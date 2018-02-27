@@ -122,7 +122,7 @@ impl Future for PhyQuery {
         // TODO(tkilbourn): make this async once queries are async.
         // TODO(tkilbourn): store the result in the PhyDevice once we can clone FIDL structs.
         let phy = self.phy.take().expect("PhyQuery polled after completion");
-        let info = phy.dev
+        let _info = phy.dev
             .query()
             .map(|mut info| {
                 // We add the id to the device's info.
@@ -130,7 +130,6 @@ impl Future for PhyQuery {
                 info
             })
             .map_err(|e| eprintln!("Could not query wlan phy device: {:?}", e))?;
-        info!("queried phy: {:?}", info);
         self.devmgr.borrow_mut().add_phy(phy);
         Ok(Async::Ready(()))
     }

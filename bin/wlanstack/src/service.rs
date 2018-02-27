@@ -28,18 +28,18 @@ pub fn device_service(
         },
 
         list_phys: |state| {
-            info!("list_phys");
+            debug!("list_phys");
             let result = state.devmgr.borrow().list_phys();
             future::ok(wlan_service::ListPhysResponse { phys: result })
         },
 
         list_ifaces: |_| {
-            info!("list_ifaces (stub)");
+            debug!("list_ifaces (stub)");
             future::ok(wlan_service::ListIfacesResponse { ifaces: vec![] })
         },
 
         create_iface: |state, req| {
-            info!("create_iface req: {:?}", req);
+            debug!("create_iface req: {:?}", req);
             // TODO(tkilbourn): have DeviceManager return a future here
             let resp = state.devmgr.borrow_mut().create_iface(req.phy_id, req.role);
             match resp {
@@ -49,7 +49,7 @@ pub fn device_service(
         },
 
         destroy_iface: |state, req| {
-            info!("destroy_iface req: {:?}", req);
+            debug!("destroy_iface req: {:?}", req);
             // TODO(tkilbourn): have DeviceManager return a future here
             let resp = state
                 .devmgr
@@ -62,7 +62,7 @@ pub fn device_service(
         },
 
         register_listener: |state, listener| {
-            info!("register listener");
+            debug!("register listener");
             if let Ok(proxy) = DeviceListener::new_proxy(listener.inner, &state.handle) {
                 state.devmgr.borrow_mut().add_listener(Box::new(proxy));
                 future::ok(())
