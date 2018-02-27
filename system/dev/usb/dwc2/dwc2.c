@@ -1726,6 +1726,7 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev) {
     usb_dwc->free_channels = ALL_CHANNELS_FREE;
     usb_dwc->next_device_address = 1;
     usb_dwc->DBG_reqid = 0x1;
+    usb_request_pool_init(&usb_dwc->free_usb_reqs);
 
     // Carve out some address space for this device.
     size_t mmio_size;
