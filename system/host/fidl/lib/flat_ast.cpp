@@ -562,33 +562,48 @@ bool Library::Resolve() {
         return false;
     }
 
-    for (const auto& const_declaration : const_declarations_) {
-        if (!ResolveConst(*const_declaration)) {
-            return false;
+    // We process declarations in topologically sorted order. For
+    // example, we process a struct member's type before the entire
+    // struct.
+    for (const Decl* decl : declaration_order_) {
+        switch (decl->kind) {
+        case Decl::Kind::kConst: {
+            auto const_decl = static_cast<const Const*>(decl);
+            if (!ResolveConst(*const_decl)) {
+                return false;
+            }
+            break;
         }
-    }
-
-    for (const auto& enum_declaration : enum_declarations_) {
-        if (!ResolveEnum(*enum_declaration)) {
-            return false;
+        case Decl::Kind::kEnum: {
+            auto enum_decl = static_cast<const Enum*>(decl);
+            if (!ResolveEnum(*enum_decl)) {
+                return false;
+            }
+            break;
         }
-    }
-
-    for (const auto& interface_declaration : interface_declarations_) {
-        if (!ResolveInterface(*interface_declaration)) {
-            return false;
+        case Decl::Kind::kInterface: {
+            auto interface_decl = static_cast<const Interface*>(decl);
+            if (!ResolveInterface(*interface_decl)) {
+                return false;
+            }
+            break;
         }
-    }
-
-    for (const auto& struct_declaration : struct_declarations_) {
-        if (!ResolveStruct(*struct_declaration)) {
-            return false;
+        case Decl::Kind::kStruct: {
+            auto struct_decl = static_cast<const Struct*>(decl);
+            if (!ResolveStruct(*struct_decl)) {
+                return false;
+            }
+            break;
         }
-    }
-
-    for (const auto& union_declaration : union_declarations_) {
-        if (!ResolveUnion(*union_declaration)) {
-            return false;
+        case Decl::Kind::kUnion: {
+            auto union_decl = static_cast<const Union*>(decl);
+            if (!ResolveUnion(*union_decl)) {
+                return false;
+            }
+            break;
+        }
+        default:
+            abort();
         }
     }
 
