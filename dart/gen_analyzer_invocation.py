@@ -28,8 +28,6 @@ def main():
   parser.add_argument('--package-name', help='Name of the analyzed package')
   parser.add_argument('--package-label', help='Label of the analyzed package')
   parser.add_argument('--options', help='Path to analysis options')
-  parser.add_argument('extra_sources', nargs='*',
-                      help='Extra source paths to analyze')
   args = parser.parse_args()
 
   if args.package_name:
@@ -55,13 +53,12 @@ $dartanalyzer \\
   --fatal-hints \\
   --fatal-lints \\
   $options_argument \\
-  $sources_argument $extra_sources_string \\
+  $sources_argument \\
   "$$@"
 ''')
   with open(analyzer_file, 'w') as file:
       file.write(script_template.substitute(
           args.__dict__,
-          extra_sources_string = ' '.join(args.extra_sources),
           package_name = package_name,
           sources_argument = ' '.join(sources),
           options_argument = '--options='+args.options if args.options else ''))

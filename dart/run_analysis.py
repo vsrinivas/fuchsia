@@ -20,9 +20,6 @@ def main():
     parser = argparse.ArgumentParser('Runs analysis on a given package')
     parser.add_argument('--source-file', help='Path to the list of sources',
                         required=True)
-    parser.add_argument('--extra-sources', help='Path to extra source files',
-                        nargs="*",
-                        default=[])
     parser.add_argument('--dot-packages', help='Path to the .packages file',
                         required=True)
     parser.add_argument('--dartanalyzer',
@@ -47,8 +44,6 @@ def main():
         depfile.write('%s: ' % args.depname)
         def add_dep(path):
             depfile.write('%s ' % path)
-        for source in args.extra_sources:
-            add_dep(source)
         options = args.options
         while True:
             if not os.path.isabs(options):
@@ -75,7 +70,7 @@ def main():
         '--fatal-warnings',
         '--fatal-hints',
         '--fatal-lints',
-    ] + sources + args.extra_sources
+    ] + sources
 
     call = subprocess.Popen(call_args, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
