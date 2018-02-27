@@ -15,7 +15,6 @@
 #include <fbl/ref_ptr.h>
 #include <inttypes.h>
 #include <lib/console.h>
-#include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>

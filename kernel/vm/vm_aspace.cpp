@@ -20,7 +20,6 @@
 #include <kernel/thread.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
-#include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
