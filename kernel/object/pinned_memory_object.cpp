@@ -64,7 +64,7 @@ zx_status_t PinnedMemoryObject::Create(const BusTransactionInitiatorDispatcher& 
     DEBUG_ASSERT(fbl::is_pow2(min_contig));
 
     fbl::AllocChecker ac;
-    const size_t num_addrs = is_contiguous ? 1 : ROUNDUP(size, min_contig) / min_contig;
+    const size_t num_addrs = ROUNDUP(size, min_contig) / min_contig;
     fbl::Array<dev_vaddr_t> addr_array(new (&ac) dev_vaddr_t[num_addrs], num_addrs);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -98,7 +98,7 @@ zx_status_t PinnedMemoryObject::MapIntoIommu(uint32_t perms) {
 
         dev_vaddr_t vaddr_base = kInvalidAddr;
         // Usermode drivers assume that if they requested a contiguous buffer in
-        // memory, then they will only get a single address back.  Return an
+        // memory, then the physical addresses will be contiguous.  Return an
         // error if we can't acutally map the address contiguously.
         size_t remaining = size_;
         size_t curr_offset = offset_;
@@ -126,7 +126,11 @@ zx_status_t PinnedMemoryObject::MapIntoIommu(uint32_t perms) {
         }
 
         mapped_addrs_[0] = vaddr_base;
-        DEBUG_ASSERT(mapped_addrs_.size() == 1);
+
+        const size_t min_contig = bti_.minimum_contiguity();
+        for (size_t i = 1; i < mapped_addrs_.size(); ++i) {
+            mapped_addrs_[i] = mapped_addrs_[i - 1] + min_contig;
+        }
         return ZX_OK;
     }
 

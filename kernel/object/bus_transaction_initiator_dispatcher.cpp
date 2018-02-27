@@ -42,14 +42,15 @@ BusTransactionInitiatorDispatcher::~BusTransactionInitiatorDispatcher() {
 
 zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, uint64_t offset,
                                                    uint64_t size, uint32_t perms,
+                                                   bool compress_results,
                                                    dev_vaddr_t* mapped_addrs,
-                                                   size_t max_mapped_addrs_count,
-                                                   size_t* actual_mapped_addrs_count) {
+                                                   size_t mapped_addrs_count) {
 
     DEBUG_ASSERT(mapped_addrs);
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
-    DEBUG_ASSERT(actual_mapped_addrs_count);
-    if (!IS_PAGE_ALIGNED(offset)) {
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+
+    if (size == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -68,12 +69,27 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, ui
 
     const fbl::Array<dev_vaddr_t>& pmo_addrs = pmo->mapped_addrs();
     const size_t found_addrs = pmo_addrs.size();
-    if (found_addrs > max_mapped_addrs_count)  {
-        return ZX_ERR_BUFFER_TOO_SMALL;
+    if (compress_results) {
+        if (found_addrs != mapped_addrs_count) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        memcpy(mapped_addrs, pmo_addrs.get(), found_addrs * sizeof(dev_vaddr_t));
+    } else {
+        const size_t num_pages = size / PAGE_SIZE;
+        if (num_pages != mapped_addrs_count) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        const size_t min_contig = minimum_contiguity();
+        size_t next_idx = 0;
+        for (size_t i = 0; i < found_addrs; ++i) {
+            dev_vaddr_t extent_base = pmo_addrs[i];
+            for (dev_vaddr_t addr = extent_base;
+                 addr < extent_base + min_contig && next_idx < num_pages;
+                 addr += PAGE_SIZE, ++next_idx) {
+                mapped_addrs[next_idx] = addr;
+            }
+        }
     }
-
-    memcpy(mapped_addrs, pmo_addrs.get(), found_addrs * sizeof(dev_vaddr_t));
-    *actual_mapped_addrs_count = found_addrs;
 
     pinned_memory_.push_back(fbl::move(pmo));
     return ZX_OK;

@@ -325,6 +325,12 @@ typedef enum {
 #define ZX_TIMER_SLACK_EARLY        1u
 #define ZX_TIMER_SLACK_LATE         2u
 
+// Bus Transaction Initiatior options.
+#define ZX_BTI_PERM_READ          (1u << 0)
+#define ZX_BTI_PERM_WRITE         (1u << 1)
+#define ZX_BTI_PERM_EXECUTE       (1u << 2)
+#define ZX_BTI_COMPRESS           (1u << 3)
+
 typedef uint32_t zx_obj_type_t;
 
 #define ZX_OBJ_TYPE_NONE            ((zx_obj_type_t)0u)

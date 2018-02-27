@@ -25,20 +25,21 @@ public:
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_BTI; }
     bool has_state_tracker() const final { return true; }
 
-    // Pins the given VMO range and writes the addresses into |mapped_addrs|.  The
-    // number of addresses returned is given in |actual_mapped_addrs_count|, and
-    // will be either:
-    // 1) 1, if the VMO was contiguous, in which case the address is the base of
-    // the contiguous physical range
-    // 2) |size|/|minimum_contiguity()|, rounded up, in which case each address
-    // represents a run of |minimum_contiguity()| bytes.
+    // Pins the given VMO range and writes the addresses into |mapped_addrs|.
+    //
+    // |mapped_addrs_count| must be either
+    // 1) If |compress_results|, |size|/|minimum_contiguity()|, rounded up, in which
+    // case each returned address represents a run of |minimum_contiguity()| bytes (with
+    // the exception of the last which may be short)
+    // 2) Otherwise, |size|/|PAGE_SIZE|, in which case each returned address represents a
+    // single page.
     //
     // Returns ZX_ERR_INVALID_ARGS if |offset| or |size| are not PAGE_SIZE aligned.
     // Returns ZX_ERR_INVALID_ARGS if |perms| is not suitable to pass to the Iommu::Map() interface.
-    // Returns ZX_ERR_BUFFER_TOO_SMALL if |max_mapped_addrs_count| is not at least |size|/PAGE_SIZE.
+    // Returns ZX_ERR_INVALID_ARGS if |mapped_addrs_count| is not exactly the
+    //   value described above.
     zx_status_t Pin(fbl::RefPtr<VmObject> vmo, uint64_t offset, uint64_t size, uint32_t perms,
-                    dev_vaddr_t* mapped_addrs, size_t max_mapped_addrs_count,
-                    size_t* actual_mapped_addrs_count);
+                    bool compress_results, dev_vaddr_t* mapped_addrs, size_t mapped_addrs_count);
 
     // Unpins the region previously created by Pin() that starts with |base_addr|.
     // Returns an error if |base_addr| does not correspond to something returned

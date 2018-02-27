@@ -398,9 +398,8 @@ zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,
     return out->make(fbl::move(dispatcher), rights);
 }
 
-zx_status_t sys_bti_pin(zx_handle_t bti, zx_handle_t vmo, uint64_t offset, uint64_t size,
-                        uint32_t perms, user_out_ptr<zx_paddr_t> addrs, size_t addrs_len,
-                        user_out_ptr<size_t> actual_addrs_len) {
+zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
+                        uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_len) {
     auto up = ProcessDispatcher::GetCurrent();
 
     if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(size)) {
@@ -425,28 +424,33 @@ zx_status_t sys_bti_pin(zx_handle_t bti, zx_handle_t vmo, uint64_t offset, uint6
 
     // Convert requested permissions and check against VMO rights
     uint32_t iommu_perms = 0;
-    if (perms & ZX_VM_FLAG_PERM_READ) {
+    bool compress_results = false;
+    if (options & ZX_BTI_PERM_READ) {
         if (!(vmo_rights & ZX_RIGHT_READ)) {
             return ZX_ERR_ACCESS_DENIED;
         }
         iommu_perms |= IOMMU_FLAG_PERM_READ;
-        perms &= ~ZX_VM_FLAG_PERM_READ;
+        options &= ~ZX_BTI_PERM_READ;
     }
-    if (perms & ZX_VM_FLAG_PERM_WRITE) {
+    if (options & ZX_BTI_PERM_WRITE) {
         if (!(vmo_rights & ZX_RIGHT_WRITE)) {
             return ZX_ERR_ACCESS_DENIED;
         }
         iommu_perms |= IOMMU_FLAG_PERM_WRITE;
-        perms &= ~ZX_VM_FLAG_PERM_WRITE;
+        options &= ~ZX_BTI_PERM_WRITE;
     }
-    if (perms & ZX_VM_FLAG_PERM_EXECUTE) {
+    if (options & ZX_BTI_PERM_EXECUTE) {
         if (!(vmo_rights & ZX_RIGHT_EXECUTE)) {
             return ZX_ERR_ACCESS_DENIED;
         }
         iommu_perms |= IOMMU_FLAG_PERM_EXECUTE;
-        perms &= ~ZX_VM_FLAG_PERM_EXECUTE;
+        options &= ~ZX_BTI_PERM_EXECUTE;
     }
-    if (perms) {
+    if (options & ZX_BTI_COMPRESS) {
+        compress_results = true;
+        options &= ~ZX_BTI_COMPRESS;
+    }
+    if (options) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -457,9 +461,8 @@ zx_status_t sys_bti_pin(zx_handle_t bti, zx_handle_t vmo, uint64_t offset, uint6
         return ZX_ERR_NO_MEMORY;
     }
 
-    size_t actual_len;
     status = bti_dispatcher->Pin(vmo_dispatcher->vmo(), offset, size, iommu_perms,
-                                 mapped_addrs.get(), addrs_len, &actual_len);
+                                 compress_results, mapped_addrs.get(), addrs_len);
     if (status != ZX_OK) {
         return status;
     }
@@ -469,10 +472,7 @@ zx_status_t sys_bti_pin(zx_handle_t bti, zx_handle_t vmo, uint64_t offset, uint6
     });
 
     static_assert(sizeof(dev_vaddr_t) == sizeof(zx_paddr_t), "mismatched types");
-    if ((status = addrs.copy_array_to_user(mapped_addrs.get(), actual_len)) != ZX_OK) {
-        return status;
-    }
-    if ((status = actual_addrs_len.copy_to_user(actual_len)) != ZX_OK) {
+    if ((status = addrs.copy_array_to_user(mapped_addrs.get(), addrs_len)) != ZX_OK) {
         return status;
     }
 

@@ -580,9 +580,9 @@ syscall bti_create
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall bti_pin
-    (bti: zx_handle_t, vmo: zx_handle_t, offset: uint64_t, size: uint64_t,
-        perms: uint32_t, addrs: zx_paddr_t[addrs_len] OUT, addrs_len: size_t)
-    returns (zx_status_t, actual: size_t);
+    (bti: zx_handle_t, options: uint32_t, vmo: zx_handle_t, offset: uint64_t, size: uint64_t,
+        addrs: zx_paddr_t[addrs_len] OUT, addrs_len: size_t)
+    returns (zx_status_t);
 
 syscall bti_unpin
     (bti: zx_handle_t, base_addr: zx_paddr_t)
