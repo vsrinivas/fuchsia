@@ -43,7 +43,7 @@ package("tests") {
     {
       name = "dev_token_manager_e2e_test"
 
-      # Disabled because it fails when fvm.blk is used instead of bootfs.
+      # Disabled because it is timed out when fvm.blk is used instead of bootfs.
       disabled = true
     },
     {

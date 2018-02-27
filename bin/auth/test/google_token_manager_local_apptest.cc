@@ -29,7 +29,8 @@
 namespace e2e_google_local {
 namespace {
 
-const std::string kTestUserId = "tq_auth_user_1";
+const std::string kTestUserId = "tq_user_1";
+const std::string kTestUserProfileId = "user1_profile1@gmail.com";
 const auth::AuthProviderType kGoogleAuthProvider =
     auth::AuthProviderType::GOOGLE;
 
@@ -119,7 +120,7 @@ TEST_F(GoogleTokenManagerAppTest, GetAccessToken) {
   f1dl::String access_token;
 
   token_mgr_->GetAccessToken(
-      kGoogleAuthProvider, "", std::move(scopes),
+      kGoogleAuthProvider, kTestUserProfileId, "", std::move(scopes),
       callback::Capture(MakeQuitTask(), &status, &access_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
@@ -130,7 +131,7 @@ TEST_F(GoogleTokenManagerAppTest, GetIdToken) {
   auth::Status status;
   f1dl::String id_token;
 
-  token_mgr_->GetIdToken(kGoogleAuthProvider, "",
+  token_mgr_->GetIdToken(kGoogleAuthProvider, kTestUserProfileId, "",
                          callback::Capture(MakeQuitTask(), &status, &id_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
@@ -142,7 +143,7 @@ TEST_F(GoogleTokenManagerAppTest, GetFirebaseToken) {
   auth::FirebaseTokenPtr firebase_token;
 
   token_mgr_->GetFirebaseToken(
-      kGoogleAuthProvider, "", "",
+      kGoogleAuthProvider, kTestUserProfileId, "", "",
       callback::Capture(MakeQuitTask(), &status, &firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
@@ -153,7 +154,7 @@ TEST_F(GoogleTokenManagerAppTest, EraseAllTokens) {
   auth::Status status;
   auth::FirebaseTokenPtr firebase_token;
 
-  token_mgr_->DeleteAllTokens(kGoogleAuthProvider,
+  token_mgr_->DeleteAllTokens(kGoogleAuthProvider, kTestUserProfileId,
                               callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);

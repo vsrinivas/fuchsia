@@ -30,6 +30,7 @@ namespace e2e_dev {
 namespace {
 
 const std::string kTestUserId = "tq_auth_user_1";
+const std::string kTestUserProfileId = "tq_auth_user_profile_1";
 const auth::AuthProviderType kDevAuthProvider = auth::AuthProviderType::DEV;
 
 class DevTokenManagerAppTest : public gtest::TestWithMessageLoop {
@@ -103,7 +104,7 @@ TEST_F(DevTokenManagerAppTest, GetAccessToken) {
   f1dl::String access_token;
 
   token_mgr_->GetAccessToken(
-      kDevAuthProvider, "", std::move(scopes),
+      kDevAuthProvider, kTestUserProfileId, "", std::move(scopes),
       callback::Capture(MakeQuitTask(), &status, &access_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
@@ -114,7 +115,7 @@ TEST_F(DevTokenManagerAppTest, GetIdToken) {
   auth::Status status;
   f1dl::String id_token;
 
-  token_mgr_->GetIdToken(kDevAuthProvider, "",
+  token_mgr_->GetIdToken(kDevAuthProvider, kTestUserProfileId, "",
                          callback::Capture(MakeQuitTask(), &status, &id_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
@@ -126,16 +127,18 @@ TEST_F(DevTokenManagerAppTest, GetFirebaseToken) {
   auth::FirebaseTokenPtr firebase_token;
 
   token_mgr_->GetFirebaseToken(
-      kDevAuthProvider, "", "",
+      kDevAuthProvider, kTestUserProfileId, "firebase_test_api_key", "",
       callback::Capture(MakeQuitTask(), &status, &firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
-  EXPECT_TRUE(firebase_token->id_token.get().find(":fbt_") !=
-              std::string::npos);
-  EXPECT_TRUE(firebase_token->email.get().find("@devauthprovider.com") !=
-              std::string::npos);
-  EXPECT_TRUE(firebase_token->local_id.get().find("local_id_") !=
-              std::string::npos);
+  if (!firebase_token.is_null()) {
+    EXPECT_TRUE(firebase_token->id_token.get().find(":fbt_") !=
+                std::string::npos);
+    EXPECT_TRUE(firebase_token->email.get().find("@devauthprovider.com") !=
+                std::string::npos);
+    EXPECT_TRUE(firebase_token->local_id.get().find("local_id_") !=
+                std::string::npos);
+  }
 }
 
 TEST_F(DevTokenManagerAppTest, GetCachedFirebaseToken) {
@@ -145,19 +148,19 @@ TEST_F(DevTokenManagerAppTest, GetCachedFirebaseToken) {
   auth::FirebaseTokenPtr cached_firebase_token;
 
   token_mgr_->GetFirebaseToken(
-      kDevAuthProvider, "", "key1",
+      kDevAuthProvider, kTestUserProfileId, "", "key1",
       callback::Capture(MakeQuitTask(), &status, &firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
   token_mgr_->GetFirebaseToken(
-      kDevAuthProvider, "", "key2",
+      kDevAuthProvider, kTestUserProfileId, "", "key2",
       callback::Capture(MakeQuitTask(), &status, &other_firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
   token_mgr_->GetFirebaseToken(
-      kDevAuthProvider, "", "key1",
+      kDevAuthProvider, kTestUserProfileId, "", "key1",
       callback::Capture(MakeQuitTask(), &status, &cached_firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
@@ -180,43 +183,43 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
   auth::FirebaseTokenPtr new_firebase_token;
 
   token_mgr_->GetIdToken(
-      kDevAuthProvider, "",
+      kDevAuthProvider, kTestUserProfileId, "",
       callback::Capture(MakeQuitTask(), &status, &old_id_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
   token_mgr_->GetAccessToken(
-      kDevAuthProvider, "", std::move(scopes),
+      kDevAuthProvider, kTestUserProfileId, "", std::move(scopes),
       callback::Capture(MakeQuitTask(), &status, &old_access_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
   token_mgr_->GetFirebaseToken(
-      kDevAuthProvider, "", "",
+      kDevAuthProvider, kTestUserProfileId, "", "",
       callback::Capture(MakeQuitTask(), &status, &old_firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
-  token_mgr_->DeleteAllTokens(kDevAuthProvider,
+  token_mgr_->DeleteAllTokens(kDevAuthProvider, kTestUserProfileId,
                               callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
   scopes = f1dl::Array<f1dl::String>::New(0);
   token_mgr_->GetIdToken(
-      kDevAuthProvider, "",
+      kDevAuthProvider, kTestUserProfileId, "",
       callback::Capture(MakeQuitTask(), &status, &new_id_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
   token_mgr_->GetAccessToken(
-      kDevAuthProvider, "", std::move(scopes),
+      kDevAuthProvider, kTestUserProfileId, "", std::move(scopes),
       callback::Capture(MakeQuitTask(), &status, &new_access_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
   token_mgr_->GetFirebaseToken(
-      kDevAuthProvider, "", "",
+      kDevAuthProvider, kTestUserProfileId, "", "",
       callback::Capture(MakeQuitTask(), &status, &new_firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
@@ -231,26 +234,26 @@ TEST_F(DevTokenManagerAppTest, GetIdTokenFromCache) {
   f1dl::String id_token;
   f1dl::String cached_id_token;
 
-  token_mgr_->GetIdToken(kDevAuthProvider, "",
+  token_mgr_->GetIdToken(kDevAuthProvider, kTestUserProfileId, "",
                          callback::Capture(MakeQuitTask(), &status, &id_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
   token_mgr_->GetIdToken(
-      kDevAuthProvider, "",
+      kDevAuthProvider, kTestUserProfileId, "",
       callback::Capture(MakeQuitTask(), &status, &cached_id_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
   EXPECT_TRUE(id_token.get().find(":idt_") != std::string::npos);
   ASSERT_EQ(id_token.get(), cached_id_token.get());
 
-  token_mgr_->DeleteAllTokens(kDevAuthProvider,
+  token_mgr_->DeleteAllTokens(kDevAuthProvider, kTestUserProfileId,
                               callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
   token_mgr_->GetIdToken(
-      kDevAuthProvider, "",
+      kDevAuthProvider, kTestUserProfileId, "",
       callback::Capture(MakeQuitTask(), &status, &cached_id_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
@@ -266,19 +269,19 @@ TEST_F(DevTokenManagerAppTest, GetAccessTokenFromCache) {
   f1dl::String cached_access_token;
 
   token_mgr_->GetAccessToken(
-      kDevAuthProvider, "", std::move(scopes),
+      kDevAuthProvider, kTestUserProfileId, "", std::move(scopes),
       callback::Capture(MakeQuitTask(), &status, &access_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
-  token_mgr_->GetIdToken(kDevAuthProvider, "",
+  token_mgr_->GetIdToken(kDevAuthProvider, kTestUserProfileId, "",
                          callback::Capture(MakeQuitTask(), &status, &id_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);
 
   scopes = f1dl::Array<f1dl::String>::New(0);
   token_mgr_->GetAccessToken(
-      kDevAuthProvider, "", std::move(scopes),
+      kDevAuthProvider, kTestUserProfileId, "", std::move(scopes),
       callback::Capture(MakeQuitTask(), &status, &cached_access_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(auth::Status::OK, status);

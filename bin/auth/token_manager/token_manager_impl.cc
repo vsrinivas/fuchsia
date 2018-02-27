@@ -11,6 +11,17 @@
 
 namespace auth {
 
+namespace {
+
+const cache::CacheKey GetCacheKey(auth::AuthProviderType auth_provider_type,
+                                  const f1dl::String& user_profile_id) {
+  // TODO: consider replacing the static cast with a string map (more type safe)
+  return cache::CacheKey(std::to_string(static_cast<int>(auth_provider_type)),
+                         user_profile_id.get());
+}
+
+}  // namespace
+
 using auth::AuthProviderStatus;
 using auth::Status;
 
@@ -93,7 +104,7 @@ void TokenManagerImpl::Authorize(
 
 void TokenManagerImpl::GetAccessToken(
     const auth::AuthProviderType auth_provider_type,
-    const f1dl::String& app_client_id,
+    const f1dl::String& user_profile_id, const f1dl::String& app_client_id,
     f1dl::Array<f1dl::String> app_scopes,
     const GetAccessTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
@@ -103,9 +114,8 @@ void TokenManagerImpl::GetAccessToken(
 
   // TODO: Fetch credential from data store
   f1dl::String credential = "TODO";
-  f1dl::String idp_credential_id = "TODO";
 
-  auto cache_key = GetCacheKey(auth_provider_type, idp_credential_id);
+  auto cache_key = GetCacheKey(auth_provider_type, user_profile_id);
   cache::OAuthTokens tokens;
 
   if (token_cache_.Get(cache_key, &tokens) == cache::Status::kOK &&
@@ -115,7 +125,7 @@ void TokenManagerImpl::GetAccessToken(
   }
 
   it->second->GetAppAccessToken(
-      idp_credential_id, app_client_id, std::move(app_scopes),
+      user_profile_id, app_client_id, std::move(app_scopes),
       [this, callback, cache_key, &tokens](AuthProviderStatus status,
                                            AuthTokenPtr access_token) {
         std::string access_token_val;
@@ -147,7 +157,7 @@ void TokenManagerImpl::GetAccessToken(
 
 void TokenManagerImpl::GetIdToken(
     const auth::AuthProviderType auth_provider_type,
-    const f1dl::String& audience,
+    const f1dl::String& user_profile_id, const f1dl::String& audience,
     const GetIdTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
@@ -156,9 +166,8 @@ void TokenManagerImpl::GetIdToken(
 
   // TODO: Fetch credential from data store
   f1dl::String credential = "TODO";
-  f1dl::String idp_credential_id = "TODO";
 
-  auto cache_key = GetCacheKey(auth_provider_type, idp_credential_id);
+  auto cache_key = GetCacheKey(auth_provider_type, user_profile_id);
   cache::OAuthTokens tokens;
 
   if (token_cache_.Get(cache_key, &tokens) == cache::Status::kOK &&
@@ -200,7 +209,7 @@ void TokenManagerImpl::GetIdToken(
 
 void TokenManagerImpl::GetFirebaseToken(
     const auth::AuthProviderType auth_provider_type,
-    const f1dl::String& audience,
+    const f1dl::String& user_profile_id, const f1dl::String& audience,
     const f1dl::String& firebase_api_key,
     const GetFirebaseTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
@@ -208,9 +217,7 @@ void TokenManagerImpl::GetFirebaseToken(
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
   }
 
-  f1dl::String idp_credential_id = "TODO";
-
-  auto cache_key = GetCacheKey(auth_provider_type, idp_credential_id);
+  auto cache_key = GetCacheKey(auth_provider_type, user_profile_id);
   cache::OAuthTokens tokens;
 
   if (token_cache_.Get(cache_key, &tokens) == cache::Status::kOK) {
@@ -226,7 +233,7 @@ void TokenManagerImpl::GetFirebaseToken(
     }
   }
 
-  GetIdToken(auth_provider_type, audience,
+  GetIdToken(auth_provider_type, user_profile_id, audience,
              [this, it, callback, cache_key, firebase_api_key](
                  Status status, f1dl::String id_token) {
                if (status != Status::OK) {
@@ -268,6 +275,7 @@ void TokenManagerImpl::GetFirebaseToken(
 
 void TokenManagerImpl::DeleteAllTokens(
     const auth::AuthProviderType auth_provider_type,
+    const f1dl::String& user_profile_id,
     const DeleteAllTokensCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
@@ -276,9 +284,7 @@ void TokenManagerImpl::DeleteAllTokens(
 
   // TODO: Fetch credential from data store
   f1dl::String credential = "TODO";
-  f1dl::String idp_credential_id = "TODO";
-  cache::CacheKey cache_key =
-      GetCacheKey(auth_provider_type, idp_credential_id);
+  cache::CacheKey cache_key = GetCacheKey(auth_provider_type, user_profile_id);
 
   it->second->RevokeAppOrPersistentCredential(
       credential, [this, cache_key, callback](AuthProviderStatus status) {
@@ -298,14 +304,6 @@ void TokenManagerImpl::DeleteAllTokens(
         callback(Status::OK);
         return;
       });
-}
-
-const cache::CacheKey TokenManagerImpl::GetCacheKey(
-    auth::AuthProviderType identity_provider,
-    const f1dl::String& idp_credential_id) {
-  // TODO: consider replacing the static cast with a string map (more type safe)
-  return cache::CacheKey(std::to_string(static_cast<int>(identity_provider)),
-                         idp_credential_id.get());
 }
 
 }  // namespace auth

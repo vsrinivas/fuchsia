@@ -27,7 +27,7 @@ class DevAuthProviderApp {
   DevAuthProviderApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()) {
-    FXL_DCHECK(app_context_);
+    FXL_CHECK(app_context_);
   }
 
   void Run() {

@@ -34,31 +34,31 @@ class TokenManagerImpl : public TokenManager {
 
  private:
   // |TokenManager|
-  void Authorize(
-      const auth::AuthProviderType identity_provider,
-      const f1dl::InterfaceHandle<auth::AuthenticationUIContext> context,
-      const AuthorizeCallback& callback) override;
+  void Authorize(const auth::AuthProviderType auth_provider_type,
+                 const f1dl::InterfaceHandle<auth::AuthenticationUIContext>
+                     auth_ui_context,
+                 const AuthorizeCallback& callback) override;
 
-  void GetAccessToken(const auth::AuthProviderType identity_provider,
+  void GetAccessToken(const auth::AuthProviderType auth_provider_type,
+                      const f1dl::String& user_profile_id,
                       const f1dl::String& app_client_id,
                       const f1dl::Array<f1dl::String> app_scopes,
                       const GetAccessTokenCallback& callback) override;
 
-  void GetIdToken(const auth::AuthProviderType identity_provider,
+  void GetIdToken(const auth::AuthProviderType auth_provider_type,
+                  const f1dl::String& user_profile_id,
                   const f1dl::String& audience,
                   const GetIdTokenCallback& callback) override;
 
-  void GetFirebaseToken(const auth::AuthProviderType identity_provider,
+  void GetFirebaseToken(const auth::AuthProviderType auth_provider_type,
+                        const f1dl::String& user_profile_id,
                         const f1dl::String& audience,
                         const f1dl::String& firebase_api_key,
                         const GetFirebaseTokenCallback& callback) override;
 
-  void DeleteAllTokens(const auth::AuthProviderType identity_provider,
+  void DeleteAllTokens(const auth::AuthProviderType auth_provider_type,
+                       const f1dl::String& user_profile_id,
                        const DeleteAllTokensCallback& callback) override;
-
-  const cache::CacheKey GetCacheKey(
-      const auth::AuthProviderType identity_provider,
-      const f1dl::String& idp_credential_id);
 
   std::map<AuthProviderType, app::ApplicationControllerPtr>
       auth_provider_controllers_;
