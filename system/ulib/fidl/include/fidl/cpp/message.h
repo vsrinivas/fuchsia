@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <fidl/cpp/message_part.h>
 #include <fidl/coding.h>
+#include <fidl/cpp/message_part.h>
 #include <zircon/fidl.h>
 
 namespace fidl {
@@ -47,11 +47,15 @@ public:
     const fidl_message_header_t& header() const {
         return *reinterpret_cast<fidl_message_header_t*>(bytes_.data());
     }
+    fidl_message_header_t& header() {
+        return *reinterpret_cast<fidl_message_header_t*>(bytes_.data());
+    }
 
     // The transaction ID in the message header.
     //
     // Valid only if has_header().
     zx_txid_t txid() const { return header().txid; }
+    void set_txid(zx_txid_t txid) { header().txid = txid; }
 
     // The flags in the message header.
     //
@@ -74,7 +78,7 @@ public:
     // The message payload that follows the header interpreted as the given type.
     //
     // Valid only if has_header().
-    template<typename T>
+    template <typename T>
     T* GetPayloadAs() const {
         return reinterpret_cast<T*>(bytes_.data() + sizeof(fidl_message_header_t));
     }
@@ -140,8 +144,8 @@ public:
     // for clients of ulib/fidl which decode message manually, this function
     // is necessary to prevent extracted handles from being closed.
     void ClearHandlesUnsafe();
-private:
 
+private:
     BytePart bytes_;
     HandlePart handles_;
 };
