@@ -237,7 +237,8 @@ private:
     }
     bool ResolveType(const raw::Type* type, TypeShape* out_type_metadata);
     bool ResolveTypeName(const raw::CompoundIdentifier* name);
-    bool RegisterResolvedType(const Name& name, TypeShape type_metadata);
+
+    bool RegisterResolvedDecl(const Decl* decl, TypeShape type_metadata);
 
     bool LookupTypeShape(const Name& name, TypeShape* out_typeshape);
 
@@ -328,7 +329,9 @@ private:
     // various foo_declarations_.
     std::map<const Name*, const Decl*, NamePtrCompare> declarations_;
 
-    std::map<Name, TypeShape> resolved_types_;
+    // All Name pointers here are non-null and are owned by the
+    // various foo_declarations_.
+    std::map<const Name*, TypeShape, NamePtrCompare> resolved_declarations_;
 };
 
 } // namespace flat

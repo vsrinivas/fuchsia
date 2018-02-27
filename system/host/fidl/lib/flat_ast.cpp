@@ -286,17 +286,15 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     return true;
 }
 
-bool Library::RegisterResolvedType(const Name& name, TypeShape typeshape) {
-    // TODO(TO-701) Should this copy the Name?
-    // auto key_value = std::make_pair(name, typeshape);
-    // auto iter = resolved_types_.insert(std::move(key_value));
-    // return iter.second;
-    return true;
+bool Library::RegisterResolvedDecl(const Decl* decl, TypeShape typeshape) {
+    const Name* name = &decl->name;
+    auto iter = resolved_declarations_.emplace(name, typeshape);
+    return iter.second;
 }
 
 bool Library::LookupTypeShape(const Name& name, TypeShape* out_typeshape) {
-    auto iter = resolved_types_.find(name);
-    if (iter == resolved_types_.end()) {
+    auto iter = resolved_declarations_.find(&name);
+    if (iter == resolved_declarations_.end()) {
         return false;
     }
     *out_typeshape = iter->second;
@@ -480,7 +478,7 @@ bool Library::ResolveEnum(const Enum& enum_declaration) {
         return false;
     }
 
-    if (!RegisterResolvedType(enum_declaration.name, typeshape)) {
+    if (!RegisterResolvedDecl(&enum_declaration, typeshape)) {
         return false;
     }
 
@@ -532,7 +530,7 @@ bool Library::ResolveStruct(const Struct& struct_declaration) {
     }
 
     auto type_shape = FidlStructTypeShape(std::move(member_typeshapes));
-    if (!RegisterResolvedType(struct_declaration.name, type_shape))
+    if (!RegisterResolvedDecl(&struct_declaration, type_shape))
         return false;
 
     return true;
@@ -551,7 +549,7 @@ bool Library::ResolveUnion(const Union& union_declaration) {
     }
 
     auto typeshape = FidlUnionTypeShape(std::move(member_typeshapes));
-    if (!RegisterResolvedType(union_declaration.name, typeshape))
+    if (!RegisterResolvedDecl(&union_declaration, typeshape))
         return false;
 
     return true;
