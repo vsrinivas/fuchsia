@@ -321,7 +321,7 @@ static bool job_default_test() {
     END_TEST;
 }
 
-BEGIN_TEST_CASE(libmx_tests)
+BEGIN_TEST_CASE(libzx_tests)
 RUN_TEST(handle_invalid_test)
 RUN_TEST(handle_close_test)
 RUN_TEST(handle_move_test)
@@ -341,7 +341,7 @@ RUN_TEST(thread_self_test)
 RUN_TEST(process_self_test)
 RUN_TEST(vmar_root_self_test)
 RUN_TEST(job_default_test)
-END_TEST_CASE(libmx_tests)
+END_TEST_CASE(libzx_tests)
 
 int main(int argc, char** argv) {
     bool success = unittest_run_all_tests(argc, argv);

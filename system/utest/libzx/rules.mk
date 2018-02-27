@@ -11,7 +11,7 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/zx-test.cpp \
 
-MODULE_NAME := libmx-test
+MODULE_NAME := libzx-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/zx \
