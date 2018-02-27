@@ -14,14 +14,6 @@
 
 namespace machina {
 
-// Use an async trap for the first port (TX port) only.
-static constexpr uint64_t kI8250AsyncBase = 0;
-static constexpr uint64_t kI8250AsyncSize = 1;
-static constexpr uint64_t kI8250AsyncOffset = 0;
-static constexpr uint64_t kI8250SyncBase = kI8250AsyncSize;
-static constexpr uint64_t kI8250SyncSize = kI8250Size - kI8250AsyncSize;
-static constexpr uint64_t kI8250SyncOffset = kI8250AsyncSize;
-
 // I8250 state flags.
 static constexpr uint64_t kI8250LineStatusEmpty = 1u << 5;
 static constexpr uint64_t kI8250LineStatusIdle = 1u << 6;
@@ -44,13 +36,7 @@ enum class I8250Register : uint64_t {
 // clang-format on
 
 zx_status_t I8250::Init(Guest* guest, uint64_t addr) {
-  zx_status_t status =
-      guest->CreateMapping(TrapType::PIO_ASYNC, addr + kI8250AsyncBase,
-                           kI8250AsyncSize, kI8250AsyncOffset, this);
-  if (status != ZX_OK)
-    return status;
-  return guest->CreateMapping(TrapType::PIO_SYNC, addr + kI8250SyncBase,
-                              kI8250SyncSize, kI8250SyncOffset, this);
+  return guest->CreateMapping(TrapType::PIO_SYNC, addr, kI8250Size, 0, this);
 }
 
 zx_status_t I8250::Read(uint64_t addr, IoValue* io) const {

@@ -46,7 +46,6 @@ static constexpr uint32_t trap_kind(machina::TrapType type) {
     case machina::TrapType::MMIO_BELL:
       return ZX_GUEST_TRAP_BELL;
     case machina::TrapType::PIO_SYNC:
-    case machina::TrapType::PIO_ASYNC:
       return ZX_GUEST_TRAP_IO;
     default:
       ZX_PANIC("Unhandled TrapType %d\n", static_cast<int>(type));
@@ -57,7 +56,6 @@ static constexpr uint32_t trap_kind(machina::TrapType type) {
 static constexpr zx_handle_t get_trap_port(machina::TrapType type,
                                            zx_handle_t port) {
   switch (type) {
-    case machina::TrapType::PIO_ASYNC:
     case machina::TrapType::MMIO_BELL:
       return port;
     case machina::TrapType::PIO_SYNC:
@@ -131,26 +129,13 @@ zx_status_t Guest::IoThread() {
       FXL_LOG(ERROR) << "Failed to wait for device port " << status;
       break;
     }
-
-    uint64_t addr;
-    machina::IoValue value;
-    switch (packet.type) {
-      case ZX_PKT_TYPE_GUEST_IO:
-        addr = packet.guest_io.port;
-        value.access_size = packet.guest_io.access_size;
-        static_assert(sizeof(value.data) >= sizeof(packet.guest_io.data),
-                      "IoValue too small to contain zx_packet_guest_io_t");
-        memcpy(value.data, packet.guest_io.data, sizeof(packet.guest_io.data));
-        break;
-      case ZX_PKT_TYPE_GUEST_BELL:
-        addr = packet.guest_bell.addr;
-        value.access_size = 0;
-        value.u32 = 0;
-        break;
-      default:
-        return ZX_ERR_NOT_SUPPORTED;
+    if (packet.type != ZX_PKT_TYPE_GUEST_BELL) {
+      FXL_LOG(ERROR) << "Unsupported async packet type " << packet.type;
+      return ZX_ERR_NOT_SUPPORTED;
     }
 
+    IoValue value = {};
+    uint64_t addr = packet.guest_bell.addr;
     status = trap_key_to_mapping(packet.key)->Write(addr, value);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Unable to handle packet for device " << status;

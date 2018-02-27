@@ -60,7 +60,6 @@ constexpr uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {
 uint32_t PciBar::aspace() const {
   switch (trap_type) {
     case TrapType::PIO_SYNC:
-    case TrapType::PIO_ASYNC:
       return PCI_BAR_ASPACE_PIO;
     case TrapType::MMIO_SYNC:
     case TrapType::MMIO_BELL:

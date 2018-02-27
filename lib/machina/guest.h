@@ -21,7 +21,6 @@ enum class TrapType {
   MMIO_SYNC = 0,
   MMIO_BELL = 1,
   PIO_SYNC = 2,
-  PIO_ASYNC = 3,
 };
 
 class IoHandler;
