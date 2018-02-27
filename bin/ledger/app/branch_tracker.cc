@@ -98,7 +98,7 @@ class BranchTracker::PageWatcherContainer {
     size_t fidl_size = -1;
     size_t handle_count = -1;
     size_t timestamp = change->timestamp;
-    auto entries = std::move(change->changes);
+    auto entries = std::move(change->changed_entries);
     auto deletions = std::move(change->deleted_keys);
     for (size_t i = 0, j = 0; i < entries.size() || j < deletions.size();) {
       bool add_entry =
@@ -116,7 +116,7 @@ class BranchTracker::PageWatcherContainer {
               fidl_serialization::kMaxMessageHandles) {
         changes.push_back(PageChange::New());
         changes.back()->timestamp = timestamp;
-        changes.back()->changes = f1dl::Array<EntryPtr>::New(0);
+        changes.back()->changed_entries = f1dl::Array<EntryPtr>::New(0);
         changes.back()->deleted_keys =
             f1dl::Array<f1dl::Array<uint8_t>>::New(0);
         fidl_size = fidl_serialization::kPageChangeHeaderSize;
@@ -125,7 +125,7 @@ class BranchTracker::PageWatcherContainer {
       fidl_size += entry_size;
       handle_count += entry_handle_count;
       if (add_entry) {
-        changes.back()->changes.push_back(std::move(entries[i]));
+        changes.back()->changed_entries.push_back(std::move(entries[i]));
         ++i;
       } else {
         changes.back()->deleted_keys.push_back(std::move(deletions[j]));

@@ -292,8 +292,8 @@ struct PageChange {
   // not synchronized across devices. In particular, there is no guarantee that
   // the |timestamp| of a follow up change is greater than this one's.
   int64 timestamp;
-  // List of new and modified entries. |changes| are sorted by |key|.
-  array<Entry> changes;
+  // List of new and modified entries. |changed_entries| are sorted by |key|.
+  array<Entry> changed_entries;
   // List of deleted keys, in sorted order.
   array<array<uint8>> deleted_keys;
 };

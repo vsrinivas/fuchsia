@@ -90,7 +90,7 @@ void ComputePageChange(
 
   auto context = std::make_unique<Context>();
   context->page_change->timestamp = other.GetTimestamp();
-  context->page_change->changes = f1dl::Array<EntryPtr>::New(0);
+  context->page_change->changed_entries = f1dl::Array<EntryPtr>::New(0);
   context->page_change->deleted_keys =
       f1dl::Array<f1dl::Array<uint8_t>>::New(0);
 
@@ -133,7 +133,7 @@ void ComputePageChange(
     entry->priority = change.entry.priority == storage::KeyPriority::EAGER
                           ? Priority::EAGER
                           : Priority::LAZY;
-    context->page_change->changes.push_back(std::move(entry));
+    context->page_change->changed_entries.push_back(std::move(entry));
     PageUtils::ResolveObjectIdentifierAsBuffer(
         storage, change.entry.object_identifier, 0u,
         std::numeric_limits<int64_t>::max(),
@@ -152,7 +152,7 @@ void ComputePageChange(
       callback(PageUtils::ConvertStatus(status), std::make_pair(nullptr, ""));
       return;
     }
-    if (context->page_change->changes.empty()) {
+    if (context->page_change->changed_entries.empty()) {
       if (context->page_change->deleted_keys.empty()) {
         callback(Status::OK, std::make_pair(nullptr, ""));
       } else {
@@ -177,9 +177,10 @@ void ComputePageChange(
         callback(status, std::make_pair(nullptr, ""));
         return;
       }
-      FXL_DCHECK(results.size() == context->page_change->changes.size());
+      FXL_DCHECK(results.size() ==
+                 context->page_change->changed_entries.size());
       for (size_t i = 0; i < results.size(); i++) {
-        context->page_change->changes[i]->value =
+        context->page_change->changed_entries[i]->value =
             std::move(results[i]).ToTransport();
       }
       callback(Status::OK, std::make_pair(std::move(context->page_change),

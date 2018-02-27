@@ -476,11 +476,11 @@ TEST_F(MergingIntegrationTest, Merging) {
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, watcher1.changes_seen);
   ledger::PageChangePtr change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change->changes.size());
-  EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Paris", ToString(change->changes[0]->value));
-  EXPECT_EQ("name", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("Alice", ToString(change->changes[1]->value));
+  ASSERT_EQ(2u, change->changed_entries.size());
+  EXPECT_EQ("city", convert::ToString(change->changed_entries[0]->key));
+  EXPECT_EQ("Paris", ToString(change->changed_entries[0]->value));
+  EXPECT_EQ("name", convert::ToString(change->changed_entries[1]->key));
+  EXPECT_EQ("Alice", ToString(change->changed_entries[1]->value));
 
   page2->Commit(
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
@@ -489,28 +489,28 @@ TEST_F(MergingIntegrationTest, Merging) {
 
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(2u, change->changes.size());
-  EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob", ToString(change->changes[0]->value));
-  EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("0123456789", ToString(change->changes[1]->value));
+  ASSERT_EQ(2u, change->changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
+  EXPECT_EQ("Bob", ToString(change->changed_entries[0]->value));
+  EXPECT_EQ("phone", convert::ToString(change->changed_entries[1]->key));
+  EXPECT_EQ("0123456789", ToString(change->changed_entries[1]->value));
 
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_FALSE(RunLoopWithTimeout());
   // Each change is seen once, and by the correct watcher only.
   EXPECT_EQ(2u, watcher1.changes_seen);
   change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change->changes.size());
-  EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob", ToString(change->changes[0]->value));
-  EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("0123456789", ToString(change->changes[1]->value));
+  ASSERT_EQ(2u, change->changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
+  EXPECT_EQ("Bob", ToString(change->changed_entries[0]->value));
+  EXPECT_EQ("phone", convert::ToString(change->changed_entries[1]->key));
+  EXPECT_EQ("0123456789", ToString(change->changed_entries[1]->value));
 
   EXPECT_EQ(2u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change->changes.size());
-  EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Paris", ToString(change->changes[0]->value));
+  ASSERT_EQ(1u, change->changed_entries.size());
+  EXPECT_EQ("city", convert::ToString(change->changed_entries[0]->key));
+  EXPECT_EQ("Paris", ToString(change->changed_entries[0]->value));
 }
 
 TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
@@ -587,11 +587,11 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   EXPECT_EQ(1u, watcher1.changes_seen);
   ledger::PageChangePtr change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change->changes.size());
-  EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Paris", ToString(change->changes[0]->value));
-  EXPECT_EQ("name", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("Alice", ToString(change->changes[1]->value));
+  ASSERT_EQ(2u, change->changed_entries.size());
+  EXPECT_EQ("city", convert::ToString(change->changed_entries[0]->key));
+  EXPECT_EQ("Paris", ToString(change->changed_entries[0]->value));
+  EXPECT_EQ("name", convert::ToString(change->changed_entries[1]->key));
+  EXPECT_EQ("Alice", ToString(change->changed_entries[1]->value));
 
   page2->Commit(
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
@@ -600,11 +600,11 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(2u, change->changes.size());
-  EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob", ToString(change->changes[0]->value));
-  EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("0123456789", ToString(change->changes[1]->value));
+  ASSERT_EQ(2u, change->changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
+  EXPECT_EQ("Bob", ToString(change->changed_entries[0]->value));
+  EXPECT_EQ("phone", convert::ToString(change->changed_entries[1]->key));
+  EXPECT_EQ("0123456789", ToString(change->changed_entries[1]->value));
   EXPECT_TRUE(RunLoopWithTimeout());
   EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 
@@ -625,17 +625,17 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   // Each change is seen once, and by the correct watcher only.
   EXPECT_EQ(2u, watcher1.changes_seen);
   change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change->changes.size());
-  EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob", ToString(change->changes[0]->value));
-  EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("0123456789", ToString(change->changes[1]->value));
+  ASSERT_EQ(2u, change->changed_entries.size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
+  EXPECT_EQ("Bob", ToString(change->changed_entries[0]->value));
+  EXPECT_EQ("phone", convert::ToString(change->changed_entries[1]->key));
+  EXPECT_EQ("0123456789", ToString(change->changed_entries[1]->value));
 
   EXPECT_EQ(2u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change->changes.size());
-  EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Paris", ToString(change->changes[0]->value));
+  ASSERT_EQ(1u, change->changed_entries.size());
+  EXPECT_EQ("city", convert::ToString(change->changed_entries[0]->key));
+  EXPECT_EQ("Paris", ToString(change->changed_entries[0]->value));
 
   EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 }

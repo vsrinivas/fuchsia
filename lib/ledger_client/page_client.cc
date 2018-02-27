@@ -65,10 +65,10 @@ f1dl::InterfaceRequest<ledger::PageSnapshot> PageClient::Update(
 void PageClient::OnChange(ledger::PageChangePtr page,
                           ledger::ResultState result_state,
                           const OnChangeCallback& callback) {
-  // According to their fidl spec, neither page nor page->changes
+  // According to their fidl spec, neither page nor page->changed_entries
   // should be null.
-  FXL_DCHECK(page && page->changes);
-  for (auto& entry : page->changes) {
+  FXL_DCHECK(page && page->changed_entries);
+  for (auto& entry : page->changed_entries) {
     // Remove prefix maybe?
     const std::string key = to_string(entry->key);
     std::string value;

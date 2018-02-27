@@ -155,7 +155,7 @@ void ConvergenceBenchmark::OnChange(ledger::PageChangePtr page_change,
                                     ledger::ResultState result_state,
                                     const OnChangeCallback& callback) {
   FXL_DCHECK(result_state == ledger::ResultState::COMPLETED);
-  for (auto& change : page_change->changes) {
+  for (auto& change : page_change->changed_entries) {
     auto find_one = remaining_keys_.find(convert::ToString(change->key));
     remaining_keys_.erase(find_one);
   }
