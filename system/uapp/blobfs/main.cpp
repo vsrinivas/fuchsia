@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <libgen.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -26,8 +27,6 @@
 #include <zircon/processargs.h>
 
 namespace {
-
-#define MIN_ARGS 2
 
 typedef struct {
     bool readonly = false;
@@ -109,7 +108,8 @@ int usage() {
     fprintf(stderr,
             "usage: blobfs [ <options>* ] <command> [ <arg>* ]\n"
             "\n"
-            "options: --readonly  Mount filesystem read-only\n"
+            "options: -r|--readonly  Mount filesystem read-only\n"
+            "         -h|--help      Display this message\n"
             "\n"
             "On Fuchsia, blobfs takes the block device argument by handle.\n"
             "This can make 'blobfs' commands hard to invoke from command line.\n"
@@ -125,26 +125,34 @@ int usage() {
 
 // Process options/commands and return open fd to device
 int process_args(int argc, char** argv, CommandFunction* func, blob_options_t* options) {
-    if (argc < MIN_ARGS) {
-        fprintf(stderr, "Not enough args\n");
-        return usage();
-    }
-
-    argc--;
-    argv++;
-
-    // Read options
-    while (argc > 1) {
-        if (!strcmp(argv[0], "--readonly")) {
-            options->readonly = true;
-        } else {
+    while (1) {
+        static struct option opts[] = {
+            {"readonly", no_argument, nullptr, 'r'},
+            {"help", no_argument, nullptr, 'h'},
+            {nullptr, 0, nullptr, 0},
+        };
+        int opt_index;
+        int c = getopt_long(argc, argv, "rh", opts, &opt_index);
+        if (c < 0) {
             break;
         }
-        argc--;
-        argv++;
+        switch (c) {
+        case 'r':
+            options->readonly = true;
+            break;
+        case 'h':
+        default:
+            return usage();
+        }
     }
 
-    char* command = argv[0];
+    argc -= optind;
+    argv += optind;
+
+    if (argc < 1) {
+        return usage();
+    }
+    const char* command = argv[0];
 
     // Validate command
     for (unsigned i = 0; i < sizeof(CMDS) / sizeof(CMDS[0]); i++) {
@@ -154,12 +162,9 @@ int process_args(int argc, char** argv, CommandFunction* func, blob_options_t* o
     }
 
     if (*func == nullptr) {
-        fprintf(stderr, "Unknown command: %s\n", argv[0]);
+        fprintf(stderr, "Unknown command: %s\n", command);
         return usage();
     }
-
-    argc--;
-    argv++;
 
     // Block device passed by handle
     return FS_FD_BLOCKDEVICE;
