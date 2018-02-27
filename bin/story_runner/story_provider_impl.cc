@@ -383,12 +383,12 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(GetControllerCall);
 };
 
-class StoryProviderImpl::TeardownCall : Operation<> {
+class StoryProviderImpl::StopAllStoriesCall : Operation<> {
  public:
-  TeardownCall(OperationContainer* const container,
-               StoryProviderImpl* const story_provider_impl,
-               ResultCall result_call)
-      : Operation("StoryProviderImpl::TeardownCall",
+  StopAllStoriesCall(OperationContainer* const container,
+                     StoryProviderImpl* const story_provider_impl,
+                     ResultCall result_call)
+      : Operation("StoryProviderImpl::StopAllStoriesCall",
                   container,
                   std::move(result_call)),
         story_provider_impl_(story_provider_impl) {
@@ -413,7 +413,28 @@ class StoryProviderImpl::TeardownCall : Operation<> {
         story_provider_impl_->story_controller_impls_.erase(story_id);
       });
     }
+  }
 
+  StoryProviderImpl* const story_provider_impl_;  // not owned
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(StopAllStoriesCall);
+};
+
+class StoryProviderImpl::StopStoryShellCall : Operation<> {
+ public:
+  StopStoryShellCall(OperationContainer* const container,
+                     StoryProviderImpl* const story_provider_impl,
+                     ResultCall result_call)
+      : Operation("StoryProviderImpl::StopStoryShellCall",
+                  container,
+                  std::move(result_call)),
+        story_provider_impl_(story_provider_impl) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
     if (story_provider_impl_->preloaded_story_shell_) {
       story_provider_impl_->preloaded_story_shell_->story_shell_app->Teardown(
           kBasicTimeout, [flow] {});
@@ -422,7 +443,7 @@ class StoryProviderImpl::TeardownCall : Operation<> {
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TeardownCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(StopStoryShellCall);
 };
 
 class StoryProviderImpl::GetImportanceCall : Operation<ImportanceList> {
@@ -634,13 +655,18 @@ void StoryProviderImpl::Connect(f1dl::InterfaceRequest<StoryProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
+void StoryProviderImpl::StopAllStories(const std::function<void()>& callback) {
+  new StopAllStoriesCall(&operation_queue_, this, callback);
+}
+
 void StoryProviderImpl::Teardown(const std::function<void()>& callback) {
   // Closing all binding to this instance ensures that no new messages come
   // in, though previous messages need to be processed. The stopping of stories
   // is done on |operation_queue_| since that must strictly happen after all
   // pending messgages have been processed.
   bindings_.CloseAll();
-  new TeardownCall(&operation_queue_, this, callback);
+  new StopAllStoriesCall(&operation_queue_, this, [] {});
+  new StopStoryShellCall(&operation_queue_, this, callback);
 }
 
 // |StoryProvider|

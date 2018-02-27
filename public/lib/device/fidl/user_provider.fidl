@@ -97,6 +97,11 @@ interface UserController {
 
   // Registers a watcher for the user's life cycle events.
   Watch@1(UserWatcher watcher);
+
+  // Stops the currently running user shell and starts the one specified by
+  // |user_shell_config|. This operation stops all stories before starting the
+  // new shell.
+  SwapUserShell@2(AppConfig user_shell_config) => ();
 };
 
 // Implemented by a |DeviceShell| implementation in order to receive

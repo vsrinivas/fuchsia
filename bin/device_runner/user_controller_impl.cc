@@ -105,6 +105,12 @@ void UserControllerImpl::GetPresentation(
 }
 
 // |UserController|
+void UserControllerImpl::SwapUserShell(AppConfigPtr user_shell,
+                                       const SwapUserShellCallback& callback) {
+  user_runner_->SwapUserShell(std::move(user_shell), callback);
+}
+
+// |UserController|
 void UserControllerImpl::Watch(f1dl::InterfaceHandle<UserWatcher> watcher) {
   user_watchers_.AddInterfacePtr(watcher.Bind());
 }

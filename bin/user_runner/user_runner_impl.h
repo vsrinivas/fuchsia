@@ -24,6 +24,7 @@
 #include "lib/speech/fidl/speech_to_text.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+#include "lib/ui/input/fidl/input_events.fidl.h"
 #include "lib/ui/presentation/fidl/presentation.fidl.h"
 #include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user/fidl/user_runner.fidl.h"
@@ -37,6 +38,7 @@
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/scope.h"
+#include "peridot/lib/fidl/view_host.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular {
@@ -65,6 +67,8 @@ class UserRunnerImpl : UserRunner,
   void Terminate(std::function<void()> done);
 
  private:
+  class SwapUserShellOperation;
+
   // |UserRunner|
   void Initialize(
       auth::AccountPtr account,
@@ -73,6 +77,10 @@ class UserRunnerImpl : UserRunner,
       f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       f1dl::InterfaceHandle<UserContext> user_context,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
+
+  // |UserRunner|
+  void SwapUserShell(AppConfigPtr user_shell,
+                     const SwapUserShellCallback& callback) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeUser(
@@ -90,6 +98,11 @@ class UserRunnerImpl : UserRunner,
   void InitializeUserShell(
       AppConfigPtr user_shell,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+
+  void RunUserShell(AppConfigPtr user_shell);
+  // This is a termination sequence that may be used with |AtEnd()|, but also
+  // may be executed to terminate the currently running user shell.
+  void TerminateUserShell(const std::function<void()>& done);
 
   // |UserShellContext|
   void GetAccount(const GetAccountCallback& callback) override;
@@ -181,6 +194,7 @@ class UserRunnerImpl : UserRunner,
   std::unique_ptr<AppClient<Lifecycle>> module_resolver_app_;
   std::unique_ptr<AppClient<Lifecycle>> user_shell_app_;
   UserShellPtr user_shell_;
+  std::unique_ptr<ViewHost> user_shell_view_host_;
 
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
   AsyncHolder<StoryProviderImpl> story_provider_impl_;
@@ -243,6 +257,8 @@ class UserRunnerImpl : UserRunner,
 
   // The agent controller used to control the clipboard agent.
   AgentControllerPtr clipboard_agent_controller_;
+
+  OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };

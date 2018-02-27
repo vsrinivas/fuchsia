@@ -57,6 +57,10 @@ class UserControllerImpl : UserController, UserContext {
 
  private:
   // |UserController|
+  void SwapUserShell(AppConfigPtr user_shell,
+                     const SwapUserShellCallback& callback) override;
+
+  // |UserController|
   void Watch(f1dl::InterfaceHandle<UserWatcher> watcher) override;
 
   // |UserContext|

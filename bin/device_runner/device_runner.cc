@@ -191,9 +191,10 @@ class Settings {
 
 class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
  public:
-  explicit DeviceRunnerApp(const Settings& settings,
-                           std::shared_ptr<app::ApplicationContext> const app_context,
-                           std::function<void()> on_shutdown)
+  explicit DeviceRunnerApp(
+      const Settings& settings,
+      std::shared_ptr<app::ApplicationContext> const app_context,
+      std::function<void()> on_shutdown)
       : settings_(settings),
         user_provider_impl_("UserProviderImpl"),
         app_context_(std::move(app_context)),
@@ -271,7 +272,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // dev_device_shell (which mimics flutter behavior) blocks until it receives
     // the root view request.
     f1dl::InterfaceHandle<mozart::ViewOwner> root_view;
-    f1dl::InterfaceHandle<mozart::Presentation> presentation;
+    mozart::PresentationPtr presentation;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
     if (!settings_.test) {
       app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
@@ -393,16 +394,13 @@ int main(int argc, const char** argv) {
   trace::TraceProvider trace_provider(loop.async());
   auto app_context = std::shared_ptr<app::ApplicationContext>(
       app::ApplicationContext::CreateFromStartupInfo());
-  fxl::AutoCall<fxl::Closure> cobalt_cleanup = SetupCobalt(
-      settings, std::move(loop.task_runner()), app_context.get());
+  fxl::AutoCall<fxl::Closure> cobalt_cleanup =
+      SetupCobalt(settings, std::move(loop.task_runner()), app_context.get());
 
-  modular::DeviceRunnerApp app(
-      settings,
-      app_context,
-      [&loop, &cobalt_cleanup] {
-        cobalt_cleanup.call();
-        loop.QuitNow();
-      });
+  modular::DeviceRunnerApp app(settings, app_context, [&loop, &cobalt_cleanup] {
+    cobalt_cleanup.call();
+    loop.QuitNow();
+  });
   loop.Run();
 
   return 0;

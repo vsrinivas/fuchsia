@@ -67,6 +67,7 @@ executable("user_runner_bin") {
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/fidl:scope",
+    "//peridot/lib/fidl:view_host",
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",

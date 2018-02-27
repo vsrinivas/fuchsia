@@ -8,6 +8,7 @@
 #include <string>
 
 #include "lib/agent/fidl/agent_provider.fidl.h"
+#include "lib/app/cpp/connect.h"
 #include "lib/clipboard/fidl/clipboard.fidl.h"
 #include "lib/config/fidl/config.fidl.h"
 #include "lib/fxl/files/directory.h"
@@ -175,6 +176,7 @@ void UserRunnerImpl::Initialize(
   InitializeMaxwell(user_shell->url, std::move(story_shell));
   InitializeClipboard();
   InitializeUserShell(std::move(user_shell), std::move(view_owner_request));
+
   ReportEvent(ModularEvent::BOOTED_TO_USER_RUNNER);
 }
 
@@ -580,13 +582,22 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::String& user_shell_url,
 void UserRunnerImpl::InitializeUserShell(
     AppConfigPtr user_shell,
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+  // We setup our own view and make the UserShell a child of it.
+  user_shell_view_host_ = std::make_unique<ViewHost>(
+      application_context_->ConnectToEnvironmentService<mozart::ViewManager>(),
+      std::move(view_owner_request));
+  RunUserShell(std::move(user_shell));
+  AtEnd([this](std::function<void()> cont) { TerminateUserShell(cont); });
+}
+
+void UserRunnerImpl::RunUserShell(AppConfigPtr user_shell) {
   user_shell_app_ = std::make_unique<AppClient<Lifecycle>>(
       user_scope_->GetLauncher(), std::move(user_shell));
-  user_shell_app_->services().ConnectToService(user_shell_.NewRequest());
 
-  AtEnd(Reset(&user_shell_app_));
-  AtEnd(Reset(&user_shell_));
-  AtEnd(Teardown(kBasicTimeout, "UserShell", user_shell_app_.get()));
+  if (user_shell_.is_bound()) {
+    user_shell_.Unbind();
+  }
+  user_shell_app_->services().ConnectToService(user_shell_.NewRequest());
 
   user_shell_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "User Shell seems to have crashed unexpectedly."
@@ -594,11 +605,60 @@ void UserRunnerImpl::InitializeUserShell(
     Logout();
   });
 
+  mozart::ViewOwnerPtr view_owner;
   mozart::ViewProviderPtr view_provider;
   user_shell_app_->services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateView(std::move(view_owner_request), nullptr);
+  view_provider->CreateView(view_owner.NewRequest(), nullptr);
+  user_shell_view_host_->ConnectView(std::move(view_owner));
 
+  if (user_shell_context_binding_.is_bound()) {
+    user_shell_context_binding_.Unbind();
+  }
   user_shell_->Initialize(user_shell_context_binding_.NewBinding());
+}
+
+void UserRunnerImpl::TerminateUserShell(const std::function<void()>& done) {
+  user_shell_app_->Teardown(kBasicTimeout, [this, done] {
+    user_shell_.Unbind();
+    user_shell_app_.reset();
+    done();
+  });
+}
+
+class UserRunnerImpl::SwapUserShellOperation : Operation<> {
+ public:
+  SwapUserShellOperation(OperationContainer* const container,
+                         UserRunnerImpl* const user_runner_impl,
+                         AppConfigPtr user_shell_config,
+                         ResultCall result_call)
+      : Operation("UserRunnerImpl::SwapUserShellOperation",
+                  container,
+                  std::move(result_call)),
+        user_runner_impl_(user_runner_impl),
+        user_shell_config_(std::move(user_shell_config)) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+    user_runner_impl_->story_provider_impl_->StopAllStories([this, flow] {
+      user_runner_impl_->TerminateUserShell([this, flow] {
+        user_runner_impl_->RunUserShell(std::move(user_shell_config_));
+      });
+    });
+  }
+
+  UserRunnerImpl* const user_runner_impl_;
+  AppConfigPtr user_shell_config_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(SwapUserShellOperation);
+};
+
+void UserRunnerImpl::SwapUserShell(AppConfigPtr user_shell_config,
+                                   const SwapUserShellCallback& callback) {
+  new SwapUserShellOperation(&operation_queue_, this,
+                             std::move(user_shell_config), callback);
 }
 
 void UserRunnerImpl::Terminate(std::function<void()> done) {

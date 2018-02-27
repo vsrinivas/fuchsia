@@ -59,6 +59,9 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   void Connect(f1dl::InterfaceRequest<StoryProvider> request);
 
+  void StopAllStories(const std::function<void()>& callback);
+
+  // Stops serving the StoryProvider interface and stops all stories.
   void Teardown(const std::function<void()>& callback);
 
   // Called by StoryControllerImpl.
@@ -261,7 +264,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   class CreateStoryCall;
   class DeleteStoryCall;
   class GetControllerCall;
-  class TeardownCall;
+  class StopAllStoriesCall;
+  class StopStoryShellCall;
   class GetImportanceCall;
   class GetLinkPeerCall;
   class DumpStateCall;
