@@ -195,6 +195,69 @@ zx_status_t AssociatedState::HandleDisassociation(const ImmutableMgmtFrame<Disas
     return ZX_OK;
 }
 
+zx_status_t AssociatedState::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
+                                               const wlan_rx_info_t& rxinfo) {
+    if (client_->HasBufferedFrames()) {
+        // Dequeue buffered Ethernet frame.
+        fbl::unique_ptr<Packet> packet;
+        auto status = client_->DequeueEthernetFrame(&packet);
+        if (status != ZX_OK) {
+            errorf("[client] [%s] unable to dequeue buffered frames\n",
+                   client_->addr().ToString().c_str());
+            return status;
+        }
+
+        // Treat Packet as Ethernet frame.
+        auto hdr = packet->field<EthernetII>(0);
+        auto payload = packet->field<uint8_t>(sizeof(hdr));
+        size_t payload_len = packet->len() - sizeof(hdr);
+        auto eth_frame = ImmutableBaseFrame<EthernetII>(hdr, payload, payload_len);
+
+        // Convert Ethernet to Data frame.
+        fbl::unique_ptr<Packet> data_packet;
+        status = client_->ConvertEthernetToDataFrame(eth_frame, &data_packet);
+        if (status != ZX_OK) {
+            errorf("[client] [%s] couldn't convert ethernet frame: %d\n",
+                   client_->addr().ToString().c_str(), status);
+            return status;
+        }
+
+        // Set `more` bit if there are more frames buffered.
+        auto fc = data_packet->mut_field<FrameControl>(0);
+        fc->set_more_data(client_->HasBufferedFrames() ? 1 : 0);
+
+        // Send Data frame.
+        return client_->SendDataFrame(fbl::move(data_packet));
+    }
+
+    // There are no frames buffered for the client.
+    // Respond with a null data frame and report the situation.
+    size_t len = sizeof(DataFrameHeader);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), len);
+    packet->clear();
+    packet->set_peer(Packet::Peer::kWlan);
+    auto hdr = packet->mut_field<DataFrameHeader>(0);
+    hdr->fc.set_type(FrameType::kData);
+    hdr->fc.set_subtype(DataSubtype::kNull);
+    hdr->fc.set_from_ds(1);
+    hdr->addr1 = client_->addr();
+    hdr->addr2 = client_->bss()->bssid();
+    hdr->addr3 = client_->bss()->bssid();
+    hdr->sc.set_seq(client_->next_seq_no());
+
+    zx_status_t status = client_->SendDataFrame(fbl::move(packet));
+    if (status != ZX_OK) {
+        errorf("[client] [%s] could not send null data frame as PS-POLL response: %d\n",
+               client_->addr().ToString().c_str(), status);
+        return status;
+    }
+
+    return ZX_OK;
+}
+
 void AssociatedState::OnExit() {
     client_->CancelTimer();
     inactive_timeout_ = zx::time();
@@ -335,6 +398,15 @@ zx_status_t RemoteClient::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     return ZX_OK;
 }
 
+zx_status_t RemoteClient::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
+                                            const wlan_rx_info_t& rxinfo) {
+    ZX_DEBUG_ASSERT(frame.hdr->ta == addr_);
+    if (frame.hdr->ta != addr_) { return ZX_ERR_STOP; }
+
+    ForwardCurrentFrameTo(state());
+    return ZX_OK;
+}
+
 zx_status_t RemoteClient::StartTimer(zx::time deadline) {
     CancelTimer();
     return timer_->SetTimer(deadline);
@@ -460,6 +532,18 @@ zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<Ethernet
 
     ps_pkt_queue_.Enqueue(fbl::move(packet));
     return ZX_OK;
+}
+
+zx_status_t RemoteClient::DequeueEthernetFrame(fbl::unique_ptr<Packet>* out_packet) {
+    ZX_DEBUG_ASSERT(ps_pkt_queue_.size() > 0);
+    if (ps_pkt_queue_.size() == 0) { return ZX_ERR_NO_RESOURCES; }
+
+    *out_packet = ps_pkt_queue_.Dequeue();
+    return ZX_OK;
+}
+
+bool RemoteClient::HasBufferedFrames() const {
+    return ps_pkt_queue_.size() > 0;
 }
 
 zx_status_t RemoteClient::ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,

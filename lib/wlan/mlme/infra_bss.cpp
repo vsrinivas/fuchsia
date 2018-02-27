@@ -59,6 +59,16 @@ zx_status_t InfraBss::HandleAuthentication(const ImmutableMgmtFrame<Authenticati
     return ZX_OK;
 }
 
+zx_status_t InfraBss::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
+                                        const wlan_rx_info_t& rxinfo) {
+    auto& client_addr = frame.hdr->ta;
+    if (frame.hdr->bssid != bssid_) { return ZX_ERR_STOP; }
+    if (clients_.GetClientAid(client_addr) != frame.hdr->aid) { return ZX_ERR_STOP; }
+
+    ForwardCurrentFrameTo(clients_.GetClient(client_addr));
+    return ZX_OK;
+}
+
 void InfraBss::HandleClientStateChange(const common::MacAddr& client, RemoteClient::StateId from,
                                        RemoteClient::StateId to) {
     debugfn();

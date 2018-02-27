@@ -79,6 +79,14 @@ zx_status_t BssClientMap::ReleaseAid(const common::MacAddr& addr) {
     return ZX_OK;
 }
 
+aid_t BssClientMap::GetClientAid(const common::MacAddr& addr) {
+    ZX_DEBUG_ASSERT(Has(addr));
+    if (!Has(addr)) { return kUnknownAid; }
+
+    auto iter = clients_.find(addr);
+    return iter->second.aid;
+}
+
 bool BssClientMap::HasAidAvailable() {
     return !aid_bitmap_.Get(kMinClientAid, kMaxClients);
 }

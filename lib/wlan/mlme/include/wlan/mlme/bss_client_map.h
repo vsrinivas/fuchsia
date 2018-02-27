@@ -36,6 +36,7 @@ class BssClientMap {
     RemoteClientInterface* GetClient(const common::MacAddr& addr);
     zx_status_t AssignAid(const common::MacAddr& addr, aid_t* out_aid);
     zx_status_t ReleaseAid(const common::MacAddr& addr);
+    aid_t GetClientAid(const common::MacAddr& addr);
 
    private:
     struct RemoteClient {

@@ -43,6 +43,8 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
 
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
+    zx_status_t HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
+                                  const wlan_rx_info_t& rxinfo) override;
 
     zx_status_t SendAuthentication(status_code::StatusCode result);
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
@@ -52,6 +54,8 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
 
     // Enqueues an ethernet frame which can be sent at a later point in time.
     zx_status_t EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame);
+    zx_status_t DequeueEthernetFrame(fbl::unique_ptr<Packet>* out_packet);
+    bool HasBufferedFrames() const;
     zx_status_t ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
                                            fbl::unique_ptr<Packet>* out_frame);
 
@@ -154,6 +158,8 @@ class AssociatedState : public BaseState {
                                        const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleDisassociation(const ImmutableMgmtFrame<Disassociation>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
+                                  const wlan_rx_info_t& rxinfo) override;
 
     inline RemoteClient::StateId id() const override { return RemoteClient::StateId::kAssociated; }
 
