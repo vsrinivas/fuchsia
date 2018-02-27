@@ -154,13 +154,13 @@ static const pbus_dev_t mali_dev = {
 #if GPIO_TEST
 static const pbus_gpio_t gpio_test_gpios[] = {
     {
+        .gpio = GPIO_USER_LED3,
+    },
+    {
         .gpio = GPIO_USER_LED1,
     },
     {
         .gpio = GPIO_USER_LED2,
-    },
-    {
-        .gpio = GPIO_USER_LED3,
     },
     {
         .gpio = GPIO_USER_LED4,
@@ -169,9 +169,9 @@ static const pbus_gpio_t gpio_test_gpios[] = {
 
 static const pbus_dev_t gpio_test_dev = {
     .name = "hikey960-gpio-test",
-    .vid = PDEV_VID_96BOARDS,
-    .pid = PDEV_PID_HIKEY960,
-    .did = PDEV_DID_HIKEY960_GPIO_TEST,
+    .vid = PDEV_VID_GENERIC,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_GPIO_TEST,
     .gpios = gpio_test_gpios,
     .gpio_count = countof(gpio_test_gpios),
 };

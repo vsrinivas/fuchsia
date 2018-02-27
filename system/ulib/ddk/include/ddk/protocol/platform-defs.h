@@ -20,6 +20,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_DSI                7   // DSI
 #define PDEV_DID_BT_UART            8   // Bluetooth HCI over UART
 #define PDEV_DID_UART_TEST          9   // Simple UART test driver
+#define PDEV_DID_GPIO_TEST          10  // Simple GPIO test driver
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
@@ -29,8 +30,7 @@ __BEGIN_CDECLS;
 #define PDEV_VID_96BOARDS           2
 #define PDEV_PID_HIKEY960           1
 
-#define PDEV_DID_HIKEY960_GPIO_TEST 1
-#define PDEV_DID_HIKEY960_I2C_TEST  2
+#define PDEV_DID_HIKEY960_I2C_TEST  1
 
 // Google
 #define PDEV_VID_GOOGLE             3
@@ -47,7 +47,6 @@ __BEGIN_CDECLS;
 #define PDEV_PID_VIM2               2
 
 #define PDEV_DID_VIM_DISPLAY        1
-#define PDEV_DID_VIM_GPIO_TEST      2
 
 // Amlogic
 #define PDEV_VID_AMLOGIC            5
