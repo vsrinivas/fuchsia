@@ -73,15 +73,14 @@ void ModuleContextImpl::StartModule(
       ModuleSource::INTERNAL);
 }
 
-void ModuleContextImpl::StartDaisy(
+void ModuleContextImpl::EmbedDaisy(
     const f1dl::String& name,
     DaisyPtr daisy,
-    const f1dl::String& link_name,
     f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner,
-    const StartDaisyCallback& callback) {
-  story_controller_impl_->StartDaisy(
+    const EmbedDaisyCallback& callback) {
+  story_controller_impl_->EmbedDaisy(
       module_data_->module_path, name, std::move(daisy),
       std::move(incoming_services), std::move(module_controller),
       std::move(view_owner), ModuleSource::INTERNAL, callback);
@@ -102,15 +101,14 @@ void ModuleContextImpl::StartModuleInShell(
       ModuleSource::INTERNAL);
 }
 
-void ModuleContextImpl::StartDaisyInShell(
+void ModuleContextImpl::StartDaisy(
     const f1dl::String& name,
     DaisyPtr daisy,
-    const f1dl::String& link_name,
     f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation,
-    const StartDaisyInShellCallback& callback) {
-  story_controller_impl_->StartDaisyInShell(
+    const StartDaisyCallback& callback) {
+  story_controller_impl_->StartDaisy(
       module_data_->module_path, name, std::move(daisy),
       std::move(incoming_services), std::move(module_controller),
       std::move(surface_relation), ModuleSource::INTERNAL, callback);

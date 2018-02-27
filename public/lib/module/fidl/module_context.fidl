@@ -31,69 +31,51 @@ interface ModuleContext {
   // compatibility reasons. MI4-739
   GetLink@0(string? name, Link& link);
 
+  // Like EmbedDaisy(), but the view of the newly started module is sent to the
+  // story shell for display.
+  //
+  // Providing a |surface_relation| will advise the StoryShell how to layout
+  // surfaces that the new module creates. If |surface_relation|
+  // is null then a default relation is used.
+  // TODO(thatguy): Rename to StartModule().
+  StartDaisy@1(string name, Daisy daisy,
+               app.ServiceProvider&? incoming_services,
+               ModuleController& module_controller,
+               SurfaceRelation? surface_relation)
+               => (StartDaisyStatus status);
+
   // Starts a new Module instance. The Module to execute is identified
-  // by the URL of the application executable, and the Module instance
+  // by the the contents of |daisy| and the Module instance
   // is given a |name| in the scope of the starting Module instance.
-  // The |name|, together with the names of all ancestor modules, is
-  // used to identify existing component message queues and links when
-  // the Story is resumed.
   //
-  // If |link_name| is null, then the parent module's default link is
-  // passed to the new module. Otherwise, a reference to the parent
-  // module's |link_name| is passed to the starting module as its
-  // default link.
-  //
-  // If the method is called again with the same name by the same Module
+  // If the method is called again with the same |name| by the same Module
   // instance, but with different arguments (or with non-null service exchange
   // arguments), the existing Module instance is restarted with the changed
   // arguments. If the other arguments don't change, just an additional module
-  // controller connection is made, and the view_owner request is closed.
+  // controller connection is made, and the |view_owner| request is closed.
   //
   // The calling Module instance and the new Module instance may also
   // interact by exchanging ServiceProviders. The new Module
   // instance may implement |incoming_services|, if an interface
   // request is supplied.
-  //
-  // TODO(mesch): EmbedModule() should be used instead, and StartModuleInShell()
-  // should be renamed to StartModule().
-  StartModule@1(string name, string module_url, string? link_name,
-                app.ServiceProvider&? incoming_services,
-                ModuleController& module_controller,
-                mozart.ViewOwner& view_owner);
-
-  // Like StartModule(), but instead accepts a Daisy structure. See docs for
-  // StartDaisyInShell().
-  StartDaisy@2(string name, Daisy daisy, string? link_name,
+  // TODO(thatguy): Rename to EmbedModule().
+  EmbedDaisy@2(string name, Daisy daisy,
                app.ServiceProvider&? incoming_services,
                ModuleController& module_controller,
                mozart.ViewOwner& view_owner) => (StartDaisyStatus status);
 
-  // Like StartModule(), but the view of the newly started module is
-  // sent to the story shell for display.
-  //
-  // Providing a |surface_relation| will advise the StoryShell how to
-  // layout surfaces that the new module creates. If |surface_relation|
-  // is null then a default relation is used.
-  //
-  // If |focused| is set to true, then the surface will also get focus.
-  StartModuleInShell@3(string name, string module_url, string? link_name,
+  // DEPRECATED: Use EmbedDaisy().
+  StartModule@3(string name, string module_url, string? link_name,
+                app.ServiceProvider&? incoming_services,
+                ModuleController& module_controller,
+                mozart.ViewOwner& view_owner);
+
+  // DEPRECATED: Use StartDaisy().
+  StartModuleInShell@4(string name, string module_url, string? link_name,
                        app.ServiceProvider&? incoming_services,
                        ModuleController& module_controller,
                        SurfaceRelation? surface_relation,
                        bool focused);
-
-  // Like StartModuleInShell(), but instead accepts a Daisy structure. A Module
-  // is selected based on a process called Module Resolution (see
-  // docs/module_resolution.md). The child Module will see one Link per |daisy.nouns|
-  // available through its ModuleContext.GetLink() call.
-  //
-  // TODO(thatguy): Add a return value that indicates success or error. Example
-  // of error: no Modules could be resolved for |daisy|.
-  StartDaisyInShell@4(string name, Daisy daisy, string? link_name,
-                      app.ServiceProvider&? incoming_services,
-                      ModuleController& module_controller,
-                      SurfaceRelation? surface_relation)
-                      => (StartDaisyStatus status);
 
   // Like StartModuleInShell(), but starts multiple modules simultaneously and
   // specifies a custom layout for them (aka container).
@@ -124,9 +106,8 @@ interface ModuleContext {
   // TODO(mesch): There is no Daisy variant of this call yet. Specifying a
   // desired module by URL should just be expressible as a Daisy too, and then
   // the URL and Daisy variants of these calls should be merged.
-  //
-  // TODO(mesch): StartModule() should be renamed to EmbedModule(), and then
-  // StartModuleInShell() should be renamed StartModule().
+  // TODO(thatguy): This doesn't appear to be used outside peridot tests.
+  // Consider removing it if it's not in fact used.
   EmbedModule@5(string name, string module_url, string? link_name,
                 app.ServiceProvider&? incoming_services,
                 ModuleController& module_controller,

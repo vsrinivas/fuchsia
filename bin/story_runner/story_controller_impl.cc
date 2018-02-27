@@ -2032,7 +2032,7 @@ void StoryControllerImpl::StartModuleInShell(
       module_source, [] {});
 }
 
-void StoryControllerImpl::StartDaisy(
+void StoryControllerImpl::EmbedDaisy(
     const f1dl::Array<f1dl::String>& parent_module_path,
     const f1dl::String& module_name,
     DaisyPtr daisy,
@@ -2055,7 +2055,7 @@ void StoryControllerImpl::StartDaisy(
       std::move(callback));
 }
 
-void StoryControllerImpl::StartDaisyInShell(
+void StoryControllerImpl::StartDaisy(
     const f1dl::Array<f1dl::String>& parent_module_path,
     const f1dl::String& module_name,
     DaisyPtr daisy,

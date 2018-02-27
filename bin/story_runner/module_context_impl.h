@@ -66,14 +66,13 @@ class ModuleContextImpl : ModuleContext {
       f1dl::InterfaceRequest<ModuleController> module_controller,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   // |ModuleContext|
-  void StartDaisy(
+  void EmbedDaisy(
       const f1dl::String& name,
       DaisyPtr daisy,
-      const f1dl::String& link_name,
       f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner,
-      const StartDaisyCallback& callback) override;
+      const EmbedDaisyCallback& callback) override;
   // |ModuleContext|
   void StartModuleInShell(
       const f1dl::String& name,
@@ -84,14 +83,13 @@ class ModuleContextImpl : ModuleContext {
       SurfaceRelationPtr surface_relation,
       bool focus) override;
   // |ModuleContext|
-  void StartDaisyInShell(
+  void StartDaisy(
       const f1dl::String& name,
       DaisyPtr daisy,
-      const f1dl::String& link_name,
       f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
-      const StartDaisyInShellCallback& callback) override;
+      const StartDaisyCallback& callback) override;
   // |ModuleContext|
   void StartContainerInShell(
       const f1dl::String& name,

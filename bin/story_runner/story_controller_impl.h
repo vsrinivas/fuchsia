@@ -179,7 +179,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       ModuleSource module_source);
 
   // Called by ModuleContextImpl.
-  void StartDaisy(
+  void EmbedDaisy(
       const f1dl::Array<f1dl::String>& parent_module_path,
       const f1dl::String& module_name,
       DaisyPtr daisy,
@@ -190,7 +190,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       std::function<void(StartDaisyStatus)> callback);
 
   // Called by ModuleContextImpl.
-  void StartDaisyInShell(
+  void StartDaisy(
       const f1dl::Array<f1dl::String>& parent_module_path,
       const f1dl::String& module_name,
       DaisyPtr daisy,
