@@ -329,22 +329,7 @@ static void x86_iframe_process_pending_signals(x86_iframe_t* frame) {
     }
 }
 
-/* top level x86 exception handler for most exceptions and irqs */
-void x86_exception_handler(x86_iframe_t* frame) {
-    // are we recursing?
-    if (unlikely(arch_in_int_handler()) && frame->vector != X86_INT_NMI) {
-        exception_die(frame, "recursion in interrupt handler\n");
-    }
-
-    arch_set_in_int_handler(true);
-    thread_preempt_disable();
-
-    // did we come from user or kernel space?
-    bool from_user = is_from_user(frame);
-
-    // deliver the interrupt
-    ktrace_tiny(TAG_IRQ_ENTER, ((uint32_t)frame->vector << 8) | arch_curr_cpu_num());
-
+static void handle_exception_types(x86_iframe_t* frame) {
     switch (frame->vector) {
     case X86_INT_DEBUG:
         kcounter_add(exceptions_debug, 1u);
@@ -452,6 +437,25 @@ void x86_exception_handler(x86_iframe_t* frame) {
         exception_die(frame, "unhandled exception type, halting\n");
         break;
     }
+}
+
+/* top level x86 exception handler for most exceptions and irqs */
+void x86_exception_handler(x86_iframe_t* frame) {
+    // are we recursing?
+    if (unlikely(arch_in_int_handler()) && frame->vector != X86_INT_NMI) {
+        exception_die(frame, "recursion in interrupt handler\n");
+    }
+
+    arch_set_in_int_handler(true);
+    thread_preempt_disable();
+
+    // did we come from user or kernel space?
+    bool from_user = is_from_user(frame);
+
+    // deliver the interrupt
+    ktrace_tiny(TAG_IRQ_ENTER, ((uint32_t)frame->vector << 8) | arch_curr_cpu_num());
+
+    handle_exception_types(frame);
 
     /* at this point we're able to be rescheduled, so we're 'outside' of the int handler */
     bool preempt_pending = thread_preempt_reenable();
