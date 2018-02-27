@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -88,10 +89,53 @@ func (m *Manager) Channel() *zx.Channel {
 	return m.channel
 }
 
-// HasBlob returns true if the requested blob is available, false otherwise
+// HasBlob returns true if the requested blob is available for reading, false otherwise
 func (m *Manager) HasBlob(root string) bool {
-	_, err := os.Stat(m.bpath(root))
-	return err == nil
+	// blobstore currently provides a signal handle over handle 2 in remoteio, but
+	// if it ever moves away from remoteio, or there are ever protocol or api
+	// changes this path is very brittle. There's no hard requirement for
+	// intermediate clients/servers to retain this handle. As such we disregard
+	// that option for detecting readable state.
+	// blobstore also does not reject open flags on in-flight blobs that only
+	// contain "read", even though reads on those files would return errors. This
+	// could be used to detect blob readability state, by opening and then issueing
+	// a read, but that will make blobstore do a lot of work.
+	// the final method chosen here for now is to open the blob for writing,
+	// non-exclusively. That will be rejected if the blob has already been fully
+	// written.
+	f, err := syscall.Open(m.bpath(root), syscall.O_WRONLY|syscall.O_APPEND, 0)
+	if os.IsNotExist(err) {
+		return false
+	}
+	syscall.Close(f)
+
+	// if there was no error, then we opened the file for writing and the file was
+	// writable, which means it exists and is being written by someone.
+	if err == nil {
+		return false
+	}
+
+	// Access denied indicates we explicitly know that we have opened a blob that
+	// already exists and it is not writable - meaning it's already written.
+	if e, ok := err.(zx.Error); ok && e.Status == zx.ErrAccessDenied {
+		return true
+	}
+
+	log.Printf("blobstore: unknown error asserting blob existence: %s", err)
+
+	// fall back to trying to stat the file. note that stat doesn't tell us if the
+	// file is readable/writable, but we best assume here that if stat succeeds
+	// there's something blocking the write path, and there's a good chance that
+	// the file exists and is readable. this could lead to premature package
+	// activation and associated errors, but those are hopefully better than some
+	// problems the other way around, such as repeatedly trying to re-download
+	// blobs. if the stat does not succeed however, we probably want to try to
+	// indicate to various systems that they should try to fetch/write the blob,
+	// hopefully leading to write-repair.
+	if _, err := os.Stat(m.bpath(root)); err == nil {
+		return true
+	}
+	return false
 }
 
 func (m *Manager) bpath(root string) string {
