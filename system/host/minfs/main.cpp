@@ -8,6 +8,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <libgen.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -385,12 +386,12 @@ int usage() {
     fprintf(stderr,
             "usage: minfs [ <option>* ] <file-or-device>[@<size>] <command> [ <arg>* ]\n"
             "\n"
-            "options:  -v               some debug messages\n"
-            "          -vv              all debug messages\n"
-            "          --readonly       Mount filesystem read-only\n"
-            "          --offset [bytes] Byte offset at which minfs partition starts (default 0)\n"
-            "          --length [bytes] Length in bytes of minfs partition (default to "
-                                        "remaining length)\n"
+            "options:  -r|--readonly       Mount filesystem read-only\n"
+            "          -o|--offset [bytes] Byte offset at which minfs partition starts\n"
+            "                              Default = 0\n"
+            "          -l|--length [bytes] Length in bytes of minfs partition\n"
+            "                              Default = Remaining Length\n"
+            "          -h|--help           Display this message\n"
             "\n");
     for (unsigned n = 0; n < fbl::count_of(CMDS); n++) {
         fprintf(stderr, "%9s %-10s %s\n", n ? "" : "commands:",
@@ -414,40 +415,47 @@ off_t get_size(int fd) {
 int main(int argc, char** argv) {
     off_t size = 0;
     bool readonly = false;
-    __UNUSED off_t offset = 0;
+    off_t offset = 0;
     off_t length = 0;
 
-    // handle options
-    while (argc > 1) {
-        if (!strcmp(argv[1], "--readonly")) {
-            readonly = true;
-        } else if (!strcmp(argv[1], "--offset")) {
-            if (argc < 2) {
-                return usage();
-            }
-            offset = atoi(argv[2]);
-            argc--;
-            argv++;
-        } else if (!strcmp(argv[1], "--length")) {
-            if (argc < 2) {
-                return usage();
-            }
-            length = atoi(argv[2]);
-            argc--;
-            argv++;
-        } else {
+    while (1) {
+        static struct option opts[] = {
+            {"readonly", no_argument, nullptr, 'r'},
+            {"offset", required_argument, nullptr, 'o'},
+            {"length", required_argument, nullptr, 'l'},
+            {"help", no_argument, nullptr, 'h'},
+            {nullptr, 0, nullptr, 0},
+        };
+        int opt_index;
+        int c = getopt_long(argc, argv, "ro:l:vh", opts, &opt_index);
+        if (c < 0) {
             break;
         }
-        argc--;
-        argv++;
+        switch (c) {
+        case 'r':
+            readonly = true;
+            break;
+        case 'o':
+            offset = atoi(optarg);
+            break;
+        case 'l':
+            length = atoi(optarg);
+            break;
+        case 'h':
+        default:
+            return usage();
+        }
     }
 
+    argc -= optind;
+    argv += optind;
+
     // Block device passed by path
-    if (argc < 3) {
+    if (argc < 2) {
         return usage();
     }
-    char* fn = argv[1];
-    char* cmd = argv[2];
+    char* fn = argv[0];
+    char* cmd = argv[1];
     char* sizestr;
     if ((sizestr = strchr(fn, '@')) != nullptr) {
         *sizestr++ = 0;
@@ -539,7 +547,7 @@ found:
 
     for (unsigned i = 0; i < fbl::count_of(CMDS); i++) {
         if (!strcmp(cmd, CMDS[i].name)) {
-            return CMDS[i].func(fbl::move(bc), argc - 3, argv + 3);
+            return CMDS[i].func(fbl::move(bc), argc - 2, argv + 2);
         }
     }
     return -1;

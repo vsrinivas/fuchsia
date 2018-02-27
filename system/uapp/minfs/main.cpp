@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <libgen.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -26,11 +27,16 @@
 
 namespace {
 
-int do_minfs_check(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
+typedef struct minfs_options {
+    bool readonly;
+    bool verbose;
+} minfs_options_t;
+
+int do_minfs_check(fbl::unique_ptr<minfs::Bcache> bc) {
     return minfs_check(fbl::move(bc));
 }
 
-int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, bool readonly) {
+int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, minfs_options_t* options) {
     zx_handle_t h = zx_get_startup_handle(PA_HND(PA_USER0, 0));
     if (h == ZX_HANDLE_INVALID) {
         FS_TRACE_ERROR("minfs: Could not access startup handle to mount point\n");
@@ -40,23 +46,31 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, bool readonly) {
     async::Loop loop;
     fs::Vfs vfs(loop.async());
     trace::TraceProvider trace_provider(loop.async());
-    vfs.SetReadonly(readonly);
+    vfs.SetReadonly(options->readonly);
 
-    if (MountAndServe(&vfs, fbl::move(bc), zx::channel(h)) != ZX_OK) {
+    zx_status_t status;
+    if ((status = MountAndServe(&vfs, fbl::move(bc), zx::channel(h)) != ZX_OK)) {
+        if (options->verbose) {
+            fprintf(stderr, "minfs: Failed to mount: %d\n", status);
+        }
         return -1;
+    }
+
+    if (options->verbose) {
+        fprintf(stderr, "minfs: Mounted successfully\n");
     }
 
     loop.Run();
     return 0;
 }
 
-int do_minfs_mkfs(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
+int do_minfs_mkfs(fbl::unique_ptr<minfs::Bcache> bc) {
     return Mkfs(fbl::move(bc));
 }
 
 struct {
     const char* name;
-    int (*func)(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv);
+    int (*func)(fbl::unique_ptr<minfs::Bcache> bc);
     uint32_t flags;
     const char* help;
 } CMDS[] = {
@@ -68,11 +82,11 @@ struct {
 
 int usage() {
     fprintf(stderr,
-            "usage: minfs [ <option>* ] <file-or-device>[@<size>] <command> [ <arg>* ]\n"
+            "usage: minfs [ <option>* ] <command> [ <arg>* ]\n"
             "\n"
-            "options:  -v               some debug messages\n"
-            "          -vv              all debug messages\n"
-            "          --readonly       Mount filesystem read-only\n"
+            "options:  -v|--verbose     Some debug messages\n"
+            "          -r|--readonly    Mount filesystem read-only\n"
+            "          -h|--help        Display this message\n"
             "\n"
             "On Fuchsia, MinFS takes the block device argument by handle.\n"
             "This can make 'minfs' commands hard to invoke from command line.\n"
@@ -99,31 +113,47 @@ off_t get_size(int fd) {
 } // namespace
 
 int main(int argc, char** argv) {
-    off_t size = 0;
-    bool readonly = false;
-    __UNUSED off_t offset = 0;
-    off_t length = 0;
+    minfs_options_t options;
+    options.readonly = false;
+    options.verbose = false;
 
-    // handle options
-    while (argc > 1) {
-        if (!strcmp(argv[1], "--readonly")) {
-            readonly = true;
-        } else {
+    while (1) {
+        static struct option opts[] = {
+            {"readonly", no_argument, nullptr, 'r'},
+            {"verbose", no_argument, nullptr, 'v'},
+            {"help", no_argument, nullptr, 'h'},
+            {nullptr, 0, nullptr, 0},
+        };
+        int opt_index;
+        int c = getopt_long(argc, argv, "rvh", opts, &opt_index);
+        if (c < 0) {
             break;
         }
-        argc--;
-        argv++;
+        switch (c) {
+        case 'r':
+            options.readonly = true;
+            break;
+        case 'v':
+            options.verbose = true;
+            break;
+        case 'h':
+        default:
+            return usage();
+        }
     }
 
+    argc -= optind;
+    argv += optind;
+
     // Block device passed by handle
-    if (argc < 2) {
+    if (argc != 1) {
         return usage();
     }
-    char* cmd = argv[1];
+    char* cmd = argv[0];
 
     fbl::unique_fd fd;
     fd.reset(FS_FD_BLOCKDEVICE);
-    if (!readonly) {
+    if (!options.readonly) {
         block_info_t block_info;
         zx_status_t status = static_cast<zx_status_t>(ioctl_block_get_info(fd.get(), &block_info));
         if (status < ZX_OK) {
@@ -131,39 +161,33 @@ int main(int argc, char** argv) {
                     status);
             return -1;
         }
-        readonly = block_info.flags & BLOCK_FLAG_READONLY;
+        options.readonly = block_info.flags & BLOCK_FLAG_READONLY;
     }
 
+    off_t size = get_size(fd.get());
     if (size == 0) {
-        size = get_size(fd.get());
-        if (size == 0) {
-            fprintf(stderr, "minfs: failed to access block device\n");
-            return usage();
-        }
-    }
-
-    if (length > size) {
-        fprintf(stderr, "Invalid length\n");
+        fprintf(stderr, "minfs: failed to access block device\n");
         return usage();
-    } else if (length > 0) {
-        size = length;
     }
-
     size /= minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
     if (minfs::Bcache::Create(&bc, fbl::move(fd), (uint32_t)size) < 0) {
-        fprintf(stderr, "error: cannot create block cache\n");
+        fprintf(stderr, "minfs: error: cannot create block cache\n");
         return -1;
     }
 
     if (!strcmp(cmd, "mount")) {
-        return do_minfs_mount(fbl::move(bc), readonly);
+        return do_minfs_mount(fbl::move(bc), &options);
     }
 
     for (unsigned i = 0; i < fbl::count_of(CMDS); i++) {
         if (!strcmp(cmd, CMDS[i].name)) {
-            return CMDS[i].func(fbl::move(bc), argc - 3, argv + 3);
+            int r = CMDS[i].func(fbl::move(bc));
+            if (options.verbose) {
+                fprintf(stderr, "minfs: %s completed with result: %d\n", cmd, r);
+            }
+            return r;
         }
     }
     return -1;
