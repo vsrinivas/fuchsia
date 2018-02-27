@@ -113,8 +113,7 @@ zx_status_t InfraBss::ReleaseAid(const common::MacAddr& client) {
 }
 
 fbl::unique_ptr<Buffer> InfraBss::GetPowerSavingBuffer(size_t len) {
-    // TODO(hahnr): Implement.
-    return fbl::unique_ptr<Buffer>();
+    return GetBuffer(len);
 }
 
 zx_status_t InfraBss::CreateClientTimer(const common::MacAddr& client_addr,
