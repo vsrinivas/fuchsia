@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_GUEST_H_
 #define GARNET_LIB_MACHINA_GUEST_H_
 
+#include <async/cpp/loop.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
@@ -36,6 +37,7 @@ class Guest {
 
   const PhysMem& phys_mem() const { return phys_mem_; }
   zx_handle_t handle() const { return guest_; }
+  async_t* device_async() const { return device_loop_.async(); }
 
   // Setup a trap to delegate accesses to an IO region to |handler|.
   zx_status_t CreateMapping(TrapType type,
@@ -65,12 +67,9 @@ class Guest {
 
   fbl::Mutex mutex_;
 
-  zx_status_t IoThread();
-
   zx_handle_t guest_ = ZX_HANDLE_INVALID;
   PhysMem phys_mem_;
 
-  zx::port port_;
   fbl::SinglyLinkedList<fbl::unique_ptr<IoMapping>> mappings_;
 
   VcpuFactory vcpu_factory_ =
@@ -78,12 +77,9 @@ class Guest {
         return ZX_ERR_BAD_STATE;
       };
   fbl::unique_ptr<Vcpu> vcpus_[kMaxVcpus] = {};
-};
 
-// Convert a key from a port packet into a pointer to the mapping object.
-static inline IoMapping* trap_key_to_mapping(uint64_t trap_key) {
-  return reinterpret_cast<IoMapping*>(trap_key);
-}
+  async::Loop device_loop_;
+};
 
 }  // namespace machina
 

@@ -23,16 +23,19 @@
 #include "garnet/lib/machina/arch/x86/decode.h"
 #endif
 
+namespace machina {
+
 #if __aarch64__
 static zx_status_t HandleMmioArm(const zx_packet_guest_mem_t& mem,
-                                 uint64_t trap_key, uint64_t* reg) {
+                                 uint64_t trap_key,
+                                 uint64_t* reg) {
   machina::IoValue mmio = {mem.access_size, {.u64 = mem.data}};
+  IoMapping* mapping = IoMapping::FromPortKey(trap_key);
   if (!mem.read) {
-    return machina::trap_key_to_mapping(trap_key)->Write(mem.addr, mmio);
+    return mapping->Write(mem.addr, mmio);
   }
 
-  zx_status_t status =
-      machina::trap_key_to_mapping(trap_key)->Read(mem.addr, &mmio);
+  zx_status_t status = mapping->Read(mem.addr, &mmio);
   if (status != ZX_OK) {
     return status;
   }
@@ -47,7 +50,7 @@ static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t& mem,
                                  uint64_t trap_key,
                                  const machina::Instruction* inst) {
   zx_status_t status;
-  machina::IoValue mmio = {inst->access_size, {.u64 = 0}};
+  IoValue mmio = {inst->access_size, {.u64 = 0}};
   switch (inst->type) {
     case INST_MOV_WRITE:
       switch (inst->access_size) {
@@ -66,10 +69,10 @@ static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t& mem,
       if (status != ZX_OK) {
         return status;
       }
-      return machina::trap_key_to_mapping(trap_key)->Write(mem.addr, mmio);
+      return IoMapping::FromPortKey(trap_key)->Write(mem.addr, mmio);
 
     case INST_MOV_READ:
-      status = machina::trap_key_to_mapping(trap_key)->Read(mem.addr, &mmio);
+      status = IoMapping::FromPortKey(trap_key)->Read(mem.addr, &mmio);
       if (status != ZX_OK) {
         return status;
       }
@@ -85,7 +88,7 @@ static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t& mem,
       }
 
     case INST_TEST:
-      status = machina::trap_key_to_mapping(trap_key)->Read(mem.addr, &mmio);
+      status = IoMapping::FromPortKey(trap_key)->Read(mem.addr, &mmio);
       if (status != ZX_OK) {
         return status;
       }
@@ -101,8 +104,6 @@ static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t& mem,
   }
 }
 #endif
-
-namespace machina {
 
 struct Vcpu::ThreadEntryArgs {
   Guest* guest;
@@ -311,7 +312,7 @@ zx_status_t Vcpu::HandleInput(const zx_packet_guest_io_t& io,
                               uint64_t trap_key) {
   IoValue value = {};
   value.access_size = io.access_size;
-  zx_status_t status = trap_key_to_mapping(trap_key)->Read(io.port, &value);
+  zx_status_t status = IoMapping::FromPortKey(trap_key)->Read(io.port, &value);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to handle port in 0x" << std::hex << io.port
                    << ": " << std::dec << status;
@@ -336,7 +337,7 @@ zx_status_t Vcpu::HandleOutput(const zx_packet_guest_io_t& io,
   IoValue value;
   value.access_size = io.access_size;
   value.u32 = io.u32;
-  zx_status_t status = trap_key_to_mapping(trap_key)->Write(io.port, value);
+  zx_status_t status = IoMapping::FromPortKey(trap_key)->Write(io.port, value);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to handle port out 0x" << std::hex << io.port
                    << ": " << std::dec << status;

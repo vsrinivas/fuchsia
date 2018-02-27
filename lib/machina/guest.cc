@@ -11,6 +11,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <fbl/string_buffer.h>
 #include <zircon/device/sysinfo.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -49,20 +50,6 @@ static constexpr uint32_t trap_kind(machina::TrapType type) {
   }
 }
 
-static constexpr zx_handle_t get_trap_port(machina::TrapType type,
-                                           zx_handle_t port) {
-  switch (type) {
-    case machina::TrapType::MMIO_BELL:
-      return port;
-    case machina::TrapType::PIO_SYNC:
-    case machina::TrapType::MMIO_SYNC:
-      return ZX_HANDLE_INVALID;
-    default:
-      ZX_PANIC("Unhandled TrapType %d\n", static_cast<int>(type));
-      return ZX_HANDLE_INVALID;
-  }
-}
-
 namespace machina {
 
 zx_status_t Guest::Init(size_t mem_size) {
@@ -86,26 +73,13 @@ zx_status_t Guest::Init(size_t mem_size) {
   }
   zx_handle_close(resource);
 
-  status = zx::port::create(0, &port_);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create port";
-    return status;
-  }
-
   for (size_t i = 0; i < kNumAsyncWorkers; ++i) {
-    thrd_t thread;
-    auto thread_func =
-        +[](void* arg) { return static_cast<Guest*>(arg)->IoThread(); };
-    int ret = thrd_create_with_name(&thread, thread_func, this, "io-handler");
-    if (ret != thrd_success) {
-      FXL_LOG(ERROR) << "Failed to create io handler thread " << ret;
-      return ZX_ERR_INTERNAL;
-    }
-
-    ret = thrd_detach(thread);
-    if (ret != thrd_success) {
-      FXL_LOG(ERROR) << "Failed to detach io handler thread " << ret;
-      return ZX_ERR_INTERNAL;
+    fbl::StringBuffer<ZX_MAX_NAME_LEN> name_buffer;
+    name_buffer.AppendPrintf("io-handler-%zu", i);
+    status = device_loop_.StartThread(name_buffer.c_str());
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to create async worker";
+      return status;
     }
   }
 
@@ -116,51 +90,23 @@ Guest::~Guest() {
   zx_handle_close(guest_);
 }
 
-zx_status_t Guest::IoThread() {
-  while (true) {
-    zx_port_packet_t packet;
-    zx_status_t status = port_.wait(zx::time::infinite(), &packet, 0);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to wait for device port " << status;
-      break;
-    }
-    if (packet.type != ZX_PKT_TYPE_GUEST_BELL) {
-      FXL_LOG(ERROR) << "Unsupported async packet type " << packet.type;
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    IoValue value = {};
-    uint64_t addr = packet.guest_bell.addr;
-    status = trap_key_to_mapping(packet.key)->Write(addr, value);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Unable to handle packet for device " << status;
-      break;
-    }
-  }
-
-  return ZX_ERR_INTERNAL;
-}
-
 zx_status_t Guest::CreateMapping(TrapType type,
                                  uint64_t addr,
                                  size_t size,
                                  uint64_t offset,
                                  IoHandler* handler) {
-  fbl::AllocChecker ac;
-  auto mapping =
-      fbl::make_unique_checked<IoMapping>(&ac, addr, size, offset, handler);
-  if (!ac.check())
-    return ZX_ERR_NO_MEMORY;
-
-  // Set a trap for the IO region. We set the 'key' to be the address of the
-  // mapping so that we get the pointer to the mapping provided to us in port
-  // packets.
-  zx_handle_t port = get_trap_port(type, port_.get());
   uint32_t kind = trap_kind(type);
-  uint64_t key = reinterpret_cast<uintptr_t>(mapping.get());
-  zx_status_t status = zx_guest_set_trap(guest_, kind, addr, size, port, key);
-  if (status != ZX_OK)
+  fbl::AllocChecker ac;
+  auto mapping = fbl::make_unique_checked<IoMapping>(&ac, kind, addr, size,
+                                                     offset, handler);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  zx_status_t status = mapping->SetTrap(this);
+  if (status != ZX_OK) {
     return status;
+  }
 
   mappings_.push_front(fbl::move(mapping));
   return ZX_OK;

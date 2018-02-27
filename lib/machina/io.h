@@ -5,11 +5,14 @@
 #ifndef GARNET_LIB_MACHINA_IO_H_
 #define GARNET_LIB_MACHINA_IO_H_
 
+#include <async/cpp/trap.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
 #include <zircon/types.h>
 
 namespace machina {
+
+class Guest;
 
 struct IoValue {
   uint8_t access_size;
@@ -42,6 +45,10 @@ class IoHandler {
 // A single handler may be mapped to mutiple distinct address ranges.
 class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
  public:
+  static IoMapping* FromPortKey(uint64_t key) {
+    return reinterpret_cast<IoMapping*>(key);
+  }
+
   // Constructs an IoMapping.
   //
   // Any accesses starting at |base| for |size| bytes are to be handled by
@@ -54,8 +61,11 @@ class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
   // displacement into |base|. This implies that |handler| should be prepared
   // handle accesses between |offset| (inclusive) and |offset| + |size|
   // (exclusive).
-  IoMapping(uint64_t base, size_t size, uint64_t offset, IoHandler* handler)
-      : base_(base), size_(size), offset_(offset), handler_(handler) {}
+  IoMapping(uint32_t kind,
+            uint64_t base,
+            size_t size,
+            uint64_t offset,
+            IoHandler* handler);
 
   uint64_t base() const {
     canary_.Assert();
@@ -77,12 +87,19 @@ class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
     return handler_->Write(addr - base_ + offset_, value);
   }
 
- private:
+  zx_status_t SetTrap(Guest* guest);
+
+ protected:
+  void CallIoHandlerAsync(async_t* async, const zx_packet_guest_bell_t* bell);
+
   fbl::Canary<fbl::magic("IOMP")> canary_;
+  const uint32_t kind_;
   const uint64_t base_;
   const size_t size_;
   const uint64_t offset_;
   IoHandler* handler_;
+  async::GuestBellTrapMethod<IoMapping, &IoMapping::CallIoHandlerAsync>
+      async_trap_;
 };
 
 }  // namespace machina

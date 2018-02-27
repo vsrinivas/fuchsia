@@ -25,6 +25,7 @@ shared_library("machina") {
     "input_dispatcher.h",
     "inspect_service_impl.cc",
     "inspect_service_impl.h",
+    "io.cc",
     "io.h",
     "pci.cc",
     "pci.h",
