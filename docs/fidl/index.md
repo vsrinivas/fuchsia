@@ -140,15 +140,13 @@ Requirements
 
 *   We will not support FIDL bindings for any platform other than Fuchsia.
 
-    Where to Find the Code
+## Where to Find the Code
 
-_[TBD??]_
-
-_FIDL compiler: //Zircon/tools/fidl_
-
-_FIDL C bindings: //Zircon/system/ulib/fidl/c_
-
-_FIDL C++ bindings: //Zircon/system/ulib/fidl/cpp_
+- [_The compiler_](../../system/host/fidl)
+- [_C bindings_](../../system/ulib/fidl)
+- [_C++ bindings_](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/cpp)
+- [_Go bindings_](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/go)
+- [_Rust bindings_](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/rust)
 
 ## Constituent Parts of Specification
 
