@@ -33,7 +33,7 @@ class Gain {
   static constexpr AScale kUnityScale =
       (static_cast<AScale>(1u) << kFractionalScaleBits);
   static constexpr float kMinGain = AudioRenderer::kMutedGain;
-  static constexpr float kMaxGain = 24.0f;
+  static constexpr float kMaxGain = AudioRenderer::kMaxGain;
 
   // TODO(mpuryear): MTWN-70 Clarify/document/test audio::Gain's thread-safety
   // Some comments below say 'should' (i.e. recommendation, not requirement).

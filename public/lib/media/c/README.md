@@ -446,7 +446,7 @@ determines the effective size of the *fuchsia_audio_device_description* struct
 
 ### FUCHSIA_AUDIO_MAX_OUTPUT_GAIN
 ```
-const float FUCHSIA_AUDIO_MAX_OUTPUT_GAIN = 20.0f;
+const float FUCHSIA_AUDIO_MAX_OUTPUT_GAIN = 24.0f;
 ```
 This is the maximum value accepted by the *fuchsia_audio_output_stream_set_gain*
 call. If a client sends values greater than this to

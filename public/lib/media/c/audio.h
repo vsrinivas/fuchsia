@@ -16,7 +16,7 @@
 __BEGIN_CDECLS
 
 const size_t FUCHSIA_AUDIO_MAX_DEVICE_NAME_LENGTH = 256;
-const float FUCHSIA_AUDIO_MAX_OUTPUT_GAIN = 20.0f;
+const float FUCHSIA_AUDIO_MAX_OUTPUT_GAIN = 24.0f;
 // zx_time_t is a uint64, but we limit it to only the bottom half of the range,
 // to smoothly interface with int64 timestamps elsewhere in the system. Hence
 // the highest possible timestamp (reserved by the system to signify 'whatever
