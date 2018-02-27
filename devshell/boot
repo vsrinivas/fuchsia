@@ -29,12 +29,15 @@ usage() {
 }
 
 if [[ "$1" =~ ^- ]]; then
+  machine_type=""
+
   case "$1" in
   -h|--help)
     usage
   ;;
+  --netboot|--bootfs)
+    machine_type="$1"
   esac
-  machine_type=""
 
 else
   machine_type="$1"
