@@ -693,8 +693,45 @@ bool Library::ResolveIdentifierType(const raw::IdentifierType& identifier_type,
     if (!named_decl)
         return false;
 
-    // TODO(TO-702) identifier type shape
-    *out_typeshape = TypeShape(184u, 8u);
+    switch (named_decl->kind) {
+    case Decl::Kind::kConst: {
+        // A constant isn't a type!
+        return false;
+    }
+    case Decl::Kind::kEnum: {
+        if (identifier_type.nullability == types::Nullability::Nullable) {
+            // Enums aren't nullable!
+            return false;
+        } else {
+            *out_typeshape = static_cast<const Enum*>(named_decl)->typeshape;
+        }
+        break;
+    }
+    case Decl::Kind::kInterface: {
+        *out_typeshape = kHandleTypeShape;
+        break;
+    }
+    case Decl::Kind::kStruct: {
+        if (identifier_type.nullability == types::Nullability::Nullable) {
+            *out_typeshape = kPointerTypeShape;
+        } else {
+            *out_typeshape = static_cast<const Struct*>(named_decl)->typeshape;
+        }
+        break;
+    }
+    case Decl::Kind::kUnion: {
+        if (identifier_type.nullability == types::Nullability::Nullable) {
+            *out_typeshape = kPointerTypeShape;
+        } else {
+            *out_typeshape = static_cast<const Union*>(named_decl)->typeshape;
+        }
+        break;
+    }
+    default: {
+        abort();
+    }
+    }
+
     return true;
 }
 
