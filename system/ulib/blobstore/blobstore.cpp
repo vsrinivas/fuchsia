@@ -115,16 +115,17 @@ blobstore_inode_t* Blobstore::GetNode(size_t index) const {
 
 zx_status_t VnodeBlob::Verify() const {
     TRACE_DURATION("blobstore", "Blobstore::Verify");
-    ZX_DEBUG_ASSERT(blob_ != nullptr);
 
     const blobstore_inode_t* inode = blobstore_->GetNode(map_index_);
+    const void* data = inode->blob_size ? GetData() : nullptr;
+    const void* tree = inode->blob_size ? GetMerkle() : nullptr;
     // TODO(smklein): We could lazily verify more of the VMO if
     // we could fault in pages on-demand.
     //
     // For now, we aggressively verify the entire VMO up front.
     Digest d;
     d = reinterpret_cast<const uint8_t*>(&digest_[0]);
-    return MerkleTree::Verify(GetData(), inode->blob_size, GetMerkle(),
+    return MerkleTree::Verify(data, inode->blob_size, tree,
                               MerkleTree::GetTreeLength(inode->blob_size), 0,
                               inode->blob_size, d);
 }
@@ -187,9 +188,6 @@ void VnodeBlob::BlobCloseHandles() {
 zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     TRACE_DURATION("blobstore", "Blobstore::SpaceAllocate", "size_data", size_data);
 
-    if (size_data == 0) {
-        return ZX_ERR_INVALID_ARGS;
-    }
     if (GetState() != kBlobStateEmpty) {
         return ZX_ERR_BAD_STATE;
     }
@@ -205,6 +203,22 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     memset(inode->merkle_root_hash, 0, Digest::kLength);
     inode->blob_size = size_data;
     inode->num_blocks = MerkleTreeBlocks(*inode) + BlobDataBlocks(*inode);
+
+    // Special case for the null blob: We skip the write phase
+    if (inode->blob_size == 0) {
+        // Toss a valid block to the null blob, to distinguish it from
+        // unallocated nodes.
+        inode->start_block = kStartBlockMinimum;
+        if ((status = Verify()) != ZX_OK) {
+            return status;
+        }
+        SetState(kBlobStateDataWrite);
+        if ((status = WriteMetadata()) != ZX_OK) {
+            fprintf(stderr, "Null blob metadata fail: %d\n", status);
+            goto fail;
+        }
+        return ZX_OK;
+    }
 
     // Open VMOs, so we can begin writing after allocate succeeds.
     if ((status = MappedVmo::Create(inode->num_blocks * kBlobstoreBlockSize, "blob", &blob_)) != ZX_OK) {
@@ -397,12 +411,15 @@ zx_status_t VnodeBlob::CopyVmo(zx_rights_t rights, zx_handle_t* out) {
     if (GetState() != kBlobStateReadable) {
         return ZX_ERR_BAD_STATE;
     }
+    auto inode = blobstore_->GetNode(map_index_);
+    if (inode->blob_size == 0) {
+        return ZX_ERR_BAD_STATE;
+    }
     zx_status_t status = InitVmos();
     if (status != ZX_OK) {
         return status;
     }
 
-    auto inode = blobstore_->GetNode(map_index_);
     // TODO(smklein): Only clone / verify the part of the vmo that
     // was requested.
     const size_t data_start = MerkleTreeBlocks(*inode) * kBlobstoreBlockSize;
@@ -426,6 +443,12 @@ zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
         return ZX_ERR_BAD_STATE;
     }
 
+    auto inode = blobstore_->GetNode(map_index_);
+    if (inode->blob_size == 0) {
+        *actual = 0;
+        return ZX_OK;
+    }
+
     zx_status_t status = InitVmos();
     if (status != ZX_OK) {
         return status;
@@ -433,7 +456,6 @@ zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
 
     Digest d;
     d = reinterpret_cast<const uint8_t*>(&digest_[0]);
-    auto inode = blobstore_->GetNode(map_index_);
     if (off >= inode->blob_size) {
         *actual = 0;
         return ZX_OK;

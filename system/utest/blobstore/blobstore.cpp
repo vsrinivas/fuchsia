@@ -434,14 +434,53 @@ static bool TestBasic(void) {
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
                              info->data.get(), info->size_data, &fd));
         ASSERT_EQ(close(fd), 0);
+
+        // We can re-open and verify the Blob as read-only
         fd = open(info->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to-reopen blob");
-
         ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data));
-
         ASSERT_EQ(close(fd), 0);
+
+        // We cannot re-open the blob as writable
+        fd = open(info->path, O_RDWR | O_CREAT);
+        ASSERT_LT(fd, 0, "Shouldn't be able to re-create blob that exists");
+        fd = open(info->path, O_RDWR);
+        ASSERT_LT(fd, 0, "Shouldn't be able to re-open blob as writable");
+        fd = open(info->path, O_WRONLY);
+        ASSERT_LT(fd, 0, "Shouldn't be able to re-open blob as writable");
+
         ASSERT_EQ(unlink(info->path), 0);
     }
+
+    ASSERT_EQ(EndBlobstoreTest<TestType>(&test_info), 0, "unmounting blobstore");
+    END_TEST;
+}
+
+template <fs_test_type_t TestType>
+static bool TestNullBlob(void) {
+    BEGIN_TEST;
+    test_info_t test_info;
+    ASSERT_EQ(StartBlobstoreTest<TestType>(&test_info), 0, "Mounting Blobstore");
+    fbl::unique_ptr<blob_info_t> info;
+    ASSERT_TRUE(GenerateBlob(0, &info));
+
+    int fd;
+    fd = open(info->path, O_CREAT | O_EXCL | O_RDWR);
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(ftruncate(fd, 0), 0);
+    char buf[1];
+    ASSERT_EQ(read(fd, &buf[0], 1), 0, "Null Blob should reach EOF immediately");
+    ASSERT_EQ(close(fd), 0);
+
+    fd = open(info->path, O_CREAT | O_EXCL | O_RDWR);
+    ASSERT_LT(fd, 0, "Null Blob should already exist");
+    fd = open(info->path, O_CREAT | O_RDWR);
+    ASSERT_LT(fd, 0, "Null Blob should not be openable as writable");
+
+    fd = open(info->path, O_RDONLY);
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(unlink(info->path), 0, "Null Blob should be unlinkable");
 
     ASSERT_EQ(EndBlobstoreTest<TestType>(&test_info), 0, "unmounting blobstore");
     END_TEST;
@@ -693,7 +732,7 @@ static bool BadAllocation(void) {
 
     int fd = open(info->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
-    ASSERT_EQ(ftruncate(fd, 0), -1, "Blob without data");
+    ASSERT_EQ(ftruncate(fd, 0), -1, "Blob without data doesn't match null blob");
     // This is the size of the entire disk; we won't have room.
     ASSERT_EQ(ftruncate(fd, test_info.blk_size * test_info.blk_count), -1, "Huge blob");
 
@@ -1597,6 +1636,7 @@ static bool CorruptAtMount(void) {
 
 BEGIN_TEST_CASE(blobstore_tests)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestBasic)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestNullBlob)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestMmap)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestReaddir)
 RUN_TEST_MEDIUM(TestQueryInfo<FS_TEST_FVM>)
