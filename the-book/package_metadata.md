@@ -45,8 +45,9 @@ the [`ApplicationRunner`][application-runner] service.
 ## sandbox
 
 The sandbox file controls the environment in which the contents of the package
-execute. Specifically, the file controls which resources the package can access
-during execution.
+execute. Specifically, the file controls which directories the package can
+access during execution. Currently, whitelisting access to individual files is
+not supported.
 
 The sandbox file is a JSON object with the following schema:
 
@@ -82,10 +83,12 @@ The sandbox file is a JSON object with the following schema:
 }
 ```
 
-The `dev` array contains a list of well-known device paths that are provided to
-the application. For example, if the string `class/input` appears in the `dev`
-array, then `/dev/class/input` will appear in the namespaces of applications
-loaded from the package.
+The `dev` array contains a list of well-known device directories that are
+provided to the application. For example, if the string `class/input` appears in
+the `dev` array, then `/dev/class/input` will appear in the namespaces of applications
+loaded from the package. To whitelist access to a `misc` device, such as
+`/dev/misc/sysinfo`, add the string `misc` to the `dev` array. Unfortunately,
+whitelisting access to individual `misc` devices is not possible currently.
 
 The `system` array contains a list of well-known paths within the system package
 that are provided to the application. For example, if the string `bin` appears
