@@ -10,7 +10,7 @@ namespace i915 {
 
 BootloaderDisplay::BootloaderDisplay(Controller* controller,
                                      registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, ddi, registers::DPLL_1, registers::TRANS_A, pipe) {}
+        : DisplayDevice(controller, ddi, registers::TRANS_A, pipe) {}
 
 bool BootloaderDisplay::QueryDevice(zx_display_info_t* di) {
     uint32_t format, width, height, stride;

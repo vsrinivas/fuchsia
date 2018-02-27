@@ -14,7 +14,6 @@
 #include "gtt.h"
 #include "power.h"
 #include "registers-ddi.h"
-#include "registers-dpll.h"
 #include "registers-pipe.h"
 #include "registers-transcoder.h"
 
@@ -27,7 +26,7 @@ using DisplayDeviceType = ddk::Device<DisplayDevice>;
 
 class DisplayDevice : public DisplayDeviceType, public ddk::DisplayProtocol<DisplayDevice> {
 public:
-    DisplayDevice(Controller* device, registers::Ddi ddi, registers::Dpll dpll,
+    DisplayDevice(Controller* device, registers::Ddi ddi,
                   registers::Trans trans, registers::Pipe pipe);
     virtual ~DisplayDevice();
 
@@ -47,8 +46,7 @@ public:
     registers::Ddi ddi() const { return ddi_; }
     registers::Pipe pipe() const { return pipe_; }
     registers::Trans trans() const { return trans_; }
-    registers::Dpll dpll() const { return dpll_; }
-    const Controller* controller() { return controller_; }
+    Controller* controller() { return controller_; }
 
 protected:
     // Queries the DisplayDevice to see if there is a supported display attached. If
@@ -67,7 +65,6 @@ private:
     Controller* controller_;
 
     registers::Ddi ddi_;
-    registers::Dpll dpll_;
     registers::Trans trans_;
     registers::Pipe pipe_;
 

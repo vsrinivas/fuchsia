@@ -12,7 +12,13 @@ namespace registers {
 
 static constexpr uint32_t kDpllCount = 4;
 
-enum Dpll { DPLL_0, DPLL_1, DPLL_2, DPLL_3 };
+enum Dpll {
+    DPLL_INVALID = -1,
+    DPLL_0 = 0,
+    DPLL_1,
+    DPLL_2,
+    DPLL_3,
+};
 
 static const Dpll kDplls[kDpllCount] = {
     DPLL_0, DPLL_1, DPLL_2, DPLL_3,

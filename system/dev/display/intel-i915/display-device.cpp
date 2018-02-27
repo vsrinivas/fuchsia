@@ -21,10 +21,10 @@
 
 namespace i915 {
 
-DisplayDevice::DisplayDevice(Controller* controller, registers::Ddi ddi, registers::Dpll dpll,
+DisplayDevice::DisplayDevice(Controller* controller, registers::Ddi ddi,
                              registers::Trans trans, registers::Pipe pipe)
         : DisplayDeviceType(controller->zxdev()), controller_(controller)
-        , ddi_(ddi), dpll_(dpll), trans_(trans), pipe_(pipe) {}
+        , ddi_(ddi), trans_(trans), pipe_(pipe) {}
 
 DisplayDevice::~DisplayDevice() {
     if (inited_) {

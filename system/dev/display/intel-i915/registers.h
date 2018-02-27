@@ -213,14 +213,6 @@ public:
     }
 };
 
-// HDPORT_STATE
-class HdportState : public hwreg::RegisterBase<HdportState, uint32_t> {
-public:
-    DEF_BIT(15, dpll2_used);
-
-    static auto Get() { return hwreg::RegisterAddr<HdportState>(0x45050); }
-};
-
 // SBLC_PWM_CTL1
 class SouthBacklightCtl1 : public hwreg::RegisterBase<SouthBacklightCtl1, uint32_t> {
 public:

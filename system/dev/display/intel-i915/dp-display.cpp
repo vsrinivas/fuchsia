@@ -832,15 +832,6 @@ void CalculateRatio(uint32_t x, uint32_t y, uint32_t* m_out, uint32_t* n_out) {
 
 }
 
-static registers::Dpll select_dpll(registers::Ddi ddi) {
-    if (ddi == registers::DDI_A) {
-        return registers::DPLL_0;
-    } else {
-        // TODO(ZX-1413): Do a smarter mapping for stuff like HDPORT or sharing
-        return static_cast<registers::Dpll>(ddi + 1);
-    }
-}
-
 static registers::Trans select_trans(registers::Ddi ddi, registers::Pipe pipe) {
     if (ddi == registers::DDI_A) {
         return registers::TRANS_EDP;
@@ -854,7 +845,7 @@ static registers::Trans select_trans(registers::Ddi ddi, registers::Pipe pipe) {
 namespace i915 {
 
 DpDisplay::DpDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, ddi, select_dpll(ddi), select_trans(ddi, pipe), pipe)
+        : DisplayDevice(controller, ddi, select_trans(ddi, pipe), pipe)
         , edid_(this) { }
 
 bool DpDisplay::QueryDevice(zx_display_info* info) {
@@ -954,7 +945,8 @@ bool DpDisplay::DefaultModeset() {
         return false;
     }
 
-    if (controller()->igd_opregion().IsEdp(ddi())) {
+    bool is_edp = controller()->igd_opregion().IsEdp(ddi());
+    if (is_edp) {
         auto panel_ctrl = registers::PanelPowerCtrl::Get().ReadFrom(mmio_space());
         auto panel_status = registers::PanelPowerStatus::Get().ReadFrom(mmio_space());
 
@@ -995,7 +987,6 @@ bool DpDisplay::DefaultModeset() {
 
     registers::TranscoderRegs trans_regs(trans());
 
-
     uint8_t dpll_link_rate;
     if (dp_link_rate_mhz_ == 1620) {
         dpll_link_rate = registers::DpllControl1::kLinkRate810Mhz;
@@ -1005,28 +996,35 @@ bool DpDisplay::DefaultModeset() {
         ZX_ASSERT(dp_link_rate_mhz_ == 5400);
         dpll_link_rate = registers::DpllControl1::kLinkRate2700Mhz;
     }
-    // Configure this DPLL to produce a suitable clock signal.
-    auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
-    dpll_ctrl1.dpll_hdmi_mode(dpll()).set(0);
-    dpll_ctrl1.dpll_ssc_enable(dpll()).set(0);
-    dpll_ctrl1.dpll_link_rate(dpll()).set(dpll_link_rate);
-    dpll_ctrl1.dpll_override(dpll()).set(1);
-    dpll_ctrl1.WriteTo(mmio_space());
-    dpll_ctrl1.ReadFrom(mmio_space()); // Posting read
-
-    // Enable this DPLL and wait for it to lock
-    auto dpll_enable = registers::DpllEnable::Get(dpll()).ReadFrom(mmio_space());
-    dpll_enable.set_enable_dpll(1);
-    dpll_enable.WriteTo(mmio_space());
-    if (!WAIT_ON_MS(registers::DpllStatus
-            ::Get().ReadFrom(mmio_space()).dpll_lock(dpll()).get(), 5)) {
-        zxlogf(ERROR, "DPLL failed to lock\n");
+    registers::Dpll dpll = controller()->SelectDpll(is_edp, false /* is_hdmi */, dpll_link_rate);
+    if (dpll == registers::DPLL_INVALID) {
         return false;
+    }
+
+    auto dpll_enable = registers::DpllEnable::Get(dpll).ReadFrom(mmio_space());
+    if (!dpll_enable.enable_dpll()) {
+        // Configure this DPLL to produce a suitable clock signal.
+        auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
+        dpll_ctrl1.dpll_hdmi_mode(dpll).set(0);
+        dpll_ctrl1.dpll_ssc_enable(dpll).set(0);
+        dpll_ctrl1.dpll_link_rate(dpll).set(dpll_link_rate);
+        dpll_ctrl1.dpll_override(dpll).set(1);
+        dpll_ctrl1.WriteTo(mmio_space());
+        dpll_ctrl1.ReadFrom(mmio_space()); // Posting read
+
+        // Enable this DPLL and wait for it to lock
+        dpll_enable.set_enable_dpll(1);
+        dpll_enable.WriteTo(mmio_space());
+        if (!WAIT_ON_MS(registers::DpllStatus
+                ::Get().ReadFrom(mmio_space()).dpll_lock(dpll).get(), 5)) {
+            zxlogf(ERROR, "DPLL failed to lock\n");
+            return false;
+        }
     }
 
     // Configure this DDI to use the given DPLL as its clock source.
     auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(mmio_space());
-    dpll_ctrl2.ddi_clock_select(ddi()).set(dpll());
+    dpll_ctrl2.ddi_clock_select(ddi()).set(dpll);
     dpll_ctrl2.ddi_select_override(ddi()).set(1);
     dpll_ctrl2.ddi_clock_off(ddi()).set(0);
     dpll_ctrl2.WriteTo(mmio_space());

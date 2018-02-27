@@ -19,6 +19,7 @@
 #include "power.h"
 #include "registers.h"
 #include "registers-ddi.h"
+#include "registers-dpll.h"
 #include "registers-pipe.h"
 #include "registers-transcoder.h"
 
@@ -51,6 +52,7 @@ public:
     bool ResetTrans(registers::Trans trans);
     bool ResetDdi(registers::Ddi ddi);
 
+    registers::Dpll SelectDpll(bool is_edp, bool is_hdmi, uint32_t rate);
 private:
     void EnableBacklight(bool enable);
     zx_status_t InitHotplug();
@@ -79,6 +81,11 @@ private:
 
     Power power_;
     PowerWellRef cd_clk_power_well_;
+    struct {
+        uint8_t use_count;
+        bool is_hdmi;
+        uint32_t rate;
+    } dplls_[registers::kDpllCount] = {};
 
     uint16_t device_id_;
     uint32_t flags_;

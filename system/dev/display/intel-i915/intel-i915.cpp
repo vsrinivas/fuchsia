@@ -337,6 +337,10 @@ bool Controller::BringUpDisplayEngine(bool resume) {
         ResetDdi(registers::kDdis[i]);
     }
 
+    for (unsigned i = 0; i < registers::kDpllCount; i++) {
+        dplls_[i].use_count = 0;
+    }
+
     AllocDisplayBuffers();
 
     return true;
@@ -411,18 +415,52 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
 
     // Remove the PLL mapping and disable the PLL (we don't share PLLs)
     auto dpll_ctrl2 = registers::DpllControl2::Get().ReadFrom(mmio_space());
-    dpll_ctrl2.ddi_clock_off(ddi).set(1);
-    dpll_ctrl2.WriteTo(mmio_space());
+    if (!dpll_ctrl2.ddi_clock_off(ddi).get()) {
+        dpll_ctrl2.ddi_clock_off(ddi).set(1);
+        dpll_ctrl2.WriteTo(mmio_space());
 
-    // We don't want to disable DPLL0, since that drives cdclk
-    registers::Dpll dpll = static_cast<registers::Dpll>(dpll_ctrl2.ddi_clock_select(ddi).get());
-    if (dpll != registers::DPLL_0) {
-        auto dpll_enable = registers::DpllEnable::Get(dpll).ReadFrom(mmio_space());
-        dpll_enable.set_enable_dpll(0);
-        dpll_enable.WriteTo(mmio_space());
+        registers::Dpll dpll = static_cast<registers::Dpll>(dpll_ctrl2.ddi_clock_select(ddi).get());
+        // Don't underflow if we're resetting at initialization
+        dplls_[dpll].use_count =
+                static_cast<uint8_t>(dplls_[dpll].use_count > 0 ? dplls_[dpll].use_count - 1 : 0);
+        // We don't want to disable DPLL0, since that drives cdclk.
+        if (dplls_[dpll].use_count == 0 && dpll != registers::DPLL_0) {
+            auto dpll_enable = registers::DpllEnable::Get(dpll).ReadFrom(mmio_space());
+            dpll_enable.set_enable_dpll(0);
+            dpll_enable.WriteTo(mmio_space());
+        }
     }
 
     return true;
+}
+
+registers::Dpll Controller::SelectDpll(bool is_edp, bool is_hdmi, uint32_t rate) {
+    registers::Dpll res = registers::DPLL_INVALID;
+    if (is_edp) {
+        if (dplls_[0].use_count == 0 || dplls_[0].rate == rate) {
+            res = registers::DPLL_0;
+        }
+    } else {
+        for (unsigned i = registers::kDpllCount - 1; i > 0; i--) {
+            if (dplls_[i].use_count == 0) {
+                res = static_cast<registers::Dpll>(i);
+            } else if (dplls_[i].is_hdmi == is_hdmi && dplls_[i].rate == rate) {
+                res = static_cast<registers::Dpll>(i);
+                break;
+            }
+        }
+    }
+
+    if (res != registers::DPLL_INVALID) {
+        dplls_[res].is_hdmi = is_hdmi;
+        dplls_[res].rate = rate;
+        dplls_[res].use_count++;
+        zxlogf(SPEW, "Selected DPLL %d\n", res);
+    } else {
+        zxlogf(INFO, "Failed to allocate DPLL\n");
+    }
+
+    return res;
 }
 
 void Controller::AllocDisplayBuffers() {
@@ -468,8 +506,7 @@ fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
     registers::Pipe pipe;
     if (!pipe_in_use(display_devices_, registers::PIPE_A)) {
         pipe = registers::PIPE_A;
-    } else if (!pipe_in_use(display_devices_, registers::PIPE_B)
-            && !registers::HdportState::Get().ReadFrom(mmio_space_.get()).dpll2_used()) {
+    } else if (!pipe_in_use(display_devices_, registers::PIPE_B)) {
         pipe = registers::PIPE_B;
     } else if (!pipe_in_use(display_devices_, registers::PIPE_C)) {
         pipe = registers::PIPE_C;
