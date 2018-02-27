@@ -55,15 +55,15 @@ PendingResponse& PendingResponse::operator=(PendingResponse&& other) {
   return *this;
 }
 
-zx_status_t PendingResponse::Send(MessageBuilder* builder) {
+zx_status_t PendingResponse::Send(const fidl_type_t* type, Message message) {
   if (!weak_controller_)
     return ZX_ERR_BAD_STATE;
   StubController* controller = weak_controller_->controller();
   if (!controller)
     return ZX_ERR_BAD_STATE;
-  builder->header()->txid = txid_;
-  Message message;
-  zx_status_t status = builder->Encode(&message, nullptr);
+  message.set_txid(txid_);
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Validate(type, &error_msg);
   if (status != ZX_OK)
     return status;
   zx_handle_t channel = controller->reader().channel().get();

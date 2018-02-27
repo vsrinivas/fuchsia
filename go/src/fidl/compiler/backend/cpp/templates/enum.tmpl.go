@@ -12,4 +12,15 @@ enum class {{ .Name }} : {{ .Type }} {
   {{- end }}
 };
 {{- end }}
+
+{{- define "EnumTraits" }}
+template <>
+struct CodingTraits<{{ .Namespace }}::{{ .Name }}> {
+  static constexpr size_t encoded_size = sizeof({{ .Namespace }}::{{ .Name }});
+  static void Encode(Encoder* encoder, {{ .Namespace }}::{{ .Name }}* value, size_t offset) {
+    {{ .Type }} underlying = static_cast<{{ .Type }}>(*value);
+    fidl::Encode(encoder, &underlying, offset);
+  }
+};
+{{- end }}
 `

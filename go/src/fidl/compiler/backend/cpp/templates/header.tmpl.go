@@ -16,7 +16,16 @@ const Header = `
 
 namespace {{ .Namespace }} {
 {{ end }}
+
 {{- define "GenerateHeaderPostamble" -}}
 }  // namespace {{ .Namespace }}
+{{ end }}
+
+{{- define "GenerateTraitsPreamble" -}}
+namespace fidl {
+{{ end }}
+
+{{- define "GenerateTraitsPostamble" -}}
+}  // namespace fidl
 {{ end }}
 `

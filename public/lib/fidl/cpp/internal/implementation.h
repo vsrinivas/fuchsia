@@ -10,7 +10,7 @@
 
 #include <memory>
 
-#include "lib/fidl/cpp/put.h"
+#include "lib/fidl/cpp/encoder.h"
 #include "lib/fidl/cpp/traits.h"
 
 #endif  // LIB_FIDL_CPP_INTERNAL_IMPLEMENTATION_H_

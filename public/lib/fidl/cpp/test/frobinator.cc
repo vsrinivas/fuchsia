@@ -27,10 +27,12 @@ FrobinatorProxy::FrobinatorProxy(::fidl::internal::ProxyController* controller)
 FrobinatorProxy::~FrobinatorProxy() = default;
 
 void FrobinatorProxy::Frob(::fidl::StringPtr value) {
-  ::fidl::MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-  builder.header()->ordinal = kFrobinator_Frob_Ordinal;
-  ::fidl::Build(&builder, value);
-  controller_->Send(&builder, nullptr);
+  ::fidl::Encoder encoder(kFrobinator_Frob_Ordinal);
+  size_t offset =
+      encoder.Alloc(::fidl::CodingTraits<::fidl::StringPtr>::encoded_size);
+  ::fidl::Encode(&encoder, &value, offset);
+  controller_->Send(&unbounded_nonnullable_string_message_type,
+                    encoder.GetMessage(), nullptr);
 }
 
 namespace {
@@ -51,7 +53,7 @@ class Frobinator_Grob_ResponseHandler
         message.Decode(&unbounded_nonnullable_string_message_type, &error_msg);
     if (status != ZX_OK)
       return status;
-    callback_(Params::Take(message.GetPayloadAs<Params::View>()));
+    callback_(Params::Take(message.GetPayloadAs<::fidl::StringView>()));
     return ZX_OK;
   }
 
@@ -68,10 +70,12 @@ class Frobinator_Grob_ResponseHandler
 
 void FrobinatorProxy::Grob(::fidl::StringPtr value, GrobCallback callback) {
   using ResponseHandler = Frobinator_Grob_ResponseHandler;
-  ::fidl::MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-  builder.header()->ordinal = kFrobinator_Grob_Ordinal;
-  ::fidl::Build(&builder, value);
-  controller_->Send(&builder,
+  ::fidl::Encoder encoder(kFrobinator_Grob_Ordinal);
+  size_t offset =
+      encoder.Alloc(::fidl::CodingTraits<::fidl::StringPtr>::encoded_size);
+  ::fidl::Encode(&encoder, &value, offset);
+  controller_->Send(&unbounded_nonnullable_string_message_type,
+                    encoder.GetMessage(),
                     std::make_unique<ResponseHandler>(std::move(callback)));
 }
 
@@ -87,10 +91,12 @@ class FrobinatorStub_Grob_Responder {
       : response_(std::move(response)) {}
 
   void operator()(::fidl::StringPtr value) {
-    ::fidl::MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-    builder.header()->ordinal = kFrobinator_Grob_Ordinal;
-    ::fidl::Build(&builder, value);
-    response_.Send(&builder);
+    ::fidl::Encoder encoder(kFrobinator_Grob_Ordinal);
+    size_t offset =
+        encoder.Alloc(::fidl::CodingTraits<::fidl::StringPtr>::encoded_size);
+    ::fidl::Encode(&encoder, &value, offset);
+    response_.Send(&unbounded_nonnullable_string_message_type,
+                   encoder.GetMessage());
   }
 
  private:
@@ -111,7 +117,7 @@ zx_status_t FrobinatorStub::Dispatch(
                               &error_msg);
       if (status != ZX_OK)
         break;
-      impl_->Frob(Params::Take(message.GetPayloadAs<Params::View>()));
+      impl_->Frob(Params::Take(message.GetPayloadAs<::fidl::StringView>()));
       break;
     }
     case kFrobinator_Grob_Ordinal: {
@@ -122,7 +128,7 @@ zx_status_t FrobinatorStub::Dispatch(
                               &error_msg);
       if (status != ZX_OK)
         break;
-      impl_->Grob(Params::Take(message.GetPayloadAs<Params::View>()),
+      impl_->Grob(Params::Take(message.GetPayloadAs<::fidl::StringView>()),
                   Responder(std::move(response)));
       break;
     }

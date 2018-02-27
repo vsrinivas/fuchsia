@@ -32,18 +32,18 @@ ProxyController& ProxyController::operator=(ProxyController&& other) {
 }
 
 zx_status_t ProxyController::Send(
-    MessageBuilder* builder,
+    const fidl_type_t* type,
+    Message message,
     std::unique_ptr<MessageHandler> response_handler) {
   zx_txid_t txid = 0;
   if (response_handler) {
     txid = next_txid_++;
     while (!txid || handlers_.find(txid) != handlers_.end())
       txid = next_txid_++;
-    builder->header()->txid = txid;
+    message.set_txid(txid);
   }
-  Message message;
   const char* error_msg = nullptr;
-  zx_status_t status = builder->Encode(&message, &error_msg);
+  zx_status_t status = message.Validate(type, &error_msg);
   if (status != ZX_OK)
     return status;
   status = message.Write(reader_.channel().get(), 0);

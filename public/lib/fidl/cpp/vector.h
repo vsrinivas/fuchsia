@@ -11,7 +11,6 @@
 #include <utility>
 #include <vector>
 
-#include "lib/fidl/cpp/put.h"
 #include "lib/fidl/cpp/traits.h"
 
 namespace fidl {
@@ -25,11 +24,6 @@ namespace fidl {
 template <typename T>
 class VectorPtr {
  public:
-  // A representation of a FIDL vector that does not own the memory for the
-  // vector. This representation matches the wire format representation of the
-  // vector.
-  using View = VectorView<typename ViewOf<T>::type>;
-
   VectorPtr() : is_null_(true) {}
   explicit VectorPtr(std::vector<T> vec)
       : vec_(std::move(vec)), is_null_(false) {}
@@ -38,24 +32,12 @@ class VectorPtr {
   VectorPtr& operator=(const VectorPtr&) = delete;
 
   VectorPtr(VectorPtr&& other)
-    : vec_(std::move(other.vec_)), is_null_(other.is_null_) {}
+      : vec_(std::move(other.vec_)), is_null_(other.is_null_) {}
 
   VectorPtr& operator=(VectorPtr&& other) {
     vec_ = std::move(other.vec_);
     is_null_ = other.is_null_;
     return *this;
-  }
-
-  // Copies the data from the |VectorView| into a new |VectorPtr| object, which
-  // is returned.
-  VectorPtr<T> Take(View* view) {
-    if (view->is_null())
-      return VectorPtr<T>();
-    std::vector<T> vec;
-    vec.resize(view->count());
-    for (size_t i = 0; i < view->count(); ++i)
-      Take(&vec.at(i), &view->at(i));
-    return VectorPtr<T>(std::move(vec));
   }
 
   // Accesses the underlying std::vector object.
@@ -98,50 +80,6 @@ class VectorPtr {
   std::vector<T> vec_;
   bool is_null_;
 };
-
-// Copies the vector data from |vector| into |*view|.
-//
-// Uses |builder| to allocate storage for the vector data. |*view| must be null
-// (e.g., freshly allocated) before calling this function.
-//
-// Returns whether |vector| was sucessfully copied into |*view|. For example,
-// this function could return false if it is unable to allocate sufficient
-// storage for the vector data from |builder|.
-template<typename T>
-bool PutAt(Builder* builder, typename VectorPtr<T>::View* view,
-           VectorPtr<T>* vector) {
-  using TypeView = typename ViewOf<T>::type;
-
-  if (vector->is_null())
-    return true;
-  size_t count = (*vector)->size();
-  TypeView* data = builder->NewArray<TypeView>(count);
-  if (!data)
-    return false;
-  view->set_data(data);
-  view->set_count(count);
-  for (size_t i = 0; i < count; ++i)
-    PutAt(builder, data + i, &(*vector)->at(i));
-  return true;
-}
-
-// Creates a VectorView and copies the given vector data into the VectorView.
-//
-// Uses |builder| to allocate storage for the |VectorView| and the vector data.
-//
-// Returns the VectorView if successful. Otherwise, returns nullptr. If this
-// function succeeds in allocating the VectorView but fails to allocate the
-// vector data, the function returns nullptr and does not roll back the
-// VectorView allocation in |builder|.
-template<typename T>
-typename ViewOf<T>::type Build(Builder* builder, const VectorPtr<T>& vector) {
-  using TypeView = typename ViewOf<T>::type;
-
-  TypeView* view = builder->New<TypeView>();
-  if (view && PutAt(builder, view, vector))
-    return view;
-  return nullptr;
-}
 
 }  // namespace fidl
 

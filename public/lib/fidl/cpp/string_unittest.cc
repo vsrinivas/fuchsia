@@ -26,21 +26,6 @@ TEST(StringPtr, Control) {
   EXPECT_EQ("hello, world", *other);
 }
 
-TEST(StringPtr, PutAt) {
-  uint8_t buffer[1024];
-  Builder builder(buffer, sizeof(buffer));
-
-  StringPtr string("hello, world");
-
-  StringView* view = builder.New<StringView>();
-  EXPECT_EQ(nullptr, view->data());
-  EXPECT_EQ(0u, view->size());
-  EXPECT_TRUE(PutAt(&builder, view, &string));
-  EXPECT_EQ("hello, world", *string);
-  EXPECT_EQ(12u, view->size());
-  EXPECT_EQ(0, memcmp(view->data(), string->data(), 12u));
-}
-
 TEST(StringPtr, Conversions) {
   StringPtr hello = "hello";
   EXPECT_FALSE(hello.is_null());

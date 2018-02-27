@@ -11,6 +11,7 @@
 #include <string>
 #include <utility>
 
+#include "lib/fidl/cpp/coding_traits.h"
 #include "lib/fidl/cpp/traits.h"
 
 namespace fidl {
@@ -23,11 +24,6 @@ namespace fidl {
 // the |is_null| and |operator bool| methods.
 class StringPtr {
  public:
-  // A representation of a FIDL string that does not own the memory for the
-  // string. This representation matches the wire format representation of the
-  // string.
-  using View = StringView;
-
   StringPtr();
   StringPtr(std::string str);
   StringPtr(const char* str);
@@ -81,34 +77,16 @@ class StringPtr {
   std::string& operator*() { return str_; }
   const std::string& operator*() const { return str_; }
 
+  void Encode(Encoder* encoder, size_t offset);
+
  private:
   std::string str_;
   bool is_null_;
 };
 
-// Copies the string data from |string| into |*view|.
-//
-// Uses |builder| to allocate storage for the string data. |*view| must be null
-// (e.g., freshly allocated) before calling this function.
-//
-// Returns whether |string| was sucessfully copied into |*view|. For example,
-// this function could return false if it is unable to allocate sufficient
-// storage for the string data from |builder|.
-bool PutAt(Builder* builder, StringView* view, StringPtr* string);
-
-// Creates a StringView and copies the given string data into the StringView.
-//
-// Uses |builder| to allocate storage for the StringView and the string data.
-//
-// Returns the StringView if successful. Otherwise, returns nullptr. If this
-// function succeeds in allocating the StringView but fails to allocate the
-// string data, the function returns nullptr and does not roll back the
-// StringView allocation in |builder|.
-StringView* Build(Builder* builder, const char* string, size_t size);
-StringView* Build(Builder* builder, const char* string);
-StringView* Build(Builder* builder, const std::string& string);
-StringView* Build(Builder* builder, StringView string);
-StringView* Build(Builder* builder, const StringPtr& string);
+template <>
+struct CodingTraits<StringPtr>
+    : public EncodableCodingTraits<StringPtr, sizeof(fidl_string_t)> {};
 
 }  // namespace fidl
 

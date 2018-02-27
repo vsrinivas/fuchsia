@@ -4,11 +4,15 @@
 
 source_set("cpp") {
   sources = [
-    "binding.h",
     "binding_set.h",
+    "binding.h",
+    "coding_traits.cc",
+    "coding_traits.h",
+    "encoder.cc",
+    "encoder.h",
     "interface_handle.h",
-    "interface_ptr.h",
     "interface_ptr_set.h",
+    "interface_ptr.h",
     "interface_request.h",
     "internal/header.h",
     "internal/implementation.h",
@@ -26,11 +30,8 @@ source_set("cpp") {
     "internal/stub_controller.h",
     "internal/weak_stub_controller.cc",
     "internal/weak_stub_controller.h",
-    "put.cc",
-    "put.h",
     "string.cc",
     "string.h",
-    "take.h",
     "traits.h",
     "vector.h",
   ]
@@ -69,9 +70,7 @@ source_set("test_sources") {
     "internal/message_reader_unittest.cc",
     "internal/proxy_controller_unittest.cc",
     "internal/stub_controller_unittest.cc",
-    "put_unittest.cc",
     "string_unittest.cc",
-    "take_unittest.cc",
     "vector_unittest.cc",
   ]
 

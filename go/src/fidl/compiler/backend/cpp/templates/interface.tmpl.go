@@ -136,16 +136,17 @@ class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
 
 {{- end }}
 void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
-  ::fidl::MessageBuilder builder(nullptr);
-  builder.header()->ordinal = {{ .OrdinalName }};
-    {{- range .Request }}
-  // TODO(abarth): Replace with correct serialization routine.
-  // ::fidl::PutAt(&builder, builder.New<::fidl::ViewOf<decltype({{ .Name }})>::type>(), &{{ .Name }});
-    {{- end -}}
+  ::fidl::Encoder encoder({{ .OrdinalName }});
+    {{- if .Request }}
+  size_t offset = encoder.Alloc({{ .RequestSize }});
+      {{- range .Request }}
+  ::fidl::Encode(&encoder, &{{ .Name }}, offset + {{ .Offset }});
+      {{- end }}
+    {{- end }}
     {{- if .HasResponse }}
-  controller_->Send(&builder, std::make_unique<{{ .ResponseHandlerType }}>(std::move(callback)));
+  controller_->Send(nullptr, encoder.GetMessage(), std::make_unique<{{ .ResponseHandlerType }}>(std::move(callback)));
     {{- else }}
-  controller_->Send(&builder, nullptr);
+  controller_->Send(nullptr, encoder.GetMessage(), nullptr);
     {{- end }}
 }
   {{- end }}
@@ -166,13 +167,14 @@ class {{ .ResponderType }} {
       : response_(std::move(response)) {}
 
   void operator()({{ template "Params" .Response }}) {
-    ::fidl::MessageBuilder builder(nullptr);
-    builder.header()->ordinal = {{ .OrdinalName }};
-      {{- range .Response }}
-    // TODO(abarth): Replace with correct serialization routine.
-    // ::fidl::PutAt(&builder, builder.New<::fidl::ViewOf<decltype({{ .Name }})>::type>(), &{{ .Name }});
+    ::fidl::Encoder encoder({{ .OrdinalName }});
+      {{- if .Response }}
+  size_t offset = encoder.Alloc({{ .ResponseSize }});
+        {{- range .Response }}
+  ::fidl::Encode(&encoder, &{{ .Name }}, offset + {{ .Offset }});
+        {{- end }}
       {{- end }}
-    response_.Send(&builder);
+    response_.Send(nullptr, encoder.GetMessage());
   }
 
  private:

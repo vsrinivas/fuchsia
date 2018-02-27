@@ -16,6 +16,9 @@ class {{ .Name }} {
   {{ .Name }}({{ .Name }}&&);
   ~{{ .Name }}();
 
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+
+ private:
   ::fidl_union_tag_t tag;
   union {
     {{- range .Members }}
@@ -27,7 +30,26 @@ class {{ .Name }} {
 
 {{- define "UnionDefinition" }}
 {{ .Name }}::{{ .Name }}() {}
+
 {{ .Name }}::{{ .Name }}({{ .Name }}&&) {}
+
 {{ .Name }}::~{{ .Name }}() {}
+
+void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
+  ::fidl::Encode(encoder, &tag, offset);
+  switch (tag) {
+  {{- range $index, $member := .Members }}
+   case {{ $index }}:
+    ::fidl::Encode(encoder, &{{ .Name }}, offset + {{ .Offset }});
+    break;
+  {{- end }}
+  }
+}
+{{- end }}
+
+{{- define "UnionTraits" }}
+template <>
+struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
+    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .Size }}> {};
 {{- end }}
 `

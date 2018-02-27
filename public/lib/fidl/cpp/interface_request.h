@@ -10,6 +10,8 @@
 #include <cstddef>
 #include <utility>
 
+#include "lib/fidl/cpp/coding_traits.h"
+
 namespace fidl {
 class Builder;
 
@@ -57,8 +59,6 @@ class Builder;
 template <typename Interface>
 class InterfaceRequest {
  public:
-  using View = zx_handle_t;
-
   // Creates an |InterfaceHandle| whose underlying channel is invalid.
   //
   // Some protocols contain messages that permit such |InterfaceRequest|
@@ -96,24 +96,18 @@ class InterfaceRequest {
   const zx::channel& channel() const { return channel_; }
   void set_channel(zx::channel channel) { channel_ = std::move(channel); }
 
+  void Encode(Encoder* encoder, size_t offset) {
+    encoder->EncodeHandle(&channel_, offset);
+  }
+
  private:
   zx::channel channel_;
 };
 
-// Transfers ownership of the underlying handle from the |InterfaceRequest|
-// into |*view| and returns true.
-//
-// After this function returns |request->is_valid()| is false and the ownership
-// of the handle that was previously stored in |request| (if any) has been
-// transferred to |*view|.
-//
-// The |builder| argument is ignored but accepted to make it easier to generate
-// code that calls this function.
 template <typename T>
-bool PutAt(Builder* builder, zx_handle_t* view, InterfaceRequest<T>* request) {
-  *view = request->TakeChannel().release();
-  return true;
-}
+struct CodingTraits<InterfaceRequest<T>>
+    : public EncodableCodingTraits<InterfaceRequest<T>, sizeof(zx_handle_t)> {
+};
 
 }  // namespace fidl
 

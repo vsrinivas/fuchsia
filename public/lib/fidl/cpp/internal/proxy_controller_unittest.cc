@@ -38,12 +38,12 @@ TEST(ProxyController, Send) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-  builder.header()->ordinal = 5u;
+  Encoder encoder(5u);
   StringPtr string("hello!");
-  EXPECT_TRUE(Build(&builder, string));
+  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
-  EXPECT_EQ(ZX_OK, controller.Send(&builder, nullptr));
+  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type,
+                                   encoder.GetMessage(), nullptr));
 
   MessageBuffer buffer;
   Message message = buffer.CreateEmptyMessage();
@@ -64,10 +64,9 @@ TEST(ProxyController, Callback) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-  builder.header()->ordinal = 3u;
+  Encoder encoder(3u);
   StringPtr string("hello!");
-  EXPECT_TRUE(Build(&builder, string));
+  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
   int callback_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -77,7 +76,8 @@ TEST(ProxyController, Callback) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, controller.Send(&builder, std::move(handler)));
+  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type,
+                                   encoder.GetMessage(), std::move(handler)));
 
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
@@ -111,28 +111,30 @@ TEST(ProxyController, BadSend) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-  builder.header()->ordinal = 3u;
+  Encoder encoder(3u);
   // Bad message format.
 
   int error_count = 0;
   controller.reader().set_error_handler([&error_count]() { ++error_count; });
 
   EXPECT_EQ(0, error_count);
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, controller.Send(&builder, nullptr));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            controller.Send(&unbounded_nonnullable_string_message_type,
+                            encoder.GetMessage(), nullptr));
   EXPECT_EQ(0, error_count);
   loop.RunUntilIdle();
   EXPECT_EQ(0, error_count);
 
   zx_handle_close(controller.reader().channel().get());
 
-  builder.Reset();
-  builder.header()->ordinal = 35u;
+  encoder.Reset(35u);
   StringPtr string("hello!");
-  EXPECT_TRUE(Build(&builder, string));
+  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
   EXPECT_EQ(0, error_count);
-  EXPECT_EQ(ZX_ERR_BAD_HANDLE, controller.Send(&builder, nullptr));
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE,
+            controller.Send(&unbounded_nonnullable_string_message_type,
+                            encoder.GetMessage(), nullptr));
   EXPECT_EQ(0, error_count);
 }
 
@@ -216,10 +218,9 @@ TEST(ProxyController, Move) {
   ProxyController controller1;
   EXPECT_EQ(ZX_OK, controller1.reader().Bind(std::move(h1)));
 
-  MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-  builder.header()->ordinal = 3u;
+  Encoder encoder(3u);
   StringPtr string("hello!");
-  EXPECT_TRUE(Build(&builder, string));
+  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
   int callback_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -229,7 +230,8 @@ TEST(ProxyController, Move) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, controller1.Send(&builder, std::move(handler)));
+  EXPECT_EQ(ZX_OK, controller1.Send(&unbounded_nonnullable_string_message_type,
+                                    encoder.GetMessage(), std::move(handler)));
 
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
@@ -267,10 +269,9 @@ TEST(ProxyController, Reset) {
   ProxyController controller;
   EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
 
-  MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-  builder.header()->ordinal = 3u;
+  Encoder encoder(3u);
   StringPtr string("hello!");
-  EXPECT_TRUE(Build(&builder, string));
+  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
   int callback_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -280,7 +281,8 @@ TEST(ProxyController, Reset) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, controller.Send(&builder, std::move(handler)));
+  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type,
+                                   encoder.GetMessage(), std::move(handler)));
 
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();

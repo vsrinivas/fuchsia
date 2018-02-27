@@ -17,6 +17,7 @@ const Implementation = `
 
 namespace {{ .Namespace }} {
 {{ end }}
+
 {{- define "GenerateImplementationPostamble" -}}
 }  // namespace {{ .Namespace }}
 {{ end }}

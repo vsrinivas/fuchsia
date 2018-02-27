@@ -16,12 +16,13 @@ import (
 type Decl interface {
 	ForwardDeclaration(*template.Template, io.Writer) error
 	Declaration(*template.Template, io.Writer) error
+	Traits(*template.Template, io.Writer) error
 	Definition(*template.Template, io.Writer) error
 }
 
 type Type struct {
-	Decl     string
-	DeclType types.DeclType
+	Decl         string
+	DeclType     types.DeclType
 }
 
 type Const struct {
@@ -33,9 +34,10 @@ type Const struct {
 }
 
 type Enum struct {
-	Type    string
-	Name    string
-	Members []EnumMember
+	Namespace string
+	Type      string
+	Name      string
+	Members   []EnumMember
 }
 
 type EnumMember struct {
@@ -44,28 +46,35 @@ type EnumMember struct {
 }
 
 type Union struct {
-	Name    string
-	Members []UnionMember
+	Namespace string
+	Name      string
+	Members   []UnionMember
+	Size      int
 }
 
 type UnionMember struct {
-	Type Type
-	Name string
+	Type   Type
+	Name   string
+	Offset int
 }
 
 type Struct struct {
-	Name    string
-	CName   string
-	Members []StructMember
+	Namespace string
+	Name      string
+	CName     string
+	Members   []StructMember
+	Size      int
 }
 
 type StructMember struct {
 	Type        Type
 	Name        string
 	StorageName string
+	Offset      int
 }
 
 type Interface struct {
+	Namespace string
 	Name      string
 	ProxyName string
 	StubName  string
@@ -78,16 +87,19 @@ type Method struct {
 	Name                string
 	HasRequest          bool
 	Request             []Parameter
+	RequestSize         int
 	HasResponse         bool
 	Response            []Parameter
+	ResponseSize        int
 	CallbackType        string
 	ResponseHandlerType string
 	ResponderType       string
 }
 
 type Parameter struct {
-	Type Type
-	Name string
+	Type   Type
+	Name   string
+	Offset int
 }
 
 type Root struct {
@@ -105,6 +117,10 @@ func (c *Const) Declaration(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "ConstDeclaration", c)
 }
 
+func (c *Const) Traits(tmpls *template.Template, wr io.Writer) error {
+	return nil
+}
+
 func (c *Const) Definition(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "ConstDefinition", c)
 }
@@ -115,6 +131,10 @@ func (e *Enum) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error 
 
 func (e *Enum) Declaration(tmpls *template.Template, wr io.Writer) error {
 	return nil
+}
+
+func (e *Enum) Traits(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "EnumTraits", e)
 }
 
 func (e *Enum) Definition(tmpls *template.Template, wr io.Writer) error {
@@ -129,6 +149,10 @@ func (u *Union) Declaration(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "UnionDeclaration", u)
 }
 
+func (u *Union) Traits(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "UnionTraits", u)
+}
+
 func (u *Union) Definition(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "UnionDefinition", u)
 }
@@ -141,8 +165,12 @@ func (s *Struct) Declaration(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "StructDeclaration", s)
 }
 
+func (s *Struct) Traits(tmpls *template.Template, wr io.Writer) error {
+	return tmpls.ExecuteTemplate(wr, "StructTraits", s)
+}
+
 func (s *Struct) Definition(tmpls *template.Template, wr io.Writer) error {
-	return nil
+	return tmpls.ExecuteTemplate(wr, "StructDefinition", s)
 }
 
 func (i *Interface) ForwardDeclaration(tmpls *template.Template, wr io.Writer) error {
@@ -151,6 +179,10 @@ func (i *Interface) ForwardDeclaration(tmpls *template.Template, wr io.Writer) e
 
 func (i *Interface) Declaration(tmpls *template.Template, wr io.Writer) error {
 	return tmpls.ExecuteTemplate(wr, "InterfaceDeclaration", i)
+}
+
+func (i *Interface) Traits(tmpls *template.Template, wr io.Writer) error {
+	return nil
 }
 
 func (i *Interface) Definition(tmpls *template.Template, wr io.Writer) error {
@@ -284,7 +316,8 @@ func changeIfReserved(val types.Identifier) string {
 }
 
 type compiler struct {
-	decls *types.DeclMap
+	namespace string
+	decls     *types.DeclMap
 }
 
 func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
@@ -413,6 +446,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
+		c.namespace,
 		c.compilePrimitiveSubtype(val.Type),
 		changeIfReserved(val.Name),
 		[]EnumMember{},
@@ -433,6 +467,7 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 		p := Parameter{
 			c.compileType(v.Type),
 			changeIfReserved(v.Name),
+			v.Offset,
 		}
 		r = append(r, p)
 	}
@@ -442,6 +477,7 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
+		c.namespace,
 		changeIfReserved(val.Name),
 		changeIfReserved(val.Name + "Proxy"),
 		changeIfReserved(val.Name + "Stub"),
@@ -460,8 +496,10 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			name,
 			v.HasRequest,
 			c.compileParameterArray(v.Request),
+			v.RequestSize,
 			v.HasResponse,
 			c.compileParameterArray(v.Response),
+			v.ResponseSize,
 			callbackType,
 			fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
@@ -477,15 +515,18 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 		c.compileType(val.Type),
 		changeIfReserved(val.Name),
 		changeIfReserved(val.Name + "_"),
+		val.Offset,
 	}
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := changeIfReserved(val.Name)
 	r := Struct{
+		c.namespace,
 		name,
 		"::" + name,
 		[]StructMember{},
+		val.Size,
 	}
 
 	for _, v := range val.Members {
@@ -499,13 +540,16 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
 		c.compileType(val.Type),
 		changeIfReserved(val.Name),
+		val.Offset,
 	}
 }
 
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
+		c.namespace,
 		changeIfReserved(val.Name),
 		[]UnionMember{},
+		val.Size,
 	}
 
 	for _, v := range val.Members {
@@ -517,9 +561,12 @@ func (c *compiler) compileUnion(val types.Union) Union {
 
 func Compile(fidlData types.Root) Root {
 	root := Root{}
-	c := compiler{&fidlData.Decls}
+	c := compiler{
+		changeIfReserved(fidlData.Name),
+		&fidlData.Decls,
+	}
 
-	root.Namespace = changeIfReserved(fidlData.Name)
+	root.Namespace = c.namespace
 
 	decls := map[types.Identifier]Decl{}
 

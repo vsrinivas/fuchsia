@@ -40,6 +40,20 @@ func generateHeader(headerPath string, tmpls *template.Template, tree ir.Root) e
 		return err
 	}
 
+	err = tmpls.ExecuteTemplate(f, "GenerateTraitsPreamble", tree)
+	if err != nil {
+		return err
+	}
+
+	for _, d := range tree.Decls {
+		err = d.Traits(tmpls, f)
+	}
+
+	err = tmpls.ExecuteTemplate(f, "GenerateTraitsPostamble", tree)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

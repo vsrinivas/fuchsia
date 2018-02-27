@@ -5,9 +5,10 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_HEADER_H_
 #define LIB_FIDL_CPP_INTERNAL_HEADER_H_
 
-#include <functional>
 #include <fidl/cpp/array.h>
+#include <functional>
 
+#include "lib/fidl/cpp/coding_traits.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/internal/proxy_controller.h"
 #include "lib/fidl/cpp/internal/stub_controller.h"

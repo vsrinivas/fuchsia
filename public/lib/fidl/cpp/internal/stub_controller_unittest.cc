@@ -59,18 +59,20 @@ TEST(StubController, NoResponse) {
     ++callback_count;
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_FALSE(response.needs_response());
-    EXPECT_EQ(ZX_ERR_BAD_STATE, response.Send(nullptr));
+    EXPECT_EQ(
+        ZX_ERR_BAD_STATE,
+        response.Send(&unbounded_nonnullable_string_message_type, Message()));
     return ZX_OK;
   };
 
   stub_ctrl.set_stub(&stub);
 
-  MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-  builder.header()->ordinal = 5u;
+  Encoder encoder(5u);
   StringPtr string("hello!");
-  EXPECT_TRUE(Build(&builder, string));
+  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&builder, nullptr));
+  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type,
+                                   encoder.GetMessage(), nullptr));
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
   EXPECT_EQ(1, callback_count);
@@ -95,20 +97,19 @@ TEST(StubController, Response) {
     ++callback_count;
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_TRUE(response.needs_response());
-    MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-    builder.header()->ordinal = 42u;
+    Encoder encoder(42u);
     StringPtr string("welcome!");
-    EXPECT_TRUE(Build(&builder, string));
-    EXPECT_EQ(ZX_OK, response.Send(&builder));
+    string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+    EXPECT_EQ(ZX_OK, response.Send(&unbounded_nonnullable_string_message_type,
+                                   encoder.GetMessage()));
     return ZX_OK;
   };
 
   stub_ctrl.set_stub(&stub);
 
-  MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-  builder.header()->ordinal = 5u;
+  Encoder encoder(5u);
   StringPtr string("hello!");
-  EXPECT_TRUE(Build(&builder, string));
+  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
   int response_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -118,7 +119,8 @@ TEST(StubController, Response) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&builder, std::move(handler)));
+  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type,
+                                   encoder.GetMessage(), std::move(handler)));
   EXPECT_EQ(0, callback_count);
   EXPECT_EQ(0, response_count);
   loop.RunUntilIdle();
@@ -149,20 +151,20 @@ TEST(StubController, ResponseAfterUnbind) {
 
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_TRUE(response.needs_response());
-    MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-    builder.header()->ordinal = 42u;
+    Encoder encoder(42u);
     StringPtr string("welcome!");
-    EXPECT_TRUE(Build(&builder, string));
-    EXPECT_EQ(ZX_ERR_BAD_STATE, response.Send(&builder));
+    string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+    EXPECT_EQ(ZX_ERR_BAD_STATE,
+              response.Send(&unbounded_nonnullable_string_message_type,
+                            encoder.GetMessage()));
     return ZX_OK;
   };
 
   stub_ctrl.set_stub(&stub);
 
-  MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-  builder.header()->ordinal = 5u;
+  Encoder encoder(5u);
   StringPtr string("hello!");
-  EXPECT_TRUE(Build(&builder, string));
+  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
   int response_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -171,7 +173,8 @@ TEST(StubController, ResponseAfterUnbind) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&builder, std::move(handler)));
+  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type,
+                                   encoder.GetMessage(), std::move(handler)));
   EXPECT_EQ(0, callback_count);
   EXPECT_EQ(0, response_count);
   loop.RunUntilIdle();
@@ -202,20 +205,20 @@ TEST(StubController, ResponseAfterDestroy) {
 
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_TRUE(response.needs_response());
-    MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-    builder.header()->ordinal = 42u;
+    Encoder encoder(42u);
     StringPtr string("welcome!");
-    EXPECT_TRUE(Build(&builder, string));
-    EXPECT_EQ(ZX_ERR_BAD_STATE, response.Send(&builder));
+    string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+    EXPECT_EQ(ZX_ERR_BAD_STATE,
+              response.Send(&unbounded_nonnullable_string_message_type,
+                            encoder.GetMessage()));
     return ZX_OK;
   };
 
   stub_ctrl->set_stub(&stub);
 
-  MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-  builder.header()->ordinal = 5u;
+  Encoder encoder(5u);
   StringPtr string("hello!");
-  EXPECT_TRUE(Build(&builder, string));
+  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
   int response_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -224,7 +227,8 @@ TEST(StubController, ResponseAfterDestroy) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&builder, std::move(handler)));
+  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type,
+                                   encoder.GetMessage(), std::move(handler)));
   EXPECT_EQ(0, callback_count);
   EXPECT_EQ(0, response_count);
   loop.RunUntilIdle();
@@ -254,19 +258,19 @@ TEST(StubController, BadResponse) {
     ++callback_count;
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_TRUE(response.needs_response());
-    MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-    builder.header()->ordinal = 42u;
+    Encoder encoder(42u);
     // Bad message format.
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, response.Send(&builder));
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+              response.Send(&unbounded_nonnullable_string_message_type,
+                            encoder.GetMessage()));
     return ZX_OK;
   };
 
   stub_ctrl.set_stub(&stub);
 
-  MessageBuilder builder(&unbounded_nonnullable_string_message_type);
-  builder.header()->ordinal = 5u;
+  Encoder encoder(5u);
   StringPtr string("hello!");
-  EXPECT_TRUE(Build(&builder, string));
+  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
 
   int response_count = 0;
   auto handler = std::make_unique<CallbackMessageHandler>();
@@ -275,7 +279,8 @@ TEST(StubController, BadResponse) {
     return ZX_OK;
   };
 
-  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&builder, std::move(handler)));
+  EXPECT_EQ(ZX_OK, proxy_ctrl.Send(&unbounded_nonnullable_string_message_type,
+                                   encoder.GetMessage(), std::move(handler)));
   EXPECT_EQ(0, callback_count);
   EXPECT_EQ(0, response_count);
   EXPECT_EQ(0, error_count);

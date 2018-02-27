@@ -6,20 +6,9 @@
 
 #include <string.h>
 
+#include "lib/fidl/cpp/encoder.h"
+
 namespace fidl {
-namespace {
-
-bool PutAt(Builder* builder, StringView* view, const char* str, size_t size) {
-  char* data = builder->NewArray<char>(size);
-  if (!data)
-    return false;
-  view->set_data(data);
-  view->set_size(size);
-  memcpy(data, str, size);
-  return true;
-}
-
-}  // namespace
 
 StringPtr::StringPtr() : is_null_(true) {}
 
@@ -47,35 +36,18 @@ StringPtr StringPtr::Take(StringView* view) {
                          : StringPtr(std::string(view->data(), view->size()));
 }
 
-bool PutAt(Builder* builder, StringView* view, StringPtr* string) {
-  if (string->is_null())
-    return true;
-  return PutAt(builder, view, (*string)->data(), (*string)->size());
-}
-
-StringView* Build(Builder* builder, const char* string, size_t size) {
-  StringView* view = builder->New<StringView>();
-  if (view && PutAt(builder, view, string, size))
-    return view;
-  return nullptr;
-}
-
-StringView* Build(Builder* builder, const char* string) {
-  return Build(builder, string, strlen(string));
-}
-
-StringView* Build(Builder* builder, StringView string) {
-  return Build(builder, string.data(), string.size());
-}
-
-StringView* Build(Builder* builder, const std::string& string) {
-  return Build(builder, string.data(), string.size());
-}
-
-StringView* Build(Builder* builder, const StringPtr& string) {
-  if (!string)
-    return builder->New<StringView>();
-  return Build(builder, *string);
+void StringPtr::Encode(Encoder* encoder, size_t offset) {
+  fidl_string_t* string = encoder->GetPtr<fidl_string_t>(offset);
+  if (is_null()) {
+    string->size = 0u;
+    string->data = reinterpret_cast<char*>(FIDL_ALLOC_ABSENT);
+  } else {
+    string->size = str_.size();
+    string->data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
+    size_t base = encoder->Alloc(str_.size());
+    char* payload = encoder->GetPtr<char>(base);
+    memcpy(payload, str_.data(), str_.size());
+  }
 }
 
 }  // namespace fidl
