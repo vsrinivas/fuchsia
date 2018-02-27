@@ -23,23 +23,30 @@ static bool create_test(void) {
         ASSERT_NE(h[0], ZX_HANDLE_INVALID, "invalid handle from eventpair_create");
         ASSERT_NE(h[1], ZX_HANDLE_INVALID, "invalid handle from eventpair_create");
 
-        zx_info_handle_basic_t info;
-        memset(&info, 0, sizeof(info));
-        zx_status_t status = zx_object_get_info(h[0], ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
+        zx_info_handle_basic_t info[2] = {};
+        zx_status_t status = zx_object_get_info(h[0], ZX_INFO_HANDLE_BASIC, &info[0], sizeof(info[0]), NULL, NULL);
         ASSERT_EQ(status, ZX_OK, "");
-        EXPECT_EQ(info.rights,
+        EXPECT_EQ(info[0].rights,
                   ZX_RIGHTS_BASIC | ZX_RIGHT_READ |
                   ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER,
                   "wrong rights");
-        EXPECT_EQ(info.type, (uint32_t)ZX_OBJ_TYPE_EVENT_PAIR, "wrong type");
-        memset(&info, 0, sizeof(info));
-        status = zx_object_get_info(h[1], ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
+        EXPECT_EQ(info[0].type, (uint32_t)ZX_OBJ_TYPE_EVENT_PAIR, "wrong type");
+        status = zx_object_get_info(h[1], ZX_INFO_HANDLE_BASIC, &info[1], sizeof(info[1]), NULL, NULL);
         ASSERT_EQ(status, ZX_OK, "");
-        EXPECT_EQ(info.rights,
+        EXPECT_EQ(info[1].rights,
                   ZX_RIGHTS_BASIC | ZX_RIGHT_READ |
                   ZX_RIGHT_WRITE | ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER,
                   "wrong rights");
-        EXPECT_EQ(info.type, (uint32_t)ZX_OBJ_TYPE_EVENT_PAIR, "wrong type");
+        EXPECT_EQ(info[1].type, (uint32_t)ZX_OBJ_TYPE_EVENT_PAIR, "wrong type");
+
+
+        // Check that koids line up.
+        ASSERT_NE(info[0].koid, 0u, "zero koid!");
+        ASSERT_NE(info[0].related_koid, 0u, "zero peer koid!");
+        ASSERT_NE(info[1].koid, 0u, "zero koid!");
+        ASSERT_NE(info[1].related_koid, 0u, "zero peer koid!");
+        ASSERT_EQ(info[0].koid, info[1].related_koid, "mismatched koids!");
+        ASSERT_EQ(info[1].koid, info[0].related_koid, "mismatched koids!");
 
         EXPECT_EQ(zx_handle_close(h[0]), ZX_OK, "failed to close event pair handle");
         EXPECT_EQ(zx_handle_close(h[1]), ZX_OK, "failed to close event pair handle");

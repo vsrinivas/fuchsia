@@ -39,6 +39,19 @@ static bool basic_test(void) {
     EXPECT_SIGNALS(a, ZX_FIFO_WRITABLE);
     EXPECT_SIGNALS(b, ZX_FIFO_WRITABLE);
 
+    // Check that koids line up.
+    zx_info_handle_basic_t info[2] = {};
+    zx_status_t status = zx_object_get_info(a, ZX_INFO_HANDLE_BASIC, &info[0], sizeof(info[0]), NULL, NULL);
+    ASSERT_EQ(status, ZX_OK, "");
+    status = zx_object_get_info(b, ZX_INFO_HANDLE_BASIC, &info[1], sizeof(info[1]), NULL, NULL);
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_NE(info[0].koid, 0u, "zero koid!");
+    ASSERT_NE(info[0].related_koid, 0u, "zero peer koid!");
+    ASSERT_NE(info[1].koid, 0u, "zero koid!");
+    ASSERT_NE(info[1].related_koid, 0u, "zero peer koid!");
+    ASSERT_EQ(info[0].koid, info[1].related_koid, "mismatched koids!");
+    ASSERT_EQ(info[1].koid, info[0].related_koid, "mismatched koids!");
+
     // should not be able to read any entries from an empty fifo
     uint32_t actual;
     EXPECT_EQ(zx_fifo_read(a, n, sizeof(n), &actual), ZX_ERR_SHOULD_WAIT, "");

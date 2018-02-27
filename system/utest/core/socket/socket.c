@@ -28,6 +28,19 @@ static bool socket_basic(void) {
     status = zx_socket_create(0, h, h + 1);
     ASSERT_EQ(status, ZX_OK, "");
 
+    // Check that koids line up.
+    zx_info_handle_basic_t info[2] = {};
+    status = zx_object_get_info(h[0], ZX_INFO_HANDLE_BASIC, &info[0], sizeof(info[0]), NULL, NULL);
+    ASSERT_EQ(status, ZX_OK, "");
+    status = zx_object_get_info(h[1], ZX_INFO_HANDLE_BASIC, &info[1], sizeof(info[1]), NULL, NULL);
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_NE(info[0].koid, 0u, "zero koid!");
+    ASSERT_NE(info[0].related_koid, 0u, "zero peer koid!");
+    ASSERT_NE(info[1].koid, 0u, "zero koid!");
+    ASSERT_NE(info[1].related_koid, 0u, "zero peer koid!");
+    ASSERT_EQ(info[0].koid, info[1].related_koid, "mismatched koids!");
+    ASSERT_EQ(info[1].koid, info[0].related_koid, "mismatched koids!");
+
     status = zx_socket_read(h[0], 0u, read_data, sizeof(read_data), &count);
     EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT, "");
 
