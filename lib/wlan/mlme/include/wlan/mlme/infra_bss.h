@@ -53,7 +53,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     // RemoteClient::Listener implementation
     void HandleClientStateChange(const common::MacAddr& client, RemoteClient::StateId from,
                                  RemoteClient::StateId to) override;
-    void HandleClientPowerSaving(const common::MacAddr& client, bool pwr_saving) override;
+    void HandleClientPowerSaveMode(const common::MacAddr& client, bool dozing) override;
 
     zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
                                   fbl::unique_ptr<Timer>* out_timer);
@@ -62,7 +62,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     DeviceInterface* device_;
     bss::timestamp_t started_at_;
     BssClientMap clients_;
-    ClientSet pwr_saving_clients_;
+    ClientSet dozing_clients_;
 };
 
 using InfraBssMap = MacAddrMap<fbl::RefPtr<InfraBss>, macaddr_map_type::kInfraBss>;

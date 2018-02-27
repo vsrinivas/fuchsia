@@ -156,7 +156,7 @@ void AssociatedState::OnEnter() {
 }
 
 zx_status_t AssociatedState::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) {
-    if (power_saving_) {
+    if (dozing_) {
         // Enqueue ethernet frame and postpone conversion to when the frame is sent to the client.
         auto status = client_->EnqueueEthernetFrame(frame);
         if (status == ZX_ERR_NO_RESOURCES) {
@@ -198,6 +198,11 @@ zx_status_t AssociatedState::HandleDisassociation(const ImmutableMgmtFrame<Disas
 
 zx_status_t AssociatedState::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
                                                const wlan_rx_info_t& rxinfo) {
+    // Control frames share no common header. Check FrameControl specifically for PsPoll frames.
+    // Other control frames must check the same once they are supported.
+    // TODO(hahnr): Explore whether it makes sense to provide a HandleCtrlFrame(FrameControl) method
+    UpdatePowerSaveMode(frame.hdr->fc);
+
     if (client_->HasBufferedFrames()) {
         // Dequeue buffered Ethernet frame.
         fbl::unique_ptr<Packet> packet;
@@ -270,6 +275,7 @@ void AssociatedState::OnExit() {
 
 zx_status_t AssociatedState::HandleDataFrame(const DataFrameHeader& hdr) {
     active_ = true;
+    UpdatePowerSaveMode(hdr.fc);
     return ZX_OK;
 }
 
@@ -338,6 +344,7 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
 
 zx_status_t AssociatedState::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     active_ = true;
+    UpdatePowerSaveMode(hdr.fc);
     return ZX_OK;
 }
 
@@ -362,6 +369,19 @@ void AssociatedState::HandleTimeout() {
                  client_->addr().ToString().c_str(), kInactivityTimeoutTu / 1000);
         MoveToState<DeauthenticatedState>();
         LOG_STATE_TRANSITION(client_->addr(), "Associated", "Deauthenticated");
+    }
+}
+
+void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
+    if (fc.pwr_mgmt() != dozing_) {
+        dozing_ = fc.pwr_mgmt();
+
+        if (!dozing_) {
+            // TODO(hahnr): Client became awake.
+            // Send all remaining buffered frames (U-APSD).
+        }
+
+        client_->HandlePowerSaveModeChange(dozing_);
     }
 }
 
@@ -625,6 +645,10 @@ zx_status_t RemoteClient::ConvertEthernetToDataFrame(const ImmutableBaseFrame<Et
     (*out_packet)->CopyCtrlFrom(txinfo);
 
     return ZX_OK;
+}
+
+void RemoteClient::HandlePowerSaveModeChange(bool dozing) {
+    if (listener_ != nullptr) { listener_->HandleClientPowerSaveMode(addr_, dozing); }
 }
 
 #undef LOG_STATE_TRANSITION

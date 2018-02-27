@@ -30,7 +30,7 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     struct Listener {
         virtual void HandleClientStateChange(const common::MacAddr& client, StateId from,
                                              StateId to) = 0;
-        virtual void HandleClientPowerSaving(const common::MacAddr& client, bool pwr_saving) = 0;
+        virtual void HandleClientPowerSaveMode(const common::MacAddr& client, bool dozing) = 0;
     };
 
     RemoteClient(DeviceInterface* device, fbl::unique_ptr<Timer> timer, BssInterface* bss,
@@ -61,6 +61,7 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     bool HasBufferedFrames() const;
     zx_status_t ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
                                            fbl::unique_ptr<Packet>* out_frame);
+    void HandlePowerSaveModeChange(bool dozing);
 
     // Note: There can only ever be one timer running at a time.
     // TODO(hahnr): Evolve this to support multiple timeouts at the same time.
@@ -169,13 +170,15 @@ class AssociatedState : public BaseState {
    private:
     // TODO(hahnr): Use WLAN_MIN_TU once defined.
     static constexpr zx_duration_t kInactivityTimeoutTu = 300000;  // 5min
+
+    void UpdatePowerSaveMode(const FrameControl& fc);
+
     const uint16_t aid_;
     zx::time inactive_timeout_;
     // `true` if the client was active during the last inactivity timeout.
     bool active_;
-    // `true` if the client entered power saving mode.
-    // TODO(NET-445): Set power saving field when FC's PS mode bit is set.
-    bool power_saving_;
+    // `true` if the client entered Power Saving mode's doze state.
+    bool dozing_;
 };
 
 }  // namespace wlan

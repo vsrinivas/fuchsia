@@ -84,15 +84,15 @@ void InfraBss::HandleClientStateChange(const common::MacAddr& client, RemoteClie
     }
 }
 
-void InfraBss::HandleClientPowerSaving(const common::MacAddr& client, bool pwr_saving) {
+void InfraBss::HandleClientPowerSaveMode(const common::MacAddr& client, bool dozing) {
     debugfn();
     ZX_DEBUG_ASSERT(clients_.Has(client));
     if (!clients_.Has(client)) { return; }
 
-    if (pwr_saving) {
-        pwr_saving_clients_.insert(client);
+    if (dozing) {
+        dozing_clients_.insert(client);
     } else {
-        pwr_saving_clients_.erase(client);
+        dozing_clients_.erase(client);
     }
 }
 
