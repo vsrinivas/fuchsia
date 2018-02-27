@@ -142,8 +142,6 @@ zx_status_t UsbVideoStream::Init() {
         return status;
     }
     DdkMakeVisible();
-    CreateDataVideoBuffer();
-    StartStreaming();
     return ZX_OK;
 }
 
