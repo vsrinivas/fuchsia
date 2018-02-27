@@ -12,70 +12,64 @@ use wlan_service::{self, DeviceListener, DeviceService};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct DeviceServiceServer {
+struct State {
     devmgr: Rc<RefCell<device::DeviceManager>>,
     handle: reactor::Handle,
 }
 
-impl DeviceServiceServer {
-    pub fn new(devmgr: Rc<RefCell<device::DeviceManager>>, handle: &reactor::Handle) -> Self {
-        DeviceServiceServer {
+pub fn device_service(
+    devmgr: Rc<RefCell<device::DeviceManager>>,
+    handle: &reactor::Handle,
+) -> impl DeviceService::Server {
+    DeviceService::Impl {
+        state: State {
             devmgr: devmgr,
             handle: handle.clone(),
-        }
-    }
-}
+        },
 
-impl DeviceService::Server for DeviceServiceServer {
-    type ListPhys = future::FutureResult<wlan_service::ListPhysResponse, fidl::CloseChannel>;
-    fn list_phys(&mut self) -> Self::ListPhys {
-        info!("list_phys");
-        let result = self.devmgr.borrow().list_phys();
-        future::ok(wlan_service::ListPhysResponse { phys: result })
-    }
+        list_phys: |state| {
+            info!("list_phys");
+            let result = state.devmgr.borrow().list_phys();
+            future::ok(wlan_service::ListPhysResponse { phys: result })
+        },
 
-    type ListIfaces = future::FutureResult<wlan_service::ListIfacesResponse, fidl::CloseChannel>;
-    fn list_ifaces(&mut self) -> Self::ListIfaces {
-        info!("list_ifaces (stub)");
-        future::ok(wlan_service::ListIfacesResponse { ifaces: vec![] })
-    }
+        list_ifaces: |_| {
+            info!("list_ifaces (stub)");
+            future::ok(wlan_service::ListIfacesResponse { ifaces: vec![] })
+        },
 
-    type CreateIface = future::FutureResult<wlan_service::CreateIfaceResponse, fidl::CloseChannel>;
-    fn create_iface(&mut self, req: wlan_service::CreateIfaceRequest) -> Self::CreateIface {
-        info!("create_iface req: {:?}", req);
-        // TODO(tkilbourn): have DeviceManager return a future here
-        let resp = self.devmgr.borrow_mut().create_iface(req.phy_id, req.role);
-        match resp {
-            Ok(resp) => future::ok(wlan_service::CreateIfaceResponse { iface_id: resp }),
-            Err(_) => future::err(fidl::CloseChannel),
-        }
-    }
+        create_iface: |state, req| {
+            info!("create_iface req: {:?}", req);
+            // TODO(tkilbourn): have DeviceManager return a future here
+            let resp = state.devmgr.borrow_mut().create_iface(req.phy_id, req.role);
+            match resp {
+                Ok(resp) => future::ok(wlan_service::CreateIfaceResponse { iface_id: resp }),
+                Err(_) => future::err(fidl::CloseChannel),
+            }
+        },
 
-    type DestroyIface = future::FutureResult<(), fidl::CloseChannel>;
-    fn destroy_iface(&mut self, req: wlan_service::DestroyIfaceRequest) -> Self::DestroyIface {
-        info!("destroy_iface req: {:?}", req);
-        // TODO(tkilbourn): have DeviceManager return a future here
-        let resp = self.devmgr
-            .borrow_mut()
-            .destroy_iface(req.phy_id, req.iface_id);
-        match resp {
-            Ok(_) => future::ok(()),
-            Err(_) => future::err(fidl::CloseChannel),
-        }
-    }
+        destroy_iface: |state, req| {
+            info!("destroy_iface req: {:?}", req);
+            // TODO(tkilbourn): have DeviceManager return a future here
+            let resp = state
+                .devmgr
+                .borrow_mut()
+                .destroy_iface(req.phy_id, req.iface_id);
+            match resp {
+                Ok(_) => future::ok(()),
+                Err(_) => future::err(fidl::CloseChannel),
+            }
+        },
 
-    type RegisterListener = future::FutureResult<(), fidl::CloseChannel>;
-    fn register_listener(
-        &mut self,
-        listener: fidl::InterfacePtr<fidl::ClientEnd<DeviceListener::Service>>,
-    ) -> Self::RegisterListener {
-        info!("register listener");
-        if let Ok(proxy) = DeviceListener::new_proxy(listener.inner, &self.handle) {
-            self.devmgr.borrow_mut().add_listener(Box::new(proxy));
-            future::ok(())
-        } else {
-            future::err(fidl::CloseChannel)
-        }
+        register_listener: |state, listener| {
+            info!("register listener");
+            if let Ok(proxy) = DeviceListener::new_proxy(listener.inner, &state.handle) {
+                state.devmgr.borrow_mut().add_listener(Box::new(proxy));
+                future::ok(())
+            } else {
+                future::err(fidl::CloseChannel)
+            }
+        },
     }
 }
 

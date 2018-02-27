@@ -68,10 +68,7 @@ fn main_res() -> Result<(), Error> {
         .add_service({
             let devmgr = devmgr.clone();
             let handle = handle.clone();
-            move || {
-                let server = service::DeviceServiceServer::new(devmgr.clone(), &handle);
-                DeviceService::Dispatcher(server)
-            }
+            move || DeviceService::Dispatcher(service::device_service(devmgr.clone(), &handle))
         })
         .start(&handle)
         .context("error configuring device service")?;

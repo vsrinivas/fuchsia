@@ -102,7 +102,7 @@ impl DeviceManager {
     pub fn add_listener(&mut self, listener: Box<EventListener>) {
         if self.phys
             .values()
-            .all(|ref phy| listener.on_phy_added(phy.id).is_ok())
+            .all(|phy| listener.on_phy_added(phy.id).is_ok())
         {
             self.listeners.push(listener);
         }
