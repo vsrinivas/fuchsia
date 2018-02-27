@@ -8,18 +8,16 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 package("image-pipe-swapchain") {
   system_image = true
 
-  if (target_cpu == "x64") {
-    deps = [
-      "src/swapchain",
-    ]
-    libraries = [ {
-          name = "libVkLayer_image_pipe_swapchain.so"
-        } ]
-    resources = [ {
-          path = rebase_path("src/swapchain/VkLayer_image_pipe_swapchain.json")
-          dest = "vulkan/explicit_layer.d/VkLayer_image_pipe_swapchain.json"
-        } ]
-  }
+  deps = [
+    "src/swapchain",
+  ]
+  libraries = [ {
+        name = "libVkLayer_image_pipe_swapchain.so"
+      } ]
+  resources = [ {
+        path = rebase_path("src/swapchain/VkLayer_image_pipe_swapchain.json")
+        dest = "vulkan/explicit_layer.d/VkLayer_image_pipe_swapchain.json"
+      } ]
 }
 
 package("image-pipe-swapchain-tests") {
