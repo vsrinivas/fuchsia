@@ -3189,7 +3189,7 @@ void Device::HandleRxComplete(usb_request_t* request) {
             auto len3 = rxwi0.mpdu_total_byte_count();
             auto len4 = rx_desc.l2pad() == 1 ? 2 : 0;
             if (len1 != len2 + 8 || len1 % 4 != 0) {
-                warnf(
+                debugf(
                     "[ralink] USB read size incongruous: response.actual %zu usb_dma_rx_pkt_len "
                     "%u rx_hdr_size %zu mpdu_total_byte_count %u l2pad_len %u\n",
                     len1, len2, rx_hdr_size, len3, len4);
