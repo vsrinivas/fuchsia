@@ -31,7 +31,7 @@ public:
 
     ~CGenerator() = default;
 
-    void ProduceCStructs(std::ostringstream* header_file_out);
+    void ProduceCHeader(std::ostringstream* header_file_out);
 
     enum struct IntegerConstantType {
         kStatus,

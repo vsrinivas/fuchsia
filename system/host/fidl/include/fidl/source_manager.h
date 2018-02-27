@@ -16,6 +16,8 @@ public:
     // Returns nullptr if |filename| could not be read.
     const SourceFile* CreateSource(StringView filename);
 
+    const std::vector<SourceFile>& sources() const { return sources_; }
+
 private:
     std::vector<SourceFile> sources_;
 };

@@ -575,7 +575,7 @@ void CGenerator::ProduceUnionDeclaration(const NamedUnion& named_union) {
     EmitBlank(&header_file_);
 }
 
-void CGenerator::ProduceCStructs(std::ostringstream* header_file_out) {
+void CGenerator::ProduceCHeader(std::ostringstream* header_file_out) {
 
     GeneratePrologues();
 
