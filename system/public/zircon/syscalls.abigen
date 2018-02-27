@@ -226,7 +226,7 @@ syscall socket_share
 
 syscall socket_accept
     (handle: zx_handle_t)
-    returns (zx_status_t, out_socket: zx_handle_t);
+    returns (zx_status_t, out_socket: zx_handle_t handle_acquire);
 
 # Threads
 
@@ -475,7 +475,7 @@ syscall futex_wake_handle_close_thread_exit vdsocall noreturn
 
 syscall log_create
     (options: uint32_t)
-    returns (zx_status_t, out: zx_handle_t);
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall log_write
     (handle: zx_handle_t, len: uint32_t, buffer: any[len] IN, options: uint32_t)
@@ -488,7 +488,7 @@ syscall log_read
 
 syscall debuglog_create
     (resource: zx_handle_t, options: uint32_t)
-    returns (zx_status_t, out: zx_handle_t);
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall debuglog_write
     (handle: zx_handle_t, options: uint32_t, buffer: any[len] IN, len: size_t)
@@ -537,7 +537,7 @@ syscall debug_send_command
 
 syscall interrupt_create
     (hrsrc: zx_handle_t, options: uint32_t)
-    returns (zx_status_t, out_handle: zx_handle_t);
+    returns (zx_status_t, out_handle: zx_handle_t handle_acquire);
 
 syscall interrupt_bind
     (handle: zx_handle_t, slot: uint32_t, hrsrc: zx_handle_t, vector: uint32_t, options: uint32_t)
@@ -563,21 +563,21 @@ syscall mmap_device_io
 
 syscall vmo_create_contiguous
     (rsrc_handle: zx_handle_t, size: size_t, alignment_log2: uint32_t)
-    returns (zx_status_t, out: zx_handle_t);
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall vmo_create_physical
     (rsrc_handle: zx_handle_t, paddr: zx_paddr_t, size: size_t)
-    returns (zx_status_t, out: zx_handle_t);
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 # DDK Syscalls: Device Memory Access
 
 syscall iommu_create
     (rsrc_handle: zx_handle_t, type: uint32_t, desc: any[desc_len] IN, desc_len: uint32_t)
-    returns (zx_status_t, out: zx_handle_t);
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall bti_create
     (iommu: zx_handle_t, options: uint32_t, bti_id: uint64_t)
-    returns (zx_status_t, out: zx_handle_t);
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall bti_pin
     (bti: zx_handle_t, vmo: zx_handle_t, offset: uint64_t, size: uint64_t,
@@ -608,7 +608,7 @@ syscall set_framebuffer_vmo
 
 syscall pci_get_nth_device
     (handle: zx_handle_t, index: uint32_t)
-    returns (zx_status_t, out_info: zx_pcie_device_info_t, out_handle: zx_handle_t);
+    returns (zx_status_t, out_info: zx_pcie_device_info_t, out_handle: zx_handle_t handle_acquire);
 
 syscall pci_enable_bus_master
     (handle: zx_handle_t, enable: bool)
@@ -633,11 +633,11 @@ syscall pci_cfg_pio_rw
 
 syscall pci_get_bar
     (handle: zx_handle_t, bar_num: uint32_t, out_bar: zx_pci_bar_t[1] OUT)
-    returns (zx_status_t, out_handle: zx_handle_t);
+    returns (zx_status_t, out_handle: zx_handle_t handle_acquire);
 
 syscall pci_map_interrupt
     (handle: zx_handle_t, which_irq: int32_t)
-    returns (zx_status_t, out_handle: zx_handle_t);
+    returns (zx_status_t, out_handle: zx_handle_t handle_acquire);
 
 syscall pci_query_irq_mode
     (handle: zx_handle_t, mode: uint32_t)
@@ -665,7 +665,7 @@ syscall acpi_uefi_rsdp
 
 syscall resource_create
     (parent_handle: zx_handle_t, kind: uint32_t, low: uint64_t, high: uint64_t)
-    returns (zx_status_t, resource_out: zx_handle_t);
+    returns (zx_status_t, resource_out: zx_handle_t handle_acquire);
 
 # Hypervisor
 
