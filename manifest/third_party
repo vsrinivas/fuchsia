@@ -235,7 +235,7 @@
     <project name="third_party/vim"
              path="third_party/vim"
              remote="https://fuchsia.googlesource.com/third_party/vim"
-             revision="dce7c84ad5b87f369c4b1610b8a6bd720a3e0c42"
+             revision="7bdc3fd7d76cd6694b8a0c6a5b71b37dcaa17a28"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/vulkan-cts"
              path="third_party/vulkan-cts"
