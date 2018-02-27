@@ -384,7 +384,13 @@ private:
 
     typedef struct bop_params {
         bop_params(blk_t start, blk_t count, blk_t* bnos)
-            : start(start), count(count), bnos(bnos) {}
+            : start(start), count(count), bnos(bnos) {
+                // Initialize output array to 0 in case the indirect block(s) containing these bnos
+                // do not exist
+                if (bnos) {
+                    memset(bnos, 0, sizeof(blk_t) * count);
+                }
+            }
 
         blk_t start;
         blk_t count;
