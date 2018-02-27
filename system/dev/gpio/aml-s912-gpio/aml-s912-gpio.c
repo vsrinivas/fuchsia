@@ -19,7 +19,7 @@
 #include <zircon/types.h>
 
 #define PINS_PER_BLOCK  32
-#define ALT_FUNCTION_MAX 5
+#define ALT_FUNCTION_MAX 6
 
 typedef struct {
     uint32_t pin_count;
@@ -56,6 +56,7 @@ typedef struct {
 
 #include "s912-blocks.h"
 #include "s905x-blocks.h"
+#include "s905-blocks.h"
 
 static zx_status_t aml_pin_to_block(aml_gpio_t* gpio, const uint32_t pin,
                                     aml_gpio_block_t** out_block, uint32_t* out_pin_index) {
@@ -281,6 +282,11 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
         gpio->pinmux_blocks = s905x_pinmux_blocks;
         gpio->block_count = countof(s905x_gpio_blocks);
         break;
+    case PDEV_PID_AMLOGIC_S905:
+        gpio->gpio_blocks = s905_gpio_blocks;
+        gpio->pinmux_blocks = s905_pinmux_blocks;
+        gpio->block_count = countof(s905_gpio_blocks);
+        break;
     default:
         zxlogf(ERROR, "aml_gpio_bind: unsupported SOC PID %u\n", info.pid);
         goto fail;
@@ -316,11 +322,12 @@ static zx_driver_ops_t aml_gpio_driver_ops = {
     .bind = aml_gpio_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(aml_gpio, aml_gpio_driver_ops, "zircon", "0.1", 5)
+ZIRCON_DRIVER_BEGIN(aml_gpio, aml_gpio_driver_ops, "zircon", "0.1", 6)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GPIO),
     // we support multiple SOC variants
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905X),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905),
 ZIRCON_DRIVER_END(aml_gpio)
