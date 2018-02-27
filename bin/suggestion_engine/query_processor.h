@@ -28,8 +28,6 @@ class QueryProcessor {
   ~QueryProcessor();
 
   void AddProposal(const std::string& source_url, ProposalPtr proposal);
-  void RemoveProposal(const std::string& component_url,
-                      const std::string& proposal_id);
 
  private:
   void DispatchQuery(const QueryHandlerRecord& handler_record);

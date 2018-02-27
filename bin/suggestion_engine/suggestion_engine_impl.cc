@@ -60,9 +60,9 @@ SuggestionEngineImpl::SuggestionEngineImpl(app::ApplicationContext* app_context)
   next_suggestions_.AddRankingFeature(-0.1, kronk_feature);
 
   // Set up the query ranking features
-  ask_suggestions_.AddRankingFeature(1.0, proposal_hint_feature);
-  ask_suggestions_.AddRankingFeature(-0.1, kronk_feature);
-  ask_suggestions_.AddRankingFeature(
+  query_suggestions_.AddRankingFeature(1.0, proposal_hint_feature);
+  query_suggestions_.AddRankingFeature(-0.1, kronk_feature);
+  query_suggestions_.AddRankingFeature(
       0, std::make_shared<QueryMatchRankingFeature>());
 }
 
@@ -73,15 +73,15 @@ void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
   next_processor_.AddProposal(source->component_url(), std::move(proposal));
 }
 
-void SuggestionEngineImpl::RemoveProposal(const std::string& component_url,
-                                          const std::string& proposal_id) {
+void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
+                                              const std::string& proposal_id) {
   const auto key = std::make_pair(component_url, proposal_id);
-  auto toRemove = suggestion_prototypes_.find(key);
-  if (toRemove != suggestion_prototypes_.end()) {
-    if (active_query_ != nullptr)
-      active_query_->RemoveProposal(component_url, proposal_id);
+  auto toRemove = next_prototypes_.find(key);
+  if (toRemove != next_prototypes_.end()) {
+    // can't erase right off the bat because the prototype must remain valid
+    // until removed from the ranked list
     next_processor_.RemoveProposal(component_url, proposal_id);
-    suggestion_prototypes_.erase(toRemove);
+    next_prototypes_.erase(toRemove);
   }
 }
 
@@ -114,7 +114,7 @@ void SuggestionEngineImpl::Query(f1dl::InterfaceHandle<QueryListener> listener,
     context_writer_->WriteEntityTopic(kQueryContextKey, formattedQuery);
 
     // Update suggestion engine debug interface
-    debug_.OnAskStart(query, &ask_suggestions_);
+    debug_.OnAskStart(query, &query_suggestions_);
   }
 
   // Steps 3 - 6
@@ -154,7 +154,7 @@ void SuggestionEngineImpl::NotifyInteraction(
   RankedSuggestion* suggestion =
       next_suggestions_.GetSuggestion(suggestion_uuid);
   if (!suggestion) {
-    suggestion = ask_suggestions_.GetSuggestion(suggestion_uuid);
+    suggestion = query_suggestions_.GetSuggestion(suggestion_uuid);
     suggestion_in_ask = true;
   }
 
@@ -181,7 +181,7 @@ void SuggestionEngineImpl::NotifyInteraction(
     if (suggestion_in_ask) {
       CleanUpPreviousQuery();
     } else {
-      RemoveProposal(suggestion->prototype->source_url, proposal->id);
+      RemoveNextProposal(suggestion->prototype->source_url, proposal->id);
     }
 
     Validate();
@@ -228,24 +228,17 @@ void SuggestionEngineImpl::Initialize(
 // end SuggestionEngine
 
 void SuggestionEngineImpl::CleanUpPreviousQuery() {
-  // Clean up the query processor
   active_query_.reset();
-
-  // Clean up the suggestions
-  for (auto& suggestion : ask_suggestions_.Get()) {
-    suggestion_prototypes_.erase(
-        std::make_pair(suggestion->prototype->source_url,
-                       suggestion->prototype->proposal->id));
-  }
-  ask_suggestions_.RemoveAllSuggestions();
+  query_prototypes_.clear();
+  query_suggestions_.RemoveAllSuggestions();
 }
 
 SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
+    SuggestionPrototypeMap* owner,
     const std::string& source_url,
     ProposalPtr proposal) {
-  auto prototype_pair =
-      suggestion_prototypes_.emplace(std::make_pair(source_url, proposal->id),
-                                     std::make_unique<SuggestionPrototype>());
+  auto prototype_pair = owner->emplace(std::make_pair(source_url, proposal->id),
+                                       std::make_unique<SuggestionPrototype>());
   auto suggestion_prototype = prototype_pair.first->second.get();
   suggestion_prototype->suggestion_id = RandomUuid();
   suggestion_prototype->source_url = source_url;

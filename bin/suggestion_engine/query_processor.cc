@@ -56,18 +56,14 @@ QueryProcessor::~QueryProcessor() {
 
 void QueryProcessor::AddProposal(const std::string& source_url,
                                  ProposalPtr proposal) {
-  RemoveProposal(source_url, proposal->id);
-  auto suggestion =
-      engine_->CreateSuggestionPrototype(source_url, std::move(proposal));
-  engine_->ask_suggestions_.AddSuggestion(std::move(suggestion));
-  dirty_ = true;
-}
-
-void QueryProcessor::RemoveProposal(const std::string& component_url,
-                                    const std::string& proposal_id) {
-  if (engine_->ask_suggestions_.RemoveProposal(component_url, proposal_id)) {
+  if (engine_->query_suggestions_.RemoveProposal(source_url, proposal->id)) {
     dirty_ = true;
   }
+
+  auto suggestion = engine_->CreateSuggestionPrototype(
+      &engine_->query_prototypes_, source_url, std::move(proposal));
+  engine_->query_suggestions_.AddSuggestion(std::move(suggestion));
+  dirty_ = true;
 }
 
 void QueryProcessor::DispatchQuery(const QueryHandlerRecord& handler_record) {
@@ -107,7 +103,7 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
   for (auto& proposal : response->proposals) {
     AddProposal(handler_url, std::move(proposal));
   }
-  engine_->ask_suggestions_.Rank(*input_);
+  engine_->query_suggestions_.Rank(*input_);
   // Rank includes an invalidate dispatch
   dirty_ = false;
 
@@ -115,7 +111,7 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
   NotifyOfResults();
 
   // Update the suggestion engine debug interface
-  engine_->debug_.OnAskStart(input_->text, &engine_->ask_suggestions_);
+  engine_->debug_.OnAskStart(input_->text, &engine_->query_suggestions_);
 
   FXL_VLOG(1) << "Handler " << handler_url << " complete";
 
@@ -129,7 +125,7 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
 void QueryProcessor::EndRequest() {
   FXL_DCHECK(!request_ended_);
 
-  engine_->debug_.OnAskStart(input_->text, &engine_->ask_suggestions_);
+  engine_->debug_.OnAskStart(input_->text, &engine_->query_suggestions_);
   listener_->OnQueryComplete();
 
   if (!has_media_response_) {
@@ -155,7 +151,7 @@ void QueryProcessor::TimeOut() {
 }
 
 void QueryProcessor::NotifyOfResults() {
-  const auto& suggestion_vector = engine_->ask_suggestions_.Get();
+  const auto& suggestion_vector = engine_->query_suggestions_.Get();
 
   f1dl::Array<SuggestionPtr> window;
   for (size_t i = 0; i < max_results_ && i < suggestion_vector.size(); i++) {

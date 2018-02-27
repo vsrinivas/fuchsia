@@ -13,7 +13,9 @@ import "lib/surface/fidl/surface.fidl";
 // here for informational purposes at this time.
 
 struct Proposal {
-  string id;  // namespaced internally to the proposing Agent. A URI?
+  // Identifies a proposal, namespaced internally to the proposing component and
+  // proposal channel (Query or Next/Interruption).
+  string id;
 
   // The Proposal is only considered valid if all of |preconditions| are
   // evaluated to true.

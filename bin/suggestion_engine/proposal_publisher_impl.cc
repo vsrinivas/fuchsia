@@ -27,7 +27,7 @@ void ProposalPublisherImpl::Propose(ProposalPtr proposal) {
 }
 
 void ProposalPublisherImpl::Remove(const f1dl::String& proposal_id) {
-  engine_->RemoveProposal(component_url_, proposal_id);
+  engine_->RemoveNextProposal(component_url_, proposal_id);
   engine_->Validate();
 }
 

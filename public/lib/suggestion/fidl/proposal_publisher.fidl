@@ -6,15 +6,19 @@ module maxwell;
 
 import "lib/suggestion/fidl/proposal.fidl";
 
-// A service enabling Agents to contribute Proposals proactively to the
-// Suggestion engine.
+// A service enabling Agents and Modules to contribute Proposals proactively to
+// the Suggestion engine.
 [ServiceName="maxwell.ProposalPublisher"]
 interface ProposalPublisher {
-  // Includes the given |proposal| in the list from this Agent. Proposals are
-  // identified by |proposal.id|, and are namespaced by the Agent's ID.
-  // If a Proposal with the same id is already present, it is overwritten.
+  // Includes the given |proposal| in the Next/Interruption channel from this
+  // publisher. Proposals are identified by |proposal.id|, and are namespaced by
+  // the component's ID and proposal channel (Query vs. Next/Interruption).
+  //
+  // If a Next/Interruption Proposal with the same id is already present, it is
+  // overwritten.
   Propose@0(Proposal proposal);
 
-  // Removes the Proposal with the given ID from the Suggestion engine.
+  // Removes the Proposal with the given ID from the Next/Interruption channel
+  // produced by this component.
   Remove@1(string proposal_id);
 };

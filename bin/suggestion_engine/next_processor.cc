@@ -44,8 +44,8 @@ void NextProcessor::AddProposal(const std::string& component_url,
   // If one already exists, remove it before adding the new one.
   RemoveProposal(component_url, proposal->id);
 
-  auto suggestion =
-      engine_->CreateSuggestionPrototype(component_url, std::move(proposal));
+  auto suggestion = engine_->CreateSuggestionPrototype(
+      &engine_->next_prototypes_, component_url, std::move(proposal));
 
   // TODO(jwnichols): Think more deeply about the intersection between the
   // interruption and next pipelines

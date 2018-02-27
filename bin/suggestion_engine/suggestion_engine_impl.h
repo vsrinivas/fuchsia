@@ -87,8 +87,8 @@ class SuggestionEngineImpl : public SuggestionEngine,
   void AddNextProposal(ProposalPublisherImpl* source, ProposalPtr proposal);
 
   // Should only be called from ProposalPublisherImpl.
-  void RemoveProposal(const std::string& component_url,
-                      const std::string& proposal_id);
+  void RemoveNextProposal(const std::string& component_url,
+                          const std::string& proposal_id);
 
   // |SuggestionProvider|
   void SubscribeToInterruptions(
@@ -150,6 +150,10 @@ class SuggestionEngineImpl : public SuggestionEngine,
   friend class NextProcessor;
   friend class QueryProcessor;
 
+  // (proposer ID, proposal ID) => suggestion prototype
+  using SuggestionPrototypeMap = std::map<std::pair<std::string, std::string>,
+                                          std::unique_ptr<SuggestionPrototype>>;
+
   // Cleans up all resources associated with a query, including clearing
   // the previous ask suggestions, closing any still open SuggestionListeners,
   // etc.
@@ -158,7 +162,9 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // Searches for a SuggestionPrototype in the Next and Ask lists.
   SuggestionPrototype* FindSuggestion(std::string suggestion_id);
 
-  SuggestionPrototype* CreateSuggestionPrototype(const std::string& source_url,
+  // Creates a suggestion prototype owned by the given |SuggestionPrototypeMap|.
+  SuggestionPrototype* CreateSuggestionPrototype(SuggestionPrototypeMap* owner,
+                                                 const std::string& source_url,
                                                  ProposalPtr proposal);
 
   std::string RandomUuid() {
@@ -217,19 +223,14 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // would remove Suggestions that are now filtered or add
   // new ones that are no longer filtered.
 
-  // The repository of raw suggestion prototypes.
-  std::map<std::pair<std::string, std::string>,
-           std::unique_ptr<SuggestionPrototype>>
-      suggestion_prototypes_;
+  SuggestionPrototypeMap query_prototypes_;
+  RankedSuggestionsList query_suggestions_;
 
-  // TODO(rosswang): it may be worthwhile to collapse these trios into classes
-  // Channels that dispatch outbound suggestions to SuggestionListeners.
-  RankedSuggestionsList ask_suggestions_;
-
-  InterruptionsProcessor interruptions_processor_;
-
-  NextProcessor next_processor_;
+  // next and interruptions share the same backing
+  SuggestionPrototypeMap next_prototypes_;
   RankedSuggestionsList next_suggestions_;
+  NextProcessor next_processor_;
+  InterruptionsProcessor interruptions_processor_;
 
   // The set of all QueryHandlers that have been registered mapped to their
   // URLs (stored as strings).
