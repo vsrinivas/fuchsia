@@ -99,13 +99,10 @@ static inline uint arch_cpu_num_to_cpu_id(uint cpu) {
     return arm64_cpu_cpu_ids[cpu];
 }
 
-// track if we're inside an interrupt handler or not
-static inline bool arch_in_int_handler(void) {
-    return arm64_read_percpu_u32(offsetof(struct arm64_percpu, in_irq));
-}
+#define READ_PERCPU_FIELD32(field) \
+    arm64_read_percpu_u32(offsetof(struct arm64_percpu, field))
 
-static inline void arch_set_in_int_handler(bool val) {
-    arm64_write_percpu_u32(offsetof(struct arm64_percpu, in_irq), val);
-}
+#define WRITE_PERCPU_FIELD32(field, value) \
+    arm64_write_percpu_u32(offsetof(struct arm64_percpu, field), (value))
 
 __END_CDECLS

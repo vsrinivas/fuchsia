@@ -30,16 +30,6 @@ static void arch_enable_ints(void);
 static void arch_disable_ints(void);
 static bool arch_ints_disabled(void);
 
-/* The arch_in_int_handler() flag is used to check that in-kernel interrupt
- * handlers do not do any blocking operations.  This is a per-CPU flag.
- * Various blocking operations, such as mutex_acquire(), contain assertions
- * that arch_in_int_handler() is false.
- *
- * arch_in_int_handler() should only be true when interrupts are
- * disabled. */
-static bool arch_in_int_handler(void);
-static void arch_set_in_int_handler(bool in_int_handler);
-
 static uint64_t arch_cycle_count(void);
 
 static cpu_num_t arch_curr_cpu_num(void);
@@ -74,6 +64,21 @@ void arch_zero_page(void *);
 
 /* give the specific arch a chance to override some routines */
 #include <arch/arch_ops.h>
+
+/* The arch_in_int_handler() flag is used to check that in-kernel interrupt
+ * handlers do not do any blocking operations.  This is a per-CPU flag.
+ * Various blocking operations, such as mutex_acquire(), contain assertions
+ * that arch_in_int_handler() is false.
+ *
+ * arch_in_int_handler() should only be true when interrupts are
+ * disabled. */
+static inline bool arch_in_int_handler(void) {
+    return READ_PERCPU_FIELD32(in_irq);
+}
+
+static inline void arch_set_in_int_handler(bool value) {
+    WRITE_PERCPU_FIELD32(in_irq, value);
+}
 
 __END_CDECLS
 

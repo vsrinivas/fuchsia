@@ -116,15 +116,11 @@ static uint arch_max_num_cpus(void)
     return x86_num_cpus;
 }
 
-static bool arch_in_int_handler(void)
-{
-    return (bool)x86_read_gs_offset32(PERCPU_IN_IRQ_OFFSET);
-}
+#define READ_PERCPU_FIELD32(field) \
+    x86_read_gs_offset32(offsetof(struct x86_percpu, field))
 
-static void arch_set_in_int_handler(bool in_irq)
-{
-    x86_write_gs_offset32(PERCPU_IN_IRQ_OFFSET, in_irq);
-}
+#define WRITE_PERCPU_FIELD32(field, value) \
+    x86_write_gs_offset32(offsetof(struct x86_percpu, field), (value))
 
 void x86_ipi_generic_handler(void);
 void x86_ipi_reschedule_handler(void);
