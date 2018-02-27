@@ -117,7 +117,7 @@ The accepted SGR control sequences all have the form `"\033[%um"`
 | `32` | Green foreground   | |
 | `33` | Yellow foreground  | |
 | `34` | Blue foreground    | |
-| `35` | Zircon foreground | |
+| `35` | Magenta foreground | |
 | `36` | Cyan foreground    | |
 | `37` | White foreground   | |
 
