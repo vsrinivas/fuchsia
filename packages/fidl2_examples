@@ -1,0 +1,6 @@
+{
+  "labels": [
+    "//garnet/go/src/fidl/examples(//build/fidl:fidling)",
+    "//garnet/go/src/fidl/examples"
+  ]
+}

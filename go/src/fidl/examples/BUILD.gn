@@ -2,19 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/public/lib/fidl/fidl2.gni")
+import("//build/fidl/fidl.gni")
 
 template("fidl_example") {
-  fidl2(target_name) {
-    forward_variables_from(invoker, [
-      "deps",
-      "public_deps",
-      "skip_build",
-    ])
+  not_needed(invoker, "*")
+  if (defined(invoker.skip_build) && invoker.skip_build) {
+    group(target_name) {}
+  } else {
+    fidl(target_name) {
 
-    sources = [
-      "//zircon/system/host/fidl/examples/${target_name}.fidl2"
-    ]
+      sources = [
+        "//zircon/system/host/fidl/examples/${target_name}.fidl2"
+      ]
+    }
   }
 }
 
