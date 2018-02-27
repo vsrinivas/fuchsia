@@ -46,7 +46,7 @@ constexpr TypeShape kFloat32TypeShape = TypeShape(4u, 4u);
 constexpr TypeShape kFloat64TypeShape = TypeShape(8u, 8u);
 constexpr TypeShape kPointerTypeShape = TypeShape(8u, 8u);
 
-size_t AlignTo(size_t size, size_t alignment) {
+uint64_t AlignTo(uint64_t size, uint64_t alignment) {
     auto mask = alignment - 1;
     size += mask;
     size &= ~mask;
@@ -54,8 +54,8 @@ size_t AlignTo(size_t size, size_t alignment) {
 }
 
 TypeShape CStructTypeShape(std::vector<TypeShape> member_typeshapes) {
-    size_t size = 0u;
-    size_t alignment = 1u;
+    uint64_t size = 0u;
+    uint64_t alignment = 1u;
 
     for (const auto& typeshape : member_typeshapes) {
         alignment = std::max(alignment, typeshape.Alignment());
@@ -72,8 +72,8 @@ TypeShape FidlStructTypeShape(std::vector<TypeShape> member_typeshapes) {
 }
 
 TypeShape CUnionTypeShape(std::vector<TypeShape> member_typeshapes) {
-    size_t size = 0u;
-    size_t alignment = 1u;
+    uint64_t size = 0u;
+    uint64_t alignment = 1u;
     for (const auto& typeshape : member_typeshapes) {
         size = std::max(size, typeshape.Size());
         alignment = std::max(alignment, typeshape.Alignment());
