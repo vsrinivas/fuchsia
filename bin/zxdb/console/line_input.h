@@ -29,7 +29,12 @@ class LineInputBase {
   explicit LineInputBase(const std::string& prompt);
   virtual ~LineInputBase();
 
-  void set_max_cols(int max) { max_cols_ = max; }
+  // The column width of the screen before horizontal scrolling. If 0,
+  // scrolling will be disabled.
+  void set_max_cols(size_t max) { max_cols_ = max; }
+
+  // The completion callback provides suggestions for tab completion. When
+  // unset, tab completion will be disabled.
   void set_completion_callback(CompletionCallback cc) {
     completion_callback_ = cc;
   }
@@ -77,7 +82,7 @@ class LineInputBase {
   std::string& cur_line() { return history_[history_index_]; }
 
   const std::string prompt_;
-  int max_cols_ = 80;
+  size_t max_cols_ = 0;
   CompletionCallback completion_callback_ = nullptr;
 
   // The history is basically the line stack going back in time as indices
@@ -114,7 +119,10 @@ class LineInputBase {
   size_t pos_;  // Current editing position.
 };
 
-// Implementation of LineInput that prints to stdout.
+// Implementation of LineInput that prints to stdout. The caller is still
+// responsible for providing input asynchronously. The initial width of the
+// output will be automatically derived from the terminal associated with
+// stdout (if any).
 class LineInputStdout : public LineInputBase {
  public:
   LineInputStdout(const std::string& prompt);
@@ -123,7 +131,6 @@ class LineInputStdout : public LineInputBase {
  protected:
   void Write(const std::string& str) override;
 };
-
 
 // A blocking implementation that reads from stdin and writes to stdout.
 class LineInputBlockingStdio : public LineInputStdout {

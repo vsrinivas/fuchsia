@@ -24,6 +24,10 @@ static_library("console") {
   public_deps = [
     "//garnet/bin/zxdb/client",
   ]
+
+  if (current_toolchain != host_toolchain) {
+    public_deps += [ "//zircon/public/lib/fdio" ]
+  }
 }
 
 source_set("tests") {

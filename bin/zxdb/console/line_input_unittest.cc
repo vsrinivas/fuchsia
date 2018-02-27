@@ -198,4 +198,27 @@ TEST(LineInput, Completions) {
   EXPECT_EQ(2u, input.pos());
 }
 
+TEST(LineInput, Scroll) {
+  TestLineInput input("ABCDE");
+  input.set_max_cols(10);
+
+  input.BeginReadLine();
+  input.ClearOutput();
+
+  // Write up to the 9th character, which should be the last character printed
+  // until scrolling starts. It should have used the optimized "just write the
+  // characters" code path for everything after the prompt.
+  EXPECT_FALSE(input.OnInputStr("FGHI"));
+  EXPECT_EQ("FGHI", input.GetAndClearOutput());
+
+  // Add a 10th character. The whole line should scroll one to the left,
+  // leaving the cursor at the last column (colum offset 9 = "9C" at the end).
+  EXPECT_FALSE(input.OnInput('J'));
+  EXPECT_EQ("\rBCDEFGHIJ\x1b[0K\r\x1B[9C", input.GetAndClearOutput());
+
+  // Move left, the line should scroll back.
+  EXPECT_FALSE(input.OnInput(2));  // 2 = Control-B.
+  EXPECT_EQ("\rABCDEFGHIJ\x1b[0K\r\x1B[9C", input.GetAndClearOutput());
+}
+
 }  // namespace zxdb

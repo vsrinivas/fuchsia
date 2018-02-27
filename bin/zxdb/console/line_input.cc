@@ -7,6 +7,13 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#ifdef __Fuchsia__
+#include <zircon/device/pty.h>
+#include <fdio/io.h>
+#else
+#include <sys/ioctl.h>
+#endif
+
 namespace zxdb {
 
 namespace {
@@ -29,13 +36,24 @@ const char kTermBeginningOfLine[] = "\r";
 const char kTermClearToEnd[] = "\x1b[0K";
 const char kTermCursorToColFormat[] = "\r\x1b[%dC";  // printf format.
 
+size_t GetTerminalMaxCols(int fileno) {
+#ifdef __Fuchsia__
+  pty_window_size_t wsz;
+  ssize_t r = ioctl_pty_get_window_size(fileno, &wsz);
+  if (r == sizeof(wsz))
+    return wsz.width;
+#else
+  struct winsize ws;
+  if (ioctl(fileno, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
+    return ws.ws_col;
+#endif
+  return 0;  // 0 means disable scrolling.
+}
+
 }  // namespace
 
-LineInputBase::LineInputBase(const std::string& prompt) : prompt_(prompt) {
-}
-
-LineInputBase::~LineInputBase() {
-}
+LineInputBase::LineInputBase(const std::string& prompt) : prompt_(prompt) {}
+LineInputBase::~LineInputBase() {}
 
 void LineInputBase::BeginReadLine() {
   pos_ = 0;
@@ -111,6 +129,7 @@ void LineInputBase::HandleEscapedInput(char c) {
   if (escape_sequence_.size() < 2)
     return;
 
+  // See https://en.wikipedia.org/wiki/ANSI_escape_code for escape codes.
   if (escape_sequence_[0] == '[') {
     if (escape_sequence_[1] >= '0' && escape_sequence_[1] <= '9') {
       // 3-character extended sequence.
@@ -212,8 +231,11 @@ void LineInputBase::HandleTab() {
 }
 
 void LineInputBase::Insert(char c) {
-  if (pos_ == cur_line().size()) {
-    // Append to end. Optimize output to avoid redrawing the entire line.
+  if (pos_ == cur_line().size() &&
+      (max_cols_ == 0 ||
+       cur_line().size() + prompt_.size() < max_cols_ - 1)) {
+    // Append to end and no scrolling needed. Optimize output to avoid
+    // redrawing the entire line.
     cur_line().push_back(c);
     pos_++;
     Write(std::string(1, c));
@@ -284,20 +306,40 @@ void LineInputBase::RepaintLine() {
   buf.reserve(64);
 
   buf += kTermBeginningOfLine;
-  buf += prompt_;
-  buf += cur_line();
+
+  // Only print up to max_cols_ - 1 to leave room for the cursor at the end.
+  std::string line_data = prompt_ + cur_line();
+  size_t pos_in_cols = prompt_.size() + pos_;
+  if (max_cols_ > 0 && line_data.size() >= max_cols_ - 1) {
+    // Needs scrolling. This code scrolls both the user entry and the prompt.
+    // This avoids some edge cases where the prompt is wider than the screen.
+    if (pos_in_cols < max_cols_) {
+      // Cursor is on the screen with no scrolling, just trim from the right.
+      line_data.resize(max_cols_);
+    } else {
+      // Cursor requires scrolling, position the cursor on the right.
+      line_data = line_data.substr(pos_in_cols - max_cols_ + 1, max_cols_);
+      pos_in_cols = max_cols_ - 1;
+    }
+    buf += line_data;
+  } else {
+    buf += line_data;
+  }
+
   buf += kTermClearToEnd;
 
-  char forward_buf[16];
+  char forward_buf[32];
   snprintf(forward_buf, sizeof(forward_buf), kTermCursorToColFormat,
-           static_cast<int>(prompt_.size() + pos_));
+           static_cast<int>(pos_in_cols));
   buf += forward_buf;
 
   Write(buf);
 }
 
 LineInputStdout::LineInputStdout(const std::string& prompt)
-    : LineInputBase(prompt) {}
+    : LineInputBase(prompt) {
+  set_max_cols(GetTerminalMaxCols(STDIN_FILENO));
+}
 LineInputStdout::~LineInputStdout() {}
 
 void LineInputStdout::Write(const std::string& data) {
