@@ -53,7 +53,7 @@ Preferred locations:
 
 Alternate locations:
 
-- Adding a `README.md` to the root of a project’s repository may serve as a
+- Adding a `README.md` to the root of a project's repository may serve as a
   brief orientation to the project for first time visitors but this is not
   required.
 
