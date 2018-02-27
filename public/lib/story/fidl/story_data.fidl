@@ -17,6 +17,11 @@ struct StoryData {
   array<uint8, 16>? story_page_id;
 };
 
+struct StoryContextEntry {
+  string key;
+  string value;
+};
+
 // Internal data about the context where a story was run. This information is
 // logged every time a story gets focus (including when it's created), and thus
 // creates a record over time that captures (and can be used to learn) which
@@ -36,7 +41,7 @@ struct StoryData {
 struct StoryContextLog {
   // The context as obtained from the maxwell Context service. Cf.
   // //lib/context/fidl/context_reader.fidl
-  map<string, string> context;
+  array<StoryContextEntry> context;
 
   // Where the context was captured.
   string device_id;

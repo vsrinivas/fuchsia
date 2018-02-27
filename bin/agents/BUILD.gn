@@ -24,6 +24,7 @@ executable("carmen_sandiego") {
     "//garnet/public/lib/fsl",
     "//peridot/bin/acquirers:gps",
     "//peridot/lib/rapidjson",
+    "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/fidl",
   ]
 }
@@ -41,6 +42,7 @@ executable("ideas") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/lib/rapidjson",
+    "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/suggestion/fidl",
   ]

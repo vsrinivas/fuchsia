@@ -49,10 +49,10 @@ std::ostream& operator<<(std::ostream& os, const ContextSelector& selector) {
 
 std::ostream& operator<<(std::ostream& os, const ContextUpdate& update) {
   os << "{" << std::endl;
-  for (auto it = update.values.cbegin(); it != update.values.cend(); ++it) {
-    os << "  " << it.GetKey() << ":" << std::endl;
+  for (auto it = update.values.begin(); it != update.values.end(); ++it) {
+    os << "  " << (*it)->key << ":" << std::endl;
     int i = 0;
-    for (const auto& v : it.GetValue()) {
+    for (const auto& v : (*it)->value) {
       os << "    [" << i++ << "]: " << v;
     }
   }
@@ -62,8 +62,8 @@ std::ostream& operator<<(std::ostream& os, const ContextUpdate& update) {
 
 std::ostream& operator<<(std::ostream& os, const ContextQuery& query) {
   os << "{" << std::endl;
-  for (auto it = query.selector.cbegin(); it != query.selector.cend(); ++it) {
-    os << "  " << it.GetKey() << ": " << it.GetValue();
+  for (auto it = query.selector.begin(); it != query.selector.end(); ++it) {
+    os << "  " << (*it)->key << ": " << (*it)->value;
   }
   os << "}";
   return os;

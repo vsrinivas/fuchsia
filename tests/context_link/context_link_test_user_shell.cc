@@ -7,6 +7,7 @@
 #include <string>
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/context/cpp/context_helper.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
@@ -47,7 +48,7 @@ class ContextListenerImpl : maxwell::ContextListener {
     selector->type = maxwell::ContextValueType::ENTITY;
 
     auto query = maxwell::ContextQuery::New();
-    query->selector["all"] = std::move(selector);
+    AddToContextQuery(query.get(), "all", std::move(selector));
 
     context_reader->Subscribe(std::move(query), binding_.NewBinding());
     binding_.set_error_handler([] {
@@ -66,8 +67,8 @@ class ContextListenerImpl : maxwell::ContextListener {
   // |ContextListener|
   void OnContextUpdate(maxwell::ContextUpdatePtr update) override {
     FXL_VLOG(4) << "ContextListenerImpl::OnUpdate()";
-    const auto& values = update->values["all"];
-    for (const auto& value : values) {
+    auto values = TakeContextValue(update.get(), "all");
+    for (const auto& value : values.second) {
       FXL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << value;
       handler_(value);
     }

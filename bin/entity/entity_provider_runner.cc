@@ -46,10 +46,10 @@ bool DecodeEntityReference(const std::string& entity_reference,
 }
 
 std::string EncodeEntityDataReference(
-    f1dl::Map<f1dl::String, f1dl::String>* const type_to_data) {
+    std::map<std::string, std::string> type_to_data) {
   std::string encoded;
-  XdrWrite(&encoded, type_to_data,
-           XdrFilter<f1dl::Map<f1dl::String, f1dl::String>>);
+  XdrWrite(&encoded, &type_to_data,
+           XdrFilter<std::map<std::string, std::string>>);
 
   std::vector<std::string> parts(2);
   parts[0] = kEntityDataReferencePrefix;
@@ -177,11 +177,11 @@ void EntityProviderRunner::OnEntityProviderFinished(
   entity_provider_controllers_.erase(agent_url);
 }
 
-f1dl::String EntityProviderRunner::CreateReferenceFromData(
-    f1dl::Map<f1dl::String, f1dl::String>* const type_to_data) {
+std::string EntityProviderRunner::CreateReferenceFromData(
+    std::map<std::string, std::string> type_to_data) {
   size_t total_bytes = 0;
-  for (const auto& it : *type_to_data) {
-    total_bytes += it.GetKey().size() + it.GetValue().size();
+  for (const auto& it : type_to_data) {
+    total_bytes += it.first.size() + it.second.size();
   }
   if (total_bytes > kDataEntityMaxByteSize) {
     FXL_LOG(ERROR)
@@ -189,7 +189,7 @@ f1dl::String EntityProviderRunner::CreateReferenceFromData(
         << total_bytes << " bytes)";
     return nullptr;
   }
-  return EncodeEntityDataReference(type_to_data);
+  return EncodeEntityDataReference(std::move(type_to_data));
 }
 
 void EntityProviderRunner::CreateReference(

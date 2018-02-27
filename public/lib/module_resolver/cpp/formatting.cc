@@ -8,8 +8,8 @@ namespace modular {
 
 std::ostream& operator<<(std::ostream& os, const Daisy& daisy) {
   os << "{ verb: " << daisy.verb << ", nouns: [" << std::endl;
-  for (auto it = daisy.nouns.cbegin(); it != daisy.nouns.cend(); ++it) {
-    os << "    " << it.GetKey() << ": " << it.GetValue() << "," << std::endl;
+  for (auto it = daisy.nouns.begin(); it != daisy.nouns.end(); ++it) {
+    os << "    " << (*it)->name << ": " << (*it)->noun << "," << std::endl;
   }
   os << "  ] }";
   return os;

@@ -4,6 +4,7 @@
 
 #include "peridot/bin/story_runner/context_handler.h"
 
+#include "lib/context/cpp/context_helper.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 
 namespace modular {
@@ -29,7 +30,7 @@ void ContextHandler::SelectTopics(const std::vector<f1dl::String>& topics) {
     ;
     selector->meta->entity = maxwell::EntityMetadata::New();
     selector->meta->entity->topic = topic;
-    query->selector[topic] = std::move(selector);
+    AddToContextQuery(query.get(), topic, std::move(selector));
   }
 
   context_reader_->Subscribe(std::move(query), binding_.NewBinding());
@@ -40,14 +41,17 @@ void ContextHandler::Watch(const std::function<void()>& watcher) {
 }
 
 void ContextHandler::OnContextUpdate(maxwell::ContextUpdatePtr update) {
-  state_ = f1dl::Map<f1dl::String, f1dl::String>();
+  state_ = f1dl::Array<StoryContextEntryPtr>();
   for (const auto& it : update->values) {
-    if (it.GetValue().empty())
+    if (it->value.empty())
       continue;
     // HACK(thatguy): It is possible to have more than one value come back per
     // ContextSelector. Use just the first value, as that will at least be
     // deterministically the first until the value is deleted.
-    state_[it.GetKey()] = it.GetValue()[0]->content;
+    auto entry = StoryContextEntry::New();
+    entry->key = it->key;
+    entry->value = it->value[0]->content;
+    state_.push_back(std::move(entry));
   }
 
   for (auto& watcher : watchers_) {

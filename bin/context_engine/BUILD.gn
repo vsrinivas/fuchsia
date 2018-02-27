@@ -59,6 +59,7 @@ source_set("context_index_unittest") {
     ":context_index",
     "//garnet/public/lib/fsl",
     "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/fidl",
     "//third_party/googletest:gtest",
   ]

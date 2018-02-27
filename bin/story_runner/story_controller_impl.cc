@@ -102,8 +102,14 @@ void XdrPerDeviceStoryInfo(XdrContext* const xdr,
   xdr->Field("state", &info->state);
 }
 
+void XdrStoryContextEntry(XdrContext* const xdr,
+                          StoryContextEntry* const entry) {
+  xdr->Field("key", &entry->key);
+  xdr->Field("value", &entry->value);
+}
+
 void XdrStoryContextLog(XdrContext* const xdr, StoryContextLog* const data) {
-  xdr->Field("context", &data->context);
+  xdr->Field("context", &data->context, XdrStoryContextEntry);
   xdr->Field("device_id", &data->device_id);
   xdr->Field("time", &data->time);
   xdr->Field("signal", &data->signal);
@@ -525,8 +531,8 @@ class StoryControllerImpl::InitializeChainCall : Operation<ChainDataPtr> {
     // b) Create & populate a new Link and add the correct mapping to
     // |result_|.
     for (auto& entry : create_chain_info_->property_info) {
-      const auto& key = entry.GetKey();
-      const auto& info = entry.GetValue();
+      const auto& key = entry->key;
+      const auto& info = entry->value;
 
       auto mapping = ChainKeyToLinkData::New();
       mapping->key = key;
@@ -1303,27 +1309,33 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
   void Cont(FlowToken /*flow*/) {
     // HACK(mesch): Hardcoded importance computation. Will be delegated
     // somewhere more flexible eventually.
-    auto i = context_state_.find(kStoryImportanceContext);
-    if (i == context_state_.cend()) {
+    auto i = std::find_if(context_state_.begin(), context_state_.end(),
+                          [] (auto const& e) {
+                            return e->key == kStoryImportanceContext;
+    });
+    if (i == context_state_.end()) {
       result_ = 1.0;
       return;
     }
 
-    const auto& context_value = i.GetValue();
+    const auto& context_value = (*i)->value;
 
     float score = 0.0;
     float count = 0.0;
 
     for (auto& entry : log_) {
-      auto i = entry->context.find(kStoryImportanceContext);
-      if (i == entry->context.end()) {
+      const auto& c = entry->context;
+      auto i = std::find_if(c.begin(), c.end(), [] (auto const& e) {
+        return e->key == kStoryImportanceContext;
+      });
+      if (i == c.end()) {
         continue;
       }
 
       // Any log entry with context relevant to importance counts.
       count += 1.0;
 
-      const auto& log_value = i.GetValue();
+      const auto& log_value = (*i)->value;
       if (context_value != log_value) {
         continue;
       }
@@ -1504,17 +1516,19 @@ class StoryControllerImpl::ResolveModulesCall
     resolver_query_ = ResolverQuery::New();
     resolver_query_->verb = daisy->verb;
     resolver_query_->url = daisy->url;
-    resolver_query_->noun_constraints.mark_non_null();
 
     std::shared_ptr<int> outstanding_requests{new int{0}};
     for (const auto& entry : daisy->nouns) {
-      const auto& name = entry.GetKey();
-      const auto& noun = entry.GetValue();
+      const auto& name = entry->name;
+      const auto& noun = entry->noun;
 
       if (noun->is_json()) {
         auto noun_constraint = ResolverNounConstraint::New();
         noun_constraint->set_json(noun->get_json());
-        resolver_query_->noun_constraints[name] = std::move(noun_constraint);
+        auto noun_constraint_entry = ResolverNounConstraintEntry::New();
+        noun_constraint_entry->key = name;
+        noun_constraint_entry->constraint = std::move(noun_constraint);
+        resolver_query_->noun_constraints.push_back(std::move(noun_constraint_entry));
       } else if (noun->is_link_name()) {
         // Find the chain for this Module.
         auto link_path = story_controller_impl_->GetLinkPathForChainKey(
@@ -1550,8 +1564,10 @@ class StoryControllerImpl::ResolveModulesCall
                     auto noun_constraint = ResolverNounConstraint::New();
                     noun_constraint->set_link_info(std::move(link_info));
 
-                    resolver_query_->noun_constraints[name] =
-                        std::move(noun_constraint);
+                    auto noun_constraint_entry = ResolverNounConstraintEntry::New();
+                    noun_constraint_entry->key = name;
+                    noun_constraint_entry->constraint = std::move(noun_constraint);
+                    resolver_query_->noun_constraints.push_back(std::move(noun_constraint_entry));
 
                     --(*outstanding_requests);
                     if (*outstanding_requests == 0) {
@@ -1562,11 +1578,17 @@ class StoryControllerImpl::ResolveModulesCall
       } else if (noun->is_entity_type()) {
         auto noun_constraint = ResolverNounConstraint::New();
         noun_constraint->set_entity_type(noun->get_entity_type().Clone());
-        resolver_query_->noun_constraints[name] = std::move(noun_constraint);
+        auto noun_constraint_entry = ResolverNounConstraintEntry::New();
+        noun_constraint_entry->key = name;
+        noun_constraint_entry->constraint = std::move(noun_constraint);
+        resolver_query_->noun_constraints.push_back(std::move(noun_constraint_entry));
       } else if (noun->is_entity_reference()) {
         auto noun_constraint = ResolverNounConstraint::New();
         noun_constraint->set_entity_reference(noun->get_entity_reference());
-        resolver_query_->noun_constraints[name] = std::move(noun_constraint);
+        auto noun_constraint_entry = ResolverNounConstraintEntry::New();
+        noun_constraint_entry->key = name;
+        noun_constraint_entry->constraint = std::move(noun_constraint);
+        resolver_query_->noun_constraints.push_back(std::move(noun_constraint_entry));
       }
     }
     if (*outstanding_requests == 0) {

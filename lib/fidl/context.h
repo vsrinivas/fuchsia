@@ -5,8 +5,8 @@
 #ifndef PERIDOT_LIB_FIDL_CONTEXT_H_
 #define PERIDOT_LIB_FIDL_CONTEXT_H_
 
-#include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/string.h"
+#include "lib/story/fidl/story_data.fidl.h"
 
 namespace modular {
 
@@ -15,7 +15,7 @@ namespace modular {
 // data member, so we abbreviate its type to reduce verbosity slightly.
 //
 // The map is from context topic to its json value.
-using ContextState = f1dl::Map<f1dl::String, f1dl::String>;
+using ContextState = f1dl::Array<StoryContextEntryPtr>;
 
 }  // namespace modular
 

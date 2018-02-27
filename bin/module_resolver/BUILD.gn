@@ -58,6 +58,7 @@ source_set("module_resolver_impl") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/module_manifest_source",
     "//peridot/public/lib/async/cpp:operation",
+    "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/module_resolver/fidl",

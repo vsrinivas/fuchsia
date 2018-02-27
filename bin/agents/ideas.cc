@@ -7,6 +7,7 @@
 #include <rapidjson/document.h>
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/context/cpp/context_helper.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/suggestion/fidl/proposal_publisher.fidl.h"
@@ -31,15 +32,16 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
     selector->meta = ContextMetadata::New();
     selector->meta->entity = EntityMetadata::New();
     selector->meta->entity->topic = kLocationTopic;
-    query->selector[kLocationTopic] = std::move(selector);
+    AddToContextQuery(query.get(), kLocationTopic, std::move(selector));
     reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
   void OnContextUpdate(ContextUpdatePtr update) override {
-    if (update->values[kLocationTopic].empty())
+    auto r = TakeContextValue(update.get(), kLocationTopic);
+    if (!r.first)
       return;
     rapidjson::Document d;
-    d.Parse(update->values[kLocationTopic][0]->content.data());
+    d.Parse(r.second[0]->content.data());
 
     if (d.IsString()) {
       const std::string region = d.GetString();

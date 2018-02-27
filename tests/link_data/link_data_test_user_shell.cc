@@ -195,8 +195,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     modular::CreatePointer(doc, segments.begin(), segments.end())
         .Set(doc, true);
 
-    using FidlStringMap = f1dl::Map<f1dl::String, f1dl::String>;
-    story_provider_->CreateStoryWithInfo(url, FidlStringMap(),
+    story_provider_->CreateStoryWithInfo(url, nullptr  /* info_entra */,
                                          modular::JsonValueToString(doc),
                                          [this](const f1dl::String& story_id) {
                                            story1_create_.Pass();

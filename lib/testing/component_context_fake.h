@@ -65,7 +65,7 @@ class ComponentContextFake : public ComponentContext {
 
   // |ComponentContext|
   void CreateEntityWithData(
-      f1dl::Map<f1dl::String, f1dl::String> type_to_data,
+      f1dl::Array<TypeToDataEntryPtr> type_to_data,
       const CreateEntityWithDataCallback& result) override;
 
   EntityResolverFake entity_resolver_;

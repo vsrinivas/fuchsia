@@ -7,6 +7,7 @@
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 
 #include "garnet/public/lib/fxl/strings/split_string.h"
+#include "lib/context/cpp/context_helper.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 #include "peridot/public/lib/story/fidl/create_chain.fidl.h"
@@ -42,7 +43,7 @@ ModuleResolverImpl::ModuleResolverImpl(
     auto query = ContextQuery::New();
     auto selector = ContextSelector::New();
     selector->type = ContextValueType::ENTITY;
-    query->selector[kContextListenerEntitiesKey] = std::move(selector);
+    AddToContextQuery(query.get(), kContextListenerEntitiesKey, std::move(selector));
     context_reader_->Subscribe(std::move(query),
                                context_listener_binding_.NewBinding());
   }
@@ -143,8 +144,8 @@ class ModuleResolverImpl::FindModulesCall
 
     num_nouns_countdown_ = query_->noun_constraints.size();
     for (const auto& noun_entry : query_->noun_constraints) {
-      const auto& noun_name = noun_entry.GetKey();
-      const auto& noun_constraints = noun_entry.GetValue();
+      const auto& noun_name = noun_entry->key;
+      const auto& noun_constraints = noun_entry->constraint;
 
       module_resolver_impl_->type_helper_.GetNounTypes(
           noun_constraints,
@@ -308,9 +309,9 @@ class ModuleResolverImpl::FindModulesCall
       std::vector<std::string> matching_query_nouns;
       for (const auto& query_noun : query_->noun_constraints) {
         std::vector<std::string> entry_noun_types = ToArray(entry_noun->types);
-        if (DoTypesIntersect(noun_types_cache_[query_noun.GetKey()],
+        if (DoTypesIntersect(noun_types_cache_[query_noun->key],
                              entry_noun_types)) {
-          matching_query_nouns.push_back(query_noun.GetKey());
+          matching_query_nouns.push_back(query_noun->key);
         }
       }
       entry_noun_to_query_nouns[entry_noun->name] = matching_query_nouns;
@@ -419,24 +420,17 @@ class ModuleResolverImpl::FindModulesCall
       const modular::ResolverQueryPtr& query,
       modular::ModuleResolverResultPtr* result,
       std::map<std::string, std::string> noun_mapping = {}) {
-    (*result)->initial_nouns.mark_non_null();
     (*result)->create_chain_info = modular::CreateChainInfo::New();
     auto& create_chain_info = (*result)->create_chain_info;  // For convenience.
-    create_chain_info->property_info.mark_non_null();
-    for (auto query_noun : query->noun_constraints) {
-      const auto& noun = query_noun.GetValue();
-      std::string name = query_noun.GetKey();
-      auto it = noun_mapping.find(query_noun.GetKey());
+    for (const auto& query_noun : query->noun_constraints) {
+      const auto& noun = query_noun->constraint;
+      std::string name = query_noun->key;
+      auto it = noun_mapping.find(query_noun->key);
       if (it != noun_mapping.end()) {
         name = it->second;
       }
 
       if (noun->is_entity_reference()) {
-        // TODO(thatguy): Remove this once no more Modules are using the root
-        // Link. MI4-736
-        (*result)->initial_nouns[name] =
-            modular::EntityReferenceToJson(noun->get_entity_reference());
-
         auto create_link = modular::CreateLinkInfo::New();
         create_link->initial_data =
             modular::EntityReferenceToJson(noun->get_entity_reference());
@@ -444,23 +438,28 @@ class ModuleResolverImpl::FindModulesCall
         // TODO(thatguy): set |create_link->permissions|.
         auto property_info = modular::CreateChainPropertyInfo::New();
         property_info->set_create_link(std::move(create_link));
-        create_chain_info->property_info[name] = std::move(property_info);
+        auto chain_entry = modular::ChainEntry::New();
+        chain_entry->key = name;
+        chain_entry->value = std::move(property_info);
+        create_chain_info->property_info.push_back(std::move(chain_entry));
       } else if (noun->is_link_info()) {
         auto property_info = modular::CreateChainPropertyInfo::New();
         property_info->set_link_path(noun->get_link_info()->path.Clone());
-        create_chain_info->property_info[name] = std::move(property_info);
+        auto chain_entry = modular::ChainEntry::New();
+        chain_entry->key = name;
+        chain_entry->value = std::move(property_info);
+        create_chain_info->property_info.push_back(std::move(chain_entry));
       } else if (noun->is_json()) {
-        // TODO(thatguy): Remove this once no more Modules are using the root
-        // Link. MI4-736
-        (*result)->initial_nouns[name] = noun->get_json();
-
         auto create_link = modular::CreateLinkInfo::New();
         create_link->initial_data = noun->get_json();
         // TODO(thatguy): set |create_link->allowed_types|.
         // TODO(thatguy): set |create_link->permissions|.
         auto property_info = modular::CreateChainPropertyInfo::New();
         property_info->set_create_link(std::move(create_link));
-        create_chain_info->property_info[name] = std::move(property_info);
+        auto chain_entry = modular::ChainEntry::New();
+        chain_entry->key = name;
+        chain_entry->value = std::move(property_info);
+        create_chain_info->property_info.push_back(std::move(chain_entry));
       }
       // There's nothing to copy over from 'entity_types', since it only
       // specifies noun constraint information, and no actual content.
@@ -668,13 +667,12 @@ void ModuleResolverImpl::PeriodicCheckIfSourcesAreReady() {
 }
 
 void ModuleResolverImpl::OnContextUpdate(ContextUpdatePtr update) {
-  const f1dl::Array<ContextValuePtr>& values =
-      update->values[kContextListenerEntitiesKey];
-  if (values.empty()) {
+  auto r = TakeContextValue(update.get(), kContextListenerEntitiesKey);
+  if (!r.first) {
     return;
   }
 
-  for (const auto& value : values) {
+  for (const auto& value : r.second) {
     rapidjson::Document document;
     document.Parse(value->content);
   }

@@ -10,6 +10,11 @@ import "lib/agent/fidl/agent_controller/agent_controller.fidl";
 import "lib/component/fidl/message_queue.fidl";
 import "lib/entity/fidl/entity_resolver.fidl";
 
+struct TypeToDataEntry {
+  string type;
+  string data;
+};
+
 // Provided to all components in their respective intialization methods by the
 // framework. For example, a Module gets it in Module::Initialize() and an Agent
 // gets it in Agent::Initialize().
@@ -38,10 +43,11 @@ interface ComponentContext {
   // reference to an Entity interface.
   GetEntityResolver@5(EntityResolver& request);
 
-  // Creates a new entity where types are the keys of |type_to_data|, and the
-  // data are the values. This is a useful way to represent small immutable
-  // entities without having to provide the entity using an Agent. The types and
-  // data together must be within 16KB in size.
-  CreateEntityWithData@6(map<string,string> type_to_data)
+  // Creates a new entity from |type_to_data| such that duplicate types are
+  // overriden by subsequent entries.
+  // This is a useful way to represent small immutable entities without having
+  // to provide the entity using an Agent. The types and data together must be
+  // within 16KB in size.
+  CreateEntityWithData@6(array<TypeToDataEntry> type_to_data)
       => (string? entity_reference);
 };

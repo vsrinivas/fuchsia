@@ -8,6 +8,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/service_provider.fidl.h"
+#include "lib/context/cpp/context_helper.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
@@ -29,6 +30,17 @@ namespace {
 constexpr char kModuleUrl[] =
     "file:///system/test/modular_tests/common_null_module";
 constexpr char kTopic[] = "location/home_work";
+
+float GetImportance(
+    const f1dl::Array<modular::StoryImportanceEntryPtr>& importance_list,
+    const std::string& id) {
+  for (auto const& it : importance_list) {
+    if (it->id == id) {
+      return it->importance;
+    }
+  }
+  return 0.0f;
+}
 
 // A simple story watcher implementation that invokes a "continue" callback when
 // it sees the watched story transition to RUNNING state. Used to push the test
@@ -117,7 +129,7 @@ class ContextListenerImpl : maxwell::ContextListener {
     selector->type = maxwell::ContextValueType::ENTITY;
 
     auto query = maxwell::ContextQuery::New();
-    query->selector["all"] = std::move(selector);
+    AddToContextQuery(query.get(), "all", std::move(selector));
 
     context_reader->Subscribe(std::move(query), binding_.NewBinding());
     binding_.set_error_handler(
@@ -135,8 +147,8 @@ class ContextListenerImpl : maxwell::ContextListener {
   // |ContextListener|
   void OnContextUpdate(maxwell::ContextUpdatePtr update) override {
     FXL_VLOG(4) << "ContextListenerImpl::OnUpdate()";
-    const auto& values = update->values["all"];
-    for (const auto& value : values) {
+    const auto& values = TakeContextValue(update.get(), "all");
+    for (const auto& value : values.second) {
       FXL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << value;
       if (value->meta && value->meta->entity) {
         handler_(value->meta->entity->topic, value->content);
@@ -291,29 +303,31 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void GetImportance1() {
     story_provider_->GetImportance(
-        [this](f1dl::Map<f1dl::String, float> importance) {
+        [this](f1dl::Array<modular::StoryImportanceEntryPtr> importance_list) {
           get_importance1_.Pass();
 
-          if (importance.find(story1_id_) == importance.end()) {
+          auto story1_importance = GetImportance(importance_list, story1_id_);
+          if (story1_importance == 0.0f) {
             modular::testing::Fail("No importance for story1");
           } else {
-            FXL_VLOG(4) << "Story1 importance " << importance[story1_id_];
+            FXL_VLOG(4) << "Story1 importance " << story1_importance;
           }
 
-          if (importance.find(story2_id_) == importance.end()) {
+          auto story2_importance = GetImportance(importance_list, story2_id_);
+          if (story2_importance == 0.0f) {
             modular::testing::Fail("No importance for story2");
           } else {
-            FXL_VLOG(4) << "Story2 importance " << importance[story2_id_];
+            FXL_VLOG(4) << "Story2 importance " << story2_importance;
           }
 
-          if (importance[story1_id_] > 0.1f) {
+          if (story1_importance > 0.1f) {
             modular::testing::Fail("Wrong importance for story1 " +
-                                   std::to_string(importance[story1_id_]));
+                                   std::to_string(story1_importance));
           };
 
-          if (importance[story2_id_] < 0.9f) {
+          if (story2_importance < 0.9f) {
             modular::testing::Fail("Wrong importance for story2 " +
-                                   std::to_string(importance[story2_id_]));
+                                   std::to_string(story2_importance));
           };
 
           Focus();
@@ -337,18 +351,19 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void GetImportance2() {
     story_provider_->GetImportance(
-        [this](f1dl::Map<f1dl::String, float> importance) {
+        [this](f1dl::Array<modular::StoryImportanceEntryPtr> importance_list) {
           get_importance2_.Pass();
 
-          if (importance.find(story1_id_) == importance.end()) {
+          auto story1_importance = GetImportance(importance_list, story1_id_);
+          if (story1_importance == 0.0f) {
             modular::testing::Fail("No importance for story1");
           } else {
-            FXL_VLOG(4) << "Story1 importance " << importance[story1_id_];
+            FXL_VLOG(4) << "Story1 importance " << story1_importance;
           }
 
-          if (importance[story1_id_] < 0.4f) {
+          if (story1_importance < 0.4f) {
             modular::testing::Fail("Wrong importance for story1 " +
-                                   std::to_string(importance[story1_id_]));
+                                   std::to_string(story1_importance));
           };
 
           Logout();

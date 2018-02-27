@@ -7,6 +7,11 @@ module component;
 import "lib/app/fidl/service_provider.fidl";
 import "lib/network/fidl/network_error.fidl";
 
+struct StringPair {
+  string first;
+  string second;
+};
+
 // Represents the contents of the fuchsia:component facet.
 struct ComponentFacet {
   string url;
@@ -17,7 +22,7 @@ struct ComponentFacet {
 
 // Represents the contents of the fuchsia:resources facet, resolved to this machine.
 struct ResourcesFacet {
-  map<string, string> resource_urls;
+  array<StringPair> resource_urls;
 };
 
 // Represents the contents of the fuchsia:application facet.
@@ -41,7 +46,7 @@ struct ComponentManifest {
 
 interface ComponentResources {
   GetResourceNames@0() => (array<string> resource_names);
-  GetResourceURLs@1() => (map<string, string> resource_urls);
+  GetResourceURLs@1() => (array<StringPair> resource_urls);
   GetResource@2(string resource_name)
       => (handle<vmo>? data, network.NetworkError? error);
 };
@@ -72,6 +77,6 @@ interface ComponentIndex {
   //
   // TODO(thatguy): |filter| should become a more descriptive query
   // representation when more than property equality is needed.
-  FindComponentManifests@1(map<string, string> filter)
+  FindComponentManifests@1(array<StringPair> filter)
       => (array<ComponentManifest> results);
 };

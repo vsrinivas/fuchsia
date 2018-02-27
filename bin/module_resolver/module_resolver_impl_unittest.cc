@@ -13,13 +13,26 @@
 namespace maxwell {
 namespace {
 
+// Returns pair<true, ..> if key found, else <false, nullptr>.
+std::pair<bool, modular::CreateChainPropertyInfo*> GetProperty(
+    modular::CreateChainInfoPtr& chain_info,
+    const std::string& key) {
+  for (auto& it: chain_info->property_info) {
+    if (it->key == key) {
+      return std::make_pair<bool, modular::CreateChainPropertyInfo*>(
+          true, it->value.get());
+    }
+  }
+
+  return std::make_pair<bool, modular::CreateChainPropertyInfo*>(
+      false, nullptr);
+}
+
 class QueryBuilder {
  public:
   QueryBuilder() : query(modular::ResolverQuery::New()) {
-    query->noun_constraints.mark_non_null();
   }
   QueryBuilder(std::string verb) : query(modular::ResolverQuery::New()) {
-    query->noun_constraints.mark_non_null();
     SetVerb(verb);
   }
 
@@ -40,14 +53,20 @@ class QueryBuilder {
     auto noun = modular::ResolverNounConstraint::New();
     auto types_array = f1dl::Array<f1dl::String>::From(types);
     noun->set_entity_type(std::move(types_array));
-    query->noun_constraints.insert(name, std::move(noun));
+    auto resolver_noun_constraint_entry = modular::ResolverNounConstraintEntry::New();
+    resolver_noun_constraint_entry->key = name;
+    resolver_noun_constraint_entry->constraint = std::move(noun);
+    query->noun_constraints.push_back(std::move(resolver_noun_constraint_entry));
     return *this;
   }
 
   QueryBuilder& AddEntityNoun(std::string name, std::string entity_reference) {
     auto noun = modular::ResolverNounConstraint::New();
     noun->set_entity_reference(entity_reference);
-    query->noun_constraints.insert(name, std::move(noun));
+    auto resolver_noun_constraint_entry = modular::ResolverNounConstraintEntry::New();
+    resolver_noun_constraint_entry->key = name;
+    resolver_noun_constraint_entry->constraint = std::move(noun);
+    query->noun_constraints.push_back(std::move(resolver_noun_constraint_entry));
     return *this;
   }
 
@@ -55,7 +74,10 @@ class QueryBuilder {
   QueryBuilder& AddJsonNoun(std::string name, std::string json) {
     auto noun = modular::ResolverNounConstraint::New();
     noun->set_json(json);
-    query->noun_constraints.insert(name, std::move(noun));
+    auto resolver_noun_constraint_entry = modular::ResolverNounConstraintEntry::New();
+    resolver_noun_constraint_entry->key = name;
+    resolver_noun_constraint_entry->constraint = std::move(noun);
+    query->noun_constraints.push_back(std::move(resolver_noun_constraint_entry));
     return *this;
   }
 
@@ -75,7 +97,10 @@ class QueryBuilder {
 
     auto noun = modular::ResolverNounConstraint::New();
     noun->set_link_info(std::move(link_info));
-    query->noun_constraints.insert(name, std::move(noun));
+    auto resolver_noun_constraint_entry = modular::ResolverNounConstraintEntry::New();
+    resolver_noun_constraint_entry->key = name;
+    resolver_noun_constraint_entry->constraint = std::move(noun);
+    query->noun_constraints.push_back(std::move(resolver_noun_constraint_entry));
     return *this;
   }
 
@@ -96,7 +121,10 @@ class QueryBuilder {
 
     auto noun = modular::ResolverNounConstraint::New();
     noun->set_link_info(std::move(link_info));
-    query->noun_constraints.insert(name, std::move(noun));
+    auto resolver_noun_constraint_entry = modular::ResolverNounConstraintEntry::New();
+    resolver_noun_constraint_entry->key = name;
+    resolver_noun_constraint_entry->constraint = std::move(noun);
+    query->noun_constraints.push_back(std::move(resolver_noun_constraint_entry));
     return *this;
   }
 
@@ -352,8 +380,8 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
   // Verify that |create_chain_info| is set up correctly.
   ASSERT_TRUE(res->create_chain_info);
   EXPECT_EQ(1lu, res->create_chain_info->property_info.size());
-  ASSERT_TRUE(res->create_chain_info->property_info["start"]);
-  auto& start = res->create_chain_info->property_info["start"];
+  ASSERT_TRUE(GetProperty(res->create_chain_info, "start").first);
+  auto start = GetProperty(res->create_chain_info, "start").second;
   ASSERT_TRUE(start->is_create_link());
   EXPECT_EQ(modular::EntityReferenceToJson(location_entity),
             start->get_create_link()->initial_data);
@@ -427,15 +455,15 @@ TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
   // Verify that |create_chain_info| is set up correctly.
   ASSERT_TRUE(res->create_chain_info);
   EXPECT_EQ(2lu, res->create_chain_info->property_info.size());
-  ASSERT_TRUE(res->create_chain_info->property_info["start"]);
-  auto& start = res->create_chain_info->property_info["start"];
+  ASSERT_TRUE(GetProperty(res->create_chain_info, "start").first);
+  auto start = GetProperty(res->create_chain_info, "start").second;
   ASSERT_TRUE(start->is_create_link());
   EXPECT_EQ(startJson, start->get_create_link()->initial_data);
   // TODO(thatguy): Populate |allowed_types| correctly.
   EXPECT_FALSE(start->get_create_link()->allowed_types);
 
-  ASSERT_TRUE(res->create_chain_info->property_info["destination"]);
-  auto& destination = res->create_chain_info->property_info["destination"];
+  ASSERT_TRUE(GetProperty(res->create_chain_info, "destination").first);
+  auto destination = GetProperty(res->create_chain_info, "destination").second;
   ASSERT_TRUE(destination->is_create_link());
   EXPECT_EQ(destinationJson, destination->get_create_link()->initial_data);
   // TODO(thatguy): Populate |allowed_types| correctly.
@@ -487,8 +515,8 @@ TEST_F(ModuleResolverImplTest, LinkInfoNounType) {
   // Verify that |create_chain_info| is set up correctly.
   ASSERT_TRUE(res->create_chain_info);
   EXPECT_EQ(1lu, res->create_chain_info->property_info.size());
-  ASSERT_TRUE(res->create_chain_info->property_info["start"]);
-  auto& start = res->create_chain_info->property_info["start"];
+  ASSERT_TRUE(GetProperty(res->create_chain_info, "start").first);
+  auto start = GetProperty(res->create_chain_info, "start").second;
   ASSERT_TRUE(start->is_link_path());
   EXPECT_EQ("a", start->get_link_path()->module_path[0]);
   EXPECT_EQ("b", start->get_link_path()->module_path[1]);
@@ -675,11 +703,11 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndMultipleNouns) {
   ASSERT_EQ(1lu, results().size());
   auto result = results()[0].get();
 
-  EXPECT_EQ(result->create_chain_info->property_info["start"]
+  EXPECT_EQ(GetProperty(result->create_chain_info, "start").second
                 ->get_create_link()
                 ->initial_data,
             modular::EntityReferenceToJson(start_entity));
-  EXPECT_EQ(result->create_chain_info->property_info["end"]
+  EXPECT_EQ(GetProperty(result->create_chain_info, "end").second
                 ->get_create_link()
                 ->initial_data,
             modular::EntityReferenceToJson(end_entity));
@@ -728,19 +756,19 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndTwoNounsOfSameType) {
 
   for (const auto& result : results()) {
     bool start_mapped_to_start =
-        result->create_chain_info->property_info["start"]
+        GetProperty(result->create_chain_info, "start").second
             ->get_create_link()
             ->initial_data == modular::EntityReferenceToJson(start_entity);
     bool start_mapped_to_end =
-        result->create_chain_info->property_info["start"]
+        GetProperty(result->create_chain_info, "start").second
             ->get_create_link()
             ->initial_data == modular::EntityReferenceToJson(end_entity);
     bool end_mapped_to_end =
-        result->create_chain_info->property_info["end"]
+        GetProperty(result->create_chain_info, "end").second
             ->get_create_link()
             ->initial_data == modular::EntityReferenceToJson(end_entity);
     bool end_mapped_to_start =
-        result->create_chain_info->property_info["end"]
+        GetProperty(result->create_chain_info, "end").second
             ->get_create_link()
             ->initial_data == modular::EntityReferenceToJson(start_entity);
     found_first_mapping |= start_mapped_to_start && end_mapped_to_end;

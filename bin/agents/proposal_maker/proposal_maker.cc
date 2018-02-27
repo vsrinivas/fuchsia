@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/context/cpp/context_helper.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/suggestion/fidl/proposal_publisher.fidl.h"
@@ -55,17 +56,18 @@ class ProposalMaker : ContextListener {
     selector->meta = ContextMetadata::New();
     selector->meta->entity = EntityMetadata::New();
     selector->meta->entity->topic = kSelectedEntitiesTopic;
-    query->selector[kSelectedEntitiesTopic] = std::move(selector);
+    AddToContextQuery(query.get(), kSelectedEntitiesTopic, std::move(selector));
     reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
   // |ContextListener|
   void OnContextUpdate(ContextUpdatePtr result) override {
-    if (result->values[kSelectedEntitiesTopic].empty())
+    auto p = TakeContextValue(result.get(), kSelectedEntitiesTopic);
+    if (!p.first || p.second.empty())
       return;
     const std::vector<EntitySpan> entities =
-        EntitySpan::FromContextValues(result->values[kSelectedEntitiesTopic]);
+        EntitySpan::FromContextValues(p.second);
     for (const EntitySpan& e : entities) {
       if (e.GetType() == kEmailType) {
         proposal_out_->Propose(MkUrlProposal(e.GetContent()));

@@ -234,10 +234,10 @@ TEST_F(EntityProviderRunnerTest, Basic) {
 }
 
 TEST_F(EntityProviderRunnerTest, DataEntity) {
-  f1dl::Map<f1dl::String, f1dl::String> data;
+  std::map<std::string, std::string> data;
   data["type1"] = "data1";
 
-  auto entity_ref = entity_provider_runner()->CreateReferenceFromData(&data);
+  auto entity_ref = entity_provider_runner()->CreateReferenceFromData(data);
 
   EntityResolverPtr entity_resolver;
   entity_provider_runner()->ConnectEntityResolver(entity_resolver.NewRequest());

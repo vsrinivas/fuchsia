@@ -32,7 +32,6 @@ class StoryControllerMock : public StoryController {
     auto info = StoryInfo::New();
     info->id = "wow";
     info->url = "wow";
-    info->extra.mark_non_null();
     callback(std::move(info), modular::StoryState::INITIAL);
   }
 

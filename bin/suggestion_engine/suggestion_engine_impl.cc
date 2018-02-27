@@ -290,10 +290,11 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
   if (story_provider_) {
     // TODO(afergan): Make this more robust later. For now, we
     // always assume that there's extra info and that it's a color.
-    f1dl::Map<f1dl::String, f1dl::String> extra_info;
+    auto extra_info = f1dl::Array<modular::StoryInfoExtraEntryPtr>::New(1);
     char hex_color[11];
     sprintf(hex_color, "0x%x", story_color);
-    extra_info["color"] = hex_color;
+    extra_info[0]->key = "color";
+    extra_info[0]->value = hex_color;
     auto& initial_data = create_story->initial_data;
     auto& module_id = create_story->module_id;
     story_provider_->CreateStoryWithInfo(

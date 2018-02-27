@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fidl/cpp/bindings/map.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/fxl/logging.h"
@@ -157,16 +156,6 @@ class XdrContext {
     Field(field).Value(data, filter);
   }
 
-  // A field of a fidl map type requires two separate filters for the
-  // key and the value data type.
-  template <typename K, typename D, typename V>
-  void Field(const char field[],
-             f1dl::Map<K, D>* const data,
-             XdrFilterType<K> const key_filter,
-             XdrFilterType<V> const value_filter) {
-    Field(field).Value(data, key_filter, value_filter);
-  }
-
   // Below are methods analog to those for values on properties of
   // objects for handling standalone values. These methods are called
   // by XdrContext client code such as XdrRead() and XdrWrite() to
@@ -293,84 +282,6 @@ class XdrContext {
   template <typename V>
   void Value(f1dl::Array<V>* const data) {
     Value(data, XdrFilter<V>);
-  }
-
-  // A fidl map is mapped to an array of pairs of key and value,
-  // because fidl maps can have non-string keys. There are two
-  // filters, for the key type and the value type.
-  //
-  // The key type is scalar, so it's the same type in the Map and the
-  // filter for it. However, the value type might be a struct, in
-  // which case the Map parameter is the StructPtr<> or
-  // InlineStructPtr<> to the type of the argument of the filter for
-  // it.
-  template <typename K, typename D, typename V>
-  void Value(f1dl::Map<K, D>* const data,
-             XdrFilterType<K> const key_filter,
-             XdrFilterType<V> const value_filter) {
-    switch (op_) {
-      case XdrOp::TO_JSON:
-        if (data->is_null()) {
-          value_->SetNull();
-
-        } else {
-          value_->SetArray();
-          value_->Reserve(data->size(), allocator());
-
-          size_t index = 0;
-          for (auto i = data->begin(); i != data->end(); ++i) {
-            // GetKey() returns a const&, but we need a mutable value
-            // to pass to the XDR Value() filter even when we don't
-            // mutate it.
-            K k{i.GetKey()};
-
-            XdrContext&& element = Element(index++);
-            element.value_->SetObject();
-
-            element.Field("@k").Value(&k, key_filter);
-            element.Field("@v").Value(&i.GetValue(), value_filter);
-          }
-        }
-        break;
-
-      case XdrOp::FROM_JSON:
-        if (value_->IsNull()) {
-          data->reset();
-
-        } else {
-          if (!value_->IsArray()) {
-            AddError("Array type expected.");
-            return;
-          }
-
-          // Erase existing data in case there are some left.
-          data->reset();
-
-          // Mark non null is essential in the case there are no
-          // elements in the map.
-          data->mark_non_null();
-
-          size_t index = 0;
-          for (auto i = value_->Begin(); i != value_->End(); ++i) {
-            XdrContext&& element = Element(index++);
-
-            K key;
-            element.Field("@k").Value(&key, key_filter);
-
-            V value;
-            element.Field("@v").Value(&value, value_filter);
-
-            data->insert(std::move(key), std::move(value));
-          }
-        }
-    }
-  }
-
-  // A fidl map with only simple values can infer its key value
-  // filters from the type parameters of the map.
-  template <typename K, typename V>
-  void Value(f1dl::Map<K, V>* const data) {
-    Value(data, XdrFilter<K>, XdrFilter<V>);
   }
 
   // An STL vector is mapped to JSON Array with a custom filter for the

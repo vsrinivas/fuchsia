@@ -6,7 +6,13 @@ module modular;
 
 import "lib/story/fidl/link.fidl";
 import "lib/story/fidl/story_controller.fidl";
+import "lib/story/fidl/story_info.fidl";
 import "lib/story/fidl/story_state.fidl";
+
+struct StoryImportanceEntry {
+  string id;
+  float importance;
+};
 
 // UserRunner creates an instance of this service and passes it to the UserShell
 // so it can operate on stories for the user. It is also passed to other
@@ -32,7 +38,8 @@ interface StoryProvider {
   //
   // Providing |module_url| is deprecated. It is preferred to GetController()
   // and call StoryController.AddDaisy().
-  CreateStoryWithInfo@1(string? module_url, map<string, string>? extra_info,
+  CreateStoryWithInfo@1(string? module_url,
+                        array<StoryInfoExtraEntry>? extra_info,
                         string? root_json) => (string story_id);
 
   // Deletes an existing story from the list of known stories. Returns when the
@@ -74,7 +81,7 @@ interface StoryProvider {
   // for which the user shell holds a story controller. This will change,
   // especially as it makes sense that the user shell uses importance to decide
   // which stories to get a controller for and start.
-  GetImportance@8() => (map<string, float> importance);
+  GetImportance@8() => (array<StoryImportanceEntry>? importance_list);
 
   // Registers a listener for changes in the story collection.
   WatchImportance@9(StoryImportanceWatcher watcher);

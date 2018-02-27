@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/context/cpp/context_helper.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -27,20 +28,21 @@ class CarmenSandiegoApp : public ContextListener {
     selector->meta->entity = EntityMetadata::New();
     selector->meta->entity->topic = acquirers::GpsAcquirer::kLabel;
     auto query = ContextQuery::New();
-    query->selector["gps"] = std::move(selector);
+    AddToContextQuery(query.get(), "gps", std::move(selector));
     reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
   // |ContextListener|
   void OnContextUpdate(ContextUpdatePtr update) override {
-    if (update->values["gps"].empty())
+    auto p = TakeContextValue(update.get(), "gps");
+    if (!p.first)
       return;
 
     std::string hlloc = "somewhere";
 
     rapidjson::Document d;
-    d.Parse(update->values["gps"][0]->content);
+    d.Parse(p.second[0]->content);
 
     if (d.IsObject()) {
       const float latitude = d["lat"].GetFloat(),

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/context/cpp/context_helper.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -36,7 +37,7 @@ class BasicTextListener : ContextListener {
     selector->meta->entity->topic = kRawTextTopic;
 
     auto query = ContextQuery::New();
-    query->selector[kRawTextTopic] = std::move(selector);
+    AddToContextQuery(query.get(), kRawTextTopic, std::move(selector));
 
     reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
@@ -70,13 +71,14 @@ class BasicTextListener : ContextListener {
 
   // |ContextListener|
   void OnContextUpdate(ContextUpdatePtr result) override {
-    if (result->values[kRawTextTopic].empty())
+    auto r = TakeContextValue(result.get(), kRawTextTopic);
+    if (!r.first || r.second.empty())
       return;
     rapidjson::Document text_doc;
     // TODO(thatguy): This is only taking the first raw_text entry. We should be
     // keeping track of each one, and writing N new context values out for
     // Entities we extracted.
-    text_doc.Parse(result->values[kRawTextTopic][0]->content);
+    text_doc.Parse(r.second[0]->content);
     // TODO(travismart): What to do if there are multiple topics, or if
     // topics_[0] has more than one entry?
     if (!text_doc.HasMember("text") || !text_doc["text"].IsString()) {

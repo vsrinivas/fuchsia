@@ -37,8 +37,10 @@ class TestApp : public ModuleWatcher {
     // the resolution process to choose a compatible Module.
     // TODO(thatguy): We should be specifying type constraints when we create
     // the Link.
-    f1dl::Map<f1dl::String, f1dl::String> entity_data;
-    entity_data["myType"] = "1337";
+    auto entity_data = f1dl::Array<TypeToDataEntryPtr>::New(1);
+    entity_data[0] = TypeToDataEntry::New();
+    entity_data[0]->type = "myType";
+    entity_data[0]->data = "1337";
     component_context_->CreateEntityWithData(
         std::move(entity_data), [this](const f1dl::String& reference) {
           entity_one_reference_ = reference;
@@ -56,6 +58,7 @@ class TestApp : public ModuleWatcher {
   void StartDaisy() {
     daisy_ = Daisy::New();
     daisy_->url = kChildModuleUrl;
+    daisy_->nouns.resize(3);
 
     // We'll put three nouns "one", "two" and "three" on the Daisy. The first
     // is used to match the Module, because we know that it expectes a noun
@@ -70,17 +73,23 @@ class TestApp : public ModuleWatcher {
     link_one_->SetEntity(entity_one_reference_);
     auto noun = Noun::New();
     noun->set_link_name("foo");
-    daisy_->nouns["one"] = std::move(noun);
+    daisy_->nouns[0] = NounEntry::New();
+    daisy_->nouns[0]->name = "one";
+    daisy_->nouns[0]->noun = std::move(noun);
 
     module_context_->GetLink("bar", link_two_.NewRequest());
     link_two_->Set(nullptr, "12345");
     noun = Noun::New();
     noun->set_link_name("bar");
-    daisy_->nouns["two"] = std::move(noun);
+    daisy_->nouns[1] = NounEntry::New();
+    daisy_->nouns[1]->name = "two";
+    daisy_->nouns[1]->noun = std::move(noun);
 
     noun = Noun::New();
     noun->set_json("67890");
-    daisy_->nouns["three"] = std::move(noun);
+    daisy_->nouns[2] = NounEntry::New();
+    daisy_->nouns[2]->name = "three";
+    daisy_->nouns[2]->noun = std::move(noun);
 
     // Sync to avoid race conditions between writing
     link_one_->Sync([this] {

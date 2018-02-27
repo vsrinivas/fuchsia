@@ -110,8 +110,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void DumpState(const std::function<void(const std::string&)>& callback);
 
  private:
-  using FidlStringMap = f1dl::Map<f1dl::String, f1dl::String>;
-  using ImportanceMap = f1dl::Map<f1dl::String, float>;
+  using ImportanceList = f1dl::Array<StoryImportanceEntryPtr>;
 
   // |StoryProvider|
   void CreateStory(const f1dl::String& module_url,
@@ -120,7 +119,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // |StoryProvider|
   void CreateStoryWithInfo(
       const f1dl::String& module_url,
-      FidlStringMap extra_info,
+      f1dl::Array<StoryInfoExtraEntryPtr> extra_info,
       const f1dl::String& root_json,
       const CreateStoryWithInfoCallback& callback) override;
 

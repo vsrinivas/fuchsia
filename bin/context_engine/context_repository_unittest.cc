@@ -5,6 +5,7 @@
 #include "peridot/bin/context_engine/context_repository.h"
 #include "gtest/gtest.h"
 #include "lib/context/cpp/context_metadata_builder.h"
+#include "lib/context/cpp/context_helper.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_engine.fidl.h"
 
@@ -198,12 +199,12 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   auto selector = ContextSelector::New();
   selector->type = ContextValueType::ENTITY;
   selector->meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
-  query->selector["a"] = std::move(selector);
+  AddToContextQuery(query.get(), "a", std::move(selector));
 
   TestListener listener;
   repository_.AddSubscription(std::move(query), &listener,
                               SubscriptionDebugInfoPtr());
-  EXPECT_EQ(0lu, listener.last_update->values["a"].size());
+  EXPECT_EQ(0lu, TakeContextValue(listener.last_update.get(), "a").second.size());
   listener.reset();
 
   // (a)
@@ -233,8 +234,9 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   value->content = "match";
   value->meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
   repository_.Add(std::move(value));
-  EXPECT_EQ(1lu, listener.last_update->values["a"].size());
-  EXPECT_EQ("match", listener.last_update->values["a"][0]->content);
+  auto result = TakeContextValue(listener.last_update.get(), "a").second;
+  EXPECT_EQ(1lu, result.size());
+  EXPECT_EQ("match", result[0]->content);
   listener.reset();
 
   // (3)
@@ -250,16 +252,18 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
                     .Build();
   repository_.Update(id, std::move(value));
   ASSERT_TRUE(listener.last_update);
-  EXPECT_EQ(2lu, listener.last_update->values["a"].size());
-  EXPECT_EQ("now it matches", listener.last_update->values["a"][0]->content);
-  EXPECT_EQ("match", listener.last_update->values["a"][1]->content);
+  result = TakeContextValue(listener.last_update.get(), "a").second;
+  EXPECT_EQ(2lu, result.size());
+  EXPECT_EQ("now it matches", result[0]->content);
+  EXPECT_EQ("match", result[1]->content);
   listener.reset();
 
   // (4)
   repository_.Remove(id);
   ASSERT_TRUE(listener.last_update);
-  EXPECT_EQ(1lu, listener.last_update->values["a"].size());
-  EXPECT_EQ("match", listener.last_update->values["a"][0]->content);
+  result = TakeContextValue(listener.last_update.get(), "a").second;
+  EXPECT_EQ(1lu, result.size());
+  EXPECT_EQ("match", result[0]->content);
   listener.reset();
 }
 
@@ -270,13 +274,14 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   auto selector = ContextSelector::New();
   selector->type = ContextValueType::ENTITY;
   selector->meta = ContextMetadataBuilder().SetStoryId("match").Build();
-  query->selector["a"] = std::move(selector);
+  AddToContextQuery(query.get(), "a", std::move(selector));
 
   TestListener listener;
   repository_.AddSubscription(std::move(query), &listener,
                               SubscriptionDebugInfoPtr());
   ASSERT_TRUE(listener.last_update);
-  EXPECT_EQ(0lu, listener.last_update->values["a"].size());
+  auto result = TakeContextValue(listener.last_update.get(), "a").second;
+  EXPECT_EQ(0lu, result.size());
   listener.reset();
 
   // Add a Story value.
@@ -307,30 +312,34 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   repository_.Update(story_value_id, std::move(story_value));
 
   ASSERT_TRUE(listener.last_update);
-  EXPECT_EQ(1lu, listener.last_update->values["a"].size());
-  EXPECT_EQ("content", listener.last_update->values["a"][0]->content);
+  result = TakeContextValue(listener.last_update.get(), "a").second;
+  EXPECT_EQ(1lu, result.size());
+  EXPECT_EQ("content", result[0]->content);
   // Make sure we adopted the parent metadata from the story node.
-  ASSERT_TRUE(listener.last_update->values["a"][0]->meta->story);
-  EXPECT_EQ("match", listener.last_update->values["a"][0]->meta->story->id);
+  ASSERT_TRUE(result[0]->meta->story);
+  EXPECT_EQ("match", result[0]->meta->story->id);
   listener.reset();
 
   // Set the value back to something that doesn't match, and we should get an
   // empty update.
   repository_.Update(story_value_id, std::move(first_story_value));
   ASSERT_TRUE(listener.last_update);
-  EXPECT_EQ(0lu, listener.last_update->values["a"].size());
+  result = TakeContextValue(listener.last_update.get(), "a").second;
+  EXPECT_EQ(0lu, result.size());
   listener.reset();
 
   // Set it back to something that matched, and this time remove the value
   // entirely. We should observe it go away.
   repository_.Update(story_value_id, std::move(matching_story_value));
   ASSERT_TRUE(listener.last_update);
-  EXPECT_EQ(1lu, listener.last_update->values["a"].size());
+  result = TakeContextValue(listener.last_update.get(), "a").second;
+  EXPECT_EQ(1lu, result.size());
   listener.reset();
 
   repository_.Remove(story_value_id);
   ASSERT_TRUE(listener.last_update);
-  EXPECT_EQ(0lu, listener.last_update->values["a"].size());
+  result = TakeContextValue(listener.last_update.get(), "a").second;
+  EXPECT_EQ(0lu, result.size());
   listener.reset();
 }
 

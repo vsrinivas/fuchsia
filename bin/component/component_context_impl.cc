@@ -82,9 +82,13 @@ void ComponentContextImpl::GetEntityResolver(
 }
 
 void ComponentContextImpl::CreateEntityWithData(
-    f1dl::Map<f1dl::String, f1dl::String> type_to_data,
+    f1dl::Array<TypeToDataEntryPtr> type_to_data,
     const CreateEntityWithDataCallback& result) {
-  result(entity_provider_runner_->CreateReferenceFromData(&type_to_data));
+  std::map<std::string, std::string> copy;
+  for (const auto& it : type_to_data) {
+    copy[it->type] = it->data;
+  }
+  result(entity_provider_runner_->CreateReferenceFromData(std::move(copy)));
 }
 
 }  // namespace modular

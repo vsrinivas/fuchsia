@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "gtest/gtest.h"
+#include "lib/context/cpp/context_helper.h"
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -150,14 +151,15 @@ class NProposals : public Proposinator, public ContextListener {
     selector->meta->entity = EntityMetadata::New();
     selector->meta->entity->topic = "n";
     auto query = ContextQuery::New();
-    query->selector["n"] = std::move(selector);
+    AddToContextQuery(query.get(), "n", std::move(selector));
     reader_->Subscribe(std::move(query), listener_binding_.NewBinding());
   }
 
   void OnContextUpdate(ContextUpdatePtr update) override {
-    if (update->values["n"].empty())
+    auto r = TakeContextValue(update.get(), "n");
+    if (!r.first)
       return;
-    int n = std::stoi(update->values["n"][0]->content);
+    int n = std::stoi(r.second[0]->content);
 
     for (int i = n_; i < n; i++)
       Propose(std::to_string(i));
@@ -882,7 +884,6 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   auto story_info = modular::StoryInfo::New();
   story_info->url = "foo://bazzle_dazzle";
   story_info->id = "";
-  story_info->extra.mark_non_null();
   story_provider()->NotifyStoryChanged(std::move(story_info),
                                        modular::StoryState::INITIAL);
 

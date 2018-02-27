@@ -26,6 +26,11 @@ interface ModuleResolver {
       (FindModulesResult result);
 };
 
+struct ResolverNounConstraintEntry {
+  string key;
+  ResolverNounConstraint constraint;
+};
+
 // Mirrors the information present in a Daisy. Where a Daisy is meant to
 // interface between Modules and the Framework, this structure is specific to
 // the interface between the Framework and the ModuleResolver.
@@ -42,7 +47,7 @@ struct ResolverQuery {
   // exactly that looks like.
   string? url;
 
-  map<string, ResolverNounConstraint> noun_constraints;
+  array<ResolverNounConstraintEntry>? noun_constraints;
 };
 
 union ResolverNounConstraint {
@@ -101,15 +106,6 @@ struct ModuleResolverResult {
   // docs/manifests/module.md). The verb to be invoked and constraints on its
   // parameters can be derived by looking at the Module's manifest.
   string? local_name;
-
-  // The initial set of noun Entities to set on the Link to this Module once it
-  // is initialized. This map is keyed by the noun's name as given in the
-  // `verb_template` file referenced by the `module` metadata file for
-  // |package_id| where |local_name| is defined. The value is a JSON string
-  // that either encodes an Entity reference, or static data.
-  //
-  // DEPRECATED: This is to be replaced by |create_chain_info|.
-  map<string, string> initial_nouns;
 
   CreateChainInfo create_chain_info;
 

@@ -28,6 +28,7 @@ executable("story_importance_test_user_shell") {
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/app_driver/cpp",
+    "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/suggestion/fidl",

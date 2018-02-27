@@ -41,7 +41,7 @@ class StoryProviderMock : public StoryProvider {
   // |StoryProvider|
   void CreateStoryWithInfo(
       const f1dl::String& url,
-      f1dl::Map<f1dl::String, f1dl::String> extra_info,
+      f1dl::Array<StoryInfoExtraEntryPtr> extra_info,
       const f1dl::String& json,
       const CreateStoryWithInfoCallback& callback) override {
     last_created_story_ = url;
@@ -80,7 +80,7 @@ class StoryProviderMock : public StoryProvider {
 
   // |StoryProvider|
   void GetImportance(const GetImportanceCallback& callback) override {
-    callback(f1dl::Map<f1dl::String, float>());
+    callback(f1dl::Array<StoryImportanceEntryPtr>());
   }
 
   // |StoryProvider|

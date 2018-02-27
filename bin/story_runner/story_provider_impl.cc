@@ -34,11 +34,17 @@ namespace {
 // Serialization and deserialization of StoryData and StoryInfo to and
 // from JSON.
 
+void XdrStoryInfoExtraEntry(XdrContext* const xdr,
+                            StoryInfoExtraEntry* const data) {
+  xdr->Field("key", &data->key);
+  xdr->Field("value", &data->value);
+}
+
 void XdrStoryInfo(XdrContext* const xdr, StoryInfo* const data) {
   xdr->Field("last_focus_time", &data->last_focus_time);
   xdr->Field("url", &data->url);
   xdr->Field("id", &data->id);
-  xdr->Field("extra", &data->extra);
+  xdr->Field("extra", &data->extra, XdrStoryInfoExtraEntry);
 }
 
 void XdrStoryData(XdrContext* const xdr, StoryData* const data) {
@@ -125,7 +131,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<f1dl::String> {
                   ledger::Page* const root_page,
                   StoryProviderImpl* const story_provider_impl,
                   const f1dl::String& url,
-                  FidlStringMap extra_info,
+                  f1dl::Array<StoryInfoExtraEntryPtr> extra_info,
                   f1dl::String root_json,
                   ResultCall result_call)
       : Operation("StoryProviderImpl::CreateStoryCall",
@@ -173,7 +179,6 @@ class StoryProviderImpl::CreateStoryCall : Operation<f1dl::String> {
             story_info->id = story_id_;
             story_info->last_focus_time = zx_clock_get(ZX_CLOCK_UTC);
             story_info->extra = std::move(extra_info_);
-            story_info->extra.mark_non_null();
 
             MakeWriteStoryDataCall(&operation_queue_, root_page_,
                                    std::move(story_data_),
@@ -210,7 +215,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<f1dl::String> {
   StoryProviderImpl* const story_provider_impl_;  // not owned
   const f1dl::String module_name_;
   const f1dl::String url_;
-  FidlStringMap extra_info_;
+  f1dl::Array<StoryInfoExtraEntryPtr> extra_info_;
   f1dl::String root_json_;
   const zx_time_t start_time_;
 
@@ -420,7 +425,7 @@ class StoryProviderImpl::TeardownCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(TeardownCall);
 };
 
-class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
+class StoryProviderImpl::GetImportanceCall : Operation<ImportanceList> {
  public:
   GetImportanceCall(OperationContainer* const container,
                     StoryProviderImpl* const story_provider_impl,
@@ -429,7 +434,6 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
                   container,
                   std::move(result_call)),
         story_provider_impl_(story_provider_impl) {
-    importance_.mark_non_null();
     Ready();
   }
 
@@ -441,13 +445,16 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
       story.second.impl->GetImportance(
           story_provider_impl_->context_handler_.values(),
           [this, id = story.first, flow](float importance) {
-            importance_[id] = importance;
+            auto entry = StoryImportanceEntry::New();
+            entry->id = id;
+            entry->importance = importance;
+            importance_.push_back(std::move(entry));
           });
     }
   }
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
-  ImportanceMap importance_;
+  ImportanceList importance_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
 };
@@ -698,7 +705,10 @@ void StoryProviderImpl::SetStoryInfoExtra(const f1dl::String& story_id,
                                           const f1dl::String& value,
                                           const std::function<void()>& done) {
   auto mutate = [name, value](StoryData* const story_data) {
-    story_data->story_info->extra[name] = value;
+    auto entry = StoryInfoExtraEntry::New();
+    entry->key = name;
+    entry->value = value;
+    story_data->story_info->extra.push_back(std::move(entry));
     return true;
   };
 
@@ -716,13 +726,13 @@ void StoryProviderImpl::CreateStory(const f1dl::String& module_url,
                                     const CreateStoryCallback& callback) {
   FXL_LOG(INFO) << "CreateStory() " << module_url;
   new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this,
-                      module_url, FidlStringMap(), f1dl::String(), callback);
+                      module_url, nullptr, f1dl::String(), callback);
 }
 
 // |StoryProvider|
 void StoryProviderImpl::CreateStoryWithInfo(
     const f1dl::String& module_url,
-    FidlStringMap extra_info,
+    f1dl::Array<StoryInfoExtraEntryPtr> extra_info,
     const f1dl::String& root_json,
     const CreateStoryWithInfoCallback& callback) {
   FXL_LOG(INFO) << "CreateStoryWithInfo() " << module_url << " " << root_json;

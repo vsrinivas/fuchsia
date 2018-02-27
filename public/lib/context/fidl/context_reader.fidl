@@ -39,17 +39,27 @@ interface ContextListener {
   OnContextUpdate@0(ContextUpdate update);
 };
 
+struct ContextUpdateEntry {
+  string key;
+  array<ContextValue> value;
+};
+
 struct ContextUpdate {
   // A list of ContextValue for each key in |ContextQuery.selector|. An empty
   // list means no values matched the given ContextSelector.
-  map<string, array<ContextValue>> values;
+  array<ContextUpdateEntry> values;
+};
+
+struct ContextQueryEntry {
+  string key;
+  ContextSelector value;
 };
 
 struct ContextQuery {
   // A map of ContextSelector structs. The keys are specified by the client.
   // Each key gets a corresponding entry in |ContextUpdate.values| when it is
   // generated in response to this query.
-  map<string, ContextSelector> selector;
+  array<ContextQueryEntry> selector;
 };
 
 struct ContextSelector {

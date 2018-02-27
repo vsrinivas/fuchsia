@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/context/cpp/context_helper.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -32,7 +33,7 @@ class SelectedEntityFinder : ContextListener {
       selector->meta = ContextMetadata::New();
       selector->meta->entity = EntityMetadata::New();
       selector->meta->entity->topic = topic;
-      query->selector[topic] = std::move(selector);
+      AddToContextQuery(query.get(), topic, std::move(selector));
     }
     reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
@@ -83,14 +84,16 @@ class SelectedEntityFinder : ContextListener {
 
   // |ContextListener|
   void OnContextUpdate(ContextUpdatePtr result) override {
-    if (result->values[kFocalEntitiesTopic].empty() ||
-        result->values[kRawTextSelectionTopic].empty()) {
+    auto focal_entities = TakeContextValue(result.get(), kFocalEntitiesTopic);
+    auto text_selection = TakeContextValue(result.get(), kRawTextSelectionTopic);
+    if (!focal_entities.first || !text_selection.first ||
+        focal_entities.second.empty() || text_selection.second.empty()) {
       return;
     }
     const std::vector<EntitySpan> entities =
-        EntitySpan::FromContextValues(result->values[kFocalEntitiesTopic]);
+        EntitySpan::FromContextValues(focal_entities.second);
     const std::pair<int, int> start_and_end = GetSelectionFromJson(
-        result->values[kRawTextSelectionTopic][0]->content);
+        text_selection.second[0]->content);
     writer_->WriteEntityTopic(kSelectedEntitiesTopic,
                               GetSelectedEntities(entities, start_and_end.first,
                                                   start_and_end.second));

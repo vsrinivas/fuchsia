@@ -291,19 +291,26 @@ void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
   // For each entry in |query->selector|, query the index for matching values.
   Subscription::IdAndVersionSet matching_id_version;
   ContextUpdatePtr update = ContextUpdate::New();
-  for (auto entry : subscription->query->selector) {
-    const auto& key = entry.GetKey();
-    const auto& selector = entry.GetValue();
+  for (const auto& entry : subscription->query->selector) {
+    const auto& key = entry->key;
+    const auto& selector = entry->value;
 
     std::set<ContextIndex::Id> values;
     index_.Query(selector->type, selector->meta, &values);
 
-    update->values[key] = f1dl::Array<ContextValuePtr>::New(0);
+    auto update_entry = ContextUpdateEntry::New();
+    update_entry->key = key;
+    update_entry->value = f1dl::Array<ContextValuePtr>::New(0);
+    update->values.push_back(std::move(update_entry));
     for (const auto& id : values) {
       auto it = values_.find(id);
       FXL_DCHECK(it != values_.end()) << id;
       matching_id_version.insert(std::make_pair(id, it->second.version));
-      update->values[key].push_back(GetMerged(id));
+      for (auto& it: update->values) {
+        if (it->key == key) {
+          it->value.push_back(GetMerged(id));
+        }
+      }
     }
   }
 

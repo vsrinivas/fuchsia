@@ -4,6 +4,11 @@
 
 module modular;
 
+struct StoryInfoExtraEntry {
+  string key;
+  string value;
+};
+
 // Information about a story as provided to the UserShell.
 struct StoryInfo {
   // URL of the first module run in this story. This module is free to
@@ -20,5 +25,5 @@ struct StoryInfo {
 
   // Data the UserShell wants to keep associated with this Story, like
   // title, a color, or a display rank.
-  map<string, string> extra;
+  array<StoryInfoExtraEntry>? extra;
 };

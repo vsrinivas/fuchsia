@@ -46,8 +46,8 @@ class EntityProviderRunner : EntityResolver {
   // Given a map of entity type -> entity data, creates an entity reference for
   // it. This data is encoded into the entity reference, and must be within
   // 16KB. If successful, a non-null value is returned.
-  f1dl::String CreateReferenceFromData(
-      f1dl::Map<f1dl::String, f1dl::String>* type_to_data);
+  std::string  CreateReferenceFromData(
+      std::map<std::string, std::string> type_to_data);
 
   // Called by a DataEntity when it has no more |Entity|s it needs to serve for
   // a particular |entity_reference|.

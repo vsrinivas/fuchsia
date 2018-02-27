@@ -98,7 +98,10 @@ class TestApp : public testing::ComponentBase<UserShell>,
 
     auto noun = Noun::New();
     noun->set_json(R"("initial data for the story")");
-    daisy->nouns["rootModuleNoun1"] = std::move(noun);
+    auto entry = NounEntry::New();
+    entry->name = "rootModuleNoun1";
+    entry->noun = std::move(noun);
+    daisy->nouns.push_back(std::move(entry));
     story_controller_->AddDaisy({}, "rootMod", std::move(daisy),
                                 nullptr /* surface_relation */);
     story_controller_->GetModuleController({"rootMod"},

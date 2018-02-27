@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/context/cpp/context_helper.h"
 #include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_engine.fidl.h"
@@ -107,30 +108,31 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   selector->type = ContextValueType::ENTITY;
   selector->meta = ContextMetadataBuilder().AddEntityType("someType").Build();
   auto query = ContextQuery::New();
-  query->selector["a"] = std::move(selector);
+  AddToContextQuery(query.get(), "a", std::move(selector));
 
   TestListener listener;
+  f1dl::Array<ContextValuePtr> result;
   reader_->Subscribe(std::move(query), listener.GetHandle());
-  ASSERT_TRUE(RunLoopUntil([&listener] {
+  ASSERT_TRUE(RunLoopUntil([&listener, &result] {
     return listener.last_update &&
-           listener.last_update->values["a"].size() == 3;
+           (result = std::move(TakeContextValue(listener.last_update.get(), "a").second)).size() == 3;
   }));
 
-  EXPECT_EQ("topic", listener.last_update->values["a"][0]->meta->entity->topic);
-  EXPECT_EQ("frob", listener.last_update->values["a"][1]->meta->entity->topic);
-  EXPECT_EQ("borf", listener.last_update->values["a"][2]->meta->entity->topic);
+  EXPECT_EQ("topic", result[0]->meta->entity->topic);
+  EXPECT_EQ("frob", result[1]->meta->entity->topic);
+  EXPECT_EQ("borf", result[2]->meta->entity->topic);
 
   // Update value1 and value3 so they no longer matches for the 'someType'
   // query.
   listener.Reset();
   value1->Set(R"({ "@type": "notSomeType", "foo": "bar" })", nullptr);
   value3.Unbind();
-  ASSERT_TRUE(RunLoopUntil([&listener] {
+  ASSERT_TRUE(RunLoopUntil([&listener, &result] {
     return !!listener.last_update &&
-           listener.last_update->values["a"].size() == 1;
+           (result = std::move(TakeContextValue(listener.last_update.get(), "a").second)).size() == 1;
   }));
 
-  EXPECT_EQ("frob", listener.last_update->values["a"][0]->meta->entity->topic);
+  EXPECT_EQ("frob", result[0]->meta->entity->topic);
 
   // Create two new values: A Story value and a child Entity value, where the
   // Entity value matches our query.
@@ -145,17 +147,19 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   value4->Set("1", ContextMetadataBuilder().AddEntityType("someType").Build());
 
   ASSERT_TRUE(RunLoopUntil([&listener] { return !!listener.last_update; }));
-  ASSERT_EQ(2lu, listener.last_update->values["a"].size());
-  EXPECT_EQ("frob", listener.last_update->values["a"][0]->meta->entity->topic);
-  EXPECT_EQ("1", listener.last_update->values["a"][1]->content);
-  EXPECT_EQ("story", listener.last_update->values["a"][1]->meta->story->id);
+  result = std::move(TakeContextValue(listener.last_update.get(), "a").second);
+  ASSERT_EQ(2lu, result.size());
+  EXPECT_EQ("frob", result[0]->meta->entity->topic);
+  EXPECT_EQ("1", result[1]->content);
+  EXPECT_EQ("story", result[1]->meta->story->id);
 
   // Lastly remove one of the values by resetting the ContextValueWriter proxy.
   listener.Reset();
   value4.Unbind();
   RunLoopUntil([&listener] { return !!listener.last_update; });
-  EXPECT_EQ(1lu, listener.last_update->values["a"].size());
-  EXPECT_EQ("frob", listener.last_update->values["a"][0]->meta->entity->topic);
+  result = std::move(TakeContextValue(listener.last_update.get(), "a").second);
+  EXPECT_EQ(1lu, result.size());
+  EXPECT_EQ("frob", result[0]->meta->entity->topic);
 }
 
 TEST_F(ContextEngineTest, CloseListenerAndReader) {
@@ -165,7 +169,7 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
   selector->type = ContextValueType::ENTITY;
   selector->meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
   auto query = ContextQuery::New();
-  query->selector["a"] = std::move(selector);
+  AddToContextQuery(query.get(), "a", std::move(selector));
 
   TestListener listener2;
   {
