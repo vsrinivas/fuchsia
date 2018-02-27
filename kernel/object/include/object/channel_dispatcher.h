@@ -108,5 +108,4 @@ private:
     MessageList messages_ TA_GUARDED(get_lock());
     uint64_t message_count_ TA_GUARDED(get_lock()) = 0;
     WaiterList waiters_ TA_GUARDED(get_lock());
-    zx_koid_t peer_koid_ TA_GUARDED(get_lock());
 };
