@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(conservative_impl_trait)]
 #![deny(warnings)]
 
 extern crate failure;
@@ -19,43 +20,39 @@ use futures::Future;
 use tokio_core::reactor;
 use wlan_service::{DeviceListener, DeviceService};
 
-struct Listener(<DeviceService::Service as fidl::FidlService>::Proxy);
-
-impl DeviceListener::Server for Listener {
-    type OnPhyAdded = fidl::BoxServerFuture<()>;
-    fn on_phy_added(&mut self, id: u16) -> Self::OnPhyAdded {
-        println!("wlancfg: phy added: {}", id);
-        // For now, just create a Client iface on the new phy.
-        // TODO(tkilbourn): get info about this phy, then consult a configuration file to determine
-        // what interfaces to create.
-        let req = wlan_service::CreateIfaceRequest {
-            phy_id: id,
-            role: wlan::MacRole::Client,
-        };
-        Box::new(
-            self.0
-                .create_iface(req)
+fn device_listener(
+    svc: <DeviceService::Service as fidl::FidlService>::Proxy,
+) -> impl DeviceListener::Server {
+    DeviceListener::Impl {
+        state: svc,
+        on_phy_added: |svc, id| {
+            println!("wlancfg: phy added: {}", id);
+            // For now, just create a Client iface on the new phy.
+            // TODO(tkilbourn): get info about this phy, then consult a configuration file to determine
+            // what interfaces to create.
+            let req = wlan_service::CreateIfaceRequest {
+                phy_id: id,
+                role: wlan::MacRole::Client,
+            };
+            svc.create_iface(req)
                 .map(|_| ())
-                .map_err(|_| fidl::CloseChannel),
-        )
-    }
+                .map_err(|_| fidl::CloseChannel)
+        },
 
-    type OnPhyRemoved = fidl::ServerImmediate<()>;
-    fn on_phy_removed(&mut self, id: u16) -> Self::OnPhyRemoved {
-        println!("wlancfg: phy removed: {}", id);
-        futures::future::ok(())
-    }
+        on_phy_removed: |_, id| {
+            println!("wlancfg: phy removed: {}", id);
+            futures::future::ok(())
+        },
 
-    type OnIfaceAdded = fidl::ServerImmediate<()>;
-    fn on_iface_added(&mut self, phy_id: u16, iface_id: u16) -> Self::OnIfaceAdded {
-        println!("wlancfg: iface added: {} (phy={})", iface_id, phy_id);
-        futures::future::ok(())
-    }
+        on_iface_added: |_, phy_id, iface_id| {
+            println!("wlancfg: iface added: {} (phy={})", iface_id, phy_id);
+            futures::future::ok(())
+        },
 
-    type OnIfaceRemoved = fidl::ServerImmediate<()>;
-    fn on_iface_removed(&mut self, phy_id: u16, iface_id: u16) -> Self::OnIfaceRemoved {
-        println!("wlancfg: iface removed: {} (phy={}", iface_id, phy_id);
-        futures::future::ok(())
+        on_iface_removed: |_, phy_id, iface_id| {
+            println!("wlancfg: iface removed: {} (phy={}", iface_id, phy_id);
+            futures::future::ok(())
+        },
     }
 }
 
@@ -81,9 +78,11 @@ fn main_res() -> Result<(), Error> {
         .register_listener(remote_ptr)
         .context("failed to register listener")?;
 
-    let listener = Listener(wlan_svc);
-    let listener_fut = fidl::Server::new(DeviceListener::Dispatcher(listener), local, &handle)
-        .context("failed to create listener server")?;
+    let listener_fut = fidl::Server::new(
+        DeviceListener::Dispatcher(device_listener(wlan_svc)),
+        local,
+        &handle,
+    ).context("failed to create listener server")?;
 
     core.run(listener_fut).map_err(|e| e.into())
 }
