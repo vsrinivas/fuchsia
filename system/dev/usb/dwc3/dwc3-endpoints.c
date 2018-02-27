@@ -110,8 +110,11 @@ static void dwc3_ep_queue_next_locked(dwc3_t* dwc, dwc3_endpoint_t* ep) {
         }
 
         // TODO(voydanoff) scatter/gather support
+        phys_iter_t iter;
+        zx_paddr_t phys;
         usb_request_physmap(req);
-        zx_paddr_t phys = usb_request_phys(req);
+        usb_request_phys_iter_init(&iter, req, PAGE_SIZE);
+        usb_request_phys_iter_next(&iter, &phys);
         dwc3_ep_start_transfer(dwc, ep->ep_num, TRB_TRBCTL_NORMAL, phys, req->header.length);
     }
 }

@@ -1171,12 +1171,16 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
     if (usb_ep_type(&ep->desc) == USB_ENDPOINT_CONTROL) {
 
         switch (req->ctrl_phase) {
-        case CTRL_PHASE_SETUP:
+        case CTRL_PHASE_SETUP: {
             assert(req->setup_req);
             characteristics.endpoint_direction = DWC_EP_OUT;
 
+            phys_iter_t iter;
+            zx_paddr_t phys;
             usb_request_physmap(req->setup_req);
-            data = (void*)usb_request_phys(req->setup_req);
+            usb_request_phys_iter_init(&iter, req->setup_req, PAGE_SIZE);
+            usb_request_phys_iter_next(&iter, &phys);
+            data = (void*)phys;
 
             // Quick sanity check to make sure that we're actually tying to
             // transfer the correct number of bytes.
@@ -1186,12 +1190,17 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
 
             transfer.packet_id = DWC_TOGGLE_SETUP;
             break;
-        case CTRL_PHASE_DATA:
+        }
+        case CTRL_PHASE_DATA: {
             characteristics.endpoint_direction =
                 usb_req->setup.bmRequestType >> 7;
 
+            phys_iter_t iter;
+            zx_paddr_t phys;
             usb_request_physmap(usb_req);
-            data = ((void*)usb_request_phys(usb_req)) + req->bytes_transferred;
+            usb_request_phys_iter_init(&iter, usb_req, PAGE_SIZE);
+            usb_request_phys_iter_next(&iter, &phys);
+            data = (void*)phys + req->bytes_transferred;
 
             transfer.size = usb_req->header.length - req->bytes_transferred;
 
@@ -1204,6 +1213,7 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
             }
 
             break;
+        }
         case CTRL_PHASE_STATUS:
             // If there was no DATA phase, the status transaction is IN to the
             // host. If there was a DATA phase, the status phase is in the
@@ -1225,8 +1235,12 @@ static void dwc_start_transfer(uint8_t chan, dwc_usb_transfer_request_t* req,
         characteristics.endpoint_direction =
             (ep->ep_address & USB_ENDPOINT_DIR_MASK) >> 7;
 
+        phys_iter_t iter;
+        zx_paddr_t phys;
         usb_request_physmap(usb_req);
-        data = ((void*)usb_request_phys(usb_req)) + req->bytes_transferred;
+        usb_request_phys_iter_init(&iter, usb_req, PAGE_SIZE);
+        usb_request_phys_iter_next(&iter, &phys);
+        data = (void*)phys + req->bytes_transferred;
 
         transfer.size = usb_req->header.length - req->bytes_transferred;
         transfer.packet_id = req->next_data_toggle;
