@@ -454,6 +454,37 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestart) {
   RunMessageLoop();
 }
 
+TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartFailure) {
+  // Set a very short scan period for the sake of the test.
+  discovery_manager()->set_scan_period(200);
+  set_quit_message_loop_on_scan_state_change(true);
+
+  std::unique_ptr<LowEnergyDiscoverySession> session;
+  discovery_manager()->StartDiscovery(
+      [&session](auto cb_session) { session = std::move(cb_session); });
+
+  // We should observe the scan state become enabled -> disabled -> enabled.
+  RunMessageLoop();
+  EXPECT_TRUE(scan_enabled());
+
+  RunMessageLoop();
+  EXPECT_FALSE(scan_enabled());
+
+  // The controller will fail to restart scanning.
+  test_device()->SetDefaultResponseStatus(hci::kLESetScanEnable,
+                                          hci::Status::kCommandDisallowed);
+
+  bool session_error = false;
+  session->set_error_callback([&session_error, this] {
+    session_error = true;
+    message_loop()->QuitNow();
+  });
+
+  RunMessageLoop();
+  EXPECT_FALSE(scan_enabled());
+  EXPECT_TRUE(session_error);
+}
+
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartRemoveSession) {
   // Set a very short scan period for the sake of the test.
   discovery_manager()->set_scan_period(200);

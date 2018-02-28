@@ -44,8 +44,9 @@ void LowEnergyDiscoverySession::SetResultCallback(
 void LowEnergyDiscoverySession::Stop() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(active_);
-  if (manager_)
+  if (manager_) {
     manager_->RemoveSession(this);
+  }
   active_ = false;
 }
 
@@ -63,6 +64,12 @@ void LowEnergyDiscoverySession::NotifyDiscoveryResult(
                                    device.connectable(), device.rssi())) {
     device_found_callback_(device);
   }
+}
+
+void LowEnergyDiscoverySession::NotifyError() {
+  active_ = false;
+  if (error_callback_)
+    error_callback_();
 }
 
 LowEnergyDiscoveryManager::LowEnergyDiscoveryManager(
@@ -176,10 +183,15 @@ void LowEnergyDiscoveryManager::OnDeviceFound(
 void LowEnergyDiscoveryManager::OnScanStatus(
     hci::LowEnergyScanner::Status status) {
   switch (status) {
-    case hci::LowEnergyScanner::Status::kFailed:
+    case hci::LowEnergyScanner::Status::kFailed: {
       FXL_LOG(ERROR)
           << "gap: LowEnergyDiscoveryManager: Failed to initiate scan!";
-      FXL_DCHECK(sessions_.empty());
+
+      // Clear all sessions.
+      auto sessions = std::move(sessions_);
+      for (auto& s : sessions) {
+        s->NotifyError();
+      }
 
       // Report failure on all currently pending requests. If any of the
       // callbacks issue a retry the new requests will get re-queued and
@@ -191,6 +203,7 @@ void LowEnergyDiscoveryManager::OnScanStatus(
         pending_.pop();
       }
       break;
+    }
     case hci::LowEnergyScanner::Status::kStarted:
       FXL_VLOG(1) << "gap: LowEnergyDiscoveryManager: Started scanning";
 

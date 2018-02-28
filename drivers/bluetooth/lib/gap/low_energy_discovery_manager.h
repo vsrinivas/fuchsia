@@ -8,6 +8,8 @@
 #include <queue>
 #include <unordered_set>
 
+#include <fbl/function.h>
+
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/gap/discovery_filter.h"
@@ -120,6 +122,12 @@ class LowEnergyDiscoverySession final {
   using DeviceFoundCallback = std::function<void(const RemoteDevice& device)>;
   void SetResultCallback(const DeviceFoundCallback& callback);
 
+  // Sets a callback to get notified when the session becomes inactive due to an
+  // internal error.
+  void set_error_callback(fbl::Closure callback) {
+    error_callback_ = std::move(callback);
+  }
+
   // Returns the filter that belongs to this session. The caller may modify the
   // filter as desired. By default the filter is configured to match
   // discoverable devices (i.e. limited and general discoverable) based on their
@@ -148,6 +156,9 @@ class LowEnergyDiscoverySession final {
   // Called by LowEnergyDiscoveryManager on newly discovered scan results.
   void NotifyDiscoveryResult(const RemoteDevice& device) const;
 
+  // Marks this session as inactive and notifies the error handler.
+  void NotifyError();
+
   inline void SetGeneralDiscoverableFlags() {
     filter_.set_flags(
         static_cast<uint8_t>(AdvFlag::kLELimitedDiscoverableMode) |
@@ -156,6 +167,7 @@ class LowEnergyDiscoverySession final {
 
   bool active_;
   fxl::WeakPtr<LowEnergyDiscoveryManager> manager_;
+  fbl::Closure error_callback_;
   DeviceFoundCallback device_found_callback_;
   DiscoveryFilter filter_;
   fxl::ThreadChecker thread_checker_;

@@ -106,6 +106,13 @@ void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
             self->OnScanResult(device);
         });
 
+        session->set_error_callback([self] {
+          if (self) {
+            // Clean up the session and notify the delegate.
+            self->StopScan();
+          }
+        });
+
         self->scan_session_ = std::move(session);
         self->NotifyScanStateChanged(true);
         callback(Status::New());
