@@ -34,7 +34,7 @@ import("sdk_molecule.gni")
 
 template("sdk") {
   main_target_name = target_name
-  generation_target_name = "${target_name}_generate"
+  generation_target_name = "${target_name}_molecule"
   copy_target_name = "${target_name}_copy"
   verification_target_name = "${target_name}_verify"
 
