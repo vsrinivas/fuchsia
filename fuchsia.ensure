@@ -33,6 +33,10 @@ fuchsia/go/${platform} git_revision:b8bd7d94a2ae6c80ab8b6ed5900d3eeba8a777c3
 @Subdir rust
 fuchsia/rust/${platform} git_revision:71340ca4e181b824bcefa887f1be60dd0b7352ce
 
+# Swift
+@Subdir swift
+fuchsia/swift/${os=linux}-${arch} git_revision:d4943f3da1ae8b69fba21fa359b62f25d74a6b14
+
 # QEMU
 @Subdir qemu
 fuchsia/qemu/${platform} git_revision:0f0027d617976b4cbb7b937d5836f8ef0ac25ba1
