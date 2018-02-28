@@ -313,7 +313,6 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         dev->rpc = hin[0];
         dev->refcount = 1;
         list_initialize(&dev->children);
-        list_initialize(&dev->instances);
 
         newios->ph.handle = hin[0];
         newios->ph.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;

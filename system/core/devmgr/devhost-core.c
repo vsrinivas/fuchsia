@@ -180,7 +180,6 @@ zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
     dev->ops = ops;
     dev->driver = drv;
     list_initialize(&dev->children);
-    list_initialize(&dev->instances);
 
     if (name == NULL) {
         printf("devhost: dev=%p has null name.\n", dev);
@@ -338,12 +337,10 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
     dev_ref_acquire(parent);
     dev->parent = parent;
 
-    if (dev->flags & DEV_FLAG_INSTANCE) {
-        list_add_tail(&parent->instances, &dev->node);
-    } else {
-        // add to the device tree
-        list_add_tail(&parent->children, &dev->node);
+    // attach to our parent
+    list_add_tail(&parent->children, &dev->node);
 
+    if (!(dev->flags & DEV_FLAG_INSTANCE)) {
         // devhost_add always consumes the handle
         status = devhost_add(parent, dev, proxy_args, props, prop_count);
         if (status < 0) {
@@ -351,9 +348,9 @@ zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
                    dev, dev->name, status);
             dev_ref_release(dev->parent);
             dev->parent = NULL;
-            dev_ref_release(dev);
             list_delete(&dev->node);
             dev->flags &= (~DEV_FLAG_BUSY);
+            dev_ref_release(dev);
             return status;
         }
     }
@@ -416,9 +413,6 @@ static void devhost_unbind_children(zx_device_t* dev) TA_REQ(&__devhost_api_lock
     printf("devhost_unbind_children: %p(%s)\n", dev, dev->name);
 #endif
     list_for_every_entry_safe(&dev->children, child, temp, zx_device_t, node) {
-        devhost_unbind_child(child);
-    }
-    list_for_every_entry_safe(&dev->instances, child, temp, zx_device_t, node) {
         devhost_unbind_child(child);
     }
 }
