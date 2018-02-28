@@ -30,8 +30,8 @@ cpuid                   .req x19
 page_table0             .req x20
 page_table1             .req x21
 
-.section .text.boot, "ax", @progbits
-FUNCTION(arm_reset)
+.section .text.boot0, "a", @progbits
+FUNCTION(_start)
     /* Save the Boot info for the primary CPU only */
     mrs     cpuid, mpidr_el1
     ubfx    cpuid, cpuid, #0, #15 /* mask Aff0 and Aff1 fields */
@@ -242,7 +242,7 @@ FUNCTION(arm_reset)
 .Lunsupported_cpu_trap:
     wfe
     b       .Lunsupported_cpu_trap
-END_FUNCTION(arm_reset)
+END_FUNCTION(_start)
 
 .ltorg
 

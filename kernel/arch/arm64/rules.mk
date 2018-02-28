@@ -19,7 +19,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/exceptions_c.cpp \
 	$(LOCAL_DIR)/feature.cpp \
 	$(LOCAL_DIR)/fpu.cpp \
-	$(LOCAL_DIR)/header.S \
 	$(LOCAL_DIR)/mexec.S \
 	$(LOCAL_DIR)/mmu.cpp \
 	$(LOCAL_DIR)/spinlock.cpp \
@@ -67,11 +66,9 @@ GLOBAL_DEFINES += \
 
 # kernel is linked to run at the arbitrary address of -4GB
 KERNEL_BASE := 0xffffffff00000000
-KERNEL_LOAD_OFFSET ?= 0
 
 KERNEL_DEFINES += \
 	KERNEL_BASE=$(KERNEL_BASE) \
-	KERNEL_LOAD_OFFSET=$(KERNEL_LOAD_OFFSET)
 
 # try to find the toolchain
 include $(LOCAL_DIR)/toolchain.mk

@@ -8,8 +8,6 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 PLATFORM := generic-arm
 
-KERNEL_LOAD_OFFSET := 0x1080000
-
 include make/kernel-images.mk
 
 PLATFORM_VID := 4   # PDEV_VID_KHADAS

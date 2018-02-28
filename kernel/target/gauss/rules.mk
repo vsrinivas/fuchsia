@@ -10,8 +10,6 @@ PLATFORM := generic-arm
 
 DEVICE_TREE := $(GET_LOCAL_DIR)/device-tree.dtb
 
-KERNEL_LOAD_OFFSET := 0x1080000
-
 include make/kernel-images.mk
 
 PLATFORM_VID := 3   # PDEV_VID_GOOGLE
