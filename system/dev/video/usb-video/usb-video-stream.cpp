@@ -19,8 +19,6 @@
 namespace video {
 namespace usb {
 
-// TODO(jocelyndang): calculate this rather than hardcoding.
-static constexpr uint32_t RING_BUFFER_NUM_FRAMES = 30;
 static constexpr uint32_t MAX_OUTSTANDING_REQS = 8;
 static constexpr uint32_t NANOSECS_IN_SEC = 1e9;
 
@@ -637,30 +635,33 @@ zx_status_t UsbVideoStream::SetFormatLocked(dispatcher::Channel* channel,
     }
 }
 
-// TODO(jocelyndang): this is only for temporary testing purposes and can be
-// removed once we have SET_BUFFER implemented.
-zx_status_t UsbVideoStream::CreateDataVideoBuffer() {
-    fbl::AutoLock lock(&lock_);
-
-    if (streaming_state_ != StreamingState::STOPPED) {
-        return ZX_ERR_BAD_STATE;
-    }
-    // TODO(jocelyndang): figure out what to do for non frame based formats.
-    uint32_t video_buffer_size = RING_BUFFER_NUM_FRAMES * max_frame_size_;
-
-    zx::vmo vmo;
-    zx_status_t status = zx::vmo::create(video_buffer_size, 0, &vmo);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "failed to create video buffer: %d\n", status);
-        return status;
-    }
-    return VideoBuffer::Create(fbl::move(vmo), &video_buffer_);
-}
-
 zx_status_t UsbVideoStream::SetBufferLocked(dispatcher::Channel* channel,
                                             const camera::camera_proto::VideoBufSetBufferReq& req,
-                                            zx::handle&& rxed_handle) {
-    return ZX_ERR_NOT_SUPPORTED;
+                                            zx::handle rxed_handle) {
+    camera::camera_proto::VideoBufSetBufferResp resp;
+    resp.hdr = req.hdr;
+
+    if (streaming_state_ != StreamingState::STOPPED) {
+        resp.result = ZX_ERR_BAD_STATE;
+        return channel->Write(&resp, sizeof(resp));
+    }
+
+    if (!rxed_handle.is_valid()) {
+        resp.result = ZX_ERR_BAD_HANDLE;
+        return channel->Write(&resp, sizeof(resp));
+    }
+
+    // Release any previously stored video buffer.
+    video_buffer_.reset();
+
+    resp.result = VideoBuffer::Create(
+        zx::vmo(fbl::move(rxed_handle)), &video_buffer_);
+
+    zx_status_t res = channel->Write(&resp, sizeof(resp));
+    if (res != ZX_OK) {
+        video_buffer_.reset();
+    }
+    return res;
 }
 
 zx_status_t UsbVideoStream::StartStreamingLocked(dispatcher::Channel* channel,

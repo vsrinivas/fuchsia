@@ -137,7 +137,7 @@ private:
     zx_status_t CreateDataVideoBuffer();
     zx_status_t SetBufferLocked(dispatcher::Channel* channel,
                                 const camera::camera_proto::VideoBufSetBufferReq& req,
-                                zx::handle&& rxed_handle) __TA_REQUIRES(lock_);
+                                zx::handle rxed_handle) __TA_REQUIRES(lock_);
 
     zx_status_t StartStreamingLocked(dispatcher::Channel* channel,
                                      const camera::camera_proto::VideoBufStartReq& req)
