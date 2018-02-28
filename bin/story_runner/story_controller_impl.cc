@@ -115,9 +115,6 @@ void XdrStoryContextLog(XdrContext* const xdr, StoryContextLog* const data) {
   xdr->Field("signal", &data->signal);
 }
 
-// TODO(thatguy): This needs to be integrated into an Operation for starting
-// Daisies.
-
 }  // namespace
 
 class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
@@ -457,11 +454,12 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
         new LinkImpl(story_controller_impl_->ledger_client_,
                      story_controller_impl_->story_page_id_.Clone(),
                      link_path_.Clone(), std::move(create_link_info_)));
-    auto* link_ptr = link_impl_.get();
+    LinkImpl* const link_ptr = link_impl_.get();
     if (request_) {
       link_impl_->Connect(std::move(request_), connection_type_);
       // Transfer ownership of |link_impl_| over to |story_controller_impl_|.
       story_controller_impl_->links_.emplace_back(link_impl_.release());
+
       // This orphaned handler will be called after this operation has been
       // deleted. So we need to take special care when depending on members.
       // Copies of |story_controller_impl_| and |link_ptr| are ok.
@@ -1509,16 +1507,16 @@ class StoryControllerImpl::ResolveModulesCall
   void Run() {
     FlowToken flow{this, &result_};
 
-    DaisyToResolverQuery(daisy_, [this, flow] { FindModules(flow); });
+    DaisyToResolverQuery([this, flow] { Cont(flow); });
   }
 
-  void DaisyToResolverQuery(const DaisyPtr& daisy, std::function<void()> done) {
+  void DaisyToResolverQuery(std::function<void()> cont) {
     resolver_query_ = ResolverQuery::New();
-    resolver_query_->verb = daisy->verb;
-    resolver_query_->url = daisy->url;
+    resolver_query_->verb = daisy_->verb;
+    resolver_query_->url = daisy_->url;
 
     std::shared_ptr<int> outstanding_requests{new int{0}};
-    for (const auto& entry : daisy->nouns) {
+    for (const auto& entry : daisy_->nouns) {
       const auto& name = entry->name;
       const auto& noun = entry->noun;
 
@@ -1529,6 +1527,7 @@ class StoryControllerImpl::ResolveModulesCall
         noun_constraint_entry->key = name;
         noun_constraint_entry->constraint = std::move(noun_constraint);
         resolver_query_->noun_constraints.push_back(std::move(noun_constraint_entry));
+
       } else if (noun->is_link_name()) {
         // Find the chain for this Module.
         auto link_path = story_controller_impl_->GetLinkPathForChainKey(
@@ -1548,12 +1547,12 @@ class StoryControllerImpl::ResolveModulesCall
             &operation_queue_, story_controller_impl_, link_path.Clone(),
             LinkImpl::ConnectionType::Secondary, nullptr /* create_link_info */,
             false /* notify_watchers */, link.NewRequest(),
-            fxl::MakeCopyable([this, name, outstanding_requests, done,
+            fxl::MakeCopyable([this, name, outstanding_requests, cont,
                                link_path = std::move(link_path),
                                link = std::move(link)]() mutable {
               link->Get(
                   nullptr /* path */,
-                  fxl::MakeCopyable([this, name, outstanding_requests, done,
+                  fxl::MakeCopyable([this, name, outstanding_requests, cont,
                                      link_path = std::move(link_path),
                                      link = std::move(link)](
                                         const f1dl::String& content) mutable {
@@ -1571,10 +1570,11 @@ class StoryControllerImpl::ResolveModulesCall
 
                     --(*outstanding_requests);
                     if (*outstanding_requests == 0) {
-                      done();
+                      cont();
                     }
                   }));
             }));
+
       } else if (noun->is_entity_type()) {
         auto noun_constraint = ResolverNounConstraint::New();
         noun_constraint->set_entity_type(noun->get_entity_type().Clone());
@@ -1582,6 +1582,7 @@ class StoryControllerImpl::ResolveModulesCall
         noun_constraint_entry->key = name;
         noun_constraint_entry->constraint = std::move(noun_constraint);
         resolver_query_->noun_constraints.push_back(std::move(noun_constraint_entry));
+
       } else if (noun->is_entity_reference()) {
         auto noun_constraint = ResolverNounConstraint::New();
         noun_constraint->set_entity_reference(noun->get_entity_reference());
@@ -1591,12 +1592,13 @@ class StoryControllerImpl::ResolveModulesCall
         resolver_query_->noun_constraints.push_back(std::move(noun_constraint_entry));
       }
     }
+
     if (*outstanding_requests == 0) {
-      done();
+      cont();
     }
   }
 
-  void FindModules(FlowToken flow) {
+  void Cont(FlowToken flow) {
     story_controller_impl_->story_provider_impl_->module_resolver()
         ->FindModules(std::move(resolver_query_), nullptr,
                       [this, flow](const FindModulesResultPtr& result) {
@@ -1607,11 +1609,10 @@ class StoryControllerImpl::ResolveModulesCall
   OperationQueue operation_queue_;
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  DaisyPtr daisy_;
-  f1dl::Array<f1dl::String> requesting_module_path_;
+  const DaisyPtr daisy_;
+  const f1dl::Array<f1dl::String> requesting_module_path_;
 
   ResolverQueryPtr resolver_query_;
-
   FindModulesResultPtr result_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ResolveModulesCall);
@@ -1648,13 +1649,13 @@ class StoryControllerImpl::AddDaisyCall : Operation<> {
                            std::move(daisy_),
                            std::move(requesting_module_path_),
                            [this, flow](FindModulesResultPtr result) {
-                             StartModuleFromFindResult(flow, std::move(result));
+                             StartModuleFromResult(flow, std::move(result));
                            });
   }
 
-  void StartModuleFromFindResult(FlowToken flow, FindModulesResultPtr result) {
+  void StartModuleFromResult(FlowToken flow, FindModulesResultPtr result) {
     if (!result->modules.empty()) {
-      // Run the first module in story shell.
+      // Runs the first module in story shell.
       const auto& module_result = result->modules[0];
       const auto& module_url = module_result->module_id;
       const auto& create_chain_info = module_result->create_chain_info;
@@ -1669,7 +1670,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<> {
   }
 
   OperationQueue operation_queue_;
-  StoryControllerImpl* story_controller_impl_ = nullptr;
+  StoryControllerImpl* const story_controller_impl_;
   f1dl::Array<f1dl::String> requesting_module_path_;
   std::string module_name_;
   DaisyPtr daisy_;
