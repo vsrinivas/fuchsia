@@ -1099,14 +1099,17 @@ zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
     // Pack additional handles into |info|, if possible.
     switch (PA_HND_TYPE(types[0])) {
     case PA_FDIO_REMOTE:
-        info.tag = FDIO_PROTOCOL_SERVICE;
-        // Expected: Single control-channel handle
-        if (hcount != 1) {
+        switch (hcount) {
+        case 1:
+            io = fdio_remote_create(handles[0], 0);
+            goto bind;
+        case 2:
+            io = fdio_remote_create(handles[0], handles[1]);
+            goto bind;
+        default:
             r = ZX_ERR_INVALID_ARGS;
             goto fail;
         }
-        control_channel = handles[0];
-        break;
     case PA_FDIO_PIPE:
         info.tag = FDIO_PROTOCOL_PIPE;
         // Expected: Single pipe handle
@@ -1115,7 +1118,6 @@ zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
             goto fail;
         }
         info.pipe.s = handles[0];
-        hcount--;
         break;
     case PA_FDIO_SOCKET:
         info.tag = FDIO_PROTOCOL_SOCKET_CONNECTED;
@@ -1135,6 +1137,7 @@ zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount,
         return r;
     }
 
+bind:
     fd = fdio_bind_to_fd(io, -1, 0);
     if (fd < 0) {
         fdio_close(io);

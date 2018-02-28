@@ -191,6 +191,27 @@ bool transfer_fd_test(void) {
     END_TEST;
 }
 
+bool transfer_device_test(void) {
+    BEGIN_TEST;
+
+    int fd = open("/dev/zero", O_RDONLY);
+    ASSERT_GE(fd, 0, "Failed to open /dev/zero");
+
+    // fd --> handles
+    zx_handle_t handles[FDIO_MAX_HANDLES];
+    uint32_t types[FDIO_MAX_HANDLES];
+    zx_status_t r = fdio_transfer_fd(fd, 0, handles, types);
+    ASSERT_GT(r, 0, "failed to transfer fds to handles");
+
+    // handles --> fd
+    ASSERT_EQ(fdio_create_fd(handles, types, r, &fd), ZX_OK,
+              "failed to transfer handles to fds");
+
+    ASSERT_EQ(close(fd), 0, "Failed to close fd");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(fdio_handle_fd_test)
 RUN_TEST(close_test);
 RUN_TEST(pipe_test);
@@ -199,4 +220,5 @@ RUN_TEST(ppoll_null_test);
 RUN_TEST(ppoll_overflow_test);
 RUN_TEST(ppoll_immediate_timeout_test);
 RUN_TEST(transfer_fd_test);
+RUN_TEST(transfer_device_test);
 END_TEST_CASE(fdio_handle_fd_test)
