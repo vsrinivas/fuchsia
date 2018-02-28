@@ -206,7 +206,7 @@ mod tests {
     macro_rules! one_step {
         ($core:ident, $s:expr) => {
             {
-                let timeout = reactor::Timeout::new(Duration::from_millis(50), &$core.handle()).unwrap();
+                let timeout = reactor::Timeout::new(Duration::from_millis(500), &$core.handle()).unwrap();
                 match $core.run($s.into_future().select2(timeout)) {
                     Ok(Either::A(((msg, rest), _))) => (msg.unwrap(), rest),
                     Ok(Either::B(_)) => panic!("Timed out waiting for watcher!"),
