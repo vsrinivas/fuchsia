@@ -109,7 +109,7 @@ MODULE_SRCS = \
     $(LOCAL_DIR)/loop_wrapper.cpp
 
 MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
-MODULE_PACKAGE_INCS := $(LOCAL_INC)/loop.h
+MODULE_PACKAGE_INCS := $(LOCAL_INC)/cpp/loop.h
 
 MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \
