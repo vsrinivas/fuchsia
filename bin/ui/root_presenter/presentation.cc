@@ -263,13 +263,8 @@ bool Presentation::SetDisplayMetrics(const DisplayMetrics& metrics) {
   display_metrics_ = metrics;
 
   auto root_properties = mozart::ViewProperties::New();
-  root_properties->display_metrics = mozart::DisplayMetrics::New();
 
   // TODO(MZ-411): Handle densities that differ in x and y.
-  FXL_DCHECK(display_metrics_.x_scale_in_px_per_pp() ==
-             display_metrics_.y_scale_in_px_per_pp());
-  root_properties->display_metrics->device_pixel_ratio =
-      display_metrics_.x_scale_in_px_per_pp();
   root_properties->view_layout = mozart::ViewLayout::New();
   root_properties->view_layout->size = mozart::SizeF::New();
   root_properties->view_layout->size->width = display_metrics_.width_in_pp();

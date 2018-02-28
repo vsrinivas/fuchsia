@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
@@ -168,8 +168,6 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   tree_container->AddChild(parent_key, std::move(parent_view_owner));
 
   auto parent_view_properties = mozart::ViewProperties::New();
-  parent_view_properties->display_metrics = mozart::DisplayMetrics::New();
-  parent_view_properties->display_metrics->device_pixel_ratio = 1.0;
   parent_view_properties->view_layout = mozart::ViewLayout::New();
   parent_view_properties->view_layout->size = mozart::Size::New();
   parent_view_properties->view_layout->size->width = parent_view_width;
@@ -208,8 +206,6 @@ TEST_F(ViewManagerTest, SetChildProperties) {
 
   auto view_properties = mozart::ViewProperties::New();
   view_properties->view_layout = mozart::ViewLayout::New();
-  view_properties->display_metrics = mozart::DisplayMetrics::New();
-  view_properties->display_metrics->device_pixel_ratio = 1.0;
   view_properties->view_layout->size = mozart::Size::New();
   view_properties->view_layout->size->width = child_view_width;
   view_properties->view_layout->size->height = child_view_height;

@@ -7,9 +7,9 @@
 
 #include <iosfwd>
 
+#include "lib/fidl/cpp/bindings/formatting.h"
 #include "lib/ui/geometry/cpp/formatting.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/fidl/cpp/bindings/formatting.h"
 
 namespace mozart {
 
@@ -20,7 +20,6 @@ std::ostream& operator<<(std::ostream& os, const ViewTreeToken& value);
 std::ostream& operator<<(std::ostream& os, const ViewInfo& value);
 
 std::ostream& operator<<(std::ostream& os, const ViewProperties& value);
-std::ostream& operator<<(std::ostream& os, const DisplayMetrics& value);
 std::ostream& operator<<(std::ostream& os, const ViewLayout& value);
 
 }  // namespace mozart

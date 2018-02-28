@@ -11,16 +11,7 @@ import "lib/ui/geometry/fidl/geometry.fidl";
 // When a container sets properties for its children, any properties which
 // are set to null are inherited from the container's own ancestors.
 struct ViewProperties {
-  DisplayMetrics? display_metrics;
   ViewLayout? view_layout;
-};
-
-// Provides information about the physical characteristics of the display.
-struct DisplayMetrics {
-  // The ratio of the size of a logical pixel to a physical pixel assuming
-  // pixels are square.  This value changes in relation to display
-  // resolution and density.  Must be > 0.
-  float device_pixel_ratio = 1.0;
 };
 
 // Provides layout constraints for a view.

@@ -26,18 +26,11 @@
 namespace view_manager {
 namespace {
 
-bool Validate(const mozart::DisplayMetrics& value) {
-  return std::isnormal(value.device_pixel_ratio) &&
-         value.device_pixel_ratio > 0.f;
-}
-
 bool Validate(const mozart::ViewLayout& value) {
   return value.size && value.size->width >= 0 && value.size->height >= 0;
 }
 
 bool Validate(const mozart::ViewProperties& value) {
-  if (value.display_metrics && !Validate(*value.display_metrics))
-    return false;
   if (value.view_layout && !Validate(*value.view_layout))
     return false;
   return true;
@@ -46,15 +39,13 @@ bool Validate(const mozart::ViewProperties& value) {
 // Returns true if the properties are valid and are sufficient for
 // operating the view tree.
 bool IsComplete(const mozart::ViewProperties& value) {
-  return Validate(value) && value.view_layout && value.display_metrics;
+  return Validate(value) && value.view_layout;
 }
 
 void ApplyOverrides(mozart::ViewProperties* value,
                     const mozart::ViewProperties* overrides) {
   if (!overrides)
     return;
-  if (overrides->display_metrics)
-    value->display_metrics = overrides->display_metrics.Clone();
   if (overrides->view_layout)
     value->view_layout = overrides->view_layout.Clone();
 }
