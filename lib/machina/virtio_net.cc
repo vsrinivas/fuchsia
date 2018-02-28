@@ -113,21 +113,21 @@ zx_status_t VirtioNet::Start(const char* path) {
   return ZX_OK;
 }
 
-zx_status_t VirtioNet::DrainQueue(virtio_queue_t* queue,
+zx_status_t VirtioNet::DrainQueue(VirtioQueue* queue,
                                   uint32_t max_entries,
                                   zx_handle_t fifo) {
   eth_fifo_entry_t entries[max_entries];
 
   // Wait on first descriptor chain to become available.
   uint16_t head;
-  virtio_queue_wait(queue, &head);
+  queue->Wait(&head);
 
   // Read all available descriptor chains from the queue.
   zx_status_t status = ZX_OK;
   uint32_t num_entries = 0;
   for (; num_entries < max_entries && status == ZX_OK; num_entries++) {
     virtio_desc_t desc;
-    status = virtio_queue_read_desc(queue, head, &desc);
+    status = queue->ReadDesc(head, &desc);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to read descriptor from queue";
       return status;
@@ -145,9 +145,9 @@ zx_status_t VirtioNet::DrainQueue(virtio_queue_t* queue,
         .flags = 0,
         .cookie = reinterpret_cast<void*>(head),
     };
-    status = virtio_queue_next_avail(queue, &head);
+    status = queue->NextAvail(&head);
   }
-  if (status != ZX_ERR_NOT_FOUND) {
+  if (status != ZX_ERR_SHOULD_WAIT) {
     FXL_LOG(ERROR) << "Failed to fetch descriptor chain from queue";
     return status;
   }
@@ -191,7 +191,7 @@ zx_status_t VirtioNet::DrainQueue(virtio_queue_t* queue,
   for (uint32_t i = 0; i < count; i++) {
     auto head = reinterpret_cast<uintptr_t>(entries[i].cookie);
     auto length = entries[i].length + sizeof(virtio_net_hdr_t);
-    virtio_queue_return(queue, head, length);
+    queue->Return(head, length);
   }
 
   // Notify guest of updates to the queue.

@@ -29,19 +29,19 @@ zx_status_t VirtioConsole::Start() {
   zx_status_t status;
 
   auto tx_entry =
-      +[](virtio_queue_t* queue, uint16_t head, uint32_t* used, void* ctx) {
+      +[](VirtioQueue* queue, uint16_t head, uint32_t* used, void* ctx) {
         return static_cast<VirtioConsole*>(ctx)->Transmit(queue, head, used);
       };
-  status = virtio_queue_poll(tx_queue(), tx_entry, this, "virtio-console-tx");
+  status = tx_queue()->Poll(tx_entry, this, "virtio-console-tx");
   if (status != ZX_OK) {
     return status;
   }
 
   auto rx_entry =
-      +[](virtio_queue_t* queue, uint16_t head, uint32_t* used, void* ctx) {
+      +[](VirtioQueue* queue, uint16_t head, uint32_t* used, void* ctx) {
         return static_cast<VirtioConsole*>(ctx)->Receive(queue, head, used);
       };
-  status = virtio_queue_poll(rx_queue(), rx_entry, this, "virtio-console-rx");
+  status = rx_queue()->Poll(rx_entry, this, "virtio-console-rx");
   if (status != ZX_OK) {
     return status;
   }
@@ -49,13 +49,13 @@ zx_status_t VirtioConsole::Start() {
   return ZX_OK;
 }
 
-zx_status_t VirtioConsole::Transmit(virtio_queue_t* queue,
+zx_status_t VirtioConsole::Transmit(VirtioQueue* queue,
                                     uint16_t head,
                                     uint32_t* used) {
   uint16_t index = head;
   virtio_desc_t desc;
   do {
-    zx_status_t status = virtio_queue_read_desc(queue, index, &desc);
+    zx_status_t status = queue->ReadDesc(index, &desc);
     if (status != ZX_OK) {
       return status;
     }
@@ -77,12 +77,12 @@ zx_status_t VirtioConsole::Transmit(virtio_queue_t* queue,
   return ZX_OK;
 }
 
-zx_status_t VirtioConsole::Receive(virtio_queue_t* queue,
+zx_status_t VirtioConsole::Receive(VirtioQueue* queue,
                                    uint16_t head,
                                    uint32_t* used) {
   uint16_t index = head;
   virtio_desc_t desc;
-  zx_status_t status = virtio_queue_read_desc(queue, index, &desc);
+  zx_status_t status = queue->ReadDesc(index, &desc);
   if (status != ZX_OK) {
     return status;
   }

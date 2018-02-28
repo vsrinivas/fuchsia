@@ -18,7 +18,7 @@ namespace machina {
 VirtioDevice::VirtioDevice(uint8_t device_id,
                            void* config,
                            size_t config_size,
-                           virtio_queue_t* queues,
+                           VirtioQueue* queues,
                            uint16_t num_queues,
                            const PhysMem& phys_mem)
     : device_id_(device_id),
@@ -30,10 +30,8 @@ VirtioDevice::VirtioDevice(uint8_t device_id,
       pci_(this) {
   // Virt queue initialization.
   for (int i = 0; i < num_queues_; ++i) {
-    virtio_queue_t* queue = &queues_[i];
-    memset(queue, 0, sizeof(*queue));
-    queue->size = QUEUE_SIZE;
-    queue->virtio_device = this;
+    queues_[i].set_size(QUEUE_SIZE);
+    queues_[i].set_device(this);
   }
 }
 
@@ -69,7 +67,7 @@ zx_status_t VirtioDevice::Kick(uint16_t kicked_queue) {
 
   // Notify threads waiting on a descriptor.
   fbl::AutoLock lock(&mutex_);
-  virtio_queue_signal(&queues_[kicked_queue]);
+  queues_[kicked_queue].Signal();
   return ZX_OK;
 }
 

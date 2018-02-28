@@ -298,10 +298,10 @@ zx_status_t VirtioInput::OnBarrierEvent() {
 
 zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event) {
   uint16_t head;
-  virtio_queue_wait(&event_queue(), &head);
+  event_queue().Wait(&head);
 
   virtio_desc_t desc;
-  zx_status_t status = virtio_queue_read_desc(&event_queue(), head, &desc);
+  zx_status_t status = event_queue().ReadDesc(head, &desc);
   if (status != ZX_OK) {
     return status;
   }
@@ -309,7 +309,7 @@ zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event) {
   auto event_out = static_cast<virtio_input_event_t*>(desc.addr);
   memcpy(event_out, &event, sizeof(event));
 
-  virtio_queue_return(&event_queue(), head, sizeof(event));
+  event_queue().Return(head, sizeof(event));
   return ZX_OK;
 }
 

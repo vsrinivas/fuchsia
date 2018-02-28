@@ -76,7 +76,7 @@ class VirtioDevice {
   VirtioDevice(uint8_t device_id,
                void* config,
                size_t config_size,
-               virtio_queue_t* queues,
+               VirtioQueue* queues,
                uint16_t num_queues,
                const PhysMem& phys_mem);
 
@@ -127,7 +127,7 @@ class VirtioDevice {
   const size_t device_config_size_ = 0;
 
   // Virtqueues for this device.
-  virtio_queue_t* const queues_ = nullptr;
+  VirtioQueue* const queues_ = nullptr;
 
   // Size of queues array.
   const uint16_t num_queues_ = 0;

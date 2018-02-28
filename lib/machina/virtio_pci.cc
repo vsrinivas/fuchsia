@@ -158,12 +158,12 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_SIZE: {
-      virtio_queue_t* queue = selected_queue();
-      if (queue == nullptr)
+      VirtioQueue* queue = selected_queue();
+      if (queue == nullptr) {
         return ZX_ERR_BAD_STATE;
+      }
 
-      fbl::AutoLock lock(&queue->mutex);
-      value->u16 = queue->size;
+      value->u16 = queue->size();
       value->access_size = 2;
       return ZX_OK;
     }
@@ -176,15 +176,16 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
       value->u16 = 0;
       return ZX_OK;
     case VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW ... VIRTIO_PCI_COMMON_CFG_QUEUE_USED_HIGH: {
-      virtio_queue_t* queue = selected_queue();
-      if (queue == nullptr)
+      VirtioQueue* queue = selected_queue();
+      if (queue == nullptr) {
         return ZX_ERR_BAD_STATE;
+      }
 
       size_t word =
           (addr - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
-      fbl::AutoLock lock(&queue->mutex);
-      value->u32 = queue->addr.words[word];
       value->access_size = 4;
+      value->u32 = queue->UpdateRing<uint32_t>(
+          [word](virtio_queue_t* ring) { return ring->addr.words[word]; });
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_NOTIFY_OFF: {
@@ -235,10 +236,10 @@ zx_status_t VirtioPci::ConfigBarRead(uint64_t addr, IoValue* value) const {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static void virtio_queue_update_addr(virtio_queue_t* queue) {
-  virtio_queue_set_desc_addr(queue, queue->addr.desc);
-  virtio_queue_set_avail_addr(queue, queue->addr.avail);
-  virtio_queue_set_used_addr(queue, queue->addr.used);
+static void virtio_queue_update_addr(VirtioQueue* queue) {
+  queue->set_desc_addr(queue->desc_addr());
+  queue->set_avail_addr(queue->avail_addr());
+  queue->set_used_addr(queue->used_addr());
 }
 
 // Handle writes to the common configuration structure as defined in
@@ -292,26 +293,29 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
     case VIRTIO_PCI_COMMON_CFG_QUEUE_SIZE: {
       if (value.access_size != 2)
         return ZX_ERR_IO_DATA_INTEGRITY;
-      virtio_queue_t* queue = selected_queue();
-      if (queue == nullptr)
+      VirtioQueue* queue = selected_queue();
+      if (queue == nullptr) {
         return ZX_ERR_BAD_STATE;
+      }
 
-      fbl::AutoLock lock(&queue->mutex);
-      queue->size = value.u16;
+      queue->set_size(value.u16);
       virtio_queue_update_addr(queue);
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW ... VIRTIO_PCI_COMMON_CFG_QUEUE_USED_HIGH: {
-      if (value.access_size != 4)
+      if (value.access_size != 4) {
         return ZX_ERR_IO_DATA_INTEGRITY;
-      virtio_queue_t* queue = selected_queue();
-      if (queue == nullptr)
+      }
+      VirtioQueue* queue = selected_queue();
+      if (queue == nullptr) {
         return ZX_ERR_BAD_STATE;
+      }
 
       size_t word =
           (addr - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
-      fbl::AutoLock lock(&queue->mutex);
-      queue->addr.words[word] = value.u32;
+      queue->UpdateRing<void>([&value, word](virtio_queue_t* ring) {
+        ring->addr.words[word] = value.u32;
+      });
       virtio_queue_update_addr(queue);
       return ZX_OK;
     }
@@ -439,10 +443,11 @@ static constexpr uint32_t virtio_pci_device_class(uint16_t virtio_id) {
   return virtio_pci_class_code(virtio_id) | kVirtioPciRevisionId;
 }
 
-virtio_queue_t* VirtioPci::selected_queue() const {
+VirtioQueue* VirtioPci::selected_queue() const {
   fbl::AutoLock lock(&device_->mutex_);
-  if (device_->queue_sel_ >= device_->num_queues_)
+  if (device_->queue_sel_ >= device_->num_queues_) {
     return nullptr;
+  }
   return &device_->queues_[device_->queue_sel_];
 }
 

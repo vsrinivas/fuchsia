@@ -22,12 +22,12 @@ class VirtioNet : public VirtioDevice {
   zx_status_t Start(const char* path);
 
   // Drains a Virtio queue, and passes data to the underlying Ethernet device.
-  zx_status_t DrainQueue(virtio_queue_t* queue,
+  zx_status_t DrainQueue(VirtioQueue* queue,
                          uint32_t max_entries,
                          zx_handle_t fifo);
 
-  virtio_queue_t* rx_queue() { return &queues_[0]; }
-  virtio_queue_t* tx_queue() { return &queues_[1]; }
+  VirtioQueue* rx_queue() { return &queues_[0]; }
+  VirtioQueue* tx_queue() { return &queues_[1]; }
 
  private:
   static constexpr uint16_t kNumQueues = 2;
@@ -35,7 +35,7 @@ class VirtioNet : public VirtioDevice {
                 "There must be a queue for both RX and TX");
 
   // Queue for handling block requests.
-  virtio_queue_t queues_[kNumQueues];
+  VirtioQueue queues_[kNumQueues];
   // Device configuration fields.
   virtio_net_config_t config_ = {};
   // Ethernet control plane.

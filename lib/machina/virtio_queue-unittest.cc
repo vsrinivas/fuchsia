@@ -21,11 +21,11 @@ class TestDevice : public VirtioDevice {
 
   zx_status_t Init() { return queue_fake_.Init(QUEUE_SIZE); }
 
-  virtio_queue_t& queue() { return queue_; }
+  VirtioQueue& queue() { return queue_; }
   VirtioQueueFake& queue_fake() { return queue_fake_; }
 
  private:
-  virtio_queue_t queue_;
+  VirtioQueue queue_;
   PhysMemFake phys_mem_;
   VirtioQueueFake queue_fake_;
 };
@@ -33,13 +33,15 @@ class TestDevice : public VirtioDevice {
 TEST(VirtioQueueTest, HandleOverflow) {
   TestDevice device;
   ASSERT_EQ(device.Init(), ZX_OK);
-  virtio_queue_t& queue = device.queue();
+  VirtioQueue& queue = device.queue();
   VirtioQueueFake& queue_fake = device.queue_fake();
 
   // Setup queue pointers so that the next descriptor will wrap avail->idx
   // to 0.
-  queue.avail->idx = UINT16_MAX;
-  queue.index = UINT16_MAX;
+  queue.UpdateRing<void>([](virtio_queue_t* ring) {
+    const_cast<uint16_t&>(ring->avail->idx) = UINT16_MAX;
+    ring->index = UINT16_MAX;
+  });
 
   uint16_t expected_desc;
   uint32_t data = 0x12345678;
@@ -49,10 +51,10 @@ TEST(VirtioQueueTest, HandleOverflow) {
             ZX_OK);
 
   uint16_t desc;
-  ASSERT_EQ(virtio_queue_next_avail(&queue, &desc), ZX_OK);
+  ASSERT_EQ(queue.NextAvail(&desc), ZX_OK);
   ASSERT_EQ(desc, expected_desc);
-  ASSERT_EQ(queue.avail->idx, 0);
-  ASSERT_EQ(queue.index, 0);
+  ASSERT_EQ(queue.ring()->avail->idx, 0);
+  ASSERT_EQ(queue.ring()->index, 0);
 }
 
 }  // namespace

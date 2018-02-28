@@ -13,8 +13,7 @@
 namespace machina {
 
 class VirtioDevice;
-
-typedef struct virtio_queue virtio_queue_t;
+class VirtioQueue;
 
 static constexpr size_t kVirtioPciNumCapabilities = 4;
 
@@ -53,7 +52,7 @@ class VirtioPci : public PciDevice {
                 uint8_t bar,
                 size_t bar_offset);
 
-  virtio_queue_t* selected_queue() const;
+  VirtioQueue* selected_queue() const;
 
   // We need one of these for every virtio_pci_cap_t structure we expose.
   pci_cap_t capabilities_[kVirtioPciNumCapabilities];

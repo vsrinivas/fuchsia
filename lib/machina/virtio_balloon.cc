@@ -101,7 +101,7 @@ zx_status_t VirtioBalloon::HandleDescriptor(uint16_t queue_sel) {
       return ZX_ERR_INVALID_ARGS;
   }
   ctx.vmo = phys_mem().vmo().get();
-  return virtio_queue_handler(&queues_[queue_sel], &queue_range_op, &ctx);
+  return queues_[queue_sel].HandleDescriptor(&queue_range_op, &ctx);
 }
 
 zx_status_t VirtioBalloon::HandleQueueNotify(uint16_t queue_sel) {
@@ -123,15 +123,15 @@ VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
                       VIRTIO_BALLOON_F_DEFLATE_ON_OOM);
 }
 
-void VirtioBalloon::WaitForStatsBuffer(virtio_queue_t* stats_queue) {
+void VirtioBalloon::WaitForStatsBuffer(VirtioQueue* stats_queue) {
   if (!stats_.has_buffer) {
-    virtio_queue_wait(stats_queue, &stats_.desc_index);
+    stats_queue->Wait(&stats_.desc_index);
     stats_.has_buffer = true;
   }
 }
 
 zx_status_t VirtioBalloon::RequestStats(StatsHandler handler) {
-  virtio_queue_t* stats_queue = &queues_[VIRTIO_BALLOON_Q_STATSQ];
+  VirtioQueue* stats_queue = &queues_[VIRTIO_BALLOON_Q_STATSQ];
 
   // stats.mutex needs to be held during the entire time the guest is
   // processing the buffer since we need to make sure no other threads
@@ -146,19 +146,22 @@ zx_status_t VirtioBalloon::RequestStats(StatsHandler handler) {
   // We have a buffer. We need to return it to the driver. It'll populate
   // a new buffer with stats and then send it back to us.
   stats_.has_buffer = false;
-  virtio_queue_return(stats_queue, stats_.desc_index, 0);
+  stats_queue->Return(stats_.desc_index, 0);
   zx_status_t status = NotifyGuest();
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   WaitForStatsBuffer(stats_queue);
 
   virtio_desc_t desc;
-  status = virtio_queue_read_desc(stats_queue, stats_.desc_index, &desc);
-  if (status != ZX_OK)
+  status = stats_queue->ReadDesc(stats_.desc_index, &desc);
+  if (status != ZX_OK) {
     return status;
+  }
 
-  if ((desc.len % sizeof(virtio_balloon_stat_t)) != 0)
+  if ((desc.len % sizeof(virtio_balloon_stat_t)) != 0) {
     return ZX_ERR_IO_DATA_INTEGRITY;
+  }
 
   // Invoke the handler on the stats.
   auto stats = static_cast<const virtio_balloon_stat_t*>(desc.addr);

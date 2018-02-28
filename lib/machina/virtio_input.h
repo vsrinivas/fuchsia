@@ -32,7 +32,7 @@ class VirtioInput : public VirtioDevice {
 
   zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
 
-  virtio_queue_t& event_queue() { return queues_[VIRTIO_INPUT_Q_EVENTQ]; }
+  VirtioQueue& event_queue() { return queues_[VIRTIO_INPUT_Q_EVENTQ]; }
 
   // Spawns a thread to monitor for new input devices. When one is detected
   // the corresponding event source will be created to poll for events.
@@ -52,7 +52,7 @@ class VirtioInput : public VirtioDevice {
   fbl::Mutex mutex_;
   const char* device_name_;
   const char* device_serial_;
-  virtio_queue_t queues_[VIRTIO_INPUT_Q_COUNT];
+  VirtioQueue queues_[VIRTIO_INPUT_Q_COUNT];
   virtio_input_config_t config_ __TA_GUARDED(config_mutex_) = {};
 };
 

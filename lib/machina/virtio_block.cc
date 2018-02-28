@@ -52,14 +52,14 @@ zx_status_t VirtioBlock::SetDispatcher(
 
 zx_status_t VirtioBlock::Start() {
   auto poll_func =
-      +[](virtio_queue_t* queue, uint16_t head, uint32_t* used, void* ctx) {
+      +[](VirtioQueue* queue, uint16_t head, uint32_t* used, void* ctx) {
         return static_cast<VirtioBlock*>(ctx)->HandleBlockRequest(queue, head,
                                                                   used);
       };
-  return virtio_queue_poll(&queue_, poll_func, this, "virtio-block");
+  return queue_.Poll(poll_func, this, "virtio-block");
 }
 
-zx_status_t VirtioBlock::HandleBlockRequest(virtio_queue_t* queue,
+zx_status_t VirtioBlock::HandleBlockRequest(VirtioQueue* queue,
                                             uint16_t head,
                                             uint32_t* used) {
   uint8_t block_status = VIRTIO_BLK_S_OK;
@@ -68,7 +68,7 @@ zx_status_t VirtioBlock::HandleBlockRequest(virtio_queue_t* queue,
   off_t offset = 0;
   virtio_desc_t desc;
 
-  zx_status_t status = virtio_queue_read_desc(queue, head, &desc);
+  zx_status_t status = queue->ReadDesc(head, &desc);
   if (status != ZX_OK) {
     desc.addr = nullptr;
     desc.len = 0;
@@ -100,11 +100,12 @@ zx_status_t VirtioBlock::HandleBlockRequest(virtio_queue_t* queue,
   // for the driver to use. This does not affect the units used in the
   // protocol (always 512 bytes), but awareness of the correct value can
   // affect performance.
-  if (req != nullptr)
+  if (req != nullptr) {
     offset = req->sector * kSectorSize;
+  }
 
   while (desc.has_next) {
-    status = virtio_queue_read_desc(queue, desc.next, &desc);
+    status = queue->ReadDesc(desc.next, &desc);
     if (status != ZX_OK) {
       block_status =
           block_status != VIRTIO_BLK_S_OK ? block_status : VIRTIO_BLK_S_IOERR;
@@ -119,8 +120,9 @@ zx_status_t VirtioBlock::HandleBlockRequest(virtio_queue_t* queue,
 
     // Skip doing any file ops if we've already encountered an error, but
     // keep traversing the descriptor chain looking for the status tailer.
-    if (block_status != VIRTIO_BLK_S_OK)
+    if (block_status != VIRTIO_BLK_S_OK) {
       continue;
+    }
 
     zx_status_t status;
     switch (req->type) {
@@ -151,14 +153,16 @@ zx_status_t VirtioBlock::HandleBlockRequest(virtio_queue_t* queue,
     }
 
     // Report any failures queuing the IO request.
-    if (block_status == VIRTIO_BLK_S_OK && status != ZX_OK)
+    if (block_status == VIRTIO_BLK_S_OK && status != ZX_OK) {
       block_status = VIRTIO_BLK_S_IOERR;
+    }
   }
 
   // Wait for operations to become consistent.
   status = dispatcher_->Submit();
-  if (block_status == VIRTIO_BLK_S_OK && status != ZX_OK)
+  if (block_status == VIRTIO_BLK_S_OK && status != ZX_OK) {
     block_status = VIRTIO_BLK_S_IOERR;
+  }
 
   // Set the output status if we found the byte in the descriptor chain.
   if (block_status_ptr != nullptr) {

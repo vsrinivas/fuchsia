@@ -63,8 +63,7 @@ class VirtioBalloon : public VirtioDevice {
   void set_deflate_on_demand(bool b) { deflate_on_demand_ = b; }
 
  private:
-  void WaitForStatsBuffer(virtio_queue_t* stats_queue)
-      __TA_REQUIRES(stats_.mutex);
+  void WaitForStatsBuffer(VirtioQueue* stats_queue) __TA_REQUIRES(stats_.mutex);
 
   zx_status_t HandleDescriptor(uint16_t queue_sel);
 
@@ -87,7 +86,7 @@ class VirtioBalloon : public VirtioDevice {
     fbl::Mutex mutex;
   } stats_;
 
-  virtio_queue_t queues_[VIRTIO_BALLOON_Q_COUNT];
+  VirtioQueue queues_[VIRTIO_BALLOON_Q_COUNT];
 
   virtio_balloon_config_t config_ __TA_GUARDED(config_mutex_) = {};
 };
