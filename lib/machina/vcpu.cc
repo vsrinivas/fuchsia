@@ -24,26 +24,28 @@
 #endif
 
 #if __aarch64__
-static zx_status_t HandleMmioArm(const zx_packet_guest_mem_t* mem,
-                                   uint64_t trap_key,
-                                   uint64_t* reg) {
-  machina::IoValue mmio = {mem->access_size, {.u64 = mem->data}};
-  if (!mem->read)
-    return machina::trap_key_to_mapping(trap_key)->Write(mem->addr, mmio);
+static zx_status_t HandleMmioArm(const zx_packet_guest_mem_t& mem,
+                                 uint64_t trap_key, uint64_t* reg) {
+  machina::IoValue mmio = {mem.access_size, {.u64 = mem.data}};
+  if (!mem.read) {
+    return machina::trap_key_to_mapping(trap_key)->Write(mem.addr, mmio);
+  }
 
   zx_status_t status =
-      machina::trap_key_to_mapping(trap_key)->Read(mem->addr, &mmio);
-  if (status != ZX_OK)
+      machina::trap_key_to_mapping(trap_key)->Read(mem.addr, &mmio);
+  if (status != ZX_OK) {
     return status;
+  }
   *reg = mmio.u64;
-  if (mem->sign_extend && *reg & (1ul << (mmio.access_size * CHAR_BIT - 1)))
+  if (mem.sign_extend && *reg & (1ul << (mmio.access_size * CHAR_BIT - 1))) {
     *reg |= UINT64_MAX << mmio.access_size;
+  }
   return ZX_OK;
 }
 #elif __x86_64__
-static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t* mem,
-                                   uint64_t trap_key,
-                                   const machina::Instruction* inst) {
+static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t& mem,
+                                 uint64_t trap_key,
+                                 const machina::Instruction* inst) {
   zx_status_t status;
   machina::IoValue mmio = {inst->access_size, {.u64 = 0}};
   switch (inst->type) {
@@ -61,14 +63,16 @@ static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t* mem,
         default:
           return ZX_ERR_NOT_SUPPORTED;
       }
-      if (status != ZX_OK)
+      if (status != ZX_OK) {
         return status;
-      return machina::trap_key_to_mapping(trap_key)->Write(mem->addr, mmio);
+      }
+      return machina::trap_key_to_mapping(trap_key)->Write(mem.addr, mmio);
 
     case INST_MOV_READ:
-      status = machina::trap_key_to_mapping(trap_key)->Read(mem->addr, &mmio);
-      if (status != ZX_OK)
+      status = machina::trap_key_to_mapping(trap_key)->Read(mem.addr, &mmio);
+      if (status != ZX_OK) {
         return status;
+      }
       switch (inst->access_size) {
         case 1:
           return inst_read8(inst, mmio.u8);
@@ -81,9 +85,10 @@ static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t* mem,
       }
 
     case INST_TEST:
-      status = machina::trap_key_to_mapping(trap_key)->Read(mem->addr, &mmio);
-      if (status != ZX_OK)
+      status = machina::trap_key_to_mapping(trap_key)->Read(mem.addr, &mmio);
+      if (status != ZX_OK) {
         return status;
+      }
       switch (inst->access_size) {
         case 1:
           return inst_test8(inst, static_cast<uint8_t>(inst->imm), mmio.u8);
@@ -197,7 +202,7 @@ zx_status_t Vcpu::Loop() {
       exit(status);
     }
 
-    status = HandlePacket(&packet);
+    status = HandlePacket(packet);
     if (status == ZX_ERR_STOP) {
       SetState(State::TERMINATED);
       return ZX_OK;
@@ -245,45 +250,47 @@ zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
   return zx_vcpu_write_state(vcpu_, kind, buffer, len);
 }
 
-zx_status_t Vcpu::HandlePacket(const zx_port_packet_t* packet) {
-  switch (packet->type) {
+zx_status_t Vcpu::HandlePacket(const zx_port_packet_t& packet) {
+  switch (packet.type) {
     case ZX_PKT_TYPE_GUEST_MEM:
-      return HandleMem(&packet->guest_mem, packet->key);
+      return HandleMem(packet.guest_mem, packet.key);
 #if __x86_64__
     case ZX_PKT_TYPE_GUEST_IO:
-      return HandleIo(&packet->guest_io, packet->key);
+      return HandleIo(packet.guest_io, packet.key);
 #endif  // __x86_64__
     case ZX_PKT_TYPE_GUEST_VCPU:
-      return HandleVcpu(&packet->guest_vcpu, packet->key);
+      return HandleVcpu(packet.guest_vcpu, packet.key);
     default:
-      FXL_LOG(ERROR) << "Unhandled guest packet " << packet->type;
+      FXL_LOG(ERROR) << "Unhandled guest packet " << packet.type;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
 
-zx_status_t Vcpu::HandleMem(const zx_packet_guest_mem_t* mem, uint64_t trap_key) {
+zx_status_t Vcpu::HandleMem(const zx_packet_guest_mem_t& mem,
+                            uint64_t trap_key) {
   zx_vcpu_state_t vcpu_state;
   zx_status_t status;
 #if __aarch64__
-  if (mem->read)
+  if (mem.read)
 #endif
   {
     status = ReadState(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
+    }
   }
 
   bool do_write = false;
 #if __aarch64__
-  do_write = mem->read;
-  status = HandleMmioArm(mem, trap_key, &vcpu_state.x[mem->xt]);
+  do_write = mem.read;
+  status = HandleMmioArm(mem, trap_key, &vcpu_state.x[mem.xt]);
 #elif __x86_64__
   Instruction inst;
-  status = inst_decode(mem->inst_buf, mem->inst_len, &vcpu_state, &inst);
+  status = inst_decode(mem.inst_buf, mem.inst_len, &vcpu_state, &inst);
   if (status != ZX_OK) {
     fbl::StringBuffer<LINE_MAX> buffer;
-    for (uint8_t i = 0; i < mem->inst_len; i++)
-      buffer.AppendPrintf(" %x", mem->inst_buf[i]);
+    for (uint8_t i = 0; i < mem.inst_len; i++)
+      buffer.AppendPrintf(" %x", mem.inst_buf[i]);
     FXL_LOG(ERROR) << "Unsupported instruction:" << buffer.c_str();
   } else {
     status = HandleMmioX86(mem, trap_key, &inst);
@@ -292,20 +299,21 @@ zx_status_t Vcpu::HandleMem(const zx_packet_guest_mem_t* mem, uint64_t trap_key)
   }
 #endif  // __x86_64__
 
-  if (status == ZX_OK && do_write)
+  if (status == ZX_OK && do_write) {
     return WriteState(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
+  }
 
   return status;
 }
 
-
 #if __x86_64__
-zx_status_t Vcpu::HandleInput(const zx_packet_guest_io_t* io, uint64_t trap_key) {
+zx_status_t Vcpu::HandleInput(const zx_packet_guest_io_t& io,
+                              uint64_t trap_key) {
   IoValue value = {};
-  value.access_size = io->access_size;
-  zx_status_t status = trap_key_to_mapping(trap_key)->Read(io->port, &value);
+  value.access_size = io.access_size;
+  zx_status_t status = trap_key_to_mapping(trap_key)->Read(io.port, &value);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to handle port in 0x" << std::hex << io->port
+    FXL_LOG(ERROR) << "Failed to handle port in 0x" << std::hex << io.port
                    << ": " << std::dec << status;
     return status;
   }
@@ -314,47 +322,49 @@ zx_status_t Vcpu::HandleInput(const zx_packet_guest_io_t* io, uint64_t trap_key)
   memset(&vcpu_io, 0, sizeof(vcpu_io));
   vcpu_io.access_size = value.access_size;
   vcpu_io.u32 = value.u32;
-  if (vcpu_io.access_size != io->access_size) {
+  if (vcpu_io.access_size != io.access_size) {
     FXL_LOG(ERROR) << "Unexpected size (" << vcpu_io.access_size
-                   << " != " << io->access_size << ") for port in 0x"
-                   << std::hex << io->port;
+                   << " != " << io.access_size << ") for port in 0x" << std::hex
+                   << io.port;
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   return WriteState(ZX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
 }
 
-zx_status_t Vcpu::HandleOutput(const zx_packet_guest_io_t* io, uint64_t trap_key) {
+zx_status_t Vcpu::HandleOutput(const zx_packet_guest_io_t& io,
+                               uint64_t trap_key) {
   IoValue value;
-  value.access_size = io->access_size;
-  value.u32 = io->u32;
-  zx_status_t status = trap_key_to_mapping(trap_key)->Write(io->port, value);
+  value.access_size = io.access_size;
+  value.u32 = io.u32;
+  zx_status_t status = trap_key_to_mapping(trap_key)->Write(io.port, value);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to handle port out 0x" << std::hex << io->port
+    FXL_LOG(ERROR) << "Failed to handle port out 0x" << std::hex << io.port
                    << ": " << std::dec << status;
   }
   return status;
 }
 
-zx_status_t Vcpu::HandleIo(const zx_packet_guest_io_t* io, uint64_t trap_key) {
-  return io->input ? HandleInput(io, trap_key) : HandleOutput(io, trap_key);
+zx_status_t Vcpu::HandleIo(const zx_packet_guest_io_t& io, uint64_t trap_key) {
+  return io.input ? HandleInput(io, trap_key) : HandleOutput(io, trap_key);
 }
 #endif  // __x86_64__
 
-zx_status_t Vcpu::HandleVcpu(const zx_packet_guest_vcpu_t* packet, uint64_t trap_key) {
-  switch (packet->type) {
+zx_status_t Vcpu::HandleVcpu(const zx_packet_guest_vcpu_t& packet,
+                             uint64_t trap_key) {
+  switch (packet.type) {
     case ZX_PKT_GUEST_VCPU_INTERRUPT:
-      return guest_->SignalInterrupt(packet->interrupt.mask, packet->interrupt.vector);
+      return guest_->SignalInterrupt(packet.interrupt.mask,
+                                     packet.interrupt.vector);
     case ZX_PKT_GUEST_VCPU_STARTUP:
       if (id_ != 0) {
         FXL_LOG(ERROR)
             << "Secondary processors must be started by the primary processor";
         return ZX_ERR_BAD_STATE;
       }
-      return guest_->StartVcpu(packet->startup.entry, packet->startup.id);
+      return guest_->StartVcpu(packet.startup.entry, packet.startup.id);
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
-
 
 }  // namespace machina
