@@ -28,7 +28,6 @@ public:
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_FIFO; }
     bool has_state_tracker() const final { return true; }
     void on_zero_handles() final;
-    zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
 
     zx_status_t WriteFromUser(user_in_ptr<const uint8_t> src, size_t len, uint32_t* actual);
     zx_status_t ReadToUser(user_out_ptr<uint8_t> dst, size_t len, uint32_t* actual);

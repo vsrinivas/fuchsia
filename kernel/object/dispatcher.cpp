@@ -129,7 +129,7 @@ zx_status_t Dispatcher::add_observer(StateObserver* observer) {
     return ZX_OK;
 }
 
-zx_status_t Dispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
+zx_status_t SoloDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
     if (peer)
         return ZX_ERR_NOT_SUPPORTED;
 
@@ -138,7 +138,8 @@ zx_status_t Dispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool
 
     // Generic objects can set all USER_SIGNALs. Particular object
     // types (events and eventpairs) may be able to set more.
-    if ((set_mask & ~ZX_USER_SIGNAL_ALL) || (clear_mask & ~ZX_USER_SIGNAL_ALL))
+    auto allowed_signals = allowed_user_signals();
+    if ((set_mask & ~allowed_signals) || (clear_mask & ~allowed_signals))
         return ZX_ERR_INVALID_ARGS;
 
     UpdateState(clear_mask, set_mask);

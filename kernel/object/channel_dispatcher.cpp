@@ -317,23 +317,6 @@ int ChannelDispatcher::WriteSelf(fbl::unique_ptr<MessagePacket> msg) {
     return 0;
 }
 
-zx_status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
-    canary_.Assert();
-
-    if ((set_mask & ~ZX_USER_SIGNAL_ALL) || (clear_mask & ~ZX_USER_SIGNAL_ALL))
-        return ZX_ERR_INVALID_ARGS;
-
-    if (!peer) {
-        UpdateState(clear_mask, set_mask);
-        return ZX_OK;
-    }
-
-    AutoLock lock(get_lock());
-    if (!peer_)
-        return ZX_ERR_PEER_CLOSED;
-    return peer_->UserSignalSelf(clear_mask, set_mask);
-}
-
 zx_status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
     canary_.Assert();
     UpdateStateLocked(clear_mask, set_mask);

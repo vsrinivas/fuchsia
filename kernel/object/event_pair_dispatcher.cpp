@@ -13,8 +13,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 
-constexpr uint32_t kUserSignalMask = ZX_EVENT_SIGNALED | ZX_USER_SIGNAL_ALL;
-
 zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
                                         fbl::RefPtr<Dispatcher>* dispatcher1,
                                         zx_rights_t* rights) {
@@ -54,27 +52,6 @@ void EventPairDispatcher::on_zero_handles()
     peer_->InvalidateCookieLocked(peer_->get_cookie_jar());
     peer_->UpdateStateLocked(0u, ZX_EPAIR_PEER_CLOSED);
     peer_.reset();
-}
-
-zx_status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer)
-    TA_NO_THREAD_SAFETY_ANALYSIS {
-    canary_.Assert();
-
-    if ((set_mask & ~kUserSignalMask) || (clear_mask & ~kUserSignalMask))
-        return ZX_ERR_INVALID_ARGS;
-
-    fbl::AutoLock locker(get_lock());
-
-    if (!peer) {
-        UpdateStateLocked(clear_mask, set_mask);
-        return ZX_OK;
-    }
-
-    // object_signal() may race with handle_close() on another thread.
-    if (!peer_)
-        return ZX_ERR_PEER_CLOSED;
-    peer_->UpdateStateLocked(clear_mask, set_mask);
-    return ZX_OK;
 }
 
 EventPairDispatcher::EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder)

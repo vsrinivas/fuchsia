@@ -11,8 +11,6 @@
 #include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
 
-constexpr uint32_t kUserSignalMask = ZX_EVENT_SIGNALED | ZX_USER_SIGNAL_ALL;
-
 zx_status_t EventDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
                                     zx_rights_t* rights) {
     fbl::AllocChecker ac;
@@ -28,16 +26,3 @@ zx_status_t EventDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* d
 EventDispatcher::EventDispatcher(uint32_t options) {}
 
 EventDispatcher::~EventDispatcher() {}
-
-zx_status_t EventDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
-    canary_.Assert();
-
-    if (peer)
-        return ZX_ERR_NOT_SUPPORTED;
-
-    if ((set_mask & ~kUserSignalMask) || (clear_mask & ~kUserSignalMask))
-        return ZX_ERR_INVALID_ARGS;
-
-    UpdateState(clear_mask, set_mask);
-    return ZX_OK;
-}

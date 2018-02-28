@@ -80,24 +80,6 @@ void FifoDispatcher::Init(fbl::RefPtr<FifoDispatcher> other) TA_NO_THREAD_SAFETY
     peer_koid_ = peer_->get_koid();
 }
 
-zx_status_t FifoDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
-    canary_.Assert();
-
-    if ((set_mask & ~ZX_USER_SIGNAL_ALL) || (clear_mask & ~ZX_USER_SIGNAL_ALL))
-        return ZX_ERR_INVALID_ARGS;
-
-    AutoLock lock(get_lock());
-
-    if (!peer) {
-        UpdateStateLocked(clear_mask, set_mask);
-        return ZX_OK;
-    }
-
-    if (!peer_)
-        return ZX_ERR_PEER_CLOSED;
-    return peer_->UserSignalSelfLocked(clear_mask, set_mask);
-}
-
 zx_status_t FifoDispatcher::UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask)
     TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();

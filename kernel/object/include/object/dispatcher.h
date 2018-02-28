@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdint.h>
 
+#include <fbl/auto_lock.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
@@ -150,7 +151,10 @@ public:
 
     virtual zx_status_t add_observer(StateObserver* observer);
 
-    virtual zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer);
+    virtual zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) = 0;
+
+    // This can be overriden by e.g. Events to allow for more signals.
+    virtual zx_signals_t allowed_user_signals() const { return ZX_USER_SIGNAL_ALL; }
 
     virtual void on_zero_handles() { }
 
@@ -266,6 +270,26 @@ public:
 
     zx_koid_t get_related_koid() const final TA_REQ(get_lock()) { return peer_koid_; }
 
+    zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final
+        TA_NO_THREAD_SAFETY_ANALYSIS {
+        auto allowed_signals = allowed_user_signals();
+        if ((set_mask & ~allowed_signals) || (clear_mask & ~allowed_signals))
+            return ZX_ERR_INVALID_ARGS;
+
+        fbl::AutoLock locker(get_lock());
+
+        if (!peer) {
+            UpdateStateLocked(clear_mask, set_mask);
+            return ZX_OK;
+        }
+
+        // object_signal() may race with handle_close() on another thread.
+        if (!peer_)
+            return ZX_ERR_PEER_CLOSED;
+        peer_->UpdateStateLocked(clear_mask, set_mask);
+        return ZX_OK;
+    }
+
     fbl::Mutex* get_lock() const override { return holder_->get_lock(); }
 
 protected:
@@ -283,6 +307,8 @@ public:
     // At construction, the object's state tracker is asserting
     // |signals|.
     explicit SoloDispatcher(zx_signals_t signals = 0u) : Dispatcher(signals) {}
+
+    zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
 
 protected:
     fbl::Mutex* get_lock() const override { return &lock_; }

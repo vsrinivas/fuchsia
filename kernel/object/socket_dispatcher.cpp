@@ -122,25 +122,6 @@ void SocketDispatcher::OnPeerZeroHandlesLocked() {
     UpdateStateLocked(ZX_SOCKET_WRITABLE, ZX_SOCKET_PEER_CLOSED);
 }
 
-zx_status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer)
-    TA_NO_THREAD_SAFETY_ANALYSIS {
-    canary_.Assert();
-
-    if ((set_mask & ~ZX_USER_SIGNAL_ALL) || (clear_mask & ~ZX_USER_SIGNAL_ALL))
-        return ZX_ERR_INVALID_ARGS;
-
-    if (!peer) {
-        UpdateState(clear_mask, set_mask);
-        return ZX_OK;
-    }
-
-    AutoLock lock(get_lock());
-    if (!peer_)
-        return ZX_ERR_PEER_CLOSED;
-
-    return peer_->UserSignalSelfLocked(clear_mask, set_mask);
-}
-
 zx_status_t SocketDispatcher::UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask) {
     canary_.Assert();
     UpdateStateLocked(clear_mask, set_mask);

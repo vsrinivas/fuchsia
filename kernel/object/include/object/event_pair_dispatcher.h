@@ -23,8 +23,8 @@ public:
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_EVENT_PAIR; }
     bool has_state_tracker() const final { return true; }
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }
-    zx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
     void on_zero_handles() final;
+    zx_signals_t allowed_user_signals() const final { return ZX_USER_SIGNAL_ALL | ZX_EVENT_SIGNALED; }
 
 private:
     explicit EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder);
