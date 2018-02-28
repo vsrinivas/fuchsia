@@ -184,9 +184,9 @@ zx_status_t alloc_vmx_state() {
             return ZX_ERR_NOT_SUPPORTED;
         }
 
-        num_guests++;
         vmxon_pages = fbl::move(pages);
     }
+    num_guests++;
     return ZX_OK;
 }
 
