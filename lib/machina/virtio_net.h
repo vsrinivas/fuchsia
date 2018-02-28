@@ -8,7 +8,7 @@
 #include <fbl/unique_fd.h>
 #include <virtio/net.h>
 
-#include "garnet/lib/machina/virtio.h"
+#include "garnet/lib/machina/virtio_device.h"
 
 namespace machina {
 

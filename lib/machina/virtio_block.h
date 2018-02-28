@@ -10,7 +10,7 @@
 #include <virtio/block.h>
 
 #include "garnet/lib/machina/block_dispatcher.h"
-#include "garnet/lib/machina/virtio.h"
+#include "garnet/lib/machina/virtio_device.h"
 
 typedef struct file_state file_state_t;
 

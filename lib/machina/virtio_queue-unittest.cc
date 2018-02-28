@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/virtio.h"
-
 #include "garnet/lib/machina/phys_mem_fake.h"
+#include "garnet/lib/machina/virtio_device.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"
 #include "gtest/gtest.h"
 

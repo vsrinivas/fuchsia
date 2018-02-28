@@ -10,7 +10,7 @@
 #include <fbl/unique_ptr.h>
 #include <virtio/virtio_ring.h>
 
-#include "garnet/lib/machina/virtio.h"
+#include "garnet/lib/machina/virtio_device.h"
 #include "lib/fxl/logging.h"
 
 // Convert guest-physical addresses to usable virtual addresses.

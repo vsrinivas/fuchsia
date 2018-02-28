@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include "garnet/lib/machina/virtio.h"
+#include "garnet/lib/machina/virtio_device.h"
 
 #define VIRTIO_BALLOON_Q_INFLATEQ 0
 #define VIRTIO_BALLOON_Q_DEFLATEQ 1

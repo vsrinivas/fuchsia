@@ -10,7 +10,8 @@
 #include <virtio/virtio_ids.h>
 
 #include "garnet/lib/machina/bits.h"
-#include "garnet/lib/machina/virtio.h"
+#include "garnet/lib/machina/virtio_device.h"
+#include "garnet/lib/machina/virtio_queue.h"
 #include "lib/fxl/logging.h"
 
 namespace machina {

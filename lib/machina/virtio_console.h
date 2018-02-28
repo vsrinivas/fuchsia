@@ -8,7 +8,7 @@
 #include <virtio/console.h>
 #include <zx/socket.h>
 
-#include "garnet/lib/machina/virtio.h"
+#include "garnet/lib/machina/virtio_device.h"
 
 namespace machina {
 

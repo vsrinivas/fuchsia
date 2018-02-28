@@ -14,7 +14,7 @@
 #include <zircon/types.h>
 
 #include "garnet/lib/machina/input_dispatcher.h"
-#include "garnet/lib/machina/virtio.h"
+#include "garnet/lib/machina/virtio_device.h"
 
 #define VIRTIO_INPUT_Q_EVENTQ 0
 #define VIRTIO_INPUT_Q_STATUSQ 1
