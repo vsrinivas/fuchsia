@@ -195,6 +195,19 @@ zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
   return ZX_OK;
 }
 
+zx_status_t Guest::SignalInterrupt(uint32_t mask, uint8_t vector) {
+  for (size_t id = 0; id != kMaxVcpus; ++id) {
+    if (vcpus_[id] == nullptr || !((1u << id) & mask)) {
+      continue;
+    }
+    zx_status_t status = vcpus_[id]->Interrupt(vector);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
 zx_status_t Guest::Join() {
   // We assume that the VCPU-0 thread will be started first, and that no
   // additional VCPUs will be brought up after it terminates.

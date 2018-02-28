@@ -10,6 +10,7 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
+#include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
 typedef struct zx_vcpu_state zx_vcpu_state_t;
@@ -49,8 +50,6 @@ class Vcpu {
 
   zx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
   zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
-
-  zx_status_t StartSecondaryProcessor(uintptr_t entry, uint64_t id);
 
  private:
   enum class State {
@@ -94,12 +93,21 @@ class Vcpu {
   zx_status_t Loop();
 
   // Sets the VCPU state and notifies any waiters.
+  void SetState(State new_state);
   void SetStateLocked(State new_state) __TA_REQUIRES(mutex_);
 
   // Block until |state_| != |initial_state|.
   void WaitForStateChangeLocked(State initial_state) __TA_REQUIRES(mutex_);
 
-  void SetState(State new_state);
+  // Guest packet handlers
+  zx_status_t HandlePacket(const zx_port_packet_t* packet);
+  zx_status_t HandleMem(const zx_packet_guest_mem_t* mem, uint64_t trap_key);
+#if __x86_64__
+  zx_status_t HandleInput(const zx_packet_guest_io_t* io, uint64_t trap_key);
+  zx_status_t HandleOutput(const zx_packet_guest_io_t* io, uint64_t trap_key);
+  zx_status_t HandleIo(const zx_packet_guest_io_t* io, uint64_t trap_key);
+#endif
+  zx_status_t HandleVcpu(const zx_packet_guest_vcpu_t* packet, uint64_t trap_key);
 
   Guest* guest_;
   uint64_t id_;

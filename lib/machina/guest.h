@@ -53,6 +53,9 @@ class Guest {
   // 0.
   zx_status_t StartVcpu(uintptr_t entry, uint64_t id);
 
+  // Signals an interrupt to the VCPUs indicated by |mask|.
+  zx_status_t SignalInterrupt(uint32_t mask, uint8_t vector);
+
   // Waits for all VCPUs associated with the guest to finish executing.
   zx_status_t Join();
 
