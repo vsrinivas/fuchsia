@@ -15,7 +15,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <fdio/debug.h>
-#include <safeint/safe_math.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>
@@ -333,18 +332,17 @@ void Device::BlockQueue(block_op_t* block) {
         return;
     }
     // Must start in range; must not overflow
-    safeint::CheckedNumeric<uint64_t> end = block->rw.offset_dev;
-    end += block->rw.length;
-    if (!end.IsValid()) {
+    uint64_t end;
+    if (add_overflow(block->rw.offset_dev, block->rw.length, &end)) {
         xprintf("overflow: off=%" PRIu64 ", len=%" PRIu32 "\n", block->rw.offset_dev,
                 block->rw.length);
         block->completion_cb(block, ZX_ERR_INVALID_ARGS);
         return;
     }
     if (block->rw.offset_dev >= info_->blk.block_count ||
-        info_->blk.block_count < end.ValueOrDie()) {
+        info_->blk.block_count < end) {
         xprintf("[%" PRIu64 ", %" PRIu64 "] is not wholly within device\n", block->rw.offset_dev,
-                end.ValueOrDie());
+                end);
         block->completion_cb(block, ZX_ERR_OUT_OF_RANGE);
         return;
     }
