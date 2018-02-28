@@ -15,6 +15,10 @@
 
 namespace maxwell {
 
+ContextGraph::ContextGraph() = default;
+
+ContextGraph::~ContextGraph() = default;
+
 void ContextGraph::AddEdge(const Id& from, const Id& to) {
   parents_[to].insert(from);
   children_[from].insert(to);

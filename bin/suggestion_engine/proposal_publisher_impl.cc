@@ -15,6 +15,8 @@ ProposalPublisherImpl::ProposalPublisherImpl(SuggestionEngineImpl* engine,
       bindings_(this),
       weak_ptr_factory_(this) {}
 
+ProposalPublisherImpl::~ProposalPublisherImpl() = default;
+
 void ProposalPublisherImpl::AddBinding(
     f1dl::InterfaceRequest<ProposalPublisher> request) {
   bindings_.emplace(
@@ -33,6 +35,8 @@ void ProposalPublisherImpl::Remove(const f1dl::String& proposal_id) {
 
 ProposalPublisherImpl::BindingSet::BindingSet(ProposalPublisherImpl* impl)
     : impl_(impl) {}
+
+ProposalPublisherImpl::BindingSet::~BindingSet() = default;
 
 void ProposalPublisherImpl::BindingSet::OnConnectionError(
     f1dl::Binding<ProposalPublisher>* binding) {

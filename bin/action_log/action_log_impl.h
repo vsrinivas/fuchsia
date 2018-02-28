@@ -23,6 +23,7 @@ namespace maxwell {
 class UserActionLogImpl : public UserActionLog {
  public:
   UserActionLogImpl(ProposalPublisherPtr proposal_publisher);
+  ~UserActionLogImpl() override;
 
  private:
   void GetComponentActionLog(
@@ -53,7 +54,8 @@ class UserActionLogImpl : public UserActionLog {
 
 class ComponentActionLogImpl : public ComponentActionLog {
  public:
-  ComponentActionLogImpl(ActionLogger log_action) : log_action_(log_action) {}
+  ComponentActionLogImpl(ActionLogger log_action);
+  ~ComponentActionLogImpl() override;
 
   void LogAction(const f1dl::String& method,
                  const f1dl::String& params) override;

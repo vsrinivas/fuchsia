@@ -15,6 +15,13 @@
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
 namespace maxwell {
+
+namespace agents {
+
+IdeasAgent::~IdeasAgent() = default;
+
+}  // agents
+
 namespace {
 
 const char kLocationTopic[] = "location/region";

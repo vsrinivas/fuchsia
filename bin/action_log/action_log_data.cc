@@ -14,6 +14,8 @@ namespace maxwell {
 
 ActionLogData::ActionLogData(ActionListener listener) : listener_(listener) {}
 
+ActionLogData::~ActionLogData() = default;
+
 ActionLogger ActionLogData::GetActionLogger(ComponentScopePtr scope) {
   std::string component_url;
   std::string story_id = "";

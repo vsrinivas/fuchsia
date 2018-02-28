@@ -30,6 +30,7 @@ using ActionListener = std::function<void(const ActionData& action_data)>;
 class ActionLogData {
  public:
   ActionLogData(ActionListener listener);
+  ~ActionLogData();
 
   ActionLogger GetActionLogger(ComponentScopePtr scope);
   // TODO(azani): Make the log readable somehow.

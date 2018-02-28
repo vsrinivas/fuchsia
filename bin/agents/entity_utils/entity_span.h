@@ -29,6 +29,8 @@ class EntitySpan {
              const int start,
              const int end);
 
+  ~EntitySpan();
+
   // Constructs a new EntitySpan by parsing a JSON-formatted string with the
   // fields given in the above constructor as keys.
   static EntitySpan FromJson(const std::string& json_string);

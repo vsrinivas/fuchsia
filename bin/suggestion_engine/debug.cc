@@ -8,7 +8,8 @@
 
 namespace maxwell {
 
-SuggestionDebugImpl::SuggestionDebugImpl() {}
+SuggestionDebugImpl::SuggestionDebugImpl() = default;
+SuggestionDebugImpl::~SuggestionDebugImpl() = default;
 
 void makeProposalSummary(const SuggestionPrototype* suggestion,
                          ProposalSummaryPtr* summary) {

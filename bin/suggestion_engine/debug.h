@@ -23,6 +23,7 @@ namespace maxwell {
 class SuggestionDebugImpl : public SuggestionDebug {
  public:
   SuggestionDebugImpl();
+  ~SuggestionDebugImpl() override;
 
   void OnAskStart(std::string query, const RankedSuggestionsList* suggestions);
   void OnSuggestionSelected(const SuggestionPrototype* selected_suggestion);

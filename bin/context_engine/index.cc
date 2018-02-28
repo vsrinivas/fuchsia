@@ -10,6 +10,9 @@
 
 namespace maxwell {
 
+ContextIndex::ContextIndex() = default;
+ContextIndex::~ContextIndex() = default;
+
 namespace internal {
 // Keys for fields within ContextMetadata.story:
 const char kStoryIdKey[] = "si";

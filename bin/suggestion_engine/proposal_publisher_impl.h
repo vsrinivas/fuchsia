@@ -28,6 +28,8 @@ class ProposalPublisherImpl : public ProposalPublisher {
   ProposalPublisherImpl(SuggestionEngineImpl* engine,
                         const std::string& component_url);
 
+  ~ProposalPublisherImpl() override;
+
   void AddBinding(f1dl::InterfaceRequest<ProposalPublisher> request);
 
   void Propose(ProposalPtr proposal) override;
@@ -39,6 +41,7 @@ class ProposalPublisherImpl : public ProposalPublisher {
   class BindingSet : public maxwell::BindingSet<ProposalPublisher> {
    public:
     BindingSet(ProposalPublisherImpl* impl);
+    ~BindingSet() override;
 
    protected:
     void OnConnectionError(f1dl::Binding<ProposalPublisher>* binding) override;

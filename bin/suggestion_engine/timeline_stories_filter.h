@@ -19,6 +19,8 @@ class TimelineStoriesFilter {
   explicit TimelineStoriesFilter(
       TimelineStoriesWatcher* timeline_stories_watcher);
 
+  ~TimelineStoriesFilter();
+
   // "is a" ProposalFilter by virtue of this method. Returns false if
   // this Proposal should be excluded.
   bool operator()(const Proposal& proposal);

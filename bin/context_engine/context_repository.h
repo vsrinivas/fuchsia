@@ -29,6 +29,10 @@ class ContextDebugImpl;
 class ContextGraph {
  public:
   using Id = std::string;
+
+  ContextGraph();
+  virtual ~ContextGraph();
+
   // Adds a graph edge from |from| to |to|.
   void AddEdge(const Id& from, const Id& to);
 

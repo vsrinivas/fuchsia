@@ -10,7 +10,7 @@ namespace agents {
 
 class IdeasAgent {
  public:
-  virtual ~IdeasAgent() {}
+  virtual ~IdeasAgent();
   static constexpr char kIdeaId[] = "";
 };
 

@@ -16,8 +16,11 @@ EntitySpan::EntitySpan(const std::string& content,
                        const std::string& type,
                        const int start,
                        const int end) {
-  this->Init(content, type, start, end);
+  Init(content, type, start, end);
 }
+
+EntitySpan::~EntitySpan() = default;
+
 
 EntitySpan EntitySpan::FromJson(const std::string& json_string) {
   rapidjson::Document e;

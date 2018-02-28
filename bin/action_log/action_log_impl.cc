@@ -28,6 +28,8 @@ UserActionLogImpl::UserActionLogImpl(ProposalPublisherPtr proposal_publisher)
       }),
       proposal_publisher_(std::move(proposal_publisher)) {}
 
+UserActionLogImpl::~UserActionLogImpl() = default;
+
 void UserActionLogImpl::BroadcastToSubscribers(const ActionData& action_data) {
   UserActionPtr action(UserAction::New());
   action->component_url = action_data.component_url;
@@ -199,6 +201,10 @@ void UserActionLogImpl::Subscribe(
   ActionLogListenerPtr listener = listener_handle.Bind();
   subscribers_.AddInterfacePtr(std::move(listener));
 }
+
+ComponentActionLogImpl::ComponentActionLogImpl(ActionLogger log_action) : log_action_(log_action) {}
+
+ComponentActionLogImpl::~ComponentActionLogImpl() = default;
 
 void ComponentActionLogImpl::LogAction(const f1dl::String& method,
                                        const f1dl::String& json_params) {

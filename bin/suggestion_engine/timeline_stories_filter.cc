@@ -15,6 +15,8 @@ TimelineStoriesFilter::TimelineStoriesFilter(
   FXL_CHECK(timeline_stories_watcher_);
 }
 
+TimelineStoriesFilter::~TimelineStoriesFilter() = default;
+
 bool TimelineStoriesFilter::operator()(const Proposal& proposal) {
   // TODO(rosswang) Why can't we foreach a const f1dl::Array???
   for (size_t i = 0; i < proposal.on_selected.size(); i++) {
