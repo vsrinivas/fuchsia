@@ -84,26 +84,32 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
         return ZX_ERR_INVALID_ARGS;
     if (SIZE_MAX - len < addr)
         return ZX_ERR_OUT_OF_RANGE;
+
     switch (kind) {
     case ZX_GUEST_TRAP_MEM:
         if (port)
             return ZX_ERR_INVALID_ARGS;
-        // fallthrough
-    case ZX_GUEST_TRAP_BELL: {
-        if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len))
-            return ZX_ERR_INVALID_ARGS;
-        zx_status_t status = gpas_->UnmapRange(addr, len);
-        if (status != ZX_OK)
-            return status;
         break;
-    }
+    case ZX_GUEST_TRAP_BELL:
+        if (!port)
+            return ZX_ERR_INVALID_ARGS;
+        break;
     case ZX_GUEST_TRAP_IO:
+        if (port)
+            return ZX_ERR_INVALID_ARGS;
         if (addr + len > UINT16_MAX)
             return ZX_ERR_OUT_OF_RANGE;
-        break;
+        return traps_.InsertTrap(kind, addr, len, fbl::move(port), key);
     default:
         return ZX_ERR_INVALID_ARGS;
     }
+
+    // Common logic for memory-based traps.
+    if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len))
+        return ZX_ERR_INVALID_ARGS;
+    zx_status_t status = gpas_->UnmapRange(addr, len);
+    if (status != ZX_OK)
+        return status;
     return traps_.InsertTrap(kind, addr, len, fbl::move(port), key);
 }
 

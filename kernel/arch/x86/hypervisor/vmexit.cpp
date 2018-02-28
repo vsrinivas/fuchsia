@@ -15,12 +15,12 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mmu.h>
+#include <arch/x86/pvclock.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/canary.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <kernel/auto_lock.h>
 #include <platform.h>
-#include <arch/x86/pvclock.h>
 #include <platform/pc/timer.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
@@ -716,8 +716,8 @@ static zx_status_t fetch_data(const AutoVmcs& vmcs, hypervisor::GuestPhysicalAdd
     return ZX_OK;
 }
 
-static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, zx_vaddr_t guest_paddr,
-                               hypervisor::GuestPhysicalAddressSpace* gpas,
+static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool read,
+                               zx_vaddr_t guest_paddr, hypervisor::GuestPhysicalAddressSpace* gpas,
                                hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
     if (exit_info.exit_instruction_length > X86_MAX_INST_LEN)
         return ZX_ERR_INTERNAL;
@@ -730,37 +730,36 @@ static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, zx_vad
 
     switch (trap->kind()) {
     case ZX_GUEST_TRAP_BELL:
-        memset(packet, 0, sizeof(*packet));
+        if (read)
+            return ZX_ERR_NOT_SUPPORTED;
+        *packet = {};
         packet->key = trap->key();
         packet->type = ZX_PKT_TYPE_GUEST_BELL;
         packet->guest_bell.addr = guest_paddr;
-        if (trap->HasPort())
-            return trap->Queue(*packet, vmcs);
-        // If there was no port for the range, then return to user-space.
-        break;
+        if (!trap->HasPort())
+            return ZX_ERR_BAD_STATE;
+        return trap->Queue(*packet, vmcs);
     case ZX_GUEST_TRAP_MEM:
-        memset(packet, 0, sizeof(*packet));
+        *packet = {};
         packet->key = trap->key();
         packet->type = ZX_PKT_TYPE_GUEST_MEM;
         packet->guest_mem.addr = guest_paddr;
         packet->guest_mem.inst_len = exit_info.exit_instruction_length & UINT8_MAX;
         status = fetch_data(*vmcs, gpas, exit_info.guest_rip, packet->guest_mem.inst_buf,
                             packet->guest_mem.inst_len);
-        if (status != ZX_OK)
-            return status;
-        break;
+        return status == ZX_OK ? ZX_ERR_NEXT : status;
     default:
         return ZX_ERR_BAD_STATE;
     }
-
-    return ZX_ERR_NEXT;
 }
 
 static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                         hypervisor::GuestPhysicalAddressSpace* gpas,
                                         hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
+    EptViolationInfo ept_violation_info(exit_info.exit_qualification);
     zx_vaddr_t guest_paddr = exit_info.guest_physical_address;
-    zx_status_t status = handle_trap(exit_info, vmcs, guest_paddr, gpas, traps, packet);
+    zx_status_t status = handle_trap(exit_info, vmcs, ept_violation_info.read, guest_paddr, gpas,
+                                     traps, packet);
     switch (status) {
     case ZX_ERR_NOT_FOUND:
         break;
@@ -774,7 +773,6 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
     if (guest_paddr >= gpas->size())
         return ZX_ERR_OUT_OF_RANGE;
 
-    EptViolationInfo ept_violation_info(exit_info.exit_qualification);
     // By default, we mark EPT PTEs as RWX. This is so we can avoid faulting
     // again if the guest requests additional permissions, and so that we can
     // avoid use of INVEPT.

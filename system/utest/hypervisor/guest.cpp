@@ -91,7 +91,7 @@ static bool setup(test_t* test, const char* start, const char* end) {
     }
     ASSERT_EQ(status, ZX_OK);
 
-    ASSERT_EQ(zx_guest_set_trap(test->guest, ZX_GUEST_TRAP_BELL, EXIT_TEST_ADDR, PAGE_SIZE,
+    ASSERT_EQ(zx_guest_set_trap(test->guest, ZX_GUEST_TRAP_MEM, EXIT_TEST_ADDR, PAGE_SIZE,
                                 ZX_HANDLE_INVALID, 0),
               ZX_OK);
 
@@ -150,7 +150,7 @@ static bool vcpu_resume(void) {
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_bell.addr, EXIT_TEST_ADDR);
 
     ASSERT_TRUE(teardown(&test));
@@ -170,7 +170,7 @@ static bool vcpu_interrupt(void) {
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_bell.addr, EXIT_TEST_ADDR);
 
     ASSERT_TRUE(teardown(&test));
@@ -190,7 +190,7 @@ static bool vcpu_hlt(void) {
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_bell.addr, EXIT_TEST_ADDR);
 
     ASSERT_TRUE(teardown(&test));
@@ -210,7 +210,7 @@ static bool vcpu_pause(void) {
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_bell.addr, EXIT_TEST_ADDR);
 
     ASSERT_TRUE(teardown(&test));
@@ -230,7 +230,7 @@ static bool vcpu_wfi(void) {
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_bell.addr, EXIT_TEST_ADDR);
 
     ASSERT_TRUE(teardown(&test));
@@ -286,7 +286,7 @@ static bool vcpu_read_write_state(void) {
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_bell.addr, EXIT_TEST_ADDR);
 
     ASSERT_EQ(zx_vcpu_read_state(test.vcpu, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -371,7 +371,7 @@ static bool guest_set_trap_with_mem(void) {
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
 
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_bell.addr, EXIT_TEST_ADDR);
 
     ASSERT_TRUE(teardown(&test));
@@ -399,7 +399,7 @@ static bool guest_set_trap_with_bell(void) {
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_bell.addr, EXIT_TEST_ADDR);
 
     ASSERT_EQ(port.wait(zx::time::infinite(), &packet, 0), ZX_OK);
@@ -422,22 +422,20 @@ static bool guest_set_trap_with_io(void) {
         return true;
     }
 
-    zx::port port;
-    ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
-
     // Trap on writes to TRAP_PORT.
-    ASSERT_EQ(zx_guest_set_trap(test.guest, ZX_GUEST_TRAP_IO, TRAP_PORT, 1, port.get(), kTrapKey),
+    ASSERT_EQ(zx_guest_set_trap(test.guest, ZX_GUEST_TRAP_IO, TRAP_PORT, 1, ZX_HANDLE_INVALID,
+                                kTrapKey),
               ZX_OK);
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
-    EXPECT_EQ(packet.guest_bell.addr, EXIT_TEST_ADDR);
-
-    ASSERT_EQ(port.wait(zx::time::infinite(), &packet, 0), ZX_OK);
-    ASSERT_EQ(packet.key, kTrapKey);
+    EXPECT_EQ(packet.key, kTrapKey);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_IO);
     EXPECT_EQ(packet.guest_io.port, TRAP_PORT);
+
+    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
+    EXPECT_EQ(packet.guest_bell.addr, EXIT_TEST_ADDR);
 
     ASSERT_TRUE(teardown(&test));
 

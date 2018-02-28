@@ -231,37 +231,35 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
     guest_paddr |= guest_state->far_el2 & (PAGE_SIZE - 1);
     LTRACEF("guest far_el2: %#lx\n", guest_state->far_el2);
 
+    const DataAbort data_abort(iss);
     switch (trap->kind()) {
     case ZX_GUEST_TRAP_BELL:
+        if (data_abort.read)
+            return ZX_ERR_NOT_SUPPORTED;
         *packet = {};
         packet->key = trap->key();
         packet->type = ZX_PKT_TYPE_GUEST_BELL;
         packet->guest_bell.addr = guest_paddr;
-        if (trap->HasPort())
-            return trap->Queue(*packet, nullptr);
-        // If there was no port for the range, then return to user-space.
-        break;
-    case ZX_GUEST_TRAP_MEM: {
+        if (!trap->HasPort())
+            return ZX_ERR_BAD_STATE;
+        return trap->Queue(*packet, nullptr);
+    case ZX_GUEST_TRAP_MEM:
+        if (!data_abort.valid)
+            return ZX_ERR_IO_DATA_INTEGRITY;
         *packet = {};
         packet->key = trap->key();
         packet->type = ZX_PKT_TYPE_GUEST_MEM;
         packet->guest_mem.addr = guest_paddr;
-        const DataAbort data_abort(iss);
-        if (!data_abort.valid)
-            return ZX_ERR_IO_DATA_INTEGRITY;
         packet->guest_mem.access_size = data_abort.access_size;
         packet->guest_mem.sign_extend = data_abort.sign_extend;
         packet->guest_mem.xt = data_abort.xt;
         packet->guest_mem.read = data_abort.read;
         if (!data_abort.read)
             packet->guest_mem.data = guest_state->x[data_abort.xt];
-        break;
-    }
+        return ZX_ERR_NEXT;
     default:
         return ZX_ERR_BAD_STATE;
     }
-
-    return ZX_ERR_NEXT;
 }
 
 zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gich_state,
