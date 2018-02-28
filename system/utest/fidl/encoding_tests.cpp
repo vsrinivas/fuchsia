@@ -9,6 +9,7 @@
 #include <fidl/coding.h>
 
 #include <unittest/unittest.h>
+#include <zircon/syscalls.h>
 
 #include "fidl_coded_types.h"
 #include "fidl_structs.h"
@@ -311,6 +312,47 @@ bool encode_array_of_present_handles() {
     EXPECT_EQ(handles[1], dummy_handle_1);
     EXPECT_EQ(handles[2], dummy_handle_2);
     EXPECT_EQ(handles[3], dummy_handle_3);
+
+    END_TEST;
+}
+
+bool encode_array_of_present_handles_error_closes_handles() {
+    BEGIN_TEST;
+
+    array_of_nonnullable_handles_message_layout message = {};
+    zx_handle_t handle_pairs[4][2];
+    // Use eventpairs so that we can know for sure that handles were closed by fidl_encode.
+    for (uint32_t i = 0; i < ArrayCount(handle_pairs); ++i) {
+        ASSERT_EQ(zx_eventpair_create(0u, &handle_pairs[i][0], &handle_pairs[i][1]), ZX_OK);
+    }
+    message.inline_struct.handles[0] = handle_pairs[0][0];
+    message.inline_struct.handles[1] = handle_pairs[1][0];
+    message.inline_struct.handles[2] = handle_pairs[2][0];
+    message.inline_struct.handles[3] = handle_pairs[3][0];
+
+    zx_handle_t output_handles[4] = {};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status = fidl_encode(&array_of_nonnullable_handles_message_type, &message, sizeof(message),
+                              output_handles,
+                              // -2 makes this invalid.
+                              ArrayCount(message.inline_struct.handles) - 2,
+                              &actual_handles, &error);
+    // Should fail because we we pass in a max_handles < the actual number of handles.
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_EQ(actual_handles, 0);
+    // All handles should be closed, those before the error was encountered and those after.
+    for (uint32_t i = 0; i < ArrayCount(handle_pairs); ++i) {
+        zx_signals_t observed_signals;
+        EXPECT_EQ(zx_object_wait_one(handle_pairs[i][1],
+                                     ZX_EPAIR_PEER_CLOSED,
+                                     1, // deadline shouldn't matter, should return immediately.
+                                     &observed_signals),
+                   ZX_OK);
+        EXPECT_EQ(observed_signals & ZX_EPAIR_PEER_CLOSED, ZX_EPAIR_PEER_CLOSED);
+        EXPECT_EQ(zx_handle_close(handle_pairs[i][1]), ZX_OK); // [i][0] was closed by fidl_encode.
+    }
 
     END_TEST;
 }
@@ -1500,6 +1542,7 @@ RUN_TEST(encode_array_of_nullable_handles)
 RUN_TEST(encode_array_of_nullable_handles_with_insufficient_handles_error)
 RUN_TEST(encode_array_of_array_of_present_handles)
 RUN_TEST(encode_out_of_line_array_of_nonnullable_handles)
+RUN_TEST(encode_array_of_present_handles_error_closes_handles)
 END_TEST_CASE(arrays)
 
 BEGIN_TEST_CASE(strings)

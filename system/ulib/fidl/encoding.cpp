@@ -10,6 +10,7 @@
 
 #include <fidl/internal.h>
 #include <zircon/assert.h>
+#include <zircon/syscalls.h>
 
 // TODO(kulakowski) Design zx_status_t error values.
 
@@ -33,12 +34,20 @@ public:
     zx_status_t EncodeMessage();
 
 private:
-    zx_status_t WithError(const char* error_msg) {
+    void SetError(const char* error_msg) {
+        // If status has already been set to an error, then we don't want to clobber error_msg_out_.
+        // We report the first error encountered.
+        if (status_ != ZX_OK) {
+            return;
+        }
+        status_ = ZX_ERR_INVALID_ARGS;
         if (error_msg_out_ != nullptr) {
             *error_msg_out_ = error_msg;
         }
-        // TODO(TO-509): release handles, set actual_handles_out_ to 0.
-        return ZX_ERR_INVALID_ARGS;
+        for (uint32_t i = 0; i < handle_idx_; ++i) {
+            // Return value intentionally ignored: this is best-effort cleanup.
+            zx_handle_close(handles_[i]);
+        }
     }
 
     template <typename T> T* TypedAt(uint32_t offset) const {
@@ -47,12 +56,21 @@ private:
 
     // Returns true when a handle was claimed, and false when the
     // handles are exhausted.
+    // If status_ != ZX_OK or handles are exhausted, will attempt to close *out_handle.
     bool ClaimHandle(zx_handle_t* out_handle) {
         if (handle_idx_ == max_handles_) {
+            // Return value intentionally ignored: this is best-effort cleanup.
+            zx_handle_close(*out_handle);
             return false;
         }
-        handles_[handle_idx_] = *out_handle;
-        *out_handle = FIDL_HANDLE_PRESENT;
+        if (status_ == ZX_OK) {
+            handles_[handle_idx_] = *out_handle;
+            *out_handle = FIDL_HANDLE_PRESENT;
+        } else {
+            // We've already encountered an error earlier, just clean up.
+            // Return value intentionally ignored: this is best-effort cleanup.
+            zx_handle_close(*out_handle);
+        }
         ++handle_idx_;
         return true;
     }
@@ -259,6 +277,7 @@ private:
     // Internal state.
     uint32_t handle_idx_ = 0u;
     uint32_t out_of_line_offset_ = 0u;
+    zx_status_t status_ = ZX_OK;
 
     // Encoding stack state.
     uint32_t depth_ = 0u;
@@ -271,27 +290,33 @@ zx_status_t FidlEncoder::EncodeMessage() {
     // out-of-line allocations.
 
     if (type_ == nullptr) {
-        return WithError("Cannot encode a null fidl type");
+        SetError("Cannot encode a null fidl type");
+        return status_;
     }
 
     if (bytes_ == nullptr) {
-        return WithError("Cannot encode null bytes");
+        SetError("Cannot encode null bytes");
+        return status_;
     }
 
     if (actual_handles_out_ == nullptr) {
-        return WithError("Cannot encode with null actual_handles_out");
+        SetError("Cannot encode with null actual_handles_out");
+        return status_;
     }
 
     if (handles_ == nullptr && max_handles_ != 0u) {
-        return WithError("Cannot provide non-zero handle count and null handle pointer");
+        SetError("Cannot provide non-zero handle count and null handle pointer");
+        return status_;
     }
 
     if (type_->type_tag != fidl::kFidlTypeStruct) {
-        return WithError("Message must be a struct");
+        SetError("Message must be a struct");
+        return status_;
     }
 
     if (type_->coded_struct.size > num_bytes_) {
-        return WithError("Message size is smaller than expected");
+        SetError("Message size is smaller than expected");
+        return status_;
     }
 
     // Any type that calls into ClaimOutOfLineStorage will have a
@@ -322,7 +347,8 @@ zx_status_t FidlEncoder::EncodeMessage() {
             const fidl_type_t* field_type = field.type;
             uint32_t field_offset = frame->offset + field.offset;
             if (!Push(Frame(field_type, field_offset))) {
-                return WithError("recursion depth exceeded encoding struct");
+                SetError("recursion depth exceeded encoding struct");
+                Pop();
             }
             continue;
         }
@@ -334,7 +360,9 @@ zx_status_t FidlEncoder::EncodeMessage() {
             }
             if (!ClaimOutOfLineStorage(frame->struct_pointer_state.struct_type->size,
                                        *struct_ptr_ptr, &frame->offset)) {
-                return WithError("message wanted to store too large of a nullable struct");
+                SetError("message wanted to store too large of a nullable struct");
+                Pop();
+                continue;
             }
             *struct_ptr_ptr = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
             const fidl::FidlCodedStruct* coded_struct = frame->struct_pointer_state.struct_type;
@@ -345,7 +373,9 @@ zx_status_t FidlEncoder::EncodeMessage() {
         case Frame::kStateUnion: {
             fidl_union_tag_t union_tag = *TypedAt<fidl_union_tag_t>(frame->offset);
             if (union_tag >= frame->union_state.type_count) {
-                return WithError("Tried to encode a bad union discriminant");
+                SetError("Tried to encode a bad union discriminant");
+                Pop();
+                continue;
             }
             const fidl_type_t* member = frame->union_state.types[union_tag];
             frame->offset += frame->union_state.data_offset;
@@ -360,7 +390,9 @@ zx_status_t FidlEncoder::EncodeMessage() {
             }
             if (!ClaimOutOfLineStorage(frame->union_pointer_state.union_type->size, *union_ptr_ptr,
                                        &frame->offset)) {
-                return WithError("message wanted to store too large of a nullable union");
+                SetError("message wanted to store too large of a nullable union");
+                Pop();
+                continue;
             }
             *union_ptr_ptr = reinterpret_cast<fidl_union_tag_t*>(FIDL_ALLOC_PRESENT);
             const fidl::FidlCodedUnion* coded_union = frame->union_pointer_state.union_type;
@@ -377,7 +409,8 @@ zx_status_t FidlEncoder::EncodeMessage() {
             const fidl_type_t* element_type = frame->array_state.element;
             uint32_t offset = frame->offset + element_offset;
             if (!Push(Frame(element_type, offset))) {
-                return WithError("recursion depth exceeded encoding array");
+                SetError("recursion depth exceeded encoding array");
+                Pop();
             }
             continue;
         }
@@ -386,7 +419,7 @@ zx_status_t FidlEncoder::EncodeMessage() {
             // The string storage may be nullptr for nullable strings.
             if (string_ptr->data == nullptr) {
                 if (!frame->string_state.nullable) {
-                    return WithError("message tried to encode an absent non-nullable string");
+                    SetError("message tried to encode an absent non-nullable string");
                 }
                 Pop();
                 continue;
@@ -394,11 +427,15 @@ zx_status_t FidlEncoder::EncodeMessage() {
             uint64_t bound = frame->string_state.max_size;
             uint64_t size = string_ptr->size;
             if (size > bound) {
-                return WithError("message tried to encode too large of a bounded string");
+                SetError("message tried to encode too large of a bounded string");
+                Pop();
+                continue;
             }
             if (!ClaimOutOfLineStorage(static_cast<uint32_t>(size), string_ptr->data,
                                        &frame->offset)) {
-                return WithError("encoding a string with incorrectly placed data");
+                SetError("encoding a string with incorrectly placed data");
+                Pop();
+                continue;
             }
             string_ptr->data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
             Pop();
@@ -415,7 +452,7 @@ zx_status_t FidlEncoder::EncodeMessage() {
                 continue;
             }
             if (!ClaimHandle(handle_ptr)) {
-                return WithError("message encoded too many handles");
+                SetError("message encoded too many handles");
             }
             Pop();
             continue;
@@ -425,18 +462,22 @@ zx_status_t FidlEncoder::EncodeMessage() {
             // The vector storage may be nullptr for nullable vectors.
             if (vector_ptr->data == nullptr) {
                 if (!frame->vector_state.nullable) {
-                    return WithError("message tried to encode an absent non-nullable vector");
+                    SetError("message tried to encode an absent non-nullable vector");
                 }
                 Pop();
                 continue;
             }
             if (vector_ptr->count > frame->vector_state.max_count) {
-                return WithError("message tried to encode too large of a bounded vector");
+                SetError("message tried to encode too large of a bounded vector");
+                Pop();
+                continue;
             }
             uint32_t size =
                 static_cast<uint32_t>(vector_ptr->count * frame->vector_state.element_size);
             if (!ClaimOutOfLineStorage(size, vector_ptr->data, &frame->offset)) {
-                return WithError("message wanted to store too large of a vector");
+                SetError("message wanted to store too large of a vector");
+                Pop();
+                continue;
             }
             vector_ptr->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
             // Continue to encoding the vector elements as an array.
@@ -446,10 +487,12 @@ zx_status_t FidlEncoder::EncodeMessage() {
         }
         case Frame::kStateDone: {
             if (out_of_line_offset_ != num_bytes_) {
-                return WithError("did not encode the entire provided buffer");
+                SetError("did not encode the entire provided buffer");
             }
-            *actual_handles_out_ = handle_idx_;
-            return ZX_OK;
+            if (status_ == ZX_OK) {
+                *actual_handles_out_ = handle_idx_;
+            }
+            return status_;
         }
         }
     }

@@ -326,12 +326,9 @@ case of an error.
 If a recoverable error occurs, such as encountering a null pointer for a
 required sub-object, **bytes** remains in an unusable partially modified state.
 
-TODO(TO-509): The following paragarph isn't true today, but it should be.
-
 All handles in **bytes** which were already been consumed up to the point of the
-error are released and **actual_handles_out** is set to zero. Depth-first traversal of
-the object then continues to completion, closing all remaining handle references
-in **bytes**.
+error are closed and **actual_handles_out** is set to zero. Depth-first traversal of
+the object then continues to completion, closing all remaining handles in **bytes**.
 
 If an unrecoverable error occurs, such as exceeding the bound of the buffer,
 exceeding the maximum nested complex object recursion depth, encountering
