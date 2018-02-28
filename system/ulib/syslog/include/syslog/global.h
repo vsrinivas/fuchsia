@@ -19,7 +19,7 @@ fx_logger_t* fx_log_get_logger(void);
 
 // Returns true if writing messages with the given severity is enabled in the
 // global logger.
-inline bool fx_log_is_enabled(fx_log_severity_t severity) {
+static inline bool fx_log_is_enabled(fx_log_severity_t severity) {
     fx_logger_t* logger = fx_log_get_logger();
     return logger && severity >= fx_logger_get_min_severity(logger);
 }

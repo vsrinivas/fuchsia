@@ -493,7 +493,7 @@ zx_status_t zxrio_read_request(zx_handle_t h, zxrio_msg_t* rio_msg) {
     zx_status_t r;
     zx_handle_t handles[FDIO_MAX_HANDLES];
     fidl::Message msg(fidl::BytePart((uint8_t*) rio_msg, sizeof(zxrio_msg_t)),
-                      fidl::HandlePart(handles, fbl::count_of(handles)));
+                      fidl::HandlePart(handles, static_cast<uint32_t>(fbl::count_of(handles))));
     if ((r = msg.Read(h, 0)) != ZX_OK) {
         return r;
     }

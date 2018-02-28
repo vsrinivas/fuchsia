@@ -73,7 +73,7 @@ struct async_wait {
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
 // See |zx_object_wait_async()|.
-inline zx_status_t async_begin_wait(async_t* async, async_wait_t* wait) {
+static inline zx_status_t async_begin_wait(async_t* async, async_wait_t* wait) {
     return async->ops->begin_wait(async, wait);
 }
 
@@ -91,7 +91,7 @@ inline zx_status_t async_begin_wait(async_t* async, async_wait_t* wait) {
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
 // See |zx_port_cancel()|.
-inline zx_status_t async_cancel_wait(async_t* async, async_wait_t* wait) {
+static inline zx_status_t async_cancel_wait(async_t* async, async_wait_t* wait) {
     return async->ops->cancel_wait(async, wait);
 }
 
