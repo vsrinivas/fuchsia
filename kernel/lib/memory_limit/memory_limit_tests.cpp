@@ -96,7 +96,7 @@ static bool test_runner(const platform_test_case_t test, size_t mem_limit) {
         total_platform_size += test.ranges[i].size;
         zx_status_t status = mem_limit_get_iovs(&ctx, test.ranges[i].base, test.ranges[i].size, vecs, &used);
 
-        REQUIRE_EQ(ZX_OK, status, "checking mem_limit_get_iovs status");
+        ASSERT_EQ(ZX_OK, status, "checking mem_limit_get_iovs status");
 
         for (size_t j = 0; j < used; j++) {
             size += vecs[j].iov_len;

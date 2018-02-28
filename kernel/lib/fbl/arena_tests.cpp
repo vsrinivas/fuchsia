@@ -165,13 +165,13 @@ static bool out_of_memory(void* context) {
 // correspond to a live VmMapping.
 static bool count_committed_pages(
     vaddr_t start, vaddr_t end, size_t* committed, size_t* uncommitted) {
-    BEGIN_TEST; // Not a test, but we need these guards to use REQUIRE_*
+    BEGIN_TEST; // Not a test, but we need these guards to use ASSERT_*
     *committed = 0;
     *uncommitted = 0;
 
     // Find the VmMapping that covers |start|. Assume that it covers |end-1|.
     const auto region = VmAspace::kernel_aspace()->FindRegion(start);
-    REQUIRE_NONNULL(region, "FindRegion");
+    ASSERT_NONNULL(region, "FindRegion");
     const auto mapping = region->as_vm_mapping();
     if (mapping == nullptr) {
         // It's a VMAR, not a mapping, so no pages are committed.
@@ -356,7 +356,7 @@ static bool uncommitting_tests(void* context) {
     // Allocate half of the data objects, freeing up half of the free nodes
     // (and thus half of the control slots).
     auto orig_committed = committed;
-    REQUIRE_EQ(top, objs.get(), "");
+    ASSERT_EQ(top, objs.get(), "");
     for (size_t i = 0; i < num_slots / 2; i++) {
         char msg[32];
         snprintf(msg, sizeof(msg), "[%zu]", i);
@@ -458,7 +458,7 @@ static bool content_preservation(void* context) {
     BEGIN_TEST;
     Arena arena;
     zx_status_t s = arena.Init("arena_tests", sizeof(TestObj), 1000);
-    REQUIRE_EQ(ZX_OK, s, "arena.Init()");
+    ASSERT_EQ(ZX_OK, s, "arena.Init()");
 
     const int count = 30;
 
@@ -467,7 +467,7 @@ static bool content_preservation(void* context) {
 
         for (int ix = 0; ix != count; ++ix) {
             afp[ix] = reinterpret_cast<TestObj*>(arena.Alloc());
-            REQUIRE_NONNULL(afp[ix], "arena.Alloc()");
+            ASSERT_NONNULL(afp[ix], "arena.Alloc()");
             *afp[ix] = {17, 5, ix + 100};
         }
 
@@ -477,7 +477,7 @@ static bool content_preservation(void* context) {
         afp[3] = afp[4] = afp[5] = nullptr;
 
         afp[4] = reinterpret_cast<TestObj*>(arena.Alloc());
-        REQUIRE_NONNULL(afp[4], "arena.Alloc()");
+        ASSERT_NONNULL(afp[4], "arena.Alloc()");
         *afp[4] = {17, 5, 104};
 
         for (int ix = 0; ix != count; ++ix) {
@@ -494,7 +494,7 @@ static bool content_preservation(void* context) {
         // Leak a few objects.
         for (int ix = 0; ix != 7; ++ix) {
             TestObj* leak = reinterpret_cast<TestObj*>(arena.Alloc());
-            REQUIRE_NONNULL(leak, "arena.Alloc()");
+            ASSERT_NONNULL(leak, "arena.Alloc()");
             *leak = {2121, 77, 55};
         }
     }

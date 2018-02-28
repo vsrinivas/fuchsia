@@ -331,8 +331,8 @@ static bool vmo_commit_test(void* context) {
     static const size_t alloc_size = PAGE_SIZE * 16;
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
-    REQUIRE_EQ(status, ZX_OK, "vmobject creation\n");
-    REQUIRE_TRUE(vmo, "vmobject creation\n");
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
     uint64_t committed;
     auto ret = vmo->CommitRange(0, alloc_size, &committed);
@@ -349,8 +349,8 @@ static bool vmo_pin_test(void* context) {
     static const size_t alloc_size = PAGE_SIZE * 16;
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
-    REQUIRE_EQ(status, ZX_OK, "vmobject creation\n");
-    REQUIRE_TRUE(vmo, "vmobject creation\n");
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
     status = vmo->Pin(PAGE_SIZE, alloc_size);
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status, "pinning out of range\n");
@@ -413,8 +413,8 @@ static bool vmo_multiple_pin_test(void* context) {
     static const size_t alloc_size = PAGE_SIZE * 16;
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
-    REQUIRE_EQ(status, ZX_OK, "vmobject creation\n");
-    REQUIRE_TRUE(vmo, "vmobject creation\n");
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
     uint64_t n;
     status = vmo->CommitRange(0, alloc_size, &n);
@@ -461,8 +461,8 @@ static bool vmo_odd_size_commit_test(void* context) {
     static const size_t alloc_size = 15;
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
-    REQUIRE_EQ(status, ZX_OK, "vmobject creation\n");
-    REQUIRE_TRUE(vmo, "vmobject creation\n");
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
     uint64_t committed;
     auto ret = vmo->CommitRange(0, alloc_size, &committed);
@@ -478,8 +478,8 @@ static bool vmo_contiguous_commit_test(void* context) {
     static const size_t alloc_size = PAGE_SIZE * 16;
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
-    REQUIRE_EQ(status, ZX_OK, "vmobject creation\n");
-    REQUIRE_TRUE(vmo, "vmobject creation\n");
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
     uint64_t committed;
     auto ret = vmo->CommitRangeContiguous(0, alloc_size, &committed, 0);
@@ -495,8 +495,8 @@ static bool vmo_precommitted_map_test(void* context) {
     static const size_t alloc_size = PAGE_SIZE * 16;
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
-    REQUIRE_EQ(status, ZX_OK, "vmobject creation\n");
-    REQUIRE_TRUE(vmo, "vmobject creation\n");
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
@@ -519,8 +519,8 @@ static bool vmo_demand_paged_map_test(void* context) {
     static const size_t alloc_size = PAGE_SIZE * 16;
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
-    REQUIRE_EQ(status, ZX_OK, "vmobject creation\n");
-    REQUIRE_TRUE(vmo, "vmobject creation\n");
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
@@ -543,8 +543,8 @@ static bool vmo_dropped_ref_test(void* context) {
     static const size_t alloc_size = PAGE_SIZE * 16;
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
-    REQUIRE_EQ(status, ZX_OK, "vmobject creation\n");
-    REQUIRE_TRUE(vmo, "vmobject creation\n");
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
@@ -570,8 +570,8 @@ static bool vmo_remap_test(void* context) {
     static const size_t alloc_size = PAGE_SIZE * 16;
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
-    REQUIRE_EQ(status, ZX_OK, "vmobject creation\n");
-    REQUIRE_TRUE(vmo, "vmobject creation\n");
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
@@ -607,8 +607,8 @@ static bool vmo_double_remap_test(void* context) {
     static const size_t alloc_size = PAGE_SIZE * 16;
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
-    REQUIRE_EQ(status, ZX_OK, "vmobject creation\n");
-    REQUIRE_TRUE(vmo, "vmobject creation\n");
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
@@ -663,8 +663,8 @@ static bool vmo_read_write_smoke_test(void* context) {
     // create object
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(0, alloc_size, &vmo);
-    REQUIRE_EQ(status, ZX_OK, "vmobject creation\n");
-    REQUIRE_TRUE(vmo, "vmobject creation\n");
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
     // create test buffer
     fbl::AllocChecker ac;
@@ -838,8 +838,8 @@ static bool vmo_lookup_test(void* context) {
     static const size_t alloc_size = PAGE_SIZE * 16;
     fbl::RefPtr<VmObject> vmo;
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
-    REQUIRE_EQ(status, ZX_OK, "vmobject creation\n");
-    REQUIRE_TRUE(vmo, "vmobject creation\n");
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
     size_t pages_seen = 0;
     auto lookup_fn = [](void* context, size_t offset, size_t index, paddr_t pa) {

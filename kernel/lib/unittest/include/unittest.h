@@ -124,7 +124,7 @@ int unittest_printf(const char* format, ...);
 
 /*
  * UTCHECK_* macros are used to check test results.  Generally, one should
- * prefer to use either the EXPECT_* (non-terminating) or REQUIRE_*
+ * prefer to use either the EXPECT_* (non-terminating) or ASSERT_*
  * (terminating) forms of the macros.  See below.
  */
 #define UTCHECK_EQ(expected, actual, msg, term)                                \
@@ -263,23 +263,23 @@ int unittest_printf(const char* format, ...);
 #define EXPECT_NULL(actual, msg)                       UTCHECK_NULL(actual, msg, false)
 #define EXPECT_NONNULL(actual, msg)                    UTCHECK_NONNULL(actual, msg, false)
 
-/* REQUIRE_* macros check the condition and will print a message and immediately
+/* ASSERT_* macros check the condition and will print a message and immediately
  * abort a test with a filure status if the condition fails.
  */
-#define REQUIRE_EQ(expected, actual, msg)               UTCHECK_EQ(expected, actual, msg, true)
-#define REQUIRE_NE(expected, actual, msg)               UTCHECK_NE(expected, actual, msg, true)
-#define REQUIRE_LE(expected, actual, msg)               UTCHECK_LE(expected, actual, msg, true)
-#define REQUIRE_LT(expected, actual, msg)               UTCHECK_LT(expected, actual, msg, true)
-#define REQUIRE_GE(expected, actual, msg)               UTCHECK_GE(expected, actual, msg, true)
-#define REQUIRE_GT(expected, actual, msg)               UTCHECK_GT(expected, actual, msg, true)
-#define REQUIRE_TRUE(actual, msg)                       UTCHECK_TRUE(actual, msg, true)
-#define REQUIRE_FALSE(actual, msg)                      UTCHECK_FALSE(actual, msg, true)
-#define REQUIRE_BYTES_EQ(expected, actual, length, msg) UTCHECK_BYTES_EQ(expected, actual, length, msg, true)
-#define REQUIRE_BYTES_NE(bytes1, bytes2, length, msg)   UTCHECK_BYTES_NE(bytes1, bytes2, length, msg, true)
-#define REQUIRE_EQ_LL(expected, actual, msg)            UTCHECK_EQ_LL(expected, actual, msg, true)
-#define REQUIRE_EQ_LL(expected, actual, msg)            UTCHECK_EQ_LL(expected, actual, msg, true)
-#define REQUIRE_NULL(actual, msg)                       UTCHECK_NULL(actual, msg, true)
-#define REQUIRE_NONNULL(actual, msg)                    UTCHECK_NONNULL(actual, msg, true)
+#define ASSERT_EQ(expected, actual, msg)               UTCHECK_EQ(expected, actual, msg, true)
+#define ASSERT_NE(expected, actual, msg)               UTCHECK_NE(expected, actual, msg, true)
+#define ASSERT_LE(expected, actual, msg)               UTCHECK_LE(expected, actual, msg, true)
+#define ASSERT_LT(expected, actual, msg)               UTCHECK_LT(expected, actual, msg, true)
+#define ASSERT_GE(expected, actual, msg)               UTCHECK_GE(expected, actual, msg, true)
+#define ASSERT_GT(expected, actual, msg)               UTCHECK_GT(expected, actual, msg, true)
+#define ASSERT_TRUE(actual, msg)                       UTCHECK_TRUE(actual, msg, true)
+#define ASSERT_FALSE(actual, msg)                      UTCHECK_FALSE(actual, msg, true)
+#define ASSERT_BYTES_EQ(expected, actual, length, msg) UTCHECK_BYTES_EQ(expected, actual, length, msg, true)
+#define ASSERT_BYTES_NE(bytes1, bytes2, length, msg)   UTCHECK_BYTES_NE(bytes1, bytes2, length, msg, true)
+#define ASSERT_EQ_LL(expected, actual, msg)            UTCHECK_EQ_LL(expected, actual, msg, true)
+#define ASSERT_EQ_LL(expected, actual, msg)            UTCHECK_EQ_LL(expected, actual, msg, true)
+#define ASSERT_NULL(actual, msg)                       UTCHECK_NULL(actual, msg, true)
+#define ASSERT_NONNULL(actual, msg)                    UTCHECK_NONNULL(actual, msg, true)
 
 /*
  * The list of test cases is made up of these elements.

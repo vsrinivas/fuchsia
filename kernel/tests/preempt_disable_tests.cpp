@@ -59,7 +59,7 @@ static bool test_in_timer_callback(void* context) {
     timer_init(&timer);
     timer_set(&timer, 0, TIMER_SLACK_CENTER, 0, timer_callback_func, &event);
 
-    REQUIRE_EQ(event_wait(&event), ZX_OK, "");
+    ASSERT_EQ(event_wait(&event), ZX_OK, "");
     event_destroy(&event);
 
     END_TEST;
