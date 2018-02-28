@@ -136,11 +136,12 @@ ui::gfx::CommandPtr NewSetHitTestBehaviorCommand(
 
 // Camera and lighting operations.
 ui::gfx::CommandPtr NewSetCameraCommand(uint32_t renderer_id, uint32_t camera_id);
+ui::gfx::CommandPtr NewSetCameraTransformCommand(uint32_t camera_id,
+                                                 const float eye_position[3],
+                                                 const float eye_look_at[3],
+                                                 const float eye_up[3]);
 ui::gfx::CommandPtr NewSetCameraProjectionCommand(uint32_t camera_id,
-                                       const float eye_position[3],
-                                       const float eye_look_at[3],
-                                       const float eye_up[3],
-                                       float fovy);
+                                                  const float fovy);
 
 ui::gfx::CommandPtr NewSetCameraPoseBufferCommand(uint32_t camera_id,
                                        uint32_t buffer_id,

@@ -454,10 +454,12 @@ class Camera final : public Resource {
   ~Camera();
 
   // Sets the camera's projection parameters.
-  void SetProjection(const float eye_position[3],
-                     const float eye_look_at[3],
-                     const float eye_up[3],
-                     float fovy);
+  void SetTransform(const float eye_position[3],
+                    const float eye_look_at[3],
+                    const float eye_up[3]);
+
+  // Sets the camera's projection parameters.
+  void SetProjection(const float fovy);
 
   // Sets the camera pose buffer
   void SetPoseBuffer(const Buffer& buffer,

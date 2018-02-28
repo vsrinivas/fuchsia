@@ -40,6 +40,7 @@ union Command {
 
   // Camera and lighting commands.
   SetCameraCommand set_camera;
+  SetCameraTransformCommand set_camera_transform;
   SetCameraProjectionCommand set_camera_projection;
   SetCameraPoseBufferCommand set_camera_pose_buffer;
   SetLightColorCommand set_light_color;
@@ -352,22 +353,30 @@ struct SetCameraCommand {
   uint32 camera_id;
 };
 
-// Sets a camera's projection matrix.
+// Sets a camera's view matrix.
 //
 // Constraints:
 // - |camera_id| refs a |Camera|.
 // - |eye_position| is the position of the eye.
 // - |eye_look_at| is the point is the scene the that eye is pointed at.
 // - |eye_up| defines the camera's "up" vector.
-// - |fovy| is the Y-axis field of view, in radians.
-//
-// NOTE: A default orthographic projection is specified by setting |fovy| to
-// zero.  In this case, all other parameters are ignored.
-struct SetCameraProjectionCommand {
+struct SetCameraTransformCommand {
   uint32 camera_id;
   Vector3Value eye_position;
   Vector3Value eye_look_at;
   Vector3Value eye_up;
+};
+
+// Sets a camera's projection matrix.
+//
+// Constraints:
+// - |camera_id| refs a |Camera|.
+// - |fovy| is the Y-axis field of view, in radians.
+//
+// NOTE: A default orthographic projection is specified by setting |fovy| to
+// zero.  In this case, the camera transform is ignored.
+struct SetCameraProjectionCommand {
+  uint32 camera_id;
   FloatValue fovy;  // Y-axis field of view, in radians.
 };
 

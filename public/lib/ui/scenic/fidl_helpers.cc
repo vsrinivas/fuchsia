@@ -834,16 +834,26 @@ ui::gfx::CommandPtr NewSetSizeCommand(uint32_t node_id, const float size[2]) {
   return command;
 }
 
-ui::gfx::CommandPtr NewSetCameraProjectionCommand(uint32_t camera_id,
-                                                  const float eye_position[3],
-                                                  const float eye_look_at[3],
-                                                  const float eye_up[3],
-                                                  float fovy) {
-  auto set_command = ui::gfx::SetCameraProjectionCommand::New();
+ui::gfx::CommandPtr NewSetCameraTransformCommand(uint32_t camera_id,
+                                                 const float eye_position[3],
+                                                 const float eye_look_at[3],
+                                                 const float eye_up[3]) {
+  auto set_command = ui::gfx::SetCameraTransformCommand::New();
   set_command->camera_id = camera_id;
   set_command->eye_position = NewVector3Value(eye_position);
   set_command->eye_look_at = NewVector3Value(eye_look_at);
   set_command->eye_up = NewVector3Value(eye_up);
+
+  auto command = ui::gfx::Command::New();
+  command->set_set_camera_transform(std::move(set_command));
+
+  return command;
+}
+
+ui::gfx::CommandPtr NewSetCameraProjectionCommand(uint32_t camera_id,
+                                                  const float fovy) {
+  auto set_command = ui::gfx::SetCameraProjectionCommand::New();
+  set_command->camera_id = camera_id;
   set_command->fovy = NewFloatValue(fovy);
 
   auto command = ui::gfx::Command::New();

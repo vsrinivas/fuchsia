@@ -26,10 +26,11 @@ class Camera final : public Resource {
 
   const ScenePtr& scene() const { return scene_; }
 
-  void SetProjection(const glm::vec3& eye_position,
-                     const glm::vec3& eye_look_at,
-                     const glm::vec3& eye_up,
-                     float fovy);
+  void SetTransform(const glm::vec3& eye_position,
+                    const glm::vec3& eye_look_at,
+                    const glm::vec3& eye_up);
+
+  void SetProjection(const float fovy);
 
   // Sets the buffer for this camera. For details see SetCameraPoseBufferCommand in
   // //garnet/public/lib/ui/gfx/fidl/commands.fidl

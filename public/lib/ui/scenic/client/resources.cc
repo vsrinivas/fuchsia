@@ -291,7 +291,7 @@ ImportNode::~ImportNode() {
 void ImportNode::Bind(zx::eventpair import_token) {
   FXL_DCHECK(!is_bound_);
   session()->Enqueue(NewImportResourceCommand(id(), ui::gfx::ImportSpec::NODE,
-                                         std::move(import_token)));
+                                              std::move(import_token)));
   is_bound_ = true;
 }
 
@@ -311,8 +311,8 @@ ClipNode::ClipNode(ClipNode&& moved) : ContainerNode(std::move(moved)) {}
 ClipNode::~ClipNode() = default;
 
 OpacityNode::OpacityNode(Session* session) : ContainerNode(session) {
-  // TODO(MZ-139): Commandacities are not currently implemented. Create an entity
-  // node for now.
+  // TODO(MZ-139): Opacities are not currently implemented. Create an
+  // entity node for now.
   session->Enqueue(NewCreateEntityNodeCommand(id()));
 }
 
@@ -327,7 +327,7 @@ void OpacityNode::SetOpacity(double opacity) {
   } else if (opacity > 1.0) {
     opacity = 1.0;
   }
-  // TODO(MZ-139): Commandacities are not currently implemented.
+  // TODO(MZ-139): Opacities are not currently implemented.
 }
 
 Variable::Variable(Session* session, ui::gfx::ValuePtr initial_value)
@@ -365,12 +365,15 @@ Camera::Camera(Camera&& moved) : Resource(std::move(moved)) {}
 
 Camera::~Camera() = default;
 
-void Camera::SetProjection(const float eye_position[3],
-                           const float eye_look_at[3],
-                           const float eye_up[3],
-                           float fovy) {
+void Camera::SetTransform(const float eye_position[3],
+                          const float eye_look_at[3],
+                          const float eye_up[3]) {
   session()->Enqueue(
-      NewSetCameraProjectionCommand(id(), eye_position, eye_look_at, eye_up, fovy));
+      NewSetCameraTransformCommand(id(), eye_position, eye_look_at, eye_up));
+}
+
+void Camera::SetProjection(const float fovy) {
+  session()->Enqueue(NewSetCameraProjectionCommand(id(), fovy));
 }
 
 void Camera::SetPoseBuffer(const Buffer& buffer,

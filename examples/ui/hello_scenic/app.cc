@@ -274,7 +274,8 @@ void App::Update(uint64_t next_presentation_time) {
     float target[3] = {1080, 720, 0};
     float up[3] = {0, 1, 0};
 
-    camera_->SetProjection(glm::value_ptr(eye), target, up, glm::radians(15.f));
+    camera_->SetTransform(glm::value_ptr(eye), target, up);
+    camera_->SetProjection(glm::radians(15.f));
   }
 
   // Present

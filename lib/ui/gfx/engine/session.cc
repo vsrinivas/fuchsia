@@ -131,6 +131,9 @@ bool Session::ApplyCommand(const ui::gfx::CommandPtr& command) {
           command->get_set_hit_test_behavior());
     case ui::gfx::Command::Tag::SET_CAMERA:
       return ApplySetCameraCommand(command->get_set_camera());
+    case ui::gfx::Command::Tag::SET_CAMERA_TRANSFORM:
+      return ApplySetCameraTransformCommand(
+          command->get_set_camera_transform());
     case ui::gfx::Command::Tag::SET_CAMERA_PROJECTION:
       return ApplySetCameraProjectionCommand(
           command->get_set_camera_projection());
@@ -560,21 +563,36 @@ bool Session::ApplySetEventMaskCommand(
   return false;
 }
 
+bool Session::ApplySetCameraTransformCommand(
+    const ui::gfx::SetCameraTransformCommandPtr& command) {
+  // TODO(MZ-123): support variables.
+  if (IsVariable(command->eye_position) || IsVariable(command->eye_look_at) ||
+      IsVariable(command->eye_up)) {
+    error_reporter_->ERROR()
+        << "scenic::gfx::Session::ApplySetCameraTransformCommand(): "
+           "unimplemented: variable properties.";
+    return false;
+  } else if (auto camera =
+                 resources_.FindResource<Camera>(command->camera_id)) {
+    camera->SetTransform(UnwrapVector3(command->eye_position),
+                         UnwrapVector3(command->eye_look_at),
+                         UnwrapVector3(command->eye_up));
+    return true;
+  }
+  return false;
+}
+
 bool Session::ApplySetCameraProjectionCommand(
     const ui::gfx::SetCameraProjectionCommandPtr& command) {
   // TODO(MZ-123): support variables.
-  if (IsVariable(command->eye_position) || IsVariable(command->eye_look_at) ||
-      IsVariable(command->eye_up) || IsVariable(command->fovy)) {
+  if (IsVariable(command->fovy)) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetCameraProjectionCommand(): "
            "unimplemented: variable properties.";
     return false;
   } else if (auto camera =
                  resources_.FindResource<Camera>(command->camera_id)) {
-    camera->SetProjection(UnwrapVector3(command->eye_position),
-                          UnwrapVector3(command->eye_look_at),
-                          UnwrapVector3(command->eye_up),
-                          UnwrapFloat(command->fovy));
+    camera->SetProjection(UnwrapFloat(command->fovy));
     return true;
   }
   return false;
@@ -1214,7 +1232,7 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
     // zero acquire fences).
 
     acquire_fence_set->WaitReadyAsync(
-        [ weak = weak_factory_.GetWeakPtr(), presentation_time ] {
+        [weak = weak_factory_.GetWeakPtr(), presentation_time] {
           if (weak)
             weak->engine_->session_manager()->ScheduleUpdateForSession(
                 presentation_time, SessionPtr(weak.get()));

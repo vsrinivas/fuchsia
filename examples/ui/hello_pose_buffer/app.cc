@@ -77,7 +77,8 @@ void App::CreateExampleScene(float display_width, float display_height) {
   float up[3] = {0, 1, 0};
   float fovy = glm::radians(30.f);
 
-  camera_->SetProjection(eye_position, look_at, up, fovy);
+  camera_->SetTransform(eye_position, look_at, up);
+  camera_->SetProjection(fovy);
 
   compositor_->SetLayerStack(layer_stack);
   layer_stack.AddLayer(layer);

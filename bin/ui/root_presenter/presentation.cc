@@ -436,7 +436,7 @@ void Presentation::CaptureKeyboardEvent(
   mozart::KeyboardCaptureListenerPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
-  listener.set_error_handler([ this, listener = listener.get() ] {
+  listener.set_error_handler([this, listener = listener.get()] {
     captured_keybindings_.erase(
         std::remove_if(captured_keybindings_.begin(),
                        captured_keybindings_.end(),

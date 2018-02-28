@@ -151,6 +151,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplySetHitTestBehaviorCommand(
       const ui::gfx::SetHitTestBehaviorCommandPtr& command);
   bool ApplySetCameraCommand(const ui::gfx::SetCameraCommandPtr& command);
+  bool ApplySetCameraTransformCommand(
+      const ui::gfx::SetCameraTransformCommandPtr& command);
   bool ApplySetCameraProjectionCommand(
       const ui::gfx::SetCameraProjectionCommandPtr& command);
   bool ApplySetCameraPoseBufferCommand(

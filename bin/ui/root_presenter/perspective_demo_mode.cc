@@ -142,7 +142,8 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter,
 
         // Switch back to ortho view, and re-enable clipping.
         float ortho_eye[3] = {half_width, half_height, 1100.f};
-        presenter->camera_.SetProjection(ortho_eye, target, up, 0.f);
+        presenter->camera_.SetTransform(ortho_eye, target, up);
+        presenter->camera_.SetProjection(0.f);
         presenter->renderer_.SetDisableClipping(false);
         return true;
       }
@@ -179,7 +180,8 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter,
   glm::vec3 eye = glm::mix(glm::mix(eye_start, eye_mid, param),
                            glm::mix(eye_mid, eye_end, param), param);
 
-  presenter->camera_.SetProjection(glm::value_ptr(eye), target, up, fovy);
+  presenter->camera_.SetTransform(glm::value_ptr(eye), target, up);
+  presenter->camera_.SetProjection(fovy);
 
   return true;
 }

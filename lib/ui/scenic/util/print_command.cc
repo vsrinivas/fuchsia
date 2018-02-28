@@ -52,6 +52,8 @@ std::ostream& operator<<(std::ostream& stream,
       return stream << "SET_HIT_TEST_BEHAVIOR";
     case Command::Tag::SET_CAMERA:
       return stream << "SET_CAMERA";
+    case Command::Tag::SET_CAMERA_TRANSFORM:
+      return stream << "SET_CAMERA_TRANSFORM";
     case Command::Tag::SET_CAMERA_PROJECTION:
       return stream << "SET_CAMERA_PROJECTION";
     case ui::gfx::Command::Tag::SET_CAMERA_POSE_BUFFER:

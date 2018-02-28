@@ -14,13 +14,15 @@ const ResourceTypeInfo Camera::kTypeInfo = {ResourceType::kCamera, "Camera"};
 Camera::Camera(Session* session, scenic::ResourceId id, ScenePtr scene)
     : Resource(session, id, Camera::kTypeInfo), scene_(std::move(scene)) {}
 
-void Camera::SetProjection(const glm::vec3& eye_position,
-                           const glm::vec3& eye_look_at,
-                           const glm::vec3& eye_up,
-                           float fovy) {
+void Camera::SetTransform(const glm::vec3& eye_position,
+                          const glm::vec3& eye_look_at,
+                          const glm::vec3& eye_up) {
   eye_position_ = eye_position;
   eye_look_at_ = eye_look_at;
   eye_up_ = eye_up;
+}
+
+void Camera::SetProjection(const float fovy) {
   fovy_ = fovy;
 }
 
