@@ -113,14 +113,3 @@ endif
 KERNEL_COMPILEFLAGS += -ffixed-x18
 
 include make/module.mk
-
-
-# The EFI code is its own module because it needs special compilation flags.
-
-MODULE := $(LOCAL_DIR).efi
-
-MODULE_SRCS := $(LOCAL_DIR)/efi.cpp
-
-MODULE_COMPILEFLAGS += $(NO_SAFESTACK)
-
-include make/module.mk

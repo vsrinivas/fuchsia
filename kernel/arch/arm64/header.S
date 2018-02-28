@@ -52,7 +52,7 @@ optional_header:
     .long   _end - header_end               //sizeOfCode
     .long   0                               //SizeOfInitializedData
     .long   0                               //SizeofUninitializedData
-    .long   efi_start - _start              //AddressOfEntryPoint
+    .long   0                               //AddressOfEntryPoint
     .long   header_end - _start             //BaseOfCode
 
     .quad   0                               //ImageBase
