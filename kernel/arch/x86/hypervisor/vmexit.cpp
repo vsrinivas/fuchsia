@@ -123,17 +123,15 @@ static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
 }
 
 static zx_status_t handle_external_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
-    // If we are receiving an external interrupt because the thread is being
-    // killed, we should exit with an error.
-    if (get_current_thread()->signals & THREAD_SIGNAL_KILL)
-        return ZX_ERR_CANCELED;
-
     ExitInterruptionInformation int_info(*vmcs);
     DEBUG_ASSERT(int_info.valid);
     DEBUG_ASSERT(int_info.interruption_type == InterruptionType::EXTERNAL_INTERRUPT);
     x86_call_external_interrupt_handler(int_info.vector);
     vmcs->Invalidate();
-    return ZX_OK;
+
+    // If we are receiving an external interrupt because the thread is being
+    // killed, we should exit with an error.
+    return get_current_thread()->signals & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
 }
 
 static zx_status_t handle_interrupt_window(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
