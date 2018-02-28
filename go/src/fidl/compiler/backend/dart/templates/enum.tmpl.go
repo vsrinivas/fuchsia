@@ -6,29 +6,7 @@ package templates
 
 const Enum = `
 {{- define "EnumDeclaration" -}}
-class {{ .Name }} extends $b.Encodable {
-  {{- range .Members }}
-  static const {{ $.Name }} {{ .Name }} = const {{ $.Name }}._({{ .Value }});
-  {{- end }}
-
-  const {{ .Name }}._(this.value);
-
-  final int value;
-
-  static const Map<String, {{ .Name }}> valuesMap = const {
-  {{- range .Members }}
-    "{{ .Name }}": {{ .Name }},
-  {{- end }}
-  };
-
-  static const List<{{ .Name }}> values = const [
-    {{- range .Members }}
-    {{ .Name }},
-    {{- end }}
-  ];
-
-  static {{ .Name }} valueOf(String name) => valuesMap[name];
-
+class {{ .Name }} extends $fidl.Encodable {
   factory {{ .Name }}(int v) {
     switch (v) {
   {{- range .Members }}
@@ -39,6 +17,33 @@ class {{ .Name }} extends $b.Encodable {
         return null;
     }
   }
+
+  factory {{ .Name }}.$decode($fidl.Decoder $decoder, int $offset, $fidl.FidlType type) {
+    final int value = $decoder.decode{{ .CodecSuffix }}($offset);
+    return new {{ .Name }}(value);
+  }
+
+  {{- range .Members }}
+  static const {{ $.Name }} {{ .Name }} = const {{ $.Name }}._({{ .Value }});
+  {{- end }}
+
+  const {{ .Name }}._(this.value);
+
+  final int value;
+
+  static const Map<String, {{ .Name }}> valuesMap = const {
+  {{- range .Members }}
+    '{{ .Name }}': {{ .Name }},
+  {{- end }}
+  };
+
+  static const List<{{ .Name }}> values = const [
+    {{- range .Members }}
+    {{ .Name }},
+    {{- end }}
+  ];
+
+  static {{ .Name }} valueOf(String name) => valuesMap[name];
 
   @override
   String toString() {
@@ -54,16 +59,9 @@ class {{ .Name }} extends $b.Encodable {
 
   int toJson() => value;
 
-  static const int $encodedSize = {{ .EncodedSize }};
-
   @override
-  void $encode($b.Encoder $encoder, int $offset) {
+  void $encode($fidl.Encoder $encoder, int $offset, $fidl.FidlType type) {
     $encoder.encode{{ .CodecSuffix }}(value, $offset);
-  }
-
-  static {{ .Name }} $decode($b.Decoder $decoder, int $offset) {
-    final int value = $decoder.decode{{ .CodecSuffix }}($offset);
-    return new {{ .Name }}(value);
   }
 }
 {{ end }}

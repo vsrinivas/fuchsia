@@ -17,6 +17,7 @@ type encodingType string
 const (
 	primitiveEncodingType   encodingType = "primitive"
 	encodableEncodingType                = "encodable"
+	pointerEncodingType                  = "pointer"
 	stringEncodingType                   = "string"
 	handleEncodingType                   = "handle"
 	vectorEncodingType                   = "vector"
@@ -33,54 +34,59 @@ type Type struct {
 	baseDecl      string
 	encodingType  encodingType
 	codecSuffix   string
+	typeSymbol    string
 }
 
-func (t *Type) Encode(identifer string, offset int) string {
-	offsetStr := strconv.Itoa(offset)
-	nullableStr := strconv.FormatBool(t.Nullable)
+func (t *Type) Encode(identifer string, offset int, index int) string {
+	offsetStr := fmt.Sprintf("$offset + %s", strconv.Itoa(offset))
+	typeStr := fmt.Sprintf("$types[%s].type", strconv.Itoa(index))
 	switch t.encodingType {
 	case primitiveEncodingType:
-		return fmt.Sprintf("$encoder.encode%s(%s, $offset + %s)", t.codecSuffix, identifer, offsetStr)
+		return fmt.Sprintf("$encoder.encode%s(%s, %s)", t.codecSuffix, identifer, offsetStr)
 	case encodableEncodingType:
-		return fmt.Sprintf("$encoder.encodeEncodable(%s, %s.$encodedSize, $offset + %s, %s)", identifer, t.baseDecl, offsetStr, nullableStr)
+		return fmt.Sprintf("%s.$encode($encoder, %s, %s)", identifer, offsetStr, typeStr)
+	case pointerEncodingType:
+		return fmt.Sprintf("$encoder.encodePointer(%s, %s, %s)", identifer, offsetStr, typeStr)
 	case stringEncodingType:
-		return fmt.Sprintf("$encoder.encodeString(%s, %s, $offset + %s, %s)", identifer, t.ElementCount, offsetStr, nullableStr)
+		return fmt.Sprintf("$encoder.encodeString(%s, %s, %s)", identifer, offsetStr, typeStr)
 	case handleEncodingType:
-		return fmt.Sprintf("$encoder.encodeHandle(%s, $offset + %s, %s)", identifer, offsetStr, nullableStr)
+		return fmt.Sprintf("$encoder.encodeHandle(%s, %s, %s)", identifer, offsetStr, typeStr)
 	case vectorEncodingType:
-		return fmt.Sprintf("$encoder.encodeEncodableVector(%s, %s.$encodedSize, %s, $offset + %s, %s)", identifer, t.baseDecl, t.ElementCount, offsetStr, nullableStr)
+		return fmt.Sprintf("$encoder.encodeVector(%s, %s, %s)", identifer, offsetStr, typeStr)
 	case typedVectorEncodingType:
-		return fmt.Sprintf("$encoder.encode%sAsVector(%s, %s, $offset + %s, %s)", t.typedDataDecl, identifer, t.ElementCount, offsetStr, nullableStr)
+		return fmt.Sprintf("$encoder.encode%sAsVector(%s, %s, %s)", t.typedDataDecl, identifer, offsetStr, typeStr)
 	case arrayEncodingType:
-		return fmt.Sprintf("$encoder.encodeEncodableArray(.%s, %s.$encodedSize, %s, $offset + %s)", identifer, t.baseDecl, t.ElementCount, offsetStr)
+		return fmt.Sprintf("$encoder.encodeArray(%s, %s, %s)", identifer, offsetStr, typeStr)
 	case typedArrayEncodingType:
-		return fmt.Sprintf("$encoder.encode%sAsArray(%s, %s, $offset + %s)", t.typedDataDecl, identifer, t.ElementCount, offsetStr)
+		return fmt.Sprintf("$encoder.encode%sAsArray(%s, %s, %s)", t.typedDataDecl, identifer, offsetStr, typeStr)
 	default:
 		log.Fatal("Unknown encodingType:", t.encodingType)
 		return ""
 	}
 }
 
-func (t *Type) Decode(offset int) string {
-	offsetStr := strconv.Itoa(offset)
-	nullableStr := strconv.FormatBool(t.Nullable)
+func (t *Type) Decode(offset int, index int) string {
+	offsetStr := fmt.Sprintf("$offset + %s", strconv.Itoa(offset))
+	typeStr := fmt.Sprintf("$types[%s].type", strconv.Itoa(index))
 	switch t.encodingType {
 	case primitiveEncodingType:
-		return fmt.Sprintf("$decoder.decode%s($offset + %s)", t.codecSuffix, offsetStr)
+		return fmt.Sprintf("$decoder.decode%s(%s)", t.codecSuffix, offsetStr)
 	case encodableEncodingType:
-		return fmt.Sprintf("$decoder.decodeEncodable(%s.$decode, %s.$encodedSize, $offset + %s, %s)", t.baseDecl, t.baseDecl, offsetStr, nullableStr)
+		return fmt.Sprintf("new %s.$decode($decoder, %s, %s)", t.Decl, offsetStr, typeStr)
+	case pointerEncodingType:
+		return fmt.Sprintf("$decoder.decodePointer<%s>(%s, %s)", t.Decl, offsetStr, typeStr)
 	case stringEncodingType:
-		return fmt.Sprintf("$decoder.decodeString(%s, $offset + %s, %s)", t.ElementCount, offsetStr, nullableStr)
+		return fmt.Sprintf("$decoder.decodeString(%s, %s)", offsetStr, typeStr)
 	case handleEncodingType:
-		return fmt.Sprintf("$decoder.decodeHandle($offset + %s, %s)", offsetStr, nullableStr)
+		return fmt.Sprintf("$decoder.decodeHandle(%s, %s)", offsetStr, typeStr)
 	case vectorEncodingType:
-		return fmt.Sprintf("$decoder.decodeEncodableVector(%s.$decode, %s.$encodedSize, %s, $offset + %s, %s)", t.baseDecl, t.baseDecl, t.ElementCount, offsetStr, nullableStr)
+		return fmt.Sprintf("$decoder.decodeVector(%s.$decode, %s, %s)", t.baseDecl, offsetStr, typeStr)
 	case typedVectorEncodingType:
-		return fmt.Sprintf("$decoder.decodeVectorAs%s(%s, $offset + %s, %s)", t.typedDataDecl, t.ElementCount, offsetStr, nullableStr)
+		return fmt.Sprintf("$decoder.decodeVectorAs%s(%s, %s)", t.typedDataDecl, offsetStr, typeStr)
 	case arrayEncodingType:
-		return fmt.Sprintf("$decoder.decodeEncodableArray(%s.$decode, %s.$encodedSize, %s, $offset + %s)", t.baseDecl, t.baseDecl, t.ElementCount, offsetStr)
+		return fmt.Sprintf("$decoder.decodeArray(%s.$decode, %s, %s)", t.baseDecl, offsetStr, typeStr)
 	case typedArrayEncodingType:
-		return fmt.Sprintf("$decoder.decodeArrayAs%s(%s, $offset + %s)", t.typedDataDecl, t.ElementCount, offsetStr)
+		return fmt.Sprintf("$decoder.decodeArrayAs%s(%s, %s)", t.typedDataDecl, offsetStr, typeStr)
 	default:
 		log.Fatal("Unknown encodingType:", t.encodingType)
 		return ""
@@ -90,7 +96,6 @@ func (t *Type) Decode(offset int) string {
 type Enum struct {
 	Name        string
 	Members     []EnumMember
-	EncodedSize int
 	CodecSuffix string
 }
 
@@ -100,10 +105,11 @@ type EnumMember struct {
 }
 
 type Union struct {
-	Name        string
-	TagName     string
-	Members     []UnionMember
-	EncodedSize int
+	Name       string
+	TagName    string
+	Members    []UnionMember
+	TypeSymbol string
+	TypeExpr   string
 }
 
 type UnionMember struct {
@@ -113,9 +119,10 @@ type UnionMember struct {
 }
 
 type Struct struct {
-	Name        string
-	Members     []StructMember
-	EncodedSize int
+	Name       string
+	Members    []StructMember
+	TypeSymbol string
+	TypeExpr   string
 }
 
 type StructMember struct {
@@ -141,6 +148,8 @@ type Method struct {
 	HasResponse  bool
 	Response     []Parameter
 	ResponseSize int
+	TypeSymbol   string
+	TypeExpr     string
 }
 
 type Parameter struct {
@@ -242,21 +251,6 @@ var typedDataDecl = map[types.PrimitiveSubtype]string{
 	types.Float64: "Float64List",
 }
 
-var primitiveEncodedSize = map[types.PrimitiveSubtype]int{
-	types.Bool:    1,
-	types.Status:  4,
-	types.Int8:    1,
-	types.Int16:   2,
-	types.Int32:   4,
-	types.Int64:   8,
-	types.Uint8:   1,
-	types.Uint16:  2,
-	types.Uint32:  4,
-	types.Uint64:  8,
-	types.Float32: 4,
-	types.Float64: 8,
-}
-
 var primitiveCodecSuffix = map[types.PrimitiveSubtype]string{
 	types.Bool:    "Bool",
 	types.Status:  "Int32",
@@ -287,6 +281,7 @@ func changeIfReserved(val types.Identifier) string {
 
 type compiler struct {
 	decls *types.DeclMap
+	types *TypeCompiler
 }
 
 func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
@@ -377,8 +372,8 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.encodingType = handleEncodingType
 	case types.RequestType:
 		t := c.compileCompoundIdentifier(val.RequestSubtype)
-		r.Decl = fmt.Sprintf("InterfaceRequest<%s>", t)
-		r.baseDecl = "InterfaceRequest"
+		r.Decl = fmt.Sprintf("$fidl.InterfaceRequest<%s>", t)
+		r.baseDecl = "$fidl.InterfaceRequest"
 		r.encodingType = encodableEncodingType
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
@@ -388,9 +383,10 @@ func (c *compiler) compileType(val types.Type) Type {
 	case types.IdentifierType:
 		t := c.compileCompoundIdentifier(val.Identifier)
 		// TODO(abarth): Need to distguish between interfaces and structs.
-		r.Decl = fmt.Sprintf("InterfaceHandle<%s>", t)
-		r.baseDecl = "InterfaceHandle"
+		r.Decl = fmt.Sprintf("$fidl.InterfaceHandle<%s>", t)
+		r.baseDecl = "$fidl.InterfaceHandle"
 		r.encodingType = encodableEncodingType
+		r.typeSymbol = c.types.CompountSymbol(val.Identifier)
 	default:
 		log.Fatal("Unknown type kind:", val.Kind)
 	}
@@ -401,7 +397,6 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	e := Enum{
 		changeIfReserved(val.Name),
 		[]EnumMember{},
-		primitiveEncodedSize[val.Type],
 		primitiveCodecSuffix[val.Type],
 	}
 	for _, v := range val.Members {
@@ -448,6 +443,8 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			v.HasResponse,
 			c.compileParameterArray(v.Response),
 			v.ResponseSize,
+			fmt.Sprintf("_k%s_%s_Type", r.Name, v.Name),
+			c.types.MethodExpr(v),
 		}
 		r.Methods = append(r.Methods, m)
 	}
@@ -467,7 +464,8 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
 		changeIfReserved(val.Name),
 		[]StructMember{},
-		val.Size,
+		c.types.Symbol(val.Name),
+		c.types.StructExpr(val),
 	}
 
 	for _, v := range val.Members {
@@ -490,7 +488,8 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		changeIfReserved(val.Name),
 		changeIfReserved(val.Name + "Tag"),
 		[]UnionMember{},
-		val.Size,
+		c.types.Symbol(val.Name),
+		c.types.UnionExpr(val),
 	}
 
 	for _, v := range val.Members {
@@ -500,23 +499,26 @@ func (c *compiler) compileUnion(val types.Union) Union {
 	return r
 }
 
-func Compile(fidlData types.Root) Root {
+func Compile(r types.Root) Root {
 	root := Root{}
-	c := compiler{&fidlData.Decls}
+	c := compiler{
+		&r.Decls,
+		NewTypeCompiler(r),
+	}
 
-	for _, v := range fidlData.Enums {
+	for _, v := range r.Enums {
 		root.Enums = append(root.Enums, c.compileEnum(v))
 	}
 
-	for _, v := range fidlData.Interfaces {
+	for _, v := range r.Interfaces {
 		root.Interfaces = append(root.Interfaces, c.compileInterface(v))
 	}
 
-	for _, v := range fidlData.Structs {
+	for _, v := range r.Structs {
 		root.Structs = append(root.Structs, c.compileStruct(v))
 	}
 
-	for _, v := range fidlData.Unions {
+	for _, v := range r.Unions {
 		root.Unions = append(root.Unions, c.compileUnion(v))
 	}
 

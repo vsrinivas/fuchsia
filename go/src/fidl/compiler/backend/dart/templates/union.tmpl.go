@@ -12,12 +12,29 @@ enum {{ .TagName }} {
 {{- end }}
 }
 
-class {{ .Name }} extends $b.Encodable {
+const $fidl.UnionType {{ .TypeSymbol }} = {{ .TypeExpr }};
+
+class {{ .Name }} extends $fidl.Encodable {
 {{- range .Members }}
 
   const {{ $.Name }}.with{{ .Name }}({{ .Type.Decl }} value)
     : _data = value, tag = {{ $.TagName }}.{{ .Name }};
 {{- end }}
+
+  factory {{ .Name }}.$decode($fidl.Decoder $decoder, int $offset) {
+    final int $index = $decoder.decodeUint32($offset);
+    if ($index >= {{ .TagName }}.values.length)
+      throw new $fidl.FidlError('Bad union tag index: ${$index}');
+    final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.members;
+    switch ({{ .TagName }}.values[$index]) {
+{{- range $index, $member := .Members }}
+      case {{ $.TagName }}.{{ .Name }}:
+        return new {{ $.Name }}.with{{ .Name }}({{ .Type.Decode .Offset $index }});
+{{- end }}
+      default:
+        throw new $fidl.FidlError('Bad union tag: ${ {{ .TagName }}.values[$index] }');
+    }
+  }
 
   final _data;
   final {{ .TagName }} tag;
@@ -35,7 +52,7 @@ class {{ .Name }} extends $b.Encodable {
     switch (tag) {
 {{- range .Members }}
       case {{ $.TagName }}.{{ .Name }}:
-        return "{{ $.Name }}.{{ .Name }}(${{ .Name }})";
+        return '{{ $.Name }}.{{ .Name }}(${{ .Name }})';
 {{- end }}
       default:
         return null;
@@ -44,35 +61,20 @@ class {{ .Name }} extends $b.Encodable {
 
   dynamic toJson() => _data.toJson();
 
-  static const int $encodedSize = {{ .EncodedSize }};
-
   @override
-  void $encode($b.Encoder $encoder, int $offset) {
+  void $encode($fidl.Encoder $encoder, int $offset, $fidl.FidlType type) {
+    final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.members;
     $encoder.encodeUint32(tag.index, $offset);
     switch (tag) {
-{{- range .Members }}
+{{- range $index, $member := .Members }}
       case {{ $.TagName }}.{{ .Name }}:
-        {{ .Type.Encode "_data" .Offset }};
+        {{ .Type.Encode "_data" .Offset $index }};
         break;
 {{- end }}
       default:
-        throw new $b.FidlCodecError('Bad union tag: $tag');
+        throw new $fidl.FidlError('Bad union tag: $tag');
     }
   }
-
-  static {{ .Name }} $decode($b.Decoder $decoder, int $offset) {
-    final int $index = $decoder.decodeUint32($offset);
-    if ($index >= {{ .TagName }}.values.length)
-      throw new $b.FidlCodecError('Bad union tag index: $index');
-    switch ({{ .TagName }}.values[$index]) {
-{{- range .Members }}
-      case {{ $.TagName }}.{{ .Name }}:
-        return new {{ $.Name }}.with{{ .Name }}({{ .Type.Decode .Offset }});
-{{- end }}
-      default:
-        throw new $b.FidlCodecError('Bad union tag: $tag');
-      }
-    }
-  }
+}
 {{ end }}
 `

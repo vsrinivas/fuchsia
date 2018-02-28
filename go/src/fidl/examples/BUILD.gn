@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
+import("//build/dart/toolchain.gni")
 
 template("fidl_example") {
   not_needed(invoker, "*")
@@ -10,7 +11,6 @@ template("fidl_example") {
     group(target_name) {}
   } else {
     fidl(target_name) {
-
       sources = [
         "//zircon/system/host/fidl/examples/${target_name}.fidl2"
       ]
@@ -57,5 +57,22 @@ group("examples") {
     ":interface-ordinals",
     ":test",
     ":types",
+
+    # TODO(abarth): Move these dependencies into Topaz.
+    # ":alignment($dart_toolchain)",
+    # ":enums($dart_toolchain)",
+    # ":example-0($dart_toolchain)",
+    # ":example-1($dart_toolchain)",
+    # ":example-2($dart_toolchain)",
+    # ":example-3($dart_toolchain)",
+    # ":example-4($dart_toolchain)",
+    # ":example-5($dart_toolchain)",
+    # ":example-6($dart_toolchain)",
+    # ":example-7($dart_toolchain)",
+    # ":example-8($dart_toolchain)",
+    # ":example-9($dart_toolchain)",
+    # ":interface-ordinals($dart_toolchain)",
+    # ":test($dart_toolchain)",
+    # ":types($dart_toolchain)",
   ]
 }

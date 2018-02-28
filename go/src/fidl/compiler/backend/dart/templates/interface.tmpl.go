@@ -34,33 +34,36 @@ const int {{ .OrdinalName }} = {{ .Ordinal }};
   {{- end }}
 {{- end }}
 
-const int _kMessageHeaderSize = 32;
+{{- range .Methods }}
+const $fidl.MethodType {{ .TypeSymbol }} = {{ .TypeExpr }};
+{{- end }}
 
-class {{ .ProxyName }} extends $b.Proxy<{{ .Name }}>
+class {{ .ProxyName }} extends $fidl.Proxy<{{ .Name }}>
     implements {{ .Name }} {
 
-  {{ .ProxyName }}() : super(new $b.ProxyController<{{ .Name }}>()) {
+  {{ .ProxyName }}() : super(new $fidl.ProxyController<{{ .Name }}>()) {
     ctrl.onResponse = _handleResponse;
   }
 
-  void _handleResponse($b.Message $message) {
+  void _handleResponse($fidl.Message $message) {
     final Function $callback = ctrl.getCallback($message.txid);
     if ($callback == null) {
       $message.closeHandles();
       return;
     }
-    final $b.Decoder $decoder = new $b.Decoder($message)
-      ..claimMemory(_kMessageHeaderSize);
-    const int $offset = _kMessageHeaderSize;
+    final $fidl.Decoder $decoder = new $fidl.Decoder($message)
+      ..claimMemory($fidl.kMessageHeaderSize);
+    const int $offset = $fidl.kMessageHeaderSize;
     switch ($message.ordinal) {
 {{- range .Methods }}
   {{- if .HasRequest }}
     {{- if .HasResponse }}
       case {{ .OrdinalName }}:
+        final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response;
         $decoder.claimMemory({{ .ResponseSize }});
         $callback(
-      {{- range .Response }}
-          {{ .Type.Decode .Offset }},
+      {{- range $index, $response := .Response }}
+          {{ .Type.Decode .Offset $index }},
       {{- end }}
         );
         break;
@@ -79,16 +82,17 @@ class {{ .ProxyName }} extends $b.Proxy<{{ .Name }}>
   @override
   void {{ template "RequestMethodSignature" . }} {
     if (!ctrl.isBound) {
-      ctrl.proxyError("The proxy is closed.");
+      ctrl.proxyError('The proxy is closed.');
       return;
     }
 
-    final $b.Encoder $encoder = new $b.Encoder({{ if .HasResponse }}ctrl.getNextTxid(){{ else }}0{{ end }}, {{ .OrdinalName }});
+    final $fidl.Encoder $encoder = new $fidl.Encoder({{ .OrdinalName }});
     {{- if .Request }}
     final int $offset = $encoder.alloc({{ .RequestSize }});
+    final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request;
     {{- end }}
-    {{- range .Request }}
-    {{ .Type.Encode .Name .Offset }};
+    {{- range $index, $request := .Request }}
+    {{ .Type.Encode .Name .Offset $index }};
     {{- end }}
     {{- if .HasResponse }}
     Function $zonedCallback;
@@ -96,15 +100,19 @@ class {{ .ProxyName }} extends $b.Proxy<{{ .Name }}>
       $zonedCallback = callback;
     } else {
       Zone $z = Zone.current;
+      {{- if .Response }}
       $zonedCallback = (({{ template "Params" .Response }}) {
         $z.bindCallback(() {
           callback(
-      {{- range .Response -}}
-        {{ .Name }},
-      {{- end -}}
+        {{- range .Response -}}
+            {{ .Name }},
+        {{- end -}}
           );
         })();
       });
+      {{- else }}
+      $zonedCallback = $z.bindCallback(callback);
+      {{- end }}
     }
     ctrl.sendMessageWithResponse($encoder.message, $zonedCallback);
     {{- else }}
@@ -115,21 +123,24 @@ class {{ .ProxyName }} extends $b.Proxy<{{ .Name }}>
 {{- end }}
 }
 
-class {{ .BindingName }} extends $b.Binding<{{ .Name }}> {
+class {{ .BindingName }} extends $fidl.Binding<{{ .Name }}> {
 
 {{ range .Methods }}
   {{- if .HasRequest }}
     {{- if .HasResponse }}
-  Function _{{ .Name }}Responder($b.MessageSink $respond, int $txid) {
+  Function _{{ .Name }}Responder($fidl.MessageSink $respond, int $txid) {
     return ({{ template "Params" .Response }}) {
-      final $b.Encoder $encoder = new $b.Encoder($txid, {{ .OrdinalName }});
+      final $fidl.Encoder $encoder = new $fidl.Encoder({{ .OrdinalName }});
       {{- if .Response }}
       final int $offset = $encoder.alloc({{ .ResponseSize }});
+      final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response;
       {{- end }}
-      {{- range .Response }}
-      {{ .Type.Encode .Name .Offset }};
+      {{- range $index, $response := .Response }}
+      {{ .Type.Encode .Name .Offset $index }};
       {{- end }}
-      $respond($encoder.message);
+      $fidl.Message $message = $encoder.message;
+      $message.txid = $txid;
+      $respond($message);
     };
   }
     {{- end }}
@@ -137,18 +148,19 @@ class {{ .BindingName }} extends $b.Binding<{{ .Name }}> {
 {{- end }}
 
   @override
-  void handleMessage($b.Message $message, $b.MessageSink $respond) {
-    final $b.Decoder $decoder = new $b.Decoder($message)
-      ..claimMemory(_kMessageHeaderSize);
-    const int $offset = _kMessageHeaderSize;
+  void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
+    final $fidl.Decoder $decoder = new $fidl.Decoder($message)
+      ..claimMemory($fidl.kMessageHeaderSize);
+    const int $offset = $fidl.kMessageHeaderSize;
     switch ($message.ordinal) {
 {{- range .Methods }}
   {{- if .HasRequest }}
       case {{ .OrdinalName }}:
+        final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request;
         $decoder.claimMemory({{ .RequestSize }});
         impl.{{ .Name }}(
-    {{- range .Request }}
-          {{ .Type.Decode .Offset }},
+    {{- range $index, $request := .Request }}
+          {{ .Type.Decode .Offset $index }},
     {{- end }}
     {{- if .HasResponse }}
           _{{ .Name }}Responder($respond, $message.txid),
@@ -158,7 +170,7 @@ class {{ .BindingName }} extends $b.Binding<{{ .Name }}> {
   {{- end }}
 {{- end }}
       default:
-        throw new $b.FidlCodecError('Unexpected message name');
+        throw new $fidl.FidlError('Unexpected message name');
     }
   }
 }
