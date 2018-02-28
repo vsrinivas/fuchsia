@@ -27,26 +27,20 @@ TOOLS_DIR=/tmp/hikey/tools
 
 RECOVERY_PORT=/dev/serial/by-id/usb-HISILICON_USB_SER-if00-port0
 
-UEFI_DIR=/tmp/hikey/uefi
-UEFI_URL=https://builds.96boards.org/snapshots/reference-platform/components/uefi-staging/48/hikey960/release/
-
 MKBOOTIMG="${ZIRCON_DIR}/third_party/tools/android/mkbootimg"
 MKDTIMG="${ZIRCON_DIR}/third_party/tools/android/mkdtimg"
 
 help() {
     echo "usage: ${0} [options]"
-    echo "  -f              Download and flash firmware."
     echo "  -b [build-dir]  Use specified build directory."
     echo "                  Defaults to build-hikey960/."
     echo "  -d [ramdisk]    Use specified ramdisk file."
     echo "                  Defaults to BUILD_DIR/bootdata.bin."
+    echo "  -f              Download and flash firmware."
     echo "  -m              Add mexec option to kernel command line to enable netboot."
-    echo "  -n              No flash. Boot image without flashing it to the device (UEFI only)."
     echo "  -p [port]       Port used for recovery."
     echo "                  Defaults to ${RECOVERY_PORT}."
-    echo "  -r              Recover device from a bad state or swap to UEFI (with -u)."
-    echo "  -u              UEFI mode. This flag is required if your device has UEFI firmware."
-    echo "                  Combine with -r and/or -f to install UEFI support."
+    echo "  -r              Recover device from a bad state."
     echo "  -h              Show this help message."
     echo
     echo "See docs/targets/hikey960.md for more details."
@@ -168,15 +162,11 @@ flash_kernel() {
         --cmdline "${CMDLINE}" \
         -o $OUT_IMAGE
 
-    if [[ $FLAG_NOFLASH ]]; then
-        fastboot boot $OUT_IMAGE
-    else
-        fastboot flash boot $OUT_IMAGE
-        # Can't guarantee that the target has written image to flash before the
-        # fastboot command completes, so short delay here before reboot.
-        sleep 1
-        fastboot reboot
-    fi
+    fastboot flash boot $OUT_IMAGE
+    # Can't guarantee that the target has written image to flash before the
+    # fastboot command completes, so short delay here before reboot.
+    sleep 1
+    fastboot reboot
 }
 
 while getopts "b:d:fmnp:ruh" FLAG; do
@@ -185,11 +175,9 @@ while getopts "b:d:fmnp:ruh" FLAG; do
     d) RAMDISK="${OPTARG}";;
     f) FLAG_FIRMWARE=true;;
     m) CMDLINE+=" netsvc.netboot=true";;
-    n) FLAG_NOFLASH=true;;
     p) RECOVERY_PORT="${OPTARG}";;
     r) FLAG_RECOVER=true;
        FLAG_FIRMWARE=true;;
-    u) FLAG_UEFI=true;;
     *) help;;
     esac
 done
@@ -200,26 +188,13 @@ RAMDISK="${RAMDISK:-${BUILD_DIR}/bootdata.bin}"
 OUT_IMAGE="${BUILD_DIR}/boot.img"
 
 if [[ $FLAG_RECOVER ]]; then
-    if [[ $FLAG_UEFI ]]; then
-        recover_uefi
-    else
-        recover_device
-    fi
+    recover_uefi
 fi
 
 if [[ $FLAG_FIRMWARE ]]; then
-    if [[ $FLAG_UEFI ]]; then
-        flash_firmware_uefi
-    else
-        flash_firmware
-    fi
+    flash_firmware
     exit 0
 fi
 
-if [[ $FLAG_UEFI ]]; then
-    KERNEL="${BUILD_DIR}/zircon.bin-dtb"
-    flash_kernel
-else
-    KERNEL="${BUILD_DIR}/zzircon.bin"
-    flash_kernel
-fi
+KERNEL="${BUILD_DIR}/zzircon.bin"
+flash_kernel
