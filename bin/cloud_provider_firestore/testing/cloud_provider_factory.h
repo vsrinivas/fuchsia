@@ -14,7 +14,7 @@
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firestore/fidl/factory.fidl.h"
 #include "peridot/lib/firebase_auth/testing/service_account_token_provider.h"
-#include "peridot/lib/network/network_service_impl.h"
+#include "garnet/lib/network_wrapper/network_wrapper_impl.h"
 
 namespace cloud_provider_firestore {
 

@@ -73,7 +73,7 @@ source_set("unittests") {
     "//peridot/bin/cloud_provider_firebase/page_handler/testing",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/firebase_auth/testing",
-    "//peridot/lib/network:fake",
+    "//garnet/lib/network_wrapper:fake",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
   ]

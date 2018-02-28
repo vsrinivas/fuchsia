@@ -19,8 +19,8 @@ namespace firebase {
 class Firebase;
 }
 
-namespace ledger {
-class NetworkService;
+namespace network_wrapper {
+class NetworkWrapper;
 }
 
 namespace modular {
@@ -56,7 +56,7 @@ class FirebaseModuleManifestSource : public ModuleManifestSource {
   const std::string db_id_;
   const std::string prefix_;
 
-  std::unique_ptr<ledger::NetworkService> network_service_;
+  std::unique_ptr<network_wrapper::NetworkWrapper> network_wrapper_;
   std::unique_ptr<firebase::Firebase> client_;
 
   std::vector<std::unique_ptr<Watcher>> watchers_;

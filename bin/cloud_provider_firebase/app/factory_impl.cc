@@ -11,8 +11,8 @@
 namespace cloud_provider_firebase {
 
 FactoryImpl::FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner,
-                         ledger::NetworkService* network_service)
-    : main_runner_(std::move(main_runner)), network_service_(network_service) {}
+                         network_wrapper::NetworkWrapper* network_wrapper)
+    : main_runner_(std::move(main_runner)), network_wrapper_(network_wrapper) {}
 
 FactoryImpl::~FactoryImpl() {}
 
@@ -39,7 +39,7 @@ void FactoryImpl::GetCloudProvider(
               return;
             }
 
-            providers_.emplace(main_runner_, network_service_, user_id,
+            providers_.emplace(main_runner_, network_wrapper_, user_id,
                                std::move(config), std::move(firebase_auth),
                                std::move(cloud_provider));
             callback(cloud_provider::Status::OK);

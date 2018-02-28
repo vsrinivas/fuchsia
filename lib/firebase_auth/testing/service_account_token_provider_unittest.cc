@@ -16,7 +16,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "peridot/lib/network/fake_network_service.h"
+#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 
 namespace service_account {
 namespace {
@@ -57,8 +57,8 @@ constexpr fxl::StringView kWrongKeyTestConfig =
 class ServiceAccountTokenProviderTest : public gtest::TestWithMessageLoop {
  public:
   ServiceAccountTokenProviderTest()
-      : network_service_(message_loop_.task_runner()),
-        token_provider_(&network_service_, "user_id") {}
+      : network_wrapper_(message_loop_.task_runner()),
+        token_provider_(&network_wrapper_, "user_id") {}
 
  protected:
   std::string GetConfigFile(fxl::StringView config) {
@@ -117,14 +117,14 @@ class ServiceAccountTokenProviderTest : public gtest::TestWithMessageLoop {
   }
 
   files::ScopedTempDir dir_;
-  ledger::FakeNetworkService network_service_;
+  network_wrapper::FakeNetworkWrapper network_wrapper_;
   ServiceAccountTokenProvider token_provider_;
 };
 
 TEST_F(ServiceAccountTokenProviderTest, GetToken) {
   ASSERT_TRUE(token_provider_.LoadCredentials(GetConfigFile(kTestConfig)));
 
-  network_service_.SetResponse(
+  network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token", 3600)));
 
   modular::auth::FirebaseTokenPtr token;
@@ -137,7 +137,7 @@ TEST_F(ServiceAccountTokenProviderTest, GetToken) {
 TEST_F(ServiceAccountTokenProviderTest, GetTokenFromCache) {
   ASSERT_TRUE(token_provider_.LoadCredentials(GetConfigFile(kTestConfig)));
 
-  network_service_.SetResponse(
+  network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token", 3600)));
 
   modular::auth::FirebaseTokenPtr token;
@@ -146,22 +146,22 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenFromCache) {
   ASSERT_TRUE(GetToken("api_key", &token, &error));
   EXPECT_EQ(modular::auth::Status::OK, error->status) << error->message;
   EXPECT_EQ("token", token->id_token);
-  EXPECT_TRUE(network_service_.GetRequest());
+  EXPECT_TRUE(network_wrapper_.GetRequest());
 
-  network_service_.ResetRequest();
-  network_service_.SetResponse(
+  network_wrapper_.ResetRequest();
+  network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token2", 3600)));
 
   ASSERT_TRUE(GetToken("api_key", &token, &error));
   EXPECT_EQ(modular::auth::Status::OK, error->status) << error->message;
   EXPECT_EQ("token", token->id_token);
-  EXPECT_FALSE(network_service_.GetRequest());
+  EXPECT_FALSE(network_wrapper_.GetRequest());
 }
 
 TEST_F(ServiceAccountTokenProviderTest, GetTokenNoCacheCache) {
   ASSERT_TRUE(token_provider_.LoadCredentials(GetConfigFile(kTestConfig)));
 
-  network_service_.SetResponse(
+  network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token", 0)));
 
   modular::auth::FirebaseTokenPtr token;
@@ -170,15 +170,15 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenNoCacheCache) {
   ASSERT_TRUE(GetToken("api_key", &token, &error));
   EXPECT_EQ(modular::auth::Status::OK, error->status) << error->message;
   EXPECT_EQ("token", token->id_token);
-  EXPECT_TRUE(network_service_.GetRequest());
+  EXPECT_TRUE(network_wrapper_.GetRequest());
 
-  network_service_.SetResponse(
+  network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token2", 0)));
 
   ASSERT_TRUE(GetToken("api_key", &token, &error));
   EXPECT_EQ(modular::auth::Status::OK, error->status) << error->message;
   EXPECT_EQ("token2", token->id_token);
-  EXPECT_TRUE(network_service_.GetRequest());
+  EXPECT_TRUE(network_wrapper_.GetRequest());
 }
 
 TEST_F(ServiceAccountTokenProviderTest, IncorrectCredentials) {
@@ -194,7 +194,7 @@ TEST_F(ServiceAccountTokenProviderTest, NetworkError) {
   auto network_error = network::NetworkError::New();
   network_error->description = "Error";
 
-  network_service_.SetResponse(GetResponse(std::move(network_error), 0, ""));
+  network_wrapper_.SetResponse(GetResponse(std::move(network_error), 0, ""));
 
   modular::auth::FirebaseTokenPtr token;
   modular::auth::AuthErrPtr error;
@@ -202,13 +202,13 @@ TEST_F(ServiceAccountTokenProviderTest, NetworkError) {
   ASSERT_TRUE(GetToken("api_key", &token, &error));
   EXPECT_EQ(modular::auth::Status::NETWORK_ERROR, error->status);
   EXPECT_FALSE(token);
-  EXPECT_TRUE(network_service_.GetRequest());
+  EXPECT_TRUE(network_wrapper_.GetRequest());
 }
 
 TEST_F(ServiceAccountTokenProviderTest, AuthenticationError) {
   ASSERT_TRUE(token_provider_.LoadCredentials(GetConfigFile(kTestConfig)));
 
-  network_service_.SetResponse(GetResponse(nullptr, 401, "Unauthorized"));
+  network_wrapper_.SetResponse(GetResponse(nullptr, 401, "Unauthorized"));
 
   modular::auth::FirebaseTokenPtr token;
   modular::auth::AuthErrPtr error;
@@ -216,13 +216,13 @@ TEST_F(ServiceAccountTokenProviderTest, AuthenticationError) {
   ASSERT_TRUE(GetToken("api_key", &token, &error));
   EXPECT_EQ(modular::auth::Status::OAUTH_SERVER_ERROR, error->status);
   EXPECT_FALSE(token);
-  EXPECT_TRUE(network_service_.GetRequest());
+  EXPECT_TRUE(network_wrapper_.GetRequest());
 }
 
 TEST_F(ServiceAccountTokenProviderTest, ResponseFormatError) {
   ASSERT_TRUE(token_provider_.LoadCredentials(GetConfigFile(kTestConfig)));
 
-  network_service_.SetResponse(GetResponse(nullptr, 200, ""));
+  network_wrapper_.SetResponse(GetResponse(nullptr, 200, ""));
 
   modular::auth::FirebaseTokenPtr token;
   modular::auth::AuthErrPtr error;
@@ -230,7 +230,7 @@ TEST_F(ServiceAccountTokenProviderTest, ResponseFormatError) {
   ASSERT_TRUE(GetToken("api_key", &token, &error));
   EXPECT_EQ(modular::auth::Status::BAD_RESPONSE, error->status);
   EXPECT_FALSE(token);
-  EXPECT_TRUE(network_service_.GetRequest());
+  EXPECT_TRUE(network_wrapper_.GetRequest());
 }
 
 }  // namespace

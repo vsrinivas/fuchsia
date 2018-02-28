@@ -18,7 +18,7 @@
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/lib/firebase/firebase_impl.h"
 #include "peridot/lib/firebase_auth/firebase_auth_impl.h"
-#include "peridot/lib/network/network_service.h"
+#include "garnet/lib/network_wrapper/network_wrapper.h"
 
 namespace cloud_provider_firebase {
 
@@ -30,7 +30,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
  public:
   CloudProviderImpl(
       fxl::RefPtr<fxl::TaskRunner> main_runner,
-      ledger::NetworkService* network_service,
+      network_wrapper::NetworkWrapper* network_wrapper,
       std::string user_id,
       ConfigPtr config,
       std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
@@ -51,7 +51,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       const GetPageCloudCallback& callback) override;
 
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
-  ledger::NetworkService* const network_service_;
+  network_wrapper::NetworkWrapper* const network_wrapper_;
   const std::string user_id_;
   const std::string server_id_;
   std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth_;

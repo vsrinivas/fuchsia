@@ -9,7 +9,7 @@
 
 #include "garnet/lib/callback/cancellable.h"
 #include "lib/auth/fidl/token_provider.fidl.h"
-#include "peridot/lib/network/network_service.h"
+#include "garnet/lib/network_wrapper/network_wrapper.h"
 
 #include "lib/fxl/macros.h"
 
@@ -28,7 +28,7 @@ namespace service_account {
 // LoadCredentials() method to initialize this class.
 class ServiceAccountTokenProvider : public modular::auth::TokenProvider {
  public:
-  ServiceAccountTokenProvider(ledger::NetworkService* network_service,
+  ServiceAccountTokenProvider(network_wrapper::NetworkWrapper* network_wrapper,
                               std::string user_id);
   ~ServiceAccountTokenProvider() override;
 
@@ -63,7 +63,7 @@ class ServiceAccountTokenProvider : public modular::auth::TokenProvider {
                         modular::auth::FirebaseTokenPtr token,
                         modular::auth::AuthErrPtr error);
 
-  ledger::NetworkService* network_service_;
+  network_wrapper::NetworkWrapper* network_wrapper_;
   const std::string user_id_;
   std::unique_ptr<Credentials> credentials_;
   std::map<std::string, std::unique_ptr<CachedToken>> cached_tokens_;

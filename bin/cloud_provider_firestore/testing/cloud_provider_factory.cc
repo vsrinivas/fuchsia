@@ -27,14 +27,14 @@ class CloudProviderFactory::TokenProviderContainer {
       std::string credentials_path,
       f1dl::InterfaceRequest<modular::auth::TokenProvider> request)
       : application_context_(application_context),
-        network_service_(
+        network_wrapper_(
             std::move(task_runner),
             std::make_unique<backoff::ExponentialBackoff>(),
             [this] {
               return application_context_
                   ->ConnectToEnvironmentService<network::NetworkService>();
             }),
-        token_provider_(&network_service_, fxl::GenerateUUID()),
+        token_provider_(&network_wrapper_, fxl::GenerateUUID()),
         binding_(&token_provider_, std::move(request)) {
     if (!token_provider_.LoadCredentials(credentials_path)) {
       FXL_LOG(ERROR) << "Failed to load token provider credentials at: "
@@ -48,7 +48,7 @@ class CloudProviderFactory::TokenProviderContainer {
 
  private:
   app::ApplicationContext* const application_context_;
-  ledger::NetworkServiceImpl network_service_;
+  network_wrapper::NetworkWrapperImpl network_wrapper_;
   service_account::ServiceAccountTokenProvider token_provider_;
   f1dl::Binding<modular::auth::TokenProvider> binding_;
 

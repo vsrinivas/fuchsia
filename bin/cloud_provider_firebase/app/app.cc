@@ -12,7 +12,7 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "peridot/bin/cloud_provider_firebase/app/factory_impl.h"
-#include "peridot/lib/network/network_service_impl.h"
+#include "garnet/lib/network_wrapper/network_wrapper_impl.h"
 
 namespace cloud_provider_firebase {
 namespace {
@@ -22,14 +22,14 @@ class App : public modular::Lifecycle {
   App()
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()),
-        network_service_(
+        network_wrapper_(
             loop_.task_runner(),
             std::make_unique<backoff::ExponentialBackoff>(),
             [this] {
               return application_context_
                   ->ConnectToEnvironmentService<network::NetworkService>();
             }),
-        factory_impl_(loop_.task_runner(), &network_service_) {
+        factory_impl_(loop_.task_runner(), &network_wrapper_) {
     FXL_DCHECK(application_context_);
   }
 
@@ -52,7 +52,7 @@ class App : public modular::Lifecycle {
   std::unique_ptr<app::ApplicationContext> application_context_;
   trace::TraceProvider trace_provider_;
 
-  ledger::NetworkServiceImpl network_service_;
+  network_wrapper::NetworkWrapperImpl network_wrapper_;
   FactoryImpl factory_impl_;
   f1dl::BindingSet<modular::Lifecycle> lifecycle_bindings_;
   f1dl::BindingSet<Factory> factory_bindings_;

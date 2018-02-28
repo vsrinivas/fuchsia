@@ -18,13 +18,13 @@ namespace cloud_provider_firebase {
 
 CloudProviderImpl::CloudProviderImpl(
     fxl::RefPtr<fxl::TaskRunner> main_runner,
-    ledger::NetworkService* network_service,
+    network_wrapper::NetworkWrapper* network_wrapper,
     std::string user_id,
     ConfigPtr config,
     std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
     f1dl::InterfaceRequest<cloud_provider::CloudProvider> request)
     : main_runner_(std::move(main_runner)),
-      network_service_(network_service),
+      network_wrapper_(network_wrapper),
       user_id_(std::move(user_id)),
       server_id_(config->server_id),
       firebase_auth_(std::move(firebase_auth)),
@@ -51,7 +51,7 @@ void CloudProviderImpl::GetDeviceSet(
     f1dl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
     const GetDeviceSetCallback& callback) {
   auto user_firebase = std::make_unique<firebase::FirebaseImpl>(
-      network_service_, server_id_, GetFirebasePathForUser(user_id_));
+      network_wrapper_, server_id_, GetFirebasePathForUser(user_id_));
   auto cloud_device_set =
       std::make_unique<CloudDeviceSetImpl>(std::move(user_firebase));
   device_sets_.emplace(firebase_auth_.get(), std::move(cloud_device_set),
@@ -69,12 +69,12 @@ void CloudProviderImpl::GetPageCloud(
 
   std::string app_firebase_path = GetFirebasePathForApp(user_id_, app_id_str);
   auto firebase = std::make_unique<firebase::FirebaseImpl>(
-      network_service_, server_id_,
+      network_wrapper_, server_id_,
       GetFirebasePathForPage(app_firebase_path, page_id_str));
 
   std::string app_gcs_prefix = GetGcsPrefixForApp(user_id_, app_id_str);
   auto cloud_storage = std::make_unique<gcs::CloudStorageImpl>(
-      main_runner_, network_service_, server_id_,
+      main_runner_, network_wrapper_, server_id_,
       GetGcsPrefixForPage(app_gcs_prefix, page_id_str));
 
   auto handler =

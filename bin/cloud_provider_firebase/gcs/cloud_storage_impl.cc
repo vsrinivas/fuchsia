@@ -74,11 +74,11 @@ std::string GetUrlPrefix(const std::string& firebase_id,
 }  // namespace
 
 CloudStorageImpl::CloudStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                                   ledger::NetworkService* network_service,
+                                   network_wrapper::NetworkWrapper* network_wrapper,
                                    const std::string& firebase_id,
                                    const std::string& cloud_prefix)
     : task_runner_(std::move(task_runner)),
-      network_service_(network_service),
+      network_wrapper_(network_wrapper),
       url_prefix_(GetUrlPrefix(firebase_id, cloud_prefix)) {}
 
 CloudStorageImpl::~CloudStorageImpl() {}
@@ -168,7 +168,7 @@ void CloudStorageImpl::Request(
     std::function<network::URLRequestPtr()> request_factory,
     std::function<void(Status status, network::URLResponsePtr response)>
         callback) {
-  requests_.emplace(network_service_->Request(
+  requests_.emplace(network_wrapper_->Request(
       std::move(request_factory),
       [this, callback = std::move(callback)](
           network::URLResponsePtr response) mutable {

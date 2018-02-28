@@ -16,8 +16,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/lib/network/fake_network_service.h"
-#include "peridot/lib/network/network_service_impl.h"
+#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
+#include "garnet/lib/network_wrapper/network_wrapper_impl.h"
 #include "peridot/lib/socket/socket_pair.h"
 
 namespace firebase {
@@ -26,8 +26,8 @@ namespace {
 class FirebaseImplTest : public gtest::TestWithMessageLoop, public WatchClient {
  public:
   FirebaseImplTest()
-      : fake_network_service_(message_loop_.task_runner()),
-        firebase_(&fake_network_service_, "example", "pre/fix") {}
+      : fake_network_wrapper_(message_loop_.task_runner()),
+        firebase_(&fake_network_wrapper_, "example", "pre/fix") {}
   ~FirebaseImplTest() override {}
 
  protected:
@@ -76,7 +76,7 @@ class FirebaseImplTest : public gtest::TestWithMessageLoop, public WatchClient {
 
   unsigned int connection_error_count_ = 0u;
 
-  ledger::FakeNetworkService fake_network_service_;
+  network_wrapper::FakeNetworkWrapper fake_network_wrapper_;
   FirebaseImpl firebase_;
 
  private:
@@ -87,7 +87,7 @@ class FirebaseImplTest : public gtest::TestWithMessageLoop, public WatchClient {
 
 // Verifies that GET requests are handled correctly.
 TEST_F(FirebaseImplTest, Get) {
-  fake_network_service_.SetStringResponse("\"content\"", 200);
+  fake_network_wrapper_.SetStringResponse("\"content\"", 200);
   firebase_.Get("bazinga", {},
                 [this](Status status, const rapidjson::Value& value) {
                   std::string response_string;
@@ -99,12 +99,12 @@ TEST_F(FirebaseImplTest, Get) {
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/bazinga.json",
-            fake_network_service_.GetRequest()->url);
-  EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
+            fake_network_wrapper_.GetRequest()->url);
+  EXPECT_EQ("GET", fake_network_wrapper_.GetRequest()->method);
 }
 
 TEST_F(FirebaseImplTest, GetError) {
-  fake_network_service_.SetStringResponse("\"content\"", 404);
+  fake_network_wrapper_.SetStringResponse("\"content\"", 404);
   firebase_.Get("bazinga", {},
                 [this](Status status, const rapidjson::Value& value) {
                   std::string response_string;
@@ -117,7 +117,7 @@ TEST_F(FirebaseImplTest, GetError) {
 }
 
 TEST_F(FirebaseImplTest, GetWithSingleQueryParam) {
-  fake_network_service_.SetStringResponse("content", 200);
+  fake_network_wrapper_.SetStringResponse("content", 200);
   firebase_.Get("bazinga", {"orderBy=\"timestamp\""},
                 [this](Status status, const rapidjson::Value& value) {
                   message_loop_.PostQuitTask();
@@ -127,12 +127,12 @@ TEST_F(FirebaseImplTest, GetWithSingleQueryParam) {
   EXPECT_EQ(
       "https://example.firebaseio.com/pre/fix/"
       "bazinga.json?orderBy=\"timestamp\"",
-      fake_network_service_.GetRequest()->url);
-  EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
+      fake_network_wrapper_.GetRequest()->url);
+  EXPECT_EQ("GET", fake_network_wrapper_.GetRequest()->method);
 }
 
 TEST_F(FirebaseImplTest, GetWithTwoQueryParams) {
-  fake_network_service_.SetStringResponse("content", 200);
+  fake_network_wrapper_.SetStringResponse("content", 200);
   firebase_.Get("bazinga", {"one_param", "other_param=bla"},
                 [this](Status status, const rapidjson::Value& value) {
                   message_loop_.PostQuitTask();
@@ -142,27 +142,27 @@ TEST_F(FirebaseImplTest, GetWithTwoQueryParams) {
   EXPECT_EQ(
       "https://example.firebaseio.com/pre/fix/"
       "bazinga.json?one_param&other_param=bla",
-      fake_network_service_.GetRequest()->url);
-  EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
+      fake_network_wrapper_.GetRequest()->url);
+  EXPECT_EQ("GET", fake_network_wrapper_.GetRequest()->method);
 }
 
 // Verifies that request urls for root of the db are correctly formed.
 TEST_F(FirebaseImplTest, Root) {
-  fake_network_service_.SetStringResponse("42", 200);
+  fake_network_wrapper_.SetStringResponse("42", 200);
   firebase_.Get("", {}, [this](Status status, const rapidjson::Value& value) {
     message_loop_.PostQuitTask();
   });
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/.json",
-            fake_network_service_.GetRequest()->url);
+            fake_network_wrapper_.GetRequest()->url);
 }
 
 // Verifies that PUT requests are handled correctly.
 TEST_F(FirebaseImplTest, Put) {
   // Firebase server seems to respond with the data we sent to it. This is not
   // useful for the client so our API doesn't expose it to the client.
-  fake_network_service_.SetStringResponse("\"Alice\"", 200);
+  fake_network_wrapper_.SetStringResponse("\"Alice\"", 200);
   firebase_.Put("name", {}, "\"Alice\"", [this](Status status) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
@@ -170,13 +170,13 @@ TEST_F(FirebaseImplTest, Put) {
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/name.json",
-            fake_network_service_.GetRequest()->url);
-  EXPECT_EQ("PUT", fake_network_service_.GetRequest()->method);
+            fake_network_wrapper_.GetRequest()->url);
+  EXPECT_EQ("PUT", fake_network_wrapper_.GetRequest()->method);
 }
 
 // Verifies that PATCH requests are handled correctly.
 TEST_F(FirebaseImplTest, Patch) {
-  fake_network_service_.SetStringResponse("\"ok\"", 200);
+  fake_network_wrapper_.SetStringResponse("\"ok\"", 200);
   std::string data = R"({"name":"Alice"})";
   firebase_.Patch("person", {}, data, [this](Status status) {
     EXPECT_EQ(Status::OK, status);
@@ -185,13 +185,13 @@ TEST_F(FirebaseImplTest, Patch) {
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/person.json",
-            fake_network_service_.GetRequest()->url);
-  EXPECT_EQ("PATCH", fake_network_service_.GetRequest()->method);
+            fake_network_wrapper_.GetRequest()->url);
+  EXPECT_EQ("PATCH", fake_network_wrapper_.GetRequest()->method);
 }
 
 // Verifies that DELETE requests are made correctly.
 TEST_F(FirebaseImplTest, Delete) {
-  fake_network_service_.SetStringResponse("", 200);
+  fake_network_wrapper_.SetStringResponse("", 200);
   firebase_.Delete("name", {}, [this](Status status) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
@@ -199,28 +199,28 @@ TEST_F(FirebaseImplTest, Delete) {
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/name.json",
-            fake_network_service_.GetRequest()->url);
-  EXPECT_EQ("DELETE", fake_network_service_.GetRequest()->method);
+            fake_network_wrapper_.GetRequest()->url);
+  EXPECT_EQ("DELETE", fake_network_wrapper_.GetRequest()->method);
 }
 
 // Verifies that event-stream requests are correctly formed.
 TEST_F(FirebaseImplTest, WatchRequest) {
-  fake_network_service_.SetStringResponse("", 200);
+  fake_network_wrapper_.SetStringResponse("", 200);
 
   firebase_.Watch("some/path", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/some/path.json",
-            fake_network_service_.GetRequest()->url);
-  EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
-  EXPECT_EQ(1u, fake_network_service_.GetRequest()->headers.size());
-  EXPECT_EQ("Accept", fake_network_service_.GetRequest()->headers[0]->name);
+            fake_network_wrapper_.GetRequest()->url);
+  EXPECT_EQ("GET", fake_network_wrapper_.GetRequest()->method);
+  EXPECT_EQ(1u, fake_network_wrapper_.GetRequest()->headers.size());
+  EXPECT_EQ("Accept", fake_network_wrapper_.GetRequest()->headers[0]->name);
   EXPECT_EQ("text/event-stream",
-            fake_network_service_.GetRequest()->headers[0]->value);
+            fake_network_wrapper_.GetRequest()->headers[0]->value);
 }
 
 TEST_F(FirebaseImplTest, WatchRequestWithQuery) {
-  fake_network_service_.SetStringResponse("", 200);
+  fake_network_wrapper_.SetStringResponse("", 200);
 
   firebase_.Watch("some/path", {"orderBy=\"timestamp\""}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -228,12 +228,12 @@ TEST_F(FirebaseImplTest, WatchRequestWithQuery) {
   EXPECT_EQ(
       "https://example.firebaseio.com/pre/fix/some/path.json"
       "?orderBy=\"timestamp\"",
-      fake_network_service_.GetRequest()->url);
-  EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
-  EXPECT_EQ(1u, fake_network_service_.GetRequest()->headers.size());
-  EXPECT_EQ("Accept", fake_network_service_.GetRequest()->headers[0]->name);
+      fake_network_wrapper_.GetRequest()->url);
+  EXPECT_EQ("GET", fake_network_wrapper_.GetRequest()->method);
+  EXPECT_EQ(1u, fake_network_wrapper_.GetRequest()->headers.size());
+  EXPECT_EQ("Accept", fake_network_wrapper_.GetRequest()->headers[0]->name);
   EXPECT_EQ("text/event-stream",
-            fake_network_service_.GetRequest()->headers[0]->value);
+            fake_network_wrapper_.GetRequest()->headers[0]->value);
 }
 
 TEST_F(FirebaseImplTest, WatchPut) {
@@ -247,7 +247,7 @@ TEST_F(FirebaseImplTest, WatchPut) {
       "event: put\n"
       "data: {\"path\":\"/\",\"data\":42.5}\n"
       "\n");
-  fake_network_service_.SetStringResponse(stream_body, 200);
+  fake_network_wrapper_.SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -274,7 +274,7 @@ TEST_F(FirebaseImplTest, WatchPatch) {
       "data: "
       "{\"path\":\"/bla/\",\"data\":{\"name1\":\"Alice\",\"name2\":\"Bob\"}}\n"
       "\n");
-  fake_network_service_.SetStringResponse(stream_body, 200);
+  fake_network_wrapper_.SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -295,7 +295,7 @@ TEST_F(FirebaseImplTest, WatchKeepAlive) {
       "event: keep-alive\n"
       "data: null\n"
       "\n");
-  fake_network_service_.SetStringResponse(stream_body, 200);
+  fake_network_wrapper_.SetStringResponse(stream_body, 200);
 
   firebase_.Watch("name", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -312,7 +312,7 @@ TEST_F(FirebaseImplTest, WatchCancel) {
       "event: cancel\n"
       "data: null\n"
       "\n");
-  fake_network_service_.SetStringResponse(stream_body, 200);
+  fake_network_wrapper_.SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -329,7 +329,7 @@ TEST_F(FirebaseImplTest, WatchAuthRevoked) {
       "event: auth_revoked\n"
       "data: credential is no longer valid\n"
       "\n");
-  fake_network_service_.SetStringResponse(stream_body, 200);
+  fake_network_wrapper_.SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -348,7 +348,7 @@ TEST_F(FirebaseImplTest, WatchErrorUnknownEvent) {
       "event: wild-animal-appears\n"
       "data: null\n"
       "\n");
-  fake_network_service_.SetStringResponse(stream_body, 200);
+  fake_network_wrapper_.SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -361,7 +361,7 @@ TEST_F(FirebaseImplTest, WatchErrorUnknownEvent) {
 }
 
 TEST_F(FirebaseImplTest, WatchHttpError) {
-  fake_network_service_.SetStringResponse("", 404);
+  fake_network_wrapper_.SetStringResponse("", 404);
 
   firebase_.Watch("/", {}, this);
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -380,7 +380,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
       "data: {\"path\":\"/\",\"data\":\"Alice\"}\n"
       "\n");
   socket::SocketPair socket;
-  fake_network_service_.SetSocketResponse(std::move(socket.socket1), 200);
+  fake_network_wrapper_.SetSocketResponse(std::move(socket.socket1), 200);
   firebase_.Watch("/", {}, this);
 
   EXPECT_TRUE(fsl::BlockingCopyFromString(event, socket.socket2));

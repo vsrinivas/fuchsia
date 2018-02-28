@@ -16,7 +16,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/firebase/firebase_impl.h"
-#include "peridot/lib/network/network_service_impl.h"
+#include "garnet/lib/network_wrapper/network_wrapper_impl.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace modular {
@@ -167,12 +167,12 @@ FirebaseModuleManifestSource::FirebaseModuleManifestSource(
     std::string prefix)
     : db_id_(db_id),
       prefix_(prefix),
-      network_service_(new ledger::NetworkServiceImpl(
+      network_wrapper_(new network_wrapper::NetworkWrapperImpl(
           std::move(task_runner),
           std::make_unique<backoff::ExponentialBackoff>(),
           std::move(network_service_factory))),
       client_(
-          new firebase::FirebaseImpl(network_service_.get(), db_id, prefix)),
+          new firebase::FirebaseImpl(network_wrapper_.get(), db_id, prefix)),
       weak_factory_(this) {}
 
 FirebaseModuleManifestSource::~FirebaseModuleManifestSource() {

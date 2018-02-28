@@ -16,7 +16,7 @@
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/status.h"
 #include "peridot/lib/firebase/watch_client.h"
-#include "peridot/lib/network/network_service.h"
+#include "garnet/lib/network_wrapper/network_wrapper.h"
 #include "peridot/lib/socket/socket_drainer_client.h"
 
 #include <rapidjson/document.h>
@@ -32,7 +32,7 @@ class FirebaseImpl : public Firebase {
   // |prefix| is a url prefix against which all requests will be made, without a
   // leading or trailing slash. (possible with slashes inside) If empty,
   // requests will be made against root of the database.
-  FirebaseImpl(ledger::NetworkService* network_service,
+  FirebaseImpl(network_wrapper::NetworkWrapper* network_wrapper,
                const std::string& db_id,
                const std::string& prefix);
   ~FirebaseImpl() override;
@@ -91,7 +91,7 @@ class FirebaseImpl : public Firebase {
                             const std::string& payload,
                             const char error_description[]);
 
-  ledger::NetworkService* const network_service_;
+  network_wrapper::NetworkWrapper* const network_wrapper_;
   // Api url against which requests are made, without a trailing slash.
   const std::string api_url_;
 

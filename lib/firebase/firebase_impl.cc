@@ -73,11 +73,11 @@ struct FirebaseImpl::WatchData {
 FirebaseImpl::WatchData::WatchData() {}
 FirebaseImpl::WatchData::~WatchData() {}
 
-FirebaseImpl::FirebaseImpl(ledger::NetworkService* network_service,
+FirebaseImpl::FirebaseImpl(network_wrapper::NetworkWrapper* network_wrapper,
                            const std::string& db_id,
                            const std::string& prefix)
-    : network_service_(network_service), api_url_(BuildApiUrl(db_id, prefix)) {
-  FXL_DCHECK(network_service_);
+    : network_wrapper_(network_wrapper), api_url_(BuildApiUrl(db_id, prefix)) {
+  FXL_DCHECK(network_wrapper_);
 }
 
 FirebaseImpl::~FirebaseImpl() {}
@@ -146,7 +146,7 @@ void FirebaseImpl::Watch(const std::string& key,
                          const std::vector<std::string>& query_params,
                          WatchClient* watch_client) {
   watch_data_[watch_client] = std::make_unique<WatchData>();
-  watch_data_[watch_client]->request.Reset(network_service_->Request(
+  watch_data_[watch_client]->request.Reset(network_wrapper_->Request(
       MakeRequest(BuildRequestUrl(key, query_params), "GET", "", true),
       [this, watch_client](network::URLResponsePtr response) {
         OnStream(watch_client, std::move(response));
@@ -190,7 +190,7 @@ void FirebaseImpl::Request(
     const std::string& method,
     const std::string& message,
     const std::function<void(Status status, std::string response)>& callback) {
-  requests_.emplace(network_service_->Request(
+  requests_.emplace(network_wrapper_->Request(
       MakeRequest(url, method, message),
       [this, callback](network::URLResponsePtr response) {
         OnResponse(callback, std::move(response));

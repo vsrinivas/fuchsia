@@ -19,7 +19,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/network/fidl/network_service.fidl.h"
-#include "peridot/lib/network/fake_network_service.h"
+#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 
 namespace gcs {
 namespace {
@@ -38,9 +38,9 @@ network::HttpHeaderPtr GetHeader(
 class CloudStorageImplTest : public gtest::TestWithMessageLoop {
  public:
   CloudStorageImplTest()
-      : fake_network_service_(message_loop_.task_runner()),
+      : fake_network_wrapper_(message_loop_.task_runner()),
         gcs_(message_loop_.task_runner(),
-             &fake_network_service_,
+             &fake_network_wrapper_,
              "project",
              "prefix") {}
   ~CloudStorageImplTest() override {}
@@ -60,7 +60,7 @@ class CloudStorageImplTest : public gtest::TestWithMessageLoop {
 
     server_response->headers.push_back(std::move(content_length_header));
 
-    fake_network_service_.SetResponse(std::move(server_response));
+    fake_network_wrapper_.SetResponse(std::move(server_response));
   }
 
   bool CreateFile(const std::string& content, std::string* path) {
@@ -70,7 +70,7 @@ class CloudStorageImplTest : public gtest::TestWithMessageLoop {
   }
 
   files::ScopedTempDir tmp_dir_;
-  ledger::FakeNetworkService fake_network_service_;
+  network_wrapper::FakeNetworkWrapper fake_network_wrapper_;
   CloudStorageImpl gcs_;
 
  private:
@@ -92,17 +92,17 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_EQ(
       "https://firebasestorage.googleapis.com"
       "/v0/b/project.appspot.com/o/prefixhello-world",
-      fake_network_service_.GetRequest()->url);
-  EXPECT_EQ("POST", fake_network_service_.GetRequest()->method);
-  EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_sized_buffer());
+      fake_network_wrapper_.GetRequest()->url);
+  EXPECT_EQ("POST", fake_network_wrapper_.GetRequest()->method);
+  EXPECT_TRUE(fake_network_wrapper_.GetRequest()->body->is_sized_buffer());
   std::string sent_content;
   EXPECT_TRUE(fsl::StringFromVmo(
-      fake_network_service_.GetRequest()->body->get_sized_buffer(),
+      fake_network_wrapper_.GetRequest()->body->get_sized_buffer(),
       &sent_content));
   EXPECT_EQ(content, sent_content);
 
   network::HttpHeaderPtr content_length_header =
-      GetHeader(fake_network_service_.GetRequest()->headers, "content-length");
+      GetHeader(fake_network_wrapper_.GetRequest()->headers, "content-length");
   EXPECT_TRUE(content_length_header);
   unsigned content_length;
   EXPECT_TRUE(fxl::StringToNumberWithError(content_length_header->value.get(),
@@ -122,7 +122,7 @@ TEST_F(CloudStorageImplTest, TestUploadAuth) {
   ASSERT_FALSE(RunLoopWithTimeout());
 
   network::HttpHeaderPtr authorization_header =
-      GetHeader(fake_network_service_.GetRequest()->headers, "authorization");
+      GetHeader(fake_network_wrapper_.GetRequest()->headers, "authorization");
   EXPECT_TRUE(authorization_header);
   EXPECT_EQ("Bearer this-is-a-token", authorization_header->value);
 }
@@ -156,8 +156,8 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   EXPECT_EQ(
       "https://firebasestorage.googleapis.com"
       "/v0/b/project.appspot.com/o/prefixhello-world?alt=media",
-      fake_network_service_.GetRequest()->url);
-  EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
+      fake_network_wrapper_.GetRequest()->url);
+  EXPECT_EQ("GET", fake_network_wrapper_.GetRequest()->method);
 
   std::string downloaded_content;
   EXPECT_TRUE(fsl::BlockingCopyToString(std::move(data), &downloaded_content));
@@ -177,7 +177,7 @@ TEST_F(CloudStorageImplTest, TestDownloadAuth) {
   ASSERT_FALSE(RunLoopWithTimeout());
 
   network::HttpHeaderPtr authorization_header =
-      GetHeader(fake_network_service_.GetRequest()->headers, "authorization");
+      GetHeader(fake_network_wrapper_.GetRequest()->headers, "authorization");
   EXPECT_TRUE(authorization_header);
   EXPECT_EQ("Bearer this-is-a-token", authorization_header->value);
 }
@@ -196,8 +196,8 @@ TEST_F(CloudStorageImplTest, TestDownloadNotFound) {
   EXPECT_EQ(
       "https://firebasestorage.googleapis.com"
       "/v0/b/project.appspot.com/o/prefixwhoa?alt=media",
-      fake_network_service_.GetRequest()->url);
-  EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
+      fake_network_wrapper_.GetRequest()->url);
+  EXPECT_EQ("GET", fake_network_wrapper_.GetRequest()->method);
 }
 
 TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {

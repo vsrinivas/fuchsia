@@ -10,7 +10,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
-#include "peridot/lib/network/fake_network_service.h"
+#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 
 namespace cloud_provider_firebase {
 
@@ -36,10 +36,10 @@ std::unique_ptr<firebase_auth::FirebaseAuth> InitFirebaseAuth(
 class CloudProviderImplTest : public gtest::TestWithMessageLoop {
  public:
   CloudProviderImplTest()
-      : network_service_(message_loop_.task_runner()),
+      : network_wrapper_(message_loop_.task_runner()),
         cloud_provider_impl_(
             message_loop_.task_runner(),
-            &network_service_,
+            &network_wrapper_,
             "user_id",
             GetFirebaseConfig(),
             InitFirebaseAuth(message_loop_.task_runner(), &firebase_auth_),
@@ -49,7 +49,7 @@ class CloudProviderImplTest : public gtest::TestWithMessageLoop {
  protected:
   firebase_auth::TestFirebaseAuth* firebase_auth_ = nullptr;
 
-  ledger::FakeNetworkService network_service_;
+  network_wrapper::FakeNetworkWrapper network_wrapper_;
   cloud_provider::CloudProviderPtr cloud_provider_;
   CloudProviderImpl cloud_provider_impl_;
 

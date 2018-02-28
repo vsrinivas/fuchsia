@@ -13,14 +13,14 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/app/cloud_provider_impl.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
-#include "peridot/lib/network/network_service.h"
+#include "garnet/lib/network_wrapper/network_wrapper.h"
 
 namespace cloud_provider_firebase {
 
 class FactoryImpl : public Factory {
  public:
   explicit FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner,
-                       ledger::NetworkService* network_service);
+                       network_wrapper::NetworkWrapper* network_wrapper);
 
   ~FactoryImpl() override;
 
@@ -33,7 +33,7 @@ class FactoryImpl : public Factory {
       const GetCloudProviderCallback& callback) override;
 
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
-  ledger::NetworkService* const network_service_;
+  network_wrapper::NetworkWrapper* const network_wrapper_;
   callback::CancellableContainer token_requests_;
   callback::AutoCleanableSet<CloudProviderImpl> providers_;
 

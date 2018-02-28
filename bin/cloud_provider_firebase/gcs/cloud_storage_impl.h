@@ -11,7 +11,7 @@
 #include "garnet/lib/callback/cancellable.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
-#include "peridot/lib/network/network_service.h"
+#include "garnet/lib/network_wrapper/network_wrapper.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 
@@ -22,7 +22,7 @@ namespace gcs {
 class CloudStorageImpl : public CloudStorage {
  public:
   CloudStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                   ledger::NetworkService* network_service,
+                   network_wrapper::NetworkWrapper* network_wrapper,
                    const std::string& firebase_id,
                    const std::string& cloud_prefix);
   ~CloudStorageImpl() override;
@@ -59,7 +59,7 @@ class CloudStorageImpl : public CloudStorage {
       network::URLResponsePtr response);
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
-  ledger::NetworkService* const network_service_;
+  network_wrapper::NetworkWrapper* const network_wrapper_;
   const std::string url_prefix_;
   callback::CancellableContainer requests_;
 };

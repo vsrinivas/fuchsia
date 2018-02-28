@@ -122,9 +122,9 @@ struct ServiceAccountTokenProvider::CachedToken {
 };
 
 ServiceAccountTokenProvider::ServiceAccountTokenProvider(
-    ledger::NetworkService* network_service,
+    network_wrapper::NetworkWrapper* network_wrapper,
     std::string user_id)
-    : network_service_(network_service), user_id_(std::move(user_id)) {}
+    : network_wrapper_(network_wrapper), user_id_(std::move(user_id)) {}
 
 ServiceAccountTokenProvider::~ServiceAccountTokenProvider() {
   for (const auto& pair : in_progress_callbacks_) {
@@ -222,7 +222,7 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
 
   in_progress_callbacks_[firebase_api_key].push_back(callback);
 
-  in_progress_requests_.emplace(network_service_->Request(
+  in_progress_requests_.emplace(network_wrapper_->Request(
       [this, firebase_api_key = firebase_api_key.get(),
        custom_token = std::move(custom_token)] {
         return GetIdentityRequest(firebase_api_key, custom_token);
