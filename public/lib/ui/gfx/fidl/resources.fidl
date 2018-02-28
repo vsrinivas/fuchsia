@@ -43,6 +43,7 @@ union ResourceArgs {
   // Scene representation and display.
   SceneArgs scene;
   CameraArgs camera;
+  StereoCameraArgs stereo_camera;
   RendererArgs renderer;
 
   // Lighting.
@@ -130,18 +131,29 @@ struct LayerArgs {
 struct SceneArgs {
 };
 
-// A Camera is used to render a Scene from a particular Viewpoint.  This is
-// achieved by setting a Renderer to use the camera.  The following commands
-// may be applied to a Camera (public/lib/ui/gfx/fidl/commands.fidl):
-//   - SetTransform
+// A Camera is used to render a Scene from a particular viewpoint.  This is
+// achieved by setting a Renderer to use the camera.  The following operations
+// may be applied to a Camera (see ops.fidl):
+//   - SetCameraTransform
 //   - SetCameraProjection
+//   - SetCameraPoseBuffer
 struct CameraArgs {
   // The scene that the camera is viewing.
   uint32 scene_id;
 };
 
-// A Renderer renders a Scene via a Camera.  The following commands may be
-// applied to a Renderer (public/lib/ui/gfx/fidl/commands.fidl):
+// A StereoCamera is a Camera that renders the scene in side-by-side stereo.
+// The following operations may be applied to a StereoCamera but not a Camera:
+//   - SetStereoCameraProjection
+// Additionally, any operation which can be applied to a Camera can also be
+// applied to a StereoCamera.
+struct StereoCameraArgs {
+  // The scene that the camera is viewing.
+  uint32 scene_id;
+};
+
+// A Renderer renders a Scene via a Camera.  The following operations may be
+// applied to a Renderer (see ops.fidl):
 //   - SetCamera
 //   - SetRendererParam
 struct RendererArgs {

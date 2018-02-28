@@ -54,6 +54,8 @@ std::ostream& operator<<(std::ostream& stream,
       return stream << "SET_CAMERA";
     case Command::Tag::SET_CAMERA_TRANSFORM:
       return stream << "SET_CAMERA_TRANSFORM";
+    case Command::Tag::SET_STEREO_CAMERA_PROJECTION:
+      return stream << "SET_STEREO_CAMERA_PROJECTION";
     case Command::Tag::SET_CAMERA_PROJECTION:
       return stream << "SET_CAMERA_PROJECTION";
     case ui::gfx::Command::Tag::SET_CAMERA_POSE_BUFFER:
@@ -114,6 +116,9 @@ std::ostream& operator<<(std::ostream& stream,
       break;
     case ResourceArgs::Tag::CAMERA:
       stream << "Camera";
+      break;
+    case ResourceArgs::Tag::STEREO_CAMERA:
+      stream << "StereoCamera";
       break;
     case ResourceArgs::Tag::RENDERER:
       stream << "Renderer";

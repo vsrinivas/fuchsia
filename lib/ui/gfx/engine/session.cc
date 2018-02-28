@@ -137,6 +137,9 @@ bool Session::ApplyCommand(const ui::gfx::CommandPtr& command) {
     case ui::gfx::Command::Tag::SET_CAMERA_PROJECTION:
       return ApplySetCameraProjectionCommand(
           command->get_set_camera_projection());
+    case ui::gfx::Command::Tag::SET_STEREO_CAMERA_PROJECTION:
+      return ApplySetStereoCameraProjectionCommand(
+          command->get_set_stereo_camera_projection());
     case ui::gfx::Command::Tag::SET_CAMERA_POSE_BUFFER:
       return ApplySetCameraPoseBufferCommand(
           command->get_set_camera_pose_buffer());
@@ -201,6 +204,9 @@ bool Session::ApplyCreateResourceCommand(
       return ApplyCreateScene(id, command->resource->get_scene());
     case ui::gfx::ResourceArgs::Tag::CAMERA:
       return ApplyCreateCamera(id, command->resource->get_camera());
+    case ui::gfx::ResourceArgs::Tag::STEREO_CAMERA:
+      return ApplyCreateStereoCamera(id,
+                                     command->resource->get_stereo_camera());
     case ui::gfx::ResourceArgs::Tag::RENDERER:
       return ApplyCreateRenderer(id, command->resource->get_renderer());
     case ui::gfx::ResourceArgs::Tag::AMBIENT_LIGHT:
@@ -598,6 +604,14 @@ bool Session::ApplySetCameraProjectionCommand(
   return false;
 }
 
+bool Session::ApplySetStereoCameraProjectionCommand(
+    const ui::gfx::SetStereoCameraProjectionCommandPtr& command) {
+  error_reporter_->ERROR() << "scenic::gfx::Session::"
+                              "ApplySetStereoCameraProjectionCommand(): "
+                              "unimplemented.";
+  return false;
+}
+
 bool Session::ApplySetCameraPoseBufferCommand(
     const ui::gfx::SetCameraPoseBufferCommandPtr& command) {
   if (command->base_time > zx::clock::get(ZX_CLOCK_MONOTONIC).get()) {
@@ -759,6 +773,14 @@ bool Session::ApplyCreateCamera(scenic::ResourceId id,
                                 const ui::gfx::CameraArgsPtr& args) {
   auto camera = CreateCamera(id, args);
   return camera ? resources_.AddResource(id, std::move(camera)) : false;
+}
+
+bool Session::ApplyCreateStereoCamera(
+    scenic::ResourceId id,
+    const ui::gfx::StereoCameraArgsPtr& args) {
+  error_reporter_->ERROR()
+      << "scene_manager::Session::ApplyCreateStereoCamera() unimplemented";
+  return false;
 }
 
 bool Session::ApplyCreateRenderer(scenic::ResourceId id,

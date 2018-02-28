@@ -42,6 +42,7 @@ union Command {
   SetCameraCommand set_camera;
   SetCameraTransformCommand set_camera_transform;
   SetCameraProjectionCommand set_camera_projection;
+  SetStereoCameraProjectionCommand set_stereo_camera_projection;
   SetCameraPoseBufferCommand set_camera_pose_buffer;
   SetLightColorCommand set_light_color;
   SetLightDirectionCommand set_light_direction;
@@ -354,6 +355,7 @@ struct SetCameraCommand {
 };
 
 // Sets a camera's view matrix.
+// This operation can be applied to both Cameras and StereoCameras.
 //
 // Constraints:
 // - |camera_id| refs a |Camera|.
@@ -368,9 +370,10 @@ struct SetCameraTransformCommand {
 };
 
 // Sets a camera's projection matrix.
+// This operation cannot be applied to a StereoCamera.
 //
 // Constraints:
-// - |camera_id| refs a |Camera|.
+// - |camera_id| refs a |Camera| that is not a |StereoCamera|.
 // - |fovy| is the Y-axis field of view, in radians.
 //
 // NOTE: A default orthographic projection is specified by setting |fovy| to
@@ -380,7 +383,24 @@ struct SetCameraProjectionCommand {
   FloatValue fovy;  // Y-axis field of view, in radians.
 };
 
+// Sets a StereoCamera's projection matrices.
+// This operation can only be applied to a StereoCamera.
+//
+// Constraints:
+// - |camera_id| refs a |StereoCamera|.
+// - |left_projection| is the projection matrix for the left eye.
+// - |right_projection| is the projection matrix for the right eye.
+//
+// These projection matrices may also contain a transform in camera space for
+// their eye if needed.
+struct SetStereoCameraProjectionCommand {
+  uint32 camera_id;
+  Matrix4Value left_projection;
+  Matrix4Value right_projection;
+};
+
 // Sets the "pose buffer" for the camera identified by |camera_id|.
+// This operation can be applied to both Cameras and StereoCameras.
 //
 // This will override any position and rotation set for the camera and will
 // make it take its position and rotation from the pose buffer each frame

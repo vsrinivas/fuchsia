@@ -155,6 +155,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
       const ui::gfx::SetCameraTransformCommandPtr& command);
   bool ApplySetCameraProjectionCommand(
       const ui::gfx::SetCameraProjectionCommandPtr& command);
+  bool ApplySetStereoCameraProjectionCommand(
+      const ui::gfx::SetStereoCameraProjectionCommandPtr& command);
   bool ApplySetCameraPoseBufferCommand(
       const ui::gfx::SetCameraPoseBufferCommandPtr& command);
   bool ApplySetLightColorCommand(
@@ -192,6 +194,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                         const ui::gfx::SceneArgsPtr& args);
   bool ApplyCreateCamera(scenic::ResourceId id,
                          const ui::gfx::CameraArgsPtr& args);
+  bool ApplyCreateStereoCamera(scenic::ResourceId id,
+                               const ui::gfx::StereoCameraArgsPtr& args);
   bool ApplyCreateRenderer(scenic::ResourceId id,
                            const ui::gfx::RendererArgsPtr& args);
   bool ApplyCreateAmbientLight(scenic::ResourceId id,
