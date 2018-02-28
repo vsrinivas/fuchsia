@@ -116,8 +116,7 @@ struct Interface : public Decl {
             std::unique_ptr<raw::Type> type;
             std::unique_ptr<raw::Identifier> name;
             // TODO(TO-758) Compute these.
-            TypeShape typeshape;
-            uint64_t offset = 0;
+            FieldShape fieldshape;
         };
 
         Method(Method&&) = default;
@@ -160,8 +159,7 @@ struct Struct : public Decl {
         std::unique_ptr<raw::Identifier> name;
         std::unique_ptr<raw::Constant> maybe_default_value;
         // TODO(TO-758) Compute these.
-        TypeShape typeshape;
-        uint64_t offset = 0;
+        FieldShape fieldshape;
     };
 
     Struct(Name name, std::vector<Member> members)
@@ -178,8 +176,7 @@ struct Union : public Decl {
         std::unique_ptr<raw::Type> type;
         std::unique_ptr<raw::Identifier> name;
         // TODO(TO-758) Compute these.
-        TypeShape typeshape;
-        uint64_t offset = 0;
+        FieldShape fieldshape;
     };
 
     Union(Name name, std::vector<Member> members)

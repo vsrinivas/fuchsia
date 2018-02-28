@@ -53,11 +53,13 @@ uint64_t AlignTo(uint64_t size, uint64_t alignment) {
     return size;
 }
 
-TypeShape CStructTypeShape(std::vector<TypeShape> member_typeshapes) {
+TypeShape CStructTypeShape(std::vector<FieldShape*>* fields) {
     uint64_t size = 0u;
     uint64_t alignment = 1u;
 
-    for (const auto& typeshape : member_typeshapes) {
+    for (FieldShape* field : *fields) {
+        field->SetOffset(size);
+        TypeShape typeshape = field->Typeshape();
         alignment = std::max(alignment, typeshape.Alignment());
         size = AlignTo(size, typeshape.Alignment());
         size += typeshape.Size();
@@ -66,43 +68,39 @@ TypeShape CStructTypeShape(std::vector<TypeShape> member_typeshapes) {
     return TypeShape(size, alignment);
 }
 
-TypeShape FidlStructTypeShape(std::vector<TypeShape> member_typeshapes) {
-    // TODO(kulakowski) Fit-sort members.
-    return CStructTypeShape(std::move(member_typeshapes));
-}
-
-TypeShape CUnionTypeShape(std::vector<TypeShape> member_typeshapes) {
+TypeShape CUnionTypeShape(const std::vector<flat::Union::Member>& members) {
     uint64_t size = 0u;
     uint64_t alignment = 1u;
-    for (const auto& typeshape : member_typeshapes) {
-        size = std::max(size, typeshape.Size());
-        alignment = std::max(alignment, typeshape.Alignment());
+    for (const auto& member : members) {
+        const auto& fieldshape = member.fieldshape;
+        size = std::max(size, fieldshape.Size());
+        alignment = std::max(alignment, fieldshape.Alignment());
     }
     size = AlignTo(size, alignment);
     return TypeShape(size, alignment);
 }
 
-TypeShape FidlUnionTypeShape(std::vector<TypeShape> member_typeshapes) {
-    std::vector<TypeShape> fidl_union;
-    fidl_union.push_back(kUint32TypeShape);
-    fidl_union.push_back(CUnionTypeShape(std::move(member_typeshapes)));
-    return CStructTypeShape(std::move(fidl_union));
+TypeShape FidlStructTypeShape(std::vector<FieldShape*>* fields) {
+    // TODO(kulakowski) Fit-sort members.
+    return CStructTypeShape(fields);
 }
 
 TypeShape ArrayTypeShape(TypeShape element, uint64_t count) {
     return TypeShape(element.Size() * count, element.Alignment());
 }
 
-TypeShape VectorTypeShape(TypeShape element, uint64_t count) {
-    auto header_shape =
-        CStructTypeShape(std::vector<TypeShape>({kUint64TypeShape, kPointerTypeShape}));
-    return header_shape;
+TypeShape VectorTypeShape() {
+    auto size = FieldShape(kUint64TypeShape);
+    auto data = FieldShape(kPointerTypeShape);
+    std::vector<FieldShape*> header{&size, &data};
+    return CStructTypeShape(&header);
 }
 
-TypeShape StringTypeShape(uint64_t count) {
-    auto header_shape =
-        CStructTypeShape(std::vector<TypeShape>({kUint64TypeShape, kPointerTypeShape}));
-    return header_shape;
+TypeShape StringTypeShape() {
+    auto size = FieldShape(kUint64TypeShape);
+    auto data = FieldShape(kPointerTypeShape);
+    std::vector<FieldShape*> header{&size, &data};
+    return CStructTypeShape(&header);
 }
 
 } // namespace
@@ -480,7 +478,7 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             for (auto& param : method.maybe_request) {
                 if (!request_scope.Insert(param.name->location.data()))
                     return false;
-                if (!ResolveType(param.type.get(), &param.typeshape))
+                if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
             }
         }
@@ -489,7 +487,7 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             for (auto& param : method.maybe_response) {
                 if (!response_scope.Insert(param.name->location.data()))
                     return false;
-                if (!ResolveType(param.type.get(), &param.typeshape))
+                if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
             }
         }
@@ -499,32 +497,41 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
 
 bool Library::ResolveStruct(Struct* struct_declaration) {
     Scope<StringView> scope;
-    std::vector<TypeShape> member_typeshapes;
+    std::vector<FieldShape*> fidl_struct;
     for (auto& member : struct_declaration->members) {
         if (!scope.Insert(member.name->location.data()))
             return false;
-        if (!ResolveType(member.type.get(), &member.typeshape))
+        if (!ResolveType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
-        member_typeshapes.push_back(member.typeshape);
+        fidl_struct.push_back(&member.fieldshape);
     }
 
-    struct_declaration->typeshape = FidlStructTypeShape(std::move(member_typeshapes));
+    struct_declaration->typeshape = FidlStructTypeShape(&fidl_struct);
 
     return true;
 }
 
 bool Library::ResolveUnion(Union* union_declaration) {
     Scope<StringView> scope;
-    std::vector<TypeShape> member_typeshapes;
     for (auto& member : union_declaration->members) {
         if (!scope.Insert(member.name->location.data()))
             return false;
-        if (!ResolveType(member.type.get(), &member.typeshape))
+        if (!ResolveType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
-        member_typeshapes.push_back(member.typeshape);
     }
 
-    union_declaration->typeshape = FidlUnionTypeShape(std::move(member_typeshapes));
+    auto tag = FieldShape(kUint32TypeShape);
+    auto members = FieldShape(CUnionTypeShape(union_declaration->members));
+    std::vector<FieldShape*> fidl_union = {&tag, &members};
+
+    union_declaration->typeshape = CStructTypeShape(&fidl_union);
+
+    // This is either 4 or 8, depending on whether any union members
+    // have alignment 8.
+    auto offset = members.Offset();
+    for (auto& member : union_declaration->members) {
+        member.fieldshape.SetOffset(offset);
+    }
 
     return true;
 }
@@ -611,7 +618,7 @@ bool Library::ResolveVectorType(const raw::VectorType& vector_type, TypeShape* o
             return false;
         }
     }
-    *out_typeshape = VectorTypeShape(element_typeshape, element_count);
+    *out_typeshape = VectorTypeShape();
     return true;
 }
 
@@ -625,7 +632,7 @@ bool Library::ResolveStringType(const raw::StringType& string_type, TypeShape* o
             return false;
         }
     }
-    *out_typeshape = StringTypeShape(byte_count);
+    *out_typeshape = StringTypeShape();
     return true;
 }
 

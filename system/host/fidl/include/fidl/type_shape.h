@@ -25,4 +25,26 @@ private:
     uint64_t alignment_;
 };
 
+class FieldShape {
+public:
+    explicit FieldShape(TypeShape typeshape, uint64_t offset = 0u)
+        : typeshape_(typeshape),
+          offset_(offset) {}
+    FieldShape()
+        : FieldShape(TypeShape()) {}
+
+    TypeShape& Typeshape() { return typeshape_; }
+
+    uint64_t Size() const { return typeshape_.Size(); }
+    uint64_t Alignment() const { return typeshape_.Alignment(); }
+    uint64_t Offset() const { return offset_; }
+
+    void SetTypeshape(TypeShape typeshape) { typeshape_ = typeshape; }
+    void SetOffset(uint64_t offset) { offset_ = offset; }
+
+private:
+    TypeShape typeshape_;
+    uint64_t offset_;
+};
+
 #endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TYPE_SHAPE_H_
