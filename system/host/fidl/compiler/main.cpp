@@ -23,22 +23,21 @@
 namespace {
 
 [[noreturn]] void Usage() {
-    std::cout <<
-        "fidl usage:\n"
-        "    fidl [--c-header HEADER_PATH]\n"
-        "         [--json JSON_PATH]\n"
-        "         --files [FIDL_FILE...]\n"
-        "    * If no output types are provided, the FIDL_FILES are parsed and\n"
-        "      compiled, but no output is produced. Otherwise:\n"
-        "    * If --c-header is provided, C structures are generated\n"
-        "        into HEADER_PATH.\n"
-        "    * If --json is provided, JSON intermediate data is generated\n"
-        "        into JSON_PATH.\n"
-        "    The --file [FIDL_FILE...] arguments can also be provided via a\n"
-        "    response file, denoted as `@filepath'. The contents of the file at\n"
-        "    `filepath' will be interpreted as a whitespace-delimited list\n"
-        "    of files to parse. Response files cannot be nested, and must be.\n"
-        "    the last argument.\n";
+    std::cout << "fidl usage:\n"
+                 "    fidl [--c-header HEADER_PATH]\n"
+                 "         [--json JSON_PATH]\n"
+                 "         --files [FIDL_FILE...]\n"
+                 "    * If no output types are provided, the FIDL_FILES are parsed and\n"
+                 "      compiled, but no output is produced. Otherwise:\n"
+                 "    * If --c-header is provided, C structures are generated\n"
+                 "        into HEADER_PATH.\n"
+                 "    * If --json is provided, JSON intermediate data is generated\n"
+                 "        into JSON_PATH.\n"
+                 "    The --file [FIDL_FILE...] arguments can also be provided via a\n"
+                 "    response file, denoted as `@filepath'. The contents of the file at\n"
+                 "    `filepath' will be interpreted as a whitespace-delimited list\n"
+                 "    of files to parse. Response files cannot be nested, and must be.\n"
+                 "    the last argument.\n";
     std::cout.flush();
     exit(1);
 }
@@ -91,7 +90,8 @@ private:
 
 class ResponseFileArguments : public Arguments {
 public:
-    ResponseFileArguments(fidl::StringView filename) : file_(Open(filename, std::ios::in)) {
+    ResponseFileArguments(fidl::StringView filename)
+        : file_(Open(filename, std::ios::in)) {
         ConsumeWhitespace();
     }
 

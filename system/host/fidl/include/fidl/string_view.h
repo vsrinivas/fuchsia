@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_STRING_VIEW_H_
+#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_STRING_VIEW_H_
 
 #include <stddef.h>
 #include <string.h>
@@ -13,11 +14,15 @@ namespace fidl {
 
 class StringView {
 public:
-    constexpr StringView() : data_(nullptr), size_(0u) {}
+    constexpr StringView()
+        : data_(nullptr), size_(0u) {}
     StringView(const StringView& view) = default;
-    constexpr StringView(const std::string& string) : StringView(string.data(), string.size()) {}
-    constexpr StringView(const char* data, size_t size) : data_(data), size_(size) {}
-    StringView(const char* string) : data_(string), size_(strlen(string)) {}
+    constexpr StringView(const std::string& string)
+        : StringView(string.data(), string.size()) {}
+    constexpr StringView(const char* data, size_t size)
+        : data_(data), size_(size) {}
+    StringView(const char* string)
+        : data_(string), size_(strlen(string)) {}
 
     operator std::string() const {
         return std::string(data(), size());
@@ -52,3 +57,5 @@ private:
 };
 
 } // namespace fidl
+
+#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_STRING_VIEW_H_

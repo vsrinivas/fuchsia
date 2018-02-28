@@ -44,28 +44,27 @@ enum {
 } // namespace
 
 Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
-        : lexer_(lexer)
-        , error_reporter_(error_reporter) {
+    : lexer_(lexer), error_reporter_(error_reporter) {
     handle_subtype_table_ = {
-        { "process", types::HandleSubtype::Process },
-        { "thread", types::HandleSubtype::Thread },
-        { "vmo", types::HandleSubtype::Vmo },
-        { "channel", types::HandleSubtype::Channel },
-        { "event", types::HandleSubtype::Event },
-        { "port", types::HandleSubtype::Port },
-        { "interrupt", types::HandleSubtype::Interrupt },
-        { "iomap", types::HandleSubtype::Iomap },
-        { "pci", types::HandleSubtype::Pci },
-        { "log", types::HandleSubtype::Log },
-        { "socket", types::HandleSubtype::Socket },
-        { "resource", types::HandleSubtype::Resource },
-        { "eventpair", types::HandleSubtype::Eventpair },
-        { "job", types::HandleSubtype::Job },
-        { "vmar", types::HandleSubtype::Vmar },
-        { "fifo", types::HandleSubtype::Fifo },
-        { "hypervisor", types::HandleSubtype::Hypervisor },
-        { "guest", types::HandleSubtype::Guest },
-        { "timer", types::HandleSubtype::Timer },
+        {"process", types::HandleSubtype::Process},
+        {"thread", types::HandleSubtype::Thread},
+        {"vmo", types::HandleSubtype::Vmo},
+        {"channel", types::HandleSubtype::Channel},
+        {"event", types::HandleSubtype::Event},
+        {"port", types::HandleSubtype::Port},
+        {"interrupt", types::HandleSubtype::Interrupt},
+        {"iomap", types::HandleSubtype::Iomap},
+        {"pci", types::HandleSubtype::Pci},
+        {"log", types::HandleSubtype::Log},
+        {"socket", types::HandleSubtype::Socket},
+        {"resource", types::HandleSubtype::Resource},
+        {"eventpair", types::HandleSubtype::Eventpair},
+        {"job", types::HandleSubtype::Job},
+        {"vmar", types::HandleSubtype::Vmar},
+        {"fifo", types::HandleSubtype::Fifo},
+        {"hypervisor", types::HandleSubtype::Hypervisor},
+        {"guest", types::HandleSubtype::Guest},
+        {"timer", types::HandleSubtype::Timer},
     };
 
     last_token_ = Lex();

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_SOURCE_LOCATION_H_
+#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_SOURCE_LOCATION_H_
 
 #include <stdint.h>
 
@@ -32,10 +33,13 @@ public:
     StringView SourceLine(int* line_number_out) const;
 
 private:
-    SourceLocation() : data_(StringView()), source_file_(nullptr) {}
+    SourceLocation()
+        : data_(StringView()), source_file_(nullptr) {}
 
     StringView data_;
     const SourceFile* source_file_;
 };
 
 } // namespace fidl
+
+#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_SOURCE_LOCATION_H_

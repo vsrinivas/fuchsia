@@ -9,8 +9,10 @@
 
 class TypeShape {
 public:
-    constexpr TypeShape(uint64_t size, uint64_t alignment) : size_(size), alignment_(alignment) {}
-    constexpr TypeShape() : TypeShape(0u, 0u) {}
+    constexpr TypeShape(uint64_t size, uint64_t alignment)
+        : size_(size), alignment_(alignment) {}
+    constexpr TypeShape()
+        : TypeShape(0u, 0u) {}
 
     TypeShape(const TypeShape&) = default;
     TypeShape& operator=(const TypeShape&) = default;

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TOKEN_H_
+#define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TOKEN_H_
 
 #include <stdint.h>
 
@@ -26,12 +27,13 @@ public:
     Token(SourceLocation location, Kind kind)
         : location_(location), kind_(kind) {}
 
-    Token() : Token(SourceLocation::Nowhere(), Token::Kind::NotAToken) {}
+    Token()
+        : Token(SourceLocation::Nowhere(), Token::Kind::NotAToken) {}
 
     static const char* Name(Kind kind) {
         switch (kind) {
-#define TOKEN(Name)                                                                                \
-    case fidl::Token::Kind::Name:                                                                  \
+#define TOKEN(Name)               \
+    case fidl::Token::Kind::Name: \
         return #Name;
 #include "fidl/token_definitions.inc"
         }
@@ -47,3 +49,5 @@ private:
 };
 
 } // namespace fidl
+
+#endif // ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_TOKEN_H_

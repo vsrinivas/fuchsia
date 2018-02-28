@@ -11,9 +11,9 @@
 
 namespace fidl {
 
-SourceFile::SourceFile(std::string filename, std::string data) :
-    filename_(std::move(filename)),
-    data_(std::move(data)) {
+SourceFile::SourceFile(std::string filename, std::string data)
+    : filename_(std::move(filename)),
+      data_(std::move(data)) {
     size_t size = 0u;
     auto start_of_line = data_.cbegin();
 

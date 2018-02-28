@@ -27,7 +27,8 @@ namespace fidl {
 
 class CGenerator {
 public:
-    explicit CGenerator(flat::Library* library) : library_(library) {}
+    explicit CGenerator(flat::Library* library)
+        : library_(library) {}
 
     ~CGenerator() = default;
 
@@ -51,7 +52,7 @@ public:
         std::vector<uint32_t> array_counts;
     };
 
- private:
+private:
     struct NamedConst {
         std::string name;
         const flat::Const& const_info;
