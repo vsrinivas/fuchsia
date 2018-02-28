@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 config("fidl_config") {
-  include_dirs = [ "." ]
+  include_dirs = [ "include" ]
   visibility = [ ":*" ]
 }
 
