@@ -49,6 +49,9 @@ This directory can be a subdirectory of `${LLVM_SRCDIR}` so that you
 use `LLVM_SRCDIR=..` or it can be elsewhere, with `LLVM_SRCDIR` set
 to an absolute or relative directory path from the build directory.
 
+You need CMake version 3.8.0 and newer to execute these commands.
+This was the first version to support Fuchsia.
+
 ```bash
 cmake -G Ninja -DFUCHSIA_x86_64_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DFUCHSIA_aarch64_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -C ${LLVM_SRCDIR}/tools/clang/cmake/caches/Fuchsia.cmake ${LLVM_SRCDIR}
 ninja stage2-distribution
@@ -72,9 +75,6 @@ CLANG_TOOLCHAIN_PREFIX=${LLVM_OBJDIR}/tools/clang/stage2-bins/bin/
 ```
 
 (Note: that trailing slash is important.)
-
-You need CMake version 3.8.0 and newer to execute these commands.
-This was the first version to support Fuchsia.
 
 Note that the second stage build uses LTO (Link Time Optimization) to achieve
 better runtime performance of the final compiler. LTO often requires a large
