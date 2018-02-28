@@ -41,6 +41,14 @@ config("safestack") {
   ldflags = cflags
 }
 
+config("scudo") {
+  cflags = [
+    "-fsanitize=scudo",
+  ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
 # ccache, at least in some configurations, caches preprocessed content. This
 # means that by the time the compiler sees it, macros are unrolled. A number
 # of gcc and clang diagnostics are conditioned on whether the source is part

@@ -35,6 +35,7 @@ action("generate_clang_toolchain_manifest") {
     "asan/libunwind.so.1",
     "libclang_rt.asan-${clang_cpu}.so",
     "libclang_rt.ubsan_standalone-${clang_cpu}.so",
+    "libclang_rt.scudo-${clang_cpu}.so",
   ]
 }
 
