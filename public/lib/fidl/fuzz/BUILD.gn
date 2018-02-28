@@ -2,31 +2,32 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
+import("//build/test.gni")
+
 declare_args() {
   enable_ossfuzz = false
 }
 
-executable("fidl-fuzzer") {
+test("compiler") {
   sources = [
-    "fuzzer.cc",
-    "test.cc",
-    "test.h",
+    "compiler.cc",
   ]
+  configs += [ "//build/config/sanitizers:asan" ]
   deps = [
     "//zircon/system/host/fidl:compiler",
   ]
-
-  cflags = [
-    "-fsanitize=address",
-    "-fsanitize-coverage=trace-pc-guard",
-  ]
-
-  ldflags = cflags
-
   if (enable_ossfuzz) {
     libs = [ "FuzzingEngine" ]
     lib_dirs = [ "/usr/lib" ]
   } else {
-    deps += [ "//third_party/llvm/lib/Fuzzer" ]
+    configs += [ "//build/config/sanitizers:fuzzer" ]
   }
+}
+
+group("host") {
+  testonly = true
+  deps = [
+    ":compiler($host_toolchain)",
+  ]
 }
