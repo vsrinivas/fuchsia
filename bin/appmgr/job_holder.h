@@ -73,12 +73,6 @@ class JobHolder {
 
   ApplicationRunnerHolder* GetOrCreateRunner(const std::string& runner);
 
-  void CreateApplicationWithRunner(
-      ApplicationPackagePtr package,
-      ApplicationLaunchInfoPtr launch_info,
-      std::string runner,
-      f1dl::InterfaceRequest<ApplicationController> controller,
-      fxl::RefPtr<ApplicationNamespace> application_namespace);
   void CreateApplicationWithProcess(
       ApplicationPackagePtr package,
       ApplicationLaunchInfoPtr launch_info,

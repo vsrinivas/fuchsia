@@ -10,6 +10,7 @@
 namespace archive {
 
 constexpr uint64_t kMagic = 0x11c5abad480bbfc8;
+constexpr uint64_t kMagicLength = 8u;
 constexpr uint64_t kDirType = 0x2d2d2d2d2d524944;
 constexpr uint64_t kDirnamesType = 0x53454d414e524944;
 

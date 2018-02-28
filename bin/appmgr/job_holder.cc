@@ -36,9 +36,6 @@ namespace {
 
 constexpr zx_rights_t kChildJobRights = ZX_RIGHTS_BASIC | ZX_RIGHTS_IO;
 
-constexpr char kFuchsiaMagic[] = "#!fuchsia ";
-constexpr size_t kFuchsiaMagicLength = sizeof(kFuchsiaMagic) - 1;
-constexpr size_t kMaxShebangLength = 2048;
 constexpr char kNumberedLabelFormat[] = "env-%d";
 constexpr char kAppPath[] = "bin/app";
 constexpr char kAppArv0[] = "/pkg/bin/app";
@@ -49,7 +46,6 @@ constexpr char kInfoDirPath[] = "/info_experimental";
 enum class LaunchType {
   kProcess,
   kArchive,
-  kRunner,
 };
 
 std::vector<const char*> GetArgv(const std::string& argv0,
@@ -169,20 +165,13 @@ zx::process CreateProcess(const zx::job& job,
 LaunchType Classify(const zx::vmo& data, std::string* runner) {
   if (!data)
     return LaunchType::kProcess;
-  std::string hint(kMaxShebangLength, '\0');
+  std::string magic(archive::kMagicLength, '\0');
   size_t count;
-  zx_status_t status = data.read(&hint[0], 0, hint.length(), &count);
+  zx_status_t status = data.read(&magic[0], 0, magic.length(), &count);
   if (status != ZX_OK)
     return LaunchType::kProcess;
-  if (memcmp(hint.data(), &archive::kMagic, sizeof(archive::kMagic)) == 0)
+  if (memcmp(magic.data(), &archive::kMagic, sizeof(archive::kMagic)) == 0)
     return LaunchType::kArchive;
-  if (hint.find(kFuchsiaMagic) == 0) {
-    size_t newline = hint.find('\n', kFuchsiaMagicLength);
-    if (newline == std::string::npos)
-      return LaunchType::kProcess;
-    *runner = hint.substr(kFuchsiaMagicLength, newline - kFuchsiaMagicLength);
-    return LaunchType::kRunner;
-  }
   return LaunchType::kProcess;
 }
 
@@ -315,11 +304,6 @@ void JobHolder::CreateApplication(
                     std::move(package), std::move(launch_info),
                     std::move(controller), std::move(application_namespace));
                 break;
-              case LaunchType::kRunner:
-                CreateApplicationWithRunner(
-                    std::move(package), std::move(launch_info), runner,
-                    std::move(controller), std::move(application_namespace));
-                break;
             }
           } else if (package->directory) {
             CreateApplicationFromPackage(
@@ -357,42 +341,6 @@ std::unique_ptr<ApplicationControllerImpl> JobHolder::ExtractApplication(
 void JobHolder::AddBinding(
     f1dl::InterfaceRequest<ApplicationEnvironment> environment) {
   default_namespace_->AddBinding(std::move(environment));
-}
-
-void JobHolder::CreateApplicationWithRunner(
-    ApplicationPackagePtr package,
-    ApplicationLaunchInfoPtr launch_info,
-    std::string runner,
-    f1dl::InterfaceRequest<ApplicationController> controller,
-    fxl::RefPtr<ApplicationNamespace> application_namespace) {
-  zx::channel svc = application_namespace->services().OpenAsDirectory();
-  if (!svc)
-    return;
-
-  NamespaceBuilder builder;
-  builder.AddServices(std::move(svc));
-  AddInfoDir(&builder);
-
-  // Add the custom namespace.
-  // Note that this must be the last |builder| step adding entries to the
-  // namespace so that we can filter out entries already added in previous
-  // steps.
-  // HACK(alhaad): We add deprecated default directories after this.
-  builder.AddFlatNamespace(std::move(launch_info->flat_namespace));
-  builder.AddDeprecatedDefaultDirectories();
-
-  auto startup_info = ApplicationStartupInfo::New();
-  startup_info->launch_info = std::move(launch_info);
-  startup_info->flat_namespace = builder.BuildForRunner();
-
-  auto* runner_ptr = GetOrCreateRunner(runner);
-  if (runner_ptr == nullptr) {
-    FXL_LOG(ERROR) << "Could not create runner " << runner << " to run "
-                   << launch_info->url;
-  }
-  runner_ptr->StartApplication(std::move(package), std::move(startup_info),
-                               nullptr, std::move(application_namespace),
-                               std::move(controller));
 }
 
 void JobHolder::CreateApplicationWithProcess(
