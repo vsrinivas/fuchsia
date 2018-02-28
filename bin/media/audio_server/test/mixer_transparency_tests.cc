@@ -36,10 +36,6 @@ TEST(DataFormats, PointSampler8) {
 // Create PointSampler objects for other formats of incoming buffers
 // This is not expected to work, as these are not yet implemented
 TEST(DataFormats, PointSamplerOther) {
-  // TODO(mpuryear): Maybe NONE/ANY should ASSERT, as success is never possible
-  EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::NONE, 1, 44100, 1, 44100));
-  EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::ANY, 1, 44100, 2, 22050));
-
   EXPECT_EQ(nullptr,
             SelectMixer(AudioSampleFormat::SIGNED_24_IN_32, 2, 8000, 1, 8000));
   EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::FLOAT, 2, 48000, 2, 16000));
@@ -70,10 +66,6 @@ TEST(DataFormats, LinearSampler8) {
 // Create LinearSampler objects for other formats of incoming buffers
 // This is not expected to work, as these are not yet implemented
 TEST(DataFormats, LinearSamplerOther) {
-  // TODO(mpuryear): Maybe NONE/ANY should ASSERT, as success is never possible
-  EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::NONE, 1, 24000, 1, 44100));
-  EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::ANY, 1, 44100, 2, 48000));
-
   EXPECT_EQ(nullptr,
             SelectMixer(AudioSampleFormat::SIGNED_24_IN_32, 2, 8000, 1, 11025));
   EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::FLOAT, 2, 48000, 2, 44100));
@@ -104,8 +96,6 @@ TEST(DataFormats, OutputFormatter8) {
 // Create OutputFormatter objects for other output formats
 // This is not expected to work, as these are not yet implemented
 TEST(DataFormats, OutputFormatterOther) {
-  EXPECT_EQ(nullptr, SelectOutputFormatter(AudioSampleFormat::NONE, 1));
-  EXPECT_EQ(nullptr, SelectOutputFormatter(AudioSampleFormat::ANY, 2));
   EXPECT_EQ(nullptr,
             SelectOutputFormatter(AudioSampleFormat::SIGNED_24_IN_32, 3));
   EXPECT_EQ(nullptr, SelectOutputFormatter(AudioSampleFormat::FLOAT, 4));

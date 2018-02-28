@@ -107,6 +107,8 @@ OutputFormatter::OutputFormatter(const AudioMediaTypeDetailsPtr& format,
 OutputFormatterPtr OutputFormatter::Select(
     const AudioMediaTypeDetailsPtr& format) {
   FXL_DCHECK(format);
+  FXL_DCHECK(format->sample_format != AudioSampleFormat::ANY);
+  FXL_DCHECK(format->sample_format != AudioSampleFormat::NONE);
 
   switch (format->sample_format) {
     case AudioSampleFormat::UNSIGNED_8:

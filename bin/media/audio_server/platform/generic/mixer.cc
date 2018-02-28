@@ -26,9 +26,10 @@ MixerPtr Mixer::Select(const AudioMediaTypeDetailsPtr& src_format,
                        const AudioMediaTypeDetailsPtr* optional_dst_format) {
   // We should always have a source format.
   FXL_DCHECK(src_format);
-
-  // TODO(mpuryear): requests that include AudioSampleFormat::NONE or ::ANY
-  // perhaps should ASSERT, since obtaining a functional mixer is never possible
+  // We have no mixer for these formats.
+  FXL_DCHECK(src_format->sample_format != AudioSampleFormat::ANY);
+  FXL_DCHECK(src_format->sample_format != AudioSampleFormat::NONE);
+  // MTWN-93: Consider eliminating these enums; they never lead to happy endings
 
   // If we don't have a destination format, just stick with no-op.  This is
   // probably the ThrottleOutput we are picking a mixer for.
@@ -38,6 +39,9 @@ MixerPtr Mixer::Select(const AudioMediaTypeDetailsPtr& src_format,
 
   const AudioMediaTypeDetailsPtr& dst_format = *optional_dst_format;
   FXL_DCHECK(dst_format);
+  // MTWN-93: same as above, for these destination sample formats
+  FXL_DCHECK(dst_format->sample_format != AudioSampleFormat::ANY);
+  FXL_DCHECK(dst_format->sample_format != AudioSampleFormat::NONE);
 
   // If the source sample rate is an integer multiple of the destination sample
   // rate, just use the point sampler.  Otherwise, use the linear re-sampler.
