@@ -234,4 +234,4 @@ ML_UNITTEST(rpi3, 1536)
 ML_UNITTEST(rpi3, 2048)
 ML_UNITTEST(rpi3, 3072)
 ML_UNITTEST(rpi3, 4096)
-UNITTEST_END_TESTCASE(memlimit_tests, "memlim_tests", "Memory limit tests", nullptr, nullptr);
+UNITTEST_END_TESTCASE(memlimit_tests, "memlim_tests", "Memory limit tests");

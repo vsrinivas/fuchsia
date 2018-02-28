@@ -191,4 +191,4 @@ ST_UNITTEST(removal::on_cancel)
 ST_UNITTEST(removal::on_cancel_by_key)
 
 UNITTEST_END_TESTCASE(
-    state_tracker_tests, "statetracker", "StateTracker test", nullptr, nullptr);
+    state_tracker_tests, "statetracker", "StateTracker test");

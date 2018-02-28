@@ -155,4 +155,4 @@ static bool mmu_tests(void* context) {
 
 UNITTEST_START_TESTCASE(x86_mmu_tests)
 UNITTEST("mmu tests", mmu_tests)
-UNITTEST_END_TESTCASE(x86_mmu_tests, "x86_mmu", "x86 mmu tests", nullptr, nullptr);
+UNITTEST_END_TESTCASE(x86_mmu_tests, "x86_mmu", "x86 mmu tests");

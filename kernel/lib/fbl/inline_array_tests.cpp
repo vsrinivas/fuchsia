@@ -75,4 +75,4 @@ bool non_inline_test(void* unused) {
 UNITTEST_START_TESTCASE(inline_array_tests)
 UNITTEST("inline test", inline_test)
 UNITTEST("non-inline test", non_inline_test)
-UNITTEST_END_TESTCASE(inline_array_tests, "inlinearraytests", "Inline array test", nullptr, nullptr);
+UNITTEST_END_TESTCASE(inline_array_tests, "inlinearraytests", "Inline array test");

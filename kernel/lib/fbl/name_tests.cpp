@@ -223,4 +223,4 @@ NAME_UNITTEST((output_buffer_size<kTypicalNameSize, kTypicalNameSize>))
 // Don't bother testing a larger output buffer, since most of the
 // earlier tests use larger output buffers.
 
-UNITTEST_END_TESTCASE(name_tests, "nametests", "Name test", nullptr, nullptr);
+UNITTEST_END_TESTCASE(name_tests, "nametests", "Name test");

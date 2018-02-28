@@ -68,4 +68,4 @@ static bool test_in_timer_callback(void* context) {
 UNITTEST_START_TESTCASE(preempt_disable_tests)
 UNITTEST("test_in_timer_callback", test_in_timer_callback)
 UNITTEST_END_TESTCASE(preempt_disable_tests, "preempt_disable_tests",
-                      "preempt_disable_tests", nullptr, nullptr);
+                      "preempt_disable_tests");

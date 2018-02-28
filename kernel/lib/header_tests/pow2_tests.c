@@ -78,4 +78,4 @@ static bool pow2_test(void* context)
 
 UNITTEST_START_TESTCASE(pow2_tests)
 UNITTEST("pow2 lib tests", pow2_test)
-UNITTEST_END_TESTCASE(pow2_tests, "pow2", "pow2 lib tests", NULL, NULL);
+UNITTEST_END_TESTCASE(pow2_tests, "pow2", "pow2 lib tests");

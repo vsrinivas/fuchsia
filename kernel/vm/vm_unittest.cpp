@@ -998,4 +998,4 @@ VM_UNITTEST(vmo_lookup_test)
 VM_UNITTEST(arch_noncontiguous_map)
 // Uncomment for debugging
 // VM_UNITTEST(dump_all_aspaces)  // Run last
-UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests", nullptr, nullptr);
+UNITTEST_END_TESTCASE(vm_tests, "vmtests", "Virtual memory tests");

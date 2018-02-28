@@ -118,4 +118,4 @@ UNITTEST("alloc checker basic", alloc_checker_basic)
 UNITTEST("alloc checker panic", alloc_checker_panic)
 UNITTEST("alloc checker new", alloc_checker_new)
 UNITTEST("alloc checker new fails", alloc_checker_new_fails)
-UNITTEST_END_TESTCASE(alloc_checker, "alloc_cpp", "Tests of the C++ AllocChecker", nullptr, nullptr);
+UNITTEST_END_TESTCASE(alloc_checker, "alloc_cpp", "Tests of the C++ AllocChecker");

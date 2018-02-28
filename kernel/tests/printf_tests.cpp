@@ -185,5 +185,4 @@ static bool snprintf_truncation_test(void* context) {
 UNITTEST_START_TESTCASE(printf_tests)
 UNITTEST("printf_tests", printf_tests)
 UNITTEST("snprintf_truncation_test", snprintf_truncation_test)
-UNITTEST_END_TESTCASE(printf_tests, "printf_tests", "printf_tests",
-                      nullptr, nullptr);
+UNITTEST_END_TESTCASE(printf_tests, "printf_tests", "printf_tests");

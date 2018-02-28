@@ -106,4 +106,4 @@ UNITTEST_START_TESTCASE(bootdata_tests)
 BOOTDATA_UNITTEST(bootdata_overflow_test)
 BOOTDATA_UNITTEST(bootdata_fill_test)
 
-UNITTEST_END_TESTCASE(bootdata_tests, "bootdata", "bootdata packing tests", nullptr, nullptr);
+UNITTEST_END_TESTCASE(bootdata_tests, "bootdata", "bootdata packing tests");

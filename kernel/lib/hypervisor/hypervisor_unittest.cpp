@@ -252,5 +252,4 @@ HYPERVISOR_UNITTEST(guest_physical_address_space_get_page)
 HYPERVISOR_UNITTEST(guest_physical_address_space_get_page_complex)
 HYPERVISOR_UNITTEST(guest_physical_address_space_get_page_not_present)
 HYPERVISOR_UNITTEST(guest_physical_address_space_map_interrupt_controller)
-UNITTEST_END_TESTCASE(hypervisor_tests, "hypervisor_tests", "Hypervisor unit tests.", nullptr,
-                      nullptr);
+UNITTEST_END_TESTCASE(hypervisor_tests, "hypervisor_tests", "Hypervisor unit tests.");
