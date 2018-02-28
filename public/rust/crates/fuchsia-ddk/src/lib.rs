@@ -4,7 +4,7 @@
 
 #![deny(warnings)]
 
-pub extern crate ddk_sys as sys;
+pub extern crate fuchsia_ddk_sys as sys;
 
 extern crate byteorder;
 extern crate fuchsia_zircon as zircon;

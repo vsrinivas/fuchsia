@@ -12,7 +12,7 @@ name = "microorb"
 crate-type = ["dylib"]
 
 [dependencies]
-ddk-rs = { path = "../../../ddk-rs" }
+fuchsia-ddk = { path = "../../../fuchsia-ddk" }
 fuchsia-zircon = { path = "../../../fuchsia-zircon" }
 
 [build-dependencies]

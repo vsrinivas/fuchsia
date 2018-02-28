@@ -4,8 +4,11 @@
 
 import("//build/rust/rust_library.gni")
 
-rust_library("ddk-sys") {
+rust_library("fuchsia-ddk") {
   deps = [
+    "//garnet/public/rust/crates/fuchsia-ddk/fuchsia-ddk-sys",
     "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
   ]
+  with_tests = true
 }

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate ddk_rs;
+extern crate fuchsia_ddk;
 extern crate fuchsia_zircon;
 use fuchsia_zircon::Status;
-use ddk_rs as ddk;
+use fuchsia_ddk as ddk;
 use ddk::{Device, DeviceOps, DriverOps};
 
 // This is a non-bindable device that can be read from and written to.

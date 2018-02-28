@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate ddk_rs;
+extern crate fuchsia_ddk;
 extern crate fuchsia_zircon;
 
 use fuchsia_zircon::{DurationNum, Status};
-use ddk_rs::{DeviceOps, Device, DriverOps, UsbProtocol};
-use ddk_rs as ddk;
-use ddk_rs::sys::{USB_DIR_IN, USB_DIR_OUT, USB_TYPE_VENDOR, USB_RECIP_DEVICE};
+use fuchsia_ddk::{DeviceOps, Device, DriverOps, UsbProtocol};
+use fuchsia_ddk as ddk;
+use fuchsia_ddk::sys::{USB_DIR_IN, USB_DIR_OUT, USB_TYPE_VENDOR, USB_RECIP_DEVICE};
 use std::{cmp, fmt, slice, str};
 use std::fmt::{Display, Formatter};
 use std::mem::size_of;

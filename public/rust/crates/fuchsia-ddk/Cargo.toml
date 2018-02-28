@@ -1,10 +1,12 @@
 [package]
-name = "ddk-sys"
+name = "fuchsia-ddk"
 version = "0.1.0"
 license = "BSD-3-Clause"
 authors = ["Andrew Walbran <qwandor@google.com>", "Anthony Stange <stange@google.com>"]
-description = "Low-level Rust DDK for the Zircon kernel"
+description = "Rust DDK for the Zircon kernel"
 repository = "https://fuchsia.googlesource.com/ddk-rs/"
 
 [dependencies]
-fuchsia-zircon = { path = "../../fuchsia-zircon" }
+byteorder = "1"
+fuchsia-ddk-sys = { path = "fuchsia-ddk-sys" }
+fuchsia-zircon = { path = "../fuchsia-zircon" }
