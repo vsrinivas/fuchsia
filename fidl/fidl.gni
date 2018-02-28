@@ -2,10 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/fidl_dart.gni")
 import("//build/dart/toolchain.gni")
-import("//build/cpp/fidl_cpp.gni")
-import("//build/fidl/fidl_library.gni")
 import("//build/fidl/toolchain.gni")
 
 # Declares a FIDL library.
@@ -30,6 +27,8 @@ template("fidl") {
 
 if (current_toolchain == fidl_toolchain) {
 
+import("//build/fidl/fidl_library.gni")
+
 fidl_library(target_name) {
   forward_variables_from(invoker, "*")
 }
@@ -37,11 +36,15 @@ fidl_library(target_name) {
 } else if (current_toolchain == target_toolchain ||
     current_toolchain == shlib_toolchain) {
 
+import("//build/cpp/fidl_cpp.gni")
+
 fidl_cpp(target_name) {
   forward_variables_from(invoker, "*")
 }
 
 } else if (current_toolchain == dart_toolchain) {
+
+import("//build/dart/fidl_dart.gni")
 
 fidl_dart(target_name) {
   forward_variables_from(invoker, "*")
