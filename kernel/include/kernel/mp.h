@@ -20,10 +20,15 @@ __BEGIN_CDECLS
 typedef void (*mp_ipi_task_func_t)(void* context);
 typedef void (*mp_sync_task_t)(void* context);
 
-/* by default, mp_mbx_reschedule does not signal to cpus that are running realtime
+/* by default, mp_reschedule does not signal to cpus that are running realtime
  * threads. Override this behavior.
  */
 #define MP_RESCHEDULE_FLAG_REALTIME (0x1)
+/* by default, mp_reschedule relies on arch_mp_reschedule, which requires that
+ * the thread lock be held. This flag can be used to directly send MP_IPI_RESCHEDULE
+ * interrupts without needing the thread lock.
+ */
+#define MP_RESCHEDULE_FLAG_USE_IPI  (0x2)
 
 typedef enum {
     MP_IPI_GENERIC,
@@ -44,7 +49,8 @@ typedef enum {
 
 void mp_init(void);
 
-void mp_reschedule(mp_ipi_target_t, cpu_mask_t mask, uint flags);
+void mp_prepare_current_cpu_idle_state(bool idle);
+void mp_reschedule(cpu_mask_t mask, uint flags);
 void mp_sync_exec(mp_ipi_target_t, cpu_mask_t mask, mp_sync_task_t task, void* context);
 
 zx_status_t mp_hotplug_cpu_mask(cpu_mask_t mask);

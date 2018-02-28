@@ -314,7 +314,7 @@ bool sched_unblock(thread_t* t) {
     find_cpu_and_insert(t, &local_resched, &mask);
 
     if (mask)
-        mp_reschedule(MP_IPI_TARGET_MASK, mask, 0);
+        mp_reschedule(mask, 0);
     return local_resched;
 }
 
@@ -341,7 +341,7 @@ bool sched_unblock_list(struct list_node* list) {
     }
 
     if (accum_cpu_mask)
-        mp_reschedule(MP_IPI_TARGET_MASK, accum_cpu_mask, 0);
+        mp_reschedule(accum_cpu_mask, 0);
 
     return local_resched;
 }
@@ -463,7 +463,7 @@ static void migrate_current_thread(thread_t* current_thread) {
     current_thread->state = THREAD_READY;
     find_cpu_and_insert(current_thread, &local_resched, &accum_cpu_mask);
     if (accum_cpu_mask)
-        mp_reschedule(MP_IPI_TARGET_MASK, accum_cpu_mask, 0);
+        mp_reschedule(accum_cpu_mask, 0);
     sched_resched_internal();
 }
 
@@ -497,7 +497,7 @@ void sched_transition_off_cpu(cpu_num_t old_cpu) {
     }
 
     if (accum_cpu_mask) {
-        mp_reschedule(MP_IPI_TARGET_MASK, accum_cpu_mask, 0);
+        mp_reschedule(accum_cpu_mask, 0);
     }
 }
 
@@ -569,7 +569,7 @@ void sched_migrate(thread_t* t) {
 
     // send some ipis based on the previous code
     if (accum_cpu_mask) {
-        mp_reschedule(MP_IPI_TARGET_MASK, accum_cpu_mask, 0);
+        mp_reschedule(accum_cpu_mask, 0);
     }
     if (local_resched) {
         sched_reschedule();
@@ -641,7 +641,7 @@ void sched_inheirit_priority(thread_t* t, int pri, bool *local_resched) {
 
     // send some ipis based on the previous code
     if (accum_cpu_mask) {
-        mp_reschedule(MP_IPI_TARGET_MASK, accum_cpu_mask, 0);
+        mp_reschedule(accum_cpu_mask, 0);
     }
 }
 
@@ -713,6 +713,10 @@ void sched_resched_internal(void) {
 
     LOCAL_KTRACE2("resched old pri", (uint32_t)oldthread->user_tid, effec_priority(oldthread));
     LOCAL_KTRACE2("resched new pri", (uint32_t)newthread->user_tid, effec_priority(newthread));
+
+    /* call this even if we're not changing threads, to handle the case where another
+     * core rescheduled us but the work disappeared before we got to run. */
+    mp_prepare_current_cpu_idle_state(thread_is_idle(newthread));
 
     /* if it's the same thread as we're already running, exit */
     if (newthread == oldthread)

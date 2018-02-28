@@ -51,7 +51,7 @@ void arch_sync_cache_range(addr_t start, size_t len);
 typedef struct event event_t;
 void arch_flush_state_and_halt(event_t *flush_done) __NO_RETURN;
 
-void arch_idle(void);
+int arch_idle_thread_routine(void*) __NO_RETURN;
 
 /* function to call in spinloops to idle */
 static void arch_spinloop_pause(void);

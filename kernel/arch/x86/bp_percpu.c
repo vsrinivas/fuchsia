@@ -18,6 +18,11 @@ static uint8_t unsafe_kstack[PAGE_SIZE] __ALIGNED(16);
 #define unsafe_kstack_end NULL
 #endif
 
+// Fake monitor to use until smp is initialized. The size of
+// the memory range doesn't matter, since it won't actually get
+// used in a non-smp environment.
+volatile uint8_t fake_monitor;
+
 struct x86_percpu bp_percpu = {
     .cpu_num = 0,
     .direct = &bp_percpu,
@@ -25,4 +30,6 @@ struct x86_percpu bp_percpu = {
 
     // Start with an invalid ID until we know the local APIC is set up.
     .apic_id = INVALID_APIC_ID,
+
+    .monitor = &fake_monitor,
 };

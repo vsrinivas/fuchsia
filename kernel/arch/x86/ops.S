@@ -22,8 +22,8 @@
 %rax 1st return register
 */
 
-/* void arch_idle(); */
-FUNCTION(arch_idle)
+/* void x86_idle(); */
+FUNCTION(x86_idle)
     pushf
     popq %rax
     andq $0x200, %rax
@@ -32,7 +32,7 @@ FUNCTION(arch_idle)
     hlt
 1:
     ret
-END_FUNCTION(arch_idle)
+END_FUNCTION(x86_idle)
 
 
 /* zx_status_t read_msr_safe(uint32_t msr_id, uint64_t *val); */
@@ -70,3 +70,29 @@ FUNCTION(read_msr_safe)
     mov $ZX_ERR_NOT_SUPPORTED, %rax
     ret
 END_FUNCTION(read_msr_safe)
+
+/* void x86_mwait(); */
+FUNCTION(x86_mwait)
+    pushf
+    popq %rax
+    andq $0x200, %rax
+    test %rax, %rax
+    je 1f                   /* don't halt if local interrupts are disabled */
+    // Clear the mwait hints and extension registers
+    xor %eax, %eax
+    xor %ecx, %ecx
+    mwait
+1:
+    ret
+END_FUNCTION(x86_mwait)
+
+/* void x86_monitor(void* addr); */
+FUNCTION(x86_monitor)
+    // Set the address to monitor
+    movq %rdi, %rax
+    // Clear the monitor extension and hints registers
+    xor %ecx, %ecx
+    xor %edx, %edx
+    monitor
+    ret
+END_FUNCTION(x86_monitor)

@@ -35,6 +35,7 @@
 
 struct x86_percpu* ap_percpus;
 uint8_t x86_num_cpus = 1;
+static bool use_monitor = false;
 
 extern struct idt _idt;
 
@@ -53,6 +54,21 @@ zx_status_t x86_allocate_ap_structures(uint32_t* apic_ids, uint8_t cpu_count) {
             return ZX_ERR_NO_MEMORY;
         }
         memset(ap_percpus, 0, len);
+
+        if ((use_monitor = x86_feature_test(X86_FEATURE_MON))) {
+            uint16_t monitor_size = x86_get_cpuid_leaf(X86_CPUID_MON)->b & 0xffff;
+            if (monitor_size < MAX_CACHE_LINE) {
+                monitor_size = MAX_CACHE_LINE;
+            }
+            uint8_t* monitors = (uint8_t*)memalign(monitor_size, monitor_size * cpu_count);
+            if (monitors == nullptr) {
+                return ZX_ERR_NO_MEMORY;
+            }
+            bp_percpu.monitor = monitors;
+            for (uint i = 1; i < cpu_count; ++i) {
+                ap_percpus[i - 1].monitor = monitors + (i * monitor_size);
+            }
+        }
     }
 
     uint32_t bootstrap_ap = apic_local_id();
@@ -202,6 +218,66 @@ int x86_apic_id_to_cpu_num(uint32_t apic_id) {
         }
     }
     return -1;
+}
+
+zx_status_t arch_mp_reschedule(cpu_mask_t mask) {
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    cpu_mask_t needs_ipi = 0;
+    if (use_monitor) {
+        while (mask) {
+            cpu_num_t cpu_id = lowest_cpu_set(mask);
+            cpu_mask_t cpu_mask = cpu_num_to_mask(cpu_id);
+            struct x86_percpu* percpu = cpu_id ? &ap_percpus[cpu_id - 1] : &bp_percpu;
+
+            // When a cpu see that it is about to start the idle thread, it sets its own
+            // monitor flag. When a cpu is rescheduling another cpu, if it sees the monitor flag
+            // set, it can clear the flag to wake up the other cpu w/o an IPI. When the other
+            // cpu wakes up, the idle thread sees the cleared flag and preempts itself. Both of
+            // these operations are under the scheduler lock, so there are no races where the
+            // wrong signal can be sent.
+            uint8_t old_val = *percpu->monitor;
+            *percpu->monitor = 0;
+            if (!old_val) {
+                needs_ipi |= cpu_mask;
+            }
+            mask &= ~cpu_mask;
+        }
+    } else {
+        needs_ipi = mask;
+    }
+
+    return needs_ipi ? arch_mp_send_ipi(MP_IPI_TARGET_MASK, needs_ipi, MP_IPI_RESCHEDULE) : ZX_OK;
+}
+
+void arch_prepare_current_cpu_idle_state(bool idle) {
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    if (use_monitor) {
+        *x86_get_percpu()->monitor = idle;
+    }
+}
+
+__NO_RETURN int arch_idle_thread_routine(void*) {
+    if (use_monitor) {
+        struct x86_percpu* percpu = x86_get_percpu();
+        for (;;) {
+            while (*percpu->monitor) {
+                x86_monitor(percpu->monitor);
+                // Check percpu->monitor in case it was cleared between the first check and
+                // the monitor being armed. Any writes after arming the monitor will trigger
+                // it and cause mwait to return, so there aren't races after this check.
+                if (*percpu->monitor) {
+                    x86_mwait();
+                }
+            }
+            thread_preempt();
+        }
+    } else {
+        for (;;) {
+            x86_idle();
+        }
+    }
 }
 
 zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi) {

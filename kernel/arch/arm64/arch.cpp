@@ -178,8 +178,9 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
     arch_clean_cache_range((addr_t)&arm_boot_cpu_lock, sizeof(arm_boot_cpu_lock));
 }
 
-void arch_idle() {
-    __asm__ volatile("wfi");
+__NO_RETURN int arch_idle_thread_routine(void*) {
+    for (;;)
+        __asm__ volatile("wfi");
 }
 
 // Switch to user mode, set the user stack pointer to user_stack_top, put the svc stack pointer to

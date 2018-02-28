@@ -47,36 +47,36 @@ void mp_init(void) {
     }
 }
 
-void mp_reschedule(mp_ipi_target_t target, cpu_mask_t mask, uint flags) {
+void mp_prepare_current_cpu_idle_state(bool idle) {
+    arch_prepare_current_cpu_idle_state(idle);
+}
+
+void mp_reschedule(cpu_mask_t mask, uint flags) {
     const cpu_num_t local_cpu = arch_curr_cpu_num();
 
-    LTRACEF("local %u, target %u, mask %#x\n", local_cpu, target, mask);
+    LTRACEF("local %u, mask %#x\n", local_cpu, mask);
 
-    switch (target) {
-    case MP_IPI_TARGET_ALL:
-    case MP_IPI_TARGET_ALL_BUT_LOCAL:
-        arch_mp_send_ipi(target, 0, MP_IPI_RESCHEDULE);
-        break;
-    case MP_IPI_TARGET_MASK:
-        if (mask == 0)
-            return;
+    if (mask == 0)
+        return;
 
-        /* mask out cpus that are not active and the local cpu */
-        mask &= mp.active_cpus;
-        mask &= ~cpu_num_to_mask(local_cpu);
+    /* mask out cpus that are not active and the local cpu */
+    mask &= mp.active_cpus;
+    mask &= ~cpu_num_to_mask(local_cpu);
 
-        /* this is generally a bad state, though this may be too aggressive */
-        DEBUG_ASSERT(mask != 0);
+    /* this is generally a bad state, though this may be too aggressive */
+    DEBUG_ASSERT(mask != 0);
 
-        /* mask out cpus that are currently running realtime code */
-        if ((flags & MP_RESCHEDULE_FLAG_REALTIME) == 0) {
-            mask &= ~mp.realtime_cpus;
-        }
+    /* mask out cpus that are currently running realtime code */
+    if ((flags & MP_RESCHEDULE_FLAG_REALTIME) == 0) {
+        mask &= ~mp.realtime_cpus;
+    }
 
-        LTRACEF("local %u, post mask target now 0x%x\n", local_cpu, mask);
+    LTRACEF("local %u, post mask target now 0x%x\n", local_cpu, mask);
 
+    if ((flags & MP_RESCHEDULE_FLAG_USE_IPI) == 0) {
+        arch_mp_reschedule(mask);
+    } else {
         arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_RESCHEDULE);
-        break;
     }
 }
 

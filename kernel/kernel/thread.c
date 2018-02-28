@@ -64,7 +64,6 @@ static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);
 spin_lock_t thread_lock = SPIN_LOCK_INITIAL_VALUE;
 
 /* local routines */
-static int idle_thread_routine(void*) __NO_RETURN;
 static void thread_exit_locked(thread_t* current_thread, int retcode) __NO_RETURN;
 static void thread_do_suspend(void);
 
@@ -356,7 +355,7 @@ zx_status_t thread_suspend(thread_t* t) {
         /* The following call is not essential.  It just makes the
              * thread suspension happen sooner rather than at the next
              * timer interrupt or syscall. */
-        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(t->curr_cpu), 0);
+        mp_reschedule(cpu_num_to_mask(t->curr_cpu), 0);
         break;
     case THREAD_SUSPENDED:
         /* thread is suspended already */
@@ -605,7 +604,7 @@ void thread_kill(thread_t* t) {
         /* The following call is not essential.  It just makes the
              * thread termination happen sooner rather than at the next
              * timer interrupt or syscall. */
-        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(t->curr_cpu), 0);
+        mp_reschedule(cpu_num_to_mask(t->curr_cpu), 0);
         break;
     case THREAD_SUSPENDED:
         /* thread is suspended, resume it so it can get the kill signal */
@@ -749,11 +748,6 @@ void thread_process_pending_signals(void) {
     } else {
         THREAD_UNLOCK(state);
     }
-}
-
-__NO_RETURN static int idle_thread_routine(void* arg) {
-    for (;;)
-        arch_idle();
 }
 
 /**
@@ -1085,7 +1079,7 @@ void thread_become_idle(void) {
     arch_enable_ints();
     thread_reschedule();
 
-    idle_thread_routine(NULL);
+    arch_idle_thread_routine(NULL);
 }
 
 /**
@@ -1124,7 +1118,7 @@ thread_t* thread_create_idle_thread(cpu_num_t cpu_num) {
 
     thread_t* t = thread_create_etc(
         &percpu[cpu_num].idle_thread, name,
-        idle_thread_routine, NULL,
+        arch_idle_thread_routine, NULL,
         IDLE_PRIORITY,
         NULL, NULL, DEFAULT_STACK_SIZE,
         NULL);
