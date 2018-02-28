@@ -120,14 +120,19 @@ class InterfaceHandle {
     encoder->EncodeHandle(&channel_, offset);
   }
 
+  static void Decode(Decoder* decoder,
+                     InterfaceHandle<Interface>* value,
+                     size_t offset) {
+    decoder->DecodeHandle(&value->channel_, offset);
+  }
+
  private:
   zx::channel channel_;
 };
 
 template <typename T>
 struct CodingTraits<InterfaceHandle<T>>
-    : public EncodableCodingTraits<InterfaceHandle<T>, sizeof(zx_handle_t)> {
-};
+    : public EncodableCodingTraits<InterfaceHandle<T>, sizeof(zx_handle_t)> {};
 
 }  // namespace fidl
 

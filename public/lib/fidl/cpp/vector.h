@@ -54,6 +54,14 @@ class VectorPtr {
     is_null_ = false;
   }
 
+  // Resizes the underlying std::vector in this VectorPtr to the given size.
+  //
+  // After this method returns, the VectorPtr is non-null.
+  void resize(size_t size) {
+    vec_.resize(size);
+    is_null_ = false;
+  }
+
   void swap(VectorPtr& other) {
     using std::swap;
     swap(vec_, other.vec_);

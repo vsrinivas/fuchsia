@@ -17,6 +17,7 @@ class {{ .Name }} {
   ~{{ .Name }}();
 
   void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
 
  private:
   ::fidl_union_tag_t tag;
@@ -41,6 +42,17 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
   {{- range $index, $member := .Members }}
    case {{ $index }}:
     ::fidl::Encode(encoder, &{{ .Name }}, offset + {{ .Offset }});
+    break;
+  {{- end }}
+  }
+}
+
+void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset) {
+  ::fidl::Decode(decoder, &value->tag, offset);
+  switch (value->tag) {
+  {{- range $index, $member := .Members }}
+   case {{ $index }}:
+    ::fidl::Decode(decoder, &value->{{ .Name }}, offset + {{ .Offset }});
     break;
   {{- end }}
   }

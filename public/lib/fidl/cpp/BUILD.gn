@@ -8,6 +8,8 @@ source_set("cpp") {
     "binding.h",
     "coding_traits.cc",
     "coding_traits.h",
+    "decoder.cc",
+    "decoder.h",
     "encoder.cc",
     "encoder.h",
     "interface_handle.h",

@@ -21,6 +21,10 @@ struct CodingTraits<{{ .Namespace }}::{{ .Name }}> {
     {{ .Type }} underlying = static_cast<{{ .Type }}>(*value);
     fidl::Encode(encoder, &underlying, offset);
   }
+  static void Decode(Decoder* decoder, {{ .Namespace }}::{{ .Name }}* value, size_t offset) {
+    {{ .Type }} underlying = static_cast<{{ .Type }}>(*value);
+    fidl::Decode(decoder, &underlying, offset);
+  }
 };
 {{- end }}
 `

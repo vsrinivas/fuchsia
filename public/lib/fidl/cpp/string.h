@@ -37,10 +37,6 @@ class StringPtr {
 
   StringPtr& operator=(StringPtr&& other);
 
-  // Copies the data from the |StringView| into a new |StringPtr| object, which
-  // is returned.
-  static StringPtr Take(StringView* view);
-
   // Accesses the underlying std::string object.
   //
   // The returned string will be empty if the StringPtr is either null or empty.
@@ -78,6 +74,7 @@ class StringPtr {
   const std::string& operator*() const { return str_; }
 
   void Encode(Encoder* encoder, size_t offset);
+  static void Decode(Decoder* decoder, StringPtr* value, size_t offset);
 
  private:
   std::string str_;

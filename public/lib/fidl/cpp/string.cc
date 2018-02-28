@@ -31,11 +31,6 @@ StringPtr& StringPtr::operator=(StringPtr&& other) {
   return *this;
 }
 
-StringPtr StringPtr::Take(StringView* view) {
-  return view->is_null() ? StringPtr()
-                         : StringPtr(std::string(view->data(), view->size()));
-}
-
 void StringPtr::Encode(Encoder* encoder, size_t offset) {
   fidl_string_t* string = encoder->GetPtr<fidl_string_t>(offset);
   if (is_null()) {
@@ -47,6 +42,15 @@ void StringPtr::Encode(Encoder* encoder, size_t offset) {
     size_t base = encoder->Alloc(str_.size());
     char* payload = encoder->GetPtr<char>(base);
     memcpy(payload, str_.data(), str_.size());
+  }
+}
+
+void StringPtr::Decode(Decoder* decoder, StringPtr* value, size_t offset) {
+  fidl_string_t* string = decoder->GetPtr<fidl_string_t>(offset);
+  if (string->data) {
+    value->reset(std::string(string->data, string->size));
+  } else {
+    *value = StringPtr();
   }
 }
 

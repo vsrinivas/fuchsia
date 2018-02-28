@@ -100,14 +100,19 @@ class InterfaceRequest {
     encoder->EncodeHandle(&channel_, offset);
   }
 
+  static void Decode(Decoder* decoder,
+                     InterfaceRequest<Interface>* value,
+                     size_t offset) {
+    decoder->DecodeHandle(&value->channel_, offset);
+  }
+
  private:
   zx::channel channel_;
 };
 
 template <typename T>
 struct CodingTraits<InterfaceRequest<T>>
-    : public EncodableCodingTraits<InterfaceRequest<T>, sizeof(zx_handle_t)> {
-};
+    : public EncodableCodingTraits<InterfaceRequest<T>, sizeof(zx_handle_t)> {};
 
 }  // namespace fidl
 

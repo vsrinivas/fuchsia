@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include "lib/fidl/cpp/decoder.h"
 #include "lib/fidl/cpp/encoder.h"
 #include "lib/fidl/cpp/traits.h"
 #include "lib/fidl/cpp/vector.h"
@@ -21,9 +22,11 @@ struct CodingTraits;
 template <typename T>
 struct CodingTraits<T, typename std::enable_if<IsPrimitive<T>::value>::type> {
   static constexpr size_t encoded_size = sizeof(T);
-
   inline static void Encode(Encoder* encoder, T* value, size_t offset) {
     *encoder->GetPtr<T>(offset) = *value;
+  }
+  inline static void Decode(Decoder* decoder, T* value, size_t offset) {
+    *value = *decoder->GetPtr<T>(offset);
   }
 };
 
@@ -34,6 +37,9 @@ struct CodingTraits<
   static constexpr size_t encoded_size = sizeof(zx_handle_t);
   static void Encode(Encoder* encoder, zx::object_base* value, size_t offset) {
     encoder->EncodeHandle(value, offset);
+  }
+  static void Decode(Decoder* decoder, zx::object_base* value, size_t offset) {
+    decoder->DecodeHandle(value, offset);
   }
 };
 
@@ -50,6 +56,15 @@ struct CodingTraits<std::unique_ptr<T>> {
     } else {
       *encoder->GetPtr<uintptr_t>(offset) = FIDL_ALLOC_ABSENT;
     }
+  }
+  static void Decode(Decoder* decoder,
+                     std::unique_ptr<T>* value,
+                     size_t offset) {
+    uintptr_t ptr = *decoder->GetPtr<uintptr_t>(offset);
+    if (!ptr)
+      return value->reset();
+    *value = std::make_unique<T>();
+    CodingTraits<T>::Decode(decoder, value->get(), decoder->GetOffset(ptr));
   }
 };
 
@@ -69,6 +84,19 @@ struct CodingTraits<VectorPtr<T>> {
     for (size_t i = 0; i < count; ++i)
       CodingTraits<T>::Encode(encoder, &(*value)->at(i), base + i * stride);
   }
+  static void Decode(Decoder* decoder, VectorPtr<T>* value, size_t offset) {
+    fidl_vector_t* encoded = decoder->GetPtr<fidl_vector_t>(offset);
+    if (!encoded->data) {
+      *value = VectorPtr<T>();
+      return;
+    }
+    value->resize(encoded->count);
+    size_t stride = CodingTraits<T>::encoded_size;
+    size_t base = decoder->GetOffset(encoded->data);
+    size_t count = encoded->count;
+    for (size_t i = 0; i < count; ++i)
+      CodingTraits<T>::Decode(decoder, &(*value)->at(i), base + i * stride);
+  }
 };
 
 template <typename T, size_t N>
@@ -79,6 +107,11 @@ struct CodingTraits<Array<T, N>> {
     for (size_t i = 0; i < N; ++i)
       CodingTraits<T>::Encode(encoder, &value->at(i), offset + i * stride);
   }
+  static void Decode(Decoder* decoder, Array<T, N>* value, size_t offset) {
+    size_t stride = CodingTraits<T>::encoded_size;
+    for (size_t i = 0; i < N; ++i)
+      CodingTraits<T>::Decode(decoder, &value->at(i), offset + i * stride);
+  }
 };
 
 template <typename T, size_t EncodedSize>
@@ -87,11 +120,26 @@ struct EncodableCodingTraits {
   static void Encode(Encoder* encoder, T* value, size_t offset) {
     value->Encode(encoder, offset);
   }
+  static void Decode(Decoder* decoder, T* value, size_t offset) {
+    T::Decode(decoder, value, offset);
+  }
 };
 
 template <typename T>
 void Encode(Encoder* encoder, T* value, size_t offset) {
   CodingTraits<T>::Encode(encoder, value, offset);
+}
+
+template <typename T>
+void Decode(Decoder* decoder, T* value, size_t offset) {
+  CodingTraits<T>::Decode(decoder, value, offset);
+}
+
+template <typename T>
+T DecodeAs(Decoder* decoder, size_t offset) {
+  T value;
+  Decode(decoder, &value, offset);
+  return value;
 }
 
 }  // namespace fidl

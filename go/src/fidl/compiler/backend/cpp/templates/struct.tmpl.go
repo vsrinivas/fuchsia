@@ -26,6 +26,7 @@ class {{ .Name }}  {
   {{- end }}
 
   void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
 
  private:
   {{- range .Members }}
@@ -46,6 +47,12 @@ class {{ .Name }}  {
 void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
   {{- range .Members }}
   ::fidl::Encode(encoder, &{{ .StorageName }}, offset + {{ .Offset }});
+  {{- end }}
+}
+
+void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset) {
+  {{- range .Members }}
+  ::fidl::Decode(decoder, &value->{{ .StorageName }}, offset + {{ .Offset }});
   {{- end }}
 }
 {{- end }}

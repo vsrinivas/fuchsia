@@ -47,13 +47,14 @@ class Frobinator_Grob_ResponseHandler
   }
 
   zx_status_t OnMessage(::fidl::Message message) override {
-    using Params = ::fidl::StringPtr;
     const char* error_msg = nullptr;
     zx_status_t status =
         message.Decode(&unbounded_nonnullable_string_message_type, &error_msg);
     if (status != ZX_OK)
       return status;
-    callback_(Params::Take(message.GetPayloadAs<::fidl::StringView>()));
+    ::fidl::Decoder decoder(std::move(message));
+    size_t offset = sizeof(fidl_message_header_t);
+    callback_(::fidl::DecodeAs<::fidl::StringPtr>(&decoder, offset));
     return ZX_OK;
   }
 
@@ -111,24 +112,26 @@ zx_status_t FrobinatorStub::Dispatch(
   zx_status_t status;
   switch (message.ordinal()) {
     case kFrobinator_Frob_Ordinal: {
-      using Params = ::fidl::StringPtr;
       const char* error_msg = nullptr;
       status = message.Decode(&unbounded_nonnullable_string_message_type,
                               &error_msg);
       if (status != ZX_OK)
         break;
-      impl_->Frob(Params::Take(message.GetPayloadAs<::fidl::StringView>()));
+      ::fidl::Decoder decoder(std::move(message));
+      size_t offset = sizeof(fidl_message_header_t);
+      impl_->Frob(::fidl::DecodeAs<::fidl::StringPtr>(&decoder, offset));
       break;
     }
     case kFrobinator_Grob_Ordinal: {
-      using Params = ::fidl::StringPtr;
       using Responder = FrobinatorStub_Grob_Responder;
       const char* error_msg = nullptr;
       status = message.Decode(&unbounded_nonnullable_string_message_type,
                               &error_msg);
       if (status != ZX_OK)
         break;
-      impl_->Grob(Params::Take(message.GetPayloadAs<::fidl::StringView>()),
+      ::fidl::Decoder decoder(std::move(message));
+      size_t offset = sizeof(fidl_message_header_t);
+      impl_->Grob(::fidl::DecodeAs<::fidl::StringPtr>(&decoder, offset),
                   Responder(std::move(response)));
       break;
     }
