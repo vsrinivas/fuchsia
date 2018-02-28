@@ -22,7 +22,7 @@ module Fdio [system] [extern_c] {
     header "limits.h"
     export *
   }
-  module private {
+  module "private" {
     header "private.h"
     export *
   }

@@ -6,6 +6,7 @@
 
 #include <zircon/compiler.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <sys/types.h>
 
 __BEGIN_CDECLS

@@ -21,8 +21,8 @@ module Zircon [system] [extern_c] {
   }
 
   module ktrace [extern_c] {
+    textual header "ktrace-def.h"
     header "ktrace.h"
-    private header "ktrace-def.h"
   }
 
   module listnode [extern_c] {
@@ -126,11 +126,131 @@ module Zircon [system] [extern_c] {
   }
 
   module device [extern_c] {
-    // glob each header into it's own module decl
     umbrella "device"
-    explicit module * {
+
+    module audio {
+      header "device/audio.h"
       export *
     }
+    module block {
+      header "device/block.h"
+      export *
+    }
+    module bt_hci {
+      header "device/bt-hci.h"
+      export *
+    }
+    module camera_proto {
+      requires cplusplus
+      header "device/camera-proto.h"
+      export *
+    }
+    module camera {
+      header "device/camera.h"
+      export *
+    }
+    module device {
+      header "device/device.h"
+      export *
+    }
+    module display {
+      header "device/display.h"
+      export *
+    }
+    module dmctl {
+      header "device/dmctl.h"
+      export *
+    }
+    module ethernet {
+      header "device/ethernet.h"
+      export *
+    }
+    module ethertap {
+      header "device/ethertap.h"
+      export *
+    }
+    module hidctl {
+      header "device/hidctl.h"
+      export *
+    }
+    module i2c {
+      header "device/i2c.h"
+      export *
+    }
+    module input {
+      header "device/input.h"
+      export *
+    }
+    module intel_hda {
+      header "device/intel-hda.h"
+      export *
+    }
+    module ioctl {
+      header "device/ioctl.h"
+      export *
+    }
+    module ioctl_wrapper {
+      header "device/ioctl-wrapper.h"
+      export *
+    }
+    module ktrace {
+      header "device/ktrace.h"
+      export *
+    }
+    module midi {
+      header "device/midi.h"
+      export *
+    }
+    module power {
+      header "device/power.h"
+      export *
+    }
+    module pty {
+      header "device/pty.h"
+      export *
+    }
+    module ramdisk {
+      header "device/ramdisk.h"
+      export *
+    }
+    module rtc {
+      header "device/rtc.h"
+      export *
+    }
+    module sysinfo {
+      header "device/sysinfo.h"
+      export *
+    }
+    module test {
+      header "device/test.h"
+      export *
+    }
+    module thermal {
+      header "device/thermal.h"
+      export *
+    }
+    module tpm {
+      header "device/tpm.h"
+      export *
+    }
+    module usb_device {
+      header "device/usb-device.h"
+      export *
+    }
+    module usb {
+      header "device/usb.h"
+      export *
+    }
+    module usb_virt_bus {
+      header "device/usb-virt-bus.h"
+      export *
+    }
+    module vfs {
+      header "device/vfs.h"
+      export *
+    }
+
+    export *
   }
 
   module driver [extern_c] {

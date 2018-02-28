@@ -122,7 +122,7 @@ typedef struct camera_stream_cmd_get_formats_resp {
 typedef struct camera_stream_cmd_set_format_req {
     camera_cmd_hdr_t hdr;
 
-    camera_video_format video_format;
+    camera_video_format_t video_format;
 } camera_stream_cmd_set_format_req_t;
 
 typedef struct camera_stream_cmd_set_format_resp {
