@@ -56,11 +56,11 @@ source_set("cpp") {
 
   public_deps = [
     ":fidl_helpers",
+    "//garnet/public/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
     "//zircon/public/lib/fbl",
   ]
 }
@@ -78,11 +78,9 @@ source_set("base_view") {
     ":cpp",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/fidl/fuchsia.ui.app",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
     "//zircon/public/lib/trace",
   ]
 }
