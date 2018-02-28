@@ -51,10 +51,11 @@ constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 constexpr size_t kPolicyBasicInlineCount = 8;
 
 #if THREAD_SET_PRIORITY_EXPERIMENT
-// See ZX-940
-bool thread_set_priority_allowed = false;
+// This was initially set to false by default. See ZX-940 for the rationale
+// for being enabled by default.
+bool thread_set_priority_allowed = true;
 void thread_set_priority_experiment_init_hook(uint) {
-    thread_set_priority_allowed = cmdline_get_bool("thread.set.priority.allowed", false);
+    thread_set_priority_allowed = !cmdline_get_bool("thread.set.priority.disable", false);
     printf("thread set priority experiment is : %s\n",
            thread_set_priority_allowed ? "ENABLED" : "DISABLED");
 }

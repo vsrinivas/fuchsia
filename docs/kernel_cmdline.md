@@ -32,7 +32,7 @@ option off unless you suspect the crashlogger is causing problems.
 
 If this option is set, the crashlogger will attempt to generate a
 "processor trace" dump along with the crash report. The dump files
-are written as /tmp/crash-pt.*. This option requires processor tracing
+are written as /tmp/crash-pt.\*. This option requires processor tracing
 to be enabled in the kernel. This can be done by running "ipt" program after
 the system has booted. E.g., set zircon.autorun.system like this
 
@@ -62,7 +62,7 @@ Example: `driver.usb_audio.disable`
 ## driver.\<name>.log=\<flags>
 
 Set the log flags for a driver.  Flags are one or more comma-separated
-values which must be preceeded by a "+" (in which case that flag is enabled)
+values which must be preceded by a "+" (in which case that flag is enabled)
 or a "-" (in which case that flag is disabled).  The textual constants
 "error", "warn", "info", "trace", "spew", "debug1", "debug2", "debug3", and "debug4"
 may be used, and they map to the corresponding bits in DDK_LOG_... in `ddk/debug.h`
@@ -230,6 +230,11 @@ This option (disabled by default) turns on dynamic linker trace output.
 The output is in a form that is consumable by clients like Intel
 Processor Trace support.
 
+## thread.set.priority.disable=\<bool>
+
+This option (false by default) prevents the syscall that increases
+a thread priority (`zx_thread_set_priority`) from taking effect.
+
 ## zircon.autorun.boot=\<command>
 
 This option requests that *command* be run at boot, after devmgr starts up.
@@ -258,7 +263,7 @@ argument.
 
 A ramdisk containing `/system` takes precedence over
 `zircon.system.blobstore-init` and *command* will not be run if a system
-ramdisk is present. blobstore init will take precendence over a minfs
+ramdisk is present. blobstore init will take precedence over a minfs
 partition with the system GUID, and the minfs partition will not be mounted
 if `zircon.system.blobstore-init` is set.
 
@@ -283,7 +288,7 @@ It may be set to:
   will be used.
 "none" (default) which avoids mounting anything.
 
-A "/system" ramdisk provided by bootdata always supercedes this option.
+A "/system" ramdisk provided by bootdata always supersedes this option.
 
 ## netsvc.netboot=\<bool>
 
