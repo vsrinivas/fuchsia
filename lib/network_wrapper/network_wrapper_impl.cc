@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "garnet/lib/backoff/exponential_backoff.h"
 #include "garnet/lib/callback/cancellable_helper.h"
 #include "garnet/lib/callback/destruction_sentinel.h"
 #include "garnet/lib/callback/to_function.h"
@@ -160,9 +161,18 @@ class NetworkWrapperImpl::RunningRequest {
 
 NetworkWrapperImpl::NetworkWrapperImpl(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
+    std::unique_ptr<backoff::Backoff> backoff,
     std::function<network::NetworkServicePtr()> network_service_factory)
-    : network_service_factory_(std::move(network_service_factory)),
+    : backoff_(std::move(backoff)),
+      network_service_factory_(std::move(network_service_factory)),
       task_runner_(std::move(task_runner)) {}
+
+NetworkWrapperImpl::NetworkWrapperImpl(
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    std::function<network::NetworkServicePtr()> network_service_factory)
+    : NetworkWrapperImpl(std::move(task_runner),
+                         std::make_unique<backoff::ExponentialBackoff>(),
+                         std::move(network_service_factory)) {}
 
 NetworkWrapperImpl::~NetworkWrapperImpl() {}
 
@@ -197,7 +207,7 @@ network::NetworkService* NetworkWrapperImpl::GetNetworkService() {
       }
       network_service_.Unbind();
       task_runner_.PostDelayedTask([this] { RetryGetNetworkService(); },
-                                   backoff_.GetNext());
+                                   backoff_->GetNext());
     });
   }
 

@@ -45,6 +45,7 @@ source_set("unittests") {
 
   deps = [
     ":network_wrapper",
+    "//garnet/lib/backoff/testing",
     "//garnet/lib/gtest",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/netstack/fidl:net_address",

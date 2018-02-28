@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_NETWORK_WRAPPER_NETWORK_WRAPPER_IMPL_H_
 #define GARNET_LIB_NETWORK_WRAPPER_NETWORK_WRAPPER_IMPL_H_
 
-#include "garnet/lib/backoff/exponential_backoff.h"
+#include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
 #include "garnet/lib/network_wrapper/network_wrapper.h"
@@ -16,6 +16,10 @@ namespace network_wrapper {
 
 class NetworkWrapperImpl : public NetworkWrapper {
  public:
+  NetworkWrapperImpl(
+      fxl::RefPtr<fxl::TaskRunner> task_runner,
+      std::unique_ptr<backoff::Backoff> backoff,
+      std::function<network::NetworkServicePtr()> network_service_factory);
   NetworkWrapperImpl(
       fxl::RefPtr<fxl::TaskRunner> task_runner,
       std::function<network::NetworkServicePtr()> network_service_factory);
@@ -32,7 +36,7 @@ class NetworkWrapperImpl : public NetworkWrapper {
 
   void RetryGetNetworkService();
 
-  backoff::ExponentialBackoff backoff_;
+  std::unique_ptr<backoff::Backoff> backoff_;
   bool in_backoff_ = false;
   std::function<network::NetworkServicePtr()> network_service_factory_;
   network::NetworkServicePtr network_service_;

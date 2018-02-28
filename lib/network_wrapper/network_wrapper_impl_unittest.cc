@@ -10,6 +10,7 @@
 
 #include <zx/socket.h>
 
+#include "garnet/lib/backoff/testing/test_backoff.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -115,6 +116,7 @@ class NetworkWrapperImplTest : public gtest::TestWithMessageLoop {
  public:
   NetworkWrapperImplTest()
       : network_service_(message_loop_.task_runner(),
+                         std::make_unique<backoff::TestBackoff>(),
                          [this] { return NewNetworkService(); }) {}
 
   void SetSocketResponse(zx::socket body, uint32_t status_code) {
