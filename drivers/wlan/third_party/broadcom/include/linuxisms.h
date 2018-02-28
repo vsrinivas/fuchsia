@@ -901,9 +901,11 @@ struct sk_buff {
     uint32_t ip_summed;
 };
 
-struct {
+struct current_with_pid {
     int pid;
-} * current;
+};
+
+extern struct current_with_pid* current;
 
 struct brcmfmac_pd_cc_entry {
     uint8_t* iso3166;
