@@ -115,14 +115,54 @@ zx_protocol_device_t device_default_ops = {
     .rxrpc = default_rxrpc,
 };
 
-static struct list_node unmatched_device_list = LIST_INITIAL_VALUE(unmatched_device_list);
-static struct list_node driver_list = LIST_INITIAL_VALUE(driver_list);
+static void device_invalid_fatal(void* ctx) {
+    printf("devhost: FATAL: zx_device_t used after destruction.\n");
+    __builtin_trap();
+}
+
+static zx_protocol_device_t device_invalid_ops = {
+    .open = (void*) device_invalid_fatal,
+    .open_at = (void*) device_invalid_fatal,
+    .close = (void*) device_invalid_fatal,
+    .unbind = (void*) device_invalid_fatal,
+    .release = (void*) device_invalid_fatal,
+    .read = (void*) device_invalid_fatal,
+    .write = (void*) device_invalid_fatal,
+    .get_size = (void*) device_invalid_fatal,
+    .ioctl = (void*) device_invalid_fatal,
+    .suspend = (void*) device_invalid_fatal,
+    .resume = (void*) device_invalid_fatal,
+    .rxrpc = (void*) device_invalid_fatal,
+};
+
+static struct list_node dead_device_list = LIST_INITIAL_VALUE(dead_device_list);
+
+void devhost_device_destroy(zx_device_t* dev) {
+    // ensure any ops will be fatal
+    dev->ops = &device_invalid_ops;
+
+    dev->magic = 0xdeaddeaddeaddead;
+
+    // ensure all handles are invalid
+    dev->event = 0xffffffff;
+    dev->local_event = 0xffffffff;
+    dev->rpc = 0xFFFFFFFF;
+
+    // ensure all pointers are invalid
+    dev->ctx = 0;
+    dev->driver = 0;
+    dev->parent = 0;
+    dev->ios = 0;
+    dev->proxy_ios = 0;
+
+    // TODO: free these eventually
+    list_add_tail(&dead_device_list, &dev->node);
+}
 
 void dev_ref_release(zx_device_t* dev) TA_REQ(&__devhost_api_lock) {
     if (dev->refcount < 1) {
-        printf("device: %p: REFCOUNT GOING NEGATIVE\n", dev);
-        //TODO: probably should assert, but to start with let's
-        //      see if this is happening in normal use
+        printf("device: FATAL: %p: REFCOUNT GOING NEGATIVE\n", dev);
+        __builtin_trap();
     }
     dev->refcount--;
     if (dev->refcount == 0) {
@@ -153,6 +193,8 @@ void dev_ref_release(zx_device_t* dev) TA_REQ(&__devhost_api_lock) {
         DM_UNLOCK();
         dev_op_release(dev);
         DM_LOCK();
+
+        devhost_device_destroy(dev);
 
         // At this point we can safely release the ref on our parent
         if (dev->parent) {
@@ -526,14 +568,6 @@ zx_status_t devhost_device_suspend(zx_device_t* dev, uint32_t flags) {
         return ZX_OK;
     }
     return ZX_OK;
-}
-
-void devhost_device_destroy(zx_device_t* dev) {
-    // Only destroy devices immediately after device_create() or after they're dead.
-    ZX_DEBUG_ASSERT(dev->flags == 0 || dev->flags & DEV_FLAG_VERY_DEAD);
-    dev->magic = 0xdeaddead;
-    dev->ops = NULL;
-    free(dev);
 }
 
 typedef struct {
