@@ -44,9 +44,11 @@ private:
         if (error_msg_out_ != nullptr) {
             *error_msg_out_ = error_msg;
         }
-        for (uint32_t i = 0; i < handle_idx_; ++i) {
-            // Return value intentionally ignored: this is best-effort cleanup.
-            zx_handle_close(handles_[i]);
+        if (handles_ != nullptr) {
+            for (uint32_t i = 0; i < handle_idx_; ++i) {
+                // Return value intentionally ignored: this is best-effort cleanup.
+                zx_handle_close(handles_[i]);
+            }
         }
     }
 
