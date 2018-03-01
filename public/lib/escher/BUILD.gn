@@ -110,6 +110,8 @@ source_set("escher") {
     "fs/hack_filesystem.h",
     "geometry/bounding_box.cc",
     "geometry/bounding_box.h",
+    "geometry/intersection.cc",
+    "geometry/intersection.h",
     "geometry/quad.cc",
     "geometry/quad.h",
     "geometry/tessellation.cc",

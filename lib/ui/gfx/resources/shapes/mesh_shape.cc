@@ -5,6 +5,7 @@
 #include "garnet/lib/ui/gfx/resources/shapes/mesh_shape.h"
 
 #include "garnet/lib/ui/gfx/engine/session.h"
+#include "lib/escher/geometry/intersection.h"
 
 namespace scenic {
 namespace gfx {
@@ -22,8 +23,8 @@ escher::Object MeshShape::GenerateRenderObject(
 
 bool MeshShape::GetIntersection(const escher::ray4& ray,
                                 float* out_distance) const {
-  // TODO(MZ-274): implement ray-intersection.
-  return false;
+  // TODO(MZ-274): implement mesh-ray intersection.
+  return IntersectRayBox(ray, bounding_box_, out_distance);
 }
 
 bool MeshShape::BindBuffers(
@@ -77,6 +78,7 @@ bool MeshShape::BindBuffers(
       index_count, vertex_buffer->escher_buffer(),
       index_buffer->escher_buffer(), vertex_offset, index_offset);
 
+  bounding_box_ = bounding_box;
   index_buffer_ = std::move(index_buffer);
   vertex_buffer_ = std::move(vertex_buffer);
 
