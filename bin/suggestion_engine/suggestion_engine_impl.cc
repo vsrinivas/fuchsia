@@ -314,6 +314,7 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
     auto extra_info = f1dl::Array<modular::StoryInfoExtraEntryPtr>::New(1);
     char hex_color[11];
     sprintf(hex_color, "0x%x", story_color);
+    extra_info[0] = modular::StoryInfoExtraEntry::New();
     extra_info[0]->key = "color";
     extra_info[0]->value = hex_color;
     auto& initial_data = create_story->initial_data;
