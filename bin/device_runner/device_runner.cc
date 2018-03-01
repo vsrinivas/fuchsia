@@ -235,7 +235,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // TODO(alhaad): We want to split this up into multiple files or even
     // organize it into multiple directories. Pseudo-directories needs to be
     // changed first to support callbacks.
-    app_context_->GetOrCreateDebugExportDir()->AddEntry(
+    app_context_->debug_export_dir()->AddEntry(
         "dump-state",
         fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
           *out = user_provider_impl_->DumpState();
