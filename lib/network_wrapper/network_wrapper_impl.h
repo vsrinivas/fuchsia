@@ -20,9 +20,6 @@ class NetworkWrapperImpl : public NetworkWrapper {
       fxl::RefPtr<fxl::TaskRunner> task_runner,
       std::unique_ptr<backoff::Backoff> backoff,
       std::function<network::NetworkServicePtr()> network_service_factory);
-  NetworkWrapperImpl(
-      fxl::RefPtr<fxl::TaskRunner> task_runner,
-      std::function<network::NetworkServicePtr()> network_service_factory);
   ~NetworkWrapperImpl() override;
 
   fxl::RefPtr<callback::Cancellable> Request(
