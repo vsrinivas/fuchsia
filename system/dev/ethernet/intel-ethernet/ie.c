@@ -106,7 +106,7 @@ static void reap_tx_buffers(ethdev_t* eth) {
 }
 
 status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
-    if ((len < 60) || (len > ETH_TXBUF_DSIZE)) {
+    if (len > ETH_TXBUF_DSIZE) {
         printf("intel-eth: unsupported packet length %zu\n", len);
         return ZX_ERR_INVALID_ARGS;
     }
@@ -126,6 +126,11 @@ status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {
 
     uint32_t n = eth->tx_wr_ptr;
     memcpy(frame->data, data, len);
+    // Pad out short packets.
+    if (len < 60) {
+      memset(frame->data + len, 0, 60 - len);
+      len = 60;
+    }
     eth->txd[n].addr = frame->phys;
     eth->txd[n].info = IE_TXD_LEN(len) | IE_TXD_EOP | IE_TXD_IFCS | IE_TXD_RS;
     list_add_tail(&eth->busy_frames, &frame->node);
