@@ -63,7 +63,7 @@ bool output_compare_helper(zx::socket local, fx_log_severity_t severity,
         auto tag_len = static_cast<int8_t>(strlen(tag));
         ASSERT_EQ(tag_len, packet.data[pos], "");
         pos++;
-        ASSERT_STR_EQ(tag, packet.data + pos, tag_len, "");
+        ASSERT_BYTES_EQ((uint8_t*)tag, (uint8_t*)packet.data + pos, tag_len, "");
         pos += tag_len;
     }
     ASSERT_EQ(0, packet.data[pos], "");

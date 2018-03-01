@@ -90,9 +90,21 @@ bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, si
     return true;
 }
 
-bool unittest_expect_str_eq(const char* expected, const char* actual, size_t len, const char* msg) {
-    if (strncmp(expected, actual, len)) {
+bool unittest_expect_str_eq(const char* expected, const char* actual,
+                            size_t length, const char* msg) {
+    if (strcmp(expected, actual)) {
         printf("%s. expected\n'%s'\nactual\n'%s'\n", msg, expected, actual);
+        return false;
+    }
+
+    // TODO(mseaborn): Remove the 'length' argument to EXPECT_STR_EQ() and
+    // ASSERT_STR_EQ(), and remove the following sanity check.
+    size_t strings_length = strlen(expected);
+    if (length < strings_length) {
+        printf("%s. 'len' argument to EXPECT_STR_EQ()/ASSERT_STR_EQ() was %zu"
+               " -- shorter than the string arguments, which matched and"
+               " had length %zu\n",
+               msg, length, strings_length);
         return false;
     }
     return true;
