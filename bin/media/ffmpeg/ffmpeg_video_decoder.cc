@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "garnet/bin/media/ffmpeg/ffmpeg_formatting.h"
+#include "garnet/bin/media/util/thread_aware_shared_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
@@ -15,6 +16,14 @@ extern "C" {
 }
 
 namespace media {
+
+// static
+std::shared_ptr<Decoder> FfmpegVideoDecoder::Create(
+    AvCodecContextPtr av_codec_context) {
+  FfmpegVideoDecoder* decoder =
+      new FfmpegVideoDecoder(std::move(av_codec_context));
+  return ThreadAwareSharedPtr<Decoder>(decoder, decoder->GetTaskRunner());
+}
 
 FfmpegVideoDecoder::FfmpegVideoDecoder(AvCodecContextPtr av_codec_context)
     : FfmpegDecoderBase(std::move(av_codec_context)) {

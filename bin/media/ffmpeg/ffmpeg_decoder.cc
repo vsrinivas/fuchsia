@@ -34,12 +34,10 @@ Result FfmpegDecoder::Create(const StreamType& stream_type,
 
   switch (av_codec_context->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
-      *decoder_out = std::shared_ptr<Decoder>(
-          new FfmpegAudioDecoder(std::move(av_codec_context)));
+      *decoder_out = FfmpegAudioDecoder::Create(std::move(av_codec_context));
       break;
     case AVMEDIA_TYPE_VIDEO:
-      *decoder_out = std::shared_ptr<Decoder>(
-          new FfmpegVideoDecoder(std::move(av_codec_context)));
+      *decoder_out = FfmpegVideoDecoder::Create(std::move(av_codec_context));
       break;
     default:
       FXL_LOG(ERROR) << "unsupported codec type "

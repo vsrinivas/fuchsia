@@ -4,11 +4,20 @@
 
 #include "garnet/bin/media/ffmpeg/ffmpeg_audio_decoder.h"
 
+#include "garnet/bin/media/util/thread_aware_shared_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
+
+// static
+std::shared_ptr<Decoder> FfmpegAudioDecoder::Create(
+    AvCodecContextPtr av_codec_context) {
+  FfmpegAudioDecoder* decoder =
+      new FfmpegAudioDecoder(std::move(av_codec_context));
+  return ThreadAwareSharedPtr<Decoder>(decoder, decoder->GetTaskRunner());
+}
 
 FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
     : FfmpegDecoderBase(std::move(av_codec_context)) {
