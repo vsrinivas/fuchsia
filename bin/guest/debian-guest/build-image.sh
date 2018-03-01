@@ -79,7 +79,7 @@ sudo multistrap -f "${MULTISTRAP_CONFIG}" -d "${MOUNTPOINT}"
 if [[ -n "${HOST_QEMU_BIN}" ]]; then
   HOST_QEMU_PATH=`which "${HOST_QEMU_BIN}"`
   TARGET_QEMU_PATH="${MOUNTPOINT}/usr/bin"
-  cp "${HOST_QEMU_PATH}" "${TARGET_QEMU_PATH}"
+  sudo cp "${HOST_QEMU_PATH}" "${TARGET_QEMU_PATH}"
 fi
 
 sudo -v -p "[sudo] Enter password to chroot into guest system"
