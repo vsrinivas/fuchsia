@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_GET_PAGE_GET_PAGE_H_
 #define PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_GET_PAGE_GET_PAGE_H_
 
+#include <vector>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
@@ -37,6 +38,7 @@ class GetPageBenchmark {
   app::ApplicationControllerPtr application_controller_;
   ledger::LedgerPtr ledger_;
   f1dl::Array<uint8_t> page_id_;
+  std::vector<ledger::PagePtr> pages_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetPageBenchmark);
 };
