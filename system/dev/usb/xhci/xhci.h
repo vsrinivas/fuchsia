@@ -215,6 +215,9 @@ static inline void xhci_cache_flush_invalidate(volatile const void* addr, size_t
 #endif
 
 zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts);
+// Returns the max number of interrupters supported by the xhci.
+// This is different to xhci->num_interrupts.
+uint32_t xhci_get_max_interrupters(xhci_t* xhci);
 int xhci_get_slot_ctx_state(xhci_slot_t* slot);
 int xhci_get_ep_ctx_state(xhci_slot_t* slot, xhci_endpoint_t* ep);
 void xhci_set_dbcaa(xhci_t* xhci, uint32_t slot_id, zx_paddr_t paddr);

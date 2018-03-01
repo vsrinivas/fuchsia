@@ -22,10 +22,6 @@
 #define ROUNDUP_TO(x, multiple) ((x + multiple - 1) & ~(multiple - 1))
 #define PAGE_ROUNDUP(x) ROUNDUP_TO(x, PAGE_SIZE)
 
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
-
 // The Interrupter Moderation Interval prevents the controller from sending interrupts too often.
 // According to XHCI Rev 1.1 4.17.2, the default is 4000 (= 1 ms). We set it to 1000 (= 250 us) to
 // get better latency on completions for bulk transfers; setting it too low seems to destabilize the
@@ -173,10 +169,7 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
     volatile uint32_t* hccparams2 = &xhci->cap_regs->hccparams2;
 
     xhci->mode = mode;
-    uint32_t max_interrupters = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_INTRS_START,
-                                                HCSPARAMS1_MAX_INTRS_BITS);
-    max_interrupters = MIN(INTERRUPTER_COUNT, max_interrupters);
-    xhci->num_interrupts = MIN(max_interrupters, num_interrupts);
+    xhci->num_interrupts = num_interrupts;
 
     xhci->max_slots = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_SLOTS_START,
                                       HCSPARAMS1_MAX_SLOTS_BITS);
@@ -337,6 +330,13 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
 fail:
     xhci_free(xhci);
     return result;
+}
+
+uint32_t xhci_get_max_interrupters(xhci_t* xhci) {
+    xhci_cap_regs_t* cap_regs = (xhci_cap_regs_t*)xhci->mmio;
+    volatile uint32_t* hcsparams1 = &cap_regs->hcsparams1;
+    return XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_INTRS_START,
+                           HCSPARAMS1_MAX_INTRS_BITS);
 }
 
 int xhci_get_slot_ctx_state(xhci_slot_t* slot) {

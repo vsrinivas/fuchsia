@@ -23,6 +23,10 @@
 #include "xhci-util.h"
 #include "xhci.h"
 
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 #define MAX_SLOTS 255
 
 #define DEFAULT_PRIORITY 16
@@ -349,10 +353,17 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
         goto error_return;
     }
 
+    // Cap IRQ count at the number of interrupters we want to use and
+    // the number of interrupters supported by XHCI.
+    irq_cnt = MIN(irq_cnt, INTERRUPTER_COUNT);
+    irq_cnt = MIN(irq_cnt, xhci_get_max_interrupters(xhci));
+
     // select our IRQ mode
     xhci_mode_t mode = XHCI_PCI_MSI;
-    status = pci_set_irq_mode(pci, ZX_PCIE_IRQ_MODE_MSI, xhci->num_interrupts);
+    status = pci_set_irq_mode(pci, ZX_PCIE_IRQ_MODE_MSI, irq_cnt);
     if (status < 0) {
+        zxlogf(ERROR, "MSI interrupts not available, irq_cnt: %d, err: %d\n",
+               irq_cnt, status);
         zx_status_t status_legacy = pci_set_irq_mode(pci, ZX_PCIE_IRQ_MODE_LEGACY, 1);
 
         if (status_legacy < 0) {
