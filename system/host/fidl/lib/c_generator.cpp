@@ -427,20 +427,20 @@ std::map<const flat::Decl*, CGenerator::NamedInterface> CGenerator::NameInterfac
         for (const auto& method : interface_info->methods) {
             NamedMethod named_method;
             std::string name = LongName(interface_info->name) + ShortName(method.name);
-            if (method.has_request) {
+            if (method.maybe_request != nullptr) {
                 std::string c_name = name + "Msg";
                 std::string coded_name = name + "ReqCoded";
-                named_method.request = std::make_unique<NamedMessage>(NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_request});
+                named_method.request = std::make_unique<NamedMessage>(NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_request->parameters});
             }
-            if (method.has_response) {
-                if (!method.has_request) {
+            if (method.maybe_response != nullptr) {
+                if (method.maybe_request == nullptr) {
                     std::string c_name = name + "Evt";
                     std::string coded_name = name + "EvtCoded";
-                    named_method.response = std::make_unique<NamedMessage>(NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response});
+                    named_method.response = std::make_unique<NamedMessage>(NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response->parameters});
                 } else {
                     std::string c_name = name + "Rsp";
                     std::string coded_name = name + "RspCoded";
-                    named_method.response = std::make_unique<NamedMessage>(NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response});
+                    named_method.response = std::make_unique<NamedMessage>(NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response->parameters});
                 }
             }
             named_interface.methods.push_back(std::move(named_method));

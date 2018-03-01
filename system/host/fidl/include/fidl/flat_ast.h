@@ -119,28 +119,27 @@ struct Interface : public Decl {
             FieldShape fieldshape;
         };
 
+        struct Message {
+            std::vector<Parameter> parameters;
+            TypeShape typeshape;
+        };
+
         Method(Method&&) = default;
         Method& operator=(Method&&) = default;
 
-        Method(Ordinal ordinal, std::unique_ptr<raw::Identifier> name, bool has_request,
-               std::vector<Parameter> maybe_request, bool has_response,
-               std::vector<Parameter> maybe_response)
-            : ordinal(std::move(ordinal)), name(std::move(name)), has_request(has_request),
-              maybe_request(std::move(maybe_request)), has_response(has_response),
+        Method(Ordinal ordinal, std::unique_ptr<raw::Identifier> name,
+               std::unique_ptr<Message> maybe_request,
+               std::unique_ptr<Message> maybe_response)
+            : ordinal(std::move(ordinal)), name(std::move(name)),
+              maybe_request(std::move(maybe_request)),
               maybe_response(std::move(maybe_response)) {
-            assert(has_request || has_response);
+            assert(this->maybe_request != nullptr || this->maybe_response != nullptr);
         }
 
         Ordinal ordinal;
         std::unique_ptr<raw::Identifier> name;
-        bool has_request;
-        std::vector<Parameter> maybe_request;
-        // TODO(TO-758,TO-825) Compute these.
-        TypeShape maybe_request_typeshape;
-        bool has_response;
-        std::vector<Parameter> maybe_response;
-        // TODO(TO-758,TO-825) Compute these.
-        TypeShape maybe_response_typeshape;
+        std::unique_ptr<Message> maybe_request;
+        std::unique_ptr<Message> maybe_response;
     };
 
     Interface(Name name, std::vector<Method> methods)

@@ -164,30 +164,28 @@ bool Library::ConsumeInterfaceDeclaration(
 
         auto method_name = std::move(method->identifier);
 
-        bool has_request = static_cast<bool>(method->maybe_request);
-        std::vector<Interface::Method::Parameter> maybe_request;
-        if (has_request) {
+        std::unique_ptr<Interface::Method::Message> maybe_request;
+        if (method->maybe_request != nullptr) {
+            maybe_request.reset(new Interface::Method::Message());
             for (auto& parameter : method->maybe_request->parameter_list) {
                 auto parameter_name = std::move(parameter->identifier);
-                maybe_request.emplace_back(std::move(parameter->type), std::move(parameter_name));
+                maybe_request->parameters.emplace_back(std::move(parameter->type), std::move(parameter_name));
             }
         }
 
-        bool has_response = static_cast<bool>(method->maybe_response);
-        std::vector<Interface::Method::Parameter> maybe_response;
-        if (has_response) {
+        std::unique_ptr<Interface::Method::Message> maybe_response;
+        if (method->maybe_response != nullptr) {
+            maybe_response.reset(new Interface::Method::Message());
             for (auto& parameter : method->maybe_response->parameter_list) {
-                auto response_paramater_name = std::move(parameter->identifier);
-                maybe_response.emplace_back(std::move(parameter->type),
-                                            std::move(response_paramater_name));
+                auto parameter_name = std::move(parameter->identifier);
+                maybe_response->parameters.emplace_back(std::move(parameter->type), std::move(parameter_name));
             }
         }
 
-        assert(has_request || has_response);
+        assert(maybe_request != nullptr || maybe_response != nullptr);
 
         methods.emplace_back(std::move(ordinal), std::move(method_name),
-                             has_request, std::move(maybe_request),
-                             has_response, std::move(maybe_response));
+                             std::move(maybe_request), std::move(maybe_response));
     }
 
     interface_declarations_.push_back(std::make_unique<Interface>(std::move(name), std::move(methods)));
@@ -343,13 +341,13 @@ std::set<Decl*> Library::DeclDependencies(Decl* decl) {
     case Decl::Kind::kInterface: {
         auto interface_decl = static_cast<const Interface*>(decl);
         for (const auto& method : interface_decl->methods) {
-            if (method.has_request) {
-                for (const auto& parameter : method.maybe_request) {
+            if (method.maybe_request != nullptr) {
+                for (const auto& parameter : method.maybe_request->parameters) {
                     maybe_add_decl(parameter.type);
                 }
             }
-            if (method.has_response) {
-                for (const auto& parameter : method.maybe_response) {
+            if (method.maybe_response != nullptr) {
+                for (const auto& parameter : method.maybe_response->parameters) {
                     maybe_add_decl(parameter.type);
                 }
             }
@@ -473,29 +471,29 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             return false;
         if (!ordinal_scope.Insert(method.ordinal.Value()))
             return false;
-        if (method.has_request) {
+        if (method.maybe_request != nullptr) {
             Scope<StringView> request_scope;
             std::vector<FieldShape*> request_struct;
-            for (auto& param : method.maybe_request) {
+            for (auto& param : method.maybe_request->parameters) {
                 if (!request_scope.Insert(param.name->location.data()))
                     return false;
                 if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
                 request_struct.push_back(&param.fieldshape);
             }
-            method.maybe_request_typeshape = FidlStructTypeShape(&request_struct);
+            method.maybe_request->typeshape = FidlStructTypeShape(&request_struct);
         }
-        if (method.has_response) {
+        if (method.maybe_response != nullptr) {
             Scope<StringView> response_scope;
             std::vector<FieldShape*> response_struct;
-            for (auto& param : method.maybe_response) {
+            for (auto& param : method.maybe_response->parameters) {
                 if (!response_scope.Insert(param.name->location.data()))
                     return false;
                 if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
                 response_struct.push_back(&param.fieldshape);
             }
-            method.maybe_response_typeshape = FidlStructTypeShape(&response_struct);
+            method.maybe_response->typeshape = FidlStructTypeShape(&response_struct);
         }
     }
     return true;

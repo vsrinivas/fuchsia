@@ -468,17 +468,17 @@ void JSONGenerator::Generate(const flat::Interface::Method& value) {
     GenerateObject([&]() {
         GenerateObjectMember("ordinal", value.ordinal, Position::First);
         GenerateObjectMember("name", value.name);
-        GenerateObjectMember("has_request", value.has_request);
-        if (value.has_request) {
-            GenerateObjectMember("maybe_request", value.maybe_request);
-            GenerateObjectMember("maybe_request_size", value.maybe_request_typeshape.Size());
-            GenerateObjectMember("maybe_request_alignment", value.maybe_request_typeshape.Alignment());
+        GenerateObjectMember("has_request", value.maybe_request != nullptr);
+        if (value.maybe_request != nullptr) {
+            GenerateObjectMember("maybe_request", value.maybe_request->parameters);
+            GenerateObjectMember("maybe_request_size", value.maybe_request->typeshape.Size());
+            GenerateObjectMember("maybe_request_alignment", value.maybe_request->typeshape.Alignment());
         }
-        GenerateObjectMember("has_response", value.has_response);
-        if (value.has_response) {
-            GenerateObjectMember("maybe_response", value.maybe_response);
-            GenerateObjectMember("maybe_response_size", value.maybe_response_typeshape.Size());
-            GenerateObjectMember("maybe_response_alignment", value.maybe_response_typeshape.Alignment());
+        GenerateObjectMember("has_response", value.maybe_response != nullptr);
+        if (value.maybe_response != nullptr) {
+            GenerateObjectMember("maybe_response", value.maybe_response->parameters);
+            GenerateObjectMember("maybe_response_size", value.maybe_response->typeshape.Size());
+            GenerateObjectMember("maybe_response_alignment", value.maybe_response->typeshape.Alignment());
         }
     });
 }
