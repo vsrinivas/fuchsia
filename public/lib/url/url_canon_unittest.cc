@@ -4,8 +4,8 @@
 
 #include <errno.h>
 
+#include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
-#include "third_party/gtest/include/gtest/gtest.h"
 #include "lib/url/test/icu_unittest_base.h"
 #include "lib/url/third_party/mozilla/url_parse.h"
 #include "lib/url/url_canon.h"

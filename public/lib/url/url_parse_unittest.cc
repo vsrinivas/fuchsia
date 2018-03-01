@@ -4,10 +4,10 @@
 
 #include "lib/url/third_party/mozilla/url_parse.h"
 
+#include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include "lib/url/third_party/mozilla/url_parse.h"
 #include "lib/url/url_test_utils.h"
-#include "third_party/gtest/include/gtest/gtest.h"
 
 // Interesting IE file:isms...
 //

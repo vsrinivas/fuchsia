@@ -10,7 +10,7 @@
 
 #include <string>
 
-#include "third_party/gtest/include/gtest/gtest.h"
+#include "gtest/gtest.h"
 #include "lib/url/url_canon_internal.h"
 
 namespace url {
