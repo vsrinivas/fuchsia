@@ -60,6 +60,8 @@ typedef struct virtio_net_hdr {
     uint16_t gso_size;
     uint16_t csum_start;
     uint16_t csum_offset;
+    // Only if |VIRTIO_NET_F_MRG_RXBUF| or |VIRTIO_F_VERSION_1|.
+    uint16_t num_buffers;
 } __PACKED virtio_net_hdr_t;
 
 __END_CDECLS

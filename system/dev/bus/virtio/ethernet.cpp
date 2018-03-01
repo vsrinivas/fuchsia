@@ -171,9 +171,9 @@ virtio_net_hdr_t* GetFrameHdr(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc
     return reinterpret_cast<virtio_net_hdr_t*>(GetFrameVirt(bufs, ring_id, desc_id));
 }
 
-uint8_t* GetFrameData(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc_id) {
+uint8_t* GetFrameData(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc_id, size_t hdr_size) {
     uintptr_t vaddr = reinterpret_cast<uintptr_t>(GetFrameHdr(bufs, ring_id, desc_id));
-    return reinterpret_cast<uint8_t*>(vaddr + sizeof(virtio_net_hdr_t));
+    return reinterpret_cast<uint8_t*>(vaddr + hdr_size);
 }
 
 } // namespace
@@ -207,7 +207,24 @@ zx_status_t EthernetDevice::Init() {
     // Ack and set the driver status bit
     DriverStatusAck();
 
-    // TODO(aarongreen): Check features bits and ack/nak them
+    virtio_hdr_len_ = sizeof(virtio_net_hdr_t);
+    if (DeviceFeatureSupported(VIRTIO_F_VERSION_1)) {
+      DriverFeatureAck(VIRTIO_F_VERSION_1);
+    } else {
+      // 5.1.6.1 Legacy Interface: Device Operation
+      //
+      // The legacy driver only presented num_buffers in the struct
+      // virtio_net_hdr when VIRTIO_NET_F_MRG_RXBUF was negotiated; without
+      // that feature the structure was 2 bytes shorter.
+      virtio_hdr_len_ -= 2;
+    }
+
+    // TODO(aarongreen): Check additional features bits and ack/nak them
+    rc = DeviceStatusFeaturesOk();
+    if (rc != ZX_OK) {
+        zxlogf(ERROR, "%s: Feature negotiation failed (%d)\n", tag(), rc);
+        return rc;
+    }
 
     // Plan to clean up unless everything goes right.
     auto cleanup = fbl::MakeAutoCall([this]() { Release(); });
@@ -299,8 +316,8 @@ void EthernetDevice::IrqRingUpdate() {
 
             // Transitional driver does not merge rx buffers.
             assert(used_elem->len < desc->len);
-            uint8_t* data = GetFrameData(bufs_.get(), kRxId, id);
-            size_t len = used_elem->len - sizeof(virtio_net_hdr_t);
+            uint8_t* data = GetFrameData(bufs_.get(), kRxId, id, virtio_hdr_len_);
+            size_t len = used_elem->len - virtio_hdr_len_;
             LTRACEF("Receiving %zu bytes:\n", len);
             LTRACE_DO(hexdump8_ex(data, len, 0));
 
@@ -381,7 +398,7 @@ zx_status_t EthernetDevice::QueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
     void* data = netbuf->data;
     size_t length = netbuf->len;
     // First, validate the packet
-    if (!data || length > sizeof(virtio_net_hdr_t) + kVirtioMtu) {
+    if (!data || length > virtio_hdr_len_ + kVirtioMtu) {
         LTRACEF("dropping packet; invalid packet\n");
         return ZX_ERR_INVALID_ARGS;
     }
@@ -411,11 +428,31 @@ zx_status_t EthernetDevice::QueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
     }
 
     // Add the data to be sent
-    void* tx_hdr = GetFrameHdr(bufs_.get(), kTxId, id);
-    memset(tx_hdr, 0, sizeof(virtio_net_hdr_t));
-    void* tx_buf = GetFrameData(bufs_.get(), kTxId, id);
+    virtio_net_hdr_t* tx_hdr = GetFrameHdr(bufs_.get(), kTxId, id);
+    memset(tx_hdr, 0, virtio_hdr_len_);
+
+    // 5.1.6.2.1 Driver Requirements: Packet Transmission
+    //
+    // The driver MUST set num_buffers to zero.
+    //
+    // Implementation note: This field doesn't exist if neither
+    // |VIRTIO_F_VERSION_1| or |VIRTIO_F_MRG_RXBUF| have been negotiated. Since
+    // this field will be part of the payload without these features we elide
+    // the check as we know the memory is valid and will soon be overwritten
+    // with packet data.
+    tx_hdr->num_buffers = 0;
+
+    // If VIRTIO_NET_F_CSUM is not negotiated, the driver MUST set flags to
+    // zero and SHOULD supply a fully checksummed packet to the device.
+    tx_hdr->flags = 0;
+
+    // If none of the VIRTIO_NET_F_HOST_TSO4, TSO6 or UFO options have been
+    // negotiated, the driver MUST set gso_type to VIRTIO_NET_HDR_GSO_NONE.
+    tx_hdr->gso_type = VIRTIO_NET_HDR_GSO_NONE;
+
+    void* tx_buf = GetFrameData(bufs_.get(), kTxId, id, virtio_hdr_len_);
     memcpy(tx_buf, data, length);
-    desc->len = static_cast<uint32_t>(sizeof(virtio_net_hdr_t) + length);
+    desc->len = static_cast<uint32_t>(virtio_hdr_len_ + length);
 
     // Submit the descriptor and notify the back-end.
     LTRACE_DO(virtio_dump_desc(desc));

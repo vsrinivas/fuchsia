@@ -64,6 +64,7 @@ private:
 
     // Saved net device configuration out of the pci config BAR
     virtio_net_config_t config_ TA_GUARDED(state_lock_);
+    size_t virtio_hdr_len_;
 
     // Ethmac callback interface; see ddk/protocol/ethernet.h
     ethmac_ifc_t* ifc_ TA_GUARDED(state_lock_);
