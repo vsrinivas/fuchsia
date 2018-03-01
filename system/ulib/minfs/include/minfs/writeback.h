@@ -51,7 +51,7 @@ class WritebackBuffer;
 // ulib/fs WriteTxn under the hood.
 class WriteTxn {
 public:
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(WriteTxn);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(WriteTxn);
     explicit WriteTxn(Bcache* bc) : bc_(bc) {}
     ~WriteTxn() {
         ZX_DEBUG_ASSERT_MSG(count_ == 0, "WriteTxn still has pending requests");
