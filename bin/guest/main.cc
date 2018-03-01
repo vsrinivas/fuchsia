@@ -468,7 +468,7 @@ int main(int argc, char** argv) {
   }
 
   // Setup net device.
-  machina::VirtioNet net(guest.phys_mem());
+  machina::VirtioNet net(guest.phys_mem(), guest.device_async());
   status = net.Start("/dev/class/ethernet/000");
   if (status == ZX_OK) {
     // If we started the net device, then connect to the PCI bus.

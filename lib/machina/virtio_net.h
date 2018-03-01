@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_NET_H_
 #define GARNET_LIB_MACHINA_VIRTIO_NET_H_
 
+#include <async/cpp/wait.h>
 #include <fbl/unique_fd.h>
 #include <virtio/net.h>
 
@@ -15,7 +16,7 @@ namespace machina {
 // Implements a Virtio Ethernet device.
 class VirtioNet : public VirtioDevice {
  public:
-  VirtioNet(const PhysMem& phys_mem);
+  VirtioNet(const PhysMem& phys_mem, async_t* async);
   ~VirtioNet() override;
 
   // Starts the Virtio Ethernet device based on the path provided.
@@ -28,6 +29,8 @@ class VirtioNet : public VirtioDevice {
 
   VirtioQueue* rx_queue() { return &queues_[0]; }
   VirtioQueue* tx_queue() { return &queues_[1]; }
+
+  zx_status_t WaitOnFifos(const eth_fifos_t& fifos);
 
  private:
   static constexpr uint16_t kNumQueues = 2;
@@ -45,6 +48,21 @@ class VirtioNet : public VirtioDevice {
 
   zx_status_t ReceiveLoop();
   zx_status_t TransmitLoop();
+
+  zx_status_t FifoWait(async::Wait* wait,
+                       zx_handle_t fifo,
+                       size_t fifo_depth,
+                       VirtioQueue* queue);
+
+  // Reads entries out of a FIFO and returns the corresponding descriptors
+  // to the queue.
+  zx_status_t DrainFifo(zx_handle_t fifo,
+                        size_t fifo_depth,
+                        VirtioQueue* queue);
+
+  async_t* async_;
+  async::Wait tx_wait_;
+  async::Wait rx_wait_;
 };
 
 }  // namespace machina

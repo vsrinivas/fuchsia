@@ -14,13 +14,14 @@
 
 namespace machina {
 
-VirtioNet::VirtioNet(const PhysMem& phys_mem)
+VirtioNet::VirtioNet(const PhysMem& phys_mem, async_t* async)
     : VirtioDevice(VIRTIO_ID_NET,
                    &config_,
                    sizeof(config_),
                    queues_,
                    kNumQueues,
-                   phys_mem) {
+                   phys_mem),
+      async_(async) {
   config_.status = VIRTIO_NET_S_LINK_UP;
   config_.max_virtqueue_pairs = 1;
   // TODO(abdulla): Support VIRTIO_NET_F_STATUS via IOCTL_ETHERNET_GET_STATUS.
@@ -28,6 +29,8 @@ VirtioNet::VirtioNet(const PhysMem& phys_mem)
 }
 
 VirtioNet::~VirtioNet() {
+  tx_wait_.Cancel(async_);
+  rx_wait_.Cancel(async_);
   zx_handle_close(fifos_.tx_fifo);
   zx_handle_close(fifos_.rx_fifo);
 }
@@ -109,8 +112,67 @@ zx_status_t VirtioNet::Start(const char* path) {
     return ZX_ERR_INTERNAL;
   }
 
+  // Setup async tasks to return descriptors to the queue.
+  status = WaitOnFifos(fifos_);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to wait on ethernet fifos";
+    return status;
+  }
+
   FXL_LOG(INFO) << "Polling device " << path << " for Ethernet frames";
   return ZX_OK;
+}
+
+zx_status_t VirtioNet::WaitOnFifos(const eth_fifos_t& fifos) {
+  // Setup async tasks to return descriptors to the queue.
+  zx_status_t status =
+      FifoWait(&tx_wait_, fifos.tx_fifo, fifos.tx_depth, tx_queue());
+  if (status == ZX_OK) {
+    status = FifoWait(&rx_wait_, fifos.rx_fifo, fifos.rx_depth, rx_queue());
+  }
+  return status;
+}
+
+zx_status_t VirtioNet::FifoWait(async::Wait* wait,
+                                zx_handle_t fifo,
+                                size_t fifo_depth,
+                                VirtioQueue* queue) {
+  wait->set_object(fifo);
+  wait->set_trigger(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED);
+  wait->set_handler(
+      [this, fifo, fifo_depth, queue](async_t* async, zx_status_t status,
+                                      const zx_packet_signal_t* signal) {
+        if (status == ZX_OK) {
+          status = DrainFifo(fifo, fifo_depth, queue);
+        }
+        return status == ZX_OK ? ASYNC_WAIT_AGAIN : ASYNC_WAIT_FINISHED;
+      });
+  return wait->Begin(async_);
+}
+
+zx_status_t VirtioNet::DrainFifo(zx_handle_t fifo,
+                                 size_t fifo_depth,
+                                 VirtioQueue* queue) {
+  eth_fifo_entry_t entries[fifo_depth];
+
+  // Dequeue entries for the Ethernet device.
+  uint32_t count;
+  zx_status_t status = zx_fifo_read(fifo, entries, sizeof(entries), &count);
+  if (status == ZX_ERR_SHOULD_WAIT) {
+    return ZX_OK;
+  }
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to read from fifo";
+    return status;
+  }
+  for (uint32_t i = 0; i < count; i++) {
+    auto head = reinterpret_cast<uintptr_t>(entries[i].cookie);
+    auto length = entries[i].length + sizeof(virtio_net_hdr_t);
+    queue->Return(head, length);
+  }
+
+  // Notify guest of updates to the queue.
+  return NotifyGuest();
 }
 
 zx_status_t VirtioNet::DrainQueue(VirtioQueue* queue,
@@ -165,37 +227,6 @@ zx_status_t VirtioNet::DrainQueue(VirtioQueue* queue,
     return ZX_ERR_IO_DATA_LOSS;
   }
 
-  // Wait for entries to dequeue.
-  while (true) {
-    zx_signals_t observed;
-    status = zx_object_wait_one(fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
-                                ZX_TIME_INFINITE, &observed);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to wait on queue";
-      return status;
-    }
-    if (observed & ZX_FIFO_PEER_CLOSED) {
-      FXL_LOG(ERROR) << "FIFO was closed";
-      return status;
-    }
-    if (observed & ZX_FIFO_READABLE) {
-      break;
-    }
-  }
-
-  // Dequeue entries for the Ethernet device.
-  status = zx_fifo_read(fifo, entries, sizeof(entries), &count);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to read from queue";
-  }
-  for (uint32_t i = 0; i < count; i++) {
-    auto head = reinterpret_cast<uintptr_t>(entries[i].cookie);
-    auto length = entries[i].length + sizeof(virtio_net_hdr_t);
-    queue->Return(head, length);
-  }
-
-  // Notify guest of updates to the queue.
-  NotifyGuest();
   return ZX_OK;
 }
 
