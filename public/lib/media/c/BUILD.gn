@@ -20,6 +20,7 @@ prebuilt_shared_library("c") {
   runtime_deps = [
     "//garnet/public/lib/fsl:fsl_sdk",
     "//garnet/public/lib/fxl:fxl_sdk",
+    "//zircon/public/lib/trace-engine:trace-engine_sdk",
   ]
 }
 

@@ -9,9 +9,6 @@ import("//build/sdk/sdk_group.gni")
 sdk_group("fsl") {
   public_deps = [
     ":fsl_lib",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fs",
-    "//zircon/public/lib/zx",
   ]
 }
 
