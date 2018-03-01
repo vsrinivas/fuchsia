@@ -98,7 +98,7 @@ and if it finds one an "exception report" is sent to the bound port.
 
 Exception reports are messages sent through the port with a specific format
 defined by the port message protocol. The packet contents are defined by
-the *zx_exception_packet_t* type defined in
+the *zx_packet_exception_t* type defined in
 [`<zircon/syscalls/port.h>`](../system/public/zircon/syscalls/port.h).
 
 The exception handler is intended to read the message, decide how it
