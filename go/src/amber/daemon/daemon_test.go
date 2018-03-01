@@ -126,35 +126,37 @@ func TestDaemon(t *testing.T) {
 	newTicker = func(d time.Duration) *time.Ticker {
 		t, tt := testBuildTicker(d, &tickerGroup, &muTickers)
 		tickers = append(tickers, tt)
+		tickerGroup.Done()
 		return t
 	}
 
-	tickerGroup.Add(1)
+	// wait for one signal from building the ticker itself and one
+	// from appending it to the tickers list
+	tickerGroup.Add(2)
 
-	sources := createTestSrcs()
+	testSrcs := createTestSrcs()
 	pkgSet := createMonitorPkgs()
-
-	d := NewDaemon(pkgSet, processPackage)
-	for _, src := range sources {
+	sources := make([]source.Source, 0, len(testSrcs))
+	for _, src := range testSrcs {
 		// allow very high request rates for this test since rate limiting isn't
 		// really the target of this test
 		src.limit = 3
 		src.interval = 1 * time.Nanosecond
-		d.AddSource(src)
+		sources = append(sources, src)
 	}
+	d := NewDaemon(pkgSet, processPackage, sources)
 
 	tickerGroup.Wait()
-
 	// protect against improper test rewrites
 	if len(tickers) != 1 {
-		t.Errorf("Unexpected number of tickers!", len(tickers))
+		t.Errorf("Unexpected number of tickers! %d", len(tickers))
 	}
 
 	// run 10 times with a slight separation so as not to exceed the
 	// throttle rate
 	runs := 10
 	for i := 0; i < runs; i++ {
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(10 * time.Nanosecond)
 		tickers[0].makeTick()
 	}
 	// one final sleep to allow the last request to sneak through
@@ -162,7 +164,7 @@ func TestDaemon(t *testing.T) {
 
 	d.CancelAll()
 
-	verifyReqCount(t, sources, pkgSet, runs+1)
+	verifyReqCount(t, testSrcs, pkgSet, runs+1)
 }
 
 func TestGetRequest(t *testing.T) {
@@ -190,7 +192,7 @@ func TestGetRequest(t *testing.T) {
 		interval: srcRateLimit,
 		pkgs:     pkgs,
 		limit:    1}
-	sources := []*testSrc{&tSrc, &tSrc2}
+	sources := []source.Source{&tSrc, &tSrc2}
 
 	tickers := []testTicker{}
 	muTickers := sync.Mutex{}
@@ -204,11 +206,7 @@ func TestGetRequest(t *testing.T) {
 
 	tickerGroup.Add(1)
 
-	d := NewDaemon(pkg.NewPackageSet(), processPackage)
-	for _, src := range sources {
-		d.AddSource(src)
-	}
-
+	d := NewDaemon(pkg.NewPackageSet(), processPackage, sources)
 	tickerGroup.Wait()
 
 	pkgSet := pkg.NewPackageSet()
@@ -281,7 +279,8 @@ func TestRequestCollapse(t *testing.T) {
 		interval: srcRateLimit,
 		pkgs:     pkgs,
 		limit:    1}
-	sources := []*testSrc{&tSrc, &tSrc2}
+	sources := []source.Source{&tSrc, &tSrc2}
+	testSrcs := []*testSrc{&tSrc, &tSrc2}
 
 	tickers := []testTicker{}
 	muTickers := sync.Mutex{}
@@ -295,13 +294,12 @@ func TestRequestCollapse(t *testing.T) {
 
 	tickerGroup.Add(1)
 
-	d := NewDaemon(pkg.NewPackageSet(), processPackage)
-	for _, src := range sources {
+	for _, src := range testSrcs {
 		// introduce a reply delay so we can make sure to run
 		// simultaneously
 		src.replyDelay = replyDelay
-		d.AddSource(src)
 	}
+	d := NewDaemon(pkg.NewPackageSet(), processPackage, sources)
 
 	tickerGroup.Wait()
 
@@ -310,7 +308,7 @@ func TestRequestCollapse(t *testing.T) {
 	go d.GetUpdates(pkgSet)
 	time.Sleep(2 * srcRateLimit)
 	updateRes := d.GetUpdates(pkgSet)
-	verifyReqCount(t, sources, pkgSet, 1)
+	verifyReqCount(t, testSrcs, pkgSet, 1)
 	verifyGetResults(t, pkgSet, updateRes)
 
 	// verify that if we do two more requests sequentially that the total
@@ -318,7 +316,7 @@ func TestRequestCollapse(t *testing.T) {
 	d.GetUpdates(pkgSet)
 	time.Sleep(srcRateLimit)
 	d.GetUpdates(pkgSet)
-	verifyReqCount(t, sources, pkgSet, 3)
+	verifyReqCount(t, testSrcs, pkgSet, 3)
 
 	pkgSetA := pkg.NewPackageSet()
 	pkgSetA.Add(&emailPkg)
@@ -329,7 +327,7 @@ func TestRequestCollapse(t *testing.T) {
 	go d.GetUpdates(pkgSetA)
 	time.Sleep(srcRateLimit * 2)
 	res := d.GetUpdates(pkgSetB)
-	verifyReqCount(t, sources, pkgSet, 4)
+	verifyReqCount(t, testSrcs, pkgSet, 4)
 	verifyGetResults(t, pkgSetB, res)
 
 	d.CancelAll()

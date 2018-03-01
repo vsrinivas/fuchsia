@@ -111,8 +111,7 @@ func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
 		Interval: time.Second * 5,
 		Limit:    50,
 	}
-	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage)
-	checker.AddSource(fetcher)
+	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage, []source.Source{fetcher})
 	u, err := url.Parse(srvAddr)
 	if err == nil {
 		u.Path = filepath.Join(u.Path, "blobs")

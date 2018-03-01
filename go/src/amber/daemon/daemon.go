@@ -56,7 +56,8 @@ type Daemon struct {
 }
 
 // NewDaemon creates a Daemon with the given SourceSet
-func NewDaemon(r *pkg.PackageSet, f func(*GetResult, *pkg.PackageSet) error) *Daemon {
+func NewDaemon(r *pkg.PackageSet, f func(*GetResult, *pkg.PackageSet) error,
+               s []source.Source) *Daemon {
 	d := &Daemon{pkgs: r,
 		runCount:  sync.WaitGroup{},
 		srcMons:   []*SourceMonitor{},
@@ -67,6 +68,9 @@ func NewDaemon(r *pkg.PackageSet, f func(*GetResult, *pkg.PackageSet) error) *Da
 	mon := NewSourceMonitor(d, r, f, CheckInterval)
 	d.runCount.Add(1)
 	d.srcMons = append(d.srcMons, mon)
+	for k := range s {
+	    d.AddSource(s[k])
+	}
 	go func() {
 		mon.Run()
 		d.runCount.Done()
