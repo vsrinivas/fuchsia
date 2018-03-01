@@ -11,6 +11,7 @@
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/utils.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
 
 namespace media {
@@ -18,8 +19,7 @@ namespace audio {
 
 class AudioServerImpl;
 
-class AudioRenderer2Impl : public AudioRendererImpl,
-                           public AudioRenderer2 {
+class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
  public:
   static fbl::RefPtr<AudioRenderer2Impl> Create(
       f1dl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
@@ -29,12 +29,10 @@ class AudioRenderer2Impl : public AudioRendererImpl,
   // TODO(johngro) : Collapse AudioRendererImpl into AudioRenderer2Impl when
   // AudioRenderer1Impl has been fully depricated and removed.
   void Shutdown() override;
-  void OnRenderRange(int64_t presentation_time, uint32_t duration) override { };
-  void SnapshotCurrentTimelineFunction(
-      int64_t reference_time,
-      TimelineFunction* out,
-      uint32_t* generation) override;
-
+  void OnRenderRange(int64_t presentation_time, uint32_t duration) override{};
+  void SnapshotCurrentTimelineFunction(int64_t reference_time,
+                                       TimelineFunction* out,
+                                       uint32_t* generation) override;
 
   // AudioRenderer2 Interface
   void SetPcmFormat(AudioPcmFormatPtr format) final;
@@ -84,13 +82,12 @@ class AudioRenderer2Impl : public AudioRendererImpl,
 
     uint32_t flags() final { return packet_->flags; }
 
-    AudioPacketRefV2(
-        fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
-        const AudioRenderer2::SendPacketCallback& callback,
-        AudioPacketPtr packet,
-        AudioServerImpl* server,
-        uint32_t frac_frame_len,
-        int64_t start_pts);
+    AudioPacketRefV2(fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
+                     const AudioRenderer2::SendPacketCallback& callback,
+                     AudioPacketPtr packet,
+                     AudioServerImpl* server,
+                     uint32_t frac_frame_len,
+                     int64_t start_pts);
 
    protected:
     bool NeedsCleanup() final { return callback_ != nullptr; }
@@ -142,7 +139,8 @@ class AudioRenderer2Impl : public AudioRendererImpl,
   AudioServerImpl* owner_ = nullptr;
   f1dl::Binding<AudioRenderer2> audio_renderer_binding_;
   f1dl::BindingSet<AudioRendererGainControl,
-                   fbl::unique_ptr<GainControlBinding>> gain_control_bindings_;
+                   fbl::unique_ptr<GainControlBinding>>
+      gain_control_bindings_;
   bool is_shutdown_ = false;
   bool gain_events_enabled_ = false;
   fbl::RefPtr<fbl::RefCountedVmoMapper> payload_buffer_;

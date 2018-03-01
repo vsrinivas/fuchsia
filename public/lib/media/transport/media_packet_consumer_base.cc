@@ -9,27 +9,6 @@
 
 namespace media {
 
-#if defined(FLOG_ENABLED)
-
-namespace {
-
-// Gets the size of a shared buffer.
-uint64_t SizeOf(const zx::vmo& vmo) {
-  uint64_t size;
-  zx_status_t status = vmo.get_size(&size);
-
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx::vmo::get_size failed, status " << status;
-    return 0;
-  }
-
-  return size;
-}
-
-}  // namespace
-
-#endif  // !defined(FLOG_ENABLED)
-
 // For checking preconditions when handling fidl requests.
 // Checks the condition, and, if it's false, calls Fail and returns.
 #define RCHECK(condition, message) \
@@ -65,7 +44,6 @@ void MediaPacketConsumerBase::Bind(
   binding_.Bind(std::move(request));
   binding_.set_error_handler([this]() { Reset(); });
   is_reset_ = false;
-  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding_)));
 }
 
 void MediaPacketConsumerBase::Bind(
@@ -74,7 +52,6 @@ void MediaPacketConsumerBase::Bind(
   binding_.Bind(handle->NewRequest());
   binding_.set_error_handler([this]() { Reset(); });
   is_reset_ = false;
-  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding_)));
 }
 
 bool MediaPacketConsumerBase::is_bound() {
@@ -99,7 +76,6 @@ void MediaPacketConsumerBase::SetDemand(uint32_t min_packets_outstanding,
   demand_.min_packets_outstanding = min_packets_outstanding;
   demand_.min_pts = min_pts;
 
-  FLOG(log_channel_, DemandSet(demand_.Clone()));
   demand_update_required_ = true;
 
   MaybeCompletePullDemandUpdate();
@@ -107,7 +83,6 @@ void MediaPacketConsumerBase::SetDemand(uint32_t min_packets_outstanding,
 
 void MediaPacketConsumerBase::Reset() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FLOG(log_channel_, Reset());
 
   bool unbind = binding_.is_bound();
 
@@ -137,7 +112,6 @@ void MediaPacketConsumerBase::Reset() {
 
 void MediaPacketConsumerBase::Fail() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FLOG(log_channel_, Failed());
   Reset();
   OnFailure();
 }
@@ -165,7 +139,6 @@ void MediaPacketConsumerBase::PullDemandUpdate(
     // that the client doesn't know what it's doing.
     FXL_DLOG(WARNING) << "PullDemandUpdate was called when another "
                          "PullDemandUpdate call was pending";
-    FLOG(log_channel_, RespondingToGetDemandUpdate(demand_.Clone()));
     get_demand_update_callback_(demand_.Clone());
   }
 
@@ -178,8 +151,6 @@ void MediaPacketConsumerBase::AddPayloadBuffer(uint32_t payload_buffer_id,
                                                zx::vmo payload_buffer) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(payload_buffer);
-  FLOG(log_channel_,
-       AddPayloadBufferRequested(payload_buffer_id, SizeOf(payload_buffer)));
   zx_status_t status = counter_->buffer_set().AddBuffer(
       payload_buffer_id, std::move(payload_buffer));
   RCHECK(status == ZX_OK, "failed to map buffer");
@@ -187,7 +158,6 @@ void MediaPacketConsumerBase::AddPayloadBuffer(uint32_t payload_buffer_id,
 
 void MediaPacketConsumerBase::RemovePayloadBuffer(uint32_t payload_buffer_id) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FLOG(log_channel_, RemovePayloadBufferRequested(payload_buffer_id));
   counter_->buffer_set().RemoveBuffer(payload_buffer_id);
 }
 
@@ -198,7 +168,6 @@ void MediaPacketConsumerBase::SupplyPacket(
   FXL_DCHECK(media_packet);
 
   if (media_packet->revised_media_type && !accept_revised_media_type_) {
-    // TODO(dalesat): FLOG this.
     FXL_DLOG(WARNING) << "Media type revision rejected. Resetting.";
     callback(nullptr);
     Reset();
@@ -219,9 +188,6 @@ void MediaPacketConsumerBase::SupplyPacket(
   }
 
   uint64_t label = ++prev_packet_label_;
-  FLOG(log_channel_,
-       PacketSupplied(label, media_packet.Clone(), FLOG_ADDRESS(payload),
-                      counter_->packets_outstanding() + 1));
 
   SetPacketPtsRate(media_packet);
 
@@ -229,15 +195,13 @@ void MediaPacketConsumerBase::SupplyPacket(
       label, std::move(media_packet), payload, callback, counter_)));
 }
 
-void MediaPacketConsumerBase::SupplyPacketNoReply(
-    MediaPacketPtr media_packet) {
+void MediaPacketConsumerBase::SupplyPacketNoReply(MediaPacketPtr media_packet) {
   SupplyPacket(std::move(media_packet), SupplyPacketCallback());
 }
 
 void MediaPacketConsumerBase::Flush(bool hold_frame,
                                     const FlushCallback& callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FLOG(log_channel_, FlushRequested());
 
   demand_.min_packets_outstanding = 0;
   demand_.min_pts = MediaPacket::kNoTimestamp;
@@ -245,7 +209,6 @@ void MediaPacketConsumerBase::Flush(bool hold_frame,
   flush_pending_ = true;
 
   OnFlushRequested(hold_frame, [this, callback]() {
-    FLOG(log_channel_, CompletingFlush());
     flush_pending_ = false;
     callback();
   });
@@ -261,7 +224,6 @@ void MediaPacketConsumerBase::MaybeCompletePullDemandUpdate() {
     return;
   }
 
-  FLOG(log_channel_, RespondingToGetDemandUpdate(demand_.Clone()));
   demand_update_required_ = false;
   get_demand_update_callback_(demand_.Clone());
   get_demand_update_callback_ = nullptr;
@@ -270,8 +232,6 @@ void MediaPacketConsumerBase::MaybeCompletePullDemandUpdate() {
 MediaPacketDemandPtr MediaPacketConsumerBase::GetDemandForPacketDeparture(
     uint64_t label) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-
-  FLOG(log_channel_, ReturningPacket(label, counter_->packets_outstanding()));
 
   // Note that we're returning a packet so that MaybeCompletePullDemandUpdate
   // won't try to send a packet update via a PullDemandUpdate callback.

@@ -56,13 +56,6 @@ void VideoFrameSource::AdvanceReferenceTime(int64_t reference_time) {
   pts_ = current_timeline_function_(reference_time);
 
   DiscardOldPackets();
-
-  if (packet_queue_.empty()) {
-    FLOG(log_channel_, EngagePacket(pts_, MediaPacket::kNoTimestamp, 0));
-  } else {
-    FLOG(log_channel_, EngagePacket(pts_, packet_queue_.front()->packet()->pts,
-                                    packet_queue_.front()->label()));
-  }
 }
 
 void VideoFrameSource::GetRgbaFrame(uint8_t* rgba_buffer,

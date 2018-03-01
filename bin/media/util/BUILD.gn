@@ -19,7 +19,6 @@ source_set("util") {
   public_deps = [
     ":host_compatible",
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/media/flog",
   ]
 
   deps = [

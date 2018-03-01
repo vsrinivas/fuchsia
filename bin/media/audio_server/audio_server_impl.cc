@@ -9,7 +9,6 @@
 #include "garnet/bin/media/audio_server/audio_renderer1_impl.h"
 #include "garnet/bin/media/audio_server/audio_renderer2_impl.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/media/flog/flog.h"
 
 namespace media {
 namespace audio {
@@ -19,8 +18,6 @@ AudioServerImpl::AudioServerImpl(
     : application_context_(std::move(application_context)),
       device_manager_(this) {
   FXL_DCHECK(application_context_);
-
-  FLOG_INITIALIZE(application_context_.get(), "audio_server");
 
   application_context_->outgoing_services()->AddService<AudioServer>(
       [this](f1dl::InterfaceRequest<AudioServer> request) {
@@ -73,8 +70,8 @@ void AudioServerImpl::CreateRenderer(
 
 void AudioServerImpl::CreateRendererV2(
     f1dl::InterfaceRequest<AudioRenderer2> audio_renderer) {
-  device_manager_.AddRenderer(AudioRenderer2Impl::Create(
-      std::move(audio_renderer), this));
+  device_manager_.AddRenderer(
+      AudioRenderer2Impl::Create(std::move(audio_renderer), this));
 }
 
 void AudioServerImpl::CreateCapturer(

@@ -32,8 +32,6 @@ VideoRendererImpl::VideoRendererImpl(
           owner),
       media_renderer_binding_(this, std::move(media_renderer_request)),
       video_frame_source_(std::make_shared<VideoFrameSource>()) {
-  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(media_renderer_binding_)));
-
   video_frame_source_->SetStreamTypeRevisedCallback(
       [this]() { status_publisher_.SendUpdates(); });
 
@@ -72,8 +70,6 @@ void VideoRendererImpl::SetMediaType(MediaTypePtr media_type) {
   video_frame_source_->converter().SetStreamType(
       media_type.To<std::unique_ptr<StreamType>>());
   status_publisher_.SendUpdates();
-
-  FLOG(log_channel_, SetMediaType(std::move(media_type)));
 }
 
 void VideoRendererImpl::GetPacketConsumer(

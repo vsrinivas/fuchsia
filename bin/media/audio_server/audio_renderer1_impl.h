@@ -4,32 +4,29 @@
 
 #pragma once
 
-#include <deque>
 #include <fbl/ref_ptr.h>
+#include <deque>
 #include <set>
 
 #include "garnet/bin/media/audio_server/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
 #include "garnet/bin/media/audio_server/audio_pipe.h"
-#include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
+#include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "garnet/bin/media/util/timeline_control_point.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
-#include "lib/media/fidl/logs/media_renderer_channel.fidl.h"
 #include "lib/media/fidl/media_renderer.fidl.h"
-#include "lib/media/flog/flog.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
 namespace audio {
 
-class AudioRenderer1Impl :
-      public AudioRendererImpl,
-      public AudioRenderer,
-      public MediaRenderer {
+class AudioRenderer1Impl : public AudioRendererImpl,
+                           public AudioRenderer,
+                           public MediaRenderer {
  public:
   ~AudioRenderer1Impl() override;
   static fbl::RefPtr<AudioRenderer1Impl> Create(
@@ -44,10 +41,9 @@ class AudioRenderer1Impl :
   // Used by the output to report packet usage.
   void OnRenderRange(int64_t presentation_time, uint32_t duration) override;
 
-  virtual void SnapshotCurrentTimelineFunction(
-      int64_t reference_time,
-      TimelineFunction* out,
-      uint32_t* generation) override;
+  virtual void SnapshotCurrentTimelineFunction(int64_t reference_time,
+                                               TimelineFunction* out,
+                                               uint32_t* generation) override;
 
  private:
   friend class AudioPipe;
@@ -90,8 +86,6 @@ class AudioRenderer1Impl :
   AudioPipe pipe_;
   TimelineControlPoint timeline_control_point_;
   bool is_shutdown_ = false;
-
-  FLOG_INSTANCE_CHANNEL(logs::MediaRendererChannel, log_channel_);
 };
 
 }  // namespace audio

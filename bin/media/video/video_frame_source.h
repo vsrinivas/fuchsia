@@ -10,10 +10,8 @@
 
 #include "garnet/bin/media/util/timeline_control_point.h"
 #include "garnet/bin/media/video/video_converter.h"
-#include "lib/media/fidl/logs/media_renderer_channel.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/media/fidl/video_renderer.fidl.h"
-#include "lib/media/flog/flog.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/transport/media_packet_consumer_base.h"
 #include "lib/ui/geometry/fidl/geometry.fidl.h"
@@ -111,11 +109,6 @@ class VideoFrameSource : public MediaPacketConsumerBase {
   MediaTimelineControlPoint::PrimeCallback prime_callback_;
   fxl::Closure stream_type_revised_callback_;
   TimelineControlPoint timeline_control_point_;
-
-  // We don't use FLOG_INSTANCE_CHANNEL, because we don't need to know the
-  // address (this), and the consumer (our base class) will register with that
-  // same address.
-  FLOG_CHANNEL(logs::MediaRendererChannel, log_channel_);
 };
 
 }  // namespace media

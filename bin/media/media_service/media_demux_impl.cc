@@ -29,9 +29,6 @@ MediaDemuxImpl::MediaDemuxImpl(f1dl::InterfaceHandle<SeekingReader> reader,
       task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       graph_(owner->multiproc_task_runner()) {
   FXL_DCHECK(reader);
-
-  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));
-
   FXL_DCHECK(task_runner_);
 
   status_publisher_.SetCallbackRunner(
@@ -110,11 +107,6 @@ void MediaDemuxImpl::OnDemuxInitialized(Result result) {
 
     streams_.back()->producer()->SetConnectionStateChangedCallback(
         [this]() { status_publisher_.SendUpdates(); });
-
-    FLOG(log_channel_,
-         NewStream(streams_.size() - 1,
-                   MediaType::From(streams_.back()->stream_type()),
-                   FLOG_ADDRESS(streams_.back()->producer().get())));
   }
 
   graph_.Prepare();

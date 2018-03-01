@@ -21,10 +21,6 @@ source_set("fidl") {
     "fidl_type_conversions.h",
   ]
 
-  public_deps = [
-    "//garnet/public/lib/media/flog",
-  ]
-
   deps = [
     "//garnet/bin/media/demux",
     "//garnet/bin/media/framework",

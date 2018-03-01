@@ -9,9 +9,7 @@
 #include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/media/fidl/logs/media_timeline_control_point_channel.fidl.h"
 #include "lib/media/fidl/timeline_controller.fidl.h"
-#include "lib/media/flog/flog.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media {
@@ -139,8 +137,6 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   uint32_t generation_ FXL_GUARDED_BY(mutex_) = 1;
   int64_t end_of_stream_pts_ FXL_GUARDED_BY(mutex_) = kUnspecifiedTime;
   bool end_of_stream_published_ FXL_GUARDED_BY(mutex_) = false;
-
-  FLOG_INSTANCE_CHANNEL(logs::MediaTimelineControlPointChannel, log_channel_);
 };
 
 }  // namespace media

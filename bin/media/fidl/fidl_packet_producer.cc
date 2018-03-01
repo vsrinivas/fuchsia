@@ -9,7 +9,6 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/media/fidl/logs/media_packet_producer_channel.fidl.h"
 
 namespace media {
 

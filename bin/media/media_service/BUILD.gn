@@ -43,10 +43,6 @@ executable("media_service_bin") {
     "video_renderer_impl.h",
   ]
 
-  public_deps = [
-    "//garnet/public/lib/media/flog",
-  ]
-
   deps = [
     "//garnet/bin/media/audio",
     "//garnet/bin/media/decode",

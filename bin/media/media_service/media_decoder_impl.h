@@ -12,9 +12,7 @@
 #include "garnet/bin/media/framework/graph.h"
 #include "garnet/bin/media/media_service/media_service_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/media/fidl/logs/media_type_converter_channel.fidl.h"
 #include "lib/media/fidl/media_type_converter.fidl.h"
-#include "lib/media/flog/flog.h"
 
 namespace media {
 
@@ -47,8 +45,6 @@ class MediaDecoderImpl : public MediaServiceImpl::Product<MediaTypeConverter>,
   std::shared_ptr<FidlPacketConsumer> consumer_;
   std::shared_ptr<Decoder> decoder_;
   std::shared_ptr<FidlPacketProducer> producer_;
-
-  FLOG_INSTANCE_CHANNEL(logs::MediaTypeConverterChannel, log_channel_);
 };
 
 }  // namespace media

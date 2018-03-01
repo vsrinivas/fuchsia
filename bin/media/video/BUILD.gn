@@ -8,10 +8,6 @@ source_set("video") {
     "video_frame_source.h",
   ]
 
-  public_deps = [
-    "//garnet/public/lib/media/flog",
-  ]
-
   deps = [
     ":video_converter",
     "//garnet/bin/media/fidl",

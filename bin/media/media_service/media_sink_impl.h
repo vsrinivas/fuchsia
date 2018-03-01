@@ -10,10 +10,8 @@
 #include "garnet/bin/media/media_service/media_service_impl.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/media/fidl/logs/media_sink_channel.fidl.h"
 #include "lib/media/fidl/media_sink.fidl.h"
 #include "lib/media/fidl/timeline_controller.fidl.h"
-#include "lib/media/flog/flog.h"
 
 namespace media {
 
@@ -51,8 +49,6 @@ class MediaSinkImpl : public MediaServiceImpl::Product<MediaSink>,
   std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>
       supported_stream_types_;
   Incident got_supported_stream_types_;
-
-  FLOG_INSTANCE_CHANNEL(logs::MediaSinkChannel, log_channel_);
 };
 
 }  // namespace media

@@ -33,8 +33,6 @@ LpcmReformatterImpl::LpcmReformatterImpl(
       producer_(FidlPacketProducer::Create()) {
   FXL_DCHECK(input_media_type);
 
-  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding()), "lpcm_reformatter"));
-
   std::unique_ptr<StreamType> input_stream_type =
       input_media_type.To<std::unique_ptr<StreamType>>();
   RCHECK(input_stream_type->medium() == StreamType::Medium::kAudio);
@@ -43,11 +41,6 @@ LpcmReformatterImpl::LpcmReformatterImpl(
   reformatter_ = LpcmReformatter::Create(*input_stream_type->audio(),
                                          Convert(output_sample_format));
   FXL_DCHECK(reformatter_);
-
-  FLOG(log_channel_,
-       Config(std::move(input_media_type),
-              MediaType::From(reformatter_->output_stream_type()),
-              FLOG_ADDRESS(consumer_.get()), FLOG_ADDRESS(producer_.get())));
 
   NodeRef consumer_ref = graph_.Add(consumer_);
   NodeRef reformatter_ref = graph_.Add(reformatter_);

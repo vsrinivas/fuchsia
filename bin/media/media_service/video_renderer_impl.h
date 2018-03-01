@@ -12,10 +12,8 @@
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/media/video/video_frame_source.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/media/fidl/logs/media_renderer_channel.fidl.h"
 #include "lib/media/fidl/media_renderer.fidl.h"
 #include "lib/media/fidl/video_renderer.fidl.h"
-#include "lib/media/flog/flog.h"
 #include "lib/ui/scenic/client/host_image_cycler.h"
 #include "lib/ui/view_framework/base_view.h"
 
@@ -86,7 +84,6 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
   FidlPublisher<GetStatusCallback> status_publisher_;
   std::shared_ptr<VideoFrameSource> video_frame_source_;
 
-  FLOG_CHANNEL(logs::MediaRendererChannel, log_channel_);
   FXL_DISALLOW_COPY_AND_ASSIGN(VideoRendererImpl);
 };
 

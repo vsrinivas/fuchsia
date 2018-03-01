@@ -14,10 +14,8 @@
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/media/fidl/logs/media_source_channel.fidl.h"
 #include "lib/media/fidl/media_source.fidl.h"
 #include "lib/media/fidl/seeking_reader.fidl.h"
-#include "lib/media/flog/flog.h"
 
 namespace media {
 
@@ -56,9 +54,6 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
   class Stream {
    public:
     Stream(size_t stream_index,
-#ifdef FLOG_ENABLED
-           flog::FlogProxy<logs::MediaSourceChannel>* log_channel,
-#endif
            MediaService* media_service,
            const ProducerGetter& producer_getter,
            std::unique_ptr<StreamType> stream_type,
@@ -93,7 +88,6 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
   MediaSourceStatusPtr demux_status_;
   FidlPublisher<GetStatusCallback> status_publisher_;
 
-  FLOG_INSTANCE_CHANNEL(logs::MediaSourceChannel, log_channel_);
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaSourceImpl);
 };
 

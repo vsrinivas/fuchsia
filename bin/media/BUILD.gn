@@ -7,7 +7,6 @@ import("//build/package.gni")
 group("services") {
   public_deps = [
     "//garnet/bin/media/audio_policy_service",
-    "//garnet/bin/media/flog_service",
     "//garnet/bin/media/media_service",
     "//garnet/bin/media/net_media_service",
   ]
@@ -15,7 +14,6 @@ group("services") {
 
 group("tools") {
   public_deps = [
-    "//garnet/bin/flog_viewer",
     "//garnet/bin/media/vol",
   ]
 }

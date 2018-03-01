@@ -22,13 +22,12 @@ source_set("transport") {
 
   public_deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/media/flog",
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
-    "//garnet/public/lib/media/fidl/flog",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/ui/geometry/fidl",
   ]

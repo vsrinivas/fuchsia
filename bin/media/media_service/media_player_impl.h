@@ -10,13 +10,11 @@
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/media/fidl/logs/media_player_channel.fidl.h"
 #include "lib/media/fidl/media_service.fidl.h"
 #include "lib/media/fidl/media_source.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/media/fidl/seeking_reader.fidl.h"
 #include "lib/media/fidl/timeline_controller.fidl.h"
-#include "lib/media/flog/flog.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 
@@ -152,8 +150,6 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
 
   MediaSourceStatusPtr source_status_;
   FidlPublisher<GetStatusCallback> status_publisher_;
-
-  FLOG_INSTANCE_CHANNEL(logs::MediaPlayerChannel, log_channel_);
 };
 
 }  // namespace media

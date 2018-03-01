@@ -47,8 +47,6 @@ MediaPlayerImpl::MediaPlayerImpl(
         std::move(video_renderer_handle);
   }
 
-  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));
-
   status_publisher_.SetCallbackRunner([this](const GetStatusCallback& callback,
                                              uint64_t version) {
     MediaPlayerStatusPtr status = MediaPlayerStatus::New();
@@ -112,12 +110,10 @@ void MediaPlayerImpl::MaybeCreateSource() {
 
   owner()->CreateSource(std::move(reader_handle_), nullptr,
                         source_.NewRequest());
-  FLOG(log_channel_, CreatedSource(FLOG_PTR_KOID(source_)));
   HandleSourceStatusUpdates();
 
   source_->Describe(
       fxl::MakeCopyable([this](f1dl::Array<MediaTypePtr> stream_types) mutable {
-        FLOG(log_channel_, ReceivedSourceDescription(stream_types.Clone()));
         stream_types_ = std::move(stream_types);
         ConnectSinks();
       }));
@@ -148,9 +144,7 @@ void MediaPlayerImpl::ConnectSinks() {
   }
 
   callback_joiner->WhenJoined([this]() {
-    FLOG(log_channel_, StreamsPrepared());
     state_ = State::kFlushed;
-    FLOG(log_channel_, Flushed());
     Update();
   });
 }
@@ -163,7 +157,6 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
     FXL_DCHECK(stream->renderer_handle_);
     owner()->CreateSink(std::move(stream->renderer_handle_),
                         stream->sink_.NewRequest());
-    FLOG(log_channel_, CreatedSink(index, FLOG_PTR_KOID(stream->sink_)));
 
     MediaTimelineControlPointPtr timeline_control_point;
     stream->sink_->GetTimelineControlPoint(timeline_control_point.NewRequest());
@@ -294,16 +287,13 @@ void MediaPlayerImpl::Update() {
                   // We've had a seek request to a new position. Refrain from
                   // seeking the source and re-enter this sequence.
                   state_ = State::kFlushed;
-                  FLOG(log_channel_, Flushed());
                   Update();
                   return;
                 }
 
                 // Seek to the new position.
-                FLOG(log_channel_, Seeking(target_position));
                 source_->Seek(target_position, [this]() {
                   state_ = State::kFlushed;
-                  FLOG(log_channel_, Flushed());
                   // Back in |kFlushed|. Call |Update| to see
                   // if there's further action to be taken.
                   Update();
@@ -325,10 +315,8 @@ void MediaPlayerImpl::Update() {
           timeline_control_point_->SetProgramRange(0, program_range_min_pts_,
                                                    kMaxTime);
 
-          FLOG(log_channel_, Priming());
           timeline_control_point_->Prime([this]() {
             state_ = State::kPrimed;
-            FLOG(log_channel_, Primed());
             // Now we're in |kPrimed|. Call |Update| to see if there's further
             // action to be taken.
             Update();
@@ -352,12 +340,10 @@ void MediaPlayerImpl::Update() {
           // |kWaiting|, issue the |Flush| request and transition to |kFlushed|
           // when the operation is complete.
           state_ = State::kWaiting;
-          FLOG(log_channel_, Flushing());
           source_->Flush(
               target_state_ != State::kFlushed && !reader_transition_pending_,
               [this]() {
                 state_ = State::kFlushed;
-                FLOG(log_channel_, Flushed());
                 // Now we're in |kFlushed|. Call |Update| to see if there's
                 // further action to be taken.
                 Update();
@@ -376,7 +362,6 @@ void MediaPlayerImpl::Update() {
           SetTimelineTransform(1.0f, Timeline::local_now() + kMinimumLeadTime,
                                [this](bool completed) {
                                  state_ = State::kPlaying;
-                                 FLOG(log_channel_, Playing());
                                  // Now we're in |kPlaying|. Call |Update| to
                                  // see if there's further action to be taken.
                                  Update();
@@ -404,7 +389,6 @@ void MediaPlayerImpl::Update() {
           SetTimelineTransform(0.0f, Timeline::local_now() + kMinimumLeadTime,
                                [this](bool completed) {
                                  state_ = State::kPrimed;
-                                 FLOG(log_channel_, Primed());
                                  // Now we're in |kPrimed|. Call |Update| to see
                                  // if there's further action to be taken.
                                  Update();
@@ -420,7 +404,6 @@ void MediaPlayerImpl::Update() {
           // itself, so we just need to transition to |kPrimed|.
           target_state_ = State::kPrimed;
           state_ = State::kPrimed;
-          FLOG(log_channel_, EndOfStream());
           // Loop around to check if there's more work to do.
           break;
         }
@@ -441,7 +424,6 @@ void MediaPlayerImpl::SetTimelineTransform(
     const TimelineConsumer::SetTimelineTransformCallback callback) {
   TimelineTransformPtr timeline_transform =
       CreateTimelineTransform(rate, reference_time);
-  FLOG(log_channel_, SettingTimelineTransform(timeline_transform.Clone()));
   timeline_consumer_->SetTimelineTransform(std::move(timeline_transform),
                                            callback);
 }
@@ -468,19 +450,16 @@ void MediaPlayerImpl::GetStatus(uint64_t version_last_seen,
 }
 
 void MediaPlayerImpl::Play() {
-  FLOG(log_channel_, PlayRequested());
   target_state_ = State::kPlaying;
   Update();
 }
 
 void MediaPlayerImpl::Pause() {
-  FLOG(log_channel_, PauseRequested());
   target_state_ = State::kPrimed;
   Update();
 }
 
 void MediaPlayerImpl::Seek(int64_t position) {
-  FLOG(log_channel_, SeekRequested(position));
   target_position_ = position;
   Update();
 }

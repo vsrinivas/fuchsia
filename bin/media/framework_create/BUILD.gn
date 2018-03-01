@@ -14,5 +14,6 @@ source_set("framework_create") {
     "//garnet/bin/media/ffmpeg",
     "//garnet/bin/media/fidl",
     "//garnet/bin/media/framework",
+    "//garnet/public/lib/fxl",
   ]
 }

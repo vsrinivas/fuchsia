@@ -14,7 +14,6 @@
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/media/flog/flog.h"
 
 namespace media {
 namespace audio {
@@ -241,20 +240,6 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
 
     bool setup_done = false;
     fbl::RefPtr<AudioPacketRef> pkt_ref;
-
-#ifdef FLOG_ENABLED
-    if (task_type == TaskType::Mix) {
-      setup_done = SetupMix(renderer, info);
-      if (!setup_done)
-        return;
-
-      // Just starting the job. Report consumption.
-      renderer->OnRenderRange(
-          info->output_frames_to_renderer_frames(cur_mix_job_.start_pts_of),
-          cur_mix_job_.buf_frames *
-              info->output_frames_to_renderer_frames.rate());
-    }
-#endif
 
     while (true) {
       // Try to grab the front of the packet queue.  If it has been flushed

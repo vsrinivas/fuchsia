@@ -86,11 +86,6 @@ executable("audio_server") {
         "utils.h",
       ]
 
-      public_deps =
-          [
-            "//garnet/public/lib/media/flog",
-          ]
-
       deps = [
         "//garnet/bin/media/audio",
         "//garnet/bin/media/audio_server:audio_mixer_lib",

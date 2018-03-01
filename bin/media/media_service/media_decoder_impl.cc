@@ -30,8 +30,6 @@ MediaDecoderImpl::MediaDecoderImpl(
       producer_(FidlPacketProducer::Create()) {
   FXL_DCHECK(input_media_type);
 
-  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding()), "decoder"));
-
   std::unique_ptr<StreamType> input_stream_type =
       input_media_type.To<std::unique_ptr<StreamType>>();
 
@@ -40,11 +38,6 @@ MediaDecoderImpl::MediaDecoderImpl(
     RCHECK(false);
     return;
   }
-
-  FLOG(log_channel_,
-       Config(std::move(input_media_type),
-              MediaType::From(decoder_->output_stream_type()),
-              FLOG_ADDRESS(consumer_.get()), FLOG_ADDRESS(producer_.get())));
 
   NodeRef consumer_ref = graph_.Add(consumer_);
   NodeRef decoder_ref = graph_.Add(decoder_);

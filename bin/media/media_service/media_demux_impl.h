@@ -16,10 +16,8 @@
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/media/fidl/logs/media_demux_channel.fidl.h"
 #include "lib/media/fidl/media_source.fidl.h"
 #include "lib/media/fidl/seeking_reader.fidl.h"
-#include "lib/media/flog/flog.h"
 
 namespace media {
 
@@ -100,8 +98,6 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
   FidlPublisher<GetStatusCallback> status_publisher_;
   MediaMetadataPtr metadata_;
   ProblemPtr problem_;
-
-  FLOG_INSTANCE_CHANNEL(logs::MediaDemuxChannel, log_channel_);
 };
 
 }  // namespace media

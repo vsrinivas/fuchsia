@@ -30,8 +30,6 @@ MediaSinkImpl::MediaSinkImpl(
       renderer_(renderer_handle.Bind()) {
   FXL_DCHECK(renderer_);
 
-  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));
-
   renderer_->GetSupportedMediaTypes([this](f1dl::Array<MediaTypeSetPtr>
                                                supported_media_types) {
     FXL_DCHECK(supported_media_types);
@@ -76,14 +74,12 @@ void MediaSinkImpl::BuildConversionPipeline() {
       std::move(stream_type_),
       [this](bool succeeded, const ConsumerGetter& consumer_getter,
              const ProducerGetter& producer_getter,
-             std::unique_ptr<StreamType> stream_type,
-             std::vector<zx_koid_t> converter_koids) {
+             std::unique_ptr<StreamType> stream_type) {
         FXL_DCHECK(!producer_getter);
         FXL_DCHECK(consume_media_type_callback_);
 
         if (!succeeded) {
           FXL_LOG(WARNING) << "Failed to create conversion pipeline.";
-          // TODO(dalesat): Log this to flog.
           consume_media_type_callback_(nullptr);
           consume_media_type_callback_ = nullptr;
           original_media_type_.reset();
@@ -95,11 +91,6 @@ void MediaSinkImpl::BuildConversionPipeline() {
         stream_type_ = std::move(stream_type);
 
         renderer_->SetMediaType(MediaType::From(stream_type_));
-
-        FLOG(log_channel_, Config(std::move(original_media_type_),
-                                  MediaType::From(stream_type_),
-                                  f1dl::Array<uint64_t>::From(converter_koids),
-                                  FLOG_PTR_KOID(renderer_)));
 
         // Not needed anymore.
         original_media_type_.reset();

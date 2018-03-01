@@ -35,8 +35,6 @@ MediaServiceImpl::MediaServiceImpl(
     bool transient)
     : FactoryServiceBase(std::move(context)),
       task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {
-  FLOG_INITIALIZE(application_context(), "media_service");
-
   multiproc_task_runner_ =
       AdoptRef(new MultiprocTaskRunner(zx_system_get_num_cpus()));
 
@@ -51,9 +49,7 @@ MediaServiceImpl::MediaServiceImpl(
   }
 }
 
-MediaServiceImpl::~MediaServiceImpl() {
-  FLOG_DESTROY();
-}
+MediaServiceImpl::~MediaServiceImpl() {}
 
 void MediaServiceImpl::CreateHttpPlayer(
     const f1dl::String& http_url,

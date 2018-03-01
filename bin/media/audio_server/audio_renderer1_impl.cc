@@ -55,12 +55,6 @@ AudioRenderer1Impl::AudioRenderer1Impl(
       pipe_(this, owner) {
   FXL_CHECK(nullptr != owner_);
 
-  FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(media_renderer_binding_)));
-  FLOG(log_channel_,
-       Config(SupportedMediaTypes(),
-              FLOG_ADDRESS(static_cast<MediaPacketConsumerBase*>(&pipe_)),
-              FLOG_ADDRESS(&timeline_control_point_)));
-
   audio_renderer_binding_.set_error_handler([this]() -> void {
     audio_renderer_binding_.set_error_handler(nullptr);
     audio_renderer_binding_.Unbind();
@@ -213,15 +207,11 @@ void AudioRenderer1Impl::SetMediaType(MediaTypePtr media_type) {
     return;
   }
 
-  FLOG(log_channel_, SetMediaType(media_type.Clone()));
-
   // Everything checks out.  Discard any existing links we are holding
   // onto.  New links need to be created with our new format.
   Unlink();
 
   pipe_.SetPtsRate(TimelineRate(cfg->frames_per_second, 1));
-
-  FLOG(log_channel_, PtsRate(cfg->frames_per_second, 1));
 
   // Create a new format info object so we can create links to outputs.
   format_info_ = AudioRendererFormatInfo::Create(std::move(cfg));
@@ -303,9 +293,7 @@ zx_status_t AudioRenderer1Impl::InitializeDestLink(const AudioLinkPtr& link) {
 }
 
 void AudioRenderer1Impl::OnRenderRange(int64_t presentation_time,
-                                       uint32_t duration) {
-  FLOG(log_channel_, RenderRange(presentation_time, duration));
-}
+                                       uint32_t duration) {}
 
 void AudioRenderer1Impl::SnapshotCurrentTimelineFunction(int64_t ref_time,
                                                          TimelineFunction* out,
@@ -322,23 +310,22 @@ void AudioRenderer1Impl::SnapshotCurrentTimelineFunction(int64_t ref_time,
     // The control point works in ns units. We want the rate in frames per
     // nanosecond, so we convert here.
     TimelineRate frac_frames_per_ns =
-      format_info()->frames_per_ns() *
-      TimelineRate(1u << kPtsFractionalBits, 1u);
+        format_info()->frames_per_ns() *
+        TimelineRate(1u << kPtsFractionalBits, 1u);
 
     TimelineRate rate_in_frames_per_ns = tcp_fn.rate() * frac_frames_per_ns;
 
-    *out = TimelineFunction(
-        tcp_fn.reference_time(),
-        tcp_fn.subject_time() * format_info()->frames_per_ns(),
-        rate_in_frames_per_ns.reference_delta(),
-        rate_in_frames_per_ns.subject_delta());
+    *out =
+        TimelineFunction(tcp_fn.reference_time(),
+                         tcp_fn.subject_time() * format_info()->frames_per_ns(),
+                         rate_in_frames_per_ns.reference_delta(),
+                         rate_in_frames_per_ns.subject_delta());
 
     *generation = tcp_gen;
   }
 }
 
-void AudioRenderer1Impl::OnPacketReceived(
-    fbl::RefPtr<AudioPacketRef> packet) {
+void AudioRenderer1Impl::OnPacketReceived(fbl::RefPtr<AudioPacketRef> packet) {
   FXL_DCHECK(packet);
   FXL_DCHECK(format_info_valid());
 
@@ -365,7 +352,7 @@ void AudioRenderer1Impl::OnPacketReceived(
 bool AudioRenderer1Impl::OnFlushRequested(
     const MediaPacketConsumer::FlushCallback& cbk) {
   fbl::RefPtr<PendingFlushToken> flush_token =
-    PendingFlushToken::Create(owner_, cbk);
+      PendingFlushToken::Create(owner_, cbk);
 
   if (throttle_output_link_ != nullptr) {
     throttle_output_link_->FlushPendingQueue(flush_token);
