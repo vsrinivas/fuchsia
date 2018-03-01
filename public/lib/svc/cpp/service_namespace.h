@@ -112,9 +112,6 @@ class ServiceNamespace : public app::ServiceProvider {
   // Retuns a file descriptor to a directory containing these services.
   int OpenAsFileDescriptor();
 
-  // Mounts this service namespace at the given path in the file system.
-  bool MountAtPath(const char* path);
-
  private:
   // Overridden from |app::ServiceProvider|:
   void ConnectToService(const f1dl::String& service_name,

@@ -72,22 +72,6 @@ int ServiceNamespace::OpenAsFileDescriptor() {
   return fdio_bind_to_fd(io, -1, 0);
 }
 
-bool ServiceNamespace::MountAtPath(const char* path) {
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) < 0)
-    return false;
-
-  if (!ServeDirectory(std::move(h1)))
-    return false;
-
-  fxl::UniqueFD fd(open(path, O_DIRECTORY | O_RDWR));
-  if (fd.get() < 0)
-    return false;
-
-  zx_handle_t h = h2.release();
-  return ioctl_vfs_mount_fs(fd.get(), &h) >= 0;
-}
-
 void ServiceNamespace::Connect(fbl::StringPiece name, zx::channel channel) {
   ConnectCommon(std::string(name.data(), name.length()), std::move(channel));
 }
