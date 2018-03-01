@@ -409,6 +409,7 @@ static async_wait_result_t loader_service_handler(async_t* async,
         goto stop;
     return ASYNC_WAIT_AGAIN;
 stop:
+    zx_handle_close(wait->object);
     free(wait);
     loader_service_deref(svc); // Balanced in |loader_service_attach|.
     return ASYNC_WAIT_FINISHED;
