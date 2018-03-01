@@ -9,6 +9,7 @@
 #include <fidl/coding.h>
 
 #include <unittest/unittest.h>
+#include <zircon/syscalls.h>
 
 #include "fidl_coded_types.h"
 #include "fidl_structs.h"
@@ -306,6 +307,59 @@ bool decode_array_of_present_handles() {
     EXPECT_EQ(message.inline_struct.handles[1], dummy_handle_1);
     EXPECT_EQ(message.inline_struct.handles[2], dummy_handle_2);
     EXPECT_EQ(message.inline_struct.handles[3], dummy_handle_3);
+
+    END_TEST;
+}
+
+bool decode_array_of_present_handles_error_closes_handles() {
+    BEGIN_TEST;
+
+    array_of_nonnullable_handles_message_layout message = {};
+    zx_handle_t handle_pairs[4][2];
+    // Use eventpairs so that we can know for sure that handles were closed by fidl_decode.
+    for (uint32_t i = 0; i < ArrayCount(handle_pairs); ++i) {
+        ASSERT_EQ(zx_eventpair_create(0u, &handle_pairs[i][0], &handle_pairs[i][1]), ZX_OK);
+    }
+    message.inline_struct.handles[0] = FIDL_HANDLE_PRESENT;
+    message.inline_struct.handles[1] = FIDL_HANDLE_PRESENT;
+    message.inline_struct.handles[2] = FIDL_HANDLE_PRESENT;
+    message.inline_struct.handles[3] = FIDL_HANDLE_PRESENT;
+
+    zx_handle_t out_of_line_handles[4] = {
+        handle_pairs[0][0], handle_pairs[1][0], handle_pairs[2][0], handle_pairs[3][0],
+    };
+
+    const char* error = nullptr;
+    auto status = fidl_decode(&array_of_nonnullable_handles_message_type, &message, sizeof(message),
+                              out_of_line_handles,
+                              // -2 makes this invalid.
+                              ArrayCount(out_of_line_handles) - 2, &error);
+    // Should fail because we we pass in a max_handles < the actual number of handles.
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    // All the handles that we told fidl_decode about should be closed.
+    uint32_t i;
+    for (i = 0; i < ArrayCount(handle_pairs) - 2; ++i) {
+        zx_signals_t observed_signals;
+        EXPECT_EQ(zx_object_wait_one(handle_pairs[i][1],
+                                     ZX_EPAIR_PEER_CLOSED,
+                                     1, // deadline shouldn't matter, should return immediately.
+                                     &observed_signals),
+                   ZX_OK);
+        EXPECT_EQ(observed_signals & ZX_EPAIR_PEER_CLOSED, ZX_EPAIR_PEER_CLOSED);
+        EXPECT_EQ(zx_handle_close(handle_pairs[i][1]), ZX_OK); // [i][0] was closed by fidl_encode.
+    }
+    // But the other ones should not be.
+    for (; i < ArrayCount(handle_pairs); ++i) {
+        zx_signals_t observed_signals;
+        EXPECT_EQ(zx_object_wait_one(handle_pairs[i][1],
+                                     ZX_EPAIR_PEER_CLOSED,
+                                     zx_clock_get(ZX_CLOCK_MONOTONIC) + 1,
+                                     &observed_signals),
+                   ZX_ERR_TIMED_OUT);
+        EXPECT_EQ(observed_signals & ZX_EPAIR_PEER_CLOSED, 0);
+        EXPECT_EQ(zx_handle_close(handle_pairs[i][0]), ZX_OK);
+        EXPECT_EQ(zx_handle_close(handle_pairs[i][1]), ZX_OK);
+    }
 
     END_TEST;
 }
@@ -1539,6 +1593,7 @@ END_TEST_CASE(handles)
 
 BEGIN_TEST_CASE(arrays)
 RUN_TEST(decode_array_of_present_handles)
+RUN_TEST(decode_array_of_present_handles_error_closes_handles)
 RUN_TEST(decode_array_of_nonnullable_handles_some_absent_error)
 RUN_TEST(decode_array_of_nullable_handles)
 RUN_TEST(decode_array_of_nullable_handles_with_insufficient_handles_error)

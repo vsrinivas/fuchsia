@@ -10,6 +10,7 @@
 
 #include <fidl/internal.h>
 #include <zircon/assert.h>
+#include <zircon/syscalls.h>
 
 // TODO(kulakowski) Design zx_status_t error values.
 
@@ -36,7 +37,12 @@ private:
         if (error_msg_out_ != nullptr) {
             *error_msg_out_ = error_msg;
         }
-        // TODO(TO-509): close all handles.
+        if (handles_) {
+            for (uint32_t i = 0; i < num_handles_; ++i) {
+                // Return value intentionally ignored: this is best-effort cleanup.
+                zx_handle_close(handles_[i]);
+            }
+        }
         return ZX_ERR_INVALID_ARGS;
     }
 

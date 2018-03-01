@@ -394,19 +394,15 @@ reference later in the buffer. Populates internal handles within **bytes**
 whose value is `FIDL_HANDLE_PRESENT` to their corresponding handle taken
 sequentially from **handles**.
 
-TODO(TO-509): The following paragarph is not true but it should be.
-
 To prevent handle leakage, this operation ensures that either all handles in
-**handles** are moved into **bytes** in case of success or they are all closed in
-case of an error. After successfully decoding an object, you may use
-`fidl_object_close_handles()` to close any handles which you did not consume
-from it.
+**handles** from **handles[0]** to **handles[num_handles - 1]** are moved into **bytes** in case of
+success or they are all closed in case of an error. After successfully decoding an object, you may
+ use `fidl_object_close_handles()` to close any handles which you did not consume from it.
 
 The **handles** array is not modified by the operation.
 
 If a recoverable error occurs, a result is returned, **bytes** remains in an
-unusable partially modified state, and all handles in **handles** are closed
-(TODO(TO-509): handles are not actually closed but they should be).
+unusable partially modified state, and all handles in **handles** are closed.
 
 If an unrecoverable error occurs, such as encountering an invalid **type**,
 the behavior is undefined.
