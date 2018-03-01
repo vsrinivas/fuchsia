@@ -1,9 +1,5 @@
 # FIDL 2.0: C++ Language Bindings
 
-Status: DRAFT
-
-Author: jeffbrown@google.com
-
 This document is a description of the Fuchsia Interface Definition Language v2.0
 (FIDL) implementation for C++, including its libraries and code generator.
 
@@ -13,8 +9,6 @@ purpose, goals, and requirements, as well as links to related documents.
 This specification builds on the [FIDL 2.0: C Language
 Bindings](c-language-bindings.md) and reuses many of its elements where
 appropriate.
-
-**WORK IN PROGRESS**
 
 [TOC]
 

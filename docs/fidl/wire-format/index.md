@@ -1,16 +1,10 @@
 # FIDL 2.0: Wire Format Specification
 
-Status: DRAFT
-
-Author: jeffbrown@google.com
-
 This document is a specification of the Fuchsia Interface Definition Language
 (FIDL) v2.0 data structure encoding.
 
 See [FIDL 2.0: Overview](index.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
-
-**WORK IN PROGRESS**
 
 [TOC]
 

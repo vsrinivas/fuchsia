@@ -1,9 +1,5 @@
 # FIDL 2.0: Overview
 
-Status: DRAFT
-
-Author: jeffbrown@google.com
-
 This document is a description of the Fuchsia Interface Definition Language v2.0
 (FIDL) purpose, high-level goals, and requirements.
 
@@ -24,8 +20,6 @@ This document is a description of the Fuchsia Interface Definition Language v2.0
 [FIDL 2.0: C Language Bindings]: c-language-bindings.md
 [FIDL 2.0: C++ Language Bindings]: c++-language-bindings.md
 [FIDL Examples]: ../../system/host/fidl/examples
-
-**WORK IN PROGRESS**
 
 [TOC]
 
