@@ -11,8 +11,6 @@ union UnionOfStructs {
   NamedRegion nr;
   array<NamedRegion> a_nr;
   array<RectPair> a_rp;
-  map<int64, NoDefaultFieldValues> m_ndfv;
-  map<int64, HandleStruct> m_hs;
 };
 
 // Tests that you can reference yet-to-be-declared structs in a struct.
@@ -20,8 +18,6 @@ struct StructOfStructs {
   NamedRegion nr;
   array<NamedRegion> a_nr;
   array<RectPair> a_rp;
-  map<int64, NoDefaultFieldValues> m_ndfv;
-  map<int64, HandleStruct> m_hs;
 };
 
 struct NamedRegion {
@@ -134,41 +130,6 @@ struct ScopedConstants {
   EType f4 = E4;  // 11
   int32 f5 = TEN;
   int32 f6 = ALSO_TEN;
-};
-
-// Used to verify that all possible Map key field types can be encoded and
-// decoded successfully.
-
-struct MapKeyTypes {
-  map<bool, bool> f0;
-  map<int8, int8> f1;
-  map<uint8, uint8> f2;
-  map<int16, int16> f3;
-  map<uint16, uint16> f4;
-  map<int32, int32> f5;
-  map<uint32, uint32> f6;
-  map<int64, int64> f7;
-  map<uint64, uint64> f8;
-  // Maps with floats as keys removed, as they break Rust bindings.
-  map<string, string> f11;
-};
-
-// Used to verify that various map value types can be encoded and decoded
-// successfully.
-
-struct MapValueTypes {
-  map<string, array<string>> f0;
-  map<string, array<string>?> f1;
-  map<string, array<string?>> f2;
-  map<string, array<string, 2>> f3;
-  map<string, array<array<string, 2>?>> f4;
-  map<string, array<array<string, 2>, 1>> f5;
-  map<string, Rect?> f6;
-  map<string, map<string, string>> f7;
-  map<string, array<map<string, string>>> f8;
-  map<string, handle> f9;
-  map<string, array<handle>> f10;
-  map<string, map<string, handle>> f11;
 };
 
 // Used to verify that various array types can be encoded and decoded

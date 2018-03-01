@@ -36,7 +36,6 @@ struct StructH {
   uint8 b;
   UnionA? c;
   array<UnionA>? d;
-  map<uint8, UnionA>? e;
 };
 
 union UnionA {
@@ -44,12 +43,10 @@ union UnionA {
   uint32 b;
   StructA? c;
   array<uint8>? d;
-  map<string, uint8>? e;
-  UnionB? f;
-  StructA g;
-  array<uint8> h;
-  map<string, uint8> i;
-  UnionB j;
+  UnionB? e;
+  StructA f;
+  array<uint8> g;
+  UnionB h;
 };
 
 union UnionB {
@@ -81,12 +78,11 @@ interface ConformanceTestInterface {
   Method7@6(StructF param0, array<array<uint8, 3>?, 2> param1);
   Method8@7(array<array<string>?> param0);
   Method9@8(array<array<handle?>>? param0);
-  Method10@9(map<string, uint8> param0);
-  Method11@10(StructG param0);
-  Method12@11(float param0) => (float param0);
-  Method13@12(InterfaceA? param0, uint32 param1, InterfaceA? param2);
-  Method14@13(UnionA param0);
-  Method15@14(StructH param0);
+  Method11@9(StructG param0);
+  Method12@10(float param0) => (float param0);
+  Method13@11(InterfaceA? param0, uint32 param1, InterfaceA? param2);
+  Method14@12(UnionA param0);
+  Method15@13(StructH param0);
 };
 
 struct BasicStruct {

@@ -50,5 +50,10 @@ interface ServiceDescription {
   // Returns all the data queryable via GetTypeDefinition in a single
   // structure, or null if the implementation is not willing or not able to
   // provide all of the data at once.
-  GetAllTypeDefinitions@2() => (map<string, UserDefinedType>? definitions);
+  GetAllTypeDefinitions@2() => (array<DefinitionEntry>? definitions);
+};
+
+struct DefinitionEntry {
+  string key;
+  UserDefinedType value;
 };

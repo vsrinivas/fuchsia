@@ -77,18 +77,33 @@ struct FidlFile {
   Comments? comments;
 };
 
+struct FileGraphEntry {
+  string key;
+  FidlFile value;
+};
+
+struct ResolvedTypeEntry {
+  string key;
+  UserDefinedType value;
+};
+
+struct ResolvedConstantEntry {
+  string key;
+  DeclaredConstant value;
+};
+
 // Represents a directed acyclic graph of FidlFiles.
 struct FidlFileGraph {
   // All the files in this graph. The keys are |file_name|s.
-  map<string, FidlFile> files;
+  array<FileGraphEntry> files;
 
   // All the resolved user-defined types in all the files in the graph. The keys are
   // the |type_key|s.
-  map<string, UserDefinedType> resolved_types;
+  array<ResolvedTypeEntry> resolved_types;
 
   // All the resolved DeclaredConstants in all the files in the graph. The keys are
   // the |constant_key|s.
-  map<string, DeclaredConstant> resolved_constants;
+  array<ResolvedConstantEntry> resolved_constants;
 };
 
 // A KeysByType struct organizes by type the keys of all types and consants in

@@ -95,7 +95,7 @@ import (
 // POS_INT_LITERAL      -> int_const_dec | int_const_hex
 // POS_FLOAT_LITERAL    -> float_const
 
-// TYPE                 -> BUILT_IN_TYPE | ARRAY_TYPE | MAP_TYPE | USER_TYPE_REF
+// TYPE                 -> BUILT_IN_TYPE | ARRAY_TYPE | USER_TYPE_REF
 // BUILT_IN_TYPE        -> SIMPLE_TYPE | STRING_TYPE | HANDLE_TYPE
 // SIMPLE_TYPE          -> bool | FLOAT_TYPE | INTEGER_TYPE
 // FLOAT_TYPE           -> float | double
@@ -104,8 +104,6 @@ import (
 // INTEGER_TYPE         -> int8 | int16 | int32 | int64 | uint8 | uint16 | uint32 | uint64
 // STRING_TYPE          -> string [qstn]
 // ARRAY_TYPE           -> array langle TYPE [comma int_const_dec] rangle [qstn]
-// MAP_TYPE             -> map langle MAP_KEY_TYPE comma TYPE rangle [qstn]
-// MAP_KEY_TYPE         -> SIMPLE_TYPE | string | ENUM_TYPE
 // USER_TYPE_REF        -> INTERFACE_TYPE | STRUCT_TYPE | UNION_TYPE | ENUM_TYPE
 // INTERFACE_TYPE       -> IDENTIFIER [amp] [qstn] {{where IDENTIFIER resolves to an interface}}
 // STRUCT_TYPE          -> IDENTIFIER [qstn] {{where IDENTIFIER resolves to a struct}}
@@ -1269,7 +1267,7 @@ func (p *Parser) parseIdentifier() (identifier string, firstToken lexer.Token) {
 	return
 }
 
-// TYPE -> BUILT_IN_TYPE | ARRAY_TYPE | MAP_TYPE | USER_TYPE_REF
+// TYPE -> BUILT_IN_TYPE | ARRAY_TYPE | USER_TYPE_REF
 func (p *Parser) parseType() core.TypeRef {
 	if !p.OK() {
 		return nil
@@ -1280,9 +1278,6 @@ func (p *Parser) parseType() core.TypeRef {
 	mojomType := p.tryParseBuiltInType()
 	if mojomType == nil {
 		mojomType = p.tryParseArrayType()
-	}
-	if mojomType == nil {
-		mojomType = p.tryParseMapType()
 	}
 	if mojomType == nil {
 		mojomType = p.parseTypeReference()
@@ -1388,41 +1383,6 @@ func (p *Parser) tryParseArrayType() core.TypeRef {
 	nullable := p.tryMatch(lexer.Qstn)
 
 	return core.NewArrayTypeRef(elementType, fixedSize, nullable)
-}
-
-// MAP_TYPE      -> map langle MAP_KEY_TYPE comma TYPE rangle [qstn]
-// MAP_KEY_TYPE  -> SIMPLE_TYPE | string | ENUM_TYPE
-func (p *Parser) tryParseMapType() core.TypeRef {
-	if !p.OK() {
-		return nil
-	}
-
-	nextToken := p.peekNextToken("Trying to read a type.")
-	if nextToken.Kind != lexer.Name || nextToken.Text != "map" {
-		return nil
-	}
-	p.consumeNextToken()
-	if !p.match(lexer.LAngle) {
-		return nil
-	}
-
-	keyToken := p.peekNextToken("Trying to read a type.")
-	keyType := p.parseType()
-	p.match(lexer.Comma)
-	valueType := p.parseType()
-	if !p.match(lexer.RAngle) {
-		return nil
-	}
-	nullable := p.tryMatch(lexer.Qstn)
-
-	if !keyType.MarkUsedAsMapKey() {
-		message := fmt.Sprintf("The type %s is not allowed as the key type of a map. "+
-			"Only simple types, strings and enum types may be map keys.", keyType)
-		p.parseErrorT(ParserErrorCodeUnexpectedToken, message, keyToken)
-		return nil
-	}
-
-	return core.NewMapTypeRef(keyType, valueType, nullable)
 }
 
 // USER_TYPE_REF    -> INTERFACE_TYPE | STRUCT_TYPE | UNION_TYPE | ENUM_TYPE

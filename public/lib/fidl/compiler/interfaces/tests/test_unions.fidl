@@ -32,8 +32,6 @@ union UnionOfUnions {
   ObjectUnion u;
   array<ObjectUnion> a_ou;
   array<HandleUnion> a_hu;
-  map<int64, ObjectUnion> m_ou;
-  map<int64, HandleUnion> m_hu;
 };
 
 // Tests that you can reference yet-to-be-declared unions in a struct.
@@ -41,8 +39,6 @@ struct StructOfUnions {
   ObjectUnion u;
   array<ObjectUnion> a_ou;
   array<HandleUnion> a_hu;
-  map<int64, ObjectUnion> m_ou;
-  map<int64, HandleUnion> m_hu;
 };
 
 union UnionOfReferences {
@@ -61,7 +57,6 @@ union ObjectUnion {
   DummyStruct f_dummy;
   DummyStruct? f_nullable;
   array<int8> f_array_int8;
-  map<string, int8> f_map_int8;
   PodUnion f_pod_union;
 };
 
@@ -88,8 +83,6 @@ struct SmallStruct {
   array<PodUnion>? pod_union_array;
   array<PodUnion?>? nullable_pod_union_array;
   array<DummyStruct>? s_array;
-  map<string, PodUnion>? pod_union_map;
-  map<string, PodUnion?>? nullable_pod_union_map;
 };
 
 struct SmallStructNonNullableUnion {

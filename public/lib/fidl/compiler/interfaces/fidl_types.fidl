@@ -277,6 +277,11 @@ struct FidlMethod {
   uint32 min_version;
 };
 
+struct MethodEntry {
+  uint32 key;
+  FidlMethod value;
+};
+
 struct FidlInterface {
   DeclarationData? decl_data;
 
@@ -291,7 +296,7 @@ struct FidlInterface {
   string? service_name;
 
   // All the methods in the interface. The keys are the method ordinals.
-  map<uint32, FidlMethod> methods;
+  array<MethodEntry> methods;
 
   // This value is the least integer that is at least as great as all of the
   // |min_version| fields in all of the methods and parameters in this
@@ -525,7 +530,7 @@ struct RuntimeTypeInfo {
   // This indicates that it can be returned from
   // ServiceProvider.ProvideService() and its description can be returned
   // from ServiceDescriber.DescribeService().
-  map<string, string> services;
+  array<ServiceEntry> services;
 
   // All of the resolved user-defined-types contained in a single .fidl File.
   // The keys are the |type_key|s. Note that the complete set of types
@@ -536,5 +541,15 @@ struct RuntimeTypeInfo {
   // |ServiceDescription| needs to merge the |RuntimeTypeInfo|
   // from all of the generated modules in the file graph and then filter on only
   // those types in the complete type set of a single service.
-  map<string, UserDefinedType> type_map;
+  array<TypeMapEntry> type_map;
+};
+
+struct ServiceEntry {
+  string key;
+  string value;
+};
+
+struct TypeMapEntry {
+  string key;
+  UserDefinedType value;
 };

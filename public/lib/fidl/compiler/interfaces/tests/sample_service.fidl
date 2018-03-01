@@ -108,7 +108,3 @@ interface Service {
 interface Port {
   PostMessage@0(string message_text@0, Port port@1);
 };
-
-struct NonNullableMapStruct {
-  map<string, string> map_field;
-};
