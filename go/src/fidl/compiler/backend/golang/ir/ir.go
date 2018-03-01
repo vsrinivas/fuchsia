@@ -78,6 +78,12 @@ type Root struct {
 	Structs []Struct
 }
 
+// compiler contains the state necessary for recursive compilation.
+type compiler struct {
+	// decls contains all top-level declarations for the FIDL source.
+	decls types.DeclMap
+}
+
 // Contains the full set of reserved golang keywords, in addition to a set of
 // primitive named types. Note that this will result in potentially unnecessary
 // identifier renaming, but this isn't a big deal for generated code.
@@ -162,7 +168,7 @@ func changeIfReserved(val types.Identifier) string {
 	return str
 }
 
-func compileLiteral(val types.Literal) string {
+func (_ *compiler) compileLiteral(val types.Literal) string {
 	switch val.Kind {
 	// TODO(mknyszek): Support string and default literals.
 	case types.NumericLiteral:
@@ -177,18 +183,18 @@ func compileLiteral(val types.Literal) string {
 	}
 }
 
-func compileConstant(val types.Constant) string {
+func (c *compiler) compileConstant(val types.Constant) string {
 	switch val.Kind {
 	// TODO(mknyszek): Support identifiers.
 	case types.LiteralConstant:
-		return compileLiteral(val.Literal)
+		return c.compileLiteral(val.Literal)
 	default:
 		log.Fatal("Unknown constant kind:", val.Kind)
 		return ""
 	}
 }
 
-func compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
+func (_ *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 	t, ok := primitiveTypes[val]
 	if !ok {
 		log.Fatal("Unknown primitive type:", val)
@@ -196,64 +202,65 @@ func compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 	return Type(t)
 }
 
-func compileType(val types.Type) Type {
+func (c *compiler) compileType(val types.Type) Type {
 	var r Type
 	// TODO(mknyszek): Support vectors, strings, handles, requests and identifiers.
 	switch val.Kind {
 	case types.ArrayType:
-		t := compileType(*val.ElementType)
-		r = Type(fmt.Sprintf("[%s]%s", compileConstant(*val.ElementCount), t))
+		t := c.compileType(*val.ElementType)
+		r = Type(fmt.Sprintf("[%s]%s", c.compileConstant(*val.ElementCount), t))
 	case types.PrimitiveType:
-		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
+		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	default:
 		log.Fatal("Unknown type kind:", val.Kind)
 	}
 	return r
 }
 
-func compileEnumMember(val types.EnumMember) EnumMember {
+func (c *compiler) compileEnumMember(val types.EnumMember) EnumMember {
 	return EnumMember{
 		Name:  changeIfReserved(exportIdentifier(val.Name)),
-		Value: compileConstant(val.Value),
+		Value: c.compileConstant(val.Value),
 	}
 }
 
-func compileEnum(val types.Enum) Enum {
+func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
 		Name: changeIfReserved(exportIdentifier(val.Name)),
-		Type: compilePrimitiveSubtype(val.Type),
+		Type: c.compilePrimitiveSubtype(val.Type),
 	}
 	for _, v := range val.Members {
-		r.Members = append(r.Members, compileEnumMember(v))
+		r.Members = append(r.Members, c.compileEnumMember(v))
 	}
 	return r
 }
 
-func compileStructMember(val types.StructMember) StructMember {
+func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	return StructMember{
-		Type: compileType(val.Type),
+		Type: c.compileType(val.Type),
 		Name: changeIfReserved(exportIdentifier(val.Name)),
 	}
 }
 
-func compileStruct(val types.Struct) Struct {
+func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
 		Name: changeIfReserved(exportIdentifier(val.Name)),
 	}
 	for _, v := range val.Members {
-		r.Members = append(r.Members, compileStructMember(v))
+		r.Members = append(r.Members, c.compileStructMember(v))
 	}
 	return r
 }
 
 // Compile translates parsed FIDL IR into golang backend IR for code generation.
 func Compile(fidlData types.Root) Root {
+	c := compiler{decls: fidlData.Decls}
 	r := Root{}
 	for _, v := range fidlData.Enums {
-		r.Enums = append(r.Enums, compileEnum(v))
+		r.Enums = append(r.Enums, c.compileEnum(v))
 	}
 	for _, v := range fidlData.Structs {
-		r.Structs = append(r.Structs, compileStruct(v))
+		r.Structs = append(r.Structs, c.compileStruct(v))
 	}
 	return r
 }
