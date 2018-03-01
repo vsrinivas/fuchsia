@@ -84,7 +84,6 @@ pub mod client {
                 err: None,
                 service_request: Some(directory_server_chan),
                 flat_namespace: None,
-                services: None,
                 additional_services: None,
             };
 
