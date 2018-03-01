@@ -9,12 +9,13 @@
 #include "address_space.h"
 #include "msd_arm_connection.h"
 
-// Normal memory, outer non-cacheable, inner cacheable read+write alloc. The
-// definition of this is similar to normal LPAE memory attributes, but is
-// undocumented.
-constexpr uint8_t kMmuNormalMemoryAttr = 0x4d;
-// Memory with this attribute is also outer cacheable read+write alloc.
-constexpr uint8_t kMmuOuterCacheableMemoryAttr = 0x8d;
+// Normal memory, outer non-cacheable, inner cacheable with
+// implementation-defined allocation. The definition of this is similar to
+// normal LPAE memory attributes, but is undocumented.
+constexpr uint8_t kMmuNormalMemoryAttr = 0x48;
+// Memory with this attribute is also outer cacheable with
+// implementation-defined allocation.
+constexpr uint8_t kMmuOuterCacheableMemoryAttr = 0x88;
 
 // The memory attribute register has 8 8-bit slots.
 static constexpr uint64_t SlotAttribute(int slot, uint8_t attributes)
