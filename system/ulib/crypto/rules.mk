@@ -23,7 +23,6 @@ MODULE_LIBS := \
     system/ulib/fdio \
 
 MODULE_STATIC_LIBS := \
-    third_party/ulib/safeint \
     third_party/ulib/uboringssl \
     system/ulib/explicit-memory \
     system/ulib/zxcpp \

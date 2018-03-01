@@ -13,7 +13,6 @@
 #include <fbl/unique_ptr.h>
 #include <fdio/debug.h>
 #include <openssl/mem.h>
-#include <safeint/safe_math.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -124,9 +123,13 @@ zx_status_t Bytes::Copy(const void* buf, size_t len, zx_off_t off) {
         xprintf("null buffer\n");
         return ZX_ERR_INVALID_ARGS;
     }
-    safeint::CheckedNumeric<size_t> size = off;
-    size += len;
-    if (len_ < size.ValueOrDie() && (rc = Resize(size.ValueOrDie())) != ZX_OK) {
+    size_t size;
+    if (add_overflow(off, len, &size)) {
+        xprintf("overflow\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (len_ < size && (rc = Resize(size)) != ZX_OK) {
         return rc;
     }
     memcpy(buf_.get() + off, buf, len);
