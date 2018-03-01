@@ -99,7 +99,7 @@ TEST_F(DeviceSetImplTest, SetWatcher) {
   watcher_binding_.Bind(watcher.NewRequest());
   device_set_->SetWatcher(convert::ToArray("bazinga"), std::move(watcher),
                           callback::Capture(MakeQuitTask(), &status));
-  EXPECT_TRUE(RunLoopUntil(
+  EXPECT_TRUE(RunLoopUntilWithTimeout(
       [this] { return cloud_device_set_->watch_callback != nullptr; }));
   EXPECT_EQ("bazinga", cloud_device_set_->watched_fingerprint);
   EXPECT_EQ(0, cloud_device_set_->timestamp_update_requests_);
@@ -127,7 +127,7 @@ TEST_F(DeviceSetImplTest, SetWatcherFailToSet) {
   watcher_binding_.Bind(watcher.NewRequest());
   device_set_->SetWatcher(convert::ToArray("bazinga"), std::move(watcher),
                           callback::Capture(MakeQuitTask(), &status));
-  EXPECT_TRUE(RunLoopUntil(
+  EXPECT_TRUE(RunLoopUntilWithTimeout(
       [this] { return cloud_device_set_->watch_callback != nullptr; }));
 
   // Call the callback indicating the network error. This should result both in

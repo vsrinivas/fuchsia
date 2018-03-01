@@ -196,7 +196,7 @@ TEST_F(LinkImplTest, Constructor) {
   bool synced{};
   link_->Sync([&synced] { synced = true; });
 
-  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&synced] { return synced; }));
 
   EXPECT_EQ(1, ledger_change_count());
 
@@ -225,7 +225,7 @@ TEST_F(LinkImplTest, Set) {
   bool synced{};
   link_->Sync([&synced] { synced = true; });
 
-  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&synced] { return synced; }));
 
   EXPECT_EQ(2, ledger_change_count());
 
@@ -253,7 +253,7 @@ TEST_F(LinkImplTest, Update) {
   bool synced{};
   link_->Sync([&synced] { synced = true; });
 
-  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&synced] { return synced; }));
 
   EXPECT_EQ(3, ledger_change_count());
 
@@ -276,7 +276,7 @@ TEST_F(LinkImplTest, UpdateNewKey) {
   bool synced{};
   link_->Sync([&synced] { synced = true; });
 
-  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&synced] { return synced; }));
 
   EXPECT_EQ(3, ledger_change_count());
 
@@ -301,7 +301,7 @@ TEST_F(LinkImplTest, Erase) {
   bool synced{};
   link_->Sync([&synced] { synced = true; });
 
-  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&synced] { return synced; }));
 
   EXPECT_EQ(3, ledger_change_count());
 
@@ -325,7 +325,7 @@ TEST_F(LinkImplTest, SetEntity) {
   bool synced{};
   link_->Sync([&synced] { synced = true; });
 
-  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&synced] { return synced; }));
 
   EXPECT_EQ(2, ledger_change_count());
 
@@ -342,7 +342,7 @@ TEST_F(LinkImplTest, SetEntity) {
     EXPECT_EQ(entity_ref, value);
     done = true;
   });
-  EXPECT_TRUE(RunLoopUntil([&done] { return done; }));
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&done] { return done; }));
 }
 
 
@@ -373,7 +373,7 @@ TEST_F(LinkImplReadOnlyTest, Constructor) {
   bool synced{};
   link_->Sync([&synced] { synced = true; });
 
-  EXPECT_TRUE(RunLoopUntil([&synced] { return synced; }));
+  EXPECT_TRUE(RunLoopUntilWithTimeout([&synced] { return synced; }));
 
   EXPECT_EQ(0, ledger_change_count());
 
@@ -403,7 +403,7 @@ TEST_F(LinkImplReadOnlyTest, Set) {
   // so we have a condition against which we can detect the end of the test.
   link_->Set(nullptr, "\"from_link\"");
 
-  EXPECT_TRUE(RunLoopUntil([this] {
+  EXPECT_TRUE(RunLoopUntilWithTimeout([this] {
     return "\"from_link\"" == last_json_notify_ && ledger_change_count() == 1;
   }));
 }
@@ -425,7 +425,7 @@ TEST_F(LinkImplNullInitTest, Set) {
 
   link_->Set(nullptr, "\"from_link\"");
 
-  EXPECT_TRUE(RunLoopUntil([this] {
+  EXPECT_TRUE(RunLoopUntilWithTimeout([this] {
     return "\"from_link\"" == last_json_notify_ && ledger_change_count() == 1;
   }));
 }

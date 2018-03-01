@@ -249,9 +249,10 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
-  bool cleared = RunLoopUntil([deletion_sentinel_path, &repo_disconnected] {
-    return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
-  });
+  bool cleared =
+      RunLoopUntilWithTimeout([deletion_sentinel_path, &repo_disconnected] {
+        return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
+      });
   EXPECT_FALSE(files::IsFile(deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
   EXPECT_TRUE(cleared);
@@ -300,9 +301,10 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
-  bool cleared = RunLoopUntil([deletion_sentinel_path, &repo_disconnected] {
-    return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
-  });
+  bool cleared =
+      RunLoopUntilWithTimeout([deletion_sentinel_path, &repo_disconnected] {
+        return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
+      });
   EXPECT_FALSE(files::IsFile(deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
   EXPECT_TRUE(cleared);
@@ -337,7 +339,8 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
 
   cloud_provider_binding.Unbind();
 
-  EXPECT_TRUE(RunLoopUntil([&repo_disconnected] { return repo_disconnected; }));
+  EXPECT_TRUE(RunLoopUntilWithTimeout(
+      [&repo_disconnected] { return repo_disconnected; }));
 
   // Verify that the Ledger app didn't crash.
   EXPECT_FALSE(ledger_app_shut_down);

@@ -57,7 +57,7 @@ TEST_F(SyncIntegrationTest, SerialConnection) {
 
   auto instance2 = NewLedgerAppInstance();
   page = instance2->GetPage(page_id, ledger::Status::OK);
-  EXPECT_TRUE(RunLoopUntil([this, &page] {
+  EXPECT_TRUE(RunLoopUntilWithTimeout([this, &page] {
     f1dl::Array<ledger::EntryPtr> entries;
     if (!GetEntries(page.get(), &entries)) {
       return true;
@@ -94,7 +94,7 @@ TEST_F(SyncIntegrationTest, ConcurrentConnection) {
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(ledger::Status::OK, status);
 
-  EXPECT_TRUE(RunLoopUntil([this, &page2] {
+  EXPECT_TRUE(RunLoopUntilWithTimeout([this, &page2] {
     f1dl::Array<ledger::EntryPtr> entries;
     if (!GetEntries(page2.get(), &entries)) {
       return true;

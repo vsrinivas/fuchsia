@@ -448,8 +448,8 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
 
   // If |RunLoopUntil| returns true, the condition is met, thus the ledgers have
   // converged.
-  EXPECT_TRUE(RunLoopUntil(is_sync_and_merge_complete,
-                           fxl::TimeDelta::FromSeconds(60)));
+  EXPECT_TRUE(RunLoopUntilWithTimeout(is_sync_and_merge_complete,
+                                      fxl::TimeDelta::FromSeconds(60)));
   int num_changes = 0;
   for (int i = 0; i < num_ledgers_; i++) {
     num_changes += watchers[i]->changes;

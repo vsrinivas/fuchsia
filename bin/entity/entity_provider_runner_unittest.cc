@@ -192,7 +192,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
                                  incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
 
-  RunLoopUntil([&dummy_agent] {
+  RunLoopUntilWithTimeout([&dummy_agent] {
     return dummy_agent.get() != nullptr &&
            dummy_agent->GetCallCount("Connect") == 1;
   });
@@ -208,7 +208,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
       "my_cookie",
       [&entity_ref](const f1dl::String& retval) { entity_ref = retval; });
 
-  RunLoopUntil([&entity_ref] { return !entity_ref.is_null(); });
+  RunLoopUntilWithTimeout([&entity_ref] { return !entity_ref.is_null(); });
   EXPECT_FALSE(entity_ref.is_null());
 
   // 3. Resolve the reference into an |Entity|, make calls to GetTypes and
@@ -227,7 +227,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
     EXPECT_EQ("MyType:MyData", data.get());
     counts["GetData"]++;
   });
-  RunLoopUntil(
+  RunLoopUntilWithTimeout(
       [&counts] { return counts["GetTypes"] == 1 && counts["GetData"] == 1; });
   EXPECT_EQ(1u, counts["GetTypes"]);
   EXPECT_EQ(1u, counts["GetData"]);
@@ -248,7 +248,7 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   entity->GetTypes([&output_types](f1dl::Array<f1dl::String> result) {
     output_types = std::move(result);
   });
-  RunLoopUntil([&output_types] { return !output_types.is_null(); });
+  RunLoopUntilWithTimeout([&output_types] { return !output_types.is_null(); });
 
   EXPECT_EQ(data.size(), output_types.size());
   EXPECT_EQ("type1", output_types[0]);
@@ -256,7 +256,7 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   f1dl::String output_data;
   entity->GetData(
       "type1", [&output_data](f1dl::String result) { output_data = result; });
-  RunLoopUntil([&output_data] { return !output_data.is_null(); });
+  RunLoopUntilWithTimeout([&output_data] { return !output_data.is_null(); });
   EXPECT_EQ("data1", output_data);
 }
 

@@ -346,7 +346,7 @@ TEST_F(PageUploadTest, RetryUpload) {
   // Test cloud provider logs every commit, even if it reports that upload
   // failed for each. Here we loop through at least five attempts to upload the
   // commit.
-  EXPECT_TRUE(RunLoopUntil([this] {
+  EXPECT_TRUE(RunLoopUntilWithTimeout([this] {
     return page_cloud_.add_commits_calls >= 5u &&
            // We need to wait for the callback to be executed on the PageSync
            // side.
@@ -453,7 +453,7 @@ TEST_F(PageUploadTest, DoNotUploadSyncedCommitsOnRetry) {
                                   storage::ChangeSource::LOCAL);
 
   // Wait for the page upload to run into temporary error.
-  EXPECT_TRUE(RunLoopUntil([this] {
+  EXPECT_TRUE(RunLoopUntilWithTimeout([this] {
     return states_.back() == UploadSyncState::UPLOAD_TEMPORARY_ERROR;
   }));
   EXPECT_GT(page_cloud_.add_commits_calls, 0u);

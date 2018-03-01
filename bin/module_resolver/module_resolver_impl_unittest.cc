@@ -188,7 +188,8 @@ class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
           got_response = true;
           result_ = result.Clone();
         });
-    ASSERT_TRUE(RunLoopUntil([&got_response] { return got_response; }));
+    ASSERT_TRUE(
+        RunLoopUntilWithTimeout([&got_response] { return got_response; }));
   }
 
   const f1dl::Array<modular::ModuleResolverResultPtr>& results() const {
@@ -273,7 +274,7 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
   auto query = QueryBuilder("com.google.fuchsia.navigate.v1").build();
   // This is mostly the contents of the FindModules() convenience function
   // above.  It's copied here so that we can call source2->idle() before
-  // RunLoopUntil() for this case only.
+  // RunLoopUntilWithTimeout() for this case only.
   auto scoring_info = modular::ResolverScoringInfo::New();
   bool got_response = false;
   resolver_->FindModules(
@@ -286,7 +287,8 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
   // effectively delayed until all sources have indicated idle ("module2" is in
   // |source2|).
   source2->idle();
-  ASSERT_TRUE(RunLoopUntil([&got_response] { return got_response; }));
+  ASSERT_TRUE(
+      RunLoopUntilWithTimeout([&got_response] { return got_response; }));
 
   ASSERT_EQ(2lu, results().size());
   EXPECT_EQ("module1", results()[0]->module_id);

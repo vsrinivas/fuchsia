@@ -49,8 +49,9 @@ class TestWithLedger : public gtest::TestWithMessageLoop {
   // see flakiness. Cf. FW-287.
   bool RunLoopWithTimeout(
       fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(10));
-  bool RunLoopUntil(std::function<bool()> condition,
-                    fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(10));
+  bool RunLoopUntilWithTimeout(
+      std::function<bool()> condition,
+      fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(10));
 
  private:
   std::unique_ptr<modular::testing::LedgerRepositoryForTesting> ledger_app_;

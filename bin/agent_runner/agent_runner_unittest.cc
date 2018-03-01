@@ -139,7 +139,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
                                  incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
 
-  RunLoopUntil([&dummy_agent] {
+  RunLoopUntilWithTimeout([&dummy_agent] {
     return dummy_agent && dummy_agent->GetCallCount("Connect") > 0;
   });
   EXPECT_EQ(1, agent_launch_count);
@@ -156,7 +156,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
                                  incoming_services2.NewRequest(),
                                  agent_controller2.NewRequest());
 
-  RunLoopUntil([&dummy_agent] {
+  RunLoopUntilWithTimeout([&dummy_agent] {
     return dummy_agent && dummy_agent->GetCallCount("Connect");
   });
   EXPECT_EQ(1, agent_launch_count);
@@ -183,13 +183,14 @@ TEST_F(AgentRunnerTest, AgentController) {
                                  incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
 
-  RunLoopUntil([&dummy_agent] { return !!dummy_agent; });
+  RunLoopUntilWithTimeout([&dummy_agent] { return !!dummy_agent; });
   dummy_agent->KillApplication();
 
   // Agent application died, so check that AgentController dies here.
   agent_controller.set_error_handler(
       [&agent_controller] { agent_controller.Unbind(); });
-  RunLoopUntil([&agent_controller] { return !agent_controller.is_bound(); });
+  RunLoopUntilWithTimeout(
+      [&agent_controller] { return !agent_controller.is_bound(); });
   EXPECT_FALSE(agent_controller.is_bound());
 }
 

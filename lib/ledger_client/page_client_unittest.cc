@@ -114,7 +114,7 @@ class PageClientTest : public TestWithLedger {
   // Runs the message loop until after Finish() completes, then optionally until
   // conflicts are resolved, then until the observed |condition| becomes true.
   void Run(const bool wait_for_resolved, std::function<bool()> condition) {
-    RunLoopUntil(
+    RunLoopUntilWithTimeout(
         [this, wait_for_resolved, condition = std::move(condition)] {
           // First wait for Finish() to be called.
           if (!finished_) {

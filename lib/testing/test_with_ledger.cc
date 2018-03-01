@@ -29,7 +29,7 @@ void TestWithLedger::TearDown() {
   bool terminated = false;
   ledger_app_->Terminate([&terminated] { terminated = true; });
   if (!terminated) {
-    RunLoopUntil([&terminated] { return terminated; });
+    RunLoopUntilWithTimeout([&terminated] { return terminated; });
   }
 
   ledger_app_.reset();
@@ -41,9 +41,10 @@ bool TestWithLedger::RunLoopWithTimeout(fxl::TimeDelta timeout) {
   return TestWithMessageLoop::RunLoopWithTimeout(timeout);
 }
 
-bool TestWithLedger::RunLoopUntil(std::function<bool()> condition,
-                                  fxl::TimeDelta timeout) {
-  return TestWithMessageLoop::RunLoopUntil(std::move(condition), timeout);
+bool TestWithLedger::RunLoopUntilWithTimeout(std::function<bool()> condition,
+                                             fxl::TimeDelta timeout) {
+  return TestWithMessageLoop::RunLoopUntilWithTimeout(std::move(condition),
+                                                      timeout);
 }
 
 }  // namespace testing

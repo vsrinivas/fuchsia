@@ -88,9 +88,10 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
                            });
 
   EXPECT_TRUE(callback_called);
-  EXPECT_TRUE(RunLoopUntil([&app_terminated_callback_called, &controller] {
-    return app_terminated_callback_called && controller.killed();
-  }));
+  EXPECT_TRUE(
+      RunLoopUntilWithTimeout([&app_terminated_callback_called, &controller] {
+        return app_terminated_callback_called && controller.killed();
+      }));
 
   EXPECT_TRUE(controller.killed());
 }

@@ -124,7 +124,7 @@ TEST_F(DirectoryModuleManifestSourceTest, CreateFiles_And_CorrectEntries) {
 
   Reset();
 
-  ASSERT_TRUE(RunLoopUntil([this]() { return idle_; }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout([this]() { return idle_; }));
   ASSERT_EQ(2lu, entries_.size());
   EXPECT_EQ("binary1", entries_[0]->binary);
   EXPECT_EQ("local_name1", entries_[0]->local_name);
@@ -148,7 +148,8 @@ TEST_F(DirectoryModuleManifestSourceTest, CreateFiles_And_CorrectEntries) {
 
   // Add a new file, expect to see the results.
   WriteManifestFile("manifest3", kManifest3);
-  ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 3; }));
+  ASSERT_TRUE(
+      RunLoopUntilWithTimeout([this]() { return entries_.size() == 3; }));
 
   EXPECT_EQ("binary3", entries_[2]->binary);
   EXPECT_EQ("local_name3", entries_[2]->local_name);
@@ -165,11 +166,12 @@ TEST_F(DirectoryModuleManifestSourceTest, RemovedFiles) {
   WriteManifestFile("manifest2", kManifest2);
 
   Reset();
-  ASSERT_TRUE(RunLoopUntil([this]() { return idle_; }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout([this]() { return idle_; }));
 
   RemoveManifestFile("manifest1");
   RemoveManifestFile("manifest2");
-  ASSERT_TRUE(RunLoopUntil([this]() { return removed_ids_.size() == 2; }));
+  ASSERT_TRUE(
+      RunLoopUntilWithTimeout([this]() { return removed_ids_.size() == 2; }));
   EXPECT_EQ(removed_ids_[0], entry_ids_[0]);
   EXPECT_EQ(removed_ids_[1], entry_ids_[1]);
 }
@@ -181,7 +183,8 @@ TEST_F(DirectoryModuleManifestSourceTest, RepoDirIsCreatedAutomatically) {
   // here.
   Reset(true /* create_dir */);
   WriteManifestFile("manifest3", kManifest3);
-  ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 1; }));
+  ASSERT_TRUE(
+      RunLoopUntilWithTimeout([this]() { return entries_.size() == 1; }));
 }
 
 TEST_F(DirectoryModuleManifestSourceTest, IgnoreIncomingFiles) {
@@ -190,7 +193,8 @@ TEST_F(DirectoryModuleManifestSourceTest, IgnoreIncomingFiles) {
   WriteManifestFile("foo", kManifest3);
 
   // The first manifest files contains two entries, but we should ignore them.
-  ASSERT_TRUE(RunLoopUntil([this]() { return entries_.size() == 1; }));
+  ASSERT_TRUE(
+      RunLoopUntilWithTimeout([this]() { return entries_.size() == 1; }));
 }
 
 }  // namespace

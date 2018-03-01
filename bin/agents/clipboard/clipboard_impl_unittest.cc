@@ -45,7 +45,7 @@ TEST_F(ClipboardImplTest, FirstPeek) {
     callback_called = true;
   });
 
-  RunLoopUntil([&callback_called] { return callback_called; });
+  RunLoopUntilWithTimeout([&callback_called] { return callback_called; });
 }
 
 TEST_F(ClipboardImplTest, PushAndPeek) {
@@ -57,7 +57,7 @@ TEST_F(ClipboardImplTest, PushAndPeek) {
     callback_called = true;
   });
 
-  RunLoopUntil([&callback_called] { return callback_called; });
+  RunLoopUntilWithTimeout([&callback_called] { return callback_called; });
 }
 
 TEST_F(ClipboardImplTest, PushAndPeekTwice) {
@@ -73,7 +73,7 @@ TEST_F(ClipboardImplTest, PushAndPeekTwice) {
     callback_called++;
   });
 
-  RunLoopUntil([&callback_called] { return callback_called == 2; });
+  RunLoopUntilWithTimeout([&callback_called] { return callback_called == 2; });
 }
 
 }  // namespace

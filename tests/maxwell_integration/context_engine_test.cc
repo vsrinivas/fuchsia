@@ -113,7 +113,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   TestListener listener;
   f1dl::Array<ContextValuePtr> result;
   reader_->Subscribe(std::move(query), listener.GetHandle());
-  ASSERT_TRUE(RunLoopUntil([&listener, &result] {
+  ASSERT_TRUE(RunLoopUntilWithTimeout([&listener, &result] {
     return listener.last_update &&
            (result = std::move(TakeContextValue(listener.last_update.get(), "a").second)).size() == 3;
   }));
@@ -127,7 +127,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   listener.Reset();
   value1->Set(R"({ "@type": "notSomeType", "foo": "bar" })", nullptr);
   value3.Unbind();
-  ASSERT_TRUE(RunLoopUntil([&listener, &result] {
+  ASSERT_TRUE(RunLoopUntilWithTimeout([&listener, &result] {
     return !!listener.last_update &&
            (result = std::move(TakeContextValue(listener.last_update.get(), "a").second)).size() == 1;
   }));
@@ -146,7 +146,8 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   story_value->CreateChildValue(value4.NewRequest(), ContextValueType::ENTITY);
   value4->Set("1", ContextMetadataBuilder().AddEntityType("someType").Build());
 
-  ASSERT_TRUE(RunLoopUntil([&listener] { return !!listener.last_update; }));
+  ASSERT_TRUE(
+      RunLoopUntilWithTimeout([&listener] { return !!listener.last_update; }));
   result = std::move(TakeContextValue(listener.last_update.get(), "a").second);
   ASSERT_EQ(2lu, result.size());
   EXPECT_EQ("frob", result[0]->meta->entity->topic);
@@ -156,7 +157,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   // Lastly remove one of the values by resetting the ContextValueWriter proxy.
   listener.Reset();
   value4.Unbind();
-  RunLoopUntil([&listener] { return !!listener.last_update; });
+  RunLoopUntilWithTimeout([&listener] { return !!listener.last_update; });
   result = std::move(TakeContextValue(listener.last_update.get(), "a").second);
   EXPECT_EQ(1lu, result.size());
   EXPECT_EQ("frob", result[0]->meta->entity->topic);
@@ -177,8 +178,8 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
     reader_->Subscribe(query.Clone(), listener1.GetHandle());
     reader_->Subscribe(query.Clone(), listener2.GetHandle());
     InitReader(MakeGlobalScope());
-    ASSERT_FALSE(
-        RunLoopUntil([&listener2] { return !!listener2.last_update; }));
+    ASSERT_FALSE(RunLoopUntilWithTimeout(
+        [&listener2] { return !!listener2.last_update; }));
     listener2.Reset();
   }
 
@@ -188,7 +189,8 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
   writer_->CreateValue(value.NewRequest(), ContextValueType::ENTITY);
   value->Set(nullptr /* content */,
              ContextMetadataBuilder().SetEntityTopic("topic").Build());
-  ASSERT_FALSE(RunLoopUntil([&listener2] { return !!listener2.last_update; }));
+  ASSERT_FALSE(RunLoopUntilWithTimeout(
+      [&listener2] { return !!listener2.last_update; }));
 }
 
 }  // namespace maxwell
