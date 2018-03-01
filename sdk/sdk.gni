@@ -177,7 +177,7 @@ template("sdk") {
         rebase_path(stamp_file, root_build_dir),
       ]
 
-      if (invoker.old_school) {
+      if (defined(invoker.old_school) && invoker.old_school) {
         args += [
           "--old-school",
         ]
