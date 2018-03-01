@@ -19,18 +19,22 @@
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>
+#include <fidl/tables_generator.h>
 
 namespace {
 
 [[noreturn]] void Usage() {
     std::cout << "fidl usage:\n"
                  "    fidl [--c-header HEADER_PATH]\n"
+                 "         [--tables TABLES_PATH]\n"
                  "         [--json JSON_PATH]\n"
                  "         --files [FIDL_FILE...]\n"
                  "    * If no output types are provided, the FIDL_FILES are parsed and\n"
                  "      compiled, but no output is produced. Otherwise:\n"
                  "    * If --c-header is provided, C structures are generated\n"
                  "        into HEADER_PATH.\n"
+                 "    * If --tables is provided, coding tables are generated\n"
+                 "        into TABLES_PATH.\n"
                  "    * If --json is provided, JSON intermediate data is generated\n"
                  "        into JSON_PATH.\n"
                  "    The --file [FIDL_FILE...] arguments can also be provided via a\n"
@@ -132,6 +136,7 @@ private:
 
 enum struct Behavior {
     CHeader,
+    Tables,
     JSON,
 };
 
@@ -197,6 +202,8 @@ int main(int argc, char* argv[]) {
         std::fstream output_file;
         if (behavior_argument == "--c-header") {
             outputs.emplace(Behavior::CHeader, Open(argv_args->Claim(), std::ios::out));
+        } else if (behavior_argument == "--tables") {
+            outputs.emplace(Behavior::Tables, Open(argv_args->Claim(), std::ios::out));
         } else if (behavior_argument == "--json") {
             outputs.emplace(Behavior::JSON, Open(argv_args->Claim(), std::ios::out));
         } else if (behavior_argument == "--files") {
@@ -238,6 +245,11 @@ int main(int argc, char* argv[]) {
         switch (behavior) {
         case Behavior::CHeader: {
             fidl::CGenerator generator(&library);
+            Generate(&generator, std::move(output_file));
+            break;
+        }
+        case Behavior::Tables: {
+            fidl::TablesGenerator generator(&library);
             Generate(&generator, std::move(output_file));
             break;
         }

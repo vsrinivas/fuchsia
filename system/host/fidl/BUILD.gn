@@ -20,5 +20,6 @@ source_set("compiler") {
     "lib/source_file.cpp",
     "lib/source_location.cpp",
     "lib/source_manager.cpp",
+    "lib/tables_generator.cpp",
   ]
 }

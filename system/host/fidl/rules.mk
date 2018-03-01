@@ -21,5 +21,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/lib/source_file.cpp \
     $(LOCAL_DIR)/lib/source_location.cpp \
     $(LOCAL_DIR)/lib/source_manager.cpp \
+    $(LOCAL_DIR)/lib/tables_generator.cpp \
 
 include make/module.mk
