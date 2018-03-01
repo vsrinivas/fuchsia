@@ -117,9 +117,12 @@ static int vim_start_thread(void* arg) {
         }
     }
 
-    if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
-        zxlogf(ERROR, "vim_start_thread could not add display_dev: %d\n", status);
-        goto fail;
+    // Display driver currently supports only the S912
+    if (bus->soc_pid == PDEV_PID_AMLOGIC_S912) {
+        if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
+            zxlogf(ERROR, "vim_start_thread could not add display_dev: %d\n", status);
+            goto fail;
+        }
     }
 
     return ZX_OK;
