@@ -2,9 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# A template for an action that creates a Fuchsia Go binary.
-
 import("//build/go/go_build.gni")
+
+# A template for an action that creates a Fuchsia Go binary.
+#
+# Parameters
+#
+#   sdk_candidate (optional)
+#     Whether the binary may be included in an SDK.
+#     Defaults to false.
 
 template("go_binary") {
   go_build(target_name) {

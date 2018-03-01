@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
+import("//build/config/sysroot.gni")
+import("//build/sdk/sdk_atom.gni")
+
+declare_args() {
+  # target_gen_dir is, for example with garnet, gen/garnet/go/src/foo/bar,
+  # whereas we need gen/go/src/garnet/foo/bar. To use, specify the following
+  # in your gn file: "${root_go_gen_dir}/$layer/path_relative_to_go_src.
+  # E.g., output_file = "$root_go_gen_dir/garnet/ktrace/gen_records/gen_records.go"
+  root_go_gen_dir = "${root_gen_dir}/go/src"
+}
+
 # A template for an action that builds a Go binary. Users should instead use the
 # go_binary or go_test rules.
 #
@@ -30,18 +42,12 @@
 #
 # At minimum there should be a go_dependencies declaration for the package to
 # be built.
-
-import("//build/config/clang/clang.gni")
-import("//build/config/sysroot.gni")
-import("//build/sdk/sdk_atom.gni")
-
-declare_args() {
-  # target_gen_dir is, for example with garnet, gen/garnet/go/src/foo/bar,
-  # whereas we need gen/go/src/garnet/foo/bar. To use, specify the following
-  # in your gn file: "${root_go_gen_dir}/$layer/path_relative_to_go_src.
-  # E.g., output_file = "$root_go_gen_dir/garnet/ktrace/gen_records/gen_records.go"
-  root_go_gen_dir = "${root_gen_dir}/go/src"
-}
+#
+# Parameters
+#
+#   sdk_candidate (optional)
+#     Whether the binary may be included in an SDK.
+#     Defaults to false.
 
 template("go_build") {
   assert(defined(invoker.gopackage),
@@ -155,23 +161,25 @@ template("go_build") {
     }
   }
 
-  sdk_atom("${target_name}_sdk") {
-    domain = "exe"
-    name = output_name
+  if (!defined(invoker.sdk_candidate) || invoker.sdk_candidate) {
+    sdk_atom("${target_name}_sdk") {
+      domain = "exe"
+      name = output_name
 
-    if (is_fuchsia) {
-      tags = [ "arch:target" ]
-    } else {
-      tags = [ "arch:host" ]
+      if (is_fuchsia) {
+        tags = [ "arch:target" ]
+      } else {
+        tags = [ "arch:host" ]
+      }
+
+      files = [
+        {
+          source = output_path
+          dest = output_name
+        },
+      ]
+
+      non_sdk_deps = [ ":$main_target_name" ]
     }
-
-    files = [
-      {
-        source = output_path
-        dest = output_name
-      },
-    ]
-
-    non_sdk_deps = [ ":$main_target_name" ]
   }
 }
