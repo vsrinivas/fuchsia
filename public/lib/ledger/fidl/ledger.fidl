@@ -7,10 +7,8 @@ module ledger;
 
 import "lib/fsl/fidl/sized_vmo_transport.fidl";
 
-/*
- * This file contains definitions of interfaces and data structures to access
- * the Fuchsia Ledger.
- */
+// This file contains definitions of interfaces and data structures to access
+// the Fuchsia Ledger.
 
 // Response code for ledger operations.
 enum Status {
