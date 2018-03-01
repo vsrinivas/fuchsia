@@ -23,7 +23,6 @@ MODULE_LIBS := \
     system/ulib/zxcrypt \
 
 MODULE_STATIC_LIBS := \
-    third_party/ulib/safeint \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \

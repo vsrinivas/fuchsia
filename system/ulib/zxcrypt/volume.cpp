@@ -22,7 +22,6 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fdio/debug.h>
-#include <safeint/safe_math.h>
 #include <sync/completion.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
@@ -348,9 +347,8 @@ zx_status_t Volume::Init() {
         return rc;
     }
     // Sanity check
-    safeint::CheckedNumeric<uint64_t> size = blk_.block_size;
-    size *= blk_.block_count;
-    if (!size.IsValid()) {
+    uint64_t size;
+    if (mul_overflow(blk_.block_size, blk_.block_count, &size)) {
         xprintf("invalid block device: size=%" PRIu32 ", count=%" PRIu64 "\n", blk_.block_size,
                 blk_.block_count);
         return ZX_ERR_NOT_SUPPORTED;
@@ -373,14 +371,18 @@ zx_status_t Volume::Init() {
     if ((rc = block_.Resize(blk_.block_size)) != ZX_OK) {
         return rc;
     }
-    safeint::CheckedNumeric<size_t> reserved_size = blk_.block_size;
-    reserved_size *= kMetadataBlocks;
+    size_t reserved_size;
+    if (mul_overflow(blk_.block_size, kMetadataBlocks, &reserved_size)) {
+        xprintf("reserved_size overflow size=%" PRIu32 ", kMetadataBlocks=%zu\n", blk_.block_size,
+                kMetadataBlocks);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     // Get FVM info
     switch ((rc = Ioctl(IOCTL_BLOCK_FVM_QUERY, nullptr, 0, &fvm_, sizeof(fvm_)))) {
     case ZX_OK: {
         // This *IS* an FVM partition.
-        if (fvm_.slice_size < reserved_size.ValueOrDie() || fvm_.vslice_count <= kReservedSlices) {
+        if (fvm_.slice_size < reserved_size || fvm_.vslice_count <= kReservedSlices) {
             xprintf("bad device: slice_size=%zu, vslice_count=%zu\n", fvm_.slice_size,
                     fvm_.vslice_count);
             return ZX_ERR_NO_SPACE;
@@ -430,7 +432,7 @@ zx_status_t Volume::Init() {
         // Set "slice" parameters to allow us to pretend it is FVM and use one set
         // of logic.
         fvm_.vslice_count = blk_.block_count / kMetadataBlocks;
-        fvm_.slice_size = reserved_size.ValueOrDie();
+        fvm_.slice_size = reserved_size;
         has_fvm_ = false;
         break;
 
@@ -476,12 +478,17 @@ zx_status_t Volume::Configure(Volume::Version version) {
     }
     slot_len_ = data_key_len + data_iv_len + tag_len;
 
-    safeint::CheckedNumeric<size_t> total = slot_len_;
-    total *= kNumSlots;
-    total += kHeaderLen;
-    if (blk_.block_size < total.ValueOrDie()) {
+    size_t total;
+    if (mul_overflow(slot_len_, kNumSlots, &total) ||
+        add_overflow(total, kHeaderLen, &total)) {
+        xprintf("overflow slot_len_=%zu kNumSlots=%zu kHeaderLen=%zu\n",
+                slot_len_, kNumSlots, kHeaderLen);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if (blk_.block_size < total) {
         xprintf("block size is too small; have %u, need %zu\n", blk_.block_size,
-                total.ValueOrDie());
+                total);
         return ZX_ERR_NOT_SUPPORTED;
     }
 
