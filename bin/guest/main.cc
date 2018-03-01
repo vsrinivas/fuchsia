@@ -39,6 +39,7 @@
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "garnet/lib/machina/virtio_input.h"
 #include "garnet/lib/machina/virtio_net.h"
+#include "garnet/public/lib/fxl/files/directory.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file.h"
@@ -165,6 +166,10 @@ zx_status_t setup_scenic_framebuffer(
     machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
+  bool has_display = files::IsDirectory("/dev/class/display");
+  if (!has_display) {
+    return ZX_ERR_NO_RESOURCES;
+  }
   zx_status_t status =
       ScenicScanout::Create(application_context, input_dispatcher, scanout);
   if (status != ZX_OK) {
@@ -442,25 +447,23 @@ int main(int argc, char** argv) {
       // is present. In this case we should read input events directly from the
       // input devics.
       status = hid_event_source.Start();
-      if (status != ZX_OK) {
-        return status;
-      }
     } else {
       // Expose a view that can be composited by mozart. Input events will be
       // injected by the view events.
       status = setup_scenic_framebuffer(application_context.get(), &gpu,
                                         &input_dispatcher, &gpu_scanout);
+    }
+    if (status == ZX_OK) {
+      status = gpu.Init();
       if (status != ZX_OK) {
         return status;
       }
-    }
-    status = gpu.Init();
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = bus.Connect(gpu.pci_device());
-    if (status != ZX_OK) {
-      return status;
+      status = bus.Connect(gpu.pci_device());
+      if (status != ZX_OK) {
+        return status;
+      }
+    } else {
+      FXL_LOG(INFO) << "Could not find a GPU backend";
     }
   }
 
@@ -473,6 +476,8 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
+  } else {
+    FXL_LOG(INFO) << "Could not open Ethernet device";
   }
 
   // GPU back-ends can take some time to initialize. Wait for them to be

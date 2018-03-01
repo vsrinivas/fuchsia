@@ -35,7 +35,6 @@ VirtioNet::~VirtioNet() {
 zx_status_t VirtioNet::Start(const char* path) {
   net_fd_.reset(open(path, O_RDONLY));
   if (!net_fd_) {
-    FXL_LOG(INFO) << "Could not open Ethernet device " << path;
     return ZX_ERR_IO;
   }
 
