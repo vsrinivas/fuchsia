@@ -29,11 +29,6 @@ namespace test {
 namespace e2e_local {
 namespace {
 
-// TODO(LE-399): This timeout allows the test to pass on qemu, debug mode on the
-// bots. It is a stopgap to remove the flakes, but the problem need to be
-// investigated.
-constexpr auto kTimeoutForLE_399 = fxl::TimeDelta::FromSeconds(10);
-
 template <class A>
 bool Equals(const f1dl::Array<uint8_t>& a1, const A& a2) {
   if (a1.size() != a2.size())
@@ -92,10 +87,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     (*ledger_repository)
         ->GetLedger(std::move(ledger_name), ledger.NewRequest(),
                     callback::Capture(MakeQuitTask(), &status));
-    if (RunLoopWithTimeout()) {
-      return ::testing::AssertionFailure()
-             << "GetLedger callback was not executed";
-    }
+    RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
              << "GetLedger failed with status " << status;
@@ -103,10 +95,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
 
     ledger->GetRootPage(page->NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
-    if (RunLoopWithTimeout()) {
-      return ::testing::AssertionFailure()
-             << "GetRootPage callback was not executed";
-    }
+    RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
              << "GetRootPage failed with status " << status;
@@ -120,10 +109,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     ledger::PageSnapshotPtr snapshot;
     (*page)->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
                          callback::Capture(MakeQuitTask(), &status));
-    if (RunLoopWithTimeout()) {
-      return ::testing::AssertionFailure()
-             << "GetSnapshot callback was not executed";
-    }
+    RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
              << "GetSnapshot failed with status " << status;
@@ -133,10 +119,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     snapshot->GetEntriesInline(
         nullptr, nullptr,
         callback::Capture(MakeQuitTask(), &status, &entries, &next_token));
-    if (RunLoopWithTimeout()) {
-      return ::testing::AssertionFailure()
-             << "GetEntriesInline callback was not executed";
-    }
+    RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure()
              << "GetEntriesInline failed with status " << status;
@@ -168,7 +151,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), nullptr, f1dl::GetSynchronousProxy(&ledger_repository),
       callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout(kTimeoutForLE_399));
+  RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
   ledger_repository->GetLedger(TestArray(), f1dl::GetSynchronousProxy(&ledger_),
@@ -199,7 +182,7 @@ TEST_F(LedgerEndToEndTest, Terminate) {
     message_loop_.PostQuitTask();
   });
   controller_->Terminate();
-  EXPECT_FALSE(RunLoopWithTimeout(kTimeoutForLE_399));
+  RunLoop();
   EXPECT_TRUE(called);
 }
 
@@ -240,7 +223,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout(kTimeoutForLE_399));
+  RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
   bool repo_disconnected = false;
@@ -249,13 +232,11 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
-  bool cleared =
-      RunLoopUntilWithTimeout([deletion_sentinel_path, &repo_disconnected] {
-        return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
-      });
+  RunLoopUntil([deletion_sentinel_path, &repo_disconnected] {
+    return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
+  });
   EXPECT_FALSE(files::IsFile(deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
-  EXPECT_TRUE(cleared);
 
   // Verify that the Ledger app didn't crash.
   EXPECT_FALSE(ledger_shut_down);
@@ -292,7 +273,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout(kTimeoutForLE_399));
+  RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
   bool repo_disconnected = false;
@@ -301,13 +282,11 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
-  bool cleared =
-      RunLoopUntilWithTimeout([deletion_sentinel_path, &repo_disconnected] {
-        return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
-      });
+  RunLoopUntil([deletion_sentinel_path, &repo_disconnected] {
+    return !files::IsFile(deletion_sentinel_path) && repo_disconnected;
+  });
   EXPECT_FALSE(files::IsFile(deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
-  EXPECT_TRUE(cleared);
 
   // Verify that the Ledger app didn't crash.
   EXPECT_FALSE(ledger_shut_down);
@@ -330,7 +309,7 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
       tmp_dir.path(), std::move(cloud_provider_ptr),
       ledger_repository.NewRequest(),
       callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout(kTimeoutForLE_399));
+  RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
   bool repo_disconnected = false;
@@ -339,8 +318,7 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
 
   cloud_provider_binding.Unbind();
 
-  EXPECT_TRUE(RunLoopUntilWithTimeout(
-      [&repo_disconnected] { return repo_disconnected; }));
+  RunLoopUntil([&repo_disconnected] { return repo_disconnected; });
 
   // Verify that the Ledger app didn't crash.
   EXPECT_FALSE(ledger_app_shut_down);
