@@ -47,6 +47,11 @@ The following rights will be set on the handle by default:
 
 The *options* field is currently unused and must be set to 0.
 
+The **ZX_VMO_ZERO_CHILDREN** signal is active on a newly created VMO. It becomes
+inactive whenever a clone of the VMO is created and becomes active again when
+all clones have been destroyed and no mappings of those clones into address
+spaces exist.
+
 ## RETURN VALUE
 
 **vmo_create**() returns **ZX_OK** on success. In the event
@@ -63,6 +68,7 @@ any value other than 0.
 
 [vmo_read](vmo_read.md),
 [vmo_write](vmo_write.md),
+[vmo_clone](vmo_clone.md),
 [vmo_set_size](vmo_set_size.md),
 [vmo_get_size](vmo_get_size.md),
 [vmo_op_range](vmo_op_range.md),

@@ -28,6 +28,13 @@ class VmMapping;
 
 typedef zx_status_t (*vmo_lookup_fn_t)(void* context, size_t offset, size_t index, paddr_t pa);
 
+class VmObjectChildObserver {
+public:
+    virtual void OnZeroChild() = 0;
+    virtual void OnOneChild() = 0;
+};
+
+
 // The base vm object that holds a range of bytes of data
 //
 // Can be created without mapping and used as a container of data, or mappable
@@ -112,6 +119,9 @@ public:
                                    size_t buffer_size) {
         return ZX_ERR_NOT_SUPPORTED;
     }
+
+    // The assocaited VmObjectDispatcher will set an observer to notify user mode.
+    void SetChildObserver(VmObjectChildObserver* child_observer);
 
     // Returns a null-terminated name, or the empty string if set_name() has not
     // been called.
@@ -212,8 +222,7 @@ public:
 protected:
     // private constructor (use Create())
     explicit VmObject(fbl::RefPtr<VmObject> parent);
-    VmObject()
-        : VmObject(nullptr) {}
+    VmObject() : VmObject(nullptr) {}
 
     // private destructor, only called from refptr
     virtual ~VmObject();
@@ -262,6 +271,9 @@ protected:
     fbl::Name<ZX_MAX_NAME_LEN> name_;
 
 private:
+    // This member, if not null, is used to signal the user facing Dispatcher.
+    VmObjectChildObserver* child_observer_ TA_GUARDED(lock_) = nullptr;
+
     // Per-node state for the global VMO list.
     using NodeState = fbl::DoublyLinkedListNodeState<VmObject*>;
     NodeState global_list_state_;

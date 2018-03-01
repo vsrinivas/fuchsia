@@ -18,8 +18,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
+
 #include <zircon/types.h>
 
 using fbl::AutoLock;
@@ -193,11 +195,21 @@ uint32_t VmObject::share_count() const {
     return num_aspaces;
 }
 
+void VmObject::SetChildObserver(VmObjectChildObserver* child_observer) {
+    AutoLock a(&lock_);
+    child_observer_ = child_observer;
+}
+
 void VmObject::AddChildLocked(VmObject* o) {
     canary_.Assert();
     DEBUG_ASSERT(lock_.IsHeld());
     children_list_.push_front(o);
     children_list_len_++;
+
+    // Signal the dispatcher that there are child VMOS
+    if ((child_observer_ != nullptr) && (children_list_len_ == 1)) {
+        child_observer_->OnOneChild();
+    }
 }
 
 void VmObject::RemoveChildLocked(VmObject* o) {
@@ -206,6 +218,11 @@ void VmObject::RemoveChildLocked(VmObject* o) {
     children_list_.erase(*o);
     DEBUG_ASSERT(children_list_len_ > 0);
     children_list_len_--;
+
+    // Signal the dispatcher that there are no more child VMOS
+    if ((child_observer_ != nullptr) && (children_list_len_ == 0)) {
+        child_observer_->OnZeroChild();
+    }
 }
 
 uint32_t VmObject::num_children() const {

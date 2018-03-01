@@ -57,6 +57,11 @@ If *options* is *ZX_VMO_CLONE_COPY_ON_WRITE* the following rights are added:
 
 ## NOTES
 
+Cloning a VMO causes the existing (source) VMO **ZX_VMO_ZERO_CHILDREN** signal
+to become inactive. Only when the last clone is destroyed and no mappings
+of those clones into address spaces exist, will **ZX_VMO_ZERO_CHILDREN** become
+active again.
+
 ### ZX_VMO_CLONE_COPY_ON_WRITE
 
 VMOs produced by this mode will interact with the VMO syscalls in the following

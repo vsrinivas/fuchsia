@@ -35,12 +35,24 @@ zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo,
 }
 
 VmObjectDispatcher::VmObjectDispatcher(fbl::RefPtr<VmObject> vmo)
-    : vmo_(vmo) {}
+    : SoloDispatcher(ZX_VMO_ZERO_CHILDREN), vmo_(vmo) {
+        vmo_->SetChildObserver(this);
+    }
 
 VmObjectDispatcher::~VmObjectDispatcher() {
     // Intentionally leave vmo_->user_id() set to our koid even though we're
     // dying and the koid will no longer map to a Dispatcher. koids are never
     // recycled, and it could be a useful breadcrumb.
+    vmo_->SetChildObserver(nullptr);
+}
+
+
+void VmObjectDispatcher::OnZeroChild() {
+    UpdateState(0, ZX_VMO_ZERO_CHILDREN);
+}
+
+void VmObjectDispatcher::OnOneChild() {
+    UpdateState(ZX_VMO_ZERO_CHILDREN, 0);
 }
 
 void VmObjectDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {

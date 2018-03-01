@@ -7,28 +7,34 @@
 #pragma once
 
 #include <zircon/types.h>
+
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
 
 #include <lib/user_copy/user_ptr.h>
-
 #include <sys/types.h>
+#include <vm/vm_object.h>
 
-class VmObject;
-class VmAspace;
-
-class VmObjectDispatcher final : public SoloDispatcher {
+class VmObjectDispatcher final : public SoloDispatcher,
+                                 public VmObjectChildObserver {
 public:
-    static zx_status_t Create(fbl::RefPtr<VmObject> vmo, fbl::RefPtr<Dispatcher>* dispatcher,
+    static zx_status_t Create(fbl::RefPtr<VmObject> vmo,
+                              fbl::RefPtr<Dispatcher>* dispatcher,
                               zx_rights_t* rights);
-
     ~VmObjectDispatcher() final;
+
+    // VmObjectChildObserver implementation.
+    void OnZeroChild() final;
+    void OnOneChild() final;
+
+    // SoloDispatcher implementation.
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_VMO; }
     bool has_state_tracker() const final { return true; }
     void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
     zx_status_t set_name(const char* name, size_t len) final;
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }
 
+    // VmObjectDispatcher own methods.
     zx_status_t Read(user_out_ptr<void> user_data, size_t length,
                      uint64_t offset, size_t* actual);
     zx_status_t Write(user_in_ptr<const void> user_data, size_t length,
@@ -49,7 +55,11 @@ private:
     explicit VmObjectDispatcher(fbl::RefPtr<VmObject> vmo);
 
     fbl::Canary<fbl::magic("VMOD")> canary_;
-    fbl::RefPtr<VmObject> vmo_;
+
+    // The 'const' here is load bearing; we give a raw pointer to
+    // ourselves to |vmo_| so we have to ensure we don't reset vmo_
+    // except during destruction.
+    fbl::RefPtr<VmObject> const vmo_;
 
     // VMOs do not currently maintain any VMO-specific signal state,
     // but do allow user signals to be set. In addition, the CookieJar

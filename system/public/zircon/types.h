@@ -151,6 +151,9 @@ typedef uint32_t zx_signals_t;
 // Timer
 #define ZX_TIMER_SIGNALED           __ZX_OBJECT_SIGNALED
 
+// VMO
+#define ZX_VMO_ZERO_CHILDREN        __ZX_OBJECT_SIGNALED
+
 // global kernel object id.
 typedef uint64_t zx_koid_t;
 #define ZX_KOID_INVALID ((uint64_t) 0)
