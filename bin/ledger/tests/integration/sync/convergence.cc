@@ -176,12 +176,10 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
           ledger::Status merge_status;
           merge_result_provider->Merge(std::move(merged_values),
                                        callback::Capture([] {}, &merge_status));
-          ASSERT_TRUE(merge_result_provider.WaitForResponseUntil(
-              zx::deadline_after(zx::sec(1))));
+          ASSERT_TRUE(merge_result_provider.WaitForResponse());
           ASSERT_EQ(ledger::Status::OK, merge_status);
           merge_result_provider->Done(callback::Capture([] {}, &merge_status));
-          ASSERT_TRUE(merge_result_provider.WaitForResponseUntil(
-              zx::deadline_after(zx::sec(1))));
+          ASSERT_TRUE(merge_result_provider.WaitForResponse());
           ASSERT_EQ(ledger::Status::OK, merge_status);
         }));
   }
@@ -263,7 +261,7 @@ class ConvergenceTest
     (*page)->GetSnapshot(std::move(page_snapshot_request), nullptr,
                          std::move(page_watcher),
                          callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout(fxl::TimeDelta::FromSeconds(10)));
+    RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
     return watcher;
   }
@@ -274,7 +272,7 @@ class ConvergenceTest
     ledger::Status status = ledger::Status::UNKNOWN_ERROR;
     (*page)->SetSyncStateWatcher(watcher->NewBinding(),
                                  callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
     return watcher;
   }
@@ -290,7 +288,7 @@ class ConvergenceTest
       watchers[i]->GetInlineOnLatestSnapshot(
           convert::ToArray(key),
           callback::Capture(MakeQuitTask(), &status, &values[i]));
-      EXPECT_FALSE(RunLoopWithTimeout(fxl::TimeDelta::FromSeconds(10)));
+      RunLoop();
       EXPECT_EQ(ledger::Status::OK, status);
     }
 
@@ -335,7 +333,7 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
       ledger->SetConflictResolverFactory(
           std::move(resolver_factory_ptr),
           callback::Capture(MakeQuitTask(), &status));
-      EXPECT_FALSE(RunLoopWithTimeout(fxl::TimeDelta::FromSeconds(10)));
+      RunLoop();
       EXPECT_EQ(ledger::Status::OK, status);
     }
 
@@ -343,7 +341,7 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
     sync_watchers.push_back(WatchPageSyncState(&pages_[i]));
 
     pages_[i]->StartTransaction(callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
 
     if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
@@ -354,7 +352,7 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
       pages_[i]->Put(convert::ToArray("value"), data_generator_.MakeValue(50),
                      callback::Capture(MakeQuitTask(), &status));
     }
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
   }
 
@@ -365,7 +363,7 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
     pages_[i]->Commit(commit_waiter->NewCallback());
   }
   commit_waiter->Finalize(callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // Function to verify if the visible Ledger state has not changed since last
   // call and all values are identical.
@@ -446,10 +444,9 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
     }
   };
 
-  // If |RunLoopUntil| returns true, the condition is met, thus the ledgers have
+  // If |RunLoopUntil| returns, the condition is met, thus the ledgers have
   // converged.
-  EXPECT_TRUE(RunLoopUntilWithTimeout(is_sync_and_merge_complete,
-                                      fxl::TimeDelta::FromSeconds(60)));
+  RunLoopUntil(is_sync_and_merge_complete);
   int num_changes = 0;
   for (int i = 0; i < num_ledgers_; i++) {
     num_changes += watchers[i]->changes;
