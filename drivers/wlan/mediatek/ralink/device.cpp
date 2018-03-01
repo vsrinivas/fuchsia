@@ -138,6 +138,9 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
     .configure_bss = [](void* ctx, uint32_t options, wlan_bss_config_t* config) -> zx_status_t {
         return DEV(ctx)->WlanmacConfigureBss(options, config);
     },
+    .configure_beacon = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
+        return DEV(ctx)->WlanmacConfigureBeacon(options, pkt);
+    },
     .set_key = [](void* ctx, uint32_t options, wlan_key_config_t* key_config) -> zx_status_t {
         return DEV(ctx)->WlanmacSetKey(options, key_config);
     },
@@ -3734,7 +3737,7 @@ void DumpTxwi(TxPacket* packet) {
            txwi1.tx_packet_id());
 }
 
-zx_status_t Device::ConfigureBssBeacon(uint32_t options, wlan_tx_packet_t* bcn_pkt) {
+zx_status_t Device::WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* bcn_pkt) {
     size_t req_len = usb_tx_pkt_len(bcn_pkt);
     if (req_len > kMaxBeaconSizeByte) {
         errorf("Beacon exceeds limit of %zu bytes: %zu\n", kMaxBeaconSizeByte, req_len);
@@ -3774,14 +3777,6 @@ zx_status_t Device::ConfigureBssBeacon(uint32_t options, wlan_tx_packet_t* bcn_p
 
 zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     ZX_DEBUG_ASSERT(pkt != nullptr && pkt->packet_head != nullptr);
-
-    // Intercept Beacon frames and instead of sending them, write them into the corresponding
-    // shared memory region.
-    // TODO(hahnr): Delete once beacon configuration goes through dedicated DDK path.
-    auto frame_hdr = reinterpret_cast<const wlan::FrameHeader*>(pkt->packet_head->data);
-    if (frame_hdr->fc.IsMgmt() && frame_hdr->fc.subtype() == 0x08) {
-        return ConfigureBssBeacon(options, pkt);
-    }
 
     size_t req_length = usb_tx_pkt_len(pkt);
 

@@ -317,6 +317,9 @@ typedef struct wlanmac_protocol_ops {
     // Configures a BSS which the STA is either joining or managing.
     zx_status_t (*configure_bss)(void* ctx, uint32_t options, wlan_bss_config_t* config);
 
+    // Configures a Beacon frame in hardware to announce the BSS' existance.
+    zx_status_t (*configure_beacon)(void* ctx, uint32_t options, wlan_tx_packet_t* pkt);
+
     // Specify a key for frame protection.
     zx_status_t (*set_key)(void* ctx, uint32_t options, wlan_key_config_t* key_config);
 } wlanmac_protocol_ops_t;

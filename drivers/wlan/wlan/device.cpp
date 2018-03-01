@@ -438,6 +438,16 @@ zx_status_t Device::ConfigureBss(wlan_bss_config_t* cfg) {
     return wlanmac_proxy_.ConfigureBss(0u, cfg);
 }
 
+zx_status_t Device::ConfigureBeacon(fbl::unique_ptr<Packet> beacon) {
+    wlan_tx_packet_t tx_packet;
+    auto status = beacon->AsWlanTxPacket(&tx_packet);
+    if (status != ZX_OK) {
+        errorf("error turning Beacon into wlan_tx_packet: %d\n", status);
+        return status;
+    }
+    return wlanmac_proxy_.ConfigureBeacon(0u, &tx_packet);
+}
+
 zx_status_t Device::SetKey(wlan_key_config_t* key_config) {
     return wlanmac_proxy_.SetKey(0u, key_config);
 }

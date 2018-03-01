@@ -70,6 +70,7 @@ class Device {
     zx_status_t WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt);
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
     zx_status_t WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config);
+    zx_status_t WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* pkt);
     zx_status_t WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config);
 
    private:
@@ -204,7 +205,6 @@ class Device {
 
     zx_status_t FillUsbTxPacket(TxPacket* usb_packet, wlan_tx_packet_t* wlan_packet);
     uint8_t LookupTxWcid(const uint8_t* addr1, bool protected_frame);
-    zx_status_t ConfigureBssBeacon(uint32_t options, wlan_tx_packet_t* bcn_pkt);
 
     static void ReadRequestComplete(usb_request_t* request, void* cookie);
     static void WriteRequestComplete(usb_request_t* request, void* cookie);

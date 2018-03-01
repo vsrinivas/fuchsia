@@ -42,6 +42,10 @@ class WlanmacProxy {
         return proto_.ops->configure_bss(proto_.ctx, options, config);
     }
 
+    zx_status_t ConfigureBeacon(uint32_t options, wlan_tx_packet_t* pkt) {
+        return proto_.ops->configure_beacon(proto_.ctx, options, pkt);
+    }
+
     zx_status_t SetKey(uint32_t options, wlan_key_config_t* key_config) {
         return proto_.ops->set_key(proto_.ctx, options, key_config);
     }
