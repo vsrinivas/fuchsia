@@ -26,6 +26,9 @@ ServiceNamespace::ServiceNamespace(
   AddBinding(std::move(request));
 }
 
+ServiceNamespace::ServiceNamespace(fbl::RefPtr<fs::PseudoDir> directory)
+    : vfs_(nullptr), directory_(std::move(directory)) {}
+
 ServiceNamespace::~ServiceNamespace() = default;
 
 void ServiceNamespace::AddBinding(

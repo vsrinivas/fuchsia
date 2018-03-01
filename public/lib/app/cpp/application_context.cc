@@ -4,6 +4,7 @@
 
 #include "lib/app/cpp/application_context.h"
 
+#include <async/default.h>
 #include <fdio/util.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -23,12 +24,15 @@ constexpr char kServiceRootPath[] = "/svc";
 ApplicationContext::ApplicationContext(
     zx::channel service_root,
     zx::channel service_request)
-    : service_root_(std::move(service_root)) {
+    : vfs_(async_get_default()),
+      directory_(fbl::AdoptRef(new fs::PseudoDir())),
+      service_root_(std::move(service_root)),
+      deprecated_outgoing_services_(directory_) {
   ConnectToEnvironmentService(environment_.NewRequest());
   ConnectToEnvironmentService(launcher_.NewRequest());
 
   if (service_request.is_valid())
-    outgoing_services_.ServeDirectory(std::move(service_request));
+    vfs_.ServeDirectory(directory_, std::move(service_request));
 }
 
 ApplicationContext::~ApplicationContext() = default;

@@ -66,7 +66,9 @@ class ApplicationContext {
 
   // Gets a service provider implementation by which the application can
   // provide outgoing services back to its creator.
-  ServiceNamespace* outgoing_services() { return &outgoing_services_; }
+  ServiceNamespace* outgoing_services() {
+    return &deprecated_outgoing_services_;
+  }
 
   // Gets the directory which is the root of the tree of file-system objects
   // exported by this application to the rest of the system.
@@ -81,7 +83,7 @@ class ApplicationContext {
     // to the root of the export directory.  Once all clients migrate off of
     // the legacy ServiceProvider and the bridging band-aids we have built,
     // we can move these objects into the "svc" subdirectory as intended.
-    return outgoing_services_.directory();
+    return directory_;
   }
 
   // Gets or creates an export sub-directory called "svc" for publishing
@@ -119,11 +121,16 @@ class ApplicationContext {
 
  private:
   ApplicationEnvironmentPtr environment_;
-  ServiceNamespace outgoing_services_;
+  ApplicationLauncherPtr launcher_;
+
   fbl::RefPtr<fs::PseudoDir> service_export_dir_;
   fbl::RefPtr<fs::PseudoDir> debug_export_dir_;
+
+  fs::ManagedVfs vfs_;
+  fbl::RefPtr<fs::PseudoDir> directory_;
   zx::channel service_root_;
-  ApplicationLauncherPtr launcher_;
+
+  ServiceNamespace deprecated_outgoing_services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationContext);
 };

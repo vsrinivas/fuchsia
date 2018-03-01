@@ -51,6 +51,8 @@ class ServiceNamespace : public app::ServiceProvider {
   explicit ServiceNamespace(
       f1dl::InterfaceRequest<app::ServiceProvider> request);
 
+  explicit ServiceNamespace(fbl::RefPtr<fs::PseudoDir> directory);
+
   ~ServiceNamespace() override;
 
   // Gets the underlying pseudo-directory.
