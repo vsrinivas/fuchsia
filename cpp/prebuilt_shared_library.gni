@@ -105,9 +105,10 @@ template("prebuilt_shared_library") {
       "type:compiled_shared",
     ]
 
+    no_headers = defined(invoker.no_headers) && invoker.no_headers
+
     files = []
-    if (defined(invoker.sources) &&
-        (!defined(invoker.no_headers) || !invoker.no_headers)) {
+    if (defined(invoker.sources) && !no_headers) {
       foreach(source_file, invoker.sources) {
         extension = get_path_info(source_file, "extension")
         if (extension == "h") {
@@ -135,7 +136,9 @@ template("prebuilt_shared_library") {
     ]
 
     deps = []
-    if (defined(invoker.public_deps)) {
+    # If a prebuilt library is only provided for packaging purposes (by not
+    # exposing headers) then its dependencies need not be included in an SDK.
+    if (defined(invoker.public_deps) && !no_headers) {
       foreach(dep, invoker.public_deps) {
         full_label = get_label_info(dep, "label_no_toolchain")
         deps += [
