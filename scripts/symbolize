@@ -147,8 +147,8 @@ def tool_path(arch, tool):
         platform = "Darwin"
     else:
         raise Exception("Unsupported platform!")
-    return ("%s/%s-elf-%s-%s-x86_64/bin/%s-elf-%s" %
-            (PREBUILTS_BASE_DIR, arch, GCC_VERSION, platform, arch, tool))
+    return ("%s/gcc/bin/%s-elf-%s" %
+            (PREBUILTS_BASE_DIR, arch, tool))
 
 
 def run_tool(arch, tool, *args):
