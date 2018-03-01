@@ -18,7 +18,6 @@ ROOT_PUBSPECS = [
     'third_party/dart/pkg/analyzer_cli',
     'third_party/dart/pkg/kernel',
     'third_party/dart/pkg/telemetry',
-    'third_party/dart/pkg/typed_mock',
     'third_party/dart-pkg/git/flutter/examples/flutter_gallery',
     'third_party/dart-pkg/git/flutter/packages/flutter',
     'third_party/dart-pkg/git/flutter/packages/flutter_test',
