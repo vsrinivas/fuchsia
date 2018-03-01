@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <unistd.h>
 
 // DDK includes
 #include <ddk/binding.h>
@@ -356,15 +357,25 @@ static void dwc_host_port_power_on(void) {
     regs->host_port_ctrlstatus = hw_status;
 }
 
+static zx_status_t wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected) {
+    for (int i = 0; i < 100; i++) {
+        if ((*ptr & bits) == expected) {
+            return ZX_OK;
+        }
+        usleep(1000);
+    }
+    return ZX_ERR_TIMED_OUT;
+}
+
 static zx_status_t usb_dwc_softreset_core(void) {
-    while (!(regs->core_reset & DWC_AHB_MASTER_IDLE))
-        ;
+    zx_status_t status = wait_bits(&regs->core_reset, DWC_AHB_MASTER_IDLE, DWC_AHB_MASTER_IDLE);
+    if (status != ZX_OK) {
+        return status;
+    }
 
     regs->core_reset = DWC_SOFT_RESET;
-    while (regs->core_reset & DWC_SOFT_RESET)
-        ;
 
-    return ZX_OK;
+    return wait_bits(&regs->core_reset, DWC_SOFT_RESET, 0);
 }
 
 static zx_status_t usb_dwc_setupcontroller(void) {
@@ -1752,10 +1763,6 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev) {
     mtx_lock(&usb_dwc->free_req_mtx);
     list_initialize(&usb_dwc->free_reqs);
     mtx_unlock(&usb_dwc->free_req_mtx);
-
-    // TODO(gkalsi):
-    // The BCM Mailbox Driver currently turns on USB power but it should be
-    // done here instead.
 
     if ((st = usb_dwc_softreset_core()) != ZX_OK) {
         zxlogf(ERROR, "usb_dwc: failed to reset core.\n");
