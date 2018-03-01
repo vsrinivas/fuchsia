@@ -40,10 +40,13 @@ bool RunGivenLoopWithTimeout(fsl::MessageLoop* message_loop,
   return timed_out;
 }
 
-bool RunGivenLoopUntil(fsl::MessageLoop* message_loop,
-                       std::function<bool()> condition, fxl::TimeDelta timeout,
-                       fxl::TimeDelta step) {
-  const fxl::TimePoint deadline = fxl::TimePoint::Now() + timeout;
+bool RunGivenLoopUntilWithTimeout(fsl::MessageLoop* message_loop,
+                                  std::function<bool()> condition,
+                                  fxl::TimeDelta timeout,
+                                  fxl::TimeDelta step) {
+  const fxl::TimePoint deadline = timeout == fxl::TimeDelta::FromSeconds(0)
+                                      ? fxl::TimePoint::Max()
+                                      : fxl::TimePoint::Now() + timeout;
   while (fxl::TimePoint::Now() < deadline) {
     if (condition()) {
       return true;
@@ -59,17 +62,32 @@ TestWithMessageLoop::TestWithMessageLoop() = default;
 
 TestWithMessageLoop::~TestWithMessageLoop() = default;
 
+void TestWithMessageLoop::RunLoop() {
+  message_loop_.Run();
+}
+
 bool TestWithMessageLoop::RunLoopWithTimeout(fxl::TimeDelta timeout) {
   return RunGivenLoopWithTimeout(&message_loop_, timeout);
+}
+
+bool TestWithMessageLoop::RunLoopUntilWithTimeout(
+    std::function<bool()> condition,
+    fxl::TimeDelta timeout,
+    fxl::TimeDelta step) {
+  return RunGivenLoopUntilWithTimeout(&message_loop_, std::move(condition),
+                                      timeout, step);
 }
 
 bool TestWithMessageLoop::RunLoopUntil(std::function<bool()> condition,
                                        fxl::TimeDelta timeout,
                                        fxl::TimeDelta step) {
-  return RunGivenLoopUntil(&message_loop_, std::move(condition), timeout, step);
+  return RunGivenLoopUntilWithTimeout(&message_loop_, std::move(condition),
+                                      timeout, step);
 }
 
-void TestWithMessageLoop::RunLoopUntilIdle() { message_loop_.RunUntilIdle(); }
+void TestWithMessageLoop::RunLoopUntilIdle() {
+  message_loop_.RunUntilIdle();
+}
 
 fxl::Closure TestWithMessageLoop::MakeQuitTask() {
   return [this] { message_loop_.PostQuitTask(); };

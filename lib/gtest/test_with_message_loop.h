@@ -51,6 +51,9 @@ class TestWithMessageLoop : public ::testing::Test {
   TestWithMessageLoop();
   ~TestWithMessageLoop() override;
 
+  // Runs the loop until it is exited.
+  void RunLoop();
+
   // Runs the loop for at most |timeout|. Returns |true| if the timeout has been
   // reached.
   bool RunLoopWithTimeout(
@@ -59,9 +62,19 @@ class TestWithMessageLoop : public ::testing::Test {
   // Runs the loop until the condition returns true or the timeout is reached.
   // Returns |true| if the condition was met, and |false| if the timeout was
   // reached.
+  // TODO(qsr): When existing usage have been migrated to
+  // |RunLoopUntilWithTimeout|, remove the timeout from this method.
   bool RunLoopUntil(std::function<bool()> condition,
                     fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1),
                     fxl::TimeDelta step = fxl::TimeDelta::FromMilliseconds(10));
+
+  // Runs the loop until the condition returns true or the timeout is reached.
+  // Returns |true| if the condition was met, and |false| if the timeout was
+  // reached.
+  bool RunLoopUntilWithTimeout(
+      std::function<bool()> condition,
+      fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1),
+      fxl::TimeDelta step = fxl::TimeDelta::FromMilliseconds(10));
 
   // Runs the message loop until idle.
   void RunLoopUntilIdle();
