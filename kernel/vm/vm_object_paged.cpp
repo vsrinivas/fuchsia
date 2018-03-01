@@ -15,7 +15,6 @@
 #include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <lib/console.h>
-#include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -302,14 +301,14 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
 
     // if we have a parent see if they have a page for us
     if (parent_) {
-        safeint::CheckedNumeric<uint64_t> parent_offset = parent_offset_;
-        parent_offset += offset;
-        DEBUG_ASSERT(parent_offset.IsValid());
+        uint64_t parent_offset;
+        bool overflowed = add_overflow(parent_offset_, offset, &parent_offset);
+        ASSERT(!overflowed);
 
         // make sure we don't cause the parent to fault in new pages, just ask for any that already exist
         uint parent_pf_flags = pf_flags & ~(VMM_PF_FLAG_FAULT_MASK);
 
-        zx_status_t status = parent_->GetPageLocked(parent_offset.ValueOrDie(), parent_pf_flags,
+        zx_status_t status = parent_->GetPageLocked(parent_offset, parent_pf_flags,
                                                     nullptr, &p, &pa);
         if (status == ZX_OK) {
             // we have a page from them. if we're read-only faulting, return that page so they can map
@@ -815,10 +814,10 @@ zx_status_t VmObjectPaged::SetParentOffsetLocked(uint64_t offset) {
     // TODO: ZX-692 make sure that the accumulated offset of the entire parent chain doesn't wrap 64bit space
 
     // make sure the size + this offset are still valid
-    safeint::CheckedNumeric<uint64_t> end = offset;
-    end += size_;
-    if (!end.IsValid())
+    uint64_t end;
+    if (add_overflow(offset, size_, &end)) {
         return ZX_ERR_OUT_OF_RANGE;
+    }
 
     parent_offset_ = offset;
 

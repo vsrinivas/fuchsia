@@ -13,7 +13,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <inttypes.h>
-#include <safeint/safe_math.h>
 #include <trace.h>
 #include <vm/fault.h>
 #include <vm/vm.h>
@@ -368,17 +367,18 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
 
     // make sure the base + offset is within our address space
     // should be, according to the range stored in base_ + size_
-    safeint::CheckedNumeric<vaddr_t> unmap_base = base_;
-    unmap_base += offset_new - object_offset_;
+    vaddr_t unmap_base;
+    bool overflowed = add_overflow(base_, offset_new - object_offset_, &unmap_base);
+    ASSERT(!overflowed);
 
     // make sure we're only unmapping within our window
-    DEBUG_ASSERT(unmap_base.ValueOrDie() >= base_ &&
-                 (unmap_base.ValueOrDie() + len_new - 1) <= (base_ + size_ - 1));
+    ASSERT(unmap_base >= base_);
+    ASSERT((unmap_base + len_new - 1) <= (base_ + size_ - 1));
 
     LTRACEF("going to unmap %#" PRIxPTR ", len %#" PRIx64 " aspace %p\n",
-            unmap_base.ValueOrDie(), len_new, aspace_.get());
+            unmap_base, len_new, aspace_.get());
 
-    zx_status_t status = aspace_->arch_aspace().Unmap(unmap_base.ValueOrDie(),
+    zx_status_t status = aspace_->arch_aspace().Unmap(unmap_base,
                                                       static_cast<size_t>(len_new) / PAGE_SIZE, nullptr);
     if (status < 0)
         return status;

@@ -14,7 +14,6 @@
 #include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <lib/console.h>
-#include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
@@ -42,10 +41,10 @@ zx_status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<Vm
         return ZX_ERR_INVALID_ARGS;
 
     // check that base + size is a valid range
-    safeint::CheckedNumeric<paddr_t> safe_base = base;
-    safe_base += size - 1;
-    if (!safe_base.IsValid())
+    paddr_t safe_base;
+    if (add_overflow(base, size - 1, &safe_base)) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     fbl::AllocChecker ac;
     auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPhysical(base, size));
