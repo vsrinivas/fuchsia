@@ -153,28 +153,11 @@ bool Parse(const fidl::SourceFile& source_file, fidl::IdentifierTable* identifie
     return true;
 }
 
-bool GenerateC(fidl::flat::Library* library, std::fstream header_output) {
-    std::ostringstream header_file;
-    fidl::CGenerator c_generator(library);
-
-    c_generator.ProduceCHeader(&header_file);
-
-    header_output << header_file.str();
-    header_output.flush();
-
-    return true;
-}
-
-bool GenerateJSON(fidl::flat::Library* library, std::fstream json_output) {
-    std::ostringstream json_file;
-    fidl::JSONGenerator json_generator(library);
-
-    json_generator.ProduceJSON(&json_file);
-
-    json_output << json_file.str();
-    json_output.flush();
-
-    return true;
+template <typename Generator>
+void Generate(Generator* generator, std::fstream file) {
+    auto generated_output = generator->Produce();
+    file << generated_output.str();
+    file.flush();
 }
 
 } // namespace
@@ -254,15 +237,13 @@ int main(int argc, char* argv[]) {
 
         switch (behavior) {
         case Behavior::CHeader: {
-            if (!GenerateC(&library, std::move(output_file))) {
-                return 1;
-            }
+            fidl::CGenerator generator(&library);
+            Generate(&generator, std::move(output_file));
             break;
         }
         case Behavior::JSON: {
-            if (!GenerateJSON(&library, std::move(output_file))) {
-                return 1;
-            }
+            fidl::JSONGenerator generator(&library);
+            Generate(&generator, std::move(output_file));
             break;
         }
         }

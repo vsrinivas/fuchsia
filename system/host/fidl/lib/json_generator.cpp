@@ -542,7 +542,7 @@ void JSONGenerator::GenerateDeclarationMapEntry(int count, const flat::Name& nam
     EmitString(&json_file_, decl);
 }
 
-void JSONGenerator::ProduceJSON(std::ostringstream* json_file_out) {
+std::ostringstream JSONGenerator::Produce() {
     indent_level_ = 0;
     GenerateObject([&]() {
         GenerateObjectMember("name", library_->library_name_, Position::First);
@@ -577,7 +577,7 @@ void JSONGenerator::ProduceJSON(std::ostringstream* json_file_out) {
     });
     GenerateEOF();
 
-    *json_file_out = std::move(json_file_);
+    return std::move(json_file_);
 }
 
 } // namespace fidl

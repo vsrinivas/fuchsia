@@ -575,8 +575,7 @@ void CGenerator::ProduceUnionDeclaration(const NamedUnion& named_union) {
     EmitBlank(&header_file_);
 }
 
-void CGenerator::ProduceCHeader(std::ostringstream* header_file_out) {
-
+std::ostringstream CGenerator::Produce() {
     GeneratePrologues();
 
     std::map<const flat::Decl*, NamedConst> named_consts = NameConsts(library_->const_declarations_);
@@ -654,7 +653,7 @@ void CGenerator::ProduceCHeader(std::ostringstream* header_file_out) {
 
     GenerateEpilogues();
 
-    *header_file_out = std::move(header_file_);
+    return std::move(header_file_);
 }
 
 } // namespace fidl

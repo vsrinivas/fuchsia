@@ -33,7 +33,7 @@ public:
 
     ~JSONGenerator() = default;
 
-    void ProduceJSON(std::ostringstream* json_file_out);
+    std::ostringstream Produce();
 
 private:
     enum class Position {
