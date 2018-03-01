@@ -79,20 +79,27 @@ class ApplicationContext {
   // - debug: debugging information exported by the application
   // - fs: the mounted file-system (for applications which are file-systems)
   const fbl::RefPtr<fs::PseudoDir>& export_dir() const {
-    // TODO(ZX-1036): For compatibiliy purposes, we map ServiceNamespace
-    // to the root of the export directory.  Once all clients migrate off of
-    // the legacy ServiceProvider and the bridging band-aids we have built,
-    // we can move these objects into the "svc" subdirectory as intended.
-    return directory_;
+    return export_dir_;
   }
 
-  // Gets or creates an export sub-directory called "svc" for publishing
-  // services.
-  const fbl::RefPtr<fs::PseudoDir>& GetOrCreateServiceExportDir();
+  // Gets an export sub-directory called "public" for publishing services for
+  // clients.
+  const fbl::RefPtr<fs::PseudoDir>& public_export_dir() const {
+    return public_export_dir_;
+  }
 
-  // Gets or creates an export sub-directory called "debug" for publishing
-  // debugging information.
-  const fbl::RefPtr<fs::PseudoDir>& GetOrCreateDebugExportDir();
+  // Gets an export sub-directory called "debug" for publishing debugging
+  // information.
+  const fbl::RefPtr<fs::PseudoDir>& debug_export_dir() const {
+    return debug_export_dir_;
+  }
+
+  // Gets an export sub-directory called "ctrl" for publishing services for
+  // appmgr.
+  const fbl::RefPtr<fs::PseudoDir>& ctrl_export_dir() const {
+    return ctrl_export_dir_;
+  }
+
 
   // Connects to a service provided by the application's environment,
   // returning an interface pointer.
@@ -123,11 +130,12 @@ class ApplicationContext {
   ApplicationEnvironmentPtr environment_;
   ApplicationLauncherPtr launcher_;
 
-  fbl::RefPtr<fs::PseudoDir> service_export_dir_;
-  fbl::RefPtr<fs::PseudoDir> debug_export_dir_;
-
   fs::ManagedVfs vfs_;
-  fbl::RefPtr<fs::PseudoDir> directory_;
+  fbl::RefPtr<fs::PseudoDir> export_dir_;
+  fbl::RefPtr<fs::PseudoDir> public_export_dir_;
+  fbl::RefPtr<fs::PseudoDir> debug_export_dir_;
+  fbl::RefPtr<fs::PseudoDir> ctrl_export_dir_;
+
   zx::channel service_root_;
 
   ServiceNamespace deprecated_outgoing_services_;

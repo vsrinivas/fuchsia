@@ -25,14 +25,20 @@ ApplicationContext::ApplicationContext(
     zx::channel service_root,
     zx::channel service_request)
     : vfs_(async_get_default()),
-      directory_(fbl::AdoptRef(new fs::PseudoDir())),
+      export_dir_(fbl::AdoptRef(new fs::PseudoDir())),
+      public_export_dir_(fbl::AdoptRef(new fs::PseudoDir())),
+      debug_export_dir_(fbl::AdoptRef(new fs::PseudoDir())),
+      ctrl_export_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       service_root_(std::move(service_root)),
-      deprecated_outgoing_services_(directory_) {
+      deprecated_outgoing_services_(export_dir_) {
   ConnectToEnvironmentService(environment_.NewRequest());
   ConnectToEnvironmentService(launcher_.NewRequest());
 
+  export_dir()->AddEntry("public", public_export_dir_);
+  export_dir()->AddEntry("debug", debug_export_dir_);
+  export_dir()->AddEntry("ctrl", ctrl_export_dir_);
   if (service_request.is_valid())
-    vfs_.ServeDirectory(directory_, std::move(service_request));
+    vfs_.ServeDirectory(export_dir_, std::move(service_request));
 }
 
 ApplicationContext::~ApplicationContext() = default;
@@ -77,24 +83,6 @@ void ApplicationContext::ConnectToEnvironmentService(
     zx::channel channel) {
   fdio_service_connect_at(service_root_.get(), interface_name.c_str(),
                           channel.release());
-}
-
-const fbl::RefPtr<fs::PseudoDir>&
-ApplicationContext::GetOrCreateServiceExportDir() {
-  if (!service_export_dir_) {
-    service_export_dir_ = fbl::AdoptRef(new fs::PseudoDir());
-    export_dir()->AddEntry("svc", service_export_dir_);
-  }
-  return service_export_dir_;
-}
-
-const fbl::RefPtr<fs::PseudoDir>&
-ApplicationContext::GetOrCreateDebugExportDir() {
-  if (!debug_export_dir_) {
-    debug_export_dir_ = fbl::AdoptRef(new fs::PseudoDir());
-    export_dir()->AddEntry("debug", debug_export_dir_);
-  }
-  return debug_export_dir_;
 }
 
 }  // namespace app

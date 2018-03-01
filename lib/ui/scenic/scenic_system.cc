@@ -73,7 +73,7 @@ void ScenicSystem::Initialize() {
   engine_ = std::make_unique<Engine>(&display_manager_, escher_.get());
 
   // Create a pseudo-file that dumps alls the Scenic scenes.
-  context()->app_context()->GetOrCreateDebugExportDir()->AddEntry(
+  context()->app_context()->debug_export_dir()->AddEntry(
       "dump-scenes",
       fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
         *out = engine_->DumpScenes();
