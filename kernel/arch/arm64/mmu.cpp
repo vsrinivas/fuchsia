@@ -139,6 +139,8 @@ static pte_t mmu_flags_to_s1_pte_attr(uint flags) {
         attr |= MMU_PTE_ATTR_NORMAL_MEMORY | MMU_PTE_ATTR_SH_INNER_SHAREABLE;
         break;
     case ARCH_MMU_FLAG_WRITE_COMBINING:
+        attr |= MMU_PTE_ATTR_NORMAL_UNCACHED | MMU_PTE_ATTR_SH_INNER_SHAREABLE;
+        break;
     case ARCH_MMU_FLAG_UNCACHED:
         attr |= MMU_PTE_ATTR_STRONGLY_ORDERED;
         break;
@@ -286,6 +288,9 @@ zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mm
             break;
         case MMU_PTE_ATTR_DEVICE:
             *mmu_flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
+            break;
+        case MMU_PTE_ATTR_NORMAL_UNCACHED:
+            *mmu_flags |= ARCH_MMU_FLAG_WRITE_COMBINING;
             break;
         case MMU_PTE_ATTR_NORMAL_MEMORY:
             break;
