@@ -23,7 +23,7 @@ TEST(SynchronousTaskTest, RunSynchronouslyOnOtherThread) {
   bool called = false;
   ASSERT_TRUE(callback::RunSynchronously(task_runner,
                                          [&called] { called = true; },
-                                         fxl::TimeDelta::FromSeconds(1)));
+                                         fxl::TimeDelta::FromSeconds(60 * 60)));
   for (bool value : values) {
     EXPECT_TRUE(value);
   }
