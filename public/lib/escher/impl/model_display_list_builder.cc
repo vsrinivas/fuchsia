@@ -73,7 +73,8 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
   FXL_DCHECK(white_texture_);
 
   // Obtain a uniform buffer and write the PerModel data to it.
-  PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerModel), 0);
+  PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerModel),
+                                     kMinUniformBufferOffsetAlignment);
   auto per_model = reinterpret_cast<ModelData::PerModel*>(
       &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
   per_model->frag_coord_to_uv_multiplier =
@@ -129,7 +130,8 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
   uniform_buffer_write_index_ += sizeof(ModelData::PerModel);
 
   // Obtain a uniform buffer and write the ViewProjection data to it.
-  PrepareUniformBufferForWriteOfSize(sizeof(ModelData::ViewProjection), 0);
+  PrepareUniformBufferForWriteOfSize(sizeof(ModelData::ViewProjection),
+                                     kMinUniformBufferOffsetAlignment);
   auto view_projection = reinterpret_cast<ModelData::ViewProjection*>(
       &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
   view_projection->vp_matrix = projection_transform_ * view_transform_;
