@@ -219,9 +219,10 @@ type Library struct {
 
 // Union represents the declaration of a FIDL2 union.
 type Union struct {
-	Name    Identifier    `json:"name"`
-	Members []UnionMember `json:"members"`
-	Size    int           `json:"size"`
+	Name      Identifier    `json:"name"`
+	Members   []UnionMember `json:"members"`
+	Size      int           `json:"size"`
+	Alignment int           `json:"alignment"`
 }
 
 // UnionMember represents the declaration of a field in a FIDL2 union.
@@ -233,9 +234,10 @@ type UnionMember struct {
 
 // Struct represents a declaration of a FIDL2 struct.
 type Struct struct {
-	Name    Identifier     `json:"name"`
-	Members []StructMember `json:"members"`
-	Size    int            `json:"size"`
+	Name      Identifier     `json:"name"`
+	Members   []StructMember `json:"members"`
+	Size      int            `json:"size"`
+	Alignment int            `json:"alignment"`
 }
 
 // StructMember represents the declaration of a field in a FIDL2 struct.

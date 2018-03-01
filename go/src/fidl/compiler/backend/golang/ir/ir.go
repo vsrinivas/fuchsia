@@ -53,6 +53,12 @@ type Struct struct {
 
 	// Members is a list of the golang struct members.
 	Members []StructMember
+
+	// Size is the FIDL-encoded size of the struct.
+	Size int
+
+	// Alignment is the alignment of the FIDL-encoded struct.
+	Alignment int
 }
 
 // StructMember represents the member of a golang struct.
@@ -204,7 +210,7 @@ func (_ *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 
 func (c *compiler) compileType(val types.Type) Type {
 	var r Type
-	// TODO(mknyszek): Support vectors, strings, handles, requests and identifiers.
+	// TODO(mknyszek): Support vectors, handles, requests and identifiers.
 	switch val.Kind {
 	case types.ArrayType:
 		t := c.compileType(*val.ElementType)
@@ -244,7 +250,9 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
-		Name: changeIfReserved(exportIdentifier(val.Name)),
+		Name:      changeIfReserved(exportIdentifier(val.Name)),
+		Size:      val.Size,
+		Alignment: val.Alignment,
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, c.compileStructMember(v))

@@ -11,5 +11,15 @@ type {{ .Name }} struct {
 	{{ .Name }} {{ .Type }}
 	{{- end }}
 }
+
+// Implements Payload.
+func (_ *{{ .Name }}) InlineAlignment() int {
+	return {{ .Alignment }}
+}
+
+// Implements Payload.
+func (_ *{{ .Name }}) InlineSize() int {
+	return {{ .Size }}
+}
 {{- end -}}
 `

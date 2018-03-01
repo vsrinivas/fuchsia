@@ -9,19 +9,20 @@ import (
 	"testing"
 )
 
-func testIdentity(t *testing.T, input interface{}, expectSize int, output interface{}) {
+func testIdentity(t *testing.T, input Payload, expectSize int, output Payload) {
 	m := MessageHeader{
-		Txid: 1215,
+		Txid:     1215,
 		Reserved: 0,
-		Flags: 111111,
-		Ordinal: 889,
+		Flags:    111111,
+		Ordinal:  889,
 	}
 	bytes, handles, err := Marshal(&m, input)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(bytes) != (expectSize + MessageHeaderSize) {
-		t.Fatalf("expected size %d but got %d: %v", expectSize, len(bytes), bytes)
+	totalSize := expectSize + MessageHeaderSize
+	if len(bytes) != totalSize {
+		t.Fatalf("expected size %d but got %d: %v", totalSize, len(bytes), bytes)
 	}
 	h, err := Unmarshal(bytes, handles, output)
 	if err != nil {
@@ -37,83 +38,38 @@ func testIdentity(t *testing.T, input interface{}, expectSize int, output interf
 
 func TestEncodingIdentity(t *testing.T) {
 	t.Run("Simple", func(t *testing.T) {
-		type test struct {
-			I uint64
-		}
-		testIdentity(t, &test{I: 124}, 8, &test{})
-		type testBool struct {
-			X bool
-		}
-		testIdentity(t, &testBool{X: true}, 8, &testBool{})
+		testIdentity(t, &TestSimple{X: 124}, 8, &TestSimple{})
+		testIdentity(t, &TestSimpleBool{X: true}, 8, &TestSimpleBool{})
 	})
 	t.Run("Alignment", func(t *testing.T) {
-		type test struct {
-			X int8
-			Y int8
-			I uint32
-		}
-		testIdentity(t, &test{X: -36, Y: -10, I: 51}, 8, &test{})
-		type testPack struct {
-			Y uint32
-			Z uint32
-			A int8
-			B int8
-			C int8
-			D uint8
-			E uint32
-			F uint16
-			G uint16
-		}
-		testIdentity(t, &testPack{
-			Y: 1212141,
-			Z: 908935,
-			A: -1,
-			B: 125,
-			C: -22,
-			D: 111,
-			E: 1515,
-			F: 65535,
+		testIdentity(t, &TestAlignment1{X: -36, Y: -10, Z: 51}, 8, &TestAlignment1{})
+		testIdentity(t, &TestAlignment2{
+			A: 1212141,
+			B: 908935,
+			C: -1,
+			D: 125,
+			E: -22,
+			F: 111,
 			G: 1515,
-		}, 24, &testPack{})
+			H: 65535,
+			I: 1515,
+		}, 24, &TestAlignment2{})
 	})
 	t.Run("Floats", func(t *testing.T) {
-		type test struct {
-			X float32
-		}
-		testIdentity(t, &test{X: -36.0}, 8, &test{})
-		type test2 struct {
-			X float64
-		}
-		testIdentity(t, &test2{X: -1254918271.0}, 8, &test2{})
-		type test3 struct {
-			X float32
-			Y float64
-			I uint64
-			Z float32
-		}
-		testIdentity(t, &test3{X: 1241.1, Y: 0.2141, I: 20, Z: 0.0}, 32, &test3{})
+		testIdentity(t, &TestFloat1{A: -36.0}, 8, &TestFloat1{})
+		testIdentity(t, &TestFloat2{A: -1254918271.0}, 8, &TestFloat2{})
+		testIdentity(t, &TestFloat3{A: 1241.1, B: 0.2141, C: 20, D: 0.0}, 32, &TestFloat3{})
 	})
 	t.Run("Arrays", func(t *testing.T) {
-		type test struct {
-			X [5]int8
-		}
-		testIdentity(t, &test{X: [5]int8{1, 77, 2, 4, 5}}, 8, &test{})
-		type test2 struct {
-			X float64
-			Y [1]float32
-		}
-		testIdentity(t, &test2{X: -1.0, Y: [1]float32{0.2}}, 16, &test2{})
-		type test3 struct {
-			X int32
-			Y [3]uint16
-			I uint64
-		}
-		testIdentity(t, &test3{X: -999, Y: [3]uint16{11, 12, 13}, I: 1021}, 24, &test3{})
-		type test4 struct {
-			B [9]bool
-		}
-		testIdentity(t, &test4{
-			B: [9]bool{true, false, false, true, false, true, true, true, true},
-		}, 16, &test4{})
+		testIdentity(t, &TestArray1{A: [5]int8{1, 77, 2, 4, 5}}, 8, &TestArray1{})
+		testIdentity(t, &TestArray2{A: -1.0, B: [1]float32{0.2}}, 16, &TestArray2{})
+		testIdentity(t, &TestArray3{
+			A: -999,
+			B: [3]uint16{11, 12, 13},
+			C: 1021,
+		}, 24, &TestArray3{})
+		testIdentity(t, &TestArray4{
+			A: [9]bool{true, false, false, true, false, true, true, true, true},
+		}, 16, &TestArray4{})
 	})
 }

@@ -1,0 +1,61 @@
+library bindings2;
+
+struct TestSimple {
+    int64 x;
+};
+
+struct TestSimpleBool {
+    bool x;
+};
+
+struct TestAlignment1 {
+    int8 x;
+    int8 y;
+    uint32 z;
+};
+
+struct TestAlignment2 {
+    uint32 a;
+    uint32 b;
+    int8 c;
+    int8 d;
+    int8 e;
+    uint8 f;
+    uint32 g;
+    uint16 h;
+    uint16 i;
+};
+
+struct TestFloat1 {
+    float32 a;
+};
+
+struct TestFloat2 {
+    float64 a;
+};
+
+struct TestFloat3 {
+    float32 a;
+    float64 b;
+    uint64 c;
+    float32 d;
+};
+
+struct TestArray1 {
+    array<int8>:5 a;
+};
+
+struct TestArray2 {
+    float64 a;
+    array<float32>:1 b;
+};
+
+struct TestArray3 {
+    int32 a;
+    array<uint16>:3 b;
+    uint64 c;
+};
+
+struct TestArray4 {
+    array<bool>:9 a;
+};

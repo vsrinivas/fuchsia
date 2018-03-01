@@ -14,9 +14,23 @@ import (
 	"syscall/zx"
 )
 
+// align increases size such that size is aligned to bytes, and returns the new size.
+//
+// bytes must be a power of 2.
+func align(size, bytes int) int {
+	offset := size & (bytes - 1)
+	// If we're not currently aligned to |bytes| bytes, add padding.
+	if offset != 0 {
+		size += (bytes - offset)
+	}
+	return size
+}
+
 // encoder represents the encoding context that is necessary to maintain across
 // recursive calls within the same FIDL object.
 type encoder struct {
+	head int
+
 	// buffer represents the output buffer that the encoder writes into.
 	buffer []byte
 
@@ -26,17 +40,11 @@ type encoder struct {
 	handles []zx.Handle
 }
 
-// align pads the end of the buffer with zeroes such that the buffer is aligned
-// to a particular byte-width.
-//
-// bytes must be a power of 2.
-func (e *encoder) align(bytes int) {
-	var zeroBytes [8]byte
-	offset := len(e.buffer) & (bytes - 1)
-	// If we're not currently aligned to |bytes| bytes, add padding.
-	if offset != 0 {
-		e.buffer = append(e.buffer, zeroBytes[:(bytes - offset)]...)
-	}
+func (e *encoder) newObject(size int) int {
+	size = align(size, 8)
+	start := len(e.buffer)
+	e.buffer = append(e.buffer, make([]byte, size)...)
+	return start
 }
 
 // writeInt writes an integer of byte-width size to the buffer.
@@ -56,23 +64,12 @@ func (e *encoder) writeInt(val int64, size int) {
 //
 // size must be a power of 2 <= 8.
 func (e *encoder) writeUint(val uint64, size int) {
-	var zeroBytes [8]byte
-	e.align(size)
-	head := len(e.buffer)
-	e.buffer = append(e.buffer, zeroBytes[:size]...)
-	for head < len(e.buffer) {
-		e.buffer[head] = byte(val & 0xFF)
+	e.head = align(e.head, size)
+	for i := e.head; i < e.head+size; i++ {
+		e.buffer[i] = byte(val & 0xFF)
 		val >>= 8
-		head++
 	}
-}
-
-// finalize ensures that the entire FIDL message is 8-byte aligned, and
-// returns the underlying buffer.
-func (e *encoder) finalize() ([]byte, []zx.Handle, error) {
-	// Top-level objects are aligned to 8 bytes, always.
-	e.align(8)
-	return e.buffer, e.handles, nil
+	e.head += size
 }
 
 // marshal is the central recursive function core to marshalling, and
@@ -117,6 +114,20 @@ func (e *encoder) marshal(t reflect.Type, v reflect.Value) error {
 	case reflect.Float64:
 		e.writeUint(math.Float64bits(v.Float()), 8)
 	case reflect.Struct:
+		// Get the alignment for the struct, and then align to it.
+		//
+		// Note that Addr can fail if the originally derived value is not "addressable",
+		// meaning the root ValueOf() call was on a struct value, not a pointer. However,
+		// we guarantee the struct is addressable by forcing a Payload to be passed in
+		// (a struct value will never cast as an interface).
+		//
+		// We avoid using Implements(), MethodByName(), and Call() here because they're
+		// very slow.
+		payload, ok := v.Addr().Interface().(Payload)
+		if !ok {
+			return fmt.Errorf("struct %s must implement Payload", t.Name())
+		}
+		e.head = align(e.head, payload.InlineAlignment())
 		for i := 0; i < t.NumField(); i++ {
 			f := t.Field(i)
 			// If it's an unexported field, ignore it.
@@ -128,13 +139,14 @@ func (e *encoder) marshal(t reflect.Type, v reflect.Value) error {
 			}
 		}
 	default:
-		return fmt.Errorf("unsupported type kind %s", t.Kind())
+		return fmt.Errorf("unsupported type kind %s for type %s", t.Kind(), t.Name())
 	}
 	return nil
 }
 
 func marshalHeader(header *MessageHeader) []byte {
 	e := encoder{}
+	e.head = e.newObject(MessageHeaderSize)
 	e.writeUint(uint64(header.Txid), 4)
 	e.writeUint(uint64(header.Reserved), 4)
 	e.writeUint(uint64(header.Flags), 4)
@@ -150,7 +162,7 @@ func marshalHeader(header *MessageHeader) []byte {
 //
 // Marshal traverses the value s recursively, following nested type values via
 // reflection in order to encode the FIDL struct.
-func Marshal(header *MessageHeader, s interface{}) ([]byte, []zx.Handle, error) {
+func Marshal(header *MessageHeader, s Payload) ([]byte, []zx.Handle, error) {
 	// First, let's make sure we have the right type in s.
 	t := reflect.TypeOf(s)
 	if t.Kind() != reflect.Ptr {
@@ -164,31 +176,21 @@ func Marshal(header *MessageHeader, s interface{}) ([]byte, []zx.Handle, error) 
 	// Now, let's get the value of s, marshal the header into a starting
 	// buffer, and then marshal the rest of the payload in s.
 	v := reflect.ValueOf(s).Elem()
-	encoder := encoder{buffer: marshalHeader(header)}
-	if err := encoder.marshal(t, v); err != nil {
+	e := encoder{buffer: marshalHeader(header)}
+	e.head = e.newObject(s.InlineSize())
+	if err := e.marshal(t, v); err != nil {
 		return nil, nil, err
 	}
-	return encoder.finalize()
+	return e.buffer, e.handles, nil
 }
 
 // decoder represents the decoding context that is necessary to maintain
 // across recursive calls within the same FIDL object.
 type decoder struct {
+	head int
+
 	// buffer represents the buffer we're decoding from.
 	buffer []byte
-
-	// head represents the current position of the decoding head.
-	head int
-}
-
-// align moves the decoding head forward to align to a given size.
-//
-// bytes must be a power of 2.
-func (d *decoder) align(bytes int) {
-	offset := d.head & (bytes - 1)
-	if offset != 0 {
-		d.head += bytes - offset
-	}
 }
 
 // readInt reads a signed integer value of byte-width size from the buffer.
@@ -208,11 +210,11 @@ func (d *decoder) readInt(size int) int64 {
 //
 // size must be a power of 2 <= 8.
 func (d *decoder) readUint(size int) uint64 {
-	d.align(size)
+	d.head = align(d.head, size)
 	var val uint64
-	for head := d.head + size - 1; head >= d.head; head-- {
+	for i := d.head + size - 1; i >= d.head; i-- {
 		val <<= 8
-		val |= uint64(d.buffer[head])
+		val |= uint64(d.buffer[i])
 	}
 	d.head += size
 	return val
@@ -263,6 +265,20 @@ func (d *decoder) unmarshal(t reflect.Type, v reflect.Value) error {
 	case reflect.Float64:
 		v.SetFloat(math.Float64frombits(d.readUint(8)))
 	case reflect.Struct:
+		// Get the alignment for the struct, and then align to it.
+		//
+		// Note that Addr can fail if the originally derived value is not "addressable",
+		// meaning the root ValueOf() call was on a struct value, not a pointer. However,
+		// we guarantee the struct is addressable by forcing a Payload to be passed in
+		// (a struct value will never cast as an interface).
+		//
+		// We avoid using Implements(), MethodByName(), and Call() here because they're
+		// very slow.
+		payload, ok := v.Addr().Interface().(Payload)
+		if !ok {
+			return fmt.Errorf("struct %s must implement Payload", t.Name())
+		}
+		d.head = align(d.head, payload.InlineAlignment())
 		for i := 0; i < t.NumField(); i++ {
 			f := t.Field(i)
 			// If it's an unexported field, ignore it.
@@ -299,7 +315,7 @@ func unmarshalHeader(data []byte, m *MessageHeader) error {
 // by the structure of the struct pointed to by s.
 //
 // TODO(mknyszek): More rigorously validate the input.
-func Unmarshal(data []byte, _ []zx.Handle, s interface{}) (*MessageHeader, error) {
+func Unmarshal(data []byte, _ []zx.Handle, s Payload) (*MessageHeader, error) {
 	// First, let's make sure we have the right type in s.
 	t := reflect.TypeOf(s)
 	if t.Kind() != reflect.Ptr {
