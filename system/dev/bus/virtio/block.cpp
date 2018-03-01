@@ -204,22 +204,25 @@ void BlockDevice::IrqRingUpdate() {
         uint32_t i = (uint16_t)used_elem->id;
         struct vring_desc* desc = vring_.DescFromIndex((uint16_t)i);
         auto head_desc = desc; // save the first element
-        for (;;) {
-            int next;
-            LTRACE_DO(virtio_dump_desc(desc));
-            if (desc->flags & VRING_DESC_F_NEXT) {
-                next = desc->next;
-            } else {
-                /* end of chain */
-                next = -1;
+        {
+            fbl::AutoLock lock(&ring_lock_);
+            for (;;) {
+                int next;
+                LTRACE_DO(virtio_dump_desc(desc));
+                if (desc->flags & VRING_DESC_F_NEXT) {
+                    next = desc->next;
+                } else {
+                    /* end of chain */
+                    next = -1;
+                }
+
+                vring_.FreeDesc((uint16_t)i);
+
+                if (next < 0)
+                    break;
+                i = next;
+                desc = vring_.DescFromIndex((uint16_t)i);
             }
-
-            vring_.FreeDesc((uint16_t)i);
-
-            if (next < 0)
-                break;
-            i = next;
-            desc = vring_.DescFromIndex((uint16_t)i);
         }
 
         bool need_signal = false;
@@ -300,7 +303,11 @@ zx_status_t BlockDevice::QueueTxn(block_txn_t* txn, bool write, size_t bytes,
 
     /* put together a transfer */
     uint16_t i;
-    auto desc = vring_.AllocDescChain((uint16_t)(2u + pagecount), &i);
+    vring_desc *desc;
+    {
+        fbl::AutoLock lock(&ring_lock_);
+        desc = vring_.AllocDescChain((uint16_t)(2u + pagecount), &i);
+    }
     if (!desc) {
         LTRACEF("failed to allocate descriptor chain of length %zu\n", 2u + pagecount);
         fbl::AutoLock lock(&txn_lock_);

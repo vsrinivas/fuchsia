@@ -98,6 +98,8 @@ struct vring_desc* Ring::AllocDescChain(uint16_t count, uint16_t* start_index) {
     uint16_t last_index = 0;
     while (count > 0) {
         uint16_t i = ring_.free_list;
+        assert(i < ring_.num);
+
         struct vring_desc* desc = &ring_.desc[i];
 
         ring_.free_list = desc->next;

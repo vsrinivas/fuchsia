@@ -60,6 +60,11 @@ private:
     // the main virtio ring
     Ring vring_ = {this};
 
+    // lock to be used around Ring::AllocDescChain and FreeDesc
+    // TODO: move this into Ring class once it's certain that other
+    // users of the class are okay with it.
+    fbl::Mutex ring_lock_;
+
     static const uint16_t ring_size = 128; // 128 matches legacy pci
 
     // saved block device configuration out of the pci config BAR
