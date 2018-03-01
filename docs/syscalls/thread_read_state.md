@@ -33,6 +33,20 @@ zircon/syscalls/debug.h for the contents of the structures on each platform.
 The buffer must point to a **zx_thread_state_general_regs_t** structure that
 contains the general registers for the current architecture.
 
+### ZX_THREAD_STATE_FP_REGS
+
+The buffer must point to a **zx_thread_state_fp_regs_t** structure. On 64-bit
+ARM platforms, float point state is in the vector registers and this structure
+is empty.
+
+### ZX_THREAD_STATE_VECTOR_REGS
+
+The buffer must point to a **zx_thread_state_vector_regs_t** structure.
+
+### ZX_THREAD_STATE_EXTRA_REGS
+
+The buffer must point to a **zx_thread_state_extra_regs_t** structure.
+
 ### ZX_THREAD_STATE_SINGLE_STEP
 
 The buffer must point to a **zx_thread_state_single_step_t** value which

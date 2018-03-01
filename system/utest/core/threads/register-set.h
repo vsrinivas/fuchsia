@@ -20,11 +20,18 @@
 # error Unsupported architecture
 #endif
 
-// This initializes the register set with arbitrary test data.
-void regs_fill_test_values(zx_thread_state_general_regs_t* regs);
+// Initializes the register set with known test data.
+void general_regs_fill_test_values(zx_thread_state_general_regs_t* regs);
+void fp_regs_fill_test_values(zx_thread_state_fp_regs* regs);
+void vector_regs_fill_test_values(zx_thread_state_vector_regs* regs);
 
-// This returns whether the two register sets' values are equal.
-bool regs_expect_eq(zx_thread_state_general_regs_t* regs1, zx_thread_state_general_regs_t* regs2);
+// Returns whether the two register sets' values are equal.
+bool general_regs_expect_eq(const zx_thread_state_general_regs_t& regs1,
+                            const zx_thread_state_general_regs_t& regs2);
+bool fp_regs_expect_eq(const zx_thread_state_fp_regs_t& regs1,
+                       const zx_thread_state_fp_regs_t& regs2);
+bool vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
+                           const zx_thread_state_vector_regs_t& regs2);
 
 // The functions below are assembly.
 __BEGIN_CDECLS;
@@ -32,12 +39,17 @@ __BEGIN_CDECLS;
 // This function sets the registers to the state specified by |regs| and
 // then spins, executing a single-instruction infinite loop whose address
 // is |spin_address|.
-void spin_with_regs(zx_thread_state_general_regs_t* regs);
-void spin_with_regs_spin_address(void);
+void spin_with_general_regs(zx_thread_state_general_regs_t* regs);
+void spin_with_general_regs_spin_address();
 
-// This assembly code routine saves the registers into a
-// zx_thread_state_general_regs_t pointed to by the stack pointer, and then
-// calls zx_thread_exit().
-void save_regs_and_exit_thread(void);
+void spin_with_fp_regs(zx_thread_state_fp_regs_t* regs);
+
+void spin_with_vector_regs(zx_thread_state_vector_regs_t* regs);
+
+// These assembly code routine saves the registers into a the corresponding
+// structure pointed to by the stack pointer, and then calls zx_thread_exit().
+void save_general_regs_and_exit_thread();
+void save_fp_regs_and_exit_thread();
+void save_vector_regs_and_exit_thread();
 
 __END_CDECLS;

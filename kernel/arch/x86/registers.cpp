@@ -558,7 +558,7 @@ void x86_xsetbv(uint32_t reg, uint64_t val) {
 }
 
 void* x86_get_extended_register_state_component(void* register_state, uint32_t component,
-                                                uint32_t* size) {
+                                                bool mark_present, uint32_t* size) {
     if (component >= XSAVE_MAX_EXT_COMPONENTS) {
         *size = 0;
         return nullptr;
@@ -566,9 +566,24 @@ void* x86_get_extended_register_state_component(void* register_state, uint32_t c
 
     xsave_area* area = reinterpret_cast<xsave_area*>(register_state);
 
+    uint64_t state_component_bit = (1ul << component);
+
     // Components 0 and 1 are special and are always present in the legacy area.
     if (component <= 1) {
         *size = sizeof(x86_xsave_legacy_area);
+        if (!(area->xstate_bv & state_component_bit)) {
+            // Component not written because registers were in the initial configuration. Set it so
+            // the caller sees the correct initial values.
+            if (component == 0) {
+                set_x87_initial_state(&area->legacy);
+            } else {
+                set_sse_initial_state(&area->legacy);
+            }
+            if (mark_present) {
+                area->xstate_bv |= state_component_bit;
+            }
+        }
+
         return area;
     }
 
@@ -580,12 +595,26 @@ void* x86_get_extended_register_state_component(void* register_state, uint32_t c
         if (leaf.a == 0) {
             return nullptr;
         }
-        return static_cast<uint8_t*>(register_state) + leaf.b;
+        uint8_t* component_begin = static_cast<uint8_t*>(register_state) + leaf.b;
+
+        if (!(area->xstate_bv & state_component_bit)) {
+            // Component not written because it's in the initial state. Write the initial values to
+            // the structure the caller sees the correct data. The initial state of all non-x87
+            // xsave components (x87 is handled above) is all 0's.
+            memset(component_begin, 0, *size);
+            if (mark_present) {
+                area->xstate_bv |= state_component_bit;
+            }
+        }
+        return component_begin;
     }
 
     // Compacted format used. The corresponding bit in xcomp_bv indicates whether the component is
     // present.
-    if (!(area->xcomp_bv & (1ul << component))) {
+    if (!(area->xcomp_bv & state_component_bit)) {
+        // Currently this doesn't support reading or writing compacted components that aren't
+        // currently marked present. In the future, we may want to add this which will require
+        // rewriting all the following components.
         *size = 0;
         return nullptr;
     }
@@ -605,8 +634,19 @@ void* x86_get_extended_register_state_component(void* register_state, uint32_t c
         offset = ROUNDUP(offset, 64);
     }
 
+    uint8_t* component_begin = static_cast<uint8_t*>(register_state) + offset;
     *size = state_components[component].size;
-    return static_cast<uint8_t*>(register_state) + offset;
+
+    if (!(area->xstate_bv & state_component_bit)) {
+        // Component not written because it's in the initial state. Write the initial values to
+        // the structure the caller sees the correct data. The initial state of all non-x87
+        // xsave components (x87 is handled above) is all 0's.
+        memset(component_begin, 0, *size);
+        if (mark_present) {
+            area->xstate_bv |= state_component_bit;
+        }
+    }
+    return component_begin;
 }
 
 // Set the extended register PT mode to trace either cpus (!threads)

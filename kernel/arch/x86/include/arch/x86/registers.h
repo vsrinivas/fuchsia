@@ -220,13 +220,22 @@ struct x86_xsave_legacy_area {
  * depending on the contents.
  *
  * The components 0 and 1 are special and refer to the legacy area. In both cases a pointer to the
- * x86_xsave_legacy_area will be returned.
+ * x86_xsave_legacy_area will be returned. Note that "mark_present=true" will only affect the
+ * requested component, so if you're writing to both x87 and SSE states, make two separate calls
+ * even though the returned pointer will be the same.
+ *
+ * Some parts of the xsave area are can be marked as unused to optimize. If you plan on
+ * writing to the area, set mark_present = true which will ensure that the corresponding area is
+ * marked used. Without this, the registers might not be restored when the thread is resumed. This
+ * is not currently supported for components >= 2. This means that to set AVX registers, for
+ * example, AVX needed to have been previously used by the thread in question. This capability can
+ * be added in the future if required.
  *
  * The size of the component will be placed in *size.
  *
  * This function will return null and fill 0 into *size if the component is not present. */
 void* x86_get_extended_register_state_component(void* register_state, uint32_t component,
-                                                uint32_t* size);
+                                                bool mark_present, uint32_t* size);
 
 __END_CDECLS
 

@@ -932,81 +932,235 @@ static bool test_suspend_repeating_wait_async_signal_delivery() {
     END_TEST;
 }
 
+// Helper class for setting up a test for reading register state from a worker thread.
+template<typename RegisterStruct>
+class RegisterReadSetup {
+  public:
+    using ThreadFunc = void (*)(RegisterStruct*);
+
+    RegisterReadSetup() = default;
+    ~RegisterReadSetup() {
+        zx_handle_close(suspend_token_);
+        zx_task_kill(thread_handle_);
+        // Wait for the thread termination to complete.
+        zx_object_wait_one(thread_handle_, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL);
+        zx_handle_close(thread_handle_);
+    }
+
+    zx_handle_t thread_handle() const { return thread_handle_; }
+
+    // Pass the thread function to run and the parameter to pass to it.
+    bool Init(ThreadFunc thread_func, RegisterStruct* state) {
+        BEGIN_HELPER;
+
+        ASSERT_TRUE(start_thread((void(*)(void*))thread_func, state, &thread_, &thread_handle_), "");
+
+        // Allow some time for the thread to begin execution and reach the
+        // instruction that spins.
+        ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK, "");
+
+        ASSERT_TRUE(suspend_thread_synchronous(thread_handle_, &suspend_token_), "");
+
+        END_HELPER;
+    }
+
+  private:
+    zxr_thread_t thread_;
+    zx_handle_t thread_handle_ = ZX_HANDLE_INVALID;
+    zx_handle_t suspend_token_ = ZX_HANDLE_INVALID;
+};
+
 // This tests the registers reported by zx_thread_read_state() for a
 // suspended thread.  It starts a thread which sets all the registers to
 // known test values.
-static bool test_reading_register_state() {
+static bool test_reading_general_register_state() {
     BEGIN_TEST;
 
-    zx_thread_state_general_regs_t regs_expected;
-    regs_fill_test_values(&regs_expected);
-    regs_expected.REG_PC = (uintptr_t)spin_with_regs_spin_address;
+    zx_thread_state_general_regs_t gen_regs_expected;
+    general_regs_fill_test_values(&gen_regs_expected);
+    gen_regs_expected.REG_PC = (uintptr_t)spin_with_general_regs_spin_address;
 
-    zxr_thread_t thread;
-    zx_handle_t thread_handle;
-    ASSERT_TRUE(start_thread((void (*)(void*))spin_with_regs, &regs_expected,
-                             &thread, &thread_handle), "");
-
-    // Allow some time for the thread to begin execution and reach the
-    // instruction that spins.
-    ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK, "");
-
-    zx_handle_t suspend_token = ZX_HANDLE_INVALID;
-    ASSERT_TRUE(suspend_thread_synchronous(thread_handle, &suspend_token), "");
+    RegisterReadSetup<zx_thread_state_general_regs_t> setup;
+    ASSERT_TRUE(setup.Init(&spin_with_general_regs, &gen_regs_expected), "");
 
     zx_thread_state_general_regs_t regs;
-    ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
+    ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_GENERAL_REGS,
                                    &regs, sizeof(regs)), ZX_OK, "");
-    ASSERT_TRUE(regs_expect_eq(&regs, &regs_expected), "");
-
-    // Clean up.
-    ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK, "");
-    ASSERT_EQ(zx_task_kill(thread_handle), ZX_OK, "");
-    // Wait for the thread termination to complete.
-    ASSERT_EQ(zx_object_wait_one(thread_handle, ZX_THREAD_TERMINATED,
-                                 ZX_TIME_INFINITE, NULL), ZX_OK, "");
+    ASSERT_TRUE(general_regs_expect_eq(regs, gen_regs_expected), "");
 
     END_TEST;
 }
 
+static bool test_reading_fp_register_state() {
+    BEGIN_TEST;
+
+    zx_thread_state_fp_regs_t fp_regs_expected;
+    fp_regs_fill_test_values(&fp_regs_expected);
+
+    RegisterReadSetup<zx_thread_state_fp_regs_t> setup;
+    ASSERT_TRUE(setup.Init(&spin_with_fp_regs, &fp_regs_expected), "");
+
+    zx_thread_state_fp_regs_t regs;
+    ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_FP_REGS,
+                                   &regs, sizeof(regs)), ZX_OK, "");
+    ASSERT_TRUE(fp_regs_expect_eq(regs, fp_regs_expected), "");
+
+    END_TEST;
+}
+
+static bool test_reading_vector_register_state() {
+    BEGIN_TEST;
+
+    zx_thread_state_vector_regs_t vector_regs_expected;
+    vector_regs_fill_test_values(&vector_regs_expected);
+
+    RegisterReadSetup<zx_thread_state_vector_regs_t> setup;
+    ASSERT_TRUE(setup.Init(&spin_with_vector_regs, &vector_regs_expected), "");
+
+    zx_thread_state_vector_regs_t regs;
+    ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_VECTOR_REGS,
+                                   &regs, sizeof(regs)), ZX_OK, "");
+
+    ASSERT_TRUE(vector_regs_expect_eq(regs, vector_regs_expected), "");
+
+    END_TEST;
+}
+
+// Procedure:
+//  1. Call Init() which will start a thread and suspend it.
+//  2. Write the register state you want to the thread_handle().
+//  3. Call DoSave with the save function and pointer. This will execute that code in the context of
+//     the thread.
+template<typename RegisterStruct>
+class RegisterWriteSetup {
+  public:
+    using SaveFunc = void (*)();
+
+    RegisterWriteSetup() = default;
+    ~RegisterWriteSetup() {
+        zx_handle_close(thread_handle_);
+    }
+
+    zx_handle_t thread_handle() const { return thread_handle_; }
+
+    bool Init() {
+      BEGIN_HELPER;
+
+      ASSERT_TRUE(start_thread(threads_test_busy_fn, nullptr, &thread_, &thread_handle_), "");
+      // Allow some time for the thread to begin execution and reach the
+      // instruction that spins.
+      ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK, "");
+      ASSERT_TRUE(suspend_thread_synchronous(thread_handle_, &suspend_token_), "");
+
+      END_HELPER;
+    }
+
+    // The IP and SP set in the general registers will be filled in to the optional output
+    // parameters. This is for the general register test since we change those values out from
+    // under it.
+    bool DoSave(SaveFunc save_func, RegisterStruct* out,
+                uint64_t* general_ip = nullptr, uint64_t* general_sp = nullptr) {
+        BEGIN_HELPER;
+
+        // Modify the PC to point to the routine, and the SP to point to the output struct.
+        zx_thread_state_general_regs_t general_regs;
+        ASSERT_EQ(zx_thread_read_state(thread_handle_, ZX_THREAD_STATE_GENERAL_REGS,
+                                       &general_regs, sizeof(general_regs)), ZX_OK, "");
+
+        struct {
+            // A small stack that is used for calling zx_thread_exit().
+            char stack[1024] __ALIGNED(16);
+            RegisterStruct regs_got;  // STACK_PTR will point here.
+        } stack;
+        general_regs.REG_PC = (uintptr_t)save_func;
+        general_regs.REG_STACK_PTR = (uintptr_t)(stack.stack + sizeof(stack.stack));
+        ASSERT_EQ(zx_thread_write_state(thread_handle_, ZX_THREAD_STATE_GENERAL_REGS,
+                                        &general_regs, sizeof(general_regs)), ZX_OK, "");
+
+        if (general_ip)
+            *general_ip = general_regs.REG_PC;
+        if (general_sp)
+            *general_sp = general_regs.REG_STACK_PTR;
+
+        // Unsuspend the thread and wait for it to finish executing, this will run the code
+        // and fill the RegisterStruct we passed.
+        ASSERT_EQ(zx_handle_close(suspend_token_), ZX_OK, "");
+        suspend_token_ = ZX_HANDLE_INVALID;
+        ASSERT_EQ(zx_object_wait_one(thread_handle_, ZX_THREAD_TERMINATED,
+                                     ZX_TIME_INFINITE, NULL), ZX_OK, "");
+
+        memcpy(out, &stack.regs_got, sizeof(RegisterStruct));
+
+        END_HELPER;
+    }
+
+   private:
+    zxr_thread_t thread_;
+    zx_handle_t thread_handle_ = ZX_HANDLE_INVALID;
+    zx_handle_t suspend_token_ = ZX_HANDLE_INVALID;
+};
+
 // This tests writing registers using zx_thread_write_state().  After
 // setting registers using that syscall, it reads back the registers and
 // checks their values.
-static bool test_writing_register_state() {
+static bool test_writing_general_register_state() {
     BEGIN_TEST;
 
-    zxr_thread_t thread;
-    zx_handle_t thread_handle;
-    ASSERT_TRUE(start_thread(threads_test_busy_fn, NULL, &thread,
-                             &thread_handle), "");
+    RegisterWriteSetup<zx_thread_state_general_regs_t> setup;
+    ASSERT_TRUE(setup.Init(), "");
 
-    // Allow some time for the thread to begin execution and reach the
-    // instruction that spins.
-    ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(100))), ZX_OK, "");
-
-    zx_handle_t suspend_token = ZX_HANDLE_INVALID;
-    ASSERT_TRUE(suspend_thread_synchronous(thread_handle, &suspend_token), "");
-
-    struct {
-        // A small stack that is used for calling zx_thread_exit().
-        char stack[1024] __ALIGNED(16);
-        zx_thread_state_general_regs_t regs_got;
-    } stack;
-
+    // Set the general registers.
     zx_thread_state_general_regs_t regs_to_set;
-    regs_fill_test_values(&regs_to_set);
-    regs_to_set.REG_PC = (uintptr_t)save_regs_and_exit_thread;
-    regs_to_set.REG_STACK_PTR = (uintptr_t)(stack.stack + sizeof(stack.stack));
-    ASSERT_EQ(zx_thread_write_state(
-                  thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
-                  &regs_to_set, sizeof(regs_to_set)), ZX_OK, "");
-    ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK, "");
-    ASSERT_EQ(zx_object_wait_one(thread_handle, ZX_THREAD_TERMINATED,
-                                 ZX_TIME_INFINITE, NULL), ZX_OK, "");
-    EXPECT_TRUE(regs_expect_eq(&regs_to_set, &stack.regs_got), "");
+    general_regs_fill_test_values(&regs_to_set);
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_GENERAL_REGS,
+                                    &regs_to_set, sizeof(regs_to_set)), ZX_OK, "");
 
-    // Clean up.
-    ASSERT_EQ(zx_handle_close(thread_handle), ZX_OK, "");
+    zx_thread_state_general_regs_t regs;
+    uint64_t ip = 0, sp = 0;
+    ASSERT_TRUE(setup.DoSave(&save_general_regs_and_exit_thread, &regs, &ip, &sp), "");
+
+    // Fix up the expected values with the IP/SP required for the register read.
+    regs_to_set.REG_PC = ip;
+    regs_to_set.REG_STACK_PTR = sp;
+    EXPECT_TRUE(general_regs_expect_eq(regs_to_set, regs), "");
+
+    END_TEST;
+}
+
+static bool test_writing_fp_register_state() {
+    BEGIN_TEST;
+
+    RegisterWriteSetup<zx_thread_state_fp_regs_t> setup;
+    ASSERT_TRUE(setup.Init(), "");
+
+    // The busyloop code executed initially by the setup class will have executed an MMX instruction
+    // so that the MMX state is available to write.
+    zx_thread_state_fp_regs_t regs_to_set;
+    fp_regs_fill_test_values(&regs_to_set);
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_FP_REGS,
+                                    &regs_to_set, sizeof(regs_to_set)), ZX_OK, "");
+
+    zx_thread_state_fp_regs_t regs;
+    ASSERT_TRUE(setup.DoSave(&save_fp_regs_and_exit_thread, &regs), "");
+    EXPECT_TRUE(fp_regs_expect_eq(regs_to_set, regs), "");
+
+    END_TEST;
+}
+
+static bool test_writing_vector_register_state() {
+    BEGIN_TEST;
+
+    RegisterWriteSetup<zx_thread_state_vector_regs_t> setup;
+    ASSERT_TRUE(setup.Init(), "");
+
+    zx_thread_state_vector_regs_t regs_to_set;
+    vector_regs_fill_test_values(&regs_to_set);
+    ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_VECTOR_REGS,
+                                    &regs_to_set, sizeof(regs_to_set)), ZX_OK, "");
+
+    zx_thread_state_vector_regs_t regs;
+    ASSERT_TRUE(setup.DoSave(&save_vector_regs_and_exit_thread, &regs), "");
+    EXPECT_TRUE(vector_regs_expect_eq(regs_to_set, regs), "");
 
     END_TEST;
 }
@@ -1181,8 +1335,12 @@ RUN_TEST(test_suspend_multiple)
 RUN_TEST(test_kill_suspended_thread)
 RUN_TEST(test_suspend_single_wait_async_signal_delivery)
 RUN_TEST(test_suspend_repeating_wait_async_signal_delivery)
-RUN_TEST(test_reading_register_state)
-RUN_TEST(test_writing_register_state)
+RUN_TEST(test_reading_general_register_state)
+RUN_TEST(test_reading_fp_register_state)
+RUN_TEST(test_reading_vector_register_state)
+RUN_TEST(test_writing_general_register_state)
+RUN_TEST(test_writing_fp_register_state)
+RUN_TEST(test_writing_vector_register_state)
 RUN_TEST(test_noncanonical_rip_address)
 RUN_TEST(test_writing_arm_flags_register)
 END_TEST_CASE(threads_tests)
