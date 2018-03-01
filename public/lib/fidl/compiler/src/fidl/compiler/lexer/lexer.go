@@ -31,7 +31,7 @@ import (
 func Tokenize(source string) TokenStream {
 	return NewFilteredTokenStream(
 		tokenizeUnfiltered(source),
-		[]TokenKind{SingleLineComment, MultiLineComment, EmptyLine})
+		[]TokenKind{SingleLineComment, EmptyLine})
 }
 
 // tokenizeUnfiltered returns a TokenStream which does not filter out any of the
@@ -506,8 +506,6 @@ func lexComment(l *lexer) stateFn {
 	switch l.Peek() {
 	case '/':
 		return lexSingleLineComment
-	case '*':
-		return lexMultiLineComment
 	}
 
 	l.emitToken(ErrorIllegalChar)
@@ -525,40 +523,4 @@ func lexSingleLineComment(l *lexer) stateFn {
 
 	l.emitToken(SingleLineComment)
 	return lexRoot
-}
-
-// lexMultiLineComment consumes a multi-line comment.
-func lexMultiLineComment(l *lexer) stateFn {
-	// Consume the '*'.
-	l.Consume()
-
-	for !l.IsEos() {
-		if l.Peek() == '*' {
-			return lexPossibleEndOfComment
-		}
-		l.Consume()
-	}
-
-	l.emitToken(ErrorUnterminatedComment)
-	return nil
-}
-
-// lexPossibleEndOfComment consumes the possible end of a multiline
-// comment and determines whether the comment in fact ended or not.
-func lexPossibleEndOfComment(l *lexer) stateFn {
-	// Consume the '*'
-	l.Consume()
-
-	if l.IsEos() {
-		l.emitToken(ErrorUnterminatedComment)
-		return nil
-	}
-
-	if l.Peek() == '/' {
-		l.Consume()
-		l.emitToken(MultiLineComment)
-		return lexRoot
-	}
-
-	return lexMultiLineComment
 }

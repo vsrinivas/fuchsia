@@ -70,7 +70,6 @@ const (
 
 	// Comments
 	SingleLineComment
-	MultiLineComment
 
 	// Empty Line
 	EmptyLine
@@ -171,8 +170,6 @@ func (tokenKind TokenKind) String() string {
 
 	case SingleLineComment:
 		return "single line comment"
-	case MultiLineComment:
-		return "multi line comment"
 
 	case EmptyLine:
 		return "empty line"

@@ -4,44 +4,42 @@
 
 module lib.fidl.compiler.interfaces;
 
-/*
- * This file contains definitions of data structures used to represent
- * Fidl types and values.
- *
- * As described in the Fidl Language Specification, Fidl types are defined
- * recursively and consequently a |Type| object may recursively contain
- * other |Type| objects. For example a |Type| object representing an
- * array<int32> will contain a |Type| object representing an int32.
- *
- * A Fidl type declaration may contain an identifier that resolves  to a
- * user-defined type: a struct, union, enum or interface. We use |TypeReference|
- * to represent an occurrence of such an identifier. A |TypeReference| may be
- * resolved or not. Resolved means that the user-defined type to which the
- * identifier refers has been found and associated with the |TypeReference|.
- * A |Type| object is fully-resolved if it, and recursively all of its
- * sub-components, do not contain any unresolved TypeReferences.
- *
- * A resolved |TypeReference| does not literally contain a structure
- * representing the user-defined type that it represents but rather refers to
- * its target type indirectly via a string called a |type_key|. The type_key may
- * be used to lookup the user-defined type to which it refers.
- *
- * The mapping from |type_keys| to user-defined types is not
- * represented by any structures in this file and instead must be maintained
- * by a higher layer context in which this file is used. For example the
- * |ServiceDescription| interface defined in service_describer.fidl includes
- * the method:
- *     GetTypeDefinition(string type_key) => UserDefinedType? type);
- * for this purpose.
- * We refer to this higher-layer context as the *owning context.*
- *
- * In addition to types, Fidl values are also representd by structures in this
- * file. A |Value| may be a LiteralValue, a ConstantReference,
- * an EnumValueReference or a BuiltinConstantValue. Similarly to the situation
- * with TypeReferences, ConstantReferences and EnumValueReferences contain a
- * key which may be used to lookup user-defined value (an EnumValue or a
- * DeclaredConstant) in the owning context.
- */
+// This file contains definitions of data structures used to represent
+// Fidl types and values.
+//
+// As described in the Fidl Language Specification, Fidl types are defined
+// recursively and consequently a |Type| object may recursively contain
+// other |Type| objects. For example a |Type| object representing an
+// array<int32> will contain a |Type| object representing an int32.
+//
+// A Fidl type declaration may contain an identifier that resolves  to a
+// user-defined type: a struct, union, enum or interface. We use |TypeReference|
+// to represent an occurrence of such an identifier. A |TypeReference| may be
+// resolved or not. Resolved means that the user-defined type to which the
+// identifier refers has been found and associated with the |TypeReference|.
+// A |Type| object is fully-resolved if it, and recursively all of its
+// sub-components, do not contain any unresolved TypeReferences.
+//
+// A resolved |TypeReference| does not literally contain a structure
+// representing the user-defined type that it represents but rather refers to
+// its target type indirectly via a string called a |type_key|. The type_key may
+// be used to lookup the user-defined type to which it refers.
+//
+// The mapping from |type_keys| to user-defined types is not
+// represented by any structures in this file and instead must be maintained
+// by a higher layer context in which this file is used. For example the
+// |ServiceDescription| interface defined in service_describer.fidl includes
+// the method:
+//     GetTypeDefinition(string type_key) => UserDefinedType? type);
+// for this purpose.
+// We refer to this higher-layer context as the//owning context.*
+//
+// In addition to types, Fidl values are also representd by structures in this
+// file. A |Value| may be a LiteralValue, a ConstantReference,
+// an EnumValueReference or a BuiltinConstantValue. Similarly to the situation
+// with TypeReferences, ConstantReferences and EnumValueReferences contain a
+// key which may be used to lookup user-defined value (an EnumValue or a
+// DeclaredConstant) in the owning context.
 
 // The different kinds of types. We divide the types into five categories:
 // simple, string, compound, handle, and user-defined.

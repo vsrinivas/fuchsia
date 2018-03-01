@@ -81,7 +81,6 @@ func TestAllSingleTokens(t *testing.T) {
 		{"\"hello world\"", StringLiteral},
 		{"\"hello \\\"real\\\" world\"", StringLiteral},
 		{"// hello comment world", SingleLineComment},
-		{"/* hello \n comment */", MultiLineComment},
 	}
 
 	for i := range testData {
@@ -199,28 +198,9 @@ func TestSingleLineCommentNoSkip(t *testing.T) {
 	checkEq(t, RParen, ts.PeekNext().Kind)
 }
 
-// TestMultiLineCommentNoSkip tests that multi line comments are correctly lexed.
-func TestMultiLineCommentNoSkip(t *testing.T) {
-	ts := tokenizeUnfiltered("( /* hello world/  * *\n */)")
-	checkEq(t, LParen, ts.PeekNext().Kind)
-	ts.ConsumeNext()
-	checkEq(t, MultiLineComment, ts.PeekNext().Kind)
-	checkEq(t, "/* hello world/  * *\n */", ts.PeekNext().Text)
-	ts.ConsumeNext()
-	checkEq(t, RParen, ts.PeekNext().Kind)
-}
-
 // TestSingleLineComment tests that single line comments are correctly skipped.
 func TestSingleLineComment(t *testing.T) {
 	ts := Tokenize("( // some stuff\n)")
-	checkEq(t, LParen, ts.PeekNext().Kind)
-	ts.ConsumeNext()
-	checkEq(t, RParen, ts.PeekNext().Kind)
-}
-
-// TestMultiLineComment tests that multi line comments are correctly skipped.
-func TestMultiLineComment(t *testing.T) {
-	ts := Tokenize("( /* hello world/  * *\n */)")
 	checkEq(t, LParen, ts.PeekNext().Kind)
 	ts.ConsumeNext()
 	checkEq(t, RParen, ts.PeekNext().Kind)
@@ -238,25 +218,6 @@ func TestConsumeUnfilteredOnly(t *testing.T) {
 func TestCommentsOnly(t *testing.T) {
 	ts := Tokenize("/* hello world */\n  // hello world")
 	checkEq(t, EOF, ts.PeekNext().Kind)
-}
-
-// TestUnterminatedMultiLineComment tests that unterminated multiline comments
-// emit the correct error.
-func TestUnterminatedMultiLineComment(t *testing.T) {
-	ts := Tokenize("( /* hello world/  * *\n )")
-	checkEq(t, LParen, ts.PeekNext().Kind)
-	ts.ConsumeNext()
-	checkEq(t, ErrorUnterminatedComment, ts.PeekNext().Kind)
-}
-
-// TestUnterminatedMultiLineCommentAtStar tests that if the string ends at a *
-// (which could be the beginning of the close of a multiline comment) the right
-// error is emitted.
-func TestUnterminatedMultiLineCommentAtStar(t *testing.T) {
-	ts := Tokenize("( /* hello world/  *")
-	checkEq(t, LParen, ts.PeekNext().Kind)
-	ts.ConsumeNext()
-	checkEq(t, ErrorUnterminatedComment, ts.PeekNext().Kind)
 }
 
 // TestTokenSnippet tests snippet generation based on tokens.
@@ -333,13 +294,12 @@ func TestTokenSnippetLongPreludeWithLongSuffix(t *testing.T) {
 }
 
 func TestFilteredTokens(t *testing.T) {
-	source := "/* filtered1 */ hello world // filtered2"
+	source := "hello world // filtered"
 	ts := Tokenize(source)
 	ts.ConsumeNext()
 	ts.ConsumeNext()
 	filtered := ts.(*FilteredTokenStream).FilteredTokens()
-	checkEq(t, MultiLineComment, filtered[0].Kind)
-	checkEq(t, SingleLineComment, filtered[1].Kind)
+	checkEq(t, SingleLineComment, filtered[0].Kind)
 }
 
 func TestEmptyLine(t *testing.T) {

@@ -643,11 +643,6 @@ func (p *printer) writeCommentBlocks(comments []lexer.Token, finalEol bool) {
 			if finalEol || i < len(comments)-1 {
 				p.nl()
 			}
-		case lexer.MultiLineComment:
-			p.writeMultiLineComment(comment)
-			if finalEol || i < len(comments)-1 {
-				p.nl()
-			}
 		case lexer.EmptyLine:
 			// We only use EmptyLine here to separate comment blocks. And we collapse
 			// sequences of empty lines to a single empty line.
@@ -673,52 +668,6 @@ func (p *printer) writeSingleLineComment(comment lexer.Token) {
 		commentText = "// " + commentText[2:]
 	}
 	p.write(commentText)
-}
-
-func (p *printer) writeMultiLineComment(comment lexer.Token) {
-	if comment.Kind != lexer.MultiLineComment {
-		panic(fmt.Sprintf("This is not a MultiLineComment: %s", comment))
-	}
-
-	lines := strings.Split(comment.Text, "\n")
-	for i, line := range lines {
-		trimmed := strings.Trim(line, " \t")
-		// If a line starts with * we assume the user is trying to use the pattern
-		// whereby they align the comment with spaces after the *. Otherwise,
-		// we try to align the comment by prepending 3 spaces.
-		if i != 0 && len(trimmed) > 0 {
-			if trimmed[0] == '*' {
-				p.write(" ")
-			} else {
-				p.write("   ")
-			}
-		}
-
-		if p.lineLength()+len(trimmed) <= p.maxLineLength || p.maxLineLength < 0 {
-			p.write(trimmed)
-		} else {
-			// If the comment is too long to fit it on a line, break up the line along
-			// spaces and wrap the line.
-			words := strings.Split(trimmed, " ")
-			for i, word := range words {
-				if i > 0 && len(word)+p.lineLength()+1 > p.maxLineLength {
-					p.nl()
-					if trimmed[0] == '*' {
-						p.write(" *")
-					} else {
-						p.write("  ")
-					}
-				}
-				if i > 0 {
-					p.write(" ")
-				}
-				p.write(word)
-			}
-		}
-		if i < len(lines)-1 {
-			p.nl()
-		}
-	}
 }
 
 // Utility functions

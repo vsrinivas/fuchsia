@@ -44,7 +44,7 @@ struct AxisF {
 };
 
 
-/* Keyboards */
+// Keyboards
 
 // |KeyboardDescriptor| describes the capabilities of a keyboard.
 struct KeyboardDescriptor {
@@ -59,7 +59,7 @@ struct KeyboardReport {
   array<uint32> pressed_keys;
 };
 
-/* Mouse */
+// Mouse
 
 // |MouseDescriptor| describes the capabilities of a mouse.
 struct MouseDescriptor {
@@ -92,7 +92,7 @@ struct MouseReport {
   uint32 pressed_buttons;
 };
 
-/* Stylus */
+// Stylus
 
 // |Stylus| describes the capabilities of a stylus.
 struct StylusDescriptor {
@@ -133,7 +133,7 @@ struct StylusReport {
   uint32 pressed_buttons;
 };
 
-/* Touchscreen */
+// Touchscreen
 
 // |TouchscreenDescriptor| describes the capabilities of a touchscreen.
 struct TouchscreenDescriptor {
@@ -166,7 +166,7 @@ struct TouchscreenReport {
   array<Touch> touches;
 };
 
-/* Device and Report */
+// Device and Report
 
 struct DeviceInfo {
   uint32 vendor_id;
