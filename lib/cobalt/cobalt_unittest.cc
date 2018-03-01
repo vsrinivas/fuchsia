@@ -248,8 +248,10 @@ TEST_F(CobaltTest, ReportStringObservation) {
 TEST_F(CobaltTest, ReportIntBucketObservation) {
   ValuePtr value = Value::New();
   auto distribution = f1dl::Array<BucketDistributionEntryPtr>::New(2);
+  distribution[0] = BucketDistributionEntry::New();
   distribution[0]->index = 1;
   distribution[0]->count = 2;
+  distribution[1] = BucketDistributionEntry::New();
   distribution[1]->index = 2;
   distribution[1]->count = 3;
   value->set_int_bucket_distribution(std::move(distribution));
