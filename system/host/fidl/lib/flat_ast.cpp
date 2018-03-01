@@ -475,21 +475,27 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             return false;
         if (method.has_request) {
             Scope<StringView> request_scope;
+            std::vector<FieldShape*> request_struct;
             for (auto& param : method.maybe_request) {
                 if (!request_scope.Insert(param.name->location.data()))
                     return false;
                 if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
+                request_struct.push_back(&param.fieldshape);
             }
+            method.maybe_request_typeshape = FidlStructTypeShape(&request_struct);
         }
         if (method.has_response) {
             Scope<StringView> response_scope;
+            std::vector<FieldShape*> response_struct;
             for (auto& param : method.maybe_response) {
                 if (!response_scope.Insert(param.name->location.data()))
                     return false;
                 if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
+                response_struct.push_back(&param.fieldshape);
             }
+            method.maybe_response_typeshape = FidlStructTypeShape(&response_struct);
         }
     }
     return true;

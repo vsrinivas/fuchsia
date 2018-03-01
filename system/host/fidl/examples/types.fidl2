@@ -2,7 +2,9 @@ library types;
 
 struct this_is_a_struct { string s; };
 union this_is_a_union { string s; };
-interface this_is_an_interface {};
+interface this_is_an_interface {
+    23: Copy(string s, uint32 count) -> (string s);
+};
 
 struct primitive_types {
     bool b;
