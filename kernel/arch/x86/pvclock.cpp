@@ -61,6 +61,7 @@ uint64_t pvclock_get_tsc_freq() {
         }
     }
 
+    printf("Fetching TSC frequency from pvclock\n");
     uint32_t tsc_mul = 0;
     int8_t tsc_shift = 0;
     uint32_t pre_version = 0, post_version = 0;
