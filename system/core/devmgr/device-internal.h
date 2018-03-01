@@ -40,6 +40,9 @@ struct zx_device {
     // list of this device's children in the device tree
     struct list_node children;
 
+    // list node for the defer_device_list
+    struct list_node defer;
+
     // iostate
     void* ios;
     proxy_iostate_t* proxy_ios;

@@ -13,6 +13,7 @@
 
 #include <fdio/remoteio.h>
 
+#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 #include <threads.h>
@@ -40,26 +41,33 @@ typedef struct zx_driver {
 
 extern zx_protocol_device_t device_default_ops;
 
+// locking and lock debugging
+extern mtx_t __devhost_api_lock;
+extern bool __dm_locked;
+
+#define REQ_DM_LOCK TA_REQ(&__devhost_api_lock)
+#define USE_DM_LOCK TA_GUARDED(&__devhost_api_lock)
+
 zx_status_t devhost_device_add(zx_device_t* dev, zx_device_t* parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
-                               const char* proxy_args);
-zx_status_t devhost_device_install(zx_device_t* dev);
-zx_status_t devhost_device_remove(zx_device_t* dev);
-zx_status_t devhost_device_bind(zx_device_t* dev, const char* drv_libname);
-zx_status_t devhost_device_rebind(zx_device_t* dev);
+                               const char* proxy_args) REQ_DM_LOCK;
+zx_status_t devhost_device_remove(zx_device_t* dev) REQ_DM_LOCK;
+zx_status_t devhost_device_bind(zx_device_t* dev, const char* drv_libname) REQ_DM_LOCK;
+zx_status_t devhost_device_rebind(zx_device_t* dev) REQ_DM_LOCK;
 zx_status_t devhost_device_create(zx_driver_t* drv, zx_device_t* parent,
                                   const char* name, void* ctx,
-                                  zx_protocol_device_t* ops, zx_device_t** out);
+                                  zx_protocol_device_t* ops, zx_device_t** out) REQ_DM_LOCK;
 zx_status_t devhost_device_open_at(zx_device_t* dev, zx_device_t** out,
-                                 const char* path, uint32_t flags);
-zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags);
-zx_status_t devhost_device_suspend(zx_device_t* dev, uint32_t flags);
-void devhost_device_destroy(zx_device_t* dev);
+                                 const char* path, uint32_t flags) REQ_DM_LOCK;
+zx_status_t devhost_device_close(zx_device_t* dev, uint32_t flags) REQ_DM_LOCK;
+zx_status_t devhost_device_suspend(zx_device_t* dev, uint32_t flags) REQ_DM_LOCK;
+void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK;
 
 zx_status_t devhost_load_firmware(zx_device_t* dev, const char* path,
-                                  zx_handle_t* fw, size_t* size);
+                                  zx_handle_t* fw, size_t* size) REQ_DM_LOCK;
 
-zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path, size_t max, size_t* actual);
+zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path,
+                                  size_t max, size_t* actual);
 
 // shared between devhost.c and rpc-device.c
 typedef struct devhost_iostate {
@@ -97,10 +105,6 @@ typedef struct {
 } creation_context_t;
 
 void devhost_set_creation_context(creation_context_t* ctx);
-
-// locking and lock debugging
-extern mtx_t __devhost_api_lock;
-extern bool __dm_locked;
 
 #if 0
 static inline void __DM_DIE(const char* fn, int ln) {
