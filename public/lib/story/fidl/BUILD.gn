@@ -29,6 +29,7 @@ fidl("fidl") {
     "//peridot/public/lib/module/fidl:module_controller",
     "//peridot/public/lib/module/fidl:module_data",
     "//peridot/public/lib/surface/fidl",
+    "//peridot/public/lib/surface/fidl:container",
   ]
 }
 

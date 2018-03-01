@@ -16,8 +16,6 @@ namespace maxwell {
 
 namespace {
 
-constexpr char kContextListenerEntitiesKey[] = "entities";
-
 // << operator for ModuleResolverImpl::EntryId.
 std::ostream& operator<<(std::ostream& o,
                          const std::pair<std::string, std::string>& id) {
@@ -28,26 +26,10 @@ std::ostream& operator<<(std::ostream& o,
 
 ModuleResolverImpl::ModuleResolverImpl(
     modular::EntityResolverPtr entity_resolver)
-    : ModuleResolverImpl(std::move(entity_resolver), ContextReaderPtr()) {}
-
-ModuleResolverImpl::ModuleResolverImpl(
-    modular::EntityResolverPtr entity_resolver,
-    ContextReaderPtr context_reader)
     : query_handler_binding_(this),
       already_checking_if_sources_are_ready_(false),
       type_helper_(std::move(entity_resolver)),
-      context_reader_(std::move(context_reader)),
-      context_listener_binding_(this),
-      weak_factory_(this) {
-  if (context_reader_.is_bound()) {
-    auto query = ContextQuery::New();
-    auto selector = ContextSelector::New();
-    selector->type = ContextValueType::ENTITY;
-    AddToContextQuery(query.get(), kContextListenerEntitiesKey, std::move(selector));
-    context_reader_->Subscribe(std::move(query),
-                               context_listener_binding_.NewBinding());
-  }
-}
+      weak_factory_(this) {}
 
 ModuleResolverImpl::~ModuleResolverImpl() = default;
 
@@ -56,15 +38,15 @@ void ModuleResolverImpl::AddSource(
     std::unique_ptr<modular::ModuleManifestSource> repo) {
   FXL_CHECK(bindings_.size() == 0);
 
-  repo->Watch(fsl::MessageLoop::GetCurrent()->task_runner(),
-              [this, name]() { OnSourceIdle(name); },
-              [this, name](std::string id,
-                           const modular::ModuleManifestPtr& entry) {
-                OnNewManifestEntry(name, std::move(id), entry.Clone());
-              },
-              [this, name](std::string id) {
-                OnRemoveManifestEntry(name, std::move(id));
-              });
+  repo->Watch(
+      fsl::MessageLoop::GetCurrent()->task_runner(),
+      [this, name]() { OnSourceIdle(name); },
+      [this, name](std::string id, const modular::ModuleManifestPtr& entry) {
+        OnNewManifestEntry(name, std::move(id), entry.Clone());
+      },
+      [this, name](std::string id) {
+        OnRemoveManifestEntry(name, std::move(id));
+      });
 
   sources_.emplace(name, std::move(repo));
 }
@@ -122,8 +104,9 @@ class ModuleResolverImpl::FindModulesCall
           module_resolver_impl_->entries_.begin(),
           module_resolver_impl_->entries_.end(),
           std::inserter(candidates_, candidates_.begin()),
-          [](std::pair<const EntryId, modular::ModuleManifestPtr>&
-                 key_value) { return key_value.first; });
+          [](std::pair<const EntryId, modular::ModuleManifestPtr>& key_value) {
+            return key_value.first;
+          });
     } else {
       auto verb_it = module_resolver_impl_->verb_to_entries_.find(query_->verb);
       if (verb_it == module_resolver_impl_->verb_to_entries_.end()) {
@@ -267,8 +250,7 @@ class ModuleResolverImpl::FindModulesCall
   // In order for a query to match an entry, it must contain enough nouns to
   // populate each of the entry nouns.
   f1dl::Array<modular::ModuleResolverResultPtr>
-  MatchQueryNounsToEntryNounsByType(
-      const modular::ModuleManifestPtr& entry) {
+  MatchQueryNounsToEntryNounsByType(const modular::ModuleManifestPtr& entry) {
     f1dl::Array<modular::ModuleResolverResultPtr> modules;
     modules.resize(0);
     // TODO(MI4-866): Handle entries with optional nouns.
@@ -302,8 +284,7 @@ class ModuleResolverImpl::FindModulesCall
   // Returns a map where the keys are the |entry|'s nouns, and the values are
   // all the |query_| nouns that are type-compatible with that |entry| noun.
   std::map<std::string, std::vector<std::string>>
-  MapEntryNounsToCompatibleQueryNouns(
-      const modular::ModuleManifestPtr& entry) {
+  MapEntryNounsToCompatibleQueryNouns(const modular::ModuleManifestPtr& entry) {
     std::map<std::string, std::vector<std::string>> entry_noun_to_query_nouns;
     for (const auto& entry_noun : entry->noun_constraints) {
       std::vector<std::string> matching_query_nouns;
@@ -503,6 +484,11 @@ class ModuleResolverImpl::FindModulesCall
   FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesCall);
 };
 
+void ModuleResolverImpl::FindModules(modular::ResolverQueryPtr query,
+                                     const FindModulesCallback& done) {
+  new FindModulesCall(&operations_, this, std::move(query), nullptr, done);
+}
+
 void ModuleResolverImpl::FindModules(
     modular::ResolverQueryPtr query,
     modular::ResolverScoringInfoPtr scoring_info,
@@ -540,8 +526,8 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
     // Verbs have a convention of being namespaced like java classes:
     // com.google.subdomain.verb
     std::string verb = entry->verb;
-    auto parts = fxl::SplitString(verb, ".", fxl::kKeepWhitespace,
-                                  fxl::kSplitWantAll);
+    auto parts =
+        fxl::SplitString(verb, ".", fxl::kKeepWhitespace, fxl::kSplitWantAll);
     const auto& last_part = parts.back();
     if (StringStartsWith(entry->verb, query->text) ||
         StringStartsWith(last_part.ToString(), query->text)) {
@@ -663,18 +649,6 @@ void ModuleResolverImpl::PeriodicCheckIfSourcesAreReady() {
           }
         },
         fxl::TimeDelta::FromSeconds(10));
-  }
-}
-
-void ModuleResolverImpl::OnContextUpdate(ContextUpdatePtr update) {
-  auto r = TakeContextValue(update.get(), kContextListenerEntitiesKey);
-  if (!r.first) {
-    return;
-  }
-
-  for (const auto& value : r.second) {
-    rapidjson::Document document;
-    document.Parse(value->content);
   }
 }
 

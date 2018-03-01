@@ -19,6 +19,7 @@ fidl("fidl") {
     "//peridot/public/lib/module_resolver/fidl",
     "//peridot/public/lib/story/fidl",
     "//peridot/public/lib/surface/fidl",
+    "//peridot/public/lib/surface/fidl:container",
     "//peridot/public/lib/user_intelligence/fidl",
   ]
 

@@ -5,6 +5,8 @@
 [DartPackage="modular"]
 module modular;
 
+import "lib/module/fidl/link_path.fidl";
+
 struct NounEntry {
   string name;
   Noun noun;
@@ -73,4 +75,7 @@ union Noun {
   // Set this to use an existing Link accessible from your Module as the noun's
   // value.
   string link_name;
+
+  // Set to re-use an existing link within a story.
+  LinkPath link_path;
 };

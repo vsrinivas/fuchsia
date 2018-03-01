@@ -22,17 +22,9 @@
 
 namespace maxwell {
 
-class ModuleResolverImpl : modular::ModuleResolver,
-                           QueryHandler,
-                           ContextListener {
+class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
  public:
   ModuleResolverImpl(modular::EntityResolverPtr entity_resolver);
-  // Constructs a module resolver that uses the provided ContextReader to
-  // monitor for context changes and ...
-  // TODO(MI4-802): provide suggestions for modules that are compatible with the
-  // current context.
-  ModuleResolverImpl(modular::EntityResolverPtr entity_resolver,
-                     ContextReaderPtr context_reader);
   ~ModuleResolverImpl() override;
 
   // Adds a source of Module manifests to index. It is not allowed to call
@@ -44,22 +36,23 @@ class ModuleResolverImpl : modular::ModuleResolver,
 
   void BindQueryHandler(f1dl::InterfaceRequest<QueryHandler> request);
 
+  // Finds modules matching |query|.
+  void FindModules(modular::ResolverQueryPtr query,
+                   const FindModulesCallback& done);
+
  private:
   class FindModulesCall;
 
   // repo name, module manifest ID
   using EntryId = std::pair<std::string, std::string>;
 
+  // |QueryHandler|
+  void OnQuery(UserInputPtr query, const OnQueryCallback& done) override;
+
   // |ModuleResolver|
   void FindModules(modular::ResolverQueryPtr query,
                    modular::ResolverScoringInfoPtr scoring_info,
                    const FindModulesCallback& done) override;
-
-  // |QueryHandler|
-  void OnQuery(UserInputPtr query, const OnQueryCallback& done) override;
-
-  // |ContextListener|
-  void OnContextUpdate(ContextUpdatePtr update) override;
 
   void OnSourceIdle(const std::string& source_name);
   void OnNewManifestEntry(const std::string& source_name,
@@ -101,11 +94,6 @@ class ModuleResolverImpl : modular::ModuleResolver,
   NounTypeInferenceHelper type_helper_;
 
   modular::OperationCollection operations_;
-
-  // The context reader that is used to suggest modules compatible with the
-  // current context.
-  ContextReaderPtr context_reader_;
-  f1dl::Binding<ContextListener> context_listener_binding_;
 
   fxl::WeakPtrFactory<ModuleResolverImpl> weak_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleResolverImpl);

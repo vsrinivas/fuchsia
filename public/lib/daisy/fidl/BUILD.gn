@@ -9,4 +9,8 @@ fidl("fidl") {
   sources = [
     "daisy.fidl",
   ]
+
+  deps = [
+    "//peridot/public/lib/module/fidl:module_data",
+  ]
 }
