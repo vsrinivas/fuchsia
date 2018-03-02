@@ -48,7 +48,8 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   void ConnectView(f1dl::InterfaceHandle<mozart::ViewOwner> view_owner,
                    const f1dl::String& /*view_id*/,
                    const f1dl::String& /*parent_id*/,
-                   modular::SurfaceRelationPtr /*surface_relation*/) override {
+                   modular::SurfaceRelationPtr /*surface_relation*/,
+                   modular::ModuleManifestPtr /*module_manifest*/) override {
     if (view_) {
       view_->ConnectView(std::move(view_owner));
     } else {

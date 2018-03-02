@@ -8,6 +8,7 @@ import "lib/daisy/fidl/daisy.fidl";
 import "lib/story/fidl/create_chain.fidl";
 import "lib/story/fidl/create_link.fidl";
 import "lib/module/fidl/link_path.fidl";
+import "lib/module/fidl/module_manifest.fidl";
 
 [ServiceName="modular.ModuleResolver"]
 interface ModuleResolver {
@@ -102,10 +103,8 @@ struct ModuleResolverResult {
   // The ID of the Module. For now, this is the URL of the Module binary.
   string module_id;
 
-  // The |local_name| within the Module's manifest file (see
-  // docs/manifests/module.md). The verb to be invoked and constraints on its
-  // parameters can be derived by looking at the Module's manifest.
-  string? local_name;
+  // The Module's manifest file (see docs/manifests/module.md)
+  ModuleManifest manifest;
 
   CreateChainInfo create_chain_info;
 

@@ -9,7 +9,6 @@ fidl("fidl") {
   sources = [
     "module.fidl",
     "module_context.fidl",
-    "module_manifest.fidl",
   ]
 
   deps = [
@@ -40,6 +39,7 @@ fidl("module_data") {
   sources = [
     "link_path.fidl",
     "module_data.fidl",
+    "module_manifest.fidl",
   ]
 
   deps = [

@@ -93,6 +93,7 @@ class ModuleResolverImpl::FindModulesCall
     FlowToken flow{this, &result_};
 
     if (query_->url) {
+      // TODO(jphsiao,thatguy): revisit this short circuiting and add the module manifest to the result.
       // Client already knows what Module they want to use, so we'll
       // short-circuit resolution.
       result_ = HandleUrlQuery(query_);
@@ -221,6 +222,7 @@ class ModuleResolverImpl::FindModulesCall
     for (auto id : candidates_) {
       auto entry_it = module_resolver_impl_->entries_.find(id);
       FXL_CHECK(entry_it != module_resolver_impl_->entries_.end()) << id;
+
       const auto& entry = entry_it->second;
 
       if (!query_->verb && !query_->url) {
@@ -236,7 +238,7 @@ class ModuleResolverImpl::FindModulesCall
       } else {
         auto result = modular::ModuleResolverResult::New();
         result->module_id = entry->binary;
-        result->local_name = entry->local_name;
+        result->manifest = entry.Clone();
         CopyNounsToModuleResolverResult(query_, &result);
 
         result_->modules.push_back(std::move(result));
@@ -273,7 +275,7 @@ class ModuleResolverImpl::FindModulesCall
     for (const auto& noun_mapping : noun_mappings) {
       auto result = modular::ModuleResolverResult::New();
       result->module_id = entry->binary;
-      result->local_name = entry->local_name;
+      result->manifest = entry.Clone();
       CopyNounsToModuleResolverResult(query_, &result, noun_mapping);
       modules.push_back(std::move(result));
     }
@@ -455,7 +457,7 @@ class ModuleResolverImpl::FindModulesCall
 
     auto mod_result = modular::ModuleResolverResult::New();
     mod_result->module_id = query->url;
-    mod_result->local_name = "n/a";
+    // TODO(jphsiao): once the manifest is plumbed through the result, set it here.
 
     CopyNounsToModuleResolverResult(query, &mod_result);
 

@@ -32,6 +32,7 @@
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/module/fidl/module_controller.fidl.h"
 #include "lib/module/fidl/module_data.fidl.h"
+#include "lib/module/fidl/module_manifest.fidl.h"
 #include "lib/story/fidl/create_chain.fidl.h"
 #include "lib/story/fidl/create_link.fidl.h"
 #include "lib/story/fidl/per_device_story_info.fidl.h"
@@ -154,6 +155,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       const f1dl::String& module_name,
       const f1dl::String& module_url,
       const f1dl::String& link_name,
+      const modular::ModuleManifestPtr manifest,
       CreateChainInfoPtr create_chain_info,
       f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
@@ -168,6 +170,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       const f1dl::String& module_name,
       const f1dl::String& module_url,
       const f1dl::String& link_name,
+      const modular::ModuleManifestPtr manifest,
       CreateChainInfoPtr create_chain_info,
       f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,

@@ -578,6 +578,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       const f1dl::Array<f1dl::String>& module_path,
       const f1dl::String& module_url,
       const f1dl::String& link_name,
+      modular::ModuleManifestPtr module_manifest,
       CreateChainInfoPtr create_chain_info,
       const ModuleSource module_source,
       SurfaceRelationPtr surface_relation,
@@ -586,6 +587,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       ResultCall result_call)
+
       : Operation("StoryControllerImpl::StartModuleCall",
                   container,
                   std::move(result_call),
@@ -594,6 +596,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
         module_path_(module_path.Clone()),
         module_url_(module_url),
         link_name_(link_name),
+        module_manifest_(std::move(module_manifest)),
         create_chain_info_(std::move(create_chain_info)),
         module_source_(module_source),
         surface_relation_(std::move(surface_relation)),
@@ -697,6 +700,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   const f1dl::Array<f1dl::String> module_path_;
   const f1dl::String module_url_;
   f1dl::String link_name_;
+  ModuleManifestPtr module_manifest_;
   CreateChainInfoPtr create_chain_info_;
   const ModuleSource module_source_;
   const SurfaceRelationPtr surface_relation_;
@@ -721,6 +725,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
       const f1dl::Array<f1dl::String>& module_path,
       const f1dl::String& module_url,
       const f1dl::String& link_name,
+      modular::ModuleManifestPtr module_manifest,
       CreateChainInfoPtr create_chain_info,
       f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
@@ -736,6 +741,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
         module_path_(module_path.Clone()),
         module_url_(module_url),
         link_name_(link_name),
+        module_manifest_(std::move(module_manifest)),
         create_chain_info_(std::move(create_chain_info)),
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
@@ -754,9 +760,8 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     // ModuleControllerImpl. In that case, the view owner request is
     // closed, and the view owner should not be sent to the story
     // shell.
-
     new StartModuleCall(&operation_queue_, story_controller_impl_, module_path_,
-                        module_url_, link_name_, create_chain_info_.Clone(),
+                        module_url_, link_name_, module_manifest_.Clone(), create_chain_info_.Clone(),
                         module_source_, surface_relation_.Clone(),
                         std::move(incoming_services_),
                         std::move(module_controller_request_),
@@ -809,7 +814,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
 
     story_controller_impl_->story_shell_->ConnectView(
         std::move(view_owner_), view_id, anchor_view_id,
-        std::move(surface_relation_));
+        std::move(surface_relation_), std::move(module_manifest_));
 
     story_controller_impl_->connected_views_.emplace(view_id);
     story_controller_impl_->ProcessPendingViews();
@@ -823,6 +828,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   const f1dl::Array<f1dl::String> module_path_;
   const f1dl::String module_url_;
   const f1dl::String link_name_;
+  ModuleManifestPtr module_manifest_;
   CreateChainInfoPtr create_chain_info_;
   f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_;
   f1dl::InterfaceRequest<ModuleController> module_controller_request_;
@@ -892,9 +898,10 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
 
   void Cont(FlowToken flow) {
     if (story_controller_impl_->IsRunning()) {
+      // TODO(jphsiao): Figure out what to do for manifest here.
       new StartModuleInShellCall(
           &operation_queue_, story_controller_impl_, module_path_, module_url_,
-          link_name_, nullptr /* chain_data */, nullptr /* incoming_services */,
+          link_name_, nullptr /* module_manifest */, nullptr /* chain_data */, nullptr /* incoming_services */,
           nullptr /* module_controller_request*/, std::move(surface_relation_),
           true, ModuleSource::EXTERNAL, [flow] {});
     }
@@ -1256,7 +1263,9 @@ class StoryControllerImpl::StartCall : Operation<> {
               new StartModuleInShellCall(
                   &operation_queue_, story_controller_impl_,
                   module_data->module_path, module_data->module_url,
-                  module_data->link_path->link_name, nullptr /* chain_data */,
+                  module_data->link_path->link_name,
+                  nullptr /* module_manifest */,
+                  nullptr /* chain_data */,
                   nullptr /* incoming_services */,
                   nullptr /* module_controller_request */,
                   module_data->surface_relation.Clone(), true,
@@ -1396,7 +1405,7 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
     // We reach this point only if we want to start an external module.
     new StartModuleInShellCall(
         &operation_queue_, story_controller_impl_, module_data_->module_path,
-        module_data_->module_url, module_data_->link_path->link_name,
+        module_data_->module_url, module_data_->link_path->link_name, nullptr /* module_manifest */,
         nullptr /* chain_data */, nullptr /* incoming_services */,
         nullptr /* module_controller_request */,
         std::move(module_data_->surface_relation), true,
@@ -1678,7 +1687,8 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
       module_path.push_back(nodes_[i]->node_name);
       new StartModuleCall(
           &operation_queue_, story_controller_impl_, std::move(module_path),
-          module_result->module_id, nullptr,
+          module_result->module_id, nullptr /* link_name */,
+          nullptr /* module_manifest */,
           module_result->create_chain_info.Clone(), ModuleSource::INTERNAL,
           nullptr /* surface_relation */, nullptr /* incoming_services */,
           nullptr /* module_controller_request */,
@@ -1775,6 +1785,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartDaisyStatus> {
     if (!result->modules.empty()) {
       // Runs the first module in story shell.
       const auto& module_result = result->modules[0];
+      const auto& manifest = module_result->manifest;
       const auto& module_url = module_result->module_id;
       const auto& create_chain_info = module_result->create_chain_info;
 
@@ -1784,7 +1795,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartDaisyStatus> {
       if (!view_owner_request_) {
         new StartModuleInShellCall(
             &operation_queue_, story_controller_impl_, std::move(module_path), module_url,
-            nullptr /* link_name */, create_chain_info.Clone(),
+            nullptr /* link_name */, manifest.Clone(), create_chain_info.Clone(),
             std::move(incoming_services_),
             std::move(module_controller_request_),
             std::move(surface_relation_),
@@ -1792,7 +1803,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartDaisyStatus> {
       } else {
         new StartModuleCall(
             &operation_queue_, story_controller_impl_, std::move(module_path), module_url,
-            nullptr /* link_name */, create_chain_info.Clone(),
+            nullptr /* link_name */, manifest.Clone(), create_chain_info.Clone(),
             module_source_,
             std::move(surface_relation_),
             std::move(incoming_services_),
@@ -1984,6 +1995,7 @@ void StoryControllerImpl::StartModule(
     const f1dl::String& module_name,
     const f1dl::String& module_url,
     const f1dl::String& link_name,
+    const modular::ModuleManifestPtr manifest,
     CreateChainInfoPtr create_chain_info,
     f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller_request,
@@ -1993,7 +2005,7 @@ void StoryControllerImpl::StartModule(
   module_path.push_back(module_name);
   new StartModuleCall(
       &operation_queue_, this, module_path, module_url, link_name,
-      std::move(create_chain_info), module_source,
+      manifest.Clone(), std::move(create_chain_info), module_source,
       nullptr /* surface_relation */, std::move(incoming_services),
       std::move(module_controller_request), nullptr /* embed_module_watcher */,
       std::move(view_owner_request), [] {});
@@ -2004,6 +2016,7 @@ void StoryControllerImpl::StartModuleInShell(
     const f1dl::String& module_name,
     const f1dl::String& module_url,
     const f1dl::String& link_name,
+    const modular::ModuleManifestPtr manifest,
     CreateChainInfoPtr create_chain_info,
     f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller_request,
@@ -2014,7 +2027,7 @@ void StoryControllerImpl::StartModuleInShell(
   module_path.push_back(module_name);
   new StartModuleInShellCall(
       &operation_queue_, this, module_path, module_url, link_name,
-      std::move(create_chain_info), std::move(incoming_services),
+      manifest.Clone(), std::move(create_chain_info), std::move(incoming_services),
       std::move(module_controller_request), std::move(surface_relation), focus,
       module_source, [] {});
 }
@@ -2090,8 +2103,8 @@ void StoryControllerImpl::EmbedModule(
   module_path.push_back(module_name);
   new StartModuleCall(
       &operation_queue_, this, module_path, module_url, link_name,
-      std::move(create_chain_info), ModuleSource::INTERNAL,
-      nullptr /* surface_relation */, std::move(incoming_services),
+      nullptr /* module_manifest */, std::move(create_chain_info),
+      ModuleSource::INTERNAL, nullptr /* surface_relation */, std::move(incoming_services),
       std::move(module_controller_request), std::move(embed_module_watcher),
       std::move(view_owner_request), [] {});
 }
@@ -2128,7 +2141,8 @@ void StoryControllerImpl::ProcessPendingViews() {
     const auto view_id = PathString(kv.second.first);
     story_shell_->ConnectView(
         std::move(kv.second.second), view_id, anchor_view_id,
-        connection->module_data->surface_relation.Clone());
+        connection->module_data->surface_relation.Clone(),
+        nullptr /* module_manifest */);
     connected_views_.emplace(view_id);
 
     added_keys.push_back(kv.first);
@@ -2456,6 +2470,10 @@ void StoryControllerImpl::UpdateStoryState(const ModuleState state) {
 
 StoryControllerImpl::Connection* StoryControllerImpl::FindConnection(
     const f1dl::Array<f1dl::String>& module_path) {
+      f1dl::String path;
+      if (module_path.size() >= 1) {
+        f1dl::String path = module_path[module_path.size()-1];
+      }
   for (auto& c : connections_) {
     if (c.module_data->module_path.Equals(module_path)) {
       return &c;

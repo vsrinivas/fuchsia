@@ -67,7 +67,7 @@ void ModuleContextImpl::StartModule(
     f1dl::InterfaceRequest<ModuleController> module_controller,
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) {
   story_controller_impl_->StartModule(
-      module_data_->module_path, name, query, link_name,
+      module_data_->module_path, name, query, link_name, nullptr /* module_manifest */,
       nullptr /* create_chain_info */, std::move(incoming_services),
       std::move(module_controller), std::move(view_owner),
       ModuleSource::INTERNAL);
@@ -96,7 +96,7 @@ void ModuleContextImpl::StartModuleInShell(
     SurfaceRelationPtr surface_relation,
     const bool focus) {
   story_controller_impl_->StartModuleInShell(
-      module_data_->module_path, name, query, link_name,
+      module_data_->module_path, name, query, link_name, nullptr /* module_manifest */,
       nullptr /* create_chain_info */, std::move(incoming_services),
       std::move(module_controller), std::move(surface_relation), focus,
       ModuleSource::INTERNAL);

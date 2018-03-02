@@ -11,7 +11,7 @@ struct ModuleManifest {
   string binary;
 
   //TODO(thatguy): This property makes no sense any more. Consider removing it.
-  string local_name;
+  string? local_name;
 
   // Identifies which verb this Module implements.
   string verb;

@@ -44,7 +44,8 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
   void ConnectView(f1dl::InterfaceHandle<mozart::ViewOwner> view_owner,
                    const f1dl::String& view_id,
                    const f1dl::String& anchor_id,
-                   modular::SurfaceRelationPtr /*surface_relation*/) override {
+                   modular::SurfaceRelationPtr /*surface_relation*/,
+                   modular::ModuleManifestPtr /*module_manifest*/) override {
     if (view_id == "root:child:child" && anchor_id == "root") {
       connect_view_.Pass();
       modular::testing::GetStore()->Put("story_shell_connect", "1", [] {});
