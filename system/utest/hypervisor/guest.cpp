@@ -129,8 +129,8 @@ static bool setup_and_interrupt(test_t* test, const char* start, const char* end
     thrd_t thread;
     int ret = thrd_create(&thread, [](void* ctx) -> int {
         test_t* test = static_cast<test_t*>(ctx);
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-        return zx_vcpu_interrupt(test->vcpu, 0);
+        while (zx_vcpu_interrupt(test->vcpu, 0) == ZX_OK) {}
+        return thrd_success;
     },
                           test);
     ASSERT_EQ(ret, thrd_success);
