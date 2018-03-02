@@ -37,13 +37,14 @@ distinguish between packets for different traps.
 
 *kind* may be either *ZX_GUEST_TRAP_BELL*, *ZX_GUEST_TRAP_MEM*, or
 *ZX_GUEST_TRAP_IO*. If *ZX_GUEST_TRAP_BELL* or *ZX_GUEST_TRAP_MEM* is specified,
-then *addr* and *len* must both be page-aligned. If *ZX_GUEST_TRAP_MEM* is
-specified, then *port* must be *ZX_HANDLE_INVALID*.
+then *addr* and *len* must both be page-aligned. If *ZX_GUEST_TRAP_BELL* is set,
+then *port* must be specified. If *ZX_GUEST_TRAP_MEM* or *ZX_GUEST_TRAP_IO* is
+set, then *port* must be *ZX_HANDLE_INVALID*.
 
 *ZX_GUEST_TRAP_BELL* is a type of trap that defines a door-bell. If there is an
 access to the memory region specified by the trap, then a packet is generated
-that does not fetch the instruction associated with the access, and the packet
-may be delivered via *port*.
+that does not fetch the instruction associated with the access. The packet will
+then be delivered via *port*.
 
 To identify what *kind* of trap generated a packet, use *ZX_PKT_TYPE_GUEST_MEM*,
 *ZX_PKT_TYPE_GUEST_IO*, *ZX_PKT_TYPE_GUEST_BELL*, and *ZX_PKT_TYPE_GUEST_VCPU*.
