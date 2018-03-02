@@ -145,10 +145,10 @@ void ExceptionHandler::DoThread() {
           OnUnalignedAccess(packet, thread);
           break;
         case ZX_EXCP_THREAD_STARTING:
-          sink_->OnThreadStarting(thread);
+          sink_->OnThreadStarting(thread, proc->koid, packet.exception.tid);
           break;
         case ZX_EXCP_THREAD_EXITING:
-          sink_->OnThreadExiting(thread);
+          sink_->OnThreadExiting(thread, proc->koid, packet.exception.tid);
           break;
         case ZX_EXCP_POLICY_ERROR:
           OnThreadPolicyError(packet, thread);

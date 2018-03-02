@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 
+#include "garnet/bin/zxdb/client/process.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -75,6 +76,12 @@ void Session::OnAgentData(debug_ipc::StreamBuffer* stream) {
   serialized.resize(header.size);
   stream->Read(&serialized[0], header.size);
 
+  // Transaction ID 0 is reserved for notifications.
+  if (header.transaction_id == 0) {
+    DispatchNotification(header, std::move(serialized));
+    return;
+  }
+
   // Find the transaction.
   auto found = pending_.find(header.transaction_id);
   if (found == pending_.end()) {
@@ -90,6 +97,31 @@ void Session::OnAgentData(debug_ipc::StreamBuffer* stream) {
   found->second(this, header.transaction_id, Err(), std::move(serialized));
 
   pending_.erase(found);
+}
+
+void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
+                                   std::vector<char> data) {
+  debug_ipc::MessageReader reader(std::move(data));
+
+  switch (header.type) {
+    case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
+    case debug_ipc::MsgHeader::Type::kNotifyThreadExiting: {
+      debug_ipc::NotifyThread thread;
+      if (!debug_ipc::ReadNotifyThread(&reader, &thread))
+        return;
+
+      Process* process = system_.ProcessFromKoid(thread.process_koid);
+      if (process) {
+        if (header.type == debug_ipc::MsgHeader::Type::kNotifyThreadStarting)
+          process->OnThreadStarting(thread.thread_koid);
+        else
+          process->OnThreadExiting(thread.thread_koid);
+      }
+      break;
+    }
+    default:
+      FXL_NOTREACHED();  // Unexpected notification.
+  }
 }
 
 }  // namespace zxdb

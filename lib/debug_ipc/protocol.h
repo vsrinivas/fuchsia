@@ -27,6 +27,10 @@ struct MsgHeader {
     kThreads,
     kReadMemory,
 
+    // The "notify" messages are sent unrequested from the agent to the client.
+    kNotifyThreadStarting,
+    kNotifyThreadExiting,
+
     kNumMessages
   };
 
@@ -36,9 +40,11 @@ struct MsgHeader {
   uint32_t size = 0;  // Size includes this header.
   Type type = Type::kNone;
 
-  // The transaction ID is assigned by the sender of a request, and is echoed in
-  // the reply so the
-  // transaction can be easily correlated.
+  // The transaction ID is assigned by the sender of a request, and is echoed
+  // in the reply so the transaction can be easily correlated.
+  //
+  // Notification messages (sent unsolicited from the agent to the client) have
+  // a 0 transaction ID.
   uint32_t transaction_id = 0;
 
   static constexpr uint32_t kSerializedHeaderSize = sizeof(uint32_t) * 3;
@@ -78,6 +84,12 @@ struct ReadMemoryRequest {
 };
 struct ReadMemoryReply {
   std::vector<MemoryBlock> blocks;
+};
+
+// Data for thread created and destroyed messages.
+struct NotifyThread {
+  uint64_t process_koid;
+  uint64_t thread_koid;
 };
 
 #pragma pack(pop)

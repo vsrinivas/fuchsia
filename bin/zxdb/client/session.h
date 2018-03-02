@@ -61,10 +61,14 @@ class Session : public AgentConnection::Sink {
   // Called when a complete message is available.
   void OnMessage(std::vector<char> serialized);
 
+  // Dispatches unsolicited notifications sent from the agent.
+  void DispatchNotification(const debug_ipc::MsgHeader& header,
+                            std::vector<char> data);
+
   std::unique_ptr<AgentConnection> agent_connection_;
 
   std::map<uint32_t, Callback> pending_;
-  uint32_t next_transaction_id_ = 1;
+  uint32_t next_transaction_id_ = 1;  // Reserve 0 for notifications.
 
   System system_;
 };

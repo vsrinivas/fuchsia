@@ -46,4 +46,11 @@ void WriteReply(const ReadMemoryReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer);
 
+// Notifications ---------------------------------------------------------------
+//
+// (These don't have a "request"/"reply".)
+
+void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
+                       MessageWriter* writer);
+
 }  // namespace debug_ipc

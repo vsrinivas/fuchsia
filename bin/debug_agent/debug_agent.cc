@@ -92,6 +92,8 @@ void DebugAgent::OnStreamData() {
     // but need to handle these "not a message" types to avoid this warning.
     case debug_ipc::MsgHeader::Type::kNone:
     case debug_ipc::MsgHeader::Type::kNumMessages:
+    case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
+    case debug_ipc::MsgHeader::Type::kNotifyThreadExiting:
       break;  // Avoid warning
   }
 
@@ -102,13 +104,32 @@ void DebugAgent::OnProcessTerminated(zx_koid_t process_koid) {
   RemoveDebuggedProcess(process_koid);
 }
 
-void DebugAgent::OnThreadStarting(const zx::thread& thread) {
-  fprintf(stderr, "Exception: thread starting.\n");
+void DebugAgent::OnThreadStarting(const zx::thread& thread, zx_koid_t proc_koid,
+                                  zx_koid_t thread_koid) {
+  debug_ipc::NotifyThread notify;
+  notify.process_koid = proc_koid;
+  notify.thread_koid = thread_koid;
+
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadStarting,
+                               notify, &writer);
+  stream().Write(writer.MessageComplete());
+
+  // The thread will currently be in a suspended state, resume it.
   thread.resume(ZX_RESUME_EXCEPTION);
 }
 
-void DebugAgent::OnThreadExiting(const zx::thread& thread) {
-  fprintf(stderr, "Exception: thread exiting.\n");
+void DebugAgent::OnThreadExiting(const zx::thread& thread, zx_koid_t proc_koid,
+                                 zx_koid_t thread_koid) {
+  debug_ipc::NotifyThread notify;
+  notify.process_koid = proc_koid;
+  notify.thread_koid = thread_koid;
+
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadExiting,
+                               notify, &writer);
+  stream().Write(writer.MessageComplete());
+
   thread.resume(ZX_RESUME_EXCEPTION);
 }
 

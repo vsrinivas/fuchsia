@@ -10,10 +10,16 @@ static_library("client") {
     "client_object.h",
     "err.cc",
     "err.h",
+    "process.cc",
+    "process.h",
     "session.cc",
     "session.h",
     "system.cc",
     "system.h",
+    "target.cc",
+    "target.h",
+    "thread.cc",
+    "thread.h",
   ]
 
   deps = [

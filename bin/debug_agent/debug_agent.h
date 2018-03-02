@@ -27,8 +27,10 @@ class DebugAgent : public ExceptionHandler::Sink {
   // ExceptionHandler::Sink implementation.
   void OnStreamData() override;
   void OnProcessTerminated(zx_koid_t process_koid) override;
-  void OnThreadStarting(const zx::thread& thread) override;
-  void OnThreadExiting(const zx::thread& thread) override;
+  void OnThreadStarting(const zx::thread& thread, zx_koid_t proc_koid,
+                        zx_koid_t thread_koid) override;
+  void OnThreadExiting(const zx::thread& thread, zx_koid_t proc_koid,
+                        zx_koid_t thread_koid) override;
 
  private:
   // IPC handlers.

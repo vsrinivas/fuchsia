@@ -49,6 +49,12 @@ bool Deserialize(MessageReader* reader, MemoryBlock* block) {
   return true;
 }
 
+bool Deserialize(MessageReader* reader, NotifyThread* thread) {
+  if (!reader->ReadUint64(&thread->process_koid))
+    return false;
+  return reader->ReadUint64(&thread->thread_koid);
+}
+
 void WriteRequest(const HelloRequest& request,
                   uint32_t transaction_id,
                   MessageWriter* writer) {
@@ -138,6 +144,13 @@ bool ReadReply(MessageReader* reader,
   *transaction_id = header.transaction_id;
 
   return Deserialize(reader, &reply->blocks);
+}
+
+bool ReadNotifyThread(MessageReader* reader, NotifyThread* thread) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  return Deserialize(reader, thread);
 }
 
 }  // namespace debug_ipc

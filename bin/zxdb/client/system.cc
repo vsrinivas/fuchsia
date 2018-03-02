@@ -4,11 +4,18 @@
 
 #include "garnet/bin/zxdb/client/system.h"
 
+#include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/target.h"
+#include "garnet/public/lib/fxl/logging.h"
 
 namespace zxdb {
 
-System::System(Session* session) : ClientObject(session) {}
+System::System(Session* session) : ClientObject(session) {
+  targets_[next_target_id_].reset(new Target(this, next_target_id_));
+  next_target_id_++;
+}
+
 System::~System() = default;
 
 void System::GetProcessTree(ProcessTreeCallback callback) {
@@ -21,6 +28,20 @@ void System::GetProcessTree(ProcessTreeCallback callback) {
           debug_ipc::ProcessTreeReply reply) {
         callback(this, err, std::move(reply));
       });
+}
+
+Target* System::GetActiveTarget() const {
+  auto found = targets_.find(active_target_id_);
+  FXL_DCHECK(found != targets_.end());
+  return found->second.get();
+}
+
+Process* System::ProcessFromKoid(uint64_t koid) {
+  for (auto& pair : targets_) {
+    if (pair.second->process() && pair.second->process()->koid() == koid)
+      return pair.second->process();
+  }
+  return nullptr;
 }
 
 }  // namespace zxdb

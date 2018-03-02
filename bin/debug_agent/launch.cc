@@ -27,11 +27,17 @@ zx_status_t Launch(const std::vector<std::string>& argv, zx::process* process) {
       return status;
   }
 
+  /*
+  Transfering STDIO handles is currently disabled. When doing local debugging
+  sharing stdio currently leaves the debugger UI in an inconsistent state and
+  stdout doesn't work. Instead we need to redirect stdio in a way the debugger
+  can control.
+
   // Transfer STDIO handles.
   status = launchpad_transfer_fd(lp, 1, FDIO_FLAG_USE_FOR_STDIO | 0);
   if (status != ZX_OK)
     return status;
-
+  */
   launchpad_clone(
       lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
   if (status != ZX_OK)

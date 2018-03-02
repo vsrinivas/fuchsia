@@ -30,6 +30,11 @@ void Serialize(const MemoryBlock& block, MessageWriter* writer) {
     writer->WriteBytes(&block.data[0], block.size);
 }
 
+void Serialize(const NotifyThread& thread, MessageWriter* writer) {
+  writer->WriteUint64(thread.process_koid);
+  writer->WriteUint64(thread.thread_koid);
+}
+
 bool ReadRequest(MessageReader* reader,
                  HelloRequest* request,
                  uint32_t* transaction_id) {
@@ -116,6 +121,12 @@ void WriteReply(const ReadMemoryReply& reply,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kReadMemory, transaction_id);
   Serialize(reply.blocks, writer);
+}
+
+void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
+                       MessageWriter* writer) {
+  writer->WriteHeader(type, 0);
+  Serialize(notify, writer);
 }
 
 }  // namespace debug_ipc

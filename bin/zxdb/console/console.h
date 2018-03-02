@@ -29,8 +29,9 @@ class Console {
   // Returns what should happen as a result of this input.
   Result OnInput(char c);
 
-  // Prints the buffer to the console.
+  // Prints the buffer/string to the console.
   void Output(OutputBuffer output);
+  void Output(const std::string& s);
 
  private:
   Result DispatchInputLine(const std::string& line);
@@ -40,6 +41,9 @@ class Console {
   Session* session_;
 
   LineInputStdout line_input_;
+
+  int target_state_change_callback_id_ = 0;
+  int thread_change_callback_id_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Console);
 };
