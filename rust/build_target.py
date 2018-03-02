@@ -214,6 +214,9 @@ def main():
                 if test_name:
                     dest_test_path = os.path.join(args.out_dir,
                             "%s-%s-%s-%s-test" % (args.name, test_name, args.type, test_type))
+                    # trigger rebuilds when integration tests change by appending tests to depfile
+                    with open(depfile_path, "a") as depfile:
+                        depfile.write(data["target"]["src_path"])
                 else:
                     # maintain support for unit tests
                     dest_test_path = os.path.join(args.out_dir,
