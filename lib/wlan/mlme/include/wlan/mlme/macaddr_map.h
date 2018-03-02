@@ -17,7 +17,6 @@ namespace wlan {
 namespace macaddr_map_type {
 enum MapType : uint8_t {
     kBss = 1,
-    kInfraBss = 3,
 };
 }  // namespace macaddr_map_type
 

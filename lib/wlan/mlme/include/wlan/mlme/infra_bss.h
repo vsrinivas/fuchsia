@@ -8,10 +8,8 @@
 #include <wlan/mlme/bss_interface.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/frame_handler.h>
-#include <wlan/mlme/macaddr_map.h>
 #include <wlan/mlme/remote_client.h>
 
-#include <fbl/ref_ptr.h>
 #include <wlan/common/macaddr.h>
 #include <zircon/types.h>
 
@@ -64,7 +62,5 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     BssClientMap clients_;
     ClientSet dozing_clients_;
 };
-
-using InfraBssMap = MacAddrMap<fbl::RefPtr<InfraBss>, macaddr_map_type::kInfraBss>;
 
 }  // namespace wlan
