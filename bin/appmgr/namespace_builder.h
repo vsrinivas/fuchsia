@@ -22,11 +22,9 @@ class NamespaceBuilder {
   ~NamespaceBuilder();
 
   void AddFlatNamespace(FlatNamespacePtr flat_namespace);
-  void AddRoot();
   void AddPackage(zx::channel package);
   void AddDirectoryIfNotPresent(const std::string& path, zx::channel directory);
   void AddServices(zx::channel services);
-  void AddDev();
   void AddSandbox(const SandboxMetadata& sandbox);
 
   // This function grants access to a number of directories to processes that

@@ -29,10 +29,6 @@ void NamespaceBuilder::AddFlatNamespace(FlatNamespacePtr ns) {
   }
 }
 
-void NamespaceBuilder::AddRoot() {
-  PushDirectoryFromPath("/");
-}
-
 void NamespaceBuilder::AddPackage(zx::channel package) {
   PushDirectoryFromChannel("/pkg", std::move(package));
 }
@@ -48,13 +44,14 @@ void NamespaceBuilder::AddServices(zx::channel services) {
   PushDirectoryFromChannel("/svc", std::move(services));
 }
 
-void NamespaceBuilder::AddDev() {
-  PushDirectoryFromPath("/dev");
-}
-
 void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
-  for (const auto& path : sandbox.dev())
+  for (const auto& path : sandbox.dev()) {
+    if (path == "class") {
+      FXL_LOG(WARNING) << "Ignoring request for all device classes";
+      continue;
+    }
     PushDirectoryFromPath("/dev/" + path);
+  }
 
   for (const auto& path : sandbox.system())
     PushDirectoryFromPath("/system/" + path);
@@ -73,8 +70,15 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
       // TODO(abarth): These permissions should depend on the envionment
       // in some way so that a shell running at a user-level scope doesn't
       // have access to all the device drivers and such.
-      AddRoot();
-      AddDev();
+      PushDirectoryFromPath("/blobstore");
+      PushDirectoryFromPath("/boot");
+      PushDirectoryFromPath("/data");
+      PushDirectoryFromPath("/dev");
+      PushDirectoryFromPath("/install");
+      PushDirectoryFromPath("/pkgfs");
+      PushDirectoryFromPath("/system");
+      PushDirectoryFromPath("/tmp");
+      PushDirectoryFromPath("/volume");
     } else if (feature == "system-temp") {
       PushDirectoryFromPath("/tmp");
     } else if (feature == "vulkan") {
