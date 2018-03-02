@@ -194,12 +194,12 @@ void dev_ref_release(zx_device_t* dev) TA_REQ(&__devhost_api_lock) {
         dev_op_release(dev);
         DM_LOCK();
 
-        devhost_device_destroy(dev);
-
         // At this point we can safely release the ref on our parent
         if (dev->parent) {
             dev_ref_release(dev->parent);
         }
+
+        devhost_device_destroy(dev);
     }
 }
 
