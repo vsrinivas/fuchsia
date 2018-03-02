@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <wlan/mlme/sequence.h>
+
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <wlan/common/bitfield.h>
@@ -25,4 +27,11 @@ MgmtFrame<Body> BuildMgmtFrame(fbl::unique_ptr<Packet>* packet, size_t body_payl
 
 zx_status_t FillTxInfo(fbl::unique_ptr<Packet>* packet, const MgmtFrameHeader& hdr);
 
+seq_t NextSeqNo(const MgmtFrameHeader& hdr, Sequence* seq);
+seq_t NextSeqNo(const MgmtFrameHeader& hdr, uint8_t aci, Sequence* seq);
+seq_t NextSeqNo(const DataFrameHeader& hdr, Sequence* seq);
+
+void SetSeqNo(MgmtFrameHeader* hdr, Sequence* seq);
+void SetSeqNo(MgmtFrameHeader* hdr, uint8_t aci, Sequence* seq);
+void SetSeqNo(DataFrameHeader* hdr, Sequence* seq);
 }  // namespace wlan

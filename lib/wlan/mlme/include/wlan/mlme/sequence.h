@@ -11,7 +11,6 @@
 #include <unordered_map>
 
 namespace wlan {
-namespace common {
 
 typedef uint64_t seq_hash_t;
 typedef uint16_t seq_t;  // TODO(porce): Mesh uses [0, 2^32 - 1] space.
@@ -64,7 +63,7 @@ class Sequence {
 
     Sns<4096>* Sns5() {
         // Arbitrary value by spec. Increment to assist debugging.
-        static const seq_hash_t hash = 0x01 << (kMacAddrLen + 1);
+        static const seq_hash_t hash = 0x01 << (common::kMacAddrLen + 1);
         return Fetch<4096>(hash);
     }
 
@@ -74,7 +73,7 @@ class Sequence {
         // This hash takes advantage of MacAddr::ToU64()'s implementation
         // where most significant two bytes are unused.
         seq_hash_t hash = addr.ToU64();
-        hash |= (bucket << kMacAddrLen);
+        hash |= (bucket << common::kMacAddrLen);
         return hash;
     }
 
@@ -106,5 +105,4 @@ class Sequence {
     SnsMap<4096> sns_map4096_;
 };
 
-}  // namespace common
 }  // namespace wlan
