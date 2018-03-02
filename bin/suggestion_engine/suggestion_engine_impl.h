@@ -26,7 +26,7 @@
 
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
-#include "lib/media/fidl/media_service.fidl.h"
+#include "lib/media/fidl/audio_server.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "lib/user/fidl/focus.fidl.h"
@@ -263,8 +263,8 @@ class SuggestionEngineImpl : public ContextListener,
 
   std::unique_ptr<QueryProcessor> active_query_;
 
-  media::MediaServicePtr media_service_;
-  media::MediaSinkPtr media_sink_;
+  media::AudioServerPtr audio_server_;
+  media::MediaRendererPtr media_renderer_;
   media::MediaPacketProducerPtr media_packet_producer_;
   media::MediaTimelineControlPointPtr time_lord_;
   media::TimelineConsumerPtr media_timeline_consumer_;

@@ -43,11 +43,11 @@ SuggestionEngineImpl::SuggestionEngineImpl(app::ApplicationContext* app_context)
         debug_bindings_.AddBinding(&debug_, std::move(request));
       });
 
-  media_service_ =
-      app_context->ConnectToEnvironmentService<media::MediaService>();
-  media_service_.set_error_handler([this] {
-    FXL_LOG(INFO) << "Media service connection error";
-    media_service_ = nullptr;
+  audio_server_ =
+      app_context->ConnectToEnvironmentService<media::AudioServer>();
+  audio_server_.set_error_handler([this] {
+    FXL_LOG(INFO) << "Audio server connection error";
+    audio_server_ = nullptr;
     media_packet_producer_ = nullptr;
   });
 
@@ -407,47 +407,44 @@ void SuggestionEngineImpl::PerformCustomAction(const ActionPtr& action,
 }
 
 void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
-  if (!media_service_)
+  if (!audio_server_)
     return;
 
-  media::AudioRendererPtr audio_renderer;
-  media::MediaRendererPtr media_renderer;
-  media_service_->CreateAudioRenderer(audio_renderer.NewRequest(),
-                                      media_renderer.NewRequest());
+  media_renderer_.Unbind();
 
-  media_sink_.Unbind();
-  media_service_->CreateSink(media_renderer.Unbind(), media_sink_.NewRequest());
+  media::AudioRendererPtr audio_renderer;
+  audio_server_->CreateRenderer(audio_renderer.NewRequest(),
+                                media_renderer_.NewRequest());
 
   media_packet_producer_ = media_response->media_packet_producer.Bind();
-  media_sink_->ConsumeMediaType(
-      std::move(media_response->media_type),
-      [this](f1dl::InterfaceHandle<media::MediaPacketConsumer> consumer) {
-        media_packet_producer_->Connect(consumer.Bind(), [this] {
-          time_lord_.Unbind();
-          media_timeline_consumer_.Unbind();
+  media_renderer_->SetMediaType(std::move(media_response->media_type));
+  media::MediaPacketConsumerPtr consumer;
+  media_renderer_->GetPacketConsumer(consumer.NewRequest());
 
-          speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
-            listener->OnStatusChanged(SpeechStatus::RESPONDING);
-          });
+  media_packet_producer_->Connect(std::move(consumer), [this] {
+    time_lord_.Unbind();
+    media_timeline_consumer_.Unbind();
 
-          media_sink_->GetTimelineControlPoint(time_lord_.NewRequest());
-          time_lord_->GetTimelineConsumer(
-              media_timeline_consumer_.NewRequest());
-          time_lord_->Prime([this] {
-            auto tt = media::TimelineTransform::New();
-            tt->reference_time =
-                media::Timeline::local_now() + media::Timeline::ns_from_ms(30);
-            tt->subject_time = media::kUnspecifiedTime;
-            tt->reference_delta = tt->subject_delta = 1;
+    speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
+      listener->OnStatusChanged(SpeechStatus::RESPONDING);
+    });
 
-            HandleMediaUpdates(media::MediaTimelineControlPoint::kInitialStatus,
-                               nullptr);
+    media_renderer_->GetTimelineControlPoint(time_lord_.NewRequest());
+    time_lord_->GetTimelineConsumer(media_timeline_consumer_.NewRequest());
+    time_lord_->Prime([this] {
+      auto tt = media::TimelineTransform::New();
+      tt->reference_time =
+          media::Timeline::local_now() + media::Timeline::ns_from_ms(30);
+      tt->subject_time = media::kUnspecifiedTime;
+      tt->reference_delta = tt->subject_delta = 1;
 
-            media_timeline_consumer_->SetTimelineTransform(
-                std::move(tt), [](bool completed) {});
-          });
-        });
-      });
+      HandleMediaUpdates(media::MediaTimelineControlPoint::kInitialStatus,
+                         nullptr);
+
+      media_timeline_consumer_->SetTimelineTransform(std::move(tt),
+                                                     [](bool completed) {});
+    });
+  });
 
   media_packet_producer_.set_error_handler([this] {
     speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
@@ -464,7 +461,7 @@ void SuggestionEngineImpl::HandleMediaUpdates(
       listener->OnStatusChanged(SpeechStatus::IDLE);
     });
     media_packet_producer_ = nullptr;
-    media_sink_ = nullptr;
+    media_renderer_ = nullptr;
   } else {
     time_lord_->GetStatus(
         version, [this](uint64_t next_version,
