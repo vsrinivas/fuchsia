@@ -26,4 +26,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/zx \
 
+MODULE_COMPILEFLAGS := -fsanitize=integer-divide-by-zero,signed-integer-overflow -fsanitize-undefined-trap-on-error
+
 include make/module.mk

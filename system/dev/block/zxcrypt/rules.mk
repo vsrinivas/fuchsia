@@ -30,4 +30,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
 
+MODULE_COMPILEFLAGS := -fsanitize=integer-divide-by-zero,signed-integer-overflow -fsanitize-undefined-trap-on-error
+
 include make/module.mk
