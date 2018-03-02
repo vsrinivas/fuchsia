@@ -8,17 +8,17 @@ version = "0.1.0"
 license = "BSD-3-Clause"
 
 [dependencies]
+bytes = "0.4"
 failure = "0.1.1"
+fdio = "0.2"
 fidl = "0.1"
 fuchsia-app = "0.1"
+fuchsia-async = "0.1"
 fuchsia-zircon = "0.3"
-futures = "0.1"
+futures = "=0.2.0-alpha"
 mxruntime = "0.1"
 mxruntime-sys = "0.1"
-tokio-core = "0.1"
-tokio-fuchsia = "0.1"
-bytes = "0.4"
-fdio = "0.2"
+parking_lot = "0.4"
 garnet_public_lib_device_settings_fidl = "0.1"
 
 [dev-dependencies]

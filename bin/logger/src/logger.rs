@@ -2,28 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate byteorder;
-extern crate libc;
-extern crate std;
-extern crate tokio_fuchsia;
-
-use futures;
-use futures::Async;
-use futures::stream::Stream;
-use tokio_core;
+use async;
+use byteorder::{LittleEndian, ByteOrder};
+use futures::io;
+use futures::prelude::*;
+use libc::{uint64_t, c_int, uint32_t, c_char, uint8_t};
+use parking_lot::Mutex;
+use std::{mem, str};
+use std::sync::Arc;
 use zircon;
-
-
-use self::byteorder::{LittleEndian, ByteOrder};
-use self::libc::{uint64_t, c_int, uint32_t, c_char, uint8_t};
-use self::std::cell::RefCell;
-use self::std::io;
-use self::std::io::Read;
-use self::std::ops::Deref;
-use self::std::ops::DerefMut;
-use self::std::rc::Rc;
-use self::tokio_core::reactor::Handle;
-use self::tokio_fuchsia::Socket;
 
 type FxLogSeverityT = c_int;
 type ZxKoid = uint64_t;
@@ -42,7 +29,7 @@ pub struct fx_log_metadata_t {
     pub dropped_logs: uint32_t,
 }
 
-const METADATA_SIZE: usize = std::mem::size_of::<fx_log_metadata_t>();
+const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
 
 #[repr(C, packed)]
 pub struct fx_log_packet_t {
@@ -71,19 +58,18 @@ pub struct LogMessage {
 
 #[must_use = "futures/streams"]
 pub struct LoggerStream {
-    socket: Socket,
-    buf: Rc<RefCell<[u8; FX_LOG_MAX_DATAGRAM_LEN]>>,
+    socket: async::Socket,
+    buf: Arc<Mutex<[u8; FX_LOG_MAX_DATAGRAM_LEN]>>,
 }
 
 impl LoggerStream {
     /// Creates a new `LoggerStream` for given `socket`.
     pub fn new(
         socket: zircon::Socket,
-        buf: Rc<RefCell<[u8; FX_LOG_MAX_DATAGRAM_LEN]>>,
-        handle: &Handle,
+        buf: Arc<Mutex<[u8; FX_LOG_MAX_DATAGRAM_LEN]>>,
     ) -> Result<LoggerStream, io::Error> {
         let l = LoggerStream {
-            socket: Socket::from_socket(socket, handle)?,
+            socket: async::Socket::from_socket(socket)?,
             buf: buf,
         };
         Ok(l)
@@ -94,7 +80,7 @@ impl LoggerStream {
 
 fn convert_to_log_message(bytes: &[u8]) -> Option<LogMessage> {
     // Check that data has metadata and first 1 byte is integer and last byte is NULL.
-    if bytes.len() < METADATA_SIZE + std::mem::size_of::<uint8_t>() || bytes[bytes.len() - 1] != 0 {
+    if bytes.len() < METADATA_SIZE + mem::size_of::<uint8_t>() || bytes[bytes.len() - 1] != 0 {
         return None;
     }
 
@@ -122,7 +108,7 @@ fn convert_to_log_message(bytes: &[u8]) -> Option<LogMessage> {
         if (pos + tag_len + 1) > bytes.len() {
             return None;
         }
-        let str_slice = match std::str::from_utf8(&bytes[(pos + 1)..(pos + tag_len + 1)]) {
+        let str_slice = match str::from_utf8(&bytes[(pos + 1)..(pos + tag_len + 1)]) {
             Err(_e) => return None,
             Ok(s) => s,
         };
@@ -139,7 +125,7 @@ fn convert_to_log_message(bytes: &[u8]) -> Option<LogMessage> {
     let mut found_msg = false;
     while i < bytes.len() {
         if bytes[i] == 0 {
-            let str_slice = match std::str::from_utf8(&bytes[pos + 1..i]) {
+            let str_slice = match str::from_utf8(&bytes[pos + 1..i]) {
                 Err(_e) => return None,
                 Ok(s) => s,
             };
@@ -160,17 +146,17 @@ impl Stream for LoggerStream {
     type Item = LogMessage;
     type Error = io::Error;
 
-    fn poll(&mut self) -> futures::Poll<Option<Self::Item>, Self::Error> {
+    fn poll_next(&mut self, cx: &mut task::Context) -> Poll<Option<Self::Item>, Self::Error> {
         let len: usize;
         {
-            let mut b = self.buf.borrow_mut();
-            len = try_nb!(self.socket.read(b.deref_mut()));
+            let mut b = self.buf.lock();
+            len = try_ready!(self.socket.poll_read(cx, &mut *b));
         }
         if len == 0 {
             return Ok(Async::Ready(None));
         }
-        let bytes = self.buf.borrow();
-        let l = convert_to_log_message(&bytes.deref()[0..len]);
+        let bytes = self.buf.lock();
+        let l = convert_to_log_message(&bytes[0..len]);
         Ok(Async::Ready(l))
     }
 }
@@ -178,10 +164,8 @@ impl Stream for LoggerStream {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use futures::Future;
-    use std::time::Duration;
-    use tokio_core::reactor;
+    use std::slice;
+    use zircon::prelude::*;
 
     /// Function to convert fx_log_packet_t to &[u8].
     /// This function is safe as it works on `fx_log_packet_t` which is `packed`
@@ -190,9 +174,9 @@ mod tests {
         // This code just converts to &[u8] so no need to explicity drop it as memory
         // location would be freed as soon as p is dropped.
         unsafe {
-            ::std::slice::from_raw_parts(
+            slice::from_raw_parts(
                 (p as *const fx_log_packet_t) as *const u8,
-                ::std::mem::size_of::<fx_log_packet_t>(),
+                mem::size_of::<fx_log_packet_t>(),
             )
         }
     }
@@ -209,25 +193,24 @@ mod tests {
         assert_eq!(FX_LOG_MAX_TAGS, 5);
         assert_eq!(FX_LOG_MAX_TAG_LEN, 64);
         assert_eq!(
-            std::mem::size_of::<fx_log_packet_t>(),
+            mem::size_of::<fx_log_packet_t>(),
             FX_LOG_MAX_DATAGRAM_LEN
         );
     }
 
     #[test]
     fn logger_stream_test() {
-        let mut core = reactor::Core::new().unwrap();
+        let mut executor = async::Executor::new().unwrap();
         let (sin, sout) = zircon::Socket::create(zircon::SocketOpts::DATAGRAM).unwrap();
         let buf: [u8; FX_LOG_MAX_DATAGRAM_LEN] = [0; FX_LOG_MAX_DATAGRAM_LEN];
-        let c = Rc::new(RefCell::new(buf));
+        let c = Arc::new(Mutex::new(buf));
         let mut p: fx_log_packet_t = Default::default();
         p.metadata.pid = 1;
         p.data[0] = 5;
         memset(&mut p.data[..], 1, 65, 5);
         memset(&mut p.data[..], 7, 66, 5);
 
-        let handle = core.handle();
-        let ls = LoggerStream::new(sout, c, &handle).unwrap();
+        let ls = LoggerStream::new(sout, c).unwrap();
         sin.write(to_u8_slice(&mut p)).unwrap();
         let mut expected_p = LogMessage {
             metadata: p.metadata.clone(),
@@ -235,28 +218,31 @@ mod tests {
             msg: String::from("BBBBB"),
         };
         expected_p.tags.push(String::from("AAAAA"));
-        let calltimes = Rc::new(RefCell::new(0));
+        let calltimes = Arc::new(Mutex::new(0));
         let c = calltimes.clone();
         let f = ls.for_each(move |msg| {
             assert_eq!(msg, expected_p);
-            let mut n = *c.borrow();
+            let mut n = *c.lock();
             n = n + 1;
-            *c.borrow_mut() = n;
+            *c.lock() = n;
             Ok(())
-        });
-        handle.spawn(f.map_err(|e| {
-            eprintln!("test fail {:?}", e);
-            assert!(false);
+        }).map(|_s| ());
+
+        async::spawn(f.recover(|e| {
+            panic!("test fail {:?}", e);
         }));
-        let mut timeout = reactor::Timeout::new(Duration::from_millis(100), &handle).unwrap();
-        core.run(timeout).expect("should not fail");
-        assert_eq!(1, *calltimes.borrow());
+        
+        let timeout = async::Timer::<()>::new(100.millis().after_now()).unwrap();
+        executor.run(timeout, 2).unwrap();
+
+        assert_eq!(1, *calltimes.lock());
 
         // write one more time
         sin.write(to_u8_slice(&p)).unwrap();
-        timeout = reactor::Timeout::new(Duration::from_millis(100), &handle).unwrap();
-        core.run(timeout).expect("should not fail");
-        assert_eq!(2, *calltimes.borrow());
+
+        let timeout = async::Timer::<()>::new(100.millis().after_now()).unwrap();
+        executor.run(timeout, 2).unwrap();
+        assert_eq!(2, *calltimes.lock());
     }
 
     #[test]

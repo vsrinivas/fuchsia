@@ -10,10 +10,9 @@
 extern crate fuchsia_zircon as zircon;
 extern crate byteorder;
 #[macro_use] extern crate failure;
+extern crate fuchsia_async as async;
 extern crate futures;
 extern crate slab;
-extern crate tokio_core;
-extern crate tokio_fuchsia;
 
 #[macro_use]
 mod encoding;
@@ -47,16 +46,16 @@ pub type BoxFuture<Item> = Box<futures::Future<Item = Item, Error = Error> + Sen
 /// `Future<Item = I, Error = CloseChannel>>`.
 /// Errors in this `Future` should require no extra handling, and upon error the type should
 /// be dropped.
-pub trait ServerFuture<Item>: futures::Future<Item = Item, Error = CloseChannel> {}
+pub trait ServerFuture<Item>: futures::Future<Item = Item, Error = CloseChannel> + Send {}
 impl<T, Item> ServerFuture<Item> for T
-    where T: futures::Future<Item = Item, Error = CloseChannel> {}
+    where T: futures::Future<Item = Item, Error = CloseChannel> + Send {}
 
 /// A specialized `Box<Future<...>>` type for FIDL server implementations.
 /// This is a convenience to avoid writing
 /// `Box<Future<Item = I, Error = CloseChannel>>`.
 /// Errors in this `Future` should require no extra handling, and upon error the type should
 /// be dropped.
-pub type BoxServerFuture<Item> = Box<futures::Future<Item = Item, Error = CloseChannel>>;
+pub type BoxServerFuture<Item> = Box<futures::Future<Item = Item, Error = CloseChannel> + Send>;
 
 /// A specialized `Future<...>` type for FIDL server implementations.
 /// This is a convenience to avoid writing

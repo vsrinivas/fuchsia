@@ -70,20 +70,20 @@ pub enum Error {
 
     /// A FIDL server encountered an IO error writing a response to a channel.
     #[fail(display = "A server encountered an IO error writing a FIDL response to a channel: {}", _0)]
-    ServerResponseWrite(#[cause] io::Error),
+    ServerResponseWrite(#[cause] zircon::Status),
 
     /// A FIDL server encountered an IO error reading incoming requests from a channel.
     #[fail(display =
           "A FIDL server encountered an IO error reading incoming FIDL requests from a channel: {}", _0)]
-    ServerRequestRead(#[cause] io::Error),
+    ServerRequestRead(#[cause] zircon::Status),
 
     /// A FIDL client encountered an IO error reading a response from a channel.
     #[fail(display = "A FIDL client encountered an IO error reading a response from a channel: {}", _0)]
-    ClientRead(#[cause] io::Error),
+    ClientRead(#[cause] zircon::Status),
 
     /// A FIDL client encountered an IO error writing a request to a channel.
     #[fail(display = "A FIDL client encountered an IO error writing a request into a channel: {}", _0)]
-    ClientWrite(#[cause] io::Error),
+    ClientWrite(#[cause] zircon::Status),
 
     /// There was an error creating a channel to be used for a FIDL client-server pair.
     #[fail(display = "There was an error creating a channel to be used for a FIDL client-server pair: {}", _0)]
@@ -95,8 +95,8 @@ pub enum Error {
 
     /// There was a miscellaneous io::Error during a test.
     #[cfg(test)]
-    #[fail(display = "Test io::Error: {}", _0)]
-    TestIo(#[cause] io::Error),
+    #[fail(display = "Test zx::Status: {}", _0)]
+    TestIo(#[cause] zircon::Status),
 
     #[doc(hidden)]
     #[fail(display = "__Nonexhaustive error should never be created.")]

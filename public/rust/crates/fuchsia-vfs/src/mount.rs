@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use zircon;
-use zircon::{DurationNum, HandleBased};
+use zx;
+use zx::{DurationNum, HandleBased};
 use fdio;
 
 use std;
@@ -18,9 +18,9 @@ use fdio::fdio_sys::{O_ADMIN, O_NOREMOTE, O_DIRECTORY};
 #[link(name = "fs-management")]
 extern "C" {
     fn vfs_unmount_handle(
-        srv: zircon::sys::zx_handle_t,
-        deadline: zircon::sys::zx_time_t,
-    ) -> zircon::sys::zx_status_t;
+        srv: zx::sys::zx_handle_t,
+        deadline: zx::sys::zx_time_t,
+    ) -> zx::sys::zx_status_t;
 }
 
 pub struct Mount {
@@ -29,7 +29,7 @@ pub struct Mount {
 
 impl Drop for Mount {
     fn drop(&mut self) {
-        let mut h: zircon::sys::zx_handle_t = zircon::sys::ZX_HANDLE_INVALID;
+        let mut h: zx::sys::zx_handle_t = zx::sys::ZX_HANDLE_INVALID;
 
         let sz = unsafe {
             fdio::ioctl_raw(
@@ -38,7 +38,7 @@ impl Drop for Mount {
                 std::ptr::null_mut(),
                 0,
                 &mut h as *mut _ as *mut std::os::raw::c_void,
-                std::mem::size_of::<zircon::sys::zx_handle_t>(),
+                std::mem::size_of::<zx::sys::zx_handle_t>(),
             )
         };
 
@@ -49,18 +49,18 @@ impl Drop for Mount {
             // TODO(raggi): what is a reasonable timeout value here?
             let deadline = 1_000_000.nanos().after_now();
             let status = unsafe { vfs_unmount_handle(h, deadline.nanos()) };
-            if status != zircon::sys::ZX_OK {
+            if status != zx::sys::ZX_OK {
                 eprintln!("fuchsia-vfs: failed to unmount handle: {:?}", status);
             }
         }
 
-        unsafe { zircon::sys::zx_handle_close(h) };
+        unsafe { zx::sys::zx_handle_close(h) };
 
         std::mem::drop(unsafe { fs::File::from_raw_fd(self.mountfd) });
     }
 }
 
-pub fn mount(path: &Path, chan: zircon::Channel) -> Result<Mount, zircon::Status> {
+pub fn mount(path: &Path, chan: zx::Channel) -> Result<Mount, zx::Status> {
     let dir = fs::OpenOptions::new()
         .read(true)
         .custom_flags(O_DIRECTORY | O_ADMIN | O_NOREMOTE)
@@ -76,15 +76,15 @@ pub fn mount(path: &Path, chan: zircon::Channel) -> Result<Mount, zircon::Status
             mount.mountfd,
             fdio::IOCTL_VFS_MOUNT_FS,
             &h as *const _ as *const std::os::raw::c_void,
-            std::mem::size_of::<zircon::sys::zx_handle_t>(),
+            std::mem::size_of::<zx::sys::zx_handle_t>(),
             std::ptr::null_mut(),
             0,
         )
     };
 
     if sz != 0 {
-        unsafe { zircon::sys::zx_handle_close(h) };
-        return Err(zircon::Status::from_raw(sz as i32));
+        unsafe { zx::sys::zx_handle_close(h) };
+        return Err(zx::Status::from_raw(sz as i32));
     }
 
     Ok(mount)
@@ -93,25 +93,25 @@ pub fn mount(path: &Path, chan: zircon::Channel) -> Result<Mount, zircon::Status
 #[cfg(test)]
 mod test {
     use super::*;
-    use zircon::AsHandleRef;
+    use zx::AsHandleRef;
 
     extern crate tempdir;
 
     #[test]
     fn test_mount_unmount() {
-        let (c1, c2) = zircon::Channel::create().unwrap();
+        let (c1, c2) = zx::Channel::create().unwrap();
 
         // TODO(raggi): where is the appropriate place to put this, it's part of the mount protocol?
-        c2.signal_handle(zircon::Signals::NONE, zircon::Signals::USER_0)
+        c2.signal_handle(zx::Signals::NONE, zx::Signals::USER_0)
             .unwrap();
 
-        let port = zircon::Port::create().unwrap();
+        let port = zx::Port::create().unwrap();
 
         c2.wait_async_handle(
             &port,
             1,
-            zircon::Signals::CHANNEL_PEER_CLOSED,
-            zircon::WaitAsyncOpts::Once,
+            zx::Signals::CHANNEL_PEER_CLOSED,
+            zx::WaitAsyncOpts::Once,
         ).unwrap();
 
         let td = tempdir::TempDir::new("test_mount_unmount").unwrap();
@@ -119,7 +119,7 @@ mod test {
         let m = mount(&td.path(), c1).unwrap();
 
         assert_eq!(
-            zircon::Status::TIMED_OUT,
+            zx::Status::TIMED_OUT,
             port.wait(2_000_000.nanos().after_now()).expect_err(
                 "timeout",
             )
@@ -129,10 +129,10 @@ mod test {
 
         let packet = port.wait(2_000_000.nanos().after_now()).unwrap();
         match packet.contents() {
-            zircon::PacketContents::SignalOne(sp) => {
+            zx::PacketContents::SignalOne(sp) => {
                 assert_eq!(
-                    zircon::Signals::CHANNEL_PEER_CLOSED,
-                    sp.observed() & zircon::Signals::CHANNEL_PEER_CLOSED
+                    zx::Signals::CHANNEL_PEER_CLOSED,
+                    sp.observed() & zx::Signals::CHANNEL_PEER_CLOSED
                 );
             }
             _ => assert!(false, "expected signalone packet"),

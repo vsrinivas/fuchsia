@@ -7,9 +7,9 @@
 
 extern crate failure;
 extern crate fidl;
-extern crate fuchsia_app;
+extern crate fuchsia_async as async;
+extern crate fuchsia_app as app;
 extern crate futures;
-extern crate tokio_core;
 
 // The `failure` crate provides an error trait called `Fail`,
 // as well as a standard dynamically-dispatched `Error` type.
@@ -19,9 +19,8 @@ use failure::{Error, ResultExt};
 extern crate garnet_examples_fidl_services;
 use garnet_examples_fidl_services::Echo;
 
-use fuchsia_app::server::ServicesServer;
+use app::server::ServicesServer;
 use futures::future;
-use tokio_core::reactor;
 
 // A function which returns a type implementing the `Echo::Server` trait
 fn echo_server() -> impl Echo::Server {
@@ -47,19 +46,18 @@ fn main() {
 }
 
 fn main_res() -> Result<(), Error> {
-    // Create a new reactor core for handling IO events.
-    let mut core = reactor::Core::new().context("Unable to create core")?;
-    let handle = core.handle();
+    // Create a new executor for running asynchronous tasks.
+    let mut executor = async::Executor::new().context("Unable to create executor")?;
 
     // Create a service provider which will provide a new EchoServer
     // instance upon receiving a `connect_to_service` request.
     let services_server =
         ServicesServer::new()
             .add_service(|| Echo::Dispatcher(echo_server()))
-            .start(&handle)
+            .start()
             .context("Error configuring services server")?;
 
-    // Run the server on the reactor core.
+    // Run the server on the executor using two worker threads.
     // The server is an empty `Future` that can return `fidl::Error`.
-    Ok(core.run(services_server).context("Error running server")?)
+    Ok(executor.run(services_server, /* threads */ 2).context("Error running server")?)
 }

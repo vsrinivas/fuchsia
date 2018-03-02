@@ -6,33 +6,29 @@
 
 use {DecodeBuf, EncodeBuf, Error, ErrorOrClose, FidlService, MsgType};
 
+use async;
 use std::io;
-
-use futures::{Async, Future, Poll, Stream};
+use futures::{Async, Future, Poll, Stream, task};
 use futures::stream::FuturesUnordered;
-use tokio_core::reactor::Handle;
-
-use zircon::Channel;
-
-use tokio_fuchsia;
+use zircon;
 
 /// A value from a server handler indicating that the current channel should be closed.
 #[derive(Debug)]
 pub struct CloseChannel;
 
 /// The "stub" which handles raw FIDL buffer requests.
-pub trait Stub {
+pub trait Stub: Send {
     /// The FIDL service type that the stub provides.
     type Service: FidlService;
 
     /// The type of the future that is resolved to a response.
-    type DispatchResponseFuture: Future<Item = EncodeBuf, Error = ErrorOrClose>;
+    type DispatchResponseFuture: Future<Item = EncodeBuf, Error = ErrorOrClose> + Send;
 
     /// Dispatches a request and returns a future for the response.
     fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchResponseFuture;
 
     /// The type of the future that dispatches a message with no response.
-    type DispatchFuture: Future<Item = (), Error = ErrorOrClose>;
+    type DispatchFuture: Future<Item = (), Error = ErrorOrClose> + Send;
 
     /// Dispatches a request and returns a future with no response.
     fn dispatch(&mut self, request: &mut DecodeBuf) -> Self::DispatchFuture;
@@ -48,10 +44,10 @@ impl<S: Stub> Future for DispatchResponseFutureWithId<S> {
     type Item = (u64, EncodeBuf);
     type Error = ErrorOrClose;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        match self.future.poll() {
+    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+        match self.future.poll(cx) {
             Ok(Async::Ready(buf)) => Ok(Async::Ready((self.id, buf))),
-            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Ok(Async::Pending) => Ok(Async::Pending),
             Err(e) => Err(e),
         }
     }
@@ -62,7 +58,7 @@ impl<S: Stub> Future for DispatchResponseFutureWithId<S> {
 /// This type is a future which must be polled by an executor.
 #[must_use = "futures do nothing unless polled"]
 pub struct Server<S: Stub> {
-    channel: tokio_fuchsia::Channel,
+    channel: async::Channel,
     stub: S,
     buf: DecodeBuf,
     dispatch_futures: FuturesUnordered<S::DispatchFuture>,
@@ -71,10 +67,10 @@ pub struct Server<S: Stub> {
 
 impl<S: Stub> Server<S> {
     /// Create a new FIDL server on the given channel.
-    pub fn new(stub: S, channel: Channel, handle: &Handle) -> io::Result<Self> {
+    pub fn new(stub: S, channel: async::Channel) -> io::Result<Self> {
         Ok(Server {
-            stub: stub,
-            channel: tokio_fuchsia::Channel::from_channel(channel, handle)?,
+            stub,
+            channel,
             buf: DecodeBuf::new(),
             dispatch_futures: FuturesUnordered::new(),
             dispatch_response_futures: FuturesUnordered::new(),
@@ -86,12 +82,12 @@ impl<S: Stub> Future for Server<S> {
     type Item = ();
     type Error = Error;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         loop {
             let mut made_progress_this_loop_iter = false;
 
             // Handle one dispatch_future at a time if any are available
-            match self.dispatch_futures.poll() {
+            match self.dispatch_futures.poll_next(cx) {
                 Ok(Async::Ready(Some(()))) => made_progress_this_loop_iter = true,
                 Ok(_) => {},
                 Err(ErrorOrClose::CloseChannel) => return Ok(Async::Ready(())),
@@ -99,7 +95,7 @@ impl<S: Stub> Future for Server<S> {
             }
 
             // Handle one dispatch_response_future at a time if any are available
-            match self.dispatch_response_futures.poll() {
+            match self.dispatch_response_futures.poll_next(cx) {
                 Ok(Async::Ready(Some((id, mut encode_buf)))) => {
                     encode_buf.set_message_id(id);
                     let (out_buf, handles) = encode_buf.get_mut_content();
@@ -112,8 +108,8 @@ impl<S: Stub> Future for Server<S> {
             }
 
             // Now process incoming requests
-            match self.channel.recv_from(self.buf.get_mut_buf()) {
-                Ok(()) => {
+            match self.channel.recv_from(self.buf.get_mut_buf(), cx) {
+                Ok(Async::Ready(())) => {
                     match self.buf.decode_message_header() {
                         Some(MsgType::Request) => {
                             self.dispatch_futures.push(self.stub.dispatch(&mut self.buf));
@@ -129,12 +125,12 @@ impl<S: Stub> Future for Server<S> {
                         }
                     }
                 }
-                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                Ok(Async::Pending) => {
                     if !made_progress_this_loop_iter {
-                        return Ok(Async::NotReady);
+                        return Ok(Async::Pending);
                     }
                 }
-                Err(ref e) if e.kind() == io::ErrorKind::ConnectionAborted => {
+                Err(zircon::Status::PEER_CLOSED) => {
                     return Ok(Async::Ready(()));
                 }
                 Err(e) => return Err(Error::ServerRequestRead(e)),
@@ -145,12 +141,12 @@ impl<S: Stub> Future for Server<S> {
 
 #[cfg(test)]
 mod tests {
-    use tokio_core::reactor::{Core, Timeout};
-    use std::time::Duration;
-    use zircon::{self, MessageBuf};
-    use tokio_fuchsia::Channel;
+    use async::TimeoutExt;
     use futures::future;
+    use futures::prelude::*;
     use byteorder::{ByteOrder, LittleEndian};
+    use zircon::prelude::*;
+    use zircon::{self, MessageBuf};
     use super::*;
     use {ClientEnd, ServerEnd, Result};
 
@@ -159,10 +155,10 @@ mod tests {
 
     impl FidlService for DummyService {
         type Proxy = ();
-        fn new_proxy(_: ClientEnd<Self>, _: &Handle) -> Result<Self::Proxy> {
+        fn new_proxy(_: ClientEnd<Self>) -> Result<Self::Proxy> {
             unimplemented!()
         }
-        fn new_pair(_: &Handle) -> Result<(Self::Proxy, ServerEnd<Self>)> {
+        fn new_pair() -> Result<(Self::Proxy, ServerEnd<Self>)> {
             unimplemented!()
         }
         const NAME: &'static str = "DUMMY_SERVICE";
@@ -191,52 +187,46 @@ mod tests {
 
     #[test]
     fn simple_server() {
-        let mut core = Core::new().unwrap();
-        let handle = core.handle();
+        let mut executor = async::Executor::new().unwrap();
+
         let req = EncodeBuf::new_request(42);
 
         let (client_end, server_end) = zircon::Channel::create().unwrap();
+        let server_end = async::Channel::from_channel(server_end).unwrap();
         let dispatcher = DummyDispatcher;
-        let server = Server::new(dispatcher, server_end, &handle).unwrap();
+        let server = Server::new(dispatcher, server_end).unwrap();
 
-        // add a timeout to receiver so if test is broken it doesn't take forever
-        let rcv_timeout = Timeout::new(Duration::from_millis(300), &handle)
-            .unwrap()
-            .map_err(Error::TestIo);
-        let receiver = server.select(rcv_timeout).map(|(_, _)| ()).map_err(
-            |(err, _)| err,
-        );
+        // add a timeout to server
+        let receiver = server.on_timeout(300.millis().after_now(), || Ok(())).unwrap();
 
-        let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().map(|()| {
+        let sender = async::Timer::new(100.millis().after_now()).unwrap().map(|()| {
             let mut handles = Vec::new();
             client_end.write(req.get_bytes(), &mut handles).unwrap();
-        }).map_err(Error::TestIo);
+        });
 
         let done = receiver.join(sender);
-        core.run(done).unwrap();
+        executor.run_singlethreaded(done).unwrap();
     }
 
     #[test]
     fn simple_response_server() {
-        let mut core = Core::new().unwrap();
-        let handle = core.handle();
+        let mut executor = async::Executor::new().unwrap();
+
         let req = EncodeBuf::new_request_expecting_response(43);
 
         let (client_end, server_end) = zircon::Channel::create().unwrap();
+        let server_end = async::Channel::from_channel(server_end).unwrap();
         let dispatcher = DummyDispatcher;
-        let server = Server::new(dispatcher, server_end, &handle).unwrap();
+        let server = Server::new(dispatcher, server_end).unwrap();
 
-        let client_end = Channel::from_channel(client_end, &handle).unwrap();
+        let client_end = async::Channel::from_channel(client_end).unwrap();
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let rcv_timeout = Timeout::new(Duration::from_millis(300), &handle)
-            .unwrap()
-            .map_err(Error::TestIo);
-        let receiver = server.select(rcv_timeout).map(|(_, _)| ()).map_err(
-            |(err, _)| err,
-        );
+        let receiver = server.on_timeout(
+            300.millis().after_now(),
+            || panic!("server timed out")).unwrap();
 
-        let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().and_then(|()| {
+        let sender = async::Timer::new(100.millis().after_now()).unwrap().and_then(|()| {
             let mut handles = Vec::new();
             client_end.write(req.get_bytes(), &mut handles).unwrap();
             let buffer = MessageBuf::new();
@@ -245,9 +235,9 @@ mod tests {
                 println!("{:?}", buf.bytes());
                 assert_eq!(bytes, buf.bytes());
             })
-        }).map_err(Error::TestIo);
+        });
 
-        let done = receiver.join(sender);
-        core.run(done).unwrap();
+        let done = receiver.join(sender.map_err(Error::TestIo));
+        executor.run_singlethreaded(done).unwrap();
     }
 }

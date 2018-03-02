@@ -7,14 +7,13 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
+extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate mxruntime;
 extern crate fdio;
 #[macro_use] extern crate failure;
 extern crate fidl;
 extern crate futures;
-extern crate tokio_core;
-extern crate tokio_fuchsia;
 
 // Generated FIDL bindings
 extern crate garnet_public_lib_app_fidl;
@@ -25,14 +24,11 @@ use garnet_public_lib_app_fidl::{
     ApplicationLaunchInfo,
 };
 use fidl::FidlService;
-use zx::Channel;
-use tokio_core::reactor::Handle as TokioHandle;
+
 #[allow(unused_imports)]
 use failure::{Error, ResultExt, Fail};
 use futures::prelude::*;
 use futures::stream::FuturesUnordered;
-use tokio_fuchsia::Channel as TokioChannel;
-use tokio_fuchsia::RecvMsg;
 
 /// Tools for starting or connecting to existing Fuchsia applications and services.
 pub mod client {
@@ -40,11 +36,10 @@ pub mod client {
 
     #[inline]
     /// Connect to a FIDL service using the application root namespace.
-    pub fn connect_to_service<Service: FidlService>(
-        handle: &TokioHandle
-    ) -> Result<Service::Proxy, Error>
+    pub fn connect_to_service<Service: FidlService>()
+        -> Result<Service::Proxy, Error>
     {
-        let (proxy, server)  = Service::new_pair(handle)?;
+        let (proxy, server)  = Service::new_pair()?;
 
         let service_path = format!("/svc/{}", Service::NAME);
         fdio::service_connect(&service_path, server.into_channel())?;
@@ -60,8 +55,8 @@ pub mod client {
     impl Launcher {
         #[inline]
         /// Create a new application launcher.
-        pub fn new(handle: &TokioHandle) -> Result<Self, Error> {
-            let app_launcher = connect_to_service::<ApplicationLauncher::Service>(handle)?;
+        pub fn new() -> Result<Self, Error> {
+            let app_launcher = connect_to_service::<ApplicationLauncher::Service>()?;
             Ok(Launcher { app_launcher })
         }
 
@@ -70,11 +65,10 @@ pub mod client {
             &self,
             url: String,
             arguments: Option<Vec<String>>,
-            handle: &TokioHandle
         ) -> Result<App, Error>
         {
 
-            let (app_controller, controller_server_end) = ApplicationController::Service::new_pair(handle)?;
+            let (app_controller, controller_server_end) = ApplicationController::Service::new_pair()?;
             let (service_request, directory_server_chan) = zx::Channel::create()?;
 
             let launch_info = ApplicationLaunchInfo {
@@ -109,12 +103,12 @@ pub mod client {
     impl App {
         #[inline]
         /// Connect to a service provided by the `App`.
-        pub fn connect_to_service<Service: FidlService>(&self, handle: &TokioHandle)
+        pub fn connect_to_service<Service: FidlService>(&self)
             -> Result<Service::Proxy, Error>
         {
             let (client_channel, server_channel) = zx::Channel::create()?;
             fdio::service_connect_at(&self.service_request, Service::NAME, server_channel)?;
-            Ok(Service::new_proxy(fidl::ClientEnd::new(client_channel), handle)?)
+            Ok(Service::new_proxy(fidl::ClientEnd::new(client_channel))?)
         }
     }
 }
@@ -172,14 +166,14 @@ pub mod server {
     /// A collection of `ServiceFactory`s.
     pub trait ServiceFactories {
         /// Spawn a service of type `service_name` on `channel`.
-        fn spawn_service(&mut self, service_name: String, channel: Channel, handle: &TokioHandle);
+        fn spawn_service(&mut self, service_name: String, channel: async::Channel);
     }
 
     impl ServiceFactories for HNil {
         #[inline]
-        fn spawn_service(&mut self, service_name: String, _: Channel, _: &TokioHandle) {
+        fn spawn_service(&mut self, service_name: String, _: async::Channel) {
             // TODO: proper logging
-            println!("No service found with name \"{}\"", service_name);
+            eprintln!("No service found with name \"{}\"", service_name);
         }
     }
 
@@ -188,14 +182,15 @@ pub mod server {
             Tail: ServiceFactories
     {
         #[inline]
-        fn spawn_service(&mut self, service_name: String, channel: Channel, handle: &TokioHandle) {
+        fn spawn_service(&mut self, service_name: String, channel: async::Channel) {
             if service_name == <Factory::Stub as fidl::Stub>::Service::NAME {
-                match fidl::Server::new(self.head.create(), channel, handle) {
+                match fidl::Server::new(self.head.create(), channel) {
                     Ok(server) => {
-                        handle.spawn(server.map_err(|e|
-                            // TODO: proper logging
-                            eprintln!("Error running server: {:?}", e)
-                        ));
+                        async::spawn(
+                            server.recover(|e|
+                                // TODO: proper logging
+                                eprintln!("Error running server: {:?}", e)
+                            ));
                     }
                     Err(e) => {
                         // TODO: proper logging
@@ -203,7 +198,7 @@ pub mod server {
                     }
                 }
             } else {
-                self.tail.spawn_service(service_name, channel, handle);
+                self.tail.spawn_service(service_name, channel);
             }
         }
     }
@@ -223,8 +218,8 @@ pub mod server {
         }
 
         /// Spawn a service instance
-        pub fn spawn_service(&mut self, service_name: String, channel: Channel, handle: &TokioHandle) {
-            self.services.spawn_service(service_name, channel, handle)
+        pub fn spawn_service(&mut self, service_name: String, channel: async::Channel) {
+            self.services.spawn_service(service_name, channel)
         }
     }
 
@@ -240,16 +235,15 @@ pub mod server {
         }
 
         /// Start serving directory protocol service requests on the process PA_SERVICE_REQUEST handle
-        pub fn start(self, handle: &TokioHandle) -> Result<FdioServer<Services>, Error> {
+        pub fn start(self) -> Result<FdioServer<Services>, Error> {
             let fdio_handle = mxruntime::get_startup_handle(mxruntime::HandleType::ServiceRequest)
                 .ok_or(MissingStartupHandle)?;
 
-            let fdio_channel = TokioChannel::from_channel(fdio_handle.into(), &handle)?;
+            let fdio_channel = async::Channel::from_channel(fdio_handle.into())?;
 
             let mut server = FdioServer{
                 readers: FuturesUnordered::new(),
                 factories: self.services,
-                handle: handle.clone(),
             };
 
             server.serve_channel(fdio_channel);
@@ -263,14 +257,13 @@ pub mod server {
     /// newly spawned fidl service produced by the factory F.
     #[must_use = "futures must be polled"]
     pub struct FdioServer<F: ServiceFactories + 'static> {
-        readers: FuturesUnordered<RecvMsg<zx::MessageBuf>>,
+        readers: FuturesUnordered<async::RecvMsg<zx::MessageBuf>>,
         factories: F,
-        handle: TokioHandle,
     }
 
     impl<F: ServiceFactories + 'static> FdioServer<F> {
 
-        fn dispatch(&mut self, chan: &TokioChannel, buf: zx::MessageBuf) -> zx::MessageBuf {
+        fn dispatch(&mut self, chan: &async::Channel, buf: zx::MessageBuf) -> zx::MessageBuf {
             // TODO(raggi): provide an alternative to the into() here so that we
             // don't need to pass the buf in owned back and forward.
             let mut msg: fdio::rio::Message = buf.into();
@@ -315,7 +308,7 @@ pub mod server {
 
             if msg.op() == fdio::fdio_sys::ZXRIO_CLONE {
                 if let Some(c) = reply_channel {
-                    if let Ok(fdio_chan) = TokioChannel::from_channel(c, &self.handle) {
+                    if let Ok(fdio_chan) = async::Channel::from_channel(c) {
                         self.serve_channel(fdio_chan);
                     }
                 }
@@ -323,6 +316,7 @@ pub mod server {
             }
 
             let service_channel = reply_channel.unwrap();
+            let service_channel = async::Channel::from_channel(service_channel).unwrap();
 
             // TODO(raggi): re-arrange things to avoid the copy here
             let path = std::str::from_utf8(msg.data()).unwrap().to_owned();
@@ -332,11 +326,11 @@ pub mod server {
                 &path
             );
 
-            self.factories.spawn_service(path, service_channel, &self.handle);
+            self.factories.spawn_service(path, service_channel);
             msg.into()
         }
 
-        fn serve_channel(&mut self, chan: TokioChannel) {
+        fn serve_channel(&mut self, chan: async::Channel) {
             let rmsg = chan.recv_msg(zx::MessageBuf::new());
             self.readers.push(rmsg);
         }
@@ -347,14 +341,14 @@ pub mod server {
         type Item = ();
         type Error = Error;
 
-        fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
             loop {
-                match self.readers.poll() {
+                match self.readers.poll_next(cx) {
                     Ok(Async::Ready(Some((chan, buf)))) => {
                         let buf = self.dispatch(&chan, buf);
                         self.readers.push(chan.recv_msg(buf));
                     },
-                    Ok(Async::Ready(None)) | Ok(Async::NotReady) => return Ok(Async::NotReady),
+                    Ok(Async::Ready(None)) | Ok(Async::Pending) => return Ok(Async::Pending),
                     Err(_) => {
                         // errors are ignored, as we assume that the channel should still be read from.
                     },

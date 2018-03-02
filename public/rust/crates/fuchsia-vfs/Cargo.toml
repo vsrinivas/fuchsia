@@ -8,10 +8,9 @@ repository = "https://fuchsia.googlesource.com/garnet/"
 
 [dependencies]
 fdio = "0.2"
+fuchsia-async = "0.1"
 fuchsia-zircon = "0.3"
-tokio-fuchsia = "0.1"
-futures = "0.1"
-tokio-core = "0.1"
+futures = "=0.2.0-alpha"
 bytes = "0.4"
 libc = "0.2"
 

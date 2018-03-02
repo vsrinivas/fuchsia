@@ -4,18 +4,19 @@
 
 //! Fuchsia VFS Server Bindings
 
+#![deny(warnings)]
+
 extern crate bytes;
 extern crate fdio;
-extern crate fuchsia_zircon as zircon;
+extern crate fuchsia_async as async;
+extern crate fuchsia_zircon as zx;
+#[macro_use]
 extern crate futures;
 extern crate libc;
-#[macro_use]
-extern crate tokio_core;
-extern crate tokio_fuchsia;
 
 use std::path::Path;
 use std::sync::Arc;
-use zircon::AsHandleRef;
+use zx::AsHandleRef;
 
 mod mount;
 
@@ -26,22 +27,25 @@ pub fn mount(
     path: &Path,
     vfs: Arc<Vfs>,
     vn: Arc<Vnode>,
-    handle: &tokio_core::reactor::Handle,
-) -> Result<mount::Mount, zircon::Status> {
-    let (c1, c2) = zircon::Channel::create()?;
+) -> Result<mount::Mount, zx::Status> {
+    let (c1, c2) = zx::Channel::create()?;
     let m = mount::mount(path, c1)?;
     c2.signal_handle(
-        zircon::Signals::NONE,
-        zircon::Signals::USER_0,
+        zx::Signals::NONE,
+        zx::Signals::USER_0,
     )?;
-    let c = Connection::new(Arc::clone(&vfs), vn, c2, handle)?;
-    vfs.register_connection(c, handle);
+    let c = Connection::new(Arc::clone(&vfs), vn, c2)?;
+    vfs.register_connection(c);
     Ok(m)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use futures::channel::oneshot;
+    use futures::io;
+    use std::fs;
+    use std::thread;
 
     extern crate tempdir;
 
@@ -55,30 +59,30 @@ mod test {
 
     #[test]
     fn mount_basic() {
-        let mut core = tokio_core::reactor::Core::new().unwrap();
+        let mut executor = async::Executor::new().unwrap();
 
         let bfs = Arc::new(BasicFS {});
         let bvn = Arc::new(BasicVnode {});
 
         let d = tempdir::TempDir::new("mount_basic").unwrap();
 
-        let m = mount(&d.path(), bfs, bvn, &core.handle()).expect("mount");
+        let m = mount(&d.path(), bfs, bvn).expect("mount");
 
-        let (tx, rx) = futures::sync::oneshot::channel::<std::io::Error>();
+        let (tx, rx) = oneshot::channel::<io::Error>();
 
         let path = d.path().to_owned();
 
-        std::thread::spawn(move || {
-            let e = std::fs::OpenOptions::new()
+        thread::spawn(move || {
+            let e = fs::OpenOptions::new()
                 .read(true)
                 .open(path)
                 .expect_err("expected notsupported");
             tx.send(e).unwrap();
         });
 
-        let e = core.run(rx).unwrap();
+        let e = executor.run_singlethreaded(rx).unwrap();
 
-        assert_eq!(std::io::ErrorKind::Other, e.kind());
+        assert_eq!(io::ErrorKind::Other, e.kind());
 
         std::mem::drop(m);
     }

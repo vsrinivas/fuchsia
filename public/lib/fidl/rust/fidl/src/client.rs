@@ -5,13 +5,12 @@
 //! An implementation of a client for a fidl interface.
 
 use {ClientEnd, ServerEnd, EncodeBuf, DecodeBuf, MsgType, Error};
-
-use tokio_core::reactor::Handle;
-use tokio_fuchsia;
-use futures::{Async, Future, Poll, future};
-use futures::task::{self, Task};
+use async;
+use futures::future;
+use futures::prelude::*;
+use futures::task::Waker;
 use slab::Slab;
-use std::{io, mem};
+use std::mem;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -25,10 +24,10 @@ pub trait FidlService: Sized {
     type Proxy;
 
     /// Create a new proxy from a `ClientEnd`.
-    fn new_proxy(client_end: ClientEnd<Self>, handle: &Handle) -> Result<Self::Proxy, Error>;
+    fn new_proxy(client_end: ClientEnd<Self>) -> Result<Self::Proxy, Error>;
 
     /// Create a new `Proxy`/`ServerEnd` pair.
-    fn new_pair(handle: &Handle) -> Result<(Self::Proxy, ServerEnd<Self>), Error>;
+    fn new_pair() -> Result<(Self::Proxy, ServerEnd<Self>), Error>;
 
     /// The name of the service.
     const NAME: &'static str;
@@ -42,7 +41,7 @@ pub trait FidlService: Sized {
 #[derive(Debug)]
 enum MessageInterest {
     WillPoll,
-    Waiting(Task),
+    Waiting(Waker),
     Received(DecodeBuf),
 }
 
@@ -68,7 +67,7 @@ impl MessageInterest {
 /// A shared client channel which tracks expected and received responses
 #[derive(Debug)]
 struct ClientInner {
-    channel: tokio_fuchsia::Channel,
+    channel: async::Channel,
 
     /// The number of `Some` entries in `message_interests`.
     /// This is used to prevent unnecessary locking.
@@ -93,7 +92,12 @@ impl ClientInner {
     }
 
     /// Check for receipt of a message with a given ID.
-    fn poll_recv(&self, id: usize, task_to_register_opt: Option<&Task>) -> Poll<DecodeBuf, Error> {
+    fn poll_recv(
+        &self,
+        id: usize,
+        waker_to_register_opt: Option<&Waker>,
+        cx: &mut task::Context
+    ) -> Poll<DecodeBuf, Error> {
         // TODO(cramertj) return errors if one has occured _ever_ in poll_recv, not just if
         // one happens on this call.
 
@@ -114,33 +118,29 @@ impl ClientInner {
         // is found, or the channel is exhausted.
         loop {
             let mut buf = DecodeBuf::new();
-            match self.channel.recv_from(buf.get_mut_buf()) {
-                Ok(()) => {},
-                Err(e) => {
-                    if e.kind() != io::ErrorKind::WouldBlock {
-                        return Err(Error::ClientRead(e));
-                    }
+            if let Async::Pending =
+                self.channel.recv_from(buf.get_mut_buf(), cx)
+                    .map_err(Error::ClientRead)?
+            {
+                let mut message_interests = self.message_interests.lock().unwrap();
 
-                    let mut message_interests = self.message_interests.lock().unwrap();
-
-                    if message_interests.get(id)
-                        .expect("Polled unregistered interst")
-                        .is_received()
-                    {
-                        // If, by happy accident, we just raced to getting the result,
-                        // then yay! Return success.
-                        let buf = message_interests.remove(id).unwrap_received();
-                        self.received_messages_count.fetch_sub(1, Ordering::SeqCst);
-                        return Ok(Async::Ready(buf));
-                    } else {
-                        // Set the current task to be notified when a response arrives.
-                        if let Some(task_to_register) = task_to_register_opt {
-                            *message_interests.get_mut(id)
-                                .expect("Polled unregistered interest") =
-                                    MessageInterest::Waiting(task_to_register.clone());
-                        }
-                        return Ok(Async::NotReady);
+                if message_interests.get(id)
+                    .expect("Polled unregistered interst")
+                    .is_received()
+                {
+                    // If, by happy accident, we just raced to getting the result,
+                    // then yay! Return success.
+                    let buf = message_interests.remove(id).unwrap_received();
+                    self.received_messages_count.fetch_sub(1, Ordering::SeqCst);
+                    return Ok(Async::Ready(buf));
+                } else {
+                    // Set the current waker to be notified when a response arrives.
+                    if let Some(waker_to_register) = waker_to_register_opt {
+                        *message_interests.get_mut(id)
+                            .expect("Polled unregistered interest") =
+                                MessageInterest::Waiting(waker_to_register.clone());
                     }
+                    return Ok(Async::Pending);
                 }
             }
 
@@ -161,9 +161,9 @@ impl ClientInner {
                 if let Some(entry) = message_interests.get_mut(recvd_id) {
                     let old_entry = mem::replace(entry, MessageInterest::Received(buf));
                     self.received_messages_count.fetch_add(1, Ordering::SeqCst);
-                    if let MessageInterest::Waiting(task) = old_entry {
+                    if let MessageInterest::Waiting(waker) = old_entry {
                         // Wake up the task to let them know a message has arrived.
-                        task.notify();
+                        waker.wake();
                     }
                 }
             }
@@ -193,10 +193,7 @@ pub type SendMessageExpectResponseFuture = future::Either<
 
 impl Client {
     /// Create a new client.
-    pub fn new(channel: tokio_fuchsia::Channel, handle: &Handle) -> Client {
-        // Unused for now-- left in public API to allow for future backwards
-        // compatibility and to allow for future changes to spawn futures.
-        let _ = handle;
+    pub fn new(channel: async::Channel) -> Client {
         Client {
             inner: Arc::new(ClientInner {
                 channel: channel,
@@ -220,14 +217,14 @@ impl Client {
         buf.set_message_id(id as u64);
         let (out_buf, handles) = buf.get_mut_content();
         if let Err(e) = self.inner.channel.write(out_buf, handles) {
-            return future::Either::A(future::err(Error::ClientWrite(e)));
+            return future::err(Error::ClientWrite(e)).left();
         }
 
-        future::Either::B(MessageResponse {
+        MessageResponse {
             id: id,
             client: Some(self.inner.clone()),
-            last_registered_task: None,
-        })
+            last_registered_waker: None,
+        }.right()
     }
 }
 
@@ -238,28 +235,29 @@ pub struct MessageResponse {
     id: usize,
     // `None` if the message response has been recieved
     client: Option<Arc<ClientInner>>,
-    last_registered_task: Option<Task>,
+    last_registered_waker: Option<Waker>,
 }
 
 impl Future for MessageResponse {
     type Item = DecodeBuf;
     type Error = Error;
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         let res;
         {
             let client = self.client.as_ref().ok_or(Error::PollAfterCompletion)?;
 
-            let current_task_is_registered =
-                self.last_registered_task
+            let current_waker_is_registered =
+                self.last_registered_waker
                     .as_ref()
-                    .map_or(false, |task| task.will_notify_current());
+                    // TODO: re-enable when "PartialEq for Waker" is resolved
+                    .map_or(false, |_waker| false/*task.will_notify_current()*/);
 
-            if !current_task_is_registered {
-                let current = task::current();
-                res = client.poll_recv(self.id, Some(&current));
-                self.last_registered_task = Some(current);
+            if !current_waker_is_registered {
+                let waker = cx.waker();
+                res = client.poll_recv(self.id, Some(&waker), cx);
+                self.last_registered_waker = Some(waker);
             } else {
-                res = client.poll_recv(self.id, None);
+                res = client.poll_recv(self.id, None, cx);
             }
         }
 
@@ -282,23 +280,23 @@ impl Drop for MessageResponse {
 
 #[cfg(test)]
 mod tests {
-    use zircon::{self, MessageBuf};
-    use std::time::Duration;
-    use tokio_fuchsia::Channel;
-    use tokio_core::reactor::{Core, Timeout};
+    use async::{self, TimeoutExt};
     use byteorder::{ByteOrder, LittleEndian};
+    use futures::io;
+    use futures::prelude::*;
+    use zircon::prelude::*;
+    use zircon::{self, MessageBuf};
     use super::*;
 
     #[test]
     fn client() {
-        let mut core = Core::new().unwrap();
-        let handle = core.handle();
+        let mut executor = async::Executor::new().unwrap();
 
         let (client_end, server_end) = zircon::Channel::create().unwrap();
-        let client_end = Channel::from_channel(client_end, &handle).unwrap();
-        let client = Client::new(client_end, &handle);
+        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
 
-        let server = Channel::from_channel(server_end, &handle).unwrap();
+        let server = async::Channel::from_channel(server_end).unwrap();
         let mut buffer = MessageBuf::new();
         let receiver = server.recv_msg(&mut buffer).map(|(_chan, buf)| {
             let bytes = &[16, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0];
@@ -307,30 +305,28 @@ mod tests {
         });
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let rcv_timeout = Timeout::new(Duration::from_millis(300), &handle).unwrap().map(|()| {
-            panic!("did not receive message in time!");
-        });
-        let receiver = receiver.select(rcv_timeout).map(|(_,_)| ()).map_err(|(err,_)| err);
+        let receiver = receiver.on_timeout(
+            300.millis().after_now(),
+            || panic!("did not receive message in time!")).unwrap();
 
-        let sender = Timeout::new(Duration::from_millis(100), &handle).unwrap().map(|()|{
+        let sender = async::Timer::new(100.millis().after_now()).unwrap().map(|()|{
             let mut req = EncodeBuf::new_request(42);
             client.send_msg(&mut req).unwrap();
         });
 
         let done = receiver.join(sender);
-        core.run(done).unwrap();
+        executor.run_singlethreaded(done).unwrap();
     }
 
     #[test]
     fn client_with_response() {
-        let mut core = Core::new().unwrap();
-        let handle = core.handle();
+        let mut executor = async::Executor::new().unwrap();
 
         let (client_end, server_end) = zircon::Channel::create().unwrap();
-        let client_end = Channel::from_channel(client_end, &handle).unwrap();
-        let client = Client::new(client_end, &handle);
+        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
 
-        let server = Channel::from_channel(server_end, &handle).unwrap();
+        let server = async::Channel::from_channel(server_end).unwrap();
         let mut buffer = MessageBuf::new();
         let receiver = server.recv_msg(&mut buffer).map(|(chan, buf)| {
             let bytes = &[24, 0, 0, 0, 1, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -345,10 +341,10 @@ mod tests {
         });
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let rcv_timeout = Timeout::new(Duration::from_millis(300), &handle).unwrap().map(|()| {
-            panic!("did not receive message in time!");
-        });
-        let receiver = receiver.select(rcv_timeout).map(|(_,_)| ()).map_err(|(err,_)| err);
+        let receiver = receiver.on_timeout(
+            300.millis().after_now(),
+            || panic!("did not receiver message in time!"
+        )).unwrap();
 
         let mut req = EncodeBuf::new_request_expecting_response(42);
         let sender = client.send_msg_expect_response(&mut req)
@@ -358,12 +354,12 @@ mod tests {
             });
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let send_timeout = Timeout::new(Duration::from_millis(300), &handle).unwrap().map(|()| {
-            panic!("did not receive response in time!");
-        });
-        let sender = sender.select(send_timeout).map(|(_,_)| ()).map_err(|(err,_)| err);
+        let sender = sender.on_timeout(
+            300.millis().after_now(),
+            || panic!("did not receive response in time!")
+        ).unwrap();
 
-        let done = receiver.join(sender);
-        core.run(done).unwrap();
+        let done = receiver.join(sender.err_into());
+        executor.run_singlethreaded(done).unwrap();
     }
 }

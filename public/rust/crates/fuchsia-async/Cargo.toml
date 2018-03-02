@@ -10,6 +10,6 @@ authors = ["cramertj <cramertj@google.com>"]
 [dependencies]
 crossbeam = "0.3.2"
 fuchsia-zircon = "0.3"
-futures = "0.2"
+futures = "=0.2.0-alpha"
 parking_lot = "0.4"
 slab = "0.4"

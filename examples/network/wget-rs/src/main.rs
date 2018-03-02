@@ -6,20 +6,17 @@
 
 extern crate failure;
 extern crate fidl;
-extern crate fuchsia_app;
+extern crate fuchsia_app as app;
+extern crate fuchsia_async as async;
 extern crate futures;
 extern crate garnet_public_lib_network_fidl;
-extern crate tokio_core;
-extern crate tokio_fuchsia;
-extern crate tokio_io;
 
 use failure::Error;
 use fidl::FidlService;
-use futures::{Future, IntoFuture};
+use futures::prelude::*;
+use futures::io::AllowStdIo;
+
 use garnet_public_lib_network_fidl as netsvc;
-use std::io;
-use tokio_core::reactor;
-use tokio_io::io::{AllowStdIo, copy};
 
 fn print_headers(resp: &netsvc::URLResponse) {
     println!(">>> Headers <<<");
@@ -55,15 +52,14 @@ fn main_res() -> Result<(), Error> {
         }
     };
 
-    // Set up tokio reactor
-    let mut core = reactor::Core::new()?;
-    let handle = core.handle();
+    // Set up async executor
+    let mut exec = async::Executor::new()?;
 
     // Connect to the network service
-    let net = fuchsia_app::client::connect_to_service::<netsvc::NetworkService::Service>(&handle)?;
+    let net = app::client::connect_to_service::<netsvc::NetworkService::Service>()?;
 
     // Create a URLLoader instance
-    let (loader_proxy, loader_server) = netsvc::URLLoader::Service::new_pair(&handle)?;
+    let (loader_proxy, loader_server) = netsvc::URLLoader::Service::new_pair()?;
     net.create_url_loader(loader_server)?;
 
     // Send the URLRequest to fetch the webpage
@@ -78,7 +74,7 @@ fn main_res() -> Result<(), Error> {
         response_body_mode: netsvc::URLRequestResponseBodyMode::Stream,
     };
 
-    let fut = loader_proxy.start(req).map_err(Error::from).and_then(|resp| {
+    let fut = loader_proxy.start(req).err_into().and_then(|resp| {
         if let Some(e) = resp.error {
             let code = e.code;
             println!("Got error: {} ({})",
@@ -90,9 +86,9 @@ fn main_res() -> Result<(), Error> {
 
         match resp.body.map(|x| *x) {
             Some(netsvc::URLBody::Stream(s)) => {
-                Some(tokio_fuchsia::Socket::from_socket(s, &handle)
-                        .map_err(Error::from)
-                        .into_future())
+                Some(async::Socket::from_socket(s)
+                        .into_future()
+                        .err_into())
             }
             Some(netsvc::URLBody::Buffer(_)) |
             Some(netsvc::URLBody::SizedBuffer(_)) |
@@ -104,12 +100,12 @@ fn main_res() -> Result<(), Error> {
             println!(">>> Body <<<");
 
             // Copy the bytes from the socket to stdout
-            copy(socket, AllowStdIo::new(io::stdout()))
+            socket.copy_into(AllowStdIo::new(::std::io::stdout()))
                 .map(|_| println!("\n>>> EOF <<<"))
-                .map_err(Error::from)
+                .err_into()
         })
     }).map(|_| ());
 
     //// Run the future to completion
-    core.run(fut)
+    exec.run_singlethreaded(fut)
 }

@@ -9,15 +9,14 @@
 
 #[macro_use]
 extern crate fdio;
+extern crate fuchsia_async as async;
 #[macro_use]
-extern crate fuchsia_zircon as zircon;
+extern crate fuchsia_zircon as zx;
+#[macro_use]
 extern crate futures;
-#[macro_use]
-extern crate tokio_core;
-extern crate tokio_fuchsia;
 
 use fdio::fdio_sys;
-use futures::{Async, Stream};
+use futures::{Async, Stream, task};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
@@ -25,8 +24,7 @@ use std::os::raw;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
-use tokio_core::reactor::Handle as TokioHandle;
-use zircon::HandleBased;
+use zx::HandleBased;
 
 /// Describes the type of event that occurred in the direcotry being watched.
 #[repr(C)]
@@ -58,22 +56,22 @@ pub struct WatchMessage {
 #[derive(Debug)]
 #[must_use = "futures/streams must be polled"]
 pub struct Watcher {
-    ch: tokio_fuchsia::Channel,
+    ch: async::Channel,
     // If idx >= buf.bytes().len(), you must call reset_buf() before get_next_msg().
-    buf: zircon::MessageBuf,
+    buf: zx::MessageBuf,
     idx: usize,
 }
 
 impl Watcher {
     /// Creates a new `Watcher` for the directory given by `dir`.
-    pub fn new(dir: &File, handle: &TokioHandle) -> Result<Watcher, zircon::Status> {
-        let (h0, h1) = zircon::Channel::create()?;
+    pub fn new(dir: &File) -> Result<Watcher, zx::Status> {
+        let (h0, h1) = zx::Channel::create()?;
         let vwd = vfs_watch_dir_t {
             h: h1.into_raw(),
             mask: VFS_WATCH_MASK_ALL,
             options: 0,
         };
-        zircon::Status::ok(
+        zx::Status::ok(
             // This is safe because no memory ownership is passed via fdio::ioctl.
             unsafe { fdio::ioctl_raw(dir.as_raw_fd(),
                                  IOCTL_VFS_WATCH_DIR,
@@ -83,9 +81,9 @@ impl Watcher {
                                  0) as i32 }
             )?;
 
-        let mut buf = zircon::MessageBuf::new();
+        let mut buf = zx::MessageBuf::new();
         buf.ensure_capacity_bytes(VFS_WATCH_MSG_MAX);
-        Ok(Watcher{ ch: tokio_fuchsia::Channel::from_channel(h0, handle)?, buf: buf, idx: 0})
+        Ok(Watcher{ ch: async::Channel::from_channel(h0)?, buf: buf, idx: 0})
     }
 
     fn reset_buf(&mut self) {
@@ -110,12 +108,12 @@ impl Stream for Watcher {
     type Item = WatchMessage;
     type Error = io::Error;
 
-    fn poll(&mut self) -> futures::Poll<Option<Self::Item>, Self::Error> {
+    fn poll_next(&mut self, cx: &mut task::Context) -> futures::Poll<Option<Self::Item>, Self::Error> {
         if self.idx >= self.buf.bytes().len() {
             self.reset_buf();
         }
         if self.idx == 0 {
-            try_nb!(self.ch.recv_from(&mut self.buf));
+            try_ready!(self.ch.recv_from(&mut self.buf, cx));
         }
         Ok(Async::Ready(Some(self.get_next_msg())))
     }
@@ -124,7 +122,7 @@ impl Stream for Watcher {
 #[repr(C)]
 #[derive(Debug)]
 struct vfs_watch_dir_t {
-    h: zircon::sys::zx_handle_t,
+    h: zx::sys::zx_handle_t,
     mask: u32,
     options: u32,
 }
@@ -193,28 +191,30 @@ const IOCTL_VFS_WATCH_DIR: raw::c_int = make_ioctl!(
 #[cfg(test)]
 mod tests {
     extern crate tempdir;
-    extern crate tokio_core;
 
-    use futures::Future;
-    use futures::future::Either;
-    use self::tempdir::TempDir;
-    use self::tokio_core::reactor;
-    use std::path::Path;
-    use std::time::Duration;
     use super::*;
 
-    macro_rules! one_step {
-        ($core:ident, $s:expr) => {
-            {
-                let timeout = reactor::Timeout::new(Duration::from_millis(500), &$core.handle()).unwrap();
-                match $core.run($s.into_future().select2(timeout)) {
-                    Ok(Either::A(((msg, rest), _))) => (msg.unwrap(), rest),
-                    Ok(Either::B(_)) => panic!("Timed out waiting for watcher!"),
-                    Err(Either::A((e, _))) => panic!("Error waiting for watcher: {:?}", e),
-                    Err(Either::B((e, _))) => panic!("Error waiting for timeout: {:?}", e),
-                }
-            }
-        }
+    use async::TimeoutExt;
+    use futures::prelude::*;
+    use self::tempdir::TempDir;
+    use std::fmt::Debug;
+    use std::path::Path;
+    use zx::prelude::*;
+
+    fn one_step<S: Stream>(exec: &mut async::Executor, s: S) -> (S::Item, S)
+        where S::Error: Debug
+    {
+        let f = s.into_future();
+        let f = f.on_timeout(
+            500.millis().after_now(),
+            || panic!("timeout waiting for watcher")
+        ).unwrap();
+
+        let (next, stream) =
+            exec.run_singlethreaded(f)
+                .unwrap_or_else(|(e, _s)| panic!("Error waiting for watcher: {:?}", e));
+
+        (next.expect("the stream yielded no next item"), stream)
     }
 
     #[test]
@@ -222,21 +222,21 @@ mod tests {
         let tmp_dir = TempDir::new("vfs-watcher-test-existing").unwrap();
         let _ = File::create(tmp_dir.path().join("file1")).unwrap();
 
-        let mut core = reactor::Core::new().unwrap();
+        let exec = &mut async::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
-        let w = Watcher::new(&dir, &core.handle()).unwrap();
+        let w = Watcher::new(&dir).unwrap();
 
         // TODO(tkilbourn): this assumes "." always comes before "file1". If this test ever starts
         // flaking, handle the case of unordered EXISTING files.
-        let (msg, rest) = one_step!(core, w);
+        let (msg, rest) = one_step(exec, w);
         assert_eq!(WatchEvent::EXISTING, msg.event);
         assert_eq!(Path::new("."), msg.filename);
 
-        let (msg, rest) = one_step!(core, rest);
+        let (msg, rest) = one_step(exec, rest);
         assert_eq!(WatchEvent::EXISTING, msg.event);
         assert_eq!(Path::new("file1"), msg.filename);
 
-        let (msg, _) = one_step!(core, rest);
+        let (msg, _) = one_step(exec, rest);
         assert_eq!(WatchEvent::IDLE, msg.event);
     }
 
@@ -244,12 +244,12 @@ mod tests {
     fn test_add() {
         let tmp_dir = TempDir::new("vfs-watcher-test-add").unwrap();
 
-        let mut core = reactor::Core::new().unwrap();
+        let exec = &mut async::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
-        let mut w = Watcher::new(&dir, &core.handle()).unwrap();
+        let mut w = Watcher::new(&dir).unwrap();
 
         loop {
-            let (msg, rest) = one_step!(core, w);
+            let (msg, rest) = one_step(exec, w);
             w = rest;
             match msg.event {
                 WatchEvent::EXISTING => continue,
@@ -259,7 +259,7 @@ mod tests {
         }
 
         let _ = File::create(tmp_dir.path().join("file1")).unwrap();
-        let (msg, _) = one_step!(core, w);
+        let (msg, _) = one_step(exec, w);
         assert_eq!(WatchEvent::ADD_FILE, msg.event);
         assert_eq!(Path::new("file1"), msg.filename);
     }
@@ -271,12 +271,12 @@ mod tests {
         let filepath = tmp_dir.path().join(filename);
         let _ = File::create(&filepath).unwrap();
 
-        let mut core = reactor::Core::new().unwrap();
+        let exec = &mut async::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
-        let mut w = Watcher::new(&dir, &core.handle()).unwrap();
+        let mut w = Watcher::new(&dir).unwrap();
 
         loop {
-            let (msg, rest) = one_step!(core, w);
+            let (msg, rest) = one_step(exec, w);
             w = rest;
             match msg.event {
                 WatchEvent::EXISTING => continue,
@@ -286,7 +286,7 @@ mod tests {
         }
 
         ::std::fs::remove_file(&filepath).unwrap();
-        let (msg, _) = one_step!(core, w);
+        let (msg, _) = one_step(exec, w);
         assert_eq!(WatchEvent::REMOVE_FILE, msg.event);
         assert_eq!(Path::new(filename), msg.filename);
     }
@@ -296,12 +296,12 @@ mod tests {
     fn test_timeout() {
         let tmp_dir = TempDir::new("vfs-watcher-test-timeout").unwrap();
 
-        let mut core = reactor::Core::new().unwrap();
+        let exec = &mut async::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
-        let mut w = Watcher::new(&dir, &core.handle()).unwrap();
+        let mut w = Watcher::new(&dir).unwrap();
 
         loop {
-            let (msg, rest) = one_step!(core, w);
+            let (msg, rest) = one_step(exec, w);
             w = rest;
             match msg.event {
                 WatchEvent::EXISTING => continue,
@@ -312,6 +312,6 @@ mod tests {
 
         // Ensure that our test timeouts actually work by waiting for another event that will never
         // arrive.
-        let _ = one_step!(core, w);
+        let _ = one_step(exec, w);
     }
 }

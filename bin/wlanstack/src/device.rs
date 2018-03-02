@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use async;
 use failure::Error;
-use fuchsia_vfs_watcher as watcher;
-use fuchsia_zircon as zx;
-use futures::{self, Async, Future, Stream};
-use tokio_core::reactor;
+use futures::prelude::*;
+use parking_lot::Mutex;
+use vfs_watcher;
 use wlan;
 use wlan_dev;
+use zx;
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::str::FromStr;
 
 struct PhyDevice {
@@ -32,7 +32,7 @@ impl PhyDevice {
 }
 
 /// Called by the `DeviceManager` in response to device events.
-pub trait EventListener {
+pub trait EventListener: Send {
     /// Called when a phy device is added. On error, the listener is removed from the
     /// `DeviceManager`.
     fn on_phy_added(&self, id: u16) -> Result<(), Error>;
@@ -41,6 +41,8 @@ pub trait EventListener {
     /// `DeviceManager`.
     fn on_phy_removed(&self, id: u16) -> Result<(), Error>;
 }
+
+pub type DevMgrRef = Arc<Mutex<DeviceManager>>;
 
 /// Manages the wlan devices used by the wlanstack.
 pub struct DeviceManager {
@@ -110,15 +112,15 @@ impl DeviceManager {
 }
 
 struct PhyQuery {
-    devmgr: Rc<RefCell<DeviceManager>>,
+    devmgr: DevMgrRef,
     phy: Option<PhyDevice>,
 }
 
 impl Future for PhyQuery {
     type Item = ();
-    type Error = ();
+    type Error = zx::Status;
 
-    fn poll(&mut self) -> futures::Poll<Self::Item, Self::Error> {
+    fn poll(&mut self, _: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         // TODO(tkilbourn): make this async once queries are async.
         // TODO(tkilbourn): store the result in the PhyDevice once we can clone FIDL structs.
         let phy = self.phy.take().expect("PhyQuery polled after completion");
@@ -128,58 +130,58 @@ impl Future for PhyQuery {
                 // We add the id to the device's info.
                 info.id = phy.id;
                 info
-            })
-            .map_err(|e| eprintln!("Could not query wlan phy device: {:?}", e))?;
-        self.devmgr.borrow_mut().add_phy(phy);
+            })?;
+
+        self.devmgr.lock().add_phy(phy);
         Ok(Async::Ready(()))
     }
 }
 
 fn new_watcher<P, OnAdd, OnRm>(
     path: P,
-    devmgr: Rc<RefCell<DeviceManager>>,
-    handle: &reactor::Handle,
+    devmgr: DevMgrRef,
     on_add: OnAdd,
     on_rm: OnRm,
-) -> Result<impl Future<Item = (), Error = Error>, Error>
+) -> impl Future<Item = (), Error = Error>
 where
-    OnAdd: Fn(Rc<RefCell<DeviceManager>>, &Path, &reactor::Handle),
-    OnRm: Fn(Rc<RefCell<DeviceManager>>, &Path, &reactor::Handle),
+    OnAdd: Fn(DevMgrRef, &Path),
+    OnRm: Fn(DevMgrRef, &Path),
     P: AsRef<Path>,
 {
-    let dev = File::open(&path)?;
-    let watcher = watcher::Watcher::new(&dev, handle)?;
-    let handle = handle.clone();
-    Ok(watcher
-        .for_each(move |msg| {
+    File::open(&path).into_future().err_into()
+    .and_then(|dev| {
+        vfs_watcher::Watcher::new(&dev).map_err(Into::into)
+    })
+    .and_then(|watcher| {
+        watcher.for_each(move |msg| {
             let full_path = path.as_ref().join(msg.filename);
             match msg.event {
-                watcher::WatchEvent::EXISTING | watcher::WatchEvent::ADD_FILE => {
-                    on_add(devmgr.clone(), &full_path, &handle);
+                vfs_watcher::WatchEvent::EXISTING | vfs_watcher::WatchEvent::ADD_FILE => {
+                    on_add(devmgr.clone(), &full_path);
                 }
-                watcher::WatchEvent::REMOVE_FILE => {
-                    on_rm(devmgr.clone(), &full_path, &handle);
+                vfs_watcher::WatchEvent::REMOVE_FILE => {
+                    on_rm(devmgr.clone(), &full_path);
                 }
-                watcher::WatchEvent::IDLE => debug!("device watcher idle"),
+                vfs_watcher::WatchEvent::IDLE => debug!("device watcher idle"),
                 e => warn!("unknown watch event: {:?}", e),
             }
             Ok(())
         })
-        .map_err(|e| e.into()))
+        .map(|_s| ())
+        .err_into()
+    })
 }
 
 /// Creates a `futures::Stream` that adds phy devices to the `DeviceManager` as they appear at the
 /// given path.
 pub fn new_phy_watcher<P: AsRef<Path>>(
     path: P,
-    devmgr: Rc<RefCell<DeviceManager>>,
-    handle: &reactor::Handle,
-) -> Result<impl Future<Item = (), Error = Error>, Error> {
+    devmgr: DevMgrRef,
+) -> impl Future<Item = (), Error = Error> {
     new_watcher(
         path,
         devmgr,
-        handle,
-        |devmgr, path, handle| {
+        |devmgr, path| {
             info!("found phy at {}", path.to_string_lossy());
             // The path was constructed in the new_watcher closure, so filename should not be
             // empty. The file_name comes from devmgr and is an integer, so from_str should not
@@ -188,18 +190,20 @@ pub fn new_phy_watcher<P: AsRef<Path>>(
             // This could fail if the device were to go away in between our receiving the watcher
             // message and here. TODO(tkilbourn): handle this case more cleanly.
             let phy = PhyDevice::new(id, path).expect("Failed to open phy device");
-            handle.spawn(PhyQuery {
+            async::spawn(PhyQuery {
                 devmgr: devmgr.clone(),
                 phy: Some(phy),
-            });
+            }.recover(
+                |e| eprintln!("Could not query wlan phy device: {:?}", e)
+            ));
         },
-        |devmgr, path, _| {
+        |devmgr, path| {
             info!("removing phy at {}", path.to_string_lossy());
             // The path was constructed in the new_watcher closure, so filename should not be
             // empty. The file_name comes from devmgr and is an integer, so from_str should not
             // fail.
             let id = u16::from_str(&path.file_name().unwrap().to_string_lossy()).unwrap();
-            devmgr.borrow_mut().rm_phy(id);
+            devmgr.lock().rm_phy(id);
         },
     )
 }
@@ -209,17 +213,15 @@ pub fn new_phy_watcher<P: AsRef<Path>>(
 /// TODO(tkilbourn): add the iface to `DeviceManager`
 pub fn new_iface_watcher<P: AsRef<Path>>(
     path: P,
-    devmgr: Rc<RefCell<DeviceManager>>,
-    handle: &reactor::Handle,
-) -> Result<impl Future<Item = (), Error = Error>, Error> {
+    devmgr: DevMgrRef,
+) -> impl Future<Item = (), Error = Error> {
     new_watcher(
         path,
         devmgr,
-        handle,
-        |_, path, _| {
+        |_, path| {
             info!("found iface at {}", path.to_string_lossy());
         },
-        |_, path, _| {
+        |_, path| {
             info!("removing iface at {}", path.to_string_lossy());
         },
     )

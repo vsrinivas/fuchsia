@@ -13,29 +13,29 @@
 
 extern crate failure;
 extern crate fidl;
-extern crate fuchsia_app;
-extern crate fuchsia_vfs_watcher;
+extern crate fuchsia_app as app;
+extern crate fuchsia_async as async;
+extern crate fuchsia_vfs_watcher as vfs_watcher;
 extern crate fuchsia_wlan_dev as wlan_dev;
-extern crate fuchsia_zircon;
+extern crate fuchsia_zircon as zx;
 extern crate futures;
 extern crate garnet_lib_wlan_fidl as wlan;
 extern crate garnet_lib_wlan_fidl_service as wlan_service;
 #[macro_use]
 extern crate log;
-extern crate tokio_core;
+extern crate parking_lot;
 
 mod logger;
 mod device;
 mod service;
 
+use app::server::ServicesServer;
 use failure::{Error, ResultExt};
-use fuchsia_app::server::ServicesServer;
-use futures::Future;
-use tokio_core::reactor;
+use futures::prelude::*;
+use parking_lot::Mutex;
+use std::sync::Arc;
 use wlan_service::DeviceService;
 
-use std::cell::RefCell;
-use std::rc::Rc;
 
 const MAX_LOG_LEVEL: log::LogLevelFilter = log::LogLevelFilter::Info;
 
@@ -56,23 +56,21 @@ fn main_res() -> Result<(), Error> {
     })?;
     info!("Starting");
 
-    let mut core = reactor::Core::new().context("error creating event loop")?;
-    let handle = core.handle();
+    let mut exec = async::Executor::new().context("error creating event loop")?;
 
-    let devmgr = Rc::new(RefCell::new(device::DeviceManager::new()));
+    let devmgr = Arc::new(Mutex::new(device::DeviceManager::new()));
 
-    let phy_watcher = device::new_phy_watcher(PHY_PATH, devmgr.clone(), &handle)?;
-    let iface_watcher = device::new_iface_watcher(IFACE_PATH, devmgr.clone(), &handle)?;
+    let phy_watcher = device::new_phy_watcher(PHY_PATH, devmgr.clone());
+    let iface_watcher = device::new_iface_watcher(IFACE_PATH, devmgr.clone());
 
     let services_server = ServicesServer::new()
         .add_service({
             let devmgr = devmgr.clone();
-            let handle = handle.clone();
-            move || DeviceService::Dispatcher(service::device_service(devmgr.clone(), &handle))
+            move || DeviceService::Dispatcher(service::device_service(devmgr.clone()))
         })
-        .start(&handle)
+        .start()
         .context("error configuring device service")?;
 
-    core.run(services_server.join3(phy_watcher, iface_watcher))
+    exec.run_singlethreaded(services_server.join3(phy_watcher, iface_watcher))
         .map(|_| ())
 }

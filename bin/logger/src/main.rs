@@ -5,19 +5,20 @@
 #![deny(warnings)]
 #![feature(const_size_of)]
 
+extern crate byteorder;
 extern crate failure;
 extern crate fidl;
-extern crate fuchsia_app;
+extern crate fuchsia_app as app;
+extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zircon;
-extern crate futures;
-
 #[macro_use]
-extern crate tokio_core;
+extern crate futures;
+extern crate libc;
+extern crate parking_lot;
 
 use failure::{Error, ResultExt};
-use fuchsia_app::server::ServicesServer;
+use app::server::ServicesServer;
 use futures::future::ok as fok;
-use tokio_core::reactor;
 
 extern crate garnet_public_lib_logger_fidl;
 use garnet_public_lib_logger_fidl::Log;
@@ -41,15 +42,15 @@ fn main() {
 }
 
 fn main_wrapper() -> Result<(), Error> {
-    let mut core = reactor::Core::new().context("unable to create core")?;
+    let mut executor = async::Executor::new().context("unable to create executor")?;
 
     let server = ServicesServer::new()
         .add_service(move || {
             let ls = LogManager {};
             Log::Dispatcher(ls)
         })
-        .start(&core.handle())
+        .start()
         .map_err(|e| e.context("error starting service server"))?;
 
-    Ok(core.run(server).context("running server")?)
+    Ok(executor.run(server, /* threads */ 2).context("running server")?)
 }

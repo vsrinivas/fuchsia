@@ -6,12 +6,13 @@
 
 extern crate failure;
 extern crate fidl;
-extern crate fuchsia_app;
+extern crate fuchsia_app as app;
+extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
 extern crate garnet_public_lib_bluetooth_fidl;
 extern crate garnet_public_lib_power_fidl;
-extern crate tokio_core;
+extern crate parking_lot;
 
 mod cancelable_future;
 
@@ -19,18 +20,17 @@ use bt::gatt;
 use bt::low_energy as le;
 use garnet_public_lib_bluetooth_fidl as bt;
 
+use app::client::connect_to_service;
 use cancelable_future::{Cancelable, CancelHandle};
 use failure::{Error, Fail};
 use fidl::{ClientEnd, FidlService, InterfacePtr};
-use fuchsia_app::client::connect_to_service;
-use futures::Future;
+use futures::prelude::*;
 use futures::future::ok as fok;
 use garnet_public_lib_power_fidl::{BatteryStatus, PowerManager, PowerManagerWatcher};
-use std::cell::RefCell;
+use parking_lot::Mutex;
 use std::collections::HashSet;
 use std::fmt;
-use std::rc::Rc;
-use tokio_core::reactor;
+use std::sync::Arc;
 
 const BATTERY_LEVEL_ID: u64 = 0;
 const BATTERY_SERVICE_UUID: &'static str = "0000180f-0000-1000-8000-00805f9b34fb";
@@ -66,11 +66,11 @@ struct BatteryState {
 }
 
 struct BatteryService {
-    state: Rc<RefCell<BatteryState>>,
+    state: Arc<Mutex<BatteryState>>,
 }
 
 impl BatteryService {
-    pub fn new(state: Rc<RefCell<BatteryState>>) -> BatteryService {
+    pub fn new(state: Arc<Mutex<BatteryState>>) -> BatteryService {
         BatteryService { state: state }
     }
 }
@@ -94,7 +94,7 @@ impl gatt::ServiceDelegate::Server for BatteryService {
             peer_id
         );
 
-        let configs = &mut self.state.borrow_mut().configs;
+        let configs = &mut self.state.lock().configs;
 
         if notify {
             configs.insert(peer_id);
@@ -110,7 +110,7 @@ impl gatt::ServiceDelegate::Server for BatteryService {
     type OnReadValue = fidl::ServerImmediate<(Option<Vec<u8>>, gatt::ErrorCode)>;
     fn on_read_value(&mut self, _id: u64, _offset: i32) -> Self::OnReadValue {
         fok((
-            Some(vec![self.state.borrow().level]),
+            Some(vec![self.state.lock().level]),
             gatt::ErrorCode::NoError,
         ))
     }
@@ -141,7 +141,7 @@ impl PowerManagerWatcher::Server for BatteryService {
         &mut self,
         battery_status: BatteryStatus,
     ) -> Self::OnChangeBatteryStatus {
-        let state = &mut self.state.borrow_mut();
+        let state = &mut self.state.lock();
         let level = battery_status.level.round() as u8;
 
         // Notify subscribed clients if the integer value of the battery level has changed.
@@ -164,7 +164,7 @@ impl PowerManagerWatcher::Server for BatteryService {
 
 // Start LE advertising to listen for connections. Advertising is stopped when a
 // central connects and restarted when it disconnects.
-fn start_advertising(state_rc: Rc<RefCell<BatteryPeripheralState>>) -> Result<(), Error> {
+fn start_advertising(state_rc: Arc<Mutex<BatteryPeripheralState>>) -> Result<(), Error> {
     println!("Listening for BLE centrals...");
 
     let ad = le::AdvertisingData {
@@ -179,12 +179,13 @@ fn start_advertising(state_rc: Rc<RefCell<BatteryPeripheralState>>) -> Result<()
     };
 
     let (delegate_local, delegate_remote) = zx::Channel::create()?;
+    let delegate_local = async::Channel::from_channel(delegate_local)?;
     let delegate_ptr = InterfacePtr {
         inner: ClientEnd::new(delegate_remote),
         version: le::PeripheralDelegate::VERSION,
     };
 
-    let mut state = state_rc.borrow_mut();
+    let mut state = state_rc.lock();
     let start_adv = state.peripheral.start_advertising(
         ad,
         None,
@@ -199,31 +200,24 @@ fn start_advertising(state_rc: Rc<RefCell<BatteryPeripheralState>>) -> Result<()
             fidl::Server::new(
                 le::PeripheralDelegate::Dispatcher(BatteryPeripheral { state: state_rc.clone() }),
                 delegate_local,
-                &state.handle,
             )?,
             &state.delegate_handle,
         );
 
     // Spin up the PeripheralDelegate server.
-    state.handle.spawn(
-        start_adv.and_then(|_| start_server).map_err(
-            |e| {
-                eprintln!("Failed to start advertising {:?}", e);
-                ()
-            },
-        ),
-    );
+    async::spawn(start_adv.and_then(|_| start_server).recover(
+        |e| eprintln!("Failed to start advertising {:?}", e)));
+
     Ok(())
 }
 
 struct BatteryPeripheralState {
     peripheral: le::Peripheral::Proxy,
     delegate_handle: CancelHandle,
-    handle: reactor::Handle,
 }
 
 struct BatteryPeripheral {
-    state: Rc<RefCell<BatteryPeripheralState>>,
+    state: Arc<Mutex<BatteryPeripheralState>>,
 }
 
 impl le::PeripheralDelegate::Server for BatteryPeripheral {
@@ -242,7 +236,7 @@ impl le::PeripheralDelegate::Server for BatteryPeripheral {
         println!("Central disconnected: {}", device_id);
 
         {
-            let state = self.state.borrow();
+            let state = self.state.lock();
             state.delegate_handle.cancel();
         }
 
@@ -278,11 +272,10 @@ fn main_res() -> Result<(), Error> {
         None => false,
     };
 
-    let mut core = reactor::Core::new()?;
-    let handle = core.handle();
+    let mut exec = async::Executor::new()?;
 
-    let server = connect_to_service::<gatt::Server_::Service>(&handle)?;
-    let power = connect_to_service::<PowerManager::Service>(&handle)?;
+    let server = connect_to_service::<gatt::Server_::Service>()?;
+    let power = connect_to_service::<PowerManager::Service>()?;
 
     // No security is required.
     let read_sec = Box::new(gatt::SecurityRequirements {
@@ -321,6 +314,7 @@ fn main_res() -> Result<(), Error> {
 
     // Register a power watcher to monitor the power level.
     let (power_watcher_local, power_watcher_remote) = zx::Channel::create()?;
+    let power_watcher_local = async::Channel::from_channel(power_watcher_local)?;
     let watcher_ptr = InterfacePtr {
         inner: ClientEnd::new(power_watcher_remote),
         version: gatt::ServiceDelegate::VERSION,
@@ -328,8 +322,9 @@ fn main_res() -> Result<(), Error> {
     power.watch(watcher_ptr)?;
 
     // Publish service and register service delegate.
-    let (service_proxy, service_server) = gatt::Service_::Service::new_pair(&handle)?;
+    let (service_proxy, service_server) = gatt::Service_::Service::new_pair()?;
     let (delegate_local, delegate_remote) = zx::Channel::create()?;
+    let delegate_local = async::Channel::from_channel(delegate_local)?;
     let delegate_ptr = InterfacePtr {
         inner: ClientEnd::new(delegate_remote),
         version: gatt::ServiceDelegate::VERSION,
@@ -345,7 +340,7 @@ fn main_res() -> Result<(), Error> {
 
     // This stores the current battery level and a list of peer device IDs that
     // have subscribed to battery level notifications.
-    let state = Rc::new(RefCell::new(BatteryState {
+    let state = Arc::new(Mutex::new(BatteryState {
         level: 0 as u8,
         service: service_proxy,
         configs: HashSet::new(),
@@ -355,7 +350,6 @@ fn main_res() -> Result<(), Error> {
     let power_watcher_server = fidl::Server::new(
         PowerManagerWatcher::Dispatcher(BatteryService::new(state.clone())),
         power_watcher_local,
-        &handle,
     )?
         .map_err(|e| {
             Error::from(e.context("PowerManagerWatcher server error"))
@@ -366,7 +360,6 @@ fn main_res() -> Result<(), Error> {
         fidl::Server::new(
             bt::ServiceDelegate::Dispatcher(BatteryService::new(state.clone())),
             delegate_local,
-            &handle,
         )?
             .map_err(|e| {
                 Error::from(e.context("ServiceDelegate dispatcher server error"))
@@ -375,17 +368,16 @@ fn main_res() -> Result<(), Error> {
     // Listen for incoming connections if the user requested it. Otherwise, this
     // will simply publish the GATT service without advertising.
     if listen {
-        let peripheral = connect_to_service::<le::Peripheral::Service>(&handle)?;
-        let peripheral_state = Rc::new(RefCell::new(BatteryPeripheralState {
+        let peripheral = connect_to_service::<le::Peripheral::Service>()?;
+        let peripheral_state = Arc::new(Mutex::new(BatteryPeripheralState {
             peripheral: peripheral,
             delegate_handle: CancelHandle::new(),
-            handle: handle.clone(),
         }));
         start_advertising(peripheral_state)?;
     }
 
     let main_fut = publish.and_then(|()| power_watcher_server.join(service_delegate_server));
 
-    core.run(main_fut)
+    exec.run(main_fut, /* threads */ 2)
         .map(|((), ())| ())
 }

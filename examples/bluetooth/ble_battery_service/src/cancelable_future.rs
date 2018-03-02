@@ -4,8 +4,8 @@
 
 extern crate futures;
 
-use futures::{Future, Poll, Async};
-use futures::task::AtomicTask;
+use futures::prelude::*;
+use futures::task::{self, AtomicWaker};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -42,7 +42,7 @@ impl CancelHandle {
     pub fn new() -> Self {
         CancelHandle {
             inner: Arc::new(CancelInner {
-                task: AtomicTask::new(),
+                task: AtomicWaker::new(),
                 cancel: AtomicBool::new(false),
             }),
         }
@@ -53,7 +53,7 @@ impl CancelHandle {
 // should be cancelled.
 #[derive(Debug)]
 struct CancelInner {
-    task: AtomicTask,
+    task: AtomicWaker,
     cancel: AtomicBool,
 }
 
@@ -63,14 +63,14 @@ where
 {
     type Item = ();
     type Error = T::Error;
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         if self.inner.cancel.load(Ordering::Acquire) {
             Ok(Async::Ready(()))
         } else {
-            match self.future.poll() {
-                Ok(Async::NotReady) => {
-                    self.inner.task.register();
-                    Ok(Async::NotReady)
+            match self.future.poll(cx) {
+                Ok(Async::Pending) => {
+                    self.inner.task.register(cx.waker());
+                    Ok(Async::Pending)
                 }
                 res => res,
             }
@@ -82,6 +82,6 @@ impl CancelHandle {
     /// Cancel the `Cancelable` future associated with this handle.
     pub fn cancel(&self) {
         self.inner.cancel.store(true, Ordering::Release);
-        self.inner.task.notify();
+        self.inner.task.wake();
     }
 }
