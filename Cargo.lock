@@ -181,6 +181,7 @@ dependencies = [
  "fuchsia-async 0.1.0",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
  "garnet_examples_fidl_services 0.1.0",
+ "structopt 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

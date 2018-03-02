@@ -1,0 +1,22 @@
+import("//build/go/go_test.gni")
+import("//build/package.gni")
+
+go_test("compatibility_test_bin") {
+  gopackage = "fidl/compatibility_test"
+
+  go_dependencies = [
+    {
+      package = "fidl/compatibility_test"
+      source = "//garnet/go/src/fidl/compatibility_test"
+    }
+  ]
+  output_name = "fidl_compatibility_test"
+}
+
+package("compatibility_test") {
+  testonly = true
+  package_name = "fidl_compatibility_test"
+
+  deps = [":compatibility_test_bin"]
+  tests = [{ name = "fidl_compatibility_test" }]
+}

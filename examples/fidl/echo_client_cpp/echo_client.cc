@@ -59,7 +59,7 @@ int main(int argc, const char** argv) {
   std::string msg = "hello world";
 
   for (int i = 1; i < argc - 1; ++i) {
-    if (!strcmp("-u", argv[i])) {
+    if (!strcmp("--server", argv[i])) {
       server_url = argv[++i];
     } else if (!strcmp("-m", argv[i])) {
       msg = argv[++i];

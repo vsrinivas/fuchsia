@@ -8,6 +8,9 @@ extern crate failure;
 extern crate fidl;
 extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
+#[macro_use]
+extern crate structopt;
+use structopt::StructOpt;
 
 // This is the generated crate containing FIDL bindings for the Echo service.
 extern crate garnet_examples_fidl_services;
@@ -34,10 +37,18 @@ fn main_res() -> Result<(), Error> {
 
     let launcher = Launcher::new().context("Failed to open launcher service")?;
 
-    // Launch the server and connect to the echo service.
-    let echo_url = std::env::args().nth(1).unwrap_or_else(|| "echo_server_rust".into());
+    #[derive(StructOpt, Debug)]
+    #[structopt(name = "echo_client_rust")]
+    struct Opt {
+        #[structopt(long = "server", help = "URL of echo server",
+                    default_value = "echo_server_rust")]
+        server_url: String,
+    }
 
-    let app = launcher.launch(echo_url, None)
+    // Launch the server and connect to the echo service.
+    let Opt { server_url } = Opt::from_args();
+
+    let app = launcher.launch(server_url, None)
                       .context("Failed to launch echo service")?;
 
     let echo = app.connect_to_service::<Echo::Service>()
