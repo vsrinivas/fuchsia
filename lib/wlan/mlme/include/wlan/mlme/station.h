@@ -7,6 +7,7 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/mac_frame.h>
+#include <wlan/mlme/sequence.h>
 
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"
 #include "lib/wlan/fidl/wlan_mlme_ext.fidl.h"
@@ -133,7 +134,6 @@ class Station : public FrameHandler {
     zx_status_t SendPsPoll();
 
     zx::time deadline_after_bcn_period(zx_duration_t tus);
-    uint16_t next_seq();
 
     bool IsHTReady() const;
     bool IsCbw40RxReady() const;
@@ -144,7 +144,7 @@ class Station : public FrameHandler {
     fbl::unique_ptr<Timer> timer_;
     BSSDescriptionPtr bss_;
     common::MacAddr bssid_;
-    uint16_t last_seq_ = kMaxSequenceNumber;
+    Sequence seq_;
 
     WlanState state_ = WlanState::kUnjoined;
     zx::time join_timeout_;

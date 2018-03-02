@@ -163,7 +163,7 @@ zx_status_t Station::HandleMlmeAuthReq(const AuthenticateRequest& req) {
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
-    hdr->sc.set_seq(next_seq());
+    SetSeqNo(hdr, &seq_);
     FillTxInfo(&packet, *hdr);
 
     // TODO(tkilbourn): this assumes Open System authentication
@@ -214,7 +214,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const DeauthenticateRequest& req) {
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
-    hdr->sc.set_seq(next_seq());
+    SetSeqNo(hdr, &seq_);
     FillTxInfo(&packet, *hdr);
 
     auto deauth = frame.body;
@@ -269,7 +269,7 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
-    hdr->sc.set_seq(next_seq());
+    SetSeqNo(hdr, &seq_);
     FillTxInfo(&packet, *hdr);
 
     auto assoc = frame.body;
@@ -565,7 +565,7 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
-    hdr->sc.set_seq(next_seq());
+    SetSeqNo(hdr, &seq_);
     FillTxInfo(&packet, *hdr);
 
     auto resp = frame.body;
@@ -775,7 +775,7 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
     hdr->addr2 = eth->src;
     hdr->addr3 = eth->dest;
 
-    hdr->sc.set_seq(next_seq());
+    SetSeqNo(hdr, &seq_);
 
     // TODO(porce): Construct addr4 field
 
@@ -952,7 +952,7 @@ zx_status_t Station::SendKeepAliveResponse() {
     hdr->addr1 = bssid;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid;
-    hdr->sc.set_seq(next_seq());
+    SetSeqNo(hdr, &seq_);
 
     zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
@@ -1051,7 +1051,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
     hdr->addr1 = bssid_;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
-    hdr->sc.set_seq(next_seq());
+    SetSeqNo(hdr, &seq_);
     FillTxInfo(&packet, *hdr);
 
     req->category = action::Category::kBlockAck;
@@ -1126,7 +1126,7 @@ zx_status_t Station::HandleMlmeEapolReq(const EapolRequest& req) {
     hdr->addr2.Set(req.src_addr.data());
     hdr->addr3.Set(req.dst_addr.data());
 
-    hdr->sc.set_seq(device_->GetState()->next_seq());
+    SetSeqNo(hdr, &seq_);
 
     auto llc = packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
     llc->dsap = kLlcSnapExtension;
@@ -1326,8 +1326,7 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     hdr->addr2 = mymac;
     hdr->addr3 = bssid;
 
-    uint16_t seq = device_->GetState()->next_seq();
-    hdr->sc.set_seq(seq);
+    SetSeqNo(hdr, &seq_);
 
     zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
@@ -1366,18 +1365,6 @@ zx_status_t Station::SendPsPoll() {
         return status;
     }
     return ZX_OK;
-}
-
-uint16_t Station::next_seq() {
-    uint16_t seq = device_->GetState()->next_seq();
-    if (seq == last_seq_) {
-        // If the sequence number has rolled over and back to the last seq number we sent to this
-        // station, increment again.
-        // IEEE Std 802.11-2016, 10.3.2.11.2, Table 10-3, Note TR1
-        seq = device_->GetState()->next_seq();
-    }
-    last_seq_ = seq;
-    return seq;
 }
 
 zx::time Station::deadline_after_bcn_period(zx_duration_t tus) {
