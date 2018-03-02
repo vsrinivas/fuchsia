@@ -44,14 +44,6 @@ public:
 
 } // namespace
 
-// Wrapper, so that we can pass bigger length param to EXPECT_STR_EQ for a
-// proper match.
-#define EXPECT_STRING_EQ(expected, actual, msg)                                \
-    EXPECT_STR_EQ(                                                             \
-        expected, actual,                                                      \
-        strlen(expected) > strlen(actual) ? strlen(expected) : strlen(actual), \
-        msg)
-
 bool output_compare_helper(zx::socket local, fx_log_severity_t severity,
                            const char* msg, const char** tags, int num_tags) {
     fx_log_packet_t packet;
@@ -68,7 +60,7 @@ bool output_compare_helper(zx::socket local, fx_log_severity_t severity,
     }
     ASSERT_EQ(0, packet.data[pos], "");
     pos++;
-    EXPECT_STRING_EQ(msg, packet.data + pos, "");
+    EXPECT_STR_EQ(msg, packet.data + pos, "");
     return true;
 }
 

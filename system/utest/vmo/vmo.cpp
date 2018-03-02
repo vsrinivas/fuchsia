@@ -578,7 +578,7 @@ bool vmo_rights_test() {
     char get_name[ZX_MAX_NAME_LEN];
     status = zx_object_get_property(vmo, ZX_PROP_NAME, get_name, sizeof(get_name));
     EXPECT_EQ(ZX_OK, status, "get_property");
-    EXPECT_STR_EQ(set_name, get_name, sizeof(set_name), "vmo name");
+    EXPECT_STR_EQ(set_name, get_name, "vmo name");
 
     // close the handle
     status = zx_handle_close(vmo);
@@ -1384,15 +1384,13 @@ bool vmo_clone_rights_test() {
     EXPECT_EQ(zx_object_get_property(vmo, ZX_PROP_NAME,
                                      oldname, sizeof(oldname)),
               ZX_OK);
-    EXPECT_STR_EQ(oldname, kOldVmoName, sizeof(kOldVmoName),
-                  "original VMO name");
+    EXPECT_STR_EQ(oldname, kOldVmoName, "original VMO name");
 
     char newname[ZX_MAX_NAME_LEN] = "bad";
     EXPECT_EQ(zx_object_get_property(clone, ZX_PROP_NAME,
                                      newname, sizeof(newname)),
               ZX_OK);
-    EXPECT_STR_EQ(newname, kNewVmoName, sizeof(kNewVmoName),
-                  "clone VMO name");
+    EXPECT_STR_EQ(newname, kNewVmoName, "clone VMO name");
 
     EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
     EXPECT_EQ(get_handle_rights(clone), kNewVmoRights);

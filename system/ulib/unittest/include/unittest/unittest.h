@@ -455,12 +455,11 @@ int unittest_set_verbosity_level(int new_level);
         }                                             \
     } while (0)
 
-#define UT_STR_EQ(expected, actual, length, msg, ret)                       \
+#define UT_STR_EQ(expected, actual, msg, ret)                               \
     do {                                                                    \
         UT_ASSERT_VALID_TEST_STATE;                                         \
-        UNITTEST_TRACEF(2, "str_eq(%s, %s, %s)\n",                          \
-                        #expected, #actual, #length);                       \
-        if (!unittest_expect_str_eq((expected), (actual), (length), msg)) { \
+        UNITTEST_TRACEF(2, "str_eq(%s, %s)\n", #expected, #actual);         \
+        if (!unittest_expect_str_eq((expected), (actual), msg)) {           \
             current_test_info->all_ok = false;                              \
             ret;                                                            \
         }                                                                   \
@@ -516,7 +515,7 @@ int unittest_set_verbosity_level(int new_level);
 #define EXPECT_NONNULL(actual, ...) UT_NONNULL(actual, DONOT_RET, ##__VA_ARGS__)
 #define EXPECT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, DONOT_RET)
 #define EXPECT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, DONOT_RET)
-#define EXPECT_STR_EQ(expected, actual, length, msg) UT_STR_EQ(expected, actual, length, msg, DONOT_RET)
+#define EXPECT_STR_EQ(expected, actual, msg) UT_STR_EQ(expected, actual, msg, DONOT_RET)
 #define EXPECT_STR_NE(str1, str2, length, msg) UT_STR_NE(str1, str2, length, msg, DONOT_RET)
 
 /* For comparing uint64_t, like hw_id_t. */
@@ -551,7 +550,7 @@ int unittest_set_verbosity_level(int new_level);
 #define ASSERT_NONNULL(actual, ...) UT_NONNULL(actual, RET_FALSE, ##__VA_ARGS__)
 #define ASSERT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, RET_FALSE)
 #define ASSERT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, RET_FALSE)
-#define ASSERT_STR_EQ(expected, actual, length, msg) UT_STR_EQ(expected, actual, length, msg, RET_FALSE)
+#define ASSERT_STR_EQ(expected, actual, msg) UT_STR_EQ(expected, actual, msg, RET_FALSE)
 #define ASSERT_STR_NE(str1, str2, length, msg) UT_STR_NE(str1, str2, length, msg, RET_FALSE)
 
 /* For comparing uint64_t, like hw_id_t. */
@@ -631,7 +630,7 @@ bool unittest_run_one_test(struct test_case_element* elem, test_type_t type);
 bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, size_t len,
                               const char* msg);
 
-bool unittest_expect_str_eq(const char* expected, const char* actual, size_t len, const char* msg);
+bool unittest_expect_str_eq(const char* expected, const char* actual, const char* msg);
 
 /* Used to implement RUN_TEST() and other variants. */
 void unittest_run_named_test(const char* name, bool (*test)(void),

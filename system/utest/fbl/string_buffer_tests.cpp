@@ -7,7 +7,7 @@
 #include <unittest/unittest.h>
 
 #define EXPECT_CSTR_EQ(expected, actual) \
-    EXPECT_STR_EQ(expected, actual, strlen(expected) + 1u, "unequal cstr")
+    EXPECT_STR_EQ(expected, actual, "unequal cstr")
 
 #define EXPECT_DATA_AND_LENGTH(expected, actual)      \
     do {                                              \

@@ -30,7 +30,7 @@ public:
         ASSERT_GE(remaining_, entry->size);
         current_ += entry->size;
         remaining_ -= entry->size;
-        EXPECT_STR_EQ(name, entry->name, strlen(name), "name");
+        EXPECT_STR_EQ(name, entry->name, "name");
         EXPECT_EQ(VTYPE_TO_DTYPE(vtype), entry->type);
 
         END_HELPER;

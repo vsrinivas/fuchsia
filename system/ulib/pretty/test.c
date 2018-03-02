@@ -109,7 +109,7 @@ bool format_size_fixed_test(void) {
         char* ret = format_size_fixed(str, sizeof(str), tc->input, tc->unit);
         snprintf(msg, sizeof(msg), "format_size_fixed(bytes=%zd, unit=%c)",
                  tc->input, tc->unit == 0 ? '0' : tc->unit);
-        EXPECT_STR_EQ(tc->expected_output, str, /* len */ 128, msg);
+        EXPECT_STR_EQ(tc->expected_output, str, msg);
         // Should always return the input pointer.
         EXPECT_EQ(&(str[0]), ret, msg);
     }

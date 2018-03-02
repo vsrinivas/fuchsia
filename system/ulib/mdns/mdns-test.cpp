@@ -9,7 +9,7 @@
 
 // Returns true iff the given question's domain, qtype and qclass match the given values.
 static bool verify_question(mdns_question* q, char* domain, uint16_t qtype, uint16_t qclass) {
-    EXPECT_STR_EQ(q->domain, domain, strlen(domain), "question has incorrect domain");
+    EXPECT_STR_EQ(q->domain, domain, "question has incorrect domain");
     EXPECT_EQ(q->qtype, qtype, "question has incorrect type");
     EXPECT_EQ(q->qclass, qclass, "question has incorrect class");
     return true;

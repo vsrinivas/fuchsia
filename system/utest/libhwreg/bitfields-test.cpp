@@ -407,7 +407,7 @@ static bool print_test() {
             "RsvdZ[11:0]: 0xfff (4095)",
         };
         reg.Print([&](const char* buf) {
-            EXPECT_STR_EQ(expected[call_count], buf, strlen(buf), "mismatch");
+            EXPECT_STR_EQ(expected[call_count], buf, "mismatch");
             call_count++;
         });
         EXPECT_EQ(fbl::count_of(expected), call_count);
@@ -430,7 +430,7 @@ static bool print_test() {
             "unknown set bits: 0x80000fff",
         };
         reg.Print([&](const char* buf) {
-            EXPECT_STR_EQ(expected[call_count], buf, strlen(buf), "mismatch");
+            EXPECT_STR_EQ(expected[call_count], buf, "mismatch");
             call_count++;
         });
         EXPECT_EQ(fbl::count_of(expected), call_count);

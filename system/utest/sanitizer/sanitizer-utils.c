@@ -29,7 +29,7 @@ static zx_status_t my1_load_abspath(void* ctx, const char* name, zx_handle_t* ou
 static zx_status_t my1_publish_data_sink(void* ctx, const char* name, zx_handle_t vmo) {
     ++my_loader_service_calls;
 
-    EXPECT_STR_EQ(TEST_SINK_NAME, name, sizeof(TEST_SINK_NAME) - 1,
+    EXPECT_STR_EQ(TEST_SINK_NAME, name,
                   "called with unexpected name");
 
     EXPECT_NE(vmo, ZX_HANDLE_INVALID,
@@ -38,7 +38,7 @@ static zx_status_t my1_publish_data_sink(void* ctx, const char* name, zx_handle_
     char vmo_name[ZX_MAX_NAME_LEN];
     EXPECT_EQ(zx_object_get_property(vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name)),
               ZX_OK, "get ZX_PROP_NAME");
-    EXPECT_STR_EQ(TEST_SINK_NAME, vmo_name, sizeof(vmo_name),
+    EXPECT_STR_EQ(TEST_SINK_NAME, vmo_name,
                   "not called with expected VMO handle");
 
     EXPECT_EQ(zx_handle_close(vmo), ZX_OK, "");
@@ -110,7 +110,7 @@ static zx_status_t my2_load_abspath(void* ctx, const char* name, zx_handle_t* ou
         result = ZX_OK;
     } else {
         EXPECT_STR_EQ(TEST_CONFIG_BAD_NAME,
-                      name, sizeof(TEST_CONFIG_BAD_NAME) - 1,
+                      name,
                       "called with unexpected name");
         result = ZX_ERR_NOT_FOUND;
     }

@@ -1354,7 +1354,7 @@ bool validate_nested_struct_recursion_too_deep_error() {
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error);
     const char expected_error_msg[] = "recursion depth exceeded decoding struct";
-    EXPECT_STR_EQ(expected_error_msg, error, sizeof(expected_error_msg), "wrong error msg");
+    EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
 
     END_TEST;
 }
