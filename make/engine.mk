@@ -143,6 +143,7 @@ GLOBAL_COMPILEFLAGS += -fno-common
 # kernel/include/lib/counters.h and kernel.ld depend on -fdata-sections.
 GLOBAL_COMPILEFLAGS += -ffunction-sections -fdata-sections
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+GLOBAL_COMPILEFLAGS += -nostdlibinc
 GLOBAL_COMPILEFLAGS += -no-canonical-prefixes
 GLOBAL_COMPILEFLAGS += -Wno-address-of-packed-member
 GLOBAL_COMPILEFLAGS += -Wthread-safety
