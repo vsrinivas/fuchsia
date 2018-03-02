@@ -70,7 +70,6 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     zx::time CreateTimerDeadline(zx_duration_t tus);
     bool IsDeadlineExceeded(zx::time deadline);
 
-    uint16_t next_seq_no() { return last_seq_no_++ & kMaxSequenceNumber; }
     BssInterface* bss() { return bss_; }
     const common::MacAddr& addr() { return addr_; }
 
@@ -84,7 +83,6 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     BssInterface* const bss_;
     const common::MacAddr addr_;
     const fbl::unique_ptr<Timer> timer_;
-    uint16_t last_seq_no_ = kMaxSequenceNumber;
     // Queue which holds buffered `EthernetII` packets while the client is in power saving mode.
     PacketQueue ps_pkt_queue_;
 };
@@ -125,7 +123,7 @@ class AuthenticatedState : public BaseState {
     void HandleTimeout() override;
 
     zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
-                                   const wlan_rx_info_t& rxinfo) override;
+                                     const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
                                          const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,

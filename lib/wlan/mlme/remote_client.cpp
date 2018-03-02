@@ -22,8 +22,7 @@ template <typename S, typename... Args> void BaseState::MoveToState(Args&&... ar
 
 // DeauthenticatedState implementation.
 
-DeauthenticatedState::DeauthenticatedState(RemoteClient* client) : BaseState(client) {
-}
+DeauthenticatedState::DeauthenticatedState(RemoteClient* client) : BaseState(client) {}
 
 zx_status_t DeauthenticatedState::HandleAuthentication(
     const ImmutableMgmtFrame<Authentication>& frame, const wlan_rx_info_t& rxinfo) {
@@ -56,8 +55,7 @@ zx_status_t DeauthenticatedState::HandleAuthentication(
 
 // AuthenticatedState implementation.
 
-AuthenticatedState::AuthenticatedState(RemoteClient* client) : BaseState(client) {
-}
+AuthenticatedState::AuthenticatedState(RemoteClient* client) : BaseState(client) {}
 
 void AuthenticatedState::OnEnter() {
     // Start timeout and wait for Association requests.
@@ -87,8 +85,8 @@ zx_status_t AuthenticatedState::HandleAuthentication(
     return client_->SendAuthentication(status_code::kSuccess);
 }
 
-zx_status_t AuthenticatedState::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
-                                                    const wlan_rx_info_t& rxinfo) {
+zx_status_t AuthenticatedState::HandleDeauthentication(
+    const ImmutableMgmtFrame<Deauthentication>& frame, const wlan_rx_info_t& rxinfo) {
     debugbss("[client] [%s] received Deauthentication request: %u\n",
              client_->addr().ToString().c_str(), frame.body->reason_code);
     MoveToState<DeauthenticatedState>();
@@ -131,8 +129,7 @@ zx_status_t AuthenticatedState::HandleAssociationRequest(
 // AssociatedState implementation.
 
 AssociatedState::AssociatedState(RemoteClient* client, uint16_t aid)
-    : BaseState(client), aid_(aid) {
-}
+    : BaseState(client), aid_(aid) {}
 
 zx_status_t AssociatedState::HandleAssociationRequest(
     const ImmutableMgmtFrame<AssociationRequest>& frame, const wlan_rx_info_t& rxinfo) {
@@ -178,8 +175,8 @@ zx_status_t AssociatedState::HandleEthFrame(const ImmutableBaseFrame<EthernetII>
     return client_->SendDataFrame(fbl::move(out_frame));
 }
 
-zx_status_t AssociatedState::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
-                                                    const wlan_rx_info_t& rxinfo) {
+zx_status_t AssociatedState::HandleDeauthentication(
+    const ImmutableMgmtFrame<Deauthentication>& frame, const wlan_rx_info_t& rxinfo) {
     debugbss("[client] [%s] received Deauthentication request: %u\n",
              client_->addr().ToString().c_str(), frame.body->reason_code);
     MoveToState<DeauthenticatedState>();
@@ -252,7 +249,7 @@ zx_status_t AssociatedState::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFr
     hdr->addr1 = client_->addr();
     hdr->addr2 = client_->bss()->bssid();
     hdr->addr3 = client_->bss()->bssid();
-    hdr->sc.set_seq(client_->next_seq_no());
+    hdr->sc.set_seq(client_->bss()->NextSeq(*hdr));
 
     zx_status_t status = client_->SendDataFrame(fbl::move(packet));
     if (status != ZX_OK) {
@@ -280,16 +277,16 @@ zx_status_t AssociatedState::HandleDataFrame(const DataFrameHeader& hdr) {
 }
 
 zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
-                                     const wlan_rx_info_t& rxinfo) {
+                                             const wlan_rx_info_t& rxinfo) {
     // Filter unsupported Data frame types.
     switch (frame.hdr->fc.subtype()) {
-        case DataSubtype::kDataSubtype:
-            // Fall-through
-        case DataSubtype::kQosdata:  // For data frames within BlockAck session.
-            break;
-        default:
-            warnf("unsupported data subtype %02x\n", frame.hdr->fc.subtype());
-            return ZX_OK;
+    case DataSubtype::kDataSubtype:
+        // Fall-through
+    case DataSubtype::kQosdata:  // For data frames within BlockAck session.
+        break;
+    default:
+        warnf("unsupported data subtype %02x\n", frame.hdr->fc.subtype());
+        return ZX_OK;
     }
 
     if (frame.hdr->fc.to_ds() == 0 || frame.hdr->fc.from_ds() == 1) {
@@ -336,7 +333,8 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
 
     auto status = client_->SendEthernet(std::move(eth_packet));
     if (status != ZX_OK) {
-        errorf("[client] [%s] could not send ethernet data: %d\n", client_->addr().ToString().c_str(), status);
+        errorf("[client] [%s] could not send ethernet data: %d\n",
+               client_->addr().ToString().c_str(), status);
     }
 
     return status;
@@ -480,7 +478,7 @@ zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {
     hdr->addr1 = addr_;
     hdr->addr2 = bss_->bssid();
     hdr->addr3 = bss_->bssid();
-    hdr->sc.set_seq(device_->GetState()->next_seq());
+    hdr->sc.set_seq(bss_->NextSeq(*hdr));
 
     auto auth = frame.body;
     auth->status_code = result;
@@ -509,7 +507,7 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     hdr->addr1 = addr_;
     hdr->addr2 = bss_->bssid();
     hdr->addr3 = bss_->bssid();
-    hdr->sc.set_seq(device_->GetState()->next_seq());
+    hdr->sc.set_seq(bss_->NextSeq(*hdr));
 
     auto assoc = frame.body;
     assoc->status_code = result;
@@ -538,7 +536,7 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
     hdr->addr1 = addr_;
     hdr->addr2 = bss_->bssid();
     hdr->addr3 = bss_->bssid();
-    hdr->sc.set_seq(device_->GetState()->next_seq());
+    hdr->sc.set_seq(bss_->NextSeq(*hdr));
 
     auto deauth = frame.body;
     deauth->reason_code = reason_code;
@@ -636,7 +634,7 @@ zx_status_t RemoteClient::ConvertEthernetToDataFrame(const ImmutableBaseFrame<Et
     hdr->fc.set_subtype(DataSubtype::kDataSubtype);
     hdr->fc.set_from_ds(1);
     // TODO(hahnr): Protect outgoing frames when RSNA is established.
-    hdr->sc.set_seq(device_->GetState()->next_seq());
+    hdr->sc.set_seq(bss_->NextSeq(*hdr));
     hdr->addr1 = frame.hdr->dest;
     hdr->addr2 = bss_->bssid();
     hdr->addr3 = frame.hdr->src;
