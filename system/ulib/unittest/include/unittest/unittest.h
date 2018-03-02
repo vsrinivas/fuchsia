@@ -465,12 +465,12 @@ int unittest_set_verbosity_level(int new_level);
         }                                                                   \
     } while (0)
 
-#define UT_STR_NE(str1, str2, length, msg, ret)      \
+#define UT_STR_NE(str1, str2, msg, ret)              \
     do {                                             \
         UT_ASSERT_VALID_TEST_STATE;                  \
-        UNITTEST_TRACEF(2, "str_ne(%s, %s, %s)\n",   \
-                        #str1, #str2, #length);      \
-        if (!strncmp(str1, str2, (length))) {        \
+        UNITTEST_TRACEF(2, "str_ne(%s, %s)\n",       \
+                        #str1, #str2);               \
+        if (!strcmp(str1, str2)) {                   \
             UNITTEST_FAIL_TRACEF(                    \
                 "%s: %s and %s are the same; "       \
                 "expected different:\n"              \
@@ -516,7 +516,7 @@ int unittest_set_verbosity_level(int new_level);
 #define EXPECT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, DONOT_RET)
 #define EXPECT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, DONOT_RET)
 #define EXPECT_STR_EQ(expected, actual, msg) UT_STR_EQ(expected, actual, msg, DONOT_RET)
-#define EXPECT_STR_NE(str1, str2, length, msg) UT_STR_NE(str1, str2, length, msg, DONOT_RET)
+#define EXPECT_STR_NE(str1, str2, msg) UT_STR_NE(str1, str2, msg, DONOT_RET)
 
 /* For comparing uint64_t, like hw_id_t. */
 #define EXPECT_EQ_LL(expected, actual, msg) UT_EQ_LL(expected, actual, msg, DONOT_RET)
@@ -551,7 +551,7 @@ int unittest_set_verbosity_level(int new_level);
 #define ASSERT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, RET_FALSE)
 #define ASSERT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, RET_FALSE)
 #define ASSERT_STR_EQ(expected, actual, msg) UT_STR_EQ(expected, actual, msg, RET_FALSE)
-#define ASSERT_STR_NE(str1, str2, length, msg) UT_STR_NE(str1, str2, length, msg, RET_FALSE)
+#define ASSERT_STR_NE(str1, str2, msg) UT_STR_NE(str1, str2, msg, RET_FALSE)
 
 /* For comparing uint64_t, like hw_id_t. */
 #define ASSERT_EQ_LL(expected, actual, msg) UT_EQ_LL(expected, actual, msg, RET_FALSE)
