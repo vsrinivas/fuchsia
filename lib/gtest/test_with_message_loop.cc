@@ -79,10 +79,9 @@ bool TestWithMessageLoop::RunLoopUntilWithTimeout(
 }
 
 bool TestWithMessageLoop::RunLoopUntil(std::function<bool()> condition,
-                                       fxl::TimeDelta timeout,
                                        fxl::TimeDelta step) {
   return RunGivenLoopUntilWithTimeout(&message_loop_, std::move(condition),
-                                      timeout, step);
+                                      fxl::TimeDelta::FromSeconds(0), step);
 }
 
 void TestWithMessageLoop::RunLoopUntilIdle() {

@@ -65,7 +65,6 @@ class TestWithMessageLoop : public ::testing::Test {
   // TODO(qsr): When existing usage have been migrated to
   // |RunLoopUntilWithTimeout|, remove the timeout from this method.
   bool RunLoopUntil(std::function<bool()> condition,
-                    fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(1),
                     fxl::TimeDelta step = fxl::TimeDelta::FromMilliseconds(10));
 
   // Runs the loop until the condition returns true or the timeout is reached.
