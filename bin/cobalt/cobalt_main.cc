@@ -257,7 +257,12 @@ void CobaltEncoderImpl::AddObservation(uint32_t metric_id,
                           observation->get_index_value(), callback);
       break;
     }
-    // TODO(azani) Handle INT_BUCKET_DISTRIBUTION
+    case Value::Tag::INT_BUCKET_DISTRIBUTION: {
+      AddIntBucketDistribution(
+          metric_id, encoding_id,
+          std::move(observation->get_int_bucket_distribution()), callback);
+      break;
+      }
     default:
       callback(Status::INVALID_ARGUMENTS);
       FXL_LOG(ERROR) << "Cobalt: Unrecognized value type in observation.";
@@ -292,7 +297,16 @@ void CobaltEncoderImpl::AddMultipartObservation(
                            obs_val->value->get_index_value());
         break;
       }
-      // TODO(azani) Handle INT_BUCKET_DISTRIBUTION
+      case Value::Tag::INT_BUCKET_DISTRIBUTION: {
+        std::map<uint32_t, uint64_t> distribution_map;
+        for (auto it = obs_val->value->get_int_bucket_distribution().begin();
+             obs_val->value->get_int_bucket_distribution().end() != it; it++) {
+          distribution_map[(*it)->index] = (*it)->count;
+        }
+        value.AddIntBucketDistributionPart(obs_val->encoding_id, obs_val->name,
+                                           distribution_map);
+        break;
+      }
       default:
         callback(Status::INVALID_ARGUMENTS);
         FXL_LOG(ERROR)
@@ -310,8 +324,13 @@ void CobaltEncoderImpl::AddIntBucketDistribution(
     uint32_t encoding_id,
     f1dl::Array<BucketDistributionEntryPtr> distribution,
     const AddIntBucketDistributionCallback& callback) {
-  FXL_LOG(ERROR) << "AddIntBucketDistribution not implemented yet!";
-  callback(Status::INTERNAL_ERROR);
+  std::map<uint32_t, uint64_t> distribution_map;
+  for (auto it = distribution.begin(); distribution.end() != it; it++) {
+    distribution_map[(*it)->index] = (*it)->count;
+  }
+  auto result = encoder_.EncodeIntBucketDistribution(metric_id, encoding_id,
+                                                     distribution_map);
+  AddEncodedObservation(&result, callback);
 }
 
 void CobaltEncoderImpl::SendObservations(
