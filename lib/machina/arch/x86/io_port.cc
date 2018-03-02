@@ -260,6 +260,14 @@ zx_status_t RtcHandler::WriteRtcRegister(uint8_t rtc_index, uint8_t value) {
       if (value & kRtcRegisterBInterruptMask)
         return ZX_ERR_NOT_SUPPORTED;
       return ZX_OK;
+    case kRtcRegisterSeconds:
+    case kRtcRegisterMinutes:
+    case kRtcRegisterHours:
+    case kRtcRegisterDayOfMonth:
+    case kRtcRegisterMonth:
+    case kRtcRegisterYear:
+      // Ignore attempts to write to the RTC.
+      return ZX_OK;
     default:
       FXL_LOG(ERROR) << "Unsupported RTC register write 0x" << std::hex
                      << static_cast<uint32_t>(rtc_index);
