@@ -5,41 +5,39 @@
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
+#include "third_party/rapidjson/rapidjson/document.h"
+#include "third_party/rapidjson/rapidjson/schema.h"
 
 namespace maxwell {
 
+namespace {
+constexpr char kDataFilePath[] = "/pkg/data/ranking_data/mod_pairs.json";
+}
+
+
 ModPairRankingFeature::ModPairRankingFeature() {
-  InitPairProbabilitiesMap();
+  InitData();
 };
 
 ModPairRankingFeature::~ModPairRankingFeature() = default;
 
 // Sample map using data collected between Feb 6-20, 2018
-// TODO(miguelfrde): use up to date data loaded from actual datasource.
-void ModPairRankingFeature::InitPairProbabilitiesMap() {
-  probabilities_["chat_conversation"]["file:///system/apps/web_view"] = 0.333333333333;
-  probabilities_["chat_conversation"]["contacts_picker"] = 0.333333333333;
-  probabilities_["chat_conversation"]["gallery"] = 0.333333333333;
-  probabilities_["video"]["file:///system/apps/youtube_video"] = 0.5;
-  probabilities_["video"]["file:///system/apps/youtube_related_videos"] = 0.5;
-  probabilities_["youtube_video"]["video"] = 1.0;
-  probabilities_["youtube_story"]["video"] = 0.285714285714;
-  probabilities_["youtube_story"]["file:///system/apps/youtube_related_videos"] = 0.357142857143;
-  probabilities_["youtube_story"]["file:///system/apps/youtube_video"] = 0.357142857143;
-  probabilities_["dashboard"]["chat_conversation"] = 0.5;
-  probabilities_["dashboard"]["file:///system/apps/web_view"] = 0.5;
-  probabilities_["file:///system/apps/web_view"]["chat_conversation"] = 1.0;
-  probabilities_["file:///system/apps/youtube_related_videos"]["video"] = 1.0;
-  probabilities_["contacts_picker"]["chat_conversation"] = 1.0;
-  probabilities_["file:///system/apps/concert_event_list"]["concert_event_page"] = 1.0;
-  probabilities_["gallery"]["chat_conversation"] = 0.5;
-  probabilities_["gallery"]["contacts_picker"] = 0.5;
-  probabilities_["file:///system/apps/map"]["file:///system/apps/weather_forecast"] = 1.0;
-  probabilities_["chat_conversation_list"]["chat_conversation"] = 0.333333333333;
-  probabilities_["chat_conversation_list"]["contacts_picker"] = 0.5;
-  probabilities_["chat_conversation_list"]["gallery"] = 0.166666666667;
-  probabilities_["file:///system/apps/youtube_video"]["video"] = 0.4;
-  probabilities_["file:///system/apps/youtube_video"]["file:///system/apps/youtube_related_videos"] = 0.6;
+void ModPairRankingFeature::InitData() {
+  std::pair<bool, rapidjson::Document> result = FetchJsonObject(kDataFilePath);
+  if (!result.first) {
+    FXL_LOG(WARNING) << "Failed to fetch mod pairs ranking feature data.";
+    return;
+  }
+  for (rapidjson::Value::ConstMemberIterator iter = result.second.MemberBegin();
+       iter != result.second.MemberEnd(); ++iter) {
+    std::string existing_mod_url = iter->name.GetString();
+    rapidjson::Value& other_mods = result.second[existing_mod_url.c_str()];
+    for (rapidjson::Value::ConstMemberIterator iter2 = other_mods.MemberBegin();
+         iter2 != other_mods.MemberEnd(); ++iter2) {
+      std::string added_mod_url = iter2->name.GetString();
+      module_pairs_[existing_mod_url][added_mod_url] = iter2->value.GetDouble();
+    }
+  }
 }
 
 
@@ -76,9 +74,9 @@ double ModPairRankingFeature::ComputeFeatureInternal(
     // TODO(miguelfrde): compute P(module_url | modules in source story)
     for (auto& context_value : context_update_values) {
       std::string existing_mod_url = context_value->meta->mod->url;
-      if (probabilities_.count(existing_mod_url) &&
-          probabilities_[existing_mod_url].count(module_url)) {
-        prob = std::max(prob, probabilities_[existing_mod_url][module_url]);
+      if (module_pairs_.count(existing_mod_url) &&
+          module_pairs_[existing_mod_url].count(module_url)) {
+        prob = std::max(prob, module_pairs_[existing_mod_url][module_url]);
       }
     }
   }

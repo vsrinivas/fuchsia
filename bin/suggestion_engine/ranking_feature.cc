@@ -2,9 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/suggestion_engine/ranking_feature.h"
-
+#include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
+#include "peridot/bin/suggestion_engine/ranking_feature.h"
+#include "rapidjson/document.h"
+#include "rapidjson/error/en.h"
+#include "rapidjson/schema.h"
+#include "rapidjson/stringbuffer.h"
+#include "third_party/rapidjson/rapidjson/document.h"
 
 namespace maxwell {
 
@@ -39,6 +44,29 @@ ContextSelectorPtr RankingFeature::CreateContextSelectorInternal() {
   // require context. If a ranking feature requires context, it should create a
   // context selector, set the values it needs and return it.
   return nullptr;
+}
+
+std::pair<bool, rapidjson::Document> RankingFeature::FetchJsonObject(
+    const std::string& path) {
+  // Load data file to string.
+  std::string data;
+  rapidjson::Document data_doc;
+  if (!files::ReadFileToString(path, &data)) {
+    FXL_LOG(WARNING) << "Missing ranking feature data file: " << path;
+    return std::make_pair(false, std::move(data_doc));
+  }
+
+  // Parse json data string.
+  data_doc.Parse(data);
+  if (data_doc.HasParseError()) {
+    std::string error;
+    FXL_LOG(WARNING) << "Invalid JSON (" << path << " at "
+                     << data_doc.GetErrorOffset() << "): "
+                     << rapidjson::GetParseError_En(data_doc.GetParseError());
+    return std::make_pair(false, std::move(data_doc));
+  }
+
+  return std::make_pair(true, std::move(data_doc));
 }
 
 }  // namespace maxwell

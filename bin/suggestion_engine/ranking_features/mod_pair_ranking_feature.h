@@ -27,10 +27,10 @@ class ModPairRankingFeature : public RankingFeature {
   ContextSelectorPtr CreateContextSelectorInternal() override;
 
  private:
-  void InitPairProbabilitiesMap();
+  void InitData();
 
   std::unordered_map<std::string, std::unordered_map<std::string, double>>
-      probabilities_;
+      module_pairs_;
 };
 
 }  // namespace maxwell

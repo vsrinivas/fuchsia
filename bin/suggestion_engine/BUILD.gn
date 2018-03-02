@@ -9,6 +9,13 @@ package("suggestion_engine") {
     ":bin",
   ]
 
+  resources = [
+    {
+      path = rebase_path("//peridot/bin/suggestion_engine/resources/mod_pairs.json")
+      dest = "ranking_data/mod_pairs.json"
+    }
+  ]
+
   binary = "suggestion_engine"
 }
 
@@ -92,6 +99,7 @@ source_set("ranking") {
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/suggestion/fidl",
+    "//third_party/rapidjson",
   ]
 }
 

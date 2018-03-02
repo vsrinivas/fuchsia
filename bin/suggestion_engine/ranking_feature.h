@@ -7,8 +7,8 @@
 
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
-
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
+#include "third_party/rapidjson/rapidjson/document.h"
 
 namespace maxwell {
 
@@ -44,6 +44,10 @@ class RankingFeature {
   // Create the context selector. Returns nullptr if the feature doesn't require
   // context.
   virtual ContextSelectorPtr CreateContextSelectorInternal();
+
+  // Loads a json file into the second value of the pair. The first value
+  // indicates if the file could be loaded and parsed.
+  std::pair<bool, rapidjson::Document> FetchJsonObject(const std::string& path);
 
  private:
   static int instances_;
