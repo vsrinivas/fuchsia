@@ -2,14 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_source_set.gni")
 import("//build/package.gni")
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
-source_set("cpp") {
+sdk_source_set("cpp") {
   sources = [
     "array.h",
-    "binding_set.h",
     "binding.h",
+    "binding_set.h",
     "clone.cc",
     "clone.h",
     "coding_traits.cc",
@@ -20,8 +21,8 @@ source_set("cpp") {
     "encoder.cc",
     "encoder.h",
     "interface_handle.h",
-    "interface_ptr_set.h",
     "interface_ptr.h",
+    "interface_ptr_set.h",
     "interface_request.h",
     "internal/header.h",
     "internal/implementation.h",
@@ -51,6 +52,8 @@ source_set("cpp") {
     "traits.h",
     "vector.h",
   ]
+
+  include_base = "//garnet/public"
 
   public_deps = [
     "//zircon/public/lib/async",
@@ -84,6 +87,10 @@ fidl("fidl_test") {
 
 source_set("test_sources") {
   testonly = true
+
+# TODO(jamesr): Make this an sdk source set
+# sdk_name = "fidl_cpp_tests"
+# include_base = "//garnet/public"
 
   sources = [
     "array_unittest.cc",
@@ -137,9 +144,13 @@ package("fidl_tests") {
   testonly = true
   deprecated_system_image = true
 
-  deps = [":fidl_cpp_unittests"]
+  deps = [
+    ":fidl_cpp_unittests",
+  ]
 
-  tests = [{
-    name = "fidl_cpp_unittests"
-  }]
+  tests = [
+    {
+      name = "fidl_cpp_unittests"
+    },
+  ]
 }

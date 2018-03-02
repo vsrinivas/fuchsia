@@ -25,6 +25,7 @@ sdk("garnet") {
     "//garnet/bin/far:bin_sdk($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
     "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
+    "//garnet/public/lib/fidl/cpp:cpp_sdk",
     "//garnet/public/lib/media/c:c_sdk",
     "//zircon/public/lib/async:async_sdk",
     "//zircon/public/lib/async-default:async-default_sdk",
