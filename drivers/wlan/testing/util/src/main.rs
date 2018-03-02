@@ -8,11 +8,15 @@
 extern crate failure;
 #[macro_use]
 extern crate fdio;
+extern crate fidl;
 extern crate fidl_wlan_device as wlan;
+extern crate fuchsia_async as async;
 extern crate fuchsia_wlan_dev as wlan_dev;
-extern crate fuchsia_zircon as zircon;
+extern crate futures;
 
-use failure::Error;
+use failure::{Error, ResultExt};
+use futures::prelude::*;
+use std::convert::Into;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
 
@@ -28,7 +32,16 @@ fn usage(appname: &str) {
 }
 
 fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
-    OpenOptions::new().read(true).write(true).open(path).map_err(|e| e.into())
+    OpenOptions::new().read(true).write(true).open(path).map_err(Into::into)
+}
+
+fn get_proxy() -> Result<(async::Executor, wlan::PhyProxy), Error> {
+    let executor = async::Executor::new().context("error creating event loop")?;
+
+    let phy = wlan_dev::WlanPhy::new(DEV_WLANPHY)?;
+    let chan = phy.connect()?;
+    let proxy = wlan::PhyProxy::new(async::Channel::from_channel(chan)?);
+    Ok((executor, proxy))
 }
 
 fn add_wlanphy() -> Result<(), Error> {
@@ -63,24 +76,32 @@ fn rm_wlanphy() -> Result<(), Error> {
 }
 
 fn query_wlanphy() -> Result<(), Error> {
-    wlan_dev::WlanPhy::new(DEV_WLANPHY)?
-        .query()
-        .map(|info| println!("query results: {:?}", info))
-        .map_err(|e| e.into())
+    let (mut executor, proxy) = get_proxy()?;
+    let fut = proxy.query().and_then(|resp| {
+       println!("query results: {:?}", resp.info);
+       Ok(())
+    });
+    executor.run_singlethreaded(fut).map_err(Into::into)
 }
 
 fn create_wlanintf() -> Result<(), Error> {
-    wlan_dev::WlanPhy::new(DEV_WLANPHY)?
-        .create_iface(wlan::MacRole::Client)
-        .map(|i| println!("create results: {:?}", i))
-        .map_err(|e| e.into())
+    let (mut executor, proxy) = get_proxy()?;
+    let mut req = wlan::CreateIfaceRequest { role: wlan::MacRole::Client };
+    let fut = proxy.create_iface(&mut req).and_then(|resp| {
+       println!("create results: {:?}", resp);
+       Ok(())
+    });
+    executor.run_singlethreaded(fut).map_err(Into::into)
 }
 
 fn destroy_wlanintf(id: u16) -> Result<(), Error> {
-    wlan_dev::WlanPhy::new(DEV_WLANPHY)?
-        .destroy_iface(id)
-        .map(|_| println!("destroyed intf {}", id))
-        .map_err(|e| e.into())
+    let (mut executor, proxy) = get_proxy()?;
+    let mut req = wlan::DestroyIfaceRequest { id: id };
+    let fut = proxy.destroy_iface(&mut req).and_then(|resp| {
+       println!("destroyed intf {} resp: {:?}", id, resp);
+       Ok(())
+    });
+    executor.run_singlethreaded(fut).map_err(Into::into)
 }
 
 fn main() {
