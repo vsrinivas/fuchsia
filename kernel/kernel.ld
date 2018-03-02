@@ -103,25 +103,25 @@ SECTIONS
      * orphans that should be RELRO.
      */
     .data.rel.ro : ALIGN(8) {
-	PROVIDE_HIDDEN(__start_commands = .);
-	KEEP(*(.data.rel.ro.commands))
-	PROVIDE_HIDDEN(__stop_commands = .);
+        PROVIDE_HIDDEN(__start_commands = .);
+        KEEP(*(.data.rel.ro.commands))
+        PROVIDE_HIDDEN(__stop_commands = .);
 
-	PROVIDE_HIDDEN(__start_ktrace_probe = .);
-	KEEP(*(.data.rel.ro.ktrace_probe))
-	PROVIDE_HIDDEN(__stop_ktrace_probe = .);
+        PROVIDE_HIDDEN(__start_ktrace_probe = .);
+        KEEP(*(.data.rel.ro.ktrace_probe))
+        PROVIDE_HIDDEN(__stop_ktrace_probe = .);
 
-	PROVIDE_HIDDEN(__start_lk_init = .);
-	KEEP(*(.data.rel.ro.lk_init))
-	PROVIDE_HIDDEN(__stop_lk_init = .);
+        PROVIDE_HIDDEN(__start_lk_init = .);
+        KEEP(*(.data.rel.ro.lk_init))
+        PROVIDE_HIDDEN(__stop_lk_init = .);
 
-	PROVIDE_HIDDEN(__start_lk_pdev_init = .);
-	KEEP(*(.data.rel.ro.lk_pdev_init))
-	PROVIDE_HIDDEN(__stop_lk_pdev_init = .);
+        PROVIDE_HIDDEN(__start_lk_pdev_init = .);
+        KEEP(*(.data.rel.ro.lk_pdev_init))
+        PROVIDE_HIDDEN(__stop_lk_pdev_init = .);
 
-	PROVIDE_HIDDEN(__start_unittest_testcases = .);
-	KEEP(*(.data.rel.ro.unittest_testcases))
-	PROVIDE_HIDDEN(__stop_unittest_testcases = .);
+        PROVIDE_HIDDEN(__start_unittest_testcases = .);
+        KEEP(*(.data.rel.ro.unittest_testcases))
+        PROVIDE_HIDDEN(__stop_unittest_testcases = .);
 
         *(.data.rel.ro* .gnu.linkonce.d.rel.ro.*)
     }
@@ -150,6 +150,11 @@ SECTIONS
         PROVIDE_HIDDEN(__rodata_end = .);
         PROVIDE_HIDDEN(__data_start = .);
         *(.data .data.* .gnu.linkonce.d.*)
+        /*
+         * Make sure the total file size is aligned to 8 bytes so the image
+         * can go into a BOOTDATA container, which requires 8-byte alignment.
+         */
+        . = ALIGN(8);
         PROVIDE_HIDDEN(__data_end = .);
     } :data
 
@@ -173,7 +178,7 @@ SECTIONS
          */
         . = ALIGN(8);
         PROVIDE_HIDDEN(kcounters_arena = .);
-	KEEP(*(SORT_BY_NAME(.bss.kcounter.*)))
+        KEEP(*(SORT_BY_NAME(.bss.kcounter.*)))
 
         /*
          * Sanity check that the aggregate size of kcounters_arena
@@ -182,7 +187,7 @@ SECTIONS
          * single counter.  (It's only for this sanity check that we need
          * to care how big k_counter_desc is.)
          */
-	ASSERT(. - kcounters_arena == SIZEOF(.kcounter.desc) * SMP_MAX_CPUS,
+        ASSERT(. - kcounters_arena == SIZEOF(.kcounter.desc) * SMP_MAX_CPUS,
                "kcounters_arena size mismatch");
 
         *(.bss*)
