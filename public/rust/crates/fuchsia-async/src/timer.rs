@@ -2,57 +2,103 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Support for creating futures that represent timeouts.
+//! Support for creating futures that represent timers.
 //!
-//! This module contains the `Timeout` type which is a future that will resolve
+//! This module contains the `Timer` type which is a future that will resolve
 //! at a particular point in the future.
 
 use std::marker::PhantomData;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use futures::{Future, Stream, Poll, Async};
-use futures::task::AtomicTask;
+use futures::{Future, Stream, Poll, Async, Never};
+use futures::task::{self, AtomicWaker};
 
 use executor::{EHandle, ReceiverRegistration, PacketReceiver};
 
 use zx;
 use zx::prelude::*;
 
-/// The packet reciever for timeouts.
+/// A trait which allows futures to be easily wrapped in a timeout.
+pub trait TimeoutExt: Future + Sized {
+    /// Wraps the future in a timeout, calling `on_timeout` to produce a result
+    /// when the timeout occurs.
+    fn on_timeout<OT>(self, time: zx::Time, on_timeout: OT)
+        -> Result<OnTimeout<Self, OT>, zx::Status>
+        where OT: FnOnce() -> Result<Self::Item, Self::Error>
+    {
+        Ok(OnTimeout {
+            timer: Timer::new(time)?,
+            future: self,
+            on_timeout: Some(on_timeout),
+        })
+    }
+}
+
+impl<F: Future + Sized> TimeoutExt for F {}
+
+/// A wrapper for a future which will complete with a provided closure when a timeout occurs.
 #[derive(Debug)]
-struct TimeoutReceiver {
-    task: AtomicTask,
+#[must_use = "futures do nothing unless polled"]
+pub struct OnTimeout<F: Future, OT> {
+    timer: Timer<Never>,
+    future: F,
+    on_timeout: Option<OT>,
+}
+
+impl<F: Future, OT> Future for OnTimeout<F, OT>
+    where OT: FnOnce() -> Result<F::Item, F::Error>
+{
+    type Item = F::Item;
+    type Error = F::Error;
+    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+        if let Async::Ready(item) = self.future.poll(cx)? {
+            return Ok(Async::Ready(item));
+        }
+        if let Async::Ready(()) = self.timer.poll(cx).map_err(|never| match never {})? {
+            let ot = self.on_timeout.take().expect("polled withtimeout after completion");
+            let item = (ot)()?;
+            return Ok(Async::Ready(item));
+        }
+        Ok(Async::Pending)
+    }
+}
+
+/// The packet reciever for timers.
+#[derive(Debug)]
+struct TimerReceiver {
+    task: AtomicWaker,
     did_fire: AtomicBool,
 }
 
-impl PacketReceiver for TimeoutReceiver {
+impl PacketReceiver for TimerReceiver {
     fn receive_packet(&self, packet: zx::Packet) {
         if let zx::PacketContents::SignalRep(signals) = packet.contents() {
             if signals.observed().contains(zx::Signals::TIMER_SIGNALED) {
                 self.did_fire.store(true, Ordering::SeqCst);
-                self.task.notify();
+                self.task.wake();
             }
         }
     }
 }
 
-/// An asynchronous timeout.
+/// An asynchronous timer.
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
-pub struct Timeout<E> {
+pub struct Timer<E> {
     timer: zx::Timer,
-    timeout_receiver: ReceiverRegistration<TimeoutReceiver>,
-    _marker: PhantomData<E>,
+    timer_receiver: ReceiverRegistration<TimerReceiver>,
+    _marker: PhantomData<E>
 }
 
-impl<E> Timeout<E> {
-    /// Create a new timeout scheduled to fire at `time`.
-    pub fn new(time: zx::Time, ehandle: &EHandle) -> Result<Self, zx::Status> {
-        let timeout_receiver = ehandle.register_receiver(
-            Arc::new(TimeoutReceiver {
-                task: AtomicTask::new(),
-                did_fire: AtomicBool::from(false),
+impl<E> Timer<E> {
+    /// Create a new timer scheduled to fire at `time`.
+    pub fn new(time: zx::Time) -> Result<Self, zx::Status> {
+        let ehandle = EHandle::local();
+        let timer_receiver = ehandle.register_receiver(
+            Arc::new(TimerReceiver {
+                task: AtomicWaker::new(),
+                did_fire: AtomicBool::new(false),
             })
         );
 
@@ -60,44 +106,44 @@ impl<E> Timeout<E> {
 
         timer.wait_async_handle(
             ehandle.port(),
-            timeout_receiver.key(),
+            timer_receiver.key(),
             zx::Signals::TIMER_SIGNALED,
             zx::WaitAsyncOpts::Repeating,
         )?;
 
         timer.set(time, 0.nanos())?;
 
-        Ok(Timeout {
+        Ok(Timer {
             timer,
-            timeout_receiver,
+            timer_receiver,
             _marker: PhantomData,
         })
     }
 
-    /// Reset the `Timeout` to a fire at a new time.
+    /// Reset the `Timer` to a fire at a new time.
     pub fn reset(&mut self, time: zx::Time) -> Result<(), zx::Status> {
-        self.timeout_receiver.receiver().did_fire.store(false, Ordering::SeqCst);
+        self.timer_receiver.receiver().did_fire.store(false, Ordering::SeqCst);
         self.timer.set(time, 0.nanos())
     }
 
     fn did_fire(&self) -> bool {
-        self.timeout_receiver.receiver().did_fire.load(Ordering::SeqCst)
+        self.timer_receiver.receiver().did_fire.load(Ordering::SeqCst)
     }
 
-    fn register_task(&self) {
-        self.timeout_receiver.receiver().task.register();
+    fn register_task(&self, cx: &mut task::Context) {
+        self.timer_receiver.receiver().task.register(cx.waker());
     }
 }
 
-impl<E> Future for Timeout<E> {
+impl<E> Future for Timer<E> {
     type Item = ();
     type Error = E;
-    fn poll(&mut self) -> Poll<(), E> {
+    fn poll(&mut self, cx: &mut task::Context) -> Poll<(), E> {
         if self.did_fire() {
             Ok(Async::Ready(()))
         } else {
-            self.register_task();
-            Ok(Async::NotReady)
+            self.register_task(cx);
+            Ok(Async::Pending)
         }
     }
 }
@@ -107,17 +153,17 @@ impl<E> Future for Timeout<E> {
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Interval {
-    timeout: Timeout<zx::Status>,
+    timer: Timer<zx::Status>,
     next: zx::Time,
     duration: zx::Duration,
 }
 
 impl Interval {
     /// Create a new `Interval` which yields every `duration`.
-    pub fn new(duration: zx::Duration, ehandle: &EHandle) -> Result<Self, zx::Status> {
+    pub fn new(duration: zx::Duration) -> Result<Self, zx::Status> {
         let next = duration.after_now();
         Ok(Interval {
-            timeout: Timeout::new(next, ehandle)?,
+            timer: Timer::new(next)?,
             next,
             duration,
         })
@@ -128,24 +174,24 @@ impl Interval {
         self.duration = duration;
         let new_next = duration.after_now();
         self.next = new_next;
-        self.timeout.reset(new_next)
+        self.timer.reset(new_next)
     }
 }
 
 impl Stream for Interval {
     type Item = ();
     type Error = zx::Status;
-    fn poll(&mut self) -> Poll<Option<()>, Self::Error> {
-        match self.timeout.poll() {
+    fn poll_next(&mut self, cx: &mut task::Context) -> Poll<Option<()>, Self::Error> {
+        match self.timer.poll(cx) {
             Ok(Async::Ready(())) => {
-                self.timeout.register_task();
+                self.timer.register_task(cx);
                 self.next += self.duration;
-                self.timeout.reset(self.next)?;
+                self.timer.reset(self.next)?;
                 Ok(Async::Ready(Some(())))
             }
-            Ok(Async::NotReady) => {
-                self.timeout.register_task();
-                Ok(Async::NotReady)
+            Ok(Async::Pending) => {
+                self.timer.register_task(cx);
+                Ok(Async::Pending)
             }
             Err(e) => Err(e),
         }

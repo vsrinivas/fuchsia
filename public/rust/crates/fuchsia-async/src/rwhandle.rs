@@ -6,7 +6,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use futures::{Async, Poll};
-use futures::task::AtomicTask;
+use futures::task::{self, AtomicWaker};
+
 use executor::{PacketReceiver, ReceiverRegistration, EHandle};
 use zx::{self, AsHandleRef};
 
@@ -16,8 +17,8 @@ const CLOSED:   usize = 0b100;
 
 struct RWPacketReceiver {
     signals: AtomicUsize,
-    read_task: AtomicTask,
-    write_task: AtomicTask,
+    read_task: AtomicWaker,
+    write_task: AtomicWaker,
 }
 
 impl PacketReceiver for RWPacketReceiver {
@@ -32,15 +33,16 @@ impl PacketReceiver for RWPacketReceiver {
             (if observed.contains(zx::Signals::OBJECT_PEER_CLOSED) { CLOSED } else { 0 });
 
         let old = self.signals.fetch_or(new, Ordering::SeqCst);
+
         let became_readable = ((new & READABLE) != 0) && ((old & READABLE) == 0);
         let became_writable = ((new & WRITABLE) != 0) && ((old & WRITABLE) == 0);
         let became_closed = ((new & CLOSED) != 0) && ((old & CLOSED) == 0);
 
         if became_readable || became_closed {
-            self.read_task.notify();
+            self.read_task.wake();
         }
         if became_writable || became_closed {
-            self.write_task.notify();
+            self.write_task.wake();
         }
     }
 }
@@ -54,11 +56,13 @@ pub struct RWHandle<T> {
 impl<T> RWHandle<T> where T: AsHandleRef {
     /// Creates a new `RWHandle` object which will receive notifications when
     /// the underlying handle becomes readable, writable, or closes.
-    pub fn new(handle: T, ehandle: &EHandle) -> Result<Self, zx::Status> {
+    pub fn new(handle: T) -> Result<Self, zx::Status> {
+        let ehandle = EHandle::local();
+
         let receiver = ehandle.register_receiver(Arc::new(RWPacketReceiver {
             signals: AtomicUsize::new(0),
-            read_task: AtomicTask::new(),
-            write_task: AtomicTask::new(),
+            read_task: AtomicWaker::new(),
+            write_task: AtomicWaker::new(),
         }));
 
         let rwhandle = RWHandle {
@@ -95,24 +99,24 @@ impl<T> RWHandle<T> where T: AsHandleRef {
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "readable" signal arrives.
-    pub fn poll_read(&self) -> Poll<(), zx::Status> {
+    pub fn poll_read(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
         if (self.receiver().signals.load(Ordering::SeqCst) & (READABLE | CLOSED)) != 0 {
             Ok(Async::Ready(()))
         } else {
-            self.need_read()?;
-            Ok(Async::NotReady)
+            self.need_read(cx)?;
+            Ok(Async::Pending)
         }
     }
 
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
     /// when a "writable" signal arrives.
-    pub fn poll_write(&self) -> Poll<(), zx::Status> {
+    pub fn poll_write(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
         if (self.receiver().signals.load(Ordering::SeqCst) & (WRITABLE | CLOSED)) != 0 {
             Ok(Async::Ready(()))
         } else {
-            self.need_write()?;
-            Ok(Async::NotReady)
+            self.need_write(cx)?;
+            Ok(Async::Pending)
         }
     }
 
@@ -122,8 +126,8 @@ impl<T> RWHandle<T> where T: AsHandleRef {
 
     /// Arranges for the current task to receive a notification when a
     /// "readable" signal arrives.
-    pub fn need_read(&self) -> Result<(), zx::Status> {
-        self.receiver().read_task.register();
+    pub fn need_read(&self, cx: &mut task::Context) -> Result<(), zx::Status> {
+        self.receiver().read_task.register(cx.waker());
         let old = self.receiver().signals.fetch_and(!READABLE, Ordering::SeqCst);
         // We only need to schedule a new packet if one isn't already scheduled.
         // If READABLE was already false, a packet was already scheduled.
@@ -135,8 +139,8 @@ impl<T> RWHandle<T> where T: AsHandleRef {
 
     /// Arranges for the current task to receive a notification when a
     /// "writable" signal arrives.
-    pub fn need_write(&self) -> Result<(), zx::Status> {
-        self.receiver().read_task.register();
+    pub fn need_write(&self, cx: &mut task::Context) -> Result<(), zx::Status> {
+        self.receiver().write_task.register(cx.waker());
         let old = self.receiver().signals.fetch_and(!WRITABLE, Ordering::SeqCst);
         // We only need to schedule a new packet if one isn't already scheduled.
         // If WRITABLE was already false, a packet was already scheduled.

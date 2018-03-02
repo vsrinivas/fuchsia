@@ -8,9 +8,8 @@ version = "0.1.0"
 authors = ["cramertj <cramertj@google.com>"]
 
 [dependencies]
+crossbeam = "0.3.2"
 fuchsia-zircon = "0.3"
-futures = "0.1"
+futures = "0.2"
 parking_lot = "0.4"
 slab = "0.4"
-smallvec = "0.4"
-tokio-io = "0.1"

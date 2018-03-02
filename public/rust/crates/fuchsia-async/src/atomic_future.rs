@@ -2,33 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::{Async, Future};
-use futures::executor::{NotifyHandle, Spawn, spawn};
+use futures::{Async, Future, Never};
+use futures::executor::Executor;
+use futures::task::{self, LocalMap, Waker};
 use std::cell::UnsafeCell;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::{AcqRel, Relaxed};
 
-/// A future which will never return an error.
-pub trait TaskFut: Future<Item = (),  Error = ()> + Send {}
-impl<T: ?Sized> TaskFut for T
-    where T: Future<Item = (),  Error = ()> + Send {}
-
 /// A lock-free thread-safe future.
-pub struct AtomicFuture<T: TaskFut + ?Sized> {
+pub struct AtomicFuture {
     // ACTIVE, INACTIVE, NOTIFIED, or DONE
     state: AtomicUsize,
     // `future` is safe to access only after a successful
     // compare-and-swap from INACTIVE to ACTIVE, and before
     // a transition from ACTIVE or NOTIFIED to INACTIVE or DONE.
-    future: UnsafeCell<Spawn<T>>,
+    // INVARIANT: this value must be `Some(...)` so long as
+    // `state` != `DONE`.
+    future: UnsafeCell<Option<(Box<Future<Item = (), Error = Never> + Send>, task::LocalMap)>>,
 }
 
 /// `AtomicFuture` is safe to access from multiple threads at once.
 /// Its only method is `try_poll`, which itself is thread-safe.
 /// (See comments on method implementation for details)
-unsafe impl<T> Sync for AtomicFuture<T> where T: TaskFut + ?Sized {}
+unsafe impl Sync for AtomicFuture {}
 trait AssertSend: Send {}
-impl<T> AssertSend for AtomicFuture<T> where T: TaskFut + ?Sized {}
+impl AssertSend for AtomicFuture {}
 
 /// No thread is currently polling the future.
 const INACTIVE: usize = 0;
@@ -60,7 +58,7 @@ pub enum AttemptPoll {
     /// to poll at least once more before yielding.
     Busy,
     /// The future was polled, but did not complete.
-    NotReady,
+    Pending,
     /// The future was polled and finished by this thread.
     /// This result is normally used to trigger garbage-collection of the future.
     IFinished,
@@ -68,12 +66,15 @@ pub enum AttemptPoll {
     SomeoneElseFinished,
 }
 
-impl<T> AtomicFuture<T> where T: TaskFut + ?Sized {
+impl AtomicFuture {
     /// Create a new `AtomicFuture`.
-    pub fn new(future: T) -> Self where T: Sized {
+    pub fn new(
+        future: Box<Future<Item = (), Error = Never> + Send>,
+        local_map: LocalMap,
+    ) -> Self {
         AtomicFuture {
             state: AtomicUsize::new(INACTIVE),
-            future: UnsafeCell::new(spawn(future)),
+            future: UnsafeCell::new(Some((future, local_map))),
         }
     }
 
@@ -81,8 +82,7 @@ impl<T> AtomicFuture<T> where T: TaskFut + ?Sized {
     ///
     /// `try_poll` ensures that the future is polled at least once more
     /// unless it has already finished.
-    pub fn try_poll<N>(&self, notify: &N, id: usize) -> AttemptPoll
-        where N: Clone + Into<NotifyHandle>
+    pub fn try_poll(&self, waker: &Waker, executor: &mut Executor) -> AttemptPoll
     {
         // AcqRel is used instead of SeqCst in the following code.
         //
@@ -108,25 +108,46 @@ impl<T> AtomicFuture<T> where T: TaskFut + ?Sized {
                 INACTIVE => {
                     // we are now the (only) active worker. proceed to poll!
                     loop {
-                        // This `UnsafeCell` access is valid because `self.future.get()`
-                        // is only called here, inside the critical section where
-                        // we performed the transition from INACTIVE to ACTIVE.
-                        let future: &mut Spawn<T> = unsafe { &mut *self.future.get() };
-                        match future.poll_future_notify(notify, id) {
-                            Ok(Async::Ready(())) | Err(()) => {
+                        let poll_res = {
+                            // This `UnsafeCell` access is valid because `self.future.get()`
+                            // is only called here, inside the critical section where
+                            // we performed the transition from INACTIVE to ACTIVE.
+                            let opt: &mut Option<(Box<_>, LocalMap)> =
+                                unsafe { &mut *self.future.get() };
+
+                            // We know that the future is still there and hasn't completed
+                            // because `state` != `DONE`
+                            let (ref mut future, ref mut map) =
+                                *opt.as_mut().expect("Missing future in AtomicFuture");
+
+                            let cx = &mut task::Context::new(
+                                map,
+                                waker,
+                                executor);
+
+                            future.poll(cx)
+                        };
+
+                        match poll_res {
+                            Ok(Async::Ready(())) | Err(_) => {
+                                // Take the future so that its innards can be dropped
+                                let future_opt: &mut Option<(Box<_>, LocalMap)> =
+                                    unsafe { &mut *self.future.get() };
+                                future_opt.take();
+
                                 // No one else will read `future` unless they see
                                 // `INACTIVE`, which will never happen again.
                                 self.state.store(DONE, Relaxed);
                                 return AttemptPoll::IFinished;
                             }
-                            Ok(Async::NotReady) => {
+                            Ok(Async::Pending) => {
                                 // Continue on
                             }
                         }
 
                         match self.state.compare_and_swap(ACTIVE, INACTIVE, AcqRel) {
                             ACTIVE => {
-                                return AttemptPoll::NotReady;
+                                return AttemptPoll::Pending;
                             }
                             NOTIFIED => {
                                 // We were notified to poll again while we were busy.

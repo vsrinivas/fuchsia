@@ -7,21 +7,21 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use futures::{Async, Future, Poll};
-use futures::task::AtomicTask;
+use futures::task::{self, AtomicWaker};
 use executor::{PacketReceiver, ReceiverRegistration, EHandle};
 use zx::{self, AsHandleRef};
 
 struct OnSignalsReceiver {
     maybe_signals: AtomicUsize,
-    task: AtomicTask,
+    task: AtomicWaker,
 }
 
 impl OnSignalsReceiver {
-    fn get_signals(&self) -> Async<zx::Signals> {
+    fn get_signals(&self, cx: &mut task::Context) -> Async<zx::Signals> {
         let signals = self.maybe_signals.load(Ordering::SeqCst);
         if signals == 0 {
-            self.task.register();
-            Async::NotReady
+            self.task.register(cx.waker());
+            Async::Pending
         } else {
             Async::Ready(zx::Signals::from_bits_truncate(signals as u32))
         }
@@ -29,7 +29,7 @@ impl OnSignalsReceiver {
 
     fn set_signals(&self, signals: zx::Signals) {
         self.maybe_signals.store(signals.bits() as usize, Ordering::SeqCst);
-        self.task.notify();
+        self.task.wake();
     }
 }
 
@@ -50,12 +50,13 @@ pub struct OnSignals(Result<ReceiverRegistration<OnSignalsReceiver>, zx::Status>
 impl OnSignals {
     /// Creates a new `OnSignals` object which will receive notifications when
     /// any signals in `signals` occur on `handle`.
-    pub fn new<T>(handle: &T, signals: zx::Signals, remote: &EHandle) -> Self
+    pub fn new<T>(handle: &T, signals: zx::Signals) -> Self
         where T: AsHandleRef
     {
-        let receiver = remote.register_receiver(Arc::new(OnSignalsReceiver {
+        let ehandle = EHandle::local();
+        let receiver = ehandle.register_receiver(Arc::new(OnSignalsReceiver {
             maybe_signals: AtomicUsize::new(0),
-            task: AtomicTask::new(),
+            task: AtomicWaker::new(),
         }));
 
         let res = handle.wait_async_handle(
@@ -72,9 +73,9 @@ impl OnSignals {
 impl Future for OnSignals {
     type Item = zx::Signals;
     type Error = zx::Status;
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         self.0.as_mut()
-            .map(|receiver| receiver.receiver().get_signals())
+            .map(|receiver| receiver.receiver().get_signals(cx))
             .map_err(|e| mem::replace(e, zx::Status::OK))
     }
 }

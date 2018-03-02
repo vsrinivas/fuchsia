@@ -7,9 +7,8 @@ use std::mem;
 use std::fmt;
 use std::borrow::BorrowMut;
 
-use futures::{Async, IntoFuture, Future, Poll};
+use futures::{Async, IntoFuture, Future, Poll, task};
 use zx::{self, AsHandleRef, MessageBuf};
-use executor::EHandle;
 
 use RWHandle;
 
@@ -36,8 +35,8 @@ impl From<Channel> for zx::Channel {
 
 impl Channel {
     /// Creates a new `Channel` from a previously-created `zx::Channel`.
-    pub fn from_channel(channel: zx::Channel, ehandle: &EHandle) -> io::Result<Channel> {
-        Ok(Channel(RWHandle::new(channel, ehandle)?))
+    pub fn from_channel(channel: zx::Channel) -> io::Result<Channel> {
+        Ok(Channel(RWHandle::new(channel)?))
     }
 
     /// Test whether this socket is ready to be read or not.
@@ -46,25 +45,23 @@ impl Channel {
     /// get a notification when the socket does become readable. That is, this
     /// is only suitable for calling in a `Future::poll` method and will
     /// automatically handle ensuring a retry once the socket is readable again.
-    pub fn poll_read(&self) -> Poll<(), zx::Status> {
-        self.0.poll_read()
+    fn poll_read(&self, cx: &mut task::Context) -> Poll<(), zx::Status> {
+        self.0.poll_read(cx)
     }
 
     /// Receives a message on the channel and registers this `Channel` as
     /// needing a read on receiving a `zx::Status::SHOULD_WAIT`.
-    pub fn recv_from(&self, buf: &mut MessageBuf) -> Result<(), zx::Status> {
-        let signals = self.poll_read()?;
+    pub fn recv_from(&self, buf: &mut MessageBuf, cx: &mut task::Context)
+        -> Poll<(), zx::Status>
+    {
+        try_ready!(self.poll_read(cx));
 
-        match signals {
-            Async::NotReady => Err(zx::Status::SHOULD_WAIT),
-            Async::Ready(()) => {
-                let res = self.0.get_ref().read(buf);
-                if res == Err(zx::Status::SHOULD_WAIT) {
-                    self.0.need_read()?;
-                }
-                res
-            }
+        let res = self.0.get_ref().read(buf);
+        if res == Err(zx::Status::SHOULD_WAIT) {
+            self.0.need_read(cx)?;
+            return Ok(Async::Pending);
         }
+        res.map(Async::Ready)
     }
 
     /// Creates a future that receive a message to be written to the buffer
@@ -136,11 +133,11 @@ impl<T> Future for RecvMsg<T>
     type Item = (Channel, T);
     type Error = zx::Status;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         {
             let (ref chan, ref mut buf) =
                 *self.0.as_mut().expect("polled a RecvMsg after completion");
-            try_nb!(chan.recv_from(buf.borrow_mut()));
+            try_ready!(chan.recv_from(buf.borrow_mut(), cx));
         }
         let (chan, buf) = self.0.take().unwrap();
         Ok(Async::Ready((chan, buf)))
@@ -167,20 +164,18 @@ impl<F,U> Future for ChainServer<F,U>
     type Item = ();
     type Error = U::Error;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         // loop because we might get a new future we have to poll immediately.
-        // we only return on error or Async::NotReady
+        // we only return on error or Async::Pending
         loop {
             let new_state = match self.state {
                 ServerState::Waiting(ref mut recv) => {
-                    let chanbuf = try_ready!(recv.poll());
-                    // this is needed or else Rust thinks .callback() is a method
-                    let ref mut callback = self.callback;
-                    let fut = callback(chanbuf).into_future();
+                    let chanbuf = try_ready!(recv.poll(cx));
+                    let fut = (self.callback)(chanbuf).into_future();
                     ServerState::Processing(fut)
                 },
                 ServerState::Processing(ref mut fut) => {
-                    let (chan, buf) = try_ready!(fut.poll());
+                    let (chan, buf) = try_ready!(fut.poll(cx));
                     let recv = chan.recv_msg(buf);
                     ServerState::Waiting(recv)
                 }
@@ -204,9 +199,9 @@ impl<F> Future for RepeatServer<F>
     type Item = ();
     type Error = io::Error;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+    fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         loop {
-            try_nb!(self.chan.recv_from(&mut self.buf));
+            try_ready!(self.chan.recv_from(&mut self.buf, cx));
 
             (self.callback)(&self.chan, &mut self.buf);
             self.buf.clear();
@@ -216,20 +211,22 @@ impl<F> Future for RepeatServer<F>
 
 #[cfg(test)]
 mod tests {
-    use {Executor, Timeout};
+    use {Executor, Timer, TimeoutExt};
     use zx::prelude::*;
     use zx::{self, MessageBuf};
-    use futures;
+    use futures::prelude::*;
+    use futures::channel::oneshot;
+    use futures::executor::Executor as FutureExecutor;
+    use futures::future;
     use super::*;
 
     #[test]
     fn can_receive() {
         let mut exec = Executor::new().unwrap();
-        let handle = exec.ehandle();
         let bytes = &[0,1,2,3];
 
         let (tx, rx) = zx::Channel::create().unwrap();
-        let f_rx = Channel::from_channel(rx, &handle).unwrap();
+        let f_rx = Channel::from_channel(rx).unwrap();
 
         let mut buffer = MessageBuf::new();
         let receiver = f_rx.recv_msg(&mut buffer).map(|(_chan, buf)| {
@@ -238,14 +235,11 @@ mod tests {
         });
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let rcv_timeout = Timeout::new(1000.millis().after_now(), &handle).unwrap().map(|()| {
-            panic!("did not receive message in time!");
-        });
+        let receiver = receiver.on_timeout(
+                        1000.millis().after_now(),
+                        || panic!("timeout")).unwrap();
 
-        let receiver = receiver.select(rcv_timeout).map(|_| ()).map_err(|(err,_)| err);
-
-        let sender = Timeout::new(100.millis().after_now(), &handle).unwrap()
-            .map(|()|{
+        let sender = Timer::new(100.millis().after_now()).unwrap().map(|()| {
             let mut handles = Vec::new();
             tx.write(bytes, &mut handles).unwrap();
         });
@@ -257,26 +251,24 @@ mod tests {
     #[test]
     fn chain_server() {
         let mut exec = Executor::new().unwrap();
-        let ehandle = exec.ehandle();
 
         let (tx, rx) = zx::Channel::create().unwrap();
-        let f_rx = Channel::from_channel(rx, &ehandle).unwrap();
+        let f_rx = Channel::from_channel(rx).unwrap();
 
         let mut count = 0;
         let receiver = f_rx.chain_server(|(chan, buf)| {
-            println!("{}: {:?}", count, buf.bytes());
+            println!("got bytes: {}: {:?}", count, buf.bytes());
             assert_eq!(1, buf.bytes().len());
             assert_eq!(count, buf.bytes()[0]);
             count += 1;
-            Timeout::new(100.millis().after_now(), &ehandle).unwrap()
+            Timer::new(100.millis().after_now()).unwrap()
                 .map(move |()| (chan, buf))
         });
 
         // add a timeout to receiver to stop the server eventually
-        let rcv_timeout = Timeout::new(400.millis().after_now(), &ehandle).unwrap();
-        let receiver = receiver.select(rcv_timeout).map(|(_,_)| ()).map_err(|(err,_)| err);
+        let receiver = receiver.on_timeout(400.millis().after_now(), || Ok(())).unwrap();
 
-        let sender = Timeout::new(100.millis().after_now(), &ehandle).unwrap().map(|()|{
+        let sender = Timer::new(100.millis().after_now()).unwrap().map(|()|{
             let mut handles = Vec::new();
             tx.write(&[0], &mut handles).unwrap();
             tx.write(&[1], &mut handles).unwrap();
@@ -289,22 +281,22 @@ mod tests {
 
     #[test]
     fn chain_server_pre_write() {
+        let mut exec = Executor::new().unwrap();
+        let mut ehandle = exec.ehandle();
+
         let (tx, rx) = zx::Channel::create().unwrap();
         tx.write(b"txidhelloworld", &mut vec![]).unwrap();
 
-        let mut exec = Executor::new().unwrap();
-        let ehandle = exec.ehandle();
-
-        let f_rx = Channel::from_channel(rx, &ehandle).unwrap();
-        let (completer, completion) = futures::sync::oneshot::channel();
+        let f_rx = Channel::from_channel(rx).unwrap();
+        let (completer, completion) = oneshot::channel();
 
         let mut maybe_completer = Some(completer);
 
         let receiver = f_rx.chain_server(move |(chan, buf)| {
             maybe_completer.take().unwrap().send(buf.bytes().to_owned()).unwrap();
-            futures::future::ok((chan, buf))
+            future::ok((chan, buf))
         });
-        ehandle.spawn(receiver.map_err(|e| assert_eq!(e, zx::Status::PEER_CLOSED) ));
+        ehandle.spawn(Box::new(receiver.recover(|e| println!("{:?}", e)))).unwrap();
 
         let mut got_result = false;
         exec.run_singlethreaded(completion.map(|b| {
@@ -320,10 +312,9 @@ mod tests {
     #[test]
     fn repeat_server() {
         let mut exec = Executor::new().unwrap();
-        let ehandle = exec.ehandle();
 
         let (tx, rx) = zx::Channel::create().unwrap();
-        let f_rx = Channel::from_channel(rx, &ehandle).unwrap();
+        let f_rx = Channel::from_channel(rx).unwrap();
 
         let mut count = 0;
         let receiver = f_rx.repeat_server(|_chan, buf| {
@@ -334,10 +325,9 @@ mod tests {
         });
 
         // add a timeout to receiver to stop the server eventually
-        let rcv_timeout = Timeout::new(400.millis().after_now(), &ehandle).unwrap();
-        let receiver = receiver.select(rcv_timeout).map(|(_,_)| ()).map_err(|(err,_)| err);
+        let receiver = receiver.on_timeout(500.millis().after_now(), || Ok(())).unwrap();
 
-        let sender = Timeout::new(100.millis().after_now(), &ehandle).unwrap().map(|()|{
+        let sender = Timer::new(100.millis().after_now()).unwrap().map(|()|{
             let mut handles = Vec::new();
             tx.write(&[0], &mut handles).unwrap();
             tx.write(&[1], &mut handles).unwrap();
