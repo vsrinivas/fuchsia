@@ -258,26 +258,26 @@ void PciModernBackend::RingKick(uint16_t ring_index) {
 
 bool PciModernBackend::ReadFeature(uint32_t feature) {
     fbl::AutoLock lock(&lock_);
-    uint32_t select = static_cast<uint32_t>(feature / sizeof(uint32_t));
+    uint32_t select = static_cast<uint32_t>(feature / 32);
     uint32_t bit = feature % sizeof(uint32_t);
     uint32_t val;
 
     MmioWrite(&common_cfg_->device_feature_select, select);
     MmioRead(&common_cfg_->device_feature, &val);
-    bool is_set = (val & bit) > 0;
+    bool is_set = (val & (1u << bit)) > 0;
     zxlogf(SPEW, "%s: read feature bit %u = %u\n", tag(), feature, is_set);
     return is_set;
 }
 
 void PciModernBackend::SetFeature(uint32_t feature) {
     fbl::AutoLock lock(&lock_);
-    uint32_t select = static_cast<uint32_t>(feature / sizeof(uint32_t));
+    uint32_t select = static_cast<uint32_t>(feature / 32);
     uint32_t bit = feature % sizeof(uint32_t);
     uint32_t val;
 
     MmioWrite(&common_cfg_->driver_feature_select, select);
     MmioRead(&common_cfg_->driver_feature, &val);
-    MmioWrite(&common_cfg_->driver_feature, val | bit);
+    MmioWrite(&common_cfg_->driver_feature, val | (1u << bit));
     zxlogf(SPEW, "%s: feature bit %u now set\n", tag(), feature);
 }
 
