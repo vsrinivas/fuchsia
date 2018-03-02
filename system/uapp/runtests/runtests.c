@@ -563,15 +563,10 @@ int main(int argc, char** argv) {
 
         int num_tests = 0;
         int num_failed = 0;
-        bool success = run_tests_in_dir(test_dirs[i], filter_names, num_filter_names,
-                                        output_dir, &num_tests, &num_failed);
+        run_tests_in_dir(test_dirs[i], filter_names, num_filter_names,
+                         output_dir, &num_tests, &num_failed);
         total_count += num_tests;
         failed_count += num_failed;
-
-        // Don't continue running tests if one directory failed.
-        if (!success) {
-            break;
-        }
     }
     free(filter_names);
 
