@@ -83,6 +83,18 @@ void LeaveDirectory(fxl::StringView name, std::vector<DirRecord>* stack) {
   parent.children.push_back(std::move(child));
 }
 
+bool GetDirectoryEntryByPath(ArchiveReader* const reader,
+                             fxl::StringView path,
+                             DirectoryTableEntry* const entry) {
+  if (!reader) {
+    return false;
+  }
+  if (!reader->GetDirectoryEntryByPath(path, entry)) {
+    return false;
+  }
+  return true;
+}
+
 }  // namespace
 
 FileSystem::FileSystem(zx::vmo vmo)
@@ -114,12 +126,16 @@ zx::channel FileSystem::OpenAsDirectory() {
   return h2;
 }
 
-fsl::SizedVmo FileSystem::GetFileAsVMO(fxl::StringView path) {
-  if (!reader_)
-    return nullptr;
+bool FileSystem::IsFile(fxl::StringView path) {
   DirectoryTableEntry entry;
-  if (!reader_->GetDirectoryEntryByPath(path, &entry))
+  return GetDirectoryEntryByPath(reader_.get(), path, &entry);;
+}
+
+fsl::SizedVmo FileSystem::GetFileAsVMO(fxl::StringView path) {
+  DirectoryTableEntry entry;
+  if (!GetDirectoryEntryByPath(reader_.get(), path, &entry)) {
     return nullptr;
+  }
   zx_handle_t result = ZX_HANDLE_INVALID;
   zx_status_t status =
       zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, entry.data_offset,
@@ -131,11 +147,10 @@ fsl::SizedVmo FileSystem::GetFileAsVMO(fxl::StringView path) {
 }
 
 bool FileSystem::GetFileAsString(fxl::StringView path, std::string* result) {
-  if (!reader_)
-    return false;
   DirectoryTableEntry entry;
-  if (!reader_->GetDirectoryEntryByPath(path, &entry))
+  if (!GetDirectoryEntryByPath(reader_.get(), path, &entry)) {
     return false;
+  }
   std::string data;
   data.resize(entry.data_length);
   size_t actual;

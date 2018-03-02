@@ -19,6 +19,20 @@
 namespace app {
 class JobHolder;
 
+enum class ExportedDirType {
+  // Legacy exported directory layout where each file / service is exposed at
+  // the top level. Appmgr forwards a client's
+  // |ApplicationLaunchInfo.service_request| to the top level directory.
+  kLegacyFlatLayout,
+
+  // A nested directory structure where appmgr expects 3 sub-directories-
+  // (1) public - A client's |ApplicationLaunchInfo.service_request| is
+  // forwarded to this directory.
+  // (2) debug - This directory is used to expose debug files.
+  // (3) ctrl - This deirectory is used to expose files to the system.
+  kPublicDebugCtrlLayout,
+};
+
 class ApplicationControllerImpl : public ApplicationController {
  public:
   ApplicationControllerImpl(
@@ -29,7 +43,9 @@ class ApplicationControllerImpl : public ApplicationController {
       std::string url,
       std::string label,
       fxl::RefPtr<ApplicationNamespace> application_namespace,
-      zx::channel service_dir_channel);
+      ExportedDirType export_dir_type,
+      zx::channel exported_dir,
+      zx::channel client_request);
   ~ApplicationControllerImpl() override;
 
   const std::string& label() const { return label_; }
@@ -53,6 +69,8 @@ class ApplicationControllerImpl : public ApplicationController {
   std::string label_;
   std::vector<WaitCallback> wait_callbacks_;
   fbl::RefPtr<fs::PseudoDir> info_dir_;
+
+  zx::channel exported_dir_;
 
   fxl::RefPtr<ApplicationNamespace> application_namespace_;
 

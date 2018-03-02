@@ -30,7 +30,7 @@ ApplicationContext::ApplicationContext(
       debug_export_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       ctrl_export_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       service_root_(std::move(service_root)),
-      deprecated_outgoing_services_(export_dir_) {
+      deprecated_outgoing_services_(public_export_dir_) {
   ConnectToEnvironmentService(environment_.NewRequest());
   ConnectToEnvironmentService(launcher_.NewRequest());
 

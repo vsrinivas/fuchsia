@@ -39,6 +39,7 @@ constexpr zx_rights_t kChildJobRights = ZX_RIGHTS_BASIC | ZX_RIGHTS_IO;
 constexpr char kNumberedLabelFormat[] = "env-%d";
 constexpr char kAppPath[] = "bin/app";
 constexpr char kAppArv0[] = "/pkg/bin/app";
+constexpr char kLegacyFlatExportedDirPath[] = "meta/legacy_flat_exported_dir";
 constexpr char kRuntimePath[] = "meta/runtime";
 constexpr char kSandboxPath[] = "meta/sandbox";
 constexpr char kInfoDirPath[] = "/info_experimental";
@@ -175,28 +176,28 @@ LaunchType Classify(const zx::vmo& data, std::string* runner) {
   return LaunchType::kProcess;
 }
 
-zx::channel BindServiceDirectory(ApplicationLaunchInfo* launch_info) {
-  zx::channel server, client;
-  zx_status_t status = zx::channel::create(0u, &server, &client);
+struct ExportedDirChannels {
+  // The client side of the channel serving connected application's exported
+  // dir.
+  zx::channel exported_dir;
+
+  // The server side of our client's |ApplicationLaunchInfo.service_request|.
+  zx::channel client_request;
+};
+
+ExportedDirChannels BindDirectory(ApplicationLaunchInfo* launch_info) {
+  zx::channel exported_dir_server, exported_dir_client;
+  zx_status_t status = zx::channel::create(0u, &exported_dir_server,
+                                           &exported_dir_client);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create channel for service directory: status="
                    << status;
-    return zx::channel();
+    return {zx::channel(), zx::channel()};
   }
 
-  if (launch_info->service_request) {
-    // The client also wants the exported services, so we'll attach its channel
-    // to a clone of the actual service directory.
-    status = fdio_service_clone_to(client.get(),
-                                   launch_info->service_request.release());
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to clone the service directory channel: status="
-                     << status;
-      return zx::channel();
-    }
-  }
-  launch_info->service_request = fbl::move(server);
-  return client;
+  auto client_request = std::move(launch_info->service_request);
+  launch_info->service_request = std::move(exported_dir_server);
+  return { std::move(exported_dir_client), std::move(client_request) };
 }
 
 }  // namespace
@@ -371,7 +372,7 @@ void JobHolder::CreateApplicationWithProcess(
     return;
 
   const std::string url = launch_info->url;  // Keep a copy before moving it.
-  zx::channel service_dir_channel = BindServiceDirectory(launch_info.get());
+  auto channels = BindDirectory(launch_info.get());
   zx::process process =
       CreateProcess(job_for_child_, std::move(executable), url,
                     std::move(launch_info), zx::channel(), builder.Build());
@@ -380,7 +381,9 @@ void JobHolder::CreateApplicationWithProcess(
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, nullptr, std::move(process), url,
         GetLabelFromURL(url), std::move(application_namespace),
-        std::move(service_dir_channel));
+        ExportedDirType::kPublicDebugCtrlLayout,
+        std::move(channels.exported_dir),
+        std::move(channels.client_request));
     ApplicationControllerImpl* key = application.get();
     info_dir_->AddEntry(application->label(), application->info_dir());
     applications_.emplace(key, std::move(application));
@@ -400,6 +403,7 @@ void JobHolder::CreateApplicationFromPackage(
   std::unique_ptr<archive::FileSystem> pkg_fs;
   std::string sandbox_data;
   std::string runtime_data;
+  ExportedDirType exported_dir_layout(ExportedDirType::kPublicDebugCtrlLayout);
   fsl::SizedVmo app_data;
   zx::channel loader_service;
 
@@ -410,12 +414,18 @@ void JobHolder::CreateApplicationFromPackage(
     pkg_fs->GetFileAsString(kSandboxPath, &sandbox_data);
     if (!pkg_fs->GetFileAsString(kRuntimePath, &runtime_data))
       app_data = pkg_fs->GetFileAsVMO(kAppPath);
+    exported_dir_layout = pkg_fs->IsFile(kLegacyFlatExportedDirPath) ?
+        ExportedDirType::kLegacyFlatLayout :
+        ExportedDirType::kPublicDebugCtrlLayout;
   } else if (package->directory) {
     fxl::UniqueFD fd =
         fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
     files::ReadFileToStringAt(fd.get(), kSandboxPath, &sandbox_data);
     if (!files::ReadFileToStringAt(fd.get(), kRuntimePath, &runtime_data))
       VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
+    exported_dir_layout = files::IsFileAt(fd.get(), kLegacyFlatExportedDirPath)
+        ? ExportedDirType::kLegacyFlatLayout :
+        ExportedDirType::kPublicDebugCtrlLayout;
     // TODO(abarth): We shouldn't need to clone the channel here. Instead, we
     // should be able to tear down the file descriptor in a way that gives us
     // the channel back.
@@ -458,7 +468,7 @@ void JobHolder::CreateApplicationFromPackage(
 
   if (app_data) {
     const std::string url = launch_info->url;  // Keep a copy before moving it.
-    zx::channel service_dir_channel = BindServiceDirectory(launch_info.get());
+    auto channels = BindDirectory(launch_info.get());
     zx::process process = CreateProcess(
         job_for_child_, std::move(app_data), kAppArv0, std::move(launch_info),
         std::move(loader_service), builder.Build());
@@ -467,7 +477,8 @@ void JobHolder::CreateApplicationFromPackage(
       auto application = std::make_unique<ApplicationControllerImpl>(
           std::move(controller), this, std::move(pkg_fs), std::move(process),
           url, GetLabelFromURL(url), std::move(application_namespace),
-          fbl::move(service_dir_channel));
+          exported_dir_layout, std::move(channels.exported_dir),
+          std::move(channels.client_request));
       ApplicationControllerImpl* key = application.get();
       info_dir_->AddEntry(application->label(), application->info_dir());
       applications_.emplace(key, std::move(application));

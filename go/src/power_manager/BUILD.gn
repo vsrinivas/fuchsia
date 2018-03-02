@@ -86,6 +86,9 @@ package("power_manager") {
   meta = [ {
         path = rebase_path("meta/sandbox")
         dest = "sandbox"
+      }, {
+        path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+        dest = "legacy_flat_exported_dir"
       } ]
 }
 

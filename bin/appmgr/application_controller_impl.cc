@@ -5,6 +5,7 @@
 #include "garnet/bin/appmgr/application_controller_impl.h"
 
 #include <fbl/string_printf.h>
+#include <fdio/util.h>
 #include <fs/pseudo-file.h>
 #include <fs/remote-dir.h>
 
@@ -27,12 +28,16 @@ ApplicationControllerImpl::ApplicationControllerImpl(
     std::string url,
     std::string label,
     fxl::RefPtr<ApplicationNamespace> application_namespace,
-    zx::channel service_dir_channel)
+    ExportedDirType export_dir_type,
+    zx::channel exported_dir,
+    zx::channel client_request)
     : binding_(this),
       job_holder_(job_holder),
       fs_(std::move(fs)),
       process_(std::move(process)),
       label_(std::move(label)),
+      info_dir_(fbl::AdoptRef(new fs::PseudoDir())),
+      exported_dir_(std::move(exported_dir)),
       application_namespace_(std::move(application_namespace)),
       wait_(fsl::MessageLoop::GetCurrent()->async(), process_.get(),
             ZX_TASK_TERMINATED) {
@@ -44,8 +49,30 @@ ApplicationControllerImpl::ApplicationControllerImpl(
     binding_.set_error_handler([this] { Kill(); });
   }
 
-  info_dir_ = fbl::AdoptRef(new fs::PseudoDir());
-  if (service_dir_channel) {
+  if (!exported_dir_) {
+    return;
+  }
+
+  if (client_request) {
+    if (export_dir_type == ExportedDirType::kPublicDebugCtrlLayout) {
+      fdio_service_connect_at(
+          exported_dir_.get(), "public", client_request.release());
+    } else if (export_dir_type == ExportedDirType::kLegacyFlatLayout) {
+      fdio_service_clone_to(
+          exported_dir_.get(), client_request.release());
+    }
+  }
+  if (export_dir_type == ExportedDirType::kPublicDebugCtrlLayout) {
+    zx::channel debug_dir_server, debug_dir_client;
+    zx_status_t status = zx::channel::create(0u, &debug_dir_server,
+                                             &debug_dir_client);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to create channel for service directory."
+                     << status;
+      return;
+    }
+    fdio_service_connect_at(
+        exported_dir_.get(), "debug", debug_dir_server.release());
     zx_koid_t process_koid = fsl::GetKoid(process_.get());
     info_dir_->AddEntry("process", fbl::AdoptRef(new fs::UnbufferedPseudoFile(
                                        [process_koid](fbl::String* output) {
@@ -60,8 +87,8 @@ ApplicationControllerImpl::ApplicationControllerImpl(
           return ZX_OK;
         })));
     info_dir_->AddEntry(
-        "export",
-        fbl::AdoptRef(new fs::RemoteDir(fbl::move(service_dir_channel))));
+        "debug",
+        fbl::AdoptRef(new fs::RemoteDir(fbl::move(debug_dir_client))));
   }
 }
 

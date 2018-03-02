@@ -53,6 +53,7 @@ FXL_EXPORT std::pair<uint8_t*, intptr_t> ReadFileDescriptorToBytes(int fd);
 
 // Returns whether the given path is a file.
 FXL_EXPORT bool IsFile(const std::string& path);
+FXL_EXPORT bool IsFileAt(int dirfd, const std::string& path);
 
 // If the given path is a file, set size to the size of the file.
 FXL_EXPORT bool GetFileSize(const std::string& path, uint64_t* size);

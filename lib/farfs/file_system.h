@@ -33,6 +33,9 @@ class FileSystem {
   // from the archive.
   zx::channel OpenAsDirectory();
 
+  // Returns true if a file exists at the given path.
+  bool IsFile(fxl::StringView path);
+
   // Returns the contents of the the given path as a VMO.
   //
   // The VMO is a copy-on-write clone of the contents of the file, which means
