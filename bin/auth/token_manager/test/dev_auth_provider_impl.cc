@@ -29,7 +29,7 @@ DevAuthProviderImpl::~DevAuthProviderImpl() {}
 void DevAuthProviderImpl::GetPersistentCredential(
     f1dl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
     const GetPersistentCredentialCallback& callback) {
-  callback(AuthProviderStatus::OK, GenerateRandomString());
+  callback(AuthProviderStatus::OK, GenerateRandomString(), nullptr);
   return;
 }
 

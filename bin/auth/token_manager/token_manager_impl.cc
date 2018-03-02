@@ -90,7 +90,8 @@ void TokenManagerImpl::Authorize(
 
   it->second->GetPersistentCredential(
       std::move(auth_ui_context),
-      [this, callback](AuthProviderStatus status, f1dl::String credential) {
+      [this, callback](AuthProviderStatus status, f1dl::String credential,
+                       UserProfileInfoPtr user_profile_info) {
         if (status != AuthProviderStatus::OK || credential.get().empty()) {
           callback(Status::INTERNAL_ERROR, nullptr);
           return;
