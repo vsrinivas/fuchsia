@@ -160,8 +160,8 @@ static zx_status_t bcm_hci_send_command(bcm_hci_t* hci, const hci_command_header
         status = zx_channel_read(hci->command_channel, 0, event_buf, NULL, sizeof(event_buf), 0,
                                  &actual, NULL);
         if (status == ZX_ERR_SHOULD_WAIT) {
-            zx_object_wait_one(hci->command_channel,  ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                               ZX_SEC(5), NULL);
+            zx_object_wait_one(hci->command_channel, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                               zx_deadline_after(ZX_SEC(5)), NULL);
         }
     } while (status == ZX_ERR_SHOULD_WAIT);
 
