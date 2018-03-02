@@ -328,10 +328,16 @@ static zx_status_t get_vic(vim2_display_t* display)
 static void dump_raw_edid(const uint8_t* edid_buf, uint16_t edid_buf_size)
 {
     ZX_DEBUG_ASSERT(edid_buf);
-
+    zxlogf(INFO, "\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
+    zxlogf(INFO,"$$$$$$$$$$$$ RAW EDID INFO $$$$$$$$$$$$\n");
+    zxlogf(INFO, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n\n");
     for (int i = 0; i < edid_buf_size; i++) {
-        DISP_ERROR("0x%x\n", edid_buf[i]);
+        zxlogf(INFO, "0x%02x ", edid_buf[i]);
+        if ( ((i + 1) % 8) == 0) {
+            zxlogf(INFO, "\n");
+        }
     }
+    zxlogf(INFO, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n\n");
 }
 
 zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size)
@@ -393,6 +399,9 @@ zx_status_t get_preferred_res(vim2_display_t* display, uint16_t edid_buf_size)
     } else {
         display->output_color_format = HDMI_COLOR_FORMAT_444;
     }
+
+    dump_raw_edid(display->edid_buf, edid_buf_size);
+
     return ZX_OK;
 
 }
