@@ -39,6 +39,11 @@ impl WlanPhy {
         })
     }
 
+    /// Retrieves a zircon channel to the WLAN Phy device, for use with the WLAN Phy fidl service.
+    pub fn connect(&self) -> Result<zircon::Channel, zircon::Status> {
+        sys::connect_wlanphy_device(&self.dev_node).map_err(|_| zircon::Status::INTERNAL)
+    }
+
     /// Queries the WLAN Phy device for its capabilities.
     pub fn query(&self) -> Result<wlan::PhyInfo, zircon::Status> {
         sys::query_wlanphy_device(&self.dev_node).map_err(|_| zircon::Status::INTERNAL)

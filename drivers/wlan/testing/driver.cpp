@@ -6,11 +6,11 @@
 
 #include "phy-device.h"
 
-#include <lib/async/cpp/loop.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/test.h>
+#include <lib/async/cpp/loop.h>
 
 #include <memory>
 

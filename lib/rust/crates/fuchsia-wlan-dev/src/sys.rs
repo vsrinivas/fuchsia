@@ -5,13 +5,13 @@
 #![deny(warnings)]
 
 use failure::{Error, ResultExt};
-use fdio::{self, fdio_sys};
+use fdio::{self, fdio_sys, ioctl_raw};
 use fidl::encoding2::{Decoder, Decodable, Encoder};
 use std::fs::File;
 use std::os::raw;
 use std::os::unix::io::AsRawFd;
 use wlan;
-use zircon;
+use zircon::{self, HandleBased};
 
 unsafe fn ioctl(
     dev: &File,
@@ -41,6 +41,27 @@ unsafe fn ioctl(
         e if e < 0 => Err(zircon::Status::from_raw(e)),
         e => Ok(e),
     }
+}
+
+pub fn connect_wlanphy_device(device: &File) -> Result<zircon::Channel, Error> {
+    let (local, remote) = zircon::Channel::create()?;
+    let hnd = remote.into_raw();
+
+    // This call is safe because the handle is never used after this call, and the output buffer is
+    // null.
+    unsafe {
+        match ioctl_raw(
+            device.as_raw_fd(),
+            IOCTL_WLANPHY_CONNECT,
+            &hnd as *const _ as *const raw::c_void,
+            ::std::mem::size_of::<zircon::sys::zx_handle_t>(),
+            ::std::ptr::null_mut(),
+            0) as i32 {
+            e if e < 0 => Err(zircon::Status::from_raw(e)),
+            e => Ok(e),
+        }?;
+    }
+    Ok(local)
 }
 
 pub fn query_wlanphy_device(device: &File) -> Result<wlan::PhyInfo, Error> {
@@ -93,20 +114,26 @@ pub fn destroy_wlaniface(device: &File, id: u16) -> Result<(), zircon::Status> {
     }
 }
 
-const IOCTL_WLANPHY_QUERY: raw::c_int = make_ioctl!(
-    fdio_sys::IOCTL_KIND_DEFAULT,
+const IOCTL_WLANPHY_CONNECT: raw::c_int = make_ioctl!(
+    fdio_sys::IOCTL_KIND_SET_HANDLE,
     fdio_sys::IOCTL_FAMILY_WLANPHY,
     0
 );
 
-const IOCTL_WLANPHY_CREATE_IFACE: raw::c_int = make_ioctl!(
+const IOCTL_WLANPHY_QUERY: raw::c_int = make_ioctl!(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_WLANPHY,
     1
 );
 
-const IOCTL_WLANPHY_DESTROY_IFACE: raw::c_int = make_ioctl!(
+const IOCTL_WLANPHY_CREATE_IFACE: raw::c_int = make_ioctl!(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_WLANPHY,
     2
+);
+
+const IOCTL_WLANPHY_DESTROY_IFACE: raw::c_int = make_ioctl!(
+    fdio_sys::IOCTL_KIND_DEFAULT,
+    fdio_sys::IOCTL_FAMILY_WLANPHY,
+    3
 );

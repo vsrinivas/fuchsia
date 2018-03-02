@@ -6,8 +6,12 @@
 #define GARNET_DRIVERS_WLAN_TESTING_PHY_DEVICE_H
 
 #include <ddk/device.h>
+#include <wlan/async/dispatcher.h>
 #include <zircon/types.h>
 
+#include <fuchsia/cpp/wlan_device.h>
+
+#include <memory>
 #include <mutex>
 #include <unordered_map>
 
@@ -16,9 +20,10 @@ namespace testing {
 
 class IfaceDevice;
 
-class PhyDevice {
+class PhyDevice : public wlan_device::Phy {
    public:
     PhyDevice(zx_device_t* device);
+    virtual ~PhyDevice() = default;
 
     zx_status_t Bind();
 
@@ -27,17 +32,20 @@ class PhyDevice {
     zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                          size_t out_len, size_t* out_actual);
 
+    virtual void Query(QueryCallback callback) override;
+    virtual void CreateIface(wlan_device::CreateIfaceRequest req,
+                             CreateIfaceCallback callback) override;
+    virtual void DestroyIface(wlan_device::DestroyIfaceRequest req,
+                              DestroyIfaceCallback callback) override;
+
    private:
-    zx_status_t Query(uint8_t* buf, size_t len, size_t* actual);
-    zx_status_t CreateIface(const void* in_buf, size_t in_len, void* out_buf,
-                           size_t out_len, size_t* out_actual);
-    zx_status_t DestroyIface(const void* in_buf, size_t in_len);
+    zx_status_t Connect(const void* buf, size_t len);
 
     zx_device_t* zxdev_;
     zx_device_t* parent_;
 
     std::mutex lock_;
-    bool dead_ = false;
+    std::unique_ptr<wlan::async::Dispatcher<wlan_device::Phy>> dispatcher_;
     std::unordered_map<uint16_t, IfaceDevice*> ifaces_;
     // Next available Iface id. Must be checked against the map to prevent overwriting an existing
     // IfaceDevice pointer in the map.
