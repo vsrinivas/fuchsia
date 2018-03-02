@@ -26,7 +26,7 @@ function main {
 
   device="$(get-device-addr $@)"
 
-  if [[ "$device" != "" ]]; then
+  if [[ -n "$device" ]]; then
     shift
     shift
   fi

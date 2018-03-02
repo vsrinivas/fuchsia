@@ -9,6 +9,10 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
 device_addr="$(get-device-addr $@)"
 
+if [[ ! -n "${device_addr}" ]]; then
+  device_addr="$(fx-command-run netaddr --fuchsia)"
+fi
+
 fx-command-run ssh -q -R 8083:localhost:8083 $device_addr exit
 result=$?
 if [[ "${result}" -ne 0 ]]; then
