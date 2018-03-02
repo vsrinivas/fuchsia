@@ -5,6 +5,7 @@
 #pragma once
 
 #include <wlan/mlme/beacon_sender_interface.h>
+#include <wlan/mlme/bss_interface.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/timer.h>
 
@@ -26,12 +27,13 @@ using timestamp_t = std::chrono::time_point<std::chrono::steady_clock, std::chro
 // frame and correctly configure its hardware.
 class BeaconSender : public BeaconSenderInterface {
    public:
-    explicit BeaconSender(DeviceInterface* device);
+    explicit BeaconSender(DeviceInterface* device, BssInterface* bss);
 
     zx_status_t Init() override;
     bool IsStarted() override;
     zx_status_t Start(const StartRequest& req) override;
     zx_status_t Stop() override;
+    BssInterface* bss() { return bss_; }
 
    private:
     bool IsStartedLocked() const;
@@ -39,7 +41,6 @@ class BeaconSender : public BeaconSenderInterface {
     zx_status_t SendBeaconFrameLocked();
     zx_status_t SetTimeout();
     uint64_t beacon_timestamp();
-    uint16_t next_seq();
 
     static constexpr uint64_t kMessageLoopMaxWaitSeconds = 30;
     // Indicates the packet was send due to the Timer being triggered.
@@ -50,10 +51,10 @@ class BeaconSender : public BeaconSenderInterface {
     std::thread bcn_thread_;
     zx::port port_;
     DeviceInterface* const device_;
+    BssInterface* bss_;
     fbl::unique_ptr<Timer> timer_;
     StartRequestPtr start_req_;
     std::mutex start_req_lock_;
-    uint16_t last_seq_ = kMaxSequenceNumber;
     timestamp_t started_at_;
 };
 

@@ -8,7 +8,9 @@
 #include <wlan/mlme/bss_interface.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/frame_handler.h>
+#include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/remote_client.h>
+#include <wlan/mlme/sequence.h>
 
 #include <wlan/common/macaddr.h>
 #include <zircon/types.h>
@@ -37,6 +39,10 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     zx_status_t ReleaseAid(const common::MacAddr& client) override;
     fbl::unique_ptr<Buffer> GetPowerSavingBuffer(size_t len) override;
 
+    seq_t NextSeq(const MgmtFrameHeader& hdr) override;
+    seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) override;
+    seq_t NextSeq(const DataFrameHeader& hdr) override;
+
    private:
     using ClientSet = std::unordered_set<common::MacAddr, common::MacAddrHasher>;
 
@@ -61,6 +67,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     bss::timestamp_t started_at_;
     BssClientMap clients_;
     ClientSet dozing_clients_;
+    Sequence seq_;
 };
 
 }  // namespace wlan

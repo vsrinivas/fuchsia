@@ -7,7 +7,6 @@
 #include <wlan/common/logging.h>
 #include <wlan/mlme/hw_beacon_sender.h>
 
-
 namespace wlan {
 
 ApMlme::ApMlme(DeviceInterface* device) : device_(device) {}

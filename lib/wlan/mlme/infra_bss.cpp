@@ -150,4 +150,16 @@ uint64_t InfraBss::timestamp() {
     return std::chrono::duration_cast<std::chrono::microseconds>(now - started_at_).count();
 }
 
+seq_t InfraBss::NextSeq(const MgmtFrameHeader& hdr) {
+    return NextSeqNo(hdr, &seq_);
+}
+
+seq_t InfraBss::NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) {
+    return NextSeqNo(hdr, aci, &seq_);
+}
+
+seq_t InfraBss::NextSeq(const DataFrameHeader& hdr) {
+    return NextSeqNo(hdr, &seq_);
+}
+
 }  // namespace wlan

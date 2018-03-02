@@ -5,8 +5,8 @@
 #pragma once
 
 #include <wlan/mlme/device_interface.h>
+#include <wlan/mlme/mac_frame.h>
 
-#include <wlan/common/macaddr.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
 
@@ -36,6 +36,10 @@ class BssInterface {
     // once the client leaves power saving mode or explicitly requests transmission of buffered
     // frames for example by sending PS-POLL frames.
     virtual fbl::unique_ptr<Buffer> GetPowerSavingBuffer(size_t len) = 0;
+
+    virtual seq_t NextSeq(const MgmtFrameHeader& hdr) = 0;
+    virtual seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) = 0;
+    virtual seq_t NextSeq(const DataFrameHeader& hdr) = 0;
 };
 
 }  // namespace wlan

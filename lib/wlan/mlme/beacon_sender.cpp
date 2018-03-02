@@ -23,7 +23,8 @@
 
 namespace wlan {
 
-BeaconSender::BeaconSender(DeviceInterface* device) : device_(device) {
+BeaconSender::BeaconSender(DeviceInterface* device, BssInterface* bss)
+    : device_(device), bss_(bss) {
     debugfn();
 }
 
@@ -179,7 +180,7 @@ zx_status_t BeaconSender::SendBeaconFrameLocked() {
     hdr->addr1 = common::kBcastMac;
     hdr->addr2 = bssid;
     hdr->addr3 = bssid;
-    hdr->sc.set_seq(next_seq());
+    hdr->sc.set_seq(bss()->NextSeq(*hdr));
     FillTxInfo(&packet, *hdr);
 
     auto bcn = frame.body;
@@ -256,19 +257,6 @@ zx_status_t BeaconSender::SetTimeout() {
         return status;
     }
     return ZX_OK;
-}
-
-// TODO(hahnr): Once InfraBss is submitted, retrieve the next sequence no from the BSS.
-uint16_t BeaconSender::next_seq() {
-    uint16_t seq = device_->GetState()->next_seq();
-    if (seq == last_seq_) {
-        // If the sequence number has rolled over and back to the last seq number we sent,
-        // increment again.
-        // IEEE Std 802.11-2016, 10.3.2.11.2, Table 10-3, Note TR1
-        seq = device_->GetState()->next_seq();
-    }
-    last_seq_ = seq;
-    return seq;
 }
 
 }  // namespace wlan
