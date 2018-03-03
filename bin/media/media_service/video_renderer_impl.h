@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/bin/media/media_service/media_service_impl.h"
+#include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/media/video/video_frame_source.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -20,13 +20,13 @@
 namespace media {
 
 // Fidl agent that renders video.
-class VideoRendererImpl : public MediaServiceImpl::Product<MediaRenderer>,
+class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
                           public MediaRenderer,
                           public VideoRenderer {
  public:
   static std::shared_ptr<VideoRendererImpl> Create(
       f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
-      MediaServiceImpl* owner);
+      MediaComponentFactory* owner);
 
   ~VideoRendererImpl() override;
 
@@ -71,7 +71,7 @@ class VideoRendererImpl : public MediaServiceImpl::Product<MediaRenderer>,
 
   VideoRendererImpl(
       f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
-      MediaServiceImpl* owner);
+      MediaComponentFactory* owner);
 
   // MediaRenderer implementation.
   void GetSupportedMediaTypes(

@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/bin/media/media_service/media_service_impl.h"
+#include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -19,14 +19,14 @@ namespace media {
 
 // Fidl agent that controls timing in a graph.
 class MediaTimelineControllerImpl
-    : public MediaServiceImpl::Product<MediaTimelineController>,
+    : public MediaComponentFactory::Product<MediaTimelineController>,
       public MediaTimelineController,
       public MediaTimelineControlPoint,
       public TimelineConsumer {
  public:
   static std::shared_ptr<MediaTimelineControllerImpl> Create(
       f1dl::InterfaceRequest<MediaTimelineController> request,
-      MediaServiceImpl* owner);
+      MediaComponentFactory* owner);
 
   ~MediaTimelineControllerImpl() override;
 
@@ -146,7 +146,7 @@ class MediaTimelineControllerImpl
 
   MediaTimelineControllerImpl(
       f1dl::InterfaceRequest<MediaTimelineController> request,
-      MediaServiceImpl* owner);
+      MediaComponentFactory* owner);
 
   // Takes action when a control point changes its end-of-stream value.
   void HandleControlPointEndOfStreamChange();

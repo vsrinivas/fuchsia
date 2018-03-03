@@ -19,15 +19,17 @@ namespace media {
 std::shared_ptr<FileReaderImpl> FileReaderImpl::Create(
     zx::channel file_channel,
     f1dl::InterfaceRequest<SeekingReader> request,
-    MediaServiceImpl* owner) {
+    MediaComponentFactory* owner) {
   return std::shared_ptr<FileReaderImpl>(new FileReaderImpl(
       FdFromChannel(std::move(file_channel)), std::move(request), owner));
 }
 
 FileReaderImpl::FileReaderImpl(fxl::UniqueFD fd,
                                f1dl::InterfaceRequest<SeekingReader> request,
-                               MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<SeekingReader>(this, std::move(request), owner),
+                               MediaComponentFactory* owner)
+    : MediaComponentFactory::Product<SeekingReader>(this,
+                                                    std::move(request),
+                                                    owner),
       fd_(std::move(fd)),
       buffer_(kBufferSize) {
   result_ = fd_.is_valid() ? MediaResult::OK : MediaResult::NOT_FOUND;

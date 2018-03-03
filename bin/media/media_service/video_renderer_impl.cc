@@ -15,15 +15,15 @@ namespace media {
 // static
 std::shared_ptr<VideoRendererImpl> VideoRendererImpl::Create(
     f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
-    MediaServiceImpl* owner) {
+    MediaComponentFactory* owner) {
   return std::shared_ptr<VideoRendererImpl>(
       new VideoRendererImpl(std::move(media_renderer_request), owner));
 }
 
 VideoRendererImpl::VideoRendererImpl(
     f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
-    MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaRenderer>(
+    MediaComponentFactory* owner)
+    : MediaComponentFactory::Product<MediaRenderer>(
           this,
           std::move(media_renderer_request),
           owner),

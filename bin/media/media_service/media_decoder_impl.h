@@ -10,20 +10,21 @@
 #include "garnet/bin/media/fidl/fidl_packet_consumer.h"
 #include "garnet/bin/media/fidl/fidl_packet_producer.h"
 #include "garnet/bin/media/framework/graph.h"
-#include "garnet/bin/media/media_service/media_service_impl.h"
+#include "garnet/bin/media/media_service/media_component_factory.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/media/fidl/media_type_converter.fidl.h"
 
 namespace media {
 
 // Fidl agent that decodes a stream.
-class MediaDecoderImpl : public MediaServiceImpl::Product<MediaTypeConverter>,
-                         public MediaTypeConverter {
+class MediaDecoderImpl
+    : public MediaComponentFactory::Product<MediaTypeConverter>,
+      public MediaTypeConverter {
  public:
   static std::shared_ptr<MediaDecoderImpl> Create(
       MediaTypePtr input_media_type,
       f1dl::InterfaceRequest<MediaTypeConverter> request,
-      MediaServiceImpl* owner);
+      MediaComponentFactory* owner);
 
   ~MediaDecoderImpl() override;
 
@@ -39,7 +40,7 @@ class MediaDecoderImpl : public MediaServiceImpl::Product<MediaTypeConverter>,
  private:
   MediaDecoderImpl(MediaTypePtr input_media_type,
                    f1dl::InterfaceRequest<MediaTypeConverter> request,
-                   MediaServiceImpl* owner);
+                   MediaComponentFactory* owner);
 
   Graph graph_;
   std::shared_ptr<FidlPacketConsumer> consumer_;

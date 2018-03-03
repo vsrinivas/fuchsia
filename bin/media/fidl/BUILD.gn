@@ -5,8 +5,6 @@
 source_set("fidl") {
   sources = [
     "fidl_async_waiter.h",
-    "fidl_conversion_pipeline_builder.cc",
-    "fidl_conversion_pipeline_builder.h",
     "fidl_default_waiter.cc",
     "fidl_default_waiter.h",
     "fidl_formatting.cc",

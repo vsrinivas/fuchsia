@@ -17,15 +17,17 @@ namespace media {
 std::shared_ptr<MediaDemuxImpl> MediaDemuxImpl::Create(
     f1dl::InterfaceHandle<SeekingReader> reader,
     f1dl::InterfaceRequest<MediaSource> request,
-    MediaServiceImpl* owner) {
+    MediaComponentFactory* owner) {
   return std::shared_ptr<MediaDemuxImpl>(
       new MediaDemuxImpl(std::move(reader), std::move(request), owner));
 }
 
 MediaDemuxImpl::MediaDemuxImpl(f1dl::InterfaceHandle<SeekingReader> reader,
                                f1dl::InterfaceRequest<MediaSource> request,
-                               MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaSource>(this, std::move(request), owner),
+                               MediaComponentFactory* owner)
+    : MediaComponentFactory::Product<MediaSource>(this,
+                                                  std::move(request),
+                                                  owner),
       task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       graph_(owner->multiproc_task_runner()) {
   FXL_DCHECK(reader);

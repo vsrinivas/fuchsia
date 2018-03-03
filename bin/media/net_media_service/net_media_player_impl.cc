@@ -41,16 +41,9 @@ NetMediaPlayerImpl::NetMediaPlayerImpl(
     media_player_.Unbind();
     UnbindAndReleaseFromOwner();
   });
-
-  media_service_ = owner->ConnectToEnvironmentService<MediaService>();
-  media_service_.set_error_handler([this]() {
-    media_service_.Unbind();
-    UnbindAndReleaseFromOwner();
-  });
 }
 
 NetMediaPlayerImpl::~NetMediaPlayerImpl() {
-  media_service_.Unbind();
   media_player_.Unbind();
 }
 

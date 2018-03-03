@@ -1,0 +1,130 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "garnet/bin/media/media_service/media_component_factory.h"
+
+#include <zircon/syscalls.h>
+
+#include "garnet/bin/media/media_service/file_reader_impl.h"
+#include "garnet/bin/media/media_service/lpcm_reformatter_impl.h"
+#include "garnet/bin/media/media_service/media_decoder_impl.h"
+#include "garnet/bin/media/media_service/media_demux_impl.h"
+#include "garnet/bin/media/media_service/media_player_impl.h"
+#include "garnet/bin/media/media_service/media_sink_impl.h"
+#include "garnet/bin/media/media_service/media_source_impl.h"
+#include "garnet/bin/media/media_service/media_timeline_controller_impl.h"
+#include "garnet/bin/media/media_service/network_reader_impl.h"
+#include "garnet/bin/media/media_service/video_renderer_impl.h"
+#include "garnet/bin/media/util/multiproc_task_runner.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/make_copyable.h"
+
+namespace media {
+
+MediaComponentFactory::MediaComponentFactory(
+    std::unique_ptr<app::ApplicationContext> context)
+    : FactoryServiceBase(std::move(context)),
+      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {
+  multiproc_task_runner_ =
+      AdoptRef(new MultiprocTaskRunner(zx_system_get_num_cpus()));
+}
+
+MediaComponentFactory::~MediaComponentFactory() {}
+
+void MediaComponentFactory::CreateMediaPlayer(
+    f1dl::InterfaceRequest<MediaPlayer> player) {
+  AddProduct(MediaPlayerImpl::Create(std::move(player), this));
+}
+
+void MediaComponentFactory::CreateSource(
+    f1dl::InterfaceHandle<SeekingReader> reader,
+    f1dl::Array<MediaTypeSetPtr> media_types,
+    f1dl::InterfaceRequest<MediaSource> source) {
+  AddProduct(MediaSourceImpl::Create(std::move(reader), media_types,
+                                     std::move(source), this));
+}
+
+void MediaComponentFactory::CreateSink(
+    f1dl::InterfaceHandle<MediaRenderer> renderer,
+    f1dl::InterfaceRequest<MediaSink> sink_request) {
+  AddProduct(MediaSinkImpl::Create(std::move(renderer), std::move(sink_request),
+                                   this));
+}
+
+void MediaComponentFactory::CreateDemux(
+    f1dl::InterfaceHandle<SeekingReader> reader,
+    f1dl::InterfaceRequest<MediaSource> request) {
+  CreateProductOnNewThread<MediaDemuxImpl>(fxl::MakeCopyable([
+    this, reader = std::move(reader), request = std::move(request)
+  ]() mutable {
+    return MediaDemuxImpl::Create(std::move(reader), std::move(request), this);
+  }));
+}
+
+void MediaComponentFactory::CreateDecoder(
+    MediaTypePtr input_media_type,
+    f1dl::InterfaceRequest<MediaTypeConverter> request) {
+  CreateProductOnNewThread<MediaDecoderImpl>(fxl::MakeCopyable([
+    this, input_media_type = std::move(input_media_type),
+    request = std::move(request)
+  ]() mutable {
+    return MediaDecoderImpl::Create(std::move(input_media_type),
+                                    std::move(request), this);
+  }));
+}
+
+void MediaComponentFactory::CreateTimelineController(
+    f1dl::InterfaceRequest<MediaTimelineController> timeline_controller) {
+  AddProduct(MediaTimelineControllerImpl::Create(std::move(timeline_controller),
+                                                 this));
+}
+
+void MediaComponentFactory::CreateLpcmReformatter(
+    MediaTypePtr input_media_type,
+    AudioSampleFormat output_sample_format,
+    f1dl::InterfaceRequest<MediaTypeConverter> request) {
+  CreateProductOnNewThread<LpcmReformatterImpl>(fxl::MakeCopyable([
+    this, input_media_type = std::move(input_media_type), output_sample_format,
+    request = std::move(request)
+  ]() mutable {
+    return LpcmReformatterImpl::Create(std::move(input_media_type),
+                                       output_sample_format, std::move(request),
+                                       this);
+  }));
+}
+
+void MediaComponentFactory::CreateHttpReader(
+    const std::string& http_url,
+    f1dl::InterfaceRequest<SeekingReader> request) {
+  CreateProductOnNewThread<NetworkReaderImpl>(fxl::MakeCopyable(
+      [ this, http_url = http_url, request = std::move(request) ]() mutable {
+        return NetworkReaderImpl::Create(http_url, std::move(request), this);
+      }));
+}
+
+void MediaComponentFactory::CreateFileChannelReader(
+    zx::channel file_channel,
+    f1dl::InterfaceRequest<SeekingReader> request) {
+  CreateProductOnNewThread<FileReaderImpl>(fxl::MakeCopyable([
+    this, file_channel = std::move(file_channel), request = std::move(request)
+  ]() mutable {
+    return FileReaderImpl::Create(std::move(file_channel), std::move(request),
+                                  this);
+  }));
+}
+
+std::shared_ptr<VideoRendererImpl> MediaComponentFactory::CreateVideoRenderer(
+    f1dl::InterfaceRequest<MediaRenderer> media_renderer_request) {
+  std::shared_ptr<VideoRendererImpl> result =
+      VideoRendererImpl::Create(std::move(media_renderer_request), this);
+  AddProduct(result);
+  return result;
+}
+
+void MediaComponentFactory::OnLastProductRemoved() {
+  task_runner_->PostTask(
+      []() { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+}
+
+}  // namespace media

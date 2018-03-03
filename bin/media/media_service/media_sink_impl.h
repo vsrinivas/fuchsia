@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include "garnet/bin/media/fidl/fidl_conversion_pipeline_builder.h"
-#include "garnet/bin/media/media_service/media_service_impl.h"
+#include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"
+#include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/media/fidl/media_sink.fidl.h"
@@ -17,13 +17,13 @@ namespace media {
 
 // Fidl agent that consumes a stream and delivers it to a destination specified
 // by URL.
-class MediaSinkImpl : public MediaServiceImpl::Product<MediaSink>,
+class MediaSinkImpl : public MediaComponentFactory::Product<MediaSink>,
                       public MediaSink {
  public:
   static std::shared_ptr<MediaSinkImpl> Create(
       f1dl::InterfaceHandle<MediaRenderer> renderer_handle,
       f1dl::InterfaceRequest<MediaSink> sink_request,
-      MediaServiceImpl* owner);
+      MediaComponentFactory* owner);
 
   ~MediaSinkImpl() override;
 
@@ -37,7 +37,7 @@ class MediaSinkImpl : public MediaServiceImpl::Product<MediaSink>,
  private:
   MediaSinkImpl(f1dl::InterfaceHandle<MediaRenderer> renderer_handle,
                 f1dl::InterfaceRequest<MediaSink> sink_request,
-                MediaServiceImpl* owner);
+                MediaComponentFactory* owner);
 
   // Builds the conversion pipeline.
   void BuildConversionPipeline();

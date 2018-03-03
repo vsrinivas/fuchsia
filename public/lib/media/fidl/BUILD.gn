@@ -15,7 +15,6 @@ fidl("fidl") {
     "media_player.fidl",
     "media_renderer.fidl",
     "media_result.fidl",
-    "media_service.fidl",
     "media_sink.fidl",
     "media_source.fidl",
     "media_transport.fidl",

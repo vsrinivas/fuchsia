@@ -6,11 +6,11 @@
 
 #include <unordered_map>
 
-#include "garnet/bin/media/media_service/media_service_impl.h"
+#include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/media/fidl/media_service.fidl.h"
+#include "lib/media/fidl/media_player.fidl.h"
 #include "lib/media/fidl/media_source.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/media/fidl/seeking_reader.fidl.h"
@@ -21,19 +21,19 @@
 namespace media {
 
 // Fidl agent that renders streams derived from a SeekingReader.
-class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
+class MediaPlayerImpl : public MediaComponentFactory::Product<MediaPlayer>,
                         public MediaPlayer {
  public:
   static std::shared_ptr<MediaPlayerImpl> Create(
       f1dl::InterfaceRequest<MediaPlayer> request,
-      MediaServiceImpl* owner);
+      MediaComponentFactory* owner);
 
   static std::shared_ptr<MediaPlayerImpl> Create(
       f1dl::InterfaceHandle<SeekingReader> reader,
       f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
       f1dl::InterfaceHandle<MediaRenderer> video_renderer,
       f1dl::InterfaceRequest<MediaPlayer> request,
-      MediaServiceImpl* owner);
+      MediaComponentFactory* owner);
 
   ~MediaPlayerImpl() override;
 
@@ -89,7 +89,7 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   };
 
   MediaPlayerImpl(f1dl::InterfaceRequest<MediaPlayer> request,
-                  MediaServiceImpl* owner);
+                  MediaComponentFactory* owner);
 
   // Sets the video renderer.
   // TODO(dalesat): Remove after topaz transition.

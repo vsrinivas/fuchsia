@@ -11,7 +11,7 @@
 #include "garnet/bin/media/demux/demux.h"
 #include "garnet/bin/media/fidl/fidl_packet_producer.h"
 #include "garnet/bin/media/framework/graph.h"
-#include "garnet/bin/media/media_service/media_service_impl.h"
+#include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -22,13 +22,13 @@
 namespace media {
 
 // Fidl agent that decodes a stream.
-class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
+class MediaDemuxImpl : public MediaComponentFactory::Product<MediaSource>,
                        public MediaSource {
  public:
   static std::shared_ptr<MediaDemuxImpl> Create(
       f1dl::InterfaceHandle<SeekingReader> reader,
       f1dl::InterfaceRequest<MediaSource> request,
-      MediaServiceImpl* owner);
+      MediaComponentFactory* owner);
 
   ~MediaDemuxImpl() override;
 
@@ -49,7 +49,7 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
  private:
   MediaDemuxImpl(f1dl::InterfaceHandle<SeekingReader> reader,
                  f1dl::InterfaceRequest<MediaSource> request,
-                 MediaServiceImpl* owner);
+                 MediaComponentFactory* owner);
 
   class Stream {
    public:

@@ -13,7 +13,7 @@ namespace media {
 std::shared_ptr<MediaDecoderImpl> MediaDecoderImpl::Create(
     MediaTypePtr input_media_type,
     f1dl::InterfaceRequest<MediaTypeConverter> request,
-    MediaServiceImpl* owner) {
+    MediaComponentFactory* owner) {
   return std::shared_ptr<MediaDecoderImpl>(new MediaDecoderImpl(
       std::move(input_media_type), std::move(request), owner));
 }
@@ -21,10 +21,10 @@ std::shared_ptr<MediaDecoderImpl> MediaDecoderImpl::Create(
 MediaDecoderImpl::MediaDecoderImpl(
     MediaTypePtr input_media_type,
     f1dl::InterfaceRequest<MediaTypeConverter> request,
-    MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaTypeConverter>(this,
-                                                    std::move(request),
-                                                    owner),
+    MediaComponentFactory* owner)
+    : MediaComponentFactory::Product<MediaTypeConverter>(this,
+                                                         std::move(request),
+                                                         owner),
       graph_(owner->multiproc_task_runner()),
       consumer_(FidlPacketConsumer::Create()),
       producer_(FidlPacketProducer::Create()) {

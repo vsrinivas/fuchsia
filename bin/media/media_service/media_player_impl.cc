@@ -10,6 +10,7 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/fidl/audio_server.fidl.h"
 #include "lib/media/timeline/fidl_type_conversions.h"
 #include "lib/media/timeline/timeline.h"
 
@@ -18,7 +19,7 @@ namespace media {
 // static
 std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
     f1dl::InterfaceRequest<MediaPlayer> request,
-    MediaServiceImpl* owner) {
+    MediaComponentFactory* owner) {
   return std::shared_ptr<MediaPlayerImpl>(
       new MediaPlayerImpl(std::move(request), owner));
 }
@@ -29,7 +30,7 @@ std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
     f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
     f1dl::InterfaceHandle<MediaRenderer> video_renderer,
     f1dl::InterfaceRequest<MediaPlayer> request,
-    MediaServiceImpl* owner) {
+    MediaComponentFactory* owner) {
   auto player = new MediaPlayerImpl(std::move(request), owner);
 
   if (audio_renderer) {
@@ -48,8 +49,10 @@ std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
 }
 
 MediaPlayerImpl::MediaPlayerImpl(f1dl::InterfaceRequest<MediaPlayer> request,
-                                 MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner) {
+                                 MediaComponentFactory* owner)
+    : MediaComponentFactory::Product<MediaPlayer>(this,
+                                                  std::move(request),
+                                                  owner) {
   FXL_DCHECK(owner);
 
   status_publisher_.SetCallbackRunner([this](const GetStatusCallback& callback,
@@ -145,7 +148,8 @@ void MediaPlayerImpl::MaybeCreateRenderer(MediaTypeMedium medium) {
   switch (medium) {
     case MediaTypeMedium::AUDIO: {
       f1dl::InterfaceHandle<MediaRenderer> audio_media_renderer;
-      owner()->CreateAudioRenderer(audio_renderer_.NewRequest(),
+      auto audio_server = owner()->ConnectToEnvironmentService<AudioServer>();
+      audio_server->CreateRenderer(audio_renderer_.NewRequest(),
                                    audio_media_renderer.NewRequest());
       stream.renderer_handle_ = std::move(audio_media_renderer);
       if (gain_ != 1.0f) {

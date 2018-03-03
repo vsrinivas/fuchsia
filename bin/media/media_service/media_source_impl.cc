@@ -4,10 +4,10 @@
 
 #include "garnet/bin/media/media_service/media_source_impl.h"
 
-#include "garnet/bin/media/fidl/fidl_conversion_pipeline_builder.h"
 #include "garnet/bin/media/fidl/fidl_reader.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/framework/formatting.h"
+#include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
@@ -19,7 +19,7 @@ std::shared_ptr<MediaSourceImpl> MediaSourceImpl::Create(
     f1dl::InterfaceHandle<SeekingReader> reader,
     const f1dl::Array<MediaTypeSetPtr>& allowed_media_types,
     f1dl::InterfaceRequest<MediaSource> request,
-    MediaServiceImpl* owner) {
+    MediaComponentFactory* owner) {
   return std::shared_ptr<MediaSourceImpl>(new MediaSourceImpl(
       std::move(reader), allowed_media_types, std::move(request), owner));
 }
@@ -28,8 +28,10 @@ MediaSourceImpl::MediaSourceImpl(
     f1dl::InterfaceHandle<SeekingReader> reader,
     const f1dl::Array<MediaTypeSetPtr>& allowed_media_types,
     f1dl::InterfaceRequest<MediaSource> request,
-    MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaSource>(this, std::move(request), owner),
+    MediaComponentFactory* owner)
+    : MediaComponentFactory::Product<MediaSource>(this,
+                                                  std::move(request),
+                                                  owner),
       allowed_stream_types_(
           allowed_media_types.To<std::unique_ptr<
               std::vector<std::unique_ptr<media::StreamTypeSet>>>>()) {
@@ -133,13 +135,13 @@ void MediaSourceImpl::HandleDemuxStatusUpdates(uint64_t version,
 
 MediaSourceImpl::Stream::Stream(
     size_t stream_index,
-    MediaService* media_service,
+    MediaComponentFactory* factory,
     const ProducerGetter& producer_getter,
     std::unique_ptr<StreamType> stream_type,
     const std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>&
         allowed_stream_types,
     const std::function<void()>& callback) {
-  FXL_DCHECK(media_service);
+  FXL_DCHECK(factory);
   FXL_DCHECK(producer_getter);
   FXL_DCHECK(stream_type);
   FXL_DCHECK(callback);
@@ -153,7 +155,7 @@ MediaSourceImpl::Stream::Stream(
   }
 
   BuildFidlConversionPipeline(
-      media_service, *allowed_stream_types, producer_getter, nullptr,
+      factory, *allowed_stream_types, producer_getter, nullptr,
       std::move(stream_type),
       [this, callback, stream_index](bool succeeded,
                                      const ConsumerGetter& consumer_getter,

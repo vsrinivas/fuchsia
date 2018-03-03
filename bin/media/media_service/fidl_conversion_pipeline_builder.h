@@ -9,10 +9,11 @@
 #include <vector>
 
 #include "garnet/bin/media/framework/types/stream_type.h"
-#include "lib/media/fidl/media_service.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
 
 namespace media {
+
+class MediaComponentFactory;
 
 using ProducerGetter =
     std::function<void(f1dl::InterfaceRequest<MediaPacketProducer>)>;
@@ -29,7 +30,7 @@ using ConsumerGetter =
 // in the |type| argument. In the trivial case in which no converters are
 // required, |callback| is called with the original getter and type.
 void BuildFidlConversionPipeline(
-    MediaService* media_service,
+    MediaComponentFactory* factory,
     const std::vector<std::unique_ptr<StreamTypeSet>>& goal_type_sets,
     const ProducerGetter& producer_getter,
     const ConsumerGetter& consumer_getter,

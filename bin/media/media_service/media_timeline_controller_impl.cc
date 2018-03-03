@@ -16,17 +16,18 @@ namespace media {
 std::shared_ptr<MediaTimelineControllerImpl>
 MediaTimelineControllerImpl::Create(
     f1dl::InterfaceRequest<MediaTimelineController> request,
-    MediaServiceImpl* owner) {
+    MediaComponentFactory* owner) {
   return std::shared_ptr<MediaTimelineControllerImpl>(
       new MediaTimelineControllerImpl(std::move(request), owner));
 }
 
 MediaTimelineControllerImpl::MediaTimelineControllerImpl(
     f1dl::InterfaceRequest<MediaTimelineController> request,
-    MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaTimelineController>(this,
-                                                         std::move(request),
-                                                         owner),
+    MediaComponentFactory* owner)
+    : MediaComponentFactory::Product<MediaTimelineController>(
+          this,
+          std::move(request),
+          owner),
       control_point_binding_(this),
       consumer_binding_(this) {
   status_publisher_.SetCallbackRunner(

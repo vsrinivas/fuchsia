@@ -14,7 +14,7 @@ std::shared_ptr<LpcmReformatterImpl> LpcmReformatterImpl::Create(
     MediaTypePtr input_media_type,
     AudioSampleFormat output_sample_format,
     f1dl::InterfaceRequest<MediaTypeConverter> request,
-    MediaServiceImpl* owner) {
+    MediaComponentFactory* owner) {
   return std::shared_ptr<LpcmReformatterImpl>(
       new LpcmReformatterImpl(std::move(input_media_type), output_sample_format,
                               std::move(request), owner));
@@ -24,10 +24,10 @@ LpcmReformatterImpl::LpcmReformatterImpl(
     MediaTypePtr input_media_type,
     AudioSampleFormat output_sample_format,
     f1dl::InterfaceRequest<MediaTypeConverter> request,
-    MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaTypeConverter>(this,
-                                                    std::move(request),
-                                                    owner),
+    MediaComponentFactory* owner)
+    : MediaComponentFactory::Product<MediaTypeConverter>(this,
+                                                         std::move(request),
+                                                         owner),
       graph_(owner->multiproc_task_runner()),
       consumer_(FidlPacketConsumer::Create()),
       producer_(FidlPacketProducer::Create()) {

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/fidl/fidl_conversion_pipeline_builder.h"
+#include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/framework/formatting.h"
 #include "garnet/bin/media/framework/types/audio_stream_type.h"
 #include "garnet/bin/media/framework/types/stream_type.h"
 #include "garnet/bin/media/framework/types/video_stream_type.h"
+#include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/media/fidl/media_service.fidl.h"
 #include "lib/media/fidl/media_type_converter.fidl.h"
 
 namespace media {
@@ -33,7 +33,7 @@ class Builder {
   // bool passed to the callback indicates whether the build was successful.
   // The stream type passed to the callback is the converted stream type if
   // the build was successful or |type| if it was not.
-  Builder(MediaService* media_service,
+  Builder(MediaComponentFactory* factory,
           const std::vector<std::unique_ptr<StreamTypeSet>>& goal_type_sets,
           const ProducerGetter& producer_getter,
           const ConsumerGetter& consumer_getter,
@@ -42,14 +42,14 @@ class Builder {
                                    const ConsumerGetter&,
                                    const ProducerGetter&,
                                    std::unique_ptr<StreamType>)>& callback)
-      : media_service_(media_service),
+      : factory_(factory),
         goal_type_sets_(goal_type_sets),
         producer_getter_(producer_getter),
         consumer_getter_(consumer_getter),
         original_type_(std::move(type)),
         callback_(callback),
         type_(&original_type_) {
-    FXL_DCHECK(media_service_);
+    FXL_DCHECK(factory_);
     FXL_DCHECK(original_type_);
     FXL_DCHECK(callback_);
   }
@@ -98,7 +98,7 @@ class Builder {
   // Calls |callback_| indicating failure and deletes this.
   void Fail();
 
-  MediaService* media_service_;
+  MediaComponentFactory* factory_;
   const std::vector<std::unique_ptr<StreamTypeSet>>& goal_type_sets_;
   ProducerGetter producer_getter_;
   ConsumerGetter consumer_getter_;
@@ -230,8 +230,7 @@ void Builder::AddConverterForCompressedAudio() {
   }
 
   MediaTypeConverterPtr decoder;
-  media_service_->CreateDecoder(MediaType::From((*type_)),
-                                decoder.NewRequest());
+  factory_->CreateDecoder(MediaType::From((*type_)), decoder.NewRequest());
 
   AddConverter(std::move(decoder));
 }
@@ -250,8 +249,7 @@ void Builder::AddConverterForCompressedVideo() {
   }
 
   MediaTypeConverterPtr decoder;
-  media_service_->CreateDecoder(MediaType::From((*type_)),
-                                decoder.NewRequest());
+  factory_->CreateDecoder(MediaType::From((*type_)), decoder.NewRequest());
 
   AddConverter(std::move(decoder));
 }
@@ -267,9 +265,9 @@ void Builder::AddConverterForLpcm(const AudioStreamTypeSet& goal_type_set) {
   if ((*type_)->audio()->sample_format() != goal_type_set.sample_format() &&
       goal_type_set.sample_format() != AudioStreamType::SampleFormat::kAny) {
     MediaTypeConverterPtr reformatter;
-    media_service_->CreateLpcmReformatter(
-        MediaType::From((*type_)), Convert(goal_type_set.sample_format()),
-        reformatter.NewRequest());
+    factory_->CreateLpcmReformatter(MediaType::From((*type_)),
+                                    Convert(goal_type_set.sample_format()),
+                                    reformatter.NewRequest());
 
     AddConverter(std::move(reformatter));
     return;
@@ -466,7 +464,7 @@ void Builder::Fail() {
 }  // namespace
 
 void BuildFidlConversionPipeline(
-    MediaService* media_service,
+    MediaComponentFactory* factory,
     const std::vector<std::unique_ptr<StreamTypeSet>>& goal_type_sets,
     const ProducerGetter& producer_getter,
     const ConsumerGetter& consumer_getter,
@@ -475,11 +473,11 @@ void BuildFidlConversionPipeline(
                              const ConsumerGetter&,
                              const ProducerGetter&,
                              std::unique_ptr<StreamType>)>& callback) {
-  FXL_DCHECK(media_service);
+  FXL_DCHECK(factory);
   FXL_DCHECK(type);
   FXL_DCHECK(callback);
 
-  Builder* builder = new Builder(media_service, goal_type_sets, producer_getter,
+  Builder* builder = new Builder(factory, goal_type_sets, producer_getter,
                                  consumer_getter, std::move(type), callback);
   builder->AddConverters();
 }

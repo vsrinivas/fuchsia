@@ -4,8 +4,8 @@
 
 #include "garnet/bin/media/media_service/media_sink_impl.h"
 
-#include "garnet/bin/media/fidl/fidl_conversion_pipeline_builder.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
@@ -15,7 +15,7 @@ namespace media {
 std::shared_ptr<MediaSinkImpl> MediaSinkImpl::Create(
     f1dl::InterfaceHandle<MediaRenderer> renderer_handle,
     f1dl::InterfaceRequest<MediaSink> sink_request,
-    MediaServiceImpl* owner) {
+    MediaComponentFactory* owner) {
   return std::shared_ptr<MediaSinkImpl>(new MediaSinkImpl(
       std::move(renderer_handle), std::move(sink_request), owner));
 }
@@ -23,10 +23,10 @@ std::shared_ptr<MediaSinkImpl> MediaSinkImpl::Create(
 MediaSinkImpl::MediaSinkImpl(
     f1dl::InterfaceHandle<MediaRenderer> renderer_handle,
     f1dl::InterfaceRequest<MediaSink> sink_request,
-    MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaSink>(this,
-                                           std::move(sink_request),
-                                           owner),
+    MediaComponentFactory* owner)
+    : MediaComponentFactory::Product<MediaSink>(this,
+                                                std::move(sink_request),
+                                                owner),
       renderer_(renderer_handle.Bind()) {
   FXL_DCHECK(renderer_);
 
