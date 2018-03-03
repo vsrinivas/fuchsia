@@ -27,7 +27,7 @@ echo $ZIRCON_DIR
 
 # Ensure Zircon has been built prior to formatting USB
 pushd "$ZIRCON_DIR" > /dev/null
-./scripts/make-parallel odroidc2
+./scripts/build-zircon-arm64
 popd > /dev/null
 
 lsblk
@@ -147,14 +147,14 @@ sudo mount "$DATA_PTN_PATH" "$MOUNT_PATH"
 trap "umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmounted succesfully\"" INT TERM EXIT
 
 # Copy the kernel to the boot partition.
-sudo cp "$ZIRCON_DIR/build-odroidc2/zircon.bin" \
+sudo cp "$ZIRCON_DIR/build-arm64/odroidc2-zircon.bin" \
         "${MOUNT_PATH}/"
 
 # Copy the ramdisk
-sudo cp "$ZIRCON_DIR/build-odroidc2/bootdata.bin" \
+sudo cp "$ZIRCON_DIR/build-arm64/odroidc2-bootdata.bin" \
         "${MOUNT_PATH}/"
 
-sudo cp "$ZIRCON_DIR/kernel/target/odroidc2/boot.ini" \
+sudo cp "$ZIRCON_DIR/kernel/target/arm64/odroidc2/boot.ini" \
         "${MOUNT_PATH}/"
 
 
@@ -163,11 +163,11 @@ pushd "$MOUNT_PATH" > /dev/null
 sync
 popd > /dev/null
 
-curl -L http://dn.odroid.com/S905/BootLoader/ODROID-C2/c2_boot_release.tar.gz >/tmp/sd.tgz
+curl -L http://dn.odroid.com/S905/BootLoader/ODROID-C2/c2_boot_release_android.tar.gz >/tmp/sd.tgz
 tar -C /tmp -xzf /tmp/sd.tgz
-cd /tmp/sd_fuse
+cd /tmp/sd_fuse_android
 sudo sh sd_fusing.sh $DEVICE_PATH
-rm -rf /tmp/sd_fuse
+rm -rf /tmp/sd_fuse_android
 rm -f /tmp/sd.tgz
 
 

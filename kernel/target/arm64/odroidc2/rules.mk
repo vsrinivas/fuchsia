@@ -6,22 +6,20 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-PLATFORM := generic-arm
+PLATFORM_VID := 7   # PDEV_VID_HARDKERNEL
+PLATFORM_PID := 1   # PDEV_PID_ODROID_C2
+PLATFORM_BOARD_NAME := odroidc2
+PLATFORM_MDI_SRCS := $(LOCAL_DIR)/odroidc2.mdi
 
-PLATFORM_VID := 3   # PDEV_VID_AMLOGIC
-PLATFORM_PID := 1   # PDEV_PID_AMLOGIC_S905
-PLATFORM_BOARD_NAME := odroid-c2
-
-# build MDI
-MDI_SRCS := $(LOCAL_DIR)/odroidc2.mdi
+include make/board.mk
 
 # prepend Linux header to kernel image
 
 HEADER_TOOL := $(LOCAL_DIR)/prepend-header.py
 KERNEL_LOAD_OFFSET := 0x10280000
-KERNEL_IMAGE := $(BUILDDIR)/odroid-zircon.bin
+KERNEL_IMAGE := $(BUILDDIR)/odroidc2-zircon.bin
 
 $(KERNEL_IMAGE): $(HEADER_TOOL) $(OUTLKBIN)
-	$(HEADER_TOOL) --kernel $(OUTLKBIN) --load_offset $(KERNEL_LOAD_OFFSET) --output $(KERNEL_IMAGE)
+	$(NOECHO)$(HEADER_TOOL) --kernel $(OUTLKBIN) --load_offset $(KERNEL_LOAD_OFFSET) --output $(KERNEL_IMAGE)
 
 EXTRA_KERNELDEPS += $(KERNEL_IMAGE)

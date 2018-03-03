@@ -18,7 +18,7 @@ CMDLINE="TERM=uart"
 
 function HELP {
     echo "help:"
-    echo "-b <build dir> : Build directory containing image to flash"
+    echo "-b <board>     : Board to flash"
     echo "-c <cmd line>  : Extra command line options"
     echo "-d <ramdisk>   : Use specified ramdisk file"
     echo "-m             : Add mexec option to command line"
@@ -28,7 +28,7 @@ function HELP {
 
 while getopts "b:c:d:mh" FLAG; do
     case $FLAG in
-        b) BUILD_DIR="${OPTARG}";;
+        b) BOARD="${OPTARG}";;
         c) CMDLINE+=" ${OPTARG}";;
         d) RAMDISK="${OPTARG}";;
         m) CMDLINE+=" netsvc.netboot=true";;
@@ -41,19 +41,19 @@ while getopts "b:c:d:mh" FLAG; do
 done
 shift $((OPTIND-1))
 
-if [[ -z "${BUILD_DIR}" ]]; then
-    echo must specify build dirctory
+if [[ -z "${BOARD}" ]]; then
+    echo must specify a board to flash
     HELP
 fi
 
-
-OUT_IMAGE="${BUILD_DIR}/boot.img"
+BUILD_DIR=build-arm64
+OUT_IMAGE="${BUILD_DIR}/${BOARD}-boot.img"
 
 $MKBOOTIMG \
 --kernel "${BUILD_DIR}/zzircon.bin" \
 --kernel_offset $KERNEL_OFFSET \
 --base $MEMBASE \
---ramdisk "${RAMDISK:-${BUILD_DIR}/bootdata.bin}" \
+--ramdisk "${RAMDISK:-${BUILD_DIR}/${BOARD}-bootdata.bin}" \
 --cmdline "${CMDLINE}" \
 -o "${OUT_IMAGE}"
 

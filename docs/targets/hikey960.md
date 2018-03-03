@@ -56,7 +56,7 @@ To build zircon, invoke the following command from the top level Zircon
 directory (ensure that you have checked out the ARM64 toolchains). For more
 information, see `docs/getting_started.md`:
 
-      make hikey960
+      make arm64
 
 
 ## Setting up the serial console
@@ -204,9 +204,8 @@ To install firmware, put your board in fastboot mode and run the following:
 
 ## Recover the device
 
-If the hikey gets into a bad state you can try the recovery mechanism. This is
-also useful for removing the UEFI firmware if you no longer need it.  The
-script should automate the process, including reinstalling the firmware. You
+If the hikey gets into a bad state you can try the recovery mechanism.
+The script should automate the process, including reinstalling the firmware. You
 first need to put the device into recovery mode:
 
         Auto Power up(Switch 1)   closed/ON
@@ -225,60 +224,19 @@ can specify which serial port to use with `-p`. Sometimes you just need to try a
 few times or power cycle the device. Occasionally the script will fail when
 attempting to install firmware, which can usually be fixed by starting again.
 
-## Install UEFI firmware
-
-Install the UEFI firmware is similar to the recovery process. The script should
-automate everything including downloading and installing the correct firmware.
-First put your board into _recovery_ mode by setting the switches to the
-following positions:
-
-        Auto Power up(Switch 1)   closed/ON
-        Recovery(Switch 2)        closed/ON
-        Fastboot(Switch 3)        open/OFF
-
-Then run:
-
-        ./scripts/flash-hikey -u -r
-
-The script will pause before installing firmware to ensure the device is put
-into fastboot mode. If everything goes right this should happen automatically
-and you should be able to continue without changing the switches. Do remember to
-go to fastboot mode before you attempt to install Zircon though.
-
-As with recovering the device this process can be flaky. If you run into trouble
-check the serial device (see above) or try power cycling the device.
-
 ## Installing Zircon
 
 Once the HiKey board is in fastboot mode, run the following script from the
-zircon root directory to flash the necessary files onto the board. If you would
-also like to set it to zedboot skip to the next section.
-
-If you _are not_ running UEFI firmware use the following command:
+zircon root directory to flash the necessary files onto the board:
 
       ./scripts/flash-hikey
-
-If you _are_ running UEFI firmware use this command instead:
-
-      ./scripts/flash-hikey -u
-
-If you'd like to boot the image instead of flashing it add the no-flash flag
-`-n` (UEFI only):
-
-      ./scripts/flash-hikey -u -n
 
 ## Zedboot
 
 If you would like to boot future kernels via the network, instead of flashing
 them directly, then run the script with the `-m` option.
 
-If you _are not_ running UEFI firmware use the following command:
-
       ./scripts/flash-hikey -m
-
-If you _are_ running UEFI firmware use this command instead:
-
-      ./scripts/flash-hikey -m -u
 
 This is the last flash update, and all subsequent boots should use normal mode
 (not fastboot or recovery). If you used the DIP Switch method to place the board

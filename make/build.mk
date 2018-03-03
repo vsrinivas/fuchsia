@@ -140,29 +140,6 @@ GENERATED += $(USER_MANIFEST)
 # to generate dependencies
 USER_MANIFEST_DEPS := $(foreach x,$(USER_MANIFEST_LINES),$(lastword $(subst =,$(SPACE),$(strip $(x)))))
 
-PLATFORM_OPTS :=
-ifneq ($(PLATFORM_VID),)
-    PLATFORM_OPTS += --vid $(PLATFORM_VID)
-    GLOBAL_DEFINES += PLATFORM_VID=$(PLATFORM_VID)
-endif
-ifneq ($(PLATFORM_PID),)
-    PLATFORM_OPTS += --pid $(PLATFORM_PID)
-    GLOBAL_DEFINES += PLATFORM_PID=$(PLATFORM_PID)
-endif
-ifneq ($(PLATFORM_BOARD_NAME),)
-    PLATFORM_OPTS += --board $(PLATFORM_BOARD_NAME)
-    GLOBAL_DEFINES += PLATFORM_BOARD_NAME=$(PLATFORM_BOARD_NAME)
-endif
-
-ifneq ($(PLATFORM_OPTS),)
-$(BUILDDIR)/platform-id.bin: $(MKBOOTFS) FORCE
-	$(call BUILDECHO,generating $@)
-	@$(MKDIR)
-	$(NOECHO)$(MKBOOTFS) -o $@ $(PLATFORM_OPTS)
-ADDITIONAL_BOOTDATA_ITEMS += $(BUILDDIR)/platform-id.bin
-GENERATED += $(BUILDDIR)/platform-id.bin
-endif
-
 .PHONY: user-manifest additional-bootdata
 user-manifest: $(USER_MANIFEST) $(USER_MANIFEST_DEPS)
 additional-bootdata: $(ADDITIONAL_BOOTDATA_ITEMS)
@@ -173,15 +150,8 @@ ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSROOT)),true)
 user-only: sysroot
 endif
 
-KERNEL_BOOTDATA := $(BUILDDIR)/kernel-bootdata.bin
-$(KERNEL_BOOTDATA): $(MKBOOTFS) $(ADDITIONAL_BOOTDATA_ITEMS)
-	$(call BUILDECHO,generating $@)
-	@$(MKDIR)
-	$(NOECHO)$(MKBOOTFS) -o $@ $(or $(ADDITIONAL_BOOTDATA_ITEMS),--empty)
-
-.PHONY: kernel-only kernel-bootdata
-kernel-only: kernel kernel-bootdata
-kernel-bootdata: $(KERNEL_BOOTDATA)
+.PHONY: kernel-only
+kernel-only: kernel 
 
 $(USER_BOOTDATA): $(MKBOOTFS) $(USER_MANIFEST) $(USER_MANIFEST_DEPS) $(ADDITIONAL_BOOTDATA_ITEMS)
 	$(call BUILDECHO,generating $@)

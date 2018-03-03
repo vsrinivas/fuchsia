@@ -6,12 +6,9 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-PLATFORM := generic-arm
+PLATFORM_VID := 2   # PDEV_VID_96BOARDS
+PLATFORM_PID := 1   # PDEV_PID_HIKEY960
+PLATFORM_BOARD_NAME := hikey960
+PLATFORM_MDI_SRCS := $(LOCAL_DIR)/hikey960.mdi
 
-include make/kernel-images.mk
-
-PLATFORM_VID := 4   # PDEV_VID_KHADAS
-PLATFORM_PID := 2   # PDEV_PID_VIM2
-PLATFORM_BOARD_NAME := vim2
-
-MDI_SRCS := $(LOCAL_DIR)/vim2.mdi
+include make/board.mk

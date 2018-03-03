@@ -65,4 +65,8 @@ __BEGIN_CDECLS;
 #define PDEV_VID_BROADCOM           6
 #define PDEV_PID_BCM4356            1
 
+//Hardkernel
+#define PDEV_VID_HARDKERNEL         7
+#define PDEV_PID_ODROID_C2          1
+
 __END_CDECLS;

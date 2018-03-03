@@ -371,11 +371,12 @@ ALLEFI_LIBS :=
 # sysroot (exported libraries and headers)
 SYSROOT_DEPS :=
 
-# MDI source files used to generate the mdi.bin binary blob
-MDI_SRCS :=
-
 # MDI source files used to generate the mdi-defs.h header file
 MDI_INCLUDES := system/public/zircon/mdi/zircon.mdi
+
+# Header file for MDI definitions
+MDI_GEN_HEADER_DIR := $(BUILDDIR)/gen/global/include
+MDI_HEADER := $(MDI_GEN_HEADER_DIR)/mdi/mdi-defs.h
 
 # For now always enable frame pointers so kernel backtraces
 # can work and define WITH_PANIC_BACKTRACE to enable them in panics
@@ -517,8 +518,18 @@ SAVED_USER_MANIFEST_LINES := $(USER_MANIFEST_LINES)
 include make/recurse.mk
 
 ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
-# rules for generating MDI header and binary
-include make/mdi.mk
+# rule for generating MDI header file for C/C++ code
+$(MDI_HEADER): $(MDIGEN) $(MDI_INCLUDES)
+	$(call BUILDECHO,generating $@)
+	@$(MKDIR)
+	$(NOECHO)$(MDIGEN) $(MDI_INCLUDES) -h $@
+
+GENERATED += $(MDI_HEADER)
+EXTRA_BUILDDEPS += $(MDI_HEADER)
+
+# Make sure $(MDI_HEADER) is generated before it is included by any source files
+TARGET_MODDEPS += $(MDI_HEADER)
+GLOBAL_INCLUDES += $(MDI_GEN_HEADER_DIR)
 endif
 
 ifneq ($(EXTRA_IDFILES),)
@@ -548,7 +559,7 @@ tools:: $(ALLHOST_APPS) $(ALLHOST_LIBS)
 
 # meta rule for the kernel
 .PHONY: kernel
-kernel: $(OUTLKBIN) $(EXTRA_KERNELDEPS) kernel-bootdata
+kernel: $(OUTLKBIN) $(EXTRA_KERNELDEPS)
 ifeq ($(ENABLE_BUILD_LISTFILES),true)
 kernel: $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size
 endif

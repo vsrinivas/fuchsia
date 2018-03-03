@@ -5,12 +5,10 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# Project file to build zircon + user space on top of qemu
-# for 64bit arm (cortex-a53)
+# Project file to build zircon + user space for 64bit arm (cortex-a53)
 
 ARCH := arm64
-TARGET := qemu-virt
+TARGET := arm64
 
 include kernel/project/virtual/test.mk
 include kernel/project/virtual/user.mk
-

@@ -17,3 +17,13 @@ MODULE_DEPS := \
     kernel/dev/intel_rng
 
 include make/module.mk
+
+# build kernel-bootdata for fuchisa build
+KERNEL_BOOTDATA := $(BUILDDIR)/x86-kernel-bootdata.bin
+$(KERNEL_BOOTDATA): $(MKBOOTFS)
+	$(call BUILDECHO,generating $@)
+	@$(MKDIR)
+	$(NOECHO)$(MKBOOTFS) -o $@ --empty
+
+kernel-only: $(KERNEL_BOOTDATA)
+kernel: $(KERNEL_BOOTDATA)

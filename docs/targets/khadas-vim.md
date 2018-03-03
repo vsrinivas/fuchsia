@@ -86,16 +86,8 @@ update partition bootloader fip/u-boot.bin
 ```
 ## Building Zircon
 
-### VIM
-
 ```
-make -j32 vim
-```
-
-### VIM2
-
-```
-make -j32 vim2
+make -j32 arm64
 ```
 
 ## Flashing Zircon
