@@ -9,9 +9,6 @@ flutter_root = "//third_party/flutter"
 declare_args() {
   # Debug build.
   is_debug = true
-  # Use the Scudo memory allocator for Fuchsia. See
-  # https://llvm.org/docs/ScudoHardenedAllocator.html for details.
-  use_scudo = false
 }
 
 if (target_os == "") {
@@ -161,25 +158,22 @@ if (is_fuchsia) {
   # compiler, this will not be necessary: -fsanitize=address et al will
   # implicitly disable safestack.
   _safestack_compatible = true
-  _scudo_compatible = true
   foreach(subvariant, toolchain_variant) {
     if (subvariant == "//build/config/sanitizers:asan" ||
         subvariant == "//build/config/sanitizers:asan_no_detect_leaks" ||
         subvariant == "//build/config/sanitizers:sancov") {
       _safestack_compatible = false
-      _scudo_compatible = false
     }
   }
   if (_safestack_compatible) {
     default_common_binary_configs += [ "//build/config/fuchsia:safestack" ]
   }
-  # Use Scudo when explicitly enabled.
-  if (_scudo_compatible && use_scudo) {
-    default_common_binary_configs += [ "//build/config/fuchsia:scudo" ]
-  }
 }
 
-default_common_binary_configs += [ "//build/config/lto:default" ]
+default_common_binary_configs += [
+  "//build/config/lto:default",
+  "//build/config/scudo:default",
+]
 
 # Add configs set by the toolchain definition.
 default_common_binary_configs += toolchain_configs + toolchain_variant

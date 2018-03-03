@@ -1,0 +1,50 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/toolchain/variant.gni")
+
+declare_args() {
+  # Use the [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
+  # memory allocator for Fuchsia.
+  use_scudo = false
+
+  # Default [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
+  # options (before the `SCUDO_OPTIONS` environment variable is read at
+  # runtime).  *NOTE:* This affects only components using the `scudo`
+  # variant (see GN build argument `select_variant`), and does not affect
+  # anything when the `use_scudo` build flag is set instead.
+  scudo_default_options = ""
+}
+
+assert(!use_scudo || scudo_default_options == "",
+       "`scudo_default_options` does not affect `use_scudo builds`; " +
+       "use `select_variant` to choose `scudo` instead")
+
+# This config is added unconditionally by BUILDCONFIG.gn to pick up the
+# global `use_scudo` build argument.  For fine-grained control, leave
+# `use_scudo=false` and use `select_variant` to choose the `scudo`
+# variant for some components.
+config("default") {
+  if (use_scudo && is_fuchsia) {
+    configs = [ ":scudo" ]
+  }
+}
+
+# This defines the //build/config/scudo config that's used separately
+# when `use_scudo` is set, as well as making that config (along with
+# the deps to propagate `scudo_default_options`) into a variant.
+variant("scudo") {
+  common_flags = [ "-fsanitize=scudo" ]
+  deps = [
+    ":scudo_default_options",
+  ]
+}
+
+source_set("scudo_default_options") {
+  visibility = [ ":*" ]
+  sources = [
+    "scudo_default_options.c",
+  ]
+  defines = [ "SCUDO_DEFAULT_OPTIONS=\"${scudo_default_options}\"" ]
+}
