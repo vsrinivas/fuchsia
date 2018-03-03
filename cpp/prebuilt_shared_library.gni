@@ -104,6 +104,15 @@ template("prebuilt_shared_library") {
     tags = [
       "type:compiled_shared",
     ]
+    if (is_fuchsia) {
+      tags += [
+        "arch:target",
+      ]
+    } else {
+      tags += [
+        "arch:host",
+      ]
+    }
 
     no_headers = defined(invoker.no_headers) && invoker.no_headers
 
