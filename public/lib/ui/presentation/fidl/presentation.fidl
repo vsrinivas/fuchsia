@@ -6,6 +6,13 @@ module mozart;
 
 import "lib/ui/presentation/fidl/display_usage.fidl";
 import "lib/ui/scenic/fidl/renderer.fidl";
+import "lib/ui/input/fidl/input_events.fidl";
+
+// |Presentation.CaptureKeyboardEvent| will consume this listener interface and
+// call |OnEvent| when the registered keyboard event occurs.
+interface KeyboardCaptureListener {
+  OnEvent@0(KeyboardEvent event);
+};
 
 // Allows clients of Presenter.Present() to control a presentation.
 // Experimental.
@@ -21,5 +28,14 @@ interface Presentation {
   // NOTE: a single param would be better than an array; see TO-529.
   SetRendererParams@3(array<scenic.RendererParam> params);
 
-  SetDisplayUsage(DisplayUsage usage);
+  SetDisplayUsage@4(DisplayUsage usage);
+
+  // This call exists so that device shell can capture hotkeys and do special
+  // things with it (e.g., switch a user shell). Only the codepoint, phase and
+  // modifiers are matched. The full KeyboardEvent is supplied to |listener|'s
+  // OnEvent.
+  // TODO: Figure out the feasibility of this feature and the best place to put
+  // it.
+  CaptureKeyboardEvent@5(KeyboardEvent event_to_capture,
+                         KeyboardCaptureListener listener);
 };

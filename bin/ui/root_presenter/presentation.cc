@@ -333,6 +333,26 @@ void Presentation::OnReport(uint32_t device_id,
   state->Update(std::move(input_report), size);
 }
 
+void Presentation::CaptureKeyboardEvent(
+    mozart::KeyboardEventPtr event_to_capture,
+    f1dl::InterfaceHandle<mozart::KeyboardCaptureListener> listener_handle) {
+  mozart::KeyboardCaptureListenerPtr listener;
+  listener.Bind(std::move(listener_handle));
+  // Auto-remove listeners if the interface closes.
+  listener.set_error_handler([this, listener = listener.get()] {
+    captured_keybindings_.erase(
+        std::remove_if(captured_keybindings_.begin(),
+                       captured_keybindings_.end(),
+                       [listener](const KeyboardCaptureItem& item) -> bool {
+                         return item.listener.get() == listener;
+                       }),
+        captured_keybindings_.end());
+  });
+
+  captured_keybindings_.push_back(
+      KeyboardCaptureItem{std::move(event_to_capture), std::move(listener)});
+}
+
 void Presentation::OnEvent(mozart::InputEventPtr event) {
   FXL_VLOG(1) << "OnEvent " << *(event);
 
@@ -423,6 +443,16 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
           !trackball_pointer_down_) {
         HandleAltBackspace();
         invalidate = true;
+      } else {
+        for (size_t i = 0; i < captured_keybindings_.size(); i++) {
+          const auto& event = captured_keybindings_[i].event;
+          if ((kbd->modifiers & event->modifiers) &&
+              (event->phase == kbd->phase) &&
+              (event->code_point == kbd->code_point)) {
+            captured_keybindings_[i].listener->OnEvent(kbd.Clone());
+            invalidate = true;
+          }
+        }
       }
     }
   }

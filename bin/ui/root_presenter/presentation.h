@@ -121,6 +121,11 @@ class Presentation : private mozart::ViewTreeListener,
   // |Presentation|
   void SetDisplayUsage(mozart::DisplayUsage usage) override;
 
+  // |Presentation|
+  void CaptureKeyboardEvent(
+      mozart::KeyboardEventPtr event_to_capture,
+      f1dl::InterfaceHandle<mozart::KeyboardCaptureListener> listener) override;
+
   void CreateViewTree(
       mozart::ViewOwnerPtr view_owner,
       f1dl::InterfaceRequest<mozart::Presentation> presentation_request,
@@ -232,6 +237,14 @@ class Presentation : private mozart::ViewTreeListener,
       uint32_t,
       std::pair<mozart::InputDeviceImpl*, std::unique_ptr<mozart::DeviceState>>>
       device_states_by_id_;
+
+  // A registry of listeners who want to be notified when their keyboard
+  // event happens.
+  struct KeyboardCaptureItem {
+    mozart::KeyboardEventPtr event;
+    mozart::KeyboardCaptureListenerPtr listener;
+  };
+  std::vector<KeyboardCaptureItem> captured_keybindings_;
 
   fxl::WeakPtrFactory<Presentation> weak_factory_;
 
