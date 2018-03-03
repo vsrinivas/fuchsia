@@ -33,9 +33,8 @@ zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
 
 // Validates an encoded message against the given |type|.
 //
-// Neither the |bytes| nor the |handles| are modified.
+// The |bytes| are not modified.
 zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
-                          const zx_handle_t* handles, uint32_t num_handles,
-                          const char** error_msg_out);
+                          uint32_t num_handles, const char** error_msg_out);
 
 __END_CDECLS

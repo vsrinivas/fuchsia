@@ -25,9 +25,9 @@ static_assert(offsetof(fidl_vector_t, data) == 8u, "");
 class FidlValidator {
 public:
     FidlValidator(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
-                  const zx_handle_t* handles, uint32_t num_handles, const char** error_msg_out)
+                  uint32_t num_handles, const char** error_msg_out)
         : type_(type), bytes_(static_cast<const uint8_t*>(bytes)), num_bytes_(num_bytes),
-          handles_(handles), num_handles_(num_handles), error_msg_out_(error_msg_out) {}
+          num_handles_(num_handles), error_msg_out_(error_msg_out) {}
 
     zx_status_t ValidateMessage();
 
@@ -250,7 +250,6 @@ private:
     const fidl_type_t* const type_;
     const uint8_t* const bytes_;
     const uint32_t num_bytes_;
-    const zx_handle_t* const handles_;
     const uint32_t num_handles_;
     const char** error_msg_out_;
 
@@ -274,10 +273,6 @@ zx_status_t FidlValidator::ValidateMessage() {
 
     if (bytes_ == nullptr) {
         return WithError("Cannot decode null bytes");
-    }
-
-    if (handles_ == nullptr && num_handles_ != 0u) {
-        return WithError("Cannot provide non-zero handle count and null handle pointer");
     }
 
     if (type_->type_tag != fidl::kFidlTypeStruct) {
@@ -481,8 +476,7 @@ zx_status_t FidlValidator::ValidateMessage() {
 } // namespace
 
 zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
-                          const zx_handle_t* handles, uint32_t num_handles,
-                          const char** error_msg_out) {
-    FidlValidator validator(type, bytes, num_bytes, handles, num_handles, error_msg_out);
+                          uint32_t num_handles, const char** error_msg_out) {
+    FidlValidator validator(type, bytes, num_bytes, num_handles, error_msg_out);
     return validator.ValidateMessage();
 }
