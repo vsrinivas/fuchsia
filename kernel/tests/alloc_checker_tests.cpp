@@ -112,10 +112,40 @@ static bool alloc_checker_new_fails(void* context) {
     END_TEST;
 }
 
+struct LargeStruct {
+    uint8_t array[0x1000];
+};
+
+static bool test_array_size_overflow_check(void* context) {
+    BEGIN_TEST;
+
+    size_t size_t_max = ~(size_t)0;
+    size_t count = size_t_max / (sizeof(LargeStruct) / 0x10);
+    fbl::AllocChecker ac;
+    // For this array allocation, the C++ compiler will generate a
+    // count*sizeof(LargeStruct) multiplication.  If this overflows, it
+    // passes size_t_max to the "operator new()" function.  Check that this
+    // allocation fails properly.
+    //
+    // |count| should be non-const (and non-constexpr) otherwise the
+    // compiler may complain at compile time that the program is ill-formed
+    // (possibly depending on C++ version).
+    //
+    // This also requires that AllocChecker's "operator new" override be
+    // declared as "noexcept" (which AllocChecker relies on anyway),
+    // otherwise the compiler might generate code that raises an exception
+    // (again, depending on C++ version).
+    EXPECT_EQ(new (&ac) LargeStruct[count], nullptr, "");
+    EXPECT_EQ(ac.check(), false, "");
+
+    END_TEST;
+}
+
 UNITTEST_START_TESTCASE(alloc_checker)
 UNITTEST("alloc checker ctor & dtor", alloc_checker_ctor)
 UNITTEST("alloc checker basic", alloc_checker_basic)
 UNITTEST("alloc checker panic", alloc_checker_panic)
 UNITTEST("alloc checker new", alloc_checker_new)
 UNITTEST("alloc checker new fails", alloc_checker_new_fails)
+UNITTEST("test array size overflow check", test_array_size_overflow_check)
 UNITTEST_END_TESTCASE(alloc_checker, "alloc_cpp", "Tests of the C++ AllocChecker");
