@@ -11,6 +11,7 @@
 #error Fuchsia-only Header
 #endif
 
+#include <lib/async/cpp/wait.h>
 #include <bitmap/raw-bitmap.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
@@ -136,7 +137,13 @@ private:
     // Otherwise, returns size of the handle.
     zx_status_t GetReadableEvent(zx_handle_t* out);
 
-    zx_status_t CopyVmo(zx_rights_t rights, zx_handle_t* out);
+    // Return a clone of the blobfs VMO.
+    //
+    // Monitors the current VMO, keeping a reference to the Vnode
+    // alive while the |out| VMO (and any clones it may have) are open.
+    zx_status_t CloneVmo(zx_rights_t rights, zx_handle_t* out);
+    async_wait_result_t HandleNoClones(async_t* async, zx_status_t status,
+                                       const zx_packet_signal_t* signal);
 
     void QueueUnlink();
 
@@ -218,6 +225,16 @@ private:
     fbl::unique_ptr<MappedVmo> blob_ = {};
     vmoid_t vmoid_ = {};
 
+    // Watches any clones of "blob_" provided to clients.
+    // Observes the ZX_VMO_ZERO_CHILDREN signal.
+    async::WaitMethod<VnodeBlob, &VnodeBlob::HandleNoClones> clone_watcher_;
+    // Keeps a reference to the blob alive (from within itself)
+    // until there are no cloned VMOs in used.
+    //
+    // This RefPtr is only non-null when a client is using a cloned VMO,
+    // or there would be a clear leak of VnodeBlob.
+    fbl::RefPtr<VnodeBlob> clone_ref_ = {};
+
     zx::event readable_event_ = {};
     uint64_t bytes_written_ = {};
     uint8_t digest_[Digest::kLength] = {};
@@ -246,6 +263,15 @@ public:
 
     static zx_status_t Create(fbl::unique_fd blockfd, const blobfs_info_t* info,
                               fbl::RefPtr<Blobfs>* out);
+
+    void SetAsync(async_t* async) {
+        ZX_DEBUG_ASSERT(async_ == nullptr);
+        async_ = async;
+    }
+    async_t* GetAsync() const {
+        ZX_DEBUG_ASSERT(async_ != nullptr);
+        return async_;
+    }
 
     void CollectMetrics() { collecting_metrics_ = true; }
     bool CollectingMetrics() const { return collecting_metrics_; }
@@ -410,9 +436,10 @@ private:
                                            VnodeBlob*,
                                            MerkleRootTraits,
                                            VnodeBlob::TypeWavlTraits>;
-    WAVLTreeByMerkle hash_ __TA_GUARDED(hash_lock_){}; // Map of all 'in use' blobs
     fbl::Mutex hash_lock_;
+    WAVLTreeByMerkle hash_ __TA_GUARDED(hash_lock_){}; // Map of all 'in use' blobs
 
+    async_t* async_ = {};
     fbl::unique_fd blockfd_;
     block_info_t block_info_ = {};
     fifo_client_t* fifo_client_ = {};
@@ -431,6 +458,7 @@ private:
 
 zx_status_t blobfs_create(fbl::RefPtr<Blobfs>* out, fbl::unique_fd blockfd);
 
-zx_status_t blobfs_mount(fbl::RefPtr<VnodeBlob>* out, fbl::unique_fd blockfd, bool metrics);
+zx_status_t blobfs_mount(async_t* async, fbl::unique_fd blockfd, bool metrics,
+                         fbl::RefPtr<VnodeBlob>* out);
 
 } // namespace blobfs

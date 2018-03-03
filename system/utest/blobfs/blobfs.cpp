@@ -522,6 +522,50 @@ static bool TestMmap(void) {
 }
 
 template <fs_test_type_t TestType>
+static bool TestMmapUseAfterClose(void) {
+    BEGIN_TEST;
+    test_info_t test_info;
+    ASSERT_EQ(StartBlobfsTest<TestType>(&test_info), 0, "Mounting Blobfs");
+
+    for (size_t i = 10; i < 16; i++) {
+        fbl::unique_ptr<blob_info_t> info;
+        ASSERT_TRUE(GenerateBlob(1 << i, &info));
+
+        int fd;
+        ASSERT_TRUE(MakeBlob(info.get(), &fd));
+        ASSERT_EQ(close(fd), 0);
+        fd = open(info->path, O_RDONLY);
+        ASSERT_GT(fd, 0, "Failed to-reopen blob");
+
+        void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd, 0);
+        ASSERT_NE(addr, MAP_FAILED, "Could not mmap blob");
+        ASSERT_EQ(close(fd), 0);
+
+        // We should be able to access the mapped data while the file is closed.
+        ASSERT_EQ(memcmp(addr, info->data.get(), info->size_data), 0, "Mmap data invalid");
+
+        // We should be able to re-open and remap the file.
+        //
+        // Although this isn't being tested explicitly (we lack a mechanism to
+        // check that the second mapping uses the same underlying pages as the
+        // first) the memory usage should avoid duplication in the second
+        // mapping.
+        fd = open(info->path, O_RDONLY);
+        void* addr2 = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd, 0);
+        ASSERT_NE(addr2, MAP_FAILED, "Could not mmap blob");
+        ASSERT_EQ(close(fd), 0);
+        ASSERT_EQ(memcmp(addr2, info->data.get(), info->size_data), 0, "Mmap data invalid");
+
+        ASSERT_EQ(munmap(addr, info->size_data), 0, "Could not unmap blob");
+        ASSERT_EQ(munmap(addr2, info->size_data), 0, "Could not unmap blob");
+
+        ASSERT_EQ(unlink(info->path), 0);
+    }
+    ASSERT_EQ(EndBlobfsTest<TestType>(&test_info), 0, "unmounting blobfs");
+    END_TEST;
+}
+
+template <fs_test_type_t TestType>
 static bool TestReaddir(void) {
     BEGIN_TEST;
     test_info_t test_info;
@@ -1847,6 +1891,7 @@ BEGIN_TEST_CASE(blobfs_tests)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestBasic)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestNullBlob)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestMmap)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestMmapUseAfterClose)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestReaddir)
 RUN_TEST_MEDIUM(TestQueryInfo<FS_TEST_FVM>)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, UseAfterUnlink)

@@ -38,6 +38,7 @@ void VnodeBlob::fbl_recycle() {
 }
 
 VnodeBlob::~VnodeBlob() {
+    ZX_ASSERT(clone_watcher_.object() == ZX_HANDLE_INVALID);
     if (blob_ != nullptr) {
         block_fifo_request_t request;
         request.txnid = blobfs_->TxnId();
@@ -258,7 +259,7 @@ zx_status_t VnodeBlob::GetVmo(int flags, zx_handle_t* out) {
     zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP;
     rights |= (flags & FDIO_MMAP_FLAG_READ) ? ZX_RIGHT_READ : 0;
     rights |= (flags & FDIO_MMAP_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
-    return CopyVmo(rights, out);
+    return CloneVmo(rights, out);
 }
 
 void VnodeBlob::Sync(SyncCallback closure) {

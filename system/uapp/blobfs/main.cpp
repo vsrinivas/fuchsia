@@ -47,7 +47,8 @@ int do_blobfs_mount(fbl::unique_fd fd, const blob_options_t& options) {
     }
 
     fbl::RefPtr<blobfs::VnodeBlob> vn;
-    if (blobfs::blobfs_mount(&vn, fbl::move(fd), options.metrics) != ZX_OK) {
+    async::Loop loop;
+    if (blobfs::blobfs_mount(loop.async(), fbl::move(fd), options.metrics, &vn) != ZX_OK) {
         return -1;
     }
     zx_handle_t h = zx_get_startup_handle(PA_HND(PA_USER0, 0));
@@ -56,7 +57,6 @@ int do_blobfs_mount(fbl::unique_fd fd, const blob_options_t& options) {
         return -1;
     }
 
-    async::Loop loop;
     fs::Vfs vfs(loop.async());
     vfs.SetReadonly(readonly);
     zx_status_t status;

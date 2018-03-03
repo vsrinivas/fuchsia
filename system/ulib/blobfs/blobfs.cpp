@@ -182,15 +182,14 @@ uint64_t VnodeBlob::SizeData() const {
 
 VnodeBlob::VnodeBlob(fbl::RefPtr<Blobfs> bs, const Digest& digest)
     : blobfs_(fbl::move(bs)),
-      flags_(kBlobStateEmpty),
-      syncing_(false) {
+      flags_(kBlobStateEmpty), syncing_(false), clone_watcher_(this) {
     digest.CopyTo(digest_, sizeof(digest_));
 }
 
 VnodeBlob::VnodeBlob(fbl::RefPtr<Blobfs> bs)
     : blobfs_(fbl::move(bs)),
       flags_(kBlobStateEmpty | kBlobFlagDirectory),
-      syncing_(false)  {}
+      syncing_(false), clone_watcher_(this) {}
 
 void VnodeBlob::BlobCloseHandles() {
     blob_ = nullptr;
@@ -414,8 +413,8 @@ zx_status_t VnodeBlob::GetReadableEvent(zx_handle_t* out) {
     return sizeof(zx_handle_t);
 }
 
-zx_status_t VnodeBlob::CopyVmo(zx_rights_t rights, zx_handle_t* out) {
-    TRACE_DURATION("blobfs", "Blobfs::CopyVmo", "rights", rights, "out", out);
+zx_status_t VnodeBlob::CloneVmo(zx_rights_t rights, zx_handle_t* out) {
+    TRACE_DURATION("blobfs", "Blobfs::CloneVmo", "rights", rights, "out", out);
     if (GetState() != kBlobStateReadable) {
         return ZX_ERR_BAD_STATE;
     }
@@ -441,7 +440,30 @@ zx_status_t VnodeBlob::CopyVmo(zx_rights_t rights, zx_handle_t* out) {
         zx_handle_close(clone);
         return status;
     }
+
+    if (clone_watcher_.object() == ZX_HANDLE_INVALID) {
+        clone_watcher_.set_object(blob_->GetVmo());
+        clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
+
+        // Keep a reference to "this" alive, preventing the blob
+        // from being closed while someone may still be using the
+        // underlying memory.
+        //
+        // We'll release it when no client-held VMOs are in use.
+        clone_ref_ = fbl::RefPtr<VnodeBlob>(this);
+        clone_watcher_.Begin(blobfs_->GetAsync());
+    }
+
     return ZX_OK;
+}
+
+async_wait_result_t VnodeBlob::HandleNoClones(async_t* async, zx_status_t status,
+                                              const zx_packet_signal_t* signal) {
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    ZX_DEBUG_ASSERT((signal->observed & ZX_VMO_ZERO_CHILDREN) != 0);
+    clone_watcher_.set_object(ZX_HANDLE_INVALID);
+    clone_ref_ = nullptr;
+    return ASYNC_WAIT_FINISHED;
 }
 
 zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
@@ -1102,7 +1124,8 @@ zx_status_t blobfs_create(fbl::RefPtr<Blobfs>* out, fbl::unique_fd blockfd) {
     return ZX_OK;
 }
 
-zx_status_t blobfs_mount(fbl::RefPtr<VnodeBlob>* out, fbl::unique_fd blockfd, bool metrics) {
+zx_status_t blobfs_mount(async_t* async, fbl::unique_fd blockfd, bool metrics,
+                         fbl::RefPtr<VnodeBlob>* out) {
     zx_status_t status;
     fbl::RefPtr<Blobfs> fs;
 
@@ -1110,6 +1133,7 @@ zx_status_t blobfs_mount(fbl::RefPtr<VnodeBlob>* out, fbl::unique_fd blockfd, bo
         return status;
     }
 
+    fs->SetAsync(async);
     if (metrics) {
         fs->CollectMetrics();
     }
