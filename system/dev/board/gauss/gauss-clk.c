@@ -23,7 +23,7 @@ static const pbus_dev_t clk_dev = {
     .name = "a113-clk",
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_A113,
-    .did = PDEV_DID_AMLOGIC_CLK,
+    .did = PDEV_DID_AMLOGIC_AXG_CLK,
     .mmios = clk_mmios,
     .mmio_count = countof(clk_mmios),
 };

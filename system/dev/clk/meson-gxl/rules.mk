@@ -9,7 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/meson-axg-clk.c \
+    $(LOCAL_DIR)/meson-gxl-clk.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

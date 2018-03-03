@@ -17,14 +17,18 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
-#include <soc/aml-a113/a113-hw.h>
 
-typedef struct axg_clk_gate {
-    uint32_t reg;
-    uint32_t bit;
-} axg_clk_gate_t;
+#include <dev/clk/meson-lib/meson.h>
+#include <soc/aml-meson/axg-clk.h>
 
-static const axg_clk_gate_t axg_clk_gates[] = {
+#define AXG_HHI_PCIE_PLL_CNTL6   0x3C
+#define AXG_HHI_GCLK_MPEG0       0x50
+#define AXG_HHI_GCLK_MPEG1       0x51
+#define AXG_HHI_GCLK_MPEG2       0x52
+#define AXG_HHI_GCLK_AO          0x55
+#define AXG_HHI_MPEG_CLK_CNTL    0x5D
+
+static meson_clk_gate_t axg_clk_gates[] = {
     // MPEG0 Clock Gates
     {.reg = AXG_HHI_GCLK_MPEG0, .bit = 0},     // CLK_AXG_DDR
     {.reg = AXG_HHI_GCLK_MPEG0, .bit = 2},     // CLK_AXG_AUDIO_LOCKER
@@ -85,147 +89,20 @@ static const axg_clk_gate_t axg_clk_gates[] = {
 static_assert(CLK_AXG_COUNT == countof(axg_clk_gates),
               "axg_clk_gates[] and axg_clk_gate_idx count mismatch");
 
-typedef struct meson_axg_clk {
-    platform_device_protocol_t pdev;
-    clk_protocol_t clk;
-    zx_device_t* zxdev;
-    pdev_vmo_buffer_t mmio;
-
-    // Serialize access to clocks.
-    mtx_t lock;
-} meson_axg_clk_t;
-
-
-static zx_status_t meson_axg_clk_toggle(void* ctx, const uint32_t clk,
-                                        const bool enable) {
-    const axg_clk_gate_idx_t idx = clk;
-    meson_axg_clk_t* const meson_clk = ctx;
-
-    if (idx >= CLK_AXG_COUNT) return ZX_ERR_INVALID_ARGS;
-
-    const axg_clk_gate_t* const gate = &axg_clk_gates[idx];
-
-    volatile uint32_t* regs = (volatile uint32_t*)meson_clk->mmio.vaddr;
-
-    mtx_lock(&meson_clk->lock);
-
-    uint32_t val = readl(regs + gate->reg);
-
-    if (enable) {
-        val |= (1 << gate->bit);
-    } else {
-        val &= ~(1 << gate->bit);
-    }
-
-    writel(val, regs + gate->reg);
-
-    mtx_unlock(&meson_clk->lock);
-
-    return ZX_OK;
-}
-
-static zx_status_t meson_axg_clk_enable(void* ctx, uint32_t clk) {
-    return meson_axg_clk_toggle(ctx, clk, true);
-}
-
-static zx_status_t meson_axg_clk_disable(void* ctx, uint32_t clk) {
-    return meson_axg_clk_toggle(ctx, clk, false);
-}
-
-clk_protocol_ops_t clk_ops = {
-    .enable = meson_axg_clk_enable,
-    .disable = meson_axg_clk_disable,
-};
-
-static void meson_axg_release(void* ctx) {
-    meson_axg_clk_t* axg_clk = ctx;
-    pdev_vmo_buffer_release(&axg_clk->mmio);
-    mtx_destroy(&axg_clk->lock);
-    free(axg_clk);
-}
-
-static zx_protocol_device_t meson_axg_clk_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .release = meson_axg_release,
-};
+static const char meson_axg_clk_name[] = "meson-axg-clk";
 
 static zx_status_t meson_axg_clk_bind(void* ctx, zx_device_t* parent) {
-    zx_status_t st = ZX_ERR_INTERNAL;
-
-    meson_axg_clk_t* meson_clk = calloc(1, sizeof(*meson_clk));
-    if (!meson_clk) {
-        zxlogf(ERROR, "meson_axg_clk_bind: failed to allocate meson_clk\n");
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    int ret = mtx_init(&meson_clk->lock, mtx_plain);
-    if (ret != thrd_success) {
-        zxlogf(ERROR, "meson_axg_clk_bind: failed to initialize mutex\n");
-        st = thrd_status_to_zx_status(ret);
-        goto fail;
-    }
-
-    st = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &meson_clk->pdev);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "meson_axg_clk_bind: Failed to get ZX_PROTOCOL_PLATFORM_DEV\n");
-        goto fail;
-    }
-
-    platform_bus_protocol_t pbus;
-    st = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "meson_axg_clk_bind: Failed to get ZX_PROTOCOL_PLATFORM_BUS\n");
-        goto fail;
-    }
-
-    // Map the MMIOs for this clock
-    st = pdev_map_mmio_buffer(&meson_clk->pdev, 0,
-                              ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                              &meson_clk->mmio);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "meson_axg_clk_bind: pdev_map_mmio_buffer failed, st = %d\n", st);
-        goto fail;
-    }
-
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "meson-axg-clk",
-        .ctx = meson_clk,
-        .ops = &meson_axg_clk_device_proto,
-        .flags = DEVICE_ADD_NON_BINDABLE,
-    };
-
-    st = device_add(parent, &args, &meson_clk->zxdev);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "meson_axg_clk_bind: device_add failed, st = %d\n", st);
-        goto fail;
-    }
-
-    meson_clk->clk.ops = &clk_ops;
-    meson_clk->clk.ctx = meson_clk;
-
-    pbus_set_protocol(&pbus, ZX_PROTOCOL_CLK, &meson_clk->clk);
-
-    return ZX_OK;
-
-fail:
-    meson_axg_release(meson_clk);
-
-    // Make sure we don't accidentally return ZX_OK if the device has failed
-    // to bind for some reason
-    ZX_DEBUG_ASSERT(st != ZX_OK);
-    return st;
+    return meson_clk_init(meson_axg_clk_name, axg_clk_gates,
+                          countof(axg_clk_gates), parent);
 }
-
 
 static zx_driver_ops_t meson_axg_clk_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = meson_axg_clk_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(meson_axg_clk, meson_axg_clk_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(meson_axg_clk, meson_axg_clk_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A113),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_CLK),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_AXG_CLK),
 ZIRCON_DRIVER_END(meson_axg_clk)

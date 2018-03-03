@@ -6,21 +6,20 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := driver
+MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/meson-axg-clk.c \
+    $(LOCAL_DIR)/meson_clk.c
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/sync \
-    system/dev/clk/meson-lib \
 
 MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/c \
     system/ulib/zircon \
 
-MODULE_HEADER_DEPS := system/dev/soc/amlogic
+MODULE_PACKAGE := static
 
 include make/module.mk
