@@ -19,7 +19,12 @@ static bool alloc_checker_ctor(void* context) {
 
     {
         fbl::AllocChecker ac;
-        ac.check();
+        // In some error cases for "new", some versions of C++ say that the
+        // allocation function (i.e. the "operator new" overload) is not
+        // called, and "new" returns NULL.  So check that ac.check()
+        // indicates failure even when AllocChecker's "operator new" wasn't
+        // called.
+        EXPECT_FALSE(ac.check(), "");
     }
 
     END_TEST;
@@ -141,6 +146,28 @@ static bool test_array_size_overflow_check(void* context) {
     END_TEST;
 }
 
+static bool test_negative_array_size(void* context) {
+    BEGIN_TEST;
+
+    fbl::AllocChecker ac;
+
+    // Test passing a signed, negative array size.  This should fail
+    // safely.
+    //
+    // C++14 and C++17 say that this size is "erroneous" because "the
+    // expression is of non-class type and its value before converting to
+    // std::size_t is less than zero".
+    //
+    // |count| should be non-const (and non-constexpr) otherwise the
+    // compiler may complain at compile time that the program is ill-formed
+    // (possibly depending on C++ version).
+    int count = -1;
+    EXPECT_EQ(new (&ac) char[count], nullptr, "");
+    EXPECT_EQ(ac.check(), false, "");
+
+    END_TEST;
+}
+
 UNITTEST_START_TESTCASE(alloc_checker)
 UNITTEST("alloc checker ctor & dtor", alloc_checker_ctor)
 UNITTEST("alloc checker basic", alloc_checker_basic)
@@ -148,4 +175,5 @@ UNITTEST("alloc checker panic", alloc_checker_panic)
 UNITTEST("alloc checker new", alloc_checker_new)
 UNITTEST("alloc checker new fails", alloc_checker_new_fails)
 UNITTEST("test array size overflow check", test_array_size_overflow_check)
+UNITTEST("test negative array size", test_negative_array_size)
 UNITTEST_END_TESTCASE(alloc_checker, "alloc_cpp", "Tests of the C++ AllocChecker");
