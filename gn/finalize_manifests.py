@@ -289,7 +289,12 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
     # update the manifest entry to point to the stripped file.
     def make_debug_file(entry, info):
         debug = info
-        stripped = os.path.join(stripped_dir, entry.target)
+        # TODO(TO-842): After TO-842, stripped_dir will a place dedicated
+        # to this one output manifest, and using entry.target will be right
+        # again.  For now, multiple manifests use the same entry.target value
+        # for different files, and they clobber each other in stripped_dir.
+        #stripped = os.path.join(stripped_dir, entry.target)
+        stripped = os.path.join(stripped_dir, os.path.basename(entry.source))
         dir = os.path.dirname(stripped)
         if not os.path.isdir(dir):
             os.makedirs(dir)
