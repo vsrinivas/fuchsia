@@ -255,6 +255,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fuchsia-bluetooth"
+version = "0.1.0"
+dependencies = [
+ "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fdio 0.2.0",
+ "fidl 0.1.0",
+ "fuchsia-zircon 0.3.4",
+ "rand 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "fuchsia-llui"
 version = "0.1.0"
 dependencies = [
