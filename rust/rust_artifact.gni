@@ -7,6 +7,7 @@ import("//build/config/clang/clang.gni")
 declare_args() {
   # Allows Cargo.lock to be updated when performing local builds.
   use_frozen_with_cargo = true
+
   # Sets a custom base directory for `rustc` and `cargo`.
   # This can be used to test custom Rust toolchains.
   rustc_prefix = "//buildtools/${host_platform}/rust/bin"
@@ -78,13 +79,11 @@ template("rust_artifact") {
   specific_out_dir = "$base_out_dir/$target_triple/$build_type"
 
   if (type == "bin") {
-    output_file =
-        "$specific_out_dir/$name"
+    output_file = "$specific_out_dir/$name"
     output_depfile = "$output_file.d"
     build_target_name = "${target_name}_build"
   } else if (type == "lib") {
-    output_base =
-        "$specific_out_dir/lib$name"
+    output_base = "$specific_out_dir/lib$name"
     output_file = "$output_base.rmeta"
     output_depfile = "$output_base.d"
     build_target_name = "${target_name}_lib"
@@ -94,30 +93,76 @@ template("rust_artifact") {
   main_target_name = target_name
 
   if (type == "bin") {
-    copy("${target_name}_bin") {
-      sources = [
-        output_file,
-      ]
-
-      if (defined(invoker.output_name)) {
-        final_output_file = "$root_out_dir/${invoker.output_name}"
-      } else {
-        final_output_file = "$root_out_dir/$name"
-      }
-      outputs = [
-        final_output_file,
-      ]
-
-      deps = [
-        ":$build_target_name",
-      ]
+    final_output_name = name
+    if (defined(invoker.output_name)) {
+      final_output_name = invoker.output_name
     }
 
-    group_deps += [ ":${target_name}_bin" ]
+    final_output_file = "$root_out_dir/$final_output_name"
+
+    if (current_toolchain == host_toolchain) {
+      # Host builds are not stripped
+      copy("${main_target_name}_bin") {
+        sources = [
+          output_file,
+        ]
+        outputs = [
+          final_output_file,
+        ]
+        deps = [
+          ":$build_target_name",
+        ]
+      }
+    } else {
+      unstripped_output_file = "$root_out_dir/exe.unstripped/$final_output_name"
+
+      copy("${main_target_name}_unstripped") {
+        sources = [
+          output_file,
+        ]
+        outputs = [
+          unstripped_output_file,
+        ]
+        deps = [
+          ":$build_target_name",
+        ]
+      }
+
+      action("${main_target_name}_bin") {
+        deps = [
+          ":${main_target_name}_unstripped",
+        ]
+        sources = [
+          unstripped_output_file,
+        ]
+
+        outputs = [
+          final_output_file,
+        ]
+
+        # inputs get computed relative to the action location when relative,
+        # which clang_prefix is, so we must resolve the path here.
+        strip = rebase_path(clang_prefix + "/llvm-objcopy", "", root_build_dir)
+        inputs = [
+          strip,
+        ]
+
+        script = "//build/gn_run_binary.sh"
+        args = [
+          clang_prefix,
+          strip,
+          "--strip-sections",
+          rebase_path(unstripped_output_file, root_build_dir, "//"),
+          rebase_path(final_output_file, root_build_dir, "//"),
+        ]
+      }
+    }
+
+    group_deps += [ ":${main_target_name}_bin" ]
   }
 
   if ((defined(invoker.with_unit_tests) && invoker.with_unit_tests) ||
-    (defined(invoker.with_tests) && invoker.with_tests)) {
+      (defined(invoker.with_tests) && invoker.with_tests)) {
     copy("${target_name}_unit_test") {
       base_out_dir = "$root_build_dir/rust_targets"
       sources = [
@@ -154,7 +199,7 @@ template("rust_artifact") {
     group_deps += [ ":${target_name}_test" ]
   }
 
-  if ((defined(invoker.integration_tests))) {
+  if (defined(invoker.integration_tests)) {
     foreach(test_name, invoker.integration_tests) {
       copy("${target_name}_${test_name}_integration_test") {
         base_out_dir = "$root_build_dir/rust_targets"
@@ -234,8 +279,8 @@ template("rust_artifact") {
           get_label_info("//default($shlib_toolchain)", "root_out_dir")),
     ]
 
-  if ((defined(invoker.with_unit_tests) && invoker.with_unit_tests) ||
-    (defined(invoker.with_tests) && invoker.with_tests)) {
+    if ((defined(invoker.with_unit_tests) && invoker.with_unit_tests) ||
+        (defined(invoker.with_tests) && invoker.with_tests)) {
       args += [ "--with-tests" ]
 
       outputs += [ "$base_out_dir/$name-$type-test" ]
@@ -259,9 +304,7 @@ template("rust_artifact") {
     }
 
     if (is_fuchsia) {
-      deps += [
-        "//garnet/public/sdk:zircon_sysroot_export",
-      ]
+      deps += [ "//garnet/public/sdk:zircon_sysroot_export" ]
 
       args += [
         "--clang_prefix",
