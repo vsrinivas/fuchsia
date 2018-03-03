@@ -5,14 +5,11 @@
 import("//build/sdk/sdk.gni")
 
 sdk("zircon_sysroot") {
-
   export = true
 
   old_school = true
 
-  domains = [
-    "c-pp",
-  ]
+  domains = [ "c-pp" ]
 
   deps = [
     "//zircon/public/lib/backtrace:backtrace_sdk",
@@ -23,8 +20,14 @@ sdk("zircon_sysroot") {
   ]
 }
 
-sdk("garnet") {
+sdk("zircon_legacy") {
+  deps = [
+    "//zircon/public/lib/async:async_sdk",
+    "//zircon/public/lib/async-default:async-default_sdk",
+  ]
+}
 
+sdk("garnet") {
   deps = [
     "//garnet/bin/far:bin_sdk($host_toolchain)",
     "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",

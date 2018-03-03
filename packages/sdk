@@ -10,6 +10,7 @@
         "garnet/packages/tracing"
     ],
     "labels": [
-        "//build/gn:fvm.blk.qcow2"
+        "//build/gn:fvm.blk.qcow2",
+        "//garnet/public/sdk:zircon_legacy"
     ]
 }
