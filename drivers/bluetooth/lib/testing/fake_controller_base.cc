@@ -12,52 +12,62 @@
 namespace btlib {
 namespace testing {
 
-FakeControllerBase::FakeControllerBase(zx::channel cmd_channel,
-                                       zx::channel acl_data_channel)
-    : cmd_channel_(std::move(cmd_channel)),
-      acl_channel_(std::move(acl_data_channel)) {}
+FakeControllerBase::FakeControllerBase() {}
 
 FakeControllerBase::~FakeControllerBase() {
   // When this destructor gets called any subclass state will be undefined. If
   // Stop() has not been called before reaching this point this can cause
   // runtime errors when our MessageLoop handlers attempt to invoke the pure
-  // virtual methods of this class. So we require that the FakeController be
-  // stopped by now.
-  FXL_DCHECK(!IsStarted());
+  // virtual methods of this class.
 }
 
-void FakeControllerBase::Start() {
-  FXL_DCHECK(!IsStarted());
-  FXL_DCHECK(cmd_channel_.is_valid());
+bool FakeControllerBase::StartCmdChannel(zx::channel chan) {
+  if (cmd_channel_.is_valid()) {
+    return false;
+  }
 
+  cmd_channel_ = std::move(chan);
   cmd_channel_wait_.set_object(cmd_channel_.get());
   cmd_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
   cmd_channel_wait_.set_handler(
       fbl::BindMember(this, &FakeControllerBase::HandleCommandPacket));
-
   zx_status_t status = cmd_channel_wait_.Begin(async_get_default());
-  FXL_DCHECK(status == ZX_OK);
-
-  if (acl_channel_.is_valid()) {
-    acl_channel_wait_.set_object(acl_channel_.get());
-    acl_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    acl_channel_wait_.set_handler(
-        fbl::BindMember(this, &FakeControllerBase::HandleACLPacket));
-    zx_status_t status = acl_channel_wait_.Begin(async_get_default());
-    FXL_DCHECK(status == ZX_OK);
+  if (status != ZX_OK) {
+    cmd_channel_.reset();
+    FXL_LOG(WARNING) << "FakeController: Failed to Start Command channel: "
+                     << zx_status_get_string(status);
+    return false;
   }
+  return true;
+}
+
+bool FakeControllerBase::StartAclChannel(zx::channel chan) {
+  if (acl_channel_.is_valid()) {
+    return false;
+  }
+
+  acl_channel_ = std::move(chan);
+  acl_channel_wait_.set_object(acl_channel_.get());
+  acl_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  acl_channel_wait_.set_handler(
+      fbl::BindMember(this, &FakeControllerBase::HandleACLPacket));
+  zx_status_t status = acl_channel_wait_.Begin(async_get_default());
+  if (status != ZX_OK) {
+    acl_channel_.reset();
+    FXL_LOG(WARNING) << "FakeController: Failed to Start ACL channel: "
+                     << zx_status_get_string(status);
+    return false;
+  }
+  return true;
 }
 
 void FakeControllerBase::Stop() {
-  FXL_DCHECK(IsStarted());
-
   CloseCommandChannel();
   CloseACLDataChannel();
 }
 
 void FakeControllerBase::SendCommandChannelPacket(
     const common::ByteBuffer& packet) {
-  FXL_DCHECK(IsStarted());
   zx_status_t status =
       cmd_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
   if (status != ZX_OK) {
@@ -68,7 +78,6 @@ void FakeControllerBase::SendCommandChannelPacket(
 
 void FakeControllerBase::SendACLDataChannelPacket(
     const common::ByteBuffer& packet) {
-  FXL_DCHECK(IsStarted());
   zx_status_t status =
       acl_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
   if (status != ZX_OK) {
@@ -78,15 +87,19 @@ void FakeControllerBase::SendACLDataChannelPacket(
 }
 
 void FakeControllerBase::CloseCommandChannel() {
-  cmd_channel_wait_.Cancel(async_get_default());
-  cmd_channel_wait_.set_object(ZX_HANDLE_INVALID);
-  cmd_channel_.reset();
+  if (cmd_channel_.is_valid()) {
+    cmd_channel_wait_.Cancel(async_get_default());
+    cmd_channel_wait_.set_object(ZX_HANDLE_INVALID);
+    cmd_channel_.reset();
+  }
 }
 
 void FakeControllerBase::CloseACLDataChannel() {
-  acl_channel_wait_.Cancel(async_get_default());
-  acl_channel_wait_.set_object(ZX_HANDLE_INVALID);
-  acl_channel_.reset();
+  if (acl_channel_.is_valid()) {
+    acl_channel_wait_.Cancel(async_get_default());
+    acl_channel_wait_.set_object(ZX_HANDLE_INVALID);
+    acl_channel_.reset();
+  }
 }
 
 async_wait_result_t FakeControllerBase::HandleCommandPacket(

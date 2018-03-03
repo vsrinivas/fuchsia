@@ -1,0 +1,45 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+package("bthci_fake") {
+  system_image = true
+  testonly = true
+
+  deps = [
+    ":fake_driver"
+  ]
+
+  drivers = [ {
+        name = "bthci-fake.so"
+  } ]
+}
+
+
+driver_module("fake_driver") {
+  output_name = "bthci-fake"
+  testonly = true
+
+  sources = [
+    "binding.c",
+    "driver.cpp",
+    "fake-device.cpp",
+    "fake-device.h",
+  ]
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/testing",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+  ]
+
+}

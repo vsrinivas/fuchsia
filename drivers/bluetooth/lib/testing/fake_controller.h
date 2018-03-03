@@ -7,6 +7,8 @@
 #include <memory>
 #include <unordered_map>
 
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
@@ -27,7 +29,8 @@ class FakeDevice;
 
 // FakeController emulates a real Bluetooth controller. It can be configured to
 // respond to HCI commands in a predictable manner.
-class FakeController : public FakeControllerBase {
+class FakeController : public FakeControllerBase,
+                       public fbl::RefCounted<FakeController> {
  public:
   // Global settings for the FakeController. These can be used to initialize a
   // FakeController and/or to re-configure an existing one.
@@ -102,7 +105,7 @@ class FakeController : public FakeControllerBase {
 
   // Constructor initializes the controller with the minimal default settings
   // (equivalent to calling Settings::ApplyDefaults()).
-  FakeController(zx::channel cmd_channel, zx::channel acl_data_channel);
+  FakeController();
   ~FakeController() override;
 
   // Resets the controller settings.

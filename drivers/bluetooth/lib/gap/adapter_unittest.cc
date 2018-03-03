@@ -33,7 +33,8 @@ class AdapterTest : public TestingBase {
     SetUpTransport();
     FXL_DCHECK(transport());
     adapter_ = std::make_unique<Adapter>(transport());
-    test_device()->Start();
+    test_device()->StartCmdChannel(test_cmd_chan());
+    test_device()->StartAclChannel(test_acl_chan());
   }
 
   void TearDown() override {

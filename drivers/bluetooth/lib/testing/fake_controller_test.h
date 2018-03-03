@@ -100,24 +100,29 @@ class FakeControllerTest : public TestBase {
 
   // Getters for internal fields frequently used by tests.
   FakeControllerType* test_device() const { return test_device_.get(); }
+  zx::channel test_cmd_chan() { return std::move(cmd1_); }
+  zx::channel test_acl_chan() { return std::move(acl1_); }
 
  private:
+  // Channels to be moved to the tests
+  zx::channel cmd1_;
+  zx::channel acl1_;
+
   // Initializes |test_device_| and returns the DeviceWrapper endpoint which can
   // be passed to classes that are under test.
   std::unique_ptr<hci::DeviceWrapper> SetUpTestDevice() {
-    zx::channel cmd0, cmd1;
-    zx::channel acl0, acl1;
+    zx::channel cmd0;
+    zx::channel acl0;
 
-    zx_status_t status = zx::channel::create(0, &cmd0, &cmd1);
+    zx_status_t status = zx::channel::create(0, &cmd0, &cmd1_);
     FXL_DCHECK(ZX_OK == status);
 
-    status = zx::channel::create(0, &acl0, &acl1);
+    status = zx::channel::create(0, &acl0, &acl1_);
     FXL_DCHECK(ZX_OK == status);
 
     auto hci_dev = std::make_unique<hci::DummyDeviceWrapper>(std::move(cmd0),
                                                              std::move(acl0));
-    test_device_ =
-        std::make_unique<FakeControllerType>(std::move(cmd1), std::move(acl1));
+    test_device_ = std::make_unique<FakeControllerType>();
 
     return hci_dev;
   }

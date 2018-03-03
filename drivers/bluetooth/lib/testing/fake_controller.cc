@@ -118,17 +118,10 @@ FakeController::LEAdvertisingState::LEAdvertisingState()
   std::memset(scan_rsp_data, 0, sizeof(scan_rsp_data));
 }
 
-FakeController::FakeController(zx::channel cmd_channel,
-                               zx::channel acl_data_channel)
-    : FakeControllerBase(std::move(cmd_channel), std::move(acl_data_channel)),
-      next_conn_handle_(0u),
-      le_connect_pending_(false),
-      next_le_sig_id_(1u) {}
+FakeController::FakeController()
+    : next_conn_handle_(0u), le_connect_pending_(false), next_le_sig_id_(1u) {}
 
-FakeController::~FakeController() {
-  if (IsStarted())
-    Stop();
-}
+FakeController::~FakeController() { Stop(); }
 
 void FakeController::SetDefaultResponseStatus(hci::OpCode opcode,
                                               hci::Status status) {

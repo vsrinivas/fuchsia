@@ -84,7 +84,8 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
   test_device()->QueueCommandTransaction(
       CommandTransaction(command_bytes, {&command_cmpl_success_bytes}));
 
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   bool result;
   int result_cb_called = 0;
@@ -220,7 +221,8 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   test_device()->QueueCommandTransaction(
       CommandTransaction(command_bytes, {&command_cmpl_error_bytes}));
 
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   bool result;
   int result_cb_called = 0;

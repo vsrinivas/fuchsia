@@ -30,10 +30,11 @@ class ACLDataChannelTest : public TestingBase {
   // TestBase overrides:
   void SetUp() override {
     TestingBase::SetUp();
+    test_device()->StartCmdChannel(test_cmd_chan());
+    test_device()->StartAclChannel(test_acl_chan());
 
     // This test never sets up command/event expections (as it only uses the
     // data endpoint) so always start the test controller during SetUp().
-    test_device()->Start();
   }
 
  private:

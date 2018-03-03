@@ -64,7 +64,8 @@ TEST_F(HCI_ConnectionTest, Close) {
 
   test_device()->QueueCommandTransaction(
       CommandTransaction({req_bytes, {&cmd_status_bytes, &disc_cmpl_bytes}}));
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   bool callback_called = false;
   test_device()->SetTransactionCallback(
@@ -104,7 +105,8 @@ TEST_F(HCI_ConnectionTest, CloseError) {
 
   test_device()->QueueCommandTransaction(
       CommandTransaction({req_bytes, {&cmd_status_bytes, &disc_cmpl_bytes}}));
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   // The callback should get called regardless of the procedure status.
   bool callback_called = false;

@@ -65,7 +65,8 @@ TEST_F(HCI_CommandChannelTest, CommandTimeout) {
 
   // No reply.
   test_device()->QueueCommandTransaction(CommandTransaction(req, {}));
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   // Send a HCI_Reset command.
   CommandChannel::TransactionId last_id = 0;
@@ -103,7 +104,8 @@ TEST_F(HCI_CommandChannelTest, SingleRequestResponse) {
       Status::kHardwareFailure);
   // clang-format on
   test_device()->QueueCommandTransaction(CommandTransaction(req, {&rsp}));
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   // Send a HCI_Reset command. We attach an instance of TestCallbackObject to
   // the callbacks to verify that it gets cleaned up as expected.
@@ -168,7 +170,8 @@ TEST_F(HCI_CommandChannelTest, SingleRequestWithStatusResponse) {
   // clang-format on
   test_device()->QueueCommandTransaction(
       CommandTransaction(req, {&rsp0, &rsp1}));
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   // Send HCI_Reset
   CommandChannel::TransactionId id;
@@ -215,7 +218,8 @@ TEST_F(HCI_CommandChannelTest, SingleRequestWithCustomResponse) {
       );
   // clang-format on
   test_device()->QueueCommandTransaction(CommandTransaction(req, {&rsp}));
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   // Send HCI_Reset
   CommandChannel::TransactionId id;
@@ -275,7 +279,8 @@ TEST_F(HCI_CommandChannelTest, SingleRequestWithCustomResponseAndMatcher) {
 
   test_device()->QueueCommandTransaction(
       CommandTransaction(req, {&rsp0, &rsp1, &rsp2, &rsp3}));
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   // Send HCI_Reset
   CommandChannel::TransactionId id;
@@ -375,7 +380,8 @@ TEST_F(HCI_CommandChannelTest, MultipleQueuedRequests) {
   test_device()->QueueCommandTransaction(CommandTransaction(req0, {&rsp0}));
   test_device()->QueueCommandTransaction(
       CommandTransaction(req1, {&rsp1, &rsp2}));
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   // Begin transactions:
   CommandChannel::TransactionId id0, id1;
@@ -464,7 +470,8 @@ TEST_F(HCI_CommandChannelTest, EventHandlerBasic) {
                                        message_loop()->task_runner());
   EXPECT_NE(0u, id1);
 
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
   test_device()->SendCommandChannelPacket(cmd_status);
   test_device()->SendCommandChannelPacket(cmd_complete);
   test_device()->SendCommandChannelPacket(event1);
@@ -526,7 +533,8 @@ TEST_F(HCI_CommandChannelTest, EventHandlerEventWhileTransactionPending) {
   // after the pending transaction completes.
   test_device()->QueueCommandTransaction(
       CommandTransaction(req, {&cmd_status, &event0, &event1}));
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   int event_count = 0;
   auto event_cb = [&event_count, kTestEventCode,
@@ -595,7 +603,8 @@ TEST_F(HCI_CommandChannelTest, LEMetaEventHandler) {
                                              message_loop()->task_runner());
   EXPECT_NE(0u, id1);
 
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   test_device()->SendCommandChannelPacket(le_meta_event_bytes0);
   RunMessageLoop();
@@ -633,7 +642,8 @@ TEST_F(HCI_CommandChannelTest, EventHandlerIdsDontCollide) {
 }
 
 TEST_F(HCI_CommandChannelTest, TransportClosedCallback) {
-  test_device()->Start();
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
 
   bool closed_cb_called = false;
   auto closed_cb = [&closed_cb_called, this] {

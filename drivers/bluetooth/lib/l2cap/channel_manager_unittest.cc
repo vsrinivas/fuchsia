@@ -47,7 +47,8 @@ class L2CAP_ChannelManagerTest : public TestingBase {
     chanmgr_ = std::make_unique<ChannelManager>(transport(),
                                                 message_loop()->task_runner());
 
-    test_device()->Start();
+    test_device()->StartCmdChannel(test_cmd_chan());
+    test_device()->StartAclChannel(test_acl_chan());
   }
 
   void TearDown() override {

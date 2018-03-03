@@ -52,7 +52,8 @@ class LowEnergyConnectorTest : public TestingBase {
                   std::placeholders::_3),
         message_loop()->task_runner());
 
-    test_device()->Start();
+    test_device()->StartCmdChannel(test_cmd_chan());
+    test_device()->StartAclChannel(test_acl_chan());
   }
 
   void TearDown() override {

@@ -45,7 +45,7 @@ class CommandTransaction final {
 // internally verifies each received HCI command using gtest ASSERT_* macros.
 class TestController : public FakeControllerBase {
  public:
-  TestController(zx::channel cmd_channel, zx::channel acl_data_channel);
+  TestController();
   ~TestController() override;
 
   // Queues a transaction into the TestController's expected command queue. Each

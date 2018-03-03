@@ -34,14 +34,9 @@ common::DynamicByteBuffer CommandTransaction::PopNextReply() {
   return reply;
 }
 
-TestController::TestController(zx::channel cmd_channel,
-                               zx::channel acl_data_channel)
-    : FakeControllerBase(std::move(cmd_channel), std::move(acl_data_channel)) {}
+TestController::TestController() : FakeControllerBase() {}
 
-TestController::~TestController() {
-  if (IsStarted())
-    Stop();
-}
+TestController::~TestController() { Stop(); }
 
 void TestController::QueueCommandTransaction(CommandTransaction transaction) {
   cmd_transactions_.push(std::move(transaction));

@@ -51,7 +51,8 @@ class HCI_LegacyLowEnergyAdvertiserTest : public TestingBase {
 
     advertiser_ = std::make_unique<LegacyLowEnergyAdvertiser>(transport());
 
-    test_device()->Start();
+    test_device()->StartCmdChannel(test_cmd_chan());
+    test_device()->StartAclChannel(test_acl_chan());
   }
 
   void TearDown() override {
