@@ -17,10 +17,14 @@ rust_binary("bin") {
 }
 
 package("wlancfg") {
+# TODO(NET-539) Remove from system_image
+  system_image = true
 
   deps = [
     ":bin",
   ]
 
-  binary = "wlancfg"
+  binaries = [ {
+    name = "wlancfg"
+  } ]
 }
