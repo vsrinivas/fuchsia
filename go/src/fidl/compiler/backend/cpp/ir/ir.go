@@ -409,6 +409,8 @@ func (c *compiler) compileType(val types.Type) Type {
 			}
 		case types.InterfaceDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
+		default:
+			log.Fatal("Unknown declaration type:", declType)
 		}
 		r.DeclType = declType
 	default:
@@ -559,43 +561,43 @@ func (c *compiler) compileUnion(val types.Union) Union {
 	return r
 }
 
-func Compile(fidlData types.Root) Root {
+func Compile(r types.Root) Root {
 	root := Root{}
 	c := compiler{
-		changeIfReserved(fidlData.Name),
-		&fidlData.Decls,
+		changeIfReserved(r.Name),
+		&r.Decls,
 	}
 
 	root.Namespace = c.namespace
 
 	decls := map[types.Identifier]Decl{}
 
-	for _, v := range fidlData.Consts {
+	for _, v := range r.Consts {
 		d := c.compileConst(v)
 		decls[v.Name] = &d
 	}
 
-	for _, v := range fidlData.Enums {
+	for _, v := range r.Enums {
 		d := c.compileEnum(v)
 		decls[v.Name] = &d
 	}
 
-	for _, v := range fidlData.Interfaces {
+	for _, v := range r.Interfaces {
 		d := c.compileInterface(v)
 		decls[v.Name] = &d
 	}
 
-	for _, v := range fidlData.Structs {
+	for _, v := range r.Structs {
 		d := c.compileStruct(v)
 		decls[v.Name] = &d
 	}
 
-	for _, v := range fidlData.Unions {
+	for _, v := range r.Unions {
 		d := c.compileUnion(v)
 		decls[v.Name] = &d
 	}
 
-	for _, v := range fidlData.DeclOrder {
+	for _, v := range r.DeclOrder {
 		root.Decls = append(root.Decls, decls[v])
 	}
 

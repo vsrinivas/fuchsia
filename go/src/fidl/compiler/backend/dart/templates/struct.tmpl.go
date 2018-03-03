@@ -6,30 +6,33 @@ package templates
 
 const Struct = `
 {{- define "StructDeclaration" -}}
-const $fidl.StructType {{ .TypeSymbol }} = {{ .TypeExpr }};
-
-class {{ .Name }} extends $fidl.Encodable {
+class {{ .Name }} extends $fidl.Struct {
   const {{ .Name }}({
 {{- range .Members }}
-  {{- if not .Type.Nullable }}
-    @required
-  {{- end }}
-    this.{{ .Name }},
+    {{ if not .Type.Nullable }}@required {{ end }}this.{{ .Name }},
 {{- end }}
   });
 
-  factory {{ .Name }}.$decode($fidl.Decoder $decoder, int $offset) {
-    final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.members;
-    return new {{ .Name }}(
-{{- range $index, $member := .Members }}
-      {{ .Name }}: {{ .Type.Decode .Offset $index }},
-{{- end }}
-    );
-  }
+  {{ .Name }}._(List<Object> argv)
+    :
+{{- range $index, $member := .Members -}}
+  {{- if $index }},
+      {{ else }} {{ end -}}
+    {{ .Name }} = argv[{{ $index }}]
+{{- end }};
 
 {{- range .Members }}
   final {{ .Type.Decl }} {{ .Name }};
 {{- end }}
+
+  @override
+  List<Object> get $fields {
+    return <Object>[
+  {{- range .Members }}
+      {{ .Name }},
+  {{- end }}
+    ];
+  }
 
   @override
   String toString() {
@@ -48,13 +51,9 @@ class {{ .Name }} extends $fidl.Encodable {
     };
   }
 
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, $fidl.FidlType type) {
-    final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.members;
-{{- range $index, $member := .Members }}
-    {{ .Type.Encode .Name .Offset $index }};
-{{- end }}
-  }
+  static {{ .Name }} _ctor(List<Object> argv) => new {{ .Name }}._(argv);
 }
+
+const $fidl.StructType<{{ .Name }}> {{ .TypeSymbol }} = {{ .TypeExpr }};
 {{ end }}
 `

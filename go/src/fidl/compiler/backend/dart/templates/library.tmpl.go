@@ -11,6 +11,7 @@ const Library = `
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:fidl/fidl.dart' as $fidl;
 import 'package:meta/meta.dart';
@@ -23,6 +24,7 @@ import 'package:zircon/zircon.dart';
 // ignore_for_file: cascade_invocations
 // ignore_for_file: constant_identifier_names
 // ignore_for_file: non_constant_identifier_names
+// ignore_for_file: one_member_abstracts
 // ignore_for_file: prefer_constructors_over_static_methods
 // ignore_for_file: public_member_api_docs
 // ignore_for_file: unused_import

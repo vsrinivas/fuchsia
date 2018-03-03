@@ -12,91 +12,19 @@ import (
 	"strings"
 )
 
-type encodingType string
-
-const (
-	primitiveEncodingType   encodingType = "primitive"
-	encodableEncodingType                = "encodable"
-	pointerEncodingType                  = "pointer"
-	stringEncodingType                   = "string"
-	handleEncodingType                   = "handle"
-	vectorEncodingType                   = "vector"
-	typedVectorEncodingType              = "typedVector"
-	arrayEncodingType                    = "array"
-	typedArrayEncodingType               = "typedArray"
-)
-
 type Type struct {
 	Decl          string
 	ElementCount  string
 	Nullable      bool
 	typedDataDecl string
-	baseDecl      string
-	encodingType  encodingType
-	codecSuffix   string
-	typeSymbol    string
-}
-
-func (t *Type) Encode(identifer string, offset int, index int) string {
-	offsetStr := fmt.Sprintf("$offset + %s", strconv.Itoa(offset))
-	typeStr := fmt.Sprintf("$types[%s].type", strconv.Itoa(index))
-	switch t.encodingType {
-	case primitiveEncodingType:
-		return fmt.Sprintf("$encoder.encode%s(%s, %s)", t.codecSuffix, identifer, offsetStr)
-	case encodableEncodingType:
-		return fmt.Sprintf("%s.$encode($encoder, %s, %s)", identifer, offsetStr, typeStr)
-	case pointerEncodingType:
-		return fmt.Sprintf("$encoder.encodePointer(%s, %s, %s)", identifer, offsetStr, typeStr)
-	case stringEncodingType:
-		return fmt.Sprintf("$encoder.encodeString(%s, %s, %s)", identifer, offsetStr, typeStr)
-	case handleEncodingType:
-		return fmt.Sprintf("$encoder.encodeHandle(%s, %s, %s)", identifer, offsetStr, typeStr)
-	case vectorEncodingType:
-		return fmt.Sprintf("$encoder.encodeVector(%s, %s, %s)", identifer, offsetStr, typeStr)
-	case typedVectorEncodingType:
-		return fmt.Sprintf("$encoder.encode%sAsVector(%s, %s, %s)", t.typedDataDecl, identifer, offsetStr, typeStr)
-	case arrayEncodingType:
-		return fmt.Sprintf("$encoder.encodeArray(%s, %s, %s)", identifer, offsetStr, typeStr)
-	case typedArrayEncodingType:
-		return fmt.Sprintf("$encoder.encode%sAsArray(%s, %s, %s)", t.typedDataDecl, identifer, offsetStr, typeStr)
-	default:
-		log.Fatal("Unknown encodingType:", t.encodingType)
-		return ""
-	}
-}
-
-func (t *Type) Decode(offset int, index int) string {
-	offsetStr := fmt.Sprintf("$offset + %s", strconv.Itoa(offset))
-	typeStr := fmt.Sprintf("$types[%s].type", strconv.Itoa(index))
-	switch t.encodingType {
-	case primitiveEncodingType:
-		return fmt.Sprintf("$decoder.decode%s(%s)", t.codecSuffix, offsetStr)
-	case encodableEncodingType:
-		return fmt.Sprintf("new %s.$decode($decoder, %s, %s)", t.Decl, offsetStr, typeStr)
-	case pointerEncodingType:
-		return fmt.Sprintf("$decoder.decodePointer<%s>(%s, %s)", t.Decl, offsetStr, typeStr)
-	case stringEncodingType:
-		return fmt.Sprintf("$decoder.decodeString(%s, %s)", offsetStr, typeStr)
-	case handleEncodingType:
-		return fmt.Sprintf("$decoder.decodeHandle(%s, %s)", offsetStr, typeStr)
-	case vectorEncodingType:
-		return fmt.Sprintf("$decoder.decodeVector(%s.$decode, %s, %s)", t.baseDecl, offsetStr, typeStr)
-	case typedVectorEncodingType:
-		return fmt.Sprintf("$decoder.decodeVectorAs%s(%s, %s)", t.typedDataDecl, offsetStr, typeStr)
-	case arrayEncodingType:
-		return fmt.Sprintf("$decoder.decodeArray(%s.$decode, %s, %s)", t.baseDecl, offsetStr, typeStr)
-	case typedArrayEncodingType:
-		return fmt.Sprintf("$decoder.decodeArrayAs%s(%s, %s)", t.typedDataDecl, offsetStr, typeStr)
-	default:
-		log.Fatal("Unknown encodingType:", t.encodingType)
-		return ""
-	}
+	typeExpr      string
 }
 
 type Enum struct {
-	Name        string
-	Members     []EnumMember
-	CodecSuffix string
+	Name       string
+	Members    []EnumMember
+	TypeSymbol string
+	TypeExpr   string
 }
 
 type EnumMember struct {
@@ -113,9 +41,10 @@ type Union struct {
 }
 
 type UnionMember struct {
-	Type   Type
-	Name   string
-	Offset int
+	Type     Type
+	Name     string
+	Offset   int
+	typeExpr string
 }
 
 type Struct struct {
@@ -126,9 +55,10 @@ type Struct struct {
 }
 
 type StructMember struct {
-	Type   Type
-	Name   string
-	Offset int
+	Type     Type
+	Name     string
+	Offset   int
+	typeExpr string
 }
 
 type Interface struct {
@@ -153,9 +83,10 @@ type Method struct {
 }
 
 type Parameter struct {
-	Type   Type
-	Name   string
-	Offset int
+	Type     Type
+	Name     string
+	Offset   int
+	typeExpr string
 }
 
 type Root struct {
@@ -221,7 +152,7 @@ var reservedWords = map[string]bool{
 	"yield":      true,
 }
 
-var primitiveTypes = map[types.PrimitiveSubtype]string{
+var declForPrimitiveType = map[types.PrimitiveSubtype]string{
 	types.Bool:    "bool",
 	types.Status:  "int",
 	types.Int8:    "int",
@@ -251,19 +182,106 @@ var typedDataDecl = map[types.PrimitiveSubtype]string{
 	types.Float64: "Float64List",
 }
 
-var primitiveCodecSuffix = map[types.PrimitiveSubtype]string{
-	types.Bool:    "Bool",
-	types.Status:  "Int32",
-	types.Int8:    "Int8",
-	types.Int16:   "Int16",
-	types.Int32:   "Int32",
-	types.Int64:   "Int64",
-	types.Uint8:   "Uint8",
-	types.Uint16:  "Uint16",
-	types.Uint32:  "Uint32",
-	types.Uint64:  "Uint64",
-	types.Float32: "Float32",
-	types.Float64: "Float64",
+var typeForPrimitiveSubtype = map[types.PrimitiveSubtype]string{
+	types.Bool:    "BoolType",
+	types.Status:  "StatusType",
+	types.Int8:    "Int8Type",
+	types.Int16:   "Int16Type",
+	types.Int32:   "Int32Type",
+	types.Int64:   "Int64Type",
+	types.Uint8:   "Uint8Type",
+	types.Uint16:  "Uint16Type",
+	types.Uint32:  "Uint32Type",
+	types.Uint64:  "Uint64Type",
+	types.Float32: "Float32Type",
+	types.Float64: "Float64Type",
+}
+
+func formatBool(val bool) string {
+	return strconv.FormatBool(val)
+}
+
+func formatConstant(val *types.Constant) string {
+	if val == nil {
+		return "null"
+	}
+
+	if val.Kind == types.LiteralConstant {
+		literal := val.Literal
+		if literal.Kind == types.NumericLiteral {
+			return literal.Value
+		}
+	}
+
+	// TODO(TO-746): Either support other kinds of constants or simplify this code
+	// when the frontend does the resolution.
+	return "0"
+}
+
+func formatParameterList(params []Parameter) string {
+	if len(params) == 0 {
+		return "null"
+	}
+
+	lines := []string{}
+
+	for _, p := range params {
+		lines = append(lines, fmt.Sprintf("      %s,\n", p.typeExpr))
+	}
+
+	return fmt.Sprintf("const <$fidl.MemberType>[\n%s    ]", strings.Join(lines, ""))
+}
+
+func formatStructMemberList(members []StructMember) string {
+	if len(members) == 0 {
+		return "const <$fidl.MemberType>[]"
+	}
+
+	lines := []string{}
+
+	for _, v := range members {
+		lines = append(lines, fmt.Sprintf("    %s,\n", v.typeExpr))
+	}
+
+	return fmt.Sprintf("const <$fidl.MemberType>[\n%s  ]", strings.Join(lines, ""))
+}
+
+func formatUnionMemberList(members []UnionMember) string {
+	if len(members) == 0 {
+		return "const <$fidl.MemberType>[]"
+	}
+
+	lines := []string{}
+
+	for _, v := range members {
+		lines = append(lines, fmt.Sprintf("    %s,\n", v.typeExpr))
+	}
+
+	return fmt.Sprintf("const <$fidl.MemberType>[\n%s  ]", strings.Join(lines, ""))
+}
+
+func typeExprForMethod(request []Parameter, response []Parameter) string {
+	return fmt.Sprintf(`const $fidl.MethodType(
+    request: %s,
+    response: %s,
+  )`, formatParameterList(request), formatParameterList(response))
+}
+
+func typeExprForPrimitiveSubtype(val types.PrimitiveSubtype) string {
+	t, ok := typeForPrimitiveSubtype[val]
+	if !ok {
+		log.Fatal("Unknown primitive subtype:", val)
+	}
+	return fmt.Sprintf("const $fidl.%s()", t)
+}
+
+func typeSymbolForCompoundIdentifier(ident types.CompoundIdentifier) string {
+	// TODO(abarth): Figure out how to reference type symbols in other libraries.
+	return fmt.Sprintf("k%s_Type", ident[0])
+}
+
+func typeSymbolForIdentifier(ident types.Identifier) string {
+	return fmt.Sprintf("k%s_Type", ident)
 }
 
 func isReservedWord(str string) bool {
@@ -281,7 +299,6 @@ func changeIfReserved(val types.Identifier) string {
 
 type compiler struct {
 	decls *types.DeclMap
-	types *TypeCompiler
 }
 
 func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
@@ -325,7 +342,7 @@ func (c *compiler) compileConstant(val types.Constant) string {
 }
 
 func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
-	if t, ok := primitiveTypes[val]; ok {
+	if t, ok := declForPrimitiveType[val]; ok {
 		return t
 	}
 	log.Fatal("Unknown primitive type:", val)
@@ -347,46 +364,75 @@ func (c *compiler) compileType(val types.Type) Type {
 		t := c.compileType(*val.ElementType)
 		if len(t.typedDataDecl) > 0 {
 			r.Decl = t.typedDataDecl
-			r.encodingType = typedArrayEncodingType
 		} else {
 			r.Decl = fmt.Sprintf("List<%s>", t.Decl)
-			r.encodingType = arrayEncodingType
 		}
 		r.ElementCount = c.compileConstant(*val.ElementCount)
+		elementStr := fmt.Sprintf("element: %s", t.typeExpr)
+		elementCountStr := fmt.Sprintf("elementCount: %s", formatConstant(val.ElementCount))
+		r.typeExpr = fmt.Sprintf("const $fidl.ArrayType<%s>(%s, %s)", r.Decl, elementStr, elementCountStr)
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		if len(t.typedDataDecl) > 0 {
 			r.Decl = t.typedDataDecl
-			r.encodingType = typedVectorEncodingType
 		} else {
 			r.Decl = fmt.Sprintf("List<%s>", t.Decl)
-			r.encodingType = vectorEncodingType
 		}
 		r.ElementCount = c.maybeCompileConstant(val.ElementCount)
+		elementStr := fmt.Sprintf("element: %s", t.typeExpr)
+		maybeElementCountStr := fmt.Sprintf("maybeElementCount: %s", formatConstant(val.ElementCount))
+		nullableStr := fmt.Sprintf("nullable: %s", formatBool(val.Nullable))
+		r.typeExpr = fmt.Sprintf("const $fidl.VectorType<%s>(%s, %s, %s)",
+			r.Decl, elementStr, maybeElementCountStr, nullableStr)
 	case types.StringType:
 		r.Decl = "String"
-		r.encodingType = stringEncodingType
 		r.ElementCount = c.maybeCompileConstant(val.ElementCount)
+		r.typeExpr = fmt.Sprintf("const $fidl.StringType(maybeElementCount: %s, nullable: %s)",
+			formatConstant(val.ElementCount), formatBool(val.Nullable))
 	case types.HandleType:
 		r.Decl = "Handle"
-		r.encodingType = handleEncodingType
+		r.typeExpr = fmt.Sprintf("const $fidl.HandleType(nullable: %s)",
+			formatBool(val.Nullable))
 	case types.RequestType:
 		t := c.compileCompoundIdentifier(val.RequestSubtype)
 		r.Decl = fmt.Sprintf("$fidl.InterfaceRequest<%s>", t)
-		r.baseDecl = "$fidl.InterfaceRequest"
-		r.encodingType = encodableEncodingType
+		r.typeExpr = fmt.Sprintf("const $fidl.InterfaceRequestType<%s>(nullable: %s)",
+			t, formatBool(val.Nullable))
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.typedDataDecl = typedDataDecl[val.PrimitiveSubtype]
-		r.encodingType = primitiveEncodingType
-		r.codecSuffix = primitiveCodecSuffix[val.PrimitiveSubtype]
+		r.typeExpr = typeExprForPrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
 		t := c.compileCompoundIdentifier(val.Identifier)
-		// TODO(abarth): Need to distguish between interfaces and structs.
-		r.Decl = fmt.Sprintf("$fidl.InterfaceHandle<%s>", t)
-		r.baseDecl = "$fidl.InterfaceHandle"
-		r.encodingType = encodableEncodingType
-		r.typeSymbol = c.types.CompountSymbol(val.Identifier)
+		// val.Identifier is a CompoundIdentifier, but we don't have the
+		// ability to look up the declaration type for identifiers in other
+		// libraries. For now, just use the first component of the identifier
+		// and assume that the identifier is in this library.
+		declType, ok := (*c.decls)[val.Identifier[0]]
+		if !ok {
+			log.Fatal("Unknown identifier:", val.Identifier)
+		}
+		switch declType {
+		case types.ConstDeclType:
+			fallthrough
+		case types.EnumDeclType:
+			fallthrough
+		case types.StructDeclType:
+			fallthrough
+		case types.UnionDeclType:
+			r.Decl = t
+			r.typeExpr = typeSymbolForCompoundIdentifier(val.Identifier)
+			if val.Nullable {
+				r.typeExpr = fmt.Sprintf("const $fidl.PointerType<%s>(element: %s)",
+					t, r.typeExpr)
+			}
+		case types.InterfaceDeclType:
+			r.Decl = fmt.Sprintf("$fidl.InterfaceHandle<%s>", t)
+			r.typeExpr = fmt.Sprintf("const $fidl.InterfaceHandleType<%s>(nullable: %s)",
+				t, formatBool(val.Nullable))
+		default:
+			log.Fatal("Unknown declaration type:", declType)
+		}
 	default:
 		log.Fatal("Unknown type kind:", val.Kind)
 	}
@@ -394,10 +440,12 @@ func (c *compiler) compileType(val types.Type) Type {
 }
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
+	n := changeIfReserved(val.Name)
 	e := Enum{
-		changeIfReserved(val.Name),
+		n,
 		[]EnumMember{},
-		primitiveCodecSuffix[val.Type],
+		typeSymbolForIdentifier(val.Name),
+		fmt.Sprintf("const $fidl.EnumType<%s>(type: %s, ctor: %s._ctor)", n, typeExprForPrimitiveSubtype(val.Type), n),
 	}
 	for _, v := range val.Members {
 		e.Members = append(e.Members, EnumMember{
@@ -412,10 +460,14 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 	r := []Parameter{}
 
 	for _, v := range val {
+		t := c.compileType(v.Type)
+		typeStr := fmt.Sprintf("type: %s", t.typeExpr)
+		offsetStr := fmt.Sprintf("offset: %v", v.Offset)
 		p := Parameter{
-			c.compileType(v.Type),
+			t,
 			changeIfReserved(v.Name),
 			v.Offset,
+			fmt.Sprintf("const $fidl.MemberType<%s>(%s, %s)", t.Decl, typeStr, offsetStr),
 		}
 		r = append(r, p)
 	}
@@ -433,18 +485,20 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 
 	for _, v := range val.Methods {
 		name := changeIfReserved(v.Name)
+		request := c.compileParameterArray(v.Request)
+		response := c.compileParameterArray(v.Response)
 		m := Method{
 			v.Ordinal,
 			fmt.Sprintf("_k%s_%s_Ordinal", r.Name, v.Name),
 			name,
 			v.HasRequest,
-			c.compileParameterArray(v.Request),
+			request,
 			v.RequestSize,
 			v.HasResponse,
-			c.compileParameterArray(v.Response),
+			response,
 			v.ResponseSize,
 			fmt.Sprintf("_k%s_%s_Type", r.Name, v.Name),
-			c.types.MethodExpr(v),
+			typeExprForMethod(request, response),
 		}
 		r.Methods = append(r.Methods, m)
 	}
@@ -453,10 +507,14 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 }
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
+	t := c.compileType(val.Type)
+	typeStr := fmt.Sprintf("type: %s", t.typeExpr)
+	offsetStr := fmt.Sprintf("offset: %v", val.Offset)
 	return StructMember{
-		c.compileType(val.Type),
+		t,
 		changeIfReserved(val.Name),
 		val.Offset,
+		fmt.Sprintf("const $fidl.MemberType<%s>(%s, %s)", t.Decl, typeStr, offsetStr),
 	}
 }
 
@@ -464,22 +522,31 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
 		changeIfReserved(val.Name),
 		[]StructMember{},
-		c.types.Symbol(val.Name),
-		c.types.StructExpr(val),
+		typeSymbolForIdentifier(val.Name),
+		"",
 	}
 
 	for _, v := range val.Members {
 		r.Members = append(r.Members, c.compileStructMember(v))
 	}
 
+	r.TypeExpr = fmt.Sprintf(`const $fidl.StructType<%s>(
+  encodedSize: %v,
+  members: %s,
+  ctor: %s._ctor,
+)`, r.Name, val.Size, formatStructMemberList(r.Members), r.Name)
 	return r
 }
 
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
+	t := c.compileType(val.Type)
+	typeStr := fmt.Sprintf("type: %s", t.typeExpr)
+	offsetStr := fmt.Sprintf("offset: %v", val.Offset)
 	return UnionMember{
-		c.compileType(val.Type),
+		t,
 		changeIfReserved(val.Name),
 		val.Offset,
+		fmt.Sprintf("const $fidl.MemberType<%s>(%s, %s)", t.Decl, typeStr, offsetStr),
 	}
 }
 
@@ -488,23 +555,25 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		changeIfReserved(val.Name),
 		changeIfReserved(val.Name + "Tag"),
 		[]UnionMember{},
-		c.types.Symbol(val.Name),
-		c.types.UnionExpr(val),
+		typeSymbolForIdentifier(val.Name),
+		"",
 	}
 
 	for _, v := range val.Members {
 		r.Members = append(r.Members, c.compileUnionMember(v))
 	}
 
+	r.TypeExpr = fmt.Sprintf(`const $fidl.UnionType<%s>(
+  encodedSize: %v,
+  members: %s,
+  ctor: %s._ctor,
+)`, r.Name, val.Size, formatUnionMemberList(r.Members), r.Name)
 	return r
 }
 
 func Compile(r types.Root) Root {
 	root := Root{}
-	c := compiler{
-		&r.Decls,
-		NewTypeCompiler(r),
-	}
+	c := compiler{&r.Decls}
 
 	for _, v := range r.Enums {
 		root.Enums = append(root.Enums, c.compileEnum(v))

@@ -6,29 +6,25 @@ package templates
 
 const Enum = `
 {{- define "EnumDeclaration" -}}
-class {{ .Name }} extends $fidl.Encodable {
+class {{ .Name }} extends $fidl.Enum {
   factory {{ .Name }}(int v) {
     switch (v) {
-  {{- range .Members }}
+{{- range .Members }}
       case {{ .Value }}:
         return {{ .Name }};
-  {{- end }}
+{{- end }}
       default:
         return null;
     }
   }
 
-  factory {{ .Name }}.$decode($fidl.Decoder $decoder, int $offset, $fidl.FidlType type) {
-    final int value = $decoder.decode{{ .CodecSuffix }}($offset);
-    return new {{ .Name }}(value);
-  }
-
-  {{- range .Members }}
+{{- range .Members }}
   static const {{ $.Name }} {{ .Name }} = const {{ $.Name }}._({{ .Value }});
-  {{- end }}
+{{- end }}
 
   const {{ .Name }}._(this.value);
 
+  @override
   final int value;
 
   static const Map<String, {{ .Name }}> valuesMap = const {
@@ -59,10 +55,9 @@ class {{ .Name }} extends $fidl.Encodable {
 
   int toJson() => value;
 
-  @override
-  void $encode($fidl.Encoder $encoder, int $offset, $fidl.FidlType type) {
-    $encoder.encode{{ .CodecSuffix }}(value, $offset);
-  }
+  static {{ .Name }} _ctor(int v) => values[v];
 }
+
+const $fidl.EnumType<{{ .Name }}> {{ .TypeSymbol }} = {{ .TypeExpr }};
 {{ end }}
 `

@@ -30,12 +30,10 @@ abstract class {{ .Name }} {
 
 {{ range .Methods }}
   {{- if .HasRequest }}
+// {{ .Name }}: ({{ template "Params" .Request }}){{ if .HasResponse }} -> ({{ template "Params" .Response }}){{ end }}
 const int {{ .OrdinalName }} = {{ .Ordinal }};
-  {{- end }}
-{{- end }}
-
-{{- range .Methods }}
 const $fidl.MethodType {{ .TypeSymbol }} = {{ .TypeExpr }};
+  {{- end }}
 {{- end }}
 
 class {{ .ProxyName }} extends $fidl.Proxy<{{ .Name }}>
@@ -63,7 +61,7 @@ class {{ .ProxyName }} extends $fidl.Proxy<{{ .Name }}>
         $decoder.claimMemory({{ .ResponseSize }});
         $callback(
       {{- range $index, $response := .Response }}
-          {{ .Type.Decode .Offset $index }},
+          $types[{{ $index }}].decode($decoder, $offset),
       {{- end }}
         );
         break;
@@ -92,7 +90,7 @@ class {{ .ProxyName }} extends $fidl.Proxy<{{ .Name }}>
     final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request;
     {{- end }}
     {{- range $index, $request := .Request }}
-    {{ .Type.Encode .Name .Offset $index }};
+    $types[{{ $index }}].encode($encoder, {{ .Name }}, $offset);
     {{- end }}
     {{- if .HasResponse }}
     Function $zonedCallback;
@@ -136,7 +134,7 @@ class {{ .BindingName }} extends $fidl.Binding<{{ .Name }}> {
       final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response;
       {{- end }}
       {{- range $index, $response := .Response }}
-      {{ .Type.Encode .Name .Offset $index }};
+      $types[{{ $index }}].encode($encoder, {{ .Name }}, $offset);
       {{- end }}
       $fidl.Message $message = $encoder.message;
       $message.txid = $txid;
@@ -160,7 +158,7 @@ class {{ .BindingName }} extends $fidl.Binding<{{ .Name }}> {
         $decoder.claimMemory({{ .RequestSize }});
         impl.{{ .Name }}(
     {{- range $index, $request := .Request }}
-          {{ .Type.Decode .Offset $index }},
+          $types[{{ $index }}].decode($decoder, $offset),
     {{- end }}
     {{- if .HasResponse }}
           _{{ .Name }}Responder($respond, $message.txid),

@@ -12,32 +12,17 @@ enum {{ .TagName }} {
 {{- end }}
 }
 
-const $fidl.UnionType {{ .TypeSymbol }} = {{ .TypeExpr }};
-
-class {{ .Name }} extends $fidl.Encodable {
+class {{ .Name }} extends $fidl.Union {
 {{- range .Members }}
 
   const {{ $.Name }}.with{{ .Name }}({{ .Type.Decl }} value)
     : _data = value, tag = {{ $.TagName }}.{{ .Name }};
 {{- end }}
 
-  factory {{ .Name }}.$decode($fidl.Decoder $decoder, int $offset) {
-    final int $index = $decoder.decodeUint32($offset);
-    if ($index >= {{ .TagName }}.values.length)
-      throw new $fidl.FidlError('Bad union tag index: ${$index}');
-    final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.members;
-    switch ({{ .TagName }}.values[$index]) {
-{{- range $index, $member := .Members }}
-      case {{ $.TagName }}.{{ .Name }}:
-        return new {{ $.Name }}.with{{ .Name }}({{ .Type.Decode .Offset $index }});
-{{- end }}
-      default:
-        throw new $fidl.FidlError('Bad union tag: ${ {{ .TagName }}.values[$index] }');
-    }
-  }
+  {{ .Name }}._(this.tag, Object data) : _data = data;
 
-  final _data;
   final {{ .TagName }} tag;
+  final _data;
 
 {{- range .Members }}
   {{ .Type.Decl }} get {{ .Name }} {
@@ -62,19 +47,16 @@ class {{ .Name }} extends $fidl.Encodable {
   dynamic toJson() => _data.toJson();
 
   @override
-  void $encode($fidl.Encoder $encoder, int $offset, $fidl.FidlType type) {
-    final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.members;
-    $encoder.encodeUint32(tag.index, $offset);
-    switch (tag) {
-{{- range $index, $member := .Members }}
-      case {{ $.TagName }}.{{ .Name }}:
-        {{ .Type.Encode "_data" .Offset $index }};
-        break;
-{{- end }}
-      default:
-        throw new $fidl.FidlError('Bad union tag: $tag');
-    }
+  int get $index => tag.index;
+
+  @override
+  Object get $data => _data;
+
+  static {{ .Name }} _ctor(int index, Object data) {
+    return new {{ .Name }}._({{ .TagName }}.values[index], data);
   }
 }
+
+const $fidl.UnionType<{{ .Name }}> {{ .TypeSymbol }} = {{ .TypeExpr }};
 {{ end }}
 `
