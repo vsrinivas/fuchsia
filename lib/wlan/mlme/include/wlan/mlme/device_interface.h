@@ -34,12 +34,9 @@ class DeviceState : public fbl::RefCounted<DeviceState> {
     bool online() { return online_; }
     void set_online(bool online) { online_ = online; }
 
-    uint16_t next_seq() { return seq_no_++ & kMaxSequenceNumber; }
-
    private:
     common::MacAddr addr_;
     wlan_channel_t chan_ = {};
-    uint16_t seq_no_ = 0;
     bool online_ = false;
 };
 

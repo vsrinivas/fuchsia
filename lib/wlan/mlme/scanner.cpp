@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <wlan/mlme/scanner.h>
+#include <wlan/mlme/sequence.h>
 
 #include <wlan/common/logging.h>
 #include <wlan/mlme/device_interface.h>
@@ -274,12 +275,13 @@ zx_status_t Scanner::SendProbeRequest() {
     auto hdr = frame.hdr;
     const common::MacAddr& mymac = device_->GetState()->address();
     const common::MacAddr& bssid = common::MacAddr(req_->bssid.data());
-    uint16_t seq = device_->GetState()->next_seq();
 
     hdr->addr1 = common::kBcastMac;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid;
-    hdr->sc.set_seq(seq);
+    // TODO(NET-556): Clarify 'Sequence' ownership of MLME and STA. Don't set sequence number for
+    // now.
+    hdr->sc.set_seq(0);
     FillTxInfo(&packet, *hdr);
 
     auto body = frame.body;
