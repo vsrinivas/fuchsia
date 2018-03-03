@@ -18,15 +18,16 @@ also provides core drivers and Fuchsia's libc implementation.
 ## Zircon Core
 
  - Device Manager & Device Hosts
- - Device Driver Model (DDK)
- - [C Library (libc) & POSIX IO (libfdio)](libc.md)
+ - [Device Driver Model (DDK)][zircon-ddk]
+ - [C Library (libc)](libc.md)
+ - [POSIX I/O (libfdio)](life_of_an_open.md)
  - [Process Start / ELF Loading (liblaunchpad)](launchpad.md)
 
 ## Framework
 
  - [Core Libraries](core_libraries.md)
  - Application model
-   - Interface description language
+   - [Interface definition language (FIDL)][FIDL]
    - Services
    - Environments
  - [Boot sequence](boot_sequence.md)
@@ -52,20 +53,18 @@ also provides core drivers and Fuchsia's libc implementation.
 
  - Ethernet
  - [Wireless](wireless_networking.md)
- - Bluetooth
+ - [Bluetooth][bluetooth]
  - Sockets
  - HTTP
 
 ## Graphics
 
- - [Magma (vulkan driver)](https://fuchsia.googlesource.com/garnet/+/master/lib/magma/)
- - [Escher (physically-based renderer)](
-   https://fuchsia.googlesource.com/garnet/+/master/public/lib/escher/)
- - [Scenic (compositor)](
-   https://fuchsia.googlesource.com/garnet/+/master/docs/ui_scenic.md)
- - [Input manager](https://fuchsia.googlesource.com/garnet/+/master/docs/ui_input.md)
- - [View manager](https://fuchsia.googlesource.com/garnet/+/master/bin/ui/view_manager/)
- - [Flutter (toolkit)](https://flutter.io/)
+ - [Magma (vulkan driver)][magma]
+ - [Escher (physically-based renderer)][escher]
+ - [Scenic (compositor)][scenic]
+ - [Input manager][input-manager]
+ - [View manager][view-manager]
+ - [Flutter (UI toolkit)][flutter]
 
 ## Media
 
@@ -86,7 +85,7 @@ also provides core drivers and Fuchsia's libc implementation.
 
 ## Backwards compatibility
 
- - POSIX lite
+ - POSIX lite (what subset of POSIX we support and why)
  - Web runtime
 
 ## Update and recovery
@@ -94,9 +93,18 @@ also provides core drivers and Fuchsia's libc implementation.
  - Verified boot
  - Updater
 
-[zircon-concepts]: https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md "Zircon concepts"
-[zircon-syscalls]: https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls.md "Zircon syscalls"
-[framework-story]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/story.md "Framework story"
-[framework-module]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/module.md "Framework module"
-[framework-agent]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/agent.md "Framework agent"
+[zircon-concepts]: https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md
+[zircon-syscalls]: https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls.md
+[zircon-ddk]: https://fuchsia.googlesource.com/zircon/+/HEAD/docs/ddk/overview.md
+[FIDL]: https://fuchsia.googlesource.com/zircon/+/HEAD/docs/fidl/index.md
+[framework-story]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/story.md
+[framework-module]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/module.md
+[framework-agent]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/agent.md
 [ledger]: https://fuchsia.googlesource.com/peridot/+/master/docs/ledger/README.md
+[bluetooth]: https://fuchsia.googlesource.com/garnet/+/HEAD/bin/bluetooth/README.md
+[magma]: https://fuchsia.googlesource.com/garnet/+/master/lib/magma/
+[escher]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/escher/
+[scenic]: https://fuchsia.googlesource.com/garnet/+/master/docs/ui_scenic.md
+[input-manager]: https://fuchsia.googlesource.com/garnet/+/master/docs/ui_input.md
+[view-manager]: https://fuchsia.googlesource.com/garnet/+/master/bin/ui/view_manager/
+[flutter]: https://flutter.io/
