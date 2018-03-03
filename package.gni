@@ -215,12 +215,14 @@ template("package") {
     }
 
     contents = []
+    extra_inputs = []
 
     foreach(entry, pkg.meta) {
       assert(!pkg.system_image, "Metadata cannot be used in system packages.")
       source = entry.path
       dest = "meta/${entry.dest}"
       contents += [ "$dest=$source" ]
+      extra_inputs += [ source ]
     }
     if (defined(pkg.binary)) {
       assert(
@@ -228,6 +230,7 @@ template("package") {
           "Binary requires the package to be archived. Consider using 'binaries' for system packages.")
       source = rebase_path("$root_build_dir/${pkg.binary}")
       contents += [ "bin/app=$source" ]
+      extra_inputs += [ source ]
     }
     foreach(binary, pkg.binaries) {
       assert(
@@ -246,6 +249,7 @@ template("package") {
         basename = binary.dest
       }
       contents += [ "$dirname/$basename=$source" ]
+      extra_inputs += [ source ]
     }
     foreach(test, pkg.tests) {
       source = rebase_path("$root_build_dir/${test.name}")
@@ -259,6 +263,7 @@ template("package") {
         dest = "test/" + basename
       }
       contents += [ "$dest=$source" ]
+      extra_inputs += [ source ]
     }
     foreach(driver, pkg.drivers) {
       # Driver paths are relative to the root of the build dir.
@@ -266,6 +271,7 @@ template("package") {
       dest = "driver/" + driver.name
 
       contents += [ "$dest=$source" ]
+      extra_inputs += [ source ]
     }
     foreach(library, pkg.libraries) {
       # Library paths are relative to the root of the build dir.
@@ -281,12 +287,14 @@ template("package") {
         dest = "lib/" + library.name
       }
       contents += [ "$dest=$source" ]
+      extra_inputs += [ source ]
     }
     foreach(resource, pkg.resources) {
       # Resource path are absolute.
       source = resource.path
       dest = "data/" + resource.dest
       contents += [ "$dest=$source" ]
+      extra_inputs += [ source ]
     }
 
     if (pkg.system_image) {
@@ -305,19 +313,19 @@ template("package") {
                  "--manifest",
                  rebase_path(system_manifest, root_build_dir),
                ] + contents
-      }
-
-      group(target_name) {
+        inputs = extra_inputs
         forward_variables_from(invoker,
                                [
                                  "deps",
                                  "testonly",
                                ])
+      }
 
-        if (!defined(deps)) {
-          deps = []
-        }
-        deps += [ ":${manifest_target_name}" ]
+      group(target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        deps = [
+          ":${manifest_target_name}",
+        ]
         if (defined(pkg.extra)) {
           deps += [ ":${extra_target_name}" ]
         }
@@ -351,6 +359,7 @@ template("package") {
 
         full_pkg_json_file = rebase_path(package_json_file)
         contents += [ "meta/package=${full_pkg_json_file}" ]
+        extra_inputs += [ source ]
       }
 
       action(manifest_target_name) {
@@ -368,22 +377,25 @@ template("package") {
                  "--manifest",
                  rebase_path(partial_package_manifest, root_build_dir),
                ] + contents
-      }
-
-      group(target_name) {
+        inputs = extra_inputs
         forward_variables_from(invoker,
                                [
                                  "deps",
                                  "testonly",
                                ])
-
         if (!defined(deps)) {
           deps = []
         }
         if (need_package_json) {
           deps += [ ":${package_json_target_name}" ]
         }
-        deps += [ ":${manifest_target_name}" ]
+      }
+
+      group(target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        deps = [
+          ":${manifest_target_name}",
+        ]
         if (defined(pkg.extra)) {
           deps += [ ":${extra_target_name}" ]
         }
@@ -407,21 +419,20 @@ template("package") {
                  "--manifest",
                  rebase_path(partial_archive_manifest, root_build_dir),
                ] + contents
-      }
-
-      # This action assembles an image containing all binaries, tests, drivers,
-      # libraries, and resources defined in the package.
-      action(target_name) {
         forward_variables_from(invoker,
                                [
                                  "deps",
                                  "testonly",
                                ])
+      }
 
-        if (!defined(deps)) {
-          deps = []
-        }
-        deps += [ ":${manifest_target_name}" ]
+      # This action assembles an image containing all binaries, tests, drivers,
+      # libraries, and resources defined in the package.
+      action(target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        deps = [
+          ":${manifest_target_name}",
+        ]
         if (defined(pkg.extra)) {
           deps += [ ":${extra_target_name}" ]
         }
