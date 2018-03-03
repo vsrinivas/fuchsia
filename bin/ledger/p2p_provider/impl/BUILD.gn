@@ -30,6 +30,7 @@ source_set("impl") {
     ":envelope",
     "//peridot/lib/convert",
     "//peridot/lib/ledger_client:constants",
+    "//peridot/public/lib/auth/fidl",
   ]
 }
 
