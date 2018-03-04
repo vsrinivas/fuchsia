@@ -87,18 +87,18 @@ func init() {
 	}
 
 	zxBuildDir := "out/build-zircon/"
-	x86ZxBuildDir := zxBuildDir + "build-user-x86-64/"
+	x64ZxBuildDir := zxBuildDir + "build-user-x64/"
 	armZxBuildDir := zxBuildDir + "build-user-arm64/"
-	x86BuildDir := "out/release-x86-64/"
-	armBuildDir := "out/release-aarch64/"
-	x86BuildBootfsDir := "out/release-x86-64-bootfs/"
-	armBuildBootfsDir := "out/release-aarch64-bootfs/"
+	x64BuildDir := "out/release-x64/"
+	armBuildDir := "out/release-arm64/"
+	x64BuildBootfsDir := "out/release-x64-bootfs/"
+	armBuildBootfsDir := "out/release-arm64-bootfs/"
 	qemuDir := fmt.Sprintf("buildtools/%s-%s/qemu/", hostOs, hostCpu)
 
 	dirs := []dir{
 		{
 			sysroot,
-			x86BuildDir + "sdks/zircon_sysroot/sysroot/",
+			x64BuildDir + "sdks/zircon_sysroot/sysroot/",
 			"sysroot/x86_64-fuchsia/",
 		},
 		{
@@ -118,12 +118,12 @@ func init() {
 		},
 		{
 			tools,
-			x86BuildDir + "host_x64/far",
+			x64BuildDir + "host_x64/far",
 			"tools/far",
 		},
 		{
 			tools,
-			x86BuildDir + "host_x64/pm",
+			x64BuildDir + "host_x64/pm",
 			"tools/pm",
 		},
 		{
@@ -178,39 +178,39 @@ func init() {
 
 		{
 			kernelImg,
-			"out/build-zircon/build-x86/zircon.bin",
+			"out/build-zircon/build-x64/zircon.bin",
 			"target/x86_64/zircon.bin",
 		},
 		{
 			kernelImg,
-			x86BuildDir + "bootdata-blob-x86.bin",
+			x64BuildDir + "bootdata-blob-x64.bin",
 			"target/x86_64/bootdata-blob.bin",
 		},
 		{
 			kernelImg,
-			x86BuildDir + "images/local-x86.esp.blk",
+			x64BuildDir + "images/local-x64.esp.blk",
 			"target/x86_64/local.esp.blk",
 		},
 		{
 			kernelImg,
-			x86BuildDir + "images/zircon-x86.vboot",
+			x64BuildDir + "images/zircon-x64.vboot",
 			"target/x86_64/zircon.vboot",
 		},
 		{
 			kernelImg,
-			x86BuildDir + "images/fvm.blk.qcow2",
+			x64BuildDir + "images/fvm.blk.qcow2",
 			"target/x86_64/fvm.blk.qcow2",
 		},
 		{
 			kernelImg,
-			x86BuildDir + "images/fvm.sparse.blk",
+			x64BuildDir + "images/fvm.sparse.blk",
 			"target/x86_64/fvm.sparse.blk",
 		},
 
 		// TODO(marshallk): Remove this when bootfs is deprecated.
 		{
 			bootdata,
-			x86BuildBootfsDir + "user.bootfs",
+			x64BuildBootfsDir + "user.bootfs",
 			"target/x86_64/bootdata.bin",
 		},
 		{
@@ -223,14 +223,14 @@ func init() {
 	components = []component{
 		{
 			kernelDebugObjs,
-			x86ZxBuildDir,
+			x64ZxBuildDir,
 			"sysroot/x86_64-fuchsia/debug-info",
 			customType,
 			copyKernelDebugObjs,
 		},
 		{
 			kernelDebugObjs,
-			x86BuildDir,
+			x64BuildDir,
 			"sysroot/x86_64-fuchsia/debug-info",
 			customType,
 			copyIdsTxt,
@@ -255,8 +255,8 @@ func init() {
 		files = append(files, file{c.flag, c.src, "sysroot/aarch64-fuchsia/include/" + c.dst})
 	}
 	for _, c := range clientLibs {
-		files = append(files, file{c.flag, x86BuildDir + "x64-shared/" + c.name, "sysroot/x86_64-fuchsia/lib/" + c.name})
-		files = append(files, file{c.flag, x86BuildDir + "x64-shared/lib.unstripped/" + c.name, "sysroot/x86_64-fuchsia/debug-info/" + c.name})
+		files = append(files, file{c.flag, x64BuildDir + "x64-shared/" + c.name, "sysroot/x86_64-fuchsia/lib/" + c.name})
+		files = append(files, file{c.flag, x64BuildDir + "x64-shared/lib.unstripped/" + c.name, "sysroot/x86_64-fuchsia/debug-info/" + c.name})
 		files = append(files, file{c.flag, armBuildDir + "arm64-shared/" + c.name, "sysroot/aarch64-fuchsia/lib/" + c.name})
 		files = append(files, file{c.flag, armBuildDir + "arm64-shared/lib.unstripped/" + c.name, "sysroot/aarch64-fuchsia/debug-info/" + c.name})
 	}

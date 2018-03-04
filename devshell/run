@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### start fuchsia in qemu with a ramdisk
+### start fuchsia in qemu with a FVM disk
 
 set -e
 
@@ -11,12 +11,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 qemu_dir="${BUILDTOOLS_QEMU_DIR}/bin"
-
-case "$FUCHSIA_ARCH" in
-aarch64) arch=arm64 ;;
-x86-64) arch=x86 ;;
-*) echo >&2 "Unexpected FUCHSIA_ARCH=$FUCHSIA_ARCH"; exit 2 ;;
-esac
 
 # Construction of a qcow image prevents qemu from writing back to the
 # build-produced image file, which could cause timestamp issues with that file.
@@ -33,7 +27,7 @@ trap 'rm "${qimg}" && rmdir "${qcowdir}"' EXIT
 
 "${FUCHSIA_DIR}/zircon/scripts/run-zircon" \
   -o "${ZIRCON_BUILD_DIR}" \
-  -a "${arch}" \
+  -a "${FUCHSIA_ARCH}" \
   -q "${qemu_dir}" \
   -x "${FUCHSIA_BUILD_DIR}/${ramdisk_bin}" \
   -d \

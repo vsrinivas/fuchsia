@@ -67,16 +67,16 @@ if [[ "${PROJECTS}" = "" ]]; then
     if [[ "${TARGET}" != "" ]]; then
         PROJECTS="${TARGET}"
     else
-        PROJECTS="x86" # Default
+        PROJECTS="x64" # Default
     fi
 fi
 
 have_arm64=false
-have_x86=false
+have_x64=false
 IFS=','
 for project in $PROJECTS; do
     case "$project" in
-    *x86*) have_x86=true ;;
+    *x64*) have_x64=true ;;
     *) have_arm64=true ;;
     esac
 done
@@ -84,8 +84,8 @@ declare -a ARCHLIST
 if $have_arm64; then
     ARCHLIST+=(arm64)
 fi
-if $have_x86; then
-    ARCHLIST+=(x86-64)
+if $have_x64; then
+    ARCHLIST+=(x64)
 fi
 readonly -a ARCHLIST
 if [[ "${#ARCHLIST[@]}" == 0 ]]; then

@@ -21,7 +21,7 @@ modular directories, such as modular, modular_dev, and modular_tests.
 ```
 cd $FUCHSIA_DIR
 fx build peridot:modular_all
-scripts/push-package.py out/debug-x86-64/package/modular*/system_manifest
+scripts/push-package.py out/debug-x64/package/modular*/system_manifest
 ```
 
 # fx publish

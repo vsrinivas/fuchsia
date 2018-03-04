@@ -63,6 +63,6 @@ Configured jiri for ${layer}. Run these commands to update your build:
 
  * jiri update -gc     # Updates your source tree to contain ${layer} and
                        # removes unneeded repositories.
- * fx set x86-64       # Updates your build directory to build ${layer}.
+ * fx set x64          # Updates your build directory to build ${layer}.
  * fx full-build       # Actually builds ${layer}.
 END

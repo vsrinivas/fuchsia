@@ -18,17 +18,33 @@ fx-machine-types() {
   echo "  nuc"
   echo "  pixel"
   echo "  vboot"
+  echo "Available board types for ${FUCHSIA_ARCH}:"
+  cat "${board_list_file}"
   echo "Note: currently efi,cros,acer,nuc,pixel and vboot all have the exact"
   echo "same behavior and target specific differences occur client side."
 }
 
+case "${FUCHSIA_ARCH}" in
+x64)
+  board="pc"
+  ;;
+arm64)
+  board="qemu"
+  ;;
+*)
+  echo >&2 "Unknown zircon board for arch: \"$FUCHSIA_ARCH\""
+  exit 1
+esac
+
+board_list_file="${FUCHSIA_BUILD_DIR}/zircon-gn/export/boards.list"
+
 zircon_bin="zircon.bin"
-ramdisk_bin="bootdata-blob-${ZIRCON_PROJECT}.bin"
+ramdisk_bin="bootdata-blob-${board}.bin"
 
 images_dir="images"
 cmdline_txt="${images_dir}/cmdline.txt"
-efi_block="${images_dir}/local-${ZIRCON_PROJECT}.esp.blk"
+efi_block="${images_dir}/local-${board}.esp.blk"
 fvm_block="${images_dir}/fvm.blk"
 fvm_sparse_block="${images_dir}/fvm.sparse.blk"
 fvm_data_sparse_block="${images_dir}/fvm.data.sparse.blk"
-kernc_vboot="${images_dir}/zircon-${ZIRCON_PROJECT}.vboot"
+kernc_vboot="${images_dir}/zircon-${board}.vboot"

@@ -25,7 +25,7 @@ Fuchsia instance:
 
 ```
 cd $FUCHSIA_ROOT
-fx set x86-64 --release
+fx set x64 --release
 fx full-build
 gce create-grub-image
 gce create-fuchsia-image

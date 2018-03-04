@@ -12,7 +12,7 @@ import sys
 import tempfile
 
 DEFAULT_DST_ROOT = '/system'
-DEFAULT_OUT_DIR = 'out/debug-x86-64'
+DEFAULT_OUT_DIR = 'out/debug-x64'
 
 
 def netaddr_cmd(out_dir, device):
@@ -106,7 +106,7 @@ def main():
       'package_files',
       nargs='+',
       help='Files containing manifest data. For example, ' \
-           '(e.g. out/debug-x86-64/package/modular*/system_manifest)')
+           '(e.g. out/debug-x64/package/modular*/system_manifest)')
   parser.add_argument('-d', '--device', default=[':'], help='Device to update')
   parser.add_argument(
       '-o',

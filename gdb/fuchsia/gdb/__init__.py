@@ -121,8 +121,8 @@ def _ClearObjfilesHandler(event):
 
 def _FindSysroot(arch):
     """Return the path to the sysroot for arch."""
-    if arch == "x86-64":
-        suffix = "-x86"
+    if arch == "x64":
+        suffix = "-x64"
     elif arch == "arm64":
         suffix = "-arm64"
     else:
@@ -178,12 +178,12 @@ def _NewObjfileHandler(event):
     # TODO(dje): IWBN to not need ld.so debug info.
     # TODO(dje): IWBN if objfiles exposed their arch field.
     arch_string = gdb.execute("show arch", to_string=True)
-    if arch_string.find("aarch64") >= 0:
+    if arch_string.find("arm64") >= 0:
         # Alas there are different directories for different arm64 builds
         # (qemu, rpi3, etc.). Pick something, hopefully this can go away soon.
         sysroot_dir = _FindSysroot("arm64")
-    elif arch_string.find("x86-64") >= 0:
-        sysroot_dir = _FindSysroot("x86-64")
+    elif arch_string.find("x64") >= 0:
+        sysroot_dir = _FindSysroot("x64")
     else:
         print "WARNING: unsupported architecture\n%s" % (arch_string)
         return

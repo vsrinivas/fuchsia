@@ -52,7 +52,7 @@ FUCHSIA_DIR="$SCRIPT_DIR/.."
 
 # Ensure Zircon has been built prior to formatting USB
 pushd "$FUCHSIA_DIR/zircon" > /dev/null
-./scripts/build-zircon-x86-64
+./scripts/build-zircon-x64
 popd > /dev/null
 
 lsblk
@@ -148,18 +148,18 @@ trap "umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmou
 
 sudo mkdir -p "${MOUNT_PATH}/EFI/BOOT"
 echo -n "Copying Bootloader..."
-sudo cp "$FUCHSIA_DIR/out/build-zircon/build-x86/bootloader/bootx64.efi" "${MOUNT_PATH}/EFI/BOOT/BOOTX64.EFI"
+sudo cp "$FUCHSIA_DIR/out/build-zircon/build-x64/bootloader/bootx64.efi" "${MOUNT_PATH}/EFI/BOOT/BOOTX64.EFI"
 echo " SUCCESS"
 
 if [ "$INCLUDE_ZIRCON" -eq 1 ]; then
   echo -n "Copying zircon.bin..."
-  sudo cp "$FUCHSIA_DIR/out/build-zircon/build-x86/zircon.bin" "${MOUNT_PATH}/zircon.bin"
-  sudo cp "$FUCHSIA_DIR/out/build-zircon/build-user-x86-64-ulib/bootdata.bin" "${MOUNT_PATH}/ramdisk.bin"
+  sudo cp "$FUCHSIA_DIR/out/build-zircon/build-x64/zircon.bin" "${MOUNT_PATH}/zircon.bin"
+  sudo cp "$FUCHSIA_DIR/out/build-zircon/build-user-x64-ulib/bootdata.bin" "${MOUNT_PATH}/ramdisk.bin"
   echo " SUCCESS"
 fi
 
 if [ "$INCLUDE_FUCHSIA" -eq 1 ]; then
-  USER_BOOTFS_PATH="${FUCHSIA_DIR}/out/${FUCHSIA_CONFIG}-x86-64/user.bootfs"
+  USER_BOOTFS_PATH="${FUCHSIA_DIR}/out/${FUCHSIA_CONFIG}-x64/user.bootfs"
   echo -n "Copying user.bootfs..."
   sudo cp "${USER_BOOTFS_PATH}" "${MOUNT_PATH}/ramdisk.bin"
   echo " SUCCESS"

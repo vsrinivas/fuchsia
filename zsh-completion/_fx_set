@@ -35,13 +35,8 @@ _gn_args() {
 # list of supported fuchsia architectures
 local -a archs
 archs=(
-  'x86:64 bit Intel'
-  'x86-64:64 bit Intel'
+  'x64:64 bit Intel'
   'arm64:64 bit ARM'
-  'aarch64:64 bit ARM'
-  'gauss:Gauss ARM'
-  'odroidc2:ODROID-C2'
-  'hikey960:HiKey 960'
 )
 
 # arguments to fx set

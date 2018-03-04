@@ -59,7 +59,7 @@ Extra flags will be passed to the supporting Dart tool if applicable.
 ''')
     parser.add_argument(
         '--out',
-        help='Path to the base output directory, e.g. out/debug-x86-64',
+        help='Path to the base output directory, e.g. out/debug-x64',
         required=True)
     parser.add_argument(
         '--tree',

@@ -63,7 +63,7 @@ def main():
             required=True)
     parser.add_argument(
             '--sysroot',
-            help='zircon sysroot (possibly //out/build_zircon/build-user-x86-64/sysroot?)',
+            help='zircon sysroot (possibly //out/build_zircon/build-user-x64/sysroot?)',
             required=True)
     parser.add_argument(
             '--host-os',

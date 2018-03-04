@@ -5,12 +5,16 @@
 
 ### run bootserver in zedboot disk paver mode
 
-## usage: fx boot [<type>] [--no-data] [bootserver arguments]
-##   <type>     For example, efi, cros, bootfs, or ram (default: bootfs)
+## usage: fx boot [--netboot|--bootfs] [--board <board>] [<type>] [--no-data] [bootserver arguments]
+##   <type>     see "--help" for list (default: x64 for x64 / none for arm64)
+##   --board    Specify Zircon board (if <type> is used, it takes precendence)
+##   --netboot  Boot from ramdisk containing FVM
+##   --bootfs   (deprecated) boot user.bootfs (old ramdisk)
 ##   --no-data  Use FVM images without a /data partition (preserve existing data)
 ##
-## If <type> is omitted, and $FUCHSIA_ARCH is x86, all x86 images will be
-## supplied. For other architectures there is no default <type>.
+## If <type> is omitted, a guess is made based on $FUCHSIA_ARCH. For x64, all
+## x64 images will be supplied (resulting in an FVM pave). For arm64 the default
+## <type> is netboot, and the default board is <qemu>.
 
 set -e
 
@@ -28,22 +32,50 @@ usage() {
     exec "${ZIRCON_TOOLS_DIR}/bootserver" --help
 }
 
-if [[ "$1" =~ ^- ]]; then
-  machine_type=""
+netboot=false
+bootfs=false
 
+while [[ "$1" =~ ^- ]]; do
   case "$1" in
   -h|--help)
     usage
-  ;;
-  --netboot|--bootfs)
-    machine_type="$1"
-  esac
-
-else
-  machine_type="$1"
-  # passing no arguments is valid, but shift will terminate with set -e
-  if [[ $# -ge 1 ]]; then
+    ;;
+  --netboot)
+    netboot=true
+    ;;
+  --bootfs)
+    bootfs=true
+    ;;
+  --board)
+    if [[ "$2" =~ ^- ]]; then
+      echo >&2 "Invalid board: $2"
+      exit 1
+    fi
+    if ! grep "$2" "${board_list_file}" > /dev/null; then
+      echo >&2 "Unrecognized board: $2"
+      echo >&2 "Known boards for ${FUCHSIA_ARCH}: $(<"${board_list_file}")"
+    fi
+    board="$2"
     shift
+    ;;
+  *)
+    echo >&2 "Unrecognized flag: $1"
+    usage
+  esac
+  shift
+done
+
+machine_type="$1"
+# passing no arguments is valid, but shift will terminate with set -e
+if [[ $# -ge 1 ]]; then
+  shift
+fi
+if [[ -z "$machine_type" ]]; then
+  if $bootfs; then
+    machine_type="bootfs"
+  fi
+  if $netboot; then
+    machine_type="netboot"
   fi
 fi
 
@@ -52,12 +84,12 @@ case "${machine_type}" in
     usage
   ;;
   zedboot)
-    ramdisk="${FUCHSIA_BUILD_DIR}/images/zedboot-${ZIRCON_PROJECT}.bin"
+    ramdisk="${FUCHSIA_BUILD_DIR}/images/zedboot-${board}.bin"
     disks=()
     add_fvm=false
   ;;
   ram|netboot|--netboot)
-    ramdisk="${FUCHSIA_BUILD_DIR}/netboot-${ZIRCON_PROJECT}.bin"
+    ramdisk="${FUCHSIA_BUILD_DIR}/netboot-${board}.bin"
     disks=()
     add_fvm=false
   ;;
@@ -75,14 +107,27 @@ case "${machine_type}" in
     disks=("${disks[@]}" --kernc "${FUCHSIA_BUILD_DIR}/${kernc_vboot}")
   ;;
   *)
-    if [[ -z "${machine_type}" ]] && [[ "$FUCHSIA_ARCH" == "x86-64" ]]; then
-      machine_type="x86"
+    if [[ "$FUCHSIA_ARCH" == "x64" ]]; then
+      machine_type="x64"
       disks=("${disks[@]}" --efi "${FUCHSIA_BUILD_DIR}/${efi_block}" \
         --kernc "${FUCHSIA_BUILD_DIR}/${kernc_vboot}")
     else
-      echo "Unsupported machine type: \"${machine_type}\""
-      fx-machine-types
-      exit 1
+      # For now all ARM64 boards are valid machine types and imply netboot.
+      if grep "$machine_type" "${board_list_file}" > /dev/null; then
+        board="$machine_type"
+        if [[ -z "$board" ]]; then
+          echo >&2 "Unknown board for ${FUCHSIA_ARCH}: \"$board\" Please supply a board name from:"
+          cat "${board_list_file}" >&2
+          exit 1
+        fi
+        ramdisk="${FUCHSIA_BUILD_DIR}/netboot-${board}.bin"
+        disks=()
+        add_fvm=false
+      else
+        echo "Unsupported machine type: \"${machine_type}\""
+        fx-machine-types
+        exit 1
+      fi
     fi
 esac
 

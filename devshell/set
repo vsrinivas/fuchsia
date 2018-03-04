@@ -14,9 +14,7 @@
 ##               [--goma-dir DIR]
 ##               [--ccache|--no-ccache]
 ##
-## where TARGET is x86-64, aarch64 (ARM qemu emulator), or another ARM platform supported by zircon.
-## x86 is accepted as an alias for x86-64.
-## arm64 is accepted as an alias for aarch64.
+## where TARGET is x64, arm64
 ##
 ## Sets build options.
 ##
@@ -70,28 +68,22 @@ function main {
   local arch=
   local zircon_project=
   case $1 in
-    x86 | x86-64)
-      arch=x86-64
-      zircon_project=x86
+    x64 | x86 | x64-64)
+      arch=x64
+      zircon_project=x64
       ;;
     arm64 | aarch64)
-      arch=aarch64
+      arch=arm64
       zircon_project=arm64
       ;;
     *)
-      # assume any other target is aarch64
-      arch=aarch64
-      if [ -f "${FUCHSIA_DIR}/zircon/kernel/project/$1.mk" ]; then
-        zircon_project=$1
-      else
-        echo Unknown zircon project \"$1\"
-        fx-command-help
-        return 1
-      fi
+      echo Unknown zircon project \"$1\"
+      fx-command-help
+      return 1
       ;;
   esac
 
-  local gen_args="${gen_args} --target_cpu ${arch} --platforms ${zircon_project}"
+  local gen_args="${gen_args} --target_cpu ${arch}"
   shift
 
   local variant=debug

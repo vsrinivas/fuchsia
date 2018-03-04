@@ -10,7 +10,7 @@ concatenation of all the compile commands is output to stdout.
 
 Example:
     <layer>$ ./scripts/cat_compile_commands.py zircon/compile_commands.json \
-    out/debug_x86-64/compile_commands.json > compile_commands.json
+    out/debug-x64/compile_commands.json > compile_commands.json
 
 The output is suitable for use with vscode + cquery which needs a single
 compile_commands.json for the whole editor workspace.  This way a single vscode
@@ -21,9 +21,9 @@ Todo:
     * For zircon, in docs that mention "bear make -j20", see also this script.
     * For rest of fuchsia, integrate something like
       "~/topaz/buildtools/ninja -v -C \
-      /usr/local/google/home/dustingreen/topaz/out/debug-x86-64 \
+      /usr/local/google/home/dustingreen/topaz/out/debug-x64 \
       -t compdb cc cxx objc objcxx x64-shared_cc x64-shared_cxx \
-      > ~/topaz/out/debug-x86-64/compile_commands.json
+      > ~/topaz/out/debug-x64/compile_commands.json
       into the build - ideally only if build.ninja or maybe *.ninja change.
     * Iff the ~0.65s execution time becomes an issue, consider a more optimized
       raw binary splice based on fixing up the "]" and "[" and the end of first
