@@ -14,6 +14,7 @@ __BEGIN_CDECLS
 
 typedef struct {
     uint32_t package_id;
+    uint32_t node_id;
     uint32_t core_id;
     uint32_t smt_id;
 } x86_cpu_topology_t;

@@ -831,8 +831,8 @@ static void platform_init_smp(void) {
         if (!use_ht && topo.smt_id != 0)
             keep = false;
 
-        dprintf(INFO, "\t%u: apic id 0x%x package %u core %u smt %u%s%s\n",
-                i, apic_ids_temp[i], topo.package_id, topo.core_id, topo.smt_id,
+        dprintf(INFO, "\t%u: apic id 0x%x package %u node %u core %u smt %u%s%s\n",
+                i, apic_ids_temp[i], topo.package_id, topo.node_id, topo.core_id, topo.smt_id,
                 (apic_ids_temp[i] == bsp_apic_id) ? " BSP" : "",
                 keep ? "" : " (not using)");
 
