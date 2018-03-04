@@ -22,6 +22,10 @@ import("//build/fidl/toolchain.gni")
 #   name (optional)
 #     Name of the library.
 #     Defaults to the target's name.
+#
+#   sdk_candidate (optional)
+#     Whether this library may be included in an SDK.
+#     Defaults to false.
 
 template("fidl") {
 

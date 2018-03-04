@@ -9,7 +9,7 @@ import("//build/fidl/toolchain.gni")
 #
 # The parameters for this template are defined in //build/fidl/fidl.gni. The
 # relevant parameters in this template are:
-#   - library_name;
+#   - name;
 #   - sources.
 
 template("fidl_cpp") {
@@ -17,6 +17,10 @@ template("fidl_cpp") {
       current_toolchain == shlib_toolchain,
       "This template can only be used in these toolchains: " +
       "$target_toolchain, $shlib_toolchain.")
+
+  not_needed(invoker, [
+    "sdk_candidate",
+  ])
 
   main_target_name = target_name
   generation_target_name = "${target_name}_cpp_generate"

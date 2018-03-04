@@ -4,12 +4,15 @@
 
 import("//build/compiled_action.gni")
 import("//build/fidl/toolchain.gni")
+import("//build/sdk/sdk_atom.gni")
 
 # Generates some representation of a FIDL library that's consumable by Language
 # bindings generators.
 #
 # The parameters for this template are defined in //build/fidl/fidl.gni. The
 # relevant parameters in this template are:
+#   - name;
+#   - sdk_candidate;
 #   - sources.
 
 template("fidl_library") {
@@ -19,10 +22,6 @@ template("fidl_library") {
   if (!defined(invoker.sources)) {
     assert(false, "A FIDL library requires some sources.")
   }
-
-  not_needed(invoker, [
-    "name",
-  ])
 
   json_representation = "$target_gen_dir/$target_name.fidl.json"
 
@@ -82,5 +81,27 @@ template("fidl_library") {
     deps = [
       ":$verification_target_name",
     ]
+  }
+
+  if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
+    library_name = target_name
+    if (defined(invoker.name)) {
+      library_name = invoker.name
+    }
+
+    sdk_atom("${target_name}_sdk") {
+      domain = "fidl"
+      name = library_name
+
+      files = []
+      foreach(source, invoker.sources) {
+        # TODO(pylaligand): remove this temporary workaround.
+        destination = get_path_info(source, "file")
+        files += [{
+          source = rebase_path(source)
+          dest = destination
+        }]
+      }
+    }
   }
 }
