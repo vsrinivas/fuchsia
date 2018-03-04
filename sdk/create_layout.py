@@ -27,10 +27,17 @@ def install_cpp_atom(atom, metadata, output):
     '''Installs an atom from the "c-pp" domain.'''
     name = atom['id']['name']
     type = atom['tags']['type']
-    if type != 'compiled_shared':
-        print('Only dealing with prebuilt shared libraries for now, '
-              'skipping %s.' % name)
-        return
+    if type == 'compiled_shared':
+        install_cpp_prebuilt_atom(atom, metadata, output)
+    elif type == 'sources':
+        install_cpp_source_atom(atom, metadata, output)
+    else:
+        print('Atom type "%s" not handled, skipping %s.' % (type, name))
+
+
+def install_cpp_prebuilt_atom(atom, metadata, output):
+    '''Installs a prebuilt atom from the "c-pp" domain.'''
+    name = atom['id']['name']
     if atom['tags']['arch'] != 'target':
         print('Only libraries compiled for a target are supported, '
               'skipping %s.' % name)
@@ -48,6 +55,15 @@ def install_cpp_atom(atom, metadata, output):
         else:
             raise Exception('Error: unknow file extension "%s" for %s.' %
                             (extension, name))
+
+
+def install_cpp_source_atom(atom, metadata, output):
+    '''Installs a source atom from the "c-pp" domain.'''
+    name = atom['id']['name']
+    for file in atom['files']:
+        dest = os.path.join(output, 'pkg', name, file['destination'])
+        make_dir(dest)
+        shutil.copyfile(file['source'], dest)
 
 
 def install_exe_atom(atom, metadata, output):
