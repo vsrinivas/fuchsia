@@ -114,7 +114,7 @@ zx_status_t platform_enumerate_cpus(
         case ACPI_MADT_TYPE_LOCAL_APIC: {
             ACPI_MADT_LOCAL_APIC* lapic = (ACPI_MADT_LOCAL_APIC*)record_hdr;
             if (!(lapic->LapicFlags & ACPI_MADT_ENABLED)) {
-                TRACEF("Skipping disabled processor %02x\n", lapic->Id);
+                LTRACEF("Skipping disabled processor %02x\n", lapic->Id);
                 continue;
             }
             if (apic_ids != NULL && count < len) {
