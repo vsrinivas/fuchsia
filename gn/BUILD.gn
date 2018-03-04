@@ -1036,5 +1036,5 @@ group("install") {
 }
 
 group("default") {
-  deps = [ ":images" ] + packages_labels
+  deps = [ ":images", ":netboot" ] + packages_labels
 }
