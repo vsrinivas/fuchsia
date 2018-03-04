@@ -7,7 +7,7 @@ import("//build/cpp/sdk_library.gni")
 # A static library that can be exported to an SDK.
 #
 # An equivalent to the built-in shared_library which adds an SDK atom
-# declaration to allow the library to be included in an SDK.
+# declaration to allow the library to be included in an SDK as sources.
 #
 # Parameters
 #

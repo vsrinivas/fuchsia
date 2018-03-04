@@ -4,10 +4,7 @@
 
 import("//build/sdk/sdk_atom.gni")
 
-# A set of C++ code exportable in an SDK.
-#
-# An equivalent to the built-in source_set which adds an SDK atom declaration to
-# allow the set to be included in an SDK.
+# A set of C++ code exportable in an SDK as sources.
 #
 # Parameters
 #
@@ -92,7 +89,7 @@ template("sdk_library") {
     }
 
     tags = [
-      "type:$library_type",
+      "type:sources",
     ]
 
     files = []
