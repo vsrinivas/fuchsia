@@ -31,9 +31,9 @@
 # At miniumum there should be a go_dependencies declaration for the package to
 # be built.
 
+import("//build/config/clang/clang.gni")
 import("//build/config/sysroot.gni")
 import("//build/sdk/sdk_atom.gni")
-import("//build/toolchain/clang_toolchain.gni")
 
 declare_args() {
   # target_gen_dir is, for example with garnet, gen/garnet/go/src/foo/bar,

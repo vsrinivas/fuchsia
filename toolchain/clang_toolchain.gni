@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/variant.gni")
@@ -14,24 +15,6 @@ stamp_description = "STAMP {{output}}"
 # compatible with links since Ninja is tracking changes to the source.
 copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
 copy_description = "COPY {{source}} {{output}}"
-
-declare_args() {
-  # The default clang toolchain provided by the buildtools. This variable is
-  # additionally consumed by the Go toolchain.
-  clang_prefix =
-      rebase_path("//buildtools/${host_platform}/clang/bin", root_build_dir)
-}
-
-if (current_cpu == "arm64") {
-  clang_cpu = "aarch64"
-} else if (current_cpu == "x64") {
-  clang_cpu = "x86_64"
-}
-if (defined(clang_cpu)) {
-  clang_target = "${clang_cpu}-${current_os}"
-} else {
-  assert(current_cpu != target_cpu, "Unsupported architecture")
-}
 
 # Defines a Clang-based toolchain.
 #

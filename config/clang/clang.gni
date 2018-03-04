@@ -1,0 +1,21 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # The default clang toolchain provided by the buildtools. This variable is
+  # additionally consumed by the Go toolchain.
+  clang_prefix =
+      rebase_path("//buildtools/${host_platform}/clang/bin", root_build_dir)
+}
+
+if (current_cpu == "arm64") {
+  clang_cpu = "aarch64"
+} else if (current_cpu == "x64") {
+  clang_cpu = "x86_64"
+}
+if (defined(clang_cpu)) {
+  clang_target = "${clang_cpu}-${current_os}"
+} else {
+  assert(current_cpu != target_cpu, "Unsupported architecture")
+}

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/clang_toolchain.gni")
+import("//build/config/clang/clang.gni")
 
 # This file introduces two related templates that act like action and
 # action_foreach but instead of running a script, it will compile a given tool
