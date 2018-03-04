@@ -8,6 +8,39 @@ import("//build/gn/config.gni")
 import("//build/gn/packages.gni")
 import("//build/package.gni")
 
+zircon_build_dir = "//out/build-zircon/build-${zircon_cpu}"
+
+zircon_files =
+    exec_script("//build/zircon/list_source_files.py", [], "list lines")
+
+supporting_templates = [
+  "//build/zircon/header.mako",
+  "//build/zircon/host_tool.mako",
+  "//build/zircon/shared_library.mako",
+  "//build/zircon/source_library.mako",
+  "//build/zircon/static_library.mako",
+  "//build/zircon/sysroot.mako",
+]
+
+exec_script("//build/zircon/create_gn_rules.py",
+            [
+              "--out",
+              rebase_path("//zircon/public"),
+              "--staging",
+              rebase_path("$root_out_dir/zircon-gn"),
+              "--zircon-project",
+              zircon_cpu,
+              "--zircon-user-build",
+              rebase_path("//out/build-zircon/build-user-\${zircon_cpu}"),
+              "--zircon-tool-build",
+              rebase_path("//out/build-zircon"),
+            ],
+            "",
+            zircon_files + supporting_templates)
+
+# Computation of the zircon_boards requires the above exec_script to have completed.
+zircon_boards = read_file("$root_build_dir/zircon-gn/export/boards.list", "list lines")
+
 # Permit dependencies on testonly targets from packages.
 testonly = true
 
@@ -396,14 +429,13 @@ bootdata_cmdline("systempkg_cmdline") {
 
 # Package up the /boot filesystem along with Zircon's kernel bootdata.
 # This `bootdata.bin` along with the Zircon kernel is enough to boot.
-foreach(platform, zircon_platforms) {
-  bootdata("bootdata-${platform}") {
+foreach(board, zircon_boards) {
+  bootdata("bootdata-${board}") {
     deps = [
       ":finalize_manifests",
     ]
-    kernel_build_dir = "//out/build-zircon/build-${platform}"
     inputs = [
-      "$kernel_build_dir/kernel-bootdata.bin",
+      "$zircon_build_dir/${board}-kernel-bootdata.bin",
       final_boot_manifest,
     ]
     boot = true
@@ -417,9 +449,9 @@ foreach(platform, zircon_platforms) {
     }
   }
 
-  bootdata("bootdata-blob-${platform}") {
+  bootdata("bootdata-blob-${board}") {
     deps = [
-      ":bootdata-${platform}",
+      ":bootdata-${board}",
       ":systempkg_cmdline",
     ]
 
@@ -596,9 +628,6 @@ action("fvm.data.sparse.blk") {
 #   deps (required)
 #     Must be bootdata labels defined earlier in the file.
 #
-#   platform (required)
-#     zircon_platforms element.
-#
 template("vboot") {
   output_name = "${target_name}.vboot"
   action(output_name) {
@@ -628,8 +657,7 @@ template("vboot") {
     bootdata_bin = bootdata_bins[0]
     assert([ bootdata_bin ] == bootdata_bins)
 
-    kernel_build_dir = "//out/build-zircon/build-${invoker.platform}"
-    zircon_bin = "$kernel_build_dir/zircon.bin"
+    zircon_bin = "${zircon_build_dir}/zircon.bin"
     inputs += [ zircon_bin ]
 
     output = "$images_dir/$output_name"
@@ -748,8 +776,7 @@ template("esp") {
     }
 
     if (target_cpu == "x64") {
-      kernel_build_dir = "//out/build-zircon/build-${invoker.platform}"
-      gigaboot_bin = "$kernel_build_dir/bootloader/bootx64.efi"
+      gigaboot_bin = "${zircon_build_dir}/bootloader/bootx64.efi"
       args += [
         "--efi-bootloader",
         rebase_path(gigaboot_bin),
@@ -841,18 +868,17 @@ action("zedboot_manifest") {
   }
 }
 
-foreach(platform, zircon_platforms) {
-  # zedboot-data-${platform}.bin is a Zircon BOOTDATA file containing the
+foreach(board, zircon_boards) {
+  # zedboot-data-${board}.bin is a Zircon BOOTDATA file containing the
   # command line and BOOTFS pieces necessary to make Zircon be Zedboot.
-  bootdata("zedboot-data-${platform}") {
+  bootdata("zedboot-data-${board}") {
     boot = true
     deps = [
       ":zedboot_cmdline",
       ":zedboot_manifest",
     ]
-    kernel_build_dir = "//out/build-zircon/build-${platform}"
     inputs = [
-      "$kernel_build_dir/kernel-bootdata.bin",
+      "${zircon_build_dir}/${board}-kernel-bootdata.bin",
     ]
     foreach(dep, deps) {
       dep = get_target_outputs(dep)
@@ -865,9 +891,9 @@ foreach(platform, zircon_platforms) {
   # without using any real storage.  The system decompresses the fvm.blk
   # image into memory and then sees that RAM disk just as if it were a
   # real disk on the device.
-  bootdata("netboot-${platform}") {
+  bootdata("netboot-${board}") {
     deps = [
-      ":bootdata-blob-${platform}",
+      ":bootdata-blob-${board}",
       ":bootdata-fvm",
     ]
     inputs = []
@@ -877,62 +903,66 @@ foreach(platform, zircon_platforms) {
   }
 
   # ChromeOS vboot images.
-  vboot("zircon-${platform}") {
+  vboot("zircon-${board}") {
     deps = [
-      ":bootdata-blob-${platform}",
+      ":bootdata-blob-${board}",
     ]
   }
 
-  # NOTE(raggi): zircon.bin from //out/build-zircon/build-${platform} is not a
-  # bootdata image on ARM, as such, all targets that try to use it as such are
-  # disabled here.
-  if (target_cpu == "x64") {
-    # images/zedboot-${platform}.bin combines the kernel image itself with
+  # arm64 kernels are not valid bootdata, and cannot be used to produce unified
+  # kernel+bootdata images such as zedboot-{board}.bin
+  if (zircon_cpu != "arm64") {
+    # images/zedboot-${board}.bin combines the kernel image itself with
     # the BOOTDATA bits.  This single file can be booted by Gigaboot.
-    bootdata("zedboot-${platform}") {
+    bootdata("zedboot-${board}") {
       output_name = "images/$target_name"
       deps = [
-        ":zedboot-data-${platform}",
+        ":zedboot-data-${board}",
       ]
-      kernel_build_dir = "//out/build-zircon/build-${platform}"
       inputs = [
-        "$kernel_build_dir/zircon.bin",
+        "${zircon_build_dir}/zircon.bin",
       ]
       foreach(label, deps) {
         inputs += get_target_outputs(label)
       }
     }
+  }
 
-    vboot("zedboot-${platform}") {
-      deps = [
-        ":zedboot-data-${platform}",
-      ]
-    }
+  vboot("zedboot-${board}") {
+    deps = [
+      ":zedboot-data-${board}",
+    ]
+  }
 
-    # EFI ESP images.
-    esp("local-${platform}") {
-      if (always_zedboot) {
-        cmdline = "efi_zedboot_cmdline"
-      } else {
-        cmdline = "efi_local_cmdline"
-      }
-      zircon_bin = "//out/build-zircon/build-${platform}/zircon.bin"
-      zedboot = ":zedboot-${platform}"
-      deps = [
-        ":bootdata-blob-${platform}",
-      ]
-    }
-
-    esp("zedboot-${platform}") {
+  # EFI ESP images.
+  esp("local-${board}") {
+    if (always_zedboot) {
       cmdline = "efi_zedboot_cmdline"
-      zedboot = ":zedboot-${platform}"
+    } else {
+      cmdline = "efi_local_cmdline"
+    }
+    zircon_bin = "${zircon_build_dir}/zircon.bin"
+
+    # Unified zedboot is not available for arm64
+    if (zircon_cpu != "arm64") {
+      zedboot = ":zedboot-${board}"
+    }
+
+    deps = [
+      ":bootdata-blob-${board}",
+    ]
+  }
+
+  if (target_cpu != "arm64") {
+    esp("zedboot-${board}") {
+      cmdline = "efi_zedboot_cmdline"
+      zedboot = ":zedboot-${board}"
     }
   }
 
-
   # install.blk creates a minfs partition image that includes all of the images
   # required to install a Fuchsia build.
-  action("install-${platform}.blk") {
+  action("install-${board}.blk") {
     minfs_path = "//out/build-zircon/tools/minfs"
     installer_label = "//garnet/bin/installer:install-fuchsia"
     installer_out_dir = get_label_info(installer_label, "root_out_dir")
@@ -947,14 +977,13 @@ foreach(platform, zircon_platforms) {
     input_images = [
       "fvm.sparse.blk",
       "fvm.data.sparse.blk",
+      "local-${board}.esp.blk",
+      "zedboot-${board}.vboot",
+      "zircon-${board}.vboot",
     ]
-    input_images += [ "zircon-${platform}.vboot" ]
-    if (target_cpu == "x64") {
-      input_images += [
-        "local-${platform}.esp.blk",
-        "zedboot-${platform}.esp.blk",
-        "zedboot-${platform}.vboot",
-      ]
+
+    if (target_cpu != "arm64") {
+      input_images += [ "zedboot-${board}.esp.blk" ]
     }
 
     # Add all of the input images as dependencies
@@ -994,17 +1023,22 @@ foreach(platform, zircon_platforms) {
 
 group("zedboot") {
   deps = []
-  if (target_cpu == "x64") {
-    foreach(platform, zircon_platforms) {
-      deps += [ ":zedboot-${platform}" ]
+  foreach(board, zircon_boards) {
+    # Unified zedboot is not available for arm64, but we can still build the
+    # zedboot-data which is useful if someone wants to construct a zedboot
+    # image/disk.
+    if (target_cpu == "arm64") {
+      deps += [ ":zedboot-data-${board}" ]
+    } else {
+      deps += [ ":zedboot-${board}" ]
     }
   }
 }
 
 group("netboot") {
   deps = []
-  foreach(platform, zircon_platforms) {
-    deps += [ ":netboot-${platform}" ]
+  foreach(board, zircon_boards) {
+    deps += [ ":netboot-${board}" ]
   }
 }
 
@@ -1016,55 +1050,26 @@ group("images") {
     ":fvm.sparse.blk",
   ]
 
-  foreach(platform, zircon_platforms) {
-    deps += [ ":zircon-${platform}.vboot" ]
-  }
-
-  if (target_cpu == "x64") {
-    foreach(platform, zircon_platforms) {
-      deps += [
-        ":local-${platform}.esp.blk",
-        ":zedboot-${platform}.esp.blk",
-        ":zedboot-${platform}.vboot",
-      ]
+  foreach(board, zircon_boards) {
+    deps += [
+      ":local-${board}.esp.blk",
+      ":zedboot-${board}.vboot",
+      ":zircon-${board}.vboot",
+    ]
+    if (target_cpu != "arm64") {
+      deps += [ ":zedboot-${board}.esp.blk" ]
     }
   }
 }
 
 group("install") {
   deps = []
-  foreach(platform, zircon_platforms) {
+  foreach(board, zircon_boards) {
     deps += [
-      ":install-${platform}.blk"
+      ":install-${board}.blk"
     ]
   }
 }
-
-zircon_files =
-    exec_script("//build/zircon/list_source_files.py", [], "list lines")
-
-supporting_templates = [
-  "//build/zircon/header.mako",
-  "//build/zircon/host_tool.mako",
-  "//build/zircon/shared_library.mako",
-  "//build/zircon/source_library.mako",
-  "//build/zircon/static_library.mako",
-  "//build/zircon/sysroot.mako",
-]
-
-exec_script("//build/zircon/create_gn_rules.py",
-            [
-              "--out",
-              rebase_path("//zircon/public"),
-              "--staging",
-              rebase_path("$root_out_dir/zircon-gn"),
-              "--zircon-user-build",
-              rebase_path("//out/build-zircon/build-user-\${zircon_cpu}"),
-              "--zircon-tool-build",
-              rebase_path("//out/build-zircon"),
-            ],
-            "",
-            zircon_files + supporting_templates)
 
 group("default") {
   deps = [ ":images" ] + packages_labels

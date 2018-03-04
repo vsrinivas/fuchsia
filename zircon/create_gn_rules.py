@@ -289,6 +289,9 @@ def main():
     parser.add_argument('--staging',
                         help='Path to the staging directory',
                         required=True)
+    parser.add_argument('--zircon-project',
+                        help='Zircon project to use when building packages',
+                        required=True)
     parser.add_argument('--zircon-user-build',
                         help='Path to the Zircon "user" build directory',
                         required=True)
@@ -315,6 +318,7 @@ def main():
         'make',
         'packages',
         'BUILDDIR=%s' % zircon_dir,
+        'PROJECT=%s' % args.zircon_project,
     ]
 
     env = {}

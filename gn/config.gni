@@ -23,14 +23,6 @@ declare_args() {
   # bootdata image used for booting.
   kernel_cmdline_file = ""
 
-  # A list of platforms, i.e. different Zircon kernels that were built.
-  # There will be a different `bootdata-${platform}.bin` built for each.
-  if (target_cpu == "x64") {
-    zircon_platforms = [ "x86" ]
-  } else {
-    zircon_platforms = [ target_cpu ]
-  }
-
   # The package key to use for signing the system package. New keys can be
   # generated with the `pm` host command.
   system_package_key = "//build/development.key"

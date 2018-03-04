@@ -80,8 +80,6 @@ def main():
                         nargs='?', const=True, default=False,
                         help="Show GN build arguments usable in --args",
                         metavar="BUILDARG")
-    parser.add_argument("--platforms", "-P",
-                        help="comma-separated list of platforms")
     parser.add_argument("--packages", "-p",
                         help="comma separated list of packages",
                         required=True)
@@ -151,10 +149,6 @@ def main():
             gn_args.append('thinlto_cache_dir="%s"' % args.thinlto_cache_dir)
 
     zircon_cpu = {"x86-64": "x86-64", "aarch64": "arm64"}[args.target_cpu]
-
-    if args.platforms:
-        gn_args.append('zircon_platforms=[%s]' % ', '.join(
-            ['"%s"' % platform for platform in args.platforms.split(',')]))
 
     select_variants = []
     bad_variants = []

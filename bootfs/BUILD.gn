@@ -41,7 +41,14 @@ bootdata("mkbootfs") {
     inputs += get_target_outputs(label)
   }
 
-  bootdata_label = "//build/gn:bootdata-${zircon_platforms[0]}"
+  # XXX(TO-848): as this is deprecated, for now we will build only an x86 or a
+  # qemu image to avoid renaming files that are in SDK etc, but also to to
+  # support ARM unikernel.
+  if (target_cpu == "x64") {
+    bootdata_label = "//build/gn:bootdata-x86"
+  } else {
+    bootdata_label = "//build/gn:bootdata-qemu"
+  }
 
   extra_input_labels = [bootdata_label] + extra_bootdata
   deps += extra_input_labels
@@ -54,11 +61,15 @@ bootdata("mkbootfs") {
   }
 }
 
+# XXX(TO-848): as this is deprecated, the list is re-read here, and depends on
+# //build/gn/BUILD.gn being evaluated first.
+zircon_boards = read_file("$root_build_dir/zircon-gn/boards.list", "list lines")
+
 group("bootfs") {
   deps = [
     ":mkbootfs",
   ]
-  foreach(platform, zircon_platforms) {
-    deps += [ "//build/gn:bootdata-${platform}" ]
+  foreach(board, zircon_boards) {
+    deps += [ "//build/gn:bootdata-${board}" ]
   }
 }
