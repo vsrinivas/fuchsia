@@ -53,9 +53,9 @@ set the `select_variant` GN build argument directly.
    approximate what you want and then edit the `select_variant` value `gen.py`
    produces:
    * You can just edit the `args.gn` file in the GN output directory
-     (e.g. `out/debug-x86-64/args.gn`) and the next `ninja` run (aka `fx build`)
+     (e.g. `out/debug-x86/args.gn`) and the next `ninja` run (aka `fx build`)
      will re-run `gn gen` with those changes.
-   * You can use the command `./buildtools gn args out/debug-x86-64`, which
+   * You can use the command `./buildtools gn args out/debug-x86`, which
      will run your `$EDITOR` on the `args.gn` file and then do `gn gen`
      immediately so you can see any errors in your GN syntax.
 

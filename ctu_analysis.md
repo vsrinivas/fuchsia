@@ -75,7 +75,7 @@ make clean && ./run.sh
 In order to build only the kernel, specify a `TARGET` as an environment variable:
 
 ```
-make clean && TARGET=./build-zircon-pc-x86-64/zircon.elf ./run.sh
+make clean && TARGET=./build-zircon-pc-x86/zircon.elf ./run.sh
 ```
 
 The script also requires [clangify.py](https://gist.github.com/karkhaz/2ab5e8c7a8783318d44ceca715f20438) to be in the zircon directory with executable bit set. After the analysis has finished, there will be a `.result-xtu` directory, containing:
