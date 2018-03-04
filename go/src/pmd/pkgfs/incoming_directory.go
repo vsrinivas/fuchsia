@@ -198,7 +198,7 @@ func importPackage(fs *Filesystem, root string) {
 		return
 	}
 
-	pf, err := r.ReadFile("meta/package.json")
+	pf, err := r.ReadFile("meta/package")
 	if err != nil {
 		log.Printf("error reading package metadata: %s", err)
 		return
