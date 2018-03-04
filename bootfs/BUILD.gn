@@ -45,7 +45,7 @@ bootdata("mkbootfs") {
   # qemu image to avoid renaming files that are in SDK etc, but also to to
   # support ARM unikernel.
   if (target_cpu == "x64") {
-    bootdata_label = "//build/gn:bootdata-x86"
+    bootdata_label = "//build/gn:bootdata-pc"
   } else {
     bootdata_label = "//build/gn:bootdata-qemu"
   }

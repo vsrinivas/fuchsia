@@ -17,8 +17,8 @@ BUILDTOOLS_PATH = os.path.join(FUCHSIA_ROOT, "buildtools", '%s-%s' % (
         'aarch64': 'arm64',
     }[platform.machine()],
 ))
-DEBUG_OUT_DIR = os.path.join(FUCHSIA_ROOT, "out", "debug-x86-64")
-RELEASE_OUT_DIR = os.path.join(FUCHSIA_ROOT, "out", "release-x86-64")
+DEBUG_OUT_DIR = os.path.join(FUCHSIA_ROOT, "out", "debug-x64")
+RELEASE_OUT_DIR = os.path.join(FUCHSIA_ROOT, "out", "release-x64")
 
 _BUILD_TOOLS = {}
 

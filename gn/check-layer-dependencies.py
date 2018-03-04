@@ -31,7 +31,7 @@ def main():
                         choices=LAYERS)
     parser.add_argument('--out',
                         help='Build output directory',
-                        default='out/debug-x86-64')
+                        default='out/debug-x64')
     args = parser.parse_args()
     layer = args.layer
     out = args.out

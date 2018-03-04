@@ -8,7 +8,7 @@ import("//build/gn/config.gni")
 import("//build/gn/packages.gni")
 import("//build/package.gni")
 
-zircon_build_dir = "//out/build-zircon/build-${zircon_cpu}"
+zircon_build_dir = "//out/build-zircon/build-${target_cpu}"
 
 zircon_files =
     exec_script("//build/zircon/list_source_files.py", [], "list lines")
@@ -29,9 +29,9 @@ exec_script("//build/zircon/create_gn_rules.py",
               "--staging",
               rebase_path("$root_out_dir/zircon-gn"),
               "--zircon-project",
-              zircon_cpu,
+              target_cpu,
               "--zircon-user-build",
-              rebase_path("//out/build-zircon/build-user-\${zircon_cpu}"),
+              rebase_path("//out/build-zircon/build-user-\${target_cpu}"),
               "--zircon-tool-build",
               rebase_path("//out/build-zircon"),
             ],
@@ -911,7 +911,7 @@ foreach(board, zircon_boards) {
 
   # arm64 kernels are not valid bootdata, and cannot be used to produce unified
   # kernel+bootdata images such as zedboot-{board}.bin
-  if (zircon_cpu != "arm64") {
+  if (target_cpu != "arm64") {
     # images/zedboot-${board}.bin combines the kernel image itself with
     # the BOOTDATA bits.  This single file can be booted by Gigaboot.
     bootdata("zedboot-${board}") {
@@ -944,7 +944,7 @@ foreach(board, zircon_boards) {
     zircon_bin = "${zircon_build_dir}/zircon.bin"
 
     # Unified zedboot is not available for arm64
-    if (zircon_cpu != "arm64") {
+    if (target_cpu != "arm64") {
       zedboot = ":zedboot-${board}"
     }
 
