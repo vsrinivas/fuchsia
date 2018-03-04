@@ -27,3 +27,17 @@ $(KERNEL_BOOTDATA): $(MKBOOTFS)
 
 kernel-only: $(KERNEL_BOOTDATA)
 kernel: $(KERNEL_BOOTDATA)
+
+# generate board list for the fuchsia build
+ZIRCON_BOARD_LIST := $(BUILDDIR)/export/boards.list
+BOARDS := "x86"
+
+$(ZIRCON_BOARD_LIST):
+	$(call BUILDECHO,generating $@)
+	@$(MKDIR)
+	$(NOECHO)echo $(BOARDS) > $@
+
+GENERATED += $(ZIRCON_BOARD_LIST)
+EXTRA_BUILDDEPS += $(ZIRCON_BOARD_LIST)
+
+packages: $(ZIRCON_BOARD_LIST)
