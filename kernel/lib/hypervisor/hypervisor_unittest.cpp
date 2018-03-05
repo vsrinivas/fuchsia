@@ -51,7 +51,7 @@ static zx_status_t create_gpas(fbl::RefPtr<VmObject> guest_phys_mem,
                                fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace>* gpas) {
 #ifdef ARCH_ARM64
     return hypervisor::GuestPhysicalAddressSpace::Create(guest_phys_mem, 1 /* vmid */, gpas);
-#elif ARCH_X86_64
+#elif ARCH_X86
     return hypervisor::GuestPhysicalAddressSpace::Create(guest_phys_mem, gpas);
 #endif
 }

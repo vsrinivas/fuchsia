@@ -421,7 +421,7 @@ FORCE:
 -include $(firstword $(wildcard kernel/project/$(PROJECT).mk \
 				kernel/project/alias/$(PROJECT).mk))
 ifndef TARGET
-$(error couldn't find project or project doesn't define target)
+$(error couldn't find project "$(PROJECT)" or project doesn't define target)
 endif
 include kernel/target/$(TARGET)/rules.mk
 ifndef PLATFORM

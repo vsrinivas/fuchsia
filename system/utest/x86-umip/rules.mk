@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-ifeq ($(SUBARCH),x86-64)
+ifeq ($(ARCH),x86)
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 

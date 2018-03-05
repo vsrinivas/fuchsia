@@ -68,7 +68,7 @@ LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/aarch64/memmove.S \
     $(GET_LOCAL_DIR)/aarch64/memset.S \
 
-else ifeq ($(SUBARCH),x86-64)
+else ifeq ($(ARCH),x86)
 
 LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/x86_64/memcpy.S \
@@ -85,7 +85,7 @@ LOCAL_SRCS += \
 endif
 
 # Only use the assembly version if x86-64 and not ASan.
-ifeq ($(SUBARCH):$(call TOBOOL,$(USE_ASAN)),x86-64:false)
+ifeq ($(ARCH):$(call TOBOOL,$(USE_ASAN)),x86:false)
 LOCAL_SRCS += $(GET_LOCAL_DIR)/x86_64/mempcpy.S
 else
 LOCAL_SRCS += $(GET_LOCAL_DIR)/mempcpy.c

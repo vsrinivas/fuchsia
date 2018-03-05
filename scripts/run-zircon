@@ -8,7 +8,7 @@
 
 function HELP {
     echo "help:"
-    echo "-a <arch>            : arm64, or x86"
+    echo "-a <arch>            : arm64, or x64"
     echo "-b                   : build first"
     echo "-c <text>            : add item to kernel commandline"
     echo "-C                   : use Clang build"
@@ -196,7 +196,7 @@ if (( !$GRAPHICS  )); then
     ARGS+=" -nographic"
 else
     ARGS+=" -serial stdio"
-    if [[ "$ARCH" == "x86" && $VIRTIO == 0 ]]; then
+    if [[ "$ARCH" == "x64" && $VIRTIO == 0 ]]; then
         # Enable Bochs VBE device, which Zircon has a device for
         ARGS+=" -vga std"
     else
@@ -272,7 +272,7 @@ if (( $NET )); then
         SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
         MAC=",mac=52:54:00$SUFFIX"
     fi
-    if [[ "$ARCH" == "x86" ]] && [[ $VIRTIO == 0 ]]; then
+    if [[ "$ARCH" == "x64" ]] && [[ $VIRTIO == 0 ]]; then
         ARGS+=" -device e1000,netdev=net0${MAC}"
     else
         ARGS+=" -device virtio-net-pci,netdev=net0${MAC}"
@@ -302,7 +302,7 @@ fi
 
 if [[ $SMP != 1 ]]; then
     ARGS+=" -smp $SMP"
-    if [[ "$ARCH" == "x86" ]]; then
+    if [[ "$ARCH" == "x64" ]]; then
         ARGS+=",threads=2"
     fi
 fi
@@ -338,7 +338,7 @@ case $ARCH in
             ARGS+=",gic_version=${GIC}"
         fi
         ;;
-    x86)
+    x64)
         QEMU=${QEMUDIR}qemu-system-x86_64
         ARGS+=" -machine q35 -kernel $BUILDDIR/zircon.bin"
         if (( $DO_KVM )); then

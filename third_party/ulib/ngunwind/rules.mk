@@ -57,7 +57,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/aarch64/fuchsia.c \
     $(LOCAL_DIR)/src/aarch64/regname.c \
 
-else ifeq ($(SUBARCH),x86-64)
+else ifeq ($(ARCH),x86)
 MODULE_SRCS += \
     $(LOCAL_DIR)/src/elf64.c \
     $(LOCAL_DIR)/src/x86_64/Gcreate_addr_space.c \

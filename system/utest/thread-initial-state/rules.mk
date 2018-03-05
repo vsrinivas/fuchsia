@@ -10,7 +10,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += $(LOCAL_DIR)/init-state.c
 
-ifeq ($(SUBARCH),x86-64)
+ifeq ($(ARCH),x86)
 MODULE_SRCS += $(LOCAL_DIR)/x86-64.S
 else ifeq ($(ARCH),arm64)
 MODULE_SRCS += $(LOCAL_DIR)/arm64.S

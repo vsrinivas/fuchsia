@@ -7,7 +7,7 @@ LOCAL_COMPILEFLAGS := \
 
 ifeq ($(ARCH),arm64)
 MUSL_ARCH := aarch64
-else ifeq ($(SUBARCH),x86-64)
+else ifeq ($(ARCH),x86)
 MUSL_ARCH := x86_64
 else
 $(error Unsupported architecture $(ARCH) for musl build!)
@@ -1007,7 +1007,7 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/third_party/math/log2l.c \
     $(LOCAL_DIR)/third_party/math/logl.c \
 
-else ifeq ($(SUBARCH),x86-64)
+else ifeq ($(ARCH),x86)
 LOCAL_SRCS += \
     $(LOCAL_DIR)/src/fenv/x86_64/fenv.c \
     $(LOCAL_DIR)/src/ldso/x86_64/tlsdesc.S \

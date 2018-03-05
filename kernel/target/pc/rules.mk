@@ -19,7 +19,7 @@ MODULE_DEPS := \
 include make/module.mk
 
 # build kernel-bootdata for fuchisa build
-KERNEL_BOOTDATA := $(BUILDDIR)/x86-kernel-bootdata.bin
+KERNEL_BOOTDATA := $(BUILDDIR)/pc-kernel-bootdata.bin
 $(KERNEL_BOOTDATA): $(MKBOOTFS)
 	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
@@ -30,7 +30,7 @@ kernel: $(KERNEL_BOOTDATA)
 
 # generate board list for the fuchsia build
 ZIRCON_BOARD_LIST := $(BUILDDIR)/export/boards.list
-BOARDS := "x86"
+BOARDS := "pc"
 
 $(ZIRCON_BOARD_LIST):
 	$(call BUILDECHO,generating $@)

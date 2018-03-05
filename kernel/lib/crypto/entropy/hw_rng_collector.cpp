@@ -14,7 +14,7 @@ namespace crypto {
 namespace entropy {
 
 zx_status_t HwRngCollector::GetInstance(Collector** ptr) {
-#if ARCH_X86_64
+#if ARCH_X86
     static HwRngCollector instance;
     *ptr = &instance;
     return ZX_OK;

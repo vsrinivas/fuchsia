@@ -20,10 +20,8 @@ struct arch_thread {
 #if __has_feature(safe_stack)
     vaddr_t unsafe_sp;
 #endif
-#if ARCH_X86_64
     vaddr_t fs_base;
     vaddr_t gs_base;
-#endif
 
     // Which entry of |suspended_general_regs| to use.
     // One of X86_GENERAL_REGS_*.

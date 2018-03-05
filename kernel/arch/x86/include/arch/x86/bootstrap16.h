@@ -8,8 +8,6 @@
 
 #include <arch/x86/mmu.h>
 
-#ifdef ARCH_X86_64
-
 #define BCD_PHYS_BOOTSTRAP_PML4_OFFSET 0
 #define BCD_PHYS_KERNEL_PML4_OFFSET 4
 #define BCD_PHYS_GDTR_OFFSET 8
@@ -129,5 +127,3 @@ static_assert(__offsetof(struct x86_realmode_entry_data, hdr) == 0, "");
 static_assert(__offsetof(struct x86_realmode_entry_data, registers_ptr) == RED_REGISTERS_OFFSET, "");
 
 #endif // __ASSEMBLER__
-
-#endif // ARCH_X86_64

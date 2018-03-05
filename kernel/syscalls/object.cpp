@@ -659,7 +659,7 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
                 return ZX_ERR_INVALID_ARGS;
             return dispatcher->set_name(name, size);
         }
-#if ARCH_X86_64
+#if ARCH_X86
         case ZX_PROP_REGISTER_FS: {
             if (size < sizeof(uintptr_t))
                 return ZX_ERR_BUFFER_TOO_SMALL;

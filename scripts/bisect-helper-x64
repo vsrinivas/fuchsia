@@ -27,7 +27,7 @@ if [[ "${DOWNLOAD_STATUS}" != 200 ]]; then
     echo "Could not find prebuilt at ${ZIRCON_BIN_URL}: ${DOWNLOAD_STATUS}"
     exit 125  # could not evaluate this commit, no prebuilt available
 fi
-"${SCRIPT_DIR}/run-zircon-x86-64" -o "${TEMP_DIR}"
+"${SCRIPT_DIR}/run-zircon-x64" -o "${TEMP_DIR}"
 
 echo "Did it work? y/n"
 read RESULT

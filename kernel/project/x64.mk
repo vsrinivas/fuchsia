@@ -9,8 +9,7 @@
 # emulating a standard PC with a 64bit x86 core
 
 ARCH := x86
-SUBARCH := x86-64
-TARGET := pc-x86
+TARGET := pc
 
 include kernel/project/virtual/test.mk
 include kernel/project/virtual/user.mk
