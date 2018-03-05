@@ -17,8 +17,7 @@
 namespace app {
 
 ServiceNamespace::ServiceNamespace()
-    : vfs_(async_get_default()),
-      directory_(fbl::AdoptRef(new fs::PseudoDir())) {}
+    : directory_(fbl::AdoptRef(new fs::PseudoDir())) {}
 
 ServiceNamespace::ServiceNamespace(
     f1dl::InterfaceRequest<app::ServiceProvider> request)
@@ -27,7 +26,7 @@ ServiceNamespace::ServiceNamespace(
 }
 
 ServiceNamespace::ServiceNamespace(fbl::RefPtr<fs::PseudoDir> directory)
-    : vfs_(nullptr), directory_(std::move(directory)) {}
+    : directory_(std::move(directory)) {}
 
 ServiceNamespace::~ServiceNamespace() = default;
 
@@ -57,22 +56,6 @@ void ServiceNamespace::RemoveServiceForName(const std::string& service_name) {
   if (it != name_to_service_connector_.end())
     name_to_service_connector_.erase(it);
   directory_->RemoveEntry(service_name);
-}
-
-bool ServiceNamespace::ServeDirectory(zx::channel channel) {
-  return vfs_.ServeDirectory(directory_, std::move(channel)) == ZX_OK;
-}
-
-int ServiceNamespace::OpenAsFileDescriptor() {
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) < 0)
-    return -1;
-  if (!ServeDirectory(std::move(h1)))
-    return -1;
-  fdio_t* io = fdio_remote_create(h2.release(), ZX_HANDLE_INVALID);
-  if (!io)
-    return -1;
-  return fdio_bind_to_fd(io, -1, 0);
 }
 
 void ServiceNamespace::Connect(fbl::StringPiece name, zx::channel channel) {

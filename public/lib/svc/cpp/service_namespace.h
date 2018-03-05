@@ -106,14 +106,6 @@ class ServiceNamespace : public app::ServiceProvider {
     RemoveServiceForName(service_name);
   }
 
-  // Serves a directory containing these services on the given channel.
-  //
-  // Returns true on success.
-  bool ServeDirectory(zx::channel channel);
-
-  // Retuns a file descriptor to a directory containing these services.
-  int OpenAsFileDescriptor();
-
  private:
   // Overridden from |app::ServiceProvider|:
   void ConnectToService(const f1dl::String& service_name,
@@ -124,7 +116,6 @@ class ServiceNamespace : public app::ServiceProvider {
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
 
-  fs::ManagedVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> directory_;
   f1dl::BindingSet<app::ServiceProvider> bindings_;
 
