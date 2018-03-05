@@ -276,6 +276,14 @@ in human-readable symbolic form.
   }}}
   ```
 
+## Trigger elements ##
+
+These elements cause an external action and will be presented to the
+user in a human readable form. Generally they trigger an external
+action to occur that results in a linkable page. The link or some
+other informative information about the external action can then be
+presented to the user.
+
 * `{{{dumpfile:%s:%s}}}`
 
   Here the first `%s` is an identifier for a type of dump and the
@@ -285,17 +293,17 @@ in human-readable symbolic form.
   format per se.  In general it might correspond to writing a file by
   that name or something similar.
 
-  This is technically a presentation element, but it may also serve to
-  trigger additional post-processing work beyond symbolizing the markup.
-  It indicates that a dump file of some sort has been published.  Some
-  logic attached to the symbolizing filter may understand certain types
-  of dump file and trigger additional post-processing of the dump file
-  upon encountering this element (e.g. generating visualizations,
-  symbolization).  The expectation is that the information collected
-  from contextual elements (described below) in the logging stream may
-  be necessary to decode the content of the dump.  So if the symbolizing
-  filter triggers other processing, it may need to feed some distilled
-  form of the contextual information to those processes.
+  This element may trigger additional post-processing work beyond
+  symbolizing the markup. It indicates that a dump file of some sort
+  has been published.  Some logic attached to the symbolizing filter may
+  understand certain types of dump file and trigger additional
+  post-processing of the dump file upon encountering this element (e.g.
+  generating visualizations, symbolization).  The expectation is that the
+  information collected from contextual elements (described below) in the
+  logging stream may be necessary to decode the content of the dump.  So
+  if the symbolizing filter triggers other processing, it may need to
+  feed some distilled form of the contextual information to those
+  processes.
 
   On Zircon and Fuchsia in particular, "publish" means to call the
   `__sanitizer_publish_data` function from `<zircon/sanitizer.h>`
