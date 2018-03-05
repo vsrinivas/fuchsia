@@ -548,7 +548,7 @@ tools:: $(ALLHOST_APPS) $(ALLHOST_LIBS)
 
 # meta rule for the kernel
 .PHONY: kernel
-kernel: $(OUTLKBIN) $(EXTRA_KERNELDEPS)
+kernel: $(OUTLKBIN) $(EXTRA_KERNELDEPS) kernel-bootdata
 ifeq ($(ENABLE_BUILD_LISTFILES),true)
 kernel: $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size
 endif
