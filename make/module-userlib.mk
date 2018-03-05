@@ -165,7 +165,7 @@ MODULE_PKG_FILES := $(shell find $(MODULE_SRCDIR) -type f)
 ifneq ($(MODULE_PACKAGE_INCS),)
 MODULE_PKG_INCS := $(MODULE_PACKAGE_INCS)
 else
-MODULE_PKG_INCS := $(filter %.h,$(filter $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
+MODULE_PKG_INCS := $(filter %.h %.modulemap,$(filter $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
 endif
 MODULE_PKG_INCS := $(foreach inc,$(MODULE_PKG_INCS),$(patsubst $(MODULE_SRCDIR)/include/%,%,$(inc))=SOURCE/$(inc))
 
@@ -179,7 +179,7 @@ ifeq ($(filter src,$(MODULE_PACKAGE)),src)
 ifneq ($(MODULE_PACKAGE_SRCS),)
 MODULE_PKG_SRCS := $(filter-out none,$(MODULE_PACKAGE_SRCS))
 else
-MODULE_PKG_SRCS := $(filter %.c %.h %.cpp %.S,$(filter-out $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
+MODULE_PKG_SRCS := $(filter %.c %.h %.cpp %.S %.modulemap,$(filter-out $(MODULE_SRCDIR)/include/%,$(MODULE_PKG_FILES)))
 endif
 MODULE_PKG_SRCS := $(foreach src,$(MODULE_PKG_SRCS),$(patsubst $(MODULE_SRCDIR)/%,%,$(src))=SOURCE/$(src))
 MODULE_PKG_ARCH := src
