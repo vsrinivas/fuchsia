@@ -93,7 +93,8 @@ uint32_t brcmf_flowring_lookup(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN]
     return BRCMF_FLOWRING_INVALID_ID;
 }
 
-uint32_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN], uint8_t prio, uint8_t ifidx) {
+zx_status_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN], uint8_t prio,
+                                  uint8_t ifidx) {
     struct brcmf_flowring_ring* ring;
     struct brcmf_flowring_hash* hash;
     uint16_t hash_idx;

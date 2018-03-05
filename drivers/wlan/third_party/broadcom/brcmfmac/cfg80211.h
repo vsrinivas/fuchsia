@@ -224,8 +224,8 @@ struct escan_info {
     uint8_t* escan_buf;
     struct wiphy* wiphy;
     struct brcmf_if* ifp;
-    int32_t (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
-                   struct cfg80211_scan_request* request);
+    zx_status_t (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
+                       struct cfg80211_scan_request* request);
 };
 
 /**
@@ -386,24 +386,25 @@ static inline struct brcmf_cfg80211_connect_info* cfg_to_conn(struct brcmf_cfg80
 struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr, struct device* busdev,
                                                   bool p2pdev_forced);
 void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg);
-int32_t brcmf_cfg80211_up(struct net_device* ndev);
-int32_t brcmf_cfg80211_down(struct net_device* ndev);
+zx_status_t brcmf_cfg80211_up(struct net_device* ndev);
+zx_status_t brcmf_cfg80211_down(struct net_device* ndev);
 enum nl80211_iftype brcmf_cfg80211_get_iftype(struct brcmf_if* ifp);
 
-struct brcmf_cfg80211_vif* brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg,
-                                           enum nl80211_iftype type);
+zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, enum nl80211_iftype type,
+                            struct brcmf_cfg80211_vif** vif_out);
 void brcmf_free_vif(struct brcmf_cfg80211_vif* vif);
 
-int32_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktflag,
-                              const uint8_t* vndr_ie_buf, uint32_t vndr_ie_len);
-int32_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif);
+zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktflag,
+                                  const uint8_t* vndr_ie_buf, uint32_t vndr_ie_len);
+zx_status_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif);
 uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, struct ieee80211_channel* ch);
 bool brcmf_get_vif_state_any(struct brcmf_cfg80211_info* cfg, unsigned long state);
 void brcmf_cfg80211_arm_vif_event(struct brcmf_cfg80211_info* cfg, struct brcmf_cfg80211_vif* vif);
 bool brcmf_cfg80211_vif_event_armed(struct brcmf_cfg80211_info* cfg);
-int brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, uint8_t action, ulong timeout);
-int32_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
-                                    bool aborted, bool fw_abort);
+uint32_t brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, uint8_t action,
+                                       ulong timeout);
+zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
+                                        bool aborted, bool fw_abort);
 void brcmf_set_mpc(struct brcmf_if* ndev, int mpc);
 void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg);
 void brcmf_cfg80211_free_netdev(struct net_device* ndev);

@@ -105,9 +105,10 @@ static const char* brcmf_fil_get_errstr(uint32_t err) {
 }
 #endif /* DEBUG */
 
-static int32_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len, bool set) {
+static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len,
+                                      bool set) {
     struct brcmf_pub* drvr = ifp->drvr;
-    int32_t err, fwerr;
+    zx_status_t err, fwerr;
 
     if (drvr->bus_if->state != BRCMF_BUS_UP) {
         brcmf_err("bus is down. we have nothing to do.\n");
@@ -123,17 +124,17 @@ static int32_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* data
         err = brcmf_proto_query_dcmd(drvr, ifp->ifidx, cmd, data, len, &fwerr);
     }
 
-    if (err) {
-        brcmf_dbg(FIL, "Failed: %s (%d)\n", brcmf_fil_get_errstr((uint32_t)(-err)), err);
-    } else if (fwerr < 0) {
-        brcmf_dbg(FIL, "Firmware error: %s (%d)\n", brcmf_fil_get_errstr((uint32_t)(-fwerr)), fwerr);
+    if (err != ZX_OK) {
+        brcmf_dbg(FIL, "Failed: %s (%d)\n", brcmf_fil_get_errstr(err), err);
+    } else if (fwerr != ZX_OK) {
+        brcmf_dbg(FIL, "Firmware error: %s (%d)\n", brcmf_fil_get_errstr(fwerr), fwerr);
         err = -EBADE;
     }
     return err;
 }
 
-int32_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len) {
-    int32_t err;
+zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len) {
+    zx_status_t err;
 
     mutex_lock(&ifp->drvr->proto_block);
 
@@ -146,8 +147,8 @@ int32_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, void* data, u
     return err;
 }
 
-int32_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len) {
-    int32_t err;
+zx_status_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len) {
+    zx_status_t err;
 
     mutex_lock(&ifp->drvr->proto_block);
     err = brcmf_fil_cmd_data(ifp, cmd, data, len, false);
@@ -160,8 +161,8 @@ int32_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* data, u
     return err;
 }
 
-int32_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t data) {
-    int32_t err;
+zx_status_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t data) {
+    zx_status_t err;
     uint32_t data_le = data;
 
     mutex_lock(&ifp->drvr->proto_block);
@@ -172,8 +173,8 @@ int32_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t data)
     return err;
 }
 
-int32_t brcmf_fil_cmd_int_get(struct brcmf_if* ifp, uint32_t cmd, uint32_t* data) {
-    int32_t err;
+zx_status_t brcmf_fil_cmd_int_get(struct brcmf_if* ifp, uint32_t cmd, uint32_t* data) {
+    zx_status_t err;
     uint32_t data_le = *data;
 
     mutex_lock(&ifp->drvr->proto_block);
@@ -204,9 +205,10 @@ static uint32_t brcmf_create_iovar(char* name, const char* data, uint32_t datale
     return len + datalen;
 }
 
-int32_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, char* name, const void* data, uint32_t len) {
+zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, char* name, const void* data,
+                                     uint32_t len) {
     struct brcmf_pub* drvr = ifp->drvr;
-    int32_t err;
+    zx_status_t err;
     uint32_t buflen;
 
     mutex_lock(&drvr->proto_block);
@@ -226,9 +228,9 @@ int32_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, char* name, const void* d
     return err;
 }
 
-int32_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, char* name, void* data, uint32_t len) {
+zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, char* name, void* data, uint32_t len) {
     struct brcmf_pub* drvr = ifp->drvr;
-    int32_t err;
+    zx_status_t err;
     uint32_t buflen;
 
     mutex_lock(&drvr->proto_block);
@@ -236,7 +238,7 @@ int32_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, char* name, void* data, u
     buflen = brcmf_create_iovar(name, data, len, (char*)drvr->proto_buf, sizeof(drvr->proto_buf));
     if (buflen) {
         err = brcmf_fil_cmd_data(ifp, BRCMF_C_GET_VAR, drvr->proto_buf, buflen, false);
-        if (err == 0) {
+        if (err == ZX_OK) {
             memcpy(data, drvr->proto_buf, len);
         }
     } else {
@@ -251,25 +253,25 @@ int32_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, char* name, void* data, u
     return err;
 }
 
-int32_t brcmf_fil_iovar_int_set(struct brcmf_if* ifp, char* name, uint32_t data) {
+zx_status_t brcmf_fil_iovar_int_set(struct brcmf_if* ifp, char* name, uint32_t data) {
     uint32_t data_le = data;
 
     return brcmf_fil_iovar_data_set(ifp, name, &data_le, sizeof(data_le));
 }
 
-int32_t brcmf_fil_iovar_int_get(struct brcmf_if* ifp, char* name, uint32_t* data) {
+zx_status_t brcmf_fil_iovar_int_get(struct brcmf_if* ifp, char* name, uint32_t* data) {
     uint32_t data_le = *data;
-    int32_t err;
+    zx_status_t err;
 
     err = brcmf_fil_iovar_data_get(ifp, name, &data_le, sizeof(data_le));
-    if (err == 0) {
+    if (err == ZX_OK) {
         *data = data_le;
     }
     return err;
 }
 
-static uint32_t brcmf_create_bsscfg(int32_t bsscfgidx, char* name, char* data, uint32_t datalen, char* buf,
-                               uint32_t buflen) {
+static uint32_t brcmf_create_bsscfg(int32_t bsscfgidx, char* name, char* data, uint32_t datalen,
+                                    char* buf, uint32_t buflen) {
     const char* prefix = "bsscfg:";
     char* p;
     uint32_t prefixlen;
@@ -313,9 +315,9 @@ static uint32_t brcmf_create_bsscfg(int32_t bsscfgidx, char* name, char* data, u
     return iolen;
 }
 
-int32_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, char* name, void* data, uint32_t len) {
+zx_status_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, char* name, void* data, uint32_t len) {
     struct brcmf_pub* drvr = ifp->drvr;
-    int32_t err;
+    zx_status_t err;
     uint32_t buflen;
 
     mutex_lock(&drvr->proto_block);
@@ -337,9 +339,9 @@ int32_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, char* name, void* data, 
     return err;
 }
 
-int32_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, char* name, void* data, uint32_t len) {
+zx_status_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, char* name, void* data, uint32_t len) {
     struct brcmf_pub* drvr = ifp->drvr;
-    int32_t err;
+    zx_status_t err;
     uint32_t buflen;
 
     mutex_lock(&drvr->proto_block);
@@ -348,7 +350,7 @@ int32_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, char* name, void* data, 
                                  sizeof(drvr->proto_buf));
     if (buflen) {
         err = brcmf_fil_cmd_data(ifp, BRCMF_C_GET_VAR, drvr->proto_buf, buflen, false);
-        if (err == 0) {
+        if (err == ZX_OK) {
             memcpy(data, drvr->proto_buf, len);
         }
     } else {
@@ -363,18 +365,18 @@ int32_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, char* name, void* data, 
     return err;
 }
 
-int32_t brcmf_fil_bsscfg_int_set(struct brcmf_if* ifp, char* name, uint32_t data) {
+zx_status_t brcmf_fil_bsscfg_int_set(struct brcmf_if* ifp, char* name, uint32_t data) {
     uint32_t data_le = data;
 
     return brcmf_fil_bsscfg_data_set(ifp, name, &data_le, sizeof(data_le));
 }
 
-int32_t brcmf_fil_bsscfg_int_get(struct brcmf_if* ifp, char* name, uint32_t* data) {
+zx_status_t brcmf_fil_bsscfg_int_get(struct brcmf_if* ifp, char* name, uint32_t* data) {
     uint32_t data_le = *data;
-    int32_t err;
+    zx_status_t err;
 
     err = brcmf_fil_bsscfg_data_get(ifp, name, &data_le, sizeof(data_le));
-    if (err == 0) {
+    if (err == ZX_OK) {
         *data = data_le;
     }
     return err;

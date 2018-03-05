@@ -31,6 +31,43 @@
 #include <sys/types.h>
 #include <zircon/assert.h>
 
+// Some temp weirdness here to make zx_status_t incompatible with int and uint but compatible with
+// ZX_OK.
+#define zx_status_t enum zxstatusenum
+
+#undef ZX_OK
+
+enum zxstatusenum {
+    ZX_OK = -1,
+    ENOENT,
+    ENAVAIL,
+    ENFILE, // file table overflow.
+    EOPNOTSUPP, // ZX_ERR_NOT_SUPPORTED
+    EBADE,
+    EPROTO,
+    EIO,
+    ENODATA,
+    EINVAL,
+    EILSEQ,
+    ENXIO,
+    ENOMEM, // ZX_ERR_NO_MEMORY
+    ENODEV,
+    ENOTBLK,
+    ENOSR,
+    ETIMEDOUT,
+    ERESTARTSYS,
+    EACCES,
+    EBUSY,
+    E2BIG,
+    EPERM,
+    ENOSPC,
+    ENOTSUPP,
+    EAGAIN,
+    EFAULT,
+    EBADF,
+    ENOMEDIUM,
+};
+
 typedef uint16_t __be16;
 typedef uint32_t __be32;
 typedef uint64_t __be64;
@@ -132,7 +169,9 @@ typedef uint32_t gfp_t;
 #define LINUX_FUNCIV(name) LINUX_FUNC(name, int, void*)
 #define LINUX_FUNCVV(name) LINUX_FUNC(name, void*, void*)
 #define LINUX_FUNCVI(name) LINUX_FUNC(name, void*, int)
+#define LINUX_FUNCVS(name) LINUX_FUNC(name, void*, zx_status_t)
 #define LINUX_FUNCcVI(name) LINUX_FUNC(name, const void*, int)
+#define LINUX_FUNCcVS(name) LINUX_FUNC(name, const void*, zx_status_t)
 #define LINUX_FUNCcVV(name) LINUX_FUNC(name, const void*, void*)
 #define LINUX_FUNCVU(name) LINUX_FUNC(name, void*, uint16_t)
 #define LINUX_FUNCUU(name) LINUX_FUNC(name, uint32_t, uint32_t)
@@ -143,7 +182,6 @@ LINUX_FUNCVV(eth_broadcast_addr)
 LINUX_FUNCcVV(is_multicast_ether_addr)
 LINUX_FUNCVV(eth_zero_addr)
 LINUX_FUNCIV(kcalloc)
-//LINUX_FUNCVV(brcmf_msgbuf_delete_flowring)
 LINUX_FUNCVV(skb_mac_header)
 LINUX_FUNCVI(pskb_expand_head)
 LINUX_FUNCVV(skb_queue_head)
@@ -160,7 +198,9 @@ LINUX_FUNCII(msecs_to_jiffies)
 LINUX_FUNCII(jiffies_to_msecs)
 LINUX_FUNCII(udelay)
 LINUX_FUNCX(net_ratelimit)
+// Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
 LINUX_FUNCVI(sdio_readb)
+// Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
 LINUX_FUNCVI(sdio_writeb)
 LINUX_FUNCVI(sdio_claim_host)
 LINUX_FUNCVI(sdio_release_host)
@@ -230,7 +270,7 @@ LINUX_FUNCII(msleep)
 LINUX_FUNCVI(pr_warn)
 LINUX_FUNCVV(spin_unlock_bh)
 LINUX_FUNCVV(spin_lock_bh)
-LINUX_FUNCVI(sdio_enable_func)
+LINUX_FUNCVS(sdio_enable_func)
 LINUX_FUNCVI(sdio_disable_func)
 LINUX_FUNCVV(alloc_ordered_workqueue)
 LINUX_FUNCVI(INIT_WORK)
@@ -247,7 +287,7 @@ LINUX_FUNC(release_firmware, const void*, int)
 #define spin_lock_irqsave(a, b) {b=0;}
 LINUX_FUNCII(enable_irq)
 LINUX_FUNCVV(wiphy_priv)
-LINUX_FUNCVI(wiphy_register)
+LINUX_FUNCVS(wiphy_register)
 LINUX_FUNCVI(wiphy_unregister)
 LINUX_FUNCVV(wiphy_new)
 LINUX_FUNCVI(wiphy_free)
@@ -263,14 +303,13 @@ typedef struct wait_queue_head {
   int foo;
 } wait_queue_head_t;
 LINUX_FUNC(wait_event_interruptible_timeout, struct wait_queue_head, int)
-LINUX_FUNC(wait_event_timeout, struct wait_queue_head, int)
+LINUX_FUNC(wait_event_timeout, struct wait_queue_head, uint32_t)
 LINUX_FUNCVI(sdio_f0_writeb)
 #define max_t(a, b, c) (b)
 LINUX_FUNCVI(queue_work)
 LINUX_FUNCX(in_interrupt)
 LINUX_FUNCVI(sdio_f0_readb)
 LINUX_FUNCVI(pr_debug)
-LINUX_FUNCVI(IS_ERR)
 LINUX_FUNCII(allow_signal)
 LINUX_FUNCX(kthread_should_stop)
 LINUX_FUNCVI(wait_for_completion_interruptible)
@@ -282,7 +321,7 @@ LINUX_FUNCVI(timer_setup)
 LINUX_FUNCVI(timer_pending)
 LINUX_FUNCII(__ffs)
 LINUX_FUNCVI(init_completion)
-LINUX_FUNCVV(kthread_run)
+LINUX_FUNCVS(kthread_run)
 LINUX_FUNCVV(dev_name)
 LINUX_FUNCVI(init_waitqueue_head)
 LINUX_FUNCVI(device_release_driver)
@@ -299,7 +338,7 @@ LINUX_FUNCVI(request_firmware)
     void* __modinit() { return a; }
 LINUX_FUNCVV(dev_get_platdata)
 LINUX_FUNCVV(dev_set_drvdata)
-LINUX_FUNCVI(platform_driver_probe)
+LINUX_FUNCVI(platform_driver_probe) // Checked for return ENODEV / ZX_ERR_IO_NOT_PRESENT
 LINUX_FUNCVI(platform_driver_unregister)
 LINUX_FUNCII(set_bit)
 LINUX_FUNCII(clear_bit)
@@ -307,7 +346,7 @@ LINUX_FUNCII(test_bit)
 LINUX_FUNCII(test_and_clear_bit)
 LINUX_FUNCVI(cfg80211_ready_on_channel)
 LINUX_FUNCVI(cfg80211_sched_scan_results)
-LINUX_FUNCcVI(cfg80211_get_p2p_attr)
+LINUX_FUNCcVS(cfg80211_get_p2p_attr) // TODO(cphoenix): Can this return >0? If so, adjust usage.
 LINUX_FUNCII(ieee80211_frequency_to_channel)
 LINUX_FUNCVI(cfg80211_remain_on_channel_expired)
 LINUX_FUNCII(ieee80211_channel_to_frequency)
@@ -335,12 +374,12 @@ LINUX_FUNCcVI(pci_write_config_dword)
 LINUX_FUNCcVI(pci_read_config_dword)
 LINUX_FUNCcVI(pci_enable_msi)
 LINUX_FUNCcVI(pci_disable_msi)
-LINUX_FUNCcVI(pci_enable_device)
+LINUX_FUNCcVS(pci_enable_device)
 LINUX_FUNCcVI(pci_disable_device)
 LINUX_FUNCcVI(pci_set_master)
 LINUX_FUNCcVI(pci_resource_start)
 LINUX_FUNCcVI(pci_resource_len)
-LINUX_FUNCcVI(pci_register_driver)
+LINUX_FUNCcVS(pci_register_driver)
 LINUX_FUNCcVI(pci_unregister_driver)
 LINUX_FUNCcVI(pci_pme_capable)
 LINUX_FUNCVI(device_wakeup_enable)
@@ -350,7 +389,7 @@ LINUX_FUNCII(free_irq)
 LINUX_FUNCVV(dma_alloc_coherent)
 LINUX_FUNCVV(dma_free_coherent)
 LINUX_FUNCVI(memcpy_fromio)
-LINUX_FUNCVI(memcpy_toio)
+LINUX_FUNCVS(memcpy_toio)
 LINUX_FUNCVI(sdio_memcpy_toio)
 LINUX_FUNCVV(dma_zalloc_coherent)
 LINUX_FUNCIV(ioremap_nocache)
@@ -401,10 +440,9 @@ LINUX_FUNCVI(netif_carrier_on)
 LINUX_FUNCVI(dev_kfree_skb_any)
 LINUX_FUNCIV(alloc_netdev)
 LINUX_FUNCVI(seq_printf)
-LINUX_FUNCVI(seq_write)
+LINUX_FUNCVS(seq_write)
 LINUX_FUNCVI(netif_queue_stopped)
 LINUX_FUNCVI(trace_brcmf_bcdchdr)
-//LINUX_FUNCVI(brcmf_proto_msgbuf_rx_trigger)
 LINUX_FUNCVI(of_device_is_compatible)
 LINUX_FUNCVI(of_property_read_u32)
 LINUX_FUNCVI(of_find_property)
@@ -413,7 +451,7 @@ LINUX_FUNCII(irqd_get_trigger_type)
 LINUX_FUNCII(irq_get_irq_data)
 LINUX_FUNCVV(bcm47xx_nvram_get_contents)
 LINUX_FUNCVI(bcm47xx_nvram_release_contents)
-LINUX_FUNCVI(request_firmware_nowait)
+LINUX_FUNCVS(request_firmware_nowait)
 LINUX_FUNCVI(dma_map_single)
 LINUX_FUNCVI(dma_mapping_error)
 LINUX_FUNCVI(atomic_cmpxchg)
@@ -424,7 +462,7 @@ LINUX_FUNCVI(strnstr)
 LINUX_FUNCX(get_random_int)
 LINUX_FUNCII(gcd)
 LINUX_FUNCVI(usb_fill_control_urb)
-LINUX_FUNCVI(usb_submit_urb)
+LINUX_FUNCVS(usb_submit_urb)
 LINUX_FUNCVI(usb_sndctrlpipe)
 LINUX_FUNCVI(usb_rcvctrlpipe)
 LINUX_FUNCVI(sdio_claim_irq)
@@ -438,16 +476,15 @@ LINUX_FUNCII(request_irq)
 LINUX_FUNCII(enable_irq_wake)
 LINUX_FUNCII(disable_irq_wake)
 LINUX_FUNCVI(sdio_release_irq)
-LINUX_FUNCVI(sdio_readl)
-LINUX_FUNCVI(sdio_writel)
-LINUX_FUNCVI(sdio_memcpy_fromio)
-LINUX_FUNCVI(sdio_readsb)
+LINUX_FUNCVI(sdio_readl)  // Last param is zx_status_t
+LINUX_FUNCVI(sdio_writel) // Last param is zx_status_t
+LINUX_FUNCVS(sdio_memcpy_fromio)
+LINUX_FUNCVS(sdio_readsb)
 LINUX_FUNCVI(dev_coredumpv)
-LINUX_FUNCVV(debugfs_create_dir)
-LINUX_FUNCVV(debugfs_create_devm_seqfile)
+LINUX_FUNCVS(debugfs_create_dir) // Must set dir to NULL or valid pointer
+LINUX_FUNCVS(debugfs_create_devm_seqfile)
 LINUX_FUNCVI(debugfs_remove_recursive)
 LINUX_FUNCVI(sg_set_buf)
-LINUX_FUNCVI(IS_ERR_OR_NULL)
 LINUX_FUNCVI(debugfs_create_u32)
 LINUX_FUNCVV(sg_next)
 LINUX_FUNCVI(cfg80211_crit_proto_stopped)
@@ -467,6 +504,7 @@ LINUX_FUNCVI(usb_free_urb)
 LINUX_FUNCVI(nla_put)
 LINUX_FUNCVI(nla_put_u16)
 LINUX_FUNCVI(mmc_set_data_timeout)
+// NOTE: mmc_wait_for_req sets .error fields of mmc_command and mmc_data structs to ENOMEDIUM sometimes.
 LINUX_FUNCVI(mmc_wait_for_req)
 LINUX_FUNCVI(sg_init_table)
 LINUX_FUNCVI(device_set_wakeup_enable)
@@ -476,10 +514,10 @@ LINUX_FUNCVV(interface_to_usbdev)
 LINUX_FUNCVI(sg_alloc_table)
 LINUX_FUNCVI(pm_runtime_allow)
 LINUX_FUNCVI(pm_runtime_forbid)
-LINUX_FUNCVI(sdio_set_block_size)
+LINUX_FUNCVS(sdio_set_block_size)
 #define SDIO_DEVICE(a,b) (a)
 #define USB_DEVICE(a,b) .idVendor=a, .idProduct=b
-LINUX_FUNCVI(sdio_register_driver)
+LINUX_FUNCVS(sdio_register_driver)
 LINUX_FUNCVV(sdio_unregister_driver)
 LINUX_FUNCVI(usb_set_intfdata)
 LINUX_FUNCVI(usb_endpoint_xfer_bulk)
@@ -510,8 +548,6 @@ typedef void* usb_complete_t;
 #define DECLARE_WAITQUEUE(name, b) struct linuxwait name
 #define DECLARE_WORK(name, b) struct linuxwait name = {b};
 #define container_of(a, b, c) ((b*)0)
-#define ERR_PTR(n) ((void*)(size_t)n)
-#define PTR_ERR(n) ((int)n)
 #define READ_ONCE(a) (a)
 #define BUG_ON(a)
 
@@ -519,35 +555,6 @@ struct linuxwait {
     void* foo;
 };
 #define WQ_MEM_RECLAIM (17)
-enum {
-    ENOENT,
-    ENAVAIL, // Used when brcmf_fws_borrow_credit() fails
-    ESRCH, // no such process. Used when mac_descriptor->occupied is false.
-    ENFILE, // file table overflow.
-    EOPNOTSUPP, // ZX_ERR_NOT_SUPPORTED
-    EBADE,
-    EPROTO,
-    EIO,
-    ENODATA,
-    EINVAL,
-    ENXIO,
-    ENOMEM, // ZX_ERR_NO_MEMORY
-    ENODEV,
-    ENOTBLK,
-    ENOSR,
-    ETIMEDOUT,
-    ERESTARTSYS,
-    EACCES,
-    EBUSY,
-    E2BIG,
-    EPERM,
-    ENOSPC,
-    ENOTSUPP,
-    EAGAIN,
-    EFAULT,
-    EBADF,
-    ENOMEDIUM,
-};
 
 #define KBUILD_MODNAME "hi world"
 #define THIS_MODULE ((void*)0)
@@ -744,7 +751,6 @@ enum {
     BCMA_CORE_ARM_CM3,
     BCMA_CORE_ARM_CA7,
     BCMA_CORE_SYS_MEM,
-    EILSEQ,
     BCMA_CORE_80211,
     BCMA_CC_CAP_EXT_AOB_PRESENT,
     BCMA_CORE_PMU,
@@ -861,7 +867,6 @@ extern uint64_t jiffies;
 
 #define __iomem            // May want it later
 #define IS_ENABLED(a) (a)  // not in compiler.h
-#define PTR_ERR_OR_ZERO(a) (0)
 #define HZ (60)
 
 struct firmware {
@@ -947,7 +952,7 @@ struct platform_driver {
     } driver;
 };
 
-struct net_device_ops {
+struct net_device_ops { // Probably all return zx_status_t
     void* ndo_open;
     void* ndo_stop;
     void* ndo_start_xmit;
@@ -1208,7 +1213,7 @@ struct pci_driver {
     struct pci_device_id node;
     char* name;
     const void* id_table;
-    int (*probe)(struct pci_dev* pdev, const struct pci_device_id* id);
+    zx_status_t (*probe)(struct pci_dev* pdev, const struct pci_device_id* id);
     void (*remove)(struct pci_dev* pdev);
 };
 
@@ -1443,7 +1448,7 @@ struct cfg80211_pmk_conf {
     int pmk_len;
 };
 
-struct cfg80211_ops {
+struct cfg80211_ops { // Most of these return zx_status_t
     void* add_virtual_intf;
     void* del_virtual_intf;
     void* change_virtual_intf;
@@ -1553,7 +1558,7 @@ struct mmc_request {
 struct mmc_command {
     uint32_t arg;
     uint32_t flags;
-    int error;
+    zx_status_t error;
     uint32_t opcode;
 };
 
@@ -1563,7 +1568,7 @@ struct mmc_data {
     void* sg;
     int blksz;
     uint32_t flags;
-    uint32_t error;
+    zx_status_t error;
 };
 
 struct usb_ctrlrequest {

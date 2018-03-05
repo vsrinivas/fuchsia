@@ -28,7 +28,7 @@
 #include "msgbuf.h"
 #include "proto.h"
 
-int brcmf_proto_attach(struct brcmf_pub* drvr) {
+zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr) {
     struct brcmf_proto* proto;
 
     brcmf_dbg(TRACE, "Enter\n");
@@ -58,7 +58,7 @@ int brcmf_proto_attach(struct brcmf_pub* drvr) {
         brcmf_err("Not all proto handlers have been installed\n");
         goto fail;
     }
-    return 0;
+    return ZX_OK;
 
 fail:
     kfree(proto);

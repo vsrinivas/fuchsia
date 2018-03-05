@@ -197,7 +197,8 @@ static enum nvram_parser_state (*nv_parser_states[])(struct nvram_parser* nvp) =
     brcmf_nvram_handle_comment, brcmf_nvram_handle_end
 };
 
-static int brcmf_init_nvram_parser(struct nvram_parser* nvp, const uint8_t* data, size_t data_len) {
+static zx_status_t brcmf_init_nvram_parser(struct nvram_parser* nvp, const uint8_t* data,
+                                           size_t data_len) {
     size_t size;
 
     memset(nvp, 0, sizeof(*nvp));
@@ -217,7 +218,7 @@ static int brcmf_init_nvram_parser(struct nvram_parser* nvp, const uint8_t* data
 
     nvp->line = 1;
     nvp->column = 1;
-    return 0;
+    return ZX_OK;
 }
 
 /* brcmf_fw_strip_multi_v1 :Some nvram files contain settings for multiple
@@ -438,7 +439,7 @@ struct brcmf_fw {
     const char* nvram_name;
     uint16_t domain_nr;
     uint16_t bus_nr;
-    void (*done)(struct device* dev, int err, const struct firmware* fw, void* nvram_image,
+    void (*done)(struct device* dev, zx_status_t err, const struct firmware* fw, void* nvram_image,
                  uint32_t nvram_len);
 };
 
@@ -475,7 +476,7 @@ static void brcmf_fw_request_nvram_done(const struct firmware* fw, void* ctx) {
         goto fail;
     }
 
-    fwctx->done(fwctx->dev, 0, fwctx->code, nvram, nvram_length);
+    fwctx->done(fwctx->dev, ZX_OK, fwctx->code, nvram, nvram_length);
     kfree(fwctx);
     return;
 
@@ -488,7 +489,7 @@ fail:
 
 static void brcmf_fw_request_code_done(const struct firmware* fw, void* ctx) {
     struct brcmf_fw* fwctx = ctx;
-    int ret = 0;
+    zx_status_t ret = ZX_OK;
 
     brcmf_dbg(TRACE, "enter: dev=%s\n", dev_name(fwctx->dev));
     if (!fw) {
@@ -505,7 +506,7 @@ static void brcmf_fw_request_code_done(const struct firmware* fw, void* ctx) {
                                   fwctx, brcmf_fw_request_nvram_done);
 
     /* pass NULL to nvram callback for bcm47xx fallback */
-    if (ret) {
+    if (ret != ZX_OK) {
         brcmf_fw_request_nvram_done(NULL, fwctx);
     }
     return;
@@ -517,11 +518,12 @@ done:
     kfree(fwctx);
 }
 
-int brcmf_fw_get_firmwares_pcie(struct device* dev, uint16_t flags, const char* code, const char* nvram,
-                                void (*fw_cb)(struct device* dev, int err,
-                                              const struct firmware* fw, void* nvram_image,
-                                              uint32_t nvram_len),
-                                uint16_t domain_nr, uint16_t bus_nr) {
+zx_status_t brcmf_fw_get_firmwares_pcie(struct device* dev, uint16_t flags, const char* code,
+                                        const char* nvram,
+                                        void (*fw_cb)(struct device* dev, zx_status_t err,
+                                                      const struct firmware* fw, void* nvram_image,
+                                                      uint32_t nvram_len),
+                                        uint16_t domain_nr, uint16_t bus_nr) {
     struct brcmf_fw* fwctx;
 
     brcmf_dbg(TRACE, "enter: dev=%s\n", dev_name(dev));
@@ -551,15 +553,18 @@ int brcmf_fw_get_firmwares_pcie(struct device* dev, uint16_t flags, const char* 
                                    brcmf_fw_request_code_done);
 }
 
-int brcmf_fw_get_firmwares(struct device* dev, uint16_t flags, const char* code, const char* nvram,
-                           void (*fw_cb)(struct device* dev, int err, const struct firmware* fw,
-                                         void* nvram_image, uint32_t nvram_len)) {
+zx_status_t brcmf_fw_get_firmwares(struct device* dev, uint16_t flags, const char* code,
+                                   const char* nvram,
+                                   void (*fw_cb)(struct device* dev, zx_status_t err,
+                                                 const struct firmware* fw, void* nvram_image,
+                                                 uint32_t nvram_len)) {
     return brcmf_fw_get_firmwares_pcie(dev, flags, code, nvram, fw_cb, 0, 0);
 }
 
-int brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev, struct brcmf_firmware_mapping mapping_table[],
-                              uint32_t table_size, char fw_name[BRCMF_FW_NAME_LEN],
-                              char nvram_name[BRCMF_FW_NAME_LEN]) {
+zx_status_t brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev,
+                                      struct brcmf_firmware_mapping mapping_table[],
+                                      uint32_t table_size, char fw_name[BRCMF_FW_NAME_LEN],
+                                      char nvram_name[BRCMF_FW_NAME_LEN]) {
     uint32_t i;
     char end;
 
@@ -596,5 +601,5 @@ int brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev, struct brcmf_firm
 
     brcmf_info("using %s for chip %#08x(%d) rev %#08x\n", fw_name, chip, chip, chiprev);
 
-    return 0;
+    return ZX_OK;
 }

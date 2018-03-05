@@ -25,9 +25,11 @@
 #include "core.h"
 
 void brcmf_commonring_register_cb(struct brcmf_commonring* commonring,
-                                  int (*cr_ring_bell)(void* ctx), int (*cr_update_rptr)(void* ctx),
-                                  int (*cr_update_wptr)(void* ctx), int (*cr_write_rptr)(void* ctx),
-                                  int (*cr_write_wptr)(void* ctx), void* ctx) {
+                                  zx_status_t (*cr_ring_bell)(void* ctx),
+                                  zx_status_t (*cr_update_rptr)(void* ctx),
+                                  zx_status_t (*cr_update_wptr)(void* ctx),
+                                  zx_status_t (*cr_write_rptr)(void* ctx),
+                                  zx_status_t (*cr_write_wptr)(void* ctx), void* ctx) {
     commonring->cr_ring_bell = cr_ring_bell;
     commonring->cr_update_rptr = cr_update_rptr;
     commonring->cr_update_wptr = cr_update_wptr;
@@ -179,7 +181,7 @@ again:
     return NULL;
 }
 
-int brcmf_commonring_write_complete(struct brcmf_commonring* commonring) {
+zx_status_t brcmf_commonring_write_complete(struct brcmf_commonring* commonring) {
     void* address;
 
     address = commonring->buf_addr;
@@ -224,7 +226,7 @@ void* brcmf_commonring_get_read_ptr(struct brcmf_commonring* commonring, uint16_
     return commonring->buf_addr + (commonring->r_ptr * commonring->item_len);
 }
 
-int brcmf_commonring_read_complete(struct brcmf_commonring* commonring, uint16_t n_items) {
+zx_status_t brcmf_commonring_read_complete(struct brcmf_commonring* commonring, uint16_t n_items) {
     commonring->r_ptr += n_items;
     if (commonring->r_ptr == commonring->depth) {
         commonring->r_ptr = 0;

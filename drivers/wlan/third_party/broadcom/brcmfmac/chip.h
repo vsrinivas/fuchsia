@@ -75,13 +75,14 @@ struct brcmf_core {
 struct brcmf_buscore_ops {
     uint32_t (*read32)(void* ctx, uint32_t addr);
     void (*write32)(void* ctx, uint32_t addr, uint32_t value);
-    int (*prepare)(void* ctx);
+    zx_status_t (*prepare)(void* ctx);
     int (*reset)(void* ctx, struct brcmf_chip* chip);
     int (*setup)(void* ctx, struct brcmf_chip* chip);
     void (*activate)(void* ctx, struct brcmf_chip* chip, uint32_t rstvec);
 };
 
-struct brcmf_chip* brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops);
+zx_status_t brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops,
+                              struct brcmf_chip** chip_out);
 void brcmf_chip_detach(struct brcmf_chip* chip);
 struct brcmf_core* brcmf_chip_get_core(struct brcmf_chip* chip, uint16_t coreid);
 struct brcmf_core* brcmf_chip_get_chipcommon(struct brcmf_chip* chip);

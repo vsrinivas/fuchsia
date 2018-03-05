@@ -54,8 +54,8 @@ struct brcmf_flowring {
 
 uint32_t brcmf_flowring_lookup(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN], uint8_t prio,
                                uint8_t ifidx);
-uint32_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN], uint8_t prio,
-                               uint8_t ifidx);
+zx_status_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_ALEN], uint8_t prio,
+                                  uint8_t ifidx);
 void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid);
 void brcmf_flowring_open(struct brcmf_flowring* flow, uint16_t flowid);
 uint8_t brcmf_flowring_tid(struct brcmf_flowring* flow, uint16_t flowid);

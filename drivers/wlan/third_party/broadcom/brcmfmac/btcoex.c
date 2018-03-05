@@ -113,7 +113,7 @@ struct brcmf_btcoex_info {
  * @addr: btc_params register number
  * @data: data to write
  */
-static int32_t brcmf_btcoex_params_write(struct brcmf_if* ifp, uint32_t addr, uint32_t data) {
+static zx_status_t brcmf_btcoex_params_write(struct brcmf_if* ifp, uint32_t addr, uint32_t data) {
     struct {
         uint32_t addr;
         uint32_t data;
@@ -130,7 +130,7 @@ static int32_t brcmf_btcoex_params_write(struct brcmf_if* ifp, uint32_t addr, ui
  * @addr: btc_params register number
  * @data: read data
  */
-static int32_t brcmf_btcoex_params_read(struct brcmf_if* ifp, uint32_t addr, uint32_t* data) {
+static zx_status_t brcmf_btcoex_params_read(struct brcmf_if* ifp, uint32_t addr, uint32_t* data) {
     *data = addr;
 
     return brcmf_fil_iovar_int_get(ifp, "btc_params", data);
@@ -347,7 +347,7 @@ idle:
  *
  * return: 0 on success
  */
-int brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
+zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
     struct brcmf_btcoex_info* btci = NULL;
     brcmf_dbg(TRACE, "enter\n");
 
@@ -369,7 +369,7 @@ int brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
     INIT_WORK(&btci->work, brcmf_btcoex_handler);
 
     cfg->btcoex = btci;
-    return 0;
+    return ZX_OK;
 }
 
 /**
@@ -437,8 +437,8 @@ static void brcmf_btcoex_dhcp_end(struct brcmf_btcoex_info* btci) {
  *
  * return: 0 on success
  */
-int brcmf_btcoex_set_mode(struct brcmf_cfg80211_vif* vif, enum brcmf_btcoex_mode mode,
-                          uint16_t duration) {
+zx_status_t brcmf_btcoex_set_mode(struct brcmf_cfg80211_vif* vif, enum brcmf_btcoex_mode mode,
+                                  uint16_t duration) {
     struct brcmf_cfg80211_info* cfg = wiphy_priv(vif->wdev.wiphy);
     struct brcmf_btcoex_info* btci = cfg->btcoex;
     struct brcmf_if* ifp = brcmf_get_ifp(cfg->pub, 0);
@@ -466,5 +466,5 @@ int brcmf_btcoex_set_mode(struct brcmf_cfg80211_vif* vif, enum brcmf_btcoex_mode
     default:
         brcmf_dbg(INFO, "Unknown mode, ignored\n");
     }
-    return 0;
+    return ZX_OK;
 }

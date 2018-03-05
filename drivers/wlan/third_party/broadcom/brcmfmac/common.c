@@ -91,7 +91,7 @@ struct brcmf_mp_global_t brcmf_mp_global;
 
 void brcmf_c_set_joinpref_default(struct brcmf_if* ifp) {
     struct brcmf_join_pref_params join_pref_params[2];
-    int err;
+    zx_status_t err;
 
     /* Setup join_pref to select target by RSSI (boost on 5GHz) */
     join_pref_params[0].type = BRCMF_JOIN_PREF_RSSI_DELTA;
@@ -104,14 +104,14 @@ void brcmf_c_set_joinpref_default(struct brcmf_if* ifp) {
     join_pref_params[1].rssi_gain = 0;
     join_pref_params[1].band = 0;
     err = brcmf_fil_iovar_data_set(ifp, "join_pref", join_pref_params, sizeof(join_pref_params));
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_err("Set join_pref error (%d)\n", err);
     }
 }
 
-static int brcmf_c_download(struct brcmf_if* ifp, uint16_t flag, struct brcmf_dload_data_le* dload_buf,
+static zx_status_t brcmf_c_download(struct brcmf_if* ifp, uint16_t flag, struct brcmf_dload_data_le* dload_buf,
                             uint32_t len) {
-    int32_t err;
+    zx_status_t err;
 
     flag |= (DLOAD_HANDLER_VER << DLOAD_FLAG_VER_SHIFT);
     dload_buf->flag = flag;
@@ -125,17 +125,17 @@ static int brcmf_c_download(struct brcmf_if* ifp, uint16_t flag, struct brcmf_dl
     return err;
 }
 
-static int brcmf_c_get_clm_name(struct brcmf_if* ifp, uint8_t* clm_name) {
+static zx_status_t brcmf_c_get_clm_name(struct brcmf_if* ifp, uint8_t* clm_name) {
     struct brcmf_bus* bus = ifp->drvr->bus_if;
     struct brcmf_rev_info* ri = &ifp->drvr->revinfo;
     uint8_t fw_name[BRCMF_FW_NAME_LEN];
     uint8_t* ptr;
     size_t len;
-    int32_t err;
+    zx_status_t err;
 
     memset(fw_name, 0, BRCMF_FW_NAME_LEN);
     err = brcmf_bus_get_fwname(bus, ri->chipnum, ri->chiprev, fw_name);
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_err("get firmware name failed (%d)\n", err);
         goto done;
     }
@@ -158,7 +158,7 @@ done:
     return err;
 }
 
-static int brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
+static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
     struct device* dev = ifp->drvr->bus_if->dev;
     struct brcmf_dload_data_le* chunk_buf;
     const struct firmware* clm = NULL;
@@ -168,22 +168,22 @@ static int brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
     uint32_t cumulative_len;
     uint16_t dl_flag = DL_BEGIN;
     uint32_t status;
-    int32_t err;
+    zx_status_t err;
 
     brcmf_dbg(TRACE, "Enter\n");
 
     memset(clm_name, 0, BRCMF_FW_NAME_LEN);
     err = brcmf_c_get_clm_name(ifp, clm_name);
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_err("get CLM blob file name failed (%d)\n", err);
         return err;
     }
 
     err = request_firmware(&clm, clm_name, dev);
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_info("no clm_blob available(err=%d), device may have limited channels available\n",
                    err);
-        return 0;
+        return ZX_OK;
     }
 
     chunk_buf = kzalloc(sizeof(*chunk_buf) + MAX_CHUNK_LEN - 1, GFP_KERNEL);
@@ -209,13 +209,13 @@ static int brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
 
         cumulative_len += chunk_len;
         datalen -= chunk_len;
-    } while ((datalen > 0) && (err == 0));
+    } while ((datalen > 0) && (err == ZX_OK));
 
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_err("clmload (%zu byte file) failed (%d); ", clm->size, err);
         /* Retrieve clmload_status and print */
         err = brcmf_fil_iovar_int_get(ifp, "clmload_status", &status);
-        if (err) {
+        if (err != ZX_OK) {
             brcmf_err("get clmload_status failed (%d)\n", err);
         } else {
             brcmf_dbg(INFO, "clmload_status=%d\n", status);
@@ -229,18 +229,18 @@ done:
     return err;
 }
 
-int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
+zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     int8_t eventmask[BRCMF_EVENTING_MASK_LEN];
     uint8_t buf[BRCMF_DCMD_SMLEN];
     struct brcmf_rev_info_le revinfo;
     struct brcmf_rev_info* ri;
     char* clmver;
     char* ptr;
-    int32_t err;
+    zx_status_t err;
 
     /* retreive mac address */
     err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", ifp->mac_addr, sizeof(ifp->mac_addr));
-    if (err < 0) {
+    if (err != ZX_OK) {
         brcmf_err("Retreiving cur_etheraddr failed, %d\n", err);
         goto done;
     }
@@ -248,7 +248,7 @@ int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
 
     err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_REVINFO, &revinfo, sizeof(revinfo));
     ri = &ifp->drvr->revinfo;
-    if (err < 0) {
+    if (err != ZX_OK) {
         brcmf_err("retrieving revision info failed, %d\n", err);
     } else {
         ri->vendorid = revinfo.vendorid;
@@ -273,7 +273,7 @@ int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
 
     /* Do any CLM downloading */
     err = brcmf_c_process_clm_blob(ifp);
-    if (err < 0) {
+    if (err != ZX_OK) {
         brcmf_err("download CLM blob file failed, %d\n", err);
         goto done;
     }
@@ -282,7 +282,7 @@ int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     memset(buf, 0, sizeof(buf));
     strcpy((char*)buf, "ver");
     err = brcmf_fil_iovar_data_get(ifp, "ver", buf, sizeof(buf));
-    if (err < 0) {
+    if (err != ZX_OK) {
         brcmf_err("Retreiving version information failed, %d\n", err);
         goto done;
     }
@@ -299,7 +299,7 @@ int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     /* Query for 'clmver' to get CLM version info from firmware */
     memset(buf, 0, sizeof(buf));
     err = brcmf_fil_iovar_data_get(ifp, "clmver", buf, sizeof(buf));
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_dbg(TRACE, "retrieving clmver failed, %d\n", err);
     } else {
         clmver = (char*)buf;
@@ -319,7 +319,7 @@ int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
 
     /* set mpc */
     err = brcmf_fil_iovar_int_set(ifp, "mpc", 1);
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_err("failed setting mpc\n");
         goto done;
     }
@@ -328,13 +328,13 @@ int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
 
     /* Setup event_msgs, enable E_IF */
     err = brcmf_fil_iovar_data_get(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN);
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_err("Get event_msgs error (%d)\n", err);
         goto done;
     }
     setbit(eventmask, BRCMF_E_IF);
     err = brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN);
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_err("Set event_msgs error (%d)\n", err);
         goto done;
     }
@@ -342,7 +342,7 @@ int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     /* Setup default scan channel time */
     err =
         brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_CHANNEL_TIME, BRCMF_DEFAULT_SCAN_CHANNEL_TIME);
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_err("BRCMF_C_SET_SCAN_CHANNEL_TIME error (%d)\n", err);
         goto done;
     }
@@ -350,7 +350,7 @@ int brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     /* Setup default scan unassoc time */
     err =
         brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_UNASSOC_TIME, BRCMF_DEFAULT_SCAN_UNASSOC_TIME);
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_err("BRCMF_C_SET_SCAN_UNASSOC_TIME error (%d)\n", err);
         goto done;
     }
@@ -383,7 +383,7 @@ void __brcmf_err(const char* func, const char* fmt, ...) {
 void __brcmf_dbg(uint32_t level, const char* func, const char* fmt, ...) {
     struct va_format vaf = {
         .fmt = fmt,
-        };
+    };
     va_list args;
 
     va_start(args, fmt);
@@ -441,7 +441,7 @@ struct brcmf_mp_device* brcmf_get_module_param(struct device* dev, enum brcmf_bu
         for (i = 0; i < brcmfmac_pdata->device_count; i++) {
             device_pd = &brcmfmac_pdata->devices[i];
             if ((device_pd->bus_type == bus_type) && (device_pd->id == chip) &&
-                ((device_pd->rev == (int32_t)chiprev) || (device_pd->rev == -1))) {
+                    ((device_pd->rev == (int32_t)chiprev) || (device_pd->rev == -1))) {
                 brcmf_dbg(INFO, "Platform data for device found\n");
                 settings->country_codes = device_pd->country_codes;
                 if (device_pd->bus_type == BRCMF_BUSTYPE_SDIO) {
@@ -463,7 +463,7 @@ void brcmf_release_module_param(struct brcmf_mp_device* module_param) {
     kfree(module_param);
 }
 
-static int brcmf_common_pd_probe(struct platform_device* pdev) {
+static zx_status_t brcmf_common_pd_probe(struct platform_device* pdev) {
     brcmf_dbg(INFO, "Enter\n");
 
     brcmfmac_pdata = dev_get_platdata(&pdev->dev);
@@ -472,17 +472,17 @@ static int brcmf_common_pd_probe(struct platform_device* pdev) {
         brcmfmac_pdata->power_on();
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-static int brcmf_common_pd_remove(struct platform_device* pdev) {
+static zx_status_t brcmf_common_pd_remove(struct platform_device* pdev) {
     brcmf_dbg(INFO, "Enter\n");
 
     if (brcmfmac_pdata->power_off) {
         brcmfmac_pdata->power_off();
     }
 
-    return 0;
+    return ZX_OK;
 }
 
 static struct platform_driver brcmf_pd = {
@@ -492,8 +492,8 @@ static struct platform_driver brcmf_pd = {
     }
 };
 
-static int brcmfmac_module_init(void) {
-    int err;
+static zx_status_t brcmfmac_module_init(void) {
+    zx_status_t err;
 
     /* Initialize debug system first */
     brcmf_debugfs_init();
@@ -509,7 +509,7 @@ static int brcmfmac_module_init(void) {
 
     /* Continue the initialization by registering the different busses */
     err = brcmf_core_init();
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_debugfs_exit();
         if (brcmfmac_pdata) {
             platform_driver_unregister(&brcmf_pd);

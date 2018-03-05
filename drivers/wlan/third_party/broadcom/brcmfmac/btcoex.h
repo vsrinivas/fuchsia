@@ -20,9 +20,9 @@
 
 enum brcmf_btcoex_mode { BRCMF_BTCOEX_DISABLED, BRCMF_BTCOEX_ENABLED };
 
-int brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg);
+zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg);
 void brcmf_btcoex_detach(struct brcmf_cfg80211_info* cfg);
-int brcmf_btcoex_set_mode(struct brcmf_cfg80211_vif* vif, enum brcmf_btcoex_mode mode,
-                          uint16_t duration);
+zx_status_t brcmf_btcoex_set_mode(struct brcmf_cfg80211_vif* vif, enum brcmf_btcoex_mode mode,
+                                  uint16_t duration);
 
 #endif /* GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_BTCOEX_H_ */

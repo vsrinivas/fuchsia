@@ -111,11 +111,11 @@ struct brcmf_cfg80211_info;
 /* firmware event codes sent by the dongle */
 enum brcmf_fweh_event_code {
     BRCMF_FWEH_EVENT_ENUM_DEFLIST
-        /* this determines event mask length which must match
-         * minimum length check in device firmware so it is
-         * hard-coded here.
-         */
-        BRCMF_E_LAST = 139
+    /* this determines event mask length which must match
+     * minimum length check in device firmware so it is
+     * hard-coded here.
+     */
+    BRCMF_E_LAST = 139
 };
 #undef BRCMF_ENUM_DEF
 
@@ -299,8 +299,8 @@ struct brcmf_if_event {
     uint8_t role;
 };
 
-typedef int (*brcmf_fweh_handler_t)(struct brcmf_if* ifp, const struct brcmf_event_msg* evtmsg,
-                                    void* data);
+typedef zx_status_t (*brcmf_fweh_handler_t)(struct brcmf_if* ifp,
+                                            const struct brcmf_event_msg* evtmsg, void* data);
 
 /**
  * struct brcmf_fweh_info - firmware event handling information.
@@ -316,19 +316,20 @@ struct brcmf_fweh_info {
     struct work_struct event_work;
     spinlock_t evt_q_lock;
     struct list_head event_q;
-    int (*evt_handler[BRCMF_E_LAST])(struct brcmf_if* ifp, const struct brcmf_event_msg* evtmsg,
-                                     void* data);
+    zx_status_t (*evt_handler[BRCMF_E_LAST])(struct brcmf_if* ifp,
+                                             const struct brcmf_event_msg* evtmsg, void* data);
 };
 
 const char* brcmf_fweh_event_name(enum brcmf_fweh_event_code code);
 
 void brcmf_fweh_attach(struct brcmf_pub* drvr);
 void brcmf_fweh_detach(struct brcmf_pub* drvr);
-int brcmf_fweh_register(struct brcmf_pub* drvr, enum brcmf_fweh_event_code code,
-                        int (*handler)(struct brcmf_if* ifp, const struct brcmf_event_msg* evtmsg,
-                                       void* data));
+zx_status_t brcmf_fweh_register(struct brcmf_pub* drvr, enum brcmf_fweh_event_code code,
+                                zx_status_t (*handler)(struct brcmf_if* ifp,
+                                                       const struct brcmf_event_msg* evtmsg,
+                                                       void* data));
 void brcmf_fweh_unregister(struct brcmf_pub* drvr, enum brcmf_fweh_event_code code);
-int brcmf_fweh_activate_events(struct brcmf_if* ifp);
+zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp);
 void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_packet,
                               uint32_t packet_len);
 void brcmf_fweh_p2pdev_setup(struct brcmf_if* ifp, bool ongoing);

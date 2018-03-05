@@ -9,7 +9,7 @@
 #include <zircon/types.h>
 
 zx_status_t brcmfmac_bind(void* ctx, zx_device_t* device) {
-  return ZX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 uint64_t jiffies; // To make it link, jiffies has to be defined (not just declared)
 struct current_with_pid* current; // likewise current

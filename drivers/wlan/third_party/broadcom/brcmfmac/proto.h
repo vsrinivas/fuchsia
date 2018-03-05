@@ -23,10 +23,13 @@ struct brcmf_skb_reorder_data {
 };
 
 struct brcmf_proto {
-    int (*hdrpull)(struct brcmf_pub* drvr, bool do_fws, struct sk_buff* skb, struct brcmf_if** ifp);
-    int (*query_dcmd)(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len, int* fwerr);
-    int (*set_dcmd)(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len, int* fwerr);
-    int (*tx_queue_data)(struct brcmf_pub* drvr, int ifidx, struct sk_buff* skb);
+    zx_status_t (*hdrpull)(struct brcmf_pub* drvr, bool do_fws, struct sk_buff* skb,
+                           struct brcmf_if** ifp);
+    zx_status_t (*query_dcmd)(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len,
+                              zx_status_t* fwerr);
+    zx_status_t (*set_dcmd)(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len,
+                            zx_status_t* fwerr);
+    zx_status_t (*tx_queue_data)(struct brcmf_pub* drvr, int ifidx, struct sk_buff* skb);
     int (*txdata)(struct brcmf_pub* drvr, int ifidx, uint8_t offset, struct sk_buff* skb);
     void (*configure_addr_mode)(struct brcmf_pub* drvr, int ifidx, enum proto_addr_mode addr_mode);
     void (*delete_peer)(struct brcmf_pub* drvr, int ifidx, uint8_t peer[ETH_ALEN]);
@@ -35,11 +38,11 @@ struct brcmf_proto {
     void (*add_if)(struct brcmf_if* ifp);
     void (*del_if)(struct brcmf_if* ifp);
     void (*reset_if)(struct brcmf_if* ifp);
-    int (*init_done)(struct brcmf_pub* drvr);
+    zx_status_t (*init_done)(struct brcmf_pub* drvr);
     void* pd;
 };
 
-int brcmf_proto_attach(struct brcmf_pub* drvr);
+zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr);
 void brcmf_proto_detach(struct brcmf_pub* drvr);
 
 static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, bool do_fws, struct sk_buff* skb,
@@ -56,22 +59,22 @@ static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, bool do_fws, struc
     }
     return drvr->proto->hdrpull(drvr, do_fws, skb, ifp);
 }
-static inline int brcmf_proto_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
-                                         uint len, int* fwerr) {
+static inline zx_status_t brcmf_proto_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
+                                                 void* buf, uint len, zx_status_t* fwerr) {
     return drvr->proto->query_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
 }
-static inline int brcmf_proto_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
-                                       uint len, int* fwerr) {
+static inline zx_status_t brcmf_proto_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
+                                               void* buf, uint len, zx_status_t* fwerr) {
     return drvr->proto->set_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
 }
 
-static inline int brcmf_proto_tx_queue_data(struct brcmf_pub* drvr, int ifidx,
-                                            struct sk_buff* skb) {
+static inline zx_status_t brcmf_proto_tx_queue_data(struct brcmf_pub* drvr, int ifidx,
+                                                    struct sk_buff* skb) {
     return drvr->proto->tx_queue_data(drvr, ifidx, skb);
 }
 
-static inline int brcmf_proto_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
-                                     struct sk_buff* skb) {
+static inline zx_status_t brcmf_proto_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t offset,
+                                             struct sk_buff* skb) {
     return drvr->proto->txdata(drvr, ifidx, offset, skb);
 }
 static inline void brcmf_proto_configure_addr_mode(struct brcmf_pub* drvr, int ifidx,
@@ -98,22 +101,30 @@ static inline void brcmf_proto_rxreorder(struct brcmf_if* ifp, struct sk_buff* s
 }
 
 static inline void brcmf_proto_add_if(struct brcmf_pub* drvr, struct brcmf_if* ifp) {
-    if (!drvr->proto->add_if) { return; }
+    if (!drvr->proto->add_if) {
+        return;
+    }
     drvr->proto->add_if(ifp);
 }
 
 static inline void brcmf_proto_del_if(struct brcmf_pub* drvr, struct brcmf_if* ifp) {
-    if (!drvr->proto->del_if) { return; }
+    if (!drvr->proto->del_if) {
+        return;
+    }
     drvr->proto->del_if(ifp);
 }
 
 static inline void brcmf_proto_reset_if(struct brcmf_pub* drvr, struct brcmf_if* ifp) {
-    if (!drvr->proto->reset_if) { return; }
+    if (!drvr->proto->reset_if) {
+        return;
+    }
     drvr->proto->reset_if(ifp);
 }
 
-static inline int brcmf_proto_init_done(struct brcmf_pub* drvr) {
-    if (!drvr->proto->init_done) { return 0; }
+static inline zx_status_t brcmf_proto_init_done(struct brcmf_pub* drvr) {
+    if (!drvr->proto->init_done) {
+        return ZX_OK;
+    }
     return drvr->proto->init_done(drvr);
 }
 

@@ -76,16 +76,16 @@ struct brcmf_bus_dcmd {
  * indicated otherwise these callbacks are mandatory.
  */
 struct brcmf_bus_ops {
-    int (*preinit)(struct device* dev);
+    zx_status_t (*preinit)(struct device* dev);
     void (*stop)(struct device* dev);
-    int (*txdata)(struct device* dev, struct sk_buff* skb);
-    int (*txctl)(struct device* dev, unsigned char* msg, uint len);
-    int (*rxctl)(struct device* dev, unsigned char* msg, uint len);
+    zx_status_t (*txdata)(struct device* dev, struct sk_buff* skb);
+    zx_status_t (*txctl)(struct device* dev, unsigned char* msg, uint len);
+    zx_status_t (*rxctl)(struct device* dev, unsigned char* msg, uint len, int* rxlen_out);
     struct pktq* (*gettxq)(struct device* dev);
     void (*wowl_config)(struct device* dev, bool enabled);
     size_t (*get_ramsize)(struct device* dev);
-    int (*get_memdump)(struct device* dev, void* data, size_t len);
-    int (*get_fwname)(struct device* dev, uint chip, uint chiprev, unsigned char* fw_name);
+    zx_status_t (*get_memdump)(struct device* dev, void* data, size_t len);
+    zx_status_t (*get_fwname)(struct device* dev, uint chip, uint chiprev, unsigned char* fw_name);
 };
 
 /**
@@ -159,8 +159,10 @@ struct brcmf_bus {
 /*
  * callback wrappers
  */
-static inline int brcmf_bus_preinit(struct brcmf_bus* bus) {
-    if (!bus->ops->preinit) { return 0; }
+static inline zx_status_t brcmf_bus_preinit(struct brcmf_bus* bus) {
+    if (!bus->ops->preinit) {
+        return ZX_OK;
+    }
     return bus->ops->preinit(bus->dev);
 }
 
@@ -176,34 +178,48 @@ static inline int brcmf_bus_txctl(struct brcmf_bus* bus, unsigned char* msg, uin
     return bus->ops->txctl(bus->dev, msg, len);
 }
 
-static inline int brcmf_bus_rxctl(struct brcmf_bus* bus, unsigned char* msg, uint len) {
-    return bus->ops->rxctl(bus->dev, msg, len);
+static inline int brcmf_bus_rxctl(struct brcmf_bus* bus, unsigned char* msg, uint len,
+                                  int* rxlen_out) {
+    return bus->ops->rxctl(bus->dev, msg, len, rxlen_out);
 }
 
-static inline struct pktq* brcmf_bus_gettxq(struct brcmf_bus* bus) {
-    if (!bus->ops->gettxq) { return ERR_PTR(-ENOENT); }
-
-    return bus->ops->gettxq(bus->dev);
+static inline zx_status_t brcmf_bus_gettxq(struct brcmf_bus* bus, struct pktq** txq_out) {
+    if (!bus->ops->gettxq) {
+        if (txq_out) {
+            *txq_out = NULL;
+        }
+        return -ENOENT;
+    }
+    if (txq_out) {
+        *txq_out = bus->ops->gettxq(bus->dev);
+    }
+    return ZX_OK;
 }
 
 static inline void brcmf_bus_wowl_config(struct brcmf_bus* bus, bool enabled) {
-    if (bus->ops->wowl_config) { bus->ops->wowl_config(bus->dev, enabled); }
+    if (bus->ops->wowl_config) {
+        bus->ops->wowl_config(bus->dev, enabled);
+    }
 }
 
 static inline size_t brcmf_bus_get_ramsize(struct brcmf_bus* bus) {
-    if (!bus->ops->get_ramsize) { return 0; }
+    if (!bus->ops->get_ramsize) {
+        return 0;
+    }
 
     return bus->ops->get_ramsize(bus->dev);
 }
 
-static inline int brcmf_bus_get_memdump(struct brcmf_bus* bus, void* data, size_t len) {
-    if (!bus->ops->get_memdump) { return -EOPNOTSUPP; }
+static inline zx_status_t brcmf_bus_get_memdump(struct brcmf_bus* bus, void* data, size_t len) {
+    if (!bus->ops->get_memdump) {
+        return -EOPNOTSUPP;
+    }
 
     return bus->ops->get_memdump(bus->dev, data, len);
 }
 
-static inline int brcmf_bus_get_fwname(struct brcmf_bus* bus, uint chip, uint chiprev,
-                                       unsigned char* fw_name) {
+static inline zx_status_t brcmf_bus_get_fwname(struct brcmf_bus* bus, uint chip, uint chiprev,
+                                               unsigned char* fw_name) {
     return bus->ops->get_fwname(bus->dev, chip, chiprev, fw_name);
 }
 
@@ -217,7 +233,7 @@ void brcmf_rx_frame(struct device* dev, struct sk_buff* rxp, bool handle_event);
 void brcmf_rx_event(struct device* dev, struct sk_buff* rxp);
 
 /* Indication from bus module regarding presence/insertion of dongle. */
-int brcmf_attach(struct device* dev, struct brcmf_mp_device* settings);
+zx_status_t brcmf_attach(struct device* dev, struct brcmf_mp_device* settings);
 /* Indication from bus module regarding removal/absence of dongle */
 void brcmf_detach(struct device* dev);
 /* Indication from bus module that dongle should be reset */
@@ -226,8 +242,8 @@ void brcmf_dev_reset(struct device* dev);
 /* Configure the "global" bus state used by upper layers */
 void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state);
 
-int brcmf_bus_started(struct device* dev);
-int32_t brcmf_iovar_data_set(struct device* dev, char* name, void* data, uint32_t len);
+zx_status_t brcmf_bus_started(struct device* dev);
+zx_status_t brcmf_iovar_data_set(struct device* dev, char* name, void* data, uint32_t len);
 void brcmf_bus_add_txhdrlen(struct device* dev, uint len);
 
 #ifdef CONFIG_BRCMFMAC_SDIO

@@ -29,6 +29,7 @@
 #include "fwil.h"
 #include "fwil_types.h"
 
+// TODO(cphoenix): Figure out what this magic number was used for
 #define BRCMF_FW_UNSUPPORTED 23
 
 /*
@@ -63,7 +64,7 @@ static const char* const brcmf_quirk_names[] = {BRCMF_QUIRK_LIST};
  * @seq: sequence for debugfs entry.
  * @data: raw data pointer.
  */
-static int brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
+static zx_status_t brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
     struct brcmf_bus* bus_if = dev_get_drvdata(seq->private);
     uint32_t feats = bus_if->drvr->feat_flags;
     uint32_t quirks = bus_if->drvr->chip_quirks;
@@ -79,11 +80,11 @@ static int brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
         if (quirks & BIT(id)) {
             seq_printf(seq, "\t%s\n", brcmf_quirk_names[id]);
         }
-    return 0;
+    return ZX_OK;
 }
 #else
-static int brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
-    return 0;
+static zx_status_t brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
+    return ZX_OK;
 }
 #endif /* DEBUG */
 
@@ -96,10 +97,10 @@ static int brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
  */
 static void brcmf_feat_iovar_int_get(struct brcmf_if* ifp, enum brcmf_feat_id id, char* name) {
     uint32_t data;
-    int err;
+    zx_status_t err;
 
     err = brcmf_fil_iovar_int_get(ifp, name, &data);
-    if (err == 0) {
+    if (err == ZX_OK) {
         brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
         ifp->drvr->feat_flags |= BIT(id);
     } else {
@@ -109,10 +110,10 @@ static void brcmf_feat_iovar_int_get(struct brcmf_if* ifp, enum brcmf_feat_id id
 
 static void brcmf_feat_iovar_data_set(struct brcmf_if* ifp, enum brcmf_feat_id id, char* name,
                                       const void* data, size_t len) {
-    int err;
+    zx_status_t err;
 
     err = brcmf_fil_iovar_data_set(ifp, name, data, len);
-    if (err != -BRCMF_FW_UNSUPPORTED) {
+    if (err == ZX_OK) { // TODO(cphoenix): was err != -BRCMF_FW_UNSUPPORTED
         brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
         ifp->drvr->feat_flags |= BIT(id);
     } else {
@@ -124,10 +125,11 @@ static void brcmf_feat_iovar_data_set(struct brcmf_if* ifp, enum brcmf_feat_id i
 static void brcmf_feat_firmware_capabilities(struct brcmf_if* ifp) {
     char caps[MAX_CAPS_BUFFER_SIZE];
     enum brcmf_feat_id id;
-    int i, err;
+    int i;
+    zx_status_t err;
 
     err = brcmf_fil_iovar_data_get(ifp, "cap", caps, sizeof(caps));
-    if (err) {
+    if (err != ZX_OK) {
         brcmf_err("could not get firmware cap (%d)\n", err);
         return;
     }
@@ -148,7 +150,7 @@ void brcmf_feat_attach(struct brcmf_pub* drvr) {
     struct brcmf_pno_macaddr_le pfn_mac;
     struct brcmf_gscan_config gscan_cfg;
     uint32_t wowl_cap;
-    int32_t err;
+    zx_status_t err;
 
     brcmf_feat_firmware_capabilities(ifp);
     memset(&gscan_cfg, 0, sizeof(gscan_cfg));
@@ -161,7 +163,7 @@ void brcmf_feat_attach(struct brcmf_pub* drvr) {
     }
     if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_WOWL)) {
         err = brcmf_fil_iovar_int_get(ifp, "wowl_cap", &wowl_cap);
-        if (!err) {
+        if (err == ZX_OK) {
             ifp->drvr->feat_flags |= BIT(BRCMF_FEAT_WOWL_ARP_ND);
             if (wowl_cap & BRCMF_WOWL_PFN_FOUND) {
                 ifp->drvr->feat_flags |= BIT(BRCMF_FEAT_WOWL_ND);
@@ -181,7 +183,7 @@ void brcmf_feat_attach(struct brcmf_pub* drvr) {
 
     pfn_mac.version = BRCMF_PFN_MACADDR_CFG_VER;
     err = brcmf_fil_iovar_data_get(ifp, "pfn_macaddr", &pfn_mac, sizeof(pfn_mac));
-    if (!err) {
+    if (err == ZX_OK) {
         ifp->drvr->feat_flags |= BIT(BRCMF_FEAT_SCAN_RANDOM_MAC);
     }
 

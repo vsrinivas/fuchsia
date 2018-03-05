@@ -26,7 +26,7 @@
 void __brcmf_err(const char* func, const char* fmt, ...) {
     struct va_format vaf = {
         .fmt = fmt,
-        };
+    };
     va_list args;
 
     va_start(args, fmt);

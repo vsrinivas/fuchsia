@@ -29,13 +29,15 @@
 #include "p2p.h"
 #include "vendor.h"
 
-static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy, struct wireless_dev* wdev,
-                                                 const void* data, int len) {
+static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
+                                                         struct wireless_dev* wdev,
+                                                         const void* data, int len) {
     struct brcmf_cfg80211_vif* vif;
     struct brcmf_if* ifp;
     const struct brcmf_vndr_dcmd_hdr* cmdhdr = data;
     struct sk_buff* reply;
-    int ret, payload, ret_len;
+    zx_status_t ret;
+    int payload, ret_len;
     void* dcmd_buf = NULL;
     void* wr_pointer;
     uint16_t msglen;
@@ -82,7 +84,7 @@ static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy, st
     } else {
         ret = brcmf_fil_cmd_data_get(ifp, cmdhdr->cmd, dcmd_buf, ret_len);
     }
-    if (ret != 0) {
+    if (ret != ZX_OK) {
         goto exit;
     }
 
@@ -105,7 +107,7 @@ static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy, st
         }
 
         ret = cfg80211_vendor_cmd_reply(reply);
-        if (ret) {
+        if (ret != ZX_OK) {
             break;
         }
 

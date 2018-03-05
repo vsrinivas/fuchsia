@@ -286,7 +286,7 @@ struct sdpcmd_regs {
 };
 
 /* Register/deregister interrupt handler. */
-int brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev);
+zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev);
 void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev);
 
 /* SDIO device register access interface */
@@ -301,8 +301,9 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev);
 
 #define brcmf_sdiod_writeb(sdiodev, addr, v, ret) sdio_writeb((sdiodev)->func1, (v), (addr), (ret))
 
-uint32_t brcmf_sdiod_readl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, int* ret);
-void brcmf_sdiod_writel(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_t data, int* ret);
+uint32_t brcmf_sdiod_readl(struct brcmf_sdio_dev* sdiodev, uint32_t addr, zx_status_t* ret);
+void brcmf_sdiod_writel(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_t data,
+                        zx_status_t* ret);
 
 /* Buffer transfer to/from device (client) core via cmd53.
  *   fn:       function number
@@ -315,12 +316,13 @@ void brcmf_sdiod_writel(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint32_t 
  * Returns 0 or error code.
  * NOTE: Async operation is not currently supported.
  */
-int brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* pktq);
-int brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes);
+zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* pktq);
+zx_status_t brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes);
 
-int brcmf_sdiod_recv_pkt(struct brcmf_sdio_dev* sdiodev, struct sk_buff* pkt);
-int brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes);
-int brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* pktq, uint totlen);
+zx_status_t brcmf_sdiod_recv_pkt(struct brcmf_sdio_dev* sdiodev, struct sk_buff* pkt);
+zx_status_t brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, uint nbytes);
+zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* pktq,
+                                   uint totlen);
 
 /* Flags bits */
 
@@ -336,8 +338,9 @@ int brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct sk_buff_head* 
  *   nbytes:   number of bytes to transfer to/from buf
  * Returns 0 or error code.
  */
-int brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address, uint8_t* data,
-                      uint size);
+zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
+                              uint8_t* data, uint size);
+// TODO(cphoenix): Expand "uint" to "unsigned int" everywhere.
 
 /* Issue an abort to the specified function */
 int brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, struct sdio_func* func);
@@ -364,7 +367,7 @@ void brcmf_sdio_isr(struct brcmf_sdio* bus);
 
 void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active);
 void brcmf_sdio_wowl_config(struct device* dev, bool enabled);
-int brcmf_sdio_sleep(struct brcmf_sdio* bus, bool sleep);
+zx_status_t brcmf_sdio_sleep(struct brcmf_sdio* bus, bool sleep);
 void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus);
 
 #endif /* BRCMFMAC_SDIO_H */

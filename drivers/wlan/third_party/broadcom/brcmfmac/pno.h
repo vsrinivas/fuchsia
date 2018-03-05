@@ -30,7 +30,8 @@ struct brcmf_pno_info;
  * @ifp: interface object used.
  * @req: configuration parameters for scheduled scan.
  */
-int brcmf_pno_start_sched_scan(struct brcmf_if* ifp, struct cfg80211_sched_scan_request* req);
+zx_status_t brcmf_pno_start_sched_scan(struct brcmf_if* ifp,
+                                       struct cfg80211_sched_scan_request* req);
 
 /**
  * brcmf_pno_stop_sched_scan - terminate scheduled scan on device.
@@ -38,7 +39,7 @@ int brcmf_pno_start_sched_scan(struct brcmf_if* ifp, struct cfg80211_sched_scan_
  * @ifp: interface object used.
  * @reqid: unique identifier of scan to be stopped.
  */
-int brcmf_pno_stop_sched_scan(struct brcmf_if* ifp, uint64_t reqid);
+zx_status_t brcmf_pno_stop_sched_scan(struct brcmf_if* ifp, uint64_t reqid);
 
 /**
  * brcmf_pno_wiphy_params - fill scheduled scan parameters in wiphy instance.
@@ -53,7 +54,7 @@ void brcmf_pno_wiphy_params(struct wiphy* wiphy, bool gscan);
  *
  * @cfg: cfg80211 context used.
  */
-int brcmf_pno_attach(struct brcmf_cfg80211_info* cfg);
+zx_status_t brcmf_pno_attach(struct brcmf_cfg80211_info* cfg);
 
 /**
  * brcmf_pno_detach - detach and free module information.

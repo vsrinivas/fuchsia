@@ -453,13 +453,16 @@ static char* brcmf_chip_name(uint chipid, char* buf, uint len) {
     return buf;
 }
 
-static struct brcmf_core* brcmf_chip_add_core(struct brcmf_chip_priv* ci, uint16_t coreid, uint32_t base,
-                                              uint32_t wrapbase) {
+static zx_status_t brcmf_chip_add_core(struct brcmf_chip_priv* ci, uint16_t coreid, uint32_t base,
+                                       uint32_t wrapbase, struct brcmf_core** core_out) {
     struct brcmf_core_priv* core;
 
     core = kzalloc(sizeof(*core), GFP_KERNEL);
     if (!core) {
-        return ERR_PTR(-ENOMEM);
+        if (core_out) {
+            *core_out = NULL;
+        }
+        return -ENOMEM;
     }
 
     core->pub.id = coreid;
@@ -468,11 +471,14 @@ static struct brcmf_core* brcmf_chip_add_core(struct brcmf_chip_priv* ci, uint16
     core->wrapbase = wrapbase;
 
     list_add_tail(&core->list, &ci->cores);
-    return &core->pub;
+    if (core_out) {
+        *core_out = &core->pub;
+    }
+    return ZX_OK;
 }
 
 /* safety check for chipinfo */
-static int brcmf_chip_cores_check(struct brcmf_chip_priv* ci) {
+static zx_status_t brcmf_chip_cores_check(struct brcmf_chip_priv* ci) {
     struct brcmf_core_priv* core;
     bool need_socram = false;
     bool has_socram = false;
@@ -511,7 +517,7 @@ static int brcmf_chip_cores_check(struct brcmf_chip_priv* ci) {
         brcmf_err("RAM core not provided with ARM CM3 core\n");
         return -ENODEV;
     }
-    return 0;
+    return ZX_OK;
 }
 
 static uint32_t brcmf_chip_core_read32(struct brcmf_core_priv* core, uint16_t reg) {
@@ -673,7 +679,7 @@ static uint32_t brcmf_chip_tcm_rambase(struct brcmf_chip_priv* ci) {
     return 0;
 }
 
-static int brcmf_chip_get_raminfo(struct brcmf_chip_priv* ci) {
+static zx_status_t brcmf_chip_get_raminfo(struct brcmf_chip_priv* ci) {
     struct brcmf_core_priv* mem_core;
     struct brcmf_core* mem;
 
@@ -719,7 +725,7 @@ static int brcmf_chip_get_raminfo(struct brcmf_chip_priv* ci) {
         return -ENOMEM;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
 static uint32_t brcmf_chip_dmp_get_desc(struct brcmf_chip_priv* ci, uint32_t* eromaddr, uint8_t* type) {
@@ -742,8 +748,8 @@ static uint32_t brcmf_chip_dmp_get_desc(struct brcmf_chip_priv* ci, uint32_t* er
     return val;
 }
 
-static int brcmf_chip_dmp_get_regaddr(struct brcmf_chip_priv* ci, uint32_t* eromaddr, uint32_t* regbase,
-                                      uint32_t* wrapbase) {
+static zx_status_t brcmf_chip_dmp_get_regaddr(struct brcmf_chip_priv* ci, uint32_t* eromaddr,
+                                              uint32_t* regbase, uint32_t* wrapbase) {
     uint8_t desc;
     uint32_t val;
     uint8_t mpnum = 0;
@@ -779,7 +785,7 @@ static int brcmf_chip_dmp_get_regaddr(struct brcmf_chip_priv* ci, uint32_t* erom
         /* stop if we crossed current component border */
         if (desc == DMP_DESC_COMPONENT) {
             *eromaddr -= 4;
-            return 0;
+            return ZX_OK;
         }
 
         /* skip upper 32-bit address descriptor */
@@ -814,10 +820,10 @@ static int brcmf_chip_dmp_get_regaddr(struct brcmf_chip_priv* ci, uint32_t* erom
         }
     } while (*regbase == 0 || *wrapbase == 0);
 
-    return 0;
+    return ZX_OK;
 }
 
-static int brcmf_chip_dmp_erom_scan(struct brcmf_chip_priv* ci) {
+static zx_status_t brcmf_chip_dmp_erom_scan(struct brcmf_chip_priv* ci) {
     struct brcmf_core* core;
     uint32_t eromaddr;
     uint8_t desc_type = 0;
@@ -825,7 +831,7 @@ static int brcmf_chip_dmp_erom_scan(struct brcmf_chip_priv* ci) {
     uint16_t id;
     uint8_t nmp, nsp, nmw, nsw, rev;
     uint32_t base, wrap;
-    int err;
+    zx_status_t err;
 
     eromaddr = ci->ops->read32(ci->ctx, CORE_CC_REG(SI_ENUM_BASE, eromptr));
 
@@ -866,27 +872,27 @@ static int brcmf_chip_dmp_erom_scan(struct brcmf_chip_priv* ci) {
 
         /* try to obtain register address info */
         err = brcmf_chip_dmp_get_regaddr(ci, &eromaddr, &base, &wrap);
-        if (err) {
+        if (err != ZX_OK) {
             continue;
         }
 
         /* finally a core to be added */
-        core = brcmf_chip_add_core(ci, id, base, wrap);
-        if (IS_ERR(core)) {
-            return PTR_ERR(core);
+        err = brcmf_chip_add_core(ci, id, base, wrap, &core);
+        if (err != ZX_OK) {
+            return err;
         }
 
         core->rev = rev;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-static int brcmf_chip_recognition(struct brcmf_chip_priv* ci) {
+static zx_status_t brcmf_chip_recognition(struct brcmf_chip_priv* ci) {
     struct brcmf_core* core;
     uint32_t regdata;
     uint32_t socitype;
-    int ret;
+    zx_status_t ret;
 
     /* Get CC core rev
      * Chipid is assume to be at offset 0 from SI_ENUM_BASE
@@ -911,16 +917,16 @@ static int brcmf_chip_recognition(struct brcmf_chip_priv* ci) {
         ci->coredisable = brcmf_chip_sb_coredisable;
         ci->resetcore = brcmf_chip_sb_resetcore;
 
-        core = brcmf_chip_add_core(ci, BCMA_CORE_CHIPCOMMON, SI_ENUM_BASE, 0);
+        brcmf_chip_add_core(ci, BCMA_CORE_CHIPCOMMON, SI_ENUM_BASE, 0, &core);
         brcmf_chip_sb_corerev(ci, core);
-        core = brcmf_chip_add_core(ci, BCMA_CORE_SDIO_DEV, BCM4329_CORE_BUS_BASE, 0);
+        brcmf_chip_add_core(ci, BCMA_CORE_SDIO_DEV, BCM4329_CORE_BUS_BASE, 0, &core);
         brcmf_chip_sb_corerev(ci, core);
-        core = brcmf_chip_add_core(ci, BCMA_CORE_INTERNAL_MEM, BCM4329_CORE_SOCRAM_BASE, 0);
+        brcmf_chip_add_core(ci, BCMA_CORE_INTERNAL_MEM, BCM4329_CORE_SOCRAM_BASE, 0, &core);
         brcmf_chip_sb_corerev(ci, core);
-        core = brcmf_chip_add_core(ci, BCMA_CORE_ARM_CM3, BCM4329_CORE_ARM_BASE, 0);
+        brcmf_chip_add_core(ci, BCMA_CORE_ARM_CM3, BCM4329_CORE_ARM_BASE, 0, &core);
         brcmf_chip_sb_corerev(ci, core);
 
-        core = brcmf_chip_add_core(ci, BCMA_CORE_80211, 0x18001000, 0);
+        brcmf_chip_add_core(ci, BCMA_CORE_80211, 0x18001000, 0, &core);
         brcmf_chip_sb_corerev(ci, core);
     } else if (socitype == SOCI_AI) {
         ci->iscoreup = brcmf_chip_ai_iscoreup;
@@ -934,7 +940,7 @@ static int brcmf_chip_recognition(struct brcmf_chip_priv* ci) {
     }
 
     ret = brcmf_chip_cores_check(ci);
-    if (ret) {
+    if (ret != ZX_OK) {
         return ret;
     }
 
@@ -1015,9 +1021,14 @@ static int brcmf_chip_setup(struct brcmf_chip_priv* chip) {
     return ret;
 }
 
-struct brcmf_chip* brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops) {
+zx_status_t brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops,
+                              struct brcmf_chip** chip_out) {
     struct brcmf_chip_priv* chip;
-    int err = 0;
+    zx_status_t err = ZX_OK;
+
+    if (chip_out) {
+        *chip_out = NULL;
+    }
 
     if (WARN_ON(!ops->read32)) {
         err = -EINVAL;
@@ -1031,13 +1042,13 @@ struct brcmf_chip* brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* 
     if (WARN_ON(!ops->activate)) {
         err = -EINVAL;
     }
-    if (err < 0) {
-        return ERR_PTR(-EINVAL);
+    if (err != ZX_OK) {
+        return -EINVAL;
     }
 
     chip = kzalloc(sizeof(*chip), GFP_KERNEL);
     if (!chip) {
-        return ERR_PTR(-ENOMEM);
+        return -ENOMEM;
     }
 
     INIT_LIST_HEAD(&chip->cores);
@@ -1046,25 +1057,28 @@ struct brcmf_chip* brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* 
     chip->ctx = ctx;
 
     err = ops->prepare(ctx);
-    if (err < 0) {
+    if (err != ZX_OK) {
         goto fail;
     }
 
     err = brcmf_chip_recognition(chip);
-    if (err < 0) {
+    if (err != ZX_OK) {
         goto fail;
     }
 
     err = brcmf_chip_setup(chip);
-    if (err < 0) {
+    if (err != ZX_OK) {
         goto fail;
     }
 
-    return &chip->pub;
+    if (chip_out) {
+        *chip_out = &chip->pub;
+    }
+    return ZX_OK;
 
 fail:
     brcmf_chip_detach(&chip->pub);
-    return ERR_PTR(err);
+    return err;
 }
 
 void brcmf_chip_detach(struct brcmf_chip* pub) {

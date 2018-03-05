@@ -86,7 +86,7 @@ struct brcmf_mp_device; /* module paramateres, device specific */
  * fwil_types.h
  */
 struct brcmf_rev_info {
-    int result;
+    zx_status_t result;
     uint32_t vendorid;
     uint32_t deviceid;
     uint32_t radiorev;
@@ -202,21 +202,21 @@ struct brcmf_if {
     uint8_t ipv6addr_idx;
 };
 
-int brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp);
+bool brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp);
 
 /* Return pointer to interface name */
 char* brcmf_ifname(struct brcmf_if* ifp);
 struct brcmf_if* brcmf_get_ifp(struct brcmf_pub* drvr, int ifidx);
 void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable);
-int brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked);
-struct brcmf_if* brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifidx,
-                              bool is_p2pdev, const char* name, uint8_t* mac_addr);
+zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked);
+zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifidx, bool is_p2pdev,
+                         const char* name, uint8_t* mac_addr, struct brcmf_if** if_out);
 void brcmf_remove_interface(struct brcmf_if* ifp, bool rtnl_locked);
 void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason reason, bool state);
 void brcmf_txfinalize(struct brcmf_if* ifp, struct sk_buff* txp, bool success);
 void brcmf_netif_rx(struct brcmf_if* ifp, struct sk_buff* skb);
 void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on);
-int brcmf_core_init(void);
+zx_status_t brcmf_core_init(void);
 void brcmf_core_exit(void);
 
 #endif /* BRCMFMAC_CORE_H */

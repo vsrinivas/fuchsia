@@ -36,13 +36,13 @@ struct msgbuf_buf_addr {
     uint32_t high_addr;
 };
 
-int brcmf_proto_msgbuf_rx_trigger(struct device* dev);
+zx_status_t brcmf_proto_msgbuf_rx_trigger(struct device* dev);
 void brcmf_msgbuf_delete_flowring(struct brcmf_pub* drvr, uint16_t flowid);
-int brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr);
+zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr);
 void brcmf_proto_msgbuf_detach(struct brcmf_pub* drvr);
 #else
-static inline int brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
-    return 0;
+static inline zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
+    return ZX_OK;
 }
 static inline void brcmf_proto_msgbuf_detach(struct brcmf_pub* drvr) {}
 #endif
