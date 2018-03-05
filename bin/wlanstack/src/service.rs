@@ -44,7 +44,10 @@ pub fn device_service(
             let resp = state.devmgr.borrow_mut().create_iface(req.phy_id, req.role);
             match resp {
                 Ok(resp) => future::ok(wlan_service::CreateIfaceResponse { iface_id: resp }),
-                Err(_) => future::err(fidl::CloseChannel),
+                Err(e) => {
+                    error!("could not create iface: {:?}", e);
+                    future::err(fidl::CloseChannel)
+                }
             }
         },
 
