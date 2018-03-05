@@ -5,6 +5,7 @@
 #include <fbl/algorithm.h>
 
 #include "audio_analysis.h"
+#include "lib/fxl/logging.h"
 #include "mixer_tests_shared.h"
 
 namespace media {
@@ -305,6 +306,152 @@ TEST(PassThru, OutputFormatterSilence8) {
   EXPECT_TRUE(CompareBufferToVal(dest, static_cast<uint8_t>(0x80),
                                  fbl::count_of(dest) - 1));
   EXPECT_EQ(dest[fbl::count_of(dest) - 1], 78);  // this val survives
+}
+
+//
+// Pass-thru Noise-Floor tests
+//
+// These tests determine our best-case audio quality/fidelity, in the absence of
+// any gain, interpolation/SRC, mixing, reformatting or other processing. These
+// tests are done with a single 1kHz tone, and provide a baseline from which we
+// can measure any changes in sonic quality caused by other mixer stages.
+//
+// In performing all of our audio analysis tests with a specific buffer length,
+// We can choose input sinusoids with frequencies that perfectly fit within
+// those buffers (eliminating the need for FFT windowing). The reference
+// frequency below was specifically chosen as an approximation of a 1kHz tone,
+// assuming a 48kHz sample rate.
+constexpr uint32_t kNoiseFloorBufSize = 65536;
+constexpr uint32_t kReferenceFreq = 1363;  // 1kHz equivalent (65536/48000)
+
+template <typename T>
+double MeasureSourceNoiseFloor(double* magn_other_db) {
+  audio::MixerPtr mixer;
+
+  if (std::is_same<T, uint8_t>::value) {
+    mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000);
+  } else if (std::is_same<T, int16_t>::value) {
+    mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000);
+  } else {
+    FXL_DCHECK(false) << "Unsupported source format";
+  }
+
+  const double amplitude = (std::is_same<T, uint8_t>::value)
+                               ? std::numeric_limits<int8_t>::max()
+                               : std::numeric_limits<int16_t>::max();
+
+  // Populate source buffer; mix it (pass-thru) to accumulation buffer
+  std::vector<T> source(kNoiseFloorBufSize);
+  AccumCosine(source.data(), kNoiseFloorBufSize, kReferenceFreq, amplitude, 0.0,
+              false);
+
+  std::vector<int32_t> accum(kNoiseFloorBufSize);
+  uint32_t dst_offset = 0;
+  int32_t frac_src_offset = 0;
+  mixer->Mix(accum.data(), kNoiseFloorBufSize, &dst_offset, source.data(),
+             kNoiseFloorBufSize << audio::kPtsFractionalBits, &frac_src_offset,
+             media::audio::Mixer::FRAC_ONE, audio::Gain::kUnityScale, false);
+  EXPECT_EQ(kNoiseFloorBufSize, dst_offset);
+  EXPECT_EQ(
+      static_cast<int32_t>(kNoiseFloorBufSize << audio::kPtsFractionalBits),
+      frac_src_offset);
+
+  // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
+  double magn_signal, magn_other;
+  MeasureAudioFreq(accum.data(), kNoiseFloorBufSize, kReferenceFreq,
+                   &magn_signal, &magn_other);
+
+  // Calculate Signal-to-Noise-And-Distortion (SINAD)
+  *magn_other_db = ValToDb(magn_signal / magn_other);
+
+  // Calculate magnitude of primary signal strength
+  if (std::is_same<T, uint8_t>::value) {
+    magn_signal /= 256.0;
+  }
+  return ValToDb(magn_signal / amplitude);
+}
+
+// Measure Frequency Response and SINAD for 1kHz sine from 16bit source.
+TEST(NoiseFloor, 16Bit_Source) {
+  double magn_signal_db =
+      MeasureSourceNoiseFloor<int16_t>(&floor_db_16bit_source);
+
+  EXPECT_GE(magn_signal_db, -0.001) << "Test signal magnitude out of range";
+  EXPECT_LE(magn_signal_db, 0.001) << "Test signal magnitude out of range";
+
+  EXPECT_GE(floor_db_16bit_source, 98.0) << "Noise level out of range";
+}
+
+// Measure Frequency Response and SINAD for 1kHz sine from 8-bit source.
+TEST(NoiseFloor, 8Bit_Source) {
+  double magn_signal_db =
+      MeasureSourceNoiseFloor<uint8_t>(&floor_db_8bit_source);
+
+  EXPECT_GE(magn_signal_db, -0.1) << "Test signal magnitude out of range";
+  EXPECT_LE(magn_signal_db, 0.1) << "Test signal magnitude out of range";
+
+  EXPECT_GE(floor_db_8bit_source, 49.0) << "Noise level out of range";
+}
+
+template <typename T>
+double MeasureOutputNoiseFloor(double* magn_other_db) {
+  audio::OutputFormatterPtr output_formatter;
+
+  if (std::is_same<T, uint8_t>::value) {
+    output_formatter = SelectOutputFormatter(AudioSampleFormat::UNSIGNED_8, 1);
+  } else if (std::is_same<T, int16_t>::value) {
+    output_formatter = SelectOutputFormatter(AudioSampleFormat::SIGNED_16, 1);
+  } else {
+    FXL_DCHECK(false) << "Unsupported source format";
+  }
+
+  const double amplitude = std::numeric_limits<int16_t>::max();
+
+  // Populate accum buffer and output to destination buffer
+  std::vector<int32_t> accum(kNoiseFloorBufSize);
+  AccumCosine(accum.data(), kNoiseFloorBufSize, kReferenceFreq, amplitude, 0.0,
+              false);
+
+  std::vector<T> dest(kNoiseFloorBufSize);
+  output_formatter->ProduceOutput(accum.data(), dest.data(),
+                                  kNoiseFloorBufSize);
+
+  // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
+  double magn_signal, magn_other;
+  MeasureAudioFreq(dest.data(), kNoiseFloorBufSize, kReferenceFreq,
+                   &magn_signal, &magn_other);
+
+  // Calculate Signal-to-Noise-And-Distortion (SINAD)
+  *magn_other_db = ValToDb(magn_signal / magn_other);
+
+  if (std::is_same<T, uint8_t>::value) {
+    magn_signal *= 256.0;
+  }
+
+  // Calculate magnitude of primary signal strength
+  return ValToDb(magn_signal / amplitude);
+}
+
+// Measure Frequency Response and SINAD for 1kHz sine, to a 16bit output.
+TEST(NoiseFloor, 16Bit_Output) {
+  double magn_signal_db =
+      MeasureOutputNoiseFloor<int16_t>(&floor_db_16bit_output);
+
+  EXPECT_GE(magn_signal_db, -0.001) << "Test signal magnitude out of range";
+  EXPECT_LE(magn_signal_db, 0.001) << "Test signal magnitude out of range";
+
+  EXPECT_GE(floor_db_16bit_output, 98.0) << "Noise level out of range";
+}
+
+// Measure Frequency Response and SINAD for 1kHz sine, to an 8bit output.
+TEST(NoiseFloor, 8Bit_Output) {
+  double magn_signal_db =
+      MeasureOutputNoiseFloor<uint8_t>(&floor_db_8bit_output);
+
+  EXPECT_GE(magn_signal_db, -0.1) << "Test signal magnitude out of range";
+  EXPECT_LE(magn_signal_db, 0.1) << "Test signal magnitude out of range";
+
+  EXPECT_GE(floor_db_8bit_output, 45.0) << "Noise level out of range";
 }
 
 }  // namespace test

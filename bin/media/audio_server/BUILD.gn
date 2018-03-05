@@ -106,6 +106,7 @@ executable("audio_server") {
 }
 
 test("tests") {
+  testonly = true
   output_name = "audio_mixer_tests"
 
   sources = [
@@ -117,6 +118,7 @@ test("tests") {
     "test/mixer_transparency_tests.cc",
     "test/mixer_gain_tests.cc",
     "test/mixer_resampler_tests.cc",
+    "test/mixer_tests_recap.cc",
   ]
 
   deps = [

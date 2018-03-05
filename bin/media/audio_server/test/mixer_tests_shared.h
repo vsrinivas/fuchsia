@@ -12,6 +12,12 @@
 namespace media {
 namespace test {
 
+// Audio measurements that are determined by various test cases throughout the
+// overall set. These measurements are eventually displayed in an overall recap,
+// after all other tests have completed.
+extern double floor_db_16bit_source, floor_db_16bit_output;
+extern double floor_db_8bit_source, floor_db_8bit_output;
+
 //
 // Subtest shared helper functions -- used by tests; can ASSERT on their own.
 //
