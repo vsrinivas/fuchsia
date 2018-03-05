@@ -23,7 +23,7 @@ fx-machine-types() {
 }
 
 zircon_bin="zircon.bin"
-ramdisk_bin="bootdata-blobstore-${ZIRCON_PROJECT}.bin"
+ramdisk_bin="bootdata-blob-${ZIRCON_PROJECT}.bin"
 
 images_dir="images"
 cmdline_txt="${images_dir}/cmdline.txt"

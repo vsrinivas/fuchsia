@@ -167,8 +167,8 @@ func init() {
 		},
 		{
 			kernelImg,
-			armBuildDir + "bootdata-blobstore-arm64.bin",
-			"target/aarch64/bootdata-blobstore.bin",
+			armBuildDir + "bootdata-blob-arm64.bin",
+			"target/aarch64/bootdata-blob.bin",
 		},
 		{
 			kernelImg,
@@ -183,8 +183,8 @@ func init() {
 		},
 		{
 			kernelImg,
-			x86BuildDir + "bootdata-blobstore-x86.bin",
-			"target/x86_64/bootdata-blobstore.bin",
+			x86BuildDir + "bootdata-blob-x86.bin",
+			"target/x86_64/bootdata-blob.bin",
 		},
 		{
 			kernelImg,
