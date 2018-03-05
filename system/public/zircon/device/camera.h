@@ -193,6 +193,7 @@ typedef struct camera_vb_cmd_frame_release_resp {
 } camera_vb_cmd_frame_release_resp_t;
 
 typedef enum camera_error {
+    CAMERA_ERROR_NONE = 0x0,
     // An error occurred during the production of a frame.
     // No data will be available in the data buffer corresponding to this
     // notification.
