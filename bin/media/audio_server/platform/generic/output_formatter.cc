@@ -109,6 +109,7 @@ OutputFormatterPtr OutputFormatter::Select(
   FXL_DCHECK(format);
   FXL_DCHECK(format->sample_format != AudioSampleFormat::ANY);
   FXL_DCHECK(format->sample_format != AudioSampleFormat::NONE);
+  // MTWN-93: Consider eliminating these enums if we don't foresee using them.
 
   switch (format->sample_format) {
     case AudioSampleFormat::UNSIGNED_8:

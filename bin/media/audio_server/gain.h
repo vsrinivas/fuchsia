@@ -37,8 +37,7 @@ class Gain {
   static constexpr AScale kUnityScale =
       (static_cast<AScale>(1u) << kFractionalScaleBits);
   static constexpr AScale kMaxScale = 0xFD9539A4;  // +24.0 dB: kMaxGain
-  //
-  // TODO(mpuryear): MTWN-89 Unify 2 differing constants for max renderer gain
+
   static constexpr float kMinGain = AudioRenderer::kMutedGain;
   static constexpr float kMaxGain = AudioRenderer::kMaxGain;
 
