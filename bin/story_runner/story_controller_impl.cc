@@ -1526,12 +1526,17 @@ class StoryControllerImpl::ResolveModulesCall
         auto noun_constraint_entry = ResolverNounConstraintEntry::New();
         noun_constraint_entry->key = name;
         noun_constraint_entry->constraint = std::move(noun_constraint);
-        resolver_query_->noun_constraints.push_back(std::move(noun_constraint_entry));
+        resolver_query_->noun_constraints.push_back(
+            std::move(noun_constraint_entry));
 
-      } else if (noun->is_link_name()) {
-        // Find the chain for this Module.
-        auto link_path = story_controller_impl_->GetLinkPathForChainKey(
-            requesting_module_path_, noun->get_link_name());
+      } else if (noun->is_link_name() || noun->is_link_path()) {
+        // Find the chain for this Module, or use the one that was provided via
+        // the noun.
+        auto link_path =
+            noun->is_link_path()
+                ? noun->get_link_path().Clone()
+                : story_controller_impl_->GetLinkPathForChainKey(
+                      requesting_module_path_, noun->get_link_name());
 
         if (!link_path) {
           // The chain doesn't contain a value for this Link, so assume it's
