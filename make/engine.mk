@@ -88,7 +88,8 @@ else
 project-name := $(firstword $(MAKECMDGOALS))
 
 ifneq ($(project-name),)
-ifneq ($(strip $(wildcard kernel/project/$(project-name).mk)),)
+ifneq ($(strip $(wildcard kernel/project/$(project-name).mk \
+			  kernel/project/alias/$(project-name).mk)),)
 do-nothing := 1
 $(MAKECMDGOALS) _all: make-make
 make-make:
@@ -416,7 +417,8 @@ endif
 FORCE:
 
 # try to include the project file
--include kernel/project/$(PROJECT).mk
+-include $(firstword $(wildcard kernel/project/$(PROJECT).mk \
+				kernel/project/alias/$(PROJECT).mk))
 ifndef TARGET
 $(error couldn't find project or project doesn't define target)
 endif
