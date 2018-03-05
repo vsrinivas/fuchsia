@@ -18,8 +18,8 @@ If you would like to run this software on such a device, you can disable the GPU
 intel-based device like Acer or NUC.
 
         out/build-zircon/tools/bootserver \
-            out/build-zircon/build-zircon-pc-x86-64/zircon.bin \
-            out/release-x86-64/user.bootfs -- \
+            out/build-zircon/build-x64/zircon.bin \
+            out/release-x64/user.bootfs -- \
             gfxconsole.font=18x32 \
             driver.intel_gen_gpu.disable
 

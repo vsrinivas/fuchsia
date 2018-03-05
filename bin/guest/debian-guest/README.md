@@ -17,7 +17,7 @@ the VIM2.
 ```
 $ cd $FUCHSIA_DIR
 $ ./garnet/bin/guest/debian-guest/build-image.sh x86
-$ fx set x86-64 --packages "garnet/packages/debian-guest" --release
+$ fx set x64 --packages "garnet/packages/debian-guest" --release
 $ fx full-build
 $ fx boot -1
 ```
@@ -36,13 +36,13 @@ $ cd $FUCHSIA_DIR
 
 # For VIM2
 $ ./garnet/bin/guest/debian-guest/build-usb.sh arm64
-$ fx set vim2 --packages "garnet/packages/debian-guest" --args "debian_guest_usb_root=true" --release --netboot
+$ fx set arm64 --packages "garnet/packages/debian-guest" --args "debian_guest_usb_root=true" --release --netboot
 $ fx full-build
 $ fx boot netboot -1
 
 # Similarly for x86:
 $ ./garnet/bin/guest/debian-guest/build-usb.sh x86
-$ fx set x86-64 --packages "garnet/packages/debian-guest" --args "debian_guest_usb_root=true" --release
+$ fx set x64 --packages "garnet/packages/debian-guest" --args "debian_guest_usb_root=true" --release
 $ fx full-build
 $ fx boot -1
 ```

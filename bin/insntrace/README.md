@@ -186,8 +186,8 @@ and so was never checked in. It's still a work-in-progress to add this feature.
 To obtain a dump of raw output:
 
 ```
-linux$ ZIRCON_BUILDROOT=out/build-zircon/build-zircon-pc-x86-64
-linux$ FUCHSIA_BUILDROOT=out/debug-x86-64
+linux$ ZIRCON_BUILDROOT=out/build-zircon/build-x64
+linux$ FUCHSIA_BUILDROOT=out/debug-x64
 linux$ $FUCHSIA_BUILDROOT/host_x64/insntrace_print \
   --ktrace=ptout.ktrace \
   --pt-list=ptout.xptlist \
@@ -202,7 +202,7 @@ linux$ $FUCHSIA_BUILDROOT/host_x64/insntrace_print \
 A sample of the output:
 
 ```
-Current function is now /usr/local/google/home/dje/fnl/ipt/fuchsia/out/debug-x86-64/exe.unstripped/syscall-test:main
+Current function is now /usr/local/google/home/dje/fnl/ipt/fuchsia/out/debug-x64/exe.unstripped/syscall-test:main
 227640018981: 608ffd59603c: other
 227640018981: 608ffd59603e: other
 227640018981: 608ffd596040: cjump
@@ -210,14 +210,14 @@ Current function is now /usr/local/google/home/dje/fnl/ipt/fuchsia/out/debug-x86
 227640018981: 608ffd596050: call
 Entering unknown function
 227640018981: 608ffd596120: jump
-Current function is now /usr/local/google/home/dje/fnl/ipt/fuchsia/out/build-zircon/build-zircon-pc-x86-64/system/ulib/zircon/libzircon.so:VDSO_zx_syscall_test_0
+Current function is now /usr/local/google/home/dje/fnl/ipt/fuchsia/out/build-zircon/build-x64/system/ulib/zircon/libzircon.so:VDSO_zx_syscall_test_0
 227640019074: 5d162fcd9e3a: other
 227640019074: 5d162fcd9e3c: other
 227640019074: 5d162fcd9e3e: other
 227640019074: 5d162fcd9e41: other
 227640019074: 5d162fcd9e46: fcall
 Space is now kernel
-Current function is now ../out/build-zircon/build-zircon-pc-x86-64/zircon.elf:x86_syscall
+Current function is now ../out/build-zircon/build-x64/zircon.elf:x86_syscall
 227640019105: ffffffff80114c7f: other
 227640019105: ffffffff80114c82: other
 227640019105: ffffffff80114c8b: other
@@ -242,8 +242,8 @@ Note: The output looks way cooler with the disassembly. :-) In time.
 To obtain a dump of calls output:
 
 ```
-linux$ ZIRCON_BUILDROOT=out/build-zircon/build-zircon-pc-x86-64
-linux$ FUCHSIA_BUILDROOT=out/debug-x86-64
+linux$ ZIRCON_BUILDROOT=out/build-zircon/build-x64
+linux$ FUCHSIA_BUILDROOT=out/debug-x64
 linux$ $FUCHSIA_BUILDROOT/host_x64/insntrace_print \
   --ktrace=ptout.ktrace \
   --pt-list=ptout.xptlist \
@@ -392,7 +392,7 @@ Also, one must save "loglistener" output to a file and pass the
 path of this file to "insntrace_print". The author runs loglistener thusly:
 
 ```
-$ TOOLSDIR="out/build-zircon/build-zircon-pc-x86-64/tools"
+$ TOOLSDIR="out/build-zircon/tools"
 $ $TOOLSDIR/loglistener 2>&1 | tee loglistener.log
 ```
 

@@ -6,7 +6,7 @@ set -e -u
 cd $(dirname $0)/../..
 
 # Assume we're using an x86-64 debug build.
-OUT_DIR=$PWD/../../out/debug-x86-64
+OUT_DIR=$PWD/../../out/debug-x64
 GEN_DIR=$OUT_DIR/gen
 
 # Rebuild the bindings

@@ -39,7 +39,7 @@ Escher can also build on Linux.  In order to do so, you need to:
   * specify that you want to build only the Escher module, for Linux:
     ```
     cd $FUCHSIA_DIR
-    fx set x86-64 --release --packages garnet/packages/escher_linux,garnet/packages/cobalt_client
+    fx set x64 --release --packages garnet/packages/escher_linux,garnet/packages/cobalt_client
     ```
     * See `$FUCHSIA_DIR/docs/getting_source.md` for how to set up the `fx` tool.
     * There may be a spurious error regarding `skia_use_sfntly`; ignore it.
@@ -50,5 +50,5 @@ Escher can also build on Linux.  In order to do so, you need to:
     * Note: you can exit via Ctrl-C once Zircon is finished building.  
   * BUILD!! AND RUN!!!
     ```
-    buildtools/ninja -C out/release-x86-64/ && out/release-x86-64/host_x64/waterfall
+    buildtools/ninja -C out/release-x64/ && out/release-x64/host_x64/waterfall
     ```

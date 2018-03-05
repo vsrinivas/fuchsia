@@ -7,10 +7,10 @@
 set -e
 fuchsia_root=`pwd`
 
-build=${1:-debug-x86-64}
+build=${1:-debug-x64}
 builddir=out/build-vkquake-$build
 
-if [[ $zircon_platform == *"aarch64" ]]; then
+if [[ $zircon_platform == *"arm64" ]]; then
 	shared_path=arm64
 	system_processor=aarch64
 

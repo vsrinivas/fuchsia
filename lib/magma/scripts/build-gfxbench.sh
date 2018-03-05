@@ -7,14 +7,14 @@
 set -e
 fuchsia_root=`pwd`
 
-zircon_platform=${1:-x86-64}
+zircon_platform=${1:-x64}
 
 if [[ $zircon_platform == *"arm64" ]]; then
-	platform=aarch64
+	platform=arm64
 	shared_path=arm64
 	system_processor=aarch64
 else
-	platform=x86-64
+	platform=x64
 	shared_path=x64
 	system_processor=x86_64
 fi

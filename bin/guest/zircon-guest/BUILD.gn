@@ -8,11 +8,7 @@ import("//build/gn/config.gni")
 import("//garnet/bin/guest/guest.gni")
 import("$root_out_dir/args.gn")
 
-if (target_cpu == "x64") {
-  zircon_cpu = "x86-64"
-} else {
-  zircon_cpu = target_cpu
-}
+zircon_cpu = target_cpu
 
 _mdigen = "//out/build-zircon/tools/mdigen"
 

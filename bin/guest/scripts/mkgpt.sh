@@ -13,7 +13,7 @@ BUILDDIR="${GUEST_SCRIPTS_DIR}/../../../../out"
 MINFS="${BUILDDIR}/build-zircon/tools/minfs"
 
 usage() {
-    echo "usage: ${0} [-f] {x86-64|arm64}"
+    echo "usage: ${0} [-f] {x64|arm64}"
     echo ""
     echo "    -f Force a rebuild even if the artifact already exists."
     echo "    -o Output directory for image files."
@@ -36,7 +36,7 @@ shift $((OPTIND - 1))
 readonly "${FORCE}"
 case "${1}" in
 arm64) ;&
-x86-64)
+x64)
   ARCH="$1";;
 *)
   usage;;

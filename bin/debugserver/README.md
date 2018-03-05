@@ -118,7 +118,7 @@ Remote debugging using 192.168.3.53:7000
 From here we can use gdb as usual:
 
 ```
-(gdb) file out/build-zircon/build-zircon-pc-x86-64/system/utest/debugger/debugger.elf
+(gdb) file out/build-zircon/build-x64/system/utest/debugger/debugger.elf
 ...
 (gdb) break main
 (gdb) run
@@ -174,7 +174,7 @@ On Linux:
 
 ```
 devhost$ out/toolchain/x86_64-linux/gdb/bin/gdb
-(gdb) file out/build-zircon/build-zircon-pc-x86-64/system/utest/debugger/debugger.elf
+(gdb) file out/build-zircon/build-x64/system/utest/debugger/debugger.elf
 (gdb) tar ext 192.168.3.53:7000
 (gdb) set remote exec-file /boot/test/sys/debugger-test
 (gdb) r segfault
@@ -237,16 +237,16 @@ If you need the library (say you want to set a breakpoint in a function in it)
 then find the library in the build tree, e.g.,
 
 ```
-devhost$ find out/build-zircon/build-zircon-pc-x86-64 -name libtest-utils.so
-out/build-zircon/build-zircon-pc-x86-64/system/ulib/test-utils/libtest-utils.so
+devhost$ find out/build-zircon/build-x64 -name libtest-utils.so
+out/build-zircon/build-x64/system/ulib/test-utils/libtest-utils.so
 ```
 
 and then in gdb:
 
 ```
 (gdb) show solib-search-path
-The search path for loading non-absolute shared library symbol files is out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info.
-(gdb) set solib-search-path out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info:out/build-zircon/build-zircon-pc-x86-64/system/ulib/test-utils
+The search path for loading non-absolute shared library symbol files is out/build-zircon/build-x64/sysroot/debug-info.
+(gdb) set solib-search-path out/build-zircon/build-x64/sysroot/debug-info:out/build-zircon/build-x64/system/ulib/test-utils
 ```
 
 ### Limitations
@@ -265,9 +265,9 @@ place to look.
 Do both of these files exist?
 
 ```
-devhost$ ls -l out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info/{libc.so,ld.so.1}
-lrwxrwxrwx 1 dje eng       7 Oct  1 12:53 out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info/ld.so.1 -> libc.so
--rwxr-x--- 2 dje eng 4934096 Oct  1 12:53 out/build-zircon/build-zircon-pc-x86-64/sysroot/debug-info/libc.so
+devhost$ ls -l out/build-zircon/build-x64/sysroot/debug-info/{libc.so,ld.so.1}
+lrwxrwxrwx 1 dje eng       7 Oct  1 12:53 out/build-zircon/build-x64/sysroot/debug-info/ld.so.1 -> libc.so
+-rwxr-x--- 2 dje eng 4934096 Oct  1 12:53 out/build-zircon/build-x64/sysroot/debug-info/libc.so
 ```
 
 Does libc.so have debug information?
@@ -299,7 +299,7 @@ finished for basic debugging to work:
 - Memory access following vRun but before "c".
 - sw/hw breakpoints and stepping
 - vCont and friends
-- Support architectures other than x86-64
+- Support architectures other than x86
 - user muscle memory will make them want to type "debugserver :7000 ..."
   instead of "debugserver 7000 ...", should stay consistent
 - downgrade some errors to INFO (e.g., for unsupported optional commands)

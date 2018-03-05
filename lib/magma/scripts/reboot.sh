@@ -6,7 +6,7 @@
 
 set -e
 fuchsia_root=`pwd`
-zircon_build_dir=$fuchsia_root/out/build-zircon/build-zircon-pc-x86-64
+zircon_build_dir=$fuchsia_root/out/build-zircon/build-x64
 netcp=$zircon_build_dir/tools/netcp
 netruncmd=$zircon_build_dir/tools/netruncmd
 

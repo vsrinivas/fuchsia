@@ -7,7 +7,7 @@
 set -e
 fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
-build=${1:-debug-x86-64}
+build=${1:-debug-x64}
 build_dir=$fuchsia_root/out/build-vulkancts-$build
 cc=$fuchsia_root/`find buildtools -type l -name "clang"`
 cxx=$fuchsia_root/`find buildtools -type l -name "clang++"`
@@ -21,7 +21,7 @@ if [ ! -d "$sysroot" ]; then
 	exit 1
 fi
 
-if [[ $build == *"aarch64" ]]; then
+if [[ $build == *"arm64" ]]; then
 	extra_args="-DFUCHSIA_SYSTEM_PROCESSOR=aarch64 -DDE_CPU=DE_CPU_ARM_64 -DDE_PTR_SIZE=8"
 else
 	extra_args="-DFUCHSIA_SYSTEM_PROCESSOR=x86_64"

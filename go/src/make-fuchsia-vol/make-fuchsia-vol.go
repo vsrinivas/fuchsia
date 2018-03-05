@@ -107,7 +107,7 @@ func main() {
 			*ramdisk = filepath.Join(*fuchsiaBuildDir, "user.bootfs")
 		} else {
 			// XXX(raggi): does not support ARM
-			*ramdisk = filepath.Join(*fuchsiaBuildDir, "bootdata-blob-x86.bin")
+			*ramdisk = filepath.Join(*fuchsiaBuildDir, "bootdata-blob-x64.bin")
 		}
 	}
 	if *cmdline == "" {
@@ -135,7 +135,7 @@ func main() {
 
 	if *zedboot == "" {
 		needFuchsiaBuildDir()
-		*zedboot = filepath.Join(*fuchsiaBuildDir, "images", "zedboot-x86.bin")
+		*zedboot = filepath.Join(*fuchsiaBuildDir, "images", "zedboot-x64.bin")
 	}
 
 	if !*ramdiskOnly {

@@ -7,7 +7,7 @@
 set -e
 fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
-zircon_build_dir=$fuchsia_root/out/build-zircon/build-zircon-pc-x86-64
+zircon_build_dir=$fuchsia_root/out/build-zircon/build-x64
 build=debug
 bootfs=$fuchsia_root/out/user.bootfs
 
@@ -24,7 +24,7 @@ fi
 fi
 fi
 
-build_dir=$fuchsia_root/out/$build-x86-64
+build_dir=$fuchsia_root/out/$build-x64
 
 args="msd_intel_wait_for_flip=true"
 args="$args magma_enable_tracing=false"

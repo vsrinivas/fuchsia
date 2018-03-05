@@ -7,13 +7,12 @@
 set -e
 fuchsia_root=`pwd`
 
-build=${1:-debug-x86-64}
+build=${1:-debug-x64}
 builddir=out/build-doom3-$build
 
-if [[ $build == *"aarch64" ]]; then
-	shared_path=arm64-shared
+if [[ $build == *"arm64" ]]; then
+	shared_path=arm64
 	system_processor=aarch64
-
 else
 	shared_path=x64-shared
 	system_processor=x86_64

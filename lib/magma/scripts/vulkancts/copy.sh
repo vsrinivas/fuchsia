@@ -7,17 +7,12 @@
 set -e
 fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
-build=${1:-debug-x86-64}
+build=${1:-debug-x64}
 build_dir=$fuchsia_root/out/build-vulkancts-$build
 dest_dir=/data/vulkancts
 netaddr=$fuchsia_root/out/build-zircon/tools/netaddr
 
-fuchsia_platform=x86-64
-if [[ $build == *"aarch64" ]]; then
-    fuchsia_platform=aarch64
-fi
-
-ssh_config="-F $fuchsia_root/out/debug-$fuchsia_platform/ssh-keys/ssh_config"
+ssh_config="-F $fuchsia_root/out/$build/ssh-keys/ssh_config"
 
 ssh $ssh_config `$netaddr --fuchsia` mkdir -p $dest_dir
 scp $ssh_config $build_dir/external/vulkancts/modules/vulkan/deqp-vk-stripped [`$netaddr --fuchsia`]:$dest_dir/deqp-vk

@@ -35,7 +35,7 @@ desktop.
 Example:
 
 ```
-bash$ out/debug-x86-64/host_x64/traceutil record \
+bash$ out/debug-x64/host_x64/traceutil record \
   --buffer-size=64 \
   --duration=2s \
   --categories=gfx,cpu:fixed:instructions_retired,cpu:fixed:unhalted_reference_cycles,cpu:l2_lines,cpu:sample:10000

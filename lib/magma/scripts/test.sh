@@ -8,7 +8,7 @@ set -e
 fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
 netaddr=$fuchsia_root/out/build-zircon/tools/netaddr
-ssh_config="-F $fuchsia_root/out/debug-x86-64/ssh-keys/ssh_config"
+ssh_config="-F $fuchsia_root/out/debug-x64/ssh-keys/ssh_config"
 test_out=/tmp/test_out
 
 ssh $ssh_config `$netaddr --fuchsia` 'export GTEST_OUTPUT=xml:/data/test_out/ && . /system/bin/magma_autorun'

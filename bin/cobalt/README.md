@@ -36,7 +36,7 @@ FIDL service.
 For example:
 
 ```
-$ fx set x86-64
+$ fx set x64
 $ fx full-build
 ```
 

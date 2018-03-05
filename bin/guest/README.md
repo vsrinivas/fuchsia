@@ -19,7 +19,7 @@ $ cd $GARNET_DIR
 # ready to netboot once you see:
 #
 # [bootserver] listening on [::]33331
-$ ./bin/guest/scripts/build.sh x86
+$ ./bin/guest/scripts/build.sh x64
 ```
 
 ## Running guests
@@ -38,7 +38,7 @@ $ guest launch linux-guest
 To run from topaz, update the build command as:
 
 ```
-$ ./bin/guest/scripts/build.sh -p "topaz/packages/default,garnet/packages/linux-guest,garnet/packages/zircon-guest" x86
+$ ./bin/guest/scripts/build.sh -p "topaz/packages/default,garnet/packages/linux-guest,garnet/packages/zircon-guest" x64
 ```
 
 After netbooting the guest packages can be launched from the system launcher as
