@@ -109,7 +109,7 @@ zx_status_t HwBeaconSender::SendBeaconFrame(const StartRequest& req) {
 
     // TODO(hahnr): Use dedicated device and DDK path to configure Beacons in the driver rather than
     // shortcutting via the tx path.
-    status = device_->SendWlan(std::move(packet));
+    status = device_->ConfigureBeacon(std::move(packet));
     if (status != ZX_OK) {
         errorf("[hw-bcn-sender] could not send beacon packet: %d\n", status);
         return status;
