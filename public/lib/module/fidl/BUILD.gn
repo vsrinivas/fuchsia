@@ -35,14 +35,24 @@ fidl("module_controller") {
   ]
 }
 
-fidl("module_data") {
+fidl("link_path") {
   sources = [
     "link_path.fidl",
+  ]
+}
+
+fidl("module_data") {
+  sources = [
     "module_data.fidl",
     "module_manifest.fidl",
   ]
 
   deps = [
+    "//peridot/public/lib/daisy/fidl",
     "//peridot/public/lib/surface/fidl",
+  ]
+
+  public_deps = [
+    ":link_path",
   ]
 }

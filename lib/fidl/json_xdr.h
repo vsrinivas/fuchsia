@@ -112,6 +112,16 @@ class XdrContext {
 
   ~XdrContext();
 
+  // Returns the XdrOp that this XdrContext was created with.
+  //
+  // This is required by some XdrFilters that cannot use the same code to set or
+  // get data from objects. However, in general, try to avoid special-casing
+  // an XdrFilter to change behavior based on whether it's translating to or
+  // from JSON.
+  XdrOp op() const {
+    return op_;
+  }
+
   // Below are methods to handle values on properties of objects for
   // handling standalone values. These methods are called by filter
   // code during a serialization/deserialization operation.

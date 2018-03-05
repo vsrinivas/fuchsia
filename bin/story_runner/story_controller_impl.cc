@@ -81,6 +81,104 @@ void XdrSurfaceRelation(XdrContext* const xdr, SurfaceRelation* const data) {
   xdr->Field("emphasis", &data->emphasis);
 }
 
+void XdrNoun(XdrContext* const xdr, Noun* const data) {
+  static constexpr char kTag[] = "tag";
+  static constexpr char kEntityReference[] = "entity_reference";
+  static constexpr char kJson[] = "json";
+  static constexpr char kEntityType[] = "entity_type";
+  static constexpr char kLinkName[] = "link_name";
+  static constexpr char kLinkPath[] = "link_path";
+
+  switch (xdr->op()) {
+    case XdrOp::FROM_JSON: {
+      std::string tag;
+      xdr->Field(kTag, &tag);
+
+      if (tag == kEntityReference) {
+        std::string value;
+        xdr->Field(kEntityReference, &value);
+        data->set_entity_reference(std::move(value));
+      } else if (tag == kJson) {
+        std::string value;
+        xdr->Field(kJson, &value);
+        data->set_json(std::move(value));
+      } else if (tag == kEntityType) {
+        ::f1dl::VectorPtr<::f1dl::String> value;
+        xdr->Field(kEntityType, &value);
+        data->set_entity_type(std::move(value));
+      } else if (tag == kLinkName) {
+        std::string value;
+        xdr->Field(kLinkName, &value);
+        data->set_link_name(std::move(value));
+      } else if (tag == kLinkPath) {
+        LinkPathPtr value;
+        xdr->Field(kLinkPath, &value, XdrLinkPath);
+        data->set_link_path(std::move(value));
+      } else {
+        FXL_LOG(ERROR) << "XdrNoun FROM_JSON unknown tag: " << tag;
+      }
+      break;
+    }
+
+    case XdrOp::TO_JSON: {
+      std::string tag;
+
+      // The unusual call to operator->() in the cases below is because
+      // operator-> for all of FIDL's pointer types to {strings, arrays,
+      // structs} returns a _non-const_ reference to the inner pointer,
+      // which is required by the xdr->Field() method. Calling get() returns
+      // a const pointer for arrays and strings. get() does return a non-const
+      // pointer for FIDL structs, but given that operator->() is required for
+      // some FIDL types, we might as well be consistent and use operator->()
+      // for all types.
+
+      switch (data->which()) {
+        case Noun::Tag::ENTITY_REFERENCE:
+          tag = kEntityReference;
+          xdr->Field(kEntityReference,
+                     data->get_entity_reference().operator->());
+          break;
+        case Noun::Tag::JSON:
+          tag = kJson;
+          xdr->Field(kJson, data->get_json().operator->());
+          break;
+        case Noun::Tag::ENTITY_TYPE:
+          tag = kEntityType;
+          xdr->Field(kEntityType, data->get_entity_type().operator->());
+          break;
+        case Noun::Tag::LINK_NAME:
+          tag = kLinkName;
+          xdr->Field(kLinkName, data->get_link_name().operator->());
+          break;
+        case Noun::Tag::LINK_PATH: {
+          tag = kLinkPath;
+          xdr->Field(kLinkPath, data->get_link_path().operator->(),
+                     XdrLinkPath);
+          break;
+        }
+        case Noun::Tag::__UNKNOWN__:
+          FXL_LOG(ERROR) << "XdrNoun TO_JSON unknown tag: "
+                         << static_cast<int>(data->which());
+          break;
+      }
+
+      xdr->Field(kTag, &tag);
+      break;
+    }
+  }
+}
+
+void XdrNounEntry(XdrContext* const xdr, NounEntry* const data) {
+  xdr->Field("name", &data->name);
+  xdr->Field("noun", &data->noun, XdrNoun);
+}
+
+void XdrDaisy(XdrContext* const xdr, Daisy* const data) {
+  xdr->Field("verb", &data->verb);
+  xdr->Field("url", &data->url);
+  xdr->Field("nouns", &data->nouns, XdrNounEntry);
+}
+
 void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
@@ -89,6 +187,7 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("module_source", &data->module_source);
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
   xdr->Field("module_stopped", &data->module_stopped);
+  xdr->Field("daisy", &data->daisy, XdrDaisy);
 
   xdr->ReadErrorHandler([data] {
        data->chain_data = ChainData::New();
@@ -148,8 +247,7 @@ class StoryControllerImpl::BlockingModuleDataWriteCall : Operation<> {
         key_(std::move(key)),
         module_data_(std::move(module_data)) {
     story_controller_impl_->blocked_operations_.push_back(
-        std::make_pair<ModuleDataPtr, BlockingModuleDataWriteCall*>(
-            module_data_.Clone(), this));
+        std::make_pair(module_data_.Clone(), this));
     Ready();
   }
 
@@ -586,6 +684,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
       f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      DaisyPtr daisy,
       ResultCall result_call)
 
       : Operation("StoryControllerImpl::StartModuleCall", container,
@@ -601,7 +700,8 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
         embed_module_watcher_(std::move(embed_module_watcher)),
-        view_owner_request_(std::move(view_owner_request)) {
+        view_owner_request_(std::move(view_owner_request)),
+        daisy_(std::move(daisy)) {
     Ready();
   }
 
@@ -650,6 +750,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     module_data_->module_source = module_source_;
     module_data_->surface_relation = surface_relation_.Clone();
     module_data_->module_stopped = false;
+    module_data_->daisy = std::move(daisy_);
 
     // Initialize |module_data_->chain_data|.
     new InitializeChainCall(&operation_queue_, story_controller_impl_,
@@ -706,6 +807,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   f1dl::InterfaceRequest<ModuleController> module_controller_request_;
   f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher_;
   f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  DaisyPtr daisy_;
 
   LinkPathPtr link_path_;
   ModuleDataPtr module_data_;
@@ -727,7 +829,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation, const bool focus,
-      ModuleSource module_source, ResultCall result_call)
+      ModuleSource module_source, DaisyPtr daisy, ResultCall result_call)
       : Operation("StoryControllerImpl::StartModuleInShellCall", container,
                   std::move(result_call), module_url),
         story_controller_impl_(story_controller_impl),
@@ -740,7 +842,8 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
         module_controller_request_(std::move(module_controller_request)),
         surface_relation_(std::move(surface_relation)),
         focus_(focus),
-        module_source_(module_source) {
+        module_source_(module_source),
+        daisy_(std::move(daisy)) {
     Ready();
   }
 
@@ -759,7 +862,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
         module_source_, surface_relation_.Clone(),
         std::move(incoming_services_), std::move(module_controller_request_),
         nullptr /* embed_module_watcher */, view_owner_.NewRequest(),
-        [this, flow] { Cont(flow); });
+        std::move(daisy_), [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
@@ -840,6 +943,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   SurfaceRelationPtr surface_relation_;
   const bool focus_;
   const ModuleSource module_source_;
+  DaisyPtr daisy_;
 
   ModuleControllerPtr module_controller_;
   mozart::ViewOwnerPtr view_owner_;
@@ -909,7 +1013,8 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
           link_name_, nullptr /* module_manifest */, nullptr /* chain_data */,
           nullptr /* incoming_services */,
           nullptr /* module_controller_request*/, std::move(surface_relation_),
-          true, ModuleSource::EXTERNAL, [flow] {});
+          true, ModuleSource::EXTERNAL, std::move(module_data_->daisy),
+          [flow] {});
     }
   }
 
@@ -1274,7 +1379,8 @@ class StoryControllerImpl::StartCall : Operation<> {
                   nullptr /* incoming_services */,
                   nullptr /* module_controller_request */,
                   module_data->surface_relation.Clone(), true,
-                  module_data->module_source, [flow] {});
+                  module_data->module_source, std::move(module_data->daisy),
+                  [flow] {});
             }
           }
 
@@ -1414,7 +1520,7 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
         nullptr /* incoming_services */,
         nullptr /* module_controller_request */,
         std::move(module_data_->surface_relation), true,
-        module_data_->module_source, [flow] {});
+        module_data_->module_source, std::move(module_data_->daisy), [flow] {});
   }
 
   OperationQueue operation_queue_;
@@ -1703,6 +1809,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
           nullptr /* module_controller_request */,
           nullptr /* embed_module_watcher */,
           node_views_[nodes_->at(i)->node_name].NewRequest(),
+          nullptr /* daisy */,
           [this, flow] { Cont2(flow); });
     } else {
       Cont2(flow);
@@ -1781,8 +1888,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
     FlowToken flow{this, &result_};
 
     new ResolveModulesCall(&operation_queue_, story_controller_impl_,
-                           std::move(daisy_),
-                           requesting_module_path_.Clone(),
+                           daisy_.Clone(), requesting_module_path_.Clone(),
                            [this, flow](FindModulesResultPtr result) {
                              StartModuleFromResult(flow, std::move(result));
                            });
@@ -1805,7 +1911,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
             module_url, nullptr /* link_name */, manifest.Clone(),
             create_chain_info.Clone(), std::move(incoming_services_),
             std::move(module_controller_request_), std::move(surface_relation_),
-            true, module_source_, [flow] {});
+            true /* focus */, module_source_, std::move(daisy_), [flow] {});
       } else {
         new StartModuleCall(
             &operation_queue_, story_controller_impl_, std::move(module_path),
@@ -1814,7 +1920,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
             std::move(surface_relation_), std::move(incoming_services_),
             std::move(module_controller_request_),
             nullptr /* embed_module_watcher */, std::move(view_owner_request_),
-            [flow] {});
+            std::move(daisy_), [flow] {});
       }
 
       result_ = StartModuleStatus::SUCCESS;
@@ -1824,7 +1930,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
   OperationQueue operation_queue_;
   StoryControllerImpl* const story_controller_impl_;
   f1dl::VectorPtr<f1dl::StringPtr> requesting_module_path_;
-  std::string module_name_;
+  const std::string module_name_;
   DaisyPtr daisy_;
   f1dl::InterfaceRequest<component::ServiceProvider> incoming_services_;
   f1dl::InterfaceRequest<ModuleController> module_controller_request_;
@@ -2011,7 +2117,7 @@ void StoryControllerImpl::StartModuleDeprecated(
       manifest.Clone(), std::move(create_chain_info), module_source,
       nullptr /* surface_relation */, std::move(incoming_services),
       std::move(module_controller_request), nullptr /* embed_module_watcher */,
-      std::move(view_owner_request), [] {});
+      std::move(view_owner_request), nullptr /* daisy */, [] {});
 }
 
 void StoryControllerImpl::StartModuleInShellDeprecated(
@@ -2029,7 +2135,8 @@ void StoryControllerImpl::StartModuleInShellDeprecated(
       &operation_queue_, this, module_path, module_url, link_name,
       manifest.Clone(), std::move(create_chain_info),
       std::move(incoming_services), std::move(module_controller_request),
-      std::move(surface_relation), focus, module_source, [] {});
+      std::move(surface_relation), focus, module_source, nullptr /* daisy */,
+      [] {});
 }
 
 void StoryControllerImpl::EmbedModule(
@@ -2089,7 +2196,8 @@ void StoryControllerImpl::EmbedModuleDeprecated(
       nullptr /* module_manifest */, std::move(create_chain_info),
       ModuleSource::INTERNAL, nullptr /* surface_relation */,
       std::move(incoming_services), std::move(module_controller_request),
-      std::move(embed_module_watcher), std::move(view_owner_request), [] {});
+      std::move(embed_module_watcher), std::move(view_owner_request),
+      nullptr /* daisy */, [] {});
 }
 
 void StoryControllerImpl::ProcessPendingViews() {

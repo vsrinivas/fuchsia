@@ -4,6 +4,7 @@
 
 module modular;
 
+import "lib/daisy/fidl/daisy.fidl";
 import "lib/module/fidl/link_path.fidl";
 import "lib/surface/fidl/surface.fidl";
 
@@ -34,6 +35,9 @@ struct ModuleData {
   // has been stopped by the story runner, or if an internally-started module
   // was stopped by its parent module using ModuleController.Stop().
   bool module_stopped;
+
+  // The daisy that was issued to start this module.
+  Daisy? daisy;
 };
 
 enum ModuleSource {

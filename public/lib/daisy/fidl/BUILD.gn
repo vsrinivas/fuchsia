@@ -11,6 +11,6 @@ fidl("fidl") {
   ]
 
   deps = [
-    "//peridot/public/lib/module/fidl:module_data",
+    "//peridot/public/lib/module/fidl:link_path",
   ]
 }
