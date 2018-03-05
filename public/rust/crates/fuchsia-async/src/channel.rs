@@ -238,7 +238,7 @@ mod tests {
         });
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let rcv_timeout = Timeout::new(300.millis().after_now(), &handle).unwrap().map(|()| {
+        let rcv_timeout = Timeout::new(1000.millis().after_now(), &handle).unwrap().map(|()| {
             panic!("did not receive message in time!");
         });
 
