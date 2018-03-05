@@ -7,7 +7,7 @@ import("//build/dart/dart_library.gni")
 dart_library("func") {
   package_name = "func"
 
-  source_dir = "lib"
+  sources = []
 
   disable_analysis = true
 }

@@ -7,6 +7,8 @@ import("//build/dart/dart_library.gni")
 dart_library("front_end") {
   package_name = "front_end"
 
+  sources = []
+
   disable_analysis = true
 
   deps = [

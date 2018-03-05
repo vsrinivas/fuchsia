@@ -17,10 +17,9 @@ declare_args() {
 #
 # Parameters
 #
-#   sources (optional)
+#   sources
 #     The list of public sources in this library, i.e. Dart files in lib/ but
 #     not in lib/src/. These sources must be within source_dir.
-#     Note: this parameter will soon be mandatory (TO-776).
 #
 #   package_root (optional)
 #     Path to the directory hosting the library.
@@ -89,11 +88,6 @@ template("dart_library") {
   } else {
     assert(false, "Must specify either a package_name or infer_package_name")
   }
-
-  # Ignore this parameter for now.
-  not_needed(invoker, [
-    "sources",
-  ])
 
   dart_deps = []
   if (defined(invoker.deps)) {
@@ -179,68 +173,46 @@ template("dart_library") {
   ]
   source_file = "$target_gen_dir/$target_name.sources"
 
-  if (defined(invoker.sources)) {
-    gen_snapshot_label = "//third_party/dart/runtime/bin:gen_snapshot($host_toolchain)"
-    gen_snapshot_dir = get_label_info(gen_snapshot_label, "root_out_dir")
-    gen_snapshot = "$gen_snapshot_dir/gen_snapshot"
+  assert(defined(invoker.sources), "Public sources must be defined")
+  gen_snapshot_label = "//third_party/dart/runtime/bin:gen_snapshot($host_toolchain)"
+  gen_snapshot_dir = get_label_info(gen_snapshot_label, "root_out_dir")
+  gen_snapshot = "$gen_snapshot_dir/gen_snapshot"
 
-    action(source_target_name) {
-      script = "//build/dart/identify_sources.py"
+  action(source_target_name) {
+    script = "//build/dart/identify_sources.py"
 
-      outputs = [
-        source_file,
-      ]
+    outputs = [
+      source_file,
+    ]
 
-      depfile = "$target_gen_dir/$target_name.d"
+    depfile = "$target_gen_dir/$target_name.d"
 
-      args = [
-        "--gen-snapshot",
-        rebase_path(gen_snapshot),
-        "--sources",
-      ] + rebase_path(invoker.sources, "", source_dir) + [
-        "--packages",
-        rebase_path(dot_packages_file),
-        "--source-dir",
-        rebase_path(source_dir),
-        "--output",
-        rebase_path(source_file),
-        "--depfile",
-        rebase_path(depfile),
-        "--depname",
-        rebase_path(source_file, root_build_dir),
-        "--url-mapping",
-        "dart:zircon," + rebase_path(zircon_sdk_ext_lib),
-        "dart:fuchsia," + rebase_path(fuchsia_sdk_ext_lib),
-        "dart:mozart.internal," + rebase_path(mozart_dart_sdk_ext_lib),
-        "dart:ui," + rebase_path(dart_ui_path),
-      ]
+    args = [
+      "--gen-snapshot",
+      rebase_path(gen_snapshot),
+      "--sources",
+    ] + rebase_path(invoker.sources, "", source_dir) + [
+      "--packages",
+      rebase_path(dot_packages_file),
+      "--source-dir",
+      rebase_path(source_dir),
+      "--output",
+      rebase_path(source_file),
+      "--depfile",
+      rebase_path(depfile),
+      "--depname",
+      rebase_path(source_file, root_build_dir),
+      "--url-mapping",
+      "dart:zircon," + rebase_path(zircon_sdk_ext_lib),
+      "dart:fuchsia," + rebase_path(fuchsia_sdk_ext_lib),
+      "dart:mozart.internal," + rebase_path(mozart_dart_sdk_ext_lib),
+      "dart:ui," + rebase_path(dart_ui_path),
+    ]
 
-      deps = [
-        ":$dot_packages_target_name",
-        gen_snapshot_label,
-      ]
-    }
-  } else {
-    action(source_target_name) {
-      script = "//build/dart/naively_identify_sources.py"
-
-      outputs = [
-        source_file,
-      ]
-
-      depfile = "$target_gen_dir/$target_name.d"
-
-      args = [
-        "--source-dir",
-        rebase_path(source_dir),
-        "--output",
-        rebase_path(source_file),
-        "--depfile",
-        rebase_path(depfile),
-        "--depname",
-        rebase_path(source_file, root_build_dir),
-      ]
-    }
+    deps = [
+      ":$dot_packages_target_name",
+      gen_snapshot_label,
+    ]
   }
 
   with_analysis =
