@@ -103,6 +103,7 @@ class ImagePipeSwapchain {
   std::vector<VkImage> images_;
   std::vector<zx::event> acquire_events_;
   std::vector<VkDeviceMemory> memories_;
+  std::vector<VkSemaphore> semaphores_;
   std::vector<uint32_t> acquired_ids_;
   std::vector<uint32_t> available_ids_;
   std::vector<PendingImageInfo> pending_images_;
@@ -286,6 +287,23 @@ VkResult ImagePipeSwapchain::Initialize(
                           0);
 
     available_ids_.push_back(i);
+
+    VkExportSemaphoreCreateInfoKHR export_create_info = {
+        .sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR};
+    VkSemaphoreCreateInfo create_semaphore_info{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = &export_create_info,
+        .flags = 0};
+    VkSemaphore semaphore;
+    result = pDisp->CreateSemaphore(device, &create_semaphore_info, pAllocator,
+                                    &semaphore);
+    if (result != VK_SUCCESS) {
+      FXL_DLOG(ERROR) << "vkCreateSemaphore failed: " << result;
+      return result;
+    }
+    semaphores_.push_back(semaphore);
   }
   device_ = device;
   return VK_SUCCESS;
@@ -325,6 +343,8 @@ void ImagePipeSwapchain::Cleanup(VkDevice device,
     pDisp->DestroyImage(device, image, pAllocator);
   for (auto memory : memories_)
     pDisp->FreeMemory(device, memory, pAllocator);
+  for (auto semaphore : semaphores_)
+    pDisp->DestroySemaphore(device, semaphore, pAllocator);
 }
 
 VKAPI_ATTR void VKAPI_CALL
@@ -463,20 +483,33 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue,
       GetLayerDataPtr(get_dispatch_key(queue), layer_data_map)
           ->device_dispatch_table;
 
-  auto acquire_fences = f1dl::Array<zx::event>::New(waitSemaphoreCount);
-  for (uint32_t i = 0; i < waitSemaphoreCount; i++) {
-    VkSemaphoreGetFuchsiaHandleInfoKHR info = {
-        VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
-        nullptr,
-        pWaitSemaphores[i],
-        VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
-    };
-    VkResult result = pDisp->GetSemaphoreFuchsiaHandleKHR(
-        device_, &info, acquire_fences[i].reset_and_get_address());
-    if (result != VK_SUCCESS) {
-      FXL_DLOG(ERROR) << "vkGetSemaphoreFuchsiaHandleKHR failed: " << result;
-      return VK_ERROR_SURFACE_LOST_KHR;
-    }
+  std::vector<VkPipelineStageFlags> flag_bits(
+      waitSemaphoreCount, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+  VkSubmitInfo submit_info = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                              .waitSemaphoreCount = waitSemaphoreCount,
+                              .pWaitSemaphores = pWaitSemaphores,
+                              .pWaitDstStageMask = flag_bits.data(),
+                              .signalSemaphoreCount = 1,
+                              .pSignalSemaphores = &semaphores_[index]};
+  VkResult result = pDisp->QueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+  if (result != VK_SUCCESS) {
+    FXL_DLOG(ERROR) << "vkQueueSubmit failed with result " << result;
+    return VK_ERROR_SURFACE_LOST_KHR;
+  }
+
+  auto acquire_fences = f1dl::Array<zx::event>::New(1);
+
+  VkSemaphoreGetFuchsiaHandleInfoKHR semaphore_info = {
+      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
+      .pNext = nullptr,
+      .semaphore = semaphores_[index],
+      .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR};
+  result = pDisp->GetSemaphoreFuchsiaHandleKHR(
+      device_, &semaphore_info, acquire_fences[0].reset_and_get_address());
+  if (result != VK_SUCCESS) {
+    FXL_DLOG(ERROR) << "GetSemaphoreFuchsiaHandleKHR failed with result "
+                    << result;
+    return VK_ERROR_SURFACE_LOST_KHR;
   }
 
   auto iter = std::find(acquired_ids_.begin(), acquired_ids_.end(), index);
