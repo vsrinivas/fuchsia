@@ -685,6 +685,13 @@ bool invalid_args_test() {
                           &map_addr),
               ZX_ERR_INVALID_ARGS);
 
+    // Using MAP_RANGE with SPECIFIC_OVERWRITE
+    EXPECT_EQ(zx_vmar_map(vmar, PAGE_SIZE, vmo, 0, 4 * PAGE_SIZE,
+                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_SPECIFIC_OVERWRITE |
+                          ZX_VM_FLAG_MAP_RANGE,
+                          &map_addr),
+              ZX_ERR_INVALID_ARGS);
+
     // Bad OUT pointers
     uintptr_t *bad_addr_ptr = reinterpret_cast<uintptr_t*>(1);
     zx_handle_t *bad_handle_ptr = reinterpret_cast<zx_handle_t*>(1);

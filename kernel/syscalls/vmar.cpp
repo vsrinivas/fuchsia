@@ -119,6 +119,10 @@ zx_status_t sys_vmar_map(zx_handle_t vmar_handle, size_t vmar_offset,
         map_flags &= ~ZX_VM_FLAG_MAP_RANGE;
     }
 
+    if (do_map_range && (map_flags & ZX_VM_FLAG_SPECIFIC_OVERWRITE)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     // Usermode is not allowed to specify these flags on mappings, though we may
     // set them below.
     if (map_flags & (ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE | ZX_VM_FLAG_CAN_MAP_EXECUTE)) {
