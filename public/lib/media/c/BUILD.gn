@@ -17,6 +17,8 @@ prebuilt_shared_library("c") {
 
   output_name = "media_client"
 
+  include_base = "//garnet/public"
+
   runtime_deps = [
     "//garnet/public/lib/fsl:fsl_sdk",
     "//garnet/public/lib/fxl:fxl_sdk",
