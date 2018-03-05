@@ -39,7 +39,7 @@
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "garnet/lib/machina/virtio_input.h"
 #include "garnet/lib/machina/virtio_net.h"
-#include "garnet/public/lib/fxl/files/directory.h"
+#include "garnet/public/lib/fxl/files/file.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file.h"
@@ -166,7 +166,7 @@ zx_status_t setup_scenic_framebuffer(
     machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
-  bool has_display = files::IsDirectory("/dev/class/display");
+  bool has_display = files::IsFile("/dev/class/display/000");
   if (!has_display) {
     return ZX_ERR_NO_RESOURCES;
   }
