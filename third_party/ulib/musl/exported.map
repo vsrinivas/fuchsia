@@ -229,6 +229,7 @@
     fileno;
     finite;
     finitef;
+    flockfile;
     floor;
     floorf;
     floorl;
@@ -275,6 +276,7 @@
     ftell;
     ftello;
     ftruncate;
+    funlockfile;
     futimens;
     futimes;
     fwrite;
@@ -392,7 +394,9 @@
     ldexpl;
     ldiv;
     lgamma;
+    lgamma_r;
     lgammaf;
+    lgammaf_r;
     lgammal;
     __libc_start_main;
     link;
@@ -436,6 +440,7 @@
     madvise;
     mallctl;
     malloc;
+    malloc_usable_size;
     mblen;
     mbrlen;
     mbrtowc;
@@ -561,6 +566,8 @@
     pthread_rwlock_init;
     pthread_rwlock_rdlock;
     pthread_rwlock_timedrdlock;
+    pthread_rwlock_tryrdlock;
+    pthread_rwlock_trywrlock;
     pthread_rwlock_unlock;
     pthread_rwlock_wrlock;
     pthread_self;
@@ -574,6 +581,7 @@
     ptsname;
     putc;
     putchar;
+    putchar_unlocked;
     putenv;
     puts;
     pwrite;
@@ -747,12 +755,15 @@
     strspn;
     strstr;
     strtod;
+    strtod_l;
     strtof;
+    strtof_l;
     strtoimax;
     strtok;
     strtok_r;
     strtol;
     strtold;
+    strtold_l;
     strtoll;
     strtoul;
     strtoull;
