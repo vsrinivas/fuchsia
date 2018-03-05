@@ -200,7 +200,7 @@ zx_status_t brcmf_commonring_write_complete(struct brcmf_commonring* commonring)
         return commonring->cr_ring_bell(commonring->cr_ctx);
     }
 
-    return -EIO;
+    return ZX_ERR_IO;
 }
 
 void brcmf_commonring_write_cancel(struct brcmf_commonring* commonring, uint16_t n_items) {
@@ -236,5 +236,5 @@ zx_status_t brcmf_commonring_read_complete(struct brcmf_commonring* commonring, 
         return commonring->cr_write_rptr(commonring->cr_ctx);
     }
 
-    return -EIO;
+    return ZX_ERR_IO;
 }

@@ -462,7 +462,7 @@ static zx_status_t brcmf_chip_add_core(struct brcmf_chip_priv* ci, uint16_t core
         if (core_out) {
             *core_out = NULL;
         }
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     core->pub.id = coreid;
@@ -706,7 +706,7 @@ static zx_status_t brcmf_chip_get_raminfo(struct brcmf_chip_priv* ci) {
             mem = brcmf_chip_get_core(&ci->pub, BCMA_CORE_INTERNAL_MEM);
             if (!mem) {
                 brcmf_err("No memory cores found\n");
-                return -ENOMEM;
+                return ZX_ERR_NO_MEMORY;
             }
             mem_core = container_of(mem, struct brcmf_core_priv, pub);
             brcmf_chip_socram_ramsize(mem_core, &ci->pub.ramsize, &ci->pub.srsize);
@@ -717,12 +717,12 @@ static zx_status_t brcmf_chip_get_raminfo(struct brcmf_chip_priv* ci) {
 
     if (!ci->pub.ramsize) {
         brcmf_err("RAM size is undetermined\n");
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     if (ci->pub.ramsize > BRCMF_CHIP_MAX_MEMSIZE) {
         brcmf_err("RAM size is incorrect\n");
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     return ZX_OK;
@@ -1048,7 +1048,7 @@ zx_status_t brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops,
 
     chip = kzalloc(sizeof(*chip), GFP_KERNEL);
     if (!chip) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     INIT_LIST_HEAD(&chip->cores);

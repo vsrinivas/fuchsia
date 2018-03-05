@@ -575,7 +575,7 @@ static zx_status_t brcmf_pcie_send_mb_data(struct brcmf_pciedev_info* devinfo,
         msleep(10);
         i++;
         if (i > 100) {
-            return -EIO;
+            return ZX_ERR_IO;
         }
         cur_htod_mb_data = brcmf_pcie_read_tcm32(devinfo, addr);
     }
@@ -736,7 +736,7 @@ static zx_status_t brcmf_pcie_request_irq(struct brcmf_pciedev_info* devinfo) {
                              IRQF_SHARED, "brcmf_pcie_intr", devinfo)) {
         pci_disable_msi(pdev);
         brcmf_err("Failed to request IRQ %d\n", pdev->irq);
-        return -EIO;
+        return ZX_ERR_IO;
     }
     devinfo->irq_allocated = true;
     return ZX_OK;
@@ -779,7 +779,7 @@ static zx_status_t brcmf_pcie_ring_mb_write_rptr(void* ctx) {
     struct brcmf_commonring* commonring = &ring->commonring;
 
     if (devinfo->state != BRCMFMAC_PCIE_STATE_UP) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     brcmf_dbg(PCIE, "W r_ptr %d (%d), ring %d\n", commonring->r_ptr, commonring->w_ptr, ring->id);
@@ -795,7 +795,7 @@ static zx_status_t brcmf_pcie_ring_mb_write_wptr(void* ctx) {
     struct brcmf_commonring* commonring = &ring->commonring;
 
     if (devinfo->state != BRCMFMAC_PCIE_STATE_UP) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     brcmf_dbg(PCIE, "W w_ptr %d (%d), ring %d\n", commonring->w_ptr, commonring->r_ptr, ring->id);
@@ -810,7 +810,7 @@ static zx_status_t brcmf_pcie_ring_mb_ring_bell(void* ctx) {
     struct brcmf_pciedev_info* devinfo = ring->devinfo;
 
     if (devinfo->state != BRCMFMAC_PCIE_STATE_UP) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     brcmf_dbg(PCIE, "RING !\n");
@@ -826,7 +826,7 @@ static zx_status_t brcmf_pcie_ring_mb_update_rptr(void* ctx) {
     struct brcmf_commonring* commonring = &ring->commonring;
 
     if (devinfo->state != BRCMFMAC_PCIE_STATE_UP) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     commonring->r_ptr = devinfo->read_ptr(devinfo, ring->r_idx_addr);
@@ -842,7 +842,7 @@ static zx_status_t brcmf_pcie_ring_mb_update_wptr(void* ctx) {
     struct brcmf_commonring* commonring = &ring->commonring;
 
     if (devinfo->state != BRCMFMAC_PCIE_STATE_UP) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     commonring->w_ptr = devinfo->read_ptr(devinfo, ring->w_idx_addr);
@@ -1080,7 +1080,7 @@ static zx_status_t brcmf_pcie_init_ringbuffers(struct brcmf_pciedev_info* devinf
 fail:
     brcmf_err("Allocating ring buffers failed\n");
     brcmf_pcie_release_ringbuffers(devinfo);
-    return -ENOMEM;
+    return ZX_ERR_NO_MEMORY;
 }
 
 static void brcmf_pcie_release_scratchbuffers(struct brcmf_pciedev_info* devinfo) {
@@ -1128,7 +1128,7 @@ static zx_status_t brcmf_pcie_init_scratchbuffers(struct brcmf_pciedev_info* dev
 fail:
     brcmf_err("Allocating scratch buffers failed\n");
     brcmf_pcie_release_scratchbuffers(devinfo);
-    return -ENOMEM;
+    return ZX_ERR_NO_MEMORY;
 }
 
 static void brcmf_pcie_down(struct device* dev) {}
@@ -1553,7 +1553,7 @@ static zx_status_t brcmf_pcie_probe(struct pci_dev* pdev, const struct pci_devic
     bus_nr = pdev->bus->number;
     brcmf_dbg(PCIE, "Enter %x:%x (%d/%d)\n", pdev->vendor, pdev->device, domain_nr, bus_nr);
 
-    ret = -ENOMEM;
+    ret = ZX_ERR_NO_MEMORY;
     devinfo = kzalloc(sizeof(*devinfo), GFP_KERNEL);
     if (devinfo == NULL) {
         return ret;
@@ -1569,25 +1569,25 @@ static zx_status_t brcmf_pcie_probe(struct pci_dev* pdev, const struct pci_devic
 
     pcie_bus_dev = kzalloc(sizeof(*pcie_bus_dev), GFP_KERNEL);
     if (pcie_bus_dev == NULL) {
-        ret = -ENOMEM;
+        ret = ZX_ERR_NO_MEMORY;
         goto fail;
     }
 
     devinfo->settings = brcmf_get_module_param(&devinfo->pdev->dev, BRCMF_BUSTYPE_PCIE,
                                                devinfo->ci->chip, devinfo->ci->chiprev);
     if (!devinfo->settings) {
-        ret = -ENOMEM;
+        ret = ZX_ERR_NO_MEMORY;
         goto fail;
     }
 
     bus = kzalloc(sizeof(*bus), GFP_KERNEL);
     if (!bus) {
-        ret = -ENOMEM;
+        ret = ZX_ERR_NO_MEMORY;
         goto fail;
     }
     bus->msgbuf = kzalloc(sizeof(*bus->msgbuf), GFP_KERNEL);
     if (!bus->msgbuf) {
-        ret = -ENOMEM;
+        ret = ZX_ERR_NO_MEMORY;
         kfree(bus);
         goto fail;
     }
@@ -1696,7 +1696,7 @@ static zx_status_t brcmf_pcie_pm_enter_D3(struct device* dev) {
     if (!devinfo->mbdata_completed) {
         brcmf_err("Timeout on response for entering D3 substate\n");
         brcmf_bus_change_state(bus, BRCMF_BUS_UP);
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     devinfo->state = BRCMFMAC_PCIE_STATE_DOWN;

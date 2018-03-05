@@ -353,7 +353,7 @@ zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
 
     btci = kmalloc(sizeof(struct brcmf_btcoex_info), GFP_KERNEL);
     if (!btci) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     btci->bt_state = BRCMF_BT_DHCP_IDLE;

@@ -112,7 +112,7 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
 
     if (drvr->bus_if->state != BRCMF_BUS_UP) {
         brcmf_err("bus is down. we have nothing to do.\n");
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     if (data != NULL) {

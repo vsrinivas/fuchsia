@@ -299,11 +299,11 @@ static zx_status_t brcmf_usb_tx_ctlpkt(struct device* dev, uint8_t* buf, uint32_
 
     brcmf_dbg(USB, "Enter\n");
     if (devinfo->bus_pub.state != BRCMFMAC_USB_STATE_UP) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     if (test_and_set_bit(0, &devinfo->ctl_op)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     devinfo->ctl_completed = false;
@@ -317,7 +317,7 @@ static zx_status_t brcmf_usb_tx_ctlpkt(struct device* dev, uint8_t* buf, uint32_
     clear_bit(0, &devinfo->ctl_op);
     if (time_left == 0) {
         brcmf_err("Txctl wait timed out\n");
-        err = -EIO;
+        err = ZX_ERR_IO;
     }
     return err;
 }
@@ -330,11 +330,11 @@ static zx_status_t brcmf_usb_rx_ctlpkt(struct device* dev, uint8_t* buf, uint32_
 
     brcmf_dbg(USB, "Enter\n");
     if (devinfo->bus_pub.state != BRCMFMAC_USB_STATE_UP) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     if (test_and_set_bit(0, &devinfo->ctl_op)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     devinfo->ctl_completed = false;
@@ -349,7 +349,7 @@ static zx_status_t brcmf_usb_rx_ctlpkt(struct device* dev, uint8_t* buf, uint32_
     clear_bit(0, &devinfo->ctl_op);
     if (time_left == 0) {
         brcmf_err("rxctl wait timed out\n");
-        err = -EIO;
+        err = ZX_ERR_IO;
     }
     if (err == ZX_OK) {
         if (urb_len_out) {
@@ -574,14 +574,14 @@ static zx_status_t brcmf_usb_tx(struct device* dev, struct sk_buff* skb) {
 
     brcmf_dbg(USB, "Enter, skb=%p\n", skb);
     if (devinfo->bus_pub.state != BRCMFMAC_USB_STATE_UP) {
-        ret = -EIO;
+        ret = ZX_ERR_IO;
         goto fail;
     }
 
     req = brcmf_usb_deq(devinfo, &devinfo->tx_freeq, &devinfo->tx_freecount);
     if (!req) {
         brcmf_err("no req to send\n");
-        ret = -ENOMEM;
+        ret = ZX_ERR_NO_MEMORY;
         goto fail;
     }
 
@@ -690,7 +690,7 @@ static zx_status_t brcmf_usb_dl_cmd(struct brcmf_usbdev_info* devinfo, uint8_t c
 
     tmpbuf = kmalloc(buflen, GFP_ATOMIC);
     if (!tmpbuf) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     size = buflen;
@@ -827,7 +827,7 @@ static zx_status_t brcmf_usb_dl_writeimage(struct brcmf_usbdev_info* devinfo, ui
 
     bulkchunk = kmalloc(TRX_RDL_CHUNK, GFP_ATOMIC);
     if (bulkchunk == NULL) {
-        err = -ENOMEM;
+        err = ZX_ERR_NO_MEMORY;
         goto fail;
     }
 
@@ -1145,7 +1145,7 @@ static void brcmf_usb_probe_phase2(struct device* dev, zx_status_t ret, const st
 
     ret = check_file(fw->data);
     if (ret != ZX_OK) {
-        ret = EIO;
+        ret = ZX_ERR_IO;
         brcmf_err("invalid firmware\n");
         release_firmware(fw);
         goto error;
@@ -1187,7 +1187,7 @@ static zx_status_t brcmf_usb_probe_cb(struct brcmf_usbdev_info* devinfo) {
 
     bus = kzalloc(sizeof(struct brcmf_bus), GFP_ATOMIC);
     if (!bus) {
-        ret = -ENOMEM;
+        ret = ZX_ERR_NO_MEMORY;
         goto fail;
     }
 
@@ -1205,7 +1205,7 @@ static zx_status_t brcmf_usb_probe_cb(struct brcmf_usbdev_info* devinfo) {
     devinfo->settings =
         brcmf_get_module_param(bus->dev, BRCMF_BUSTYPE_USB, bus_pub->devid, bus_pub->chiprev);
     if (!devinfo->settings) {
-        ret = -ENOMEM;
+        ret = ZX_ERR_NO_MEMORY;
         goto fail;
     }
 
@@ -1267,7 +1267,7 @@ static zx_status_t brcmf_usb_probe(struct usb_interface* intf, const struct usb_
 
     devinfo = kzalloc(sizeof(*devinfo), GFP_ATOMIC);
     if (devinfo == NULL) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     devinfo->usbdev = usb;

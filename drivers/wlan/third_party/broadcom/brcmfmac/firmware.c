@@ -213,7 +213,7 @@ static zx_status_t brcmf_init_nvram_parser(struct nvram_parser* nvp, const uint8
     size += 1 + 3 + sizeof(uint32_t);
     nvp->nvram = kzalloc(size, GFP_KERNEL);
     if (!nvp->nvram) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     nvp->line = 1;
@@ -537,7 +537,7 @@ zx_status_t brcmf_fw_get_firmwares_pcie(struct device* dev, uint16_t flags, cons
 
     fwctx = kzalloc(sizeof(*fwctx), GFP_KERNEL);
     if (!fwctx) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     fwctx->dev = dev;

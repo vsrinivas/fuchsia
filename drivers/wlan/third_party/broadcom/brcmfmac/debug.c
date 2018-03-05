@@ -42,7 +42,7 @@ zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, 
 
     dump = vzalloc(len + ramsize);
     if (!dump) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     memcpy(dump, data, len);

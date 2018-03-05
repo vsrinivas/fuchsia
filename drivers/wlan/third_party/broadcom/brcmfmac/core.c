@@ -479,7 +479,7 @@ static zx_status_t brcmf_netdev_open(struct net_device* ndev) {
 
     if (brcmf_cfg80211_up(ndev) != ZX_OK) {
         brcmf_err("failed to bring up cfg80211\n");
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     /* Clear, carrier, set when connected or AP mode. */
@@ -653,7 +653,7 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
         brcmf_dbg(INFO, "allocate non-netdev interface\n");
         ifp = kzalloc(sizeof(*ifp), GFP_KERNEL);
         if (!ifp) {
-            return -ENOMEM;
+            return ZX_ERR_NO_MEMORY;
         }
     } else {
         brcmf_dbg(INFO, "allocate netdev interface\n");
@@ -917,7 +917,7 @@ zx_status_t brcmf_attach(struct device* dev, struct brcmf_mp_device* settings) {
     /* Allocate primary brcmf_info */
     drvr = kzalloc(sizeof(struct brcmf_pub), GFP_ATOMIC);
     if (!drvr) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     for (i = 0; i < (int)ARRAY_SIZE(drvr->if2bss); i++) {
@@ -1032,7 +1032,7 @@ zx_status_t brcmf_bus_started(struct device* dev) {
 
     drvr->config = brcmf_cfg80211_attach(drvr, bus_if->dev, drvr->settings->p2p_enable);
     if (drvr->config == NULL) {
-        ret = -ENOMEM;
+        ret = ZX_ERR_NO_MEMORY;
         goto fail;
     }
 

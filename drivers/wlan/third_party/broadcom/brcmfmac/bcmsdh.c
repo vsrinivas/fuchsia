@@ -376,7 +376,7 @@ static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct 
         while (req_sz > PAGE_SIZE) {
             pkt_next = brcmu_pkt_buf_get_skb(PAGE_SIZE);
             if (pkt_next == NULL) {
-                ret = -ENOMEM;
+                ret = ZX_ERR_NO_MEMORY;
                 goto exit;
             }
             __skb_queue_tail(&local_list, pkt_next);
@@ -384,7 +384,7 @@ static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct 
         }
         pkt_next = brcmu_pkt_buf_get_skb(req_sz);
         if (pkt_next == NULL) {
-            ret = -ENOMEM;
+            ret = ZX_ERR_NO_MEMORY;
             goto exit;
         }
         __skb_queue_tail(&local_list, pkt_next);
@@ -471,7 +471,7 @@ static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct 
             break;
         } else if (ret != ZX_OK) {
             brcmf_err("CMD53 sg block %s failed %d\n", write ? "write" : "read", ret);
-            ret = -EIO;
+            ret = ZX_ERR_IO;
             break;
         }
     }
@@ -516,7 +516,7 @@ zx_status_t brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, u
     mypkt = brcmu_pkt_buf_get_skb(nbytes);
     if (!mypkt) {
         brcmf_err("brcmu_pkt_buf_get_skb failed: len %d\n", nbytes);
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     err = brcmf_sdiod_recv_pkt(sdiodev, mypkt);
@@ -570,7 +570,7 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct sk_buf
     } else if (!sdiodev->sg_support) {
         glom_skb = brcmu_pkt_buf_get_skb(totlen);
         if (!glom_skb) {
-            return -ENOMEM;
+            return ZX_ERR_NO_MEMORY;
         }
         err = brcmf_sdiod_skbuff_read(sdiodev, sdiodev->func2, addr, glom_skb);
         if (err != ZX_OK) {
@@ -599,7 +599,7 @@ zx_status_t brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, u
 
     if (!mypkt) {
         brcmf_err("brcmu_pkt_buf_get_skb failed: len %d\n", nbytes);
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     memcpy(mypkt->data, buf, nbytes);
@@ -661,7 +661,7 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
     pkt = dev_alloc_skb(dsize);
     if (!pkt) {
         brcmf_err("dev_alloc_skb failed: len %d\n", dsize);
-        return -EIO;
+        return ZX_ERR_IO;
     }
     pkt->priority = 0;
 
@@ -772,7 +772,7 @@ void brcmf_sdiod_sgtable_alloc(struct brcmf_sdio_dev* sdiodev) {
 static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {
     sdiodev->freezer = kzalloc(sizeof(*sdiodev->freezer), GFP_KERNEL);
     if (!sdiodev->freezer) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
     atomic_set(&sdiodev->freezer->thread_count, 0);
     atomic_set(&sdiodev->freezer->freezing, 0);
@@ -990,12 +990,12 @@ static zx_status_t brcmf_ops_sdio_probe(struct sdio_func* func, const struct sdi
 
     bus_if = kzalloc(sizeof(struct brcmf_bus), GFP_KERNEL);
     if (!bus_if) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
     sdiodev = kzalloc(sizeof(struct brcmf_sdio_dev), GFP_KERNEL);
     if (!sdiodev) {
         kfree(bus_if);
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     /* store refs to functions used. mmc_card does

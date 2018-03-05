@@ -188,7 +188,7 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
 
     chunk_buf = kzalloc(sizeof(*chunk_buf) + MAX_CHUNK_LEN - 1, GFP_KERNEL);
     if (!chunk_buf) {
-        err = -ENOMEM;
+        err = ZX_ERR_NO_MEMORY;
         goto done;
     }
 
@@ -220,7 +220,7 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
         } else {
             brcmf_dbg(INFO, "clmload_status=%d\n", status);
         }
-        err = -EIO;
+        err = ZX_ERR_IO;
     }
 
     kfree(chunk_buf);

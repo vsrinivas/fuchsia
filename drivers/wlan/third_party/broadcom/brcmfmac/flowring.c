@@ -135,12 +135,12 @@ zx_status_t brcmf_flowring_create(struct brcmf_flowring* flow, uint8_t da[ETH_AL
             }
         }
         if (i == flow->nrofrings) {
-            return -ENOMEM;
+            return ZX_ERR_NO_MEMORY;
         }
 
         ring = kzalloc(sizeof(*ring), GFP_ATOMIC);
         if (!ring) {
-            return -ENOMEM;
+            return ZX_ERR_NO_MEMORY;
         }
 
         memcpy(hash[hash_idx].mac, mac, ETH_ALEN);

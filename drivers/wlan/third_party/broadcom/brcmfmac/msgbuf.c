@@ -315,7 +315,7 @@ static zx_status_t brcmf_msgbuf_alloc_pktid(struct device* dev, struct brcmf_msg
 
     if (dma_mapping_error(dev, *physaddr)) {
         brcmf_err("dma_map_single failed !!\n");
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     *idx = pktids->last_allocated_idx;
@@ -334,7 +334,7 @@ static zx_status_t brcmf_msgbuf_alloc_pktid(struct device* dev, struct brcmf_msg
     } while (count < pktids->array_size);
 
     if (count == pktids->array_size) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     array[*idx].data_offset = data_offset;
@@ -414,7 +414,7 @@ static zx_status_t brcmf_msgbuf_tx_ioctl(struct brcmf_pub* drvr, int ifidx, uint
     if (!ret_ptr) {
         brcmf_err("Failed to reserve space in commonring\n");
         brcmf_commonring_unlock(commonring);
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     msgbuf->reqid++;
@@ -472,7 +472,7 @@ static zx_status_t brcmf_msgbuf_query_dcmd(struct brcmf_pub* drvr, int ifidx, ui
     time_left = brcmf_msgbuf_ioctl_resp_wait(msgbuf);
     if (time_left == 0) {
         brcmf_err("Timeout on response for query command\n");
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     skb = brcmf_msgbuf_get_pktid(msgbuf->drvr->bus_if->dev, msgbuf->rx_pktids,
@@ -741,7 +741,7 @@ static zx_status_t brcmf_msgbuf_tx_queue_data(struct brcmf_pub* drvr, int ifidx,
     if (flowid == BRCMF_FLOWRING_INVALID_ID) {
         flowid = brcmf_msgbuf_flowring_create(msgbuf, ifidx, skb);
         if (flowid == BRCMF_FLOWRING_INVALID_ID) {
-            return -ENOMEM;
+            return ZX_ERR_NO_MEMORY;
         }
     }
     queue_count = brcmf_flowring_enqueue(flow, flowid, skb);
@@ -1420,7 +1420,7 @@ fail:
                               msgbuf->ioctbuf_handle);
         kfree(msgbuf);
     }
-    return -ENOMEM;
+    return ZX_ERR_NO_MEMORY;
 }
 
 void brcmf_proto_msgbuf_detach(struct brcmf_pub* drvr) {

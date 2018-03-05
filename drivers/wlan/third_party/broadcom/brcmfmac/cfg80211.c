@@ -509,7 +509,7 @@ static zx_status_t brcmf_get_first_free_bsscfgidx(struct brcmf_pub* drvr) {
         }
     }
 
-    return -ENOMEM;
+    return ZX_ERR_NO_MEMORY;
 }
 
 static zx_status_t brcmf_cfg80211_request_ap_if(struct brcmf_if* ifp) {
@@ -577,7 +577,7 @@ static zx_status_t brcmf_ap_add_vif(struct wiphy* wiphy, const char* name,
     brcmf_cfg80211_arm_vif_event(cfg, NULL);
     if (time_left == 0) {
         brcmf_err("timeout occurred\n");
-        err = -EIO;
+        err = ZX_ERR_IO;
         goto fail;
     }
 
@@ -784,7 +784,7 @@ static zx_status_t brcmf_cfg80211_del_ap_iface(struct wiphy* wiphy, struct wirel
     time_left = brcmf_cfg80211_wait_vif_event(cfg, BRCMF_E_IF_DEL, BRCMF_VIF_EVENT_TIMEOUT);
     if (time_left == 0) {
         brcmf_err("timeout occurred\n");
-        err = -EIO;
+        err = ZX_ERR_IO;
         goto err_unarm;
     }
 
@@ -1014,7 +1014,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
 
     params = kzalloc(params_size, GFP_KERNEL);
     if (!params) {
-        err = -ENOMEM;
+        err = ZX_ERR_NO_MEMORY;
         goto exit;
     }
     BUG_ON(params_size + sizeof("escan") >= BRCMF_DCMD_MEDLEN);
@@ -1069,7 +1069,7 @@ static zx_status_t brcmf_cfg80211_scan(struct wiphy* wiphy, struct cfg80211_scan
     brcmf_dbg(TRACE, "Enter\n");
     vif = container_of(request->wdev, struct brcmf_cfg80211_vif, wdev);
     if (!check_vif_up(vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     if (test_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
@@ -1169,7 +1169,7 @@ static zx_status_t brcmf_cfg80211_set_wiphy_params(struct wiphy* wiphy, uint32_t
 
     brcmf_dbg(TRACE, "Enter\n");
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     if (changed & WIPHY_PARAM_RTS_THRESHOLD && (cfg->conf->rts_threshold != wiphy->rts_threshold)) {
@@ -1293,7 +1293,7 @@ static zx_status_t brcmf_cfg80211_join_ibss(struct wiphy* wiphy, struct net_devi
 
     brcmf_dbg(TRACE, "Enter\n");
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     if (params->ssid) {
@@ -1835,7 +1835,7 @@ static zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device
 
     brcmf_dbg(TRACE, "Enter\n");
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     if (!sme->ssid) {
@@ -1950,7 +1950,7 @@ static zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device
     }
     ext_join_params = kzalloc(join_params_size, GFP_KERNEL);
     if (ext_join_params == NULL) {
-        err = -ENOMEM;
+        err = ZX_ERR_NO_MEMORY;
         goto done;
     }
     ssid_len = min_t(uint32_t, sme->ssid_len, IEEE80211_MAX_SSID_LEN);
@@ -2040,7 +2040,7 @@ static zx_status_t brcmf_cfg80211_disconnect(struct wiphy* wiphy, struct net_dev
 
     brcmf_dbg(TRACE, "Enter. Reason code = %d\n", reason_code);
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     clear_bit(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
@@ -2069,7 +2069,7 @@ static zx_status_t brcmf_cfg80211_set_tx_power(struct wiphy* wiphy, struct wirel
 
     brcmf_dbg(TRACE, "Enter %d %d\n", type, mbm);
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     switch (type) {
@@ -2120,7 +2120,7 @@ static zx_status_t brcmf_cfg80211_get_tx_power(struct wiphy* wiphy, struct wirel
 
     brcmf_dbg(TRACE, "Enter\n");
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     err = brcmf_fil_iovar_int_get(ifp, "qtxpower", (uint32_t*)&qdbm);
@@ -2145,7 +2145,7 @@ static zx_status_t brcmf_cfg80211_config_default_key(struct wiphy* wiphy, struct
     brcmf_dbg(TRACE, "Enter\n");
     brcmf_dbg(CONN, "key index (%d)\n", key_idx);
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     err = brcmf_fil_bsscfg_int_get(ifp, "wsec", &wsec);
@@ -2177,7 +2177,7 @@ static zx_status_t brcmf_cfg80211_del_key(struct wiphy* wiphy, struct net_device
     brcmf_dbg(CONN, "key index (%d)\n", key_idx);
 
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     if (key_idx >= BRCMF_MAX_DEFAULT_KEYS) {
@@ -2217,7 +2217,7 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
     brcmf_dbg(TRACE, "Enter\n");
     brcmf_dbg(CONN, "key index (%d)\n", key_idx);
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     if (key_idx >= BRCMF_MAX_DEFAULT_KEYS) {
@@ -2329,7 +2329,7 @@ static zx_status_t brcmf_cfg80211_get_key(struct wiphy* wiphy, struct net_device
     brcmf_dbg(TRACE, "Enter\n");
     brcmf_dbg(CONN, "key index (%d)\n", key_idx);
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     memset(&params, 0, sizeof(params));
@@ -2533,7 +2533,7 @@ static zx_status_t brcmf_cfg80211_get_station(struct wiphy* wiphy, struct net_de
 
     brcmf_dbg(TRACE, "Enter, MAC %pM\n", mac);
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     if (brcmf_is_ibssmode(ifp->vif)) {
@@ -2747,7 +2747,7 @@ static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
                               notify_ie, notify_ielen, notify_signal, GFP_KERNEL);
 
     if (!bss) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     cfg80211_put_bss(wiphy, bss);
@@ -2806,7 +2806,7 @@ static zx_status_t brcmf_inform_ibss(struct brcmf_cfg80211_info* cfg, struct net
 
     buf = kzalloc(WL_BSS_INFO_MAX, GFP_KERNEL);
     if (buf == NULL) {
-        err = -ENOMEM;
+        err = ZX_ERR_NO_MEMORY;
         goto CleanUp;
     }
 
@@ -2849,7 +2849,7 @@ static zx_status_t brcmf_inform_ibss(struct brcmf_cfg80211_info* cfg, struct net
                               notify_signal, GFP_KERNEL);
 
     if (!bss) {
-        err = -ENOMEM;
+        err = ZX_ERR_NO_MEMORY;
         goto CleanUp;
     }
 
@@ -3258,7 +3258,7 @@ static zx_status_t brcmf_notify_sched_scan_results(struct brcmf_if* ifp,
 
     request = brcmf_alloc_internal_escan_request(wiphy, result_count);
     if (!request) {
-        err = -ENOMEM;
+        err = ZX_ERR_NO_MEMORY;
         goto out_err;
     }
 
@@ -3352,7 +3352,7 @@ static zx_status_t brcmf_config_wowl_pattern(struct brcmf_if* ifp, uint8_t cmd[4
     bufsize = sizeof(*filter) + patternsize + masksize;
     buf = kzalloc(bufsize, GFP_KERNEL);
     if (!buf) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
     filter = (struct brcmf_fil_wowl_pattern_le*)buf;
 
@@ -3658,7 +3658,7 @@ static zx_status_t brcmf_cfg80211_set_pmksa(struct wiphy* wiphy, struct net_devi
 
     brcmf_dbg(TRACE, "Enter\n");
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     npmk = cfg->pmk_list.npmk;
@@ -3699,7 +3699,7 @@ static zx_status_t brcmf_cfg80211_del_pmksa(struct wiphy* wiphy, struct net_devi
 
     brcmf_dbg(TRACE, "Enter\n");
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     brcmf_dbg(CONN, "del_pmksa - PMK bssid = %pM\n", pmksa->bssid);
@@ -3735,7 +3735,7 @@ static zx_status_t brcmf_cfg80211_flush_pmksa(struct wiphy* wiphy, struct net_de
 
     brcmf_dbg(TRACE, "Enter\n");
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     memset(&cfg->pmk_list, 0, sizeof(cfg->pmk_list));
@@ -4115,7 +4115,7 @@ zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktfla
     brcmf_dbg(TRACE, "bsscfgidx %d, pktflag : 0x%02X\n", ifp->bsscfgidx, pktflag);
     iovar_ie_buf = kzalloc(WL_EXTRA_BUF_MAX, GFP_KERNEL);
     if (!iovar_ie_buf) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
     curr_ie_buf = iovar_ie_buf;
     switch (pktflag) {
@@ -4146,7 +4146,7 @@ zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktfla
     }
 
     if ((int)vndr_ie_len > mgmt_ie_buf_len) {
-        err = -ENOMEM;
+        err = ZX_ERR_NO_MEMORY;
         brcmf_err("extra IE size too big\n");
         goto exit;
     }
@@ -4584,7 +4584,7 @@ static zx_status_t brcmf_cfg80211_del_station(struct wiphy* wiphy, struct net_de
         ifp = cfg->p2p.bss_idx[P2PAPI_BSSCFG_PRIMARY].vif->ifp;
     }
     if (!check_vif_up(ifp->vif)) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     memcpy(&scbval.ea, params->mac, ETH_ALEN);
@@ -4703,7 +4703,7 @@ static zx_status_t brcmf_cfg80211_mgmt_tx(struct wiphy* wiphy, struct wireless_d
         af_params = kzalloc(sizeof(*af_params), GFP_KERNEL);
         if (af_params == NULL) {
             brcmf_err("unable to allocate frame\n");
-            err = -ENOMEM;
+            err = ZX_ERR_NO_MEMORY;
             goto exit;
         }
         action_frame = &af_params->action_frame;
@@ -5054,7 +5054,7 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, enum nl80211_iftype
         if (vif_out) {
             *vif_out = NULL;
         }
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     vif->wdev.wiphy = cfg->wiphy;
@@ -5240,7 +5240,7 @@ static zx_status_t brcmf_bss_roaming_done(struct brcmf_cfg80211_info* cfg, struc
 
     buf = kzalloc(WL_BSS_INFO_MAX, GFP_KERNEL);
     if (buf == NULL) {
-        err = -ENOMEM;
+        err = ZX_ERR_NO_MEMORY;
         goto done;
     }
 
@@ -5559,7 +5559,7 @@ static zx_status_t brcmf_init_priv_mem(struct brcmf_cfg80211_info* cfg) {
 init_priv_mem_out:
     brcmf_deinit_priv_mem(cfg);
 
-    return -ENOMEM;
+    return ZX_ERR_NO_MEMORY;
 }
 
 static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
@@ -5703,7 +5703,7 @@ static zx_status_t brcmf_construct_chaninfo(struct brcmf_cfg80211_info* cfg, uin
     pbuf = kzalloc(BRCMF_DCMD_MEDLEN, GFP_KERNEL);
 
     if (pbuf == NULL) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     list = (struct brcmf_chanspec_list*)pbuf;
@@ -5833,7 +5833,7 @@ static zx_status_t brcmf_enable_bw40_2g(struct brcmf_cfg80211_info* cfg) {
         pbuf = kzalloc(BRCMF_DCMD_MEDLEN, GFP_KERNEL);
 
         if (pbuf == NULL) {
-            return -ENOMEM;
+            return ZX_ERR_NO_MEMORY;
         }
 
         ch.band = BRCMU_CHAN_BAND_2G;
@@ -6205,7 +6205,7 @@ err:
     kfree(p2p_limits);
     kfree(mbss_limits);
     kfree(combo);
-    return -ENOMEM;
+    return ZX_ERR_NO_MEMORY;
 }
 
 #ifdef CONFIG_PM
@@ -6328,13 +6328,13 @@ static zx_status_t brcmf_setup_wiphy(struct wiphy* wiphy, struct brcmf_if* ifp) 
         if (bandlist[i] == WLC_BAND_2G) {
             band = kmemdup(&__wl_band_2ghz, sizeof(__wl_band_2ghz), GFP_KERNEL);
             if (!band) {
-                return -ENOMEM;
+                return ZX_ERR_NO_MEMORY;
             }
 
             band->channels = kmemdup(&__wl_2ghz_channels, sizeof(__wl_2ghz_channels), GFP_KERNEL);
             if (!band->channels) {
                 kfree(band);
-                return -ENOMEM;
+                return ZX_ERR_NO_MEMORY;
             }
 
             band->n_channels = ARRAY_SIZE(__wl_2ghz_channels);
@@ -6343,13 +6343,13 @@ static zx_status_t brcmf_setup_wiphy(struct wiphy* wiphy, struct brcmf_if* ifp) 
         if (bandlist[i] == WLC_BAND_5G) {
             band = kmemdup(&__wl_band_5ghz, sizeof(__wl_band_5ghz), GFP_KERNEL);
             if (!band) {
-                return -ENOMEM;
+                return ZX_ERR_NO_MEMORY;
             }
 
             band->channels = kmemdup(&__wl_5ghz_channels, sizeof(__wl_5ghz_channels), GFP_KERNEL);
             if (!band->channels) {
                 kfree(band);
-                return -ENOMEM;
+                return ZX_ERR_NO_MEMORY;
             }
 
             band->n_channels = ARRAY_SIZE(__wl_5ghz_channels);

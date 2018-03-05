@@ -45,12 +45,10 @@ enum zxstatusenum {
     EOPNOTSUPP, // ZX_ERR_NOT_SUPPORTED
     EBADE,
     EPROTO,
-    EIO,
     ENODATA,
     EINVAL,
     EILSEQ,
     ENXIO,
-    ENOMEM, // ZX_ERR_NO_MEMORY
     ENODEV,
     ENOTBLK,
     ENOSR,

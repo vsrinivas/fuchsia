@@ -2073,7 +2073,7 @@ zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct sk_buff* skb) {
     } else {
         brcmf_err("drop skb: no hanger slot\n");
         brcmf_txfinalize(ifp, skb, false);
-        rc = -ENOMEM;
+        rc = ZX_ERR_NO_MEMORY;
     }
     brcmf_fws_unlock(fws);
 
@@ -2251,7 +2251,7 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
 
     fws = kzalloc(sizeof(*fws), GFP_KERNEL);
     if (!fws) {
-        rc = -ENOMEM;
+        rc = ZX_ERR_NO_MEMORY;
         goto fail;
     }
 

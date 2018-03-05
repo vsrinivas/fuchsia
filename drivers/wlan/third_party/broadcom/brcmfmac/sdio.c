@@ -638,7 +638,8 @@ static void pkt_align(struct sk_buff* p, int len, int align) {
 
 /* To check if there's window offered */
 static bool data_ok(struct brcmf_sdio* bus) {
-    return (uint8_t)(bus->tx_max - bus->tx_seq) != 0 && ((uint8_t)(bus->tx_max - bus->tx_seq) & 0x80) == 0;
+    return (uint8_t)(bus->tx_max - bus->tx_seq) != 0 &&
+            ((uint8_t)(bus->tx_max - bus->tx_seq) & 0x80) == 0;
 }
 
 static zx_status_t brcmf_sdio_kso_control(struct brcmf_sdio* bus, bool on) {
@@ -967,7 +968,8 @@ static zx_status_t brcmf_sdio_readshared(struct brcmf_sdio* bus, struct sdpcm_sh
     brcmf_dbg(INFO, "sdpcm_shared address 0x%08X\n", addr);
 
     /* Read hndrte_shared structure */
-    rv = brcmf_sdiod_ramrw(bus->sdiodev, false, addr, (uint8_t*)&sh_le, sizeof(struct sdpcm_shared_le));
+    rv = brcmf_sdiod_ramrw(bus->sdiodev, false, addr, (uint8_t*)&sh_le,
+                           sizeof(struct sdpcm_shared_le));
     if (rv != ZX_OK) {
         goto fail;
     }
@@ -1273,7 +1275,7 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
         brcmf_err("HW header checksum error\n");
         bus->sdcnt.rx_badhdr++;
         brcmf_sdio_rxfail(bus, false, false);
-        return -EIO;
+        return ZX_ERR_IO;
     }
     if (len < SDPCM_HDRLEN) {
         brcmf_err("HW header length error\n");
@@ -1942,7 +1944,7 @@ static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct sk_bu
             atomic_inc(&stats->pktcowed);
             if (skb_cow_head(pkt, head_pad)) {
                 atomic_inc(&stats->pktcow_failed);
-                return -ENOMEM;
+                return ZX_ERR_NO_MEMORY;
             }
             head_pad = 0;
         }
@@ -1995,7 +1997,7 @@ static zx_status_t brcmf_sdio_txpkt_prep_sg(struct brcmf_sdio* bus, struct sk_bu
     if (skb_tailroom(pkt) < tail_pad && pkt->len > blksize) {
         pkt_pad = brcmu_pkt_buf_get_skb(tail_pad + tail_chop + bus->head_align);
         if (pkt_pad == NULL) {
-            return -ENOMEM;
+            return ZX_ERR_NO_MEMORY;
         }
         ret = brcmf_sdio_txpkt_hdalign(bus, pkt_pad, &head_pad);
         if (unlikely(ret != ZX_OK)) {
@@ -2011,10 +2013,10 @@ static zx_status_t brcmf_sdio_txpkt_prep_sg(struct brcmf_sdio* bus, struct sk_bu
         ntail = pkt->data_len + tail_pad - (pkt->end - pkt->tail);
         if (skb_cloned(pkt) || ntail > 0)
             if (pskb_expand_head(pkt, 0, ntail, GFP_ATOMIC)) {
-                return -ENOMEM;
+                return ZX_ERR_NO_MEMORY;
             }
         if (skb_linearize(pkt)) {
-            return -ENOMEM;
+            return ZX_ERR_NO_MEMORY;
         }
         __skb_put(pkt, tail_pad);
     }
@@ -2626,7 +2628,7 @@ static zx_status_t brcmf_sdio_bus_txdata(struct device* dev, struct sk_buff* pkt
 
     brcmf_dbg(TRACE, "Enter: pkt: data %p len %d\n", pkt->data, pkt->len);
     if (sdiodev->state != BRCMF_SDIOD_DATA) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     /* Add space for the header */
@@ -2695,7 +2697,7 @@ static zx_status_t brcmf_sdio_readconsole(struct brcmf_sdio* bus) {
         c->bufsize = c->log_le.buf_size;
         c->buf = kmalloc(c->bufsize, GFP_ATOMIC);
         if (c->buf == NULL) {
-            return -ENOMEM;
+            return ZX_ERR_NO_MEMORY;
         }
     }
 
@@ -2764,7 +2766,7 @@ static zx_status_t brcmf_sdio_bus_txctl(struct device* dev, unsigned char* msg, 
 
     brcmf_dbg(TRACE, "Enter\n");
     if (sdiodev->state != BRCMF_SDIOD_DATA) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     /* Send from dpc */
@@ -2836,7 +2838,7 @@ static zx_status_t brcmf_sdio_dump_console(struct seq_file* seq, struct brcmf_sd
     }
 
     if (!conbuf) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     /* obtain the console data from device */
@@ -3044,7 +3046,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct device* dev, unsigned char* msg, 
 
     brcmf_dbg(TRACE, "Enter\n");
     if (sdiodev->state != BRCMF_SDIOD_DATA) {
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     /* Wait until control frame is available */
@@ -3129,13 +3131,14 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
     return ret;
 }
 #else  /* DEBUG */
-static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram_addr, uint8_t* ram_data,
-                                    uint ram_sz) {
+static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram_addr,
+                                    uint8_t* ram_data, uint ram_sz) {
     return true;
 }
 #endif /* DEBUG */
 
-static zx_status_t brcmf_sdio_download_code_file(struct brcmf_sdio* bus, const struct firmware* fw) {
+static zx_status_t brcmf_sdio_download_code_file(struct brcmf_sdio* bus,
+                                                 const struct firmware* fw) {
     zx_status_t err;
 
     brcmf_dbg(TRACE, "Enter\n");
@@ -3144,8 +3147,9 @@ static zx_status_t brcmf_sdio_download_code_file(struct brcmf_sdio* bus, const s
     if (err != ZX_OK)
         brcmf_err("error %d on writing %d membytes at 0x%08x\n", err, (int)fw->size,
                   bus->ci->rambase);
-    else if (!brcmf_sdio_verifymemory(bus->sdiodev, bus->ci->rambase, (uint8_t*)fw->data, fw->size)) {
-        err = -EIO;
+    else if (!brcmf_sdio_verifymemory(bus->sdiodev, bus->ci->rambase,
+                                      (uint8_t*)fw->data, fw->size)) {
+        err = ZX_ERR_IO;
     }
 
     return err;
@@ -3162,7 +3166,7 @@ static zx_status_t brcmf_sdio_download_nvram(struct brcmf_sdio* bus, void* vars,
     if (err != ZX_OK) {
         brcmf_err("error %d on writing %d nvram bytes at 0x%08x\n", err, varsz, address);
     } else if (!brcmf_sdio_verifymemory(bus->sdiodev, address, vars, varsz)) {
-        err = -EIO;
+        err = ZX_ERR_IO;
     }
 
     return err;

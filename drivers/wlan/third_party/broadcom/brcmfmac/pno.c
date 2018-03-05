@@ -330,7 +330,7 @@ static zx_status_t brcmf_pno_prep_fwconfig(struct brcmf_pno_info* pi,
     *buckets = NULL;
     fw_buckets = kcalloc(pi->n_reqs, sizeof(*fw_buckets), GFP_KERNEL);
     if (!fw_buckets) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     memset(pno_cfg, 0, sizeof(*pno_cfg));
@@ -416,7 +416,7 @@ static zx_status_t brcmf_pno_config_sched_scans(struct brcmf_if* ifp) {
     gsz = sizeof(*gscan_cfg) + (n_buckets - 1) * sizeof(*buckets);
     gscan_cfg = kzalloc(gsz, GFP_KERNEL);
     if (!gscan_cfg) {
-        err = -ENOMEM;
+        err = ZX_ERR_NO_MEMORY;
         goto free_buckets;
     }
 
@@ -528,7 +528,7 @@ zx_status_t brcmf_pno_attach(struct brcmf_cfg80211_info* cfg) {
     brcmf_dbg(TRACE, "enter\n");
     pi = kzalloc(sizeof(*pi), GFP_KERNEL);
     if (!pi) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     cfg->pno = pi;

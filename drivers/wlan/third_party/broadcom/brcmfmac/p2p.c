@@ -618,7 +618,7 @@ static zx_status_t brcmf_p2p_escan(struct brcmf_p2p_info* p2p, uint32_t num_chan
     memsize += num_chans * sizeof(uint16_t);
     memblk = kzalloc(memsize, GFP_KERNEL);
     if (!memblk) {
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
 
     vif = p2p->bss_idx[bss_type].vif;
@@ -752,7 +752,7 @@ static zx_status_t brcmf_p2p_run_escan(struct brcmf_cfg80211_info* cfg, struct b
     if (request->n_channels) {
         chanspecs = kcalloc(request->n_channels, sizeof(*chanspecs), GFP_KERNEL);
         if (!chanspecs) {
-            err = -ENOMEM;
+            err = ZX_ERR_NO_MEMORY;
             goto exit;
         }
         vif = p2p->bss_idx[P2PAPI_BSSCFG_CONNECTION].vif;
@@ -1020,7 +1020,7 @@ static zx_status_t brcmf_p2p_act_frm_search(struct brcmf_p2p_info* p2p, uint16_t
     default_chan_list = kzalloc(channel_cnt * sizeof(*default_chan_list), GFP_KERNEL);
     if (default_chan_list == NULL) {
         brcmf_err("channel list allocation failed\n");
-        err = -ENOMEM;
+        err = ZX_ERR_NO_MEMORY;
         goto exit;
     }
     ch.bw = BRCMU_CHAN_BW_20;
@@ -1347,7 +1347,7 @@ zx_status_t brcmf_p2p_notify_action_frame_rx(struct brcmf_if* ifp, const struct 
     mgmt_frame = kzalloc(offsetof(struct ieee80211_mgmt, u) + mgmt_frame_len, GFP_KERNEL);
     if (!mgmt_frame) {
         brcmf_err("No memory available for action frame\n");
-        return -ENOMEM;
+        return ZX_ERR_NO_MEMORY;
     }
     memcpy(mgmt_frame->da, ifp->mac_addr, ETH_ALEN);
     brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSSID, mgmt_frame->bssid, ETH_ALEN);
@@ -1445,7 +1445,7 @@ static zx_status_t brcmf_p2p_tx_action_frame(struct brcmf_p2p_info* p2p,
     if (test_bit(BRCMF_P2P_STATUS_ACTION_TX_COMPLETED, &p2p->status)) {
         brcmf_dbg(TRACE, "TX action frame operation is success\n");
     } else {
-        err = -EIO;
+        err = ZX_ERR_IO;
         brcmf_dbg(TRACE, "TX action frame operation has failed\n");
     }
     /* clear status bit for action tx */
@@ -1892,7 +1892,7 @@ zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
     brcmf_cfg80211_arm_vif_event(cfg, NULL);
     if (time_left == 0) {
         brcmf_err("No BRCMF_E_IF_CHANGE event received\n");
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     err = brcmf_fil_cmd_int_set(vif->ifp, BRCMF_C_SET_SCB_TIMEOUT, BRCMF_SCB_TIMEOUT_VALUE);
@@ -1990,7 +1990,7 @@ static zx_status_t brcmf_p2p_create_p2pdev(struct brcmf_p2p_info* p2p, struct wi
     brcmf_fweh_p2pdev_setup(pri_ifp, false);
     if (time_left == 0) {
         brcmf_err("timeout occurred\n");
-        err = -EIO;
+        err = ZX_ERR_IO;
         goto fail;
     }
 
@@ -2084,7 +2084,7 @@ zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name,
     brcmf_cfg80211_arm_vif_event(cfg, NULL);
     if (time_left == 0) {
         brcmf_err("timeout occurred\n");
-        err = -EIO;
+        err = ZX_ERR_IO;
         goto fail;
     }
 
@@ -2183,7 +2183,7 @@ zx_status_t brcmf_p2p_del_vif(struct wiphy* wiphy, struct wireless_dev* wdev) {
         /* wait for firmware event */
         time_left = brcmf_cfg80211_wait_vif_event(cfg, BRCMF_E_IF_DEL, BRCMF_VIF_EVENT_TIMEOUT);
         if (time_left == 0) {
-            err = -EIO;
+            err = ZX_ERR_IO;
         } else {
             err = ZX_OK;
         }

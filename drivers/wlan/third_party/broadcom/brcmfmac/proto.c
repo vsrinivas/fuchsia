@@ -63,7 +63,7 @@ zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr) {
 fail:
     kfree(proto);
     drvr->proto = NULL;
-    return -ENOMEM;
+    return ZX_ERR_NO_MEMORY;
 }
 
 void brcmf_proto_detach(struct brcmf_pub* drvr) {

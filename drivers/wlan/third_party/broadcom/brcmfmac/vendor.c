@@ -72,7 +72,7 @@ static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
         payload = max(ret_len, len) + 1;
         dcmd_buf = vzalloc(payload);
         if (NULL == dcmd_buf) {
-            return -ENOMEM;
+            return ZX_ERR_NO_MEMORY;
         }
 
         memcpy(dcmd_buf, (void*)cmdhdr + cmdhdr->offset, len);
@@ -95,7 +95,7 @@ static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
         payload = msglen + sizeof(msglen);
         reply = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, payload);
         if (NULL == reply) {
-            ret = -ENOMEM;
+            ret = ZX_ERR_NO_MEMORY;
             break;
         }
 
