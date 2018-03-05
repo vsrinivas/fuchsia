@@ -358,36 +358,57 @@ raw logging stream, accumulating context and massaging text as it goes.
   from a previous process's contextual elements is not assumed for new
   process that just happens have the same identifying information.
 
-* `{{{module:%x:%s:...}}}`
+* `{{{module:%i:%s:%s:...}}}`
 
-  Here `%x` encodes an ELF Build ID (or equivalent unique identifier).
-  The `%s` is a human-readable identifier for the module, such as an ELF
-  `DT_SONAME` string or a file name; but it might be empty.  It's only
-  for casual information.  The Build ID string is the sole way to
-  identify the binary from which this module was loaded.  A "module" is
-  a single linked binary, such as a loaded ELF file.  Usually each
-  module occupies a contiguous range of memory (always does on Zircon).
+  This element represents a so called "module". A "module" is a single
+  linked binary, such as a loaded ELF file. Usually each module occupies
+  a contiguous range of memory (always does on Zircon).
+ 
+  Here `%i` is the Module ID which is used by other contextual elements
+  to refer to this module. The first `%s` is a human-readable identifier
+  for the module, such as an ELF `DT_SONAME` string or a file name; but
+  it might be empty. It's only for casual information. The Module ID
+  will be exclusivelly used to refer to this module in other contextual
+  elements. The second `%s` is the module type and it determines what
+  the remaining fields are. The following module types are supported:
 
-  The `...` is a sequence of fields (separated by `:`) that each
-  describe a range of memory, called a _segment_.  The field for each
-  segment has the form `%p,%p,%s` which can be read as: address, size,
-  flags.  The first `%p` is the starting address of the segment and
-  the second `%p` is its size in bytes.  The starting address will
-  usually have been rounded down to the active page size, and the size
-  rounded up.  The `%s` is one or more of the letters 'r', 'w', and
-  'x' (in that order and in either upper or lower case) to indicate
-  this segment of memory is readable, writable, and/or executable.
-  The symbolizing filter can use this information to guess whether an
-  address is a likely code address or a likely data address in the
-  given module.
+  * `elf:%x`
 
-  There can be any number of segments (within reason), but there must
-  be at least one.  They must be in ascending order of address and
-  must not overlap.  For an ELF module, the segments should correspond
-  exactly to the `PT_LOAD` segments in the ELF file's program headers
-  (except for address and size rounding).
+    Here `%x` encodes an ELF Build ID. The Build ID should refer to a
+    single linked binary. The Build ID string is the sole way to identify
+    the binary from which this module was loaded.
 
   Example:
   ```
-  {{{module:83238ab56ba10497:libc.so:0x7acba69d5000,0x5a000,r:0x7acba6a2f000,0x7e000,rx:0x7acba6aad000,0x8000,rw}}}
+  {{{module:1:libc.so:elf:83238ab56ba10497}}}
+  ```
+
+* `{{{mmap:%p:%x:...}}}`
+
+  This contextual element is used to give information about a particular
+  region in memory. `%p` is the starting address and `%x` gives the size
+  in hex of the region of memory. The `...` part can take different forms
+  to give different information about the specified region of memory. The
+  allowed forms are the following:
+
+  * `load:%i:%s:%p`
+
+    This subelement informs the filter that a segment was loaded from a
+    module. The module is identified by its module id `%i`. The `%s` is
+    one or more of the letters 'r', 'w', and 'x' (in that order and in
+    either upper or lower case) to indicate this segment of memory is
+    readable, writable, and/or executable. The symbolizing filter can use
+    this information to guess whether an address is a likely code address
+    or a likely data address in the given module. The remaining `%p` gives
+    the module relative address. For ELF files the module relative address
+    will be the `p_vaddr` of the associated program header. For example if
+    your module's executable segment has `p_vaddr=0x1000`, `p_memsz=0x1234`,
+    and was loaded at 0x7acba69d5000 then you need to subtract 0x7acba69d4000
+    from any address between 0x7acba69d5000 and 0x7acba69d6234 to get the
+    module relative address. The starting address will usually have been
+    rounded down to the active page size, and the size rounded up.
+
+  Example:
+  ```
+  {{{mmap:0x7acba69d5000:0x5a000:load:1:rx:0x1000}}}
   ```
