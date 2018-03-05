@@ -43,9 +43,6 @@ zx_status_t VideoBuffer::Create(zx::vmo&& vmo,
         return status;
     }
 
-    // Zero out the buffer.
-    memset(virt, 0, size);
-
     fbl::AllocChecker ac;
     fbl::unique_ptr<VideoBuffer> res(
         new (&ac) VideoBuffer(fbl::move(vmo), size, virt));
@@ -53,17 +50,19 @@ zx_status_t VideoBuffer::Create(zx::vmo&& vmo,
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = res->Init(max_frame_size);
+    status = res->Alloc(max_frame_size);
     if (status != ZX_OK) {
         zxlogf(ERROR, "failed to init video buffer, err: %d\n", status);
         return status;
     }
 
+    res->Init();
+
     *out = fbl::move(res);
     return ZX_OK;
 }
 
-zx_status_t VideoBuffer::Init(uint32_t max_frame_size) {
+zx_status_t VideoBuffer::Alloc(uint32_t max_frame_size) {
     if (max_frame_size == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -84,6 +83,18 @@ zx_status_t VideoBuffer::Init(uint32_t max_frame_size) {
         free_frames_.push_back(i * max_frame_size);
     }
     return ZX_OK;
+}
+
+void VideoBuffer::Init() {
+    if (has_in_progress_frame_) {
+        free_frames_.push_back(in_progress_frame_);
+        has_in_progress_frame_ = false;
+    }
+    for (size_t n = locked_frames_.size(); n > 0; --n) {
+        free_frames_.push_back(locked_frames_.erase(n - 1));
+    }
+    // Zero out the buffer.
+    memset(virt_, 0, size_);
 }
 
 zx_status_t VideoBuffer::GetNewFrame(FrameOffset* out_offset) {

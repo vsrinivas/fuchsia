@@ -688,6 +688,8 @@ zx_status_t UsbVideoStream::StartStreamingLocked(dispatcher::Channel* channel,
     // Initialize this to -1 so that the first frame will consistently be
     // detected as a new frame.
     cur_frame_state_.fid = -1;
+    bulk_payload_bytes_ = 0;
+    video_buffer_->Init();
 
     zx_status_t status = usb_set_interface(&usb_, iface_num_,
                                            cur_streaming_setting_->alt_setting);

@@ -26,6 +26,9 @@ public:
                               fbl::unique_ptr<VideoBuffer>* out,
                               uint32_t max_frame_size);
 
+    // Initializes the video buffer for a new streaming session.
+    void Init();
+
     // Finds the next available frame for the driver to write to, and sets
     // the frame as currently in progress.
     // Returns ZX_OK if successful, and stores the frame offset into out_offset.
@@ -57,7 +60,7 @@ private:
           virt_(virt) {}
 
     // Allocates the free_frames_ and locked_frames_ vectors.
-    zx_status_t Init(uint32_t max_frame_size);
+    zx_status_t Alloc(uint32_t max_frame_size);
 
     // VMO backing the video buffer.
     zx::vmo vmo_;
