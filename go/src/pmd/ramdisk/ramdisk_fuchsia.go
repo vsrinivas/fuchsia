@@ -11,11 +11,11 @@ package ramdisk
 // #include <fs-management/mount.h>
 // #include <fcntl.h>
 //
-// int blobstore_mount(char *dpath, char *path) {
+// int blobfs_mount(char *dpath, char *path) {
 //   int fd = open(dpath, O_RDWR);
 //   return mount(fd, path, DISK_FORMAT_BLOBFS, &default_mount_options, &launch_stdio_async);
 // }
-// int blobstore_mkfs(char *path) {
+// int blobfs_mkfs(char *path) {
 //   return mkfs(path, DISK_FORMAT_BLOBFS, &launch_stdio_sync, &default_mkfs_options);
 // }
 import "C"
@@ -59,15 +59,15 @@ func (r *Ramdisk) Path() string {
 	return string(r.path[:bytes.Index(r.path[:], []byte{0})])
 }
 
-func (r *Ramdisk) MkfsBlobstore() error {
-	n := C.blobstore_mkfs(C.CString(r.Path()))
+func (r *Ramdisk) MkfsBlobfs() error {
+	n := C.blobfs_mkfs(C.CString(r.Path()))
 	if n == 0 {
 		return nil
 	}
 	return fmt.Errorf("mkfs failed with %d", n)
 }
-func (r *Ramdisk) MountBlobstore(mountPath string) error {
-	n := C.blobstore_mount(C.CString(r.Path()), C.CString(mountPath))
+func (r *Ramdisk) MountBlobfs(mountPath string) error {
+	n := C.blobfs_mount(C.CString(r.Path()), C.CString(mountPath))
 	if n == 0 {
 		return nil
 	}

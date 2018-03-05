@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// installblob takes a file by path or by stdin and writes it to blobstore.
+// installblob takes a file by path or by stdin and writes it to blobfs.
 package main
 
 import (
@@ -18,7 +18,7 @@ import (
 
 var (
 	from       = flag.String("from", "", "Path of file to read from")
-	blobstore  = flag.String("blobstore", "/blobstore", "Blobstore mount to write to")
+	blob       = flag.String("blob", "/blob", "Blobfs mount to write to")
 	merkleroot = flag.String("merkleroot", "", "optional: merkle root, if known")
 	size       = flag.Int64("size", -1, "Size, if known")
 )
@@ -76,7 +76,7 @@ func main() {
 		}
 	}
 
-	output, err := os.Create(filepath.Join(*blobstore, *merkleroot))
+	output, err := os.Create(filepath.Join(*blob, *merkleroot))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -22,7 +22,7 @@ import (
 var (
 	sysPath   = flag.String("system", "/system", "Path at which the filesystem will be served")
 	pkgfsPath = flag.String("pkgfs", "/pkgfs", "Path at which the package filesystem will be served")
-	blobstore = flag.String("blobstore", "/blobstore", "Path of blobstore to use")
+	blob      = flag.String("blob", "/blob", "Path at which to store blobs")
 	index     = flag.String("index", "/data/pkgfs_index", "Path at which to store package index")
 )
 
@@ -77,7 +77,7 @@ func main() {
 	sysPkg := flag.Arg(0)
 
 	// TODO(raggi): Reading from the index should be delayed until after verified boot completion
-	fs, err := pkgfs.New(*index, *blobstore)
+	fs, err := pkgfs.New(*index, *blob)
 	if err != nil {
 		log.Fatalf("pkgfs: initialization failed: %s", err)
 	}
@@ -92,7 +92,7 @@ func main() {
 			log.Fatalf("pkgfs: serve failed on startup handle: %s", err)
 		}
 	}
-	log.Printf("pkgfs mounted at %s serving index %s from blobstore %s", *pkgfsPath, *index, *blobstore)
+	log.Printf("pkgfs mounted at %s serving index %s from blobfs %s", *pkgfsPath, *index, *blob)
 
 	if sysPkg != "" {
 		var err error

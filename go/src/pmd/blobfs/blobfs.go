@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Package blobstore provides some wrappers around interactions with the blobstore.
+// Package blobfs provides some wrappers around interactions with the blobfs.
 // TODO(raggi): add support for blob garbage collection
-package blobstore
+package blobfs
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ import (
 	"fuchsia.googlesource.com/merkle"
 )
 
-// Manager wraps operations for reading and writing to blobstore, and will later
+// Manager wraps operations for reading and writing to blobfs, and will later
 // tackle more complex problems such as managing reference counting and garbage
 // collection of blobs.
 type Manager struct {
@@ -29,7 +29,7 @@ type Manager struct {
 	channel *zx.Channel
 }
 
-// New constructs a new Manager for the blobstore mount at the given root.
+// New constructs a new Manager for the blobfs mount at the given root.
 // tmpDir is a temporary directory where blobs will be temporarily stored if the
 // blob key is not known at creation time. tmpDir may be empty, in which case
 // the OS default temporary directory is used.
@@ -40,16 +40,16 @@ func New(root, tmpDir string) (*Manager, error) {
 
 	rootFDIO, err := syscall.OpenPath(root, 0, 0644)
 	if err != nil {
-		return nil, fmt.Errorf("pkgfs: blobstore: can't open %q: %s", root, err)
+		return nil, fmt.Errorf("pkgfs: blobfs: can't open %q: %s", root, err)
 	}
 	defer rootFDIO.Close()
 	rootIO, ok := rootFDIO.(*fdio.RemoteIO)
 	if !ok {
-		return nil, fmt.Errorf("pkgfs: blobstore: can't open blobstore root %q with remoteio protocol, got %#v", root, rootFDIO)
+		return nil, fmt.Errorf("pkgfs: blobfs: can't open blobfs root %q with remoteio protocol, got %#v", root, rootFDIO)
 	}
 	handles, err := rootIO.Clone()
 	if err != nil {
-		return nil, fmt.Errorf("pkgfs: blobstore: can't clone blobstore root handle: %s", err)
+		return nil, fmt.Errorf("pkgfs: blobfs: can't clone blobfs root handle: %s", err)
 	}
 	for _, h := range handles[1:] {
 		h.Close()
@@ -59,7 +59,7 @@ func New(root, tmpDir string) (*Manager, error) {
 	return &Manager{Root: root, tmpDir: tmpDir, channel: channel}, nil
 }
 
-// Create makes a new io for writing to the blobstore. If the given root looks
+// Create makes a new io for writing to blobfs. If the given root looks
 // like a blob root key (is non-empty) then it will be used as the blob key and
 // validated on Close - in this case size must also be accurate or Close() will
 // fail. If the given root is the empty string, the returned writer will first
@@ -79,27 +79,27 @@ func (m *Manager) Create(root string, size int64) (io.WriteCloser, error) {
 	return newTempProxy(m)
 }
 
-// Open opens a blobstore blob for reading
+// Open opens a blobfs blob for reading
 func (m *Manager) Open(root string) (*os.File, error) {
 	return os.Open(m.bpath(root))
 }
 
-// Channel returns an the FDIO directory handle for the blobstore root
+// Channel returns an the FDIO directory handle for the blobfs root
 func (m *Manager) Channel() *zx.Channel {
 	return m.channel
 }
 
 // HasBlob returns true if the requested blob is available for reading, false otherwise
 func (m *Manager) HasBlob(root string) bool {
-	// blobstore currently provides a signal handle over handle 2 in remoteio, but
+	// blobfs currently provides a signal handle over handle 2 in remoteio, but
 	// if it ever moves away from remoteio, or there are ever protocol or api
 	// changes this path is very brittle. There's no hard requirement for
 	// intermediate clients/servers to retain this handle. As such we disregard
 	// that option for detecting readable state.
-	// blobstore also does not reject open flags on in-flight blobs that only
+	// blobfs also does not reject open flags on in-flight blobs that only
 	// contain "read", even though reads on those files would return errors. This
 	// could be used to detect blob readability state, by opening and then issueing
-	// a read, but that will make blobstore do a lot of work.
+	// a read, but that will make blobfs do a lot of work.
 	// the final method chosen here for now is to open the blob for writing,
 	// non-exclusively. That will be rejected if the blob has already been fully
 	// written.
@@ -121,7 +121,7 @@ func (m *Manager) HasBlob(root string) bool {
 		return true
 	}
 
-	log.Printf("blobstore: unknown error asserting blob existence: %s", err)
+	log.Printf("blobfs: unknown error asserting blob existence: %s", err)
 
 	// fall back to trying to stat the file. note that stat doesn't tell us if the
 	// file is readable/writable, but we best assume here that if stat succeeds
@@ -149,7 +149,7 @@ type tempProxy struct {
 }
 
 func newTempProxy(m *Manager) (io.WriteCloser, error) {
-	f, err := ioutil.TempFile(m.tmpDir, "blobstore-proxy")
+	f, err := ioutil.TempFile(m.tmpDir, "blob-proxy")
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func (t *tempProxy) Root() (string, error) {
 	return fmt.Sprintf("%x", t.root), nil
 }
 
-// Rooter is an interface that indicates the object provides blobstore merkle
+// Rooter is an interface that indicates the object provides blobfs merkle
 // roots that identify it's content
 type Rooter interface {
 	Root() (string, error)

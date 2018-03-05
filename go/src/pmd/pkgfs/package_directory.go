@@ -60,7 +60,7 @@ func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, e
 
 // Initialize a package directory server interface from a package meta.far
 func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, error) {
-	blobPath := filepath.Join(filesystem.blobstore.Root, blob)
+	blobPath := filepath.Join(filesystem.blobfs.Root, blob)
 	f, err := os.Open(blobPath)
 	if err != nil {
 		log.Printf("pkgfs: failed to open package contents at %q: %s", blob, err)
@@ -175,7 +175,7 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 	}
 
 	if root, ok := d.contents[name]; ok {
-		return nil, nil, &fs.Remote{Channel: d.fs.blobstore.Channel(), Path: root, Flags: flags}, nil
+		return nil, nil, &fs.Remote{Channel: d.fs.blobfs.Channel(), Path: root, Flags: flags}, nil
 	}
 
 	dirname := name + "/"

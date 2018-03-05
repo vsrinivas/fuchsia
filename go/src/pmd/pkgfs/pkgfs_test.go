@@ -22,14 +22,14 @@ import (
 	"fuchsia.googlesource.com/pmd/ramdisk"
 )
 
-// Adding a file to /in writes the file to the blobstore
+// Adding a file to /in writes the file to blobfs
 // Adding a file that is a meta.far to /in creates the package in the package filesystem
 // If not all of a packages contents are available, opening the package directory should fail
 // A package directory should contain all files from meta.far and listed by meta/contents
 
 var (
 	pkgfsMount    string
-	blobstorePath string
+	blobfsPath string
 )
 
 // tmain exists for the defer convenience, so that defers are run before os.Exit gets called.
@@ -38,11 +38,11 @@ func tmain(m *testing.M) int {
 	log.SetOutput(os.Stdout)
 
 	var err error
-	blobstorePath, err = ioutil.TempDir("", "pkgfs-test-blobstore")
+	blobfsPath, err = ioutil.TempDir("", "pkgfs-test-blobfs")
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(blobstorePath)
+	defer os.RemoveAll(blobfsPath)
 
 	staticFile, err := ioutil.TempFile("", "pkgfs-test-static-index")
 	if err != nil {
@@ -65,16 +65,16 @@ func tmain(m *testing.M) int {
 	}
 	defer rd.Destroy()
 
-	if err := rd.MkfsBlobstore(); err != nil {
+	if err := rd.MkfsBlobfs(); err != nil {
 		panic(err)
 	}
 
-	if err := rd.MountBlobstore(blobstorePath); err != nil {
+	if err := rd.MountBlobfs(blobfsPath); err != nil {
 		panic(err)
 	}
-	defer rd.Umount(blobstorePath)
+	defer rd.Umount(blobfsPath)
 
-	fmt.Printf("blobstore mounted at %s\n", blobstorePath)
+	fmt.Printf("blobfs mounted at %s\n", blobfsPath)
 
 	d, err := ioutil.TempDir("", "pkgfs-test-mount")
 	if err != nil {
@@ -82,7 +82,7 @@ func tmain(m *testing.M) int {
 	}
 	defer os.RemoveAll(d)
 
-	pkgfs, err := New(indexPath, blobstorePath)
+	pkgfs, err := New(indexPath, blobfsPath)
 	if err != nil {
 		panic(err)
 	}
@@ -114,7 +114,7 @@ func TestAddFile(t *testing.T) {
 	var tree merkle.Tree
 	tree.ReadFrom(strings.NewReader("foo"))
 	root := tree.Root()
-	path := filepath.Join(blobstorePath, fmt.Sprintf("%x", root))
+	path := filepath.Join(blobfsPath, fmt.Sprintf("%x", root))
 	os.RemoveAll(path)
 
 	info, err := os.Stat(filepath.Join(pkgfsMount, "incoming"))
@@ -215,7 +215,7 @@ func TestAddPackage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = os.Stat(filepath.Join(blobstorePath, fmt.Sprintf("%x", tree.Root())))
+	_, err = os.Stat(filepath.Join(blobfsPath, fmt.Sprintf("%x", tree.Root())))
 	if err != nil {
 		t.Fatalf("package blob missing after package write: %s", err)
 	}

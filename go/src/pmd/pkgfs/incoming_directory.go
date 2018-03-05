@@ -19,10 +19,10 @@ import (
 
 	"fuchsia.googlesource.com/far"
 	"fuchsia.googlesource.com/pm/pkg"
-	"fuchsia.googlesource.com/pmd/blobstore"
+	"fuchsia.googlesource.com/pmd/blobfs"
 )
 
-// inDirectory is located at /in. It accepts newly created files, and writes them to blobstore.
+// inDirectory is located at /in. It accepts newly created files, and writes them to blobfs.
 type inDirectory struct {
 	unsupportedDirectory
 
@@ -83,9 +83,9 @@ func (f *inFile) Write(p []byte, off int64, whence int) (int, error) {
 
 	if f.w == nil {
 		var err error
-		f.w, err = f.fs.blobstore.Create(f.name, f.sz)
+		f.w, err = f.fs.blobfs.Create(f.name, f.sz)
 		if err != nil {
-			log.Printf("pkgfs: incoming file %q blobstore creation failed %q: %s", f.oname, f.name, err)
+			log.Printf("pkgfs: incoming file %q blobfs creation failed %q: %s", f.oname, f.name, err)
 			return 0, goErrToFSErr(err)
 		}
 	}
@@ -105,9 +105,9 @@ func (f *inFile) Close() error {
 
 	if f.w == nil {
 		var err error
-		f.w, err = f.fs.blobstore.Create(f.name, f.sz)
+		f.w, err = f.fs.blobfs.Create(f.name, f.sz)
 		if err != nil {
-			log.Printf("pkgfs: incoming file %q blobstore creation failed %q: %s", f.oname, f.name, err)
+			log.Printf("pkgfs: incoming file %q blobfs creation failed %q: %s", f.oname, f.name, err)
 			return goErrToFSErr(err)
 		}
 	}
@@ -115,15 +115,15 @@ func (f *inFile) Close() error {
 	err := f.w.Close()
 
 	root := f.name
-	if rooter, ok := f.w.(blobstore.Rooter); ok {
+	if rooter, ok := f.w.(blobfs.Rooter); ok {
 		root, err = rooter.Root()
 		if err != nil {
-			log.Printf("pkgfs: root digest computation failed after successful blobstore write: %s", err)
+			log.Printf("pkgfs: root digest computation failed after successful blobfs write: %s", err)
 			return goErrToFSErr(err)
 		}
 	}
 
-	if err == nil || f.fs.blobstore.HasBlob(root) {
+	if err == nil || f.fs.blobfs.HasBlob(root) {
 		log.Printf("pkgfs: wrote %q to blob %q", f.oname, root)
 
 		if f.oname == root {
@@ -141,7 +141,7 @@ func (f *inFile) Close() error {
 		}
 	}
 	if err != nil {
-		log.Printf("pkgfs: failed incoming file write to blobstore: %s", err)
+		log.Printf("pkgfs: failed incoming file write to blobfs: %s", err)
 	}
 	return goErrToFSErr(err)
 }
@@ -161,11 +161,11 @@ func (f *inFile) Truncate(sz uint64) error {
 	return nil
 }
 
-// importPackage reads a package far from blobstore, given a content key, and imports it into the package index
+// importPackage reads a package far from blobfs, given a content key, and imports it into the package index
 func importPackage(fs *Filesystem, root string) {
 	log.Printf("pkgfs: importing package from %q", root)
 
-	f, err := fs.blobstore.Open(root)
+	f, err := fs.blobfs.Open(root)
 	if err != nil {
 		log.Printf("error importing package: %s", err)
 		return
@@ -240,7 +240,7 @@ func importPackage(fs *Filesystem, root string) {
 		}
 		root := string(parts[1])
 
-		if fs.blobstore.HasBlob(root) {
+		if fs.blobfs.HasBlob(root) {
 			log.Printf("pkgfs: blob already present for %s: %q", p, root)
 			continue
 		}

@@ -25,7 +25,7 @@ import (
 	"thinfs/fs"
 	"thinfs/zircon/rpc"
 
-	"fuchsia.googlesource.com/pmd/blobstore"
+	"fuchsia.googlesource.com/pmd/blobfs"
 	"fuchsia.googlesource.com/pmd/index"
 )
 
@@ -34,23 +34,23 @@ type Filesystem struct {
 	root      *rootDirectory
 	static    *index.StaticIndex
 	index     *index.DynamicIndex
-	blobstore *blobstore.Manager
+	blobfs    *blobfs.Manager
 	mountInfo mountInfo
 	mountTime time.Time
 	amberPxy  *amber.Control_Proxy
 }
 
 // New initializes a new pkgfs filesystem server
-func New(indexDir, blobstoreDir string) (*Filesystem, error) {
-	bm, err := blobstore.New(blobstoreDir, "")
+func New(indexDir, blobDir string) (*Filesystem, error) {
+	bm, err := blobfs.New(blobDir, "")
 	if err != nil {
-		return nil, fmt.Errorf("pkgfs: open blobstore: %s", err)
+		return nil, fmt.Errorf("pkgfs: open blobfs: %s", err)
 	}
 
 	f := &Filesystem{
 		static:    index.NewStatic(),
 		index:     index.NewDynamic(indexDir),
-		blobstore: bm,
+		blobfs:    bm,
 		mountInfo: mountInfo{
 			parentFd: -1,
 		},
@@ -102,7 +102,7 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 		return fmt.Errorf("pkgfs: new system root set, but new static index %q not found in %q", staticIndexPath, merkleroot)
 	}
 
-	indexFile, err := f.blobstore.Open(blob)
+	indexFile, err := f.blobfs.Open(blob)
 	if err != nil {
 		return fmt.Errorf("pkgfs: could not load static index %q from package %q: %s", staticIndexPath, merkleroot, err)
 	}
@@ -113,21 +113,21 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 
 func (f *Filesystem) Blockcount() int64 {
 	// TODO(raggi): sum up all packages?
-	// TODO(raggi): delegate to blobstore?
+	// TODO(raggi): delegate to blobfs?
 	debugLog("fs blockcount")
 	return 0
 }
 
 func (f *Filesystem) Blocksize() int64 {
 	// TODO(raggi): sum up all packages?
-	// TODO(raggi): delegate to blobstore?
+	// TODO(raggi): delegate to blobfs?
 	debugLog("fs blocksize")
 	return 0
 }
 
 func (f *Filesystem) Size() int64 {
 	debugLog("fs size")
-	// TODO(raggi): delegate to blobstore?
+	// TODO(raggi): delegate to blobfs?
 	return 0
 }
 

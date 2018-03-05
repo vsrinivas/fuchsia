@@ -45,7 +45,7 @@ var (
 	grubCoreImg = flag.String("grub-core", "", "path to grub standalone core.img")
 
 	ramdiskOnly = flag.Bool("ramdisk-only", false, "ramdisk-only mode - only write an ESP partition")
-	blobstore   = flag.String("blobstore", "", "path to blobstore partition image (not used with ramdisk)")
+	blob        = flag.String("blob", "", "path to blob partition image (not used with ramdisk)")
 	data        = flag.String("data", "", "path to data partition image (not used with ramdisk)")
 
 	blockSize           = flag.Int64("block-size", 0, "the block size of the target disk (0 means detect)")
@@ -107,7 +107,7 @@ func main() {
 			*ramdisk = filepath.Join(*fuchsiaBuildDir, "user.bootfs")
 		} else {
 			// XXX(raggi): does not support ARM
-			*ramdisk = filepath.Join(*fuchsiaBuildDir, "bootdata-blobstore-x86.bin")
+			*ramdisk = filepath.Join(*fuchsiaBuildDir, "bootdata-blob-x86.bin")
 		}
 	}
 	if *cmdline == "" {
@@ -139,17 +139,17 @@ func main() {
 	}
 
 	if !*ramdiskOnly {
-		if *blobstore == "" {
+		if *blob == "" {
 			needFuchsiaBuildDir()
-			*blobstore = filepath.Join(*fuchsiaBuildDir, "images", "blobstore.blk")
+			*blob = filepath.Join(*fuchsiaBuildDir, "images", "blob.blk")
 		}
 		if *data == "" {
 			needFuchsiaBuildDir()
 			*data = filepath.Join(*fuchsiaBuildDir, "images", "data.blk")
 		}
 
-		if _, err := os.Stat(*blobstore); err != nil {
-			log.Fatalf("Blobstore image error: %s\nEither provide a blobstore image, or pass -ramdisk", err)
+		if _, err := os.Stat(*blob); err != nil {
+			log.Fatalf("Blob image error: %s\nEither provide a blob image, or pass -ramdisk", err)
 		}
 		if _, err := os.Stat(*data); err != nil {
 			f, err := os.Create(*data)
@@ -463,7 +463,7 @@ func main() {
 
 	if !*ramdiskOnly {
 		log.Print("Populating FVM in GPT image")
-		fvm(disk, int64(fvmStart), *fvmSize, "create", "--blobstore", *blobstore, "--data", *data)
+		fvm(disk, int64(fvmStart), *fvmSize, "create", "--blob", *blob, "--data", *data)
 	}
 
 	// Keep the file open so that OSX doesn't try to remount the disk while tools are working on it.

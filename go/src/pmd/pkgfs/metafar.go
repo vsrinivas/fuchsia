@@ -13,7 +13,7 @@ import (
 )
 
 func GetMetaFar(name, version, blob string, fs *Filesystem) (*metaFar, error) {
-	f, err := os.Open(filepath.Join(fs.blobstore.Root, blob))
+	f, err := os.Open(filepath.Join(fs.blobfs.Root, blob))
 	if err != nil {
 		return nil, err
 	}
