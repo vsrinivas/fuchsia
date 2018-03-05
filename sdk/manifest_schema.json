@@ -37,7 +37,8 @@
           "type": "string",
           "enum": [
             "c-pp",
-            "exe"
+            "exe",
+            "fidl"
           ]
         },
         "name": {
@@ -92,6 +93,9 @@
             },
             {
               "$ref": "#/definitions/exeTags"
+            },
+            {
+              "$ref": "#/definitions/fidlTags"
             }
           ]
         }
@@ -200,6 +204,23 @@
       "required": [
         "domain",
         "arch"
+      ],
+      "additionalProperties": false
+    },
+    "fidlTags": {
+      "description": "Tag definitions for the 'fidl' domain",
+      "type": "object",
+      "properties": {
+        "domain": {
+          "description": "Marker for this type of tags",
+          "type": "string",
+          "enum": [
+            "fidl"
+          ]
+        }
+      },
+      "required": [
+        "domain"
       ],
       "additionalProperties": false
     },
