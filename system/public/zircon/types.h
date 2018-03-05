@@ -198,12 +198,16 @@ typedef uint32_t zx_rights_t;
 #define ZX_RIGHT_SIGNAL           ((zx_rights_t)1u << 12)
 #define ZX_RIGHT_SIGNAL_PEER      ((zx_rights_t)1u << 13)
 #define ZX_RIGHT_WAIT             ((zx_rights_t)1u << 14)
-
+#define ZX_RIGHT_INSPECT          ((zx_rights_t)1u << 15)
+#define ZX_RIGHT_MANAGE_JOB       ((zx_rights_t)1u << 16)
+#define ZX_RIGHT_MANAGE_PROCESS   ((zx_rights_t)1u << 17)
+#define ZX_RIGHT_MANAGE_THREAD    ((zx_rights_t)1u << 18)
 #define ZX_RIGHT_SAME_RIGHTS      ((zx_rights_t)1u << 31)
 
 // Convenient names for commonly grouped rights
 #define ZX_RIGHTS_BASIC \
-    (ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_WAIT)
+    (ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE |\
+     ZX_RIGHT_WAIT | ZX_RIGHT_INSPECT)
 
 #define ZX_RIGHTS_IO \
     (ZX_RIGHT_READ | ZX_RIGHT_WRITE)
