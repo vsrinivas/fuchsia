@@ -79,8 +79,8 @@ and `blk1.bin`.
 Start two qemu instances running fuchsia/zircon.
 
 ```
-$ scripts/run-zircon-x86-64 -N -I qemu0 -x out/debug-x86-64/user.bootfs -g -- -hda blk0.bin
-$ scripts/run-zircon-x86-64 -N -I qemu1 -x out/debug-x86-64/user.bootfs -g -- -hda blk1.bin
+$ scripts/run-zircon-x64 -N -I qemu0 -x out/debug-x64/user.bootfs -g -- -hda blk0.bin
+$ scripts/run-zircon-x64 -N -I qemu1 -x out/debug-x64/user.bootfs -g -- -hda blk1.bin
 ```
 
 ### Prerequisites on fuchsia

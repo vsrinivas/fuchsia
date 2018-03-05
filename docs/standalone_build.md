@@ -10,16 +10,16 @@ curl -s "https://fuchsia.googlesource.com/scripts/+/master/bootstrap?format=TEXT
 
 To build the Peridot layer, use the following commands:
 
-## x86-64
+## x64
 
 ```
-fx set x86-64
+fx set x64
 fx full-build
 ```
 
-## aarch64 (64 bit ARM)
+## arm64
 
 ```
-fx set aarch64
+fx set arm64
 fx full-build
 ```

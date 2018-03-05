@@ -9,7 +9,7 @@ In order to run the current CL through the linter (assuming the current
 directory is `//peridot`), run:
 
 ```
-../scripts/git-file-tidy [--out-dir out/debug-x86-64]
+../scripts/git-file-tidy [--out-dir out/debug-x64]
 ```
 
 In order to run the entire repository through the linter, add `--all`. You can
