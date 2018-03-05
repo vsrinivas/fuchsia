@@ -26,8 +26,8 @@ closing the VMO handle does not remove the mapping added by this function.
   *vmar_offset* is an offset relative to the base address of the given VMAR.
   It is an error to specify a range that overlaps with another VMAR or mapping.
 - **ZX_VM_FLAG_SPECIFIC_OVERWRITE**  Same as **ZX_VM_FLAG_SPECIFIC**, but can
-  overlap another mapping.  It is still an error to overlap another VMAR.  If
-  the range meets these requirements, it will atomically (with respect to all
+  overlap another mapping.  It is still an error to partially-overlap another VMAR.
+  If the range meets these requirements, it will atomically (with respect to all
   other map/unmap/protect operations) replace existing mappings in the area.
 - **ZX_VM_FLAG_PERM_READ**  Map *vmo* as readable.  It is an error if *vmar*
   does not have *ZX_VM_FLAG_CAN_MAP_READ* permissions, the *vmar* handle does
