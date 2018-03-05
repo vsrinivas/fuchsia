@@ -127,7 +127,7 @@ At the time of writing, on-demand paging is not supported by the
 kernel, and has not been wired into filesystems. As a result, if a client
 writes to a “memory-mapped” region, the filesystem cannot reasonably identify
 which pages have and have not been touched. To cope with this restriction, mmap
-has only been implemented on **read-only filesystems**, such as the blobstore.
+has only been implemented on **read-only filesystems**, such as blobfs.
 
 ### Other Operations acting on paths
 
@@ -218,15 +218,15 @@ MinFS also supplies a variety of tools: “mkfs” for formatting, “fsck” fo
 verification, as well as “mount” and “umount” for adding and subtracting MinFS
 filesystems to a namespace from the command line.
 
-### Blobstore: An immutable, integrity-verifying package storage filesystem
+### Blobfs: An immutable, integrity-verifying package storage filesystem
 
-[Blobstore](https://fuchsia.googlesource.com/zircon/+/master/system/uapp/blobstore/)
+[Blobfs](https://fuchsia.googlesource.com/zircon/+/master/system/uapp/blobfs/)
 is a simple, flat filesystem optimized for “write-once, then read-only” [signed
 data](merkleroot.md), such as [application packages](package_metadata.md).
 Other than two small prerequisites (file names which are deterministic, content
 addressable hashes of a file’s Merkle Tree root, for integrity-verification)
-and forward knowledge of file size (identified to the Blobstore by a call to
-“ftruncate” before writing a blob to storage), the Blobstore appears like a
+and forward knowledge of file size (identified to Blobfs by a call to
+“ftruncate” before writing a blob to storage), Blobfs appears like a
 typical filesystem. It can be mounted and unmounted, it appears to contain a
 single flat directory of hashes, and blobs can be accessed by operations like
 “open”, “read”, “stat” and “mmap”.

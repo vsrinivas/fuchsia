@@ -3,7 +3,7 @@
 It's useful to run QEMU with persistent disks, like you'd have on actual
 hardware.
 
-Specifically you'd want a `/data` minfs partition and a `/blobstore` blobfs
+Specifically you'd want a `/data` minfs partition and a `/blob` blobfs
 partition, but `/system` and `/boot` from your local build. Here's how to do
 that.
 
@@ -82,11 +82,11 @@ changes complete.
 
 ## Create the filesystems
 
-And now create the minfs and blobstore filesystems on the new partitions:
+And now create the minfs and blobfs filesystems on the new partitions:
 
 ```
 $ mkfs /dev/class/block/003 minfs
-$ mkfs /dev/class/block/004 blobstore
+$ mkfs /dev/class/block/004 blobfs
 ```
 
 You're done. Now reboot and pass `-d` to `frun` to run with peristent disks.
