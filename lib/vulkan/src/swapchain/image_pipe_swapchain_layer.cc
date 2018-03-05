@@ -228,13 +228,6 @@ VkResult ImagePipeSwapchain::Initialize(
       return result;
     }
     images_.push_back(image);
-    constexpr VkImageSubresource subres = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .mipLevel = 0,
-        .arrayLayer = 0,
-    };
-    VkSubresourceLayout layout;
-    pDisp->GetImageSubresourceLayout(device, image, &subres, &layout);
 
     VkMemoryRequirements memory_requirements;
     pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
@@ -282,7 +275,7 @@ VkResult ImagePipeSwapchain::Initialize(
     auto image_info = scenic::ImageInfo::New();
     image_info->width = width;
     image_info->height = height;
-    image_info->stride = layout.rowPitch;
+    image_info->stride = 0; // Meaningless for optimal tiling.
     image_info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
     image_info->color_space = scenic::ImageInfo::ColorSpace::SRGB;
     image_info->tiling = scenic::ImageInfo::Tiling::GPU_OPTIMAL;
