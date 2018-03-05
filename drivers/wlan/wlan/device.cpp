@@ -216,19 +216,20 @@ void Device::WlanUnbind() {
         std::lock_guard<std::mutex> lock(lock_);
         channel_.reset();
         dead_ = true;
+        if (port_.is_valid()) {
+            zx_status_t status = QueueDevicePortPacket(DevicePacket::kShutdown);
+            if (status != ZX_OK) {
+                ZX_PANIC("wlan: could not send shutdown loop message: %d\n", status);
+            }
+        }
     }
-    device_remove(ethdev_);
     device_remove(zxdev_);
 }
 
 void Device::WlanRelease() {
     debugfn();
-    if (port_.is_valid()) {
-        zx_status_t status = QueueDevicePortPacket(DevicePacket::kShutdown);
-        if (status != ZX_OK) {
-            ZX_PANIC("wlan: could not send shutdown loop message: %d\n", status);
-        }
-        if (work_thread_.joinable()) { work_thread_.join(); }
+    if (work_thread_.joinable()) {
+        work_thread_.join();
     }
     delete this;
 }
