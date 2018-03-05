@@ -18,6 +18,7 @@ class {{ .Name }} {
 
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
+  zx_status_t Clone({{ .Name }}* result) const;
 
  private:
   ::fidl_union_tag_t tag;
@@ -57,11 +58,28 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
   {{- end }}
   }
 }
+
+zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
+  result->tag = tag;
+  switch (tag) {
+    {{- range $index, $member := .Members }}
+     case {{ $index }}:
+      return ::fidl::Clone({{ .Name }}, &result->{{ .Name }});
+    {{- end }}
+     default:
+      return ZX_ERR_INVALID_ARGS;
+  }
+}
 {{- end }}
 
 {{- define "UnionTraits" }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
     : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .Size }}> {};
+
+inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
+                         {{ .Namespace }}::{{ .Name }}* result) {
+  return value.Clone(result);
+}
 {{- end }}
 `

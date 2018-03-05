@@ -26,5 +26,11 @@ struct CodingTraits<{{ .Namespace }}::{{ .Name }}> {
     fidl::Decode(decoder, &underlying, offset);
   }
 };
+
+inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
+                         {{ .Namespace }}::{{ .Name }}* result) {
+  *result = value;
+  return ZX_OK;
+}
 {{- end }}
 `

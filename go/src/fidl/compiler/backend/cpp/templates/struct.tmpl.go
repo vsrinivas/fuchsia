@@ -27,6 +27,7 @@ class {{ .Name }}  {
 
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
+  zx_status_t Clone({{ .Name }}* result) const;
 
  private:
   {{- range .Members }}
@@ -55,11 +56,26 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
   ::fidl::Decode(decoder, &value->{{ .StorageName }}, offset + {{ .Offset }});
   {{- end }}
 }
+
+zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
+  {{- range $index, $member := .Members }}
+  {{ if not $index }}zx_status_t {{ end -}}
+  status = ::fidl::Clone({{ .StorageName }}, &result->{{ .StorageName }});
+  if (status != ZX_OK)
+    return status;
+  {{- end }}
+  return ZX_OK;
+}
 {{- end }}
 
 {{- define "StructTraits" }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
     : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .Size }}> {};
+
+inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
+                         {{ .Namespace }}::{{ .Name }}* result) {
+return value.Clone(result);
+}
 {{- end }}
 `
