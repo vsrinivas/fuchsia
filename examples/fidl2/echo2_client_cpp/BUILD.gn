@@ -1,0 +1,36 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "echo2_client_cpp"
+
+  sources = [
+    "echo2_client.cc",
+  ]
+
+  deps = [
+    "//garnet/examples/fidl2/services:echo2",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/svc/cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/launchpad",
+  ]
+}
+
+package("echo2_client_cpp") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "echo2_client_cpp"
+
+  meta = [ {
+    path = rebase_path("meta/sandbox")
+    dest = "sandbox"
+  } ]
+}

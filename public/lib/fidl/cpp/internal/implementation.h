@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_INTERNAL_IMPLEMENTATION_H_
 
 #include <stdint.h>
+#include <stdio.h>
 #include <zircon/assert.h>
 
 #include <memory>

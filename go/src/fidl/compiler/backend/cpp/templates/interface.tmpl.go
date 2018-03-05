@@ -114,8 +114,10 @@ class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(nullptr, &error_msg);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+      fprintf(stderr, "error: fidl_decode: %s\n", error_msg);
       return status;
+    }
       {{- if .Response }}
     ::fidl::Decoder decoder(std::move(message));
     size_t offset = sizeof(fidl_message_header_t);
@@ -199,8 +201,10 @@ zx_status_t {{ .StubName }}::Dispatch(
     case {{ .OrdinalName }}: {
       const char* error_msg = nullptr;
       status = message.Decode(nullptr, &error_msg);
-      if (status != ZX_OK)
+      if (status != ZX_OK) {
+        fprintf(stderr, "error: fidl_decode: %s\n", error_msg);
         break;
+      }
         {{- if .Request }}
       ::fidl::Decoder decoder(std::move(message));
       size_t offset = sizeof(fidl_message_header_t);

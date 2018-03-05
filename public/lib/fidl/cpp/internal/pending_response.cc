@@ -4,6 +4,8 @@
 
 #include "lib/fidl/cpp/internal/pending_response.h"
 
+#include <stdio.h>
+
 #include "lib/fidl/cpp/internal/stub_controller.h"
 #include "lib/fidl/cpp/internal/weak_stub_controller.h"
 
@@ -64,8 +66,10 @@ zx_status_t PendingResponse::Send(const fidl_type_t* type, Message message) {
   message.set_txid(txid_);
   const char* error_msg = nullptr;
   zx_status_t status = message.Validate(type, &error_msg);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
+    fprintf(stderr, "error: fidl_valdate: %s\n", error_msg);
     return status;
+  }
   zx_handle_t channel = controller->reader().channel().get();
   return message.Write(channel, 0);
 }
