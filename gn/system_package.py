@@ -21,7 +21,7 @@ def get_merkleroot(path, merkleroot):
 def main():
     """
     Produces a meta.far "package descriptor" using the pm host tool and a
-    command line for zircon.system.blobstore-init that will mount the package
+    command line for zircon.system.blob-init that will mount the package
     at boot time.
 
     This script wraps the `pm` host tool for the build in order to create a
@@ -32,11 +32,11 @@ def main():
     outputs:
         * system-package-dir/meta.far - a signed package descriptor mountable
           by pkgsvr and pmd.
-        * commandline - a file containing the zircon.system.blobstore-init and
-          zircon.system.blobstore-init-arg lines sufficient to mount the
+        * commandline - a file containing the zircon.system.blob-init and
+          zircon.system.blob-init-arg lines sufficient to mount the
           produced meta.far system package using the supplied pkgsvr binary.
-        * blobstore-manifest - a full manifest of all files that need to be
-          added to the blobstore (all system-manifest files, plus all
+        * blob-manifest - a full manifest of all files that need to be
+          added to blobfs (all system-manifest files, plus all
           packages in the pkgsvr-index).
     """
 
@@ -65,8 +65,8 @@ def main():
     parser.add_argument("--pkgsvr-index",
                         help="Path to the static packages index",
                         required=True)
-    parser.add_argument("--blobstore-manifest",
-                        help="Path to output the final blobstore manifest.",
+    parser.add_argument("--blob-manifest",
+                        help="Path to output the final blob manifest.",
                         required=True)
     args = parser.parse_args()
 
@@ -110,18 +110,18 @@ def main():
         # args.commandline will contain the boot arguments required to cause pkgsvr
         # to mount the package defined by the `system-manifest` that is described by
         # `system_package_meta_far`. See
-        # https://fuchsia.googlesource.com/zircon/+/master/docs/kernel_cmdline.md#zircon_system_blobstore_init_command
+        # https://fuchsia.googlesource.com/zircon/+/master/docs/kernel_cmdline.md#zircon_system_blob_init_command
         with open(args.commandline, 'w') as cmdline:
             cmdline.write(
-                "zircon.system.blobstore-init=/blobstore/%s\n" % pkgsvr_merkle)
+                "zircon.system.blob-init=/blob/%s\n" % pkgsvr_merkle)
             cmdline.write(
-                "zircon.system.blobstore-init-arg=%s\n" % meta_far_merkle)
+                "zircon.system.blob-init-arg=%s\n" % meta_far_merkle)
 
-        with open(args.blobstore_manifest, 'w') as blobstore_manifest:
-            blobstore_manifest.write("=%s\n" % os.path.relpath(system_package_meta_far))
+        with open(args.blob_manifest, 'w') as blob_manifest:
+            blob_manifest.write("=%s\n" % os.path.relpath(system_package_meta_far))
             with open(package_manifest) as manifest:
                 for line in manifest:
-                    blobstore_manifest.write(line)
+                    blob_manifest.write(line)
 
     except:
         if os.path.exists(args.system_package_dir):

@@ -9,7 +9,7 @@ build_all_fuchsia_packages.py drives the `pm` tool to build Fuchsia packages.
 It accepts a list of package names as input and produces:
  * A signed meta.far for each package
  * A manifest file for pkgsvr that contains `package_name/package_version:merkleroot(meta.far)`
- * A manifest file listing all of the meta.fars and package content files (for input to blobstore(1))
+ * A manifest file listing all of the meta.fars and package content files (for input to blobfs(1))
 
 TODO(US-415): move the behavior of finalize_manifests.py and
 build_all_fuchsia_packages.py into package.gni to be performed on a
@@ -71,8 +71,8 @@ def main():
     parser.add_argument("--merkleroot",
                         help="Path to the host merkleroot binary from the Zircon tools build",
                         required=True)
-    parser.add_argument("--blobstore-manifest",
-                        help="Path to the blobstore manifest to output (containing all produced meta.fars).",
+    parser.add_argument("--blob-manifest",
+                        help="Path to the blob manifest to output (containing all produced meta.fars).",
                         required=True)
     # TODO(raggi): the pkgsvr-index should end up in a signed meta-package instead.
     parser.add_argument("--pkgsvr-index",
@@ -142,26 +142,26 @@ def main():
     subprocess.check_call([args.amber_publish, "-bs", "-f", args.amber_blobs_manifest, "-r", args.amber_repo, "-k", args.amber_keys])
 
 
-    blobstore_manifest_dir = os.path.dirname(args.blobstore_manifest)
-    with open(args.blobstore_manifest, "w+") as blobstore_manifest:
+    blob_manifest_dir = os.path.dirname(args.blob_manifest)
+    with open(args.blob_manifest, "w+") as blob_manifest:
         with open(args.pkgsvr_index, "w+") as pkgsvr_index:
             for package in packages:
                 meta_far = os.path.join(args.packages_dir, package, "meta.far")
-                blobstore_manifest.write("%s\n" % os.path.relpath(meta_far, blobstore_manifest_dir))
+                blob_manifest.write("%s\n" % os.path.relpath(meta_far, blob_manifest_dir))
 
                 with open(os.path.join(args.packages_dir, package, "final_package_manifest")) as package_manifest:
                     for line in package_manifest:
-                        # XXX: the blobstore tool always prepends the manifest
+                        # XXX: the blobfs tool always prepends the manifest
                         # directory to the input path, which means that we have
                         # to re-pack the line with a path relative to the
                         # manifest.
                         src = line.strip().split("=", 2)[1]
-                        blobstore_manifest.write(os.path.relpath(src, blobstore_manifest_dir) + "\n")
+                        blob_manifest.write(os.path.relpath(src, blob_manifest_dir) + "\n")
 
                 with open(meta_far + ".merkle") as merklefile:
                     pkgsvr_index.write("%s/%d=%s\n" % (package, package_version, merklefile.readline().strip()))
             if not packages:
-                blobstore_manifest.write("")
+                blob_manifest.write("")
                 pkgsvr_index.write("")
 
     return 0

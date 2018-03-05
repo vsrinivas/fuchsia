@@ -83,14 +83,14 @@ final_boot_manifest = "$root_out_dir/boot.manifest"
 final_system_manifest = "$root_out_dir/system.manifest"
 
 # pkgsvr_index is the static packages index for the package server, it contains
-# all package content addresses that are added to the blobstore during the
+# all package content addresses that are added to blobfs during the
 # build.
 pkgsvr_index = "$root_gen_dir/pkgsvr_index"
 packages_dir = "$root_build_dir/package"
 # Packages blobs manifest is all the blobs from inside all Fuchsia packages, as well as their meta.fars.
 packages_blobs_manifest = "$root_build_dir/packages_blobs.manifest"
-# Final blobstore manifest is the packages_blobs_manifest.
-final_blobstore_manifest = "$root_build_dir/blobstore.manifest"
+# Final blob manifest is the packages_blobs_manifest.
+final_blob_manifest = "$root_build_dir/blob.manifest"
 
 # Keep the following in sync with the values in
 #   //scripts/devshell/lib/image_build_vars.sh
@@ -98,7 +98,7 @@ images_dir = "$root_out_dir/images"
 system_package_dir = "$root_gen_dir/system.pkg"
 system_package_meta_far = "$system_package_dir/meta.far"
 system_package_cmdline = "$images_dir/cmdline.txt"
-blobstore_image_path = "$images_dir/blobstore.blk"
+blob_image_path = "$images_dir/blob.blk"
 data_image_path = "$images_dir/data.blk"
 fvm_image_path = "$images_dir/fvm.blk"
 fvm_sparse_image_path = "$images_dir/fvm.sparse.blk"

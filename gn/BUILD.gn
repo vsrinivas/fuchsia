@@ -254,7 +254,7 @@ action("pkgbuilds") {
     rebase_path(pm_path),
     "--merkleroot",
     rebase_path(merkleroot_bin),
-    "--blobstore-manifest",
+    "--blob-manifest",
     rebase_path(packages_blobs_manifest),
     "--pkgsvr-index",
     rebase_path(pkgsvr_index),
@@ -319,8 +319,8 @@ action("system.pkg") {
     rebase_path(system_package_cmdline),
     "--pkgsvr-index",
     rebase_path(pkgsvr_index),
-    "--blobstore-manifest",
-    rebase_path(final_blobstore_manifest),
+    "--blob-manifest",
+    rebase_path(final_blob_manifest),
   ]
   sources = [
     "system_package.py",
@@ -330,33 +330,33 @@ action("system.pkg") {
     system_package_cmdline,
     system_package_dir,
     system_package_meta_far,
-    final_blobstore_manifest,
+    final_blob_manifest,
   ]
 }
 
-action("blobstore.blk") {
+action("blob.blk") {
   visibility = [ ":*" ]
-  blobstore_bin = "//out/build-zircon/tools/blobstore"
+  blobfs_bin = "//out/build-zircon/tools/blobfs"
 
   script = "//build/gn_run_binary.sh"
   args = [
     clang_prefix,
-    rebase_path(blobstore_bin),
-    rebase_path(blobstore_image_path),
+    rebase_path(blobfs_bin),
+    rebase_path(blob_image_path),
     "create",
     "--manifest",
-    rebase_path(final_blobstore_manifest),
+    rebase_path(final_blob_manifest),
     "--manifest",
     rebase_path(packages_blobs_manifest),
   ]
   inputs = [
-    blobstore_bin,
+    blobfs_bin,
     system_package_meta_far,
     packages_blobs_manifest,
-    final_blobstore_manifest,
+    final_blob_manifest,
   ]
   outputs = [
-    blobstore_image_path,
+    blob_image_path,
   ]
   deps = [
     ":finalize_manifests",
@@ -417,7 +417,7 @@ foreach(platform, zircon_platforms) {
     }
   }
 
-  bootdata("bootdata-blobstore-${platform}") {
+  bootdata("bootdata-blob-${platform}") {
     deps = [
       ":bootdata-${platform}",
       ":systempkg_cmdline",
@@ -453,18 +453,18 @@ action("data.blk") {
   ]
 }
 
-# fvm.blk creates a non-sparse FVM partition image containing the blobstore
-# partition produced by blobstore.blk. fvm.blk is primarily invoked and used by
+# fvm.blk creates a non-sparse FVM partition image containing the blob
+# partition produced by blob.blk. fvm.blk is primarily invoked and used by
 # the qemu run, via `fx run-fvm`.
 action("fvm.blk") {
   visibility = [ ":*" ]
   fvm_path = "//out/build-zircon/tools/fvm"
   inputs = [
-    blobstore_image_path,
+    blob_image_path,
     fvm_path,
   ]
   deps = [
-    ":blobstore.blk",
+    ":blob.blk",
   ]
 
   script = "//build/gn_run_binary.sh"
@@ -473,8 +473,8 @@ action("fvm.blk") {
     rebase_path(fvm_path),
     rebase_path(fvm_image_path),
     "create",
-    "--blobstore",
-    rebase_path(blobstore_image_path),
+    "--blob",
+    rebase_path(blob_image_path),
   ]
   outputs = [
     fvm_image_path,
@@ -530,18 +530,18 @@ bootdata_ramdisk("bootdata-fvm") {
   }
 }
 
-# fvm.sparse.blk creates a sparse FVM partition image containing the blobstore
-# partition produced by blobstore.blk.  fvm.sparse.blk is primarily invoked and
+# fvm.sparse.blk creates a sparse FVM partition image containing the blob
+# partition produced by blob.blk.  fvm.sparse.blk is primarily invoked and
 # used by the paver boot, via `fx boot-paver`.
 action("fvm.sparse.blk") {
   visibility = [ ":*" ]
   fvm_path = "//out/build-zircon/tools/fvm"
   inputs = [
-    blobstore_image_path,
+    blob_image_path,
     fvm_path,
   ]
   deps = [
-    ":blobstore.blk",
+    ":blob.blk",
   ]
 
   script = "//build/gn_run_binary.sh"
@@ -552,8 +552,8 @@ action("fvm.sparse.blk") {
     "sparse",
     "--compress",
     "lz4",
-    "--blobstore",
-    rebase_path(blobstore_image_path),
+    "--blob",
+    rebase_path(blob_image_path),
   ]
   outputs = [
     fvm_sparse_image_path,
@@ -787,7 +787,7 @@ zedboot_binary_patterns = [
   "driver/*",  # Drivers automagically cause devhost to be brought in.
 
   # These are needed for installer runs.
-  "bin/blobstore",
+  "bin/blobfs",
   "bin/install-disk-image",
   "bin/minfs",
   "bin/mount",
@@ -867,7 +867,7 @@ foreach(platform, zircon_platforms) {
   # real disk on the device.
   bootdata("netboot-${platform}") {
     deps = [
-      ":bootdata-blobstore-${platform}",
+      ":bootdata-blob-${platform}",
       ":bootdata-fvm",
     ]
     inputs = []
@@ -879,7 +879,7 @@ foreach(platform, zircon_platforms) {
   # ChromeOS vboot images.
   vboot("zircon-${platform}") {
     deps = [
-      ":bootdata-blobstore-${platform}",
+      ":bootdata-blob-${platform}",
     ]
   }
 
@@ -919,7 +919,7 @@ foreach(platform, zircon_platforms) {
       zircon_bin = "//out/build-zircon/build-${platform}/zircon.bin"
       zedboot = ":zedboot-${platform}"
       deps = [
-        ":bootdata-blobstore-${platform}",
+        ":bootdata-blob-${platform}",
       ]
     }
 
@@ -1010,7 +1010,7 @@ group("netboot") {
 
 group("images") {
   deps = [
-    ":blobstore.blk",
+    ":blob.blk",
     ":fvm.blk",
     ":fvm.data.sparse.blk",
     ":fvm.sparse.blk",
