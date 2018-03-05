@@ -37,6 +37,7 @@ class PhyDevice {
     zx_device_t* parent_;
 
     std::mutex lock_;
+    bool dead_ = false;
     std::unordered_map<uint16_t, IfaceDevice*> ifaces_;
     // Next available Iface id. Must be checked against the map to prevent overwriting an existing
     // IfaceDevice pointer in the map.

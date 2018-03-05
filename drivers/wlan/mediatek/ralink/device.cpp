@@ -3260,7 +3260,6 @@ void Device::HandleTxComplete(usb_request_t* request) {
 
 void Device::Unbind() {
     debugfn();
-    device_remove(wlanmac_dev_);
     device_remove(zxdev_);
 }
 

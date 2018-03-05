@@ -66,10 +66,7 @@ zx_status_t PhyDevice::Bind() {
 void PhyDevice::Unbind() {
     zxlogf(INFO, "wlan::testing::PhyDevice::Unbind()\n");
     std::lock_guard<std::mutex> guard(lock_);
-    for (auto it = ifaces_.begin(); it != ifaces_.end(); ) {
-        device_remove(it->second->zxdev());
-        it = ifaces_.erase(it);
-    }
+    dead_ = true;
     device_remove(zxdev_);
 }
 
@@ -105,6 +102,11 @@ zx_status_t PhyDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len, voi
 
 zx_status_t PhyDevice::Query(uint8_t* buf, size_t len, size_t* actual) {
     zxlogf(INFO, "wlan::testing::PhyDevice::Query()\n");
+    std::lock_guard<std::mutex> guard(lock_);
+    if (dead_) {
+        return ZX_ERR_PEER_CLOSED;
+    }
+
     auto info = wlan::phy::WlanPhyInfo::New();
     info->supported_phys = f1dl::Array<wlan::phy::SupportedPhy>::New(0);
     info->driver_features = f1dl::Array<wlan::phy::DriverFeature>::New(0);
@@ -169,6 +171,9 @@ zx_status_t PhyDevice::CreateIface(const void* in_buf, size_t in_len, void* out_
     }
     zxlogf(INFO, "CreateRequest: role=%u\n", req->role);
     std::lock_guard<std::mutex> guard(lock_);
+    if (dead_) {
+        return ZX_ERR_PEER_CLOSED;
+    }
 
     // We leverage wrapping of unsigned ints to cycle back through ids to find an unused one.
     bool found_unused = false;
@@ -223,6 +228,10 @@ zx_status_t PhyDevice::DestroyIface(const void* in_buf, size_t in_len) {
     zxlogf(INFO, "DestroyRequest: id=%u\n", req->id);
 
     std::lock_guard<std::mutex> guard(lock_);
+    if (dead_) {
+        return ZX_ERR_PEER_CLOSED;
+    }
+
     auto intf = ifaces_.find(req->id);
     if (intf == ifaces_.end()) { return ZX_ERR_NOT_FOUND; }
 
