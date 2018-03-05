@@ -4,6 +4,8 @@
 
 #include <memory>
 
+#include <fs/service.h>
+
 #include "gtest/gtest.h"
 #include "lib/agent/cpp/agent_impl.h"
 #include "lib/agent/fidl/agent.fidl.h"
@@ -100,17 +102,22 @@ class MyEntityProvider : AgentImpl::Delegate,
  public:
   MyEntityProvider(app::ApplicationLaunchInfoPtr launch_info,
                    f1dl::InterfaceRequest<app::ApplicationController> ctrl)
-      : app_controller_(this, std::move(ctrl)),
+      : vfs_(async_get_default()),
+        outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
+        app_controller_(this, std::move(ctrl)),
         entity_provider_binding_(this),
         launch_info_(std::move(launch_info)) {
     FXL_CHECK(!launch_info_.is_null());
-    outgoing_services_.AddService<EntityProvider>(
-        [this](f1dl::InterfaceRequest<EntityProvider> request) {
-          entity_provider_binding_.Bind(std::move(request));
-        });
-    outgoing_services_.ServeDirectory(std::move(launch_info_->service_request));
+    outgoing_directory_->AddEntry(
+        EntityProvider::Name_,
+        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+          entity_provider_binding_.Bind(std::move(channel));
+          return ZX_OK;
+        })));
+    vfs_.ServeDirectory(outgoing_directory_,
+                        std::move(launch_info_->service_request));
     agent_impl_ = std::make_unique<AgentImpl>(
-        &outgoing_services_, static_cast<AgentImpl::Delegate*>(this));
+        outgoing_directory_, static_cast<AgentImpl::Delegate*>(this));
 
     // Get |agent_context_| and |entity_resolver_| from incoming namespace.
     FXL_CHECK(!launch_info_->additional_services.is_null());
@@ -163,7 +170,8 @@ class MyEntityProvider : AgentImpl::Delegate,
   }
 
  private:
-  app::ServiceNamespace outgoing_services_;
+  fs::ManagedVfs vfs_;
+  fbl::RefPtr<fs::PseudoDir> outgoing_directory_;
   AgentContextPtr agent_context_;
   std::unique_ptr<AgentImpl> agent_impl_;
   EntityResolverPtr entity_resolver_;

@@ -4,6 +4,8 @@
 
 #include <memory>
 
+#include <fs/service.h>
+
 #include "gtest/gtest.h"
 #include "lib/agent/fidl/agent.fidl.h"
 #include "lib/app/cpp/service_provider_impl.h"
@@ -76,12 +78,17 @@ class MyDummyAgent : Agent,
  public:
   MyDummyAgent(zx::channel service_request,
                f1dl::InterfaceRequest<app::ApplicationController> ctrl)
-      : app_controller_(this, std::move(ctrl)), agent_binding_(this) {
-    outgoing_services_.AddService<Agent>(
-        [this](f1dl::InterfaceRequest<Agent> request) {
-          agent_binding_.Bind(std::move(request));
-        });
-    outgoing_services_.ServeDirectory(std::move(service_request));
+      : vfs_(async_get_default()),
+        outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
+        app_controller_(this, std::move(ctrl)),
+        agent_binding_(this) {
+    outgoing_directory_->AddEntry(
+        Agent::Name_,
+        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+          agent_binding_.Bind(std::move(channel));
+          return ZX_OK;
+        })));
+    vfs_.ServeDirectory(outgoing_directory_, std::move(service_request));
   }
 
   void KillApplication() { app_controller_.Unbind(); }
@@ -110,7 +117,8 @@ class MyDummyAgent : Agent,
   }
 
  private:
-  app::ServiceNamespace outgoing_services_;
+  fs::ManagedVfs vfs_;
+  fbl::RefPtr<fs::PseudoDir> outgoing_directory_;
   f1dl::Binding<app::ApplicationController> app_controller_;
   f1dl::Binding<modular::Agent> agent_binding_;
 

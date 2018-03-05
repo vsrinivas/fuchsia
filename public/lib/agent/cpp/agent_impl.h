@@ -32,6 +32,8 @@ class AgentImpl : public Agent {
 
   AgentImpl(app::ServiceNamespace* service_namespace, Delegate* delegate);
 
+  AgentImpl(fbl::RefPtr<fs::PseudoDir> directory, Delegate* delegate);
+
  private:
   // |Agent|
   void Connect(

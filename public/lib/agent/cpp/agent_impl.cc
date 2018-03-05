@@ -4,6 +4,8 @@
 
 #include "lib/agent/cpp/agent_impl.h"
 
+#include <fs/service.h>
+
 namespace modular {
 
 AgentImpl::AgentImpl(app::ServiceNamespace* const service_namespace,
@@ -13,6 +15,17 @@ AgentImpl::AgentImpl(app::ServiceNamespace* const service_namespace,
       [this](f1dl::InterfaceRequest<Agent> request) {
         binding_.Bind(std::move(request));
       });
+}
+
+AgentImpl::AgentImpl(fbl::RefPtr<fs::PseudoDir> directory,
+                     Delegate* const delegate)
+    : delegate_(delegate), binding_(this) {
+  directory->AddEntry(
+      Agent::Name_,
+      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+        binding_.Bind(std::move(channel));
+        return ZX_OK;
+      })));
 }
 
 // |Agent|
