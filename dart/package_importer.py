@@ -87,7 +87,9 @@ import("//build/dart/dart_library.gni")
 dart_library("%s") {
   package_name = "%s"
 
-  source_dir = "lib"
+  # This parameter is left empty as we don't care about analysis or exporting
+  # these sources outside of the tree.
+  sources = []
 
   disable_analysis = true
 
