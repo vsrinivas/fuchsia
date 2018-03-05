@@ -8,11 +8,15 @@
 
 #include <zircon/types.h>
 
+extern zx_status_t wlanphy_test_init(void** out_ctx);
 extern zx_status_t wlanphy_test_bind(void* ctx, zx_device_t* device);
+extern void wlanphy_test_release(void* ctx);
 
 static zx_driver_ops_t wlanphy_test_driver_ops = {
     .version = DRIVER_OPS_VERSION,
+    .init = wlanphy_test_init,
     .bind = wlanphy_test_bind,
+    .release = wlanphy_test_release,
 };
 
 ZIRCON_DRIVER_BEGIN(wlanphy_test, wlanphy_test_driver_ops, "fuchsia", "0.1", 2)
