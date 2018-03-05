@@ -217,7 +217,11 @@ private:
 
         // FID is a bit that is toggled when a new frame begins,
         // and stays constant for the rest of the frame.
+        // Some devices will not set this bit.
         int8_t fid;
+        // Whether we've received the last payload for the frame.
+        // Some devices will not set this bit.
+        bool eof;
 
         // Whether the frame contains an error.
         bool error;

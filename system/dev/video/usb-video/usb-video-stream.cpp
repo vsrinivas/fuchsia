@@ -871,6 +871,21 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
 }
 
 zx_status_t UsbVideoStream::FrameNotifyLocked() {
+    if (clock_frequency_hz_ != 0) {
+        zxlogf(TRACE, "#%u: [%ld ns] PTS = %lfs, STC = %lfs, SOF = %u host SOF = %lu\n",
+               num_frames_,
+               cur_frame_state_.capture_time,
+               cur_frame_state_.pts / static_cast<double>(clock_frequency_hz_),
+               cur_frame_state_.stc / static_cast<double>(clock_frequency_hz_),
+               cur_frame_state_.device_sof,
+               cur_frame_state_.host_sof);
+    }
+
+    if (vb_channel_ == nullptr) {
+        // Can't send a notification if there's no channel.
+        return ZX_OK;
+    }
+
     camera::camera_proto::VideoBufFrameNotify notif = { };
     notif.hdr.cmd = CAMERA_VB_FRAME_NOTIFY;
     notif.metadata.timestamp = cur_frame_state_.capture_time;
@@ -921,29 +936,24 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(usb_request_t* req,
     }
 
     uint8_t fid = header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_FID;
+    // We can detect the start of a new frame via FID or EOF.
+    //
     // FID is toggled when a new frame begins. This means any in progress frame
     // is now complete, and we are currently parsing the header of a new frame.
-    if (cur_frame_state_.fid != fid) {
-        // If the currently stored FID is valid, we've just completed a frame.
-        if (cur_frame_state_.fid >= 0) {
-            // Send a notification to the client for frame completion.
-            if (vb_channel_ != nullptr) {
-                zx_status_t status = FrameNotifyLocked();
-                if (status != ZX_OK) {
-                    zxlogf(ERROR, "failed to send notification to client, err: %d\n", status);
-                    // Even if we failed to send a notification, we should
-                    // probably continue processing the new frame.
-                }
-            }
-
-            if (clock_frequency_hz_ != 0) {
-                zxlogf(TRACE, "#%u: [%ld ns] PTS = %lfs, STC = %lfs, SOF = %u host SOF = %lu\n",
-                       num_frames_,
-                       cur_frame_state_.capture_time,
-                       cur_frame_state_.pts / static_cast<double>(clock_frequency_hz_),
-                       cur_frame_state_.stc / static_cast<double>(clock_frequency_hz_),
-                       cur_frame_state_.device_sof,
-                       cur_frame_state_.host_sof);
+    //
+    // If EOF was set on the previous frame, that means it was also completed,
+    // and this is a new frame.
+    bool new_frame = cur_frame_state_.fid != fid || cur_frame_state_.eof;
+    if (new_frame) {
+        // Notify the client of the completion of the previous frame.
+        // We need to check if the currently stored FID is valid, and we didn't
+        // already send a notification (EOF bit set).
+        if (cur_frame_state_.fid >= 0 && !cur_frame_state_.eof) {
+            zx_status_t status = FrameNotifyLocked();
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "failed to send notification to client, err: %d\n", status);
+                // Even if we failed to send a notification, we should
+                // probably continue processing the new frame.
             }
         }
 
@@ -964,6 +974,8 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(usb_request_t* req,
             }
         }
     }
+    cur_frame_state_.eof = header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_EOF;
+
     if (header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_ERR) {
         // Only print the error message for the first erroneous payload of the
         // frame.
@@ -1048,6 +1060,15 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
     usb_request_copyfrom(req, dst, data_size, header_len);
 
     cur_frame_state_.bytes += data_size;
+
+    if (cur_frame_state_.eof) {
+        // Send a notification to the client for frame completion now instead of
+        // waiting to parse the next payload header, in case this is the very last payload.
+        zx_status_t status = FrameNotifyLocked();
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "failed to send notification to client, err: %d\n", status);
+        }
+    }
 }
 
 void UsbVideoStream::DeactivateStreamChannel(const dispatcher::Channel* channel) {
