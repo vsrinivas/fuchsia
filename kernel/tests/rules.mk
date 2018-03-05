@@ -30,7 +30,6 @@ MODULE_DEPS += \
     kernel/lib/crypto \
     kernel/lib/header_tests \
     kernel/lib/fbl \
-    third_party/lib/safeint \
     kernel/lib/unittest \
 
 MODULE_COMPILEFLAGS += -fno-builtin
