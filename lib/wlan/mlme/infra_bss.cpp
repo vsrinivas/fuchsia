@@ -46,9 +46,10 @@ zx_status_t InfraBss::HandleAuthentication(const ImmutableMgmtFrame<Authenticati
     fbl::unique_ptr<Timer> timer = nullptr;
     auto status = CreateClientTimer(client_addr, &timer);
     if (status != ZX_OK) { return status; }
+
     auto client = fbl::make_unique<RemoteClient>(device_, fbl::move(timer),
-                                                 this,     // bss
-                                                 nullptr,  // client listener
+                                                 this,  // bss
+                                                 this,  // client listener
                                                  client_addr);
     clients_.Add(client_addr, fbl::move(client));
 
@@ -72,11 +73,20 @@ zx_status_t InfraBss::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& f
 void InfraBss::HandleClientStateChange(const common::MacAddr& client, RemoteClient::StateId from,
                                        RemoteClient::StateId to) {
     debugfn();
+    // Ignore when transitioning from `uninitialized` state.
+    if (from == RemoteClient::StateId::kUninitialized) {
+        return;
+    }
+
     ZX_DEBUG_ASSERT(clients_.Has(client));
+    if (!clients_.Has(client)) {
+        errorf("state change (%hhu, %hhu) reported for unknown client: %s\n", from, to,
+               client.ToString().c_str());
+        return;
+    }
 
     // If client enters deauthenticated state after being authenticated, remove client.
-    if (to == RemoteClient::StateId::kDeauthenticated &&
-        from != RemoteClient::StateId::kUninitialized) {
+    if (to == RemoteClient::StateId::kDeauthenticated) {
         auto status = clients_.Remove(client);
         if (status != ZX_OK) {
             errorf("[infra-bss] couldn't remove client %s: %d\n", MACSTR(client), status);

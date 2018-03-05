@@ -390,9 +390,9 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
 RemoteClient::RemoteClient(DeviceInterface* device, fbl::unique_ptr<Timer> timer, BssInterface* bss,
                            RemoteClient::Listener* listener, const common::MacAddr& addr)
     : listener_(listener), device_(device), bss_(bss), addr_(addr), timer_(std::move(timer)) {
-    ZX_DEBUG_ASSERT(device != nullptr);
-    ZX_DEBUG_ASSERT(timer != nullptr);
-    ZX_DEBUG_ASSERT(bss != nullptr);
+    ZX_DEBUG_ASSERT(device_ != nullptr);
+    ZX_DEBUG_ASSERT(timer_ != nullptr);
+    ZX_DEBUG_ASSERT(bss_ != nullptr);
     debugbss("[client] [%s] spawned\n", addr_.ToString().c_str());
 
     MoveToState(fbl::make_unique<DeauthenticatedState>(this));
@@ -404,9 +404,19 @@ RemoteClient::~RemoteClient() {
 }
 
 void RemoteClient::MoveToState(fbl::unique_ptr<BaseState> to) {
-    auto from_id = state() == nullptr ? RemoteClient::StateId::kUninitialized : state()->id();
+    auto from_id = state() == nullptr ? StateId::kUninitialized : state()->id();
+    if (to == nullptr) {
+        errorf("attempt to transition to a nullptr from state: %hhu\n", from_id);
+        ZX_DEBUG_ASSERT(to == nullptr);
+        return;
+    }
+
+    auto to_id = to->id();
     fsm::StateMachine<BaseState>::MoveToState(fbl::move(to));
-    if (listener_ != nullptr) { listener_->HandleClientStateChange(addr_, from_id, to->id()); }
+
+    if (listener_ != nullptr) {
+        listener_->HandleClientStateChange(addr_, from_id, to_id);
+    }
 }
 
 void RemoteClient::HandleTimeout() {
