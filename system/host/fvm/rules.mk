@@ -13,7 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/container/container.cpp \
     $(LOCAL_DIR)/container/fvm.cpp \
     $(LOCAL_DIR)/container/sparse.cpp \
-    $(LOCAL_DIR)/format/blobstore.cpp \
+    $(LOCAL_DIR)/format/blobfs.cpp \
     $(LOCAL_DIR)/format/format.cpp \
     $(LOCAL_DIR)/format/minfs.cpp \
 
@@ -26,7 +26,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fvm/include \
     -Isystem/ulib/digest/include \
     -Isystem/ulib/gpt/include \
-    -Isystem/ulib/blobstore/include \
+    -Isystem/ulib/blobfs/include \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/bitmap/include \
     -Isystem/ulib/fdio/include \
@@ -36,7 +36,7 @@ MODULE_COMPILEFLAGS := \
 MODULE_HOST_LIBS := \
     third_party/ulib/uboringssl.hostlib \
     third_party/ulib/lz4.hostlib \
-    system/uapp/blobstore.hostlib \
+    system/uapp/blobfs.hostlib \
     system/ulib/fvm.hostlib \
     system/ulib/fbl.hostlib \
     system/ulib/digest.hostlib \

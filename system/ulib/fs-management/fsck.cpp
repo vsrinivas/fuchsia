@@ -79,7 +79,7 @@ zx_status_t fsck(const char* device_path, disk_format_t df,
     case DISK_FORMAT_FAT:
         return FsckFat(device_path, options, cb);
     case DISK_FORMAT_BLOBFS:
-        return FsckNativeFs(device_path, options, cb, "/boot/bin/blobstore");
+        return FsckNativeFs(device_path, options, cb, "/boot/bin/blobfs");
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }

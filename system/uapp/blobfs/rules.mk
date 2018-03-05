@@ -9,13 +9,13 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userapp
 MODULE_GROUP := core
 
-MODULE_NAME := blobstore
+MODULE_NAME := blobfs
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/blobstore \
+    system/ulib/blobfs \
     system/ulib/fs \
     system/ulib/async.cpp \
     system/ulib/async \

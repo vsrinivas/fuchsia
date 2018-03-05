@@ -8,10 +8,10 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := usertest
 
-MODULE_NAME := blobstore-bench-test
+MODULE_NAME := blobfs-bench-test
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/blobstore-bench.cpp \
+    $(LOCAL_DIR)/blobfs-bench.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/digest \

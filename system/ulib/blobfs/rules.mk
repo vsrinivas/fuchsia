@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-MODULE_NAME := blobstore
+MODULE_NAME := blobfs
 
 COMMON_SRCS := \
     $(LOCAL_DIR)/common.cpp \
@@ -17,7 +17,7 @@ COMMON_SRCS := \
 # app main
 MODULE_SRCS := \
     $(COMMON_SRCS) \
-    $(LOCAL_DIR)/blobstore.cpp \
+    $(LOCAL_DIR)/blobfs.cpp \
     $(LOCAL_DIR)/vnode.cpp \
     $(LOCAL_DIR)/rpc.cpp \
 
@@ -46,7 +46,7 @@ MODULE_LIBS := \
 
 include make/module.mk
 
-# host blobstore lib
+# host blobfs lib
 
 MODULE := $(LOCAL_DIR).hostlib
 

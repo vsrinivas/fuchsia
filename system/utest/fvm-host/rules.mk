@@ -15,7 +15,7 @@ MODULE_SRCS += \
     system/host/fvm/container/sparse.cpp \
     system/host/fvm/format/format.cpp \
     system/host/fvm/format/minfs.cpp \
-    system/host/fvm/format/blobstore.cpp \
+    system/host/fvm/format/blobfs.cpp \
 
 MODULE_NAME := fvm-host-test
 
@@ -30,7 +30,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/digest/include \
     -Ithird_party/ulib/uboringssl/include \
     -Isystem/ulib/gpt/include \
-    -Isystem/ulib/blobstore/include \
+    -Isystem/ulib/blobfs/include \
     -Isystem/ulib/bitmap/include \
     -Isystem/ulib/fs-management/include \
     -Isystem/ulib/minfs/include \
@@ -47,7 +47,7 @@ MODULE_HOST_LIBS := \
     system/ulib/minfs.hostlib \
     system/ulib/fbl.hostlib \
     system/ulib/digest.hostlib \
-    system/uapp/blobstore.hostlib \
+    system/uapp/blobfs.hostlib \
 
 MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 

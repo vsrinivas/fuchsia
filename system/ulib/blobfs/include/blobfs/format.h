@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file describes the on-disk structure of Blobstore.
+// This file describes the on-disk structure of Blobfs.
 
 #pragma once
 
@@ -19,20 +19,20 @@
 
 // clang-format off
 
-namespace blobstore {
+namespace blobfs {
 
-constexpr uint64_t kBlobstoreMagic0  = (0xac2153479e694d21ULL);
-constexpr uint64_t kBlobstoreMagic1  = (0x985000d4d4d3d314ULL);
-constexpr uint32_t kBlobstoreVersion = 0x00000004;
+constexpr uint64_t kBlobfsMagic0  = (0xac2153479e694d21ULL);
+constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
+constexpr uint32_t kBlobfsVersion = 0x00000004;
 
-constexpr uint32_t kBlobstoreFlagClean      = 1;
-constexpr uint32_t kBlobstoreFlagDirty      = 2;
-constexpr uint32_t kBlobstoreFlagFVM        = 4;
-constexpr uint32_t kBlobstoreBlockSize      = 8192;
-constexpr uint32_t kBlobstoreBlockBits      = (kBlobstoreBlockSize * 8);
-constexpr uint32_t kBlobstoreBlockMapStart  = 1;
-constexpr uint32_t kBlobstoreInodeSize      = 64;
-constexpr uint32_t kBlobstoreInodesPerBlock = (kBlobstoreBlockSize / kBlobstoreInodeSize);
+constexpr uint32_t kBlobfsFlagClean      = 1;
+constexpr uint32_t kBlobfsFlagDirty      = 2;
+constexpr uint32_t kBlobfsFlagFVM        = 4;
+constexpr uint32_t kBlobfsBlockSize      = 8192;
+constexpr uint32_t kBlobfsBlockBits      = (kBlobfsBlockSize * 8);
+constexpr uint32_t kBlobfsBlockMapStart  = 1;
+constexpr uint32_t kBlobfsInodeSize      = 64;
+constexpr uint32_t kBlobfsInodesPerBlock = (kBlobfsBlockSize / kBlobfsInodeSize);
 
 constexpr size_t kFVMBlockMapStart  = 0x10000;
 constexpr size_t kFVMNodeMapStart   = 0x20000;
@@ -52,54 +52,54 @@ typedef struct {
     uint64_t inode_count;      // Number of blobs in this area
     uint64_t alloc_block_count; // Total number of allocated blocks
     uint64_t alloc_inode_count; // Total number of allocated blobs
-    uint64_t blob_header_next; // Block containing next blobstore, or zero if this is the last one
-    // The following flags are only valid with (flags & kBlobstoreFlagFVM):
+    uint64_t blob_header_next; // Block containing next blobfs, or zero if this is the last one
+    // The following flags are only valid with (flags & kBlobfsFlagFVM):
     uint64_t slice_size;    // Underlying slice size
     uint64_t vslice_count;  // Number of underlying slices
     uint32_t abm_slices;    // Slices allocated to block bitmap
     uint32_t ino_slices;    // Slices allocated to node map
     uint32_t dat_slices;    // Slices allocated to file data section
-} blobstore_info_t;
+} blobfs_info_t;
 
-constexpr uint64_t BlockMapStartBlock(const blobstore_info_t& info) {
-    if (info.flags & kBlobstoreFlagFVM) {
+constexpr uint64_t BlockMapStartBlock(const blobfs_info_t& info) {
+    if (info.flags & kBlobfsFlagFVM) {
         return kFVMBlockMapStart;
     } else {
-        return kBlobstoreBlockMapStart;
+        return kBlobfsBlockMapStart;
     }
 }
 
-constexpr uint64_t BlockMapBlocks(const blobstore_info_t& info) {
-    return fbl::round_up(info.block_count, kBlobstoreBlockBits) / kBlobstoreBlockBits;
+constexpr uint64_t BlockMapBlocks(const blobfs_info_t& info) {
+    return fbl::round_up(info.block_count, kBlobfsBlockBits) / kBlobfsBlockBits;
 }
 
-constexpr uint64_t NodeMapStartBlock(const blobstore_info_t& info) {
+constexpr uint64_t NodeMapStartBlock(const blobfs_info_t& info) {
     // Node map immediately follows the block map
-    if (info.flags & kBlobstoreFlagFVM) {
+    if (info.flags & kBlobfsFlagFVM) {
         return kFVMNodeMapStart;
     } else {
         return BlockMapStartBlock(info) + BlockMapBlocks(info);
     }
 }
 
-constexpr uint64_t NodeMapBlocks(const blobstore_info_t& info) {
-    return fbl::round_up(info.inode_count, kBlobstoreInodesPerBlock) / kBlobstoreInodesPerBlock;
+constexpr uint64_t NodeMapBlocks(const blobfs_info_t& info) {
+    return fbl::round_up(info.inode_count, kBlobfsInodesPerBlock) / kBlobfsInodesPerBlock;
 }
 
-constexpr uint64_t DataStartBlock(const blobstore_info_t& info) {
+constexpr uint64_t DataStartBlock(const blobfs_info_t& info) {
     // Data immediately follows the node map
-    if (info.flags & kBlobstoreFlagFVM) {
+    if (info.flags & kBlobfsFlagFVM) {
         return kFVMDataStart;
     } else {
         return NodeMapStartBlock(info) + NodeMapBlocks(info);
     }
 }
 
-constexpr uint64_t DataBlocks(const blobstore_info_t& info) {
+constexpr uint64_t DataBlocks(const blobfs_info_t& info) {
     return info.block_count;
 }
 
-constexpr uint64_t TotalBlocks(const blobstore_info_t& info) {
+constexpr uint64_t TotalBlocks(const blobfs_info_t& info) {
     return BlockMapStartBlock(info) + BlockMapBlocks(info) + NodeMapBlocks(info) + DataBlocks(info);
 }
 
@@ -115,16 +115,16 @@ typedef struct {
     uint64_t num_blocks;
     uint64_t blob_size;
     uint64_t reserved;
-} blobstore_inode_t;
+} blobfs_inode_t;
 
-static_assert(sizeof(blobstore_inode_t) == kBlobstoreInodeSize,
-              "Blobstore Inode size is wrong");
-static_assert(kBlobstoreBlockSize % kBlobstoreInodeSize == 0,
-              "Blobstore Inodes should fit cleanly within a blobstore block");
+static_assert(sizeof(blobfs_inode_t) == kBlobfsInodeSize,
+              "Blobfs Inode size is wrong");
+static_assert(kBlobfsBlockSize % kBlobfsInodeSize == 0,
+              "Blobfs Inodes should fit cleanly within a blobfs block");
 
 // Number of blocks reserved for the blob itself
-constexpr uint64_t BlobDataBlocks(const blobstore_inode_t& blobNode) {
-    return fbl::round_up(blobNode.blob_size, kBlobstoreBlockSize) / kBlobstoreBlockSize;
+constexpr uint64_t BlobDataBlocks(const blobfs_inode_t& blobNode) {
+    return fbl::round_up(blobNode.blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
 }
 
-} // namespace blobstore
+} // namespace blobfs

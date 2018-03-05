@@ -214,7 +214,7 @@ zx_status_t process_block_device(const char* device_name) {
     switch (disk_format) {
     case DISK_FORMAT_BLOBFS: {
         mount_options.create_mountpoint = true;
-        check_and_remount(device_path, PATH_BLOBSTORE, disk_format, &mount_options);
+        check_and_remount(device_path, PATH_BLOB, disk_format, &mount_options);
         break;
     }
     case DISK_FORMAT_MINFS: {

@@ -36,7 +36,7 @@ public:
     virtual zx_status_t Init() = 0;
 
     // Reports various information about the Container, e.g. number of partitions, and runs fsck on
-    // all supported partitions (blobstore, minfs)
+    // all supported partitions (blobfs, minfs)
     virtual zx_status_t Verify() const = 0;
 
     // Commits the Container data to disk

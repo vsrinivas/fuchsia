@@ -5,4 +5,4 @@
 #pragma once
 
 void fuchsia_start(void);
-void launch_blobstore_init(void);
+void launch_blob_init(void);

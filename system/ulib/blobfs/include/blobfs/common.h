@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // This file contains functions that are shared between host
-// and target implementations of Blobstore.
+// and target implementations of Blobfs.
 
 #pragma once
 
@@ -19,9 +19,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <blobstore/format.h>
+#include <blobfs/format.h>
 
-namespace blobstore {
+namespace blobfs {
 
 #ifdef __Fuchsia__
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
@@ -34,17 +34,17 @@ void* GetBitBlock(const RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno);
 
 zx_status_t readblk(int fd, uint64_t bno, void* data);
 zx_status_t writeblk(int fd, uint64_t bno, const void* data);
-zx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max);
-zx_status_t blobstore_get_blockcount(int fd, uint64_t* out);
-int blobstore_mkfs(int fd, uint64_t block_count);
+zx_status_t blobfs_check_info(const blobfs_info_t* info, uint64_t max);
+zx_status_t blobfs_get_blockcount(int fd, uint64_t* out);
+int blobfs_mkfs(int fd, uint64_t block_count);
 
-uint64_t MerkleTreeBlocks(const blobstore_inode_t& blobNode);
+uint64_t MerkleTreeBlocks(const blobfs_inode_t& blobNode);
 
 // Get a pointer to the nth block of the bitmap.
 inline void* get_raw_bitmap_data(const RawBitmap& bm, uint64_t n) {
-    assert(n * kBlobstoreBlockSize < bm.size());                  // Accessing beyond end of bitmap
-    assert(kBlobstoreBlockSize <= (n + 1) * kBlobstoreBlockSize); // Avoid overflow
-    return fs::GetBlock<kBlobstoreBlockSize>(bm.StorageUnsafe()->GetData(), n);
+    assert(n * kBlobfsBlockSize < bm.size());             // Accessing beyond end of bitmap
+    assert(kBlobfsBlockSize <= (n + 1) * kBlobfsBlockSize); // Avoid overflow
+    return fs::GetBlock<kBlobfsBlockSize>(bm.StorageUnsafe()->GetData(), n);
 }
 
-} // namespace blobstore
+} // namespace blobfs

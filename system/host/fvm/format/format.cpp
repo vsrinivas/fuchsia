@@ -18,7 +18,7 @@ zx_status_t Format::Detect(int fd, off_t offset, disk_format_t* out) {
 
     if (!memcmp(data, minfs_magic, sizeof(minfs_magic))) {
         *out = DISK_FORMAT_MINFS;
-    } else if (!memcmp(data, blobstore_magic, sizeof(blobstore_magic))) {
+    } else if (!memcmp(data, blobfs_magic, sizeof(blobfs_magic))) {
         *out = DISK_FORMAT_BLOBFS;
     } else {
         *out = DISK_FORMAT_UNKNOWN;
@@ -51,7 +51,7 @@ zx_status_t Format::Create(const char* path, const char* type, fbl::unique_ptr<F
         *out = fbl::move(minfsFormat);
         return ZX_OK;
     } else if (part == DISK_FORMAT_BLOBFS) {
-        // Found blobstore partition
+        // Found blobfs partition
         fbl::unique_ptr<Format> blobfsFormat(new (&ac) BlobfsFormat(fbl::move(fd), type));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
@@ -68,7 +68,7 @@ zx_status_t Format::Create(const char* path, const char* type, fbl::unique_ptr<F
 zx_status_t Format::Check(fbl::unique_fd fd, off_t start, off_t end,
                           const fbl::Vector<size_t>& extent_lengths, disk_format_t part) {
     if (part == DISK_FORMAT_BLOBFS) {
-        return blobstore::blobstore_fsck(fbl::move(fd), start, end, extent_lengths);
+        return blobfs::blobfs_fsck(fbl::move(fd), start, end, extent_lengths);
     } else if (part == DISK_FORMAT_MINFS) {
         return minfs::minfs_fsck(fbl::move(fd), start, end, extent_lengths);
     }

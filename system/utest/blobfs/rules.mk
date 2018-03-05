@@ -10,10 +10,10 @@ MODULE_TYPE := usertest
 
 MODULE_USERTEST_GROUP := fs
 
-MODULE_NAME := blobstore-test
+MODULE_NAME := blobfs-test
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/blobstore.cpp
+    $(LOCAL_DIR)/blobfs.cpp
 
 MODULE_STATIC_LIBS := \
     system/ulib/fvm \
@@ -22,7 +22,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/gpt \
     system/ulib/zxcpp \
     system/ulib/fbl \
-    system/ulib/blobstore \
+    system/ulib/blobfs \
     third_party/ulib/uboringssl \
 
 MODULE_LIBS := \
@@ -33,6 +33,6 @@ MODULE_LIBS := \
     system/ulib/unittest \
 
 MODULE_COMPILEFLAGS := \
-    -Isystem/ulib/blobstore/include \
+    -Isystem/ulib/blobfs/include \
 
 include make/module.mk

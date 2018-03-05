@@ -78,18 +78,18 @@ bool CreateSystem() {
     END_HELPER;
 }
 
-bool CreateBlobstore() {
+bool CreateBlobfs() {
     BEGIN_HELPER;
-    printf("Creating Blobstore partition: %s\n", blobfs_path);
+    printf("Creating Blobfs partition: %s\n", blobfs_path);
     int r = open(blobfs_path, O_RDWR | O_CREAT | O_EXCL, 0755);
     ASSERT_GE(r, 0, "Unable to create path");
     gFileFlags |= kBlobfs;
     ASSERT_EQ(ftruncate(r, PARTITION_SIZE), 0, "Unable to truncate disk");
     uint64_t block_count;
-    ASSERT_EQ(blobstore::blobstore_get_blockcount(r, &block_count), ZX_OK,
+    ASSERT_EQ(blobfs::blobfs_get_blockcount(r, &block_count), ZX_OK,
                  "Cannot find end of underlying device");
-    ASSERT_EQ(blobstore::blobstore_mkfs(r, block_count), ZX_OK,
-              "Failed to make blobstore partition");
+    ASSERT_EQ(blobfs::blobfs_mkfs(r, block_count), ZX_OK,
+              "Failed to make blobfs partition");
     ASSERT_EQ(close(r), 0, "Unable to close disk\n");
     END_HELPER;
 }
@@ -109,9 +109,9 @@ bool AddPartitions(Container* container) {
     }
 
     if (gFileFlags & kBlobfs) {
-        printf("Adding blobstore partition to container\n");
-        ASSERT_EQ(container->AddPartition(blobfs_path, "blobstore"), ZX_OK,
-                  "Failed to add blobstore partition");
+        printf("Adding blobfs partition to container\n");
+        ASSERT_EQ(container->AddPartition(blobfs_path, "blobfs"), ZX_OK,
+                  "Failed to add blobfs partition");
 
     }
     END_HELPER;
@@ -271,7 +271,7 @@ bool PopulateSystem(size_t ndirs, size_t nfiles, size_t max_size) {
     return PopulateMinfs(system_path, ndirs, nfiles, max_size);
 }
 
-bool AddFileBlobstore(blobstore::Blobstore* bs, size_t size) {
+bool AddFileBlobfs(blobfs::Blobfs* bs, size_t size) {
     BEGIN_HELPER;
     char new_file[PATH_MAX];
     GenerateFilename(test_dir, 10, new_file);;
@@ -280,32 +280,32 @@ bool AddFileBlobstore(blobstore::Blobstore* bs, size_t size) {
     fbl::unique_ptr<uint8_t[]> data;
     ASSERT_TRUE(GenerateData(size, &data));
     ASSERT_EQ(write(datafd.get(), data.get(), size), size, "Failed to write data to file");
-    ASSERT_EQ(blobstore::blobstore_add_blob(bs, datafd.get()), ZX_OK, "Failed to add blob");
+    ASSERT_EQ(blobfs::blobfs_add_blob(bs, datafd.get()), ZX_OK, "Failed to add blob");
     ASSERT_EQ(unlink(new_file), 0);
     END_HELPER;
 }
 
-bool PopulateBlobstore(size_t nfiles, size_t max_size) {
+bool PopulateBlobfs(size_t nfiles, size_t max_size) {
     BEGIN_HELPER;
-    printf("Populating blobstore partition\n");
+    printf("Populating blobfs partition\n");
     fbl::unique_fd blobfd(open(blobfs_path, O_RDWR, 0755));
-    ASSERT_TRUE(blobfd, "Unable to open blobstore path");
-    fbl::RefPtr<blobstore::Blobstore> bs;
-    ASSERT_EQ(blobstore::blobstore_create(&bs, fbl::move(blobfd)), ZX_OK,
-              "Failed to create blobstore");
+    ASSERT_TRUE(blobfd, "Unable to open blobfs path");
+    fbl::RefPtr<blobfs::Blobfs> bs;
+    ASSERT_EQ(blobfs::blobfs_create(&bs, fbl::move(blobfd)), ZX_OK,
+              "Failed to create blobfs");
     for (unsigned i = 0; i < nfiles; i++) {
         size_t size = 1 + (rand() % max_size);
-        ASSERT_TRUE(AddFileBlobstore(bs.get(), size));
+        ASSERT_TRUE(AddFileBlobfs(bs.get(), size));
     }
     END_HELPER;
 }
 
 bool PopulatePartitions(size_t ndirs, size_t nfiles, size_t max_size) {
     BEGIN_HELPER;
-    printf("Populating blobstore partition\n");
+    printf("Populating blobfs partition\n");
     ASSERT_TRUE(PopulateData(ndirs, nfiles, max_size));
     ASSERT_TRUE(PopulateSystem(ndirs, nfiles, max_size));
-    ASSERT_TRUE(PopulateBlobstore(nfiles, max_size));
+    ASSERT_TRUE(PopulateBlobfs(nfiles, max_size));
     END_HELPER;
 }
 
@@ -351,7 +351,7 @@ bool CreatePartitions() {
     BEGIN_HELPER;
     ASSERT_TRUE(CreateData());
     ASSERT_TRUE(CreateSystem());
-    ASSERT_TRUE(CreateBlobstore());
+    ASSERT_TRUE(CreateBlobfs());
     END_HELPER;
 }
 

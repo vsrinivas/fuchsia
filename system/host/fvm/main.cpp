@@ -13,7 +13,7 @@ int usage(void) {
     fprintf(stderr, "Commands:\n");
     fprintf(stderr, " create : Creates an FVM partition\n");
     fprintf(stderr, " verify : Report basic information about sparse/fvm files and run fsck on"                     "contained partitions\n");
-    fprintf(stderr, " add : Adds a Minfs or Blobstore partition to an FVM (input path is"
+    fprintf(stderr, " add : Adds a Minfs or Blobfs partition to an FVM (input path is"
                     " required)\n");
     fprintf(stderr, " sparse : Creates a sparse file. One or more input paths are required.\n");
     fprintf(stderr, "Flags (neither or both of offset/length must be specified):\n");
@@ -21,7 +21,7 @@ int usage(void) {
     fprintf(stderr, " --length [bytes] - length of container within file (fvm only)\n");
     fprintf(stderr, " --compress - specify that file should be compressed (sparse only)\n");
     fprintf(stderr, "Input options:\n");
-    fprintf(stderr, " --blobstore [path] - Add path as blobstore type (must be blobstore)\n");
+    fprintf(stderr, " --blob [path] - Add path as blob type (must be blobfs)\n");
     fprintf(stderr, " --data [path] - Add path as data type (must be minfs)\n");
     fprintf(stderr, " --system [path] - Add path as system type (must be minfs)\n");
     exit(-1);

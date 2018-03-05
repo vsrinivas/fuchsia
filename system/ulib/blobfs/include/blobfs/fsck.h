@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // This file contains functionality for checking the consistency of
-// Blobstore.
+// Blobfs.
 
 #pragma once
 
@@ -14,28 +14,28 @@
 #include <fs/trace.h>
 
 #ifdef __Fuchsia__
-#include <blobstore/blobstore.h>
+#include <blobfs/blobfs.h>
 #else
-#include <blobstore/host.h>
+#include <blobfs/host.h>
 #endif
 
-namespace blobstore {
+namespace blobfs {
 
-class BlobstoreChecker {
+class BlobfsChecker {
 public:
-    BlobstoreChecker();
-    void Init(fbl::RefPtr<Blobstore> vnode);
+    BlobfsChecker();
+    void Init(fbl::RefPtr<Blobfs> vnode);
     void TraverseInodeBitmap();
     void TraverseBlockBitmap();
     zx_status_t CheckAllocatedCounts() const;
 
 private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(BlobstoreChecker);
-    fbl::RefPtr<Blobstore> blobstore_;
+    DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsChecker);
+    fbl::RefPtr<Blobfs> blobfs_;
     uint32_t alloc_inodes_;
     uint32_t alloc_blocks_;
 };
 
-zx_status_t blobstore_check(fbl::RefPtr<Blobstore> vnode);
+zx_status_t blobfs_check(fbl::RefPtr<Blobfs> vnode);
 
-} // namespace blobstore
+} // namespace blobfs

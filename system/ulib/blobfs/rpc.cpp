@@ -19,9 +19,9 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <blobstore/blobstore.h>
+#include <blobfs/blobfs.h>
 
-namespace blobstore {
+namespace blobfs {
 
 zx_status_t VnodeBlob::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type,
                                   zxrio_object_info_t* extra) {

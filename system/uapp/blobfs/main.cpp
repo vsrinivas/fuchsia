@@ -13,8 +13,8 @@
 #include <unistd.h>
 
 #include <async/cpp/loop.h>
-#include <blobstore/blobstore.h>
-#include <blobstore/fsck.h>
+#include <blobfs/blobfs.h>
+#include <blobfs/fsck.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
@@ -31,30 +31,30 @@ namespace {
 
 typedef struct {
     bool readonly = false;
-    uint64_t data_blocks = blobstore::kStartBlockMinimum; // Account for reserved blocks
+    uint64_t data_blocks = blobfs::kStartBlockMinimum; // Account for reserved blocks
     fbl::Vector<fbl::String> blob_list;
 } blob_options_t;
 
-int do_blobstore_mount(fbl::unique_fd fd, const blob_options_t& options) {
+int do_blobfs_mount(fbl::unique_fd fd, const blob_options_t& options) {
     bool readonly = options.readonly;
     if (!readonly) {
         block_info_t block_info;
         zx_status_t status = static_cast<zx_status_t>(ioctl_block_get_info(fd.get(), &block_info));
         if (status < ZX_OK) {
-            FS_TRACE_ERROR("blobstore: Unable to query block device, fd: %d status: 0x%x\n",
-                            fd.get(), status);
+            FS_TRACE_ERROR("blobfs: Unable to query block device, fd: %d status: 0x%x\n",
+                           fd.get(), status);
             return -1;
         }
         readonly = block_info.flags & BLOCK_FLAG_READONLY;
     }
 
-    fbl::RefPtr<blobstore::VnodeBlob> vn;
-    if (blobstore::blobstore_mount(&vn, fbl::move(fd)) < 0) {
+    fbl::RefPtr<blobfs::VnodeBlob> vn;
+    if (blobfs::blobfs_mount(&vn, fbl::move(fd)) < 0) {
         return -1;
     }
     zx_handle_t h = zx_get_startup_handle(PA_HND(PA_USER0, 0));
     if (h == ZX_HANDLE_INVALID) {
-        FS_TRACE_ERROR("blobstore: Could not access startup handle to mount point\n");
+        FS_TRACE_ERROR("blobfs: Could not access startup handle to mount point\n");
         return -1;
     }
 
@@ -70,25 +70,25 @@ int do_blobstore_mount(fbl::unique_fd fd, const blob_options_t& options) {
     return ZX_OK;
 }
 
-int do_blobstore_mkfs(fbl::unique_fd fd, const blob_options_t& options) {
+int do_blobfs_mkfs(fbl::unique_fd fd, const blob_options_t& options) {
     uint64_t block_count;
-    if (blobstore::blobstore_get_blockcount(fd.get(), &block_count)) {
-        fprintf(stderr, "blobstore: cannot find end of underlying device\n");
+    if (blobfs::blobfs_get_blockcount(fd.get(), &block_count)) {
+        fprintf(stderr, "blobfs: cannot find end of underlying device\n");
         return -1;
     }
 
-    int r = blobstore::blobstore_mkfs(fd.get(), block_count);
+    int r = blobfs::blobfs_mkfs(fd.get(), block_count);
 
     return r;
 }
 
-int do_blobstore_check(fbl::unique_fd fd, const blob_options_t& options) {
-    fbl::RefPtr<blobstore::Blobstore> vn;
-    if (blobstore::blobstore_create(&vn, fbl::move(fd)) < 0) {
+int do_blobfs_check(fbl::unique_fd fd, const blob_options_t& options) {
+    fbl::RefPtr<blobfs::Blobfs> vn;
+    if (blobfs::blobfs_create(&vn, fbl::move(fd)) < 0) {
         return -1;
     }
 
-    return blobstore::blobstore_check(vn);
+    return blobfs::blobfs_check(vn);
 }
 
 typedef int (*CommandFunction)(fbl::unique_fd fd, const blob_options_t& options);
@@ -98,21 +98,21 @@ struct {
     CommandFunction func;
     const char* help;
 } CMDS[] = {
-    {"create", do_blobstore_mkfs, "initialize filesystem"},
-    {"mkfs", do_blobstore_mkfs, "initialize filesystem"},
-    {"check", do_blobstore_check, "check filesystem integrity"},
-    {"fsck", do_blobstore_check, "check filesystem integrity"},
-    {"mount", do_blobstore_mount, "mount filesystem"},
+    {"create", do_blobfs_mkfs, "initialize filesystem"},
+    {"mkfs", do_blobfs_mkfs, "initialize filesystem"},
+    {"check", do_blobfs_check, "check filesystem integrity"},
+    {"fsck", do_blobfs_check, "check filesystem integrity"},
+    {"mount", do_blobfs_mount, "mount filesystem"},
 };
 
 int usage() {
     fprintf(stderr,
-            "usage: blobstore [ <options>* ] <command> [ <arg>* ]\n"
+            "usage: blobfs [ <options>* ] <command> [ <arg>* ]\n"
             "\n"
             "options: --readonly  Mount filesystem read-only\n"
             "\n"
-            "On Fuchsia, blobstore takes the block device argument by handle.\n"
-            "This can make 'blobstore' commands hard to invoke from command line.\n"
+            "On Fuchsia, blobfs takes the block device argument by handle.\n"
+            "This can make 'blobfs' commands hard to invoke from command line.\n"
             "Try using the [mkfs,fsck,mount,umount] commands instead\n"
             "\n");
     for (unsigned n = 0; n < (sizeof(CMDS) / sizeof(CMDS[0])); n++) {

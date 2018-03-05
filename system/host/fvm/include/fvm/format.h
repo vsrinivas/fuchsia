@@ -7,9 +7,9 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#include <blobstore/format.h>
-#include <blobstore/fsck.h>
-#include <blobstore/host.h>
+#include <blobfs/format.h>
+#include <blobfs/fsck.h>
+#include <blobfs/host.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <fvm/fvm.h>
@@ -142,7 +142,7 @@ public:
     void Name(char* name) const final;
     uint32_t BlockSize() const final;
     uint32_t BlocksPerSlice() const final;
-    uint8_t datablk[blobstore::kBlobstoreBlockSize];
+    uint8_t datablk[blobfs::kBlobfsBlockSize];
 
 private:
     fbl::unique_fd fd_;
@@ -150,13 +150,13 @@ private:
 
     // Input superblock
     union {
-        char blk_[blobstore::kBlobstoreBlockSize];
-        blobstore::blobstore_info_t info_;
+        char blk_[blobfs::kBlobfsBlockSize];
+        blobfs::blobfs_info_t info_;
     };
 
     // Output superblock
     union {
-        char fvm_blk_[blobstore::kBlobstoreBlockSize];
-        blobstore::blobstore_info_t fvm_info_;
+        char fvm_blk_[blobfs::kBlobfsBlockSize];
+        blobfs::blobfs_info_t fvm_info_;
     };
 };

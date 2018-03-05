@@ -16,7 +16,7 @@ __BEGIN_CDECLS
 #define PATH_DATA "/data"
 #define PATH_INSTALL "/install"
 #define PATH_SYSTEM "/system"
-#define PATH_BLOBSTORE "/blobstore"
+#define PATH_BLOB "/blob"
 #define PATH_VOLUME "/volume"
 #define PATH_DEV_BLOCK "/dev/class/block"
 
@@ -37,7 +37,7 @@ static const uint8_t minfs_magic[16] = {
     0x04, 0xd3, 0xd3, 0xd3, 0xd3, 0x00, 0x50, 0x38,
 };
 
-static const uint8_t blobstore_magic[16] = {
+static const uint8_t blobfs_magic[16] = {
     0x21, 0x4d, 0x69, 0x9e, 0x47, 0x53, 0x21, 0xac,
     0x14, 0xd3, 0xd3, 0xd4, 0xd4, 0x00, 0x50, 0x98,
 };

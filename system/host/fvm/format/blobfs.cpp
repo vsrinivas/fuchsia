@@ -6,29 +6,29 @@
 
 #include "fvm/format.h"
 
-static constexpr char kBlobstoreName[] = "blobstore";
-static constexpr uint8_t kBlobstoreType[] = GUID_BLOBFS_VALUE;
+static constexpr char kBlobName[] = "blob";
+static constexpr uint8_t kBlobType[] = GUID_BLOB_VALUE;
 
 
 BlobfsFormat::BlobfsFormat(fbl::unique_fd fd, const char* type)
     : Format(), fd_(fbl::move(fd)) {
-    if (!strcmp(type, kBlobstoreName)) {
-        memcpy(type_, kBlobstoreType, sizeof(kBlobstoreType));
+    if (!strcmp(type, kBlobName)) {
+        memcpy(type_, kBlobType, sizeof(kBlobType));
     } else {
-        fprintf(stderr, "Unrecognized type for blobstore: %s\n", type);
+        fprintf(stderr, "Unrecognized type for blobfs: %s\n", type);
         exit(-1);
     }
 
-    if (blobstore::readblk(fd_.get(), 0, reinterpret_cast<void*>(blk_)) < 0) {
-        fprintf(stderr, "blobstore: could not read info block\n");
+    if (blobfs::readblk(fd_.get(), 0, reinterpret_cast<void*>(blk_)) < 0) {
+        fprintf(stderr, "blobfs: could not read info block\n");
         exit(-1);
     }
 
-    if (blobstore::blobstore_get_blockcount(fd_.get(), &blocks_) != ZX_OK) {
-        fprintf(stderr, "blobstore: cannot find end of underlying device\n");
+    if (blobfs::blobfs_get_blockcount(fd_.get(), &blocks_) != ZX_OK) {
+        fprintf(stderr, "blobfs: cannot find end of underlying device\n");
         exit(-1);
-    } else if (blobstore::blobstore_check_info(&info_, blocks_) != ZX_OK) {
-        fprintf(stderr, "blobstore: Info check failed\n");
+    } else if (blobfs::blobfs_check_info(&info_, blocks_) != ZX_OK) {
+        fprintf(stderr, "blobfs: Info check failed\n");
         exit(-1);
     }
 }
@@ -63,14 +63,14 @@ zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) 
             fvm_info_.dat_slices);
 
     fvm_info_.inode_count = static_cast<uint32_t>(fvm_info_.ino_slices * fvm_info_.slice_size /
-                                                  blobstore::kBlobstoreInodeSize);
+                                                  blobfs::kBlobfsInodeSize);
     fvm_info_.block_count = static_cast<uint32_t>(fvm_info_.dat_slices * fvm_info_.slice_size /
-                                                  blobstore::kBlobstoreBlockSize);
+                                                  blobfs::kBlobfsBlockSize);
 
-    fvm_info_.flags |= blobstore::kBlobstoreFlagFVM;
+    fvm_info_.flags |= blobfs::kBlobfsFlagFVM;
 
     zx_status_t status;
-    if ((status = blobstore_check_info(&fvm_info_, blocks_)) != ZX_OK) {
+    if ((status = blobfs_check_info(&fvm_info_, blocks_)) != ZX_OK) {
         fprintf(stderr, "Check info failed\n");
         return status;
     }
@@ -91,21 +91,21 @@ zx_status_t BlobfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* v
         return ZX_OK;
     }
     case 1: {
-        vslice_info->vslice_start = blobstore::kFVMBlockMapStart;
+        vslice_info->vslice_start = blobfs::kFVMBlockMapStart;
         vslice_info->slice_count = fvm_info_.abm_slices;
         vslice_info->block_offset = BlockMapStartBlock(info_);
         vslice_info->block_count = BlockMapBlocks(info_);
         return ZX_OK;
     }
     case 2: {
-        vslice_info->vslice_start = blobstore::kFVMNodeMapStart;
+        vslice_info->vslice_start = blobfs::kFVMNodeMapStart;
         vslice_info->slice_count = fvm_info_.ino_slices;
         vslice_info->block_offset = NodeMapStartBlock(info_);
         vslice_info->block_count = NodeMapBlocks(info_);
         return ZX_OK;
     }
     case 3: {
-        vslice_info->vslice_start = blobstore::kFVMDataStart;
+        vslice_info->vslice_start = blobfs::kFVMDataStart;
         vslice_info->slice_count = fvm_info_.dat_slices;
         vslice_info->block_offset = DataStartBlock(info_);
         vslice_info->block_count = DataBlocks(info_);
@@ -127,8 +127,8 @@ zx_status_t BlobfsFormat::FillBlock(size_t block_offset) {
     // If we are reading the super block, make sure it is the fvm version and not the original
     if (block_offset == 0) {
         memcpy(datablk, fvm_blk_, BlockSize());
-    } else if (blobstore::readblk(fd_.get(), block_offset, datablk) != ZX_OK) {
-        fprintf(stderr, "blobstore: could not read block\n");
+    } else if (blobfs::readblk(fd_.get(), block_offset, datablk) != ZX_OK) {
+        fprintf(stderr, "blobfs: could not read block\n");
         return ZX_ERR_INTERNAL;
     }
     return ZX_OK;
@@ -145,11 +145,11 @@ void* BlobfsFormat::Data() {
 }
 
 void BlobfsFormat::Name(char* name) const {
-    strcpy(name, kBlobstoreName);
+    strcpy(name, kBlobName);
 }
 
 uint32_t BlobfsFormat::BlockSize() const {
-    return blobstore::kBlobstoreBlockSize;
+    return blobfs::kBlobfsBlockSize;
 }
 
 uint32_t BlobfsFormat::BlocksPerSlice() const {

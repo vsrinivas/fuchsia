@@ -23,20 +23,20 @@
 
 #define ZXDEBUG 0
 
-#include <blobstore/blobstore.h>
+#include <blobfs/blobfs.h>
 
 using digest::Digest;
 
-namespace blobstore {
+namespace blobfs {
 
 VnodeBlob::~VnodeBlob() {
-    blobstore_->ReleaseBlob(this);
+    blobfs_->ReleaseBlob(this);
     if (blob_ != nullptr) {
         block_fifo_request_t request;
-        request.txnid = blobstore_->TxnId();
+        request.txnid = blobfs_->TxnId();
         request.vmoid = vmoid_;
         request.opcode = BLOCKIO_CLOSE_VMO;
-        blobstore_->Txn(&request, 1);
+        blobfs_->Txn(&request, 1);
     }
 }
 
@@ -48,7 +48,7 @@ zx_status_t VnodeBlob::ValidateFlags(uint32_t flags) {
     if (flags & ZX_FS_RIGHT_WRITABLE) {
         if (IsDirectory()) {
             return ZX_ERR_NOT_FILE;
-        } else if (GetState() != kBlobStateEmpty) {
+        } else if (GetState() != kBlobfsStateEmpty) {
             return ZX_ERR_ACCESS_DENIED;
         }
     }
@@ -61,11 +61,11 @@ zx_status_t VnodeBlob::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
         return ZX_ERR_NOT_DIR;
     }
 
-    return blobstore_->Readdir(cookie, dirents, len, out_actual);
+    return blobfs_->Readdir(cookie, dirents, len, out_actual);
 }
 
 zx_status_t VnodeBlob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
-    TRACE_DURATION("blobstore", "VnodeBlob::Read", "len", len, "off", off);
+    TRACE_DURATION("blobfs", "VnodeBlob::Read", "len", len, "off", off);
 
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
@@ -76,7 +76,7 @@ zx_status_t VnodeBlob::Read(void* data, size_t len, size_t off, size_t* out_actu
 
 zx_status_t VnodeBlob::Write(const void* data, size_t len, size_t offset,
                              size_t* out_actual) {
-    TRACE_DURATION("blobstore", "VnodeBlob::Write", "len", len, "off", offset);
+    TRACE_DURATION("blobfs", "VnodeBlob::Write", "len", len, "off", offset);
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
@@ -92,7 +92,7 @@ zx_status_t VnodeBlob::Append(const void* data, size_t len, size_t* out_end,
 }
 
 zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
-    TRACE_DURATION("blobstore", "VnodeBlob::Lookup", "name", name);
+    TRACE_DURATION("blobfs", "VnodeBlob::Lookup", "name", name);
     assert(memchr(name.data(), '/', name.length()) == nullptr);
     if (name == "." && IsDirectory()) {
         // Special case: Accessing root directory via '.'
@@ -110,7 +110,7 @@ zx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
         return status;
     }
     fbl::RefPtr<VnodeBlob> vn;
-    if ((status = blobstore_->LookupBlob(digest, &vn)) < 0) {
+    if ((status = blobfs_->LookupBlob(digest, &vn)) < 0) {
         return status;
     }
     *out = fbl::move(vn);
@@ -122,9 +122,9 @@ zx_status_t VnodeBlob::Getattr(vnattr_t* a) {
     a->mode = (IsDirectory() ? V_TYPE_DIR : V_TYPE_FILE) | V_IRUSR;
     a->inode = 0;
     a->size = IsDirectory() ? 0 : SizeData();
-    a->blksize = kBlobstoreBlockSize;
-    a->blkcount = blobstore_->GetNode(map_index_)->num_blocks *
-                  (kBlobstoreBlockSize / VNATTR_BLKSIZE);
+    a->blksize = kBlobfsBlockSize;
+    a->blkcount = blobfs_->GetNode(map_index_)->num_blocks *
+                  (kBlobfsBlockSize / VNATTR_BLKSIZE);
     a->nlink = 1;
     a->create_time = 0;
     a->modify_time = 0;
@@ -132,7 +132,7 @@ zx_status_t VnodeBlob::Getattr(vnattr_t* a) {
 }
 
 zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
-    TRACE_DURATION("blobstore", "VnodeBlob::Create", "name", name, "mode", mode);
+    TRACE_DURATION("blobfs", "VnodeBlob::Create", "name", name, "mode", mode);
     assert(memchr(name.data(), '/', name.length()) == nullptr);
 
     if (!IsDirectory()) {
@@ -145,14 +145,14 @@ zx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
         return status;
     }
     fbl::RefPtr<VnodeBlob> vn;
-    if ((status = blobstore_->NewBlob(digest, &vn)) != ZX_OK) {
+    if ((status = blobfs_->NewBlob(digest, &vn)) != ZX_OK) {
         return status;
     }
     *out = fbl::move(vn);
     return ZX_OK;
 }
 
-constexpr const char kFsName[] = "blobstore";
+constexpr const char kFsName[] = "blobfs";
 
 zx_status_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                              size_t out_len, size_t* out_actual) {
@@ -163,14 +163,14 @@ zx_status_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, voi
         }
         vfs_query_info_t* info = static_cast<vfs_query_info_t*>(out_buf);
         memset(info, 0, sizeof(*info));
-        info->block_size = kBlobstoreBlockSize;
+        info->block_size = kBlobfsBlockSize;
         info->max_filename_size = Digest::kLength * 2;
-        info->fs_type = VFS_TYPE_BLOBSTORE;
-        info->fs_id = blobstore_->GetFsId();
-        info->total_bytes = blobstore_->info_.block_count * blobstore_->info_.block_size;
-        info->used_bytes = blobstore_->info_.alloc_block_count * blobstore_->info_.block_size;
-        info->total_nodes = blobstore_->info_.inode_count;
-        info->used_nodes = blobstore_->info_.alloc_inode_count;
+        info->fs_type = VFS_TYPE_BLOBFS;
+        info->fs_id = blobfs_->GetFsId();
+        info->total_bytes = blobfs_->info_.block_count * blobfs_->info_.block_size;
+        info->used_bytes = blobfs_->info_.alloc_block_count * blobfs_->info_.block_size;
+        info->total_nodes = blobfs_->info_.inode_count;
+        info->used_nodes = blobfs_->info_.alloc_inode_count;
         memcpy(info->name, kFsName, strlen(kFsName));
         *out_actual = sizeof(vfs_query_info_t) + strlen(kFsName);
         return ZX_OK;
@@ -186,11 +186,11 @@ zx_status_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, voi
         Sync(fbl::move(closure));
         completion_wait(&completion, ZX_TIME_INFINITE);
         *out_actual = 0;
-        return blobstore_->Unmount();
+        return blobfs_->Unmount();
     }
 #ifdef __Fuchsia__
     case IOCTL_VFS_GET_DEVICE_PATH: {
-        ssize_t len = ioctl_device_get_topo_path(blobstore_->Fd(), static_cast<char*>(out_buf), out_len);
+        ssize_t len = ioctl_device_get_topo_path(blobfs_->Fd(), static_cast<char*>(out_buf), out_len);
 
         if ((ssize_t)out_len < len) {
             return ZX_ERR_INVALID_ARGS;
@@ -209,7 +209,7 @@ zx_status_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, voi
 }
 
 zx_status_t VnodeBlob::Truncate(size_t len) {
-    TRACE_DURATION("blobstore", "VnodeBlob::Truncate", "len", len);
+    TRACE_DURATION("blobfs", "VnodeBlob::Truncate", "len", len);
 
     if (IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -219,7 +219,7 @@ zx_status_t VnodeBlob::Truncate(size_t len) {
 }
 
 zx_status_t VnodeBlob::Unlink(fbl::StringPiece name, bool must_be_dir) {
-    TRACE_DURATION("blobstore", "VnodeBlob::Unlink", "name", name, "must_be_dir", must_be_dir);
+    TRACE_DURATION("blobfs", "VnodeBlob::Unlink", "name", name, "must_be_dir", must_be_dir);
     assert(memchr(name.data(), '/', name.length()) == nullptr);
 
     if (!IsDirectory()) {
@@ -231,7 +231,7 @@ zx_status_t VnodeBlob::Unlink(fbl::StringPiece name, bool must_be_dir) {
     fbl::RefPtr<VnodeBlob> out;
     if ((status = digest.Parse(name.data(), name.length())) != ZX_OK) {
         return status;
-    } else if ((status = blobstore_->LookupBlob(digest, &out)) < 0) {
+    } else if ((status = blobfs_->LookupBlob(digest, &out)) < 0) {
         return status;
     }
     out->QueueUnlink();
@@ -239,7 +239,7 @@ zx_status_t VnodeBlob::Unlink(fbl::StringPiece name, bool must_be_dir) {
 }
 
 zx_status_t VnodeBlob::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) {
-    TRACE_DURATION("blobstore", "VnodeBlob::Mmap", "flags", flags, "len", len, "off", off);
+    TRACE_DURATION("blobfs", "VnodeBlob::Mmap", "flags", flags, "len", len, "off", off);
 
     if (IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -256,8 +256,8 @@ zx_status_t VnodeBlob::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out
 
 void VnodeBlob::Sync(SyncCallback closure) {
     // TODO(smklein): For now, this is a no-op, but it will change
-    // once the kBlobFlagSync flag is in use.
+    // once the kBlobfsFlagSync flag is in use.
     closure(ZX_OK);
 }
 
-} // namespace blobstore
+} // namespace blobfs

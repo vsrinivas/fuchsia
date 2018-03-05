@@ -20,7 +20,7 @@
 #include <fbl/vector.h>
 #include <unittest/unittest.h>
 
-#include "blobstore-bench.h"
+#include "blobfs-bench.h"
 
 using digest::Digest;
 using digest::MerkleTree;
@@ -431,9 +431,9 @@ bool TestData::unlink_blobs() {
     return true;
 }
 
-static bool StartBlobstoreBenchmark(size_t blob_size, size_t blob_count, traversal_order_t order) {
+static bool StartBlobfsBenchmark(size_t blob_size, size_t blob_count, traversal_order_t order) {
     int mountfd = open(MOUNT_PATH, O_RDONLY);
-    ASSERT_GT(mountfd, 0, "Failed to open - expected mounted blobstore partition");
+    ASSERT_GT(mountfd, 0, "Failed to open - expected mounted blobfs partition");
 
     char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
     vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
@@ -443,17 +443,17 @@ static bool StartBlobstoreBenchmark(size_t blob_size, size_t blob_count, travers
     ASSERT_GT(r, (ssize_t)sizeof(vfs_query_info_t), "Failed to query fs");
     buf[r] = '\0';
     const char* name = reinterpret_cast<const char*>(buf + sizeof(vfs_query_info_t));
-    ASSERT_FALSE(strcmp(name, "blobstore"), "Found non-blobstore partition");
+    ASSERT_FALSE(strcmp(name, "blobfs"), "Found non-blobfs partition");
     ASSERT_GT(info->total_bytes - info->used_bytes, blob_size * blob_count, "Not enough free space on disk to run this test");
     ASSERT_GT(info->total_nodes - info->used_nodes, blob_count, "Not enough free space on disk to run this test");
 
     DIR* dir = opendir(MOUNT_PATH);
-    ASSERT_TRUE(readdir(dir) == nullptr, "Expected empty blobstore partition");
+    ASSERT_TRUE(readdir(dir) == nullptr, "Expected empty blobfs partition");
     closedir(dir);
     return true;
 }
 
-static bool EndBlobstoreBenchmark() {
+static bool EndBlobfsBenchmark() {
     DIR* dir = opendir(MOUNT_PATH);
     struct dirent* de;
     ASSERT_NONNULL(dir);
@@ -471,16 +471,16 @@ static bool EndBlobstoreBenchmark() {
 template <size_t BlobSize, size_t BlobCount, traversal_order_t Order>
 static bool benchmark_blob_basic() {
     BEGIN_TEST;
-    ASSERT_TRUE(StartBlobstoreBenchmark(BlobSize, BlobCount, Order));
+    ASSERT_TRUE(StartBlobfsBenchmark(BlobSize, BlobCount, Order));
     TestData data(BlobSize, BlobCount, Order);
     bool success = data.run_tests();
-    ASSERT_TRUE(EndBlobstoreBenchmark()); //clean up
+    ASSERT_TRUE(EndBlobfsBenchmark()); //clean up
     ASSERT_TRUE(success);
     END_TEST;
 }
 
 
-BEGIN_TEST_CASE(blobstore_benchmarks)
+BEGIN_TEST_CASE(blobfs_benchmarks)
 
 RUN_FOR_ALL_ORDER(benchmark_blob_basic, 128 * B, 500);
 RUN_FOR_ALL_ORDER(benchmark_blob_basic, 128 * B, 1000);
@@ -505,7 +505,7 @@ RUN_FOR_ALL_ORDER(benchmark_blob_basic, 512 * KB, 10000);
 RUN_FOR_ALL_ORDER(benchmark_blob_basic, MB, 500);
 RUN_FOR_ALL_ORDER(benchmark_blob_basic, MB, 1000);
 
-END_TEST_CASE(blobstore_benchmarks)
+END_TEST_CASE(blobfs_benchmarks)
 
 int main(int argc, char** argv) {
     if (GetStartTime() != 0) {

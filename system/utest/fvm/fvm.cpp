@@ -224,7 +224,7 @@ constexpr uint8_t kTestUniqueGUID2[] = {
 constexpr char kTestPartName1[] = "data";
 constexpr uint8_t kTestPartGUIDData[] = GUID_DATA_VALUE;
 constexpr char kTestPartName2[] = "blob";
-constexpr uint8_t kTestPartGUIDBlob[] = GUID_BLOBFS_VALUE;
+constexpr uint8_t kTestPartGUIDBlob[] = GUID_BLOB_VALUE;
 constexpr char kTestPartName3[] = "system";
 constexpr uint8_t kTestPartGUIDSys[] = GUID_SYSTEM_VALUE;
 
@@ -1502,7 +1502,7 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
 
     vdata_t vparts[kNumVParts] = {
         {0, GUID_DATA_VALUE, "data", request.slice_count},
-        {0, GUID_BLOBFS_VALUE, "blob", request.slice_count},
+        {0, GUID_BLOB_VALUE, "blob", request.slice_count},
         {0, GUID_SYSTEM_VALUE, "sys", request.slice_count},
     };
 
@@ -1645,7 +1645,7 @@ static bool TestSliceAccessNonContiguousVirtual(void) {
 
     vdata_t vparts[kNumVParts] = {
         {0, GUID_DATA_VALUE, "data", request.slice_count, request.slice_count},
-        {0, GUID_BLOBFS_VALUE, "blob", request.slice_count, request.slice_count},
+        {0, GUID_BLOB_VALUE, "blob", request.slice_count, request.slice_count},
         {0, GUID_SYSTEM_VALUE, "sys", request.slice_count, request.slice_count},
     };
 
@@ -2188,11 +2188,11 @@ static bool TestMkfs(void) {
     ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
                    &default_mkfs_options), ZX_OK);
 
-    // Now try reformatting as blobstore.
+    // Now try reformatting as blobfs.
     ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_BLOBFS, launch_stdio_sync,
                    &default_mkfs_options), ZX_OK);
 
-    // Demonstrate that mounting as minfs will fail, but mounting as blobstore
+    // Demonstrate that mounting as minfs will fail, but mounting as blobfs
     // is successful.
     const char* mount_path = "/tmp/minfs_test_mountpath";
     ASSERT_EQ(mkdir(mount_path, 0666), 0);

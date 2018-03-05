@@ -6,7 +6,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 HOSTAPPS := \
 	$(LOCAL_DIR)/abigen/rules.mk \
-	$(LOCAL_DIR)/blobstore/rules.mk \
+	$(LOCAL_DIR)/blobfs/rules.mk \
 	$(LOCAL_DIR)/bootserver/rules.mk \
 	$(LOCAL_DIR)/fidl/compiler/rules.mk \
 	$(LOCAL_DIR)/fvm/rules.mk \

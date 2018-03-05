@@ -7,63 +7,63 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fdio/watcher.h>
 #include <fs-management/mount.h>
 #include <gpt/gpt.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
 #include <zircon/syscalls.h>
-#include <fdio/watcher.h>
 
-#include "devmgr.h"
 #include "block-watcher.h"
+#include "devmgr.h"
 
 static zx_handle_t job;
 static bool netboot;
 
-void launch_blobstore_init() {
-    const char* blobstore_init = getenv("zircon.system.blobstore-init");
-    if (blobstore_init == NULL) {
+void launch_blob_init() {
+    const char* blob_init = getenv("zircon.system.blob-init");
+    if (blob_init == NULL) {
         return;
     }
     if (secondary_bootfs_ready()) {
-        printf("fshost: zircon.system.blobstore-init ignored due to secondary bootfs\n");
+        printf("fshost: zircon.system.blob-init ignored due to secondary bootfs\n");
         return;
     }
-    const char *argv[2];
-    argv[0] = blobstore_init;
-    const char* blobstore_init_arg = getenv("zircon.system.blobstore-init-arg");
+    const char* argv[2];
+    argv[0] = blob_init;
+    const char* blob_init_arg = getenv("zircon.system.blob-init-arg");
     int argc = 1;
-    if (blobstore_init_arg != NULL) {
+    if (blob_init_arg != NULL) {
         argc++;
-        argv[1] = blobstore_init_arg;
+        argv[1] = blob_init_arg;
     }
 
     zx_handle_t proc;
-    zx_status_t status = devmgr_launch(job, "blobstore:init", argc, &argv[0],
+    zx_status_t status = devmgr_launch(job, "blob:init", argc, &argv[0],
                                        NULL, -1, NULL, NULL, 0, &proc);
     if (status != ZX_OK) {
-        printf("fshost: '%s' failed to launch: %d\n", blobstore_init, status);
+        printf("fshost: '%s' failed to launch: %d\n", blob_init, status);
         return;
     }
 
     zx_time_t deadline = zx_deadline_after(ZX_SEC(5));
     zx_signals_t observed;
-    status = zx_object_wait_one(proc, ZX_USER_SIGNAL_0|ZX_PROCESS_TERMINATED, deadline, &observed);
+    status = zx_object_wait_one(proc, ZX_USER_SIGNAL_0 | ZX_PROCESS_TERMINATED, deadline, &observed);
     if (status == ZX_OK) {
         if (observed & ZX_USER_SIGNAL_0) {
             fuchsia_start();
         } else {
-            printf("fshost: '%s' terminated prematurely\n", blobstore_init);
+            printf("fshost: '%s' terminated prematurely\n", blob_init);
         }
     } else {
-        printf("fshost: '%s' did not signal completion: %d\n", blobstore_init, status);
+        printf("fshost: '%s' did not signal completion: %d\n", blob_init, status);
     }
     zx_handle_close(proc);
 }
 
-static zx_status_t launch_blobstore(int argc, const char** argv, zx_handle_t* hnd,
-                                    uint32_t* ids, size_t len) {
-    return devmgr_launch(job, "blobstore:/blobstore", argc, argv, NULL, -1,
+static zx_status_t launch_blobfs(int argc, const char** argv, zx_handle_t* hnd,
+                                 uint32_t* ids, size_t len) {
+    return devmgr_launch(job, "blobfs:/blob", argc, argv, NULL, -1,
                          hnd, ids, len, NULL);
 }
 
@@ -81,7 +81,7 @@ static zx_status_t launch_fat(int argc, const char** argv, zx_handle_t* hnd,
 
 static bool data_mounted = false;
 static bool install_mounted = false;
-static bool blobstore_mounted = false;
+static bool blob_mounted = false;
 
 /*
  * Attempt to mount the device pointed to be the file descriptor at a known
@@ -104,8 +104,8 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
             if (secondary_bootfs_ready()) {
                 return ZX_ERR_ALREADY_BOUND;
             }
-            if (getenv("zircon.system.blobstore-init") != NULL) {
-                printf("fshost: minfs system partition ignored due to zircon.system.blobstore-init\n");
+            if (getenv("zircon.system.blob-init") != NULL) {
+                printf("fshost: minfs system partition ignored due to zircon.system.blob-init\n");
                 return ZX_ERR_ALREADY_BOUND;
             }
             const char* volume = getenv("zircon.system.volume");
@@ -226,22 +226,22 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
     switch (df) {
     case DISK_FORMAT_BLOBFS: {
         uint8_t guid[GPT_GUID_LEN];
-        const uint8_t expected_guid[GPT_GUID_LEN] = GUID_BLOBFS_VALUE;
+        const uint8_t expected_guid[GPT_GUID_LEN] = GUID_BLOB_VALUE;
 
         if (ioctl_block_get_type_guid(fd, guid, sizeof(guid)) < 0 ||
             memcmp(guid, expected_guid, sizeof(guid))) {
             close(fd);
             return ZX_OK;
         }
-        if (!blobstore_mounted) {
+        if (!blob_mounted) {
             mount_options_t options = default_mount_options;
             options.create_mountpoint = true;
-            zx_status_t status = mount(fd, PATH_BLOBSTORE, DISK_FORMAT_BLOBFS, &options, launch_blobstore);
+            zx_status_t status = mount(fd, PATH_BLOB, DISK_FORMAT_BLOBFS, &options, launch_blobfs);
             if (status != ZX_OK) {
-                printf("devmgr: Failed to mount blobstore partition %s at %s: %d. Please run fixfs to reformat.\n", device_path, PATH_BLOBSTORE, status);
+                printf("devmgr: Failed to mount blobfs partition %s at %s: %d. Please run fixfs to reformat.\n", device_path, PATH_BLOB, status);
             } else {
-                blobstore_mounted = true;
-                launch_blobstore_init();
+                blob_mounted = true;
+                launch_blob_init();
             }
         }
 
@@ -260,9 +260,9 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
         ssize_t r = ioctl_block_get_type_guid(fd, guid, sizeof(guid));
         bool efi = gpt_is_efi_guid(guid, r);
         if (efi) {
-          close(fd);
-          printf("devmgr: not automounting efi\n");
-          return ZX_OK;
+            close(fd);
+            printf("devmgr: not automounting efi\n");
+            return ZX_OK;
         }
         mount_options_t options = default_mount_options;
         options.create_mountpoint = true;

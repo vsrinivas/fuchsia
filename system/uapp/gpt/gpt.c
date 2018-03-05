@@ -434,7 +434,7 @@ static bool expand_special(char* in, uint8_t* out) {
         return false;
     }
 
-    static const uint8_t blobfs[GPT_GUID_LEN] = GUID_BLOBFS_VALUE;
+    static const uint8_t blobfs[GPT_GUID_LEN] = GUID_BLOB_VALUE;
     static const uint8_t data[GPT_GUID_LEN] = GUID_DATA_VALUE;
     static const uint8_t install[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
     static const uint8_t system[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;

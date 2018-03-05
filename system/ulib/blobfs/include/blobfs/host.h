@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file includes host-side functionality for accessing Blobstore.
+// This file includes host-side functionality for accessing Blobfs.
 
 #pragma once
 
@@ -24,25 +24,25 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <mutex>
 #include <stdbool.h>
 #include <stdint.h>
-#include <mutex>
 
-#include <blobstore/format.h>
-#include <blobstore/common.h>
+#include <blobfs/common.h>
+#include <blobfs/format.h>
 
-namespace blobstore {
+namespace blobfs {
 
 typedef union {
-    uint8_t block[kBlobstoreBlockSize];
-    blobstore_info_t info;
+    uint8_t block[kBlobfsBlockSize];
+    blobfs_info_t info;
 } info_block_t;
 
 // Stores pointer to an inode's metadata and the matching block number
 class InodeBlock {
 public:
-    InodeBlock(size_t bno, blobstore_inode_t* inode, const Digest& digest)
-              : bno_(bno) {
+    InodeBlock(size_t bno, blobfs_inode_t* inode, const Digest& digest)
+        : bno_(bno) {
         inode_ = inode;
         digest.CopyTo(inode_->merkle_root_hash, sizeof(inode_->merkle_root_hash));
     }
@@ -51,7 +51,7 @@ public:
         return bno_;
     }
 
-    blobstore_inode_t* GetInode() {
+    blobfs_inode_t* GetInode() {
         return inode_;
     }
 
@@ -59,20 +59,20 @@ public:
 
 private:
     size_t bno_;
-    blobstore_inode_t* inode_;
+    blobfs_inode_t* inode_;
 };
 
-class Blobstore : public fbl::RefCounted<Blobstore> {
+class Blobfs : public fbl::RefCounted<Blobfs> {
 public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Blobstore);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
-    // Creates an instance of Blobstore from the file at |blockfd|.
-    // The blobstore partition is expected to start at |offset| bytes into the file.
+    // Creates an instance of Blobfs from the file at |blockfd|.
+    // The blobfs partition is expected to start at |offset| bytes into the file.
     static zx_status_t Create(fbl::unique_fd blockfd, off_t offset, const info_block_t& info_block,
                               const fbl::Array<size_t>& extent_lengths,
-                              fbl::RefPtr<Blobstore>* out);
+                              fbl::RefPtr<Blobfs>* out);
 
-    ~Blobstore() {}
+    ~Blobfs() {}
 
     // Checks to see if a blob already exists, and if not allocates a new node
     zx_status_t NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* out);
@@ -80,7 +80,7 @@ public:
     // Allocate |nblocks| starting at |*blkno_out| in memory
     zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
 
-    zx_status_t WriteData(blobstore_inode_t* inode, void* merkle_data, void* blob_data);
+    zx_status_t WriteData(blobfs_inode_t* inode, void* merkle_data, void* blob_data);
     zx_status_t WriteBitmap(size_t nblocks, size_t start_block);
     zx_status_t WriteNode(fbl::unique_ptr<InodeBlock> ino_block);
     zx_status_t WriteInfo();
@@ -88,17 +88,17 @@ public:
 private:
     typedef struct {
         size_t bno;
-        uint8_t blk[kBlobstoreBlockSize];
+        uint8_t blk[kBlobfsBlockSize];
     } block_cache_t;
 
-    friend class BlobstoreChecker;
+    friend class BlobfsChecker;
 
-    Blobstore(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
-              const fbl::Array<size_t>& extent_lengths);
+    Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
+           const fbl::Array<size_t>& extent_lengths);
     zx_status_t LoadBitmap();
 
     // Access the |index|th inode
-    blobstore_inode_t* GetNode(size_t index);
+    blobfs_inode_t* GetNode(size_t index);
 
     // Read data from block |bno| into the block cache.
     // If the block cache already contains data from the specified bno, nothing happens.
@@ -125,28 +125,28 @@ private:
     size_t data_block_count_;
 
     union {
-        blobstore_info_t info_;
-        uint8_t info_block_[kBlobstoreBlockSize];
+        blobfs_info_t info_;
+        uint8_t info_block_[kBlobfsBlockSize];
     };
 
     // Caches the most recent block read from disk
     block_cache_t cache_;
 };
 
-zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, fbl::unique_fd blockfd);
+zx_status_t blobfs_create(fbl::RefPtr<Blobfs>* out, fbl::unique_fd blockfd);
 
-// blobstore_add_blob may be called by multiple threads to gain concurrent
+// blobfs_add_blob may be called by multiple threads to gain concurrent
 // merkle tree generation. No other methods are thread safe.
-zx_status_t blobstore_add_blob(Blobstore* bs, int data_fd);
-zx_status_t blobstore_fsck(fbl::unique_fd fd, off_t start, off_t end,
-                           const fbl::Vector<size_t>& extent_lengths);
+zx_status_t blobfs_add_blob(Blobfs* bs, int data_fd);
+zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
+                        const fbl::Vector<size_t>& extent_lengths);
 
-// Create a blobstore from a sparse file
-// |start| indicates where the blobstore partition starts within the file (in bytes)
-// |end| indicates the end of the blobstore partition (in bytes)
-// |extent_lengths| contains the length (in bytes) of each blobstore extent: currently this includes
+// Create a blobfs from a sparse file
+// |start| indicates where the blobfs partition starts within the file (in bytes)
+// |end| indicates the end of the blobfs partition (in bytes)
+// |extent_lengths| contains the length (in bytes) of each blobfs extent: currently this includes
 // the superblock, block bitmap, inode table, and data blocks.
-zx_status_t blobstore_create_sparse(fbl::RefPtr<Blobstore>* out, fbl::unique_fd fd, off_t start,
-                                    off_t end, const fbl::Vector<size_t>& extent_lengths);
+zx_status_t blobfs_create_sparse(fbl::RefPtr<Blobfs>* out, fbl::unique_fd fd, off_t start,
+                                 off_t end, const fbl::Vector<size_t>& extent_lengths);
 
-} // namespace blobstore
+} // namespace blobfs

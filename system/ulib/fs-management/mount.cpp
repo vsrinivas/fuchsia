@@ -212,7 +212,7 @@ zx_status_t Mounter::Mount(unique_fd device, disk_format_t format,
     case DISK_FORMAT_MINFS:
         return MountNativeFs("/boot/bin/minfs", fbl::move(device), options, cb);
     case DISK_FORMAT_BLOBFS:
-        return MountNativeFs("/boot/bin/blobstore", fbl::move(device), options, cb);
+        return MountNativeFs("/boot/bin/blobfs", fbl::move(device), options, cb);
     case DISK_FORMAT_FAT:
         return MountFat(fbl::move(device), options, cb);
     default:
@@ -241,7 +241,7 @@ disk_format_t detect_disk_format(int fd) {
         return DISK_FORMAT_MINFS;
     }
 
-    if (!memcmp(data, blobstore_magic, sizeof(blobstore_magic))) {
+    if (!memcmp(data, blobfs_magic, sizeof(blobfs_magic))) {
         return DISK_FORMAT_BLOBFS;
     }
 

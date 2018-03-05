@@ -8,59 +8,59 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
-#include <fs/block-txn.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/new.h>
 #include <fbl/unique_ptr.h>
 #include <fdio/debug.h>
+#include <fs/block-txn.h>
 
 #define ZXDEBUG 0
 
-#include <blobstore/format.h>
-#include <blobstore/fsck.h>
-#include <blobstore/host.h>
+#include <blobfs/format.h>
+#include <blobfs/fsck.h>
+#include <blobfs/host.h>
 
 using digest::Digest;
 using digest::MerkleTree;
 
-namespace blobstore {
+namespace blobfs {
 
 #define EXTENT_COUNT 4
 
 zx_status_t readblk_offset(int fd, uint64_t bno, off_t offset, void* data) {
-    off_t off = offset + bno * kBlobstoreBlockSize;
+    off_t off = offset + bno * kBlobfsBlockSize;
     if (lseek(fd, off, SEEK_SET) < 0) {
-        fprintf(stderr, "blobstore: cannot seek to block %" PRIu64 "\n", bno);
+        fprintf(stderr, "blobfs: cannot seek to block %" PRIu64 "\n", bno);
         return ZX_ERR_IO;
     }
-    if (read(fd, data, kBlobstoreBlockSize) != kBlobstoreBlockSize) {
-        fprintf(stderr, "blobstore: cannot read block %" PRIu64 "\n", bno);
+    if (read(fd, data, kBlobfsBlockSize) != kBlobfsBlockSize) {
+        fprintf(stderr, "blobfs: cannot read block %" PRIu64 "\n", bno);
         return ZX_ERR_IO;
     }
     return ZX_OK;
 }
 
 zx_status_t writeblk_offset(int fd, uint64_t bno, off_t offset, const void* data) {
-    off_t off = offset + bno * kBlobstoreBlockSize;
+    off_t off = offset + bno * kBlobfsBlockSize;
     if (lseek(fd, off, SEEK_SET) < 0) {
-        fprintf(stderr, "blobstore: cannot seek to block %" PRIu64 "\n", bno);
+        fprintf(stderr, "blobfs: cannot seek to block %" PRIu64 "\n", bno);
         return ZX_ERR_IO;
     }
-    if (write(fd, data, kBlobstoreBlockSize) != kBlobstoreBlockSize) {
-        fprintf(stderr, "blobstore: cannot write block %" PRIu64 "\n", bno);
+    if (write(fd, data, kBlobfsBlockSize) != kBlobfsBlockSize) {
+        fprintf(stderr, "blobfs: cannot write block %" PRIu64 "\n", bno);
         return ZX_ERR_IO;
     }
     return ZX_OK;
 }
 
-zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, fbl::unique_fd fd) {
+zx_status_t blobfs_create(fbl::RefPtr<Blobfs>* out, fbl::unique_fd fd) {
     info_block_t info_block;
 
     if (readblk(fd.get(), 0, (void*)info_block.block) < 0) {
@@ -68,11 +68,11 @@ zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, fbl::unique_fd fd) {
     }
     uint64_t blocks;
     zx_status_t status;
-    if ((status = blobstore_get_blockcount(fd.get(), &blocks)) != ZX_OK) {
-        fprintf(stderr, "blobstore: cannot find end of underlying device\n");
+    if ((status = blobfs_get_blockcount(fd.get(), &blocks)) != ZX_OK) {
+        fprintf(stderr, "blobfs: cannot find end of underlying device\n");
         return status;
-    } else if ((status = blobstore_check_info(&info_block.info, blocks)) != ZX_OK) {
-        fprintf(stderr, "blobstore: Info check failed\n");
+    } else if ((status = blobfs_check_info(&info_block.info, blocks)) != ZX_OK) {
+        fprintf(stderr, "blobfs: Info check failed\n");
         return status;
     }
 
@@ -82,27 +82,27 @@ zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, fbl::unique_fd fd) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    extent_lengths[0] = BlockMapStartBlock(info_block.info) * kBlobstoreBlockSize;
-    extent_lengths[1] = BlockMapBlocks(info_block.info) * kBlobstoreBlockSize;
-    extent_lengths[2] = NodeMapBlocks(info_block.info) * kBlobstoreBlockSize;
-    extent_lengths[3] = DataBlocks(info_block.info) * kBlobstoreBlockSize;
+    extent_lengths[0] = BlockMapStartBlock(info_block.info) * kBlobfsBlockSize;
+    extent_lengths[1] = BlockMapBlocks(info_block.info) * kBlobfsBlockSize;
+    extent_lengths[2] = NodeMapBlocks(info_block.info) * kBlobfsBlockSize;
+    extent_lengths[3] = DataBlocks(info_block.info) * kBlobfsBlockSize;
 
-    if ((status = Blobstore::Create(fbl::move(fd), 0, info_block, extent_lengths, out))
-        != ZX_OK) {
-        fprintf(stderr, "blobstore: mount failed; could not create blobstore\n");
+    if ((status = Blobfs::Create(fbl::move(fd), 0, info_block, extent_lengths, out)) != ZX_OK) {
+        fprintf(stderr, "blobfs: mount failed; could not create blobfs\n");
         return status;
     }
 
     return ZX_OK;
 }
 
-zx_status_t blobstore_create_sparse(fbl::RefPtr<Blobstore>* out, fbl::unique_fd fd, off_t start,
-                                    off_t end, const fbl::Vector<size_t>& extent_vector) {
+zx_status_t blobfs_create_sparse(fbl::RefPtr<Blobfs>* out, fbl::unique_fd fd, off_t start,
+                                 off_t end, const fbl::Vector<size_t>& extent_vector) {
     if (start >= end) {
-        fprintf(stderr, "blobstore: Insufficient space allocated\n");
+        fprintf(stderr, "blobfs: Insufficient space allocated\n");
         return ZX_ERR_INVALID_ARGS;
-    } if (extent_vector.size() != EXTENT_COUNT) {
-        fprintf(stderr, "blobstore: Incorrect number of extents\n");
+    }
+    if (extent_vector.size() != EXTENT_COUNT) {
+        fprintf(stderr, "blobfs: Incorrect number of extents\n");
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -114,16 +114,15 @@ zx_status_t blobstore_create_sparse(fbl::RefPtr<Blobstore>* out, fbl::unique_fd 
     }
 
     if (s.st_size < end) {
-        fprintf(stderr, "blobstore: Invalid file size\n");
+        fprintf(stderr, "blobfs: Invalid file size\n");
         return ZX_ERR_BAD_STATE;
     } else if (readblk_offset(fd.get(), 0, start, (void*)info_block.block) < 0) {
         return ZX_ERR_IO;
     }
 
     zx_status_t status;
-    if ((status = blobstore_check_info(&info_block.info, (end - start) / kBlobstoreBlockSize))
-        != ZX_OK) {
-        fprintf(stderr, "blobstore: Info check failed\n");
+    if ((status = blobfs_check_info(&info_block.info, (end - start) / kBlobfsBlockSize)) != ZX_OK) {
+        fprintf(stderr, "blobfs: Info check failed\n");
         return status;
     }
 
@@ -138,9 +137,8 @@ zx_status_t blobstore_create_sparse(fbl::RefPtr<Blobstore>* out, fbl::unique_fd 
     extent_lengths[2] = extent_vector[2];
     extent_lengths[3] = extent_vector[3];
 
-    if ((status = Blobstore::Create(fbl::move(fd), start, info_block, extent_lengths, out))
-        != ZX_OK) {
-        fprintf(stderr, "blobstore: mount failed; could not create blobstore\n");
+    if ((status = Blobfs::Create(fbl::move(fd), start, info_block, extent_lengths, out)) != ZX_OK) {
+        fprintf(stderr, "blobfs: mount failed; could not create blobfs\n");
         return status;
     }
 
@@ -149,7 +147,7 @@ zx_status_t blobstore_create_sparse(fbl::RefPtr<Blobstore>* out, fbl::unique_fd 
 
 std::mutex add_blob_mutex_;
 
-zx_status_t blobstore_add_blob(Blobstore* bs, int data_fd) {
+zx_status_t blobfs_add_blob(Blobfs* bs, int data_fd) {
     // Mmap user-provided file, create the corresponding merkle tree
     struct stat s;
     if (fstat(data_fd, &s) < 0) {
@@ -172,7 +170,7 @@ zx_status_t blobstore_add_blob(Blobstore* bs, int data_fd) {
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     } else if ((status = MerkleTree::Create(blob_data, s.st_size, merkle_tree.get(),
-                                  merkle_size, &digest)) != ZX_OK) {
+                                            merkle_size, &digest)) != ZX_OK) {
         return status;
     }
 
@@ -182,12 +180,12 @@ zx_status_t blobstore_add_blob(Blobstore* bs, int data_fd) {
         return status;
     }
     if (inode_block == nullptr) {
-        fprintf(stderr, "error: No nodes available on blobstore image\n");
+        fprintf(stderr, "error: No nodes available on blobfs image\n");
         return ZX_ERR_NO_RESOURCES;
     }
 
     inode_block->SetSize(s.st_size);
-    blobstore_inode_t* inode = inode_block->GetInode();
+    blobfs_inode_t* inode = inode_block->GetInode();
 
     if ((status = bs->AllocateBlocks(inode->num_blocks,
                                      reinterpret_cast<size_t*>(&inode->start_block))) != ZX_OK) {
@@ -206,14 +204,13 @@ zx_status_t blobstore_add_blob(Blobstore* bs, int data_fd) {
     return ZX_OK;
 }
 
-zx_status_t blobstore_fsck(fbl::unique_fd fd, off_t start, off_t end,
-                   const fbl::Vector<size_t>& extent_lengths) {
-    fbl::RefPtr<Blobstore> blob;
+zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
+                        const fbl::Vector<size_t>& extent_lengths) {
+    fbl::RefPtr<Blobfs> blob;
     zx_status_t status;
-    if ((status = blobstore_create_sparse(&blob, fbl::move(fd), start, end, extent_lengths))
-        != ZX_OK) {
+    if ((status = blobfs_create_sparse(&blob, fbl::move(fd), start, end, extent_lengths)) != ZX_OK) {
         return status;
-    } else if ((status = blobstore_check(blob)) != ZX_OK) {
+    } else if ((status = blobfs_check(blob)) != ZX_OK) {
         return status;
     }
     return ZX_OK;
@@ -224,47 +221,48 @@ void InodeBlock::SetSize(size_t size) {
     inode_->num_blocks = MerkleTreeBlocks(*inode_) + BlobDataBlocks(*inode_);
 }
 
-Blobstore::Blobstore(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
-                     const fbl::Array<size_t>& extent_lengths) : blockfd_(fbl::move(fd)),
-                                                                 dirty_(false), offset_(offset) {
+Blobfs::Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
+               const fbl::Array<size_t>& extent_lengths)
+    : blockfd_(fbl::move(fd)),
+      dirty_(false), offset_(offset) {
     ZX_ASSERT(extent_lengths.size() == EXTENT_COUNT);
-    memcpy(&info_block_, info_block.block, kBlobstoreBlockSize);
+    memcpy(&info_block_, info_block.block, kBlobfsBlockSize);
     cache_.bno = 0;
 
-    block_map_start_block_ = extent_lengths[0] / kBlobstoreBlockSize;
-    block_map_block_count_ = extent_lengths[1] / kBlobstoreBlockSize;
+    block_map_start_block_ = extent_lengths[0] / kBlobfsBlockSize;
+    block_map_block_count_ = extent_lengths[1] / kBlobfsBlockSize;
     node_map_start_block_ = block_map_start_block_ + block_map_block_count_;
-    node_map_block_count_ = extent_lengths[2] / kBlobstoreBlockSize;
+    node_map_block_count_ = extent_lengths[2] / kBlobfsBlockSize;
     data_start_block_ = node_map_start_block_ + node_map_block_count_;
-    data_block_count_ = extent_lengths[3] / kBlobstoreBlockSize;
+    data_block_count_ = extent_lengths[3] / kBlobfsBlockSize;
 }
 
-zx_status_t Blobstore::Create(fbl::unique_fd blockfd_, off_t offset, const info_block_t& info_block,
-                              const fbl::Array<size_t>& extent_lengths,
-                              fbl::RefPtr<Blobstore>* out) {
-    zx_status_t status = blobstore_check_info(&info_block.info, TotalBlocks(info_block.info));
+zx_status_t Blobfs::Create(fbl::unique_fd blockfd_, off_t offset, const info_block_t& info_block,
+                           const fbl::Array<size_t>& extent_lengths,
+                           fbl::RefPtr<Blobfs>* out) {
+    zx_status_t status = blobfs_check_info(&info_block.info, TotalBlocks(info_block.info));
     if (status < 0) {
-        fprintf(stderr, "blobstore: Check info failure\n");
+        fprintf(stderr, "blobfs: Check info failure\n");
         return status;
     }
 
     ZX_ASSERT(extent_lengths.size() == EXTENT_COUNT);
 
     for (unsigned i = 0; i < 3; i++) {
-        if (extent_lengths[i] % kBlobstoreBlockSize) {
+        if (extent_lengths[i] % kBlobfsBlockSize) {
             return ZX_ERR_INVALID_ARGS;
         }
     }
 
     fbl::AllocChecker ac;
-    fbl::RefPtr<Blobstore> fs = fbl::AdoptRef(new (&ac) Blobstore(fbl::move(blockfd_), offset,
-                                                                  info_block, extent_lengths));
+    fbl::RefPtr<Blobfs> fs = fbl::AdoptRef(new (&ac) Blobfs(fbl::move(blockfd_), offset,
+                                                            info_block, extent_lengths));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
     if ((status = fs->LoadBitmap()) < 0) {
-        fprintf(stderr, "blobstore: Failed to load bitmaps\n");
+        fprintf(stderr, "blobfs: Failed to load bitmaps\n");
         return status;
     }
 
@@ -272,9 +270,9 @@ zx_status_t Blobstore::Create(fbl::unique_fd blockfd_, off_t offset, const info_
     return ZX_OK;
 }
 
-zx_status_t Blobstore::LoadBitmap() {
+zx_status_t Blobfs::LoadBitmap() {
     zx_status_t status;
-    if ((status = block_map_.Reset(block_map_block_count_ * kBlobstoreBlockBits)) != ZX_OK) {
+    if ((status = block_map_.Reset(block_map_block_count_ * kBlobfsBlockBits)) != ZX_OK) {
         return status;
     } else if ((status = block_map_.Shrink(info_.block_count)) != ZX_OK) {
         return status;
@@ -282,32 +280,32 @@ zx_status_t Blobstore::LoadBitmap() {
     const void* bmstart = block_map_.StorageUnsafe()->GetData();
 
     for (size_t n = 0; n < block_map_block_count_; n++) {
-        void* bmdata = fs::GetBlock<kBlobstoreBlockSize>(bmstart, n);
+        void* bmdata = fs::GetBlock<kBlobfsBlockSize>(bmstart, n);
 
         if (n >= node_map_start_block_) {
-            memset(bmdata, 0, kBlobstoreBlockSize);
+            memset(bmdata, 0, kBlobfsBlockSize);
         } else if ((status = ReadBlock(block_map_start_block_ + n)) != ZX_OK) {
             return status;
         } else {
-            memcpy(bmdata, cache_.blk, kBlobstoreBlockSize);
+            memcpy(bmdata, cache_.blk, kBlobfsBlockSize);
         }
     }
     return ZX_OK;
 }
 
-zx_status_t Blobstore::NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* out) {
+zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* out) {
     size_t ino = info_.inode_count;
 
     for (size_t i = 0; i < info_.inode_count; ++i) {
-        size_t bno = (i / kBlobstoreInodesPerBlock) + node_map_start_block_;
+        size_t bno = (i / kBlobfsInodesPerBlock) + node_map_start_block_;
 
         zx_status_t status;
         if ((status = ReadBlock(bno)) != ZX_OK) {
             return status;
         }
 
-        auto iblk = reinterpret_cast<const blobstore_inode_t*>(cache_.blk);
-        auto observed_inode = &iblk[i % kBlobstoreInodesPerBlock];
+        auto iblk = reinterpret_cast<const blobfs_inode_t*>(cache_.blk);
+        auto observed_inode = &iblk[i % kBlobfsInodesPerBlock];
         if (observed_inode->start_block >= kStartBlockMinimum) {
             if (digest == observed_inode->merkle_root_hash) {
                 return ZX_ERR_ALREADY_EXISTS;
@@ -324,17 +322,17 @@ zx_status_t Blobstore::NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>
         return ZX_ERR_NO_RESOURCES;
     }
 
-    size_t bno = (ino / kBlobstoreInodesPerBlock) + NodeMapStartBlock(info_);
+    size_t bno = (ino / kBlobfsInodesPerBlock) + NodeMapStartBlock(info_);
     zx_status_t status;
     if ((status = ReadBlock(bno)) != ZX_OK) {
         return status;
     }
 
     fbl::AllocChecker ac;
-    blobstore_inode_t* inodes = reinterpret_cast<blobstore_inode_t*>(cache_.blk);
+    blobfs_inode_t* inodes = reinterpret_cast<blobfs_inode_t*>(cache_.blk);
 
     fbl::unique_ptr<InodeBlock> ino_block(
-        new (&ac) InodeBlock(bno, &inodes[ino % kBlobstoreInodesPerBlock], digest));
+        new (&ac) InodeBlock(bno, &inodes[ino % kBlobfsInodesPerBlock], digest));
 
     if (!ac.check()) {
         return ZX_ERR_INTERNAL;
@@ -346,7 +344,7 @@ zx_status_t Blobstore::NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>
     return ZX_OK;
 }
 
-zx_status_t Blobstore::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
+zx_status_t Blobfs::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
     zx_status_t status;
     if ((status = block_map_.Find(false, 0, block_map_.size(), nblocks, blkno_out)) != ZX_OK) {
         return status;
@@ -358,13 +356,12 @@ zx_status_t Blobstore::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
     return ZX_OK;
 }
 
-zx_status_t Blobstore::WriteBitmap(size_t nblocks, size_t start_block) {
-    uint64_t bbm_start_block = start_block / kBlobstoreBlockBits;
-    uint64_t bbm_end_block = fbl::round_up(start_block + nblocks, kBlobstoreBlockBits)
-                             / kBlobstoreBlockBits;
+zx_status_t Blobfs::WriteBitmap(size_t nblocks, size_t start_block) {
+    uint64_t bbm_start_block = start_block / kBlobfsBlockBits;
+    uint64_t bbm_end_block = fbl::round_up(start_block + nblocks, kBlobfsBlockBits) / kBlobfsBlockBits;
     const void* bmstart = block_map_.StorageUnsafe()->GetData();
     for (size_t n = bbm_start_block; n < bbm_end_block; n++) {
-        const void* data = fs::GetBlock<kBlobstoreBlockSize>(bmstart, n);
+        const void* data = fs::GetBlock<kBlobfsBlockSize>(bmstart, n);
         uint64_t bno = block_map_start_block_ + n;
         zx_status_t status;
         if ((status = WriteBlock(bno, data)) != ZX_OK) {
@@ -375,7 +372,7 @@ zx_status_t Blobstore::WriteBitmap(size_t nblocks, size_t start_block) {
     return ZX_OK;
 }
 
-zx_status_t Blobstore::WriteNode(fbl::unique_ptr<InodeBlock> ino_block) {
+zx_status_t Blobfs::WriteNode(fbl::unique_ptr<InodeBlock> ino_block) {
     if (ino_block->GetBno() != cache_.bno) {
         return ZX_ERR_ACCESS_DENIED;
     }
@@ -384,9 +381,9 @@ zx_status_t Blobstore::WriteNode(fbl::unique_ptr<InodeBlock> ino_block) {
     return WriteBlock(cache_.bno, cache_.blk);
 }
 
-zx_status_t Blobstore::WriteData(blobstore_inode_t* inode, void* merkle_data, void* blob_data) {
+zx_status_t Blobfs::WriteData(blobfs_inode_t* inode, void* merkle_data, void* blob_data) {
     for (size_t n = 0; n < MerkleTreeBlocks(*inode); n++) {
-        const void* data = fs::GetBlock<kBlobstoreBlockSize>(merkle_data, n);
+        const void* data = fs::GetBlock<kBlobfsBlockSize>(merkle_data, n);
         uint64_t bno = data_start_block_ + inode->start_block + n;
         zx_status_t status;
         if ((status = WriteBlock(bno, data)) != ZX_OK) {
@@ -395,15 +392,15 @@ zx_status_t Blobstore::WriteData(blobstore_inode_t* inode, void* merkle_data, vo
     }
 
     for (size_t n = 0; n < BlobDataBlocks(*inode); n++) {
-        const void* data = fs::GetBlock<kBlobstoreBlockSize>(blob_data, n);
+        const void* data = fs::GetBlock<kBlobfsBlockSize>(blob_data, n);
 
         // If we try to write a block, will it be reaching beyond the end of the
         // mapped file?
-        size_t off = n * kBlobstoreBlockSize;
-        uint8_t last_data[kBlobstoreBlockSize];
-        if (inode->blob_size < off + kBlobstoreBlockSize) {
+        size_t off = n * kBlobfsBlockSize;
+        uint8_t last_data[kBlobfsBlockSize];
+        if (inode->blob_size < off + kBlobfsBlockSize) {
             // Read the partial block from a block-sized buffer which zero-pads the data.
-            memset(last_data, 0, kBlobstoreBlockSize);
+            memset(last_data, 0, kBlobfsBlockSize);
             memcpy(last_data, data, inode->blob_size - off);
             data = last_data;
         }
@@ -418,18 +415,17 @@ zx_status_t Blobstore::WriteData(blobstore_inode_t* inode, void* merkle_data, vo
     return ZX_OK;
 }
 
-zx_status_t Blobstore::WriteInfo() {
+zx_status_t Blobfs::WriteInfo() {
     return WriteBlock(0, info_block_);
 }
 
-zx_status_t Blobstore::ReadBlock(size_t bno) {
+zx_status_t Blobfs::ReadBlock(size_t bno) {
     if (dirty_) {
         return ZX_ERR_ACCESS_DENIED;
     }
 
     zx_status_t status;
-    if ((cache_.bno != bno) && ((status = readblk_offset(blockfd_.get(), bno, offset_, &cache_.blk))
-        != ZX_OK)) {
+    if ((cache_.bno != bno) && ((status = readblk_offset(blockfd_.get(), bno, offset_, &cache_.blk)) != ZX_OK)) {
         return status;
     }
 
@@ -437,24 +433,24 @@ zx_status_t Blobstore::ReadBlock(size_t bno) {
     return ZX_OK;
 }
 
-zx_status_t Blobstore::WriteBlock(size_t bno, const void* data) {
+zx_status_t Blobfs::WriteBlock(size_t bno, const void* data) {
     return writeblk_offset(blockfd_.get(), bno, offset_, data);
 }
 
-zx_status_t Blobstore::ResetCache() {
+zx_status_t Blobfs::ResetCache() {
     if (dirty_) {
         return ZX_ERR_ACCESS_DENIED;
     }
 
     if (cache_.bno != 0) {
-        memset(cache_.blk, 0, kBlobstoreBlockSize);
+        memset(cache_.blk, 0, kBlobfsBlockSize);
         cache_.bno = 0;
     }
     return ZX_OK;
 }
 
-blobstore_inode_t* Blobstore::GetNode(size_t index)  {
-    size_t bno = node_map_start_block_ + index / kBlobstoreInodesPerBlock;
+blobfs_inode_t* Blobfs::GetNode(size_t index) {
+    size_t bno = node_map_start_block_ + index / kBlobfsInodesPerBlock;
 
     if (bno >= data_start_block_) {
         // Set cache to 0 so we can return a pointer to an empty inode
@@ -465,10 +461,10 @@ blobstore_inode_t* Blobstore::GetNode(size_t index)  {
         return nullptr;
     }
 
-    auto iblock = reinterpret_cast<blobstore_inode_t*>(cache_.blk);
-    return &iblock[index % kBlobstoreInodesPerBlock];
+    auto iblock = reinterpret_cast<blobfs_inode_t*>(cache_.blk);
+    return &iblock[index % kBlobfsInodesPerBlock];
 }
-} // namespace blobstore
+} // namespace blobfs
 
 // This is used by the ioctl wrappers in magenta/device/device.h. It's not
 // called by host tools, so just satisfy the linker with a stub.

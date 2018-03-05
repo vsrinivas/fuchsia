@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file contains Vnodes and global Blobstore structures
-// used for constructing a Blobstore filesystem in memory.
+// This file contains Vnodes and global Blobfs structures
+// used for constructing a Blobfs filesystem in memory.
 
 #pragma once
 
@@ -34,15 +34,15 @@
 #include <zx/event.h>
 #include <zx/vmo.h>
 
-#include <blobstore/common.h>
-#include <blobstore/format.h>
+#include <blobfs/common.h>
+#include <blobfs/format.h>
 
-namespace blobstore {
+namespace blobfs {
 
-class Blobstore;
+class Blobfs;
 
-using WriteTxn = fs::WriteTxn<kBlobstoreBlockSize, Blobstore>;
-using ReadTxn = fs::ReadTxn<kBlobstoreBlockSize, Blobstore>;
+using WriteTxn = fs::WriteTxn<kBlobfsBlockSize, Blobfs>;
+using ReadTxn = fs::ReadTxn<kBlobfsBlockSize, Blobfs>;
 using digest::Digest;
 
 typedef uint32_t BlobFlags;
@@ -50,22 +50,22 @@ typedef uint32_t BlobFlags;
 // clang-format off
 
 // After Open;
-constexpr BlobFlags kBlobStateEmpty       = 0x00000001; // Not yet allocated
+constexpr BlobFlags kBlobfsStateEmpty       = 0x00000001; // Not yet allocated
 // After Ioctl configuring size:
-constexpr BlobFlags kBlobStateDataWrite   = 0x00000002; // Data is being written
+constexpr BlobFlags kBlobfsStateDataWrite   = 0x00000002; // Data is being written
 // After Writing:
-constexpr BlobFlags kBlobStateReadable    = 0x00000004; // Readable
+constexpr BlobFlags kBlobfsStateReadable    = 0x00000004; // Readable
 // After Unlink:
-constexpr BlobFlags kBlobStateReleasing   = 0x00000008; // In the process of unlinking
+constexpr BlobFlags kBlobfsStateReleasing   = 0x00000008; // In the process of unlinking
 // Unrecoverable error state:
-constexpr BlobFlags kBlobStateError       = 0x00000010; // Unrecoverable error state
-constexpr BlobFlags kBlobStateMask        = 0x000000FF;
+constexpr BlobFlags kBlobfsStateError       = 0x00000010; // Unrecoverable error state
+constexpr BlobFlags kBlobfsStateMask        = 0x000000FF;
 
 // Informational non-state flags:
-constexpr BlobFlags kBlobFlagSync         = 0x00000100; // The blob is being written to disk
-constexpr BlobFlags kBlobFlagDeletable    = 0x00000200; // This node should be unlinked when closed
-constexpr BlobFlags kBlobFlagDirectory    = 0x00000400; // This node represents the root directory
-constexpr BlobFlags kBlobOtherMask        = 0x0000FF00;
+constexpr BlobFlags kBlobfsFlagSync         = 0x00000100; // The blob is being written to disk
+constexpr BlobFlags kBlobfsFlagDeletable    = 0x00000200; // This node should be unlinked when closed
+constexpr BlobFlags kBlobfsFlagDirectory    = 0x00000400; // This node represents the root directory
+constexpr BlobFlags kBlobfsOtherMask        = 0x0000FF00;
 
 // clang-format on
 
@@ -81,20 +81,20 @@ public:
     };
 
     BlobFlags GetState() const {
-        return flags_ & kBlobStateMask;
+        return flags_ & kBlobfsStateMask;
     }
 
-    bool IsDirectory() const { return flags_ & kBlobFlagDirectory; }
+    bool IsDirectory() const { return flags_ & kBlobfsFlagDirectory; }
 
     zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
                       void* out_buf, size_t out_len, size_t* out_actual) final;
 
     bool DeletionQueued() const {
-        return flags_ & kBlobFlagDeletable;
+        return flags_ & kBlobfsFlagDeletable;
     }
 
     void SetState(BlobFlags new_state) {
-        flags_ = (flags_ & ~kBlobStateMask) | new_state;
+        flags_ = (flags_ & ~kBlobfsStateMask) | new_state;
     }
 
     size_t GetMapIndex() const {
@@ -108,9 +108,9 @@ public:
     uint64_t SizeData() const;
 
     // Constructs the "directory" blob
-    VnodeBlob(fbl::RefPtr<Blobstore> bs);
+    VnodeBlob(fbl::RefPtr<Blobfs> bs);
     // Constructs actual blobs
-    VnodeBlob(fbl::RefPtr<Blobstore> bs, const Digest& digest);
+    VnodeBlob(fbl::RefPtr<Blobfs> bs, const Digest& digest);
     virtual ~VnodeBlob();
 
 private:
@@ -132,7 +132,7 @@ private:
     void QueueUnlink();
 
     // If successful, allocates Blob Node and Blocks (in-memory)
-    // kBlobStateEmpty --> kBlobStateDataWrite
+    // kBlobfsStateEmpty --> kBlobfsStateDataWrite
     zx_status_t SpaceAllocate(uint64_t size_data);
 
     // Writes to either the Merkle Tree or the Data section,
@@ -140,7 +140,7 @@ private:
     zx_status_t WriteInternal(const void* data, size_t len, size_t* actual);
 
     // Reads from a blob.
-    // Requires: kBlobStateReadable
+    // Requires: kBlobfsStateReadable
     zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
 
     // Vnode I/O operations
@@ -186,12 +186,12 @@ private:
 
     WAVLTreeNodeState type_wavl_state_{};
 
-    const fbl::RefPtr<Blobstore> blobstore_;
+    const fbl::RefPtr<Blobfs> blobfs_;
     BlobFlags flags_{};
 
     // The blob_ here consists of:
     // 1) The Merkle Tree
-    // 2) The Blob itself, aligned to the nearest kBlobstoreBlockSize
+    // 2) The Blob itself, aligned to the nearest kBlobfsBlockSize
     fbl::unique_ptr<MappedVmo> blob_{};
     vmoid_t vmoid_{};
 
@@ -215,16 +215,16 @@ struct MerkleRootTraits {
     }
 };
 
-class Blobstore : public fbl::RefCounted<Blobstore> {
+class Blobfs : public fbl::RefCounted<Blobfs> {
 public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Blobstore);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
     friend class VnodeBlob;
 
-    static zx_status_t Create(fbl::unique_fd blockfd, const blobstore_info_t* info,
-                              fbl::RefPtr<Blobstore>* out);
+    static zx_status_t Create(fbl::unique_fd blockfd, const blobfs_info_t* info,
+                              fbl::RefPtr<Blobfs>* out);
 
     zx_status_t Unmount();
-    virtual ~Blobstore();
+    virtual ~Blobfs();
 
     // Returns the root blob
     zx_status_t GetRootBlob(fbl::RefPtr<VnodeBlob>* out);
@@ -254,14 +254,14 @@ public:
 
     zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out);
     zx_status_t Txn(block_fifo_request_t* requests, size_t count) {
-        TRACE_DURATION("blobstore", "Blobstore::Txn", "count", count);
+        TRACE_DURATION("blobfs", "Blobfs::Txn", "count", count);
         return block_fifo_txn(fifo_client_, requests, count);
     }
     uint32_t BlockSize() const { return block_info_.block_size; }
 
     txnid_t TxnId() const { return txnid_; }
 
-    // If possible, attempt to resize the blobstore partition.
+    // If possible, attempt to resize the blobfs partition.
     // Add one additional slice for inodes.
     zx_status_t AddInodes();
     // Add enough slices required to hold nblocks additional blocks.
@@ -274,12 +274,12 @@ public:
     // Returns an unique identifier for this instance.
     uint64_t GetFsId() const { return fs_id_; }
 
-    blobstore_info_t info_;
+    blobfs_info_t info_;
 
 private:
-    friend class BlobstoreChecker;
+    friend class BlobfsChecker;
 
-    Blobstore(fbl::unique_fd fd, const blobstore_info_t* info);
+    Blobfs(fbl::unique_fd fd, const blobfs_info_t* info);
     zx_status_t LoadBitmaps();
 
     // Finds space for a block in memory. Does not update disk.
@@ -291,7 +291,7 @@ private:
     void FreeNode(size_t node_index);
 
     // Access the nth inode of the node map
-    blobstore_inode_t* GetNode(size_t index) const;
+    blobfs_inode_t* GetNode(size_t index) const;
 
     // Given a contiguous number of blocks after a starting block,
     // write out the bitmap to disk for the corresponding blocks.
@@ -310,9 +310,9 @@ private:
     // VnodeBlobs exist in the WAVLTree as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the WAVL tree.
     using WAVLTreeByMerkle = fbl::WAVLTree<const uint8_t*,
-                                            VnodeBlob*,
-                                            MerkleRootTraits,
-                                            VnodeBlob::TypeWavlTraits>;
+                                           VnodeBlob*,
+                                           MerkleRootTraits,
+                                           VnodeBlob::TypeWavlTraits>;
     WAVLTreeByMerkle hash_{}; // Map of all 'in use' blobs
 
     fbl::unique_fd blockfd_;
@@ -328,9 +328,9 @@ private:
     uint64_t fs_id_{};
 };
 
-zx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, fbl::unique_fd blockfd);
+zx_status_t blobfs_create(fbl::RefPtr<Blobfs>* out, fbl::unique_fd blockfd);
 
-//TODO(planders): Update blobstore to use unique_fd.
-zx_status_t blobstore_mount(fbl::RefPtr<VnodeBlob>* out, fbl::unique_fd blockfd);
+//TODO(planders): Update blobfs to use unique_fd.
+zx_status_t blobfs_mount(fbl::RefPtr<VnodeBlob>* out, fbl::unique_fd blockfd);
 
-} // namespace blobstore
+} // namespace blobfs

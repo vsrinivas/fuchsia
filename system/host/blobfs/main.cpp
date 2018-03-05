@@ -10,12 +10,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <thread>
+#include <unistd.h>
 #include <vector>
 
-#include <blobstore/fsck.h>
-#include <blobstore/host.h>
+#include <blobfs/fsck.h>
+#include <blobfs/host.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
@@ -31,34 +31,34 @@ namespace {
 
 typedef struct {
     bool readonly = false;
-    uint64_t data_blocks = blobstore::kStartBlockMinimum; // Account for reserved blocks
+    uint64_t data_blocks = blobfs::kStartBlockMinimum; // Account for reserved blocks
     fbl::Vector<fbl::String> blob_list;
 } blob_options_t;
 
-int do_blobstore_add_blob(blobstore::Blobstore* bs, const char* blob_name) {
+int do_blobfs_add_blob(blobfs::Blobfs* bs, const char* blob_name) {
     fbl::unique_fd data_fd(open(blob_name, O_RDONLY, 0644));
     if (!data_fd) {
         fprintf(stderr, "error: cannot open '%s'\n", blob_name);
         return -1;
     }
     int r;
-    if ((r = blobstore::blobstore_add_blob(bs, data_fd.get())) != 0) {
+    if ((r = blobfs::blobfs_add_blob(bs, data_fd.get())) != 0) {
         if (r != ZX_ERR_ALREADY_EXISTS) {
-            fprintf(stderr, "blobstore: Failed to add blob '%s': %d\n", blob_name, r);
+            fprintf(stderr, "blobfs: Failed to add blob '%s': %d\n", blob_name, r);
             return -1;
         }
     }
     return 0;
 }
 
-int do_blobstore_add_blobs(fbl::unique_fd fd, const blob_options_t& options) {
+int do_blobfs_add_blobs(fbl::unique_fd fd, const blob_options_t& options) {
     if (options.blob_list.is_empty()) {
         fprintf(stderr, "Adding a blob requires an additional file argument\n");
         return -1;
     }
 
-    fbl::RefPtr<blobstore::Blobstore> bs;
-    if (blobstore_create(&bs, fbl::move(fd)) < 0) {
+    fbl::RefPtr<blobfs::Blobfs> bs;
+    if (blobfs_create(&bs, fbl::move(fd)) < 0) {
         return -1;
     }
 
@@ -81,7 +81,7 @@ int do_blobstore_add_blobs(fbl::unique_fd fd, const blob_options_t& options) {
                 if (i >= options.blob_list.size()) {
                     return;
                 }
-                if (do_blobstore_add_blob(bs.get(), options.blob_list[i].c_str()) < 0) {
+                if (do_blobfs_add_blob(bs.get(), options.blob_list[i].c_str()) < 0) {
                     mtx.lock();
                     res = -1;
                     mtx.unlock();
@@ -97,41 +97,41 @@ int do_blobstore_add_blobs(fbl::unique_fd fd, const blob_options_t& options) {
     return res;
 }
 
-int do_blobstore_mkfs(fbl::unique_fd fd, const blob_options_t& options) {
+int do_blobfs_mkfs(fbl::unique_fd fd, const blob_options_t& options) {
     uint64_t block_count;
-    if (blobstore::blobstore_get_blockcount(fd.get(), &block_count)) {
-        fprintf(stderr, "blobstore: cannot find end of underlying device\n");
+    if (blobfs::blobfs_get_blockcount(fd.get(), &block_count)) {
+        fprintf(stderr, "blobfs: cannot find end of underlying device\n");
         return -1;
     }
 
-    int r = blobstore::blobstore_mkfs(fd.get(), block_count);
+    int r = blobfs::blobfs_mkfs(fd.get(), block_count);
 
     if (r >= 0 && !options.blob_list.is_empty()) {
-        if (do_blobstore_add_blobs(fbl::move(fd), options) < 0) {
+        if (do_blobfs_add_blobs(fbl::move(fd), options) < 0) {
             return -1;
         }
     }
     return r;
 }
 
-int do_blobstore_check(fbl::unique_fd fd, const blob_options_t& options) {
-    fbl::RefPtr<blobstore::Blobstore> vn;
-    if (blobstore::blobstore_create(&vn, fbl::move(fd)) < 0) {
+int do_blobfs_check(fbl::unique_fd fd, const blob_options_t& options) {
+    fbl::RefPtr<blobfs::Blobfs> vn;
+    if (blobfs::blobfs_create(&vn, fbl::move(fd)) < 0) {
         return -1;
     }
 
-    return blobstore::blobstore_check(vn);
+    return blobfs::blobfs_check(vn);
 }
 
 off_t calculate_total_size(off_t data_blocks) {
-    blobstore::blobstore_info_t info;
+    blobfs::blobfs_info_t info;
     info.block_count = data_blocks;
     info.inode_count = 32768;
-    return (data_blocks + blobstore::DataStartBlock(info)) * blobstore::kBlobstoreBlockSize;
+    return (data_blocks + blobfs::DataStartBlock(info)) * blobfs::kBlobfsBlockSize;
 }
 
 off_t calculate_blob_blocks(off_t data_size) {
-    blobstore::blobstore_inode_t node;
+    blobfs::blobfs_inode_t node;
     node.blob_size = data_size;
     return MerkleTreeBlocks(node) + BlobDataBlocks(node);
 }
@@ -218,16 +218,16 @@ struct {
     bool accept_args;
     const char* help;
 } CMDS[] = {
-    {"create", do_blobstore_mkfs, true, true, "initialize filesystem"},
-    {"mkfs", do_blobstore_mkfs, true, true, "initialize filesystem"},
-    {"check", do_blobstore_check, false, false, "check filesystem integrity"},
-    {"fsck", do_blobstore_check, false, false, "check filesystem integrity"},
-    {"add", do_blobstore_add_blobs, false, true, "add blobs to a blobstore image"},
+    {"create", do_blobfs_mkfs, true, true, "initialize filesystem"},
+    {"mkfs", do_blobfs_mkfs, true, true, "initialize filesystem"},
+    {"check", do_blobfs_check, false, false, "check filesystem integrity"},
+    {"fsck", do_blobfs_check, false, false, "check filesystem integrity"},
+    {"add", do_blobfs_add_blobs, false, true, "add blobs to a blobfs image"},
 };
 
 int usage() {
     fprintf(stderr,
-            "usage: blobstore <file-or-device>[@<size>] <command> [ <arg>* ]\n"
+            "usage: blobfs <file-or-device>[@<size>] <command> [ <arg>* ]\n"
             "\n");
     for (unsigned n = 0; n < (sizeof(CMDS) / sizeof(CMDS[0])); n++) {
         fprintf(stderr, "%9s %-10s %s\n", n ? "" : "commands:",
@@ -329,7 +329,7 @@ int process_args(int argc, char** argv, CommandFunction* func, blob_options_t* o
         argv += 2;
     }
 
-    // Determine blobstore size (with no de-duping for identical files)
+    // Determine blobfs size (with no de-duping for identical files)
     off_t total_size = calculate_total_size(options->data_blocks);
     char* sizestr = nullptr;
     if ((sizestr = strchr(device, '@')) != nullptr) {
@@ -342,7 +342,7 @@ int process_args(int argc, char** argv, CommandFunction* func, blob_options_t* o
         char* end;
         size_t size = strtoull(sizestr, &end, 10);
         if (end == sizestr) {
-            fprintf(stderr, "blobstore: bad size: %s\n", sizestr);
+            fprintf(stderr, "blobfs: bad size: %s\n", sizestr);
             return usage();
         }
         switch (end[0]) {
@@ -358,7 +358,7 @@ int process_args(int argc, char** argv, CommandFunction* func, blob_options_t* o
             break;
         }
         if (end[0]) {
-            fprintf(stderr, "blobstore: bad size: %s\n", sizestr);
+            fprintf(stderr, "blobfs: bad size: %s\n", sizestr);
             return usage();
         }
 
