@@ -33,7 +33,7 @@
  * the beginning and end of the test and the EXPECT_* macros to
  * validate test results, as shown:
  *
- * static bool test_foo(void* context)
+ * static bool test_foo()
  * {
  *      BEGIN_TEST;
  *
@@ -290,7 +290,7 @@ bool unittest_expect_bytes(const uint8_t* expected,
                            int line,
                            bool expect_eq);
 
-typedef bool        (*unitest_fn_t)(void* context);
+typedef bool        (*unitest_fn_t)(void);
 
 typedef struct unitest_registration {
     const char*  name;

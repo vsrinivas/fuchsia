@@ -39,7 +39,7 @@ static bool test_printf(const char* expected, const char* format, ...) {
     return true;
 }
 
-static bool printf_tests(void* context) {
+static bool printf_tests() {
     BEGIN_TEST;
 
     printf("numbers:\n");
@@ -157,7 +157,7 @@ static bool printf_tests(void* context) {
 }
 
 // Test snprintf() when the output is larger than the given buffer.
-static bool snprintf_truncation_test(void* context) {
+static bool snprintf_truncation_test() {
     BEGIN_TEST;
 
     char buf[32];

@@ -56,7 +56,7 @@ static zx_status_t create_gpas(fbl::RefPtr<VmObject> guest_phys_mem,
 #endif
 }
 
-static bool guest_physical_address_space_unmap_range(void* context) {
+static bool guest_physical_address_space_unmap_range() {
     BEGIN_TEST;
 
     if (!hypervisor_supported()) {
@@ -83,7 +83,7 @@ static bool guest_physical_address_space_unmap_range(void* context) {
     END_TEST;
 }
 
-static bool guest_physical_address_space_get_page_not_present(void* context) {
+static bool guest_physical_address_space_get_page_not_present() {
     BEGIN_TEST;
 
     if (!hypervisor_supported()) {
@@ -107,7 +107,7 @@ static bool guest_physical_address_space_get_page_not_present(void* context) {
     END_TEST;
 }
 
-static bool guest_physical_address_space_get_page(void* context) {
+static bool guest_physical_address_space_get_page() {
     BEGIN_TEST;
 
     if (!hypervisor_supported()) {
@@ -138,7 +138,7 @@ static bool guest_physical_address_space_get_page(void* context) {
     END_TEST;
 }
 
-static bool guest_physical_address_space_get_page_complex(void* context) {
+static bool guest_physical_address_space_get_page_complex() {
     BEGIN_TEST;
 
     if (!hypervisor_supported()) {
@@ -210,7 +210,7 @@ static bool guest_physical_address_space_get_page_complex(void* context) {
     END_TEST;
 }
 
-static bool guest_physical_address_space_map_interrupt_controller(void* context) {
+static bool guest_physical_address_space_map_interrupt_controller() {
     BEGIN_TEST;
 
     if (!hypervisor_supported()) {

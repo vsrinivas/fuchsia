@@ -35,7 +35,7 @@ static void initialize_buffer(char* buf, size_t len, char fill, size_t fill_len)
     }
 }
 
-static bool memcpy_func_test(memcpy_func_t cpy, void* context) {
+static bool memcpy_func_test(memcpy_func_t cpy) {
     BEGIN_TEST;
 
     // Test buffers for sizes from 0 to 64
@@ -89,7 +89,7 @@ static bool memcpy_func_test(memcpy_func_t cpy, void* context) {
     END_TEST;
 }
 
-static bool memset_func_test(memset_func_t set, void* context) {
+static bool memset_func_test(memset_func_t set) {
     BEGIN_TEST;
 
     // Test buffers for sizes from 0 to 64
@@ -138,36 +138,36 @@ static bool memset_func_test(memset_func_t set, void* context) {
     END_TEST;
 }
 
-static bool memcpy_test(void* context) {
-    return memcpy_func_test(memcpy, context);
+static bool memcpy_test() {
+    return memcpy_func_test(memcpy);
 }
 
-static bool memcpy_quad_test(void* context) {
-    return memcpy_func_test(memcpy_quad, context);
+static bool memcpy_quad_test() {
+    return memcpy_func_test(memcpy_quad);
 }
 
-static bool memcpy_erms_test(void* context) {
+static bool memcpy_erms_test() {
     if (!x86_feature_test(X86_FEATURE_ERMS)) {
         return true;
     }
 
-    return memcpy_func_test(memcpy_erms, context);
+    return memcpy_func_test(memcpy_erms);
 }
 
-static bool memset_test(void* context) {
-    return memset_func_test(memset, context);
+static bool memset_test() {
+    return memset_func_test(memset);
 }
 
-static bool memset_quad_test(void* context) {
-    return memset_func_test(memset_quad, context);
+static bool memset_quad_test() {
+    return memset_func_test(memset_quad);
 }
 
-static bool memset_erms_test(void* context) {
+static bool memset_erms_test() {
     if (!x86_feature_test(X86_FEATURE_ERMS)) {
         return true;
     }
 
-    return memset_func_test(memset_erms, context);
+    return memset_func_test(memset_erms);
 }
 
 UNITTEST_START_TESTCASE(memops_tests)

@@ -10,7 +10,7 @@
 #include <fbl/unique_ptr.h>
 #include <unittest.h>
 
-static bool alloc_checker_ctor(void* context) {
+static bool alloc_checker_ctor() {
     BEGIN_TEST;
 
     {
@@ -30,7 +30,7 @@ static bool alloc_checker_ctor(void* context) {
     END_TEST;
 }
 
-static bool alloc_checker_basic(void* context) {
+static bool alloc_checker_basic() {
     BEGIN_TEST;
 
     fbl::AllocChecker ac;
@@ -47,7 +47,7 @@ static bool alloc_checker_basic(void* context) {
     END_TEST;
 }
 
-static bool alloc_checker_panic(void* context) {
+static bool alloc_checker_panic() {
     BEGIN_TEST;
 // Enable any of the blocks below to test the possible panics.
 
@@ -84,7 +84,7 @@ struct StructWithCtor {
 };
 static_assert(sizeof(StructWithCtor) == 1, "");
 
-static bool alloc_checker_new(void* context) {
+static bool alloc_checker_new() {
     BEGIN_TEST;
 
     const int kCount = 128;
@@ -99,7 +99,7 @@ static bool alloc_checker_new(void* context) {
     END_TEST;
 }
 
-static bool alloc_checker_new_fails(void* context) {
+static bool alloc_checker_new_fails() {
     BEGIN_TEST;
 
     // malloc(size_t_max) should fail but currently does not (see
@@ -121,7 +121,7 @@ struct LargeStruct {
     uint8_t array[0x1000];
 };
 
-static bool test_array_size_overflow_check(void* context) {
+static bool test_array_size_overflow_check() {
     BEGIN_TEST;
 
     size_t size_t_max = ~(size_t)0;
@@ -146,7 +146,7 @@ static bool test_array_size_overflow_check(void* context) {
     END_TEST;
 }
 
-static bool test_negative_array_size(void* context) {
+static bool test_negative_array_size() {
     BEGIN_TEST;
 
     fbl::AllocChecker ac;

@@ -60,7 +60,7 @@ private:
     int removals_ = 0;
 };
 
-bool on_initialize(void* context) {
+bool on_initialize() {
     BEGIN_TEST;
 
     class RmOnInitialize : public RemovableObserver {
@@ -95,7 +95,7 @@ public:
     }
 };
 
-bool on_state_change_via_update_state(void* context) {
+bool on_state_change_via_update_state() {
     BEGIN_TEST;
 
     RmOnStateChange obs;
@@ -118,7 +118,7 @@ bool on_state_change_via_update_state(void* context) {
     END_TEST;
 }
 
-bool on_cancel(void* context) {
+bool on_cancel() {
     BEGIN_TEST;
 
     class RmOnCancel : public RemovableObserver {
@@ -148,7 +148,7 @@ bool on_cancel(void* context) {
     END_TEST;
 }
 
-bool on_cancel_by_key(void* context) {
+bool on_cancel_by_key() {
     BEGIN_TEST;
 
     class RmOnCancelByKey : public RemovableObserver {

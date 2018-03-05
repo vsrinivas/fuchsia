@@ -16,35 +16,35 @@ struct TestObj {
     int xx, yy, zz;
 };
 
-static bool init_null_name_succeeds(void* context) {
+static bool init_null_name_succeeds() {
     BEGIN_TEST;
     Arena arena;
     EXPECT_EQ(ZX_OK, arena.Init(nullptr, sizeof(TestObj), 16), "");
     END_TEST;
 }
 
-static bool init_zero_ob_size_fails(void* context) {
+static bool init_zero_ob_size_fails() {
     BEGIN_TEST;
     Arena arena;
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, arena.Init("name", 0, 16), "");
     END_TEST;
 }
 
-static bool init_large_ob_size_fails(void* context) {
+static bool init_large_ob_size_fails() {
     BEGIN_TEST;
     Arena arena;
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, arena.Init("name", PAGE_SIZE + 1, 16), "");
     END_TEST;
 }
 
-static bool init_zero_count_fails(void* context) {
+static bool init_zero_count_fails() {
     BEGIN_TEST;
     Arena arena;
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, arena.Init("name", sizeof(TestObj), 0), "");
     END_TEST;
 }
 
-static bool start_and_end_look_good(void* context) {
+static bool start_and_end_look_good() {
     BEGIN_TEST;
     static const size_t num_slots = (2 * PAGE_SIZE) / sizeof(TestObj);
     static const size_t expected_size = num_slots * sizeof(TestObj);
@@ -61,7 +61,7 @@ static bool start_and_end_look_good(void* context) {
     END_TEST;
 }
 
-static bool in_range_tests(void* context) {
+static bool in_range_tests() {
     BEGIN_TEST;
     static const size_t num_slots = (2 * PAGE_SIZE) / sizeof(TestObj);
 
@@ -114,7 +114,7 @@ static bool in_range_tests(void* context) {
     END_TEST;
 }
 
-static bool out_of_memory(void* context) {
+static bool out_of_memory() {
     BEGIN_TEST;
     static const size_t num_slots = (2 * PAGE_SIZE) / sizeof(TestObj);
 
@@ -188,7 +188,7 @@ static bool count_committed_pages(
     END_TEST;
 }
 
-static bool committing_tests(void* context) {
+static bool committing_tests() {
     BEGIN_TEST;
     static const size_t num_slots = (64 * PAGE_SIZE) / sizeof(TestObj);
 
@@ -277,7 +277,7 @@ using fbl::ArenaTestFriend;
 
 // Hit the decommit code path. We can't observe it without peeking inside the
 // control pool, since the data pool doesn't currently decommit.
-static bool uncommitting_tests(void* context) {
+static bool uncommitting_tests() {
     BEGIN_TEST;
     // Create an arena with a 16-page control pool.
     static const size_t num_pages = 16;
@@ -413,7 +413,7 @@ static bool uncommitting_tests(void* context) {
 }
 
 // Checks that destroying an arena unmaps all of its pages.
-static bool memory_cleanup(void* context) {
+static bool memory_cleanup() {
     BEGIN_TEST;
     static const size_t num_slots = (16 * PAGE_SIZE) / sizeof(TestObj);
 
@@ -454,7 +454,7 @@ static bool memory_cleanup(void* context) {
 
 // Basic checks that the contents of allocated objects stick around, aren't
 // stomped on.
-static bool content_preservation(void* context) {
+static bool content_preservation() {
     BEGIN_TEST;
     Arena arena;
     zx_status_t s = arena.Init("arena_tests", sizeof(TestObj), 1000);

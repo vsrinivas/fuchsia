@@ -12,7 +12,7 @@
 namespace crypto {
 
 namespace {
-bool identical(void*) {
+bool identical() {
     BEGIN_TEST;
 
     PRNG* prng1 = GlobalPRNG::GetInstance();

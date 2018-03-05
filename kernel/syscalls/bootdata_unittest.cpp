@@ -42,7 +42,7 @@ static bool sentinel_integrity_okay(const uint8_t* sentinel, const size_t len) {
 }
 
 // Try to overflow the bootdata buffer.
-static bool bootdata_overflow_test(void* context) {
+static bool bootdata_overflow_test() {
     BEGIN_TEST;
 
     const size_t kBootdataBufferLen = 64;
@@ -69,7 +69,7 @@ static bool bootdata_overflow_test(void* context) {
 }
 
 // Fill the entire boot
-static bool bootdata_fill_test(void* context) {
+static bool bootdata_fill_test() {
     BEGIN_TEST;
 
     // The bootdata buffer the Global Bootdata Header + The Section Header + the Section Contents

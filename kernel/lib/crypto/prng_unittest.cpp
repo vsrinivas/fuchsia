@@ -12,7 +12,7 @@
 namespace crypto {
 
 namespace {
-bool instantiate(void*) {
+bool instantiate() {
     BEGIN_TEST;
 
     { PRNG prng("", 0); }
@@ -20,7 +20,7 @@ bool instantiate(void*) {
     END_TEST;
 }
 
-bool non_thread_safe_prng_same_behavior(void*) {
+bool non_thread_safe_prng_same_behavior() {
     BEGIN_TEST;
 
     static const char kSeed1[32] = {'1', '2', '3'};
@@ -61,7 +61,7 @@ bool non_thread_safe_prng_same_behavior(void*) {
     END_TEST;
 }
 
-bool prng_output(void*) {
+bool prng_output() {
     BEGIN_TEST;
 
     static const char kSeed1[32] = {'a', 'b', 'c'};
@@ -108,7 +108,7 @@ bool prng_output(void*) {
     END_TEST;
 }
 
-bool prng_randint(void*) {
+bool prng_randint() {
     BEGIN_TEST;
 
     static const char kSeed[32] = {'a', 'b', 'c'};

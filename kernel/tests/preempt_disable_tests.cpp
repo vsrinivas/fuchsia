@@ -49,7 +49,7 @@ static void timer_callback_func(timer_t* timer, zx_time_t now, void* arg) {
 
 // Schedule a timer callback and wait for it to complete.  Most of the
 // testing is done in the timer callback.
-static bool test_in_timer_callback(void* context) {
+static bool test_in_timer_callback() {
     BEGIN_TEST;
 
     event_t event;

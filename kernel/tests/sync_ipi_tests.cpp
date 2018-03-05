@@ -77,7 +77,7 @@ cleanup:
     event_destroy(&gate);
 };
 
-static bool sync_ipi_tests(void* context) {
+static bool sync_ipi_tests() {
     BEGIN_TEST;
 
     uint num_cpus = arch_max_num_cpus();

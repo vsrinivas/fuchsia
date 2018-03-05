@@ -23,7 +23,7 @@ public:
     size_t DrawEntropy(uint8_t* buf, size_t len) override { return 0; }
 };
 
-bool entropy_estimate_test(void*) {
+bool entropy_estimate_test() {
     BEGIN_TEST;
 
     MockCollector ec_1(1);

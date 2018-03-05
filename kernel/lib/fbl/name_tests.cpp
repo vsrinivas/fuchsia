@@ -37,7 +37,7 @@ bool buffer_invariants_hold(const char* buf, size_t size) {
 }
 
 template <size_t Size>
-bool empty_ctor(void* context) {
+bool empty_ctor() {
     BEGIN_TEST;
 
     // Note on |out| sizes: most tests use Size * 2 to ensure the out buffer is
@@ -55,7 +55,7 @@ bool empty_ctor(void* context) {
 }
 
 template <size_t Size>
-bool named_ctor_empty(void* context) {
+bool named_ctor_empty() {
     BEGIN_TEST;
 
     char out[Size * 2];
@@ -71,7 +71,7 @@ bool named_ctor_empty(void* context) {
 }
 
 template <size_t Size>
-bool named_ctor_small(void* context) {
+bool named_ctor_small() {
     BEGIN_TEST;
 
     char out[Size * 2];
@@ -88,7 +88,7 @@ bool named_ctor_small(void* context) {
 }
 
 template <size_t Size>
-bool named_ctor_exact(void* context) {
+bool named_ctor_exact() {
     BEGIN_TEST;
 
     char out[Size * 2];
@@ -111,7 +111,7 @@ bool named_ctor_exact(void* context) {
 }
 
 template <size_t Size>
-bool named_ctor_overflow(void* context) {
+bool named_ctor_overflow() {
     BEGIN_TEST;
 
     constexpr size_t overflow_size = 2 * Size;
@@ -136,7 +136,7 @@ bool named_ctor_overflow(void* context) {
 }
 
 template <size_t Size>
-bool zero_sized_output_buffer(void* context) {
+bool zero_sized_output_buffer() {
     BEGIN_TEST;
 
     // Neither of these bytes should be touched.
@@ -152,7 +152,7 @@ bool zero_sized_output_buffer(void* context) {
 }
 
 template <size_t NameSize, size_t OutSize>
-bool output_buffer_size(void* context) {
+bool output_buffer_size() {
     static_assert(OutSize > 0, ""); // |OutSize - 1| below would fail.
 
     BEGIN_TEST;

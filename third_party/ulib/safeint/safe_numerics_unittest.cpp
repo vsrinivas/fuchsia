@@ -157,7 +157,7 @@ static bool TestSpecializedArithmetic(
 
 // Generic arithmetic tests.
 template <typename Dst>
-static bool TestArithmetic(void* ctx) {
+static bool TestArithmetic() {
   typedef numeric_limits<Dst> DstLimits;
 
   BEGIN_TEST;
@@ -283,7 +283,7 @@ struct TestNumericConversion {};
 
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_VALUE_PRESERVING> {
-  static bool Test(void*) {
+  static bool Test() {
     typedef numeric_limits<Src> SrcLimits;
     typedef numeric_limits<Dst> DstLimits;
     BEGIN_TEST;
@@ -330,7 +330,7 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_VALUE_PRESERVING> {
 
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_NARROW> {
-  static bool Test(void*) {
+  static bool Test() {
     typedef numeric_limits<Src> SrcLimits;
     typedef numeric_limits<Dst> DstLimits;
     BEGIN_TEST;
@@ -376,7 +376,7 @@ struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_NARROW> {
 
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL> {
-  static bool Test(void*) {
+  static bool Test() {
     typedef numeric_limits<Src> SrcLimits;
     typedef numeric_limits<Dst> DstLimits;
     BEGIN_TEST;
@@ -400,7 +400,7 @@ struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_WIDEN_OR_EQUAL> {
 
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_NARROW> {
-  static bool Test(void*) {
+  static bool Test() {
     typedef numeric_limits<Src> SrcLimits;
     typedef numeric_limits<Dst> DstLimits;
     BEGIN_TEST;
@@ -442,7 +442,7 @@ struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_NARROW> {
 
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, UNSIGN_TO_SIGN_NARROW_OR_EQUAL> {
-  static bool Test(void*) {
+  static bool Test() {
     typedef numeric_limits<Src> SrcLimits;
     typedef numeric_limits<Dst> DstLimits;
     BEGIN_TEST;
@@ -514,7 +514,7 @@ TEST_NUMERIC_CONVERSION(int,    size_t, UNSIGN_TO_SIGN_NARROW_OR_EQUAL)
 UNITTEST_END_TESTCASE(SafeNumerics_SizeTOperations,
                       "sizet_ops", "SafeNumerics SizeT operations");
 
-bool SafeNumerics_CastTests(void*) {
+bool SafeNumerics_CastTests() {
 // MSVC catches and warns that we're forcing saturation in these tests.
 // Since that's intentional, we need to shut this warning off.
 #if defined(COMPILER_MSVC)
@@ -565,7 +565,7 @@ bool SafeNumerics_CastTests(void*) {
   END_TEST;
 }
 
-bool SafeNumerics_IsValueInRangeForNumericType(void*) {
+bool SafeNumerics_IsValueInRangeForNumericType() {
   BEGIN_TEST;
   EXPECT_TRUE1(IsValueInRangeForNumericType<uint32_t>(0));
   EXPECT_TRUE1(IsValueInRangeForNumericType<uint32_t>(1));
@@ -642,7 +642,7 @@ bool SafeNumerics_IsValueInRangeForNumericType(void*) {
   END_TEST;
 }
 
-bool SafeNumerics_CompoundNumericOperations(void*) {
+bool SafeNumerics_CompoundNumericOperations() {
   BEGIN_TEST;
   CheckedNumeric<int> a = 1;
   CheckedNumeric<int> b = 2;
