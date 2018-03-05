@@ -45,7 +45,8 @@ def install_cpp_prebuilt_atom(atom, metadata, output):
         destination = file['destination']
         extension = os.path.splitext(destination)[1][1:]
         if extension == 'so':
-            dest = os.path.join(output, metadata['target-arch'], destination)
+            dest = os.path.join(output, 'arch', metadata['target-arch'],
+                                destination)
             make_dir(dest)
             shutil.copyfile(file['source'], dest)
         elif extension == 'h':
