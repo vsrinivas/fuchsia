@@ -495,7 +495,7 @@ void pc_mem_init(void) {
 
             const uint64_t alloc_size = 2 * PAGE_SIZE;
             const uint64_t min_base = 2 * PAGE_SIZE;
-            if (!initialized_bootstrap16 &&
+            if (!initialized_bootstrap16 && entry->is_mem &&
                 entry->base <= 1 * MB - alloc_size && entry->size >= alloc_size) {
 
                 uint64_t adj_base = entry->base;
