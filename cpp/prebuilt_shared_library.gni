@@ -25,24 +25,28 @@ import("//build/sdk/sdk_atom.gni")
 #     only needed for runtime dependencies inherited from private dependencies.
 #     Note that these labels should represent SDK targets.
 
-template("prebuilt_shared_library") {
+# The defaults for a prebuilt_shared_library should match that of a shared_library.
+set_defaults("prebuilt_shared_library") {
+  configs = default_shared_library_configs
+}
 
+template("prebuilt_shared_library") {
   main_target_name = target_name
   manifest_target_name = "${target_name}_sdk_manifest"
   sdk_target_name = "${target_name}_sdk"
 
   shared_library(main_target_name) {
-    forward_variables_from(invoker, "*", [
-      "no_headers",
-      "include_base",
-      "runtime_deps",
-      "sdk_name",
-    ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "no_headers",
+                             "include_base",
+                             "runtime_deps",
+                             "sdk_name",
+                           ])
 
     if (defined(visibility)) {
-      visibility += [
-        ":$manifest_target_name",
-      ]
+      visibility += [ ":$manifest_target_name" ]
     }
 
     # Request that the runtime deps be written out to a file. This file will be
@@ -53,7 +57,7 @@ template("prebuilt_shared_library") {
   compute_name = false
   if (defined(invoker.sdk_name)) {
     atom_name = invoker.sdk_name
-  } else if(defined(invoker.output_name)) {
+  } else if (defined(invoker.output_name)) {
     atom_name = invoker.output_name
   } else {
     compute_name = true
@@ -88,12 +92,14 @@ template("prebuilt_shared_library") {
   }
 
   sdk_atom(manifest_target_name) {
-    forward_variables_from(invoker, "*", [
-      "headers_only",
-      "include_base",
-      "prebuilt",
-      "sdk_name",
-    ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "headers_only",
+                             "include_base",
+                             "prebuilt",
+                             "sdk_name",
+                           ])
 
     # Specify the path to the generated manifest file so that it matches the
     # label of the SDK (group) target below. This way the file will be found in
@@ -106,18 +112,12 @@ template("prebuilt_shared_library") {
     } else {
       name = atom_name
     }
+    tags = [ "type:compiled_shared" ]
 
-    tags = [
-      "type:compiled_shared",
-    ]
     if (is_fuchsia) {
-      tags += [
-        "arch:target",
-      ]
+      tags += [ "arch:target" ]
     } else {
-      tags += [
-        "arch:host",
-      ]
+      tags += [ "arch:host" ]
     }
 
     no_headers = defined(invoker.no_headers) && invoker.no_headers
@@ -158,14 +158,13 @@ template("prebuilt_shared_library") {
     ]
 
     deps = []
+
     # If a prebuilt library is only provided for packaging purposes (by not
     # exposing headers) then its dependencies need not be included in an SDK.
     if (defined(invoker.public_deps) && !no_headers) {
       foreach(dep, invoker.public_deps) {
         full_label = get_label_info(dep, "label_no_toolchain")
-        deps += [
-          "${full_label}_sdk",
-        ]
+        deps += [ "${full_label}_sdk" ]
       }
     }
 
@@ -173,13 +172,9 @@ template("prebuilt_shared_library") {
       package_deps = invoker.runtime_deps
     }
 
-    non_sdk_deps = [
-      ":$main_target_name",
-    ]
+    non_sdk_deps = [ ":$main_target_name" ]
     if (compute_name) {
-      non_sdk_deps += [
-        ":$name_target_name",
-      ]
+      non_sdk_deps += [ ":$name_target_name" ]
     }
 
     # Explicitly add non-public dependencies, in case some of the source files
