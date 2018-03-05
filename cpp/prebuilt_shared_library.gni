@@ -16,6 +16,10 @@ import("//build/sdk/sdk_atom.gni")
 #     Name of the library in the SDK.
 #     If not specified, a name is inferred from the target's label.
 #
+#   include_base (optional)
+#     Path to the root directory for includes.
+#     Defaults to ".".
+#
 #   runtime_deps (optional)
 #     List of labels representing the library's runtime dependencies. This is
 #     only needed for runtime dependencies inherited from private dependencies.
@@ -30,6 +34,7 @@ template("prebuilt_shared_library") {
   shared_library(main_target_name) {
     forward_variables_from(invoker, "*", [
       "no_headers",
+      "include_base",
       "runtime_deps",
       "sdk_name",
     ])
@@ -85,6 +90,7 @@ template("prebuilt_shared_library") {
   sdk_atom(manifest_target_name) {
     forward_variables_from(invoker, "*", [
       "headers_only",
+      "include_base",
       "prebuilt",
       "sdk_name",
     ])
@@ -121,9 +127,16 @@ template("prebuilt_shared_library") {
       foreach(source_file, invoker.sources) {
         extension = get_path_info(source_file, "extension")
         if (extension == "h") {
+          # TODO(pylaligand): change this default to "include".
+          include_base = "."
+          if (defined(invoker.include_base)) {
+            include_base = invoker.include_base
+          }
+          destination = rebase_path(source_file, include_base)
           files += [
             {
               source = source_file
+              dest = "include/$destination"
             },
           ]
         }

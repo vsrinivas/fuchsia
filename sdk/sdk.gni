@@ -41,13 +41,7 @@ template("sdk") {
   if (!is_fuchsia) {
     assert(false, "SDKs can only target Fuchsia")
   }
-  if (target_cpu == "x64") {
-    target_triple = "x86_64-fuchsia"
-  } else if (target_cpu == "arm64") {
-    target_triple = "aarch64-fuchsia"
-  } else {
-    assert(false, "Unrecognized target CPU: $target_cpu")
-  }
+  target_triple = target_cpu
   if (host_cpu == "x64") {
     host_triple_cpu = "x86_64"
   } else if (host_cpu == "arm64") {

@@ -153,7 +153,11 @@ def main():
         real_source = os.path.realpath(source)
         if not os.path.exists(real_source):
             raise Exception('Missing source file: %s' % real_source)
-        if not destination:
+        if destination:
+            if destination.find('..') != -1:
+                raise Exception('Destination for %s cannot contain "..": %s.' %
+                                (source, destination))
+        else:
             if not real_source.startswith(base):
                 raise Exception('Destination for %s must be given as it is not'
                                 ' under source directory %s' % (source, base))

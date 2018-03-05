@@ -22,7 +22,7 @@ import("//build/sdk/sdk_atom.gni")
 #
 #   include_base (optional)
 #     Path to the root directory for includes.
-#     Defaults to ".".
+#     Defaults to "include".
 
 template("sdk_library") {
   if (!defined(invoker.type)) {
@@ -97,7 +97,7 @@ template("sdk_library") {
       foreach(source_file, invoker.sources) {
         extension = get_path_info(source_file, "extension")
         if (extension == "h") {
-          include_base = "."
+          include_base = "include"
           if (defined(invoker.include_base)) {
             include_base = invoker.include_base
           }
