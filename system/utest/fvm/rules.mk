@@ -24,6 +24,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/sync \
     third_party/ulib/uboringssl \
+    system/ulib/minfs \
+    system/ulib/bitmap
 
 MODULE_LIBS := \
     system/ulib/c \

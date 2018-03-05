@@ -19,17 +19,6 @@
 #include <utime.h>
 
 #include <block-client/client.h>
-#include <fs-management/mount.h>
-#include <fs-management/ramdisk.h>
-#include <fvm/fvm.h>
-#include <gpt/gpt.h>
-#include <zircon/device/block.h>
-#include <zircon/device/device.h>
-#include <zircon/device/ramdisk.h>
-#include <zircon/device/vfs.h>
-#include <zircon/syscalls.h>
-#include <zircon/thread_annotations.h>
-#include <zx/vmo.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
@@ -38,6 +27,19 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <fs-management/mount.h>
+#include <fs-management/ramdisk.h>
+#include <fvm/fvm.h>
+#include <minfs/format.h>
+#include <gpt/gpt.h>
+#include <zircon/device/block.h>
+#include <zircon/device/device.h>
+#include <zircon/device/ramdisk.h>
+#include <zircon/device/vfs.h>
+#include <zircon/syscalls.h>
+#include <zircon/thread_annotations.h>
+#include <zx/vmo.h>
+
 #include <unittest/unittest.h>
 
 /////////////////////// Helper functions for creating FVM:
@@ -1856,11 +1858,10 @@ static bool TestCorruptMount(void) {
     // Check initial slice allocation
     query_request_t query_request;
     query_request.count = 4;
-    //TODO(planders): Use actual Minfs values instead of hardcoding these
-    query_request.vslice_start[0] = 0x10000 / kBlocksPerSlice;
-    query_request.vslice_start[1] = 0x20000 / kBlocksPerSlice;
-    query_request.vslice_start[2] = 0x30000 / kBlocksPerSlice;
-    query_request.vslice_start[3] = 0x40000 / kBlocksPerSlice;
+    query_request.vslice_start[0] = minfs::kFVMBlockInodeBmStart / kBlocksPerSlice;
+    query_request.vslice_start[1] = minfs::kFVMBlockDataBmStart / kBlocksPerSlice;
+    query_request.vslice_start[2] = minfs::kFVMBlockInodeStart / kBlocksPerSlice;
+    query_request.vslice_start[3] = minfs::kFVMBlockDataStart / kBlocksPerSlice;
 
     query_response_t query_response;
     ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
