@@ -76,7 +76,7 @@ have_x86=false
 IFS=','
 for project in $PROJECTS; do
     case "$project" in
-    *x86*) have_x86=true ;;
+    x64|*x86*) have_x86=true ;;
     *) have_arm64=true ;;
     esac
 done
@@ -132,6 +132,16 @@ done
 
 # Build kernels and bootloaders.
 for project in $PROJECTS; do
-    make_zircon_target PROJECT="$project" kernel-only
-    make_zircon_target PROJECT="$project" bootloader
+    # TODO(mcgrathr): This builds all of userland too, though the user-${ARCH}
+    # build already has all that.  It also duplicates the ulib build under
+    # a different name.  This is an incremental step towards going
+    # back to a single unified build per architecture.  Once everything
+    # is switched over, the user-* builds will go away and this whole
+    # scripts will be made simpler.
+    make_zircon_target PROJECT="$project" \
+        BUILDDIR_SUFFIX= USE_ASAN="${ASAN_ZIRCON}"
+    # Build alternate shared libraries (ASan).
+    make_zircon_target PROJECT="$project" \
+        BUILDDIR_SUFFIX=-ulib USE_ASAN="${ASAN_ULIB}" \
+        ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false
 done
