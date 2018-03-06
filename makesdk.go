@@ -87,8 +87,8 @@ func init() {
 	}
 
 	zxBuildDir := "out/build-zircon/"
-	x64ZxBuildDir := zxBuildDir + "build-user-x64/"
-	armZxBuildDir := zxBuildDir + "build-user-arm64/"
+	x64ZxBuildDir := zxBuildDir + "build-x64/"
+	armZxBuildDir := zxBuildDir + "build-arm64/"
 	x64BuildDir := "out/release-x64/"
 	armBuildDir := "out/release-arm64/"
 	x64BuildBootfsDir := "out/release-x64-bootfs/"
@@ -167,7 +167,7 @@ func init() {
 		},
 		{
 			kernelImg,
-			armBuildDir + "bootdata-blob-arm64.bin",
+			armBuildDir + "bootdata-qemu.bin",
 			"target/aarch64/bootdata-blob.bin",
 		},
 		{
@@ -183,17 +183,17 @@ func init() {
 		},
 		{
 			kernelImg,
-			x64BuildDir + "bootdata-blob-x64.bin",
+			x64BuildDir + "bootdata-pc.bin",
 			"target/x86_64/bootdata-blob.bin",
 		},
 		{
 			kernelImg,
-			x64BuildDir + "images/local-x64.esp.blk",
+			x64BuildDir + "images/local-pc.esp.blk",
 			"target/x86_64/local.esp.blk",
 		},
 		{
 			kernelImg,
-			x64BuildDir + "images/zircon-x64.vboot",
+			x64BuildDir + "images/zircon-pc.vboot",
 			"target/x86_64/zircon.vboot",
 		},
 		{
