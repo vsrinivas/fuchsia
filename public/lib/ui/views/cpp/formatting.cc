@@ -21,7 +21,12 @@ std::ostream& operator<<(std::ostream& os, const ViewInfo& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const ViewProperties& value) {
-  return os << "{view_layout=" << value.view_layout << "}";
+  return os << "{display_metrics=" << value.display_metrics
+            << ", view_layout=" << value.view_layout << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const DisplayMetrics& value) {
+  return os << "{device_pixel_ratio=" << value.device_pixel_ratio << "}";
 }
 
 std::ostream& operator<<(std::ostream& os, const ViewLayout& value) {

@@ -8,8 +8,31 @@ import "lib/ui/geometry/fidl/geometry.fidl";
 import "lib/ui/scenic/fidl/types.fidl";
 
 union Event {
+  ViewPropertiesChangedEvent view_properties_changed;
   ChildViewAttachedEvent child_view_attached;
   ChildViewUnavailableEvent child_view_unavailable;
+};
+
+// |id| identifies the View whose properties have changed.
+//
+// TODO: this corresponds to ViewListener.OnPropertiesChanged(), which has a
+// void return value to notify when the listener has responded to the event.
+// Is this still necessary?
+struct ViewPropertiesChangedEvent {
+  uint32 id;
+
+  // The ratio of the size of a logical pixel to a physical pixel assuming
+  // pixels are square.  This value changes in relation to display
+  // resolution and density.  Must be > 0.
+  float device_pixel_ratio = 1.0;
+
+  // The size of the view in logical pixels.
+  // Must be non-negative.
+  scenic.BoundingBox size;
+
+  // The inset of the view in logical pixels.
+  // Must be non-negative.
+  scenic.vec3 inset;
 };
 
 // Called when a child view is attached.
