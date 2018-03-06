@@ -212,7 +212,7 @@ private:
     // declaration. For example, if |type| refers to int32 or if it is
     // a struct pointer, this will return null. If it is a struct, it
     // will return a pointer to the declaration of the type.
-    Decl* LookupType(const raw::Type* type);
+    Decl* LookupType(const flat::Type& type);
 
     // Returns nullptr when the |identifier| cannot be resolved to a
     // Name. Otherwise it returns the declaration.

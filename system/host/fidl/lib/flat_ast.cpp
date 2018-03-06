@@ -313,9 +313,10 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
 // Library resolution is concerned with resolving identifiers to their
 // declarations, and with computing type sizes and alignments.
 
-Decl* Library::LookupType(const raw::Type* type) {
+Decl* Library::LookupType(const flat::Type& type) {
+    const raw::Type* raw_type = type.raw_type.get();
     for (;;) {
-        switch (type->kind) {
+        switch (raw_type->kind) {
         case raw::Type::Kind::String:
         case raw::Type::Kind::Handle:
         case raw::Type::Kind::Request:
@@ -323,11 +324,11 @@ Decl* Library::LookupType(const raw::Type* type) {
         case raw::Type::Kind::Vector:
             return nullptr;
         case raw::Type::Kind::Array: {
-            type = static_cast<const raw::ArrayType*>(type)->element_type.get();
+            raw_type = static_cast<const raw::ArrayType*>(raw_type)->element_type.get();
             continue;
         }
         case raw::Type::Kind::Identifier: {
-            auto identifier_type = static_cast<const raw::IdentifierType*>(type);
+            auto identifier_type = static_cast<const raw::IdentifierType*>(raw_type);
             if (identifier_type->nullability == types::Nullability::Nullable) {
                 return nullptr;
             }
@@ -356,8 +357,8 @@ Decl* Library::LookupType(const raw::CompoundIdentifier* identifier) {
 // unlike inline structs or unions, do not have dependency edges.
 std::set<Decl*> Library::DeclDependencies(Decl* decl) {
     std::set<Decl*> edges;
-    auto maybe_add_decl = [this, &edges](const std::unique_ptr<raw::Type>& type) {
-        auto type_decl = LookupType(type.get());
+    auto maybe_add_decl = [this, &edges](const flat::Type& type) {
+        auto type_decl = LookupType(type);
         if (type_decl != nullptr) {
             edges.insert(type_decl);
         }
@@ -371,12 +372,12 @@ std::set<Decl*> Library::DeclDependencies(Decl* decl) {
         for (const auto& method : interface_decl->methods) {
             if (method.maybe_request != nullptr) {
                 for (const auto& parameter : method.maybe_request->parameters) {
-                    maybe_add_decl(parameter.type.raw_type);
+                    maybe_add_decl(parameter.type);
                 }
             }
             if (method.maybe_response != nullptr) {
                 for (const auto& parameter : method.maybe_response->parameters) {
-                    maybe_add_decl(parameter.type.raw_type);
+                    maybe_add_decl(parameter.type);
                 }
             }
         }
@@ -385,14 +386,14 @@ std::set<Decl*> Library::DeclDependencies(Decl* decl) {
     case Decl::Kind::kStruct: {
         auto struct_decl = static_cast<const Struct*>(decl);
         for (const auto& member : struct_decl->members) {
-            maybe_add_decl(member.type.raw_type);
+            maybe_add_decl(member.type);
         }
         break;
     }
     case Decl::Kind::kUnion: {
         auto union_decl = static_cast<const Union*>(decl);
         for (const auto& member : union_decl->members) {
-            maybe_add_decl(member.type.raw_type);
+            maybe_add_decl(member.type);
         }
         break;
     }
