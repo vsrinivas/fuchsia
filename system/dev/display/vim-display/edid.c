@@ -255,6 +255,34 @@ static zx_status_t get_vic(vim2_display_t* display)
 
     if (display->p->timings.vactive == 2160) {
         DISP_INFO("4K Monitor Detected.\n");
+
+        if (display->p->timings.pfreq == 533250) {
+            // FIXME: 4K with reduced blanking (533.25MHz) does not work
+            DISP_INFO("4K @ 30Hz\n");
+            display->p->timings.interlace_mode =     0;
+            display->p->timings.pfreq =              (297000); // KHz
+            display->p->timings.pixel_repeat =       0;
+            display->p->timings.hactive =            3840;
+            display->p->timings.hblank =             560;
+            display->p->timings.hfront =             176;
+            display->p->timings.hsync =              88;
+            display->p->timings.htotal =             (display->p->timings.hactive) +
+                                                        (display->p->timings.hblank);
+            display->p->timings.hback =              (display->p->timings.hblank) -
+                                                        (display->p->timings.hfront +
+                                                            display->p->timings.hsync);
+            display->p->timings.hpol =               1;
+            display->p->timings.vactive =            2160;
+            display->p->timings.vblank0 =            90;
+            display->p->timings.vfront =             8;
+            display->p->timings.vsync =              10;
+            display->p->timings.vtotal =             (display->p->timings.vactive) +
+                                                        (display->p->timings.vblank0);
+            display->p->timings.vback =              (display->p->timings.vblank0) -
+                                                        (display->p->timings.vfront +
+                                                            display->p->timings.vsync);
+            display->p->timings.vpol =               1;
+        }
     }
 
     if (display->p->timings.pfreq > 500000) {
