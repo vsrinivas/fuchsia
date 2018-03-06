@@ -269,7 +269,6 @@ executable("fxl_unittests") {
     "synchronization/thread_annotations_unittest.cc",
     "synchronization/thread_checker_unittest.cc",
     "synchronization/waitable_event_unittest.cc",
-    "syslogger_init_unittest.cc",
     "tasks/one_shot_timer_unittest.cc",
     "test/fake_task_runner_unittest.cc",
     "test/timeout_tolerance.h",
@@ -279,6 +278,12 @@ executable("fxl_unittests") {
     "time/time_point_unittest.cc",
     "time/time_unittest.cc",
   ]
+
+  if (is_fuchsia) {
+    sources += [
+      "syslogger_init_unittest.cc",
+    ]
+  }
 
   deps = [
     ":fxl",
