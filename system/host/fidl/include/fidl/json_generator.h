@@ -77,6 +77,7 @@ private:
 
     void Generate(const flat::Ordinal& value);
     void Generate(const flat::Name& value);
+    void Generate(const flat::Type& value);
     void Generate(const flat::Const& value);
     void Generate(const flat::Enum& value);
     void Generate(const flat::Enum::Member& value);

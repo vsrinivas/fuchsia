@@ -371,12 +371,12 @@ std::set<Decl*> Library::DeclDependencies(Decl* decl) {
         for (const auto& method : interface_decl->methods) {
             if (method.maybe_request != nullptr) {
                 for (const auto& parameter : method.maybe_request->parameters) {
-                    maybe_add_decl(parameter.type);
+                    maybe_add_decl(parameter.type.raw_type);
                 }
             }
             if (method.maybe_response != nullptr) {
                 for (const auto& parameter : method.maybe_response->parameters) {
-                    maybe_add_decl(parameter.type);
+                    maybe_add_decl(parameter.type.raw_type);
                 }
             }
         }
@@ -385,14 +385,14 @@ std::set<Decl*> Library::DeclDependencies(Decl* decl) {
     case Decl::Kind::kStruct: {
         auto struct_decl = static_cast<const Struct*>(decl);
         for (const auto& member : struct_decl->members) {
-            maybe_add_decl(member.type);
+            maybe_add_decl(member.type.raw_type);
         }
         break;
     }
     case Decl::Kind::kUnion: {
         auto union_decl = static_cast<const Union*>(decl);
         for (const auto& member : union_decl->members) {
-            maybe_add_decl(member.type);
+            maybe_add_decl(member.type.raw_type);
         }
         break;
     }
@@ -456,7 +456,7 @@ bool Library::SortDeclarations() {
 
 bool Library::ResolveConst(Const* const_declaration) {
     TypeShape typeshape;
-    if (!ResolveType(const_declaration->type.get(), &typeshape)) {
+    if (!ResolveType(const_declaration->type.raw_type.get(), &typeshape)) {
         return false;
     }
     // TODO(TO-702) Resolve const declarations.
@@ -504,7 +504,7 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             for (auto& param : method.maybe_request->parameters) {
                 if (!request_scope.Insert(param.name.data()))
                     return false;
-                if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
+                if (!ResolveType(param.type.raw_type.get(), &param.fieldshape.Typeshape()))
                     return false;
                 request_struct.push_back(&param.fieldshape);
             }
@@ -516,7 +516,7 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             for (auto& param : method.maybe_response->parameters) {
                 if (!response_scope.Insert(param.name.data()))
                     return false;
-                if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
+                if (!ResolveType(param.type.raw_type.get(), &param.fieldshape.Typeshape()))
                     return false;
                 response_struct.push_back(&param.fieldshape);
             }
@@ -532,7 +532,7 @@ bool Library::ResolveStruct(Struct* struct_declaration) {
     for (auto& member : struct_declaration->members) {
         if (!scope.Insert(member.name.data()))
             return false;
-        if (!ResolveType(member.type.get(), &member.fieldshape.Typeshape()))
+        if (!ResolveType(member.type.raw_type.get(), &member.fieldshape.Typeshape()))
             return false;
         fidl_struct.push_back(&member.fieldshape);
     }
@@ -547,7 +547,7 @@ bool Library::ResolveUnion(Union* union_declaration) {
     for (auto& member : union_declaration->members) {
         if (!scope.Insert(member.name.data()))
             return false;
-        if (!ResolveType(member.type.get(), &member.fieldshape.Typeshape()))
+        if (!ResolveType(member.type.raw_type.get(), &member.fieldshape.Typeshape()))
             return false;
     }
 

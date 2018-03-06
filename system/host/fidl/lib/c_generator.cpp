@@ -103,9 +103,10 @@ std::string IntegerCConstantMacro(CGenerator::IntegerConstantType type) {
     }
 }
 
-std::string TypeName(const raw::Type* type) {
+std::string TypeName(const flat::Type& type) {
+    const raw::Type* raw_type = type.raw_type.get();
     for (;;) {
-        switch (type->kind) {
+        switch (raw_type->kind) {
         case raw::Type::Kind::Handle:
         case raw::Type::Kind::Request:
             return "zx_handle_t";
@@ -116,18 +117,18 @@ std::string TypeName(const raw::Type* type) {
             return "fidl_string_t";
 
         case raw::Type::Kind::Primitive: {
-            auto primitive_type = static_cast<const raw::PrimitiveType*>(type);
+            auto primitive_type = static_cast<const raw::PrimitiveType*>(raw_type);
             return PrimitiveTypeName(primitive_type);
         }
 
         case raw::Type::Kind::Array: {
-            auto array_type = static_cast<const raw::ArrayType*>(type);
-            type = array_type->element_type.get();
+            auto array_type = static_cast<const raw::ArrayType*>(raw_type);
+            raw_type = array_type->element_type.get();
             continue;
         }
 
         case raw::Type::Kind::Identifier: {
-            auto identifier_type = static_cast<const raw::IdentifierType*>(type);
+            auto identifier_type = static_cast<const raw::IdentifierType*>(raw_type);
             // TODO(TO-701) Handle longer names.
             const auto& components = identifier_type->identifier->components;
             assert(components.size() == 1);
@@ -320,9 +321,9 @@ std::vector<uint32_t> ArrayCounts(flat::Library* library, const raw::Type* type)
     }
 }
 
-CGenerator::Member CreateMember(flat::Library* library, const raw::Type* type, StringView name) {
+CGenerator::Member CreateMember(flat::Library* library, const flat::Type& type, StringView name) {
     auto type_name = TypeName(type);
-    std::vector<uint32_t> array_counts = ArrayCounts(library, type);
+    std::vector<uint32_t> array_counts = ArrayCounts(library, type.raw_type.get());
     return CGenerator::Member{type_name, name, std::move(array_counts)};
 }
 
@@ -331,7 +332,7 @@ GenerateMembers(flat::Library* library, const std::vector<flat::Union::Member>& 
     std::vector<CGenerator::Member> members;
     members.reserve(union_members.size());
     for (const auto& union_member : union_members) {
-        const raw::Type* union_member_type = union_member.type.get();
+        const flat::Type& union_member_type = union_member.type;
         auto union_member_name = ShortName(union_member.name);
         members.push_back(CreateMember(library, union_member_type, union_member_name));
     }
@@ -525,9 +526,8 @@ void CGenerator::ProduceMessageDeclaration(const NamedMessage& named_message) {
     members.reserve(1 + named_message.parameters.size());
     members.push_back(MessageHeader());
     for (const auto& parameter : named_message.parameters) {
-        const raw::Type* parameter_type = parameter.type.get();
         auto parameter_name = ShortName(parameter.name);
-        members.push_back(CreateMember(library_, parameter_type, parameter_name));
+        members.push_back(CreateMember(library_, parameter.type, parameter_name));
     }
 
     GenerateStructDeclaration(named_message.c_name, members);
@@ -548,9 +548,8 @@ void CGenerator::ProduceStructDeclaration(const NamedStruct& named_struct) {
     std::vector<CGenerator::Member> members;
     members.reserve(named_struct.struct_info.members.size());
     for (const auto& struct_member : named_struct.struct_info.members) {
-        const raw::Type* struct_member_type = struct_member.type.get();
         auto struct_member_name = ShortName(struct_member.name);
-        members.push_back(CreateMember(library_, struct_member_type, struct_member_name));
+        members.push_back(CreateMember(library_, struct_member.type, struct_member_name));
     }
 
     GenerateStructDeclaration(named_struct.c_name, members);

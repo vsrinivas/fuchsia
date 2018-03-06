@@ -84,10 +84,19 @@ struct Decl {
     const Name name;
 };
 
+struct Type {
+    explicit Type(std::unique_ptr<raw::Type> raw_type)
+        : raw_type(std::move(raw_type)) {}
+
+    std::unique_ptr<raw::Type> raw_type;
+    // Owned by the containing Library.
+    const Decl* decl = nullptr;
+};
+
 struct Const : public Decl {
     Const(Name name, std::unique_ptr<raw::Type> type, std::unique_ptr<raw::Constant> value)
         : Decl(Kind::kConst, std::move(name)), type(std::move(type)), value(std::move(value)) {}
-    std::unique_ptr<raw::Type> type;
+    Type type;
     std::unique_ptr<raw::Constant> value;
 };
 
@@ -112,7 +121,7 @@ struct Interface : public Decl {
         struct Parameter {
             Parameter(std::unique_ptr<raw::Type> type, SourceLocation name)
                 : type(std::move(type)), name(std::move(name)) {}
-            std::unique_ptr<raw::Type> type;
+            Type type;
             SourceLocation name;
             // TODO(TO-758) Compute these.
             FieldShape fieldshape;
@@ -153,7 +162,7 @@ struct Struct : public Decl {
                std::unique_ptr<raw::Constant> maybe_default_value)
             : type(std::move(type)), name(std::move(name)),
               maybe_default_value(std::move(maybe_default_value)) {}
-        std::unique_ptr<raw::Type> type;
+        Type type;
         SourceLocation name;
         std::unique_ptr<raw::Constant> maybe_default_value;
         // TODO(TO-758) Compute these.
@@ -171,7 +180,7 @@ struct Union : public Decl {
     struct Member {
         Member(std::unique_ptr<raw::Type> type, SourceLocation name)
             : type(std::move(type)), name(std::move(name)) {}
-        std::unique_ptr<raw::Type> type;
+        Type type;
         SourceLocation name;
         // TODO(TO-758) Compute these.
         FieldShape fieldshape;

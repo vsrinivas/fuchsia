@@ -435,6 +435,10 @@ void JSONGenerator::Generate(const flat::Name& value) {
     EmitString(&json_file_, LongName(value));
 }
 
+void JSONGenerator::Generate(const flat::Type& value) {
+    Generate(*value.raw_type);
+}
+
 void JSONGenerator::Generate(const flat::Const& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::First);
