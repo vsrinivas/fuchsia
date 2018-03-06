@@ -6,6 +6,8 @@
 
 #include "constants_priv.h"
 
+#define CPACR_EL1_FPEN_NO_TRAP (3 << 20)
+
 .text
 
 // Test vcpu_resume.
@@ -18,7 +20,8 @@ FUNCTION(vcpu_resume_end)
 FUNCTION(vcpu_interrupt_start)
     msr daifclr, #2
     b .
-.skip 0x278
+
+.skip 0x278 // 0x280 minus 2 instructions.
     mov x0, EXIT_TEST_ADDR
     str xzr, [x0]
 FUNCTION(vcpu_interrupt_end)
@@ -29,6 +32,28 @@ FUNCTION(vcpu_wfi_start)
     mov x0, EXIT_TEST_ADDR
     str xzr, [x0]
 FUNCTION(vcpu_wfi_end)
+
+// Test floating-point instruction handling with trapping between levels.
+FUNCTION(vcpu_fp_start)
+    // Drop to EL0.
+    mov x0, 3 /* instructions */ * 4 /* instruction length */
+    msr elr_el1, x0
+    eret
+
+    // Access vector registers.
+    mov w0, 0xff
+    dup v0.16b, w0
+
+    // Exit test.
+    mov x0, EXIT_TEST_ADDR
+    str xzr, [x0]
+
+    // Handle EL1 floating-point trap.
+.skip 0x3e4 // 0x400 minus 7 instructions.
+    mov x0, CPACR_EL1_FPEN_NO_TRAP
+    msr cpacr_el1, x0
+    eret
+FUNCTION(vcpu_fp_end)
 
 // Test vcpu_read_state and vcpu_write_state.
 FUNCTION(vcpu_read_write_state_start)

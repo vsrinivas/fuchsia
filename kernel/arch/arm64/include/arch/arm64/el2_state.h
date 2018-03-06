@@ -104,7 +104,7 @@
 typedef uint32_t __ALIGNED(8) algn32_t;
 
 struct FpState {
-    long double q[FS_NUM_REGS];
+    __uint128_t q[FS_NUM_REGS];
     algn32_t fpsr;
     algn32_t fpcr;
 };

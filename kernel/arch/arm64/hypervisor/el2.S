@@ -471,9 +471,8 @@ FUNCTION_LABEL(el2_hvc_resume)
     msr cnthctl_el2, x10
 
     // Enable floating-point traps.
-    // TODO(ZX-1685): Re-enable floating-point traps once bug is fixed.
-    // movlit x10, CPTR_EL2_RES1 | CPTR_EL2_TFP
-    // msr cptr_el2, x10
+    movlit x10, CPTR_EL2_RES1 | CPTR_EL2_TFP
+    msr cptr_el2, x10
     isb
 
     host_state stp, HS_X18
@@ -538,17 +537,18 @@ FUNCTION_LABEL(el2_guest_exit)
     eret
 
 FUNCTION_LABEL(el2_fp_resume)
-    // Load El2State from tpidr_el2.
-    mrs x9, tpidr_el2
-
     // Save x10 so we have an extra register for floating-point state swapping.
     // We're returning to the guest so we don't need the return code in [sp, 8].
     str x10, [sp, 8]
 
-    // Disable floating-point traps.
-    mov x10, CPTR_EL2_RES1
-    msr cptr_el2, x10
+    // Disable floating-point traps and reset exception syndrome.
+    mov x9, CPTR_EL2_RES1
+    msr cptr_el2, x9
+    msr esr_el2, xzr
     isb
+
+    // Load El2State from tpidr_el2.
+    mrs x9, tpidr_el2
 
     fp_state stp, HS_FP_STATE
     fp_state ldp, GS_FP_STATE
