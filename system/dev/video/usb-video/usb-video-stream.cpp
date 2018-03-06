@@ -729,7 +729,10 @@ zx_status_t UsbVideoStream::StopStreamingLocked(dispatcher::Channel* channel,
 
 zx_status_t UsbVideoStream::FrameReleaseLocked(dispatcher::Channel* channel,
                                                const camera::camera_proto::VideoBufFrameReleaseReq& req) {
-    return ZX_ERR_NOT_SUPPORTED;
+    camera::camera_proto::VideoBufFrameReleaseResp resp;
+    resp.hdr = req.hdr;
+    resp.result = video_buffer_->FrameRelease(req.data_vb_offset);
+    return channel->Write(&resp, sizeof(resp));
 }
 
 

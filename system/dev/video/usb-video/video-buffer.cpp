@@ -126,9 +126,18 @@ zx_status_t VideoBuffer::FrameCompleted() {
     return ZX_OK;
 }
 
-zx_status_t VideoBuffer::FrameRelease(FrameOffset frame_offset) {
-    // TODO(jocelyndang): implement this.
-    return ZX_ERR_NOT_SUPPORTED;
+zx_status_t VideoBuffer::FrameRelease(FrameOffset req_frame_offset) {
+    size_t i = 0;
+    for (auto& locked_offset : locked_frames_) {
+        if (req_frame_offset == locked_offset) {
+            free_frames_.push_back(locked_frames_.erase(i));
+            return ZX_OK;
+        }
+        i++;
+    }
+    zxlogf(ERROR, "frame with offset %ld not found in free frames list\n",
+           req_frame_offset);
+    return ZX_ERR_NOT_FOUND;
 }
 
 } // namespace usb
