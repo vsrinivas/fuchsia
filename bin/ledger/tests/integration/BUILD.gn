@@ -18,7 +18,6 @@ executable("integration") {
     "page_snapshot_tests.cc",
     "page_tests.cc",
     "page_watcher_tests.cc",
-    "sync_tests.cc",
     "test_utils.cc",
     "test_utils.h",
   ]

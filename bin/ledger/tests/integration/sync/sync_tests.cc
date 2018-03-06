@@ -4,14 +4,15 @@
 
 #include "garnet/lib/callback/capture.h"
 #include "lib/fsl/vmo/strings.h"
-#include "peridot/bin/ledger/tests/integration/integration_test.h"
+#include "peridot/bin/ledger/tests/integration/sync/lib.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace test {
 namespace integration {
+namespace sync {
 namespace {
 
-class SyncIntegrationTest : public IntegrationTest {
+class SyncIntegrationTest : public SyncTest {
  protected:
   ::testing::AssertionResult GetEntries(
       ledger::Page* page,
@@ -57,7 +58,7 @@ TEST_F(SyncIntegrationTest, SerialConnection) {
 
   auto instance2 = NewLedgerAppInstance();
   page = instance2->GetPage(page_id, ledger::Status::OK);
-  EXPECT_TRUE(RunLoopUntilWithTimeout([this, &page] {
+  EXPECT_TRUE(RunLoopUntil([this, &page] {
     f1dl::Array<ledger::EntryPtr> entries;
     if (!GetEntries(page.get(), &entries)) {
       return true;
@@ -94,7 +95,7 @@ TEST_F(SyncIntegrationTest, ConcurrentConnection) {
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(ledger::Status::OK, status);
 
-  EXPECT_TRUE(RunLoopUntilWithTimeout([this, &page2] {
+  EXPECT_TRUE(RunLoopUntil([this, &page2] {
     f1dl::Array<ledger::EntryPtr> entries;
     if (!GetEntries(page2.get(), &entries)) {
       return true;
@@ -116,5 +117,6 @@ TEST_F(SyncIntegrationTest, ConcurrentConnection) {
 }
 
 }  // namespace
+}  // namespace sync
 }  // namespace integration
 }  // namespace test

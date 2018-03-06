@@ -9,6 +9,7 @@ source_set("sync") {
 
   sources = [
     "convergence.cc",
+    "sync_tests.cc",
     "lib.cc",
     "lib.h",
   ]
