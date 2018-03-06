@@ -46,24 +46,7 @@ public:
         if (result != 0)
             return DRET(result);
 
-        uint64_t size;
-        magma_buffer_t batch_buffer, command_buffer;
-
-        result = magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer);
-        if (result != 0)
-            return DRET(result);
-
-        result = magma_create_command_buffer(connection_, PAGE_SIZE, &command_buffer);
-        if (result != 0)
-            return DRET(result);
-
-        EXPECT_TRUE(InitBatchBuffer(batch_buffer, size));
-        EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size));
-
-        magma_submit_command_buffer(connection_, command_buffer, context_id);
-
-        magma_release_context(connection_, context_id);
-        magma_release_buffer(connection_, batch_buffer);
+        magma_execute_immediate_commands(connection_, context_id, 0, nullptr);
 
         result = magma_get_error(connection_);
         return DRET(result);

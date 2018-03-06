@@ -14,83 +14,6 @@ namespace {
 
 class Test {
 public:
-    void TestInvalidFlags()
-    {
-        auto ctx = InitializeContext();
-        ASSERT_TRUE(ctx);
-        BatchBuffer buffer = MakeBatchBuffer();
-
-        *buffer.size_ptr = 1;
-        magma_arm_mali_atom* atom = buffer.atom_ptr;
-        atom->atom_number = 0;
-        atom->flags = 0xff;
-
-        auto command_buffer = MakeCommandBuffer(buffer.id);
-
-        magma::Status status = ctx->ExecuteCommandBuffer(std::move(command_buffer));
-        EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, status.get());
-    }
-
-    void TestEmpty()
-    {
-        auto ctx = InitializeContext();
-        ASSERT_TRUE(ctx);
-
-        BatchBuffer buffer = MakeBatchBuffer();
-        *buffer.size_ptr = 0;
-
-        auto command_buffer = MakeCommandBuffer(buffer.id);
-
-        magma::Status status = ctx->ExecuteCommandBuffer(std::move(command_buffer));
-        EXPECT_EQ(MAGMA_STATUS_OK, status.get());
-    }
-
-    void TestValid()
-    {
-        auto ctx = InitializeContext();
-        ASSERT_TRUE(ctx);
-
-        BatchBuffer buffer = MakeBatchBuffer();
-        *buffer.size_ptr = 1;
-        magma_arm_mali_atom* atom = buffer.atom_ptr;
-        atom->atom_number = 0;
-        atom->flags = 1;
-
-        auto command_buffer = MakeCommandBuffer(buffer.id);
-
-        magma::Status status = ctx->ExecuteCommandBuffer(std::move(command_buffer));
-        EXPECT_EQ(MAGMA_STATUS_OK, status.get());
-    }
-
-    void TestTooSmall()
-    {
-        auto ctx = InitializeContext();
-        ASSERT_TRUE(ctx);
-
-        BatchBuffer buffer = MakeBatchBuffer();
-        *buffer.size_ptr =
-            buffer.buffer->platform_buffer()->size() / sizeof(magma_arm_mali_atom) + 1;
-
-        auto command_buffer = MakeCommandBuffer(buffer.id);
-
-        magma::Status status = ctx->ExecuteCommandBuffer(std::move(command_buffer));
-        EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, status.get());
-    }
-
-    void TestOverflow()
-    {
-        auto ctx = InitializeContext();
-        ASSERT_TRUE(ctx);
-        BatchBuffer buffer = MakeBatchBuffer();
-
-        *buffer.size_ptr = UINT64_MAX / sizeof(magma_arm_mali_atom) + 1;
-
-        auto command_buffer = MakeCommandBuffer(buffer.id);
-
-        magma::Status status = ctx->ExecuteCommandBuffer(std::move(command_buffer));
-        EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, status.get());
-    }
-
     void TestValidImmediate()
     {
         auto ctx = InitializeContext();
@@ -136,55 +59,6 @@ public:
     }
 
 private:
-    struct BatchBuffer {
-        std::unique_ptr<MagmaSystemBuffer> buffer;
-        uint64_t id;
-        uint64_t* size_ptr;
-        magma_arm_mali_atom* atom_ptr;
-    };
-
-    std::unique_ptr<magma::PlatformBuffer> MakeCommandBuffer(uint32_t batch_buffer_id)
-    {
-        auto buffer = magma::PlatformBuffer::Create(1024, "command-buffer");
-        void* addr;
-        buffer->MapCpu(&addr);
-        magma_system_command_buffer* command_buffer =
-            static_cast<magma_system_command_buffer*>(addr);
-        command_buffer->batch_buffer_resource_index = 0;
-        command_buffer->num_resources = 1;
-        command_buffer->wait_semaphore_count = 0;
-        command_buffer->signal_semaphore_count = 0;
-        magma_system_exec_resource* exec_resources =
-            reinterpret_cast<magma_system_exec_resource*>(command_buffer + 1);
-        for (size_t i = 0; i < 10; i++) {
-            exec_resources[i].buffer_id = i;
-            exec_resources[i].num_relocations = 0;
-            exec_resources[i].offset = 0;
-            exec_resources[i].length = 0;
-        }
-        exec_resources[0].buffer_id = batch_buffer_id;
-        buffer->UnmapCpu();
-        return buffer;
-    }
-
-    BatchBuffer MakeBatchBuffer()
-    {
-        BatchBuffer buffer;
-        buffer.buffer =
-            MagmaSystemBuffer::Create(magma::PlatformBuffer::Create(100, "command-buffer-batch"));
-        DASSERT(buffer.buffer);
-        uint32_t duplicate_handle;
-        bool success = buffer.buffer->platform_buffer()->duplicate_handle(&duplicate_handle);
-        DASSERT(success);
-        success = connection_->ImportBuffer(duplicate_handle, &buffer.id);
-        DASSERT(success);
-        void* addr;
-        buffer.buffer->platform_buffer()->MapCpu(&addr);
-        buffer.size_ptr = static_cast<uint64_t*>(addr);
-        buffer.atom_ptr = reinterpret_cast<magma_arm_mali_atom*>(buffer.size_ptr + 1);
-        return buffer;
-    }
-
     MagmaSystemContext* InitializeContext()
     {
         msd_drv_ = msd_driver_unique_ptr_t(msd_driver_create(), &msd_driver_destroy);
@@ -222,12 +96,6 @@ private:
     std::shared_ptr<MagmaSystemDevice> system_dev_;
     std::unique_ptr<MagmaSystemConnection> connection_;
 };
-
-TEST(CommandBuffer, TestTooSmall) { ::Test().TestTooSmall(); }
-TEST(CommandBuffer, TestEmpty) { ::Test().TestEmpty(); }
-TEST(CommandBuffer, TestInvalidFlags) { ::Test().TestInvalidFlags(); }
-TEST(CommandBuffer, TestOverflow) { ::Test().TestOverflow(); }
-TEST(CommandBuffer, TestValid) { ::Test().TestValid(); }
 
 TEST(CommandBuffer, TestInvalidSemaphoreImmediate) { ::Test().TestInvalidSemaphoreImmediate(); }
 TEST(CommandBuffer, TestSemaphoreImmediate) { ::Test().TestSemaphoreImmediate(); }

@@ -103,61 +103,9 @@ magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer
                                                   msd_semaphore_t** wait_semaphores,
                                                   msd_semaphore_t** signal_semaphores)
 {
-    TRACE_DURATION("magma", "msd_context_execute_command_buffer");
-    auto context = static_cast<MsdArmContext*>(ctx);
-    auto connection = context->connection().lock();
-    if (!connection)
-        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Connection not valid");
 
-    std::deque<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
-    // Command buffers aren't shared cross-connection, so use the base
-    // pointer.
-    auto command_buffer = MsdArmAbiBuffer::cast(cmd_buf)->base_ptr();
-    void* command_buffer_addr;
-    if (!command_buffer->platform_buffer()->MapCpu(&command_buffer_addr))
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Can't map buffer");
-    auto* command_buffer_data = static_cast<magma_system_command_buffer*>(command_buffer_addr);
-    for (size_t i = 0; i < command_buffer_data->signal_semaphore_count; i++) {
-        semaphores.push_back(MsdArmAbiSemaphore::cast(signal_semaphores[i])->ptr());
-    }
-
-    command_buffer->platform_buffer()->UnmapCpu();
-
-    auto buffer = connection->GetBuffer(MsdArmAbiBuffer::cast(exec_resources[0]));
-    void* addr;
-    if (!buffer->platform_buffer()->MapCpu(&addr))
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Can't map buffer");
-
-    if (buffer->platform_buffer()->size() < sizeof(uint64_t)) {
-        buffer->platform_buffer()->UnmapCpu();
-        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Buffer too small");
-    }
-    // This is marked as volatile to ensure the compiler only dereferences it
-    // once, so that the client can't increase the atom count after it's been
-    // validated and have the loop dereference memory outside of the buffer.
-    volatile uint64_t* atom_count_ptr = static_cast<volatile uint64_t*>(addr);
-    uint64_t atom_count = *atom_count_ptr;
-    TRACE_DURATION("magma", "atom count", "atom_count", atom_count);
-
-    uint64_t buffer_max_entries =
-        (buffer->platform_buffer()->size() - sizeof(uint64_t)) / sizeof(magma_arm_mali_atom);
-    if (buffer_max_entries < atom_count) {
-        buffer->platform_buffer()->UnmapCpu();
-        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Buffer too small");
-    }
-
-    volatile magma_arm_mali_atom* atom =
-        reinterpret_cast<volatile magma_arm_mali_atom*>(atom_count_ptr + 1);
-    for (uint64_t i = 0; i < atom_count; i++) {
-        if (!connection->ExecuteAtom(&atom[i], &semaphores)) {
-            buffer->platform_buffer()->UnmapCpu();
-            return DRET(MAGMA_STATUS_CONTEXT_KILLED);
-        }
-    }
-
-    buffer->platform_buffer()->UnmapCpu();
-
-    return MAGMA_STATUS_OK;
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                    "msd_context_execute_command_buffer not implemented");
 }
 
 magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64_t commands_size,

@@ -74,18 +74,16 @@ public:
         uint64_t job_va;
         InitJobBuffer(job_buffer, &job_va);
 
-        magma_buffer_t batch_buffer;
+        std::vector<uint8_t> vaddr(sizeof(magma_arm_mali_atom));
 
-        ASSERT_EQ(magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer), 0);
-        void* vaddr;
-        ASSERT_EQ(0, magma_map(connection_, batch_buffer, &vaddr));
+        ASSERT_TRUE(InitBatchBuffer(vaddr.data(), vaddr.size(), job_va, how));
 
-        ASSERT_TRUE(InitBatchBuffer(vaddr, size, job_va, how));
-
-        magma_buffer_t command_buffer;
-        ASSERT_EQ(magma_create_command_buffer(connection_, PAGE_SIZE, &command_buffer), 0);
-        EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size));
-        magma_submit_command_buffer(connection_, command_buffer, context_id_);
+        magma_system_inline_command_buffer command_buffer;
+        command_buffer.data = vaddr.data();
+        command_buffer.size = vaddr.size();
+        command_buffer.semaphores = nullptr;
+        command_buffer.semaphore_count = 0;
+        magma_execute_immediate_commands(connection_, context_id_, 1, &command_buffer);
 
         int notification_fd = magma_get_notification_channel_fd(connection_);
 
@@ -113,19 +111,14 @@ public:
                 break;
         }
 
-        EXPECT_EQ(magma_unmap(connection_, batch_buffer), 0);
-
-        magma_release_buffer(connection_, batch_buffer);
         magma_release_buffer(connection_, job_buffer);
     }
 
     bool InitBatchBuffer(void* vaddr, uint64_t size, uint64_t job_va, How how)
     {
         memset(vaddr, 0, size);
-        uint64_t* atom_count = static_cast<uint64_t*>(vaddr);
-        *atom_count = 1;
 
-        magma_arm_mali_atom* atom = reinterpret_cast<magma_arm_mali_atom*>(atom_count + 1);
+        magma_arm_mali_atom* atom = static_cast<magma_arm_mali_atom*>(vaddr);
         if (how == JOB_FAULT) {
             // An unaligned job chain address should fail with error 0x40.
             atom->job_chain_addr = 1;
@@ -137,30 +130,6 @@ public:
             atom->job_chain_addr = job_va;
         }
         atom->atom_number = 1;
-
-        return true;
-    }
-
-    bool InitCommandBuffer(magma_buffer_t buffer, magma_buffer_t batch_buffer,
-                           uint64_t batch_buffer_length)
-    {
-        void* vaddr;
-        if (magma_map(connection_, buffer, &vaddr) != 0)
-            return DRETF(false, "couldn't map command buffer");
-
-        auto command_buffer = reinterpret_cast<struct magma_system_command_buffer*>(vaddr);
-        command_buffer->batch_buffer_resource_index = 0;
-        command_buffer->batch_start_offset = 0;
-        command_buffer->num_resources = 1;
-
-        auto exec_resource =
-            reinterpret_cast<struct magma_system_exec_resource*>(command_buffer + 1);
-        exec_resource->buffer_id = magma_get_buffer_id(batch_buffer);
-        exec_resource->num_relocations = 0;
-        exec_resource->offset = 0;
-        exec_resource->length = batch_buffer_length;
-
-        EXPECT_EQ(magma_unmap(connection_, buffer), 0);
 
         return true;
     }
