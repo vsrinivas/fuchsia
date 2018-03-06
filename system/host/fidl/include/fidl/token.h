@@ -28,7 +28,7 @@ public:
         : location_(location), kind_(kind) {}
 
     Token()
-        : Token(SourceLocation::Nowhere(), Token::Kind::NotAToken) {}
+        : Token(SourceLocation(), Token::Kind::NotAToken) {}
 
     static const char* Name(Kind kind) {
         switch (kind) {

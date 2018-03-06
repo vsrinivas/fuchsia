@@ -118,7 +118,7 @@ bool Library::RegisterDecl(Decl* decl) {
 }
 
 bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
-    auto name = Name(std::move(const_declaration->identifier));
+    auto name = Name(const_declaration->identifier->location);
 
     const_declarations_.push_back(std::make_unique<Const>(std::move(name), std::move(const_declaration->type),
                                                           std::move(const_declaration->constant)));
@@ -128,14 +128,14 @@ bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
 bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
     std::vector<Enum::Member> members;
     for (auto& member : enum_declaration->members) {
-        auto name = Name(std::move(member->identifier));
+        auto name = Name(member->identifier->location);
         auto value = std::move(member->value);
         members.emplace_back(std::move(name), std::move(value));
     }
     std::unique_ptr<raw::PrimitiveType> type = std::move(enum_declaration->maybe_subtype);
     if (!type)
         type = std::make_unique<raw::PrimitiveType>(types::PrimitiveSubtype::Uint32);
-    auto name = Name(std::move(enum_declaration->identifier));
+    auto name = Name(enum_declaration->identifier->location);
 
     enum_declarations_.push_back(std::make_unique<Enum>(std::move(name), std::move(type), std::move(members)));
     return RegisterDecl(enum_declarations_.back().get());
@@ -143,7 +143,7 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
 
 bool Library::ConsumeInterfaceDeclaration(
     std::unique_ptr<raw::InterfaceDeclaration> interface_declaration) {
-    auto name = Name(std::move(interface_declaration->identifier));
+    auto name = Name(interface_declaration->identifier->location);
 
     for (auto& const_member : interface_declaration->const_members)
         if (!ConsumeConstDeclaration(std::move(const_member)))
@@ -162,13 +162,13 @@ bool Library::ConsumeInterfaceDeclaration(
             return false;
         Ordinal ordinal(std::move(ordinal_literal), value);
 
-        auto method_name = std::move(method->identifier);
+        SourceLocation method_name = method->identifier->location;
 
         std::unique_ptr<Interface::Method::Message> maybe_request;
         if (method->maybe_request != nullptr) {
             maybe_request.reset(new Interface::Method::Message());
             for (auto& parameter : method->maybe_request->parameter_list) {
-                auto parameter_name = std::move(parameter->identifier);
+                SourceLocation parameter_name = parameter->identifier->location;
                 maybe_request->parameters.emplace_back(std::move(parameter->type), std::move(parameter_name));
             }
         }
@@ -177,8 +177,8 @@ bool Library::ConsumeInterfaceDeclaration(
         if (method->maybe_response != nullptr) {
             maybe_response.reset(new Interface::Method::Message());
             for (auto& parameter : method->maybe_response->parameter_list) {
-                auto parameter_name = std::move(parameter->identifier);
-                maybe_response->parameters.emplace_back(std::move(parameter->type), std::move(parameter_name));
+                SourceLocation parameter_name = parameter->identifier->location;
+                maybe_response->parameters.emplace_back(std::move(parameter->type), parameter_name);
             }
         }
 
@@ -193,7 +193,7 @@ bool Library::ConsumeInterfaceDeclaration(
 }
 
 bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
-    auto name = Name(std::move(struct_declaration->identifier));
+    auto name = Name(struct_declaration->identifier->location);
 
     for (auto& const_member : struct_declaration->const_members)
         if (!ConsumeConstDeclaration(std::move(const_member)))
@@ -204,8 +204,8 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
 
     std::vector<Struct::Member> members;
     for (auto& member : struct_declaration->members) {
-        auto name = std::move(member->identifier);
-        members.emplace_back(std::move(member->type), std::move(name),
+        members.emplace_back(std::move(member->type),
+                             member->identifier->location,
                              std::move(member->maybe_default_value));
     }
 
@@ -216,10 +216,9 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
 bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
     std::vector<Union::Member> members;
     for (auto& member : union_declaration->members) {
-        auto name = std::move(member->identifier);
-        members.emplace_back(std::move(member->type), std::move(name));
+        members.emplace_back(std::move(member->type), member->identifier->location);
     }
-    auto name = Name(std::move(union_declaration->identifier));
+    auto name = Name(union_declaration->identifier->location);
 
     union_declarations_.push_back(std::make_unique<Union>(std::move(name), std::move(members)));
     return RegisterDecl(union_declarations_.back().get());
@@ -230,16 +229,16 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     if (file->identifier->components.size() != 1) {
         return false;
     }
-    auto library_name = std::move(file->identifier->components[0]);
+    auto library_name = file->identifier->components[0]->location;
 
-    if (library_name_ == nullptr) {
-        library_name_ = std::move(library_name);
-    } else {
-        StringView current_name = library_name_->location.data();
-        StringView new_name = library_name->location.data();
+    if (library_name_.valid()) {
+        StringView current_name = library_name_.data();
+        StringView new_name = library_name.data();
         if (current_name != new_name) {
             return false;
         }
+    } else {
+        library_name_ = library_name;
     }
 
     auto using_list = std::move(file->using_list);
@@ -312,7 +311,7 @@ Decl* Library::LookupType(const raw::Type* type) {
 Decl* Library::LookupType(const raw::CompoundIdentifier* identifier) {
     // TODO(TO-701) Properly handle using aliases or module imports,
     // which requires actually walking scopes.
-    Name name(std::make_unique<raw::Identifier>(identifier->components[0]->location));
+    Name name(identifier->components[0]->location);
     auto iter = declarations_.find(&name);
     if (iter == declarations_.end()) {
         return nullptr;
@@ -467,7 +466,7 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
     Scope<StringView> name_scope;
     Scope<uint32_t> ordinal_scope;
     for (auto& method : interface_declaration->methods) {
-        if (!name_scope.Insert(method.name->location.data()))
+        if (!name_scope.Insert(method.name.data()))
             return false;
         if (!ordinal_scope.Insert(method.ordinal.Value()))
             return false;
@@ -475,7 +474,7 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             Scope<StringView> request_scope;
             std::vector<FieldShape*> request_struct;
             for (auto& param : method.maybe_request->parameters) {
-                if (!request_scope.Insert(param.name->location.data()))
+                if (!request_scope.Insert(param.name.data()))
                     return false;
                 if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
@@ -487,7 +486,7 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             Scope<StringView> response_scope;
             std::vector<FieldShape*> response_struct;
             for (auto& param : method.maybe_response->parameters) {
-                if (!response_scope.Insert(param.name->location.data()))
+                if (!response_scope.Insert(param.name.data()))
                     return false;
                 if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
@@ -503,7 +502,7 @@ bool Library::ResolveStruct(Struct* struct_declaration) {
     Scope<StringView> scope;
     std::vector<FieldShape*> fidl_struct;
     for (auto& member : struct_declaration->members) {
-        if (!scope.Insert(member.name->location.data()))
+        if (!scope.Insert(member.name.data()))
             return false;
         if (!ResolveType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
@@ -518,7 +517,7 @@ bool Library::ResolveStruct(Struct* struct_declaration) {
 bool Library::ResolveUnion(Union* union_declaration) {
     Scope<StringView> scope;
     for (auto& member : union_declaration->members) {
-        if (!scope.Insert(member.name->location.data()))
+        if (!scope.Insert(member.name.data()))
             return false;
         if (!ResolveType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;

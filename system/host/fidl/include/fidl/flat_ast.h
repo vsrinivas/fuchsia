@@ -32,30 +32,29 @@ private:
 
 // TODO(TO-701) Handle multipart names.
 struct Name {
-    Name()
-        : name_(nullptr) {}
+    Name() : name_(SourceLocation()) {}
 
-    explicit Name(std::unique_ptr<raw::Identifier> name)
-        : name_(std::move(name)) {}
+    explicit Name(SourceLocation name)
+        : name_(name) {}
 
     Name(Name&&) = default;
     Name& operator=(Name&&) = default;
 
-    const raw::Identifier* get() const { return name_.get(); }
+    StringView data() const { return name_.data(); }
 
     bool operator==(const Name& other) const {
-        return name_->location.data() == other.name_->location.data();
+        return name_.data() == other.name_.data();
     }
     bool operator!=(const Name& other) const {
-        return name_->location.data() != other.name_->location.data();
+        return name_.data() != other.name_.data();
     }
 
     bool operator<(const Name& other) const {
-        return name_->location.data() < other.name_->location.data();
+        return name_.data() < other.name_.data();
     }
 
 private:
-    std::unique_ptr<raw::Identifier> name_;
+    SourceLocation name_;
 };
 
 struct NamePtrCompare {
@@ -111,10 +110,10 @@ struct Enum : public Decl {
 struct Interface : public Decl {
     struct Method {
         struct Parameter {
-            Parameter(std::unique_ptr<raw::Type> type, std::unique_ptr<raw::Identifier> name)
+            Parameter(std::unique_ptr<raw::Type> type, SourceLocation name)
                 : type(std::move(type)), name(std::move(name)) {}
             std::unique_ptr<raw::Type> type;
-            std::unique_ptr<raw::Identifier> name;
+            SourceLocation name;
             // TODO(TO-758) Compute these.
             FieldShape fieldshape;
         };
@@ -127,7 +126,7 @@ struct Interface : public Decl {
         Method(Method&&) = default;
         Method& operator=(Method&&) = default;
 
-        Method(Ordinal ordinal, std::unique_ptr<raw::Identifier> name,
+        Method(Ordinal ordinal, SourceLocation name,
                std::unique_ptr<Message> maybe_request,
                std::unique_ptr<Message> maybe_response)
             : ordinal(std::move(ordinal)), name(std::move(name)),
@@ -137,7 +136,7 @@ struct Interface : public Decl {
         }
 
         Ordinal ordinal;
-        std::unique_ptr<raw::Identifier> name;
+        SourceLocation name;
         std::unique_ptr<Message> maybe_request;
         std::unique_ptr<Message> maybe_response;
     };
@@ -150,12 +149,12 @@ struct Interface : public Decl {
 
 struct Struct : public Decl {
     struct Member {
-        Member(std::unique_ptr<raw::Type> type, std::unique_ptr<raw::Identifier> name,
+        Member(std::unique_ptr<raw::Type> type, SourceLocation name,
                std::unique_ptr<raw::Constant> maybe_default_value)
             : type(std::move(type)), name(std::move(name)),
               maybe_default_value(std::move(maybe_default_value)) {}
         std::unique_ptr<raw::Type> type;
-        std::unique_ptr<raw::Identifier> name;
+        SourceLocation name;
         std::unique_ptr<raw::Constant> maybe_default_value;
         // TODO(TO-758) Compute these.
         FieldShape fieldshape;
@@ -170,10 +169,10 @@ struct Struct : public Decl {
 
 struct Union : public Decl {
     struct Member {
-        Member(std::unique_ptr<raw::Type> type, std::unique_ptr<raw::Identifier> name)
+        Member(std::unique_ptr<raw::Type> type, SourceLocation name)
             : type(std::move(type)), name(std::move(name)) {}
         std::unique_ptr<raw::Type> type;
-        std::unique_ptr<raw::Identifier> name;
+        SourceLocation name;
         // TODO(TO-758) Compute these.
         FieldShape fieldshape;
     };
@@ -301,7 +300,7 @@ public:
         }
     }
 
-    std::unique_ptr<raw::Identifier> library_name_;
+    SourceLocation library_name_;
 
     std::vector<std::unique_ptr<Const>> const_declarations_;
     std::vector<std::unique_ptr<Enum>> enum_declarations_;

@@ -14,18 +14,18 @@ namespace {
 
 constexpr const char* kIndent = "    ";
 
-std::string ShortName(const std::unique_ptr<raw::Identifier>& name) {
+std::string ShortName(SourceLocation name) {
     // TODO(TO-704) C name escaping and ergonomics.
-    return name->location.data();
+    return name.data();
 }
 
 std::string LongName(const flat::Name& name) {
     // TODO(TO-701) Handle complex names.
-    return name.get()->location.data();
+    return name.data();
 }
 
 std::string UnionTagName(StringView union_name,
-                         const std::unique_ptr<raw::Identifier>& member_name) {
+                         SourceLocation member_name) {
     return std::string(union_name) + "_tag_" + ShortName(member_name);
 }
 

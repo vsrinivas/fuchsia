@@ -12,7 +12,7 @@ constexpr const char* kIndent = "  ";
 
 std::string LongName(const flat::Name& name) {
     // TODO(TO-701) Handle complex names.
-    return name.get()->location.data();
+    return name.data();
 }
 
 std::string PrimitiveSubtypeName(types::PrimitiveSubtype subtype) {
@@ -288,6 +288,10 @@ void JSONGenerator::Generate(bool value) {
 
 void JSONGenerator::Generate(StringView value) {
     EmitString(&json_file_, value);
+}
+
+void JSONGenerator::Generate(SourceLocation value) {
+    EmitString(&json_file_, value.data());
 }
 
 void JSONGenerator::Generate(uint64_t value) {
