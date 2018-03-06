@@ -94,23 +94,25 @@ void InfraBss::HandleClientStateChange(const common::MacAddr& client, RemoteClie
     }
 }
 
-void InfraBss::HandleClientPowerSaveMode(const common::MacAddr& client, bool dozing) {
+void InfraBss::HandleClientBuChange(const common::MacAddr& client, size_t bu_count) {
     debugfn();
-    ZX_DEBUG_ASSERT(clients_.Has(client));
-    if (!clients_.Has(client)) { return; }
-
-    if (dozing) {
-        dozing_clients_.insert(client);
-    } else {
-        dozing_clients_.erase(client);
+    auto aid = clients_.GetClientAid(client);
+    ZX_DEBUG_ASSERT(aid != kUnknownAid);
+    if (aid == kUnknownAid) {
+        errorf("[infra-bss] received traffic indication from client with unknown AID: %s\n",
+               client.ToString().c_str());
+        return;
     }
+
+    // TODO(hahnr): Track client traffic in TIM.
 }
 
 zx_status_t InfraBss::AssignAid(const common::MacAddr& client, aid_t* out_aid) {
     debugfn();
     auto status = clients_.AssignAid(client, out_aid);
     if (status != ZX_OK) {
-        errorf("[infra-bss] couldn't assign AID to client %s: %d\n", MACSTR(client), status);
+        errorf("[infra-bss] couldn't assign AID to client %s: %d\n", client.ToString().c_str(),
+               status);
         return status;
     }
     return ZX_OK;

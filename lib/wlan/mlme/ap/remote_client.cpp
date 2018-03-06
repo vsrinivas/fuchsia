@@ -378,8 +378,6 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
             // TODO(hahnr): Client became awake.
             // Send all remaining buffered frames (U-APSD).
         }
-
-        client_->HandlePowerSaveModeChange(dozing_);
     }
 }
 
@@ -662,6 +660,8 @@ zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<Ethernet
     memcpy(packet->mut_data(), frame.hdr, frame_len);
 
     ps_pkt_queue_.Enqueue(fbl::move(packet));
+    ReportBuChange(ps_pkt_queue_.size());
+
     return ZX_OK;
 }
 
@@ -670,6 +670,8 @@ zx_status_t RemoteClient::DequeueEthernetFrame(fbl::unique_ptr<Packet>* out_pack
     if (ps_pkt_queue_.size() == 0) { return ZX_ERR_NO_RESOURCES; }
 
     *out_packet = ps_pkt_queue_.Dequeue();
+    ReportBuChange(ps_pkt_queue_.size());
+
     return ZX_OK;
 }
 
@@ -713,8 +715,8 @@ zx_status_t RemoteClient::ConvertEthernetToDataFrame(const ImmutableBaseFrame<Et
     return ZX_OK;
 }
 
-void RemoteClient::HandlePowerSaveModeChange(bool dozing) {
-    if (listener_ != nullptr) { listener_->HandleClientPowerSaveMode(addr_, dozing); }
+void RemoteClient::ReportBuChange(size_t bu_count) {
+    if (listener_ != nullptr) { listener_->HandleClientBuChange(addr_, bu_count); }
 }
 
 #undef LOG_STATE_TRANSITION

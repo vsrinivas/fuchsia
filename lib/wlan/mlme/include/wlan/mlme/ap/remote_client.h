@@ -30,7 +30,7 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     struct Listener {
         virtual void HandleClientStateChange(const common::MacAddr& client, StateId from,
                                              StateId to) = 0;
-        virtual void HandleClientPowerSaveMode(const common::MacAddr& client, bool dozing) = 0;
+        virtual void HandleClientBuChange(const common::MacAddr& client, size_t bu_count) = 0;
     };
 
     RemoteClient(DeviceInterface* device, fbl::unique_ptr<Timer> timer, BssInterface* bss,
@@ -62,7 +62,7 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     bool HasBufferedFrames() const;
     zx_status_t ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
                                            fbl::unique_ptr<Packet>* out_frame);
-    void HandlePowerSaveModeChange(bool dozing);
+    void ReportBuChange(size_t bu_count);
 
     // Note: There can only ever be one timer running at a time.
     // TODO(hahnr): Evolve this to support multiple timeouts at the same time.

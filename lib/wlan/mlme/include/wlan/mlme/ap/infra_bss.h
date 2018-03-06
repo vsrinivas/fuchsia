@@ -44,8 +44,6 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     seq_t NextSeq(const DataFrameHeader& hdr) override;
 
    private:
-    using ClientSet = std::unordered_set<common::MacAddr, common::MacAddrHasher>;
-
     // FrameHandler implementation
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
@@ -57,7 +55,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     // RemoteClient::Listener implementation
     void HandleClientStateChange(const common::MacAddr& client, RemoteClient::StateId from,
                                  RemoteClient::StateId to) override;
-    void HandleClientPowerSaveMode(const common::MacAddr& client, bool dozing) override;
+    void HandleClientBuChange(const common::MacAddr& client, size_t bu_count) override;
 
     zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
                                   fbl::unique_ptr<Timer>* out_timer);
@@ -66,7 +64,6 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     DeviceInterface* device_;
     bss::timestamp_t started_at_;
     BssClientMap clients_;
-    ClientSet dozing_clients_;
     Sequence seq_;
 };
 
