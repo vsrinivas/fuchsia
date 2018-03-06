@@ -23,7 +23,7 @@ extend to allow you to build what you need.
 ## TL;DR
 
 Read this all before? Here are the common case commands
-1. `fx set x86`
+1. `fx set x64`
 2. `fx full-build`
 3. Make the install media
     * [[ insert USB drive into host ]]
@@ -37,7 +37,7 @@ Read this all before? Here are the common case commands
 Detailed instructions for obtaining and building Fuchsia are available from the
 [Getting Started](getting_started.md) guide, but we'll assume here that the
 target system is x86-based and that you want to build a complete system. To
-configure our build for this we can run `fx set x86` and then build with
+configure our build for this we can run `fx set x64` and then build with
 `fx full-build`.
 
 ## Creating install media

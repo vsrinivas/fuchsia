@@ -117,13 +117,13 @@ $ dot -Tpng tree.dot -o tree.png
 ### Inspecting the content of a GN target
 
 ```bash
-$ buildtools/gn desc out/debug-x86 //path/to/my:target
+$ buildtools/gn desc out/debug-x64 //path/to/my:target
 ```
 
 ### Finding references to a GN target
 
 ```bash
-$ buildtools/gn refs out/debug-x86 //path/to/my:target
+$ buildtools/gn refs out/debug-x64 //path/to/my:target
 ```
 
 ### Referencing targets for the build host
@@ -146,7 +146,7 @@ file:
 If a target is defined in a GN build file as `//foo/bar/blah:dash`, that target
 (and its dependencies) can be built with:
 ```bash
-$ buildtools/ninja -C out/debug-x86 -j64 foo/bar/blah:dash
+$ buildtools/ninja -C out/debug-x64 -j64 foo/bar/blah:dash
 ```
 Note that this only works for targets in the default toolchain.
 
@@ -161,7 +161,7 @@ $ buildtools/gn help ninja_rules
 You can also browse the set of Ninja targets currently defined in your output
 directory with:
 ```bash
-$ buildtools/ninja -C out/debug-x86 -t browse
+$ buildtools/ninja -C out/debug-x64 -t browse
 ```
 Note that the presence of a Ninja target does not mean it will be built - for
 that it needs to depend on the “default” target.

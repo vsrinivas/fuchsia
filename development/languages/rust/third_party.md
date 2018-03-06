@@ -28,7 +28,7 @@ a new crate, you'll need to either run `update_rust_crates.sh` or temporarily
 pass use_frozen_with_cargo=false to gn. If you are using the fx scripts,
 you can do so as follows:
 
-    ./scripts/fx set x86 --release --packages garnet/packages/default --args "use_frozen_with_cargo=false"
+    ./scripts/fx set x64 --release --packages garnet/packages/default --args "use_frozen_with_cargo=false"
 
 Running `update_rust_crates.sh` to solve this problem will have the side effect
 of updating all the existing crates in `third_party/rust-crates`, which may not be desired.

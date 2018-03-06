@@ -67,13 +67,13 @@ the `fx` command should already be in your path. If not, the command is also
 available as `scripts/fx`.
 
 ```
-fx set x86
+fx set x64
 fx full-build
 ```
 
 The first command selects the build configuration you wish to build and
 generates the build system itself in an output directory
-(e.g., `out/debug-x86`).
+(e.g., `out/debug-x64`).
 
 The second command actually executes the build, transforming the source code in
 build products. If you modify the source tree, you can do an incremental build
@@ -83,15 +83,15 @@ Alternatively, you can use the [underlying build system directly](build_system.m
 
 #### [optional] Customize Build Environment
 
-By default you will get a x86 debug build. You can skip this section unless
+By default you will get a x64 debug build. You can skip this section unless
 you want something else.
 
 Run `fset-usage` to see a list of build options. Some examples:
 
 ```
-fx set x86                 # x86 debug build
+fx set x64                 # x64 debug build
 fx set arm64               # arm64 debug build
-fx set x86 --release       # x86 release build
+fx set x64 --release       # x64 release build
 ```
 
 #### [optional] Accelerate builds with `ccache` and `goma`

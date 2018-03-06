@@ -27,7 +27,7 @@ Here's an example running `gen.py` directly:
 This does the same thing using the `fx set` tool:
 
 ```sh
-fx set x86 --variant host_asan --variant asan=cat,ledger
+fx set x64 --variant host_asan --variant asan=cat,ledger
 ```
 
  1. The first switch applies the `host_asan` matching rule, which enables
@@ -53,9 +53,9 @@ set the `select_variant` GN build argument directly.
    approximate what you want and then edit the `select_variant` value `gen.py`
    produces:
    * You can just edit the `args.gn` file in the GN output directory
-     (e.g. `out/debug-x86/args.gn`) and the next `ninja` run (aka `fx build`)
+     (e.g. `out/debug-x64/args.gn`) and the next `ninja` run (aka `fx build`)
      will re-run `gn gen` with those changes.
-   * You can use the command `./buildtools gn args out/debug-x86`, which
+   * You can use the command `./buildtools gn args out/debug-x64`, which
      will run your `$EDITOR` on the `args.gn` file and then do `gn gen`
      immediately so you can see any errors in your GN syntax.
 
@@ -71,7 +71,7 @@ also runs GN this way:
 You can also use the `fx set` tool to run `gen.py` for you:
 
 ```sh
-fx set x86 --help-args select_variant
+fx set x64 --help-args select_variant
 ```
 
 If you combine this with one or more `--variant` switches, GN will show you
@@ -84,7 +84,7 @@ the actual value of `select_variant` that `gen.py` chose.  For example:
 or:
 
 ```sh
-fx set x86 --help-args select_variant --variant asan=cat,ledger
+fx set x64 --help-args select_variant --variant asan=cat,ledger
 ```
 
 prints out:
