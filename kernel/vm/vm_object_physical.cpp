@@ -168,12 +168,12 @@ zx_status_t VmObjectPhysical::GetMappingCachePolicy(uint32_t* cache_policy) {
 }
 
 zx_status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy) {
-    AutoLock l(&lock_);
-
     // Is it a valid cache flag?
-    if (cache_policy & ~ARCH_MMU_FLAG_CACHE_MASK) {
+    if (cache_policy & ~ZX_CACHE_POLICY_MASK) {
         return ZX_ERR_INVALID_ARGS;
     }
+
+    AutoLock l(&lock_);
 
     // If the cache policy is already configured on this VMO and matches
     // the requested policy then this is a no-op. This is a common practice

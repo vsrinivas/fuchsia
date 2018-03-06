@@ -42,15 +42,6 @@
 
 #define LOCAL_TRACE 0
 
-static_assert(ZX_CACHE_POLICY_CACHED == ARCH_MMU_FLAG_CACHED,
-              "Cache policy constant mismatch - CACHED");
-static_assert(ZX_CACHE_POLICY_UNCACHED == ARCH_MMU_FLAG_UNCACHED,
-              "Cache policy constant mismatch - UNCACHED");
-static_assert(ZX_CACHE_POLICY_UNCACHED_DEVICE == ARCH_MMU_FLAG_UNCACHED_DEVICE,
-              "Cache policy constant mismatch - UNCACHED_DEVICE");
-static_assert(ZX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
-              "Cache policy constant mismatch - WRITE_COMBINING");
-
 zx_status_t sys_interrupt_create(zx_handle_t hrsrc, uint32_t options,
                                  user_out_handle* out_handle) {
     LTRACEF("options 0x%x\n", options);

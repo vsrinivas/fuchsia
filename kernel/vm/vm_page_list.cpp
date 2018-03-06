@@ -170,3 +170,7 @@ size_t VmPageList::FreeAllPages() {
 
     return count;
 }
+
+bool VmPageList::IsEmpty() {
+    return list_.is_empty();
+}

@@ -47,6 +47,8 @@ value is returned.
 
 **ZX_ERR_OUT_OF_RANGE**  *offset* starts at or beyond the end of the VMO.
 
+**ZX_ERR_BAD_STATE**  VMO has been marked uncached and is not directly writable.
+
 ## SEE ALSO
 
 [vmo_create](vmo_create.md),
@@ -55,3 +57,4 @@ value is returned.
 [vmo_get_size](vmo_get_size.md),
 [vmo_set_size](vmo_set_size.md),
 [vmo_op_range](vmo_op_range.md).
+[vmo_set_cache_policy](vmo_set_cache_policy.md)

@@ -23,6 +23,17 @@
 
 #define LOCAL_TRACE 0
 
+static_assert(ZX_CACHE_POLICY_CACHED == ARCH_MMU_FLAG_CACHED,
+              "Cache policy constant mismatch - CACHED");
+static_assert(ZX_CACHE_POLICY_UNCACHED == ARCH_MMU_FLAG_UNCACHED,
+              "Cache policy constant mismatch - UNCACHED");
+static_assert(ZX_CACHE_POLICY_UNCACHED_DEVICE == ARCH_MMU_FLAG_UNCACHED_DEVICE,
+              "Cache policy constant mismatch - UNCACHED_DEVICE");
+static_assert(ZX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
+              "Cache policy constant mismatch - WRITE_COMBINING");
+static_assert(ZX_CACHE_POLICY_MASK == ARCH_MMU_FLAG_CACHE_MASK,
+              "Cache policy constant mismatch - CACHE_MASK");
+
 zx_status_t sys_vmo_create(uint64_t size, uint32_t options,
                            user_out_handle* out) {
     LTRACEF("size %#" PRIx64 "\n", size);

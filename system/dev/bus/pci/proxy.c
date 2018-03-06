@@ -200,7 +200,7 @@ static zx_status_t pci_op_get_bar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_
 // Map a pci device's bar into the process's address space
 static zx_status_t pci_op_map_bar(void* ctx,
                                   uint32_t bar_id,
-                                  zx_cache_policy_t cache_policy,
+                                  uint32_t cache_policy,
                                   void** vaddr,
                                   size_t* size,
                                   zx_handle_t* out_handle) {

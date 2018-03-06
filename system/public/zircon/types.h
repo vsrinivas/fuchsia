@@ -306,14 +306,11 @@ typedef uint64_t zx_off_t;
 #define ZX_SOCKET_CONTROL                   (1u << 2)
 
 // Flags which can be used to to control cache policy for APIs which map memory.
-typedef enum {
-    ZX_CACHE_POLICY_CACHED          = 0,
-    ZX_CACHE_POLICY_UNCACHED        = 1,
-    ZX_CACHE_POLICY_UNCACHED_DEVICE = 2,
-    ZX_CACHE_POLICY_WRITE_COMBINING = 3,
-
-    ZX_CACHE_POLICY_MASK            = 0x3,
-} zx_cache_policy_t;
+#define ZX_CACHE_POLICY_CACHED              0u
+#define ZX_CACHE_POLICY_UNCACHED            1u
+#define ZX_CACHE_POLICY_UNCACHED_DEVICE     2u
+#define ZX_CACHE_POLICY_WRITE_COMBINING     3u
+#define ZX_CACHE_POLICY_MASK                3u
 
 // Flag bits for zx_cache_flush.
 #define ZX_CACHE_FLUSH_INSN         (1u << 0)

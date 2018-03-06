@@ -115,6 +115,7 @@ zx_status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_na
     if (status != ZX_OK)
         return status;
 
+    // allocate the clone up front outside of our lock
     fbl::AllocChecker ac;
     auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(pmm_alloc_flags_, size, fbl::WrapRefPtr(this)));
     if (!ac.check())
@@ -122,8 +123,14 @@ zx_status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_na
 
     AutoLock a(&lock_);
 
-    // add it as a child to us
+    // add the new VMO as a child before we do anything, since its
+    // dtor expects to find it in its parent's child list
     AddChildLocked(vmo.get());
+
+    // check that we're not uncached in some way
+    if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
+        return ZX_ERR_BAD_STATE;
+    }
 
     // set the offset with the parent
     status = vmo->SetParentOffsetLocked(offset);
@@ -399,6 +406,13 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
 
     // TODO: remove once pmm returns zeroed pages
     ZeroPage(pa);
+
+    // if ARM and not fully cached, clean/invalidate the page after zeroing it
+#if ARCH_ARM64
+    if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
+        arch_clean_invalidate_cache_range((addr_t)paddr_to_physmap(pa), PAGE_SIZE);
+    }
+#endif
 
     zx_status_t status = AddPageLocked(p, offset);
     DEBUG_ASSERT(status == ZX_OK);
@@ -835,6 +849,10 @@ zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t
 
     AutoLock a(&lock_);
 
+    // are we uncached? abort in this case
+    if (cache_policy_ != ARCH_MMU_FLAG_CACHED)
+        return  ZX_ERR_BAD_STATE;
+
     // trim the size
     uint64_t new_len;
     if (!TrimRange(offset, len, size_, &new_len))
@@ -1104,6 +1122,45 @@ zx_status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t l
 
         op_start_offset += cache_op_len;
     }
+
+    return ZX_OK;
+}
+
+zx_status_t VmObjectPaged::GetMappingCachePolicy(uint32_t* cache_policy) {
+    AutoLock lock(&lock_);
+
+    *cache_policy = cache_policy_;
+
+    return ZX_OK;
+}
+
+zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
+    // Is it a valid cache flag?
+    if (cache_policy & ~ZX_CACHE_POLICY_MASK) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    AutoLock lock(&lock_);
+
+    // conditions for allowing the cache policy to be set:
+    // 1) vmo has no pages committed currently
+    // 2) vmo has no mappings
+    // 3) vmo has no clones
+    // 4) vmo is not a clone
+    if (!page_list_.IsEmpty()) {
+        return ZX_ERR_BAD_STATE;
+    }
+    if (!mapping_list_.is_empty()) {
+        return ZX_ERR_BAD_STATE;
+    }
+    if (!children_list_.is_empty()) {
+        return ZX_ERR_BAD_STATE;
+    }
+    if (parent_) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    cache_policy_ = cache_policy;
 
     return ZX_OK;
 }

@@ -1140,14 +1140,116 @@ bool vmo_cache_test() {
     BEGIN_TEST;
 
     zx_handle_t vmo;
-    const size_t size = PAGE_SIZE * 4;
+    const size_t size = PAGE_SIZE;
 
-    // The objects returned by zx_vmo_create() are VmObjectPaged objects which
-    // should not support these syscalls.
     EXPECT_EQ(ZX_OK, zx_vmo_create(size, 0, &vmo), "creation for cache_policy");
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED),
-              "attempt set cache");
+
+    // clean vmo can have all valid cache policies set
+    EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
+    EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED));
+    EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED_DEVICE));
+    EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_WRITE_COMBINING));
+
+    // bad cache policy
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_MASK + 1));
+
+    // commit a page, make sure the policy doesn't set
+    EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, 0, size, nullptr, 0));
+    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
+    EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, size, nullptr, 0));
+    EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
+
+    // map the vmo, make sure policy doesn't set
+    uintptr_t ptr;
+    EXPECT_EQ(ZX_OK, zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size, ZX_VM_FLAG_PERM_READ, &ptr));
+    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
+    EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), ptr, size));
+    EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
+
+    // clone the vmo, make sure policy doesn't set
+    zx_handle_t clone;
+    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone));
+    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
+    EXPECT_EQ(ZX_OK, zx_handle_close(clone));
+    EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
+
+    // clone the vmo, try to set policy on the clone
+    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone));
+    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_set_cache_policy(clone, ZX_CACHE_POLICY_CACHED));
+    EXPECT_EQ(ZX_OK, zx_handle_close(clone));
+
+    // set the policy, make sure future clones do not go through
+    EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED));
+    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone));
+    EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
+    EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, size, &clone));
+    EXPECT_EQ(ZX_OK, zx_handle_close(clone));
+
+    // set the policy, make sure vmo read/write do not work
+    char c;
+    size_t actual;
+    EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED));
+    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_read(vmo, &c, 0, sizeof(c), &actual));
+    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_write(vmo, &c, 0, sizeof(c), &actual));
+    EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
+    EXPECT_EQ(ZX_OK, zx_vmo_read(vmo, &c, 0, sizeof(c), &actual));
+    EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &c, 0, sizeof(c), &actual));
+
     EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "close handle");
+    END_TEST;
+}
+
+bool vmo_cache_map_test() {
+    BEGIN_TEST;
+
+    auto maptest = [](uint32_t policy, const char *type) {
+        zx_handle_t vmo;
+        const size_t size = 256*1024; // 256K
+
+        EXPECT_EQ(ZX_OK, zx_vmo_create(size, 0, &vmo));
+
+        // set the cache policy
+        EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, policy));
+
+        // commit it
+        EXPECT_EQ(ZX_OK, zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, 0, size, nullptr, 0));
+
+        // map it
+        uintptr_t ptr;
+        EXPECT_EQ(ZX_OK, zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, size,
+                  ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_MAP_RANGE, &ptr));
+
+        volatile uint32_t *buf = (volatile uint32_t *)ptr;
+
+        // write it once, priming the cache
+        for (size_t i = 0; i < size / 4; i++)
+            buf[i] = 0;
+
+        // write to it
+        zx_time_t wt = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        for (size_t i = 0; i < size / 4; i++)
+            buf[i] = 0;
+        wt = zx_clock_get(ZX_CLOCK_MONOTONIC) - wt;
+
+        // read from it
+        zx_time_t rt = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        for (size_t i = 0; i < size / 4; i++)
+            __UNUSED uint32_t hole = buf[i];
+        rt = zx_clock_get(ZX_CLOCK_MONOTONIC) - rt;
+
+        printf("took %" PRIu64 " nsec to write %s memory\n", wt, type);
+        printf("took %" PRIu64 " nsec to read %s memory\n", rt, type);
+
+        EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), ptr, size));
+        EXPECT_EQ(ZX_OK, zx_handle_close(vmo));
+    };
+
+    printf("\n");
+    maptest(ZX_CACHE_POLICY_CACHED, "cached");
+    maptest(ZX_CACHE_POLICY_UNCACHED, "uncached");
+    maptest(ZX_CACHE_POLICY_UNCACHED_DEVICE, "uncached device");
+    maptest(ZX_CACHE_POLICY_WRITE_COMBINING, "write combining");
+
     END_TEST;
 }
 
@@ -1509,6 +1611,7 @@ RUN_TEST(vmo_lookup_test);
 RUN_TEST(vmo_commit_test);
 RUN_TEST(vmo_decommit_misaligned_test);
 RUN_TEST(vmo_cache_test);
+RUN_TEST_PERFORMANCE(vmo_cache_map_test);
 RUN_TEST(vmo_cache_op_test);
 RUN_TEST(vmo_cache_flush_test);
 RUN_TEST(vmo_zero_page_test);

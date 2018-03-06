@@ -15,12 +15,15 @@ zx_status_t vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy);
 
 ## DESCRIPTION
 
-**vmo_set_cache_policy()** sets caching policy for a VMO holding physical
-memory. Such VMOs are generally only handed to userspace via bus protocol
-interfaces, so this syscall will typically only be used by drivers dealing with
-device memory. A handle must have the *ZX_RIGHT_MAP* right for this call to be
+**vmo_set_cache_policy()** sets caching policy for a VMO. Generally used on VMOs
+that point directly at physical memory. Such VMOs are generally only handed to
+userspace via bus protocol interfaces, so this syscall will typically only be
+used by drivers dealing with device memory. This call can also be used on a
+regular memory backed VMO with similar limitations and uses.
+
+A handle must have the *ZX_RIGHT_MAP* right for this call to be
 permitted. Additionally, the VMO must not presently be mapped by any process,
-and the cache policy must not have been set prior to this call.
+be cloned, be a clone itself, or have any memory committed.
 
 *cache_policy* cache flags to use:
 
@@ -32,8 +35,7 @@ and the cache policy must not have been set prior to this call.
 This is architecture dependent and may be equivalent to
 *ZX_CACHE_POLICY_UNCACHED* on some architectures.
 
-**ZX_CACHE_POLICY_WRITE_COMBINING** - Use write combining. This is architecture
-dependent and may be equivalent to *ZX_CACHE_POLICY_UNCACHED*.
+**ZX_CACHE_POLICY_WRITE_COMBINING** - Uncached with write combining.
 
 ## RETURN VALUE
 
@@ -54,7 +56,7 @@ above, or *cache_policy* contains an invalid mix of cache policy flags.
 physical memory.
 
 **ZX_ERR_BAD_STATE** Cache policy cannot be changed because the VMO is presently
-mapped.
+mapped, cloned, a clone itself, or have any memory committed.
 
 ## SEE ALSO
 

@@ -105,11 +105,8 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
         return ZX_ERR_INVALID_ARGS;
     }
 
-    // Check to see if a cache policy exists if a VMO is passed in. VMOs that are not physical
-    // return ERR_UNSUPPORTED, anything aside from that and ZX_OK is an error.
-    // TODO(cja): explore whether it makes sense to add a default PAGED value to VmObjectPaged
-    // and allow them to be treated the same, since by default we're mapping those objects that
-    // way anyway.
+    // Check to see if a cache policy exists if a VMO is passed in. VMOs that do not support
+    // cache policy return ERR_UNSUPPORTED, anything aside from that and ZX_OK is an error.
     if (vmo) {
         uint32_t cache_policy;
         zx_status_t status = vmo->GetMappingCachePolicy(&cache_policy);

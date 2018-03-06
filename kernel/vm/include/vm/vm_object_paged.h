@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
+#include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page_list.h>
 #include <zircon/thread_annotations.h>
@@ -83,6 +84,9 @@ public:
         // Called under the parent's lock, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
+    zx_status_t GetMappingCachePolicy(uint32_t* cache_policy) override;
+    zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
+
     // maximum size of a VMO is one page less than the full 64bit range
     static const uint64_t MAX_SIZE = ROUNDDOWN(UINT64_MAX, PAGE_SIZE);
 
@@ -128,6 +132,7 @@ private:
     uint64_t size_ TA_GUARDED(lock_) = 0;
     uint64_t parent_offset_ TA_GUARDED(lock_) = 0;
     uint32_t pmm_alloc_flags_ TA_GUARDED(lock_) = PMM_ALLOC_FLAG_ANY;
+    uint32_t cache_policy_ TA_GUARDED(lock_) = ARCH_MMU_FLAG_CACHED;
 
     // a tree of pages
     VmPageList page_list_ TA_GUARDED(lock_);

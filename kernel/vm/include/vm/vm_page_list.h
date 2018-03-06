@@ -191,6 +191,7 @@ public:
     vm_page* GetPage(uint64_t offset);
     zx_status_t FreePage(uint64_t offset);
     size_t FreeAllPages();
+    bool IsEmpty();
 
 private:
     fbl::WAVLTree<uint64_t, fbl::unique_ptr<VmPageListNode>> list_;
