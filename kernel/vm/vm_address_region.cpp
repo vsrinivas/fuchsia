@@ -309,30 +309,45 @@ zx_status_t VmAddressRegion::DestroyLocked() {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     LTRACEF("%p '%s'\n", this, name_);
 
-    // Take a reference to ourself, so that we do not get destructed after
-    // dropping our last reference in this method (e.g. when calling
-    // subregions_.erase below).
-    fbl::RefPtr<VmAddressRegion> self(this);
+    // The cur reference prevents regions from being destructed after dropping
+    // the last reference to them when removing from their parent.
+    fbl::RefPtr<VmAddressRegion> cur(this);
+    while (cur) {
+        // Iterate through children destroying mappings. If we find a
+        // subregion, stop so we can traverse down.
+        fbl::RefPtr<VmAddressRegion> child_region = nullptr;
+        while (!cur->subregions_.is_empty() && !child_region) {
+            VmAddressRegionOrMapping* child = &cur->subregions_.front();
+            if (child->is_mapping()) {
+                // DestroyLocked should remove this child from our list on success.
+                zx_status_t status = child->DestroyLocked();
+                if (status != ZX_OK) {
+                    // TODO(teisenbe): Do we want to handle this case differently?
+                    return status;
+                }
+            } else {
+                child_region = child->as_vm_address_region();
+            }
+        }
 
-    while (!subregions_.is_empty()) {
-        fbl::RefPtr<VmAddressRegionOrMapping> child(&subregions_.front());
+        if (child_region) {
+            // If we found a child region, traverse down the tree.
+            cur = child_region;
+        } else {
+            // All children are destroyed, so now destroy the current node.
+            if (cur->parent_) {
+                DEBUG_ASSERT(cur->subregion_list_node_.InContainer());
+                cur->parent_->RemoveSubregion(cur.get());
+            }
+            cur->state_ = LifeCycleState::DEAD;
+            VmAddressRegion* cur_parent = cur->parent_;
+            cur->parent_ = nullptr;
 
-        // DestroyLocked should remove this child from our list on success
-        zx_status_t status = child->DestroyLocked();
-        if (status != ZX_OK) {
-            // TODO(teisenbe): Do we want to handle this case differently?
-            return status;
+            // If we destroyed the original node, stop. Otherwise traverse
+            // up the tree and keep destroying.
+            cur.reset((cur.get() == this) ? nullptr : cur_parent);
         }
     }
-
-    // Detach the now dead region from the parent
-    if (parent_) {
-        DEBUG_ASSERT(subregion_list_node_.InContainer());
-        parent_->RemoveSubregion(this);
-    }
-
-    parent_ = nullptr;
-    state_ = LifeCycleState::DEAD;
     return ZX_OK;
 }
 
