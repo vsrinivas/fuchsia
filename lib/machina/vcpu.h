@@ -35,6 +35,8 @@ class Vcpu {
     return Create(guest, entry, 0);
   }
 
+  static Vcpu* GetCurrent();
+
   // Begins VCPU execution.
   //
   // If |initial_vcpu_state| is non-null the given state will be written to

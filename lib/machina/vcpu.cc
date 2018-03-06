@@ -25,6 +25,8 @@
 
 namespace machina {
 
+thread_local Vcpu* thread_vcpu = nullptr;
+
 #if __aarch64__
 static zx_status_t HandleMmioArm(const zx_packet_guest_mem_t& mem,
                                  uint64_t trap_key,
@@ -139,6 +141,11 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, uint64_t id) {
   return ZX_OK;
 }
 
+Vcpu* Vcpu::GetCurrent() {
+  FXL_DCHECK(thread_vcpu != nullptr) << "Thread does not have a VCPU";
+  return thread_vcpu;
+}
+
 zx_status_t Vcpu::ThreadEntry(const ThreadEntryArgs* args) {
   {
     fbl::AutoLock lock(&mutex_);
@@ -191,6 +198,8 @@ void Vcpu::SetState(State new_state) {
 }
 
 zx_status_t Vcpu::Loop() {
+  FXL_DCHECK(thread_vcpu == nullptr) << "Thread has multiple VCPUs";
+  thread_vcpu = this;
   zx_port_packet_t packet;
   while (true) {
     zx_status_t status = zx_vcpu_resume(vcpu_, &packet);
@@ -209,7 +218,7 @@ zx_status_t Vcpu::Loop() {
       return ZX_OK;
     }
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to handle guest packet " << packet.type << ": "
+      FXL_LOG(ERROR) << "Failed to handle packet " << packet.type << ": "
                      << status;
       exit(status);
     }
