@@ -189,7 +189,7 @@ bool validate_single_present_handle_unaligned_error() {
         dummy_handle_0,
     };
 
-    // Decoding the unaligned version of the struct should fail.
+    // Validating the unaligned version of the struct should fail.
     const char* error = nullptr;
     auto status = fidl_validate(&nonnullable_handle_message_type, &message, sizeof(message),
                                 ArrayCount(handles), &error);
@@ -1342,7 +1342,7 @@ bool validate_nested_struct_recursion_too_deep_error() {
                            ArrayCount(handles), &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error);
-    const char expected_error_msg[] = "recursion depth exceeded decoding struct";
+    const char expected_error_msg[] = "recursion depth exceeded validating struct";
     EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
 
     END_TEST;

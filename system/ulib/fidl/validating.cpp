@@ -71,7 +71,7 @@ private:
         return true;
     }
 
-    // Functions that manipulate the decoding stack frames.
+    // Functions that manipulate the validating stack frames.
     struct Frame {
         Frame(const fidl_type_t* fidl_type, uint32_t offset)
             : offset(offset) {
@@ -185,7 +185,7 @@ private:
         uint32_t offset;
 
         // This is a subset of the information recorded in the
-        // fidl_type structures needed for decoding state. For
+        // fidl_type structures needed for validating state. For
         // example, struct sizes do not need to be present here.
         union {
             struct {
@@ -231,7 +231,7 @@ private:
         if (depth_ == FIDL_RECURSION_DEPTH) {
             return false;
         }
-        decoding_frames_[depth_] = frame;
+        validating_frames_[depth_] = frame;
         ++depth_;
         return true;
     }
@@ -243,7 +243,7 @@ private:
 
     Frame* Peek() {
         ZX_DEBUG_ASSERT(depth_ != 0u);
-        return &decoding_frames_[depth_ - 1];
+        return &validating_frames_[depth_ - 1];
     }
 
     // Message state passed in to the constructor.
@@ -257,9 +257,9 @@ private:
     uint32_t handle_idx_ = 0u;
     uint32_t out_of_line_offset_ = 0u;
 
-    // Decoding stack state.
+    // Validating stack state.
     uint32_t depth_ = 0u;
-    Frame decoding_frames_[FIDL_RECURSION_DEPTH];
+    Frame validating_frames_[FIDL_RECURSION_DEPTH];
 };
 
 zx_status_t FidlValidator::ValidateMessage() {
@@ -268,11 +268,11 @@ zx_status_t FidlValidator::ValidateMessage() {
     // out-of-line allocations.
 
     if (type_ == nullptr) {
-        return WithError("Cannot decode a null fidl type");
+        return WithError("Cannot validate a null fidl type");
     }
 
     if (bytes_ == nullptr) {
-        return WithError("Cannot decode null bytes");
+        return WithError("Cannot validate null bytes");
     }
 
     if (type_->type_tag != fidl::kFidlTypeStruct) {
@@ -311,7 +311,7 @@ zx_status_t FidlValidator::ValidateMessage() {
             const fidl_type_t* field_type = field.type;
             uint32_t field_offset = frame->offset + field.offset;
             if (!Push(Frame(field_type, field_offset))) {
-                return WithError("recursion depth exceeded decoding struct");
+                return WithError("recursion depth exceeded validating struct");
             }
             continue;
         }
@@ -370,7 +370,7 @@ zx_status_t FidlValidator::ValidateMessage() {
             const fidl_type_t* element_type = frame->array_state.element;
             uint32_t offset = frame->offset + element_offset;
             if (!Push(Frame(element_type, offset))) {
-                return WithError("recursion depth exceeded decoding array");
+                return WithError("recursion depth exceeded validating array");
             }
             continue;
         }
@@ -401,7 +401,7 @@ zx_status_t FidlValidator::ValidateMessage() {
             }
             uint32_t string_data_offset = 0u;
             if (!ClaimOutOfLineStorage(static_cast<uint32_t>(size), &string_data_offset)) {
-                return WithError("decoding a  string overflowed buffer");
+                return WithError("validating a  string overflowed buffer");
             }
             Pop();
             continue;
@@ -455,7 +455,7 @@ zx_status_t FidlValidator::ValidateMessage() {
             if (!ClaimOutOfLineStorage(size, &frame->offset)) {
                 return WithError("message wanted to store too large of a vector");
             }
-            // Continue by decoding the vector elements as an array.
+            // Continue by validating the vector elements as an array.
             *frame = Frame(frame->vector_state.element, size,
                            static_cast<uint32_t>(vector_ptr->count), frame->offset);
             continue;
