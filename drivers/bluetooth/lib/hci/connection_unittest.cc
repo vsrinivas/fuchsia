@@ -50,15 +50,15 @@ TEST_F(HCI_ConnectionTest, Close) {
 
   // HCI_Disconnect (handle: 0x0001, reason: RemoteUserTerminatedConnection)
   auto req_bytes = common::CreateStaticByteBuffer(
-      0x06, 0x04, 0x03, 0x01, 0x00, Status::kRemoteUserTerminatedConnection);
+      0x06, 0x04, 0x03, 0x01, 0x00, StatusCode::kRemoteUserTerminatedConnection);
 
   // Respond with Command Status and Disconnection Complete.
   auto cmd_status_bytes = common::CreateStaticByteBuffer(
-      kCommandStatusEventCode, 0x04, Status::kSuccess, 1, 0x06, 0x04);
+      kCommandStatusEventCode, 0x04, StatusCode::kSuccess, 1, 0x06, 0x04);
 
   auto disc_cmpl_bytes = common::CreateStaticByteBuffer(
       kDisconnectionCompleteEventCode, 0x04,
-      Status::kSuccess, 0x01, 0x00, Status::kConnectionTerminatedByLocalHost);
+      StatusCode::kSuccess, 0x01, 0x00, StatusCode::kConnectionTerminatedByLocalHost);
 
   // clang-format on
 
@@ -79,7 +79,7 @@ TEST_F(HCI_ConnectionTest, Close) {
                         transport());
   EXPECT_TRUE(connection.is_open());
 
-  connection.Close(Status::kRemoteUserTerminatedConnection);
+  connection.Close(StatusCode::kRemoteUserTerminatedConnection);
   EXPECT_FALSE(connection.is_open());
 
   RunMessageLoop();
@@ -91,15 +91,15 @@ TEST_F(HCI_ConnectionTest, CloseError) {
 
   // HCI_Disconnect (handle: 0x0001, reason: RemoteUserTerminatedConnection)
   auto req_bytes = common::CreateStaticByteBuffer(
-      0x06, 0x04, 0x03, 0x01, 0x00, Status::kRemoteUserTerminatedConnection);
+      0x06, 0x04, 0x03, 0x01, 0x00, StatusCode::kRemoteUserTerminatedConnection);
 
   // Respond with Command Status and Disconnection Complete.
   auto cmd_status_bytes = common::CreateStaticByteBuffer(
-      kCommandStatusEventCode, 0x04, Status::kSuccess, 1, 0x06, 0x04);
+      kCommandStatusEventCode, 0x04, StatusCode::kSuccess, 1, 0x06, 0x04);
 
   auto disc_cmpl_bytes = common::CreateStaticByteBuffer(
       kDisconnectionCompleteEventCode, 0x04,
-      Status::kCommandDisallowed, 0x01, 0x00, Status::kConnectionTerminatedByLocalHost);
+      StatusCode::kCommandDisallowed, 0x01, 0x00, StatusCode::kConnectionTerminatedByLocalHost);
 
   // clang-format on
 
@@ -121,7 +121,7 @@ TEST_F(HCI_ConnectionTest, CloseError) {
                         transport());
   EXPECT_TRUE(connection.is_open());
 
-  connection.Close(Status::kRemoteUserTerminatedConnection);
+  connection.Close(StatusCode::kRemoteUserTerminatedConnection);
   EXPECT_FALSE(connection.is_open());
 
   RunMessageLoop();

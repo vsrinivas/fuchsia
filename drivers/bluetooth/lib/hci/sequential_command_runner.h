@@ -48,17 +48,17 @@ class SequentialCommandRunner final {
 
   // Runs all the queued commands. Once this is called no new commands can be
   // queued. This method will return before queued commands have been run.
-  // |result_callback| is called with the status of the last command run,
+  // |status_callback| is called with the status of the last command run,
   // or kSuccess if all commands returned HCI_Command_Complete.
   //
   // Once RunCommands() has been called this instance will not be ready for
-  // re-use until |result_callback| gets run. At that point new commands can be
+  // re-use until |status_callback| gets run. At that point new commands can be
   // queued and run (see IsReady()).
   //
   // RunCommands() will always send the first queued HCI command to
   // CommandChannel even if it is followed by a call to Cancel().
-  using ResultCallback = std::function<void(hci::Status status)>;
-  void RunCommands(const ResultCallback& result_callback);
+  using StatusCallback = std::function<void(Status status)>;
+  void RunCommands(const StatusCallback& status_callback);
 
   // Returns true if commands can be queued and run on this instance. This
   // returns false if RunCommands() is currently in progress.
@@ -85,7 +85,7 @@ class SequentialCommandRunner final {
  private:
   void RunNextQueuedCommand();
   void Reset();
-  void NotifyResultAndReset(hci::Status result);
+  void NotifyStatusAndReset(Status status);
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   fxl::RefPtr<Transport> transport_;
@@ -96,23 +96,21 @@ class SequentialCommandRunner final {
 
   // Callback assigned in RunCommands(). If this is non-null then this object is
   // currently executing a sequence.
-  ResultCallback result_callback_;
+  StatusCallback status_callback_;
 
   // Number assigned to the current sequence. Each "sequence" begins on a call
   // to RunCommands() and ends either on a call to Cancel() or when
-  // |result_callback_| has been invoked.
+  // |status_callback_| has been invoked.
   //
   // This number is used to detect cancelation of a sequence from a
   // CommandCompleteCallback.
   uint64_t sequence_number_;
 
-  // The callbacks we pass to the HCI CommandChannel for command execution.
-  // These can be cancelled and erased at any time.
-  fxl::CancelableCallback<void(CommandChannel::TransactionId, Status)>
-      status_callback_;
+  // The callback we pass to the HCI CommandChannel for command execution.
+  // This can be cancelled and erased at any time.
   fxl::CancelableCallback<void(CommandChannel::TransactionId,
                                const EventPacket&)>
-      complete_callback_;
+      command_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SequentialCommandRunner);
 };

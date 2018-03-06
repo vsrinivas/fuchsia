@@ -5,6 +5,7 @@
 #include "control_packets.h"
 
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
 
 #include "slab_allocators.h"
 
@@ -50,6 +51,35 @@ std::unique_ptr<CommandPacket> NewCommandPacket(size_t payload_size) {
   return slab_allocators::LargeCommandAllocator::New(payload_size);
 }
 
+// Returns true and populates the |out_code| field with the status parameter.
+// Returns false if |event|'s payload is too small to hold a T. T must have a
+// |status| member of type hci::StatusCode for this to compile.
+template <typename T>
+bool StatusCodeFromEvent(const EventPacket& event, hci::StatusCode* out_code) {
+  FXL_DCHECK(out_code);
+
+  if (event.view().payload_size() < sizeof(T))
+    return false;
+
+  *out_code = event.view().payload<T>().status;
+  return true;
+}
+
+// Specialization for the CommandComplete event.
+template <>
+bool StatusCodeFromEvent<CommandCompleteEventParams>(
+    const EventPacket& event,
+    hci::StatusCode* out_code) {
+  FXL_DCHECK(out_code);
+
+  const auto* params = event.return_params<SimpleReturnParams>();
+  if (!params)
+    return false;
+
+  *out_code = params->status;
+  return true;
+}
+
 }  // namespace
 
 // static
@@ -72,6 +102,38 @@ void CommandPacket::WriteHeader(OpCode opcode) {
 // static
 std::unique_ptr<EventPacket> EventPacket::New(size_t payload_size) {
   return slab_allocators::EventAllocator::New(payload_size);
+}
+
+bool EventPacket::ToStatusCode(StatusCode* out_code) const {
+#define CASE_EVENT_STATUS(event_name) \
+  case k##event_name##EventCode:      \
+    return StatusCodeFromEvent<event_name##EventParams>(*this, out_code)
+
+  switch (event_code()) {
+    CASE_EVENT_STATUS(CommandComplete);
+    CASE_EVENT_STATUS(CommandStatus);
+    CASE_EVENT_STATUS(DisconnectionComplete);
+    CASE_EVENT_STATUS(InquiryComplete);
+    CASE_EVENT_STATUS(EncryptionChange);
+
+      // TODO(armansito): Complete this list.
+
+    default:
+      FXL_NOTREACHED() << fxl::StringPrintf("Event not implemented! (0x%02x)",
+                                            event_code());
+      break;
+  }
+  return false;
+
+#undef CASE_EVENT_STATUS
+}
+
+Status EventPacket::ToStatus() const {
+  StatusCode code;
+  if (!ToStatusCode(&code)) {
+    return Status(common::HostError::kPacketMalformed);
+  }
+  return Status(code);
 }
 
 void EventPacket::InitializeFromBuffer() {

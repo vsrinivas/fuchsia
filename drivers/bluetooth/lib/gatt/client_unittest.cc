@@ -11,6 +11,8 @@ namespace btlib {
 namespace gatt {
 namespace {
 
+using common::HostError;
+
 class GATT_ClientTest : public l2cap::testing::FakeChannelTest {
  public:
   GATT_ClientTest() = default;
@@ -50,10 +52,10 @@ TEST_F(GATT_ClientTest, ExchangeMTUMalformedResponse) {
 
   // Initialize to a non-zero value.
   uint16_t final_mtu = kPreferredMTU;
-  att::ErrorCode ecode;
-  auto mtu_cb = [&, this](att::ErrorCode cb_code, uint16_t val) {
+  att::Status status;
+  auto mtu_cb = [&, this](att::Status cb_status, uint16_t val) {
     final_mtu = val;
-    ecode = cb_code;
+    status = cb_status;
   };
 
   att()->set_preferred_mtu(kPreferredMTU);
@@ -74,7 +76,7 @@ TEST_F(GATT_ClientTest, ExchangeMTUMalformedResponse) {
 
   RunUntilIdle();
 
-  EXPECT_EQ(att::ErrorCode::kInvalidPDU, ecode);
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
   EXPECT_EQ(0, final_mtu);
   EXPECT_TRUE(fake_chan()->link_error());
 }
@@ -89,10 +91,10 @@ TEST_F(GATT_ClientTest, ExchangeMTUErrorNotSupported) {
   );
 
   uint16_t final_mtu = 0;
-  att::ErrorCode ecode;
-  auto mtu_cb = [&, this](att::ErrorCode cb_code, uint16_t val) {
+  att::Status status;
+  auto mtu_cb = [&, this](att::Status cb_status, uint16_t val) {
     final_mtu = val;
-    ecode = cb_code;
+    status = cb_status;
   };
 
   // Set the initial MTU to something other than the default LE MTU since we
@@ -117,7 +119,8 @@ TEST_F(GATT_ClientTest, ExchangeMTUErrorNotSupported) {
 
   RunUntilIdle();
 
-  EXPECT_EQ(att::ErrorCode::kNoError, ecode);
+  EXPECT_FALSE(status);
+  EXPECT_EQ(att::ErrorCode::kRequestNotSupported, status.protocol_error());
   EXPECT_EQ(att::kLEMinMTU, final_mtu);
   EXPECT_EQ(att::kLEMinMTU, att()->mtu());
 }
@@ -130,10 +133,10 @@ TEST_F(GATT_ClientTest, ExchangeMTUErrorOther) {
   );
 
   uint16_t final_mtu = kPreferredMTU;
-  att::ErrorCode ecode;
-  auto mtu_cb = [&, this](att::ErrorCode cb_code, uint16_t val) {
+  att::Status status;
+  auto mtu_cb = [&, this](att::Status cb_status, uint16_t val) {
     final_mtu = val;
-    ecode = cb_code;
+    status = cb_status;
   };
 
   att()->set_preferred_mtu(kPreferredMTU);
@@ -155,7 +158,7 @@ TEST_F(GATT_ClientTest, ExchangeMTUErrorOther) {
 
   RunUntilIdle();
 
-  EXPECT_EQ(att::ErrorCode::kUnlikelyError, ecode);
+  EXPECT_EQ(att::ErrorCode::kUnlikelyError, status.protocol_error());
   EXPECT_EQ(0, final_mtu);
   EXPECT_EQ(att::kLEMinMTU, att()->mtu());
 }
@@ -171,10 +174,10 @@ TEST_F(GATT_ClientTest, ExchangeMTUSelectLocal) {
   );
 
   uint16_t final_mtu = 0;
-  att::ErrorCode ecode;
-  auto mtu_cb = [&, this](att::ErrorCode cb_code, uint16_t val) {
+  att::Status status;
+  auto mtu_cb = [&, this](att::Status cb_status, uint16_t val) {
     final_mtu = val;
-    ecode = cb_code;
+    status = cb_status;
   };
 
   att()->set_preferred_mtu(kPreferredMTU);
@@ -194,7 +197,7 @@ TEST_F(GATT_ClientTest, ExchangeMTUSelectLocal) {
 
   RunUntilIdle();
 
-  EXPECT_EQ(att::ErrorCode::kNoError, ecode);
+  EXPECT_TRUE(status);
   EXPECT_EQ(kPreferredMTU, final_mtu);
   EXPECT_EQ(kPreferredMTU, att()->mtu());
 }
@@ -210,10 +213,10 @@ TEST_F(GATT_ClientTest, ExchangeMTUSelectRemote) {
   );
 
   uint16_t final_mtu = 0;
-  att::ErrorCode ecode;
-  auto mtu_cb = [&, this](att::ErrorCode cb_code, uint16_t val) {
+  att::Status status;
+  auto mtu_cb = [&, this](att::Status cb_status, uint16_t val) {
     final_mtu = val;
-    ecode = cb_code;
+    status = cb_status;
   };
 
   att()->set_preferred_mtu(kPreferredMTU);
@@ -233,7 +236,7 @@ TEST_F(GATT_ClientTest, ExchangeMTUSelectRemote) {
 
   RunUntilIdle();
 
-  EXPECT_EQ(att::ErrorCode::kNoError, ecode);
+  EXPECT_TRUE(status);
   EXPECT_EQ(kServerRxMTU, final_mtu);
   EXPECT_EQ(kServerRxMTU, att()->mtu());
 }
@@ -249,10 +252,10 @@ TEST_F(GATT_ClientTest, ExchangeMTUSelectDefault) {
   );
 
   uint16_t final_mtu = 0;
-  att::ErrorCode ecode;
-  auto mtu_cb = [&, this](att::ErrorCode cb_code, uint16_t val) {
+  att::Status status;
+  auto mtu_cb = [&, this](att::Status cb_status, uint16_t val) {
     final_mtu = val;
-    ecode = cb_code;
+    status = cb_status;
   };
 
   att()->set_preferred_mtu(kPreferredMTU);
@@ -272,7 +275,7 @@ TEST_F(GATT_ClientTest, ExchangeMTUSelectDefault) {
 
   RunUntilIdle();
 
-  EXPECT_EQ(att::ErrorCode::kNoError, ecode);
+  EXPECT_TRUE(status);
   EXPECT_EQ(att::kLEMinMTU, final_mtu);
   EXPECT_EQ(att::kLEMinMTU, att()->mtu());
 }

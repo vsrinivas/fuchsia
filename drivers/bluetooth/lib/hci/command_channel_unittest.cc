@@ -68,7 +68,7 @@ TEST_F(HCI_CommandChannelTest, SingleRequestResponse) {
       0x04,  // parameter_total_size (4 byte payload)
       0x01,  // num_hci_command_packets (1 can be sent)
       LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
-      Status::kHardwareFailure);
+      StatusCode::kHardwareFailure);
   // clang-format on
   test_device()->QueueCommandTransaction(CommandTransaction(req, {&rsp}));
   test_device()->StartCmdChannel(test_cmd_chan());
@@ -94,7 +94,7 @@ TEST_F(HCI_CommandChannelTest, SingleRequestResponse) {
         EXPECT_EQ(kReset, le16toh(event.view()
                                       .payload<CommandCompleteEventParams>()
                                       .command_opcode));
-        EXPECT_EQ(Status::kHardwareFailure,
+        EXPECT_EQ(StatusCode::kHardwareFailure,
                   event.return_params<SimpleReturnParams>()->status);
 
         // Quit the message loop to continue the test.
@@ -126,14 +126,14 @@ TEST_F(HCI_CommandChannelTest, SingleAsynchronousRequest) {
   auto rsp0 = common::CreateStaticByteBuffer(
       kCommandStatusEventCode,
       0x04,  // parameter_total_size (4 byte payload)
-      Status::kSuccess, 0x01, // status, num_hci_command_packets (1 can be sent)
+      StatusCode::kSuccess, 0x01, // status, num_hci_command_packets (1 can be sent)
       LowerBits(kInquiry), UpperBits(kInquiry)  // HCI_Inquiry opcode
       );
   // HCI_InquiryComplete
   auto rsp1 = common::CreateStaticByteBuffer(
       kInquiryCompleteEventCode,
       0x01,  // parameter_total_size (1 byte payload)
-      Status::kSuccess);
+      StatusCode::kSuccess);
   // clang-format on
   test_device()->QueueCommandTransaction(
       CommandTransaction(req, {&rsp0, &rsp1}));
@@ -150,11 +150,11 @@ TEST_F(HCI_CommandChannelTest, SingleAsynchronousRequest) {
     if (cb_count == 1) {
       EXPECT_EQ(kCommandStatusEventCode, event.event_code());
       const auto params = event.view().payload<CommandStatusEventParams>();
-      EXPECT_EQ(Status::kSuccess, params.status);
+      EXPECT_EQ(StatusCode::kSuccess, params.status);
       EXPECT_EQ(kInquiry, params.command_opcode);
     } else {
       EXPECT_EQ(kInquiryCompleteEventCode, event.event_code());
-      EXPECT_EQ(Status::kSuccess, event.status());
+      EXPECT_TRUE(event.ToStatus());
       // Quit the message loop to continue the test.
       message_loop()->QuitNow();
     }
@@ -187,7 +187,7 @@ TEST_F(HCI_CommandChannelTest, SingleRequestWithStatusResponse) {
   auto rsp = common::CreateStaticByteBuffer(
       kCommandStatusEventCode,
       0x04,  // parameter_total_size (4 byte payload)
-      Status::kSuccess, 0x01, // status, num_hci_command_packets (1 can be sent)
+      StatusCode::kSuccess, 0x01, // status, num_hci_command_packets (1 can be sent)
       LowerBits(kReset), UpperBits(kReset)  // HCI_Reset opcode
       );
   // clang-format on
@@ -201,7 +201,7 @@ TEST_F(HCI_CommandChannelTest, SingleRequestWithStatusResponse) {
                                  const EventPacket& event) {
     EXPECT_EQ(callback_id, id);
     EXPECT_EQ(kCommandStatusEventCode, event.event_code());
-    EXPECT_EQ(Status::kSuccess,
+    EXPECT_EQ(StatusCode::kSuccess,
               event.view().payload<CommandStatusEventParams>().status);
     EXPECT_EQ(1, event.view()
                      .payload<CommandStatusEventParams>()
@@ -252,7 +252,7 @@ TEST_F(HCI_CommandChannelTest, OneSentUntilStatus) {
   auto rsp_commandsavail = common::CreateStaticByteBuffer(
       kCommandStatusEventCode,
       0x04,  // parameter_total_size (3 byte payload)
-      Status::kSuccess, 0x01, // status, num_hci_command_packets (1 can be sent)
+      StatusCode::kSuccess, 0x01, // status, num_hci_command_packets (1 can be sent)
       0x00, 0x00 // No associated opcode.
       );
   // clang-format on
@@ -335,7 +335,7 @@ TEST_F(HCI_CommandChannelTest, QueuedCommands) {
   auto rsp_commandsavail = common::CreateStaticByteBuffer(
       kCommandStatusEventCode,
       0x04,  // parameter_total_size (3 byte payload)
-      Status::kSuccess, 0xFA, // status, num_hci_command_packets (250 can be sent)
+      StatusCode::kSuccess, 0xFA, // status, num_hci_command_packets (250 can be sent)
       0x00, 0x00 // No associated opcode.
       );
   // clang-format on
@@ -423,7 +423,7 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommands) {
   auto rsp_resetstatus = common::CreateStaticByteBuffer(
       kCommandStatusEventCode,
       0x04,  // parameter_total_size (4 byte payload)
-      Status::kSuccess, 0xFA, // status, num_hci_command_packets (250 can be sent)
+      StatusCode::kSuccess, 0xFA, // status, num_hci_command_packets (250 can be sent)
       LowerBits(kReset), UpperBits(kReset)  // HCI_Reset opcode
       );
   auto req_inqcancel = common::CreateStaticByteBuffer(
@@ -433,7 +433,7 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommands) {
   auto rsp_inqstatus = common::CreateStaticByteBuffer(
       kCommandStatusEventCode,
       0x04,  // parameter_total_size (4 byte payload)
-      Status::kSuccess, 0xFA, // status, num_hci_command_packets (250 can be sent)
+      StatusCode::kSuccess, 0xFA, // status, num_hci_command_packets (250 can be sent)
       LowerBits(kInquiryCancel), UpperBits(kInquiryCancel)  // HCI_Reset opcode
       );
   auto rsp_bogocomplete = common::CreateStaticByteBuffer(
@@ -463,7 +463,7 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommands) {
     if ((cb_count % 2) == 0) {
       EXPECT_EQ(kCommandStatusEventCode, event.event_code());
       auto params = event.view().payload<CommandStatusEventParams>();
-      EXPECT_EQ(Status::kSuccess, params.status);
+      EXPECT_EQ(StatusCode::kSuccess, params.status);
     } else if ((cb_count % 2) == 1) {
       EXPECT_EQ(kTestEventCode0, event.event_code());
     }
@@ -523,7 +523,7 @@ TEST_F(HCI_CommandChannelTest, AsyncQueueWhenBlocked) {
   auto rsp_resetstatus = common::CreateStaticByteBuffer(
       kCommandStatusEventCode,
       0x04,  // parameter_total_size (4 byte payload)
-      Status::kSuccess, 0xFA, // status, num_hci_command_packets (250 can be sent)
+      StatusCode::kSuccess, 0xFA, // status, num_hci_command_packets (250 can be sent)
       LowerBits(kReset), UpperBits(kReset)  // HCI_Reset opcode
       );
   auto rsp_bogocomplete = common::CreateStaticByteBuffer(
@@ -533,13 +533,13 @@ TEST_F(HCI_CommandChannelTest, AsyncQueueWhenBlocked) {
   auto rsp_nocommandsavail = common::CreateStaticByteBuffer(
       kCommandStatusEventCode,
       0x04,  // parameter_total_size (3 byte payload)
-      Status::kSuccess, 0x00, // status, num_hci_command_packets (none can be sent)
+      StatusCode::kSuccess, 0x00, // status, num_hci_command_packets (none can be sent)
       0x00, 0x00 // No associated opcode.
       );
   auto rsp_commandsavail = common::CreateStaticByteBuffer(
       kCommandStatusEventCode,
       0x04,  // parameter_total_size (3 byte payload)
-      Status::kSuccess, 0x01, // status, num_hci_command_packets (one can be sent)
+      StatusCode::kSuccess, 0x01, // status, num_hci_command_packets (one can be sent)
       0x00, 0x00 // No associated opcode.
       );
   // clang-format on
@@ -569,7 +569,7 @@ TEST_F(HCI_CommandChannelTest, AsyncQueueWhenBlocked) {
     if (cb_count == 1) {
       EXPECT_EQ(kCommandStatusEventCode, event.event_code());
       const auto params = event.view().payload<CommandStatusEventParams>();
-      EXPECT_EQ(Status::kSuccess, params.status);
+      EXPECT_EQ(StatusCode::kSuccess, params.status);
       EXPECT_EQ(kReset, params.command_opcode);
     } else {
       EXPECT_EQ(kTestEventCode0, event.event_code());
@@ -892,7 +892,7 @@ TEST_F(HCI_CommandChannelTest, CommandTimeout) {
     EXPECT_TRUE(callback_id == id1 || callback_id == id2);
     EXPECT_EQ(kCommandStatusEventCode, event.event_code());
     const auto params = event.view().payload<CommandStatusEventParams>();
-    EXPECT_EQ(Status::kUnspecifiedError, params.status);
+    EXPECT_EQ(StatusCode::kUnspecifiedError, params.status);
     EXPECT_EQ(kReset, params.command_opcode);
     if (cb_count == 2) {
       message_loop()->QuitNow();

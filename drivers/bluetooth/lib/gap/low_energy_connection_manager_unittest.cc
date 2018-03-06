@@ -165,13 +165,14 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectNonConnectableDevice) {
 TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   auto fake_dev = std::make_unique<FakeDevice>(kAddress0);
-  fake_dev->set_connect_status(hci::Status::kConnectionFailedToBeEstablished);
+  fake_dev->set_connect_status(
+      hci::StatusCode::kConnectionFailedToBeEstablished);
   test_device()->AddLEDevice(std::move(fake_dev));
 
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
             dev->connection_state());
 
-  hci::Status status = hci::Status::kSuccess;
+  hci::Status status;
   auto callback = [&status](auto cb_status, auto conn_ref) {
     EXPECT_FALSE(conn_ref);
     status = cb_status;
@@ -183,7 +184,9 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
 
   RunUntilIdle();
 
-  EXPECT_EQ(hci::Status::kConnectionFailedToBeEstablished, status);
+  EXPECT_TRUE(status.is_protocol_error());
+  EXPECT_EQ(hci::StatusCode::kConnectionFailedToBeEstablished,
+            status.protocol_error());
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
             dev->connection_state());
 }
@@ -192,10 +195,11 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
 TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   auto fake_dev = std::make_unique<FakeDevice>(kAddress0);
-  fake_dev->set_connect_response(hci::Status::kConnectionFailedToBeEstablished);
+  fake_dev->set_connect_response(
+      hci::StatusCode::kConnectionFailedToBeEstablished);
   test_device()->AddLEDevice(std::move(fake_dev));
 
-  hci::Status status = hci::Status::kSuccess;
+  hci::Status status;
   auto callback = [&status](auto cb_status, auto conn_ref) {
     EXPECT_FALSE(conn_ref);
     status = cb_status;
@@ -207,7 +211,9 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
 
   RunUntilIdle();
 
-  EXPECT_EQ(hci::Status::kConnectionFailedToBeEstablished, status);
+  EXPECT_TRUE(status.is_protocol_error());
+  EXPECT_EQ(hci::StatusCode::kConnectionFailedToBeEstablished,
+            status.protocol_error());
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
             dev->connection_state());
 }
@@ -217,7 +223,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
 
   // We add no fake devices to cause the request to time out.
 
-  hci::Status status = hci::Status::kSuccess;
+  hci::Status status;
   auto callback = [&status](auto cb_status, auto conn_ref) {
     EXPECT_FALSE(conn_ref);
     status = cb_status;
@@ -231,7 +237,8 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
 
   RunMessageLoop();
 
-  EXPECT_EQ(hci::Status::kCommandTimeout, status);
+  EXPECT_FALSE(status);
+  EXPECT_EQ(common::HostError::kTimedOut, status.error());
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
             dev->connection_state());
 }
@@ -244,8 +251,8 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDevice) {
   auto fake_dev = std::make_unique<FakeDevice>(kAddress0);
   test_device()->AddLEDevice(std::move(fake_dev));
 
-  hci::Status status =
-      hci::Status::kUnknownCommand;  // any error status will do
+  // Initialize as error to verify that |callback| assigns success.
+  hci::Status status(common::HostError::kFailed);
   LowEnergyConnectionRefPtr conn_ref;
   auto callback = [&status, &conn_ref](auto cb_status, auto cb_conn_ref) {
     EXPECT_TRUE(cb_conn_ref);
@@ -261,7 +268,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDevice) {
 
   RunUntilIdle();
 
-  EXPECT_EQ(hci::Status::kSuccess, status);
+  EXPECT_TRUE(status);
   EXPECT_EQ(1u, connected_devices().size());
   EXPECT_EQ(1u, connected_devices().count(kAddress0));
 
@@ -277,13 +284,14 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
   auto fake_dev = std::make_unique<FakeDevice>(kAddress0);
   test_device()->AddLEDevice(std::move(fake_dev));
 
-  hci::Status status =
-      hci::Status::kUnknownCommand;  // any error cb_status will do
+  // Initialize as error to verify that |callback| assigns success.
+  hci::Status status(common::HostError::kFailed);
   LowEnergyConnectionRefPtr conn_ref;
   auto callback = [&status, &conn_ref](auto cb_status, auto cb_conn_ref) {
     EXPECT_TRUE(cb_conn_ref);
     status = cb_status;
     conn_ref = std::move(cb_conn_ref);
+    EXPECT_TRUE(conn_ref->active());
   };
 
   EXPECT_TRUE(connected_devices().empty());
@@ -291,7 +299,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
 
   RunUntilIdle();
 
-  EXPECT_EQ(hci::Status::kSuccess, status);
+  EXPECT_TRUE(status);
   EXPECT_EQ(1u, connected_devices().size());
   EXPECT_EQ(RemoteDevice::ConnectionState::kConnected, dev->connection_state());
 
@@ -311,16 +319,16 @@ TEST_F(GAP_LowEnergyConnectionManagerTest,
 
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   auto fake_dev = std::make_unique<FakeDevice>(kAddress0);
-  fake_dev->set_connect_response(hci::Status::kConnectionFailedToBeEstablished);
+  fake_dev->set_connect_response(
+      hci::StatusCode::kConnectionFailedToBeEstablished);
   test_device()->AddLEDevice(std::move(fake_dev));
 
-  hci::Status status[kRequestCount];
-  memset(&status, hci::Status::kSuccess, sizeof(status));
+  hci::Status statuses[kRequestCount];
 
   int cb_count = 0;
-  auto callback = [&status, &cb_count](auto cb_status, auto conn_ref) {
+  auto callback = [&statuses, &cb_count](auto cb_status, auto conn_ref) {
     EXPECT_FALSE(conn_ref);
-    status[cb_count++] = cb_status;
+    statuses[cb_count++] = cb_status;
   };
 
   for (int i = 0; i < kRequestCount; ++i) {
@@ -332,7 +340,9 @@ TEST_F(GAP_LowEnergyConnectionManagerTest,
 
   ASSERT_EQ(kRequestCount, cb_count);
   for (int i = 0; i < kRequestCount; ++i) {
-    EXPECT_EQ(hci::Status::kConnectionFailedToBeEstablished, status[i])
+    EXPECT_TRUE(statuses[i].is_protocol_error());
+    EXPECT_EQ(hci::StatusCode::kConnectionFailedToBeEstablished,
+              statuses[i].protocol_error())
         << "request count: " << i + 1;
   }
 }
@@ -347,7 +357,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, OneDeviceManyPendingRequests) {
   std::vector<LowEnergyConnectionRefPtr> conn_refs;
   auto callback = [&conn_refs](auto cb_status, auto conn_ref) {
     EXPECT_TRUE(conn_ref);
-    EXPECT_EQ(hci::Status::kSuccess, cb_status);
+    EXPECT_TRUE(cb_status);
     conn_refs.emplace_back(std::move(conn_ref));
   };
 
@@ -396,7 +406,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, AddRefAfterConnection) {
   std::vector<LowEnergyConnectionRefPtr> conn_refs;
   auto callback = [&conn_refs](auto cb_status, auto conn_ref) {
     EXPECT_TRUE(conn_ref);
-    EXPECT_EQ(hci::Status::kSuccess, cb_status);
+    EXPECT_TRUE(cb_status);
     conn_refs.emplace_back(std::move(conn_ref));
   };
 
@@ -437,7 +447,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, PendingRequestsOnTwoDevices) {
   std::vector<LowEnergyConnectionRefPtr> conn_refs;
   auto callback = [&conn_refs](auto cb_status, auto conn_ref) {
     EXPECT_TRUE(conn_ref);
-    EXPECT_EQ(hci::Status::kSuccess, cb_status);
+    EXPECT_TRUE(cb_status);
     conn_refs.emplace_back(std::move(conn_ref));
   };
 
@@ -477,14 +487,12 @@ TEST_F(GAP_LowEnergyConnectionManagerTest,
 
   auto fake_dev0 = std::make_unique<FakeDevice>(kAddress0);
   fake_dev0->set_connect_response(
-      hci::Status::kConnectionFailedToBeEstablished);
+      hci::StatusCode::kConnectionFailedToBeEstablished);
   test_device()->AddLEDevice(std::move(fake_dev0));
   test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress1));
 
-  hci::Status status[2];
   std::vector<LowEnergyConnectionRefPtr> conn_refs;
-  auto callback = [&conn_refs, &status](auto cb_status, auto conn_ref) {
-    status[conn_refs.size()] = cb_status;
+  auto callback = [&conn_refs](auto, auto conn_ref) {
     conn_refs.emplace_back(std::move(conn_ref));
   };
 
@@ -526,7 +534,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, Destructor) {
   LowEnergyConnectionRefPtr conn_ref;
   auto success_cb = [&conn_ref, this](auto status, auto cb_conn_ref) {
     EXPECT_TRUE(cb_conn_ref);
-    EXPECT_EQ(hci::Status::kSuccess, status);
+    EXPECT_TRUE(status);
 
     conn_ref = std::move(cb_conn_ref);
   };
@@ -541,7 +549,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, Destructor) {
   bool error_cb_called = false;
   auto error_cb = [&error_cb_called](auto status, auto conn_ref) {
     EXPECT_FALSE(conn_ref);
-    EXPECT_EQ(hci::Status::kHardwareFailure, status);
+    EXPECT_EQ(common::HostError::kFailed, status.error());
     error_cb_called = true;
   };
 
@@ -576,7 +584,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, Disconnect) {
 
   std::vector<LowEnergyConnectionRefPtr> conn_refs;
   auto success_cb = [&conn_refs, &closed_cb, this](auto status, auto conn_ref) {
-    EXPECT_EQ(hci::Status::kSuccess, status);
+    EXPECT_TRUE(status);
     ASSERT_TRUE(conn_ref);
     conn_ref->set_closed_callback(closed_cb);
     conn_refs.push_back(std::move(conn_ref));
@@ -612,7 +620,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectEvent) {
 
   std::vector<LowEnergyConnectionRefPtr> conn_refs;
   auto success_cb = [&conn_refs, &closed_cb, this](auto status, auto conn_ref) {
-    EXPECT_EQ(hci::Status::kSuccess, status);
+    EXPECT_TRUE(status);
     ASSERT_TRUE(conn_ref);
     conn_ref->set_closed_callback(closed_cb);
     conn_refs.push_back(std::move(conn_ref));
@@ -640,7 +648,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectWhileRefPending) {
 
   LowEnergyConnectionRefPtr conn_ref;
   auto success_cb = [&conn_ref, this](auto status, auto cb_conn_ref) {
-    EXPECT_EQ(hci::Status::kSuccess, status);
+    EXPECT_TRUE(status);
     ASSERT_TRUE(cb_conn_ref);
     EXPECT_TRUE(cb_conn_ref->active());
 
@@ -652,8 +660,9 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectWhileRefPending) {
   ASSERT_TRUE(conn_ref);
 
   auto ref_cb = [](auto status, auto conn_ref) {
-    ASSERT_FALSE(conn_ref);
-    ASSERT_EQ(hci::Status::kConnectionFailedToBeEstablished, status);
+    EXPECT_FALSE(conn_ref);
+    EXPECT_FALSE(status);
+    EXPECT_EQ(common::HostError::kFailed, status.error());
   };
 
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), ref_cb));
@@ -674,7 +683,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectEventWhileRefPending) {
   LowEnergyConnectionRefPtr conn_ref;
   auto success_cb = [&conn_ref, this](auto status, auto cb_conn_ref) {
     ASSERT_TRUE(cb_conn_ref);
-    ASSERT_EQ(hci::Status::kSuccess, status);
+    ASSERT_TRUE(status);
     EXPECT_TRUE(cb_conn_ref->active());
 
     conn_ref = std::move(cb_conn_ref);
@@ -688,7 +697,8 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, DisconnectEventWhileRefPending) {
   // received.
   auto ref_cb = [](auto status, auto conn_ref) {
     EXPECT_FALSE(conn_ref);
-    EXPECT_EQ(hci::Status::kConnectionFailedToBeEstablished, status);
+    EXPECT_FALSE(status);
+    EXPECT_EQ(common::HostError::kFailed, status.error());
   };
 
   auto disconn_cb = [this, ref_cb, dev](auto) {

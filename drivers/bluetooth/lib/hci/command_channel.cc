@@ -439,7 +439,7 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
     const auto& params = event->view().payload<CommandStatusEventParams>();
     matching_opcode = le16toh(params.command_opcode);
     allowed_command_packets_ = params.num_hci_command_packets;
-    async_failed = params.status != Status::kSuccess;
+    async_failed = params.status != StatusCode::kSuccess;
   }
   FXL_VLOG(4) << "hci: CommandChannel: allowed packets update: "
               << allowed_command_packets_;

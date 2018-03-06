@@ -222,7 +222,7 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
                      const common::ByteBuffer& data) override;
 
   // Called by hci::LowEnergyScanner
-  void OnScanStatus(hci::LowEnergyScanner::Status status);
+  void OnScanStatus(hci::LowEnergyScanner::ScanStatus status);
 
   // Tells the scanner to start scanning.
   void StartScan();

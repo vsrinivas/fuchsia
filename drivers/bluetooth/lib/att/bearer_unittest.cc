@@ -25,7 +25,7 @@ constexpr OpCode kTestResponse3 = kFindByTypeValueResponse;
 constexpr OpCode kTestCommand = kWriteCommand;
 
 void NopCallback(const PacketReader&) {}
-void NopErrorCallback(bool, ErrorCode, Handle) {}
+void NopErrorCallback(Status, Handle) {}
 void NopHandler(Bearer::TransactionId, const PacketReader&) {}
 
 class ATT_BearerTest : public l2cap::testing::FakeChannelTest {
@@ -125,10 +125,8 @@ TEST_F(ATT_BearerTest, RequestTimeout) {
       message_loop()->QuitNow();
   });
 
-  auto err_cb = [&closed, &err_cb_called, this](bool timeout, ErrorCode code,
-                                             Handle handle) {
-    EXPECT_TRUE(timeout);
-    EXPECT_EQ(ErrorCode::kNoError, code);
+  auto err_cb = [&closed, &err_cb_called, this](Status status, Handle handle) {
+    EXPECT_EQ(common::HostError::kTimedOut, status.error());
     EXPECT_EQ(0, handle);
 
     err_cb_called = true;
@@ -168,10 +166,8 @@ TEST_F(ATT_BearerTest, RequestTimeoutMany) {
       message_loop()->QuitNow();
   });
 
-  auto err_cb = [&closed, &err_cb_count, this](bool timeout, ErrorCode code,
-                                            Handle handle) {
-    EXPECT_TRUE(timeout);
-    EXPECT_EQ(ErrorCode::kNoError, code);
+  auto err_cb = [&closed, &err_cb_count, this](Status status, Handle handle) {
+    EXPECT_EQ(common::HostError::kTimedOut, status.error());
     EXPECT_EQ(0, handle);
 
     err_cb_count++;
@@ -207,10 +203,8 @@ TEST_F(ATT_BearerTest, IndicationTimeout) {
       message_loop()->QuitNow();
   });
 
-  auto err_cb = [&closed, &err_cb_called, this](bool timeout, ErrorCode code,
-                                             Handle handle) {
-    EXPECT_TRUE(timeout);
-    EXPECT_EQ(ErrorCode::kNoError, code);
+  auto err_cb = [&closed, &err_cb_called, this](Status status, Handle handle) {
+    EXPECT_EQ(common::HostError::kTimedOut, status.error());
     EXPECT_EQ(0, handle);
 
     err_cb_called = true;
@@ -251,10 +245,8 @@ TEST_F(ATT_BearerTest, IndicationTimeoutMany) {
       message_loop()->QuitNow();
   });
 
-  auto err_cb = [&closed, &err_cb_count, this](bool timeout, ErrorCode code,
-                                            Handle handle) {
-    EXPECT_TRUE(timeout);
-    EXPECT_EQ(ErrorCode::kNoError, code);
+  auto err_cb = [&closed, &err_cb_count, this](Status status, Handle handle) {
+    EXPECT_EQ(common::HostError::kTimedOut, status.error());
     EXPECT_EQ(0, handle);
 
     err_cb_count++;
@@ -329,10 +321,8 @@ TEST_F(ATT_BearerTest, SendRequestWrongResponse) {
     closed = true;
   });
 
-  auto err_cb = [&err_cb_called, this](bool timeout, ErrorCode code,
-                                             Handle handle) {
-    EXPECT_FALSE(timeout);
-    EXPECT_EQ(ErrorCode::kNoError, code);
+  auto err_cb = [&err_cb_called, this](Status status, Handle handle) {
+    EXPECT_EQ(common::HostError::kFailed, status.error());
     EXPECT_EQ(0, handle);
 
     err_cb_called = true;
@@ -372,11 +362,9 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseTooShort) {
     closed = true;
   });
 
-  auto err_cb = [&err_cb_called, this](bool timeout, ErrorCode code,
-                                             Handle handle) {
-    EXPECT_FALSE(timeout);
-    EXPECT_EQ(ErrorCode::kNoError, code);
+  auto err_cb = [&err_cb_called, this](Status status, Handle handle) {
     EXPECT_EQ(0, handle);
+    EXPECT_EQ(common::HostError::kFailed, status.error());
 
     err_cb_called = true;
   };
@@ -415,11 +403,9 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseTooLong) {
     closed = true;
   });
 
-  auto err_cb = [&err_cb_called, this](bool timeout, ErrorCode code,
-                                             Handle handle) {
-    EXPECT_FALSE(timeout);
-    EXPECT_EQ(ErrorCode::kNoError, code);
+  auto err_cb = [&err_cb_called, this](Status status, Handle handle) {
     EXPECT_EQ(0, handle);
+    EXPECT_EQ(common::HostError::kFailed, status.error());
 
     err_cb_called = true;
   };
@@ -463,11 +449,9 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseWrongOpCode) {
     closed = true;
   });
 
-  auto err_cb = [&err_cb_called, this](bool timeout, ErrorCode code,
-                                             Handle handle) {
-    EXPECT_FALSE(timeout);
-    EXPECT_EQ(ErrorCode::kNoError, code);
+  auto err_cb = [&err_cb_called, this](Status status, Handle handle) {
     EXPECT_EQ(0, handle);
+    EXPECT_EQ(common::HostError::kFailed, status.error());
 
     err_cb_called = true;
   };
@@ -505,9 +489,9 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponse) {
   fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
 
   bool err_cb_called = false;
-  auto err_cb = [&err_cb_called](bool timeout, ErrorCode code, Handle handle) {
-    EXPECT_FALSE(timeout);
-    EXPECT_EQ(ErrorCode::kRequestNotSupported, code);
+  auto err_cb = [&err_cb_called, this](Status status, Handle handle) {
+    EXPECT_TRUE(status.is_protocol_error());
+    EXPECT_EQ(ErrorCode::kRequestNotSupported, status.protocol_error());
     EXPECT_EQ(0x0001, handle);
 
     err_cb_called = true;
@@ -586,13 +570,12 @@ TEST_F(ATT_BearerTest, SendManyRequests) {
   unsigned int success_count = 0u;
   unsigned int error_count = 0u;
 
-  auto error_cb = [&success_count, &error_count](bool timeout, ErrorCode code,
-                                                 Handle handle) {
+  auto error_cb = [&success_count, &error_count](Status status, Handle handle) {
     // This should only be called for the second request (the first request
     // should have already succeeded).
     EXPECT_EQ(1u, success_count);
-    EXPECT_FALSE(timeout);
-    EXPECT_EQ(ErrorCode::kRequestNotSupported, code);
+    EXPECT_TRUE(status.is_protocol_error());
+    EXPECT_EQ(ErrorCode::kRequestNotSupported, status.protocol_error());
     EXPECT_EQ(0x0001, handle);
 
     error_count++;

@@ -37,82 +37,80 @@ std::string HCIVersionToString(hci::HCIVersion version) {
   return "(unknown)";
 }
 
-std::string StatusToString(const hci::Status& status) {
-  switch (status) {
-    case hci::kSuccess: return "Success";
-    case hci::kUnknownCommand: return "Unknown command";
-    case hci::kUnknownConnectionId: return "Unknown connection ID";
-    case hci::kHardwareFailure: return "Hardware failure";
-    case hci::kPageTimeout: return "Page timeout";
-    case hci::kAuthenticationFailure: return "Authentication failure";
-    case hci::kPinOrKeyMissing: return "Pin or key missing";
-    case hci::kMemoryCapacityExceeded: return "Memory capacity exceeded";
-    case hci::kConnectionTimeout: return "Connection timeout";
-    case hci::kConnectionLimitExceeded: return "Connection limit exceeded";
-    case hci::kSynchronousConnectionLimitExceeded: return "Synchronous connection limit exceeded";
-    case hci::kConnectionAlreadyExists: return "Connection already exists";
-    case hci::kCommandDisallowed: return "Command disallowed";
-    case hci::kConnectionRejectedLimitedResources: return "Connection rejected: limited resources";
-    case hci::kConnectionRejectedSecurity: return "Connection rejected: security";
-    case hci::kConnectionRejectedBadBdAddr: return "Connection rejected: bad BD_ADDR";
-    case hci::kConnectionAcceptTimeoutExceeded: return "Connection accept timeout exceeded";
-    case hci::kUnsupportedFeatureOrParameter: return "Unsupported feature or parameter";
-    case hci::kInvalidHCICommandParameters: return "Invalid HCI command parameters";
-    case hci::kRemoteUserTerminatedConnection: return "Remote user terminated connection";
-    case hci::kRemoteDeviceTerminatedConnectionLowResources: return "Remote device terminated connection: low resources";
-    case hci::kRemoteDeviceTerminatedConnectionPowerOff: return "Remote device rerminated connection: power off";
-    case hci::kConnectionTerminatedByLocalHost: return "Connection terminated by local host";
-    case hci::kRepeatedAttempts: return "Repeated attempts";
-    case hci::kPairingNotAllowed: return "Pairing not allowed";
-    case hci::kUnknownLMPPDU: return "Unknown LMP PDU";
-    case hci::kUnsupportedRemoteFeature: return "Unsupported remote feature";
+// clang-format off
+std::string StatusCodeToString(hci::StatusCode code) {
+  switch (code) {
+    case hci::kSuccess: return "success";
+    case hci::kUnknownCommand: return "unknown command";
+    case hci::kUnknownConnectionId: return "unknown connection ID";
+    case hci::kHardwareFailure: return "hardware failure";
+    case hci::kPageTimeout: return "page timeout";
+    case hci::kAuthenticationFailure: return "authentication failure";
+    case hci::kPinOrKeyMissing: return "pin or key missing";
+    case hci::kMemoryCapacityExceeded: return "memory capacity exceeded";
+    case hci::kConnectionTimeout: return "connection timeout";
+    case hci::kConnectionLimitExceeded: return "connection limit exceeded";
+    case hci::kSynchronousConnectionLimitExceeded: return "synchronous connection limit exceeded";
+    case hci::kConnectionAlreadyExists: return "connection already exists";
+    case hci::kCommandDisallowed: return "command disallowed";
+    case hci::kConnectionRejectedLimitedResources: return "connection rejected: limited resources";
+    case hci::kConnectionRejectedSecurity: return "connection rejected: security";
+    case hci::kConnectionRejectedBadBdAddr: return "connection rejected: bad BD_ADDR";
+    case hci::kConnectionAcceptTimeoutExceeded: return "connection accept timeout exceeded";
+    case hci::kUnsupportedFeatureOrParameter: return "unsupported feature or parameter";
+    case hci::kInvalidHCICommandParameters: return "invalid HCI command parameters";
+    case hci::kRemoteUserTerminatedConnection: return "remote user terminated connection";
+    case hci::kRemoteDeviceTerminatedConnectionLowResources: return "remote device terminated connection: low resources";
+    case hci::kRemoteDeviceTerminatedConnectionPowerOff: return "remote device rerminated connection: power off";
+    case hci::kConnectionTerminatedByLocalHost: return "connection terminated by local host";
+    case hci::kRepeatedAttempts: return "repeated attempts";
+    case hci::kPairingNotAllowed: return "pairing not allowed";
+    case hci::kUnknownLMPPDU: return "unknown LMP PDU";
+    case hci::kUnsupportedRemoteFeature: return "unsupported remote feature";
     case hci::kSCOOffsetRejected: return "SCO offset rejected";
     case hci::kSCOIntervalRejected: return "SCO interval rejected";
     case hci::kSCOAirModeRejected: return "SCO air mode rejected";
-    case hci::kInvalidLMPOrLLParameters: return "Invalid LMP or LL parameters";
-    case hci::kUnspecifiedError: return "Unspecified error";
-    case hci::kUnsupportedLMPOrLLParameterValue: return "Unsupported LMP or LL parameter value";
-    case hci::kRoleChangeNotAllowed: return "Role change not allowed";
+    case hci::kInvalidLMPOrLLParameters: return "invalid LMP or LL parameters";
+    case hci::kUnspecifiedError: return "unspecified error";
+    case hci::kUnsupportedLMPOrLLParameterValue: return "unsupported LMP or LL parameter value";
+    case hci::kRoleChangeNotAllowed: return "role change not allowed";
     case hci::kLMPOrLLResponseTimeout: return "LMP or LL response timeout";
     case hci::kLMPErrorTransactionCollision: return "LMP error transaction collision";
     case hci::kLMPPDUNotAllowed: return "LMP PDU not allowed";
-    case hci::kEncryptionModeNotAcceptable: return "Encryption mode not acceptable";
-    case hci::kLinkKeyCannotBeChanged: return "Link key cannot be changed";
-    case hci::kRequestedQoSNotSupported: return "Requested QoS not supported";
-    case hci::kInstantPassed: return "Instant passed";
-    case hci::kPairingWithUnitKeyNotSupported: return "Pairing with unit key not supported";
-    case hci::kDifferentTransactionCollision: return "Different transaction collision";
+    case hci::kEncryptionModeNotAcceptable: return "encryption mode not acceptable";
+    case hci::kLinkKeyCannotBeChanged: return "link key cannot be changed";
+    case hci::kRequestedQoSNotSupported: return "requested QoS not supported";
+    case hci::kInstantPassed: return "instant passed";
+    case hci::kPairingWithUnitKeyNotSupported: return "pairing with unit key not supported";
+    case hci::kDifferentTransactionCollision: return "different transaction collision";
     case hci::kQoSUnacceptableParameter: return "QoS unacceptable parameter";
     case hci::kQoSRejected: return "QoS rejected";
-    case hci::kChannelClassificationNotSupported: return "Channel classification not supported";
-    case hci::kInsufficientSecurity: return "Insufficient security";
-    case hci::kParameterOutOfMandatoryRange: return "Parameter out of mandatory range";
-    case hci::kRoleSwitchPending: return "Role switch pending";
-    case hci::kReservedSlotViolation: return "Reserved slot violation";
-    case hci::kRoleSwitchFailed: return "Role switch failed";
-    case hci::kExtendedInquiryResponseTooLarge: return "Extended inquiry response too large";
-    case hci::kSecureSimplePairingNotSupportedByHost: return "Secure simple pairing not supported by host";
-    case hci::kHostBusyPairing: return "Host busy pairing";
-    case hci::kConnectionRejectedNoSuitableChannelFound: return "Connection rejected: no suitable channel found";
-    case hci::kControllerBusy: return "Controller busy";
-    case hci::kUnacceptableConnectionParameters: return "Unacceptable connection parameters";
-    case hci::kDirectedAdvertisingTimeout: return "Directed advertising timeout";
-    case hci::kConnectionTerminatedMICFailure: return "Connection terminated: MIC failure";
-    case hci::kConnectionFailedToBeEstablished: return "Connection failed to be established";
+    case hci::kChannelClassificationNotSupported: return "channel classification not supported";
+    case hci::kInsufficientSecurity: return "insufficient security";
+    case hci::kParameterOutOfMandatoryRange: return "parameter out of mandatory range";
+    case hci::kRoleSwitchPending: return "role switch pending";
+    case hci::kReservedSlotViolation: return "reserved slot violation";
+    case hci::kRoleSwitchFailed: return "role switch failed";
+    case hci::kExtendedInquiryResponseTooLarge: return "extended inquiry response too large";
+    case hci::kSecureSimplePairingNotSupportedByHost: return "secure simple pairing not supported by host";
+    case hci::kHostBusyPairing: return "host busy pairing";
+    case hci::kConnectionRejectedNoSuitableChannelFound: return "connection rejected: no suitable channel found";
+    case hci::kControllerBusy: return "controller busy";
+    case hci::kUnacceptableConnectionParameters: return "unacceptable connection parameters";
+    case hci::kDirectedAdvertisingTimeout: return "directed advertising timeout";
+    case hci::kConnectionTerminatedMICFailure: return "connection terminated: MIC failure";
+    case hci::kConnectionFailedToBeEstablished: return "connection failed to be established";
     case hci::kMACConnectionFailed: return "MAC connection failed";
-    case hci::kCoarseClockAdjustmentRejected: return "Coarse clock adjustment rejected";
-    case hci::kType0SubmapNotDefined: return "Type 0 submap not defined";
-    case hci::kUnknownAdvertisingIdentifier: return "Unknown advertising identifier";
-    case hci::kLimitReached: return "Limit reached";
-    case hci::kOperationCancelledByHost: return "Operation cancelled by host";
-
-    case hci::kReserved0: break;
-    case hci::kReserved1: break;
-    case hci::kReserved2: break;
+    case hci::kCoarseClockAdjustmentRejected: return "coarse clock adjustment rejected";
+    case hci::kType0SubmapNotDefined: return "type 0 submap not defined";
+    case hci::kUnknownAdvertisingIdentifier: return "unknown advertising identifier";
+    case hci::kLimitReached: return "limit reached";
+    case hci::kOperationCancelledByHost: return "operation cancelled by host";
     default: break;
   };
-  return "Unknown status";
+  return "unknown status";
 }
+// clang-format on
 
 bool DeviceAddressFromAdvReport(const hci::LEAdvertisingReportData& report,
                                 common::DeviceAddress* out_address) {

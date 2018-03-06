@@ -179,9 +179,9 @@ void LowEnergyDiscoveryManager::OnDeviceFound(
 }
 
 void LowEnergyDiscoveryManager::OnScanStatus(
-    hci::LowEnergyScanner::Status status) {
+    hci::LowEnergyScanner::ScanStatus status) {
   switch (status) {
-    case hci::LowEnergyScanner::Status::kFailed: {
+    case hci::LowEnergyScanner::ScanStatus::kFailed: {
       FXL_LOG(ERROR)
           << "gap: LowEnergyDiscoveryManager: Failed to initiate scan!";
 
@@ -202,7 +202,7 @@ void LowEnergyDiscoveryManager::OnScanStatus(
       }
       break;
     }
-    case hci::LowEnergyScanner::Status::kStarted:
+    case hci::LowEnergyScanner::ScanStatus::kStarted:
       FXL_VLOG(1) << "gap: LowEnergyDiscoveryManager: Started scanning";
 
       // Create and register all sessions before notifying the clients. We do
@@ -224,7 +224,7 @@ void LowEnergyDiscoveryManager::OnScanStatus(
       }
       FXL_DCHECK(pending_.empty());
       break;
-    case hci::LowEnergyScanner::Status::kStopped:
+    case hci::LowEnergyScanner::ScanStatus::kStopped:
       // TODO(armansito): Revise this logic when we support pausing a scan even
       // with active sessions.
       FXL_VLOG(1) << "gap: LowEnergyDiscoveryManager: Stopped scanning";
@@ -236,7 +236,7 @@ void LowEnergyDiscoveryManager::OnScanStatus(
       if (!pending_.empty())
         StartScan();
       break;
-    case hci::LowEnergyScanner::Status::kComplete:
+    case hci::LowEnergyScanner::ScanStatus::kComplete:
       FXL_VLOG(2) << "gap: LowEnergyDiscoveryManager: end of scan period";
       cached_scan_results_.clear();
 

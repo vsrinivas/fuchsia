@@ -26,7 +26,7 @@
 using btlib::hci::CommandPacket;
 using btlib::hci::EventPacket;
 using btlib::hci::GenericEnableParam;
-using btlib::hci::Status;
+using btlib::hci::StatusCode;
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -83,7 +83,7 @@ class MfgModeEnabler {
   }
 };
 
-void LogCommandComplete(Status status) {
+void LogCommandComplete(StatusCode status) {
   std::cout << "  Command Complete - status: "
             << fxl::StringPrintf("0x%02x", status) << std::endl;
 }

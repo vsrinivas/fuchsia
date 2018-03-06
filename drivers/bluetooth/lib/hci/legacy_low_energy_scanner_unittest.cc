@@ -141,14 +141,14 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScanHCIErrors) {
   EXPECT_FALSE(scanner()->IsScanning());
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
 
-  LowEnergyScanner::Status status;
-  auto cb = [&status, this](LowEnergyScanner::Status in_status) {
+  LowEnergyScanner::ScanStatus status;
+  auto cb = [&status, this](LowEnergyScanner::ScanStatus in_status) {
     status = in_status;
   };
 
   // Set Scan Parameters will fail.
   test_device()->SetDefaultResponseStatus(kLESetScanParameters,
-                                          Status::kHardwareFailure);
+                                          StatusCode::kHardwareFailure);
   EXPECT_EQ(0, test_device()->le_scan_state().scan_interval);
 
   EXPECT_TRUE(scanner()->StartScan(
@@ -165,7 +165,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScanHCIErrors) {
   RunUntilIdle();
 
   // Status should be failure and the scan parameters shouldn't have applied.
-  EXPECT_EQ(LowEnergyScanner::Status::kFailed, status);
+  EXPECT_EQ(LowEnergyScanner::ScanStatus::kFailed, status);
   EXPECT_EQ(0, test_device()->le_scan_state().scan_interval);
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
@@ -174,7 +174,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScanHCIErrors) {
   // Set Scan Parameters will succeed but Set Scan Enable will fail.
   test_device()->ClearDefaultResponseStatus(kLESetScanParameters);
   test_device()->SetDefaultResponseStatus(kLESetScanEnable,
-                                          Status::kHardwareFailure);
+                                          StatusCode::kHardwareFailure);
 
   EXPECT_TRUE(scanner()->StartScan(
       false, defaults::kLEScanInterval, defaults::kLEScanWindow, false,
@@ -184,7 +184,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScanHCIErrors) {
   RunUntilIdle();
 
   // Status should be failure but the scan parameters should have applied.
-  EXPECT_EQ(LowEnergyScanner::Status::kFailed, status);
+  EXPECT_EQ(LowEnergyScanner::ScanStatus::kFailed, status);
   EXPECT_EQ(defaults::kLEScanInterval,
             test_device()->le_scan_state().scan_interval);
   EXPECT_EQ(defaults::kLEScanWindow,
@@ -201,8 +201,8 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
   EXPECT_FALSE(scanner()->IsScanning());
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
 
-  LowEnergyScanner::Status status;
-  auto cb = [&status, this](LowEnergyScanner::Status in_status) {
+  LowEnergyScanner::ScanStatus status;
+  auto cb = [&status, this](LowEnergyScanner::ScanStatus in_status) {
     status = in_status;
     message_loop()->QuitNow();
   };
@@ -216,7 +216,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
   RunUntilIdle();
 
   // Scan should have started.
-  EXPECT_EQ(LowEnergyScanner::Status::kStarted, status);
+  EXPECT_EQ(LowEnergyScanner::ScanStatus::kStarted, status);
   EXPECT_EQ(defaults::kLEScanInterval,
             test_device()->le_scan_state().scan_interval);
   EXPECT_EQ(defaults::kLEScanWindow,
@@ -237,7 +237,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
 
   // After 10 ms (kScanPeriodMs) the scan should stop by itself.
   RunMessageLoop();
-  EXPECT_EQ(LowEnergyScanner::Status::kComplete, status);
+  EXPECT_EQ(LowEnergyScanner::ScanStatus::kComplete, status);
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
   EXPECT_FALSE(scanner()->IsScanning());
@@ -248,8 +248,8 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopScan) {
   EXPECT_FALSE(scanner()->IsScanning());
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
 
-  LowEnergyScanner::Status status;
-  auto cb = [&status, this](LowEnergyScanner::Status in_status) {
+  LowEnergyScanner::ScanStatus status;
+  auto cb = [&status, this](LowEnergyScanner::ScanStatus in_status) {
     status = in_status;
   };
 
@@ -267,7 +267,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopScan) {
   RunUntilIdle();
 
   // Scan should have started.
-  EXPECT_EQ(LowEnergyScanner::Status::kStarted, status);
+  EXPECT_EQ(LowEnergyScanner::ScanStatus::kStarted, status);
   EXPECT_TRUE(test_device()->le_scan_state().enabled);
   EXPECT_EQ(LowEnergyScanner::State::kScanning, scanner()->state());
   EXPECT_TRUE(scanner()->IsScanning());
@@ -277,7 +277,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopScan) {
   EXPECT_TRUE(scanner()->StopScan());
   RunUntilIdle();
 
-  EXPECT_EQ(LowEnergyScanner::Status::kStopped, status);
+  EXPECT_EQ(LowEnergyScanner::ScanStatus::kStopped, status);
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
   EXPECT_FALSE(scanner()->IsScanning());
@@ -288,8 +288,8 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopScanWhileInitiating) {
   EXPECT_FALSE(scanner()->IsScanning());
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
 
-  LowEnergyScanner::Status status;
-  auto cb = [&status, this](LowEnergyScanner::Status in_status) {
+  LowEnergyScanner::ScanStatus status;
+  auto cb = [&status, this](LowEnergyScanner::ScanStatus in_status) {
     status = in_status;
   };
 
@@ -306,7 +306,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopScanWhileInitiating) {
   EXPECT_TRUE(scanner()->StopScan());
   RunUntilIdle();
 
-  EXPECT_EQ(LowEnergyScanner::Status::kStopped, status);
+  EXPECT_EQ(LowEnergyScanner::ScanStatus::kStopped, status);
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
   EXPECT_FALSE(scanner()->IsScanning());
@@ -315,10 +315,10 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopScanWhileInitiating) {
 TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
   AddFakeDevices();
 
-  LowEnergyScanner::Status status;
-  auto cb = [&status, this](LowEnergyScanner::Status in_status) {
+  LowEnergyScanner::ScanStatus status;
+  auto cb = [&status, this](LowEnergyScanner::ScanStatus in_status) {
     status = in_status;
-    if (status == LowEnergyScanner::Status::kComplete)
+    if (status == LowEnergyScanner::ScanStatus::kComplete)
       message_loop()->QuitNow();
   };
 
@@ -409,13 +409,9 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
 TEST_F(HCI_LegacyLowEnergyScannerTest, StopDuringActiveScan) {
   AddFakeDevices();
 
-  LowEnergyScanner::Status status;
-  auto cb = [&status, this](LowEnergyScanner::Status in_status) {
+  LowEnergyScanner::ScanStatus status;
+  auto cb = [&status, this](LowEnergyScanner::ScanStatus in_status) {
     status = in_status;
-    //if (status == LowEnergyScanner::Status::kStarted ||
-    //    status == LowEnergyScanner::Status::kStopped) {
-    //  message_loop()->QuitNow();
-    //}
   };
 
   std::map<common::DeviceAddress, std::pair<LowEnergyScanResult, std::string>>
@@ -461,11 +457,9 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopDuringActiveScan) {
 TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
   AddFakeDevices();
 
-  LowEnergyScanner::Status status;
-  auto cb = [&status, this](LowEnergyScanner::Status in_status) {
+  LowEnergyScanner::ScanStatus status;
+  auto cb = [&status, this](LowEnergyScanner::ScanStatus in_status) {
     status = in_status;
-    //if (status == LowEnergyScanner::Status::kComplete)
-    //  message_loop()->QuitNow();
   };
 
   std::map<common::DeviceAddress, std::pair<LowEnergyScanResult, std::string>>

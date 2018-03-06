@@ -35,32 +35,30 @@ class LowEnergyAdvertisingManager {
   // Returns false if the parameters represent an invalid advertisement:
   //  * if |anonymous| is true but |callback| is set
   //
-  // |result_callback| may be called synchronously within this function.
-  // |result_callback| provides one of:
-  //  - an |advertisement_id| which can be used to stop advertising
-  //    or disambiguate calls to |callback|, and |status| of hci::kSuccess
+  // |status_callback| may be called synchronously within this function.
+  // |status_callback| provides one of:
+  //  - an |advertisement_id|, which can be used to stop advertising
+  //    or disambiguate calls to |callback|, and a success |status|.
   //  - an empty |advertisement_id| and an error indication in |status|:
-  //    * hci::kHCIInvalidHCICommandParameters if the advertising parameters are
-  //    invalid
-  //    * hci::kConnectionLimitExceeded if another set cannot be advertised
-  //    * hci::kMemoryCapacityExceeded if the |data| is too large
-  //    * hci::kUnsupportedFeatureOrParameter if a feature is requested but
-  //      unsupported
-  //    * the actual hci error reported from the controller, otherwise.
-  // TODO(jamuraa): Introduce stack error codes that are separate from HCI error
-  // codes.
+  //    * common::HostError::kInvalidParameters if the advertising parameters
+  //      are invalid (e.g. |data| is too large).
+  //    * common::HostError::kNotSupported if another set cannot be advertised
+  //      or if the requested parameters are not supported by the hardware.
+  //    * common::HostError::kProtocolError with the a HCI error reported from
+  //      the controller, otherwise.
+  //
   // TODO(armansito): Return integer IDs instead.
   using ConnectionCallback =
       std::function<void(std::string advertisement_id,
                          std::unique_ptr<hci::Connection> link)>;
-  using AdvertisingResultCallback =
+  using AdvertisingStatusCallback =
       std::function<void(std::string advertisement_id, hci::Status status)>;
   void StartAdvertising(const AdvertisingData& data,
                         const AdvertisingData& scan_rsp,
                         const ConnectionCallback& connect_callback,
                         uint32_t interval_ms,
                         bool anonymous,
-                        const AdvertisingResultCallback& result_callback);
+                        const AdvertisingStatusCallback& status_callback);
 
   // Stop advertising the advertisement with the id |advertisement_id|
   // Returns true if an advertisement was stopped, and false otherwise.

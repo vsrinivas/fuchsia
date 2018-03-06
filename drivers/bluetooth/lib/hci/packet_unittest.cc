@@ -61,7 +61,7 @@ TEST(HCI_PacketTest, EventPacket) {
   auto bytes = common::CreateStaticByteBuffer(
       0xFF,  // event code
       0x01,  // parameter_total_size
-      0x7F  // foo
+      0x7F   // foo
   );
   packet->mutable_view()->mutable_data().Write(bytes);
   packet->InitializeFromBuffer();
@@ -124,6 +124,72 @@ TEST(HCI_PacketTest, EventPacketReturnParams) {
   packet->InitializeFromBuffer();
   ASSERT_NE(nullptr, packet->return_params<TestPayload>());
   EXPECT_EQ(127, packet->return_params<TestPayload>()->foo);
+}
+
+TEST(HCI_PacketTest, EventPacketStatus) {
+  // clang-format off
+  auto evt = common::CreateStaticByteBuffer(
+      // Event header
+      0x05, 0x04,  // (event_code is DisconnectionComplete)
+
+      // Disconnection Complete event parameters
+      0x03,        // status: hardware failure
+      0x01, 0x00,  // handle: 0x0001
+      0x16         // reason: terminated by local host
+  );
+  // clang-format on
+
+  auto packet = EventPacket::New(evt.size());
+  packet->mutable_view()->mutable_data().Write(evt);
+  packet->InitializeFromBuffer();
+
+  Status status = packet->ToStatus();
+  EXPECT_TRUE(status.is_protocol_error());
+  EXPECT_EQ(StatusCode::kHardwareFailure, status.protocol_error());
+}
+
+TEST(HCI_PacketTest, CommandCompleteEventStatus) {
+  // clang-format off
+  auto evt = common::CreateStaticByteBuffer(
+      // Event header
+      0x0E, 0x04,  // (event code is CommandComplete)
+
+      // CommandCompleteEventParams
+      0x01, 0xFF, 0x07,
+
+      // Return parameters (status: hardware failure)
+      0x03);
+  // clang-format on
+
+  auto packet = EventPacket::New(evt.size());
+  packet->mutable_view()->mutable_data().Write(evt);
+  packet->InitializeFromBuffer();
+
+  Status status = packet->ToStatus();
+  EXPECT_TRUE(status.is_protocol_error());
+  EXPECT_EQ(StatusCode::kHardwareFailure, status.protocol_error());
+}
+
+TEST(HCI_PacketTest, EventPacketMalformed) {
+  // clang-format off
+  auto evt = common::CreateStaticByteBuffer(
+      // Event header
+      0x05, 0x03,  // (event_code is DisconnectionComplete)
+
+      // Disconnection Complete event parameters
+      0x03,        // status: hardware failure
+      0x01, 0x00   // handle: 0x0001
+      // event is one byte too short
+  );
+  // clang-format on
+
+  auto packet = EventPacket::New(evt.size());
+  packet->mutable_view()->mutable_data().Write(evt);
+  packet->InitializeFromBuffer();
+
+  Status status = packet->ToStatus();
+  EXPECT_FALSE(status.is_protocol_error());
+  EXPECT_EQ(common::HostError::kPacketMalformed, status.error());
 }
 
 TEST(HCI_PacketTest, LEEventParams) {

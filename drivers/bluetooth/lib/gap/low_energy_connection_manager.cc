@@ -8,6 +8,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
+#include "garnet/drivers/bluetooth/lib/hci/util.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
 
 #include "lib/fxl/functional/make_copyable.h"
@@ -232,9 +233,7 @@ LowEnergyConnectionManager::~LowEnergyConnectionManager() {
 
   // Clear |pending_requests_| and notify failure.
   for (auto& iter : pending_requests_) {
-    // TODO(armansito): Use our own error code for errors that don't come from
-    // the controller (such as this and command timeout).
-    iter.second.NotifyCallbacks(hci::Status::kHardwareFailure,
+    iter.second.NotifyCallbacks(hci::Status(common::HostError::kFailed),
                                 [] { return nullptr; });
   }
   pending_requests_.clear();
@@ -302,10 +301,9 @@ bool LowEnergyConnectionManager::Connect(
             FXL_VLOG(1) << "gap: LowEnergyConnectionManager: Link "
                            "disconnected, ref is inactive";
 
-            // TODO(armansito): Use a non-HCI error code for this.
-            callback(hci::Status::kConnectionFailedToBeEstablished, nullptr);
+            callback(hci::Status(common::HostError::kFailed), nullptr);
           } else {
-            callback(hci::Status::kSuccess, std::move(conn_ref));
+            callback(hci::Status(), std::move(conn_ref));
           }
         }));
 
@@ -444,10 +442,10 @@ void LowEnergyConnectionManager::RequestCreateConnection(RemoteDevice* peer) {
       hci::defaults::kLESupervisionTimeout);
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  auto result_cb = [self, device_id = peer->identifier()](
-                       auto result, auto status, auto link) {
+  auto status_cb = [self, device_id = peer->identifier()](hci::Status status,
+                                                          auto link) {
     if (self)
-      self->OnConnectResult(device_id, result, status, std::move(link));
+      self->OnConnectResult(device_id, status, std::move(link));
   };
 
   // We set the scan window and interval to the same value for continuous
@@ -456,7 +454,7 @@ void LowEnergyConnectionManager::RequestCreateConnection(RemoteDevice* peer) {
   connector_->CreateConnection(hci::LEOwnAddressType::kPublic,
                                false /* use_whitelist */, peer->address(),
                                kLEScanFastInterval, kLEScanFastInterval,
-                               initial_params, result_cb, request_timeout_ms_);
+                               initial_params, status_cb, request_timeout_ms_);
 }
 
 LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
@@ -584,9 +582,8 @@ void LowEnergyConnectionManager::RegisterLocalInitiatedLink(
     auto pending_req_data = std::move(iter->second);
     pending_requests_.erase(iter);
 
-    pending_req_data.NotifyCallbacks(hci::Status::kSuccess, [&conn_iter] {
-      return conn_iter->second->AddRef();
-    });
+    pending_req_data.NotifyCallbacks(
+        hci::Status(), [&conn_iter] { return conn_iter->second->AddRef(); });
   }
 
   // Release the extra reference before attempting the next connection. This
@@ -613,12 +610,11 @@ RemoteDevice* LowEnergyConnectionManager::UpdateRemoteDeviceWithLink(
 
 void LowEnergyConnectionManager::OnConnectResult(
     const std::string& device_identifier,
-    hci::LowEnergyConnector::Result result,
     hci::Status status,
     hci::ConnectionPtr link) {
   FXL_DCHECK(connections_.find(device_identifier) == connections_.end());
 
-  if (result == hci::LowEnergyConnector::Result::kSuccess) {
+  if (status) {
     FXL_VLOG(1) << "gap: le connmgr: LE connection request successful";
     RegisterLocalInitiatedLink(std::move(link));
     return;
@@ -654,19 +650,19 @@ void LowEnergyConnectionManager::OnDisconnectionComplete(
       event.view().payload<hci::DisconnectionCompleteEventParams>();
   hci::ConnectionHandle handle = le16toh(params.connection_handle);
 
-  if (params.status != hci::Status::kSuccess) {
-    FXL_LOG(WARNING) << fxl::StringPrintf(
+  if (params.status != hci::StatusCode::kSuccess) {
+    FXL_VLOG(1) << fxl::StringPrintf(
         "gap: LowEnergyConnectionManager: HCI disconnection event received "
         "with error "
-        "(status: 0x%02x, handle: 0x%04x)",
-        params.status, handle);
+        "(status: \"%s\", handle: 0x%04x)",
+        hci::StatusCodeToString(params.status).c_str(), handle);
     return;
   }
 
   FXL_LOG(INFO) << fxl::StringPrintf(
       "gap: LowEnergyConnectionManager: Link disconnected - "
-      "status: 0x%02x, handle: 0x%04x, reason: 0x%02x",
-      params.status, handle, params.reason);
+      "status: \"%s\", handle: 0x%04x, reason: 0x%02x",
+      hci::StatusCodeToString(params.status).c_str(), handle, params.reason);
 
   if (test_disconn_cb_)
     test_disconn_cb_(handle);
@@ -703,7 +699,7 @@ void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
   FXL_CHECK(payload);
   hci::ConnectionHandle handle = le16toh(payload->connection_handle);
 
-  if (payload->status != hci::Status::kSuccess) {
+  if (payload->status != hci::StatusCode::kSuccess) {
     FXL_LOG(WARNING) << fxl::StringPrintf(
         "gap: LowEnergyConnectionManager: HCI LE Connection Update Complete "
         "event with error (status: 0x%02x, handle: 0x%04x)",
@@ -795,11 +791,10 @@ void LowEnergyConnectionManager::UpdateConnectionParams(
   auto status_cb = [handle](auto id, const hci::EventPacket& event) {
     FXL_DCHECK(event.event_code() == hci::kCommandStatusEventCode);
 
-    hci::Status status = event.status();
-    if (status != hci::Status::kSuccess) {
-      FXL_VLOG(1) << fxl::StringPrintf(
-          "(ERROR): gap: Controller rejected LE conn. params. (status: 0x%02x",
-          status);
+    hci::Status status = event.ToStatus();
+    if (!status) {
+      FXL_VLOG(1) << "(ERROR): gap: Controller rejected LE conn. params: "
+                  << status.ToString();
     }
   };
 

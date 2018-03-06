@@ -124,7 +124,7 @@ class LowEnergyScanner {
   // device is never received during a scan period, then an OnDeviceFound event
   // (exluding scan response data) will be generated for that device at the end
   // of the scan period, UNLESS the scan was explicitly stopped via StopScan().
-  enum class Status {
+  enum class ScanStatus {
     // Reported when the scan could not be started.
     kFailed,
 
@@ -138,14 +138,14 @@ class LowEnergyScanner {
     // Called when the scan was terminated due to a call to StopScan().
     kStopped,
   };
-  using StatusCallback = std::function<void(Status)>;
+  using ScanStatusCallback = std::function<void(ScanStatus)>;
   virtual bool StartScan(bool active,
                          uint16_t scan_interval,
                          uint16_t scan_window,
                          bool filter_duplicates,
                          LEScanFilterPolicy filter_policy,
                          int64_t period_ms,
-                         const StatusCallback& callback) = 0;
+                         const ScanStatusCallback& callback) = 0;
 
   // Stops a previously started device scan. Returns false if a scan is not in
   // progress. Otherwise, cancels any in progress scan procedure and returns

@@ -32,8 +32,8 @@ FakeDevice::FakeDevice(const common::DeviceAddress& address,
       connected_(false),
       connectable_(connectable),
       scannable_(scannable),
-      connect_status_(hci::Status::kSuccess),
-      connect_response_(hci::Status::kSuccess),
+      connect_status_(hci::StatusCode::kSuccess),
+      connect_response_(hci::StatusCode::kSuccess),
       force_pending_connect_(false),
       should_batch_reports_(false) {}
 

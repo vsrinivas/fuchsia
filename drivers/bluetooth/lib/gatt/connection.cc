@@ -24,11 +24,9 @@ Connection::Connection(const std::string& peer_id,
   server_ = std::make_unique<gatt::Server>(peer_id, local_db, att);
 
   // Negotiate the MTU right away.
-  client_->ExchangeMTU([](att::ErrorCode ecode, uint16_t mtu) {
-    // TODO(NET-288): Format this properly using common::Status.
-    if (ecode != att::ErrorCode::kNoError) {
-      FXL_LOG(ERROR) << "gatt: MTU exchange failed: "
-                     << static_cast<unsigned int>(ecode);
+  client_->ExchangeMTU([](att::Status status, uint16_t mtu) {
+    if (!status) {
+      FXL_LOG(ERROR) << "gatt: MTU exchange failed: " << status.ToString();
     } else {
       FXL_VLOG(1) << "gatt: MTU exchanged: " << mtu;
     }

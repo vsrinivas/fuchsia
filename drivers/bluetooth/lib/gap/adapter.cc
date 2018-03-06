@@ -134,10 +134,10 @@ bool Adapter::Initialize(const InitializeCallback& callback,
       });
 
   init_seq_runner_->RunCommands([callback, this](hci::Status status) {
-    if (status != hci::Status::kSuccess) {
+    if (!status) {
       FXL_LOG(ERROR)
           << "gap: Adapter: Failed to obtain initial controller information: "
-          << StatusToString(status);
+          << status.ToString();
       CleanUp();
       callback(false);
       return;
@@ -266,10 +266,10 @@ void Adapter::InitializeStep2(const InitializeCallback& callback) {
   }
 
   init_seq_runner_->RunCommands([callback, this](hci::Status status) {
-    if (status != hci::Status::kSuccess) {
+    if (!status) {
       FXL_LOG(ERROR) << "gap: Adapter: Failed to obtain initial controller "
                         "information (step 2): "
-                     << StatusToString(status);
+                     << status.ToString();
       CleanUp();
       callback(false);
       return;
@@ -367,10 +367,10 @@ void Adapter::InitializeStep3(const InitializeCallback& callback) {
   }
 
   init_seq_runner_->RunCommands([callback, this](hci::Status status) {
-    if (status != hci::Status::kSuccess) {
+    if (!status) {
       FXL_LOG(ERROR) << "gap: Adapter: Failed to obtain initial controller "
                         "information (step 3): "
-                     << StatusToString(status);
+                     << status.ToString();
       CleanUp();
       callback(false);
       return;

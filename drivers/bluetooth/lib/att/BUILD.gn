@@ -13,6 +13,8 @@ static_library("att") {
     "database.h",
     "packet.cc",
     "packet.h",
+    "status.cc",
+    "status.h",
   ]
 
   public_deps = [

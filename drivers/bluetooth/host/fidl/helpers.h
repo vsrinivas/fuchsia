@@ -4,15 +4,18 @@
 
 #pragma once
 
-#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/gap/adapter.h"
-#include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include <fuchsia/cpp/bluetooth.h>
 #include <fuchsia/cpp/bluetooth_control.h>
 #include <fuchsia/cpp/bluetooth_gatt.h>
 #include <fuchsia/cpp/bluetooth_low_energy.h>
-#include "lib/fxl/type_converter.h"
+
 #include "lib/fidl/cpp/vector.h"
+#include "lib/fxl/type_converter.h"
+
+#include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/status.h"
+#include "garnet/drivers/bluetooth/lib/gap/adapter.h"
+#include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 
 // Helpers for implementing the Bluetooth FIDL interfaces.
 
@@ -27,8 +30,35 @@ class DiscoveryFilter;
 namespace bthost {
 namespace fidl_helpers {
 
-::bluetooth::Status NewErrorStatus(::bluetooth::ErrorCode error_code,
-                                      const std::string& description);
+// Functions for generating a FIDL bluetooth::Status
+
+::bluetooth::ErrorCode HostErrorToFidl(::btlib::common::HostError host_error);
+
+::bluetooth::Status NewFidlError(::bluetooth::ErrorCode error_code,
+                                 std::string description);
+
+template <typename ProtocolErrorCode>
+::bluetooth::Status StatusToFidl(
+    const ::btlib::common::Status<ProtocolErrorCode>& status,
+    std::string msg = "") {
+  ::bluetooth::Status fidl_status;
+
+  if (status.is_success())
+    return fidl_status;
+
+  auto error = ::bluetooth::Error::New();
+  error->error_code = HostErrorToFidl(status.error());
+  error->description = msg.empty() ? status.ToString() : std::move(msg);
+  if (status.is_protocol_error()) {
+    error->protocol_error_code = status.protocol_error();
+  }
+
+  fidl_status.error = std::move(error);
+  return fidl_status;
+}
+
+// Functions to convert host library objects into FIDL types.
+
 ::bluetooth_control::AdapterInfo NewAdapterInfo(
     const ::btlib::gap::Adapter& adapter);
 ::bluetooth_control::RemoteDevicePtr NewRemoteDevice(

@@ -6,6 +6,7 @@
 
 // clang-format off
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -54,7 +55,7 @@ enum class HCIVersion : uint8_t {
 // HCI Error Codes. Refer to Core Spec v5.0, Vol 2, Part D for definitions and
 // descriptions. All enum values are in increasing numerical order, however the
 // values are listed below for clarity.
-enum Status : uint8_t {
+enum StatusCode : uint8_t {
   kSuccess                                      = 0x00,
   kUnknownCommand                               = 0x01,
   kUnknownConnectionId                          = 0x02,
@@ -126,13 +127,6 @@ enum Status : uint8_t {
   kUnknownAdvertisingIdentifier                 = 0x42,
   kLimitReached                                 = 0x43,
   kOperationCancelledByHost                     = 0x44,
-
-  // Our stack defined error to signal an invalid status.
-  // TODO(armansito): Vendor commands could be using this code to report their custom errors. We
-  // should introduce a wider (16-bit) Status type for errors reported via CommandChannel and assign
-  // a number from beyond the reserved range for our own errors.
-  kInvalidStatus                                = 0xFE,
-  kCommandTimeout                               = 0xFF,
 };
 
 // Bitmask values for the 8-octet Local Supported LMP Features bit-field. See Core Spec

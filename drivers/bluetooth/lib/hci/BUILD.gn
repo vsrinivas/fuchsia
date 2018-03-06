@@ -31,6 +31,8 @@ static_library("hci") {
     "low_energy_scanner.cc",
     "low_energy_scanner.h",
     "packet.h",
+    "status.cc",
+    "status.h",
     "sequential_command_runner.cc",
     "sequential_command_runner.h",
     "slab_allocators.h",
@@ -62,6 +64,7 @@ source_set("tests") {
     "packet_unittest.cc",
     "sequential_command_runner_unittest.cc",
     "slab_allocators_unittest.cc",
+    "status_unittest.cc",
   ]
 
   deps = [

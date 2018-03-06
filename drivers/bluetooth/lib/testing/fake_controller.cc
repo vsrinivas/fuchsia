@@ -124,8 +124,8 @@ FakeController::FakeController()
 FakeController::~FakeController() { Stop(); }
 
 void FakeController::SetDefaultResponseStatus(hci::OpCode opcode,
-                                              hci::Status status) {
-  FXL_DCHECK(status != hci::Status::kSuccess);
+                                              hci::StatusCode status) {
+  FXL_DCHECK(status != hci::StatusCode::kSuccess);
   default_status_map_[opcode] = status;
 }
 
@@ -218,13 +218,13 @@ void FakeController::RespondWithCommandComplete(
 
 void FakeController::RespondWithSuccess(hci::OpCode opcode) {
   hci::SimpleReturnParams out_params;
-  out_params.status = hci::Status::kSuccess;
+  out_params.status = hci::StatusCode::kSuccess;
   RespondWithCommandComplete(
       opcode, common::BufferView(&out_params, sizeof(out_params)));
 }
 
 void FakeController::RespondWithCommandStatus(hci::OpCode opcode,
-                                              hci::Status status) {
+                                              hci::StatusCode status) {
   common::StaticByteBuffer<sizeof(hci::CommandStatusEventParams)> buffer;
   common::MutablePacketView<hci::CommandStatusEventParams> event(&buffer);
 
@@ -343,7 +343,7 @@ void FakeController::ConnectLowEnergy(const common::DeviceAddress& addr,
     hci::LEConnectionCompleteSubeventParams params;
     std::memset(&params, 0, sizeof(params));
 
-    params.status = hci::Status::kSuccess;
+    params.status = hci::StatusCode::kSuccess;
     params.peer_address = addr.value();
     params.peer_address_type = ToPeerAddrType(addr.type());
     params.conn_latency = htole16(conn_params.latency());
@@ -408,9 +408,9 @@ void FakeController::Disconnect(const common::DeviceAddress& addr) {
 
     for (auto link : links) {
       hci::DisconnectionCompleteEventParams params;
-      params.status = hci::Status::kSuccess;
+      params.status = hci::StatusCode::kSuccess;
       params.connection_handle = htole16(link);
-      params.reason = hci::Status::kRemoteUserTerminatedConnection;
+      params.reason = hci::StatusCode::kRemoteUserTerminatedConnection;
       SendEvent(hci::kDisconnectionCompleteEventCode,
                 common::BufferView(&params, sizeof(params)));
     }
@@ -497,7 +497,7 @@ void FakeController::OnLECreateConnectionCommandReceived(
   // Cannot issue this command while a request is already pending.
   if (le_connect_pending_) {
     RespondWithCommandStatus(hci::kLECreateConnection,
-                             hci::Status::kCommandDisallowed);
+                             hci::StatusCode::kCommandDisallowed);
     return;
   }
 
@@ -506,13 +506,13 @@ void FakeController::OnLECreateConnectionCommandReceived(
   FXL_DCHECK(addr_type != common::DeviceAddress::Type::kBREDR);
 
   const common::DeviceAddress peer_address(addr_type, params.peer_address);
-  hci::Status status = hci::Status::kSuccess;
+  hci::StatusCode status = hci::StatusCode::kSuccess;
 
   // Find the device that matches the requested address.
   FakeDevice* device = FindDeviceByAddress(peer_address);
   if (device) {
     if (device->connected())
-      status = hci::Status::kConnectionAlreadyExists;
+      status = hci::StatusCode::kConnectionAlreadyExists;
     else
       status = device->connect_status();
   }
@@ -521,7 +521,7 @@ void FakeController::OnLECreateConnectionCommandReceived(
   RespondWithCommandStatus(hci::kLECreateConnection, status);
 
   // If we just sent back an error status then the operation is complete.
-  if (status != hci::Status::kSuccess)
+  if (status != hci::StatusCode::kSuccess)
     return;
 
   le_connect_pending_ = true;
@@ -537,7 +537,7 @@ void FakeController::OnLECreateConnectionCommandReceived(
 
   if (next_conn_handle_ == 0x0FFF) {
     // Ran out of handles
-    status = hci::Status::kConnectionLimitExceeded;
+    status = hci::StatusCode::kConnectionLimitExceeded;
   } else {
     status = device->connect_response();
   }
@@ -549,7 +549,7 @@ void FakeController::OnLECreateConnectionCommandReceived(
   response.peer_address = params.peer_address;
   response.peer_address_type = ToPeerAddrType(addr_type);
 
-  if (status == hci::Status::kSuccess) {
+  if (status == hci::StatusCode::kSuccess) {
     uint16_t interval_min = le16toh(params.conn_interval_min);
     uint16_t interval_max = le16toh(params.conn_interval_max);
     uint16_t interval = interval_min + ((interval_max - interval_min) / 2);
@@ -578,7 +578,7 @@ void FakeController::OnLECreateConnectionCommandReceived(
   pending_le_connect_rsp_.Reset([response, device, this] {
     le_connect_pending_ = false;
 
-    if (response.status == hci::Status::kSuccess) {
+    if (response.status == hci::StatusCode::kSuccess) {
       bool notify = !device->connected();
       device->AddLink(le16toh(response.connection_handle));
       if (notify && device->connected())
@@ -597,7 +597,7 @@ void FakeController::OnLEConnectionUpdateCommandReceived(
   FakeDevice* device = FindDeviceByConnHandle(handle);
   if (!device) {
     RespondWithCommandStatus(hci::kLEConnectionUpdate,
-                             hci::Status::kUnknownConnectionId);
+                             hci::StatusCode::kUnknownConnectionId);
     return;
   }
 
@@ -610,11 +610,11 @@ void FakeController::OnLEConnectionUpdateCommandReceived(
 
   if (min_interval > max_interval) {
     RespondWithCommandStatus(hci::kLEConnectionUpdate,
-                             hci::Status::kInvalidHCICommandParameters);
+                             hci::StatusCode::kInvalidHCICommandParameters);
     return;
   }
 
-  RespondWithCommandStatus(hci::kLEConnectionUpdate, hci::Status::kSuccess);
+  RespondWithCommandStatus(hci::kLEConnectionUpdate, hci::StatusCode::kSuccess);
 
   hci::LEConnectionParameters conn_params(
       min_interval + ((max_interval - min_interval) / 2), max_latency,
@@ -622,7 +622,7 @@ void FakeController::OnLEConnectionUpdateCommandReceived(
   device->set_le_params(conn_params);
 
   hci::LEConnectionUpdateCompleteSubeventParams reply;
-  reply.status = hci::Status::kSuccess;
+  reply.status = hci::StatusCode::kSuccess;
   reply.connection_handle = params.connection_handle;
   reply.conn_interval = htole16(conn_params.interval());
   reply.conn_latency = params.conn_latency;
@@ -642,13 +642,13 @@ void FakeController::OnDisconnectCommandReceived(
   FakeDevice* device = FindDeviceByConnHandle(handle);
   if (!device) {
     RespondWithCommandStatus(hci::kDisconnect,
-                             hci::Status::kUnknownConnectionId);
+                             hci::StatusCode::kUnknownConnectionId);
     return;
   }
 
   FXL_DCHECK(device->connected());
 
-  RespondWithCommandStatus(hci::kDisconnect, hci::Status::kSuccess);
+  RespondWithCommandStatus(hci::kDisconnect, hci::StatusCode::kSuccess);
 
   bool notify = device->connected();
   device->RemoveLink(handle);
@@ -656,9 +656,9 @@ void FakeController::OnDisconnectCommandReceived(
     NotifyConnectionState(device->address(), false);
 
   hci::DisconnectionCompleteEventParams reply;
-  reply.status = hci::Status::kSuccess;
+  reply.status = hci::StatusCode::kSuccess;
   reply.connection_handle = params.connection_handle;
-  reply.reason = hci::Status::kConnectionTerminatedByLocalHost;
+  reply.reason = hci::StatusCode::kConnectionTerminatedByLocalHost;
   SendEvent(hci::kDisconnectionCompleteEventCode,
             common::BufferView(&reply, sizeof(reply)));
 }
@@ -680,7 +680,7 @@ void FakeController::OnCommandPacketReceived(
     }
     case hci::kReadLocalSupportedCommands: {
       hci::ReadLocalSupportedCommandsReturnParams params;
-      params.status = hci::Status::kSuccess;
+      params.status = hci::StatusCode::kSuccess;
       std::memcpy(params.supported_commands, settings_.supported_commands,
                   sizeof(params.supported_commands));
       RespondWithCommandComplete(hci::kReadLocalSupportedCommands,
@@ -689,7 +689,7 @@ void FakeController::OnCommandPacketReceived(
     }
     case hci::kReadLocalSupportedFeatures: {
       hci::ReadLocalSupportedFeaturesReturnParams params;
-      params.status = hci::Status::kSuccess;
+      params.status = hci::StatusCode::kSuccess;
       params.lmp_features = htole64(settings_.lmp_features_page0);
       RespondWithCommandComplete(hci::kReadLocalSupportedFeatures,
                                  common::BufferView(&params, sizeof(params)));
@@ -712,7 +712,7 @@ void FakeController::OnCommandPacketReceived(
       // Command Parameters when apporopriate (Vol 2, Part E, 7.8.9 p1259)
       if (le_adv_state_.enabled) {
         hci::SimpleReturnParams out_params;
-        out_params.status = hci::Status::kCommandDisallowed;
+        out_params.status = hci::StatusCode::kCommandDisallowed;
         RespondWithCommandComplete(
             opcode, common::BufferView(&out_params, sizeof(out_params)));
         return;
@@ -763,7 +763,7 @@ void FakeController::OnCommandPacketReceived(
     }
     case hci::kReadBDADDR: {
       hci::ReadBDADDRReturnParams params;
-      params.status = hci::Status::kSuccess;
+      params.status = hci::StatusCode::kSuccess;
       params.bd_addr = settings_.bd_addr.value();
       RespondWithCommandComplete(hci::kReadBDADDR,
                                  common::BufferView(&params, sizeof(params)));
@@ -797,11 +797,11 @@ void FakeController::OnCommandPacketReceived(
     }
     case hci::kLECreateConnectionCancel: {
       hci::SimpleReturnParams params;
-      params.status = hci::Status::kSuccess;
+      params.status = hci::StatusCode::kSuccess;
 
       if (!le_connect_pending_) {
         // No request is currently pending.
-        params.status = hci::Status::kCommandDisallowed;
+        params.status = hci::StatusCode::kCommandDisallowed;
         RespondWithCommandComplete(hci::kLECreateConnectionCancel,
                                    common::BufferView(&params, sizeof(params)));
         return;
@@ -815,7 +815,7 @@ void FakeController::OnCommandPacketReceived(
       hci::LEConnectionCompleteSubeventParams response;
       std::memset(&response, 0, sizeof(response));
 
-      response.status = hci::Status::kUnknownConnectionId;
+      response.status = hci::StatusCode::kUnknownConnectionId;
       response.peer_address = pending_le_connect_addr_.value();
       response.peer_address_type =
           ToPeerAddrType(pending_le_connect_addr_.type());
@@ -828,7 +828,7 @@ void FakeController::OnCommandPacketReceived(
     }
     case hci::kLEReadLocalSupportedFeatures: {
       hci::LEReadLocalSupportedFeaturesReturnParams params;
-      params.status = hci::Status::kSuccess;
+      params.status = hci::StatusCode::kSuccess;
       params.le_features = htole64(settings_.le_features);
       RespondWithCommandComplete(hci::kLEReadLocalSupportedFeatures,
                                  common::BufferView(&params, sizeof(params)));
@@ -836,7 +836,7 @@ void FakeController::OnCommandPacketReceived(
     }
     case hci::kLEReadSupportedStates: {
       hci::LEReadSupportedStatesReturnParams params;
-      params.status = hci::Status::kSuccess;
+      params.status = hci::StatusCode::kSuccess;
       params.le_states = htole64(settings_.le_supported_states);
       RespondWithCommandComplete(hci::kLEReadSupportedStates,
                                  common::BufferView(&params, sizeof(params)));
@@ -844,7 +844,7 @@ void FakeController::OnCommandPacketReceived(
     }
     case hci::kLEReadBufferSize: {
       hci::LEReadBufferSizeReturnParams params;
-      params.status = hci::Status::kSuccess;
+      params.status = hci::StatusCode::kSuccess;
       params.hc_le_acl_data_packet_length =
           htole16(settings_.le_acl_data_packet_length);
       params.hc_total_num_le_acl_data_packets =
@@ -878,9 +878,9 @@ void FakeController::OnCommandPacketReceived(
       out_params.maximum_page_number = 2;
 
       if (in_params.page_number > 2) {
-        out_params.status = hci::Status::kInvalidHCICommandParameters;
+        out_params.status = hci::StatusCode::kInvalidHCICommandParameters;
       } else {
-        out_params.status = hci::Status::kSuccess;
+        out_params.status = hci::StatusCode::kSuccess;
 
         switch (in_params.page_number) {
           case 0:
@@ -908,9 +908,9 @@ void FakeController::OnCommandPacketReceived(
 
       hci::SimpleReturnParams out_params;
       if (le_scan_state_.enabled) {
-        out_params.status = hci::Status::kCommandDisallowed;
+        out_params.status = hci::StatusCode::kCommandDisallowed;
       } else {
-        out_params.status = hci::Status::kSuccess;
+        out_params.status = hci::StatusCode::kSuccess;
         le_scan_state_.scan_type = in_params.scan_type;
         le_scan_state_.scan_interval = le16toh(in_params.scan_interval);
         le_scan_state_.scan_window = le16toh(in_params.scan_window);
@@ -954,7 +954,7 @@ void FakeController::OnCommandPacketReceived(
     }
     default: {
       hci::SimpleReturnParams params;
-      params.status = hci::Status::kUnknownCommand;
+      params.status = hci::StatusCode::kUnknownCommand;
       RespondWithCommandComplete(opcode,
                                  common::BufferView(&params, sizeof(params)));
       break;

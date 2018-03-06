@@ -55,7 +55,7 @@ Connection::~Connection() {
   Close();
 }
 
-void Connection::Close(Status reason) {
+void Connection::Close(StatusCode reason) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (!is_open())
     return;
@@ -75,7 +75,7 @@ void Connection::Close(Status reason) {
   auto status_cb = [](auto id, const EventPacket& event) {
     FXL_DCHECK(event.event_code() == kCommandStatusEventCode);
     const auto& params = event.view().payload<CommandStatusEventParams>();
-    if (params.status != Status::kSuccess) {
+    if (params.status != StatusCode::kSuccess) {
       FXL_LOG(WARNING) << fxl::StringPrintf(
           "Ignoring failed disconnection status: 0x%02x", params.status);
     }

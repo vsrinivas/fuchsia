@@ -5,11 +5,12 @@
 #include "client.h"
 
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
-
 #include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
 
 namespace btlib {
+
+using common::HostError;
+
 namespace gatt {
 namespace {
 
@@ -20,56 +21,6 @@ common::MutableByteBufferPtr NewPDU(size_t param_size) {
   }
 
   return pdu;
-}
-
-std::string ErrorToString(att::ErrorCode ecode) {
-  switch (ecode) {
-    case att::ErrorCode::kNoError:
-      return "No Error";
-    case att::ErrorCode::kInvalidHandle:
-      return "Invalid Handle";
-    case att::ErrorCode::kReadNotPermitted:
-      return "Read Not Permitted";
-    case att::ErrorCode::kWriteNotPermitted:
-      return "Write Not Permitted";
-    case att::ErrorCode::kInvalidPDU:
-      return "Invalid PDU";
-    case att::ErrorCode::kInsufficientAuthentication:
-      return "Insuff. Authentication";
-    case att::ErrorCode::kRequestNotSupported:
-      return "Request Not Supported";
-    case att::ErrorCode::kInvalidOffset:
-      return "Invalid Offset";
-    case att::ErrorCode::kInsufficientAuthorization:
-      return "Insuff. Authorization";
-    case att::ErrorCode::kPrepareQueueFull:
-      return "Prepare Queue Full";
-    case att::ErrorCode::kAttributeNotFound:
-      return "Attribute Not Found";
-    case att::ErrorCode::kAttributeNotLong:
-      return "Attribute Not Long";
-    case att::ErrorCode::kInsufficientEncryptionKeySize:
-      return "Insuff. Encryption Key Size";
-    case att::ErrorCode::kInvalidAttributeValueLength:
-      return "Invalid Attribute Value Length";
-    case att::ErrorCode::kUnlikelyError:
-      return "Unlikely Error";
-    case att::ErrorCode::kInsufficientEncryption:
-      return "Insuff. Encryption";
-    case att::ErrorCode::kUnsupportedGroupType:
-      return "Unsupported Group Type";
-    case att::ErrorCode::kInsufficientResources:
-      return "Insuff. Resources";
-    default:
-      break;
-  }
-
-  return "(unknown)";
-}
-
-std::string FormatError(att::ErrorCode ecode) {
-  return fxl::StringPrintf("%s (0x%02hhu)", ErrorToString(ecode).c_str(),
-                           ecode);
 }
 
 }  // namespace
@@ -95,8 +46,7 @@ void Client::ExchangeMTU(MTUCallback mtu_cb) {
       // Received a malformed response. Disconnect the link.
       att_->ShutDown();
 
-      // TODO(armansito): Use a host error code here.
-      mtu_cb(att::ErrorCode::kInvalidPDU, 0);
+      mtu_cb(att::Status(HostError::kPacketMalformed), 0);
       return;
     }
 
@@ -109,24 +59,24 @@ void Client::ExchangeMTU(MTUCallback mtu_cb) {
         std::max(att::kLEMinMTU, std::min(server_mtu, att_->preferred_mtu()));
     att_->set_mtu(final_mtu);
 
-    mtu_cb(att::ErrorCode::kNoError, final_mtu);
+    mtu_cb(att::Status(), final_mtu);
   });
 
-  auto error_cb = BindErrorCallback([this, mtu_cb](bool timeout,
-                                                   att::ErrorCode ecode,
+  auto error_cb = BindErrorCallback([this, mtu_cb](att::Status status,
                                                    att::Handle handle) {
     // "If the Error Response is sent by the server with the Error Code set to
     // Request Not Supported, [...] the default MTU shall be used (Vol 3, Part
     // G, 4.3.1)"
-    if (ecode == att::ErrorCode::kRequestNotSupported) {
+    if (status.is_protocol_error() &&
+        status.protocol_error() == att::ErrorCode::kRequestNotSupported) {
       FXL_VLOG(1) << "gatt: Peer does not support MTU exchange: using default";
       att_->set_mtu(att::kLEMinMTU);
-      mtu_cb(att::ErrorCode::kNoError, att::kLEMinMTU);
+      mtu_cb(status, att::kLEMinMTU);
       return;
     }
 
-    FXL_VLOG(1) << "gatt: Exchange MTU failed: " << FormatError(ecode);
-    mtu_cb(ecode, 0);
+    FXL_VLOG(1) << "gatt: Exchange MTU failed: " << status.ToString();
+    mtu_cb(status, 0);
   });
 
   att_->StartTransaction(std::move(pdu), rsp_cb, error_cb);
@@ -143,10 +93,10 @@ att::Bearer::TransactionCallback Client::BindCallback(
 
 att::Bearer::ErrorCallback Client::BindErrorCallback(
     att::Bearer::ErrorCallback callback) {
-  return [self = weak_ptr_factory_.GetWeakPtr(), callback](
-             bool timeout, att::ErrorCode ecode, att::Handle handle) {
+  return [self = weak_ptr_factory_.GetWeakPtr(), callback](att::Status status,
+                                                           att::Handle handle) {
     if (self) {
-      callback(timeout, ecode, handle);
+      callback(status, handle);
     }
   };
 }

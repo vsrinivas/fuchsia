@@ -73,8 +73,8 @@ void AdapterServer::StartDiscovery(StartDiscoveryCallback callback) {
 
   if (le_discovery_session_ || requesting_discovery_) {
     FXL_VLOG(1) << "Discovery already in progress";
-    callback(fidl_helpers::NewErrorStatus(ErrorCode::IN_PROGRESS,
-                                          "Discovery already in progress"));
+    callback(fidl_helpers::NewFidlError(ErrorCode::IN_PROGRESS,
+                                        "Discovery already in progress"));
     return;
   }
 
@@ -91,7 +91,7 @@ void AdapterServer::StartDiscovery(StartDiscoveryCallback callback) {
 
         if (!session) {
           FXL_VLOG(1) << "Failed to start discovery session";
-          callback(fidl_helpers::NewErrorStatus(
+          callback(fidl_helpers::NewFidlError(
               ErrorCode::FAILED, "Failed to start discovery session"));
           return;
         }
@@ -112,8 +112,8 @@ void AdapterServer::StopDiscovery(StopDiscoveryCallback callback) {
   FXL_VLOG(1) << "Adapter StopDiscovery()";
   if (!le_discovery_session_) {
     FXL_VLOG(1) << "No active discovery session";
-    callback(fidl_helpers::NewErrorStatus(ErrorCode::BAD_STATE,
-                                          "No discovery session in progress"));
+    callback(fidl_helpers::NewFidlError(ErrorCode::BAD_STATE,
+                                        "No discovery session in progress"));
     return;
   }
 

@@ -32,10 +32,10 @@ void StatusFilterCallback(fxl::Closure complete_cb,
                           ::btlib::hci::CommandChannel::TransactionId id,
                           const ::btlib::hci::EventPacket& event) {
   if (event.event_code() == ::btlib::hci::kCommandStatusEventCode) {
-    auto status = event.status();
-    std::cout << "  Command Status: " << fxl::StringPrintf("0x%02x", status)
-              << " (id=" << id << ")" << std::endl;
-    if (status != ::btlib::hci::Status::kSuccess)
+    auto status = event.ToStatus();
+    std::cout << "  Command Status: " << status.ToString() << " (id=" << id
+              << ")" << std::endl;
+    if (status != ::btlib::hci::StatusCode::kSuccess)
       complete_cb();
     return;
   }
@@ -52,7 +52,7 @@ void StatusFilterCallback(fxl::Closure complete_cb,
       std::bind(&StatusFilterCallback, complete_cb, cb, _1, _2));
 }
 
-void LogCommandResult(::btlib::hci::Status status,
+void LogCommandResult(::btlib::hci::StatusCode status,
                       ::btlib::hci::CommandChannel::TransactionId id,
                       const std::string& event_name = "Command Complete") {
   std::cout << fxl::StringPrintf("  %s - status: 0x%02x (id=%lu)\n",
@@ -224,7 +224,7 @@ bool HandleVersionInfo(const CommandData* cmd_data,
     auto params =
         event.return_params<::btlib::hci::ReadLocalVersionInfoReturnParams>();
     LogCommandResult(params->status, id);
-    if (params->status != ::btlib::hci::Status::kSuccess) {
+    if (params->status != ::btlib::hci::StatusCode::kSuccess) {
       complete_cb();
       return;
     }
@@ -279,7 +279,7 @@ bool HandleReadBDADDR(const CommandData* cmd_data,
     auto return_params =
         event.return_params<::btlib::hci::ReadBDADDRReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::btlib::hci::Status::kSuccess) {
+    if (return_params->status != ::btlib::hci::StatusCode::kSuccess) {
       complete_cb();
       return;
     }
@@ -310,7 +310,7 @@ bool HandleReadLocalName(const CommandData* cmd_data,
     auto return_params =
         event.return_params<::btlib::hci::ReadLocalNameReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::btlib::hci::Status::kSuccess) {
+    if (return_params->status != ::btlib::hci::StatusCode::kSuccess) {
       complete_cb();
       return;
     }
@@ -720,7 +720,7 @@ bool HandleLEScan(const CommandData* cmd_data,
     auto return_params =
         event.return_params<::btlib::hci::SimpleReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::btlib::hci::Status::kSuccess) {
+    if (return_params->status != ::btlib::hci::StatusCode::kSuccess) {
       cleanup_cb();
       return;
     }
@@ -867,7 +867,7 @@ bool HandleBRScan(const CommandData* cmd_data,
     auto return_params =
         event.view().payload<::btlib::hci::CommandStatusEventParams>();
     LogCommandResult(return_params.status, id, "Command Status");
-    if (return_params.status != ::btlib::hci::Status::kSuccess) {
+    if (return_params.status != ::btlib::hci::StatusCode::kSuccess) {
       cleanup_cb();
       return;
     }

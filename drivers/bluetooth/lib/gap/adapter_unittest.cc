@@ -150,7 +150,7 @@ TEST_F(GAP_AdapterTest, InitializeFailureHCICommandError) {
   settings.ApplyLEOnlyDefaults();
   test_device()->set_settings(settings);
   test_device()->SetDefaultResponseStatus(hci::kLEReadLocalSupportedFeatures,
-                                          hci::Status::kHardwareFailure);
+                                          hci::StatusCode::kHardwareFailure);
 
   InitializeAdapter(init_cb);
   RunMessageLoop();

@@ -249,7 +249,6 @@ class LowEnergyConnectionManager final {
 
   // Called by |connector_| to indicate the result of a connect request.
   void OnConnectResult(const std::string& device_identifier,
-                       hci::LowEnergyConnector::Result result,
                        hci::Status status,
                        hci::ConnectionPtr link);
 

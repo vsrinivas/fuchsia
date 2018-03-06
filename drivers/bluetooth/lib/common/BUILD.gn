@@ -25,6 +25,8 @@ source_set("common") {
     "slab_allocator.h",
     "slab_allocator_traits.h",
     "slab_buffer.h",
+    "status.cc",
+    "status.h",
     "task_domain.h",
     "test_helpers.h",
     "uint128.h",
@@ -56,6 +58,7 @@ source_set("tests") {
     "run_task_sync_unittest.cc",
     "slab_allocator_traits_unittest.cc",
     "slab_allocator_unittest.cc",
+    "status_unittest.cc",
     "task_domain_unittest.cc",
     "uuid_unittest.cc",
   ]

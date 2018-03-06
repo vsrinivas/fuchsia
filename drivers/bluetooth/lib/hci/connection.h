@@ -89,7 +89,7 @@ class Connection final {
 
   // Closes this connection by sending the HCI_Disconnect command to the
   // controller. This method is a NOP if the connecton is already closed.
-  void Close(Status reason = Status::kRemoteUserTerminatedConnection);
+  void Close(StatusCode reason = StatusCode::kRemoteUserTerminatedConnection);
 
   std::string ToString() const;
 

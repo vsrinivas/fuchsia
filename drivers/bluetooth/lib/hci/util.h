@@ -17,7 +17,7 @@ namespace hci {
 std::string HCIVersionToString(hci::HCIVersion version);
 
 // Returns a user-friendly string representation of |status|.
-std::string StatusToString(const hci::Status& status);
+std::string StatusCodeToString(hci::StatusCode code);
 
 // Constructs a common::DeviceAddress structure from the contents of the given
 // advertising report. Returns false if the report contain an invalid value.

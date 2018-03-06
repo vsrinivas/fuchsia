@@ -63,17 +63,17 @@ class HCI_LegacyLowEnergyAdvertiserTest : public TestingBase {
 
   LegacyLowEnergyAdvertiser* advertiser() const { return advertiser_.get(); }
 
-  LowEnergyAdvertiser::AdvertisingResultCallback GetSuccessCallback() {
+  LowEnergyAdvertiser::AdvertisingStatusCallback GetSuccessCallback() {
     return [this](uint32_t interval_ms, Status status) {
       last_status_ = status;
-      EXPECT_EQ(kSuccess, status);
+      EXPECT_TRUE(status);
     };
   }
 
-  LowEnergyAdvertiser::AdvertisingResultCallback GetErrorCallback() {
+  LowEnergyAdvertiser::AdvertisingStatusCallback GetErrorCallback() {
     return [this](uint32_t interval_ms, Status status) {
       last_status_ = status;
-      EXPECT_NE(kSuccess, status);
+      EXPECT_FALSE(status);
     };
   }
 
@@ -256,7 +256,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStarting) {
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
   auto status = MoveLastStatus();
   ASSERT_TRUE(status);
-  EXPECT_EQ(Status::kRepeatedAttempts, *status);
+  EXPECT_EQ(common::HostError::kInProgress, status->error());
 }
 
 TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStopping) {

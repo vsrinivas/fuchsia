@@ -64,31 +64,6 @@ class Packet<EventHeader> : public PacketBase<EventHeader, EventPacket> {
         view().payload<CommandCompleteEventParams>().return_parameters);
   }
 
-  // If this is an event packet with a standard status (See Vol 2, Part D), this
-  // method returns the status from the event parameters.
-  // Returns kInvalidStatus if this is not an event that produces such a status.
-  Status status() const {
-    switch (event_code()) {
-      case kCommandStatusEventCode:
-        return view().payload<CommandStatusEventParams>().status;
-      case kInquiryCompleteEventCode:
-        return view().payload<InquiryCompleteEventParams>().status;
-      case kDisconnectionCompleteEventCode:
-        return view().payload<DisconnectionCompleteEventParams>().status;
-      case kEncryptionChangeEventCode:
-        return view().payload<EncryptionChangeEventParams>().status;
-      case kCommandCompleteEventCode: {
-        const SimpleReturnParams* params = return_params<SimpleReturnParams>();
-        if (!params) {
-          return kInvalidStatus;
-        }
-        return params->status;
-      }
-      default:
-        return kInvalidStatus;
-    };
-  }
-
   // If this is a LE Meta Event packet, this method returns a pointer to the
   // beginning of the subevent parameter structure. If the given template type
   // would exceed the bounds of the packet or if this packet does not represent
@@ -102,6 +77,27 @@ class Packet<EventHeader> : public PacketBase<EventHeader, EventPacket> {
     return reinterpret_cast<const SubeventParams*>(
         view().payload<LEMetaEventParams>().subevent_parameters);
   }
+
+  // If this is an event packet with a standard status (See Vol 2, Part D), this
+  // method returns true and populates |out_status| using the status from the
+  // event parameters.
+  //
+  // Not all events contain a status code and not all of those that do are
+  // supported by this method. Returns false for such events and |out_status| is
+  // left unmodified.
+  //
+  // NOTE: Using this method on an unsupported event packet will trigger an
+  // assertion in debug builds. If you intend to use this with a new event code,
+  // make sure to add an entry to the implementation in control_packets.cc.
+  //
+  // TODO(armansito): Add more event entries here as needed.
+  bool ToStatusCode(hci::StatusCode* out_code) const;
+
+  // Returns a status if this event represents the result of an operation. See
+  // the documentation on ToStatusCode() as the same conditions apply to this
+  // method. Instead of a boolean, this returns a default status of type
+  // HostError::kMalformedPacket.
+  Status ToStatus() const;
 
   // Initializes the internal PacketView by reading the header portion of the
   // underlying buffer.

@@ -61,15 +61,15 @@ void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
 
   if (requesting_scan_) {
     FXL_VLOG(1) << "Scan request already in progress";
-    callback(fidl_helpers::NewErrorStatus(ErrorCode::IN_PROGRESS,
-                                          "Scan request in progress"));
+    callback(fidl_helpers::NewFidlError(ErrorCode::IN_PROGRESS,
+                                        "Scan request in progress"));
     return;
   }
 
   if (filter && !fidl_helpers::IsScanFilterValid(*filter)) {
     FXL_VLOG(1) << "Invalid scan filter given";
-    callback(fidl_helpers::NewErrorStatus(
-        ErrorCode::INVALID_ARGUMENTS, "ScanFilter contains an invalid UUID"));
+    callback(fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                        "ScanFilter contains an invalid UUID"));
     return;
   }
 
@@ -92,7 +92,7 @@ void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
 
         if (!session) {
           FXL_VLOG(1) << "Failed to start discovery session";
-          callback(fidl_helpers::NewErrorStatus(
+          callback(fidl_helpers::NewFidlError(
               ErrorCode::FAILED, "Failed to start discovery session"));
           return;
         }
@@ -139,11 +139,11 @@ void LowEnergyCentralServer::ConnectPeripheral(
   auto iter = connections_.find(identifier);
   if (iter != connections_.end()) {
     if (iter->second) {
-      callback(fidl_helpers::NewErrorStatus(
+      callback(fidl_helpers::NewFidlError(
           ErrorCode::ALREADY, "Already connected to requested peer"));
     } else {
-      callback(fidl_helpers::NewErrorStatus(ErrorCode::IN_PROGRESS,
-                                            "Connect request pending"));
+      callback(fidl_helpers::NewFidlError(ErrorCode::IN_PROGRESS,
+                                          "Connect request pending"));
     }
     return;
   }
@@ -157,24 +157,19 @@ void LowEnergyCentralServer::ConnectPeripheral(
     auto iter = self->connections_.find(id);
     if (iter == self->connections_.end()) {
       FXL_VLOG(1) << "Connect request canceled";
-      auto error = fidl_helpers::NewErrorStatus(ErrorCode::FAILED,
-                                                "Connect request canceled");
+      auto error = fidl_helpers::NewFidlError(ErrorCode::CANCELED,
+                                              "Connect request canceled");
       callback(std::move(error));
       return;
     }
 
-    if (status != ::btlib::hci::Status::kSuccess) {
+    if (!status) {
       FXL_DCHECK(!conn_ref);
       auto msg =
           fxl::StringPrintf("Failed to connect to device (id: %s)", id.c_str());
       FXL_VLOG(1) << msg;
 
-      // TODO(armansito): Report PROTOCOL_ERROR only if |status| correspond to
-      // an actual HCI error reported from the controller. LE conn mgr currently
-      // uses HCI error codes for internal errors which needs to change.
-      auto error = fidl_helpers::NewErrorStatus(ErrorCode::PROTOCOL_ERROR, msg);
-      error.error->protocol_error_code = status;
-      callback(std::move(error));
+      callback(fidl_helpers::StatusToFidl(status, std::move(msg)));
       return;
     }
 
@@ -208,7 +203,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
     auto msg = fxl::StringPrintf("Cannot connect to unknown device id: %s",
                                  identifier.get().c_str());
     FXL_VLOG(1) << msg;
-    callback(fidl_helpers::NewErrorStatus(ErrorCode::NOT_FOUND, msg));
+    callback(fidl_helpers::NewFidlError(ErrorCode::NOT_FOUND, msg));
     return;
   }
 
@@ -223,7 +218,7 @@ void LowEnergyCentralServer::DisconnectPeripheral(
     auto msg = fxl::StringPrintf("Client not connected to device (id: %s)",
                                  identifier.get().c_str());
     FXL_VLOG(1) << msg;
-    callback(fidl_helpers::NewErrorStatus(ErrorCode::NOT_FOUND, msg));
+    callback(fidl_helpers::NewFidlError(ErrorCode::NOT_FOUND, msg));
     return;
   }
 

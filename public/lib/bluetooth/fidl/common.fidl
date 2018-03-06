@@ -6,14 +6,17 @@ library bluetooth;
 
 enum ErrorCode {
   UNKNOWN = 0;
-  BAD_STATE = 1;
-  BLUETOOTH_NOT_AVAILABLE = 2;
-  FAILED = 3;
-  IN_PROGRESS = 4;
-  INVALID_ARGUMENTS = 5;
-  NOT_FOUND = 6;
-  ALREADY = 7;
-  PROTOCOL_ERROR = 8;
+  FAILED = 1;
+  CANCELED = 2;
+  IN_PROGRESS = 3;
+  TIMED_OUT = 4;
+  NOT_FOUND = 5;
+  NOT_SUPPORTED = 6;
+  BLUETOOTH_NOT_AVAILABLE = 7;
+  BAD_STATE = 8;
+  INVALID_ARGUMENTS = 9;
+  ALREADY = 10;
+  PROTOCOL_ERROR = 11;
 };
 
 // Represents an error result returned from an asynchronous operation.

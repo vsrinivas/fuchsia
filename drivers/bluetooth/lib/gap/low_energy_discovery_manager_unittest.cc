@@ -245,7 +245,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryAndStopInCallback) {
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryFailure) {
   test_device()->SetDefaultResponseStatus(hci::kLESetScanEnable,
-                                          hci::Status::kCommandDisallowed);
+                                          hci::StatusCode::kCommandDisallowed);
 
   // |session| should contain nullptr.
   discovery_manager()->StartDiscovery(
@@ -392,7 +392,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWhilePendingStop) {
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryFailureManyPending) {
   test_device()->SetDefaultResponseStatus(hci::kLESetScanEnable,
-                                          hci::Status::kCommandDisallowed);
+                                          hci::StatusCode::kCommandDisallowed);
 
   constexpr size_t kExpectedSessionCount = 5;
   size_t cb_count = 0u;
@@ -452,7 +452,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartFailure) {
 
   // The controller will fail to restart scanning.
   test_device()->SetDefaultResponseStatus(hci::kLESetScanEnable,
-                                          hci::Status::kCommandDisallowed);
+                                          hci::StatusCode::kCommandDisallowed);
 
   bool session_error = false;
   session->set_error_callback([&session_error, this] {

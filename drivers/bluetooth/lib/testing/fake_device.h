@@ -76,16 +76,16 @@ class FakeDevice {
 
   // The response status that will be returned when this device receives a LE
   // Create Connection command.
-  hci::Status connect_response() const { return connect_response_; }
-  void set_connect_response(hci::Status response) {
+  hci::StatusCode connect_response() const { return connect_response_; }
+  void set_connect_response(hci::StatusCode response) {
     connect_response_ = response;
   }
 
   // The status that will be returned in the Command Status event in response to
   // a LE Create Connection command. If this is set to anything other than
-  // hci::Status::kSuccess, then connect_response() will have no effect.
-  hci::Status connect_status() const { return connect_status_; }
-  void set_connect_status(hci::Status status) { connect_status_ = status; }
+  // hci::StatusCode::kSuccess, then connect_response() will have no effect.
+  hci::StatusCode connect_status() const { return connect_status_; }
+  void set_connect_status(hci::StatusCode status) { connect_status_ = status; }
 
   bool force_pending_connect() const { return force_pending_connect_; }
   void set_force_pending_connect(bool value) { force_pending_connect_ = value; }
@@ -109,8 +109,8 @@ class FakeDevice {
   bool connectable_;
   bool scannable_;
 
-  hci::Status connect_status_;
-  hci::Status connect_response_;
+  hci::StatusCode connect_status_;
+  hci::StatusCode connect_response_;
   bool force_pending_connect_;  // Causes connection requests to remain pending.
 
   hci::LEConnectionParameters le_params_;

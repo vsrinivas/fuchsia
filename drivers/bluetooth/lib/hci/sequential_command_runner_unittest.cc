@@ -34,17 +34,17 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
   auto command_status_error_bytes = common::CreateStaticByteBuffer(
       kCommandStatusEventCode,
       0x04,  // parameter_total_size (4 byte payload)
-      Status::kHardwareFailure, 1, 0xFF, 0xFF);
+      StatusCode::kHardwareFailure, 1, 0xFF, 0xFF);
 
   auto command_cmpl_error_bytes = common::CreateStaticByteBuffer(
       kCommandCompleteEventCode,
       0x04,  // parameter_total_size (4 byte payload)
-      1, 0xFF, 0xFF, Status::kReserved0);
+      1, 0xFF, 0xFF, StatusCode::kReserved0);
 
   auto command_cmpl_success_bytes = common::CreateStaticByteBuffer(
       kCommandCompleteEventCode,
       0x04,  // parameter_total_size (4 byte payload)
-      1, 0xFF, 0xFF, Status::kSuccess);
+      1, 0xFF, 0xFF, StatusCode::kSuccess);
 
   // Here we perform multiple test sequences where we queue up several  commands
   // in each sequence. We expect each sequence to terminate differently after
@@ -87,11 +87,11 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
   test_device()->StartCmdChannel(test_cmd_chan());
   test_device()->StartAclChannel(test_acl_chan());
 
-  hci::Status result;
-  int result_cb_called = 0;
-  auto result_cb = [&, this](hci::Status cb_result) {
-    result = cb_result;
-    result_cb_called++;
+  Status status;
+  int status_cb_called = 0;
+  auto status_cb = [&, this](Status cb_status) {
+    status = cb_status;
+    status_cb_called++;
   };
 
   int cb_called = 0;
@@ -109,14 +109,14 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
 
-  cmd_runner.RunCommands(result_cb);
+  cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
   RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(0, cb_called);
-  EXPECT_EQ(1, result_cb_called);
-  EXPECT_EQ(Status::kHardwareFailure, result);
+  EXPECT_EQ(1, status_cb_called);
+  EXPECT_EQ(StatusCode::kHardwareFailure, status.protocol_error());
 
   // Sequence 2 (test)
   cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);
@@ -126,14 +126,14 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
 
-  cmd_runner.RunCommands(result_cb);
+  cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
   RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(0, cb_called);
-  EXPECT_EQ(2, result_cb_called);
-  EXPECT_EQ(Status::kReserved0, result);
+  EXPECT_EQ(2, status_cb_called);
+  EXPECT_EQ(StatusCode::kReserved0, status.protocol_error());
 
   // Sequence 3 (test)
   cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);
@@ -144,14 +144,14 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
 
-  cmd_runner.RunCommands(result_cb);
+  cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
   RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(1, cb_called);
-  EXPECT_EQ(3, result_cb_called);
-  EXPECT_EQ(Status::kReserved0, result);
+  EXPECT_EQ(3, status_cb_called);
+  EXPECT_EQ(StatusCode::kReserved0, status.protocol_error());
   cb_called = 0;
 
   // Sequence 4 (test)
@@ -161,16 +161,16 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
 
-  cmd_runner.RunCommands(result_cb);
+  cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
   RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(2, cb_called);
-  EXPECT_EQ(4, result_cb_called);
-  EXPECT_EQ(Status::kSuccess, result);
+  EXPECT_EQ(4, status_cb_called);
+  EXPECT_TRUE(status);
   cb_called = 0;
-  result_cb_called = 0;
+  status_cb_called = 0;
 
   // Sequence 5 (test) (no callback passed to QueueCommand)
   cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode));
@@ -179,14 +179,14 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
 
-  cmd_runner.RunCommands(result_cb);
+  cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
   RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(0, cb_called);
-  EXPECT_EQ(1, result_cb_called);
-  EXPECT_EQ(Status::kSuccess, result);
+  EXPECT_EQ(1, status_cb_called);
+  EXPECT_TRUE(status);
 }
 
 TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
@@ -195,12 +195,12 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   auto command_cmpl_error_bytes = common::CreateStaticByteBuffer(
       kCommandCompleteEventCode,
       0x04,  // parameter_total_size (4 byte payload)
-      1, 0xFF, 0xFF, Status::kHardwareFailure);
+      1, 0xFF, 0xFF, StatusCode::kHardwareFailure);
 
   auto command_cmpl_success_bytes = common::CreateStaticByteBuffer(
       kCommandCompleteEventCode,
       0x04,  // parameter_total_size (4 byte payload)
-      1, 0xFF, 0xFF, Status::kSuccess);
+      1, 0xFF, 0xFF, StatusCode::kSuccess);
 
   // Sequence 1
   //   -> Command; <- success complete
@@ -223,11 +223,11 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   test_device()->StartCmdChannel(test_cmd_chan());
   test_device()->StartAclChannel(test_acl_chan());
 
-  hci::Status result;
-  int result_cb_called = 0;
-  auto result_cb = [&, this](hci::Status cb_result) {
-    result = cb_result;
-    result_cb_called++;
+  Status status;
+  int status_cb_called = 0;
+  auto status_cb = [&, this](Status cb_status) {
+    status = cb_status;
+    status_cb_called++;
   };
 
   int cb_called = 0;
@@ -245,18 +245,18 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   // Call RunCommands() and right away post a task to cancel the sequence. The
   // first command will go out but no successive packets should be sent and no
   // callbacks should be invoked.
-  cmd_runner.RunCommands(result_cb);
+  cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
   cmd_runner.Cancel();
 
-  // Since |result_cb| is expected to not get called (which would normally quit
+  // Since |status_cb| is expected to not get called (which would normally quit
   // the message loop) - we run until we reach a steady-state waiting.
   RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
 
   EXPECT_EQ(0, cb_called);
-  EXPECT_EQ(0, result_cb_called);
+  EXPECT_EQ(0, status_cb_called);
 
   // Sequence 2: Sequence will be cancelled after first command. This tests
   // canceling a sequence from a CommandCompleteCallback.
@@ -271,16 +271,16 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
 
-  cmd_runner.RunCommands(result_cb);
+  cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
 
-  // |result_cb| is expected to not get called.
+  // |status_cb| is expected to not get called.
   RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
 
   EXPECT_EQ(0, cb_called);
-  EXPECT_EQ(0, result_cb_called);
+  EXPECT_EQ(0, status_cb_called);
 
   // Sequence 3: Sequence will be cancelled after first command and immediately
   // followed by a second command which will fail. This tests canceling a
@@ -296,14 +296,14 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
         cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);
         cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode),
                                 cb);  // <-- Should not run
-        cmd_runner.RunCommands(result_cb);
+        cmd_runner.RunCommands(status_cb);
       });
   cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode),
                           cb);  // <-- Should not run
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_TRUE(cmd_runner.HasQueuedCommands());
 
-  cmd_runner.RunCommands(result_cb);
+  cmd_runner.RunCommands(status_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
 
   RunUntilIdle();
@@ -313,8 +313,8 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
 
   // The result callback should have been called once with a failure result.
   EXPECT_EQ(0, cb_called);
-  EXPECT_EQ(1, result_cb_called);
-  EXPECT_EQ(Status::kHardwareFailure, result);
+  EXPECT_EQ(1, status_cb_called);
+  EXPECT_EQ(StatusCode::kHardwareFailure, status.protocol_error());
 }
 
 }  // namespace

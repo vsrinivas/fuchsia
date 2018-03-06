@@ -27,15 +27,13 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
   // 1. If called while a start request is pending, reports kRepeatedAttempts.
   // 2. If called while a stop request is pending, then cancels the stop request
   //    and proceeds with start.
-  // TODO(armansito): We need to stop using HCI error codes for errors that are
-  // not reported by the controller (NET-288).
   void StartAdvertising(const common::DeviceAddress& address,
                         const common::ByteBuffer& data,
                         const common::ByteBuffer& scan_rsp,
                         const ConnectionCallback& connect_callback,
                         uint32_t interval_ms,
                         bool anonymous,
-                        const AdvertisingResultCallback& callback) override;
+                        const AdvertisingStatusCallback& callback) override;
 
   // If called while a stop request is pending, returns false.
   // If called while a start request is pending, then cancels the start

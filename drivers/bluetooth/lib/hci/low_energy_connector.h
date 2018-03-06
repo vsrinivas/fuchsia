@@ -66,20 +66,13 @@ class LowEnergyConnector {
   // determine which advertiser to connect to. Otherwise, the controller will
   // connect to |peer_address|.
   //
-  // |result_callback| is called asynchronously to notify the status of the
+  // |status_callback| is called asynchronously to notify the status of the
   // operation. A valid |link| will be provided on success.
   //
   // |timeout_ms| specifies a time period after which the request will time out.
-  // When a request to create connection times out, |result_callback| will be
-  // called with its |result| parameter set to Result::kFailed and |hci_status|
-  // set to Status::kCommandTimeout.
-  enum class Result {
-    kSuccess,
-    kCanceled,
-    kFailed,
-  };
-  using ResultCallback =
-      std::function<void(Result result, Status hci_status, ConnectionPtr link)>;
+  // When a request to create connection times out, |status_callback| will be
+  // called with a null |link| and a |status| with error Host::Error::kTimedOut.
+  using StatusCallback = std::function<void(Status status, ConnectionPtr link)>;
   bool CreateConnection(
       LEOwnAddressType own_address_type,
       bool use_whitelist,
@@ -87,7 +80,7 @@ class LowEnergyConnector {
       uint16_t scan_interval,
       uint16_t scan_window,
       const LEPreferredConnectionParameters& initial_parameters,
-      const ResultCallback& result_callback,
+      const StatusCallback& status_callback,
       int64_t timeout_ms);
 
   // Cancels the currently pending connection attempt.
@@ -104,12 +97,12 @@ class LowEnergyConnector {
   struct PendingRequest {
     PendingRequest() = default;
     PendingRequest(const common::DeviceAddress& peer_address,
-                   const ResultCallback& result_callback);
+                   const StatusCallback& status_callback);
 
     bool canceled;
     bool timed_out;
     common::DeviceAddress peer_address;
-    ResultCallback result_callback;
+    StatusCallback status_callback;
   };
 
   // Called by Cancel() and by OnCreateConnectionTimeout().
@@ -119,9 +112,7 @@ class LowEnergyConnector {
   void OnConnectionCompleteEvent(const EventPacket& event);
 
   // Called when a LE Create Connection request has completed.
-  void OnCreateConnectionComplete(Result result,
-                                  Status hci_status,
-                                  ConnectionPtr link);
+  void OnCreateConnectionComplete(Status status, ConnectionPtr link);
 
   // Called when a LE Create Connection request has timed out.
   void OnCreateConnectionTimeout();

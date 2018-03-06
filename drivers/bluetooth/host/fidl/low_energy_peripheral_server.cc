@@ -27,16 +27,16 @@ namespace bthost {
 
 namespace {
 
-std::string ErrorToString(btlib::hci::Status error) {
-  switch (error) {
-    case ::btlib::hci::kSuccess:
+std::string MessageFromStatus(btlib::hci::Status status) {
+  switch (status.error()) {
+    case ::btlib::common::HostError::kNoError:
       return "Success";
-    case ::btlib::hci::kConnectionLimitExceeded:
+    case ::btlib::common::HostError::kNotSupported:
       return "Maximum advertisement amount reached";
-    case ::btlib::hci::kMemoryCapacityExceeded:
+    case ::btlib::common::HostError::kInvalidParameters:
       return "Advertisement exceeds maximum allowed length";
     default:
-      return ::btlib::hci::StatusToString(error);
+      return status.ToString();
   }
 }
 
@@ -109,17 +109,17 @@ void LowEnergyPeripheralServer::StartAdvertising(
   }
   // |delegate| is temporarily held by the result callback, which will close the
   // delegate channel if the advertising fails (after returning the status)
-  auto advertising_result_cb = fxl::MakeCopyable(
+  auto advertising_status_cb = fxl::MakeCopyable(
       [self, callback, delegate = std::move(delegate)](
           std::string ad_id, ::btlib::hci::Status status) mutable {
         if (!self)
           return;
 
-        if (status != ::btlib::hci::kSuccess) {
-          auto fidlerror = fidl_helpers::NewErrorStatus(
-              ErrorCode::PROTOCOL_ERROR, ErrorToString(status));
-          fidlerror.error->protocol_error_code = status;
-          callback(std::move(fidlerror), "");
+        if (!status) {
+          FXL_VLOG(1) << "Failed to start advertising: " << status.ToString();
+          callback(
+              fidl_helpers::StatusToFidl(status, MessageFromStatus(status)),
+              "");
           return;
         }
 
@@ -141,7 +141,7 @@ void LowEnergyPeripheralServer::StartAdvertising(
 
   advertising_manager->StartAdvertising(ad_data, scan_data, connect_cb,
                                         interval, anonymous,
-                                        advertising_result_cb);
+                                        advertising_status_cb);
 }
 
 void LowEnergyPeripheralServer::StopAdvertising(
@@ -150,8 +150,8 @@ void LowEnergyPeripheralServer::StopAdvertising(
   if (StopAdvertisingInternal(id)) {
     callback(Status());
   } else {
-    callback(fidl_helpers::NewErrorStatus(ErrorCode::NOT_FOUND,
-                                          "Unrecognized advertisement ID"));
+    callback(fidl_helpers::NewFidlError(ErrorCode::NOT_FOUND,
+                                        "Unrecognized advertisement ID"));
   }
 }
 

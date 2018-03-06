@@ -113,7 +113,7 @@ class FakeController : public FakeControllerBase,
 
   // Tells the FakeController to always respond to the given command opcode with
   // the given HCI status code.
-  void SetDefaultResponseStatus(hci::OpCode opcode, hci::Status status);
+  void SetDefaultResponseStatus(hci::OpCode opcode, hci::StatusCode status);
   void ClearDefaultResponseStatus(hci::OpCode opcode);
 
   // Returns the current LE scan state.
@@ -222,7 +222,7 @@ class FakeController : public FakeControllerBase,
 
   // Sends a HCI_Command_Status event in response to the command with |opcode|
   // and using the given data as the parameter payload.
-  void RespondWithCommandStatus(hci::OpCode opcode, hci::Status status);
+  void RespondWithCommandStatus(hci::OpCode opcode, hci::StatusCode status);
 
   // If a default status has been configured for the given opcode, sends back an
   // error response and returns true. Returns false if no response was set.
@@ -279,7 +279,7 @@ class FakeController : public FakeControllerBase,
   // ID used for L2CAP LE signaling channel commands.
   uint8_t next_le_sig_id_;
 
-  std::unordered_map<hci::OpCode, hci::Status> default_status_map_;
+  std::unordered_map<hci::OpCode, hci::StatusCode> default_status_map_;
   std::vector<std::unique_ptr<FakeDevice>> le_devices_;
 
   ScanStateCallback scan_state_cb_;

@@ -37,9 +37,7 @@ class Client final {
   // |status| will be set to an error if the MTU exchange fails. The |mtu|
   // parameter will be set to 0 and the underlying bearer's MTU will remain
   // unmodified.
-  //
-  // TODO(NET-288): Return a att::Status here instead.
-  using MTUCallback = std::function<void(att::ErrorCode status, uint16_t mtu)>;
+  using MTUCallback = std::function<void(att::Status status, uint16_t mtu)>;
   void ExchangeMTU(MTUCallback callback);
 
  private:

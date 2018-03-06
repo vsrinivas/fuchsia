@@ -177,15 +177,14 @@ void Bearer::TransactionQueue::Reset() {
   current_ = nullptr;
 }
 
-void Bearer::TransactionQueue::InvokeErrorAll(bool timeout,
-                                              ErrorCode error_code) {
+void Bearer::TransactionQueue::InvokeErrorAll(Status status) {
   if (current_) {
-    current_->error_callback(timeout, error_code, kInvalidHandle);
+    current_->error_callback(status, kInvalidHandle);
   }
 
   for (const auto& t : queue_) {
     if (t.error_callback)
-      t.error_callback(timeout, error_code, kInvalidHandle);
+      t.error_callback(status, kInvalidHandle);
   }
 }
 
@@ -244,9 +243,12 @@ void Bearer::ShutDownInternal(bool due_to_timeout) {
   chan_->SignalLinkError();
   chan_ = nullptr;
 
-  request_queue_.InvokeErrorAll(due_to_timeout, ErrorCode::kNoError);
+  // Terminate all remaining procedures with an error.
+  Status status(due_to_timeout ? common::HostError::kTimedOut
+                               : common::HostError::kFailed);
+  request_queue_.InvokeErrorAll(status);
   request_queue_.Reset();
-  indication_queue_.InvokeErrorAll(due_to_timeout, ErrorCode::kNoError);
+  indication_queue_.InvokeErrorAll(status);
   indication_queue_.Reset();
 
   if (closed_cb_)
@@ -513,7 +515,7 @@ void Bearer::HandleEndTransaction(TransactionQueue* tq,
   if (!report_error)
     transaction->callback(packet);
   else if (transaction->error_callback)
-    transaction->error_callback(false /* timeout */, error_code, attr_in_error);
+    transaction->error_callback(Status(error_code), attr_in_error);
 }
 
 Bearer::HandlerId Bearer::NextHandlerId() {

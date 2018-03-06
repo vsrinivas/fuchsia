@@ -42,19 +42,11 @@ class LowEnergyAdvertiser {
   // interval of advertising is provided in |interval_ms| and |status|
   // is kSuccess.
   //
-  // Otherwise, |status| will indicate the type of error:
-  //  - kInvalidHCICommandParameters if the parameters are invalid
-  //  - kConnectionLimitExceeded if no more advertisements can be made
-  //  - kMemoryCapacityExceeded if the data provided is too large
-  //  - kUnsupportedFeatureOrParameter if anonymous or connectable
-  //    advertising is requested but unsupported
-  //  - another error if the Controller provides one
+  // Otherwise, |status| will indicate the type of error.
   //
   // |callback| may be called before this function returns, but will
   // be called before any calls to |connect_callback|.
-  // TODO(jamuraa): In the future, use stack-based error codes instead
-  // of coopting the HCI error statuses.
-  using AdvertisingResultCallback =
+  using AdvertisingStatusCallback =
       std::function<void(uint32_t interval_ms, Status status)>;
   using ConnectionCallback = std::function<void(ConnectionPtr link)>;
   virtual void StartAdvertising(const common::DeviceAddress& address,
@@ -63,7 +55,7 @@ class LowEnergyAdvertiser {
                                 const ConnectionCallback& connect_callback,
                                 uint32_t interval_ms,
                                 bool anonymous,
-                                const AdvertisingResultCallback& callback) = 0;
+                                const AdvertisingStatusCallback& callback) = 0;
 
   // Stops any advertisement currently active on |address|. Idempotent and
   // asynchronous. Returns true if advertising will be stopped, false otherwise.

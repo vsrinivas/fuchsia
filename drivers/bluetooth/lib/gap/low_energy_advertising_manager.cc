@@ -71,11 +71,11 @@ void LowEnergyAdvertisingManager::StartAdvertising(
     const ConnectionCallback& connect_callback,
     uint32_t interval_ms,
     bool anonymous,
-    const AdvertisingResultCallback& result_callback) {
+    const AdvertisingStatusCallback& status_callback) {
   // Can't be anonymous and connectable
   if (anonymous && connect_callback) {
     FXL_LOG(WARNING) << "Can't advertise anonymously and connectable!";
-    result_callback("", hci::kInvalidHCICommandParameters);
+    status_callback("", hci::Status(common::HostError::kInvalidParameters));
     return;
   }
   // Generate the DeviceAddress and id
@@ -98,18 +98,20 @@ void LowEnergyAdvertisingManager::StartAdvertising(
       connect_callback(id, std::move(link));
     };
   }
-  auto result_cb =
-      fxl::MakeCopyable([self, ad_ptr = std::move(ad_ptr), result_callback](
+  auto status_cb =
+      fxl::MakeCopyable([self, ad_ptr = std::move(ad_ptr), status_callback](
                             uint32_t, hci::Status status) mutable {
         if (!self)
           return;
-        if (status != hci::kSuccess) {
-          result_callback("", status);
+
+        if (!status) {
+          status_callback("", status);
           return;
         }
-        std::string id = ad_ptr->id();
+
+        const std::string& id = ad_ptr->id();
         self->advertisements_.emplace(id, std::move(ad_ptr));
-        result_callback(id, status);
+        status_callback(id, status);
       });
 
   // Serialize the data
@@ -124,7 +126,7 @@ void LowEnergyAdvertisingManager::StartAdvertising(
 
   // Call StartAdvertising, with the callback
   advertiser_->StartAdvertising(address, *data_block, *scan_rsp_block,
-                                adv_conn_cb, interval_ms, anonymous, result_cb);
+                                adv_conn_cb, interval_ms, anonymous, status_cb);
 }
 
 bool LowEnergyAdvertisingManager::StopAdvertising(

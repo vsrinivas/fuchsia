@@ -18,7 +18,7 @@ namespace btintel {
 constexpr btlib::hci::OpCode kReadVersion = btlib::hci::VendorOpCode(0x0005);
 
 struct ReadVersionReturnParams {
-  btlib::hci::Status status;
+  btlib::hci::StatusCode status;
   uint8_t hw_platform;
   uint8_t hw_variant;
   uint8_t hw_revision;
@@ -40,7 +40,7 @@ constexpr btlib::hci::OpCode kSecureSend = btlib::hci::VendorOpCode(0x0009);
 constexpr btlib::hci::OpCode kReadBootParams = btlib::hci::VendorOpCode(0x000D);
 
 struct ReadBootParamsReturnParams {
-  btlib::hci::Status status;
+  btlib::hci::StatusCode status;
   uint8_t otp_format;
   uint8_t otp_content;
   uint8_t otp_patch;

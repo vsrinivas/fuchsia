@@ -107,14 +107,12 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnection) {
 
   EXPECT_FALSE(connector()->request_pending());
 
-  LowEnergyConnector::Result result;
-  Status hci_status;
+  hci::Status status;
   ConnectionPtr conn;
   bool callback_called = false;
 
-  auto callback = [&, this](auto cb_result, auto cb_status, auto cb_conn) {
-    result = cb_result;
-    hci_status = cb_status;
+  auto callback = [&, this](auto cb_status, auto cb_conn) {
+    status = cb_status;
     conn = std::move(cb_conn);
     callback_called = true;
 
@@ -136,8 +134,7 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnection) {
 
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
-  EXPECT_EQ(LowEnergyConnector::Result::kSuccess, result);
-  EXPECT_EQ(Status::kSuccess, hci_status);
+  EXPECT_TRUE(status);
   EXPECT_TRUE(in_connections().empty());
 
   ASSERT_TRUE(conn);
@@ -150,19 +147,17 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnection) {
 // Controller reports error from HCI Command Status event.
 TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionStatusError) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
-  fake_device->set_connect_status(Status::kCommandDisallowed);
+  fake_device->set_connect_status(StatusCode::kCommandDisallowed);
   test_device()->AddLEDevice(std::move(fake_device));
 
   EXPECT_FALSE(connector()->request_pending());
 
-  LowEnergyConnector::Result result;
-  Status hci_status;
+  hci::Status status;
   ConnectionPtr conn;
   bool callback_called = false;
 
-  auto callback = [&, this](auto cb_result, auto cb_status, auto cb_conn) {
-    result = cb_result;
-    hci_status = cb_status;
+  auto callback = [&, this](auto cb_status, auto cb_conn) {
+    status = cb_status;
     conn = std::move(cb_conn);
     callback_called = true;
 
@@ -179,8 +174,9 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionStatusError) {
 
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
-  EXPECT_EQ(LowEnergyConnector::Result::kFailed, result);
-  EXPECT_EQ(Status::kCommandDisallowed, hci_status);
+  EXPECT_FALSE(status);
+  EXPECT_TRUE(status.is_protocol_error());
+  EXPECT_EQ(StatusCode::kCommandDisallowed, status.protocol_error());
   EXPECT_FALSE(conn);
   EXPECT_TRUE(in_connections().empty());
 }
@@ -188,19 +184,17 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionStatusError) {
 // Controller reports error from HCI LE Connection Complete event
 TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionEventError) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
-  fake_device->set_connect_response(Status::kConnectionRejectedSecurity);
+  fake_device->set_connect_response(StatusCode::kConnectionRejectedSecurity);
   test_device()->AddLEDevice(std::move(fake_device));
 
   EXPECT_FALSE(connector()->request_pending());
 
-  LowEnergyConnector::Result result;
-  Status hci_status;
+  hci::Status status;
   ConnectionPtr conn;
   bool callback_called = false;
 
-  auto callback = [&, this](auto cb_result, auto cb_status, auto cb_conn) {
-    result = cb_result;
-    hci_status = cb_status;
+  auto callback = [&, this](auto cb_status, auto cb_conn) {
+    status = cb_status;
     callback_called = true;
     conn = std::move(cb_conn);
 
@@ -217,8 +211,9 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionEventError) {
 
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
-  EXPECT_EQ(LowEnergyConnector::Result::kFailed, result);
-  EXPECT_EQ(Status::kConnectionRejectedSecurity, hci_status);
+  EXPECT_FALSE(status);
+  EXPECT_TRUE(status.is_protocol_error());
+  EXPECT_EQ(StatusCode::kConnectionRejectedSecurity, status.protocol_error());
   EXPECT_TRUE(in_connections().empty());
   EXPECT_FALSE(conn);
 }
@@ -231,14 +226,12 @@ TEST_F(HCI_LowEnergyConnectorTest, Cancel) {
   fake_device->set_force_pending_connect(true);
   test_device()->AddLEDevice(std::move(fake_device));
 
-  LowEnergyConnector::Result result;
-  Status hci_status;
+  hci::Status status;
   ConnectionPtr conn;
   bool callback_called = false;
 
-  auto callback = [&, this](auto cb_result, auto cb_status, auto cb_conn) {
-    result = cb_result;
-    hci_status = cb_status;
+  auto callback = [&, this](auto cb_status, auto cb_conn) {
+    status = cb_status;
     callback_called = true;
     conn = std::move(cb_conn);
 
@@ -266,8 +259,7 @@ TEST_F(HCI_LowEnergyConnectorTest, Cancel) {
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
   EXPECT_TRUE(request_canceled);
-  EXPECT_EQ(LowEnergyConnector::Result::kCanceled, result);
-  EXPECT_EQ(Status::kUnknownConnectionId, hci_status);
+  EXPECT_EQ(common::HostError::kCanceled, status.error());
   EXPECT_TRUE(in_connections().empty());
   EXPECT_FALSE(conn);
 }
@@ -279,7 +271,7 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnect) {
   LEConnectionCompleteSubeventParams event;
   std::memset(&event, 0, sizeof(event));
 
-  event.status = Status::kSuccess;
+  event.status = StatusCode::kSuccess;
   event.peer_address = kTestAddress.value();
   event.peer_address_type = LEPeerAddressType::kPublic;
   event.conn_interval = defaults::kLEConnectionIntervalMin;
@@ -310,14 +302,12 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
   test_device()->AddLEDevice(std::move(fake_device));
 
-  LowEnergyConnector::Result result;
-  Status hci_status;
+  hci::Status status;
   ConnectionPtr conn;
   unsigned int callback_count = 0;
 
-  auto callback = [&, this](auto cb_result, auto cb_status, auto cb_conn) {
-    result = cb_result;
-    hci_status = cb_status;
+  auto callback = [&, this](auto cb_status, auto cb_conn) {
+    status = cb_status;
     callback_count++;
     conn = std::move(cb_conn);
 
@@ -332,7 +322,7 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
     LEConnectionCompleteSubeventParams event;
     std::memset(&event, 0, sizeof(event));
 
-    event.status = Status::kSuccess;
+    event.status = StatusCode::kSuccess;
     event.peer_address = kIncomingAddress.value();
     event.peer_address_type = LEPeerAddressType::kPublic;
     event.conn_interval = defaults::kLEConnectionIntervalMin;
@@ -344,8 +334,7 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
 
   RunMessageLoop();
 
-  EXPECT_EQ(LowEnergyConnector::Result::kSuccess, result);
-  EXPECT_EQ(Status::kSuccess, hci_status);
+  EXPECT_TRUE(status);
   EXPECT_EQ(1u, callback_count);
   ASSERT_EQ(1u, in_connections().size());
 
@@ -368,14 +357,12 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionTimeout) {
   // We do not set up any fake devices. This will cause the request to time out.
   EXPECT_FALSE(connector()->request_pending());
 
-  LowEnergyConnector::Result result;
-  Status hci_status;
+  hci::Status status;
   ConnectionPtr conn;
   bool callback_called = false;
 
-  auto callback = [&, this](auto cb_result, auto cb_status, auto cb_conn) {
-    result = cb_result;
-    hci_status = cb_status;
+  auto callback = [&, this](auto cb_status, auto cb_conn) {
+    status = cb_status;
     callback_called = true;
     conn = std::move(cb_conn);
 
@@ -393,9 +380,8 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionTimeout) {
 
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
-  EXPECT_EQ(LowEnergyConnector::Result::kCanceled, result);
   EXPECT_TRUE(request_canceled);
-  EXPECT_EQ(Status::kCommandTimeout, hci_status);
+  EXPECT_EQ(common::HostError::kTimedOut, status.error());
   EXPECT_TRUE(in_connections().empty());
   EXPECT_FALSE(conn);
 }
@@ -409,8 +395,7 @@ TEST_F(HCI_LowEnergyConnectorTest, SendRequestAndDelete) {
 
   bool ret = connector()->CreateConnection(
       LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,
-      defaults::kLEScanWindow, kTestParams, [](auto, auto, auto) {},
-      kTestTimeoutMs);
+      defaults::kLEScanWindow, kTestParams, [](auto, auto) {}, kTestTimeoutMs);
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 

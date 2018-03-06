@@ -112,10 +112,10 @@ void Server::SendNotification(att::Handle handle,
   att_->StartTransaction(
       std::move(buffer),
       [](const auto&) { FXL_VLOG(2) << "Got confirmation!"; },
-      [](bool timeout, att::ErrorCode ecode, att::Handle handle) {
+      [](att::Status status, att::Handle handle) {
         FXL_VLOG(1) << fxl::StringPrintf(
-            "Indication failed (timeout: %s, error: 0x%02hhx, handle: 0x%04x)",
-            timeout ? "true" : "false", ecode, handle);
+            "Indication failed (result %s, handle: 0x%04x)",
+            status.ToString().c_str(), handle);
       });
 }
 

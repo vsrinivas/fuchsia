@@ -48,10 +48,7 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
       size_t max_ads,
       size_t max_ad_size,
       std::map<common::DeviceAddress, AdvertisementStatus>* ad_store)
-      : max_ads_(max_ads),
-        max_ad_size_(max_ad_size),
-        ads_(ad_store),
-        pending_error_(hci::kSuccess) {
+      : max_ads_(max_ads), max_ad_size_(max_ad_size), ads_(ad_store) {
     FXL_CHECK(ads_);
   }
 
@@ -67,18 +64,18 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
                         const ConnectionCallback& connect_callback,
                         uint32_t interval_ms,
                         bool anonymous,
-                        const AdvertisingResultCallback& callback) override {
-    if (pending_error_ != hci::kSuccess) {
+                        const AdvertisingStatusCallback& callback) override {
+    if (!pending_error_) {
       callback(0, pending_error_);
-      pending_error_ = hci::kSuccess;
+      pending_error_ = hci::Status();
       return;
     }
     if (data.size() > max_ad_size_) {
-      callback(0, hci::kMemoryCapacityExceeded);
+      callback(0, hci::Status(common::HostError::kInvalidParameters));
       return;
     }
     if (scan_rsp.size() > max_ad_size_) {
-      callback(0, hci::kMemoryCapacityExceeded);
+      callback(0, hci::Status(common::HostError::kInvalidParameters));
       return;
     }
     AdvertisementStatus new_status;
@@ -88,7 +85,7 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
     new_status.interval_ms = interval_ms;
     new_status.anonymous = anonymous;
     ads_->emplace(address, std::move(new_status));
-    callback(interval_ms, hci::kSuccess);
+    callback(interval_ms, hci::Status());
   }
 
   bool StopAdvertising(const common::DeviceAddress& address) override {
@@ -108,7 +105,7 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
   }
 
   // Sets this faker up to send an error back from the next StartAdvertising
-  // call. Set to hci::kSuccess to disable a previously called error.
+  // call. Set to success to disable a previously called error.
   void ErrorOnNext(hci::Status error_status) { pending_error_ = error_status; }
 
  private:
@@ -149,19 +146,19 @@ class GAP_LowEnergyAdvertisingManagerTest : public TestingBase {
     return result;
   }
 
-  LowEnergyAdvertisingManager::AdvertisingResultCallback GetErrorCallback() {
+  LowEnergyAdvertisingManager::AdvertisingStatusCallback GetErrorCallback() {
     return [this](std::string ad_id, hci::Status status) {
       EXPECT_TRUE(ad_id.empty());
-      EXPECT_NE(hci::kSuccess, status);
+      EXPECT_FALSE(status);
       last_status_ = status;
     };
   }
 
-  LowEnergyAdvertisingManager::AdvertisingResultCallback GetSuccessCallback() {
+  LowEnergyAdvertisingManager::AdvertisingStatusCallback GetSuccessCallback() {
     return [this](std::string ad_id, hci::Status status) {
       last_ad_id_ = ad_id;
       EXPECT_FALSE(ad_id.empty());
-      EXPECT_EQ(hci::kSuccess, status);
+      EXPECT_TRUE(status);
       last_status_ = status;
     };
   }
@@ -276,7 +273,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, RegisterUnregister) {
 
 //  - When the advertiser returns an error, we return an error
 TEST_F(GAP_LowEnergyAdvertisingManagerTest, AdvertiserError) {
-  advertiser()->ErrorOnNext(hci::kInvalidHCICommandParameters);
+  advertiser()->ErrorOnNext(hci::Status(hci::kInvalidHCICommandParameters));
   LowEnergyAdvertisingManager am(advertiser());
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;

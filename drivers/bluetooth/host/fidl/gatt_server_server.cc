@@ -268,23 +268,23 @@ void GattServerServer::PublishService(
     PublishServiceCallback callback) {
 
   if (!delegate) {
-    auto error = fidl_helpers::NewErrorStatus(ErrorCode::INVALID_ARGUMENTS,
-                                              "A delegate is required");
+    auto error = fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                            "A delegate is required");
     callback(std::move(error));
     return;
   }
 
   if (!service_iface) {
-    auto error = fidl_helpers::NewErrorStatus(ErrorCode::INVALID_ARGUMENTS,
-                                              "Service interface is required");
+    auto error = fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                            "Service interface is required");
     callback(std::move(error));
     return;
   }
 
   ::btlib::common::UUID service_type;
   if (!::btlib::common::StringToUuid(service_info.type.get(), &service_type)) {
-    auto error = fidl_helpers::NewErrorStatus(ErrorCode::INVALID_ARGUMENTS,
-                                              "Invalid service UUID");
+    auto error = fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                            "Invalid service UUID");
     callback(std::move(error));
     return;
   }
@@ -296,8 +296,8 @@ void GattServerServer::PublishService(
     for (const auto& fidl_chrc : *service_info.characteristics) {
       auto chrc_result = NewCharacteristic(fidl_chrc);
       if (chrc_result.is_error()) {
-        auto error = fidl_helpers::NewErrorStatus(ErrorCode::INVALID_ARGUMENTS,
-                                                  chrc_result.error);
+        auto error = fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                                chrc_result.error);
         callback(std::move(error));
         return;
       }
@@ -342,8 +342,8 @@ void GattServerServer::PublishService(
         if (!id) {
           // TODO(armansito): Report a more detailed string if registration
           // fails due to duplicate ids.
-          auto error = fidl_helpers::NewErrorStatus(
-              ErrorCode::FAILED, "Failed to publish service");
+          auto error = fidl_helpers::NewFidlError(ErrorCode::FAILED,
+                                                  "Failed to publish service");
           callback(std::move(error));
           return;
         }

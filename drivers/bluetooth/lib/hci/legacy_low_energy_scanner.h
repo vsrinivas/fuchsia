@@ -39,7 +39,7 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
                  bool filter_duplicates,
                  LEScanFilterPolicy filter_policy,
                  int64_t period_ms,
-                 const StatusCallback& callback) override;
+                 const ScanStatusCallback& callback) override;
   bool StopScan() override;
 
  private:
@@ -71,7 +71,7 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
   bool active_scanning_;
 
   // Callback passed in to the most recently accepted call to StartScan();
-  StatusCallback scan_cb_;
+  ScanStatusCallback scan_cb_;
 
   // The scan period timeout handler for the currently active scan session.
   fxl::CancelableClosure scan_timeout_cb_;

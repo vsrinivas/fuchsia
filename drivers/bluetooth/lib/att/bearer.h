@@ -10,6 +10,7 @@
 
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/att/packet.h"
+#include "garnet/drivers/bluetooth/lib/att/status.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/cancelable_task.h"
 #include "garnet/drivers/bluetooth/lib/common/linked_list.h"
@@ -112,8 +113,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   // Returns false if |pdu| is malformed or does not correspond to a request or
   // indication.
   using TransactionCallback = std::function<void(const PacketReader& packet)>;
-  using ErrorCallback = std::function<
-      void(bool timeout, ErrorCode protocol_error, Handle attr_in_error)>;
+  using ErrorCallback = std::function<void(Status, Handle attr_in_error)>;
   bool StartTransaction(common::ByteBufferPtr pdu,
                         const TransactionCallback& callback,
                         const ErrorCallback& error_callback);
@@ -227,8 +227,8 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
     // Resets the contents of this queue to their default state.
     void Reset();
 
-    // Invokes the error callbacks of all transactions.
-    void InvokeErrorAll(bool timeout, ErrorCode error_code);
+    // Invokes the error callbacks of all transactions with |status|.
+    void InvokeErrorAll(Status status);
 
    private:
     common::LinkedList<PendingTransaction> queue_;
