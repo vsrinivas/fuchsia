@@ -446,10 +446,7 @@ void JSONGenerator::Generate(const flat::Const& value) {
 void JSONGenerator::Generate(const flat::Enum& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::First);
-        if (value.type->kind == raw::Type::Kind::Primitive) {
-            auto type = static_cast<const raw::PrimitiveType*>(value.type.get());
-            GenerateObjectMember("type", type->subtype);
-        }
+        GenerateObjectMember("type", value.type);
         GenerateObjectMember("members", value.members);
     });
 }

@@ -103,6 +103,35 @@ TypeShape StringTypeShape() {
     return CStructTypeShape(&header);
 }
 
+TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
+    switch (type) {
+    case types::PrimitiveSubtype::Int8:
+        return kInt8TypeShape;
+    case types::PrimitiveSubtype::Int16:
+        return kInt16TypeShape;
+    case types::PrimitiveSubtype::Int32:
+        return kInt32TypeShape;
+    case types::PrimitiveSubtype::Int64:
+        return kInt64TypeShape;
+    case types::PrimitiveSubtype::Uint8:
+        return kUint8TypeShape;
+    case types::PrimitiveSubtype::Uint16:
+        return kUint16TypeShape;
+    case types::PrimitiveSubtype::Uint32:
+        return kUint32TypeShape;
+    case types::PrimitiveSubtype::Uint64:
+        return kUint64TypeShape;
+    case types::PrimitiveSubtype::Bool:
+        return kBoolTypeShape;
+    case types::PrimitiveSubtype::Status:
+        return kStatusTypeShape;
+    case types::PrimitiveSubtype::Float32:
+        return kFloat32TypeShape;
+    case types::PrimitiveSubtype::Float64:
+        return kFloat64TypeShape;
+    }
+}
+
 } // namespace
 
 // Consuming the AST is primarily concerned with walking the tree and
@@ -132,12 +161,12 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
         auto value = std::move(member->value);
         members.emplace_back(std::move(name), std::move(value));
     }
-    std::unique_ptr<raw::PrimitiveType> type = std::move(enum_declaration->maybe_subtype);
-    if (!type)
-        type = std::make_unique<raw::PrimitiveType>(types::PrimitiveSubtype::Uint32);
+    auto type = types::PrimitiveSubtype::Uint32;
+    if (enum_declaration->maybe_subtype)
+        type = enum_declaration->maybe_subtype->subtype;
     auto name = Name(enum_declaration->identifier->location);
 
-    enum_declarations_.push_back(std::make_unique<Enum>(std::move(name), std::move(type), std::move(members)));
+    enum_declarations_.push_back(std::make_unique<Enum>(std::move(name), type, std::move(members)));
     return RegisterDecl(enum_declarations_.back().get());
 }
 
@@ -435,7 +464,7 @@ bool Library::ResolveConst(Const* const_declaration) {
 }
 
 bool Library::ResolveEnum(Enum* enum_declaration) {
-    switch (enum_declaration->type->subtype) {
+    switch (enum_declaration->type) {
     case types::PrimitiveSubtype::Int8:
     case types::PrimitiveSubtype::Int16:
     case types::PrimitiveSubtype::Int32:
@@ -445,8 +474,7 @@ bool Library::ResolveEnum(Enum* enum_declaration) {
     case types::PrimitiveSubtype::Uint32:
     case types::PrimitiveSubtype::Uint64:
         // These are allowed as enum subtypes. Resolve the size and alignment.
-        if (!ResolveType(enum_declaration->type.get(), &enum_declaration->typeshape))
-            return false;
+        enum_declaration->typeshape = PrimitiveTypeShape(enum_declaration->type);
         break;
 
     case types::PrimitiveSubtype::Bool:
@@ -656,44 +684,7 @@ bool Library::ResolveRequestType(const raw::RequestType& request_type, TypeShape
 
 bool Library::ResolvePrimitiveType(const raw::PrimitiveType& primitive_type,
                                    TypeShape* out_typeshape) {
-    switch (primitive_type.subtype) {
-    case types::PrimitiveSubtype::Int8:
-        *out_typeshape = kInt8TypeShape;
-        break;
-    case types::PrimitiveSubtype::Int16:
-        *out_typeshape = kInt16TypeShape;
-        break;
-    case types::PrimitiveSubtype::Int32:
-        *out_typeshape = kInt32TypeShape;
-        break;
-    case types::PrimitiveSubtype::Int64:
-        *out_typeshape = kInt64TypeShape;
-        break;
-    case types::PrimitiveSubtype::Uint8:
-        *out_typeshape = kUint8TypeShape;
-        break;
-    case types::PrimitiveSubtype::Uint16:
-        *out_typeshape = kUint16TypeShape;
-        break;
-    case types::PrimitiveSubtype::Uint32:
-        *out_typeshape = kUint32TypeShape;
-        break;
-    case types::PrimitiveSubtype::Uint64:
-        *out_typeshape = kUint64TypeShape;
-        break;
-    case types::PrimitiveSubtype::Bool:
-        *out_typeshape = kBoolTypeShape;
-        break;
-    case types::PrimitiveSubtype::Status:
-        *out_typeshape = kStatusTypeShape;
-        break;
-    case types::PrimitiveSubtype::Float32:
-        *out_typeshape = kFloat32TypeShape;
-        break;
-    case types::PrimitiveSubtype::Float64:
-        *out_typeshape = kFloat64TypeShape;
-        break;
-    }
+    *out_typeshape = PrimitiveTypeShape(primitive_type.subtype);
     return true;
 }
 

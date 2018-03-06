@@ -99,10 +99,10 @@ struct Enum : public Decl {
         std::unique_ptr<raw::Constant> value;
     };
 
-    Enum(Name name, std::unique_ptr<raw::PrimitiveType> type, std::vector<Member> members)
-        : Decl(Kind::kEnum, std::move(name)), type(std::move(type)), members(std::move(members)) {}
+    Enum(Name name, types::PrimitiveSubtype type, std::vector<Member> members)
+        : Decl(Kind::kEnum, std::move(name)), type(type), members(std::move(members)) {}
 
-    std::unique_ptr<raw::PrimitiveType> type;
+    types::PrimitiveSubtype type;
     std::vector<Member> members;
     TypeShape typeshape;
 };
