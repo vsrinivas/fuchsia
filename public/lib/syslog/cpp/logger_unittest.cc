@@ -92,7 +92,7 @@ TEST(Logger, LogSeverity) {
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
 
-  FX_LOGS(DEBUG) << "just some msg";
+  FX_VLOGS(1) << "just some msg";
   size_t outstanding_bytes = 10u;  // init to non zero value.
   ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);

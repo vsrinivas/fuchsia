@@ -86,7 +86,7 @@ Status RoughTimeServer::GetTimeFromServer(
     return NETWORK_ERROR;
   }
 
-  FX_LOGS(DEBUG) << "Sending request to " << dest_str << ", port " << port_str;
+  FX_VLOGS(1) << "Sending request to " << dest_str << ", port " << port_str;
 
   uint8_t nonce[roughtime::kNonceLength];
   RAND_bytes(nonce, sizeof(nonce));

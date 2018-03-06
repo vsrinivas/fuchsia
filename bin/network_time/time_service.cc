@@ -46,12 +46,12 @@ bool TimeService::UpdateSystemTime(uint8_t tries) {
   }
 
   for (uint8_t i = 0; i < tries; i++) {
-    FX_LOGS(DEBUG) << "Updating system time, attempt: " << i + 1;
+    FX_VLOGS(1) << "Updating system time, attempt: " << i + 1;
     roughtime::rough_time_t timestamp;
     Status ret = server->GetTimeFromServer(&timestamp);
     if (ret == NETWORK_ERROR) {
       if (i != tries - 1) {
-        FX_LOGS(DEBUG) << "Can't get time, sleeping for 10 sec";
+        FX_VLOGS(1) << "Can't get time, sleeping for 10 sec";
         sleep(10);
       }
       continue;
