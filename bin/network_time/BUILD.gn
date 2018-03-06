@@ -71,6 +71,7 @@ executable("bin") {
 
   deps = [
     ":lib",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
   ]
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "syslogger_init.h"
+#include "init.h"
 
 #include <fcntl.h>
 
@@ -10,7 +10,7 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/syslog/cpp/logger.h"
 
-namespace fxl {
+namespace fsl {
 
 std::string ParseLoggerSettings(const fxl::CommandLine& command_line,
                                 syslog::LogSettings* out_settings) {
@@ -72,4 +72,4 @@ zx_status_t InitLoggerFromCommandLine(const fxl::CommandLine& command_line) {
   return InitLoggerFromCommandLine(command_line, {});
 }
 
-}  // namespace fxl
+}  // namespace fsl

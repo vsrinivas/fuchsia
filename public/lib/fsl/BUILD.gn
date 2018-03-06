@@ -21,6 +21,7 @@ prebuilt_shared_library("fsl_lib") {
     "//garnet/public/lib/fsl/handles",
     "//garnet/public/lib/fsl/io",
     "//garnet/public/lib/fsl/socket",
+    "//garnet/public/lib/fsl/syslogger",
     "//garnet/public/lib/fsl/tasks",
     "//garnet/public/lib/fsl/threading",
     "//garnet/public/lib/fsl/vmo",
@@ -30,6 +31,7 @@ prebuilt_shared_library("fsl_lib") {
     "//garnet/public/lib/fxl:fxl_sdk",
     "//zircon/public/lib/async-default:async-default_sdk",
     "//zircon/public/lib/fdio:fdio_sdk",
+    "//zircon/public/lib/syslog:syslog_sdk",
   ]
 }
 
@@ -43,6 +45,7 @@ executable("fsl_unittests") {
     "socket/files_unittest.cc",
     "socket/socket_drainer_unittest.cc",
     "socket/strings_unittest.cc",
+    "syslogger/init_unittest.cc",
     "tasks/fd_waiter_unittest.cc",
     "tasks/message_loop_unittest.cc",
     "threading/create_thread_unittest.cc",
@@ -70,7 +73,9 @@ package("package") {
     ":fsl_unittests",
   ]
 
-  tests = [ {
-        name = "fsl_unittests"
-      } ]
+  tests = [
+    {
+      name = "fsl_unittests"
+    },
+  ]
 }

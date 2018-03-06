@@ -150,14 +150,8 @@ source_set("fxl_lib") {
     ":fxl_common",
     ":fxl_logging",
   ]
-
   if (is_fuchsia) {
     libs = [ "zircon" ]
-    sources += [
-      "syslogger_init.cc",
-      "syslogger_init.h",
-    ]
-    public_deps += [ "//garnet/public/lib/syslog/cpp" ]
   }
 }
 
@@ -212,10 +206,7 @@ if (is_fuchsia) {
       ":fxl_lib",
     ]
 
-    runtime_deps = [
-      ":fxl_logging_sdk",
-      "//zircon/public/lib/syslog:syslog_sdk",
-    ]
+    runtime_deps = [ ":fxl_logging_sdk" ]
   }
 } else {
   group("fxl") {
@@ -278,12 +269,6 @@ executable("fxl_unittests") {
     "time/time_point_unittest.cc",
     "time/time_unittest.cc",
   ]
-
-  if (is_fuchsia) {
-    sources += [
-      "syslogger_init_unittest.cc",
-    ]
-  }
 
   deps = [
     ":fxl",
