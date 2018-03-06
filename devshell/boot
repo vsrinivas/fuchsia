@@ -5,7 +5,7 @@
 
 ### run bootserver in zedboot disk paver mode
 
-## usage: fx boot [--netboot|--bootfs] [--board <board>] [<type>] [--no-data] [bootserver arguments]
+## usage: fx boot [--netboot|--bootfs] [--board <board>] [--no-data] [<type>] [bootserver arguments]
 ##   <type>     see "--help" for list (default: x64 for x64 / none for arm64)
 ##   --board    Specify Zircon board (if <type> is used, it takes precendence)
 ##   --netboot  Boot from ramdisk containing FVM
@@ -34,6 +34,7 @@ usage() {
 
 netboot=false
 bootfs=false
+add_data=true
 
 while [[ "$1" =~ ^- ]]; do
   case "$1" in
@@ -58,18 +59,30 @@ while [[ "$1" =~ ^- ]]; do
     board="$2"
     shift
     ;;
+  --no-data)
+    echo "##"
+    echo "## Note: if the target has no pre-existing data partition, then"
+    echo "## none will be created. The resultant system will behave in a"
+    echo "## kind of 'incognito' fashion, as /data will be backed by ram."
+    echo "##"
+    add_data=false
+    ;;
   *)
-    echo >&2 "Unrecognized flag: $1"
-    usage
+    break
   esac
   shift
 done
 
-machine_type="$1"
-# passing no arguments is valid, but shift will terminate with set -e
-if [[ $# -ge 1 ]]; then
-  shift
+if [[ "$1" =~ ^- ]]; then
+  machine_type=""
+else
+  machine_type="$1"
+  # passing no arguments is valid, but shift will terminate with set -e
+  if [[ $# -ge 1 ]]; then
+    shift
+  fi
 fi
+
 if [[ -z "$machine_type" ]]; then
   if $bootfs; then
     machine_type="bootfs"
@@ -138,24 +151,10 @@ if ! $add_fvm; then
   bootserver_args=("$@")
 else
   disks=("${disks[@]}" --fvm "${FUCHSIA_BUILD_DIR}/${fvm_sparse_block}")
-  add_data=true
 
   while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --no-data)
-        echo "##"
-        echo "## Note: if the target has no pre-existing data partition, then"
-        echo "## none will be created. The resultant system will behave in a"
-        echo "## kind of 'incognito' fashion, as /data will be backed by ram."
-        echo "##"
-        add_data=false
-        shift
-        ;;
-      *)
-        bootserver_args=("${bootserver_args[@]}" "$1")
-        shift
-        ;;
-    esac
+      bootserver_args=("${bootserver_args[@]}" "$1")
+      shift
   done
 
   if $add_data; then
