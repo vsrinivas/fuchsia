@@ -174,6 +174,7 @@ public:
                          uint64_t addr_out[]) override;
     bool UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count) override;
     bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) override;
+    bool SetCachePolicy(magma_cache_policy_t cache_policy) override;
 
     uint32_t num_pages() { return size_ / PAGE_SIZE; }
 
@@ -471,6 +472,26 @@ bool ZirconPlatformBuffer::CleanCache(uint64_t offset, uint64_t length, bool inv
     if (status != ZX_OK)
         return DRETF(false, "failed to clean cache: %d", status);
     return true;
+}
+
+bool ZirconPlatformBuffer::SetCachePolicy(magma_cache_policy_t cache_policy)
+{
+    uint32_t zx_cache_policy;
+    switch (cache_policy) {
+        case MAGMA_CACHE_POLICY_CACHED:
+            zx_cache_policy = ZX_CACHE_POLICY_CACHED;
+            break;
+
+        case MAGMA_CACHE_POLICY_WRITE_COMBINING:
+            zx_cache_policy = ZX_CACHE_POLICY_WRITE_COMBINING;
+            break;
+
+        default:
+            return DRETF(false, "Invalid cache policy %d", cache_policy);
+    }
+
+    zx_status_t status = zx_vmo_set_cache_policy(vmo_.get(), zx_cache_policy);
+    return DRETF(status == ZX_OK, "zx_vmo_set_cache_policy failed with status %d", status);
 }
 
 std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char* name)

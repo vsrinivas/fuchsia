@@ -52,6 +52,9 @@ magma_status_t magma_read_notification_channel(struct magma_connection_t* connec
 magma_status_t magma_clean_cache(magma_buffer_t buffer, uint64_t offset, uint64_t size,
                                  magma_cache_operation_t operation);
 
+// This must be set before the buffer is mapped anywhere.
+magma_status_t magma_set_cache_policy(magma_buffer_t buffer, magma_cache_policy_t policy);
+
 magma_status_t magma_map(struct magma_connection_t* connection, magma_buffer_t buffer,
                          void** addr_out);
 // alignment must be a power of 2 and at least PAGE_SIZE.

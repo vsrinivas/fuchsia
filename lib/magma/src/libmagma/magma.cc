@@ -89,6 +89,12 @@ void magma_release_buffer(magma_connection_t* connection, magma_buffer_t buffer)
     delete platform_buffer;
 }
 
+magma_status_t magma_set_cache_policy(magma_buffer_t buffer, magma_cache_policy_t policy)
+{
+    bool result = reinterpret_cast<magma::PlatformBuffer*>(buffer)->SetCachePolicy(policy);
+    return result ? MAGMA_STATUS_OK : MAGMA_STATUS_INTERNAL_ERROR;
+}
+
 uint64_t magma_get_buffer_id(magma_buffer_t buffer)
 {
     return reinterpret_cast<magma::PlatformBuffer*>(buffer)->id();

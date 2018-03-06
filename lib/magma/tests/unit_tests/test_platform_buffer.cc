@@ -119,6 +119,16 @@ public:
         EXPECT_LT(i, 100u);
     }
 
+    static void CachePolicy()
+    {
+        std::unique_ptr<magma::PlatformBuffer> buffer =
+            magma::PlatformBuffer::Create(PAGE_SIZE, "test");
+        EXPECT_FALSE(buffer->SetCachePolicy(100));
+
+        EXPECT_TRUE(buffer->SetCachePolicy(MAGMA_CACHE_POLICY_CACHED));
+        EXPECT_TRUE(buffer->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING));
+    }
+
     static void test_buffer_passing(magma::PlatformBuffer* buf, magma::PlatformBuffer* buf1)
     {
         EXPECT_EQ(buf1->size(), buf->size());
@@ -347,6 +357,7 @@ TEST(PlatformBuffer, Basic)
 }
 
 TEST(PlatformBuffer, MapSpecific) { TestPlatformBuffer::MapSpecific(); }
+TEST(PlatformBuffer, CachePolicy) { TestPlatformBuffer::CachePolicy(); }
 
 TEST(PlatformBuffer, BufferPassing) { TestPlatformBuffer::BufferPassing(); }
 TEST(PlatformBuffer, BufferFdPassing) { TestPlatformBuffer::BufferFdPassing(); }

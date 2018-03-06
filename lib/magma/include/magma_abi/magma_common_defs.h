@@ -38,11 +38,17 @@ extern "C" {
 #define MAGMA_CACHE_OPERATION_CLEAN 0
 #define MAGMA_CACHE_OPERATION_CLEAN_INVALIDATE 1
 
+// possible values for magma_cache_policy_t
+#define MAGMA_CACHE_POLICY_CACHED 0
+#define MAGMA_CACHE_POLICY_WRITE_COMBINING 1
+
 typedef int32_t magma_status_t;
 
 typedef uint32_t magma_image_tiling_t;
 
 typedef uint32_t magma_cache_operation_t;
+
+typedef uint32_t magma_cache_policy_t;
 
 typedef uintptr_t magma_buffer_t;
 
