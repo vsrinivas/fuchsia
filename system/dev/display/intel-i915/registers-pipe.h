@@ -147,9 +147,20 @@ public:
     DEF_FIELD(11, 0, y_size);
 };
 
+// DE_PIPE_INTERRUPT
+class PipeDeInterrupt : public hwreg::RegisterBase<PipeDeInterrupt, uint32_t> {
+public:
+    DEF_BIT(1, vsync);
+};
+
 // An instance of PipeRegs represents the registers for a particular pipe.
 class PipeRegs {
 public:
+    static constexpr uint32_t kStatusReg = 0x44400;
+    static constexpr uint32_t kMaskReg = 0x44404;
+    static constexpr uint32_t kIdentityReg = 0x44408;
+    static constexpr uint32_t kEnableReg = 0x4440c;
+
     PipeRegs(Pipe pipe) : pipe_(pipe) { }
 
     hwreg::RegisterAddr<registers::PipeSourceSize> PipeSourceSize() {
@@ -187,6 +198,10 @@ public:
     hwreg::RegisterAddr<registers::PipeScalerWinSize> PipeScalerWinSize(int num) {
         return hwreg::RegisterAddr<registers::PipeScalerWinSize>(
                 PipeScalerWinSize::kBaseAddr + 0x800 * pipe_ + num * 0x100);
+    }
+
+    hwreg::RegisterAddr<registers::PipeDeInterrupt> PipeDeInterrupt(uint32_t type) {
+        return hwreg::RegisterAddr<registers::PipeDeInterrupt>(type + 0x10 * pipe_);
     }
 
 private:

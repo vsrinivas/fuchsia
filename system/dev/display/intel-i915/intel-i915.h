@@ -16,6 +16,7 @@
 #include "display-device.h"
 #include "gtt.h"
 #include "igd.h"
+#include "interrupts.h"
 #include "power.h"
 #include "registers.h"
 #include "registers-ddi.h"
@@ -46,7 +47,8 @@ public:
     const IgdOpRegion& igd_opregion() const { return igd_opregion_; }
     Power* power() { return &power_; }
 
-    int IrqLoop();
+    void HandleHotplug(registers::Ddi ddi);
+    void HandlePipeVsync(registers::Pipe pipe);
 
     void ResetPipe(registers::Pipe pipe);
     bool ResetTrans(registers::Trans trans);
@@ -55,25 +57,20 @@ public:
     registers::Dpll SelectDpll(bool is_edp, bool is_hdmi, uint32_t rate);
 private:
     void EnableBacklight(bool enable);
-    zx_status_t InitHotplug();
-    void EnableHotplugInterrupts();
     zx_status_t InitDisplays();
     fbl::unique_ptr<DisplayDevice> InitDisplay(registers::Ddi ddi);
     zx_status_t AddDisplay(fbl::unique_ptr<DisplayDevice>&& display);
     bool BringUpDisplayEngine(bool resume);
     void AllocDisplayBuffers();
-    void HandleHotplug(registers::Ddi ddi);
 
     Gtt gtt_;
     IgdOpRegion igd_opregion_;
+    Interrupts interrupts_;
 
     pci_protocol_t pci_;
 
     fbl::unique_ptr<hwreg::RegisterIo> mmio_space_;
     zx_handle_t regs_handle_;
-
-    zx_handle_t irq_;
-    thrd_t irq_thread_;
 
     // References to displays. References are owned by devmgr, but will always
     // be valid while they are in this vector.

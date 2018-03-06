@@ -20,6 +20,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/hdmi-display.cpp \
     $(LOCAL_DIR)/igd.cpp \
     $(LOCAL_DIR)/intel-i915.cpp \
+    $(LOCAL_DIR)/interrupts.cpp \
     $(LOCAL_DIR)/power.cpp \
 
 MODULE_STATIC_LIBS := \

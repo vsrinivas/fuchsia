@@ -51,10 +51,6 @@
 #define ENABLE_MODESETTING 1
 
 namespace {
-static int irq_handler(void* arg) {
-    return static_cast<i915::Controller*>(arg)->IrqLoop();
-}
-
 bool pipe_in_use(const fbl::Vector<i915::DisplayDevice*>& displays, registers::Pipe pipe) {
     for (size_t i = 0; i < displays.size(); i++) {
         if (displays[i]->pipe() == pipe) {
@@ -67,44 +63,6 @@ bool pipe_in_use(const fbl::Vector<i915::DisplayDevice*>& displays, registers::P
 
 namespace i915 {
 
-int Controller::IrqLoop() {
-    for (;;) {
-        uint64_t slots;
-        if (zx_interrupt_wait(irq_, &slots) != ZX_OK) {
-            zxlogf(TRACE, "i915: interrupt wait failed\n");
-            break;
-        }
-
-        auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space_.get());
-        interrupt_ctrl.set_enable_mask(0);
-        interrupt_ctrl.WriteTo(mmio_space_.get());
-
-        if (interrupt_ctrl.sde_int_pending()) {
-            auto sde_int_identity = registers::SdeInterruptBase::Get(registers::SdeInterruptBase::kSdeIntIdentity).ReadFrom(mmio_space_.get());
-            auto hp_ctrl1 = registers::HotplugCtrl
-                    ::Get(registers::DDI_A).ReadFrom(mmio_space_.get());
-            auto hp_ctrl2 = registers::HotplugCtrl
-                    ::Get(registers::DDI_E).ReadFrom(mmio_space_.get());
-            for (uint32_t i = 0; i < registers::kDdiCount; i++) {
-                registers::Ddi ddi = registers::kDdis[i];
-                bool hp_detected = sde_int_identity.ddi_bit(ddi).get();
-                auto hp_ctrl = ddi < registers::DDI_E ? hp_ctrl1 : hp_ctrl2;
-                if (hp_detected && hp_ctrl.hpd_long_pulse(ddi).get()) {
-                    HandleHotplug(ddi);
-                }
-            }
-            // Write back the register to clear the bits
-            hp_ctrl1.WriteTo(mmio_space_.get());
-            hp_ctrl2.WriteTo(mmio_space_.get());
-            sde_int_identity.WriteTo(mmio_space_.get());
-        }
-
-        interrupt_ctrl.set_enable_mask(1);
-        interrupt_ctrl.WriteTo(mmio_space_.get());
-    }
-    return 0;
-}
-
 void Controller::EnableBacklight(bool enable) {
     if (flags_ & FLAGS_BACKLIGHT) {
         uint32_t tmp = mmio_space_->Read<uint32_t>(BACKLIGHT_CTRL_OFFSET);
@@ -116,64 +74,6 @@ void Controller::EnableBacklight(bool enable) {
         }
 
         mmio_space_->Write<uint32_t>(BACKLIGHT_CTRL_OFFSET, tmp);
-    }
-}
-
-zx_status_t Controller::InitHotplug() {
-    // Disable interrupts here, we'll re-enable them at the very end of ::Bind
-    auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space_.get());
-    interrupt_ctrl.set_enable_mask(0);
-    interrupt_ctrl.WriteTo(mmio_space_.get());
-
-    uint32_t irq_cnt = 0;
-    zx_status_t status = pci_query_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
-    if (status != ZX_OK || !irq_cnt) {
-        zxlogf(ERROR, "i915: Failed to find interrupts %d %d\n", status, irq_cnt);
-        return ZX_ERR_INTERNAL;
-    }
-
-    if ((status = pci_set_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_LEGACY, 1)) != ZX_OK) {
-        zxlogf(ERROR, "i915: Failed to set irq mode %d\n", status);
-        return status;
-    }
-
-    if ((status = pci_map_interrupt(&pci_, 0, &irq_) != ZX_OK)) {
-        zxlogf(ERROR, "i915: Failed to map interrupt %d\n", status);
-        return status;
-    }
-
-    status = thrd_create_with_name(&irq_thread_, irq_handler, this, "i915-irq-thread");
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: Failed to create irq thread\n");
-        return status;
-    }
-
-    EnableHotplugInterrupts();
-
-    return ZX_OK;
-}
-
-void Controller::EnableHotplugInterrupts() {
-    auto sfuse_strap = registers::SouthFuseStrap::Get().ReadFrom(mmio_space_.get());
-    for (uint32_t i = 0; i < registers::kDdiCount; i++) {
-        registers::Ddi ddi = registers::kDdis[i];
-        bool enabled = (ddi == registers::DDI_A) || (ddi == registers::DDI_E) || (ddi == registers::DDI_B && sfuse_strap.port_b_present()) || (ddi == registers::DDI_C && sfuse_strap.port_c_present()) || (ddi == registers::DDI_D && sfuse_strap.port_d_present());
-
-        auto hp_ctrl = registers::HotplugCtrl::Get(ddi).ReadFrom(mmio_space_.get());
-        hp_ctrl.hpd_enable(ddi).set(enabled);
-        hp_ctrl.WriteTo(mmio_space_.get());
-
-        auto mask = registers::SdeInterruptBase::Get(
-                        registers::SdeInterruptBase::kSdeIntMask)
-                        .ReadFrom(mmio_space_.get());
-        mask.ddi_bit(ddi).set(!enabled);
-        mask.WriteTo(mmio_space_.get());
-
-        auto enable = registers::SdeInterruptBase::Get(
-                          registers::SdeInterruptBase::kSdeIntEnable)
-                          .ReadFrom(mmio_space_.get());
-        enable.ddi_bit(ddi).set(enabled);
-        enable.WriteTo(mmio_space_.get());
     }
 }
 
@@ -213,6 +113,10 @@ void Controller::HandleHotplug(registers::Ddi ddi) {
             zxlogf(INFO, "Failed to add display %d\n", ddi);
         }
     }
+}
+
+void Controller::HandlePipeVsync(registers::Pipe pipe) {
+    // TODO(ZX-1413): Do something with these when we actually have something to do
 }
 
 bool Controller::BringUpDisplayEngine(bool resume) {
@@ -672,7 +576,7 @@ zx_status_t Controller::DdkResume(uint32_t hint) {
         }
     }
 
-    EnableHotplugInterrupts();
+    interrupts_.Resume();
 
     return ZX_OK;
 }
@@ -733,7 +637,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
 
     if (ENABLE_MODESETTING && is_gen9(device_id_)) {
         zxlogf(TRACE, "i915: initialzing hotplug\n");
-        status = InitHotplug();
+        status = interrupts_.Init(this);
         if (status != ZX_OK) {
             zxlogf(ERROR, "i915: failed to init hotplugging\n");
             return status;
@@ -763,9 +667,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     }
 
     if (is_gen9(device_id_)) {
-        auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space_.get());
-        interrupt_ctrl.set_enable_mask(1);
-        interrupt_ctrl.WriteTo(mmio_space_.get());
+        interrupts_.FinishInit();
     }
 
     // TODO remove when the gfxconsole moves to user space
@@ -777,17 +679,10 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
 }
 
 Controller::Controller(zx_device_t* parent)
-    : DeviceType(parent), irq_(ZX_HANDLE_INVALID), power_(this) {}
+    : DeviceType(parent), power_(this) {}
 
 Controller::~Controller() {
-    if (irq_ != ZX_HANDLE_INVALID) {
-        zx_interrupt_signal(irq_, ZX_INTERRUPT_SLOT_USER, 0);
-
-        thrd_join(irq_thread_, nullptr);
-
-        zx_handle_close(irq_);
-    }
-
+    interrupts_.Destroy();
     if (mmio_space_) {
         EnableBacklight(false);
 

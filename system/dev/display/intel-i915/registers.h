@@ -60,6 +60,9 @@ class MasterInterruptControl : public hwreg::RegisterBase<MasterInterruptControl
 public:
     DEF_BIT(31, enable_mask);
     DEF_BIT(23, sde_int_pending);
+    DEF_BIT(18, de_pipe_c_int_pending);
+    DEF_BIT(17, de_pipe_b_int_pending);
+    DEF_BIT(16, de_pipe_a_int_pending);
 
     static auto Get() { return hwreg::RegisterAddr<MasterInterruptControl>(0x44200); }
 };
