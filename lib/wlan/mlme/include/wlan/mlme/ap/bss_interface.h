@@ -21,6 +21,7 @@ namespace bss {
 using timestamp_t = std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>;
 }
 using aid_t = size_t;
+static constexpr aid_t kMaxBssClients = 2008;
 
 class BssInterface {
    public:

@@ -19,16 +19,14 @@
 
 namespace wlan {
 
-// BssClientMap::kMaxClients + 1
-static constexpr aid_t kUnknownAid = 2009;
+static constexpr aid_t kUnknownAid = kMaxBssClients + 1;
 
 // Map which tracks clients and assigns AIDs.
 class BssClientMap {
    public:
-    static constexpr aid_t kMaxClients = 2008;
     static constexpr aid_t kMinClientAid = 1;
 
-    BssClientMap() { aid_bitmap_.Reset(kMaxClients); }
+    BssClientMap() { aid_bitmap_.Reset(kMaxBssClients); }
 
     bool Has(const common::MacAddr& addr);
     zx_status_t Add(const common::MacAddr& addr, fbl::unique_ptr<RemoteClientInterface> client);
@@ -50,6 +48,6 @@ class BssClientMap {
 
     // Map to lookup clients by their address.
     ClientMap clients_;
-    bitmap::RawBitmapGeneric<bitmap::FixedStorage<kMaxClients>> aid_bitmap_;
+    bitmap::RawBitmapGeneric<bitmap::FixedStorage<kMaxBssClients>> aid_bitmap_;
 };
 }  // namespace wlan

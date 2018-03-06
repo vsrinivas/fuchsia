@@ -89,7 +89,8 @@ void InfraBss::HandleClientStateChange(const common::MacAddr& client, RemoteClie
     if (to == RemoteClient::StateId::kDeauthenticated) {
         auto status = clients_.Remove(client);
         if (status != ZX_OK) {
-            errorf("[infra-bss] couldn't remove client %s: %d\n", MACSTR(client), status);
+            errorf("[infra-bss] couldn't remove client %s: %d\n", client.ToString().c_str(),
+                   status);
         }
     }
 }
@@ -104,7 +105,7 @@ void InfraBss::HandleClientBuChange(const common::MacAddr& client, size_t bu_cou
         return;
     }
 
-    // TODO(hahnr): Track client traffic in TIM.
+    tim_.SetTrafficIndication(aid, bu_count > 0);
 }
 
 zx_status_t InfraBss::AssignAid(const common::MacAddr& client, aid_t* out_aid) {
@@ -119,9 +120,17 @@ zx_status_t InfraBss::AssignAid(const common::MacAddr& client, aid_t* out_aid) {
 }
 
 zx_status_t InfraBss::ReleaseAid(const common::MacAddr& client) {
-    auto status = clients_.ReleaseAid(client);
-    if (status == ZX_ERR_NOT_FOUND) { return ZX_OK; }
-    return status;
+    debugfn();
+    auto aid = clients_.GetClientAid(client);
+    ZX_DEBUG_ASSERT(aid != kUnknownAid);
+    if (aid == kUnknownAid) {
+        errorf("[infra-bss] tried releasing AID for unknown client: %s\n",
+               client.ToString().c_str());
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    tim_.SetTrafficIndication(aid, false);
+    return clients_.ReleaseAid(client);
 }
 
 fbl::unique_ptr<Buffer> InfraBss::GetPowerSavingBuffer(size_t len) {

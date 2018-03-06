@@ -7,6 +7,7 @@
 #include <wlan/mlme/ap/bss_client_map.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/ap/remote_client.h>
+#include <wlan/mlme/ap/tim.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/mac_frame.h>
@@ -14,8 +15,6 @@
 
 #include <wlan/common/macaddr.h>
 #include <zircon/types.h>
-
-#include <unordered_set>
 
 namespace wlan {
 
@@ -65,6 +64,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     bss::timestamp_t started_at_;
     BssClientMap clients_;
     Sequence seq_;
+    TrafficIndicationMap tim_;
 };
 
 }  // namespace wlan

@@ -55,7 +55,7 @@ zx_status_t BssClientMap::AssignAid(const common::MacAddr& addr, aid_t* out_aid)
 
     // Retrieve next available AID. Return if all AIDs are already taken.
     aid_t available_aid;
-    auto status = aid_bitmap_.Get(kMinClientAid, kMaxClients, &available_aid);
+    auto status = aid_bitmap_.Get(kMinClientAid, kMaxBssClients, &available_aid);
     if (status != ZX_OK) {
         return status;
     }
@@ -88,11 +88,11 @@ aid_t BssClientMap::GetClientAid(const common::MacAddr& addr) {
 }
 
 bool BssClientMap::HasAidAvailable() {
-    return !aid_bitmap_.Get(kMinClientAid, kMaxClients);
+    return !aid_bitmap_.Get(kMinClientAid, kMaxBssClients);
 }
 
 void BssClientMap::ClearAid(aid_t aid) {
-    ZX_DEBUG_ASSERT(aid < kMaxClients);
+    ZX_DEBUG_ASSERT(aid < kMaxBssClients);
     if (aid != kUnknownAid) { aid_bitmap_.ClearOne(aid); }
 }
 
