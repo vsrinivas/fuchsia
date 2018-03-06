@@ -1,0 +1,29 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Performs WLAN smoke tests by reaching out the Internet
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+function usage {
+  cat <<END
+usage: fx test-wlan
+Copies the test script to target and runs from it.
+END
+}
+
+if [[ $# -ne 0 ]]; then
+  usage
+  exit 1
+fi
+
+source="garnet/bin/wlan/wlan-smoke.sh"
+script="$(basename ${source})"
+
+fx-command-run cp "${FUCHSIA_DIR}/${source}" "/tmp/${script}"
+fx-command-run shell "/tmp/${script}" "$@"
