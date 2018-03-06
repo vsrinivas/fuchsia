@@ -88,11 +88,11 @@ int main(int argc, char** argv) {
 
 ```C++
 #include "lib/fxl/command_line.h"
-#include "lib/fxl/syslogger_init.h"
+#include "lib/fsl/syslogger/init.h"
 
 int main(int argc, char** argv) {
     auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-    fxl::InitLoggerFromCommandLine(command_line, {"my_program"});
+    fsl::InitLoggerFromCommandLine(command_line, {"my_program"});
 }
 ```
 
@@ -106,4 +106,4 @@ FX_LOGST(INFO, "tag") << "my message";
 ### Reference
 [C++ APIs](https://fuchsia.googlesource.com/garnet/+/master/public/lib/syslog/cpp/logger.h)
 <br/>
-[FXL initialization API](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fxl/syslogger_init.h)
+[FSL initialization API](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fsl/syslogger/init.h)
