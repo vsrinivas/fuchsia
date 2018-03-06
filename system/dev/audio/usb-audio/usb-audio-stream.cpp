@@ -483,7 +483,7 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
 
     // Only the privileged stream channel is allowed to change the format.
     if (!privileged) {
-        ZX_DEBUG_ASSERT(channel == stream_channel_.get());
+        ZX_DEBUG_ASSERT(channel != stream_channel_.get());
         resp.result = ZX_ERR_ACCESS_DENIED;
         goto finished;
     }
