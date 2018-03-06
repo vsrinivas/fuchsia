@@ -61,9 +61,9 @@ if (zircon_boot_groups == "all") {
 }
 
 zircon_boot_manifest =
-    "//out/build-zircon/build-user-${target_cpu}/bootfs.manifest"
+    "//out/build-zircon/build-${current_cpu}/bootfs.manifest"
 zircon_ulib_manifest =
-    "//out/build-zircon/build-user-${target_cpu}-ulib/bootfs.manifest"
+    "//out/build-zircon/build-${current_cpu}-ulib/bootfs.manifest"
 
 final_boot_manifest = "$root_out_dir/boot.manifest"
 final_system_manifest = "$root_out_dir/system.manifest"

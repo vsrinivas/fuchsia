@@ -123,7 +123,7 @@ config("fdio_config") {
   # TODO(pylaligand): find a better way to let executables link in fdio.
   # Ideally their dependencies should be set up in such a way that it would get
   # inherited from them.
-  lib_dirs = [ "//out/build-zircon/build-user-${target_cpu}/system/ulib/fdio" ]
+  lib_dirs = [ "//out/build-zircon/build-${current_cpu}/system/ulib/fdio" ]
 }
 
 config("executable_config") {
