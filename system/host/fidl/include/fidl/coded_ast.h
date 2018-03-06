@@ -13,13 +13,11 @@
 
 #include "types.h"
 
-// The types in ast.h define a comparatively raw parse tree,
-// corresponding to fidl file sources. The types in this file define
-// structures that much more closely map the coding tables (i.e.,
-// fidl_type_t) for (de)serialization, defined at
-// ulib/fidl/include/coding.h and so on.
+// The types in this file define structures that much more closely map
+// the coding tables (i.e., fidl_type_t) for (de)serialization,
+// defined at ulib/fidl/include/coding.h and so on.
 
-// In particular, compared to the ast version:
+// In particular, compared to the flat_ast version:
 // - All files in the library are resolved together
 // - Names have been unnested and fully qualified
 // - All data structure sizes and layouts have been computed
