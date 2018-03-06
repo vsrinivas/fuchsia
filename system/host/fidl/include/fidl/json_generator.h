@@ -10,7 +10,6 @@
 #include <string>
 #include <vector>
 
-#include "coded_ast.h"
 #include "flat_ast.h"
 #include "string_view.h"
 

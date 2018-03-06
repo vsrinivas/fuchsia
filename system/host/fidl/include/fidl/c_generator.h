@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 
-#include "coded_ast.h"
 #include "flat_ast.h"
 #include "string_view.h"
 
@@ -98,9 +97,6 @@ private:
 
     void GenerateStructDeclaration(StringView name, const std::vector<Member>& members);
     void GenerateTaggedUnionDeclaration(StringView name, const std::vector<Member>& members);
-
-    void MaybeProduceCodingField(std::string field_name, uint32_t offset, const raw::Type* type,
-                                 std::vector<coded::Field>* fields);
 
     std::map<const flat::Decl*, NamedConst> NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos);
     std::map<const flat::Decl*, NamedEnum> NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos);
