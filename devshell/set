@@ -66,15 +66,12 @@ function main {
   fi
 
   local arch=
-  local zircon_project=
   case $1 in
     x64 | x86 | x64-64)
       arch=x64
-      zircon_project=x64
       ;;
     arm64 | aarch64)
       arch=arm64
-      zircon_project=arm64
       ;;
     *)
       echo Unknown zircon project \"$1\"
@@ -268,7 +265,6 @@ function main {
 FUCHSIA_BUILD_DIR="${build_dir}"
 FUCHSIA_VARIANT="${variant}"
 FUCHSIA_ARCH="${arch}"
-ZIRCON_PROJECT="${zircon_project}"
 END
 
   "${FUCHSIA_DIR}/build/gn/gen.py" ${gen_args} "$@" || return $?

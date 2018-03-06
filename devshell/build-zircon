@@ -9,4 +9,4 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
 echo "Building zircon..."
-"${FUCHSIA_DIR}/scripts/build-zircon.sh" -t "${ZIRCON_PROJECT}" "$@"
+"${FUCHSIA_DIR}/scripts/build-zircon.sh" -t "${FUCHSIA_ARCH}" "$@"

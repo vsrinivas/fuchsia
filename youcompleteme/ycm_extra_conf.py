@@ -35,11 +35,11 @@ ninja_path = os.path.join(fuchsia_root, 'buildtools', 'ninja')
 # Get the name of the zircon project from GN args.
 # Reading the args.gn is significantly faster than running `gn args` so we do
 # that.
-zircon_project = None
+target_cpu = None
 args = open(os.path.join(fuchsia_build, 'args.gn')).read()
-match = re.search(r'zircon_project\s*=\s*"([^"]+)"', args)
+match = re.search(r'target_cpu\s*=\s*"([^"]+)"', args)
 if match:
-  zircon_project = match.groups()[0]
+  target_cpu = match.groups()[0]
 
 common_flags = [
     '-std=c++14',
@@ -51,9 +51,9 @@ common_flags = [
 ]
 
 # Add the sysroot include if we found the zircon project
-if zircon_project:
+if target_cpu:
     common_flags += ['-I' + os.path.join(
-        fuchsia_root, 'out/build-zircon', 'build-' + zircon_project, 'sysroot/include')]
+        fuchsia_root, 'out/build-zircon', 'build-' + target_cpu, 'sysroot/include')]
 
 default_flags = [
     '-I' + fuchsia_root,
