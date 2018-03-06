@@ -7,7 +7,6 @@
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/gpio.h>
 #include <zircon/listnode.h>
-#include <soc/hi3660/i2c-dw.h>
 
 typedef struct {
     list_node_t gpios;
@@ -19,7 +18,6 @@ typedef struct {
     io_buffer_t iomg_pmx4;
     io_buffer_t iocfg_pmx9;
     io_buffer_t pmu_ssio;
-    i2c_dw_t i2c;
 } hi3660_t;
 
 zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out);

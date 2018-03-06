@@ -26,9 +26,6 @@
 #include <soc/hi3660/hi3660-regs.h>
 #include <hw/reg.h>
 
-// #define ENABLE_I2C
-// #define ENABLE_DSI
-
 zx_status_t hi3660_enable_ldo3(hi3660_t* hi3660) {
     volatile void* iopmu = io_buffer_virt(&hi3660->pmu_ssio);
     writel(LDO3_ENABLE_BIT, iopmu + LDO3_ENABLE_REG);
@@ -72,7 +69,6 @@ zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out) {
         goto fail;
     }
 
-#ifdef ENABLE_I2C
     status = hi3660_i2c1_init(hi3660);
     if (status != ZX_OK) {
         goto fail;
@@ -88,19 +84,6 @@ zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out) {
         goto fail;
     }
 
-    if ((status = i2c_dw_bus_init(&hi3660->i2c)) != ZX_OK) {
-        zxlogf(ERROR, "hi3660_init could not add i2c: %d\n", status);
-        return status;
-    }
-#endif
-
-#ifdef ENABLE_DSI
-    status = hi3660_dsi_init(hi3660);
-    if (status != ZX_OK) {
-        goto fail;
-    }
-#endif
-
     *out = hi3660;
     return ZX_OK;
 
@@ -112,14 +95,9 @@ fail:
 
 zx_status_t hi3660_get_protocol(hi3660_t* hi3660, uint32_t proto_id, void* out) {
     switch (proto_id) {
-    case ZX_PROTOCOL_GPIO: {
+    case ZX_PROTOCOL_GPIO:
         memcpy(out, &hi3660->gpio, sizeof(hi3660->gpio));
         return ZX_OK;
-    }
-    case ZX_PROTOCOL_I2C: {
-        memcpy(out, &hi3660->i2c.proto, sizeof(hi3660->i2c.proto));
-        return ZX_OK;
-    }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }

@@ -4,42 +4,83 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/io-buffer.h>
+#include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-bus.h>
+#include <ddk/protocol/platform-device.h>
 #include <hw/reg.h>
-#include <threads.h>
+#include <sync/completion.h>
+#include <zircon/process.h>
+#include <zircon/assert.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <threads.h>
-#include <zircon/process.h>
-#include <zircon/assert.h>
-#include <soc/hi3660/i2c-dw.h>
+
+#include "dw-i2c-regs.h"
 
 typedef struct {
-    i2c_dw_port_t   port;
-    zx_paddr_t      base_phys;
-    uint32_t        irqnum;
-} i2c_dw_dev_desc_t;
+    zx_handle_t                     irq_handle;
+    zx_handle_t                     event_handle;
+    pdev_vmo_buffer_t               regs_iobuff;
+    void*                           virt_reg;
+    zx_duration_t                   timeout;
 
-//These are specific to the HI3660, if this driver gets used on another
-// SoC with DesignWare, these will change.
-// TODO: Do not hardcode these values. Pass it via some metadata.
-static i2c_dw_dev_desc_t i2c_devs[3] = {
-    {.port = DW_I2C_0, .base_phys = MMIO_I2C0_BASE, .irqnum = IRQ_IOMCU_I2C0},
-    {.port = DW_I2C_1, .base_phys = MMIO_I2C1_BASE, .irqnum = IRQ_IOMCU_I2C1},
-    {.port = DW_I2C_2, .base_phys = MMIO_I2C2_BASE, .irqnum = IRQ_IOMCU_I2C2},
-};
+    uint32_t                        bitrate;
+    list_node_t                     connections;
+    list_node_t                     txn_list;
+    list_node_t                     free_txn_list;
+    completion_t                    txn_active;
+    mtx_t                           conn_mutex;
+    mtx_t                           txn_mutex;
 
-static inline i2c_dw_dev_desc_t* get_i2c_dev(i2c_dw_port_t portnum) {
-    for (uint32_t i = 0; i < countof(i2c_devs); i++) {
-        if (i2c_devs[i].port == portnum) {
-            return &i2c_devs[i];
-        }
-    }
-    return NULL;
-}
+    uint32_t                        tx_fifo_depth;
+    uint32_t                        rx_fifo_depth;
+} i2c_dw_dev_t;
+
+typedef struct i2c_dw_connection {
+    list_node_t                     node;
+    uint32_t                        slave_addr;
+    uint32_t                        addr_bits;
+    i2c_dw_dev_t*                   dev;
+} i2c_dw_connection_t;
+
+/*
+    We have separate tx and rx buffs since a common need with i2c
+    is the ability to do a write,read sequence without having another
+    transaction on the bus in between the write/read.
+*/
+typedef struct {
+    list_node_t                     node;
+    uint8_t                         tx_buff[I2C_DW_MAX_TRANSFER];
+    uint8_t                         rx_buff[I2C_DW_MAX_TRANSFER];
+    uint32_t                        tx_idx;
+    uint32_t                        rx_idx;
+    uint32_t                        tx_len;
+    uint32_t                        rx_len;
+    i2c_dw_connection_t             *conn;
+    i2c_complete_cb                 cb;
+    void*                           cookie;
+} i2c_dw_txn_t;
+
+typedef struct {
+    platform_device_protocol_t pdev;
+    i2c_protocol_t i2c;
+    zx_device_t* zxdev;
+    i2c_dw_dev_t* i2c_devs;
+    size_t i2c_dev_count;
+} i2c_dw_t;
+
+static zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len);
+static zx_status_t i2c_dw_write(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len, bool stop);
+static zx_status_t i2c_dw_set_slave_addr(i2c_dw_dev_t* dev, uint16_t addr);
+static zx_status_t i2c_dw_release(i2c_dw_connection_t* conn);
+static zx_status_t i2c_dw_connect(i2c_dw_connection_t** connection, i2c_dw_dev_t* dev,
+                                  uint32_t i2c_addr, uint32_t num_addr_bits);
 
 zx_status_t i2c_dw_dumpstate(i2c_dw_dev_t* dev) {
     zxlogf(INFO, "########################\n");
@@ -307,16 +348,12 @@ static zx_status_t i2c_dw_get_channel(void* ctx, uint32_t channel_id, i2c_channe
 
 static zx_status_t i2c_dw_get_channel_by_address(void* ctx, uint32_t bus_id, uint16_t address,
                                                 i2c_channel_t* channel) {
-    if (bus_id >= HISI_I2C_COUNT) {
+    i2c_dw_t* i2c = ctx;
+
+    if (bus_id >= i2c->i2c_dev_count) {
         return ZX_ERR_INVALID_ARGS;
     }
-
-    i2c_dw_t* i2c = ctx;
-    i2c_dw_dev_t* dev = i2c->i2c_devs[bus_id];
-
-    if (dev == NULL) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    i2c_dw_dev_t* dev = &i2c->i2c_devs[bus_id];
 
     i2c_dw_connection_t* connection;
     uint32_t address_bits = 7;
@@ -336,10 +373,8 @@ static zx_status_t i2c_dw_get_channel_by_address(void* ctx, uint32_t bus_id, uin
     return ZX_OK;
 }
 
-zx_status_t i2c_dw_connect(i2c_dw_connection_t** connection,
-                            i2c_dw_dev_t* dev,
-                            uint32_t i2c_addr,
-                            uint32_t num_addr_bits) {
+static zx_status_t i2c_dw_connect(i2c_dw_connection_t** connection, i2c_dw_dev_t* dev,
+                                  uint32_t i2c_addr, uint32_t num_addr_bits) {
 
     if ((num_addr_bits != 7) && (num_addr_bits != 10)) {
         return ZX_ERR_INVALID_ARGS;
@@ -374,7 +409,7 @@ zx_status_t i2c_dw_connect(i2c_dw_connection_t** connection,
     return ZX_OK;
 }
 
-zx_status_t i2c_dw_release(i2c_dw_connection_t* conn) {
+static zx_status_t i2c_dw_release(i2c_dw_connection_t* conn) {
     mtx_lock(&conn->dev->conn_mutex);
     list_delete(&conn->node);
     mtx_unlock(&conn->dev->conn_mutex);
@@ -403,7 +438,7 @@ static int i2c_dw_bus_not_busy_wait(i2c_dw_dev_t* dev)
     return ZX_OK;
 }
 
-zx_status_t i2c_dw_set_slave_addr(i2c_dw_dev_t* dev, uint16_t addr) {
+static zx_status_t i2c_dw_set_slave_addr(i2c_dw_dev_t* dev, uint16_t addr) {
     addr &= 0x7f; // support 7bit for now
     uint32_t reg = I2C_DW_READ32(DW_I2C_TAR);
     reg = I2C_DW_SET_MASK(reg, DW_I2C_TAR_TAR_START, DW_I2C_TAR_TAR_BITS, addr);
@@ -412,7 +447,7 @@ zx_status_t i2c_dw_set_slave_addr(i2c_dw_dev_t* dev, uint16_t addr) {
     return ZX_OK;
 }
 
-zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len) {
+static zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len) {
      uint32_t rx_limit;
 
     ZX_DEBUG_ASSERT(len <= I2C_DW_MAX_TRANSFER);
@@ -447,7 +482,7 @@ zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len) {
     return ZX_OK;
 }
 
-zx_status_t i2c_dw_write(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len, bool stop) {
+static zx_status_t i2c_dw_write(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len, bool stop) {
     uint32_t tx_limit;
 
     ZX_DEBUG_ASSERT(len <= I2C_DW_MAX_TRANSFER);
@@ -549,82 +584,62 @@ static zx_status_t i2c_dw_host_init(i2c_dw_dev_t* dev) {
     return ZX_OK;
 }
 
-zx_status_t i2c_dw_init(i2c_dw_dev_t** device, i2c_dw_port_t portnum) {
+static zx_status_t i2c_dw_init(i2c_dw_t* i2c, uint32_t index) {
     zx_status_t status;
-    zx_handle_t resource;
 
-    i2c_dw_dev_desc_t* dev_desc = get_i2c_dev(portnum);
-    if (dev_desc == NULL) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    *device = calloc(1, sizeof(i2c_dw_dev_t));
-    if (*device == NULL) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    i2c_dw_dev_t* device = &i2c->i2c_devs[index];
 
     // Initialize connection lists
-    list_initialize(&(*device)->connections);
-    list_initialize(&(*device)->txn_list);
-    list_initialize(&(*device)->free_txn_list);
-    ZX_DEBUG_ASSERT(mtx_init(&(*device)->conn_mutex, mtx_plain) == thrd_success);
-    ZX_DEBUG_ASSERT(mtx_init(&(*device)->txn_mutex, mtx_plain) == thrd_success);
+    list_initialize(&device->connections);
+    list_initialize(&device->txn_list);
+    list_initialize(&device->free_txn_list);
+    ZX_DEBUG_ASSERT(mtx_init(&device->conn_mutex, mtx_plain) == thrd_success);
+    ZX_DEBUG_ASSERT(mtx_init(&device->txn_mutex, mtx_plain) == thrd_success);
 
-    (*device)->txn_active = COMPLETION_INIT;
+    device->txn_active = COMPLETION_INIT;
+    device->timeout = ZX_SEC(10);
 
-    (*device)->timeout = ZX_SEC(10);
-
-    resource = get_root_resource();
-
-    status = io_buffer_init_physical(&(*device)->regs_iobuff,
-                                        dev_desc->base_phys,
-                                        PAGE_SIZE, resource,
-                                        ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    status = pdev_map_mmio_buffer(&i2c->pdev, index, ZX_CACHE_POLICY_UNCACHED_DEVICE, &device->regs_iobuff);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: io_buffer_init_physical failed %d\n", __FUNCTION__, status);
         goto init_fail;
     }
-    (*device)->virt_reg = io_buffer_virt(&(*device)->regs_iobuff);
+    device->virt_reg = device->regs_iobuff.vaddr;
 
-    status = zx_interrupt_create(resource, 0, &(*device)->irq_handle);
-    if (status != ZX_OK) {
-        goto init_fail;
-    }
-    status = zx_interrupt_bind((*device)->irq_handle, 0, resource, dev_desc->irqnum,
-                               ZX_INTERRUPT_MODE_LEVEL_HIGH);
+    status = pdev_map_interrupt(&i2c->pdev, index, &device->irq_handle);
     if (status != ZX_OK) {
         goto init_fail;
     }
 
-    status = zx_event_create(0, &(*device)->event_handle);
+    status = zx_event_create(0, &device->event_handle);
     if (status != ZX_OK) {
         goto init_fail;
     }
 
     // initialize i2c host controller
-    status = i2c_dw_host_init(*device);
+    status = i2c_dw_host_init(device);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: failed to initialize i2c host controller %d", __FUNCTION__, status);
         goto init_fail;
     }
 
     thrd_t worker_thread;
-    thrd_create_with_name(&worker_thread, i2c_dw_worker_thread, *device, "i2c_dw_worker_thread");
+    thrd_create_with_name(&worker_thread, i2c_dw_worker_thread, device, "i2c_dw_worker_thread");
     thrd_t irq_thread;
-    thrd_create_with_name(&irq_thread, i2c_dw_irq_thread, *device, "i2c_dw_irq_thread");
+    thrd_create_with_name(&irq_thread, i2c_dw_irq_thread, device, "i2c_dw_irq_thread");
 
     return ZX_OK;
 
 init_fail:
-    if (*device) {
-        io_buffer_release(&(*device)->regs_iobuff);
-        if ((*device)->event_handle != ZX_HANDLE_INVALID) {
-            zx_handle_close((*device)->event_handle);
+    if (device) {
+        pdev_vmo_buffer_release(&device->regs_iobuff);
+        if (device->event_handle != ZX_HANDLE_INVALID) {
+            zx_handle_close(device->event_handle);
         }
-        if ((*device)->irq_handle != ZX_HANDLE_INVALID) {
-            zx_handle_close((*device)->irq_handle);
+        if (device->irq_handle != ZX_HANDLE_INVALID) {
+            zx_handle_close(device->irq_handle);
         }
-        free(*device);
+        free(device);
     }
     return status;
 }
@@ -634,16 +649,92 @@ static i2c_protocol_ops_t i2c_ops = {
     .get_channel_by_address =   i2c_dw_get_channel_by_address,
 };
 
-zx_status_t i2c_dw_bus_init(i2c_dw_t* i2c) {
+static zx_protocol_device_t i2c_device_proto = {
+    .version = DEVICE_OPS_VERSION,
+};
+
+static zx_status_t dw_i2c_bind(void* ctx, zx_device_t* parent) {
+ printf("dw_i2c_bind\n");
     zx_status_t status;
-    status = i2c_dw_init(&i2c->i2c_devs[DW_I2C_0], DW_I2C_0);
-    status = i2c_dw_init(&i2c->i2c_devs[DW_I2C_1], DW_I2C_1);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: i2c_dw_init failed %d\n", __FUNCTION__, status);
-        return status;
+
+    i2c_dw_t* i2c = calloc(1, sizeof(i2c_dw_t));
+    if (!i2c) {
+        return ZX_ERR_NO_MEMORY;
     }
-    i2c->proto.ops = &i2c_ops;
-    i2c->proto.ctx = i2c;
+
+    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &i2c->pdev)) != ZX_OK) {
+        zxlogf(ERROR, "dw_i2c_bind: ZX_PROTOCOL_PLATFORM_DEV not available\n");
+        goto fail;
+    }
+
+    platform_bus_protocol_t pbus;
+    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus)) != ZX_OK) {
+        zxlogf(ERROR, "dw_i2c_bind: ZX_PROTOCOL_PLATFORM_BUS not available\n");
+        goto fail;
+    }
+
+    pdev_device_info_t info;
+    status = pdev_get_device_info(&i2c->pdev, &info);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "dw_i2c_bind: pdev_get_device_info failed\n");
+        goto fail;
+    }
+
+    if (info.mmio_count != info.irq_count) {
+        zxlogf(ERROR, "dw_i2c_bind: mmio_count %u does not matchirq_count %u\n",
+               info.mmio_count, info.irq_count);
+        status = ZX_ERR_INVALID_ARGS;
+        goto fail;
+    }
+
+    i2c->i2c_devs = calloc(info.mmio_count, sizeof(i2c_dw_dev_t));
+    if (!i2c->i2c_devs) {
+        free(i2c);
+        return ZX_ERR_NO_MEMORY;
+    }
+    i2c->i2c_dev_count = info.mmio_count;
+
+    for (uint32_t i = 0; i < i2c->i2c_dev_count; i++) {
+        zx_status_t status = i2c_dw_init(i2c, i);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "dw_i2c_bind: dw_i2c_dev_init failed: %d\n", status);
+            goto fail;
+        }
+    }
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "dw-i2c",
+        .ctx = i2c,
+        .ops = &i2c_device_proto,
+        .flags = DEVICE_ADD_NON_BINDABLE,
+    };
+
+    status = device_add(parent, &args, &i2c->zxdev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "dw_i2c_bind: device_add failed\n");
+        goto fail;
+    }
+
+    i2c->i2c.ops = &i2c_ops;
+    i2c->i2c.ctx = i2c;
+    pbus_set_protocol(&pbus, ZX_PROTOCOL_I2C, &i2c->i2c);
+
     return ZX_OK;
+
+fail:
+    return status;
 }
+
+static zx_driver_ops_t dw_i2c_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = dw_i2c_bind,
+};
+
+ZIRCON_DRIVER_BEGIN(dw_i2c, dw_i2c_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DW_I2C),
+ZIRCON_DRIVER_END(dw_i2c)
 

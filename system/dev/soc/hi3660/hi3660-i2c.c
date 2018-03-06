@@ -29,9 +29,7 @@ zx_status_t hi3660_i2c1_init(hi3660_t* hi3660) {
     return ZX_OK;
 }
 
-zx_status_t hi3660_i2c_pinmux(hi3660_t* hi3660)
-{
-
+zx_status_t hi3660_i2c_pinmux(hi3660_t* hi3660) {
     // setup i2c0 and i2c1 pin control first
     volatile void* iomg_pmx4 = io_buffer_virt(&hi3660->iomg_pmx4);
     volatile void* iocfg_pmx9 = iomg_pmx4 + MMIO_IOCFG_PMX9_OFFSET;

@@ -573,3 +573,11 @@
 #define IRQ_INTR_HISEE_TSENSOR_1                373
 #define IRQ_INTR_HISEE_LOCKUP                   374
 #define IRQ_INTR_HISEE_DMA                      375
+
+// I2C ports
+enum {
+    DW_I2C_0,
+    DW_I2C_1,
+    DW_I2C_2,
+    DW_I2C_COUNT,
+};
