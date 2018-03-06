@@ -10,11 +10,21 @@ class {{ .Name }};
 using {{ .Name }}Ptr = ::fidl::InterfacePtr<{{ .Name }}>;
 class {{ .ProxyName }};
 class {{ .StubName }};
+class {{ .SyncName }};
+// TODO(abarth): Add |SynchronousInterfacePtr|.
+// using {{ .Name }}SyncPtr = ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
+class {{ .SyncProxyName }};
 {{- end }}
 
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
     {{- if $index }}, {{ end -}}{{ $param.Type.Decl }} {{ $param.Name }}
+  {{- end -}}
+{{ end }}
+
+{{- define "OutParams" -}}
+  {{- range $index, $param := . -}}
+    {{- if $index }}, {{ end -}}{{ $param.Type.Decl }}* out_{{ $param.Name }}
   {{- end -}}
 {{ end }}
 
@@ -27,6 +37,14 @@ class {{ .StubName }};
 {{- define "RequestMethodSignature" -}}
   {{- if .HasResponse -}}
 {{ .Name }}({{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ .CallbackType }} callback)
+  {{- else -}}
+{{ .Name }}({{ template "Params" .Request }})
+  {{- end -}}
+{{ end -}}
+
+{{- define "SyncRequestMethodSignature" -}}
+  {{- if .Response -}}
+{{ .Name }}({{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ template "OutParams" .Response }})
   {{- else -}}
 {{ .Name }}({{ template "Params" .Request }})
   {{- end -}}
@@ -50,6 +68,18 @@ class {{ .Name }} {
   {{- end }}
 };
 
+class {{ .SyncName }} {
+ public:
+  using Proxy_ = {{ .SyncProxyName }};
+  virtual ~{{ .SyncName }}();
+
+  {{- range .Methods }}
+    {{- if .HasRequest }}
+  virtual zx_status_t {{ template "SyncRequestMethodSignature" . }} = 0;
+    {{- end }}
+  {{- end }}
+};
+
 class {{ .ProxyName }} : public {{ .Name }} {
  public:
   explicit {{ .ProxyName }}(::fidl::internal::ProxyController* controller);
@@ -59,7 +89,7 @@ class {{ .ProxyName }} : public {{ .Name }} {
     {{- if .HasRequest }}
   void {{ template "RequestMethodSignature" . }} override;
     {{- end }}
-{{- end }}
+  {{- end }}
 
  private:
   {{ .ProxyName }}(const {{ .ProxyName }}&) = delete;
@@ -79,6 +109,25 @@ class {{ .StubName }} : public ::fidl::internal::Stub {
  private:
   {{ .Name }}* impl_;
 };
+
+class {{ .SyncProxyName }} : public {{ .SyncName }} {
+ public:
+  explicit {{ .SyncProxyName }}(::zx::channel channel);
+  ~{{ .SyncProxyName }}();
+
+  bool is_bound() const { return !!channel_; }
+  ::zx::channel TakeChannel_();
+
+  {{- range .Methods }}
+    {{- if .HasRequest }}
+  zx_status_t {{ template "SyncRequestMethodSignature" . }} override;
+    {{- end }}
+  {{- end }}
+
+  private:
+  ::zx::channel channel_;
+};
+
 {{- end }}
 
 {{- define "InterfaceDefinition" }}
@@ -92,6 +141,8 @@ constexpr uint32_t {{ .OrdinalName }} = {{ .Ordinal }}u;
 }  // namespace
 
 {{ .Name }}::~{{ .Name }}() = default;
+
+{{ .SyncName }}::~{{ .SyncName }}() = default;
 
 {{ .ProxyName }}::{{ .ProxyName }}(::fidl::internal::ProxyController* controller)
     : controller_(controller) {}
@@ -228,5 +279,53 @@ zx_status_t {{ .StubName }}::Dispatch(
   }
   return status;
 }
+
+{{ .SyncProxyName }}::{{ .SyncProxyName }}(::zx::channel channel)
+  : channel_(::std::move(channel)) {}
+
+{{ .SyncProxyName }}::~{{ .SyncProxyName }}() = default;
+
+::zx::channel {{ .SyncProxyName }}::TakeChannel_() {
+  return std::move(channel_);
+}
+
+{{- range .Methods }}
+  {{- if .HasRequest }}
+zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }} {
+  ::fidl::Encoder encoder_({{ .OrdinalName }});
+    {{- if .Request }}
+  size_t offset_ = encoder_.Alloc({{ .RequestSize }});
+      {{- range .Request }}
+  ::fidl::Encode(&encoder_, &{{ .Name }}, offset_ + {{ .Offset }});
+      {{- end }}
+    {{- end }}
+    {{- if .HasResponse }}
+  ::fidl::MessageBuffer buffer_;
+  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  zx_status_t status = encoder_.GetMessage().Call(
+      channel_.get(), 0, ZX_TIME_INFINITE, nullptr, &response_);
+  if (status != ZX_OK)
+    return status;
+  const char* error_msg = nullptr;
+  status = response_.Decode(nullptr, &error_msg);
+  if (status != ZX_OK) {
+    fprintf(stderr, "error: fidl_decode: %s\n", error_msg);
+    return status;
+  }
+      {{- if .Response }}
+  ::fidl::Decoder decoder_(std::move(response_));
+  offset_ = sizeof(fidl_message_header_t);
+        {{- range $index, $param := .Response }}
+  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder_, offset_ + {{ .Offset }});
+        {{- end }}
+      {{- end }}
+  return ZX_OK;
+    {{- else }}
+  return encoder_.GetMessage().Write(channel_.get(), 0);
+    {{- end }}
+}
+  {{- end }}
+{{- end }}
+
 {{ end }}
 `

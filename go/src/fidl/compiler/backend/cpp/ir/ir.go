@@ -21,8 +21,8 @@ type Decl interface {
 }
 
 type Type struct {
-	Decl         string
-	DeclType     types.DeclType
+	Decl     string
+	DeclType types.DeclType
 }
 
 type Const struct {
@@ -74,11 +74,13 @@ type StructMember struct {
 }
 
 type Interface struct {
-	Namespace string
-	Name      string
-	ProxyName string
-	StubName  string
-	Methods   []Method
+	Namespace     string
+	Name          string
+	ProxyName     string
+	StubName      string
+	SyncName      string
+	SyncProxyName string
+	Methods       []Method
 }
 
 type Method struct {
@@ -481,8 +483,10 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		c.namespace,
 		changeIfReserved(val.Name),
-		changeIfReserved(val.Name + "Proxy"),
-		changeIfReserved(val.Name + "Stub"),
+		changeIfReserved(val.Name + "_Proxy"),
+		changeIfReserved(val.Name + "_Stub"),
+		changeIfReserved(val.Name + "_Sync"),
+		changeIfReserved(val.Name + "_SyncProxy"),
 		[]Method{},
 	}
 
