@@ -58,15 +58,12 @@ struct Type {
     const std::string name;
 };
 
-enum Nullability { kNullable,
-                   kNonnullable };
-
 struct HandleType : public Type {
-    HandleType(std::string name, types::HandleSubtype subtype, Nullability nullability)
+    HandleType(std::string name, types::HandleSubtype subtype, types::Nullability nullability)
         : Type(Kind::kHandle, std::move(name)), subtype(subtype), nullability(nullability) {}
 
     const types::HandleSubtype subtype;
-    const Nullability nullability;
+    const types::Nullability nullability;
 };
 
 struct StructType : public Type {
@@ -111,23 +108,23 @@ struct ArrayType : public Type {
 };
 
 struct StringType : public Type {
-    StringType(std::string name, uint32_t max_size, Nullability nullability)
+    StringType(std::string name, uint32_t max_size, types::Nullability nullability)
         : Type(Kind::kString, std::move(name)), max_size(max_size), nullability(nullability) {}
 
     const uint32_t max_size;
-    const Nullability nullability;
+    const types::Nullability nullability;
 };
 
 struct VectorType : public Type {
     VectorType(std::string name, const Type* element_type, uint32_t max_count,
-               uint32_t element_size, Nullability nullability)
+               uint32_t element_size, types::Nullability nullability)
         : Type(Kind::kVector, std::move(name)), element_type(element_type), max_count(max_count),
           element_size(element_size), nullability(nullability) {}
 
     const Type* const element_type;
     const uint32_t max_count;
     const uint32_t element_size;
-    const Nullability nullability;
+    const types::Nullability nullability;
 };
 
 } // namespace coded
