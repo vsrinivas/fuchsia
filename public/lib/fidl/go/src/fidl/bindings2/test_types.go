@@ -173,3 +173,47 @@ func (_ *TestArray4) InlineAlignment() int {
 func (_ *TestArray4) InlineSize() int {
 	return 9
 }
+
+type TestString1 struct {
+	A string
+	B *string
+}
+
+// Implements Payload.
+func (_ *TestString1) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *TestString1) InlineSize() int {
+	return 32
+}
+
+type TestString2 struct {
+	A [2]string
+}
+
+// Implements Payload.
+func (_ *TestString2) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *TestString2) InlineSize() int {
+	return 32
+}
+
+type TestString3 struct {
+	A [2]string  `fidl:"4"`
+	B [2]*string `fidl:"4"`
+}
+
+// Implements Payload.
+func (_ *TestString3) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *TestString3) InlineSize() int {
+	return 64
+}

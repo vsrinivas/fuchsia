@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/types"
@@ -62,6 +63,44 @@ type Struct struct {
 	Alignment int
 }
 
+// Tag loosely represents a golang struct member tag for maximum elements e.g.
+// `fidl:"3,4,5"`. For a type like vector<vector<int>:3>:4, the tag would
+// look like `fidl:"3,4"`, such that the commas separate nesting. Note that if
+// a nested type that doesn't specify a max size is used, it is encoded as the
+// empty string. For example, vector<vector<vector<int>:3>>:5 would have tag
+// `fidl:"3,,5"`. Note that this makes a maximum length of 0 distinct.
+// Fundamentally, this Tag exists to provide type metadata for nested FIDL2
+// container types to the encoder/decoder in the bindings.
+//
+// Note that arrays are not included because their maximum sizes are encoded in
+// the golang type system. Because of this, FIDL types such as
+// vector<array<int>:10>:10 will have a tag that looks like `fidl:"10"`.
+type Tag struct {
+	// MaxElems is the maximum number of elements a type is annotated with.
+	MaxElems []*int
+}
+
+// String generates a string representation for the tag.
+func (t *Tag) String() string {
+	var elemsTag []string
+	if len(t.MaxElems) == 0 {
+		return ""
+	}
+	anyNonNil := false
+	for _, elems := range t.MaxElems {
+		if elems == nil {
+			elemsTag = append(elemsTag, "")
+			continue
+		}
+		anyNonNil = true
+		elemsTag = append(elemsTag, strconv.Itoa(*elems))
+	}
+	if !anyNonNil {
+		return ""
+	}
+	return fmt.Sprintf("`fidl:\"%s\"`", strings.Join(elemsTag, ","))
+}
+
 // StructMember represents the member of a golang struct.
 type StructMember struct {
 	// Name is the name of the golang struct member.
@@ -69,6 +108,10 @@ type StructMember struct {
 
 	// Type is the type of the golang struct member.
 	Type Type
+
+	// Tag is the golang struct member tag which holds additional metadata
+	// about the struct field.
+	Tag string
 }
 
 // Root is the root of the golang backend IR structure.
@@ -185,7 +228,7 @@ func (_ *compiler) compileLiteral(val types.Literal) string {
 	case types.FalseLiteral:
 		return "false"
 	default:
-		log.Fatal("Unknown literal kind:", val.Kind)
+		log.Fatal("Unknown literal kind: ", val.Kind)
 		return ""
 	}
 }
@@ -196,7 +239,7 @@ func (c *compiler) compileConstant(val types.Constant) string {
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	default:
-		log.Fatal("Unknown constant kind:", val.Kind)
+		log.Fatal("Unknown constant kind: ", val.Kind)
 		return ""
 	}
 }
@@ -204,24 +247,31 @@ func (c *compiler) compileConstant(val types.Constant) string {
 func (_ *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 	t, ok := primitiveTypes[val]
 	if !ok {
-		log.Fatal("Unknown primitive type:", val)
+		log.Fatal("Unknown primitive type: ", val)
 	}
 	return Type(t)
 }
 
-func (c *compiler) compileType(val types.Type) Type {
-	var r Type
-	// TODO(mknyszek): Support vectors, handles, requests and identifiers.
+func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
+	// TODO(mknyszek): Support handles, requests and identifiers.
 	switch val.Kind {
 	case types.ArrayType:
-		t := c.compileType(*val.ElementType)
-		r = Type(fmt.Sprintf("[%s]%s", strconv.Itoa(*val.ElementCount), t))
+		e, et := c.compileType(*val.ElementType)
+		r = Type(fmt.Sprintf("[%s]%s", strconv.Itoa(*val.ElementCount), e))
+		t = et
+	case types.StringType:
+		t.MaxElems = append(t.MaxElems, val.ElementCount)
+		if val.Nullable {
+			r = Type("*string")
+		} else {
+			r = Type("string")
+		}
 	case types.PrimitiveType:
 		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	default:
 		log.Fatal("Unknown type kind:", val.Kind)
 	}
-	return r
+	return
 }
 
 func (c *compiler) compileEnumMember(val types.EnumMember) EnumMember {
@@ -243,9 +293,11 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 }
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
+	ty, tag := c.compileType(val.Type)
 	return StructMember{
-		Type: c.compileType(val.Type),
+		Type: ty,
 		Name: changeIfReserved(exportIdentifier(val.Name)),
+		Tag:  tag.String(),
 	}
 }
 

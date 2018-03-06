@@ -8,7 +8,7 @@ const Struct = `
 {{- define "StructDefinition" -}}
 type {{ .Name }} struct {
 	{{- range .Members }}
-	{{ .Name }} {{ .Type }}
+	{{ .Name }} {{ .Type }} {{ .Tag }}
 	{{- end }}
 }
 

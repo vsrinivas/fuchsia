@@ -72,4 +72,13 @@ func TestEncodingIdentity(t *testing.T) {
 			A: [9]bool{true, false, false, true, false, true, true, true, true},
 		}, 16, &TestArray4{})
 	})
+	t.Run("Strings", func(t *testing.T) {
+		testIdentity(t, &TestString1{A: "str", B: nil}, 40, &TestString1{})
+		testIdentity(t, &TestString2{A: [2]string{"hello", "g"}}, 48, &TestString2{})
+		s := "bye"
+		testIdentity(t, &TestString3{
+			A: [2]string{"boop", "g"},
+			B: [2]*string{&s, nil},
+		}, 88, &TestString3{})
+	})
 }

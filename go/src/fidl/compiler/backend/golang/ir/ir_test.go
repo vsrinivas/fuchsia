@@ -52,6 +52,18 @@ func arrayType(elementType types.Type, elementCount int) types.Type {
 	}
 }
 
+func stringType(elementCount *int) types.Type {
+	return types.Type{
+		Kind: types.StringType,
+		ElementCount: elementCount,
+	}
+}
+
+func nullable(t types.Type) types.Type {
+	t.Nullable = true
+	return t
+}
+
 func compileExpect(t *testing.T, testName string, input types.Root, expect Root) {
 	t.Run(testName, func(t *testing.T) {
 		actual := Compile(input)
@@ -149,6 +161,63 @@ func TestCompileStruct(t *testing.T) {
 				{
 					Type: "[27][1]bool",
 					Name: "Nested",
+				},
+			},
+		},
+	})
+
+	maxElems := 40
+	compileStructsExpect(t, "Struct with string types", []types.Struct{
+		{
+			Name: types.Identifier("Test"),
+			Members: []types.StructMember{
+				{
+					Type: stringType(nil),
+					Name: types.Identifier("Flat"),
+				},
+				{
+					Type: nullable(stringType(nil)),
+					Name: types.Identifier("Nullable"),
+				},
+				{
+					Type: nullable(stringType(&maxElems)),
+					Name: types.Identifier("Max"),
+				},
+				{
+					Type: arrayType(stringType(nil), 27),
+					Name: types.Identifier("Nested"),
+				},
+				{
+					Type: arrayType(nullable(stringType(&maxElems)), 27),
+					Name: types.Identifier("NestedNullableMax"),
+				},
+			},
+		},
+	}, []Struct{
+		{
+			Name: "Test",
+			Members: []StructMember{
+				{
+					Type: "string",
+					Name: "Flat",
+				},
+				{
+					Type: "*string",
+					Name: "Nullable",
+				},
+				{
+					Type: "*string",
+					Name: "Max",
+					Tag: "`fidl:\"40\"`", 
+				},
+				{
+					Type: "[27]string",
+					Name: "Nested",
+				},
+				{
+					Type: "[27]*string",
+					Name: "NestedNullableMax",
+					Tag: "`fidl:\"40\"`", 
 				},
 			},
 		},

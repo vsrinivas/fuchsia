@@ -1,4 +1,4 @@
-library bindings2;
+library foo;
 
 struct TestSimple {
     int64 x;
@@ -58,4 +58,18 @@ struct TestArray3 {
 
 struct TestArray4 {
     array<bool>:9 a;
+};
+
+struct TestString1 {
+    string a;
+    string? b;
+};
+
+struct TestString2 {
+    array<string>:2 a;
+};
+
+struct TestString3 {
+    array<string:4>:2 a;
+    array<string:4?>:2 b;
 };
