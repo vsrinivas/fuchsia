@@ -458,7 +458,7 @@ int unittest_set_verbosity_level(int new_level);
     } while (0)
 
 /* Check that two strings are equal. */
-#define UT_STR_EQ(str1, str2, msg, ret)                                     \
+#define UT_STR_EQ(str1, str2, ret, ...)                                     \
     do {                                                                    \
         UT_ASSERT_VALID_TEST_STATE;                                         \
         UNITTEST_TRACEF(2, "str_eq(%s, %s)\n", #str1, #str2);               \
@@ -467,7 +467,8 @@ int unittest_set_verbosity_level(int new_level);
          * That does not work in C++ if str1 is string.c_str(): the         \
          * storage for the C string will get deallocated before the         \
          * string is used.  Instead we must use a helper function. */       \
-        if (!unittest_expect_str_eq((str1), (str2), #str1, #str2, msg,      \
+        if (!unittest_expect_str_eq((str1), (str2), #str1, #str2,           \
+                                    unittest_get_message(__VA_ARGS__),      \
                                     __FILE__, __LINE__,                     \
                                     __PRETTY_FUNCTION__)) {                 \
             current_test_info->all_ok = false;                              \
@@ -476,11 +477,12 @@ int unittest_set_verbosity_level(int new_level);
     } while (0)
 
 /* Check that two strings are not equal. */
-#define UT_STR_NE(str1, str2, msg, ret)                                     \
+#define UT_STR_NE(str1, str2, ret, ...)                                     \
     do {                                                                    \
         UT_ASSERT_VALID_TEST_STATE;                                         \
         UNITTEST_TRACEF(2, "str_ne(%s, %s)\n", #str1, #str2);               \
-        if (!unittest_expect_str_ne((str1), (str2), #str1, #str2, msg,      \
+        if (!unittest_expect_str_ne((str1), (str2), #str1, #str2,           \
+                                    unittest_get_message(__VA_ARGS__),      \
                                     __FILE__, __LINE__,                     \
                                     __PRETTY_FUNCTION__)) {                 \
             current_test_info->all_ok = false;                              \
@@ -507,8 +509,8 @@ int unittest_set_verbosity_level(int new_level);
 #define EXPECT_NONNULL(actual, ...) UT_NONNULL(actual, DONOT_RET, ##__VA_ARGS__)
 #define EXPECT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, DONOT_RET)
 #define EXPECT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, DONOT_RET)
-#define EXPECT_STR_EQ(expected, actual, msg) UT_STR_EQ(expected, actual, msg, DONOT_RET)
-#define EXPECT_STR_NE(str1, str2, msg) UT_STR_NE(str1, str2, msg, DONOT_RET)
+#define EXPECT_STR_EQ(str1, str2, ...) UT_STR_EQ(str1, str2, DONOT_RET, ##__VA_ARGS__)
+#define EXPECT_STR_NE(str1, str2, ...) UT_STR_NE(str1, str2, DONOT_RET, ##__VA_ARGS__)
 
 /*
  * The ASSERT_* macros are similar to the EXPECT_* macros except that
@@ -539,8 +541,8 @@ int unittest_set_verbosity_level(int new_level);
 #define ASSERT_NONNULL(actual, ...) UT_NONNULL(actual, RET_FALSE, ##__VA_ARGS__)
 #define ASSERT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, RET_FALSE)
 #define ASSERT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, RET_FALSE)
-#define ASSERT_STR_EQ(expected, actual, msg) UT_STR_EQ(expected, actual, msg, RET_FALSE)
-#define ASSERT_STR_NE(str1, str2, msg) UT_STR_NE(str1, str2, msg, RET_FALSE)
+#define ASSERT_STR_EQ(str1, str2, ...) UT_STR_EQ(str1, str2, RET_FALSE, ##__VA_ARGS__)
+#define ASSERT_STR_NE(str1, str2, ...) UT_STR_NE(str1, str2, RET_FALSE, ##__VA_ARGS__)
 
 #ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
 

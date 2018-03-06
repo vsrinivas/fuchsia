@@ -9,9 +9,6 @@
 #include <fbl/array.h>
 #include <unittest/unittest.h>
 
-#define EXPECT_CSTR_EQ(expected, actual) \
-    EXPECT_STR_EQ(expected, actual, "unequal cstr")
-
 namespace {
 
 // Note: |runnable| can't be a reference since that'd make the behavior of
@@ -30,11 +27,11 @@ bool string_printf_basic_test() {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
-    EXPECT_CSTR_EQ("", fbl::StringPrintf("").c_str());
+    EXPECT_STR_EQ("", fbl::StringPrintf("").c_str());
 #pragma GCC diagnostic pop
-    EXPECT_CSTR_EQ("hello", fbl::StringPrintf("hello").c_str());
-    EXPECT_CSTR_EQ("hello-123", fbl::StringPrintf("hello%d", -123).c_str());
-    EXPECT_CSTR_EQ("hello0123FACE", fbl::StringPrintf("%s%04d%X", "hello", 123, 0xfaceU).c_str());
+    EXPECT_STR_EQ("hello", fbl::StringPrintf("hello").c_str());
+    EXPECT_STR_EQ("hello-123", fbl::StringPrintf("hello%d", -123).c_str());
+    EXPECT_STR_EQ("hello0123FACE", fbl::StringPrintf("%s%04d%X", "hello", 123, 0xfaceU).c_str());
 
     END_TEST;
 }
@@ -42,30 +39,30 @@ bool string_printf_basic_test() {
 bool string_vprintf_basic_test() {
     BEGIN_TEST;
 
-    EXPECT_CSTR_EQ("",
-                   VAListHelper([](va_list ap) -> fbl::String {
-                       return fbl::StringVPrintf("", ap);
-                   })
+    EXPECT_STR_EQ("",
+                  VAListHelper([](va_list ap) -> fbl::String {
+                      return fbl::StringVPrintf("", ap);
+                  })
                        .c_str());
-    EXPECT_CSTR_EQ("hello",
-                   VAListHelper([](va_list ap) -> fbl::String {
-                       return fbl::StringVPrintf("hello", ap);
-                   })
+    EXPECT_STR_EQ("hello",
+                  VAListHelper([](va_list ap) -> fbl::String {
+                      return fbl::StringVPrintf("hello", ap);
+                  })
                        .c_str());
-    EXPECT_CSTR_EQ("hello-123",
-                   VAListHelper(
-                       [](va_list ap) -> fbl::String {
-                           return fbl::StringVPrintf("hello%d", ap);
-                       },
-                       -123)
-                       .c_str());
-    EXPECT_CSTR_EQ("hello0123FACE",
-                   VAListHelper(
-                       [](va_list ap) -> fbl::String {
-                           return fbl::StringVPrintf("%s%04d%X", ap);
-                       },
-                       "hello", 123, 0xfaceU)
-                       .c_str());
+    EXPECT_STR_EQ("hello-123",
+                  VAListHelper(
+                      [](va_list ap) -> fbl::String {
+                          return fbl::StringVPrintf("hello%d", ap);
+                      },
+                      -123)
+                      .c_str());
+    EXPECT_STR_EQ("hello0123FACE",
+                  VAListHelper(
+                      [](va_list ap) -> fbl::String {
+                          return fbl::StringVPrintf("%s%04d%X", ap);
+                      },
+                      "hello", 123, 0xfaceU)
+                      .c_str());
 
     END_TEST;
 }
@@ -81,8 +78,8 @@ bool string_printf_boundary_test() {
     for (size_t i = 800; i < 1200; i++) {
         fbl::String stuff(i, 'x');
         fbl::String format = fbl::String::Concat({stuff, "%d", "%s", " world"});
-        EXPECT_CSTR_EQ(fbl::String::Concat({stuff, "123", "hello world"}).c_str(),
-                       fbl::StringPrintf(format.c_str(), 123, "hello").c_str());
+        EXPECT_STR_EQ(fbl::String::Concat({stuff, "123", "hello world"}).c_str(),
+                      fbl::StringPrintf(format.c_str(), 123, "hello").c_str());
     }
 
     END_TEST;
@@ -94,10 +91,10 @@ bool string_printf_very_big_string_test() {
     // 4 megabytes of exes (we'll generate 5 times this).
     fbl::String stuff(4u << 20u, 'x');
     fbl::String format = fbl::String::Concat({"%s", stuff, "%s", stuff, "%s"});
-    EXPECT_CSTR_EQ(fbl::String::Concat({stuff, stuff, stuff, stuff, stuff}).c_str(),
-                   fbl::StringPrintf(format.c_str(), stuff.c_str(), stuff.c_str(),
-                                      stuff.c_str())
-                       .c_str());
+    EXPECT_STR_EQ(fbl::String::Concat({stuff, stuff, stuff, stuff, stuff}).c_str(),
+                  fbl::StringPrintf(format.c_str(), stuff.c_str(), stuff.c_str(),
+                                    stuff.c_str())
+                      .c_str());
 
     END_TEST;
 }

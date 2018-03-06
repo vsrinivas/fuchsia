@@ -6,12 +6,9 @@
 
 #include <unittest/unittest.h>
 
-#define EXPECT_CSTR_EQ(expected, actual) \
-    EXPECT_STR_EQ(expected, actual, "unequal cstr")
-
 #define EXPECT_DATA_AND_LENGTH(expected, actual)      \
     do {                                              \
-        EXPECT_CSTR_EQ(expected, actual.data());      \
+        EXPECT_STR_EQ(expected, actual.data());      \
         EXPECT_EQ(strlen(expected), actual.length()); \
     } while (false)
 
@@ -49,17 +46,17 @@ bool empty_string_test() {
     {
         fbl::StringBuffer<0u> empty;
 
-        EXPECT_CSTR_EQ("", empty.data());
-        EXPECT_CSTR_EQ("", empty.c_str());
+        EXPECT_STR_EQ("", empty.data());
+        EXPECT_STR_EQ("", empty.c_str());
 
         EXPECT_EQ(0u, empty.length());
         EXPECT_EQ(0u, empty.size());
         EXPECT_TRUE(empty.empty());
         EXPECT_EQ(0u, empty.capacity());
 
-        EXPECT_CSTR_EQ("", empty.begin());
+        EXPECT_STR_EQ("", empty.begin());
         EXPECT_EQ(0u, empty.end() - empty.begin());
-        EXPECT_CSTR_EQ("", empty.cbegin());
+        EXPECT_STR_EQ("", empty.cbegin());
         EXPECT_EQ(0u, empty.cend() - empty.cbegin());
 
         EXPECT_EQ(0, empty[0u]);
@@ -68,17 +65,17 @@ bool empty_string_test() {
     {
         fbl::StringBuffer<16u> empty;
 
-        EXPECT_CSTR_EQ("", empty.data());
-        EXPECT_CSTR_EQ("", empty.c_str());
+        EXPECT_STR_EQ("", empty.data());
+        EXPECT_STR_EQ("", empty.c_str());
 
         EXPECT_EQ(0u, empty.length());
         EXPECT_EQ(0u, empty.size());
         EXPECT_TRUE(empty.empty());
         EXPECT_EQ(16u, empty.capacity());
 
-        EXPECT_CSTR_EQ("", empty.begin());
+        EXPECT_STR_EQ("", empty.begin());
         EXPECT_EQ(0u, empty.end() - empty.begin());
-        EXPECT_CSTR_EQ("", empty.cbegin());
+        EXPECT_STR_EQ("", empty.cbegin());
         EXPECT_EQ(0u, empty.cend() - empty.cbegin());
 
         EXPECT_EQ(0, empty[0u]);
@@ -104,17 +101,17 @@ bool append_test() {
             .Append(fbl::StringPiece("zzzzz", 3u))
             .Append(fbl::String("zzzzz"));
 
-        EXPECT_CSTR_EQ("abcdefghijklmnop", str.data());
-        EXPECT_CSTR_EQ("abcdefghijklmnop", str.c_str());
+        EXPECT_STR_EQ("abcdefghijklmnop", str.data());
+        EXPECT_STR_EQ("abcdefghijklmnop", str.c_str());
 
         EXPECT_EQ(16u, str.length());
         EXPECT_EQ(16u, str.size());
         EXPECT_FALSE(str.empty());
         EXPECT_EQ(16u, str.capacity());
 
-        EXPECT_CSTR_EQ("abcdefghijklmnop", str.begin());
+        EXPECT_STR_EQ("abcdefghijklmnop", str.begin());
         EXPECT_EQ(16u, str.end() - str.begin());
-        EXPECT_CSTR_EQ("abcdefghijklmnop", str.cbegin());
+        EXPECT_STR_EQ("abcdefghijklmnop", str.cbegin());
         EXPECT_EQ(16u, str.cend() - str.cbegin());
 
         EXPECT_EQ('b', str[1u]);
@@ -228,20 +225,20 @@ bool resize_test() {
         fbl::StringBuffer<16u> str;
 
         str.Resize(4u, 'x');
-        EXPECT_CSTR_EQ("xxxx", str.data());
+        EXPECT_STR_EQ("xxxx", str.data());
         EXPECT_EQ(4u, str.length());
 
         str.Resize(8u, 'y');
-        EXPECT_CSTR_EQ("xxxxyyyy", str.data());
+        EXPECT_STR_EQ("xxxxyyyy", str.data());
         EXPECT_EQ(8u, str.length());
 
         str.Resize(16u);
-        EXPECT_CSTR_EQ("xxxxyyyy", str.data());
+        EXPECT_STR_EQ("xxxxyyyy", str.data());
         EXPECT_EQ(0, memcmp("xxxxyyyy\0\0\0\0\0\0\0\0\0", str.data(), str.length() + 1));
         EXPECT_EQ(16u, str.length());
 
         str.Resize(0u);
-        EXPECT_CSTR_EQ("", str.data());
+        EXPECT_STR_EQ("", str.data());
         EXPECT_EQ(0u, str.length());
     }
 
@@ -256,7 +253,7 @@ bool clear_test() {
         str.Append("abcdef");
 
         str.Clear();
-        EXPECT_CSTR_EQ("", str.data());
+        EXPECT_STR_EQ("", str.data());
         EXPECT_EQ(0u, str.length());
     }
 
