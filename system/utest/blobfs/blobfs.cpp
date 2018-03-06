@@ -23,6 +23,7 @@
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fdio/io.h>
+#include <fbl/atomic.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
@@ -1106,13 +1107,13 @@ static bool CreateUmountRemountLarge(void) {
 
 typedef struct reopen_data {
     char path[PATH_MAX];
-    bool complete = false;
+    fbl::atomic_bool complete;
 } reopen_data_t;
 
 int reopen_thread(void* arg) {
     reopen_data_t* dat = static_cast<reopen_data_t*>(arg);
     unsigned attempts = 0;
-    while (!dat->complete) {
+    while (!atomic_load(&dat->complete)) {
         int fd = open(dat->path, O_RDONLY);
         ASSERT_GT(fd, 0);
         ASSERT_EQ(close(fd), 0);
@@ -1148,7 +1149,7 @@ static bool CreateWriteReopen(void) {
         printf("Running op %lu... ", i);
         int fd;
         int anchor_fd;
-        dat.complete = false;
+        atomic_store(&dat.complete, false);
 
         // Write both blobs to disk (without verification, so we can start reopening the blob asap)
         ASSERT_TRUE(MakeBlobUnverified(info.get(), &fd));
@@ -1161,7 +1162,7 @@ static bool CreateWriteReopen(void) {
         // Sleep while the thread continually opens and closes the blob
         usleep(1000000);
         ASSERT_EQ(syncfs(anchor_fd), 0);
-        dat.complete = true;
+        atomic_store(&dat.complete, true);
 
         int res;
         ASSERT_EQ(thrd_join(thread, &res), thrd_success);
