@@ -457,7 +457,7 @@ bool Library::SortDeclarations() {
 
 bool Library::ResolveConst(Const* const_declaration) {
     TypeShape typeshape;
-    if (!ResolveType(const_declaration->type.raw_type.get(), &typeshape)) {
+    if (!ResolveType(const_declaration->type, &typeshape)) {
         return false;
     }
     // TODO(TO-702) Resolve const declarations.
@@ -505,7 +505,7 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             for (auto& param : method.maybe_request->parameters) {
                 if (!request_scope.Insert(param.name.data()))
                     return false;
-                if (!ResolveType(param.type.raw_type.get(), &param.fieldshape.Typeshape()))
+                if (!ResolveType(param.type, &param.fieldshape.Typeshape()))
                     return false;
                 request_struct.push_back(&param.fieldshape);
             }
@@ -517,7 +517,7 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             for (auto& param : method.maybe_response->parameters) {
                 if (!response_scope.Insert(param.name.data()))
                     return false;
-                if (!ResolveType(param.type.raw_type.get(), &param.fieldshape.Typeshape()))
+                if (!ResolveType(param.type, &param.fieldshape.Typeshape()))
                     return false;
                 response_struct.push_back(&param.fieldshape);
             }
@@ -533,7 +533,7 @@ bool Library::ResolveStruct(Struct* struct_declaration) {
     for (auto& member : struct_declaration->members) {
         if (!scope.Insert(member.name.data()))
             return false;
-        if (!ResolveType(member.type.raw_type.get(), &member.fieldshape.Typeshape()))
+        if (!ResolveType(member.type, &member.fieldshape.Typeshape()))
             return false;
         fidl_struct.push_back(&member.fieldshape);
     }
@@ -548,7 +548,7 @@ bool Library::ResolveUnion(Union* union_declaration) {
     for (auto& member : union_declaration->members) {
         if (!scope.Insert(member.name.data()))
             return false;
-        if (!ResolveType(member.type.raw_type.get(), &member.fieldshape.Typeshape()))
+        if (!ResolveType(member.type, &member.fieldshape.Typeshape()))
             return false;
     }
 
@@ -774,6 +774,10 @@ bool Library::ResolveType(const raw::Type* type, TypeShape* out_typeshape) {
         return ResolveIdentifierType(*identifier_type, out_typeshape);
     }
     }
+}
+
+bool Library::ResolveType(const flat::Type& type, TypeShape* out_typeshape) {
+    return ResolveType(type.raw_type.get(), out_typeshape);
 }
 
 } // namespace flat

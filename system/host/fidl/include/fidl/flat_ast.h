@@ -239,6 +239,8 @@ private:
                                TypeShape* out_type_metadata);
     bool ResolveType(const raw::Type* type, TypeShape* out_type_metadata);
 
+    bool ResolveType(const flat::Type& type, TypeShape* out_type_metadata);
+
 public:
     // TODO(TO-702) Add a validate literal function. Some things
     // (e.g. array indexes) want to check the value but print the
