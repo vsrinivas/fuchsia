@@ -59,7 +59,7 @@ class SessionHandler : public mz::TempSessionDelegate, public EventReporter {
   bool ApplyCommand(const ui_mozart::CommandPtr& command) override;
 
  private:
-  friend class Engine;
+  friend class SessionManager;
 
   // Called by |binding_| when the connection closes. Must be invoked within
   // the SessionHandler MessageLoop.
@@ -69,7 +69,7 @@ class SessionHandler : public mz::TempSessionDelegate, public EventReporter {
   // teardown from within SessionHandler.
   void TearDown();
 
-  Engine* const engine_;
+  SessionManager* const session_manager_;
 
   mz::EventReporter* const event_reporter_;
   mz::ErrorReporter* const error_reporter_;

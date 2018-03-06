@@ -64,6 +64,19 @@ class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
   uint32_t num_calls_to_add_cpu_release_fence_ = 0;
 };
 
+class SessionManagerForTest : public SessionManager {
+ public:
+  SessionManagerForTest(UpdateScheduler* update_scheduler);
+
+ private:
+  std::unique_ptr<SessionHandler> CreateSessionHandler(
+      mz::CommandDispatcherContext context,
+      Engine* engine,
+      SessionId session_id,
+      mz::EventReporter* event_reporter,
+      mz::ErrorReporter* error_reporter) const override;
+};
+
 class EngineForTest : public Engine {
  public:
   EngineForTest(DisplayManager* display_manager,
@@ -71,11 +84,7 @@ class EngineForTest : public Engine {
                 escher::Escher* escher = nullptr);
 
  private:
-  std::unique_ptr<SessionHandler> CreateSessionHandler(
-      mz::CommandDispatcherContext context,
-      SessionId id,
-      mz::EventReporter* event_reporter,
-      mz::ErrorReporter* error_reporter) override;
+  std::unique_ptr<SessionManager> InitializeSessionManager() override;
 };
 
 }  // namespace test

@@ -16,12 +16,12 @@ SessionHandler::SessionHandler(mz::CommandDispatcherContext dispatcher_context,
                                mz::EventReporter* event_reporter,
                                mz::ErrorReporter* error_reporter)
     : mz::TempSessionDelegate(std::move(dispatcher_context)),
-      engine_(engine),
+      session_manager_(engine->session_manager()),
       event_reporter_(event_reporter),
       error_reporter_(error_reporter),
       session_(::fxl::MakeRefCounted<scene_manager::Session>(
           session_id,
-          engine_,
+          engine,
           static_cast<EventReporter*>(this),
           error_reporter)) {
   FXL_DCHECK(engine);
@@ -87,7 +87,7 @@ bool SessionHandler::ApplyCommand(const ui_mozart::CommandPtr& command) {
 }
 
 void SessionHandler::BeginTearDown() {
-  engine_->TearDownSession(session_->id());
+  session_manager_->TearDownSession(session_->id());
   FXL_DCHECK(!session_->is_valid());
 }
 

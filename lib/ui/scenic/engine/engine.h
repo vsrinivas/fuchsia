@@ -15,18 +15,17 @@
 #include "lib/escher/shape/rounded_rect_factory.h"
 #include "lib/escher/vk/simple_image_factory.h"
 
-#include "garnet/lib/ui/mozart/command_dispatcher.h"
 #include "garnet/lib/ui/mozart/event_reporter.h"
 #include "garnet/lib/ui/scenic/displays/display_manager.h"
 #include "garnet/lib/ui/scenic/engine/frame_scheduler.h"
 #include "garnet/lib/ui/scenic/engine/resource_linker.h"
+#include "garnet/lib/ui/scenic/engine/session_manager.h"
+#include "garnet/lib/ui/scenic/engine/update_scheduler.h"
 #include "garnet/lib/ui/scenic/resources/import.h"
 #include "garnet/lib/ui/scenic/resources/nodes/scene.h"
 #include "garnet/lib/ui/scenic/util/event_timestamper.h"
 
 namespace scene_manager {
-
-using SessionId = uint64_t;
 
 class Compositor;
 class Session;
@@ -37,7 +36,7 @@ class Swapchain;
 // using the same resource linker and which coexist within the same timing
 // domain using the same frame scheduler.  It is not possible for sessions
 // which belong to different engines to communicate with one another.
-class Engine : private FrameSchedulerDelegate {
+class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
  public:
   Engine(DisplayManager* display_manager, escher::Escher* escher);
 
@@ -72,28 +71,18 @@ class Engine : private FrameSchedulerDelegate {
 
   EventTimestamper* event_timestamper() { return &event_timestamper_; }
 
-  // Tell the FrameScheduler to schedule a frame, and remember the Session so
-  // that we can tell it to apply updates when the FrameScheduler notifies us
-  // via OnPrepareFrame().
-  void ScheduleSessionUpdate(uint64_t presentation_time,
-                             fxl::RefPtr<Session> session);
+  SessionManager* session_manager() { return session_manager_.get(); }
 
-  // Tell the FrameScheduler to schedule a frame. This is used for updates
+  // |UpdateScheduler|
+  //
+  // Tell the FrameScheduler to schedule a frame. This is also used for updates
   // triggered by something other than a Session update i.e. an ImagePipe with
   // a new Image to present.
-  void ScheduleUpdate(uint64_t presentation_time);
-
-  std::unique_ptr<mz::CommandDispatcher> CreateCommandDispatcher(
-      mz::CommandDispatcherContext context);
+  void ScheduleUpdate(uint64_t presentation_time) override;
 
   // Create a swapchain for the specified display.  The display must not already
   // be claimed by another swapchain.
   std::unique_ptr<Swapchain> CreateDisplaySwapchain(Display* display);
-
-  // Finds the session handler corresponding to the given id.
-  SessionHandler* FindSession(SessionId id);
-
-  size_t GetSessionCount() { return session_count_; }
 
   // Returns the first compositor in the current compositors, or nullptr if no
   // compositor exists.
@@ -110,31 +99,15 @@ class Engine : private FrameSchedulerDelegate {
 
  private:
   friend class Compositor;
-  friend class SessionHandler;
-  friend class Session;
 
   // Compositors register/unregister themselves upon creation/destruction.
   void AddCompositor(Compositor* compositor);
   void RemoveCompositor(Compositor* compositor);
 
-  // Allow overriding to support tests.
-  virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
-      mz::CommandDispatcherContext context,
-      SessionId id,
-      mz::EventReporter* event_reporter,
-      mz::ErrorReporter* error_reporter);
-
-  // Destroys the session with the given id.
-  void TearDownSession(SessionId id);
-
   // |FrameSchedulerDelegate|:
   bool RenderFrame(const FrameTimingsPtr& frame,
                    uint64_t presentation_time,
                    uint64_t presentation_interval) override;
-
-  // Returns true if rendering is needed.
-  bool ApplyScheduledSessionUpdates(uint64_t presentation_time,
-                                    uint64_t presentation_interval);
 
   void InitializeFrameScheduler();
 
@@ -147,6 +120,9 @@ class Engine : private FrameSchedulerDelegate {
                      const scenic::Metrics& parent_metrics,
                      std::vector<Node*>* updated_nodes);
 
+  // Allow overriding to support tests.
+  virtual std::unique_ptr<SessionManager> InitializeSessionManager();
+
   // Invoke Escher::Cleanup().  If more work remains afterward, post a delayed
   // task to try again; this is typically because cleanup couldn't finish due to
   // unfinished GPU work.
@@ -157,6 +133,7 @@ class Engine : private FrameSchedulerDelegate {
   escher::PaperRendererPtr paper_renderer_;
   escher::ShadowMapRendererPtr shadow_renderer_;
 
+  std::unique_ptr<SessionManager> session_manager_;
   ResourceLinker resource_linker_;
   EventTimestamper event_timestamper_;
   std::unique_ptr<escher::SimpleImageFactory> image_factory_;
@@ -165,16 +142,7 @@ class Engine : private FrameSchedulerDelegate {
   std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::set<Compositor*> compositors_;
 
-  // Map of all the sessions.
-  std::unordered_map<SessionId, SessionHandler*> sessions_;
-  std::atomic<size_t> session_count_;
-  SessionId next_session_id_ = 1;
-
   bool escher_cleanup_scheduled_ = false;
-
-  // Lists all Session that have updates to apply, sorted by the earliest
-  // requested presentation time of each update.
-  std::set<std::pair<uint64_t, fxl::RefPtr<Session>>> updatable_sessions_;
 
   fxl::WeakPtrFactory<Engine> weak_factory_;  // must be last
 

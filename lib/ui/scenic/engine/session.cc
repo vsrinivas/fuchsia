@@ -1172,15 +1172,15 @@ bool Session::ScheduleUpdate(
     }
     auto acquire_fence_set =
         std::make_unique<escher::FenceSetListener>(std::move(acquire_fences));
-    // TODO: Consider calling ScheduleSessionUpdate immediately if
+    // TODO: Consider calling ScheduleUpdateForSession immediately if
     // acquire_fence_set is already ready (which is the case if there are
     // zero acquire fences).
 
     acquire_fence_set->WaitReadyAsync(
         [weak = weak_factory_.GetWeakPtr(), presentation_time] {
           if (weak)
-            weak->engine_->ScheduleSessionUpdate(presentation_time,
-                                                 SessionPtr(weak.get()));
+            weak->engine_->session_manager()->ScheduleUpdateForSession(
+                presentation_time, SessionPtr(weak.get()));
         });
 
     scheduled_updates_.push(Update{presentation_time, std::move(ops),
@@ -1196,7 +1196,8 @@ void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
     scheduled_image_pipe_updates_.push(
         {presentation_time, std::move(image_pipe)});
 
-    engine_->ScheduleSessionUpdate(presentation_time, SessionPtr(this));
+    engine_->session_manager()->ScheduleUpdateForSession(presentation_time,
+                                                         SessionPtr(this));
   }
 }
 
@@ -1341,7 +1342,7 @@ void Session::HitTestDeviceRay(
 }
 
 void Session::BeginTearDown() {
-  engine()->TearDownSession(id());
+  engine()->session_manager()->TearDownSession(id());
   FXL_DCHECK(!is_valid());
 }
 

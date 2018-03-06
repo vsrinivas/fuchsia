@@ -39,10 +39,11 @@ Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
           std::make_unique<escher::RoundedRectFactory>(escher)),
       release_fence_signaller_(std::make_unique<escher::ReleaseFenceSignaller>(
           escher->command_buffer_sequencer())),
-      session_count_(0),
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);
   FXL_DCHECK(escher_);
+
+  session_manager_ = InitializeSessionManager();
 
   InitializeFrameScheduler();
   paper_renderer_->set_sort_by_pipeline(false);
@@ -58,6 +59,8 @@ Engine::Engine(
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);
 
+  session_manager_ = InitializeSessionManager();
+
   InitializeFrameScheduler();
 }
 
@@ -68,14 +71,6 @@ void Engine::InitializeFrameScheduler() {
     frame_scheduler_ =
         std::make_unique<FrameScheduler>(display_manager_->default_display());
     frame_scheduler_->set_delegate(this);
-  }
-}
-
-void Engine::ScheduleSessionUpdate(uint64_t presentation_time,
-                                   fxl::RefPtr<Session> session) {
-  if (session->is_valid()) {
-    updatable_sessions_.insert({presentation_time, std::move(session)});
-    ScheduleUpdate(presentation_time);
   }
 }
 
@@ -90,19 +85,6 @@ void Engine::ScheduleUpdate(uint64_t presentation_time) {
   }
 }
 
-std::unique_ptr<mz::CommandDispatcher> Engine::CreateCommandDispatcher(
-    mz::CommandDispatcherContext context) {
-  SessionId session_id = next_session_id_++;
-
-  mz::Session* session = context.session();
-  auto handler =
-      CreateSessionHandler(std::move(context), session_id, session, session);
-  sessions_.insert({session_id, handler.get()});
-  ++session_count_;
-
-  return handler;
-}
-
 std::unique_ptr<Swapchain> Engine::CreateDisplaySwapchain(Display* display) {
   FXL_DCHECK(!display->is_claimed());
 #if defined(SCENE_MANAGER_VULKAN_SWAPCHAIN)
@@ -114,46 +96,14 @@ std::unique_ptr<Swapchain> Engine::CreateDisplaySwapchain(Display* display) {
 #endif
 }
 
-std::unique_ptr<SessionHandler> Engine::CreateSessionHandler(
-    mz::CommandDispatcherContext context,
-    SessionId session_id,
-    mz::EventReporter* event_reporter,
-    mz::ErrorReporter* error_reporter) {
-  return std::make_unique<SessionHandler>(std::move(context), this, session_id,
-                                          event_reporter, error_reporter);
-}
-
-SessionHandler* Engine::FindSession(SessionId id) {
-  auto it = sessions_.find(id);
-  if (it != sessions_.end()) {
-    return it->second;
-  }
-  return nullptr;
-}
-
-void Engine::TearDownSession(SessionId id) {
-  auto it = sessions_.find(id);
-  FXL_DCHECK(it != sessions_.end());
-  if (it != sessions_.end()) {
-    SessionHandler* handler = std::move(it->second);
-    sessions_.erase(it);
-    FXL_DCHECK(session_count_ > 0);
-    --session_count_;
-
-    // Don't destroy handler immediately, since it may be the one calling
-    // TearDownSession().
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        [handler] { handler->TearDown(); });
-  }
-}
-
 bool Engine::RenderFrame(const FrameTimingsPtr& timings,
                          uint64_t presentation_time,
                          uint64_t presentation_interval) {
   TRACE_DURATION("gfx", "RenderFrame", "frame_number", timings->frame_number(),
                  "time", presentation_time, "interval", presentation_interval);
 
-  if (!ApplyScheduledSessionUpdates(presentation_time, presentation_interval))
+  if (!session_manager_->ApplyScheduledSessionUpdates(presentation_time,
+                                                      presentation_interval))
     return false;
 
   UpdateAndDeliverMetrics(presentation_time);
@@ -169,30 +119,6 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
   CleanupEscher();
 
   return frame_drawn;
-}
-
-bool Engine::ApplyScheduledSessionUpdates(uint64_t presentation_time,
-                                          uint64_t presentation_interval) {
-  TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time",
-                 presentation_time, "interval", presentation_interval);
-
-  bool needs_render = false;
-  while (!updatable_sessions_.empty()) {
-    auto top = updatable_sessions_.begin();
-    if (top->first > presentation_time)
-      break;
-    auto session = std::move(top->second);
-    updatable_sessions_.erase(top);
-    if (session) {
-      needs_render |= session->ApplyScheduledUpdates(presentation_time,
-                                                     presentation_interval);
-    } else {
-      // Corresponds to a call to ScheduleUpdate(), which always triggers a
-      // render.
-      needs_render = true;
-    }
-  }
-  return needs_render;
 }
 
 void Engine::AddCompositor(Compositor* compositor) {
@@ -272,6 +198,10 @@ void Engine::UpdateMetrics(Node* node,
       *node, [this, &local_metrics, updated_nodes](Node* node) {
         UpdateMetrics(node, local_metrics, updated_nodes);
       });
+}
+
+std::unique_ptr<SessionManager> Engine::InitializeSessionManager() {
+  return std::make_unique<SessionManager>(this);
 }
 
 void Engine::CleanupEscher() {

@@ -58,18 +58,26 @@ void ReleaseFenceSignallerForTest::AddCPUReleaseFence(zx::event fence) {
   fence.signal(0u, escher::kFenceSignalled);
 }
 
+SessionManagerForTest::SessionManagerForTest(UpdateScheduler* update_scheduler)
+    : SessionManager(update_scheduler) {}
+
+std::unique_ptr<SessionHandler> SessionManagerForTest::CreateSessionHandler(
+    mz::CommandDispatcherContext context,
+    Engine* engine,
+    SessionId session_id,
+    mz::EventReporter* event_reporter,
+    mz::ErrorReporter* error_reporter) const {
+  return std::make_unique<SessionHandlerForTest>(
+      std::move(context), engine, session_id, event_reporter, error_reporter);
+}
+
 EngineForTest::EngineForTest(DisplayManager* display_manager,
                              std::unique_ptr<escher::ReleaseFenceSignaller> r,
                              escher::Escher* escher)
     : Engine(display_manager, std::move(r), escher) {}
 
-std::unique_ptr<SessionHandler> EngineForTest::CreateSessionHandler(
-    mz::CommandDispatcherContext context,
-    SessionId session_id,
-    mz::EventReporter* event_reporter,
-    mz::ErrorReporter* error_reporter) {
-  return std::make_unique<SessionHandlerForTest>(
-      std::move(context), this, session_id, event_reporter, error_reporter);
+std::unique_ptr<SessionManager> EngineForTest::InitializeSessionManager() {
+  return std::make_unique<SessionManagerForTest>(this);
 }
 
 }  // namespace test

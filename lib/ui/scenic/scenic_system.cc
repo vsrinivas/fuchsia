@@ -38,7 +38,8 @@ ScenicSystem::~ScenicSystem() {
 
 std::unique_ptr<mz::CommandDispatcher> ScenicSystem::CreateCommandDispatcher(
     mz::CommandDispatcherContext context) {
-  return engine_->CreateCommandDispatcher(std::move(context));
+  return engine_->session_manager()->CreateCommandDispatcher(std::move(context),
+                                                             engine_.get());
 }
 
 void ScenicSystem::Initialize() {
