@@ -53,7 +53,7 @@ zx_status_t Packet::AsWlanTxPacket(wlan_tx_packet_t* tx_pkt) {
 fbl::unique_ptr<Buffer> GetBuffer(size_t len) {
     fbl::unique_ptr<Buffer> buffer;
     // TODO(tkilbourn): implement a better fallback system here
-    if (len > kLargeBuffers) {
+    if (len > kLargeBufferSize) {
         buffer = HugeBufferAllocator::New();
     } else if (len > kSmallBufferSize) {
         buffer = LargeBufferAllocator::New();
