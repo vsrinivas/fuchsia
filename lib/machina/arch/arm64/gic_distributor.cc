@@ -123,10 +123,21 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
     }
     case GicdRegister::SGI: {
       SoftwareGeneratedInterrupt sgi(value.u32);
-      if (sgi.target != InterruptTarget::MASK) {
+      uint8_t cpu_mask;
+      switch (sgi.target) {
+      case InterruptTarget::MASK:
+        cpu_mask = sgi.cpu_mask;
+        break;
+      case InterruptTarget::ALL_BUT_LOCAL:
+        cpu_mask = ~(1u << Vcpu::GetCurrent()->id());
+        break;
+      case InterruptTarget::LOCAL:
+        cpu_mask = 1u << Vcpu::GetCurrent()->id();
+        break;
+      default:
         return ZX_ERR_NOT_SUPPORTED;
       }
-      return TargetInterrupt(sgi.vector, sgi.cpu_mask);
+      return TargetInterrupt(sgi.vector, cpu_mask);
     }
     case GicdRegister::ISENABLE0... GicdRegister::ISENABLE7: {
       fbl::AutoLock lock(&mutex_);
@@ -153,16 +164,16 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
   }
 }
 
-zx_status_t GicDistributor::RegisterVcpu(uint8_t vcpu_id, Vcpu* vcpu) {
-  if (vcpu_id > kMaxVcpus) {
+zx_status_t GicDistributor::RegisterVcpu(uint8_t vcpu_num, Vcpu* vcpu) {
+  if (vcpu_num > kMaxVcpus) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  if (vcpus_[vcpu_id] != nullptr) {
+  if (vcpus_[vcpu_num] != nullptr) {
     return ZX_ERR_ALREADY_EXISTS;
   }
-  vcpus_[vcpu_id] = vcpu;
+  vcpus_[vcpu_num] = vcpu;
   // We set the default state of all CPU masks to target every registered VCPU.
-  uint8_t default_mask = cpu_masks_[0] | 1u << vcpu_id;
+  uint8_t default_mask = cpu_masks_[0] | 1u << vcpu_num;
   memset(cpu_masks_, default_mask, sizeof(cpu_masks_));
   return ZX_OK;
 }

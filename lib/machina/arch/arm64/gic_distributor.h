@@ -24,7 +24,7 @@ class GicDistributor : public IoHandler {
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
-  zx_status_t RegisterVcpu(uint8_t vcpu_id,
+  zx_status_t RegisterVcpu(uint8_t vcpu_num,
                            Vcpu* vcpu) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   zx_status_t Interrupt(uint32_t global_irq);
@@ -32,7 +32,7 @@ class GicDistributor : public IoHandler {
  private:
   // NOTE: This must match the same constant in arch/hypervisor.h within Zircon.
   static constexpr size_t kNumInterrupts = 256;
-  static constexpr size_t kMaxVcpus = 8;
+  static constexpr uint8_t kMaxVcpus = 8;
 
   mutable fbl::Mutex mutex_;
   uint8_t enabled_[kNumInterrupts / CHAR_BIT] __TA_GUARDED(mutex_) = {};
