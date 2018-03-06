@@ -32,7 +32,7 @@ bool test_log_enabled_macro(void) {
   BEGIN_TEST;
   fx_log_reset_global();
   EXPECT_EQ(ZX_OK, fx_log_init(), "");
-  if (FX_LOG_IS_ENABLED(DEBUG)) {
+  if (FX_VLOG_IS_ENABLED(1)) {
     EXPECT_TRUE(false, "control should not reach this line");
   }
   if (!FX_LOG_IS_ENABLED(INFO)) {
@@ -113,7 +113,8 @@ bool test_log_severity(void) {
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
-  FX_LOGF(DEBUG, NULL, "%d, %s", 10, "just some number");
+  FX_LOG_SET_SEVERITY(WARNING);
+  FX_LOGF(INFO, NULL, "%d, %s", 10, "just some number");
   fd.fd = pipefd[1];
   fd.events = POLLIN;
   EXPECT_EQ(poll(&fd, 1, 1), 0, "");

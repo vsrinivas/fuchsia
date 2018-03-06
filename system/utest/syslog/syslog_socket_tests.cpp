@@ -107,7 +107,8 @@ bool test_log_severity(void) {
     EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote), "");
     ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0), "");
 
-    FX_LOGF(DEBUG, nullptr, "%d, %s", 10, "just some number");
+    FX_LOG_SET_SEVERITY(WARNING);
+    FX_LOGF(INFO, nullptr, "%d, %s", 10, "just some number");
     size_t outstanding_bytes = 10u; // init to non zero value.
     ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes), "");
     EXPECT_EQ(0u, outstanding_bytes);
@@ -289,7 +290,6 @@ bool test_log_verbosity(void) {
     ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes), "");
     EXPECT_EQ(0u, outstanding_bytes);
 
-    FX_LOG_SET_SEVERITY(DEBUG);
     FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
     outstanding_bytes = 10u; // init to non zero value.
     ASSERT_EQ(ZX_OK, local.read(0, nullptr, 0, &outstanding_bytes), "");

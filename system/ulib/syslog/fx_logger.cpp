@@ -107,7 +107,7 @@ zx_status_t fx_logger::VLogWriteToConsoleFd(fx_log_severity_t severity,
     constexpr size_t kMaxMessageSize = 2043;
 
     fbl::StringBuffer<kMaxMessageSize + kEllipsisSize + 1 /*\n*/> buf;
-    buf.AppendPrintf("[%05ld.%06ld]",time / 1000000000UL,(time / 1000UL) % 1000000UL);
+    buf.AppendPrintf("[%05ld.%06ld]", time / 1000000000UL, (time / 1000UL) % 1000000UL);
     buf.AppendPrintf("[%ld]", pid_);
     buf.AppendPrintf("[%ld]", GetCurrentThreadKoid());
 
@@ -128,9 +128,6 @@ zx_status_t fx_logger::VLogWriteToConsoleFd(fx_log_severity_t severity,
     }
     buf.Append("]");
     switch (severity) {
-    case FX_LOG_DEBUG:
-        buf.Append(" DEBUG");
-        break;
     case FX_LOG_INFO:
         buf.Append(" INFO");
         break;

@@ -22,11 +22,10 @@
 // Log entry severity.
 // Used for coarse filtering of log messages
 typedef int fx_log_severity_t;
-#define FX_LOG_DEBUG (0)
-#define FX_LOG_INFO (1)
-#define FX_LOG_WARNING (2)
-#define FX_LOG_ERROR (3)
-#define FX_LOG_FATAL (4)
+#define FX_LOG_INFO (0)
+#define FX_LOG_WARNING (1)
+#define FX_LOG_ERROR (2)
+#define FX_LOG_FATAL (3)
 
 __BEGIN_CDECLS
 
