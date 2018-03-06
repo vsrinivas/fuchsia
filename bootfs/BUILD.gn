@@ -63,7 +63,7 @@ bootdata("mkbootfs") {
 
 # XXX(TO-848): as this is deprecated, the list is re-read here, and depends on
 # //build/gn/BUILD.gn being evaluated first.
-zircon_boards = read_file("$root_build_dir/zircon-gn/boards.list", "list lines")
+zircon_boards = read_file("$root_build_dir/zircon-gn/export/boards.list", "list lines")
 
 group("bootfs") {
   deps = [
