@@ -107,7 +107,7 @@ typedef struct zx_packet_guest_vcpu {
             uint8_t vector;
         } interrupt;
         struct {
-            uint32_t id;
+            uint64_t id;
             zx_vaddr_t entry;
         } startup;
     };
