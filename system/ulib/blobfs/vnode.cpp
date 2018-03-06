@@ -48,7 +48,7 @@ zx_status_t VnodeBlob::ValidateFlags(uint32_t flags) {
     if (flags & ZX_FS_RIGHT_WRITABLE) {
         if (IsDirectory()) {
             return ZX_ERR_NOT_FILE;
-        } else if (GetState() != kBlobfsStateEmpty) {
+        } else if (GetState() != kBlobStateEmpty) {
             return ZX_ERR_ACCESS_DENIED;
         }
     }
@@ -256,7 +256,7 @@ zx_status_t VnodeBlob::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out
 
 void VnodeBlob::Sync(SyncCallback closure) {
     // TODO(smklein): For now, this is a no-op, but it will change
-    // once the kBlobfsFlagSync flag is in use.
+    // once the kBlobFlagSync flag is in use.
     closure(ZX_OK);
 }
 

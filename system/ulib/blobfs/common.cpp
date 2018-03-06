@@ -55,7 +55,7 @@ zx_status_t blobfs_check_info(const blobfs_info_t* info, uint64_t max) {
         fprintf(stderr, "blobfs: bsz %u unsupported\n", info->block_size);
         return ZX_ERR_INVALID_ARGS;
     }
-    if ((info->flags & kBlobfsFlagFVM) == 0) {
+    if ((info->flags & kBlobFlagFVM) == 0) {
         if (info->block_count + DataStartBlock(*info) > max) {
             fprintf(stderr, "blobfs: too large for device\n");
             return ZX_ERR_INVALID_ARGS;
@@ -156,7 +156,7 @@ int blobfs_mkfs(int fd, uint64_t block_count) {
     info.magic0 = kBlobfsMagic0;
     info.magic1 = kBlobfsMagic1;
     info.version = kBlobfsVersion;
-    info.flags = kBlobfsFlagClean;
+    info.flags = kBlobFlagClean;
     info.block_size = kBlobfsBlockSize;
     // Set block_count to max blocks so we can calculate block map blocks
     info.block_count = block_count;
@@ -173,7 +173,7 @@ int blobfs_mkfs(int fd, uint64_t block_count) {
 
     if (ioctl_block_fvm_query(fd, &fvm_info) >= 0) {
         info.slice_size = fvm_info.slice_size;
-        info.flags |= kBlobfsFlagFVM;
+        info.flags |= kBlobFlagFVM;
 
         if (info.slice_size % kBlobfsBlockSize) {
             fprintf(stderr, "blobfs mkfs: Slice size not multiple of blobfs block\n");
@@ -220,7 +220,7 @@ int blobfs_mkfs(int fd, uint64_t block_count) {
     xprintf("Block Size : %u\n", kBlobfsBlockSize);
     xprintf("Block Count: %" PRIu64 "\n", TotalBlocks(info));
     xprintf("Inode Count: %" PRIu64 "\n", inodes);
-    xprintf("FVM-aware: %s\n", (info.flags & kBlobfsFlagFVM) ? "YES" : "NO");
+    xprintf("FVM-aware: %s\n", (info.flags & kBlobFlagFVM) ? "YES" : "NO");
 
     // Determine the number of blocks necessary for the block map and node map.
     uint64_t bbm_blocks = BlockMapBlocks(info);

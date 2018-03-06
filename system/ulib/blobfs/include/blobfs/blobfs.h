@@ -50,22 +50,22 @@ typedef uint32_t BlobFlags;
 // clang-format off
 
 // After Open;
-constexpr BlobFlags kBlobfsStateEmpty       = 0x00000001; // Not yet allocated
+constexpr BlobFlags kBlobStateEmpty       = 0x00000001; // Not yet allocated
 // After Ioctl configuring size:
-constexpr BlobFlags kBlobfsStateDataWrite   = 0x00000002; // Data is being written
+constexpr BlobFlags kBlobStateDataWrite   = 0x00000002; // Data is being written
 // After Writing:
-constexpr BlobFlags kBlobfsStateReadable    = 0x00000004; // Readable
+constexpr BlobFlags kBlobStateReadable    = 0x00000004; // Readable
 // After Unlink:
-constexpr BlobFlags kBlobfsStateReleasing   = 0x00000008; // In the process of unlinking
+constexpr BlobFlags kBlobStateReleasing   = 0x00000008; // In the process of unlinking
 // Unrecoverable error state:
-constexpr BlobFlags kBlobfsStateError       = 0x00000010; // Unrecoverable error state
-constexpr BlobFlags kBlobfsStateMask        = 0x000000FF;
+constexpr BlobFlags kBlobStateError       = 0x00000010; // Unrecoverable error state
+constexpr BlobFlags kBlobStateMask        = 0x000000FF;
 
 // Informational non-state flags:
-constexpr BlobFlags kBlobfsFlagSync         = 0x00000100; // The blob is being written to disk
-constexpr BlobFlags kBlobfsFlagDeletable    = 0x00000200; // This node should be unlinked when closed
-constexpr BlobFlags kBlobfsFlagDirectory    = 0x00000400; // This node represents the root directory
-constexpr BlobFlags kBlobfsOtherMask        = 0x0000FF00;
+constexpr BlobFlags kBlobFlagSync         = 0x00000100; // The blob is being written to disk
+constexpr BlobFlags kBlobFlagDeletable    = 0x00000200; // This node should be unlinked when closed
+constexpr BlobFlags kBlobFlagDirectory    = 0x00000400; // This node represents the root directory
+constexpr BlobFlags kBlobOtherMask        = 0x0000FF00;
 
 // clang-format on
 
@@ -81,20 +81,20 @@ public:
     };
 
     BlobFlags GetState() const {
-        return flags_ & kBlobfsStateMask;
+        return flags_ & kBlobStateMask;
     }
 
-    bool IsDirectory() const { return flags_ & kBlobfsFlagDirectory; }
+    bool IsDirectory() const { return flags_ & kBlobFlagDirectory; }
 
     zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
                       void* out_buf, size_t out_len, size_t* out_actual) final;
 
     bool DeletionQueued() const {
-        return flags_ & kBlobfsFlagDeletable;
+        return flags_ & kBlobFlagDeletable;
     }
 
     void SetState(BlobFlags new_state) {
-        flags_ = (flags_ & ~kBlobfsStateMask) | new_state;
+        flags_ = (flags_ & ~kBlobStateMask) | new_state;
     }
 
     size_t GetMapIndex() const {
@@ -132,7 +132,7 @@ private:
     void QueueUnlink();
 
     // If successful, allocates Blob Node and Blocks (in-memory)
-    // kBlobfsStateEmpty --> kBlobfsStateDataWrite
+    // kBlobStateEmpty --> kBlobStateDataWrite
     zx_status_t SpaceAllocate(uint64_t size_data);
 
     // Writes to either the Merkle Tree or the Data section,
@@ -140,7 +140,7 @@ private:
     zx_status_t WriteInternal(const void* data, size_t len, size_t* actual);
 
     // Reads from a blob.
-    // Requires: kBlobfsStateReadable
+    // Requires: kBlobStateReadable
     zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
 
     // Vnode I/O operations

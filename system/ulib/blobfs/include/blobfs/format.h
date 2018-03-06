@@ -25,9 +25,9 @@ constexpr uint64_t kBlobfsMagic0  = (0xac2153479e694d21ULL);
 constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
 constexpr uint32_t kBlobfsVersion = 0x00000004;
 
-constexpr uint32_t kBlobfsFlagClean      = 1;
-constexpr uint32_t kBlobfsFlagDirty      = 2;
-constexpr uint32_t kBlobfsFlagFVM        = 4;
+constexpr uint32_t kBlobFlagClean        = 1;
+constexpr uint32_t kBlobFlagDirty        = 2;
+constexpr uint32_t kBlobFlagFVM          = 4;
 constexpr uint32_t kBlobfsBlockSize      = 8192;
 constexpr uint32_t kBlobfsBlockBits      = (kBlobfsBlockSize * 8);
 constexpr uint32_t kBlobfsBlockMapStart  = 1;
@@ -53,7 +53,7 @@ typedef struct {
     uint64_t alloc_block_count; // Total number of allocated blocks
     uint64_t alloc_inode_count; // Total number of allocated blobs
     uint64_t blob_header_next; // Block containing next blobfs, or zero if this is the last one
-    // The following flags are only valid with (flags & kBlobfsFlagFVM):
+    // The following flags are only valid with (flags & kBlobFlagFVM):
     uint64_t slice_size;    // Underlying slice size
     uint64_t vslice_count;  // Number of underlying slices
     uint32_t abm_slices;    // Slices allocated to block bitmap
@@ -62,7 +62,7 @@ typedef struct {
 } blobfs_info_t;
 
 constexpr uint64_t BlockMapStartBlock(const blobfs_info_t& info) {
-    if (info.flags & kBlobfsFlagFVM) {
+    if (info.flags & kBlobFlagFVM) {
         return kFVMBlockMapStart;
     } else {
         return kBlobfsBlockMapStart;
@@ -75,7 +75,7 @@ constexpr uint64_t BlockMapBlocks(const blobfs_info_t& info) {
 
 constexpr uint64_t NodeMapStartBlock(const blobfs_info_t& info) {
     // Node map immediately follows the block map
-    if (info.flags & kBlobfsFlagFVM) {
+    if (info.flags & kBlobFlagFVM) {
         return kFVMNodeMapStart;
     } else {
         return BlockMapStartBlock(info) + BlockMapBlocks(info);
@@ -88,7 +88,7 @@ constexpr uint64_t NodeMapBlocks(const blobfs_info_t& info) {
 
 constexpr uint64_t DataStartBlock(const blobfs_info_t& info) {
     // Data immediately follows the node map
-    if (info.flags & kBlobfsFlagFVM) {
+    if (info.flags & kBlobFlagFVM) {
         return kFVMDataStart;
     } else {
         return NodeMapStartBlock(info) + NodeMapBlocks(info);

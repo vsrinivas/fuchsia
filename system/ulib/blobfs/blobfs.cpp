@@ -54,7 +54,7 @@ zx_status_t vmo_write_exact(zx_handle_t h, const void* data, uint64_t offset, si
 }
 
 zx_status_t CheckFvmConsistency(const blobfs_info_t* info, int block_fd) {
-    if ((info->flags & kBlobfsFlagFVM) == 0) {
+    if ((info->flags & kBlobFlagFVM) == 0) {
         return ZX_OK;
     }
 
@@ -162,7 +162,7 @@ zx_status_t VnodeBlob::InitVmos() {
 }
 
 uint64_t VnodeBlob::SizeData() const {
-    if (GetState() == kBlobfsStateReadable) {
+    if (GetState() == kBlobStateReadable) {
         auto inode = blobfs_->GetNode(map_index_);
         return inode->blob_size;
     }
@@ -171,13 +171,13 @@ uint64_t VnodeBlob::SizeData() const {
 
 VnodeBlob::VnodeBlob(fbl::RefPtr<Blobfs> bs, const Digest& digest)
     : blobfs_(fbl::move(bs)),
-      flags_(kBlobfsStateEmpty) {
+      flags_(kBlobStateEmpty) {
     digest.CopyTo(digest_, sizeof(digest_));
 }
 
 VnodeBlob::VnodeBlob(fbl::RefPtr<Blobfs> bs)
     : blobfs_(fbl::move(bs)),
-      flags_(kBlobfsStateEmpty | kBlobfsFlagDirectory) {}
+      flags_(kBlobStateEmpty | kBlobFlagDirectory) {}
 
 void VnodeBlob::BlobCloseHandles() {
     blob_ = nullptr;
@@ -187,7 +187,7 @@ void VnodeBlob::BlobCloseHandles() {
 zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "size_data", size_data);
 
-    if (GetState() != kBlobfsStateEmpty) {
+    if (GetState() != kBlobStateEmpty) {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -211,7 +211,7 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
         if ((status = Verify()) != ZX_OK) {
             return status;
         }
-        SetState(kBlobfsStateDataWrite);
+        SetState(kBlobStateDataWrite);
         if ((status = WriteMetadata()) != ZX_OK) {
             fprintf(stderr, "Null blob metadata fail: %d\n", status);
             goto fail;
@@ -232,7 +232,7 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
         goto fail;
     }
 
-    SetState(kBlobfsStateDataWrite);
+    SetState(kBlobStateDataWrite);
     return ZX_OK;
 
 fail:
@@ -267,14 +267,14 @@ void* VnodeBlob::GetMerkle() const {
 zx_status_t VnodeBlob::WriteMetadata() {
     TRACE_DURATION("blobfs", "Blobfs::WriteMetadata");
 
-    assert(GetState() == kBlobfsStateDataWrite);
+    assert(GetState() == kBlobStateDataWrite);
 
     // All data has been written to the containing VMO
-    SetState(kBlobfsStateReadable);
+    SetState(kBlobStateReadable);
     if (readable_event_.is_valid()) {
         zx_status_t status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
         if (status != ZX_OK) {
-            SetState(kBlobfsStateError);
+            SetState(kBlobStateError);
             return status;
         }
     }
@@ -283,9 +283,9 @@ zx_status_t VnodeBlob::WriteMetadata() {
     // Even writing the above blocks could be done async. The "node" write must be done
     // LAST, after everything else is complete, but that's the only restriction.
     //
-    // This 'kBlobfsFlagSync' is currently not used, but it indicates when the sync is
+    // This 'kBlobFlagSync' is currently not used, but it indicates when the sync is
     // complete.
-    flags_ |= kBlobfsFlagSync;
+    flags_ |= kBlobFlagSync;
     auto inode = blobfs_->GetNode(map_index_);
 
     WriteTxn txn(blobfs_.get());
@@ -307,7 +307,7 @@ zx_status_t VnodeBlob::WriteMetadata() {
     }
 
     blobfs_->CountUpdate(&txn);
-    flags_ &= ~kBlobfsFlagSync;
+    flags_ &= ~kBlobFlagSync;
     return ZX_OK;
 }
 
@@ -322,7 +322,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
     WriteTxn txn(blobfs_.get());
     auto inode = blobfs_->GetNode(map_index_);
     const size_t data_start = MerkleTreeBlocks(*inode) * kBlobfsBlockSize;
-    if (GetState() == kBlobfsStateDataWrite) {
+    if (GetState() == kBlobStateDataWrite) {
         size_t to_write = fbl::min(len, inode->blob_size - bytes_written_);
         size_t offset = bytes_written_ + data_start;
         zx_status_t status = vmo_write_exact(blob_->GetVmo(), data, offset, to_write);
@@ -332,7 +332,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
 
         status = WriteShared(&txn, offset, len, inode->start_block);
         if (status != ZX_OK) {
-            SetState(kBlobfsStateError);
+            SetState(kBlobStateError);
             return status;
         }
 
@@ -354,30 +354,30 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
             const void* blob_data = GetData();
             if (MerkleTree::Create(blob_data, inode->blob_size, merkle_data,
                                    merkle_size, &digest) != ZX_OK) {
-                SetState(kBlobfsStateError);
+                SetState(kBlobStateError);
                 return status;
             } else if (digest != digest_) {
                 // Downloaded blob did not match provided digest
-                SetState(kBlobfsStateError);
+                SetState(kBlobStateError);
                 return status;
             }
 
             status = WriteShared(&txn, 0, merkle_size, inode->start_block);
             if (status != ZX_OK) {
-                SetState(kBlobfsStateError);
+                SetState(kBlobStateError);
                 return status;
             }
         } else if ((status = Verify()) != ZX_OK) {
             // Small blobs may not have associated Merkle Trees, and will
             // require validation, since we are not regenerating and checking
             // the digest.
-            SetState(kBlobfsStateError);
+            SetState(kBlobStateError);
             return status;
         }
 
         // No more data to write. Flush to disk.
         if ((status = WriteMetadata()) != ZX_OK) {
-            SetState(kBlobfsStateError);
+            SetState(kBlobStateError);
             return status;
         }
         return ZX_OK;
@@ -394,7 +394,7 @@ zx_status_t VnodeBlob::GetReadableEvent(zx_handle_t* out) {
         status = zx::event::create(0, &readable_event_);
         if (status != ZX_OK) {
             return status;
-        } else if (GetState() == kBlobfsStateReadable) {
+        } else if (GetState() == kBlobStateReadable) {
             readable_event_.signal(0u, ZX_USER_SIGNAL_0);
         }
     }
@@ -407,7 +407,7 @@ zx_status_t VnodeBlob::GetReadableEvent(zx_handle_t* out) {
 
 zx_status_t VnodeBlob::CopyVmo(zx_rights_t rights, zx_handle_t* out) {
     TRACE_DURATION("blobfs", "Blobfs::CopyVmo", "rights", rights, "out", out);
-    if (GetState() != kBlobfsStateReadable) {
+    if (GetState() != kBlobStateReadable) {
         return ZX_ERR_BAD_STATE;
     }
     auto inode = blobfs_->GetNode(map_index_);
@@ -438,7 +438,7 @@ zx_status_t VnodeBlob::CopyVmo(zx_rights_t rights, zx_handle_t* out) {
 zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
     TRACE_DURATION("blobfs", "Blobfs::ReadInternal", "len", len, "off", off);
 
-    if (GetState() != kBlobfsStateReadable) {
+    if (GetState() != kBlobStateReadable) {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -468,7 +468,7 @@ zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
 }
 
 void VnodeBlob::QueueUnlink() {
-    flags_ |= kBlobfsFlagDeletable;
+    flags_ |= kBlobFlagDeletable;
 }
 
 // Allocates Blocks IN MEMORY
@@ -594,18 +594,18 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
 zx_status_t Blobfs::ReleaseBlob(VnodeBlob* vn) {
     TRACE_DURATION("blobfs", "Blobfs::ReleaseBlob");
 
-    // TODO(smklein): What if kBlobfsFlagSync is set? Do we risk writing out
+    // TODO(smklein): What if kBlobFlagSync is set? Do we risk writing out
     // parts of the blob AFTER it has been deleted?
     // Ex: open, alloc, disk write async start, unlink, release, disk write async end.
     // FWIW, this isn't a problem right now with synchronous writes, but it
     // would become a problem with asynchronous writes.
     switch (vn->GetState()) {
-    case kBlobfsStateEmpty: {
+    case kBlobStateEmpty: {
         // There are no in-memory or on-disk structures allocated.
         hash_.erase(*vn);
         return ZX_OK;
     }
-    case kBlobfsStateReadable: {
+    case kBlobStateReadable: {
         if (!vn->DeletionQueued()) {
             // We want in-memory and on-disk data to persist.
             hash_.erase(*vn);
@@ -613,9 +613,9 @@ zx_status_t Blobfs::ReleaseBlob(VnodeBlob* vn) {
         }
         // Fall-through
     }
-    case kBlobfsStateDataWrite:
-    case kBlobfsStateError: {
-        vn->SetState(kBlobfsStateReleasing);
+    case kBlobStateDataWrite:
+    case kBlobStateError: {
+        vn->SetState(kBlobStateReleasing);
         size_t node_index = vn->GetMapIndex();
         uint64_t start_block = GetNode(node_index)->start_block;
         uint64_t nblocks = GetNode(node_index)->num_blocks;
@@ -718,7 +718,7 @@ zx_status_t Blobfs::LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out
                     if (!ac.check()) {
                         return ZX_ERR_NO_MEMORY;
                     }
-                    vn->SetState(kBlobfsStateReadable);
+                    vn->SetState(kBlobStateReadable);
                     vn->SetMapIndex(i);
                     // Delay reading any data from disk until read.
                     hash_.insert(vn.get());
@@ -748,7 +748,7 @@ zx_status_t Blobfs::AttachVmo(zx_handle_t vmo, vmoid_t* out) {
 zx_status_t Blobfs::AddInodes() {
     TRACE_DURATION("blobfs", "Blobfs::AddInodes");
 
-    if (!(info_.flags & kBlobfsFlagFVM)) {
+    if (!(info_.flags & kBlobFlagFVM)) {
         return ZX_ERR_NO_SPACE;
     }
 
@@ -793,7 +793,7 @@ zx_status_t Blobfs::AddInodes() {
 zx_status_t Blobfs::AddBlocks(size_t nblocks) {
     TRACE_DURATION("blobfs", "Blobfs::AddBlocks", "nblocks", nblocks);
 
-    if (!(info_.flags & kBlobfsFlagFVM)) {
+    if (!(info_.flags & kBlobFlagFVM)) {
         return ZX_ERR_NO_SPACE;
     }
 

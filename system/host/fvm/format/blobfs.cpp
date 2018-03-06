@@ -67,7 +67,7 @@ zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) 
     fvm_info_.block_count = static_cast<uint32_t>(fvm_info_.dat_slices * fvm_info_.slice_size /
                                                   blobfs::kBlobfsBlockSize);
 
-    fvm_info_.flags |= blobfs::kBlobfsFlagFVM;
+    fvm_info_.flags |= blobfs::kBlobFlagFVM;
 
     zx_status_t status;
     if ((status = blobfs_check_info(&fvm_info_, blocks_)) != ZX_OK) {
