@@ -7,16 +7,19 @@
 
 #include <atomic>
 #include <functional>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <queue>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <lib/async/cpp/wait.h>
 #include <zircon/compiler.h>
 #include <zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/cancelable_task.h"
 #include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
@@ -61,59 +64,52 @@ class CommandChannel final {
   // Used to identify an individual HCI command<->event transaction.
   using TransactionId = size_t;
 
-  // Callback invoked to report the completion of a HCI command.
-  using CommandCompleteCallback =
-      std::function<void(TransactionId id, const EventPacket& event_packet)>;
-
-  // Callback invoked to report the status of a pending HCI command. This can be
-  // following the receipt of a HCI_Command_Status event from the controller OR
-  // due to a command timeout.
-  using CommandStatusCallback =
-      std::function<void(TransactionId id, Status status)>;
-
   // Queues the given |command_packet| to be sent to the controller and returns
-  // a transaction ID. The given callbacks will be posted on |task_runner| to be
-  // processed on the appropriate thread requested by the caller.
+  // a transaction ID. The given |callback| will be posted on |task_runner| to
+  // be processed on the appropriate thread requested by the caller.
   //
-  // This call will take ownership of the contents of |command_packet|.
+  // This call takes ownership of the contents of |command_packet|.
   // |command_packet| MUST represent a valid HCI command packet.
   //
-  // |status_callback| will be called if the controller responds to the command
-  // with a CommandStatus HCI event.
+  // |callback| will be called with all events related to the transaction.
+  // If the command results in a CommandStatus event, it will be sent to this
+  // callback before the event with |complete_event_code| is sent.
   //
-  // |complete_callback| will be called if the controller responds to the
-  // command with an event with the given |complete_event_code|. Most HCI
-  // commands are marked as complete using the CommandComplete HCI event,
-  // however some command sequences use different events, as specified in the
-  // Bluetooth Core Specification.
+  // Synchronous transactions complete with a CommandComplete HCI event.
+  // This function is the only way to receive a CommandComplete event.
   //
-  // When a caller provides a value for |complete_event_code| the caller can
-  // also optionally provide a filter |complete_event_matcher| which will be
-  // used to determine whether the event should match this command sequence. If
-  // a filter rejects the event (by returning false), the event will be passed
-  // to the handler registered via AddEventHander(). This callback will be run
-  // on the I/O thread and must complete synchronously.
+  // Most asynchronous transactions return the CommandStatus event and
+  // another event to indicate completion, which should be indicated in
+  // |complete_event_code|.
   //
-  // Returns a transaction ID that is unique to the initiated command sequence.
-  // This can be used to identify the command sequence by comparing it to the
-  // |id| parameter in a CommandCompleteCallback.
+  // If |complete_event_code| is set to kCommandStatus, the transaction
+  // is considered complete when the CommandStatus event is received.
   //
-  // If the controller does not respond to with the expected
-  // |complete_event_code| within a certain amount of time (see
-  // kCommandTimeoutMs in hci_constants.h) the command will time out. This will
-  // be signalled to the caller by invoking |status_callback| with the |status|
-  // parameter set to the special status code Status::kCommandTimeout.
+  // |complete_event_code| cannot be an LE event code, the LE Meta Event code,
+  // or a code that has been registered for events via AddEventHandler.
+  //
+  // TODO(jamuraa): Support LE Event Codes for LE Commands.
+  // TODO(jamuraa): Add a way to cancel commands (NET-619)
+  //
+  // Returns a ID unique to the command transaction, or zero if the parameters
+  // are invalid.  This ID will be supplied to |callback| in its |id| parameter
+  // to identify the transaction.
+  //
+  // NOTE: Commmands queued are not guaranteed to be finished or sent in order,
+  // although commands with the same opcode will be sent in order, and
+  // commands with the same |complete_code| will be sent in order.
+  // If strict ordering of commands is required, use SequentialCommandRunner
+  // or callbacks for sequencing.
   //
   // See Bluetooth Core Spec v5.0, Volume 2, Part E, Section 4.4 "Command Flow
   // Control" for more information about the HCI command flow control.
-  using EventMatcher = std::function<bool(const EventPacket& event)>;
+  using CommandCallback =
+      std::function<void(TransactionId id, const EventPacket& event)>;
   TransactionId SendCommand(
       std::unique_ptr<CommandPacket> command_packet,
       fxl::RefPtr<fxl::TaskRunner> task_runner,
-      const CommandCompleteCallback& complete_callback,
-      const CommandStatusCallback& status_callback = {},
-      const EventCode complete_event_code = kCommandCompleteEventCode,
-      const EventMatcher& complete_event_matcher = {});
+      CommandCallback callback,
+      const EventCode complete_event_code = kCommandCompleteEventCode);
 
   // Used to identify an individual HCI event handler that was registered with
   // this CommandChannel.
@@ -135,12 +131,18 @@ class CommandChannel final {
   //   - HCI_CommandComplete events;
   //   - The completion event of the currently pending command packet, if any;
   //
-  // Returns a non-zero ID if the handler was successfully registered. Returns
+  // Returns an ID if the handler was successfully registered. Returns
   // zero in case of an error.
   //
   // Only one handler can be registered for a given |event_code| at a time. If a
   // handler was previously registered for the given |event_code|, this method
   // returns zero.
+  //
+  // If an asynchronous command is queued which completes on |event_code|, this
+  // method returns zero. It is good practice to avoid using asynchrous commands
+  // and event handlers for the same event code.  In most cases, registering a
+  // long-lived event handler and ending transactions on CommandStatus is
+  // recommended.
   //
   // If |task_runner| corresponds to the I/O thread's task runner, then the
   // callback will be executed as soon as the event is received from the command
@@ -151,7 +153,7 @@ class CommandChannel final {
   //    - HCI_Command_Status event code
   //    - HCI_LE_Meta event code (use AddLEMetaEventHandler instead).
   EventHandlerId AddEventHandler(EventCode event_code,
-                                 const EventCallback& event_callback,
+                                 EventCallback event_callback,
                                  fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   // Works just like AddEventHandler but the passed in event code is only valid
@@ -162,7 +164,7 @@ class CommandChannel final {
   // |subevent_code| cannot be 0.
   EventHandlerId AddLEMetaEventHandler(
       EventCode subevent_code,
-      const EventCallback& event_callback,
+      EventCallback event_callback,
       fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   // Removes a previously registered event handler. Does nothing if an event
@@ -172,34 +174,70 @@ class CommandChannel final {
   // Returns the underlying channel handle.
   const zx::channel& channel() const { return channel_; }
 
+  // Sets the command timeout interval. This is intended for unit tests.
+  void set_command_timeout_ms(uint32_t value) {
+    FXL_DCHECK(value);
+    command_timeout_ms_ = value;
+  }
+
  private:
-  // Represents a pending HCI command.
-  struct PendingTransactionData {
-    TransactionId id;
-    OpCode opcode;
-    EventCode complete_event_code;
-    EventMatcher complete_event_matcher;
-    CommandStatusCallback status_callback;
-    CommandCompleteCallback complete_callback;
-    fxl::RefPtr<fxl::TaskRunner> task_runner;
+  // Represents a pending or running HCI command.
+  class TransactionData {
+   public:
+    TransactionData(TransactionId id,
+                    OpCode opcode,
+                    EventCode complete_event_code,
+                    CommandCallback callback,
+                    fxl::RefPtr<fxl::TaskRunner> task_runner);
+    ~TransactionData();
+
+    // Starts the transaction timer, which will call timeout_cb if it's not
+    // completed in time.
+    void Start(fxl::Closure timeout_cb, zx::duration timeout);
+
+    // Completes the transaction with |event|.
+    void Complete(std::unique_ptr<EventPacket> event);
+
+    // Makes an EventCallback that calls the callback correctly.
+    EventCallback MakeCallback() const;
+
+    fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
+    EventCode complete_event_code() const { return complete_event_code_; }
+    OpCode opcode() const { return opcode_; }
+    TransactionId id() const { return id_; }
+
+    EventHandlerId handler_id() const { return handler_id_; };
+    void set_handler_id(EventHandlerId id) { handler_id_ = id; }
+
+   private:
+    TransactionId id_;
+    OpCode opcode_;
+    EventCode complete_event_code_;
+    CommandCallback callback_;
+    fxl::RefPtr<fxl::TaskRunner> task_runner_;
+    std::unique_ptr<common::CancelableTask> timeout_;
+    EventHandlerId handler_id_;
+
+    FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(TransactionData);
   };
+
+  // Adds an internal event handler for |data| if one does not exist yet and
+  // another ransaction is not waiting on the same event.
+  // Used to add expiring event handlers for asynchronous commands.
+  void MaybeAddTransactionHandler(TransactionData* data)
+      __TA_REQUIRES(event_handler_mutex_);
 
   // Represents a queued command packet.
   struct QueuedCommand {
-    QueuedCommand(TransactionId id,
-                  std::unique_ptr<CommandPacket> command_packet,
-                  const CommandStatusCallback& status_callback,
-                  const CommandCompleteCallback& complete_callback,
-                  fxl::RefPtr<fxl::TaskRunner> task_runner,
-                  EventCode complete_event_code,
-                  const EventMatcher& complete_event_matcher);
+    QueuedCommand(std::unique_ptr<CommandPacket> command_packet,
+                  std::unique_ptr<TransactionData> data);
     QueuedCommand() = default;
 
     QueuedCommand(QueuedCommand&& other) = default;
     QueuedCommand& operator=(QueuedCommand&& other) = default;
 
     std::unique_ptr<CommandPacket> packet;
-    PendingTransactionData transaction_data;
+    std::unique_ptr<TransactionData> data;
   };
 
   // Data stored for each event handler registered via AddEventHandler.
@@ -211,50 +249,58 @@ class CommandChannel final {
     fxl::RefPtr<fxl::TaskRunner> task_runner;
   };
 
-  // Tries to send the next queued command if there are any queued commands and
-  // there is no currently pending command.
-  void TrySendNextQueuedCommand();
+  // Removes internal event handler structures for |id|.
+  void RemoveEventHandlerInternal(EventHandlerId id)
+      __TA_REQUIRES(event_handler_mutex_);
 
-  // If the given event packet corresponds to the currently pending command,
-  // this method completes the transaction and sends the next queued command, if
-  // any. Returns false if the event needs to be handled by an event handler and
-  // does not take ownership of it.
-  bool HandlePendingCommandComplete(std::unique_ptr<EventPacket>&& event);
+  // Sends any queued commands that can be processed unambiguously
+  // and complete.
+  void TrySendQueuedCommands();
 
-  // If the given CommandStatus event packet corresponds to the currently
-  // pending command and notifes the transaction's |status_callback|.
-  void HandlePendingCommandStatus(const EventPacket& event);
-
-  // Returns a pointer to the currently pending command. Return nullptr if no
-  // command is currently pending.
-  PendingTransactionData* GetPendingCommand();
-
-  // Sets the currently pending command. If |command| is nullptr, this will
-  // clear the currently pending command. This also cancels the HCI command
-  // timeout callback for the current pending command.
-  void SetPendingCommand(PendingTransactionData* command);
+  // Sends |command|, adding an internal event handler if asynchronous.
+  void SendQueuedCommand(QueuedCommand&& cmd)
+      __TA_REQUIRES(event_handler_mutex_);
 
   // Creates a new event handler entry in the event handler map and returns its
   // ID.
   EventHandlerId NewEventHandler(EventCode event_code,
                                  bool is_le_meta,
-                                 const EventCallback& event_callback,
+                                 EventCallback event_callback,
                                  fxl::RefPtr<fxl::TaskRunner> task_runner)
       __TA_REQUIRES(event_handler_mutex_);
 
-  // Notifies a matching event handler for the given event.
+  // Notifies any matching event handler for |event|.
   void NotifyEventHandler(std::unique_ptr<EventPacket> event);
+
+  // Notifies handlers for Command Status and Command Complete Events.
+  // This function marks opcodes that have transactions pending as complete
+  // by removing them and calling their callbacks.
+  void UpdateTransaction(std::unique_ptr<EventPacket> event);
 
   // Read ready handler for |channel_|
   async_wait_result_t OnChannelReady(async_t* async,
                                      zx_status_t status,
                                      const zx_packet_signal_t* signal);
 
+  // Opcodes of commands that we have sent to the controller but not received a
+  // status update from.  New commands with these opcodes can't be sent because
+  // they are indistinguishable from ones we need to get the result of.
+  std::unordered_map<OpCode, std::unique_ptr<TransactionData>>
+      pending_transactions_ __TA_GUARDED(event_handler_mutex_);
+
   // TransactionId counter.
   std::atomic_size_t next_transaction_id_ __TA_GUARDED(send_queue_mutex_);
 
   // EventHandlerId counter.
   std::atomic_size_t next_event_handler_id_ __TA_GUARDED(event_handler_mutex_);
+
+  // Event handlers that are automatically removed after being called.
+  //
+  // These are currently only used internally for asynchronous commands to
+  // end transacions and deliver these events to callbacks.
+  // These can not be detected or removed using RemoveEventHandler.
+  std::unordered_set<EventHandlerId> expiring_event_handler_ids_
+      __TA_GUARDED(event_handler_mutex_);
 
   // Used to assert that certain public functions are only called on the
   // creation thread.
@@ -269,6 +315,10 @@ class CommandChannel final {
   // Wait object for |channel_|
   async::Wait channel_wait_;
 
+  // The command timeout value (in milliseconds) for pending transactions.
+  // If any transactions take longer than this, we shutdown automatically.
+  uint32_t command_timeout_ms_;
+
   // True if this CommandChannel has been initialized through a call to
   // Initialize().
   std::atomic_bool is_initialized_;
@@ -280,20 +330,19 @@ class CommandChannel final {
   // SendCommand() as well as from |io_thread_|.
   std::mutex send_queue_mutex_;
 
-  // The HCI command queue. These are the commands that have been queued to be
-  // sent to the controller.
-  // TODO(armansito): Store std::unique_ptr<QueuedCommand>?
-  std::queue<QueuedCommand> send_queue_ __TA_GUARDED(send_queue_mutex_);
+  // The HCI command queue.
+  // This queue is not necessarily sent in order, but commands with the same
+  // opcode or that wait on the same completion event code are sent first-in,
+  // first-out.
+  std::list<QueuedCommand> send_queue_ __TA_GUARDED(send_queue_mutex_);
 
-  // Contains the currently pending HCI command packet. While controllers may
-  // allow more than one packet to be pending at a given point in time, we only
-  // send one packet at a time to keep things simple.
+  // Contains the current count of commands we ae allowed to send to the
+  // controller.  This is decremented when we send a command and updated
+  // when we receive a CommandStatus or CommandComplete event with the Num
+  // HCI Command Packets parameter.
   //
   // Accessed only from the I/O thread and thus not guarded.
-  common::Optional<PendingTransactionData> pending_command_;
-
-  // The command timeout callback assigned to the current pending command.
-  fxl::CancelableClosure pending_cmd_timeout_;
+  size_t allowed_command_packets_;
 
   // Guards |event_handler_id_map_| and |event_code_handlers_| which can be
   // accessed by both the public EventHandler methods and |io_thread_|.

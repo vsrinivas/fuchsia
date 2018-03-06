@@ -27,7 +27,8 @@ class TestBase : public ::testing::Test {
   // ::testing::Test override:
   void TearDown() override  {}
 
-  // Posts a delayed task to quit the message loop after |seconds| have elapsed.
+  // Posts a delayed task to quit the message loop after |time_delta| has
+  // elapsed.
   void PostDelayedQuitTask(const fxl::TimeDelta& time_delta) {
     message_loop_.task_runner()->PostDelayedTask(
         [this] { message_loop_.QuitNow(); }, time_delta);

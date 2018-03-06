@@ -64,6 +64,31 @@ class Packet<EventHeader> : public PacketBase<EventHeader, EventPacket> {
         view().payload<CommandCompleteEventParams>().return_parameters);
   }
 
+  // If this is an event packet with a standard status (See Vol 2, Part D), this
+  // method returns the status from the event parameters.
+  // Returns kInvalidStatus if this is not an event that produces such a status.
+  Status status() const {
+    switch (event_code()) {
+      case kCommandStatusEventCode:
+        return view().payload<CommandStatusEventParams>().status;
+      case kInquiryCompleteEventCode:
+        return view().payload<InquiryCompleteEventParams>().status;
+      case kDisconnectionCompleteEventCode:
+        return view().payload<DisconnectionCompleteEventParams>().status;
+      case kEncryptionChangeEventCode:
+        return view().payload<EncryptionChangeEventParams>().status;
+      case kCommandCompleteEventCode: {
+        const SimpleReturnParams* params = return_params<SimpleReturnParams>();
+        if (!params) {
+          return kInvalidStatus;
+        }
+        return params->status;
+      }
+      default:
+        return kInvalidStatus;
+    };
+  }
+
   // If this is a LE Meta Event packet, this method returns a pointer to the
   // beginning of the subevent parameter structure. If the given template type
   // would exceed the bounds of the packet or if this packet does not represent

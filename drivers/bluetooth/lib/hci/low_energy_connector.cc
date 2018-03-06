@@ -105,7 +105,7 @@ bool LowEnergyConnector::CreateConnection(
     if (!self)
       return;
 
-    Status hci_status = event.view().payload<CommandStatusEventParams>().status;
+    Status hci_status = event.status();
     if (hci_status != Status::kSuccess) {
       self->OnCreateConnectionComplete(Result::kFailed, hci_status, nullptr);
       return;
@@ -128,8 +128,7 @@ bool LowEnergyConnector::CreateConnection(
   };
 
   hci_->command_channel()->SendCommand(std::move(request), task_runner_,
-                                       complete_cb, nullptr,
-                                       kCommandStatusEventCode);
+                                       complete_cb, kCommandStatusEventCode);
 
   return true;
 }
@@ -156,7 +155,11 @@ void LowEnergyConnector::CancelInternal(bool timed_out) {
 
   request_timeout_task_.Cancel();
 
-  auto complete_cb = [](auto id, const EventPacket& event) {
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  auto complete_cb = [self](auto id, const EventPacket& event) {
+    if (!self) {
+      return;
+    }
     Status status = event.return_params<SimpleReturnParams>()->status;
     if (status != Status::kSuccess) {
       FXL_LOG(WARNING) << "Failed to cancel connection request - status: "

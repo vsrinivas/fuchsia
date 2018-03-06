@@ -27,23 +27,29 @@ using std::placeholders::_2;
 namespace hcitool {
 namespace {
 
-void StatusCallback(fxl::Closure complete_cb,
-                    ::btlib::hci::CommandChannel::TransactionId id,
-                    ::btlib::hci::Status status) {
-  std::cout << "  Command Status: " << fxl::StringPrintf("0x%02x", status)
-            << " (id=" << id << ")" << std::endl;
-  if (status != ::btlib::hci::Status::kSuccess)
-    complete_cb();
+void StatusFilterCallback(fxl::Closure complete_cb,
+                          ::btlib::hci::CommandChannel::CommandCallback& cb,
+                          ::btlib::hci::CommandChannel::TransactionId id,
+                          const ::btlib::hci::EventPacket& event) {
+  if (event.event_code() == ::btlib::hci::kCommandStatusEventCode) {
+    auto status = event.status();
+    std::cout << "  Command Status: " << fxl::StringPrintf("0x%02x", status)
+              << " (id=" << id << ")" << std::endl;
+    if (status != ::btlib::hci::Status::kSuccess)
+      complete_cb();
+    return;
+  }
+  cb(id, event);
 }
 
 ::btlib::hci::CommandChannel::TransactionId SendCommand(
     const CommandData* cmd_data,
     std::unique_ptr<::btlib::hci::CommandPacket> packet,
-    const ::btlib::hci::CommandChannel::CommandCompleteCallback& cb,
+    const ::btlib::hci::CommandChannel::CommandCallback& cb,
     const fxl::Closure& complete_cb) {
   return cmd_data->cmd_channel()->SendCommand(
-      std::move(packet), cmd_data->task_runner(), cb,
-      std::bind(&StatusCallback, complete_cb, _1, _2));
+      std::move(packet), cmd_data->task_runner(),
+      std::bind(&StatusFilterCallback, complete_cb, cb, _1, _2));
 }
 
 void LogCommandResult(::btlib::hci::Status status,
@@ -872,7 +878,7 @@ bool HandleBRScan(const CommandData* cmd_data,
   // or the timer to run out, for a long time. Count this as "complete" when the
   // Status comes in.
   auto id = cmd_data->cmd_channel()->SendCommand(
-      std::move(packet), cmd_data->task_runner(), cb, nullptr,
+      std::move(packet), cmd_data->task_runner(), cb,
       ::btlib::hci::kCommandStatusEventCode);
   std::cout << "  Sent HCI_Inquiry (id=" << id << ")" << std::endl;
 

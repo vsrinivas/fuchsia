@@ -75,8 +75,7 @@ void TestController::OnCommandPacketReceived(
 
   while (!current.replies_.empty()) {
     auto& reply = current.replies_.front();
-    zx_status_t status =
-        command_channel().write(0, reply.data(), reply.size(), nullptr, 0);
+    auto status = SendCommandChannelPacket(reply);
     ASSERT_EQ(ZX_OK, status)
         << "Failed to send reply: " << zx_status_get_string(status);
     current.replies_.pop();

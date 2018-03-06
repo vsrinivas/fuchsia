@@ -795,8 +795,7 @@ void LowEnergyConnectionManager::UpdateConnectionParams(
   auto status_cb = [handle](auto id, const hci::EventPacket& event) {
     FXL_DCHECK(event.event_code() == hci::kCommandStatusEventCode);
 
-    hci::Status status =
-        event.view().payload<hci::CommandStatusEventParams>().status;
+    hci::Status status = event.status();
     if (status != hci::Status::kSuccess) {
       FXL_VLOG(1) << fxl::StringPrintf(
           "(ERROR): gap: Controller rejected LE conn. params. (status: 0x%02x",
@@ -805,8 +804,7 @@ void LowEnergyConnectionManager::UpdateConnectionParams(
   };
 
   hci_->command_channel()->SendCommand(std::move(command), task_runner_,
-                                       status_cb, nullptr,
-                                       hci::kCommandStatusEventCode);
+                                       status_cb, hci::kCommandStatusEventCode);
 }
 
 LowEnergyConnectionManager::ConnectionMap::iterator

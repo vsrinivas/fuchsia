@@ -66,7 +66,7 @@ void FakeControllerBase::Stop() {
   CloseACLDataChannel();
 }
 
-void FakeControllerBase::SendCommandChannelPacket(
+zx_status_t FakeControllerBase::SendCommandChannelPacket(
     const common::ByteBuffer& packet) {
   zx_status_t status =
       cmd_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
@@ -74,9 +74,10 @@ void FakeControllerBase::SendCommandChannelPacket(
     FXL_LOG(WARNING) << "FakeController: Failed to write to control channel: "
                      << zx_status_get_string(status);
   }
+  return status;
 }
 
-void FakeControllerBase::SendACLDataChannelPacket(
+zx_status_t FakeControllerBase::SendACLDataChannelPacket(
     const common::ByteBuffer& packet) {
   zx_status_t status =
       acl_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
@@ -84,6 +85,7 @@ void FakeControllerBase::SendACLDataChannelPacket(
     FXL_LOG(WARNING) << "FakeController: Failed to write to ACL data channel: "
                      << zx_status_get_string(status);
   }
+  return status;
 }
 
 void FakeControllerBase::CloseCommandChannel() {

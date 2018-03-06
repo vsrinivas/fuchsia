@@ -90,7 +90,7 @@ void Connection::Close(Status reason) {
 
   hci_->command_channel()->SendCommand(
       std::move(disconn), fsl::MessageLoop::GetCurrent()->task_runner(),
-      status_cb, {}, kCommandStatusEventCode);
+      status_cb, kCommandStatusEventCode);
 }
 
 std::string Connection::ToString() const {

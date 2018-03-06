@@ -29,11 +29,13 @@ class FakeControllerBase {
   void Stop();
 
   // Sends the given packet over this FakeController's command channel endpoint.
-  void SendCommandChannelPacket(const common::ByteBuffer& packet);
+  // Retuns the result of the write operation on the command channel.
+  zx_status_t SendCommandChannelPacket(const common::ByteBuffer& packet);
 
   // Sends the given packet over this FakeController's ACL data channel
   // endpoint.
-  void SendACLDataChannelPacket(const common::ByteBuffer& packet);
+  // Retuns the result of the write operation on the channel.
+  zx_status_t SendACLDataChannelPacket(const common::ByteBuffer& packet);
 
   // Immediately closes the command channel endpoint.
   void CloseCommandChannel();

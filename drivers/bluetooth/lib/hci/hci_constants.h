@@ -127,10 +127,11 @@ enum Status : uint8_t {
   kLimitReached                                 = 0x43,
   kOperationCancelledByHost                     = 0x44,
 
-  // Our stack defined error to signal a command time out
+  // Our stack defined error to signal an invalid status.
   // TODO(armansito): Vendor commands could be using this code to report their custom errors. We
   // should introduce a wider (16-bit) Status type for errors reported via CommandChannel and assign
   // a number from beyond the reserved range for our own errors.
+  kInvalidStatus                                = 0xFE,
   kCommandTimeout                               = 0xFF,
 };
 

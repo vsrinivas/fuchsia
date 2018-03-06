@@ -48,7 +48,7 @@ FakeController::Settings::Settings() {
 void FakeController::Settings::ApplyDefaults() {
   std::memset(this, 0, sizeof(*this));
   hci_version = hci::HCIVersion::k5_0;
-  num_hci_command_packets = 1;
+  num_hci_command_packets = 250;
 }
 
 void FakeController::Settings::ApplyLEOnlyDefaults() {
