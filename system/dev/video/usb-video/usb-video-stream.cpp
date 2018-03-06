@@ -870,6 +870,41 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
     cur_frame_state_.capture_time = capture_start_ns + ZX_MSEC(device_delay_ms) / 2;
 }
 
+zx_status_t UsbVideoStream::FrameNotifyLocked() {
+    camera::camera_proto::VideoBufFrameNotify notif = { };
+    notif.hdr.cmd = CAMERA_VB_FRAME_NOTIFY;
+    notif.metadata.timestamp = cur_frame_state_.capture_time;
+
+    if (cur_frame_state_.error) {
+        notif.error = CAMERA_ERROR_FRAME;
+
+    } else if (!has_video_buffer_offset_) {
+        notif.error = CAMERA_ERROR_BUFFER_FULL;
+
+    // Only mark the frame completed if it had no errors and had data stored.
+    } else if (cur_frame_state_.bytes > 0) {
+        notif.frame_size = cur_frame_state_.bytes;
+        notif.data_vb_offset = video_buffer_offset_;
+
+        // Need to lock the frame before sending the notification.
+        zx_status_t status = video_buffer_->FrameCompleted();
+        // No longer have a frame offset to write to.
+        has_video_buffer_offset_ = false;
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "could not mark frame as complete: %d\n", status);
+            return ZX_ERR_BAD_STATE;
+        }
+
+    } else {
+        // No bytes were received, so don't send a notification.
+        return ZX_OK;
+    }
+
+    zxlogf(SPEW, "sending NOTIFY_FRAME, timestamp = %ld, error = %d\n",
+           notif.metadata.timestamp, notif.error);
+    return vb_channel_->Write(&notif, sizeof(notif));
+}
+
 zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(usb_request_t* req,
                                                      uint32_t* out_header_length) {
     // Different payload types have different header types but always share
@@ -891,14 +926,14 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(usb_request_t* req,
     if (cur_frame_state_.fid != fid) {
         // If the currently stored FID is valid, we've just completed a frame.
         if (cur_frame_state_.fid >= 0) {
-            // Only mark the frame completed if it had no errors and had data stored.
-            // TODO(jocelyndang): send a notification to the client.
-            if (!cur_frame_state_.error && cur_frame_state_.bytes > 0) {
-                zx_status_t status = video_buffer_->FrameCompleted();
+            // Send a notification to the client for frame completion.
+            if (vb_channel_ != nullptr) {
+                zx_status_t status = FrameNotifyLocked();
                 if (status != ZX_OK) {
-                    zxlogf(ERROR, "could not mark frame as complete: %d\n", status);
+                    zxlogf(ERROR, "failed to send notification to client, err: %d\n", status);
+                    // Even if we failed to send a notification, we should
+                    // probably continue processing the new frame.
                 }
-                has_video_buffer_offset_ = false;
             }
 
             if (clock_frequency_hz_ != 0) {

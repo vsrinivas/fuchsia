@@ -160,6 +160,12 @@ private:
     void RequestComplete(usb_request_t* req);
 
     void ParseHeaderTimestamps(usb_request_t* req);
+    // Notifies the client regarding the status of the completed frame.
+    // If the frame was completed successfully, it will also be locked until the
+    // client sends a FRAME_RELEASE request.
+    // Returns an error if the completed frame could not be locked or the
+    // notification could not be sent.
+    zx_status_t FrameNotifyLocked() __TA_REQUIRES(lock_);
     // Parses the payload header from the start of the usb request response.
     // If the header is parsed successfully, ZX_OK is returned and the length
     // of the header stored in out_header_length.
