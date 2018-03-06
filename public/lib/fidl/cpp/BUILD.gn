@@ -32,6 +32,8 @@ source_set("cpp") {
     "internal/stub.h",
     "internal/stub_controller.cc",
     "internal/stub_controller.h",
+    "internal/synchronous_proxy.cc",
+    "internal/synchronous_proxy.h",
     "internal/weak_stub_controller.cc",
     "internal/weak_stub_controller.h",
     "string.cc",
@@ -76,6 +78,7 @@ source_set("test_sources") {
     "internal/proxy_controller_unittest.cc",
     "internal/stub_controller_unittest.cc",
     "string_unittest.cc",
+    "synchronous_interface_ptr_unittest.cc",
     "vector_unittest.cc",
   ]
 

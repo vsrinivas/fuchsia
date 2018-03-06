@@ -12,7 +12,9 @@
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/internal/proxy_controller.h"
 #include "lib/fidl/cpp/internal/stub_controller.h"
+#include "lib/fidl/cpp/internal/synchronous_proxy.h"
 #include "lib/fidl/cpp/string.h"
+#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fidl/cpp/vector.h"
 
 #endif  // LIB_FIDL_CPP_INTERNAL_HEADER_H_

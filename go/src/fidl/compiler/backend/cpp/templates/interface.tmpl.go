@@ -11,8 +11,7 @@ using {{ .Name }}Ptr = ::fidl::InterfacePtr<{{ .Name }}>;
 class {{ .ProxyName }};
 class {{ .StubName }};
 class {{ .SyncName }};
-// TODO(abarth): Add |SynchronousInterfacePtr|.
-// using {{ .Name }}SyncPtr = ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
+using {{ .Name }}SyncPtr = ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
 class {{ .SyncProxyName }};
 {{- end }}
 
@@ -55,6 +54,7 @@ class {{ .Name }} {
  public:
   using Proxy_ = {{ .ProxyName }};
   using Stub_ = {{ .StubName }};
+  using Sync_ = {{ .SyncName }};
   virtual ~{{ .Name }}();
 
   {{- range .Methods }}
@@ -113,10 +113,7 @@ class {{ .StubName }} : public ::fidl::internal::Stub {
 class {{ .SyncProxyName }} : public {{ .SyncName }} {
  public:
   explicit {{ .SyncProxyName }}(::zx::channel channel);
-  ~{{ .SyncProxyName }}();
-
-  bool is_bound() const { return !!channel_; }
-  ::zx::channel TakeChannel_();
+  ~{{ .SyncProxyName }}() override;
 
   {{- range .Methods }}
     {{- if .HasRequest }}
@@ -125,7 +122,7 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
   {{- end }}
 
   private:
-  ::zx::channel channel_;
+  ::fidl::internal::SynchronousProxy proxy_;
 };
 
 {{- end }}
@@ -281,13 +278,9 @@ zx_status_t {{ .StubName }}::Dispatch(
 }
 
 {{ .SyncProxyName }}::{{ .SyncProxyName }}(::zx::channel channel)
-  : channel_(::std::move(channel)) {}
+  : proxy_(::std::move(channel)) {}
 
 {{ .SyncProxyName }}::~{{ .SyncProxyName }}() = default;
-
-::zx::channel {{ .SyncProxyName }}::TakeChannel_() {
-  return std::move(channel_);
-}
 
 {{- range .Methods }}
   {{- if .HasRequest }}
@@ -302,16 +295,9 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
     {{- if .HasResponse }}
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
-  zx_status_t status = encoder_.GetMessage().Call(
-      channel_.get(), 0, ZX_TIME_INFINITE, nullptr, &response_);
-  if (status != ZX_OK)
-    return status;
-  const char* error_msg = nullptr;
-  status = response_.Decode(nullptr, &error_msg);
-  if (status != ZX_OK) {
-    fprintf(stderr, "error: fidl_decode: %s\n", error_msg);
-    return status;
-  }
+  zx_status_t status_ = proxy_.Call(nullptr, nullptr, encoder_.GetMessage(), &response_);
+  if (status_ != ZX_OK)
+    return status_;
       {{- if .Response }}
   ::fidl::Decoder decoder_(std::move(response_));
   offset_ = sizeof(fidl_message_header_t);
@@ -321,7 +307,7 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
       {{- end }}
   return ZX_OK;
     {{- else }}
-  return encoder_.GetMessage().Write(channel_.get(), 0);
+  return proxy_.Send(nullptr, encoder_.GetMessage());
     {{- end }}
 }
   {{- end }}

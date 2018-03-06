@@ -23,8 +23,11 @@ class AsyncLoopForTest {
   AsyncLoopForTest();
   ~AsyncLoopForTest();
 
-  // This call match the behavior of async_loop_run_until_idle().
+  // This call matches the behavior of async_loop_run_until_idle().
   zx_status_t RunUntilIdle();
+
+  // This call matches the behavior of async_loop_run().
+  zx_status_t Run();
 
   // Returns the underlying async_t.
   async_t* async();

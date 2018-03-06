@@ -30,6 +30,10 @@ zx_status_t AsyncLoopForTest::RunUntilIdle() {
   return impl_->loop()->RunUntilIdle();
 }
 
+zx_status_t AsyncLoopForTest::Run() {
+  return impl_->loop()->Run();
+}
+
 async_t* AsyncLoopForTest::async() {
   return impl_->loop()->async();
 }

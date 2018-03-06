@@ -18,6 +18,8 @@ namespace fidl {
 class Builder;
 template <typename Interface>
 class InterfacePtr;
+template <typename Interface>
+class SynchronousInterfacePtr;
 
 // The client endpoint of a FIDL channel.
 //
@@ -101,6 +103,13 @@ class InterfaceHandle {
   template <typename InterfacePtr = InterfacePtr<Interface>>
   inline InterfacePtr Bind() {
     InterfacePtr ptr;
+    ptr.Bind(std::move(channel_));
+    return ptr;
+  }
+
+  template <typename SyncInterfacePtr = SynchronousInterfacePtr<Interface>>
+  inline SyncInterfacePtr BindSync() {
+    SyncInterfacePtr ptr;
     ptr.Bind(std::move(channel_));
     return ptr;
   }

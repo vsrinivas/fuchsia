@@ -51,7 +51,9 @@ namespace fidl {
 //
 // See also:
 //
-//  * |Binding|, which is the client analog of an |InterfacePtr|.
+//  * |Binding|, which is the server analog of an |InterfacePtr|.
+//  * |SynchronousInterfacePtr|, which is a synchronous client interface to a
+//    remote implementation.
 template <typename Interface>
 class InterfacePtr {
  public:
@@ -74,8 +76,8 @@ class InterfacePtr {
   // Bind the |InterfacePtr| to one endpoint of a newly created channel and
   // return the other endpoint as an |InterfaceRequest|.
   //
-  // Typically, the returned |InterfacePtr| will be sent to a remote process to
-  // be bound to an implementation of |Interface| using a |Binding| object.
+  // Typically, the returned |InterfaceRequest| will be sent to a remote process
+  // to be bound to an implementation of |Interface| using a |Binding| object.
   //
   // After calling this method, clients can start calling methods on this
   // |InterfacePtr|. The methods will write messages into the underlying
@@ -103,7 +105,7 @@ class InterfacePtr {
     zx::channel h1;
     zx::channel h2;
     if (zx::channel::create(0, &h1, &h2) != ZX_OK ||
-        Bind(InterfaceHandle<Interface>(std::move(h1))) != ZX_OK)
+        Bind(std::move(h1)) != ZX_OK)
       return nullptr;
     return InterfaceRequest<Interface>(std::move(h2));
   }
