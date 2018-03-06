@@ -152,13 +152,15 @@ void unittest_set_output_function(test_output_func fun, void* arg);
  */
 int unittest_set_verbosity_level(int new_level);
 
+#define UNITTEST_FAIL_TRACEF_FORMAT " [FAILED]\n        %s:%d:%s:\n        "
+
 /*
  * Format the error string
  */
 #define UNITTEST_FAIL_TRACEF(str, x...)                                       \
     do {                                                                      \
         unittest_printf_critical(                                             \
-            " [FAILED] \n        %s:%d:%s:\n        " str,                    \
+            UNITTEST_FAIL_TRACEF_FORMAT str,                                  \
             __FILE__, __LINE__, __PRETTY_FUNCTION__, ##x);                    \
     } while (0)
 
@@ -455,30 +457,35 @@ int unittest_set_verbosity_level(int new_level);
         }                                             \
     } while (0)
 
-#define UT_STR_EQ(expected, actual, msg, ret)                               \
+/* Check that two strings are equal. */
+#define UT_STR_EQ(str1, str2, msg, ret)                                     \
     do {                                                                    \
         UT_ASSERT_VALID_TEST_STATE;                                         \
-        UNITTEST_TRACEF(2, "str_eq(%s, %s)\n", #expected, #actual);         \
-        if (!unittest_expect_str_eq((expected), (actual), msg)) {           \
+        UNITTEST_TRACEF(2, "str_eq(%s, %s)\n", #str1, #str2);               \
+        /* Note that we should not do the following here:                   \
+         *   const char* str1_val = str1;                                   \
+         * That does not work in C++ if str1 is string.c_str(): the         \
+         * storage for the C string will get deallocated before the         \
+         * string is used.  Instead we must use a helper function. */       \
+        if (!unittest_expect_str_eq((str1), (str2), #str1, #str2, msg,      \
+                                    __FILE__, __LINE__,                     \
+                                    __PRETTY_FUNCTION__)) {                 \
             current_test_info->all_ok = false;                              \
             ret;                                                            \
         }                                                                   \
     } while (0)
 
-#define UT_STR_NE(str1, str2, msg, ret)              \
-    do {                                             \
-        UT_ASSERT_VALID_TEST_STATE;                  \
-        UNITTEST_TRACEF(2, "str_ne(%s, %s)\n",       \
-                        #str1, #str2);               \
-        if (!strcmp(str1, str2)) {                   \
-            UNITTEST_FAIL_TRACEF(                    \
-                "%s: %s and %s are the same; "       \
-                "expected different:\n"              \
-                "        '%s'\n",                    \
-                msg, #str1, #str2, str1);            \
-            current_test_info->all_ok = false;       \
-            ret;                                     \
-        }                                            \
+/* Check that two strings are not equal. */
+#define UT_STR_NE(str1, str2, msg, ret)                                     \
+    do {                                                                    \
+        UT_ASSERT_VALID_TEST_STATE;                                         \
+        UNITTEST_TRACEF(2, "str_ne(%s, %s)\n", #str1, #str2);               \
+        if (!unittest_expect_str_ne((str1), (str2), #str1, #str2, msg,      \
+                                    __FILE__, __LINE__,                     \
+                                    __PRETTY_FUNCTION__)) {                 \
+            current_test_info->all_ok = false;                              \
+            ret;                                                            \
+        }                                                                   \
     } while (0)
 
 #define EXPECT_CMP(op, lhs, rhs, lhs_str, rhs_str, ...) \
@@ -609,7 +616,17 @@ bool unittest_run_one_test(struct test_case_element* elem, test_type_t type);
 bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, size_t len,
                               const char* msg);
 
-bool unittest_expect_str_eq(const char* expected, const char* actual, const char* msg);
+bool unittest_expect_str_eq(const char* str1_value, const char* str2_value,
+                            const char* str1_expr, const char* str2_expr,
+                            const char* msg,
+                            const char* source_filename, int source_line_num,
+                            const char* source_function);
+
+bool unittest_expect_str_ne(const char* str1_value, const char* str2_value,
+                            const char* str1_expr, const char* str2_expr,
+                            const char* msg,
+                            const char* source_filename, int source_line_num,
+                            const char* source_function);
 
 /* Used to implement RUN_TEST() and other variants. */
 void unittest_run_named_test(const char* name, bool (*test)(void),

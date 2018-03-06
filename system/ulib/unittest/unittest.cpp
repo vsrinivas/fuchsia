@@ -90,10 +90,43 @@ bool unittest_expect_bytes_eq(const uint8_t* expected, const uint8_t* actual, si
     return true;
 }
 
-bool unittest_expect_str_eq(const char* expected, const char* actual,
-                            const char* msg) {
-    if (strcmp(expected, actual)) {
-        printf("%s. expected\n'%s'\nactual\n'%s'\n", msg, expected, actual);
+bool unittest_expect_str_eq(const char* str1_value, const char* str2_value,
+                            const char* str1_expr, const char* str2_expr,
+                            const char* msg,
+                            const char* source_filename, int source_line_num,
+                            const char* source_function) {
+    if (strcmp(str1_value, str2_value)) {
+        unittest_printf_critical(
+            UNITTEST_FAIL_TRACEF_FORMAT
+            "%s:\n"
+            "        Comparison failed: strings not equal:\n"
+            "        String 1 expression: %s\n"
+            "        String 2 expression: %s\n"
+            "        String 1 value: \"%s\"\n"
+            "        String 2 value: \"%s\"\n",
+            source_filename, source_line_num, source_function,
+            msg, str1_expr, str2_expr, str1_value, str2_value);
+        return false;
+    }
+    return true;
+}
+
+bool unittest_expect_str_ne(const char* str1_value, const char* str2_value,
+                            const char* str1_expr, const char* str2_expr,
+                            const char* msg,
+                            const char* source_filename, int source_line_num,
+                            const char* source_function) {
+    if (!strcmp(str1_value, str2_value)) {
+        unittest_printf_critical(
+            UNITTEST_FAIL_TRACEF_FORMAT
+            "%s:\n"
+            "        Comparison failed: strings are equal,"
+            " but expected different strings:\n"
+            "        String 1 expression: %s\n"
+            "        String 2 expression: %s\n"
+            "        Value of both strings: \"%s\"\n",
+            source_filename, source_line_num, source_function,
+            msg, str1_expr, str2_expr, str1_value);
         return false;
     }
     return true;
