@@ -97,6 +97,15 @@ zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t al
         return status;
     }
 
+    if (flags & IO_BUFFER_UNCACHED) {
+        status = zx_vmo_set_cache_policy(vmo_handle, ZX_CACHE_POLICY_UNCACHED);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "io_buffer: zx_vmo_set_cache_policy failed %d\n", status);
+            zx_handle_close(vmo_handle);
+            return status;
+        }
+    }
+
     return io_buffer_init_common(buffer, vmo_handle, size, 0, flags);
 }
 

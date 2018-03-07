@@ -36,10 +36,11 @@ typedef struct {
 } io_buffer_t;
 
 enum {
-    IO_BUFFER_RO         = (0 << 0),
-    IO_BUFFER_RW         = (1 << 0),
-    IO_BUFFER_CONTIG     = (1 << 1),
-    IO_BUFFER_FLAGS_MASK = IO_BUFFER_RW | IO_BUFFER_CONTIG,
+    IO_BUFFER_RO         = (0 << 0),    // map buffer read-only
+    IO_BUFFER_RW         = (1 << 0),    // map buffer read/write
+    IO_BUFFER_CONTIG     = (1 << 1),    // allocate physically contiguous buffer
+    IO_BUFFER_UNCACHED   = (1 << 2),    // map buffer with ZX_CACHE_POLICY_UNCACHED
+    IO_BUFFER_FLAGS_MASK = IO_BUFFER_RW | IO_BUFFER_CONTIG | IO_BUFFER_UNCACHED,
 };
 
 // Initializes a new io_buffer.  If this call fails, it is still safe to call
