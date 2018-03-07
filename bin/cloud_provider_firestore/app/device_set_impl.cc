@@ -83,6 +83,8 @@ void DeviceSetImpl::SetFingerprint(f1dl::Array<uint8_t> fingerprint,
   request.set_collection_id(kDeviceCollection);
   request.set_document_id(EncodeKey(convert::ToString(fingerprint)));
   google::firestore::v1beta1::Value exists;
+  // TODO(ppi): store a timestamp of the last connection rather than a boolean
+  // flag.
   exists.set_boolean_value(true);
   (*(request.mutable_document()->mutable_fields()))[kExistsKey] = exists;
 
@@ -105,16 +107,68 @@ void DeviceSetImpl::SetFingerprint(f1dl::Array<uint8_t> fingerprint,
 }
 
 void DeviceSetImpl::SetWatcher(
-    f1dl::Array<uint8_t> /*fingerprint*/,
-    f1dl::InterfaceHandle<cloud_provider::DeviceSetWatcher> /*watcher*/,
+    f1dl::Array<uint8_t> fingerprint,
+    f1dl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
     const SetWatcherCallback& callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
+  watcher_ = watcher.Bind();
+  watched_fingerprint_ = convert::ToString(fingerprint);
+  set_watcher_callback_ = callback;
+
+  credentials_provider_->GetCredentials([this](auto call_credentials) mutable {
+    // Initiate the listen RPC. We will receive a call on OnConnected() when the
+    // watcher is ready.
+    listen_call_handler_ =
+        firestore_service_->Listen(std::move(call_credentials), this);
+  });
 }
 
 void DeviceSetImpl::Erase(const EraseCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR);
+}
+
+void DeviceSetImpl::OnConnected() {
+  auto request = google::firestore::v1beta1::ListenRequest();
+  request.set_database(firestore_service_->GetDatabasePath());
+  request.mutable_add_target()->mutable_documents()->add_documents(
+      GetDevicePath(user_path_, watched_fingerprint_));
+  listen_call_handler_->Write(std::move(request));
+}
+
+void DeviceSetImpl::OnResponse(
+    google::firestore::v1beta1::ListenResponse response) {
+  if (response.has_target_change()) {
+    if (response.target_change().target_change_type() ==
+        google::firestore::v1beta1::TargetChange_TargetChangeType_CURRENT) {
+      if (set_watcher_callback_) {
+        set_watcher_callback_(cloud_provider::Status::OK);
+        set_watcher_callback_ = nullptr;
+      }
+    }
+    return;
+  }
+  if (response.has_document_delete()) {
+    if (set_watcher_callback_) {
+      set_watcher_callback_(cloud_provider::Status::NOT_FOUND);
+      set_watcher_callback_ = nullptr;
+    }
+    watcher_->OnCloudErased();
+    return;
+  }
+}
+
+void DeviceSetImpl::OnFinished(grpc::Status status) {
+  if (status.error_code() == grpc::UNAVAILABLE ||
+      status.error_code() == grpc::UNAUTHENTICATED) {
+    if (watcher_) {
+      watcher_->OnNetworkError();
+    }
+    return;
+  }
+  FXL_LOG(ERROR) << "Server unexpectedly closed the watcher connection "
+                 << "with status: " << status.error_message()
+                 << ", error details: " << status.error_details();
+  watcher_.Unbind();
 }
 
 }  // namespace cloud_provider_firestore

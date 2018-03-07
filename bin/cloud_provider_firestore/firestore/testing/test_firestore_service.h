@@ -62,6 +62,7 @@ class TestFirestoreService : public FirestoreService {
 
   std::vector<GetDocumentRecord> get_document_records;
   std::vector<CreateDocumentRecord> create_document_records;
+  std::vector<ListenCallClient*> listen_clients;
 
   fxl::Closure shutdown_callback;
 

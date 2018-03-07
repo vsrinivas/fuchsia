@@ -6,6 +6,23 @@
 
 namespace cloud_provider_firestore {
 
+namespace {
+class TestListenCallHandler : public ListenCallHandler {
+ public:
+  TestListenCallHandler() {}
+
+  ~TestListenCallHandler() override {}
+
+  void Write(google::firestore::v1beta1::ListenRequest request) override {
+    // do nothing
+  }
+
+ private:
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestListenCallHandler);
+};
+
+}  // namespace
+
 TestFirestoreService::TestFirestoreService() : db_path_(), root_path_() {}
 TestFirestoreService::~TestFirestoreService() {}
 
@@ -50,8 +67,9 @@ void TestFirestoreService::DeleteDocument(
 
 std::unique_ptr<ListenCallHandler> TestFirestoreService::Listen(
     std::shared_ptr<grpc::CallCredentials> call_credentials,
-    ListenCallClient* /*client*/) {
-  return nullptr;
+    ListenCallClient* client) {
+  listen_clients.push_back(client);
+  return std::make_unique<TestListenCallHandler>();
 }
 
 void TestFirestoreService::ShutDown(fxl::Closure callback) {

@@ -13,6 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/listen_call_client.h"
 
 namespace cloud_provider_firestore {
 
@@ -20,7 +21,7 @@ namespace cloud_provider_firestore {
 //
 // If the |on_empty| callback is set, it is called when the client connection is
 // closed.
-class DeviceSetImpl : public cloud_provider::DeviceSet {
+class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
  public:
   DeviceSetImpl(std::string user_path,
                 CredentialsProvider* credentials_provider,
@@ -45,12 +46,25 @@ class DeviceSetImpl : public cloud_provider::DeviceSet {
 
   void Erase(const EraseCallback& callback) override;
 
+  // ListenCallClient:
+  void OnConnected() override;
+
+  void OnResponse(google::firestore::v1beta1::ListenResponse response) override;
+
+  void OnFinished(grpc::Status status) override;
+
   const std::string user_path_;
   CredentialsProvider* const credentials_provider_;
   FirestoreService* const firestore_service_;
 
   f1dl::Binding<cloud_provider::DeviceSet> binding_;
   fxl::Closure on_empty_;
+
+  // Watcher set by the client.
+  cloud_provider::DeviceSetWatcherPtr watcher_;
+  std::string watched_fingerprint_;
+  SetWatcherCallback set_watcher_callback_;
+  std::unique_ptr<ListenCallHandler> listen_call_handler_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceSetImpl);
 };
