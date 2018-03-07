@@ -81,10 +81,11 @@ class ByteBuffer {
     return data()[pos];
   }
 
-  // Converts the underlying buffer to the given type with bounds checking.
+  // Converts the underlying buffer to the given type with bounds checking. The
+  // buffer is allowed to be larger than T.
   template <typename T>
   const T& As() const {
-    FXL_CHECK(size() == sizeof(T));
+    FXL_CHECK(size() >= sizeof(T));
     return *reinterpret_cast<const T*>(data());
   }
 

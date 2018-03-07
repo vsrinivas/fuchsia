@@ -23,6 +23,8 @@ std::string HostErrorToString(HostError error) {
       return "not supported";
     case HostError::kPacketMalformed:
       return "packet malformed";
+    case HostError::kOutOfMemory:
+      return "out of memory";
     case HostError::kProtocolError:
       return "protocol error";
     case HostError::kFailed:

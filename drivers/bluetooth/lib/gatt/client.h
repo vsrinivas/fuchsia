@@ -4,14 +4,24 @@
 
 #pragma once
 
+#include <functional>
+
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/att/bearer.h"
+#include "garnet/drivers/bluetooth/lib/common/uuid.h"
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace btlib {
 namespace gatt {
+
+// Types representing GATT procedure results.
+struct ServiceData {
+  att::Handle range_start;
+  att::Handle range_end;
+  common::UUID type;
+};
 
 // Implements GATT client-role procedures. A client operates over a single ATT
 // data bearer. Client objects are solely used to map GATT procedures to ATT
@@ -40,7 +50,20 @@ class Client final {
   using MTUCallback = std::function<void(att::Status status, uint16_t mtu)>;
   void ExchangeMTU(MTUCallback callback);
 
+  // Performs the "Discover All Primary Services" procedure defined in
+  // v5.0, Vol 3, Part G, 4.4.1. |service_callback| is run for each discovered
+  // service. |status_callback| is run with the result of the operation.
+  using ServiceCallback = std::function<void(const ServiceData&)>;
+  using StatusCallback = std::function<void(att::Status status)>;
+  void DiscoverPrimaryServices(ServiceCallback svc_callback,
+                               StatusCallback status_callback);
+
  private:
+  void DiscoveryPrimaryServicesInternal(att::Handle start,
+                                        att::Handle end,
+                                        ServiceCallback svc_callback,
+                                        StatusCallback status_callback);
+
   // Wraps |callback| in a TransactionCallback that only runs if this Client is
   // still alive.
   att::Bearer::TransactionCallback BindCallback(

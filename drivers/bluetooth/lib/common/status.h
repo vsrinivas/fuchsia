@@ -35,6 +35,9 @@ enum class HostError : uint8_t {
   // Received an invalid packet from the controller.
   kPacketMalformed,
 
+  // Ran out of resources.
+  kOutOfMemory,
+
   // Error code for protocol errors. The actual error code is specified by a
   // protocol error code type.
   kProtocolError,

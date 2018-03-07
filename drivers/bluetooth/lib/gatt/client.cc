@@ -7,8 +7,11 @@
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "lib/fxl/logging.h"
 
+#include "gatt_defs.h"
+
 namespace btlib {
 
+using common::BufferView;
 using common::HostError;
 
 namespace gatt {
@@ -32,8 +35,10 @@ Client::Client(fxl::RefPtr<att::Bearer> bearer)
 
 void Client::ExchangeMTU(MTUCallback mtu_cb) {
   auto pdu = NewPDU(sizeof(att::ExchangeMTURequestParams));
-  if (!pdu)
+  if (!pdu) {
+    mtu_cb(att::Status(HostError::kOutOfMemory), 0);
     return;
+  }
 
   att::PacketWriter writer(att::kExchangeMTURequest, pdu.get());
   auto params = writer.mutable_payload<att::ExchangeMTURequestParams>();
@@ -78,6 +83,121 @@ void Client::ExchangeMTU(MTUCallback mtu_cb) {
     FXL_VLOG(1) << "gatt: Exchange MTU failed: " << status.ToString();
     mtu_cb(status, 0);
   });
+
+  att_->StartTransaction(std::move(pdu), rsp_cb, error_cb);
+}
+
+void Client::DiscoverPrimaryServices(ServiceCallback svc_callback,
+                                     StatusCallback status_callback) {
+  DiscoveryPrimaryServicesInternal(att::kHandleMin, att::kHandleMax,
+                                   std::move(svc_callback),
+                                   std::move(status_callback));
+}
+
+void Client::DiscoveryPrimaryServicesInternal(att::Handle start,
+                                              att::Handle end,
+                                              ServiceCallback svc_callback,
+                                              StatusCallback status_callback) {
+  auto pdu = NewPDU(sizeof(att::ReadByGroupTypeRequestParams16));
+  if (!pdu) {
+    status_callback(att::Status(HostError::kOutOfMemory));
+    return;
+  }
+
+  att::PacketWriter writer(att::kReadByGroupTypeRequest, pdu.get());
+  auto* params = writer.mutable_payload<att::ReadByGroupTypeRequestParams16>();
+  params->start_handle = htole16(start);
+  params->end_handle = htole16(end);
+  params->type = htole16(types::kPrimaryService16);
+
+  auto rsp_cb = BindCallback([this, svc_cb = std::move(svc_callback),
+                              res_cb = status_callback](
+                                 const att::PacketReader& rsp) mutable {
+    FXL_DCHECK(rsp.opcode() == att::kReadByGroupTypeResponse);
+
+    if (rsp.payload_size() < sizeof(att::ReadByGroupTypeResponseParams)) {
+      // Received malformed response. Disconnect the link.
+      FXL_VLOG(1) << "gatt: Received malformed Read By Group Type response";
+      att_->ShutDown();
+      res_cb(att::Status(HostError::kPacketMalformed));
+      return;
+    }
+
+    const auto& rsp_params = rsp.payload<att::ReadByGroupTypeResponseParams>();
+    uint8_t entry_length = rsp_params.length;
+
+    // We expect the returned attribute value to be a 16-bit or 128-bit service
+    // UUID.
+    constexpr size_t kAttrDataSize16 =
+        sizeof(att::AttributeGroupDataEntry) + sizeof(att::AttributeType16);
+    constexpr size_t kAttrDataSize128 =
+        sizeof(att::AttributeGroupDataEntry) + sizeof(att::AttributeType128);
+
+    if (entry_length != kAttrDataSize16 && entry_length != kAttrDataSize128) {
+      FXL_VLOG(1) << "gatt: Invalid attribute data length!";
+      att_->ShutDown();
+      res_cb(att::Status(HostError::kPacketMalformed));
+      return;
+    }
+
+    BufferView attr_data_list(rsp_params.attribute_data_list,
+                              rsp.payload_size() - 1);
+    if (attr_data_list.size() % entry_length) {
+      FXL_VLOG(1) << "gatt: Malformed attribute data list!";
+      att_->ShutDown();
+      res_cb(att::Status(HostError::kPacketMalformed));
+      return;
+    }
+
+    att::Handle last_handle = att::kHandleMax;
+    while (attr_data_list.size()) {
+      const auto& entry = attr_data_list.As<att::AttributeGroupDataEntry>();
+
+      ServiceData service;
+      service.range_start = le16toh(entry.start_handle);
+      service.range_end = last_handle = le16toh(entry.group_end_handle);
+
+      if (service.range_end < service.range_start) {
+        FXL_VLOG(1) << "gatt: Received malformed service range values!";
+        res_cb(att::Status(HostError::kPacketMalformed));
+        return;
+      }
+
+      BufferView value(entry.value, entry_length - (2 * sizeof(att::Handle)));
+
+      // This must succeed as we have performed the appropriate checks above.
+      __UNUSED bool result = common::UUID::FromBytes(value, &service.type);
+      FXL_DCHECK(result);
+
+      // Notify the handler.
+      svc_cb(service);
+
+      attr_data_list = attr_data_list.view(entry_length);
+    }
+
+    // The procedure is over if we have reached the end of the handle range.
+    if (last_handle == att::kHandleMax) {
+      res_cb(att::Status());
+      return;
+    }
+
+    // Request the next batch.
+    DiscoveryPrimaryServicesInternal(last_handle + 1, att::kHandleMax,
+                                     std::move(svc_cb), std::move(res_cb));
+  });
+
+  auto error_cb = BindErrorCallback(
+      [this, res_cb = status_callback](att::Status status, att::Handle handle) {
+        // An Error Response code of "Attribute Not Found" indicates the end of
+        // the procedure (v5.0, Vol 3, Part G, 4.4.1).
+        if (status.is_protocol_error() &&
+            status.protocol_error() == att::ErrorCode::kAttributeNotFound) {
+          res_cb(att::Status());
+          return;
+        }
+
+        res_cb(status);
+      });
 
   att_->StartTransaction(std::move(pdu), rsp_cb, error_cb);
 }

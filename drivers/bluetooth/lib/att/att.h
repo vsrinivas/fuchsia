@@ -266,8 +266,8 @@ constexpr OpCode kReadByGroupTypeResponse = 0x11;
 constexpr uint8_t kMaxReadByGroupTypeValueLength = 251;
 
 // The Read By Group Type and Read By Type requests use identical payloads.
-template <UUIDType Format>
-using ReadByGroupTypeRequestParams = ReadByTypeRequestParams<Format>;
+using ReadByGroupTypeRequestParams16 = ReadByTypeRequestParams16;
+using ReadByGroupTypeRequestParams128 = ReadByTypeRequestParams128;
 
 struct AttributeGroupDataEntry {
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(AttributeGroupDataEntry);
