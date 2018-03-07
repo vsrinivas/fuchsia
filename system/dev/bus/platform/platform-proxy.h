@@ -58,6 +58,7 @@ typedef struct {
 typedef struct {
     size_t size;
     uint32_t align_log2;
+    uint32_t cache_policy;
 } pdev_config_vmo_t;
 
 typedef struct {

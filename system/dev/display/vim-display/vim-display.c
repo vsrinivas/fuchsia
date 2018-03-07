@@ -122,8 +122,7 @@ static zx_status_t setup_hdmi(vim2_display_t* display)
    status = pdev_map_contig_buffer(&display->pdev,
                         (display->disp_info.stride * display->disp_info.height *
                             ZX_PIXEL_FORMAT_BYTES(display->disp_info.format)),
-                        0,
-                        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                        0, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, ZX_CACHE_POLICY_CACHED,
                         &display->fbuffer);
     if (status != ZX_OK) {
         return status;

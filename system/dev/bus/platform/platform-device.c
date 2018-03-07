@@ -123,21 +123,38 @@ static zx_status_t platform_dev_get_bti(void* ctx, uint32_t index, zx_handle_t* 
 }
 
 static zx_status_t platform_dev_alloc_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
-                                                 zx_handle_t* out_handle) {
+                                                 uint32_t cache_policy, zx_handle_t* out_handle) {
     platform_dev_t* dev = ctx;
-    zx_status_t status = zx_vmo_create_contiguous(dev->bus->resource, size, align_log2, out_handle);
+    zx_handle_t vmo_handle;
+
+    zx_status_t status = zx_vmo_create_contiguous(dev->bus->resource, size, align_log2,
+                                                  &vmo_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_alloc_contig_vmo: zx_vmo_create_contiguous failed %d\n",
                status);
     }
+
+    if (cache_policy != ZX_CACHE_POLICY_CACHED) {
+        status = zx_vmo_set_cache_policy(vmo_handle, cache_policy);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "platform_dev_alloc_contig_vmo: zx_vmo_set_cache_policy failed %d\n",
+                   status);
+            zx_handle_close(vmo_handle);
+            return status;
+        }
+    }
+
+    *out_handle = vmo_handle;
     return status;
 }
 
 static zx_status_t platform_dev_map_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
-                                               uint32_t map_flags, void** out_vaddr,
-                                               zx_paddr_t* out_paddr, zx_handle_t* out_handle) {
+                                               uint32_t map_flags, uint32_t cache_policy,
+                                               void** out_vaddr, zx_paddr_t* out_paddr,
+                                               zx_handle_t* out_handle) {
     zx_handle_t handle;
-    zx_status_t status = platform_dev_alloc_contig_vmo(ctx, size, align_log2, &handle);
+    zx_status_t status = platform_dev_alloc_contig_vmo(ctx, size, align_log2, cache_policy,
+                                                       &handle);
     if (status != ZX_OK) {
         return status;
     }
@@ -232,9 +249,10 @@ static zx_status_t pdev_rpc_get_bti(platform_dev_t* dev, uint32_t index, zx_hand
 }
 
 static zx_status_t pdev_rpc_alloc_contig_vmo(platform_dev_t* dev, size_t size,
-                                             uint32_t align_log2, zx_handle_t* out_handle,
-                                             uint32_t* out_handle_count) {
-    zx_status_t status = platform_dev_alloc_contig_vmo(dev, size, align_log2, out_handle);
+                                             uint32_t align_log2, uint32_t cache_policy,
+                                             zx_handle_t* out_handle,  uint32_t* out_handle_count) {
+    zx_status_t status = platform_dev_alloc_contig_vmo(dev, size, align_log2, cache_policy,
+                                                       out_handle);
     if (status == ZX_OK) {
         *out_handle_count = 1;
     }
@@ -496,8 +514,9 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         break;
     case PDEV_ALLOC_CONTIG_VMO:
         resp.status = pdev_rpc_alloc_contig_vmo(dev, req->contig_vmo.size,
-                                                    req->contig_vmo.align_log2,
-                                                    &handle, &handle_count);
+                                                req->contig_vmo.align_log2,
+                                                req->contig_vmo.cache_policy,
+                                                &handle, &handle_count);
         break;
     case PDEV_GET_DEVICE_INFO:
          resp.status = platform_dev_get_device_info(dev, &resp.info);

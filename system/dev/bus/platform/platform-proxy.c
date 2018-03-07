@@ -440,13 +440,14 @@ static zx_status_t platform_dev_get_bti(void* ctx, uint32_t index, zx_handle_t* 
 }
 
 static zx_status_t platform_dev_alloc_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
-                                                 zx_handle_t* out_handle) {
+                                                 uint32_t cache_policy, zx_handle_t* out_handle) {
     platform_proxy_t* dev = ctx;
     pdev_req_t req = {
         .op = PDEV_ALLOC_CONTIG_VMO,
         .contig_vmo = {
             .size = size,
             .align_log2 = align_log2,
+            .cache_policy = cache_policy,
         },
     };
     pdev_resp_t resp;
@@ -455,10 +456,12 @@ static zx_status_t platform_dev_alloc_contig_vmo(void* ctx, size_t size, uint32_
 }
 
 static zx_status_t platform_dev_map_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
-                                               uint32_t map_flags, void** out_vaddr,
-                                               zx_paddr_t* out_paddr, zx_handle_t* out_handle) {
+                                               uint32_t map_flags, uint32_t cache_policy,
+                                               void** out_vaddr, zx_paddr_t* out_paddr,
+                                               zx_handle_t* out_handle) {
     zx_handle_t handle;
-    zx_status_t status = platform_dev_alloc_contig_vmo(ctx, size, align_log2, &handle);
+    zx_status_t status = platform_dev_alloc_contig_vmo(ctx, size, align_log2, cache_policy,
+                                                       &handle);
     if (status != ZX_OK) {
         return status;
     }

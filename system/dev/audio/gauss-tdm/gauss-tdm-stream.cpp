@@ -579,7 +579,7 @@ zx_status_t TdmOutputStream::OnGetBufferLocked(dispatcher::Channel* channel,
         ring_buffer_size_ = fbl::round_up(fifo_bytes_, frame_size_);
 
     // TODO - (hollande) Make this work with non contig vmo
-    resp.result = pdev_alloc_contig_vmo(&pdev_, ring_buffer_size_, 0,
+    resp.result = pdev_alloc_contig_vmo(&pdev_, ring_buffer_size_, 0, ZX_CACHE_POLICY_CACHED,
                                         ring_buffer_vmo_.reset_and_get_address());
 
     if (resp.result != ZX_OK) {
