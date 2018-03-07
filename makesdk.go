@@ -167,7 +167,7 @@ func init() {
 		},
 		{
 			kernelImg,
-			armBuildDir + "bootdata-qemu.bin",
+			armBuildDir + "bootdata-blob-qemu.bin",
 			"target/aarch64/bootdata-blob.bin",
 		},
 		{
@@ -183,7 +183,7 @@ func init() {
 		},
 		{
 			kernelImg,
-			x64BuildDir + "bootdata-pc.bin",
+			x64BuildDir + "bootdata-blob-pc.bin",
 			"target/x86_64/bootdata-blob.bin",
 		},
 		{
