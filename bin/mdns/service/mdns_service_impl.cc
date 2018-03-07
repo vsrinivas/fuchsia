@@ -9,6 +9,7 @@
 #include "garnet/bin/mdns/service/mdns_fidl_util.h"
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "lib/app/cpp/application_context.h"
+#include "lib/fidl/cpp/bindings/type_converters.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
@@ -186,7 +187,7 @@ void MdnsServiceImpl::SetSubtypes(const f1dl::String& service_name,
     return;
   }
 
-  iter->second->SetSubtypes(subtypes.To<std::vector<std::string>>());
+  iter->second->SetSubtypes(fxl::To<std::vector<std::string>>(subtypes));
 }
 
 void MdnsServiceImpl::ReannounceInstance(const f1dl::String& service_name,

@@ -9,6 +9,7 @@
 
 #include "garnet/bin/mdns/tool/formatting.h"
 #include "garnet/bin/mdns/tool/mdns_params.h"
+#include "lib/fidl/cpp/bindings/type_converters.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/mdns/fidl/mdns.fidl.h"
@@ -134,8 +135,8 @@ void MdnsImpl::Publish(const std::string& service_name,
   std::cout << "publishing instance " << instance_name << " of service "
             << service_name << "\n";
   mdns_service_->PublishServiceInstance(
-      service_name, instance_name, port, f1dl::Array<f1dl::String>::From(text),
-      [this](MdnsResult result) {
+      service_name, instance_name, port,
+      fxl::To<f1dl::Array<f1dl::String>>(text), [this](MdnsResult result) {
         UpdateStatus(result);
         fsl::MessageLoop::GetCurrent()->PostQuitTask();
       });
@@ -175,7 +176,7 @@ void MdnsImpl::Respond(const std::string& service_name,
 
   if (!announce.empty()) {
     mdns_service_->SetSubtypes(service_name, instance_name,
-                               f1dl::Array<f1dl::String>::From(announce));
+                               fxl::To<f1dl::Array<f1dl::String>>(announce));
   }
 
   WaitForKeystroke();
@@ -218,7 +219,7 @@ void MdnsImpl::GetPublication(bool query,
 
   auto publication = MdnsPublication::New();
   publication->port = publication_port_;
-  publication->text = f1dl::Array<f1dl::String>::From(publication_text_);
+  publication->text = fxl::To<f1dl::Array<f1dl::String>>(publication_text_);
 
   callback(std::move(publication));
 }
