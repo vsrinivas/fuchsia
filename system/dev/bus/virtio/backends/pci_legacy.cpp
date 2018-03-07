@@ -141,23 +141,32 @@ void PciLegacyBackend::RingKick(uint16_t ring_index) {
 }
 
 bool PciLegacyBackend::ReadFeature(uint32_t feature) {
+    // Legacy PCI back-end can only support one feature word.
+    if (feature >= 32) {
+        return false;
+    }
+
     fbl::AutoLock lock(&lock_);
     uint32_t val;
 
-    ZX_DEBUG_ASSERT((feature & (feature-1)) == 0);
+    ZX_DEBUG_ASSERT((feature & (feature - 1)) == 0);
     IoReadLocked(VIRTIO_PCI_DEVICE_FEATURES, &val);
-    bool is_set = (val & feature) > 0;
+    bool is_set = (val & (1u << feature)) > 0;
     zxlogf(SPEW, "%s: read feature bit %u = %u\n", tag(), feature, is_set);
     return is_set;
 }
 
 void PciLegacyBackend::SetFeature(uint32_t feature) {
+    // Legacy PCI back-end can only support one feature word.
+    if (feature >= 32) {
+        return;
+    }
+
     fbl::AutoLock lock(&lock_);
     uint32_t val;
-
-    ZX_DEBUG_ASSERT((feature & (feature-1)) == 0);
+    ZX_DEBUG_ASSERT((feature & (feature - 1)) == 0);
     IoReadLocked(VIRTIO_PCI_DRIVER_FEATURES, &val);
-    IoWriteLocked(VIRTIO_PCI_DRIVER_FEATURES, val | feature);
+    IoWriteLocked(VIRTIO_PCI_DRIVER_FEATURES, val | (1u << feature));
     zxlogf(SPEW, "%s: feature bit %u now set\n", tag(), feature);
 }
 
