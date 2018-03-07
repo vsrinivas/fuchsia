@@ -40,6 +40,7 @@ zx_status_t SelectBestFormat(
   uint32_t best_channels;
   audio_sample_format_t best_sample_format;
   uint32_t best_score = 0;
+  uint32_t best_frame_rate_delta = std::numeric_limits<uint32_t>::max();
 
   constexpr uint32_t U8_FMT =
       AUDIO_SAMPLE_FORMAT_8BIT | AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
@@ -50,10 +51,10 @@ zx_status_t SelectBestFormat(
   // indicate signed 16 bit for now.
   //
   // TODO(johngro) : clean this up as part of fixing MTWN-54
-  if ((pref_frame_rate & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN) ||
-      (((pref_frame_rate & U8_FMT) != U8_FMT) &&
-       ((pref_frame_rate & S16_FMT) != S16_FMT))) {
-    pref_frame_rate = AUDIO_SAMPLE_FORMAT_16BIT;
+  if ((pref_sample_format & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN) ||
+      (((pref_sample_format & U8_FMT) != U8_FMT) &&
+       ((pref_sample_format & S16_FMT) != S16_FMT))) {
+    pref_sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
   }
 
   for (const auto& range : fmts) {
@@ -117,8 +118,9 @@ zx_status_t SelectBestFormat(
     }
 
     uint32_t this_frame_rate = 0;
+    uint32_t frame_rate_delta = std::numeric_limits<uint32_t>::max();
     int frame_rate_score = 0;
-    if (range.flags | ASF_RANGE_FLAG_FPS_CONTINUOUS) {
+    if (range.flags & ASF_RANGE_FLAG_FPS_CONTINUOUS) {
       // This is a continuous sample rate range.  If we are within the range,
       // thats a match.  Otherwise move up/down as needed to match the min/max
       // of the range as appropriate.
@@ -126,13 +128,16 @@ zx_status_t SelectBestFormat(
           (pref_frame_rate <= range.max_frames_per_second)) {
         this_frame_rate = pref_frame_rate;
         frame_rate_score = 3;
+        frame_rate_delta = 0;
       } else if (pref_frame_rate < range.min_frames_per_second) {
         this_frame_rate = range.min_frames_per_second;
         frame_rate_score = 2;
+        frame_rate_delta = range.min_frames_per_second - pref_frame_rate;
       } else {
         FXL_DCHECK(pref_frame_rate > range.max_frames_per_second);
         this_frame_rate = range.max_frames_per_second;
         frame_rate_score = 1;
+        frame_rate_delta = pref_frame_rate - range.max_frames_per_second;
       }
     } else {
       // This is a discrete sample rate range.  Use the frame rate enumerator
@@ -142,6 +147,7 @@ zx_status_t SelectBestFormat(
           // We matched our preference.  No need to keep searching.
           this_frame_rate = rate;
           frame_rate_score = 3;
+          frame_rate_delta = 0;
           break;
         }
 
@@ -154,6 +160,7 @@ zx_status_t SelectBestFormat(
               ((frame_rate_score == 2) && (rate < this_frame_rate))) {
             this_frame_rate = rate;
             frame_rate_score = 2;
+            frame_rate_delta = rate - pref_frame_rate;
           }
         } else {
           FXL_DCHECK(pref_frame_rate > rate);
@@ -166,6 +173,7 @@ zx_status_t SelectBestFormat(
               ((frame_rate_score == 1) && (rate > this_frame_rate))) {
             this_frame_rate = rate;
             frame_rate_score = 1;
+            frame_rate_delta = pref_frame_rate - rate;
           }
         }
       }
@@ -195,8 +203,13 @@ zx_status_t SelectBestFormat(
     FXL_DCHECK(::audio::utils::FormatIsCompatible(
         this_frame_rate, this_channels, this_sample_format, range));
 
-    if (score > best_score) {
+    // If this score is better than the current best score, or this score ties
+    // the current best score but the frame rate distance is less, then this is
+    // the new best format.
+    if ((score > best_score) ||
+        ((score == best_score) && (frame_rate_delta < best_frame_rate_delta))) {
       best_frame_rate = this_frame_rate;
+      best_frame_rate_delta = frame_rate_delta;
       best_channels = this_channels;
       best_sample_format = this_sample_format;
       best_score = score;
