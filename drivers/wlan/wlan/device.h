@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "dispatcher.h"
 #include "proxy_helpers.h"
 
 #include <ddk/driver.h>
@@ -14,6 +13,7 @@
 #include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/device_interface.h>
+#include <wlan/mlme/dispatcher.h>
 #include <wlan/mlme/packet.h>
 #include <zircon/compiler.h>
 #include <zx/channel.h>

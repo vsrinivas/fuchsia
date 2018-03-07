@@ -15,8 +15,6 @@ driver_module("wlan_driver") {
     "binding.c",
     "device.cpp",
     "device.h",
-    "dispatcher.cpp",
-    "dispatcher.h",
     "driver.cpp",
     "proxy_helpers.h",
   ]

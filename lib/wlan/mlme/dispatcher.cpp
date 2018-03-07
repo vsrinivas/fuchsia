@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dispatcher.h"
-
-#include "lib/wlan/fidl/wlan_mlme.fidl.h"
-#include "lib/wlan/fidl/wlan_mlme_ext.fidl.h"
+#include <wlan/mlme/dispatcher.h>
 
 #include <fbl/unique_ptr.h>
 #include <wlan/common/channel.h>
@@ -18,6 +15,9 @@
 #include <wlan/mlme/serialize.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
+
+#include "lib/wlan/fidl/wlan_mlme.fidl.h"
+#include "lib/wlan/fidl/wlan_mlme_ext.fidl.h"
 
 #include <cinttypes>
 #include <cstring>
