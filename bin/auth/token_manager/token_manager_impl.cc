@@ -140,7 +140,6 @@ void TokenManagerImpl::GetAccessToken(
   auth_db_->GetRefreshToken(cred_id, &credential);
 
   auto cache_key = GetCacheKey(auth_provider_type, user_profile_id);
-
   cache::OAuthTokens tokens;
 
   if (token_cache_.Get(cache_key, &tokens) == cache::Status::kOK &&
@@ -176,7 +175,6 @@ void TokenManagerImpl::GetAccessToken(
         }
 
         callback(Status::OK, std::move(access_token_val));
-        return;
       });
 }
 
@@ -230,7 +228,6 @@ void TokenManagerImpl::GetIdToken(
         }
 
         callback(Status::OK, id_token_val);
-        return;
       });
 }
 
@@ -296,7 +293,6 @@ void TokenManagerImpl::GetFirebaseToken(
                      }
 
                      callback(Status::OK, std::move(fb_token));
-                     return;
                    });
              });
 }
@@ -338,7 +334,6 @@ void TokenManagerImpl::DeleteAllTokens(
         auth_db_->DeleteCredential(cred_id);
 
         callback(Status::OK);
-        return;
       });
 }
 

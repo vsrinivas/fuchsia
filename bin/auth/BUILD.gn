@@ -19,6 +19,21 @@ package("token_manager") {
   ]
 }
 
+package("oauth_examples") {
+  testonly = true
+  system_image = true
+
+  deps = [
+    "//garnet/bin/auth/testing/e2e_manual:google_oauth_demo",
+  ]
+
+  binaries = [
+    {
+      name = "google_oauth_demo"
+    },
+  ]
+}
+
 package("tests") {
   testonly = true
   system_image = true
@@ -27,8 +42,7 @@ package("tests") {
 
   deps = [
     ":token_manager_unittests",
-    "//garnet/bin/auth/test:e2e_dev",
-    "//garnet/bin/auth/test:e2e_google_local",
+    "//garnet/bin/auth/testing/e2e_local:e2e_dev",
     "//garnet/bin/auth/token_manager/test:dev_auth_provider",
   ]
 
@@ -43,16 +57,7 @@ package("tests") {
       name = "token_manager_unittests"
     },
     {
-      name = "dev_token_manager_e2e_test"
-
-      # Disabled because it is timed out when fvm.blk is used instead of bootfs.
-      disabled = true
-    },
-    {
-      name = "google_token_manager_e2e_local_test"
-
-      # Disabled because it fails when fvm.blk is used instead of bootfs.
-      disabled = true
+      name = "dev_token_mgr_e2e_test"
     },
   ]
 }

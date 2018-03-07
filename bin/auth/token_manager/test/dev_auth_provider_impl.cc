@@ -29,12 +29,13 @@ DevAuthProviderImpl::~DevAuthProviderImpl() {}
 void DevAuthProviderImpl::GetPersistentCredential(
     f1dl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
     const GetPersistentCredentialCallback& callback) {
-  auto profile = auth::UserProfileInfo::New();
-  profile->id = GenerateRandomString() + "@example.com";
+  UserProfileInfoPtr ui = UserProfileInfo::New();
+  ui->id = GenerateRandomString() + "@example.com";
+  ui->display_name = "test_user_display_name";
+  ui->url = "http://test_user/profile/url";
+  ui->image_url = "http://test_user/profile/image/url";
 
-  callback(AuthProviderStatus::OK, "rt_" + GenerateRandomString(),
-           std::move(profile));
-  return;
+  callback(AuthProviderStatus::OK, "rt_" + GenerateRandomString(), std::move(ui));
 }
 
 void DevAuthProviderImpl::GetAppAccessToken(

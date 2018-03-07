@@ -5,12 +5,12 @@
 visibility = [ "//garnet/bin/auth/*" ]
 
 executable("e2e_dev") {
-  output_name = "dev_token_manager_e2e_test"
+  output_name = "dev_token_mgr_e2e_test"
 
   testonly = true
 
   sources = [
-    "dev_token_manager_apptest.cc",
+    "dev_token_mgr_test.cc",
   ]
 
   public_deps = [
@@ -31,26 +31,3 @@ executable("e2e_dev") {
   ]
 }
 
-executable("e2e_google_local") {
-  output_name = "google_token_manager_e2e_local_test"
-
-  testonly = true
-
-  sources = [
-    "google_token_manager_local_apptest.cc",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/app/cpp",
-  ]
-
-  deps = [
-    "//garnet/lib/callback",
-    "//garnet/lib/gtest",
-    "//garnet/public/lib/auth/fidl",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/test_runner/cpp/reporting",
-    "//third_party/googletest:gtest",
-  ]
-}
