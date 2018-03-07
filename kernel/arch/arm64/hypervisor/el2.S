@@ -217,13 +217,12 @@
 
 .macro entry_init
 .align 7
-    hvc_jump .Linit_table 5
+    hvc_jump .Linit_table 4
 .Linit_table:
     b el2_hvc_psci
     b el2_hvc_mexec
     b el2_hvc_on
-    b el2_hvc_tlbi_ipa
-    b el2_hvc_tlbi_vmid
+    b el2_hvc_tlbi
 .endm
 
 .macro entry_sync return_code
@@ -240,13 +239,12 @@
 
     // If we got to here, the exception came from the host or EL2.
     // Continue execution through a jump table based on the HVC index.
-    hvc_jump .Lsync_table 6
+    hvc_jump .Lsync_table 5
 .Lsync_table:
     b el2_hvc_psci
     b el2_hvc_mexec
     b el2_hvc_off
-    b el2_hvc_tlbi_ipa
-    b el2_hvc_tlbi_vmid
+    b el2_hvc_tlbi
     b el2_hvc_resume
 .endm
 
@@ -405,12 +403,29 @@ FUNCTION_LABEL(el2_hvc_off)
 
 // zx_status_t arm64_el2_tlbi_ipa(zx_paddr_t vttbr, zx_vaddr_t addr, bool terminal);
 FUNCTION(arm64_el2_tlbi_ipa)
+    mov x7, 0
     hvc 3
     ret
 END_FUNCTION(arm64_el2_tlbi_ipa)
-FUNCTION_LABEL(el2_hvc_tlbi_ipa)
+
+// zx_status_t arm64_el2_tlbi_vmid(zx_paddr_t vttbr);
+FUNCTION(arm64_el2_tlbi_vmid)
+    mov x7, 1
+    hvc 3
+    ret
+END_FUNCTION(arm64_el2_tlbi_vmid)
+
+FUNCTION_LABEL(el2_hvc_tlbi)
     switch_to_guest
 
+    cbz x7, el2_hvc_tlbi_ipa
+    b el2_hvc_tlbi_vmid
+
+.Ltlbi_exit:
+    switch_to_host
+    exception_return ZX_OK
+
+FUNCTION_LABEL(el2_hvc_tlbi_ipa)
     // TLBI IPAS2* instructions take bits [51:12] of the IPA.
     lsr x1, x1, 12
 
@@ -426,30 +441,19 @@ FUNCTION_LABEL(el2_hvc_tlbi_ipa)
     tlbi vmalle1is
     dsb ish
     isb
+    b .Ltlbi_exit
 
-    switch_to_host
-    exception_return ZX_OK
-
-// zx_status_t arm64_el2_tlbi_vmid(zx_paddr_t vttbr);
-FUNCTION(arm64_el2_tlbi_vmid)
-    hvc 4
-    ret
-END_FUNCTION(arm64_el2_tlbi_vmid)
 FUNCTION_LABEL(el2_hvc_tlbi_vmid)
-    switch_to_guest
-
     // Invalidate VMID. Based on ARM DEN 0024A, page 12-5.
     dsb ishst
     tlbi vmalls12e1is
     dsb ish
     isb
-
-    switch_to_host
-    exception_return ZX_OK
+    b .Ltlbi_exit
 
 // zx_status_t arm64_el2_resume(zx_paddr_t vttbr, zx_paddr_t state, uint64_t hcr);
 FUNCTION(arm64_el2_resume)
-    hvc 5
+    hvc 4
     ret
 END_FUNCTION(arm64_el2_resume)
 FUNCTION_LABEL(el2_hvc_resume)
