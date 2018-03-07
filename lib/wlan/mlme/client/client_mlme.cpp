@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/mlme/client_mlme.h>
+#include <wlan/mlme/client/client_mlme.h>
 
 #include <wlan/common/bitfield.h>
 #include <wlan/common/logging.h>
+#include <wlan/mlme/client/scanner.h>
+#include <wlan/mlme/client/station.h>
 #include <wlan/mlme/interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/scanner.h>
 #include <wlan/mlme/serialize.h>
-#include <wlan/mlme/station.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
 

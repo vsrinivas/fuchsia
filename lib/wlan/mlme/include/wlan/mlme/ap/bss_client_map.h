@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <wlan/mlme/bss_interface.h>
+#include <wlan/mlme/ap/bss_interface.h>
+#include <wlan/mlme/ap/remote_client_interface.h>
 #include <wlan/mlme/macaddr_map.h>
-#include <wlan/mlme/remote_client_interface.h>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>

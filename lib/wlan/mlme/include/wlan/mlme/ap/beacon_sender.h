@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <wlan/mlme/beacon_sender_interface.h>
-#include <wlan/mlme/bss_interface.h>
+#include <wlan/mlme/ap/beacon_sender_interface.h>
+#include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/timer.h>
 

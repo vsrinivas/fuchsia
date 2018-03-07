@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <wlan/mlme/beacon_sender_interface.h>
+#include <wlan/mlme/ap/beacon_sender_interface.h>
 #include <wlan/mlme/device_interface.h>
 
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"

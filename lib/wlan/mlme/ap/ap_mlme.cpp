@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/mlme/ap_mlme.h>
+#include <wlan/mlme/ap/ap_mlme.h>
 
 #include <wlan/common/logging.h>
-#include <wlan/mlme/hw_beacon_sender.h>
+#include <wlan/mlme/ap/hw_beacon_sender.h>
 
 namespace wlan {
 

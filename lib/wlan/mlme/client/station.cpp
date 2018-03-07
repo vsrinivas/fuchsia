@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/mlme/station.h>
+#include <wlan/mlme/client/station.h>
 
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>

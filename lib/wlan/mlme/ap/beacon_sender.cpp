@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/mlme/beacon_sender.h>
+#include <wlan/mlme/ap/beacon_sender.h>
 
 #include <wlan/common/logging.h>
 #include <wlan/mlme/mac_frame.h>

@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/mlme/scanner.h>
-#include <wlan/mlme/sequence.h>
+#include <wlan/mlme/client/scanner.h>
 
 #include <wlan/common/logging.h>
 #include <wlan/mlme/device_interface.h>
@@ -11,6 +10,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/serialize.h>
+#include <wlan/mlme/sequence.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
 

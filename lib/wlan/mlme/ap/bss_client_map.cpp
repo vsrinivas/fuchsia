@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/mlme/bss_client_map.h>
+#include <wlan/mlme/ap/bss_client_map.h>
 
 namespace wlan {
 

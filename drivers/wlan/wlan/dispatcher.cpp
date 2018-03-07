@@ -10,8 +10,8 @@
 #include <fbl/unique_ptr.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/mac_frame.h>
-#include <wlan/mlme/ap_mlme.h>
-#include <wlan/mlme/client_mlme.h>
+#include <wlan/mlme/ap/ap_mlme.h>
+#include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/packet.h>

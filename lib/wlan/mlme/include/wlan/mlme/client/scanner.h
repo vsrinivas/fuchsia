@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <wlan/mlme/bss.h>
+#include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/frame_handler.h>
 
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"

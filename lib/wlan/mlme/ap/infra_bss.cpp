@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <wlan/mlme/infra_bss.h>
+#include <wlan/mlme/ap/infra_bss.h>
 
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>

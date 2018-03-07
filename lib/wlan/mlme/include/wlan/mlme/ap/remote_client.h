@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <wlan/mlme/bss_interface.h>
+#include <wlan/mlme/ap/bss_interface.h>
+#include <wlan/mlme/ap/remote_client_interface.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/fsm.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/remote_client_interface.h>
 #include <wlan/mlme/timer.h>
 
 #include <zircon/types.h>
