@@ -176,6 +176,7 @@ class ModuleResolverApp : ContextListener {
 
     auto add_module = AddModule::New();
     add_module->daisy = std::move(daisy);
+    add_module->module_name = module_result->module_id;
     add_module->story_id = story_id;
     add_module->surface_relation = modular::SurfaceRelation::New();
     auto action = Action::New();
@@ -218,7 +219,7 @@ class ModuleResolverApp : ContextListener {
     noun_constraint->set_link_info(std::move(link_info));
 
     auto noun_constraint_entry = modular::ResolverNounConstraintEntry::New();
-    noun_constraint_entry->key = link_path->link_name;
+    noun_constraint_entry->key = link_metadata->name;
     noun_constraint_entry->constraint = std::move(noun_constraint);
     return noun_constraint_entry;
   }

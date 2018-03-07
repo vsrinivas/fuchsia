@@ -104,7 +104,7 @@ struct ModuleResolverResult {
   string module_id;
 
   // The Module's manifest file (see docs/manifests/module.md)
-  ModuleManifest manifest;
+  ModuleManifest? manifest;
 
   CreateChainInfo create_chain_info;
 
