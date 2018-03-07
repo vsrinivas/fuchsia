@@ -7,7 +7,6 @@ group("maxwell_integration") {
 
   public_deps = [
     ":context_engine_test",
-    ":resolver_test",
     ":suggestion_engine_test",
   ]
 }
@@ -32,19 +31,6 @@ executable("context_engine_test") {
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
-  ]
-}
-
-executable("resolver_test") {
-  testonly = true
-
-  sources = [
-    "resolver_test.cc",
-  ]
-
-  deps = [
-    ":common",
-    "//peridot/public/lib/resolver/fidl",
   ]
 }
 
