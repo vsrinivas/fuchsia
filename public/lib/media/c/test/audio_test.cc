@@ -46,6 +46,15 @@ constexpr char* UNKNOWN_DEVICE_ID = (char* const)UNKNOWN_DEVICE_STR;
 constexpr char* EMPTY_DEVICE_ID = (char* const)EMPTY_DEVICE_STR;
 constexpr int WRITE_BUFFER_NUM_SAMPLES = 16 * 3 * 5 * 7;  // Mods w/num_channels
 
+// No implementation of an audio renderer should ever report that its minimum
+// clock lead time is max(uint64_t), as this would imply a minimum lead time of
+// over 580 years.  When testing this API to validate that the API provided at
+// least *some* value, initialize our out variable to this value to make sure
+// that the API provided at least some value, instead of leaving the variable in
+// its potentially uninitialized state..
+constexpr zx_duration_t INVALID_MIN_DELAY =
+  std::numeric_limits<zx_duration_t>::max();
+
 //
 // Utility functions
 //
@@ -346,7 +355,6 @@ TEST(media_client, audio_stream_delay) {
 
   std::vector<fuchsia_audio_parameters> param_list(num_devices);
   std::vector<fuchsia_audio_output_stream*> stream_list(num_devices);
-  std::vector<zx_duration_t> delay_list(num_devices, 0);
 
   for (int dev_num = 0; dev_num < num_devices; ++dev_num) {
     ASSERT_EQ(ZX_OK, fuchsia_audio_manager_get_output_device_default_parameters(
@@ -355,9 +363,11 @@ TEST(media_client, audio_stream_delay) {
                          manager, dev_list[dev_num].id, &param_list[dev_num],
                          &stream_list[dev_num]));
     ASSERT_TRUE(stream_list[dev_num]);
+
+    zx_duration_t delay_nsec = INVALID_MIN_DELAY;
     ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_get_min_delay(
-                         stream_list[dev_num], &delay_list[dev_num]));
-    ASSERT_TRUE(delay_list[dev_num] > 0);
+                         stream_list[dev_num], &delay_nsec));
+    ASSERT_NE(delay_nsec, INVALID_MIN_DELAY);
   }
 
   // Get all delays before starting to free them
@@ -450,7 +460,6 @@ TEST(media_client, audio_stream_write) {
 
   std::vector<fuchsia_audio_parameters> param_list(num_devices);
   std::vector<fuchsia_audio_output_stream*> stream_list(num_devices);
-  std::vector<zx_duration_t> delay_list(num_devices, 0);
 
   std::vector<float> audio_buffer1(WRITE_BUFFER_NUM_SAMPLES);
   std::vector<float> audio_buffer2(WRITE_BUFFER_NUM_SAMPLES);
@@ -466,12 +475,13 @@ TEST(media_client, audio_stream_write) {
                          manager, dev_list[dev_num].id, &param_list[dev_num],
                          &stream_list[dev_num]));
     ASSERT_TRUE(stream_list[dev_num]);
-    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_get_min_delay(
-                         stream_list[dev_num], &delay_list[dev_num]));
-    ASSERT_TRUE(delay_list[dev_num] > 0);
 
-    zx_time_t pres_time =
-        (2 * delay_list[dev_num]) + zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_duration_t delay_nsec = INVALID_MIN_DELAY;
+    ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_get_min_delay(
+                         stream_list[dev_num], &delay_nsec));
+    ASSERT_NE(delay_nsec, INVALID_MIN_DELAY);
+
+    zx_time_t pres_time = (2 * delay_nsec) + zx_clock_get(ZX_CLOCK_MONOTONIC);
     ASSERT_EQ(ZX_OK, fuchsia_audio_output_stream_write(
                          stream_list[dev_num], audio_buffer1.data(),
                          WRITE_BUFFER_NUM_SAMPLES, pres_time));
@@ -510,9 +520,9 @@ TEST(media_client, audio_stream_write_c) {
                                                       &params, &stream));
   ASSERT_TRUE(stream);
 
-  zx_duration_t delay_nsec = 0;
+  zx_duration_t delay_nsec = INVALID_MIN_DELAY;
   ASSERT_EQ(ZX_OK, audio_output_stream_get_min_delay(stream, &delay_nsec));
-  ASSERT_TRUE(delay_nsec > 0);
+  ASSERT_NE(delay_nsec, INVALID_MIN_DELAY);
 
   ASSERT_EQ(ZX_OK, audio_output_stream_set_gain(stream, 0.0f));
 
