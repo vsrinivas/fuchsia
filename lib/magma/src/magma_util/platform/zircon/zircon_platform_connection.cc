@@ -658,6 +658,7 @@ public:
         uint64_t commands_sent = 0;
         while (commands_sent < command_count) {
             auto op = new (payload) ExecuteImmediateCommandsOp;
+            op->context_id = context_id;
 
             uint64_t space_used = sizeof(ExecuteImmediateCommandsOp);
             uint64_t semaphores_used = 0;
