@@ -48,7 +48,7 @@ TEST(SysloggerSettings, ParseValidOptions) {
 
   EXPECT_STR_EMPTY(ParseLoggerSettings(
       fxl::CommandLineFromInitializerList({"argv0", "--quiet"}), &settings));
-  EXPECT_EQ(1, settings.severity);
+  EXPECT_EQ(0, settings.severity);
 
   EXPECT_STR_EMPTY(ParseLoggerSettings(
       fxl::CommandLineFromInitializerList({"argv0", "--quiet=3"}), &settings));
