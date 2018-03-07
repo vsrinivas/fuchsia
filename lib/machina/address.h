@@ -60,9 +60,9 @@ static constexpr uint64_t kI8250Base2               = 0x3e8;
 static constexpr uint64_t kI8250Base3               = 0x2e8;
 static constexpr uint64_t kI8250Size                = 0x8;
 
-// RTC ports.
-static constexpr uint64_t kRtcBase                  = 0x70;
-static constexpr uint64_t kRtcSize                  = 0x2;
+// CMOS ports.
+static constexpr uint64_t kCmosBase                 = 0x70;
+static constexpr uint64_t kCmosSize                 = 0x2;
 
 // I8042 ports.
 static constexpr uint64_t kI8042Base                = 0x60;

@@ -43,7 +43,7 @@ class Pm1Handler : public IoHandler {
   uint16_t enable_ __TA_GUARDED(mutex_) = 0;
 };
 
-class RtcHandler : public IoHandler {
+class CmosHandler : public IoHandler {
  public:
   zx_status_t Init(Guest* guest);
 
@@ -51,8 +51,8 @@ class RtcHandler : public IoHandler {
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
  private:
-  zx_status_t ReadRtcRegister(uint8_t rtc_index, uint8_t* value) const;
-  zx_status_t WriteRtcRegister(uint8_t rtc_index, uint8_t value);
+  zx_status_t ReadCmosRegister(uint8_t cmos_index, uint8_t* value) const;
+  zx_status_t WriteCmosRegister(uint8_t cmos_index, uint8_t value);
   mutable fbl::Mutex mutex_;
   uint8_t index_ __TA_GUARDED(mutex_) = 0;
 };
@@ -89,7 +89,7 @@ class IoPort {
   PicHandler pic2_;
   PitHandler pit_;
   Pm1Handler pm1_;
-  RtcHandler rtc_;
+  CmosHandler cmos_;
   I8042Handler i8042_;
   ProcessorInterfaceHandler proc_iface_;
 };
