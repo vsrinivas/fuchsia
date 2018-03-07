@@ -26,5 +26,6 @@ chsh -s /bin/bash ${username}
 
 # Setup hostname.
 echo "machina-guest" > /etc/hostname
+echo "127.0.1.1    machina-guest" >> /etc/hosts
 
 apt clean
