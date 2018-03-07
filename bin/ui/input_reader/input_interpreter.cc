@@ -233,7 +233,39 @@ bool InputInterpreter::Initialize() {
       touchscreen_report_ = mozart::InputReport::New();
       touchscreen_report_->touchscreen = mozart::TouchscreenReport::New();
 
-      touch_device_type_ = TouchDeviceType::PARADISE;
+      touch_device_type_ = TouchDeviceType::PARADISEv1;
+    } else if (is_paradise_touch_v2_report_desc(desc.data(), desc.size())) {
+      zx_status_t setup_res = setup_paradise_touch(fd_);
+      if (setup_res != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to setup Paradise touch (res " << setup_res
+                       << ")";
+        return false;
+      }
+
+      // TODO(cpu): Add support for stylus.
+
+      FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
+      has_touchscreen_ = true;
+      touchscreen_descriptor_ = mozart::TouchscreenDescriptor::New();
+      touchscreen_descriptor_->x = mozart::Axis::New();
+      touchscreen_descriptor_->x->range = mozart::Range::New();
+      touchscreen_descriptor_->x->range->min = 0;
+      touchscreen_descriptor_->x->range->max = PARADISE_X_MAX;
+      touchscreen_descriptor_->x->resolution = 1;
+
+      touchscreen_descriptor_->y = mozart::Axis::New();
+      touchscreen_descriptor_->y->range = mozart::Range::New();
+      touchscreen_descriptor_->y->range->min = 0;
+      touchscreen_descriptor_->y->range->max = PARADISE_Y_MAX;
+      touchscreen_descriptor_->y->resolution = 1;
+
+      // TODO(cpu) do not hardcode |max_finger_id|.
+      touchscreen_descriptor_->max_finger_id = 255;
+
+      touchscreen_report_ = mozart::InputReport::New();
+      touchscreen_report_->touchscreen = mozart::TouchscreenReport::New();
+
+      touch_device_type_ = TouchDeviceType::PARADISEv2;
     } else if (is_paradise_touchpad_v1_report_desc(desc.data(), desc.size())) {
       zx_status_t setup_res = setup_paradise_touchpad(fd_);
       if (setup_res != ZX_OK) {
@@ -439,9 +471,18 @@ bool InputInterpreter::Read(bool discard) {
       }
       break;
 
-    case TouchDeviceType::PARADISE:
+    case TouchDeviceType::PARADISEv1:
       if (report_[0] == PARADISE_RPT_ID_TOUCH) {
-        if (ParseParadiseTouchscreenReport(report_.data(), rc)) {
+        if (ParseParadiseTouchscreenReport<paradise_touch_t>(report_.data(), rc)) {
+          if (!discard) {
+            input_device_->DispatchReport(touchscreen_report_.Clone());
+          }
+        }
+      }
+      break;
+    case TouchDeviceType::PARADISEv2:
+      if (report_[0] == PARADISE_RPT_ID_TOUCH) {
+        if (ParseParadiseTouchscreenReport<paradise_touch_v2_t>(report_.data(), rc)) {
           if (!discard) {
             input_device_->DispatchReport(touchscreen_report_.Clone());
           }
@@ -595,13 +636,14 @@ bool InputInterpreter::ParseSamsungTouchscreenReport(uint8_t* r, size_t len) {
   return true;
 }
 
+template <typename ReportT>
 bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
-  if (len != sizeof(paradise_touch_t)) {
+  if (len != sizeof(ReportT)) {
     FXL_LOG(INFO) << "paradise wrong size " << len;
     return false;
   }
 
-  const auto& report = *(reinterpret_cast<paradise_touch_t*>(r));
+  const auto& report = *(reinterpret_cast<ReportT*>(r));
   touchscreen_report_->event_time = InputEventTimestampNow();
 
   size_t index = 0;

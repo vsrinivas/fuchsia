@@ -44,7 +44,8 @@ class InputInterpreter {
   enum class TouchDeviceType {
     NONE,
     ACER12,
-    PARADISE,
+    PARADISEv1,
+    PARADISEv2,
     SAMSUNG,
     EGALAX
   };
@@ -73,6 +74,7 @@ class InputInterpreter {
   bool ParseAcer12TouchscreenReport(uint8_t* report, size_t len);
   bool ParseAcer12StylusReport(uint8_t* report, size_t len);
   bool ParseSamsungTouchscreenReport(uint8_t* report, size_t len);
+  template <typename ReportT>
   bool ParseParadiseTouchscreenReport(uint8_t* report, size_t len);
   bool ParseEGalaxTouchscreenReport(uint8_t* report, size_t len);
   template <typename ReportT>
