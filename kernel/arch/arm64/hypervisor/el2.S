@@ -213,14 +213,6 @@
     str x9, [sp, -16]!
     mov x9, \return_code
     str x9, [sp, 8]
-
-    // Check VTTBR_EL2 to determine whether the exception came from the guest or
-    // from the host.
-    mrs x9, vttbr_el2
-    cbnz x9, el2_guest_exit
-
-    // The exception came from the host, so there is no guest state to preserve.
-    pop_stack
 .endm
 
 .macro entry_init
@@ -234,20 +226,34 @@
     b el2_hvc_tlbi_vmid
 .endm
 
-.macro entry_exec name return_code
+.macro entry_sync return_code
 .align 7
     guest_exit \return_code
 
+    // Check VTTBR_EL2 to determine whether the exception came from the guest or
+    // from the host.
+    mrs x9, vttbr_el2
+    cbnz x9, el2_guest_exit_or_fp_resume
+
+    // The exception came from the host, so there is no guest state to preserve.
+    pop_stack
+
     // If we got to here, the exception came from the host or EL2.
     // Continue execution through a jump table based on the HVC index.
-    hvc_jump .L\name\()_exec_table 6
-.L\name\()_exec_table:
+    hvc_jump .Lsync_table 6
+.Lsync_table:
     b el2_hvc_psci
     b el2_hvc_mexec
     b el2_hvc_off
     b el2_hvc_tlbi_ipa
     b el2_hvc_tlbi_vmid
     b el2_hvc_resume
+.endm
+
+.macro entry_irq return_code
+.align 7
+    guest_exit \return_code
+    b el2_guest_exit
 .endm
 
 .macro entry_invalid_exception
@@ -306,8 +312,8 @@ FUNCTION_LABEL(arm64_el2_exec_table)
     entry_invalid_exception
 
     /* exceptions from lower EL, running arm64 */
-    entry_exec sync, ZX_OK
-    entry_exec irq, ZX_ERR_NEXT
+    entry_sync ZX_OK
+    entry_irq ZX_ERR_NEXT
     entry_invalid_exception
     entry_invalid_exception
 
@@ -460,7 +466,7 @@ FUNCTION_LABEL(el2_hvc_resume)
     tlbi vmalle1
     mov x10, 1
     str x10, [x9, ES_RESUME]
-    dsb ishst
+    dsb nshst
 
 .Lresume:
     // Set the hypervisor control register.
@@ -485,7 +491,7 @@ FUNCTION_LABEL(el2_hvc_resume)
     // Return to guest.
     eret
 
-FUNCTION_LABEL(el2_guest_exit)
+FUNCTION_LABEL(el2_guest_exit_or_fp_resume)
     // Check ESR_EL2.EC to determine whether the exception was due to a
     // floating-point trap.
     mrs x9, esr_el2
@@ -493,6 +499,7 @@ FUNCTION_LABEL(el2_guest_exit)
     cmp x9, ESR_EL2_EC_FP
     b.eq el2_fp_resume
 
+FUNCTION_LABEL(el2_guest_exit)
     // Load El2State from tpidr_el2.
     mrs x9, tpidr_el2
 
