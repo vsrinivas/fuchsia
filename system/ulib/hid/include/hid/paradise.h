@@ -39,6 +39,28 @@ typedef struct paradise_touch {
     uint16_t scan_time;
 } __attribute__((packed)) paradise_touch_t;
 
+typedef struct paradise_finger_v2 {
+    uint8_t flags;
+    uint16_t finger_id;
+
+    uint8_t width;
+    uint8_t height;
+
+    uint16_t x;
+    uint16_t y;
+
+    uint8_t pressure;
+} __attribute__((packed)) paradise_finger_v2_t;
+
+typedef struct paradise_touch_v2 {
+    uint8_t rpt_id;
+    uint8_t pad;
+    uint8_t contact_count;
+
+    paradise_finger_v2_t fingers[5];
+    uint16_t scan_time;
+} __attribute__((packed)) paradise_touch_v2_t;
+
 #define PARADISE_STYLUS_STATUS_TSWITCH 0x01
 #define PARADISE_STYLUS_STATUS_BARREL  0x02
 #define PARADISE_STYLUS_STATUS_ERASER  0x04
@@ -72,6 +94,7 @@ typedef struct paradise_stylus {
 } __attribute__((packed)) paradise_stylus_t;
 
 bool is_paradise_touch_report_desc(const uint8_t* data, size_t len);
+bool is_paradise_touch_v2_report_desc(const uint8_t* data, size_t len);
 zx_status_t setup_paradise_touch(int fd);
 
 typedef struct paradise_touchpad_finger_v1 {

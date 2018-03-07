@@ -32,6 +32,7 @@ enum touch_panel_type {
     TOUCH_PANEL_UNKNOWN,
     TOUCH_PANEL_ACER12,
     TOUCH_PANEL_PARADISE,
+    TOUCH_PANEL_PARADISEv2,
     TOUCH_PANEL_EGALAX,
 };
 
@@ -75,6 +76,24 @@ static void paradise_touch_dump(paradise_touch_t* rpt) {
         printf("    tswitch: %u\n", paradise_finger_flags_tswitch(rpt->fingers[i].flags));
         printf("    confidence: %u\n", paradise_finger_flags_confidence(rpt->fingers[i].flags));
         printf("  finger_id: %u\n", rpt->fingers[i].finger_id);
+        printf("  x:      %u\n", rpt->fingers[i].x);
+        printf("  y:      %u\n", rpt->fingers[i].y);
+    }
+    printf("scan_time: %u\n", rpt->scan_time);
+}
+
+static void paradise_touch_v2_dump(paradise_touch_v2_t* rpt) {
+    printf("report id: %u\n", rpt->rpt_id);
+    printf("pad: %#02x\n", rpt->pad);
+    printf("contact count: %u\n", rpt->contact_count);
+    for (int i = 0; i < 5; i++) {
+        printf("finger %d\n", i);
+        printf("  flags: %#02x\n", rpt->fingers[i].flags);
+        printf("    tswitch: %u\n", paradise_finger_flags_tswitch(rpt->fingers[i].flags));
+        printf("    confidence: %u\n", paradise_finger_flags_confidence(rpt->fingers[i].flags));
+        printf("  finger_id: %u\n", rpt->fingers[i].finger_id);
+        printf("  width:  %u\n", rpt->fingers[i].width);
+        printf("  height: %u\n", rpt->fingers[i].height);
         printf("  x:      %u\n", rpt->fingers[i].x);
         printf("  y:      %u\n", rpt->fingers[i].y);
     }
@@ -199,6 +218,39 @@ static void process_paradise_touchscreen_input(void* buf, size_t len, int vcfd, 
         uint32_t y = scale32(rpt->fingers[c].y, fb->info.height, PARADISE_Y_MAX);
         uint32_t width = 10;
         uint32_t height = 10;
+        uint32_t color = get_color(c);
+        draw_points(pixels, color, x, y, width, height, fb->info.stride, fb->info.height);
+    }
+
+    if (paradise_finger_flags_tswitch(rpt->fingers[0].flags)) {
+        uint32_t x = scale32(rpt->fingers[0].x, fb->info.width, PARADISE_X_MAX);
+        uint32_t y = scale32(rpt->fingers[0].y, fb->info.height, PARADISE_Y_MAX);
+        if (x + CLEAR_BTN_SIZE > fb->info.width && y < CLEAR_BTN_SIZE) {
+            clear_screen(pixels, fb);
+        }
+    }
+    ssize_t ret = ioctl_display_flush_fb(vcfd);
+    if (ret < 0) {
+        printf("failed to flush: %zd\n", ret);
+    }
+}
+
+static void process_paradise_touchscreen_v2_input(void* buf, size_t len, int vcfd, uint32_t* pixels,
+        ioctl_display_get_fb_t* fb) {
+    paradise_touch_v2_t* rpt = buf;
+    if (len < sizeof(*rpt)) {
+        printf("bad report size: %zd < %zd\n", len, sizeof(*rpt));
+        return;
+    }
+#if I2C_HID_DEBUG
+    paradise_touch_v2_dump(rpt);
+#endif
+    for (uint8_t c = 0; c < 5; c++) {
+        if (!paradise_finger_flags_tswitch(rpt->fingers[c].flags)) continue;
+        uint32_t x = scale32(rpt->fingers[c].x, fb->info.width, PARADISE_X_MAX);
+        uint32_t y = scale32(rpt->fingers[c].y, fb->info.height, PARADISE_Y_MAX);
+        uint32_t width = 2 * rpt->fingers[c].width;
+        uint32_t height = 2 * rpt->fingers[c].height;
         uint32_t color = get_color(c);
         draw_points(pixels, color, x, y, width, height, fb->info.stride, fb->info.height);
     }
@@ -364,6 +416,13 @@ int main(int argc, char* argv[]) {
             break;
         }
 
+        if (is_paradise_touch_v2_report_desc(rpt_desc, rpt_desc_len)) {
+            panel = TOUCH_PANEL_PARADISEv2;
+            // Found the touchscreen
+            printf("touchscreen: %s\n", devname);
+            break;
+        }
+
         if (is_egalax_touchscreen_report_desc(rpt_desc, rpt_desc_len)) {
             panel = TOUCH_PANEL_EGALAX;
             printf("touchscreen: %s is egalax\n", devname);
@@ -420,6 +479,10 @@ next_node:
         } else if (panel == TOUCH_PANEL_PARADISE) {
             if (*(uint8_t*)buf == PARADISE_RPT_ID_TOUCH) {
                 process_paradise_touchscreen_input(buf, r, vcfd, pixels32, &fb);
+            }
+        } else if (panel == TOUCH_PANEL_PARADISEv2) {
+            if (*(uint8_t*)buf == PARADISE_RPT_ID_TOUCH) {
+                process_paradise_touchscreen_v2_input(buf, r, vcfd, pixels32, &fb);
             }
         } else if (panel == TOUCH_PANEL_EGALAX) {
             if (*(uint8_t*)buf == EGALAX_RPT_ID_TOUCH) {
