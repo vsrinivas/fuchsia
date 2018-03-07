@@ -113,10 +113,11 @@ cobalt::Status ToCobaltStatus(ShippingManager::Status s) {
 
 class CobaltEncoderImpl : public CobaltEncoder {
  public:
-  // Does not take ownership of |shipping_manager|.
+  // Does not take ownership of |shipping_manager| or |system_data|.
   CobaltEncoderImpl(std::unique_ptr<ProjectContext> project_context,
                     ClientSecret client_secret,
-                    ShippingManager* shipping_manager);
+                    ShippingManager* shipping_manager,
+                    const SystemData* system_data);
 
  private:
   template <class CB>
@@ -172,8 +173,11 @@ class CobaltEncoderImpl : public CobaltEncoder {
 CobaltEncoderImpl::CobaltEncoderImpl(
     std::unique_ptr<ProjectContext> project_context,
     ClientSecret client_secret,
-    ShippingManager* shipping_manager)
-    : encoder_(std::move(project_context), std::move(client_secret)),
+    ShippingManager* shipping_manager,
+    const SystemData* system_data)
+    : encoder_(std::move(project_context),
+               std::move(client_secret),
+               system_data),
       shipping_manager_(shipping_manager) {}
 
 template <class CB>
@@ -262,7 +266,7 @@ void CobaltEncoderImpl::AddObservation(uint32_t metric_id,
           metric_id, encoding_id,
           std::move(observation->get_int_bucket_distribution()), callback);
       break;
-      }
+    }
     default:
       callback(Status::INVALID_ARGUMENTS);
       FXL_LOG(ERROR) << "Cobalt: Unrecognized value type in observation.";
@@ -401,11 +405,12 @@ void CobaltControllerImpl::FailedSendAttempts(
 
 class CobaltEncoderFactoryImpl : public CobaltEncoderFactory {
  public:
-  // Does not take ownerhsip of |shipping_manager|.
+  // Does not take ownerhsip of |shipping_manager| or |system_data|.
   CobaltEncoderFactoryImpl(std::shared_ptr<MetricRegistry> metric_registry,
                            std::shared_ptr<EncodingRegistry> encoding_registry,
                            ClientSecret client_secret,
-                           ShippingManager* shipping_manager);
+                           ShippingManager* shipping_manager,
+                           const SystemData* system_data);
 
  private:
   void GetEncoder(int32_t project_id,
@@ -417,6 +422,7 @@ class CobaltEncoderFactoryImpl : public CobaltEncoderFactory {
   f1dl::BindingSet<CobaltEncoder, std::unique_ptr<CobaltEncoder>>
       cobalt_encoder_bindings_;
   ShippingManager* shipping_manager_;  // not owned
+  const SystemData* system_data_;      // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltEncoderFactoryImpl);
 };
@@ -425,11 +431,13 @@ CobaltEncoderFactoryImpl::CobaltEncoderFactoryImpl(
     std::shared_ptr<MetricRegistry> metric_registry,
     std::shared_ptr<EncodingRegistry> encoding_registry,
     ClientSecret client_secret,
-    ShippingManager* shipping_manager)
+    ShippingManager* shipping_manager,
+    const SystemData* system_data)
     : metric_registry_(metric_registry),
       encoding_registry_(encoding_registry),
       client_secret_(std::move(client_secret)),
-      shipping_manager_(shipping_manager) {}
+      shipping_manager_(shipping_manager),
+      system_data_(system_data) {}
 
 void CobaltEncoderFactoryImpl::GetEncoder(
     int32_t project_id,
@@ -437,8 +445,9 @@ void CobaltEncoderFactoryImpl::GetEncoder(
   std::unique_ptr<ProjectContext> project_context(new ProjectContext(
       kFuchsiaCustomerId, project_id, metric_registry_, encoding_registry_));
 
-  std::unique_ptr<CobaltEncoderImpl> cobalt_encoder_impl(new CobaltEncoderImpl(
-      std::move(project_context), client_secret_, shipping_manager_));
+  std::unique_ptr<CobaltEncoderImpl> cobalt_encoder_impl(
+      new CobaltEncoderImpl(std::move(project_context), client_secret_,
+                            shipping_manager_, system_data_));
   cobalt_encoder_bindings_.AddBinding(std::move(cobalt_encoder_impl),
                                       std::move(request));
 }
@@ -489,8 +498,7 @@ CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
                                       kMinEnvelopeSendSize),
           ShippingManager::ScheduleParams(schedule_interval, min_interval),
           // TODO(rudominer): Enable encryption.
-          ShippingManager::EnvelopeMakerParams(&system_data_,
-                                               "",
+          ShippingManager::EnvelopeMakerParams("",
                                                EncryptedMessage::NONE,
                                                "",
                                                EncryptedMessage::NONE),
@@ -518,7 +526,7 @@ CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
   registered_metrics.mutable_element()->Swap(
       cobalt_config.mutable_metric_configs());
   auto metric_parse_result =
-      MetricRegistry::FromProto(&registered_metrics, nullptr);
+      MetricRegistry::TakeFrom(&registered_metrics, nullptr);
   // TODO(rudominer) Checkfailing is probably not the right thing to do.
   FXL_CHECK(cobalt::config::kOK == metric_parse_result.second);
   metric_registry_.reset(metric_parse_result.first.release());
@@ -528,13 +536,13 @@ CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
   registered_encodings.mutable_element()->Swap(
       cobalt_config.mutable_encoding_configs());
   auto encoding_parse_result =
-      EncodingRegistry::FromProto(&registered_encodings, nullptr);
+      EncodingRegistry::TakeFrom(&registered_encodings, nullptr);
   FXL_CHECK(cobalt::config::kOK == encoding_parse_result.second);
   encoding_registry_.reset(encoding_parse_result.first.release());
 
-  factory_impl_.reset(
-      new CobaltEncoderFactoryImpl(metric_registry_, encoding_registry_,
-                                   getClientSecret(), &shipping_manager_));
+  factory_impl_.reset(new CobaltEncoderFactoryImpl(
+      metric_registry_, encoding_registry_, getClientSecret(),
+      &shipping_manager_, &system_data_));
 
   context_->outgoing_services()->AddService<CobaltEncoderFactory>(
       [this](f1dl::InterfaceRequest<CobaltEncoderFactory> request) {
