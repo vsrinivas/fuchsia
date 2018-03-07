@@ -132,7 +132,7 @@ static int open_from_libpath(const char* fn) {
 
 // Always consumes the fd.
 static zx_handle_t load_object_fd(int fd, const char* fn, zx_handle_t* out) {
-    zx_status_t status = fdio_get_vmo(fd, out);
+    zx_status_t status = fdio_get_vmo_clone(fd, out);
     close(fd);
     if (status == ZX_OK)
         zx_object_set_property(*out, ZX_PROP_NAME, fn, strlen(fn));

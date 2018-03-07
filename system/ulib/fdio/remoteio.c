@@ -1396,6 +1396,17 @@ static void zxrio_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events) 
     *_events = ((signals >> POLL_SHIFT) & POLL_MASK) | events;
 }
 
+static zx_status_t zxrio_get_vmo(fdio_t* io, int flags, zx_handle_t* out) {
+    zx_handle_t vmo;
+    zxrio_t* rio = (zxrio_t*)io;
+    zx_status_t r = fidl_getvmo(rio, flags, &vmo);
+    if (r != ZX_OK) {
+        return r;
+    }
+    *out = vmo;
+    return ZX_OK;
+}
+
 static fdio_ops_t zx_remote_ops = {
     .read = zxrio_read,
     .read_at = zxrio_read_at,
@@ -1416,7 +1427,7 @@ static fdio_ops_t zx_remote_ops = {
     .unwrap = zxrio_unwrap,
     .shutdown = fdio_default_shutdown,
     .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = fdio_default_get_vmo,
+    .get_vmo = zxrio_get_vmo,
 };
 
 fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t e) {

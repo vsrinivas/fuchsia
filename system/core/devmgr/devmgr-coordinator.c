@@ -245,7 +245,7 @@ static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
         log(ERROR, "devcoord: cannot open driver '%s'\n", libname);
         return ZX_ERR_IO;
     }
-    zx_status_t r = fdio_get_vmo(fd, out);
+    zx_status_t r = fdio_get_vmo_clone(fd, out);
     close(fd);
     if (r < 0) {
         log(ERROR, "devcoord: cannot get driver vmo '%s'\n", libname);
@@ -984,7 +984,7 @@ static zx_status_t dc_load_firmware(device_t* dev, const char* path,
         close(fd);
         if (fwfd >= 0) {
             *size = lseek(fwfd, 0, SEEK_END);
-            zx_status_t r = fdio_get_vmo(fwfd, vmo);
+            zx_status_t r = fdio_get_vmo_clone(fwfd, vmo);
             close(fwfd);
             return r;
         }

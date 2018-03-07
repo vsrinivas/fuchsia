@@ -50,7 +50,7 @@ typedef struct fdio_ops {
     void (*wait_end)(fdio_t* io, zx_signals_t signals, uint32_t* events);
     ssize_t (*ioctl)(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
     ssize_t (*posix_ioctl)(fdio_t* io, int req, va_list va);
-    zx_status_t (*get_vmo)(fdio_t* io, zx_handle_t* out, size_t* off, size_t* len);
+    zx_status_t (*get_vmo)(fdio_t* io, int flags, zx_handle_t* out);
 } fdio_ops_t;
 
 // fdio_t ioflag values
@@ -183,7 +183,7 @@ void fdio_default_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events);
 zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* handles, uint32_t* types);
 zx_status_t fdio_default_shutdown(fdio_t* io, int how);
 ssize_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
-zx_status_t fdio_default_get_vmo(fdio_t* io, zx_handle_t* out, size_t* off, size_t* len);
+zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx_handle_t* out);
 
 void __fdio_startup_handles_init(uint32_t num, zx_handle_t handles[],
                                  uint32_t handle_info[])

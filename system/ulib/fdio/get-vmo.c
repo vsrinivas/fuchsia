@@ -20,13 +20,16 @@ static zx_status_t read_at(fdio_t* io, void* buf, size_t len, off_t offset,
     zx_status_t status;
     while ((status = fdio_read_at(io, buf, len, offset)) == ZX_ERR_SHOULD_WAIT) {
         status = fdio_wait(io, FDIO_EVT_READABLE, ZX_TIME_INFINITE, NULL);
-        if (status != ZX_OK)
+        if (status != ZX_OK) {
             return status;
+        }
     }
-    if (status < 0)
+    if (status < 0) {
         return status;
-    if (status == 0) // EOF (?)
+    }
+    if (status == 0) { // EOF (?)
         return ZX_ERR_OUT_OF_RANGE;
+    }
     *actual_len = status;
     return ZX_OK;
 }
@@ -36,17 +39,20 @@ static zx_status_t read_file_into_vmo(fdio_t* io, zx_handle_t* out_vmo) {
 
     vnattr_t attr;
     int r = io->ops->misc(io, ZXRIO_STAT, 0, sizeof(attr), &attr, 0);
-    if (r < 0)
+    if (r < 0) {
         return ZX_ERR_BAD_HANDLE;
-    if (r < (int)sizeof(attr))
+    }
+    if (r < (int)sizeof(attr)) {
         return ZX_ERR_IO;
+    }
 
     uint64_t size = attr.size;
     uint64_t offset = 0;
 
     zx_status_t status = zx_vmo_create(size, 0, out_vmo);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     while (size > 0) {
         if (size < MIN_WINDOW) {
@@ -102,63 +108,67 @@ static zx_status_t read_file_into_vmo(fdio_t* io, zx_handle_t* out_vmo) {
 }
 
 static zx_status_t get_file_vmo(fdio_t* io, zx_handle_t* out_vmo) {
-    zx_handle_t vmo;
-    size_t offset, len;
-    zx_status_t status = io->ops->get_vmo(io, &vmo, &offset, &len);
-    if (status != ZX_OK)
-        return status;
-    // Clone a private copy of it at the offset/length returned with
-    // the handle.
-    // TODO(mcgrathr): Create a plain read only clone when the feature
-    // is implemented in the VM.
-    status = zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, offset, len, out_vmo);
-    zx_handle_close(vmo);
-    return status;
+    return io->ops->get_vmo(io, FDIO_MMAP_FLAG_READ | FDIO_MMAP_FLAG_EXEC |
+                            FDIO_MMAP_FLAG_PRIVATE, out_vmo);
 }
 
-zx_status_t fdio_get_vmo(int fd, zx_handle_t* out_vmo) {
-    fdio_t* io = fd_to_io(fd);
-    if (io == NULL)
-        return ZX_ERR_BAD_HANDLE;
+static zx_status_t copy_file_vmo(fdio_t* io, zx_handle_t* out_vmo) {
+    zx_status_t status = get_file_vmo(io, out_vmo);
+    if (status == ZX_OK) {
+        return ZX_OK;
+    }
 
     zx_handle_t vmo;
-    zx_status_t status = get_file_vmo(io, &vmo);
-    if (status != ZX_OK)
-        status = read_file_into_vmo(io, &vmo);
-    fdio_release(io);
-
-    if (status == ZX_OK) {
+    if ((status = read_file_into_vmo(io, &vmo)) == ZX_OK) {
         status = zx_handle_replace(
             vmo,
             ZX_RIGHTS_BASIC | ZX_RIGHTS_PROPERTY |
             ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP,
             out_vmo);
-        if (status != ZX_OK)
+        if (status != ZX_OK) {
             zx_handle_close(vmo);
+        }
     }
+    return status;
+}
+
+zx_status_t fdio_get_vmo_copy(int fd, zx_handle_t* out_vmo) {
+    fdio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ZX_ERR_BAD_HANDLE;
+    }
+    zx_status_t status = copy_file_vmo(io, out_vmo);
+    fdio_release(io);
+    return status;
+}
+
+zx_status_t fdio_get_vmo_clone(int fd, zx_handle_t* out_vmo) {
+    fdio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ZX_ERR_BAD_HANDLE;
+    }
+    zx_status_t status = get_file_vmo(io, out_vmo);
+    fdio_release(io);
+    return status;
+}
+
+zx_status_t fdio_get_vmo(int fd, zx_handle_t* out_vmo) {
+    return fdio_get_vmo_copy(fd, out_vmo);
+}
+
+zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo) {
+    fdio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ZX_ERR_BAD_HANDLE;
+    }
+
+    zx_status_t status = io->ops->get_vmo(io, FDIO_MMAP_FLAG_READ |
+                                          FDIO_MMAP_FLAG_EXEC, out_vmo);
+    fdio_release(io);
 
     return status;
 }
 
 zx_status_t fdio_get_exact_vmo(int fd, zx_handle_t* out_vmo) {
-    fdio_t* io = fd_to_io(fd);
-    if (io == NULL)
-        return ZX_ERR_BAD_HANDLE;
-
-    zx_handle_t vmo;
-    size_t offset, len;
-    zx_status_t status = io->ops->get_vmo(io, &vmo, &offset, &len);
-    fdio_release(io);
-
-    if (status != ZX_OK)
-        return status;
-
-    size_t vmo_size;
-    if (offset != 0 || zx_vmo_get_size(vmo, &vmo_size) != ZX_OK || vmo_size != len) {
-        zx_handle_close(vmo);
-        return ZX_ERR_NOT_FOUND;
-     }
-
-    *out_vmo = vmo;
-    return ZX_OK;
+    return fdio_get_vmo_exact(fd, out_vmo);
 }

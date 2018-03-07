@@ -90,7 +90,7 @@ ssize_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_get_vmo(fdio_t* io, zx_handle_t* out, size_t* off, size_t* len) {
+zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx_handle_t* out) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

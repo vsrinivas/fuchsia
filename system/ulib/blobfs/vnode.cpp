@@ -251,11 +251,11 @@ zx_status_t VnodeBlob::GetVmo(int flags, zx_handle_t* out) {
     if (IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (flags & FDIO_MMAP_FLAG_WRITE) {
+    if ((flags & FDIO_MMAP_FLAG_WRITE) || !(flags & FDIO_MMAP_FLAG_PRIVATE)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_rights_t rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP;
+    zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP;
     rights |= (flags & FDIO_MMAP_FLAG_READ) ? ZX_RIGHT_READ : 0;
     rights |= (flags & FDIO_MMAP_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
     return CopyVmo(rights, out);

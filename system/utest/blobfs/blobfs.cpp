@@ -509,7 +509,7 @@ static bool TestMmap(void) {
         fd = open(info->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to-reopen blob");
 
-        void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_SHARED,
+        void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE,
                           fd, 0);
         ASSERT_NE(addr, MAP_FAILED, "Could not mmap blob");
         ASSERT_EQ(memcmp(addr, info->data.get(), info->size_data), 0, "Mmap data invalid");

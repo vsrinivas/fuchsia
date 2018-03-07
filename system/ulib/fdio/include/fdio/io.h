@@ -61,13 +61,27 @@ zx_status_t fdio_pipe_half(zx_handle_t* handle, uint32_t* type);
 // Get a read-only VMO containing the whole contents of the file.
 // This function creates a clone of the underlying VMO when possible, falling
 // back to eagerly reading the contents into a freshly-created VMO.
-zx_status_t fdio_get_vmo(int fd, zx_handle_t* out_vmo);
+//
+// DEPRECATED: Prefer the new name "fdio_get_vmo_copy" or
+// "fdio_get_vmo_clone", explicit about clone/copy behavior.
+zx_status_t fdio_get_vmo(int fd, zx_handle_t* out_vmo) __DEPRECATE;
+
+// Get a read-only VMO containing the whole contents of the file.
+// This function creates a clone of the underlying VMO when possible, falling
+// back to eagerly reading the contents into a freshly-created VMO.
+zx_status_t fdio_get_vmo_copy(int fd, zx_handle_t* out_vmo);
+
+// Gets a read-only VMO containing a clone of the underlying VMO.
+// This function will fail rather than copying the contents if it cannot clone.
+zx_status_t fdio_get_vmo_clone(int fd, zx_handle_t* out_vmo);
 
 // Get a read-only handle to the exact VMO used by the file system server to
 // represent the file. This function fails if the server does not have an exact
-// VMO representation of the file (e.g., if fdio_get_vmo would need to copy the
-// data into a new VMO).
-zx_status_t fdio_get_exact_vmo(int fd, zx_handle_t* out_vmo);
+// VMO representation of the file (e.g., if fdio_get_vmo would need to copy
+// or clone data into a new VMO).
+zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo);
+// DEPRECATED: Use "fdio_get_vmo_exact".
+zx_status_t fdio_get_exact_vmo(int fd, zx_handle_t* out_vmo) __DEPRECATE;
 
 // create a fd that is backed by the given range of the vmo.
 // This function takes ownership of the vmo and will close the vmo when the fd

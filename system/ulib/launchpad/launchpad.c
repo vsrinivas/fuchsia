@@ -1300,7 +1300,7 @@ zx_status_t launchpad_load_from_file(launchpad_t* lp, const char* path) {
 
 zx_status_t launchpad_load_from_fd(launchpad_t* lp, int fd) {
     zx_handle_t vmo;
-    zx_status_t status = fdio_get_vmo(fd, &vmo);
+    zx_status_t status = fdio_get_vmo_clone(fd, &vmo);
     if (status == ZX_OK) {
         return launchpad_file_load_with_vdso(lp, vmo);
     } else {

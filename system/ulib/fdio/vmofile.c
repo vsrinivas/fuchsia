@@ -176,16 +176,29 @@ static zx_status_t vmofile_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t m
     }
 }
 
-zx_status_t vmofile_get_vmo(fdio_t* io, zx_handle_t* out, size_t* off, size_t* len) {
+zx_status_t vmofile_get_vmo(fdio_t* io, int flags, zx_handle_t* out) {
     vmofile_t* vf = (vmofile_t*)io;
 
-    if ((out == NULL) || (off == NULL) || (len == NULL)) {
+    if (out == NULL) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    *off = vf->off;
-    *len = vf->end - vf->off;
-    return zx_handle_duplicate(vf->vmo, ZX_RIGHT_SAME_RIGHTS, out);
+    size_t len = vf->end - vf->off;
+    if (flags & FDIO_MMAP_FLAG_PRIVATE) {
+        return zx_vmo_clone(vf->vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, len, out);
+    } else {
+        size_t vmo_len = 0;
+        if (vf->off != 0 || zx_vmo_get_size(vf->vmo, &vmo_len) != ZX_OK ||
+            len != vmo_len) {
+            return ZX_ERR_NOT_FOUND;
+        }
+        zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY |
+                ZX_RIGHT_MAP;
+        rights |= (flags & FDIO_MMAP_FLAG_READ) ? ZX_RIGHT_READ : 0;
+        rights |= (flags & FDIO_MMAP_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
+        rights |= (flags & FDIO_MMAP_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+        return zx_handle_duplicate(vf->vmo, rights, out);
+    }
 }
 
 static fdio_ops_t vmofile_ops = {

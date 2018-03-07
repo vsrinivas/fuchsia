@@ -20,10 +20,10 @@ int main(void) {
     }
 
     zx_handle_t vdso_vmo;
-    zx_status_t status = fdio_get_exact_vmo(fd, &vdso_vmo);
+    zx_status_t status = fdio_get_vmo_exact(fd, &vdso_vmo);
     close(fd);
     if (status != ZX_OK) {
-        printf("fdio_get_exact_vmo(%d): %s\n", fd, zx_status_get_string(status));
+        printf("fdio_get_vmo_exact(%d): %s\n", fd, zx_status_get_string(status));
         return status;
     }
 
