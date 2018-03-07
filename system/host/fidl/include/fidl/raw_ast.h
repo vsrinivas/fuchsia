@@ -173,10 +173,10 @@ struct HandleType : public Type {
 };
 
 struct RequestType : public Type {
-    RequestType(std::unique_ptr<CompoundIdentifier> subtype, types::Nullability nullability)
-        : Type(Kind::Request), subtype(std::move(subtype)), nullability(nullability) {}
+    RequestType(std::unique_ptr<CompoundIdentifier> identifier, types::Nullability nullability)
+        : Type(Kind::Request), identifier(std::move(identifier)), nullability(nullability) {}
 
-    std::unique_ptr<CompoundIdentifier> subtype;
+    std::unique_ptr<CompoundIdentifier> identifier;
     types::Nullability nullability;
 };
 

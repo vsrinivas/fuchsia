@@ -140,16 +140,95 @@ TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
 // a struct declaration inside an interface out to the top level and
 // so on.
 
+bool Library::ParseSize(std::unique_ptr<raw::Constant> raw_constant, Size* out_size) {
+    uint64_t value;
+    if (!ParseIntegerConstant(raw_constant.get(), &value)) {
+        *out_size = Size();
+        return false;
+    }
+    *out_size = Size(std::move(raw_constant), value);
+    return true;
+}
+
 bool Library::RegisterDecl(Decl* decl) {
     const Name* name = &decl->name;
     auto iter = declarations_.emplace(name, decl);
     return iter.second;
 }
 
+bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<Type>* out_type) {
+    switch (raw_type->kind) {
+    case raw::Type::Kind::Array: {
+        auto array_type = static_cast<raw::ArrayType*>(raw_type.get());
+        std::unique_ptr<Type> element_type;
+        if (!ConsumeType(std::move(array_type->element_type), &element_type))
+            return false;
+        Size element_count;
+        if (!ParseSize(std::move(array_type->element_count), &element_count))
+            return false;
+        // TODO(kulakowski) Overflow checking.
+        uint64_t size = element_count.Value() * element_type->size;
+        *out_type = std::make_unique<ArrayType>(size, std::move(element_type), std::move(element_count));
+        break;
+    }
+    case raw::Type::Kind::Vector: {
+        auto vector_type = static_cast<raw::VectorType*>(raw_type.get());
+        std::unique_ptr<Type> element_type;
+        if (!ConsumeType(std::move(vector_type->element_type), &element_type))
+            return false;
+        Size element_count(std::numeric_limits<uint64_t>::max());
+        if (vector_type->maybe_element_count) {
+            if (!ParseSize(std::move(vector_type->maybe_element_count), &element_count))
+                return false;
+        }
+        *out_type = std::make_unique<VectorType>(std::move(element_type), std::move(element_count), vector_type->nullability);
+        break;
+    }
+    case raw::Type::Kind::String: {
+        auto string_type = static_cast<raw::StringType*>(raw_type.get());
+        Size element_count(std::numeric_limits<uint64_t>::max());
+        if (string_type->maybe_element_count) {
+            if (!ParseSize(std::move(string_type->maybe_element_count), &element_count))
+                return false;
+        }
+        *out_type = std::make_unique<StringType>(std::move(element_count), string_type->nullability);
+        break;
+    }
+    case raw::Type::Kind::Handle: {
+        auto handle_type = static_cast<raw::HandleType*>(raw_type.get());
+        *out_type = std::make_unique<HandleType>(handle_type->subtype, handle_type->nullability);
+        break;
+    }
+    case raw::Type::Kind::Request: {
+        auto request_type = static_cast<raw::RequestType*>(raw_type.get());
+        // TODO(TO-701) Handle longer names.
+        Name name(request_type->identifier->components[0]->location);
+        *out_type = std::make_unique<RequestType>(std::move(name), std::move(request_type->nullability));
+        break;
+    }
+    case raw::Type::Kind::Primitive: {
+        auto primitive_type = static_cast<raw::PrimitiveType*>(raw_type.get());
+        *out_type = std::make_unique<PrimitiveType>(primitive_type->subtype);
+        break;
+    }
+    case raw::Type::Kind::Identifier: {
+        auto identifier_type = static_cast<raw::IdentifierType*>(raw_type.get());
+        // TODO(TO-701) Handle longer names.
+        Name name(identifier_type->identifier->components[0]->location);
+        *out_type = std::make_unique<IdentifierType>(std::move(name), identifier_type->nullability);
+        break;
+    }
+    }
+    return true;
+}
+
 bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
     auto name = Name(const_declaration->identifier->location);
+    std::unique_ptr<Type> type;
+    if (!ConsumeType(std::move(const_declaration->type), &type))
+        return false;
 
-    const_declarations_.push_back(std::make_unique<Const>(std::move(name), std::move(const_declaration->type),
+    const_declarations_.push_back(std::make_unique<Const>(std::move(name), std::move(type),
                                                           std::move(const_declaration->constant)));
     return RegisterDecl(const_declarations_.back().get());
 }
@@ -198,7 +277,10 @@ bool Library::ConsumeInterfaceDeclaration(
             maybe_request.reset(new Interface::Method::Message());
             for (auto& parameter : method->maybe_request->parameter_list) {
                 SourceLocation parameter_name = parameter->identifier->location;
-                maybe_request->parameters.emplace_back(std::move(parameter->type), std::move(parameter_name));
+                std::unique_ptr<Type> type;
+                if (!ConsumeType(std::move(parameter->type), &type))
+                    return false;
+                maybe_request->parameters.emplace_back(std::move(type), std::move(parameter_name));
             }
         }
 
@@ -207,7 +289,10 @@ bool Library::ConsumeInterfaceDeclaration(
             maybe_response.reset(new Interface::Method::Message());
             for (auto& parameter : method->maybe_response->parameter_list) {
                 SourceLocation parameter_name = parameter->identifier->location;
-                maybe_response->parameters.emplace_back(std::move(parameter->type), parameter_name);
+                std::unique_ptr<Type> type;
+                if (!ConsumeType(std::move(parameter->type), &type))
+                    return false;
+                maybe_response->parameters.emplace_back(std::move(type), parameter_name);
             }
         }
 
@@ -233,7 +318,10 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
 
     std::vector<Struct::Member> members;
     for (auto& member : struct_declaration->members) {
-        members.emplace_back(std::move(member->type),
+        std::unique_ptr<Type> type;
+        if (!ConsumeType(std::move(member->type), &type))
+            return false;
+        members.emplace_back(std::move(type),
                              member->identifier->location,
                              std::move(member->maybe_default_value));
     }
@@ -245,7 +333,10 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
 bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
     std::vector<Union::Member> members;
     for (auto& member : union_declaration->members) {
-        members.emplace_back(std::move(member->type), member->identifier->location);
+        std::unique_ptr<Type> type;
+        if (!ConsumeType(std::move(member->type), &type))
+            return false;
+        members.emplace_back(std::move(type), member->identifier->location);
     }
     auto name = Name(union_declaration->identifier->location);
 
@@ -313,35 +404,31 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
 // Library resolution is concerned with resolving identifiers to their
 // declarations, and with computing type sizes and alignments.
 
-Decl* Library::LookupType(const flat::Type& type) {
-    const raw::Type* raw_type = type.raw_type.get();
+Decl* Library::LookupType(const flat::Type* type) {
     for (;;) {
-        switch (raw_type->kind) {
-        case raw::Type::Kind::String:
-        case raw::Type::Kind::Handle:
-        case raw::Type::Kind::Request:
-        case raw::Type::Kind::Primitive:
-        case raw::Type::Kind::Vector:
+        switch (type->kind) {
+        case flat::Type::Kind::String:
+        case flat::Type::Kind::Handle:
+        case flat::Type::Kind::Request:
+        case flat::Type::Kind::Primitive:
+        case flat::Type::Kind::Vector:
             return nullptr;
-        case raw::Type::Kind::Array: {
-            raw_type = static_cast<const raw::ArrayType*>(raw_type)->element_type.get();
+        case flat::Type::Kind::Array: {
+            type = static_cast<const flat::ArrayType*>(type)->element_type.get();
             continue;
         }
-        case raw::Type::Kind::Identifier: {
-            auto identifier_type = static_cast<const raw::IdentifierType*>(raw_type);
+        case flat::Type::Kind::Identifier: {
+            auto identifier_type = static_cast<const flat::IdentifierType*>(type);
             if (identifier_type->nullability == types::Nullability::Nullable) {
                 return nullptr;
             }
-            return LookupType(identifier_type->identifier.get());
+            return LookupType(identifier_type->name);
         }
         }
     }
 }
 
-Decl* Library::LookupType(const raw::CompoundIdentifier* identifier) {
-    // TODO(TO-701) Properly handle using aliases or module imports,
-    // which requires actually walking scopes.
-    Name name(identifier->components[0]->location);
+Decl* Library::LookupType(const Name& name) {
     auto iter = declarations_.find(&name);
     if (iter == declarations_.end()) {
         return nullptr;
@@ -357,8 +444,8 @@ Decl* Library::LookupType(const raw::CompoundIdentifier* identifier) {
 // unlike inline structs or unions, do not have dependency edges.
 std::set<Decl*> Library::DeclDependencies(Decl* decl) {
     std::set<Decl*> edges;
-    auto maybe_add_decl = [this, &edges](const flat::Type& type) {
-        auto type_decl = LookupType(type);
+    auto maybe_add_decl = [this, &edges](const std::unique_ptr<flat::Type>& type) {
+        auto type_decl = LookupType(type.get());
         if (type_decl != nullptr) {
             edges.insert(type_decl);
         }
@@ -457,7 +544,7 @@ bool Library::SortDeclarations() {
 
 bool Library::ResolveConst(Const* const_declaration) {
     TypeShape typeshape;
-    if (!ResolveType(const_declaration->type, &typeshape)) {
+    if (!ResolveType(const_declaration->type.get(), &typeshape)) {
         return false;
     }
     // TODO(TO-702) Resolve const declarations.
@@ -505,7 +592,7 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             for (auto& param : method.maybe_request->parameters) {
                 if (!request_scope.Insert(param.name.data()))
                     return false;
-                if (!ResolveType(param.type, &param.fieldshape.Typeshape()))
+                if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
                 request_struct.push_back(&param.fieldshape);
             }
@@ -517,7 +604,7 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             for (auto& param : method.maybe_response->parameters) {
                 if (!response_scope.Insert(param.name.data()))
                     return false;
-                if (!ResolveType(param.type, &param.fieldshape.Typeshape()))
+                if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
                 response_struct.push_back(&param.fieldshape);
             }
@@ -533,7 +620,7 @@ bool Library::ResolveStruct(Struct* struct_declaration) {
     for (auto& member : struct_declaration->members) {
         if (!scope.Insert(member.name.data()))
             return false;
-        if (!ResolveType(member.type, &member.fieldshape.Typeshape()))
+        if (!ResolveType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
         fidl_struct.push_back(&member.fieldshape);
     }
@@ -548,7 +635,7 @@ bool Library::ResolveUnion(Union* union_declaration) {
     for (auto& member : union_declaration->members) {
         if (!scope.Insert(member.name.data()))
             return false;
-        if (!ResolveType(member.type, &member.fieldshape.Typeshape()))
+        if (!ResolveType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
     }
 
@@ -621,61 +708,32 @@ bool Library::Resolve() {
     return true;
 }
 
-bool Library::ResolveArrayType(const raw::ArrayType& array_type, TypeShape* out_typeshape) {
+bool Library::ResolveArrayType(flat::ArrayType* array_type, TypeShape* out_typeshape) {
     TypeShape element_typeshape;
-    if (!ResolveType(array_type.element_type.get(), &element_typeshape))
+    if (!ResolveType(array_type->element_type.get(), &element_typeshape))
         return false;
-    uint64_t element_count;
-    if (!ParseIntegerConstant<decltype(element_count)>(array_type.element_count.get(),
-                                                       &element_count))
-        return false;
-    if (element_count == 0) {
-        return false;
-    }
-    *out_typeshape = ArrayTypeShape(element_typeshape, element_count);
+    *out_typeshape = ArrayTypeShape(element_typeshape, array_type->element_count.Value());
     return true;
 }
 
-bool Library::ResolveVectorType(const raw::VectorType& vector_type, TypeShape* out_typeshape) {
-    TypeShape element_typeshape;
-    if (!ResolveType(vector_type.element_type.get(), &element_typeshape)) {
-        return false;
-    }
-    auto element_count = std::numeric_limits<uint64_t>::max();
-    if (vector_type.maybe_element_count) {
-        if (!ParseIntegerConstant(vector_type.maybe_element_count.get(), &element_count)) {
-            return false;
-        }
-        if (element_count == 0u) {
-            return false;
-        }
-    }
+bool Library::ResolveVectorType(flat::VectorType* vector_type, TypeShape* out_typeshape) {
     *out_typeshape = VectorTypeShape();
     return true;
 }
 
-bool Library::ResolveStringType(const raw::StringType& string_type, TypeShape* out_typeshape) {
-    auto byte_count = std::numeric_limits<uint64_t>::max();
-    if (string_type.maybe_element_count) {
-        if (!ParseIntegerConstant(string_type.maybe_element_count.get(), &byte_count)) {
-            return false;
-        }
-        if (byte_count == 0u) {
-            return false;
-        }
-    }
+bool Library::ResolveStringType(flat::StringType* string_type, TypeShape* out_typeshape) {
     *out_typeshape = StringTypeShape();
     return true;
 }
 
-bool Library::ResolveHandleType(const raw::HandleType& handle_type, TypeShape* out_typeshape) {
+bool Library::ResolveHandleType(flat::HandleType* handle_type, TypeShape* out_typeshape) {
     // Nothing to check.
     *out_typeshape = kHandleTypeShape;
     return true;
 }
 
-bool Library::ResolveRequestType(const raw::RequestType& request_type, TypeShape* out_typeshape) {
-    auto named_decl = LookupType(request_type.subtype.get());
+bool Library::ResolveRequestType(flat::RequestType* request_type, TypeShape* out_typeshape) {
+    auto named_decl = LookupType(request_type->name);
     if (!named_decl || named_decl->kind != Decl::Kind::kInterface)
         return false;
 
@@ -683,15 +741,17 @@ bool Library::ResolveRequestType(const raw::RequestType& request_type, TypeShape
     return true;
 }
 
-bool Library::ResolvePrimitiveType(const raw::PrimitiveType& primitive_type,
+bool Library::ResolvePrimitiveType(flat::PrimitiveType* primitive_type,
                                    TypeShape* out_typeshape) {
-    *out_typeshape = PrimitiveTypeShape(primitive_type.subtype);
+    *out_typeshape = PrimitiveTypeShape(primitive_type->subtype);
     return true;
 }
 
-bool Library::ResolveIdentifierType(const raw::IdentifierType& identifier_type,
+bool Library::ResolveIdentifierType(flat::IdentifierType* identifier_type,
                                     TypeShape* out_typeshape) {
-    auto named_decl = LookupType(identifier_type.identifier.get());
+    TypeShape typeshape;
+
+    auto named_decl = LookupType(identifier_type->name);
     if (!named_decl)
         return false;
 
@@ -701,31 +761,31 @@ bool Library::ResolveIdentifierType(const raw::IdentifierType& identifier_type,
         return false;
     }
     case Decl::Kind::kEnum: {
-        if (identifier_type.nullability == types::Nullability::Nullable) {
+        if (identifier_type->nullability == types::Nullability::Nullable) {
             // Enums aren't nullable!
             return false;
         } else {
-            *out_typeshape = static_cast<const Enum*>(named_decl)->typeshape;
+            typeshape = static_cast<const Enum*>(named_decl)->typeshape;
         }
         break;
     }
     case Decl::Kind::kInterface: {
-        *out_typeshape = kHandleTypeShape;
+        typeshape = kHandleTypeShape;
         break;
     }
     case Decl::Kind::kStruct: {
-        if (identifier_type.nullability == types::Nullability::Nullable) {
-            *out_typeshape = kPointerTypeShape;
+        if (identifier_type->nullability == types::Nullability::Nullable) {
+           typeshape = kPointerTypeShape;
         } else {
-            *out_typeshape = static_cast<const Struct*>(named_decl)->typeshape;
+           typeshape = static_cast<const Struct*>(named_decl)->typeshape;
         }
         break;
     }
     case Decl::Kind::kUnion: {
-        if (identifier_type.nullability == types::Nullability::Nullable) {
-            *out_typeshape = kPointerTypeShape;
+        if (identifier_type->nullability == types::Nullability::Nullable) {
+            typeshape = kPointerTypeShape;
         } else {
-            *out_typeshape = static_cast<const Union*>(named_decl)->typeshape;
+            typeshape = static_cast<const Union*>(named_decl)->typeshape;
         }
         break;
     }
@@ -734,50 +794,48 @@ bool Library::ResolveIdentifierType(const raw::IdentifierType& identifier_type,
     }
     }
 
+    identifier_type->size = typeshape.Size();
+    *out_typeshape = typeshape;
     return true;
 }
 
-bool Library::ResolveType(const raw::Type* type, TypeShape* out_typeshape) {
+bool Library::ResolveType(Type* type, TypeShape* out_typeshape) {
     switch (type->kind) {
-    case raw::Type::Kind::Array: {
-        auto array_type = static_cast<const raw::ArrayType*>(type);
-        return ResolveArrayType(*array_type, out_typeshape);
+    case Type::Kind::Array: {
+        auto array_type = static_cast<ArrayType*>(type);
+        return ResolveArrayType(array_type, out_typeshape);
     }
 
-    case raw::Type::Kind::Vector: {
-        auto vector_type = static_cast<const raw::VectorType*>(type);
-        return ResolveVectorType(*vector_type, out_typeshape);
+    case Type::Kind::Vector: {
+        auto vector_type = static_cast<VectorType*>(type);
+        return ResolveVectorType(vector_type, out_typeshape);
     }
 
-    case raw::Type::Kind::String: {
-        auto string_type = static_cast<const raw::StringType*>(type);
-        return ResolveStringType(*string_type, out_typeshape);
+    case Type::Kind::String: {
+        auto string_type = static_cast<StringType*>(type);
+        return ResolveStringType(string_type, out_typeshape);
     }
 
-    case raw::Type::Kind::Handle: {
-        auto handle_type = static_cast<const raw::HandleType*>(type);
-        return ResolveHandleType(*handle_type, out_typeshape);
+    case Type::Kind::Handle: {
+        auto handle_type = static_cast<HandleType*>(type);
+        return ResolveHandleType(handle_type, out_typeshape);
     }
 
-    case raw::Type::Kind::Request: {
-        auto request_type = static_cast<const raw::RequestType*>(type);
-        return ResolveRequestType(*request_type, out_typeshape);
+    case Type::Kind::Request: {
+        auto request_type = static_cast<RequestType*>(type);
+        return ResolveRequestType(request_type, out_typeshape);
     }
 
-    case raw::Type::Kind::Primitive: {
-        auto primitive_type = static_cast<const raw::PrimitiveType*>(type);
-        return ResolvePrimitiveType(*primitive_type, out_typeshape);
+    case Type::Kind::Primitive: {
+        auto primitive_type = static_cast<PrimitiveType*>(type);
+        return ResolvePrimitiveType(primitive_type, out_typeshape);
     }
 
-    case raw::Type::Kind::Identifier: {
-        auto identifier_type = static_cast<const raw::IdentifierType*>(type);
-        return ResolveIdentifierType(*identifier_type, out_typeshape);
+    case Type::Kind::Identifier: {
+        auto identifier_type = static_cast<IdentifierType*>(type);
+        return ResolveIdentifierType(identifier_type, out_typeshape);
     }
     }
-}
-
-bool Library::ResolveType(const flat::Type& type, TypeShape* out_typeshape) {
-    return ResolveType(type.raw_type.get(), out_typeshape);
 }
 
 } // namespace flat

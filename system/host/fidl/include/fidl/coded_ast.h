@@ -41,19 +41,17 @@ struct Type {
     enum struct Kind {
         kHandle,
         kStruct,
-        kStructPointer,
         kUnion,
-        kUnionPointer,
         kArray,
         kString,
         kVector,
     };
 
-    Type(Kind kind, std::string name)
-        : kind(kind), name(std::move(name)) {}
+    Type(Kind kind, std::string coded_name)
+        : kind(kind), coded_name(std::move(coded_name)) {}
 
     const Kind kind;
-    const std::string name;
+    const std::string coded_name;
 };
 
 struct HandleType : public Type {
@@ -72,26 +70,12 @@ struct StructType : public Type {
     const uint32_t size;
 };
 
-struct StructPointerType : public Type {
-    explicit StructPointerType(std::string name, const StructType* struct_type)
-        : Type(Kind::kStructPointer, std::move(name)), struct_type(struct_type) {}
-
-    const StructType* struct_type;
-};
-
 struct UnionType : public Type {
     UnionType(std::string name, std::vector<const Type*> types, uint32_t size)
         : Type(Kind::kUnion, std::move(name)), types(std::move(types)), size(size) {}
 
     const std::vector<const Type*> types;
     const uint32_t size;
-};
-
-struct UnionPointerType : public Type {
-    UnionPointerType(std::string name, const UnionType* union_type)
-        : Type(Kind::kUnionPointer, std::move(name)), union_type(union_type) {}
-
-    const UnionType* const union_type;
 };
 
 struct ArrayType : public Type {

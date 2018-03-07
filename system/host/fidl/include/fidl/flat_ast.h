@@ -30,6 +30,24 @@ private:
     uint32_t value_;
 };
 
+template <typename IntType>
+struct IntConstant {
+    IntConstant(std::unique_ptr<raw::Constant> raw_constant, IntType value)
+        : raw_constant_(std::move(raw_constant)), value_(value) {}
+
+    explicit IntConstant(IntType value) : value_(value) {}
+
+    IntConstant() : value_(0) {}
+
+    IntType Value() const { return value_; }
+
+private:
+    std::unique_ptr<raw::Constant> raw_constant_;
+    IntType value_;
+};
+
+using Size = IntConstant<uint64_t>;
+
 // TODO(TO-701) Handle multipart names.
 struct Name {
     Name()
@@ -86,18 +104,117 @@ struct Decl {
 };
 
 struct Type {
-    explicit Type(std::unique_ptr<raw::Type> raw_type)
-        : raw_type(std::move(raw_type)) {}
+    virtual ~Type() {}
 
-    std::unique_ptr<raw::Type> raw_type;
-    // Owned by the containing Library.
-    const Decl* decl = nullptr;
+    enum struct Kind {
+        Array,
+        Vector,
+        String,
+        Handle,
+        Request,
+        Primitive,
+        Identifier,
+    };
+
+    explicit Type(Kind kind, uint64_t size)
+        : kind(kind), size(size) {}
+
+    const Kind kind;
+    // Set at construction time for most Types. Identifier types get
+    // this set later, during compilation.
+    uint64_t size;
+};
+
+struct ArrayType : public Type {
+    ArrayType(uint64_t size, std::unique_ptr<Type> element_type, Size element_count)
+        : Type(Kind::Array, size),
+          element_type(std::move(element_type)),
+          element_count(std::move(element_count)) {}
+
+    std::unique_ptr<Type> element_type;
+    Size element_count;
+};
+
+struct VectorType : public Type {
+    VectorType(std::unique_ptr<Type> element_type, Size element_count,
+               types::Nullability nullability)
+        : Type(Kind::Vector, 16u),
+          element_type(std::move(element_type)),
+          element_count(std::move(element_count)), nullability(nullability) {}
+
+    std::unique_ptr<Type> element_type;
+    Size element_count;
+    types::Nullability nullability;
+};
+
+struct StringType : public Type {
+    StringType(Size max_size, types::Nullability nullability)
+        : Type(Kind::String, 16u), max_size(std::move(max_size)),
+          nullability(nullability) {}
+
+    Size max_size;
+    types::Nullability nullability;
+};
+
+struct HandleType : public Type {
+    HandleType(types::HandleSubtype subtype, types::Nullability nullability)
+        : Type(Kind::Handle, 4u), subtype(subtype), nullability(nullability) {}
+
+    types::HandleSubtype subtype;
+    types::Nullability nullability;
+};
+
+struct RequestType : public Type {
+    RequestType(Name name, types::Nullability nullability)
+        : Type(Kind::Request, 4u), name(std::move(name)), nullability(nullability) {}
+
+    Name name;
+    types::Nullability nullability;
+};
+
+struct PrimitiveType : public Type {
+    static uint64_t SubtypeSize(types::PrimitiveSubtype subtype) {
+        switch (subtype) {
+        case types::PrimitiveSubtype::Bool:
+        case types::PrimitiveSubtype::Int8:
+        case types::PrimitiveSubtype::Uint8:
+            return 1u;
+
+        case types::PrimitiveSubtype::Int16:
+        case types::PrimitiveSubtype::Uint16:
+            return 2u;
+
+        case types::PrimitiveSubtype::Float32:
+        case types::PrimitiveSubtype::Status:
+        case types::PrimitiveSubtype::Int32:
+        case types::PrimitiveSubtype::Uint32:
+            return 4u;
+
+        case types::PrimitiveSubtype::Float64:
+        case types::PrimitiveSubtype::Int64:
+        case types::PrimitiveSubtype::Uint64:
+            return 8u;
+        }
+    }
+
+    explicit PrimitiveType(types::PrimitiveSubtype subtype)
+        : Type(Kind::Primitive, SubtypeSize(subtype)), subtype(subtype) { }
+
+    types::PrimitiveSubtype subtype;
+};
+
+struct IdentifierType : public Type {
+    IdentifierType(Name name, types::Nullability nullability)
+        : Type(Kind::Identifier, 0u), name(std::move(name)), nullability(nullability) {}
+
+    Name name;
+    types::Nullability nullability;
 };
 
 struct Const : public Decl {
-    Const(Name name, std::unique_ptr<raw::Type> type, std::unique_ptr<raw::Constant> value)
+    Const(Name name, std::unique_ptr<Type> type, std::unique_ptr<raw::Constant> value)
         : Decl(Kind::kConst, std::move(name)), type(std::move(type)), value(std::move(value)) {}
-    Type type;
+    std::unique_ptr<Type> type;
     std::unique_ptr<raw::Constant> value;
 };
 
@@ -120,9 +237,9 @@ struct Enum : public Decl {
 struct Interface : public Decl {
     struct Method {
         struct Parameter {
-            Parameter(std::unique_ptr<raw::Type> type, SourceLocation name)
+            Parameter(std::unique_ptr<Type> type, SourceLocation name)
                 : type(std::move(type)), name(std::move(name)) {}
-            Type type;
+            std::unique_ptr<Type> type;
             SourceLocation name;
             // TODO(TO-758) Compute these.
             FieldShape fieldshape;
@@ -159,11 +276,11 @@ struct Interface : public Decl {
 
 struct Struct : public Decl {
     struct Member {
-        Member(std::unique_ptr<raw::Type> type, SourceLocation name,
+        Member(std::unique_ptr<Type> type, SourceLocation name,
                std::unique_ptr<raw::Constant> maybe_default_value)
             : type(std::move(type)), name(std::move(name)),
               maybe_default_value(std::move(maybe_default_value)) {}
-        Type type;
+        std::unique_ptr<Type> type;
         SourceLocation name;
         std::unique_ptr<raw::Constant> maybe_default_value;
         // TODO(TO-758) Compute these.
@@ -179,9 +296,9 @@ struct Struct : public Decl {
 
 struct Union : public Decl {
     struct Member {
-        Member(std::unique_ptr<raw::Type> type, SourceLocation name)
+        Member(std::unique_ptr<Type> type, SourceLocation name)
             : type(std::move(type)), name(std::move(name)) {}
-        Type type;
+        std::unique_ptr<Type> type;
         SourceLocation name;
         // TODO(TO-758) Compute these.
         FieldShape fieldshape;
@@ -200,7 +317,11 @@ public:
     bool Resolve();
 
 private:
+    bool ParseSize(std::unique_ptr<raw::Constant> raw_constant, Size* out_size);
+
     bool RegisterDecl(Decl* decl);
+
+    bool ConsumeType(std::unique_ptr<raw::Type> type, std::unique_ptr<Type>* out_type);
 
     bool ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
     bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
@@ -213,11 +334,11 @@ private:
     // declaration. For example, if |type| refers to int32 or if it is
     // a struct pointer, this will return null. If it is a struct, it
     // will return a pointer to the declaration of the type.
-    Decl* LookupType(const flat::Type& type);
+    Decl* LookupType(const flat::Type* type);
 
-    // Returns nullptr when the |identifier| cannot be resolved to a
+    // Returns nullptr when the |name| cannot be resolved to a
     // Name. Otherwise it returns the declaration.
-    Decl* LookupType(const raw::CompoundIdentifier* identifier);
+    Decl* LookupType(const Name& name);
 
     std::set<Decl*> DeclDependencies(Decl* decl);
 
@@ -229,18 +350,14 @@ private:
     bool ResolveStruct(Struct* struct_declaration);
     bool ResolveUnion(Union* union_declaration);
 
-    bool ResolveArrayType(const raw::ArrayType& array_type, TypeShape* out_type_metadata);
-    bool ResolveVectorType(const raw::VectorType& vector_type, TypeShape* out_type_metadata);
-    bool ResolveStringType(const raw::StringType& string_type, TypeShape* out_type_metadata);
-    bool ResolveHandleType(const raw::HandleType& handle_type, TypeShape* out_type_metadata);
-    bool ResolveRequestType(const raw::RequestType& request_type, TypeShape* out_type_metadata);
-    bool ResolvePrimitiveType(const raw::PrimitiveType& primitive_type,
-                              TypeShape* out_type_metadata);
-    bool ResolveIdentifierType(const raw::IdentifierType& identifier_type,
-                               TypeShape* out_type_metadata);
-    bool ResolveType(const raw::Type* type, TypeShape* out_type_metadata);
-
-    bool ResolveType(const flat::Type& type, TypeShape* out_type_metadata);
+    bool ResolveArrayType(ArrayType* array_type, TypeShape* out_type_metadata);
+    bool ResolveVectorType(VectorType* vector_type, TypeShape* out_type_metadata);
+    bool ResolveStringType(StringType* string_type, TypeShape* out_type_metadata);
+    bool ResolveHandleType(HandleType* handle_type, TypeShape* out_type_metadata);
+    bool ResolveRequestType(RequestType* request_type, TypeShape* out_type_metadata);
+    bool ResolvePrimitiveType(PrimitiveType* primitive_type, TypeShape* out_type_metadata);
+    bool ResolveIdentifierType(IdentifierType* identifier_type, TypeShape* out_type_metadata);
+    bool ResolveType(Type* type, TypeShape* out_type_metadata);
 
 public:
     // TODO(TO-702) Add a validate literal function. Some things
@@ -287,7 +404,9 @@ public:
         case raw::Constant::Kind::Identifier: {
             auto identifier_constant = static_cast<const raw::IdentifierConstant*>(constant);
             auto identifier = identifier_constant->identifier.get();
-            auto decl = LookupType(identifier);
+            // TODO(TO-701) Support more parts of names.
+            Name name(identifier->components[0]->location);
+            auto decl = LookupType(name);
             if (!decl || decl->kind != Decl::Kind::kConst)
                 return false;
             return ParseIntegerConstant(static_cast<Const*>(decl)->value.get(), out_value);

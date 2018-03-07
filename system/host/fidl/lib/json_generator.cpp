@@ -98,21 +98,21 @@ std::string LiteralKindName(raw::Literal::Kind kind) {
     }
 }
 
-std::string TypeKindName(raw::Type::Kind kind) {
+std::string TypeKindName(flat::Type::Kind kind) {
     switch (kind) {
-    case raw::Type::Kind::Array:
+    case flat::Type::Kind::Array:
         return "array";
-    case raw::Type::Kind::Vector:
+    case flat::Type::Kind::Vector:
         return "vector";
-    case raw::Type::Kind::String:
+    case flat::Type::Kind::String:
         return "string";
-    case raw::Type::Kind::Handle:
+    case flat::Type::Kind::Handle:
         return "handle";
-    case raw::Type::Kind::Request:
+    case flat::Type::Kind::Request:
         return "request";
-    case raw::Type::Kind::Primitive:
+    case flat::Type::Kind::Primitive:
         return "primitive";
-    case raw::Type::Kind::Identifier:
+    case flat::Type::Kind::Identifier:
         return "identifier";
     }
 }
@@ -349,60 +349,50 @@ void JSONGenerator::Generate(const raw::Literal& value) {
     });
 }
 
-void JSONGenerator::Generate(const raw::Type& value) {
+void JSONGenerator::Generate(const flat::Type& value) {
     GenerateObject([&]() {
         GenerateObjectMember("kind", TypeKindName(value.kind), Position::First);
 
         switch (value.kind) {
-        case raw::Type::Kind::Array: {
-            auto type = static_cast<const raw::ArrayType*>(&value);
+        case flat::Type::Kind::Array: {
+            auto type = static_cast<const flat::ArrayType*>(&value);
             GenerateObjectMember("element_type", type->element_type);
-            uint64_t count = 0;
-            if (library_->ParseIntegerConstant(type->element_count.get(), &count))
-                GenerateObjectMember("element_count", count);
+            GenerateObjectMember("element_count", type->element_count.Value());
             break;
         }
-        case raw::Type::Kind::Vector: {
-            auto type = static_cast<const raw::VectorType*>(&value);
+        case flat::Type::Kind::Vector: {
+            auto type = static_cast<const flat::VectorType*>(&value);
             GenerateObjectMember("element_type", type->element_type);
-            if (type->maybe_element_count) {
-                uint64_t count = 0;
-                if (library_->ParseIntegerConstant(type->maybe_element_count.get(), &count))
-                    GenerateObjectMember("maybe_element_count", count);
-            }
+            GenerateObjectMember("maybe_element_count", type->element_count.Value());
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case raw::Type::Kind::String: {
-            auto type = static_cast<const raw::StringType*>(&value);
-            if (type->maybe_element_count) {
-                uint64_t count = 0;
-                if (library_->ParseIntegerConstant(type->maybe_element_count.get(), &count))
-                    GenerateObjectMember("maybe_element_count", count);
-            }
+        case flat::Type::Kind::String: {
+            auto type = static_cast<const flat::StringType*>(&value);
+            GenerateObjectMember("maybe_element_count", type->max_size.Value());
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case raw::Type::Kind::Handle: {
-            auto type = static_cast<const raw::HandleType*>(&value);
+        case flat::Type::Kind::Handle: {
+            auto type = static_cast<const flat::HandleType*>(&value);
             GenerateObjectMember("subtype", type->subtype);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case raw::Type::Kind::Request: {
-            auto type = static_cast<const raw::RequestType*>(&value);
-            GenerateObjectMember("subtype", type->subtype);
+        case flat::Type::Kind::Request: {
+            auto type = static_cast<const flat::RequestType*>(&value);
+            GenerateObjectMember("subtype", type->name);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case raw::Type::Kind::Primitive: {
-            auto type = static_cast<const raw::PrimitiveType*>(&value);
+        case flat::Type::Kind::Primitive: {
+            auto type = static_cast<const flat::PrimitiveType*>(&value);
             GenerateObjectMember("subtype", type->subtype);
             break;
         }
-        case raw::Type::Kind::Identifier: {
-            auto type = static_cast<const raw::IdentifierType*>(&value);
-            GenerateObjectMember("identifier", type->identifier);
+        case flat::Type::Kind::Identifier: {
+            auto type = static_cast<const flat::IdentifierType*>(&value);
+            GenerateObjectMember("identifier", type->name);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
@@ -435,10 +425,6 @@ void JSONGenerator::Generate(const flat::Ordinal& value) {
 
 void JSONGenerator::Generate(const flat::Name& value) {
     EmitString(&json_file_, LongName(value));
-}
-
-void JSONGenerator::Generate(const flat::Type& value) {
-    Generate(*value.raw_type);
 }
 
 void JSONGenerator::Generate(const flat::Const& value) {

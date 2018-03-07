@@ -34,6 +34,7 @@ struct arrays {
     array<uint64>:1 u64_0;
     array<float32>:1 f32_0;
     array<float64>:1 f64_0;
+    array<handle>:1 handle_0;
 
     array<bool>:arrays_size b_1;
     array<int8>:arrays_size i8_1;
@@ -46,6 +47,7 @@ struct arrays {
     array<uint64>:arrays_size u64_1;
     array<float32>:arrays_size f32_1;
     array<float64>:arrays_size f64_1;
+    array<handle>:arrays_size handle_1;
 
     array<array<bool>:4>:arrays_size b_2;
     array<array<int8>:4>:arrays_size i8_2;
@@ -58,6 +60,7 @@ struct arrays {
     array<array<uint64>:4>:arrays_size u64_2;
     array<array<float32>:4>:arrays_size f32_2;
     array<array<float64>:4>:arrays_size f64_2;
+    array<array<handle>:4>:arrays_size handle_2;
 };
 
 struct vectors {
@@ -74,6 +77,7 @@ struct vectors {
     vector<uint64>:1 u64_0;
     vector<float32>:1 f32_0;
     vector<float64>:1 f64_0;
+    vector<handle>:1 handle_0;
 
     vector<vector<bool>:4> b_1;
     vector<vector<int8>:4> i8_1;
@@ -86,6 +90,7 @@ struct vectors {
     vector<vector<uint64>:4> u64_1;
     vector<vector<float32>:4> f32_1;
     vector<vector<float64>:4> f64_1;
+    vector<vector<handle>:4> handle_1;
 
     vector<bool>:1 b_sized_0;
     vector<int8>:1 i8_sized_0;
@@ -98,6 +103,7 @@ struct vectors {
     vector<uint64>:1 u64_sized_0;
     vector<float32>:1 f32_sized_0;
     vector<float64>:1 f64_sized_0;
+    vector<handle>:1 handle_sized_0;
 
     vector<bool>:vectors_size b_sized_1;
     vector<int8>:vectors_size i8_sized_1;
@@ -110,6 +116,7 @@ struct vectors {
     vector<uint64>:vectors_size u64_sized_1;
     vector<float32>:vectors_size f32_sized_1;
     vector<float64>:vectors_size f64_sized_1;
+    vector<handle>:vectors_size handle_sized_1;
 
     vector<vector<bool>:4>:vectors_size b_sized_2;
     vector<vector<int8>:4>:vectors_size i8_sized_2;
@@ -122,6 +129,7 @@ struct vectors {
     vector<vector<uint64>:4>:vectors_size u64_sized_2;
     vector<vector<float32>:4>:vectors_size f32_sized_2;
     vector<vector<float64>:4>:vectors_size f64_sized_2;
+    vector<vector<handle>:4>:vectors_size handle_sized_2;
 
     vector<bool>:1? b_nullable_0;
     vector<int8>:1? i8_nullable_0;
@@ -134,6 +142,7 @@ struct vectors {
     vector<uint64>:1? u64_nullable_0;
     vector<float32>:1? f32_nullable_0;
     vector<float64>:1? f64_nullable_0;
+    vector<handle>:1? handle_nullable_0;
 
     vector<vector<bool>:4>? b_nullable_1;
     vector<vector<int8>:4>? i8_nullable_1;
@@ -146,6 +155,7 @@ struct vectors {
     vector<vector<uint64>:4>? u64_nullable_1;
     vector<vector<float32>:4>? f32_nullable_1;
     vector<vector<float64>:4>? f64_nullable_1;
+    vector<vector<handle>:4>? handle_nullable_1;
 
     vector<bool>:1? b_nullable_sized_0;
     vector<int8>:1? i8_nullable_sized_0;
@@ -158,6 +168,7 @@ struct vectors {
     vector<uint64>:1? u64_nullable_sized_0;
     vector<float32>:1? f32_nullable_sized_0;
     vector<float64>:1? f64_nullable_sized_0;
+    vector<handle>:1? handle_nullable_sized_0;
 
     vector<bool>:vectors_size? b_nullable_sized_1;
     vector<int8>:vectors_size? i8_nullable_sized_1;
@@ -170,6 +181,7 @@ struct vectors {
     vector<uint64>:vectors_size? u64_nullable_sized_1;
     vector<float32>:vectors_size? f32_nullable_sized_1;
     vector<float64>:vectors_size? f64_nullable_sized_1;
+    vector<handle>:vectors_size? handle_nullable_sized_1;
 
     vector<vector<bool>:4>:vectors_size? b_nullable_sized_2;
     vector<vector<int8>:4>:vectors_size? i8_nullable_sized_2;
@@ -182,6 +194,7 @@ struct vectors {
     vector<vector<uint64>:4>:vectors_size? u64_nullable_sized_2;
     vector<vector<float32>:4>:vectors_size? f32_nullable_sized_2;
     vector<vector<float64>:4>:vectors_size? f64_nullable_sized_2;
+    vector<vector<handle>:4>:vectors_size? handle_nullable_sized_2;
 };
 
 struct handles {
