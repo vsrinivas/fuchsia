@@ -128,6 +128,7 @@ source_set("fxl_lib") {
     "time/stopwatch.h",
     "time/time_point.cc",
     "time/time_point.h",
+    "type_converter.h",
   ]
 
   if (is_win) {
