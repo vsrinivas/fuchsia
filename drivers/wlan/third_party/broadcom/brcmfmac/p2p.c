@@ -624,7 +624,7 @@ static zx_status_t brcmf_p2p_escan(struct brcmf_p2p_info* p2p, uint32_t num_chan
     vif = p2p->bss_idx[bss_type].vif;
     if (vif == NULL) {
         brcmf_err("no vif for bss type %d\n", bss_type);
-        ret = -EINVAL;
+        ret = ZX_ERR_INVALID_ARGS;
         goto exit;
     }
     p2p_params = (struct brcmf_p2p_scan_le*)memblk;
@@ -650,7 +650,7 @@ static zx_status_t brcmf_p2p_escan(struct brcmf_p2p_info* p2p, uint32_t num_chan
         break;
     default:
         brcmf_err(" invalid search state %d\n", search_state);
-        ret = -EINVAL;
+        ret = ZX_ERR_INVALID_ARGS;
         goto exit;
     }
 
@@ -745,7 +745,7 @@ static zx_status_t brcmf_p2p_run_escan(struct brcmf_cfg80211_info* cfg, struct b
     brcmf_dbg(TRACE, "enter\n");
 
     if (!request) {
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
         goto exit;
     }
 
@@ -1547,7 +1547,7 @@ static zx_status_t brcmf_p2p_pub_af_tx(struct brcmf_cfg80211_info* cfg,
         break;
     default:
         brcmf_err("Unknown p2p pub act frame subtype: %d\n", act_frm->subtype);
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
     }
     return err;
 }

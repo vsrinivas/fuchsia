@@ -31,14 +31,8 @@
 #include <sys/types.h>
 #include <zircon/assert.h>
 
-// Some temp weirdness here to make zx_status_t incompatible with int and uint but compatible with
-// ZX_OK.
-#define zx_status_t enum zxstatusenum
-
-#undef ZX_OK
 
 enum zxstatusenum {
-    ZX_OK = -1,
     ENOENT,
     ENAVAIL,
     ENFILE, // file table overflow.
@@ -46,7 +40,6 @@ enum zxstatusenum {
     EBADE,
     EPROTO,
     ENODATA,
-    EINVAL,
     EILSEQ,
     ENXIO,
     ENODEV,

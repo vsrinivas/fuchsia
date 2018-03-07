@@ -363,7 +363,7 @@ static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct 
     zx_status_t ret = ZX_OK;
 
     if (!pktlist->qlen) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     target_list = pktlist;
@@ -516,7 +516,7 @@ zx_status_t brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, u
     mypkt = brcmu_pkt_buf_get_skb(nbytes);
     if (!mypkt) {
         brcmf_err("brcmu_pkt_buf_get_skb failed: len %d\n", nbytes);
-        return ZX_ERR_IO;
+        return ZX_ERR_NO_MEMORY;
     }
 
     err = brcmf_sdiod_recv_pkt(sdiodev, mypkt);

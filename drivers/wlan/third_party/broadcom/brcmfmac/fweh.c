@@ -104,7 +104,7 @@ static zx_status_t brcmf_fweh_call_event_handler(struct brcmf_if* ifp,
                                                  enum brcmf_fweh_event_code code,
                                                  struct brcmf_event_msg* emsg, void* data) {
     struct brcmf_fweh_info* fweh;
-    zx_status_t err = -EINVAL;
+    zx_status_t err = ZX_ERR_IO;
 
     if (ifp) {
         fweh = &ifp->drvr->fweh;

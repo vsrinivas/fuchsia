@@ -528,11 +528,11 @@ zx_status_t brcmf_fw_get_firmwares_pcie(struct device* dev, uint16_t flags, cons
 
     brcmf_dbg(TRACE, "enter: dev=%s\n", dev_name(dev));
     if (!fw_cb || !code) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if ((flags & BRCMF_FW_REQUEST_NVRAM) && !nvram) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     fwctx = kzalloc(sizeof(*fwctx), GFP_KERNEL);

@@ -261,7 +261,7 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct sk_buff* skb, struct net_devic
 
     /* validate length for ether packet */
     if (skb->len < sizeof(*eh)) {
-        ret = -EINVAL;
+        ret = ZX_ERR_INVALID_ARGS;
         dev_kfree_skb(skb);
         goto done;
     }
@@ -644,7 +644,7 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
             drvr->iflist[bsscfgidx] = NULL;
         } else {
             brcmf_dbg(INFO, "netdev:%s ignore IF event\n", ifp->ndev->name);
-            return -EINVAL;
+            return ZX_ERR_INVALID_ARGS;
         }
     }
 
@@ -1032,7 +1032,7 @@ zx_status_t brcmf_bus_started(struct device* dev) {
 
     drvr->config = brcmf_cfg80211_attach(drvr, bus_if->dev, drvr->settings->p2p_enable);
     if (drvr->config == NULL) {
-        ret = ZX_ERR_NO_MEMORY;
+        ret = ZX_ERR_IO;
         goto fail;
     }
 

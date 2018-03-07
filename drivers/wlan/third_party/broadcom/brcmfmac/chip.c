@@ -690,7 +690,7 @@ static zx_status_t brcmf_chip_get_raminfo(struct brcmf_chip_priv* ci) {
         ci->pub.rambase = brcmf_chip_tcm_rambase(ci);
         if (!ci->pub.rambase) {
             brcmf_err("RAM base not provided with ARM CR4 core\n");
-            return -EINVAL;
+            return ZX_ERR_INVALID_ARGS;
         }
     } else {
         mem = brcmf_chip_get_core(&ci->pub, BCMA_CORE_SYS_MEM);
@@ -700,7 +700,7 @@ static zx_status_t brcmf_chip_get_raminfo(struct brcmf_chip_priv* ci) {
             ci->pub.rambase = brcmf_chip_tcm_rambase(ci);
             if (!ci->pub.rambase) {
                 brcmf_err("RAM base not provided with ARM CA7 core\n");
-                return -EINVAL;
+                return ZX_ERR_INVALID_ARGS;
             }
         } else {
             mem = brcmf_chip_get_core(&ci->pub, BCMA_CORE_INTERNAL_MEM);
@@ -1031,19 +1031,19 @@ zx_status_t brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops,
     }
 
     if (WARN_ON(!ops->read32)) {
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
     }
     if (WARN_ON(!ops->write32)) {
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
     }
     if (WARN_ON(!ops->prepare)) {
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
     }
     if (WARN_ON(!ops->activate)) {
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
     }
     if (err != ZX_OK) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     chip = kzalloc(sizeof(*chip), GFP_KERNEL);

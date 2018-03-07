@@ -45,7 +45,7 @@ static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
 
     if (len < (int)sizeof(*cmdhdr)) {
         brcmf_err("vendor command too short: %d\n", len);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
@@ -55,7 +55,7 @@ static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
 
     if ((int)cmdhdr->offset > len) {
         brcmf_err("bad buffer offset %d > %d\n", cmdhdr->offset, len);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     len -= cmdhdr->offset;

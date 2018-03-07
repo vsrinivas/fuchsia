@@ -961,7 +961,7 @@ static zx_status_t brcmf_sdio_readshared(struct brcmf_sdio* bus, struct sdpcm_sh
     addr = addr_le;
     if (!brcmf_sdio_valid_shared_address(addr)) {
         brcmf_err("invalid sdpcm_shared address 0x%08X\n", addr);
-        rv = -EINVAL;
+        rv = ZX_ERR_INVALID_ARGS;
         goto fail;
     }
 
@@ -1297,7 +1297,7 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
     if (type == BRCMF_SDIO_FT_SUPER && SDPCM_GLOMDESC(header)) {
         brcmf_err("Glom descriptor found in superframe head\n");
         rd->len = 0;
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
     rx_seq = (uint8_t)(swheader & SDPCM_SEQ_MASK);
     rd->channel = (swheader & SDPCM_CHANNEL_MASK) >> SDPCM_CHANNEL_SHIFT;
@@ -1312,13 +1312,13 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
     if (type == BRCMF_SDIO_FT_SUPER && rd->channel != SDPCM_GLOM_CHANNEL) {
         brcmf_err("Wrong channel for superframe\n");
         rd->len = 0;
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (type == BRCMF_SDIO_FT_SUB && rd->channel != SDPCM_DATA_CHANNEL &&
             rd->channel != SDPCM_EVENT_CHANNEL) {
         brcmf_err("Wrong channel for subframe\n");
         rd->len = 0;
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
     rd->dat_offset = brcmf_sdio_getdatoffset(header);
     if (rd->dat_offset < SDPCM_HDRLEN || rd->dat_offset > rd->len) {

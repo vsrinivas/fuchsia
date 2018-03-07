@@ -833,7 +833,7 @@ static int brcmf_cfg80211_del_iface(struct wiphy* wiphy, struct wireless_dev* wd
         return brcmf_p2p_del_vif(wiphy, wdev);
     case NL80211_IFTYPE_UNSPECIFIED:
     default:
-        return -EINVAL;
+        return ZX_ERR_OUT_OF_RANGE;
     }
     return -EOPNOTSUPP;
 }
@@ -901,7 +901,7 @@ static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_d
         ap = 1;
         break;
     default:
-        err = -EINVAL;
+        err = ZX_ERR_OUT_OF_RANGE;
         goto done;
     }
 
@@ -1533,7 +1533,7 @@ static zx_status_t brcmf_set_wsec_mode(struct net_device* ndev,
             break;
         default:
             brcmf_err("invalid cipher pairwise (%d)\n", sme->crypto.ciphers_pairwise[0]);
-            return -EINVAL;
+            return ZX_ERR_INVALID_ARGS;
         }
     }
     if (sme->crypto.cipher_group) {
@@ -1553,7 +1553,7 @@ static zx_status_t brcmf_set_wsec_mode(struct net_device* ndev,
             break;
         default:
             brcmf_err("invalid cipher group (%d)\n", sme->crypto.cipher_group);
-            return -EINVAL;
+            return ZX_ERR_INVALID_ARGS;
         }
     }
 
@@ -1615,7 +1615,7 @@ static zx_status_t brcmf_set_key_mgmt(struct net_device* ndev, struct cfg80211_c
             break;
         default:
             brcmf_err("invalid cipher group (%d)\n", sme->crypto.cipher_group);
-            return -EINVAL;
+            return ZX_ERR_INVALID_ARGS;
         }
     } else if (val & (WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED)) {
         switch (sme->crypto.akm_suites[0]) {
@@ -1639,7 +1639,7 @@ static zx_status_t brcmf_set_key_mgmt(struct net_device* ndev, struct cfg80211_c
             break;
         default:
             brcmf_err("invalid cipher group (%d)\n", sme->crypto.cipher_group);
-            return -EINVAL;
+            return ZX_ERR_INVALID_ARGS;
         }
     }
 
@@ -1728,7 +1728,7 @@ static zx_status_t brcmf_set_sharedkey(struct net_device* ndev,
     key.index = (uint32_t)sme->key_idx;
     if (key.len > sizeof(key.data)) {
         brcmf_err("Too long key length (%u)\n", key.len);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
     memcpy(key.data, sme->key, key.len);
     key.flags = BRCMF_PRIMARY_KEY;
@@ -1741,7 +1741,7 @@ static zx_status_t brcmf_set_sharedkey(struct net_device* ndev,
         break;
     default:
         brcmf_err("Invalid algorithm (%d)\n", sme->crypto.ciphers_pairwise[0]);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
     /* Set the new key/index */
     brcmf_dbg(CONN, "key length (%d) key index (%d) algo (%d)\n", key.len, key.index, key.algo);
@@ -1917,7 +1917,7 @@ static zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device
 
     if (sme->crypto.psk) {
         if (WARN_ON(profile->use_fwsup != BRCMF_PROFILE_FWSUP_NONE)) {
-            err = -EINVAL;
+            err = ZX_ERR_INVALID_ARGS;
             goto done;
         }
         brcmf_dbg(INFO, "using PSK offload\n");
@@ -2079,7 +2079,7 @@ static zx_status_t brcmf_cfg80211_set_tx_power(struct wiphy* wiphy, struct wirel
     case NL80211_TX_POWER_FIXED:
         if (mbm < 0) {
             brcmf_err("TX_POWER_FIXED - dbm is negative\n");
-            err = -EINVAL;
+            err = ZX_ERR_INVALID_ARGS;
             goto done;
         }
         qdbm = MBM_TO_DBM(4 * mbm);
@@ -2090,7 +2090,7 @@ static zx_status_t brcmf_cfg80211_set_tx_power(struct wiphy* wiphy, struct wirel
         break;
     default:
         brcmf_err("Unsupported type %d\n", type);
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
         goto done;
     }
     /* Make sure radio is off or on as far as software is concerned */
@@ -2182,14 +2182,14 @@ static zx_status_t brcmf_cfg80211_del_key(struct wiphy* wiphy, struct net_device
 
     if (key_idx >= BRCMF_MAX_DEFAULT_KEYS) {
         /* we ignore this key index in this case */
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     key = &ifp->vif->profile.key[key_idx];
 
     if (key->algo == CRYPTO_ALGO_OFF) {
         brcmf_dbg(CONN, "Ignore clearing of (never configured) key\n");
-        return -EINVAL;
+        return ZX_ERR_BAD_STATE;
     }
 
     memset(key, 0, sizeof(*key));
@@ -2223,7 +2223,7 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
     if (key_idx >= BRCMF_MAX_DEFAULT_KEYS) {
         /* we ignore this key index in this case */
         brcmf_err("invalid key index (%d)\n", key_idx);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (params->key_len == 0) {
@@ -2232,7 +2232,7 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
 
     if (params->key_len > sizeof(key->data)) {
         brcmf_err("Too long key length (%u)\n", params->key_len);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     ext_key = false;
@@ -2288,7 +2288,7 @@ static zx_status_t brcmf_cfg80211_add_key(struct wiphy* wiphy, struct net_device
         break;
     default:
         brcmf_err("Invalid cipher (0x%x)\n", params->cipher);
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
         goto done;
     }
 
@@ -2358,7 +2358,7 @@ static zx_status_t brcmf_cfg80211_get_key(struct wiphy* wiphy, struct net_device
         brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_AES_CMAC\n");
     } else {
         brcmf_err("Invalid algo (0x%x)\n", wsec);
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
         goto done;
     }
     callback(cookie, &params);
@@ -3125,12 +3125,12 @@ static zx_status_t brcmf_internal_escan_add_info(struct cfg80211_scan_request* r
 
     freq = ieee80211_channel_to_frequency(channel, band);
     if (!freq) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     chan = ieee80211_get_channel(req->wiphy, freq);
     if (!chan) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     for (i = 0; i < req->n_channels; i++) {
@@ -3308,7 +3308,7 @@ static zx_status_t brcmf_cfg80211_sched_scan_start(struct wiphy* wiphy, struct n
 
     if (req->n_match_sets <= 0) {
         brcmf_dbg(SCAN, "invalid number of matchsets specified: %d\n", req->n_match_sets);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     return brcmf_pno_start_sched_scan(ifp, req);
@@ -3398,7 +3398,7 @@ static zx_status_t brcmf_wowl_nd_results(struct brcmf_if* ifp, const struct brcm
 
     if (pfn_result->count < 1) {
         brcmf_err("Invalid result count, expected 1 (%d)\n", pfn_result->count);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     netinfo = brcmf_get_netinfo_array(pfn_result);
@@ -3675,7 +3675,7 @@ static zx_status_t brcmf_cfg80211_set_pmksa(struct wiphy* wiphy, struct net_devi
         }
     } else {
         brcmf_err("Too many PMKSA entries cached %d\n", npmk);
-        return -EINVAL;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     brcmf_dbg(CONN, "set_pmksa - PMK bssid: %pM =\n", pmk[npmk].bssid);
@@ -3719,7 +3719,7 @@ static zx_status_t brcmf_cfg80211_del_pmksa(struct wiphy* wiphy, struct net_devi
         cfg->pmk_list.npmk = npmk - 1;
     } else {
         brcmf_err("Cache entry not found\n");
-        return -EINVAL;
+        return ZX_ERR_BAD_STATE;
     }
 
     err = brcmf_update_pmklist(cfg, ifp);
@@ -3817,13 +3817,13 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
 
     /* check for multicast cipher suite */
     if ((int32_t)offset + WPA_IE_MIN_OUI_LEN > len) {
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
         brcmf_err("no multicast cipher suite\n");
         goto exit;
     }
 
     if (!brcmf_valid_wpa_oui(&data[offset], is_rsn_ie)) {
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
         brcmf_err("invalid OUI\n");
         goto exit;
     }
@@ -3845,7 +3845,7 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
         gval = AES_ENABLED;
         break;
     default:
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
         brcmf_err("Invalid multi cast cipher info\n");
         goto exit;
     }
@@ -3856,13 +3856,13 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
     offset += WPA_IE_SUITE_COUNT_LEN;
     /* Check for unicast suite(s) */
     if ((int32_t)(offset + (WPA_IE_MIN_OUI_LEN * count)) > len) {
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
         brcmf_err("no unicast cipher suite\n");
         goto exit;
     }
     for (i = 0; i < count; i++) {
         if (!brcmf_valid_wpa_oui(&data[offset], is_rsn_ie)) {
-            err = -EINVAL;
+            err = ZX_ERR_INVALID_ARGS;
             brcmf_err("ivalid OUI\n");
             goto exit;
         }
@@ -3890,13 +3890,13 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
     offset += WPA_IE_SUITE_COUNT_LEN;
     /* Check for auth key management suite(s) */
     if ((int32_t)(offset + (WPA_IE_MIN_OUI_LEN * count)) > len) {
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
         brcmf_err("no auth key mgmt suite\n");
         goto exit;
     }
     for (i = 0; i < count; i++) {
         if (!brcmf_valid_wpa_oui(&data[offset], is_rsn_ie)) {
-            err = -EINVAL;
+            err = ZX_ERR_INVALID_ARGS;
             brcmf_err("ivalid OUI\n");
             goto exit;
         }
@@ -3944,7 +3944,7 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
                  * WPA2_AUTH_1X_SHA256.
                  */
                 if (!(wpa_auth & (WPA2_AUTH_PSK_SHA256 | WPA2_AUTH_1X_SHA256))) {
-                    err = -EINVAL;
+                    err = ZX_ERR_INVALID_ARGS;
                     goto exit;
                 }
                 /* Firmware has requirement that WPA2_AUTH_PSK/
@@ -4315,7 +4315,7 @@ static zx_status_t brcmf_cfg80211_start_ap(struct wiphy* wiphy, struct net_devic
         ssid_ie = brcmf_parse_tlvs((uint8_t*)&settings->beacon.head[ie_offset],
                                    settings->beacon.head_len - ie_offset, WLAN_EID_SSID);
         if (!ssid_ie || ssid_ie->len > IEEE80211_MAX_SSID_LEN) {
-            return -EINVAL;
+            return ZX_ERR_INVALID_ARGS;
         }
 
         memcpy(ssid_le.SSID, ssid_ie->data, ssid_ie->len);
@@ -4402,7 +4402,7 @@ static zx_status_t brcmf_cfg80211_start_ap(struct wiphy* wiphy, struct net_devic
         }
     } else if (WARN_ON(supports_11d && (is_11d != ifp->vif->is_11d))) {
         /* Multiple-BSS should use same 11d configuration */
-        err = -EINVAL;
+        err = ZX_ERR_INVALID_ARGS;
         goto exit;
     }
 
@@ -4697,7 +4697,7 @@ static zx_status_t brcmf_cfg80211_mgmt_tx(struct wiphy* wiphy, struct wireless_d
     } else if (ieee80211_is_action(mgmt->frame_control)) {
         if (len > BRCMF_FIL_ACTION_FRAME_SIZE + DOT11_MGMT_HDR_LEN) {
             brcmf_err("invalid action frame length\n");
-            err = -EINVAL;
+            err = ZX_ERR_INVALID_ARGS;
             goto exit;
         }
         af_params = kzalloc(sizeof(*af_params), GFP_KERNEL);
@@ -4835,7 +4835,7 @@ static zx_status_t brcmf_cfg80211_crit_proto_start(struct wiphy* wiphy, struct w
 
     /* only DHCP support for now */
     if (proto != NL80211_CRIT_PROTO_DHCP) {
-        return -EINVAL;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     /* suppress and abort scanning */
@@ -4879,7 +4879,7 @@ static zx_status_t brcmf_convert_nl80211_tdls_oper(enum nl80211_tdls_operation o
     zx_status_t ret = ZX_OK;
 
     if (!op_out) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
     switch (oper) {
     case NL80211_TDLS_DISCOVERY_REQ:
@@ -4976,7 +4976,7 @@ static zx_status_t brcmf_cfg80211_set_pmk(struct wiphy* wiphy, struct net_device
     /* expect using firmware supplicant for 1X */
     ifp = netdev_priv(dev);
     if (WARN_ON(ifp->vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_1X)) {
-        return -EINVAL;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     return brcmf_set_pmk(ifp, conf->pmk, conf->pmk_len);
@@ -4989,7 +4989,7 @@ static zx_status_t brcmf_cfg80211_del_pmk(struct wiphy* wiphy, struct net_device
     brcmf_dbg(TRACE, "enter\n");
     ifp = netdev_priv(dev);
     if (WARN_ON(ifp->vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_1X)) {
-        return -EINVAL;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     return brcmf_set_pmk(ifp, NULL, 0);
@@ -5336,7 +5336,7 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
         memset(&sinfo, 0, sizeof(sinfo));
         if (!data) {
             brcmf_err("No IEs present in ASSOC/REASSOC_IND");
-            return -EINVAL;
+            return ZX_ERR_INVALID_ARGS;
         }
         sinfo.assoc_req_ies = data;
         sinfo.assoc_req_ies_len = e->datalen;
@@ -5485,7 +5485,7 @@ static zx_status_t brcmf_notify_vif_event(struct brcmf_if* ifp, const struct brc
         spin_unlock(&event->vif_event_lock);
         break;
     }
-    return -EINVAL;
+    return ZX_ERR_INVALID_ARGS;
 }
 
 static void brcmf_init_conf(struct brcmf_cfg80211_conf* conf) {
@@ -6522,7 +6522,7 @@ static zx_status_t brcmf_translate_country_code(struct brcmf_pub* drvr, char alp
     country_codes = drvr->settings->country_codes;
     if (!country_codes) {
         brcmf_dbg(TRACE, "No country codes configured for device\n");
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if ((alpha2[0] == ccreq->country_abbrev[0]) && (alpha2[1] == ccreq->country_abbrev[1])) {
@@ -6543,7 +6543,7 @@ static zx_status_t brcmf_translate_country_code(struct brcmf_pub* drvr, char alp
     }
     if (found_index == -1) {
         brcmf_dbg(TRACE, "No country code match found\n");
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
     memset(ccreq, 0, sizeof(*ccreq));
     ccreq->rev = country_codes->table[found_index].rev;

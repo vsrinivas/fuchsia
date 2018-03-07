@@ -534,7 +534,7 @@ static const int brcmf_fws_prio2fifo[] = {
 static zx_status_t brcmf_fws_get_tlv_len(struct brcmf_fws_info* fws, enum brcmf_fws_tlv_type id,
                                          int* len_out) {
     if (!len_out) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
     switch (id) {
         BRCMF_FWS_TLV_DEFLIST
@@ -543,7 +543,7 @@ static zx_status_t brcmf_fws_get_tlv_len(struct brcmf_fws_info* fws, enum brcmf_
         break;
     }
     *len_out = 0;
-    return -EINVAL;
+    return ZX_ERR_INVALID_ARGS;
 }
 #undef BRCMF_FWS_TLV_DEF
 
@@ -617,7 +617,7 @@ static zx_status_t brcmf_fws_hanger_pushpkt(struct brcmf_fws_hanger* h, struct s
     if (h->items[slot_id].state != BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
         brcmf_err("slot is not free\n");
         h->failed_to_push++;
-        return -EINVAL;
+        return ZX_ERR_BAD_STATE;
     }
 
     h->items[slot_id].state = BRCMF_FWS_HANGER_ITEM_STATE_INUSE;
@@ -635,7 +635,7 @@ static inline zx_status_t brcmf_fws_hanger_poppkt(struct brcmf_fws_hanger* h, ui
     if (h->items[slot_id].state == BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
         brcmf_err("entry not in use\n");
         h->failed_to_pop++;
-        return -EINVAL;
+        return ZX_ERR_BAD_STATE;
     }
 
     *pktout = h->items[slot_id].pkt;
@@ -654,7 +654,7 @@ static zx_status_t brcmf_fws_hanger_mark_suppressed(struct brcmf_fws_hanger* h, 
 
     if (h->items[slot_id].state == BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
         brcmf_err("entry not in use\n");
-        return -EINVAL;
+        return ZX_ERR_BAD_STATE;
     }
 
     h->items[slot_id].state = BRCMF_FWS_HANGER_ITEM_STATE_INUSE_SUPPRESSED;
@@ -728,7 +728,7 @@ static zx_status_t brcmf_fws_macdesc_lookup(struct brcmf_fws_info* fws, uint8_t*
     }
 
     if (ea == NULL) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     entry = &fws->desc.nodes[0];
@@ -1454,7 +1454,7 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
     } else {
         WARN_ON(true/*bad entry*/);
         brcmu_pkt_buf_free_skb(skb);
-        return -EINVAL;
+        return ZX_ERR_INTERNAL;
     }
     entry->transit_count--;
     if (entry->suppressed && entry->suppr_transit_count) {
@@ -1476,7 +1476,7 @@ static zx_status_t brcmf_fws_txs_process(struct brcmf_fws_info* fws, uint8_t fla
     ret = brcmf_proto_hdrpull(fws->drvr, false, skb, &ifp);
     if (ret != ZX_OK) {
         brcmu_pkt_buf_free_skb(skb);
-        return -EINVAL;
+        return ZX_ERR_INTERNAL;
     }
     if (!remove_from_hanger) {
         ret = brcmf_fws_txstatus_suppressed(fws, fifo, skb, genbit, seq);
@@ -1553,7 +1553,7 @@ static zx_status_t brcmf_fws_notify_credit_map(struct brcmf_if* ifp, const struc
 
     if (e->datalen < BRCMF_FWS_FIFO_COUNT) {
         brcmf_err("event payload too small (%d)\n", e->datalen);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (fws->creditmap_received) {
         return ZX_OK;

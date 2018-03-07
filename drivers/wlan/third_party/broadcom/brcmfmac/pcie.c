@@ -550,7 +550,7 @@ static zx_status_t brcmf_pcie_exit_download_state(struct brcmf_pciedev_info* dev
     }
 
     if (!brcmf_chip_set_active(devinfo->ci, resetintr)) {
-        return -EINVAL;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
     return ZX_OK;
 }
@@ -1235,7 +1235,7 @@ static zx_status_t brcmf_pcie_init_share_ram_info(struct brcmf_pciedev_info* dev
     if ((shared->version > BRCMF_PCIE_MAX_SHARED_VERSION) ||
             (shared->version < BRCMF_PCIE_MIN_SHARED_VERSION)) {
         brcmf_err("Unsupported PCIE version %d\n", shared->version);
-        return -EINVAL;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     /* check firmware support dma indicies */
@@ -1358,7 +1358,7 @@ static zx_status_t brcmf_pcie_get_resource(struct brcmf_pciedev_info* devinfo) {
     if ((bar1_size == 0) || (bar1_addr == 0)) {
         brcmf_err("BAR1 Not enabled, device size=%ld, addr=%#016llx\n", bar1_size,
                   (unsigned long long)bar1_addr);
-        return -EINVAL;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     devinfo->regs = ioremap_nocache(bar0_addr, BRCMF_PCIE_REG_MAP_SIZE);
@@ -1366,7 +1366,7 @@ static zx_status_t brcmf_pcie_get_resource(struct brcmf_pciedev_info* devinfo) {
 
     if (!devinfo->regs || !devinfo->tcm) {
         brcmf_err("ioremap() failed (%p,%p)\n", devinfo->regs, devinfo->tcm);
-        return -EINVAL;
+        return ZX_ERR_NO_RESOURCES;
     }
     brcmf_dbg(PCIE, "Phys addr : reg space = %p base addr %#016llx\n", devinfo->regs,
               (unsigned long long)bar0_addr);

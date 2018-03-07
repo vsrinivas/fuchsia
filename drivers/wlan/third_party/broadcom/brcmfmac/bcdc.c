@@ -200,7 +200,7 @@ retry:
     if (id != bcdc->reqid) {
         brcmf_err("%s: unexpected request id %d (expected %d)\n",
                   brcmf_ifname(brcmf_get_ifp(drvr, ifidx)), id, bcdc->reqid);
-        ret = -EINVAL;
+        ret = ZX_ERR_BAD_STATE;
         goto done;
     }
 
@@ -252,7 +252,7 @@ static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, 
     if (id != bcdc->reqid) {
         brcmf_err("%s: unexpected request id %d (expected %d)\n",
                   brcmf_ifname(brcmf_get_ifp(drvr, ifidx)), id, bcdc->reqid);
-        ret = -EINVAL;
+        ret = ZX_ERR_BAD_STATE;
         goto done;
     }
 

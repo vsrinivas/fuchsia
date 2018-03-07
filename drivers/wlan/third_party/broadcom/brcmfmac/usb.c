@@ -243,7 +243,7 @@ static zx_status_t brcmf_usb_send_ctl(struct brcmf_usbdev_info* devinfo, uint8_t
 
     brcmf_dbg(USB, "Enter\n");
     if (devinfo == NULL || buf == NULL || len == 0 || devinfo->ctl_urb == NULL) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     size = len;
@@ -270,7 +270,7 @@ static zx_status_t brcmf_usb_recv_ctl(struct brcmf_usbdev_info* devinfo, uint8_t
 
     brcmf_dbg(USB, "Enter\n");
     if ((devinfo == NULL) || (buf == NULL) || (len == 0) || (devinfo->ctl_urb == NULL)) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     size = len;
@@ -685,7 +685,7 @@ static zx_status_t brcmf_usb_dl_cmd(struct brcmf_usbdev_info* devinfo, uint8_t c
     uint16_t size;
 
     if ((!devinfo) || (devinfo->ctl_urb == NULL)) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     tmpbuf = kmalloc(buflen, GFP_ATOMIC);
@@ -786,7 +786,7 @@ static zx_status_t brcmf_usb_resetcfg(struct brcmf_usbdev_info* devinfo) {
     } else {
         brcmf_err("Cannot talk to Dongle. Firmware is not UP, %d ms\n",
                   BRCMF_USB_RESET_GETVER_SPINWAIT * loop_cnt);
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 }
 
@@ -795,7 +795,7 @@ static bool brcmf_usb_dl_send_bulk(struct brcmf_usbdev_info* devinfo, void* buff
     uint32_t time_left;
 
     if ((devinfo == NULL) || (devinfo->bulk_urb == NULL)) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     /* Prepare the URB */
@@ -840,7 +840,7 @@ static zx_status_t brcmf_usb_dl_writeimage(struct brcmf_usbdev_info* devinfo, ui
     /* 2) Check we are in the Waiting state */
     if (rdlstate != DL_WAITING) {
         brcmf_err("Failed to DL_START\n");
-        err = -EINVAL;
+        err = ZX_ERR_BAD_STATE;
         goto fail;
     }
     sent = 0;
@@ -870,7 +870,7 @@ static zx_status_t brcmf_usb_dl_writeimage(struct brcmf_usbdev_info* devinfo, ui
             memcpy(bulkchunk, dlpos, sendlen);
             if (brcmf_usb_dl_send_bulk(devinfo, bulkchunk, sendlen)) {
                 brcmf_err("send_bulk failed\n");
-                err = -EINVAL;
+                err = ZX_ERR_INTERNAL;
                 goto fail;
             }
 
@@ -889,7 +889,7 @@ static zx_status_t brcmf_usb_dl_writeimage(struct brcmf_usbdev_info* devinfo, ui
         /* restart if an error is reported */
         if (rdlstate == DL_BAD_HDR || rdlstate == DL_BAD_CRC) {
             brcmf_err("Bad Hdr or Bad CRC state %d\n", rdlstate);
-            err = -EINVAL;
+            err = ZX_ERR_IO_DATA_INTEGRITY;
             goto fail;
         }
     }
@@ -906,11 +906,11 @@ static zx_status_t brcmf_usb_dlstart(struct brcmf_usbdev_info* devinfo, uint8_t*
     brcmf_dbg(USB, "Enter\n");
 
     if (devinfo == NULL) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (devinfo->bus_pub.devid == 0xDEAD) {
-        return -EINVAL;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
 
     err = brcmf_usb_dl_writeimage(devinfo, fw, len);
@@ -929,11 +929,11 @@ static zx_status_t brcmf_usb_dlrun(struct brcmf_usbdev_info* devinfo) {
 
     brcmf_dbg(USB, "Enter\n");
     if (!devinfo) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (devinfo->bus_pub.devid == 0xDEAD) {
-        return -EINVAL;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
 
     /* Check we are runnable */
@@ -951,7 +951,7 @@ static zx_status_t brcmf_usb_dlrun(struct brcmf_usbdev_info* devinfo) {
         /* The Dongle may go for re-enumeration. */
     } else {
         brcmf_err("Dongle not runnable\n");
-        return -EINVAL;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
     brcmf_dbg(USB, "Exit\n");
     return ZX_OK;
