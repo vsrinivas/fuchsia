@@ -428,6 +428,17 @@ static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, zx_hand
     return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), out_handle, 1, NULL);
 }
 
+static zx_status_t platform_dev_get_bti(void* ctx, uint32_t index, zx_handle_t* out_handle) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_GET_BTI,
+        .index = index,
+    };
+    pdev_resp_t resp;
+
+    return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), out_handle, 1, NULL);
+}
+
 static zx_status_t platform_dev_alloc_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
                                                  zx_handle_t* out_handle) {
     platform_proxy_t* dev = ctx;
@@ -491,6 +502,7 @@ static zx_status_t platform_dev_get_device_info(void* ctx, pdev_device_info_t* o
 static platform_device_protocol_ops_t platform_dev_proto_ops = {
     .map_mmio = platform_dev_map_mmio,
     .map_interrupt = platform_dev_map_interrupt,
+    .get_bti = platform_dev_get_bti,
     .alloc_contig_vmo = platform_dev_alloc_contig_vmo,
     .map_contig_vmo = platform_dev_map_contig_vmo,
     .get_device_info = platform_dev_get_device_info,

@@ -18,6 +18,13 @@
 #define EE_AUDIO_MMIO_BASE 0xff642000
 #define PDM_IRQ (85 + 32)
 
+static const pbus_bti_t audio_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = 0,
+    },
+};
+
 static const pbus_mmio_t audio_in_mmios[] = {
     {
         .base = EE_AUDIO_MMIO_BASE, .length = PAGE_SIZE,
@@ -43,6 +50,8 @@ static const pbus_dev_t gauss_audio_in_dev = {
     .mmio_count = countof(audio_in_mmios),
     .irqs = audio_in_irqs,
     .irq_count = countof(audio_in_irqs),
+    .btis = audio_btis,
+    .bti_count = countof(audio_btis),
 };
 
 static const pbus_mmio_t tdm_audio_mmios[] = {
@@ -85,6 +94,8 @@ static const pbus_dev_t gauss_tdm_audio_dev = {
     .mmio_count = countof(tdm_audio_mmios),
     .i2c_channels = tdm_i2cs,
     .i2c_channel_count = countof(tdm_i2cs),
+    .btis = audio_btis,
+    .bti_count = countof(audio_btis),
 };
 
 zx_status_t gauss_audio_init(gauss_bus_t* bus) {

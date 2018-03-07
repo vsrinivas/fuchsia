@@ -30,6 +30,13 @@ static const pbus_irq_t dwc3_irqs[] = {
     },
 };
 
+static const pbus_bti_t usb_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = 0,
+    },
+};
+
 static const pbus_dev_t dwc3_dev = {
     .name = "dwc3",
     .vid = PDEV_VID_GENERIC,
@@ -39,6 +46,8 @@ static const pbus_dev_t dwc3_dev = {
     .mmio_count = countof(dwc3_mmios),
     .irqs = dwc3_irqs,
     .irq_count = countof(dwc3_irqs),
+    .btis = usb_btis,
+    .bti_count = countof(usb_btis),
 };
 
 static const pbus_dev_t xhci_dev = {
@@ -50,6 +59,8 @@ static const pbus_dev_t xhci_dev = {
     .mmio_count = countof(dwc3_mmios),
     .irqs = dwc3_irqs,
     .irq_count = countof(dwc3_irqs),
+    .btis = usb_btis,
+    .bti_count = countof(usb_btis),
 };
 
 // based on code from phy-aml-new-usb3.c

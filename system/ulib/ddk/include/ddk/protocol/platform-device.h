@@ -24,6 +24,8 @@ typedef struct {
     uint32_t gpio_count;
     uint32_t i2c_channel_count;
     uint32_t uart_count;
+    uint32_t clk_count;
+    uint32_t bti_count;
     uint32_t reserved[8];
 } pdev_device_info_t;
 
@@ -31,6 +33,7 @@ typedef struct {
     zx_status_t (*map_mmio)(void* ctx, uint32_t index, uint32_t cache_policy, void** out_vaddr,
                             size_t* out_size, zx_handle_t* out_handle);
     zx_status_t (*map_interrupt)(void* ctx, uint32_t index, zx_handle_t* out_handle);
+    zx_status_t (*get_bti)(void* ctx, uint32_t index, zx_handle_t* out_handle);
     zx_status_t (*alloc_contig_vmo)(void* ctx, size_t size, uint32_t align_log2,
                                     zx_handle_t* out_handle);
     zx_status_t (*map_contig_vmo)(void* ctx, size_t size, uint32_t align_log2, uint32_t map_flags,
@@ -43,19 +46,24 @@ typedef struct {
     void* ctx;
 } platform_device_protocol_t;
 
-// Maps an MMIO region based on information in the MDI
-// index is based on ordering of the device's mmio nodes in the MDI
+// Maps an MMIO region. "index" is relative to the list of MMIOs for the device.
 static inline zx_status_t pdev_map_mmio(platform_device_protocol_t* pdev, uint32_t index,
                                         uint32_t cache_policy, void** out_vaddr, size_t* out_size,
                                         zx_handle_t* out_handle) {
     return pdev->ops->map_mmio(pdev->ctx, index, cache_policy, out_vaddr, out_size, out_handle);
 }
 
-// Returns an interrupt handle for an IRQ based on information in the MDI
-// index is based on ordering of the device's irq nodes in the MDI
+// Returns an interrupt handle. "index" is relative to the list of IRQs for the device.
 static inline zx_status_t pdev_map_interrupt(platform_device_protocol_t* pdev, uint32_t index,
                                              zx_handle_t* out_handle) {
     return pdev->ops->map_interrupt(pdev->ctx, index, out_handle);
+}
+
+// Returns an IOMMU bus transaction initiator handle.
+// "index" is relative to the list of BTIs for the device.
+static inline zx_status_t pdev_get_bti(platform_device_protocol_t* pdev, uint32_t index,
+                                       zx_handle_t* out_handle) {
+    return pdev->ops->get_bti(pdev->ctx, index, out_handle);
 }
 
 static inline zx_status_t pdev_alloc_contig_vmo(platform_device_protocol_t* pdev, size_t size,

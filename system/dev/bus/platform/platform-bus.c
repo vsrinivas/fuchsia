@@ -14,8 +14,23 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
 #include <zircon/process.h>
+#include <zircon/syscalls/iommu.h>
 
 #include "platform-bus.h"
+
+static zx_status_t platform_bus_get_bti(void* ctx, uint32_t iommu_index, uint32_t bti_id,
+                                        zx_handle_t* out_handle) {
+    platform_bus_t* bus = ctx;
+    if (iommu_index != 0) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return zx_bti_create(bus->dummy_iommu_handle, 0, bti_id, out_handle);
+}
+
+// default IOMMU protocol to use if the board driver does not set one via pbus_set_protocol()
+static iommu_protocol_ops_t platform_bus_default_iommu_ops = {
+    .get_bti = platform_bus_get_bti,
+};
 
 static zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void* protocol) {
     if (!protocol) {
@@ -44,6 +59,9 @@ static zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void*
         memcpy(&bus->serial, protocol, sizeof(bus->serial));
         break;
     }
+    case ZX_PROTOCOL_IOMMU:
+        memcpy(&bus->iommu, protocol, sizeof(bus->iommu));
+        break;
     default:
         // TODO(voydanoff) consider having a registry of arbitrary protocols
         return ZX_ERR_NOT_SUPPORTED;
@@ -139,6 +157,12 @@ zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protoc
             return ZX_OK;
         }
         break;
+    case ZX_PROTOCOL_IOMMU:
+        if (bus->iommu.ops) {
+            memcpy(protocol, &bus->iommu, sizeof(bus->iommu));
+            return ZX_OK;
+        }
+        break;
     default:
         // TODO(voydanoff) consider having a registry of arbitrary protocols
         return ZX_ERR_NOT_SUPPORTED;
@@ -162,6 +186,7 @@ static void platform_bus_release(void* ctx) {
     }
 
     platform_serial_release(bus);
+    zx_handle_close(bus->dummy_iommu_handle);
 
     free(bus);
 }
@@ -200,6 +225,19 @@ static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const cha
         return  ZX_ERR_NO_MEMORY;
     }
     completion_reset(&bus->proto_completion);
+    bus->resource = get_root_resource();
+
+    // set up a dummy IOMMU protocol to use in the case where our board driver does not
+    // set a real one.
+    zx_iommu_desc_dummy_t desc;
+    zx_status_t status = zx_iommu_create(bus->resource, ZX_IOMMU_TYPE_DUMMY,
+                                         &desc, sizeof(desc), &bus->dummy_iommu_handle);
+    if (status != ZX_OK) {
+        free(bus);
+        return status;
+    }
+    bus->iommu.ops = &platform_bus_default_iommu_ops;
+    bus->iommu.ctx = bus;
 
     char* board_name = strstr(args, "board=");
     if (board_name) {
@@ -220,13 +258,14 @@ static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const cha
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    zx_status_t r = device_add(parent, &self_args, &parent);
-    if (r != ZX_OK) {
-        return r;
+    status = device_add(parent, &self_args, &parent);
+    if (status != ZX_OK) {
+        zx_handle_close(bus->dummy_iommu_handle);
+        free(bus);
+        return status;
     }
 
     // Then we attach the platform-bus device below it
-    bus->resource = get_root_resource();
     bus->vid = vid;
     bus->pid = pid;
     list_initialize(&bus->devices);

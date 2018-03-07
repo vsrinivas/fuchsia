@@ -10,6 +10,7 @@
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
+#include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/serial.h>
@@ -28,6 +29,7 @@ typedef struct {
     i2c_protocol_t i2c;
     clk_protocol_t clk;
     serial_driver_protocol_t serial;
+    iommu_protocol_t iommu;
     zx_handle_t resource;   // root resource for platform bus
     uint32_t vid;
     uint32_t pid;
@@ -41,6 +43,8 @@ typedef struct {
     // list of i2c_txn_t
     list_node_t i2c_txns;
     mtx_t i2c_txn_lock;
+
+    zx_handle_t dummy_iommu_handle;
 
     completion_t proto_completion;
 } platform_bus_t;
@@ -63,12 +67,14 @@ typedef struct {
     pbus_i2c_channel_t* i2c_channels;
     pbus_uart_t* uarts;
     pbus_clk_t* clks;
+    pbus_bti_t* btis;
     uint32_t mmio_count;
     uint32_t irq_count;
     uint32_t gpio_count;
     uint32_t i2c_channel_count;
     uint32_t uart_count;
     uint32_t clk_count;
+    uint32_t bti_count;
 } platform_dev_t;
 
 typedef struct {

@@ -15,6 +15,13 @@
 // #define I2C_TEST 1
 #define DSI_ENABLE 1
 
+static const pbus_bti_t hikey_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = 0,
+    },
+};
+
 static const pbus_mmio_t dwc3_mmios[] = {
     {
         .base = MMIO_USB3OTG_BASE,
@@ -38,6 +45,8 @@ static const pbus_dev_t dwc3_dev = {
     .mmio_count = countof(dwc3_mmios),
     .irqs = dwc3_irqs,
     .irq_count = countof(dwc3_irqs),
+    .btis = hikey_btis,
+    .bti_count = countof(hikey_btis),
 };
 
 #ifdef DSI_ENABLE
@@ -90,6 +99,8 @@ static const pbus_dev_t dsi_dev = {
     .i2c_channel_count = countof(dsi_i2c_channels),
     .gpios = dsi_gpios,
     .gpio_count = countof(dsi_gpios),
+    .btis = hikey_btis,
+    .bti_count = countof(hikey_btis),
 };
 #endif
 
@@ -116,6 +127,8 @@ static const pbus_dev_t xhci_dev = {
     .mmio_count = countof(xhci_mmios),
     .irqs = xhci_irqs,
     .irq_count = countof(xhci_irqs),
+    .btis = hikey_btis,
+    .bti_count = countof(hikey_btis),
 };
 
 static const pbus_mmio_t mali_mmios[] = {
@@ -149,6 +162,8 @@ static const pbus_dev_t mali_dev = {
     .mmio_count = countof(mali_mmios),
     .irqs = mali_irqs,
     .irq_count = countof(mali_irqs),
+    .btis = hikey_btis,
+    .bti_count = countof(hikey_btis),
 };
 
 #if GPIO_TEST

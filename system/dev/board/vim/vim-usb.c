@@ -29,6 +29,13 @@ static const pbus_irq_t xhci_irqs[] = {
     },
 };
 
+static const pbus_bti_t xhci_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = 0,
+    },
+};
+
 static const pbus_dev_t xhci_dev = {
     .name = "xhci",
     .vid = PDEV_VID_GENERIC,
@@ -38,6 +45,8 @@ static const pbus_dev_t xhci_dev = {
     .mmio_count = countof(xhci_mmios),
     .irqs = xhci_irqs,
     .irq_count = countof(xhci_irqs),
+    .btis = xhci_btis,
+    .bti_count = countof(xhci_btis),
 };
 
 zx_status_t vim_usb_init(vim_bus_t* bus) {

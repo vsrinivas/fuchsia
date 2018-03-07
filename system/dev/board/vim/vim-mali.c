@@ -34,6 +34,13 @@ static const pbus_irq_t mali_irqs[] = {
     },
 };
 
+static const pbus_bti_t mali_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = 0,
+    },
+};
+
 static const pbus_dev_t mali_dev = {
     .name = "mali",
     .vid = PDEV_VID_GENERIC,
@@ -43,6 +50,8 @@ static const pbus_dev_t mali_dev = {
     .mmio_count = countof(mali_mmios),
     .irqs = mali_irqs,
     .irq_count = countof(mali_irqs),
+    .btis = mali_btis,
+    .bti_count = countof(mali_btis),
 };
 
 #define RESET0_MASK_REGISTER 0x440

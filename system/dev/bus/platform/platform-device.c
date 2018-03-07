@@ -107,6 +107,21 @@ static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, zx_hand
     return status;
 }
 
+static zx_status_t platform_dev_get_bti(void* ctx, uint32_t index, zx_handle_t* out_handle) {
+    platform_dev_t* dev = ctx;
+    iommu_protocol_t* iommu = &dev->bus->iommu;
+
+    if (!iommu->ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= dev->bti_count || !out_handle) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    pbus_bti_t* bti = &dev->btis[index];
+
+    return iommu_get_bti(iommu, bti->iommu_index, bti->bti_id, out_handle);
+}
+
 static zx_status_t platform_dev_alloc_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
                                                  zx_handle_t* out_handle) {
     platform_dev_t* dev = ctx;
@@ -158,6 +173,9 @@ static zx_status_t platform_dev_get_device_info(void* ctx, pdev_device_info_t* o
     out_info->irq_count = dev->irq_count;
     out_info->gpio_count = dev->gpio_count;
     out_info->i2c_channel_count = dev->i2c_channel_count;
+    out_info->uart_count = dev->uart_count;
+    out_info->clk_count = dev->clk_count;
+    out_info->bti_count = dev->bti_count;
 
     return ZX_OK;
 }
@@ -165,6 +183,7 @@ static zx_status_t platform_dev_get_device_info(void* ctx, pdev_device_info_t* o
 static platform_device_protocol_ops_t platform_dev_proto_ops = {
     .map_mmio = platform_dev_map_mmio,
     .map_interrupt = platform_dev_map_interrupt,
+    .get_bti = platform_dev_get_bti,
     .alloc_contig_vmo = platform_dev_alloc_contig_vmo,
     .map_contig_vmo = platform_dev_map_contig_vmo,
     .get_device_info = platform_dev_get_device_info,
@@ -196,6 +215,16 @@ static zx_status_t pdev_rpc_get_interrupt(platform_dev_t* dev, uint32_t index,
                                           zx_handle_t* out_handle, uint32_t* out_handle_count) {
 
     zx_status_t status = platform_dev_map_interrupt(dev, index, out_handle);
+    if (status == ZX_OK) {
+        *out_handle_count = 1;
+    }
+    return status;
+}
+
+static zx_status_t pdev_rpc_get_bti(platform_dev_t* dev, uint32_t index, zx_handle_t* out_handle,
+                                    uint32_t* out_handle_count) {
+
+    zx_status_t status = platform_dev_get_bti(dev, index, out_handle);
     if (status == ZX_OK) {
         *out_handle_count = 1;
     }
@@ -462,6 +491,9 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
     case PDEV_GET_INTERRUPT:
         resp.status = pdev_rpc_get_interrupt(dev, req->index, &handle, &handle_count);
         break;
+    case PDEV_GET_BTI:
+        resp.status = pdev_rpc_get_bti(dev, req->index, &handle, &handle_count);
+        break;
     case PDEV_ALLOC_CONTIG_VMO:
         resp.status = pdev_rpc_alloc_contig_vmo(dev, req->contig_vmo.size,
                                                     req->contig_vmo.align_log2,
@@ -551,6 +583,8 @@ void platform_dev_free(platform_dev_t* dev) {
     free(dev->gpios);
     free(dev->i2c_channels);
     free(dev->uarts);
+    free(dev->clks);
+    free(dev->btis);
     free(dev);
 }
 
@@ -632,6 +666,16 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uin
         }
         memcpy(dev->clks, pdev->clks, sz);
         dev->clk_count = pdev->clk_count;
+    }
+    if (pdev->bti_count) {
+        const size_t sz = pdev->bti_count * sizeof(*pdev->btis);
+        dev->btis = malloc(sz);
+        if (!dev->btis) {
+            status = ZX_ERR_NO_MEMORY;
+            goto fail;
+        }
+        memcpy(dev->btis, pdev->btis, sz);
+        dev->bti_count = pdev->bti_count;
     }
 
     dev->bus = bus;
