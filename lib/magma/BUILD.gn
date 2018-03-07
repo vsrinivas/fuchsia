@@ -27,6 +27,45 @@ group("platform_driver_nodeps") {
   ]
 }
 
+icd_list = []
+if (build_intel_gen) {
+  icd_list += [
+    {
+      name = "intel"
+    },
+  ]
+}
+
+if (build_libvulkan_arm_mali) {
+  icd_list += [
+    {
+      name = "arm"
+    },
+  ]
+} else if (have_prebuilt_libvulkan_arm) {
+  icd_list += [
+    {
+      name = "arm"
+      library_path = "$libvulkan_gen_path/libvulkan_arm.so"
+    },
+  ]
+}
+
+foreach(entry, icd_list) {
+  icd_name = entry.name
+  filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
+  icd_data = [
+    "{",
+    "\"file_format_version\": \"1.0.0\",",
+    "\"ICD\": {",
+    "\"library_path\": \"libvulkan_$icd_name.so\",",
+    "\"abi_versions\": \"1.0.3\"",
+    "}",
+    "}",
+  ]
+  write_file(filename, icd_data)
+}
+
 package("magma") {
   system_image = true
   if (magma_enable_developer_build) {
@@ -34,6 +73,7 @@ package("magma") {
   }
 
   deps = []
+  resources = []
   if (have_libvulkan) {
     deps += [
       ":libmagma",
@@ -70,44 +110,6 @@ package("magma") {
           },
         ]
       }
-
-      libraries += [
-        {
-          name = "libvulkan_intel.so"
-        },
-      ]
-      resources = [
-        {
-          path = rebase_path("icd/intel_icd.json")
-          dest = "vulkan/icd.d/intel_icd.json"
-        },
-      ]
-    }
-    if (build_libvulkan_arm_mali) {
-      libraries += [
-        {
-          name = "libvulkan_arm.so"
-        },
-      ]
-      resources = [
-        {
-          path = rebase_path("icd/arm_icd.json")
-          dest = "vulkan/icd.d/arm_icd.json"
-        },
-      ]
-    } else if (have_prebuilt_libvulkan_arm) {
-      libraries += [
-        {
-          source = "$libvulkan_gen_path/libvulkan_arm.so"
-          name = "libvulkan_arm.so"
-        },
-      ]
-      resources = [
-        {
-          path = rebase_path("icd/arm_icd.json")
-          dest = "vulkan/icd.d/arm_icd.json"
-        },
-      ]
     }
   }
 
@@ -124,6 +126,29 @@ package("magma") {
       drivers = [
         {
           name = "libmsd_arm.so"
+        },
+      ]
+    }
+  }
+  foreach(entry, icd_list) {
+    icd_name = entry.name
+    resources += [
+      {
+        path = rebase_path("$target_gen_dir/vulkan/icd.d/$icd_name.json")
+        dest = "vulkan/icd.d/$icd_name.json"
+      },
+    ]
+    if (defined(entry.library_path)) {
+      libraries += [
+        {
+          source = entry.library_path
+          name = "libvulkan_$icd_name.so"
+        },
+      ]
+    } else {
+      libraries += [
+        {
+          name = "libvulkan_$icd_name.so"
         },
       ]
     }
