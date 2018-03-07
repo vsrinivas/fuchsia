@@ -33,8 +33,9 @@ MediaSourceImpl::MediaSourceImpl(
                                                   std::move(request),
                                                   owner),
       allowed_stream_types_(
-          allowed_media_types.To<std::unique_ptr<
-              std::vector<std::unique_ptr<media::StreamTypeSet>>>>()) {
+          fxl::To<std::unique_ptr<
+              std::vector<std::unique_ptr<media::StreamTypeSet>>>>(
+              allowed_media_types)) {
   FXL_DCHECK(reader);
 
   status_publisher_.SetCallbackRunner(
@@ -57,7 +58,7 @@ MediaSourceImpl::MediaSourceImpl(
            stream_index](f1dl::InterfaceRequest<MediaPacketProducer> request) {
             demux_->GetPacketProducer(stream_index, std::move(request));
           },
-          stream_media_type.To<std::unique_ptr<StreamType>>(),
+          fxl::To<std::unique_ptr<StreamType>>(stream_media_type),
           allowed_stream_types_, callback_joiner->NewCallback()));
       ++stream_index;
     }
@@ -174,7 +175,7 @@ MediaSourceImpl::Stream::Stream(
 MediaSourceImpl::Stream::~Stream() {}
 
 MediaTypePtr MediaSourceImpl::Stream::media_type() const {
-  return MediaType::From(stream_type_);
+  return fxl::To<MediaTypePtr>(stream_type_);
 }
 
 void MediaSourceImpl::Stream::GetPacketProducer(

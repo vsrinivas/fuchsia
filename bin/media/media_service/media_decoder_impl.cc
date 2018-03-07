@@ -31,7 +31,7 @@ MediaDecoderImpl::MediaDecoderImpl(
   FXL_DCHECK(input_media_type);
 
   std::unique_ptr<StreamType> input_stream_type =
-      input_media_type.To<std::unique_ptr<StreamType>>();
+      fxl::To<std::unique_ptr<StreamType>>(input_media_type);
 
   if (Decoder::Create(*input_stream_type, &decoder_) != Result::kOk) {
     FXL_LOG(WARNING) << "Couldn't find decoder for stream type";
@@ -61,7 +61,7 @@ MediaDecoderImpl::~MediaDecoderImpl() {}
 
 void MediaDecoderImpl::GetOutputType(const GetOutputTypeCallback& callback) {
   FXL_DCHECK(decoder_);
-  callback(MediaType::From(decoder_->output_stream_type()));
+  callback(fxl::To<MediaTypePtr>(decoder_->output_stream_type()));
 }
 
 void MediaDecoderImpl::GetPacketConsumer(

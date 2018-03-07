@@ -34,12 +34,13 @@ LpcmReformatterImpl::LpcmReformatterImpl(
   FXL_DCHECK(input_media_type);
 
   std::unique_ptr<StreamType> input_stream_type =
-      input_media_type.To<std::unique_ptr<StreamType>>();
+      fxl::To<std::unique_ptr<StreamType>>(input_media_type);
   RCHECK(input_stream_type->medium() == StreamType::Medium::kAudio);
   RCHECK(input_stream_type->audio() != nullptr);
 
-  reformatter_ = LpcmReformatter::Create(*input_stream_type->audio(),
-                                         Convert(output_sample_format));
+  reformatter_ = LpcmReformatter::Create(
+      *input_stream_type->audio(),
+      fxl::To<AudioStreamType::SampleFormat>(output_sample_format));
   FXL_DCHECK(reformatter_);
 
   NodeRef consumer_ref = graph_.Add(consumer_);
@@ -64,7 +65,7 @@ LpcmReformatterImpl::~LpcmReformatterImpl() {}
 
 void LpcmReformatterImpl::GetOutputType(const GetOutputTypeCallback& callback) {
   FXL_DCHECK(reformatter_);
-  callback(MediaType::From(reformatter_->output_stream_type()));
+  callback(fxl::To<MediaTypePtr>(reformatter_->output_stream_type()));
 }
 
 void LpcmReformatterImpl::GetPacketConsumer(

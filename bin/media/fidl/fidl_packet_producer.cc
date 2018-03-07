@@ -138,7 +138,7 @@ void FidlPacketProducer::SendPacket(PacketPtr packet) {
 
   ProducePacket(packet->payload(), packet->size(), packet->pts(),
                 packet->pts_rate(), packet->keyframe(), packet->end_of_stream(),
-                MediaType::From(packet->revised_stream_type()),
+                fxl::To<MediaTypePtr>(packet->revised_stream_type()),
                 fxl::MakeCopyable([ this, packet = std::move(packet) ]() {
                   ActiveSinkStage* stage_ptr = stage();
                   if (stage_ptr) {

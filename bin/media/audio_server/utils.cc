@@ -28,7 +28,8 @@ zx_status_t SelectBestFormat(
   audio_sample_format_t pref_sample_format;
 
   if (!driver_utils::SampleFormatToDriverSampleFormat(
-          Convert(*sample_format_inout), &pref_sample_format)) {
+          fxl::To<AudioStreamType::SampleFormat>(*sample_format_inout),
+          &pref_sample_format)) {
     FXL_LOG(WARNING) << "Failed to convert FIDL sample format ("
                      << static_cast<uint32_t>(*sample_format_inout)
                      << ") to driver sample format.";
@@ -211,7 +212,7 @@ zx_status_t SelectBestFormat(
   AudioStreamType::SampleFormat tmp;
   __UNUSED bool convert_res =
       driver_utils::DriverSampleFormatToSampleFormat(best_sample_format, &tmp);
-  *sample_format_inout = Convert(tmp);
+  *sample_format_inout = fxl::To<AudioSampleFormat>(tmp);
   FXL_DCHECK(convert_res);
 
   *channels_inout = best_channels;

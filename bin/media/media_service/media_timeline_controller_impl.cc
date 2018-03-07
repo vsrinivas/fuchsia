@@ -7,7 +7,6 @@
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fxl/logging.h"
-#include "lib/media/timeline/fidl_type_conversions.h"
 #include "lib/media/timeline/timeline.h"
 
 namespace media {
@@ -35,7 +34,7 @@ MediaTimelineControllerImpl::MediaTimelineControllerImpl(
         MediaTimelineControlPointStatusPtr status =
             MediaTimelineControlPointStatus::New();
         status->timeline_transform =
-            TimelineTransform::From(current_timeline_function_);
+            static_cast<TimelineTransformPtr>(current_timeline_function_);
         status->end_of_stream = end_of_stream_;
         callback(version, std::move(status));
       });

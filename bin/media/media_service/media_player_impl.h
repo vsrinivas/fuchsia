@@ -28,13 +28,6 @@ class MediaPlayerImpl : public MediaComponentFactory::Product<MediaPlayer>,
       f1dl::InterfaceRequest<MediaPlayer> request,
       MediaComponentFactory* owner);
 
-  static std::shared_ptr<MediaPlayerImpl> Create(
-      f1dl::InterfaceHandle<SeekingReader> reader,
-      f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
-      f1dl::InterfaceHandle<MediaRenderer> video_renderer,
-      f1dl::InterfaceRequest<MediaPlayer> request,
-      MediaComponentFactory* owner);
-
   ~MediaPlayerImpl() override;
 
   // MediaPlayer implementation.

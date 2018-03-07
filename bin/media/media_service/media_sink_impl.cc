@@ -34,8 +34,9 @@ MediaSinkImpl::MediaSinkImpl(
                                                supported_media_types) {
     FXL_DCHECK(supported_media_types);
 
-    supported_stream_types_ = supported_media_types.To<
-        std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>>();
+    supported_stream_types_ = fxl::To<
+        std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>>(
+        supported_media_types);
 
     got_supported_stream_types_.Occur();
   });
@@ -59,7 +60,7 @@ void MediaSinkImpl::ConsumeMediaType(MediaTypePtr media_type,
   }
 
   original_media_type_ = std::move(media_type);
-  stream_type_ = original_media_type_.To<std::unique_ptr<StreamType>>();
+  stream_type_ = fxl::To<std::unique_ptr<StreamType>>(original_media_type_);
   consume_media_type_callback_ = callback;
 
   got_supported_stream_types_.When([this]() { BuildConversionPipeline(); });
@@ -90,7 +91,7 @@ void MediaSinkImpl::BuildConversionPipeline() {
 
         stream_type_ = std::move(stream_type);
 
-        renderer_->SetMediaType(MediaType::From(stream_type_));
+        renderer_->SetMediaType(fxl::To<MediaTypePtr>(stream_type_));
 
         // Not needed anymore.
         original_media_type_.reset();

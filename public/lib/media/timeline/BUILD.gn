@@ -6,22 +6,6 @@ import("//build/test.gni")
 
 source_set("timeline") {
   sources = [
-    "fidl_type_conversions.cc",
-    "fidl_type_conversions.h",
-  ]
-
-  public_deps = [
-    ":host_compatible",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/media/fidl",
-  ]
-}
-
-source_set("host_compatible") {
-  sources = [
     "timeline.h",
     "timeline_function.cc",
     "timeline_function.h",
@@ -31,6 +15,7 @@ source_set("host_compatible") {
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/fidl",
   ]
 }
 

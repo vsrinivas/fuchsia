@@ -81,7 +81,7 @@ MediaDemuxImpl::MediaDemuxImpl(f1dl::InterfaceHandle<SeekingReader> reader,
   demux_->SetStatusCallback([this](const std::unique_ptr<Metadata>& metadata,
                                    const std::string& problem_type,
                                    const std::string& problem_details) {
-    metadata_ = MediaMetadata::From(metadata);
+    metadata_ = fxl::To<MediaMetadataPtr>(metadata);
     if (problem_type.empty()) {
       problem_.reset();
       status_publisher_.SendUpdates();
@@ -131,7 +131,7 @@ void MediaDemuxImpl::Describe(const DescribeCallback& callback) {
     f1dl::Array<MediaTypePtr> result =
         f1dl::Array<MediaTypePtr>::New(streams_.size());
     for (size_t i = 0; i < streams_.size(); i++) {
-      result[i] = MediaType::From(streams_[i]->stream_type());
+      result[i] = fxl::To<MediaTypePtr>(streams_[i]->stream_type());
     }
 
     callback(std::move(result));

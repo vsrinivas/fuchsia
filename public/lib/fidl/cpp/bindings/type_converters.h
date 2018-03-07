@@ -40,6 +40,10 @@ struct TypeConverter<std::vector<T>, f1dl::Array<T>> {
 template <typename T>
 struct TypeConverter<std::unique_ptr<std::vector<T>>, f1dl::Array<T>> {
   static std::vector<T> Convert(const f1dl::Array<T>& value) {
+    if (!value) {
+      return nullptr;
+    }
+
     std::vector<T> result;
     if (!value.is_null()) {
       result.resize(value.size());
@@ -83,6 +87,10 @@ struct TypeConverter<std::vector<T>, f1dl::Array<U>> {
 template <typename T, typename U>
 struct TypeConverter<std::unique_ptr<std::vector<T>>, f1dl::Array<U>> {
   static std::unique_ptr<std::vector<T>> Convert(const f1dl::Array<U>& value) {
+    if (!value) {
+      return nullptr;
+    }
+
     std::vector<T> result;
     if (!value.is_null()) {
       result.resize(value.size());

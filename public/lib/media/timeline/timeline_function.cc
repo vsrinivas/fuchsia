@@ -33,4 +33,19 @@ TimelineFunction TimelineFunction::Compose(const TimelineFunction& bc,
                           TimelineRate::Product(ab.rate(), bc.rate(), exact));
 }
 
+TimelineFunction::TimelineFunction(const TimelineTransformPtr& from)
+    : reference_time_(from ? from->reference_time : 0),
+      subject_time_(from ? from->subject_time : 0),
+      rate_(from ? TimelineRate(from->subject_delta, from->reference_delta)
+                 : TimelineRate()) {}
+
+TimelineFunction::operator TimelineTransformPtr() const {
+  TimelineTransformPtr result = TimelineTransform::New();
+  result->reference_time = reference_time();
+  result->subject_time = subject_time();
+  result->reference_delta = reference_delta();
+  result->subject_delta = subject_delta();
+  return result;
+}
+
 }  // namespace media

@@ -8,7 +8,6 @@
 #include <iostream>
 #include <limits>
 
-#include "lib/media/timeline/fidl_type_conversions.h"
 #include "lib/media/timeline/timeline.h"
 
 namespace media {
@@ -280,7 +279,7 @@ void FakeRenderer::CompleteGetStatus(const GetStatusCallback& callback) {
   MediaTimelineControlPointStatusPtr status =
       MediaTimelineControlPointStatus::New();
   status->timeline_transform =
-      TimelineTransform::From(current_timeline_function_);
+      static_cast<TimelineTransformPtr>(current_timeline_function_);
   status->end_of_stream = end_of_stream_;
   callback(status_version_, std::move(status));
 }

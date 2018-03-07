@@ -103,7 +103,7 @@ void VideoRendererImpl::SetMediaType(MediaTypePtr media_type) {
   FXL_DCHECK(details);
 
   video_frame_source_->converter().SetStreamType(
-      media_type.To<std::unique_ptr<StreamType>>());
+      fxl::To<std::unique_ptr<StreamType>>(media_type));
   status_publisher_.SendUpdates();
   if (geometry_update_callback_) {
     geometry_update_callback_();

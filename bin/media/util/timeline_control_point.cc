@@ -6,7 +6,6 @@
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "lib/media/timeline/fidl_type_conversions.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 
@@ -36,7 +35,7 @@ TimelineControlPoint::TimelineControlPoint()
           fxl::MutexLocker locker(&mutex_);
           status = MediaTimelineControlPointStatus::New();
           status->timeline_transform =
-              TimelineTransform::From(current_timeline_function_);
+              static_cast<TimelineTransformPtr>(current_timeline_function_);
           status->end_of_stream = ReachedEndOfStream();
         }
         callback(version, std::move(status));

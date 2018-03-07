@@ -101,9 +101,8 @@ FidlPacketConsumer::PacketImpl::PacketImpl(
              supplied_packet->payload()),
       supplied_packet_(std::move(supplied_packet)) {
   if (supplied_packet_->packet()->revised_media_type) {
-    SetRevisedStreamType(
-        supplied_packet_->packet()
-            ->revised_media_type.To<std::unique_ptr<StreamType>>());
+    SetRevisedStreamType(fxl::To<std::unique_ptr<StreamType>>(
+        supplied_packet_->packet()->revised_media_type));
   }
 }
 

@@ -9,287 +9,7 @@
 #include "garnet/bin/media/framework/types/text_stream_type.h"
 #include "garnet/bin/media/framework/types/video_stream_type.h"
 
-namespace media {
-
-Result Convert(MediaResult media_result) {
-  switch (media_result) {
-    case MediaResult::OK:
-      return Result::kOk;
-    case MediaResult::INTERNAL_ERROR:
-      return Result::kInternalError;
-    case MediaResult::UNSUPPORTED_OPERATION:
-    case MediaResult::NOT_IMPLEMENTED:
-      return Result::kUnsupportedOperation;
-    case MediaResult::INVALID_ARGUMENT:
-      return Result::kInvalidArgument;
-    case MediaResult::NOT_FOUND:
-      return Result::kNotFound;
-    case MediaResult::UNKNOWN_ERROR:
-    case MediaResult::UNSUPPORTED_CONFIG:
-    case MediaResult::INSUFFICIENT_RESOURCES:
-    case MediaResult::BAD_STATE:
-    case MediaResult::BUF_OVERFLOW:
-    case MediaResult::FLUSHED:
-    case MediaResult::BUSY:
-    case MediaResult::PROTOCOL_ERROR:
-    case MediaResult::ALREADY_EXISTS:
-    case MediaResult::SHUTTING_DOWN:
-    case MediaResult::CONNECTION_LOST:
-      break;
-  }
-  return Result::kUnknownError;
-}
-
-StreamType::Medium Convert(MediaTypeMedium media_type_medium) {
-  switch (media_type_medium) {
-    case MediaTypeMedium::AUDIO:
-      return StreamType::Medium::kAudio;
-    case MediaTypeMedium::VIDEO:
-      return StreamType::Medium::kVideo;
-    case MediaTypeMedium::TEXT:
-      return StreamType::Medium::kText;
-    case MediaTypeMedium::SUBPICTURE:
-      return StreamType::Medium::kSubpicture;
-  }
-  FXL_LOG(ERROR) << "unrecognized medium";
-  abort();
-}
-
-AudioStreamType::SampleFormat Convert(AudioSampleFormat audio_sample_format) {
-  switch (audio_sample_format) {
-    case AudioSampleFormat::NONE:
-      return AudioStreamType::SampleFormat::kNone;
-    case AudioSampleFormat::ANY:
-      return AudioStreamType::SampleFormat::kAny;
-    case AudioSampleFormat::UNSIGNED_8:
-      return AudioStreamType::SampleFormat::kUnsigned8;
-    case AudioSampleFormat::SIGNED_16:
-      return AudioStreamType::SampleFormat::kSigned16;
-    case AudioSampleFormat::SIGNED_24_IN_32:
-      return AudioStreamType::SampleFormat::kSigned24In32;
-    case AudioSampleFormat::FLOAT:
-      return AudioStreamType::SampleFormat::kFloat;
-  }
-  FXL_LOG(ERROR) << "unrecognized sample format";
-  abort();
-}
-
-VideoStreamType::VideoProfile Convert(VideoProfile video_profile) {
-  switch (video_profile) {
-    case VideoProfile::UNKNOWN:
-      return VideoStreamType::VideoProfile::kUnknown;
-    case VideoProfile::NOT_APPLICABLE:
-      return VideoStreamType::VideoProfile::kNotApplicable;
-    case VideoProfile::H264_BASELINE:
-      return VideoStreamType::VideoProfile::kH264Baseline;
-    case VideoProfile::H264_MAIN:
-      return VideoStreamType::VideoProfile::kH264Main;
-    case VideoProfile::H264_EXTENDED:
-      return VideoStreamType::VideoProfile::kH264Extended;
-    case VideoProfile::H264_HIGH:
-      return VideoStreamType::VideoProfile::kH264High;
-    case VideoProfile::H264_HIGH10:
-      return VideoStreamType::VideoProfile::kH264High10;
-    case VideoProfile::H264_HIGH422:
-      return VideoStreamType::VideoProfile::kH264High422;
-    case VideoProfile::H264_HIGH444_PREDICTIVE:
-      return VideoStreamType::VideoProfile::kH264High444Predictive;
-    case VideoProfile::H264_SCALABLE_BASELINE:
-      return VideoStreamType::VideoProfile::kH264ScalableBaseline;
-    case VideoProfile::H264_SCALABLE_HIGH:
-      return VideoStreamType::VideoProfile::kH264ScalableHigh;
-    case VideoProfile::H264_STEREO_HIGH:
-      return VideoStreamType::VideoProfile::kH264StereoHigh;
-    case VideoProfile::H264_MULTIVIEW_HIGH:
-      return VideoStreamType::VideoProfile::kH264MultiviewHigh;
-  }
-  FXL_LOG(ERROR);
-  abort();
-}
-
-VideoStreamType::PixelFormat Convert(PixelFormat pixel_format) {
-  switch (pixel_format) {
-    case PixelFormat::UNKNOWN:
-      return VideoStreamType::PixelFormat::kUnknown;
-    case PixelFormat::I420:
-      return VideoStreamType::PixelFormat::kI420;
-    case PixelFormat::YV12:
-      return VideoStreamType::PixelFormat::kYv12;
-    case PixelFormat::YV16:
-      return VideoStreamType::PixelFormat::kYv16;
-    case PixelFormat::YV12A:
-      return VideoStreamType::PixelFormat::kYv12A;
-    case PixelFormat::YV24:
-      return VideoStreamType::PixelFormat::kYv24;
-    case PixelFormat::NV12:
-      return VideoStreamType::PixelFormat::kNv12;
-    case PixelFormat::NV21:
-      return VideoStreamType::PixelFormat::kNv21;
-    case PixelFormat::UYVY:
-      return VideoStreamType::PixelFormat::kUyvy;
-    case PixelFormat::YUY2:
-      return VideoStreamType::PixelFormat::kYuy2;
-    case PixelFormat::ARGB:
-      return VideoStreamType::PixelFormat::kArgb;
-    case PixelFormat::XRGB:
-      return VideoStreamType::PixelFormat::kXrgb;
-    case PixelFormat::RGB24:
-      return VideoStreamType::PixelFormat::kRgb24;
-    case PixelFormat::RGB32:
-      return VideoStreamType::PixelFormat::kRgb32;
-    case PixelFormat::MJPEG:
-      return VideoStreamType::PixelFormat::kMjpeg;
-    case PixelFormat::MT21:
-      return VideoStreamType::PixelFormat::kMt21;
-  }
-  return VideoStreamType::PixelFormat::kUnknown;
-}
-
-VideoStreamType::ColorSpace Convert(ColorSpace color_space) {
-  switch (color_space) {
-    case ColorSpace::UNKNOWN:
-      return VideoStreamType::ColorSpace::kUnknown;
-    case ColorSpace::NOT_APPLICABLE:
-      return VideoStreamType::ColorSpace::kNotApplicable;
-    case ColorSpace::JPEG:
-      return VideoStreamType::ColorSpace::kJpeg;
-    case ColorSpace::HD_REC709:
-      return VideoStreamType::ColorSpace::kHdRec709;
-    case ColorSpace::SD_REC601:
-      return VideoStreamType::ColorSpace::kSdRec601;
-  }
-  return VideoStreamType::ColorSpace::kUnknown;
-}
-
-MediaTypeMedium Convert(StreamType::Medium medium) {
-  switch (medium) {
-    case StreamType::Medium::kAudio:
-      return MediaTypeMedium::AUDIO;
-    case StreamType::Medium::kVideo:
-      return MediaTypeMedium::VIDEO;
-    case StreamType::Medium::kText:
-      return MediaTypeMedium::TEXT;
-    case StreamType::Medium::kSubpicture:
-      return MediaTypeMedium::SUBPICTURE;
-  }
-
-  FXL_LOG(ERROR) << "unrecognized medium";
-  abort();
-}
-
-AudioSampleFormat Convert(AudioStreamType::SampleFormat sample_format) {
-  switch (sample_format) {
-    case AudioStreamType::SampleFormat::kNone:
-      return AudioSampleFormat::NONE;
-    case AudioStreamType::SampleFormat::kAny:
-      return AudioSampleFormat::ANY;
-    case AudioStreamType::SampleFormat::kUnsigned8:
-      return AudioSampleFormat::UNSIGNED_8;
-    case AudioStreamType::SampleFormat::kSigned16:
-      return AudioSampleFormat::SIGNED_16;
-    case AudioStreamType::SampleFormat::kSigned24In32:
-      return AudioSampleFormat::SIGNED_24_IN_32;
-    case AudioStreamType::SampleFormat::kFloat:
-      return AudioSampleFormat::FLOAT;
-  }
-
-  FXL_LOG(ERROR) << "unrecognized sample format";
-  abort();
-}
-
-VideoProfile Convert(VideoStreamType::VideoProfile video_profile) {
-  switch (video_profile) {
-    case VideoStreamType::VideoProfile::kUnknown:
-      return VideoProfile::UNKNOWN;
-    case VideoStreamType::VideoProfile::kNotApplicable:
-      return VideoProfile::NOT_APPLICABLE;
-    case VideoStreamType::VideoProfile::kH264Baseline:
-      return VideoProfile::H264_BASELINE;
-    case VideoStreamType::VideoProfile::kH264Main:
-      return VideoProfile::H264_MAIN;
-    case VideoStreamType::VideoProfile::kH264Extended:
-      return VideoProfile::H264_EXTENDED;
-    case VideoStreamType::VideoProfile::kH264High:
-      return VideoProfile::H264_HIGH;
-    case VideoStreamType::VideoProfile::kH264High10:
-      return VideoProfile::H264_HIGH10;
-    case VideoStreamType::VideoProfile::kH264High422:
-      return VideoProfile::H264_HIGH422;
-    case VideoStreamType::VideoProfile::kH264High444Predictive:
-      return VideoProfile::H264_HIGH444_PREDICTIVE;
-    case VideoStreamType::VideoProfile::kH264ScalableBaseline:
-      return VideoProfile::H264_SCALABLE_BASELINE;
-    case VideoStreamType::VideoProfile::kH264ScalableHigh:
-      return VideoProfile::H264_SCALABLE_HIGH;
-    case VideoStreamType::VideoProfile::kH264StereoHigh:
-      return VideoProfile::H264_STEREO_HIGH;
-    case VideoStreamType::VideoProfile::kH264MultiviewHigh:
-      return VideoProfile::H264_MULTIVIEW_HIGH;
-  }
-
-  FXL_LOG(ERROR) << "unrecognized video profile";
-  abort();
-}
-
-PixelFormat Convert(VideoStreamType::PixelFormat pixel_format) {
-  switch (pixel_format) {
-    case VideoStreamType::PixelFormat::kUnknown:
-      return PixelFormat::UNKNOWN;
-    case VideoStreamType::PixelFormat::kI420:
-      return PixelFormat::I420;
-    case VideoStreamType::PixelFormat::kYv12:
-      return PixelFormat::YV12;
-    case VideoStreamType::PixelFormat::kYv16:
-      return PixelFormat::YV16;
-    case VideoStreamType::PixelFormat::kYv12A:
-      return PixelFormat::YV12A;
-    case VideoStreamType::PixelFormat::kYv24:
-      return PixelFormat::YV24;
-    case VideoStreamType::PixelFormat::kNv12:
-      return PixelFormat::NV12;
-    case VideoStreamType::PixelFormat::kNv21:
-      return PixelFormat::NV21;
-    case VideoStreamType::PixelFormat::kUyvy:
-      return PixelFormat::UYVY;
-    case VideoStreamType::PixelFormat::kYuy2:
-      return PixelFormat::YUY2;
-    case VideoStreamType::PixelFormat::kArgb:
-      return PixelFormat::ARGB;
-    case VideoStreamType::PixelFormat::kXrgb:
-      return PixelFormat::XRGB;
-    case VideoStreamType::PixelFormat::kRgb24:
-      return PixelFormat::RGB24;
-    case VideoStreamType::PixelFormat::kRgb32:
-      return PixelFormat::RGB32;
-    case VideoStreamType::PixelFormat::kMjpeg:
-      return PixelFormat::MJPEG;
-    case VideoStreamType::PixelFormat::kMt21:
-      return PixelFormat::MT21;
-  }
-
-  FXL_LOG(ERROR) << "unrecognized pixel format";
-  abort();
-}
-
-ColorSpace Convert(VideoStreamType::ColorSpace color_space) {
-  switch (color_space) {
-    case VideoStreamType::ColorSpace::kUnknown:
-      return ColorSpace::UNKNOWN;
-    case VideoStreamType::ColorSpace::kNotApplicable:
-      return ColorSpace::NOT_APPLICABLE;
-    case VideoStreamType::ColorSpace::kJpeg:
-      return ColorSpace::JPEG;
-    case VideoStreamType::ColorSpace::kHdRec709:
-      return ColorSpace::HD_REC709;
-    case VideoStreamType::ColorSpace::kSdRec601:
-      return ColorSpace::SD_REC601;
-  }
-
-  FXL_LOG(ERROR) << "unrecognized color space";
-  abort();
-}
-
-}  // namespace media
+namespace fxl {
 
 namespace {
 
@@ -334,7 +54,310 @@ bool KnownEncodingsMatch() {
 
 }  // namespace
 
-namespace f1dl {
+media::Result TypeConverter<media::Result, media::MediaResult>::Convert(
+    media::MediaResult media_result) {
+  switch (media_result) {
+    case media::MediaResult::OK:
+      return media::Result::kOk;
+    case media::MediaResult::INTERNAL_ERROR:
+      return media::Result::kInternalError;
+    case media::MediaResult::UNSUPPORTED_OPERATION:
+    case media::MediaResult::NOT_IMPLEMENTED:
+      return media::Result::kUnsupportedOperation;
+    case media::MediaResult::INVALID_ARGUMENT:
+      return media::Result::kInvalidArgument;
+    case media::MediaResult::NOT_FOUND:
+      return media::Result::kNotFound;
+    case media::MediaResult::UNKNOWN_ERROR:
+    case media::MediaResult::UNSUPPORTED_CONFIG:
+    case media::MediaResult::INSUFFICIENT_RESOURCES:
+    case media::MediaResult::BAD_STATE:
+    case media::MediaResult::BUF_OVERFLOW:
+    case media::MediaResult::FLUSHED:
+    case media::MediaResult::BUSY:
+    case media::MediaResult::PROTOCOL_ERROR:
+    case media::MediaResult::ALREADY_EXISTS:
+    case media::MediaResult::SHUTTING_DOWN:
+    case media::MediaResult::CONNECTION_LOST:
+      break;
+  }
+
+  return media::Result::kUnknownError;
+}
+
+media::StreamType::Medium
+TypeConverter<media::StreamType::Medium, media::MediaTypeMedium>::Convert(
+    media::MediaTypeMedium media_type_medium) {
+  switch (media_type_medium) {
+    case media::MediaTypeMedium::AUDIO:
+      return media::StreamType::Medium::kAudio;
+    case media::MediaTypeMedium::VIDEO:
+      return media::StreamType::Medium::kVideo;
+    case media::MediaTypeMedium::TEXT:
+      return media::StreamType::Medium::kText;
+    case media::MediaTypeMedium::SUBPICTURE:
+      return media::StreamType::Medium::kSubpicture;
+  }
+
+  FXL_LOG(ERROR) << "unrecognized medium";
+  abort();
+}
+
+media::AudioStreamType::SampleFormat
+TypeConverter<media::AudioStreamType::SampleFormat, media::AudioSampleFormat>::
+    Convert(media::AudioSampleFormat audio_sample_format) {
+  switch (audio_sample_format) {
+    case media::AudioSampleFormat::NONE:
+      return media::AudioStreamType::SampleFormat::kNone;
+    case media::AudioSampleFormat::ANY:
+      return media::AudioStreamType::SampleFormat::kAny;
+    case media::AudioSampleFormat::UNSIGNED_8:
+      return media::AudioStreamType::SampleFormat::kUnsigned8;
+    case media::AudioSampleFormat::SIGNED_16:
+      return media::AudioStreamType::SampleFormat::kSigned16;
+    case media::AudioSampleFormat::SIGNED_24_IN_32:
+      return media::AudioStreamType::SampleFormat::kSigned24In32;
+    case media::AudioSampleFormat::FLOAT:
+      return media::AudioStreamType::SampleFormat::kFloat;
+  }
+
+  FXL_LOG(ERROR) << "unrecognized sample format";
+  abort();
+}
+
+media::VideoStreamType::VideoProfile
+TypeConverter<media::VideoStreamType::VideoProfile,
+              media::VideoProfile>::Convert(media::VideoProfile video_profile) {
+  switch (video_profile) {
+    case media::VideoProfile::UNKNOWN:
+      return media::VideoStreamType::VideoProfile::kUnknown;
+    case media::VideoProfile::NOT_APPLICABLE:
+      return media::VideoStreamType::VideoProfile::kNotApplicable;
+    case media::VideoProfile::H264_BASELINE:
+      return media::VideoStreamType::VideoProfile::kH264Baseline;
+    case media::VideoProfile::H264_MAIN:
+      return media::VideoStreamType::VideoProfile::kH264Main;
+    case media::VideoProfile::H264_EXTENDED:
+      return media::VideoStreamType::VideoProfile::kH264Extended;
+    case media::VideoProfile::H264_HIGH:
+      return media::VideoStreamType::VideoProfile::kH264High;
+    case media::VideoProfile::H264_HIGH10:
+      return media::VideoStreamType::VideoProfile::kH264High10;
+    case media::VideoProfile::H264_HIGH422:
+      return media::VideoStreamType::VideoProfile::kH264High422;
+    case media::VideoProfile::H264_HIGH444_PREDICTIVE:
+      return media::VideoStreamType::VideoProfile::kH264High444Predictive;
+    case media::VideoProfile::H264_SCALABLE_BASELINE:
+      return media::VideoStreamType::VideoProfile::kH264ScalableBaseline;
+    case media::VideoProfile::H264_SCALABLE_HIGH:
+      return media::VideoStreamType::VideoProfile::kH264ScalableHigh;
+    case media::VideoProfile::H264_STEREO_HIGH:
+      return media::VideoStreamType::VideoProfile::kH264StereoHigh;
+    case media::VideoProfile::H264_MULTIVIEW_HIGH:
+      return media::VideoStreamType::VideoProfile::kH264MultiviewHigh;
+  }
+
+  FXL_LOG(ERROR);
+  abort();
+}
+
+media::VideoStreamType::PixelFormat
+TypeConverter<media::VideoStreamType::PixelFormat, media::PixelFormat>::Convert(
+    media::PixelFormat pixel_format) {
+  switch (pixel_format) {
+    case media::PixelFormat::UNKNOWN:
+      return media::VideoStreamType::PixelFormat::kUnknown;
+    case media::PixelFormat::I420:
+      return media::VideoStreamType::PixelFormat::kI420;
+    case media::PixelFormat::YV12:
+      return media::VideoStreamType::PixelFormat::kYv12;
+    case media::PixelFormat::YV16:
+      return media::VideoStreamType::PixelFormat::kYv16;
+    case media::PixelFormat::YV12A:
+      return media::VideoStreamType::PixelFormat::kYv12A;
+    case media::PixelFormat::YV24:
+      return media::VideoStreamType::PixelFormat::kYv24;
+    case media::PixelFormat::NV12:
+      return media::VideoStreamType::PixelFormat::kNv12;
+    case media::PixelFormat::NV21:
+      return media::VideoStreamType::PixelFormat::kNv21;
+    case media::PixelFormat::UYVY:
+      return media::VideoStreamType::PixelFormat::kUyvy;
+    case media::PixelFormat::YUY2:
+      return media::VideoStreamType::PixelFormat::kYuy2;
+    case media::PixelFormat::ARGB:
+      return media::VideoStreamType::PixelFormat::kArgb;
+    case media::PixelFormat::XRGB:
+      return media::VideoStreamType::PixelFormat::kXrgb;
+    case media::PixelFormat::RGB24:
+      return media::VideoStreamType::PixelFormat::kRgb24;
+    case media::PixelFormat::RGB32:
+      return media::VideoStreamType::PixelFormat::kRgb32;
+    case media::PixelFormat::MJPEG:
+      return media::VideoStreamType::PixelFormat::kMjpeg;
+    case media::PixelFormat::MT21:
+      return media::VideoStreamType::PixelFormat::kMt21;
+  }
+
+  return media::VideoStreamType::PixelFormat::kUnknown;
+}
+
+media::VideoStreamType::ColorSpace
+TypeConverter<media::VideoStreamType::ColorSpace, media::ColorSpace>::Convert(
+    media::ColorSpace color_space) {
+  switch (color_space) {
+    case media::ColorSpace::UNKNOWN:
+      return media::VideoStreamType::ColorSpace::kUnknown;
+    case media::ColorSpace::NOT_APPLICABLE:
+      return media::VideoStreamType::ColorSpace::kNotApplicable;
+    case media::ColorSpace::JPEG:
+      return media::VideoStreamType::ColorSpace::kJpeg;
+    case media::ColorSpace::HD_REC709:
+      return media::VideoStreamType::ColorSpace::kHdRec709;
+    case media::ColorSpace::SD_REC601:
+      return media::VideoStreamType::ColorSpace::kSdRec601;
+  }
+
+  return media::VideoStreamType::ColorSpace::kUnknown;
+}
+
+media::MediaTypeMedium
+TypeConverter<media::MediaTypeMedium, media::StreamType::Medium>::Convert(
+    media::StreamType::Medium medium) {
+  switch (medium) {
+    case media::StreamType::Medium::kAudio:
+      return media::MediaTypeMedium::AUDIO;
+    case media::StreamType::Medium::kVideo:
+      return media::MediaTypeMedium::VIDEO;
+    case media::StreamType::Medium::kText:
+      return media::MediaTypeMedium::TEXT;
+    case media::StreamType::Medium::kSubpicture:
+      return media::MediaTypeMedium::SUBPICTURE;
+  }
+
+  FXL_LOG(ERROR) << "unrecognized medium";
+  abort();
+}
+
+media::AudioSampleFormat
+TypeConverter<media::AudioSampleFormat, media::AudioStreamType::SampleFormat>::
+    Convert(media::AudioStreamType::SampleFormat sample_format) {
+  switch (sample_format) {
+    case media::AudioStreamType::SampleFormat::kNone:
+      return media::AudioSampleFormat::NONE;
+    case media::AudioStreamType::SampleFormat::kAny:
+      return media::AudioSampleFormat::ANY;
+    case media::AudioStreamType::SampleFormat::kUnsigned8:
+      return media::AudioSampleFormat::UNSIGNED_8;
+    case media::AudioStreamType::SampleFormat::kSigned16:
+      return media::AudioSampleFormat::SIGNED_16;
+    case media::AudioStreamType::SampleFormat::kSigned24In32:
+      return media::AudioSampleFormat::SIGNED_24_IN_32;
+    case media::AudioStreamType::SampleFormat::kFloat:
+      return media::AudioSampleFormat::FLOAT;
+  }
+
+  FXL_LOG(ERROR) << "unrecognized sample format";
+  abort();
+}
+
+media::VideoProfile
+TypeConverter<media::VideoProfile, media::VideoStreamType::VideoProfile>::
+    Convert(media::VideoStreamType::VideoProfile video_profile) {
+  switch (video_profile) {
+    case media::VideoStreamType::VideoProfile::kUnknown:
+      return media::VideoProfile::UNKNOWN;
+    case media::VideoStreamType::VideoProfile::kNotApplicable:
+      return media::VideoProfile::NOT_APPLICABLE;
+    case media::VideoStreamType::VideoProfile::kH264Baseline:
+      return media::VideoProfile::H264_BASELINE;
+    case media::VideoStreamType::VideoProfile::kH264Main:
+      return media::VideoProfile::H264_MAIN;
+    case media::VideoStreamType::VideoProfile::kH264Extended:
+      return media::VideoProfile::H264_EXTENDED;
+    case media::VideoStreamType::VideoProfile::kH264High:
+      return media::VideoProfile::H264_HIGH;
+    case media::VideoStreamType::VideoProfile::kH264High10:
+      return media::VideoProfile::H264_HIGH10;
+    case media::VideoStreamType::VideoProfile::kH264High422:
+      return media::VideoProfile::H264_HIGH422;
+    case media::VideoStreamType::VideoProfile::kH264High444Predictive:
+      return media::VideoProfile::H264_HIGH444_PREDICTIVE;
+    case media::VideoStreamType::VideoProfile::kH264ScalableBaseline:
+      return media::VideoProfile::H264_SCALABLE_BASELINE;
+    case media::VideoStreamType::VideoProfile::kH264ScalableHigh:
+      return media::VideoProfile::H264_SCALABLE_HIGH;
+    case media::VideoStreamType::VideoProfile::kH264StereoHigh:
+      return media::VideoProfile::H264_STEREO_HIGH;
+    case media::VideoStreamType::VideoProfile::kH264MultiviewHigh:
+      return media::VideoProfile::H264_MULTIVIEW_HIGH;
+  }
+
+  FXL_LOG(ERROR) << "unrecognized video profile";
+  abort();
+}
+
+media::PixelFormat
+TypeConverter<media::PixelFormat, media::VideoStreamType::PixelFormat>::Convert(
+    media::VideoStreamType::PixelFormat pixel_format) {
+  switch (pixel_format) {
+    case media::VideoStreamType::PixelFormat::kUnknown:
+      return media::PixelFormat::UNKNOWN;
+    case media::VideoStreamType::PixelFormat::kI420:
+      return media::PixelFormat::I420;
+    case media::VideoStreamType::PixelFormat::kYv12:
+      return media::PixelFormat::YV12;
+    case media::VideoStreamType::PixelFormat::kYv16:
+      return media::PixelFormat::YV16;
+    case media::VideoStreamType::PixelFormat::kYv12A:
+      return media::PixelFormat::YV12A;
+    case media::VideoStreamType::PixelFormat::kYv24:
+      return media::PixelFormat::YV24;
+    case media::VideoStreamType::PixelFormat::kNv12:
+      return media::PixelFormat::NV12;
+    case media::VideoStreamType::PixelFormat::kNv21:
+      return media::PixelFormat::NV21;
+    case media::VideoStreamType::PixelFormat::kUyvy:
+      return media::PixelFormat::UYVY;
+    case media::VideoStreamType::PixelFormat::kYuy2:
+      return media::PixelFormat::YUY2;
+    case media::VideoStreamType::PixelFormat::kArgb:
+      return media::PixelFormat::ARGB;
+    case media::VideoStreamType::PixelFormat::kXrgb:
+      return media::PixelFormat::XRGB;
+    case media::VideoStreamType::PixelFormat::kRgb24:
+      return media::PixelFormat::RGB24;
+    case media::VideoStreamType::PixelFormat::kRgb32:
+      return media::PixelFormat::RGB32;
+    case media::VideoStreamType::PixelFormat::kMjpeg:
+      return media::PixelFormat::MJPEG;
+    case media::VideoStreamType::PixelFormat::kMt21:
+      return media::PixelFormat::MT21;
+  }
+
+  FXL_LOG(ERROR) << "unrecognized pixel format";
+  abort();
+}
+
+media::ColorSpace
+TypeConverter<media::ColorSpace, media::VideoStreamType::ColorSpace>::Convert(
+    media::VideoStreamType::ColorSpace color_space) {
+  switch (color_space) {
+    case media::VideoStreamType::ColorSpace::kUnknown:
+      return media::ColorSpace::UNKNOWN;
+    case media::VideoStreamType::ColorSpace::kNotApplicable:
+      return media::ColorSpace::NOT_APPLICABLE;
+    case media::VideoStreamType::ColorSpace::kJpeg:
+      return media::ColorSpace::JPEG;
+    case media::VideoStreamType::ColorSpace::kHdRec709:
+      return media::ColorSpace::HD_REC709;
+    case media::VideoStreamType::ColorSpace::kSdRec601:
+      return media::ColorSpace::SD_REC601;
+  }
+
+  FXL_LOG(ERROR) << "unrecognized color space";
+  abort();
+}
 
 media::MediaTypePtr
 TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
@@ -350,7 +373,7 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
       media::AudioMediaTypeDetailsPtr audio_details =
           media::AudioMediaTypeDetails::New();
       audio_details->sample_format =
-          media::Convert(input->audio()->sample_format());
+          To<media::AudioSampleFormat>(input->audio()->sample_format());
       audio_details->channels = input->audio()->channels();
       audio_details->frames_per_second = input->audio()->frames_per_second();
       media::MediaTypeDetailsPtr details = media::MediaTypeDetails::New();
@@ -360,17 +383,18 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
       media_type->details = std::move(details);
       media_type->encoding = input->encoding();
       media_type->encoding_parameters =
-          f1dl::Array<uint8_t>::From(input->encoding_parameters());
+          To<f1dl::Array<uint8_t>>(input->encoding_parameters());
       return media_type;
     }
     case media::StreamType::Medium::kVideo: {
       media::VideoMediaTypeDetailsPtr video_details =
           media::VideoMediaTypeDetails::New();
-      video_details->profile = media::Convert(input->video()->profile());
+      video_details->profile =
+          To<media::VideoProfile>(input->video()->profile());
       video_details->pixel_format =
-          media::Convert(input->video()->pixel_format());
+          To<media::PixelFormat>(input->video()->pixel_format());
       video_details->color_space =
-          media::Convert(input->video()->color_space());
+          To<media::ColorSpace>(input->video()->color_space());
       video_details->width = input->video()->width();
       video_details->height = input->video()->height();
       video_details->coded_width = input->video()->coded_width();
@@ -380,9 +404,9 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
       video_details->pixel_aspect_ratio_height =
           input->video()->pixel_aspect_ratio_height();
       video_details->line_stride =
-          f1dl::Array<uint32_t>::From(input->video()->line_stride());
+          To<f1dl::Array<uint32_t>>(input->video()->line_stride());
       video_details->plane_offset =
-          f1dl::Array<uint32_t>::From(input->video()->plane_offset());
+          To<f1dl::Array<uint32_t>>(input->video()->plane_offset());
       media::MediaTypeDetailsPtr details = media::MediaTypeDetails::New();
       details->set_video(std::move(video_details));
       media::MediaTypePtr media_type = media::MediaType::New();
@@ -390,7 +414,7 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
       media_type->details = std::move(details);
       media_type->encoding = input->encoding();
       media_type->encoding_parameters =
-          f1dl::Array<uint8_t>::From(input->encoding_parameters());
+          To<f1dl::Array<uint8_t>>(input->encoding_parameters());
       return media_type;
     }
     case media::StreamType::Medium::kText: {
@@ -401,7 +425,7 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
       media_type->details = std::move(details);
       media_type->encoding = input->encoding();
       media_type->encoding_parameters =
-          f1dl::Array<uint8_t>::From(input->encoding_parameters());
+          To<f1dl::Array<uint8_t>>(input->encoding_parameters());
       return media_type;
     }
     case media::StreamType::Medium::kSubpicture: {
@@ -412,7 +436,7 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
       media_type->details = std::move(details);
       media_type->encoding = input->encoding();
       media_type->encoding_parameters =
-          f1dl::Array<uint8_t>::From(input->encoding_parameters());
+          To<f1dl::Array<uint8_t>>(input->encoding_parameters());
       return media_type;
     }
   }
@@ -434,17 +458,21 @@ TypeConverter<std::unique_ptr<media::StreamType>, media::MediaTypePtr>::Convert(
     case media::MediaTypeMedium::AUDIO:
       return media::AudioStreamType::Create(
           input->encoding,
-          input->encoding_parameters.To<std::unique_ptr<media::Bytes>>(),
-          media::Convert(input->details->get_audio()->sample_format),
+          To<std::unique_ptr<media::Bytes>>(input->encoding_parameters),
+          To<media::AudioStreamType::SampleFormat>(
+              input->details->get_audio()->sample_format),
           input->details->get_audio()->channels,
           input->details->get_audio()->frames_per_second);
     case media::MediaTypeMedium::VIDEO:
       return media::VideoStreamType::Create(
           input->encoding,
-          input->encoding_parameters.To<std::unique_ptr<media::Bytes>>(),
-          media::Convert(input->details->get_video()->profile),
-          media::Convert(input->details->get_video()->pixel_format),
-          media::Convert(input->details->get_video()->color_space),
+          To<std::unique_ptr<media::Bytes>>(input->encoding_parameters),
+          To<media::VideoStreamType::VideoProfile>(
+              input->details->get_video()->profile),
+          To<media::VideoStreamType::PixelFormat>(
+              input->details->get_video()->pixel_format),
+          To<media::VideoStreamType::ColorSpace>(
+              input->details->get_video()->color_space),
           input->details->get_video()->width,
           input->details->get_video()->height,
           input->details->get_video()->coded_width,
@@ -456,12 +484,13 @@ TypeConverter<std::unique_ptr<media::StreamType>, media::MediaTypePtr>::Convert(
     case media::MediaTypeMedium::TEXT:
       return media::TextStreamType::Create(
           input->encoding,
-          input->encoding_parameters.To<std::unique_ptr<media::Bytes>>());
+          To<std::unique_ptr<media::Bytes>>(input->encoding_parameters));
     case media::MediaTypeMedium::SUBPICTURE:
       return media::SubpictureStreamType::Create(
           input->encoding,
-          input->encoding_parameters.To<std::unique_ptr<media::Bytes>>());
+          To<std::unique_ptr<media::Bytes>>(input->encoding_parameters));
   }
+
   return nullptr;
 }
 
@@ -479,7 +508,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media::AudioMediaTypeSetDetailsPtr audio_details =
           media::AudioMediaTypeSetDetails::New();
       audio_details->sample_format =
-          media::Convert(input->audio()->sample_format());
+          To<media::AudioSampleFormat>(input->audio()->sample_format());
       audio_details->min_channels = input->audio()->channels().min;
       audio_details->max_channels = input->audio()->channels().max;
       audio_details->min_frames_per_second =
@@ -492,7 +521,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media_type_set->medium = media::MediaTypeMedium::AUDIO;
       media_type_set->details = std::move(details);
       media_type_set->encodings =
-          f1dl::Array<f1dl::String>::From(input->encodings());
+          To<f1dl::Array<f1dl::String>>(input->encodings());
       return media_type_set;
     }
     case media::StreamType::Medium::kVideo: {
@@ -508,7 +537,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media_type_set->medium = media::MediaTypeMedium::VIDEO;
       media_type_set->details = std::move(details);
       media_type_set->encodings =
-          f1dl::Array<f1dl::String>::From(input->encodings());
+          To<f1dl::Array<f1dl::String>>(input->encodings());
       return media_type_set;
     }
     case media::StreamType::Medium::kText: {
@@ -518,7 +547,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media_type_set->medium = media::MediaTypeMedium::TEXT;
       media_type_set->details = std::move(details);
       media_type_set->encodings =
-          f1dl::Array<f1dl::String>::From(input->encodings());
+          To<f1dl::Array<f1dl::String>>(input->encodings());
       return media_type_set;
     }
     case media::StreamType::Medium::kSubpicture: {
@@ -528,7 +557,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media_type_set->medium = media::MediaTypeMedium::SUBPICTURE;
       media_type_set->details = std::move(details);
       media_type_set->encodings =
-          f1dl::Array<f1dl::String>::From(input->encodings());
+          To<f1dl::Array<f1dl::String>>(input->encodings());
       return media_type_set;
     }
   }
@@ -549,8 +578,9 @@ std::unique_ptr<media::StreamTypeSet> TypeConverter<
   switch (input->medium) {
     case media::MediaTypeMedium::AUDIO:
       return media::AudioStreamTypeSet::Create(
-          input->encodings.To<std::vector<std::string>>(),
-          media::Convert(input->details->get_audio()->sample_format),
+          To<std::vector<std::string>>(input->encodings),
+          To<media::AudioStreamType::SampleFormat>(
+              input->details->get_audio()->sample_format),
           media::Range<uint32_t>(input->details->get_audio()->min_channels,
                                  input->details->get_audio()->max_channels),
           media::Range<uint32_t>(
@@ -558,17 +588,17 @@ std::unique_ptr<media::StreamTypeSet> TypeConverter<
               input->details->get_audio()->max_frames_per_second));
     case media::MediaTypeMedium::VIDEO:
       return media::VideoStreamTypeSet::Create(
-          input->encodings.To<std::vector<std::string>>(),
+          To<std::vector<std::string>>(input->encodings),
           media::Range<uint32_t>(input->details->get_video()->min_width,
                                  input->details->get_video()->max_width),
           media::Range<uint32_t>(input->details->get_video()->min_height,
                                  input->details->get_video()->max_height));
     case media::MediaTypeMedium::TEXT:
       return media::TextStreamTypeSet::Create(
-          input->encodings.To<std::vector<std::string>>());
+          To<std::vector<std::string>>(input->encodings));
     case media::MediaTypeMedium::SUBPICTURE:
       return media::SubpictureStreamTypeSet::Create(
-          input->encodings.To<std::vector<std::string>>());
+          To<std::vector<std::string>>(input->encodings));
   }
 
   return nullptr;
@@ -612,76 +642,6 @@ std::unique_ptr<media::Metadata> TypeConverter<
                                  input->composer);
 }
 
-f1dl::Array<media::MediaTypePtr> TypeConverter<
-    f1dl::Array<media::MediaTypePtr>,
-    std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>>::
-    Convert(
-        const std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>&
-            input) {
-  if (input == nullptr) {
-    return nullptr;
-  }
-
-  f1dl::Array<media::MediaTypePtr> result =
-      f1dl::Array<media::MediaTypePtr>::New(input->size());
-  for (const std::unique_ptr<media::StreamType>& stream_type : *input) {
-    result.push_back(media::MediaType::From(stream_type));
-  }
-  return result;
-}
-
-std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>
-TypeConverter<std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>,
-              f1dl::Array<media::MediaTypePtr>>::
-    Convert(const f1dl::Array<media::MediaTypePtr>& input) {
-  if (!input) {
-    return nullptr;
-  }
-
-  std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>> result =
-      std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>(
-          new std::vector<std::unique_ptr<media::StreamType>>(input.size()));
-  for (size_t i = 0; i < input.size(); i++) {
-    (*result)[i] = input[i].To<std::unique_ptr<media::StreamType>>();
-  }
-  return result;
-}
-
-f1dl::Array<media::MediaTypeSetPtr> TypeConverter<
-    f1dl::Array<media::MediaTypeSetPtr>,
-    std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>>::
-    Convert(const std::unique_ptr<
-            std::vector<std::unique_ptr<media::StreamTypeSet>>>& input) {
-  if (input == nullptr) {
-    return nullptr;
-  }
-
-  f1dl::Array<media::MediaTypeSetPtr> result =
-      f1dl::Array<media::MediaTypeSetPtr>::New(input->size());
-  for (const std::unique_ptr<media::StreamTypeSet>& stream_type_set : *input) {
-    result.push_back(media::MediaTypeSet::From(stream_type_set));
-  }
-  return result;
-}
-
-std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>
-TypeConverter<
-    std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>,
-    f1dl::Array<media::MediaTypeSetPtr>>::
-    Convert(const f1dl::Array<media::MediaTypeSetPtr>& input) {
-  if (!input) {
-    return nullptr;
-  }
-
-  std::vector<std::unique_ptr<media::StreamTypeSet>>* result =
-      new std::vector<std::unique_ptr<media::StreamTypeSet>>(input.size());
-  for (size_t i = 0; i < input.size(); i++) {
-    (*result)[i] = input[i].To<std::unique_ptr<media::StreamTypeSet>>();
-  }
-  return std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>(
-      result);
-}
-
 f1dl::Array<uint8_t>
 TypeConverter<f1dl::Array<uint8_t>, std::unique_ptr<media::Bytes>>::Convert(
     const std::unique_ptr<media::Bytes>& input) {
@@ -708,4 +668,4 @@ TypeConverter<std::unique_ptr<media::Bytes>, f1dl::Array<uint8_t>>::Convert(
   return bytes;
 }
 
-}  // namespace f1dl
+}  // namespace fxl

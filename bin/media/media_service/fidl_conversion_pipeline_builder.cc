@@ -208,7 +208,7 @@ bool Builder::GoalTypeSetsIncludeEncoding(const std::string& encoding) const {
 
 void Builder::AddConverter(MediaTypeConverterPtr converter) {
   converter->GetOutputType([this](MediaTypePtr output_type) {
-    current_type_ = output_type.To<std::unique_ptr<StreamType>>();
+    current_type_ = fxl::To<std::unique_ptr<StreamType>>(output_type);
     type_ = &current_type_;
     AddConverters();
   });
@@ -230,7 +230,7 @@ void Builder::AddConverterForCompressedAudio() {
   }
 
   MediaTypeConverterPtr decoder;
-  factory_->CreateDecoder(MediaType::From((*type_)), decoder.NewRequest());
+  factory_->CreateDecoder(fxl::To<MediaTypePtr>(*type_), decoder.NewRequest());
 
   AddConverter(std::move(decoder));
 }
@@ -249,7 +249,7 @@ void Builder::AddConverterForCompressedVideo() {
   }
 
   MediaTypeConverterPtr decoder;
-  factory_->CreateDecoder(MediaType::From((*type_)), decoder.NewRequest());
+  factory_->CreateDecoder(fxl::To<MediaTypePtr>(*type_), decoder.NewRequest());
 
   AddConverter(std::move(decoder));
 }
@@ -265,9 +265,10 @@ void Builder::AddConverterForLpcm(const AudioStreamTypeSet& goal_type_set) {
   if ((*type_)->audio()->sample_format() != goal_type_set.sample_format() &&
       goal_type_set.sample_format() != AudioStreamType::SampleFormat::kAny) {
     MediaTypeConverterPtr reformatter;
-    factory_->CreateLpcmReformatter(MediaType::From((*type_)),
-                                    Convert(goal_type_set.sample_format()),
-                                    reformatter.NewRequest());
+    factory_->CreateLpcmReformatter(
+        fxl::To<MediaTypePtr>(*type_),
+        fxl::To<AudioSampleFormat>(goal_type_set.sample_format()),
+        reformatter.NewRequest());
 
     AddConverter(std::move(reformatter));
     return;

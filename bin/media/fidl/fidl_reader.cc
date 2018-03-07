@@ -22,7 +22,7 @@ FidlReader::FidlReader(f1dl::InterfaceHandle<SeekingReader> seeking_reader)
 
   seeking_reader_->Describe(
       [this](MediaResult result, uint64_t size, bool can_seek) {
-        result_ = Convert(result);
+        result_ = fxl::To<Result>(result);
         if (result_ == Result::kOk) {
           size_ = size;
           can_seek_ = can_seek;
@@ -96,7 +96,7 @@ void FidlReader::ContinueReadAt() {
 
     seeking_reader_->ReadAt(read_at_position_,
                             [this](MediaResult result, zx::socket socket) {
-                              result_ = Convert(result);
+                              result_ = fxl::To<Result>(result);
                               if (result_ != Result::kOk) {
                                 CompleteReadAt(result_);
                                 return;

@@ -45,6 +45,7 @@ source_set("serialization") {
     "string.h",
     "struct_ptr.h",
     "type_converter.h",
+    "type_converters.h",
   ]
 
   public_deps = [

@@ -9,48 +9,81 @@
 #include "garnet/bin/media/framework/types/audio_stream_type.h"
 #include "garnet/bin/media/framework/types/stream_type.h"
 #include "garnet/bin/media/framework/types/video_stream_type.h"
+#include "lib/fidl/cpp/bindings/type_converters.h"
+#include "lib/fxl/type_converter.h"
 #include "lib/media/fidl/media_metadata.fidl.h"
 #include "lib/media/fidl/media_result.fidl.h"
 #include "lib/media/fidl/media_types.fidl.h"
 
-namespace media {
+namespace fxl {
 
-// Converts a MediaResult into a Result.
-Result Convert(MediaResult media_result);
+template <>
+struct TypeConverter<media::Result, media::MediaResult> {
+  static media::Result Convert(media::MediaResult media_result);
+};
 
-// Creates a StreamType::Medium from a MediaTypeMedium.
-StreamType::Medium Convert(MediaTypeMedium media_type_medium);
+template <>
+struct TypeConverter<media::StreamType::Medium, media::MediaTypeMedium> {
+  static media::StreamType::Medium Convert(
+      media::MediaTypeMedium media_type_medium);
+};
 
-// Creates an AudioStreamType::SampleFormat from an AudioSampleFormat.
-AudioStreamType::SampleFormat Convert(AudioSampleFormat audio_sample_format);
+template <>
+struct TypeConverter<media::AudioStreamType::SampleFormat,
+                     media::AudioSampleFormat> {
+  static media::AudioStreamType::SampleFormat Convert(
+      media::AudioSampleFormat audio_sample_format);
+};
 
-// Creates a VideoStreamType::VideoProfile from a VideoProfile.
-VideoStreamType::VideoProfile Convert(VideoProfile video_profile);
+template <>
+struct TypeConverter<media::VideoStreamType::VideoProfile,
+                     media::VideoProfile> {
+  static media::VideoStreamType::VideoProfile Convert(
+      media::VideoProfile video_profile);
+};
 
-// Creates a VideoStreamType::PixelFormat from a PixelFormat.
-VideoStreamType::PixelFormat Convert(PixelFormat pixel_format);
+template <>
+struct TypeConverter<media::VideoStreamType::PixelFormat, media::PixelFormat> {
+  static media::VideoStreamType::PixelFormat Convert(
+      media::PixelFormat pixel_format);
+};
 
-// Creates a VideoStreamType::ColorSpace from a ColorSpace.
-VideoStreamType::ColorSpace Convert(ColorSpace color_space);
+template <>
+struct TypeConverter<media::VideoStreamType::ColorSpace, media::ColorSpace> {
+  static media::VideoStreamType::ColorSpace Convert(
+      media::ColorSpace color_space);
+};
 
-// Creates a MediaTypeMedium from a StreamType::Medium.
-MediaTypeMedium Convert(StreamType::Medium medium);
+template <>
+struct TypeConverter<media::MediaTypeMedium, media::StreamType::Medium> {
+  static media::MediaTypeMedium Convert(media::StreamType::Medium medium);
+};
 
-// Creates an AudioSampleFormat from an AudioStreamType::SampleFormat.
-AudioSampleFormat Convert(AudioStreamType::SampleFormat sample_format);
+template <>
+struct TypeConverter<media::AudioSampleFormat,
+                     media::AudioStreamType::SampleFormat> {
+  static media::AudioSampleFormat Convert(
+      media::AudioStreamType::SampleFormat sample_format);
+};
 
-// Creates a VideoProfile from a VideoStreamType::VideoProfile.
-VideoProfile Convert(VideoStreamType::VideoProfile video_profile);
+template <>
+struct TypeConverter<media::VideoProfile,
+                     media::VideoStreamType::VideoProfile> {
+  static media::VideoProfile Convert(
+      media::VideoStreamType::VideoProfile video_profile);
+};
 
-// Creates a PixelFormat from a VideoStreamType::PixelFormat.
-PixelFormat Convert(VideoStreamType::PixelFormat pixel_format);
+template <>
+struct TypeConverter<media::PixelFormat, media::VideoStreamType::PixelFormat> {
+  static media::PixelFormat Convert(
+      media::VideoStreamType::PixelFormat pixel_format);
+};
 
-// Creates a ColorSpace from a VideoStreamType::ColorSpace.
-ColorSpace Convert(VideoStreamType::ColorSpace color_space);
-
-}  // namespace media
-
-namespace f1dl {
+template <>
+struct TypeConverter<media::ColorSpace, media::VideoStreamType::ColorSpace> {
+  static media::ColorSpace Convert(
+      media::VideoStreamType::ColorSpace color_space);
+};
 
 template <>
 struct TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>> {
@@ -93,40 +126,6 @@ struct TypeConverter<std::unique_ptr<media::Metadata>,
 };
 
 template <>
-struct TypeConverter<
-    f1dl::Array<media::MediaTypePtr>,
-    std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>> {
-  static f1dl::Array<media::MediaTypePtr> Convert(
-      const std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>&
-          input);
-};
-
-template <>
-struct TypeConverter<
-    std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>,
-    f1dl::Array<media::MediaTypePtr>> {
-  static std::unique_ptr<std::vector<std::unique_ptr<media::StreamType>>>
-  Convert(const f1dl::Array<media::MediaTypePtr>& input);
-};
-
-template <>
-struct TypeConverter<
-    f1dl::Array<media::MediaTypeSetPtr>,
-    std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>> {
-  static f1dl::Array<media::MediaTypeSetPtr> Convert(
-      const std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>&
-          input);
-};
-
-template <>
-struct TypeConverter<
-    std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>,
-    f1dl::Array<media::MediaTypeSetPtr>> {
-  static std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>
-  Convert(const f1dl::Array<media::MediaTypeSetPtr>& input);
-};
-
-template <>
 struct TypeConverter<f1dl::Array<uint8_t>, std::unique_ptr<media::Bytes>> {
   static f1dl::Array<uint8_t> Convert(
       const std::unique_ptr<media::Bytes>& input);
@@ -138,4 +137,4 @@ struct TypeConverter<std::unique_ptr<media::Bytes>, f1dl::Array<uint8_t>> {
       const f1dl::Array<uint8_t>& input);
 };
 
-}  // namespace f1dl
+}  // namespace fxl

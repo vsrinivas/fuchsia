@@ -5,6 +5,7 @@
 #pragma once
 
 #include "lib/fxl/logging.h"
+#include "lib/media/fidl/timelines.fidl.h"
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
@@ -62,6 +63,10 @@ class TimelineFunction {
   explicit TimelineFunction(
       TimelineRate rate)  // subject_delta / reference_delta
       : reference_time_(0), subject_time_(0), rate_(rate) {}
+
+  explicit TimelineFunction(const TimelineTransformPtr& from);
+
+  explicit operator TimelineTransformPtr() const;
 
   // Determines whether this |TimelineFunction| is invertable.
   bool invertable() const { return rate_.invertable(); }

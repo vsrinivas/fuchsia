@@ -180,7 +180,7 @@ void VideoFrameSource::CheckForRevisedMediaType(const MediaPacketPtr& packet) {
   if (revised_media_type && revised_media_type->details &&
       revised_media_type->details->get_video()) {
     converter_.SetStreamType(
-        revised_media_type.To<std::unique_ptr<StreamType>>());
+        fxl::To<std::unique_ptr<StreamType>>(revised_media_type));
 
     if (stream_type_revised_callback_) {
       stream_type_revised_callback_();

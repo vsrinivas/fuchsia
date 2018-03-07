@@ -11,7 +11,6 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/fidl/audio_server.fidl.h"
-#include "lib/media/timeline/fidl_type_conversions.h"
 #include "lib/media/timeline/timeline.h"
 
 namespace media {
@@ -24,30 +23,6 @@ std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
       new MediaPlayerImpl(std::move(request), owner));
 }
 
-// static
-std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
-    f1dl::InterfaceHandle<SeekingReader> reader,
-    f1dl::InterfaceHandle<MediaRenderer> audio_renderer,
-    f1dl::InterfaceHandle<MediaRenderer> video_renderer,
-    f1dl::InterfaceRequest<MediaPlayer> request,
-    MediaComponentFactory* owner) {
-  auto player = new MediaPlayerImpl(std::move(request), owner);
-
-  if (audio_renderer) {
-    player->SetAudioRenderer(nullptr, std::move(audio_renderer));
-  }
-
-  if (video_renderer) {
-    player->SetVideoRenderer(std::move(video_renderer));
-  }
-
-  if (reader) {
-    player->SetReaderSource(std::move(reader));
-  }
-
-  return std::shared_ptr<MediaPlayerImpl>(player);
-}
-
 MediaPlayerImpl::MediaPlayerImpl(f1dl::InterfaceRequest<MediaPlayer> request,
                                  MediaComponentFactory* owner)
     : MediaComponentFactory::Product<MediaPlayer>(this,
@@ -55,52 +30,53 @@ MediaPlayerImpl::MediaPlayerImpl(f1dl::InterfaceRequest<MediaPlayer> request,
                                                   owner) {
   FXL_DCHECK(owner);
 
-  status_publisher_.SetCallbackRunner([this](const GetStatusCallback& callback,
-                                             uint64_t version) {
-    MediaPlayerStatusPtr status = MediaPlayerStatus::New();
-    status->timeline_transform = TimelineTransform::From(timeline_function_);
-    status->end_of_stream = end_of_stream_;
+  status_publisher_.SetCallbackRunner(
+      [this](const GetStatusCallback& callback, uint64_t version) {
+        MediaPlayerStatusPtr status = MediaPlayerStatus::New();
+        status->timeline_transform =
+            static_cast<TimelineTransformPtr>(timeline_function_);
+        status->end_of_stream = end_of_stream_;
 
-    if (stream_types_) {
-      for (MediaTypePtr& stream_type : stream_types_) {
-        switch (stream_type->medium) {
-          case MediaTypeMedium::AUDIO:
-            status->content_has_audio = true;
-            break;
-          case MediaTypeMedium::VIDEO:
-            status->content_has_video = true;
-            break;
-          default:
-            break;
+        if (stream_types_) {
+          for (MediaTypePtr& stream_type : stream_types_) {
+            switch (stream_type->medium) {
+              case MediaTypeMedium::AUDIO:
+                status->content_has_audio = true;
+                break;
+              case MediaTypeMedium::VIDEO:
+                status->content_has_video = true;
+                break;
+              default:
+                break;
+            }
+          }
         }
-      }
-    }
 
-    if (source_status_) {
-      status->audio_connected = source_status_->audio_connected;
-      status->video_connected = source_status_->video_connected;
-      status->metadata = source_status_->metadata.Clone();
+        if (source_status_) {
+          status->audio_connected = source_status_->audio_connected;
+          status->video_connected = source_status_->video_connected;
+          status->metadata = source_status_->metadata.Clone();
 
-      if (video_renderer_impl_) {
-        status->video_size = video_renderer_impl_->GetSize().Clone();
-        status->pixel_aspect_ratio =
-            video_renderer_impl_->GetPixelAspectRatio().Clone();
-      }
+          if (video_renderer_impl_) {
+            status->video_size = video_renderer_impl_->GetSize().Clone();
+            status->pixel_aspect_ratio =
+                video_renderer_impl_->GetPixelAspectRatio().Clone();
+          }
 
-      if (source_status_->problem) {
-        status->problem = source_status_->problem.Clone();
-      } else if (state_ >= State::kFlushed && !status->audio_connected &&
-                 !status->video_connected) {
-        // The source isn't reporting a problem, but neither audio nor video
-        // is connected. We report this as a problem so the client doesn't
-        // have to check these values separately.
-        status->problem = Problem::New();
-        status->problem->type = Problem::kProblemMediaTypeNotSupported;
-      }
-    }
+          if (source_status_->problem) {
+            status->problem = source_status_->problem.Clone();
+          } else if (state_ >= State::kFlushed && !status->audio_connected &&
+                     !status->video_connected) {
+            // The source isn't reporting a problem, but neither audio nor video
+            // is connected. We report this as a problem so the client doesn't
+            // have to check these values separately.
+            status->problem = Problem::New();
+            status->problem->type = Problem::kProblemMediaTypeNotSupported;
+          }
+        }
 
-    callback(version, std::move(status));
-  });
+        callback(version, std::move(status));
+      });
 
   state_ = State::kInactive;
 
@@ -626,7 +602,8 @@ void MediaPlayerImpl::HandleTimelineControlPointStatusUpdates(
     uint64_t version,
     MediaTimelineControlPointStatusPtr status) {
   if (status) {
-    timeline_function_ = status->timeline_transform.To<TimelineFunction>();
+    timeline_function_ =
+        static_cast<TimelineFunction>(status->timeline_transform);
     end_of_stream_ = status->end_of_stream;
     status_publisher_.SendUpdates();
     Update();
