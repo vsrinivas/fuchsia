@@ -46,6 +46,7 @@ typedef struct ethernet_device {
     zx_handle_t irqh;
     zx_handle_t ioh;
     thrd_t irq_thread;
+    zx_handle_t btih;
     io_buffer_t buffer;
     uintptr_t iobase;
 
@@ -326,7 +327,9 @@ static void rtl8111_release(void* ctx) {
     thrd_join(edev->irq_thread, NULL);
 
     zx_handle_close(edev->ioh);
+
     io_buffer_release(&edev->buffer);
+    zx_handle_close(edev->btih);
 
     free(edev);
 }
@@ -387,12 +390,18 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
+    if ((r = pci_get_bti(&edev->pci, 0, &edev->btih)) != ZX_OK) {
+        zxlogf(ERROR, "rtl8111: could not get bti %d\n", r);
+        goto fail;
+    }
+
     uint32_t mac_version = readl(RTL_TCR) & 0x7cf00000;
     zxlogf(TRACE, "rtl8111: version 0x%08x\n", mac_version);
 
     // TODO(stevensd): Don't require a contiguous buffer
     uint32_t alloc_size = ((ETH_BUF_SIZE + ETH_DESC_ELT_SIZE) * ETH_BUF_COUNT) * 2;
-    r = io_buffer_init(&edev->buffer, alloc_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    r = io_buffer_init_with_bti(&edev->buffer, edev->btih, alloc_size,
+                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (r != ZX_OK) {
         zxlogf(ERROR, "rtl8111: cannot alloc io-buffer %d\n", r);
         goto fail;
@@ -427,13 +436,16 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
     return ZX_OK;
 
 fail:
+    io_buffer_release(&edev->buffer);
+    if (edev->btih) {
+        zx_handle_close(edev->btih);
+    }
     if (edev->irqh) {
         zx_handle_close(edev->irqh);
     }
     if (edev->ioh) {
         zx_handle_close(edev->ioh);
     }
-    io_buffer_release(&edev->buffer);
     free(edev);
     return r != ZX_OK ? r : ZX_ERR_INTERNAL;
 }
