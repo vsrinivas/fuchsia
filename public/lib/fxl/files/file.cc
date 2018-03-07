@@ -89,10 +89,12 @@ bool ReadFileDescriptorToString(int fd, std::string* result) {
   return ReadFileDescriptor(fd, result);
 }
 
+#if defined(OS_LINUX) || defined(OS_FUCHSIA)
 bool ReadFileToStringAt(int dirfd, const std::string& path, std::string* result) {
   fxl::UniqueFD fd(openat(dirfd, path.c_str(), O_RDONLY));
   return ReadFileDescriptor(fd.get(), result);
 }
+#endif
 
 bool ReadFileToVector(const std::string& path, std::vector<uint8_t>* result) {
   fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
