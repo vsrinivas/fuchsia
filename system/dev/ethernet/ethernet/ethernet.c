@@ -582,10 +582,14 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t i
             status = ZX_ERR_NO_MEMORY;
             goto fail;
         }
-        // TODO: pin memory
-        if ((status = zx_vmo_op_range(edev->io_vmo, ZX_VMO_OP_LOOKUP, 0, size, &edev->paddr_map,
+        if ((status = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT,
+                                      0 , size, NULL, 0)) != ZX_OK) {
+            zxlogf(ERROR, "eth [%s]: vmo_op_range failed, can't commit vmo\n", edev->name);
+            goto fail;
+        }
+        if ((status = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP, 0, size, edev->paddr_map,
                                       paddr_map_size)) != ZX_OK) {
-            zxlogf(ERROR, "eth [%s]: vmo_op_range failed, can't determine phys addr\n", edev->name);
+            zxlogf(ERROR, "eth [%s]: vmo_op_range failed, can't determine phys addr- %d\n", edev->name,status);
             goto fail;
         }
     }
