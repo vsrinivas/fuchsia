@@ -85,10 +85,26 @@ FUNCTION(vcpu_hlt_start)
     hlt
 FUNCTION(vcpu_hlt_end)
 
+// Test that pause exiting works correctly.
 FUNCTION(vcpu_pause_start)
     pause
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION(vcpu_pause_end)
+
+// Test that reading and writing cr0 works correctly.
+FUNCTION(vcpu_write_cr0_start)
+    // Read cr0.
+    mov %cr0, %rax
+
+    // Write cr0 and negate the NE bit.
+    and $~X86_CR0_NE, %rax
+    mov %rax, %cr0
+
+    // Test cr0 masking. NE bit should be set.
+    mov %cr0, %rax
+
+    movq $0, (EXIT_TEST_ADDR)
+FUNCTION(vcpu_write_cr0_end)
 
 // Test vcpu_read_state and vcpu_write_state.
 FUNCTION(vcpu_read_write_state_start)

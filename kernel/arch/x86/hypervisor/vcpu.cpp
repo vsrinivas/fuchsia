@@ -477,16 +477,18 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
     uint64_t cr0 = X86_CR0_PE | // Enable protected mode
                    X86_CR0_PG | // Enable paging
                    X86_CR0_NE;  // Enable internal x87 exception handling
-    if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1)) {
-        return ZX_ERR_BAD_STATE;
-    }
     if (vpid != kBaseProcessorVpid) {
         // Disable protected mode and paging on secondary VCPUs.
-        // From Volume 3, Section 26.3.1.1: CR0 is now invalid according to
-        // X86_MSR_IA32_VMX_CR0_FIXED1 but this does not apply to unrestricted guests.
         cr0 &= ~(X86_CR0_PE | X86_CR0_PG);
     }
+    if (cr0_is_invalid(&vmcs, cr0)) {
+        return ZX_ERR_BAD_STATE;
+    }
     vmcs.Write(VmcsFieldXX::GUEST_CR0, cr0);
+
+    // Ensure that CR0.NE remains set by masking and manually handling writes to CR0 that unset it.
+    vmcs.Write(VmcsFieldXX::CR0_GUEST_HOST_MASK, X86_CR0_NE);
+    vmcs.Write(VmcsFieldXX::CR0_READ_SHADOW, X86_CR0_NE);
 
     uint64_t cr4 = X86_CR4_VMXE; // Enable VMX
     if (vpid == kBaseProcessorVpid) {
@@ -823,4 +825,14 @@ zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     }
     }
     return ZX_ERR_INVALID_ARGS;
+}
+
+bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value) {
+    uint64_t check_value = cr0_value;
+    // From Volume 3, Section 26.3.1.1: PE and PG bits of CR0 are not checked when unrestricted
+    // guest is enabled. Set both here to avoid clashing with X86_MSR_IA32_VMX_CR0_FIXED1.
+    if (vmcs->Read(VmcsField32::PROCBASED_CTLS2) & kProcbasedCtls2UnrestrictedGuest) {
+        check_value |= X86_CR0_PE | X86_CR0_PG;
+    }
+    return cr_is_invalid(check_value, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1);
 }

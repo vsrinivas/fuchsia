@@ -201,23 +201,30 @@ enum class X2ApicMsr : uint64_t {
 };
 
 enum class InterruptDeliveryMode : uint8_t {
-    FIXED               = 0,
-    SMI                 = 2,
-    NMI                 = 4,
-    INIT                = 5,
-    STARTUP             = 6,
+    FIXED               = 0u,
+    SMI                 = 2u,
+    NMI                 = 4u,
+    INIT                = 5u,
+    STARTUP             = 6u,
 };
 
 enum class InterruptDestinationMode : bool {
-    PHYSICAL            = 0,
-    LOGICAL             = 1,
+    PHYSICAL            = false,
+    LOGICAL             = true,
 };
 
 enum class InterruptDestinationShorthand : uint8_t {
-    NO_SHORTHAND        = 0,
-    SELF                = 1,
-    ALL_INCLUDING_SELF  = 2,
-    ALL_EXCLUDING_SELF  = 3,
+    NO_SHORTHAND        = 0u,
+    SELF                = 1u,
+    ALL_INCLUDING_SELF  = 2u,
+    ALL_EXCLUDING_SELF  = 3u,
+};
+
+enum class CrAccessType : uint8_t {
+    MOV_TO_CR           = 0u,
+    MOV_FROM_CR         = 1u,
+    CLTS                = 2u,
+    LMSW                = 3u,
 };
 
 // clang-format on
@@ -257,6 +264,15 @@ struct EptViolationInfo {
     bool instruction;
 
     EptViolationInfo(uint64_t qualification);
+};
+
+// Stores control register access info from the VMCS exit qualification field.
+struct CrAccessInfo {
+    uint8_t cr_number;
+    CrAccessType access_type;
+    uint8_t reg;
+
+    CrAccessInfo(uint64_t qualification);
 };
 
 // Stores IO instruction info from the VMCS exit qualification field.

@@ -30,6 +30,8 @@ extern const char vcpu_hlt_start[];
 extern const char vcpu_hlt_end[];
 extern const char vcpu_pause_start[];
 extern const char vcpu_pause_end[];
+extern const char vcpu_write_cr0_start[];
+extern const char vcpu_write_cr0_end[];
 extern const char vcpu_wfi_start[];
 extern const char vcpu_wfi_end[];
 extern const char vcpu_fp_start[];
@@ -214,6 +216,33 @@ static bool vcpu_pause() {
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_write_cr0() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_write_cr0_start, vcpu_write_cr0_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
+    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+
+#if __x86_64__
+    zx_vcpu_state_t vcpu_state;
+    ASSERT_EQ(zx_vcpu_read_state(test.vcpu, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+    // Check that cr0 has the NE bit set when read.
+    EXPECT_TRUE(vcpu_state.rax & X86_CR0_NE);
+#endif
 
     ASSERT_TRUE(teardown(&test));
 
@@ -477,5 +506,6 @@ RUN_TEST(vcpu_fp)
 RUN_TEST(guest_set_trap_with_io)
 RUN_TEST(vcpu_hlt)
 RUN_TEST(vcpu_pause)
+RUN_TEST(vcpu_write_cr0)
 #endif
 END_TEST_CASE(guest)

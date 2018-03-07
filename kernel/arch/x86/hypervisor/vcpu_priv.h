@@ -160,7 +160,9 @@ enum class VmcsField32 : uint64_t {
 };
 
 enum class VmcsFieldXX : uint64_t {
+    CR0_GUEST_HOST_MASK                                 = 0x6000,
     CR4_GUEST_HOST_MASK                                 = 0x6002,
+    CR0_READ_SHADOW                                     = 0x6004,
     CR4_READ_SHADOW                                     = 0x6006,
     EXIT_QUALIFICATION                                  = 0x6400,
     GUEST_LINEAR_ADDRESS                                = 0x640a,
@@ -236,3 +238,5 @@ private:
     cpu_mask_t prev_cpu_mask_;
     thread_t* thread_;
 };
+
+bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value);
