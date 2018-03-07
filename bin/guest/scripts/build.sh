@@ -42,18 +42,18 @@ shift $((OPTIND - 1))
 case "${1}" in
 hikey960) ;&
 vim2)
-  ARCH="arm64";
+  ARCH="arm64";;
 x64) ;&
 qemu-x64)
-  ARCH="x64";
+  ARCH="x64";;
 qemu-arm64)
-  ARCH="arm64";
+  ARCH="arm64";;
 *)
   usage;;
 esac
 
 scripts/build-zircon.sh \
-  -p $ARCH
+  -t $ARCH
 
 build/gn/gen.py \
   --target_cpu=$ARCH \

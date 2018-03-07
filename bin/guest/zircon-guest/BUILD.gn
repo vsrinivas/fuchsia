@@ -70,7 +70,7 @@ bootdata("guest-bootdata") {
   visibility = [ ":*" ]
   boot = true
   inputs = [
-    "//out/build-zircon/build-user-${zircon_cpu}/bootfs.manifest",
+    "//out/build-zircon/build-${zircon_cpu}/bootfs.manifest",
   ]
 
   if (target_cpu == "arm64") {
@@ -92,7 +92,7 @@ guest_app("zircon-guest") {
   cmdline = "TERM=uart"
   bootdata_outputs = get_target_outputs(":guest-bootdata")
   ramdisk = bootdata_outputs[0]
-  kernel = "//out/build-zircon/build-${zircon_platforms[0]}/zircon.bin"
+  kernel = "//out/build-zircon/build-${zircon_cpu}/zircon.bin"
 
   gpt_outputs = get_target_outputs(":gpt_image")
   gpt_filename = "gpt.img"
