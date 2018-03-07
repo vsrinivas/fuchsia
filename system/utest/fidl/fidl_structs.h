@@ -229,6 +229,64 @@ struct alignas(FIDL_ALIGNMENT) multiple_nullable_vectors_of_handles_message_layo
     alignas(FIDL_ALIGNMENT) zx_handle_t handles2[4];
 };
 
+struct alignas(FIDL_ALIGNMENT) unbounded_nonnullable_vector_of_uint32_inline_data {
+    fidl_message_header_t header;
+    fidl_vector_t vector;
+};
+struct alignas(FIDL_ALIGNMENT) unbounded_nonnullable_vector_of_uint32_message_layout {
+    unbounded_nonnullable_vector_of_uint32_inline_data inline_struct;
+    alignas(FIDL_ALIGNMENT) uint32_t uint32[4];
+};
+
+struct alignas(FIDL_ALIGNMENT) unbounded_nullable_vector_of_uint32_inline_data {
+    fidl_message_header_t header;
+    fidl_vector_t vector;
+};
+struct alignas(FIDL_ALIGNMENT) unbounded_nullable_vector_of_uint32_message_layout {
+    unbounded_nullable_vector_of_uint32_inline_data inline_struct;
+    alignas(FIDL_ALIGNMENT) uint32_t uint32[4];
+};
+
+struct alignas(FIDL_ALIGNMENT) bounded_32_nonnullable_vector_of_uint32_inline_data {
+    fidl_message_header_t header;
+    fidl_vector_t vector;
+};
+struct alignas(FIDL_ALIGNMENT) bounded_32_nonnullable_vector_of_uint32_message_layout {
+    bounded_32_nonnullable_vector_of_uint32_inline_data inline_struct;
+    alignas(FIDL_ALIGNMENT) uint32_t uint32[4];
+};
+
+struct alignas(FIDL_ALIGNMENT) bounded_32_nullable_vector_of_uint32_inline_data {
+    fidl_message_header_t header;
+    fidl_vector_t vector;
+};
+struct alignas(FIDL_ALIGNMENT) bounded_32_nullable_vector_of_uint32_message_layout {
+    bounded_32_nullable_vector_of_uint32_inline_data inline_struct;
+    alignas(FIDL_ALIGNMENT) uint32_t uint32[4];
+};
+
+struct alignas(FIDL_ALIGNMENT) multiple_nonnullable_vectors_of_uint32_inline_data {
+    fidl_message_header_t header;
+    fidl_vector_t vector;
+    fidl_vector_t vector2;
+};
+struct alignas(FIDL_ALIGNMENT) multiple_nonnullable_vectors_of_uint32_message_layout {
+    multiple_nonnullable_vectors_of_uint32_inline_data inline_struct;
+    alignas(FIDL_ALIGNMENT) uint32_t uint32[4];
+    alignas(FIDL_ALIGNMENT) uint32_t uint32_2[4];
+};
+
+struct alignas(FIDL_ALIGNMENT) multiple_nullable_vectors_of_uint32_inline_data {
+    fidl_message_header_t header;
+    fidl_vector_t vector;
+    fidl_vector_t vector2;
+};
+struct alignas(FIDL_ALIGNMENT) multiple_nullable_vectors_of_uint32_message_layout {
+    multiple_nullable_vectors_of_uint32_inline_data inline_struct;
+    alignas(FIDL_ALIGNMENT) uint32_t uint32[4];
+    alignas(FIDL_ALIGNMENT) uint32_t uint32_2[4];
+};
+
 // Union types.
 #define nonnullable_handle_union_kHandle UINT32_C(0)
 struct alignas(FIDL_ALIGNMENT) nonnullable_handle_union {

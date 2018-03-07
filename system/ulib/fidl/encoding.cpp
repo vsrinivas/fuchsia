@@ -482,9 +482,16 @@ zx_status_t FidlEncoder::EncodeMessage() {
                 continue;
             }
             vector_ptr->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
-            // Continue to encoding the vector elements as an array.
-            *frame = Frame(frame->vector_state.element, size,
-                           static_cast<uint32_t>(vector_ptr->count), frame->offset);
+            if (frame->vector_state.element) {
+                // Continue to encoding the vector elements as an array.
+                *frame = Frame(frame->vector_state.element, size,
+                               static_cast<uint32_t>(vector_ptr->count), frame->offset);
+            } else {
+                // If there is no element type pointer, there is
+                // nothing to encode in the vector secondary
+                // payload. So just continue.
+                Pop();
+            }
             continue;
         }
         case Frame::kStateDone: {

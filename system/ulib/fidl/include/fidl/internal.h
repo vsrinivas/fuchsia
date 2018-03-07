@@ -16,6 +16,15 @@
 // with 32 bits. For vectors, max_count * element_size will always fit
 // within 32 bits.
 
+// Pointers to other type tables within a type are always nonnull,
+// with the exception of vectors. In that case, a null pointer
+// indicates that the element type of the vector has no interesting
+// information to be decoded (i.e. no pointers or handles). The vector
+// type still needs to be emitted as it contains the information about
+// the size of its secondary object. Contrast this with arrays: being
+// inline, ones with no interested coding information can be elided,
+// just like a uint32 field in a struct is elided.
+
 namespace fidl {
 
 enum FidlNullability : uint32_t {
@@ -120,7 +129,9 @@ struct FidlCodedString {
 };
 
 // Note that |max_count * element_size| is guaranteed to fit into a
-// uint32_t.
+// uint32_t. Unlike other types, the |element| pointer may be
+// null. This occurs when the element type contains no interesting
+// bits (i.e. pointers or handles).
 struct FidlCodedVector {
     const fidl_type* const element;
     const uint32_t max_count;

@@ -455,9 +455,16 @@ zx_status_t FidlValidator::ValidateMessage() {
             if (!ClaimOutOfLineStorage(size, &frame->offset)) {
                 return WithError("message wanted to store too large of a vector");
             }
-            // Continue by validating the vector elements as an array.
-            *frame = Frame(frame->vector_state.element, size,
-                           static_cast<uint32_t>(vector_ptr->count), frame->offset);
+            if (frame->vector_state.element) {
+                // Continue to validating the vector elements as an array.
+                *frame = Frame(frame->vector_state.element, size,
+                               static_cast<uint32_t>(vector_ptr->count), frame->offset);
+            } else {
+                // If there is no element type pointer, there is
+                // nothing to validate in the vector secondary
+                // payload. So just continue.
+                Pop();
+            }
             continue;
         }
         case Frame::kStateDone: {

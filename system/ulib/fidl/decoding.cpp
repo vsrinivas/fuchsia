@@ -469,9 +469,16 @@ zx_status_t FidlDecoder::DecodeMessage() {
                 return WithError("message wanted to store too large of a vector");
             }
             vector_ptr->data = TypedAt<void>(frame->offset);
-            // Continue by decoding the vector elements as an array.
-            *frame = Frame(frame->vector_state.element, size,
-                           static_cast<uint32_t>(vector_ptr->count), frame->offset);
+            if (frame->vector_state.element) {
+                // Continue by decoding the vector elements as an array.
+                *frame = Frame(frame->vector_state.element, size,
+                               static_cast<uint32_t>(vector_ptr->count), frame->offset);
+            } else {
+                // If there is no element type pointer, there is
+                // nothing to decode in the vector secondary
+                // payload. So just continue.
+                Pop();
+            }
             continue;
         }
         case Frame::kStateDone: {

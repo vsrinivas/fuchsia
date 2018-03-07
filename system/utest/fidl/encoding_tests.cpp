@@ -1045,6 +1045,209 @@ bool encode_present_nullable_bounded_vector_of_handles_short_error() {
     END_TEST;
 }
 
+bool encode_present_nonnullable_vector_of_uint32() {
+    BEGIN_TEST;
+
+    unbounded_nonnullable_vector_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{4, &message.uint32[0]};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status =
+        fidl_encode(&unbounded_nonnullable_vector_of_uint32_message_type, &message,
+                    sizeof(message), nullptr, 0, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+    EXPECT_EQ(actual_handles, 0u);
+
+    auto message_uint32 = reinterpret_cast<uint64_t>(message.inline_struct.vector.data);
+    EXPECT_EQ(message_uint32, FIDL_ALLOC_PRESENT);
+
+    END_TEST;
+}
+
+bool encode_present_nullable_vector_of_uint32() {
+    BEGIN_TEST;
+
+    unbounded_nullable_vector_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{4, &message.uint32[0]};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status =
+        fidl_encode(&unbounded_nullable_vector_of_uint32_message_type, &message, sizeof(message),
+                    nullptr, 0, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+    EXPECT_EQ(actual_handles, 0u);
+
+    auto message_uint32 = reinterpret_cast<uint64_t>(message.inline_struct.vector.data);
+    EXPECT_EQ(message_uint32, FIDL_ALLOC_PRESENT);
+
+    END_TEST;
+}
+
+bool encode_absent_nonnullable_vector_of_uint32_error() {
+    BEGIN_TEST;
+
+    unbounded_nonnullable_vector_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{4, nullptr};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status =
+        fidl_encode(&unbounded_nonnullable_vector_of_uint32_message_type, &message,
+                    sizeof(message), nullptr, 0, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error, error);
+
+    END_TEST;
+}
+
+bool encode_absent_nullable_vector_of_uint32() {
+    BEGIN_TEST;
+
+    unbounded_nullable_vector_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{4, nullptr};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status = fidl_encode(&unbounded_nullable_vector_of_uint32_message_type, &message,
+                              sizeof(message.inline_struct), nullptr, 0u, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+    EXPECT_EQ(actual_handles, 0u);
+
+    auto message_uint32 = reinterpret_cast<uint64_t>(message.inline_struct.vector.data);
+    EXPECT_EQ(message_uint32, FIDL_ALLOC_ABSENT);
+
+    END_TEST;
+}
+
+bool encode_present_nonnullable_bounded_vector_of_uint32() {
+    BEGIN_TEST;
+
+    bounded_32_nonnullable_vector_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{4, &message.uint32[0]};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status =
+        fidl_encode(&bounded_32_nonnullable_vector_of_uint32_message_type, &message,
+                    sizeof(message), nullptr, 0, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+    EXPECT_EQ(actual_handles, 0u);
+
+    auto message_uint32 = reinterpret_cast<uint64_t>(message.inline_struct.vector.data);
+    EXPECT_EQ(message_uint32, FIDL_ALLOC_PRESENT);
+
+    END_TEST;
+}
+
+bool encode_present_nullable_bounded_vector_of_uint32() {
+    BEGIN_TEST;
+
+    bounded_32_nullable_vector_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{4, &message.uint32[0]};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status =
+        fidl_encode(&bounded_32_nullable_vector_of_uint32_message_type, &message, sizeof(message),
+                    nullptr, 0, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+    EXPECT_EQ(actual_handles, 0u);
+
+    auto message_uint32 = reinterpret_cast<uint64_t>(message.inline_struct.vector.data);
+    EXPECT_EQ(message_uint32, FIDL_ALLOC_PRESENT);
+
+    END_TEST;
+}
+
+bool encode_absent_nonnullable_bounded_vector_of_uint32() {
+    BEGIN_TEST;
+
+    bounded_32_nonnullable_vector_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{4, nullptr};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status = fidl_encode(&bounded_32_nonnullable_vector_of_uint32_message_type, &message,
+                              sizeof(message), nullptr, 0u, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error);
+
+    END_TEST;
+}
+
+bool encode_absent_nullable_bounded_vector_of_uint32() {
+    BEGIN_TEST;
+
+    bounded_32_nullable_vector_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{4, nullptr};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status = fidl_encode(&bounded_32_nullable_vector_of_uint32_message_type, &message,
+                              sizeof(message.inline_struct), nullptr, 0u, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+    EXPECT_EQ(actual_handles, 0u);
+
+    auto message_uint32 = reinterpret_cast<uint64_t>(message.inline_struct.vector.data);
+    EXPECT_EQ(message_uint32, FIDL_ALLOC_ABSENT);
+
+    END_TEST;
+}
+
+bool encode_present_nonnullable_bounded_vector_of_uint32_short_error() {
+    BEGIN_TEST;
+
+    multiple_nonnullable_vectors_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{4, &message.uint32[0]};
+    message.inline_struct.vector2 = fidl_vector_t{4, &message.uint32_2[0]};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status =
+        fidl_encode(&multiple_nonnullable_vectors_of_uint32_message_type, &message,
+                    sizeof(message), nullptr, 0, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error);
+
+    END_TEST;
+}
+
+bool encode_present_nullable_bounded_vector_of_uint32_short_error() {
+    BEGIN_TEST;
+
+    multiple_nullable_vectors_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{4, &message.uint32[0]};
+    message.inline_struct.vector2 = fidl_vector_t{4, &message.uint32_2[0]};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status =
+        fidl_encode(&multiple_nullable_vectors_of_uint32_message_type, &message, sizeof(message),
+                    nullptr, 0, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error);
+
+    END_TEST;
+}
+
 bool encode_bad_tagged_union_error() {
     BEGIN_TEST;
 
@@ -1570,6 +1773,16 @@ RUN_TEST(encode_absent_nonnullable_bounded_vector_of_handles)
 RUN_TEST(encode_absent_nullable_bounded_vector_of_handles)
 RUN_TEST(encode_present_nonnullable_bounded_vector_of_handles_short_error)
 RUN_TEST(encode_present_nullable_bounded_vector_of_handles_short_error)
+RUN_TEST(encode_present_nonnullable_vector_of_uint32)
+RUN_TEST(encode_present_nullable_vector_of_uint32)
+RUN_TEST(encode_absent_nonnullable_vector_of_uint32_error)
+RUN_TEST(encode_absent_nullable_vector_of_uint32)
+RUN_TEST(encode_present_nonnullable_bounded_vector_of_uint32)
+RUN_TEST(encode_present_nullable_bounded_vector_of_uint32)
+RUN_TEST(encode_absent_nonnullable_bounded_vector_of_uint32)
+RUN_TEST(encode_absent_nullable_bounded_vector_of_uint32)
+RUN_TEST(encode_present_nonnullable_bounded_vector_of_uint32_short_error)
+RUN_TEST(encode_present_nullable_bounded_vector_of_uint32_short_error)
 END_TEST_CASE(vectors)
 
 BEGIN_TEST_CASE(unions)
