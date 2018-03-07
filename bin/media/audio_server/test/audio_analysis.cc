@@ -76,6 +76,24 @@ bool CompareBufferToVal(const T* buf,
   return true;
 }
 
+// Display array of double values
+void DisplayVals(const double* buf, uint32_t buf_size) {
+  printf("\n    ********************************************************");
+  printf("\n **************************************************************");
+  printf("\n ***       Displaying raw array data for length %5d       ***",
+         buf_size);
+  printf("\n **************************************************************");
+  for (uint32_t idx = 0; idx < buf_size; ++idx) {
+    if (idx % 8 == 0) {
+      printf("\n [%d]  ", idx);
+    }
+    printf("%.15lf    ", buf[idx]);
+  }
+  printf("\n **************************************************************");
+  printf("\n    ********************************************************");
+  printf("\n");
+}
+
 // Given a val with fractional content, prep it to be put in an int container.
 //
 // Used specifically when generating high-precision audio content for source
@@ -254,8 +272,8 @@ template <typename T>
 void MeasureAudioFreq(T* audio,
                       uint32_t buf_size,
                       uint32_t freq,
-                      float* magn_signal,
-                      float* magn_other) {
+                      double* magn_signal,
+                      double* magn_other) {
   FXL_DCHECK(fbl::is_pow2(buf_size));
   uint32_t buf_sz_2 = buf_size >> 1;
   FXL_DCHECK(freq <= buf_sz_2);
@@ -369,18 +387,18 @@ template void AccumCosine<double>(double*,
 template void MeasureAudioFreq<uint8_t>(uint8_t* audio,
                                         uint32_t buf_size,
                                         uint32_t freq,
-                                        float* magn_signal,
-                                        float* magn_other = nullptr);
+                                        double* magn_signal,
+                                        double* magn_other = nullptr);
 template void MeasureAudioFreq<int16_t>(int16_t* audio,
                                         uint32_t buf_size,
                                         uint32_t freq,
-                                        float* magn_signal,
-                                        float* magn_other = nullptr);
+                                        double* magn_signal,
+                                        double* magn_other = nullptr);
 template void MeasureAudioFreq<int32_t>(int32_t* audio,
                                         uint32_t buf_size,
                                         uint32_t freq,
-                                        float* magn_signal,
-                                        float* magn_other = nullptr);
+                                        double* magn_signal,
+                                        double* magn_other = nullptr);
 
 }  // namespace test
 }  // namespace media

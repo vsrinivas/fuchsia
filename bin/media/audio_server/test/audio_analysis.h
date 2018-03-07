@@ -37,6 +37,9 @@ bool CompareBufferToVal(const T* buf,
                         uint32_t buf_size,
                         bool expect_to_pass = true);
 
+// Print values of a double-float array -- used during debugging, not test-runs
+void DisplayVals(const double* buf, uint32_t buf_size);
+
 // Write sinusoidal values into a given buffer & length, determined by equation
 // "buffer[idx] = magn * cosine(idx*freq/buf_size*2*M_PI + phase)".
 // Restated: 'buffer' is the destination for these values; 'buf_size' is the
@@ -72,7 +75,7 @@ template <typename T>
 void MeasureAudioFreq(T* audio,
                       uint32_t buf_size,
                       uint32_t freq,
-                      float* magn_signal,
-                      float* magn_other = nullptr);
+                      double* magn_signal,
+                      double* magn_other = nullptr);
 }  // namespace test
 }  // namespace media

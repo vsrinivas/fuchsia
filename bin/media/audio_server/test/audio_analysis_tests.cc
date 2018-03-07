@@ -12,7 +12,7 @@ namespace test {
 
 // Test the inline function that converts a numerical value to dB.
 TEST(AnalysisHelpers, ValToDb) {
-  EXPECT_EQ(ValToDb(1.0), 0.0f);    // Unity is 0 dB
+  EXPECT_EQ(ValToDb(1.0), 0.0);     // Unity is 0 dB
   EXPECT_EQ(ValToDb(100.0), 40.0);  // 100x is 40 dB
   EXPECT_EQ(ValToDb(0.1), -20.0);   // 10% is -20 dB
 
@@ -228,18 +228,18 @@ TEST(AnalysisHelpers, FFT) {
 // For inputs of magnitude 3 and 4, their combination equals 5.
 TEST(AnalysisHelpers, MeasureAudioFreq) {
   int32_t reals[] = {5, -3, 13, -3};  // sinusoids at freq 0,1,2; magns 3,4,6
-  float magn_signal = -54.32;         // will be overwritten
-  float magn_other = 42.0f;           // will be overwritten
+  double magn_signal = -54.32;        // will be overwritten
+  double magn_other = 42.0;           // will be overwritten
 
   MeasureAudioFreq(reals, fbl::count_of(reals), 0, &magn_signal);
-  EXPECT_EQ(3.0f, magn_signal);
+  EXPECT_EQ(3.0, magn_signal);
 
   MeasureAudioFreq(reals, fbl::count_of(reals), 1, &magn_signal, &magn_other);
-  EXPECT_EQ(4.0f, magn_signal);
+  EXPECT_EQ(4.0, magn_signal);
 
   MeasureAudioFreq(reals, fbl::count_of(reals), 2, &magn_signal, &magn_other);
-  EXPECT_EQ(6.0f, magn_signal);
-  EXPECT_EQ(5.0f, magn_other);
+  EXPECT_EQ(6.0, magn_signal);
+  EXPECT_EQ(5.0, magn_other);
 }
 
 }  // namespace test
