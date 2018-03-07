@@ -61,7 +61,8 @@ void SuggestionDebugImpl::OnInterrupt(
       });
 }
 
-void SuggestionDebugImpl::OnNextUpdate(const RankedSuggestionsList* suggestions) {
+void SuggestionDebugImpl::OnNextUpdate(
+    const RankedSuggestionsList* suggestions) {
   next_proposal_listeners_.ForAllPtrs(
       [this, suggestions](NextProposalListener* listener) {
         auto proposals = f1dl::Array<ProposalSummaryPtr>::New(0);

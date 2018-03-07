@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_NEXT_PROCESSOR_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_NEXT_PROCESSOR_H_
 
+#include <vector>
+
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
@@ -13,8 +15,6 @@
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
-
-#include <vector>
 
 namespace maxwell {
 

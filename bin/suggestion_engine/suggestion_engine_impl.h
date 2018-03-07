@@ -38,7 +38,7 @@ namespace maxwell {
 
 class ProposalPublisherImpl;
 
-const std::string kQueryContextKey = "/suggestion_engine/current_query";
+constexpr char kQueryContextKey[] = "/suggestion_engine/current_query";
 
 // This class is currently responsible for 3 things:
 //
@@ -83,7 +83,7 @@ class SuggestionEngineImpl : public ContextListener,
   // stored in a BindingSet with an error handler that performs removal).
   void RemoveSourceClient(const std::string& component_url) {
     proposal_publishers_.erase(component_url);
-  };
+  }
 
   // Should only be called from ProposalPublisherImpl.
   void AddNextProposal(ProposalPublisherImpl* source, ProposalPtr proposal);

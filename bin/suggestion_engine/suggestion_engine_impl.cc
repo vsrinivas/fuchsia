@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string>
+
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/context/cpp/context_helper.h"
@@ -14,13 +17,12 @@
 #include "lib/media/timeline/timeline_rate.h"
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
+
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/proposal_hint_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/query_match_ranking_feature.h"
 #include "peridot/lib/fidl/json_xdr.h"
-
-#include <string>
 
 namespace maxwell {
 
@@ -313,7 +315,7 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
     // always assume that there's extra info and that it's a color.
     auto extra_info = f1dl::Array<modular::StoryInfoExtraEntryPtr>::New(1);
     char hex_color[11];
-    sprintf(hex_color, "0x%x", story_color);
+    snprintf(hex_color, sizeof(hex_color), "0x%x", story_color);
     extra_info[0] = modular::StoryInfoExtraEntry::New();
     extra_info[0]->key = "color";
     extra_info[0]->value = hex_color;
