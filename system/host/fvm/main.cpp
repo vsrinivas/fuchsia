@@ -7,6 +7,8 @@
 
 #include "fvm/container.h"
 
+#define DEFAULT_SLICE_SIZE (64lu * (1 << 20))
+
 int usage(void) {
     fprintf(stderr, "usage: fvm [ output_path ] [ command ] [ <flags>* ] [ <input_paths>* ]\n");
     fprintf(stderr, "fvm performs host-side FVM and sparse file creation\n");
@@ -17,6 +19,7 @@ int usage(void) {
                     " required)\n");
     fprintf(stderr, " sparse : Creates a sparse file. One or more input paths are required.\n");
     fprintf(stderr, "Flags (neither or both of offset/length must be specified):\n");
+    fprintf(stderr, " --slice [bytes] - specify slice size (default: %zu)\n", DEFAULT_SLICE_SIZE);
     fprintf(stderr, " --offset [bytes] - offset at which container begins (fvm only)\n");
     fprintf(stderr, " --length [bytes] - length of container within file (fvm only)\n");
     fprintf(stderr, " --compress - specify that file should be compressed (sparse only)\n");
@@ -56,11 +59,21 @@ int main(int argc, char** argv) {
 
     size_t length = 0;
     size_t offset = 0;
+    size_t slice_size = DEFAULT_SLICE_SIZE;
     bool should_unlink = true;
     compress_type_t compress = NONE;
 
     while (i < argc) {
-        if (!strcmp(argv[i], "--offset") && i + 1 < argc) {
+        if (!strcmp(argv[i], "--slice") && i + 1 < argc) {
+            slice_size = atoll(argv[++i]);
+            if (!slice_size ||
+                slice_size % blobfs::kBlobfsBlockSize ||
+                slice_size % minfs::kMinfsBlockSize) {
+                fprintf(stderr, "Invalid slice size - must be a multiple of %u and %u\n",
+                        blobfs::kBlobfsBlockSize, minfs::kMinfsBlockSize);
+                return -1;
+            }
+        } else if (!strcmp(argv[i], "--offset") && i + 1 < argc) {
             should_unlink = false;
             offset = atoll(argv[++i]);
         } else if (!strcmp(argv[i], "--length") && i + 1 < argc) {
@@ -97,9 +110,6 @@ int main(int argc, char** argv) {
             length = s.st_size - offset;
         }
     }
-
-    //TODO(planders): take this as argument?
-    size_t slice_size = 64lu * (1 << 20);
 
     if (!strcmp(command, "create")) {
         fbl::unique_ptr<FvmContainer> fvmContainer;
@@ -139,7 +149,7 @@ int main(int argc, char** argv) {
             return -1;
         }
     } else if (!strcmp(command, "sparse")) {
-        if (i == 7) {
+        if (offset) {
             fprintf(stderr, "Invalid sparse flags\n");
             return -1;
         }
