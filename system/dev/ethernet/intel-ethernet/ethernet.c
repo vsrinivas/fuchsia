@@ -37,6 +37,7 @@ typedef struct ethernet_device {
     zx_handle_t ioh;
     zx_handle_t irqh;
     thrd_t thread;
+    zx_handle_t btih;
     io_buffer_t buffer;
     bool online;
 
@@ -206,6 +207,10 @@ static void eth_release(void* ctx) {
     ethernet_device_t* edev = ctx;
     eth_reset_hw(&edev->eth);
     pci_enable_bus_master(&edev->pci, false);
+
+    io_buffer_release(&edev->buffer);
+
+    zx_handle_close(edev->btih);
     zx_handle_close(edev->irqh);
     zx_handle_close(edev->ioh);
     free(edev);
@@ -228,6 +233,11 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
 
     if (device_get_protocol(dev, ZX_PROTOCOL_PCI, &edev->pci)) {
         printf("no pci protocol\n");
+        goto fail;
+    }
+
+    zx_status_t status = pci_get_bti(&edev->pci, 0, &edev->btih);
+    if (status != ZX_OK) {
         goto fail;
     }
 
@@ -275,7 +285,8 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
-    r = io_buffer_init(&edev->buffer, ETH_ALLOC, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    r = io_buffer_init_with_bti(&edev->buffer, edev->btih, ETH_ALLOC,
+                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (r < 0) {
         printf("eth: cannot alloc io-buffer %d\n", r);
         goto fail;
@@ -306,6 +317,9 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
 
 fail:
     io_buffer_release(&edev->buffer);
+    if (edev->btih) {
+        zx_handle_close(edev->btih);
+    }
     if (edev->ioh) {
         pci_enable_bus_master(&edev->pci, false);
         zx_handle_close(edev->irqh);
