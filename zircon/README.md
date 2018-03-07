@@ -4,6 +4,9 @@ GN support for Zircon
 This folder contains utilities that help Zircon artifacts better integrate into
 the GN build without having to manually maintain GN build files in sync with the
 existing `rules.mk` build files specific to Zircon.
+It also makes it so that targets in upper layers don't need to know about the
+structure of Zircon's output directory in order to use Zircon build artifacts,
+as knowledge of that structure is confined within the generated GN build files.
 
 ### Process
 
