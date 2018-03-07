@@ -70,22 +70,8 @@ MaxwellTestBase::MaxwellTestBase() {
   auto root_environment = startup_context_->environment().get();
   FXL_CHECK(root_environment != nullptr);
 
-  test_environment_host_.reset(
-      new ApplicationEnvironmentHostImpl(root_environment));
-  test_environment_host_binding_.reset(
-      new f1dl::Binding<app::ApplicationEnvironmentHost>(
-          test_environment_host_.get()));
-
-  f1dl::InterfaceHandle<app::ApplicationEnvironmentHost>
-      test_environment_host_handle;
-  test_environment_host_binding_->Bind(
-      test_environment_host_handle.NewRequest());
-  root_environment->CreateNestedEnvironment(
-      std::move(test_environment_host_handle), test_environment_.NewRequest(),
-      test_environment_controller_.NewRequest(), "maxwell-test");
-  test_environment_->GetApplicationLauncher(test_launcher_.NewRequest());
   agent_launcher_ =
-      std::make_unique<maxwell::AgentLauncher>(test_environment_.get());
+      std::make_unique<maxwell::AgentLauncher>(root_environment);
 
   child_app_services_.AddService<modular::ComponentContext>(
       [this](f1dl::InterfaceRequest<modular::ComponentContext> request) {
@@ -104,7 +90,8 @@ app::Services MaxwellTestBase::StartServices(const std::string& url) {
   child_app_services_.AddBinding(service_list->provider.NewRequest());
   launch_info->additional_services = std::move(service_list);
 
-  test_launcher_->CreateApplication(std::move(launch_info), nullptr);
+  startup_context_->launcher()->CreateApplication(
+      std::move(launch_info), nullptr);
   return services;
 }
 

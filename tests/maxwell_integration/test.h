@@ -120,13 +120,6 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
 
  private:
   std::unique_ptr<app::ApplicationContext> startup_context_;
-  std::unique_ptr<ApplicationEnvironmentHostImpl> test_environment_host_;
-  std::unique_ptr<f1dl::Binding<app::ApplicationEnvironmentHost>>
-      test_environment_host_binding_;
-  app::ApplicationEnvironmentPtr test_environment_;
-  // Hold a controller so that we kill all children when we go out of scope.
-  app::ApplicationEnvironmentControllerPtr test_environment_controller_;
-  app::ApplicationLauncherPtr test_launcher_;
   std::unique_ptr<AgentLauncher> agent_launcher_;
 
   app::ServiceProviderImpl child_app_services_;
