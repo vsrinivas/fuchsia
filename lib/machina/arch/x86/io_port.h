@@ -69,6 +69,17 @@ class I8042Handler : public IoHandler {
   uint8_t command_ __TA_GUARDED(mutex_) = 0;
 };
 
+class ProcessorInterfaceHandler : public IoHandler {
+ public:
+  zx_status_t Init(Guest* guest);
+
+  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
+ private:
+  uint8_t nmi_sc_ = 0;
+};
+
 class IoPort {
  public:
   zx_status_t Init(Guest* guest);
@@ -80,6 +91,7 @@ class IoPort {
   Pm1Handler pm1_;
   RtcHandler rtc_;
   I8042Handler i8042_;
+  ProcessorInterfaceHandler proc_iface_;
 };
 
 }  // namespace machina

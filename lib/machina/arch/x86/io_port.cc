@@ -320,6 +320,41 @@ zx_status_t I8042Handler::Write(uint64_t port, const IoValue& value) {
   return ZX_OK;
 }
 
+// Processor Interface Registers
+//
+// See Intel Series 7 Platform Host Controller Hub, Section 13.7:
+// Processor Interface Registers
+constexpr uint8_t kNmiStatusControlPort = 0x61;
+constexpr uint8_t kNmiStatusControlOffset = 0;
+
+zx_status_t ProcessorInterfaceHandler::Init(Guest* guest) {
+  return guest->CreateMapping(TrapType::PIO_SYNC, kNmiStatusControlPort, 1,
+                              kNmiStatusControlOffset, this);
+}
+
+zx_status_t ProcessorInterfaceHandler::Read(uint64_t addr,
+                                            IoValue* value) const {
+  switch (addr) {
+    case kNmiStatusControlOffset:
+      value->u8 = nmi_sc_;
+      return ZX_OK;
+    default:
+      return ZX_ERR_INTERNAL;
+  }
+}
+
+zx_status_t ProcessorInterfaceHandler::Write(uint64_t addr,
+                                             const IoValue& value) {
+  switch (addr) {
+    case kNmiStatusControlOffset:
+      // The upper 4 bits are all read-only to the guest.
+      nmi_sc_ |= value.u8 & bit_mask<uint8_t>(4);
+      return ZX_OK;
+    default:
+      return ZX_ERR_INTERNAL;
+  }
+}
+
 zx_status_t IoPort::Init(Guest* guest) {
   zx_status_t status;
   status = pic1_.Init(guest, kPic1Base);
@@ -338,6 +373,9 @@ zx_status_t IoPort::Init(Guest* guest) {
   if (status != ZX_OK)
     return status;
   status = i8042_.Init(guest);
+  if (status != ZX_OK)
+    return status;
+  status = proc_iface_.Init(guest);
   if (status != ZX_OK)
     return status;
 
