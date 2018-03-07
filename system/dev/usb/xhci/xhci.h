@@ -200,20 +200,6 @@ struct xhci {
     usb_request_pool_t free_reqs;
 };
 
-#if __x86_64__
-// cache is coherent on x86
-static inline void xhci_cache_flush(volatile const void* addr, size_t len) {}
-static inline void xhci_cache_flush_invalidate(volatile const void* addr, size_t len) {}
-#else
-static inline void xhci_cache_flush(volatile const void* addr, size_t len) {
-    zx_cache_flush((void *)addr, len, ZX_CACHE_FLUSH_DATA);
-}
-
-static inline void xhci_cache_flush_invalidate(volatile const void* addr, size_t len) {
-    zx_cache_flush((void *)addr, len, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
-}
-#endif
-
 zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts);
 // Returns the max number of interrupters supported by the xhci.
 // This is different to xhci->num_interrupts.

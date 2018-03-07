@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <hw/arch_ops.h>
 #include <stdio.h>
 
 #include "xhci-util.h"
@@ -61,6 +62,7 @@ zx_status_t xhci_send_command(xhci_t* xhci, uint32_t cmd, uint64_t ptr, uint32_t
         }
 
         // ring doorbell to restart command ring
+        hw_mb();
         XHCI_WRITE32(&xhci->doorbells[0], 0);
         xhci_wait_bits64(crcr_ptr, CRCR_CRR, CRCR_CRR);
     }
