@@ -63,7 +63,7 @@ def build_package(pm_bin, pkg_key, far_stg_dir, manifest, pkg_name):
         return None, None, "Could not start packging tool %s" % e
 
     far_path = os.path.join(far_stg_dir, "meta.far")
-    pkg_json = os.path.join(far_stg_dir, "meta", "package.json")
+    pkg_json = os.path.join(far_stg_dir, "meta", "package")
     if os.path.exists(far_path) and os.path.exists(pkg_json):
         return far_path, pkg_json, None
     else:
