@@ -204,9 +204,11 @@ static void devhost_finalize(void) REQ_DM_LOCK {
         list_delete(&dev->defer);
 
         // invoke release op
-        DM_UNLOCK();
-        dev_op_release(dev);
-        DM_LOCK();
+        if (dev->flags & DEV_FLAG_ADDED) {
+            DM_UNLOCK();
+            dev_op_release(dev);
+            DM_LOCK();
+        }
 
         if (dev->parent) {
             // If the parent wants rebinding when its children are gone,
