@@ -165,9 +165,11 @@ bool MsdArmDevice::Init(void* device_handle)
     magma::log(magma::LOG_INFO, "ARM mali ID %x", gpu_features_.gpu_id.reg_value());
 
 #if defined(MSD_ARM_ENABLE_CACHE_COHERENCY)
-    if (!gpu_features_.coherency_features.ace().get())
-        return DRETF(false, "ACE cache coherency not available");
-    cache_coherency_status_ = kArmMaliCacheCoherencyAce;
+    if (gpu_features_.coherency_features.ace().get()) {
+        cache_coherency_status_ = kArmMaliCacheCoherencyAce;
+    } else {
+        magma::log(magma::LOG_INFO, "Cache coherency unsupported");
+    }
 #endif
 
     device_request_semaphore_ = magma::PlatformSemaphore::Create();

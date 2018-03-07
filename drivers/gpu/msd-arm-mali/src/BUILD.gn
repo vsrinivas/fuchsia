@@ -8,9 +8,9 @@ declare_args() {
   # Enable all 8 cores, which is faster but emits more heat.
   msd_arm_enable_all_cores = true
 
-  # This is disabled by default because it's not guaranteed that it actually
-  # works on all systems (including the hikey960).
-  msd_arm_enable_cache_coherency = false
+  # With this flag set the system tries to use cache coherent memory if the
+  # GPU supports it.
+  msd_arm_enable_cache_coherency = true
 }
 
 source_set("src") {
