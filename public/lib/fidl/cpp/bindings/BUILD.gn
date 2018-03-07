@@ -81,9 +81,11 @@ source_set("bindings") {
     "internal/router.h",
     "internal/shared_data.h",
     "internal/template_util.h",
+    "internal/type_converters.cc",
     "message.h",
     "message_validator.h",
     "synchronous_interface_ptr.h",
+    "type_converters.h",
   ]
 
   public_deps = [
