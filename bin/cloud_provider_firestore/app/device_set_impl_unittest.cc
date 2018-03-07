@@ -26,11 +26,7 @@ class DeviceSetImplTest : public gtest::TestWithMessageLoop,
                          &test_credentials_provider_,
                          &firestore_service_,
                          device_set_.NewRequest()),
-        watcher_binding_(this) {
-    // Configure test Firestore service to quit the message loop at each
-    // request.
-    firestore_service_.SetOnRequest([this] { message_loop_.PostQuitTask(); });
-  }
+        watcher_binding_(this) {}
 
   // cloud_provider::DeviceSetWatcher:
   void OnCloudErased() override {
@@ -64,65 +60,53 @@ TEST_F(DeviceSetImplTest, EmptyWhenDisconnected) {
     message_loop_.PostQuitTask();
   });
   device_set_.Unbind();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_TRUE(on_empty_called);
 }
 
 TEST_F(DeviceSetImplTest, CheckFingerprintOk) {
   auto status = cloud_provider::Status::INTERNAL_ERROR;
-  device_set_->CheckFingerprint(convert::ToArray("abc"),
-                                [this, &status](auto got_status) {
-                                  status = got_status;
-                                  message_loop_.PostQuitTask();
-                                });
+  device_set_->CheckFingerprint(
+      convert::ToArray("abc"),
+      [this, &status](auto got_status) { status = got_status; });
 
-  // Will be quit by the firestore service on-request callback.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, firestore_service_.get_document_records.size());
   firestore_service_.get_document_records.front().callback(
       grpc::Status(), google::firestore::v1beta1::Document());
 
-  // Will be quit by the CheckFingerprint() callback;
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(cloud_provider::Status::OK, status);
 }
 
 TEST_F(DeviceSetImplTest, CheckFingerprintNotFound) {
   auto status = cloud_provider::Status::INTERNAL_ERROR;
-  device_set_->CheckFingerprint(convert::ToArray("abc"),
-                                [this, &status](auto got_status) {
-                                  status = got_status;
-                                  message_loop_.PostQuitTask();
-                                });
+  device_set_->CheckFingerprint(
+      convert::ToArray("abc"),
+      [this, &status](auto got_status) { status = got_status; });
 
-  // Will be quit by the firestore service on-request callback.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, firestore_service_.get_document_records.size());
   firestore_service_.get_document_records.front().callback(
       grpc::Status(grpc::NOT_FOUND, ""),
       google::firestore::v1beta1::Document());
 
-  // Will be quit by the CheckFingerprint() callback;
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(cloud_provider::Status::NOT_FOUND, status);
 }
 
 TEST_F(DeviceSetImplTest, SetFingerprint) {
   auto status = cloud_provider::Status::INTERNAL_ERROR;
-  device_set_->SetFingerprint(convert::ToArray("abc"),
-                              [this, &status](auto got_status) {
-                                status = got_status;
-                                message_loop_.PostQuitTask();
-                              });
+  device_set_->SetFingerprint(
+      convert::ToArray("abc"),
+      [this, &status](auto got_status) { status = got_status; });
 
-  // Will be quit by the firestore service on-request callback.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, firestore_service_.create_document_records.size());
   firestore_service_.create_document_records.front().callback(
       grpc::Status(), google::firestore::v1beta1::Document());
 
-  // Will be quit by the CheckFingerprint() callback;
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_EQ(cloud_provider::Status::OK, status);
 }
 
