@@ -30,20 +30,6 @@ zx_rights_t GetVmoRightsForAccessMode(uint32_t flags) {
     return rights;
 }
 
-zx_rights_t GetVmoRightsForMmapFlags(uint32_t flags) {
-    zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP;
-    if (flags & FDIO_MMAP_FLAG_READ) {
-        rights |= ZX_RIGHT_READ;
-    }
-    if (flags & FDIO_MMAP_FLAG_EXEC) {
-        rights |= ZX_RIGHT_EXECUTE;
-    }
-    if (flags & FDIO_MMAP_FLAG_WRITE) {
-        rights |= ZX_RIGHT_WRITE;
-    }
-    return rights;
-}
-
 } // namespace
 
 VmoFile::VmoFile(const zx::vmo& unowned_vmo,
@@ -128,7 +114,7 @@ zx_status_t VmoFile::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type
 
     zx::vmo vmo;
     size_t offset;
-    zx_status_t status = GetVmo(GetVmoRightsForAccessMode(flags), &vmo, &offset);
+    zx_status_t status = AcquireVmo(GetVmoRightsForAccessMode(flags), &vmo, &offset);
     if (status != ZX_OK) {
         return status;
     }
@@ -140,19 +126,7 @@ zx_status_t VmoFile::GetHandles(uint32_t flags, zx_handle_t* hnd, uint32_t* type
     return ZX_OK;
 }
 
-zx_status_t VmoFile::Mmap(int flags, size_t length, size_t* off, zx_handle_t* out) {
-    ZX_DEBUG_ASSERT(!(flags & FDIO_MMAP_FLAG_WRITE) || writable_); // checked by the VFS
-
-    // |length| is ignored, the VMO is fully populated with whatever data we have
-    zx::vmo vmo;
-    zx_status_t status = GetVmo(GetVmoRightsForMmapFlags(flags), &vmo, off);
-    if (status == ZX_OK) {
-        *out = vmo.release();
-    }
-    return status;
-}
-
-zx_status_t VmoFile::GetVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset) {
+zx_status_t VmoFile::AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset) {
     ZX_DEBUG_ASSERT(!(rights & ZX_RIGHT_WRITE) || writable_); // checked by the VFS
 
     switch (vmo_sharing_) {

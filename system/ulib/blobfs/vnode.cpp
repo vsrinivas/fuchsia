@@ -245,8 +245,8 @@ zx_status_t VnodeBlob::Unlink(fbl::StringPiece name, bool must_be_dir) {
     return ZX_OK;
 }
 
-zx_status_t VnodeBlob::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) {
-    TRACE_DURATION("blobfs", "VnodeBlob::Mmap", "flags", flags, "len", len, "off", off);
+zx_status_t VnodeBlob::GetVmo(int flags, zx_handle_t* out) {
+    TRACE_DURATION("blobfs", "VnodeBlob::GetVmo", "flags", flags);
 
     if (IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;

@@ -851,7 +851,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         }
         assert(false);
     }
-    case ZXFIDL_GET_VMO_AT:
+    case ZXFIDL_GET_VMO:
     case ZXRIO_MMAP: {
         TRACE_DURATION("vfs", "ZXRIO_MMAP");
         if (IsPathOnly(flags_)) {
@@ -859,16 +859,12 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         }
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
         uint32_t flags;
-        uint64_t offset;
-        uint64_t length;
         zx_handle_t* handle;
 
         if (fidl) {
-            auto request = reinterpret_cast<FileGetVmoAtMsg*>(msg);
-            auto response = reinterpret_cast<FileGetVmoAtRsp*>(msg);
+            auto request = reinterpret_cast<FileGetVmoMsg*>(msg);
+            auto response = reinterpret_cast<FileGetVmoRsp*>(msg);
             flags = request->flags;
-            offset = request->offset;
-            length = request->length;
             handle = &response->v;
         } else {
             if (len != sizeof(zxrio_mmap_data_t)) {
@@ -876,8 +872,6 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             }
             zxrio_mmap_data_t* data = reinterpret_cast<zxrio_mmap_data_t*>(msg->data);
             flags = data->flags;
-            offset = data->offset;
-            length = data->length;
             handle = &msg->handle[0];
         }
 
@@ -889,9 +883,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             return ZX_ERR_ACCESS_DENIED;
         }
 
-        // TODO(smklein): This code assumes the offset passed to Mmap won't
-        // change -- the API should be updated so this is more apparent.
-        zx_status_t status = vnode_->Mmap(flags, length, &offset, handle);
+        zx_status_t status = vnode_->GetVmo(flags, handle);
         if (!fidl && status == ZX_OK) {
             msg->hcount = 1;
         }

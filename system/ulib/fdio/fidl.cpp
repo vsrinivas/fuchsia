@@ -429,8 +429,8 @@ zx_status_t zxrio_encode_response(zx_status_t status, zxrio_msg_t* msg, uint32_t
         encode_response_status<DirectoryRewindRsp>(msg, status, sz);
         break;
     }
-    case ZXFIDL_GET_VMO_AT: {
-        auto response = encode_response_status<FileGetVmoAtRsp>(msg, status, sz);
+    case ZXFIDL_GET_VMO: {
+        auto response = encode_response_status<FileGetVmoRsp>(msg, status, sz);
         if (response->s != ZX_OK) {
             response->v = FIDL_HANDLE_ABSENT;
         } else {
@@ -1219,20 +1219,17 @@ zx_status_t fidl_ioctl(zxrio_t* rio, uint32_t op, const void* in_buf,
     return ZX_OK;
 }
 
-zx_status_t fidl_getvmoat(zxrio_t* rio, uint32_t flags, uint64_t offset,
-                          uint64_t length, zx_handle_t* out) {
+zx_status_t fidl_getvmo(zxrio_t* rio, uint32_t flags, zx_handle_t* out) {
     // Prepare buffers for input & output
     char byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
     fidl::Builder builder(byte_buffer, sizeof(byte_buffer));
     fidl::HandlePart handles(out, 1);
 
     // Setup the request message header
-    auto request = new_request<FileGetVmoAtMsg, ZXFIDL_GET_VMO_AT>(rio, &builder);
+    auto request = new_request<FileGetVmoMsg, ZXFIDL_GET_VMO>(rio, &builder);
 
     // Setup the request message primary
     request->flags = flags;
-    request->offset = offset;
-    request->length = length;
 
     fidl::Message message(builder.Finalize(), fbl::move(handles));
     zx_status_t r = fidl_call(zxrio_handle(rio), &message);
@@ -1241,20 +1238,20 @@ zx_status_t fidl_getvmoat(zxrio_t* rio, uint32_t flags, uint64_t offset,
     }
 
     // Validate primary size
-    auto response = to_primary<FileGetVmoAtRsp>(&message);
+    auto response = to_primary<FileGetVmoRsp>(&message);
     if (response == nullptr) {
-        fprintf(stderr, "fidl_getvmoat couldn't convert to primary\n");
+        fprintf(stderr, "fidl_getvmo couldn't convert to primary\n");
         return ZX_ERR_IO;
     } else if (response->s != ZX_OK) {
         return response->s;
     } else if (message.handles().actual() != 1) {
-        fprintf(stderr, "fidl_getvmoat missing VMO\n");
+        fprintf(stderr, "fidl_getvmo missing VMO\n");
         return ZX_ERR_IO;
     }
 
     // Already reading directly into |out|.
     if (response->v != FIDL_HANDLE_PRESENT) {
-        fprintf(stderr, "fidl_getvmoat: Missing response VMO\n");
+        fprintf(stderr, "fidl_getvmo: Missing response VMO\n");
         return ZX_ERR_IO;
     }
     message.ClearHandlesUnsafe();

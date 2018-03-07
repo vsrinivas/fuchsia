@@ -79,7 +79,7 @@ private:
                        size_t* out_actual) final;
     zx_status_t Truncate(size_t len) final;
     zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) final;
+    zx_status_t GetVmo(int flags, zx_handle_t* out) final;
 
     zx_handle_t vmo_;
     zx_off_t length_;
@@ -132,7 +132,7 @@ private:
                        bool dst_must_be_dir) final;
     zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
     zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) final;
+    zx_status_t GetVmo(int flags,  zx_handle_t* out) final;
     zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
                       void* out_buf, size_t out_len, size_t* out_actual) final;
 

@@ -97,7 +97,7 @@ zx_status_t VnodeFile::Append(const void* data, size_t len, size_t* out_end,
     return status;
 }
 
-zx_status_t VnodeFile::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) {
+zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out) {
     if (vmo_ == ZX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
         zx_status_t status;

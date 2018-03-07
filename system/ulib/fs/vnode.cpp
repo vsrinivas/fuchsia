@@ -100,7 +100,7 @@ zx_status_t Vnode::Link(fbl::StringPiece name, fbl::RefPtr<Vnode> target) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) {
+zx_status_t Vnode::GetVmo(int flags, zx_handle_t* out) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

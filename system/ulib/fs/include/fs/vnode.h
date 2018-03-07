@@ -144,7 +144,7 @@ public:
     // since (without paging) there is no mechanism to update either
     // 1) The file by writing to the mapping, or
     // 2) The mapping by writing to the underlying file.
-    virtual zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out);
+    virtual zx_status_t GetVmo(int flags, zx_handle_t* out);
 
     // Syncs the vnode with its underlying storage.
     //

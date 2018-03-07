@@ -1018,8 +1018,7 @@ zx_status_t zxrio_misc(fdio_t* io, uint32_t op, int64_t off,
         }
         zxrio_mmap_data_t* data = ptr;
         zx_handle_t vmo;
-        zx_status_t r = fidl_getvmoat(rio, data->flags, data->offset, data->length,
-                                      &vmo);
+        zx_status_t r = fidl_getvmo(rio, data->flags, &vmo);
         if (r != ZX_OK) {
             return r;
         }

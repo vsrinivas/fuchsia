@@ -59,8 +59,7 @@ zx_status_t fidl_link(zxrio_t* rio, const char* src, size_t srclen,
 zx_status_t fidl_ioctl(zxrio_t* rio, uint32_t op, const void* in_buf,
                        size_t in_len, void* out_buf, size_t out_len,
                        size_t* out_actual);
-zx_status_t fidl_getvmoat(zxrio_t* rio, uint32_t flags, uint64_t offset, uint64_t length,
-                          zx_handle_t* out);
+zx_status_t fidl_getvmo(zxrio_t* rio, uint32_t flags, zx_handle_t* out);
 zx_status_t fidl_getflags(zxrio_t* rio, uint32_t* outflags);
 zx_status_t fidl_setflags(zxrio_t* rio, uint32_t flags);
 

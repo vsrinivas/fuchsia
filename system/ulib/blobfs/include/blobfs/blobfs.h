@@ -179,7 +179,7 @@ private:
                        uint32_t mode) final;
     zx_status_t Truncate(size_t len) final;
     zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
-    zx_status_t Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) final;
+    zx_status_t GetVmo(int flags, zx_handle_t* out) final;
     void Sync(SyncCallback closure) final;
     zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Close() final;

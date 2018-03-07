@@ -41,7 +41,7 @@ zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
     return watcher_.WatchDir(vfs, this, cmd);
 }
 
-zx_status_t VnodeDir::Mmap(int flags, size_t len, size_t* off, zx_handle_t* out) {
+zx_status_t VnodeDir::GetVmo(int flags, zx_handle_t* out) {
     return ZX_ERR_ACCESS_DENIED;
 }
 
