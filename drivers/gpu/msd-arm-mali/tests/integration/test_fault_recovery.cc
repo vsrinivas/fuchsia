@@ -72,7 +72,7 @@ public:
 
         ASSERT_EQ(magma_create_buffer(connection_, PAGE_SIZE, &size, &job_buffer), 0);
         uint64_t job_va;
-        InitJobBuffer(job_buffer, &job_va);
+        InitJobBuffer(job_buffer, how, &job_va);
 
         std::vector<uint8_t> vaddr(sizeof(magma_arm_mali_atom));
 
@@ -103,7 +103,8 @@ public:
                 break;
 
             case JOB_FAULT:
-                EXPECT_EQ(kArmMaliResultConfigFault, status.result_code);
+                EXPECT_NE(kArmMaliResultReadFault, status.result_code);
+                EXPECT_NE(kArmMaliResultSuccess, status.result_code);
                 break;
 
             case MMU_FAULT:
@@ -119,10 +120,7 @@ public:
         memset(vaddr, 0, size);
 
         magma_arm_mali_atom* atom = static_cast<magma_arm_mali_atom*>(vaddr);
-        if (how == JOB_FAULT) {
-            // An unaligned job chain address should fail with error 0x40.
-            atom->job_chain_addr = 1;
-        } else if (how == MMU_FAULT) {
+        if (how == MMU_FAULT) {
             atom->job_chain_addr = job_va - PAGE_SIZE;
             if (atom->job_chain_addr == 0)
                 atom->job_chain_addr = PAGE_SIZE * 2;
@@ -134,12 +132,13 @@ public:
         return true;
     }
 
-    bool InitJobBuffer(magma_buffer_t buffer, uint64_t* job_va)
+    bool InitJobBuffer(magma_buffer_t buffer, How how, uint64_t* job_va)
     {
         void* vaddr;
         if (magma_map(connection_, buffer, &vaddr) != 0)
             return DRETF(false, "couldn't map job buffer");
-        *job_va = (uint64_t)vaddr;
+        *job_va = next_job_address_;
+        next_job_address_ += 0x5000;
         magma_map_buffer_gpu(connection_, buffer, 0, 1, *job_va,
                              MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE |
                                  kMagmaArmMaliGpuMapFlagInnerShareable);
@@ -147,7 +146,11 @@ public:
         JobDescriptorHeader* header = static_cast<JobDescriptorHeader*>(vaddr);
         memset(header, 0, sizeof(*header));
         header->job_descriptor_size = 1; // Next job address is 64-bit.
-        header->job_type = kJobDescriptorTypeNop;
+        if (how == JOB_FAULT) {
+            header->job_type = 127;
+        } else {
+            header->job_type = kJobDescriptorTypeNop;
+        }
         header->next_job = 0;
         magma_clean_cache(buffer, 0, PAGE_SIZE, MAGMA_CACHE_OPERATION_CLEAN);
         return true;
@@ -156,6 +159,7 @@ public:
 private:
     magma_connection_t* connection_;
     uint32_t context_id_;
+    uint64_t next_job_address_ = 0x1000000;
 };
 
 } // namespace
