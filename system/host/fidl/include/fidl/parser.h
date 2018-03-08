@@ -78,7 +78,7 @@ private:
     std::unique_ptr<raw::StringType> ParseStringType();
     std::unique_ptr<raw::HandleType> ParseHandleType();
     std::unique_ptr<raw::PrimitiveType> ParsePrimitiveType();
-    std::unique_ptr<raw::RequestType> ParseRequestType();
+    std::unique_ptr<raw::RequestHandleType> ParseRequestHandleType();
     std::unique_ptr<raw::Type> ParseType();
 
     std::unique_ptr<raw::ConstDeclaration> ParseConstDeclaration(std::unique_ptr<raw::AttributeList> attributes);

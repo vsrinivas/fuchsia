@@ -6,6 +6,13 @@ interface this_is_an_interface {
     23: Copy(string s, uint32 count) -> (string s);
 };
 
+struct interfaces_and_requests {
+    this_is_an_interface nonnullable_interface;
+    this_is_an_interface? nullable_interface;
+    request<this_is_an_interface> nonnullable_request;
+    request<this_is_an_interface>? nullable_request;
+};
+
 struct primitive_types {
     bool b;
     int8 i8;

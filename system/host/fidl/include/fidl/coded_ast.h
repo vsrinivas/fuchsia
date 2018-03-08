@@ -25,6 +25,17 @@
 namespace fidl {
 namespace coded {
 
+enum struct CodingNeeded {
+    // There is interesting coding information about the location of
+    // pointers, allocations, or handles for this type.
+    kNeeded,
+
+    // There is no coding information needed for this type. That is,
+    // it contains no pointers or handles, and is just primitive
+    // types, or fixed size aggregates thereof.
+    kNotNeeded,
+};
+
 struct Type;
 
 struct Field {
@@ -39,7 +50,10 @@ struct Type {
     virtual ~Type() = default;
 
     enum struct Kind {
+        kPrimitive,
         kHandle,
+        kInterfaceHandle,
+        kRequestHandle,
         kStruct,
         kUnion,
         kArray,
@@ -47,41 +61,83 @@ struct Type {
         kVector,
     };
 
-    Type(Kind kind, std::string coded_name)
-        : kind(kind), coded_name(std::move(coded_name)) {}
+    Type(Kind kind, std::string coded_name, CodingNeeded coding_needed)
+        : kind(kind), coded_name(std::move(coded_name)), coding_needed(coding_needed) {}
 
     const Kind kind;
     const std::string coded_name;
+    const CodingNeeded coding_needed;
+};
+
+inline CodingNeeded SomeFieldIsNeeded(const std::vector<Field>& fields) {
+    for (const auto& field : fields) {
+        if (field.type->coding_needed == CodingNeeded::kNeeded)
+            return CodingNeeded::kNeeded;
+    }
+    return CodingNeeded::kNotNeeded;
+}
+
+inline CodingNeeded SomeTypeIsNeeded(const std::vector<const Type*>& types) {
+    for (const auto& type : types) {
+        if (type->coding_needed == CodingNeeded::kNeeded)
+            return CodingNeeded::kNeeded;
+    }
+    return CodingNeeded::kNotNeeded;
+}
+
+struct PrimitiveType : public Type {
+    PrimitiveType(std::string name, types::PrimitiveSubtype subtype)
+        : Type(Kind::kPrimitive, std::move(name), CodingNeeded::kNotNeeded), subtype(subtype) {}
+
+    const types::PrimitiveSubtype subtype;
 };
 
 struct HandleType : public Type {
     HandleType(std::string name, types::HandleSubtype subtype, types::Nullability nullability)
-        : Type(Kind::kHandle, std::move(name)), subtype(subtype), nullability(nullability) {}
+        : Type(Kind::kHandle, std::move(name), CodingNeeded::kNeeded), subtype(subtype), nullability(nullability) {}
 
     const types::HandleSubtype subtype;
     const types::Nullability nullability;
 };
 
+struct InterfaceHandleType : public Type {
+    InterfaceHandleType(std::string name, types::Nullability nullability)
+        : Type(Kind::kInterfaceHandle, std::move(name), CodingNeeded::kNeeded), nullability(nullability) {}
+
+    const types::Nullability nullability;
+};
+
+struct RequestHandleType : public Type {
+    RequestHandleType(std::string name, types::Nullability nullability)
+        : Type(Kind::kRequestHandle, std::move(name), CodingNeeded::kNeeded), nullability(nullability) {}
+
+    const types::Nullability nullability;
+};
+
 struct StructType : public Type {
     StructType(std::string name, std::vector<Field> fields, uint32_t size)
-        : Type(Kind::kStruct, std::move(name)), fields(std::move(fields)), size(size) {}
+        : Type(Kind::kStruct, std::move(name), SomeFieldIsNeeded(fields)), fields(std::move(fields)), size(size) {}
 
     const std::vector<Field> fields;
     const uint32_t size;
+    bool referenced_by_pointer = false;
 };
 
 struct UnionType : public Type {
-    UnionType(std::string name, std::vector<const Type*> types, uint32_t size)
-        : Type(Kind::kUnion, std::move(name)), types(std::move(types)), size(size) {}
+    UnionType(std::string name, std::vector<const Type*> types, uint32_t data_offset, uint32_t size)
+        : Type(Kind::kUnion, std::move(name), SomeTypeIsNeeded(types)),
+          types(std::move(types)), data_offset(data_offset), size(size) {}
 
     const std::vector<const Type*> types;
+    const uint32_t data_offset;
     const uint32_t size;
+    bool referenced_by_pointer = false;
 };
 
 struct ArrayType : public Type {
     ArrayType(std::string name, const Type* element_type, uint32_t array_size,
               uint32_t element_size)
-        : Type(Kind::kArray, std::move(name)), element_type(element_type), array_size(array_size),
+        : Type(Kind::kArray, std::move(name), element_type->coding_needed), element_type(element_type), array_size(array_size),
           element_size(element_size) {}
 
     const Type* const element_type;
@@ -91,7 +147,7 @@ struct ArrayType : public Type {
 
 struct StringType : public Type {
     StringType(std::string name, uint32_t max_size, types::Nullability nullability)
-        : Type(Kind::kString, std::move(name)), max_size(max_size), nullability(nullability) {}
+        : Type(Kind::kString, std::move(name), CodingNeeded::kNeeded), max_size(max_size), nullability(nullability) {}
 
     const uint32_t max_size;
     const types::Nullability nullability;
@@ -100,7 +156,8 @@ struct StringType : public Type {
 struct VectorType : public Type {
     VectorType(std::string name, const Type* element_type, uint32_t max_count,
                uint32_t element_size, types::Nullability nullability)
-        : Type(Kind::kVector, std::move(name)), element_type(element_type), max_count(max_count),
+        : Type(Kind::kVector, std::move(name), CodingNeeded::kNeeded),
+          element_type(element_type), max_count(max_count),
           element_size(element_size), nullability(nullability) {}
 
     const Type* const element_type;

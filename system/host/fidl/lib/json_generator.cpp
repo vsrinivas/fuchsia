@@ -108,7 +108,7 @@ std::string TypeKindName(flat::Type::Kind kind) {
         return "string";
     case flat::Type::Kind::Handle:
         return "handle";
-    case flat::Type::Kind::Request:
+    case flat::Type::Kind::RequestHandle:
         return "request";
     case flat::Type::Kind::Primitive:
         return "primitive";
@@ -381,8 +381,8 @@ void JSONGenerator::Generate(const flat::Type& value) {
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case flat::Type::Kind::Request: {
-            auto type = static_cast<const flat::RequestType*>(&value);
+        case flat::Type::Kind::RequestHandle: {
+            auto type = static_cast<const flat::RequestHandleType*>(&value);
             GenerateObjectMember("subtype", type->name);
             GenerateObjectMember("nullable", type->nullability);
             break;
@@ -538,8 +538,8 @@ void JSONGenerator::Generate(const flat::Union& value) {
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("members", value.members);
-        GenerateObjectMember("size", value.typeshape.Size());
-        GenerateObjectMember("alignment", value.typeshape.Alignment());
+        GenerateObjectMember("size", value.fieldshape.Size());
+        GenerateObjectMember("alignment", value.fieldshape.Alignment());
     });
 }
 

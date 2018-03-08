@@ -139,7 +139,7 @@ struct Type {
         Vector,
         String,
         Handle,
-        Request,
+        RequestHandle,
         Primitive,
         Identifier,
     };
@@ -188,9 +188,9 @@ struct HandleType : public Type {
     types::Nullability nullability;
 };
 
-struct RequestType : public Type {
-    RequestType(std::unique_ptr<CompoundIdentifier> identifier, types::Nullability nullability)
-        : Type(Kind::Request), identifier(std::move(identifier)), nullability(nullability) {}
+struct RequestHandleType : public Type {
+    RequestHandleType(std::unique_ptr<CompoundIdentifier> identifier, types::Nullability nullability)
+        : Type(Kind::RequestHandle), identifier(std::move(identifier)), nullability(nullability) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
     types::Nullability nullability;

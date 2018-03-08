@@ -47,6 +47,8 @@ private:
     void Generate(const coded::StructType& struct_type);
     void Generate(const coded::UnionType& union_type);
     void Generate(const coded::HandleType& handle_type);
+    void Generate(const coded::InterfaceHandleType& interface_type);
+    void Generate(const coded::RequestHandleType& request_type);
     void Generate(const coded::ArrayType& array_type);
     void Generate(const coded::StringType& string_type);
     void Generate(const coded::VectorType& vector_type);
@@ -54,28 +56,26 @@ private:
     void Generate(const coded::Type* type);
     void Generate(const coded::Field& field);
 
-    // TODO(TO-856) The |name| is plumbed through as part of a hack to
-    // work around not generating identical anonymous types once.
-    const coded::Type* LookupType(const flat::Type* type, StringView name);
+    // Returns a pointer owned by coded_types_.
+    const coded::Type* Compile(const flat::Type* type);
 
-    // TODO(TO-856) A coded::Type is returned as part of a hack to
-    // work around not generating identical anonymous types once.
-    const coded::Type* Compile(const flat::Type* type, StringView name);
     void Compile(const flat::Decl* decl);
 
     const flat::Library* library_;
 
     // All flat::Types and flat::Names here are owned by library_, and
-    // all coded::Types by the various coded_foo_types_ vectors.
-    std::map<const flat::Name*, const coded::Type*, flat::NamePtrCompare> named_type_map_;
+    // all coded::Types by the coded_types_ vector.
+    std::map<const flat::Name*, coded::Type*, flat::PtrCompare<flat::Name>> named_type_map_;
+    template <typename FlatType, typename CodedType>
+    using TypeMap = std::map<const FlatType*, const CodedType*, flat::PtrCompare<FlatType>>;
+    TypeMap<flat::PrimitiveType, coded::PrimitiveType> primitive_type_map_;
+    TypeMap<flat::HandleType, coded::HandleType> handle_type_map_;
+    TypeMap<flat::RequestHandleType, coded::RequestHandleType> request_type_map_;
+    TypeMap<flat::ArrayType, coded::ArrayType> array_type_map_;
+    TypeMap<flat::VectorType, coded::VectorType> vector_type_map_;
+    TypeMap<flat::StringType, coded::StringType> string_type_map_;
 
-    std::vector<std::unique_ptr<coded::StructType>> coded_struct_types_;
-    std::vector<std::unique_ptr<coded::UnionType>> coded_union_types_;
-    std::vector<std::unique_ptr<coded::HandleType>> coded_handle_types_;
-    std::vector<std::unique_ptr<coded::HandleType>> coded_request_types_;
-    std::vector<std::unique_ptr<coded::ArrayType>> coded_array_types_;
-    std::vector<std::unique_ptr<coded::StringType>> coded_string_types_;
-    std::vector<std::unique_ptr<coded::VectorType>> coded_vector_types_;
+    std::vector<std::unique_ptr<coded::Type>> coded_types_;
 
     std::ostringstream tables_file_;
     size_t indent_level_ = 0u;

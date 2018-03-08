@@ -199,11 +199,11 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
         *out_type = std::make_unique<HandleType>(handle_type->subtype, handle_type->nullability);
         break;
     }
-    case raw::Type::Kind::Request: {
-        auto request_type = static_cast<raw::RequestType*>(raw_type.get());
+    case raw::Type::Kind::RequestHandle: {
+        auto request_type = static_cast<raw::RequestHandleType*>(raw_type.get());
         // TODO(TO-701) Handle longer names.
         Name name(request_type->identifier->components[0]->location);
-        *out_type = std::make_unique<RequestType>(std::move(name), std::move(request_type->nullability));
+        *out_type = std::make_unique<RequestHandleType>(std::move(name), std::move(request_type->nullability));
         break;
     }
     case raw::Type::Kind::Primitive: {
@@ -416,7 +416,7 @@ Decl* Library::LookupType(const flat::Type* type) {
         switch (type->kind) {
         case flat::Type::Kind::String:
         case flat::Type::Kind::Handle:
-        case flat::Type::Kind::Request:
+        case flat::Type::Kind::RequestHandle:
         case flat::Type::Kind::Primitive:
         case flat::Type::Kind::Vector:
             return nullptr;
@@ -650,14 +650,13 @@ bool Library::ResolveUnion(Union* union_declaration) {
     auto members = FieldShape(CUnionTypeShape(union_declaration->members));
     std::vector<FieldShape*> fidl_union = {&tag, &members};
 
-    union_declaration->typeshape = CStructTypeShape(&fidl_union);
-
     // This is either 4 or 8, depending on whether any union members
     // have alignment 8.
     auto offset = members.Offset();
     for (auto& member : union_declaration->members) {
         member.fieldshape.SetOffset(offset);
     }
+    union_declaration->fieldshape = FieldShape(CStructTypeShape(&fidl_union), offset);
 
     return true;
 }
@@ -739,7 +738,7 @@ bool Library::ResolveHandleType(flat::HandleType* handle_type, TypeShape* out_ty
     return true;
 }
 
-bool Library::ResolveRequestType(flat::RequestType* request_type, TypeShape* out_typeshape) {
+bool Library::ResolveRequestHandleType(flat::RequestHandleType* request_type, TypeShape* out_typeshape) {
     auto named_decl = LookupType(request_type->name);
     if (!named_decl || named_decl->kind != Decl::Kind::kInterface)
         return false;
@@ -792,7 +791,7 @@ bool Library::ResolveIdentifierType(flat::IdentifierType* identifier_type,
         if (identifier_type->nullability == types::Nullability::Nullable) {
             typeshape = kPointerTypeShape;
         } else {
-            typeshape = static_cast<const Union*>(named_decl)->typeshape;
+            typeshape = static_cast<const Union*>(named_decl)->fieldshape.Typeshape();
         }
         break;
     }
@@ -828,9 +827,9 @@ bool Library::ResolveType(Type* type, TypeShape* out_typeshape) {
         return ResolveHandleType(handle_type, out_typeshape);
     }
 
-    case Type::Kind::Request: {
-        auto request_type = static_cast<RequestType*>(type);
-        return ResolveRequestType(request_type, out_typeshape);
+    case Type::Kind::RequestHandle: {
+        auto request_type = static_cast<RequestHandleType*>(type);
+        return ResolveRequestHandleType(request_type, out_typeshape);
     }
 
     case Type::Kind::Primitive: {

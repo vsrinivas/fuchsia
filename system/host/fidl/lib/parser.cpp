@@ -425,7 +425,7 @@ std::unique_ptr<raw::PrimitiveType> Parser::ParsePrimitiveType() {
     return std::make_unique<raw::PrimitiveType>(subtype);
 }
 
-std::unique_ptr<raw::RequestType> Parser::ParseRequestType() {
+std::unique_ptr<raw::RequestHandleType> Parser::ParseRequestHandleType() {
     ConsumeToken(Token::Kind::Request);
     if (!Ok())
         return Fail();
@@ -444,7 +444,7 @@ std::unique_ptr<raw::RequestType> Parser::ParseRequestType() {
         nullability = types::Nullability::Nullable;
     }
 
-    return std::make_unique<raw::RequestType>(std::move(identifier), nullability);
+    return std::make_unique<raw::RequestHandleType>(std::move(identifier), nullability);
 }
 
 std::unique_ptr<raw::Type> Parser::ParseType() {
@@ -491,7 +491,7 @@ std::unique_ptr<raw::Type> Parser::ParseType() {
     }
 
     case Token::Kind::Request: {
-        auto type = ParseRequestType();
+        auto type = ParseRequestHandleType();
         if (!Ok())
             return Fail();
         return type;

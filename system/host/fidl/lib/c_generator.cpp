@@ -107,7 +107,7 @@ std::string TypeName(const flat::Type* type) {
     for (;;) {
         switch (type->kind) {
         case flat::Type::Kind::Handle:
-        case flat::Type::Kind::Request:
+        case flat::Type::Kind::RequestHandle:
             return "zx_handle_t";
 
         case flat::Type::Kind::Vector:

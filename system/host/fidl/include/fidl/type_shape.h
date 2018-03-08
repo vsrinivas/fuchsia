@@ -34,6 +34,7 @@ public:
         : FieldShape(TypeShape()) {}
 
     TypeShape& Typeshape() { return typeshape_; }
+    TypeShape Typeshape() const { return typeshape_; }
 
     uint64_t Size() const { return typeshape_.Size(); }
     uint64_t Alignment() const { return typeshape_.Alignment(); }

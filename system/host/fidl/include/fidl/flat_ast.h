@@ -20,6 +20,13 @@
 namespace fidl {
 namespace flat {
 
+template <typename T>
+struct PtrCompare {
+    bool operator()(const T* left, const T* right) const {
+        return *left < *right;
+    }
+};
+
 struct Ordinal {
     Ordinal(std::unique_ptr<raw::NumericLiteral> literal, uint32_t value)
         : literal_(std::move(literal)), value_(value) {}
@@ -81,12 +88,6 @@ private:
     SourceLocation name_;
 };
 
-struct NamePtrCompare {
-    bool operator()(const Name* left, const Name* right) const {
-        return *left < *right;
-    }
-};
-
 struct Decl {
     virtual ~Decl() {}
 
@@ -117,7 +118,7 @@ struct Type {
         Vector,
         String,
         Handle,
-        Request,
+        RequestHandle,
         Primitive,
         Identifier,
     };
@@ -129,6 +130,8 @@ struct Type {
     // Set at construction time for most Types. Identifier types get
     // this set later, during compilation.
     uint64_t size;
+
+    bool operator<(const Type& other) const;
 };
 
 struct ArrayType : public Type {
@@ -139,6 +142,12 @@ struct ArrayType : public Type {
 
     std::unique_ptr<Type> element_type;
     Size element_count;
+
+    bool operator<(const ArrayType& other) const {
+        if (element_count.Value() != other.element_count.Value())
+            return element_count.Value() < other.element_count.Value();
+        return *element_type < *other.element_type;
+    }
 };
 
 struct VectorType : public Type {
@@ -151,6 +160,14 @@ struct VectorType : public Type {
     std::unique_ptr<Type> element_type;
     Size element_count;
     types::Nullability nullability;
+
+    bool operator<(const VectorType& other) const {
+        if (element_count.Value() != other.element_count.Value())
+            return element_count.Value() < other.element_count.Value();
+        if (nullability != other.nullability)
+            return nullability < other.nullability;
+        return *element_type < *other.element_type;
+    }
 };
 
 struct StringType : public Type {
@@ -160,6 +177,12 @@ struct StringType : public Type {
 
     Size max_size;
     types::Nullability nullability;
+
+    bool operator<(const StringType& other) const {
+        if (max_size.Value() != other.max_size.Value())
+            return max_size.Value() < other.max_size.Value();
+        return nullability < other.nullability;
+    }
 };
 
 struct HandleType : public Type {
@@ -168,14 +191,26 @@ struct HandleType : public Type {
 
     types::HandleSubtype subtype;
     types::Nullability nullability;
+
+    bool operator<(const HandleType& other) const {
+        if (subtype != other.subtype)
+            return subtype < other.subtype;
+        return nullability < other.nullability;
+    }
 };
 
-struct RequestType : public Type {
-    RequestType(Name name, types::Nullability nullability)
-        : Type(Kind::Request, 4u), name(std::move(name)), nullability(nullability) {}
+struct RequestHandleType : public Type {
+    RequestHandleType(Name name, types::Nullability nullability)
+        : Type(Kind::RequestHandle, 4u), name(std::move(name)), nullability(nullability) {}
 
     Name name;
     types::Nullability nullability;
+
+    bool operator<(const RequestHandleType& other) const {
+        if (name != other.name)
+            return name < other.name;
+        return nullability < other.nullability;
+    }
 };
 
 struct PrimitiveType : public Type {
@@ -207,6 +242,10 @@ struct PrimitiveType : public Type {
         : Type(Kind::Primitive, SubtypeSize(subtype)), subtype(subtype) {}
 
     types::PrimitiveSubtype subtype;
+
+    bool operator<(const PrimitiveType& other) const {
+        return subtype < other.subtype;
+    }
 };
 
 struct IdentifierType : public Type {
@@ -215,7 +254,55 @@ struct IdentifierType : public Type {
 
     Name name;
     types::Nullability nullability;
+
+    bool operator<(const IdentifierType& other) const {
+        if (name != other.name)
+            return name < other.name;
+        return nullability < other.nullability;
+    }
 };
+
+inline bool Type::operator<(const Type& other) const {
+    if (kind != other.kind)
+        return kind < other.kind;
+    switch (kind) {
+    case Type::Kind::Array: {
+        auto left_array = static_cast<const ArrayType*>(this);
+        auto right_array = static_cast<const ArrayType*>(&other);
+        return *left_array < *right_array;
+    }
+    case Type::Kind::Vector: {
+        auto left_vector = static_cast<const VectorType*>(this);
+        auto right_vector = static_cast<const VectorType*>(&other);
+        return *left_vector < *right_vector;
+    }
+    case Type::Kind::String: {
+        auto left_string = static_cast<const StringType*>(this);
+        auto right_string = static_cast<const StringType*>(&other);
+        return *left_string < *right_string;
+    }
+    case Type::Kind::Handle: {
+        auto left_handle = static_cast<const HandleType*>(this);
+        auto right_handle = static_cast<const HandleType*>(&other);
+        return *left_handle < *right_handle;
+    }
+    case Type::Kind::RequestHandle: {
+        auto left_request = static_cast<const RequestHandleType*>(this);
+        auto right_request = static_cast<const RequestHandleType*>(&other);
+        return *left_request < *right_request;
+    }
+    case Type::Kind::Primitive: {
+        auto left_primitive = static_cast<const PrimitiveType*>(this);
+        auto right_primitive = static_cast<const PrimitiveType*>(&other);
+        return *left_primitive < *right_primitive;
+    }
+    case Type::Kind::Identifier: {
+        auto left_identifier = static_cast<const IdentifierType*>(this);
+        auto right_identifier = static_cast<const IdentifierType*>(&other);
+        return *left_identifier < *right_identifier;
+    }
+    }
+}
 
 struct Const : public Decl {
     Const(std::unique_ptr<raw::AttributeList> attributes, Name name, std::unique_ptr<Type> type, std::unique_ptr<raw::Constant> value)
@@ -314,7 +401,9 @@ struct Union : public Decl {
         : Decl(Kind::kUnion, std::move(attributes), std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
-    TypeShape typeshape;
+    // The offset of each of the union members is the same, so store
+    // it here as well.
+    FieldShape fieldshape;
 };
 
 class Library {
@@ -359,7 +448,7 @@ private:
     bool ResolveVectorType(VectorType* vector_type, TypeShape* out_type_metadata);
     bool ResolveStringType(StringType* string_type, TypeShape* out_type_metadata);
     bool ResolveHandleType(HandleType* handle_type, TypeShape* out_type_metadata);
-    bool ResolveRequestType(RequestType* request_type, TypeShape* out_type_metadata);
+    bool ResolveRequestHandleType(RequestHandleType* request_type, TypeShape* out_type_metadata);
     bool ResolvePrimitiveType(PrimitiveType* primitive_type, TypeShape* out_type_metadata);
     bool ResolveIdentifierType(IdentifierType* identifier_type, TypeShape* out_type_metadata);
     bool ResolveType(Type* type, TypeShape* out_type_metadata);
@@ -451,7 +540,7 @@ public:
 private:
     // All Name and Decl pointers here are non-null and are owned by the
     // various foo_declarations_.
-    std::map<const Name*, Decl*, NamePtrCompare> declarations_;
+    std::map<const Name*, Decl*, PtrCompare<Name>> declarations_;
 };
 
 } // namespace flat
