@@ -61,8 +61,7 @@ TEST(CancelableCallbackTest, CancelAndRunOnDifferentThreads) {
 }
 
 TEST(CancelableCallbackTest, CancelAllBlocksDuringCallback) {
-  constexpr int kLoopCount = 100;
-  constexpr int64_t kBlockTimeMs = 10;
+  constexpr int kLoopCount = 20;
 
   for (int i = 0; i < kLoopCount; ++i) {
     CancelableCallbackFactory<void()> factory;
@@ -71,16 +70,17 @@ TEST(CancelableCallbackTest, CancelAllBlocksDuringCallback) {
     std::mutex mtx;
     std::condition_variable cv;
     bool ready = false;
+    bool task_complete = false;
 
     auto callback = [&] {
-      // This makes sure that CancelAll() is called after this.
+      // This makes sure that CancelAll() is called after this exits.
       {
         std::lock_guard<std::mutex> lock(mtx);
         ready = true;
       }
       cv.notify_one();
 
-      fxl::SleepFor(fxl::TimeDelta::FromMilliseconds(kBlockTimeMs));
+      task_complete = true;
     };
 
     fxl::Stopwatch sw;
@@ -92,10 +92,9 @@ TEST(CancelableCallbackTest, CancelAllBlocksDuringCallback) {
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock, [&ready] { return ready; });
 
-    // This should block for at least |kBlockTimeMs| milliseconds as that is how
-    // long |callback| will sleep for.
+    // This should block until |callback| is finished.
     factory.CancelAll();
-    ASSERT_GE(sw.Elapsed().ToMilliseconds(), kBlockTimeMs);
+    ASSERT_TRUE(task_complete);
   }
 }
 

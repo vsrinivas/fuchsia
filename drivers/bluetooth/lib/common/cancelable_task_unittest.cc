@@ -27,7 +27,7 @@ TEST(CancelableTaskTest, IsPosted) {
 
 // Tests that tasks can be posted more than once.
 TEST(CancelableTaskTest, PostAgain) {
-  constexpr zx::duration kTimeoutNs(2000000000);
+  constexpr auto kTimeout = zx::msec(20);
 
   fsl::MessageLoop loop;
   CancelableTask task;
@@ -37,18 +37,18 @@ TEST(CancelableTaskTest, PostAgain) {
     called = true;
     loop.QuitNow();
   };
-  EXPECT_TRUE(task.Post(func, kTimeoutNs));
+  EXPECT_TRUE(task.Post(func, kTimeout));
   EXPECT_TRUE(task.posted());
 
   // Cannot post again before the task runs.
-  EXPECT_FALSE(task.Post(func, kTimeoutNs));
+  EXPECT_FALSE(task.Post(func, kTimeout));
   loop.Run();
 
   EXPECT_TRUE(called);
   EXPECT_FALSE(task.posted());
 
   // Can post now.
-  EXPECT_TRUE(task.Post(func, kTimeoutNs));
+  EXPECT_TRUE(task.Post(func, kTimeout));
 }
 
 }  // namespace

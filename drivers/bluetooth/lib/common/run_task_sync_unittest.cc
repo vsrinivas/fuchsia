@@ -16,7 +16,7 @@ namespace {
 
 TEST(RunTaskSyncTest, RunTaskSync) {
   constexpr int64_t kSleepTimeMs = 10;
-  constexpr int kLoopCount = 50;
+  constexpr int kLoopCount = 10;
 
   fxl::RefPtr<fxl::TaskRunner> task_runner;
   std::thread thrd = fsl::CreateThread(&task_runner, "RunTaskSyncTest thread");

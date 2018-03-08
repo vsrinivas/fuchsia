@@ -19,7 +19,7 @@ using ::btlib::testing::FakeController;
 using ::btlib::testing::FakeDevice;
 using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
-constexpr int64_t kScanPeriodMs = 500;
+constexpr int64_t kScanPeriodMs = 100;
 
 constexpr char kPlainAdvData[] = "Test";
 constexpr char kPlainScanRsp[] = "Data";

@@ -13,7 +13,7 @@ namespace att {
 namespace {
 
 // Short timeout interval used in test cases that exercise transaction timeouts.
-constexpr uint32_t kTestTimeoutMs = 50;
+constexpr uint32_t kTestTimeoutMs = 10;
 
 constexpr OpCode kTestRequest = kFindInformationRequest;
 constexpr OpCode kTestResponse = kFindInformationResponse;
