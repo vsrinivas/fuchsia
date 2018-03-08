@@ -77,6 +77,19 @@ func (a *netstackClientApp) setStatus(iface netstack.NetInterface, up bool) {
 	a.netstack.SetInterfaceStatus(iface.Id, up)
 }
 
+func (a *netstackClientApp) addIfaceAddress(iface netstack.NetInterface, cidr string) {
+	netAddr, netSubnet, err := net.ParseCIDR(os.Args[3])
+	if err != nil {
+		fmt.Printf("Error parsing CIDR notation: %s, error: %v\n", os.Args[3], err)
+		usage()
+	}
+	prefixLen, _ := netSubnet.Mask.Size()
+	result, _ := a.netstack.SetInterfaceAddress(iface.Id, toNetAddress(netAddr), uint64(prefixLen))
+	if result.Status != netstack.Status_Ok {
+		fmt.Printf("Error setting interface address: %s\n", result.Message)
+	}
+}
+
 func hwAddrToString(hwaddr []uint8) string {
 	str := ""
 	for i := 0; i < len(hwaddr); i++ {
@@ -187,16 +200,7 @@ func main() {
 		case "down":
 			a.setStatus(*iface, false)
 		case "add":
-			netAddr, netSubnet, err := net.ParseCIDR(os.Args[3])
-			if err != nil {
-				fmt.Printf("Error parsing CIDR notation: %s, error: %v\n", os.Args[3], err)
-				usage()
-			}
-			prefixLen, _ := netSubnet.Mask.Size()
-			result, _ := a.netstack.SetInterfaceAddress(iface.Id, toNetAddress(netAddr), uint64(prefixLen))
-			if result.Status != netstack.Status_Ok {
-				fmt.Printf("Error setting interface address: %s\n", result.Message)
-			}
+			a.addIfaceAddress(*iface, os.Args[3])
 		case "del":
 			fmt.Printf("Deleting addresses from an interface is not yet supported.")
 			usage()
