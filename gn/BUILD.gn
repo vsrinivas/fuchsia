@@ -44,34 +44,6 @@ zircon_boards = read_file("$root_build_dir/zircon-gn/export/boards.list", "list 
 # Permit dependencies on testonly targets from packages.
 testonly = true
 
-# TODO(TO-471): The toolchain package will provide this file
-# but it doesn't yet, so generate it with this kludge.
-toolchain_manifests[0] = "${root_out_dir}/clang_toolchain.manifest"
-action("generate_clang_toolchain_manifest") {
-  script = "toolchain_manifest.py"
-  outputs = [
-    toolchain_manifests[0],
-  ]
-  inputs = [
-    "${clang_prefix}/clang",
-  ]
-  args = [
-    "--output",
-    rebase_path(outputs[0]),
-    "--prefix=$clang_prefix",
-    "--target=$clang_target",
-    "libc++.so.2",
-    "libc++abi.so.1",
-    "libunwind.so.1",
-    "asan/libc++.so.2",
-    "asan/libc++abi.so.1",
-    "asan/libunwind.so.1",
-    "libclang_rt.asan-${clang_cpu}.so",
-    "libclang_rt.ubsan_standalone-${clang_cpu}.so",
-    "libclang_rt.scudo-${clang_cpu}.so",
-  ]
-}
-
 finalize_manifests_extra = [
   "elfinfo.py",
   "manifest.py",
@@ -113,6 +85,7 @@ action("finalize_manifests") {
     build_id_file,
   ]
 
+  deps = _result.deps
   sources = []
   args = [
     "--depfile=" + rebase_path(depfile, root_build_dir),
@@ -121,9 +94,6 @@ action("finalize_manifests") {
 
   # First the toolchain and Zircon "ulib" manifests are pure auxiliaries:
   # they just supply libraries that might satisfy dependencies.
-
-  # TODO(TO-471): Remove this when toolchain_manifests are in the source tree.
-  deps = _result.deps + [ ":generate_clang_toolchain_manifest" ]
 
   sources += toolchain_manifests
   foreach(manifest, toolchain_manifests) {
