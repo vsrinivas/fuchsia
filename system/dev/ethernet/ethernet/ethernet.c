@@ -963,7 +963,7 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
     }
 
     zx_status_t status;
-    if (device_get_protocol(dev, ZX_PROTOCOL_ETHERMAC, &edev0->mac)) {
+    if (device_get_protocol(dev, ZX_PROTOCOL_ETHERNET_IMPL, &edev0->mac)) {
         zxlogf(ERROR, "eth: bind: no ethermac protocol\n");
         status = ZX_ERR_INTERNAL;
         goto fail;
@@ -1014,5 +1014,5 @@ static zx_driver_ops_t eth_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(ethernet, eth_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ETHERMAC),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ETHERNET_IMPL),
 ZIRCON_DRIVER_END(ethernet)

@@ -25,7 +25,7 @@
 //
 // :: Examples ::
 //
-// // A driver that communicates with a ZX_PROTOCOL_ETHERMAC device as a ethmac_ifc_t
+// // A driver that communicates with a ZX_PROTOCOL_ETHERNET_IMPL device as a ethmac_ifc_t
 // class EthDevice;
 // using EthDeviceType = ddk::Device<EthDevice, /* ddk mixins */>;
 //
@@ -38,7 +38,7 @@
 //
 //     zx_status_t Bind() {
 //         ethmac_protocol_t* ops;
-//         auto status = get_device_protocol(parent_, ZX_PROTOCOL_ETHERMAC,
+//         auto status = get_device_protocol(parent_, ZX_PROTOCOL_ETHERNET_IMPL,
 //                                           reinterpret_cast<void**>(&ops));
 //         if (status != ZX_OK) {
 //             return status;
@@ -69,7 +69,7 @@
 // };
 //
 //
-// // A driver that implements a ZX_PROTOCOL_ETHERMAC device
+// // A driver that implements a ZX_PROTOCOL_ETHERNET_IMPL device
 // class EthmacDevice;
 // using EthmacDeviceType = ddk::Device<EthmacDevice, /* ddk mixins */>;
 //
@@ -183,7 +183,7 @@ class EthmacProtocol : public internal::base_protocol {
 
         // Can only inherit from one base_protocol implemenation
         ZX_ASSERT(ddk_proto_id_ == 0);
-        ddk_proto_id_ = ZX_PROTOCOL_ETHERMAC;
+        ddk_proto_id_ = ZX_PROTOCOL_ETHERNET_IMPL;
         ddk_proto_ops_ = &ops_;
     }
 

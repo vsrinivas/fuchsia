@@ -958,7 +958,7 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
         .ctx = eth,
         .ops = &ax88179_device_proto,
         .flags = DEVICE_ADD_INVISIBLE,
-        .proto_id = ZX_PROTOCOL_ETHERMAC,
+        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
         .proto_ops = &ethmac_ops,
     };
 

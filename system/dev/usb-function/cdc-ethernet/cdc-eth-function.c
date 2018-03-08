@@ -633,7 +633,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
         .name = "cdc-eth-function",
         .ctx = cdc,
         .ops = &usb_cdc_proto,
-        .proto_id = ZX_PROTOCOL_ETHERMAC,
+        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
         .proto_ops = &ethmac_ops,
     };
 

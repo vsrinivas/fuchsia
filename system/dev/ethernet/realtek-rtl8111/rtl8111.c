@@ -406,7 +406,7 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
         .name = "rtl8111",
         .ctx = edev,
         .ops = &device_ops,
-        .proto_id = ZX_PROTOCOL_ETHERMAC,
+        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
         .proto_ops = &ethmac_ops,
     };
 

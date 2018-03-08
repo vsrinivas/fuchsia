@@ -509,7 +509,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
         .name = "rndishost",
         .ctx = eth,
         .ops = &rndishost_device_proto,
-        .proto_id = ZX_PROTOCOL_ETHERMAC,
+        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
         .proto_ops = &ethmac_ops,
         .flags = DEVICE_ADD_INVISIBLE,
     };

@@ -536,7 +536,7 @@ static int ax88772b_start_thread(void* arg) {
         .name = "ax88772b",
         .ctx = eth,
         .ops = &ax88772b_device_proto,
-        .proto_id = ZX_PROTOCOL_ETHERMAC,
+        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
         .proto_ops = &ethmac_ops,
     };
 

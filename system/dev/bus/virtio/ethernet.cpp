@@ -271,7 +271,7 @@ zx_status_t EthernetDevice::Init() {
     args.name = "virtio-net";
     args.ctx = this;
     args.ops = &kDeviceOps;
-    args.proto_id = ZX_PROTOCOL_ETHERMAC;
+    args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
     args.proto_ops = &kProtoOps;
     if ((rc = device_add(bus_device_, &args, &device_)) != ZX_OK) {
         zxlogf(ERROR, "failed to add device: %s\n", zx_status_get_string(rc));

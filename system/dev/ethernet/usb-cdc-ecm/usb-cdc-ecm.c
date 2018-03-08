@@ -721,7 +721,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
         .name = "usb-cdc-ecm",
         .ctx = ecm_ctx,
         .ops = &ecm_device_proto,
-        .proto_id = ZX_PROTOCOL_ETHERMAC,
+        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
         .proto_ops = &ethmac_ops,
     };
     result = device_add(ecm_ctx->usb_device, &args, &ecm_ctx->zxdev);

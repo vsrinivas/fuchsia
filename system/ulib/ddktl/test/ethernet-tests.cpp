@@ -75,7 +75,7 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
     }
 
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out) {
-        if (proto_id != ZX_PROTOCOL_ETHERMAC) return ZX_ERR_INVALID_ARGS;
+        if (proto_id != ZX_PROTOCOL_ETHERNET_IMPL) return ZX_ERR_INVALID_ARGS;
         ddk::AnyProtocol* proto = static_cast<ddk::AnyProtocol*>(out);
         proto->ops = ddk_proto_ops_;
         proto->ctx = this;
@@ -195,7 +195,7 @@ static bool test_ethmac_protocol() {
     auto status = dev.DdkGetProtocol(0, reinterpret_cast<void*>(&proto));
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, status, "");
 
-    status = dev.DdkGetProtocol(ZX_PROTOCOL_ETHERMAC, reinterpret_cast<void*>(&proto));
+    status = dev.DdkGetProtocol(ZX_PROTOCOL_ETHERNET_IMPL, reinterpret_cast<void*>(&proto));
     EXPECT_EQ(ZX_OK, status, "");
 
     EXPECT_EQ(ZX_OK, proto.ops->query(proto.ctx, 0, nullptr), "");
@@ -218,7 +218,7 @@ static bool test_ethmac_protocol_proxy() {
     TestEthmacProtocol protocol_dev;
 
     ethmac_protocol_t proto;
-    auto status = protocol_dev.DdkGetProtocol(ZX_PROTOCOL_ETHERMAC, reinterpret_cast<void*>(&proto));
+    auto status = protocol_dev.DdkGetProtocol(ZX_PROTOCOL_ETHERNET_IMPL, reinterpret_cast<void*>(&proto));
     EXPECT_EQ(ZX_OK, status, "");
     // The proxy device to wrap the ops + device that represent the parent
     // device.
@@ -247,7 +247,7 @@ static bool test_ethmac_protocol_ifc_proxy() {
     TestEthmacProtocol protocol_dev;
 
     ethmac_protocol_t proto;
-    auto status = protocol_dev.DdkGetProtocol(ZX_PROTOCOL_ETHERMAC, reinterpret_cast<void*>(&proto));
+    auto status = protocol_dev.DdkGetProtocol(ZX_PROTOCOL_ETHERNET_IMPL, reinterpret_cast<void*>(&proto));
     EXPECT_EQ(ZX_OK, status, "");
 
     ddk::EthmacProtocolProxy proxy(&proto);

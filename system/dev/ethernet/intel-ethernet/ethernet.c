@@ -300,7 +300,7 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
         .name = "intel-ethernet",
         .ctx = edev,
         .ops = &device_ops,
-        .proto_id = ZX_PROTOCOL_ETHERMAC,
+        .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
         .proto_ops = &ethmac_ops,
     };
 
