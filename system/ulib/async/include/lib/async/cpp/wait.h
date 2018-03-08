@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <async/dispatcher.h>
-#include <async/wait.h>
+#include <lib/async/dispatcher.h>
+#include <lib/async/wait.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
 

@@ -4,23 +4,30 @@
 
 #pragma once
 
-#include <async/wait.h>
+#include <lib/async/task.h>
+#include <lib/async/wait.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
 
 namespace async {
 
-// C++ wrapper for a pending wait operation which is automatically canceled
-// when it goes out of scope.
+// C++ wrapper for a pending wait operation with an associated timeout.
+//
+// Use |ZX_TIME_INFINITE| as the deadline to wait indefinitely.
 //
 // This class is NOT thread-safe; it can only be used with single-threaded
 // asynchronous dispatchers.
-class AutoWait final : private async_wait_t {
+//
+// Implementation note: The task's flags are managed internally by this object
+// so they are not exposed to the client unlike the wait flags.
+class WaitWithTimeout final : private async_wait_t, private async_task_t {
 public:
-    // Handles completion of asynchronous wait operations.
+    // Handles completion of asynchronous wait operations or a timeout.
     //
     // Reports the |status| of the wait.  If the status is |ZX_OK| then |signal|
     // describes the signal which was received, otherwise |signal| is null.
+    //
+    // Timeouts are indicated with status |ZX_ERR_TIMED_OUT|.
     //
     // The result indicates whether the wait should be repeated; it may
     // modify the wait's properties (such as the trigger) before returning.
@@ -32,24 +39,18 @@ public:
                                                       zx_status_t status,
                                                       const zx_packet_signal_t* signal)>;
 
-    // Initializes the properties of the wait operation and binds it to an
-    // asynchronous dispatcher.
-    explicit AutoWait(async_t* async,
-                      zx_handle_t object = ZX_HANDLE_INVALID,
-                      zx_signals_t trigger = ZX_SIGNAL_NONE,
-                      uint32_t flags = 0u);
+    // Initializes the properties of the wait with timeout operation.
+    explicit WaitWithTimeout(zx_handle_t object = ZX_HANDLE_INVALID,
+                             zx_signals_t trigger = ZX_SIGNAL_NONE,
+                             zx_time_t deadline = ZX_TIME_INFINITE,
+                             uint32_t flags = 0u);
 
-    // Destroys the wait operation.
+    // Destroys the wait with timeout operation.
     //
-    // The wait is canceled automatically if it is still pending.
-    ~AutoWait();
-
-    // Gets the asynchronous dispatcher to which this wait has been bound.
-    async_t* async() const { return async_; }
-
-    // Returns true if |Begin()| was called successfully but the wait has not
-    // completed or been canceled.
-    bool is_pending() const { return pending_; }
+    // This object must not be destroyed until the wait has completed, been
+    // successfully canceled, timed out, or the asynchronous dispatcher itself
+    // has been destroyed.
+    ~WaitWithTimeout();
 
     // Gets or sets the handler to invoke when the wait completes.
     // Must be set before beginning the wait.
@@ -64,35 +65,35 @@ public:
     zx_signals_t trigger() const { return async_wait_t::trigger; }
     void set_trigger(zx_signals_t trigger) { async_wait_t::trigger = trigger; }
 
+    // The time when the timeout should occur.
+    zx_time_t deadline() const { return async_task_t::deadline; }
+    void set_deadline(zx_time_t deadline) { async_task_t::deadline = deadline; }
+
     // Valid flags: |ASYNC_FLAG_HANDLE_SHUTDOWN|.
     uint32_t flags() const { return async_wait_t::flags; }
     void set_flags(uint32_t flags) { async_wait_t::flags = flags; }
 
     // Begins asynchronously waiting for the object to receive one or more of
-    // the trigger signals.
-    //
-    // This method must not be called when the wait is already pending.
+    // the trigger signals or for the timeout deadline to elapse.
     //
     // See |async_begin_wait()| for details.
-    zx_status_t Begin();
+    zx_status_t Begin(async_t* async);
 
-    // Cancels the wait.
-    //
-    // This method does nothing if the wait is not pending.
+    // Cancels the wait and its associated timeout.
     //
     // See |async_cancel_wait()| for details.
-    void Cancel();
+    zx_status_t Cancel(async_t* async);
 
 private:
-    static async_wait_result_t CallHandler(async_t* async, async_wait_t* wait,
+    static async_wait_result_t WaitHandler(async_t* async, async_wait_t* wait,
                                            zx_status_t status,
                                            const zx_packet_signal_t* signal);
+    static async_task_result_t TimeoutHandler(async_t* async, async_task_t* task,
+                                              zx_status_t status);
 
-    async_t* const async_;
     Handler handler_;
-    bool pending_ = false;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoWait);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(WaitWithTimeout);
 };
 
 } // namespace async

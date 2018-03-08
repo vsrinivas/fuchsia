@@ -22,7 +22,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <async/dispatcher.h>
+#include <lib/async/dispatcher.h>
 #include <trace-engine/instrumentation.h>
 
 __BEGIN_CDECLS

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <async/task.h>
+#include <lib/async/task.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <async/loop.h>
+#include <lib/async/loop.h>
 
 #include <assert.h>
 #include <stdatomic.h>
@@ -13,10 +13,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 
-#include <async/receiver.h>
-#include <async/task.h>
-#include <async/trap.h>
-#include <async/wait.h>
+#include <lib/async/receiver.h>
+#include <lib/async/task.h>
+#include <lib/async/trap.h>
+#include <lib/async/wait.h>
 
 // The port wait key associated with the dispatcher's control messages.
 #define KEY_CONTROL (0u)

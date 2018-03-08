@@ -20,8 +20,8 @@
 
 #include <zircon/compiler.h>
 
-#include <async/default.h>
-#include <async/dispatcher.h>
+#include <lib/async/default.h>
+#include <lib/async/dispatcher.h>
 
 __BEGIN_CDECLS
 

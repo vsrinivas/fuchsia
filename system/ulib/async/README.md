@@ -50,7 +50,7 @@ memory until the wait's handler runs or the wait is successfully canceled using
 See [async/wait.h](include/async/wait.h) for details.
 
 ```c
-#include <async/wait.h>
+#include <lib/async/wait.h>
 
 async_wait_result_t handler(async_t* async, async_wait_t* wait,
                             zx_status_t status, const zx_packet_signal_t* signal) {
@@ -85,7 +85,7 @@ memory until the task's handler runs or the task is successfully canceled using
 See [async/task.h](include/async/task.h) for details.
 
 ```c
-#include <async/task.h>
+#include <lib/async/task.h>
 
 typedef struct {
     async_task_t task;
@@ -125,7 +125,7 @@ memory until all queued packets have been delivered.
 See [async/receiver.h](include/async/receiver.h) for details.
 
 ```c
-#include <async/receiver.h>
+#include <lib/async/receiver.h>
 
 void handler(async_t* async, async_receiver_t* receiver, zx_status_t status,
              const zx_packet_user_t* data) {
@@ -150,7 +150,7 @@ unless you need something more specialized.
 See [async/loop.h](include/async/loop.h) for details.
 
 ```c
-#include <async/loop.h>
+#include <lib/async/loop.h>
 
 int main(int argc, char** argv) {
     async_t* async;

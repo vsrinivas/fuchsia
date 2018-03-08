@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <async/default.h>
-#include <async/loop.h>
+#include <lib/async/default.h>
+#include <lib/async/loop.h>
 #include <fbl/macros.h>
 #include <stdbool.h>
 #include <stddef.h>

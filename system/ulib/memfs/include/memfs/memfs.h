@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <async/dispatcher.h>
+#include <lib/async/dispatcher.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

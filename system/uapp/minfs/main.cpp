@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <async/cpp/loop.h>
+#include <lib/async/cpp/loop.h>
 #include <fbl/unique_free_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fs/trace.h>

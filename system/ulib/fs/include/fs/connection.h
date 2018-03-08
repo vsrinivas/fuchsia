@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-#include <async/cpp/wait.h>
+#include <lib/async/cpp/wait.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>

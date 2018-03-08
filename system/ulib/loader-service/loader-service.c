@@ -4,8 +4,8 @@
 
 #include <loader-service/loader-service.h>
 
-#include <async/loop.h>
-#include <async/wait.h>
+#include <lib/async/loop.h>
+#include <lib/async/wait.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <fdio/io.h>

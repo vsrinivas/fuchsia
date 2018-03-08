@@ -18,7 +18,7 @@
 #include <zircon/types.h>
 
 #ifdef __Fuchsia__
-#include <async/dispatcher.h>
+#include <lib/async/dispatcher.h>
 #include <fdio/io.h>
 #include <zx/channel.h>
 #include <zx/event.h>

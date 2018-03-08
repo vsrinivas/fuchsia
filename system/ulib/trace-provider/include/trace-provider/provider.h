@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <async/dispatcher.h>
+#include <lib/async/dispatcher.h>
 
 __BEGIN_CDECLS
 

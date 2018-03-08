@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
-LOCAL_INC := $(LOCAL_DIR)/include/async
+LOCAL_INC := $(LOCAL_DIR)/include/lib/async
 
 #
 # libasync.a: the client library
