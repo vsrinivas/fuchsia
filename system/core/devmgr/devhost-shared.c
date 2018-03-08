@@ -101,17 +101,22 @@ zx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
 
 zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
                        zx_handle_t* handles, size_t hcount,
-                       dc_status_t* rsp, size_t rsplen) {
+                       dc_status_t* rsp, size_t rsplen,
+                       zx_handle_t* outhandle) {
     zx_channel_call_args_t args = {
         .wr_bytes = msg,
         .wr_handles = handles,
         .rd_bytes = rsp,
-        .rd_handles = NULL,
+        .rd_handles = outhandle,
         .wr_num_bytes = msglen,
         .wr_num_handles = hcount,
         .rd_num_bytes = rsplen,
-        .rd_num_handles = 0,
+        .rd_num_handles = outhandle ? 1 : 0,
     };
+
+    if (outhandle) {
+        *outhandle = ZX_HANDLE_INVALID;
+    }
 
     //TODO: incrementing txids
     msg->txid = 1;

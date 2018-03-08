@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <ctype.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,6 +26,9 @@
 #include "devmgr.h"
 #include "log.h"
 #include "memfs-private.h"
+
+#define BOOT_FIRMWARE_DIR "/boot/lib/firmware"
+#define SYSTEM_FIRMWARE_DIR "/system/lib/firmware"
 
 extern zx_handle_t virtcon_open;
 
@@ -964,6 +969,33 @@ static zx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
     return ZX_OK;
 };
 
+static zx_status_t dc_load_firmware(device_t* dev, const char* path,
+                                    zx_handle_t* vmo, size_t* size) {
+    static const char* fwdirs[] = {
+        BOOT_FIRMWARE_DIR,
+        SYSTEM_FIRMWARE_DIR,
+    };
+
+    int fd, fwfd;
+    for (unsigned n = 0; n < countof(fwdirs); n++) {
+        if ((fd = open(fwdirs[n], O_RDONLY, O_DIRECTORY)) < 0) {
+            continue;
+        }
+        fwfd = openat(fd, path, O_RDONLY);
+        close(fd);
+        if (fwfd >= 0) {
+            *size = lseek(fwfd, 0, SEEK_END);
+            zx_status_t r = fdio_get_vmo(fwfd, vmo);
+            close(fwfd);
+            return r;
+        }
+        if (errno != ENOENT) {
+            return ZX_ERR_IO;
+        }
+    }
+    return ZX_ERR_NOT_FOUND;
+}
+
 static zx_status_t dc_handle_device_read(device_t* dev) {
     dc_msg_t msg;
     zx_handle_t hin[3];
@@ -1116,6 +1148,26 @@ static zx_status_t dc_handle_device_read(device_t* dev) {
         reply.rsp.status = ZX_OK;
         reply.rsp.txid = msg.txid;
         if ((r = zx_channel_write(dev->hrpc, 0, &reply, sizeof(reply), NULL, 0)) < 0) {
+            return r;
+        }
+        return ZX_OK;
+    }
+    case DC_OP_LOAD_FIRMWARE: {
+        if (hcount != 0) {
+            goto fail_wrong_hcount;
+        }
+        zx_handle_t vmo;
+        struct {
+            dc_status_t rsp;
+            size_t size;
+        } reply;
+        if ((r = dc_load_firmware(dev, args, &vmo, &reply.size)) < 0) {
+            break;
+        }
+        reply.rsp.status = ZX_OK;
+        reply.rsp.txid = msg.txid;
+        if ((r = zx_channel_write(dev->hrpc, 0, &reply, sizeof(reply), &vmo, 1)) < 0) {
+            zx_handle_close(vmo);
             return r;
         }
         return ZX_OK;
