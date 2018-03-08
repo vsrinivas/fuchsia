@@ -54,7 +54,7 @@ struct brcmf_pno_info {
 static zx_status_t brcmf_pno_store_request(struct brcmf_pno_info* pi,
                                            struct cfg80211_sched_scan_request* req) {
     if (WARN(pi->n_reqs == BRCMF_PNO_MAX_BUCKETS, "pno request storage full\n")) {
-        return -ENOSPC;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     brcmf_dbg(SCAN, "reqid=%lu\n", req->reqid);
@@ -78,7 +78,7 @@ static zx_status_t brcmf_pno_remove_request(struct brcmf_pno_info* pi, uint64_t 
     }
     /* request not found */
     if (WARN(i == pi->n_reqs, "reqid not found\n")) {
-        err = -ENOENT;
+        err = ZX_ERR_NOT_FOUND;
         goto done;
     }
 
@@ -282,7 +282,7 @@ static zx_status_t brcmf_pno_get_bucket_channels(struct cfg80211_sched_scan_requ
 
     for (i = 0; i < r->n_channels; i++) {
         if (n_chan >= BRCMF_NUMCHANNELS) {
-            err = -ENOSPC;
+            err = ZX_ERR_NO_RESOURCES;
             goto done;
         }
         chan = r->channels[i]->hw_value;
@@ -310,7 +310,7 @@ static zx_status_t brcmf_pno_prep_fwconfig(struct brcmf_pno_info* pi,
 
     brcmf_dbg(SCAN, "n_reqs=%d\n", pi->n_reqs);
     if (WARN_ON(!pi->n_reqs)) {
-        return -ENODATA;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     /*

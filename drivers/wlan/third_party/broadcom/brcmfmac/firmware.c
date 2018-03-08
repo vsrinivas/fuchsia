@@ -483,7 +483,7 @@ static void brcmf_fw_request_nvram_done(const struct firmware* fw, void* ctx) {
 fail:
     brcmf_dbg(TRACE, "failed: dev=%s\n", dev_name(fwctx->dev));
     release_firmware(fwctx->code);
-    fwctx->done(fwctx->dev, -ENOENT, NULL, NULL, 0);
+    fwctx->done(fwctx->dev, ZX_ERR_NOT_FOUND, NULL, NULL, 0);
     kfree(fwctx);
 }
 
@@ -493,7 +493,7 @@ static void brcmf_fw_request_code_done(const struct firmware* fw, void* ctx) {
 
     brcmf_dbg(TRACE, "enter: dev=%s\n", dev_name(fwctx->dev));
     if (!fw) {
-        ret = -ENOENT;
+        ret = ZX_ERR_INVALID_ARGS;
         goto fail;
     }
     /* only requested code so done here */
@@ -576,7 +576,7 @@ zx_status_t brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev,
 
     if (i == table_size) {
         brcmf_err("Unknown chipid %d [%d]\n", chip, chiprev);
-        return -ENODEV;
+        return ZX_ERR_NOT_FOUND;
     }
 
     /* check if firmware path is provided by module parameter */

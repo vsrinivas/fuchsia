@@ -188,7 +188,7 @@ static inline zx_status_t brcmf_bus_gettxq(struct brcmf_bus* bus, struct pktq** 
         if (txq_out) {
             *txq_out = NULL;
         }
-        return -ENOENT;
+        return ZX_ERR_NOT_FOUND;
     }
     if (txq_out) {
         *txq_out = bus->ops->gettxq(bus->dev);
@@ -212,7 +212,7 @@ static inline size_t brcmf_bus_get_ramsize(struct brcmf_bus* bus) {
 
 static inline zx_status_t brcmf_bus_get_memdump(struct brcmf_bus* bus, void* data, size_t len) {
     if (!bus->ops->get_memdump) {
-        return -EOPNOTSUPP;
+        return ZX_ERR_NOT_FOUND;
     }
 
     return bus->ops->get_memdump(bus->dev, data, len);

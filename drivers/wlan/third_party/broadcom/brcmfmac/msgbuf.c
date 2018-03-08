@@ -479,7 +479,7 @@ static zx_status_t brcmf_msgbuf_query_dcmd(struct brcmf_pub* drvr, int ifidx, ui
                                  msgbuf->ioctl_resp_pktid);
     if (msgbuf->ioctl_resp_ret_len != 0) {
         if (!skb) {
-            return -EBADF;
+            return ZX_ERR_NOT_FOUND;
         }
 
         memcpy(buf, skb->data,
@@ -498,7 +498,7 @@ static zx_status_t brcmf_msgbuf_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint
 
 static zx_status_t brcmf_msgbuf_hdrpull(struct brcmf_pub* drvr, bool do_fws, struct sk_buff* skb,
                                         struct brcmf_if** ifp) {
-    return -ENODEV;
+    return ZX_ERR_IO_NOT_PRESENT;
 }
 
 static void brcmf_msgbuf_rxreorder(struct brcmf_if* ifp, struct sk_buff* skb) {}

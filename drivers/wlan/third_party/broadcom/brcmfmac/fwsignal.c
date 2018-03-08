@@ -611,7 +611,7 @@ done:
 static zx_status_t brcmf_fws_hanger_pushpkt(struct brcmf_fws_hanger* h, struct sk_buff* pkt,
                                             uint32_t slot_id) {
     if (slot_id >= BRCMF_FWS_HANGER_MAXITEMS) {
-        return -ENOENT;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     if (h->items[slot_id].state != BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
@@ -629,7 +629,7 @@ static zx_status_t brcmf_fws_hanger_pushpkt(struct brcmf_fws_hanger* h, struct s
 static inline zx_status_t brcmf_fws_hanger_poppkt(struct brcmf_fws_hanger* h, uint32_t slot_id,
                                                   struct sk_buff** pktout, bool remove_item) {
     if (slot_id >= BRCMF_FWS_HANGER_MAXITEMS) {
-        return -ENOENT;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     if (h->items[slot_id].state == BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
@@ -649,7 +649,7 @@ static inline zx_status_t brcmf_fws_hanger_poppkt(struct brcmf_fws_hanger* h, ui
 
 static zx_status_t brcmf_fws_hanger_mark_suppressed(struct brcmf_fws_hanger* h, uint32_t slot_id) {
     if (slot_id >= BRCMF_FWS_HANGER_MAXITEMS) {
-        return -ENOENT;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     if (h->items[slot_id].state == BRCMF_FWS_HANGER_ITEM_STATE_FREE) {
@@ -742,7 +742,7 @@ static zx_status_t brcmf_fws_macdesc_lookup(struct brcmf_fws_info* fws, uint8_t*
         entry++;
     }
 
-    return -ENOENT;
+    return ZX_ERR_NOT_FOUND;
 }
 
 static zx_status_t brcmf_fws_macdesc_find(struct brcmf_fws_info* fws,
@@ -1235,7 +1235,7 @@ static zx_status_t brcmf_fws_enq(struct brcmf_fws_info* fws, enum brcmf_fws_skb_
     entry = brcmf_skbcb(p)->mac;
     if (entry == NULL) {
         brcmf_err("no mac descriptor found for skb %p\n", p);
-        return -ENOENT;
+        return ZX_ERR_NOT_FOUND;
     }
 
     brcmf_dbg(DATA, "enter: fifo %d skb %p\n", fifo, p);
@@ -1248,7 +1248,7 @@ static zx_status_t brcmf_fws_enq(struct brcmf_fws_info* fws, enum brcmf_fws_skb_
         pq = &entry->psq;
         if (pktq_full(pq) || pktq_pfull(pq, prec)) {
             *qfull_stat += 1;
-            return -ENFILE;
+            return ZX_ERR_NO_RESOURCES;
         }
         queue = &pq->q[prec].skblist;
 
@@ -1288,7 +1288,7 @@ static zx_status_t brcmf_fws_enq(struct brcmf_fws_info* fws, enum brcmf_fws_skb_
         }
     } else if (brcmu_pktq_penq(&entry->psq, prec, p) == NULL) {
         *qfull_stat += 1;
-        return -ENFILE;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     /* increment total enqueued packet count */
@@ -1936,11 +1936,11 @@ static void brcmf_fws_rollback_toq(struct brcmf_fws_info* fws, struct sk_buff* s
         pktout = brcmu_pktq_penq_head(&entry->psq, qidx, skb);
         if (pktout == NULL) {
             brcmf_err("%s queue %d full\n", entry->name, qidx);
-            rc = -ENOSPC;
+            rc = ZX_ERR_NO_RESOURCES;
         }
     } else {
         brcmf_err("%s entry removed\n", entry->name);
-        rc = -ENOENT;
+        rc = ZX_ERR_NOT_FOUND;
     }
 
     if (rc != ZX_OK) {
@@ -1959,7 +1959,7 @@ static zx_status_t brcmf_fws_borrow_credit(struct brcmf_fws_info* fws) {
 
     if (time_after(fws->borrow_defer_timestamp, jiffies)) {
         fws->fifo_credit_map &= ~(1 << BRCMF_FWS_FIFO_AC_BE);
-        return -ENAVAIL;
+        return ZX_ERR_UNAVAILABLE;
     }
 
     for (lender_ac = 0; lender_ac <= BRCMF_FWS_FIFO_AC_VO; lender_ac++) {
@@ -1975,7 +1975,7 @@ static zx_status_t brcmf_fws_borrow_credit(struct brcmf_fws_info* fws) {
         }
     }
     fws->fifo_credit_map &= ~(1 << BRCMF_FWS_FIFO_AC_BE);
-    return -ENAVAIL;
+    return ZX_ERR_UNAVAILABLE;
 }
 
 static zx_status_t brcmf_fws_commit_skb(struct brcmf_fws_info* fws, int fifo, struct sk_buff* skb) {
@@ -2273,7 +2273,7 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
     fws->fws_wq = create_singlethread_workqueue("brcmf_fws_wq");
     if (fws->fws_wq == NULL) {
         brcmf_err("workqueue creation failed\n");
-        rc = -EBADF;
+        rc = ZX_ERR_NO_RESOURCES;
         goto fail;
     }
     INIT_WORK(&fws->fws_dequeue_work, brcmf_fws_dequeue_worker);

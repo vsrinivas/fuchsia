@@ -447,7 +447,7 @@ zx_status_t brcmf_btcoex_set_mode(struct brcmf_cfg80211_vif* vif, enum brcmf_btc
     case BRCMF_BTCOEX_DISABLED:
         brcmf_dbg(INFO, "DHCP session starts\n");
         if (btci->bt_state != BRCMF_BT_DHCP_IDLE) {
-            return -EBUSY;
+            return ZX_ERR_UNAVAILABLE;
         }
         /* Start BT timer only for SCO connection */
         if (brcmf_btcoex_is_sco_active(ifp)) {

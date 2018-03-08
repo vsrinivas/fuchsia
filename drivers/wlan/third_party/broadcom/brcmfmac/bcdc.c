@@ -301,7 +301,7 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
     /* Pop BCDC header used to convey priority for buses that don't */
     if (pktbuf->len <= BCDC_HEADER_LEN) {
         brcmf_dbg(INFO, "rx data too short (%d <= %d)\n", pktbuf->len, BCDC_HEADER_LEN);
-        return -EBADE;
+        return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
     trace_brcmf_bcdchdr(pktbuf->data);
@@ -310,11 +310,11 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
     tmp_if = brcmf_get_ifp(drvr, BCDC_GET_IF_IDX(h));
     if (!tmp_if) {
         brcmf_dbg(INFO, "no matching ifp found\n");
-        return -EBADE;
+        return ZX_ERR_NOT_FOUND;
     }
     if (((h->flags & BCDC_FLAG_VER_MASK) >> BCDC_FLAG_VER_SHIFT) != BCDC_PROTO_VER) {
         brcmf_err("%s: non-BCDC packet received, flags 0x%x\n", brcmf_ifname(tmp_if), h->flags);
-        return -EBADE;
+        return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
     if (h->flags & BCDC_FLAG_SUM_GOOD) {
@@ -332,7 +332,7 @@ static zx_status_t brcmf_proto_bcdc_hdrpull(struct brcmf_pub* drvr, bool do_fws,
     }
 
     if (pktbuf->len == 0) {
-        return -ENODATA;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
     if (ifp != NULL) {

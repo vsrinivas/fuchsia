@@ -553,7 +553,7 @@ static zx_status_t brcmf_p2p_enable_discovery(struct brcmf_p2p_info* p2p) {
     vif = p2p->bss_idx[P2PAPI_BSSCFG_DEVICE].vif;
     if (!vif) {
         brcmf_err("P2P config device not available\n");
-        ret = -EPERM;
+        ret = ZX_ERR_UNAVAILABLE;
         goto exit;
     }
 
@@ -832,7 +832,7 @@ static zx_status_t brcmf_p2p_find_listen_channel(const uint8_t* ie, uint32_t ie_
         return ZX_OK;
     }
 
-    return -EPERM;
+    return ZX_ERR_UNAVAILABLE;
 }
 
 /**
@@ -894,7 +894,7 @@ static zx_status_t brcmf_p2p_discover_listen(struct brcmf_p2p_info* p2p, uint16_
     vif = p2p->bss_idx[P2PAPI_BSSCFG_DEVICE].vif;
     if (!vif) {
         brcmf_err("Discovery is not set, so we have nothing to do\n");
-        err = -EPERM;
+        err = ZX_ERR_UNAVAILABLE;
         goto exit;
     }
 
@@ -1862,13 +1862,13 @@ zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
     vif = p2p->bss_idx[P2PAPI_BSSCFG_PRIMARY].vif;
     if (!vif) {
         brcmf_err("vif for P2PAPI_BSSCFG_PRIMARY does not exist\n");
-        return -EPERM;
+        return ZX_ERR_UNAVAILABLE;
     }
     brcmf_notify_escan_complete(cfg, vif->ifp, true, true);
     vif = p2p->bss_idx[P2PAPI_BSSCFG_CONNECTION].vif;
     if (!vif) {
         brcmf_err("vif for P2PAPI_BSSCFG_CONNECTION does not exist\n");
-        return -EPERM;
+        return ZX_ERR_UNAVAILABLE;
     }
     brcmf_set_mpc(vif->ifp, 0);
 
@@ -1959,7 +1959,7 @@ static zx_status_t brcmf_p2p_create_p2pdev(struct brcmf_p2p_info* p2p, struct wi
     }
 
     if (p2p->bss_idx[P2PAPI_BSSCFG_DEVICE].vif) {
-        return -ENOSPC;
+        return ZX_ERR_ALREADY_EXISTS;
     }
 
     err = brcmf_alloc_vif(p2p->cfg, NL80211_IFTYPE_P2P_DEVICE, &p2p_vif);
@@ -2048,7 +2048,7 @@ zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name,
     }
 
     if (brcmf_cfg80211_vif_event_armed(cfg)) {
-        return -EBUSY;
+        return ZX_ERR_SHOULD_WAIT;
     }
 
     brcmf_dbg(INFO, "adding vif \"%s\" (type=%d)\n", name, type);
@@ -2064,7 +2064,7 @@ zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name,
         err = brcmf_p2p_create_p2pdev(&cfg->p2p, wiphy, params->macaddr, vif_out);
         return err;
     default:
-        return -EOPNOTSUPP;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     err = brcmf_alloc_vif(cfg, type, &vif);
@@ -2092,7 +2092,7 @@ zx_status_t brcmf_p2p_add_vif(struct wiphy* wiphy, const char* name,
     ifp = vif->ifp;
     if (!ifp) {
         brcmf_err("no if pointer provided\n");
-        err = -ENOENT;
+        err = ZX_ERR_INVALID_ARGS;
         goto fail;
     }
 
@@ -2164,7 +2164,7 @@ zx_status_t brcmf_p2p_del_vif(struct wiphy* wiphy, struct wireless_dev* wdev) {
         break;
 
     default:
-        return -ENOTSUPP;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     clear_bit(BRCMF_P2P_STATUS_GO_NEG_PHASE, &p2p->status);

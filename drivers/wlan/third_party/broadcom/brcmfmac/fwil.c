@@ -128,7 +128,7 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
         brcmf_dbg(FIL, "Failed: %s (%d)\n", brcmf_fil_get_errstr(err), err);
     } else if (fwerr != ZX_OK) {
         brcmf_dbg(FIL, "Firmware error: %s (%d)\n", brcmf_fil_get_errstr(fwerr), fwerr);
-        err = -EBADE;
+        err = ZX_ERR_IO_REFUSED;
     }
     return err;
 }
@@ -220,7 +220,7 @@ zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, char* name, const voi
     if (buflen) {
         err = brcmf_fil_cmd_data(ifp, BRCMF_C_SET_VAR, drvr->proto_buf, buflen, true);
     } else {
-        err = -EPERM;
+        err = ZX_ERR_BUFFER_TOO_SMALL;
         brcmf_err("Creating iovar failed\n");
     }
 
@@ -242,7 +242,7 @@ zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, char* name, void* dat
             memcpy(data, drvr->proto_buf, len);
         }
     } else {
-        err = -EPERM;
+        err = ZX_ERR_BUFFER_TOO_SMALL;
         brcmf_err("Creating iovar failed\n");
     }
 
@@ -331,7 +331,7 @@ zx_status_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, char* name, void* da
     if (buflen) {
         err = brcmf_fil_cmd_data(ifp, BRCMF_C_SET_VAR, drvr->proto_buf, buflen, true);
     } else {
-        err = -EPERM;
+        err = ZX_ERR_BUFFER_TOO_SMALL;
         brcmf_err("Creating bsscfg failed\n");
     }
 
@@ -354,7 +354,7 @@ zx_status_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, char* name, void* da
             memcpy(data, drvr->proto_buf, len);
         }
     } else {
-        err = -EPERM;
+        err = ZX_ERR_BUFFER_TOO_SMALL;
         brcmf_err("Creating bsscfg failed\n");
     }
     brcmf_dbg(FIL, "ifidx=%d, bsscfgidx=%d, name=%s, len=%d\n", ifp->ifidx, ifp->bsscfgidx, name,

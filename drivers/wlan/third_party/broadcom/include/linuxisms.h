@@ -32,32 +32,6 @@
 #include <zircon/assert.h>
 
 
-enum zxstatusenum {
-    ENOENT,
-    ENAVAIL,
-    ENFILE, // file table overflow.
-    EOPNOTSUPP, // ZX_ERR_NOT_SUPPORTED
-    EBADE,
-    EPROTO,
-    ENODATA,
-    EILSEQ,
-    ENXIO,
-    ENODEV,
-    ENOTBLK,
-    ENOSR,
-    ETIMEDOUT,
-    ERESTARTSYS,
-    EACCES,
-    EBUSY,
-    E2BIG,
-    EPERM,
-    ENOSPC,
-    ENOTSUPP,
-    EAGAIN,
-    EFAULT,
-    EBADF,
-    ENOMEDIUM,
-};
 
 typedef uint16_t __be16;
 typedef uint32_t __be32;
@@ -329,7 +303,8 @@ LINUX_FUNCVI(request_firmware)
     void* __modinit() { return a; }
 LINUX_FUNCVV(dev_get_platdata)
 LINUX_FUNCVV(dev_set_drvdata)
-LINUX_FUNCVI(platform_driver_probe) // Checked for return ENODEV / ZX_ERR_IO_NOT_PRESENT
+// platform_driver_probe() is checked for return ENODEV / ZX_ERR_IO_NOT_PRESENT (just for logging)
+LINUX_FUNCVI(platform_driver_probe)
 LINUX_FUNCVI(platform_driver_unregister)
 LINUX_FUNCII(set_bit)
 LINUX_FUNCII(clear_bit)

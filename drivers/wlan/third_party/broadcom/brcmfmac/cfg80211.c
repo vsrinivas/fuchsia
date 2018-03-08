@@ -551,7 +551,7 @@ static zx_status_t brcmf_ap_add_vif(struct wiphy* wiphy, const char* name,
     uint32_t time_left;
 
     if (brcmf_cfg80211_vif_event_armed(cfg)) {
-        return -EBUSY;
+        return ZX_ERR_UNAVAILABLE;
     }
 
     brcmf_dbg(INFO, "Adding vif \"%s\"\n", name);
@@ -585,7 +585,7 @@ static zx_status_t brcmf_ap_add_vif(struct wiphy* wiphy, const char* name,
     ifp = vif->ifp;
     if (!ifp) {
         brcmf_err("no if pointer provided\n");
-        err = -ENOENT;
+        err = ZX_ERR_INVALID_ARGS;
         goto fail;
     }
 
@@ -800,12 +800,12 @@ static int brcmf_cfg80211_del_iface(struct wiphy* wiphy, struct wireless_dev* wd
     struct net_device* ndev = wdev->netdev;
 
     if (ndev && ndev == cfg_to_ndev(cfg)) {
-        return -ENOTSUPP;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     /* vif event pending in firmware */
     if (brcmf_cfg80211_vif_event_armed(cfg)) {
-        return -EBUSY;
+        return ZX_ERR_UNAVAILABLE;
     }
 
     if (ndev) {
@@ -824,7 +824,7 @@ static int brcmf_cfg80211_del_iface(struct wiphy* wiphy, struct wireless_dev* wd
     case NL80211_IFTYPE_WDS:
     case NL80211_IFTYPE_MONITOR:
     case NL80211_IFTYPE_MESH_POINT:
-        return -EOPNOTSUPP;
+        return ZX_ERR_NOT_SUPPORTED;
     case NL80211_IFTYPE_AP:
         return brcmf_cfg80211_del_ap_iface(wiphy, wdev);
     case NL80211_IFTYPE_P2P_CLIENT:
@@ -835,7 +835,7 @@ static int brcmf_cfg80211_del_iface(struct wiphy* wiphy, struct wireless_dev* wd
     default:
         return ZX_ERR_OUT_OF_RANGE;
     }
-    return -EOPNOTSUPP;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_device* ndev,
@@ -863,7 +863,7 @@ static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_d
             (vif->wdev.iftype == NL80211_IFTYPE_P2P_DEVICE))) {
         brcmf_dbg(TRACE, "Ignoring cmd for p2p if\n");
         /* Now depending on whether module param p2pon=1 was used the
-         * response needs to be either 0 or EOPNOTSUPP. The reason is
+         * response needs to be either 0 or ZX_ERR_NOT_SUPPORTED. The reason is
          * that if p2pon=1 is used, but a newer supplicant is used then
          * we should return an error, as this combination wont work.
          * In other situations 0 is returned and supplicant will start
@@ -875,7 +875,7 @@ static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_d
          * fail/lock.
          */
         if (cfg->p2p.p2pdev_dynamically) {
-            return -EOPNOTSUPP;
+            return ZX_ERR_NOT_SUPPORTED;
         } else {
             return ZX_OK;
         }
@@ -889,7 +889,7 @@ static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_d
     case NL80211_IFTYPE_MONITOR:
     case NL80211_IFTYPE_WDS:
         brcmf_err("type (%d) : currently we do not support this type\n", type);
-        return -EOPNOTSUPP;
+        return ZX_ERR_NOT_SUPPORTED;
     case NL80211_IFTYPE_ADHOC:
         infra = 0;
         break;
@@ -917,7 +917,7 @@ static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_d
         err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, infra);
         if (err != ZX_OK) {
             brcmf_err("WLC_SET_INFRA error (%d)\n", err);
-            err = -EAGAIN;
+            err = ZX_ERR_UNAVAILABLE;
             goto done;
         }
         brcmf_dbg(INFO, "IF Type = %s\n", brcmf_is_ibssmode(vif) ? "Adhoc" : "Infra");
@@ -1025,7 +1025,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
 
     err = brcmf_fil_iovar_data_set(ifp, "escan", params, params_size);
     if (err != ZX_OK) {
-        if (err == -EBUSY) {
+        if (err == ZX_ERR_UNAVAILABLE) {
             brcmf_dbg(INFO, "system busy : escan canceled\n");
         } else {
             brcmf_err("error (%d)\n", err);
@@ -1074,19 +1074,19 @@ static zx_status_t brcmf_cfg80211_scan(struct wiphy* wiphy, struct cfg80211_scan
 
     if (test_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
         brcmf_err("Scanning already: status (%lu)\n", cfg->scan_status);
-        return -EAGAIN;
+        return ZX_ERR_UNAVAILABLE;
     }
     if (test_bit(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status)) {
         brcmf_err("Scanning being aborted: status (%lu)\n", cfg->scan_status);
-        return -EAGAIN;
+        return ZX_ERR_UNAVAILABLE;
     }
     if (test_bit(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status)) {
         brcmf_err("Scanning suppressed: status (%lu)\n", cfg->scan_status);
-        return -EAGAIN;
+        return ZX_ERR_UNAVAILABLE;
     }
     if (test_bit(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
         brcmf_err("Connecting: status (%lu)\n", vif->sme_state);
-        return -EAGAIN;
+        return ZX_ERR_UNAVAILABLE;
     }
 
     /* If scan req comes for p2p0, send it over primary I/F */
@@ -1300,7 +1300,7 @@ static zx_status_t brcmf_cfg80211_join_ibss(struct wiphy* wiphy, struct net_devi
         brcmf_dbg(CONN, "SSID: %s\n", params->ssid);
     } else {
         brcmf_dbg(CONN, "SSID: NULL, Not supported\n");
-        return -EOPNOTSUPP;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     set_bit(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
@@ -1840,7 +1840,7 @@ static zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device
 
     if (!sme->ssid) {
         brcmf_err("Invalid ssid\n");
-        return -EOPNOTSUPP;
+        return ZX_ERR_NOT_FOUND;
     }
 
     if (ifp->vif == cfg->p2p.bss_idx[P2PAPI_BSSCFG_PRIMARY].vif) {
@@ -2338,7 +2338,7 @@ static zx_status_t brcmf_cfg80211_get_key(struct wiphy* wiphy, struct net_device
     if (err != ZX_OK) {
         brcmf_err("WLC_GET_WSEC error (%d)\n", err);
         /* Ignore this error, may happen during DISASSOC */
-        err = -EAGAIN;
+        err = ZX_ERR_UNAVAILABLE;
         goto done;
     }
     if (wsec & WEP_ENABLED) {
@@ -2381,7 +2381,7 @@ static zx_status_t brcmf_cfg80211_config_default_mgmt_key(struct wiphy* wiphy,
 
     brcmf_dbg(INFO, "Not supported\n");
 
-    return -EOPNOTSUPP;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static void brcmf_cfg80211_reconfigure_wep(struct brcmf_if* ifp) {
@@ -2641,14 +2641,14 @@ static zx_status_t brcmf_cfg80211_dump_station(struct wiphy* wiphy, struct net_d
         if (err != ZX_OK) {
             brcmf_err("BRCMF_C_GET_ASSOCLIST unsupported, err=%d\n", err);
             cfg->assoclist.count = 0;
-            return -EOPNOTSUPP;
+            return ZX_ERR_NOT_SUPPORTED;
         }
     }
     if (idx < (int)cfg->assoclist.count) {
         memcpy(mac, cfg->assoclist.mac[idx], ETH_ALEN);
         return brcmf_cfg80211_get_station(wiphy, ndev, mac, sinfo);
     }
-    return -ENOENT;
+    return ZX_ERR_NOT_FOUND;
 }
 
 static zx_status_t brcmf_cfg80211_set_power_mgmt(struct wiphy* wiphy, struct net_device* ndev,
@@ -2683,7 +2683,7 @@ static zx_status_t brcmf_cfg80211_set_power_mgmt(struct wiphy* wiphy, struct net
 
     err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PM, pm);
     if (err != ZX_OK) {
-        if (err == -ENODEV) {
+        if (err == ZX_ERR_UNAVAILABLE) {
             brcmf_err("net_device is not ready yet\n");
         } else {
             brcmf_err("error (%d)\n", err);
@@ -2772,7 +2772,7 @@ static zx_status_t brcmf_inform_bss(struct brcmf_cfg80211_info* cfg) {
     bss_list = (struct brcmf_scan_results*)cfg->escan_info.escan_buf;
     if (bss_list->count != 0 && bss_list->version != BRCMF_BSS_INFO_VERSION) {
         brcmf_err("Version %d != WL_BSS_INFO_VERSION\n", bss_list->version);
-        return -EOPNOTSUPP;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     brcmf_dbg(SCAN, "scanned AP count (%d)\n", bss_list->count);
     for (i = 0; i < (int32_t)bss_list->count; i++) {
@@ -3005,7 +3005,7 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
 
     if (!test_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
         brcmf_err("scan not ready, bsscfgidx=%d\n", ifp->bsscfgidx);
-        return -EPERM;
+        return ZX_ERR_UNAVAILABLE;
     }
 
     if (status == BRCMF_E_STATUS_PARTIAL) {
@@ -3303,7 +3303,7 @@ static zx_status_t brcmf_cfg80211_sched_scan_start(struct wiphy* wiphy, struct n
 
     if (test_bit(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status)) {
         brcmf_err("Scanning suppressed: status=%lu\n", cfg->scan_status);
-        return -EAGAIN;
+        return ZX_ERR_UNAVAILABLE;
     }
 
     if (req->n_match_sets <= 0) {
@@ -4107,7 +4107,7 @@ zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktfla
     int remained_buf_len;
 
     if (!vif) {
-        return -ENODEV;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
     ifp = vif->ifp;
     saved_ie = &vif->saved_ie;
@@ -4140,7 +4140,7 @@ zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktfla
         mgmt_ie_buf_len = sizeof(saved_ie->assoc_req_ie);
         break;
     default:
-        err = -EPERM;
+        err = ZX_ERR_WRONG_TYPE;
         brcmf_err("not suitable type\n");
         goto exit;
     }
@@ -4280,7 +4280,7 @@ static zx_status_t brcmf_cfg80211_start_ap(struct wiphy* wiphy, struct net_devic
     const struct brcmf_tlv* ssid_ie;
     const struct brcmf_tlv* country_ie;
     struct brcmf_ssid_le ssid_le;
-    int32_t err = -EPERM;
+    int32_t err = ZX_ERR_WRONG_TYPE;
     const struct brcmf_tlv* rsn_ie;
     const struct brcmf_vs_tlv* wpa_ie;
     struct brcmf_join_params join_params;
@@ -4575,7 +4575,7 @@ static zx_status_t brcmf_cfg80211_del_station(struct wiphy* wiphy, struct net_de
     zx_status_t err;
 
     if (!params->mac) {
-        return -EFAULT;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
 
     brcmf_dbg(TRACE, "Enter %pM\n", params->mac);
@@ -4670,7 +4670,7 @@ static zx_status_t brcmf_cfg80211_mgmt_tx(struct wiphy* wiphy, struct wireless_d
 
     if (!ieee80211_is_mgmt(mgmt->frame_control)) {
         brcmf_err("Driver only allows MGMT packet type\n");
-        return -EPERM;
+        return ZX_ERR_WRONG_TYPE;
     }
 
     vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
@@ -4755,7 +4755,7 @@ static zx_status_t brcmf_cfg80211_cancel_remain_on_channel(struct wiphy* wiphy,
     vif = cfg->p2p.bss_idx[P2PAPI_BSSCFG_DEVICE].vif;
     if (vif == NULL) {
         brcmf_err("No p2p device available for probe response\n");
-        err = -ENODEV;
+        err = ZX_ERR_IO_NOT_PRESENT;
         goto exit;
     }
     brcmf_p2p_cancel_remain_on_channel(vif->ifp);
@@ -4776,7 +4776,7 @@ static zx_status_t brcmf_cfg80211_get_channel(struct wiphy* wiphy, struct wirele
     zx_status_t err;
 
     if (!ndev) {
-        return -ENODEV;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
     ifp = netdev_priv(ndev);
 
@@ -4893,7 +4893,7 @@ static zx_status_t brcmf_convert_nl80211_tdls_oper(enum nl80211_tdls_operation o
         break;
     default:
         brcmf_err("unsupported operation: %d\n", oper);
-        ret = -EOPNOTSUPP;
+        ret = ZX_ERR_NOT_SUPPORTED;
     }
     return ret;
 }
@@ -5454,7 +5454,7 @@ static zx_status_t brcmf_notify_vif_event(struct brcmf_if* ifp, const struct brc
         /* waiting process may have timed out */
         if (!cfg->vif_event.vif) {
             spin_unlock(&event->vif_event_lock);
-            return -EBADF;
+            return ZX_ERR_SHOULD_WAIT;
         }
 
         ifp->vif = vif;
@@ -6527,7 +6527,7 @@ static zx_status_t brcmf_translate_country_code(struct brcmf_pub* drvr, char alp
 
     if ((alpha2[0] == ccreq->country_abbrev[0]) && (alpha2[1] == ccreq->country_abbrev[1])) {
         brcmf_dbg(TRACE, "Country code already set\n");
-        return -EAGAIN;
+        return ZX_ERR_ALREADY_EXISTS;
     }
 
     found_index = -1;

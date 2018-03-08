@@ -304,10 +304,10 @@ static zx_status_t brcmf_sdiod_skbuff_read(struct brcmf_sdio_dev* sdiodev, struc
     default:
         /* bail out as things are really fishy here */
         WARN(1, "invalid sdio function number\n"); // TODO(cphoenix): %d\n", func->num);
-        err = -ENOMEDIUM;
+        err = ZX_ERR_IO_REFUSED;
     };
 
-    if (err == -ENOMEDIUM) {
+    if (err == ZX_ERR_IO_REFUSED) {
         brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
     }
 
@@ -325,7 +325,7 @@ static zx_status_t brcmf_sdiod_skbuff_write(struct brcmf_sdio_dev* sdiodev, stru
 
     err = sdio_memcpy_toio(func, addr, ((uint8_t*)(skb->data)), req_sz);
 
-    if (err == -ENOMEDIUM) {
+    if (err == ZX_ERR_IO_REFUSED) {
         brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
     }
 
@@ -449,7 +449,7 @@ static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct 
 
         if (req_sz % func_blk_sz != 0) {
             brcmf_err("sg request length %u is not %u aligned\n", req_sz, func_blk_sz);
-            ret = -ENOTBLK;
+            ret = ZX_ERR_INTERNAL;
             goto exit;
         }
 
@@ -466,7 +466,7 @@ static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct 
         mmc_wait_for_req(func->card->host, &mmc_req);
 
         ret = mmc_cmd.error ? mmc_cmd.error : mmc_dat.error;
-        if (ret == -ENOMEDIUM) {
+        if (ret == ZX_ERR_IO_REFUSED) {
             brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
             break;
         } else if (ret != ZX_OK) {
@@ -910,7 +910,7 @@ static zx_status_t brcmf_sdiod_probe(struct brcmf_sdio_dev* sdiodev) {
     /* try to attach to the target device */
     sdiodev->bus = brcmf_sdio_probe(sdiodev);
     if (!sdiodev->bus) {
-        ret = -ENODEV;
+        ret = ZX_ERR_IO_NOT_PRESENT;
         goto out;
     }
     brcmf_sdiod_host_fixup(sdiodev->func2->card->host);
@@ -985,7 +985,7 @@ static zx_status_t brcmf_ops_sdio_probe(struct sdio_func* func, const struct sdi
 
     /* Ignore anything but func 2 */
     if (func->num != 2) {
-        return -ENODEV;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
 
     bus_if = kzalloc(sizeof(struct brcmf_bus), GFP_KERNEL);

@@ -241,7 +241,7 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct sk_buff* skb, struct net_devic
         brcmf_err("xmit rejected state=%d\n", drvr->bus_if->state);
         netif_stop_queue(ndev);
         dev_kfree_skb(skb);
-        ret = -ENODEV;
+        ret = ZX_ERR_UNAVAILABLE;
         goto done;
     }
 
@@ -352,11 +352,11 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct sk_buff* skb,
     ret = brcmf_proto_hdrpull(drvr, true, skb, ifp);
 
     if (ret != ZX_OK || !(*ifp) || !(*ifp)->ndev) {
-        if (ret != -ENODATA && *ifp) {
+        if (ret != ZX_ERR_BUFFER_TOO_SMALL && *ifp) {
             (*ifp)->ndev->stats.rx_errors++;
         }
         brcmu_pkt_buf_free_skb(skb);
-        return -ENODATA;
+        return ZX_ERR_IO;
     }
 
     skb->protocol = eth_type_trans(skb, (*ifp)->ndev);
@@ -465,7 +465,7 @@ static zx_status_t brcmf_netdev_open(struct net_device* ndev) {
     /* If bus is not ready, can't continue */
     if (bus_if->state != BRCMF_BUS_UP) {
         brcmf_err("failed bus is not ready\n");
-        return -EAGAIN;
+        return ZX_ERR_UNAVAILABLE;
     }
 
     atomic_set(&ifp->pend_8021x_cnt, 0);
@@ -533,7 +533,7 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
 fail:
     drvr->iflist[ifp->bsscfgidx] = NULL;
     ndev->netdev_ops = NULL;
-    return -EBADE;
+    return ZX_ERR_IO_NOT_PRESENT;
 }
 
 static void brcmf_net_detach(struct net_device* ndev, bool rtnl_locked) {
@@ -617,7 +617,7 @@ static zx_status_t brcmf_net_p2p_attach(struct brcmf_if* ifp) {
 fail:
     ifp->drvr->iflist[ifp->bsscfgidx] = NULL;
     ndev->netdev_ops = NULL;
-    return -EBADE;
+    return ZX_ERR_IO_NOT_PRESENT;
 }
 
 zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifidx, bool is_p2pdev,
@@ -1211,7 +1211,7 @@ static DECLARE_WORK(brcmf_driver_work, brcmf_driver_register);
 
 zx_status_t brcmf_core_init(void) {
     if (!schedule_work(&brcmf_driver_work)) {
-        return -EBUSY;
+        return ZX_ERR_UNAVAILABLE;
     }
 
     return ZX_OK;

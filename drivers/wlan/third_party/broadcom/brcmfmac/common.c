@@ -143,13 +143,13 @@ static zx_status_t brcmf_c_get_clm_name(struct brcmf_if* ifp, uint8_t* clm_name)
     /* generate CLM blob file name */
     ptr = (uint8_t*)strrchr((char*)fw_name, '.');
     if (!ptr) {
-        err = -ENOENT;
+        err = ZX_ERR_NOT_FOUND;
         goto done;
     }
 
     len = ptr - fw_name + 1;
     if (len + strlen(".clm_blob") > BRCMF_FW_NAME_LEN) {
-        err = -E2BIG;
+        err = ZX_ERR_BUFFER_TOO_SMALL;
     } else {
         strlcpy((char*)clm_name, (const char*)fw_name, len);
         strlcat((char*)clm_name, ".clm_blob", BRCMF_FW_NAME_LEN);
@@ -500,7 +500,7 @@ static zx_status_t brcmfmac_module_init(void) {
 
     /* Get the platform data (if available) for our devices */
     err = platform_driver_probe(&brcmf_pd, brcmf_common_pd_probe);
-    if (err == -ENODEV) {
+    if (err == ZX_ERR_IO_NOT_PRESENT) {
         brcmf_dbg(INFO, "No platform data available.\n");
     }
 

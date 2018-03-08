@@ -1326,7 +1326,7 @@ static zx_status_t brcmf_pcie_download_fw_nvram(struct brcmf_pciedev_info* devin
     }
     if (sharedram_addr == sharedram_addr_written) {
         brcmf_err("FW failed to initialize\n");
-        return -ENODEV;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
     brcmf_dbg(PCIE, "Shared RAM addr: 0x%08x\n", sharedram_addr);
 

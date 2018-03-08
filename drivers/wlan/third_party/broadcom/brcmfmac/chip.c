@@ -510,12 +510,12 @@ static zx_status_t brcmf_chip_cores_check(struct brcmf_chip_priv* ci) {
 
     if (!cpu_found) {
         brcmf_err("CPU core not detected\n");
-        return -ENXIO;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
     /* check RAM core presence for ARM CM3 core */
     if (need_socram && !has_socram) {
         brcmf_err("RAM core not provided with ARM CM3 core\n");
-        return -ENODEV;
+        return ZX_ERR_WRONG_TYPE;
     }
     return ZX_OK;
 }
@@ -768,7 +768,7 @@ static zx_status_t brcmf_chip_dmp_get_regaddr(struct brcmf_chip_priv* ci, uint32
         wraptype = DMP_SLAVE_TYPE_SWRAP;
     } else {
         *eromaddr -= 4;
-        return -EILSEQ;
+        return ZX_ERR_WRONG_TYPE;
     }
 
     do {
@@ -778,7 +778,7 @@ static zx_status_t brcmf_chip_dmp_get_regaddr(struct brcmf_chip_priv* ci, uint32
             /* unexpected table end */
             if (desc == DMP_DESC_EOT) {
                 *eromaddr -= 4;
-                return -EFAULT;
+                return ZX_ERR_WRONG_TYPE;
             }
         } while (desc != DMP_DESC_ADDRESS && desc != DMP_DESC_COMPONENT);
 
@@ -855,7 +855,7 @@ static zx_status_t brcmf_chip_dmp_erom_scan(struct brcmf_chip_priv* ci) {
         /* next descriptor must be component as well */
         val = brcmf_chip_dmp_get_desc(ci, &eromaddr, &desc_type);
         if (WARN_ON((val & DMP_DESC_TYPE_MSK) != DMP_DESC_COMPONENT)) {
-            return -EFAULT;
+            return ZX_ERR_WRONG_TYPE;
         }
 
         /* only look at cores with master port(s) */
@@ -911,7 +911,7 @@ static zx_status_t brcmf_chip_recognition(struct brcmf_chip_priv* ci) {
     if (socitype == SOCI_SB) {
         if (ci->pub.chip != BRCM_CC_4329_CHIP_ID) {
             brcmf_err("SB chip is not supported\n");
-            return -ENODEV;
+            return ZX_ERR_WRONG_TYPE;
         }
         ci->iscoreup = brcmf_chip_sb_iscoreup;
         ci->coredisable = brcmf_chip_sb_coredisable;
@@ -936,7 +936,7 @@ static zx_status_t brcmf_chip_recognition(struct brcmf_chip_priv* ci) {
         brcmf_chip_dmp_erom_scan(ci);
     } else {
         brcmf_err("chip backplane type %u is not supported\n", socitype);
-        return -ENODEV;
+        return ZX_ERR_WRONG_TYPE;
     }
 
     ret = brcmf_chip_cores_check(ci);

@@ -324,7 +324,7 @@ zx_status_t brcmf_fweh_register(struct brcmf_pub* drvr, enum brcmf_fweh_event_co
                                 brcmf_fweh_handler_t handler) {
     if (drvr->fweh.evt_handler[code]) {
         brcmf_err("event code %d already registered\n", code);
-        return -ENOSPC;
+        return ZX_ERR_ALREADY_EXISTS;
     }
     drvr->fweh.evt_handler[code] = handler;
     brcmf_dbg(TRACE, "event handler registered for %s\n", brcmf_fweh_event_name(code));

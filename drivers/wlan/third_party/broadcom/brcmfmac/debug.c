@@ -37,7 +37,7 @@ zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, 
 
     ramsize = brcmf_bus_get_ramsize(bus);
     if (!ramsize) {
-        return -ENOTSUPP;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     dump = vzalloc(len + ramsize);
@@ -80,7 +80,7 @@ zx_status_t brcmf_debug_attach(struct brcmf_pub* drvr) {
     zx_status_t ret;
 
     if (!root_folder) {
-        return -ENODEV;
+        return ZX_ERR_NOT_FILE;
     }
 
     ret = debugfs_create_dir(dev_name(dev), root_folder, &drvr->dbgfs_dir);

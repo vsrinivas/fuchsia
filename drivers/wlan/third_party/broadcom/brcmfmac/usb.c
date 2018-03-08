@@ -713,7 +713,7 @@ static zx_status_t brcmf_usb_dl_cmd(struct brcmf_usbdev_info* devinfo, uint8_t c
 
     if (brcmf_usb_ioctl_resp_wait(devinfo) == 0) {
         usb_kill_urb(devinfo->ctl_urb);
-        ret = -ETIMEDOUT;
+        ret = ZX_ERR_SHOULD_WAIT;
     } else {
         memcpy(buffer, tmpbuf, buflen);
     }
@@ -769,7 +769,7 @@ static zx_status_t brcmf_usb_resetcfg(struct brcmf_usbdev_info* devinfo) {
         loop_cnt++;
         id.chip = 0xDEAD; /* Get the ID */
         err = brcmf_usb_dl_cmd(devinfo, DL_GETVER, &id, sizeof(id));
-        if ((err != ZX_OK) && (err != -ETIMEDOUT)) {
+        if ((err != ZX_OK) && (err != ZX_ERR_SHOULD_WAIT)) {
             return err;
         }
         if (id.chip == BRCMF_POSTBOOT_ID) {
@@ -943,10 +943,10 @@ static zx_status_t brcmf_usb_dlrun(struct brcmf_usbdev_info* devinfo) {
     /* Start the image */
     if (state.state == DL_RUNNABLE) {
         if (brcmf_usb_dl_cmd(devinfo, DL_GO, &state, sizeof(state)) != ZX_OK) {
-            return -ENODEV;
+            return ZX_ERR_IO_NOT_PRESENT;
         }
         if (brcmf_usb_resetcfg(devinfo) != ZX_OK) {
-            return -ENODEV;
+            return ZX_ERR_IO_NOT_PRESENT;
         }
         /* The Dongle may go for re-enumeration. */
     } else {
@@ -962,12 +962,12 @@ static zx_status_t brcmf_usb_fw_download(struct brcmf_usbdev_info* devinfo) {
 
     brcmf_dbg(USB, "Enter\n");
     if (devinfo == NULL) {
-        return -ENODEV;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (!devinfo->image) {
         brcmf_err("No firmware!\n");
-        return -ENOENT;
+        return ZX_ERR_BAD_STATE;
     }
 
     err = brcmf_usb_dlstart(devinfo, (uint8_t*)devinfo->image, devinfo->image_len);
@@ -1182,7 +1182,7 @@ static zx_status_t brcmf_usb_probe_cb(struct brcmf_usbdev_info* devinfo) {
     brcmf_dbg(USB, "Enter\n");
     bus_pub = brcmf_usb_attach(devinfo, BRCMF_USB_NRXQ, BRCMF_USB_NTXQ);
     if (!bus_pub) {
-        return -ENODEV;
+        return ZX_ERR_IO_NOT_PRESENT;
     }
 
     bus = kzalloc(sizeof(struct brcmf_bus), GFP_ATOMIC);
@@ -1284,7 +1284,7 @@ static zx_status_t brcmf_usb_probe(struct usb_interface* intf, const struct usb_
     if (usb->descriptor.bNumConfigurations != 1) {
         brcmf_err("Number of configurations: %d not supported\n",
                   usb->descriptor.bNumConfigurations);
-        ret = -ENODEV;
+        ret = ZX_ERR_WRONG_TYPE;
         goto fail;
     }
 
@@ -1292,7 +1292,7 @@ static zx_status_t brcmf_usb_probe(struct usb_interface* intf, const struct usb_
             (usb->descriptor.bDeviceClass != USB_CLASS_MISC) &&
             (usb->descriptor.bDeviceClass != USB_CLASS_WIRELESS_CONTROLLER)) {
         brcmf_err("Device class: 0x%x not supported\n", usb->descriptor.bDeviceClass);
-        ret = -ENODEV;
+        ret = ZX_ERR_WRONG_TYPE;
         goto fail;
     }
 
@@ -1301,7 +1301,7 @@ static zx_status_t brcmf_usb_probe(struct usb_interface* intf, const struct usb_
             (desc->bInterfaceProtocol != 0xff)) {
         brcmf_err("non WLAN interface %d: 0x%x:0x%x:0x%x\n", desc->bInterfaceNumber,
                   desc->bInterfaceClass, desc->bInterfaceSubClass, desc->bInterfaceProtocol);
-        ret = -ENODEV;
+        ret = ZX_ERR_WRONG_TYPE;
         goto fail;
     }
 
@@ -1324,12 +1324,12 @@ static zx_status_t brcmf_usb_probe(struct usb_interface* intf, const struct usb_
     }
     if (devinfo->rx_pipe == 0) {
         brcmf_err("No RX (in) Bulk EP found\n");
-        ret = -ENODEV;
+        ret = ZX_ERR_IO_NOT_PRESENT;
         goto fail;
     }
     if (devinfo->tx_pipe == 0) {
         brcmf_err("No TX (out) Bulk EP found\n");
-        ret = -ENODEV;
+        ret = ZX_ERR_IO_NOT_PRESENT;
         goto fail;
     }
 

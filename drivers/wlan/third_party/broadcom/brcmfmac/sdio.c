@@ -730,14 +730,14 @@ static zx_status_t brcmf_sdio_htclk(struct brcmf_sdio* bus, bool on, bool pendok
         brcmf_sdiod_writeb(bus->sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, clkreq, &err);
         if (err != ZX_OK) {
             brcmf_err("HT Avail request error: %d\n", err);
-            return -EBADE;
+            return ZX_ERR_IO_REFUSED;
         }
 
         /* Check current status */
         clkctl = brcmf_sdiod_readb(bus->sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, &err);
         if (err != ZX_OK) {
             brcmf_err("HT Avail read error: %d\n", err);
-            return -EBADE;
+            return ZX_ERR_IO_REFUSED;
         }
 
         /* Go to pending and await interrupt if appropriate */
@@ -746,7 +746,7 @@ static zx_status_t brcmf_sdio_htclk(struct brcmf_sdio* bus, bool on, bool pendok
             devctl = brcmf_sdiod_readb(bus->sdiodev, SBSDIO_DEVICE_CTL, &err);
             if (err != ZX_OK) {
                 brcmf_err("Devctl error setting CA: %d\n", err);
-                return -EBADE;
+                return ZX_ERR_IO_REFUSED;
             }
 
             devctl |= SBSDIO_DEVCTL_CA_INT_ONLY;
@@ -774,11 +774,11 @@ static zx_status_t brcmf_sdio_htclk(struct brcmf_sdio* bus, bool on, bool pendok
         }
         if (err != ZX_OK) {
             brcmf_err("HT Avail request error: %d\n", err);
-            return -EBADE;
+            return ZX_ERR_IO_REFUSED;
         }
         if (!SBSDIO_CLKAV(clkctl, bus->alp_only)) {
             brcmf_err("HT Avail timeout (%d): clkctl 0x%02x\n", PMU_MAX_TRANSITION_DLY, clkctl);
-            return -EBADE;
+            return ZX_ERR_SHOULD_WAIT;
         }
 
         /* Mark clock available */
@@ -808,7 +808,7 @@ static zx_status_t brcmf_sdio_htclk(struct brcmf_sdio* bus, bool on, bool pendok
         brcmf_dbg(SDIO, "CLKCTL: turned OFF\n");
         if (err != ZX_OK) {
             brcmf_err("Failed access turning clock off: %d\n", err);
-            return -EBADE;
+            return ZX_ERR_IO_REFUSED;
         }
     }
     return ZX_OK;
@@ -988,7 +988,7 @@ static zx_status_t brcmf_sdio_readshared(struct brcmf_sdio* bus, struct sdpcm_sh
     if ((sh->flags & SDPCM_SHARED_VERSION_MASK) > SDPCM_SHARED_VERSION) {
         brcmf_err("sdpcm shared version unsupported: dhd %d dongle %d\n", SDPCM_SHARED_VERSION,
                   sh->flags & SDPCM_SHARED_VERSION_MASK);
-        return -EPROTO;
+        return ZX_ERR_WRONG_TYPE;
     }
     return ZX_OK;
 
@@ -1269,7 +1269,7 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
     /* All zero means no more to read */
     if (!(len | checksum)) {
         bus->rxpending = false;
-        return -ENODATA;
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
     if ((uint16_t)(~(len ^ checksum))) {
         brcmf_err("HW header checksum error\n");
@@ -1279,15 +1279,15 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
     }
     if (len < SDPCM_HDRLEN) {
         brcmf_err("HW header length error\n");
-        return -EPROTO;
+        return ZX_ERR_IO_DATA_INTEGRITY;
     }
     if (type == BRCMF_SDIO_FT_SUPER && (roundup(len, bus->blocksize) != rd->len)) {
         brcmf_err("HW superframe header length error\n");
-        return -EPROTO;
+        return ZX_ERR_IO_DATA_INTEGRITY;
     }
     if (type == BRCMF_SDIO_FT_SUB && len > rd->len) {
         brcmf_err("HW subframe header length error\n");
-        return -EPROTO;
+        return ZX_ERR_IO_DATA_INTEGRITY;
     }
     rd->len = len;
 
@@ -1307,7 +1307,7 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
         bus->sdcnt.rx_toolong++;
         brcmf_sdio_rxfail(bus, false, false);
         rd->len = 0;
-        return -EPROTO;
+        return ZX_ERR_IO_DATA_INTEGRITY;
     }
     if (type == BRCMF_SDIO_FT_SUPER && rd->channel != SDPCM_GLOM_CHANNEL) {
         brcmf_err("Wrong channel for superframe\n");
@@ -1326,7 +1326,7 @@ static zx_status_t brcmf_sdio_hdparse(struct brcmf_sdio* bus, uint8_t* header,
         bus->sdcnt.rx_badhdr++;
         brcmf_sdio_rxfail(bus, false, false);
         rd->len = 0;
-        return -ENXIO;
+        return ZX_ERR_IO_DATA_INTEGRITY;
     }
     if (rd->seq_num != rx_seq) {
         brcmf_dbg(SDIO, "seq %d, expected %d\n", rx_seq, rd->seq_num);
@@ -2552,7 +2552,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
         if (bus->ctrl_frame_stat) {
             sdio_claim_host(bus->sdiodev->func1);
             if (bus->ctrl_frame_stat) {
-                bus->ctrl_frame_err = -ENODEV;
+                bus->ctrl_frame_err = ZX_ERR_IO_REFUSED;
                 wmb();
                 bus->ctrl_frame_stat = false;
                 brcmf_sdio_wait_event_wakeup(bus);
@@ -2620,7 +2620,7 @@ static bool brcmf_sdio_prec_enq(struct pktq* q, struct sk_buff* pkt, int prec) {
 }
 
 static zx_status_t brcmf_sdio_bus_txdata(struct device* dev, struct sk_buff* pkt) {
-    zx_status_t ret = -EBADE;
+    zx_status_t ret;
     uint prec;
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
@@ -2649,7 +2649,7 @@ static zx_status_t brcmf_sdio_bus_txdata(struct device* dev, struct sk_buff* pkt
     if (!brcmf_sdio_prec_enq(&bus->txq, pkt, prec)) {
         skb_pull(pkt, bus->tx_hdrlen);
         brcmf_err("out of bus->txq !!!\n");
-        ret = -ENOSR;
+        ret = ZX_ERR_NO_RESOURCES;
     } else {
         ret = ZX_OK;
     }
@@ -2705,7 +2705,7 @@ static zx_status_t brcmf_sdio_readconsole(struct brcmf_sdio* bus) {
 
     /* Protect against corrupt value */
     if (idx > c->bufsize) {
-        return -EBADE;
+        return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
     /* Skip reading the console buffer if the index pointer
@@ -2783,7 +2783,7 @@ static zx_status_t brcmf_sdio_bus_txctl(struct device* dev, unsigned char* msg, 
         if (bus->ctrl_frame_stat) {
             brcmf_dbg(SDIO, "ctrl_frame timeout\n");
             bus->ctrl_frame_stat = false;
-            ret = -ETIMEDOUT;
+            ret = ZX_ERR_SHOULD_WAIT;
         }
         sdio_release_host(bus->sdiodev->func1);
     }
@@ -3069,7 +3069,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct device* dev, unsigned char* msg, 
         brcmf_sdio_checkdied(bus);
     } else if (pending) {
         brcmf_dbg(CTL, "cancelled\n");
-        return -ERESTARTSYS;
+        return ZX_ERR_UNAVAILABLE;
     } else {
         brcmf_dbg(CTL, "resumed for unknown reason?\n");
         brcmf_sdio_checkdied(bus);
@@ -3085,7 +3085,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct device* dev, unsigned char* msg, 
         *rxlen_out = rxlen;
         return ZX_OK;
     } else {
-        return -ETIMEDOUT;
+        return ZX_ERR_SHOULD_WAIT;
     }
 }
 
@@ -3580,7 +3580,7 @@ static zx_status_t brcmf_sdio_buscoreprep(void* ctx) {
 
     if ((clkval & ~SBSDIO_AVBITS) != clkset) {
         brcmf_err("ChipClkCSR access: wrote 0x%02x read 0x%02x\n", clkset, clkval);
-        return -EACCES;
+        return ZX_ERR_IO_REFUSED;
     }
 
     SPINWAIT(((clkval = brcmf_sdiod_readb(sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, NULL)),
@@ -3589,7 +3589,7 @@ static zx_status_t brcmf_sdio_buscoreprep(void* ctx) {
 
     if (!SBSDIO_ALPAV(clkval)) {
         brcmf_err("timeout on ALPAV wait, clkval 0x%02x\n", clkval);
-        return -EBUSY;
+        return ZX_ERR_SHOULD_WAIT;
     }
 
     clkset = SBSDIO_FORCE_HW_CLKREQ_OFF | SBSDIO_FORCE_ALP;
