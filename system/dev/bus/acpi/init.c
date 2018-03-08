@@ -2,11 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
+#include <assert.h>
+#include <ddk/debug.h>
 #include <limits.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <zircon/syscalls/iommu.h>
 
 #include "dev.h"
 #include "init.h"
+#include "iommu.h"
 
 #define ACPI_MAX_INIT_TABLES 32
 
@@ -139,6 +144,11 @@ ACPI_STATUS init(void) {
         return status;
     }
 
+    zx_status_t zx_status = iommu_manager_init();
+    if (zx_status != ZX_OK) {
+        zxlogf(INFO, "acpi: Failed to initialize IOMMU manager\n");
+    }
+
     status = set_apic_irq_mode();
     if (status == AE_NOT_FOUND) {
         printf("WARNING: Could not find ACPI IRQ mode switch\n");
@@ -161,4 +171,3 @@ ACPI_STATUS init(void) {
     // successful boot anyway.
     return AE_OK;
 }
-
