@@ -468,7 +468,7 @@ void CGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) {
     IntegerConstantType literal_type = EnumType(named_enum.enum_info.type);
     GenerateIntegerTypedef(literal_type, named_enum.name);
     for (const auto& member : named_enum.enum_info.members) {
-        std::string member_name = named_enum.name + "_" + LongName(member.name);
+        std::string member_name = named_enum.name + "_" + ShortName(member.name);
         std::string member_value;
         EnumValue(named_enum.enum_info.type, member.value.get(),
                   library_, &member_value);

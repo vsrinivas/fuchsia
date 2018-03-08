@@ -236,9 +236,9 @@ bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
 bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
     std::vector<Enum::Member> members;
     for (auto& member : enum_declaration->members) {
-        auto name = Name(member->identifier->location);
+        auto name = member->identifier->location;
         auto value = std::move(member->value);
-        members.emplace_back(std::move(name), std::move(value));
+        members.emplace_back(name, std::move(value));
     }
     auto type = types::PrimitiveSubtype::Uint32;
     if (enum_declaration->maybe_subtype)

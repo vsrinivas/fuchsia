@@ -426,7 +426,8 @@ void JSONGenerator::Generate(const flat::Ordinal& value) {
 }
 
 void JSONGenerator::Generate(const flat::Name& value) {
-    EmitString(&json_file_, LongName(value));
+    std::vector<std::string> name_parts = { LongName(value) };
+    Generate(name_parts);
 }
 
 void JSONGenerator::Generate(const flat::Const& value) {

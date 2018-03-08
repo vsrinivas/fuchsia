@@ -49,7 +49,7 @@
         "declaration_order": {
             "type": "array",
             "items": {
-                "$ref": "#/definitions/identifier"
+                "$ref": "#/definitions/compound-identifier"
             }
         },
         "declarations": {
@@ -84,7 +84,7 @@
             ],
             "properties": {
                 "name": {
-                    "$ref": "#/definitions/identifier"
+                    "$ref": "#/definitions/compound-identifier"
                 },
                 "type": {
                     "$ref": "#/definitions/type"
@@ -103,7 +103,7 @@
             ],
             "properties": {
                 "name": {
-                    "$ref": "#/definitions/identifier"
+                    "$ref": "#/definitions/compound-identifier"
                 },
                 "type": {
                     "$ref": "#/definitions/integer-type"
@@ -139,7 +139,7 @@
             ],
             "properties": {
                 "name": {
-                    "$ref": "#/definitions/identifier"
+                    "$ref": "#/definitions/compound-identifier"
                 },
                 "methods": {
                     "type": "array",
@@ -232,7 +232,7 @@
             ],
             "properties": {
                 "name": {
-                    "$ref": "#/definitions/identifier"
+                    "$ref": "#/definitions/compound-identifier"
                 },
                 "members": {
                     "type": "array",
@@ -285,7 +285,7 @@
             ],
             "properties": {
                 "name": {
-                    "$ref": "#/definitions/identifier"
+                    "$ref": "#/definitions/compound-identifier"
                 },
                 "members": {
                     "type": "array",

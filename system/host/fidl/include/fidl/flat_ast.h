@@ -223,9 +223,9 @@ struct Const : public Decl {
 
 struct Enum : public Decl {
     struct Member {
-        Member(Name name, std::unique_ptr<raw::Constant> value)
-            : name(std::move(name)), value(std::move(value)) {}
-        Name name;
+        Member(SourceLocation name, std::unique_ptr<raw::Constant> value)
+            : name(name), value(std::move(value)) {}
+        SourceLocation name;
         std::unique_ptr<raw::Constant> value;
     };
 
