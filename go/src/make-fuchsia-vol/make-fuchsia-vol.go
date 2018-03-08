@@ -48,6 +48,8 @@ var (
 	blob        = flag.String("blob", "", "path to blob partition image (not used with ramdisk)")
 	data        = flag.String("data", "", "path to data partition image (not used with ramdisk)")
 
+	board = flag.String("board", "pc", "Zircon board name to use/build for")
+
 	blockSize           = flag.Int64("block-size", 0, "the block size of the target disk (0 means detect)")
 	physicalBlockSize   = flag.Int64("physical-block-size", 0, "the physical block size of the target disk (0 means detect)")
 	optimalTransferSize = flag.Int64("optimal-transfer-size", 0, "the optimal transfer size of the target disk (0 means unknown/unused)")
@@ -106,8 +108,7 @@ func main() {
 		if *ramdiskOnly {
 			*ramdisk = filepath.Join(*fuchsiaBuildDir, "user.bootfs")
 		} else {
-			// XXX(raggi): does not support ARM
-			*ramdisk = filepath.Join(*fuchsiaBuildDir, "bootdata-blob-x64.bin")
+			*ramdisk = filepath.Join(*fuchsiaBuildDir, fmt.Sprintf("bootdata-blob-%s.bin", *board))
 		}
 	}
 	if *cmdline == "" {
@@ -135,7 +136,7 @@ func main() {
 
 	if *zedboot == "" {
 		needFuchsiaBuildDir()
-		*zedboot = filepath.Join(*fuchsiaBuildDir, "images", "zedboot-x64.bin")
+		*zedboot = filepath.Join(*fuchsiaBuildDir, "images", fmt.Sprintf("zedboot-%s.bin", *board))
 	}
 
 	if !*ramdiskOnly {
