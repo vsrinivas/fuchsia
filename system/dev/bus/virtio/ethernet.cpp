@@ -115,6 +115,7 @@ ethmac_protocol_ops_t kProtoOps = {
     virtio_net_start,
     virtio_net_queue_tx,
     virtio_set_param,
+    NULL, // get_bti not implemented because we don't have FEATURE_DMA
 };
 
 // I/O buffer helpers

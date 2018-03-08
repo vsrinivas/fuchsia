@@ -129,6 +129,12 @@ typedef struct ethmac_protocol_ops {
     // set_param() may be called at any time after start() is called including from multiple threads
     // simultaneously.
     zx_status_t (*set_param)(void* ctx, uint32_t param, int32_t value, void* data);
+
+    // Get the BTI handle (needed to pin DMA memory) for this device.
+    // This method is only valid on devices that advertise ETHMAC_FEATURE_DMA
+    // The caller does *not* take ownership of the BTI handle and must never close
+    // the handle.
+    zx_handle_t (*get_bti)(void* ctx);
 } ethmac_protocol_ops_t;
 
 typedef struct ethmac_protocol {
