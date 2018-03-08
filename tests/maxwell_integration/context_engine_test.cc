@@ -20,20 +20,6 @@ ComponentScopePtr MakeGlobalScope() {
   return scope;
 }
 
-/*
-ComponentScopePtr MakeModuleScope(const std::string& path,
-                                  const std::string& story_id) {
-  auto scope = ComponentScope::New();
-  auto module_scope = ModuleScope::New();
-  module_scope->url = path;
-  module_scope->story_id = story_id;
-  module_scope->module_path = f1dl::Array<f1dl::String>::New(1);
-  module_scope->module_path[0] = path;
-  scope->set_module_scope(std::move(module_scope));
-  return scope;
-}
-*/
-
 class TestListener : public ContextListener {
  public:
   ContextUpdatePtr last_update;
@@ -115,7 +101,8 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   reader_->Subscribe(std::move(query), listener.GetHandle());
   ASSERT_TRUE(RunLoopUntilWithTimeout([&listener, &result] {
     return listener.last_update &&
-           (result = std::move(TakeContextValue(listener.last_update.get(), "a").second)).size() == 3;
+           (result = TakeContextValue(listener.last_update.get(), "a").second)
+                   .size() == 3;
   }));
 
   EXPECT_EQ("topic", result[0]->meta->entity->topic);
@@ -129,7 +116,8 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   value3.Unbind();
   ASSERT_TRUE(RunLoopUntilWithTimeout([&listener, &result] {
     return !!listener.last_update &&
-           (result = std::move(TakeContextValue(listener.last_update.get(), "a").second)).size() == 1;
+           (result = TakeContextValue(listener.last_update.get(), "a").second)
+                   .size() == 1;
   }));
 
   EXPECT_EQ("frob", result[0]->meta->entity->topic);
@@ -148,7 +136,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
 
   ASSERT_TRUE(
       RunLoopUntilWithTimeout([&listener] { return !!listener.last_update; }));
-  result = std::move(TakeContextValue(listener.last_update.get(), "a").second);
+  result = TakeContextValue(listener.last_update.get(), "a").second;
   ASSERT_EQ(2lu, result.size());
   EXPECT_EQ("frob", result[0]->meta->entity->topic);
   EXPECT_EQ("1", result[1]->content);
@@ -158,9 +146,55 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   listener.Reset();
   value4.Unbind();
   RunLoopUntilWithTimeout([&listener] { return !!listener.last_update; });
-  result = std::move(TakeContextValue(listener.last_update.get(), "a").second);
+  result = TakeContextValue(listener.last_update.get(), "a").second;
   EXPECT_EQ(1lu, result.size());
   EXPECT_EQ("frob", result[0]->meta->entity->topic);
+}
+
+TEST_F(ContextEngineTest, WriteNullEntity) {
+  ContextMetadataPtr meta =
+      ContextMetadataBuilder().SetEntityTopic("topic").Build();
+
+  auto selector = ContextSelector::New();
+  selector->type = ContextValueType::ENTITY;
+  selector->meta = meta->Clone();
+  auto query = ContextQuery::New();
+  AddToContextQuery(query.get(), "a", std::move(selector));
+
+  ContextValueWriterPtr value;
+  writer_->CreateValue(value.NewRequest(), ContextValueType::ENTITY);
+
+  const std::string value1 = R"({ "@type": "someType", "foo": "frob" })";
+  const std::string value2 = R"({ "@type": "someType", "foo": "borf" })";
+
+  f1dl::Array<ContextValuePtr> result;
+  value->Set(value1, meta->Clone());
+
+  TestListener listener;
+  reader_->Subscribe(std::move(query), listener.GetHandle());
+  ASSERT_TRUE(RunLoopUntilWithTimeout([&listener, &result] {
+    return !!listener.last_update &&
+           (result = TakeContextValue(listener.last_update.get(), "a").second)
+                   .size() == 1;
+  }));
+
+  EXPECT_EQ(value1, result[0]->content);
+
+  listener.Reset();
+
+  value->Set(nullptr, nullptr);
+
+  // Ensure that this didn't cause a crash; the fidl further specifies that
+  // previous values should be unchanged.
+
+  value->Set(value2, meta->Clone());
+
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [&listener, &result] { return !!listener.last_update; }));
+
+  result = TakeContextValue(listener.last_update.get(), "a").second;
+  EXPECT_EQ(1lu, result.size());
+  EXPECT_EQ(value2, result[0]->content);
 }
 
 TEST_F(ContextEngineTest, CloseListenerAndReader) {
@@ -178,18 +212,17 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
     reader_->Subscribe(query.Clone(), listener1.GetHandle());
     reader_->Subscribe(query.Clone(), listener2.GetHandle());
     InitReader(MakeGlobalScope());
-    ASSERT_FALSE(RunLoopUntilWithTimeout(
+    ASSERT_TRUE(RunLoopUntilWithTimeout(
         [&listener2] { return !!listener2.last_update; }));
     listener2.Reset();
   }
 
-  // We don't want to crash. There's no way to assert that here, but it will
-  // show up in the logs.
+  // We don't want to crash. If the assertion below fails, context engine has
+  // probably crashed.
   ContextValueWriterPtr value;
   writer_->CreateValue(value.NewRequest(), ContextValueType::ENTITY);
-  value->Set(nullptr /* content */,
-             ContextMetadataBuilder().SetEntityTopic("topic").Build());
-  ASSERT_FALSE(RunLoopUntilWithTimeout(
+  value->Set("foo", ContextMetadataBuilder().SetEntityTopic("topic").Build());
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
       [&listener2] { return !!listener2.last_update; }));
 }
 

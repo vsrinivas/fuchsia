@@ -223,51 +223,51 @@ void ContextValueWriterImpl::CreateChildValue(
 
 void ContextValueWriterImpl::Set(const f1dl::String& content,
                                  ContextMetadataPtr metadata) {
-  auto done_getting_types = [weak_this = weak_factory_.GetWeakPtr(), content,
-                             metadata = std::move(metadata)](
-                                const f1dl::Array<f1dl::String>& entity_types) {
-    if (!weak_this)
-      return;
-    if (!weak_this->value_id_) {
-      // We're creating this value for the first time.
-      auto value = ContextValue::New();
-      value->type = weak_this->type_;
-      value->content = content;
-      // value->meta = std::move(metadata);  // Why won't this compile??
-      value->meta = metadata.Clone();
-      MaybeFillEntityTypeMetadata(entity_types, &value);
+  auto done_getting_types =
+      [weak_this = weak_factory_.GetWeakPtr(), content,
+       metadata = std::move(metadata)](
+          const f1dl::Array<f1dl::String>& entity_types) mutable {
+        if (!weak_this)
+          return;
+        if (!weak_this->value_id_) {
+          // We're creating this value for the first time.
+          auto value = ContextValue::New();
+          value->type = weak_this->type_;
+          value->content = content;
+          value->meta = std::move(metadata);
+          MaybeFillEntityTypeMetadata(entity_types, &value);
 
-      if (weak_this->parent_id_.empty()) {
-        weak_this->value_id_ =
-            weak_this->writer_->repository()->Add(std::move(value));
-      } else {
-        weak_this->value_id_ = weak_this->writer_->repository()->Add(
-            weak_this->parent_id_, std::move(value));
-      }
-    } else {
-      if (!weak_this->writer_->repository()->Contains(
-              weak_this->value_id_.get())) {
-        FXL_LOG(FATAL) << "Trying to update non-existent context value ("
-                       << weak_this->value_id_.get()
-                       << "). New content: " << content
-                       << ", new metadata: " << metadata;
-      }
+          if (weak_this->parent_id_.empty()) {
+            weak_this->value_id_ =
+                weak_this->writer_->repository()->Add(std::move(value));
+          } else {
+            weak_this->value_id_ = weak_this->writer_->repository()->Add(
+                weak_this->parent_id_, std::move(value));
+          }
+        } else {
+          if (!weak_this->writer_->repository()->Contains(
+                  weak_this->value_id_.get())) {
+            FXL_LOG(FATAL) << "Trying to update non-existent context value ("
+                           << weak_this->value_id_.get()
+                           << "). New content: " << content
+                           << ", new metadata: " << metadata;
+          }
 
-      auto value =
-          weak_this->writer_->repository()->Get(weak_this->value_id_.get());
-      if (content) {
-        value->content = content;
-      }
-      if (metadata) {
-        value->meta = metadata.Clone();
-      }
-      MaybeFillEntityTypeMetadata(entity_types, &value);
-      weak_this->writer_->repository()->Update(weak_this->value_id_.get(),
-                                               std::move(value));
-    }
-  };
+          auto value =
+              weak_this->writer_->repository()->Get(weak_this->value_id_.get());
+          if (content) {
+            value->content = content;
+          }
+          if (metadata) {
+            value->meta = metadata.Clone();
+          }
+          MaybeFillEntityTypeMetadata(entity_types, &value);
+          weak_this->writer_->repository()->Update(weak_this->value_id_.get(),
+                                                   std::move(value));
+        }
+      };
 
-  if (type_ != ContextValueType::ENTITY) {
+  if (type_ != ContextValueType::ENTITY || !content) {
     // Avoid an extra round-trip to EntityResolver that won't get us anything.
     done_getting_types({});
   } else {
