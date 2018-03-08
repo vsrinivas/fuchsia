@@ -63,12 +63,11 @@ be 2, it could be 50.
 If you have a Fuchsia build, you can use treemap to visualize memory usage by
 the system.
 
- 1. On your host machine, source the `env.sh` script into your shell.
- 2. Also on your host machine, run the following command from the root of your
+ 1. On your host machine, run the following command from the root of your
     Fuchsia checkout:
 
-    ```fx shell memgraph -vt | ./scripts/memory/treemap.py > mem.html```
- 3. Open `mem.html` in a browser.
+    ```./scripts/fx shell memgraph -vt | ./scripts/memory/treemap.py > mem.html```
+ 2. Open `mem.html` in a browser.
 
 The `memgraph` tool generates a JSON description of system task and memory
 information, which is then parsed by the `treemap.py` script. `-vt` says
