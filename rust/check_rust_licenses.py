@@ -46,7 +46,7 @@ def fetch_license(subdir):
     baseurl = find_github_blob_path(repo_path)
     text = []
     # 'LICENCE' is a British English spelling variant used in https://github.com/ebarnard/rust-plist
-    for license_filename in ('LICENSE', 'LICENSE-APACHE', 'LICENSE-MIT', 'COPYING', 'LICENCE'):
+    for license_filename in ('LICENSE', 'LICENSE-APACHE', 'LICENSE-MIT', 'COPYING', 'LICENCE', 'LICENSE.md'):
         url = '/'.join((baseurl, license_filename))
         try:
             resp = urllib2.urlopen(url)
