@@ -45,7 +45,7 @@ public:
 
     Gtt* gtt() { return gtt_.get(); }
 
-    magma_display_size display_size() { return display_size_; }
+    magma_display_size display_size() { return reported_display_size_; }
 
     void PresentBuffer(uint32_t buffer_handle, magma_system_image_descriptor* image_desc,
                        std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
@@ -125,6 +125,7 @@ private:
 
     magma::FpsPrinter fps_printer_;
     magma_display_size display_size_{};
+    magma_display_size reported_display_size_{};
 };
 
 #endif // MSD_INTEL_DEVICE_CORE_H

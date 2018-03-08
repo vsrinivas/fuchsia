@@ -1,3 +1,5 @@
+#define MAGMA_DLOG_ENABLE 1
+
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -441,32 +443,14 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device)
         return DRET_MSG(ZX_ERR_INTERNAL, "couldn't create core device");
 
     zx_display_info_t* di = &device->info;
-    uint32_t format, width, height, stride, pitch;
-    zx_status_t status = zx_bootloader_fb_get_info(&format, &width, &height, &stride);
-    if (status == ZX_OK) {
-        di->format = format;
-        di->width = width;
-        di->height = height;
-        di->stride = stride;
-    } else {
-        di->format = ZX_PIXEL_FORMAT_ARGB_8888;
-        di->width = 2560 / 2;
-        di->height = 1700 / 2;
-        di->stride = 2560 / 2;
-    }
+    di->format = ZX_PIXEL_FORMAT_ARGB_8888;
+    di->width = device->core_device->display_size().width;
+    di->height = device->core_device->display_size().height;
 
-    switch (di->format) {
-        case ZX_PIXEL_FORMAT_RGB_565:
-            pitch = di->stride * sizeof(uint16_t);
-            break;
-        default:
-            DLOG("unrecognized format 0x%x, defaulting to 32bpp", di->format);
-        case ZX_PIXEL_FORMAT_ARGB_8888:
-        case ZX_PIXEL_FORMAT_RGB_x888:
-            pitch = di->stride * sizeof(uint32_t);
-            break;
-    }
+    constexpr uint32_t kCacheLineWords = 64 / 4;
+    di->stride = magma::round_up(di->width, kCacheLineWords);
 
+    uint32_t pitch = di->stride * sizeof(uint32_t);
     device->framebuffer_size = pitch * di->height;
 
     device->console_buffer =
@@ -492,8 +476,9 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device)
     if (!device->console_buffer->duplicate_handle(&handle))
         return DRET_MSG(ZX_ERR_INTERNAL, "Failed to duplicate framebuffer handle");
 
-    status = zx_set_framebuffer_vmo(get_root_resource(), handle, device->framebuffer_size, format,
-                                    width, height, stride);
+    zx_status_t status =
+        zx_set_framebuffer_vmo(get_root_resource(), handle, device->framebuffer_size, di->format,
+                               di->width, di->height, di->stride);
     if (status != ZX_OK)
         magma::log(magma::LOG_WARNING, "Failed to pass framebuffer to zircon: %d", status);
 

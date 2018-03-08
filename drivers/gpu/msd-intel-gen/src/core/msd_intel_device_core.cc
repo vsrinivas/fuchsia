@@ -169,6 +169,11 @@ void MsdIntelDeviceCore::ReadDisplaySize()
     auto surface_size = pipe.PlaneSurfaceSize().ReadFrom(register_io());
     display_size_.width = surface_size.width_minus_1().get() + 1;
     display_size_.height = surface_size.height_minus_1().get() + 1;
+    reported_display_size_ = display_size_;
+#if MSD_INTEL_REPORTED_WIDTH && MSD_INTEL_REPORTED_HEIGHT
+    reported_display_size_.width = MSD_INTEL_REPORTED_WIDTH;
+    reported_display_size_.height = MSD_INTEL_REPORTED_HEIGHT;
+#endif
 }
 
 void MsdIntelDeviceCore::PresentBuffer(
@@ -384,8 +389,11 @@ magma::Status MsdIntelDeviceCore::ProcessFlip(
     uint32_t pipe_number = 0;
     registers::PipeRegs pipe(pipe_number);
 
-    auto surface_size = pipe.PlaneSurfaceSize().ReadFrom(register_io());
-    uint32_t width = surface_size.width_minus_1().get() + 1;
+    // We assume the size of the incoming buffers match the reported display size.
+    auto display_size_pipe = pipe.PlaneSurfaceSize().FromValue(0);
+    display_size_pipe.width_minus_1().set(reported_display_size_.width - 1);
+    display_size_pipe.height_minus_1().set(reported_display_size_.height - 1);
+    display_size_pipe.WriteTo(register_io());
 
     // Controls whether the plane surface update happens immediately or on the next vblank.
     constexpr bool kUpdateOnVblank = true;
@@ -408,11 +416,13 @@ magma::Status MsdIntelDeviceCore::ProcessFlip(
     uint32_t stride;
     if (image_desc.tiling == MAGMA_IMAGE_TILING_OPTIMAL) {
         // Stride must be an integer number of tiles
-        stride = magma::round_up(width * sizeof(uint32_t), kTileSize) / kTileSize;
+        stride =
+            magma::round_up(reported_display_size_.width * sizeof(uint32_t), kTileSize) / kTileSize;
         plane_control.tiled_surface().set(plane_control.TILING_X);
     } else {
         // Stride must be an integer number of cache lines
-        stride = magma::round_up(width * sizeof(uint32_t), kCacheLineSize) / kCacheLineSize;
+        stride = magma::round_up(reported_display_size_.width * sizeof(uint32_t), kCacheLineSize) /
+                 kCacheLineSize;
         plane_control.tiled_surface().set(plane_control.TILING_NONE);
     }
     plane_control.WriteTo(register_io());
