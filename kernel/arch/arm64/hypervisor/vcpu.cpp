@@ -62,7 +62,7 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
             continue;
         }
         uint32_t lr_index = __builtin_ctzl(elrs);
-        uint32_t lr = GICH_LR_PENDING | (vector & GICH_LR_VIRTUAL_ID_MASK);
+        uint64_t lr = gic_set_vector(vector);
         gic_write_gich_lr(lr_index, lr);
         elrs &= ~(1u << lr_index);
     }
@@ -74,7 +74,7 @@ static bool gich_active_interrupts(InterruptBitmap* active_interrupts) {
     active_interrupts->ClearAll();
     const uint32_t lr_limit = __builtin_ctzl(gic_read_gich_elrs());
     for (uint32_t i = 0; i < lr_limit; i++) {
-        uint32_t vector = gic_read_gich_lr(i) & GICH_LR_VIRTUAL_ID_MASK;
+        uint32_t vector = gic_get_vector(i);
         active_interrupts->SetOne(vector);
     }
     return lr_limit > 0;
@@ -151,7 +151,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
 
     gic_write_gich_hcr(GICH_HCR_EN);
     vcpu->gich_state_.active_interrupts.Reset(kNumInterrupts);
-    vcpu->gich_state_.num_lrs = (gic_read_gich_vtr() & GICH_VTR_LIST_REGS_MASK) + 1;
+    vcpu->gich_state_.num_lrs = gic_get_num_lrs();
     vcpu->gich_state_.elrs = (1u << vcpu->gich_state_.num_lrs) - 1;
     vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_->guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;

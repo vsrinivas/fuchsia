@@ -239,13 +239,14 @@
 
     // If we got to here, the exception came from the host or EL2.
     // Continue execution through a jump table based on the HVC index.
-    hvc_jump .Lsync_table 5
+    hvc_jump .Lsync_table 6
 .Lsync_table:
     b el2_hvc_psci
     b el2_hvc_mexec
     b el2_hvc_off
     b el2_hvc_tlbi
     b el2_hvc_resume
+    b el2_hvc_sysreg
 .endm
 
 .macro entry_irq return_code

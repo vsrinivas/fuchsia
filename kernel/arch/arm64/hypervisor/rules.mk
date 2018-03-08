@@ -16,5 +16,6 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/vmexit.cpp \
 	$(LOCAL_DIR)/gic/gicv2.cpp \
 	$(LOCAL_DIR)/gic/gicv3.cpp \
+	$(LOCAL_DIR)/gic/el2.S \
 
 include make/module.mk

@@ -78,13 +78,13 @@ static void gicv2_write_gich_elrs(uint64_t val) {
 }
 
 /* Returns the GICH_LRn value */
-static uint32_t gicv2_read_gich_lr(uint32_t idx) {
+static uint64_t gicv2_read_gich_lr(uint32_t idx) {
     return gich->lr[idx];
 }
 
 /* Writes to the GICH_LR register */
-static void gicv2_write_gich_lr(uint32_t idx, uint32_t val) {
-    gich->lr[idx] = val;
+static void gicv2_write_gich_lr(uint32_t idx, uint64_t val) {
+    gich->lr[idx] = static_cast<uint32_t>(val);
 }
 
 static zx_status_t gicv2_get_gicv(paddr_t* gicv_paddr) {
@@ -93,6 +93,18 @@ static zx_status_t gicv2_get_gicv(paddr_t* gicv_paddr) {
         return ZX_ERR_NOT_SUPPORTED;
     *gicv_paddr = vaddr_to_paddr(reinterpret_cast<void*>(GICV_ADDRESS));
     return ZX_OK;
+}
+
+static uint64_t gicv2_set_vector(uint32_t vector) {
+    return GICH_LR_PENDING | (vector & GICH_LR_VIRTUAL_ID_MASK);
+}
+
+static uint32_t gicv2_get_vector(uint32_t i) {
+    return gicv2_read_gich_lr(i) & GICH_LR_VIRTUAL_ID_MASK;
+}
+
+static uint32_t gicv2_get_num_lrs() {
+    return (gicv2_read_gich_vtr() & GICH_VTR_LIST_REGS_MASK) + 1;
 }
 
 static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
@@ -107,6 +119,9 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .read_gich_lr = gicv2_read_gich_lr,
     .write_gich_lr = gicv2_write_gich_lr,
     .get_gicv = gicv2_get_gicv,
+    .set_vector = gicv2_set_vector,
+    .get_vector = gicv2_get_vector,
+    .get_num_lrs = gicv2_get_num_lrs,
 };
 
 void gicv2_hw_interface_register(void) {

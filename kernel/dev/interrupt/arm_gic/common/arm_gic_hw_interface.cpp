@@ -19,6 +19,10 @@ void arm_gic_hw_interface_register(const struct arm_gic_hw_interface_ops* ops) {
     gic_ops = ops;
 }
 
+bool arm_gic_is_registered(void) {
+    return gic_ops == nullptr ? false : true;
+}
+
 /* Returns the GICH_HCR value */
 uint32_t gic_read_gich_hcr(void) {
     return gic_ops->read_gich_hcr();
@@ -60,16 +64,28 @@ void gic_write_gich_elrs(uint64_t val) {
 }
 
 /* Returns the GICH_LRn value */
-uint32_t gic_read_gich_lr(uint32_t idx) {
+uint64_t gic_read_gich_lr(uint32_t idx) {
     return gic_ops->read_gich_lr(idx);
 }
 
 /* Writes to the GICH_LR register */
-void gic_write_gich_lr(uint32_t idx, uint32_t val) {
+void gic_write_gich_lr(uint32_t idx, uint64_t val) {
     return gic_ops->write_gich_lr(idx, val);
 }
 
 /* Get the GICV physical address */
 zx_status_t gic_get_gicv(paddr_t* gicv_paddr) {
     return gic_ops->get_gicv(gicv_paddr);
+}
+
+uint64_t gic_set_vector(uint32_t vector) {
+    return gic_ops->set_vector(vector);
+}
+
+uint32_t gic_get_vector(uint32_t i) {
+    return gic_ops->get_vector(i);
+}
+
+uint32_t gic_get_num_lrs() {
+    return gic_ops->get_num_lrs();
 }

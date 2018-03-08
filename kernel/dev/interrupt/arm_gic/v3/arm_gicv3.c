@@ -68,7 +68,8 @@ static void gic_set_enable(uint vector, bool enable) {
         for (uint i = 0; i < arch_max_num_cpus(); i++) {
             if (enable) {
                 GICREG(0, GICR_ISENABLER0(i)) = mask;
-            } else {
+            }
+            else {
                 GICREG(0, GICR_ICENABLER0(i)) = mask;
             }
             gic_wait_for_rwp(GICR_CTLR(i));
@@ -76,7 +77,8 @@ static void gic_set_enable(uint vector, bool enable) {
     } else {
         if (enable) {
             GICREG(0, GICD_ISENABLER(reg)) = mask;
-        } else {
+        }
+        else {
             GICREG(0, GICD_ICENABLER(reg)) = mask;
         }
         gic_wait_for_rwp(GICD_CTLR);
@@ -378,6 +380,13 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
     bool got_gicr_stride = false;
     bool got_ipi_base = false;
     bool optional = false;
+
+    // If a GIC driver is already registered to the GIC interface it's means we are running GICv2
+    // and we do not need to initialize GICv3. Since we have added both GICv3 and GICv2 in board.mdi,
+    // both drivers are initialized
+    if(gicv3_is_gic_registered()) {
+        return;
+    }
 
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {

@@ -19,9 +19,12 @@ struct arm_gic_hw_interface_ops {
     void (*write_gich_vmcr)(uint32_t val);
     uint64_t (*read_gich_elrs)(void);
     void (*write_gich_elrs)(uint64_t val);
-    uint32_t (*read_gich_lr)(uint32_t idx);
-    void (*write_gich_lr)(uint32_t idx, uint32_t val);
+    uint64_t (*read_gich_lr)(uint32_t idx);
+    void (*write_gich_lr)(uint32_t idx, uint64_t val);
     zx_status_t (*get_gicv)(paddr_t* gicv_paddr);
+    uint64_t (*set_vector)(uint32_t);
+    uint32_t (*get_vector)(uint32_t);
+    uint32_t (*get_num_lrs)(void);
 };
 
 /* Returns the GICH_HCR value */
@@ -49,13 +52,21 @@ uint64_t gic_read_gich_elrs(void);
 void gic_write_gich_elrs(uint64_t val);
 
 /* Returns the GICH_LRn value */
-uint32_t gic_read_gich_lr(uint32_t idx);
+uint64_t gic_read_gich_lr(uint32_t idx);
 
 /* Writes to the GICH_LR register */
-void gic_write_gich_lr(uint32_t idx, uint32_t val);
+void gic_write_gich_lr(uint32_t idx, uint64_t val);
 
 /* Get the GICV physical address */
 zx_status_t gic_get_gicv(paddr_t* gicv_paddr);
 
+uint64_t gic_set_vector(uint32_t vector);
+
+uint32_t gic_get_vector(uint32_t i);
+
 /* Registers the ops of the GIC driver initialized with HW interface layer */
 void arm_gic_hw_interface_register(const struct arm_gic_hw_interface_ops* ops);
+
+bool arm_gic_is_registered(void);
+
+uint32_t gic_get_num_lrs();

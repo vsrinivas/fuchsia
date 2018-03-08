@@ -60,5 +60,6 @@ kernel = {
     }
     arm-timer = {
         irq-virt = 27
+        irq-phys = 30
     }
 }
