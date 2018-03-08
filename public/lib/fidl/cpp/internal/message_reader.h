@@ -113,10 +113,12 @@ class MessageReader {
                                     const zx_packet_signal_t* signal);
   zx_status_t ReadAndDispatchMessage(MessageBuffer* buffer);
   void NotifyError();
+  void Stop();
 
   async_wait_t wait_;  // Must be first.
   zx::channel channel_;
   async_t* async_;
+  bool* should_stop_;  // See |Canary| in message_reader.cc.
   MessageHandler* message_handler_;
   std::function<void()> error_handler_;
 };

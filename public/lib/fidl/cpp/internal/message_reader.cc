@@ -14,6 +14,56 @@ namespace {
 
 constexpr zx_signals_t kSignals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
 
+// |Canary| is a stack-allocated object that observes when a |MessageReader| is
+// destroyed or unbound from the current channel.
+//
+// Because |WaitAndDispatchOneMessageUntil| can be called re-entrantly, we can
+// be in a state where there are N nested calls to |ReadAndDispatchMessage| on
+// the stack. While dispatching any of those messages, the client can destroy
+// the |MessageReader| or unbind it from the current channel. When that happens
+// we need to stop reading messages from the channel and unwind the stack
+// safely.
+//
+// The |Canary| works by storing a pointer to its |should_stop_| field in the
+// |MessageReader|.  Upon destruction or unbinding, the |MessageReader| writes
+// |true| into |should_stop_|. When we unwind the stack, the |Canary| forwards
+// that value to the next |Canary| on the stack.
+class Canary {
+ public:
+  explicit Canary(bool** should_stop_slot)
+      : should_stop_slot_(should_stop_slot),
+        previous_should_stop_(*should_stop_slot_),
+        should_stop_(false) {
+    *should_stop_slot_ = &should_stop_;
+  }
+
+  ~Canary() {
+    if (should_stop_) {
+      // If we should stop, we need to propagate that information to the
+      // |Canary| higher up the stack, if any. We also cannot touch
+      // |*should_stop_slot_| because the |MessageReader| might have been
+      // destroyed (or bound to another channel).
+      if (previous_should_stop_)
+        *previous_should_stop_ = should_stop_;
+    } else {
+      // Otherwise, the |MessageReader| was not destroyed and is still bound to
+      // the same channel. We need to restore the previous |should_stop_|
+      // pointer so that a |Canary| further up the stack can still be informed
+      // about whether to stop.
+      *should_stop_slot_ = previous_should_stop_;
+    }
+  }
+
+  // Whether the |ReadAndDispatchMessage| that created the |Canary| should stop
+  // after dispatching the current message.
+  bool should_stop() const { return should_stop_; }
+
+ private:
+  bool** should_stop_slot_;
+  bool* previous_should_stop_;
+  bool should_stop_;
+};
+
 }  // namespace
 
 static_assert(std::is_standard_layout<MessageReader>::value,
@@ -27,9 +77,11 @@ MessageReader::MessageReader(MessageHandler* message_handler)
             0u,
             {}},
       async_(nullptr),
+      should_stop_(nullptr),
       message_handler_(message_handler) {}
 
 MessageReader::~MessageReader() {
+  Stop();
   if (async_)
     async_cancel_wait(async_, &wait_);
 }
@@ -51,6 +103,7 @@ zx_status_t MessageReader::Bind(zx::channel channel) {
 zx::channel MessageReader::Unbind() {
   if (!is_bound())
     return zx::channel();
+  Stop();
   async_cancel_wait(async_, &wait_);
   wait_.object = ZX_HANDLE_INVALID;
   async_ = nullptr;
@@ -124,11 +177,11 @@ async_wait_result_t MessageReader::OnHandleReady(
       // handler has destroyed this object and we need to unwind without
       // touching |this|.
       if (status == ZX_ERR_SHOULD_WAIT)
-        break;
+        return ASYNC_WAIT_AGAIN;
       if (status != ZX_OK)
         return ASYNC_WAIT_FINISHED;
     }
-    return is_bound() ? ASYNC_WAIT_AGAIN : ASYNC_WAIT_FINISHED;
+    return ASYNC_WAIT_AGAIN;
   }
 
   ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
@@ -149,8 +202,11 @@ zx_status_t MessageReader::ReadAndDispatchMessage(MessageBuffer* buffer) {
   }
   if (!message_handler_)
     return ZX_OK;
+  Canary canary(&should_stop_);
   status = message_handler_->OnMessage(std::move(message));
-  if (status != ZX_OK && status != ZX_ERR_STOP)
+  if (canary.should_stop())
+    return ZX_ERR_STOP;
+  if (status != ZX_OK)
     NotifyError();
   return status;
 }
@@ -159,6 +215,13 @@ void MessageReader::NotifyError() {
   Unbind();
   if (error_handler_)
     error_handler_();
+}
+
+void MessageReader::Stop() {
+  if (should_stop_) {
+    *should_stop_ = true;
+    should_stop_ = nullptr;
+  }
 }
 
 }  // namespace internal

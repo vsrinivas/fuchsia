@@ -174,47 +174,6 @@ TEST(MessageReader, HandlerErrorWithoutErrorHandler) {
   EXPECT_FALSE(reader.is_bound());
 }
 
-TEST(MessageReader, HandlerStop) {
-  StatusMessageHandler handler;
-  handler.status = ZX_ERR_STOP;
-
-  MessageReader reader;
-  reader.set_message_handler(&handler);
-
-  int error_count = 0;
-  reader.set_error_handler([&error_count] { ++error_count; });
-
-  fidl::test::AsyncLoopForTest loop;
-
-  zx::channel h1, h2;
-  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-  reader.Bind(std::move(h1));
-
-  EXPECT_EQ(ZX_OK, h2.write(0, "hello", 5, nullptr, 0));
-
-  EXPECT_EQ(0, error_count);
-  EXPECT_TRUE(reader.is_bound());
-
-  EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
-
-  EXPECT_EQ(0, error_count);
-  EXPECT_TRUE(reader.is_bound());
-
-  // The handler generated ZX_ERR_STOP, which means the reader stopped without
-  // calling the error callback or unbinding the channel. However, the reader is
-  // no longer listening to the channel.
-
-  CopyingMessageHandler logger;
-  reader.set_message_handler(&logger);
-
-  EXPECT_EQ(ZX_OK, h2.write(0, ", world", 7, nullptr, 0));
-  EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
-
-  EXPECT_EQ(0, error_count);
-  EXPECT_TRUE(reader.is_bound());
-  EXPECT_EQ(0, logger.message_count_);
-}
-
 TEST(MessageReader, BindTwice) {
   MessageReader reader;
   fidl::test::AsyncLoopForTest loop;
@@ -499,6 +458,125 @@ TEST(MessageReader, TakeChannelAndErrorHandlerFrom) {
   EXPECT_FALSE(reader2.is_bound());
 }
 
+TEST(MessageReader, ReentrantDestruction) {
+  std::unique_ptr<MessageReader> reader = std::make_unique<MessageReader>();
+
+  int read_count = 0;
+
+  CallbackMessageHandler handler;
+  handler.callback = [&reader, &read_count](Message message) {
+    ++read_count;
+    reader.reset();
+    return ZX_OK;
+  };
+
+  reader->set_message_handler(&handler);
+
+  fidl::test::AsyncLoopForTest loop;
+
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+  reader->Bind(std::move(h1));
+
+  EXPECT_EQ(ZX_OK, h2.write(0, "hello", 5, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, ", world", 7, nullptr, 0));
+
+  EXPECT_TRUE(reader->is_bound());
+
+  EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+
+  EXPECT_FALSE(reader);
+
+  // The handler destroyed the reader, which means the reader should have read
+  // only one of the messages and its endpoint should be closed.
+
+  EXPECT_EQ(1, read_count);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, h2.write(0, "!", 1, nullptr, 0));
+}
+
+TEST(MessageReader, DoubleReentrantDestruction) {
+  std::unique_ptr<MessageReader> reader = std::make_unique<MessageReader>();
+
+  int read_count = 0;
+
+  CallbackMessageHandler handler;
+  handler.callback = [&reader, &read_count](Message message) {
+    ++read_count;
+    if (read_count == 1) {
+      reader->WaitAndDispatchOneMessageUntil(zx::time::infinite());
+    } else {
+      reader.reset();
+    }
+    return ZX_OK;
+  };
+
+  reader->set_message_handler(&handler);
+
+  fidl::test::AsyncLoopForTest loop;
+
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+  reader->Bind(std::move(h1));
+
+  EXPECT_EQ(ZX_OK, h2.write(0, "hello", 5, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, ", world", 7, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, "!", 1, nullptr, 0));
+
+  EXPECT_TRUE(reader->is_bound());
+
+  EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+
+  EXPECT_FALSE(reader);
+
+  // The handler destroyed the reader in a nested callstack, which means the
+  // reader should have read two of the messages and its endpoint should be
+  // closed.
+
+  EXPECT_EQ(2, read_count);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, h2.write(0, "\n", 1, nullptr, 0));
+}
+
+TEST(MessageReader, DoubleReentrantUnbind) {
+  MessageReader reader;
+
+  int read_count = 0;
+
+  CallbackMessageHandler handler;
+  handler.callback = [&reader, &read_count](Message message) {
+    ++read_count;
+    if (read_count == 1) {
+      reader.WaitAndDispatchOneMessageUntil(zx::time::infinite());
+    } else {
+      reader.Unbind();
+    }
+    return ZX_OK;
+  };
+
+  reader.set_message_handler(&handler);
+
+  fidl::test::AsyncLoopForTest loop;
+
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+  reader.Bind(std::move(h1));
+
+  EXPECT_EQ(ZX_OK, h2.write(0, "hello", 5, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, ", world", 7, nullptr, 0));
+  EXPECT_EQ(ZX_OK, h2.write(0, "!", 1, nullptr, 0));
+
+  EXPECT_TRUE(reader.is_bound());
+
+  EXPECT_EQ(ZX_OK, loop.RunUntilIdle());
+
+  EXPECT_FALSE(reader.is_bound());
+
+  // The handler unbound the reader in a nested callstack, which means the
+  // reader should have read two of the messages and its endpoint should be
+  // closed.
+
+  EXPECT_EQ(2, read_count);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, h2.write(0, "\n", 1, nullptr, 0));
+}
 }  // namespace
 }  // namespace internal
 }  // namespace fidl
