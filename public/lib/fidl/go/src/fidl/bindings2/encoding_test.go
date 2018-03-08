@@ -81,4 +81,19 @@ func TestEncodingIdentity(t *testing.T) {
 			B: [2]*string{&s, nil},
 		}, 88, &TestString3{})
 	})
+	t.Run("Vectors", func(t *testing.T) {
+		v1 := []int64{-1}
+		testIdentity(t, &TestVector1{
+			A: []int8{1, 2, 3, 4},
+			B: nil,
+			C: []int32{99},
+			D: &v1,
+		}, 88, &TestVector1{})
+		v2 := []string{"x", "hello"}
+		testIdentity(t, &TestVector2{
+			A: [2][]int8{{9, -1}, {}},
+			B: [][]int8{{-111, 41}, {-1, -1, -1, -1}},
+			C: []*[]string{nil, &v2},
+		}, 200, &TestVector2{})
+	})
 }

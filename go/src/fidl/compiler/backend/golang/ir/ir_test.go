@@ -52,6 +52,14 @@ func arrayType(elementType types.Type, elementCount int) types.Type {
 	}
 }
 
+func vectorType(elementType types.Type, elementCount *int) types.Type {
+	return types.Type{
+		Kind:         types.VectorType,
+		ElementType:  &elementType,
+		ElementCount: elementCount,
+	}
+}
+
 func stringType(elementCount *int) types.Type {
 	return types.Type{
 		Kind: types.StringType,
@@ -218,6 +226,62 @@ func TestCompileStruct(t *testing.T) {
 					Type: "[27]*string",
 					Name: "NestedNullableMax",
 					Tag: "`fidl:\"40\"`", 
+				},
+			},
+		},
+	})
+
+	compileStructsExpect(t, "Struct with vector types", []types.Struct{
+		{
+			Name: types.Identifier("Test"),
+			Members: []types.StructMember{
+				{
+					Type: vectorType(primitiveType(types.Uint8), nil),
+					Name: types.Identifier("Flat"),
+				},
+				{
+					Type: vectorType(primitiveType(types.Uint8), &maxElems),
+					Name: types.Identifier("Max"),
+				},
+				{
+					Type: vectorType(vectorType(primitiveType(types.Bool), nil), nil),
+					Name: types.Identifier("Nested"),
+				},
+				{
+					Type: vectorType(nullable(vectorType(primitiveType(types.Bool), nil)), nil),
+					Name: types.Identifier("Nullable"),
+				},
+				{
+					Type: vectorType(vectorType(vectorType(primitiveType(types.Uint8), &maxElems), nil), nil),
+					Name: types.Identifier("NestedMax"),
+				},
+			},
+		},
+	}, []Struct{
+		{
+			Name: "Test",
+			Members: []StructMember{
+				{
+					Type: "[]uint8",
+					Name: "Flat",
+				},
+				{
+					Type: "[]uint8",
+					Name: "Max",
+					Tag: "`fidl:\"40\"`",
+				},
+				{
+					Type: "[][]bool",
+					Name: "Nested",
+				},
+				{
+					Type: "[]*[]bool",
+					Name: "Nullable",
+				},
+				{
+					Type: "[][][]uint8",
+					Name: "NestedMax",
+					Tag: "`fidl:\"40,,\"`",
 				},
 			},
 		},

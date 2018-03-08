@@ -4,7 +4,7 @@
 
 package bindings2
 
-// TODO(mknyszek): Support unions, handles, interfaces, and vectors.
+// TODO(mknyszek): Support unions, handles, and interfaces.
 
 import (
 	"errors"
@@ -20,6 +20,50 @@ const (
 	allocPresent uint64 = math.MaxUint64
 	noAlloc             = 0
 )
+
+// getSize returns the size of the type. Occasionally this requires the value,
+// particularly for a struct.
+func getSize(t reflect.Type, v reflect.Value) (int, error) {
+	switch t.Kind() {
+	case reflect.Array:
+		if v.Len() == 0 {
+			return 0, nil
+		}
+		s, err := getSize(t.Elem(), v.Index(0))
+		if err != nil {
+			return 0, err
+		}
+		return v.Len() * s, nil
+	case reflect.Bool, reflect.Int8, reflect.Uint8:
+		return 1, nil
+	case reflect.Int16, reflect.Uint16:
+		return 2, nil
+	case reflect.Int32, reflect.Uint32, reflect.Float32:
+		return 4, nil
+	case reflect.Int64, reflect.Uint64, reflect.Float64:
+		return 8, nil
+	case reflect.Ptr:
+		i := t.Elem()
+		switch i.Kind() {
+		case reflect.Slice:
+			return 16, nil
+		case reflect.String:
+			return 16, nil
+		}
+		return 0, fmt.Errorf("unsupported pointer type kind %s for type %s", t.Kind(), t.Name())
+	case reflect.String:
+		return 16, nil
+	case reflect.Slice:
+		return 16, nil
+	case reflect.Struct:
+		payload, ok := v.Addr().Interface().(Payload)
+		if !ok {
+			return 0, fmt.Errorf("struct %s must implement Payload", t.Name())
+		}
+		return payload.InlineSize(), nil
+	}
+	return 0, fmt.Errorf("unsupported inline type kind %s for type %s", t.Kind(), t.Name())
+}
 
 // fieldData contains metadata for a single struct field for use during encoding and
 // decoding. It is derived from a struct field tag, and generally contains facilities
@@ -214,6 +258,41 @@ func (e *encoder) marshalInline(t reflect.Type, v reflect.Value, n nestedTypeDat
 	return nil
 }
 
+// marshalVector writes the vector metadata inline and the elements of the vector in a new
+// out-of-line object. Expects the value to be a regular string value, i.e. of type string.
+func (e *encoder) marshalVector(t reflect.Type, v reflect.Value, n nestedTypeData) error {
+	if !v.IsValid() {
+		e.writeUint(0, 8)
+		e.writeUint(noAlloc, 8)
+		return nil
+	}
+	max := n.Unnest()
+	if max != nil && v.Len() > *max {
+		return fmt.Errorf("vector exceeds maximum length of %d", *max)
+	}
+	e.writeUint(uint64(v.Len()), 8)
+	e.writeUint(allocPresent, 8)
+	// Don't bother creating the out-of-line struct if its length is 0.
+	if v.Len() == 0 {
+		return nil
+	}
+	elemType := t.Elem()
+	elemSize, err := getSize(elemType, v.Index(0))
+	if err != nil {
+		return err
+	}
+	// Encode in the out-of-line object.
+	oldHead := e.head
+	e.head = e.newObject(v.Len() * elemSize)
+	for i := 0; i < v.Len(); i++ {
+		if err := e.marshal(elemType, v.Index(i), n); err != nil {
+			return err
+		}
+	}
+	e.head = oldHead
+	return nil
+}
+
 // marshalString writes the string metadata inline and the bytes of the string in a new
 // out-of-line object. Expects the value to be a regular string value, i.e. of type string.
 func (e *encoder) marshalString(v reflect.Value, n nestedTypeData) error {
@@ -243,8 +322,10 @@ func (e *encoder) marshalString(v reflect.Value, n nestedTypeData) error {
 // that is, if we're marshalling *string, we should get string.
 func (e *encoder) marshalPointer(t reflect.Type, v reflect.Value, n nestedTypeData) error {
 	switch t.Kind() {
+	case reflect.Slice:
+		return e.marshalVector(t, v, n)
 	case reflect.String:
-		e.marshalString(v, n)
+		return e.marshalString(v, n)
 	default:
 		return fmt.Errorf("unsupported nullable type kind %s for type %s", t.Kind(), t.Name())
 	}
@@ -258,6 +339,8 @@ func (e *encoder) marshal(t reflect.Type, v reflect.Value, n nestedTypeData) err
 	switch t.Kind() {
 	case reflect.Ptr:
 		return e.marshalPointer(t.Elem(), v.Elem(), n)
+	case reflect.Slice:
+		return e.marshalVector(t, v, n)
 	case reflect.String:
 		return e.marshalString(v, n)
 	}
@@ -437,6 +520,60 @@ func (d *decoder) unmarshalInline(t reflect.Type, v reflect.Value, n nestedTypeD
 	return nil
 }
 
+// unmarshalVector unmarshals an out-of-line FIDL vector into a golang slice which is placed
+// into v. nestedTypeData is also necessary because a vector can have a maximum size). The
+// expected types and values are either pointers, i.e. *[]int8 or an "inline" vector value
+// i.e. []int8.
+func (d *decoder) unmarshalVector(t reflect.Type, v reflect.Value, n nestedTypeData) error {
+	size := int64(d.readUint(8))
+	if size < 0 {
+		return fmt.Errorf("vector length exceeds golang positive int")
+	}
+	if ptr := d.readUint(8); ptr == noAlloc {
+		if t.Kind() != reflect.Ptr {
+			return fmt.Errorf("unexpected null vector, vector is not nullable")
+		}
+		v.Set(reflect.Zero(t))
+		return nil
+	}
+	max := n.Unnest()
+	if max != nil && int(size) > *max {
+		return fmt.Errorf("vector of length %d exceeds maximum length of %d", size, *max)
+	}
+
+	// Create the slice with reflection.
+	sliceType := t
+	elemType := t.Elem()
+	if t.Kind() == reflect.Ptr {
+		sliceType = elemType
+		elemType = sliceType.Elem()
+	}
+	s := reflect.MakeSlice(sliceType, int(size), int(size))
+
+	// Unmarshal the out-of-line structure.
+	oldHead := d.head
+	d.head = d.nextObject
+	// TODO(mknyszek): Get rid of this extra reflect.New somehow.
+	elemSize, err := getSize(elemType, reflect.New(elemType).Elem())
+	if err != nil {
+		return err
+	}
+	d.nextObject += align(int(size)*elemSize, 8)
+	for i := 0; i < int(size); i++ {
+		if err := d.unmarshal(elemType, s.Index(i), n); err != nil {
+			return err
+		}
+	}
+	d.head = oldHead
+	if t.Kind() == reflect.Ptr {
+		v.Set(reflect.New(t.Elem()))
+		v.Elem().Set(s)
+	} else {
+		v.Set(s)
+	}
+	return nil
+}
+
 // unmarshalString unmarshals an out-of-line FIDL string into a golang string which is placed
 // into v. nestedTypeData is also necessary because it can have a maximum size). The expected
 // types and values are either pointers, i.e. *string or an "inline" string value. i.e. string.
@@ -473,8 +610,10 @@ func (d *decoder) unmarshalString(t reflect.Type, v reflect.Value, n nestedTypeD
 // indirections. The expected types and values t and v are pointers, i.e. they start with *.
 func (d *decoder) unmarshalPointer(t reflect.Type, v reflect.Value, n nestedTypeData) error {
 	switch t.Elem().Kind() {
+	case reflect.Slice:
+		return d.unmarshalVector(t, v, n)
 	case reflect.String:
-		d.unmarshalString(t, v, n)
+		return d.unmarshalString(t, v, n)
 	default:
 		return fmt.Errorf("unsupported nullable type kind %s for type %s", t.Kind(), t.Name())
 	}
@@ -488,6 +627,8 @@ func (d *decoder) unmarshal(t reflect.Type, v reflect.Value, n nestedTypeData) e
 	switch t.Kind() {
 	case reflect.Ptr:
 		return d.unmarshalPointer(t, v, n)
+	case reflect.Slice:
+		return d.unmarshalVector(t, v, n)
 	case reflect.String:
 		return d.unmarshalString(t, v, n)
 	}

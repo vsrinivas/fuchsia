@@ -217,3 +217,36 @@ func (_ *TestString3) InlineAlignment() int {
 func (_ *TestString3) InlineSize() int {
 	return 64
 }
+
+type TestVector1 struct {
+	A []int8
+	B *[]int16
+	C []int32  `fidl:"2"`
+	D *[]int64 `fidl:"2"`
+}
+
+// Implements Payload.
+func (_ *TestVector1) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *TestVector1) InlineSize() int {
+	return 64
+}
+
+type TestVector2 struct {
+	A [2][]int8
+	B [][]int8    `fidl:",2"`
+	C []*[]string `fidl:"5,2,2"`
+}
+
+// Implements Payload.
+func (_ *TestVector2) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *TestVector2) InlineSize() int {
+	return 64
+}

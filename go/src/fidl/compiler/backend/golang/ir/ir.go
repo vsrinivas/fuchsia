@@ -266,10 +266,19 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 		} else {
 			r = Type("string")
 		}
+	case types.VectorType:
+		e, et := c.compileType(*val.ElementType)
+		et.MaxElems = append(et.MaxElems, val.ElementCount)
+		if val.Nullable {
+			r = Type(fmt.Sprintf("*[]%s", e))
+		} else {
+			r = Type(fmt.Sprintf("[]%s", e))
+		}
+		t = et
 	case types.PrimitiveType:
 		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	default:
-		log.Fatal("Unknown type kind:", val.Kind)
+		log.Fatal("Unknown type kind: ", val.Kind)
 	}
 	return
 }

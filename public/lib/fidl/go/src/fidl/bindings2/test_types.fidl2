@@ -73,3 +73,16 @@ struct TestString3 {
     array<string:4>:2 a;
     array<string:4?>:2 b;
 };
+
+struct TestVector1 {
+    vector<int8> a;
+    vector<int16>? b;
+    vector<int32>:2 c;
+    vector<int64>:2? d;
+};
+
+struct TestVector2 {
+    array<vector<int8>>:2 a;
+    vector<vector<int8>>:2 b;
+    vector<vector<string:5>:2?>:2 c;
+};
