@@ -12,8 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-zx_handle_t io_default_bti = ZX_HANDLE_INVALID;
-
 // Returns true if a buffer with these parameters was allocated using
 // zx_vmo_create_contiguous.  This is primarily important so we know whether we
 // need to call COMMIT on it to get the pages to exist.
@@ -120,21 +118,21 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_ha
 
 zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t alignment_log2,
                                    uint32_t flags) {
-    return io_buffer_init_aligned_with_bti(buffer, io_default_bti, size, alignment_log2, flags);
+    return io_buffer_init_aligned_with_bti(buffer, ZX_HANDLE_INVALID, size, alignment_log2, flags);
 }
 
 zx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags) {
-    return io_buffer_init_with_bti(buffer, io_default_bti, size, flags);
+    return io_buffer_init_with_bti(buffer, ZX_HANDLE_INVALID, size, flags);
 }
 
 zx_status_t io_buffer_init_vmo(io_buffer_t* buffer,
                                zx_handle_t vmo_handle, zx_off_t offset, uint32_t flags) {
-    return io_buffer_init_vmo_with_bti(buffer, io_default_bti, vmo_handle, offset, flags);
+    return io_buffer_init_vmo_with_bti(buffer, ZX_HANDLE_INVALID, vmo_handle, offset, flags);
 }
 
 zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_paddr_t addr, size_t size,
                                     zx_handle_t resource, uint32_t cache_policy) {
-    return io_buffer_init_physical_with_bti(buffer, io_default_bti, addr, size, resource,
+    return io_buffer_init_physical_with_bti(buffer, ZX_HANDLE_INVALID, addr, size, resource,
                                             cache_policy);
 }
 
@@ -355,9 +353,4 @@ zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t offset,
         physmap[0] += sub_offset;
         return ZX_OK;
     }
-}
-
-void io_buffer_set_default_bti(zx_handle_t bti) {
-    ZX_ASSERT(io_default_bti == ZX_HANDLE_INVALID || bti == ZX_HANDLE_INVALID);
-    io_default_bti = bti;
 }

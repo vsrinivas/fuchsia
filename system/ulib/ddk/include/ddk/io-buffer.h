@@ -101,11 +101,6 @@ zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t offset,
 // Releases an io_buffer
 void io_buffer_release(io_buffer_t* buffer);
 
-// Set the BTI used by io_buffers for getting physical addresses.
-// |bti| is borrowed but not owned by the library.  The borrow can be released
-// by calling this again with ZX_HANDLE_INVALID
-void io_buffer_set_default_bti(zx_handle_t bti);
-
 static inline bool io_buffer_is_valid(io_buffer_t* buffer) {
     return (buffer->vmo_handle != ZX_HANDLE_INVALID);
 }
