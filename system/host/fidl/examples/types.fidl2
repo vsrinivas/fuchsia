@@ -211,7 +211,6 @@ struct handles {
     handle<event>? nullable_event_handle;
     handle<port>? nullable_port_handle;
     handle<interrupt>? nullable_interrupt_handle;
-    handle<pci>? nullable_pci_handle;
     handle<log>? nullable_log_handle;
     handle<socket>? nullable_socket_handle;
     handle<resource>? nullable_resource_handle;

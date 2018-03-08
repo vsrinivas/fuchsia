@@ -56,9 +56,11 @@ public:
 
     explicit constexpr time(zx_time_t value) : value_(value) {}
 
-    static constexpr time infinite() { return  time(ZX_TIME_INFINITE); }
+    static constexpr time infinite() { return time(ZX_TIME_INFINITE); }
 
     constexpr zx_time_t get() const { return value_; }
+
+    zx_time_t* get_address() { return &value_; }
 
     constexpr duration operator-(time other) const {
         return duration(value_ - other.value_);
