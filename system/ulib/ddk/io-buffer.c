@@ -21,6 +21,49 @@ static bool is_allocated_contiguous(size_t size, uint32_t flags) {
     return (flags & IO_BUFFER_CONTIG) && size > PAGE_SIZE;
 }
 
+static zx_status_t pin_contig_buffer(zx_handle_t bti, zx_handle_t vmo, size_t size,
+                                     zx_paddr_t* phys) {
+    if (bti == ZX_HANDLE_INVALID) {
+        size_t lookup_size = size < PAGE_SIZE ? size : PAGE_SIZE;
+        return zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP, 0, lookup_size, phys,
+                               sizeof(*phys));
+    }
+
+    zx_info_bti_t info;
+    zx_status_t status = zx_object_get_info(bti, ZX_INFO_BTI, &info, sizeof(info),
+                                            NULL, NULL);
+    if (status != ZX_OK) {
+        return status;
+    }
+    ZX_DEBUG_ASSERT(info.minimum_contiguity % PAGE_SIZE == 0);
+
+    size_t num_entries = ROUNDUP(size, info.minimum_contiguity) / info.minimum_contiguity;
+    uint32_t options = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_COMPRESS;
+    // Issue the pin request.  We need to temporarily allocate storage for the
+    // returned list.  If it's too big, allocate on the heap.
+    if (num_entries < 512) {
+        zx_paddr_t addrs[512];
+        status = zx_bti_pin(bti, options, vmo, 0, ROUNDUP(size, PAGE_SIZE), addrs, num_entries);
+        if (status == ZX_OK) {
+            *phys = addrs[0];
+        }
+    } else {
+        zx_paddr_t* addrs = malloc(sizeof(*addrs) * num_entries);
+        if (addrs == NULL) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        status = zx_bti_pin(bti, options, vmo, 0, ROUNDUP(size, PAGE_SIZE), addrs, num_entries);
+        if (status != ZX_OK) {
+            free(addrs);
+            return status;
+        }
+        *phys = addrs[0];
+        free(addrs);
+    }
+
+    return ZX_OK;
+}
+
 static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_handle,
                                          zx_handle_t vmo_handle, size_t size,
                                          zx_off_t offset, uint32_t flags) {
@@ -53,48 +96,13 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_ha
     // will need to be called.
     zx_paddr_t phys = IO_BUFFER_INVALID_PHYS;
     if (flags & IO_BUFFER_CONTIG) {
-        if (bti_handle == ZX_HANDLE_INVALID) {
-            size_t lookup_size = size < PAGE_SIZE ? size : PAGE_SIZE;
-            status = zx_vmo_op_range(vmo_handle, ZX_VMO_OP_LOOKUP, 0, lookup_size, &phys,
-                                     sizeof(phys));
-            if (status != ZX_OK) {
-                goto lookup_failed;
-            }
-        } else {
-            zx_info_bti_t info;
-            zx_status_t status = zx_object_get_info(bti_handle, ZX_INFO_BTI, &info, sizeof(info),
-                                                    NULL, NULL);
-            if (status != ZX_OK) {
-                goto lookup_failed;
-            }
-            ZX_DEBUG_ASSERT(info.minimum_contiguity % PAGE_SIZE == 0);
-
-            size_t num_entries = ROUNDUP(size, info.minimum_contiguity) / info.minimum_contiguity;
-            uint32_t options = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_COMPRESS;
-            // Issue the pin request.  We need to temporarily allocate storage for the
-            // returned list.  If it's too big, allocate on the heap.
-            if (num_entries < 512) {
-                zx_paddr_t addrs[512];
-                status = zx_bti_pin(bti_handle, options, vmo_handle, 0,
-                                    ROUNDUP(size, PAGE_SIZE), addrs, num_entries);
-                if (status == ZX_OK) {
-                    phys = addrs[0];
-                }
-            } else {
-                zx_paddr_t* addrs = malloc(sizeof(*addrs) * num_entries);
-                if (addrs == NULL) {
-                    status = ZX_ERR_NO_MEMORY;
-                    goto lookup_failed;
-                }
-                status = zx_bti_pin(bti_handle, options, vmo_handle, 0,
-                                    ROUNDUP(size, PAGE_SIZE), addrs, num_entries);
-                if (status != ZX_OK) {
-                    free(addrs);
-                    goto lookup_failed;
-                }
-                phys = addrs[0];
-                free(addrs);
-            }
+        ZX_DEBUG_ASSERT(offset == 0);
+        status = pin_contig_buffer(bti_handle, vmo_handle, size, &phys);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "io_buffer: init pin failed %d size: %zu\n", status, size);
+            zx_vmar_unmap(zx_vmar_root_self(), virt, size);
+            zx_handle_close(vmo_handle);
+            return status;
         }
     }
 
@@ -108,12 +116,6 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_ha
     buffer->phys_count = 0;
 
     return ZX_OK;
-
-lookup_failed:
-    zxlogf(ERROR, "io_buffer: zx_vmo_op_range failed %d size: %zu\n", status, size);
-    zx_vmar_unmap(zx_vmar_root_self(), virt, size);
-    zx_handle_close(vmo_handle);
-    return status;
 }
 
 zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t alignment_log2,
@@ -230,12 +232,21 @@ zx_status_t io_buffer_init_physical_with_bti(io_buffer_t* buffer, zx_handle_t bt
         return status;
     }
 
+    zx_paddr_t phys;
+    status = pin_contig_buffer(bti, vmo_handle, size, &phys);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "io_buffer: init pin failed %d size: %zu\n", status, size);
+        zx_vmar_unmap(zx_vmar_root_self(), virt, size);
+        zx_handle_close(vmo_handle);
+        return status;
+    }
+
     buffer->bti_handle = bti;
     buffer->vmo_handle = vmo_handle;
     buffer->size = size;
     buffer->offset = 0;
     buffer->virt = (void *)virt;
-    buffer->phys = addr;
+    buffer->phys = phys;
     buffer->phys_list = NULL;
     buffer->phys_count = 0;
     return ZX_OK;
