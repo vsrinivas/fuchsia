@@ -266,7 +266,12 @@ int main(int argc, char** argv) {
   }
   // Setup interrupt controller.
   machina::InterruptController interrupt_controller;
+#if __aarch64__
+  status = interrupt_controller.Init(&guest, cfg.gic_version());
+#elif __x86_64__
   status = interrupt_controller.Init(&guest);
+#endif
+
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create interrupt controller";
     return status;

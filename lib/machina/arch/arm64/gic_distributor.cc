@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/machina/arch/arm64/gic_distributor.h"
-
 #include <fbl/auto_lock.h>
 
 #include "garnet/lib/machina/address.h"
@@ -14,19 +13,23 @@
 
 namespace machina {
 
-static constexpr uint64_t kGicRevision = 2;
+static constexpr uint32_t kGicv2Revision = 2;
+static constexpr uint32_t kGicv3Revision = 3;
+static constexpr uint32_t kGicdCtlr      = 0x7;
 
 // clang-format off
 
 enum GicdRegister : uint64_t {
     CTL           = 0x000,
     TYPE          = 0x004,
+    IGROUPR0      = 0x080,
+    IGROUPR31     = 0x0FC,
     ISENABLE0     = 0x100,
-    ISENABLE7     = 0x11c,
+    ISENABLE31    = 0x11c,
     ICENABLE0     = 0x180,
-    ICENABLE7     = 0x19c,
+    ICENABLE31    = 0x19c,
     ICPEND0       = 0x280,
-    ICPEND15      = 0x2bc,
+    ICPEND31      = 0x2bc,
     ICFG0         = 0xc00,
     ICFG1         = 0xc04,
     ICFG31        = 0xc7c,
@@ -38,8 +41,14 @@ enum GicdRegister : uint64_t {
     ITARGETS7     = 0x81c,
     ITARGETS8     = 0x820,
     ITARGETS63    = 0x8fc,
+    IGRPMODR0     = 0xd00,
+    IGRPMODR31    = 0xd7c,
     SGI           = 0xf00,
-    PID2          = 0xfe8,
+    PID2_v2       = 0xfe8,
+    // This is the offset of PID2 register when are running GICv3,
+    // since the offset mappings of GICD & GICR are 0x1000 apart
+    PID2_v2_v3    = 0x1fe8,
+    PID2_v3       = 0xffe8,
 };
 
 // Target CPU for the software-generated interrupt.
@@ -64,8 +73,12 @@ struct SoftwareGeneratedInterrupt {
   }
 };
 
-static inline uint32_t typer_it_lines(uint32_t num_interrupts) {
-  return set_bits((num_interrupts >> 5) - 1, 4, 0);
+static inline uint32_t typer_it_lines(uint32_t num_interrupts, Gic version) {
+  if (version == Gic::V2) {
+    return set_bits((num_interrupts >> 5) - 1, 4, 0);
+  } else {
+    return set_bits((num_interrupts >> 5) - 1, 23, 19);
+  }
 }
 
 static inline uint32_t typer_cpu_number(uint8_t num_cpus) {
@@ -76,9 +89,34 @@ static inline uint32_t pidr2_arch_rev(uint32_t revision) {
   return set_bits(revision, 7, 4);
 }
 
-zx_status_t GicDistributor::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::MMIO_SYNC, kGicDistributorPhysBase,
-                              kGicDistributorSize, 0, this);
+zx_status_t GicDistributor::Init(Guest* guest, Gic version) {
+  zx_status_t status;
+  gic_version_ = version;
+
+  if (version == Gic::V2) {
+    status = guest->CreateMapping(TrapType::MMIO_SYNC, kGicv2DistributorPhysBase,
+                             kGicv2DistributorSize, 0, this);
+  } else {
+    // Map the distributor
+    status = guest->CreateMapping(TrapType::MMIO_SYNC, kGicv3DistributorPhysBase,
+                             kGicv3DistributorSize, 0, this);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // Map the redistributor RD Base
+    status = guest->CreateMapping(TrapType::MMIO_SYNC, kGicv3ReDistributorPhysBase,
+                             kGicv3ReDistributorSize, 0, this);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // Also map the redistributor SGI Base
+    status = guest->CreateMapping(TrapType::MMIO_SYNC,
+                                  kGicv3ReDistributor_SGIPhysBase,
+                                  kGicv3ReDistributor_SGISize, 0, this);
+  }
+  return status;
 }
 
 zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
@@ -88,7 +126,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
 
   switch (addr) {
     case GicdRegister::TYPE:
-      value->u32 = typer_it_lines(kNumInterrupts) | typer_cpu_number(num_vcpus_);
+      value->u32 = typer_it_lines(kNumInterrupts, gic_version_) | typer_cpu_number(num_vcpus_);
       return ZX_OK;
     case GicdRegister::ICFG0:
       // SGIs are RAO/WI.
@@ -111,8 +149,17 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
       value->u32 = *reinterpret_cast<const uint32_t*>(cpu_mask);
       return ZX_OK;
     }
-    case GicdRegister::PID2:
-      value->u32 = pidr2_arch_rev(kGicRevision);
+    case GicdRegister::PID2_v2_v3:
+      value->u32 = pidr2_arch_rev(kGicv3Revision);
+      return ZX_OK;
+    case GicdRegister::PID2_v2:
+      value->u32 = pidr2_arch_rev(kGicv2Revision);
+      return ZX_OK;
+    case GicdRegister::PID2_v3:
+      value->u32 = pidr2_arch_rev(kGicv3Revision);
+      return ZX_OK;
+    case GicdRegister::CTL:
+      value->u32 = kGicdCtlr;
       return ZX_OK;
     default:
       FXL_LOG(ERROR) << "Unhandled GIC distributor address read 0x" << std::hex
@@ -157,13 +204,13 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       }
       return TargetInterrupt(sgi.vector, cpu_mask);
     }
-    case GicdRegister::ISENABLE0... GicdRegister::ISENABLE7: {
+    case GicdRegister::ISENABLE0... GicdRegister::ISENABLE31: {
       fbl::AutoLock lock(&mutex_);
       uint8_t* enable = &enabled_[addr - GicdRegister::ISENABLE0];
       *reinterpret_cast<uint32_t*>(enable) |= value.u32;
       return ZX_OK;
     }
-    case GicdRegister::ICENABLE0... GicdRegister::ICENABLE7: {
+    case GicdRegister::ICENABLE0... GicdRegister::ICENABLE31: {
       fbl::AutoLock lock(&mutex_);
       uint8_t* enable = &enabled_[addr - GicdRegister::ICENABLE0];
       *reinterpret_cast<uint32_t*>(enable) &= ~value.u32;
@@ -172,8 +219,10 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
     case GicdRegister::CTL:
     case GicdRegister::ICACTIVE0... GicdRegister::ICACTIVE15:
     case GicdRegister::ICFG0... GicdRegister::ICFG31:
-    case GicdRegister::ICPEND0... GicdRegister::ICPEND15:
+    case GicdRegister::ICPEND0... GicdRegister::ICPEND31:
     case GicdRegister::IPRIORITY0... GicdRegister::IPRIORITY255:
+    case GicdRegister::IGROUPR0... GicdRegister::IGROUPR31:
+    case GicdRegister::IGRPMODR0... GicdRegister::IGRPMODR31:
       return ZX_OK;
     default:
       FXL_LOG(ERROR) << "Unhandled GIC distributor address write 0x" << std::hex

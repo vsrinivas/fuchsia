@@ -17,6 +17,14 @@ $ fx full-build
 $ fx boot
 ```
 
+## Building for QEMU
+Configure, build, and boot the guest package as follows:
+```
+$ fx set arm64 --packages "garnet/packages/experimental/guest"
+$ fx full-build
+$ fx run
+```
+
 ## Running guests
 After netbooting the target device, to run Zircon:
 ```

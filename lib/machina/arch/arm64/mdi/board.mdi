@@ -59,7 +59,17 @@ kernel = {
         gich-offset = 0x4000
         gicv-offset = 0x6000
         ipi-base = 13
+        optional = true
         msi = true
+    }
+    arm-gic-v3 = {
+        base-phys = 0xe82b0000
+        base-virt = PERIPH_VIRT + 0x01b0000
+        gicd-offset = 0x00000
+        gicr-offset = 0xa0000
+        gicr-stride = 0x20000
+        optional = true
+        ipi-base = 13
     }
     arm-psci = {
         use-smc = true

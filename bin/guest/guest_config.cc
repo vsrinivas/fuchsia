@@ -46,6 +46,7 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--balloon-threshold=[pages]     Number of unused pages to allow the guest to\n";
   std::cerr << "\t                                retain. Has no effect unless -m is also used\n";
   std::cerr << "\t--balloon-demand-page           Demand-page balloon deflate requests\n";
+  std::cerr << "\t--gic                           Version 2 or 3\n";
   std::cerr << "\n";
   std::cerr << "BLOCK SPEC\n";
   std::cerr << "\n";
@@ -315,6 +316,30 @@ static GuestConfigParser::OptionHandler parse_display(GuestDisplay* out) {
   };
 }
 
+static GuestConfigParser::OptionHandler parse_gic(Gic* out) {
+  return [out](const std::string& key, const std::string& value) {
+    if (value.empty()) {
+      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
+                     << "=<value>)";
+      return ZX_ERR_INVALID_ARGS;
+    }
+    uint32_t number;
+    if (!fxl::StringToNumberWithError<uint32_t>(value, &number)) {
+      FXL_LOG(ERROR) << "Unable to convert '" << value << "' into a number";
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (number == 2) {
+      *out = Gic::V2;
+    } else if (number == 3) {
+      *out = Gic::V3;
+    } else {
+      FXL_LOG(ERROR) << "Invalid GIC version";
+      return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
+  };
+}
+
 GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
   {"zircon", save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
       {"linux",
@@ -333,6 +358,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
       {"balloon-threshold", parse_number(&cfg_->balloon_pages_threshold_)},
       {"display", parse_display(&cfg_->display_)},
       {"block-wait", set_flag(&cfg_->block_wait_, true)},
+      {"gic", parse_gic(&cfg_->gic_version_)},
 }
 {}
 

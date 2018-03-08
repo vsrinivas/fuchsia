@@ -15,6 +15,11 @@
 
 #include "garnet/lib/machina/block_dispatcher.h"
 
+enum class Gic {
+  V2 = 2,
+  V3 = 3,
+};
+
 struct BlockSpec {
   std::string path;
   machina::BlockDispatcher::Guid guid;
@@ -52,6 +57,7 @@ class GuestConfig {
   bool balloon_demand_page() const { return balloon_demand_page_; }
   GuestDisplay display() const { return display_; }
   bool block_wait() const { return block_wait_; }
+  Gic gic_version() const {return gic_version_;}
 
  private:
   friend class GuestConfigParser;
@@ -67,6 +73,7 @@ class GuestConfig {
   bool balloon_demand_page_ = false;
   GuestDisplay display_ = GuestDisplay::SCENIC;
   bool block_wait_ = false;
+  Gic gic_version_ = Gic::V2;
 };
 
 class GuestConfigParser {
