@@ -14,6 +14,7 @@ class TestListenStream : public ListenStream {
   ~TestListenStream() override {}
 
   // ListenStream:
+  void StartCall(void* tag) override {}
   void ReadInitialMetadata(void* tag) override {}
   void Read(google::firestore::v1beta1::ListenResponse* response,
             void* tag) override {
