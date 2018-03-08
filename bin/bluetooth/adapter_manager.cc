@@ -224,8 +224,6 @@ void AdapterManager::CancelInitTimeout() {
 }
 
 void AdapterManager::SetActiveAdapterInternal(Adapter* adapter) {
-  FXL_DCHECK(adapter);
-
   if (active_adapter_) {
     // Tell the current active adapter to close all of its handles.
     FXL_DCHECK(active_adapter_->host());
