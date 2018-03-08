@@ -25,11 +25,10 @@ bool FakeChannelTest::Expect(const common::ByteBuffer& expected) {
   bool success = false;
   auto cb = [&expected, &success, this](auto cb_packet) {
     success = common::ContainersEqual(expected, *cb_packet);
-    fsl::MessageLoop::GetCurrent()->QuitNow();
   };
 
   fake_chan()->SetSendCallback(cb, message_loop()->task_runner());
-  RunMessageLoop();
+  RunUntilIdle();
 
   return success;
 }

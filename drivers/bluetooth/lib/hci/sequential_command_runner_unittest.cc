@@ -92,7 +92,6 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
   auto result_cb = [&, this](bool cb_result) {
     result = cb_result;
     result_cb_called++;
-    message_loop()->QuitNow();
   };
 
   int cb_called = 0;
@@ -112,7 +111,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
 
   cmd_runner.RunCommands(result_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(0, cb_called);
@@ -129,7 +128,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
 
   cmd_runner.RunCommands(result_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(0, cb_called);
@@ -147,7 +146,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
 
   cmd_runner.RunCommands(result_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(1, cb_called);
@@ -164,7 +163,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
 
   cmd_runner.RunCommands(result_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(2, cb_called);
@@ -182,7 +181,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
 
   cmd_runner.RunCommands(result_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
   EXPECT_EQ(0, cb_called);
@@ -229,7 +228,6 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   auto result_cb = [&, this](bool cb_result) {
     result = cb_result;
     result_cb_called++;
-    message_loop()->QuitNow();
   };
 
   int cb_called = 0;
@@ -252,9 +250,8 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   cmd_runner.Cancel();
 
   // Since |result_cb| is expected to not get called (which would normally quit
-  // the message loop), we set a shorter-than-usual timeout for the message loop
-  // here.
-  RunMessageLoop(2);
+  // the message loop) - we run until we reach a steady-state waiting.
+  RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
 
@@ -277,10 +274,8 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   cmd_runner.RunCommands(result_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
 
-  // Since |result_cb| is expected to not get called (which would normally quit
-  // the message loop), we set a shorter-than-usual timeout for the message loop
-  // here.
-  RunMessageLoop(2);
+  // |result_cb| is expected to not get called.
+  RunUntilIdle();
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
 
@@ -311,7 +306,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   cmd_runner.RunCommands(result_cb);
   EXPECT_FALSE(cmd_runner.IsReady());
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(cmd_runner.IsReady());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());

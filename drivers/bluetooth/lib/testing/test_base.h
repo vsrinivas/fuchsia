@@ -45,6 +45,11 @@ class TestBase : public ::testing::Test {
     message_loop_.Run();
   }
 
+  // Runs the message loop until it would wait.
+  void RunUntilIdle() {
+    message_loop_.RunUntilIdle();
+  }
+
   // Getters for internal fields frequently used by tests.
   fsl::MessageLoop* message_loop() { return &message_loop_; }
 

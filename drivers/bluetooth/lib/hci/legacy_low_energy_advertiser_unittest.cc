@@ -67,7 +67,6 @@ class HCI_LegacyLowEnergyAdvertiserTest : public TestingBase {
     return [this](uint32_t interval_ms, Status status) {
       last_status_ = status;
       EXPECT_EQ(kSuccess, status);
-      message_loop()->PostQuitTask();
     };
   }
 
@@ -75,7 +74,6 @@ class HCI_LegacyLowEnergyAdvertiserTest : public TestingBase {
     return [this](uint32_t interval_ms, Status status) {
       last_status_ = status;
       EXPECT_NE(kSuccess, status);
-      message_loop()->PostQuitTask();
     };
   }
 
@@ -119,7 +117,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertisementSizeTest) {
   advertiser()->StartAdvertising(kPublicAddress, reasonable_data, scan_data,
                                  nullptr, 1000, false, GetSuccessCallback());
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
 
@@ -143,7 +141,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, ConnectionTest) {
   auto conn_cb = [&link](auto cb_link) { link = std::move(cb_link); };
   advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb, 1000,
                                  false, GetSuccessCallback());
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(MoveLastStatus());
 
   // The connection manager will hand us a connection when one gets created.
@@ -156,25 +154,15 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, ConnectionTest) {
   link->set_closed();
 
   // Advertising state should get cleared.
-  bool disabling = true;
-  auto disabled_cb = [this, &disabling] {
-    // StopAdvertising() sends multiple HCI commands. We only check that the
-    // first one succeeded. StartAdvertising cancels the rest of the sequence
-    // below.
-    if (disabling && !test_device()->le_advertising_state().enabled &&
-        test_device()->le_advertising_state().data_length == 0u) {
-      message_loop()->QuitNow();
-    }
-  };
-  test_device()->SetAdvertisingStateCallback(disabled_cb,
-                                             message_loop()->task_runner());
-  RunMessageLoop();
+  RunUntilIdle();
+  // StopAdvertising() sends multiple HCI commands. We only check that the
+  // first one succeeded. StartAdvertising cancels the rest of the sequence
+  // below.
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
 
-  disabling = false;
   advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb, 1000,
                                  false, GetSuccessCallback());
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(MoveLastStatus());
 }
 
@@ -193,7 +181,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, RestartInConnectionCallback) {
 
   advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb, 1000,
                                  false, GetSuccessCallback());
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
 
@@ -235,7 +223,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartAndStop) {
   advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, kIntervalMs,
                                  false, GetSuccessCallback());
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
 
@@ -247,17 +235,9 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartAndStop) {
       test_device()->le_advertising_state().advertised_view(), ad));
   EXPECT_EQ(0u, test_device()->le_advertising_state().scan_rsp_view().size());
 
-  test_device()->SetAdvertisingStateCallback(
-      [this]() {
-        if (!test_device()->le_advertising_state().enabled) {
-          message_loop()->PostQuitTask();
-        }
-      },
-      message_loop()->task_runner());
-
   EXPECT_TRUE(advertiser()->StopAdvertising(addr));
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
 }
@@ -287,7 +267,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStopping) {
   // Get to a started state.
   advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
                                  GetSuccessCallback());
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
 
@@ -302,6 +282,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStopping) {
                                              message_loop()->task_runner());
 
   EXPECT_TRUE(advertiser()->StopAdvertising(addr));
+  // Runs until we've _started_ disabling advetising.
   RunMessageLoop();
 
   // The stop sequence should have started.
@@ -311,7 +292,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStopping) {
   disabling = false;
   advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
                                  GetSuccessCallback());
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
 }
@@ -326,7 +307,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
   advertiser()->StartAdvertising(kPeerAddress, ad, scan_data, nullptr, 1000,
                                  false, GetSuccessCallback());
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
 
@@ -341,19 +322,9 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
   EXPECT_TRUE(ContainersEqual(
       test_device()->le_advertising_state().advertised_view(), ad));
 
-  test_device()->SetAdvertisingStateCallback(
-      [this]() {
-        if (!test_device()->le_advertising_state().enabled &&
-            test_device()->le_advertising_state().data_length == 0 &&
-            test_device()->le_advertising_state().scan_rsp_length == 0) {
-          message_loop()->PostQuitTask();
-        }
-      },
-      message_loop()->task_runner());
-
   EXPECT_TRUE(advertiser()->StopAdvertising(kPeerAddress));
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
   EXPECT_EQ(0u, test_device()->le_advertising_state().advertised_view().size());
@@ -367,7 +338,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
 
   advertiser()->StartAdvertising(kPeerAddress, ad, scan_data, nullptr, 1000,
                                  false, GetSuccessCallback());
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
@@ -393,7 +364,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertiseUpdate) {
 
   advertiser()->StartAdvertising(kPeerAddress, ad, scan_data, nullptr, 1000,
                                  false, GetSuccessCallback());
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
@@ -403,7 +374,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertiseUpdate) {
   ad[0] = 0xff;
   advertiser()->StartAdvertising(kPeerAddress, ad, scan_data, nullptr, 2500,
                                  false, GetSuccessCallback());
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);

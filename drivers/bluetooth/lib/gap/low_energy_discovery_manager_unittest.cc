@@ -163,10 +163,9 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
     discovery_manager()->StartDiscovery([&](auto cb_session) {
       FXL_DCHECK(cb_session);
       session = std::move(cb_session);
-      message_loop()->QuitNow();
     });
 
-    RunMessageLoop();
+    RunUntilIdle();
     FXL_DCHECK(session);
     return session;
   }
@@ -184,20 +183,17 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
 using GAP_LowEnergyDiscoveryManagerTest = LowEnergyDiscoveryManagerTest;
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryAndStop) {
-  set_quit_message_loop_on_scan_state_change(true);
-
   std::unique_ptr<LowEnergyDiscoverySession> session;
   discovery_manager()->StartDiscovery([this, &session](auto cb_session) {
     session = std::move(cb_session);
-    message_loop()->QuitNow();
   });
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   // The test fixture will be notified of the change in scan state before we
   // receive the session.
   EXPECT_TRUE(scan_enabled());
-  RunMessageLoop();
+  RunUntilIdle();
 
   ASSERT_TRUE(session);
   EXPECT_TRUE(session->active());
@@ -205,34 +201,31 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryAndStop) {
   session->Stop();
   EXPECT_FALSE(session->active());
 
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_FALSE(scan_enabled());
 }
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryAndStopByDeleting) {
-  set_quit_message_loop_on_scan_state_change(true);
-
   // Start discovery but don't acquire ownership of the received session. This
   // should immediately terminate the session.
   std::unique_ptr<LowEnergyDiscoverySession> session;
   discovery_manager()->StartDiscovery([this, &session](auto cb_session) {
     session = std::move(cb_session);
-    message_loop()->QuitNow();
   });
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   // The test fixture will be notified of the change in scan state before we
   // receive the session.
   EXPECT_TRUE(scan_enabled());
-  RunMessageLoop();
+  RunUntilIdle();
 
   ASSERT_TRUE(session);
   EXPECT_TRUE(session->active());
 
   session = nullptr;
 
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_FALSE(scan_enabled());
 }
 
@@ -258,7 +251,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryFailure) {
   discovery_manager()->StartDiscovery(
       [](auto session) { EXPECT_FALSE(session); });
 
-  RunMessageLoop(1);
+  RunUntilIdle();
   EXPECT_FALSE(scan_enabled());
 }
 
@@ -270,13 +263,11 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWhileScanning) {
   auto cb = [this, &cb_count, &sessions](auto session) {
     sessions.push_back(std::move(session));
     cb_count++;
-    if (cb_count == 1 || cb_count == kExpectedSessionCount)
-      message_loop()->QuitNow();
   };
 
   discovery_manager()->StartDiscovery(cb);
 
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(scan_enabled());
   EXPECT_EQ(1u, sessions.size());
 
@@ -286,25 +277,24 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWhileScanning) {
     discovery_manager()->StartDiscovery(cb);
   }
 
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(scan_enabled());
   EXPECT_EQ(kExpectedSessionCount, sessions.size());
 
   // Remove one session from the list. Scan should continue.
   sessions.pop_back();
-  RunMessageLoop(1);
+  RunUntilIdle();
   EXPECT_TRUE(scan_enabled());
 
   // Remove all but one session from the list. Scan should continue.
   sessions.erase(sessions.begin() + 1, sessions.end());
-  RunMessageLoop(1);
+  RunUntilIdle();
   EXPECT_TRUE(scan_enabled());
   EXPECT_EQ(1u, sessions.size());
 
   // Remove the last session.
   sessions.clear();
-  set_quit_message_loop_on_scan_state_change(true);
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_FALSE(scan_enabled());
 }
 
@@ -316,22 +306,19 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWhilePendingStart) {
   auto cb = [this, &cb_count, &sessions](auto session) {
     sessions.push_back(std::move(session));
     cb_count++;
-    if (cb_count == kExpectedSessionCount)
-      message_loop()->QuitNow();
   };
 
   for (size_t i = 0u; i < kExpectedSessionCount; i++) {
     discovery_manager()->StartDiscovery(cb);
   }
 
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(scan_enabled());
   EXPECT_EQ(kExpectedSessionCount, sessions.size());
 
   // Remove all sessions. This should stop the scan.
   sessions.clear();
-  set_quit_message_loop_on_scan_state_change(true);
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_FALSE(scan_enabled());
 }
 
@@ -346,7 +333,6 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
       // Hold on to only the last session object. The rest should get deleted
       // within the callback.
       session = std::move(cb_session);
-      message_loop()->QuitNow();
     }
   };
 
@@ -354,12 +340,11 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
     discovery_manager()->StartDiscovery(cb);
   }
 
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(scan_enabled());
   EXPECT_TRUE(session);
 
-  // Make sure we're still scanning after running the loop for a bit.
-  RunMessageLoop(1);
+  RunUntilIdle();
   EXPECT_EQ(kExpectedSessionCount, cb_count);
   EXPECT_TRUE(scan_enabled());
 
@@ -375,10 +360,9 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWhilePendingStop) {
 
   discovery_manager()->StartDiscovery([this, &session](auto cb_session) {
     session = std::move(cb_session);
-    message_loop()->QuitNow();
   });
 
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(scan_enabled());
   EXPECT_TRUE(session);
 
@@ -416,28 +400,26 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryFailureManyPending) {
     // |session| should contain nullptr as the request will fail.
     EXPECT_FALSE(session);
     cb_count++;
-    if (cb_count == kExpectedSessionCount)
-      message_loop()->QuitNow();
   };
 
   for (size_t i = 0u; i < kExpectedSessionCount; i++) {
     discovery_manager()->StartDiscovery(cb);
   }
 
-  RunMessageLoop(1);
+  RunUntilIdle();
   EXPECT_FALSE(scan_enabled());
 }
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestart) {
   // Set a very short scan period for the sake of the test.
   discovery_manager()->set_scan_period(200);
-  set_quit_message_loop_on_scan_state_change(true);
 
   std::unique_ptr<LowEnergyDiscoverySession> session;
   discovery_manager()->StartDiscovery(
       [&session](auto cb_session) { session = std::move(cb_session); });
 
   // We should observe the scan state become enabled -> disabled -> enabled.
+  set_quit_message_loop_on_scan_state_change(true);
   RunMessageLoop();
   EXPECT_TRUE(scan_enabled());
 
@@ -448,10 +430,8 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestart) {
   EXPECT_TRUE(scan_enabled());
 
   // Allow enough time for the discovery manager to process the updated scan
-  // state. (We simply let the MessageLoop process any remaining events that
-  // have been posted on it, before shutting down).
-  message_loop()->PostQuitTask();
-  RunMessageLoop();
+  // state.
+  RunUntilIdle();
 }
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartFailure) {
@@ -477,10 +457,9 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartFailure) {
   bool session_error = false;
   session->set_error_callback([&session_error, this] {
     session_error = true;
-    message_loop()->QuitNow();
   });
 
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_FALSE(scan_enabled());
   EXPECT_TRUE(session_error);
 }
@@ -603,7 +582,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
   sessions[4]->filter()->set_connectable(false);
   sessions[4]->SetResultCallback(result_cb);
 
-  RunMessageLoop(1);
+  RunUntilIdle();
 
   EXPECT_EQ(5u, sessions.size());
 
@@ -653,16 +632,11 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
   LowEnergyDiscoverySession::DeviceFoundCallback result_cb =
       [this, &devices_session0](const auto& device) {
         devices_session0.insert(device.address());
-
-        // We expect this session to discover all devices. End the loop once all
-        // devices have been cached.
-        if (devices_session0.size() == 3)
-          message_loop()->QuitNow();
       };
   sessions.push_back(StartDiscoverySession());
   sessions[0]->SetResultCallback(result_cb);
 
-  RunMessageLoop();
+  RunUntilIdle();
   ASSERT_EQ(3u, devices_session0.size());
 
   // Session 1 is interested in performing limited discovery.
@@ -709,7 +683,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
 #define EXPECT_CONTAINS(addr, dev_list) \
   EXPECT_TRUE(dev_list.find(addr) != dev_list.end())
   // At this point all sessions should have processed all devices at least once
-  // without running the message loop results for Sessions 1, 2, 3, and 4 should
+  // without running the message loop; results for Sessions 1, 2, 3, and 4 should
   // have come from the cache.
 
   // Session 0: Should have seen all devices at least once.

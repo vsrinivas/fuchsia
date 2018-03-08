@@ -198,12 +198,11 @@ TEST_F(L2CAP_SignalingChannelTest, HandlePacket) {
   sig()->set_packet_callback([&cmd, &called, this](auto packet) {
     EXPECT_TRUE(common::ContainersEqual(cmd, packet.data()));
     called = true;
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
   });
 
   fake_chan()->Receive(cmd);
 
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(called);
 }
 

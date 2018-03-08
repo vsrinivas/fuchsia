@@ -154,7 +154,6 @@ class GAP_LowEnergyAdvertisingManagerTest : public TestingBase {
       EXPECT_TRUE(ad_id.empty());
       EXPECT_NE(hci::kSuccess, status);
       last_status_ = status;
-      message_loop()->PostQuitTask();
     };
   }
 
@@ -164,7 +163,6 @@ class GAP_LowEnergyAdvertisingManagerTest : public TestingBase {
       EXPECT_FALSE(ad_id.empty());
       EXPECT_EQ(hci::kSuccess, status);
       last_status_ = status;
-      message_loop()->PostQuitTask();
     };
   }
 
@@ -206,7 +204,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, Success) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
                       false /* anonymous */, GetSuccessCallback());
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(1u, ad_store().size());
@@ -220,7 +218,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, DataSize) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
                       false /* anonymous */, GetSuccessCallback());
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   fake_ad = CreateFakeAdvertisingData(kDefaultMaxAdSize + 1);
 
@@ -230,7 +228,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, DataSize) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
                       false /* anonymous */, GetErrorCallback());
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(1u, ad_store().size());
@@ -250,7 +248,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, RegisterUnregister) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
                       false /* anonymous */, GetSuccessCallback());
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(1u, ad_store().size());
@@ -261,7 +259,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, RegisterUnregister) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
                       false /* anonymous */, GetSuccessCallback());
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(2u, ad_store().size());
@@ -286,7 +284,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, AdvertiserError) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestIntervalMs,
                       false /* anonymous */, GetErrorCallback());
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
 }
@@ -307,20 +305,19 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectCallback) {
                                                     hci::ConnectionPtr link) {
     called = true;
     EXPECT_EQ(advertised_id, connected_id);
-    message_loop()->PostQuitTask();
   };
 
   am.StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestIntervalMs,
                       false /* anonymous */, GetSuccessCallback());
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   advertised_id = last_ad_id();
 
   incoming_conn_cb(std::move(link));
 
-  RunMessageLoop();
+  RunUntilIdle();
 }
 
 //  - Error: Connectable and Anonymous at the same time
@@ -329,9 +326,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectAdvertiseError) {
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;
 
-  auto connect_cb = [this](std::string connected_id, hci::ConnectionPtr conn) {
-    message_loop()->PostQuitTask();
-  };
+  auto connect_cb = [this](std::string connected_id, hci::ConnectionPtr conn) { };
 
   am.StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestIntervalMs,
                       true /* anonymous */, GetErrorCallback());
@@ -351,7 +346,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, SendsCorrectData) {
   am.StartAdvertising(fake_ad, scan_rsp, nullptr, interval_ms,
                       false /* anonymous */, GetSuccessCallback());
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(1u, ad_store().size());

@@ -185,7 +185,6 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveData) {
   auto smp_rx_cb = [&smp_cb_called, this](const SDU& sdu) {
     EXPECT_EQ(0u, sdu.length());
     smp_cb_called = true;
-    message_loop()->QuitNow();
   };
 
   auto att_chan =
@@ -223,7 +222,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveData) {
       // L2CAP B-frame (empty)
       0x00, 0x00, 0x06, 0x00));
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_TRUE(smp_cb_called);
   ASSERT_EQ(2u, sdus.size());
@@ -245,7 +244,6 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
   auto smp_rx_cb = [&smp_cb_called, this](const SDU& sdu) {
     EXPECT_EQ(0u, sdu.length());
     smp_cb_called = true;
-    message_loop()->QuitNow();
   };
 
   // ATT channel
@@ -268,25 +266,21 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
 
   std::unique_ptr<Channel> att_chan, smp_chan;
 
-  // Allow enough time for all packets to be received before creating the
-  // channels.
-  message_loop()->task_runner()->PostDelayedTask(
-      [&att_chan, &smp_chan, att_rx_cb, smp_rx_cb, this] {
-        chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
-                            hci::Connection::Role::kMaster);
+  // Run the loop so all packets are received.
+  RunUntilIdle();
 
-        att_chan =
-            OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
-        FXL_DCHECK(att_chan);
+  chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
+                      hci::Connection::Role::kMaster);
 
-        smp_chan =
-            OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
-        FXL_DCHECK(smp_chan);
-      },
-      fxl::TimeDelta::FromMilliseconds(100));
+  att_chan =
+      OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
+  FXL_DCHECK(att_chan);
 
-  RunMessageLoop();
+  smp_chan =
+      OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+  FXL_DCHECK(smp_chan);
 
+  RunUntilIdle();
   EXPECT_TRUE(smp_cb_called);
   EXPECT_EQ(kPacketCount, packet_count);
 }
@@ -309,7 +303,6 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
   auto smp_rx_cb = [&smp_cb_called, this](const SDU& sdu) {
     EXPECT_EQ(0u, sdu.length());
     smp_cb_called = true;
-    message_loop()->QuitNow();
   };
 
   // ATT channel
@@ -332,21 +325,16 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
 
   std::unique_ptr<Channel> att_chan, smp_chan;
 
-  // Allow enough time for all packets to be received before creating the
-  // channels.
-  message_loop()->task_runner()->PostDelayedTask(
-      [&att_chan, &smp_chan, att_rx_cb, smp_rx_cb, this] {
-        att_chan =
-            OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
-        FXL_DCHECK(att_chan);
+  // Run the loop so all packets are received.
+  RunUntilIdle();
 
-        smp_chan =
-            OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
-        FXL_DCHECK(smp_chan);
-      },
-      fxl::TimeDelta::FromMilliseconds(100));
+  att_chan = OpenFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
+  FXL_DCHECK(att_chan);
 
-  RunMessageLoop();
+  smp_chan = OpenFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+  FXL_DCHECK(smp_chan);
+
+  RunUntilIdle();
 
   EXPECT_TRUE(smp_cb_called);
   EXPECT_EQ(kPacketCount, packet_count);
@@ -376,7 +364,6 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
   auto smp_rx_cb = [&smp_cb_called, this](const SDU& sdu) {
     EXPECT_EQ(0u, sdu.length());
     smp_cb_called = true;
-    message_loop()->QuitNow();
   };
 
   // ATT channel
@@ -397,16 +384,13 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
       // L2CAP B-frame (empty)
       0x00, 0x00, 0x06, 0x00));
 
-  // Allow enough time for all packets to be received before creating the
-  // channels.
-  message_loop()->task_runner()->PostDelayedTask(
-      [&att_chan, &smp_chan, att_rx_cb, smp_rx_cb, this] {
-        att_chan->SetRxHandler(att_rx_cb, message_loop()->task_runner());
-        smp_chan->SetRxHandler(smp_rx_cb, message_loop()->task_runner());
-      },
-      fxl::TimeDelta::FromMilliseconds(100));
+  // Run the loop so all packets are received.
+  RunUntilIdle();
 
-  RunMessageLoop();
+  att_chan->SetRxHandler(att_rx_cb, message_loop()->task_runner());
+  smp_chan->SetRxHandler(smp_rx_cb, message_loop()->task_runner());
+
+  RunUntilIdle();
 
   EXPECT_TRUE(smp_cb_called);
   EXPECT_EQ(kPacketCount, packet_count);
@@ -432,13 +416,12 @@ TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
   std::unique_ptr<common::ByteBuffer> received;
   auto data_cb = [&received](const common::ByteBuffer& bytes) {
     received = std::make_unique<common::DynamicByteBuffer>(bytes);
-    fsl::MessageLoop::GetCurrent()->QuitNow();
   };
   test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 
   EXPECT_TRUE(att_chan->Send(common::NewBuffer('T', 'e', 's', 't')));
 
-  RunMessageLoop();
+  RunUntilIdle();
   ASSERT_TRUE(received);
 
   auto expected = common::CreateStaticByteBuffer(
@@ -457,7 +440,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
   constexpr size_t kMaxNumPackets =
       100;  // Make this large to avoid simulating flow-control.
   constexpr size_t kMaxDataSize = 5;
-  constexpr size_t kExpectedNumFragments = 5;
+  //constexpr size_t kExpectedNumFragments = 5;
 
   // No LE buffers.
   TearDown();
@@ -480,9 +463,6 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
     else if (handle == kTestHandle2)
       acl_fragments.push_back(
           std::make_unique<common::DynamicByteBuffer>(bytes));
-
-    if (le_fragments.size() + acl_fragments.size() == kExpectedNumFragments)
-      fsl::MessageLoop::GetCurrent()->QuitNow();
   };
   test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 
@@ -506,7 +486,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
   EXPECT_TRUE(
       sm_chan->Send(common::NewBuffer('G', 'o', 'o', 'd', 'b', 'y', 'e')));
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_EQ(2u, le_fragments.size());
   ASSERT_EQ(3u, acl_fragments.size());
@@ -561,7 +541,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
       100;  // This is large to avoid having to simulate flow-control
   constexpr size_t kMaxACLDataSize = 6;
   constexpr size_t kMaxLEDataSize = 10;
-  constexpr size_t kExpectedNumFragments = 3;
+  //constexpr size_t kExpectedNumFragments = 3;
 
   TearDown();
   SetUp(hci::DataBufferInfo(kMaxACLDataSize, kMaxNumPackets),
@@ -583,9 +563,6 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
     else if (handle == kTestHandle2)
       acl_fragments.push_back(
           std::make_unique<common::DynamicByteBuffer>(bytes));
-
-    if (le_fragments.size() + acl_fragments.size() == kExpectedNumFragments)
-      fsl::MessageLoop::GetCurrent()->QuitNow();
   };
   test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 
@@ -609,7 +586,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
   EXPECT_TRUE(
       sm_chan->Send(common::NewBuffer('G', 'o', 'o', 'd', 'b', 'y', 'e')));
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_EQ(1u, le_fragments.size());
   ASSERT_EQ(2u, acl_fragments.size());
@@ -650,7 +627,6 @@ TEST_F(L2CAP_ChannelManagerTest, LEConnectionParameterUpdateRequest) {
     EXPECT_EQ(0x01F3, params.max_latency());
     EXPECT_EQ(0x0C80, params.supervision_timeout());
     conn_param_cb_called = true;
-    fsl::MessageLoop::GetCurrent()->QuitNow();
   };
 
   chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
@@ -676,7 +652,7 @@ TEST_F(L2CAP_ChannelManagerTest, LEConnectionParameterUpdateRequest) {
       0x80, 0x0C));
   // clang-format on
 
-  RunMessageLoop(5);
+  RunUntilIdle();
   EXPECT_TRUE(conn_param_cb_called);
 }
 
