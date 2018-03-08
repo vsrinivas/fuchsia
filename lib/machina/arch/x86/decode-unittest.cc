@@ -15,25 +15,26 @@ TEST(InstDecode, failure) {
   ASSERT_EQ(inst_decode(nullptr, 0, nullptr, nullptr), ZX_ERR_BAD_STATE);
   ASSERT_EQ(inst_decode(nullptr, 32, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
 
-  uint8_t bad_rex[] = {0b0100'0000, 0x00, 0b00'000'000}; // rex opcode modrm
+  uint8_t bad_rex[] = {0b0100'0000, 0x00, 0b00'000'000};  // rex opcode modrm
   ASSERT_EQ(inst_decode(bad_rex, 1, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
   ASSERT_EQ(inst_decode(bad_rex, 2, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
   ASSERT_EQ(inst_decode(bad_rex, 3, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
 
-  uint8_t bad_len[] = {0x00, 0b00'000'000}; // opcode modrm
+  uint8_t bad_len[] = {0x00, 0b00'000'000};  // opcode modrm
   ASSERT_EQ(inst_decode(bad_len, 2, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST(InstDecode, mov_89) {
-  uint8_t bad_len[] = {0x89, 0, 0}; // opcode modrm ?
+  uint8_t bad_len[] = {0x89, 0, 0};  // opcode modrm ?
   ASSERT_EQ(inst_decode(bad_len, 3, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-  uint8_t bad_disp[] = {0x89, 0b01'000'000}; // opcode modrm
+  uint8_t bad_disp[] = {0x89, 0b01'000'000};  // opcode modrm
   ASSERT_EQ(inst_decode(bad_disp, 2, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-  uint8_t bad_h66[] = {0x66, 0b0100'1000, 0x89, 0b00'010'000}; // h66 rex opcode modrm
+  uint8_t bad_h66[] = {0x66, 0b0100'1000, 0x89,
+                       0b00'010'000};  // h66 rex opcode modrm
   ASSERT_EQ(inst_decode(bad_h66, 4, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
 
   // mov %ecx, (%rax)
-  uint8_t mov[] = {0x89, 0b00'001'000}; // opcode modrm
+  uint8_t mov[] = {0x89, 0b00'001'000};  // opcode modrm
   zx_vcpu_state_t vcpu_state;
   Instruction inst;
   ASSERT_EQ(inst_decode(mov, 2, &vcpu_state, &inst), ZX_OK);
@@ -44,7 +45,7 @@ TEST(InstDecode, mov_89) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov %r10d, (%rax)
-  uint8_t rex_mov[] = {0b0100'0100, 0x89, 0b00'010'000}; // rex opcode modrm
+  uint8_t rex_mov[] = {0b0100'0100, 0x89, 0b00'010'000};  // rex opcode modrm
   ASSERT_EQ(inst_decode(rex_mov, 3, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 4u);
@@ -53,7 +54,7 @@ TEST(InstDecode, mov_89) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov %ebx, 0x10(%rax)
-  uint8_t mov_disp_1[] = {0x89, 0b01'011'000, 0x10}; // opcode modrm disp
+  uint8_t mov_disp_1[] = {0x89, 0b01'011'000, 0x10};  // opcode modrm disp
   ASSERT_EQ(inst_decode(mov_disp_1, 3, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 4u);
@@ -62,7 +63,8 @@ TEST(InstDecode, mov_89) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov %ebx, 0x1000000(%rax)
-  uint8_t mov_disp_4[] = {0x89, 0b10'011'000, 0, 0, 0, 0x1}; // opcode modrm dis4 disp3 disp2 disp1
+  uint8_t mov_disp_4[] = {0x89, 0b10'011'000, 0, 0,
+                          0,    0x1};  // opcode modrm dis4 disp3 disp2 disp1
   ASSERT_EQ(inst_decode(mov_disp_4, 6, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 4u);
@@ -71,7 +73,8 @@ TEST(InstDecode, mov_89) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov %r12, 0x11(%rax)
-  uint8_t rex_mov_disp[] = {0b0100'1100, 0x89, 0b01'100'000, 0x11}; // rex opcode modrm disp
+  uint8_t rex_mov_disp[] = {0b0100'1100, 0x89, 0b01'100'000,
+                            0x11};  // rex opcode modrm disp
   ASSERT_EQ(inst_decode(rex_mov_disp, 4, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 8u);
@@ -80,7 +83,8 @@ TEST(InstDecode, mov_89) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov %r14w, 0x13(%rax)
-  uint8_t h66_mov_disp[] = {0x66, 0b0100'0100, 0x89, 0b01'110'000, 0x13}; // h66 rex opcode modrm disp
+  uint8_t h66_mov_disp[] = {0x66, 0b0100'0100, 0x89, 0b01'110'000,
+                            0x13};  // h66 rex opcode modrm disp
   ASSERT_EQ(inst_decode(h66_mov_disp, 5, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 2u);
@@ -89,7 +93,7 @@ TEST(InstDecode, mov_89) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov %ebx, (%rax,%rcx,2)
-  uint8_t mov_sib[] = {0x89, 0b00'011'100, 0b01'001'000}; // opcode modrm sib
+  uint8_t mov_sib[] = {0x89, 0b00'011'100, 0b01'001'000};  // opcode modrm sib
   ASSERT_EQ(inst_decode(mov_sib, 3, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 4u);
@@ -98,7 +102,8 @@ TEST(InstDecode, mov_89) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov %ebx, 0x04(%rax,%rcx,1)
-  uint8_t mov_sib_disp[] = {0x89, 0b01'011'100, 0b00'001'000, 0x04}; // opcode modrm sib disp
+  uint8_t mov_sib_disp[] = {0x89, 0b01'011'100, 0b00'001'000,
+                            0x04};  // opcode modrm sib disp
   ASSERT_EQ(inst_decode(mov_sib_disp, 4, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 4u);
@@ -107,8 +112,9 @@ TEST(InstDecode, mov_89) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov %eax, 0x00ABCDEF
-  uint8_t mov_sib_nobase[] = {0x89, 0b00'000'100, 0b00'100'101, 0xEF,
-                              0xCD, 0xAB,         0x00}; // opcode modrm sib disp4 disp3 disp2 disp1
+  uint8_t mov_sib_nobase[] = {
+      0x89, 0b00'000'100, 0b00'100'101, 0xEF,
+      0xCD, 0xAB,         0x00};  // opcode modrm sib disp4 disp3 disp2 disp1
   ASSERT_EQ(inst_decode(mov_sib_nobase, 7, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 4u);
@@ -123,20 +129,20 @@ TEST(InstDecode, mov_88) {
   Instruction inst;
 
   // movb %ah, (%rsi)
-  uint8_t mov_ah[] = {0x88, 0b00'100'110}; // opcode modrm
+  uint8_t mov_ah[] = {0x88, 0b00'100'110};  // opcode modrm
   ASSERT_EQ(inst_decode(mov_ah, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
   // movb %bh, (%rsi)
-  uint8_t mov_bh[] = {0x88, 0b00'111'110}; // opcode modrm
+  uint8_t mov_bh[] = {0x88, 0b00'111'110};  // opcode modrm
   ASSERT_EQ(inst_decode(mov_bh, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
   // movb %ch, (%rsi)
-  uint8_t mov_ch[] = {0x88, 0b00'101'110}; // opcode modrm
+  uint8_t mov_ch[] = {0x88, 0b00'101'110};  // opcode modrm
   ASSERT_EQ(inst_decode(mov_ch, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
   // movb %dh, (%rsi)
-  uint8_t mov_dh[] = {0x88, 0b00'110'110}; // opcode modrm
+  uint8_t mov_dh[] = {0x88, 0b00'110'110};  // opcode modrm
   ASSERT_EQ(inst_decode(mov_dh, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
 
   // movb %dil,(%rsi)
-  uint8_t rex_mov[] = {0b0100'0000, 0x88, 0b00'111'110}; // rex opcode modrm
+  uint8_t rex_mov[] = {0b0100'0000, 0x88, 0b00'111'110};  // rex opcode modrm
   ASSERT_EQ(inst_decode(rex_mov, 3, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 1u);
@@ -146,15 +152,16 @@ TEST(InstDecode, mov_88) {
 }
 
 TEST(InstDecode, mov_8b) {
-  uint8_t bad_len[] = {0x8b, 0, 0}; // opcode modrm ?
+  uint8_t bad_len[] = {0x8b, 0, 0};  // opcode modrm ?
   ASSERT_EQ(inst_decode(bad_len, 3, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-  uint8_t bad_disp[] = {0x8b, 0b01'000'000}; // opcode modrm
+  uint8_t bad_disp[] = {0x8b, 0b01'000'000};  // opcode modrm
   ASSERT_EQ(inst_decode(bad_disp, 2, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-  uint8_t bad_h66[] = {0x66, 0b0100'1000, 0x8b, 0b00'010'000}; // h66 rex opcode modrm
+  uint8_t bad_h66[] = {0x66, 0b0100'1000, 0x8b,
+                       0b00'010'000};  // h66 rex opcode modrm
   ASSERT_EQ(inst_decode(bad_h66, 4, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
 
   // mov (%rax), %ecx
-  uint8_t mov[] = {0x8b, 0b00'001'000}; // opcode modrm
+  uint8_t mov[] = {0x8b, 0b00'001'000};  // opcode modrm
   zx_vcpu_state_t vcpu_state;
   Instruction inst;
   ASSERT_EQ(inst_decode(mov, 2, &vcpu_state, &inst), ZX_OK);
@@ -165,7 +172,7 @@ TEST(InstDecode, mov_8b) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov (%rax), %r10d
-  uint8_t rex_mov[] = {0b0100'0100, 0x8b, 0b00'010'000}; // rex opcode modrm
+  uint8_t rex_mov[] = {0b0100'0100, 0x8b, 0b00'010'000};  // rex opcode modrm
   ASSERT_EQ(inst_decode(rex_mov, 3, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 4u);
@@ -174,7 +181,7 @@ TEST(InstDecode, mov_8b) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov 0x10(%rax), %ebx
-  uint8_t mov_disp_1[] = {0x8b, 0b01'011'000, 0x10}; // opcode modrm disp
+  uint8_t mov_disp_1[] = {0x8b, 0b01'011'000, 0x10};  // opcode modrm disp
   ASSERT_EQ(inst_decode(mov_disp_1, 3, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 4u);
@@ -183,7 +190,8 @@ TEST(InstDecode, mov_8b) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov 0x10000000(%rax), %ebx
-  uint8_t mov_disp_4[] = {0x8b, 0b10'011'000, 0, 0, 0, 0x1}; // opcode modrm disp4 disp3 disp2 disp1
+  uint8_t mov_disp_4[] = {0x8b, 0b10'011'000, 0, 0,
+                          0,    0x1};  // opcode modrm disp4 disp3 disp2 disp1
   ASSERT_EQ(inst_decode(mov_disp_4, 6, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 4u);
@@ -192,7 +200,8 @@ TEST(InstDecode, mov_8b) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov 0x11(rax), %r12
-  uint8_t rex_mov_disp[] = {0b0100'1100, 0x8b, 0b01'100'000, 0x11}; // rex opcode modrm disp
+  uint8_t rex_mov_disp[] = {0b0100'1100, 0x8b, 0b01'100'000,
+                            0x11};  // rex opcode modrm disp
   ASSERT_EQ(inst_decode(rex_mov_disp, 4, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 8u);
@@ -201,7 +210,8 @@ TEST(InstDecode, mov_8b) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov 0x13(rax), %r14w
-  uint8_t h66_mov_disp[] = {0x66, 0b0100'0100, 0x8b, 0b01'110'000, 0x13}; // h66 rex opcode modrm disp
+  uint8_t h66_mov_disp[] = {0x66, 0b0100'0100, 0x8b, 0b01'110'000,
+                            0x13};  // h66 rex opcode modrm disp
   ASSERT_EQ(inst_decode(h66_mov_disp, 5, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 2u);
@@ -210,7 +220,7 @@ TEST(InstDecode, mov_8b) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov (%rax,%rcx,2), %ebx
-  uint8_t mov_sib[] = {0x8b, 0b00'011'100, 0b01'001'000}; // opcode modrm sib
+  uint8_t mov_sib[] = {0x8b, 0b00'011'100, 0b01'001'000};  // opcode modrm sib
   ASSERT_EQ(inst_decode(mov_sib, 3, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 4u);
@@ -219,7 +229,8 @@ TEST(InstDecode, mov_8b) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov 0x04(%rax,%rcx,1), %ebx
-  uint8_t mov_sib_disp[] = {0x8b, 0b01'011'100, 0b00'001'000, 0x04}; // opcode modrm sib disp
+  uint8_t mov_sib_disp[] = {0x8b, 0b01'011'100, 0b00'001'000,
+                            0x04};  // opcode modrm sib disp
   ASSERT_EQ(inst_decode(mov_sib_disp, 4, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 4u);
@@ -228,8 +239,9 @@ TEST(InstDecode, mov_8b) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // mov 0xABCDEF, %eax
-  uint8_t mov_sib_nobase[] = {0x8b, 0b00'000'100, 0b00'100'101, 0xEF,
-                              0xCD, 0xAB,         0x00}; // opcode modrm sib disp4 disp3 disp2 disp1
+  uint8_t mov_sib_nobase[] = {
+      0x8b, 0b00'000'100, 0b00'100'101, 0xEF,
+      0xCD, 0xAB,         0x00};  // opcode modrm sib disp4 disp3 disp2 disp1
   ASSERT_EQ(inst_decode(mov_sib_nobase, 7, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 4u);
@@ -244,20 +256,20 @@ TEST(InstDecode, mov_8a) {
   Instruction inst;
 
   // movb (%rsi), %ah
-  uint8_t mov_ah[] = {0x8a, 0b00'100'110}; // opcode modrm
+  uint8_t mov_ah[] = {0x8a, 0b00'100'110};  // opcode modrm
   ASSERT_EQ(inst_decode(mov_ah, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
   // movb (%rsi), %bh
-  uint8_t mov_bh[] = {0x8a, 0b00'111'110}; // opcode modrm
+  uint8_t mov_bh[] = {0x8a, 0b00'111'110};  // opcode modrm
   ASSERT_EQ(inst_decode(mov_bh, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
   // movb (%rsi), %ch
-  uint8_t mov_ch[] = {0x8a, 0b00'101'110}; // opcode modrm
+  uint8_t mov_ch[] = {0x8a, 0b00'101'110};  // opcode modrm
   ASSERT_EQ(inst_decode(mov_ch, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
   // movb (%rsi), %dh
-  uint8_t mov_dh[] = {0x8a, 0b00'110'110}; // opcode modrm
+  uint8_t mov_dh[] = {0x8a, 0b00'110'110};  // opcode modrm
   ASSERT_EQ(inst_decode(mov_dh, 2, &vcpu_state, &inst), ZX_ERR_NOT_SUPPORTED);
 
   // movb (%rsi)
-  uint8_t rex_mov[] = {0b0100'0000, 0x8a, 0b00'111'110}; // rex opcode modrm
+  uint8_t rex_mov[] = {0b0100'0000, 0x8a, 0b00'111'110};  // rex opcode modrm
   ASSERT_EQ(inst_decode(rex_mov, 3, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 1u);
@@ -267,17 +279,21 @@ TEST(InstDecode, mov_8a) {
 }
 
 TEST(InstDecode, mov_c7) {
-  uint8_t bad_len[] = {0xc7, 0}; // opcode modrm
+  uint8_t bad_len[] = {0xc7, 0};  // opcode modrm
   ASSERT_EQ(inst_decode(bad_len, 2, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-  uint8_t bad_disp[] = {0xc7, 0b01'000'000}; // opcode modrm
+  uint8_t bad_disp[] = {0xc7, 0b01'000'000};  // opcode modrm
   ASSERT_EQ(inst_decode(bad_disp, 2, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-  uint8_t bad_mod_rm[] = {0xc7, 0b00'111'000, 0x1, 0, 0, 0}; // opcode modrm imm4 imm3 imm2 imm1
+  uint8_t bad_mod_rm[] = {0xc7, 0b00'111'000, 0x1, 0, 0,
+                          0};  // opcode modrm imm4 imm3 imm2 imm1
   ASSERT_EQ(inst_decode(bad_mod_rm, 6, nullptr, nullptr), ZX_ERR_INVALID_ARGS);
-  uint8_t bad_h66[] = {0x66, 0b0100'1000, 0xc7, 0b00'000'000, 0, 0, 0, 0x1}; // h66 rex opcode modrm imm4 imm3 imm2 imm1
+  uint8_t bad_h66[] = {
+      0x66, 0b0100'1000, 0xc7, 0b00'000'000, 0,
+      0,    0,           0x1};  // h66 rex opcode modrm imm4 imm3 imm2 imm1
   ASSERT_EQ(inst_decode(bad_h66, 8, nullptr, nullptr), ZX_ERR_NOT_SUPPORTED);
 
   // movl 0x1, (%rax)
-  uint8_t mov[] = {0xc7, 0b00'000'000, 0x1, 0, 0, 0}; // opcode modrm imm4 imm3 imm2 imm1
+  uint8_t mov[] = {0xc7, 0b00'000'000, 0x1, 0, 0,
+                   0};  // opcode modrm imm4 imm3 imm2 imm1
   zx_vcpu_state_t vcpu_state;
   Instruction inst;
   ASSERT_EQ(inst_decode(mov, 6, &vcpu_state, &inst), ZX_OK);
@@ -288,7 +304,9 @@ TEST(InstDecode, mov_c7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movq 0x1000000, (%rax)
-  uint8_t rex_mov[] = {0b0100'1000, 0xc7, 0b00'000'000, 0, 0, 0, 0x1}; // rex opcode modrm imm4 imm3 imm2 imm1
+  uint8_t rex_mov[] = {
+      0b0100'1000, 0xc7, 0b00'000'000, 0,
+      0,           0,    0x1};  // rex opcode modrm imm4 imm3 imm2 imm1
   ASSERT_EQ(inst_decode(rex_mov, 7, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 8u);
@@ -297,7 +315,8 @@ TEST(InstDecode, mov_c7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movl 0x10, -0x1(%rbx)
-  uint8_t mov_disp_1[] = {0xc7, 0b01'000'011, 0xff, 0x10, 0, 0, 0}; // opcode modrm disp imm4 imm3 imm2 imm1
+  uint8_t mov_disp_1[] = {0xc7, 0b01'000'011, 0xff, 0x10, 0, 0,
+                          0};  // opcode modrm disp imm4 imm3 imm2 imm1
   ASSERT_EQ(inst_decode(mov_disp_1, 7, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 4u);
@@ -306,7 +325,9 @@ TEST(InstDecode, mov_c7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movl 0x1000000, -0x1000000(%rbx)
-  uint8_t mov_disp_4[] = {0xc7, 0b10'000'011, 0, 0, 0, 0xff, 0, 0, 0, 0x1}; // opcode modrm disp4 disp3 disp2 disp1 imm4 imm3 imm2 imm1
+  uint8_t mov_disp_4[] = {
+      0xc7, 0b10'000'011, 0, 0, 0, 0xff, 0, 0,
+      0,    0x1};  // opcode modrm disp4 disp3 disp2 disp1 imm4 imm3 imm2 imm1
   ASSERT_EQ(inst_decode(mov_disp_4, 10, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 4u);
@@ -315,7 +336,9 @@ TEST(InstDecode, mov_c7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movw 0x100, -0x1(%rax)
-  uint8_t h66_mov_disp[] = {0x66, 0b0100'0100, 0xc7, 0b01'000'000, 0xff, 0, 0x1}; // h66 rex opcode modrm disp imm2 imm1
+  uint8_t h66_mov_disp[] = {
+      0x66, 0b0100'0100, 0xc7, 0b01'000'000,
+      0xff, 0,           0x1};  // h66 rex opcode modrm disp imm2 imm1
   ASSERT_EQ(inst_decode(h66_mov_disp, 7, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 2u);
@@ -324,7 +347,8 @@ TEST(InstDecode, mov_c7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movl 0x10, (%rax,%rcx,2)
-  uint8_t mov_sib[] = {0xc7, 0b00'000'100, 0b01'001'000, 0x10, 0, 0, 0}; // opcode modrm sib imm4 imm3 imm2 imm1
+  uint8_t mov_sib[] = {0xc7, 0b00'000'100, 0b01'001'000, 0x10, 0, 0,
+                       0};  // opcode modrm sib imm4 imm3 imm2 imm1
   ASSERT_EQ(inst_decode(mov_sib, 7, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 4u);
@@ -333,7 +357,8 @@ TEST(InstDecode, mov_c7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movl 0x10, 0x04(%rax,%rcx,1)
-  uint8_t mov_sib_disp[] = {0xc7, 0b01'000'100, 0b00'001'000, 0x04, 0x10, 0, 0, 0}; // opcode modrm sib disp imm4 imm3 imm2 imm1
+  uint8_t mov_sib_disp[] = {0xc7, 0b01'000'100, 0b00'001'000, 0x04, 0x10, 0, 0,
+                            0};  // opcode modrm sib disp imm4 imm3 imm2 imm1
   ASSERT_EQ(inst_decode(mov_sib_disp, 8, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 4u);
@@ -342,8 +367,9 @@ TEST(InstDecode, mov_c7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movl 0x10, 0x00ABCDEF
-  uint8_t mov_sib_nobase[] = {0xc7, 0b00'000'100, 0b00'100'101, 0xEF, 0xCD, 0xAB,
-                              0x00, 0x10,         0,            0,    0}; // opcode modrm sib disp4 disp3 disp2 disp1 imm4 imm3 imm2 imm1
+  uint8_t mov_sib_nobase[] = {
+      0xc7, 0b00'000'100, 0b00'100'101, 0xEF, 0xCD, 0xAB, 0x00, 0x10, 0, 0,
+      0};  // opcode modrm sib disp4 disp3 disp2 disp1 imm4 imm3 imm2 imm1
   ASSERT_EQ(inst_decode(mov_sib_nobase, 11, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 4u);
@@ -358,7 +384,7 @@ TEST(InstDecode, mov_c6) {
   Instruction inst;
 
   // movb 0x1, (%rax)
-  uint8_t mov[] = {0xc6, 0b00'000'000, 0x1}; // opcode modrm imm
+  uint8_t mov[] = {0xc6, 0b00'000'000, 0x1};  // opcode modrm imm
   ASSERT_EQ(inst_decode(mov, 3, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_WRITE);
   EXPECT_EQ(inst.access_size, 1u);
@@ -368,13 +394,13 @@ TEST(InstDecode, mov_c6) {
 }
 
 TEST(InstDecode, movz_0f_b6) {
-  uint8_t bad_len[] = {0x0f, 0xb6, 0b00'000'000, 0}; // opcode opcode modrm ?
+  uint8_t bad_len[] = {0x0f, 0xb6, 0b00'000'000, 0};  // opcode opcode modrm ?
   ASSERT_EQ(inst_decode(bad_len, 4, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-  uint8_t bad_disp[] = {0x0f, 0xb6, 0b01'000'000}; // opcode opcode modrm
+  uint8_t bad_disp[] = {0x0f, 0xb6, 0b01'000'000};  // opcode opcode modrm
   ASSERT_EQ(inst_decode(bad_disp, 3, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
 
   // movzb (%rax), %ecx
-  uint8_t movz[] = {0x0f, 0xb6, 0b00'001'000}; // opcode opcode modrm
+  uint8_t movz[] = {0x0f, 0xb6, 0b00'001'000};  // opcode opcode modrm
   zx_vcpu_state_t vcpu_state;
   Instruction inst;
   ASSERT_EQ(inst_decode(movz, 3, &vcpu_state, &inst), ZX_OK);
@@ -385,7 +411,8 @@ TEST(InstDecode, movz_0f_b6) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzb (%rax), %r10d
-  uint8_t rex_movz[] = {0b0100'0100, 0x0f, 0xb6, 0b00'010'000}; // rex opcode opcode modrm
+  uint8_t rex_movz[] = {0b0100'0100, 0x0f, 0xb6,
+                        0b00'010'000};  // rex opcode opcode modrm
   ASSERT_EQ(inst_decode(rex_movz, 4, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 1u);
@@ -394,7 +421,8 @@ TEST(InstDecode, movz_0f_b6) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzb 0x10(%rax), %ebx
-  uint8_t movz_disp_1[] = {0x0f, 0xb6, 0b01'011'000, 0x10}; // opcode opcode modrm disp
+  uint8_t movz_disp_1[] = {0x0f, 0xb6, 0b01'011'000,
+                           0x10};  // opcode opcode modrm disp
   ASSERT_EQ(inst_decode(movz_disp_1, 4, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 1u);
@@ -403,7 +431,9 @@ TEST(InstDecode, movz_0f_b6) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzb 0x10000000(%rax), %ebx
-  uint8_t movz_disp_4[] = {0x0f, 0xb6, 0b10'011'000, 0, 0, 0, 0x1}; // opcode opcode modrm disp4 disp3 disp2 disp1
+  uint8_t movz_disp_4[] = {
+      0x0f, 0xb6, 0b10'011'000, 0,
+      0,    0,    0x1};  // opcode opcode modrm disp4 disp3 disp2 disp1
   ASSERT_EQ(inst_decode(movz_disp_4, 7, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 1u);
@@ -412,7 +442,8 @@ TEST(InstDecode, movz_0f_b6) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzb 0x11(rax), %r12
-  uint8_t rex_movz_disp[] = {0b0100'1100, 0x0f, 0xb6, 0b01'100'000, 0x11}; // rex opcode opcode modrm disp
+  uint8_t rex_movz_disp[] = {0b0100'1100, 0x0f, 0xb6, 0b01'100'000,
+                             0x11};  // rex opcode opcode modrm disp
   ASSERT_EQ(inst_decode(rex_movz_disp, 5, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 1u);
@@ -421,7 +452,8 @@ TEST(InstDecode, movz_0f_b6) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzb (%rax),%cx
-  uint8_t has_h66[] = {0x66, 0x0f, 0xb6, 0b00'001'000}; // h66 opcode opcode modrm
+  uint8_t has_h66[] = {0x66, 0x0f, 0xb6,
+                       0b00'001'000};  // h66 opcode opcode modrm
   ASSERT_EQ(inst_decode(has_h66, 4, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 1u);
@@ -430,7 +462,7 @@ TEST(InstDecode, movz_0f_b6) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzb (%rax),%esi
-  uint8_t mov_to_esi[] = {0x0f, 0xb6, 0b00'110'000}; // opcode opcode modrm
+  uint8_t mov_to_esi[] = {0x0f, 0xb6, 0b00'110'000};  // opcode opcode modrm
   ASSERT_EQ(inst_decode(mov_to_esi, 3, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 1u);
@@ -439,7 +471,8 @@ TEST(InstDecode, movz_0f_b6) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzb (%rax,%rcx,2), %bx
-  uint8_t mov_sib[] = {0x66, 0x0f, 0xb6, 0b00'011'100, 0b01'001'000}; // h66 opcode opcode modrm sib
+  uint8_t mov_sib[] = {0x66, 0x0f, 0xb6, 0b00'011'100,
+                       0b01'001'000};  // h66 opcode opcode modrm sib
   ASSERT_EQ(inst_decode(mov_sib, 5, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 1u);
@@ -448,7 +481,9 @@ TEST(InstDecode, movz_0f_b6) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzb 0x04(%rax,%rcx,1), %bx
-  uint8_t mov_sib_disp[] = {0x66, 0x0f, 0xb6, 0b01'011'100, 0b00'001'000, 0x04}; // h66 opcode opcode modrm sib disp
+  uint8_t mov_sib_disp[] = {
+      0x66,         0x0f,         0xb6,
+      0b01'011'100, 0b00'001'000, 0x04};  // h66 opcode opcode modrm sib disp
   ASSERT_EQ(inst_decode(mov_sib_disp, 6, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 1u);
@@ -457,8 +492,10 @@ TEST(InstDecode, movz_0f_b6) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzb 0xABCDEF, %ax
-  uint8_t mov_sib_nobase[] = {0x66, 0x0f, 0xb6, 0b00'000'100, 0b00'100'101,
-                              0xEF, 0xCD, 0xAB, 0x00}; // h66 opcode opcode modrm sib disp4 disp3 disp2 disp1
+  uint8_t mov_sib_nobase[] = {
+      0x66, 0x0f, 0xb6, 0b00'000'100, 0b00'100'101,
+      0xEF, 0xCD, 0xAB, 0x00};  // h66 opcode opcode modrm sib disp4 disp3 disp2
+                                // disp1
   ASSERT_EQ(inst_decode(mov_sib_nobase, 9, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 1u);
@@ -468,15 +505,16 @@ TEST(InstDecode, movz_0f_b6) {
 }
 
 TEST(InstDecode, movz_0f_b7) {
-  uint8_t bad_len[] = {0x0f, 0xb7, 0b00'000'000, 0}; // opcode opcode modrm ?
+  uint8_t bad_len[] = {0x0f, 0xb7, 0b00'000'000, 0};  // opcode opcode modrm ?
   ASSERT_EQ(inst_decode(bad_len, 4, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-  uint8_t bad_disp[] = {0x0f, 0xb7, 0b01'000'000}; // opcode opcode modrm
+  uint8_t bad_disp[] = {0x0f, 0xb7, 0b01'000'000};  // opcode opcode modrm
   ASSERT_EQ(inst_decode(bad_disp, 3, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-  uint8_t has_h66[] = {0x66, 0x0f, 0xb7, 0b00'001'000}; // h66 opcode opcode modrm
+  uint8_t has_h66[] = {0x66, 0x0f, 0xb7,
+                       0b00'001'000};  // h66 opcode opcode modrm
   ASSERT_EQ(inst_decode(has_h66, 4, nullptr, nullptr), ZX_ERR_BAD_STATE);
 
   // movzw (%rax), %ecx
-  uint8_t movz[] = {0x0f, 0xb7, 0b00'001'000}; // opcode opcode modrm
+  uint8_t movz[] = {0x0f, 0xb7, 0b00'001'000};  // opcode opcode modrm
   zx_vcpu_state_t vcpu_state;
   Instruction inst;
   ASSERT_EQ(inst_decode(movz, 3, &vcpu_state, &inst), ZX_OK);
@@ -487,7 +525,8 @@ TEST(InstDecode, movz_0f_b7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzw (%rax), %r10d
-  uint8_t rex_movz[] = {0b0100'0100, 0x0f, 0xb7, 0b00'010'000}; // rex opcode opcode modrm
+  uint8_t rex_movz[] = {0b0100'0100, 0x0f, 0xb7,
+                        0b00'010'000};  // rex opcode opcode modrm
   ASSERT_EQ(inst_decode(rex_movz, 4, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 2u);
@@ -496,7 +535,8 @@ TEST(InstDecode, movz_0f_b7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzw 0x10(%rax), %ebx
-  uint8_t movz_disp_1[] = {0x0f, 0xb7, 0b01'011'000, 0x10}; // opcode opcode modrm disp
+  uint8_t movz_disp_1[] = {0x0f, 0xb7, 0b01'011'000,
+                           0x10};  // opcode opcode modrm disp
   ASSERT_EQ(inst_decode(movz_disp_1, 4, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 2u);
@@ -505,7 +545,9 @@ TEST(InstDecode, movz_0f_b7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzw 0x10000000(%rax), %ebx
-  uint8_t movz_disp_4[] = {0x0f, 0xb7, 0b10'011'000, 0, 0, 0, 0x1}; // opcode opcode modrm disp4 disp3 disp2 disp1
+  uint8_t movz_disp_4[] = {
+      0x0f, 0xb7, 0b10'011'000, 0,
+      0,    0,    0x1};  // opcode opcode modrm disp4 disp3 disp2 disp1
   ASSERT_EQ(inst_decode(movz_disp_4, 7, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 2u);
@@ -514,7 +556,8 @@ TEST(InstDecode, movz_0f_b7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzw 0x11(rax), %r12
-  uint8_t rex_movz_disp[] = {0b0100'1100, 0x0f, 0xb7, 0b01'100'000, 0x11}; // rex opcode opcode modrm disp
+  uint8_t rex_movz_disp[] = {0b0100'1100, 0x0f, 0xb7, 0b01'100'000,
+                             0x11};  // rex opcode opcode modrm disp
   ASSERT_EQ(inst_decode(rex_movz_disp, 5, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 2u);
@@ -523,7 +566,7 @@ TEST(InstDecode, movz_0f_b7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzw (%rax),%esi
-  uint8_t mov_to_esi[] = {0x0f, 0xb7, 0b00'110'000}; // opcode opcode modrm
+  uint8_t mov_to_esi[] = {0x0f, 0xb7, 0b00'110'000};  // opcode opcode modrm
   ASSERT_EQ(inst_decode(mov_to_esi, 3, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 2u);
@@ -532,7 +575,8 @@ TEST(InstDecode, movz_0f_b7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzw (%rax,%rcx,2), %ebx
-  uint8_t mov_sib[] = {0x0f, 0xb7, 0b00'011'100, 0b01'001'000}; // opcode opcode modrm sib
+  uint8_t mov_sib[] = {0x0f, 0xb7, 0b00'011'100,
+                       0b01'001'000};  // opcode opcode modrm sib
   ASSERT_EQ(inst_decode(mov_sib, 4, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 2u);
@@ -541,7 +585,8 @@ TEST(InstDecode, movz_0f_b7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzw 0x04(%rax,%rcx,1), %ebx
-  uint8_t mov_sib_disp[] = {0x0f, 0xb7, 0b01'011'100, 0b00'001'000, 0x04}; // opcode opcode modrm sib disp
+  uint8_t mov_sib_disp[] = {0x0f, 0xb7, 0b01'011'100, 0b00'001'000,
+                            0x04};  // opcode opcode modrm sib disp
   ASSERT_EQ(inst_decode(mov_sib_disp, 5, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 2u);
@@ -550,8 +595,9 @@ TEST(InstDecode, movz_0f_b7) {
   EXPECT_EQ(inst.flags, nullptr);
 
   // movzw 0x00ABCDEF, %eax
-  uint8_t mov_sib_nobase[] = {0x0f, 0xb7, 0b00'000'100, 0b00'100'101,
-                              0xEF, 0xCD, 0xAB,         0x00}; // opcode opcode modrm sib disp4 disp3 disp2 disp1
+  uint8_t mov_sib_nobase[] = {
+      0x0f, 0xb7, 0b00'000'100, 0b00'100'101, 0xEF,
+      0xCD, 0xAB, 0x00};  // opcode opcode modrm sib disp4 disp3 disp2 disp1
   ASSERT_EQ(inst_decode(mov_sib_nobase, 8, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_MOV_READ);
   EXPECT_EQ(inst.access_size, 2u);
@@ -561,17 +607,17 @@ TEST(InstDecode, movz_0f_b7) {
 }
 
 TEST(InstDecode, test_f6) {
-  uint8_t bad_len[] = {0xf6, 0b00'000'000}; // opcode modrm
+  uint8_t bad_len[] = {0xf6, 0b00'000'000};  // opcode modrm
   ASSERT_EQ(inst_decode(bad_len, 2, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-  uint8_t bad_disp[] = {0xf6, 0b01'000'000, 0}; // opcode modrm disp
+  uint8_t bad_disp[] = {0xf6, 0b01'000'000, 0};  // opcode modrm disp
   ASSERT_EQ(inst_decode(bad_disp, 3, nullptr, nullptr), ZX_ERR_OUT_OF_RANGE);
-  uint8_t bad_mod_rm[] = {0xf6, 0b00'111'000, 0x1}; // opcode modrm imm
+  uint8_t bad_mod_rm[] = {0xf6, 0b00'111'000, 0x1};  // opcode modrm imm
   ASSERT_EQ(inst_decode(bad_mod_rm, 3, nullptr, nullptr), ZX_ERR_INVALID_ARGS);
-  uint8_t has_h66[] = {0x66, 0xf6, 0b00'001'000, 0}; // h66 opcode modrm imm
+  uint8_t has_h66[] = {0x66, 0xf6, 0b00'001'000, 0};  // h66 opcode modrm imm
   ASSERT_EQ(inst_decode(has_h66, 4, nullptr, nullptr), ZX_ERR_BAD_STATE);
 
   // test 0x1, (%rax)
-  uint8_t test[] = {0xf6, 0b00'000'000, 0x1}; // opcode modrm imm
+  uint8_t test[] = {0xf6, 0b00'000'000, 0x1};  // opcode modrm imm
   zx_vcpu_state_t vcpu_state;
   Instruction inst;
   ASSERT_EQ(inst_decode(test, 3, &vcpu_state, &inst), ZX_OK);
@@ -582,7 +628,8 @@ TEST(InstDecode, test_f6) {
   EXPECT_EQ(inst.flags, &vcpu_state.rflags);
 
   // test 0x10, -0x1(%rbx)
-  uint8_t test_disp_1[] = {0xf6, 0b01'000'011, 0xff, 0x10}; // opcode modrm disp imm
+  uint8_t test_disp_1[] = {0xf6, 0b01'000'011, 0xff,
+                           0x10};  // opcode modrm disp imm
   ASSERT_EQ(inst_decode(test_disp_1, 4, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_TEST);
   EXPECT_EQ(inst.access_size, 1u);
@@ -591,7 +638,9 @@ TEST(InstDecode, test_f6) {
   EXPECT_EQ(inst.flags, &vcpu_state.rflags);
 
   // test 0x11, -0x1000000(%rbx)
-  uint8_t test_disp_4[] = {0xf6, 0b10'000'011, 0, 0, 0, 0xff, 0x11}; // opcode modrm disp4 disp3 disp2 disp1 imm
+  uint8_t test_disp_4[] = {
+      0xf6, 0b10'000'011, 0,   0,
+      0,    0xff,         0x11};  // opcode modrm disp4 disp3 disp2 disp1 imm
   ASSERT_EQ(inst_decode(test_disp_4, 7, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_TEST);
   EXPECT_EQ(inst.access_size, 1u);
@@ -600,7 +649,8 @@ TEST(InstDecode, test_f6) {
   EXPECT_EQ(inst.flags, &vcpu_state.rflags);
 
   // test 0x11, (%rax,%rcx,2)
-  uint8_t test_sib[] = {0xf6, 0b00'000'100, 0b0100'1000, 0x11}; // opcode modrm sib imm
+  uint8_t test_sib[] = {0xf6, 0b00'000'100, 0b0100'1000,
+                        0x11};  // opcode modrm sib imm
   ASSERT_EQ(inst_decode(test_sib, 4, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_TEST);
   EXPECT_EQ(inst.access_size, 1u);
@@ -609,7 +659,8 @@ TEST(InstDecode, test_f6) {
   EXPECT_EQ(inst.flags, &vcpu_state.rflags);
 
   // test 0x11, 0x04(%rax,%rcx,1)
-  uint8_t test_sib_disp[] = {0xf6, 0b01'000'100, 0b00'001'000, 0x04, 0x11}; // opcode modrm sib disp imm
+  uint8_t test_sib_disp[] = {0xf6, 0b01'000'100, 0b00'001'000, 0x04,
+                             0x11};  // opcode modrm sib disp imm
   ASSERT_EQ(inst_decode(test_sib_disp, 5, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_TEST);
   EXPECT_EQ(inst.access_size, 1u);
@@ -618,8 +669,10 @@ TEST(InstDecode, test_f6) {
   EXPECT_EQ(inst.flags, &vcpu_state.rflags);
 
   // test 0x11, 0x00ABCDEF
-  uint8_t test_sib_nobase[] = {0xf6, 0b00'000'100, 0b00'100'101, 0xEF,
-                               0xCD, 0xAB,         0x00,         0x11}; // opcode modrm sib disp4 disp3 disp2 disp1 imm
+  uint8_t test_sib_nobase[] = {
+      0xf6, 0b00'000'100, 0b00'100'101, 0xEF, 0xCD,
+      0xAB, 0x00,         0x11};  // opcode modrm sib disp4 disp3 disp2 disp1
+                                  // imm
   ASSERT_EQ(inst_decode(test_sib_nobase, 8, &vcpu_state, &inst), ZX_OK);
   EXPECT_EQ(inst.type, INST_TEST);
   EXPECT_EQ(inst.access_size, 1u);

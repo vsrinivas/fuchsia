@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <sys/stat.h>
 
 extern "C" {
@@ -42,27 +43,20 @@ static void acpi_header(ACPI_TABLE_HEADER* header,
   header->Checksum = acpi_checksum(header, header->Length);
 }
 
-static zx_status_t load_file(const char* path,
-                             uintptr_t addr,
-                             size_t size,
-                             uint32_t* actual) {
-  int fd = open(path, O_RDONLY);
-  if (fd < 0) {
+static zx_status_t load_file(const char* path, void* addr, uint32_t* actual) {
+  fbl::unique_fd fd(open(path, O_RDONLY));
+  if (!fd) {
     FXL_LOG(ERROR) << "Failed to open ACPI table " << path;
     return ZX_ERR_IO;
   }
   struct stat stat;
-  int ret = fstat(fd, &stat);
+  ssize_t ret = fstat(fd.get(), &stat);
   if (ret < 0) {
     FXL_LOG(ERROR) << "Failed to stat ACPI table " << path;
     return ZX_ERR_IO;
   }
-  if ((size_t)stat.st_size > size) {
-    FXL_LOG(ERROR) << "Not enough space for ACPI table " << path;
-    return ZX_ERR_IO;
-  }
-  ssize_t count = read(fd, (void*)addr, stat.st_size);
-  if (count < 0 || count != stat.st_size) {
+  ret = read(fd.get(), addr, stat.st_size);
+  if (ret != stat.st_size) {
     FXL_LOG(ERROR) << "Failed to read ACPI table " << path;
     return ZX_ERR_IO;
   }
@@ -70,47 +64,35 @@ static zx_status_t load_file(const char* path,
   return ZX_OK;
 }
 
-static void* madt_subtable(void* base,
-                           uint32_t off,
-                           uint8_t type,
-                           uint8_t length) {
-  ACPI_SUBTABLE_HEADER* subtable =
-      (ACPI_SUBTABLE_HEADER*)((uint8_t*)base + off);
-  subtable->Type = type;
-  subtable->Length = length;
+template <typename T>
+static T* madt_subtable(void* base, uint32_t off, uint8_t type) {
+  auto subtable = reinterpret_cast<T*>(static_cast<uint8_t*>(base) + off);
+  subtable->Header.Type = type;
+  subtable->Header.Length = sizeof(T);
   return subtable;
 }
 
-static zx_status_t create_madt(uintptr_t addr,
-                               size_t size,
+static zx_status_t create_madt(ACPI_TABLE_MADT* madt,
                                zx_vaddr_t io_apic_addr,
                                size_t num_cpus,
                                uint32_t* actual) {
   uint32_t table_size = static_cast<uint32_t>(
       sizeof(ACPI_TABLE_MADT) + (num_cpus * sizeof(ACPI_MADT_LOCAL_APIC)) +
       sizeof(ACPI_MADT_IO_APIC));
-  if (table_size > size) {
-    FXL_LOG(ERROR) << "Not enough space for MADT table";
-    return ZX_ERR_IO;
-  }
-
-  ACPI_TABLE_MADT* madt = reinterpret_cast<ACPI_TABLE_MADT*>(addr);
   acpi_header(&madt->Header, "ZX MADT", ACPI_SIG_MADT, table_size);
 
   uint32_t offset = sizeof(ACPI_TABLE_MADT);
   for (uint8_t id = 0; id < num_cpus; ++id) {
-    ACPI_MADT_LOCAL_APIC* local_apic = reinterpret_cast<ACPI_MADT_LOCAL_APIC*>(
-        madt_subtable(madt, offset, ACPI_MADT_TYPE_LOCAL_APIC,
-                      sizeof(ACPI_MADT_LOCAL_APIC)));
+    auto local_apic = madt_subtable<ACPI_MADT_LOCAL_APIC>(
+        madt, offset, ACPI_MADT_TYPE_LOCAL_APIC);
     local_apic->ProcessorId = id;
     local_apic->Id = id;
     local_apic->LapicFlags = ACPI_MADT_ENABLED;
     offset += static_cast<uint32_t>(sizeof(ACPI_MADT_LOCAL_APIC));
   }
 
-  ACPI_MADT_IO_APIC* io_apic =
-      reinterpret_cast<ACPI_MADT_IO_APIC*>(madt_subtable(
-          madt, offset, ACPI_MADT_TYPE_IO_APIC, sizeof(ACPI_MADT_IO_APIC)));
+  auto io_apic =
+      madt_subtable<ACPI_MADT_IO_APIC>(madt, offset, ACPI_MADT_TYPE_IO_APIC);
   io_apic->Reserved = 0;
   io_apic->Address = static_cast<uint32_t>(io_apic_addr);
   io_apic->GlobalIrqBase = 0;
@@ -122,10 +104,9 @@ static zx_status_t create_madt(uintptr_t addr,
 namespace machina {
 
 zx_status_t create_acpi_table(const AcpiConfig& cfg,
-                              uintptr_t addr,
-                              size_t size,
+                              const PhysMem& phys_mem,
                               uintptr_t acpi_off) {
-  if (size < acpi_off + PAGE_SIZE)
+  if (phys_mem.size() < acpi_off + PAGE_SIZE)
     return ZX_ERR_BUFFER_TOO_SMALL;
 
   const uint32_t rsdt_entries = 3;
@@ -133,7 +114,7 @@ zx_status_t create_acpi_table(const AcpiConfig& cfg,
       sizeof(ACPI_TABLE_RSDT) + (rsdt_entries - 1) * sizeof(uint32_t);
 
   // RSDP. ACPI 1.0.
-  ACPI_RSDP_COMMON* rsdp = (ACPI_RSDP_COMMON*)(addr + acpi_off);
+  auto rsdp = phys_mem.as<ACPI_RSDP_COMMON>(acpi_off);
   ACPI_MAKE_RSDP_SIG(rsdp->Signature);
   memcpy(rsdp->OemId, "ZX", 2);
   rsdp->RsdtPhysicalAddress =
@@ -142,7 +123,7 @@ zx_status_t create_acpi_table(const AcpiConfig& cfg,
 
   // FADT.
   const uint32_t fadt_off = rsdp->RsdtPhysicalAddress + rsdt_length;
-  ACPI_TABLE_FADT* fadt = (ACPI_TABLE_FADT*)(addr + fadt_off);
+  auto fadt = phys_mem.as<ACPI_TABLE_FADT>(fadt_off);
   const uint32_t dsdt_off =
       static_cast<uint32_t>(fadt_off + sizeof(ACPI_TABLE_FADT));
   fadt->Dsdt = dsdt_off;
@@ -157,26 +138,25 @@ zx_status_t create_acpi_table(const AcpiConfig& cfg,
   // DSDT.
   uint32_t actual;
   zx_status_t status =
-      load_file(cfg.dsdt_path, addr + dsdt_off, size - dsdt_off, &actual);
+      load_file(cfg.dsdt_path, phys_mem.as<void>(dsdt_off), &actual);
   if (status != ZX_OK)
     return status;
 
   // MADT.
   const uint32_t madt_off = dsdt_off + actual;
-  status = create_madt(addr + madt_off, size - madt_off, cfg.io_apic_addr,
+  status = create_madt(phys_mem.as<ACPI_TABLE_MADT>(madt_off), cfg.io_apic_addr,
                        cfg.num_cpus, &actual);
-
   if (status != ZX_OK)
     return status;
 
   // MCFG.
   const uint32_t mcfg_off = madt_off + actual;
-  status = load_file(cfg.mcfg_path, addr + mcfg_off, size - mcfg_off, &actual);
+  status = load_file(cfg.mcfg_path, phys_mem.as<void>(mcfg_off), &actual);
   if (status != ZX_OK)
     return status;
 
   // RSDT.
-  ACPI_TABLE_RSDT* rsdt = (ACPI_TABLE_RSDT*)(addr + rsdp->RsdtPhysicalAddress);
+  auto rsdt = phys_mem.as<ACPI_TABLE_RSDT>(rsdp->RsdtPhysicalAddress);
   rsdt->TableOffsetEntry[0] = fadt_off;
   rsdt->TableOffsetEntry[1] = madt_off;
   rsdt->TableOffsetEntry[2] = mcfg_off;

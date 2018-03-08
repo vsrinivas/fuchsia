@@ -100,15 +100,15 @@ static void balloon_stats_handler(machina::VirtioBalloon* balloon,
 
 typedef struct balloon_task_args {
   machina::VirtioBalloon* balloon;
-  const GuestConfig* config;
+  const GuestConfig* cfg;
 } balloon_task_args_t;
 
 static int balloon_stats_task(void* ctx) {
   fbl::unique_ptr<balloon_task_args_t> args(
       static_cast<balloon_task_args_t*>(ctx));
   machina::VirtioBalloon* balloon = args->balloon;
-  zx_duration_t interval = args->config->balloon_interval();
-  uint32_t threshold = args->config->balloon_pages_threshold();
+  zx_duration_t interval = args->cfg->balloon_interval();
+  uint32_t threshold = args->cfg->balloon_pages_threshold();
   while (true) {
     zx_nanosleep(zx_deadline_after(interval));
     args->balloon->RequestStats(
@@ -120,9 +120,9 @@ static int balloon_stats_task(void* ctx) {
 }
 
 static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
-                                      const GuestConfig* config) {
+                                      const GuestConfig* cfg) {
   thrd_t thread;
-  auto args = new balloon_task_args_t{balloon, config};
+  auto args = new balloon_task_args_t{balloon, cfg};
 
   int ret = thrd_create_with_name(&thread, balloon_stats_task, args,
                                   "virtio-balloon");
@@ -141,17 +141,7 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
   return ZX_OK;
 }
 
-static const char* linux_cmdline(const char* cmdline, uintptr_t acpi_addr) {
-#if __aarch64__
-  return cmdline;
-#elif __x86_64__
-  static fbl::StringBuffer<LINE_MAX> buffer;
-  buffer.AppendPrintf("acpi_rsdp=%#lx %s", acpi_addr, cmdline);
-  return buffer.c_str();
-#endif
-}
-
-zx_status_t setup_zircon_framebuffer(
+static zx_status_t setup_zircon_framebuffer(
     machina::VirtioGpu* gpu,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
   zx_status_t status = machina::FramebufferScanout::Create(
@@ -161,7 +151,7 @@ zx_status_t setup_zircon_framebuffer(
   return gpu->AddScanout(scanout->get());
 }
 
-zx_status_t setup_scenic_framebuffer(
+static zx_status_t setup_scenic_framebuffer(
     app::ApplicationContext* application_context,
     machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
@@ -181,14 +171,14 @@ zx_status_t setup_scenic_framebuffer(
   return gpu->AddScanout(scanout->get());
 }
 
-zx_status_t read_guest_config(GuestConfig* options,
-                              const char* config_path,
-                              int argc,
-                              char** argv) {
-  GuestConfigParser parser(options);
-  std::string config;
-  if (files::ReadFileToString(config_path, &config)) {
-    zx_status_t status = parser.ParseConfig(config);
+static zx_status_t read_guest_cfg(const char* cfg_path,
+                                  int argc,
+                                  char** argv,
+                                  GuestConfig* cfg) {
+  GuestConfigParser parser(cfg);
+  std::string cfg_str;
+  if (files::ReadFileToString(cfg_path, &cfg_str)) {
+    zx_status_t status = parser.ParseConfig(cfg_str);
     if (status != ZX_OK) {
       return status;
     }
@@ -201,25 +191,20 @@ int main(int argc, char** argv) {
   std::unique_ptr<app::ApplicationContext> application_context =
       app::ApplicationContext::CreateFromStartupInfo();
 
-  GuestConfig options;
-  zx_status_t status =
-      read_guest_config(&options, "/pkg/data/guest.cfg", argc, argv);
+  GuestConfig cfg;
+  zx_status_t status = read_guest_cfg("/pkg/data/guest.cfg", argc, argv, &cfg);
   if (status != ZX_OK) {
     return status;
   }
 
   machina::Guest guest;
-  status = guest.Init(options.memory());
+  status = guest.Init(cfg.memory());
   if (status != ZX_OK)
     return status;
 
   // Instantiate the inspect service.
   machina::InspectServiceImpl inspect_svc(application_context.get(),
                                           guest.phys_mem());
-
-  // TODO(abdulla): Remove these variables. We should use PhysMem directly.
-  uintptr_t physmem_addr = guest.phys_mem().addr();
-  size_t physmem_size = guest.phys_mem().size();
 
   uintptr_t pt_end_off = 0;
 #if __x86_64__
@@ -235,46 +220,31 @@ int main(int argc, char** argv) {
       .io_apic_addr = machina::kIoApicPhysBase,
       .num_cpus = 1,
   };
-  status = create_acpi_table(acpi_cfg, physmem_addr, physmem_size, pt_end_off);
+  status = machina::create_acpi_table(acpi_cfg, guest.phys_mem(), pt_end_off);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create ACPI table";
     return status;
   }
 #endif  // __x86_64__
 
-  // Open the kernel image.
-  fbl::unique_fd fd(open(options.kernel_path().c_str(), O_RDONLY));
-  if (!fd) {
-    FXL_LOG(ERROR) << "Failed to open kernel image \"" << options.kernel_path();
-    return ZX_ERR_IO;
-  }
-
-  // Load the first page to pass to setup functions.
-  uintptr_t first_page = physmem_addr + physmem_size - PAGE_SIZE;
-  ssize_t ret = read(fd.get(), (void*)first_page, PAGE_SIZE);
-  if (ret != PAGE_SIZE) {
-    FXL_LOG(ERROR) << "Failed to read first page of kernel";
-    return ZX_ERR_IO;
-  }
-
+  // Setup kernel.
   uintptr_t guest_ip = 0;
   uintptr_t boot_ptr = 0;
-  status = setup_zircon(physmem_addr, physmem_size, first_page, pt_end_off,
-                        fd.get(), options.ramdisk_path().c_str(),
-                        options.cmdline().c_str(), &guest_ip, &boot_ptr);
-  if (status == ZX_ERR_NOT_SUPPORTED) {
-    ret = lseek(fd.get(), 0, SEEK_SET);
-    if (ret < 0) {
-      FXL_LOG(ERROR) << "Failed to seek to start of kernel";
-      return ZX_ERR_IO;
-    }
-    status = setup_linux(physmem_addr, physmem_size, first_page, fd.get(),
-                         options.ramdisk_path().c_str(),
-                         linux_cmdline(options.cmdline().c_str(), pt_end_off),
-                         &guest_ip, &boot_ptr);
+  switch (cfg.kernel()) {
+    case Kernel::ZIRCON:
+      status =
+          setup_zircon(cfg, guest.phys_mem(), pt_end_off, &guest_ip, &boot_ptr);
+      break;
+    case Kernel::LINUX:
+      status =
+          setup_linux(cfg, guest.phys_mem(), pt_end_off, &guest_ip, &boot_ptr);
+      break;
+    default:
+      FXL_LOG(ERROR) << "Unknown kernel";
+      return ZX_ERR_INVALID_ARGS;
   }
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to load kernel";
+    FXL_LOG(ERROR) << "Failed to load kernel " << cfg.kernel_path();
     return status;
   }
 
@@ -357,18 +327,18 @@ int main(int argc, char** argv) {
 
   // Setup balloon device.
   machina::VirtioBalloon balloon(guest.phys_mem());
-  balloon.set_deflate_on_demand(options.balloon_demand_page());
+  balloon.set_deflate_on_demand(cfg.balloon_demand_page());
   status = bus.Connect(balloon.pci_device());
   if (status != ZX_OK) {
     return status;
   }
-  if (options.balloon_interval() > 0) {
-    poll_balloon_stats(&balloon, &options);
+  if (cfg.balloon_interval() > 0) {
+    poll_balloon_stats(&balloon, &cfg);
   }
 
   // Setup block device.
   std::vector<fbl::unique_ptr<machina::VirtioBlock>> block_devices;
-  for (const auto& block_spec : options.block_devices()) {
+  for (const auto& block_spec : cfg.block_devices()) {
     fbl::unique_ptr<machina::BlockDispatcher> dispatcher;
     if (!block_spec.path.empty()) {
       status = machina::BlockDispatcher::CreateFromPath(
@@ -376,7 +346,7 @@ int main(int argc, char** argv) {
           guest.phys_mem(), &dispatcher);
     } else if (!block_spec.guid.empty()) {
       status = machina::BlockDispatcher::CreateFromGuid(
-          block_spec.guid, options.block_wait() ? ZX_TIME_INFINITE : 0,
+          block_spec.guid, cfg.block_wait() ? ZX_TIME_INFINITE : 0,
           block_spec.mode, block_spec.data_plane, guest.phys_mem(),
           &dispatcher);
     } else {
@@ -432,7 +402,7 @@ int main(int argc, char** argv) {
   machina::VirtioGpu gpu(guest.phys_mem());
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
 
-  if (options.enable_gpu()) {
+  if (cfg.enable_gpu()) {
     // Setup input device.
     status = input.Start();
     if (status != ZX_OK) {

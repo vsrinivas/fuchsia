@@ -48,7 +48,7 @@ static uintptr_t create_page_table_level(const machina::PhysMem& phys_mem,
   const size_t l1_pages = (l1_ptes + kPtesPerPage - 1) / kPtesPerPage;
 
   uintptr_t l0_pte_off = l1_pte_off + l1_pages * PAGE_SIZE;
-  uint64_t* pt = (uint64_t*)(phys_mem.addr() + l1_pte_off);
+  auto pt = phys_mem.as<uint64_t>(l1_pte_off);
   for (size_t i = 0; i < l1_ptes; i++) {
     if (has_page && (!has_l0_aspace || i < l1_ptes - 1)) {
       pt[i] = *aspace_off | X86_PTE_P | X86_PTE_RW | map_flags;

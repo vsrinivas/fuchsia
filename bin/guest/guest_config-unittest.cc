@@ -25,8 +25,9 @@ TEST(GuestConfigParserTest, DefaultValues) {
   GuestConfigParser parser(&config);
   parser.ParseConfig("{}");
 
-  ASSERT_STREQ("/pkg/data/kernel", config.kernel_path().c_str());
-  ASSERT_STREQ("/pkg/data/ramdisk", config.ramdisk_path().c_str());
+  ASSERT_EQ(Kernel::ZIRCON, config.kernel());
+  ASSERT_TRUE(config.kernel_path().empty());
+  ASSERT_TRUE(config.ramdisk_path().empty());
   ASSERT_TRUE(config.block_devices().empty());
   ASSERT_TRUE(config.cmdline().empty());
   ASSERT_EQ(0, config.balloon_interval());
@@ -41,7 +42,7 @@ TEST(GuestConfigParserTest, ParseConfig) {
 
   ASSERT_EQ(ZX_OK, parser.ParseConfig(
                        R"JSON({
-          "kernel": "kernel_path",
+          "zircon": "zircon_path",
           "ramdisk": "ramdisk_path",
           "block": "/pkg/data/block_path",
           "cmdline": "kernel cmdline",
@@ -50,11 +51,12 @@ TEST(GuestConfigParserTest, ParseConfig) {
           "balloon-demand-page": "true",
           "block-wait": "true"
         })JSON"));
-  ASSERT_STREQ("kernel_path", config.kernel_path().c_str());
-  ASSERT_STREQ("ramdisk_path", config.ramdisk_path().c_str());
+  ASSERT_EQ(Kernel::ZIRCON, config.kernel());
+  ASSERT_EQ("zircon_path", config.kernel_path());
+  ASSERT_EQ("ramdisk_path", config.ramdisk_path());
   ASSERT_EQ(1, config.block_devices().size());
-  ASSERT_STREQ("/pkg/data/block_path", config.block_devices()[0].path.c_str());
-  ASSERT_STREQ("kernel cmdline", config.cmdline().c_str());
+  ASSERT_EQ("/pkg/data/block_path", config.block_devices()[0].path);
+  ASSERT_EQ("kernel cmdline", config.cmdline());
   ASSERT_EQ(ZX_SEC(1234), config.balloon_interval());
   ASSERT_EQ(5678, config.balloon_pages_threshold());
   ASSERT_TRUE(config.balloon_demand_page());
@@ -66,7 +68,7 @@ TEST(GuestConfigParserTest, ParseArgs) {
   GuestConfigParser parser(&config);
 
   const char* argv[] = {"exe_name",
-                        "--kernel=kernel_path",
+                        "--linux=linux_path",
                         "--ramdisk=ramdisk_path",
                         "--block=/pkg/data/block_path",
                         "--cmdline=kernel_cmdline",
@@ -76,11 +78,12 @@ TEST(GuestConfigParserTest, ParseArgs) {
                         "--block-wait"};
   ASSERT_EQ(ZX_OK,
             parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
-  ASSERT_STREQ("kernel_path", config.kernel_path().c_str());
-  ASSERT_STREQ("ramdisk_path", config.ramdisk_path().c_str());
+  ASSERT_EQ(Kernel::LINUX, config.kernel());
+  ASSERT_EQ("linux_path", config.kernel_path());
+  ASSERT_EQ("ramdisk_path", config.ramdisk_path());
   ASSERT_EQ(1, config.block_devices().size());
-  ASSERT_STREQ("/pkg/data/block_path", config.block_devices()[0].path.c_str());
-  ASSERT_STREQ("kernel_cmdline", config.cmdline().c_str());
+  ASSERT_EQ("/pkg/data/block_path", config.block_devices()[0].path);
+  ASSERT_EQ("kernel_cmdline", config.cmdline());
   ASSERT_EQ(ZX_SEC(1234), config.balloon_interval());
   ASSERT_EQ(5678, config.balloon_pages_threshold());
   ASSERT_TRUE(config.balloon_demand_page());
@@ -119,7 +122,7 @@ TEST(GuestConfigParserTest, CommandLineAppend) {
                         "--cmdline-append=baz"};
   ASSERT_EQ(ZX_OK,
             parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
-  ASSERT_STREQ("foo bar baz", config.cmdline().c_str());
+  ASSERT_EQ("foo bar baz", config.cmdline());
 }
 
 TEST(GuestConfigParserTest, BlockSpecArg) {
@@ -137,13 +140,13 @@ TEST(GuestConfigParserTest, BlockSpecArg) {
   const BlockSpec& spec0 = config.block_devices()[0];
   ASSERT_EQ(machina::BlockDispatcher::Mode::RO, spec0.mode);
   ASSERT_EQ(machina::BlockDispatcher::DataPlane::FDIO, spec0.data_plane);
-  ASSERT_STREQ("/pkg/data/foo", spec0.path.c_str());
+  ASSERT_EQ("/pkg/data/foo", spec0.path);
   ASSERT_TRUE(spec0.guid.empty());
 
   const BlockSpec& spec1 = config.block_devices()[1];
   ASSERT_EQ(machina::BlockDispatcher::Mode::RW, spec1.mode);
   ASSERT_EQ(machina::BlockDispatcher::DataPlane::FIFO, spec1.data_plane);
-  ASSERT_STREQ("/dev/class/block/001", spec1.path.c_str());
+  ASSERT_EQ("/dev/class/block/001", spec1.path);
   ASSERT_TRUE(spec1.guid.empty());
 
   const BlockSpec& spec2 = config.block_devices()[2];
@@ -181,12 +184,12 @@ TEST(GuestConfigParserTest, BlockSpecJson) {
   const BlockSpec& spec0 = config.block_devices()[0];
   ASSERT_EQ(machina::BlockDispatcher::Mode::RO, spec0.mode);
   ASSERT_EQ(machina::BlockDispatcher::DataPlane::FDIO, spec0.data_plane);
-  ASSERT_STREQ("/pkg/data/foo", spec0.path.c_str());
+  ASSERT_EQ("/pkg/data/foo", spec0.path);
 
   const BlockSpec& spec1 = config.block_devices()[1];
   ASSERT_EQ(machina::BlockDispatcher::Mode::RW, spec1.mode);
   ASSERT_EQ(machina::BlockDispatcher::DataPlane::FIFO, spec1.data_plane);
-  ASSERT_STREQ("/dev/class/block/001", spec1.path.c_str());
+  ASSERT_EQ("/dev/class/block/001", spec1.path);
 
   const BlockSpec& spec2 = config.block_devices()[2];
   ASSERT_EQ(machina::BlockDispatcher::Mode::RW, spec2.mode);

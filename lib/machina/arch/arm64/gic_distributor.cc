@@ -125,17 +125,17 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
       SoftwareGeneratedInterrupt sgi(value.u32);
       uint8_t cpu_mask;
       switch (sgi.target) {
-      case InterruptTarget::MASK:
-        cpu_mask = sgi.cpu_mask;
-        break;
-      case InterruptTarget::ALL_BUT_LOCAL:
-        cpu_mask = ~(1u << Vcpu::GetCurrent()->id());
-        break;
-      case InterruptTarget::LOCAL:
-        cpu_mask = 1u << Vcpu::GetCurrent()->id();
-        break;
-      default:
-        return ZX_ERR_NOT_SUPPORTED;
+        case InterruptTarget::MASK:
+          cpu_mask = sgi.cpu_mask;
+          break;
+        case InterruptTarget::ALL_BUT_LOCAL:
+          cpu_mask = ~(1u << Vcpu::GetCurrent()->id());
+          break;
+        case InterruptTarget::LOCAL:
+          cpu_mask = 1u << Vcpu::GetCurrent()->id();
+          break;
+        default:
+          return ZX_ERR_NOT_SUPPORTED;
       }
       return TargetInterrupt(sgi.vector, cpu_mask);
     }

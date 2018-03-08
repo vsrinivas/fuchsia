@@ -34,7 +34,7 @@ if (target_cpu == "x64") {
 
 guest_app("debian-guest") {
   cmdline = "${arch_cmdline} console=hvc0 console=tty0 root=/dev/vda rw"
-  kernel = "${image_dir}/vmlinuz"
+  linux = "${image_dir}/vmlinuz"
   ramdisk = "${image_dir}/initrd.img"
 
   if (debian_guest_usb_root) {

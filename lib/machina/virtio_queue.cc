@@ -180,8 +180,8 @@ zx_status_t VirtioQueue::Poll(virtio_queue_poll_fn_t handler,
   auto args = new poll_task_args_t{this, handler, std::move(name), ctx};
 
   thrd_t thread;
-  int ret = thrd_create_with_name(&thread, virtio_queue_poll_task,
-                                  args, args->name.c_str());
+  int ret = thrd_create_with_name(&thread, virtio_queue_poll_task, args,
+                                  args->name.c_str());
   if (ret != thrd_success) {
     delete args;
     FXL_LOG(ERROR) << "Failed to create queue thread " << ret;

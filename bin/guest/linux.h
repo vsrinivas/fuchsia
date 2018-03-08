@@ -5,14 +5,11 @@
 #ifndef GARNET_BIN_GUEST_LINUX_H_
 #define GARNET_BIN_GUEST_LINUX_H_
 
-#include <zircon/types.h>
+#include "garnet/bin/guest/guest_config.h"
 
-zx_status_t setup_linux(const uintptr_t addr,
-                        const size_t size,
-                        const uintptr_t first_page,
-                        const int fd,
-                        const char* initrd_path,
-                        const char* cmdline,
+zx_status_t setup_linux(const GuestConfig cfg,
+                        const machina::PhysMem& phys_mem,
+                        const uintptr_t acpi_off,
                         uintptr_t* guest_ip,
                         uintptr_t* boot_ptr);
 

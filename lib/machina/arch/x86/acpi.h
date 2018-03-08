@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_ARCH_X86_ACPI_H_
 #define GARNET_LIB_MACHINA_ARCH_X86_ACPI_H_
 
-#include <zircon/types.h>
+#include "garnet/lib/machina/phys_mem.h"
 
 namespace machina {
 
@@ -17,8 +17,7 @@ struct AcpiConfig {
 };
 
 zx_status_t create_acpi_table(const struct AcpiConfig& cfg,
-                              uintptr_t addr,
-                              size_t size,
+                              const machina::PhysMem& phys_mem,
                               uintptr_t acpi_off);
 
 }  // namespace machina

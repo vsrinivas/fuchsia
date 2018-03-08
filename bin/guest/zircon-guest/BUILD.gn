@@ -92,7 +92,7 @@ guest_app("zircon-guest") {
   cmdline = "TERM=uart"
   bootdata_outputs = get_target_outputs(":guest-bootdata")
   ramdisk = bootdata_outputs[0]
-  kernel = "//out/build-zircon/build-${zircon_cpu}/zircon.bin"
+  zircon = "//out/build-zircon/build-${zircon_cpu}/zircon.bin"
 
   gpt_outputs = get_target_outputs(":gpt_image")
   gpt_filename = "gpt.img"

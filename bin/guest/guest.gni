@@ -7,9 +7,11 @@ import("//build/package.gni")
 # Defines a guest package.
 #
 # Parameters
-#   kernel (string, optional)
-#     Path to the guest kernel.
-#   ramdisk (string, optional)
+#   zircon (string, optional)
+#     Path to the Zircon kernel. Either "zircon" or "linux" must be specified.
+#   linux (string, optional)
+#     Path to the Linux kernel. Either "zircon" or "linux" must be specified.
+#   ramdisk (string, required)
 #     Path to a ramdisk file to be loaded into the guest.
 #   cmdline (string, optional)
 #     Kernel cmdline string.
@@ -17,9 +19,8 @@ import("//build/package.gni")
 #     List of block devices to use.
 #
 template("guest_app") {
-  if (defined(invoker.cli) && invoker.cli) {
-    assert(!defined(invoker.kernel) && !defined(invoker.ramdisk), "")
-  }
+  assert(defined(invoker.zircon) || defined(invoker.linux), "")
+  assert(defined(invoker.ramdisk), "")
 
   guest_config_target_name = "${target_name}_guest_config"
   guest_config_file = "${target_out_dir}/guest.cfg"
@@ -31,22 +32,23 @@ template("guest_app") {
     ]
 
     args = []
-    if (defined(invoker.cmdline)) {
-      args += [
-        "--cmdline",
-        invoker.cmdline,
-      ]
+    if (defined(invoker.zircon)) {
+      args += ["--zircon", "/pkg/data/kernel"]
     }
-
+    if (defined(invoker.linux)) {
+      args += ["--linux", "/pkg/data/kernel"]
+    }
+    if (defined(invoker.ramdisk)) {
+      args += ["--ramdisk", "/pkg/data/ramdisk"]
+    }
+    if (defined(invoker.cmdline)) {
+      args += ["--cmdline", invoker.cmdline]
+    }
     if (defined(invoker.block_devices)) {
       foreach(block_spec, invoker.block_devices) {
-        args += [
-          "--block",
-          block_spec,
-        ]
+        args += ["--block", block_spec]
       }
     }
-
     args += [ rebase_path("$guest_config_file") ]
   }
 
@@ -91,8 +93,18 @@ template("guest_app") {
     }
 
     # Add kernel resource.
-    if (defined(invoker.kernel)) {
-      kernel = rebase_path(invoker.kernel)
+    if (defined(invoker.zircon)) {
+      kernel = rebase_path(invoker.zircon)
+      inputs += [ kernel ]
+      resources += [
+        {
+          path = kernel
+          dest = "kernel"
+        },
+      ]
+    }
+    if (defined(invoker.linux)) {
+      kernel = rebase_path(invoker.linux)
       inputs += [ kernel ]
       resources += [
         {
@@ -103,16 +115,14 @@ template("guest_app") {
     }
 
     # Add ramdisk resource.
-    if (defined(invoker.ramdisk)) {
-      ramdisk = rebase_path(invoker.ramdisk)
-      inputs += [ ramdisk ]
-      resources += [
-        {
-          path = ramdisk
-          dest = "ramdisk"
-        },
-      ]
-    }
+    ramdisk = rebase_path(invoker.ramdisk)
+    inputs += [ ramdisk ]
+    resources += [
+      {
+        path = ramdisk
+        dest = "ramdisk"
+      },
+    ]
 
     resources += [
       {

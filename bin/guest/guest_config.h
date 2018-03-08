@@ -25,11 +25,14 @@ struct BlockSpec {
   bool volatile_writes = false;
 };
 
+enum class Kernel {
+  ZIRCON,
+  LINUX,
+};
+
 class GuestConfig {
  public:
-  GuestConfig();
-  ~GuestConfig();
-
+  Kernel kernel() const { return kernel_; }
   const std::string& kernel_path() const { return kernel_path_; }
   const std::string& ramdisk_path() const { return ramdisk_path_; }
   const std::vector<BlockSpec>& block_devices() const { return block_specs_; }
@@ -45,6 +48,7 @@ class GuestConfig {
 
  private:
   friend class GuestConfigParser;
+  Kernel kernel_ = Kernel::ZIRCON;
   std::string kernel_path_;
   std::string ramdisk_path_;
   std::vector<BlockSpec> block_specs_;
@@ -68,10 +72,10 @@ class GuestConfigParser {
   zx_status_t ParseConfig(const std::string& data);
 
  private:
-  GuestConfig* config_;
+  GuestConfig* cfg_;
 
   using OptionMap = std::unordered_map<std::string, OptionHandler>;
-  OptionMap options_;
+  OptionMap opts_;
 };
 
 #endif  // GARNET_BIN_GUEST_GUEST_CONFIG_H_

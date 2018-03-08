@@ -8,13 +8,16 @@ source_set("lib") {
   visibility = [ ":*" ]
 
   sources = [
-    "efi.cc",
+    "kernel.cc",
+    "kernel.h",
     "guest_config.cc",
     "guest_config.h",
     "guest_view.cc",
     "guest_view.h",
     "linux.cc",
+    "linux.h",
     "zircon.cc",
+    "zircon.h",
   ]
 
   public_deps = [

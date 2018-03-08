@@ -23,8 +23,9 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "usage: " << cl.argv0() << " [OPTIONS]\n";
   std::cerr << "\n";
   std::cerr << "OPTIONS:\n";
-  std::cerr << "\t--kernel=[kernel.bin]           Use file 'kernel.bin' as the kernel\n";
-  std::cerr << "\t--ramdisk=[ramdisk.bin]         Use file 'ramdisk.bin' as a ramdisk\n";
+  std::cerr << "\t--zircon=[kernel.bin]           Load a Zircon kernel from 'kernel.bin'\n";
+  std::cerr << "\t--linux=[kernel.bin]            Load a Linux kernel from 'kernel.bin'\n";
+  std::cerr << "\t--ramdisk=[ramdisk.bin]         Use file 'ramdisk.bin' as an initial RAM disk\n";
   std::cerr << "\t--memory=[bytes]                Allocate 'bytes' of physical memory for the guest. The\n";
   std::cerr << "\t                                suffixes 'k', 'M', and 'G' are accepted (currently x64 only)\n";
   std::cerr << "\t--block=[block_spec]            Adds a block device with the given parameters\n";
@@ -277,27 +278,36 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
   return ZX_OK;
 }
 
-GuestConfig::GuestConfig()
-    : kernel_path_("/pkg/data/kernel"), ramdisk_path_("/pkg/data/ramdisk") {}
+static GuestConfigParser::OptionHandler save_kernel(std::string* out,
+                                                    Kernel* kernel,
+                                                    Kernel set_kernel) {
+  return [out, kernel, set_kernel](const std::string& key,
+                                   const std::string& value) {
+    zx_status_t status = save_option(out)(key, value);
+    if (status == ZX_OK) {
+      *kernel = set_kernel;
+    }
+    return status;
+  };
+}
 
-GuestConfig::~GuestConfig() = default;
-
-GuestConfigParser::GuestConfigParser(GuestConfig* config)
-    : config_(config), options_ {
-  {"kernel", save_option(&config_->kernel_path_)},
-      {"ramdisk", save_option(&config_->ramdisk_path_)},
+GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
+  {"zircon", save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
+      {"linux",
+       save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
+      {"ramdisk", save_option(&cfg_->ramdisk_path_)},
       {"block",
-       append_option<BlockSpec>(&config_->block_specs_, parse_block_spec)},
-      {"cmdline", save_option(&config_->cmdline_)},
-      {"cmdline-append", append_string(&config_->cmdline_, " ")},
+       append_option<BlockSpec>(&cfg_->block_specs_, parse_block_spec)},
+      {"cmdline", save_option(&cfg_->cmdline_)},
+      {"cmdline-append", append_string(&cfg_->cmdline_, " ")},
 #if __x86_64__
-      {"memory", parse_mem_size(&config_->memory_)},
+      {"memory", parse_mem_size(&cfg_->memory_)},
 #endif
-      {"balloon-demand-page", set_flag(&config_->balloon_demand_page_, true)},
-      {"balloon-interval", parse_number(&config_->balloon_interval_seconds_)},
-      {"balloon-threshold", parse_number(&config_->balloon_pages_threshold_)},
-      {"nogpu", set_flag(&config_->enable_gpu_, false)},
-      {"block-wait", set_flag(&config_->block_wait_, true)},
+      {"balloon-demand-page", set_flag(&cfg_->balloon_demand_page_, true)},
+      {"balloon-interval", parse_number(&cfg_->balloon_interval_seconds_)},
+      {"balloon-threshold", parse_number(&cfg_->balloon_pages_threshold_)},
+      {"nogpu", set_flag(&cfg_->enable_gpu_, false)},
+      {"block-wait", set_flag(&cfg_->block_wait_, true)},
 }
 {}
 
@@ -313,8 +323,8 @@ zx_status_t GuestConfigParser::ParseArgcArgv(int argc, char** argv) {
   }
 
   for (const fxl::CommandLine::Option& option : cl.options()) {
-    auto entry = options_.find(option.name);
-    if (entry == options_.end()) {
+    auto entry = opts_.find(option.name);
+    if (entry == opts_.end()) {
       FXL_LOG(ERROR) << "Unknown option --" << option.name;
       print_usage(cl);
       return ZX_ERR_INVALID_ARGS;
@@ -337,8 +347,8 @@ zx_status_t GuestConfigParser::ParseConfig(const std::string& data) {
   }
 
   for (auto& member : document.GetObject()) {
-    auto entry = options_.find(member.name.GetString());
-    if (entry == options_.end()) {
+    auto entry = opts_.find(member.name.GetString());
+    if (entry == opts_.end()) {
       FXL_LOG(ERROR) << "Unknown field in configuration object: "
                      << member.name.GetString();
       return ZX_ERR_INVALID_ARGS;

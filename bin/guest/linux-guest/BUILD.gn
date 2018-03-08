@@ -72,7 +72,7 @@ guest_app("linux-guest") {
   }
 
   host_out_dir = get_label_info(":bogus($host_toolchain)", "target_out_dir")
-  kernel = "$host_out_dir/linux/Image"
+  linux = "$host_out_dir/linux/Image"
   ramdisk = "$host_out_dir/linux/initrd.img"
 
   disk_name = "filesystem.img"

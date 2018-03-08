@@ -78,7 +78,8 @@ zx_status_t VirtioQueueFake::SetNext(uint16_t desc_index, uint16_t next_index) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto& desc = const_cast<volatile vring_desc&>(queue_->ring()->desc[desc_index]);
+  auto& desc =
+      const_cast<volatile vring_desc&>(queue_->ring()->desc[desc_index]);
   desc.flags |= VRING_DESC_F_NEXT;
   desc.next = next_index;
   return ZX_OK;
@@ -95,7 +96,8 @@ zx_status_t VirtioQueueFake::WriteDescriptor(void* buf,
 
   next_free_desc_++;
 
-  auto& desc = const_cast<volatile vring_desc&>(queue_->ring()->desc[desc_index]);
+  auto& desc =
+      const_cast<volatile vring_desc&>(queue_->ring()->desc[desc_index]);
   desc.addr = reinterpret_cast<uint64_t>(buf);
   desc.len = static_cast<uint32_t>(len);
   desc.flags = flags;
