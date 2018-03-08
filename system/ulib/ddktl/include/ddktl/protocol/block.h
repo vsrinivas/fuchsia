@@ -20,7 +20,7 @@
 //
 // :: Examples ::
 //
-// // A driver that implements a ZX_PROTOCOL_BLOCK_CORE device
+// // A driver that implements a ZX_PROTOCOL_BLOCK_IMPL device
 // class BlockDevice;
 // using BlockDeviceType = ddk::Device<BlockDevice, /* ddk mixins */>;
 //
@@ -55,7 +55,7 @@ class BlockProtocol : public internal::base_protocol {
 
         // Can only inherit from one base_protocol implemenation
         ZX_ASSERT(ddk_proto_id_ == 0);
-        ddk_proto_id_ = ZX_PROTOCOL_BLOCK_CORE;
+        ddk_proto_id_ = ZX_PROTOCOL_BLOCK_IMPL;
         ddk_proto_ops_ = &ops_;
     }
 

@@ -319,7 +319,7 @@ static int mbr_bind_thread(void* arg) {
                 .name = name,
                 .ctx = pdev,
                 .ops = &mbr_proto,
-                .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+                .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
                 .proto_ops = &block_ops,
             };
 
@@ -371,7 +371,7 @@ static zx_status_t mbr_bind(void* ctx, zx_device_t* parent) {
         .name = name,
         .ctx = device,
         .ops = &mbr_proto,
-        .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+        .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
         .proto_ops = &block_ops,
         .flags = DEVICE_ADD_INVISIBLE,
     };

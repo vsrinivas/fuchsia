@@ -12,7 +12,7 @@
 #define PF_NOPUB 1
 #endif
 DDK_PROTOCOL_DEF(BLOCK,          'pBLK', "block", 0)
-DDK_PROTOCOL_DEF(BLOCK_CORE,     'pBKC', "block-core", 0)
+DDK_PROTOCOL_DEF(BLOCK_IMPL,     'pBKC', "block-impl", 0)
 DDK_PROTOCOL_DEF(CONSOLE,        'pCON', "console", 0)
 DDK_PROTOCOL_DEF(DEVICE,         'pDEV', "device", 0)
 DDK_PROTOCOL_DEF(DISPLAY,        'pDIS', "display", 0)

@@ -465,7 +465,7 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* parent) {
         .name = "sdmmc",
         .ctx = dev,
         .ops = &sdmmc_device_proto,
-        .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+        .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
         .proto_ops = &block_proto,
         .flags = DEVICE_ADD_INVISIBLE,
     };

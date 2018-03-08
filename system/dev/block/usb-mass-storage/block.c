@@ -98,7 +98,7 @@ zx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
         .name = name,
         .ctx = dev,
         .ops = &ums_block_proto,
-        .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+        .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
         .proto_ops = &ums_block_ops,
     };
 

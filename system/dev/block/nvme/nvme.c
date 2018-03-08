@@ -1109,7 +1109,7 @@ irq_configured:
         .ctx = nvme,
         .ops = &device_ops,
         .flags = DEVICE_ADD_INVISIBLE,
-        .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+        .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
         .proto_ops = &block_ops,
     };
 

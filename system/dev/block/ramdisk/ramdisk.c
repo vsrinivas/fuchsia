@@ -342,7 +342,7 @@ static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
         .name = ramdev->name,
         .ctx = ramdev,
         .ops = &ramdisk_instance_proto,
-        .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+        .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
         .proto_ops = &block_ops,
     };
 

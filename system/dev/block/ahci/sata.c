@@ -301,7 +301,7 @@ zx_status_t sata_bind(ahci_device_t* controller, zx_device_t* parent, int port) 
         .name = name,
         .ctx = device,
         .ops = &sata_device_proto,
-        .proto_id = ZX_PROTOCOL_BLOCK_CORE,
+        .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
         .proto_ops = &sata_block_proto,
     };
 

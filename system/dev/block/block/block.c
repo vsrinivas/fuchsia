@@ -373,7 +373,7 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
     mtx_init(&bdev->lock, mtx_plain);
     bdev->parent = dev;
 
-    if (device_get_protocol(dev, ZX_PROTOCOL_BLOCK_CORE, &bdev->bp) != ZX_OK) {
+    if (device_get_protocol(dev, ZX_PROTOCOL_BLOCK_IMPL, &bdev->bp) != ZX_OK) {
         printf("ERROR: block device '%s': does not support block protocol\n",
                device_get_name(dev));
         free(bdev);
@@ -423,5 +423,5 @@ static zx_driver_ops_t block_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(block, block_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK_CORE),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK_IMPL),
 ZIRCON_DRIVER_END(block)

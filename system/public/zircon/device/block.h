@@ -83,7 +83,7 @@
 #define IOCTL_BLOCK_GET_STATS   \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 18)
 
-// Block Core ioctls (specific to each block device):
+// Block Impl ioctls (specific to each block device):
 
 #define BLOCK_FLAG_READONLY 0x00000001
 #define BLOCK_FLAG_REMOVABLE 0x00000002

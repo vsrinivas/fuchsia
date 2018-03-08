@@ -184,7 +184,7 @@ zx_status_t BlockDevice::Init() {
     args.name = "virtio-block";
     args.ctx = this;
     args.ops = &device_ops_;
-    args.proto_id = ZX_PROTOCOL_BLOCK_CORE;
+    args.proto_id = ZX_PROTOCOL_BLOCK_IMPL;
     args.proto_ops = &block_ops_;
 
     auto status = device_add(bus_device_, &args, &device_);
