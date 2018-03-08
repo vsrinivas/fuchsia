@@ -17,7 +17,7 @@ struct ModuleManifest {
   string verb;
 
   // Includes the name and types of entities for the nouns requires to execute |verb|.
-  array<NounConstraint> noun_constraints;
+  array<NounConstraint>? noun_constraints;
 
   // Identifies the pattern with which to compose this module with others.
   string? composition_pattern;
