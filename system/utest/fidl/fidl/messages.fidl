@@ -1,0 +1,131 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// A set of structs and interface methods designed to exercise fidl_encode,
+// fidl_decode, and fidl_validate.
+
+library CodingTests;
+
+interface Handles {
+    // Starting easy: just a handle.
+    1: NonnullableHandle(handle h0);
+
+    // Multiple handles!
+    2: MultipleNonnullableHandles(uint32 data0, handle h0, uint64 data1, handle h1, handle h2, uint64 data2);
+    3: MultipleNullableHandles(uint32 data0, handle? h0, uint64 data1, handle? h1, handle? h2, uint64 data2);
+};
+
+struct NonnullableHandleArray {
+    array<handle>:4 handles;
+};
+
+interface Arrays {
+    1: ArrayOfNonnullableHandles(array<handle>:4 handles);
+    2: ArrayOfNullableHandles(array<handle?>:4 handles);
+    3: ArrayOfArrayOfNonnullableHandles(array<array<handle>:3>:4 handles);
+    4: OutOfLineArrayOfNonnullableHandles(NonnullableHandleArray? handles);
+};
+
+interface Strings {
+    1: UnboundedNonnullableString(string s0);
+    2: UnboundedNullableString(string? s0);
+    3: Bounded32NonnullableString(string:32 s0);
+    4: Bounded32NullableString(string:32? s0);
+    5: MultipleNonnullableStrings(string s0, string s1);
+    6: MultipleNullableStrings(string? s0, string? s1);
+};
+
+interface Vectors {
+    1: UnboundedNonnullableVectorOfHandles(vector<handle> vh0);
+    2: UnboundedNullableVectorOfHandles(vector<handle>? vh0);
+    3: Bounded32NonnullableVectorOfHandles(vector<handle>:32 vh0);
+    4: Bounded32NullableVectorOfHandles(vector<handle>:32? vh0);
+    5: MultipleNonnullableVectorsOfHandles(vector<handle> vh0, vector<handle> vh1);
+    6: MultipleNullableVectorsOfHandles(vector<handle>? vh0, vector<handle>? vh1);
+    7: UnboundedNonnullableVectorOfUint32s(vector<uint32> vu0);
+    8: UnboundedNullableVectorOfUint32s(vector<uint32>? vu0);
+    9: Bounded32NonnullableVectorOfUint32s(vector<uint32>:32 vu0);
+    10: Bounded32NullableVectorOfUint32s(vector<uint32>:32? vu0);
+    11: MultipleNonnullableVectorsOfUint32s(vector<uint32> vu0, vector<uint32> vu1);
+    12: MultipleNullableVectorsOfUint32s(vector<uint32>? vu0, vector<uint32>? vu1);
+};
+
+union SingleHandleUnion {
+    handle h0;
+};
+
+union MultipleHandlesUnion {
+    handle h;
+    array<handle>:2 hs;
+    array<array<handle>:2>:2 hss;
+};
+
+union MaybeRecurse {
+    handle h;
+    MaybeRecurse? more;
+};
+
+interface Unions {
+    1: SingleHandleUnion(SingleHandleUnion u);
+    2: SingleHandleUnionPointer(SingleHandleUnion u);
+    3: MultipleHandlesUnion(MultipleHandlesUnion u);
+    4: MultipleHandlesUnionPointer(MultipleHandlesUnion? u);
+    5: Recursion(MaybeRecurse u);
+};
+
+struct Inline3 {
+    uint32 padding;
+    handle h;
+};
+
+struct Inline2 {
+    uint64 padding;
+    Inline3 l3;
+    handle h;
+};
+
+struct Inline1 {
+    handle h;
+    Inline2 l2;
+    uint64 padding;
+};
+
+struct Inline0 {
+    uint64 padding;
+    Inline1 L1;
+    handle h;
+};
+
+struct OutOfLine3 {
+    uint32 padding;
+    handle h;
+};
+
+struct OutOfLine2 {
+    uint64 padding;
+    OutOfLine3? l3_present;
+    OutOfLine3? l3_absent;
+    OutOfLine3 l3_inline;
+};
+
+struct OutOfLine1 {
+    handle h;
+    OutOfLine2? l2_present;
+    OutOfLine2 l2_inline;
+    OutOfLine2? l2_absent;
+    uint64 padding;
+};
+
+struct OutOfLine0 {
+    uint64 padding;
+    OutOfLine1? l1_absent;
+    OutOfLine1 l1_inline;
+    handle h;
+    OutOfLine1? l1_present;
+};
+
+interface Structs {
+    1: Inline(Inline0 l0);
+    2: OutOfLine(OutOfLine0 l0);
+};
