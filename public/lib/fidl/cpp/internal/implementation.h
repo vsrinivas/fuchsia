@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <zircon/assert.h>
 
+#include <limits>
 #include <memory>
 
 #include "lib/fidl/cpp/clone.h"

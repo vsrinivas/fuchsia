@@ -22,6 +22,7 @@ type Decl interface {
 
 type Type struct {
 	Decl     string
+	Dtor     string
 	DeclType types.DeclType
 }
 
@@ -53,9 +54,10 @@ type Union struct {
 }
 
 type UnionMember struct {
-	Type   Type
-	Name   string
-	Offset int
+	Type        Type
+	Name        string
+	StorageName string
+	Offset      int
 }
 
 type Struct struct {
@@ -374,16 +376,21 @@ func (c *compiler) compileType(val types.Type) Type {
 	case types.ArrayType:
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::fidl::Array<%s, %v>", t.Decl, *val.ElementCount)
+		r.Dtor = fmt.Sprintf("~Array", r.Decl)
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
+		r.Dtor = fmt.Sprintf("~VectorPtr", r.Decl)
 	case types.StringType:
 		r.Decl = "::fidl::StringPtr"
+		r.Dtor = "~StringPtr"
 	case types.HandleType:
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
+		r.Dtor = fmt.Sprintf("~%s", val.HandleSubtype)
 	case types.RequestType:
 		t := c.compileCompoundIdentifier(val.RequestSubtype)
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>", t)
+		r.Dtor = fmt.Sprintf("~InterfaceRequest", r.Decl)
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
@@ -406,11 +413,14 @@ func (c *compiler) compileType(val types.Type) Type {
 		case types.UnionDeclType:
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
+				r.Dtor = fmt.Sprintf("~unique_ptr")
 			} else {
 				r.Decl = t
+				r.Dtor = fmt.Sprintf("~%s", t)
 			}
 		case types.InterfaceDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
+			r.Dtor = fmt.Sprintf("~InterfaceHandle")
 		default:
 			log.Fatal("Unknown declaration type:", declType)
 		}
@@ -546,6 +556,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
 		c.compileType(val.Type),
 		changeIfReserved(val.Name),
+		changeIfReserved(val.Name + "_"),
 		val.Offset,
 	}
 }
