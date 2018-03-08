@@ -44,8 +44,6 @@ private:
     template <typename Collection>
     void GenerateArray(const Collection& collection);
 
-    void GenerateForward(const coded::Type& type);
-
     void Generate(const coded::StructType& struct_type);
     void Generate(const coded::UnionType& union_type);
     void Generate(const coded::HandleType& handle_type);
