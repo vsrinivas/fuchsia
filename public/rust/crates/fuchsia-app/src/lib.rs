@@ -69,14 +69,14 @@ pub mod client {
         {
 
             let (app_controller, controller_server_end) = ApplicationController::Service::new_pair()?;
-            let (service_request, directory_server_chan) = zx::Channel::create()?;
+            let (directory_request, directory_server_chan) = zx::Channel::create()?;
 
             let launch_info = ApplicationLaunchInfo {
                 url,
                 arguments,
                 out: None,
                 err: None,
-                service_request: Some(directory_server_chan),
+                directory_request: Some(directory_server_chan),
                 flat_namespace: None,
                 additional_services: None,
             };
@@ -86,14 +86,14 @@ pub mod client {
                 .create_application(launch_info, Some(controller_server_end))
                 .context("Failed to start a new Fuchsia application.")?;
 
-            Ok(App { service_request, app_controller })
+            Ok(App { directory_request, app_controller })
         }
     }
 
     /// `App` represents a launched application.
     pub struct App {
-        // service_request is a directory protocol channel
-        service_request: zx::Channel,
+        // directory_request is a directory protocol channel
+        directory_request: zx::Channel,
 
         // TODO: use somehow?
         #[allow(dead_code)]
@@ -107,7 +107,7 @@ pub mod client {
             -> Result<Service::Proxy, Error>
         {
             let (client_channel, server_channel) = zx::Channel::create()?;
-            fdio::service_connect_at(&self.service_request, Service::NAME, server_channel)?;
+            fdio::service_connect_at(&self.directory_request, Service::NAME, server_channel)?;
             Ok(Service::new_proxy(fidl::ClientEnd::new(client_channel))?)
         }
     }
@@ -234,9 +234,9 @@ pub mod server {
             }
         }
 
-        /// Start serving directory protocol service requests on the process PA_SERVICE_REQUEST handle
+        /// Start serving directory protocol service requests on the process PA_DIRECTORY_REQUEST handle
         pub fn start(self) -> Result<FdioServer<Services>, Error> {
-            let fdio_handle = mxruntime::get_startup_handle(mxruntime::HandleType::ServiceRequest)
+            let fdio_handle = mxruntime::get_startup_handle(mxruntime::HandleType::DirectoryRequest)
                 .ok_or(MissingStartupHandle)?;
 
             let fdio_channel = async::Channel::from_channel(fdio_handle.into())?;

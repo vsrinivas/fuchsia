@@ -52,7 +52,7 @@ TokenManagerImpl::TokenManagerImpl(
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = config->url;
     app::Services services;
-    launch_info->service_request = services.NewRequest();
+    launch_info->directory_request = services.NewRequest();
 
     app::ApplicationControllerPtr controller;
     app_context->launcher()->CreateApplication(std::move(launch_info),

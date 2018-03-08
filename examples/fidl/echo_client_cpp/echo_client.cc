@@ -30,7 +30,7 @@ class EchoClientApp {
   bool Start(std::string server_url, std::string msg) {
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = server_url;
-    launch_info->service_request = echo_provider_.NewRequest();
+    launch_info->directory_request = echo_provider_.NewRequest();
 
     context_->launcher()->CreateApplication(std::move(launch_info),
                                             controller_.NewRequest());

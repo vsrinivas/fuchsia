@@ -52,7 +52,7 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop {
     app::Services services;
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = "token_manager";
-    launch_info->service_request = services.NewRequest();
+    launch_info->directory_request = services.NewRequest();
     {
       std::ostringstream stream;
       stream << "--verbose=" << fxl::GetVlogVerbosity();

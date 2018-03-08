@@ -51,7 +51,7 @@ void handle_launch(int argc, const char** argv) {
 
   // Create service request and service directory.
   zx_status_t status =
-      zx::channel::create(0, &launch_info->service_request, &directory);
+      zx::channel::create(0, &launch_info->directory_request, &directory);
   FXL_CHECK(status == ZX_OK) << "Unable to create directory";
 
   // Connect to application launcher and create guest.

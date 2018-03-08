@@ -23,7 +23,7 @@ constexpr char kServiceRootPath[] = "/svc";
 
 ApplicationContext::ApplicationContext(
     zx::channel service_root,
-    zx::channel service_request)
+    zx::channel directory_request)
     : vfs_(async_get_default()),
       export_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       public_export_dir_(fbl::AdoptRef(new fs::PseudoDir())),
@@ -37,8 +37,8 @@ ApplicationContext::ApplicationContext(
   export_dir()->AddEntry("public", public_export_dir_);
   export_dir()->AddEntry("debug", debug_export_dir_);
   export_dir()->AddEntry("ctrl", ctrl_export_dir_);
-  if (service_request.is_valid())
-    vfs_.ServeDirectory(export_dir_, std::move(service_request));
+  if (directory_request.is_valid())
+    vfs_.ServeDirectory(export_dir_, std::move(directory_request));
 }
 
 ApplicationContext::~ApplicationContext() = default;
@@ -54,9 +54,9 @@ ApplicationContext::CreateFromStartupInfo() {
 
 std::unique_ptr<ApplicationContext>
 ApplicationContext::CreateFromStartupInfoNotChecked() {
-  zx_handle_t service_request = zx_get_startup_handle(PA_SERVICE_REQUEST);
+  zx_handle_t directory_request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
   return std::make_unique<ApplicationContext>(
-      subtle::CreateStaticServiceRootHandle(), zx::channel(service_request));
+      subtle::CreateStaticServiceRootHandle(), zx::channel(directory_request));
 }
 
 std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
@@ -75,7 +75,7 @@ std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
 
   return std::make_unique<ApplicationContext>(
       std::move(service_root),
-      std::move(startup_info->launch_info->service_request));
+      std::move(startup_info->launch_info->directory_request));
 }
 
 void ApplicationContext::ConnectToEnvironmentService(

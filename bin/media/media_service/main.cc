@@ -23,7 +23,7 @@ void ConnectToIsolate(f1dl::InterfaceRequest<Interface> request,
   launch_info->arguments = f1dl::Array<f1dl::String>::New(1);
   launch_info->arguments[0] = kIsolateArgument;
   app::Services services;
-  launch_info->service_request = services.NewRequest();
+  launch_info->directory_request = services.NewRequest();
 
   app::ApplicationControllerPtr controller;
   launcher->CreateApplication(std::move(launch_info), controller.NewRequest());

@@ -46,7 +46,7 @@ int main(int argc, const char** argv) {
   launch_info->url = positional_args[0];
   for (size_t i = 1; i < positional_args.size(); ++i)
     launch_info->arguments.push_back(positional_args[i]);
-  launch_info->service_request = services.NewRequest();
+  launch_info->directory_request = services.NewRequest();
   app::ApplicationControllerPtr controller;
   application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                       controller.NewRequest());

@@ -69,7 +69,7 @@ class Services {
   // Creates a request for a directory and stores the other end of the channel
   // in this object for later use by |Connect|.
   //
-  // The returned channel is suitable for use in PA_SERVICE_REQUEST.
+  // The returned channel is suitable for use in PA_DIRECTORY_REQUEST.
   zx::channel NewRequest();
 
   void Bind(zx::channel directory);

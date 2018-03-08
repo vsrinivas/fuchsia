@@ -263,7 +263,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   app::Services services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = "cobalt";
-  launch_info->service_request = services.NewRequest();
+  launch_info->directory_request = services.NewRequest();
   {
     std::ostringstream stream;
     stream << "--schedule_interval_seconds=" << schedule_interval_seconds;

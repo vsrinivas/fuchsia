@@ -28,7 +28,7 @@ type Context struct {
 
 // TODO: define these in syscall/zx/mxruntime
 const (
-	HandleServiceRequest mxruntime.HandleType = 0x3B
+	HandleDirectoryRequest mxruntime.HandleType = 0x3B
 	HandleAppServices    mxruntime.HandleType = 0x43
 )
 
@@ -107,7 +107,7 @@ func (c *Context) ConnectToEnvServiceAt(name string, h zx.Handle) {
 
 func CreateFromStartupInfo() *Context {
 	serviceRequest := mxruntime.GetStartupHandle(
-		mxruntime.HandleInfo{Type: HandleServiceRequest, Arg: 0})
+		mxruntime.HandleInfo{Type: HandleDirectoryRequest, Arg: 0})
 	appServices := mxruntime.GetStartupHandle(
 		mxruntime.HandleInfo{Type: HandleAppServices, Arg: 0})
 	return New(getServiceRoot(), serviceRequest, appServices)

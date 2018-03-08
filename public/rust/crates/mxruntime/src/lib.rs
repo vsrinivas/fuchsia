@@ -26,7 +26,7 @@ pub enum HandleType {
     // Handle types used by the device manager and device hosts
     Resource = mxruntime_sys::PA_RESOURCE,
     // Handle types used by the mojo application model
-    ServiceRequest = mxruntime_sys::PA_SERVICE_REQUEST,
+    DirectoryRequest = mxruntime_sys::PA_DIRECTORY_REQUEST,
     ApplicationLauncher = mxruntime_sys::PA_APP_LAUNCHER,
     User0 = mxruntime_sys::PA_USER0,
 }

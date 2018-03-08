@@ -43,7 +43,7 @@ void TileView::ConnectViews() {
 
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = url;
-    launch_info->service_request = services.NewRequest();
+    launch_info->directory_request = services.NewRequest();
 
     // |env_launcher_| launches the app with our nested environment.
     env_launcher_->CreateApplication(std::move(launch_info),

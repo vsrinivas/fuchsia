@@ -48,7 +48,7 @@ void DelegatingApplicationLoader::StartDelegate(
   auto dup_launch_info = app::ApplicationLaunchInfo::New();
   dup_launch_info->url = record->launch_info->url;
   dup_launch_info->arguments = record->launch_info->arguments.Clone();
-  dup_launch_info->service_request = services.NewRequest();
+  dup_launch_info->directory_request = services.NewRequest();
   delegate_launcher_->CreateApplication(std::move(dup_launch_info),
                                         record->controller.NewRequest());
 

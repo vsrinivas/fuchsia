@@ -60,12 +60,12 @@ std::vector<const char*> GetArgv(const std::string& argv0,
 }
 
 // The very first nested environment process we create gets the
-// PA_SERVICE_REQUEST given to us by our parent. It's slightly awkward that we
+// PA_DIRECTORY_REQUEST given to us by our parent. It's slightly awkward that we
 // don't publish the root environment's services. We should consider
 // reorganizing the boot process so that the root environment's services are
 // the ones we want to publish.
 void PublishServicesForFirstNestedEnvironment(ServiceProviderBridge* services) {
-  static zx_handle_t request = zx_get_startup_handle(PA_SERVICE_REQUEST);
+  static zx_handle_t request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
   if (request == ZX_HANDLE_INVALID)
     return;
   services->ServeDirectory(zx::channel(request));
@@ -114,10 +114,10 @@ zx::process CreateProcess(const zx::job& job,
   std::vector<uint32_t> ids;
   std::vector<zx_handle_t> handles;
 
-  zx::channel service_request = std::move(launch_info->service_request);
-  if (service_request) {
-    ids.push_back(PA_SERVICE_REQUEST);
-    handles.push_back(service_request.release());
+  zx::channel directory_request = std::move(launch_info->directory_request);
+  if (directory_request) {
+    ids.push_back(PA_DIRECTORY_REQUEST);
+    handles.push_back(directory_request.release());
   }
 
   PushFileDescriptor(std::move(launch_info->out), STDOUT_FILENO, &ids,
@@ -181,7 +181,7 @@ struct ExportedDirChannels {
   // dir.
   zx::channel exported_dir;
 
-  // The server side of our client's |ApplicationLaunchInfo.service_request|.
+  // The server side of our client's |ApplicationLaunchInfo.directory_request|.
   zx::channel client_request;
 };
 
@@ -195,8 +195,8 @@ ExportedDirChannels BindDirectory(ApplicationLaunchInfo* launch_info) {
     return {zx::channel(), zx::channel()};
   }
 
-  auto client_request = std::move(launch_info->service_request);
-  launch_info->service_request = std::move(exported_dir_server);
+  auto client_request = std::move(launch_info->directory_request);
+  launch_info->directory_request = std::move(exported_dir_server);
   return { std::move(exported_dir_client), std::move(client_request) };
 }
 
@@ -520,7 +520,7 @@ ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
     ApplicationControllerPtr runner_controller;
     auto runner_launch_info = ApplicationLaunchInfo::New();
     runner_launch_info->url = runner;
-    runner_launch_info->service_request = runner_services.NewRequest();
+    runner_launch_info->directory_request = runner_services.NewRequest();
     CreateApplication(std::move(runner_launch_info),
                       runner_controller.NewRequest());
 
