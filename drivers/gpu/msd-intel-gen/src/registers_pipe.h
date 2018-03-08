@@ -22,6 +22,28 @@ public:
     DEF_FIELD(11, 0, vertical_source_size);
 };
 
+class PipeScalerControl : public RegisterBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x68180;
+
+    enum Mode { DYNAMIC = 0, SEVEN_BY_FIVE = 1 };
+    enum Binding { PIPE = 0, PLANE_1 = 1, PLANE_2 = 2, PLANE_3 = 3, PLANE_4 = 4 };
+    enum Filter { MEDIUM = 0, EDGE_ENHANCE = 2, BILINEAR = 3 };
+
+    DEF_BIT(31, enable);
+    DEF_FIELD(29, 28, mode);
+    DEF_FIELD(27, 25, binding);
+    DEF_FIELD(24, 23, filter_select);
+};
+
+class PipeScalerWindowSize : public RegisterBase {
+public:
+    static constexpr uint32_t kBaseAddr = 0x68174;
+
+    DEF_FIELD(28, 16, x_size);
+    DEF_FIELD(11, 0, y_size);
+};
+
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.601
 class PlaneSurfaceAddress : public RegisterBase {
 public:
@@ -159,6 +181,8 @@ public:
     }
 
     auto PipeSourceSize() { return GetReg<registers::PipeSourceSize>(); }
+    auto PipeScalerControl() { return GetReg<registers::PipeScalerControl>(); }
+    auto PipeScalerWindowSize() { return GetReg<registers::PipeScalerWindowSize>(); }
 
     // The following methods get the instance of the plane register for
     // Plane 1 of this pipe.

@@ -395,6 +395,24 @@ magma::Status MsdIntelDeviceCore::ProcessFlip(
     display_size_pipe.height_minus_1().set(reported_display_size_.height - 1);
     display_size_pipe.WriteTo(register_io());
 
+    auto scaler_reg = pipe.PipeScalerControl().FromValue(0);
+    if (reported_display_size_.width == display_size_.width &&
+        reported_display_size_.height == display_size_.height) {
+        scaler_reg.enable().set(0);
+    } else {
+        scaler_reg.enable().set(1);
+        scaler_reg.mode().set(registers::PipeScalerControl::DYNAMIC);
+        scaler_reg.binding().set(registers::PipeScalerControl::PLANE_1);
+        scaler_reg.filter_select().set(registers::PipeScalerControl::BILINEAR);
+    }
+    scaler_reg.WriteTo(register_io());
+
+    // Writing this register arms the scaler.
+    auto window_size = pipe.PipeScalerWindowSize().ReadFrom(register_io());
+    window_size.x_size().set(display_size_.width);
+    window_size.y_size().set(display_size_.height);
+    window_size.WriteTo(register_io());
+
     // Controls whether the plane surface update happens immediately or on the next vblank.
     constexpr bool kUpdateOnVblank = true;
 
