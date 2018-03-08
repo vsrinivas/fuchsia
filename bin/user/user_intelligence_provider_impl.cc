@@ -166,7 +166,7 @@ app::Services UserIntelligenceProviderImpl::StartTrustedApp(
   app::Services services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
-  launch_info->service_request = services.NewRequest();
+  launch_info->directory_request = services.NewRequest();
   app_context_->launcher()->CreateApplication(std::move(launch_info), NULL);
   return services;
 }

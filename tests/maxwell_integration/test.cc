@@ -83,7 +83,7 @@ app::Services MaxwellTestBase::StartServices(const std::string& url) {
   app::Services services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
-  launch_info->service_request = services.NewRequest();
+  launch_info->directory_request = services.NewRequest();
 
   auto service_list = app::ServiceList::New();
   service_list->names.push_back(modular::ComponentContext::Name_);

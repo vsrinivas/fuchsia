@@ -33,7 +33,7 @@ class HelloAppParent {
         launch_info->arguments.push_back(args[i]);
       }
     }
-    launch_info->service_request = child_services_.NewRequest();
+    launch_info->directory_request = child_services_.NewRequest();
     app_context->launcher()->CreateApplication(std::move(launch_info),
                                                child_.NewRequest());
 

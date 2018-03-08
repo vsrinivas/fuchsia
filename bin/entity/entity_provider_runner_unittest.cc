@@ -115,7 +115,7 @@ class MyEntityProvider : AgentImpl::Delegate,
           return ZX_OK;
         })));
     vfs_.ServeDirectory(outgoing_directory_,
-                        std::move(launch_info_->service_request));
+                        std::move(launch_info_->directory_request));
     agent_impl_ = std::make_unique<AgentImpl>(
         outgoing_directory_, static_cast<AgentImpl::Delegate*>(this));
 

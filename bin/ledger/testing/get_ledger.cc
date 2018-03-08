@@ -34,7 +34,7 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
   app::Services child_services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = "ledger";
-  launch_info->service_request = child_services.NewRequest();
+  launch_info->directory_request = child_services.NewRequest();
   launch_info->arguments.push_back("--no_minfs_wait");
   launch_info->arguments.push_back("--no_statistics_reporting_for_testing");
 

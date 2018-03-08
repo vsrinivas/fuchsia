@@ -76,7 +76,7 @@ class MyDummyAgent : Agent,
                      public app::ApplicationController,
                      public testing::MockBase {
  public:
-  MyDummyAgent(zx::channel service_request,
+  MyDummyAgent(zx::channel directory_request,
                f1dl::InterfaceRequest<app::ApplicationController> ctrl)
       : vfs_(async_get_default()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
@@ -88,7 +88,7 @@ class MyDummyAgent : Agent,
           agent_binding_.Bind(std::move(channel));
           return ZX_OK;
         })));
-    vfs_.ServeDirectory(outgoing_directory_, std::move(service_request));
+    vfs_.ServeDirectory(outgoing_directory_, std::move(directory_request));
   }
 
   void KillApplication() { app_controller_.Unbind(); }
@@ -137,7 +137,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
           app::ApplicationLaunchInfoPtr launch_info,
           f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
-            std::move(launch_info->service_request), std::move(ctrl));
+            std::move(launch_info->directory_request), std::move(ctrl));
         ++agent_launch_count;
       });
 
@@ -182,7 +182,7 @@ TEST_F(AgentRunnerTest, AgentController) {
       [&dummy_agent](app::ApplicationLaunchInfoPtr launch_info,
                      f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
-            std::move(launch_info->service_request), std::move(ctrl));
+            std::move(launch_info->directory_request), std::move(ctrl));
       });
 
   app::ServiceProviderPtr incoming_services;

@@ -72,7 +72,7 @@ impl Launcher {
         let launch_info = ApplicationLaunchInfo {
             url,
             arguments,
-            service_request: None,
+            directory_request: None,
             flat_namespace: None,
             services: Some(services_request)
         };

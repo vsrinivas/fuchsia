@@ -72,7 +72,7 @@ void CloudProviderFactory::Init() {
   app::Services child_services;
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = kAppUrl;
-  launch_info->service_request = child_services.NewRequest();
+  launch_info->directory_request = child_services.NewRequest();
   application_context_->launcher()->CreateApplication(
       std::move(launch_info), cloud_provider_controller_.NewRequest());
   child_services.ConnectToService(cloud_provider_factory_.NewRequest());

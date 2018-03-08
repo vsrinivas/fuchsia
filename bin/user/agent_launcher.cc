@@ -30,7 +30,7 @@ app::Services AgentLauncher::StartAgent(
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = url;
   app::Services services;
-  launch_info->service_request = services.NewRequest();
+  launch_info->directory_request = services.NewRequest();
   FXL_LOG(INFO) << "Starting Maxwell agent " << url;
   agent_launcher->CreateApplication(std::move(launch_info), NULL);
   return services;
