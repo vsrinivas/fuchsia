@@ -1256,7 +1256,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status zx.Status)
 			<-notifyCh
 			ios.wq.EventUnregister(&waitEntry)
 			e = ios.ep.GetSockOpt(tcpip.ErrorOption{})
-			if err != nil {
+			if e != nil {
 				ios.mu.Lock()
 				ios.lastError = e
 				ios.mu.Unlock()
