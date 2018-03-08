@@ -168,6 +168,14 @@ const uint8_t kKeyMap[] = {
     126,  // Right Meta
 };
 
+// Make sure to report only these event codes from keyboard.
+// Reporting other keycodes may cause guest OS to recognize keyboard as
+// touchpad, stylus or joystick.
+constexpr int kATKeyboardFirstCode = 0;
+constexpr int kATKeyboardLastCode = 255;
+constexpr int kMediaKeyboardFirstCode = 0x160;
+constexpr int kMediaKeyboardLastCode = 0x2bf;
+
 VirtioInput::VirtioInput(InputDispatcher* input_dispatcher,
                          const PhysMem& phys_mem,
                          const char* device_name,
@@ -215,7 +223,28 @@ zx_status_t VirtioInput::WriteConfig(uint64_t addr, const IoValue& value) {
       if (config_.subsel == VIRTIO_INPUT_EV_KEY) {
         // Say we support all key events. This isn't true but it's
         // simple.
-        memset(&config_.u, 0xff, sizeof(config_.u));
+        static_assert(kATKeyboardFirstCode % 8 == 0,
+                      "First scan code must be byte aligned.");
+        static_assert((kATKeyboardLastCode + 1 - kATKeyboardFirstCode) % 8 == 0,
+                      "Scan code range must be byte aligned.");
+        static_assert(kMediaKeyboardFirstCode % 8 == 0,
+                      "First scan code must be byte aligned.");
+        static_assert(
+            (kMediaKeyboardLastCode + 1 - kMediaKeyboardFirstCode) % 8 == 0,
+            "Scan code range must be byte aligned.");
+        static_assert((kATKeyboardLastCode + 7) / 8 <
+                      sizeof(virtio_input_config_t().u.bitmap),
+                      "Last scan code cannot exceed allowed range.");
+        static_assert((kMediaKeyboardLastCode + 7) / 8 <
+                      sizeof(virtio_input_config_t().u.bitmap),
+                      "Last scan code cannot exceed allowed range.");
+
+
+        memset(&config_.u, 0, sizeof(config_.u));
+        memset(&config_.u.bitmap[kATKeyboardFirstCode / 8], 0xff,
+               (kATKeyboardLastCode + 1 - kATKeyboardFirstCode) / 8);
+        memset(&config_.u.bitmap[kMediaKeyboardFirstCode / 8], 0xff,
+               (kMediaKeyboardLastCode + 1 - kMediaKeyboardFirstCode) / 8);
         config_.size = sizeof(config_.u);
         return ZX_OK;
       }
