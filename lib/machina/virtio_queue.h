@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_QUEUE_H_
 #define GARNET_LIB_MACHINA_VIRTIO_QUEUE_H_
 
+#include <string>
+
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
@@ -169,9 +171,11 @@ class VirtioQueue {
 
   // Spawn a thread to wait for descriptors to be available and invoke the
   // provided handler on each available buffer asyncronously.
+  //
+  // Returns |ZX_ERR_INVALID_ARGS| if |thread_name| is null.
   zx_status_t Poll(virtio_queue_poll_fn_t handler,
                    void* ctx,
-                   const char* thread_name);
+                   std::string thread_name);
 
   // Handles the next available descriptor in a Virtio queue, calling handler to
   // process individual payload buffers.

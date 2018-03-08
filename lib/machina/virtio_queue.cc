@@ -139,12 +139,14 @@ void VirtioQueue::Wait(uint16_t* index) {
 struct poll_task_args_t {
   VirtioQueue* queue;
   virtio_queue_poll_fn_t handler;
+  std::string name;
   void* ctx;
 
   poll_task_args_t(VirtioQueue* queue,
                    virtio_queue_poll_fn_t handler,
+                   std::string name,
                    void* ctx)
-      : queue(queue), handler(handler), ctx(ctx) {}
+      : queue(queue), handler(handler), name(name), ctx(ctx) {}
 };
 
 static int virtio_queue_poll_task(void* ctx) {
@@ -163,7 +165,8 @@ static int virtio_queue_poll_task(void* ctx) {
       break;
     }
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Error " << status << " while handling queue buffer";
+      FXL_LOG(ERROR) << "Error " << status
+                     << " while handling queue buffer for queue " << args->name;
       result = status;
       break;
     }
@@ -179,12 +182,12 @@ static int virtio_queue_poll_task(void* ctx) {
 
 zx_status_t VirtioQueue::Poll(virtio_queue_poll_fn_t handler,
                               void* ctx,
-                              const char* thread_name) {
-  auto args = fbl::make_unique<poll_task_args_t>(this, handler, ctx);
+                              std::string name) {
+  auto args = new poll_task_args_t(this, handler, std::move(name), ctx);
 
   thrd_t thread;
   int ret = thrd_create_with_name(&thread, virtio_queue_poll_task,
-                                  args.release(), thread_name);
+                                  args, args->name.c_str());
   if (ret != thrd_success) {
     FXL_LOG(ERROR) << "Failed to create queue thread " << ret;
     return ZX_ERR_INTERNAL;
