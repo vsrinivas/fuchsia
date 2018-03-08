@@ -5,12 +5,12 @@
 #ifndef PERIDOT_LIB_SOCKET_SOCKET_WRITER_H_
 #define PERIDOT_LIB_SOCKET_SOCKET_WRITER_H_
 
-#include <async/cpp/auto_wait.h>
-#include <async/default.h>
-
 #include <functional>
 #include <memory>
 #include <string>
+
+#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/default.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
