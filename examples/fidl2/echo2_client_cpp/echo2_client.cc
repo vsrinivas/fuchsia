@@ -22,43 +22,20 @@ class EchoClientApp {
 
   echo2::EchoPtr& echo() { return echo_; }
 
-  zx_status_t Start(std::string server_url, std::string msg) {
-    zx_status_t status = LaunchServer(std::move(server_url));
-    if (status != ZX_OK)
-      return status;
+  void Start(std::string server_url, std::string msg) {
+    auto launch_info = app::ApplicationLaunchInfo::New();
+    launch_info->url = server_url;
+    launch_info->service_request = echo_provider_.NewRequest();
+    context_->launcher()->CreateApplication(std::move(launch_info),
+                                            controller_.NewRequest());
 
     echo_provider_.ConnectToService(echo_.NewRequest().TakeChannel(),
                                     "echo2.Echo");
-    printf("***** Connected\n");
-    return ZX_OK;
   }
 
  private:
   EchoClientApp(const EchoClientApp&) = delete;
   EchoClientApp& operator=(const EchoClientApp&) = delete;
-
-  // This function is a workaround for not being able to use ApplicationLauncher
-  // yet.  We can't use ApplicationLauncher at the moment because it speaks
-  // FIDL1 rather than FIDL2.
-  zx_status_t LaunchServer(std::string server_url) {
-    constexpr int argc = 1;
-    const char* argv[argc] = {
-        server_url.c_str(),
-    };
-    launchpad_t* lp = nullptr;
-    launchpad_create(zx_job_default(), argv[0], &lp);
-    launchpad_load_from_file(lp, argv[0]);
-    launchpad_set_args(lp, argc, argv);
-    launchpad_clone(lp, LP_CLONE_ALL);
-    launchpad_add_handle(lp, echo_provider_.NewRequest().release(),
-                         PA_SERVICE_REQUEST);
-    const char* err = nullptr;
-    zx_status_t status =
-        launchpad_go(lp, server_.reset_and_get_address(), &err);
-    if (status < 0)
-      fprintf(stderr, "launchpad failed: %s: %d\n", err, status);
-    return status;
-  }
 
   std::unique_ptr<app::ApplicationContext> context_;
   zx::process server_;
@@ -70,7 +47,7 @@ class EchoClientApp {
 }  // namespace echo2
 
 int main(int argc, const char** argv) {
-  std::string server_url = "/pkgfs/packages/echo2_server_cpp/0/bin/app";
+  std::string server_url = "echo2_server_cpp";
   std::string msg = "hello world";
 
   for (int i = 1; i < argc - 1; ++i) {
@@ -88,17 +65,11 @@ int main(int argc, const char** argv) {
   async::Loop loop(&config);
 
   echo2::EchoClientApp app;
-  if (app.Start(server_url, msg) != ZX_OK)
-    return -1;
+  app.Start(server_url, msg);
 
   app.echo()->EchoString(msg, [](fidl::StringPtr value) {
     printf("***** Response: %s\n", value->data());
   });
 
-  printf("***** Waiting for response\n");
-  if (app.echo().WaitForResponse() != ZX_OK)
-    return -1;
-
-  printf("***** Exiting\n");
-  return 0;
+  return app.echo().WaitForResponse();
 }

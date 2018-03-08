@@ -17,7 +17,6 @@ class EchoServerApp : public Echo {
   EchoServerApp() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     context_->outgoing_services()->AddServiceForName(
         [this](zx::channel request) {
-          printf("+++++ Server got request\n");
           bindings_.AddBinding(
               this, fidl::InterfaceRequest<Echo>(std::move(request)));
         },
@@ -49,8 +48,6 @@ int main(int argc, const char** argv) {
   async::Loop loop(&config);
 
   echo2::EchoServerApp app;
-  printf("+++++ Server waiting\n");
   loop.Run();
-  printf("+++++ Server exiting\n");
   return 0;
 }
