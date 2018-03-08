@@ -1,0 +1,33 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_test.gni")
+import("//build/package.gni")
+
+go_test("syslog_go_tests") {
+  gopackage = "syslog_tests"
+  go_dependencies = [
+    {
+      package = "syslog_tests"
+    },
+    {
+      package = "syslog"
+      source = "//garnet/public/lib/syslog/go/src/syslog"
+    },
+  ]
+}
+
+package("syslog_gotests") {
+  testonly = true
+  system_image = true
+
+  deps = [
+    ":syslog_go_tests",
+  ]
+  tests = [
+    {
+      name = "syslog_go_tests"
+    },
+  ]
+}
