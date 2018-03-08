@@ -158,7 +158,8 @@ class NProposals : public Proposinator, public ContextListener {
 
   void OnContextUpdate(ContextUpdatePtr update) override {
     auto r = TakeContextValue(update.get(), "n");
-    if (!r.first)
+    ASSERT_TRUE(r.first) << "Expect an update key for every query key.";
+    if (r.second.empty())
       return;
     int n = std::stoi(r.second[0]->content);
 
@@ -203,15 +204,14 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     f1dl::InterfaceHandle<maxwell::ContextReader> context_reader_handle;
     auto scope = ComponentScope::New();
     scope->set_global_scope(GlobalScope::New());
-    context_engine()->GetWriter(std::move(scope),
+    context_engine()->GetWriter(scope->Clone(),
                                 context_writer_handle.NewRequest());
     context_engine()->GetReader(std::move(scope),
                                 context_reader_handle.NewRequest());
 
-    suggestion_engine()->Initialize(std::move(story_provider_handle),
-                                    std::move(focus_provider_handle),
-                                    std::move(context_writer_handle),
-                                    std::move(context_reader_handle));
+    suggestion_engine()->Initialize(
+        std::move(story_provider_handle), std::move(focus_provider_handle),
+        std::move(context_writer_handle), std::move(context_reader_handle));
   }
 
  protected:
