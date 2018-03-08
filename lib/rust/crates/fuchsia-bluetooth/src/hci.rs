@@ -16,7 +16,8 @@ use std::path::{Path, PathBuf};
 pub const DEV_TEST: &str = "/dev/misc/test";
 pub const BTHCI_DRIVER_NAME: &str = "/system/driver/bthci-fake.so";
 
-pub fn create_and_bind_device() -> Result<File, Error> {
+// Returns the name of the fake device and a File representing the device on success.
+pub fn create_and_bind_device() -> Result<(File, String), Error> {
     let mut rng = rand::thread_rng();
     let id = format!("bt-hci-{}", rng.gen::<u8>());
     let devpath = create_fake_device(DEV_TEST, id.as_str())?;
@@ -34,7 +35,7 @@ pub fn create_and_bind_device() -> Result<File, Error> {
     }
     let dev = dev.ok_or(format_err!("could not open {:?}", devpath))?;
     bind_fake_device(&dev)?;
-    Ok(dev)
+    Ok((dev, id))
 }
 
 pub fn list_host_devices() -> Vec<PathBuf> {

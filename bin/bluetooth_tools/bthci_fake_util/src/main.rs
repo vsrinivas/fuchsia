@@ -45,7 +45,9 @@ fn main() {
 
     match command.as_str() {
         "add" => {
-            hci::create_and_bind_device();
+            if let Ok((_, id)) = hci::create_and_bind_device() {
+                println!("fake device added: {}", id);
+            }
         }
         "rm" => {
             if args.len() < 3 {
