@@ -154,13 +154,13 @@ zx_status_t vim_uart_init(vim_bus_t* bus) {
         return status;
     }
 
-    status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_SERIAL_DRIVER);
+    status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_SERIAL_IMPL);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_gpio_init: pbus_wait_protocol failed: %d\n", status);
         return status;
     }
 
-    status = device_get_protocol(bus->parent, ZX_PROTOCOL_SERIAL_DRIVER, &bus->serial);
+    status = device_get_protocol(bus->parent, ZX_PROTOCOL_SERIAL_IMPL, &bus->serial);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_gpio_init: device_get_protocol failed: %d\n", status);
         return status;
@@ -170,8 +170,8 @@ zx_status_t vim_uart_init(vim_bus_t* bus) {
     gpio_config(&bus->gpio, BT_EN, GPIO_DIR_OUT);
     gpio_write(&bus->gpio, BT_EN, 1);
 
-    serial_driver_config(&bus->serial, 0, 115200, SERIAL_DATA_BITS_8 | SERIAL_STOP_BITS_1 |
-                                                  SERIAL_PARITY_NONE | SERIAL_FLOW_CTRL_CTS_RTS);
+    serial_impl_config(&bus->serial, 0, 115200, SERIAL_DATA_BITS_8 | SERIAL_STOP_BITS_1 |
+                                                SERIAL_PARITY_NONE | SERIAL_FLOW_CTRL_CTS_RTS);
 
     // bind Bluetooth HCI UART driver
     status = pbus_device_add(&bus->pbus, &bt_uart_dev, 0);
@@ -181,8 +181,8 @@ zx_status_t vim_uart_init(vim_bus_t* bus) {
     }
 
 #if UART_TEST
-    serial_driver_config(&bus->serial, 1, 115200, SERIAL_DATA_BITS_8 | SERIAL_STOP_BITS_1 |
-                                                  SERIAL_PARITY_NONE);
+    serial_impl_config(&bus->serial, 1, 115200, SERIAL_DATA_BITS_8 | SERIAL_STOP_BITS_1 |
+                                                SERIAL_PARITY_NONE);
     // Bind UART test driver
     status = pbus_device_add(&bus->pbus, &uart_test_dev, 0);
     if (status != ZX_OK) {

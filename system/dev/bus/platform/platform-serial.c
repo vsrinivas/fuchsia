@@ -10,14 +10,14 @@
 
 #include "platform-bus.h"
 
-typedef struct serial_port {
-    serial_driver_protocol_t serial;
+typedef struct platform_serial_port {
+    serial_impl_protocol_t serial;
     uint32_t port_num;
     zx_handle_t socket; // socket used for communicating with our client
     zx_handle_t event;  // event for signaling serial driver state changes
     thrd_t thread;
     mtx_t lock;
-} serial_port_t;
+} platform_serial_port_t;
 
 enum {
     WAIT_ITEM_SOCKET,
@@ -32,7 +32,7 @@ enum {
 
 // This thread handles data transfer in both directions
 static int platform_serial_thread(void* arg) {
-    serial_port_t* port = arg;
+    platform_serial_port_t* port = arg;
     uint8_t in_buffer[UART_BUFFER_SIZE];
     uint8_t out_buffer[UART_BUFFER_SIZE];
     size_t in_buffer_offset = 0;    // offset of first byte in in_buffer (if any)
@@ -68,9 +68,9 @@ static int platform_serial_thread(void* arg) {
         // attempt pending serial write
         if (out_buffer_count > 0) {
             size_t actual;
-            zx_status_t status = serial_driver_write(&port->serial, port->port_num,
-                                                     out_buffer + out_buffer_offset,
-                                                     out_buffer_count, &actual);
+            zx_status_t status = serial_impl_write(&port->serial, port->port_num,
+                                                   out_buffer + out_buffer_offset,
+                                                   out_buffer_count, &actual);
             if (status == ZX_OK) {
                 out_buffer_count -= actual;
                 if (out_buffer_count > 0) {
@@ -80,7 +80,7 @@ static int platform_serial_thread(void* arg) {
                     out_buffer_offset = 0;
                 }
             } else if (status != ZX_ERR_SHOULD_WAIT && status != ZX_SOCKET_PEER_CLOSED) {
-                zxlogf(ERROR, "platform_serial_thread: serial_driver_write returned %d\n", status);
+                zxlogf(ERROR, "platform_serial_thread: serial_impl_write returned %d\n", status);
                 break;
             }
         }
@@ -104,11 +104,11 @@ static int platform_serial_thread(void* arg) {
 
         if (items[WAIT_ITEM_EVENT].pending & EVENT_READABLE_SIGNAL) {
             size_t length;
-            status = serial_driver_read(&port->serial, port->port_num, in_buffer + in_buffer_count,
+            status = serial_impl_read(&port->serial, port->port_num, in_buffer + in_buffer_count,
                                         sizeof(in_buffer) - in_buffer_count, &length);
 
             if (status != ZX_OK) {
-                zxlogf(ERROR, "platform_serial_thread: serial_driver_read returned %d\n", status);
+                zxlogf(ERROR, "platform_serial_thread: serial_impl_read returned %d\n", status);
                 break;
             }
             in_buffer_count += length;
@@ -129,8 +129,8 @@ static int platform_serial_thread(void* arg) {
         }
     }
 
-    serial_driver_enable(&port->serial, port->port_num, false);
-    serial_driver_set_notify_callback(&port->serial, port->port_num, NULL, NULL);
+    serial_impl_enable(&port->serial, port->port_num, false);
+    serial_impl_set_notify_callback(&port->serial, port->port_num, NULL, NULL);
 
     zx_handle_close(port->event);
     zx_handle_close(port->socket);
@@ -141,7 +141,7 @@ static int platform_serial_thread(void* arg) {
 }
 
 static void platform_serial_state_cb(uint32_t port_num, uint32_t state, void* cookie) {
-    serial_port_t* port = cookie;
+    platform_serial_port_t* port = cookie;
 
     // update our event handle signals with latest state from the serial driver
     zx_signals_t set = 0;
@@ -160,8 +160,8 @@ static void platform_serial_state_cb(uint32_t port_num, uint32_t state, void* co
     zx_object_signal(port->event, clear, set);
 }
 
-zx_status_t platform_serial_init(platform_bus_t* bus, serial_driver_protocol_t* serial) {
-    uint32_t port_count = serial_driver_get_port_count(serial);
+zx_status_t platform_serial_init(platform_bus_t* bus, serial_impl_protocol_t* serial) {
+    uint32_t port_count = serial_impl_get_port_count(serial);
     if (!port_count) {
         return ZX_ERR_INVALID_ARGS;
      }
@@ -171,7 +171,7 @@ zx_status_t platform_serial_init(platform_bus_t* bus, serial_driver_protocol_t* 
         return ZX_ERR_BAD_STATE;
     }
 
-    serial_port_t* ports = calloc(port_count, sizeof(serial_port_t));
+    platform_serial_port_t* ports = calloc(port_count, sizeof(platform_serial_port_t));
     if (!ports) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -180,7 +180,7 @@ zx_status_t platform_serial_init(platform_bus_t* bus, serial_driver_protocol_t* 
     bus->serial_port_count = port_count;
 
     for (uint32_t i = 0; i < port_count; i++) {
-        serial_port_t* port = &ports[i];
+        platform_serial_port_t* port = &ports[i];
         mtx_init(&port->lock, mtx_plain);
         memcpy(&port->serial, serial, sizeof(port->serial));
         port->port_num = i;
@@ -189,9 +189,9 @@ zx_status_t platform_serial_init(platform_bus_t* bus, serial_driver_protocol_t* 
     return ZX_OK;
 }
 
-static void platform_serial_port_release(serial_port_t* port) {
-    serial_driver_enable(&port->serial, port->port_num, false);
-    serial_driver_set_notify_callback(&port->serial, port->port_num, NULL, NULL);
+static void platform_serial_port_release(platform_serial_port_t* port) {
+    serial_impl_enable(&port->serial, port->port_num, false);
+    serial_impl_set_notify_callback(&port->serial, port->port_num, NULL, NULL);
     zx_handle_close(port->event);
     zx_handle_close(port->socket);
     port->event = ZX_HANDLE_INVALID;
@@ -214,7 +214,7 @@ zx_status_t platform_serial_config(platform_bus_t* bus, uint32_t port_num, uint3
     }
 
 // locking? flushing?
-    return serial_driver_config(&bus->serial, port_num, baud_rate, flags);
+    return serial_impl_config(&bus->serial, port_num, baud_rate, flags);
 }
 
 zx_status_t platform_serial_open_socket(platform_bus_t* bus, uint32_t port_num,
@@ -222,7 +222,7 @@ zx_status_t platform_serial_open_socket(platform_bus_t* bus, uint32_t port_num,
     if (port_num >= bus->serial_port_count) {
         return ZX_ERR_NOT_FOUND;
     }
-    serial_port_t* port = &bus->serial_ports[port_num];
+    platform_serial_port_t* port = &bus->serial_ports[port_num];
 
     mtx_lock(&port->lock);
     if (port->socket != ZX_HANDLE_INVALID) {
@@ -242,9 +242,9 @@ zx_status_t platform_serial_open_socket(platform_bus_t* bus, uint32_t port_num,
         goto fail;
     }
 
-    serial_driver_set_notify_callback(&bus->serial, port_num, platform_serial_state_cb, port);
+    serial_impl_set_notify_callback(&bus->serial, port_num, platform_serial_state_cb, port);
 
-    status = serial_driver_enable(&bus->serial, port_num, true);
+    status = serial_impl_enable(&bus->serial, port_num, true);
     if (status != ZX_OK) {
         goto fail;
     }

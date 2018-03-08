@@ -51,8 +51,8 @@ static zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void*
     case ZX_PROTOCOL_CLK:
         memcpy(&bus->clk, protocol, sizeof(bus->clk));
         break;
-    case ZX_PROTOCOL_SERIAL_DRIVER: {
-        zx_status_t status = platform_serial_init(bus, (serial_driver_protocol_t *)protocol);
+    case ZX_PROTOCOL_SERIAL_IMPL: {
+        zx_status_t status = platform_serial_init(bus, (serial_impl_protocol_t *)protocol);
         if (status != ZX_OK) {
             return status;
          }
@@ -151,7 +151,7 @@ zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protoc
             return ZX_OK;
         }
         break;
-    case ZX_PROTOCOL_SERIAL_DRIVER:
+    case ZX_PROTOCOL_SERIAL_IMPL:
         if (bus->serial.ops) {
             memcpy(protocol, &bus->serial, sizeof(bus->serial));
             return ZX_OK;

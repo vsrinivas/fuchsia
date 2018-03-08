@@ -23,7 +23,7 @@
 // crystal clock speed
 #define CLK_XTAL 24000000
 
-// default configuration for the case that serial_driver_config is not called
+// default configuration for the case that serial_impl_config is not called
 #define DEFAULT_BAUD_RATE 115200
 #define DEFAULT_CONFIG    (SERIAL_DATA_BITS_8 | SERIAL_STOP_BITS_1 | SERIAL_PARITY_NONE)
 
@@ -52,7 +52,7 @@ typedef struct {
 
 typedef struct aml_uart {
     platform_device_protocol_t pdev;
-    serial_driver_protocol_t serial;
+    serial_impl_protocol_t serial;
     zx_device_t* zxdev;
     aml_uart_port_t* ports;
     unsigned port_count;
@@ -364,7 +364,7 @@ static zx_status_t aml_serial_set_notify_callback(void* ctx, uint32_t port_num, 
     return ZX_OK;
 }
 
-static serial_driver_ops_t aml_serial_ops = {
+static serial_impl_ops_t aml_serial_ops = {
     .get_port_count = aml_serial_get_port_count,
     .config = aml_serial_config,
     .enable = aml_serial_enable,
@@ -463,7 +463,7 @@ static zx_status_t aml_uart_bind(void* ctx, zx_device_t* parent) {
 
     uart->serial.ops = &aml_serial_ops;
     uart->serial.ctx = uart;
-    pbus_set_protocol(&pbus, ZX_PROTOCOL_SERIAL_DRIVER, &uart->serial);
+    pbus_set_protocol(&pbus, ZX_PROTOCOL_SERIAL_IMPL, &uart->serial);
 
     return ZX_OK;
 

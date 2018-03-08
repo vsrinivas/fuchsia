@@ -19,7 +19,7 @@
 #include <zircon/types.h>
 
 // this struct is local to platform-serial.c
-typedef struct serial_port serial_port_t;
+typedef struct platform_serial_port platform_serial_port_t;
 
 // context structure for the platform bus
 typedef struct {
@@ -28,7 +28,7 @@ typedef struct {
     gpio_protocol_t gpio;
     i2c_protocol_t i2c;
     clk_protocol_t clk;
-    serial_driver_protocol_t serial;
+    serial_impl_protocol_t serial;
     iommu_protocol_t iommu;
     zx_handle_t resource;   // root resource for platform bus
     uint32_t vid;
@@ -37,7 +37,7 @@ typedef struct {
     list_node_t devices;    // list of platform_dev_t
     char board_name[ZX_DEVICE_NAME_MAX + 1];
 
-    serial_port_t* serial_ports;
+    platform_serial_port_t* serial_ports;
     uint32_t serial_port_count;
 
     // list of i2c_txn_t
@@ -96,7 +96,7 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* dev, uint
 zx_status_t platform_device_enable(platform_dev_t* dev, bool enable);
 
 // platform-serial.c
-zx_status_t platform_serial_init(platform_bus_t* bus, serial_driver_protocol_t* serial);
+zx_status_t platform_serial_init(platform_bus_t* bus, serial_impl_protocol_t* serial);
 void platform_serial_release(platform_bus_t* bus);
 zx_status_t platform_serial_config(platform_bus_t* bus, uint32_t port, uint32_t baud_rate,
                                    uint32_t flags);

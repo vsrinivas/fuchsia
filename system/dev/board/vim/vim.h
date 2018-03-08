@@ -15,7 +15,7 @@ typedef struct {
     platform_bus_protocol_t pbus;
     gpio_protocol_t gpio;
     i2c_protocol_t i2c;
-    serial_driver_protocol_t serial;
+    serial_impl_protocol_t serial;
     zx_device_t* parent;
     io_buffer_t usb_phy;
     uint32_t soc_pid;

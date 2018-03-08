@@ -85,40 +85,40 @@ typedef struct {
                          size_t* out_actual);
     zx_status_t (*set_notify_callback)(void* ctx, uint32_t port_num, serial_notify_cb cb,
                                        void* cookie);
-} serial_driver_ops_t;
+} serial_impl_ops_t;
 
 typedef struct {
-    serial_driver_ops_t* ops;
+    serial_impl_ops_t* ops;
     void* ctx;
-} serial_driver_protocol_t;
+} serial_impl_protocol_t;
 
-static inline uint32_t serial_driver_get_port_count(serial_driver_protocol_t* serial) {
+static inline uint32_t serial_impl_get_port_count(serial_impl_protocol_t* serial) {
     return serial->ops->get_port_count(serial->ctx);
 }
 
 // Configures the given serial port
-static inline zx_status_t serial_driver_config(serial_driver_protocol_t* serial, uint32_t port_num,
-                                               uint32_t baud_rate, uint32_t flags) {
+static inline zx_status_t serial_impl_config(serial_impl_protocol_t* serial, uint32_t port_num,
+                                             uint32_t baud_rate, uint32_t flags) {
     return serial->ops->config(serial->ctx, port_num, baud_rate, flags);
 }
 
 // Enables or disables the given serial port
-static inline zx_status_t serial_driver_enable(serial_driver_protocol_t* serial, uint32_t port_num,
-                                               bool enable) {
+static inline zx_status_t serial_impl_enable(serial_impl_protocol_t* serial, uint32_t port_num,
+                                             bool enable) {
     return serial->ops->enable(serial->ctx, port_num, enable);
 }
 
 // Reads data from the given serial port
 // Returns ZX_ERR_SHOULD_WAIT if no data is available to read
-static inline zx_status_t serial_driver_read(serial_driver_protocol_t* serial, uint32_t port_num,
-                                             void* buf, size_t length, size_t* out_actual) {
+static inline zx_status_t serial_impl_read(serial_impl_protocol_t* serial, uint32_t port_num,
+                                           void* buf, size_t length, size_t* out_actual) {
     return serial->ops->read(serial->ctx, port_num, buf, length, out_actual);
 }
 
 // Reads data from the given serial port
 // Returns ZX_ERR_SHOULD_WAIT if transmit buffer is full and writing is not possible
-static inline zx_status_t serial_driver_write(serial_driver_protocol_t* serial, uint32_t port_num,
-                                              const void* buf, size_t length, size_t* out_actual) {
+static inline zx_status_t serial_impl_write(serial_impl_protocol_t* serial, uint32_t port_num,
+                                            const void* buf, size_t length, size_t* out_actual) {
     return serial->ops->write(serial->ctx, port_num, buf, length, out_actual);
 }
 
@@ -128,9 +128,9 @@ static inline zx_status_t serial_driver_write(serial_driver_protocol_t* serial, 
 // and return as soon as possible. In particular, it may not be safe to make protocol calls
 // from the callback.
 // Returns ZX_ERR_BAD_STATE called while the driver is in enabled state.
-static inline zx_status_t serial_driver_set_notify_callback(serial_driver_protocol_t* serial,
-                                                            uint32_t port_num, serial_notify_cb cb,
-                                                            void* cookie) {
+static inline zx_status_t serial_impl_set_notify_callback(serial_impl_protocol_t* serial,
+                                                          uint32_t port_num, serial_notify_cb cb,
+                                                          void* cookie) {
     return serial->ops->set_notify_callback(serial->ctx, port_num, cb, cookie);
 }
 
