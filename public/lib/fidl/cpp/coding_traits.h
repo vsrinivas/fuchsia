@@ -30,6 +30,23 @@ struct CodingTraits<T, typename std::enable_if<IsPrimitive<T>::value>::type> {
   }
 };
 
+template <>
+struct CodingTraits<bool> {
+  static constexpr size_t encoded_size = sizeof(bool);
+  inline static void Encode(Encoder* encoder, bool* value, size_t offset) {
+    *encoder->GetPtr<bool>(offset) = *value;
+  }
+  inline static void Encode(Encoder* encoder, std::vector<bool>::iterator value, size_t offset) {
+    *encoder->GetPtr<bool>(offset) = *value;
+  }
+  inline static void Decode(Decoder* decoder, bool* value, size_t offset) {
+    *value = *decoder->GetPtr<bool>(offset);
+  }
+  inline static void Decode(Decoder* decoder, std::vector<bool>::iterator value, size_t offset) {
+    *value = *decoder->GetPtr<bool>(offset);
+  }
+};
+
 template <typename T>
 struct CodingTraits<
     T,

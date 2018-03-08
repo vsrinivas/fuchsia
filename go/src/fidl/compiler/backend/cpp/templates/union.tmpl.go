@@ -13,8 +13,10 @@ class {{ .Name }};
 class {{ .Name }} {
  public:
   {{ .Name }}();
-  {{ .Name }}({{ .Name }}&&);
   ~{{ .Name }}();
+
+  {{ .Name }}({{ .Name }}&&);
+  {{ .Name }}& operator=({{ .Name }}&&);
 
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
@@ -33,9 +35,13 @@ class {{ .Name }} {
 {{- define "UnionDefinition" }}
 {{ .Name }}::{{ .Name }}() {}
 
+{{ .Name }}::~{{ .Name }}() {}
+
 {{ .Name }}::{{ .Name }}({{ .Name }}&&) {}
 
-{{ .Name }}::~{{ .Name }}() {}
+{{ .Name }}& {{ .Name }}::operator=({{ .Name }}&&) {
+  return *this;
+}
 
 void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
   ::fidl::Encode(encoder, &tag, offset);

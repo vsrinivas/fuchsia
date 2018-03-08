@@ -6,6 +6,23 @@
 #define LIB_FIDL_CPP_INTERNAL_HEADER_H_
 
 #include <fidl/cpp/array.h>
+#include <zx/channel.h>
+#include <zx/event.h>
+#include <zx/eventpair.h>
+#include <zx/fifo.h>
+#include <zx/guest.h>
+#include <zx/interrupt.h>
+#include <zx/job.h>
+#include <zx/log.h>
+#include <zx/port.h>
+#include <zx/process.h>
+#include <zx/resource.h>
+#include <zx/socket.h>
+#include <zx/thread.h>
+#include <zx/timer.h>
+#include <zx/vmar.h>
+#include <zx/vmo.h>
+
 #include <functional>
 
 #include "lib/fidl/cpp/coding_traits.h"

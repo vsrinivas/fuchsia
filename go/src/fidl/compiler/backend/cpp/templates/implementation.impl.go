@@ -12,7 +12,6 @@ const Implementation = `
 
 #include "{{ .PrimaryHeader }}"
 
-#include "{{ .CHeader }}"
 #include "lib/fidl/cpp/internal/implementation.h"
 
 namespace {{ .Namespace }} {

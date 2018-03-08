@@ -50,17 +50,29 @@ inline zx_status_t Clone(const std::unique_ptr<T>& value,
 }
 
 template <typename T>
-inline zx_status_t Clone(const VectorPtr<T>& value, VectorPtr<T>* result) {
+inline typename std::enable_if<!IsPrimitive<T>::value, zx_status_t>::type
+Clone(const VectorPtr<T>& value, VectorPtr<T>* result) {
   if (!value) {
     *result = VectorPtr<T>();
     return ZX_OK;
   }
-  result->resize(value.size());
-  for (size_t i = 0; i < value.size(); ++i) {
-    zx_status_t status = Clone(value[i], &result->at(i));
+  result->resize(value->size());
+  for (size_t i = 0; i < value->size(); ++i) {
+    zx_status_t status = Clone(value->at(i), &(*result)->at(i));
     if (status != ZX_OK)
       return status;
   }
+  return ZX_OK;
+}
+
+template <typename T>
+inline typename std::enable_if<IsPrimitive<T>::value, zx_status_t>::type
+Clone(const VectorPtr<T>& value, VectorPtr<T>* result) {
+  if (!value) {
+    *result = VectorPtr<T>();
+    return ZX_OK;
+  }
+  result->reset(*value);
   return ZX_OK;
 }
 

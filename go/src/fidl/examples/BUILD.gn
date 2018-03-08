@@ -6,14 +6,10 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 template("fidl_example") {
   not_needed(invoker, "*")
-  if (defined(invoker.skip_build) && invoker.skip_build) {
-    group(target_name) {}
-  } else {
-    fidl(target_name) {
-      sources = [
-        "//zircon/system/host/fidl/examples/${target_name}.fidl2"
-      ]
-    }
+  fidl(target_name) {
+    sources = [
+      "//zircon/system/host/fidl/examples/${target_name}.fidl2"
+    ]
   }
 }
 
@@ -31,10 +27,7 @@ fidl_example("example-8") {}
 fidl_example("example-9") {}
 fidl_example("interface-ordinals") {}
 fidl_example("test") {}
-fidl_example("types") {
-  # TODO(TO-746): Build this example.
-  skip_build = true
-}
+fidl_example("types") {}
 
 group("examples") {
   deps = [
