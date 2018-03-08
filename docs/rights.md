@@ -21,12 +21,12 @@ default rights for each object type, which can be reduced via
 |                             | Allows mapping as writeable if **ZX_RIGHT_MAP** is also present |
 | **ZX_RIGHT_EXECUTE**        | Allows mapping as executable if **ZX_RIGHT_MAP** is also present |
 | **ZX_RIGHT_MAP**            | Allows mapping of a VM object into an address space. |
-| **ZX_RIGHT_GET_PROPERTY**   | Allows property inspection via [*xz_object_get_property*](syscalls/object_get_property.md) |
-| **ZX_RIGHT_SET_PROPERTY**   | Allows property modification via [*xz_object_get_property*](syscalls/object_set_property.md) |
+| **ZX_RIGHT_GET_PROPERTY**   | Allows property inspection via [*zx_object_get_property*](syscalls/object_get_property.md) |
+| **ZX_RIGHT_SET_PROPERTY**   | Allows property modification via [*zx_object_set_property*](syscalls/object_set_property.md) |
 | **ZX_RIGHT_ENUMERATE**      | Allows enumerating child objects via [*zx_object_get_info*](syscalls/object_get_info.md) and [*zx_object_get_child*](syscalls/object_get_child.md) |
 | **ZX_RIGHT_DESTROY**        | Allows termination of task objects via [*zx_task_kill*](syscalls/task_kill.md)|
-| **ZX_RIGHT_SET_POLICY**     | Allows policy modification via [*xz_job_set_policy*](syscalls/job_set_policy.md)|
-| **ZX_RIGHT_GET_POLICY**     | Allows policy inspection via [*xz_job_get_policy*](syscalls/job_get_policy.md)|
+| **ZX_RIGHT_SET_POLICY**     | Allows policy modification via [*zx_job_set_policy*](syscalls/job_set_policy.md)|
+| **ZX_RIGHT_GET_POLICY**     | Allows policy inspection via [*zx_job_get_policy*](syscalls/job_get_policy.md)|
 | **ZX_RIGHT_SIGNAL**         | Allows use of [*zx_object_signal*](syscalls/object_signal.md) |
 | **ZX_RIGHT_SIGNAL_PEER**    | Allows use of [*zx_object_signal_peer*](syscalls/object_signal.md) |
 | **ZX_RIGHT_WAIT**           | Allows use of [*zx_object_wait_one*](syscalls/object_wait_one.md), [*zx_object_wait_many*](syscalls/object_wait_many.md), and other waiting primitives |
