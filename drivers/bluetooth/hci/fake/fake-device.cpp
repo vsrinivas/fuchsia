@@ -88,7 +88,7 @@ zx_status_t Device::Bind() {
       0x05, 0x03, 0x0d, 0x18, 0x0f, 0x18,
 
       // Complete local name
-      0x09, 0x09, 'f', 'n', 'o', 'r', 'd');
+      0x05, 0x09, 'F', 'a', 'k', 'e');
   auto device = std::make_unique<FakeDevice>(kAddress0, true, true);
   device->SetAdvertisingData(kAdvData0);
   fake_device_->AddLEDevice(std::move(device));
@@ -101,8 +101,10 @@ void Device::Release() { delete this; }
 
 void Device::Unbind() {
   std::lock_guard<std::mutex> lock(device_lock_);
-  fake_device_->Stop();
-  task_runner_->PostTask([] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
+  task_runner_->PostTask([fake_dev = fake_device_] {
+    fake_dev->Stop();
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  });
   device_remove(zxdev_);
 }
 
