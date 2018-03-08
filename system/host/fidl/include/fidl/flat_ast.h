@@ -32,7 +32,8 @@ private:
 
 // TODO(TO-701) Handle multipart names.
 struct Name {
-    Name() : name_(SourceLocation()) {}
+    Name()
+        : name_(SourceLocation()) {}
 
     explicit Name(SourceLocation name)
         : name_(name) {}
@@ -286,10 +287,10 @@ public:
         case raw::Constant::Kind::Identifier: {
             auto identifier_constant = static_cast<const raw::IdentifierConstant*>(constant);
             auto identifier = identifier_constant->identifier.get();
-            // TODO(TO-702) Actually resolve this.
-            static_cast<void>(identifier);
-            *out_value = static_cast<IntType>(123);
-            return true;
+            auto decl = LookupType(identifier);
+            if (!decl || decl->kind != Decl::Kind::kConst)
+                return false;
+            return ParseIntegerConstant(static_cast<Const*>(decl)->value.get(), out_value);
         }
         case raw::Constant::Kind::Literal: {
             auto literal_constant = static_cast<const raw::LiteralConstant*>(constant);

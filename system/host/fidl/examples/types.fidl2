@@ -35,29 +35,29 @@ struct arrays {
     array<float32>:1 f32_0;
     array<float64>:1 f64_0;
 
-    array<bool>:size b_1;
-    array<int8>:size i8_1;
-    array<int16>:size i16_1;
-    array<int32>:size i32_1;
-    array<int64>:size i64_1;
-    array<uint8>:size u8_1;
-    array<uint16>:size u16_1;
-    array<uint32>:size u32_1;
-    array<uint64>:size u64_1;
-    array<float32>:size f32_1;
-    array<float64>:size f64_1;
+    array<bool>:arrays_size b_1;
+    array<int8>:arrays_size i8_1;
+    array<int16>:arrays_size i16_1;
+    array<int32>:arrays_size i32_1;
+    array<int64>:arrays_size i64_1;
+    array<uint8>:arrays_size u8_1;
+    array<uint16>:arrays_size u16_1;
+    array<uint32>:arrays_size u32_1;
+    array<uint64>:arrays_size u64_1;
+    array<float32>:arrays_size f32_1;
+    array<float64>:arrays_size f64_1;
 
-    array<array<bool>:4>:size b_2;
-    array<array<int8>:4>:size i8_2;
-    array<array<int16>:4>:size i16_2;
-    array<array<int32>:4>:size i32_2;
-    array<array<int64>:4>:size i64_2;
-    array<array<uint8>:4>:size u8_2;
-    array<array<uint16>:4>:size u16_2;
-    array<array<uint32>:4>:size u32_2;
-    array<array<uint64>:4>:size u64_2;
-    array<array<float32>:4>:size f32_2;
-    array<array<float64>:4>:size f64_2;
+    array<array<bool>:4>:arrays_size b_2;
+    array<array<int8>:4>:arrays_size i8_2;
+    array<array<int16>:4>:arrays_size i16_2;
+    array<array<int32>:4>:arrays_size i32_2;
+    array<array<int64>:4>:arrays_size i64_2;
+    array<array<uint8>:4>:arrays_size u8_2;
+    array<array<uint16>:4>:arrays_size u16_2;
+    array<array<uint32>:4>:arrays_size u32_2;
+    array<array<uint64>:4>:arrays_size u64_2;
+    array<array<float32>:4>:arrays_size f32_2;
+    array<array<float64>:4>:arrays_size f64_2;
 };
 
 struct vectors {
@@ -99,29 +99,29 @@ struct vectors {
     vector<float32>:1 f32_sized_0;
     vector<float64>:1 f64_sized_0;
 
-    vector<bool>:size b_sized_1;
-    vector<int8>:size i8_sized_1;
-    vector<int16>:size i16_sized_1;
-    vector<int32>:size i32_sized_1;
-    vector<int64>:size i64_sized_1;
-    vector<uint8>:size u8_sized_1;
-    vector<uint16>:size u16_sized_1;
-    vector<uint32>:size u32_sized_1;
-    vector<uint64>:size u64_sized_1;
-    vector<float32>:size f32_sized_1;
-    vector<float64>:size f64_sized_1;
+    vector<bool>:vectors_size b_sized_1;
+    vector<int8>:vectors_size i8_sized_1;
+    vector<int16>:vectors_size i16_sized_1;
+    vector<int32>:vectors_size i32_sized_1;
+    vector<int64>:vectors_size i64_sized_1;
+    vector<uint8>:vectors_size u8_sized_1;
+    vector<uint16>:vectors_size u16_sized_1;
+    vector<uint32>:vectors_size u32_sized_1;
+    vector<uint64>:vectors_size u64_sized_1;
+    vector<float32>:vectors_size f32_sized_1;
+    vector<float64>:vectors_size f64_sized_1;
 
-    vector<vector<bool>:4>:size b_sized_2;
-    vector<vector<int8>:4>:size i8_sized_2;
-    vector<vector<int16>:4>:size i16_sized_2;
-    vector<vector<int32>:4>:size i32_sized_2;
-    vector<vector<int64>:4>:size i64_sized_2;
-    vector<vector<uint8>:4>:size u8_sized_2;
-    vector<vector<uint16>:4>:size u16_sized_2;
-    vector<vector<uint32>:4>:size u32_sized_2;
-    vector<vector<uint64>:4>:size u64_sized_2;
-    vector<vector<float32>:4>:size f32_sized_2;
-    vector<vector<float64>:4>:size f64_sized_2;
+    vector<vector<bool>:4>:vectors_size b_sized_2;
+    vector<vector<int8>:4>:vectors_size i8_sized_2;
+    vector<vector<int16>:4>:vectors_size i16_sized_2;
+    vector<vector<int32>:4>:vectors_size i32_sized_2;
+    vector<vector<int64>:4>:vectors_size i64_sized_2;
+    vector<vector<uint8>:4>:vectors_size u8_sized_2;
+    vector<vector<uint16>:4>:vectors_size u16_sized_2;
+    vector<vector<uint32>:4>:vectors_size u32_sized_2;
+    vector<vector<uint64>:4>:vectors_size u64_sized_2;
+    vector<vector<float32>:4>:vectors_size f32_sized_2;
+    vector<vector<float64>:4>:vectors_size f64_sized_2;
 
     vector<bool>:1? b_nullable_0;
     vector<int8>:1? i8_nullable_0;
@@ -159,29 +159,29 @@ struct vectors {
     vector<float32>:1? f32_nullable_sized_0;
     vector<float64>:1? f64_nullable_sized_0;
 
-    vector<bool>:size? b_nullable_sized_1;
-    vector<int8>:size? i8_nullable_sized_1;
-    vector<int16>:size? i16_nullable_sized_1;
-    vector<int32>:size? i32_nullable_sized_1;
-    vector<int64>:size? i64_nullable_sized_1;
-    vector<uint8>:size? u8_nullable_sized_1;
-    vector<uint16>:size? u16_nullable_sized_1;
-    vector<uint32>:size? u32_nullable_sized_1;
-    vector<uint64>:size? u64_nullable_sized_1;
-    vector<float32>:size? f32_nullable_sized_1;
-    vector<float64>:size? f64_nullable_sized_1;
+    vector<bool>:vectors_size? b_nullable_sized_1;
+    vector<int8>:vectors_size? i8_nullable_sized_1;
+    vector<int16>:vectors_size? i16_nullable_sized_1;
+    vector<int32>:vectors_size? i32_nullable_sized_1;
+    vector<int64>:vectors_size? i64_nullable_sized_1;
+    vector<uint8>:vectors_size? u8_nullable_sized_1;
+    vector<uint16>:vectors_size? u16_nullable_sized_1;
+    vector<uint32>:vectors_size? u32_nullable_sized_1;
+    vector<uint64>:vectors_size? u64_nullable_sized_1;
+    vector<float32>:vectors_size? f32_nullable_sized_1;
+    vector<float64>:vectors_size? f64_nullable_sized_1;
 
-    vector<vector<bool>:4>:size? b_nullable_sized_2;
-    vector<vector<int8>:4>:size? i8_nullable_sized_2;
-    vector<vector<int16>:4>:size? i16_nullable_sized_2;
-    vector<vector<int32>:4>:size? i32_nullable_sized_2;
-    vector<vector<int64>:4>:size? i64_nullable_sized_2;
-    vector<vector<uint8>:4>:size? u8_nullable_sized_2;
-    vector<vector<uint16>:4>:size? u16_nullable_sized_2;
-    vector<vector<uint32>:4>:size? u32_nullable_sized_2;
-    vector<vector<uint64>:4>:size? u64_nullable_sized_2;
-    vector<vector<float32>:4>:size? f32_nullable_sized_2;
-    vector<vector<float64>:4>:size? f64_nullable_sized_2;
+    vector<vector<bool>:4>:vectors_size? b_nullable_sized_2;
+    vector<vector<int8>:4>:vectors_size? i8_nullable_sized_2;
+    vector<vector<int16>:4>:vectors_size? i16_nullable_sized_2;
+    vector<vector<int32>:4>:vectors_size? i32_nullable_sized_2;
+    vector<vector<int64>:4>:vectors_size? i64_nullable_sized_2;
+    vector<vector<uint8>:4>:vectors_size? u8_nullable_sized_2;
+    vector<vector<uint16>:4>:vectors_size? u16_nullable_sized_2;
+    vector<vector<uint32>:4>:vectors_size? u32_nullable_sized_2;
+    vector<vector<uint64>:4>:vectors_size? u64_nullable_sized_2;
+    vector<vector<float32>:4>:vectors_size? f32_nullable_sized_2;
+    vector<vector<float64>:4>:vectors_size? f64_nullable_sized_2;
 };
 
 struct handles {
@@ -229,9 +229,9 @@ struct strings {
     string s;
     string? nullable_s;
     string:4 size_0_s;
-    string:size size_1_s;
+    string:strings_size size_1_s;
     string:4? nullable_size_0_s;
-    string:size? nullable_size_1_s;
+    string:strings_size? nullable_size_1_s;
 };
 
 enum default_enum {};

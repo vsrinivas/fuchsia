@@ -375,7 +375,7 @@
                     "$ref": "#/definitions/type"
                 },
                 "element_count": {
-                    "$ref": "#/definitions/constant"
+                    "$ref": "#/definitions/size"
                 }
             }
         },
@@ -397,7 +397,7 @@
                     "$ref": "#/definitions/type"
                 },
                 "maybe_element_count": {
-                    "$ref": "#/definitions/constant"
+                    "$ref": "#/definitions/size"
                 },
                 "nullable": {
                     "type": "boolean"
@@ -418,7 +418,7 @@
                     ]
                 },
                 "maybe_element_count": {
-                    "$ref": "#/definitions/constant"
+                    "$ref": "#/definitions/size"
                 },
                 "nullable": {
                     "type": "boolean"

@@ -357,21 +357,29 @@ void JSONGenerator::Generate(const raw::Type& value) {
         case raw::Type::Kind::Array: {
             auto type = static_cast<const raw::ArrayType*>(&value);
             GenerateObjectMember("element_type", type->element_type);
-            GenerateObjectMember("element_count", type->element_count);
+            uint64_t count = 0;
+            if (library_->ParseIntegerConstant(type->element_count.get(), &count))
+                GenerateObjectMember("element_count", count);
             break;
         }
         case raw::Type::Kind::Vector: {
             auto type = static_cast<const raw::VectorType*>(&value);
             GenerateObjectMember("element_type", type->element_type);
-            if (type->maybe_element_count)
-                GenerateObjectMember("maybe_element_count", type->maybe_element_count);
+            if (type->maybe_element_count) {
+                uint64_t count = 0;
+                if (library_->ParseIntegerConstant(type->maybe_element_count.get(), &count))
+                    GenerateObjectMember("maybe_element_count", count);
+            }
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
         case raw::Type::Kind::String: {
             auto type = static_cast<const raw::StringType*>(&value);
-            if (type->maybe_element_count)
-                GenerateObjectMember("maybe_element_count", type->maybe_element_count);
+            if (type->maybe_element_count) {
+                uint64_t count = 0;
+                if (library_->ParseIntegerConstant(type->maybe_element_count.get(), &count))
+                    GenerateObjectMember("maybe_element_count", count);
+            }
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
