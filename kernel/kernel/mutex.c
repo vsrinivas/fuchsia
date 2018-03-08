@@ -101,10 +101,10 @@ retry:
         goto retry;
     }
 
-    // have the holder inheirit our priority
+    // have the holder inherit our priority
     // discard the local reschedule flag because we're just about to block anyway
     bool unused;
-    sched_inheirit_priority(mutex_holder(m), ct->effec_priority, &unused);
+    sched_inherit_priority(mutex_holder(m), ct->effec_priority, &unused);
 
     // we have signalled that we're blocking, so drop into the wait queue
     zx_status_t ret = wait_queue_block(&m->wait, ZX_TIME_INFINITE);
@@ -137,14 +137,14 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
     oldval = (uintptr_t)ct;
     if (likely(atomic_cmpxchg_u64(&m->val, &oldval, 0))) {
         // we're done, exit
-        // if we had inheirited any priorities, undo it if we are no longer holding any mutexes
-        if (unlikely(ct->inheirited_priority >= 0) && ct->mutexes_held == 0) {
+        // if we had inherited any priorities, undo it if we are no longer holding any mutexes
+        if (unlikely(ct->inherited_priority >= 0) && ct->mutexes_held == 0) {
             spin_lock_saved_state_t state;
             if (!thread_lock_held)
                 spin_lock_irqsave(&thread_lock, state);
 
             bool local_resched = false;
-            sched_inheirit_priority(ct, -1, &local_resched);
+            sched_inherit_priority(ct, -1, &local_resched);
             if (reschedule && local_resched) {
                 sched_reschedule();
             }
@@ -194,12 +194,12 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
     bool local_resched = false;
     int blocked_priority = wait_queue_blocked_priority(&m->wait);
     if (blocked_priority >= 0 || t->mutexes_held == 0) {
-        sched_inheirit_priority(t, blocked_priority, &local_resched);
+        sched_inherit_priority(t, blocked_priority, &local_resched);
     }
 
     // deboost ourself if this is the last mutex we held
-    if (ct->inheirited_priority >= 0 && ct->mutexes_held == 0)
-        sched_inheirit_priority(ct, -1, &local_resched);
+    if (ct->inherited_priority >= 0 && ct->mutexes_held == 0)
+        sched_inherit_priority(ct, -1, &local_resched);
 
     // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
     // cpu run queue was modified

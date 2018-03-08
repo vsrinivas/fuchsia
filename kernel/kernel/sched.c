@@ -57,8 +57,8 @@ static bool local_migrate_if_needed(thread_t* curr_thread);
 /* compute the effective priority of a thread */
 static void compute_effec_priority(thread_t* t) {
     int ep = t->base_priority + t->priority_boost;
-    if (t->inheirited_priority > ep)
-        ep = t->inheirited_priority;
+    if (t->inherited_priority > ep)
+        ep = t->inherited_priority;
 
     DEBUG_ASSERT(ep >= LOWEST_PRIORITY && ep <= HIGHEST_PRIORITY);
 
@@ -253,7 +253,7 @@ static thread_t* sched_get_top_thread(cpu_num_t cpu) {
 void sched_init_thread(thread_t* t, int priority) {
     t->base_priority = priority;
     t->priority_boost = 0;
-    t->inheirited_priority = -1;
+    t->inherited_priority = -1;
     compute_effec_priority(t);
 }
 
@@ -576,20 +576,20 @@ void sched_migrate(thread_t* t) {
     }
 }
 
-/* set the priority to the higher value of what it was before and the newly inheirited value */
-/* pri < 0 disables priority inheiritance and goes back to the naturally computed values */
-void sched_inheirit_priority(thread_t* t, int pri, bool *local_resched) {
+/* set the priority to the higher value of what it was before and the newly inherited value */
+/* pri < 0 disables priority inheritance and goes back to the naturally computed values */
+void sched_inherit_priority(thread_t* t, int pri, bool *local_resched) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     if (pri > HIGHEST_PRIORITY)
         pri = HIGHEST_PRIORITY;
 
     // if we're setting it to something real and it's less than the current, skip
-    if (pri >= 0 && pri <= t->inheirited_priority)
+    if (pri >= 0 && pri <= t->inherited_priority)
         return;
 
     // adjust the priority and remember the old value
-    t->inheirited_priority = pri;
+    t->inherited_priority = pri;
     int old_ep = t->effec_priority;
     compute_effec_priority(t);
     if (old_ep == t->effec_priority) {

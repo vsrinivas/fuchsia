@@ -26,10 +26,10 @@ void sched_resched_internal(void);
 void sched_unblock_idle(thread_t* t);
 void sched_migrate(thread_t* t);
 
-/* set the inheirited priority of a thread and return if the caller should locally reschedule.
- * pri should be <= MAX_PRIORITY, negative values disable priority inheiritance
+/* set the inherited priority of a thread and return if the caller should locally reschedule.
+ * pri should be <= MAX_PRIORITY, negative values disable priority inheritance
  */
-void sched_inheirit_priority(thread_t* t, int pri, bool* local_resched);
+void sched_inherit_priority(thread_t* t, int pri, bool* local_resched);
 
 /* return true if the thread was placed on the current cpu's run queue */
 /* this usually means the caller should locally reschedule soon */

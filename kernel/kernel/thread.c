@@ -1192,7 +1192,7 @@ void dump_thread(thread_t* t, bool full_dump) {
                       "remaining time slice %" PRIu64 "\n",
                 thread_state_to_str(t->state), (int)t->curr_cpu, (int)t->last_cpu, t->cpu_affinity,
                 t->effec_priority, t->base_priority,
-                t->priority_boost, t->inheirited_priority, t->remaining_time_slice);
+                t->priority_boost, t->inherited_priority, t->remaining_time_slice);
         dprintf(INFO, "\truntime_ns %" PRIu64 ", runtime_s %" PRIu64 "\n",
                 runtime, runtime / 1000000000);
         dprintf(INFO, "\tstack %p, stack_size %zu\n", t->stack, t->stack_size);
@@ -1212,7 +1212,7 @@ void dump_thread(thread_t* t, bool full_dump) {
     } else {
         printf("thr %p st %4s m %d pri %2d [%d:%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n",
                t, thread_state_to_str(t->state), t->mutexes_held, t->effec_priority, t->base_priority,
-               t->priority_boost, t->inheirited_priority, t->user_pid,
+               t->priority_boost, t->inherited_priority, t->user_pid,
                t->user_tid, oname, t->name);
     }
 }

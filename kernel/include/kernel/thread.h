@@ -98,15 +98,15 @@ typedef struct thread {
     /* priority: in the range of [MIN_PRIORITY, MAX_PRIORITY], from low to high.
      * base_priority is set at creation time, and can be tuned with thread_set_priority().
      * priority_boost is a signed value that is moved around within a range by the scheduler.
-     * inheirited_priority is temporarily set to >0 when inheiriting a priority from another
-     * thread blocked on a locking primitive this thread holds. -1 means no inheirit.
-     * effective_priority is MAX(base_priority + priority boost, inheirited_priority) and is
+     * inherited_priority is temporarily set to >0 when inheriting a priority from another
+     * thread blocked on a locking primitive this thread holds. -1 means no inherit.
+     * effective_priority is MAX(base_priority + priority boost, inherited_priority) and is
      * the working priority for run queue decisions.
      */
     int effec_priority;
     int base_priority;
     int priority_boost;
-    int inheirited_priority;
+    int inherited_priority;
 
     /* current cpu the thread is either running on or in the ready queue, undefined otherwise */
     cpu_num_t curr_cpu;
