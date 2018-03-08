@@ -72,6 +72,7 @@ class ContextRepository {
 
  public:
   using Id = ContextIndex::Id;
+  using IdAndVersionSet = std::set<std::pair<Id, uint32_t>>;
 
   ContextRepository();
   ~ContextRepository();
@@ -91,6 +92,10 @@ class ContextRepository {
   ContextValuePtr GetMerged(const Id& id) const;
 
   std::set<Id> Select(const ContextSelectorPtr& selector);
+
+  // Returns the current requested values for the given query as a context
+  // update.
+  ContextUpdatePtr Query(const ContextQueryPtr& query);
 
   // Does not take ownership of |listener|. |listener| must remain valid until
   // RemoveSubscription() is called with the returned Id.
@@ -113,6 +118,8 @@ class ContextRepository {
   void RecomputeMergedMetadata(ValueInternal* value);
   void ReindexAndNotify(InProgressUpdate update);
   void QueryAndMaybeNotify(Subscription* subscription, bool force);
+  std::pair<ContextUpdatePtr, IdAndVersionSet> QueryInternal(
+      const ContextQueryPtr& query);
 
   // Keyed by internal id.
   std::map<Id, ValueInternal> values_;
@@ -140,7 +147,6 @@ struct ContextRepository::ValueInternal {
 };
 
 struct ContextRepository::Subscription {
-  using IdAndVersionSet = std::set<std::pair<Id, uint32_t>>;
 
   ContextQueryPtr query;
   ContextListener* listener;  // Optionally owned by |listener_storage|.

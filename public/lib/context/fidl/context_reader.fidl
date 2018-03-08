@@ -24,6 +24,9 @@ interface ContextReader {
   // The subscription will continue to stay active as long as the |listener|
   // handle is not closed.
   Subscribe@0(ContextQuery query, ContextListener listener);
+
+  // Returns the current context state matching |query|.
+  Get@1(ContextQuery query) => (ContextUpdate update);
 };
 
 interface ContextListener {

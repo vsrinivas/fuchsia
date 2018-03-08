@@ -245,6 +245,10 @@ ContextValuePtr ContextRepository::GetMerged(const Id& id) const {
   return merged_value;
 }
 
+ContextUpdatePtr ContextRepository::Query(const ContextQueryPtr& query) {
+  return QueryInternal(query).first;
+}
+
 ContextRepository::Id ContextRepository::AddSubscription(
     ContextQueryPtr query,
     ContextListener* const listener,
@@ -290,17 +294,16 @@ void ContextRepository::RemoveSubscription(Id id) {
   debug_->OnSubscriptionRemoved(id);
 }
 
-void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
-                                            bool force) {
+std::pair<ContextUpdatePtr, ContextRepository::IdAndVersionSet>
+ContextRepository::QueryInternal(const ContextQueryPtr& query) {
   // For each entry in |query->selector|, query the index for matching values.
-  Subscription::IdAndVersionSet matching_id_version;
+  IdAndVersionSet matching_id_version;
   ContextUpdatePtr update = ContextUpdate::New();
-  for (const auto& entry : subscription->query->selector) {
+  for (const auto& entry : query->selector) {
     const auto& key = entry->key;
     const auto& selector = entry->value;
 
-    std::set<ContextIndex::Id> values;
-    index_.Query(selector->type, selector->meta, &values);
+    std::set<ContextIndex::Id> values = Select(selector);
 
     auto update_entry = ContextUpdateEntry::New();
     update_entry->key = key;
@@ -317,21 +320,28 @@ void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
       }
     }
   }
+  return std::make_pair(std::move(update), std::move(matching_id_version));
+}
 
+
+void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
+                                            bool force) {
+  std::pair<ContextUpdatePtr, IdAndVersionSet> result = QueryInternal(
+      subscription->query);
   if (!force) {
     // Check if this update contains any new values.
-    Subscription::IdAndVersionSet diff;
+    IdAndVersionSet diff;
     std::set_symmetric_difference(
-        matching_id_version.begin(), matching_id_version.end(),
+        result.second.begin(), result.second.end(),
         subscription->last_update.begin(), subscription->last_update.end(),
         std::inserter(diff, diff.begin()));
     if (diff.empty()) {
       return;
     }
   }
-  subscription->last_update = matching_id_version;
+  subscription->last_update = result.second;
 
-  subscription->listener->OnContextUpdate(std::move(update));
+  subscription->listener->OnContextUpdate(std::move(result.first));
 }
 
 void ContextRepository::ReindexAndNotify(

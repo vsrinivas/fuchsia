@@ -226,4 +226,54 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
       [&listener2] { return !!listener2.last_update; }));
 }
 
+TEST_F(ContextEngineTest, GetContext) {
+  // Ensure ContextReader::Get returns values in the context we queried for.
+  ContextValueWriterPtr value1;
+  writer_->CreateValue(value1.NewRequest(), ContextValueType::ENTITY);
+  value1->Set(R"({ "@type": "someType", "foo": "bar" })",
+              ContextMetadataBuilder().SetEntityTopic("topic").Build());
+
+  ContextValueWriterPtr value2;
+  writer_->CreateValue(value2.NewRequest(), ContextValueType::ENTITY);
+  value2->Set(R"({ "@type": ["someType", "alsoAnotherType"], "baz": "bang" })",
+              ContextMetadataBuilder().SetEntityTopic("frob").Build());
+
+  ContextValueWriterPtr value3;
+  writer_->CreateValue(value3.NewRequest(), ContextValueType::ENTITY);
+  value3->Set(R"({ "@type": ["otherType", "alsoAnotherType"], "qux": "quux" })",
+              ContextMetadataBuilder().SetEntityTopic("borf").Build());
+
+  // Query those values.
+  auto selector = ContextSelector::New();
+  selector->type = ContextValueType::ENTITY;
+  selector->meta = ContextMetadataBuilder().AddEntityType("someType").Build();
+  auto query = ContextQuery::New();
+  AddToContextQuery(query.get(), "a", std::move(selector));
+
+  // Make sure context has been written.
+  TestListener listener;
+  reader_->Subscribe(query.Clone(), listener.GetHandle());
+  ASSERT_TRUE(RunLoopUntilWithTimeout([&listener] {
+    return !!listener.last_update;
+  }));
+
+  // Assert Get gives us the expected context.
+  bool callback_called = false;
+  reader_->Get(
+      std::move(query),
+      [&callback_called](const ContextUpdatePtr& update) {
+    std::pair<bool, f1dl::Array<ContextValuePtr>> result =
+        TakeContextValue(update.get(), "a");
+    EXPECT_TRUE(result.first);
+    EXPECT_EQ(result.second.size(), 2u);
+    EXPECT_EQ("topic", result.second[0]->meta->entity->topic);
+    EXPECT_EQ("frob", result.second[1]->meta->entity->topic);
+    callback_called = true;
+  });
+
+  ASSERT_TRUE(RunLoopUntilWithTimeout([&callback_called] {
+    return callback_called;
+  }));
+}
+
 }  // namespace maxwell

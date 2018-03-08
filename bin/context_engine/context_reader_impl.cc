@@ -29,4 +29,10 @@ void ContextReaderImpl::Subscribe(
                                debug_.Clone());
 }
 
+void ContextReaderImpl::Get(
+    ContextQueryPtr query,
+    const GetCallback& callback) {
+  callback(repository_->Query(query));
+}
+
 }  // namespace maxwell
