@@ -129,14 +129,12 @@ std::unique_ptr<ListenCallHandler> FirestoreServiceImpl::Listen(
     std::shared_ptr<grpc::CallCredentials> call_credentials,
     ListenCallClient* client) {
   FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+  auto context = std::make_unique<grpc::ClientContext>();
+  context->set_credentials(call_credentials);
 
-  auto stream_factory = [cq = &cq_, firestore = firestore_.get(),
-                         call_credentials = std::move(call_credentials)](
-                            grpc::ClientContext* context, void* tag) {
-    context->set_credentials(call_credentials);
-    return firestore->AsyncListen(context, cq, tag);
-  };
-  auto& call = listen_calls_.emplace(client, std::move(stream_factory));
+  auto stream = firestore_->PrepareAsyncListen(context.get(), &cq_);
+  auto& call =
+      listen_calls_.emplace(client, std::move(context), std::move(stream));
   return std::make_unique<ListenCallHandlerImpl>(&call);
 }
 

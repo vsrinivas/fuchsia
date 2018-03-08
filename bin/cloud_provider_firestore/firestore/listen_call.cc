@@ -6,11 +6,12 @@
 
 namespace cloud_provider_firestore {
 
-ListenCall::ListenCall(
-    ListenCallClient* client,
-    std::function<std::unique_ptr<ListenStream>(grpc::ClientContext* context,
-                                                void* tag)> stream_factory)
-    : client_(client) {
+ListenCall::ListenCall(ListenCallClient* client,
+                       std::unique_ptr<grpc::ClientContext> context,
+                       std::unique_ptr<ListenStream> stream)
+    : context_(std::move(context)),
+      client_(client),
+      stream_(std::move(stream)) {
   on_connected_ = [this](bool ok) {
     pending_cq_operations_--;
     if (!ok) {
@@ -79,7 +80,7 @@ ListenCall::ListenCall(
     HandleFinished(status_);
   };
 
-  stream_ = stream_factory(&context_, &on_connected_);
+  stream_->StartCall(&on_connected_);
   pending_cq_operations_++;
 }
 
@@ -103,7 +104,7 @@ void ListenCall::OnHandlerGone() {
   // after the handler is deleted.
   client_ = nullptr;
 
-  context_.TryCancel();
+  context_->TryCancel();
   CheckEmpty();
 }
 

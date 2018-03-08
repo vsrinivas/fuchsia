@@ -27,10 +27,9 @@ class ListenCall {
   // Creates a new instance.
   //
   // |stream_factory| is used within the constructor and not retained.
-  ListenCall(
-      ListenCallClient* client,
-      std::function<std::unique_ptr<ListenStream>(grpc::ClientContext* context,
-                                                  void* tag)> stream_factory);
+  ListenCall(ListenCallClient* client,
+             std::unique_ptr<grpc::ClientContext> context,
+             std::unique_ptr<ListenStream> stream);
   ~ListenCall();
 
   void set_on_empty(fxl::Closure on_empty) { on_empty_ = std::move(on_empty); }
@@ -51,7 +50,7 @@ class ListenCall {
   void CheckEmpty();
 
   // Context used to make the remote call.
-  grpc::ClientContext context_;
+  std::unique_ptr<grpc::ClientContext> context_;
 
   // Pointer to the client of the call. It is unset when the call handler is
   // deleted.

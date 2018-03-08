@@ -14,7 +14,9 @@ class TestListenStream : public ListenStream {
   ~TestListenStream() override {}
 
   // ListenStream:
-  void StartCall(void* tag) override {}
+  void StartCall(void* tag) override {
+    connect_tag = static_cast<std::function<void(bool)>*>(tag);
+  }
   void ReadInitialMetadata(void* tag) override {}
   void Read(google::firestore::v1beta1::ListenResponse* response,
             void* tag) override {
@@ -32,6 +34,7 @@ class TestListenStream : public ListenStream {
     finish_tag = static_cast<std::function<void(bool)>*>(tag);
   }
 
+  std::function<void(bool)>* connect_tag = nullptr;
   std::function<void(bool)>* read_tag = nullptr;
   std::function<void(bool)>* write_tag = nullptr;
   std::function<void(bool)>* finish_tag = nullptr;
@@ -44,13 +47,11 @@ class ListenCallTest : public gtest::TestWithMessageLoop,
                        public ListenCallClient {
  public:
   ListenCallTest() {
-    auto stream_factory = [this](grpc::ClientContext* context, void* tag) {
-      connect_tag_ = static_cast<std::function<void(bool)>*>(tag);
-      auto result = std::make_unique<TestListenStream>();
-      stream_ = result.get();
-      return result;
-    };
-    call_ = std::make_unique<ListenCall>(this, std::move(stream_factory));
+    auto stream = std::make_unique<TestListenStream>();
+    auto context = std::make_unique<grpc::ClientContext>();
+    stream_ = stream.get();
+    call_ = std::make_unique<ListenCall>(this, std::move(context),
+                                         std::move(stream));
     call_->set_on_empty([this] { on_empty_calls_++; });
   }
   ~ListenCallTest() override {}
@@ -71,7 +72,6 @@ class ListenCallTest : public gtest::TestWithMessageLoop,
  protected:
   TestListenStream* stream_;
   std::unique_ptr<ListenCall> call_;
-  std::function<void(bool)>* connect_tag_ = nullptr;
 
   int on_connected_calls_ = 0;
   int on_response_calls_ = 0;
@@ -89,7 +89,7 @@ TEST_F(ListenCallTest, DeleteHandlerBeforeConnect) {
   handler.reset();
 
   // Simulate the connection response arriving.
-  (*connect_tag_)(true);
+  (*stream_->connect_tag)(true);
 
   // Verify that on_empty was called.
   EXPECT_EQ(1, on_empty_calls_);
@@ -103,7 +103,7 @@ TEST_F(ListenCallTest, DeleteHandlerBeforeConnect) {
 
 TEST_F(ListenCallTest, ConnectionError) {
   auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
-  (*connect_tag_)(false);
+  (*stream_->connect_tag)(false);
   EXPECT_EQ(0, on_connected_calls_);
   EXPECT_EQ(0, on_response_calls_);
   EXPECT_EQ(1, on_finished_calls_);
@@ -112,7 +112,7 @@ TEST_F(ListenCallTest, ConnectionError) {
 
 TEST_F(ListenCallTest, DeleteHandlerAfterConnect) {
   auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
-  (*connect_tag_)(true);
+  (*stream_->connect_tag)(true);
   EXPECT_EQ(1, on_connected_calls_);
 
   // Delete the handler and simulate the pending read call failing due to being
@@ -131,7 +131,7 @@ TEST_F(ListenCallTest, DeleteHandlerAfterConnect) {
 
 TEST_F(ListenCallTest, WriteAndDeleteHandler) {
   auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
-  (*connect_tag_)(true);
+  (*stream_->connect_tag)(true);
   EXPECT_EQ(1, on_connected_calls_);
 
   handler->Write(google::firestore::v1beta1::ListenRequest());
@@ -147,7 +147,7 @@ TEST_F(ListenCallTest, WriteAndDeleteHandler) {
 
 TEST_F(ListenCallTest, ReadAndDeleteHandler) {
   auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
-  (*connect_tag_)(true);
+  (*stream_->connect_tag)(true);
   EXPECT_EQ(1, on_connected_calls_);
 
   (*stream_->read_tag)(true);
@@ -164,7 +164,7 @@ TEST_F(ListenCallTest, ReadAndDeleteHandler) {
 
 TEST_F(ListenCallTest, ReadError) {
   auto handler = std::make_unique<ListenCallHandlerImpl>(call_.get());
-  (*connect_tag_)(true);
+  (*stream_->connect_tag)(true);
   EXPECT_EQ(1, on_connected_calls_);
 
   (*stream_->read_tag)(true);
