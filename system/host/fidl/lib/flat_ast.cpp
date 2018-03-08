@@ -176,7 +176,7 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
         std::unique_ptr<Type> element_type;
         if (!ConsumeType(std::move(vector_type->element_type), &element_type))
             return false;
-        Size element_count(std::numeric_limits<uint64_t>::max());
+        Size element_count = Size::Max();
         if (vector_type->maybe_element_count) {
             if (!ParseSize(std::move(vector_type->maybe_element_count), &element_count))
                 return false;
@@ -186,7 +186,7 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
     }
     case raw::Type::Kind::String: {
         auto string_type = static_cast<raw::StringType*>(raw_type.get());
-        Size element_count(std::numeric_limits<uint64_t>::max());
+        Size element_count = Size::Max();
         if (string_type->maybe_element_count) {
             if (!ParseSize(std::move(string_type->maybe_element_count), &element_count))
                 return false;

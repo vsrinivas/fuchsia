@@ -363,13 +363,15 @@ void JSONGenerator::Generate(const flat::Type& value) {
         case flat::Type::Kind::Vector: {
             auto type = static_cast<const flat::VectorType*>(&value);
             GenerateObjectMember("element_type", type->element_type);
-            GenerateObjectMember("maybe_element_count", type->element_count.Value());
+            if (type->element_count.Value() < flat::Size::Max().Value())
+                GenerateObjectMember("maybe_element_count", type->element_count.Value());
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
         case flat::Type::Kind::String: {
             auto type = static_cast<const flat::StringType*>(&value);
-            GenerateObjectMember("maybe_element_count", type->max_size.Value());
+            if (type->max_size.Value() < flat::Size::Max().Value())
+                GenerateObjectMember("maybe_element_count", type->max_size.Value());
             GenerateObjectMember("nullable", type->nullability);
             break;
         }

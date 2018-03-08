@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <stdint.h>
 
+#include <limits>
 #include <map>
 #include <memory>
 #include <set>
@@ -40,6 +41,8 @@ struct IntConstant {
     IntConstant() : value_(0) {}
 
     IntType Value() const { return value_; }
+
+    static IntConstant Max() { return IntConstant(std::numeric_limits<IntType>::max()); }
 
 private:
     std::unique_ptr<raw::Constant> raw_constant_;
