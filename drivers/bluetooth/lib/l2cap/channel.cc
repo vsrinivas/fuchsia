@@ -136,10 +136,6 @@ void ChannelImpl::OnLinkClosed() {
 }
 
 void ChannelImpl::HandleRxPdu(PDU&& pdu) {
-  // Data is always received on the HCI I/O thread which is assumed to be
-  // different from this Channel's creation thread.
-  FXL_DCHECK(!IsCreationThreadCurrent());
-
   // TODO(armansito): This is the point where the channel mode implementation
   // should take over the PDU. Since we only support basic mode: SDU == PDU.
 

@@ -117,8 +117,6 @@ void LowEnergyDiscoveryManager::StartDiscovery(
   // includes the state in which we are stopping and restarting scan in between
   // scan periods).
   if (!sessions_.empty()) {
-    FXL_DCHECK(scanner_->IsScanning());
-
     // Invoke |callback| asynchronously.
     auto session = AddSession();
     task_runner_->PostTask(

@@ -31,7 +31,7 @@ Transport::~Transport() {
     ShutDown();
 }
 
-bool Transport::Initialize() {
+bool Transport::Initialize(fxl::RefPtr<fxl::TaskRunner> task_runner) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(hci_device_);
   FXL_DCHECK(!command_channel_);
@@ -45,7 +45,11 @@ bool Transport::Initialize() {
     return false;
   }
 
-  io_thread_ = fsl::CreateThread(&io_task_runner_, "hci-transport-io");
+  if (task_runner) {
+    io_task_runner_ = task_runner;
+  } else {
+    io_thread_ = fsl::CreateThread(&io_task_runner_, "hci-transport-io");
+  }
 
   // We watch for handle errors and closures to perform the necessary clean up.
   WatchChannelClosed(channel, cmd_channel_wait_);
@@ -105,22 +109,26 @@ void Transport::ShutDown() {
   if (command_channel_)
     command_channel_->ShutDown();
 
-  io_task_runner_->PostTask([this] {
+  bool owns_thread = io_thread_.joinable();
+  io_task_runner_->PostTask([this, owns_thread] {
     FXL_DCHECK(fsl::MessageLoop::GetCurrent());
     const auto async = fsl::MessageLoop::GetCurrent()->async();
     cmd_channel_wait_.Cancel(async);
     acl_channel_wait_.Cancel(async);
-    fsl::MessageLoop::GetCurrent()->QuitNow();
+
+    // If own the IO thread, end it's message loop.
+    if (owns_thread)
+      fsl::MessageLoop::GetCurrent()->QuitNow();
   });
 
-  if (io_thread_.joinable())
+  if (owns_thread)
     io_thread_.join();
 
   // We avoid deallocating the channels here as they *could* still be accessed
   // by other threads. It's OK to clear |io_task_runner_| as the channels hold
   // their own references to it.
   //
-  // Once |io_thread_| joins above, |io_task_runner_| will be defunct. However,
+  // Once |io_thread_| joins above, |io_task_runner_| may be defunct. However,
   // the channels are allowed to keep posting tasks on it (which will never
   // execute).
 

@@ -44,16 +44,18 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   static fxl::RefPtr<Transport> Create(
       std::unique_ptr<DeviceWrapper> hci_device);
 
-  // Initializes the HCI command channel, starts the I/O event loop, and kicks
-  // off a new I/O thread for transactions with the HCI driver. The
-  // ACLDataChannel will be left uninitialized. The ACLDataChannel must be
+  // Initializes the HCI command channel and starts the I/O event loop.
+  // I/O events are run on the task_runner given, or a new I/O thread
+  // is started if one is not given.
+  //
+  // The ACLDataChannel will be left uninitialized. The ACLDataChannel must be
   // initialized after available data buffer information has been obtained from
   // the controller (via HCI_Read_Buffer_Size and HCI_LE_Read_Buffer_Size).
   //
   // This method is NOT thread-safe! Care must be taken such that the public
   // methods of this class and those of the individual channel classes are not
   // called in a manner that would race with the execution of Initialize().
-  bool Initialize();
+  bool Initialize(fxl::RefPtr<fxl::TaskRunner> task_runner = nullptr);
 
   // Initializes the ACL data channel with the given parameters. Returns false
   // if an error occurs during initialization. Initialize() must have been

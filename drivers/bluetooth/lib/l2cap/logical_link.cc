@@ -136,9 +136,6 @@ std::unique_ptr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
 }
 
 void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
-  // The creation thread of this object is expected to be different from the HCI
-  // I/O thread.
-  FXL_DCHECK(!thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(io_task_runner()->RunsTasksOnCurrentThread());
   FXL_DCHECK(!recombiner_.ready());
   FXL_DCHECK(packet);

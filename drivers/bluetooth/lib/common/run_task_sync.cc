@@ -16,7 +16,11 @@ void RunTaskSync(const fxl::Closure& callback,
                  fxl::RefPtr<fxl::TaskRunner> task_runner) {
   FXL_DCHECK(callback);
   FXL_DCHECK(task_runner);
-  FXL_DCHECK(!task_runner->RunsTasksOnCurrentThread());
+
+  if (task_runner->RunsTasksOnCurrentThread()) {
+    callback();
+    return;
+  }
 
   std::mutex mtx;
   std::condition_variable cv;
