@@ -112,9 +112,10 @@ type iostate struct {
 	refs      int
 	lastError *tcpip.Error // if not-nil, next error returned via getsockopt
 
-	writeLoopDone   chan struct{}
-	controlLoopDone chan struct{}
-	listenLoopDone  chan struct{}
+	writeLoopDone     chan struct{}
+	controlLoopDone   chan struct{}
+	listenLoopClosing chan struct{} // tell the listen loop to close
+	listenLoopDone    chan struct{} // report that the listen loops has closed
 
 	withNewSocket bool // remove when we remove old FDIO support
 }
@@ -1094,12 +1095,17 @@ func (s *socketServer) opGetPeerName(ios *iostate, msg *fdio.Msg) (status zx.Sta
 }
 
 func (s *socketServer) loopListen(ios *iostate, inCh chan struct{}) {
-	ios.listenLoopDone = make(chan struct{})
 	defer func() { ios.listenLoopDone <- struct{}{} }()
 
 	// When an incoming connection is available, wait for the listening socket to
 	// enter a shareable state, then share it with zircon.
-	for range inCh {
+	for {
+		select {
+		case <-inCh:
+			// NOP
+		case <-ios.listenLoopClosing:
+			return
+		}
 		obs, err := ios.dataHandle.WaitOne(
 			zx.SignalSocketShare|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
 			zx.TimensecInfinite)
@@ -1167,6 +1173,8 @@ func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status zx.Status) 
 	}
 
 	if ios.withNewSocket {
+		ios.listenLoopClosing = make(chan struct{})
+		ios.listenLoopDone = make(chan struct{})
 		go func() {
 			defer ios.wq.EventUnregister(&inEntry)
 			s.loopListen(ios, inCh)
@@ -1439,6 +1447,9 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 		// Signal that we're about to close. This tells the various message loops to finish
 		// processing, and let us know when they're done.
 		err := zx.Handle(ios.dataHandle).Signal(0, LOCAL_SIGNAL_CLOSING)
+		if ios.listenLoopClosing != nil {
+			ios.listenLoopClosing <- struct{}{}
+		}
 
 		go func() {
 			switch mxerror.Status(err) {
