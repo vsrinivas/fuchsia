@@ -22,8 +22,6 @@ enum struct HandleSubtype {
     Event,
     Port,
     Interrupt,
-    Iomap,
-    Pci,
     Log,
     Socket,
     Resource,
@@ -31,7 +29,6 @@ enum struct HandleSubtype {
     Job,
     Vmar,
     Fifo,
-    Hypervisor,
     Guest,
     Timer,
 };

@@ -62,10 +62,6 @@ std::string HandleSubtypeName(types::HandleSubtype subtype) {
         return "port";
     case types::HandleSubtype::Interrupt:
         return "interrupt";
-    case types::HandleSubtype::Iomap:
-        return "iomap";
-    case types::HandleSubtype::Pci:
-        return "pci";
     case types::HandleSubtype::Log:
         return "log";
     case types::HandleSubtype::Socket:
@@ -80,8 +76,6 @@ std::string HandleSubtypeName(types::HandleSubtype subtype) {
         return "vmar";
     case types::HandleSubtype::Fifo:
         return "fifo";
-    case types::HandleSubtype::Hypervisor:
-        return "hypervisor";
     case types::HandleSubtype::Guest:
         return "guest";
     case types::HandleSubtype::Timer:

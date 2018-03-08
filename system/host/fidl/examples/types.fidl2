@@ -193,8 +193,6 @@ struct handles {
     handle<event> event_handle;
     handle<port> port_handle;
     handle<interrupt> interrupt_handle;
-    handle<iomap> iomap_handle;
-    handle<pci> pci_handle;
     handle<log> log_handle;
     handle<socket> socket_handle;
     handle<resource> resource_handle;
@@ -202,7 +200,6 @@ struct handles {
     handle<job> job_handle;
     handle<vmar> vmar_handle;
     handle<fifo> fifo_handle;
-    handle<hypervisor> hypervisor_handle;
     handle<guest> guest_handle;
     handle<timer> timer_handle;
 
@@ -214,7 +211,6 @@ struct handles {
     handle<event>? nullable_event_handle;
     handle<port>? nullable_port_handle;
     handle<interrupt>? nullable_interrupt_handle;
-    handle<iomap>? nullable_iomap_handle;
     handle<pci>? nullable_pci_handle;
     handle<log>? nullable_log_handle;
     handle<socket>? nullable_socket_handle;
@@ -223,7 +219,6 @@ struct handles {
     handle<job>? nullable_job_handle;
     handle<vmar>? nullable_vmar_handle;
     handle<fifo>? nullable_fifo_handle;
-    handle<hypervisor>? nullable_hypervisor_handle;
     handle<guest>? nullable_guest_handle;
     handle<timer>? nullable_timer_handle;
 };

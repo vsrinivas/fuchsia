@@ -53,8 +53,6 @@ Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
         {"event", types::HandleSubtype::Event},
         {"port", types::HandleSubtype::Port},
         {"interrupt", types::HandleSubtype::Interrupt},
-        {"iomap", types::HandleSubtype::Iomap},
-        {"pci", types::HandleSubtype::Pci},
         {"log", types::HandleSubtype::Log},
         {"socket", types::HandleSubtype::Socket},
         {"resource", types::HandleSubtype::Resource},
@@ -62,7 +60,6 @@ Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
         {"job", types::HandleSubtype::Job},
         {"vmar", types::HandleSubtype::Vmar},
         {"fifo", types::HandleSubtype::Fifo},
-        {"hypervisor", types::HandleSubtype::Hypervisor},
         {"guest", types::HandleSubtype::Guest},
         {"timer", types::HandleSubtype::Timer},
     };

@@ -663,8 +663,6 @@
                 "event",
                 "port",
                 "interrupt",
-                "iomap",
-                "pci",
                 "log",
                 "socket",
                 "resource",
@@ -672,7 +670,6 @@
                 "job",
                 "vmar",
                 "fifo",
-                "hypervisor",
                 "guest",
                 "timer"
             ]

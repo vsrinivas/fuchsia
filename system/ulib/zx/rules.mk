@@ -8,16 +8,17 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-# Don't forget to update BUILD.gn as well for the Fuchsia build.
 MODULE_SRCS += \
     $(LOCAL_DIR)/channel.cpp \
     $(LOCAL_DIR)/event.cpp \
     $(LOCAL_DIR)/eventpair.cpp \
     $(LOCAL_DIR)/fifo.cpp \
+    $(LOCAL_DIR)/guest.cpp \
     $(LOCAL_DIR)/job.cpp \
     $(LOCAL_DIR)/log.cpp \
     $(LOCAL_DIR)/port.cpp \
     $(LOCAL_DIR)/process.cpp \
+    $(LOCAL_DIR)/resource.cpp \
     $(LOCAL_DIR)/socket.cpp \
     $(LOCAL_DIR)/thread.cpp \
     $(LOCAL_DIR)/timer.cpp \
