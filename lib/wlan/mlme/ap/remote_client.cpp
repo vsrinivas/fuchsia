@@ -383,6 +383,43 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
     }
 }
 
+zx_status_t AssociatedState::HandleMlmeEapolReq(const EapolRequest& req) {
+    size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req.data.size();
+    auto buffer = GetBuffer(len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::unique_ptr<Packet>(new Packet(fbl::move(buffer), len));
+    packet->clear();
+    packet->set_peer(Packet::Peer::kWlan);
+
+    auto hdr = packet->mut_field<DataFrameHeader>(0);
+    hdr->fc.set_type(FrameType::kData);
+    hdr->fc.set_from_ds(1);
+    hdr->addr1.Set(req.dst_addr.data());
+    hdr->addr2 = client_->bss()->bssid();
+    hdr->addr3.Set(req.src_addr.data());
+    hdr->sc.set_seq(client_->bss()->NextSeq(*hdr));
+
+    auto llc = packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
+    llc->dsap = kLlcSnapExtension;
+    llc->ssap = kLlcSnapExtension;
+    llc->control = kLlcUnnumberedInformation;
+    std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
+    llc->protocol_id = htobe16(kEapolProtocolId);
+    std::memcpy(llc->payload, req.data.data(), req.data.size());
+
+    auto status = client_->SendDataFrame(fbl::move(packet));
+    if (status != ZX_OK) {
+        errorf("[client] [%s] could not send EAPOL request packet: %d\n",
+               client_->addr().ToString().c_str(), status);
+        client_->SendEapolResponse(EapolResultCodes::TRANSMISSION_FAILURE);
+        return status;
+    }
+
+    client_->SendEapolResponse(EapolResultCodes::SUCCESS);
+    return status;
+}
+
 // RemoteClient implementation.
 
 RemoteClient::RemoteClient(DeviceInterface* device, fbl::unique_ptr<Timer> timer, BssInterface* bss,
@@ -580,11 +617,32 @@ zx_status_t RemoteClient::SendEapolIndication(const EapolFrame& eapol, const com
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
     auto status = SerializeServiceMsg(packet.get(), Method::EAPOL_indication, ind);
     if (status != ZX_OK) {
         errorf("could not serialize MLME-Eapol.indication: %d\n", status);
+    } else {
+        status = device_->SendService(fbl::move(packet));
+    }
+    return status;
+}
+
+zx_status_t RemoteClient::SendEapolResponse(EapolResultCodes result_code) {
+    debugfn();
+
+    auto resp = EapolResponse::New();
+    resp->result_code = result_code;
+
+    size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
+    auto buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
+    packet->set_peer(Packet::Peer::kService);
+    zx_status_t status = SerializeServiceMsg(packet.get(), Method::EAPOL_confirm, resp);
+    if (status != ZX_OK) {
+        errorf("could not serialize EapolResponse: %d\n", status);
     } else {
         status = device_->SendService(fbl::move(packet));
     }
