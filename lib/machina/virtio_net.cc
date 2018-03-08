@@ -195,12 +195,25 @@ zx_status_t VirtioNet::DrainQueue(VirtioQueue* queue,
       FXL_LOG(ERROR) << "Failed to read descriptor from queue";
       return status;
     }
-    if (desc.has_next) {
-      FXL_LOG(ERROR) << "Descriptor chain must have a length of 1";
-      return ZX_ERR_IO_DATA_INTEGRITY;
+
+    uintptr_t packet_offset;
+    uintptr_t packet_length;
+    auto header = reinterpret_cast<virtio_net_hdr_t*>(desc.addr);
+    if (!desc.has_next) {
+      packet_offset = static_cast<uint32_t>(
+          reinterpret_cast<uintptr_t>(header + 1) - phys_mem().addr());
+      packet_length = static_cast<uint16_t>(desc.len - sizeof(*header));
+    } else if (desc.len == sizeof(virtio_net_hdr_t)) {
+      status = queue->ReadDesc(desc.next, &desc);
+      packet_offset = static_cast<uint32_t>(
+          reinterpret_cast<uintptr_t>(desc.addr) - phys_mem().addr());
+      packet_length = static_cast<uint16_t>(desc.len);
     }
 
-    auto header = reinterpret_cast<virtio_net_hdr_t*>(desc.addr);
+    if (desc.has_next) {
+      FXL_LOG(ERROR) << "Packet data must be on a single buffer";
+      return ZX_ERR_IO_DATA_INTEGRITY;
+    }
     if (rx) {
       // Section 5.1.6.4.1 Device Requirements: Processing of Incoming Packets
 
@@ -218,9 +231,8 @@ zx_status_t VirtioNet::DrainQueue(VirtioQueue* queue,
       header->flags = 0;
     }
     entries[num_entries] = {
-        .offset = static_cast<uint32_t>(
-            reinterpret_cast<uintptr_t>(header + 1) - phys_mem().addr()),
-        .length = static_cast<uint16_t>(desc.len - sizeof(*header)),
+        .offset = static_cast<uint32_t>(packet_offset),
+        .length = static_cast<uint16_t>(packet_length),
         .flags = 0,
         .cookie = reinterpret_cast<void*>(head),
     };

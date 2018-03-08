@@ -71,11 +71,38 @@ TEST_F(VirtioNetTest, DrainQueue) {
   ASSERT_EQ(1u, net_.rx_queue()->ring()->used->idx);
 }
 
-TEST_F(VirtioNetTest, InvalidDesc) {
+TEST_F(VirtioNetTest, HeaderOnDifferentBuffer) {
   virtio_net_hdr_t hdr = {};
+  // Ethernet FIFOs only support 32-bit VMO offsets which means validating
+  // against stack values may not be safe if they're above UINT32_MAX in our
+  // address space.
+  uint8_t* packet_ptr = reinterpret_cast<uint8_t*>(0x123456);
+  size_t packet_len = 512;
   ASSERT_EQ(queue_.BuildDescriptor()
                 .AppendReadable(&hdr, sizeof(hdr))
+                .AppendReadable(packet_ptr, packet_len)
+                .Build(),
+            ZX_OK);
+
+  uint32_t count;
+  eth_fifo_entry_t entry[fifos_.rx_depth];
+  ASSERT_EQ(ZX_OK, net_.DrainQueue(net_.rx_queue(), fifos_.rx_depth,
+                                   fifos_.rx_fifo, true));
+
+  // Read the fifo entry.
+  ASSERT_EQ(ZX_OK, zx_fifo_read(fifo_[0], entry, sizeof(entry), &count));
+  ASSERT_EQ(1u, count);
+  ASSERT_EQ(reinterpret_cast<uintptr_t>(packet_ptr), entry[0].offset);
+  ASSERT_EQ(packet_len, entry[0].length);
+}
+
+TEST_F(VirtioNetTest, InvalidDesc) {
+  virtio_net_hdr_t hdr = {};
+  uint8_t packet[1024];
+  ASSERT_EQ(queue_.BuildDescriptor()
                 .AppendReadable(&hdr, sizeof(hdr))
+                .AppendReadable(packet, sizeof(packet))
+                .AppendReadable(packet, sizeof(packet))
                 .Build(),
             ZX_OK);
 
