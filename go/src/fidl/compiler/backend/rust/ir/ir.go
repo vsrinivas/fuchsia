@@ -9,6 +9,7 @@ import (
 	"fidl/compiler/backend/types"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 )
 
@@ -278,7 +279,7 @@ func compileType(val types.Type) Type {
 	switch val.Kind {
 	case types.ArrayType:
 		t := compileType(*val.ElementType)
-		r = fmt.Sprintf("[%s; %s]", t, compileConstant(*val.ElementCount))
+		r = fmt.Sprintf("[%s; %s]", t, strconv.Itoa(*val.ElementCount))
 	case types.VectorType:
 		t := compileType(*val.ElementType)
 		r = fmt.Sprintf("::std::vec::Vec<%s>", t)

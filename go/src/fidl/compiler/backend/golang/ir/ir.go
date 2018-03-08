@@ -7,6 +7,7 @@ package ir
 import (
 	"fmt"
 	"log"
+	"strconv"
 
 	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/types"
@@ -214,7 +215,7 @@ func (c *compiler) compileType(val types.Type) Type {
 	switch val.Kind {
 	case types.ArrayType:
 		t := c.compileType(*val.ElementType)
-		r = Type(fmt.Sprintf("[%s]%s", c.compileConstant(*val.ElementCount), t))
+		r = Type(fmt.Sprintf("[%s]%s", strconv.Itoa(*val.ElementCount), t))
 	case types.PrimitiveType:
 		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	default:

@@ -45,11 +45,10 @@ func primitiveType(kind types.PrimitiveSubtype) types.Type {
 }
 
 func arrayType(elementType types.Type, elementCount int) types.Type {
-	countConst := numericLiteral(elementCount)
 	return types.Type{
 		Kind:         types.ArrayType,
 		ElementType:  &elementType,
-		ElementCount: &countConst,
+		ElementCount: &elementCount,
 	}
 }
 

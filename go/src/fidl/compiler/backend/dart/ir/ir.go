@@ -14,7 +14,6 @@ import (
 
 type Type struct {
 	Decl          string
-	ElementCount  string
 	Nullable      bool
 	typedDataDecl string
 	typeExpr      string
@@ -201,21 +200,11 @@ func formatBool(val bool) string {
 	return strconv.FormatBool(val)
 }
 
-func formatConstant(val *types.Constant) string {
+func formatInt(val *int) string {
 	if val == nil {
 		return "null"
 	}
-
-	if val.Kind == types.LiteralConstant {
-		literal := val.Literal
-		if literal.Kind == types.NumericLiteral {
-			return literal.Value
-		}
-	}
-
-	// TODO(TO-746): Either support other kinds of constants or simplify this code
-	// when the frontend does the resolution.
-	return "0"
+	return strconv.Itoa(*val)
 }
 
 func formatParameterList(params []Parameter) string {
@@ -367,9 +356,8 @@ func (c *compiler) compileType(val types.Type) Type {
 		} else {
 			r.Decl = fmt.Sprintf("List<%s>", t.Decl)
 		}
-		r.ElementCount = c.compileConstant(*val.ElementCount)
 		elementStr := fmt.Sprintf("element: %s", t.typeExpr)
-		elementCountStr := fmt.Sprintf("elementCount: %s", formatConstant(val.ElementCount))
+		elementCountStr := fmt.Sprintf("elementCount: %s", formatInt(val.ElementCount))
 		r.typeExpr = fmt.Sprintf("const $fidl.ArrayType<%s>(%s, %s)", r.Decl, elementStr, elementCountStr)
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
@@ -378,17 +366,15 @@ func (c *compiler) compileType(val types.Type) Type {
 		} else {
 			r.Decl = fmt.Sprintf("List<%s>", t.Decl)
 		}
-		r.ElementCount = c.maybeCompileConstant(val.ElementCount)
 		elementStr := fmt.Sprintf("element: %s", t.typeExpr)
-		maybeElementCountStr := fmt.Sprintf("maybeElementCount: %s", formatConstant(val.ElementCount))
+		maybeElementCountStr := fmt.Sprintf("maybeElementCount: %s", formatInt(val.ElementCount))
 		nullableStr := fmt.Sprintf("nullable: %s", formatBool(val.Nullable))
 		r.typeExpr = fmt.Sprintf("const $fidl.VectorType<%s>(%s, %s, %s)",
 			r.Decl, elementStr, maybeElementCountStr, nullableStr)
 	case types.StringType:
 		r.Decl = "String"
-		r.ElementCount = c.maybeCompileConstant(val.ElementCount)
 		r.typeExpr = fmt.Sprintf("const $fidl.StringType(maybeElementCount: %s, nullable: %s)",
-			formatConstant(val.ElementCount), formatBool(val.Nullable))
+			formatInt(val.ElementCount), formatBool(val.Nullable))
 	case types.HandleType:
 		r.Decl = "Handle"
 		r.typeExpr = fmt.Sprintf("const $fidl.HandleType(nullable: %s)",

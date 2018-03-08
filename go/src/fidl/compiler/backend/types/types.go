@@ -111,7 +111,7 @@ const (
 type Type struct {
 	Kind             TypeKind
 	ElementType      *Type
-	ElementCount     *Constant
+	ElementCount     *int
 	HandleSubtype    HandleSubtype
 	RequestSubtype   CompoundIdentifier
 	PrimitiveSubtype PrimitiveSubtype

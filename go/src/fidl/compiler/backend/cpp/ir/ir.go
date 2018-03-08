@@ -373,7 +373,7 @@ func (c *compiler) compileType(val types.Type) Type {
 	switch val.Kind {
 	case types.ArrayType:
 		t := c.compileType(*val.ElementType)
-		r.Decl = fmt.Sprintf("::fidl::Array<%s, %s>", t.Decl, c.compileConstant(*val.ElementCount))
+		r.Decl = fmt.Sprintf("::fidl::Array<%s, %v>", t.Decl, *val.ElementCount)
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
