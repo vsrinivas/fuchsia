@@ -25,10 +25,8 @@ namespace machina {
 // Virtio input device.
 class VirtioInput : public VirtioDevice {
  public:
-  VirtioInput(InputDispatcher* input_dispatcher,
-              const PhysMem& phys_mem,
-              const char* device_name,
-              const char* device_serial);
+  VirtioInput(InputDispatcher* input_dispatcher, const PhysMem& phys_mem,
+              const char* device_name, const char* device_serial);
 
   zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
 
@@ -42,8 +40,10 @@ class VirtioInput : public VirtioDevice {
   zx_status_t PollInputDispatcher();
 
   zx_status_t OnInputEvent(const InputEvent& event);
+  zx_status_t OnPointerEvent(const PointerEvent& pointer_event);
   zx_status_t OnBarrierEvent();
   zx_status_t OnKeyEvent(const KeyEvent& event);
+  zx_status_t OnButtonEvent(const ButtonEvent& button_event);
 
   zx_status_t SendVirtioEvent(const virtio_input_event_t& event);
 

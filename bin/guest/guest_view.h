@@ -66,6 +66,8 @@ class GuestView : public mozart::BaseView {
   fbl::unique_ptr<scenic_lib::HostMemory> memory_;
 
   machina::InputDispatcher* input_dispatcher_;
+  float previous_pointer_x_;
+  float previous_pointer_y_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GuestView);
 };

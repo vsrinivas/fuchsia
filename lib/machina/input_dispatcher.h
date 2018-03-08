@@ -15,6 +15,8 @@ namespace machina {
 enum class InputEventType {
   KEYBOARD,
   BARRIER,
+  POINTER,
+  BUTTON,
 };
 
 enum class KeyState {
@@ -27,10 +29,34 @@ struct KeyEvent {
   KeyState state;
 };
 
+enum class PointerType {
+  RELATIVE,
+  ABSOLUTE,
+};
+
+struct PointerEvent {
+  float x;
+  float y;
+  PointerType type;
+};
+
+enum class Button {
+  BTN_MOUSE_PRIMARY,
+  BTN_MOUSE_SECONDARY,
+  BTN_MOUSE_TERTIARY,
+};
+
+struct ButtonEvent {
+  Button button;
+  KeyState state;
+};
+
 struct InputEvent {
   InputEventType type;
   union {
     KeyEvent key;
+    PointerEvent pointer;
+    ButtonEvent button;
   };
 };
 

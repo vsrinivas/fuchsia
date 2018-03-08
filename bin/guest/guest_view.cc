@@ -62,14 +62,15 @@ void ScenicScanout::InvalidateRegion(const machina::GpuRect& rect) {
 }
 
 GuestView::GuestView(
-    machina::GpuScanout* scanout,
-    machina::InputDispatcher* input_dispatcher,
+    machina::GpuScanout* scanout, machina::InputDispatcher* input_dispatcher,
     mozart::ViewManagerPtr view_manager,
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Guest"),
       background_node_(session()),
       material_(session()),
-      input_dispatcher_(input_dispatcher) {
+      input_dispatcher_(input_dispatcher),
+      previous_pointer_x_(kDisplayWidth * .5f),
+      previous_pointer_y_(kDisplayHeight * .5f) {
   background_node_.SetMaterial(material_);
   parent_node().AddChild(background_node_);
 
@@ -90,8 +91,9 @@ GuestView::GuestView(
 GuestView::~GuestView() = default;
 
 void GuestView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
-  if (!has_logical_size())
+  if (!has_logical_size()) {
     return;
+  }
 
   const uint32_t width = logical_size().width;
   const uint32_t height = logical_size().height;
@@ -105,6 +107,22 @@ void GuestView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
 
   scenic_lib::HostImage image(*memory_, 0u, image_info_.Clone());
   material_.SetTexture(image);
+}
+
+zx_status_t FromMozartButton(uint32_t event, machina::Button* button) {
+  switch (event) {
+    case mozart::kMousePrimaryButton:
+      *button = machina::Button::BTN_MOUSE_PRIMARY;
+      return ZX_OK;
+    case mozart::kMouseSecondaryButton:
+      *button = machina::Button::BTN_MOUSE_SECONDARY;
+      return ZX_OK;
+    case mozart::kMouseTertiaryButton:
+      *button = machina::Button::BTN_MOUSE_TERTIARY;
+      return ZX_OK;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
 }
 
 bool GuestView::OnInputEvent(mozart::InputEventPtr event) {
@@ -121,6 +139,44 @@ bool GuestView::OnInputEvent(mozart::InputEventPtr event) {
       case mozart::KeyboardEvent::Phase::RELEASED:
       case mozart::KeyboardEvent::Phase::CANCELLED:
         event.key.state = machina::KeyState::RELEASED;
+        break;
+      default:
+        // Ignore events for unsupported phases.
+        return true;
+    }
+    input_dispatcher_->PostEvent(event, true);
+    return true;
+  } else if (event->is_pointer()) {
+    const mozart::PointerEventPtr& pointer_event = event->get_pointer();
+
+    machina::InputEvent event;
+    switch (pointer_event->phase) {
+      case mozart::PointerEvent::Phase::MOVE:
+        event.type = machina::InputEventType::POINTER;
+        // TODO(PD-102): Convert this to use absolute pointer events.
+        event.pointer.x = pointer_event->x - previous_pointer_x_;
+        event.pointer.y = pointer_event->y - previous_pointer_y_;
+        event.pointer.type = machina::PointerType::RELATIVE;
+        previous_pointer_x_ = pointer_event->x;
+        previous_pointer_y_ = pointer_event->y;
+        break;
+      case mozart::PointerEvent::Phase::DOWN:
+        event.type = machina::InputEventType::BUTTON;
+        event.button.state = machina::KeyState::PRESSED;
+        if (FromMozartButton(pointer_event->buttons, &event.button.button) !=
+            ZX_OK) {
+          // Ignore events for unsupported buttons.
+          return true;
+        }
+        break;
+      case mozart::PointerEvent::Phase::UP:
+        event.type = machina::InputEventType::BUTTON;
+        event.button.state = machina::KeyState::RELEASED;
+        if (FromMozartButton(pointer_event->buttons, &event.button.button) !=
+            ZX_OK) {
+          // Ignore events for unsupported buttons.
+          return true;
+        }
         break;
       default:
         // Ignore events for unsupported phases.
