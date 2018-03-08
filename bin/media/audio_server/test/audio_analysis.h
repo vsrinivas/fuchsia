@@ -50,12 +50,28 @@ void DisplayVals(const double* buf, uint32_t buf_size);
 // in radians, so runs from -M_PI to +M_PI); 'accum' represents whether to add
 // the results to current contents of the buffer, or to overwrite it.
 template <typename T>
-void AccumCosine(T* buffer,
-                 uint32_t buf_size,
-                 double freq,
-                 double magn = 1.0,
-                 double phase = 0.0,
-                 bool accum = true);
+void GenerateCosine(T* buffer,
+                    uint32_t buf_size,
+                    double freq,
+                    bool accumulate,
+                    double magn = 1.0,
+                    double phase = 0.0);
+template <typename T>
+void AccumulateCosine(T* buffer,
+                      uint32_t buf_size,
+                      double freq,
+                      double magn = 1.0,
+                      double phase = 0.0) {
+  GenerateCosine(buffer, buf_size, freq, true, magn, phase);
+}
+template <typename T>
+void OverwriteCosine(T* buffer,
+                     uint32_t buf_size,
+                     double freq,
+                     double magn = 1.0,
+                     double phase = 0.0) {
+  GenerateCosine(buffer, buf_size, freq, false, magn, phase);
+}
 
 // Perform a Fast Fourier Transform on the provided data arrays.
 //

@@ -14,7 +14,7 @@ namespace test {
 // audio- or gain-related outputs.
 //
 // The ValToDb and GainScaleToDb functions convert numerical values (RMS level)
-// into the decibel scale (hence 20dB per 10x, not 10dB). The AccumCosine
+// into the decibel scale (hence 20dB per 10x, not 10dB). The GenerateCosine
 // function populates audio buffers with sinusoidal values of the given
 // frequency, magnitude and phase. The FFT function performs Fast Fourier
 // Transforms on the provided real and imaginary arrays. The MeasureAudioFreq
@@ -106,8 +106,8 @@ void DisplayVals(const double* buf, uint32_t buf_size) {
 // audio input device operating in uint8 mode). Float and double specializations
 // need not do anything, as double-to-float cast poses no real risk of
 // distortion from truncation.
-// Used only within this file by AccumCosine, these functions do not check for
-// overflow/clamp, leaving that responsibility on users of AccumCosine.
+// Used only within this file by GenerateCosine, these functions do not check
+// for overflow/clamp, leaving that responsibility on users of GenerateCosine.
 template <typename T>
 inline T Finalize(double value) {
   return static_cast<T>(round(value));
@@ -129,17 +129,19 @@ inline double Finalize(double value) {
 // repeats itself 'freq' times within buffer length; 'magn' specifies peak
 // value. Accumulates these values with preexisting array vals, if bool is set.
 template <typename T>
-void AccumCosine(T* buffer,
-                 uint32_t buf_size,
-                 double freq,
-                 double magn,
-                 double phase,
-                 bool accum) {
+void GenerateCosine(T* buffer,
+                    uint32_t buf_size,
+                    double freq,
+                    bool accumulate,
+                    double magn,
+                    double phase) {
+  // If frequency is 0 (constant val), phase offset causes reduced amplitude
   FXL_DCHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
 
+  // freq is defined as: cosine recurs exactly 'freq' times within buf_size.
   const double mult = 2.0 * M_PI / buf_size * freq;
 
-  if (accum) {
+  if (accumulate) {
     for (uint32_t idx = 0; idx < buf_size; ++idx) {
       buffer[idx] += Finalize<T>(magn * std::cos(mult * idx + phase));
     }
@@ -359,30 +361,30 @@ template bool CompareBufferToVal<uint8_t>(const uint8_t*,
                                           uint32_t,
                                           bool);
 
-template void AccumCosine<uint8_t>(uint8_t*,
-                                   uint32_t,
-                                   double,
-                                   double,
-                                   double,
-                                   bool);
-template void AccumCosine<int16_t>(int16_t*,
-                                   uint32_t,
-                                   double,
-                                   double,
-                                   double,
-                                   bool);
-template void AccumCosine<int32_t>(int32_t*,
-                                   uint32_t,
-                                   double,
-                                   double,
-                                   double,
-                                   bool);
-template void AccumCosine<double>(double*,
-                                  uint32_t,
-                                  double,
-                                  double,
-                                  double,
-                                  bool);
+template void GenerateCosine<uint8_t>(uint8_t*,
+                                      uint32_t,
+                                      double,
+                                      bool,
+                                      double,
+                                      double);
+template void GenerateCosine<int16_t>(int16_t*,
+                                      uint32_t,
+                                      double,
+                                      bool,
+                                      double,
+                                      double);
+template void GenerateCosine<int32_t>(int32_t*,
+                                      uint32_t,
+                                      double,
+                                      bool,
+                                      double,
+                                      double);
+template void GenerateCosine<double>(double*,
+                                     uint32_t,
+                                     double,
+                                     bool,
+                                     double,
+                                     double);
 
 template void MeasureAudioFreq<uint8_t>(uint8_t* audio,
                                         uint32_t buf_size,

@@ -99,21 +99,39 @@ TEST(AnalysisHelpers, CompareBuffToVal32) {
   EXPECT_TRUE(CompareBufferToVal(source, 0xF00CAFE, 1));
 }
 
-// AccumCosine writes a cosine wave into a given buffer & length, at the given
-// frequency and magnitude (default 1.0). The final two parameters are phase
-// (default 0.0) and whether to accumulate with existing values (default true).
-TEST(AnalysisHelpers, AccumCosine16) {
+// GenerateCosine writes a cosine wave into given buffer & length, at given
+// frequency, magnitude (default 1.0), and phase offset (default false).
+// OverwriteCosine/AccumulateCosine variants eliminate the 'accum' flag.
+//
+// The uint8_t variant also provides the 0x80 offset to generated values.
+TEST(AnalysisHelpers, GenerateCosine8) {
+  uint8_t source[] = {0, 0xFF};
+  GenerateCosine(source, 2, 0.0, false, 0.0, 0.0);  // false:overwrite source[]
+
+  // Frequency of 0.0 produces constant value, with 0 offset to 0x80..
+  EXPECT_TRUE(CompareBufferToVal(source, static_cast<uint8_t>(0x80),
+                                 fbl::count_of(source)));
+}
+
+TEST(AnalysisHelpers, GenerateCosine16) {
   int16_t source[] = {12345, -6543};
-  AccumCosine(source, 2, 0.0, -32766.4, 0.0, false);  // overwrite source[]
+  GenerateCosine(source, 2, 0.0, false, -32766.4);  // overwrite source[]
 
   // Frequency of 0.0 produces constant value, with -.4 rounded toward zero.
   EXPECT_TRUE(CompareBufferToVal(source, static_cast<int16_t>(-32766),
                                  fbl::count_of(source)));
+
+  // Test default bool value (false): also overwrite
+  OverwriteCosine(source, 1, 0.0, -41.5, 0.0);
+
+  // Should only overwrite one value, and -.5 rounds away from zero.
+  EXPECT_EQ(source[0], -42);
+  EXPECT_EQ(source[1], -32766);
 }
 
-TEST(AnalysisHelpers, AccumCosine32) {
+TEST(AnalysisHelpers, GenerateCosine32) {
   int32_t source[] = {-4000, 0, 4000, 8000};
-  AccumCosine(source, 4, 1.0, 12345.6, M_PI, true);  // add to existing vals
+  GenerateCosine(source, 4, 1.0, true, 12345.6, M_PI);  // true: accumulate
 
   // PI phase leads to effective magnitude of -12345.6.
   // At frequency 1.0, the change to the buffer is [-12345.6, 0, +12345.6, 0],
@@ -122,9 +140,9 @@ TEST(AnalysisHelpers, AccumCosine32) {
   EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source)));
 }
 
-TEST(AnalysisHelpers, AccumCosineDouble) {
+TEST(AnalysisHelpers, GenerateCosineDouble) {
   double source[] = {-4000.0, -83000.0, 4000.0, 78000.0};
-  AccumCosine(source, 4, 1.0, 12345.5, M_PI, true);  // add to existing vals
+  AccumulateCosine(source, 4, 1.0, 12345.5, M_PI);  // add to existing
 
   // PI phase leads to effective magnitude of -12345.5.
   // At frequency 1.0, the change to the buffer is [-12345.5, 0, +12345.5, 0],
@@ -143,9 +161,9 @@ TEST(AnalysisHelpers, FFT) {
   const uint32_t buf_sz_2 = buf_size >> 1;
 
   // Impulse input produces constant val in all frequency bins
-  AccumCosine(reals, buf_size, 0.0, 0.0, 0.0, false);
+  OverwriteCosine(reals, buf_size, 0.0, 0.0);
   reals[0] = 1000000.0;
-  AccumCosine(imags, buf_size, 0.0, 0.0, 0.0, false);
+  OverwriteCosine(imags, buf_size, 0.0, 0.0);
   FFT(reals, imags, buf_size);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
@@ -158,8 +176,8 @@ TEST(AnalysisHelpers, FFT) {
   }
 
   // DC input produces val only in frequency bin 0
-  AccumCosine(reals, buf_size, 0.0, 700000.0, 0.0, false);
-  AccumCosine(imags, buf_size, 0.0, 0.0, 0.0, false);
+  OverwriteCosine(reals, buf_size, 0.0, 700000.0);
+  OverwriteCosine(imags, buf_size, 0.0, 0.0);
   FFT(reals, imags, buf_size);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
@@ -174,8 +192,8 @@ TEST(AnalysisHelpers, FFT) {
 
   // Folding frequency (buf_size/2) produces all zeroes except N/2.
   double test_val = 1001001.0;
-  AccumCosine(reals, buf_size, buf_sz_2, test_val, 0.0, false);
-  AccumCosine(imags, buf_size, 0.0, 0.0, 0.0, false);
+  OverwriteCosine(reals, buf_size, buf_sz_2, test_val);
+  OverwriteCosine(imags, buf_size, 0.0, 0.0);
   FFT(reals, imags, buf_size);
 
   for (uint32_t idx = 0; idx < buf_sz_2; ++idx) {
@@ -193,8 +211,8 @@ TEST(AnalysisHelpers, FFT) {
   // A cosine that fits exactly into the buffer len should produce zero values
   // in all frequency bins except for bin 1.
   test_val = 20202020.0;
-  AccumCosine(reals, buf_size, 1.0, test_val, 0.0, false);
-  AccumCosine(imags, buf_size, 0.0, 0.0, 0.0, false);
+  OverwriteCosine(reals, buf_size, 1.0, test_val);
+  OverwriteCosine(imags, buf_size, 0.0, 0.0);
   FFT(reals, imags, buf_size);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
@@ -208,8 +226,8 @@ TEST(AnalysisHelpers, FFT) {
 
   // That same cosine, shifted by PI/2, should have identical reesults, but
   // flipped between real and imaginary domains.
-  AccumCosine(reals, buf_size, 1.0, test_val, -M_PI / 2.0, false);
-  AccumCosine(imags, buf_size, 0.0, 0.0, 0.0, false);
+  OverwriteCosine(reals, buf_size, 1.0, test_val, -M_PI / 2.0);
+  OverwriteCosine(imags, buf_size, 0.0, 0.0, 0.0);
   FFT(reals, imags, buf_size);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {

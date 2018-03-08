@@ -342,8 +342,7 @@ double MeasureSourceNoiseFloor(double* magn_other_db) {
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
   std::vector<T> source(kNoiseFloorBufSize);
-  AccumCosine(source.data(), kNoiseFloorBufSize, kReferenceFreq, amplitude, 0.0,
-              false);
+  OverwriteCosine(source.data(), kNoiseFloorBufSize, kReferenceFreq, amplitude);
 
   std::vector<int32_t> accum(kNoiseFloorBufSize);
   uint32_t dst_offset = 0;
@@ -409,8 +408,7 @@ double MeasureOutputNoiseFloor(double* magn_other_db) {
 
   // Populate accum buffer and output to destination buffer
   std::vector<int32_t> accum(kNoiseFloorBufSize);
-  AccumCosine(accum.data(), kNoiseFloorBufSize, kReferenceFreq, amplitude, 0.0,
-              false);
+  OverwriteCosine(accum.data(), kNoiseFloorBufSize, kReferenceFreq, amplitude);
 
   std::vector<T> dest(kNoiseFloorBufSize);
   output_formatter->ProduceOutput(accum.data(), dest.data(),
