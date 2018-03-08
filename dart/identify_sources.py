@@ -62,9 +62,6 @@ def main():
                         nargs='*')
     args = parser.parse_args()
 
-    if not args.sources:
-      raise Exception('No source files given.')
-
     all_deps = get_dependencies(args)
     def is_within_package(dep):
         return os.path.commonprefix([dep, args.source_dir]) == args.source_dir
