@@ -53,6 +53,7 @@ enum vm_page_state {
     VM_PAGE_STATE_HEAP,
     VM_PAGE_STATE_OBJECT,
     VM_PAGE_STATE_MMU, /* allocated to serve arch-specific mmu purposes */
+    VM_PAGE_STATE_IOMMU, /* allocated for platform-specific iommu structures */
 
     _VM_PAGE_STATE_COUNT
 };

@@ -95,6 +95,7 @@ struct map_range {
 };
 
 bool x86_is_vaddr_canonical(vaddr_t vaddr);
+bool x86_mmu_check_paddr(paddr_t paddr);
 
 void x86_mmu_percpu_init(void);
 void x86_mmu_early_init(void);

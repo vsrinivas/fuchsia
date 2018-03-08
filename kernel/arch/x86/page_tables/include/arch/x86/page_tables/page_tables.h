@@ -9,6 +9,8 @@
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <hwreg/bitfields.h>
+// Needed for ARCH_MMU_FLAG_*
+#include <vm/arch_vm_aspace.h>
 
 typedef uint64_t pt_entry_t;
 #define PRIxPTE PRIx64

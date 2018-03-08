@@ -94,7 +94,7 @@ static bool x86_mmu_check_vaddr(vaddr_t vaddr) {
 /**
  * @brief  check if the physical address is valid and aligned
  */
-static bool x86_mmu_check_paddr(paddr_t paddr) {
+bool x86_mmu_check_paddr(paddr_t paddr) {
     uint64_t max_paddr;
 
     /* Check to see if the address is PAGE aligned */

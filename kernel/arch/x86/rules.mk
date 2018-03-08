@@ -76,6 +76,7 @@ MODULE_SRCS += \
 MODULE_DEPS += \
 	kernel/arch/x86/page_tables \
 	kernel/dev/iommu/dummy \
+	kernel/dev/iommu/intel \
 	kernel/lib/bitmap \
 	kernel/lib/code_patching \
 	kernel/lib/fbl \
