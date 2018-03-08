@@ -110,6 +110,12 @@ bool DisplayDevice::Init() {
         return false;
     }
 
+    status = framebuffer_vmo_.set_cache_policy(ZX_CACHE_POLICY_WRITE_COMBINING);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i915: Failed to set vmo as write combining (%d)\n", status);
+        return false;
+    }
+
     status = framebuffer_vmo_.op_range(ZX_VMO_OP_COMMIT, 0, framebuffer_size_, nullptr, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "i915: Failed to commit VMO (%d)\n", status);

@@ -57,6 +57,10 @@ public:
                          void* buffer, size_t buffer_size) const {
         return zx_vmo_op_range(get(), op, offset, size, buffer, buffer_size);
     }
+
+    zx_status_t set_cache_policy(uint32_t cache_policy) {
+        return zx_vmo_set_cache_policy(get(), cache_policy);
+    }
 };
 
 using unowned_vmo = const unowned<vmo>;
