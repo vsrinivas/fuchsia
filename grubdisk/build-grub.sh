@@ -9,7 +9,7 @@ set -e
 
 toolchain="${FUCHSIA_DIR}/zircon/prebuilt/downloads/x86_64-elf-6.3.0-$(uname)-x86_64/bin"
 if [[ ! -d $toolchain ]]; then
-  "./${FUCHSIA_DIR}/zircon/scripts/download-toolchain"
+  "${FUCHSIA_DIR}/zircon/scripts/download-toolchain"
 fi
 
 if [[ ! -e $FUCHSIA_OUT_DIR/build-objconv/bin/objconv ]]; then
