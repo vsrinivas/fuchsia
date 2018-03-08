@@ -7,6 +7,7 @@
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
 #include <region-alloc/region-alloc.h>
+#include <zx/bti.h>
 #include <zx/vmo.h>
 
 namespace i915 {
@@ -16,7 +17,7 @@ class Gtt;
 
 class GttRegion {
 public:
-    GttRegion(fbl::unique_ptr<const RegionAllocator::Region> region, Gtt* gtt);
+    explicit GttRegion(Gtt* gtt);
     ~GttRegion();
 
     uint64_t base() const { return region_->base; }
@@ -25,11 +26,16 @@ public:
 private:
     fbl::unique_ptr<const RegionAllocator::Region> region_;
     Gtt* gtt_;
+
+    uint32_t mapped_end_;
+
+    friend class Gtt;
 };
 
 class Gtt {
 public:
     Gtt();
+    ~Gtt();
     zx_status_t Init(Controller* controller);
     fbl::unique_ptr<const GttRegion> Insert(zx::vmo* buffer,
                                             uint32_t length, uint32_t align_pow2,
@@ -39,9 +45,13 @@ private:
     Controller* controller_;
     RegionAllocator region_allocator_;
     zx::vmo scratch_buffer_;
+    zx::bti bti_;
     zx_paddr_t scratch_buffer_paddr_;
+    uint64_t min_contiguity_;
 
     friend class GttRegion;
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Gtt);
 };
 
 } // namespace i915

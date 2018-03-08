@@ -116,12 +116,6 @@ bool DisplayDevice::Init() {
         return false;
     }
 
-    status = framebuffer_vmo_.op_range(ZX_VMO_OP_COMMIT, 0, framebuffer_size_, nullptr, 0);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: Failed to commit VMO (%d)\n", status);
-        return false;
-    }
-
     status = zx::vmar::root_self().map(0, framebuffer_vmo_, 0, framebuffer_size_,
                                        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &framebuffer_);
     if (status != ZX_OK) {
