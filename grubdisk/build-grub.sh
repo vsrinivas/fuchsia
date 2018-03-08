@@ -7,9 +7,13 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/env.sh
 
 set -e
 
-toolchain="${FUCHSIA_DIR}/zircon/prebuilt/downloads/x86_64-elf-6.3.0-$(uname)-x86_64/bin"
+toolchain="${FUCHSIA_DIR}/zircon/prebuilt/downloads/gcc/bin"
 if [[ ! -d $toolchain ]]; then
   "${FUCHSIA_DIR}/zircon/scripts/download-toolchain"
+fi
+if [[ ! -d $toolchain ]]; then
+  echo >&2 "Toolchain not found, expected at $toolchain"
+  exit 1
 fi
 
 if [[ ! -e $FUCHSIA_OUT_DIR/build-objconv/bin/objconv ]]; then
