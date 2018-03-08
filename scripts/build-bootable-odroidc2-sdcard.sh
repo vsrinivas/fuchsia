@@ -146,6 +146,9 @@ MOUNT_PATH=`mktemp -d`
 sudo mount "$DATA_PTN_PATH" "$MOUNT_PATH"
 trap "umount_retry \"${MOUNT_PATH}\" && rm -rf \"${MOUNT_PATH}\" && echo \"Unmounted succesfully\"" INT TERM EXIT
 
+curl -L http://dn.odroid.com/S905/BootLoader/ODROID-C2/c2_boot_release_fuchsia.tar.gz >/tmp/sd.tgz
+tar -C /tmp -xzf /tmp/sd.tgz
+
 # Copy the kernel to the boot partition.
 sudo cp "$ZIRCON_DIR/build-arm64/odroidc2-zircon.bin" \
         "${MOUNT_PATH}/"
@@ -154,21 +157,27 @@ sudo cp "$ZIRCON_DIR/build-arm64/odroidc2-zircon.bin" \
 sudo cp "$ZIRCON_DIR/build-arm64/odroidc2-bootdata.bin" \
         "${MOUNT_PATH}/"
 
-sudo cp "$ZIRCON_DIR/kernel/target/arm64/odroidc2/boot.ini" \
-        "${MOUNT_PATH}/"
+# Copy Linux device tree for ODROID-C2
+FDT_PATH="${MOUNT_PATH}/dtbs/current/amlogic"
+sudo mkdir -p "$FDT_PATH"
+sudo cp "/tmp/sd_fuse_fuchsia/meson64_odroidc2.dtb" \
+        "${FDT_PATH}/meson-gxbb-odroidc2.dtb"
 
+# Create a boot script (boot.scr)
+sudo mkimage -A arm64 -T script -C none \
+        -d "$ZIRCON_DIR/kernel/target/arm64/odroidc2/boot.cmd" \
+        "${MOUNT_PATH}/boot.scr"
 
 # Make sure all writes are committed to disk.
 pushd "$MOUNT_PATH" > /dev/null
 sync
 popd > /dev/null
 
-curl -L http://dn.odroid.com/S905/BootLoader/ODROID-C2/c2_boot_release_android.tar.gz >/tmp/sd.tgz
-tar -C /tmp -xzf /tmp/sd.tgz
-cd /tmp/sd_fuse_android
+cd /tmp/sd_fuse_fuchsia
 sudo sh sd_fusing.sh $DEVICE_PATH
-rm -rf /tmp/sd_fuse_android
+rm -rf /tmp/sd_fuse_fuchsia
 rm -f /tmp/sd.tgz
+
 
 
 echo " SUCCESS"

@@ -1,11 +1,12 @@
-ODROIDC2-UBOOT-CONFIG
-
 setenv bootcmd ''
 
-setenv dtb_load 0x10200000
-setenv kern_load 0x10280000
+setenv fk_kvers current
+setenv fdtpath /dtbs/${fk_kvers}/${fdtfile}
 
-setenv ramdisk_start 0x18000000
+setenv fdt_addr_r 0x10200000
+setenv kernel_addr_r 0x10280000
+
+setenv ramdisk_addr_r 0x18000000
 
 setenv bootargs 'TERM=uart'
 
@@ -21,13 +22,11 @@ setenv bootargs 'TERM=uart'
 
 setenv ramdisk_end 0x70000000
 
-movi read dtb 0 ${dtb_load}
-fdt addr ${dtb_load}
+load mmc 0:1 ${fdt_addr_r} ${fdtpath}
+fdt addr ${fdt_addr_r}
 fdt resize
-fatload mmc 0 ${ramdisk_start} odroidc2-bootdata.bin
-fdt chosen ${ramdisk_start} ${ramdisk_end}
-fatload mmc 0 ${kern_load} odroidc2-zircon.bin
+load mmc 0:1 ${ramdisk_addr_r} odroidc2-bootdata.bin
+fdt chosen ${ramdisk_addr_r} ${ramdisk_end}
+load mmc 0:1 ${kernel_addr_r} odroidc2-zircon.bin
 
-booti ${kern_load} - ${dtb_load}
-
-
+booti ${kernel_addr_r} - ${fdt_addr_r}
