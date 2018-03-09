@@ -102,11 +102,18 @@ static zx_status_t vim_enable_wifi_32K(vim_bus_t* bus) {
     zx_status_t status = gpio_set_alt_function(&bus->gpio, WIFI_32K, 1);
     if (status != ZX_OK) return status;
 
-    io_buffer_t buffer;
-    status = io_buffer_init_physical(&buffer, S912_PWM_BASE, 0x10000, get_root_resource(),
-                                     ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    zx_handle_t bti;
+    status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bti);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_enable_wifi_32K: io_buffer_init_physical failed: %d\n", status);
+        zxlogf(ERROR, "vim_bus_bind: iommu_get_bti failed: %d\n", status);
+        return status;
+    }
+    io_buffer_t buffer;
+    status = io_buffer_init_physical_with_bti(&buffer, bti, S912_PWM_BASE, 0x10000,
+                                              get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "vim_enable_wifi_32K: io_buffer_init_physical_with_bti failed: %d\n", status);
+        zx_handle_close(bti);
         return status;
     }
     uint32_t* regs = io_buffer_virt(&buffer);
@@ -119,6 +126,7 @@ static zx_status_t vim_enable_wifi_32K(vim_bus_t* bus) {
     writel(0x02808003, regs + S912_PWM_MISC_REG_EF);
 
     io_buffer_release(&buffer);
+    zx_handle_close(bti);
 
     return ZX_OK;
 }

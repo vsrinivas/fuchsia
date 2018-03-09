@@ -32,7 +32,7 @@ static const pbus_irq_t xhci_irqs[] = {
 static const pbus_bti_t xhci_btis[] = {
     {
         .iommu_index = 0,
-        .bti_id = 0,
+        .bti_id = BTI_USB_XHCI,
     },
 };
 
@@ -52,14 +52,22 @@ static const pbus_dev_t xhci_dev = {
 zx_status_t vim_usb_init(vim_bus_t* bus) {
     zx_status_t status;
 
-    status = io_buffer_init_physical(&bus->usb_phy, 0xd0078000, 4096, get_root_resource(),
-                                     ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    zx_handle_t bti;
+    status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bti);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_usb_init io_buffer_init_physical failed %d\n", status);
+        zxlogf(ERROR, "vim_bus_bind: iommu_get_bti failed: %d\n", status);
+        return status;
+    }
+    io_buffer_t usb_phy;
+    status = io_buffer_init_physical_with_bti(&usb_phy, bti, 0xd0078000, 4096,
+                                             get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "vim_usb_init io_buffer_init_physical_with_bti failed %d\n", status);
+        zx_handle_close(bti);
         return status;
     }
 
-    volatile void* regs = io_buffer_virt(&bus->usb_phy);
+    volatile void* regs = io_buffer_virt(&usb_phy);
 
     // amlogic_new_usb2_init
     for (int i = 0; i < 4; i++) {
@@ -90,6 +98,9 @@ zx_status_t vim_usb_init(vim_bus_t* bus) {
     temp |= USB_R5_IDDIG_EN1;
     temp = SET_BITS(temp, USB_R5_IDDIG_TH_START, USB_R5_IDDIG_TH_BITS, 255);
     writel(temp, addr + USB_R5_OFFSET);
+
+    io_buffer_release(&usb_phy);
+    zx_handle_close(bti);
 
     if ((status = pbus_device_add(&bus->pbus, &xhci_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "vim_usb_init could not add xhci_dev: %d\n", status);

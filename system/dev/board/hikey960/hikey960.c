@@ -132,16 +132,18 @@ static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if (device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &hikey->pbus) != ZX_OK) {
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &hikey->pbus);
+    if (status != ZX_OK) {
         free(hikey);
         return ZX_ERR_NOT_SUPPORTED;
     }
+
     hikey->parent = parent;
     hikey->usb_mode = USB_MODE_NONE;
 
     // TODO(voydanoff) get from platform bus driver somehow
     zx_handle_t resource = get_root_resource();
-    zx_status_t status = hi3660_init(resource, &hikey->hi3660);
+    status = hi3660_init(resource, &hikey->hi3660);
     if (status != ZX_OK) {
         zxlogf(ERROR, "hikey960_bind: hi3660_init failed %d\n", status);
         goto fail;

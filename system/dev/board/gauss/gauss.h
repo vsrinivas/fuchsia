@@ -8,6 +8,7 @@
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
+#include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/usb-mode-switch.h>
 #include <soc/aml-a113/a113-clocks.h>
@@ -21,6 +22,14 @@ enum {
     AML_I2C_D,
 };
 
+// BTI IDs for our devices
+enum {
+    BTI_BOARD,
+    BTI_AUDIO_IN,
+    BTI_AUDIO_OUT,
+    BTI_USB_XHCI,
+};
+
 typedef struct {
     platform_bus_protocol_t pbus;
     zx_device_t* parent;
@@ -28,6 +37,7 @@ typedef struct {
     i2c_protocol_t i2c;
     usb_mode_switch_protocol_t usb_mode_switch;
     clk_protocol_t clk;
+    iommu_protocol_t iommu;
     io_buffer_t usb_phy;
     zx_handle_t usb_phy_irq_handle;
     thrd_t phy_irq_thread;

@@ -37,7 +37,7 @@ static const pbus_irq_t mali_irqs[] = {
 static const pbus_bti_t mali_btis[] = {
     {
         .iommu_index = 0,
-        .bti_id = 0,
+        .bti_id = BTI_MALI,
     },
 };
 
@@ -65,28 +65,36 @@ zx_status_t vim_mali_init(vim_bus_t* bus) {
     zx_status_t status = ZX_OK;
 
     io_buffer_t hiu_buffer;
-
-    status = io_buffer_init_physical(&hiu_buffer, S912_HIU_BASE, S912_HIU_LENGTH, get_root_resource(),
-                                     ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    zx_handle_t bti;
+    status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bti);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_mali_init io_buffer_init_physical hiu failed %d\n", status);
-        goto done;
+        zxlogf(ERROR, "vim_bus_bind: iommu_get_bti failed: %d\n", status);
+        return status;
+    }
+
+    status = io_buffer_init_physical_with_bti(&hiu_buffer, bti, S912_HIU_BASE, S912_HIU_LENGTH,
+                                             get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "vim_mali_init io_buffer_init_physical_with_bti hiu failed %d\n", status);
+        goto fail1;
     }
 
     io_buffer_t preset_buffer;
-    status = io_buffer_init_physical(&preset_buffer, S912_PRESET_BASE, S912_PRESET_LENGTH,
-            get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    status = io_buffer_init_physical_with_bti(&preset_buffer, bti, S912_PRESET_BASE,
+                                              S912_PRESET_LENGTH, get_root_resource(),
+                                              ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_mali_init io_buffer_init_physical preset failed %d\n", status);
-        goto done;
+        zxlogf(ERROR, "vim_mali_init io_buffer_init_physical_with_bti preset failed %d\n", status);
+        goto fail2;
     }
 
     io_buffer_t gpu_buffer;
-    status = io_buffer_init_physical(&gpu_buffer, S912_MALI_BASE, S912_MALI_LENGTH,
-            get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    status = io_buffer_init_physical_with_bti(&gpu_buffer, bti, S912_MALI_BASE,
+                                              S912_MALI_LENGTH, get_root_resource(),
+                                              ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_mali_init io_buffer_init_physical gpu failed %d\n", status);
-        goto done;
+        zxlogf(ERROR, "vim_mali_init io_buffer_init_physical_with_bti gpu failed %d\n", status);
+        goto fail3;
     }
 
     volatile uint8_t* hiu_regs = io_buffer_virt(&hiu_buffer);
@@ -147,13 +155,15 @@ zx_status_t vim_mali_init(vim_bus_t* bus) {
 
     if ((status = pbus_device_add(&bus->pbus, &mali_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "vim_start_thread could not add mali_dev: %d\n", status);
-        goto done;
     }
 
-done:
     io_buffer_release(&hiu_buffer);
+fail3:
     io_buffer_release(&preset_buffer);
+fail2:
     io_buffer_release(&gpu_buffer);
+fail1:
+    zx_handle_close(bti);
 
     return status;
 }

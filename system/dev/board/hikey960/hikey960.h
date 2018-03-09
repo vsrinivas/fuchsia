@@ -10,6 +10,14 @@
 #include <ddk/protocol/usb-mode-switch.h>
 #include <soc/hi3660/hi3660.h>
 
+// BTI IDs for our devices
+enum {
+    BTI_USB_DWC3,
+    BTI_USB_XHCI,
+    BTI_DSI,
+    BTI_MALI,
+};
+
 typedef struct {
     platform_bus_protocol_t pbus;
     i2c_protocol_t i2c;
