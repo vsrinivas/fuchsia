@@ -108,7 +108,7 @@ void do_autorun(const char* name, const char* env) {
     free(buf);
 }
 
-static zx_handle_t fuchsia_event;
+static zx_handle_t fshost_event;
 
 static int fuchsia_starter(void* arg) {
     bool appmgr_started = false;
@@ -118,7 +118,7 @@ static int fuchsia_starter(void* arg) {
     zx_time_t deadline = zx_deadline_after(ZX_SEC(10));
 
     do {
-        zx_status_t status = zx_object_wait_one(fuchsia_event, ZX_USER_SIGNAL_0, deadline, NULL);
+        zx_status_t status = zx_object_wait_one(fshost_event, FSHOST_SIGNAL_READY, deadline, NULL);
         if (status == ZX_ERR_TIMED_OUT) {
             if (svc_request_handle != ZX_HANDLE_INVALID) {
                 printf("devmgr: appmgr not launched in 10s, closing svc handle\n");
@@ -131,7 +131,7 @@ static int fuchsia_starter(void* arg) {
             printf("devmgr: error waiting on fuchsia start event: %d\n", status);
             break;
         }
-        zx_object_signal(fuchsia_event, ZX_USER_SIGNAL_0, 0);
+        zx_object_signal(fshost_event, FSHOST_SIGNAL_READY, 0);
 
         if (!drivers_loaded) {
             // we're starting the appmgr because /system is present
@@ -424,7 +424,7 @@ int main(int argc, char** argv) {
     }
     zx_object_set_property(fuchsia_job_handle, ZX_PROP_NAME, "fuchsia", 7);
     zx_channel_create(0, &svc_root_handle, &svc_request_handle);
-    zx_event_create(0, &fuchsia_event);
+    zx_event_create(0, &fshost_event);
 
     devmgr_vfs_init();
 
@@ -570,7 +570,7 @@ void fshost_start(void) {
     types[n++] = PA_HND(PA_VMO_BOOTFS, 0);
 
     // pass fuchsia start event to fshost
-    if (zx_handle_duplicate(fuchsia_event, ZX_RIGHT_SAME_RIGHTS, &handles[n]) == ZX_OK) {
+    if (zx_handle_duplicate(fshost_event, ZX_RIGHT_SAME_RIGHTS, &handles[n]) == ZX_OK) {
         types[n++] = PA_HND(PA_USER1, 0);
     }
 
@@ -648,7 +648,15 @@ zx_handle_t fs_root_clone(void) {
 }
 
 void devmgr_vfs_exit(void) {
-    //TODO: wire up correctly
+    zx_status_t status;
+    if ((status = zx_object_signal(fshost_event, 0, FSHOST_SIGNAL_EXIT)) != ZX_OK) {
+        printf("devmgr: Failed to signal VFS exit\n");
+        return;
+    } else if ((status = zx_object_wait_one(fshost_event,
+                                            FSHOST_SIGNAL_EXIT_DONE,
+                                            zx_deadline_after(ZX_SEC(5)), NULL)) != ZX_OK) {
+        printf("devmgr: Failed to wait for VFS exit completion\n");
+    }
 }
 
 void devmgr_vfs_init(void) {

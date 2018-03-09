@@ -10,6 +10,7 @@
 #include <threads.h>
 
 #include <lib/async/cpp/loop.h>
+#include <lib/async/cpp/wait.h>
 #include <fs/vfs.h>
 #include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
@@ -34,6 +35,7 @@ namespace {
 Vfs root_vfs;
 Vfs system_vfs;
 fbl::unique_ptr<async::Loop> global_loop;
+async::Wait global_shutdown;
 
 }  // namespace
 
@@ -175,11 +177,6 @@ VnodeDir* vfs_create_global_root() {
     return memfs::global_root.get();
 }
 
-void devmgr_vfs_exit() {
-    memfs::root_vfs.UninstallAll(zx_deadline_after(ZX_SEC(5)));
-    memfs::system_vfs.UninstallAll(zx_deadline_after(ZX_SEC(5)));
-}
-
 zx_status_t memfs_mount(VnodeDir* parent, const char* name, VnodeDir* subtree) {
     fbl::RefPtr<fs::Vnode> vn;
     zx_status_t status = parent->Create(&vn, fbl::StringPiece(name), S_IFDIR);
@@ -213,6 +210,21 @@ zx_status_t vfs_connect_root_handle(VnodeMemfs* vn, zx_handle_t h) {
 // Initialize the global root VFS node
 void vfs_global_init(VnodeDir* root) {
     memfs::global_vfs_root = root;
+}
+
+void vfs_watch_exit(zx_handle_t event) {
+    memfs::global_shutdown.set_handler([event](async_t* async,
+                                               zx_status_t status,
+                                               const zx_packet_signal_t* signal) {
+        memfs::root_vfs.UninstallAll(ZX_TIME_INFINITE);
+        memfs::system_vfs.UninstallAll(ZX_TIME_INFINITE);
+        zx_object_signal(event, 0, FSHOST_SIGNAL_EXIT_DONE);
+        return ASYNC_WAIT_FINISHED;
+    });
+
+    memfs::global_shutdown.set_object(event);
+    memfs::global_shutdown.set_trigger(FSHOST_SIGNAL_EXIT);
+    memfs::global_shutdown.Begin(memfs::global_loop->async());
 }
 
 // Return a RIO handle to the global root

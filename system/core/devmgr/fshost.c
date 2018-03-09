@@ -299,10 +299,15 @@ static void fetch_vmos(uint_fast8_t type, const char* debug_type_name) {
     }
 }
 
+static zx_handle_t devfs_root;
+static zx_handle_t svc_root;
+static zx_handle_t fshost_event;
+
 void fshost_start(void) {
     setup_bootfs();
 
     vfs_global_init(vfs_create_global_root());
+    vfs_watch_exit(fshost_event);
 
     fetch_vmos(PA_VMO_VDSO, "PA_VMO_VDSO");
     fetch_vmos(PA_VMO_KERNEL_FILE, "PA_VMO_KERNEL_FILE");
@@ -325,10 +330,6 @@ zx_handle_t devmgr_load_file(const char* path) {
     return ZX_HANDLE_INVALID;
 }
 
-static zx_handle_t devfs_root;
-static zx_handle_t svc_root;
-static zx_handle_t fuchsia_event;
-
 zx_handle_t devfs_root_clone(void) {
     return fdio_service_clone(devfs_root);
 }
@@ -338,7 +339,7 @@ zx_handle_t svc_root_clone(void) {
 }
 
 void fuchsia_start(void) {
-    zx_object_signal(fuchsia_event, 0, ZX_USER_SIGNAL_0);
+    zx_object_signal(fshost_event, 0, FSHOST_SIGNAL_READY);
 }
 
 static loader_service_t* loader_service;
@@ -361,7 +362,7 @@ int main(int argc, char** argv) {
     devfs_root = zx_get_startup_handle(PA_HND(PA_USER0, 1));
     svc_root = zx_get_startup_handle(PA_HND(PA_USER0, 2));
     zx_handle_t devmgr_loader = zx_get_startup_handle(PA_HND(PA_USER0, 3));
-    fuchsia_event = zx_get_startup_handle(PA_HND(PA_USER1, 0));
+    fshost_event = zx_get_startup_handle(PA_HND(PA_USER1, 0));
 
     fshost_start();
 

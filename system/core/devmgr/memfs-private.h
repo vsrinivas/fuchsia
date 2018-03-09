@@ -32,6 +32,7 @@ typedef struct VnodeDir VnodeDir;
 __BEGIN_CDECLS
 
 void vfs_global_init(VnodeDir* root);
+void vfs_watch_exit(zx_handle_t event);
 
 // generate mxremoteio handles
 zx_status_t vfs_create_global_root_handle(zx_handle_t* out);
