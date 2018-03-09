@@ -58,6 +58,14 @@ struct TcpStats {
   uint64 resets_sent;
 };
 
+struct UdpStats {
+  uint64 packets_received;
+  uint64 unknown_port_errors;
+  uint64 receive_buffer_errors;
+  uint64 malformed_packets_received;
+  uint64 packets_sent;
+};
+
 // Mirrors tcpip.Stats in third_party/netstack/tcpip/tcpip.go.
 struct AggregateStats {
   uint64 unknown_protocol_received_packets;
@@ -65,6 +73,7 @@ struct AggregateStats {
   uint64 malformed_received_packets;
   uint64 dropped_packets;
   TcpStats tcp_stats;
+  UdpStats udp_stats;
 };
 
 // https://linux.die.net/man/7/netdevice

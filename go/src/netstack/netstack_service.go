@@ -266,6 +266,13 @@ func (ni *netstackImpl) GetAggregateStats() (stats nsfidl.AggregateStats, err er
 			SegmentsSent:              s.TCP.SegmentsSent,
 			ResetsSent:                s.TCP.ResetsSent,
 		},
+		UdpStats: nsfidl.UdpStats{
+			PacketsReceived:          s.UDP.PacketsReceived,
+			UnknownPortErrors:        s.UDP.UnknownPortErrors,
+			ReceiveBufferErrors:      s.UDP.ReceiveBufferErrors,
+			MalformedPacketsReceived: s.UDP.MalformedPacketsReceived,
+			PacketsSent:              s.UDP.PacketsSent,
+		},
 	}, nil
 }
 

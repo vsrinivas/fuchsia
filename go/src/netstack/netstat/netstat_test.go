@@ -42,6 +42,24 @@ func TestICMPSentCount(t *testing.T) {
 	}
 }
 
+func TestUDPOutputPresence(t *testing.T) {
+	out := output(t, "/system/bin/netstat", "-s")
+	metrics := []string{
+		"packets received",
+		"packet receive errors",
+		"packets to unknown ports received",
+		"receive buffer errors",
+		"malformed packets received",
+		"packets sent",
+	}
+
+	for _, m := range metrics {
+		if !strings.Contains(out, m) {
+			t.Errorf("ICMP metric %q not present", m)
+		}
+	}
+}
+
 func output(t *testing.T, command string, args ...string) string {
 	cmd := exec.Command(command, args...)
 	out, err := cmd.CombinedOutput()
