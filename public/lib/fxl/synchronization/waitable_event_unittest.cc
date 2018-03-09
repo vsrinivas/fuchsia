@@ -195,44 +195,6 @@ TEST(ManualResetWaitableEventTest, SignalMultiple) {
   }
 }
 
-// Tries to test that threads that are awoken may immediately call |Reset()|
-// without affecting other threads that are awoken.
-//
-// This test is flaky. https://fuchsia.atlassian.net/browse/US-429
-TEST(ManualResetWaitableEventTest, DISABLED_SignalMultipleWaitReset) {
-  ManualResetWaitableEvent ev;
-
-  for (size_t i = 0u; i < 5u; i++) {
-    std::vector<std::thread> threads;
-    for (size_t j = 0u; j < 4u; j++) {
-      threads.push_back(std::thread([&ev]() {
-        if (rand() % 2 == 0)
-          ev.Wait();
-        else
-          EXPECT_FALSE(ev.WaitWithTimeout(kActionTimeout));
-        ev.Reset();
-      }));
-    }
-
-    // Unfortunately, we can't really wait for the threads to be waiting, so we
-    // just sleep for a bit, and count on them having started and advanced to
-    // waiting.
-    SleepFor(kTinyTimeout + kTinyTimeout);
-
-    ev.Signal();
-
-    // In fact, we may ourselves call |Reset()| immediately.
-    ev.Reset();
-
-    // The threads will only terminate once they've successfully waited (or
-    // timed out).
-    for (auto& thread : threads)
-      thread.join();
-
-    ASSERT_FALSE(ev.IsSignaledForTest());
-  }
-}
-
 TEST(ManualResetWaitableEventTest, Timeouts) {
   static const unsigned kTestTimeoutsMs[] = {0, 10, 20, 40, 80};
 
@@ -249,8 +211,6 @@ TEST(ManualResetWaitableEventTest, Timeouts) {
 
     // It should time out after *at least* the specified amount of time.
     EXPECT_GE(elapsed, timeout - kTimeoutTolerance);
-    // But we expect that it should time out soon after that amount of time.
-    EXPECT_LT(elapsed, timeout + kEpsilonTimeout);
   }
 }
 
