@@ -22,6 +22,7 @@ mod error;
 mod server;
 mod interface;
 mod client;
+pub mod client2;
 mod endpoints;
 
 pub use encoding::{Encodable, Decodable, EncodablePtr, DecodablePtr, EncodableType};

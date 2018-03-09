@@ -1,0 +1,27 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rust_binary.gni")
+import("//build/rust/toolchain.gni")
+import("//build/package.gni")
+
+rust_binary("echo2_server_rust_bin") {
+  name = "echo2_server_rust"
+  deps = [
+    "//garnet/public/rust/fidl_crates/garnet_examples_fidl2_services_echo2"
+  ]
+}
+
+package("echo2_server_rust") {
+  deps = [
+    ":echo2_server_rust_bin"
+  ]
+
+  binary = "echo2_server_rust"
+
+  meta = [{
+    path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+    dest = "legacy_flat_exported_dir"
+  }]
+}

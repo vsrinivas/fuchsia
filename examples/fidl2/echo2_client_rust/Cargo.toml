@@ -1,0 +1,17 @@
+[package]
+name = "echo2_client_rust"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Taylor Cramer <cramertj@google.com>"]
+description = "FIDL2 Example Echo Client"
+repository = "https://fuchsia.googlesource.com/garnet/"
+
+[dependencies]
+failure = "0.1"
+fidl = "0.1"
+fuchsia-app = "0.1"
+fuchsia-async = "0.1"
+fuchsia-zircon = "0.3"
+futures = "=0.2.0-alpha"
+garnet_examples_fidl2_services_echo2 = "0.1"
+structopt = "0.2"

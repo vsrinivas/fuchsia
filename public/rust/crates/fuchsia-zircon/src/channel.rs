@@ -228,6 +228,16 @@ impl MessageBuf {
         }
     }
 
+    /// Splits apart the message buf into a vector of bytes and a vector of handles.
+    pub fn split_mut(&mut self) -> (&mut Vec<u8>, &mut Vec<Handle>) {
+        (&mut self.bytes, &mut self.handles)
+    }
+
+    /// Splits apart the message buf into a vector of bytes and a vector of handles.
+    pub fn split(self) -> (Vec<u8>, Vec<Handle>) {
+        (self.bytes, self.handles)
+    }
+
     /// Ensure that the buffer has the capacity to hold at least `n_bytes` bytes.
     pub fn ensure_capacity_bytes(&mut self, n_bytes: usize) {
         ensure_capacity(&mut self.bytes, n_bytes);

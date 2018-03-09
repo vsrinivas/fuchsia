@@ -110,6 +110,15 @@ pub mod client {
             fdio::service_connect_at(&self.directory_request, Service::NAME, server_channel)?;
             Ok(Service::new_proxy(fidl::ClientEnd::new(client_channel))?)
         }
+
+        /// Connect `channel` to a service called `service_name` provided by the `App`.
+        #[inline]
+        pub fn connect_to_service_raw(&self, channel: zx::Channel, service_name: &str)
+            -> Result<(), Error>
+        {
+            fdio::service_connect_at(&self.directory_request, service_name, channel)?;
+            Ok(())
+        }
     }
 }
 
@@ -216,7 +225,6 @@ pub mod server {
                 services: HNil,
             }
         }
-
         /// Spawn a service instance
         pub fn spawn_service(&mut self, service_name: String, channel: async::Channel) {
             self.services.spawn_service(service_name, channel)
@@ -224,6 +232,11 @@ pub mod server {
     }
 
     impl<Services: ServiceFactories> ServicesServer<Services> {
+        /// Create a new `ServicesServer` with an existing `ServiceFactories`.
+        pub fn new_with_factories(services: Services) -> Self {
+            ServicesServer { services, }
+        }
+
         /// Add a service to the `ServicesServer`.
         pub fn add_service<S: ServiceFactory>(self, service_factory: S) -> ServicesServer<HCons<S, Services>> {
             ServicesServer {
@@ -262,7 +275,6 @@ pub mod server {
     }
 
     impl<F: ServiceFactories + 'static> FdioServer<F> {
-
         fn dispatch(&mut self, chan: &async::Channel, buf: zx::MessageBuf) -> zx::MessageBuf {
             // TODO(raggi): provide an alternative to the into() here so that we
             // don't need to pass the buf in owned back and forward.

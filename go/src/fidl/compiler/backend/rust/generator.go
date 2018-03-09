@@ -35,10 +35,13 @@ func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error
 		return err
 	}
 
-	srcPath := relStem + ".rs"
+	// TODO(cramertj)-- why is the gen prefix needed here?
+	// Why isn't it added at a higher level like it is in the other backends?
+	srcPath := "gen/" + relStem + ".rs"
 
 	tmpls := template.New("RustTemplates")
 	template.Must(tmpls.Parse(templates.SourceFile))
+	template.Must(tmpls.Parse(templates.Const))
 	template.Must(tmpls.Parse(templates.Enum))
 	template.Must(tmpls.Parse(templates.Interface))
 	template.Must(tmpls.Parse(templates.Struct))

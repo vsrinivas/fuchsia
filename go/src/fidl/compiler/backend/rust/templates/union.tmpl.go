@@ -6,10 +6,18 @@ package templates
 
 const Union = `
 {{- define "UnionDeclaration" }}
-pub enum {{ .Name }} {
-    {{- range .Members }}
-    {{ .Name }}(pub {{ .Type }});
-    {{- end }}
-}
+fidl2_union! {
+  name: {{ .Name }},
+  members: [
+  {{- range .Members }}
+    {{ .Name }} {
+      ty: {{ .Type }},
+      offset: {{ .Offset }},
+    },
+  {{- end }}
+  ],
+  size: {{ .Size }},
+  align: {{ .Alignment }},
+};
 {{- end }}
 `

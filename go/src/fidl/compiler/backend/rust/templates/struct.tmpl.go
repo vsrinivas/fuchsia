@@ -6,10 +6,24 @@ package templates
 
 const Struct = `
 {{- define "StructDeclaration" }}
-struct {{ .Name }} {
+pub struct {{ .Name }} {
   {{- range .Members }}
   pub {{ .Name }}: {{ .Type }},
   {{- end }}
 }
+
+fidl2_struct! {
+  name: {{ .Name }},
+  members: [
+  {{- range .Members }}
+    {{ .Name }} {
+      ty: {{ .Type }},
+      offset: {{ .Offset }},
+    },
+  {{- end }}
+  ],
+  size: {{ .Size }},
+  align: {{ .Alignment }},
+};
 {{- end }}
 `

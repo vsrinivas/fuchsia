@@ -10,8 +10,18 @@ const SourceFile = `
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
+#[macro_use]
+extern crate fidl;
+extern crate futures;
 
+use fidl::encoding2::{Encodable, Decodable};
+use futures::{Future, Stream, Never};
+
+{{ range $const := .Consts -}}
+{{ template "ConstDeclaration" $const }}
+{{ end -}}
 {{ range $enum := .Enums -}}
 {{ template "EnumDeclaration" $enum }}
 {{ end -}}

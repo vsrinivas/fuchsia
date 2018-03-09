@@ -9,11 +9,19 @@ import (
 	"fidl/compiler/backend/types"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 )
 
-type Type string
+type Type struct {
+	Decl     string
+	DeclType types.DeclType
+}
+
+type Const struct {
+	Name  string
+	Type  string
+	Value string
+}
 
 type Enum struct {
 	Name    string
@@ -22,58 +30,68 @@ type Enum struct {
 }
 
 type EnumMember struct {
-	Name  string
-	Value string
+	Name      string
+	ConstName string
+	Value     string
 }
 
 type Union struct {
-	Name    string
-	Members []UnionMember
+	Name      string
+	Members   []UnionMember
+	Size      int
+	Alignment int
 }
 
 type UnionMember struct {
-	Type Type
-	Name string
+	Type   string
+	Name   string
+	Offset int
 }
 
 type Struct struct {
-	Name    string
-	Members []StructMember
+	Name      string
+	Members   []StructMember
+	Size      int
+	Alignment int
 }
 
 type StructMember struct {
-	Type Type
-	Name string
+	Type         string
+	Name         string
+	Offset       int
+	HasDefault   bool
+	DefaultValue string
 }
 
 type Interface struct {
-	Name      string
-	ProxyName string
-	StubName  string
-	Methods   []Method
+	Name    string
+	Methods []Method
 }
 
 type Method struct {
-	Ordinal     types.Ordinal
-	OrdinalName string
-	Name        string
-	HasRequest  bool
-	Request     []Parameter
-	HasResponse bool
-	Response    []Parameter
+	Ordinal      types.Ordinal
+	OrdinalName  string
+	Name         string
+	CamelName    string
+	HasRequest   bool
+	Request      []Parameter
+	HasResponse  bool
+	Response     []Parameter
+	ResponseSize int
 }
 
 type Parameter struct {
-	Type Type
-	Name string
+	Type   string
+	Name   string
+	Offset int
 }
 
 type Root struct {
-	PrimaryHeader string
-	Enums         []Enum
-	Interfaces    []Interface
-	Structs       []Struct
-	Unions        []Union
+	Consts     []Const
+	Enums      []Enum
+	Structs    []Struct
+	Unions     []Union
+	Interfaces []Interface
 }
 
 var reservedWords = map[string]bool{
@@ -139,13 +157,22 @@ var reservedWords = map[string]bool{
 	//"union":	true,
 
 	// Things that are not keywords, but for which collisions would be very unpleasant
-	"Ok":     true,
-	"Err":    true,
-	"Vec":    true,
-	"Option": true,
-	"Some":   true,
-	"None":   true,
-	"Box":    true,
+	"Ok":         true,
+	"Err":        true,
+	"Vec":        true,
+	"Option":     true,
+	"Some":       true,
+	"None":       true,
+	"Box":        true,
+	"Future":     true,
+	"Stream":     true,
+	"Never":      true,
+	"fidl":       true,
+	"futures":    true,
+	"zx":         true,
+	"response":   true,
+	"controller": true,
+	"async":      true,
 
 	// Names used by the FIDL bindings
 	"Server":                 true,
@@ -207,6 +234,10 @@ var handleSubtypes = map[types.HandleSubtype]string{
 	types.Time:      "Timer",
 }
 
+type compiler struct {
+	decls *types.DeclMap
+}
+
 func compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
 	for i, v := range val {
@@ -228,10 +259,14 @@ func compileSnakeIdentifier(val types.Identifier) string {
 	return common.ToSnakeCase(changeIfReserved(val))
 }
 
+func compileScreamingSnakeIdentifier(val types.Identifier) string {
+	return common.ConstNameToAllCapsSnake(changeIfReserved(val))
+}
+
 func compileLiteral(val types.Literal) string {
 	switch val.Kind {
 	case types.StringLiteral:
-		return fmt.Sprintf("r###\"%q\"###", val.Value)
+		return fmt.Sprintf("r###\"%s\"###", val.Value)
 	case types.NumericLiteral:
 		return val.Value
 	case types.TrueLiteral:
@@ -249,13 +284,32 @@ func compileLiteral(val types.Literal) string {
 func compileConstant(val types.Constant) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
-		return compileCompoundIdentifier(val.Identifier)
+		return compileScreamingSnakeIdentifier(
+			types.Identifier(compileCompoundIdentifier(val.Identifier)))
 	case types.LiteralConstant:
 		return compileLiteral(val.Literal)
 	default:
 		log.Fatal("Unknown constant kind:", val.Kind)
 		return ""
 	}
+}
+
+func (c *compiler) compileConst(val types.Const) Const {
+	var r Const
+	if val.Type.Kind == types.StringType {
+		r = Const{
+			Type:  "&str",
+			Name:  compileScreamingSnakeIdentifier(val.Name[0]),
+			Value: compileConstant(val.Value),
+		}
+	} else {
+		r = Const{
+			Type:  c.compileType(val.Type).Decl,
+			Name:  compileScreamingSnakeIdentifier(val.Name[0]),
+			Value: compileConstant(val.Value),
+		}
+	}
+	return r
 }
 
 func compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
@@ -274,17 +328,18 @@ func compileHandleSubtype(val types.HandleSubtype) string {
 	return ""
 }
 
-func compileType(val types.Type) Type {
+func (c *compiler) compileType(val types.Type) Type {
 	var r string
+	var declType types.DeclType
 	switch val.Kind {
 	case types.ArrayType:
-		t := compileType(*val.ElementType)
-		r = fmt.Sprintf("[%s; %s]", t, strconv.Itoa(*val.ElementCount))
+		t := c.compileType(*val.ElementType)
+		r = fmt.Sprintf("[%s; %v]", t.Decl, *val.ElementCount)
 	case types.VectorType:
-		t := compileType(*val.ElementType)
-		r = fmt.Sprintf("::std::vec::Vec<%s>", t)
+		t := c.compileType(*val.ElementType)
+		r = fmt.Sprintf("Vec<%s>", t.Decl)
 	case types.StringType:
-		r = "::std::string::String"
+		r = "String"
 	case types.HandleType:
 		r = fmt.Sprintf("::zx::%s", compileHandleSubtype(val.HandleSubtype))
 	case types.RequestType:
@@ -293,16 +348,36 @@ func compileType(val types.Type) Type {
 		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
 		t := compileCompoundIdentifier(val.Identifier)
-		// TODO(cramertj): Need to distinguish between interfaces and structs
-		r = fmt.Sprintf("::std::boxed::Box<%s>", t)
+		declType, ok := (*c.decls)[val.Identifier[0]]
+		if !ok {
+			log.Fatal("unknown identifier:", val.Identifier)
+		}
+		switch declType {
+		case types.ConstDeclType:
+			fallthrough
+		case types.EnumDeclType:
+			fallthrough
+		case types.StructDeclType:
+			fallthrough
+		case types.UnionDeclType:
+			if val.Nullable {
+				r = fmt.Sprintf("Option<Box<%s>>", t)
+			} else {
+				r = t
+			}
+		case types.InterfaceDeclType:
+			r = fmt.Sprintf("::fidl::encoding2::InterfaceHandle<%s>", t)
+		default:
+			log.Fatal("Unknown declaration type: ", declType)
+		}
 	default:
 		log.Fatal("Unknown type kind:", val.Kind)
 	}
 
-	if val.Nullable {
-		r = fmt.Sprintf("::std::option::Option<%s>", r)
+	return Type{
+		Decl:     r,
+		DeclType: declType,
 	}
-	return Type(r)
 }
 
 func compileEnum(val types.Enum) Enum {
@@ -313,20 +388,22 @@ func compileEnum(val types.Enum) Enum {
 	}
 	for _, v := range val.Members {
 		e.Members = append(e.Members, EnumMember{
-			compileCamelIdentifier(v.Name),
-			compileConstant(v.Value),
+			Name:      compileCamelIdentifier(v.Name),
+			ConstName: compileScreamingSnakeIdentifier(v.Name),
+			Value:     compileConstant(v.Value),
 		})
 	}
 	return e
 }
 
-func compileParameterArray(val []types.Parameter) []Parameter {
+func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 	r := []Parameter{}
 
 	for _, v := range val {
 		p := Parameter{
-			compileType(v.Type),
+			c.compileType(v.Type).Decl,
 			changeIfReserved(v.Name),
+			v.Offset,
 		}
 		r = append(r, p)
 	}
@@ -334,23 +411,26 @@ func compileParameterArray(val []types.Parameter) []Parameter {
 	return r
 }
 
-func compileInterface(val types.Interface) Interface {
+func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		compileCamelIdentifier(val.Name[0]),
-		compileCamelIdentifier(val.Name[0] + "Proxy"),
-		compileCamelIdentifier(val.Name[0] + "Stub"),
 		[]Method{},
 	}
 
 	for _, v := range val.Methods {
 		name := compileSnakeIdentifier(v.Name)
+		camelName := compileCamelIdentifier(v.Name)
+		request := c.compileParameterArray(v.Request)
+		response := c.compileParameterArray(v.Response)
+
 		m := Method{
 			Ordinal:     v.Ordinal,
 			Name:        name,
+			CamelName:   camelName,
 			HasRequest:  v.HasRequest,
-			Request:     compileParameterArray(v.Request),
+			Request:     request,
 			HasResponse: v.HasResponse,
-			Response:    compileParameterArray(v.Response),
+			Response:    response,
 		}
 		r.Methods = append(r.Methods, m)
 	}
@@ -358,66 +438,77 @@ func compileInterface(val types.Interface) Interface {
 	return r
 }
 
-func compileStructMember(val types.StructMember) StructMember {
+func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	return StructMember{
-		Type: compileType(val.Type),
-		Name: compileSnakeIdentifier(val.Name),
+		Type:         c.compileType(val.Type).Decl,
+		Name:         compileSnakeIdentifier(val.Name),
+		Offset:       val.Offset,
+		HasDefault:   false,
+		DefaultValue: "", // TODO(cramertj) support defaults
 	}
 }
 
-func compileStruct(val types.Struct) Struct {
+func (c *compiler) compileStruct(val types.Struct) Struct {
 	name := compileCamelIdentifier(val.Name[0])
 	r := Struct{
-		Name:    name,
-		Members: []StructMember{},
+		Name:      name,
+		Members:   []StructMember{},
+		Size:      val.Size,
+		Alignment: val.Alignment,
 	}
 
 	for _, v := range val.Members {
-		r.Members = append(r.Members, compileStructMember(v))
+		r.Members = append(r.Members, c.compileStructMember(v))
 	}
 
 	return r
 }
 
-func compileUnionMember(val types.UnionMember) UnionMember {
+func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
-		compileType(val.Type),
-		compileSnakeIdentifier(val.Name),
+		Type:   c.compileType(val.Type).Decl,
+		Name:   compileCamelIdentifier(val.Name),
+		Offset: val.Offset,
 	}
 }
 
-func compileUnion(val types.Union) Union {
+func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
-		compileCamelIdentifier(val.Name[0]),
-		[]UnionMember{},
+		Name:      compileCamelIdentifier(val.Name[0]),
+		Members:   []UnionMember{},
+		Size:      val.Size,
+		Alignment: val.Alignment,
 	}
 
 	for _, v := range val.Members {
-		r.Members = append(r.Members, compileUnionMember(v))
+		r.Members = append(r.Members, c.compileUnionMember(v))
 	}
 
 	return r
 }
 
-func Compile(fidlData types.Root) Root {
+func Compile(r types.Root) Root {
 	root := Root{}
+	c := compiler{&r.Decls}
 
-	// TODO(cramertj): Constants.
+	for _, v := range r.Consts {
+		root.Consts = append(root.Consts, c.compileConst(v))
+	}
 
-	for _, v := range fidlData.Enums {
+	for _, v := range r.Enums {
 		root.Enums = append(root.Enums, compileEnum(v))
 	}
 
-	for _, v := range fidlData.Interfaces {
-		root.Interfaces = append(root.Interfaces, compileInterface(v))
+	for _, v := range r.Interfaces {
+		root.Interfaces = append(root.Interfaces, c.compileInterface(v))
 	}
 
-	for _, v := range fidlData.Structs {
-		root.Structs = append(root.Structs, compileStruct(v))
+	for _, v := range r.Structs {
+		root.Structs = append(root.Structs, c.compileStruct(v))
 	}
 
-	for _, v := range fidlData.Unions {
-		root.Unions = append(root.Unions, compileUnion(v))
+	for _, v := range r.Unions {
+		root.Unions = append(root.Unions, c.compileUnion(v))
 	}
 
 	return root

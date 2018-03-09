@@ -7,6 +7,7 @@
 use {Error, Result};
 use std::{mem, ptr, str, u32, u64};
 use zircon as zx;
+use self::zx::HandleBased;
 
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -20,28 +21,50 @@ pub fn round_up_to_align(x: usize, align: usize) -> usize {
 }
 
 /// Split off the first element from a slice.
-fn split_off_first<'a, T>(slice: &mut &'a mut [T]) -> Result<&'a mut T> {
-    split_off_front(slice, 1).map(|res| &mut res[0])
+fn split_off_first<'a, T>(slice: &mut &'a [T]) -> Result<&'a T> {
+    split_off_front(slice, 1).map(|res| &res[0])
+}
+
+/// Split off the first element from a mutable slice.
+fn split_off_first_mut<'a, T>(slice: &mut &'a mut [T]) -> Result<&'a mut T> {
+    split_off_front_mut(slice, 1).map(|res| &mut res[0])
 }
 
 /// Split of the first `n` bytes from `slice`.
-fn split_off_front<'a, T>(slice: &mut &'a mut [T], n: usize) -> Result<&'a mut [T]> {
+fn split_off_front<'a, T>(slice: &mut &'a [T], n: usize) -> Result<&'a [T]> {
     if n > slice.len() {
         return Err(Error::OutOfRange);
     }
     let original = take_slice(slice);
+    let (head, tail) = original.split_at(n);
+    *slice = tail;
+    Ok(head)
+}
+
+/// Split of the first `n` mutable bytes from `slice`.
+fn split_off_front_mut<'a, T>(slice: &mut &'a mut [T], n: usize) -> Result<&'a mut [T]> {
+    if n > slice.len() {
+        return Err(Error::OutOfRange);
+    }
+    let original = take_slice_mut(slice);
     let (head, tail) = original.split_at_mut(n);
     *slice = tail;
     Ok(head)
 }
 
 /// Empty out a slice.
-fn take_slice<'a, T>(x: &mut &'a mut [T]) -> &'a mut [T] {
+fn take_slice<'a, T>(x: &mut &'a [T]) -> &'a [T] {
     mem::replace(x, &mut [])
 }
 
-fn take_handle(handle: &mut zx::Handle) -> zx::Handle {
-    mem::replace(handle, zx::Handle::invalid())
+/// Empty out a mutable slice.
+fn take_slice_mut<'a, T>(x: &mut &'a mut [T]) -> &'a mut [T] {
+    mem::replace(x, &mut [])
+}
+
+fn take_handle<T: HandleBased>(handle: &mut T) -> zx::Handle {
+    let invalid = T::from_handle(zx::Handle::invalid());
+    mem::replace(handle, invalid).into_handle()
 }
 
 /// The maximum recursion depth of encoding and decoding.
@@ -85,10 +108,10 @@ pub struct Decoder<'a> {
     remaining_depth: usize,
 
     /// Buffer from which to read data.
-    buf: &'a mut [u8],
+    buf: &'a [u8],
 
     /// Buffer from which to read out-of-line data.
-    out_of_line_buf: &'a mut [u8],
+    out_of_line_buf: &'a [u8],
 
     /// The number of bytes that `out_of_line_buf` has advanced since the start of the entire buffer.
     /// This is used for calculating offsets of new out-of-line sections of data.
@@ -106,7 +129,7 @@ impl<'a> Encoder<'a> {
         x: &mut T
     ) -> Result<()>
     {
-        let inline_size = x.inline_size();
+        let inline_size = round_up_to_align(x.inline_size(), 8);
         buf.truncate(0);
         buf.resize(inline_size, 0);
         handles.truncate(0);
@@ -150,14 +173,13 @@ impl<'a> Encoder<'a> {
     ///
     /// Once the closure has completed, this function resets the offset
     /// to where it was at the beginning of the call.
-    pub fn write_out_of_line<F>(&mut self, align: usize, len: usize, f: F) -> Result<()>
+    pub fn write_out_of_line<F>(&mut self, len: usize, f: F) -> Result<()>
         where F: FnOnce(&mut Encoder) -> Result<()>
     {
         let old_offset = self.offset;
-        let offset = round_up_to_align(self.buf.len(), align);
-        self.offset = offset;
+        self.offset = self.buf.len();
         // Create space for the new data
-        self.buf.resize(offset + len, 0);
+        self.buf.resize(self.offset + round_up_to_align(len, 8), 0);
         f(self)?;
         self.offset = old_offset;
         Ok(())
@@ -167,14 +189,17 @@ impl<'a> Encoder<'a> {
 impl<'a> Decoder<'a> {
     /// FIDL2-decodes a value of type `T` from the provided data and handle buffers.
     pub fn decode_into<T: Decodable>(
-        buf: &'a mut [u8],
+        buf: &'a [u8],
         handles: &'a mut [zx::Handle],
         value: &mut T,
     ) -> Result<()>
     {
         let out_of_line_offset = T::inline_size();
+        if buf.len() < out_of_line_offset {
+            return Err(Error::OutOfRange);
+        }
 
-        let (buf, out_of_line_buf) = buf.split_at_mut(out_of_line_offset);
+        let (buf, out_of_line_buf) = buf.split_at(out_of_line_offset);
 
         let mut decoder = Decoder {
             remaining_depth: MAX_RECURSION,
@@ -207,7 +232,7 @@ impl<'a> Decoder<'a> {
     ///
     /// `absolute_offset` indicates the offset of the start of the out-of-line data to read,
     /// relative to the original start of the buffer.
-    pub fn read_out_of_line<F, R>(&mut self, align: usize, len: usize, f: F) -> Result<R>
+    pub fn read_out_of_line<F, R>(&mut self, len: usize, f: F) -> Result<R>
         where F: FnOnce(&mut Decoder) -> Result<R>
     {
         // Currently, out-of-line points here:
@@ -221,20 +246,12 @@ impl<'a> Decoder<'a> {
         // [---------------------------------]
         //     ^old--buf^      ^--buf--^^ool^
         //                              ^out-of-line-advanced
-        //
-        // First, we calculate we'll have to shift the start of `out_of_line` to be a multiple of
-        // `align`, then we adjust `out-of-line` and `out-of-line-advanced` appropriately.
 
-        // Don't try to shift to the proper alignment if there is no actual data to be read.
-        let out_of_line_align_shift =
-            round_up_to_align(self.out_of_line_advanced, align) - self.out_of_line_advanced;
-        split_off_front(&mut self.out_of_line_buf, out_of_line_align_shift)?;
-        self.out_of_line_advanced += out_of_line_align_shift;
-
-        // Next, we split off the first `len` bytes from `out_of_line` and adjust
+        // We split off the first `len` bytes from `out_of_line` and adjust
         // `out-of-line-advanced` appropriately.
         let new_buf = split_off_front(&mut self.out_of_line_buf, len)?;
-        self.out_of_line_advanced += len;
+        // Out of line data must always be aligned to 8 bytes
+        self.out_of_line_advanced += round_up_to_align(len, 8);
 
         // Store the current `buf` slice and shift the `buf` slice to point at the out-of-line data.
         let old_buf = take_slice(&mut self.buf);
@@ -252,13 +269,13 @@ impl<'a> Decoder<'a> {
     }
 
     /// Returns a slice of the next `len` bytes to be decoded into and shifts the decoding buffer.
-    pub fn next_slice(&mut self, len: usize) -> Result<&mut [u8]> {
+    pub fn next_slice(&mut self, len: usize) -> Result<&[u8]> {
         split_off_front(&mut self.buf, len)
     }
 
     /// Take the next handle from the `handles` list and shift the list down by one element.
     pub fn take_handle(&mut self) -> Result<zx::Handle> {
-        split_off_first(&mut self.handles).map(take_handle)
+        split_off_first_mut(&mut self.handles).map(take_handle)
     }
 }
 
@@ -444,7 +461,7 @@ fn encode_byte_slice(encoder: &mut Encoder, slice_opt: Option<&[u8]>) -> Result<
             // Two u64: (len, present)
             (slice.len() as u64).encode(encoder)?;
             ALLOC_PRESENT_U64.encode(encoder)?;
-            encoder.write_out_of_line(1, slice.len(), |encoder| {
+            encoder.write_out_of_line(slice.len(), |encoder| {
                 let slot = encoder.next_slice(slice.len())?;
                 slot.copy_from_slice(slice);
                 Ok(())
@@ -467,9 +484,8 @@ fn encode_encodable_slice<T: Encodable>(
             (slice.len() as u64).encode(encoder)?;
             ALLOC_PRESENT_U64.encode(encoder)?;
             if slice.len() == 0 { return Ok(()); }
-            let align = slice.get(0).map(Encodable::inline_align).unwrap_or(0);
             let bytes_len = slice.len() * slice.get(0).map(Encodable::inline_size).unwrap_or(0);
-            encoder.write_out_of_line(align, bytes_len, |encoder| {
+            encoder.write_out_of_line(bytes_len, |encoder| {
                 encoder.recurse(|encoder| {
                     for item in slice.iter_mut() {
                         item.encode(encoder)?;
@@ -496,7 +512,7 @@ fn decode_string(decoder: &mut Decoder, string: &mut String) -> Result<bool> {
         _ => return Err(Error::Invalid),
     };
     let len = len as usize;
-    decoder.read_out_of_line(/* align */1, len, |decoder| {
+    decoder.read_out_of_line(len, |decoder| {
         string.truncate(0);
         string.push_str(
             str::from_utf8(decoder.buf)
@@ -523,8 +539,7 @@ fn decode_vec<T: Decodable>(decoder: &mut Decoder, vec: &mut Vec<T>) -> Result<b
 
     let len = len as usize;
     let bytes_len = len * T::inline_size();
-    let required_alignment = T::inline_align();
-    decoder.read_out_of_line(required_alignment, bytes_len, |decoder| {
+    decoder.read_out_of_line(bytes_len, |decoder| {
         decoder.recurse(|decoder| {
             vec.truncate(0);
             for _ in 0..len {
@@ -653,79 +668,74 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
     }
 }
 
-impl Encodable for zx::Handle {
-    fn inline_align(&self) -> usize { 4 }
-
-    fn inline_size(&self) -> usize { 4 }
-
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
-        let handle = take_handle(self);
-        ALLOC_PRESENT_U32.encode(encoder)?;
-        encoder.handles.push(handle);
-        Ok(())
-    }
-}
-
-impl Decodable for zx::Handle {
-    fn new_empty() -> Self {
-        zx::Handle::invalid()
-    }
-
-    fn inline_align() -> usize { 4 }
-
-    fn inline_size() -> usize { 4 }
-
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
-        let mut present: u32 = 0;
-        present.decode(decoder)?;
-        match present {
-            ALLOC_ABSENT_U32 => return Err(Error::NotNullable),
-            ALLOC_PRESENT_U32 => {},
-            _ => return Err(Error::Invalid),
-        }
-        *self = decoder.take_handle()?;
-        Ok(())
-    }
-}
-
-impl Encodable for Option<zx::Handle> {
-    fn inline_align(&self) -> usize { 4 }
-
-    fn inline_size(&self) -> usize { 4 }
-
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
-        match *self {
-            Some(ref mut handle) => handle.encode(encoder),
-            None => ALLOC_ABSENT_U32.encode(encoder),
-        }
-    }
-}
-
-impl Decodable for Option<zx::Handle> {
-    fn new_empty() -> Self {
-        None
-    }
-
-    fn inline_align() -> usize { 4 }
-
-    fn inline_size() -> usize { 4 }
-
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
-        let mut present: u32 = 0;
-        present.decode(decoder)?;
-        match present {
-            ALLOC_ABSENT_U32 => {
-                *self = None;
+// TODO(cramertj) replace when specialization is stable
+macro_rules! handle_based_codable {
+    ($($ty:ty, )*) => { $(
+        impl Encodable for $ty {
+            fn inline_align(&self) -> usize { 4 }
+            fn inline_size(&self) -> usize { 4 }
+            fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+                let handle = take_handle(self);
+                ALLOC_PRESENT_U32.encode(encoder)?;
+                encoder.handles.push(handle);
                 Ok(())
-            },
-            ALLOC_PRESENT_U32 => {
-                *self = Some(decoder.take_handle()?);
-                Ok(())
-            },
-            _ => Err(Error::Invalid),
+            }
         }
-    }
+
+        impl Decodable for $ty {
+            fn new_empty() -> Self {
+                <$ty>::from_handle(zx::Handle::invalid())
+            }
+            fn inline_align() -> usize { 4 }
+            fn inline_size() -> usize { 4 }
+            fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+                let mut present: u32 = 0;
+                present.decode(decoder)?;
+                match present {
+                    ALLOC_ABSENT_U32 => return Err(Error::NotNullable),
+                    ALLOC_PRESENT_U32 => {},
+                    _ => return Err(Error::Invalid),
+                }
+                *self = <$ty>::from_handle(decoder.take_handle()?);
+                Ok(())
+            }
+        }
+
+        impl Encodable for Option<$ty> {
+            fn inline_align(&self) -> usize { 4 }
+            fn inline_size(&self) -> usize { 4 }
+            fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+                match *self {
+                    Some(ref mut handle) => handle.encode(encoder),
+                    None => ALLOC_ABSENT_U32.encode(encoder),
+                }
+            }
+        }
+
+        impl Decodable for Option<$ty> {
+            fn new_empty() -> Self { None }
+            fn inline_align() -> usize { 4 }
+            fn inline_size() -> usize { 4 }
+            fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+                let mut present: u32 = 0;
+                present.decode(decoder)?;
+                match present {
+                    ALLOC_ABSENT_U32 => {
+                        *self = None;
+                        Ok(())
+                    },
+                    ALLOC_PRESENT_U32 => {
+                        *self = Some(decoder.take_handle()?.into());
+                        Ok(())
+                    },
+                    _ => Err(Error::Invalid),
+                }
+            }
+        }
+    )* }
 }
+
+handle_based_codable![zx::Handle, zx::Channel, zx::Socket,];
 
 #[macro_export]
 macro_rules! fidl2_inline_size {
@@ -771,7 +781,7 @@ macro_rules! fidl2_enum {
             $(
                 $key = $value,
             )*
-        };
+        }
 
         impl $name {
             pub fn from_primitive(prim: $prim_ty) -> Option<Self> {
@@ -797,7 +807,9 @@ macro_rules! fidl2_enum {
                 fidl2_inline_size!($prim_ty)
             }
 
-            fn encode(&mut self, encoder: &mut $crate::encoding2::Encoder) -> Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding2::Encoder)
+                -> ::std::result::Result<(), $crate::Error>
+            {
                 fidl2_encode!(&mut (*self as $prim_ty), encoder)
             }
         }
@@ -820,10 +832,12 @@ macro_rules! fidl2_enum {
                 fidl2_inline_size!($prim_ty)
             }
 
-            fn decode(&mut self, decoder: &mut $crate::encoding2::Decoder) -> Result<()> {
+            fn decode(&mut self, decoder: &mut $crate::encoding2::Decoder)
+                -> ::std::result::Result<(), $crate::Error>
+            {
                 let mut prim = fidl2_new_empty!($prim_ty);
                 fidl2_decode!(&mut prim, decoder)?;
-                *self = Self::from_primitive(prim).ok_or(Error::Invalid)?;
+                *self = Self::from_primitive(prim).ok_or($crate::Error::Invalid)?;
                 Ok(())
             }
         }
@@ -833,7 +847,7 @@ macro_rules! fidl2_enum {
 #[macro_export]
 macro_rules! fidl2_nullable {
     ($name:ident) => {
-        impl $crate::encoding2::Encodable for Option<$name> {
+        impl $crate::encoding2::Encodable for Option<Box<$name>> {
             fn inline_align(&self) -> usize {
                 fidl2_inline_align!(u64)
             }
@@ -845,9 +859,8 @@ macro_rules! fidl2_nullable {
                     Some(ref mut inner) => {
                         fidl2_encode!(&mut ALLOC_PRESENT_U64, encoder)?;
                         encoder.write_out_of_line(
-                            fidl2_inline_align!($name),
                             fidl2_inline_size!($name),
-                            |encoder| fidl2_encode!(inner, encoder))
+                            |encoder| fidl2_encode!(&mut **inner, encoder))
                     }
                     None => {
                         fidl2_encode!(&mut ALLOC_ABSENT_U64, encoder)
@@ -856,7 +869,7 @@ macro_rules! fidl2_nullable {
             }
         }
 
-        impl $crate::encoding2::Decodable for Option<$name> {
+        impl $crate::encoding2::Decodable for Option<Box<$name>> {
             fn inline_align() -> usize {
                 fidl2_inline_align!(u64)
             }
@@ -879,11 +892,10 @@ macro_rules! fidl2_nullable {
                         loop {
                             if let Some(ref mut inner) = *self {
                                 return decoder.read_out_of_line(
-                                    fidl2_inline_align!($name),
                                     fidl2_inline_size!($name),
-                                    |decoder| fidl2_decode!(inner, decoder));
+                                    |decoder| fidl2_decode!(&mut **inner, decoder));
                             } else {
-                                *self = Some(fidl2_new_empty!($name));
+                                *self = Some(Box::new(fidl2_new_empty!($name)));
                             }
                         }
                     }
@@ -907,13 +919,6 @@ macro_rules! fidl2_struct {
         size: $size:expr,
         align: $align:expr,
     ) => {
-        #[derive(Debug)]
-        pub struct $name {
-            $(
-                pub $member_name: $member_ty,
-            )*
-        }
-
         impl $crate::encoding2::Encodable for $name {
             fn inline_align(&self) -> usize {
                 $align
@@ -1094,6 +1099,288 @@ macro_rules! fidl2_union {
     }
 }
 
+/// Header for transactional FIDL messages
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct TransactionHeader {
+    /// Transaction ID which identifies a request-response pair
+    pub tx_id: u32,
+    /// Flags (always zero for now)
+    pub flags: u32,
+    /// Ordinal which identifies the FIDL method
+    pub ordinal: u32,
+}
+
+fidl2_struct! {
+    name: TransactionHeader,
+    members: [
+        tx_id {
+            ty: u32,
+            offset: 0,
+        },
+        flags {
+            ty: u32,
+            offset: 8, // Save 64 bits for id, even though it's only 32 bits
+        },
+        ordinal {
+            ty: u32,
+            offset: 12,
+        },
+    ],
+    size: 16,
+    align: 0,
+}
+
+/// Transactional FIDL message
+pub struct TransactionMessage<'a, T: 'a> {
+    /// Header of the message
+    pub header: TransactionHeader,
+    /// Body of the message
+    pub body: &'a mut T,
+}
+
+impl<'a, T: Encodable> Encodable for TransactionMessage<'a, T> {
+    fn inline_align(&self) -> usize { 0 }
+    fn inline_size(&self) -> usize {
+        self.header.inline_size() + self.body.inline_size()
+    }
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        self.header.encode(encoder)?;
+        (*self.body).encode(encoder)?;
+        Ok(())
+    }
+}
+
+impl<'a, T: Decodable> Decodable for TransactionMessage<'a, T> {
+    fn new_empty() -> Self {
+        panic!("cannot create an empty transaction message")
+    }
+    fn inline_align() -> usize { 0 }
+    fn inline_size() -> usize {
+        <TransactionHeader as Decodable>::inline_size() + T::inline_size()
+    }
+    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+        self.header.decode(decoder)?;
+        (*self.body).decode(decoder)?;
+        Ok(())
+    }
+}
+
+/// Decode the transaction header from a message.
+/// Returns the header and a reference to the tail of the message.
+pub fn decode_transaction_header(bytes: &[u8]) -> Result<(TransactionHeader, &[u8])> {
+    let mut header = TransactionHeader::new_empty();
+    let header_len = <TransactionHeader as Decodable>::inline_size();
+    if bytes.len() < header_len { return Err(Error::OutOfRange); }
+    let (header_bytes, body_bytes) = bytes.split_at(header_len);
+    let handles = &mut [];
+    Decoder::decode_into(header_bytes, handles, &mut header)?;
+    Ok((header, body_bytes))
+}
+
+// Implementations of Encodable for (&mut Head, ...Tail) and Decodable for (Head, ...Tail)
+macro_rules! tuple_impls {
+    () => {};
+
+    (($idx:tt => $typ:ident), $( ($nidx:tt => $ntyp:ident), )*) => {
+        /*
+         * Invoke recursive reversal of list that ends in the macro expansion implementation
+         * of the reversed list
+        */
+        tuple_impls!([($idx, $typ);] $( ($nidx => $ntyp), )*);
+        tuple_impls!($( ($nidx => $ntyp), )*); // invoke macro on tail
+    };
+
+    /*
+     * ([accumulatedList], listToReverse); recursively calls tuple_impls until the list to reverse
+     + is empty (see next pattern)
+    */
+    ([$(($accIdx:tt, $accTyp:ident);)+]
+        ($idx:tt => $typ:ident), $( ($nidx:tt => $ntyp:ident), )*) => {
+      tuple_impls!([($idx, $typ); $(($accIdx, $accTyp); )*] $( ($nidx => $ntyp), ) *);
+    };
+
+    // Finally expand into the implementation
+    ([($idx:tt, $typ:ident); $( ($nidx:tt, $ntyp:ident); )*]) => {
+        impl<'a, $typ, $( $ntyp ,)*>
+            Encodable for (&'a mut $typ, $( &'a mut $ntyp ,)*)
+            where $typ: Encodable + 'a,
+                  $( $ntyp: Encodable + 'a ,)*
+        {
+            fn inline_align(&self) -> usize {
+                let mut max = 0;
+                if max < self.$idx.inline_align() {
+                    max = self.$idx.inline_align();
+                }
+                $(
+                    if max < self.$nidx.inline_align() {
+                        max = self.$nidx.inline_align();
+                    }
+                )*
+                max
+            }
+
+            fn inline_size(&self) -> usize {
+                let mut offset = 0;
+                offset += self.$idx.inline_size();
+                $(
+                    offset = round_up_to_align(offset, self.$nidx.inline_align());
+                    offset += self.$nidx.inline_size();
+                )*
+                offset
+            }
+
+            fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+                encoder.recurse(|encoder| {
+                    let mut cur_offset = 0;
+                    self.$idx.encode(encoder)?;
+                    cur_offset += self.$idx.inline_size();
+                    $(
+                        // Skip to the start of the next field
+                        let member_offset = round_up_to_align(cur_offset, self.$nidx.inline_align());
+                        encoder.next_slice(member_offset - cur_offset)?;
+                        cur_offset = member_offset;
+                        self.$nidx.encode(encoder)?;
+                        cur_offset += self.$nidx.inline_size();
+                    )*
+                    // Skip to the end of the struct's size
+                    encoder.next_slice(self.inline_size() - cur_offset)?;
+                    Ok(())
+                })
+            }
+        }
+
+        /* TODO(cramertj) enable when some form of specialization is stable in the future...
+        impl<$typ, $( $ntyp ,)*>
+            Encodable for ($typ, $( $ntyp ,)*)
+            where $typ: Encodable,
+                  $( $ntyp: Encodable,)*
+        {
+            fn inline_align(&self) -> usize {
+                (
+                    &mut self.$idx,
+                    $(
+                        &mut self.$nidx,
+                    )*
+                ).inline_align()
+            }
+
+            fn inline_size(&self) -> usize {
+                (
+                    &mut self.$idx,
+                    $(
+                        &mut self.$nidx,
+                    )*
+                ).inline_size()
+            }
+
+            fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+                (
+                    &mut self.$idx,
+                    $(
+                        &mut self.$nidx,
+                    )*
+                ).encode(encoder)
+            }
+        }
+        */
+
+        impl<$typ, $( $ntyp ),*> Decodable for ($typ, $( $ntyp, )*)
+            where $typ: Decodable,
+                  $( $ntyp: Decodable, )*
+        {
+            fn inline_align() -> usize {
+                let mut max = 0;
+                if max < $typ::inline_align() {
+                    max = $typ::inline_align();
+                }
+                $(
+                    if max < $ntyp::inline_align() {
+                        max = $ntyp::inline_align();
+                    }
+                )*
+                max
+            }
+
+            fn inline_size() -> usize {
+                let mut offset = 0;
+                offset += $typ::inline_size();
+                $(
+                    offset = round_up_to_align(offset, $ntyp::inline_align());
+                    offset += $ntyp::inline_size();
+                )*
+                offset
+            }
+
+            fn new_empty() -> Self {
+                (
+                    $typ::new_empty(),
+                    $(
+                        $ntyp::new_empty(),
+                    )*
+                )
+            }
+
+            fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+                decoder.recurse(|decoder| {
+                    let mut cur_offset = 0;
+                    self.$idx.decode(decoder)?;
+                    cur_offset += $typ::inline_size();
+                    $(
+                        // Skip to the start of the next field
+                        let member_offset = round_up_to_align(cur_offset, $ntyp::inline_align());
+                        decoder.next_slice(member_offset - cur_offset)?;
+                        cur_offset = member_offset;
+                        self.$nidx.decode(decoder)?;
+                        cur_offset += $ntyp::inline_size();
+                    )*
+                    // Skip to the end of the struct's size
+                    decoder.next_slice(Self::inline_size() - cur_offset)?;
+                    Ok(())
+                })
+            }
+        }
+    }
+}
+
+tuple_impls!(
+    (10 => K),
+    (9 => J),
+    (8 => I),
+    (7 => H),
+    (6 => G),
+    (5 => F),
+    (4 => E),
+    (3 => D),
+    (2 => C),
+    (1 => B),
+    (0 => A),
+);
+
+impl Encodable for () {
+    fn inline_align(&self) -> usize { 0 }
+    fn inline_size(&self) -> usize { 0 }
+    fn encode(&mut self, _: &mut Encoder) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl Decodable for () {
+    fn new_empty() -> Self { () }
+    fn inline_size() -> usize { 0 }
+    fn inline_align() -> usize { 0 }
+    fn decode(&mut self, _: &mut Decoder) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl<'a, T> Encodable for &'a mut T where T: Encodable {
+    fn inline_align(&self) -> usize { (**self).inline_align() }
+    fn inline_size(&self) -> usize { (**self).inline_size() }
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        (&mut **self).encode(encoder)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -1240,39 +1527,122 @@ mod test {
         }
     }
 
+    struct Foo {
+        byte: u8,
+        bignum: u64,
+        string: String,
+    }
+
+    fidl2_struct! {
+        name: Foo,
+        members: [
+            byte {
+                ty: u8,
+                offset: 0,
+            },
+            bignum {
+                ty: u64,
+                offset: 8,
+            },
+            string {
+                ty: String,
+                offset: 16,
+            },
+        ],
+        size: 32,
+        align: 8,
+    }
+
     #[test]
     fn encode_decode_struct() {
-        fidl2_struct! {
-            name: Foo,
-            members: [
-                byte {
-                    ty: u8,
-                    offset: 0,
-                },
-                bignum {
-                    ty: u64,
-                    offset: 16,
-                },
-                string {
-                    ty: String,
-                    offset: 32,
-                },
-            ],
-            size: 48,
-            align: 8,
-        }
-
-        let out_foo = encode_decode(&mut Some(Foo {
+        let out_foo = encode_decode(&mut Some(Box::new(Foo {
             byte: 5,
             bignum: 22,
             string: "hello world".to_string()
-        })).expect("should be some");
+        }))).expect("should be some");
 
         assert_eq!(out_foo.byte, 5);
         assert_eq!(out_foo.bignum, 22);
         assert_eq!(out_foo.string, "hello world");
 
-        let out_foo: Option<Foo> = encode_decode(&mut None);
+        let out_foo: Option<Box<Foo>> = encode_decode(&mut Box::new(None));
         assert!(out_foo.is_none());
+    }
+
+    #[test]
+    fn encode_decode_tuple() {
+        let mut start: (&mut u8, &mut u64, &mut String) = (
+            &mut 5,
+            &mut 10,
+            &mut "foo".to_string(),
+        );
+        let mut out: (u8, u64, String) = Decodable::new_empty();
+
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode(buf, handle_buf, &mut start)
+            .expect("Encoding failed");
+        Decoder::decode_into(buf, handle_buf, &mut out)
+            .expect("Decoding failed");
+
+        assert_eq!(*start.0, out.0);
+        assert_eq!(*start.1, out.1);
+        assert_eq!(*start.2, out.2);
+    }
+
+    #[test]
+    fn encode_decode_struct_as_tuple() {
+        let mut start = Foo { byte: 5, bignum: 10, string: "foo".to_string() };
+        let mut out: (u8, u64, String) = Decodable::new_empty();
+
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode(buf, handle_buf, &mut start)
+            .expect("Encoding failed");
+        Decoder::decode_into(buf, handle_buf, &mut out)
+            .expect("Decoding failed");
+
+        assert_eq!(start.byte, out.0);
+        assert_eq!(start.bignum, out.1);
+        assert_eq!(start.string, out.2);
+    }
+
+    #[test]
+    fn encode_decode_tuple_as_struct() {
+        let mut start = (&mut 5u8, &mut 10u64, &mut "foo".to_string());
+        let mut out: Foo = Decodable::new_empty();
+
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode(buf, handle_buf, &mut start)
+            .expect("Encoding failed");
+        Decoder::decode_into(buf, handle_buf, &mut out)
+            .expect("Decoding failed");
+
+        assert_eq!(*start.0, out.byte);
+        assert_eq!(*start.1, out.bignum);
+        assert_eq!(*start.2, out.string);
+    }
+
+    #[test]
+    fn encode_decode_transaction_msg() {
+        let header = TransactionHeader {
+            tx_id: 4,
+            flags: 5,
+            ordinal: 6,
+        };
+        let body = "hello".to_string();
+
+        let start = &mut TransactionMessage { header, body: &mut body.clone() };
+
+        let (buf, handles) = (&mut vec![], &mut vec![]);
+        Encoder::encode(buf, handles, start).expect("Encoding failed");
+
+        let (out_header, out_buf) = decode_transaction_header(&**buf).expect("Decoding header failed");
+        assert_eq!(header, out_header);
+
+        let mut body_out = String::new();
+        Decoder::decode_into(out_buf, handles, &mut body_out).expect("Decoding body failed");
+        assert_eq!(body, body_out);
     }
 }
