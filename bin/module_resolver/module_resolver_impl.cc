@@ -459,6 +459,11 @@ class ModuleResolverImpl::FindModulesCall
 
     auto mod_result = modular::ModuleResolverResult::New();
     mod_result->module_id = query->url;
+    for (const auto& iter : module_resolver_impl_->entries_) {
+      if (iter.second->binary == query->url) {
+        mod_result->manifest = iter.second.Clone();
+      }
+    }
 
     CopyNounsToModuleResolverResult(query, &mod_result);
 
