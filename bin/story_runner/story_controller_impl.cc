@@ -310,9 +310,8 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
 
     ModuleContextInfo module_context_info = {
         story_controller_impl_->story_provider_impl_->component_context_info(),
-        story_controller_impl_,
-        story_controller_impl_->story_provider_impl_
-            ->user_intelligence_provider(),
+        story_controller_impl_, story_controller_impl_->story_provider_impl_
+                                    ->user_intelligence_provider(),
         story_controller_impl_->story_provider_impl_->module_resolver()};
 
     connection.module_context_impl = std::make_unique<ModuleContextImpl>(
@@ -466,10 +465,9 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
       // This orphaned handler will be called after this operation has been
       // deleted. So we need to take special care when depending on members.
       // Copies of |story_controller_impl_| and |link_ptr| are ok.
-      link_ptr->set_orphaned_handler(
-          [link_ptr, story_controller_impl = story_controller_impl_] {
-            story_controller_impl->DisposeLink(link_ptr);
-          });
+      link_ptr->set_orphaned_handler([
+        link_ptr, story_controller_impl = story_controller_impl_
+      ] { story_controller_impl->DisposeLink(link_ptr); });
     }
 
     link_ptr->Sync([this, flow] { Cont(flow); });
@@ -815,8 +813,20 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   void ConnectView(FlowToken flow, const f1dl::String& anchor_view_id) {
     const auto view_id = PathString(module_path_);
 
+    // If there is no anchor view id, arbitrarily choose a different module as
+    // the parent.
+    // TODO(MI4-889): Pass along more useful layout signals to the story shell.
+    f1dl::String parent_id = anchor_view_id;
+    if (anchor_view_id->empty()) {
+      const std::string first_module_string =
+          PathString(story_controller_impl_->first_module_path_);
+      if (view_id != first_module_string) {
+        parent_id = first_module_string;
+      }
+    }
+
     story_controller_impl_->story_shell_->ConnectView(
-        std::move(view_owner_), view_id, anchor_view_id,
+        std::move(view_owner_), view_id, parent_id,
         std::move(surface_relation_), std::move(module_manifest_));
 
     story_controller_impl_->connected_views_.emplace(view_id);
@@ -1563,16 +1573,15 @@ class StoryControllerImpl::ResolveModulesCall
         new ConnectLinkCall(
             &operation_queue_, story_controller_impl_, link_path.Clone(),
             LinkImpl::ConnectionType::Secondary, nullptr /* create_link_info */,
-            false /* notify_watchers */, link.NewRequest(),
-            fxl::MakeCopyable([this, name, outstanding_requests, cont,
-                               link_path = std::move(link_path),
-                               link = std::move(link)]() mutable {
+            false /* notify_watchers */, link.NewRequest(), fxl::MakeCopyable([
+              this, name, outstanding_requests, cont,
+              link_path = std::move(link_path), link = std::move(link)
+            ]() mutable {
               link->Get(
-                  nullptr /* path */,
-                  fxl::MakeCopyable([this, name, outstanding_requests, cont,
-                                     link_path = std::move(link_path),
-                                     link = std::move(link)](
-                                        const f1dl::String& content) mutable {
+                  nullptr /* path */, fxl::MakeCopyable([
+                    this, name, outstanding_requests, cont,
+                    link_path = std::move(link_path), link = std::move(link)
+                  ](const f1dl::String& content) mutable {
                     auto link_info = ResolverLinkInfo::New();
                     link_info->path = std::move(link_path);
                     link_info->content_snapshot = content;
@@ -2197,7 +2206,7 @@ void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
         // after the operation following GetInfo()), and (2) |this| may have
         // been deleted when GetStoryInfo returned if there was a Delete
         // operation in the queue before GetStoryInfo().
-        [state = state_, callback](modular::StoryInfoPtr story_info) {
+        [ state = state_, callback ](modular::StoryInfoPtr story_info) {
           callback(std::move(story_info), state);
         });
   });
@@ -2256,7 +2265,7 @@ void StoryControllerImpl::GetActiveModules(
   // during some Operation.
   new SyncCall(&operation_queue_,
                fxl::MakeCopyable(
-                   [this, watcher = std::move(watcher), callback]() mutable {
+                   [ this, watcher = std::move(watcher), callback ]() mutable {
                      if (watcher) {
                        auto ptr = watcher.Bind();
                        modules_watchers_.AddInterfacePtr(std::move(ptr));
@@ -2281,20 +2290,19 @@ void StoryControllerImpl::GetModules(const GetModulesCallback& callback) {
 void StoryControllerImpl::GetModuleController(
     f1dl::Array<f1dl::String> module_path,
     f1dl::InterfaceRequest<ModuleController> request) {
-  new SyncCall(
-      &operation_queue_,
-      fxl::MakeCopyable([this, module_path = std::move(module_path),
-                         request = std::move(request)]() mutable {
-        for (auto& connection : connections_) {
-          if (module_path.Equals(connection.module_data->module_path)) {
-            connection.module_controller_impl->Connect(std::move(request));
-            return;
-          }
-        }
+  new SyncCall(&operation_queue_, fxl::MakeCopyable([
+    this, module_path = std::move(module_path), request = std::move(request)
+  ]() mutable {
+    for (auto& connection : connections_) {
+      if (module_path.Equals(connection.module_data->module_path)) {
+        connection.module_controller_impl->Connect(std::move(request));
+        return;
+      }
+    }
 
-        // Trying to get a controller for a module that is not active just
-        // drops the connection request.
-      }));
+    // Trying to get a controller for a module that is not active just
+    // drops the connection request.
+  }));
 }
 
 // |StoryController|
@@ -2307,7 +2315,7 @@ void StoryControllerImpl::GetActiveLinks(
   // don't want to rely on it.)
   new SyncCall(&operation_queue_,
                fxl::MakeCopyable(
-                   [this, watcher = std::move(watcher), callback]() mutable {
+                   [ this, watcher = std::move(watcher), callback ]() mutable {
                      if (watcher) {
                        auto ptr = watcher.Bind();
                        links_watchers_.AddInterfacePtr(std::move(ptr));
