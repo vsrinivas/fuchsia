@@ -6,7 +6,7 @@
 
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/serialize.h>
+#include <wlan/mlme/service.h>
 
 namespace wlan {
 

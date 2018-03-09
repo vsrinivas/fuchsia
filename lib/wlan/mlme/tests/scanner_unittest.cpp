@@ -9,7 +9,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/serialize.h>
+#include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 
 #include <fbl/ref_ptr.h>

@@ -8,7 +8,7 @@
 #include <fbl/limits.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
-#include <wlan/mlme/serialize.h>
+#include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
 #include <wlan/protocol/ioctl.h>

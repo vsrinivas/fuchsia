@@ -4,11 +4,19 @@
 
 #pragma once
 
-#include <wlan/mlme/interface.h>
-
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
 namespace wlan {
+
+// ServiceHeader is the method header that is prepended to method calls over the channel.
+// This will be removed when FIDL2 is available.
+struct ServiceHeader {
+  uint64_t len;
+  uint64_t txn_id;
+  uint32_t flags;
+  uint32_t ordinal;
+  uint8_t payload[];
+} __PACKED;
 
 template <typename T, typename FidlStruct = ::f1dl::StructPtr<T>>
 zx_status_t DeserializeServiceMsg(const Packet& packet, Method m, FidlStruct* out) {

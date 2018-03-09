@@ -10,8 +10,8 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/service.h>
 #include <wlan/mlme/sequence.h>
-#include <wlan/mlme/serialize.h>
 #include <wlan/mlme/timer.h>
 
 #include <cstring>

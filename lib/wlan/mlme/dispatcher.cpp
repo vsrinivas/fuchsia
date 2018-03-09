@@ -12,7 +12,7 @@
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/serialize.h>
+#include <wlan/mlme/service.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
