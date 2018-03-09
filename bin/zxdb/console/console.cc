@@ -32,7 +32,6 @@ void OnTargetStateChange(Target* target, Target::State old_state) {
     Console::get()->Output(fxl::StringPrintf(
         "Process %zu exited.", target->target_id()));
   }
-
 }
 
 void OnThreadChange(Thread* thread, Process::ThreadChange change) {
@@ -115,9 +114,9 @@ Console::Result Console::DispatchInputLine(const std::string& line) {
   Err err = ParseCommand(line, &cmd);
 
   if (err.ok()) {
-    if (cmd.noun == Noun::kZxdb && cmd.verb == Verb::kQuit)
+    if (cmd.verb() == Verb::kQuit)
       return Result::kQuit;
-    else if (cmd.noun != Noun::kNone)
+    else if (cmd.verb() != Verb::kNone)
       err = DispatchCommand(session_, cmd);
   }
 

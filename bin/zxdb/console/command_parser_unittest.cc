@@ -47,84 +47,82 @@ TEST(CommandParser, Tokenizer) {
 TEST(CommandParser, ParserBasic) {
   Command output;
 
-  EXPECT_FALSE(ParseCommand("", &output).has_error());
-  EXPECT_EQ(Noun::kNone, output.noun);
-  EXPECT_EQ(Verb::kNone, output.verb);
-  EXPECT_TRUE(output.args.empty());
+  // Verb-only command.
+  Err err = ParseCommand("run", &output);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_TRUE(output.nouns().empty());
+  EXPECT_EQ(Verb::kRun, output.verb());
 
-  EXPECT_FALSE(ParseCommand("   ", &output).has_error());
-  EXPECT_EQ(Noun::kNone, output.noun);
-  EXPECT_EQ(Verb::kNone, output.verb);
-  EXPECT_TRUE(output.args.empty());
+  // Noun-only command.
+  err = ParseCommand("process", &output);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(1u, output.nouns().size());
+  EXPECT_TRUE(output.HasNoun(Noun::kProcess));
+  EXPECT_EQ(Command::kNoIndex, output.GetNounIndex(Noun::kProcess));
+  EXPECT_EQ(Verb::kNone, output.verb());
 
-  // Noun-only.
-  EXPECT_FALSE(ParseCommand("process", &output).has_error());
-  EXPECT_EQ(Noun::kProcess, output.noun);
-  EXPECT_EQ(Verb::kNone, output.verb);
-  EXPECT_TRUE(output.args.empty());
+  // Noun-index command.
+  err = ParseCommand("process 1", &output);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(1u, output.nouns().size());
+  EXPECT_TRUE(output.HasNoun(Noun::kProcess));
+  EXPECT_EQ(1u, output.GetNounIndex(Noun::kProcess));
+  EXPECT_EQ(Verb::kNone, output.verb());
 
-  // Noun-verb shortcut.
-  EXPECT_FALSE(ParseCommand("r", &output).has_error());
-  EXPECT_EQ(Noun::kProcess, output.noun);
-  EXPECT_EQ(Verb::kRun, output.verb);
-  EXPECT_TRUE(output.args.empty());
+  // Noun-verb command.
+  err = ParseCommand("process run", &output);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(1u, output.nouns().size());
+  EXPECT_TRUE(output.HasNoun(Noun::kProcess));
+  EXPECT_EQ(Command::kNoIndex, output.GetNounIndex(Noun::kProcess));
+  EXPECT_EQ(Verb::kRun, output.verb());
 
-  // Noun-verb shortcut with args.
-  EXPECT_FALSE(ParseCommand(" r foo bar ", &output).has_error());
-  EXPECT_EQ(Noun::kProcess, output.noun);
-  EXPECT_EQ(Verb::kRun, output.verb);
-  ASSERT_EQ(2u, output.args.size());
-  EXPECT_EQ("foo", output.args[0]);
-  EXPECT_EQ("bar", output.args[1]);
+  // Noun-index-verb command.
+  err = ParseCommand("process 2 run", &output);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(1u, output.nouns().size());
+  EXPECT_TRUE(output.HasNoun(Noun::kProcess));
+  EXPECT_EQ(2u, output.GetNounIndex(Noun::kProcess));
+  EXPECT_EQ(Verb::kRun, output.verb());
 
-  // Noun-only shortcut.
-  EXPECT_FALSE(ParseCommand("pro run", &output).has_error());
-  EXPECT_EQ(Noun::kProcess, output.noun);
-  EXPECT_EQ(Verb::kRun, output.verb);
-  EXPECT_TRUE(output.args.empty());
-
-  // Noun-only shortcut with args.
-  EXPECT_FALSE(ParseCommand("pro run foo bar", &output).has_error());
-  EXPECT_EQ(Noun::kProcess, output.noun);
-  EXPECT_EQ(Verb::kRun, output.verb);
-  ASSERT_EQ(2u, output.args.size());
-  EXPECT_EQ("foo", output.args[0]);
-  EXPECT_EQ("bar", output.args[1]);
+  err = ParseCommand("process 2 thread 1 run", &output);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(2u, output.nouns().size());
+  EXPECT_TRUE(output.HasNoun(Noun::kProcess));
+  EXPECT_EQ(2u, output.GetNounIndex(Noun::kProcess));
+  EXPECT_TRUE(output.HasNoun(Noun::kThread));
+  EXPECT_EQ(1u, output.GetNounIndex(Noun::kThread));
+  EXPECT_EQ(Verb::kRun, output.verb());
 }
 
 TEST(CommandParser, ParserBasicErrors) {
   Command output;
 
-  // Unknown command.
+  // Unknown command in different contexts.
   Err err = ParseCommand("zzyzx", &output);
   EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Unknown command \"zzyzx\". See \"help\".", err.msg());
+  EXPECT_EQ("The string \"zzyzx\" is not a valid verb.", err.msg());
 
-  // Unknown verb.
-  err = ParseCommand("pro zzyzx", &output);
+  err = ParseCommand("process 1 zzyzx", &output);
   EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Unknown verb. See \"help process\".", err.msg());
+  EXPECT_EQ("The string \"zzyzx\" is not a valid verb.", err.msg());
 
-  // Mismatched noun/verb.
-  err = ParseCommand("pro up", &output);
+  err = ParseCommand("process 1 process run", &output);
   EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Invalid combination \"process up\". See \"help process\".",
-            err.msg());
+  EXPECT_EQ("Noun \"process\" specified twice.", err.msg());
 }
 
 TEST(CommandParser, Switches) {
   Command output;
 
   // Look up the command ID for the size switch to "memory read". This allows
-  // the checks below
-  // to stay in sync without knowing much about how the memory command is
-  // implemented.
-  output.noun = Noun::kMemory;
-  output.verb = Verb::kRead;
-  const CommandRecord& read_record = GetRecordForCommand(output);
-  ASSERT_TRUE(read_record.exec);
+  // the checks below to stay in sync without knowing much about how the memory
+  // command is implemented.
+  const auto& verbs = GetVerbs();
+  auto read_record = verbs.find(Verb::kMemRead);
+  ASSERT_NE(read_record, verbs.end());
   const SwitchRecord* size_switch = nullptr;
-  for (const auto& sr : read_record.switches) {
+  for (const auto& sr : read_record->second.switches) {
     if (sr.ch == 's') {
       size_switch = &sr;
       break;
@@ -132,41 +130,41 @@ TEST(CommandParser, Switches) {
   }
   ASSERT_TRUE(size_switch);
 
-  Err err = ParseCommand("memory read -", &output);
+  Err err = ParseCommand("mem-read -", &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Invalid switch \"-\".", err.msg());
 
   // Valid long switch.
-  err = ParseCommand("memory read --size 234 next", &output);
+  err = ParseCommand("mem-read --size 234 next", &output);
   EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(1u, output.switches.size());
-  EXPECT_EQ("234", output.switches[size_switch->id]);
-  ASSERT_EQ(1u, output.args.size());
-  EXPECT_EQ("next", output.args[0]);
+  EXPECT_EQ(1u, output.switches().size());
+  EXPECT_EQ("234", output.GetSwitchValue(size_switch->id));
+  ASSERT_EQ(1u, output.args().size());
+  EXPECT_EQ("next", output.args()[0]);
 
   // Expects a value for a long switch.
-  err = ParseCommand("memory read --size", &output);
+  err = ParseCommand("mem-read --size", &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Parameter needed for \"--size\".", err.msg());
 
   // Valid short switch with value following.
-  err = ParseCommand("memory read -s 567 next", &output);
+  err = ParseCommand("mem-read -s 567 next", &output);
   EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(1u, output.switches.size());
-  EXPECT_EQ("567", output.switches[size_switch->id]);
-  ASSERT_EQ(1u, output.args.size());
-  EXPECT_EQ("next", output.args[0]);
+  EXPECT_EQ(1u, output.switches().size());
+  EXPECT_EQ("567", output.GetSwitchValue(size_switch->id));
+  ASSERT_EQ(1u, output.args().size());
+  EXPECT_EQ("next", output.args()[0]);
 
   // Valid short switch with value concatenated.
-  err = ParseCommand("memory read -s567 next", &output);
+  err = ParseCommand("mem-read -s567 next", &output);
   EXPECT_FALSE(err.has_error());
-  EXPECT_EQ(1u, output.switches.size());
-  EXPECT_EQ("567", output.switches[size_switch->id]);
-  ASSERT_EQ(1u, output.args.size());
-  EXPECT_EQ("next", output.args[0]);
+  EXPECT_EQ(1u, output.switches().size());
+  EXPECT_EQ("567", output.GetSwitchValue(size_switch->id));
+  ASSERT_EQ(1u, output.args().size());
+  EXPECT_EQ("next", output.args()[0]);
 
   // Expects a value for a short switch.
-  err = ParseCommand("memory read -s", &output);
+  err = ParseCommand("mem-read -s", &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Parameter needed for \"-s\".", err.msg());
 }
@@ -174,20 +172,25 @@ TEST(CommandParser, Switches) {
 TEST(CommandParser, Completions) {
   std::vector<std::string> comp;
 
-  // Noun completion
-  comp = GetCommandCompletions("me");
-  EXPECT_TRUE(CompletionContains(comp, "mem"));
-  EXPECT_TRUE(CompletionContains(comp, "memory"));
+  // Noun completion.
+  comp = GetCommandCompletions("t");
+  EXPECT_TRUE(CompletionContains(comp, "t"));
+  EXPECT_TRUE(CompletionContains(comp, "thread"));
 
-  // Noun followed by space should give all verbs.
-  comp = GetCommandCompletions("memory ");
-  EXPECT_TRUE(CompletionContains(comp, "memory read"));
-  EXPECT_TRUE(CompletionContains(comp, "memory write"));
+  // Verb completion.
+  comp = GetCommandCompletions("h");
+  EXPECT_TRUE(CompletionContains(comp, "h"));
+  EXPECT_TRUE(CompletionContains(comp, "help"));
 
-  // Noun followed by a verb prefix.
-  comp = GetCommandCompletions("memory rea");
-  EXPECT_EQ(1u, comp.size());  // Should be only one completion for this.
-  EXPECT_TRUE(CompletionContains(comp, "memory read"));
+  // Ending in a space gives everything.
+  comp = GetCommandCompletions("process ");
+  EXPECT_TRUE(CompletionContains(comp, "process quit"));
+  EXPECT_TRUE(CompletionContains(comp, "process run"));
+
+  // No input should give everything
+  comp = GetCommandCompletions("");
+  EXPECT_TRUE(CompletionContains(comp, "run"));
+  EXPECT_TRUE(CompletionContains(comp, "quit"));
 }
 
 }  // namespace zxdb

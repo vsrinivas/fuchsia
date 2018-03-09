@@ -16,12 +16,13 @@ static_library("console") {
     "line_input.h",
     "main_loop.cc",
     "main_loop.h",
-    "noun_memory.cc",
-    "noun_process.cc",
-    "noun_system.cc",
-    "noun_zxdb.cc",
     "output_buffer.cc",
     "output_buffer.h",
+    "verbs.h",
+    "verbs_control.cc",
+    "verbs_memory.cc",
+    "verbs_run.cc",
+    "verbs_system.cc",
   ]
 
   deps = []

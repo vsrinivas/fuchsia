@@ -9,7 +9,7 @@
 
 namespace zxdb {
 
-struct Command;
+class Command;
 class Err;
 
 // Converts the given string to a series of tokens. This is used by ParseCommand

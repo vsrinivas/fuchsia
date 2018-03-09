@@ -5,121 +5,47 @@
 #include "garnet/bin/zxdb/console/command_parser.h"
 
 #include <map>
+#include <set>
+#include <stdio.h>
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/console/command.h"
+#include "garnet/public/lib/fxl/logging.h"
 
 namespace zxdb {
 
 namespace {
 
-// Stores an expansion from a short command to a noun ("none" verb) or a
-// noun/verb pair. In the
-// noun-only case, the command expects an explicit verb to follow.
-struct Shortcut {
-  Shortcut() = default;
-  Shortcut(Noun n) : noun(n), verb(Verb::kNone) {}
-  Shortcut(Noun n, Verb v) : noun(n), verb(v) {}
-
-  Noun noun = Noun::kNone;
-  Verb verb = Verb::kNone;
-};
-
-using ShortcutMap = std::map<std::string, Shortcut>;
-
-const ShortcutMap& GetShortcutMap() {
-  static ShortcutMap map;
-  if (!map.empty())
-    return map;
-
-  // Nouns.
-  map["breakpoint"] = Shortcut(Noun::kBreakpoint);
-  map["frame"] = Shortcut(Noun::kFrame);
-  map["memory"] = Shortcut(Noun::kMemory);
-  map["process"] = Shortcut(Noun::kProcess);
-  map["system"] = Shortcut(Noun::kSystem);
-  map["thread"] = Shortcut(Noun::kThread);
-  map["zxdb"] = Shortcut(Noun::kZxdb);
-
-  // Noun-only shortcuts.
-  map["fr"] = Shortcut(Noun::kFrame);
-  map["br"] = Shortcut(Noun::kBreakpoint);
-  map["mem"] = Shortcut(Noun::kMemory);
-  map["pro"] = Shortcut(Noun::kProcess);
-  map["th"] = Shortcut(Noun::kThread);
-
-  // Noun-verb shortcuts.
-  map["attach"] = Shortcut(Noun::kProcess, Verb::kAttach);
-  map["b"] = Shortcut(Noun::kBreakpoint, Verb::kSet);
-  map["break"] = Shortcut(Noun::kBreakpoint, Verb::kSet);
-  map["bt"] = Shortcut(Noun::kBreakpoint, Verb::kBacktrace);
-  map["c"] = Shortcut(Noun::kThread, Verb::kContinue);
-  map["continue"] = Shortcut(Noun::kThread, Verb::kContinue);
-  map["delete"] = Shortcut(Noun::kBreakpoint, Verb::kDelete);
-  map["down"] = Shortcut(Noun::kFrame, Verb::kDown);
-  map["f"] = Shortcut(Noun::kFrame, Verb::kSelect);
-  map["finish"] = Shortcut(Noun::kThread, Verb::kStepOut);
-  map["g"] = Shortcut(Noun::kThread, Verb::kContinue);
-  map["help"] = Shortcut(Noun::kZxdb, Verb::kHelp);
-  map["n"] = Shortcut(Noun::kThread, Verb::kStepOver);
-  map["next"] = Shortcut(Noun::kThread, Verb::kStepOver);
-  map["ps"] = Shortcut(Noun::kSystem, Verb::kListProcesses);
-  map["q"] = Shortcut(Noun::kZxdb, Verb::kQuit);
-  map["quit"] = Shortcut(Noun::kZxdb, Verb::kQuit);
-  map["r"] = Shortcut(Noun::kProcess, Verb::kRun);
-  map["run"] = Shortcut(Noun::kProcess, Verb::kRun);
-  map["s"] = Shortcut(Noun::kThread, Verb::kStepIn);
-  map["si"] = Shortcut(Noun::kThread, Verb::kStepInst);
-  map["step"] = Shortcut(Noun::kThread, Verb::kStepIn);
-  map["stepi"] = Shortcut(Noun::kThread, Verb::kStepInst);
-  map["up"] = Shortcut(Noun::kFrame, Verb::kUp);
-
-  static_assert(static_cast<int>(Noun::kLast) == 8,
-                "Need to update GetShortcutMap for noun addition.");
-
-  return map;
+// Returns a sorted list of all possible noun and verb strings that can be
+// input.
+const std::set<std::string>& GetAllNounVerbStrings() {
+  static std::set<std::string> strings;
+  if (strings.empty()) {
+    for (const auto& noun_pair : GetNouns()) {
+      for (const auto& alias : noun_pair.second.aliases)
+        strings.insert(alias);
+    }
+    for (const auto& verb_pair : GetVerbs()) {
+      for (const auto& alias : verb_pair.second.aliases)
+        strings.insert(alias);
+    }
+  }
+  return strings;
 }
 
-using VerbMap = std::map<std::string, Verb>;
+// Returns only the canonical version of each noun and verb. Used for
+// completions when there is no input and we don't want to cycle through both
+// "s" and "step".
+const std::set<std::string>& GetCanonicalNounVerbStrings() {
+  static std::set<std::string> strings;
+  if (strings.empty()) {
+    for (const auto& noun_pair : GetNouns())
+      strings.insert(noun_pair.second.aliases[0]);
+    for (const auto& verb_pair : GetVerbs())
+      strings.insert(verb_pair.second.aliases[0]);
+  }
+  return strings;
 
-const VerbMap& GetVerbMap() {
-  static VerbMap map;
-  if (!map.empty())
-    return map;
-
-  // Full verbs.
-  map["attach"] = Verb::kAttach;
-  map["backtrace"] = Verb::kBacktrace;
-  map["continue"] = Verb::kContinue;
-  map["delete"] = Verb::kDelete;
-  map["down"] = Verb::kDown;
-  map["help"] = Verb::kHelp;
-  map["list"] = Verb::kList;
-  map["list-processes"] = Verb::kListProcesses;
-  map["quit"] = Verb::kQuit;
-  map["read"] = Verb::kRead;
-  map["run"] = Verb::kRun;
-  map["select"] = Verb::kSelect;
-  map["set"] = Verb::kSet;
-  map["step-in"] = Verb::kStepIn;
-  map["step-inst"] = Verb::kStepInst;
-  map["step-out"] = Verb::kStepOut;
-  map["step-over"] = Verb::kStepOver;
-  map["up"] = Verb::kUp;
-  map["write"] = Verb::kWrite;
-
-  // Verb shortcuts.
-  map["at"] = Verb::kAttach;
-  map["del"] = Verb::kDelete;
-  map["l"] = Verb::kList;
-  map["ls"] = Verb::kList;
-  map["ps"] = Verb::kListProcesses;
-  map["set"] = Verb::kSelect;
-
-  static_assert(static_cast<int>(Verb::kLast) == 20,
-                "Need to update GetVerbMap for noun addition.");
-
-  return map;
 }
 
 bool IsTokenSeparator(char c) {
@@ -130,7 +56,7 @@ bool IsTokenSeparator(char c) {
 // include leading dashes),
 // or null if there is no match.
 const SwitchRecord* FindSwitch(const std::string& str,
-                               const CommandRecord& record) {
+                               const VerbRecord& record) {
   for (const auto& sr : record.switches) {
     if (sr.name == str)
       return &sr;
@@ -138,7 +64,7 @@ const SwitchRecord* FindSwitch(const std::string& str,
   return nullptr;
 }
 
-const SwitchRecord* FindSwitch(char ch, const CommandRecord& record) {
+const SwitchRecord* FindSwitch(char ch, const VerbRecord& record) {
   for (const auto& sr : record.switches) {
     if (sr.ch == ch)
       return &sr;
@@ -156,17 +82,54 @@ bool StartsWith(const std::string& str, const std::string& starts_with) {
   return true;
 }
 
-std::vector<std::string> GetNounCompletions(const std::string& token) {
-  std::vector<std::string> result;
-  const ShortcutMap& shortcut_map = GetShortcutMap();
-
-  auto found_shortcut = shortcut_map.lower_bound(token);
-  while (found_shortcut != shortcut_map.end() &&
-         StartsWith(found_shortcut->first, token)) {
-    result.push_back(found_shortcut->first);
-    ++found_shortcut;
+// Returns true if the string is all numeric digits that mean it's an index
+// token.
+bool IsIndexToken(const std::string& token) {
+  for (char c : token) {
+    if (c < '0' || c > '9')
+      return false;
   }
-  return result;
+  return true;
+}
+
+// Consumes the next noun (and optional following integer) in the input at
+// *token_index. If valid, fills the information into the given command and
+// advances *token_index to the next unused token.
+//
+// *consumed will be set if any nouns were consumed (to disambiguate the
+// "error parsing" case and the "the next thing wasn't a noun" case).
+Err ConsumeNoun(const std::vector<std::string>& tokens,
+                size_t* token_index,
+                Command* output,
+                bool* consumed) {
+  *consumed = false;
+
+  const auto& nouns = GetStringNounMap();
+  auto found = nouns.find(tokens[*token_index]);
+  if (found == nouns.end())
+    return Err();  // Not a noun, but that's not an error.
+
+  Noun noun = found->second;
+  if (output->HasNoun(noun))
+    return Err("Noun \"" + NounToString(noun) + "\" specified twice.");
+
+  // Advance to the next token.
+  (*token_index)++;
+
+  // Consume optional following index if it's all integers. For example, it
+  // could be "process 2 run" (with index) or "process run" (without).
+  size_t noun_index = Command::kNoIndex;
+  if ((*token_index) < tokens.size() && IsIndexToken(tokens[*token_index])) {
+    if (sscanf(tokens[*token_index].c_str(), "%zu", &noun_index) != 1) {
+      return Err("Invalid index \"" + tokens[*token_index] +
+                 "\" for \"" + NounToString(noun) + "\".");
+    }
+    (*token_index)++;
+  }
+
+  *consumed = true;
+  output->SetNoun(noun, noun_index);
+  return Err();
 }
 
 }  // namespace
@@ -218,43 +181,36 @@ Err ParseCommand(const std::vector<std::string>& tokens, Command* output) {
   if (tokens.empty())
     return Err();
 
-  // Loop up the root noun.
-  const ShortcutMap& shortcut_map = GetShortcutMap();
-  auto found_shortcut = shortcut_map.find(tokens[0]);
-  if (found_shortcut == shortcut_map.end()) {
-    return Err("Unknown command \"" + tokens[0] + "\". See \"help\".");
+  size_t token_index = 0;
+  while (token_index < tokens.size()) {
+    bool had_noun = false;
+    Err err = ConsumeNoun(tokens, &token_index, output, &had_noun);
+    if (err.has_error())
+      return err;
+    if (!had_noun)
+      break;
   }
 
-  // Handle verbs.
-  size_t first_arg;
-  if (found_shortcut->second.verb == Verb::kNone && tokens.size() >= 2) {
-    const VerbMap& verb_map = GetVerbMap();
-    auto found_verb = verb_map.find(tokens[1]);
-    if (found_verb == verb_map.end()) {
-      return Err("Unknown verb. See \"help " +
-                 std::string(NounToString(found_shortcut->second.noun)) +
-                 "\".");
-    }
-    output->verb = found_verb->second;
-    first_arg = 2;
-  } else {
-    output->verb = found_shortcut->second.verb;
-    first_arg = 1;
-  }
-  output->noun = found_shortcut->second.noun;
+  if (token_index == tokens.size())
+    return Err();  // No verb specified (for example "process 2").
 
-  // Get the command record for this noun/verb. This also validates that the
-  // verb is valid.
-  const CommandRecord& record = GetRecordForCommand(*output);
-  if (!record.exec) {
-    std::string noun_str = NounToString(output->noun);
-    std::string verb_str = VerbToString(output->verb);
-    return Err("Invalid combination \"" + noun_str + " " + verb_str +
-               "\". See \"help " + noun_str + "\".");
+  // Consume the verb.
+  const auto& verb_strings = GetStringVerbMap();
+  auto found_verb_str = verb_strings.find(tokens[token_index]);
+  if (found_verb_str == verb_strings.end()) {
+    return Err("The string \"" + tokens[token_index] +
+               "\" is not a valid verb.");
   }
+  output->set_verb(found_verb_str->second);
+  token_index++;
+
+  // Find the verb record.
+  const auto& verbs = GetVerbs();
+  auto found_verb = verbs.find(output->verb());
+  FXL_DCHECK(found_verb != verbs.end());  // Valid verb should always be found.
+  const VerbRecord& verb_record = found_verb->second;
 
   // Look for switches.
-  size_t token_index = first_arg;
   while (token_index < tokens.size()) {
     const std::string& token = tokens[token_index];
     if (token == "--") {
@@ -272,14 +228,14 @@ Err ParseCommand(const std::vector<std::string>& tokens, Command* output) {
     bool next_token_is_value = false;
     if (token[1] == '-') {
       // Two-hyphen switch.
-      sw_record = FindSwitch(token.substr(2), record);
+      sw_record = FindSwitch(token.substr(2), verb_record);
       if (!sw_record)
         return Err(std::string("Unknown switch \"") + token + "\".");
       next_token_is_value = sw_record->has_value;
     } else {
       // Single-dash token means one character.
       char switch_char = token[1];
-      sw_record = FindSwitch(switch_char, record);
+      sw_record = FindSwitch(switch_char, verb_record);
       if (!sw_record)
         return Err(std::string("Unknown switch \"-") + switch_char + "\".");
 
@@ -305,56 +261,51 @@ Err ParseCommand(const std::vector<std::string>& tokens, Command* output) {
         value = tokens[token_index];
       }
     }
-    output->switches[sw_record->id] = value;
+    output->SetSwitch(sw_record->id, std::move(value));
 
     token_index++;
   }
 
-  output->args.insert(output->args.end(), tokens.begin() + token_index,
-                      tokens.end());
+  std::vector<std::string> args(tokens.begin() + token_index, tokens.end());
+  output->set_args(std::move(args));
   return Err();
 }
 
+// It would be nice to do more context-aware completions. For now, just
+// complete based on all known nouns and verbs.
 std::vector<std::string> GetCommandCompletions(const std::string& input) {
   std::vector<std::string> result;
 
   std::vector<std::string> tokens;
   Err err = TokenizeCommand(input, &tokens);
-  if (err.has_error() || tokens.empty())
-    return result;
-  bool ends_in_space = input.back() == ' ';
-
-  // Only one token means completion based on the noun. If it ends in a space,
-  // assume they're done typing the noun and want verb completions.
-  if (tokens.size() == 1 && !ends_in_space)
-    return GetNounCompletions(tokens[0]);
-
-  // Look up this noun.
-  const ShortcutMap& shortcut_map = GetShortcutMap();
-  auto found_shortcut = shortcut_map.find(tokens[0]);
-  if (found_shortcut == shortcut_map.end())
+  if (err.has_error())
     return result;
 
-  if (found_shortcut->second.verb == Verb::kNone) {
-    // This noun needs a verb.
-    const auto& verbs = GetVerbsForNoun(found_shortcut->second.noun);
-    if (tokens.size() == 1 && ends_in_space) {
-      // Complete based on all verbs for this noun.
-      for (const auto& pair : verbs) {
-        if (pair.first != Verb::kNone)
-          result.push_back(tokens[0] + " " + VerbToString(pair.first));
-      }
-    } else if (tokens.size() == 2 && !ends_in_space) {
-      // Complete based on verb prefixes.
-      for (const auto& pair : verbs) {
-        if (pair.first != Verb::kNone) {
-          std::string verb_str = VerbToString(pair.first);
-          if (StartsWith(verb_str, tokens[1]))
-            result.push_back(tokens[0] + " " + verb_str);
-        }
-      }
-      return result;
+  // The no input or following a space, cycle through all possibilities.
+  if (input.empty() || tokens.empty() || input.back() == ' ') {
+    for (const auto& str : GetCanonicalNounVerbStrings())
+      result.push_back(input + str);
+    return result;
+  }
+
+  // Compute the string of stuff that stays constant for each completion.
+  std::string prefix;
+  if (!tokens.empty()) {
+    // All tokens but the last one.
+    for (size_t i = 0; i < tokens.size() - 1; i++) {
+      if (i > 0)
+        prefix.push_back(' ');
+      prefix += tokens[i];
     }
+  }
+
+  // Cycle through matching prefixes.
+  const std::string token = tokens.back();
+  const std::set<std::string>& possibilities = GetAllNounVerbStrings();
+  auto found = possibilities.lower_bound(token);
+  while (found != possibilities.end() && StartsWith(*found, token)) {
+    result.push_back(prefix + *found);
+    ++found;
   }
 
   return result;

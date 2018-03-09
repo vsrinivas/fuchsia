@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/zxdb/console/verbs.h"
+
 #include <iomanip>
 #include <sstream>
 
@@ -16,10 +18,8 @@ namespace zxdb {
 
 namespace {
 
-// system list-processes -------------------------------------------------------
-
-void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec, int indent,
-                             OutputBuffer* output) {
+void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec,
+                             int indent, OutputBuffer* output) {
   std::ostringstream line;
   line << std::setw(indent * 2) << "";
 
@@ -46,10 +46,10 @@ void OnListProcessesComplete(System* system, const Err& err,
   Console::get()->Output(std::move(out));
 }
 
+const char kListProcessesShortHelp[] =
+    "ps: Prints the process tree of the debugged system.";
 const char kListProcessesHelp[] =
-    R"(system list-processes
-
-Aliases: "system ps", "ps"
+    R"(ps
 
 Prints the process tree of the debugged system.)";
 Err DoListProcesses(Session* session, const Command& cmd) {
@@ -59,11 +59,9 @@ Err DoListProcesses(Session* session, const Command& cmd) {
 
 }  // namespace
 
-std::map<Verb, CommandRecord> GetSystemVerbs() {
-  std::map<Verb, CommandRecord> map;
-  map[Verb::kListProcesses] =
-      CommandRecord(&DoListProcesses, kListProcessesHelp);
-  return map;
+void AppendSystemVerbs(std::map<Verb, VerbRecord>* verbs) {
+  (*verbs)[Verb::kListProcesses] = VerbRecord(
+      &DoListProcesses, {"ps"}, kListProcessesShortHelp, kListProcessesHelp);
 }
 
 }  // namespace zxdb
