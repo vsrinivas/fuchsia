@@ -27,37 +27,45 @@ zx_status_t PinnedMemoryObject::Create(const BusTransactionInitiatorDispatcher& 
     LTRACE_ENTRY;
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset) && IS_PAGE_ALIGNED(size));
 
-    // Commit the VMO range, in case it's not already committed.
-    zx_status_t status = vmo->CommitRange(offset, size, nullptr);
-    if (status != ZX_OK) {
-        LTRACEF("vmo->CommitRange failed: %d\n", status);
-        return status;
-    }
-
-    // Pin the memory to make sure it doesn't change from underneath us for the
-    // lifetime of the created PMO.
-    status = vmo->Pin(offset, size);
-    if (status != ZX_OK) {
-        LTRACEF("vmo->Pin failed: %d\n", status);
-        return status;
-    }
-
-    uint64_t expected_addr = 0;
-    auto check_contiguous = [](void* context, size_t offset, size_t index, paddr_t pa) {
-        auto expected_addr = static_cast<uint64_t*>(context);
-        if (index != 0 && pa != *expected_addr) {
-            return ZX_ERR_NOT_FOUND;
+    bool is_contiguous;
+    if (vmo->is_paged()) {
+        // Commit the VMO range, in case it's not already committed.
+        zx_status_t status = vmo->CommitRange(offset, size, nullptr);
+        if (status != ZX_OK) {
+            LTRACEF("vmo->CommitRange failed: %d\n", status);
+            return status;
         }
-        *expected_addr = pa + PAGE_SIZE;
-        return ZX_OK;
-    };
-    status = vmo->Lookup(offset, size, 0, check_contiguous, &expected_addr);
-    bool is_contiguous = (status == ZX_OK);
+
+        // Pin the memory to make sure it doesn't change from underneath us for the
+        // lifetime of the created PMO.
+        status = vmo->Pin(offset, size);
+        if (status != ZX_OK) {
+            LTRACEF("vmo->Pin failed: %d\n", status);
+            return status;
+        }
+
+        uint64_t expected_addr = 0;
+        auto check_contiguous = [](void* context, size_t offset, size_t index, paddr_t pa) {
+            auto expected_addr = static_cast<uint64_t*>(context);
+            if (index != 0 && pa != *expected_addr) {
+                return ZX_ERR_NOT_FOUND;
+            }
+            *expected_addr = pa + PAGE_SIZE;
+            return ZX_OK;
+        };
+        status = vmo->Lookup(offset, size, 0, check_contiguous, &expected_addr);
+        is_contiguous = (status == ZX_OK);
+    } else {
+        // This is a physical VMO
+        is_contiguous = true;
+    }
 
     // Set up a cleanup function to undo the pin if we need to fail this
     // operation.
     auto unpin_vmo = fbl::MakeAutoCall([vmo, offset, size]() {
-        vmo->Unpin(offset, size);
+        if (vmo->is_paged()) {
+            vmo->Unpin(offset, size);
+        }
     });
 
     const size_t min_contig = bti.minimum_contiguity();
@@ -81,7 +89,7 @@ zx_status_t PinnedMemoryObject::Create(const BusTransactionInitiatorDispatcher& 
     // unpinning.
     unpin_vmo.cancel();
 
-    status = pmo->MapIntoIommu(perms);
+    zx_status_t status = pmo->MapIntoIommu(perms);
     if (status != ZX_OK) {
         LTRACEF("MapIntoIommu failed: %d\n", status);
         return status;
@@ -218,7 +226,9 @@ void PinnedMemoryObject::InvalidateMappedAddrs() {
 PinnedMemoryObject::~PinnedMemoryObject() {
     zx_status_t status = UnmapFromIommu();
     ASSERT(status == ZX_OK);
-    vmo_->Unpin(offset_, size_);
+    if (vmo_->is_paged()) {
+        vmo_->Unpin(offset_, size_);
+    }
 }
 
 PinnedMemoryObject::PinnedMemoryObject(const BusTransactionInitiatorDispatcher& bti,
