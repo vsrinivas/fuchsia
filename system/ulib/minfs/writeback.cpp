@@ -7,6 +7,7 @@
 #ifdef __Fuchsia__
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <fbl/vector.h>
 #include <zx/vmo.h>
 #endif
 
@@ -30,7 +31,7 @@ namespace minfs {
 void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t vmo_offset, uint64_t dev_offset,
                        uint64_t nblocks) {
     validate_vmo_size(vmo, static_cast<blk_t>(vmo_offset));
-    for (size_t i = 0; i < count_; i++) {
+    for (size_t i = 0; i < requests_.size(); i++) {
         if (requests_[i].vmo != vmo) {
             continue;
         }
@@ -48,18 +49,15 @@ void WriteTxn::Enqueue(zx_handle_t vmo, uint64_t vmo_offset, uint64_t dev_offset
         }
     }
 
-    requests_[count_].vmo = vmo;
+    write_request_t request;
+    request.vmo = vmo;
     // NOTE: It's easier to compare everything when dealing
     // with blocks (not offsets!) so the following are described in
     // terms of blocks until we Flush().
-    requests_[count_].vmo_offset = vmo_offset;
-    requests_[count_].dev_offset = dev_offset;
-    requests_[count_].length = nblocks;
-    count_++;
-
-    // "-1" so we can split a txn into two if we need to wrap around the log.
-    ZX_ASSERT_MSG(count_ < MAX_TXN_MESSAGES - 1,
-                  "Enqueueing too many messages for one operation");
+    request.vmo_offset = vmo_offset;
+    request.dev_offset = dev_offset;
+    request.length = nblocks;
+    requests_.push_back(fbl::move(request));
 }
 
 zx_status_t WriteTxn::Flush(zx_handle_t vmo, vmoid_t vmoid) {
@@ -68,9 +66,9 @@ zx_status_t WriteTxn::Flush(zx_handle_t vmo, vmoid_t vmoid) {
 
     // Update all the outgoing transactions to be in "disk blocks",
     // not "Minfs blocks".
-    block_fifo_request_t blk_reqs[MAX_TXN_MESSAGES];
+    block_fifo_request_t blk_reqs[requests_.size()];
     const uint32_t kDiskBlocksPerMinfsBlock = kMinfsBlockSize / bc_->BlockSize();
-    for (size_t i = 0; i < count_; i++) {
+    for (size_t i = 0; i < requests_.size(); i++) {
         blk_reqs[i].txnid = bc_->TxnId();
         blk_reqs[i].vmoid = vmoid;
         blk_reqs[i].opcode = BLOCKIO_WRITE;
@@ -80,15 +78,15 @@ zx_status_t WriteTxn::Flush(zx_handle_t vmo, vmoid_t vmoid) {
     }
 
     // Actually send the operations to the underlying block device.
-    zx_status_t status = bc_->Txn(blk_reqs, count_);
+    zx_status_t status = bc_->Txn(blk_reqs, requests_.size());
 
-    count_ = 0;
+    requests_.reset();
     return status;
 }
 
 size_t WriteTxn::BlkCount() const {
     size_t blocks_needed = 0;
-    for (size_t i = 0; i < count_; i++) {
+    for (size_t i = 0; i < requests_.size(); i++) {
         blocks_needed += requests_[i].length;
     }
     return blocks_needed;
@@ -104,7 +102,7 @@ WritebackWork::WritebackWork(Bcache* bc) :
 
 void WritebackWork::Reset() {
 #ifdef __Fuchsia__
-    ZX_DEBUG_ASSERT(txn_.Count() == 0);
+    ZX_DEBUG_ASSERT(txn_.Requests().size() == 0);
     closure_ = nullptr;
 #endif
     while (0 < node_count_) {
@@ -220,10 +218,9 @@ zx_status_t WritebackBuffer::EnsureSpaceLocked(size_t blocks) {
 }
 
 void WritebackBuffer::CopyToBufferLocked(WriteTxn* txn) {
-    size_t req_count = txn->Count();
-    write_request_t* reqs = txn->Requests();
+    auto& reqs = txn->Requests();
     // Write back to the buffer
-    for (size_t i = 0; i < req_count; i++) {
+    for (size_t i = 0; i < reqs.size(); i++) {
         size_t vmo_offset = reqs[i].vmo_offset;
         size_t dev_offset = reqs[i].dev_offset;
         const size_t vmo_len = reqs[i].length;
@@ -262,16 +259,16 @@ void WritebackBuffer::CopyToBufferLocked(WriteTxn* txn) {
 
             // Shift down all following write requests
             static_assert(fbl::is_pod<write_request_t>::value, "Can't memmove non-POD");
-            req_count++;
-            i++;
-            memmove(&reqs[i + 1], &reqs[i], sizeof(write_request_t) * (req_count - i));
 
             // Insert the "new" request, which is the latter half of
             // the request we wrote out earlier
-            reqs[i].dev_offset = dev_offset;
-            reqs[i].vmo_offset = 0;
-            reqs[i].length = wb_len;
-            txn->count_++;
+            write_request_t request;
+            request.vmo = reqs[i].vmo;
+            request.vmo_offset = 0;
+            request.dev_offset = dev_offset;
+            request.length = wb_len;
+            i++;
+            reqs.insert(i, request);
         }
     }
 }

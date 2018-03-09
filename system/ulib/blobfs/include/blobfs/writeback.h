@@ -8,7 +8,6 @@
 #error Fuchsia-only Header
 #endif
 
-
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_hash_table.h>
@@ -17,6 +16,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 
 #include <fs/block-txn.h>
 #include <fs/mapped-vmo.h>
@@ -57,15 +57,15 @@ public:
     explicit WriteTxn(Blobfs* bs) : bs_(bs), vmoid_(VMOID_INVALID) {}
 
     ~WriteTxn() {
-        ZX_DEBUG_ASSERT_MSG(!IsReady() || count_ == 0, "WriteTxn still has pending requests");
+        ZX_DEBUG_ASSERT_MSG(!IsReady() || requests_.size() == 0,
+                            "WriteTxn still has pending requests");
     }
 
     // Identify that a block should be written to disk
     // as a later point in time.
     void Enqueue(zx_handle_t vmo, uint64_t relative_block, uint64_t absolute_block,
                  uint64_t nblocks);
-    size_t Count() const { return count_; }
-    write_request_t* Requests() { return &requests_[0]; }
+    fbl::Vector<write_request_t>& Requests() { return requests_; }
 
     // Activate the transaction.
     zx_status_t Flush();
@@ -87,8 +87,7 @@ private:
     friend class WritebackBuffer;
     Blobfs* bs_;
     vmoid_t vmoid_;
-    size_t count_{};
-    write_request_t requests_[MAX_TXN_MESSAGES];
+    fbl::Vector<write_request_t> requests_;
 };
 
 

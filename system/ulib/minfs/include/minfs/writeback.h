@@ -53,14 +53,13 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(WriteTxn);
     explicit WriteTxn(Bcache* bc) : bc_(bc) {}
     ~WriteTxn() {
-        ZX_DEBUG_ASSERT_MSG(count_ == 0, "WriteTxn still has pending requests");
+        ZX_DEBUG_ASSERT_MSG(requests_.size() == 0, "WriteTxn still has pending requests");
     }
 
     // Identify that a block should be written to disk
     // as a later point in time.
     void Enqueue(zx_handle_t vmo, uint64_t vmo_offset, uint64_t dev_offset, uint64_t nblocks);
-    size_t Count() const { return count_; }
-    write_request_t* Requests() { return &requests_[0]; }
+    fbl::Vector<write_request_t>& Requests() { return requests_; }
 
     // Activate the transaction, writing it out to disk.
     //
@@ -73,8 +72,7 @@ public:
 private:
     friend class WritebackBuffer;
     Bcache* bc_;
-    size_t count_ = 0;
-    write_request_t requests_[MAX_TXN_MESSAGES];
+    fbl::Vector<write_request_t> requests_;
 };
 
 #else

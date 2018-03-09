@@ -7,6 +7,7 @@
 #include <zircon/device/block.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
+#include <fbl/vector.h>
 
 #include <fs/vfs.h>
 
@@ -38,7 +39,7 @@ template <bool Write, size_t BlockSize, typename TxnHandler>
 class BlockTxn <vmoid_t, Write, BlockSize, TxnHandler> {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlockTxn);
-    explicit BlockTxn(TxnHandler* handler) : handler_(handler), count_(0) {}
+    explicit BlockTxn(TxnHandler* handler) : handler_(handler) {}
     ~BlockTxn() {
         Flush();
     }
@@ -46,7 +47,7 @@ public:
     // Identify that a block should be written to disk
     // as a later point in time.
     void Enqueue(vmoid_t id, uint64_t vmo_offset, uint64_t dev_offset, uint64_t nblocks) {
-        for (size_t i = 0; i < count_; i++) {
+        for (size_t i = 0; i < requests_.size(); i++) {
             if (requests_[i].vmoid != id) {
                 continue;
             }
@@ -64,22 +65,16 @@ public:
             }
         }
 
-        requests_[count_].txnid = handler_->TxnId();
-        requests_[count_].vmoid = id;
+        block_fifo_request_t request;
+        request.txnid = handler_->TxnId();
+        request.vmoid = id;
         // NOTE: It's easier to compare everything when dealing
         // with blocks (not offsets!) so the following are described in
         // terms of blocks until we Flush().
-        requests_[count_].vmo_offset = vmo_offset;
-        requests_[count_].dev_offset = dev_offset;
-        requests_[count_].length = nblocks;
-        count_++;
-
-        if (count_ == MAX_TXN_MESSAGES) {
-            // TODO(smklein): Maybe panic (on write) instead, for metadata?
-            // TODO(smklein): We could buffer more messages than this -- just
-            // send then in MAX_TXN_MESSAGES increments.
-            Flush();
-        }
+        request.length = nblocks;
+        request.vmo_offset = vmo_offset;
+        request.dev_offset = dev_offset;
+        requests_.push_back(fbl::move(request));
     }
 
     // Activate the transaction
@@ -87,25 +82,24 @@ public:
 
 private:
     TxnHandler* handler_;
-    size_t count_;
-    block_fifo_request_t requests_[MAX_TXN_MESSAGES];
+    fbl::Vector<block_fifo_request_t> requests_;
 };
 
 template <bool Write, size_t BlockSize, typename TxnHandler>
 inline zx_status_t BlockTxn<vmoid_t, Write, BlockSize, TxnHandler>::Flush() {
     // Convert 'filesystem block' units to 'disk block' units.
     const size_t kBlockFactor = BlockSize / handler_->BlockSize();
-    for (size_t i = 0; i < count_; i++) {
+    for (size_t i = 0; i < requests_.size(); i++) {
         requests_[i].opcode = Write ? BLOCKIO_WRITE : BLOCKIO_READ;
         requests_[i].vmo_offset *= kBlockFactor;
         requests_[i].dev_offset *= kBlockFactor;
         requests_[i].length *= kBlockFactor;
     }
     zx_status_t status = ZX_OK;
-    if (count_ != 0) {
-        status = handler_->Txn(requests_, count_);
+    if (requests_.size() != 0) {
+        status = handler_->Txn(requests_.get(), requests_.size());
     }
-    count_ = 0;
+    requests_.reset();
     return status;
 }
 

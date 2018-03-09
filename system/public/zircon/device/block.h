@@ -133,9 +133,6 @@ typedef uint16_t vmoid_t;
 // ssize_t ioctl_block_attach_vmo(int fd, zx_handle_t* in, vmoid_t* out_vmoid);
 IOCTL_WRAPPER_INOUT(ioctl_block_attach_vmo, IOCTL_BLOCK_ATTACH_VMO, zx_handle_t, vmoid_t);
 
-// TODO(smklein): Address this; it's not being used directly anymore.
-// Do we want to make an arena of block_ops, and have this be the txn count?
-#define MAX_TXN_MESSAGES 16
 #define MAX_TXN_COUNT 256
 
 typedef uint16_t txnid_t;
@@ -230,12 +227,12 @@ IOCTL_WRAPPER_INOUT(ioctl_block_get_stats, IOCTL_BLOCK_GET_STATS, bool, block_st
 // be allocated at any point in time.
 //
 // "Transactions" are allocated with the "alloc_txn" ioctl. Allocating a transaction allows
-// MAX_TXN_MESSAGES to be buffered at once on a single txn before receiving a response.
+// multiple message to be buffered at once on a single txn before receiving a response.
 // Once a txn has been allocated, it can be re-used many times. It is recommended that
 // transactions are allocated on a "per-thread" basis, and only freed on thread teardown.
 //
 // The protocol to communicate with a single txn is as follows:
-// 1) SEND [N - 1] messages with an allocated txnid for any value of 1 <= N < MAX_TXN_MESSAGES.
+// 1) SEND [N - 1] messages with an allocated txnid for any value of 1 <= N.
 //    The BLOCKIO_TXN_END flag is not set for this step.
 // 2) SEND a final Nth message with the same txnid, but also the BLOCKIO_TXN_END flag.
 // 3) RECEIVE a single response from the Block IO server after all N requests have completed.
