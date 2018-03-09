@@ -37,6 +37,7 @@ void XdrEntry(modular::XdrContext* const xdr,
   xdr->Field("binary", &data->binary);
   xdr->Field("local_name", &data->local_name);
   xdr->Field("verb", &data->verb);
+  xdr->Field("composition_pattern", &data->composition_pattern);
   xdr->Field("noun_constraints", &data->noun_constraints, XdrNounConstraint);
 }
 
