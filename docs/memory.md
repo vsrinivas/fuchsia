@@ -244,6 +244,12 @@ None of the process-dumping tools account for:
 
     You can look at process handle consumption with the `k zx ps` command; run
     `k zx ps help` for a description of its columns.
+-   Copy-on-write (COW) cloned VMOs. The clean (non-dirty, non-copied) pages of
+    a clone will not count towards "shared" for a process that maps the clone,
+    and those same pages may mistakenly count towards "private" of a process
+    that maps the parent (cloned) VMO.
+
+    TODO(dbort): Fix this; the tools were written before COW clones existed.
 
 ## Kernel memory
 
