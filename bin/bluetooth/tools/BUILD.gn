@@ -9,10 +9,11 @@ package("bt-tools") {
 
   deps = [
     "bt-cli",
-    "bt-intel-tool",
-    "bt-snoop",
+    "bt-fake-hci",
     "bt-hci-tool",
-    "bt-fake-hci"
+    "bt-intel-tool",
+    "bt-le-central",
+    "bt-snoop"
   ]
 
   binaries = [
@@ -20,7 +21,7 @@ package("bt-tools") {
       name = "bt-cli"
     },
     {
-      name = "bt-snoop"
+      name = "bt-fake-hci"
     },
     {
       name = "bt-hci-tool"
@@ -29,7 +30,10 @@ package("bt-tools") {
       name = "bt-intel-tool"
     },
     {
-      name = "bt-fake-hci"
+      name = "bt-le-central"
+    },
+    {
+      name = "bt-snoop"
     }
   ]
 }

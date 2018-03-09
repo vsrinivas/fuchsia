@@ -1,18 +1,23 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 [package]
-name = "fidl_bluetooth_low_energy"
-version = "0.1.0"
+description = "Command-line tool for LE central role"
 license = "BSD-3-Clause"
-authors = ["rust-fuchsia@fuchsia.com"]
-description = "Generated FIDL interface"
-repository = "https://fuchsia.googlesource.com/garnet/"
+name = "bt-le-central"
+version = "0.1.0"
 
 [dependencies]
+failure = "0.1.1"
+failure_derive = "0.1.1"
 fidl = "0.1"
 fidl_bluetooth = "0.1"
 fidl_bluetooth_gatt = "0.1"
+fidl_bluetooth_low_energy = "0.1"
+fuchsia-app = "0.1"
 fuchsia-async = "0.1"
 fuchsia-zircon = "0.3"
-futures = { version = "0.2.1", features = ["nightly"] }
+futures = "0.2.1"
+getopts = "0.2"
+parking_lot = "0.4"

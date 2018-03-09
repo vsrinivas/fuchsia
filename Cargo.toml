@@ -5,6 +5,7 @@ members =  [
   "bin/bluetooth/bt-gap",
   "bin/bluetooth/tests/integration",
   "bin/bluetooth/tools/bt-fake-hci",
+  "bin/bluetooth/tools/bt-le-central",
   "bin/bluetooth/tools/bt-snoop",
   "bin/xi_core",
   "examples/bluetooth/ble_battery_service",
