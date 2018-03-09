@@ -48,9 +48,9 @@ func New(indexDir, blobDir string) (*Filesystem, error) {
 	}
 
 	f := &Filesystem{
-		static:    index.NewStatic(),
-		index:     index.NewDynamic(indexDir),
-		blobfs:    bm,
+		static: index.NewStatic(),
+		index:  index.NewDynamic(indexDir),
+		blobfs: bm,
 		mountInfo: mountInfo{
 			parentFd: -1,
 		},
@@ -63,6 +63,10 @@ func New(indexDir, blobDir string) (*Filesystem, error) {
 		dirs: map[string]fs.Directory{
 			"incoming": &inDirectory{
 				unsupportedDirectory: unsupportedDirectory("/incoming"),
+				fs:                   f,
+			},
+			"install": &installDir{
+				unsupportedDirectory: unsupportedDirectory("/install"),
 				fs:                   f,
 			},
 			"needs": &needsRoot{

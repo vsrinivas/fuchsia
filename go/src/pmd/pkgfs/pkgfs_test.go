@@ -28,7 +28,7 @@ import (
 // A package directory should contain all files from meta.far and listed by meta/contents
 
 var (
-	pkgfsMount    string
+	pkgfsMount string
 	blobfsPath string
 )
 
@@ -314,7 +314,7 @@ func TestListRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"incoming", "needs", "packages", "system", "metadata"}
+	want := []string{"incoming", "install", "needs", "packages", "system", "metadata"}
 	sort.Strings(names)
 	sort.Strings(want)
 

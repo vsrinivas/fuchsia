@@ -46,7 +46,7 @@ func Run(cfg *build.Config) error {
 	}
 	merkleroot := tree.Root()
 
-	f, err := os.Create(filepath.Join("/pkgfs/incoming", fmt.Sprintf("%x", merkleroot)))
+	f, err := os.Create(filepath.Join("/pkgfs/install/pkg", fmt.Sprintf("%x", merkleroot)))
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func Run(cfg *build.Config) error {
 			continue
 		}
 
-		f, err := os.Create(filepath.Join("/pkgfs/incoming", name))
+		f, err := os.Create(filepath.Join("/pkgfs/install/blob", name))
 		if err != nil {
 			return err
 		}

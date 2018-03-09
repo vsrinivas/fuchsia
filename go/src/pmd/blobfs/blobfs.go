@@ -142,6 +142,10 @@ func (m *Manager) bpath(root string) string {
 	return filepath.Join(m.Root, root)
 }
 
+func (m *Manager) PathOf(root string) string {
+	return m.bpath(root)
+}
+
 type tempProxy struct {
 	f    *os.File
 	m    *Manager
