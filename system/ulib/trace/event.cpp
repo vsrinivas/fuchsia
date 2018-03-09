@@ -159,3 +159,15 @@ void trace_internal_write_kernel_object_record_for_handle_and_release_context(
         context, handle, args, num_args);
     trace_release_context(context);
 }
+
+void trace_internal_write_blob_record_and_release_context(
+    trace_context_t* context,
+    trace_blob_type_t type,
+    const char* name_literal,
+    const void* blob, size_t blob_size) {
+    trace_string_ref_t name_ref;
+    trace_context_register_string_literal(context, name_literal, &name_ref);
+    trace_context_write_blob_record(
+        context, type, &name_ref, blob, blob_size);
+    trace_release_context(context);
+}

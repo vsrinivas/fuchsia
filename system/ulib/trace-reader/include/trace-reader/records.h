@@ -11,6 +11,7 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
+#include <fbl/array.h>
 #include <fbl/macros.h>
 #include <fbl/new.h>
 #include <fbl/string.h>
@@ -504,6 +505,17 @@ public:
         EventData data;
     };
 
+    // Blob record data.
+    // Since blobs can be rather large we avoid unnecessary copying of them.
+    // This then means that the consumer must process the blob's payload
+    // before the next record is read.
+    struct Blob {
+        trace_blob_type_t type;
+        fbl::String name;
+        const void* blob;
+        size_t blob_size;
+    };
+
     // Kernel Object record data.
     struct KernelObject {
         zx_koid_t koid;
@@ -547,6 +559,11 @@ public:
     explicit Record(Event record)
         : type_(RecordType::kEvent) {
         new (&event_) Event(fbl::move(record));
+    }
+
+    explicit Record(Blob record)
+        : type_(RecordType::kBlob) {
+        new (&blob_) Blob(fbl::move(record));
     }
 
     explicit Record(KernelObject record)
@@ -599,6 +616,11 @@ public:
         return event_;
     }
 
+    const Blob& GetBlob() const {
+        ZX_DEBUG_ASSERT(type_ == RecordType::kBlob);
+        return blob_;
+    }
+
     const KernelObject& GetKernelObject() const {
         ZX_DEBUG_ASSERT(type_ == RecordType::kKernelObject);
         return kernel_object_;
@@ -629,6 +651,7 @@ private:
         String string_;
         Thread thread_;
         Event event_;
+        Blob blob_;
         KernelObject kernel_object_;
         ContextSwitch context_switch_;
         Log log_;

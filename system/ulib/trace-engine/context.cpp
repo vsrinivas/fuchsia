@@ -245,8 +245,8 @@ public:
         return *this;
     }
 
-    Payload& WriteBytes(const void* src, size_t length) {
-        memcpy(ptr_, src, length);
+    void* PrepareWriteBytes(size_t length) {
+        auto result = ptr_;
         ptr_ += length / 8u;
         size_t tail = length & 7u;
         if (tail) {
@@ -254,6 +254,12 @@ public:
             ptr_++;
             memset(reinterpret_cast<uint8_t*>(ptr_) - padding, 0u, padding);
         }
+        return result;
+    }
+
+    Payload& WriteBytes(const void* src, size_t length) {
+        auto ptr = PrepareWriteBytes(length);
+        memcpy(ptr, src, length);
         return *this;
     }
 
@@ -533,6 +539,35 @@ void trace_context_register_thread(
         *out_ref = trace_make_indexed_thread_ref(index);
     } else {
         *out_ref = trace_make_inline_thread_ref(process_koid, thread_koid);
+    }
+}
+
+void trace_context_write_blob_record(
+    trace_context_t* context,
+    trace_blob_type_t type,
+    const trace_string_ref_t* name_ref,
+    const void* blob, size_t blob_size) {
+    const size_t name_string_size = trace::SizeOfEncodedStringRef(name_ref);
+    const size_t record_size_less_blob = sizeof(trace::RecordHeader) +
+                                         name_string_size;
+    const size_t padded_blob_size = trace::Pad(blob_size);
+    const size_t max_record_size = trace::RecordFields::kMaxRecordSizeBytes;
+    if (record_size_less_blob > max_record_size ||
+            padded_blob_size > max_record_size - record_size_less_blob) {
+        return;
+    }
+    const size_t record_size = record_size_less_blob + padded_blob_size;
+    trace::Payload payload(context, record_size);
+    if (payload) {
+        payload
+            .WriteUint64(trace::MakeRecordHeader(trace::RecordType::kBlob, record_size) |
+                         trace::BlobRecordFields::BlobType::Make(
+                             trace::ToUnderlyingType(type)) |
+                         trace::BlobRecordFields::NameStringRef::Make(
+                             name_ref->encoded_value) |
+                         trace::BlobRecordFields::BlobSize::Make(blob_size))
+            .WriteStringRef(name_ref)
+            .WriteBytes(blob, blob_size);
     }
 }
 

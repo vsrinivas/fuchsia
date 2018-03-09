@@ -179,6 +179,19 @@ inline trace_thread_ref_t trace_context_make_registered_thread(
     return ref;
 }
 
+// Write a blob of binary data into the trace buffer.
+// Discards the record if it cannot be written.
+// |context| must be a valid trace context reference.
+// |type| is the blob type.
+// |name_ref| is the name of the blob.
+// |blob| is the binary data to write.
+// |blob_size| is the size of the binary data to write.
+void trace_context_write_blob_record(
+    trace_context_t* context,
+    trace_blob_type_t type,
+    const trace_string_ref_t* name_ref,
+    const void* blob, size_t blob_size);
+
 // Writes a kernel object record which describes the specified object into
 // the trace buffer.  Discards the record if it cannot be written.
 //

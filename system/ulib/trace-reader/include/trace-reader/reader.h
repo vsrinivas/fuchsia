@@ -64,6 +64,7 @@ private:
     bool ReadThreadRecord(Chunk& record,
                           RecordHeader header);
     bool ReadEventRecord(Chunk& record, RecordHeader header);
+    bool ReadBlobRecord(Chunk& record, RecordHeader header, void** out_ptr);
     bool ReadKernelObjectRecord(Chunk& record,
                                 RecordHeader header);
     bool ReadContextSwitchRecord(Chunk& record,
@@ -158,6 +159,7 @@ public:
     bool ReadDouble(double* out_value);
     bool ReadString(size_t length, fbl::StringPiece* out_string);
     bool ReadChunk(size_t num_words, Chunk* out_chunk);
+    bool ReadInPlace(size_t num_words, const void** out_ptr);
 
 private:
     const uint64_t* current_;

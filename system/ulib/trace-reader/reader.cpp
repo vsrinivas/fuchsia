@@ -64,6 +64,13 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
             }
             break;
         }
+        case RecordType::kBlob: {
+            void* ptr;
+            if (!ReadBlobRecord(record, pending_header_, &ptr)) {
+                ReportError("Failed to read blob record");
+            }
+            break;
+        }
         case RecordType::kKernelObject: {
             if (!ReadKernelObjectRecord(record, pending_header_)) {
                 ReportError("Failed to read kernel object record");
@@ -310,6 +317,26 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         break;
     }
     }
+    return true;
+}
+
+bool TraceReader::ReadBlobRecord(Chunk& record, RecordHeader header, void** out_blob) {
+    auto blob_type =
+        BlobRecordFields::BlobType::Get<trace_blob_type_t>(header);
+    auto name_ref =
+        BlobRecordFields::NameStringRef::Get<trace_encoded_string_ref_t>(header);
+    auto blob_size =
+        BlobRecordFields::BlobSize::Get<size_t>(header);
+    fbl::String name;
+    if (!DecodeStringRef(record, name_ref, &name))
+        return false;
+    const void* blob;
+    auto blob_words = BytesToWords(blob_size);
+    if (!record.ReadInPlace(blob_words, &blob))
+        return false;
+
+    record_consumer_(
+        Record(Record::Blob{blob_type, name, blob, blob_size}));
     return true;
 }
 
@@ -644,6 +671,14 @@ bool Chunk::ReadString(size_t length, fbl::StringPiece* out_string) {
 
     *out_string =
         fbl::StringPiece(reinterpret_cast<const char*>(current_), length);
+    current_ += num_words;
+    return true;
+}
+
+bool Chunk::ReadInPlace(size_t num_words, const void** out_ptr) {
+    if (current_ + num_words > end_)
+        return false;
+    *out_ptr = current_;
     current_ += num_words;
     return true;
 }

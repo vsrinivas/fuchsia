@@ -316,6 +316,16 @@ inline trace_arg_t trace_make_arg(trace_string_ref_t name_ref,
 // The trace format specified maximum number of args for a record.
 #define TRACE_MAX_ARGS ((size_t)15u)
 
+// BlobType enumerates all known trace blob types.
+typedef enum {
+    TRACE_BLOB_TYPE_DATA = 1,
+} trace_blob_type_t;
+
+// The maximum size of a blob.
+// This is slightly less than the actual maximum ((= 0xfff * 8) - header size)
+// to allow room for reasonably sized blob names should they get inlined.
+#define TRACE_MAX_BLOB_SIZE ((size_t)32000u)
+
 __END_CDECLS
 
 #ifdef __cplusplus
@@ -329,6 +339,7 @@ enum class RecordType {
     kString = 2,
     kThread = 3,
     kEvent = 4,
+    kBlob = 5,
     kKernelObject = 7,
     kContextSwitch = 8,
     kLog = 9,

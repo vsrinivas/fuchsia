@@ -372,6 +372,9 @@ void Record::Destroy() {
     case RecordType::kEvent:
         event_.~Event();
         break;
+    case RecordType::kBlob:
+        blob_.~Blob();
+        break;
     case RecordType::kKernelObject:
         kernel_object_.~KernelObject();
         break;
@@ -401,6 +404,9 @@ void Record::MoveFrom(Record&& other) {
         break;
     case RecordType::kEvent:
         new (&event_) Event(fbl::move(other.event_));
+        break;
+    case RecordType::kBlob:
+        new (&blob_) Blob(fbl::move(other.blob_));
         break;
     case RecordType::kKernelObject:
         new (&kernel_object_) KernelObject(fbl::move(other.kernel_object_));
@@ -435,6 +441,11 @@ fbl::String Record::ToString() const {
                                   event_.data.ToString().c_str(),
                                   FormatArgumentList(event_.arguments).c_str());
         break;
+    case RecordType::kBlob:
+        // TODO(dje): Could print something like the first 16 bytes of the
+        // payload or some such.
+        return fbl::StringPrintf("Blob(name: %s, size: %zu)",
+                                 blob_.name.c_str(), blob_.blob_size);
     case RecordType::kKernelObject:
         return fbl::StringPrintf("KernelObject(koid: %" PRIu64 ", type: %s, name: \"%s\", %s)",
                                   kernel_object_.koid,

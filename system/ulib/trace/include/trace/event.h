@@ -440,3 +440,27 @@
 //
 #define TRACE_KERNEL_OBJECT(handle, args...) \
     TRACE_INTERNAL_KERNEL_OBJECT((handle), args)
+
+// Writes a blob of binary data to the trace buffer.
+//
+// |type| is the type of the blob, and must be one of the enums in type
+//        |trace_blob_type_t|.
+// |name_ref| is the name of the blob, and must be a string literal.
+// |blob| is a pointer to the data.
+// |blob_size| is the size, in bytes, of the data.
+//
+// A size of zero is ok. The maximum size of a blob is defined by
+// TRACE_MAX_BLOB_SIZE which is slighly less than 32K.
+// Exercise caution when emitting blob records: space is shared with all
+// trace records and large blobs can eat up space fast.
+// The blob must fit in the remaining space in the buffer. If the blob does
+// not fit the call silently fails, as do all calls that write trace records
+// when the buffer is full.
+//
+// Usage:
+//     size_t blob_size = ...;
+//     const void* blob = ...;
+//     TRACE_BLOB(TRACE_BLOB_TYPE_DATA, "my-blob", blob, blob_size);
+//
+#define TRACE_BLOB(type, name, blob, blob_size) \
+    TRACE_INTERNAL_BLOB((type), (name), (blob), (blob_size))

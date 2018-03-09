@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/string_printf.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -672,6 +673,35 @@ bool record_test() {
         EXPECT_STR_EQ("Event(ts: 123, pt: 4/5, category: \"category\", name: \"name\", "
                       "AsyncBegin(id: 678), {arg1: int32(11), arg2: double(-3.140000)})",
                       r.ToString().c_str());
+    }
+
+    // blobs
+
+    {
+        const char name[] = "name";
+        const char blob[] = "abc";
+        trace::Record r(trace::Record::Blob{
+                TRACE_BLOB_TYPE_DATA, "name", blob, sizeof(blob)});
+        EXPECT_EQ(trace::RecordType::kBlob, r.type());
+        EXPECT_EQ(TRACE_BLOB_TYPE_DATA, r.GetBlob().type);
+        EXPECT_EQ(sizeof(blob), r.GetBlob().blob_size);
+        EXPECT_STR_EQ(blob, reinterpret_cast<const char*>(r.GetBlob().blob));
+
+        trace::Record m(fbl::move(r));
+        EXPECT_EQ(trace::RecordType::kBlob, m.type());
+        EXPECT_EQ(TRACE_BLOB_TYPE_DATA, m.GetBlob().type);
+        EXPECT_EQ(sizeof(blob), m.GetBlob().blob_size);
+        EXPECT_STR_EQ(blob, reinterpret_cast<const char*>(m.GetBlob().blob));
+
+        r = fbl::move(m);
+        EXPECT_EQ(trace::RecordType::kBlob, r.type());
+        EXPECT_EQ(TRACE_BLOB_TYPE_DATA, r.GetBlob().type);
+        EXPECT_EQ(sizeof(blob), r.GetBlob().blob_size);
+        EXPECT_STR_EQ(blob, reinterpret_cast<const char*>(r.GetBlob().blob));
+
+        auto expected = fbl::StringPrintf("Blob(name: %s, size: %zu)",
+                                          name, sizeof(blob));
+        EXPECT_STR_EQ(expected.c_str(), r.ToString().c_str());
     }
 
     // kernel object

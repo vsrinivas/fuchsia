@@ -216,6 +216,17 @@ __BEGIN_CDECLS
             (handle), TRACE_INTERNAL_ARGS, TRACE_INTERNAL_NUM_ARGS),              \
         args)
 
+#define TRACE_INTERNAL_BLOB(type, name, blob, blob_size)                \
+    do {                                                                \
+        trace_context_t* TRACE_INTERNAL_CONTEXT =                       \
+            trace_acquire_context();                                    \
+        if (unlikely(TRACE_INTERNAL_CONTEXT)) {                         \
+            trace_internal_write_blob_record_and_release_context(       \
+                TRACE_INTERNAL_CONTEXT,                                 \
+                (type), (name), (blob), (blob_size));                   \
+        }                                                               \
+    } while (0)
+
 void trace_internal_write_instant_event_record_and_release_context(
     trace_context_t* context,
     const trace_string_ref_t* category_ref,
@@ -288,6 +299,12 @@ void trace_internal_write_kernel_object_record_for_handle_and_release_context(
     trace_context_t* context,
     zx_handle_t handle,
     const trace_arg_t* args, size_t num_args);
+
+void trace_internal_write_blob_record_and_release_context(
+    trace_context_t* context,
+    trace_blob_type_t type,
+    const char* name_literal,
+    const void* blob, size_t blob_size);
 
 #ifndef NTRACE
 // When "destroyed" (by the cleanup attribute), writes a duration end event.

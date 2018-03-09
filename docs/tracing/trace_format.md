@@ -561,7 +561,7 @@ _payload stream_ (variable size)
 ##### Blob Types
 
 The following blob types are defined:
-- `0x01`: Catapult trace event data represented in JSON format
+- `0x01`: Raw untyped data. Consumer is expected to know how to consume it, perhaps based on context.
 
 ### Userspace Object Record (record type = 6)
 
