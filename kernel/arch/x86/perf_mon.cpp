@@ -131,7 +131,7 @@ const uint16_t supported_mem_device_ids[] = {
 };
 
 // Offset in PCI config space of the BAR (base address register) of the
-// memory control stats registers.
+// MCHBAR stats registers.
 #define INTEL_MCHBAR_PCI_CONFIG_OFFSET 0x48
 
 // Offsets from the BAR in the memory controller hub mmio space of counters
@@ -157,7 +157,7 @@ static_assert(1
 static uint64_t kGlobalCtrlWritableBits;
 static uint64_t kFixedCounterCtrlWritableBits;
 
-static constexpr size_t kMaxRecordSize = sizeof(cpuperf_pc_record_t);
+static constexpr size_t kMaxEventRecordSize = sizeof(cpuperf_pc_record_t);
 
 // Commented out values represent currently unsupported features.
 // They remain present for documentation purposes.
@@ -625,7 +625,7 @@ zx_status_t x86_ipm_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo) {
     // A simple safe approximation of the minimum size needed.
     size_t min_size_needed = sizeof(cpuperf_buffer_header_t);
     min_size_needed += sizeof(cpuperf_time_record_t);
-    min_size_needed += CPUPERF_MAX_EVENTS * kMaxRecordSize;
+    min_size_needed += CPUPERF_MAX_EVENTS * kMaxEventRecordSize;
     if (vmo->size() < min_size_needed)
         return ZX_ERR_INVALID_ARGS;
 
@@ -799,7 +799,7 @@ static zx_status_t x86_ipm_verify_misc_config(
                 TRACEF("Unused bits set in |misc_flags[%u]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
-            // Currently we only support the MCHBAR counters.
+            // Currently we only support the MCHBAR events.
             // They cannot provide pc. We ignore the OS/USER bits.
             if (config->misc_flags[i] & IPM_CONFIG_FLAG_PC) {
                 TRACEF("Invalid bits (0x%x) in |misc_flags[%u]|\n",
@@ -944,7 +944,7 @@ static void x86_ipm_stage_misc_config(const zx_x86_ipm_config_t* config,
 
     state->need_mchbar = false;
     for (unsigned i = 0; i < state->num_used_misc; ++i) {
-        // All misc events currently come from the memory controller.
+        // All misc events currently come from MCHBAR.
         // When needed we can add a flag to the event to denote origin.
         switch (CPUPERF_EVENT_ID_EVENT(state->misc_ids[i])) {
 #define DEF_MISC_SKL_EVENT(symbol, id, offset, size, flags, name, description) \
@@ -1011,7 +1011,7 @@ struct ReadMiscResult {
     uint8_t type;
 };
 
-// Read the 32-bit counter from the MCHBAR and return the delta
+// Read the 32-bit counter from MCHBAR and return the delta
 // since the last read. We do this in part because it's easier for clients
 // to process and in part to catch the cases of the counter wrapping that
 // we can (they're only 32 bits in h/w and are read-only).
@@ -1034,7 +1034,7 @@ static uint32_t read_mc_counter32(volatile uint32_t* addr,
     }
 }
 
-// Read the 64-bit counter from the memory controller and return the delta
+// Read the 64-bit counter from MCHBAR and return the delta
 // since the last read. We do this because it's easier for clients to process.
 // Overflow is highly unlikely with a 64-bit counter.
 // WARNING: This function has the side-effect of updating |*last_value|.
@@ -1046,7 +1046,7 @@ static uint64_t read_mc_counter64(volatile uint64_t* addr,
     return value - last_value;
 }
 
-// Read the 32-bit non-counter value from the memory controller.
+// Read the 32-bit non-counter value from MCHBAR.
 static uint32_t read_mc_value32(volatile uint32_t* addr) {
     return *addr;
 }
@@ -1724,7 +1724,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                            (state->num_used_programmable +
                             state->num_used_fixed +
                             state->num_used_misc) *
-                           kMaxRecordSize);
+                           kMaxEventRecordSize);
     if (reinterpret_cast<char*>(data->buffer_next) + space_needed > data->buffer_end) {
         TRACEF("cpu %u: @%" PRIu64 " pmi buffer full\n", cpu, now);
         data->buffer_start->flags |= CPUPERF_BUFFER_FLAG_FULL;
@@ -1805,7 +1805,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
 
         bits_to_clear |= perfmon_counter_status_bits;
 
-        // Now handle counters that have IPM_CONFIG_FLAG_TIMEBASE set.
+        // Now handle events that have IPM_CONFIG_FLAG_TIMEBASE set.
         if (saw_timebase) {
             for (unsigned i = 0; i < state->num_used_programmable; ++i) {
                 if (!(state->programmable_flags[i] & IPM_CONFIG_FLAG_TIMEBASE))

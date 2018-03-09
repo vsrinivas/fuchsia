@@ -26,7 +26,7 @@ __BEGIN_CDECLS
 // Typically the h/w supports less than this, e.g., 7 or so.
 // TODO(dje): Have the device driver multiplex the events when more is
 // asked for than the h/w supports.
-#define CPUPERF_MAX_EVENTS 32
+#define CPUPERF_MAX_EVENTS 32u
 
 // Header for each data buffer.
 typedef struct {
@@ -35,14 +35,13 @@ typedef struct {
 
     // The architecture that generated the data.
     uint16_t arch;
-#define CPUPERF_BUFFER_ARCH_UNKNOWN 0
-#define CPUPERF_BUFFER_ARCH_X86_64  1
-#define CPUPERF_BUFFER_ARCH_ARM64   2
+#define CPUPERF_BUFFER_ARCH_UNKNOWN 0u
+#define CPUPERF_BUFFER_ARCH_X86_64  1u
+#define CPUPERF_BUFFER_ARCH_ARM64   2u
 
-    // There are no flags yet, but reserve a spot.
     uint32_t flags;
 // The buffer filled, and records were dropped.
-#define CPUPERF_BUFFER_FLAG_FULL (1ul << 0)
+#define CPUPERF_BUFFER_FLAG_FULL (1u << 0)
 
     // zx_ticks_per_second in the kernel
     uint64_t ticks_per_second;
@@ -177,21 +176,21 @@ typedef struct {
 // The properties of this system.
 typedef struct {
     // S/W API version = CPUPERF_API_VERSION.
-    uint32_t api_version;
+    uint16_t api_version;
     // The H/W Performance Monitor version.
-    uint32_t pm_version;
+    uint16_t pm_version;
     // The number of fixed events.
-    uint32_t num_fixed_events;
+    uint16_t num_fixed_events;
     // The number of programmable events.
-    uint32_t num_programmable_events;
+    uint16_t num_programmable_events;
     // For fixed events that are counters, the width in bits.
     // If different counters have different widths, the choice is architecture
     // specific.
-    uint32_t fixed_counter_width;
+    uint16_t fixed_counter_width;
     // For programmable events that are counters, the width in bits.
     // If different counters have different widths, the choice is architecture
     // specific.
-    uint32_t programmable_counter_width;
+    uint16_t programmable_counter_width;
 } cpuperf_properties_t;
 
 // Passed to STAGE_CONFIG to select the data to be collected.
@@ -217,6 +216,8 @@ typedef struct {
     // Flags for each event in |events|.
     // TODO(dje): hypervisor, host/guest os/user
     uint32_t flags[CPUPERF_MAX_EVENTS];
+// Valid bits in |flags|.
+#define CPUPERF_CONFIG_FLAG_MASK      0xf
 // Collect os data.
 #define CPUPERF_CONFIG_FLAG_OS        (1u << 0)
 // Collect userspace data.

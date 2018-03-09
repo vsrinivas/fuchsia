@@ -204,7 +204,7 @@ void ipm_init_once(void)
            ipm_properties.programmable_counter_width);
     zxlogf(TRACE, "IPM: fixed_counter_width: %u\n",
            ipm_properties.fixed_counter_width);
-    zxlogf(TRACE, "IPM: perf_capabilities: %lu\n",
+    zxlogf(TRACE, "IPM: perf_capabilities: 0x%lx\n",
            ipm_properties.perf_capabilities);
 }
 
@@ -288,6 +288,7 @@ static zx_status_t ipm_get_properties(cpu_trace_device_t* dev,
     if (replymax < sizeof(props))
         return ZX_ERR_BUFFER_TOO_SMALL;
 
+    memset(&props, 0, sizeof(props));
     props.api_version = CPUPERF_API_VERSION;
     props.pm_version = ipm_properties.pm_version;
     // To the arch-independent API, the misc events on Intel are currently
@@ -689,6 +690,11 @@ static zx_status_t ipm_stage_config(cpu_trace_device_t* dev,
         if (id == 0)
             break;
         unsigned unit = CPUPERF_EVENT_ID_UNIT(id);
+
+        if (icfg->flags[ii] & ~CPUPERF_CONFIG_FLAG_MASK) {
+            zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
+            return ZX_ERR_INVALID_ARGS;
+        }
 
         switch (unit) {
         case CPUPERF_UNIT_FIXED:

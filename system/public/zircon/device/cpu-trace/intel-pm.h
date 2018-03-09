@@ -238,10 +238,10 @@ __BEGIN_CDECLS
 #define IA32_DEBUGCTL_FREEZE_PERFMON_ON_PMI_MASK \
   IPM_MSR_MASK(IA32_DEBUGCTL_FREEZE_PERFMON_ON_PMI_LEN, IA32_DEBUGCTL_FREEZE_PERFMON_ON_PMI_SHIFT)
 
-#define IA32_DEBUGCTL_FREEZE_WHILE_SMM_EN_SHIFT (14)
-#define IA32_DEBUGCTL_FREEZE_WHILE_SMM_EN_LEN   (1)
-#define IA32_DEBUGCTL_FREEZE_WHILE_SMM_EN_MASK \
-  IPM_MSR_MASK(IA32_DEBUGCTL_FREEZE_WHILE_SMM_EN_LEN, IA32_DEBUGCTL_FREEZE_WHILE_SMM_EN_SHIFT)
+#define IA32_DEBUGCTL_FREEZE_WHILE_SMM_SHIFT (14)
+#define IA32_DEBUGCTL_FREEZE_WHILE_SMM_LEN   (1)
+#define IA32_DEBUGCTL_FREEZE_WHILE_SMM_MASK \
+  IPM_MSR_MASK(IA32_DEBUGCTL_FREEZE_WHILE_SMM_LEN, IA32_DEBUGCTL_FREEZE_WHILE_SMM_SHIFT)
 
 #define IA32_DEBUGCTL_RTM_SHIFT (15)
 #define IA32_DEBUGCTL_RTM_LEN   (1)
@@ -333,6 +333,8 @@ typedef struct {
 // Both of IPM_CONFIG_FLAG_{PC,TIMEBASE} cannot be set.
 #define IPM_CONFIG_FLAG_MASK     0x3
 // Collect aspace+pc values.
+// Cannot be set with IPM_CONFIG_FLAG_TIMEBASE unless the counter is
+// |timebase_id|.
 #define IPM_CONFIG_FLAG_PC       (1u << 0)
 // Collect this event's value when |timebase_id| counter's data is collected.
 // While redundant, it is ok to set this for the |timebase_id| counter.
