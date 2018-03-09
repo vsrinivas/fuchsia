@@ -9,9 +9,9 @@
 #include <thread>
 #include <vector>
 
-#include <async/cpp/loop.h>
 #include <benchmark/benchmark.h>
 #include <gflags/gflags.h>
+#include <lib/async/cpp/loop.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <zircon/syscalls.h>
@@ -25,7 +25,8 @@
 #include "test_runner.h"
 
 DEFINE_string(fbenchmark_out, "", "Filename to write results to");
-DEFINE_uint32(fbenchmark_runs, 1000,
+DEFINE_uint32(fbenchmark_runs,
+              1000,
               "Number of times to run each test (default is 1000)");
 // Note that an empty regular expression matches any string.
 DEFINE_string(fbenchmark_filter,

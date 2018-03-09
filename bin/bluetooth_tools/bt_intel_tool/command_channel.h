@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_BLUETOOTH_TOOLS_BT_INTEL_TOOL_COMMAND_CHANNEL_H_
+#define GARNET_BIN_BLUETOOTH_TOOLS_BT_INTEL_TOOL_COMMAND_CHANNEL_H_
 
-#include <async/cpp/wait.h>
 #include <fbl/unique_fd.h>
+#include <lib/async/cpp/wait.h>
 #include <zircon/types.h>
 #include <zx/channel.h>
 
@@ -67,3 +68,5 @@ class CommandChannel {
   zx::channel acl_channel_;
   async::Wait acl_channel_wait_;
 };
+
+#endif  // GARNET_BIN_BLUETOOTH_TOOLS_BT_INTEL_TOOL_COMMAND_CHANNEL_H_

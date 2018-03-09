@@ -4,7 +4,7 @@
 
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
 
-#include <async/loop.h>
+#include <lib/async/loop.h>
 #include <loader-service/loader-service.h>
 
 namespace app {

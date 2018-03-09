@@ -8,8 +8,8 @@
 
 #include <iostream>
 
-#include <async/default.h>
-#include <async/cpp/loop.h>
+#include <lib/async/cpp/loop.h>
+#include <lib/async/default.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
 #include <zx/event.h>

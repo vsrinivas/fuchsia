@@ -5,9 +5,9 @@
 #ifndef GARNET_LIB_MACHINA_IO_H_
 #define GARNET_LIB_MACHINA_IO_H_
 
-#include <async/cpp/trap.h>
 #include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
+#include <lib/async/cpp/trap.h>
 #include <zircon/types.h>
 
 namespace machina {

@@ -18,7 +18,7 @@ namespace fsl {
 //
 // EXAMPLE:
 //
-// #include <async/cpp/auto_wait.h>
+// #include <lib/async/cpp/auto_wait.h>
 // #include <fbl/function.h>
 // #include <zx/channel.h>
 //

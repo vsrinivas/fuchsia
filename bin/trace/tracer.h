@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_TRACE_TRACER_H_
 #define GARNET_BIN_TRACE_TRACER_H_
 
-#include <async/cpp/wait.h>
+#include <lib/async/cpp/wait.h>
 #include <zx/socket.h>
 
 #include <functional>

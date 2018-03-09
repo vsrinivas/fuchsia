@@ -5,8 +5,8 @@
 #ifndef LIB_FSL_SOCKET_SOCKET_DRAINER_H_
 #define LIB_FSL_SOCKET_SOCKET_DRAINER_H_
 
-#include <async/default.h>
-#include <async/cpp/wait.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/async/default.h>
 #include <zx/socket.h>
 
 #include "lib/fxl/fxl_export.h"
@@ -25,14 +25,14 @@ class FXL_EXPORT SocketDrainer {
     virtual ~Client();
   };
 
-  explicit SocketDrainer(Client* client,
-                         async_t* async = async_get_default());
+  explicit SocketDrainer(Client* client, async_t* async = async_get_default());
   ~SocketDrainer();
 
   void Start(zx::socket source);
 
  private:
-  async_wait_result_t OnHandleReady(async_t* async, zx_status_t status,
+  async_wait_result_t OnHandleReady(async_t* async,
+                                    zx_status_t status,
                                     const zx_packet_signal_t* signal);
 
   Client* client_;

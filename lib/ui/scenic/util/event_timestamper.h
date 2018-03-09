@@ -7,9 +7,9 @@
 
 #include <functional>
 
-#include <async/cpp/loop.h>
-#include <async/cpp/task.h>
-#include <async/cpp/wait.h>
+#include <lib/async/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/cpp/wait.h>
 #include <zx/event.h>
 
 #include "lib/fsl/tasks/message_loop.h"

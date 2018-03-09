@@ -6,8 +6,8 @@
 
 #include <fcntl.h>
 
-#include <async/default.h>
 #include <fbl/function.h>
+#include <lib/async/default.h>
 #include <zircon/status.h>
 
 #include "garnet/lib/bluetooth/c/bt_host.h"

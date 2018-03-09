@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/bindings/internal/connector.h"
 
-#include <async/default.h>
+#include <lib/async/default.h>
 #include <zircon/assert.h>
 #include <zx/time.h>
 
@@ -20,7 +20,9 @@ constexpr zx_signals_t kSignals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
 
 Connector::Connector(zx::channel channel)
     : channel_(std::move(channel)),
-      wait_(async_get_default(), channel_.get(), kSignals,
+      wait_(async_get_default(),
+            channel_.get(),
+            kSignals,
             ASYNC_FLAG_HANDLE_SHUTDOWN),
       incoming_receiver_(nullptr),
       error_(false),
@@ -100,8 +102,9 @@ bool Connector::Accept(Message* message) {
   return false;
 }
 
-async_wait_result_t Connector::OnHandleReady(
-    async_t* async, zx_status_t status, const zx_packet_signal_t* signal) {
+async_wait_result_t Connector::OnHandleReady(async_t* async,
+                                             zx_status_t status,
+                                             const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     NotifyError();
     return ASYNC_WAIT_FINISHED;

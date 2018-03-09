@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_NETCONNECTOR_CPP_MESSAGE_RELAY_H_
+#define LIB_NETCONNECTOR_CPP_MESSAGE_RELAY_H_
 
-#include <async/cpp/auto_wait.h>
+#include <lib/async/cpp/auto_wait.h>
 #include <zx/channel.h>
 
 #include <queue>
@@ -43,14 +44,14 @@ class MessageRelayBase {
 
  private:
   // Tries to read messages from channel_ and waits for more.
-  async_wait_result_t ReadChannelMessages(
-    async_t* async, zx_status_t status,
-    const zx_packet_signal_t* signal);
+  async_wait_result_t ReadChannelMessages(async_t* async,
+                                          zx_status_t status,
+                                          const zx_packet_signal_t* signal);
 
   // Writes all the messages in messages_to_write_.
-  async_wait_result_t WriteChannelMessages(
-    async_t* async, zx_status_t status,
-    const zx_packet_signal_t* signal);
+  async_wait_result_t WriteChannelMessages(async_t* async,
+                                           zx_status_t status,
+                                           const zx_packet_signal_t* signal);
 
   zx::channel channel_;
   async::AutoWait read_wait_;
@@ -85,3 +86,5 @@ class MessageRelay : public MessageRelayBase {
 };
 
 }  // namespace netconnector
+
+#endif  // LIB_NETCONNECTOR_CPP_MESSAGE_RELAY_H_

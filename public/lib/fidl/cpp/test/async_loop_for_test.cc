@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 
-#include <async/cpp/loop.h>
+#include <lib/async/cpp/loop.h>
 #include "lib/fidl/cpp/test/loop_config.h"
 
 namespace fidl {

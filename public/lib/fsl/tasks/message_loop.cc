@@ -6,8 +6,8 @@
 
 #include <utility>
 
-#include <async/cpp/task.h>
-#include <async/cpp/wait_with_timeout.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/cpp/wait_with_timeout.h>
 #include <zircon/syscalls.h>
 
 #include "lib/fxl/logging.h"
@@ -217,7 +217,7 @@ void MessageLoop::Epilogue(async_t* async, void* data) {
 MessageLoop::TaskRecord::TaskRecord(zx_time_t deadline, fxl::Closure closure)
     : task_(deadline, ASYNC_FLAG_HANDLE_SHUTDOWN) {
   task_.set_handler(
-      [ this, closure = std::move(closure) ](async_t*, zx_status_t status) {
+      [this, closure = std::move(closure)](async_t*, zx_status_t status) {
         if (status == ZX_OK)
           closure();
         delete this;
@@ -237,8 +237,7 @@ MessageLoop::HandlerRecord::HandlerRecord(zx_handle_t object,
       loop_(loop),
       handler_(handler),
       key_(key) {
-  wait_.set_handler(
-      fbl::BindMember(this, &MessageLoop::HandlerRecord::Handle));
+  wait_.set_handler(fbl::BindMember(this, &MessageLoop::HandlerRecord::Handle));
 }
 
 MessageLoop::HandlerRecord::~HandlerRecord() = default;

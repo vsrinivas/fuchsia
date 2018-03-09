@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_TESTING_FAKE_CONTROLLER_BASE_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_TESTING_FAKE_CONTROLLER_BASE_H_
 
-#include <async/cpp/wait.h>
+#include <lib/async/cpp/wait.h>
 #include <zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
@@ -81,3 +82,5 @@ class FakeControllerBase {
 
 }  // namespace testing
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_TESTING_FAKE_CONTROLLER_BASE_H_

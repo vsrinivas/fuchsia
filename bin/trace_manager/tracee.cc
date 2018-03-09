@@ -4,7 +4,7 @@
 
 #include "garnet/bin/trace_manager/tracee.h"
 
-#include <async/default.h>
+#include <lib/async/default.h>
 #include <trace-engine/fields.h>
 #include <trace-provider/provider.h>
 
@@ -88,9 +88,8 @@ bool Tracee::Start(size_t buffer_size,
   }
 
   zx::vmo buffer_vmo_for_provider;
-  status =
-      buffer_vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP,
-                           &buffer_vmo_for_provider);
+  status = buffer_vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MAP,
+                                &buffer_vmo_for_provider);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << *bundle_
                    << ": Failed to duplicate trace buffer for provider: status="
@@ -107,9 +106,9 @@ bool Tracee::Start(size_t buffer_size,
     return false;
   }
 
-  bundle_->provider->Start(
-      std::move(buffer_vmo_for_provider), std::move(fence_for_provider),
-      std::move(categories));
+  bundle_->provider->Start(std::move(buffer_vmo_for_provider),
+                           std::move(fence_for_provider),
+                           std::move(categories));
 
   buffer_vmo_ = std::move(buffer_vmo);
   buffer_vmo_size_ = buffer_size;
@@ -135,8 +134,8 @@ void Tracee::Stop() {
 }
 
 void Tracee::TransitionToState(State new_state) {
-  FXL_VLOG(2) << *bundle_ << ": Transitioning from " << state_
-              << " to " << new_state;
+  FXL_VLOG(2) << *bundle_ << ": Transitioning from " << state_ << " to "
+              << new_state;
   state_ = new_state;
 }
 
@@ -146,9 +145,8 @@ async_wait_result_t Tracee::OnHandleReady(async_t* async,
   if (status != ZX_OK) {
     FXL_VLOG(2) << *bundle_ << ": error=" << status;
     FXL_DCHECK(status == ZX_ERR_CANCELED);
-    FXL_DCHECK(state_ == State::kStartPending ||
-              state_ == State::kStarted ||
-              state_ == State::kStopping);
+    FXL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
+               state_ == State::kStopping);
     wait_.set_object(ZX_HANDLE_INVALID);
     async_ = nullptr;
     TransitionToState(State::kStopped);
@@ -157,11 +155,10 @@ async_wait_result_t Tracee::OnHandleReady(async_t* async,
 
   zx_signals_t pending = signal->observed;
   FXL_VLOG(2) << *bundle_ << ": pending=0x" << std::hex << pending;
-  FXL_DCHECK(pending & (TRACE_PROVIDER_SIGNAL_STARTED |
-                        TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW |
-                        ZX_EPAIR_PEER_CLOSED));
-  FXL_DCHECK(state_ == State::kStartPending ||
-             state_ == State::kStarted ||
+  FXL_DCHECK(pending &
+             (TRACE_PROVIDER_SIGNAL_STARTED |
+              TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW | ZX_EPAIR_PEER_CLOSED));
+  FXL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
              state_ == State::kStopping);
 
   // Handle this before BUFFER_OVERFLOW so that if they arrive together we'll
@@ -190,13 +187,15 @@ async_wait_result_t Tracee::OnHandleReady(async_t* async,
     // The signal remains set until we clear it.
     zx_object_signal(wait_.object(), TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW, 0u);
     if (state_ == State::kStarted || state_ == State::kStopping) {
-      FXL_LOG(WARNING) << *bundle_
-                       << ": Records got dropped, probably due to buffer overflow";
+      FXL_LOG(WARNING)
+          << *bundle_
+          << ": Records got dropped, probably due to buffer overflow";
       buffer_overflow_ = true;
     } else {
-      FXL_LOG(WARNING) << *bundle_
-                       << ": Received TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW in state "
-                       << state_;
+      FXL_LOG(WARNING)
+          << *bundle_
+          << ": Received TRACE_PROVIDER_SIGNAL_BUFFER_OVERFLOW in state "
+          << state_;
     }
   }
 

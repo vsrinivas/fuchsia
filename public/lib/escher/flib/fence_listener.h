@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_FLIB_FENCE_LISTENER_H_
+#define LIB_ESCHER_FLIB_FENCE_LISTENER_H_
 
-#include <async/cpp/auto_wait.h>
+#include <lib/async/cpp/auto_wait.h>
 #include <zircon/syscalls/port.h>
 #include <zx/event.h>
 
@@ -53,3 +54,5 @@ class FenceListener {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_FLIB_FENCE_LISTENER_H_

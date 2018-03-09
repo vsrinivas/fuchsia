@@ -14,10 +14,10 @@
 #include <iostream>
 #include <limits>
 
-#include <async/default.h>
-#include <async/cpp/loop.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
+#include <lib/async/cpp/loop.h>
+#include <lib/async/default.h>
 #include <zircon/status.h>
 #include <zx/event.h>
 #include <zx/time.h>
@@ -335,7 +335,8 @@ bool IntelFirmwareLoader::RunCommandAndExpect(
 
     // The expected event was not received in this iteration of the loop. Check
     // to see if this was due to a timeout.
-    zx_status_t status = timeout.wait_one(ZX_TIMER_SIGNALED, zx::time(), nullptr);
+    zx_status_t status =
+        timeout.wait_one(ZX_TIMER_SIGNALED, zx::time(), nullptr);
     if (status == ZX_OK) {
       std::cerr << "Timed out while waiting for event" << std::endl;
       return false;

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_CANCELABLE_TASK_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_CANCELABLE_TASK_H_
 
-#include <async/cpp/task.h>
+#include <lib/async/cpp/task.h>
 #include <zx/time.h>
 
 #include "lib/fxl/functional/closure.h"
@@ -43,3 +44,5 @@ class CancelableTask final {
 
 }  // namespace common
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_CANCELABLE_TASK_H_

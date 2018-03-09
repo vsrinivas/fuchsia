@@ -6,36 +6,37 @@
 
 #include <stdio.h>
 
-#include <async/cpp/loop.h>
-#include <async/cpp/task.h>
+#include <lib/async/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 
 namespace {
 
 zx_time_t now() {
-    return zx_clock_get(ZX_CLOCK_MONOTONIC);
+  return zx_clock_get(ZX_CLOCK_MONOTONIC);
 }
 
-} // namespace
+}  // namespace
 
 int main(int argc, char** argv) {
-    async::Loop loop;
-    trace::TraceProvider provider(loop.async());
+  async::Loop loop;
+  trace::TraceProvider provider(loop.async());
 
-    puts("Starting Benchmark...");
+  puts("Starting Benchmark...");
 
-    zx_time_t start_time = now();
-    async::Task task(start_time);
+  zx_time_t start_time = now();
+  async::Task task(start_time);
 
-    // Run the task for kIterationCount iterations.  We use a fixed number
-    // of iterations (rather than iterating the test until a fixed amount
-    // of time has elapsed) to avoid some statistical problems with using a
-    // variable sample size.
-    const uint32_t kIterationCount = 1000;
-    uint32_t iteration = 0;
+  // Run the task for kIterationCount iterations.  We use a fixed number
+  // of iterations (rather than iterating the test until a fixed amount
+  // of time has elapsed) to avoid some statistical problems with using a
+  // variable sample size.
+  const uint32_t kIterationCount = 1000;
+  uint32_t iteration = 0;
 
-    task.set_handler([&task, &loop, &iteration](async_t* async, zx_status_t status) {
+  task.set_handler(
+      [&task, &loop, &iteration](async_t* async, zx_status_t status) {
         // `task_start` and `task_end` are used to measure the time between
         // `example` benchmarks.  This is measured with a `time_between`
         // measurement type.
@@ -48,20 +49,20 @@ int main(int argc, char** argv) {
         zx_nanosleep(now() + ZX_USEC(1500));
 
         if (++iteration >= kIterationCount) {
-            loop.Quit();
-            return ASYNC_TASK_FINISHED;
+          loop.Quit();
+          return ASYNC_TASK_FINISHED;
         }
 
         // Schedule another benchmark.
         task.set_deadline(now() + ZX_USEC(500));
         TRACE_INSTANT("benchmark", "task_end", TRACE_SCOPE_PROCESS);
         return ASYNC_TASK_REPEAT;
-    });
+      });
 
-    task.Post(loop.async());
+  task.Post(loop.async());
 
-    loop.Run();
+  loop.Run();
 
-    puts("Finished.");
-    return 0;
+  puts("Finished.");
+  return 0;
 }

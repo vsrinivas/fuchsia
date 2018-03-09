@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <async/cpp/auto_wait.h>
+#include <lib/async/cpp/auto_wait.h>
 #include "lib/fsl/handles/object_info.h"
 
 #include "garnet/lib/ui/scenic/engine/unresolved_imports.h"

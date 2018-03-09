@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_FLIB_FENCE_SET_LISTENER_H_
+#define LIB_ESCHER_FLIB_FENCE_SET_LISTENER_H_
 
 #include <zx/event.h>
 
-#include <async/cpp/auto_wait.h>
+#include <lib/async/cpp/auto_wait.h>
 #include "lib/escher/flib/fence.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/functional/closure.h"
@@ -51,3 +52,5 @@ class FenceSetListener {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_FLIB_FENCE_SET_LISTENER_H_

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_BLUETOOTH_TOOLS_BTSNOOP_SNIFFER_H_
+#define GARNET_BIN_BLUETOOTH_TOOLS_BTSNOOP_SNIFFER_H_
 
-#include <async/cpp/auto_wait.h>
+#include <lib/async/cpp/auto_wait.h>
 #include <zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/common/bt_snoop_logger.h"
@@ -50,3 +51,5 @@ class Sniffer final {
 };
 
 }  // namespace btsnoop
+
+#endif  // GARNET_BIN_BLUETOOTH_TOOLS_BTSNOOP_SNIFFER_H_

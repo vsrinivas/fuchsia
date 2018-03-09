@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_SOCKET_FILES_H_
 #define LIB_FSL_SOCKET_FILES_H_
 
-#include <async/dispatcher.h>
+#include <lib/async/dispatcher.h>
 #include <zx/socket.h>
 
 #include <functional>

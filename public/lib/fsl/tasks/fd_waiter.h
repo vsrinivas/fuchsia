@@ -7,9 +7,9 @@
 
 #include <functional>
 
-#include <async/cpp/wait.h>
-#include <async/default.h>
 #include <fdio/private.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/async/default.h>
 #include <zircon/types.h>
 
 #include "lib/fxl/fxl_export.h"

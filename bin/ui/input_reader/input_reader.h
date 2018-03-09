@@ -8,7 +8,7 @@
 #include <map>
 #include <utility>
 
-#include <async/cpp/auto_wait.h>
+#include <lib/async/cpp/auto_wait.h>
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/macros.h"
@@ -38,7 +38,6 @@ class InputReader {
   void Start();
 
  private:
-
   void WatchDisplayOwnershipChanges(int dir_fd);
 
   void DeviceAdded(std::unique_ptr<InputInterpreter> interpreter);

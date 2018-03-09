@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_TEST_ASYNC_LOOP_FOR_TEST_H_
 #define LIB_FIDL_CPP_TEST_ASYNC_LOOP_FOR_TEST_H_
 
-#include <async/dispatcher.h>
+#include <lib/async/dispatcher.h>
 #include <zircon/types.h>
 #include <memory>
 

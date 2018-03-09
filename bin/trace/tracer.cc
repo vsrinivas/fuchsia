@@ -6,8 +6,8 @@
 
 #include <utility>
 
-#include <async/default.h>
 #include <fbl/type_support.h>
+#include <lib/async/default.h>
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
 
@@ -25,9 +25,7 @@ constexpr size_t kReadBufferSize = trace::RecordFields::kMaxRecordSizeBytes * 4;
 }  // namespace
 
 Tracer::Tracer(TraceController* controller)
-    : controller_(controller),
-      async_(nullptr),
-      wait_(this) {
+    : controller_(controller), async_(nullptr), wait_(this) {
   FXL_DCHECK(controller_);
   wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 }

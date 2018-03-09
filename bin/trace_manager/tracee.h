@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_TRACE_MANAGER_TRACEE_H_
 #define GARNET_BIN_TRACE_MANAGER_TRACEE_H_
 
-#include <async/cpp/wait.h>
+#include <lib/async/cpp/wait.h>
 #include <zx/socket.h>
 #include <zx/vmo.h>
 
@@ -23,7 +23,6 @@ namespace tracing {
 
 class Tracee {
  public:
-
   enum class State {
     // All systems go, provider hasn't been started, yet.
     kReady,
@@ -69,7 +68,8 @@ class Tracee {
                                     const zx_packet_signal_t* signal);
 
   TransferStatus WriteProviderInfoRecord(const zx::socket& socket) const;
-  TransferStatus WriteProviderBufferOverflowEvent(const zx::socket& socket) const;
+  TransferStatus WriteProviderBufferOverflowEvent(
+      const zx::socket& socket) const;
 
   TraceProviderBundle* bundle_;
   State state_ = State::kReady;

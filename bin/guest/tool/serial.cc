@@ -4,7 +4,7 @@
 
 #include "garnet/bin/guest/tool/serial.h"
 
-#include <async/cpp/wait.h>
+#include <lib/async/cpp/wait.h>
 #include <poll.h>
 #include <iostream>
 

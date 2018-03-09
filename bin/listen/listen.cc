@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <arpa/inet.h>
-#include <async/cpp/auto_wait.h>
-#include <async/cpp/loop.h>
-#include <async/default.h>
 #include <errno.h>
 #include <fdio/io.h>
 #include <fdio/util.h>
 #include <launchpad/launchpad.h>
+#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/loop.h>
+#include <lib/async/default.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <poll.h>
@@ -148,12 +148,13 @@ class Service {
 
     std::unique_ptr<async::AutoWait> waiter = std::make_unique<async::AutoWait>(
         async_get_default(), process.get(), ZX_PROCESS_TERMINATED);
-    waiter->set_handler([
-      this, process = std::move(process), job = std::move(child_job)
-    ](async_t*, zx_status_t status, const zx_packet_signal_t* signal) mutable {
-      ProcessTerminated(std::move(process), std::move(job));
-      return ASYNC_WAIT_FINISHED;
-    });
+    waiter->set_handler(
+        [this, process = std::move(process), job = std::move(child_job)](
+            async_t*, zx_status_t status,
+            const zx_packet_signal_t* signal) mutable {
+          ProcessTerminated(std::move(process), std::move(job));
+          return ASYNC_WAIT_FINISHED;
+        });
     waiter->Begin();
     process_waiters_.push_back(std::move(waiter));
   }

@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_NET_H_
 #define GARNET_LIB_MACHINA_VIRTIO_NET_H_
 
-#include <async/cpp/wait.h>
 #include <fbl/unique_fd.h>
+#include <lib/async/cpp/wait.h>
 #include <virtio/net.h>
 
 #include "garnet/lib/machina/virtio_device.h"

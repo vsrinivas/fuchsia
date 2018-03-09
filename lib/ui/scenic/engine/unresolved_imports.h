@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-#include <async/cpp/auto_wait.h>
+#include <lib/async/cpp/auto_wait.h>
 
 #include "garnet/lib/ui/scenic/resources/import.h"
 

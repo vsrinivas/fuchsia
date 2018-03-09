@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <async/cpp/loop.h>
+#include <lib/async/cpp/loop.h>
 #include <zx/channel.h>
 
 #include "garnet/examples/fidl2/services/echo2.fidl.cc.h"

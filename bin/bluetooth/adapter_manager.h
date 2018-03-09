@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_BLUETOOTH_ADAPTER_MANAGER_H_
+#define GARNET_BIN_BLUETOOTH_ADAPTER_MANAGER_H_
 
 #include <memory>
 #include <queue>
 #include <unordered_map>
 
-#include <async/cpp/task.h>
+#include <lib/async/cpp/task.h>
 
 #include "lib/bluetooth/fidl/control.fidl.h"
 #include "lib/fsl/io/device_watcher.h"
@@ -182,3 +183,5 @@ class AdapterManager final {
 };
 
 }  // namespace bluetooth_service
+
+#endif  // GARNET_BIN_BLUETOOTH_ADAPTER_MANAGER_H_

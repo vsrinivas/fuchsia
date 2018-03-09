@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <async/default.h>
-#include <async/cpp/loop.h>
+#include <lib/async/cpp/loop.h>
+#include <lib/async/default.h>
 
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
 

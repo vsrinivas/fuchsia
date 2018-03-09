@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <async/cpp/loop.h>
-#include <async/default.h>
 #include <launchpad/launchpad.h>
+#include <lib/async/cpp/loop.h>
+#include <lib/async/default.h>
 #include <zircon/processargs.h>
 #include <zx/process.h>
 
