@@ -34,6 +34,7 @@ template("fidl_cpp") {
 
   file_stem = "$base_gen_dir/$library_name.fidl"
   c_header = "$file_stem.c.h"
+  tables = "$file_stem.tables.cc"
 
   if (current_toolchain == current_base_toolchain) {
     fidl_target_gen_dir =
@@ -79,11 +80,14 @@ template("fidl_cpp") {
 
       outputs = [
         c_header,
+        tables,
       ]
 
       args = [
                "--c-header",
                rebase_path(c_header, root_build_dir),
+               "--tables",
+               rebase_path(tables, root_build_dir),
                "--files",
              ] + rebase_path(inputs, root_build_dir)
     }
@@ -102,6 +106,7 @@ template("fidl_cpp") {
       "$file_stem.cc",
       "$file_stem.cc.h",
       c_header,
+      tables,
     ]
 
     deps = [

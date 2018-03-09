@@ -93,9 +93,11 @@ type Method struct {
 	HasRequest          bool
 	Request             []Parameter
 	RequestSize         int
+	RequestTypeName     string
 	HasResponse         bool
 	Response            []Parameter
 	ResponseSize        int
+	ResponseTypeName    string
 	CallbackType        string
 	ResponseHandlerType string
 	ResponderType       string
@@ -515,9 +517,11 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			v.HasRequest,
 			c.compileParameterArray(v.Request),
 			v.RequestSize,
+			fmt.Sprintf("%s%sRequestTable", r.Name, v.Name),
 			v.HasResponse,
 			c.compileParameterArray(v.Response),
 			v.ResponseSize,
+			fmt.Sprintf("%s%sResponseTable", r.Name, v.Name),
 			callbackType,
 			fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),

@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_IMPLEMENTATION_H_
 #define LIB_FIDL_CPP_INTERNAL_IMPLEMENTATION_H_
 
+#include <fidl/internal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <zircon/assert.h>

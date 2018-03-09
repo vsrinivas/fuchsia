@@ -132,9 +132,14 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
 
 {{- define "InterfaceDefinition" }}
 namespace {
+
 {{ range .Methods }}
   {{- if .HasRequest }}
 constexpr uint32_t {{ .OrdinalName }} = {{ .Ordinal }}u;
+extern "C" const fidl_type_t {{ .RequestTypeName }};
+    {{- if .HasResponse }}
+extern "C" const fidl_type_t {{ .ResponseTypeName }};
+    {{- end }}
   {{- end }}
 {{- end }}
 
@@ -168,7 +173,7 @@ class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
 
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(nullptr, &error_msg);
+    zx_status_t status = message.Decode(&{{ .ResponseTypeName }}, &error_msg);
     if (status != ZX_OK) {
       fprintf(stderr, "error: fidl_decode: %s\n", error_msg);
       return status;
@@ -203,9 +208,9 @@ void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
       {{- end }}
     {{- end }}
     {{- if .HasResponse }}
-  controller_->Send(nullptr, encoder.GetMessage(), std::make_unique<{{ .ResponseHandlerType }}>(std::move(callback)));
+  controller_->Send(&{{ .RequestTypeName }}, encoder.GetMessage(), std::make_unique<{{ .ResponseHandlerType }}>(std::move(callback)));
     {{- else }}
-  controller_->Send(nullptr, encoder.GetMessage(), nullptr);
+  controller_->Send(&{{ .RequestTypeName }}, encoder.GetMessage(), nullptr);
     {{- end }}
 }
   {{- end }}
@@ -233,7 +238,7 @@ class {{ .ResponderType }} {
   ::fidl::Encode(&encoder, &{{ .Name }}, {{ .Offset }});
         {{- end }}
       {{- end }}
-    response_.Send(nullptr, encoder.GetMessage());
+    response_.Send(&{{ .ResponseTypeName }}, encoder.GetMessage());
   }
 
  private:
@@ -254,7 +259,7 @@ zx_status_t {{ .StubName }}::Dispatch(
       {{- if .HasRequest }}
     case {{ .OrdinalName }}: {
       const char* error_msg = nullptr;
-      status = message.Decode(nullptr, &error_msg);
+      status = message.Decode(&{{ .RequestTypeName }}, &error_msg);
       if (status != ZX_OK) {
         fprintf(stderr, "error: fidl_decode: %s\n", error_msg);
         break;
@@ -300,7 +305,7 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
     {{- if .HasResponse }}
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
-  zx_status_t status_ = proxy_.Call(nullptr, nullptr, encoder_.GetMessage(), &response_);
+  zx_status_t status_ = proxy_.Call(&{{ .RequestTypeName }}, &{{ .ResponseTypeName }}, encoder_.GetMessage(), &response_);
   if (status_ != ZX_OK)
     return status_;
       {{- if .Response }}
@@ -311,7 +316,7 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
       {{- end }}
   return ZX_OK;
     {{- else }}
-  return proxy_.Send(nullptr, encoder_.GetMessage());
+  return proxy_.Send(&{{ .RequestTypeName }}, encoder_.GetMessage());
     {{- end }}
 }
   {{- end }}
