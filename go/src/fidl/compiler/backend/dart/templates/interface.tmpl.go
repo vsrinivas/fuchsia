@@ -94,7 +94,7 @@ class {{ .ProxyName }} extends $fidl.Proxy<{{ .Name }}>
     {{- end }}
     {{- if .HasResponse }}
     Function $zonedCallback;
-    if ((callback == null) || identical(Zone.current, Zone.ROOT)) {
+    if ((callback == null) || identical(Zone.current, Zone.root)) {
       $zonedCallback = callback;
     } else {
       Zone $z = Zone.current;
