@@ -30,7 +30,7 @@ void IncomingTaskQueue::PostDelayedTask(fxl::Closure task,
 }
 
 void IncomingTaskQueue::AddTask(fxl::Closure task, fxl::TimePoint target_time) {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   if (drop_incoming_tasks_)
     return;
@@ -42,14 +42,14 @@ void IncomingTaskQueue::AddTask(fxl::Closure task, fxl::TimePoint target_time) {
 }
 
 bool IncomingTaskQueue::RunsTasksOnCurrentThread() {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   return delegate_ && delegate_->RunsTasksOnCurrentThread();
 }
 
 void IncomingTaskQueue::InitDelegate(TaskQueueDelegate* delegate) {
   FXL_DCHECK(delegate);
 
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(!drop_incoming_tasks_);
 
   delegate_ = delegate;
@@ -59,7 +59,7 @@ void IncomingTaskQueue::InitDelegate(TaskQueueDelegate* delegate) {
 }
 
 void IncomingTaskQueue::ClearDelegate() {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   FXL_DCHECK(!drop_incoming_tasks_);
   drop_incoming_tasks_ = true;

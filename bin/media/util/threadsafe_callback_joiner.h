@@ -5,10 +5,10 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
@@ -60,7 +60,7 @@ class ThreadsafeCallbackJoiner
   bool Cancel();
 
  private:
-  fxl::Mutex mutex_;
+  std::mutex mutex_;
   size_t counter_ = 0;
   fxl::Closure join_callback_;
   fxl::RefPtr<fxl::TaskRunner> join_callback_runner_;

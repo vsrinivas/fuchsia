@@ -11,6 +11,8 @@
 #include <zircon/device/audio.h>
 #include <zx/channel.h>
 #include <zx/vmo.h>
+
+#include <mutex>
 #include <string>
 
 #include "garnet/bin/media/audio_server/audio_device.h"
@@ -81,7 +83,7 @@ class AudioDriver {
   uint32_t fifo_depth_frames() const { return fifo_depth_frames_; }
 
   void SetEndFenceToStartFenceFrames(uint32_t dist) {
-    fxl::MutexLocker lock(&ring_buffer_state_lock_);
+    std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
     end_fence_to_start_fence_frames_ = dist;
   }
 
@@ -98,12 +100,11 @@ class AudioDriver {
   friend class AudioDevice;
 
   // Dispatchers for messages received over stream and ring buffer channels.
-  zx_status_t ReadMessage(
-      const fbl::RefPtr<::dispatcher::Channel>& channel,
-      void* buf,
-      uint32_t buf_size,
-      uint32_t* bytes_read_out,
-      zx::handle* handle_out)
+  zx_status_t ReadMessage(const fbl::RefPtr<::dispatcher::Channel>& channel,
+                          void* buf,
+                          uint32_t buf_size,
+                          uint32_t* bytes_read_out,
+                          zx::handle* handle_out)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
   zx_status_t ProcessStreamChannelMessage()
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
@@ -210,7 +211,7 @@ class AudioDriver {
   // A stashed copy of the currently configured format which may be queried by
   // destintions (either outputs or capturers) when determining what mixer to
   // use.
-  mutable fxl::Mutex configured_format_lock_;
+  mutable std::mutex configured_format_lock_;
   AudioMediaTypeDetailsPtr configured_format_
       FXL_GUARDED_BY(configured_format_lock_);
 
@@ -218,7 +219,7 @@ class AudioDriver {
   // protected by a lock and changes are tracked with a generation counter.
   // This is importatnt as it allows capturer clients to take a snapshot of the
   // ring buffer state during mixing/resampling operations.
-  mutable fxl::Mutex ring_buffer_state_lock_;
+  mutable std::mutex ring_buffer_state_lock_;
   fbl::RefPtr<DriverRingBuffer> ring_buffer_
       FXL_GUARDED_BY(ring_buffer_state_lock_);
   TimelineFunction clock_mono_to_ring_pos_bytes_

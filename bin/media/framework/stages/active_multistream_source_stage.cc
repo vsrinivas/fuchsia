@@ -70,7 +70,7 @@ GenericNode* ActiveMultistreamSourceStageImpl::GetGenericNode() {
 }
 
 void ActiveMultistreamSourceStageImpl::Update() {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   FXL_DCHECK(outputs_.size() == packets_per_output_.size());
 
@@ -108,7 +108,7 @@ void ActiveMultistreamSourceStageImpl::FlushInput(
 }
 
 void ActiveMultistreamSourceStageImpl::FlushOutput(size_t index) {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(index < outputs_.size());
   FXL_DCHECK(source_);
   packets_per_output_[index].clear();
@@ -127,7 +127,7 @@ void ActiveMultistreamSourceStageImpl::PostTask(const fxl::Closure& task) {
 
 void ActiveMultistreamSourceStageImpl::SupplyPacket(size_t output_index,
                                                     PacketPtr packet) {
-  mutex_.Lock();
+  mutex_.lock();
   FXL_DCHECK(output_index < outputs_.size());
   FXL_DCHECK(outputs_.size() == packets_per_output_.size());
   FXL_DCHECK(packet);
@@ -135,7 +135,7 @@ void ActiveMultistreamSourceStageImpl::SupplyPacket(size_t output_index,
   if (!packet_request_outstanding_) {
     // We requested a packet, then changed our minds due to a flush. Discard
     // the packet.
-    mutex_.Unlock();
+    mutex_.unlock();
     return;
   }
 
@@ -156,7 +156,7 @@ void ActiveMultistreamSourceStageImpl::SupplyPacket(size_t output_index,
     // We have a packet for an output with non-negative demand that didn't
     // have one before. Request an update. Update will request another
     // packet, if needed.
-    mutex_.Unlock();
+    mutex_.unlock();
     NeedsUpdate();
   } else {
     // We got a packet, but it doesn't change matters, either because the
@@ -165,7 +165,7 @@ void ActiveMultistreamSourceStageImpl::SupplyPacket(size_t output_index,
     // We can request another packet without having to go through an update.
     source_->RequestPacket();
     packet_request_outstanding_ = true;
-    mutex_.Unlock();
+    mutex_.unlock();
   }
 }
 

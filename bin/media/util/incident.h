@@ -5,9 +5,9 @@
 #pragma once
 
 #include <functional>
+#include <mutex>
 #include <vector>
 
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 // The Incident class provides a facility for executing code as the consequence
@@ -90,7 +90,7 @@ class ThreadsafeIncident {
   // immediately after this method returns, so there's no guarantee that the
   // result is still valid.
   bool occurred() {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     return occurred_;
   }
 
@@ -105,7 +105,7 @@ class ThreadsafeIncident {
   // and when the consequence is actually run.
   void When(const std::function<void()>& consequence) {
     {
-      fxl::MutexLocker locker(&mutex_);
+      std::lock_guard<std::mutex> locker(mutex_);
       if (!occurred_) {
         consequences_.push_back(consequence);
         return;
@@ -123,13 +123,13 @@ class ThreadsafeIncident {
   // Resets this ThreadsafeIncident to initial state and clears the list of
   // consequences.
   void Reset() {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     occurred_ = false;
     consequences_.clear();
   }
 
  private:
-  mutable fxl::Mutex mutex_;
+  mutable std::mutex mutex_;
   bool occurred_ FXL_GUARDED_BY(mutex_) = false;
   std::vector<std::function<void()>> consequences_ FXL_GUARDED_BY(mutex_);
 };

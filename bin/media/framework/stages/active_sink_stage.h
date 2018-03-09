@@ -5,10 +5,10 @@
 #pragma once
 
 #include <deque>
+#include <mutex>
 
 #include "garnet/bin/media/framework/models/active_sink.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
@@ -58,7 +58,7 @@ class ActiveSinkStageImpl : public StageImpl, public ActiveSinkStage {
   Input input_;
   std::shared_ptr<ActiveSink> sink_;
 
-  mutable fxl::Mutex mutex_;
+  mutable std::mutex mutex_;
   Demand sink_demand_ FXL_GUARDED_BY(mutex_) = Demand::kNegative;
 };
 

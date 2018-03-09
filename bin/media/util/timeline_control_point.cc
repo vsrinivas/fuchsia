@@ -25,14 +25,14 @@ TimelineControlPoint::TimelineControlPoint()
   task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
   FXL_DCHECK(task_runner_);
 
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   ClearPendingTimelineFunction(false);
 
   status_publisher_.SetCallbackRunner(
       [this](const GetStatusCallback& callback, uint64_t version) {
         MediaTimelineControlPointStatusPtr status;
         {
-          fxl::MutexLocker locker(&mutex_);
+          std::lock_guard<std::mutex> locker(mutex_);
           status = MediaTimelineControlPointStatus::New();
           status->timeline_transform =
               static_cast<TimelineTransformPtr>(current_timeline_function_);
@@ -74,7 +74,7 @@ void TimelineControlPoint::Reset() {
   }
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     current_timeline_function_ = TimelineFunction();
     ClearPendingTimelineFunction(false);
     generation_ = 1;
@@ -87,7 +87,7 @@ void TimelineControlPoint::SnapshotCurrentFunction(int64_t reference_time,
                                                    TimelineFunction* out,
                                                    uint32_t* generation) {
   FXL_DCHECK(out);
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   ApplyPendingChanges(reference_time);
   *out = current_timeline_function_;
   if (generation) {
@@ -101,7 +101,7 @@ void TimelineControlPoint::SnapshotCurrentFunction(int64_t reference_time,
 }
 
 void TimelineControlPoint::SetEndOfStreamPts(int64_t end_of_stream_pts) {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   if (end_of_stream_pts_ != end_of_stream_pts) {
     end_of_stream_pts_ = end_of_stream_pts;
     end_of_stream_published_ = false;
@@ -109,7 +109,7 @@ void TimelineControlPoint::SetEndOfStreamPts(int64_t end_of_stream_pts) {
 }
 
 void TimelineControlPoint::ClearEndOfStream() {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   if (end_of_stream_pts_ != kUnspecifiedTime) {
     end_of_stream_pts_ = kUnspecifiedTime;
     end_of_stream_published_ = false;
@@ -117,8 +117,6 @@ void TimelineControlPoint::ClearEndOfStream() {
 }
 
 bool TimelineControlPoint::ReachedEndOfStream() {
-  mutex_.AssertHeld();
-
   return end_of_stream_pts_ != kUnspecifiedTime &&
          current_timeline_function_(Timeline::local_now()) >=
              end_of_stream_pts_;
@@ -157,7 +155,7 @@ void TimelineControlPoint::Prime(const PrimeCallback& callback) {
 void TimelineControlPoint::SetTimelineTransform(
     TimelineTransformPtr timeline_transform,
     const SetTimelineTransformCallback& callback) {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   SetTimelineTransformLocked(std::move(timeline_transform));
 
@@ -166,15 +164,13 @@ void TimelineControlPoint::SetTimelineTransform(
 
 void TimelineControlPoint::SetTimelineTransformNoReply(
     TimelineTransformPtr timeline_transform) {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   SetTimelineTransformLocked(std::move(timeline_transform));
 }
 
 void TimelineControlPoint::SetTimelineTransformLocked(
     TimelineTransformPtr timeline_transform) {
-  mutex_.AssertHeld();
-
   RCHECK(timeline_transform);
   RCHECK(timeline_transform->reference_delta != 0);
 
@@ -206,8 +202,6 @@ void TimelineControlPoint::SetTimelineTransformLocked(
 }
 
 void TimelineControlPoint::ApplyPendingChanges(int64_t reference_time) {
-  mutex_.AssertHeld();
-
   if (!TimelineFunctionPending() ||
       pending_timeline_function_.reference_time() > reference_time) {
     return;
@@ -222,8 +216,6 @@ void TimelineControlPoint::ApplyPendingChanges(int64_t reference_time) {
 }
 
 void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
-  mutex_.AssertHeld();
-
   pending_timeline_function_ =
       TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
   if (set_timeline_transform_callback_) {
@@ -235,12 +227,10 @@ void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
 }
 
 void TimelineControlPoint::PostReset() {
-  mutex_.AssertHeld();
   task_runner_->PostTask([this]() { Reset(); });
 }
 
 bool TimelineControlPoint::ProgressingInternal() {
-  mutex_.AssertHeld();
   return !end_of_stream_published_ &&
          (current_timeline_function_.subject_delta() != 0 ||
           pending_timeline_function_.subject_delta() != 0);

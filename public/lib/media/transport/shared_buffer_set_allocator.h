@@ -6,11 +6,11 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <vector>
 
 #include "lib/fxl/logging.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/media/transport/fifo_allocator.h"
 #include "lib/media/transport/shared_buffer_set.h"
@@ -189,7 +189,7 @@ class SharedBufferSetAllocator : public SharedBufferSet {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   zx_rights_t remote_rights_;
-  mutable fxl::Mutex mutex_;
+  mutable std::mutex mutex_;
   bool use_fixed_buffer_ FXL_GUARDED_BY(mutex_) = false;
   std::vector<Buffer> buffers_ FXL_GUARDED_BY(mutex_);
   std::multimap<uint64_t, uint32_t> free_whole_buffer_ids_by_size_

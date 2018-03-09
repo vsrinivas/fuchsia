@@ -54,7 +54,7 @@ void ActiveSinkStageImpl::Update() {
   Demand demand;
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
 
     if (input_.packet()) {
       sink_demand_ = sink_->SupplyPacket(input_.TakePacket(Demand::kNegative));
@@ -75,7 +75,7 @@ void ActiveSinkStageImpl::FlushInput(size_t index,
   FXL_DCHECK(sink_);
   input_.Flush();
   sink_->Flush(hold_frame);
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   sink_demand_ = Demand::kNegative;
 }
 
@@ -96,7 +96,7 @@ void ActiveSinkStageImpl::SetDemand(Demand demand) {
   bool needs_update = false;
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     if (sink_demand_ != demand) {
       sink_demand_ = demand;
       needs_update = true;

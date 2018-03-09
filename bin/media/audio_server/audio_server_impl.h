@@ -7,6 +7,8 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
 
+#include <mutex>
+
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
@@ -14,7 +16,6 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/fidl/audio_capturer.fidl.h"
@@ -81,7 +82,7 @@ class AudioServerImpl : public AudioServer {
   AudioDeviceManager device_manager_;
 
   // State for dealing with cleanup tasks.
-  fxl::Mutex cleanup_queue_mutex_;
+  std::mutex cleanup_queue_mutex_;
   fbl::DoublyLinkedList<fbl::unique_ptr<AudioPacketRef>> packet_cleanup_queue_
       FXL_GUARDED_BY(cleanup_queue_mutex_);
   fbl::DoublyLinkedList<fbl::unique_ptr<PendingFlushToken>> flush_cleanup_queue_

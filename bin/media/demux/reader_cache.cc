@@ -94,7 +94,7 @@ ReaderCache::Store::Store() {}
 ReaderCache::Store::~Store() {}
 
 void ReaderCache::Store::Initialize(Result result, size_t size, bool can_seek) {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   result_ = result;
   size_ = size;
@@ -111,7 +111,7 @@ void ReaderCache::Store::Describe(const DescribeCallback& callback) {
   Result result;
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     result = result_;
   }
 
@@ -119,7 +119,7 @@ void ReaderCache::Store::Describe(const DescribeCallback& callback) {
 }
 
 void ReaderCache::Store::SetReadAtRequest(ReadAtRequest* request) {
-  mutex_.Lock();
+  mutex_.lock();
 
   FXL_DCHECK(read_request_ == nullptr);
   FXL_DCHECK(request->position() < size_);
@@ -139,7 +139,7 @@ void ReaderCache::Store::SetReadAtRequest(ReadAtRequest* request) {
 size_t ReaderCache::Store::GetIntakePositionAndSize(size_t* size_out) {
   FXL_DCHECK(size_out);
 
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   size_t size = kDefaultReadSize;
 
@@ -166,7 +166,7 @@ size_t ReaderCache::Store::GetIntakePositionAndSize(size_t* size_out) {
 
 void ReaderCache::Store::PutIntakeBuffer(size_t position,
                                          std::vector<uint8_t>&& buffer) {
-  mutex_.Lock();
+  mutex_.lock();
 
   FXL_DCHECK(intake_hole_ != sparse_byte_buffer_.null_hole());
   FXL_DCHECK(position == intake_hole_.position());
@@ -190,7 +190,7 @@ void ReaderCache::Store::PutIntakeBuffer(size_t position,
 void ReaderCache::Store::ReportIntakeError(Result result) {
   FXL_DCHECK(result != Result::kOk);
 
-  mutex_.Lock();
+  mutex_.lock();
   result_ = result;
 
   ServeRequest();  // unlocks mutex_
@@ -201,7 +201,7 @@ void ReaderCache::Store::ServeRequest() {
   Result read_request_result;
 
   if (read_request_ == nullptr) {
-    mutex_.Unlock();
+    mutex_.unlock();
     return;
   }
 
@@ -213,7 +213,7 @@ void ReaderCache::Store::ServeRequest() {
       // to fill this need.
       read_hole_ = sparse_byte_buffer_.FindOrCreateHole(read_request_position_,
                                                         intake_hole_);
-      mutex_.Unlock();
+      mutex_.unlock();
       return;
     }
 
@@ -242,7 +242,7 @@ void ReaderCache::Store::ServeRequest() {
   read_request_result = result_;
   read_request_ = nullptr;
 
-  mutex_.Unlock();
+  mutex_.unlock();
 
   FXL_DCHECK(read_request_to_complete);
   read_request_to_complete->Complete(read_request_result);

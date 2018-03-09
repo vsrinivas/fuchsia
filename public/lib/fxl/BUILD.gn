@@ -108,7 +108,6 @@ source_set("fxl_lib") {
     "strings/utf_codecs.h",
     "synchronization/monitor.cc",
     "synchronization/monitor.h",
-    "synchronization/mutex.h",
     "synchronization/sleep.cc",
     "synchronization/sleep.h",
     "synchronization/thread_annotations.h",
@@ -134,13 +133,11 @@ source_set("fxl_lib") {
     sources += [
       "files/path_win.cc",
       "files/symlink_win.cc",
-      "synchronization/mutex_win.cc",
     ]
   } else {
     sources += [
       "files/path_posix.cc",
       "files/symlink_posix.cc",
-      "synchronization/mutex_posix.cc",
     ]
   }
 
@@ -253,7 +250,6 @@ executable("fxl_unittests") {
     "strings/string_printf_unittest.cc",
     "strings/string_view_unittest.cc",
     "strings/trim_unittest.cc",
-    "synchronization/mutex_unittest.cc",
     "synchronization/thread_annotations_unittest.cc",
     "synchronization/thread_checker_unittest.cc",
     "synchronization/waitable_event_unittest.cc",

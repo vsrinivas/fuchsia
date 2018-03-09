@@ -5,12 +5,12 @@
 #pragma once
 
 #include <list>
+#include <mutex>
 #include <set>
 #include <vector>
 
 #include "garnet/bin/media/framework/models/active_multistream_sink.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
@@ -72,7 +72,7 @@ class ActiveMultistreamSinkStageImpl : public StageImpl,
 
   std::shared_ptr<ActiveMultistreamSink> sink_;
 
-  mutable fxl::Mutex mutex_;
+  mutable std::mutex mutex_;
   std::vector<std::unique_ptr<StageInput>> inputs_ FXL_GUARDED_BY(mutex_);
   std::set<size_t> unallocated_inputs_ FXL_GUARDED_BY(mutex_);
   std::list<size_t> pending_inputs_ FXL_GUARDED_BY(mutex_);

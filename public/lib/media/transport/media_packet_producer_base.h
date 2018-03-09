@@ -6,8 +6,8 @@
 #define LIB_MEDIA_TRANSPORT_MEDIA_PACKET_PRODUCER_BASE_H_
 
 #include <limits>
+#include <mutex>
 
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/media/fidl/media_transport.fidl.h"
@@ -99,7 +99,7 @@ class MediaPacketProducerBase {
   MediaPacketConsumerPtr consumer_;
   bool flush_in_progress_ = false;
 
-  mutable fxl::Mutex mutex_;
+  mutable std::mutex mutex_;
   MediaPacketDemand demand_ FXL_GUARDED_BY(mutex_);
   uint32_t packets_outstanding_ FXL_GUARDED_BY(mutex_);
   int64_t pts_last_produced_ FXL_GUARDED_BY(mutex_) =

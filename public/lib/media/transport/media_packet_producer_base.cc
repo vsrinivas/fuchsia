@@ -62,7 +62,7 @@ void MediaPacketProducerBase::FlushConsumer(
   FXL_DCHECK(consumer_.is_bound());
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     end_of_stream_ = false;
   }
 
@@ -117,7 +117,7 @@ void MediaPacketProducerBase::ProducePacket(
   media_packet->payload_size = size;
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     ++packets_outstanding_;
     pts_last_produced_ = pts;
     end_of_stream_ = end_of_stream;
@@ -139,7 +139,7 @@ void MediaPacketProducerBase::ProducePacket(
         FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
         {
-          fxl::MutexLocker locker(&mutex_);
+          std::lock_guard<std::mutex> locker(mutex_);
           --packets_outstanding_;
         }
 
@@ -153,7 +153,7 @@ void MediaPacketProducerBase::ProducePacket(
 
 bool MediaPacketProducerBase::ShouldProducePacket(
     uint32_t additional_packets_outstanding) {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   // Shouldn't send any more after end of stream.
   if (end_of_stream_) {
@@ -176,7 +176,7 @@ void MediaPacketProducerBase::OnFailure() {
 }
 
 void MediaPacketProducerBase::ResetDemand() {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   packets_outstanding_ = 0;
   demand_.min_packets_outstanding = 0;
   demand_.min_pts = MediaPacket::kNoTimestamp;
@@ -208,7 +208,7 @@ void MediaPacketProducerBase::UpdateDemand(const MediaPacketDemand& demand) {
   bool updated = false;
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     if (demand_.min_packets_outstanding != demand.min_packets_outstanding ||
         demand_.min_pts != demand.min_pts) {
       demand_.min_packets_outstanding = demand.min_packets_outstanding;

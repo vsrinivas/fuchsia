@@ -21,7 +21,7 @@ void StageImpl::UnprepareOutput(size_t index,
 
 void StageImpl::ShutDown() {
   {
-    fxl::MutexLocker locker(&tasks_mutex_);
+    std::lock_guard<std::mutex> locker(tasks_mutex_);
     while (!tasks_.empty()) {
       tasks_.pop();
     }
@@ -67,7 +67,7 @@ void StageImpl::UpdateUntilDone() {
 void StageImpl::Acquire(const fxl::Closure& callback) {
   PostTask([this, callback]() {
     {
-      fxl::MutexLocker locker(&tasks_mutex_);
+      std::lock_guard<std::mutex> locker(tasks_mutex_);
       tasks_suspended_ = true;
     }
 
@@ -77,7 +77,7 @@ void StageImpl::Acquire(const fxl::Closure& callback) {
 
 void StageImpl::Release() {
   {
-    fxl::MutexLocker locker(&tasks_mutex_);
+    std::lock_guard<std::mutex> locker(tasks_mutex_);
     tasks_suspended_ = false;
     if (tasks_.empty()) {
       // Don't need to run tasks.
@@ -102,7 +102,7 @@ void StageImpl::PostTask(const fxl::Closure& task) {
   FXL_DCHECK(task);
 
   {
-    fxl::MutexLocker locker(&tasks_mutex_);
+    std::lock_guard<std::mutex> locker(tasks_mutex_);
     tasks_.push(task);
     if (tasks_.size() != 1 || tasks_suspended_) {
       // Don't need to run tasks, either because there were already tasks in
@@ -124,22 +124,22 @@ void StageImpl::PostShutdownTask(fxl::Closure task) {
 }
 
 void StageImpl::RunTasks() {
-  tasks_mutex_.Lock();
+  tasks_mutex_.lock();
 
   while (!tasks_.empty() && !tasks_suspended_) {
     fxl::Closure& task = tasks_.front();
-    tasks_mutex_.Unlock();
+    tasks_mutex_.unlock();
     task();
     // The closure may be keeping objects alive. Destroy it here so those
     // objects are destroyed with the mutex unlocked. It's OK to do this,
     // because this method is the only consumer of tasks from the queue, and
     // this method will not be re-entered.
     task = nullptr;
-    tasks_mutex_.Lock();
+    tasks_mutex_.lock();
     tasks_.pop();
   }
 
-  tasks_mutex_.Unlock();
+  tasks_mutex_.unlock();
 }
 
 }  // namespace media

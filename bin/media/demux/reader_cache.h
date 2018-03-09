@@ -6,12 +6,12 @@
 
 #include <atomic>
 #include <map>
+#include <mutex>
 #include <vector>
 
 #include "garnet/bin/media/demux/reader.h"
 #include "garnet/bin/media/demux/sparse_byte_buffer.h"
 #include "garnet/bin/media/util/incident.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
@@ -136,7 +136,7 @@ class ReaderCache : public Reader {
     size_t size_ = kUnknownSize;
     bool can_seek_ = false;
 
-    mutable fxl::Mutex mutex_;
+    mutable std::mutex mutex_;
     Result result_ FXL_GUARDED_BY(mutex_) = Result::kOk;
     SparseByteBuffer sparse_byte_buffer_ FXL_GUARDED_BY(mutex_);
     SparseByteBuffer::Hole intake_hole_ FXL_GUARDED_BY(mutex_);

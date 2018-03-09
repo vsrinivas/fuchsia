@@ -5,11 +5,11 @@
 #pragma once
 
 #include <deque>
+#include <mutex>
 #include <vector>
 
 #include "garnet/bin/media/framework/models/active_multistream_source.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
@@ -64,7 +64,7 @@ class ActiveMultistreamSourceStageImpl : public StageImpl,
   std::vector<std::deque<PacketPtr>> packets_per_output_;
   std::shared_ptr<ActiveMultistreamSource> source_;
 
-  mutable fxl::Mutex mutex_;
+  mutable std::mutex mutex_;
   size_t ended_streams_ FXL_GUARDED_BY(mutex_) = 0;
   bool packet_request_outstanding_ FXL_GUARDED_BY(mutex_) = false;
 };

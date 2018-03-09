@@ -4,9 +4,10 @@
 
 #pragma once
 
+#include <mutex>
+
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/fidl/timeline_controller.fidl.h"
@@ -54,7 +55,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   // Determines if presentation time is progressing or a pending change will
   // cause it to progress.
   bool Progressing() {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     return ProgressingInternal();
   }
 
@@ -128,7 +129,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   PrimeRequestedCallback prime_requested_callback_;
   ProgressStartedCallback progress_started_callback_;
 
-  fxl::Mutex mutex_;
+  std::mutex mutex_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_ FXL_GUARDED_BY(mutex_);
   TimelineFunction current_timeline_function_ FXL_GUARDED_BY(mutex_);
   TimelineFunction pending_timeline_function_ FXL_GUARDED_BY(mutex_);

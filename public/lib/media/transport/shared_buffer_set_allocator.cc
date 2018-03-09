@@ -13,7 +13,7 @@ SharedBufferSetAllocator::SharedBufferSetAllocator(uint32_t local_map_flags,
 SharedBufferSetAllocator::~SharedBufferSetAllocator() {}
 
 void SharedBufferSetAllocator::Reset() {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   use_fixed_buffer_ = false;
   buffers_.clear();
@@ -29,7 +29,7 @@ void SharedBufferSetAllocator::Reset() {
 bool SharedBufferSetAllocator::SetFixedBufferSize(uint64_t size) {
   FXL_DCHECK(size != 0);
 
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   FXL_DCHECK(!use_fixed_buffer_) << "SetFixedBufferSize called more than once";
   FXL_DCHECK(buffers_.empty())
@@ -49,7 +49,7 @@ bool SharedBufferSetAllocator::SetFixedBufferSize(uint64_t size) {
 void* SharedBufferSetAllocator::AllocateRegion(uint64_t size) {
   FXL_DCHECK(size != 0);
 
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   Locator locator;
 
@@ -65,7 +65,7 @@ void* SharedBufferSetAllocator::AllocateRegion(uint64_t size) {
 void SharedBufferSetAllocator::ReleaseRegion(void* ptr) {
   FXL_DCHECK(ptr != nullptr);
 
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   if (buffers_.empty()) {
     // Freeing after |Reset|.
@@ -91,7 +91,7 @@ bool SharedBufferSetAllocator::PollForBufferUpdate(uint32_t* buffer_id_out,
   FXL_DCHECK(buffer_id_out != nullptr);
   FXL_DCHECK(handle_out != nullptr);
 
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   if (buffer_updates_.empty()) {
     return false;

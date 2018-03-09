@@ -5,6 +5,7 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <unordered_set>
 
@@ -13,7 +14,6 @@
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
 
@@ -126,13 +126,13 @@ class FactoryServiceBase {
   // Adds a product to the factory's collection of products. Threadsafe.
   template <typename ProductImpl>
   void AddProduct(std::shared_ptr<ProductImpl> product) {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     products_.insert(std::static_pointer_cast<ProductBase>(product));
   }
 
   // Removes a product from the factory's collection of products. Threadsafe.
   void RemoveProduct(std::shared_ptr<ProductBase> product) {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     bool erased = products_.erase(product);
     FXL_DCHECK(erased);
     if (products_.empty()) {
@@ -162,7 +162,7 @@ class FactoryServiceBase {
  private:
   std::unique_ptr<app::ApplicationContext> application_context_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
-  mutable fxl::Mutex mutex_;
+  mutable std::mutex mutex_;
   std::unordered_set<std::shared_ptr<ProductBase>> products_
       FXL_GUARDED_BY(mutex_);
 

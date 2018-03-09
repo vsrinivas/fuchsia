@@ -76,7 +76,7 @@ void ActiveSourceStageImpl::Update() {
   Demand demand = output_.demand();
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     if (demand != Demand::kNegative && !packets_.empty()) {
       output_.SupplyPacket(std::move(packets_.front()));
       packets_.pop_front();
@@ -98,7 +98,7 @@ void ActiveSourceStageImpl::FlushInput(size_t index,
 void ActiveSourceStageImpl::FlushOutput(size_t index) {
   FXL_DCHECK(source_);
   source_->Flush();
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   packets_.clear();
 }
 
@@ -115,7 +115,7 @@ void ActiveSourceStageImpl::SupplyPacket(PacketPtr packet) {
   bool needs_update = false;
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     bool packets_was_empty_ = packets_.empty();
     packets_.push_back(std::move(packet));
     if (packets_was_empty_ && prepared_) {

@@ -34,8 +34,9 @@ zx_status_t TtsSpeaker::Speak(const f1dl::String& words,
   FXL_DCHECK(!engine_thread_.joinable());
   engine_thread_ = fsl::CreateThread(&engine_task_runner_);
 
-  engine_task_runner_->PostTask(
-      [thiz = shared_from_this()]() { thiz->DoSpeak(); });
+  engine_task_runner_->PostTask([thiz = shared_from_this()]() {
+    thiz->DoSpeak();
+  });
 
   return ZX_OK;
 }
@@ -134,7 +135,7 @@ void TtsSpeaker::Shutdown() {
     FXL_DCHECK(engine_thread_.joinable());
     abort_playback_.store(true);
     {
-      fxl::MutexLocker lock(&ring_buffer_lock_);
+      std::lock_guard<std::mutex> lock(ring_buffer_lock_);
       wakeup_event_.signal(0, ZX_USER_SIGNAL_0);
     }
     engine_thread_.join();
@@ -159,7 +160,7 @@ void TtsSpeaker::SendPendingAudio() {
   //
   uint64_t bytes_to_send;
   {
-    fxl::MutexLocker lock(&ring_buffer_lock_);
+    std::lock_guard<std::mutex> lock(ring_buffer_lock_);
     bytes_to_send = ComputeTxPending();
   }
 
@@ -203,13 +204,17 @@ void TtsSpeaker::SendPendingAudio() {
     media::MediaPacketConsumer::SupplyPacketCallback after_payload_rendered;
 
     if (pkt->flags & media::MediaPacket::kFlagEos) {
-      after_payload_rendered =
-          [speak_complete_cbk = std::move(speak_complete_cbk_)](
-              media::MediaPacketDemandPtr) { speak_complete_cbk(); };
+      after_payload_rendered = [speak_complete_cbk =
+                                    std::move(speak_complete_cbk_)](
+          media::MediaPacketDemandPtr) {
+        speak_complete_cbk();
+      };
     } else if (todo == bytes_till_low_water) {
       after_payload_rendered =
-          [thiz = shared_from_this(), new_rd_pos = tx_ptr_](
-              media::MediaPacketDemandPtr) { thiz->UpdateRdPtr(new_rd_pos); };
+          [ thiz = shared_from_this(),
+            new_rd_pos = tx_ptr_ ](media::MediaPacketDemandPtr) {
+        thiz->UpdateRdPtr(new_rd_pos);
+      };
     } else {
       after_payload_rendered = [](media::MediaPacketDemandPtr) {};
     }
@@ -238,7 +243,7 @@ void TtsSpeaker::SendPendingAudio() {
 
 void TtsSpeaker::UpdateRdPtr(uint64_t new_pos) {
   if (!abort_playback_.load()) {
-    fxl::MutexLocker lock(&ring_buffer_lock_);
+    std::lock_guard<std::mutex> lock(ring_buffer_lock_);
     rd_ptr_ = new_pos;
     wakeup_event_.signal(0, ZX_USER_SIGNAL_0);
   }
@@ -269,7 +274,7 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave,
 
   while (true) {
     {  // explicit scope for ring buffer lock.
-      fxl::MutexLocker lock(&ring_buffer_lock_);
+      std::lock_guard<std::mutex> lock(ring_buffer_lock_);
       uint64_t space = ComputeWriteSpace();
 
       if (size < space) {
@@ -298,13 +303,15 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave,
 
     // Looks like we need to wait for there to be some space.  Before we do so,
     // let the master thread know it needs to send the data we just produced.
-    master_task_runner_->PostTask(
-        [thiz = shared_from_this()]() { thiz->SendPendingAudio(); });
+    master_task_runner_->PostTask([thiz = shared_from_this()]() {
+      thiz->SendPendingAudio();
+    });
 
     zx_signals_t pending;
     zx_status_t res;
 
-    res = wakeup_event_.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), &pending);
+    res = wakeup_event_.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(),
+                                 &pending);
     if ((res != ZX_OK) || abort_playback_.load()) {
       return CST_AUDIO_STREAM_STOP;
     }
@@ -314,8 +321,9 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave,
   // of our synthesized audio right now.
   if (last) {
     synthesis_complete_.store(true);
-    master_task_runner_->PostTask(
-        [thiz = shared_from_this()]() { thiz->SendPendingAudio(); });
+    master_task_runner_->PostTask([thiz = shared_from_this()]() {
+      thiz->SendPendingAudio();
+    });
   }
 
   return CST_AUDIO_STREAM_CONT;
@@ -334,10 +342,10 @@ void TtsSpeaker::DoSpeak() {
   delete_voice(vox);
 
   if (abort_playback_.load()) {
-    master_task_runner_->PostTask(
-        [speak_complete_cbk = std::move(speak_complete_cbk_)]() {
-          speak_complete_cbk();
-        });
+    master_task_runner_->PostTask([speak_complete_cbk =
+                                       std::move(speak_complete_cbk_)]() {
+      speak_complete_cbk();
+    });
   }
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();

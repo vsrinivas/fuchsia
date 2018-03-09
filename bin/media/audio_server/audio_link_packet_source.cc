@@ -49,7 +49,7 @@ std::shared_ptr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
 
 void AudioLinkPacketSource::PushToPendingQueue(
     const fbl::RefPtr<AudioPacketRef>& pkt) {
-  fxl::MutexLocker locker(&pending_mutex_);
+  std::lock_guard<std::mutex> locker(pending_mutex_);
   pending_packet_queue_.emplace_back(pkt);
 }
 
@@ -58,7 +58,7 @@ void AudioLinkPacketSource::FlushPendingQueue(
   std::deque<fbl::RefPtr<AudioPacketRef>> flushed_packets;
 
   {
-    fxl::MutexLocker locker(&pending_mutex_);
+    std::lock_guard<std::mutex> locker(pending_mutex_);
 
     flushed_ = true;
 
@@ -101,11 +101,11 @@ void AudioLinkPacketSource::CopyPendingQueue(
   FXL_DCHECK(other != nullptr);
   FXL_DCHECK(this != other.get());
 
-  fxl::MutexLocker source_locker(&other->pending_mutex_);
+  std::lock_guard<std::mutex> source_locker(other->pending_mutex_);
   if (other->pending_packet_queue_.empty())
     return;
 
-  fxl::MutexLocker locker(&pending_mutex_);
+  std::lock_guard<std::mutex> locker(pending_mutex_);
   FXL_DCHECK(pending_packet_queue_.empty());
   pending_packet_queue_ = other->pending_packet_queue_;
 }
@@ -113,7 +113,7 @@ void AudioLinkPacketSource::CopyPendingQueue(
 fbl::RefPtr<AudioPacketRef> AudioLinkPacketSource::LockPendingQueueFront(
     bool* was_flushed) {
   FXL_DCHECK(was_flushed);
-  fxl::MutexLocker locker(&pending_mutex_);
+  std::lock_guard<std::mutex> locker(pending_mutex_);
 
   FXL_DCHECK(!processing_in_progress_);
   processing_in_progress_ = true;
@@ -130,7 +130,7 @@ fbl::RefPtr<AudioPacketRef> AudioLinkPacketSource::LockPendingQueueFront(
 
 void AudioLinkPacketSource::UnlockPendingQueueFront(bool release_packet) {
   {
-    fxl::MutexLocker locker(&pending_mutex_);
+    std::lock_guard<std::mutex> locker(pending_mutex_);
     FXL_DCHECK(processing_in_progress_);
     processing_in_progress_ = false;
 

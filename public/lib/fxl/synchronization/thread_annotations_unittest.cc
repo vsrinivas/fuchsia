@@ -12,9 +12,10 @@
 
 #include "lib/fxl/synchronization/thread_annotations.h"
 
+#include <mutex>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/synchronization/mutex.h"
 
 // Uncomment these to enable particular compilation failure tests.
 // #define NC_GUARDED_BY
@@ -34,9 +35,9 @@ class GuardedByClass {
   ~GuardedByClass() {}
 
   void GoodSet(int x) {
-    mu_.Lock();
+    mu_.lock();
     x_ = x;
-    mu_.Unlock();
+    mu_.unlock();
   }
 
 #ifdef NC_GUARDED_BY
@@ -44,7 +45,7 @@ class GuardedByClass {
 #endif
 
  private:
-  Mutex mu_;
+  std::mutex mu_;
   int x_ FXL_GUARDED_BY(mu_);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GuardedByClass);
@@ -65,8 +66,8 @@ class AcquiredBeforeClass1 {
   ~AcquiredBeforeClass1() {}
 
   void NoOp() {
-    mu_.Lock();
-    mu_.Unlock();
+    mu_.lock();
+    mu_.unlock();
   }
 
 #ifdef NC_ACQUIRED_BEFORE
@@ -76,7 +77,7 @@ class AcquiredBeforeClass1 {
  private:
   friend class AcquiredBeforeClass2;
 
-  Mutex mu_;
+  std::mutex mu_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AcquiredBeforeClass1);
 };
@@ -87,27 +88,27 @@ class AcquiredBeforeClass2 {
   ~AcquiredBeforeClass2() {}
 
   void NoOp() {
-    mu_.Lock();
-    mu_.Unlock();
+    mu_.lock();
+    mu_.unlock();
   }
 
   void GoodMethod(AcquiredBeforeClass1* c1) {
-    mu_.Lock();
+    mu_.lock();
     c1->NoOp();
-    mu_.Unlock();
+    mu_.unlock();
   }
 
  private:
-  Mutex mu_ FXL_ACQUIRED_BEFORE(AcquiredBeforeClass1::mu_);
+  std::mutex mu_ FXL_ACQUIRED_BEFORE(AcquiredBeforeClass1::mu_);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AcquiredBeforeClass2);
 };
 
 #ifdef NC_ACQUIRED_BEFORE
 void AcquiredBeforeClass1::BadMethod(AcquiredBeforeClass2* c2) {
-  mu_.Lock();
+  mu_.lock();
   c2->NoOp();
-  mu_.Unlock();
+  mu_.unlock();
 }
 #endif
 

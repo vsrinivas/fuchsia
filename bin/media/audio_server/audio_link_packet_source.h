@@ -7,13 +7,13 @@
 #include <fbl/ref_ptr.h>
 #include <deque>
 #include <memory>
+#include <mutex>
 
 #include "garnet/bin/media/audio_server/audio_link.h"
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "garnet/bin/media/audio_server/pending_flush_token.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
@@ -23,7 +23,6 @@ namespace audio {
 //
 class AudioLinkPacketSource : public AudioLink {
  public:
-
   static std::shared_ptr<AudioLinkPacketSource> Create(
       fbl::RefPtr<AudioObject> source,
       fbl::RefPtr<AudioObject> dest);
@@ -42,7 +41,7 @@ class AudioLinkPacketSource : public AudioLink {
 
   // Common pending queue ops.
   bool pending_queue_empty() const {
-    fxl::MutexLocker locker(&pending_mutex_);
+    std::lock_guard<std::mutex> locker(pending_mutex_);
     return pending_packet_queue_.empty();
   }
 
@@ -76,15 +75,15 @@ class AudioLinkPacketSource : public AudioLink {
 
   fbl::RefPtr<AudioRendererFormatInfo> format_info_;
 
-  fxl::Mutex flush_mutex_;
-  mutable fxl::Mutex pending_mutex_;
+  std::mutex flush_mutex_;
+  mutable std::mutex pending_mutex_;
 
   std::deque<fbl::RefPtr<AudioPacketRef>> pending_packet_queue_
-    FXL_GUARDED_BY(pending_mutex_);
+      FXL_GUARDED_BY(pending_mutex_);
   std::deque<fbl::RefPtr<AudioPacketRef>> pending_flush_packet_queue_
-    FXL_GUARDED_BY(pending_mutex_);
+      FXL_GUARDED_BY(pending_mutex_);
   std::deque<fbl::RefPtr<PendingFlushToken>> pending_flush_token_queue_
-    FXL_GUARDED_BY(pending_mutex_);
+      FXL_GUARDED_BY(pending_mutex_);
   bool flushed_ FXL_GUARDED_BY(pending_mutex_) = true;
   bool processing_in_progress_ FXL_GUARDED_BY(pending_mutex_) = false;
 };

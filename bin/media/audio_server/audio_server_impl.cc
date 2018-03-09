@@ -108,7 +108,7 @@ void AudioServerImpl::DoPacketCleanup() {
   fbl::DoublyLinkedList<fbl::unique_ptr<PendingFlushToken>> tmp_token_queue;
 
   {
-    fxl::MutexLocker locker(&cleanup_queue_mutex_);
+    std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
     packet_cleanup_queue_.swap(tmp_packet_queue);
     flush_cleanup_queue_.swap(tmp_token_queue);
     cleanup_scheduled_ = false;
@@ -127,7 +127,7 @@ void AudioServerImpl::DoPacketCleanup() {
 
 void AudioServerImpl::SchedulePacketCleanup(
     fbl::unique_ptr<AudioPacketRef> packet) {
-  fxl::MutexLocker locker(&cleanup_queue_mutex_);
+  std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
 
   packet_cleanup_queue_.push_back(std::move(packet));
 
@@ -140,7 +140,7 @@ void AudioServerImpl::SchedulePacketCleanup(
 
 void AudioServerImpl::ScheduleFlushCleanup(
     fbl::unique_ptr<PendingFlushToken> token) {
-  fxl::MutexLocker locker(&cleanup_queue_mutex_);
+  std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
 
   flush_cleanup_queue_.push_back(std::move(token));
 

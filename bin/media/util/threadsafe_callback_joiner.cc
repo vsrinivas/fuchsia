@@ -20,7 +20,7 @@ ThreadsafeCallbackJoiner::ThreadsafeCallbackJoiner() {}
 ThreadsafeCallbackJoiner::~ThreadsafeCallbackJoiner() {}
 
 void ThreadsafeCallbackJoiner::Spawn() {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   ++counter_;
 }
 
@@ -29,7 +29,7 @@ void ThreadsafeCallbackJoiner::Complete() {
   fxl::RefPtr<fxl::TaskRunner> runner;
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     FXL_DCHECK(counter_ != 0);
     --counter_;
     if (counter_ != 0 || !join_callback_) {
@@ -61,7 +61,7 @@ void ThreadsafeCallbackJoiner::WhenJoined(
   FXL_DCHECK(join_callback);
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     FXL_DCHECK(!join_callback_);
     if (counter_ != 0) {
       join_callback_ = join_callback;
@@ -76,7 +76,7 @@ void ThreadsafeCallbackJoiner::WhenJoined(
 }
 
 bool ThreadsafeCallbackJoiner::Cancel() {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   if (join_callback_) {
     join_callback_ = nullptr;

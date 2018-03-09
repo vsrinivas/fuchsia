@@ -19,12 +19,12 @@ ActiveMultistreamSinkStageImpl::~ActiveMultistreamSinkStageImpl() {}
 size_t ActiveMultistreamSinkStageImpl::input_count() const {
   // TODO(dalesat): Provide checks to make sure inputs_.size() is stable when
   // it needs to be.
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   return inputs_.size();
 };
 
 Input& ActiveMultistreamSinkStageImpl::input(size_t index) {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(index < inputs_.size());
   return inputs_[index]->input_;
 }
@@ -57,7 +57,7 @@ GenericNode* ActiveMultistreamSinkStageImpl::GetGenericNode() {
 void ActiveMultistreamSinkStageImpl::Update() {
   FXL_DCHECK(sink_);
 
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   for (auto iter = pending_inputs_.begin(); iter != pending_inputs_.end();) {
     FXL_DCHECK(*iter < inputs_.size());
@@ -87,7 +87,7 @@ void ActiveMultistreamSinkStageImpl::FlushInput(
 
   sink_->Flush(hold_frame);
 
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   inputs_[index]->input_.Flush();
 
   pending_inputs_.remove(index);
@@ -107,7 +107,7 @@ void ActiveMultistreamSinkStageImpl::PostTask(const fxl::Closure& task) {
 }
 
 size_t ActiveMultistreamSinkStageImpl::AllocateInput() {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
 
   StageInput* input;
   if (unallocated_inputs_.empty()) {
@@ -127,7 +127,7 @@ size_t ActiveMultistreamSinkStageImpl::AllocateInput() {
 }
 
 size_t ActiveMultistreamSinkStageImpl::ReleaseInput(size_t index) {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(index < inputs_.size());
 
   StageInput* input = inputs_[index].get();
@@ -155,7 +155,7 @@ size_t ActiveMultistreamSinkStageImpl::ReleaseInput(size_t index) {
 void ActiveMultistreamSinkStageImpl::UpdateDemand(size_t input_index,
                                                   Demand demand) {
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     FXL_DCHECK(input_index < inputs_.size());
     FXL_DCHECK(demand != Demand::kNegative);
 

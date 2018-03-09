@@ -32,7 +32,7 @@ void ThreadsafeIncident::Occur() {
   std::vector<std::function<void()>> consequences;
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
 
     if (occurred_) {
       return;

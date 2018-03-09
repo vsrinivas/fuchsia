@@ -5,10 +5,10 @@
 #pragma once
 
 #include <deque>
+#include <mutex>
 
 #include "garnet/bin/media/framework/models/active_source.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media {
@@ -61,7 +61,7 @@ class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
   std::shared_ptr<ActiveSource> source_;
   bool prepared_;
 
-  mutable fxl::Mutex mutex_;
+  mutable std::mutex mutex_;
   std::deque<PacketPtr> packets_ FXL_GUARDED_BY(mutex_);
 };
 
