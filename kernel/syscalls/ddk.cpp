@@ -390,7 +390,7 @@ zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,
 }
 
 zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
-                        uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_len) {
+                        uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count) {
     auto up = ProcessDispatcher::GetCurrent();
 
     if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(size)) {
@@ -447,13 +447,13 @@ zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint
 
     constexpr size_t kAddrsLenLimitForStack = 4;
     fbl::AllocChecker ac;
-    fbl::InlineArray<dev_vaddr_t, kAddrsLenLimitForStack> mapped_addrs(&ac, addrs_len);
+    fbl::InlineArray<dev_vaddr_t, kAddrsLenLimitForStack> mapped_addrs(&ac, addrs_count);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
     status = bti_dispatcher->Pin(vmo_dispatcher->vmo(), offset, size, iommu_perms,
-                                 compress_results, mapped_addrs.get(), addrs_len);
+                                 compress_results, mapped_addrs.get(), addrs_count);
     if (status != ZX_OK) {
         return status;
     }
@@ -463,7 +463,7 @@ zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint
     });
 
     static_assert(sizeof(dev_vaddr_t) == sizeof(zx_paddr_t), "mismatched types");
-    if ((status = addrs.copy_array_to_user(mapped_addrs.get(), addrs_len)) != ZX_OK) {
+    if ((status = addrs.copy_array_to_user(mapped_addrs.get(), addrs_count)) != ZX_OK) {
         return status;
     }
 

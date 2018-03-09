@@ -585,7 +585,7 @@ syscall bti_create
 
 syscall bti_pin
     (bti: zx_handle_t, options: uint32_t, vmo: zx_handle_t, offset: uint64_t, size: uint64_t,
-        addrs: zx_paddr_t[addrs_len] OUT, addrs_len: size_t)
+        addrs: zx_paddr_t[addrs_count] OUT, addrs_count: size_t)
     returns (zx_status_t);
 
 syscall bti_unpin

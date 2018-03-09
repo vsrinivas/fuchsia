@@ -11,7 +11,7 @@ bti_pin - pin pages and grant devices access to them
 
 zx_status_t zx_bti_pin(zx_handle_t bti, uint32_t options,
                        zx_handle_t vmo, uint64_t offset, uint64_t size,
-                       zx_paddr_t* addrs, uint32_t addrs_len);
+                       zx_paddr_t* addrs, size_t addrs_count);
 ```
 
 ## DESCRIPTION
@@ -70,7 +70,7 @@ In the event of failure, a negative error value is returned.
 *options* contained a permissions flag corresponding to a right that *vmo* does not have.
 
 **ZX_ERR_INVALID_ARGS** *options* is 0 or contains an undefined flag, or *addrs* is not a
-valid pointer, *addrs_len* is not the same as the number of entries that would be
+valid pointer, *addrs_count* is not the same as the number of entries that would be
 returned, or *offset* or *size* is not page-aligned.
 
 **ZX_ERR_ALREADY_BOUND** The requested range contains a page already pinned by this
