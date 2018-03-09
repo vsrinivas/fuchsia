@@ -5,9 +5,12 @@
 #ifndef LIB_FXL_SYNCHRONIZATION_MONITOR_H_
 #define LIB_FXL_SYNCHRONIZATION_MONITOR_H_
 
+#include <condition_variable>
+#include <mutex>
+
 #include "lib/fxl/fxl_export.h"
-#include "lib/fxl/synchronization/cond_var.h"
-#include "lib/fxl/synchronization/mutex.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace fxl {
 
@@ -61,8 +64,9 @@ class FXL_LOCKABLE FXL_EXPORT Monitor {
   void Wait() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
  private:
-  CondVar cv_;
-  Mutex mutex_;
+  std::condition_variable cv_;
+  std::mutex mutex_;
+  std::unique_lock<std::mutex> locker_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Monitor);
 };

@@ -17,8 +17,6 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/synchronization/cond_var.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/fidl/problem.fidl.h"
@@ -97,6 +95,9 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
   // Runs in the ffmpeg thread doing the real work.
   void Worker();
+  bool Wait(bool* packet_requested,
+            int64_t* seek_position,
+            SeekCallback* seek_callback);
 
   // Produces a packet. Called from the ffmpeg thread only.
   PacketPtr PullPacket(size_t* stream_index_out);
@@ -115,8 +116,8 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   // Sets the problem values and sends status.
   void ReportProblem(const std::string& type, const std::string& details);
 
-  fxl::Mutex mutex_;
-  fxl::CondVar condition_variable_ FXL_GUARDED_BY(mutex_);
+  std::mutex mutex_;
+  std::condition_variable condition_variable_ FXL_GUARDED_BY(mutex_);
   std::thread ffmpeg_thread_;
 
   int64_t seek_position_ FXL_GUARDED_BY(mutex_) = kNotSeeking;
@@ -159,9 +160,9 @@ FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<Reader> reader)
 
 FfmpegDemuxImpl::~FfmpegDemuxImpl() {
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     terminating_ = true;
-    condition_variable_.SignalAll();
+    condition_variable_.notify_all();
   }
 
   if (ffmpeg_thread_.joinable()) {
@@ -182,10 +183,10 @@ const std::vector<Demux::DemuxStream*>& FfmpegDemuxImpl::streams() const {
 }
 
 void FfmpegDemuxImpl::Seek(int64_t position, const SeekCallback& callback) {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   seek_position_ = position;
   seek_callback_ = callback;
-  condition_variable_.SignalAll();
+  condition_variable_.notify_all();
 }
 
 size_t FfmpegDemuxImpl::stream_count() const {
@@ -193,9 +194,9 @@ size_t FfmpegDemuxImpl::stream_count() const {
 }
 
 void FfmpegDemuxImpl::RequestPacket() {
-  fxl::MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   packet_requested_ = true;
-  condition_variable_.SignalAll();
+  condition_variable_.notify_all();
 }
 
 void FfmpegDemuxImpl::Worker() {
@@ -242,7 +243,7 @@ void FfmpegDemuxImpl::Worker() {
   }
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     metadata_ =
         Metadata::Create(format_context_->duration * kNanosecondsPerMicrosecond,
                          metadata_map["TITLE"], metadata_map["ARTIST"],
@@ -260,25 +261,8 @@ void FfmpegDemuxImpl::Worker() {
     int64_t seek_position;
     SeekCallback seek_callback;
 
-    {
-      fxl::MutexLocker locker(&mutex_);
-      while (!packet_requested_ && !terminating_ &&
-             seek_position_ == kNotSeeking) {
-        condition_variable_.Wait(&mutex_);
-      }
-
-      if (terminating_) {
-        return;
-      }
-
-      packet_requested = packet_requested_;
-      packet_requested_ = false;
-
-      seek_position = seek_position_;
-      seek_position_ = kNotSeeking;
-
-      seek_callback_.swap(seek_callback);
-    }
+    if (!Wait(&packet_requested, &seek_position, &seek_callback))
+      return;
 
     if (seek_position != kNotSeeking) {
       // AVSEEK_FLAG_BACKWARD tells the demux to search backward from the
@@ -310,6 +294,31 @@ void FfmpegDemuxImpl::Worker() {
           }));
     }
   }
+}
+
+bool FfmpegDemuxImpl::Wait(bool* packet_requested,
+                           int64_t* seek_position,
+                           SeekCallback* seek_callback)
+    // TODO(US-452): Re-enable thread safety analysis once unique_lock
+    // has proper annotations.
+    FXL_NO_THREAD_SAFETY_ANALYSIS {
+  std::unique_lock<std::mutex> locker(mutex_);
+  while (!packet_requested_ && !terminating_ && seek_position_ == kNotSeeking) {
+    condition_variable_.wait(locker);
+  }
+
+  if (terminating_) {
+    return false;
+  }
+
+  *packet_requested = packet_requested_;
+  packet_requested_ = false;
+
+  *seek_position = seek_position_;
+  seek_position_ = kNotSeeking;
+
+  seek_callback_.swap(*seek_callback);
+  return true;
 }
 
 PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
@@ -381,7 +390,7 @@ void FfmpegDemuxImpl::SendStatus() {
   std::string problem_details;
 
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     metadata = SafeClone(metadata_);
     problem_type = problem_type_;
     problem_details = problem_details_;
@@ -393,7 +402,7 @@ void FfmpegDemuxImpl::SendStatus() {
 void FfmpegDemuxImpl::ReportProblem(const std::string& type,
                                     const std::string& details) {
   {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     problem_type_ = type;
     problem_details_ = details;
   }

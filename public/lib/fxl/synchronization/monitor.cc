@@ -8,24 +8,24 @@
 
 namespace fxl {
 
-Monitor::Monitor() {}
+Monitor::Monitor() : locker_(mutex_, std::defer_lock) {}
 
 Monitor::~Monitor() {}
 
 void Monitor::Enter() {
-  mutex_.Lock();
+  locker_.lock();
 }
 
 void Monitor::Exit() {
-  mutex_.Unlock();
+  locker_.unlock();
 }
 
 void Monitor::Signal() {
-  cv_.Signal();
+  cv_.notify_one();
 }
 
 void Monitor::Wait() {
-  cv_.Wait(&mutex_);
+  cv_.wait(locker_);
 }
 
 MonitorLocker::MonitorLocker(Monitor* monitor) : monitor_(monitor) {

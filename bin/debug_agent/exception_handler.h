@@ -4,19 +4,19 @@
 
 #pragma once
 
-#include <memory>
-#include <mutex>
-#include <thread>
-#include <vector>
 #include <zx/event.h>
 #include <zx/port.h>
 #include <zx/process.h>
 #include <zx/socket.h>
 #include <zx/thread.h>
+#include <memory>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 #include "garnet/lib/debug_ipc/stream_buffer.h"
-#include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/synchronization/thread_annotations.h"
+#include "lib/fxl/macros.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 // This exception handler class runs a background thread that blocks on
 // exceptions from processes being debugged. It also manages reading and

@@ -5,11 +5,10 @@
 #pragma once
 
 #include <condition_variable>
+#include <mutex>
 
 #include "garnet/bin/media/demux/reader.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/synchronization/cond_var.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 extern "C" {
 #include "third_party/ffmpeg/libavformat/avio.h"
@@ -66,19 +65,21 @@ class AvIoContextOpaque {
   // Performs a synchronous seek.
   int64_t Seek(int64_t offset, int whence);
 
-  void WaitForCallback() {
-    fxl::MutexLocker locker(&mutex_);
+  // TODO(US-452): Re-enable thread safety analysis once unique_lock has proper
+  // annotations.
+  void WaitForCallback() FXL_NO_THREAD_SAFETY_ANALYSIS {
+    std::unique_lock<std::mutex> locker(mutex_);
     while (!callback_happened_) {
-      condition_variable_.Wait(&mutex_);
+      condition_variable_.wait(locker);
     }
     callback_happened_ = false;
   }
 
   void CallbackComplete() {
-    fxl::MutexLocker locker(&mutex_);
+    std::lock_guard<std::mutex> locker(mutex_);
     FXL_DCHECK(!callback_happened_);
     callback_happened_ = true;
-    condition_variable_.SignalAll();
+    condition_variable_.notify_all();
   }
 
   std::shared_ptr<Reader> reader_;
@@ -86,8 +87,8 @@ class AvIoContextOpaque {
   int64_t size_;
   bool can_seek_;
   int64_t position_ = 0;
-  fxl::Mutex mutex_;
-  fxl::CondVar condition_variable_ FXL_GUARDED_BY(mutex_);
+  std::mutex mutex_;
+  std::condition_variable condition_variable_;
   bool callback_happened_ FXL_GUARDED_BY(mutex_) = false;
 
   friend class AvIoContext;

@@ -10,11 +10,13 @@
 #ifndef LIB_FXL_SYNCHRONIZATION_WAITABLE_EVENT_H_
 #define LIB_FXL_SYNCHRONIZATION_WAITABLE_EVENT_H_
 
+#include <condition_variable>
+#include <mutex>
+
 #include "lib/fxl/fxl_export.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/synchronization/cond_var.h"
-#include "lib/fxl/synchronization/mutex.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace fxl {
 
@@ -62,11 +64,11 @@ class FXL_EXPORT AutoResetWaitableEvent final {
   bool IsSignaledForTest();
 
  private:
-  CondVar cv_;
-  Mutex mutex_;
+  std::condition_variable cv_;
+  std::mutex mutex_;
 
   // True if this event is in the signaled state.
-  bool signaled_ FXL_GUARDED_BY(mutex_) = false;
+  bool signaled_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AutoResetWaitableEvent);
 };
@@ -104,19 +106,20 @@ class FXL_EXPORT ManualResetWaitableEvent final {
   bool IsSignaledForTest();
 
  private:
-  CondVar cv_;
-  Mutex mutex_;
+  std::condition_variable cv_;
+  std::mutex mutex_;
 
   // True if this event is in the signaled state.
-  bool signaled_ FXL_GUARDED_BY(mutex_) = false;
+  bool signaled_ = false;
 
-  // While |CondVar::SignalAll()| (|pthread_cond_broadcast()|) will wake all
-  // waiting threads, one has to deal with spurious wake-ups. Checking
-  // |signaled_| isn't sufficient, since another thread may have been awoken and
-  // (manually) reset |signaled_|. This is a counter that is incremented in
-  // |Signal()| before calling |CondVar::SignalAll()|. A waiting thread knows it
-  // was awoken if |signal_id_| is different from when it started waiting.
-  unsigned signal_id_ FXL_GUARDED_BY(mutex_) = 0u;
+  // While |std::condition_variable::notify_all()| (|pthread_cond_broadcast()|)
+  // will wake all waiting threads, one has to deal with spurious wake-ups.
+  // Checking |signaled_| isn't sufficient, since another thread may have been
+  // awoken and (manually) reset |signaled_|. This is a counter that is
+  // incremented in |Signal()| before calling
+  // |std::condition_variable::notify_all()|. A waiting thread knows it was
+  // awoken if |signal_id_| is different from when it started waiting.
+  unsigned signal_id_ = 0u;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ManualResetWaitableEvent);
 };

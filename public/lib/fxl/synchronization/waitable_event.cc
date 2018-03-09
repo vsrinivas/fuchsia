@@ -17,12 +17,11 @@ namespace fxl {
 // |condition()| ever returns true. |condition()| should have no side effects
 // (and will always be called with |*mutex| held).
 template <typename ConditionFn>
-bool WaitWithTimeoutImpl(Mutex* mutex,
-                         CondVar* cv,
+bool WaitWithTimeoutImpl(std::unique_lock<std::mutex>* locker,
+                         std::condition_variable* cv,
                          ConditionFn condition,
-                         TimeDelta timeout)
-    FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex) {
-  mutex->AssertHeld();
+                         TimeDelta timeout) {
+  FXL_DCHECK(locker->owns_lock());
 
   if (condition())
     return false;
@@ -31,7 +30,9 @@ bool WaitWithTimeoutImpl(Mutex* mutex,
   TimeDelta wait_remaining = timeout;
   TimePoint start = TimePoint::Now();
   while (true) {
-    if (cv->WaitWithTimeout(mutex, wait_remaining))
+    if (std::cv_status::timeout ==
+        cv->wait_for(*locker,
+                     std::chrono::nanoseconds(wait_remaining.ToNanoseconds())))
       return true;  // Definitely timed out.
 
     // We may have been awoken.
@@ -54,25 +55,25 @@ bool WaitWithTimeoutImpl(Mutex* mutex,
 // AutoResetWaitableEvent ------------------------------------------------------
 
 void AutoResetWaitableEvent::Signal() {
-  MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   signaled_ = true;
-  cv_.Signal();
+  cv_.notify_one();
 }
 
 void AutoResetWaitableEvent::Reset() {
-  MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   signaled_ = false;
 }
 
 void AutoResetWaitableEvent::Wait() {
-  MutexLocker locker(&mutex_);
+  std::unique_lock<std::mutex> locker(mutex_);
   while (!signaled_)
-    cv_.Wait(&mutex_);
+    cv_.wait(locker);
   signaled_ = false;
 }
 
 bool AutoResetWaitableEvent::WaitWithTimeout(TimeDelta timeout) {
-  MutexLocker locker(&mutex_);
+  std::unique_lock<std::mutex> locker(mutex_);
 
   if (signaled_) {
     signaled_ = false;
@@ -83,7 +84,9 @@ bool AutoResetWaitableEvent::WaitWithTimeout(TimeDelta timeout) {
   TimeDelta wait_remaining = timeout;
   TimePoint start = TimePoint::Now();
   while (true) {
-    if (cv_.WaitWithTimeout(&mutex_, wait_remaining))
+    if (std::cv_status::timeout ==
+        cv_.wait_for(locker,
+                     std::chrono::nanoseconds(wait_remaining.ToNanoseconds())))
       return true;  // Definitely timed out.
 
     // We may have been awoken.
@@ -107,38 +110,38 @@ bool AutoResetWaitableEvent::WaitWithTimeout(TimeDelta timeout) {
 }
 
 bool AutoResetWaitableEvent::IsSignaledForTest() {
-  MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   return signaled_;
 }
 
 // ManualResetWaitableEvent ----------------------------------------------------
 
 void ManualResetWaitableEvent::Signal() {
-  MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   signaled_ = true;
   signal_id_++;
-  cv_.SignalAll();
+  cv_.notify_all();
 }
 
 void ManualResetWaitableEvent::Reset() {
-  MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   signaled_ = false;
 }
 
 void ManualResetWaitableEvent::Wait() {
-  MutexLocker locker(&mutex_);
+  std::unique_lock<std::mutex> locker(mutex_);
 
   if (signaled_)
     return;
 
   auto last_signal_id = signal_id_;
   do {
-    cv_.Wait(&mutex_);
+    cv_.wait(locker);
   } while (signal_id_ == last_signal_id);
 }
 
 bool ManualResetWaitableEvent::WaitWithTimeout(TimeDelta timeout) {
-  MutexLocker locker(&mutex_);
+  std::unique_lock<std::mutex> locker(mutex_);
 
   auto last_signal_id = signal_id_;
   // Disable thread-safety analysis for the lambda: We could annotate it with
@@ -146,7 +149,7 @@ bool ManualResetWaitableEvent::WaitWithTimeout(TimeDelta timeout) {
   // isn't able to figure out that |WaitWithTimeoutImpl()| calls it while
   // holding |mutex_|.
   bool rv = WaitWithTimeoutImpl(
-      &mutex_, &cv_,
+      &locker, &cv_,
       [this, last_signal_id]() FXL_NO_THREAD_SAFETY_ANALYSIS {
         // Also check |signaled_| in case we're already signaled.
         return signaled_ || signal_id_ != last_signal_id;
@@ -157,7 +160,7 @@ bool ManualResetWaitableEvent::WaitWithTimeout(TimeDelta timeout) {
 }
 
 bool ManualResetWaitableEvent::IsSignaledForTest() {
-  MutexLocker locker(&mutex_);
+  std::lock_guard<std::mutex> locker(mutex_);
   return signaled_;
 }
 

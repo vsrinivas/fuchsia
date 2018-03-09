@@ -25,8 +25,6 @@ namespace fxl {
 
 // Mutex -----------------------------------------------------------------------
 
-class CondVar;
-
 class FXL_LOCKABLE FXL_EXPORT Mutex final {
  public:
 #ifndef NDEBUG
@@ -73,8 +71,6 @@ class FXL_LOCKABLE FXL_EXPORT Mutex final {
 #endif  // NDEBUG
 
  private:
-  friend class CondVar;
-
 #if defined(OS_WIN)
   SRWLOCK impl_;
 #ifndef NDEBUG
