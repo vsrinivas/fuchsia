@@ -300,7 +300,7 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
     return status_;
       {{- if .Response }}
   ::fidl::Decoder decoder_(std::move(response_));
-  offset_ = sizeof(fidl_message_header_t);
+  {{ if not .Request }}size_t {{ end }}offset_ = sizeof(fidl_message_header_t);
         {{- range $index, $param := .Response }}
   *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder_, offset_ + {{ .Offset }});
         {{- end }}
