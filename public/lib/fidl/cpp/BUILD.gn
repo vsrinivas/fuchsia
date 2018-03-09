@@ -38,6 +38,7 @@ source_set("cpp") {
     "internal/weak_stub_controller.h",
     "string.cc",
     "string.h",
+    "thread_safe_binding_set.h",
     "traits.h",
     "vector.h",
   ]
@@ -79,6 +80,7 @@ source_set("test_sources") {
     "internal/stub_controller_unittest.cc",
     "string_unittest.cc",
     "synchronous_interface_ptr_unittest.cc",
+    "thread_safe_binding_set_unittest.cc",
     "vector_unittest.cc",
   ]
 

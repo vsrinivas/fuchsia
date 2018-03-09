@@ -85,6 +85,10 @@ class InterfacePtr {
   // underlying channel until the |InterfaceRequest| is bound to an
   // implementation of |Interface|, potentially in a remote process.
   //
+  // Uses the given async_t (e.g., a message loop) in order to read messages
+  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // If |async| is null, the current thread must have a default async_t.
+  //
   // # Example
   //
   // Given the following interface:
@@ -101,11 +105,11 @@ class InterfacePtr {
   //   database->OpenTable(table.NewRequest());
   //
   // The client can call methods on |table| immediately.
-  InterfaceRequest<Interface> NewRequest() {
+  InterfaceRequest<Interface> NewRequest(async_t* async = nullptr) {
     zx::channel h1;
     zx::channel h2;
     if (zx::channel::create(0, &h1, &h2) != ZX_OK ||
-        Bind(std::move(h1)) != ZX_OK)
+        Bind(std::move(h1), async) != ZX_OK)
       return nullptr;
     return InterfaceRequest<Interface>(std::move(h2));
   }
@@ -121,14 +125,14 @@ class InterfacePtr {
   // unbind the |InterfacePtr|. A more direct way to have that effect is to call
   // |Unbind|.
   //
-  // Requires the current thread to have a default async_t (e.g., a message
-  // loop) in order to read messages from the channel and to monitor the
-  // channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // Uses the given async_t (e.g., a message loop) in order to read messages
+  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // If |async| is null, the current thread must have a default async_t.
   //
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
-  zx_status_t Bind(zx::channel channel) {
-    return controller_.reader().Bind(std::move(channel));
+  zx_status_t Bind(zx::channel channel, async_t* async = nullptr) {
+    return controller_.reader().Bind(std::move(channel), async);
   }
 
   // Binds the |InterfacePtr| to the given |InterfaceHandle|.
@@ -142,13 +146,14 @@ class InterfacePtr {
   // effectively unbind the |InterfacePtr|. A more direct way to have that
   // effect is to call |Unbind|.
   //
-  // Requires the current thread to have a default async_t (e.g., a message
-  // loop) in order to read messages from the channel and to monitor the
-  // channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // Uses the given async_t (e.g., a message loop) in order to read messages
+  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // If |async| is null, the current thread must have a default async_t.
   //
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
-  zx_status_t Bind(InterfaceHandle<Interface> handle) {
+  zx_status_t Bind(InterfaceHandle<Interface> handle,
+                   async_t* async = nullptr) {
     return Bind(handle.TakeChannel());
   }
 

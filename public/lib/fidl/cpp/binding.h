@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_CPP_BINDING_H_
 #define LIB_FIDL_CPP_BINDING_H_
 
+#include <lib/async/dispatcher.h>
 #include <zircon/assert.h>
 #include <zx/channel.h>
 
@@ -50,7 +51,8 @@ namespace fidl {
 //
 // After the |Binding| has been bound to an implementation, the implementation
 // will receive methods calls from the remote endpoint of the channel on the
-// thread on which the |InterfaceRequest| was bound.
+// async_t on which the |InterfaceRequest| was bound. By default this is the
+// thread on which the binding occurred.
 //
 // See also:
 //
@@ -75,12 +77,12 @@ class Binding {
   // the |channel| lacks |ZX_RIGHT_WAIT|), the |Binding| will be constructed
   // in an unbound state.
   //
-  // Requires the current thread to have a default async_t (e.g., a message
-  // loop) in order to read messages from the channel and to monitor the
-  // channel for |ZX_CHANNEL_PEER_CLOSED|.
-  Binding(ImplPtr impl, zx::channel channel)
+  // Uses the given async_t (e.g., a message loop) in order to read messages
+  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // If |async| is null, the current thread must have a default async_t.
+  Binding(ImplPtr impl, zx::channel channel, async_t* async = nullptr)
       : Binding(std::forward<ImplPtr>(impl)) {
-    Bind(std::move(channel));
+    Bind(std::move(channel), async);
   }
 
   // Constructs a completed binding of |impl| to the channel in |request|.
@@ -91,12 +93,13 @@ class Binding {
   // the |channel| lacks |ZX_RIGHT_WAIT|), the |Binding| will be constructed
   // in an unbound state.
   //
-  // Requires the current thread to have a default async_t (e.g., a message
-  // loop) in order to read messages from the channel and to monitor the
-  // channel for |ZX_CHANNEL_PEER_CLOSED|.
-  Binding(ImplPtr impl, InterfaceRequest<Interface> request)
+  // Uses the given async_t (e.g., a message loop) in order to read messages
+  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // If |async| is null, the current thread must have a default async_t.
+  Binding(ImplPtr impl, InterfaceRequest<Interface> request,
+          async_t* async = nullptr)
       : Binding(std::forward<ImplPtr>(impl)) {
-    Bind(request.TakeChannel());
+    Bind(request.TakeChannel(), async);
   }
 
   Binding(const Binding&) = delete;
@@ -108,12 +111,12 @@ class Binding {
   // If |NewBinding| fails to create the underlying channel, the returned
   // |InterfaceHandle| will return false from |is_valid()|.
   //
-  // Requires the current thread to have a default async_t (e.g., a message
-  // loop) in order to read messages from the channel and to monitor the
-  // channel for |ZX_CHANNEL_PEER_CLOSED|.
-  InterfaceHandle<Interface> NewBinding() {
+  // Uses the given async_t (e.g., a message loop) in order to read messages
+  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // If |async| is null, the current thread must have a default async_t.
+  InterfaceHandle<Interface> NewBinding(async_t* async = nullptr) {
     InterfaceHandle<Interface> client;
-    Bind(client.NewRequest().TakeChannel());
+    Bind(client.NewRequest().TakeChannel(), async);
     return client;
   }
 
@@ -122,14 +125,14 @@ class Binding {
   // If the |Binding| was prevously bound to another channel, that channel is
   // closed.
   //
-  // Requires the current thread to have a default async_t (e.g., a message
-  // loop) in order to read messages from the channel and to monitor the
-  // channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // Uses the given async_t (e.g., a message loop) in order to read messages
+  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // If |async| is null, the current thread must have a default async_t.
   //
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
-  zx_status_t Bind(zx::channel channel) {
-    return controller_.reader().Bind(std::move(channel));
+  zx_status_t Bind(zx::channel channel, async_t* async = nullptr) {
+    return controller_.reader().Bind(std::move(channel), async);
   }
 
   // Binds the previously specified implementation to the given
@@ -138,14 +141,15 @@ class Binding {
   // If the |Binding| was prevously bound to another channel, that channel is
   // closed.
   //
-  // Requires the current thread to have a default async_t (e.g., a message
-  // loop) in order to read messages from the channel and to monitor the
-  // channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // Uses the given async_t (e.g., a message loop) in order to read messages
+  // from the channel and to monitor the channel for |ZX_CHANNEL_PEER_CLOSED|.
+  // If |async| is null, the current thread must have a default async_t.
   //
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
-  zx_status_t Bind(InterfaceRequest<Interface> request) {
-    return Bind(request.TakeChannel());
+  zx_status_t Bind(InterfaceRequest<Interface> request,
+                   async_t* async = nullptr) {
+    return Bind(request.TakeChannel(), async);
   }
 
   // Unbinds the underlying channel from this binding and returns it so it can

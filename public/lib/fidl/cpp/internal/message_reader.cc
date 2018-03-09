@@ -86,13 +86,17 @@ MessageReader::~MessageReader() {
     async_cancel_wait(async_, &wait_);
 }
 
-zx_status_t MessageReader::Bind(zx::channel channel) {
+zx_status_t MessageReader::Bind(zx::channel channel, async_t* async) {
   if (is_bound())
     Unbind();
   if (!channel)
     return ZX_OK;
   channel_ = std::move(channel);
-  async_ = async_get_default();
+  if (async) {
+    async_ = async;
+  } else {
+    async_ = async_get_default();
+  }
   wait_.object = channel_.get();
   zx_status_t status = async_begin_wait(async_, &wait_);
   if (status != ZX_OK)
@@ -120,7 +124,7 @@ void MessageReader::Reset() {
 
 zx_status_t MessageReader::TakeChannelAndErrorHandlerFrom(
     MessageReader* other) {
-  zx_status_t status = Bind(other->Unbind());
+  zx_status_t status = Bind(other->Unbind(), other->async_);
   if (status != ZX_OK)
     return status;
   error_handler_ = std::move(other->error_handler_);
