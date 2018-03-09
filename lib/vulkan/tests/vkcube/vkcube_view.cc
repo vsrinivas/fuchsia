@@ -42,7 +42,8 @@ void VkCubeView::OnSceneInvalidated(ui_mozart::PresentationInfoPtr presentation_
         image_pipe_id, f1dl::InterfaceRequest<scenic::ImagePipe>(std::move(endpoint1))));
     pane_material.SetTexture(image_pipe_id);
     session()->ReleaseResource(image_pipe_id);
-    session()->Present(zx_clock_get(ZX_CLOCK_MONOTONIC), [](ui_mozart::PresentationInfoPtr info) {});
+
+    // No need to Present on session; base_view will present after calling OnSceneInvalidated.
 
     resize_callback_(logical_size().width, logical_size().height,
                      f1dl::InterfaceHandle<scenic::ImagePipe>(std::move(endpoint0)));
