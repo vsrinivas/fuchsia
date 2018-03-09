@@ -527,6 +527,9 @@ template("fidl") {
       package_root = get_label_info(generator_label, "target_gen_dir")
       source_dir = "."
 
+      # Can be left empty as analysis is disabled.
+      sources = []
+
       # Disable analysis. FIDL targets in a same build file will share a gen (and
       # therefore source) directory which confuses the analyzer trying to process
       # every single file in the directory but not having the right packages set
