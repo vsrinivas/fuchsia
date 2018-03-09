@@ -89,5 +89,17 @@ TEST(Convert, ImplicitConversion) {
   EXPECT_EQ(str, ToString(string_view));
 }
 
+TEST(Convert, FromFlatBufferBuilder) {
+  flatbuffers::FlatBufferBuilder builder;
+  auto bytes = convert::ToFlatBufferVector(&builder, "test");
+  builder.Finish(CreateBytesTest(builder, bytes));
+
+  ExtendedStringView result(builder);
+  std::string buffer_bytes(reinterpret_cast<char*>(builder.GetBufferPointer()),
+                           builder.GetSize());
+
+  EXPECT_EQ(buffer_bytes, result);
+}
+
 }  // namespace
 }  // namespace convert

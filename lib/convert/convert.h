@@ -48,6 +48,11 @@ class ExtendedStringView : public fxl::StringView {
       const flatbuffers::Vector<uint8_t>* byte_storage)
       : fxl::StringView(reinterpret_cast<const char*>(byte_storage->data()),
                         byte_storage->size()) {}
+  ExtendedStringView(  // NOLINT
+      const flatbuffers::FlatBufferBuilder& buffer_builder)
+      : fxl::StringView(
+            reinterpret_cast<char*>(buffer_builder.GetBufferPointer()),
+            buffer_builder.GetSize()) {}
 
   operator leveldb::Slice() const {  // NOLINT
     return leveldb::Slice(data(), size());
