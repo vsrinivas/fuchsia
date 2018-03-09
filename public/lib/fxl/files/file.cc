@@ -138,13 +138,14 @@ bool IsFile(const std::string& path) {
   return S_ISREG(buf.st_mode);
 }
 
+#if defined(OS_LINUX) || defined(OS_FUCHSIA)
 bool IsFileAt(int dirfd, const std::string& path) {
   struct stat buf;
   if (fstatat(dirfd, path.c_str(), &buf, 0  /* flags */) != 0)
     return false;
   return S_ISREG(buf.st_mode);
 }
-
+#endif
 
 bool GetFileSize(const std::string& path, uint64_t* size) {
   struct stat stat_buffer;

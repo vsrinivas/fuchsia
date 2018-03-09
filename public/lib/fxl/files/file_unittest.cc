@@ -42,6 +42,7 @@ TEST(File, WriteFileInTwoPhases) {
   EXPECT_EQ(read_content, content);
 }
 
+#if defined(OS_LINUX) || defined(OS_FUCHSIA)
 TEST(File, IsFileAt) {
   ScopedTempDir dir;
   std::string path;
@@ -52,6 +53,7 @@ TEST(File, IsFileAt) {
   ASSERT_TRUE(dirfd.get() != -1);
   EXPECT_TRUE(IsFileAt(dirfd.get(), GetBaseName(path)));
 }
+#endif
 
 }  // namespace
 }  // namespace files
