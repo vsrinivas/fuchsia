@@ -1,0 +1,78 @@
+{
+  "description": "Schema for a build package file",
+  "type": "object",
+  "properties": {
+    "languages": {
+      "description": "The set of language runtimes needed by Fuchsia packages in this file",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/language"
+      }
+    },
+    "imports": {
+      "description": "A list of paths to other build package files to include",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "labels": {
+      "description": "A list of GN labels to build; useful for e.g. host tools",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/gnLabel"
+      }
+    },
+    "packages": {
+      "description": "A map of Fuchsia packages; each entry's key must match exactly the name of the package in the entry's value",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/gnLabel"
+      }
+    },
+    "resources": {
+      "description": "A list of files to add to the final image",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/resource"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "language": {
+      "description": "A language runtime available on Fuchsia",
+      "type": "string",
+      "enum": [
+        "cpp",
+        "dart",
+        "go",
+        "rust"
+      ]
+    },
+    "gnLabel": {
+      "description": "An absolute GN label",
+      "type": "string",
+      "pattern": "^/(/[^/]+)+(:[^/]+)?(\\(/(/[^/]+)+(:[^/]+)?\\))?$"
+    },
+    "resource": {
+      "description": "A file to add to the final system image",
+      "type": "object",
+      "properties": {
+        "bootfs_path": {
+          "description": "Path of the file on the target",
+          "type": "string"
+        },
+        "file": {
+          "description": "Location of the file relative to the root of the Fuchsia tree",
+          "type": "string"
+        }
+      },
+      "required": [
+        "bootfs_path",
+        "file"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

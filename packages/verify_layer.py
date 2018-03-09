@@ -7,7 +7,11 @@ import argparse
 from common import FUCHSIA_ROOT, get_package_imports
 import json
 import os
+import subprocess
 import sys
+
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def check_json(packages):
@@ -21,6 +25,16 @@ def check_json(packages):
                 all_json = False
                 print('Non-JSON file: %s.' % package)
     return all_json
+
+
+def check_schema(packages, validator):
+    '''Verifies that all files adhere to the schema.'''
+    all_valid = True
+    schema = os.path.join(SCRIPT_DIR, 'package_schema.json')
+    for package in packages:
+        if subprocess.call([validator, schema, package]) != 0:
+            all_valid = False
+    return all_valid
 
 
 def check_deps_exist(dep_map):
@@ -79,6 +93,9 @@ def main():
                         help='Name of the layer to analyze',
                         choices=['garnet', 'peridot', 'topaz'],
                         required=True)
+    parser.add_argument('--json-validator',
+                        help='Path to the JSON validation tool',
+                        required=True)
     args = parser.parse_args()
 
     layer = args.layer
@@ -91,6 +108,9 @@ def main():
         packages.extend([os.path.join(dirpath, f) for f in filenames])
 
     if not check_json(packages):
+        return False
+
+    if not check_schema(packages, args.json_validator):
         return False
 
     deps = dict([(p, get_package_imports(p)) for p in packages])
