@@ -4,23 +4,14 @@
 # found in the LICENSE file.
 
 import argparse
+from common import FUCHSIA_ROOT, get_package_imports
 import json
 import os
 import sys
 
-FUCHSIA_ROOT = os.path.dirname(  # $root
-    os.path.dirname(             # scripts
-    os.path.abspath(__file__)))
-
-
-def get_package_imports(package):
-    with open(os.path.join(FUCHSIA_ROOT, package), 'r') as package_file:
-        data = json.load(package_file)
-    return data['imports'] if 'imports' in data else []
-
 
 def get_package_id(package):
-    return package.replace('/', '_')
+    return package.replace('/', '_').replace('-', '_')
 
 
 def get_package_nick(package):
