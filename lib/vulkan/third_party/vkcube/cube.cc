@@ -551,11 +551,8 @@ void demo_draw(struct demo* demo)
     TRACE_ASYNC_BEGIN("cube", "acquire next image", nonce);
 
     while (true) {
-        // TODO(MA-265) dont do this
-        VkSemaphore acquire_semaphore = VK_NULL_HANDLE;
-#if !defined(CUBE_USE_IMAGE_PIPE)
-        acquire_semaphore = demo->image_acquired_semaphores[demo->frame_index];
-#endif
+        VkSemaphore acquire_semaphore = demo->image_acquired_semaphores[demo->frame_index];
+
         // Get the index of the next available swapchain image:
         err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain, 5000 * 1000 * 1000,
                                           acquire_semaphore, VK_NULL_HANDLE, &demo->current_buffer);
@@ -593,12 +590,7 @@ void demo_draw(struct demo* demo)
     submit_info.pNext = NULL;
     submit_info.pWaitDstStageMask = &pipe_stage_flags;
     pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-// TODO(MA-265) dont do this
-#if defined(CUBE_USE_IMAGE_PIPE)
-    submit_info.waitSemaphoreCount = 0;
-#else
     submit_info.waitSemaphoreCount = 1;
-#endif
     submit_info.pWaitSemaphores = &demo->image_acquired_semaphores[demo->frame_index];
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &demo->buffers[demo->current_buffer].cmd;

@@ -101,6 +101,7 @@ class ImagePipeSwapchain {
   SupportedImageProperties supported_properties_;
   scenic::ImagePipeSyncPtr image_pipe_;
   std::vector<VkImage> images_;
+  std::vector<zx::event> acquire_events_;
   std::vector<VkDeviceMemory> memories_;
   std::vector<uint32_t> acquired_ids_;
   std::vector<uint32_t> available_ids_;
@@ -394,6 +395,47 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
   *pImageIndex = available_ids_[0];
   available_ids_.erase(available_ids_.begin());
   acquired_ids_.push_back(*pImageIndex);
+
+  if (semaphore != VK_NULL_HANDLE) {
+    if (acquire_events_.size() == 0)
+      acquire_events_.resize(images_.size());
+
+    if (!acquire_events_[*pImageIndex]) {
+      zx_status_t status = zx::event::create(0, &acquire_events_[*pImageIndex]);
+      if (status != ZX_OK) {
+        FXL_DLOG(ERROR) << "zx::event::create failed: " << status;
+        return VK_SUCCESS;
+      }
+    }
+
+    zx::event event;
+    zx_status_t status =
+        acquire_events_[*pImageIndex].duplicate(ZX_RIGHT_SAME_RIGHTS, &event);
+    if (status != ZX_OK) {
+      FXL_DLOG(ERROR) << "failed to duplicate acquire semaphore: " << status;
+      return VK_SUCCESS;
+    }
+
+    event.signal(0, ZX_EVENT_SIGNALED);
+
+    VkImportSemaphoreFuchsiaHandleInfoKHR import_info = {
+        .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FUCHSIA_HANDLE_INFO_KHR,
+        .pNext = nullptr,
+        .semaphore = semaphore,
+        .flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
+        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+        .handle = event.release()};
+
+    VkLayerDispatchTable* pDisp =
+        GetLayerDataPtr(get_dispatch_key(device_), layer_data_map)
+            ->device_dispatch_table;
+    VkResult result =
+        pDisp->ImportSemaphoreFuchsiaHandleKHR(device_, &import_info);
+    if (result != VK_SUCCESS) {
+      FXL_DLOG(ERROR) << "semaphore import failed: " << result;
+      return VK_SUCCESS;
+    }
+  }
   return VK_SUCCESS;
 }
 
@@ -405,7 +447,6 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device,
                                                    uint32_t* pImageIndex) {
   // TODO(MA-264) handle this correctly
   FXL_CHECK(fence == VK_NULL_HANDLE);
-  FXL_CHECK(semaphore == VK_NULL_HANDLE);
 
   auto swapchain = reinterpret_cast<ImagePipeSwapchain*>(vk_swapchain);
   return swapchain->AcquireNextImage(timeout, semaphore, pImageIndex);
@@ -432,8 +473,10 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue,
     };
     VkResult result = pDisp->GetSemaphoreFuchsiaHandleKHR(
         device_, &info, acquire_fences[i].reset_and_get_address());
-    if (result != VK_SUCCESS)
+    if (result != VK_SUCCESS) {
+      FXL_DLOG(ERROR) << "vkGetSemaphoreFuchsiaHandleKHR failed: " << result;
       return VK_ERROR_SURFACE_LOST_KHR;
+    }
   }
 
   auto iter = std::find(acquired_ids_.begin(), acquired_ids_.end(), index);
