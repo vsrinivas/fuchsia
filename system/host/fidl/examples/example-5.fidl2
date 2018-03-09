@@ -17,6 +17,8 @@ enum Enum23 : int32 {
     enum_3 = 0;
     enum_4 = -23;
 };
+
+[ServiceName="my.Thing"]
 interface Thing {
     const int64 foo = 3;
     1: one_function(string s, bool b) -> ();

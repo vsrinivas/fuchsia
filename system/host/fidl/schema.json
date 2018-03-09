@@ -83,6 +83,9 @@
                 "value"
             ],
             "properties": {
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list"
+                },
                 "name": {
                     "$ref": "#/definitions/compound-identifier"
                 },
@@ -102,6 +105,9 @@
                 "members"
             ],
             "properties": {
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list"
+                },
                 "name": {
                     "$ref": "#/definitions/compound-identifier"
                 },
@@ -138,6 +144,9 @@
                 "methods"
             ],
             "properties": {
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list"
+                },
                 "name": {
                     "$ref": "#/definitions/compound-identifier"
                 },
@@ -231,6 +240,9 @@
                 "size"
             ],
             "properties": {
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list"
+                },
                 "name": {
                     "$ref": "#/definitions/compound-identifier"
                 },
@@ -284,6 +296,9 @@
                 "alignment"
             ],
             "properties": {
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list"
+                },
                 "name": {
                     "$ref": "#/definitions/compound-identifier"
                 },
@@ -466,6 +481,27 @@
                 },
                 "nullable": {
                     "type": "boolean"
+                }
+            }
+        },
+        "attribute-list": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/attribute"
+            }
+        },
+        "attribute": {
+            "type": "object",
+            "required": [
+                "name",
+                "value"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
                 }
             }
         },

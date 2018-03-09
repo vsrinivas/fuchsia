@@ -36,9 +36,11 @@ struct IntConstant {
     IntConstant(std::unique_ptr<raw::Constant> raw_constant, IntType value)
         : raw_constant_(std::move(raw_constant)), value_(value) {}
 
-    explicit IntConstant(IntType value) : value_(value) {}
+    explicit IntConstant(IntType value)
+        : value_(value) {}
 
-    IntConstant() : value_(0) {}
+    IntConstant()
+        : value_(0) {}
 
     IntType Value() const { return value_; }
 
@@ -96,13 +98,14 @@ struct Decl {
         kUnion,
     };
 
-    Decl(Kind kind, Name name)
-        : kind(kind), name(std::move(name)) {}
+    Decl(Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
+        : kind(kind), attributes(std::move(attributes)), name(std::move(name)) {}
 
     Decl(Decl&&) = default;
     Decl& operator=(Decl&&) = default;
 
     const Kind kind;
+    std::unique_ptr<raw::AttributeList> attributes;
     const Name name;
 };
 
@@ -201,7 +204,7 @@ struct PrimitiveType : public Type {
     }
 
     explicit PrimitiveType(types::PrimitiveSubtype subtype)
-        : Type(Kind::Primitive, SubtypeSize(subtype)), subtype(subtype) { }
+        : Type(Kind::Primitive, SubtypeSize(subtype)), subtype(subtype) {}
 
     types::PrimitiveSubtype subtype;
 };
@@ -215,8 +218,8 @@ struct IdentifierType : public Type {
 };
 
 struct Const : public Decl {
-    Const(Name name, std::unique_ptr<Type> type, std::unique_ptr<raw::Constant> value)
-        : Decl(Kind::kConst, std::move(name)), type(std::move(type)), value(std::move(value)) {}
+    Const(std::unique_ptr<raw::AttributeList> attributes, Name name, std::unique_ptr<Type> type, std::unique_ptr<raw::Constant> value)
+        : Decl(Kind::kConst, std::move(attributes), std::move(name)), type(std::move(type)), value(std::move(value)) {}
     std::unique_ptr<Type> type;
     std::unique_ptr<raw::Constant> value;
 };
@@ -229,8 +232,8 @@ struct Enum : public Decl {
         std::unique_ptr<raw::Constant> value;
     };
 
-    Enum(Name name, types::PrimitiveSubtype type, std::vector<Member> members)
-        : Decl(Kind::kEnum, std::move(name)), type(type), members(std::move(members)) {}
+    Enum(std::unique_ptr<raw::AttributeList> attributes, Name name, types::PrimitiveSubtype type, std::vector<Member> members)
+        : Decl(Kind::kEnum, std::move(attributes), std::move(name)), type(type), members(std::move(members)) {}
 
     types::PrimitiveSubtype type;
     std::vector<Member> members;
@@ -271,8 +274,8 @@ struct Interface : public Decl {
         std::unique_ptr<Message> maybe_response;
     };
 
-    Interface(Name name, std::vector<Method> methods)
-        : Decl(Kind::kInterface, std::move(name)), methods(std::move(methods)) {}
+    Interface(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Method> methods)
+        : Decl(Kind::kInterface, std::move(attributes), std::move(name)), methods(std::move(methods)) {}
 
     std::vector<Method> methods;
 };
@@ -290,8 +293,8 @@ struct Struct : public Decl {
         FieldShape fieldshape;
     };
 
-    Struct(Name name, std::vector<Member> members)
-        : Decl(Kind::kStruct, std::move(name)), members(std::move(members)) {}
+    Struct(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
+        : Decl(Kind::kStruct, std::move(attributes), std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
     TypeShape typeshape;
@@ -307,8 +310,8 @@ struct Union : public Decl {
         FieldShape fieldshape;
     };
 
-    Union(Name name, std::vector<Member> members)
-        : Decl(Kind::kUnion, std::move(name)), members(std::move(members)) {}
+    Union(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
+        : Decl(Kind::kUnion, std::move(attributes), std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
     TypeShape typeshape;
@@ -328,8 +331,7 @@ private:
 
     bool ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
     bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
-    bool
-    ConsumeInterfaceDeclaration(std::unique_ptr<raw::InterfaceDeclaration> interface_declaration);
+    bool ConsumeInterfaceDeclaration(std::unique_ptr<raw::InterfaceDeclaration> interface_declaration);
     bool ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
     bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
 

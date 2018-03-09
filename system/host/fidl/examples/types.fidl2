@@ -197,6 +197,7 @@ struct vectors {
     vector<vector<handle>:4>:vectors_size? handle_nullable_sized_2;
 };
 
+[Awesome]
 struct handles {
     handle handle_handle;
     handle<process> process_handle;

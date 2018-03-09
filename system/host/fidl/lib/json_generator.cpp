@@ -421,18 +421,34 @@ void JSONGenerator::Generate(const raw::Constant& value) {
     });
 }
 
+void JSONGenerator::Generate(const raw::Attribute& value) {
+    GenerateObject([&]() {
+        GenerateObjectMember("name", value.name, Position::First);
+        if (value.value)
+            GenerateObjectMember("value", value.value->location);
+        else
+            GenerateObjectMember("value", StringView());
+    });
+}
+
+void JSONGenerator::Generate(const raw::AttributeList& value) {
+    Generate(value.attribute_list);
+}
+
 void JSONGenerator::Generate(const flat::Ordinal& value) {
     EmitUint32(&json_file_, value.Value());
 }
 
 void JSONGenerator::Generate(const flat::Name& value) {
-    std::vector<std::string> name_parts = { LongName(value) };
+    std::vector<std::string> name_parts = {LongName(value)};
     Generate(name_parts);
 }
 
 void JSONGenerator::Generate(const flat::Const& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::First);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("type", value.type);
         GenerateObjectMember("value", value.value);
     });
@@ -441,6 +457,8 @@ void JSONGenerator::Generate(const flat::Const& value) {
 void JSONGenerator::Generate(const flat::Enum& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::First);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("type", value.type);
         GenerateObjectMember("members", value.members);
     });
@@ -456,6 +474,8 @@ void JSONGenerator::Generate(const flat::Enum::Member& value) {
 void JSONGenerator::Generate(const flat::Interface& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::First);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("methods", value.methods);
     });
 }
@@ -492,6 +512,8 @@ void JSONGenerator::Generate(const flat::Interface::Method::Parameter& value) {
 void JSONGenerator::Generate(const flat::Struct& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::First);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("members", value.members);
         GenerateObjectMember("size", value.typeshape.Size());
         GenerateObjectMember("alignment", value.typeshape.Alignment());
@@ -513,6 +535,8 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
 void JSONGenerator::Generate(const flat::Union& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::First);
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("members", value.members);
         GenerateObjectMember("size", value.typeshape.Size());
         GenerateObjectMember("alignment", value.typeshape.Alignment());

@@ -113,6 +113,7 @@ Token Lexer::LexStringLiteral() {
         case 0:
             return Finish(Token::Kind::NotAToken);
         case '"':
+            // This escaping logic is incorrect for the input: "\\"
             if (last != '\\')
                 return Finish(Token::Kind::StringLiteral);
         // Fall through.

@@ -67,6 +67,10 @@ private:
 
     std::unique_ptr<raw::Constant> ParseConstant();
 
+    std::unique_ptr<raw::Attribute> ParseAttribute();
+    std::unique_ptr<raw::AttributeList> ParseAttributeList();
+    std::unique_ptr<raw::AttributeList> MaybeParseAttributeList();
+
     std::unique_ptr<raw::Using> ParseUsing();
 
     std::unique_ptr<raw::ArrayType> ParseArrayType();
@@ -77,21 +81,21 @@ private:
     std::unique_ptr<raw::RequestType> ParseRequestType();
     std::unique_ptr<raw::Type> ParseType();
 
-    std::unique_ptr<raw::ConstDeclaration> ParseConstDeclaration();
+    std::unique_ptr<raw::ConstDeclaration> ParseConstDeclaration(std::unique_ptr<raw::AttributeList> attributes);
 
     std::unique_ptr<raw::EnumMember> ParseEnumMember();
-    std::unique_ptr<raw::EnumDeclaration> ParseEnumDeclaration();
+    std::unique_ptr<raw::EnumDeclaration> ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes);
 
     std::unique_ptr<raw::Parameter> ParseParameter();
     std::unique_ptr<raw::ParameterList> ParseParameterList();
     std::unique_ptr<raw::InterfaceMemberMethod> ParseInterfaceMemberMethod();
-    std::unique_ptr<raw::InterfaceDeclaration> ParseInterfaceDeclaration();
+    std::unique_ptr<raw::InterfaceDeclaration> ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes);
 
     std::unique_ptr<raw::StructMember> ParseStructMember();
-    std::unique_ptr<raw::StructDeclaration> ParseStructDeclaration();
+    std::unique_ptr<raw::StructDeclaration> ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes);
 
     std::unique_ptr<raw::UnionMember> ParseUnionMember();
-    std::unique_ptr<raw::UnionDeclaration> ParseUnionDeclaration();
+    std::unique_ptr<raw::UnionDeclaration> ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes);
 
     std::unique_ptr<raw::File> ParseFile();
 

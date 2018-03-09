@@ -115,6 +115,22 @@ struct LiteralConstant : Constant {
     std::unique_ptr<Literal> literal;
 };
 
+struct Attribute {
+    Attribute(std::unique_ptr<Identifier> name,
+              std::unique_ptr<StringLiteral> value)
+        : name(std::move(name)), value(std::move(value)) {}
+
+    std::unique_ptr<Identifier> name;
+    std::unique_ptr<StringLiteral> value;
+};
+
+struct AttributeList {
+    AttributeList(std::vector<std::unique_ptr<Attribute>> attribute_list)
+        : attribute_list(std::move(attribute_list)) {}
+
+    std::vector<std::unique_ptr<Attribute>> attribute_list;
+};
+
 struct Type {
     virtual ~Type() {}
 
@@ -204,10 +220,12 @@ struct Using {
 };
 
 struct ConstDeclaration {
-    ConstDeclaration(std::unique_ptr<Type> type, std::unique_ptr<Identifier> identifier,
-                     std::unique_ptr<Constant> constant)
-        : type(std::move(type)), identifier(std::move(identifier)), constant(std::move(constant)) {}
+    ConstDeclaration(std::unique_ptr<AttributeList> attributes, std::unique_ptr<Type> type,
+                     std::unique_ptr<Identifier> identifier, std::unique_ptr<Constant> constant)
+        : attributes(std::move(attributes)), type(std::move(type)),
+          identifier(std::move(identifier)), constant(std::move(constant)) {}
 
+    std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Type> type;
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<Constant> constant;
@@ -222,12 +240,14 @@ struct EnumMember {
 };
 
 struct EnumDeclaration {
-    EnumDeclaration(std::unique_ptr<Identifier> identifier,
+    EnumDeclaration(std::unique_ptr<AttributeList> attributes,
+                    std::unique_ptr<Identifier> identifier,
                     std::unique_ptr<PrimitiveType> maybe_subtype,
                     std::vector<std::unique_ptr<EnumMember>> members)
-        : identifier(std::move(identifier)), maybe_subtype(std::move(maybe_subtype)),
-          members(std::move(members)) {}
+        : attributes(std::move(attributes)), identifier(std::move(identifier)),
+          maybe_subtype(std::move(maybe_subtype)), members(std::move(members)) {}
 
+    std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<PrimitiveType> maybe_subtype;
     std::vector<std::unique_ptr<EnumMember>> members;
@@ -265,15 +285,17 @@ struct InterfaceMemberMethod {
 };
 
 struct InterfaceDeclaration {
-    InterfaceDeclaration(std::unique_ptr<Identifier> identifier,
+    InterfaceDeclaration(std::unique_ptr<AttributeList> attributes,
+                         std::unique_ptr<Identifier> identifier,
                          std::vector<std::unique_ptr<CompoundIdentifier>> superinterfaces,
                          std::vector<std::unique_ptr<ConstDeclaration>> const_members,
                          std::vector<std::unique_ptr<EnumDeclaration>> enum_members,
                          std::vector<std::unique_ptr<InterfaceMemberMethod>> method_members)
-        : identifier(std::move(identifier)), superinterfaces(std::move(superinterfaces)),
-          const_members(std::move(const_members)), enum_members(std::move(enum_members)),
-          method_members(std::move(method_members)) {}
+        : attributes(std::move(attributes)), identifier(std::move(identifier)),
+          superinterfaces(std::move(superinterfaces)), const_members(std::move(const_members)),
+          enum_members(std::move(enum_members)), method_members(std::move(method_members)) {}
 
+    std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
     std::vector<std::unique_ptr<CompoundIdentifier>> superinterfaces;
     std::vector<std::unique_ptr<ConstDeclaration>> const_members;
@@ -293,13 +315,16 @@ struct StructMember {
 };
 
 struct StructDeclaration {
-    StructDeclaration(std::unique_ptr<Identifier> identifier,
+    StructDeclaration(std::unique_ptr<AttributeList> attributes,
+                      std::unique_ptr<Identifier> identifier,
                       std::vector<std::unique_ptr<ConstDeclaration>> const_members,
                       std::vector<std::unique_ptr<EnumDeclaration>> enum_members,
                       std::vector<std::unique_ptr<StructMember>> members)
-        : identifier(std::move(identifier)), const_members(std::move(const_members)),
-          enum_members(std::move(enum_members)), members(std::move(members)) {}
+        : attributes(std::move(attributes)), identifier(std::move(identifier)),
+          const_members(std::move(const_members)), enum_members(std::move(enum_members)),
+          members(std::move(members)) {}
 
+    std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
     std::vector<std::unique_ptr<ConstDeclaration>> const_members;
     std::vector<std::unique_ptr<EnumDeclaration>> enum_members;
@@ -315,13 +340,16 @@ struct UnionMember {
 };
 
 struct UnionDeclaration {
-    UnionDeclaration(std::unique_ptr<Identifier> identifier,
+    UnionDeclaration(std::unique_ptr<AttributeList> attributes,
+                     std::unique_ptr<Identifier> identifier,
                      std::vector<std::unique_ptr<ConstDeclaration>> const_members,
                      std::vector<std::unique_ptr<EnumDeclaration>> enum_members,
                      std::vector<std::unique_ptr<UnionMember>> members)
-        : identifier(std::move(identifier)), const_members(std::move(const_members)),
-          enum_members(std::move(enum_members)), members(std::move(members)) {}
+        : attributes(std::move(attributes)), identifier(std::move(identifier)),
+          const_members(std::move(const_members)), enum_members(std::move(enum_members)),
+          members(std::move(members)) {}
 
+    std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
     std::vector<std::unique_ptr<ConstDeclaration>> const_members;
     std::vector<std::unique_ptr<EnumDeclaration>> enum_members;
