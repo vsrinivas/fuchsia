@@ -11,15 +11,17 @@ import (
 	"path/filepath"
 
 	"fuchsia.googlesource.com/pm/build"
+	"fuchsia.googlesource.com/pm/cmd/pm/archive"
 	"fuchsia.googlesource.com/pm/cmd/pm/genkey"
 	initcmd "fuchsia.googlesource.com/pm/cmd/pm/init"
+	"fuchsia.googlesource.com/pm/cmd/pm/install"
 	"fuchsia.googlesource.com/pm/cmd/pm/seal"
 	"fuchsia.googlesource.com/pm/cmd/pm/sign"
 	"fuchsia.googlesource.com/pm/cmd/pm/update"
 	"fuchsia.googlesource.com/pm/cmd/pm/verify"
 )
 
-const usage = `Usage: %s [-k] [-m] [-o] [-t] <command>
+const usage = `Usage: %s [-k key] [-m manifest] [-o output dir] [-t tempdir] <command>
 Commands
     init    - initialize a package meta directory in the standard form
     genkey  - generate a new private key
@@ -28,10 +30,13 @@ Commands
       update  - update the merkle roots in meta/contents
       sign    - sign a package with the given key
       seal    - seal package metadata into a signed meta.far
-    verify  - verify metadata signature against the embedded public key
+		verify  - verify metadata signature against the embedded public key
+
+	Dev Only:
+    archive - construct a single .far representation of the package
+    install - install a single .far representation of the package
 
 TODO:
-    archive - construct a single .far representation of the package
     publish - upload the package to a distribution service
 `
 
@@ -80,6 +85,12 @@ func main() {
 
 	case "verify":
 		err = verify.Run(cfg)
+
+	case "archive":
+		err = archive.Run(cfg)
+
+	case "install":
+		err = install.Run(cfg)
 
 	default:
 		flag.Usage()
