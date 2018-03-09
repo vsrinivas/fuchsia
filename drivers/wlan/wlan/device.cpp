@@ -175,7 +175,7 @@ zx_status_t Device::AddEthDevice() {
     args.name = "wlan-ethernet";
     args.ctx = this;
     args.ops = &eth_device_ops;
-    args.proto_id = ZX_PROTOCOL_ETHERMAC;
+    args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
     args.proto_ops = &ethmac_ops;
     return device_add(zxdev_, &args, &ethdev_);
 }
