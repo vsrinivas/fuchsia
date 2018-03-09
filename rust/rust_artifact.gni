@@ -84,7 +84,7 @@ template("rust_artifact") {
     build_target_name = "${target_name}_build"
   } else if (type == "lib") {
     output_base = "$specific_out_dir/lib$name"
-    output_file = "$output_base.rmeta"
+    output_file = "$output_base.rlib"
     output_depfile = "$output_base.d"
     build_target_name = "${target_name}_lib"
     group_deps += [ ":$build_target_name" ]
@@ -178,25 +178,7 @@ template("rust_artifact") {
       ]
     }
 
-    # for backwards compatability to not break builds
-    # TODO(bwb): remove this after landing dependent CLs
-    copy("${target_name}_test") {
-      base_out_dir = "$root_build_dir/rust_targets"
-      sources = [
-        "$base_out_dir/$name-$type-unit-test",
-      ]
-
-      outputs = [
-        "$root_out_dir/$name-$type-test",
-      ]
-
-      deps = [
-        ":$build_target_name",
-      ]
-    }
-
     group_deps += [ ":${target_name}_unit_test" ]
-    group_deps += [ ":${target_name}_test" ]
   }
 
   if (defined(invoker.integration_tests)) {
@@ -283,7 +265,6 @@ template("rust_artifact") {
         (defined(invoker.with_tests) && invoker.with_tests)) {
       args += [ "--with-tests" ]
 
-      outputs += [ "$base_out_dir/$name-$type-test" ]
       outputs += [ "$base_out_dir/$name-$type-unit-test" ]
     }
 

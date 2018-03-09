@@ -146,16 +146,9 @@ def main():
         package_name = config["package"]["name"]
         default_name = package_name.replace("-", "_")
 
-    if args.type == "lib":
-        # Since the generated .rlib artifact won't actually be used (for now),
-        # just do syntax checking and avoid generating it.
-        build_command = "check"
-    else:
-        build_command = "build"
-
     call_args = [
         args.cargo,
-        build_command,
+        "build",
         "--target=%s" % args.target_triple,
         "--verbose",
     ]
@@ -214,9 +207,6 @@ def main():
                 if test_name:
                     dest_test_path = os.path.join(args.out_dir,
                             "%s-%s-%s-%s-test" % (args.name, test_name, args.type, test_type))
-                    # trigger rebuilds when integration tests change by appending tests to depfile
-                    with open(depfile_path, "a") as depfile:
-                        depfile.write(data["target"]["src_path"])
                 else:
                     # maintain support for unit tests
                     dest_test_path = os.path.join(args.out_dir,
