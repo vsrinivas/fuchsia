@@ -193,13 +193,13 @@ zx_status_t AssociatedState::HandleDisassociation(const ImmutableMgmtFrame<Disas
     return ZX_OK;
 }
 
+zx_status_t AssociatedState::HandleCtrlFrame(const FrameControl& fc) {
+    UpdatePowerSaveMode(fc);
+    return ZX_OK;
+}
+
 zx_status_t AssociatedState::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
                                                const wlan_rx_info_t& rxinfo) {
-    // Control frames share no common header. Check FrameControl specifically for PsPoll frames.
-    // Other control frames must check the same once they are supported.
-    // TODO(hahnr): Explore whether it makes sense to provide a HandleCtrlFrame(FrameControl) method
-    UpdatePowerSaveMode(frame.hdr->fc);
-
     if (client_->HasBufferedFrames()) {
         // Dequeue buffered Ethernet frame.
         fbl::unique_ptr<Packet> packet;

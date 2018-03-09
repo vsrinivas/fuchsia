@@ -174,6 +174,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_HANDLE_MGMT(AddBaResponseFrame)
 
     // Control frame handlers.
+    virtual zx_status_t HandleCtrlFrame(const FrameControl& fc) { return ZX_OK; }
     WLAN_DECL_FUNC_HANDLE_CTRL(PsPollFrame)
 
    private:
@@ -236,6 +237,9 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     template <typename Body>
     zx_status_t HandleFrameInternal(const ImmutableCtrlFrame<Body>& frame,
                                     const wlan_rx_info_t& info) {
+        auto status = HandleCtrlFrame(frame.hdr->fc);
+        if (status != ZX_OK) { return status; }
+
         return HandleCtrlFrameInternal(frame, info);
     }
     WLAN_DECL_FUNC_INTERNAL_HANDLE_CTRL(PsPollFrame)

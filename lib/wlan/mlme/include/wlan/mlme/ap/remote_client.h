@@ -161,6 +161,7 @@ class AssociatedState : public BaseState {
                                        const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleDisassociation(const ImmutableMgmtFrame<Disassociation>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleCtrlFrame(const FrameControl& fc) override;
     zx_status_t HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
                                   const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleMlmeEapolReq(const EapolRequest& req) override;
