@@ -372,6 +372,7 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
             offset = request->offset;
         } else {
             data = msg->data;
+            len = arg;
             offset = msg->arg2.off;
         }
         zx_status_t r = do_sync_io(dev, DO_READ, data, len, offset);
