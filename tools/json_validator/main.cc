@@ -29,13 +29,12 @@ int ReadDocument(std::string file, Document* document) {
 }
 
 int main(int argc, const char** argv) {
-  if (argc != 4) {
-    printf("Usage: %s <schema> <file> <stamp>\n", argv[0]);
+  if (argc < 3 || argc > 4) {
+    printf("Usage: %s <schema> <file> [stamp]\n", argv[0]);
     return 1;
   }
   std::string schema_path = argv[1];
   std::string file_path = argv[2];
-  std::string stamp_path = argv[3];
 
   Document schema_document;
   if (ReadDocument(schema_path, &schema_document) != 0) {
@@ -62,8 +61,12 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  std::ofstream stamp(stamp_path);
-  stamp.close();
+  if (argc == 4) {
+    // Write the stamp file if one was given.
+    std::string stamp_path = argv[3];
+    std::ofstream stamp(stamp_path);
+    stamp.close();
+  }
 
   return 0;
 }
