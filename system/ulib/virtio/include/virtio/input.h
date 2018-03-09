@@ -44,11 +44,36 @@ enum virtio_input_key_event_value {
     VIRTIO_INPUT_EV_KEY_PRESSED = 1,
 };
 
+/* To populate 'code' in an EV_REL event. */
+enum virtio_input_rel_event_code {
+    VIRTIO_INPUT_EV_REL_X = 0,
+    VIRTIO_INPUT_EV_REL_Y = 1,
+    VIRTIO_INPUT_EV_REL_Z = 2,
+    VIRTIO_INPUT_EV_REL_RX = 3,
+    VIRTIO_INPUT_EV_REL_RY = 4,
+    VIRTIO_INPUT_EV_REL_RZ = 5,
+    VIRTIO_INPUT_EV_REL_HWHEEL = 6,
+    VIRTIO_INPUT_EV_REL_DIAL = 7,
+    VIRTIO_INPUT_EV_REL_WHEEL = 8,
+    VIRTIO_INPUT_EV_REL_MISC = 9,
+};
+
+/* To populate 'code' in an EV_ABS event. */
+enum virtio_input_abs_event_code {
+    VIRTIO_INPUT_EV_ABS_X = 0,
+    VIRTIO_INPUT_EV_ABS_Y = 1,
+    VIRTIO_INPUT_EV_ABS_Z = 2,
+    VIRTIO_INPUT_EV_ABS_RX = 3,
+    VIRTIO_INPUT_EV_ABS_RY = 4,
+    VIRTIO_INPUT_EV_ABS_RZ = 5,
+};
+
 typedef struct virtio_input_absinfo {
     uint32_t min;
     uint32_t max;
     uint32_t fuzz;
     uint32_t flat;
+    uint32_t res;
 } __PACKED virtio_input_absinfo_t;
 
 typedef struct virtio_input_devids {
