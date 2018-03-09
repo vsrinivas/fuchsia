@@ -117,18 +117,7 @@ class Station : public FrameHandler {
     const Timer& timer() const { return *timer_; }
 
    private:
-    zx_status_t SendJoinResponse();
-    zx_status_t SendAuthResponse(AuthenticateResultCodes code);
-    zx_status_t SendDeauthResponse(const common::MacAddr& peer_sta_addr);
-    zx_status_t SendDeauthIndication(uint16_t code);
-    zx_status_t SendAssocResponse(AssociateResultCodes code);
-    zx_status_t SendDisassociateIndication(uint16_t code);
     zx_status_t SendAddBaRequestFrame();
-
-    zx_status_t SendSignalReportIndication(uint8_t rssi);
-    zx_status_t SendEapolResponse(EapolResultCodes result_code);
-    zx_status_t SendEapolIndication(const EapolFrame* eapol, const common::MacAddr& src,
-                                    const common::MacAddr& dst);
 
     zx_status_t SetPowerManagementMode(bool ps_mode);
     zx_status_t SendPsPoll();

@@ -51,6 +51,7 @@ source_set("mlme") {
     "include/wlan/mlme/wlan.h",
     "mac_frame.cpp",
     "packet.cpp",
+    "service.cpp",
     "timer.cpp",
   ]
 

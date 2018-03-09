@@ -326,6 +326,7 @@ zx_status_t Scanner::SendProbeRequest() {
     return status;
 }
 
+// TODO(hahnr): Move to service.cpp.
 zx_status_t Scanner::SendScanResponse() {
     debugfn();
 

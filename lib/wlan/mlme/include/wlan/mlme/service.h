@@ -4,9 +4,16 @@
 
 #pragma once
 
+#include <wlan/common/macaddr.h>
+#include <wlan/mlme/mac_frame.h>
+#include <wlan/mlme/packet.h>
+
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"
+#include "lib/wlan/fidl/wlan_mlme_ext.fidl.h"
 
 namespace wlan {
+
+class DeviceInterface;
 
 // ServiceHeader is the method header that is prepended to method calls over the channel.
 // This will be removed when FIDL2 is available.
@@ -45,5 +52,24 @@ template <typename T> zx_status_t SerializeServiceMsg(Packet* packet, Method m, 
     if (!msg->Serialize(header->payload, buf_len - sizeof(ServiceHeader))) { return ZX_ERR_IO; }
     return ZX_OK;
 }
+
+namespace service {
+
+zx_status_t SendJoinResponse(DeviceInterface* device, JoinResultCodes result_code);
+zx_status_t SendAuthResponse(DeviceInterface* device, const common::MacAddr& peer_sta,
+                             AuthenticateResultCodes code);
+zx_status_t SendDeauthResponse(DeviceInterface* device, const common::MacAddr& peer_sta);
+zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
+                                 uint16_t code);
+zx_status_t SendAssocResponse(DeviceInterface* device, AssociateResultCodes code, uint16_t aid = 0);
+zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
+                                       uint16_t code);
+
+zx_status_t SendSignalReportIndication(DeviceInterface* device, uint8_t rssi);
+
+zx_status_t SendEapolResponse(DeviceInterface* device, EapolResultCodes result_code);
+zx_status_t SendEapolIndication(DeviceInterface* device, const EapolFrame& eapol,
+                                const common::MacAddr& src, const common::MacAddr& dst);
+}  // namespace service
 
 }  // namespace wlan
