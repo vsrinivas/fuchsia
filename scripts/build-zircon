@@ -27,7 +27,7 @@ ARGS=
 ARCH=
 QUIET=0
 
-while getopts a:ACdlLqr FLAG; do
+while getopts a:ACdhlLqr FLAG; do
     case $FLAG in
         a) ARCH=${OPTARG};;
         A) ARGS+=" USE_ASAN=true USE_CLANG=true";;
@@ -37,6 +37,7 @@ while getopts a:ACdlLqr FLAG; do
         L) ARGS+=" USE_LTO=true";;
         q) QUIET=1;;
         r) ARGS+=" DEBUG=0";;
+        h) HELP ;;
         \?)
             echo unrecognized option
             HELP
