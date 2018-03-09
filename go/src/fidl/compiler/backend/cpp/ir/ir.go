@@ -439,7 +439,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 			Type{
 				Decl: "char",
 			},
-			changeIfReserved(val.Name) + "[]",
+			changeIfReserved(val.Name[0]) + "[]",
 			c.compileConstant(val.Value),
 		}
 		return r
@@ -448,7 +448,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 			false,
 			"constexpr",
 			c.compileType(val.Type),
-			changeIfReserved(val.Name),
+			changeIfReserved(val.Name[0]),
 			c.compileConstant(val.Value),
 		}
 		if r.Type.DeclType == types.EnumDeclType {
@@ -462,7 +462,7 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
 		c.namespace,
 		c.compilePrimitiveSubtype(val.Type),
-		changeIfReserved(val.Name),
+		changeIfReserved(val.Name[0]),
 		[]EnumMember{},
 	}
 	for _, v := range val.Members {
@@ -492,11 +492,11 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		c.namespace,
-		changeIfReserved(val.Name),
-		changeIfReserved(val.Name + "_Proxy"),
-		changeIfReserved(val.Name + "_Stub"),
-		changeIfReserved(val.Name + "_Sync"),
-		changeIfReserved(val.Name + "_SyncProxy"),
+		changeIfReserved(val.Name[0]),
+		changeIfReserved(val.Name[0] + "_Proxy"),
+		changeIfReserved(val.Name[0] + "_Stub"),
+		changeIfReserved(val.Name[0] + "_Sync"),
+		changeIfReserved(val.Name[0] + "_SyncProxy"),
 		[]Method{},
 	}
 
@@ -536,7 +536,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
-	name := changeIfReserved(val.Name)
+	name := changeIfReserved(val.Name[0])
 	r := Struct{
 		c.namespace,
 		name,
@@ -564,7 +564,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
 		c.namespace,
-		changeIfReserved(val.Name),
+		changeIfReserved(val.Name[0]),
 		[]UnionMember{},
 		val.Size,
 	}
@@ -589,31 +589,31 @@ func Compile(r types.Root) Root {
 
 	for _, v := range r.Consts {
 		d := c.compileConst(v)
-		decls[v.Name] = &d
+		decls[v.Name[0]] = &d
 	}
 
 	for _, v := range r.Enums {
 		d := c.compileEnum(v)
-		decls[v.Name] = &d
+		decls[v.Name[0]] = &d
 	}
 
 	for _, v := range r.Interfaces {
 		d := c.compileInterface(v)
-		decls[v.Name] = &d
+		decls[v.Name[0]] = &d
 	}
 
 	for _, v := range r.Structs {
 		d := c.compileStruct(v)
-		decls[v.Name] = &d
+		decls[v.Name[0]] = &d
 	}
 
 	for _, v := range r.Unions {
 		d := c.compileUnion(v)
-		decls[v.Name] = &d
+		decls[v.Name[0]] = &d
 	}
 
 	for _, v := range r.DeclOrder {
-		root.Decls = append(root.Decls, decls[v])
+		root.Decls = append(root.Decls, decls[v[0]])
 	}
 
 	return root

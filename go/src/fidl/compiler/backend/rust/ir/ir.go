@@ -307,7 +307,7 @@ func compileType(val types.Type) Type {
 
 func compileEnum(val types.Enum) Enum {
 	e := Enum{
-		compileCamelIdentifier(val.Name),
+		compileCamelIdentifier(val.Name[0]),
 		compilePrimitiveSubtype(val.Type),
 		[]EnumMember{},
 	}
@@ -336,9 +336,9 @@ func compileParameterArray(val []types.Parameter) []Parameter {
 
 func compileInterface(val types.Interface) Interface {
 	r := Interface{
-		compileCamelIdentifier(val.Name),
-		compileCamelIdentifier(val.Name + "Proxy"),
-		compileCamelIdentifier(val.Name + "Stub"),
+		compileCamelIdentifier(val.Name[0]),
+		compileCamelIdentifier(val.Name[0] + "Proxy"),
+		compileCamelIdentifier(val.Name[0] + "Stub"),
 		[]Method{},
 	}
 
@@ -366,7 +366,7 @@ func compileStructMember(val types.StructMember) StructMember {
 }
 
 func compileStruct(val types.Struct) Struct {
-	name := compileCamelIdentifier(val.Name)
+	name := compileCamelIdentifier(val.Name[0])
 	r := Struct{
 		Name:    name,
 		Members: []StructMember{},
@@ -388,7 +388,7 @@ func compileUnionMember(val types.UnionMember) UnionMember {
 
 func compileUnion(val types.Union) Union {
 	r := Union{
-		compileCamelIdentifier(val.Name),
+		compileCamelIdentifier(val.Name[0]),
 		[]UnionMember{},
 	}
 

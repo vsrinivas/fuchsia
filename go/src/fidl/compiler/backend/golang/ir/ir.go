@@ -233,7 +233,7 @@ func (c *compiler) compileEnumMember(val types.EnumMember) EnumMember {
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
-		Name: changeIfReserved(exportIdentifier(val.Name)),
+		Name: changeIfReserved(exportIdentifier(val.Name[0])),
 		Type: c.compilePrimitiveSubtype(val.Type),
 	}
 	for _, v := range val.Members {
@@ -251,7 +251,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
-		Name:      changeIfReserved(exportIdentifier(val.Name)),
+		Name:      changeIfReserved(exportIdentifier(val.Name[0])),
 		Size:      val.Size,
 		Alignment: val.Alignment,
 	}

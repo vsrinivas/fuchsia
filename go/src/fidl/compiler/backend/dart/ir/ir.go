@@ -426,11 +426,11 @@ func (c *compiler) compileType(val types.Type) Type {
 }
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
-	n := changeIfReserved(val.Name)
+	n := changeIfReserved(val.Name[0])
 	e := Enum{
 		n,
 		[]EnumMember{},
-		typeSymbolForIdentifier(val.Name),
+		typeSymbolForIdentifier(val.Name[0]),
 		fmt.Sprintf("const $fidl.EnumType<%s>(type: %s, ctor: %s._ctor)", n, typeExprForPrimitiveSubtype(val.Type), n),
 	}
 	for _, v := range val.Members {
@@ -463,9 +463,9 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
-		changeIfReserved(val.Name),
-		changeIfReserved(val.Name + "Proxy"),
-		changeIfReserved(val.Name + "Binding"),
+		changeIfReserved(val.Name[0]),
+		changeIfReserved(val.Name[0] + "Proxy"),
+		changeIfReserved(val.Name[0] + "Binding"),
 		[]Method{},
 	}
 
@@ -506,9 +506,9 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
-		changeIfReserved(val.Name),
+		changeIfReserved(val.Name[0]),
 		[]StructMember{},
-		typeSymbolForIdentifier(val.Name),
+		typeSymbolForIdentifier(val.Name[0]),
 		"",
 	}
 
@@ -538,10 +538,10 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
-		changeIfReserved(val.Name),
-		changeIfReserved(val.Name + "Tag"),
+		changeIfReserved(val.Name[0]),
+		changeIfReserved(val.Name[0] + "Tag"),
 		[]UnionMember{},
-		typeSymbolForIdentifier(val.Name),
+		typeSymbolForIdentifier(val.Name[0]),
 		"",
 	}
 

@@ -216,10 +216,10 @@ type Library struct {
 
 // Union represents the declaration of a FIDL2 union.
 type Union struct {
-	Name      Identifier    `json:"name"`
-	Members   []UnionMember `json:"members"`
-	Size      int           `json:"size"`
-	Alignment int           `json:"alignment"`
+	Name      CompoundIdentifier `json:"name"`
+	Members   []UnionMember      `json:"members"`
+	Size      int                `json:"size"`
+	Alignment int                `json:"alignment"`
 }
 
 // UnionMember represents the declaration of a field in a FIDL2 union.
@@ -231,10 +231,10 @@ type UnionMember struct {
 
 // Struct represents a declaration of a FIDL2 struct.
 type Struct struct {
-	Name      Identifier     `json:"name"`
-	Members   []StructMember `json:"members"`
-	Size      int            `json:"size"`
-	Alignment int            `json:"alignment"`
+	Name      CompoundIdentifier `json:"name"`
+	Members   []StructMember     `json:"members"`
+	Size      int                `json:"size"`
+	Alignment int                `json:"alignment"`
 }
 
 // StructMember represents the declaration of a field in a FIDL2 struct.
@@ -247,8 +247,8 @@ type StructMember struct {
 
 // Interface represents the declaration of a FIDL2 interface.
 type Interface struct {
-	Name    Identifier `json:"name"`
-	Methods []Method   `json:"methods"`
+	Name    CompoundIdentifier `json:"name"`
+	Methods []Method           `json:"methods"`
 }
 
 // Method represents the declaration of a FIDL2 method.
@@ -272,9 +272,9 @@ type Parameter struct {
 
 // Enum represents a FIDL2 delcaration of an enum.
 type Enum struct {
-	Type    PrimitiveSubtype `json:"type"`
-	Name    Identifier       `json:"name"`
-	Members []EnumMember     `json:"members"`
+	Type    PrimitiveSubtype   `json:"type"`
+	Name    CompoundIdentifier `json:"name"`
+	Members []EnumMember       `json:"members"`
 }
 
 // EnumMember represents a single variant in a FIDL2 enum.
@@ -285,9 +285,9 @@ type EnumMember struct {
 
 // Const represents a FIDL2 declaration of a named constant.
 type Const struct {
-	Type  Type       `json:"type"`
-	Name  Identifier `json:"name"`
-	Value Constant   `json:"value"`
+	Type  Type               `json:"type"`
+	Name  CompoundIdentifier `json:"name"`
+	Value Constant           `json:"value"`
 }
 
 type DeclType string
@@ -305,13 +305,13 @@ type DeclMap map[Identifier]DeclType
 // Root is the top-level object for a FIDL2 library.
 // It contains lists of all declarations and dependencies within the library.
 type Root struct {
-	Name       Identifier   `json:"name,omitempty"`
-	Consts     []Const      `json:"const_declarations,omitempty"`
-	Enums      []Enum       `json:"enum_declarations,omitempty"`
-	Interfaces []Interface  `json:"interface_declarations,omitempty"`
-	Structs    []Struct     `json:"struct_declarations,omitempty"`
-	Unions     []Union      `json:"union_declarations,omitempty"`
-	DeclOrder  []Identifier `json:"declaration_order,omitempty"`
-	Decls      DeclMap      `json:"declarations,omitempty"`
-	Libraries  []Library    `json:"library_dependencies,omitempty"`
+	Name       Identifier           `json:"name,omitempty"`
+	Consts     []Const              `json:"const_declarations,omitempty"`
+	Enums      []Enum               `json:"enum_declarations,omitempty"`
+	Interfaces []Interface          `json:"interface_declarations,omitempty"`
+	Structs    []Struct             `json:"struct_declarations,omitempty"`
+	Unions     []Union              `json:"union_declarations,omitempty"`
+	DeclOrder  []CompoundIdentifier `json:"declaration_order,omitempty"`
+	Decls      DeclMap              `json:"declarations,omitempty"`
+	Libraries  []Library            `json:"library_dependencies,omitempty"`
 }
