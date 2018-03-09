@@ -9,6 +9,8 @@ shared_library("machina") {
     "bits.h",
     "block_dispatcher.cc",
     "block_dispatcher.h",
+    "fifo_block_dispatcher.cc",
+    "fifo_block_dispatcher.h",
     "framebuffer_scanout.cc",
     "framebuffer_scanout.h",
     "gpu_bitmap.cc",
