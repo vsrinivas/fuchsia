@@ -4,7 +4,6 @@
 
 module mozart;
 
-import "lib/ui/scenic/fidl/scene_manager.fidl";
 import "lib/ui/mozart/fidl/mozart.fidl";
 import "lib/ui/views/fidl/view_trees.fidl";
 import "lib/ui/views/fidl/views.fidl";

@@ -28,8 +28,6 @@
 #include "garnet/lib/ui/scenic/tests/util.h"
 #include "lib/ui/scenic/client/host_memory.h"
 #include "lib/ui/scenic/fidl/ops.fidl.h"
-#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
-#include "lib/ui/scenic/fidl/session.fidl.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/scenic/types.h"
 

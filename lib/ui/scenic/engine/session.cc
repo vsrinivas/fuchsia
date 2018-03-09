@@ -1146,11 +1146,12 @@ bool Session::AssertValueIsOfType(const scenic::ValuePtr& value,
   return false;
 }
 
-bool Session::ScheduleUpdate(uint64_t presentation_time,
-                             ::f1dl::Array<scenic::OpPtr> ops,
-                             ::f1dl::Array<zx::event> acquire_fences,
-                             ::f1dl::Array<zx::event> release_events,
-                             const scenic::Session::PresentCallback& callback) {
+bool Session::ScheduleUpdate(
+    uint64_t presentation_time,
+    ::f1dl::Array<scenic::OpPtr> ops,
+    ::f1dl::Array<zx::event> acquire_fences,
+    ::f1dl::Array<zx::event> release_events,
+    const ui_mozart::Session::PresentCallback& callback) {
   if (is_valid()) {
     uint64_t last_scheduled_presentation_time =
         last_applied_update_presentation_time_;

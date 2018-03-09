@@ -14,7 +14,7 @@ namespace scene_manager {
 namespace test {
 
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
-  scenic::Session::PresentCallback callback = [](auto) {};
+  ui_mozart::Session::PresentCallback callback = [](auto) {};
   EXPECT_TRUE(session_->ScheduleUpdate(1, ::f1dl::Array<scenic::OpPtr>(),
                                        ::f1dl::Array<zx::event>(),
                                        ::f1dl::Array<zx::event>(), callback));
@@ -27,7 +27,7 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 }
 
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
-  scenic::Session::PresentCallback callback = [](auto) {};
+  ui_mozart::Session::PresentCallback callback = [](auto) {};
   EXPECT_TRUE(session_->ScheduleUpdate(1, ::f1dl::Array<scenic::OpPtr>(),
                                        ::f1dl::Array<zx::event>(),
                                        ::f1dl::Array<zx::event>(), callback));

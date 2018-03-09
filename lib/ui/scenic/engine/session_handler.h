@@ -15,7 +15,6 @@
 #include "garnet/lib/ui/scenic/engine/engine.h"
 #include "garnet/lib/ui/scenic/engine/session.h"
 #include "lib/ui/mozart/fidl/events.fidl.h"
-#include "lib/ui/scenic/fidl/session.fidl.h"
 
 namespace scene_manager {
 

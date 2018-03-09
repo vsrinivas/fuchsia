@@ -7,6 +7,7 @@
 
 #include "garnet/lib/ui/scenic/resources/resource.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/scenic/fidl/resources.fidl.h"
 #include "zircon/system/ulib/zx/include/zx/eventpair.h"
 
 namespace scene_manager {

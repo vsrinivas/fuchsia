@@ -21,7 +21,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/mozart/fidl/mozart.fidl.h"
 #include "lib/ui/scenic/client/session.h"
-#include "lib/ui/scenic/fidl/scene_manager.fidl.h"
+#include "lib/ui/scenic/fidl/hit.fidl.h"
 #include "lib/ui/views/fidl/view_trees.fidl.h"
 #include "lib/ui/views/fidl/views.fidl.h"
 

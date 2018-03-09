@@ -7,13 +7,12 @@ import("//garnet/public/lib/fidl/fidl.gni")
 fidl("fidl") {
   sources = [
     "display_info.fidl",
+    "hit.fidl",
     "events.fidl",
     "nodes.fidl",
     "ops.fidl",
     "renderer.fidl",
     "resources.fidl",
-    "scene_manager.fidl",
-    "session.fidl",
     "shapes.fidl",
     "types.fidl",
   ]

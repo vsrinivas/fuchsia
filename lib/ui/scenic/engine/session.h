@@ -15,7 +15,6 @@
 #include "lib/escher/flib/fence_set_listener.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/ui/scenic/fidl/session.fidl.h"
 
 namespace scene_manager {
 
@@ -77,7 +76,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                       ::f1dl::Array<scenic::OpPtr> ops,
                       ::f1dl::Array<zx::event> acquire_fences,
                       ::f1dl::Array<zx::event> release_fences,
-                      const scenic::Session::PresentCallback& callback);
+                      const ui_mozart::Session::PresentCallback& callback);
 
   // Called by ImagePipe::PresentImage().  Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().
@@ -274,7 +273,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 
     // Callback to report when the update has been applied in response to
     // an invocation of |Session.Present()|.
-    scenic::Session::PresentCallback present_callback;
+    ui_mozart::Session::PresentCallback present_callback;
   };
   bool ApplyUpdate(Update* update);
   std::queue<Update> scheduled_updates_;

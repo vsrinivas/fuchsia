@@ -8,7 +8,6 @@
 #include <string>
 
 #include "lib/ui/mozart/fidl/commands.fidl.h"
-#include "lib/ui/scenic/fidl/session.fidl.h"
 
 namespace scenic_lib {
 

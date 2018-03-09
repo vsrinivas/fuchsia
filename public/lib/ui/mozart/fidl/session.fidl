@@ -7,7 +7,7 @@ module ui_mozart;
 import "lib/ui/mozart/fidl/commands.fidl";
 import "lib/ui/mozart/fidl/events.fidl";
 import "lib/ui/scenic/fidl/types.fidl";
-import "lib/ui/scenic/fidl/session.fidl";
+import "lib/ui/scenic/fidl/hit.fidl";
 
 // Client use Sessions to interact with a Mozart instance by enqueuing commands
 // that create or modify resources.
