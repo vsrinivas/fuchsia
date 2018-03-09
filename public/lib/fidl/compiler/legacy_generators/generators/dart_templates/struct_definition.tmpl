@@ -94,19 +94,6 @@ class {{struct|name}} extends bindings.Struct {
            "{{packed_field.field|name}}: ${{packed_field.field|name}}" {% if not loop.last %}", "{% endif %}
 {%- endfor %}")";
   }
-
-  Map toJson() {
-    {%- if struct|is_cloneable_kind %}
-    Map map = new Map();
-    {%- for packed_field in struct.packed.packed_fields %}
-    map["{{packed_field.field|name}}"] = {{packed_field.field|name}};
-    {%- endfor %}
-    return map;
-    {%- else %}
-    throw new bindings.FidlCodecError(
-        'Object containing handles cannot be encoded to JSON.');
-    {%- endif %}
-  }
 }
 
 {%- endmacro %}

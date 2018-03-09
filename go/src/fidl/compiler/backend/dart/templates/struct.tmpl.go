@@ -43,14 +43,6 @@ class {{ .Name }} extends $fidl.Struct {
     )';
   }
 
-  Map toJson() {
-    return {
-{{- range .Members }}
-     '{{ .Name }}': {{ .Name }},
-{{- end }}
-    };
-  }
-
   static {{ .Name }} _ctor(List<Object> argv) => new {{ .Name }}._(argv);
 }
 

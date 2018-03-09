@@ -53,8 +53,6 @@ class {{ .Name }} extends $fidl.Enum {
     }
   }
 
-  int toJson() => value;
-
   static {{ .Name }} _ctor(int v) => values[v];
 }
 

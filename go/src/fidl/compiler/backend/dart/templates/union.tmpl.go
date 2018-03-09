@@ -44,8 +44,6 @@ class {{ .Name }} extends $fidl.Union {
     }
   }
 
-  dynamic toJson() => _data.toJson();
-
   @override
   int get $index => tag.index;
 
