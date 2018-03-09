@@ -396,8 +396,7 @@ void NonBlockingConnectRefused() {
   EXPECT_EQ(0, close(acptfd));
 }
 
-// TODO: Enable this test when it works.
-TEST(NetStreamTest, DISABLED_NonBlockingConnectRefused) {
+TEST(NetStreamTest, NonBlockingConnectRefused) {
   for (int i = 0; i < kRepeatEach; i++) {
     NonBlockingConnectRefused();
   }
