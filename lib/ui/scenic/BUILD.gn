@@ -156,11 +156,13 @@ source_set("scenic") {
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/geometry/fidl",
     "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/lib/ui/scenic/fidl:fidl_cpp_sources__common",
     "//garnet/public/lib/vulkan",
   ]
 
   deps = [
     "//garnet/lib/magma:libmagma",
+    "//garnet/public/lib/ui/scenic:fidl_helpers",
     "//zircon/public/lib/trace",
   ]
 }

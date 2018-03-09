@@ -34,6 +34,7 @@ source_set("cpp") {
     ":generate_icu_constants",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/icu_data/fidl",
     "//third_party/icu",
   ]

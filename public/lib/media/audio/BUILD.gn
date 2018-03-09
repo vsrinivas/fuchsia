@@ -19,6 +19,7 @@ source_set("audio") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",

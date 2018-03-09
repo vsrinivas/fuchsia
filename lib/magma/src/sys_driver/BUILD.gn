@@ -109,6 +109,7 @@ source_set("test_entry_pdev") {
     "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
+    "//garnet/lib/magma/tests/helper:platform_device_helper",
     "//zircon/public/lib/zx",
   ]
 

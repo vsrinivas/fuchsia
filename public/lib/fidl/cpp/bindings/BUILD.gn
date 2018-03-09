@@ -49,6 +49,7 @@ source_set("serialization") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/fxl",
     "//zircon/public/lib/zx",
   ]
 

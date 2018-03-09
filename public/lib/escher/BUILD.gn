@@ -293,7 +293,10 @@ source_set("escher") {
   ]
 
   if (is_fuchsia) {
-    public_deps += [ "//garnet/public/lib/vulkan" ]
+    public_deps += [
+      "//garnet/public/lib/images/fidl",
+      "//garnet/public/lib/vulkan",
+    ]
     deps += [ "//zircon/public/lib/trace" ]
     sources += [
       "util/fuchsia_utils.cc",

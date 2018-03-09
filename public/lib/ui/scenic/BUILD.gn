@@ -21,6 +21,10 @@ source_set("fidl_helpers") {
     "//garnet/public/lib/ui/mozart/fidl",
     "//garnet/public/lib/ui/scenic/fidl",
   ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
 }
 
 source_set("client") {
