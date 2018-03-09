@@ -8,10 +8,10 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
+#include <hw/reg.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
-
-#include <hw/reg.h>
+#include <unistd.h>
 
 #include "vim.h"
 
@@ -103,9 +103,8 @@ static zx_status_t vim_enable_wifi_32K(vim_bus_t* bus) {
     if (status != ZX_OK) return status;
 
     io_buffer_t buffer;
-    status = io_buffer_init_physical(&buffer, S912_PWM_BASE, 0x10000,
-                                                 get_root_resource(),
-                                                 ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    status = io_buffer_init_physical(&buffer, S912_PWM_BASE, 0x10000, get_root_resource(),
+                                     ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_enable_wifi_32K: io_buffer_init_physical failed: %d\n", status);
         return status;
@@ -166,8 +165,10 @@ zx_status_t vim_uart_init(vim_bus_t* bus) {
         return status;
     }
 
-    // set GPIO to enable Bluetooth module
+    // set GPIO to reset Bluetooth module
     gpio_config(&bus->gpio, BT_EN, GPIO_DIR_OUT);
+    gpio_write(&bus->gpio, BT_EN, 0);
+    usleep(10 * 1000);
     gpio_write(&bus->gpio, BT_EN, 1);
 
     serial_impl_config(&bus->serial, 0, 115200, SERIAL_DATA_BITS_8 | SERIAL_STOP_BITS_1 |
