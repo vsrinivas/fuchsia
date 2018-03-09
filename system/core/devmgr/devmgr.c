@@ -149,7 +149,7 @@ static int fuchsia_starter(void* arg) {
             if (svc_request_handle) {
                 assert(appmgr_hnd_count < countof(appmgr_hnds));
                 appmgr_hnds[appmgr_hnd_count] = svc_request_handle;
-                appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
+                appmgr_ids[appmgr_hnd_count] = PA_SERVICE_REQUEST;
                 appmgr_hnd_count++;
                 svc_request_handle = ZX_HANDLE_INVALID;
             }
