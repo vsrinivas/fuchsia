@@ -11,11 +11,11 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <zircon/assert.h>
-#include <zircon/types.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/type_support.h>
+#include <zircon/assert.h>
+#include <zircon/types.h>
 
 namespace bitmap {
 namespace internal {
@@ -45,15 +45,24 @@ public:
     // restrict access to a smaller portion of the bitmap (via Shrink).
     zx_status_t Shrink(size_t size);
 
-    // Returns the lesser of bitmax and the index of the first bit that doesn't
-    // match *is_set* starting from *bitoff*.
-    size_t Scan(size_t bitoff, size_t bitmax, bool is_set) const;
+    // Returns true if all bits in the range [*bitoff*, *bitmax*) match
+    // *is_set*, otherwise returns false and sets *out* (if provided) to the
+    // first (or last, in the case of ReverseScan) bit that doesn't match. An
+    // empty region (i.e. *bitoff* is greater than *bitmax*, or *bitoff* is
+    // outside the range of the bitmap) will return true.
+    bool Scan(size_t bitoff, size_t bitmax, bool is_set,
+              size_t* out = nullptr) const;
+    bool ReverseScan(size_t bitoff, size_t bitmax, bool is_set,
+                     size_t* out = nullptr) const;
 
-    // Find a run of *run_len* *is_set* bits, between bitoff and bitmax.
-    // Returns the start of the run in *out*, or bitmax if it is
-    // not found in the provided range.
-    // If the run is not found, "ZX_ERR_NO_RESOURCES" is returned.
-    zx_status_t Find(bool is_set, size_t bitoff, size_t bitmax, size_t run_len, size_t* out) const;
+    // Finds the first (or last, in the case of ReverseFind) run of *run_len*
+    // *is_set* bits, in [*bitoff*, *bitmax*). Returns the start of the run in
+    // *out* and returns ZX_OK if a run is found, otherwise returns
+    // ZX_ERR_NO_RESOURCES.
+    zx_status_t Find(bool is_set, size_t bitoff, size_t bitmax, size_t run_len,
+                     size_t* out) const;
+    zx_status_t ReverseFind(bool is_set, size_t bitoff, size_t bitmax,
+                            size_t run_len, size_t* out) const;
 
     // Returns true if all the bits in [*bitoff*, *bitmax*) are set. Afterwards,
     // *first_unset* will be set to the lesser of bitmax and the index of the
@@ -86,7 +95,8 @@ protected:
 //   - void* GetData()
 //      To access the underlying storage.
 //   - zx_status_t Grow(size_t size)
-//      (optional) To expand the underlying storage to fit at least |size| bytes.
+//      (optional) To expand the underlying storage to fit at least |size|
+//      bytes.
 template <typename Storage>
 class RawBitmapGeneric final : public RawBitmapBase {
 public:
@@ -116,8 +126,10 @@ public:
         }
 
         // Clear all the "newly grown" bytes
-        uintptr_t addr = reinterpret_cast<uintptr_t>(bits_.GetData()) + old_len * sizeof(size_t);
-        memset(reinterpret_cast<void*>(addr), 0, (new_len - old_len) * sizeof(size_t));
+        uintptr_t addr = reinterpret_cast<uintptr_t>(bits_.GetData()) +
+                         old_len * sizeof(size_t);
+        memset(reinterpret_cast<void*>(addr), 0,
+               (new_len - old_len) * sizeof(size_t));
 
         size_t old_size = size_;
         data_ = static_cast<size_t*>(bits_.GetData());

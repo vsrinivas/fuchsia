@@ -26,7 +26,7 @@ public:
     // Returns whether there are pending interrupts.
     bool Pending() {
         AutoSpinLock lock(&lock_);
-        return bitmap_.Scan(0, N, false) != N;
+        return !bitmap_.Scan(0, N, false);
     }
 
     bool TryPop(uint32_t vector) {
@@ -40,16 +40,15 @@ public:
 
     // Pops the highest priority interrupt.
     zx_status_t Pop(uint32_t* vector) {
-        uint32_t value;
+        size_t value;
         {
             AutoSpinLock lock(&lock_);
-            value = static_cast<uint32_t>(bitmap_.Scan(0, N, false));
-            if (value == N) {
+            if (bitmap_.Scan(0, N, false, &value)) {
                 return ZX_ERR_NOT_FOUND;
             }
             bitmap_.ClearOne(value);
         }
-        *vector = reverse(value);
+        *vector = reverse(static_cast<uint32_t>(value));
         return ZX_OK;
     }
 
