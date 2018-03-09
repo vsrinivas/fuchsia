@@ -43,7 +43,10 @@ static void acpi_header(ACPI_TABLE_HEADER* header,
   header->Checksum = acpi_checksum(header, header->Length);
 }
 
-static zx_status_t load_file(const char* path, void* addr, uint32_t* actual) {
+static zx_status_t load_file(const char* path,
+                             const machina::PhysMem& phys_mem,
+                             uint32_t off,
+                             uint32_t* actual) {
   fbl::unique_fd fd(open(path, O_RDONLY));
   if (!fd) {
     FXL_LOG(ERROR) << "Failed to open ACPI table " << path;
@@ -55,7 +58,7 @@ static zx_status_t load_file(const char* path, void* addr, uint32_t* actual) {
     FXL_LOG(ERROR) << "Failed to stat ACPI table " << path;
     return ZX_ERR_IO;
   }
-  ret = read(fd.get(), addr, stat.st_size);
+  ret = read(fd.get(), phys_mem.ptr(off, stat.st_size), stat.st_size);
   if (ret != stat.st_size) {
     FXL_LOG(ERROR) << "Failed to read ACPI table " << path;
     return ZX_ERR_IO;
@@ -137,8 +140,7 @@ zx_status_t create_acpi_table(const AcpiConfig& cfg,
 
   // DSDT.
   uint32_t actual;
-  zx_status_t status =
-      load_file(cfg.dsdt_path, phys_mem.as<void>(dsdt_off), &actual);
+  zx_status_t status = load_file(cfg.dsdt_path, phys_mem, dsdt_off, &actual);
   if (status != ZX_OK)
     return status;
 
@@ -151,7 +153,7 @@ zx_status_t create_acpi_table(const AcpiConfig& cfg,
 
   // MCFG.
   const uint32_t mcfg_off = madt_off + actual;
-  status = load_file(cfg.mcfg_path, phys_mem.as<void>(mcfg_off), &actual);
+  status = load_file(cfg.mcfg_path, phys_mem, mcfg_off, &actual);
   if (status != ZX_OK)
     return status;
 

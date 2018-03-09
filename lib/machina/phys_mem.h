@@ -12,16 +12,6 @@
 
 namespace machina {
 
-template <typename T>
-struct type_size {
-  static constexpr size_t value = sizeof(T);
-};
-
-template <>
-struct type_size<void> {
-  static constexpr size_t value = 1;
-};
-
 class PhysMem {
  public:
   zx_status_t Init(size_t mem_size);
@@ -34,9 +24,15 @@ class PhysMem {
 
   template <typename T>
   T* as(uintptr_t off) const {
-    FXL_DCHECK(off + type_size<T>::value <= vmo_size_)
-        << "Offset is outside of guest physical memory";
+    FXL_DCHECK(off + sizeof(T) <= vmo_size_)
+        << "Region is outside of guest physical memory";
     return reinterpret_cast<T*>(addr_ + off);
+  }
+
+  void* ptr(uintptr_t off, size_t len) const {
+    FXL_DCHECK(off + len <= vmo_size_)
+        << "Region is outside of guest physical memory";
+    return reinterpret_cast<void*>(addr_ + off);
   }
 
  protected:
