@@ -41,6 +41,9 @@ const (
 	customType
 )
 
+const x64BuildDir = "out/release-x64"
+const armBuildDir = "out/release-arm64/"
+
 type component struct {
 	flag      *bool  // Flag controlling whether this component should be included
 	srcPrefix string // Source path prefix relative to the fuchsia root
@@ -89,8 +92,6 @@ func init() {
 	zxBuildDir := "out/build-zircon/"
 	x64ZxBuildDir := zxBuildDir + "build-x64/"
 	armZxBuildDir := zxBuildDir + "build-arm64/"
-	x64BuildDir := "out/release-x64/"
-	armBuildDir := "out/release-arm64/"
 	x64BuildBootfsDir := "out/release-x64-bootfs/"
 	armBuildBootfsDir := "out/release-arm64-bootfs/"
 	qemuDir := fmt.Sprintf("buildtools/%s-%s/qemu/", hostOs, hostCpu)
@@ -268,6 +269,22 @@ func init() {
 	}
 }
 
+func createLayout(manifest, fuchsiaRoot, outDir string) {
+	manifestPath := filepath.Join(fuchsiaRoot, x64BuildDir, "sdk-manifests", manifest)
+	cmd := filepath.Join(fuchsiaRoot, "scripts", "sdk", "create_layout.py")
+	args := []string{"--manifest", manifestPath, "--output", outDir}
+	if *verbose || *dryRun {
+		fmt.Println("createLayout", cmd, args)
+	}
+	if *dryRun {
+		return
+	}
+	out, err := exec.Command(cmd, args...).Output()
+	if err != nil {
+		log.Fatal("create_layout.py failed with output", string(out), "error", err)
+	}
+}
+
 func copyKernelDebugObjs(src, dstPrefix string) {
 	// The kernel debug information lives in many .elf files in the out directory
 	filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
@@ -387,6 +404,8 @@ only module.
 	} else if _, err := os.Stat(fuchsiaRoot); os.IsNotExist(err) {
 		mkdir(filepath.Dir(*outDir))
 	}
+
+	createLayout("zircon_legacy", fuchsiaRoot, *outDir)
 
 	for _, c := range components {
 		if *c.flag {
