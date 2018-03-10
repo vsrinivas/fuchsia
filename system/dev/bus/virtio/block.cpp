@@ -16,7 +16,6 @@
 #include <zircon/compiler.h>
 
 #include "trace.h"
-#include "utils.h"
 
 #define LOCAL_TRACE 0
 

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "console.h"
-#include "utils.h"
 
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>

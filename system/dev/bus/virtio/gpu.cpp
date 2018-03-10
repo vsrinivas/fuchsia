@@ -14,7 +14,6 @@
 #include <zircon/compiler.h>
 
 #include "trace.h"
-#include "utils.h"
 #include "virtio_gpu.h"
 
 #define LOCAL_TRACE 0
