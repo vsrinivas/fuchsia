@@ -38,11 +38,12 @@ zx_status_t QueueTransfer(Ring* ring, uintptr_t phys, uint32_t len, bool write) 
 
 } // namespace
 
-TransferBuffer::TransferBuffer() {}
+TransferBuffer::TransferBuffer() {
+    memset(&buf_, 0, sizeof(buf_));
+}
 
 TransferBuffer::~TransferBuffer() {
-    if (phys_)
-        zx::vmar::root_self().unmap(phys_, size_);
+    io_buffer_release(&buf_);
 }
 
 zx_status_t TransferBuffer::Init(size_t count, uint32_t chunk_size) {
@@ -61,22 +62,19 @@ zx_status_t TransferBuffer::Init(size_t count, uint32_t chunk_size) {
 
     descriptor_.reset(descriptor, count_);
 
-    uintptr_t virt, phys;
-    zx_status_t status = map_contiguous_memory(size_, &virt, &phys);
-
-    if (status) {
+    zx_status_t status = io_buffer_init(&buf_, size_, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (status != ZX_OK) {
         zxlogf(ERROR, "Failed to allocate transfer buffers (%d)\n", status);
         return status;
     }
 
-    virt_ = virt;
-    phys_ = phys;
-
+    void* virt = io_buffer_virt(&buf_);
+    zx_paddr_t phys = io_buffer_phys(&buf_);
     for (size_t i = 0; i < count_; ++i) {
         TransferDescriptor& desc = descriptor_[i];
 
-        desc.virt = reinterpret_cast<uint8_t*>(virt_) + i * chunk_size;
-        desc.phys = phys_ + i * chunk_size;
+        desc.virt = reinterpret_cast<uint8_t*>(virt) + i * chunk_size;
+        desc.phys = phys + i * chunk_size;
         desc.total_len = chunk_size;
         desc.used_len = 0;
         desc.processed_len = 0;
@@ -92,9 +90,10 @@ TransferDescriptor* TransferBuffer::GetDescriptor(size_t index) {
 }
 
 TransferDescriptor* TransferBuffer::PhysicalToDescriptor(uintptr_t phys) {
-    if (phys < phys_ || phys >= phys_ + size_)
+    zx_paddr_t base = io_buffer_phys(&buf_);
+    if (phys < base || phys >= base + size_)
         return nullptr;
-    return &descriptor_[(phys - phys_) / chunk_size_];
+    return &descriptor_[(phys - base) / chunk_size_];
 }
 
 void TransferQueue::Add(TransferDescriptor* desc) {

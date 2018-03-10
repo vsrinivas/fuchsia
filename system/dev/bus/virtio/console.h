@@ -39,8 +39,7 @@ private:
     size_t size_ = 0;
     uint32_t chunk_size_ = 0;
 
-    zx_vaddr_t virt_ = 0;
-    zx_paddr_t phys_ = 0;
+    io_buffer_t buf_;
     fbl::Array<TransferDescriptor> descriptor_;
 };
 
