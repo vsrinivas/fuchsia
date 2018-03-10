@@ -52,6 +52,7 @@ DECLARE_HAS_MEMBER_FN(has_ethmac_stop, EthmacStop);
 DECLARE_HAS_MEMBER_FN(has_ethmac_start, EthmacStart);
 DECLARE_HAS_MEMBER_FN(has_ethmac_queue_tx, EthmacQueueTx);
 DECLARE_HAS_MEMBER_FN(has_ethmac_set_param, EthmacSetParam);
+DECLARE_HAS_MEMBER_FN(has_ethmac_get_bti, EthmacGetBti);
 
 template <typename D>
 constexpr void CheckEthmacProtocolSubclass() {
@@ -94,6 +95,13 @@ constexpr void CheckEthmacProtocolSubclass() {
                   "'zx_status_t EthmacSetParam(uint32_t, int32_t, void*)', and be visible to "
                   "ddk::EthmacProtocol<D> (either because they are public, or because of "
                   "friendship).");
+    static_assert(internal::has_ethmac_get_bti<D>::value,
+                  "EthmacProtocol subclasses must implement EthmacGetBti");
+    static_assert(fbl::is_same<decltype(&D::EthmacGetBti),
+                                zx_handle_t (D::*)()>::value,
+                  "EthmacGetBti must be a non-static member function with signature "
+                  "'zx_handle_t EthmacGetBti()', and be visible to ddk::EthmacProtocol<D> "
+                  "(either because they are public, or because of friendship).");
 }
 
 }  // namespace internal

@@ -113,6 +113,8 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
         set_param_called_ = true;
         return ZX_OK;
     }
+    zx_handle_t EthmacGetBti() { return ZX_HANDLE_INVALID;}
+
 
     bool VerifyCalls() const {
         BEGIN_HELPER;

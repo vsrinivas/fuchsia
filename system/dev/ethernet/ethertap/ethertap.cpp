@@ -207,6 +207,10 @@ zx_status_t TapDevice::EthmacSetParam(uint32_t param, int32_t value, void* data)
     return ZX_OK;
 }
 
+zx_handle_t TapDevice::EthmacGetBti() {
+    return ZX_HANDLE_INVALID;
+}
+
 int TapDevice::Thread() {
     ethertap_trace("starting main thread\n");
     zx_signals_t pending;

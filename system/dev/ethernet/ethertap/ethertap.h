@@ -41,7 +41,8 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
     zx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy);
     zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf);
     zx_status_t EthmacSetParam(uint32_t param, int32_t value, void* data);
-
+    // No DMA capability, so return invalid handle for get_bti
+    zx_handle_t EthmacGetBti();
     int Thread();
 
   private:

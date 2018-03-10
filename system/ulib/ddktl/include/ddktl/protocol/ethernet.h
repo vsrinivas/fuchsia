@@ -180,6 +180,7 @@ class EthmacProtocol : public internal::base_protocol {
         ops_.start = Start;
         ops_.queue_tx = QueueTx;
         ops_.set_param = SetParam;
+        ops_.get_bti = GetBti;
 
         // Can only inherit from one base_protocol implemenation
         ZX_ASSERT(ddk_proto_id_ == 0);
@@ -207,6 +208,10 @@ class EthmacProtocol : public internal::base_protocol {
 
     static zx_status_t SetParam(void* ctx, uint32_t param, int32_t value, void* data) {
         return static_cast<D*>(ctx)->EthmacSetParam(param, value, data);
+    }
+
+    static zx_handle_t GetBti(void* ctx) {
+        return static_cast<D*>(ctx)->EthmacGetBti();
     }
 
     ethmac_protocol_ops_t ops_ = {};
