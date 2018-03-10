@@ -6,7 +6,7 @@
 
 #include <zircon/syscalls/exception.h>
 
-#include "garnet/bin/debug_agent/launch.h"
+#include "garnet/bin/debug_agent/launcher.h"
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/bin/debug_agent/process_info.h"
 #include "garnet/bin/debug_agent/system_info.h"
@@ -140,12 +140,20 @@ void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
 
 void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
                           debug_ipc::LaunchReply* reply) {
-  zx::process process;
-  reply->status = Launch(request.argv, &process);
+  Launcher launcher;
+  reply->status = launcher.Setup(request.argv);
   if (reply->status != ZX_OK)
     return;
+
+  zx::process process = launcher.GetProcess();
   reply->process_koid = KoidForObject(process);
   AddDebuggedProcess(reply->process_koid, std::move(process));
+
+  reply->status = launcher.Start();
+  if (reply->status != ZX_OK) {
+    RemoveDebuggedProcess(reply->process_koid);
+    reply->process_koid = 0;
+  }
 }
 
 void DebugAgent::OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
