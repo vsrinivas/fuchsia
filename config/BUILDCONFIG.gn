@@ -160,22 +160,6 @@ if (is_fuchsia) {
     # For now, safest to do it everywhere.
     "//build/config/fuchsia:zircon_asserts",
   ]
-
-  # Add safestack when not using a variant that's incompatible.
-  # TODO(mcgrathr): When -fsanitize=safe-stack is the default in the
-  # compiler, this will not be necessary: -fsanitize=address et al will
-  # implicitly disable safestack.
-  _safestack_compatible = true
-  foreach(subvariant, toolchain_variant) {
-    if (subvariant == "//build/config/sanitizers:asan" ||
-        subvariant == "//build/config/sanitizers:asan_no_detect_leaks" ||
-        subvariant == "//build/config/sanitizers:sancov") {
-      _safestack_compatible = false
-    }
-  }
-  if (_safestack_compatible) {
-    default_common_binary_configs += [ "//build/config/fuchsia:safestack" ]
-  }
 }
 
 default_common_binary_configs += [

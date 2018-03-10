@@ -31,17 +31,6 @@ config("icf") {
   ldflags = [ "-Wl,--icf=all" ]
 }
 
-config("safestack") {
-  # This may cause issues in code that makes assumptions about stack layout
-  # such as garbage collectors.
-  cflags = [
-    "-fsanitize=safe-stack",
-    "-fstack-protector-strong",
-  ]
-  asmflags = cflags
-  ldflags = cflags
-}
-
 # ccache, at least in some configurations, caches preprocessed content. This
 # means that by the time the compiler sees it, macros are unrolled. A number
 # of gcc and clang diagnostics are conditioned on whether the source is part
