@@ -1810,8 +1810,9 @@ void dc_bind_driver(driver_t* drv) {
     } else if (dc_running) {
         device_t* dev;
         list_for_every_entry(&list_devices, dev, device_t, anode) {
-            if (dev->flags & (DEV_CTX_BOUND | DEV_CTX_DEAD | DEV_CTX_ZOMBIE)) {
-                // if device is already bound or being destroyed, skip it
+            if (dev->flags & (DEV_CTX_BOUND | DEV_CTX_DEAD |
+                              DEV_CTX_ZOMBIE | DEV_CTX_INVISIBLE)) {
+                // if device is already bound or being destroyed or invisible, skip it
                 continue;
             }
             if (dc_is_bindable(drv, dev->protocol_id,
