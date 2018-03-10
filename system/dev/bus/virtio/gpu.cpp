@@ -89,9 +89,15 @@ GpuDevice::GpuDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
     sem_init(&request_sem_, 0, 1);
     sem_init(&response_sem_, 0, 0);
     cnd_init(&flush_cond_);
+
+    memset(&fb_, 0, sizeof(fb_));
+    memset(&gpu_req_, 0, sizeof(gpu_req_));
 }
 
 GpuDevice::~GpuDevice() {
+    io_buffer_release(&fb_);
+    io_buffer_release(&gpu_req_);
+
     // TODO: clean up allocated physical memory
     sem_destroy(&request_sem_);
     sem_destroy(&response_sem_);
@@ -112,9 +118,12 @@ void GpuDevice::send_command_response(const RequestType* cmd, ResponseType** res
     struct vring_desc* desc = vring_.AllocDescChain(2, &i);
     ZX_ASSERT(desc);
 
-    memcpy(gpu_req_, cmd, cmd_len);
+    void* gpu_req_base = io_buffer_virt(&gpu_req_);
+    zx_paddr_t gpu_req_pa = io_buffer_phys(&gpu_req_);
 
-    desc->addr = gpu_req_pa_;
+    memcpy(gpu_req_base, cmd, cmd_len);
+
+    desc->addr = gpu_req_pa;
     desc->len = static_cast<uint32_t>(cmd_len);
     desc->flags = VRING_DESC_F_NEXT;
 
@@ -122,8 +131,8 @@ void GpuDevice::send_command_response(const RequestType* cmd, ResponseType** res
     desc = vring_.DescFromIndex(desc->next);
     ZX_ASSERT(desc);
 
-    *res = reinterpret_cast<ResponseType*>(static_cast<uint8_t*>(gpu_req_) + cmd_len);
-    zx_paddr_t res_phys = gpu_req_pa_ + cmd_len;
+    *res = reinterpret_cast<ResponseType*>(static_cast<uint8_t*>(gpu_req_base) + cmd_len);
+    zx_paddr_t res_phys = gpu_req_pa + cmd_len;
     memset(*res, 0, res_len);
 
     desc->addr = res_phys;
@@ -338,15 +347,15 @@ zx_status_t GpuDevice::virtio_gpu_start() {
     // Attach a backing store to the resource
     size_t len = pmode_.r.width * pmode_.r.height * 4;
 
-    status = map_contiguous_memory(len, reinterpret_cast<uintptr_t*>(&fb_), &fb_pa_);
+    status = io_buffer_init(&fb_, len, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: failed to allocate framebuffer, wanted 0x%zx bytes\n", tag(), len);
         return ZX_ERR_NO_MEMORY;
     }
 
-    LTRACEF("framebuffer at %p, 0x%zx bytes\n", fb_, len);
+    LTRACEF("framebuffer at %p, 0x%zx bytes\n", io_buffer_virt(&fb_), len);
 
-    status = attach_backing(display_resource_id_, fb_pa_, len);
+    status = attach_backing(display_resource_id_, io_buffer_phys(&fb_), len);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: failed to attach backing store\n", tag());
         return status;
@@ -419,13 +428,14 @@ zx_status_t GpuDevice::Init() {
     }
 
     // Allocate a GPU request
-    status = map_contiguous_memory(PAGE_SIZE, (uintptr_t*)&gpu_req_, &gpu_req_pa_);
+    status = io_buffer_init(&gpu_req_, PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: cannot alloc gpu_req buffers %d\n", tag(), status);
         return status;
     }
 
-    LTRACEF("allocated gpu request at %p, physical address %#" PRIxPTR "\n", gpu_req_, gpu_req_pa_);
+    LTRACEF("allocated gpu request at %p, physical address %#" PRIxPTR "\n",
+            io_buffer_virt(&gpu_req_), io_buffer_phys(&gpu_req_));
 
     StartIrqThread();
     DriverStatusOk();

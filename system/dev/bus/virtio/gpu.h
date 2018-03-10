@@ -29,7 +29,7 @@ public:
     void IrqRingUpdate() override;
     void IrqConfigChange() override;
 
-    void* framebuffer() const { return fb_; }
+    void* framebuffer() { return io_buffer_virt(&fb_); }
     const virtio_gpu_resp_display_info::virtio_gpu_display_one* pmode() const { return &pmode_; }
 
     void Flush();
@@ -64,8 +64,7 @@ private:
     display_protocol_ops_t display_proto_ops_ = {};
 
     // gpu op
-    void* gpu_req_ = nullptr;
-    zx_paddr_t gpu_req_pa_ = 0;
+    io_buffer_t gpu_req_;
 
     // A saved copy of the display
     virtio_gpu_resp_display_info::virtio_gpu_display_one pmode_ = {};
@@ -76,8 +75,7 @@ private:
 
     uint32_t next_resource_id_ = -1;
 
-    void* fb_ = nullptr;
-    zx_paddr_t fb_pa_ = 0;
+    io_buffer_t fb_;
 
     fbl::Mutex request_lock_;
     sem_t request_sem_;
