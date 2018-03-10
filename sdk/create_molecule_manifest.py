@@ -8,7 +8,7 @@ import json
 import os
 import sys
 
-from create_atom_manifest import detect_collisions, gather_dependencies
+from sdk_common import detect_collisions, gather_dependencies
 
 
 def main():

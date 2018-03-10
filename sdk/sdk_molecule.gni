@@ -64,7 +64,7 @@ template("sdk_molecule") {
 
     inputs = dep_manifests + [
       # Imported by the action's script.
-      "//build/sdk/create_atom_manifest.py",
+      "//build/sdk/sdk_common.py",
     ]
 
     outputs = [

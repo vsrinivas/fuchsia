@@ -179,7 +179,10 @@ template("sdk_atom") {
 
     deps = gn_deps
 
-    inputs = dep_manifests + file_inputs
+    inputs = dep_manifests + file_inputs + [
+      # Imported by the action's script.
+      "//build/sdk/sdk_common.py",
+    ]
 
     outputs = [
       manifest,
