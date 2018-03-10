@@ -130,9 +130,9 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // The observability of the STOPPED state, however, is guaranteed.
     auto daisy = modular::Daisy::New();
     daisy->url = kModuleUrl;
-    story_controller_->AddDaisy(nullptr /* parent_module_path */, "module1",
-                                std::move(daisy),
-                                nullptr /* surface_relation */);
+    story_controller_->AddModule(nullptr /* parent_module_path */, "module1",
+                                 std::move(daisy),
+                                 nullptr /* surface_relation */);
 
     f1dl::Array<f1dl::String> module_path;
     module_path.push_back("module1");
@@ -189,9 +189,9 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // to resume from the connection error handler of the module controller.
     auto daisy = modular::Daisy::New();
     daisy->url = kModuleUrl;
-    story_controller_->AddDaisy(nullptr /* parent_module_path */, "module2",
-                                std::move(daisy),
-                                nullptr /* surface_relation */);
+    story_controller_->AddModule(nullptr /* parent_module_path */, "module2",
+                                 std::move(daisy),
+                                 nullptr /* surface_relation */);
 
     f1dl::Array<f1dl::String> module_path;
     module_path.push_back("module2");

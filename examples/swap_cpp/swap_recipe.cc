@@ -90,27 +90,27 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
   }
 
   void SwapModule() {
-    StartModule(kModuleQueries[query_index_]);
+    StartModuleDeprecated(kModuleQueries[query_index_]);
     query_index_ = (query_index_ + 1) % kModuleQueries.size();
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this] { SwapModule(); }, fxl::TimeDelta::FromSeconds(kSwapSeconds));
   }
 
-  void StartModule(const std::string& module_query) {
+  void StartModuleDeprecated(const std::string& module_query) {
     if (module_) {
       module_->Stop([this, module_query] {
         module_.Unbind();
         module_view_.Unbind();
-        StartModule(module_query);
+        StartModuleDeprecated(module_query);
       });
       return;
     }
 
     // This module is named after its URL.
     constexpr char kModuleLink[] = "module";
-    module_context_->StartModule(module_query, module_query, kModuleLink,
-                                 nullptr, module_.NewRequest(),
-                                 module_view_.NewRequest());
+    module_context_->StartModuleDeprecated(
+        module_query, module_query, kModuleLink, nullptr, module_.NewRequest(),
+        module_view_.NewRequest());
     SetChild();
   }
 

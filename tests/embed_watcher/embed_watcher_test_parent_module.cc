@@ -54,7 +54,7 @@ class ParentApp : modular::EmbedModuleWatcher {
   }
 
   void StartChildModule() {
-    module_host_->module_context()->EmbedModule(
+    module_host_->module_context()->EmbedModuleDeprecated(
         kChildModuleName, kChildModule, nullptr /* link_name */,
         nullptr /* incoming_services */, child_module_.NewRequest(),
         embed_module_watcher_binding_.NewBinding(), child_view_.NewRequest());

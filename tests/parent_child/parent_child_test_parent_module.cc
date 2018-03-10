@@ -55,7 +55,7 @@ class ParentApp {
 
  private:
   void StartChildModuleTwice() {
-    module_host_->module_context()->StartModuleInShell(
+    module_host_->module_context()->StartModuleInShellDeprecated(
         kChildModuleName, kChildModule, kChildLink, nullptr,
         child_module_.NewRequest(), nullptr, true);
 
@@ -65,7 +65,7 @@ class ParentApp {
         "child_module_init", [this](const f1dl::String&) {
           child_module_.set_error_handler([this] { OnChildModuleStopped(); });
 
-          module_host_->module_context()->StartModuleInShell(
+          module_host_->module_context()->StartModuleInShellDeprecated(
               kChildModuleName, kChildModule, kChildLinkAlternate, nullptr,
               child_module2_.NewRequest(), nullptr, true);
         });

@@ -11,7 +11,7 @@ either the [`ModuleContext`](../../public/lib/module/fidl/module_context.fidl)
 (for Module clients) or the
 [`StoryController`](../../public/lib/story/fidl/story_controller.fidl) (for
 privileged platform clients). Specifically, clients would call either
-`ModuleContext.StartDaisy()` or `StoryController.AddDaisy()`.
+`ModuleContext.StartModule()` or `StoryController.AddModule()`.
 > TODO: add detail and other entry-points for creating Modules from Daisies.
 
 This document outlines what happens behind the scenes of those two calls.

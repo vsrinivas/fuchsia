@@ -6,7 +6,7 @@ module modular;
 
 import "lib/module/fidl/module_state.fidl";
 
-// This interface is used by the caller of ModuleContext.StartModule()
+// This interface is used by the caller of ModuleContext.StartModuleDeprecated()
 // to control the started Module instance.
 //
 // Closing this connection affects neither its ModuleWatchers nor its

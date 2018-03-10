@@ -10,7 +10,7 @@ import "lib/module/fidl/module_context.fidl";
 // This service is implemented by an application that is meant to be run under a
 // ModuleContext in a Story.
 //
-// When ModuleContext.StartModule() is invoked, the Module instance is requested
+// When ModuleContext.StartModuleDeprecated() is invoked, the Module instance is requested
 // from its application and its dependent services and parameters are passed to
 // it by Initialize().
 //
@@ -36,7 +36,7 @@ import "lib/module/fidl/module_context.fidl";
 interface Module {
   // The arguments to Initialize() are the ModuleContext instance that created
   // the Module instance and a Link instance provided by the caller of
-  // ModuleContext.StartModule().
+  // ModuleContext.StartModuleDeprecated().
   //
   // The default Link instance available from ModuleContext.GetLink() with a
   // null link name is shared with the calling module and can be used to

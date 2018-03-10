@@ -41,6 +41,23 @@ interface StoryController {
   // Registers a watcher for changes of the story state.
   Watch@4(StoryWatcher watcher);
 
+  // Adds a module matching the provided Daisy to the story.
+  //
+  // A module is selected via Module Resolution (docs/module_resolution.md).
+  // The started module will see one Link per |daisy.nouns| entry available
+  // with the same name as the noun. For example, if daisy.nouns[0].name ==
+  // 'foo', the started module can call ModuleContext.GetLink('foo', ...) in
+  // order to access the Link.
+  //
+  // |parent_module_path| is the path to the module that is adding the Daisy.
+  // |module_name| is the name of the started module as exposed to the parent
+  //               module.
+  // |daisy| is the daisy that will be used for module resolution.
+  // |surface_relation| is used to determine how the started module will be
+  //                    presented.
+  AddModule@11(array<string>? parent_module_path, string module_name,
+               Daisy daisy, SurfaceRelation? surface_relation);
+
   // Adds and starts a module in the story.
   //
   // The view of this module is sent to the story shell. Providing a
@@ -62,9 +79,9 @@ interface StoryController {
   // A ModuleController for the newly added module can be obtained through
   // GetModuleController().
   // TODO(thatguy): Add a Daisy variant of this call, deprecate this one.
-  AddModule@5(array<string>? parent_module_path, string module_name,
-              string module_url, string link_name,
-              SurfaceRelation? surface_relation);
+  AddModuleDeprecated@5(array<string>? parent_module_path, string module_name,
+                        string module_url, string link_name,
+                        SurfaceRelation? surface_relation);
 
   // Lists the active modules in the story. Active modules are those with a
   // controller.
@@ -119,21 +136,6 @@ interface StoryController {
   // For the links leading to top level modules (specifically for the "root"
   // link to the root module), the |module_path| is empty or null.
   GetLink@10(array<string>? module_path, string link_name, Link& link);
-
-  // Adds a module matching the provided Daisy to the story.
-  //
-  // A module is selected via Module Resolution (docs/module_resolution.md).
-  // The started module will see one Link per |daisy.nouns|, available through
-  // ModuleContext.GetLink() calls.
-  //
-  // |parent_module_path| is the path to the module that is adding the Daisy.
-  // |module_name| is the name of the started module as exposed to the parent
-  //               module.
-  // |daisy| is the daisy that will be used for module resolution.
-  // |surface_relation| is used to determine how the started module will be
-  //                    presented.
-  AddDaisy@11(array<string>? parent_module_path, string module_name,
-              Daisy daisy, SurfaceRelation? surface_relation);
 };
 
 // Implemented by the client calling StoryController.Watch().

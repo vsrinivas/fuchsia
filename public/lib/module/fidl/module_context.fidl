@@ -37,12 +37,12 @@ interface ModuleContext {
   // Providing a |surface_relation| will advise the StoryShell how to layout
   // surfaces that the new module creates. If |surface_relation|
   // is null then a default relation is used.
-  // TODO(thatguy): Rename to StartModule().
-  StartDaisy@1(string name, Daisy daisy,
-               app.ServiceProvider&? incoming_services,
-               ModuleController& module_controller,
-               SurfaceRelation? surface_relation)
-               => (StartDaisyStatus status);
+  // TODO(thatguy): Rename to StartModuleDeprecated().
+  StartModule@1(string name, Daisy daisy,
+                app.ServiceProvider&? incoming_services,
+                ModuleController& module_controller,
+                SurfaceRelation? surface_relation)
+                => (StartModuleStatus status);
 
   // Starts a new Module instance. The Module to execute is identified
   // by the the contents of |daisy| and the Module instance
@@ -59,23 +59,23 @@ interface ModuleContext {
   // instance may implement |incoming_services|, if an interface
   // request is supplied.
   // TODO(thatguy): Rename to EmbedModule().
-  EmbedDaisy@2(string name, Daisy daisy,
-               app.ServiceProvider&? incoming_services,
-               ModuleController& module_controller,
-               mozart.ViewOwner& view_owner) => (StartDaisyStatus status);
-
-  // DEPRECATED: Use EmbedDaisy().
-  StartModule@3(string name, string module_url, string? link_name,
+  EmbedModule@2(string name, Daisy daisy,
                 app.ServiceProvider&? incoming_services,
                 ModuleController& module_controller,
-                mozart.ViewOwner& view_owner);
+                mozart.ViewOwner& view_owner) => (StartModuleStatus status);
+
+  // DEPRECATED: Use EmbedDaisy().
+  StartModuleDeprecated@3(string name, string module_url, string? link_name,
+                          app.ServiceProvider&? incoming_services,
+                          ModuleController& module_controller,
+                          mozart.ViewOwner& view_owner);
 
   // DEPRECATED: Use StartDaisy().
-  StartModuleInShell@4(string name, string module_url, string? link_name,
-                       app.ServiceProvider&? incoming_services,
-                       ModuleController& module_controller,
-                       SurfaceRelation? surface_relation,
-                       bool focused);
+  StartModuleInShellDeprecated@4(string name, string module_url, string? link_name,
+                                 app.ServiceProvider&? incoming_services,
+                                 ModuleController& module_controller,
+                                 SurfaceRelation? surface_relation,
+                                 bool focused);
 
   // Like StartModuleInShell(), but starts multiple modules simultaneously and
   // specifies a custom layout for them (aka container).
@@ -86,7 +86,7 @@ interface ModuleContext {
                            array<ContainerRelationEntry> relationships,
                            array<ContainerNode> nodes);
 
-  // Like StartModule(), used to embed the view of the requested module, but
+  // Like StartModuleDeprecated(), used to embed the view of the requested module, but
   // also allows to obtain information of modules started transitively in the
   // story shell by the embedded module through the supplied EmbedModuleWatcher.
   //
@@ -101,18 +101,18 @@ interface ModuleContext {
   // could also be addressed by sending catch up notifications. TBD.
   //
   // The EmbedModuleWatcher may be null, then EmbedModule() does exactly the
-  // same as StartModule().
+  // same as StartModuleDeprecated().
   //
   // TODO(mesch): There is no Daisy variant of this call yet. Specifying a
   // desired module by URL should just be expressible as a Daisy too, and then
   // the URL and Daisy variants of these calls should be merged.
   // TODO(thatguy): This doesn't appear to be used outside peridot tests.
   // Consider removing it if it's not in fact used.
-  EmbedModule@5(string name, string module_url, string? link_name,
-                app.ServiceProvider&? incoming_services,
-                ModuleController& module_controller,
-                EmbedModuleWatcher? embed_module_watcher,
-                mozart.ViewOwner& view_owner);
+  EmbedModuleDeprecated@5(string name, string module_url, string? link_name,
+                          app.ServiceProvider&? incoming_services,
+                          ModuleController& module_controller,
+                          EmbedModuleWatcher? embed_module_watcher,
+                          mozart.ViewOwner& view_owner);
 
   // Gets the ComponentContext instance associated with this Module
   // instance. This ComponentContext instance is unique to this
@@ -186,7 +186,7 @@ interface EmbedModuleController {
 };
 
 // Communicates the status of the daisy resolution
-enum StartDaisyStatus {
+enum StartModuleStatus {
   SUCCESS = 0,
   NO_MODULES_FOUND = 1
 };

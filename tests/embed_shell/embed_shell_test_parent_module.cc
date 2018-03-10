@@ -53,7 +53,7 @@ class ParentApp {
   }
 
   void StartChildModule() {
-    module_host_->module_context()->StartModule(
+    module_host_->module_context()->StartModuleDeprecated(
         kChildModuleName, kChildModule, nullptr /* link_name */,
         nullptr /* incoming_services */, child_module_.NewRequest(),
         child_view_.NewRequest());

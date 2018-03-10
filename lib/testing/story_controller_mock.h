@@ -43,11 +43,11 @@ class StoryControllerMock : public StoryController {
   }
 
   // |StoryController|
-  void AddModule(f1dl::Array<f1dl::String> module_path,
-                 const f1dl::String& module_name,
-                 const f1dl::String& module_url,
-                 const f1dl::String& link_name,
-                 SurfaceRelationPtr surface_relation) override {
+  void AddModuleDeprecated(f1dl::Array<f1dl::String> module_path,
+                           const f1dl::String& module_name,
+                           const f1dl::String& module_url,
+                           const f1dl::String& link_name,
+                           SurfaceRelationPtr surface_relation) override {
     last_added_module_ = module_url;
   }
 
@@ -96,10 +96,10 @@ class StoryControllerMock : public StoryController {
     get_link_calls.push_back(std::move(call));
   }
 
-  void AddDaisy(f1dl::Array<f1dl::String> module_path,
-                const f1dl::String& module_name,
-                DaisyPtr daisy,
-                SurfaceRelationPtr surface_relation) override {
+  void AddModule(f1dl::Array<f1dl::String> module_path,
+                 const f1dl::String& module_name,
+                 DaisyPtr daisy,
+                 SurfaceRelationPtr surface_relation) override {
     FXL_NOTIMPLEMENTED();
   }
 

@@ -58,7 +58,7 @@ class ModuleContextImpl : ModuleContext {
   void GetLink(const f1dl::String& name,
                f1dl::InterfaceRequest<Link> request) override;
   // |ModuleContext|
-  void StartModule(
+  void StartModuleDeprecated(
       const f1dl::String& name,
       const f1dl::String& query,
       const f1dl::String& link_name,
@@ -66,15 +66,15 @@ class ModuleContextImpl : ModuleContext {
       f1dl::InterfaceRequest<ModuleController> module_controller,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   // |ModuleContext|
-  void EmbedDaisy(
+  void EmbedModule(
       const f1dl::String& name,
       DaisyPtr daisy,
       f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner,
-      const EmbedDaisyCallback& callback) override;
+      const EmbedModuleCallback& callback) override;
   // |ModuleContext|
-  void StartModuleInShell(
+  void StartModuleInShellDeprecated(
       const f1dl::String& name,
       const f1dl::String& query,
       const f1dl::String& link_name,
@@ -83,13 +83,13 @@ class ModuleContextImpl : ModuleContext {
       SurfaceRelationPtr surface_relation,
       bool focus) override;
   // |ModuleContext|
-  void StartDaisy(
+  void StartModule(
       const f1dl::String& name,
       DaisyPtr daisy,
       f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
-      const StartDaisyCallback& callback) override;
+      const StartModuleCallback& callback) override;
   // |ModuleContext|
   void StartContainerInShell(
       const f1dl::String& name,
@@ -97,7 +97,7 @@ class ModuleContextImpl : ModuleContext {
       f1dl::Array<ContainerRelationEntryPtr> relationships,
       f1dl::Array<ContainerNodePtr> nodes) override;
   // |ModuleContext|
-  void EmbedModule(
+  void EmbedModuleDeprecated(
       const f1dl::String& name,
       const f1dl::String& query,
       const f1dl::String& link_name,

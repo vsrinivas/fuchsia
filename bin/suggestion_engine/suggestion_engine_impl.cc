@@ -244,8 +244,8 @@ void SuggestionEngineImpl::Initialize(
   selector->meta->story->focused->state = FocusedState::State::FOCUSED;
   AddToContextQuery(query.get(), kContextListenerStoriesKey,
                     std::move(selector));
-  context_reader_->Subscribe(
-      std::move(query), context_listener_binding_.NewBinding());
+  context_reader_->Subscribe(std::move(query),
+                             context_listener_binding_.NewBinding());
 }
 
 // end SuggestionEngine
@@ -372,8 +372,9 @@ void SuggestionEngineImpl::PerformAddModuleToStoryAction(
       link->Set(nullptr /* json_path */, add_module_to_story->initial_data);
     }
 
-    story_controller->AddModule(module_path.Clone(), module_name, module_url,
-                                link_name, surface_relation.Clone());
+    story_controller->AddModuleDeprecated(module_path.Clone(), module_name,
+                                          module_url, link_name,
+                                          surface_relation.Clone());
   } else {
     FXL_LOG(WARNING) << "Unable to add module; no story provider";
   }
@@ -388,9 +389,9 @@ void SuggestionEngineImpl::PerformAddModuleAction(
     const auto& story_id = add_module->story_id;
     modular::StoryControllerPtr story_controller;
     story_provider_->GetController(story_id, story_controller.NewRequest());
-    story_controller->AddDaisy({source_url}, module_name,
-                               add_module->daisy.Clone(),
-                               add_module->surface_relation.Clone());
+    story_controller->AddModule({source_url}, module_name,
+                                add_module->daisy.Clone(),
+                                add_module->surface_relation.Clone());
   } else {
     FXL_LOG(WARNING) << "Unable to add module; no story provider";
   }

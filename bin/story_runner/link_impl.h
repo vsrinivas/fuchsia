@@ -40,11 +40,12 @@ class LinkWatcherConnection;
 // A Link is a mutable and observable value shared between modules.
 //
 // When a module requests to run more modules using
-// ModuleContext::StartModule(), a Link instance is associated with each such
-// request, i.e. a Link instance is shared between at least two modules. The
-// same Link instance can be used in multiple StartModule() requests, so it can
-// be shared between more than two modules. The Link instance is identified by
-// its name in the context of the calling module.
+// ModuleContext::StartModuleDeprecated(), a Link instance is associated with
+// each such request, i.e. a Link instance is shared between at least two
+// modules. The same Link instance can be used in multiple
+// StartModuleDeprecated() requests, so it can be shared between more than two
+// modules. The Link instance is identified by its name in the context of the
+// calling module.
 //
 // If a watcher is registered through one handle using the Watch() method, it
 // only receives notifications for changes by requests through other handles. To

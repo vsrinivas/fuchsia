@@ -760,13 +760,13 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     // ModuleControllerImpl. In that case, the view owner request is
     // closed, and the view owner should not be sent to the story
     // shell.
-    new StartModuleCall(&operation_queue_, story_controller_impl_, module_path_,
-                        module_url_, link_name_, module_manifest_.Clone(), create_chain_info_.Clone(),
-                        module_source_, surface_relation_.Clone(),
-                        std::move(incoming_services_),
-                        std::move(module_controller_request_),
-                        nullptr /* embed_module_watcher */,
-                        view_owner_.NewRequest(), [this, flow] { Cont(flow); });
+    new StartModuleCall(
+        &operation_queue_, story_controller_impl_, module_path_, module_url_,
+        link_name_, module_manifest_.Clone(), create_chain_info_.Clone(),
+        module_source_, surface_relation_.Clone(),
+        std::move(incoming_services_), std::move(module_controller_request_),
+        nullptr /* embed_module_watcher */, view_owner_.NewRequest(),
+        [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
@@ -901,7 +901,8 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
       // TODO(jphsiao): Figure out what to do for manifest here.
       new StartModuleInShellCall(
           &operation_queue_, story_controller_impl_, module_path_, module_url_,
-          link_name_, nullptr /* module_manifest */, nullptr /* chain_data */, nullptr /* incoming_services */,
+          link_name_, nullptr /* module_manifest */, nullptr /* chain_data */,
+          nullptr /* incoming_services */,
           nullptr /* module_controller_request*/, std::move(surface_relation_),
           true, ModuleSource::EXTERNAL, [flow] {});
     }
@@ -1264,8 +1265,7 @@ class StoryControllerImpl::StartCall : Operation<> {
                   &operation_queue_, story_controller_impl_,
                   module_data->module_path, module_data->module_url,
                   module_data->link_path->link_name,
-                  nullptr /* module_manifest */,
-                  nullptr /* chain_data */,
+                  nullptr /* module_manifest */, nullptr /* chain_data */,
                   nullptr /* incoming_services */,
                   nullptr /* module_controller_request */,
                   module_data->surface_relation.Clone(), true,
@@ -1316,10 +1316,9 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
   void Cont(FlowToken /*flow*/) {
     // HACK(mesch): Hardcoded importance computation. Will be delegated
     // somewhere more flexible eventually.
-    auto i = std::find_if(context_state_.begin(), context_state_.end(),
-                          [] (auto const& e) {
-                            return e->key == kStoryImportanceContext;
-    });
+    auto i = std::find_if(
+        context_state_.begin(), context_state_.end(),
+        [](auto const& e) { return e->key == kStoryImportanceContext; });
     if (i == context_state_.end()) {
       result_ = 1.0;
       return;
@@ -1332,7 +1331,7 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
 
     for (auto& entry : log_) {
       const auto& c = entry->context;
-      auto i = std::find_if(c.begin(), c.end(), [] (auto const& e) {
+      auto i = std::find_if(c.begin(), c.end(), [](auto const& e) {
         return e->key == kStoryImportanceContext;
       });
       if (i == c.end()) {
@@ -1405,8 +1404,9 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
     // We reach this point only if we want to start an external module.
     new StartModuleInShellCall(
         &operation_queue_, story_controller_impl_, module_data_->module_path,
-        module_data_->module_url, module_data_->link_path->link_name, nullptr /* module_manifest */,
-        nullptr /* chain_data */, nullptr /* incoming_services */,
+        module_data_->module_url, module_data_->link_path->link_name,
+        nullptr /* module_manifest */, nullptr /* chain_data */,
+        nullptr /* incoming_services */,
         nullptr /* module_controller_request */,
         std::move(module_data_->surface_relation), true,
         module_data_->module_source, [flow] {});
@@ -1577,10 +1577,13 @@ class StoryControllerImpl::ResolveModulesCall
                     auto noun_constraint = ResolverNounConstraint::New();
                     noun_constraint->set_link_info(std::move(link_info));
 
-                    auto noun_constraint_entry = ResolverNounConstraintEntry::New();
+                    auto noun_constraint_entry =
+                        ResolverNounConstraintEntry::New();
                     noun_constraint_entry->key = name;
-                    noun_constraint_entry->constraint = std::move(noun_constraint);
-                    resolver_query_->noun_constraints.push_back(std::move(noun_constraint_entry));
+                    noun_constraint_entry->constraint =
+                        std::move(noun_constraint);
+                    resolver_query_->noun_constraints.push_back(
+                        std::move(noun_constraint_entry));
 
                     --(*outstanding_requests);
                     if (*outstanding_requests == 0) {
@@ -1595,7 +1598,8 @@ class StoryControllerImpl::ResolveModulesCall
         auto noun_constraint_entry = ResolverNounConstraintEntry::New();
         noun_constraint_entry->key = name;
         noun_constraint_entry->constraint = std::move(noun_constraint);
-        resolver_query_->noun_constraints.push_back(std::move(noun_constraint_entry));
+        resolver_query_->noun_constraints.push_back(
+            std::move(noun_constraint_entry));
 
       } else if (noun->is_entity_reference()) {
         auto noun_constraint = ResolverNounConstraint::New();
@@ -1603,7 +1607,8 @@ class StoryControllerImpl::ResolveModulesCall
         auto noun_constraint_entry = ResolverNounConstraintEntry::New();
         noun_constraint_entry->key = name;
         noun_constraint_entry->constraint = std::move(noun_constraint);
-        resolver_query_->noun_constraints.push_back(std::move(noun_constraint_entry));
+        resolver_query_->noun_constraints.push_back(
+            std::move(noun_constraint_entry));
       }
     }
 
@@ -1741,19 +1746,20 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
 // An operation that first performs module resolution with the provided Daisy
 // and subsequently starts the most appropriate resolved module in the story
 // shell.
-class StoryControllerImpl::AddDaisyCall : Operation<StartDaisyStatus> {
+class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
  public:
-  AddDaisyCall(OperationContainer* const container,
-               StoryControllerImpl* const story_controller_impl,
-               f1dl::Array<f1dl::String> requesting_module_path,
-               const std::string& module_name,
-               DaisyPtr daisy,
-               f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
-               f1dl::InterfaceRequest<ModuleController> module_controller_request,
-               SurfaceRelationPtr surface_relation,
-               f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-               const ModuleSource module_source,
-               ResultCall result_call)
+  AddDaisyCall(
+      OperationContainer* const container,
+      StoryControllerImpl* const story_controller_impl,
+      f1dl::Array<f1dl::String> requesting_module_path,
+      const std::string& module_name,
+      DaisyPtr daisy,
+      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<ModuleController> module_controller_request,
+      SurfaceRelationPtr surface_relation,
+      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      const ModuleSource module_source,
+      ResultCall result_call)
       : Operation("StoryControllerImpl::AddDaisyCall",
                   container,
                   std::move(result_call)),
@@ -1794,25 +1800,23 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartDaisyStatus> {
 
       if (!view_owner_request_) {
         new StartModuleInShellCall(
-            &operation_queue_, story_controller_impl_, std::move(module_path), module_url,
-            nullptr /* link_name */, manifest.Clone(), create_chain_info.Clone(),
-            std::move(incoming_services_),
-            std::move(module_controller_request_),
-            std::move(surface_relation_),
+            &operation_queue_, story_controller_impl_, std::move(module_path),
+            module_url, nullptr /* link_name */, manifest.Clone(),
+            create_chain_info.Clone(), std::move(incoming_services_),
+            std::move(module_controller_request_), std::move(surface_relation_),
             true, module_source_, [flow] {});
       } else {
         new StartModuleCall(
-            &operation_queue_, story_controller_impl_, std::move(module_path), module_url,
-            nullptr /* link_name */, manifest.Clone(), create_chain_info.Clone(),
-            module_source_,
-            std::move(surface_relation_),
-            std::move(incoming_services_),
+            &operation_queue_, story_controller_impl_, std::move(module_path),
+            module_url, nullptr /* link_name */, manifest.Clone(),
+            create_chain_info.Clone(), module_source_,
+            std::move(surface_relation_), std::move(incoming_services_),
             std::move(module_controller_request_),
-            nullptr /* embed_module_watcher */,
-            std::move(view_owner_request_), [flow] {});
+            nullptr /* embed_module_watcher */, std::move(view_owner_request_),
+            [flow] {});
       }
 
-      result_ = StartDaisyStatus::SUCCESS;
+      result_ = StartModuleStatus::SUCCESS;
     }
   }
 
@@ -1827,7 +1831,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartDaisyStatus> {
   f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
   const ModuleSource module_source_;
 
-  StartDaisyStatus result_{StartDaisyStatus::NO_MODULES_FOUND};
+  StartModuleStatus result_{StartModuleStatus::NO_MODULES_FOUND};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AddDaisyCall);
 };
@@ -1990,7 +1994,7 @@ LinkPathPtr StoryControllerImpl::GetLinkPathForChainKey(
   return (*i)->GetLinkPathForKey(key);
 }
 
-void StoryControllerImpl::StartModule(
+void StoryControllerImpl::StartModuleDeprecated(
     const f1dl::Array<f1dl::String>& parent_module_path,
     const f1dl::String& module_name,
     const f1dl::String& module_url,
@@ -2011,7 +2015,7 @@ void StoryControllerImpl::StartModule(
       std::move(view_owner_request), [] {});
 }
 
-void StoryControllerImpl::StartModuleInShell(
+void StoryControllerImpl::StartModuleInShellDeprecated(
     const f1dl::Array<f1dl::String>& parent_module_path,
     const f1dl::String& module_name,
     const f1dl::String& module_url,
@@ -2027,12 +2031,12 @@ void StoryControllerImpl::StartModuleInShell(
   module_path.push_back(module_name);
   new StartModuleInShellCall(
       &operation_queue_, this, module_path, module_url, link_name,
-      manifest.Clone(), std::move(create_chain_info), std::move(incoming_services),
-      std::move(module_controller_request), std::move(surface_relation), focus,
-      module_source, [] {});
+      manifest.Clone(), std::move(create_chain_info),
+      std::move(incoming_services), std::move(module_controller_request),
+      std::move(surface_relation), focus, module_source, [] {});
 }
 
-void StoryControllerImpl::EmbedDaisy(
+void StoryControllerImpl::EmbedModule(
     const f1dl::Array<f1dl::String>& parent_module_path,
     const f1dl::String& module_name,
     DaisyPtr daisy,
@@ -2040,22 +2044,16 @@ void StoryControllerImpl::EmbedDaisy(
     f1dl::InterfaceRequest<ModuleController> module_controller_request,
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     ModuleSource module_source,
-    std::function<void(StartDaisyStatus)> callback) {
-  new AddDaisyCall(
-      &operation_queue_,
-      this,
-      parent_module_path.Clone(),
-      module_name,
-      std::move(daisy),
-      std::move(incoming_services),
-      std::move(module_controller_request),
-      nullptr /* surface_relation */,
-      std::move(view_owner_request),
-      std::move(module_source),
-      std::move(callback));
+    std::function<void(StartModuleStatus)> callback) {
+  new AddDaisyCall(&operation_queue_, this, parent_module_path.Clone(),
+                   module_name, std::move(daisy), std::move(incoming_services),
+                   std::move(module_controller_request),
+                   nullptr /* surface_relation */,
+                   std::move(view_owner_request), std::move(module_source),
+                   std::move(callback));
 }
 
-void StoryControllerImpl::StartDaisy(
+void StoryControllerImpl::StartModule(
     const f1dl::Array<f1dl::String>& parent_module_path,
     const f1dl::String& module_name,
     DaisyPtr daisy,
@@ -2063,19 +2061,13 @@ void StoryControllerImpl::StartDaisy(
     f1dl::InterfaceRequest<ModuleController> module_controller_request,
     SurfaceRelationPtr surface_relation,
     ModuleSource module_source,
-    std::function<void(StartDaisyStatus)> callback) {
-  new AddDaisyCall(
-      &operation_queue_,
-      this,
-      parent_module_path.Clone(),
-      module_name,
-      std::move(daisy),
-      std::move(incoming_services),
-      std::move(module_controller_request),
-      std::move(surface_relation),
-      nullptr /* view_owner_request */,
-      std::move(module_source),
-      std::move(callback));
+    std::function<void(StartModuleStatus)> callback) {
+  new AddDaisyCall(&operation_queue_, this, parent_module_path.Clone(),
+                   module_name, std::move(daisy), std::move(incoming_services),
+                   std::move(module_controller_request),
+                   std::move(surface_relation),
+                   nullptr /* view_owner_request */, std::move(module_source),
+                   std::move(callback));
 }
 
 void StoryControllerImpl::StartContainerInShell(
@@ -2089,7 +2081,7 @@ void StoryControllerImpl::StartContainerInShell(
       std::move(layout), std::move(relationships), std::move(nodes));
 }
 
-void StoryControllerImpl::EmbedModule(
+void StoryControllerImpl::EmbedModuleDeprecated(
     const f1dl::Array<f1dl::String>& parent_module_path,
     const f1dl::String& module_name,
     const f1dl::String& module_url,
@@ -2104,9 +2096,9 @@ void StoryControllerImpl::EmbedModule(
   new StartModuleCall(
       &operation_queue_, this, module_path, module_url, link_name,
       nullptr /* module_manifest */, std::move(create_chain_info),
-      ModuleSource::INTERNAL, nullptr /* surface_relation */, std::move(incoming_services),
-      std::move(module_controller_request), std::move(embed_module_watcher),
-      std::move(view_owner_request), [] {});
+      ModuleSource::INTERNAL, nullptr /* surface_relation */,
+      std::move(incoming_services), std::move(module_controller_request),
+      std::move(embed_module_watcher), std::move(view_owner_request), [] {});
 }
 
 void StoryControllerImpl::ProcessPendingViews() {
@@ -2139,10 +2131,10 @@ void StoryControllerImpl::ProcessPendingViews() {
     }
 
     const auto view_id = PathString(kv.second.first);
-    story_shell_->ConnectView(
-        std::move(kv.second.second), view_id, anchor_view_id,
-        connection->module_data->surface_relation.Clone(),
-        nullptr /* module_manifest */);
+    story_shell_->ConnectView(std::move(kv.second.second), view_id,
+                              anchor_view_id,
+                              connection->module_data->surface_relation.Clone(),
+                              nullptr /* module_manifest */);
     connected_views_.emplace(view_id);
 
     added_keys.push_back(kv.first);
@@ -2234,11 +2226,12 @@ void StoryControllerImpl::Watch(f1dl::InterfaceHandle<StoryWatcher> watcher) {
 }
 
 // |StoryController|
-void StoryControllerImpl::AddModule(f1dl::Array<f1dl::String> module_path,
-                                    const f1dl::String& module_name,
-                                    const f1dl::String& module_url,
-                                    const f1dl::String& link_name,
-                                    SurfaceRelationPtr surface_relation) {
+void StoryControllerImpl::AddModuleDeprecated(
+    f1dl::Array<f1dl::String> module_path,
+    const f1dl::String& module_name,
+    const f1dl::String& module_url,
+    const f1dl::String& link_name,
+    SurfaceRelationPtr surface_relation) {
   // In the API, a null module path is allowed to represent the empty module
   // path.
   if (module_path.is_null()) {
@@ -2348,21 +2341,17 @@ void StoryControllerImpl::GetLink(f1dl::Array<f1dl::String> module_path,
                   std::move(request));
 }
 
-void StoryControllerImpl::AddDaisy(f1dl::Array<f1dl::String> parent_module_path,
-                                   const f1dl::String& module_name,
-                                   DaisyPtr daisy,
-                                   SurfaceRelationPtr surface_relation) {
-  new AddDaisyCall(&operation_queue_,
-                   this,
-                   std::move(parent_module_path),
-                   module_name,
-                   std::move(daisy),
-                   nullptr /* incoming_services */,
-                   nullptr /* module_controller_request */,
-                   std::move(surface_relation),
-                   nullptr /* view_owner_request */,
-                   ModuleSource::EXTERNAL,
-                   [](StartDaisyStatus) {});
+void StoryControllerImpl::AddModule(
+    f1dl::Array<f1dl::String> parent_module_path,
+    const f1dl::String& module_name,
+    DaisyPtr daisy,
+    SurfaceRelationPtr surface_relation) {
+  new AddDaisyCall(
+      &operation_queue_, this, std::move(parent_module_path), module_name,
+      std::move(daisy), nullptr /* incoming_services */,
+      nullptr /* module_controller_request */, std::move(surface_relation),
+      nullptr /* view_owner_request */, ModuleSource::EXTERNAL,
+      [](StartModuleStatus) {});
 }
 
 void StoryControllerImpl::StartStoryShell(
@@ -2470,10 +2459,10 @@ void StoryControllerImpl::UpdateStoryState(const ModuleState state) {
 
 StoryControllerImpl::Connection* StoryControllerImpl::FindConnection(
     const f1dl::Array<f1dl::String>& module_path) {
-      f1dl::String path;
-      if (module_path.size() >= 1) {
-        f1dl::String path = module_path[module_path.size()-1];
-      }
+  f1dl::String path;
+  if (module_path.size() >= 1) {
+    f1dl::String path = module_path[module_path.size() - 1];
+  }
   for (auto& c : connections_) {
     if (c.module_data->module_path.Equals(module_path)) {
       return &c;

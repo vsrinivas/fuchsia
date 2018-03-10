@@ -209,10 +209,10 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     module2_link_->SetSchema(kJsonSchema);
 
     app::ServiceProviderPtr services_from_module1;
-    module_context_->StartModuleInShell("module1", "example_module1",
-                                        kModule1Link,
-                                        services_from_module1.NewRequest(),
-                                        module1_.NewRequest(), nullptr, true);
+    module_context_->StartModuleInShellDeprecated(
+        "module1", "example_module1", kModule1Link,
+        services_from_module1.NewRequest(), module1_.NewRequest(), nullptr,
+        true);
 
     // Consume services from Module 1.
     auto multiplier_service =
@@ -230,9 +230,9 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
           FXL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
         }));
 
-    module_context_->StartModuleInShell("module2", "example_module2",
-                                        kModule2Link, nullptr,
-                                        module2_.NewRequest(), nullptr, true);
+    module_context_->StartModuleInShellDeprecated(
+        "module2", "example_module2", kModule2Link, nullptr,
+        module2_.NewRequest(), nullptr, true);
 
     connections_.emplace_back(
         new LinkForwarder(module1_link_.get(), module2_link_.get()));

@@ -44,7 +44,7 @@ class TestApp : public ModuleWatcher {
     component_context_->CreateEntityWithData(
         std::move(entity_data), [this](const f1dl::String& reference) {
           entity_one_reference_ = reference;
-          EmbedDaisy();
+          EmbedModule();
         });
   }
 
@@ -55,7 +55,7 @@ class TestApp : public ModuleWatcher {
   }
 
  private:
-  void EmbedDaisy() {
+  void EmbedModule() {
     daisy_ = Daisy::New();
     daisy_->url = kChildModuleUrl;
     daisy_->nouns.resize(3);
@@ -94,16 +94,15 @@ class TestApp : public ModuleWatcher {
     // Sync to avoid race conditions between writing
     link_one_->Sync([this] {
       link_two_->Sync([this] {
-        module_context_->EmbedDaisy("my child", std::move(daisy_),
-                                    nullptr, child_module_.NewRequest(),
-                                    child_view_.NewRequest(),
-                                    [this](StartDaisyStatus status) {
-                                      if (status == StartDaisyStatus::SUCCESS) {
-                                        start_daisy_.Pass();
-                                      } else {
-                                        module_context_->Done();
-                                      }
-                                    });
+        module_context_->EmbedModule(
+            "my child", std::move(daisy_), nullptr, child_module_.NewRequest(),
+            child_view_.NewRequest(), [this](StartModuleStatus status) {
+              if (status == StartModuleStatus::SUCCESS) {
+                start_daisy_.Pass();
+              } else {
+                module_context_->Done();
+              }
+            });
         child_module_.set_error_handler(
             [this]() { child_module_stopped_.Pass(); });
         ModuleWatcherPtr watcher;

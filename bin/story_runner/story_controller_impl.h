@@ -148,9 +148,9 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       const f1dl::String& key);
 
   // Called by ModuleContextImpl.
-  // TODO(thatguy): Remove this entirely once all Modules use StartDaisy.
+  // TODO(thatguy): Remove this entirely once all Modules use StartModule.
   // MI4-739
-  void StartModule(
+  void StartModuleDeprecated(
       const f1dl::Array<f1dl::String>& parent_module_path,
       const f1dl::String& module_name,
       const f1dl::String& module_url,
@@ -163,9 +163,9 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       ModuleSource module_source);
 
   // Called by ModuleContextImpl and AddModule.
-  // TODO(thatguy): Remove this entirely once all Modules use StartDaisy.
+  // TODO(thatguy): Remove this entirely once all Modules use StartModule.
   // MI4-739
-  void StartModuleInShell(
+  void StartModuleInShellDeprecated(
       const f1dl::Array<f1dl::String>& parent_module_path,
       const f1dl::String& module_name,
       const f1dl::String& module_url,
@@ -179,7 +179,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       ModuleSource module_source);
 
   // Called by ModuleContextImpl.
-  void EmbedDaisy(
+  void EmbedModule(
       const f1dl::Array<f1dl::String>& parent_module_path,
       const f1dl::String& module_name,
       DaisyPtr daisy,
@@ -187,10 +187,10 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       ModuleSource module_source,
-      std::function<void(StartDaisyStatus)> callback);
+      std::function<void(StartModuleStatus)> callback);
 
   // Called by ModuleContextImpl.
-  void StartDaisy(
+  void StartModule(
       const f1dl::Array<f1dl::String>& parent_module_path,
       const f1dl::String& module_name,
       DaisyPtr daisy,
@@ -198,13 +198,13 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
       ModuleSource module_source,
-      std::function<void(StartDaisyStatus)> callback);
+      std::function<void(StartModuleStatus)> callback);
 
   // Called by ModuleContextImpl. Note this is always from an internal module
   // source.
   // TODO(thatguy): Remove |link_name| once no Modules use root Links.
   // MI4-739
-  void EmbedModule(
+  void EmbedModuleDeprecated(
       const f1dl::Array<f1dl::String>& parent_module_path,
       const f1dl::String& module_name,
       const f1dl::String& module_url,
@@ -237,11 +237,11 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void Start(f1dl::InterfaceRequest<mozart::ViewOwner> request) override;
   void Stop(const StopCallback& done) override;
   void Watch(f1dl::InterfaceHandle<StoryWatcher> watcher) override;
-  void AddModule(f1dl::Array<f1dl::String> module_path,
-                 const f1dl::String& module_name,
-                 const f1dl::String& module_url,
-                 const f1dl::String& link_name,
-                 SurfaceRelationPtr surface_relation) override;
+  void AddModuleDeprecated(f1dl::Array<f1dl::String> module_path,
+                           const f1dl::String& module_name,
+                           const f1dl::String& module_url,
+                           const f1dl::String& link_name,
+                           SurfaceRelationPtr surface_relation) override;
   void GetActiveModules(f1dl::InterfaceHandle<StoryModulesWatcher> watcher,
                         const GetActiveModulesCallback& callback) override;
   void GetModules(const GetModulesCallback& callback) override;
@@ -253,10 +253,10 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void GetLink(f1dl::Array<f1dl::String> module_path,
                const f1dl::String& name,
                f1dl::InterfaceRequest<Link> request) override;
-  void AddDaisy(f1dl::Array<f1dl::String> module_path,
-                const f1dl::String& module_name,
-                DaisyPtr daisy,
-                SurfaceRelationPtr surface_relation) override;
+  void AddModule(f1dl::Array<f1dl::String> module_path,
+                 const f1dl::String& module_name,
+                 DaisyPtr daisy,
+                 SurfaceRelationPtr surface_relation) override;
 
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(f1dl::InterfaceRequest<mozart::ViewOwner> request);
@@ -354,8 +354,8 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   std::vector<std::unique_ptr<LinkImpl>> links_;
 
   // Module state is used to inform Story state (see OnModuleStateChange() and
-  // MaybeUpdateStoryState()). We keep track of the first Module to start in this
-  // Story as a proxy 'root' Module.
+  // MaybeUpdateStoryState()). We keep track of the first Module to start in
+  // this Story as a proxy 'root' Module.
   f1dl::Array<f1dl::String> first_module_path_;
 
   // A dummy service that allows applications that can run both as modules in a

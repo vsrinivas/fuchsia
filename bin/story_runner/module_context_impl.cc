@@ -59,34 +59,34 @@ void ModuleContextImpl::GetLink(const f1dl::String& name,
                                           std::move(request));
 }
 
-void ModuleContextImpl::StartModule(
+void ModuleContextImpl::StartModuleDeprecated(
     const f1dl::String& name,
     const f1dl::String& query,
     const f1dl::String& link_name,
     f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) {
-  story_controller_impl_->StartModule(
-      module_data_->module_path, name, query, link_name, nullptr /* module_manifest */,
-      nullptr /* create_chain_info */, std::move(incoming_services),
-      std::move(module_controller), std::move(view_owner),
-      ModuleSource::INTERNAL);
+  story_controller_impl_->StartModuleDeprecated(
+      module_data_->module_path, name, query, link_name,
+      nullptr /* module_manifest */, nullptr /* create_chain_info */,
+      std::move(incoming_services), std::move(module_controller),
+      std::move(view_owner), ModuleSource::INTERNAL);
 }
 
-void ModuleContextImpl::EmbedDaisy(
+void ModuleContextImpl::EmbedModule(
     const f1dl::String& name,
     DaisyPtr daisy,
     f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner,
-    const EmbedDaisyCallback& callback) {
-  story_controller_impl_->EmbedDaisy(
+    const EmbedModuleCallback& callback) {
+  story_controller_impl_->EmbedModule(
       module_data_->module_path, name, std::move(daisy),
       std::move(incoming_services), std::move(module_controller),
       std::move(view_owner), ModuleSource::INTERNAL, callback);
 }
 
-void ModuleContextImpl::StartModuleInShell(
+void ModuleContextImpl::StartModuleInShellDeprecated(
     const f1dl::String& name,
     const f1dl::String& query,
     const f1dl::String& link_name,
@@ -94,21 +94,21 @@ void ModuleContextImpl::StartModuleInShell(
     f1dl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation,
     const bool focus) {
-  story_controller_impl_->StartModuleInShell(
-      module_data_->module_path, name, query, link_name, nullptr /* module_manifest */,
-      nullptr /* create_chain_info */, std::move(incoming_services),
-      std::move(module_controller), std::move(surface_relation), focus,
-      ModuleSource::INTERNAL);
+  story_controller_impl_->StartModuleInShellDeprecated(
+      module_data_->module_path, name, query, link_name,
+      nullptr /* module_manifest */, nullptr /* create_chain_info */,
+      std::move(incoming_services), std::move(module_controller),
+      std::move(surface_relation), focus, ModuleSource::INTERNAL);
 }
 
-void ModuleContextImpl::StartDaisy(
+void ModuleContextImpl::StartModule(
     const f1dl::String& name,
     DaisyPtr daisy,
     f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation,
-    const StartDaisyCallback& callback) {
-  story_controller_impl_->StartDaisy(
+    const StartModuleCallback& callback) {
+  story_controller_impl_->StartModule(
       module_data_->module_path, name, std::move(daisy),
       std::move(incoming_services), std::move(module_controller),
       std::move(surface_relation), ModuleSource::INTERNAL, callback);
@@ -120,11 +120,11 @@ void ModuleContextImpl::StartContainerInShell(
     f1dl::Array<ContainerRelationEntryPtr> relationships,
     f1dl::Array<ContainerNodePtr> nodes) {
   story_controller_impl_->StartContainerInShell(
-      module_data_->module_path,
-      name, std::move(layout), std::move(relationships), std::move(nodes));
+      module_data_->module_path, name, std::move(layout),
+      std::move(relationships), std::move(nodes));
 }
 
-void ModuleContextImpl::EmbedModule(
+void ModuleContextImpl::EmbedModuleDeprecated(
     const f1dl::String& name,
     const f1dl::String& query,
     const f1dl::String& link_name,
@@ -132,7 +132,7 @@ void ModuleContextImpl::EmbedModule(
     f1dl::InterfaceRequest<ModuleController> module_controller,
     f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) {
-  story_controller_impl_->EmbedModule(
+  story_controller_impl_->EmbedModuleDeprecated(
       module_data_->module_path, name, query, link_name,
       nullptr /* create_chain_info */, std::move(incoming_services),
       std::move(module_controller), std::move(embed_module_watcher),

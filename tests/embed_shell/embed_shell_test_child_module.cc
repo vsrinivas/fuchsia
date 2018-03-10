@@ -35,7 +35,7 @@ class ChildApp : modular::ModuleWatcher {
 
  private:
   void StartChildModule() {
-    module_host_->module_context()->StartModuleInShell(
+    module_host_->module_context()->StartModuleInShellDeprecated(
         kChildModuleName, kChildModuleUrl, nullptr /* link_name */,
         nullptr /* incoming_services */, child_module_.NewRequest(),
         nullptr /* surface_relation */, true /* focused */);
