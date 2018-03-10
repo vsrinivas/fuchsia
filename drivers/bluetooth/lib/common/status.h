@@ -17,6 +17,9 @@ namespace common {
 enum class HostError : uint8_t {
   kNoError = 0u,
 
+  // Not found.
+  kNotFound,
+
   // The time limit for the operation has expired.
   kTimedOut,
 

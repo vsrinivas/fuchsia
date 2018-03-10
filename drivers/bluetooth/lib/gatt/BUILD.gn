@@ -13,6 +13,10 @@ static_library("gatt") {
     "gatt_defs.h",
     "local_service_manager.cc",
     "local_service_manager.h",
+    "remote_service.cc",
+    "remote_service.h",
+    "remote_service_manager.cc",
+    "remote_service_manager.h",
     "server.cc",
     "server.h",
     "types.cc",
@@ -35,6 +39,7 @@ source_set("testing") {
 
   public_deps = [
     ":gatt",
+    "//garnet/drivers/bluetooth/lib/common",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fbl",
   ]
@@ -48,6 +53,7 @@ source_set("tests") {
     "fake_client.cc",
     "fake_client.h",
     "local_service_manager_unittest.cc",
+    "remote_service_manager_unittest.cc",
     "server_unittest.cc"
   ]
 

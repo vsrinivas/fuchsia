@@ -16,13 +16,16 @@ FakeChannel::FakeChannel(ChannelId id,
                          hci::ConnectionHandle handle,
                          hci::Connection::LinkType link_type)
     : Channel(id, link_type),
+      handle_(handle),
       fragmenter_(handle),
       dispatcher_(nullptr),
       send_dispatcher_(nullptr),
       link_err_dispatcher_(nullptr),
       activate_fails_(false),
       link_error_(false),
-      weak_ptr_factory_(this) {}
+      weak_ptr_factory_(this) {
+  FXL_DCHECK(handle_);
+}
 
 void FakeChannel::Receive(const common::ByteBuffer& data) {
   FXL_DCHECK(rx_cb_ && dispatcher_);
@@ -86,12 +89,18 @@ void FakeChannel::SignalLinkError() {
 }
 
 bool FakeChannel::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
-  if (!send_cb_)
-    return false;
-
   FXL_DCHECK(sdu);
-  FXL_DCHECK(send_dispatcher_);
 
+  if (!send_cb_) {
+    if (peer_) {
+      peer_->Receive(*sdu);
+      return true;
+    }
+
+    return false;
+  }
+
+  FXL_DCHECK(send_dispatcher_);
   async::PostTask(
       send_dispatcher_,
       [cb = send_cb_, sdu = std::move(sdu)]() mutable { cb(std::move(sdu)); });

@@ -7,9 +7,12 @@
 #include <memory>
 
 #include <fbl/ref_ptr.h>
+#include <lib/async/dispatcher.h>
+
+#include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
+#include "garnet/drivers/bluetooth/lib/gatt/remote_service_manager.h"
 
 #include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
 
 namespace btlib {
 
@@ -18,12 +21,12 @@ class Channel;
 }  // namespace l2cap
 
 namespace att {
+class Bearer;
 class Database;
 }  // namespace att
 
 namespace gatt {
 
-class Client;
 class Server;
 
 namespace internal {
@@ -38,8 +41,10 @@ class Connection final {
   // |local_db| is the local attribute database that the GATT server will
   // operate on. |att_chan| must correspond to an open L2CAP Attribute channel.
   Connection(const std::string& peer_id,
-             fbl::RefPtr<l2cap::Channel> att_chan,
-             fxl::RefPtr<att::Database> local_db);
+             fxl::RefPtr<att::Bearer> att_bearer,
+             fxl::RefPtr<att::Database> local_db,
+             RemoteServiceWatcher svc_watcher,
+             async_t* gatt_dispatcher);
   ~Connection();
 
   Connection() = default;
@@ -47,10 +52,13 @@ class Connection final {
   Connection& operator=(Connection&&) = default;
 
   Server* server() const { return server_.get(); }
+  RemoteServiceManager* remote_service_manager() const {
+    return remote_service_manager_.get();
+  }
 
  private:
-  std::unique_ptr<Client> client_;
   std::unique_ptr<Server> server_;
+  std::unique_ptr<RemoteServiceManager> remote_service_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Connection);
 };

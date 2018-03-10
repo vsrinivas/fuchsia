@@ -11,6 +11,8 @@ std::string HostErrorToString(HostError error) {
   switch (error) {
     case HostError::kNoError:
       return "success";
+    case HostError::kNotFound:
+      return "not found";
     case HostError::kTimedOut:
       return "timed out";
     case HostError::kInvalidParameters:

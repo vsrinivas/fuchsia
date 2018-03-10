@@ -29,8 +29,8 @@ class FakeChannel : public Channel {
               hci::Connection::LinkType link_type);
   ~FakeChannel() override = default;
 
-  // Routes the given data over to the rx handler as if it was received from the
-  // controller.
+  // Routes the given data over to the rx handler as if it were received from
+  // the controller.
   void Receive(const common::ByteBuffer& data);
 
   // Sets a delegate to notify when a frame was sent over the channel.
@@ -68,6 +68,9 @@ class FakeChannel : public Channel {
   bool Send(std::unique_ptr<const common::ByteBuffer> sdu) override;
 
  private:
+  void set_peer(fxl::WeakPtr<FakeChannel> peer) { peer_ = peer; }
+
+  hci::ConnectionHandle handle_;
   Fragmenter fragmenter_;
 
   ClosedCallback closed_cb_;
@@ -82,6 +85,10 @@ class FakeChannel : public Channel {
 
   bool activate_fails_;
   bool link_error_;
+
+  // Another fake channel that this was paired with, if any. Paired channels
+  // bounce packets between eachother.
+  fxl::WeakPtr<FakeChannel> peer_;
 
   fxl::WeakPtrFactory<FakeChannel> weak_ptr_factory_;
 

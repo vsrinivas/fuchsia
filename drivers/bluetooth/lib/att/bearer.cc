@@ -236,13 +236,13 @@ bool Bearer::Activate() {
 }
 
 void Bearer::ShutDown() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (is_open())
     ShutDownInternal(false /* due_to_timeout */);
 }
 
 void Bearer::ShutDownInternal(bool due_to_timeout) {
   FXL_DCHECK(is_open());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   FXL_VLOG(1) << "att: Bearer shutting down";
 

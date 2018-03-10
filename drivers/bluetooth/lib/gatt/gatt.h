@@ -9,8 +9,10 @@
 #include <fbl/ref_ptr.h>
 #include <lib/async/dispatcher.h>
 
+#include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
 #include "garnet/drivers/bluetooth/lib/gatt/local_service_manager.h"
+#include "garnet/drivers/bluetooth/lib/gatt/remote_service.h"
 #include "garnet/drivers/bluetooth/lib/gatt/types.h"
 
 #include "lib/fidl/cpp/vector.h"
@@ -117,6 +119,31 @@ class GATT : public fbl::RefCounted<GATT> {
                                 std::string peer_id,
                                 ::fidl::VectorPtr<uint8_t> value,
                                 bool indicate) = 0;
+
+  // ===============
+  // Remote Services
+  // ===============
+  //
+  // The methods below are for interacting with remote GATT services. These
+  // methods operate asynchronously.
+
+  // Register a handler that will be notified when a remote service gets
+  // discovered on a connected peer.
+  //
+  // |watcher| will be posted on an async dispatcher if one is provided.
+  // Otherwise, it will run on an internal thread and the client is responsible
+  // for synchronization.
+  using RemoteServiceWatcher =
+      std::function<void(const std::string& peer_id,
+                         fbl::RefPtr<RemoteService> service)>;
+  virtual void RegisterRemoteServiceWatcher(RemoteServiceWatcher watcher,
+                                            async_t* dispatcher = nullptr) = 0;
+
+  // Returns the list of remote services that were found on the device with
+  // |peer_id|. |callback| will run on the GATT loop.
+  virtual void ListServices(std::string peer_id,
+                            std::vector<common::UUID> uuids,
+                            ServiceListCallback callback) = 0;
 
  protected:
   friend class fbl::RefPtr<GATT>;
