@@ -21,18 +21,12 @@ class {{ .Name }}  {
   {{ .Name }}& operator=(const {{ .Name }}&) = delete;
 
   {{- range .Members }}
-  const {{ .Type.Decl }}& {{ .Name }}() const { return {{ .StorageName }}; }
-  void set_{{ .Name }}({{ .Type.Decl }} value) { {{ .StorageName }} = std::move(value); }
+  {{ .Type.Decl }} {{ .Name }};
   {{- end }}
 
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
   zx_status_t Clone({{ .Name }}* result) const;
-
- private:
-  {{- range .Members }}
-  {{ .Type.Decl }} {{ .StorageName }};
-  {{- end }}
 };
 {{- end }}
 
@@ -47,20 +41,20 @@ class {{ .Name }}  {
 
 void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
   {{- range .Members }}
-  ::fidl::Encode(encoder, &{{ .StorageName }}, offset + {{ .Offset }});
+  ::fidl::Encode(encoder, &{{ .Name }}, offset + {{ .Offset }});
   {{- end }}
 }
 
 void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset) {
   {{- range .Members }}
-  ::fidl::Decode(decoder, &value->{{ .StorageName }}, offset + {{ .Offset }});
+  ::fidl::Decode(decoder, &value->{{ .Name }}, offset + {{ .Offset }});
   {{- end }}
 }
 
 zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   {{- range $index, $member := .Members }}
   {{ if not $index }}zx_status_t {{ end -}}
-  status = ::fidl::Clone({{ .StorageName }}, &result->{{ .StorageName }});
+  status = ::fidl::Clone({{ .Name }}, &result->{{ .Name }});
   if (status != ZX_OK)
     return status;
   {{- end }}

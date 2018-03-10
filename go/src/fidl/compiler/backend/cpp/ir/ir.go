@@ -71,7 +71,6 @@ type Struct struct {
 type StructMember struct {
 	Type        Type
 	Name        string
-	StorageName string
 	Offset      int
 }
 
@@ -530,7 +529,6 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	return StructMember{
 		c.compileType(val.Type),
 		changeIfReserved(val.Name),
-		changeIfReserved(val.Name + "_"),
 		val.Offset,
 	}
 }
