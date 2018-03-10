@@ -214,12 +214,27 @@ type Library struct {
 	// TODO(cramertj/kulakowski)
 }
 
+type Attribute struct {
+	Name  Identifier `json:"name"`
+	Value string     `json:"value"`
+}
+
 // Union represents the declaration of a FIDL2 union.
 type Union struct {
-	Name      CompoundIdentifier `json:"name"`
-	Members   []UnionMember      `json:"members"`
-	Size      int                `json:"size"`
-	Alignment int                `json:"alignment"`
+	Attributes []Attribute        `json:"maybe_attributes,omitempty"`
+	Name       CompoundIdentifier `json:"name"`
+	Members    []UnionMember      `json:"members"`
+	Size       int                `json:"size"`
+	Alignment  int                `json:"alignment"`
+}
+
+func (d *Union) GetAttribute(name Identifier) string {
+	for _, a := range d.Attributes {
+		if a.Name == name {
+			return a.Value
+		}
+	}
+	return ""
 }
 
 // UnionMember represents the declaration of a field in a FIDL2 union.
@@ -231,10 +246,20 @@ type UnionMember struct {
 
 // Struct represents a declaration of a FIDL2 struct.
 type Struct struct {
-	Name      CompoundIdentifier `json:"name"`
-	Members   []StructMember     `json:"members"`
-	Size      int                `json:"size"`
-	Alignment int                `json:"alignment"`
+	Attributes []Attribute        `json:"maybe_attributes,omitempty"`
+	Name       CompoundIdentifier `json:"name"`
+	Members    []StructMember     `json:"members"`
+	Size       int                `json:"size"`
+	Alignment  int                `json:"alignment"`
+}
+
+func (d *Struct) GetAttribute(name Identifier) string {
+	for _, a := range d.Attributes {
+		if a.Name == name {
+			return a.Value
+		}
+	}
+	return ""
 }
 
 // StructMember represents the declaration of a field in a FIDL2 struct.
@@ -247,8 +272,18 @@ type StructMember struct {
 
 // Interface represents the declaration of a FIDL2 interface.
 type Interface struct {
-	Name    CompoundIdentifier `json:"name"`
-	Methods []Method           `json:"methods"`
+	Attributes []Attribute        `json:"maybe_attributes,omitempty"`
+	Name       CompoundIdentifier `json:"name"`
+	Methods    []Method           `json:"methods"`
+}
+
+func (d *Interface) GetAttribute(name Identifier) string {
+	for _, a := range d.Attributes {
+		if a.Name == name {
+			return a.Value
+		}
+	}
+	return ""
 }
 
 // Method represents the declaration of a FIDL2 method.
@@ -272,9 +307,19 @@ type Parameter struct {
 
 // Enum represents a FIDL2 delcaration of an enum.
 type Enum struct {
-	Type    PrimitiveSubtype   `json:"type"`
-	Name    CompoundIdentifier `json:"name"`
-	Members []EnumMember       `json:"members"`
+	Attributes []Attribute        `json:"maybe_attributes,omitempty"`
+	Type       PrimitiveSubtype   `json:"type"`
+	Name       CompoundIdentifier `json:"name"`
+	Members    []EnumMember       `json:"members"`
+}
+
+func (d *Enum) GetAttribute(name Identifier) string {
+	for _, a := range d.Attributes {
+		if a.Name == name {
+			return a.Value
+		}
+	}
+	return ""
 }
 
 // EnumMember represents a single variant in a FIDL2 enum.
@@ -285,9 +330,19 @@ type EnumMember struct {
 
 // Const represents a FIDL2 declaration of a named constant.
 type Const struct {
-	Type  Type               `json:"type"`
-	Name  CompoundIdentifier `json:"name"`
-	Value Constant           `json:"value"`
+	Attributes []Attribute        `json:"maybe_attributes,omitempty"`
+	Type       Type               `json:"type"`
+	Name       CompoundIdentifier `json:"name"`
+	Value      Constant           `json:"value"`
+}
+
+func (d *Const) GetAttribute(name Identifier) string {
+	for _, a := range d.Attributes {
+		if a.Name == name {
+			return a.Value
+		}
+	}
+	return ""
 }
 
 type DeclType string

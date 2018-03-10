@@ -21,6 +21,8 @@ const Interface = `
 
 {{- define "InterfaceDeclaration" -}}
 abstract class {{ .Name }} {
+  static const String $serviceName = {{ .ServiceName }};
+
 {{- range .Methods }}
   {{- if .HasRequest }}
   void {{ template "RequestMethodSignature" . }};

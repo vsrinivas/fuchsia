@@ -77,6 +77,7 @@ type StructMember struct {
 type Interface struct {
 	Namespace     string
 	Name          string
+	ServiceName   string
 	ProxyName     string
 	StubName      string
 	SyncName      string
@@ -492,6 +493,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		c.namespace,
 		changeIfReserved(val.Name[0]),
+		val.GetAttribute("ServiceName"),
 		changeIfReserved(val.Name[0] + "_Proxy"),
 		changeIfReserved(val.Name[0] + "_Stub"),
 		changeIfReserved(val.Name[0] + "_Sync"),

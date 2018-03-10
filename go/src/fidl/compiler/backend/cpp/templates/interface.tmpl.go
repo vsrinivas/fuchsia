@@ -55,6 +55,9 @@ class {{ .Name }} {
   using Proxy_ = {{ .ProxyName }};
   using Stub_ = {{ .StubName }};
   using Sync_ = {{ .SyncName }};
+  {{- if .ServiceName }}
+  static const char Name_[];
+  {{- end }}
   virtual ~{{ .Name }}();
 
   {{- range .Methods }}
@@ -138,6 +141,10 @@ constexpr uint32_t {{ .OrdinalName }} = {{ .Ordinal }}u;
 }  // namespace
 
 {{ .Name }}::~{{ .Name }}() = default;
+
+{{- if .ServiceName }}
+const char {{ .Name }}::Name_[] = {{ .ServiceName }};
+{{- end }}
 
 {{ .SyncName }}::~{{ .SyncName }}() = default;
 

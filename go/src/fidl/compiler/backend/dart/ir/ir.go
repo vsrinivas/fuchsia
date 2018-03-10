@@ -62,6 +62,7 @@ type StructMember struct {
 
 type Interface struct {
 	Name        string
+	ServiceName string
 	ProxyName   string
 	BindingName string
 	Methods     []Method
@@ -464,9 +465,14 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		changeIfReserved(val.Name[0]),
+		val.GetAttribute("ServiceName"),
 		changeIfReserved(val.Name[0] + "Proxy"),
 		changeIfReserved(val.Name[0] + "Binding"),
 		[]Method{},
+	}
+
+	if r.ServiceName == "" {
+		r.ServiceName = "null"
 	}
 
 	for _, v := range val.Methods {
