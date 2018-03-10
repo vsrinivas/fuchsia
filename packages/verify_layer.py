@@ -13,6 +13,19 @@ import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Standard names for packages in a layer.
+CANONICAL_PACKAGES = [
+    'all',
+    'default',
+    'dev',
+]
+
+# Directories which do not require aggregation.
+NO_AGGREGATION_DIRECTORIES = [
+    'config',
+    'products',
+]
+
 
 def check_json(packages):
     '''Verifies that all files in the list are JSON files.'''
@@ -52,13 +65,12 @@ def check_all(directory, dep_map):
     '''Verifies that directories contain an "all" package and that this packages
        lists all the files in the directory.
        '''
-    is_clean = True
     for dirpath, dirnames, filenames in os.walk(directory):
-        # The 'config' directory does not need any aggregation.
-        dirnames = [d for d in dirnames if d != 'config']
+        dirnames = [d for d in dirnames if d not in NO_AGGREGATION_DIRECTORIES]
+        is_clean = True
         for dir in dirnames:
-            is_clean = is_clean and check_all(os.path.join(dirpath, dir),
-                                              dep_map)
+            if not check_all(os.path.join(dirpath, dir), dep_map):
+                is_clean = False
         if not is_clean:
             return False
         all_package = os.path.join(dirpath, 'all')
@@ -73,9 +85,9 @@ def check_all(directory, dep_map):
                 return False
             return True
         for file in filenames:
-            package = os.path.join(dirpath, file)
-            if package == all_package:
+            if file in CANONICAL_PACKAGES:
                 continue
+            package = os.path.join(dirpath, file)
             if not verify(package):
                 has_all_files = False
         for dir in dirnames:
