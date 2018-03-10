@@ -35,6 +35,14 @@
 
 #define ISOCH_INTERRUPTER 1
 
+#if __x86_64__
+// cache is coherent on x86, so we always use cached buffers
+#define XHCI_IO_BUFFER_UNCACHED 0
+#else
+#define XHCI_IO_BUFFER_UNCACHED IO_BUFFER_UNCACHED
+#endif
+
+// cache is coherent on x86
 // state for endpoint's current transfer
 typedef struct {
     phys_iter_t         phys_iter;

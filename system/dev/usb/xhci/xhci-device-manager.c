@@ -74,7 +74,7 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     // allocate a read-only DMA buffer for device context
     size_t dc_length = xhci->context_size * XHCI_NUM_EPS;
     zx_status_t status = io_buffer_init(&slot->buffer, dc_length,
-                                        IO_BUFFER_RO | IO_BUFFER_CONTIG | IO_BUFFER_UNCACHED);
+                                        IO_BUFFER_RO | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
     if (status != ZX_OK) {
         zxlogf(ERROR, "xhci_address_device: failed to allocate io_buffer for slot\n");
         return status;

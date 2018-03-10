@@ -216,13 +216,13 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
 
     // Allocate DMA memory for various things
     result = io_buffer_init(&xhci->dcbaa_erst_buffer, PAGE_SIZE,
-                            IO_BUFFER_RW | IO_BUFFER_CONTIG | IO_BUFFER_UNCACHED);
+                            IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
     if (result != ZX_OK) {
         zxlogf(ERROR, "io_buffer_init failed for xhci->dcbaa_erst_buffer\n");
         goto fail;
     }
     result = io_buffer_init(&xhci->input_context_buffer, PAGE_SIZE,
-                            IO_BUFFER_RW | IO_BUFFER_CONTIG | IO_BUFFER_UNCACHED);
+                            IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
     if (result != ZX_OK) {
         zxlogf(ERROR, "io_buffer_init failed for xhci->input_context_buffer\n");
         goto fail;
@@ -240,7 +240,7 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
         }
         size_t scratch_pad_index_size = PAGE_ROUNDUP(scratch_pad_bufs * sizeof(uint64_t));
         result = io_buffer_init(&xhci->scratch_pad_index_buffer, scratch_pad_index_size,
-                                IO_BUFFER_RW | IO_BUFFER_CONTIG | IO_BUFFER_UNCACHED);
+                                IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
         if (result != ZX_OK) {
             zxlogf(ERROR, "io_buffer_init failed for xhci->scratch_pad_index_buffer\n");
             goto fail;
