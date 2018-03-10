@@ -21,9 +21,9 @@ is &gt;=62.
 ***WARNING: This will erase any state stored locally on your Pixelbook***
 
 1. Power off the Pixelbook.
-2. Go into Recovery Mode by holding down Refresh+Esc while powering on the
-device. (The Refresh key is the third from the left on the top row of the
-keyboard.)
+2. Go into Recovery Mode.
+Hold down Esc+Refresh (first and third buttons on the top row of the keyboard).
+Then press the Power button (bottom left side of the device).
 3. Go into Developer Mode by pressing Ctrl+D.
 4. Press Enter to confirm your choice to enter Developer Mode.
 5. Wait for the device to re-configure itself, which will take several minutes.
