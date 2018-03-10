@@ -214,6 +214,7 @@ class Device {
     size_t align_pad_len(wlan_tx_packet_t* pkt);
     size_t terminal_pad_len();
     size_t usb_tx_pkt_len(wlan_tx_packet_t* pkt);
+    uint8_t GetRxAckPolicy(const wlan_tx_packet_t& wlan_packet);
 
     zx_device_t* parent_;
     zx_device_t* zxdev_;

@@ -3883,7 +3883,7 @@ zx_status_t Device::FillUsbTxPacket(TxPacket* usb_packet, wlan_tx_packet_t* wlan
     auto frame_hdr = reinterpret_cast<const wlan::FrameHeader*>(wlan_packet->packet_head->data);
     auto wcid = LookupTxWcid(frame_hdr->addr1.byte, protected_frame);
     Txwi1& txwi1 = usb_packet->txwi1;
-    txwi1.set_ack(0);
+    txwi1.set_ack(GetRxAckPolicy(*wlan_packet));
     txwi1.set_nseq(0);
 
     // TODO(porce): Study if BlockAck window size can change without resetting the radio
@@ -4356,6 +4356,14 @@ size_t Device::usb_tx_pkt_len(wlan_tx_packet_t* pkt) {
     //   alignment zero padding (round up to a 4-byte boundary)
     //   terminal zero padding (4 bytes)
     return sizeof(TxInfo) + txwi_len() + tx_pkt_len(pkt) + align_pad_len(pkt) + terminal_pad_len();
+}
+
+uint8_t Device::GetRxAckPolicy(const wlan_tx_packet_t& wlan_packet) {
+    // TODO(NET-571): Honor what MLME instructs the chipset for this particular wlan_packet
+    // whether to wait for an acknowledgement from the recipient or not.
+    // It appears that Ralink has its own logic to override the instruction
+    // specified in txwi1.ack field. It shall be recorded here as it's found.
+    return 1;  // Wait for acknowledgement
 }
 
 }  // namespace ralink
