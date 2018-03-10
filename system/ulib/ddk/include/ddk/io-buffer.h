@@ -17,7 +17,7 @@
 __BEGIN_CDECLS;
 
 // Sentinel value for io_buffer_t's |phys| field for when it is not valid.
-#define IO_BUFFER_INVALID_PHYS UINT64_MAX
+#define IO_BUFFER_INVALID_PHYS 0
 
 typedef struct {
     zx_handle_t bti_handle; // borrowed by library

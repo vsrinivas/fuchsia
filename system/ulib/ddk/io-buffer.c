@@ -11,6 +11,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Returns true if a buffer with these parameters was allocated using
 // zx_vmo_create_contiguous.  This is primarily important so we know whether we
@@ -59,7 +60,7 @@ static zx_status_t pin_contig_buffer(zx_handle_t bti, zx_handle_t vmo, size_t si
         free(addrs);
     }
 
-    return ZX_OK;
+    return status;
 }
 
 static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_handle,
@@ -110,8 +111,6 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_ha
     buffer->offset = offset;
     buffer->virt = (void *)virt;
     buffer->phys = phys;
-    buffer->phys_list = NULL;
-    buffer->phys_count = 0;
 
     return ZX_OK;
 }
@@ -138,8 +137,7 @@ zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_paddr_t addr, size_t
 
 zx_status_t io_buffer_init_aligned_with_bti(io_buffer_t* buffer, zx_handle_t bti,
                                             size_t size, uint32_t alignment_log2, uint32_t flags) {
-    buffer->vmo_handle = ZX_HANDLE_INVALID;
-    buffer->phys_list = NULL;
+    memset(buffer, 0, sizeof(*buffer));
 
     if (size == 0) {
         return ZX_ERR_INVALID_ARGS;
@@ -184,8 +182,7 @@ zx_status_t io_buffer_init_with_bti(io_buffer_t* buffer, zx_handle_t bti,
 
 zx_status_t io_buffer_init_vmo_with_bti(io_buffer_t* buffer, zx_handle_t bti,
                                         zx_handle_t vmo_handle, zx_off_t offset, uint32_t flags) {
-    buffer->vmo_handle = ZX_HANDLE_INVALID;
-    buffer->phys_list = NULL;
+    memset(buffer, 0, sizeof(*buffer));
 
     if (flags != IO_BUFFER_RO && flags != IO_BUFFER_RW) {
         return ZX_ERR_INVALID_ARGS;
@@ -207,6 +204,8 @@ zx_status_t io_buffer_init_vmo_with_bti(io_buffer_t* buffer, zx_handle_t bti,
 zx_status_t io_buffer_init_physical_with_bti(io_buffer_t* buffer, zx_handle_t bti,
                                              zx_paddr_t addr, size_t size, zx_handle_t resource,
                                              uint32_t cache_policy) {
+    memset(buffer, 0, sizeof(*buffer));
+
     zx_handle_t vmo_handle;
     zx_status_t status = zx_vmo_create_physical(resource, addr, size, &vmo_handle);
     if (status != ZX_OK) {
@@ -252,7 +251,7 @@ zx_status_t io_buffer_init_physical_with_bti(io_buffer_t* buffer, zx_handle_t bt
 
 void io_buffer_release(io_buffer_t* buffer) {
     if (buffer->vmo_handle != ZX_HANDLE_INVALID) {
-        if (buffer->bti_handle != ZX_HANDLE_INVALID && buffer->phys != UINT64_MAX) {
+        if (buffer->bti_handle != ZX_HANDLE_INVALID && buffer->phys != IO_BUFFER_INVALID_PHYS) {
             zx_status_t status = zx_bti_unpin(buffer->bti_handle, buffer->phys);
             ZX_DEBUG_ASSERT(status == ZX_OK);
         }
@@ -267,6 +266,7 @@ void io_buffer_release(io_buffer_t* buffer) {
     }
     free(buffer->phys_list);
     buffer->phys_list = NULL;
+    buffer->phys = 0;
     buffer->phys_count = 0;
 }
 
