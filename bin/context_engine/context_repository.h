@@ -111,6 +111,7 @@ class ContextRepository {
                        ContextListenerPtr listener,
                        SubscriptionDebugInfoPtr debug_info);
 
+  ContextDebugImpl* debug();
   void AddDebugBinding(f1dl::InterfaceRequest<ContextDebug> request);
 
  private:
@@ -147,7 +148,6 @@ struct ContextRepository::ValueInternal {
 };
 
 struct ContextRepository::Subscription {
-
   ContextQueryPtr query;
   ContextListener* listener;  // Optionally owned by |listener_storage|.
   ContextListenerPtr listener_storage;

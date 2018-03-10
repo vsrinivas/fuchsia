@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef PERIDOT_TESTS_MAXWELL_INTEGRATION_CONTEXT_ENGINE_TEST_BASE_H_
+#define PERIDOT_TESTS_MAXWELL_INTEGRATION_CONTEXT_ENGINE_TEST_BASE_H_
+
 #include "lib/context/fidl/context_engine.fidl.h"
+#include "lib/context/fidl/debug.fidl.h"
 #include "lib/user_intelligence/fidl/scope.fidl.h"
 #include "peridot/tests/maxwell_integration/test.h"
 
@@ -11,37 +15,19 @@ namespace maxwell {
 // Base fixture to support test cases requiring Context Engine.
 class ContextEngineTestBase : public MaxwellTestBase {
  public:
-  void SetUp() override {
-    context_engine_ = ConnectToService<ContextEngine>("context_engine");
-  }
+  void SetUp() override;
 
  protected:
-  void StartContextAgent(const std::string& url) {
-    auto agent_bridge =
-        std::make_unique<MaxwellServiceProviderBridge>(root_environment());
-    agent_bridge->AddService<ContextWriter>(
-        [this, url](f1dl::InterfaceRequest<ContextWriter> request) {
-          auto scope = ComponentScope::New();
-          auto agent_scope = AgentScope::New();
-          agent_scope->url = url;
-          scope->set_agent_scope(std::move(agent_scope));
-          context_engine_->GetWriter(std::move(scope), std::move(request));
-        });
-    agent_bridge->AddService<ContextReader>(
-        [this, url](f1dl::InterfaceRequest<ContextReader> request) {
-          auto scope = ComponentScope::New();
-          auto agent_scope = AgentScope::New();
-          agent_scope->url = url;
-          scope->set_agent_scope(std::move(agent_scope));
-          context_engine_->GetReader(std::move(scope), std::move(request));
-        });
-    StartAgent(url, std::move(agent_bridge));
-  }
+  void StartContextAgent(const std::string& url);
+  void WaitUntilIdle();
 
   ContextEngine* context_engine() { return context_engine_.get(); }
 
  private:
   ContextEnginePtr context_engine_;
+  ContextDebugPtr debug_;
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_TESTS_MAXWELL_INTEGRATION_CONTEXT_ENGINE_TEST_BASE_H_

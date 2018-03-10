@@ -281,6 +281,10 @@ void ContextRepository::AddSubscription(ContextQueryPtr query,
   subscriptions_[id].listener_storage = std::move(listener);
 }
 
+ContextDebugImpl* ContextRepository::debug() {
+  return debug_.get();
+}
+
 void ContextRepository::AddDebugBinding(
     f1dl::InterfaceRequest<ContextDebug> request) {
   debug_bindings_.AddBinding(debug_.get(), std::move(request));
@@ -313,7 +317,7 @@ ContextRepository::QueryInternal(const ContextQueryPtr& query) {
       auto it = values_.find(id);
       FXL_DCHECK(it != values_.end()) << id;
       matching_id_version.insert(std::make_pair(id, it->second.version));
-      for (auto& it: *update->values) {
+      for (auto& it : *update->values) {
         if (it->key == key) {
           it->value.push_back(GetMerged(id));
         }
@@ -323,18 +327,17 @@ ContextRepository::QueryInternal(const ContextQueryPtr& query) {
   return std::make_pair(std::move(update), std::move(matching_id_version));
 }
 
-
 void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
                                             bool force) {
-  std::pair<ContextUpdatePtr, IdAndVersionSet> result = QueryInternal(
-      subscription->query);
+  std::pair<ContextUpdatePtr, IdAndVersionSet> result =
+      QueryInternal(subscription->query);
   if (!force) {
     // Check if this update contains any new values.
     IdAndVersionSet diff;
-    std::set_symmetric_difference(
-        result.second.begin(), result.second.end(),
-        subscription->last_update.begin(), subscription->last_update.end(),
-        std::inserter(diff, diff.begin()));
+    std::set_symmetric_difference(result.second.begin(), result.second.end(),
+                                  subscription->last_update.begin(),
+                                  subscription->last_update.end(),
+                                  std::inserter(diff, diff.begin()));
     if (diff.empty()) {
       return;
     }

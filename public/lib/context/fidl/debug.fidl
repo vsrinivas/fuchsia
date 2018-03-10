@@ -12,6 +12,10 @@ import "lib/user_intelligence/fidl/scope.fidl";
 interface ContextDebug {
   // The watch will stay active until the |listener| handle is closed.
   Watch@0(ContextDebugListener listener);
+
+  // Waits until Context Engine has reached a steady state such that no further
+  // activity will occur unless acted upon from the outside.
+  WaitUntilIdle@1() => ();
 };
 
 interface ContextDebugListener {

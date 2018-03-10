@@ -31,6 +31,10 @@ class ContextEngineApp {
 
   void Terminate(std::function<void()> done) { done(); }
 
+  fxl::WeakPtr<ContextDebugImpl> debug() {
+    return context_engine_impl_->debug();
+  }
+
  private:
   modular::EntityResolverPtr entity_resolver_;
   std::unique_ptr<ContextEngineImpl> context_engine_impl_;
@@ -43,11 +47,20 @@ class ContextEngineApp {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto context = component::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context_engine_app =
+      std::make_unique<maxwell::ContextEngineApp>(app_context.get());
+  fxl::WeakPtr<maxwell::ContextDebugImpl> debug = context_engine_app->debug();
+
   modular::AppDriver<maxwell::ContextEngineApp> driver(
-      context->outgoing_services(),
-      std::make_unique<maxwell::ContextEngineApp>(context.get()),
+      app_context->outgoing_services(), std::move(context_engine_app),
       [&loop] { loop.QuitNow(); });
-  loop.Run();
+
+  // The |WaitUntilIdle| debug functionality escapes the main message loop to
+  // perform its test.
+  do {
+    loop.Run();
+  } while (debug && debug->FinishIdleCheck());
+
   return 0;
 }

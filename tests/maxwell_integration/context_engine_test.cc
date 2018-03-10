@@ -27,7 +27,7 @@ class TestListener : public ContextListener {
   TestListener() : binding_(this) {}
 
   void OnContextUpdate(ContextUpdatePtr update) override {
-    FXL_LOG(INFO) << "OnUpdate(" << update << ")";
+    FXL_VLOG(1) << "OnUpdate(" << update << ")";
     last_update = std::move(update);
   }
 
@@ -68,6 +68,17 @@ class ContextEngineTest : public ContextEngineTestBase {
   ContextWriterPtr writer_;
 };
 
+// Result ordering for |ContextValue|s is not specified, and ordering ends up
+// depending on the order the |ContextValueWriter::Set| calls get handled,
+// which is nondeterministic since they are on separate channels.
+std::set<std::string> GetTopicSet(const std::vector<ContextValuePtr>& values) {
+  std::set<std::string> topics;
+  for (const auto& value : values) {
+    topics.emplace(value->meta->entity->topic);
+  }
+  return topics;
+}
+
 }  // namespace
 
 TEST_F(ContextEngineTest, ContextValueWriter) {
@@ -97,30 +108,27 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   AddToContextQuery(query.get(), "a", std::move(selector));
 
   TestListener listener;
-  f1dl::VectorPtr<ContextValuePtr> result;
+  std::vector<ContextValuePtr> results;
   reader_->Subscribe(std::move(query), listener.GetHandle());
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&listener, &result] {
-    return listener.last_update &&
-           (result = TakeContextValue(listener.last_update.get(), "a").second)
-                   ->size() == 3;
-  }));
 
-  EXPECT_EQ("topic", result->at(0)->meta->entity->topic);
-  EXPECT_EQ("frob", result->at(1)->meta->entity->topic);
-  EXPECT_EQ("borf", result->at(2)->meta->entity->topic);
+  WaitUntilIdle();
+  ASSERT_TRUE(listener.last_update);
+  results = TakeContextValue(listener.last_update.get(), "a").second.take();
+  ASSERT_EQ(3u, results.size());
+  EXPECT_EQ(std::set<std::string>({"topic", "frob", "borf"}),
+            GetTopicSet(results));
 
-  // Update value1 and value3 so they no longer matches for the 'someType'
+  // Update value1 and value3 so they're no longer matches for the 'someType'
   // query.
   listener.Reset();
   value1->Set(R"({ "@type": "notSomeType", "foo": "bar" })", nullptr);
   value3.Unbind();
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&listener, &result] {
-    return !!listener.last_update &&
-           (result = TakeContextValue(listener.last_update.get(), "a").second)
-                   ->size() == 1;
-  }));
 
-  EXPECT_EQ("frob", result->at(0)->meta->entity->topic);
+  WaitUntilIdle();
+  ASSERT_TRUE(listener.last_update);
+  results = TakeContextValue(listener.last_update.get(), "a").second.take();
+  ASSERT_EQ(1u, results.size());
+  EXPECT_EQ("frob", results[0]->meta->entity->topic);
 
   // Create two new values: A Story value and a child Entity value, where the
   // Entity value matches our query.
@@ -134,21 +142,32 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   story_value->CreateChildValue(value4.NewRequest(), ContextValueType::ENTITY);
   value4->Set("1", ContextMetadataBuilder().AddEntityType("someType").Build());
 
-  ASSERT_TRUE(
-      RunLoopUntilWithTimeout([&listener] { return !!listener.last_update; }));
-  result = TakeContextValue(listener.last_update.get(), "a").second;
-  ASSERT_EQ(2lu, result->size());
-  EXPECT_EQ("frob", result->at(0)->meta->entity->topic);
-  EXPECT_EQ("1", result->at(1)->content);
-  EXPECT_EQ("story", result->at(1)->meta->story->id);
+  WaitUntilIdle();
+  ASSERT_TRUE(listener.last_update);
+  results = TakeContextValue(listener.last_update.get(), "a").second.take();
+  ASSERT_EQ(2u, results.size());
+
+  maxwell::ContextValuePtr entity_result, story_result;
+  if (results[0]->type == maxwell::ContextValueType::ENTITY) {
+    entity_result = std::move(results[0]);
+    story_result = std::move(results[1]);
+  } else {
+    story_result = std::move(results[0]);
+    entity_result = std::move(results[1]);
+  }
+  EXPECT_EQ("frob", entity_result->meta->entity->topic);
+  EXPECT_EQ("1", story_result->content);
+  EXPECT_EQ("story", story_result->meta->story->id);
 
   // Lastly remove one of the values by resetting the ContextValueWriter proxy.
   listener.Reset();
   value4.Unbind();
-  RunLoopUntilWithTimeout([&listener] { return !!listener.last_update; });
-  result = TakeContextValue(listener.last_update.get(), "a").second;
-  EXPECT_EQ(1lu, result->size());
-  EXPECT_EQ("frob", result->at(0)->meta->entity->topic);
+
+  WaitUntilIdle();
+  ASSERT_TRUE(listener.last_update);
+  results = TakeContextValue(listener.last_update.get(), "a").second.take();
+  ASSERT_EQ(1u, results.size());
+  EXPECT_EQ("frob", results[0]->meta->entity->topic);
 }
 
 TEST_F(ContextEngineTest, WriteNullEntity) {
@@ -167,18 +186,18 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
   const std::string value1 = R"({ "@type": "someType", "foo": "frob" })";
   const std::string value2 = R"({ "@type": "someType", "foo": "borf" })";
 
-  f1dl::VectorPtr<ContextValuePtr> result;
+  std::vector<ContextValuePtr> result;
   value->Set(value1, meta->Clone());
 
   TestListener listener;
   reader_->Subscribe(std::move(query), listener.GetHandle());
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&listener, &result] {
-    return !!listener.last_update &&
-           (result = TakeContextValue(listener.last_update.get(), "a").second)
-                   ->size() == 1;
-  }));
 
-  EXPECT_EQ(value1, result->at(0)->content);
+  WaitUntilIdle();
+
+  ASSERT_TRUE(listener.last_update);
+  result = TakeContextValue(listener.last_update.get(), "a").second.take();
+  ASSERT_EQ(1u, result.size());
+  EXPECT_EQ(value1, result[0]->content);
 
   listener.Reset();
 
@@ -189,12 +208,12 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
 
   value->Set(value2, meta->Clone());
 
-  ASSERT_TRUE(RunLoopUntilWithTimeout(
-      [&listener, &result] { return !!listener.last_update; }));
+  WaitUntilIdle();
+  ASSERT_TRUE(listener.last_update);
 
-  result = TakeContextValue(listener.last_update.get(), "a").second;
-  EXPECT_EQ(1lu, result->size());
-  EXPECT_EQ(value2, result->at(0)->content);
+  result = TakeContextValue(listener.last_update.get(), "a").second.take();
+  ASSERT_EQ(1u, result.size());
+  EXPECT_EQ(value2, result[0]->content);
 }
 
 TEST_F(ContextEngineTest, CloseListenerAndReader) {
@@ -212,18 +231,20 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
     reader_->Subscribe(query.Clone(), listener1.GetHandle());
     reader_->Subscribe(query.Clone(), listener2.GetHandle());
     InitReader(MakeGlobalScope());
-    ASSERT_TRUE(RunLoopUntilWithTimeout(
-        [&listener2] { return !!listener2.last_update; }));
+
+    WaitUntilIdle();
+    EXPECT_TRUE(listener2.last_update);
     listener2.Reset();
   }
 
-  // We don't want to crash. If the assertion below fails, context engine has
+  // We don't want to crash. If the test below fails, context engine has
   // probably crashed.
   ContextValueWriterPtr value;
   writer_->CreateValue(value.NewRequest(), ContextValueType::ENTITY);
   value->Set("foo", ContextMetadataBuilder().SetEntityTopic("topic").Build());
-  ASSERT_TRUE(RunLoopUntilWithTimeout(
-      [&listener2] { return !!listener2.last_update; }));
+
+  WaitUntilIdle();
+  EXPECT_TRUE(listener2.last_update);
 }
 
 TEST_F(ContextEngineTest, GetContext) {
@@ -253,27 +274,26 @@ TEST_F(ContextEngineTest, GetContext) {
   // Make sure context has been written.
   TestListener listener;
   reader_->Subscribe(query.Clone(), listener.GetHandle());
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&listener] {
-    return !!listener.last_update;
-  }));
+
+  WaitUntilIdle();
+  EXPECT_TRUE(listener.last_update);
 
   // Assert Get gives us the expected context.
   bool callback_called = false;
-  reader_->Get(
-      std::move(query),
-      [&callback_called](const ContextUpdatePtr& update) {
-    std::pair<bool, f1dl::VectorPtr<ContextValuePtr>> result =
-        TakeContextValue(update.get(), "a");
-    EXPECT_TRUE(result.first);
-    EXPECT_EQ(result.second->size(), 2u);
-    EXPECT_EQ("topic", result.second->at(0)->meta->entity->topic);
-    EXPECT_EQ("frob", result.second->at(1)->meta->entity->topic);
-    callback_called = true;
-  });
+  reader_->Get(std::move(query),
+               [&callback_called](const ContextUpdatePtr& update) {
+                 callback_called = true;
 
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&callback_called] {
-    return callback_called;
-  }));
+                 std::pair<bool, f1dl::VectorPtr<ContextValuePtr>> results =
+                     TakeContextValue(update.get(), "a");
+                 EXPECT_TRUE(results.first);
+                 ASSERT_EQ(2u, results.second->size());
+                 EXPECT_EQ(std::set<std::string>({"topic", "frob"}),
+                           GetTopicSet(*results.second));
+               });
+
+  WaitUntilIdle();
+  EXPECT_TRUE(callback_called);
 }
 
 }  // namespace maxwell

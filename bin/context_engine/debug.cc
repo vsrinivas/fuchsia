@@ -3,13 +3,32 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/context_engine/debug.h"
+
 #include "peridot/bin/context_engine/context_repository.h"
 
 namespace maxwell {
 
+ContextDebugImpl::Activity::Activity(fxl::WeakPtr<ContextDebugImpl> debug)
+    : debug_(debug) {
+  debug_->activity_ = this;
+}
+
+ContextDebugImpl::Activity::~Activity() {
+  if (debug_) {
+    debug_->activity_ = nullptr;
+    debug_->PostIdleCheck();
+  }
+}
+
 ContextDebugImpl::ContextDebugImpl(const ContextRepository* const repository)
-    : repository_(repository) {}
+    : repository_(repository),
+      message_loop_(fsl::MessageLoop::GetCurrent()),
+      weak_ptr_factory_(this) {}
 ContextDebugImpl::~ContextDebugImpl() = default;
+
+fxl::WeakPtr<ContextDebugImpl> ContextDebugImpl::GetWeakPtr() {
+  return weak_ptr_factory_.GetWeakPtr();
+}
 
 void ContextDebugImpl::OnValueChanged(const std::set<Id>& parent_ids,
                                       const Id& id,
@@ -45,6 +64,18 @@ void ContextDebugImpl::OnSubscriptionRemoved(const Id& id) {
   DispatchOneSubscription(std::move(update));
 }
 
+ContextDebugImpl::ActivityToken ContextDebugImpl::RegisterOngoingActivity() {
+  FXL_DCHECK(message_loop_ == fsl::MessageLoop::GetCurrent());
+
+  if (activity_) {
+    return ActivityToken(activity_);
+  } else {
+    // |activity_| is set in the |Activity| constructor and cleared in
+    // the destructor
+    return fxl::MakeRefCounted<Activity>(weak_ptr_factory_.GetWeakPtr());
+  }
+}
+
 void ContextDebugImpl::Watch(
     f1dl::InterfaceHandle<ContextDebugListener> listener) {
   FXL_LOG(INFO) << "Watch(): entered";
@@ -63,6 +94,11 @@ void ContextDebugImpl::Watch(
   // TODO(thatguy): Add subscriptions.
 
   listeners_.AddInterfacePtr(std::move(listener_ptr));
+}
+
+void ContextDebugImpl::WaitUntilIdle(const WaitUntilIdleCallback& callback) {
+  idle_waiters_.push_back(callback);
+  PostIdleCheck();
 }
 
 void ContextDebugImpl::DispatchOneValue(ContextDebugValuePtr value) {
@@ -90,6 +126,33 @@ void ContextDebugImpl::DispatchSubscriptions(
   listeners_.ForAllPtrs([&subscriptions](ContextDebugListener* listener) {
     listener->OnSubscriptionsChanged(subscriptions.Clone());
   });
+}
+
+void ContextDebugImpl::PostIdleCheck() {
+  if (!(idle_waiters_.empty() || activity_ || idle_check_pending_)) {
+    FXL_DCHECK(message_loop_);
+    message_loop_->PostQuitTask();
+    idle_check_pending_ = true;
+  }
+}
+
+bool ContextDebugImpl::FinishIdleCheck() {
+  if (idle_check_pending_) {
+    message_loop_->RunUntilIdle();
+    if (!activity_) {
+      for (const auto& callback : idle_waiters_) {
+        callback();
+      }
+      idle_waiters_.clear();
+    }
+    // Otherwise, |PostIdleCheck| will be invoked again when |activity_| is
+    // released.
+
+    idle_check_pending_ = false;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 }  // namespace maxwell

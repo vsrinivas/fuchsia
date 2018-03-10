@@ -16,6 +16,10 @@ ContextEngineImpl::ContextEngineImpl(
     : entity_resolver_(entity_resolver) {}
 ContextEngineImpl::~ContextEngineImpl() = default;
 
+fxl::WeakPtr<ContextDebugImpl> ContextEngineImpl::debug() {
+  return repository_.debug()->GetWeakPtr();
+}
+
 void ContextEngineImpl::AddBinding(
     f1dl::InterfaceRequest<ContextEngine> request) {
   bindings_.AddBinding(this, std::move(request));

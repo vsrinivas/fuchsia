@@ -25,6 +25,10 @@
       "exec":"/system/test/modular_tests/maxwell_unittests"
     },
     {
+      "name":"context_engine",
+      "exec":"/system/test/maxwell/context_engine_test"
+    },
+    {
       "name":"context_link",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/context_link_test_user_shell --story_shell=dev_story_shell",
       "copy":{

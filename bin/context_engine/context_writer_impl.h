@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_WRITER_IMPL_H_
+#define PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_WRITER_IMPL_H_
+
 #include <map>
 #include <string>
 
@@ -11,6 +14,8 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/user_intelligence/fidl/scope.fidl.h"
 #include "peridot/bin/context_engine/context_repository.h"
+#include "peridot/lib/bound_set/bound_set.h"
+#include "peridot/public/lib/entity/fidl/entity.fidl.h"
 
 namespace modular {
 class EntityResolver;
@@ -66,6 +71,12 @@ class ContextWriterImpl : ContextWriter {
   // Supports CreateValue().
   std::vector<std::unique_ptr<ContextValueWriterImpl>> value_writer_storage_;
 
+  // Supports GetEntityTypesFromEntityReference
+  //
+  // TODO(rosswang): consider adding removal capability to |InterfacePtrSet|
+  // instead.
+  maxwell::BoundPtrSet<modular::Entity> entities_;
+
   fxl::WeakPtrFactory<ContextWriterImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextWriterImpl);
@@ -92,7 +103,8 @@ class ContextValueWriterImpl : ContextValueWriter {
                         ContextValueType type) override;
 
   // |ContextValueWriter|
-  void Set(const f1dl::StringPtr& content, ContextMetadataPtr metadata) override;
+  void Set(const f1dl::StringPtr& content,
+           ContextMetadataPtr metadata) override;
 
   f1dl::Binding<ContextValueWriter> binding_;
 
@@ -107,3 +119,5 @@ class ContextValueWriterImpl : ContextValueWriter {
 };
 
 }  // namespace maxwell
+
+#endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_WRITER_IMPL_H_

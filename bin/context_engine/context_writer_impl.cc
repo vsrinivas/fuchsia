@@ -7,8 +7,10 @@
 #include "lib/context/cpp/formatting.h"
 #include "lib/entity/cpp/json.h"
 #include "lib/entity/fidl/entity_resolver.fidl.h"
+#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/context_engine/context_writer_impl.h"
+#include "peridot/bin/context_engine/debug.h"
 #include "rapidjson/document.h"
 
 namespace maxwell {
@@ -126,6 +128,8 @@ void ContextWriterImpl::DestroyContextValueWriter(ContextValueWriterImpl* ptr) {
 
 void ContextWriterImpl::WriteEntityTopic(const f1dl::StringPtr& topic,
                                          const f1dl::StringPtr& value) {
+  auto activity = repository_->debug()->RegisterOngoingActivity();
+
   if (!value) {
     // Remove this value.
     auto it = topic_value_ids_.find(topic);
@@ -136,7 +140,8 @@ void ContextWriterImpl::WriteEntityTopic(const f1dl::StringPtr& topic,
   }
 
   GetEntityTypesFromEntityReference(
-      value, [this, topic, value](const f1dl::VectorPtr<f1dl::StringPtr>& types) {
+      value, [this, activity, topic,
+              value](const f1dl::VectorPtr<f1dl::StringPtr>& types) {
         auto value_ptr = ContextValue::New();
         value_ptr->type = ContextValueType::ENTITY;
         value_ptr->content = value;
@@ -165,25 +170,29 @@ void ContextWriterImpl::WriteEntityTopic(const f1dl::StringPtr& topic,
 void ContextWriterImpl::GetEntityTypesFromEntityReference(
     const f1dl::StringPtr& reference,
     std::function<void(const f1dl::VectorPtr<f1dl::StringPtr>&)> done) {
-  // TODO(thatguy): This function could be re-used in multiple places. Move it
-  // to somewhere where other places can reach it.
-  std::shared_ptr<modular::EntityPtr> entity(new modular::EntityPtr);
-  entity_resolver_->ResolveEntity(reference, entity->NewRequest());
-  entity->set_error_handler(
-      [weak_this = weak_factory_.GetWeakPtr(), entity, reference, done] {
-        if (!weak_this)
-          return;
-        // The contents of the Entity value could be a deprecated JSON Entity,
-        // not an Entity reference.
-        done(Deprecated_GetTypesFromJsonEntity(reference));
-      });
+  auto activity = repository_->debug()->RegisterOngoingActivity();
 
-  (*entity)->GetTypes([weak_this = weak_factory_.GetWeakPtr(), entity,
-                       done](const f1dl::VectorPtr<f1dl::StringPtr>& types) {
-    if (!weak_this)
-      return;
-    done(types);
+  // TODO(thatguy): This function could be re-used in multiple places. Move it
+  // somewhere other places can reach it.
+  modular::EntityPtr entity;
+  entity_resolver_->ResolveEntity(reference, entity.NewRequest());
+
+  auto fallback = fxl::MakeAutoCall([done, reference] {
+    // The contents of the Entity value could be a deprecated JSON Entity, not
+    // an Entity reference.
+    done(Deprecated_GetTypesFromJsonEntity(reference));
   });
+
+  entity->GetTypes(fxl::MakeCopyable(
+      [this, activity, id = entities_.GetId(&entity), done = std::move(done),
+       fallback = std::move(fallback)](
+          const f1dl::VectorPtr<f1dl::StringPtr>& types) mutable {
+        done(types);
+        fallback.cancel();
+        entities_.erase(id);
+      }));
+
+  entities_.emplace(std::move(entity));
 }
 
 ContextValueWriterImpl::ContextValueWriterImpl(
@@ -223,12 +232,15 @@ void ContextValueWriterImpl::CreateChildValue(
 
 void ContextValueWriterImpl::Set(const f1dl::StringPtr& content,
                                  ContextMetadataPtr metadata) {
+  auto activity = writer_->repository()->debug()->RegisterOngoingActivity();
+
   auto done_getting_types =
-      [weak_this = weak_factory_.GetWeakPtr(), content,
+      [weak_this = weak_factory_.GetWeakPtr(), activity, content,
        metadata = std::move(metadata)](
           const f1dl::VectorPtr<f1dl::StringPtr>& entity_types) mutable {
         if (!weak_this)
           return;
+
         if (!weak_this->value_id_) {
           // We're creating this value for the first time.
           auto value = ContextValue::New();

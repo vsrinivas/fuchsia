@@ -59,8 +59,8 @@ source_set("context_index_unittest") {
   deps = [
     ":context_index",
     "//garnet/public/lib/fsl",
-    "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/cpp:context_helper",
+    "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
     "//third_party/googletest:gtest",
   ]
@@ -90,6 +90,7 @@ source_set("context_repository") {
 
   deps = [
     ":context_index",
+    "//garnet/public/lib/fsl",
     "//peridot/lib/bound_set",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/context/cpp:formatting",
@@ -125,6 +126,7 @@ source_set("context_writer_impl") {
   deps = [
     ":context_repository",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/bound_set",
     "//peridot/public/lib/async/cpp:future_value",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",

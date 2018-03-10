@@ -67,6 +67,7 @@ source_set("context_common") {
   testonly = true
 
   sources = [
+    "context_engine_test_base.cc",
     "context_engine_test_base.h",
   ]
 

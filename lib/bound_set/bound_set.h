@@ -86,9 +86,16 @@ class BoundSet {
     return c;
   }
 
+  UniqueType GetId(T* object) { return Identify(GetFidlType(object)); }
+
   // Removes the element at the given iterator. This effectively closes the pipe
   // there if open, but it does not call OnConnectionError.
   iterator erase(iterator it) { return elements_.erase(it); }
+  iterator erase(UniqueType id) {
+    auto it = Find(id);
+    FXL_CHECK(it != elements_.end());
+    return elements_.erase(it);
+  }
 
   // Closes the Channel associated with each of the items in this set and
   // clears the set. This does not call OnConnectionError for every interface in
@@ -101,11 +108,7 @@ class BoundSet {
   iterator end() { return elements_.end(); }
 
  protected:
-  virtual void OnConnectionError(UniqueType id) {
-    auto it = Find(id);
-    FXL_CHECK(it != elements_.end());
-    elements_.erase(it);
-  }
+  virtual void OnConnectionError(UniqueType id) { erase(id); }
 
  private:
   iterator Find(UniqueType id) {

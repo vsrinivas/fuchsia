@@ -29,6 +29,8 @@ class ContextEngineImpl : ContextEngine {
 
   void AddBinding(f1dl::InterfaceRequest<ContextEngine> request);
 
+  fxl::WeakPtr<ContextDebugImpl> debug();
+
  private:
   // |ContextEngine|
   void GetWriter(ComponentScopePtr client_info,
