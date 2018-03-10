@@ -98,14 +98,7 @@ static zx_status_t bcm_hci_ioctl(void* ctx, uint32_t op, const void* in_buf, siz
 
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     if (op == IOCTL_BT_HCI_GET_COMMAND_CHANNEL) {
-        // first reuse the command channel we opened
-        if (hci->command_channel != ZX_HANDLE_INVALID) {
-            *reply = hci->command_channel;
-            hci->command_channel = ZX_HANDLE_INVALID;
-            status = ZX_OK;
-        } else {
-            status = bt_hci_open_command_channel(&hci->hci, reply);
-        }
+        status = bt_hci_open_command_channel(&hci->hci, reply);
     } else if (op == IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL) {
         status = bt_hci_open_acl_data_channel(&hci->hci, reply);
     } else if (op == IOCTL_BT_HCI_GET_SNOOP_CHANNEL) {
@@ -129,7 +122,10 @@ static void bcm_hci_unbind(void* ctx) {
 static void bcm_hci_release(void* ctx) {
     bcm_hci_t* hci = ctx;
 
-    zx_handle_close(hci->command_channel);
+    if (hci->command_channel != ZX_HANDLE_INVALID) {
+        zx_handle_close(hci->command_channel);
+    }
+
     free(hci);
 }
 
@@ -290,6 +286,11 @@ static int bcm_hci_start_thread(void* arg) {
         zxlogf(INFO, "bcm-hci: no firmware file found\n");
     }
 
+    // We're done with the command channel. Close it so that it can be opened by
+    // the host stack after the device becomes visible.
+    zx_handle_close(hci->command_channel);
+    hci->command_channel = ZX_HANDLE_INVALID;
+
     device_make_visible(hci->zxdev);
     return 0;
 
@@ -298,6 +299,7 @@ vmo_close_fail:
 fail:
     zxlogf(ERROR, "bcm_hci_start_thread: device initialization failed: %s\n",
            zx_status_get_string(status));
+
     device_remove(hci->zxdev);
     return -1;
 }
