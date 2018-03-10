@@ -35,6 +35,11 @@ declare_args() {
 #
 #     Defaults to false.
 #
+#   boot_firmware_image (bool, optional)
+#     If true, the package is a boot firmware package instead of a regular
+#     package. A boot firmware package may contain only resources which are
+#     installed into /boot/lib/fw.
+#
 #   meta (optional)
 #     List of scopes defining the metadata entries in the package. A metadata
 #     entry is typically a source file and is placed in the "meta/" directory of
@@ -141,7 +146,9 @@ declare_args() {
 #         $target_gen_dir
 #
 #       dest (path, required)
-#         Location the resource will be placed within "data/"
+#         Location the resource will be placed within "data/", unless the package
+#         is a boot firmware package in which case this is the location the resource
+#         will be placed within "/boot/lib/fw".
 #
 #   extra (optional)
 #     A list of potentially build-time generated files containing extra entries
@@ -154,6 +161,7 @@ template("package") {
       # packages.
       fuchsia_package = !bootfs_packages
       system_image = false
+      boot_firmware_image = false
       binaries = []
       drivers = []
       libraries = []
@@ -172,9 +180,26 @@ template("package") {
 
     assert(pkg.drivers == [] || pkg.system_image)
 
+    if (pkg.boot_firmware_image) {
+      assert(!pkg.fuchsia_package,
+             "boot firmware packages cannot be true fuchsia packages")
+      assert(!pkg.system_image,
+             "boot firmware packages cannot be system images")
+      assert(pkg.binaries == [],
+             "boot firmware packages cannot contain binaries")
+      assert(pkg.drivers == [], "boot firmware packages cannot contain drivers")
+      assert(pkg.libraries == [],
+             "boot firmware packages cannot contain libraries")
+      assert(pkg.meta == [], "boot firmware packages cannot contain metadata")
+      assert(pkg.tests == [], "boot firmware packages cannot contain tests")
+      assert(!defined(pkg.extra) || pkg.extra == [],
+             "boot firmware packages cannot contain extra build-time entries")
+    }
+
     package_manifest = "$pkg_out_dir/package_manifest"
     archive_manifest = "$pkg_out_dir/archive_manifest"
     system_manifest = "$pkg_out_dir/system_manifest"
+    boot_manifest = "$pkg_out_dir/boot_manifest"
 
     manifest_target_name = "${target_name}__manifest"
 
@@ -292,28 +317,42 @@ template("package") {
     foreach(resource, pkg.resources) {
       # Resource path are absolute.
       source = resource.path
-      dest = "data/" + resource.dest
+      if (pkg.boot_firmware_image) {
+        dest = "lib/fw/" + resource.dest
+      } else {
+        dest = "data/" + resource.dest
+      }
       contents += [ "$dest=$source" ]
       extra_inputs += [ source ]
     }
 
-    if (pkg.system_image) {
+    if (pkg.system_image || pkg.boot_firmware_image) {
       action(manifest_target_name) {
         script = "//build/gn/write_manifest.py"
         outputs = [
           partial_package_manifest,
           partial_archive_manifest,
           system_manifest,
+          boot_manifest,
         ]
         args = [
-                 "--manifest",
-                 rebase_path(partial_package_manifest, root_build_dir),
-                 "--manifest",
-                 rebase_path(partial_archive_manifest, root_build_dir),
-                 "--manifest",
-                 rebase_path(system_manifest, root_build_dir),
-               ] + contents
+          "--manifest",
+          rebase_path(partial_package_manifest, root_build_dir),
+          "--manifest",
+          rebase_path(partial_archive_manifest, root_build_dir),
+          "--manifest",
+          rebase_path(system_manifest, root_build_dir),
+        ]
+        if (pkg.boot_firmware_image) {
+          args += [
+            "--manifest",
+            rebase_path(boot_manifest, root_build_dir),
+          ]
+        }
+
+        args += contents
         inputs = extra_inputs
+
         forward_variables_from(invoker,
                                [
                                  "deps",
@@ -323,7 +362,7 @@ template("package") {
 
       group(target_name) {
         forward_variables_from(invoker, [ "testonly" ])
-        deps = [
+        public_deps = [
           ":${manifest_target_name}",
         ]
         if (defined(pkg.extra)) {
@@ -368,12 +407,15 @@ template("package") {
           partial_package_manifest,
           partial_archive_manifest,
           system_manifest,
+          boot_manifest,
         ]
         args = [
                  "--manifest",
                  rebase_path(partial_archive_manifest, root_build_dir),
                  "--manifest",
                  rebase_path(system_manifest, root_build_dir),
+                 "--manifest",
+                 rebase_path(boot_manifest, root_build_dir),
                  "--manifest",
                  rebase_path(partial_package_manifest, root_build_dir),
                ] + contents
@@ -393,7 +435,7 @@ template("package") {
 
       group(target_name) {
         forward_variables_from(invoker, [ "testonly" ])
-        deps = [
+        public_deps = [
           ":${manifest_target_name}",
         ]
         if (defined(pkg.extra)) {
@@ -409,6 +451,7 @@ template("package") {
           partial_package_manifest,
           partial_archive_manifest,
           system_manifest,
+          boot_manifest,
         ]
         args = [
                  "--manifest",
@@ -416,6 +459,8 @@ template("package") {
                  "--manifest",
                  rebase_path(system_manifest, root_build_dir),
                  "pkgs/${pkg.package_name}=" + rebase_path(output),
+                 "--manifest",
+                 rebase_path(boot_manifest, root_build_dir),
                  "--manifest",
                  rebase_path(partial_archive_manifest, root_build_dir),
                ] + contents
@@ -430,7 +475,7 @@ template("package") {
       # libraries, and resources defined in the package.
       action(target_name) {
         forward_variables_from(invoker, [ "testonly" ])
-        deps = [
+        public_deps = [
           ":${manifest_target_name}",
         ]
         if (defined(pkg.extra)) {

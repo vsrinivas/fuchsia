@@ -39,7 +39,8 @@ exec_script("//build/zircon/create_gn_rules.py",
             zircon_files + supporting_templates)
 
 # Computation of the zircon_boards requires the above exec_script to have completed.
-zircon_boards = read_file("$root_build_dir/zircon-gn/export/boards.list", "list lines")
+zircon_boards =
+    read_file("$root_build_dir/zircon-gn/export/boards.list", "list lines")
 
 # Permit dependencies on testonly targets from packages.
 testonly = true
@@ -125,6 +126,15 @@ action("finalize_manifests") {
     "--groups=all",
   ]
 
+  foreach(package, _result.packages) {
+    package_manifest = "$root_build_dir/package/$package/boot_manifest"
+
+    sources += [ package_manifest ]
+
+    args += [ "--optional-manifest=" +
+              rebase_path(package_manifest, root_build_dir) ]
+  }
+
   # Finally, everything that will go into the final /system manifest.
   args += [
     "--output=" + rebase_path(final_system_manifest, root_build_dir),
@@ -148,10 +158,7 @@ action("finalize_manifests") {
   foreach(package, _result.packages) {
     package_manifest = "$root_build_dir/package/$package/system_manifest"
 
-    # GN won't let us make these sources because they're in the build
-    # directory but written implicitly at gen time rather than by a proper
-    # action.  We're relying on the depfile to notice their changes.
-    #sources += [ package_manifest ]
+    sources += [ package_manifest ]
 
     args += [ "--optional-manifest=" +
               rebase_path(package_manifest, root_build_dir) ]
@@ -161,10 +168,7 @@ action("finalize_manifests") {
     package_manifest = "$root_build_dir/package/$package/archive_manifest"
     final_manifest = "$root_build_dir/package/$package/final_archive_manifest"
 
-    # GN won't let us make these sources because they're in the build
-    # directory but written implicitly at gen time rather than by a proper
-    # action.  We're relying on the depfile to notice their changes.
-    #sources += [ package_manifest ]
+    sources += [ package_manifest ]
 
     outputs += [ final_manifest ]
     args += [
@@ -177,10 +181,7 @@ action("finalize_manifests") {
     package_manifest = "$root_build_dir/package/$package/package_manifest"
     final_manifest = "$root_build_dir/package/$package/final_package_manifest"
 
-    # GN won't let us make these sources because they're in the build
-    # directory but written implicitly at gen time rather than by a proper
-    # action.  We're relying on the depfile to notice their changes.
-    #sources += [ package_manifest ]
+    sources += [ package_manifest ]
 
     outputs += [ final_manifest ]
     args += [
@@ -957,15 +958,18 @@ foreach(board, zircon_boards) {
     }
 
     # Add all of the input images as dependencies
-    deps = [installer_label]
+    deps = [
+      installer_label,
+    ]
     foreach(image, input_images) {
       deps += [ ":${image}" ]
     }
 
     install_manifest = "$root_build_dir/install_manifest"
+
     # Produce a manifest of images to be added to the filesystem
     manifest_lines = []
-    rebased_installer_path=rebase_path(installer_path, root_build_dir)
+    rebased_installer_path = rebase_path(installer_path, root_build_dir)
     manifest_lines += [ "install-fuchsia=${rebased_installer_path}" ]
     foreach(image, input_images) {
       image_src_path = rebase_path("${images_dir}/${image}", root_build_dir)
@@ -974,8 +978,12 @@ foreach(board, zircon_boards) {
     write_file(install_manifest, manifest_lines)
 
     output_image_path = "${images_dir}/${target_name}"
-    outputs = [ output_image_path ]
-    sources = ["mkminfs.py"]
+    outputs = [
+      output_image_path,
+    ]
+    sources = [
+      "mkminfs.py",
+    ]
 
     script = "//build/gn_run_binary.sh"
     args = [
@@ -1035,9 +1043,7 @@ group("images") {
 group("install") {
   deps = []
   foreach(board, zircon_boards) {
-    deps += [
-      ":install-${board}.blk"
-    ]
+    deps += [ ":install-${board}.blk" ]
   }
 }
 
