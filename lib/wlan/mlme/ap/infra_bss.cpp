@@ -8,16 +8,14 @@
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
 
+#include <zircon/syscalls.h>
+
 namespace wlan {
 
 InfraBss::InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
                    const common::MacAddr& bssid)
     : bssid_(bssid), device_(device), bcn_sender_(fbl::move(bcn_sender)) {
     ZX_DEBUG_ASSERT(bcn_sender_ != nullptr);
-
-    // Start sending Beacon frames.
-    started_at_ = std::chrono::steady_clock::now();
-    bcn_sender_->Start(this);
 }
 
 InfraBss::~InfraBss() {
@@ -173,8 +171,9 @@ const common::MacAddr& InfraBss::bssid() const {
 }
 
 uint64_t InfraBss::timestamp() {
-    bss::timestamp_t now = std::chrono::steady_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>(now - started_at_).count();
+    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_duration_t uptime_ns = now - started_at_;
+    return uptime_ns / 1000; // as microseconds
 }
 
 seq_t InfraBss::NextSeq(const MgmtFrameHeader& hdr) {

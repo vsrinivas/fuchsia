@@ -61,7 +61,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     const common::MacAddr bssid_;
     DeviceInterface* device_;
     fbl::unique_ptr<BeaconSender> bcn_sender_;
-    bss::timestamp_t started_at_;
+    zx_time_t started_at_;
     BssClientMap clients_;
     Sequence seq_;
     TrafficIndicationMap tim_;
