@@ -176,6 +176,10 @@ func (f *installFile) open() error {
 		return fs.ErrInvalidArgs
 	}
 
+	if f.fs.blobfs.HasBlob(f.name) {
+		return fs.ErrAlreadyExists
+	}
+
 	var err error
 	f.blob, err = os.Create(f.fs.blobfs.PathOf(f.name))
 	if err != nil {

@@ -74,6 +74,9 @@ func Run(cfg *build.Config) error {
 		}
 
 		f, err := os.Create(filepath.Join("/pkgfs/install/blob", name))
+		if os.IsExist(err) {
+			continue
+		}
 		if err != nil {
 			return err
 		}
