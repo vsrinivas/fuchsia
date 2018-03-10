@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "peridot/packages/prod/maxwell"
+    ],
+    "packages": {
+        "maxwell_tests": "//peridot:maxwell_tests"
+    }
+}

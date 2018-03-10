@@ -1,0 +1,11 @@
+{
+    "imports": [
+        "peridot/packages/tests/bup",
+        "peridot/packages/tests/ledger",
+        "peridot/packages/tests/leveldb",
+        "peridot/packages/tests/maxwell",
+        "peridot/packages/tests/modular",
+        "peridot/packages/tests/peridot_lib",
+        "peridot/packages/tests/re2"
+    ]
+}

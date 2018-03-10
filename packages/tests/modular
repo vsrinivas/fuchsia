@@ -2,22 +2,17 @@
     "languages": [
         "cpp"
     ],
+    "imports": [
+        "peridot/packages/prod/modular"
+    ],
     "packages": {
         "dev_device_shell": "//peridot/bin/device_runner:dev_device_shell",
         "dev_story_shell": "//peridot/bin/story_runner:dev_story_shell",
         "dev_user_shell": "//peridot/bin/user_runner:dev_user_shell",
-        "device_runner_monitor": "//peridot/bin/device_runner_monitor",
-        "device_runner": "//peridot/bin/device_runner",
         "modular_tests": "//peridot/tests:modular_tests",
-        "modular_benchmarks": "//peridot/tests/benchmark:modular_benchmarks",
-        "modular_unittests": "//peridot:modular_unittests",
-        "user_runner": "//peridot/bin/user_runner"
+        "modular_unittests": "//peridot:modular_unittests"
     },
     "resources": [
-        {
-            "bootfs_path": "test/modular_tests/run_modular_benchmarks.sh",
-            "file": "peridot/tests/benchmark/run_modular_benchmarks.sh"
-        },
         {
             "bootfs_path": "test/run_modular_tests.sh",
             "file": "peridot/tests/run_modular_tests.sh"

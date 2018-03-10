@@ -1,0 +1,7 @@
+{
+    "imports": [
+        "peridot/packages/prod/ledger",
+        "peridot/packages/prod/maxwell",
+        "peridot/packages/prod/modular"
+    ]
+}

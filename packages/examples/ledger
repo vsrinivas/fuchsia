@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "peridot/packages/prod/ledger"
+    ],
+    "packages": {
+        "firestore_demo": "//peridot/bin/cloud_provider_firestore:firestore_demo"
+    }
+}

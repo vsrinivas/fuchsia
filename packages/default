@@ -1,7 +1,5 @@
 {
     "imports": [
-        "garnet/packages/default",
-        "peridot/packages/all",
-        "peridot/packages/config/device_runner"
+        "peridot/packages/dev"
     ]
 }

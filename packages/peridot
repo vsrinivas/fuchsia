@@ -1,0 +1,7 @@
+{
+    "imports": [
+        "garnet/packages/default",
+        "peridot/packages/config/device_runner",
+        "peridot/packages/prod/all"
+    ]
+}
