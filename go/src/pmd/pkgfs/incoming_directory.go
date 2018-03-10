@@ -232,6 +232,8 @@ func importPackage(fs *Filesystem, root string) {
 
 	files := bytes.Split(contents, []byte{'\n'})
 	var needsCount int
+	var needBlobs []string
+
 	for i := range files {
 		parts := bytes.SplitN(files[i], []byte{'='}, 2)
 		if len(parts) != 2 {
@@ -258,14 +260,20 @@ func importPackage(fs *Filesystem, root string) {
 			log.Printf("pkgfs: import error, can't create needs index for %s: %s", p, err)
 		}
 
-		log.Printf("pkgfs: asking amber to fetch blob for %s: %q", p, root)
-		// TODO(jmatt) limit concurrency, send this to a worker routine?
-		go fs.amberPxy.GetBlob(root)
+		needBlobs = append(needBlobs, root)
 	}
 
 	if needsCount == 0 {
 		activatePackage(p, fs)
 	}
+
+	go func() {
+		for _, root := range needBlobs {
+			log.Printf("pkgfs: asking amber to fetch blob for %s: %q", p, root)
+			// TODO(jmatt) limit concurrency, send this to a worker routine?
+			fs.amberPxy.GetBlob(root)
+		}
+	}()
 
 	checkNeeds(fs, root)
 }
