@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
@@ -15,7 +16,6 @@
 
 #include "device.h"
 #include "trace.h"
-#include "utils.h"
 
 #define LOCAL_TRACE 0
 
@@ -30,10 +30,13 @@ void virtio_dump_desc(const struct vring_desc* desc) {
 }
 
 Ring::Ring(Device* device)
-    : device_(device) {}
+    : device_(device) {
+
+    memset(&ring_buf_, 0, sizeof(ring_buf_));
+}
 
 Ring::~Ring() {
-    zx::vmar::root_self().unmap(ring_va_, ring_va_len_);
+    io_buffer_release(&ring_buf_);
 }
 
 zx_status_t Ring::Init(uint16_t index, uint16_t count) {
@@ -54,17 +57,16 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
     size_t size = vring_size(count, PAGE_SIZE);
     LTRACEF("need %zu bytes\n", size);
 
-    zx_status_t r = map_contiguous_memory(size, &ring_va_, &ring_pa_);
-    if (r) {
-        zxlogf(ERROR, "map_contiguous_memory failed %d\n", r);
-        return r;
+    zx_status_t status = io_buffer_init(&ring_buf_, size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (status != ZX_OK) {
+        return status;
     }
-    ring_va_len_ = size;
 
-    LTRACEF("allocated vring at %#" PRIxPTR ", physical address %#" PRIxPTR "\n", ring_va_, ring_pa_);
+    LTRACEF("allocated vring at %p, physical address %#" PRIxPTR "\n",
+            io_buffer_virt(&ring_buf_), io_buffer_phys(&ring_buf_));
 
     /* initialize the ring */
-    vring_init(&ring_, count, (void*)ring_va_, PAGE_SIZE);
+    vring_init(&ring_, count, io_buffer_virt(&ring_buf_), PAGE_SIZE);
     ring_.free_list = 0xffff;
     ring_.free_count = 0;
 
@@ -74,9 +76,9 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
     }
 
     /* register the ring with the device */
-    zx_paddr_t pa_desc = ring_pa_;
-    zx_paddr_t pa_avail = ring_pa_ + ((uintptr_t)ring_.avail - (uintptr_t)ring_.desc);
-    zx_paddr_t pa_used = ring_pa_ + ((uintptr_t)ring_.used - (uintptr_t)ring_.desc);
+    zx_paddr_t pa_desc = io_buffer_phys(&ring_buf_);
+    zx_paddr_t pa_avail = pa_desc + ((uintptr_t)ring_.avail - (uintptr_t)ring_.desc);
+    zx_paddr_t pa_used = pa_desc + ((uintptr_t)ring_.used - (uintptr_t)ring_.desc);
     device_->SetRing(index_, count, pa_desc, pa_avail, pa_used);
 
     return ZX_OK;

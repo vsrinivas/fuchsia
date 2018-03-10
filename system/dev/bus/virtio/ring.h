@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #pragma once
 
+#include <ddk/io-buffer.h>
 #include <virtio/virtio_ring.h>
 #include <zircon/types.h>
 
@@ -34,9 +35,7 @@ public:
 private:
     Device* device_ = nullptr;
 
-    zx_paddr_t ring_pa_ = 0;
-    uintptr_t ring_va_ = 0;
-    size_t ring_va_len_ = 0;
+    io_buffer_t ring_buf_;
 
     uint16_t index_ = 0;
 
