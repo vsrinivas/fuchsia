@@ -626,9 +626,6 @@ Macros
 
 ## Examples
 
-See also [FIDL 2.0: I/O
-Sketch](http://drive.google.com/a/google.com/open?id=1_oBDWwtPiCd56tCpd4JEtexmkalczh7sNU7TB5K5wTU).
-
 Common Declarations used by Examples
 
 The examples in this section use the following declarations.
