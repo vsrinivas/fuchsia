@@ -19,8 +19,8 @@ import (
 	"amber/source"
 )
 
-var DstUpdate = "/pkgfs/incoming"
-var DstBlob = DstUpdate
+var DstUpdate = "/pkgfs/install/pkg"
+var DstBlob = "/pkgfs/install/blob"
 var newTicker = time.NewTicker
 
 // ErrSrcNotFound is returned when a request is made to RemoveSource, but the
