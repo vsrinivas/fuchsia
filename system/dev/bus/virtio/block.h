@@ -73,7 +73,7 @@ private:
     // a queue of block request/responses
     static const size_t blk_req_count = 32;
 
-    zx_paddr_t blk_req_pa_ = 0;
+    io_buffer_t blk_req_buf_;
     virtio_blk_req_t* blk_req_ = nullptr;
 
     zx_paddr_t blk_res_pa_ = 0;
