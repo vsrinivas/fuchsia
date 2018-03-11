@@ -85,11 +85,11 @@ zx_status_t vim_i2c_init(vim_bus_t* bus) {
         return status;
     }
 
-    status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_I2C);
+    status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_I2C_IMPL);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_i2c_init: pbus_wait_protocol failed: %d\n", status);
         return status;
     }
 
-    return device_get_protocol(bus->parent, ZX_PROTOCOL_I2C, &bus->i2c);
+    return device_get_protocol(bus->parent, ZX_PROTOCOL_I2C_IMPL, &bus->i2c);
 }

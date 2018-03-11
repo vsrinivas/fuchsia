@@ -18,6 +18,11 @@
 #include <sync/completion.h>
 #include <zircon/types.h>
 
+typedef struct pdev_req pdev_req_t;
+
+// this struct is local to platform-i2c.c
+typedef struct platform_i2c_bus platform_i2c_bus_t;
+
 // this struct is local to platform-serial.c
 typedef struct platform_serial_port platform_serial_port_t;
 
@@ -26,7 +31,7 @@ typedef struct {
     zx_device_t* zxdev;
     usb_mode_switch_protocol_t ums;
     gpio_protocol_t gpio;
-    i2c_protocol_t i2c;
+    i2c_impl_protocol_t i2c;
     clk_protocol_t clk;
     serial_impl_protocol_t serial;
     iommu_protocol_t iommu;
@@ -40,9 +45,8 @@ typedef struct {
     platform_serial_port_t* serial_ports;
     uint32_t serial_port_count;
 
-    // list of i2c_txn_t
-    list_node_t i2c_txns;
-    mtx_t i2c_txn_lock;
+    platform_i2c_bus_t* i2c_buses;
+    uint32_t i2c_bus_count;
 
     zx_handle_t dummy_iommu_handle;
 
@@ -77,16 +81,6 @@ typedef struct {
     uint32_t bti_count;
 } platform_dev_t;
 
-typedef struct {
-    list_node_t node;
-    platform_bus_t* bus;
-    zx_handle_t channel;
-    zx_txid_t txid;
-    i2c_complete_cb complete_cb;
-    void* cookie;
-} i2c_txn_t;
-
-
 // platform-bus.c
 zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protocol);
 
@@ -94,6 +88,11 @@ zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protoc
 void platform_dev_free(platform_dev_t* dev);
 zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* dev, uint32_t flags);
 zx_status_t platform_device_enable(platform_dev_t* dev, bool enable);
+
+// platform-i2c.c
+zx_status_t platform_i2c_init(platform_bus_t* bus, i2c_impl_protocol_t* i2c);
+zx_status_t platform_i2c_transact(platform_bus_t* bus, pdev_req_t* req, pbus_i2c_channel_t* channel,
+                                  const void* write_buf, zx_handle_t channel_handle);
 
 // platform-serial.c
 zx_status_t platform_serial_init(platform_bus_t* bus, serial_impl_protocol_t* serial);

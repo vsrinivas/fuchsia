@@ -45,9 +45,14 @@ static zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void*
     case ZX_PROTOCOL_GPIO:
         memcpy(&bus->gpio, protocol, sizeof(bus->gpio));
         break;
-    case ZX_PROTOCOL_I2C:
+    case ZX_PROTOCOL_I2C_IMPL: {
+        zx_status_t status = platform_i2c_init(bus, (i2c_impl_protocol_t *)protocol);
+        if (status != ZX_OK) {
+            return status;
+         }
         memcpy(&bus->i2c, protocol, sizeof(bus->i2c));
         break;
+    }
     case ZX_PROTOCOL_CLK:
         memcpy(&bus->clk, protocol, sizeof(bus->clk));
         break;
@@ -139,7 +144,7 @@ zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protoc
             return ZX_OK;
         }
         break;
-    case ZX_PROTOCOL_I2C:
+    case ZX_PROTOCOL_I2C_IMPL:
         if (bus->i2c.ops) {
             memcpy(protocol, &bus->i2c, sizeof(bus->i2c));
             return ZX_OK;
@@ -177,12 +182,6 @@ static void platform_bus_release(void* ctx) {
     platform_dev_t* dev;
     list_for_every_entry(&bus->devices, dev, platform_dev_t, node) {
         platform_dev_free(dev);
-    }
-
-    i2c_txn_t* txn;
-    i2c_txn_t* temp;
-    list_for_every_entry_safe(&bus->i2c_txns, txn, temp, i2c_txn_t, node) {
-        free(txn);
     }
 
     platform_serial_release(bus);
@@ -269,8 +268,6 @@ static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const cha
     bus->vid = vid;
     bus->pid = pid;
     list_initialize(&bus->devices);
-    list_initialize(&bus->i2c_txns);
-    mtx_init(&bus->i2c_txn_lock, mtx_plain);
 
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, bus->vid},
