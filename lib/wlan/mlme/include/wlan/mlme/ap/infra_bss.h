@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <wlan/mlme/ap/beacon_sender.h>
 #include <wlan/mlme/ap/bss_client_map.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/ap/remote_client.h>
@@ -23,11 +24,9 @@ class ObjectId;
 // An infrastructure BSS which keeps track of its client and owned by the AP MLME.
 class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::Listener {
    public:
-    InfraBss(DeviceInterface* device, const common::MacAddr& bssid)
-        : bssid_(bssid), device_(device) {
-        started_at_ = std::chrono::steady_clock::now();
-    }
-    virtual ~InfraBss() = default;
+    InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
+             const common::MacAddr& bssid);
+    virtual ~InfraBss();
 
     zx_status_t HandleTimeout(const common::MacAddr& client_addr);
 
@@ -61,6 +60,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
 
     const common::MacAddr bssid_;
     DeviceInterface* device_;
+    fbl::unique_ptr<BeaconSender> bcn_sender_;
     bss::timestamp_t started_at_;
     BssClientMap clients_;
     Sequence seq_;

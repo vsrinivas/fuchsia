@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <wlan/mlme/ap/beacon_sender_interface.h>
+#include <wlan/mlme/ap/beacon_sender.h>
 #include <wlan/mlme/ap/infra_bss.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
@@ -32,7 +32,6 @@ class ApMlme : public Mlme {
 
    private:
     DeviceInterface* const device_;
-    fbl::unique_ptr<BeaconSenderInterface> bcn_sender_;
     fbl::RefPtr<InfraBss> bss_;
 };
 

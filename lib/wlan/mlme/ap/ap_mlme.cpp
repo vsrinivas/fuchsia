@@ -5,7 +5,7 @@
 #include <wlan/mlme/ap/ap_mlme.h>
 
 #include <wlan/common/logging.h>
-#include <wlan/mlme/ap/hw_beacon_sender.h>
+#include <fbl/ref_ptr.h>
 
 namespace wlan {
 
@@ -13,19 +13,6 @@ ApMlme::ApMlme(DeviceInterface* device) : device_(device) {}
 
 zx_status_t ApMlme::Init() {
     debugfn();
-
-    // Setup BeaconSender.
-    bcn_sender_.reset(new HwBeaconSender(device_));
-    auto status = bcn_sender_->Init();
-    if (status != ZX_OK) {
-        errorf("could not initialize BeaconSender: %d\n", status);
-        return status;
-    }
-
-    // Create a BSS. It'll become active once MLME issues a Start request.
-    auto& bssid = device_->GetState()->address();
-    bss_ = fbl::AdoptRef(new InfraBss(device_, bssid));
-
     return ZX_OK;
 }
 
@@ -48,8 +35,9 @@ zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
 zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
     debugfn();
 
-    if (bcn_sender_->IsStarted()) {
-        errorf("received MLME-START.request while already running\n");
+    // Only one BSS can be started at a time.
+    if (bss_ != nullptr) {
+        errorf("received MLME-START.request with an already running BSS\n");
         return ZX_OK;
     }
 
@@ -62,8 +50,9 @@ zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
     bssid.CopyTo(cfg.bssid);
     device_->ConfigureBss(&cfg);
 
-    // Start Beacon sender.
-    bcn_sender_->Start(req);
+    // Create and start BSS.
+    auto bcn_sender = fbl::make_unique<BeaconSender>(device_, req);
+    bss_ = fbl::AdoptRef(new InfraBss(device_, fbl::move(bcn_sender), bssid));
     AddChildHandler(bss_);
 
     return ZX_OK;
@@ -72,13 +61,9 @@ zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
 zx_status_t ApMlme::HandleMlmeStopReq(const StopRequest& req) {
     debugfn();
 
-    if (!bcn_sender_->IsStarted()) {
-        errorf("received MLME-STOP.request without running\n");
-        return ZX_OK;
-    }
-
-    bcn_sender_->Stop();
+    // Stop and destroy BSS.
     RemoveChildHandler(bss_);
+    bss_.reset();
 
     return ZX_OK;
 }

@@ -5,168 +5,48 @@
 #include <wlan/mlme/ap/beacon_sender.h>
 
 #include <wlan/common/logging.h>
+#include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
 #include <zircon/assert.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/port.h>
-#include <zx/thread.h>
-
-#include <chrono>
-#include <cinttypes>
-#include <future>
-#include <iostream>
-#include <thread>
 
 namespace wlan {
 
-BeaconSender::BeaconSender(DeviceInterface* device, BssInterface* bss)
-    : device_(device), bss_(bss) {
-    debugfn();
+BeaconSender::BeaconSender(DeviceInterface* device, const StartRequest& req) : device_(device) {
+    req_ = req.Clone();
 }
 
-zx_status_t BeaconSender::Init() {
-    // Create port.
-    auto status = zx::port::create(0, &port_);
-    if (status != ZX_OK) {
-        errorf("[bcn-sender] could not create port: %d\n", status);
-        return status;
-    }
-
-    // Create timer.
-    zx::timer t;
-    status = zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &t);
-    if (status != ZX_OK) {
-        errorf("[bcn-sender] could not create timer: %d\n", status);
-        return status;
-    }
-
-    status = t.wait_async(port_, kPortPktKeyTimer, ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_REPEATING);
-    if (status != ZX_OK) {
-        errorf("[bcn-sender] could not create timer: %d\n", status);
-        return status;
-    }
-    timer_.reset(new SystemTimer(kPortPktKeyTimer, std::move(t)));
-    return ZX_OK;
+BeaconSender::~BeaconSender() {
+    // Ensure Beaconing is stopped when the object is destroyed.
+    Stop();
 }
 
-zx_status_t BeaconSender::Start(const StartRequest& req) {
-    debugfn();
-    std::lock_guard<std::mutex> lock(start_req_lock_);
-    ZX_DEBUG_ASSERT(!IsStartedLocked());
-
-    start_req_ = req.Clone();
-    bcn_thread_ = std::thread(&BeaconSender::MessageLoop, this);
-    started_at_ = std::chrono::steady_clock::now();
-    return SetTimeout();
+void BeaconSender::Start(BssInterface* bss) {
+    ZX_DEBUG_ASSERT(!IsStarted());
+    bss_ = bss;
+    WriteBeacon();
+    debugbss("[bcn-sender] [%s] started sending Beacons\n", bss_->bssid().ToString().c_str());
 }
 
-zx_status_t BeaconSender::Stop() {
-    debugfn();
+void BeaconSender::Stop() {
+    if (!IsStarted()) { return; }
 
-    // Cancel Timer and destroy MLME-START.request.
-    {
-        std::lock_guard<std::mutex> lock(start_req_lock_);
-        ZX_DEBUG_ASSERT(IsStartedLocked());
-
-        timer_->CancelTimer();
-        start_req_.reset();
-    }
-
-    // Shutdown thread and wait for its termination.
-    zx_port_packet_t pkt = {
-        .key = kPortPktKeyShutdown,
-        .type = ZX_PKT_TYPE_USER,
-    };
-    port_.queue(&pkt, 0);
-    if (bcn_thread_.joinable()) { bcn_thread_.join(); }
-
-    debugbcnsndr("stopped loop\n");
-    return ZX_OK;
+    bss_ = nullptr;
+    // TODO(hahnr): Let hardware know there is no need for sending Beacon frames anymore.
+    debugbss("[bcn-sender] [%s] stopped sending Beacons\n", bss_->bssid().ToString().c_str());
 }
 
 bool BeaconSender::IsStarted() {
-    debugfn();
-    std::lock_guard<std::mutex> lock(start_req_lock_);
-    return IsStartedLocked();
+    return bss_ != nullptr;
 }
 
-bool BeaconSender::IsStartedLocked() const {
+zx_status_t BeaconSender::WriteBeacon() {
     debugfn();
-    return !start_req_.is_null();
-}
-
-void BeaconSender::MessageLoop() {
-    debugbcnsndr("starting loop\n");
-    const char kThreadName[] = "wlan-beacon-sender";
-    zx::thread::self().set_property(ZX_PROP_NAME, kThreadName, sizeof(kThreadName));
-    // TODO(hahnr): Change to high priority Thread if necessary. Needs evaluation.
-
-    zx_port_packet_t pkt;
-    bool running = true;
-    while (running) {
-        zx::time timeout = zx::deadline_after(zx::sec(kMessageLoopMaxWaitSeconds));
-        zx_status_t status = port_.wait(timeout, &pkt, 0);
-        if (status == ZX_ERR_TIMED_OUT) {
-            continue;
-        } else if (status != ZX_OK) {
-            if (status == ZX_ERR_BAD_HANDLE) {
-                errorf("[bcn-sender] port closed, exiting loop\n");
-            } else {
-                errorf("[bcn-sender] error waiting on port: %d\n", status);
-            }
-            // No further clean-up required. The internal state of the BeaconSender is opaque to
-            // its owner. If the thread was terminated the owner should still call Stop().
-            break;
-        }
-
-        switch (pkt.type) {
-        case ZX_PKT_TYPE_USER:
-            switch (pkt.key) {
-            case kPortPktKeyShutdown:
-                debugbcnsndr("shutting down loop\n");
-                running = false;
-                break;
-            default:
-                errorf("[bcn-sender] unknown user port key: %" PRIu64 "\n", pkt.key);
-                break;
-            }
-            break;
-        case ZX_PKT_TYPE_SIGNAL_REP:
-            switch (pkt.key) {
-            case kPortPktKeyTimer: {
-                std::lock_guard<std::mutex> lock(start_req_lock_);
-                if (IsStartedLocked()) {
-                    status = SendBeaconFrameLocked();
-                    if (status != ZX_OK) {
-                        errorf("error sending beacon, exiting message loop: %d\n", status);
-                        running = false;
-                        break;
-                    }
-                }
-                break;
-            }
-            default:
-                errorf("[bcn-sender] unknown signal port key: %" PRIu64 "\n", pkt.key);
-                break;
-            }
-            break;
-        default:
-            errorf("[bcn-sender] unknown port packet type: %u\n", pkt.type);
-            break;
-        }
-    }
-
-    debugbcnsndr("stopping loop\n");
-}
-
-zx_status_t BeaconSender::SendBeaconFrameLocked() {
-    debugfn();
-    ZX_DEBUG_ASSERT(IsStartedLocked());
-    debugbcnsndr("sending Beacon\n");
+    ZX_DEBUG_ASSERT(IsStarted());
+    if (!IsStarted()) { return ZX_ERR_BAD_STATE; }
 
     // TODO(hahnr): Length of elements is not known at this time. Allocate enough bytes.
     // This should be updated once there is a better size management.
@@ -176,46 +56,52 @@ zx_status_t BeaconSender::SendBeaconFrameLocked() {
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto hdr = frame.hdr;
-    const common::MacAddr& bssid = device_->GetState()->address();
+    const auto& bssid = bss_->bssid();
     hdr->addr1 = common::kBcastMac;
     hdr->addr2 = bssid;
     hdr->addr3 = bssid;
-    hdr->sc.set_seq(bss()->NextSeq(*hdr));
     FillTxInfo(&packet, *hdr);
 
     auto bcn = frame.body;
-    bcn->beacon_interval = start_req_->beacon_period;
-    bcn->timestamp = beacon_timestamp();
+    bcn->beacon_interval = req_->beacon_period;
+    bcn->timestamp = bss_->timestamp();
     bcn->cap.set_ess(1);
     bcn->cap.set_short_preamble(1);
 
     // Write elements.
-    // TODO(hahnr): All of this is hardcoded for now. Replace with actual capabilities.
     ElementWriter w(bcn->elements, body_payload_len);
-    if (!w.write<SsidElement>(start_req_->ssid.data())) {
-        errorf("could not write ssid \"%s\" to Beacon\n", start_req_->ssid.data());
+    if (!w.write<SsidElement>(req_->ssid.data())) {
+        // TODO(hahnr): Also log BSSID once BeaconSender has access to its BSS.
+        errorf("[bcn-sender] [%s] could not write ssid \"%s\" to Beacon\n",
+               bssid.ToString().c_str(), req_->ssid.data());
         return ZX_ERR_IO;
     }
 
-    // Rates (in Mbps): 1, 2, 5.5, 6 (base), 9, 11, 12, 18
-    std::vector<uint8_t> rates = {0x02, 0x04, 0x0b, 0x8c, 0x12, 0x16, 0x18, 0x24};
+    // Rates (in Mbps): 1 (basic), 2 (basic), 5.5 (basic), 6, 9, 11 (basic), 12, 18
+    std::vector<uint8_t> rates = {0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24};
     if (!w.write<SupportedRatesElement>(std::move(rates))) {
-        errorf("[bcn-sender] could not write supported rates\n");
+        errorf("[bcn-sender] [%s] could not write supported rates\n", bssid.ToString().c_str());
         return ZX_ERR_IO;
     }
 
-    // TODO(hahnr): Replace hardcoded channel.
+    // TODO(NET-427): Support channel selection.
     if (!w.write<DsssParamSetElement>(1)) {
-        errorf("[bcn-sender] could not write extended supported rates\n");
+        errorf("[bcn-sender] [%s] could not write extended supported rates\n",
+               bssid.ToString().c_str());
         return ZX_ERR_IO;
     }
+
+    // TODO(hahnr): Write TIM.
 
     // Rates (in Mbps): 24, 36, 48, 54
     std::vector<uint8_t> ext_rates = {0x30, 0x48, 0x60, 0x6c};
     if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
-        errorf("[bcn-sender] could not write extended supported rates\n");
+        errorf("[bcn-sender] [%s] could not write extended supported rates\n",
+               bssid.ToString().c_str());
         return ZX_ERR_IO;
     }
+
+    // TODO(hahnr): Query from hardware which IEs must be filled out here.
 
     // Validate the request in debug mode.
     ZX_DEBUG_ASSERT(bcn->Validate(w.size()));
@@ -225,37 +111,18 @@ zx_status_t BeaconSender::SendBeaconFrameLocked() {
     size_t actual_len = hdr->len() + sizeof(Beacon) + body_payload_len;
     auto status = packet->set_len(actual_len);
     if (status != ZX_OK) {
-        errorf("[bcn-sender] could not set packet length to %zu: %d\n", actual_len, status);
+        errorf("[bcn-sender] [%s] could not set packet length to %zu: %d\n",
+               bssid.ToString().c_str(), actual_len, status);
         return status;
     }
 
-    status = device_->SendWlan(std::move(packet));
+    status = device_->ConfigureBeacon(fbl::move(packet));
     if (status != ZX_OK) {
-        errorf("[bcn-sender] could not send beacon packet: %d\n", status);
+        errorf("[bcn-sender] [%s] could not send beacon packet: %d\n", bssid.ToString().c_str(),
+               status);
         return status;
     }
 
-    return SetTimeout();
-}
-
-// TODO(hahnr): Once InfraBss is submitted, retrieve the timestamp from the BSS.
-uint64_t BeaconSender::beacon_timestamp() {
-    auto now = std::chrono::steady_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>(now - started_at_).count();
-}
-
-zx_status_t BeaconSender::SetTimeout() {
-    debugfn();
-    ZX_DEBUG_ASSERT(timer_);
-
-    timer_->CancelTimer();
-    zx::time timeout = timer_->Now() + WLAN_TU(start_req_->beacon_period);
-    auto status = timer_->SetTimer(timeout);
-    if (status != ZX_OK) {
-        timer_->CancelTimer();
-        errorf("[bcn-sender] could not set timer: %d\n", status);
-        return status;
-    }
     return ZX_OK;
 }
 

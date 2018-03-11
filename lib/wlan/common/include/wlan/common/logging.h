@@ -60,7 +60,6 @@ constexpr bool kFinspectEnabled = kLogLevel & kLogFinspect;
 #define debugbcn(args...)  wlogf(wlan::kLogDataBeaconTrace, "[V:bcn ] ", args)
 #define debugbss(args...)  wlogf(wlan::kLogDataBeaconTrace, "[V:bss ] ", args)
 #define debugfhandler(args...)  wlogf(wlan::kLogFrameHandlerTrace, "[V:fhdl] ", args)
-#define debugbcnsndr(args...)  wlogf(wlan::kLogDataBeaconTrace, "[V:bcns] ", args)
 // clang-format on
 
 #define MAC_ADDR_FMT "%02x:%02x:%02x:%02x:%02x:%02x"

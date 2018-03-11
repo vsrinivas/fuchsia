@@ -4,58 +4,32 @@
 
 #pragma once
 
-#include <wlan/mlme/ap/beacon_sender_interface.h>
-#include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/device_interface.h>
-#include <wlan/mlme/timer.h>
 
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
 #include <zircon/types.h>
 
-#include <thread>
-
 namespace wlan {
 
-using timestamp_t = std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds>;
+class BssInterface;
 
-// BeaconSender sends periodic Beacon frames for a given BSS. The BeaconSender only supports one
-// BSS at a time. Beacons are sent from a separate thread.
-// Sending Beacons through software is unlikely to be precise enough due to the tight time
-// constraints. Use this BeaconSender only for development purposes to cut ties to the driver.
-// In all other cases make use of the HwBeaconSender which requires the driver to pick-up the Beacon
-// frame and correctly configure its hardware.
-class BeaconSender : public BeaconSenderInterface {
+// Configures the driver to send Beacon frames periodically.
+class BeaconSender {
    public:
-    explicit BeaconSender(DeviceInterface* device, BssInterface* bss);
+    BeaconSender(DeviceInterface* device, const StartRequest& req);
+    ~BeaconSender();
 
-    zx_status_t Init() override;
-    bool IsStarted() override;
-    zx_status_t Start(const StartRequest& req) override;
-    zx_status_t Stop() override;
-    BssInterface* bss() { return bss_; }
+    void Start(BssInterface* bss);
+    void Stop();
 
    private:
-    bool IsStartedLocked() const;
-    void MessageLoop();
-    zx_status_t SendBeaconFrameLocked();
-    zx_status_t SetTimeout();
-    uint64_t beacon_timestamp();
+    zx_status_t WriteBeacon();
+    bool IsStarted();
 
-    static constexpr uint64_t kMessageLoopMaxWaitSeconds = 30;
-    // Indicates the packet was send due to the Timer being triggered.
-    static constexpr uint64_t kPortPktKeyTimer = 1;
-    // Message which will shut down the currently running Beacon thread.
-    static constexpr uint64_t kPortPktKeyShutdown = 2;
-
-    std::thread bcn_thread_;
-    zx::port port_;
     DeviceInterface* const device_;
+    StartRequestPtr req_;
     BssInterface* bss_;
-    fbl::unique_ptr<Timer> timer_;
-    StartRequestPtr start_req_;
-    std::mutex start_req_lock_;
-    timestamp_t started_at_;
 };
 
 }  // namespace wlan

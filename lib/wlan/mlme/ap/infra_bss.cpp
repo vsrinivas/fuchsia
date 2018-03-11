@@ -10,6 +10,20 @@
 
 namespace wlan {
 
+InfraBss::InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
+                   const common::MacAddr& bssid)
+    : bssid_(bssid), device_(device), bcn_sender_(fbl::move(bcn_sender)) {
+    ZX_DEBUG_ASSERT(bcn_sender_ != nullptr);
+
+    // Start sending Beacon frames.
+    started_at_ = std::chrono::steady_clock::now();
+    bcn_sender_->Start(this);
+}
+
+InfraBss::~InfraBss() {
+    bcn_sender_->Stop();
+}
+
 zx_status_t InfraBss::HandleTimeout(const common::MacAddr& client_addr) {
     ZX_DEBUG_ASSERT(clients_.Has(client_addr));
     if (clients_.Has(client_addr)) { clients_.GetClient(client_addr)->HandleTimeout(); }
