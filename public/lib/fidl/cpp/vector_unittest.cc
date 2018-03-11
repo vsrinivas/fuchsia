@@ -24,6 +24,12 @@ TEST(VectorPtr, Control) {
 
   VectorPtr<int> other(std::move(vector));
   EXPECT_EQ(reference, *other);
+
+  VectorPtr<int> sized(3);
+  EXPECT_FALSE(sized.is_null());
+  EXPECT_TRUE(sized);
+  EXPECT_EQ(3u, sized->size());
+  EXPECT_EQ(0, sized->at(0));
 }
 
 }  // namespace

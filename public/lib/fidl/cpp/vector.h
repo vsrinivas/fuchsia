@@ -27,6 +27,8 @@ template <typename T>
 class VectorPtr {
  public:
   VectorPtr() : is_null_(true) {}
+  explicit VectorPtr(size_t size)
+      : vec_(std::vector<T>(size)), is_null_(false) {}
   explicit VectorPtr(std::vector<T> vec)
       : vec_(std::move(vec)), is_null_(false) {}
 
