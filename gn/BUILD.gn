@@ -14,6 +14,7 @@ zircon_files =
     exec_script("//build/zircon/list_source_files.py", [], "list lines")
 
 supporting_templates = [
+  "//build/zircon/boards.mako",
   "//build/zircon/header.mako",
   "//build/zircon/host_tool.mako",
   "//build/zircon/shared_library.mako",
@@ -28,19 +29,15 @@ exec_script("//build/zircon/create_gn_rules.py",
               rebase_path("//zircon/public"),
               "--staging",
               rebase_path("$root_out_dir/zircon-gn"),
-              "--zircon-project",
-              target_cpu,
               "--zircon-user-build",
-              rebase_path("//out/build-zircon/build-${target_cpu}"),
+              rebase_path("//out/build-zircon/build-\${target_cpu}"),
               "--zircon-tool-build",
               rebase_path("//out/build-zircon"),
             ],
             "",
             zircon_files + supporting_templates)
 
-# Computation of the zircon_boards requires the above exec_script to have completed.
-zircon_boards =
-    read_file("$root_build_dir/zircon-gn/export/boards.list", "list lines")
+import("//zircon/public/config/boards.gni")
 
 # Permit dependencies on testonly targets from packages.
 testonly = true

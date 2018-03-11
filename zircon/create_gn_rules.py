@@ -269,6 +269,12 @@ def generate_host_tool(package, context):
     generate_build_file(build_path, 'host_tool.mako', data, context)
 
 
+def generate_board_list(package, context):
+    """Generates a configuration file with the list of target boards."""
+    build_path = os.path.join(context.out_dir, 'config', 'boards.gni')
+    generate_build_file(build_path, 'boards.mako', package, context)
+
+
 class GenerationContext(object):
     """Describes the context in which GN rules should be generated."""
 
@@ -289,9 +295,6 @@ def main():
     parser.add_argument('--staging',
                         help='Path to the staging directory',
                         required=True)
-    parser.add_argument('--zircon-project',
-                        help='Zircon project to use when building packages',
-                        required=True)
     parser.add_argument('--zircon-user-build',
                         help='Path to the Zircon "user" build directory',
                         required=True)
@@ -304,13 +307,14 @@ def main():
     args = parser.parse_args()
 
     out_dir = os.path.abspath(args.out)
+    shutil.rmtree(os.path.join(out_dir, 'config'), True)
     shutil.rmtree(os.path.join(out_dir, 'lib'), True)
     shutil.rmtree(os.path.join(out_dir, 'sysroot'), True)
     shutil.rmtree(os.path.join(out_dir, 'tool'), True)
     debug = args.debug
 
     # Generate package descriptions through Zircon's build.
-    zircon_dir = args.staging
+    zircon_dir = os.path.abspath(args.staging)
     shutil.rmtree(zircon_dir, True)
     if debug:
         print('Building Zircon in: %s' % zircon_dir)
@@ -318,7 +322,6 @@ def main():
         'make',
         'packages',
         'BUILDDIR=%s' % zircon_dir,
-        'PROJECT=%s' % args.zircon_project,
     ]
 
     env = {}
@@ -376,6 +379,11 @@ def main():
             continue
         if debug:
             print('Processed %s (%s)' % (name, type))
+
+    board_path = os.path.join(zircon_dir, 'export', 'all-boards.list')
+    with open(board_path, 'r') as board_file:
+        package = parse_package(board_file.readlines())
+        generate_board_list(package, context)
 
 
 if __name__ == "__main__":
