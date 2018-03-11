@@ -155,7 +155,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
 
     module_context_.Bind(std::move(module_context));
     modular::LinkPtr link;
-    module_context_->GetLink(nullptr, link.NewRequest());
+    module_context_->GetLink("theOneLink", link.NewRequest());
     store_.Initialize(std::move(link));
 
     // Provide services to the recipe module.

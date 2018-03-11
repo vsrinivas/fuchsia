@@ -131,7 +131,7 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
       override {
     module_context_.Bind(std::move(module_context));
     modular::LinkPtr link;
-    module_context_->GetLink(nullptr, link.NewRequest());
+    module_context_->GetLink("theOneLink", link.NewRequest());
     store_.Initialize(std::move(link));
 
     module_context_->Ready();

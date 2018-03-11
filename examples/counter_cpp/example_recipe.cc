@@ -27,8 +27,8 @@
 
 namespace {
 
-using modular::to_array;
 using modular::examples::Adder;
+using modular::to_array;
 
 // JSON data
 constexpr char kInitialJson[] =
@@ -208,11 +208,19 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     module1_link_->SetSchema(kJsonSchema);
     module2_link_->SetSchema(kJsonSchema);
 
+    auto daisy = modular::Daisy::New();
+    daisy->url = "example_module1";
+    auto noun = modular::Noun::New();
+    noun->set_link_name(kModule1Link);
+    auto noun_entry = modular::NounEntry::New();
+    noun_entry->name = "theOneLink";
+    noun_entry->noun = std::move(noun);
+    daisy->nouns.push_back(std::move(noun_entry));
     app::ServiceProviderPtr services_from_module1;
-    module_context_->StartModuleInShellDeprecated(
-        "module1", "example_module1", kModule1Link,
-        services_from_module1.NewRequest(), module1_.NewRequest(), nullptr,
-        true);
+    module_context_->StartModule("module1", std::move(daisy),
+                                 services_from_module1.NewRequest(),
+                                 module1_.NewRequest(), nullptr,
+                                 [](const modular::StartModuleStatus&) {});
 
     // Consume services from Module 1.
     auto multiplier_service =
@@ -230,9 +238,18 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
           FXL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
         }));
 
-    module_context_->StartModuleInShellDeprecated(
-        "module2", "example_module2", kModule2Link, nullptr,
-        module2_.NewRequest(), nullptr, true);
+    daisy = modular::Daisy::New();
+    daisy->url = "example_module2";
+    noun = modular::Noun::New();
+    noun->set_link_name(kModule2Link);
+    noun_entry = modular::NounEntry::New();
+    noun_entry->name = "theOneLink";
+    noun_entry->noun = std::move(noun);
+    daisy->nouns.push_back(std::move(noun_entry));
+    app::ServiceProviderPtr services_from_module2;
+    module_context_->StartModule("module2", std::move(daisy), nullptr,
+                                 module2_.NewRequest(), nullptr,
+                                 [](const modular::StartModuleStatus&) {});
 
     connections_.emplace_back(
         new LinkForwarder(module1_link_.get(), module2_link_.get()));
