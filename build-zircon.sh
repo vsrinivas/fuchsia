@@ -27,11 +27,11 @@ usage() {
   echo "Note: Passing extra arguments to make is not supported."
 }
 
-declare ASAN="${ASAN:-false}"
-declare CLEAN="${CLEAN:-false}"
-declare HOST_ASAN="${HOST_ASAN:-false}"
-declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
-declare VERBOSE="${VERBOSE:-0}"
+declare ASAN="false"
+declare CLEAN="false"
+declare HOST_ASAN="false"
+declare OUTDIR="${ROOT_DIR}/out"
+declare VERBOSE="0"
 declare -a ARCHLIST=(arm64 x64)
 
 while getopts "AcHht:p:o:vV" opt; do
