@@ -94,15 +94,10 @@ KEEP_FRAME_POINTER_COMPILEFLAGS += -mno-omit-leaf-frame-pointer
 
 KERNEL_COMPILEFLAGS += -fPIE -include kernel/include/hidden.h
 
-ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-
 # Clang needs -mcmodel=kernel to tell it to use the right safe-stack ABI for
 # the kernel.
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 KERNEL_COMPILEFLAGS += -mcmodel=kernel
-
-# Clang now supports -fsanitize=safe-stack with -mcmodel=kernel.
-KERNEL_COMPILEFLAGS += $(SAFESTACK)
-
 endif
 
 # tell the compiler to leave x18 alone so we can use it to point

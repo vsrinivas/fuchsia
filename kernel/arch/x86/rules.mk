@@ -135,7 +135,6 @@ KERNEL_COMPILEFLAGS += -mno-red-zone
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 KERNEL_COMPILEFLAGS += -mcmodel=kernel
 endif
-KERNEL_COMPILEFLAGS += $(SAFESTACK)
 
 # optimization: since fpu is disabled, do not pass flag in rax to varargs routines
 # that floating point args are in use.

@@ -228,16 +228,12 @@ USER_COMPILEFLAGS += -fasynchronous-unwind-tables
 KERNEL_COMPILEFLAGS += -fno-exceptions -fno-unwind-tables
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-SAFESTACK := -fsanitize=safe-stack -fstack-protector-strong
 NO_SAFESTACK := -fno-sanitize=safe-stack -fno-stack-protector
 NO_SANITIZERS := -fno-sanitize=all -fno-stack-protector
 else
-SAFESTACK :=
 NO_SAFESTACK :=
 NO_SANITIZERS :=
 endif
-
-USER_COMPILEFLAGS += $(SAFESTACK)
 
 USER_SCRT1_OBJ := $(BUILDDIR)/system/ulib/Scrt1.o
 
