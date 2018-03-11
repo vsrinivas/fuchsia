@@ -11,6 +11,8 @@
 #include <utility>
 #include <vector>
 
+#include <zircon/assert.h>
+
 #include "lib/fidl/cpp/traits.h"
 
 namespace fidl {
@@ -18,9 +20,9 @@ namespace fidl {
 // A representation of a FIDL vector that owns the memory for the vector.
 //
 // A VectorPtr has three states: (1) null, (2) empty, (3) contains data. In
-// the first and second states, operations that return an std::vector return
-// the empty std::vector. The null and empty states can be distinguished using
-// the |is_null| and |operator bool| methods.
+// the second state, operations that return an std::vector return the empty
+// std::vector. The null and empty states can be distinguished using the
+// is_null| and |operator bool| methods.
 template <typename T>
 class VectorPtr {
  public:
@@ -42,9 +44,15 @@ class VectorPtr {
 
   // Accesses the underlying std::vector object.
   //
-  // The returned vector will be empty if the VectorPtr is either null or empty.
-  std::vector<T>& get() { return vec_; }
-  const std::vector<T>& get() const { return vec_; }
+  // Asserts if the VectorPtr is null.
+  std::vector<T>& get() {
+    ZX_ASSERT_MSG(!is_null_, "cannot call get() on a null VectorPtr");
+    return vec_;
+  }
+  const std::vector<T>& get() const {
+    ZX_ASSERT_MSG(!is_null_, "cannot call get() on a null VectorPtr");
+    return vec_;
+  }
 
   // Stores the given std::vector in this VectorPtr.
   //
@@ -76,13 +84,27 @@ class VectorPtr {
   // Tests as true if non-null, false if null.
   explicit operator bool() const { return !is_null_; }
 
-  // Provides access to the underlying std::vector.
-  std::vector<T>* operator->() { return &vec_; }
-  const std::vector<T>* operator->() const { return &vec_; }
+  // Provides access to the underlying std::vector. Asserts if the VectorPtr is
+  // null.
+  std::vector<T>* operator->() {
+    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null VectorPtr");
+    return &vec_;
+  }
+  const std::vector<T>* operator->() const {
+    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null VectorPtr");
+    return &vec_;
+  }
 
-  // Provides access to the underlying std::vector.
-  std::vector<T>& operator*() { return vec_; }
-  const std::vector<T>& operator*() const { return vec_; }
+  // Provides access to the underlying std::vector. Asserts if the VectorPtr is
+  // null.
+  std::vector<T>& operator*() {
+    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null VectorPtr");
+    return vec_;
+  }
+  const std::vector<T>& operator*() const {
+    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null VectorPtr");
+    return vec_;
+  }
 
  private:
   std::vector<T> vec_;

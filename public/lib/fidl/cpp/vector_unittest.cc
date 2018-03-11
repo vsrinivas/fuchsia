@@ -12,13 +12,13 @@ TEST(VectorPtr, Control) {
   VectorPtr<int> vector;
   EXPECT_TRUE(vector.is_null());
   EXPECT_FALSE(vector);
-  EXPECT_EQ(std::vector<int>(), vector.get());
 
   std::vector<int> reference = {1, 2, 3};
 
   vector.reset(reference);
   EXPECT_FALSE(vector.is_null());
   EXPECT_TRUE(vector);
+  EXPECT_EQ(reference, vector.get());
   EXPECT_EQ(reference, *vector);
   EXPECT_EQ(3u, vector->size());
 

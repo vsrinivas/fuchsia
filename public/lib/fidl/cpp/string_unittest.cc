@@ -14,12 +14,12 @@ TEST(StringPtr, Control) {
   StringPtr string;
   EXPECT_TRUE(string.is_null());
   EXPECT_FALSE(string);
-  EXPECT_EQ(std::string(), string.get());
 
   string.reset("hello, world");
   EXPECT_FALSE(string.is_null());
   EXPECT_TRUE(string);
   EXPECT_EQ("hello, world", *string);
+  EXPECT_EQ("hello, world", string.get());
   EXPECT_EQ(12u, string->size());
 
   StringPtr other(std::move(string));
@@ -37,7 +37,6 @@ TEST(StringPtr, Conversions) {
 
   StringPtr null = nullptr;
   EXPECT_TRUE(null.is_null());
-  EXPECT_TRUE(null->empty());
 }
 
 }  // namespace

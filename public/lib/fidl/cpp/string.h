@@ -11,6 +11,8 @@
 #include <string>
 #include <utility>
 
+#include <zircon/assert.h>
+
 #include "lib/fidl/cpp/coding_traits.h"
 #include "lib/fidl/cpp/traits.h"
 
@@ -19,9 +21,9 @@ namespace fidl {
 // A representation of a FIDL string that owns the memory for the string.
 //
 // A StringPtr has three states: (1) null, (2) empty, (3) contains a string. In
-// the first and second states, operations that return an std::string return
-// the empty std::string. The null and empty states can be distinguished using
-// the |is_null| and |operator bool| methods.
+// the second state, operations that return an std::string return the empty
+// std::string. The null and empty states can be distinguished using the
+// |is_null| and |operator bool| methods.
 class StringPtr {
  public:
   StringPtr();
@@ -39,9 +41,15 @@ class StringPtr {
 
   // Accesses the underlying std::string object.
   //
-  // The returned string will be empty if the StringPtr is either null or empty.
-  std::string& get() { return str_; }
-  const std::string& get() const { return str_; }
+  // Asserts if the StringPtr is null.
+  std::string& get() {
+    ZX_ASSERT_MSG(!is_null_, "cannot call get() on a null StringPtr");
+    return str_;
+  }
+  const std::string& get() const {
+    ZX_ASSERT_MSG(!is_null_, "cannot call get() on a null StringPtr");
+    return str_;
+  }
 
   // Stores the given std::string in this StringPtr.
   //
@@ -65,13 +73,26 @@ class StringPtr {
   // Tests as true if non-null, false if null.
   explicit operator bool() const { return !is_null_; }
 
-  // Provides access to the underlying std::string.
-  std::string* operator->() { return &str_; }
-  const std::string* operator->() const { return &str_; }
+  // Provides access to the underlying std::string. Asserts if the StringPtr is
+  // null.
+  std::string* operator->() {
+    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
+    return &str_;
+  }
+  const std::string* operator->() const {
+    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
+    return &str_;
+  }
 
   // Provides access to the underlying std::string.
-  std::string& operator*() { return str_; }
-  const std::string& operator*() const { return str_; }
+  std::string& operator*() {
+    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
+    return str_;
+  }
+  const std::string& operator*() const {
+    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
+    return str_;
+  }
 
   void Encode(Encoder* encoder, size_t offset);
   static void Decode(Decoder* decoder, StringPtr* value, size_t offset);
