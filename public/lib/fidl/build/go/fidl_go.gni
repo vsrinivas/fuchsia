@@ -1,0 +1,73 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/fidl/toolchain.gni")
+import("//build/go/toolchain.gni")
+
+# Generates some C++ bindings for a FIDL library.
+#
+# The parameters for this template are defined in //build/fidl/fidl.gni. The
+# relevant parameters in this template are:
+#   - name.
+
+template("fidl_go") {
+  assert(current_toolchain == go_toolchain,
+      "This template can only be used in $go_toolchain.")
+
+  not_needed(invoker, [
+    "sdk_candidate",
+    "sources"
+  ])
+
+  main_target_name = target_name
+  generation_target_name = "${target_name}_go_generate"
+
+  library_name = target_name
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  }
+  file_stem = "$target_gen_dir/$library_name.fidl"
+
+  fidl_target_gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
+  json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
+
+  compiled_action(generation_target_name) {
+    visibility = [
+      ":*",
+    ]
+
+    tool = "//garnet/go/src/fidl:fidl_backend"
+
+    inputs = [
+      json_representation,
+    ]
+
+    outputs = [
+      "$file_stem.go",
+    ]
+
+    args = [
+      "-fidl-json",
+      rebase_path(json_representation, root_build_dir),
+      "-fidl-stem",
+      rebase_path(file_stem, root_build_dir),
+      "--root-gen-dir",
+      rebase_path(root_gen_dir, root_build_dir),
+      "-generators",
+      "go",
+    ]
+
+    deps = [
+      ":$main_target_name($fidl_toolchain)",
+    ]
+  }
+
+  # TODO(TO-862): turn this into a target consumable by other Go targets.
+  group(main_target_name) {
+    deps = [
+      ":$generation_target_name",
+    ]
+  }
+}

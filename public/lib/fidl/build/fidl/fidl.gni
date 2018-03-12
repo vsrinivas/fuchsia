@@ -4,6 +4,7 @@
 
 import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
+import("//build/go/toolchain.gni")
 
 # Declares a FIDL library.
 #
@@ -40,14 +41,19 @@ template("fidl") {
     fidl_dart(target_name) {
       forward_variables_from(invoker, "*")
     }
-  } else {
-    assert(current_base_toolchain == target_toolchain,
-           "Unable to process FIDL target in toolchain $current_toolchain.")
-
+  } else if (current_base_toolchain == target_toolchain) {
     import("//garnet/public/lib/fidl/build/cpp/fidl_cpp.gni")
 
     fidl_cpp(target_name) {
       forward_variables_from(invoker, "*")
     }
+  } else if (current_toolchain == go_toolchain) {
+    import("//garnet/public/lib/fidl/build/go/fidl_go.gni")
+
+    fidl_go(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else {
+    assert(false, "Unable to process FIDL target in toolchain $current_toolchain.")
   }
 }
