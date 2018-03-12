@@ -16,6 +16,8 @@ executable("root_presenter") {
     "displays/display_model.cc",
     "displays/display_model.h",
     "main.cc",
+    "perspective_demo_mode.cc",
+    "perspective_demo_mode.h",
     "presentation.cc",
     "presentation.h",
   ]

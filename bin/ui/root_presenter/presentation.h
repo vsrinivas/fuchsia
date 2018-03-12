@@ -12,6 +12,7 @@
 #include "garnet/bin/ui/root_presenter/display_usage_switcher.h"
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
 #include "garnet/bin/ui/root_presenter/displays/display_model.h"
+#include "garnet/bin/ui/root_presenter/perspective_demo_mode.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -83,6 +84,7 @@ class Presentation : private mozart::ViewTreeListener,
  private:
   friend class DisplayFlipper;
   friend class DisplayUsageSwitcher;
+  friend class PerspectiveDemoMode;
 
   // Gets the DisplayMetrics for the given |model|. If |display_usage_override|
   // is not UNKNOWN, uses that value for purpose of calculating metrics.
@@ -134,18 +136,6 @@ class Presentation : private mozart::ViewTreeListener,
 
   void PresentScene();
   void Shutdown();
-
-  // Handle the "Perspective Demo" hotkey.  This cycles through the following
-  // modes:
-  // 1) default UI behavior
-  // 2) disable clipping
-  // 3) disable clipping + zoomed out perspective view w/ trackball
-  // ... and then back to 1).
-  //
-  // In mode 3), dragging along the bottom 10% of the screen causes the camera
-  // to pan/rotate around the stage.
-  void HandleAltBackspace();
-  bool UpdateAnimation(uint64_t presentation_time);
 
   mozart::ViewManager* const view_manager_;
   ui::Scenic* const scenic_;
@@ -199,31 +189,13 @@ class Presentation : private mozart::ViewTreeListener,
   mozart::ViewContainerPtr root_container_;
   mozart::InputDispatcherPtr input_dispatcher_;
 
-  enum AnimationState {
-    kDefault,
-    kNoClipping,
-    kCameraMovingAway,
-    kCameraReturning,
-    kTrackball,
-  };
-  AnimationState animation_state_ = kDefault;
-
   // Rotates the display 180 degrees in response to events.
   DisplayFlipper display_flipper_;
 
   // Toggles through different display usage values.
   DisplayUsageSwitcher display_usage_switcher_;
 
-  // Presentation time at which this presentation last entered either
-  // kCameraMovingAway or kCameraReturning state.
-  uint64_t animation_start_time_ = 0;
-
-  // State related to managing camera panning in "trackball" mode.
-  bool trackball_pointer_down_ = false;
-  uint32_t trackball_device_id_ = 0;
-  uint32_t trackball_pointer_id_ = 0;
-  float trackball_previous_x_ = 0.f;
-  float camera_pan_ = 0.f;
+  PerspectiveDemoMode perspective_demo_mode_;
 
   struct CursorState {
     bool created;

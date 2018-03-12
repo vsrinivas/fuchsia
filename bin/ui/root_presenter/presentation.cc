@@ -31,8 +31,6 @@
 namespace root_presenter {
 namespace {
 
-constexpr float kPi = glm::pi<float>();
-
 // View Key: The presentation's own root view.
 constexpr uint32_t kRootViewKey = 1u;
 
@@ -359,7 +357,7 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
   bool invalidate = false;
   bool dispatch_event = true;
 
-  // First, allow DisplayFlipper to handle event.
+  // Allow hooks to process event.
   if (dispatch_event) {
     invalidate |= display_flipper_.OnEvent(event, this, &dispatch_event);
   }
@@ -368,6 +366,11 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
     invalidate |= display_usage_switcher_.OnEvent(event, this, &dispatch_event);
   }
 
+  if (dispatch_event) {
+    invalidate |= perspective_demo_mode_.OnEvent(event, this, &dispatch_event);
+  }
+
+  // Process the event.
   if (dispatch_event) {
     if (event->is_pointer()) {
       const mozart::PointerEventPtr& pointer = event->get_pointer();
@@ -397,61 +400,17 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
         }
       }
 
-      if (animation_state_ == kTrackball) {
-        if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
-          // If we're not already panning/rotating the camera, then start, but
-          // only if the touch-down is in the bottom 10% of the screen.
-          if (!trackball_pointer_down_ &&
-              pointer->y > 0.9f * display_metrics_.height_in_pp()) {
-            trackball_pointer_down_ = true;
-            trackball_device_id_ = pointer->device_id;
-            trackball_pointer_id_ = pointer->pointer_id;
-            trackball_previous_x_ = pointer->x;
-          }
-        } else if (pointer->phase == mozart::PointerEvent::Phase::MOVE) {
-          // If the moved pointer is the one that is currently panning/rotating
-          // the camera, then update the camera position.
-          if (trackball_pointer_down_ &&
-              trackball_device_id_ == pointer->device_id &&
-              trackball_device_id_ == pointer->device_id) {
-            float pan_rate = -2.5f / display_metrics_.width_in_pp();
-            float pan_change = pan_rate * (pointer->x - trackball_previous_x_);
-            trackball_previous_x_ = pointer->x;
-
-            camera_pan_ += pan_change;
-            if (camera_pan_ < -1.f) {
-              camera_pan_ = -1.f;
-            } else if (camera_pan_ > 1.f) {
-              camera_pan_ = 1.f;
-            }
-          }
-        } else if (pointer->phase == mozart::PointerEvent::Phase::UP) {
-          // The pointer was released.
-          if (trackball_pointer_down_ &&
-              trackball_device_id_ == pointer->device_id &&
-              trackball_device_id_ == pointer->device_id) {
-            trackball_pointer_down_ = false;
-          }
-        }
-      }
     } else if (event->is_keyboard()) {
       // Alt-Backspace cycles through modes.
       const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
-      if ((kbd->modifiers & mozart::kModifierAlt) &&
-          kbd->phase == mozart::KeyboardEvent::Phase::PRESSED &&
-          kbd->code_point == 0 && kbd->hid_usage == 42 &&
-          !trackball_pointer_down_) {
-        HandleAltBackspace();
-        invalidate = true;
-      } else {
-        for (size_t i = 0; i < captured_keybindings_.size(); i++) {
-          const auto& event = captured_keybindings_[i].event;
-          if ((kbd->modifiers & event->modifiers) &&
-              (event->phase == kbd->phase) &&
-              (event->code_point == kbd->code_point)) {
-            captured_keybindings_[i].listener->OnEvent(kbd.Clone());
-            invalidate = true;
-          }
+
+      for (size_t i = 0; i < captured_keybindings_.size(); i++) {
+        const auto& event = captured_keybindings_[i].event;
+        if ((kbd->modifiers & event->modifiers) &&
+            (event->phase == kbd->phase) &&
+            (event->code_point == kbd->code_point)) {
+          captured_keybindings_[i].listener->OnEvent(kbd.Clone());
+          invalidate = true;
         }
       }
     }
@@ -463,103 +422,6 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
 
   if (dispatch_event && input_dispatcher_)
     input_dispatcher_->DispatchEvent(std::move(event));
-}
-
-void Presentation::HandleAltBackspace() {
-  switch (animation_state_) {
-    case kDefault:
-      animation_state_ = kNoClipping;
-      renderer_.SetDisableClipping(true);
-      break;
-    case kNoClipping:
-      animation_state_ = kCameraMovingAway;
-      break;
-    case kTrackball:
-      animation_state_ = kCameraReturning;
-      break;
-    case kCameraMovingAway:
-    case kCameraReturning:
-      return;
-  }
-
-  animation_start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
-  UpdateAnimation(animation_start_time_);
-}
-
-bool Presentation::UpdateAnimation(uint64_t presentation_time) {
-  if (animation_state_ == kDefault || animation_state_ == kNoClipping) {
-    return false;
-  }
-
-  const float half_width = display_metrics_.width_in_px() * 0.5f;
-  const float half_height = display_metrics_.height_in_px() * 0.5f;
-
-  // Always look at the middle of the stage.
-  float target[3] = {half_width, half_height, 0};
-
-  glm::vec3 glm_up(0, 0.1, -0.9);
-  glm_up = glm::normalize(glm_up);
-  float up[3] = {glm_up[0], glm_up[1], glm_up[2]};
-
-  double secs = static_cast<double>(presentation_time - animation_start_time_) /
-                1'000'000'000;
-  constexpr double kAnimationDuration = 1.3;
-  float param = secs / kAnimationDuration;
-  if (param >= 1.f) {
-    param = 1.f;
-    switch (animation_state_) {
-      case kDefault:
-      case kNoClipping:
-        FXL_DCHECK(false);
-        return false;
-      case kCameraMovingAway:
-        animation_state_ = kTrackball;
-        break;
-      case kCameraReturning: {
-        animation_state_ = kDefault;
-
-        // Switch back to ortho view, and re-enable clipping.
-        float ortho_eye[3] = {half_width, half_height, 1100.f};
-        camera_.SetProjection(ortho_eye, target, up, 0.f);
-        renderer_.SetDisableClipping(false);
-        return true;
-      }
-      case kTrackball:
-        break;
-    }
-  }
-  if (animation_state_ == kCameraReturning) {
-    param = 1.f - param;  // Animating back to regular position.
-  }
-  param = glm::smoothstep(0.f, 1.f, param);
-
-  // TODO: kOrthoEyeDist and the values in |eye_end| below are somewhat
-  // dependent on the screen size, but also the depth of the stage's viewing
-  // volume (currently hardcoded in the SceneManager implementation to 1000, and
-  // not available outside).  Since this is a demo feature, it seems OK for now.
-  constexpr float kOrthoEyeDist = 60000;
-  const float fovy = 2.f * atan(half_height / kOrthoEyeDist);
-  glm::vec3 eye_start(half_width, half_height, kOrthoEyeDist);
-
-  constexpr float kEyePanRadius = 1.01f * kOrthoEyeDist;
-  constexpr float kMaxPanAngle = kPi / 4;
-  float eye_end_x =
-      sin(camera_pan_ * kMaxPanAngle) * kEyePanRadius + half_width;
-  float eye_end_y =
-      cos(camera_pan_ * kMaxPanAngle) * kEyePanRadius + half_height;
-
-  glm::vec3 eye_end(eye_end_x, eye_end_y, 0.75f * kOrthoEyeDist);
-
-  glm::vec3 eye_mid = glm::mix(eye_start, eye_end, 0.4f);
-  eye_mid.z = 1.5f * kOrthoEyeDist;
-
-  // Quadratic bezier.
-  glm::vec3 eye = glm::mix(glm::mix(eye_start, eye_mid, param),
-                           glm::mix(eye_mid, eye_end, param), param);
-
-  camera_.SetProjection(glm::value_ptr(eye), target, up, fovy);
-
-  return true;
 }
 
 void Presentation::OnChildAttached(uint32_t child_key,
@@ -639,7 +501,8 @@ void Presentation::PresentScene() {
         if (auto self = weak.get()) {
           uint64_t next_presentation_time =
               info->presentation_time + info->presentation_interval;
-          if (self->UpdateAnimation(next_presentation_time)) {
+          if (self->perspective_demo_mode_.UpdateAnimation(
+                  self, next_presentation_time)) {
             self->PresentScene();
           }
         }
