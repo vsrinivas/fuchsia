@@ -18,16 +18,16 @@ namespace machina {
 
 class VirtioDevice;
 
-// Base class for all virtio devices.
+// Interface for all virtio devices.
 class VirtioDevice {
  public:
-  virtual ~VirtioDevice() = default;
+  virtual ~VirtioDevice();
 
   // Read a device-specific configuration field.
-  virtual zx_status_t ReadConfig(uint64_t addr, IoValue* value);
+  virtual zx_status_t ReadConfig(uint64_t addr, IoValue* value) = 0;
 
   // Write a device-specific configuration field.
-  virtual zx_status_t WriteConfig(uint64_t addr, const IoValue& value);
+  virtual zx_status_t WriteConfig(uint64_t addr, const IoValue& value) = 0;
 
   // Handle notify events for one of this devices queues.
   virtual zx_status_t HandleQueueNotify(uint16_t queue_sel) { return ZX_OK; }
@@ -74,14 +74,10 @@ class VirtioDevice {
 
  protected:
   VirtioDevice(uint8_t device_id,
-               void* config,
                size_t config_size,
                VirtioQueue* queues,
                uint16_t num_queues,
                const PhysMem& phys_mem);
-
-  // Mutex for accessing device configuration fields.
-  fbl::Mutex config_mutex_;
 
  private:
   // Temporarily expose our state to the PCI transport until the proper
@@ -115,10 +111,6 @@ class VirtioDevice {
   // Index of the queue currently selected by the driver.
   uint16_t queue_sel_ __TA_GUARDED(mutex_) = 0;
 
-  // Pointer to the structure that holds this devices configuration
-  // structure.
-  void* const device_config_ __TA_GUARDED(config_mutex_) = nullptr;
-
   // Number of bytes used for this devices configuration space.
   //
   // This should cover only bytes used for the device-specific portions of
@@ -137,6 +129,83 @@ class VirtioDevice {
 
   // Virtio PCI transport.
   VirtioPci pci_;
+};
+
+template <uint16_t VIRTIO_ID,
+          int NUM_QUEUES,
+          typename ConfigType,
+          uint16_t QUEUE_SIZE_MAX = 128>
+class VirtioDeviceBase : public VirtioDevice {
+ public:
+  VirtioDeviceBase(const PhysMem& phys_mem)
+      : VirtioDevice(VIRTIO_ID,
+                     sizeof(config_),
+                     queues_,
+                     NUM_QUEUES,
+                     phys_mem) {
+    for (int i = 0; i < NUM_QUEUES; ++i) {
+      queues_[i].set_size(QUEUE_SIZE_MAX);
+      queues_[i].set_device(this);
+    }
+  }
+
+  zx_status_t ReadConfig(uint64_t addr, IoValue* value) override {
+    fbl::AutoLock lock(&config_mutex_);
+    switch (value->access_size) {
+      case 1: {
+        uint8_t* buf = reinterpret_cast<uint8_t*>(&config_);
+        value->u8 = buf[addr];
+        return ZX_OK;
+      }
+      case 2: {
+        uint16_t* buf = reinterpret_cast<uint16_t*>(&config_);
+        value->u16 = buf[addr / 2];
+        return ZX_OK;
+      }
+      case 4: {
+        uint32_t* buf = reinterpret_cast<uint32_t*>(&config_);
+        value->u32 = buf[addr / 4];
+        return ZX_OK;
+      }
+    }
+    FXL_LOG(ERROR) << "Unsupported config read 0x" << std::hex << addr;
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override {
+    fbl::AutoLock lock(&config_mutex_);
+    switch (value.access_size) {
+      case 1: {
+        uint8_t* buf = reinterpret_cast<uint8_t*>(&config_);
+        buf[addr] = value.u8;
+        return ZX_OK;
+      }
+      case 2: {
+        uint16_t* buf = reinterpret_cast<uint16_t*>(&config_);
+        buf[addr / 2] = value.u16;
+        return ZX_OK;
+      }
+      case 4: {
+        uint32_t* buf = reinterpret_cast<uint32_t*>(&config_);
+        buf[addr / 4] = value.u32;
+        return ZX_OK;
+      }
+    }
+    FXL_LOG(ERROR) << "Unsupported config write 0x" << std::hex << addr;
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  VirtioQueue* queue(uint16_t sel) {
+    return sel >= NUM_QUEUES ? nullptr : &queues_[sel];
+  }
+
+ protected:
+  // Mutex for accessing device configuration fields.
+  fbl::Mutex config_mutex_;
+  ConfigType config_ __TA_GUARDED(config_mutex_) = {};
+
+ private:
+  VirtioQueue queues_[NUM_QUEUES];
 };
 
 }  // namespace machina

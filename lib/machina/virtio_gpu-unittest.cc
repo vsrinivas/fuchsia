@@ -35,7 +35,7 @@ struct BackingPages
 
 class VirtioGpuTest {
  public:
-  VirtioGpuTest() : gpu_(phys_mem_), control_queue_(&gpu_.control_queue()) {}
+  VirtioGpuTest() : gpu_(phys_mem_), control_queue_(gpu_.control_queue()) {}
 
   zx_status_t Init() {
     zx_status_t status = control_queue_.Init(kQueueSize);
@@ -92,7 +92,7 @@ class VirtioGpuTest {
     }
 
     uint32_t used = 0;
-    status = gpu_.HandleGpuCommand(&gpu_.control_queue(), desc, &used);
+    status = gpu_.HandleGpuCommand(gpu_.control_queue(), desc, &used);
     EXPECT_EQ(sizeof(response), used);
     if (status != ZX_OK) {
       return status;
@@ -150,7 +150,7 @@ class VirtioGpuTest {
     }
 
     uint32_t used = 0;
-    status = gpu_.HandleGpuCommand(&gpu_.control_queue(), desc, &used);
+    status = gpu_.HandleGpuCommand(gpu_.control_queue(), desc, &used);
     EXPECT_EQ(sizeof(response), used);
     if (status != ZX_OK) {
       return status;
@@ -180,7 +180,7 @@ class VirtioGpuTest {
       return status;
 
     uint32_t used = 0;
-    status = gpu_.HandleGpuCommand(&gpu_.control_queue(), desc, &used);
+    status = gpu_.HandleGpuCommand(gpu_.control_queue(), desc, &used);
     EXPECT_EQ(sizeof(response), used);
     if (status != ZX_OK)
       return status;
@@ -208,7 +208,7 @@ class VirtioGpuTest {
       return status;
 
     uint32_t used = 0;
-    status = gpu_.HandleGpuCommand(&gpu_.control_queue(), desc, &used);
+    status = gpu_.HandleGpuCommand(gpu_.control_queue(), desc, &used);
     EXPECT_EQ(sizeof(response), used);
     if (status != ZX_OK)
       return status;
@@ -247,7 +247,7 @@ TEST(VirtioGpuTest, HandleGetDisplayInfo) {
   uint32_t used = 0;
   request.type = VIRTIO_GPU_CMD_GET_DISPLAY_INFO;
   ASSERT_EQ(
-      test.gpu().HandleGpuCommand(&test.gpu().control_queue(), desc, &used),
+      test.gpu().HandleGpuCommand(test.gpu().control_queue(), desc, &used),
       ZX_OK);
 
   EXPECT_EQ(sizeof(response), used);
@@ -295,7 +295,7 @@ TEST(VirtioGpuTest, SetScanoutToInvalidResource) {
 
   uint32_t used = 0;
   ASSERT_EQ(
-      test.gpu().HandleGpuCommand(&test.gpu().control_queue(), desc, &used),
+      test.gpu().HandleGpuCommand(test.gpu().control_queue(), desc, &used),
       ZX_OK);
   EXPECT_EQ(sizeof(response), used);
   ASSERT_EQ(response.type, VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
@@ -336,7 +336,7 @@ TEST(VirtioGpuTest, HandleTransfer2D) {
 
   uint32_t used = 0;
   ASSERT_EQ(
-      test.gpu().HandleGpuCommand(&test.gpu().control_queue(), desc, &used),
+      test.gpu().HandleGpuCommand(test.gpu().control_queue(), desc, &used),
       ZX_OK);
   EXPECT_EQ(sizeof(response), used);
   ASSERT_EQ(response.type, VIRTIO_GPU_RESP_OK_NODATA);
@@ -386,7 +386,7 @@ TEST(VirtioGpuTest, DrawCursor) {
             ZX_OK);
   uint32_t used = 0;
   ASSERT_EQ(
-      test.gpu().HandleGpuCommand(&test.gpu().control_queue(), desc, &used),
+      test.gpu().HandleGpuCommand(test.gpu().control_queue(), desc, &used),
       ZX_OK);
 
   // Update cursor.
@@ -405,7 +405,7 @@ TEST(VirtioGpuTest, DrawCursor) {
             ZX_OK);
 
   ASSERT_EQ(
-      test.gpu().HandleGpuCommand(&test.gpu().control_queue(), desc, &used),
+      test.gpu().HandleGpuCommand(test.gpu().control_queue(), desc, &used),
       ZX_OK);
   EXPECT_EQ(0u, used);
 
@@ -431,7 +431,7 @@ TEST(VirtioGpuTest, DrawCursor) {
                 .Build(&desc),
             ZX_OK);
   ASSERT_EQ(
-      test.gpu().HandleGpuCommand(&test.gpu().control_queue(), desc, &used),
+      test.gpu().HandleGpuCommand(test.gpu().control_queue(), desc, &used),
       ZX_OK);
   EXPECT_EQ(0u, used);
 }

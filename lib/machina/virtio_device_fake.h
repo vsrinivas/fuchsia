@@ -12,19 +12,20 @@
 
 namespace machina {
 
-class VirtioDeviceFake : public VirtioDevice {
+typedef struct test_config {
+} test_config_t;
+
+class VirtioDeviceFake
+    : public VirtioDeviceBase<VIRTIO_TEST_ID, 1, test_config_t> {
  public:
-  VirtioDeviceFake()
-      : VirtioDevice(VIRTIO_TEST_ID, nullptr, 0, &queue_, 1, phys_mem_),
-        queue_fake_(&queue_) {}
+  VirtioDeviceFake() : VirtioDeviceBase(phys_mem_), queue_fake_(queue()) {}
 
   zx_status_t Init() { return queue_fake_.Init(QUEUE_SIZE); }
 
-  VirtioQueue& queue() { return queue_; }
+  VirtioQueue* queue() { return VirtioDeviceBase::queue(0); }
   VirtioQueueFake& queue_fake() { return queue_fake_; }
 
  private:
-  VirtioQueue queue_;
   PhysMemFake phys_mem_;
   VirtioQueueFake queue_fake_;
 };

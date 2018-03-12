@@ -9,6 +9,7 @@
 #include <fbl/unique_ptr.h>
 #include <lib/async/cpp/wait.h>
 #include <virtio/gpu.h>
+#include <virtio/virtio_ids.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -28,13 +29,15 @@ using ResourceId = uint32_t;
 using ScanoutId = uint32_t;
 
 // Virtio 2D GPU device.
-class VirtioGpu : public VirtioDevice {
+class VirtioGpu : public VirtioDeviceBase<VIRTIO_ID_GPU,
+                                          VIRTIO_GPU_Q_COUNT,
+                                          virtio_gpu_config_t> {
  public:
   VirtioGpu(const PhysMem& phys_mem);
   ~VirtioGpu() override;
 
-  VirtioQueue& control_queue() { return queues_[VIRTIO_GPU_Q_CONTROLQ]; }
-  VirtioQueue& cursor_queue() { return queues_[VIRTIO_GPU_Q_CURSORQ]; }
+  VirtioQueue* control_queue() { return queue(VIRTIO_GPU_Q_CONTROLQ); }
+  VirtioQueue* cursor_queue() { return queue(VIRTIO_GPU_Q_CURSORQ); }
 
   // Begins processing any descriptors that become available in the queues.
   zx_status_t Init(async_t* async);
@@ -108,8 +111,6 @@ class VirtioGpu : public VirtioDevice {
                      kNumHashTableBuckets>;
 
   ResourceTable resources_;
-  VirtioQueue queues_[VIRTIO_GPU_Q_COUNT];
-  virtio_gpu_config_t config_ = {};
   async::Wait control_queue_wait_;
   async::Wait cursor_queue_wait_;
 };

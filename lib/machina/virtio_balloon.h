@@ -8,6 +8,7 @@
 #include <fbl/function.h>
 #include <fbl/mutex.h>
 #include <virtio/balloon.h>
+#include <virtio/virtio_ids.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -21,7 +22,9 @@
 namespace machina {
 
 // Virtio memory balloon device.
-class VirtioBalloon : public VirtioDevice {
+class VirtioBalloon : public VirtioDeviceBase<VIRTIO_ID_BALLOON,
+                                              VIRTIO_BALLOON_Q_COUNT,
+                                              virtio_balloon_config_t> {
  public:
   // Per Virtio 1.0 Section 5.5.6, This value is historical, and independent
   // of the guest page size.
@@ -85,10 +88,6 @@ class VirtioBalloon : public VirtioDevice {
     // Also guards access to other members of this structure.
     fbl::Mutex mutex;
   } stats_;
-
-  VirtioQueue queues_[VIRTIO_BALLOON_Q_COUNT];
-
-  virtio_balloon_config_t config_ __TA_GUARDED(config_mutex_) = {};
 };
 
 }  // namespace machina

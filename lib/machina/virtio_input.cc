@@ -12,7 +12,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <virtio/virtio_ids.h>
 
 #include "garnet/lib/machina/bits.h"
 #include "lib/fxl/logging.h"
@@ -179,10 +178,11 @@ constexpr uint32_t kButtonMousePrimaryCode = 0x110;
 constexpr uint32_t kButtonMouseSecondaryCode = 0x111;
 constexpr uint32_t kButtonMouseTertiaryCode = 0x112;
 
-VirtioInput::VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
-                         const char* device_name, const char* device_serial)
-    : VirtioDevice(VIRTIO_ID_INPUT, &config_, sizeof(config_), queues_,
-                   VIRTIO_INPUT_Q_COUNT, phys_mem),
+VirtioInput::VirtioInput(InputEventQueue* event_queue,
+                         const PhysMem& phys_mem,
+                         const char* device_name,
+                         const char* device_serial)
+    : VirtioDeviceBase(phys_mem),
       device_name_(device_name),
       device_serial_(device_serial),
       event_queue_(event_queue) {}
@@ -192,7 +192,7 @@ static void SetConfigBit(uint32_t event_code, virtio_input_config_t* config) {
 }
 
 zx_status_t VirtioInput::WriteConfig(uint64_t addr, const IoValue& value) {
-  zx_status_t status = VirtioDevice::WriteConfig(addr, value);
+  zx_status_t status = VirtioDeviceBase::WriteConfig(addr, value);
   if (status != ZX_OK) {
     return status;
   }
@@ -407,10 +407,10 @@ zx_status_t VirtioInput::OnBarrierEvent() {
 
 zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event) {
   uint16_t head;
-  event_queue().Wait(&head);
+  event_queue()->Wait(&head);
 
   virtio_desc_t desc;
-  zx_status_t status = event_queue().ReadDesc(head, &desc);
+  zx_status_t status = event_queue()->ReadDesc(head, &desc);
   if (status != ZX_OK) {
     return status;
   }
@@ -418,7 +418,7 @@ zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event) {
   auto event_out = static_cast<virtio_input_event_t*>(desc.addr);
   memcpy(event_out, &event, sizeof(event));
 
-  event_queue().Return(head, sizeof(event));
+  event_queue()->Return(head, sizeof(event));
   return ZX_OK;
 }
 

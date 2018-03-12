@@ -19,7 +19,7 @@ TEST(VirtioQueueWaiter, Wait) {
   ASSERT_EQ(device.Init(), ZX_OK);
   bool wait_complete = false;
 
-  EXPECT_EQ(ZX_OK, waiter.Wait(&device.queue(),
+  EXPECT_EQ(ZX_OK, waiter.Wait(device.queue(),
                                [&](zx_status_t status, uint32_t events) {
                                  EXPECT_EQ(ZX_OK, status);
                                  wait_complete = true;
@@ -29,7 +29,7 @@ TEST(VirtioQueueWaiter, Wait) {
   EXPECT_FALSE(wait_complete);
 
   // Signal without a descriptor should not invoke the wait callback.
-  device.queue().Signal();
+  device.queue()->Signal();
   loop.RunUntilIdle();
   EXPECT_FALSE(wait_complete);
 
@@ -40,7 +40,7 @@ TEST(VirtioQueueWaiter, Wait) {
                 .AppendReadable(buf, sizeof(buf))
                 .Build(),
             ZX_OK);
-  device.queue().Signal();
+  device.queue()->Signal();
   loop.RunUntilIdle();
   EXPECT_TRUE(wait_complete);
 }

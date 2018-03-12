@@ -9,14 +9,21 @@
 #include <fbl/unique_fd.h>
 #include <lib/async/cpp/wait.h>
 #include <virtio/net.h>
+#include <virtio/virtio_ids.h>
 
 #include "garnet/lib/machina/virtio_device.h"
 #include "garnet/lib/machina/virtio_queue_waiter.h"
 
 namespace machina {
 
+static constexpr uint16_t kVirtioNetNumQueues = 2;
+static_assert(kVirtioNetNumQueues % 2 == 0,
+              "There must be a queue for both RX and TX");
+
 // Implements a Virtio Ethernet device.
-class VirtioNet : public VirtioDevice {
+class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET,
+                                          kVirtioNetNumQueues,
+                                          virtio_net_config_t> {
  public:
   VirtioNet(const PhysMem& phys_mem, async_t* async);
   ~VirtioNet() override;
@@ -26,18 +33,10 @@ class VirtioNet : public VirtioDevice {
 
   zx_status_t WaitOnFifos(const eth_fifos_t& fifos);
 
-  VirtioQueue* rx_queue() { return &queues_[0]; }
-  VirtioQueue* tx_queue() { return &queues_[1]; }
+  VirtioQueue* rx_queue() { return queue(0); }
+  VirtioQueue* tx_queue() { return queue(1); }
 
  private:
-  static constexpr uint16_t kNumQueues = 2;
-  static_assert(kNumQueues % 2 == 0,
-                "There must be a queue for both RX and TX");
-
-  // Queue for handling block requests.
-  VirtioQueue queues_[kNumQueues];
-  // Device configuration fields.
-  virtio_net_config_t config_ = {};
   // Ethernet control plane.
   eth_fifos_t fifos_ = {};
   // Connection to the Ethernet device.

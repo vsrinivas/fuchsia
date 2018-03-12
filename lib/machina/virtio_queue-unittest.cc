@@ -17,12 +17,12 @@ namespace {
 TEST(VirtioQueueTest, HandleOverflow) {
   VirtioDeviceFake device;
   ASSERT_EQ(device.Init(), ZX_OK);
-  VirtioQueue& queue = device.queue();
+  VirtioQueue* queue = device.queue();
   VirtioQueueFake& queue_fake = device.queue_fake();
 
   // Setup queue pointers so that the next descriptor will wrap avail->idx
   // to 0.
-  queue.UpdateRing<void>([](virtio_queue_t* ring) {
+  queue->UpdateRing<void>([](virtio_queue_t* ring) {
     const_cast<uint16_t&>(ring->avail->idx) = UINT16_MAX;
     ring->index = UINT16_MAX;
   });
@@ -35,10 +35,10 @@ TEST(VirtioQueueTest, HandleOverflow) {
             ZX_OK);
 
   uint16_t desc;
-  ASSERT_EQ(queue.NextAvail(&desc), ZX_OK);
+  ASSERT_EQ(queue->NextAvail(&desc), ZX_OK);
   ASSERT_EQ(desc, expected_desc);
-  ASSERT_EQ(queue.ring()->avail->idx, 0);
-  ASSERT_EQ(queue.ring()->index, 0);
+  ASSERT_EQ(queue->ring()->avail->idx, 0);
+  ASSERT_EQ(queue->ring()->index, 0);
 }
 
 }  // namespace

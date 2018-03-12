@@ -8,7 +8,6 @@
 
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
-#include <virtio/virtio_ids.h>
 
 #include "garnet/lib/machina/gpu_bitmap.h"
 #include "garnet/lib/machina/gpu_resource.h"
@@ -17,22 +16,16 @@
 
 namespace machina {
 
-VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
-    : VirtioDevice(VIRTIO_ID_GPU,
-                   &config_,
-                   sizeof(config_),
-                   queues_,
-                   VIRTIO_GPU_Q_COUNT,
-                   phys_mem) {}
+VirtioGpu::VirtioGpu(const PhysMem& phys_mem) : VirtioDeviceBase(phys_mem) {}
 
 VirtioGpu::~VirtioGpu() = default;
 
 zx_status_t VirtioGpu::Init(async_t* async) {
-  zx_status_t status = control_queue().PollAsync(
+  zx_status_t status = control_queue()->PollAsync(
       async, &control_queue_wait_, &VirtioGpu::QueueHandler, this);
   if (status == ZX_OK) {
-    status = cursor_queue().PollAsync(async, &cursor_queue_wait_,
-                                      &VirtioGpu::QueueHandler, this);
+    status = cursor_queue()->PollAsync(async, &cursor_queue_wait_,
+                                       &VirtioGpu::QueueHandler, this);
   }
   return status;
 }
@@ -42,7 +35,11 @@ zx_status_t VirtioGpu::AddScanout(GpuScanout* scanout) {
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  config_.num_scanouts = 1;
+  {
+    fbl::AutoLock lock(&config_mutex_);
+    FXL_DCHECK(config_.num_scanouts == 0);
+    config_.num_scanouts = 1;
+  }
   scanout_ = scanout;
   return ZX_OK;
 }

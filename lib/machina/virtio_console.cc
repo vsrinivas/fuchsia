@@ -21,7 +21,6 @@ VirtioConsole::Stream::Stream(async_t* async,
   socket_wait_.set_handler(
       fbl::BindMember(this, &VirtioConsole::Stream::OnSocketReady));
 }
-
 zx_status_t VirtioConsole::Stream::Start() {
   return WaitOnQueue();
 }
@@ -117,12 +116,7 @@ void VirtioConsole::Stream::OnStreamClosed(zx_status_t status,
 VirtioConsole::VirtioConsole(const PhysMem& phys_mem,
                              async_t* async,
                              zx::socket socket)
-    : VirtioDevice(VIRTIO_ID_CONSOLE,
-                   &config_,
-                   sizeof(config_),
-                   queues_,
-                   kNumQueues,
-                   phys_mem),
+    : VirtioDeviceBase(phys_mem),
       socket_(fbl::move(socket)),
       rx_stream_(async, rx_queue(), socket_.get()),
       tx_stream_(async, tx_queue(), socket_.get()) {}

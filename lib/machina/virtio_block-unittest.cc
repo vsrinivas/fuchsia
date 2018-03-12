@@ -26,7 +26,7 @@ namespace {
 
 class VirtioBlockTest {
  public:
-  VirtioBlockTest() : block_(phys_mem_), queue_(&block_.queue()) {}
+  VirtioBlockTest() : block_(phys_mem_), queue_(block_.request_queue()) {}
 
   ~VirtioBlockTest() {
     if (fd_ > 0)
@@ -107,7 +107,8 @@ TEST(VirtioBlockTest, BadHeader) {
                 .AppendWriteable(&status, 1)
                 .Build(&desc),
             ZX_OK);
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
   ASSERT_EQ(status, VIRTIO_BLK_S_IOERR);
 
@@ -117,7 +118,8 @@ TEST(VirtioBlockTest, BadHeader) {
                 .AppendWriteable(&status, 1)
                 .Build(&desc),
             ZX_OK);
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
   ASSERT_EQ(status, VIRTIO_BLK_S_IOERR);
 }
@@ -140,7 +142,8 @@ TEST(VirtioBlockTest, BadPayload) {
                 .Build(&desc),
             ZX_OK);
 
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
 }
 
@@ -163,7 +166,8 @@ TEST(VirtioBlockTest, BadStatus) {
                 .Build(&desc),
             ZX_OK);
 
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
   ASSERT_EQ(status, 0xff);
 }
@@ -191,7 +195,8 @@ TEST(VirtioBlock, BadRequest) {
                 .Build(&desc),
             ZX_OK);
 
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
   ASSERT_EQ(status, VIRTIO_BLK_S_UNSUPP);
 }
@@ -215,7 +220,8 @@ TEST(VirtioBlock, BadFlush) {
                 .Build(&desc),
             ZX_OK);
 
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
   ASSERT_EQ(status, VIRTIO_BLK_S_IOERR);
 }
@@ -241,7 +247,8 @@ TEST(VirtioBlock, Read) {
                 .Build(&desc),
             ZX_OK);
 
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
 
   uint8_t expected[DATA_SIZE];
@@ -273,7 +280,8 @@ TEST(VirtioBlock, ReadChain) {
                 .AppendWriteable(&status, sizeof(status))
                 .Build(&desc),
             ZX_OK);
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
 
   uint8_t expected[DATA_SIZE];
@@ -304,7 +312,8 @@ TEST(VirtioBlock, Write) {
                 .AppendWriteable(&status, sizeof(status))
                 .Build(&desc),
             ZX_OK);
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
 
   int fd = test.fd();
@@ -341,7 +350,8 @@ TEST(VirtioBlockTest, WriteChain) {
                 .AppendWriteable(&status, sizeof(status))
                 .Build(&desc),
             ZX_OK);
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
 
   int fd = test.fd();
@@ -373,7 +383,8 @@ TEST(VirtioBlockTest, Flush) {
                 .AppendWriteable(&status, sizeof(status))
                 .Build(&desc),
             ZX_OK);
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
   ASSERT_EQ(status, VIRTIO_BLK_S_OK);
 }
@@ -399,7 +410,8 @@ TEST(VirtioBlockTest, FlushWithData) {
                 .Build(&desc),
             ZX_OK);
 
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
   ASSERT_EQ(status, VIRTIO_BLK_S_OK);
   ASSERT_EQ(used, sizeof(status));
@@ -453,10 +465,10 @@ TEST(VirtioBlockTest, ReadMultipleDescriptors) {
   // Initalize block device. Write unique bit patterns to sector 1 and 2.
   ASSERT_EQ(test.WriteSector(request1_bitpattern, 0, DATA_SIZE), ZX_OK);
   ASSERT_EQ(test.WriteSector(request2_bitpattern, 1, DATA_SIZE), ZX_OK);
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(),
                                             request1.desc, &request1.used),
             ZX_OK);
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(),
                                             request2.desc, &request2.used),
             ZX_OK);
 
@@ -494,7 +506,8 @@ TEST(VirtioBlockTest, WriteToReadOnlyDevice) {
                 .AppendWriteable(&status, sizeof(status))
                 .Build(&desc),
             ZX_OK);
-  ASSERT_EQ(test.block().HandleBlockRequest(&test.block().queue(), desc, &used),
+  ASSERT_EQ(test.block().HandleBlockRequest(test.block().request_queue(), desc,
+                                            &used),
             ZX_OK);
 
   // No bytes written and error status set.

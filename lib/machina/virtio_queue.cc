@@ -21,17 +21,6 @@ namespace machina {
 
 VirtioQueue::VirtioQueue() {
   FXL_CHECK(zx::event::create(0, &event_) == ZX_OK);
-  // TODO(PD-94): VirtioDevice will call set_size and set_device before the
-  // constructor has run so we need to be careful what we initialize here.
-  ring_.index = 0;
-  ring_.desc = nullptr;
-  ring_.avail = nullptr;
-  ring_.avail_event = nullptr;
-  ring_.used = nullptr;
-  ring_.used_event = nullptr;
-  ring_.addr.desc = 0;
-  ring_.addr.avail = 0;
-  ring_.addr.used = 0;
 }
 
 static bool validate_queue_range(VirtioDevice* device,

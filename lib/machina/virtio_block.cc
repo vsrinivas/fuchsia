@@ -21,13 +21,7 @@
 
 namespace machina {
 
-VirtioBlock::VirtioBlock(const PhysMem& phys_mem)
-    : VirtioDevice(VIRTIO_ID_BLOCK,
-                   &config_,
-                   sizeof(config_),
-                   &queue_,
-                   1,
-                   phys_mem) {
+VirtioBlock::VirtioBlock(const PhysMem& phys_mem) : VirtioDeviceBase(phys_mem) {
   config_.blk_size = kSectorSize;
   // Virtio 1.0: 5.2.5.2: Devices SHOULD always offer VIRTIO_BLK_F_FLUSH
   add_device_features(VIRTIO_BLK_F_FLUSH
@@ -43,7 +37,10 @@ zx_status_t VirtioBlock::SetDispatcher(
   }
 
   dispatcher_ = fbl::move(dispatcher);
-  config_.capacity = dispatcher_->size() / kSectorSize;
+  {
+    fbl::AutoLock lock(&config_mutex_);
+    config_.capacity = dispatcher_->size() / kSectorSize;
+  }
   if (dispatcher_->read_only()) {
     add_device_features(VIRTIO_BLK_F_RO);
   }
@@ -56,7 +53,7 @@ zx_status_t VirtioBlock::Start() {
         return static_cast<VirtioBlock*>(ctx)->HandleBlockRequest(queue, head,
                                                                   used);
       };
-  return queue_.Poll(poll_func, this, "virtio-block");
+  return queue(0)->Poll(poll_func, this, "virtio-block");
 }
 
 zx_status_t VirtioBlock::HandleBlockRequest(VirtioQueue* queue,

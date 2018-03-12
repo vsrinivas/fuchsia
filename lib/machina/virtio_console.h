@@ -6,6 +6,7 @@
 #define GARNET_LIB_MACHINA_VIRTIO_CONSOLE_H_
 
 #include <virtio/console.h>
+#include <virtio/virtio_ids.h>
 #include <zx/socket.h>
 
 #include "garnet/lib/machina/virtio_device.h"
@@ -13,24 +14,23 @@
 
 namespace machina {
 
-class VirtioConsole : public VirtioDevice {
+static constexpr uint16_t kVirtioConsoleNumQueues = 2;
+static_assert(kVirtioConsoleNumQueues % 2 == 0,
+              "There must be a queue for both RX and TX");
+
+class VirtioConsole : public VirtioDeviceBase<VIRTIO_ID_CONSOLE,
+                                              kVirtioConsoleNumQueues,
+                                              virtio_console_config_t> {
  public:
   VirtioConsole(const PhysMem&, async_t* async, zx::socket socket);
   ~VirtioConsole() override;
 
   zx_status_t Start();
 
-  VirtioQueue* rx_queue() { return &queues_[0]; }
-  VirtioQueue* tx_queue() { return &queues_[1]; }
+  VirtioQueue* rx_queue() { return queue(0); }
+  VirtioQueue* tx_queue() { return queue(1); }
 
  private:
-  static constexpr uint16_t kNumQueues = 2;
-  static_assert(kNumQueues % 2 == 0,
-                "There must be a queue for both RX and TX");
-
-  VirtioQueue queues_[kNumQueues];
-  virtio_console_config_t config_ = {};
-
   zx::socket socket_;
 
   // Represents an single, unidirectional serial stream.

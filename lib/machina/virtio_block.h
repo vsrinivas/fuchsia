@@ -8,16 +8,16 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <virtio/block.h>
+#include <virtio/virtio_ids.h>
 
 #include "garnet/lib/machina/block_dispatcher.h"
 #include "garnet/lib/machina/virtio_device.h"
 
-typedef struct file_state file_state_t;
-
 namespace machina {
 
 // Stores the state of a block device.
-class VirtioBlock : public VirtioDevice {
+class VirtioBlock
+    : public VirtioDeviceBase<VIRTIO_ID_BLOCK, 1, virtio_blk_config_t> {
  public:
   static constexpr size_t kSectorSize = 512;
 
@@ -41,14 +41,10 @@ class VirtioBlock : public VirtioDevice {
 
   bool is_read_only() { return has_device_features(VIRTIO_BLK_F_RO); }
 
-  // The queue used for handling block reauests.
-  VirtioQueue& queue() { return queue_; }
+  // The queue used for handling block requests.
+  VirtioQueue* request_queue() { return queue(0); }
 
  private:
-  // Queue for handling block requests.
-  VirtioQueue queue_;
-  // Device configuration fields.
-  virtio_blk_config_t config_ = {};
   fbl::unique_ptr<BlockDispatcher> dispatcher_;
 };
 

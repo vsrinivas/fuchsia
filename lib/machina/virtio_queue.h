@@ -221,7 +221,7 @@ class VirtioQueue {
 
   mutable fbl::Mutex mutex_;
   VirtioDevice* device_;
-  virtio_queue_t ring_ __TA_GUARDED(mutex_);
+  virtio_queue_t ring_ __TA_GUARDED(mutex_) = {};
   zx::event event_;
 };
 

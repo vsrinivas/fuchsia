@@ -4,7 +4,6 @@
 
 #include "garnet/lib/machina/virtio_net.h"
 
-#include <virtio/virtio_ids.h>
 #include <zircon/device/ethernet.h>
 #include <zx/fifo.h>
 
@@ -193,12 +192,7 @@ async_wait_result_t VirtioNet::Stream::OnFifoReadable(
 }
 
 VirtioNet::VirtioNet(const PhysMem& phys_mem, async_t* async)
-    : VirtioDevice(VIRTIO_ID_NET,
-                   &config_,
-                   sizeof(config_),
-                   queues_,
-                   kNumQueues,
-                   phys_mem),
+    : VirtioDeviceBase(phys_mem),
       rx_stream_(this, async),
       tx_stream_(this, async) {
   config_.status = VIRTIO_NET_S_LINK_UP;
