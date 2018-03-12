@@ -66,6 +66,7 @@ source_set("msd_intel_entry") {
   ]
 
   deps = [
+    "src",
     "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util/platform:trace",
@@ -87,6 +88,7 @@ source_set("msd_intel_test_entry") {
   defines = [ "MAGMA_TEST_DRIVER=1" ]
 
   deps = [
+    "src",
     "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util/platform:trace",

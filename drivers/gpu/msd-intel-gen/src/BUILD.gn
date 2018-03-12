@@ -15,6 +15,7 @@ declare_args() {
 
 # To be removed
 source_set("core") {
+  check_includes = false
   public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
 
   sources = [
@@ -28,6 +29,8 @@ source_set("core") {
     "gpu_mapping_cache.cc",
     "interrupt_manager_shim.cc",
     "msd_intel_buffer.cc",
+    "msd_intel_buffer.h",
+    "msd_intel_pci_device.h",
     "msd_intel_semaphore.cc",
   ]
 
@@ -38,8 +41,10 @@ source_set("core") {
     "$magma_build_root/src/magma_util:semaphore_port",
     "$magma_build_root/src/magma_util:thread",
     "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:device",
     "$magma_build_root/src/magma_util/platform:event",
     "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/magma_util/platform:thread",
     "$magma_build_root/src/magma_util/platform:trace",
     "../include",
   ]
@@ -129,8 +134,10 @@ source_set("src") {
     "$magma_build_root/src/magma_util:semaphore_port",
     "$magma_build_root/src/magma_util:thread",
     "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:device",
     "$magma_build_root/src/magma_util/platform:event",
     "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/magma_util/platform:thread",
     "$magma_build_root/src/magma_util/platform:trace",
     "../include",
   ]

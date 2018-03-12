@@ -14,6 +14,7 @@ source_set("mock") {
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:buffer",
+    "$msd_intel_gen_build_root/src",
   ]
 
   sources = [
