@@ -366,7 +366,7 @@ template("package") {
           ":${manifest_target_name}",
         ]
         if (defined(pkg.extra)) {
-          deps = [ ":${extra_target_name}" ]
+          public_deps += [ ":${extra_target_name}" ]
         }
       }
     } else if (pkg.fuchsia_package) {
@@ -439,7 +439,7 @@ template("package") {
           ":${manifest_target_name}",
         ]
         if (defined(pkg.extra)) {
-          deps = [ ":${extra_target_name}" ]
+          public_deps += [ ":${extra_target_name}" ]
         }
       }
     } else {
@@ -478,13 +478,12 @@ template("package") {
         public_deps = [
           ":${manifest_target_name}",
         ]
-        deps = []
         if (defined(pkg.extra)) {
-          deps += [ ":${extra_target_name}" ]
+          public_deps += [ ":${extra_target_name}" ]
         }
 
         archiver_label = "//garnet/bin/far:bin($host_toolchain)"
-        deps += [ archiver_label ]
+        deps = [ archiver_label ]
 
         archiver_out_dir = get_label_info(archiver_label, "root_out_dir")
         far_path = "$archiver_out_dir/far"
