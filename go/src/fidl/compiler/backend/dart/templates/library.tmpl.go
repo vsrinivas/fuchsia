@@ -26,6 +26,7 @@ import 'package:zircon/zircon.dart';
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: one_member_abstracts
 // ignore_for_file: prefer_constructors_over_static_methods
+// ignore_for_file: prefer_single_quotes
 // ignore_for_file: public_member_api_docs
 // ignore_for_file: unused_import
 // ignore_for_file: unused_local_variable
