@@ -50,7 +50,6 @@ package("modular_tests") {
     "context_link",
     "dev_token_manager",
     "embed_shell",
-    "embed_watcher",
     "last_focus_time",
     "link_context_entities",
     "link_data",
@@ -131,18 +130,6 @@ package("modular_tests") {
     {
       name = "embed_shell_test_story_shell"
       dest = "modular_tests/embed_shell_test_story_shell"
-    },
-    {
-      name = "embed_watcher_test_child_module"
-      dest = "modular_tests/embed_watcher_test_child_module"
-    },
-    {
-      name = "embed_watcher_test_parent_module"
-      dest = "modular_tests/embed_watcher_test_parent_module"
-    },
-    {
-      name = "embed_watcher_test_story_shell"
-      dest = "modular_tests/embed_watcher_test_story_shell"
     },
     {
       name = "last_focus_time_test_user_shell"
