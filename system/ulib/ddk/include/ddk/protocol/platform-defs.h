@@ -18,10 +18,8 @@ __BEGIN_CDECLS;
 #define PDEV_DID_USB_DWC2           5   // DWC2 USB Controller
 #define PDEV_DID_RTC_PL031          6   // ARM Primecell PL031 RTC
 #define PDEV_DID_DSI                7   // DSI
-#define PDEV_DID_BT_UART            8   // Bluetooth HCI over UART
-#define PDEV_DID_UART_TEST          9   // Simple UART test driver
-#define PDEV_DID_GPIO_TEST          10  // Simple GPIO test driver
-#define PDEV_DID_DW_I2C             11  // Designware I2C
+#define PDEV_DID_GPIO_TEST          8   // Simple GPIO test driver
+#define PDEV_DID_DW_I2C             9   // Designware I2C
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1

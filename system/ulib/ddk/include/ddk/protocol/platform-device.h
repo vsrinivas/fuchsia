@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/driver.h>
+#include <ddk/protocol/serial.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -19,11 +20,11 @@ typedef struct {
     uint32_t vid;
     uint32_t pid;
     uint32_t did;
+    serial_port_info_t serial_port_info;
     uint32_t mmio_count;
     uint32_t irq_count;
     uint32_t gpio_count;
     uint32_t i2c_channel_count;
-    uint32_t uart_count;
     uint32_t clk_count;
     uint32_t bti_count;
     uint32_t reserved[8];

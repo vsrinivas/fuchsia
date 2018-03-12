@@ -22,77 +22,68 @@
 #define WIFI_32K    S912_GPIOX(16)
 #define BT_EN       S912_GPIOX(17)
 
-static const pbus_mmio_t uart_mmios[] = {
+
+static const pbus_mmio_t bt_uart_mmios[] = {
     // UART_A, for BT HCI
     {
         .base = 0xc11084c0,
         .length = 0x18,
     },
-#if UART_TEST
-    // UART_AO_B, on 40 pin header
-    {
-        .base = 0xc81004e0,
-        .length = 0x18,
-    },
-#endif
 };
 
-static const pbus_irq_t uart_irqs[] = {
+static const pbus_irq_t bt_uart_irqs[] = {
     // UART_A, for BT HCI
     {
         .irq = 58,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
+};
+
+static pbus_dev_t bt_uart_dev = {
+    .name = "bt-uart",
+    .vid = PDEV_VID_AMLOGIC,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_AMLOGIC_UART,
+    .serial_port_info = {
+        .serial_class = SERIAL_CLASS_BLUETOOTH_HCI,
+        .serial_vid = PDEV_VID_BROADCOM,
+        .serial_pid = PDEV_PID_BCM4356,
+    },
+    .mmios = bt_uart_mmios,
+    .mmio_count = countof(bt_uart_mmios),
+    .irqs = bt_uart_irqs,
+    .irq_count = countof(bt_uart_irqs),
+};
+
 #if UART_TEST
+static const pbus_mmio_t header_uart_mmios[] = {
+    // UART_AO_B, on 40 pin header
+    {
+        .base = 0xc81004e0,
+        .length = 0x18,
+    },
+};
+
+static const pbus_irq_t header_uart_irqs[] = {
     // UART_AO_B, on 40 pin header
     {
         .irq = 229,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
-#endif
 };
 
-static pbus_dev_t uart_dev = {
-    .name = "uart",
+static pbus_dev_t header_uart_dev = {
+    .name = "header-uart",
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_AMLOGIC_UART,
-    .mmios = uart_mmios,
-    .mmio_count = countof(uart_mmios),
-    .irqs = uart_irqs,
-    .irq_count = countof(uart_irqs),
-};
-
-const pbus_uart_t bt_uarts[] = {
-    {
-        .port = 0,
+    .serial_port_info = {
+        .serial_class = SERIAL_CLASS_GENERIC,
     },
-};
-
-
-static const pbus_dev_t bt_uart_dev = {
-    .name = "bt-uart-hci",
-    .vid = PDEV_VID_BROADCOM,
-    .pid = PDEV_PID_BCM4356,
-    .did = PDEV_DID_BT_UART,
-    .uarts = bt_uarts,
-    .uart_count = countof(bt_uarts),
-};
-
-#if UART_TEST
-const pbus_uart_t uart_test_uarts[] = {
-    {
-        .port = 1,
-    },
-};
-
-static pbus_dev_t uart_test_dev = {
-    .name = "uart-test",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_UART_TEST,
-    .uarts = uart_test_uarts,
-    .uart_count = countof(uart_test_uarts),
+    .mmios = header_uart_mmios,
+    .mmio_count = countof(header_uart_mmios),
+    .irqs = header_uart_irqs,
+    .irq_count = countof(header_uart_irqs),
 };
 #endif
 
@@ -154,35 +145,13 @@ zx_status_t vim_uart_init(vim_bus_t* bus) {
         return status;
     }
 
-    // bind our UART driver
-    status = pbus_device_add(&bus->pbus, &uart_dev, PDEV_ADD_PBUS_DEVHOST);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_gpio_init: pbus_device_add failed: %d\n", status);
-        return status;
-    }
-
-    status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_SERIAL_IMPL);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_gpio_init: pbus_wait_protocol failed: %d\n", status);
-        return status;
-    }
-
-    status = device_get_protocol(bus->parent, ZX_PROTOCOL_SERIAL_IMPL, &bus->serial);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_gpio_init: device_get_protocol failed: %d\n", status);
-        return status;
-    }
-
     // set GPIO to reset Bluetooth module
     gpio_config(&bus->gpio, BT_EN, GPIO_DIR_OUT);
     gpio_write(&bus->gpio, BT_EN, 0);
     usleep(10 * 1000);
     gpio_write(&bus->gpio, BT_EN, 1);
 
-    serial_impl_config(&bus->serial, 0, 115200, SERIAL_DATA_BITS_8 | SERIAL_STOP_BITS_1 |
-                                                SERIAL_PARITY_NONE | SERIAL_FLOW_CTRL_CTS_RTS);
-
-    // bind Bluetooth HCI UART driver
+    // Bind UART for Bluetooth HCI
     status = pbus_device_add(&bus->pbus, &bt_uart_dev, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_gpio_init: pbus_device_add failed: %d\n", status);
@@ -190,10 +159,8 @@ zx_status_t vim_uart_init(vim_bus_t* bus) {
     }
 
 #if UART_TEST
-    serial_impl_config(&bus->serial, 1, 115200, SERIAL_DATA_BITS_8 | SERIAL_STOP_BITS_1 |
-                                                SERIAL_PARITY_NONE);
-    // Bind UART test driver
-    status = pbus_device_add(&bus->pbus, &uart_test_dev, 0);
+    // Bind UART for 40-pin header
+    status = pbus_device_add(&bus->pbus, &header_uart_dev, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_gpio_init: pbus_device_add failed: %d\n", status);
         return status;

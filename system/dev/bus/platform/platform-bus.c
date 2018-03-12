@@ -56,14 +56,6 @@ static zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void*
     case ZX_PROTOCOL_CLK:
         memcpy(&bus->clk, protocol, sizeof(bus->clk));
         break;
-    case ZX_PROTOCOL_SERIAL_IMPL: {
-        zx_status_t status = platform_serial_init(bus, (serial_impl_protocol_t *)protocol);
-        if (status != ZX_OK) {
-            return status;
-         }
-        memcpy(&bus->serial, protocol, sizeof(bus->serial));
-        break;
-    }
     case ZX_PROTOCOL_IOMMU:
         memcpy(&bus->iommu, protocol, sizeof(bus->iommu));
         break;
@@ -156,12 +148,6 @@ zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protoc
             return ZX_OK;
         }
         break;
-    case ZX_PROTOCOL_SERIAL_IMPL:
-        if (bus->serial.ops) {
-            memcpy(protocol, &bus->serial, sizeof(bus->serial));
-            return ZX_OK;
-        }
-        break;
     case ZX_PROTOCOL_IOMMU:
         if (bus->iommu.ops) {
             memcpy(protocol, &bus->iommu, sizeof(bus->iommu));
@@ -184,7 +170,6 @@ static void platform_bus_release(void* ctx) {
         platform_dev_free(dev);
     }
 
-    platform_serial_release(bus);
     zx_handle_close(bus->dummy_iommu_handle);
 
     free(bus);

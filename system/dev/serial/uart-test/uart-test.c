@@ -7,7 +7,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/serial.h>
 
 #include <stdlib.h>
@@ -69,7 +68,7 @@ static int uart_test_thread(void *arg) {
             test->socket = ZX_HANDLE_INVALID;
             // wait a bit for serial port to shut down before reopening
             sleep(1);
-            status = serial_open_socket(&test->serial, 0, &test->socket);
+            status = serial_open_socket(&test->serial, &test->socket);
              if (status != ZX_OK) {
                 zxlogf(ERROR, "uart_test_thread: failed to reopen serial port: %d\n", status);
                 return status;
@@ -98,7 +97,7 @@ static zx_status_t uart_test_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    status = serial_open_socket(&test->serial, 0, &test->socket);
+    status = serial_open_socket(&test->serial, &test->socket);
      if (status != ZX_OK) {
         zxlogf(ERROR, "uart_test_bind: serial_open_socket failed: %d\n", status);
         free(test);
@@ -130,6 +129,6 @@ static zx_driver_ops_t uart_test_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(uart_test, uart_test_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_UART_TEST),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SERIAL),
+    BI_MATCH_IF(EQ, BIND_SERIAL_CLASS, SERIAL_CLASS_GENERIC),
 ZIRCON_DRIVER_END(uart_test)

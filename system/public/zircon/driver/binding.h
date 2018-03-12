@@ -118,6 +118,11 @@ __BEGIN_CDECLS;
 #define BIND_IHDA_CODEC_VENDOR_REV  0x0504
 #define BIND_IHDA_CODEC_VENDOR_STEP 0x0505
 
+// Serial binding variables at 0x06XX
+#define BIND_SERIAL_CLASS           0x0600
+#define BIND_SERIAL_VID             0x0601
+#define BIND_SERIAL_PID             0x0602
+
 // TEMPORARY binding variables at 0xfXX
 // I2C_ADDR is a temporary way to bind the i2c touchscreen on the Acer12. This
 // binding will eventually be made via some sort of ACPI device enumeration.

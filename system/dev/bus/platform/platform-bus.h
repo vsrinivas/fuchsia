@@ -13,7 +13,6 @@
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/serial.h>
 #include <ddk/protocol/usb-mode-switch.h>
 #include <sync/completion.h>
 #include <zircon/types.h>
@@ -23,9 +22,6 @@ typedef struct pdev_req pdev_req_t;
 // this struct is local to platform-i2c.c
 typedef struct platform_i2c_bus platform_i2c_bus_t;
 
-// this struct is local to platform-serial.c
-typedef struct platform_serial_port platform_serial_port_t;
-
 // context structure for the platform bus
 typedef struct {
     zx_device_t* zxdev;
@@ -33,7 +29,6 @@ typedef struct {
     gpio_protocol_t gpio;
     i2c_impl_protocol_t i2c;
     clk_protocol_t clk;
-    serial_impl_protocol_t serial;
     iommu_protocol_t iommu;
     zx_handle_t resource;   // root resource for platform bus
     uint32_t vid;
@@ -41,9 +36,6 @@ typedef struct {
 
     list_node_t devices;    // list of platform_dev_t
     char board_name[ZX_DEVICE_NAME_MAX + 1];
-
-    platform_serial_port_t* serial_ports;
-    uint32_t serial_port_count;
 
     platform_i2c_bus_t* i2c_buses;
     uint32_t i2c_bus_count;
@@ -63,20 +55,19 @@ typedef struct {
     uint32_t vid;
     uint32_t pid;
     uint32_t did;
+    serial_port_info_t serial_port_info;
     bool enabled;
 
     pbus_mmio_t* mmios;
     pbus_irq_t* irqs;
     pbus_gpio_t* gpios;
     pbus_i2c_channel_t* i2c_channels;
-    pbus_uart_t* uarts;
     pbus_clk_t* clks;
     pbus_bti_t* btis;
     uint32_t mmio_count;
     uint32_t irq_count;
     uint32_t gpio_count;
     uint32_t i2c_channel_count;
-    uint32_t uart_count;
     uint32_t clk_count;
     uint32_t bti_count;
 } platform_dev_t;
@@ -93,10 +84,3 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable);
 zx_status_t platform_i2c_init(platform_bus_t* bus, i2c_impl_protocol_t* i2c);
 zx_status_t platform_i2c_transact(platform_bus_t* bus, pdev_req_t* req, pbus_i2c_channel_t* channel,
                                   const void* write_buf, zx_handle_t channel_handle);
-
-// platform-serial.c
-zx_status_t platform_serial_init(platform_bus_t* bus, serial_impl_protocol_t* serial);
-void platform_serial_release(platform_bus_t* bus);
-zx_status_t platform_serial_config(platform_bus_t* bus, uint32_t port, uint32_t baud_rate,
-                                   uint32_t flags);
-zx_status_t platform_serial_open_socket(platform_bus_t* bus, uint32_t port, zx_handle_t* out_handle);

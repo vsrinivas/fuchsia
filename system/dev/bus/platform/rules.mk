@@ -14,7 +14,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/platform-bus.c \
     $(LOCAL_DIR)/platform-device.c \
     $(LOCAL_DIR)/platform-i2c.c \
-    $(LOCAL_DIR)/platform-serial.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 

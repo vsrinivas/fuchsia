@@ -157,11 +157,11 @@ static zx_status_t platform_dev_get_device_info(void* ctx, pdev_device_info_t* o
     out_info->vid = dev->vid;
     out_info->pid = dev->pid;
     out_info->did = dev->did;
+    memcpy(&out_info->serial_port_info, &dev->serial_port_info, sizeof(out_info->serial_port_info));
     out_info->mmio_count = dev->mmio_count;
     out_info->irq_count = dev->irq_count;
     out_info->gpio_count = dev->gpio_count;
     out_info->i2c_channel_count = dev->i2c_channel_count;
-    out_info->uart_count = dev->uart_count;
     out_info->clk_count = dev->clk_count;
     out_info->bti_count = dev->bti_count;
 
@@ -315,31 +315,6 @@ static zx_status_t pdev_rpc_i2c_transact(platform_dev_t* dev, pdev_req_t* req, u
     return platform_i2c_transact(dev->bus, req, pdev_channel, data, channel);
 }
 
-static zx_status_t pdev_rpc_serial_config(platform_dev_t* dev, uint32_t index, uint32_t baud_rate,
-                                          uint32_t flags) {
-    if (index >= dev->uart_count) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    pbus_uart_t* uart = &dev->uarts[index];
-
-    return platform_serial_config(dev->bus, uart->port, baud_rate, flags);
-}
-
-static zx_status_t pdev_rpc_serial_open_socket(platform_dev_t* dev, uint32_t index,
-                                               zx_handle_t* out_handle,
-                                               uint32_t* out_handle_count) {
-    if (index >= dev->uart_count) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    pbus_uart_t* uart = &dev->uarts[index];
-
-    zx_status_t status = platform_serial_open_socket(dev->bus, uart->port, out_handle);
-    if (status == ZX_OK) {
-        *out_handle_count = 1;
-    }
-    return status;
-}
-
 static zx_status_t pdev_rpc_clk_enable(platform_dev_t* dev, uint32_t index) {
     platform_bus_t* bus = dev->bus;
     if (!bus->clk.ops) {
@@ -443,13 +418,6 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
             return ZX_OK;
         }
         break;
-    case PDEV_SERIAL_CONFIG:
-        resp.status = pdev_rpc_serial_config(dev, req->index, req->serial_config.baud_rate,
-                                             req->serial_config.flags);
-        break;
-    case PDEV_SERIAL_OPEN_SOCKET:
-        resp.status = pdev_rpc_serial_open_socket(dev, req->index, &handle, &handle_count);
-        break;
     case PDEV_CLK_ENABLE:
         resp.status = pdev_rpc_clk_enable(dev, req->index);
         break;
@@ -488,7 +456,6 @@ void platform_dev_free(platform_dev_t* dev) {
     free(dev->irqs);
     free(dev->gpios);
     free(dev->i2c_channels);
-    free(dev->uarts);
     free(dev->clks);
     free(dev->btis);
     free(dev);
@@ -553,16 +520,6 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uin
         memcpy(dev->i2c_channels, pdev->i2c_channels, size);
         dev->i2c_channel_count = pdev->i2c_channel_count;
     }
-    if (pdev->uart_count) {
-        size_t size = pdev->uart_count * sizeof(*pdev->uarts);
-        dev->uarts = malloc(size);
-        if (!dev->uarts) {
-            status = ZX_ERR_NO_MEMORY;
-            goto fail;
-        }
-        memcpy(dev->uarts, pdev->uarts, size);
-        dev->uart_count = pdev->uart_count;
-    }
     if (pdev->clk_count) {
         const size_t sz = pdev->clk_count * sizeof(*pdev->clks);
         dev->clks = malloc(sz);
@@ -590,6 +547,7 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uin
     dev->vid = pdev->vid;
     dev->pid = pdev->pid;
     dev->did = pdev->did;
+    memcpy(&dev->serial_port_info, &pdev->serial_port_info, sizeof(dev->serial_port_info));
 
     list_add_tail(&bus->devices, &dev->node);
 

@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include <ddk/protocol/serial.h>
 #include <zircon/compiler.h>
-#include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
@@ -33,10 +33,6 @@ typedef struct {
 } pbus_i2c_channel_t;
 
 typedef struct {
-    uint32_t    port;
-} pbus_uart_t;
-
-typedef struct {
     uint32_t clk;
 } pbus_clk_t;
 
@@ -47,9 +43,10 @@ typedef struct {
 
 typedef struct {
     const char* name;
-    uint32_t vid;
-    uint32_t pid;
-    uint32_t did;
+    uint32_t vid;   // BIND_PLATFORM_DEV_VID
+    uint32_t pid;   // BIND_PLATFORM_DEV_PID
+    uint32_t did;   // BIND_PLATFORM_DEV_DID
+    serial_port_info_t serial_port_info;
     const pbus_mmio_t* mmios;
     uint32_t mmio_count;
     const pbus_irq_t* irqs;
@@ -58,8 +55,6 @@ typedef struct {
     uint32_t gpio_count;
     const pbus_i2c_channel_t* i2c_channels;
     uint32_t i2c_channel_count;
-    const pbus_uart_t* uarts;
-    uint32_t uart_count;
     const pbus_clk_t* clks;
     uint32_t clk_count;
     const pbus_bti_t* btis;

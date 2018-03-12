@@ -36,10 +36,6 @@ enum {
     PDEV_I2C_GET_MAX_TRANSFER,
     PDEV_I2C_TRANSACT,
 
-    // ZX_PROTOCOL_SERIAL
-    PDEV_SERIAL_CONFIG,
-    PDEV_SERIAL_OPEN_SOCKET,
-
     // ZX_PROTOCOL_CLK
     PDEV_CLK_ENABLE,
     PDEV_CLK_DISABLE,
@@ -71,10 +67,6 @@ typedef struct pdev_req {
         uint8_t gpio_value;
         pdev_i2c_txn_ctx_t i2c_txn;
         uint32_t i2c_bitrate;
-        struct {
-            uint32_t baud_rate;
-            uint32_t flags;
-        } serial_config;
     };
 } pdev_req_t;
 

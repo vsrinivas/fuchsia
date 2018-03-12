@@ -197,7 +197,7 @@ static zx_status_t bcm_hci_set_baud_rate(bcm_hci_t* hci, uint32_t baud_rate) {
         return status;
     }
 
-    return serial_config(&hci->serial, 0, TARGET_BAUD_RATE, SERIAL_SET_BAUD_RATE_ONLY);
+    return serial_config(&hci->serial, TARGET_BAUD_RATE, SERIAL_SET_BAUD_RATE_ONLY);
 }
 
 
@@ -271,7 +271,7 @@ static int bcm_hci_start_thread(void* arg) {
 
         if (hci->is_uart) {
             // firmware switched us back to 115200. switch back to TARGET_BAUD_RATE
-            status = serial_config(&hci->serial, 0, 115200, SERIAL_SET_BAUD_RATE_ONLY);
+            status = serial_config(&hci->serial, 115200, SERIAL_SET_BAUD_RATE_ONLY);
             if (status != ZX_OK) {
                 goto fail;
             }
@@ -357,5 +357,5 @@ static zx_driver_ops_t bcm_hci_driver_ops = {
 // clang-format off
 ZIRCON_DRIVER_BEGIN(bcm_hci, bcm_hci_driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_BT_TRANSPORT),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOM),
+    BI_MATCH_IF(EQ, BIND_SERIAL_VID, PDEV_VID_BROADCOM),
 ZIRCON_DRIVER_END(bcm_hci)

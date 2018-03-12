@@ -2,22 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/protocol/serial.h>
+#include <zircon/syscalls.h>
 #include <zircon/threads.h>
 #include <stdlib.h>
+#include <string.h>
 #include <threads.h>
 
-#include "platform-bus.h"
-
-typedef struct platform_serial_port {
+typedef struct {
     serial_impl_protocol_t serial;
-    uint32_t port_num;
+    zx_device_t* zxdev;
     zx_handle_t socket; // socket used for communicating with our client
     zx_handle_t event;  // event for signaling serial driver state changes
     thrd_t thread;
     mtx_t lock;
-} platform_serial_port_t;
+} serial_port_t;
 
 enum {
     WAIT_ITEM_SOCKET,
@@ -32,7 +35,7 @@ enum {
 
 // This thread handles data transfer in both directions
 static int platform_serial_thread(void* arg) {
-    platform_serial_port_t* port = arg;
+    serial_port_t* port = arg;
     uint8_t in_buffer[UART_BUFFER_SIZE];
     uint8_t out_buffer[UART_BUFFER_SIZE];
     size_t in_buffer_offset = 0;    // offset of first byte in in_buffer (if any)
@@ -68,8 +71,7 @@ static int platform_serial_thread(void* arg) {
         // attempt pending serial write
         if (out_buffer_count > 0) {
             size_t actual;
-            zx_status_t status = serial_impl_write(&port->serial, port->port_num,
-                                                   out_buffer + out_buffer_offset,
+            zx_status_t status = serial_impl_write(&port->serial, out_buffer + out_buffer_offset,
                                                    out_buffer_count, &actual);
             if (status == ZX_OK) {
                 out_buffer_count -= actual;
@@ -104,8 +106,8 @@ static int platform_serial_thread(void* arg) {
 
         if (items[WAIT_ITEM_EVENT].pending & EVENT_READABLE_SIGNAL) {
             size_t length;
-            status = serial_impl_read(&port->serial, port->port_num, in_buffer + in_buffer_count,
-                                        sizeof(in_buffer) - in_buffer_count, &length);
+            status = serial_impl_read(&port->serial, in_buffer + in_buffer_count,
+                                      sizeof(in_buffer) - in_buffer_count, &length);
 
             if (status != ZX_OK) {
                 zxlogf(ERROR, "platform_serial_thread: serial_impl_read returned %d\n", status);
@@ -129,8 +131,8 @@ static int platform_serial_thread(void* arg) {
         }
     }
 
-    serial_impl_enable(&port->serial, port->port_num, false);
-    serial_impl_set_notify_callback(&port->serial, port->port_num, NULL, NULL);
+    serial_impl_enable(&port->serial, false);
+    serial_impl_set_notify_callback(&port->serial, NULL, NULL);
 
     zx_handle_close(port->event);
     zx_handle_close(port->socket);
@@ -140,8 +142,8 @@ static int platform_serial_thread(void* arg) {
     return 0;
 }
 
-static void platform_serial_state_cb(uint32_t port_num, uint32_t state, void* cookie) {
-    platform_serial_port_t* port = cookie;
+static void platform_serial_state_cb(uint32_t state, void* cookie) {
+    serial_port_t* port = cookie;
 
     // update our event handle signals with latest state from the serial driver
     zx_signals_t set = 0;
@@ -160,69 +162,18 @@ static void platform_serial_state_cb(uint32_t port_num, uint32_t state, void* co
     zx_object_signal(port->event, clear, set);
 }
 
-zx_status_t platform_serial_init(platform_bus_t* bus, serial_impl_protocol_t* serial) {
-    uint32_t port_count = serial_impl_get_port_count(serial);
-    if (!port_count) {
-        return ZX_ERR_INVALID_ARGS;
-     }
-
-    if (bus->serial_ports) {
-        // already initialized
-        return ZX_ERR_BAD_STATE;
-    }
-
-    platform_serial_port_t* ports = calloc(port_count, sizeof(platform_serial_port_t));
-    if (!ports) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    bus->serial_ports = ports;
-    bus->serial_port_count = port_count;
-
-    for (uint32_t i = 0; i < port_count; i++) {
-        platform_serial_port_t* port = &ports[i];
-        mtx_init(&port->lock, mtx_plain);
-        memcpy(&port->serial, serial, sizeof(port->serial));
-        port->port_num = i;
-    }
-
-    return ZX_OK;
+static zx_status_t serial_port_get_info(void* ctx, serial_port_info_t* info) {
+    serial_port_t* port = ctx;
+    return serial_impl_get_info(&port->serial, info);
 }
 
-static void platform_serial_port_release(platform_serial_port_t* port) {
-    serial_impl_enable(&port->serial, port->port_num, false);
-    serial_impl_set_notify_callback(&port->serial, port->port_num, NULL, NULL);
-    zx_handle_close(port->event);
-    zx_handle_close(port->socket);
-    port->event = ZX_HANDLE_INVALID;
-    port->socket = ZX_HANDLE_INVALID;
+static zx_status_t serial_port_config(void* ctx, uint32_t baud_rate, uint32_t flags) {
+    serial_port_t* port = ctx;
+    return serial_impl_config(&port->serial, baud_rate, flags);
 }
 
-void platform_serial_release(platform_bus_t* bus) {
-    if (bus->serial_ports) {
-        for (unsigned i = 0; i < bus->serial_port_count; i++) {
-            platform_serial_port_release(&bus->serial_ports[i]);
-        }
-    }
-    free(bus->serial_ports);
-}
-
-zx_status_t platform_serial_config(platform_bus_t* bus, uint32_t port_num, uint32_t baud_rate,
-                                   uint32_t flags) {
-    if (port_num >= bus->serial_port_count) {
-        return ZX_ERR_NOT_FOUND;
-    }
-
-// locking? flushing?
-    return serial_impl_config(&bus->serial, port_num, baud_rate, flags);
-}
-
-zx_status_t platform_serial_open_socket(platform_bus_t* bus, uint32_t port_num,
-                                        zx_handle_t* out_handle) {
-    if (port_num >= bus->serial_port_count) {
-        return ZX_ERR_NOT_FOUND;
-    }
-    platform_serial_port_t* port = &bus->serial_ports[port_num];
+static zx_status_t serial_port_open_socket(void* ctx, zx_handle_t* out_handle) {
+    serial_port_t* port = ctx;
 
     mtx_lock(&port->lock);
     if (port->socket != ZX_HANDLE_INVALID) {
@@ -242,9 +193,9 @@ zx_status_t platform_serial_open_socket(platform_bus_t* bus, uint32_t port_num,
         goto fail;
     }
 
-    serial_impl_set_notify_callback(&bus->serial, port_num, platform_serial_state_cb, port);
+    serial_impl_set_notify_callback(&port->serial, platform_serial_state_cb, port);
 
-    status = serial_impl_enable(&bus->serial, port_num, true);
+    status = serial_impl_enable(&port->serial, true);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -262,8 +213,86 @@ zx_status_t platform_serial_open_socket(platform_bus_t* bus, uint32_t port_num,
 
 fail:
     zx_handle_close(socket);
-    platform_serial_port_release(port);
     mtx_unlock(&port->lock);
 
     return status;
 }
+
+static serial_protocol_ops_t serial_ops = {
+    .get_info = serial_port_get_info,
+    .config = serial_port_config,
+    .open_socket = serial_port_open_socket,
+};
+
+static void serial_release(void* ctx) {
+    serial_port_t* serial = ctx;
+
+    serial_impl_enable(&serial->serial, false);
+    serial_impl_set_notify_callback(&serial->serial, NULL, NULL);
+    zx_handle_close(serial->event);
+    zx_handle_close(serial->socket);
+    free(serial);
+}
+
+static zx_protocol_device_t serial_device_proto = {
+    .version = DEVICE_OPS_VERSION,
+    .release = serial_release,
+};
+
+static zx_status_t serial_bind(void* ctx, zx_device_t* parent) {
+    serial_port_t* port = calloc(1, sizeof(serial_port_t));
+    if (!port) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_SERIAL_IMPL, &port->serial);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "serial_bind: ZX_PROTOCOL_SERIAL_IMPL not available\n");
+        free(port);
+        return status;
+    }
+
+    serial_port_info_t info;
+    status = serial_impl_get_info(&port->serial, &info);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "serial_bind: serial_impl_get_info failed %d\n", status);
+        free(port);
+        return status;
+    }
+
+    zx_device_prop_t props[] = {
+        { BIND_PROTOCOL, 0, ZX_PROTOCOL_SERIAL },
+        { BIND_SERIAL_CLASS, 0, info.serial_class },
+    };
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "serial",
+        .ctx = port,
+        .ops = &serial_device_proto,
+        .proto_id = ZX_PROTOCOL_SERIAL,
+        .proto_ops = &serial_ops,
+        .props = props,
+        .prop_count = countof(props),
+    };
+
+    status = device_add(parent, &args, &port->zxdev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "serial_bind: device_add failed\n");
+        goto fail;
+    }
+
+    return ZX_OK;
+fail:
+        serial_release(port);
+        return status;
+}
+
+static zx_driver_ops_t serial_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = serial_bind,
+};
+
+ZIRCON_DRIVER_BEGIN(serial, serial_driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SERIAL_IMPL),
+ZIRCON_DRIVER_END(serial)

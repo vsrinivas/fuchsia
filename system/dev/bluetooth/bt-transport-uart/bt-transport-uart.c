@@ -8,7 +8,6 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/bt-hci.h>
 #include <ddk/protocol/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/serial.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
@@ -491,16 +490,10 @@ static zx_protocol_device_t hci_device_proto = {
 
 static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
     serial_protocol_t serial;
-    platform_device_protocol_t pdev;
 
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_SERIAL, &serial);
     if (status != ZX_OK) {
         zxlogf(ERROR, "bt-transport-uart: get protocol ZX_PROTOCOL_SERIAL failed\n");
-        return status;
-    }
-    status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "bt-transport-uart: get protocol ZX_PROTOCOL_PLATFORM_DEV failed\n");
         return status;
     }
 
@@ -510,7 +503,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = serial_open_socket(&serial, 0, &hci->uart_socket);
+    status = serial_open_socket(&serial, &hci->uart_socket);
      if (status != ZX_OK) {
         zxlogf(ERROR, "bt-transport-uart: serial_open_socket failed: %s\n",
                zx_status_get_string(status));
@@ -528,10 +521,15 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
     hci->acl_buffer[0] = HCI_ACL_DATA;
     hci->acl_buffer_offset = 1;
 
-    pdev_device_info_t info;
-    status = pdev_get_device_info(&pdev, &info);
+    serial_port_info_t info;
+    status = serial_get_info(&serial, &info);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "hci_bind: pdev_get_device_info failed\n");
+        zxlogf(ERROR, "hci_bind: serial_get_info failed\n");
+        goto fail;
+    }
+    if (info.serial_class != SERIAL_CLASS_BLUETOOTH_HCI) {
+        zxlogf(ERROR, "hci_bind: info.device_class != SERIAL_CLASS_BLUETOOTH_HCI\n");
+        status = ZX_ERR_INTERNAL;
         goto fail;
     }
 
@@ -539,8 +537,8 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* parent) {
     // for HCI drivers
     zx_device_prop_t props[] = {
       { BIND_PROTOCOL, 0, ZX_PROTOCOL_BT_TRANSPORT },
-      { BIND_PLATFORM_DEV_VID, 0, info.vid },
-      { BIND_PLATFORM_DEV_PID, 0, info.pid },
+      { BIND_SERIAL_VID, 0, info.serial_vid },
+      { BIND_SERIAL_PID, 0, info.serial_pid },
     };
 
     device_add_args_t args = {
@@ -571,6 +569,6 @@ static zx_driver_ops_t bt_hci_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(bt_transport_uart, bt_hci_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_BT_UART),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SERIAL),
+    BI_MATCH_IF(EQ, BIND_SERIAL_CLASS, SERIAL_CLASS_BLUETOOTH_HCI),
 ZIRCON_DRIVER_END(bt_transport_uart)

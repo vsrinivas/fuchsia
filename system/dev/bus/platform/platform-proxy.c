@@ -14,7 +14,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-device.h>
-#include <ddk/protocol/serial.h>
 #include <ddk/protocol/clk.h>
 #include <ddk/protocol/usb-mode-switch.h>
 
@@ -247,36 +246,6 @@ static i2c_protocol_ops_t i2c_ops = {
     .get_max_transfer_size = pdev_i2c_get_max_transfer_size,
 };
 
-static zx_status_t pdev_serial_config(void* ctx, uint32_t port, uint32_t baud_rate,
-                                      uint32_t flags) {
-    platform_proxy_t* proxy = ctx;
-    pdev_req_t req = {
-        .op = PDEV_SERIAL_CONFIG,
-        .index = port,
-        .serial_config.baud_rate = baud_rate,
-        .serial_config.flags = flags,
-    };
-    pdev_resp_t resp;
-
-    return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), NULL, 0, NULL);
-}
-
-static zx_status_t pdev_serial_open_socket(void* ctx, uint32_t port, zx_handle_t* out_handle) {
-    platform_proxy_t* proxy = ctx;
-    pdev_req_t req = {
-        .op = PDEV_SERIAL_OPEN_SOCKET,
-        .index = port,
-    };
-    pdev_resp_t resp;
-
-    return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), out_handle, 1, NULL);
-}
-
-static serial_protocol_ops_t serial_ops = {
-    .config = pdev_serial_config,
-    .open_socket = pdev_serial_open_socket,
-};
-
 static zx_status_t pdev_clk_enable(void* ctx, uint32_t index) {
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
@@ -472,12 +441,6 @@ static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void*
         i2c_protocol_t* proto = out;
         proto->ctx = ctx;
         proto->ops = &i2c_ops;
-        return ZX_OK;
-    }
-    case ZX_PROTOCOL_SERIAL: {
-        serial_protocol_t* proto = out;
-        proto->ctx = ctx;
-        proto->ops = &serial_ops;
         return ZX_OK;
     }
     case ZX_PROTOCOL_CLK: {
