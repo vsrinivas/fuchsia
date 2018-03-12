@@ -25,7 +25,7 @@
 using digest::Digest;
 using digest::MerkleTree;
 
-#define MOUNT_PATH "/blobbench"
+#define MOUNT_PATH "/tmp/blobbench"
 #define RESULT_FILE "/tmp/benchmark.csv"
 #define END_COUNT 100
 

@@ -20,7 +20,7 @@
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
-#define MOUNT_POINT "/benchmark"
+#define MOUNT_POINT "/tmp/benchmark"
 
 constexpr size_t KB = (1 << 10);
 constexpr size_t MB = (1 << 20);
