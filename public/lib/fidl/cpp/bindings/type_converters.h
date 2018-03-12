@@ -22,39 +22,6 @@ struct TypeConverter<f1dl::Array<T>, std::vector<T>> {
   }
 };
 
-// Converts a FIDL Array to a vector with the same element type.
-template <typename T>
-struct TypeConverter<std::vector<T>, f1dl::Array<T>> {
-  static std::vector<T> Convert(const f1dl::Array<T>& value) {
-    std::vector<T> result;
-    if (!value.is_null()) {
-      result.resize(value.size());
-      for (size_t i = 0; i < value.size(); ++i)
-        result[i] = value[i];
-    }
-    return result;
-  }
-};
-
-// Converts a FIDL Array to a unique_ptr to a vector with the same element type.
-template <typename T>
-struct TypeConverter<std::unique_ptr<std::vector<T>>, f1dl::Array<T>> {
-  static std::vector<T> Convert(const f1dl::Array<T>& value) {
-    if (!value) {
-      return nullptr;
-    }
-
-    std::vector<T> result;
-    if (!value.is_null()) {
-      result.resize(value.size());
-      for (size_t i = 0; i < value.size(); ++i)
-        result[i] = value[i];
-    }
-
-    return std::make_unique<std::vector<T>>(std::move(result));
-  }
-};
-
 // Converts a vector to a FIDL Array with a different element type.
 template <typename T, typename U>
 struct TypeConverter<f1dl::Array<T>, std::vector<U>> {
