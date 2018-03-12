@@ -1640,6 +1640,15 @@ struct wmi_tlv_tx_pause_ev {
     uint32_t tid_map;
 } __packed;
 
+#define WMI_TLV_PFX(type) ATH10K_MSG_TYPE_WMI_TLV_##type
+
+#define WMI_TLV_MSG(type, hdr) \
+    MSG(WMI_TLV_PFX(type), ATH10K_MSG_TYPE_WMI, sizeof(struct hdr))
+
+#define WMI_TLV_MSGS \
+    MSG(ATH10K_MSG_TYPE_WMI_TLV, ATH10K_MSG_TYPE_WMI, sizeof(struct wmi_tlv)), \
+    WMI_TLV_MSG(PDEV_SUSPEND, wmi_tlv_pdev_suspend)
+
 void ath10k_wmi_tlv_attach(struct ath10k* ar);
 
 #endif

@@ -18,13 +18,6 @@
 #ifndef _HTT_H_
 #define _HTT_H_
 
-#include <linux/bug.h>
-#include <linux/interrupt.h>
-#include <linux/dmapool.h>
-#include <linux/hashtable.h>
-#include <linux/kfifo.h>
-#include <net/mac80211.h>
-
 #include "htc.h"
 #include "hw.h"
 #include "rx_desc.h"
@@ -1780,6 +1773,23 @@ struct htt_rx_desc {
 #define ATH10K_HTT_MAX_NUM_AMSDU_DEFAULT 3
 #define ATH10K_HTT_MAX_NUM_AMPDU_DEFAULT 64
 
+#define HTT_CMD_PFX(x) ATH10K_MSG_TYPE_HTT_CMD_##x
+#define HTT_CMD_MSG(type, hdr) \
+    MSG(HTT_CMD_PFX(type), ATH10K_MSG_TYPE_HTT_CMD, sizeof(struct hdr))
+
+#define HTT_CMD_MSGS \
+    MSG(ATH10K_MSG_TYPE_HTT_CMD, ATH10K_MSG_TYPE_HTC, sizeof(struct htt_cmd_hdr)), \
+    HTT_CMD_MSG(VER_REQ, htt_ver_req)
+
+#define HTT_RESP_MSGS \
+    MSG(ATH10K_MSG_TYPE_HTT_RESP, ATH10K_MSG_TYPE_HTC, sizeof(struct htt_resp_hdr))
+
+#define HTT_MSGS \
+    HTT_CMD_MSGS, \
+    HTT_RESP_MSGS
+
+struct msg_buf;
+
 int ath10k_htt_connect(struct ath10k_htt* htt);
 int ath10k_htt_init(struct ath10k* ar);
 int ath10k_htt_setup(struct ath10k_htt* htt);
@@ -1793,10 +1803,11 @@ int ath10k_htt_rx_alloc(struct ath10k_htt* htt);
 int ath10k_htt_rx_ring_refill(struct ath10k* ar);
 void ath10k_htt_rx_free(struct ath10k_htt* htt);
 
-void ath10k_htt_htc_tx_complete(struct ath10k* ar, struct sk_buff* skb);
-void ath10k_htt_htc_t2h_msg_handler(struct ath10k* ar, struct sk_buff* skb);
-bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct sk_buff* skb);
+void ath10k_htt_htc_tx_complete(struct ath10k* ar, struct ath10k_msg_buf* msg_buf);
+void ath10k_htt_htc_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_buf);
+bool ath10k_htt_t2h_msg_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_buf);
 int ath10k_htt_h2t_ver_req_msg(struct ath10k_htt* htt);
+#if 0 // NEEDS PORTING
 int ath10k_htt_h2t_stats_req(struct ath10k_htt* htt, uint8_t mask, uint64_t cookie);
 int ath10k_htt_send_frag_desc_bank_cfg(struct ath10k_htt* htt);
 int ath10k_htt_send_rx_ring_cfg_ll(struct ath10k_htt* htt);
@@ -1830,5 +1841,6 @@ int ath10k_htt_tx(struct ath10k_htt* htt,
 void ath10k_htt_rx_pktlog_completion_handler(struct ath10k* ar,
         struct sk_buff* skb);
 int ath10k_htt_txrx_compl_task(struct ath10k* ar, int budget);
+#endif // NEEDS PORTING
 
 #endif

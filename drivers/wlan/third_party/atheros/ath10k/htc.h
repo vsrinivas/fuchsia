@@ -18,13 +18,15 @@
 #ifndef _HTC_H_
 #define _HTC_H_
 
-#include <linux/kernel.h>
-#include <linux/list.h>
-#include <linux/bug.h>
-#include <linux/skbuff.h>
-#include <linux/timer.h>
+#include <ddk/io-buffer.h>
+#include <sync/completion.h>
+#include <zircon/listnode.h>
+#include <zircon/threads.h>
+
+#include "linuxisms.h"
 
 struct ath10k;
+struct ath10k_msg_buf;
 
 /****************/
 /* HTC protocol */
@@ -298,8 +300,8 @@ struct ath10k_htc_ops {
 };
 
 struct ath10k_htc_ep_ops {
-    void (*ep_tx_complete)(struct ath10k*, struct sk_buff*);
-    void (*ep_rx_complete)(struct ath10k*, struct sk_buff*);
+    void (*ep_tx_complete)(struct ath10k*, struct ath10k_msg_buf* msg_buf);
+    void (*ep_rx_complete)(struct ath10k*, struct ath10k_msg_buf* msg_buf);
     void (*ep_tx_credits)(struct ath10k*);
 };
 
@@ -367,6 +369,22 @@ struct ath10k_htc {
     uint8_t max_msgs_per_htc_bundle;
 };
 
+#define HTC_MSG_PFX(x) ATH10K_MSG_TYPE_HTC_##x
+
+#define HTC_MSG(type, hdr) \
+    MSG(HTC_MSG_PFX(type), ATH10K_MSG_TYPE_HTC_MSG, sizeof(struct hdr))
+
+// NB: MSG_TYPE_HTC are used by all messages (HTC, WMI, WMI-TLV, HTT). MSG_TYPE_HTC_MSG,
+//     on the other hand, are for messages that are intended for the HTC interface.
+#define HTC_MSGS \
+    MSG(ATH10K_MSG_TYPE_HTC,     ATH10K_MSG_TYPE_BASE, sizeof(struct ath10k_htc_hdr)), \
+    MSG(ATH10K_MSG_TYPE_HTC_MSG, ATH10K_MSG_TYPE_HTC, sizeof(struct ath10k_ath10k_htc_msg_hdr)), \
+    HTC_MSG(CONN_SVC,           ath10k_htc_conn_svc),               \
+    HTC_MSG(READY,              ath10k_htc_ready),                  \
+    HTC_MSG(READY_EXT,          ath10k_htc_ready_extended),         \
+    HTC_MSG(UNKNOWN,            ath10k_htc_unknown),                \
+    HTC_MSG(SETUP_COMPLETE_EXT, ath10k_htc_setup_complete_extended)
+
 int ath10k_htc_init(struct ath10k* ar);
 int ath10k_htc_wait_target(struct ath10k_htc* htc);
 int ath10k_htc_start(struct ath10k_htc* htc);
@@ -374,17 +392,15 @@ int ath10k_htc_connect_service(struct ath10k_htc* htc,
                                struct ath10k_htc_svc_conn_req*  conn_req,
                                struct ath10k_htc_svc_conn_resp* conn_resp);
 int ath10k_htc_send(struct ath10k_htc* htc, enum ath10k_htc_ep_id eid,
-                    struct sk_buff* packet);
-struct sk_buff* ath10k_htc_alloc_skb(struct ath10k* ar, int size);
-void ath10k_htc_tx_completion_handler(struct ath10k* ar, struct sk_buff* skb);
-void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct sk_buff* skb);
-void ath10k_htc_notify_tx_completion(struct ath10k_htc_ep* ep,
-                                     struct sk_buff* skb);
-int ath10k_htc_process_trailer(struct ath10k_htc* htc,
-                               uint8_t* buffer,
-                               int length,
-                               enum ath10k_htc_ep_id src_eid,
-                               void* next_lookaheads,
-                               int* next_lookaheads_len);
+                    struct ath10k_msg_buf* msg_buf);
+void ath10k_htc_tx_completion_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_buf);
+void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct ath10k_msg_buf* buf);
+void ath10k_htc_notify_tx_completion(struct ath10k_htc_ep* ep, struct ath10k_msg_buf* msg_buf);
+zx_status_t ath10k_htc_process_trailer(struct ath10k_htc* htc,
+                                       uint8_t* buffer,
+                                       int length,
+                                       enum ath10k_htc_ep_id src_eid,
+                                       void* next_lookaheads,
+                                       int* next_lookaheads_len);
 
 #endif
