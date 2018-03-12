@@ -20,25 +20,90 @@ namespace f1dl {
 // object.
 class String {
  public:
+  //////////////////////////////////////////////////////////////////////////////
+  // FIDL2 INTERFACE
+  //////////////////////////////////////////////////////////////////////////////
+
+  String() : is_null_(true) {}
+  String(const std::string& str) : str_(str), is_null_(false) {}
+  String(const char* chars) : is_null_(!chars) {
+    if (chars)
+      str_ = chars;
+  }
+  String(const char* chars, size_t num_chars)
+      : str_(chars, num_chars), is_null_(false) {}
+
+  // Accesses the underlying std::string object.
+  //
+  // Asserts if the StringPtr is null.
+  std::string& get() {
+    // TODO(abarth): Add this assert once clients are ready.
+    // ZX_ASSERT_MSG(!is_null_, "cannot call get() on a null StringPtr");
+    return str_;
+  }
+  const std::string& get() const {
+    // TODO(abarth): Add this assert once clients are ready.
+    // ZX_ASSERT_MSG(!is_null_, "cannot call get() on a null StringPtr");
+    return str_;
+  }
+
+  // Stores the given std::string in this StringPtr.
+  //
+  // After this method returns, the StringPtr is non-null.
+  void reset(std::string str) {
+    str_ = std::move(str);
+    is_null_ = false;
+  }
+
+  void swap(String& other) {
+    using std::swap;
+    swap(str_, other.str_);
+    swap(is_null_, other.is_null_);
+  }
+
+  // Whether this StringPtr is null.
+  //
+  // The null state is separate from the empty state.
+  bool is_null() const { return is_null_; }
+
+  // Tests as true if non-null, false if null.
+  explicit operator bool() const { return !is_null_; }
+
+  // Provides access to the underlying std::string. Asserts if the StringPtr is
+  // null.
+  std::string* operator->() {
+    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
+    return &str_;
+  }
+  const std::string* operator->() const {
+    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
+    return &str_;
+  }
+
+  // Provides access to the underlying std::string.
+  std::string& operator*() {
+    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
+    return str_;
+  }
+  const std::string& operator*() const {
+    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
+    return str_;
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+  // FIDL1 INTERFACE
+  //////////////////////////////////////////////////////////////////////////////
+
   // Provide iterator access to the underlying std::string.
   using ConstIterator = typename std::string::const_iterator;
   using Iterator = typename std::string::iterator;
 
   typedef internal::String_Data Data_;
 
-  String() : is_null_(true) {}
-  String(const std::string& str) : value_(str), is_null_(false) {}
-  String(const char* chars) : is_null_(!chars) {
-    if (chars)
-      value_ = chars;
-  }
-  String(const char* chars, size_t num_chars)
-      : value_(chars, num_chars), is_null_(false) {}
-  String(const f1dl::String& str)
-      : value_(str.value_), is_null_(str.is_null_) {}
+  String(const f1dl::String& str) : str_(str.str_), is_null_(str.is_null_) {}
 
   template <size_t N>
-  String(const char chars[N]) : value_(chars, N - 1), is_null_(false) {}
+  String(const char chars[N]) : str_(chars, N - 1), is_null_(false) {}
 
   template <typename U>
   static String From(const U& other) {
@@ -51,69 +116,63 @@ class String {
   }
 
   String& operator=(const f1dl::String& str) {
-    value_ = str.value_;
+    str_ = str.str_;
     is_null_ = str.is_null_;
     return *this;
   }
   String& operator=(const std::string& str) {
-    value_ = str;
+    str_ = str;
     is_null_ = false;
     return *this;
   }
   String& operator=(const char* chars) {
     is_null_ = !chars;
     if (chars) {
-      value_ = chars;
+      str_ = chars;
     } else {
-      value_.clear();
+      str_.clear();
     }
     return *this;
   }
 
   void reset() {
-    value_.clear();
+    str_.clear();
     is_null_ = true;
   }
 
-  // Tests as true if non-null, false if null.
-  explicit operator bool() const { return !is_null_; }
+  size_t size() const { return str_.size(); }
 
-  bool is_null() const { return is_null_; }
+  bool empty() const { return str_.empty(); }
 
-  size_t size() const { return value_.size(); }
+  const char* data() const { return str_.data(); }
 
-  bool empty() const { return value_.empty(); }
+  const char& at(size_t offset) const { return str_.at(offset); }
+  char& at(size_t offset) { return str_.at(offset); }
 
-  const char* data() const { return value_.data(); }
+  const char& operator[](size_t offset) const { return str_[offset]; }
+  char& operator[](size_t offset) { return str_[offset]; }
 
-  const char& at(size_t offset) const { return value_.at(offset); }
-  char& at(size_t offset) { return value_.at(offset); }
-
-  const char& operator[](size_t offset) const { return value_[offset]; }
-  char& operator[](size_t offset) { return value_[offset]; }
-
-  const std::string& get() const { return value_; }
-  operator const std::string&() const { return value_; }
+  operator const std::string&() const { return str_; }
 
   void Swap(String* other) {
     std::swap(is_null_, other->is_null_);
-    value_.swap(other->value_);
+    str_.swap(other->str_);
   }
 
   void Swap(std::string* other) {
     is_null_ = false;
-    value_.swap(*other);
+    str_.swap(*other);
   }
 
   // std::string iterators into the string. The behavior is undefined
   // if the string is null.
-  Iterator begin() { return value_.begin(); }
-  Iterator end() { return value_.end(); }
-  ConstIterator begin() const { return value_.begin(); }
-  ConstIterator end() const { return value_.end(); }
+  Iterator begin() { return str_.begin(); }
+  Iterator end() { return str_.end(); }
+  ConstIterator begin() const { return str_.begin(); }
+  ConstIterator end() const { return str_.end(); }
 
  private:
-  std::string value_;
+  std::string str_;
   bool is_null_;
 };
 
