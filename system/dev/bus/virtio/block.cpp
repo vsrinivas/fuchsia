@@ -27,7 +27,10 @@
 
 namespace virtio {
 
-static void txn_complete(block_txn_t* txn, zx_status_t status) {
+void BlockDevice::txn_complete(block_txn_t* txn, zx_status_t status) {
+    if (txn->pin_base != 0) {
+        bti_.unpin(txn->pin_base);
+    }
     txn->op.completion_cb(&txn->op, status);
 }
 
@@ -64,6 +67,7 @@ void BlockDevice::virtio_block_query(void* ctx, block_info_t* info, size_t* bops
 void BlockDevice::virtio_block_queue(void* ctx, block_op_t* bop) {
     BlockDevice* bd = static_cast<BlockDevice*>(ctx);
     block_txn_t* txn = static_cast<block_txn_t*>((void*) bop);
+    txn->pin_base = 0;
 
     switch(txn->op.command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
@@ -75,10 +79,10 @@ void BlockDevice::virtio_block_queue(void* ctx, block_op_t* bop) {
     case BLOCK_OP_FLUSH:
         //TODO: this should complete after any in-flight IO and before
         //      any later IO begins
-        txn_complete(txn, ZX_OK);
+        bd->txn_complete(txn, ZX_OK);
         break;
     default:
-        txn_complete(txn, ZX_ERR_NOT_SUPPORTED);
+        bd->txn_complete(txn, ZX_ERR_NOT_SUPPORTED);
     }
 
 }
@@ -273,7 +277,7 @@ void BlockDevice::IrqConfigChange() {
 }
 
 zx_status_t BlockDevice::QueueTxn(block_txn_t* txn, bool write, size_t bytes,
-                           uint64_t* pages, size_t pagecount, uint16_t* idx) {
+                                  uint64_t* pages, size_t pagecount, uint16_t* idx) {
 
     size_t index;
     {
@@ -384,28 +388,35 @@ void BlockDevice::QueueReadWriteTxn(block_txn_t* txn, bool write) {
         return;
     }
 
+    if (txn->op.rw.length == 0) {
+        txn_complete(txn, ZX_OK);
+        return;
+    }
+
     size_t bytes = txn->op.rw.length * config_.blk_size;
 
-    zx_status_t r;
+    uint64_t suboffset = txn->op.rw.offset_vmo & PAGE_MASK;
+    uint64_t aligned_offset = txn->op.rw.offset_vmo & ~PAGE_MASK;
+    size_t pin_size = ROUNDUP(suboffset + bytes, PAGE_SIZE);
+    size_t num_pages = pin_size / PAGE_SIZE;
+    if (num_pages > MAX_SCATTER) {
+        TRACEF("virtio: transaction too large\n");
+        txn_complete(txn, ZX_ERR_INVALID_ARGS);
+        return;
+    }
+
     zx_handle_t vmo = txn->op.rw.vmo;
-    if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT,
-                             txn->op.rw.offset_vmo, bytes, NULL, 0)) != ZX_OK) {
-        TRACEF("could not commit pages\n");
-        txn_complete(txn, ZX_ERR_INTERNAL);
-        return;
-    }
-
     uint64_t pages[MAX_SCATTER];
-    if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP,
-                             txn->op.rw.offset_vmo, bytes, pages, sizeof(pages))) != ZX_OK) {
-        TRACEF("nvme: could not lookup pages\n");
+    zx_status_t r;
+    if ((r = zx_bti_pin(bti_.get(), ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo,
+                        aligned_offset, pin_size, pages, num_pages)) != ZX_OK) {
+        TRACEF("virtio: could not pin pages\n");
         txn_complete(txn, ZX_ERR_INTERNAL);
         return;
     }
 
-    // Take the starting byte into the initial page plus total bytes
-    // transferred, convert to page count (rounded up)
-    size_t pagecount = ((txn->op.rw.offset_vmo & PAGE_MASK) + bytes + PAGE_MASK) / PAGE_SIZE;
+    txn->pin_base = pages[0];
+    pages[0] += suboffset;
 
     bool cannot_fail = false;
 
@@ -413,7 +424,7 @@ void BlockDevice::QueueReadWriteTxn(block_txn_t* txn, bool write) {
         uint16_t idx;
 
         // attempt to setup hw txn
-        zx_status_t status = QueueTxn(txn, write, bytes, pages, pagecount, &idx);
+        zx_status_t status = QueueTxn(txn, write, bytes, pages, num_pages, &idx);
         if (status == ZX_OK) {
             fbl::AutoLock lock(&txn_lock_);
 
