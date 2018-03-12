@@ -75,27 +75,38 @@ type Struct struct {
 // Note that arrays are not included because their maximum sizes are encoded in
 // the golang type system. Because of this, FIDL types such as
 // vector<array<int>:10>:10 will have a tag that looks like `fidl:"10"`.
+//
+// Rather than representing handle nullability using a pointer indirection, we
+// include it as part of the struct tag. For example, vector<handle?>:2 will
+// have tag `fidl:"*,2"`.
 type Tag struct {
 	// MaxElems is the maximum number of elements a type is annotated with.
 	MaxElems []*int
+
+	// Nullable is whether the innermost type is nullable. This only applies
+	// for handle types.
+	Nullable bool
 }
 
 // String generates a string representation for the tag.
 func (t *Tag) String() string {
 	var elemsTag []string
-	if len(t.MaxElems) == 0 {
-		return ""
+	anyData := false
+	if t.Nullable {
+		elemsTag = append(elemsTag, "*")
+		anyData = true
+	} else {
+		elemsTag = append(elemsTag, "")
 	}
-	anyNonNil := false
 	for _, elems := range t.MaxElems {
 		if elems == nil {
 			elemsTag = append(elemsTag, "")
 			continue
 		}
-		anyNonNil = true
+		anyData = true
 		elemsTag = append(elemsTag, strconv.Itoa(*elems))
 	}
-	if !anyNonNil {
+	if !anyData {
 		return ""
 	}
 	return fmt.Sprintf("`fidl:\"%s\"`", strings.Join(elemsTag, ","))
@@ -200,6 +211,20 @@ var primitiveTypes = map[types.PrimitiveSubtype]string{
 	types.Float64: "float64",
 }
 
+var handleTypes = map[types.HandleSubtype]string{
+	// TODO(mknyszek): Add support here for process, thread, job, resource,
+	// interrupt, eventpair, fifo, guest, and time once these are actually
+	// supported in the Go runtime.
+	types.Handle:  "_zx.Handle",
+	types.Vmo:     "_zx.VMO",
+	types.Channel: "_zx.Channel",
+	types.Event:   "_zx.Event",
+	types.Port:    "_zx.Port",
+	types.Log:     "_zx.Log",
+	types.Socket:  "_zx.Socket",
+	types.Vmar:    "_zx.VMAR",
+}
+
 func exportIdentifier(name types.Identifier) types.Identifier {
 	return types.Identifier(common.ToCamelCase(string(name)))
 }
@@ -253,7 +278,7 @@ func (_ *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 }
 
 func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
-	// TODO(mknyszek): Support handles, requests and identifiers.
+	// TODO(mknyszek): Support requests and identifiers.
 	switch val.Kind {
 	case types.ArrayType:
 		e, et := c.compileType(*val.ElementType)
@@ -266,6 +291,17 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 		} else {
 			r = Type("string")
 		}
+	case types.HandleType:
+		e, ok := handleTypes[val.HandleSubtype]
+		if !ok {
+			// Fall back onto a generic handle if we don't support that particular
+			// handle subtype.
+			e = handleTypes[types.Handle]
+		}
+		if val.Nullable {
+			t.Nullable = true
+		}
+		r = Type(e)
 	case types.VectorType:
 		e, et := c.compileType(*val.ElementType)
 		et.MaxElems = append(et.MaxElems, val.ElementCount)

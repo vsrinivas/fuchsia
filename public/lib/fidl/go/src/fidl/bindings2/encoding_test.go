@@ -6,6 +6,7 @@ package bindings2
 
 import (
 	"reflect"
+	"syscall/zx"
 	"testing"
 )
 
@@ -117,5 +118,22 @@ func TestEncodingIdentity(t *testing.T) {
 				D: &v1,
 			},
 		}, 104, &TestStruct2{})
+	})
+	t.Run("Handles", func(t *testing.T) {
+		vmo, err := zx.NewVMO(10, 0)
+		if err != nil {
+			t.Fatalf("failed to create vmo: %v", err)
+		}
+		testIdentity(t, &TestHandle1{
+			A: zx.Handle(22),
+			B: zx.HANDLE_INVALID,
+			C: vmo,
+			D: zx.VMO(zx.HANDLE_INVALID),
+		}, 16, &TestHandle1{})
+		testIdentity(t, &TestHandle2{
+			A: []zx.Handle{zx.Handle(vmo)},
+			B: []zx.VMO{zx.VMO(zx.HANDLE_INVALID)},
+		}, 48, &TestHandle2{})
+		vmo.Close()
 	})
 }

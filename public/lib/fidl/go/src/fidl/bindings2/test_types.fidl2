@@ -96,3 +96,15 @@ struct TestStruct2 {
     TestFloat1 b;
     TestVector1 c;
 };
+
+struct TestHandle1 {
+    handle a;
+    handle? b;
+    handle<vmo> c;
+    handle<vmo>? d;
+};
+
+struct TestHandle2 {
+    vector<handle>:1 a;
+    vector<handle<vmo>?>:1 b;
+};

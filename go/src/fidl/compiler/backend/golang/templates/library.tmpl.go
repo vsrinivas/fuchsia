@@ -12,6 +12,8 @@ const Library = `
 
 package main
 
+import _zx "syscall/zx"
+
 {{ range $enum := .Enums -}}
 {{ template "EnumDefinition" $enum }}
 {{ end -}}

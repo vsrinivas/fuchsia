@@ -4,7 +4,8 @@
 
 package bindings2
 
-// TODO(mknyszek): Support unions, handles, and interfaces.
+// TODO(mknyszek): Support unions and interfaces.
+// TODO(mknyszek): Create a proper set of error values.
 
 import (
 	"errors"
@@ -20,6 +21,41 @@ const (
 	allocPresent uint64 = math.MaxUint64
 	noAlloc             = 0
 )
+
+const (
+	handlePresent uint32 = math.MaxUint32
+	noHandle             = 0
+)
+
+var (
+	// TODO(mknyszek): Add support here for process, thread, job, resource,
+	// interrupt, eventpair, fifo, guest, and time once these are actually
+	// supported in the Go runtime.
+	// TODO(mknyszek): Add channel, log, and port once the underlying types
+	// are unified to uint32.
+	handleType reflect.Type = reflect.TypeOf(zx.Handle(0))
+	vmoType                 = reflect.TypeOf(zx.VMO(0))
+	eventType               = reflect.TypeOf(zx.Event(0))
+	socketType              = reflect.TypeOf(zx.Socket(0))
+	vmarType                = reflect.TypeOf(zx.VMAR(0))
+)
+
+// isHandleType returns true if the reflected type is a Fuchsia handle type.
+func isHandleType(t reflect.Type) bool {
+	switch t {
+	case handleType:
+		fallthrough
+	case vmoType:
+		fallthrough
+	case eventType:
+		fallthrough
+	case socketType:
+		fallthrough
+	case vmarType:
+		return true
+	}
+	return false
+}
 
 // getSize returns the size of the type. Occasionally this requires the value,
 // particularly for a struct.
@@ -75,6 +111,11 @@ type nestedTypeData struct {
 	// as a slice because FIDL container types may be nested arbitrarily
 	// deeply. The lower the index, the more deeply nested the type is.
 	maxElems []*int
+
+	// nullable reflects whether the innermost type for a struct field is nullable.
+	// This is only used for types where nullability is non-obvious, which is only
+	// handles for now.
+	nullable bool
 }
 
 // Unnest attempts to unnest the nestedTypeData one level. If it succeeds, it returns the type
@@ -95,8 +136,13 @@ func (n *nestedTypeData) FromTag(tag reflect.StructTag) error {
 	if !ok {
 		return nil
 	}
+	split := strings.Split(raw, ",")
+	if split[0] == "*" {
+		n.nullable = true
+		split = split[1:]
+	}
 	var maxElems []*int
-	for _, e := range strings.Split(raw, ",") {
+	for _, e := range split {
 		if e == "" {
 			maxElems = append(maxElems, nil)
 			continue
@@ -317,6 +363,24 @@ func (e *encoder) marshalString(v reflect.Value, n nestedTypeData) error {
 	return nil
 }
 
+// marshalHandle marshals a Fuchsia handle type, and ensures that the handle is
+// valid if it is not nullable.
+func (e *encoder) marshalHandle(v reflect.Value, n nestedTypeData) error {
+	// The underlying type of all the handles is a uint32, so we're
+	// safe calling Uint(). This will panic if that is no longer true.
+	raw := zx.Handle(v.Uint())
+	if raw == zx.HANDLE_INVALID {
+		if !n.nullable {
+			return fmt.Errorf("encountered null handle for non-nullable handle type")
+		}
+		e.writeUint(uint64(noHandle), 4)
+		return nil
+	}
+	e.handles = append(e.handles, raw)
+	e.writeUint(uint64(handlePresent), 4)
+	return nil
+}
+
 // marshalPointer marshals nullable FIDL types that are represented by golang pointer
 // indirections. The input type and value should be the dereference of the golang pointers,
 // that is, if we're marshalling *string, we should get string.
@@ -326,10 +390,8 @@ func (e *encoder) marshalPointer(t reflect.Type, v reflect.Value, n nestedTypeDa
 		return e.marshalVector(t, v, n)
 	case reflect.String:
 		return e.marshalString(v, n)
-	default:
-		return fmt.Errorf("unsupported nullable type kind %s for type %s", t.Kind(), t.Name())
 	}
-	return nil
+	return fmt.Errorf("unsupported nullable type kind %s for type %s", t.Kind(), t.Name())
 }
 
 // marshal is the central recursive function core to marshalling, and
@@ -343,6 +405,9 @@ func (e *encoder) marshal(t reflect.Type, v reflect.Value, n nestedTypeData) err
 		return e.marshalVector(t, v, n)
 	case reflect.String:
 		return e.marshalString(v, n)
+	}
+	if isHandleType(t) {
+		return e.marshalHandle(v, n)
 	}
 	return e.marshalInline(t, v, n)
 }
@@ -400,6 +465,9 @@ type decoder struct {
 
 	// buffer represents the buffer we're decoding from.
 	buffer []byte
+
+	// handles represents the input untyped handled we're decoding.
+	handles []zx.Handle
 }
 
 // readInt reads a signed integer value of byte-width size from the buffer.
@@ -606,7 +674,29 @@ func (d *decoder) unmarshalString(t reflect.Type, v reflect.Value, n nestedTypeD
 	return nil
 }
 
-// marshalPointer unmarshals nullable FIDL types that are represented by golang pointer
+// unmarshalHandle unmarshals a handle into a value, validating that it is valid if the handle is
+// not nullable.
+func (d *decoder) unmarshalHandle(v reflect.Value, n nestedTypeData) error {
+	h := d.readUint(4)
+	switch h {
+	case uint64(noHandle):
+		if !n.nullable {
+			return fmt.Errorf("found invalid handle passed for non-nullable handle type")
+		}
+		v.SetUint(uint64(zx.HANDLE_INVALID))
+	case uint64(handlePresent):
+		if len(d.handles) == 0 {
+			return fmt.Errorf("not enough handles available for decoding")
+		}
+		v.SetUint(uint64(d.handles[0]))
+		d.handles = d.handles[1:]
+	default:
+		return fmt.Errorf("unsupported value %d for encoded handle", h)
+	}
+	return nil
+}
+
+// unmarshalPointer unmarshals nullable FIDL types that are represented by golang pointer
 // indirections. The expected types and values t and v are pointers, i.e. they start with *.
 func (d *decoder) unmarshalPointer(t reflect.Type, v reflect.Value, n nestedTypeData) error {
 	switch t.Elem().Kind() {
@@ -614,10 +704,8 @@ func (d *decoder) unmarshalPointer(t reflect.Type, v reflect.Value, n nestedType
 		return d.unmarshalVector(t, v, n)
 	case reflect.String:
 		return d.unmarshalString(t, v, n)
-	default:
-		return fmt.Errorf("unsupported nullable type kind %s for type %s", t.Kind(), t.Name())
 	}
-	return nil
+	return fmt.Errorf("unsupported nullable type kind %s for type %s", t.Kind(), t.Name())
 }
 
 // unmarshal is the central recursive function core to unmarshalling, and
@@ -631,6 +719,9 @@ func (d *decoder) unmarshal(t reflect.Type, v reflect.Value, n nestedTypeData) e
 		return d.unmarshalVector(t, v, n)
 	case reflect.String:
 		return d.unmarshalString(t, v, n)
+	}
+	if isHandleType(t) {
+		return d.unmarshalHandle(v, n)
 	}
 	return d.unmarshalInline(t, v, n)
 }
@@ -655,7 +746,7 @@ func unmarshalHeader(data []byte, m *MessageHeader) error {
 // by the structure of the struct pointed to by s.
 //
 // TODO(mknyszek): More rigorously validate the input.
-func Unmarshal(data []byte, _ []zx.Handle, s Payload) (*MessageHeader, error) {
+func Unmarshal(data []byte, handles []zx.Handle, s Payload) (*MessageHeader, error) {
 	// First, let's make sure we have the right type in s.
 	t := reflect.TypeOf(s)
 	if t.Kind() != reflect.Ptr {
@@ -674,6 +765,10 @@ func Unmarshal(data []byte, _ []zx.Handle, s Payload) (*MessageHeader, error) {
 
 	// Get the payload's value and unmarshal it.
 	nextObject := align(s.InlineSize(), 8)
-	d := decoder{buffer: data[MessageHeaderSize:], nextObject: nextObject}
+	d := decoder{
+		buffer:     data[MessageHeaderSize:],
+		handles:    handles,
+		nextObject: nextObject,
+	}
 	return &m, d.unmarshalStruct(t, reflect.ValueOf(s).Elem())
 }

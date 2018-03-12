@@ -4,6 +4,8 @@
 
 package bindings2
 
+import _zx "syscall/zx"
+
 type TestSimple struct {
 	X int64
 }
@@ -204,8 +206,8 @@ func (_ *TestString2) InlineSize() int {
 }
 
 type TestString3 struct {
-	A [2]string  `fidl:"4"`
-	B [2]*string `fidl:"4"`
+	A [2]string  `fidl:",4"`
+	B [2]*string `fidl:",4"`
 }
 
 // Implements Payload.
@@ -221,8 +223,8 @@ func (_ *TestString3) InlineSize() int {
 type TestVector1 struct {
 	A []int8
 	B *[]int16
-	C []int32  `fidl:"2"`
-	D *[]int64 `fidl:"2"`
+	C []int32  `fidl:",2"`
+	D *[]int64 `fidl:",2"`
 }
 
 // Implements Payload.
@@ -237,8 +239,8 @@ func (_ *TestVector1) InlineSize() int {
 
 type TestVector2 struct {
 	A [2][]int8
-	B [][]int8    `fidl:",2"`
-	C []*[]string `fidl:"5,2,2"`
+	B [][]int8    `fidl:",,2"`
+	C []*[]string `fidl:",5,2,2"`
 }
 
 // Implements Payload.
@@ -279,4 +281,36 @@ func (_ *TestStruct2) InlineAlignment() int {
 // Implements Payload.
 func (_ *TestStruct2) InlineSize() int {
 	return 80
+}
+
+type TestHandle1 struct {
+	A _zx.Handle
+	B _zx.Handle `fidl:"*"`
+	C _zx.VMO
+	D _zx.VMO `fidl:"*"`
+}
+
+// Implements Payload.
+func (_ *TestHandle1) InlineAlignment() int {
+	return 4
+}
+
+// Implements Payload.
+func (_ *TestHandle1) InlineSize() int {
+	return 16
+}
+
+type TestHandle2 struct {
+	A []_zx.Handle `fidl:",1"`
+	B []_zx.VMO    `fidl:"*,1"`
+}
+
+// Implements Payload.
+func (_ *TestHandle2) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *TestHandle2) InlineSize() int {
+	return 32
 }
