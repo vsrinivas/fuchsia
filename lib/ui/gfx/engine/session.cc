@@ -32,6 +32,7 @@
 #include "garnet/lib/ui/gfx/resources/shapes/mesh_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rectangle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
+#include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/gfx/util/wrap.h"
@@ -596,9 +597,18 @@ bool Session::ApplySetCameraProjectionCommand(
 
 bool Session::ApplySetStereoCameraProjectionCommand(
     ::gfx::SetStereoCameraProjectionCommand command) {
-  error_reporter_->ERROR() << "scenic::gfx::Session::"
-                              "ApplySetStereoCameraProjectionCommand(): "
-                              "unimplemented.";
+  if (IsVariable(command.left_projection) ||
+      IsVariable(command.right_projection)) {
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplySetStereoCameraProjectionOp(): "
+           "unimplemented: variable properties.";
+    return false;
+  } else if (auto stereo_camera =
+                 resources_.FindResource<StereoCamera>(command.camera_id)) {
+    stereo_camera->SetStereoProjection(Unwrap(command.left_projection.value),
+                                       Unwrap(command.right_projection.value));
+    return true;
+  }
   return false;
 }
 
@@ -759,9 +769,8 @@ bool Session::ApplyCreateCamera(scenic::ResourceId id, ::gfx::CameraArgs args) {
 
 bool Session::ApplyCreateStereoCamera(scenic::ResourceId id,
                                       ::gfx::StereoCameraArgs args) {
-  error_reporter_->ERROR()
-      << "scene_manager::Session::ApplyCreateStereoCamera() unimplemented";
-  return false;
+  auto camera = CreateStereoCamera(id, args);
+  return camera ? resources_.AddResource(id, std::move(camera)) : false;
 }
 
 bool Session::ApplyCreateRenderer(scenic::ResourceId id,
@@ -965,6 +974,14 @@ ResourcePtr Session::CreateCamera(scenic::ResourceId id,
                                   ::gfx::CameraArgs args) {
   if (auto scene = resources_.FindResource<Scene>(args.scene_id)) {
     return fxl::MakeRefCounted<Camera>(this, id, std::move(scene));
+  }
+  return ResourcePtr();
+}
+
+ResourcePtr Session::CreateStereoCamera(scenic::ResourceId id,
+                                        const ::gfx::StereoCameraArgs args) {
+  if (auto scene = resources_.FindResource<Scene>(args.scene_id)) {
+    return fxl::MakeRefCounted<StereoCamera>(this, id, std::move(scene));
   }
   return ResourcePtr();
 }

@@ -15,11 +15,12 @@
 namespace scenic {
 namespace gfx {
 
-class Camera final : public Resource {
+class Camera : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
   Camera(Session* session, scenic::ResourceId id, ScenePtr scene);
+  virtual ~Camera() {}
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;
@@ -55,7 +56,7 @@ class Camera final : public Resource {
       const escher::ray4& ray,
       const escher::ViewingVolume& viewing_volume) const;
 
- private:
+ protected:
   ScenePtr scene_;
 
   glm::vec3 eye_position_ = glm::vec3();

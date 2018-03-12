@@ -11,23 +11,12 @@
 #include "garnet/public/lib/escher/vk/buffer.h"
 #include "gtest/gtest.h"
 #include "lib/escher/hmd/pose_buffer.h"
+#include "lib/escher/util/epsilon_compare.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
 namespace escher {
 namespace test {
-
-static constexpr bool EPSILON_ERROR_DETAIL = false;
-
-// Returns true iff |f0| and |f1| are the same within optional |epsilon|.
-bool CompareFloat(float f0, float f1, float epsilon = 0.0) {
-  bool compare = glm::abs(f0 - f1) <= epsilon;
-  if (!compare && EPSILON_ERROR_DETAIL)
-    FXL_LOG(WARNING) << "floats " << f0 << " and " << f1 << " differ by "
-                     << glm::abs(f0 - f1)
-                     << " which is greater than provided epsilon " << epsilon;
-  return compare;
-}
 
 // Returns true iff |a| and |b| are the same within optional |epsilon|.
 bool ComparePose(escher::hmd::Pose* p0,
@@ -57,32 +46,6 @@ bool ComparePose(escher::hmd::Pose* p0,
   compare = compare && CompareFloat(p0->z, p1->z, epsilon);
 
   return true;
-}
-
-void PrintMatrix(glm::mat4 m) {
-  for (uint32_t i = 0; i < 4; i++) {
-    for (uint32_t j = 0; j < 4; j++) {
-      printf("%6.3f, ", m[j][i]);
-    }
-    printf("\n");
-  }
-  printf("\n");
-}
-
-bool CompareMatrix(glm::mat4 m0, glm::mat4 m1, float epsilon = 0.0) {
-  bool compare = true;
-  for (uint32_t i = 0; i < 4; i++) {
-    for (uint32_t j = 0; j < 4; j++) {
-      compare = compare && CompareFloat(m0[i][j], m1[i][j], epsilon);
-    }
-  }
-
-  if (!compare) {
-    FXL_LOG(WARNING) << "The following matrices differ:\n";
-    PrintMatrix(m0);
-    PrintMatrix(m1);
-  }
-  return compare;
 }
 
 glm::mat4 MatrixFromPose(const hmd::Pose& pose) {

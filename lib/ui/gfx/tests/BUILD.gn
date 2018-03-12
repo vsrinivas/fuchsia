@@ -56,6 +56,7 @@ executable("unittests") {
     "session_test.h",
     "session_unittest.cc",
     "shape_unittest.cc",
+    "stereo_camera_unittest.cc",
     "vk_session_test.cc",
     "vk_session_test.h",
   ]

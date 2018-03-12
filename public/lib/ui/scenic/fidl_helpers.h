@@ -54,6 +54,7 @@ gfx::Command NewCreateLayerCommand(uint32_t id);
 
 gfx::Command NewCreateSceneCommand(uint32_t id);
 gfx::Command NewCreateCameraCommand(uint32_t id, uint32_t scene_id);
+gfx::Command NewCreateStereoCameraCommand(uint32_t id, uint32_t scene_id);
 gfx::Command NewCreateRendererCommand(uint32_t id);
 gfx::Command NewCreateAmbientLightCommand(uint32_t id);
 gfx::Command NewCreateDirectionalLightCommand(uint32_t id);
@@ -140,6 +141,7 @@ gfx::Command NewSetHitTestBehaviorCommand(
     gfx::HitTestBehavior hit_test_behavior);
 
 // Camera and lighting operations.
+
 gfx::Command NewSetCameraCommand(uint32_t renderer_id, uint32_t camera_id);
 gfx::Command NewSetCameraTransformCommand(uint32_t camera_id,
                                           const float eye_position[3],
@@ -153,6 +155,11 @@ gfx::Command NewSetCameraPoseBufferCommand(uint32_t camera_id,
                                            uint32_t num_entries,
                                            uint64_t base_time,
                                            uint64_t time_interval);
+
+gfx::Command NewSetStereoCameraProjectionCommand(
+    uint32_t camera_id,
+    const float left_projection[16],
+    const float right_projection[16]);
 
 gfx::Command NewSetLightColorCommand(uint32_t light_id, const float rgb[3]);
 gfx::Command NewSetLightColorCommand(uint32_t light_id, uint32_t variable_id);

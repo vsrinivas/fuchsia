@@ -207,9 +207,13 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                            MemoryPtr memory,
                            uint32_t memory_offset,
                            uint32_t num_bytes);
+
   ResourcePtr CreateScene(scenic::ResourceId id, ::gfx::SceneArgs args);
   ResourcePtr CreateCamera(scenic::ResourceId id, ::gfx::CameraArgs args);
+  ResourcePtr CreateStereoCamera(scenic::ResourceId id,
+                                 ::gfx::StereoCameraArgs args);
   ResourcePtr CreateRenderer(scenic::ResourceId id, ::gfx::RendererArgs args);
+
   ResourcePtr CreateAmbientLight(scenic::ResourceId id);
   ResourcePtr CreateDirectionalLight(scenic::ResourceId id);
   ResourcePtr CreateClipNode(scenic::ResourceId id, ::gfx::ClipNodeArgs args);

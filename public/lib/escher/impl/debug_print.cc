@@ -4,9 +4,6 @@
 
 #include "lib/escher/util/debug_print.h"
 
-// These should only be called by operator<<, so it's safe to elide them.
-#if !defined(NDEBUG)
-
 #include "lib/escher/geometry/bounding_box.h"
 #include "lib/escher/geometry/transform.h"
 #include "lib/escher/impl/model_pipeline_spec.h"
@@ -193,4 +190,3 @@ std::ostream& operator<<(std::ostream& str, const Camera& camera) {
 
 }  // namespace escher
 
-#endif  // #if !defined(NDEBUG)

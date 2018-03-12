@@ -155,9 +155,18 @@ gfx::Command NewCreateCameraCommand(uint32_t id, uint32_t scene_id) {
   return NewCreateResourceCommand(id, std::move(resource));
 }
 
+gfx::Command NewCreateStereoCameraCommand(uint32_t id, uint32_t scene_id) {
+  gfx::StereoCameraArgs stereo_camera;
+  stereo_camera.scene_id = scene_id;
+
+  gfx::ResourceArgs resource;
+  resource.set_stereo_camera(std::move(stereo_camera));
+
+  return NewCreateResourceCommand(id, std::move(resource));
+}
+
 gfx::Command NewCreateRendererCommand(uint32_t id) {
   gfx::RendererArgs renderer;
-
   gfx::ResourceArgs resource;
   resource.set_renderer(std::move(renderer));
 
@@ -843,6 +852,21 @@ gfx::Command NewSetCameraProjectionCommand(uint32_t camera_id,
 
   gfx::Command command;
   command.set_set_camera_projection(std::move(set_command));
+
+  return command;
+}
+
+gfx::Command NewSetStereoCameraProjectionCommand(
+    uint32_t camera_id,
+    const float left_projection[16],
+    const float right_projection[16]) {
+  gfx::SetStereoCameraProjectionCommand set_command;
+  set_command.camera_id = camera_id;
+  set_command.left_projection = NewMatrix4Value(left_projection);
+  set_command.right_projection = NewMatrix4Value(right_projection);
+
+  gfx::Command command;
+  command.set_set_stereo_camera_projection(std::move(set_command));
 
   return command;
 }

@@ -118,6 +118,8 @@ source_set("gfx") {
     "resources/shapes/rounded_rectangle_shape.h",
     "resources/shapes/shape.cc",
     "resources/shapes/shape.h",
+    "resources/stereo_camera.cc",
+    "resources/stereo_camera.h",
     "resources/variable.cc",
     "resources/variable.h",
     "scenic_system.cc",
