@@ -10,8 +10,10 @@
 
 #if defined(OS_WIN)
 #define FILE_CREATE_MODE _S_IREAD | _S_IWRITE
+#define BINARY_MODE _O_BINARY
 #else
 #define FILE_CREATE_MODE 0666
+#define BINARY_MODE 0
 #endif
 
 #include "lib/fxl/files/eintr_wrapper.h"
@@ -97,13 +99,13 @@ bool ReadFileToStringAt(int dirfd, const std::string& path, std::string* result)
 #endif
 
 bool ReadFileToVector(const std::string& path, std::vector<uint8_t>* result) {
-  fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
+  fxl::UniqueFD fd(open(path.c_str(), O_RDONLY | BINARY_MODE));
   return ReadFileDescriptor(fd.get(), result);
 }
 
 std::pair<uint8_t*, intptr_t> ReadFileToBytes(const std::string& path) {
   std::pair<uint8_t*, intptr_t> failure_pair {nullptr, -1};
-  fxl::UniqueFD fd(open(path.c_str(), O_RDONLY));
+  fxl::UniqueFD fd(open(path.c_str(), O_RDONLY | BINARY_MODE));
   if (!fd.is_valid())
     return failure_pair;
   return ReadFileDescriptorToBytes(fd.get());
