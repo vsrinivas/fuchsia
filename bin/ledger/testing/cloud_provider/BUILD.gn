@@ -26,6 +26,7 @@ source_set("cloud_provider") {
   deps = [
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/lib/convert",
+    "//peridot/public/lib/cloud_provider/fidl",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

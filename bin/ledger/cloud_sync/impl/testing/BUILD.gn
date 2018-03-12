@@ -25,6 +25,7 @@ source_set("testing") {
     "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/testing",
+    "//peridot/public/lib/cloud_provider/fidl",
   ]
 
   deps = [

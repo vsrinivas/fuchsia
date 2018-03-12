@@ -20,5 +20,9 @@ source_set("public") {
     "//peridot/bin/ledger/storage/public",
   ]
 
+  deps = [
+    "//peridot/public/lib/cloud_provider/fidl",
+  ]
+
   configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
