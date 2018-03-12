@@ -48,6 +48,12 @@ enum struct PrimitiveSubtype {
     Float64,
 };
 
+enum struct MessageKind {
+    kRequest,
+    kResponse,
+    kEvent,
+};
+
 } // namespace types
 } // namespace fidl
 

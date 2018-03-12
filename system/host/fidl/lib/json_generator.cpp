@@ -4,127 +4,13 @@
 
 #include "fidl/json_generator.h"
 
+#include "fidl/names.h"
+
 namespace fidl {
 
 namespace {
 
 constexpr const char* kIndent = "  ";
-
-std::string LongName(const flat::Name& name) {
-    // TODO(TO-701) Handle complex names.
-    return name.data();
-}
-
-std::string PrimitiveSubtypeName(types::PrimitiveSubtype subtype) {
-    switch (subtype) {
-    case types::PrimitiveSubtype::Int8:
-        return "int8";
-    case types::PrimitiveSubtype::Int16:
-        return "int16";
-    case types::PrimitiveSubtype::Int32:
-        return "int32";
-    case types::PrimitiveSubtype::Int64:
-        return "int64";
-    case types::PrimitiveSubtype::Uint8:
-        return "uint8";
-    case types::PrimitiveSubtype::Uint16:
-        return "uint16";
-    case types::PrimitiveSubtype::Uint32:
-        return "uint32";
-    case types::PrimitiveSubtype::Uint64:
-        return "uint64";
-    case types::PrimitiveSubtype::Bool:
-        return "bool";
-    case types::PrimitiveSubtype::Status:
-        return "status";
-    case types::PrimitiveSubtype::Float32:
-        return "float32";
-    case types::PrimitiveSubtype::Float64:
-        return "float64";
-    }
-}
-
-std::string HandleSubtypeName(types::HandleSubtype subtype) {
-    switch (subtype) {
-    case types::HandleSubtype::Handle:
-        return "handle";
-    case types::HandleSubtype::Process:
-        return "process";
-    case types::HandleSubtype::Thread:
-        return "thread";
-    case types::HandleSubtype::Vmo:
-        return "vmo";
-    case types::HandleSubtype::Channel:
-        return "channel";
-    case types::HandleSubtype::Event:
-        return "event";
-    case types::HandleSubtype::Port:
-        return "port";
-    case types::HandleSubtype::Interrupt:
-        return "interrupt";
-    case types::HandleSubtype::Log:
-        return "log";
-    case types::HandleSubtype::Socket:
-        return "socket";
-    case types::HandleSubtype::Resource:
-        return "resource";
-    case types::HandleSubtype::Eventpair:
-        return "eventpair";
-    case types::HandleSubtype::Job:
-        return "job";
-    case types::HandleSubtype::Vmar:
-        return "vmar";
-    case types::HandleSubtype::Fifo:
-        return "fifo";
-    case types::HandleSubtype::Guest:
-        return "guest";
-    case types::HandleSubtype::Timer:
-        return "timer";
-    }
-}
-
-std::string LiteralKindName(raw::Literal::Kind kind) {
-    switch (kind) {
-    case raw::Literal::Kind::String:
-        return "string";
-    case raw::Literal::Kind::Numeric:
-        return "numeric";
-    case raw::Literal::Kind::True:
-        return "true";
-    case raw::Literal::Kind::False:
-        return "false";
-    case raw::Literal::Kind::Default:
-        return "default";
-    }
-}
-
-std::string TypeKindName(flat::Type::Kind kind) {
-    switch (kind) {
-    case flat::Type::Kind::Array:
-        return "array";
-    case flat::Type::Kind::Vector:
-        return "vector";
-    case flat::Type::Kind::String:
-        return "string";
-    case flat::Type::Kind::Handle:
-        return "handle";
-    case flat::Type::Kind::RequestHandle:
-        return "request";
-    case flat::Type::Kind::Primitive:
-        return "primitive";
-    case flat::Type::Kind::Identifier:
-        return "identifier";
-    }
-}
-
-std::string ConstantKindName(raw::Constant::Kind kind) {
-    switch (kind) {
-    case raw::Constant::Kind::Identifier:
-        return "identifier";
-    case raw::Constant::Kind::Literal:
-        return "literal";
-    }
-}
 
 // Functions named "Emit..." are called to actually emit to an std::ostream
 // is here. No other functions should directly emit to the streams.
@@ -293,7 +179,7 @@ void JSONGenerator::Generate(uint64_t value) {
 }
 
 void JSONGenerator::Generate(types::HandleSubtype value) {
-    EmitString(&json_file_, HandleSubtypeName(value));
+    EmitString(&json_file_, NameHandleSubtype(value));
 }
 
 void JSONGenerator::Generate(types::Nullability value) {
@@ -308,7 +194,7 @@ void JSONGenerator::Generate(types::Nullability value) {
 }
 
 void JSONGenerator::Generate(types::PrimitiveSubtype value) {
-    EmitString(&json_file_, PrimitiveSubtypeName(value));
+    EmitString(&json_file_, NamePrimitiveSubtype(value));
 }
 
 void JSONGenerator::Generate(const raw::Identifier& value) {
@@ -321,7 +207,7 @@ void JSONGenerator::Generate(const raw::CompoundIdentifier& value) {
 
 void JSONGenerator::Generate(const raw::Literal& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("kind", LiteralKindName(value.kind), Position::First);
+        GenerateObjectMember("kind", NameRawLiteralKind(value.kind), Position::First);
 
         switch (value.kind) {
         case raw::Literal::Kind::String: {
@@ -351,7 +237,7 @@ void JSONGenerator::Generate(const raw::Literal& value) {
 
 void JSONGenerator::Generate(const flat::Type& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("kind", TypeKindName(value.kind), Position::First);
+        GenerateObjectMember("kind", NameFlatTypeKind(value.kind), Position::First);
 
         switch (value.kind) {
         case flat::Type::Kind::Array: {
@@ -404,7 +290,7 @@ void JSONGenerator::Generate(const flat::Type& value) {
 
 void JSONGenerator::Generate(const raw::Constant& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("kind", ConstantKindName(value.kind), Position::First);
+        GenerateObjectMember("kind", NameRawConstantKind(value.kind), Position::First);
 
         switch (value.kind) {
         case raw::Constant::Kind::Identifier: {
@@ -440,7 +326,7 @@ void JSONGenerator::Generate(const flat::Ordinal& value) {
 }
 
 void JSONGenerator::Generate(const flat::Name& value) {
-    std::vector<std::string> name_parts = {LongName(value)};
+    std::vector<std::string> name_parts = {NameName(value)};
     Generate(name_parts);
 }
 
@@ -558,7 +444,7 @@ void JSONGenerator::GenerateDeclarationMapEntry(int count, const flat::Name& nam
         EmitNewlineAndIndent(&json_file_, ++indent_level_);
     else
         EmitObjectSeparator(&json_file_, indent_level_);
-    EmitObjectKey(&json_file_, indent_level_, LongName(name));
+    EmitObjectKey(&json_file_, indent_level_, NameName(name));
     EmitString(&json_file_, decl);
 }
 

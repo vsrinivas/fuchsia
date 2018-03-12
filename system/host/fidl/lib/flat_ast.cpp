@@ -593,33 +593,28 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             return false;
         if (!ordinal_scope.Insert(method.ordinal.Value()))
             return false;
-        if (method.maybe_request != nullptr) {
-            Scope<StringView> request_scope;
-            FieldShape header_field_shape(TypeShape(16u, 4u));
-            std::vector<FieldShape*> request_struct;
-            request_struct.push_back(&header_field_shape);
-            for (auto& param : method.maybe_request->parameters) {
-                if (!request_scope.Insert(param.name.data()))
+        auto CreateMessage = [&](Interface::Method::Message* message) -> bool{
+            Scope<StringView> scope;
+            auto header_field_shape = FieldShape(TypeShape(16u, 4u));
+            std::vector<FieldShape*> message_struct;
+            message_struct.push_back(&header_field_shape);
+            for (auto& param : message->parameters) {
+                if (!scope.Insert(param.name.data()))
                     return false;
                 if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
-                request_struct.push_back(&param.fieldshape);
+                message_struct.push_back(&param.fieldshape);
             }
-            method.maybe_request->typeshape = FidlStructTypeShape(&request_struct);
+            message->typeshape = FidlStructTypeShape(&message_struct);
+            return true;
+        };
+        if (method.maybe_request) {
+            if (!CreateMessage(method.maybe_request.get()))
+                return false;
         }
-        if (method.maybe_response != nullptr) {
-            Scope<StringView> response_scope;
-            FieldShape header_field_shape(TypeShape(16u, 4u));
-            std::vector<FieldShape*> response_struct;
-            response_struct.push_back(&header_field_shape);
-            for (auto& param : method.maybe_response->parameters) {
-                if (!response_scope.Insert(param.name.data()))
-                    return false;
-                if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
-                    return false;
-                response_struct.push_back(&param.fieldshape);
-            }
-            method.maybe_response->typeshape = FidlStructTypeShape(&response_struct);
+        if (method.maybe_response) {
+            if (!CreateMessage(method.maybe_response.get()))
+                return false;
         }
     }
     return true;

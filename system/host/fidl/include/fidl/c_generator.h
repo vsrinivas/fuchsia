@@ -33,18 +33,6 @@ public:
 
     std::ostringstream Produce();
 
-    enum struct IntegerConstantType {
-        kStatus,
-        kInt8,
-        kInt16,
-        kInt32,
-        kInt64,
-        kUint8,
-        kUint16,
-        kUint32,
-        kUint64,
-    };
-
     struct Member {
         std::string type;
         std::string name;
@@ -91,8 +79,8 @@ private:
     void GeneratePrologues();
     void GenerateEpilogues();
 
-    void GenerateIntegerDefine(StringView name, IntegerConstantType type, StringView value);
-    void GenerateIntegerTypedef(IntegerConstantType type, StringView name);
+    void GenerateIntegerDefine(StringView name, types::PrimitiveSubtype subtype, StringView value);
+    void GenerateIntegerTypedef(types::PrimitiveSubtype subtype, StringView name);
     void GenerateStructTypedef(StringView name);
 
     void GenerateStructDeclaration(StringView name, const std::vector<Member>& members);
