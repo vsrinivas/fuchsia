@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_OBSERVER_LIST_H_
-#define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_OBSERVER_LIST_H_
+#ifndef GARNET_PUBLIC_LIB_FXL_OBSERVER_LIST_H_
+#define GARNET_PUBLIC_LIB_FXL_OBSERVER_LIST_H_
 
 // Derived from chromium/src/base/observer_list.h
 
@@ -71,21 +71,20 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-namespace btlib {
-namespace common {
+namespace fxl {
 
 template <class ObserverType>
 class ObserverListBase {
  public:
   // Enumeration of which observers are notified.
-  enum NotificationType {
+  enum class NotifyWhat {
     // Specifies that any observers added during notification are notified.
     // This is the default type if non type is provided to the constructor.
-    NOTIFY_ALL,
+    kAll,
 
     // Specifies that observers added while sending out notification are not
     // notified.
-    NOTIFY_EXISTING_ONLY
+    kExistingOnly
   };
 
   // An iterator class that can be used to access the list of observers.
@@ -140,9 +139,9 @@ class ObserverListBase {
   const_iterator end() const { return const_iterator(); }
 
   ObserverListBase()
-      : notify_depth_(0), type_(NOTIFY_ALL), weak_ptr_factory_(this) {}
-  explicit ObserverListBase(NotificationType type)
-      : notify_depth_(0), type_(type), weak_ptr_factory_(this) {}
+      : notify_depth_(0), what_(NotifyWhat::kAll), weak_ptr_factory_(this) {}
+  explicit ObserverListBase(NotifyWhat what)
+      : notify_depth_(0), what_(what), weak_ptr_factory_(this) {}
 
   // Add an observer to the list.  An observer should not be added to
   // the same list more than once.
@@ -170,7 +169,7 @@ class ObserverListBase {
 
   ListType observers_;
   int notify_depth_;
-  NotificationType type_;
+  NotifyWhat what_;
 
   template <class ContainerType>
   friend class Iter;
@@ -190,8 +189,9 @@ template <class ContainerType>
 ObserverListBase<ObserverType>::Iter<ContainerType>::Iter(ContainerType* list)
     : list_(const_cast<ObserverListBase<ObserverType>*>(list)->AsWeakPtr()),
       index_(0),
-      max_index_(list->type_ == NOTIFY_ALL ? std::numeric_limits<size_t>::max()
-                                           : list->observers_.size()) {
+      max_index_(list->what_ == NotifyWhat::kAll
+                     ? std::numeric_limits<size_t>::max()
+                     : list->observers_.size()) {
   EnsureValidIndex();
   FXL_DCHECK(list_);
   ++list_->notify_depth_;
@@ -325,12 +325,11 @@ void ObserverListBase<ObserverType>::Compact() {
 template <class ObserverType, bool check_empty = false>
 class ObserverList : public ObserverListBase<ObserverType> {
  public:
-  typedef typename ObserverListBase<ObserverType>::NotificationType
-      NotificationType;
+  using NotifyWhat = typename ObserverListBase<ObserverType>::NotifyWhat;
 
   ObserverList() {}
-  explicit ObserverList(NotificationType type)
-      : ObserverListBase<ObserverType>(type) {}
+  explicit ObserverList(NotifyWhat what)
+      : ObserverListBase<ObserverType>(what) {}
 
   ~ObserverList() {
     // When check_empty is true, assert that the list is empty on destruction.
@@ -345,7 +344,6 @@ class ObserverList : public ObserverListBase<ObserverType> {
   }
 };
 
-}  // namespace common
-}  // namespace btlib
+}  // namespace fxl
 
-#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_OBSERVER_LIST_H_
+#endif  // GARNET_PUBLIC_LIB_FXL_OBSERVER_LIST_H_

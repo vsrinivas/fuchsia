@@ -4,15 +4,15 @@
 
 // Derived from chromium/src/base/observer_list_unittest.cc
 
-#include "garnet/drivers/bluetooth/lib/common/observer_list.h"
+#include "garnet/public/lib/fxl/observer_list.h"
 
 #include <utility>
 #include <vector>
 
 #include "gtest/gtest.h"
 
-namespace btlib {
-namespace common {
+namespace fxl {
+
 namespace {
 
 class Foo {
@@ -191,7 +191,7 @@ TEST(ObserverListTest, DisruptBefore) {
 }
 
 TEST(ObserverListTest, Existing) {
-  ObserverList<Foo> observer_list(ObserverList<Foo>::NOTIFY_EXISTING_ONLY);
+  ObserverList<Foo> observer_list(ObserverList<Foo>::NotifyWhat::kExistingOnly);
   Adder a(1);
   AddInObserve<ObserverList<Foo>> b(&observer_list);
   Adder c(1);
@@ -228,7 +228,7 @@ TEST(ObserverListTest, ClearNotifyAll) {
 }
 
 TEST(ObserverListTest, ClearNotifyExistingOnly) {
-  ObserverList<Foo> observer_list(ObserverList<Foo>::NOTIFY_EXISTING_ONLY);
+  ObserverList<Foo> observer_list(ObserverList<Foo>::NotifyWhat::kExistingOnly);
   AddInClearObserve a(&observer_list);
 
   observer_list.AddObserver(&a);
@@ -572,5 +572,4 @@ TEST(ObserverListTest, AddObserverInTheLastObserve) {
 }
 
 }  // namespace
-}  // namespace common
-}  // namespace btlib
+}  // namespace fxl
