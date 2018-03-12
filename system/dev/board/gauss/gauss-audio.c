@@ -8,7 +8,6 @@
 #include <hw/reg.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <soc/aml-a113/aml-tdm.h>
-#include <soc/aml-common/aml-i2c.h>
 #include <zircon/assert.h>
 #include <limits.h>
 

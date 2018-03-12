@@ -16,15 +16,12 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/platform-defs.h>
 
-#include <soc/aml-common/aml-i2c.h>
-
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
 #include "gauss.h"
 #include "gauss-hw.h"
-
 
 #define GAUSS_TDM_SAMPLE_RATE (48000)
 #define GAUSS_TDM_BITS_PER_SLOT (32)

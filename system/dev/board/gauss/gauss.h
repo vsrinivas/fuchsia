@@ -14,6 +14,13 @@
 
 #include <threads.h>
 
+enum {
+    AML_I2C_A,
+    AML_I2C_B,
+    AML_I2C_C,
+    AML_I2C_D,
+};
+
 typedef struct {
     platform_bus_protocol_t pbus;
     zx_device_t* parent;

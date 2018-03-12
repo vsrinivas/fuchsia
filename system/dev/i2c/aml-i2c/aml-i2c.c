@@ -20,8 +20,6 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <soc/aml-common/aml-i2c.h>
-
 #define I2C_ERROR_SIGNAL ZX_USER_SIGNAL_0
 #define I2C_TXN_COMPLETE_SIGNAL ZX_USER_SIGNAL_1
 
@@ -91,7 +89,7 @@ typedef struct {
     platform_device_protocol_t pdev;
     i2c_protocol_t i2c;
     zx_device_t* zxdev;
-    aml_i2c_dev_t i2c_devs[AML_I2C_COUNT];
+    aml_i2c_dev_t* i2c_devs;
     size_t dev_count;
 } aml_i2c_t;
 
@@ -550,6 +548,7 @@ static void aml_i2c_release(void* ctx) {
         zx_handle_close(device->event);
         zx_handle_close(device->irq);
     }
+    free(i2c->i2c_devs);
     free(i2c);
 }
 
@@ -590,12 +589,10 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
         status = ZX_ERR_INVALID_ARGS;
         goto fail;
     }
-    if (info.mmio_count > countof(i2c->i2c_devs)) {
-        zxlogf(ERROR, "aml_i2c_bind: mmio_count %u too large\n", info.mmio_count);
-        status = ZX_ERR_OUT_OF_RANGE;
+    i2c->i2c_devs = calloc(info.mmio_count, sizeof(aml_i2c_dev_t));
+    if (!i2c->i2c_devs) {
         goto fail;
     }
-
     i2c->dev_count = info.mmio_count;
 
     for (unsigned i = 0; i < i2c->dev_count; i++) {
