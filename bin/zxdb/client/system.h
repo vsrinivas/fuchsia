@@ -5,46 +5,51 @@
 #pragma once
 
 #include <functional>
-#include <map>
-#include <memory>
+#include <vector>
 
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/lib/debug_ipc/protocol.h"
+#include "garnet/public/lib/fxl/macros.h"
+#include "garnet/public/lib/fxl/observer_list.h"
 
 namespace zxdb {
 
 class Err;
+class SystemObserver;
 
 // Represents system-wide state on the debugged computer.
 class System : public ClientObject {
  public:
-  using TargetMap = std::map<size_t, std::unique_ptr<Target>>;
-
   // Callback for requesting the process tree.
   using ProcessTreeCallback = std::function<
-      void(System*, const Err&, debug_ipc::ProcessTreeReply)>;
+      void(const Err&, debug_ipc::ProcessTreeReply)>;
 
   System(Session* session);
   ~System() override;
 
-  // The active target is guaranteed to exist.
-  size_t active_target_id() const { return active_target_id_; }
-  Target* GetActiveTarget() const;
+  void AddObserver(SystemObserver* observer);
+  void RemoveObserver(SystemObserver* observer);
 
-  const TargetMap& targets() const { return targets_; }
+  // Returns all targets currently in the System. The returned pointers are
+  // managed by the System object and should not be cached once you return to
+  // the message loop.
+  virtual std::vector<Target*> GetAllTargets() const = 0;
 
   // Returns the process (and hence Target) associated with the given live
   // koid. Returns 0 if not found.
-  Process* ProcessFromKoid(uint64_t koid);
+  virtual Process* ProcessFromKoid(uint64_t koid) const = 0;
 
-  void GetProcessTree(ProcessTreeCallback callback);
+  // Schedules a request for the system process tree.
+  virtual void GetProcessTree(ProcessTreeCallback callback) = 0;
+
+ protected:
+  fxl::ObserverList<SystemObserver>& observers() { return observers_; }
 
  private:
-  TargetMap targets_;
-  size_t next_target_id_ = 0;
+  fxl::ObserverList<SystemObserver> observers_;
 
-  size_t active_target_id_ = 0;
+  FXL_DISALLOW_COPY_AND_ASSIGN(System);
 };
 
 }  // namespace zxdb

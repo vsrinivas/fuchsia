@@ -4,9 +4,13 @@
 
 #include "garnet/bin/zxdb/console/command.h"
 
+#include <algorithm>
+
 #include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/console/nouns.h"
 #include "garnet/bin/zxdb/console/verbs.h"
 #include "garnet/public/lib/fxl/logging.h"
+#include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -38,7 +42,7 @@ const char kProcessHelp[] =
 
 }  // namespace
 
-const size_t Command::kNoIndex;
+const int Command::kNoIndex;
 
 Command::Command() = default;
 Command::~Command() = default;
@@ -47,16 +51,28 @@ bool Command::HasNoun(Noun noun) const {
   return nouns_.find(noun) != nouns_.end();
 }
 
-size_t Command::GetNounIndex(Noun noun) const {
+int Command::GetNounIndex(Noun noun) const {
   auto found = nouns_.find(noun);
   if (found == nouns_.end())
     return kNoIndex;
   return found->second;
 }
 
-void Command::SetNoun(Noun noun, size_t index) {
+void Command::SetNoun(Noun noun, int index) {
   FXL_DCHECK(nouns_.find(noun) == nouns_.end());
   nouns_[noun] = index;
+}
+
+Err Command::ValidateNouns(std::initializer_list<Noun> allowed_nouns) const {
+  for (const auto& pair : nouns_) {
+    if (std::find(allowed_nouns.begin(), allowed_nouns.end(), pair.first) ==
+        allowed_nouns.end()) {
+      return Err(ErrType::kInput, fxl::StringPrintf(
+          "\"%s\" may not be specified for this command.",
+          NounToString(pair.first).c_str()));
+    }
+  }
+  return Err();
 }
 
 bool Command::HasSwitch(int id) const {
@@ -167,7 +183,10 @@ const std::map<std::string, Verb>& GetStringVerbMap() {
   return map;
 }
 
-Err DispatchCommand(Session* session, const Command& cmd) {
+Err DispatchCommand(ConsoleContext* context, const Command& cmd) {
+  if (cmd.verb() == Verb::kNone)
+    return ExecuteNoun(context, cmd);
+
   const auto& verbs = GetVerbs();
   const auto& found = verbs.find(cmd.verb());
   if (found == verbs.end()) {
@@ -175,7 +194,7 @@ Err DispatchCommand(Session* session, const Command& cmd) {
                "Invalid verb \"" + VerbToString(cmd.verb()) +
                "\".");
   }
-  return found->second.exec(session, cmd);
+  return found->second.exec(context, cmd);
 }
 
 }  // namespace zxdb

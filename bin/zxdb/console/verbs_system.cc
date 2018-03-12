@@ -36,7 +36,7 @@ void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec,
     OutputProcessTreeRecord(child, indent + 1, output);
 }
 
-void OnListProcessesComplete(System* system, const Err& err,
+void OnListProcessesComplete(const Err& err,
                              debug_ipc::ProcessTreeReply reply) {
   OutputBuffer out;
   if (err.has_error())
@@ -52,8 +52,8 @@ const char kListProcessesHelp[] =
     R"(ps
 
 Prints the process tree of the debugged system.)";
-Err DoListProcesses(Session* session, const Command& cmd) {
-  session->system().GetProcessTree(&OnListProcessesComplete);
+Err DoListProcesses(ConsoleContext* context, const Command& cmd) {
+  context->session()->system().GetProcessTree(&OnListProcessesComplete);
   return Err();
 }
 

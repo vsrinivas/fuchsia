@@ -3,27 +3,43 @@
 # found in the LICENSE file.
 
 static_library("client") {
+  public = [
+    "client_object.h",
+    "err.h",
+    "process.h",
+    "process_observer.h",
+    "session.h",
+    "system.h",
+    "system_observer.h",
+    "target.h",
+    "target_observer.h",
+    "thread.h",
+  ]
+
   sources = [
     "agent_connection.cc",
     "agent_connection.h",
     "client_object.cc",
-    "client_object.h",
     "err.cc",
-    "err.h",
     "process.cc",
-    "process.h",
+    "process_impl.cc",
+    "process_impl.h",
     "session.cc",
-    "session.h",
     "system.cc",
-    "system.h",
+    "system_impl.cc",
+    "system_impl.h",
     "target.cc",
-    "target.h",
+    "target_impl.cc",
+    "target_impl.h",
     "thread.cc",
-    "thread.h",
+    "thread_impl.cc",
+    "thread_impl.h",
   ]
 
+  public_deps = [
+    "//garnet/public/lib/fxl",
+  ]
   deps = [
     "//garnet/lib/debug_ipc:client",
-    "//garnet/public/lib/fxl",
   ]
 }

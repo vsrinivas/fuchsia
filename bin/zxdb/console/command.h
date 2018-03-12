@@ -9,11 +9,12 @@
 #include <string>
 #include <vector>
 
+#include "garnet/bin/zxdb/client/err.h"
+
 namespace zxdb {
 
-class Err;
-class Process;
-class Session;
+class ConsoleContext;
+class Target;
 class Thread;
 
 // Noun ------------------------------------------------------------------------
@@ -55,7 +56,7 @@ class Command {
   // This valid indicates that there was a noun specified but no index.
   // For example the command "process step" specifies the process noun but
   // not an index.
-  static constexpr size_t kNoIndex = (size_t)(-1);
+  static constexpr int kNoIndex = -1;
 
   Command();
   ~Command();
@@ -66,12 +67,17 @@ class Command {
   // Returns the index specified for the given noun. If the noun was not
   // specified or the index was not specified, returns kNoIndex (use HasNoun to
   // disambiguate).
-  size_t GetNounIndex(Noun noun) const;
+  int GetNounIndex(Noun noun) const;
 
   // Sets that the given noun was present. index may be kNoIndex.
-  void SetNoun(Noun noun, size_t index);
+  void SetNoun(Noun noun, int index);
 
-  const std::map<Noun, size_t>& nouns() const { return nouns_; }
+  const std::map<Noun, int>& nouns() const { return nouns_; }
+
+  // Checks the specified nouns against the parameter listing the allowed ones.
+  // If any nouns are specified that are not in the list, generates an error
+  // and returns it. Otherwise it will return an empty error.
+  Err ValidateNouns(std::initializer_list<Noun> allowed_nouns) const;
 
   Verb verb() const { return verb_; }
   void set_verb(Verb v) { verb_ = v; }
@@ -93,8 +99,8 @@ class Command {
   // The computed environment for the command. This is filled in with the
   // objects corresponding to the indices given on the command line, and
   // default to the current one for the current command line.
-  Process* process() const { return process_; }
-  void set_process(Process* p) { process_ = p; }
+  Target* target() const { return target_; }
+  void set_target(Target* t) { target_ = t; }
   Thread* thread() const { return thread_; }
   void set_thread(Thread* t) { thread_ = t; }
 
@@ -103,12 +109,12 @@ class Command {
   // was not written on the command line. If present but ther was no index
   // given for it, the mapped value will be kNoIndex. Otherwise the mapped
   // value will be the index specified.
-  std::map<Noun, size_t> nouns_;
+  std::map<Noun, int> nouns_;
 
   // The effective context for the command. The explicitly specified process/
   // thread/etc. will be reflected here, and anything that wasn't explicit
   // will inherit the default.
-  Process* process_ = nullptr;  // Guaranteed non-null for valid commands.
+  Target* target_ = nullptr;  // Guaranteed non-null for valid commands.
   Thread* thread_ = nullptr;  // Will be null if not running.
   // Frame* frame_ = nullptr;  // TODO(brettw) do frame support.
 
@@ -141,7 +147,7 @@ struct SwitchRecord {
 // Command dispatch ------------------------------------------------------------
 
 // Type for the callback that runs a command.
-using CommandExecutor = Err (*)(Session*, const Command& cmd);
+using CommandExecutor = Err (*)(ConsoleContext*, const Command& cmd);
 
 struct NounRecord {
   NounRecord();
@@ -194,6 +200,6 @@ const std::map<std::string, Noun>& GetStringNounMap();
 const std::map<std::string, Verb>& GetStringVerbMap();
 
 // Runs the given command.
-Err DispatchCommand(Session* session, const Command& cmd);
+Err DispatchCommand(ConsoleContext* context, const Command& cmd);
 
 }  // namespace zxdb

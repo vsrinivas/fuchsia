@@ -28,7 +28,7 @@ const char kMemReadHelp[] =
   Alias: "x"
 
 Reads memory from debugged process.)";
-Err DoMemRead(Session* session, const Command& cmd) {
+Err DoMemRead(ConsoleContext* context, const Command& cmd) {
   return Err("Unimplemented");
 }
 

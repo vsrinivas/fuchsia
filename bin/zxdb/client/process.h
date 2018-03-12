@@ -10,7 +10,9 @@
 #include <memory>
 
 #include "garnet/bin/zxdb/client/client_object.h"
+#include "garnet/bin/zxdb/client/process_observer.h"
 #include "garnet/public/lib/fxl/macros.h"
+#include "garnet/public/lib/fxl/observer_list.h"
 
 namespace zxdb {
 
@@ -19,47 +21,33 @@ class Thread;
 
 class Process : public ClientObject {
  public:
-  // The ID is a monotonically increasing thread index generated based on
-  // next_thread_id_.
-  using ThreadMap = std::map<size_t, std::unique_ptr<Thread>>;
-
-  // Callback for thread creation and destruction. It will be called with the
-  // thread object immediately after its creation and immediately before its
-  // destruction.
-  enum class ThreadChange {
-    kStarted,
-    kExiting
-  };
-  using ThreadChangeCallback = std::function<void(Thread*, ThreadChange)>;
-
-  // The passed-in target owns this process.
-  Process(Target* target, uint64_t koid);
+  Process(Session* session);
   ~Process() override;
 
-  Target* target() { return target_; }
-  uint64_t koid() const { return koid_; }
+  void AddObserver(ProcessObserver* observer);
+  void RemoveObserver(ProcessObserver* observer);
 
-  // Notification from the agent that a thread has started or exited.
-  void OnThreadStarting(uint64_t thread_koid);
-  void OnThreadExiting(uint64_t thread_koid);
+  // Returns the target associated with this process. Guaranteed non-null.
+  virtual Target* GetTarget() const = 0;
 
-  // Register and unregister for notifications about thread changes. The ID
-  // returned by the Start() function can be used to unregister with the Stop()
-  // function.
-  //
-  // These observers are global and will apply to all processes.
-  static int StartWatchingGlobalThreadChanges(ThreadChangeCallback callback);
-  static void StopWatchingGlobalThreadChanges(int callback_id);
+  // The Process koid is guaranteed non-null.
+  virtual uint64_t GetKoid() const = 0;
+
+  // Returns all threads in the process. This is a as of the last update from
+  // the system. If the program is currently running, the actual threads may be
+  // different since it can be asynchonously creating and destroying them. The
+  // pointers will only be valid until you return to the message loop.
+  virtual std::vector<Thread*> GetThreads() const = 0;
+
+  // Notifications from the agent that a thread has started or exited.
+  virtual void OnThreadStarting(uint64_t thread_koid) = 0;
+  virtual void OnThreadExiting(uint64_t thread_koid) = 0;
+
+ protected:
+  fxl::ObserverList<ProcessObserver>& observers() { return observers_; }
 
  private:
-  Target* target_;
-  uint64_t koid_;
-
-  ThreadMap threads_;
-  size_t next_thread_id_ = 0;
-
-  static std::map<int, ThreadChangeCallback> thread_change_callbacks_;
-  static int next_thread_change_callback_id_;
+  fxl::ObserverList<ProcessObserver> observers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Process);
 };

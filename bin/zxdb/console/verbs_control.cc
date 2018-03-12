@@ -73,7 +73,7 @@ std::string GetReference() {
   return help;
 }
 
-Err DoHelp(Session* session, const Command& cmd) {
+Err DoHelp(ConsoleContext* context, const Command& cmd) {
   OutputBuffer out;
 
   if (cmd.args().empty()) {
@@ -122,7 +122,7 @@ const char kQuitHelp[] =
 
     Quits the debugger.)";
 
-Err DoQuit(Session* session, const Command& cmd) {
+Err DoQuit(ConsoleContext* context, const Command& cmd) {
   // This command is special-cased by the main loop so it shouldn't get
   // executed.
   return Err();

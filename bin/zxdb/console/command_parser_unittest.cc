@@ -66,7 +66,7 @@ TEST(CommandParser, ParserBasic) {
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(1u, output.nouns().size());
   EXPECT_TRUE(output.HasNoun(Noun::kProcess));
-  EXPECT_EQ(1u, output.GetNounIndex(Noun::kProcess));
+  EXPECT_EQ(1, output.GetNounIndex(Noun::kProcess));
   EXPECT_EQ(Verb::kNone, output.verb());
 
   // Noun-verb command.
@@ -82,16 +82,16 @@ TEST(CommandParser, ParserBasic) {
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(1u, output.nouns().size());
   EXPECT_TRUE(output.HasNoun(Noun::kProcess));
-  EXPECT_EQ(2u, output.GetNounIndex(Noun::kProcess));
+  EXPECT_EQ(2, output.GetNounIndex(Noun::kProcess));
   EXPECT_EQ(Verb::kRun, output.verb());
 
   err = ParseCommand("process 2 thread 1 run", &output);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(2u, output.nouns().size());
   EXPECT_TRUE(output.HasNoun(Noun::kProcess));
-  EXPECT_EQ(2u, output.GetNounIndex(Noun::kProcess));
+  EXPECT_EQ(2, output.GetNounIndex(Noun::kProcess));
   EXPECT_TRUE(output.HasNoun(Noun::kThread));
-  EXPECT_EQ(1u, output.GetNounIndex(Noun::kThread));
+  EXPECT_EQ(1, output.GetNounIndex(Noun::kThread));
   EXPECT_EQ(Verb::kRun, output.verb());
 }
 

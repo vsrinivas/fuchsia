@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/console/verbs.h"
 
-#include <sstream>
+#include <inttypes.h>
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/session.h"
@@ -14,6 +14,7 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -22,30 +23,51 @@ namespace {
 const char kRunShortHelp[] =
     "run / r: Run the program.";
 const char kRunHelp[] =
-    R"(run
+    R"(run [ <program name> ]
 
-    Alias: "r"
-    )";
+  Alias: "r"
 
-Err DoRun(Session* session, const Command& cmd) {
-  Target* target = session->system().GetActiveTarget();
-  target->args().resize(1);
-  target->args()[0] = "/boot/bin/ps";
-  target->Launch([](Target* target, const Err& err) {
-    std::ostringstream line;
-    line << "Process " << target->target_id();
+Examples
+
+  run
+  run chrome
+  process 2 run
+)";
+
+Err DoRun(ConsoleContext* context, const Command& cmd) {
+  // Only a process can be run.
+  Err err = cmd.ValidateNouns({Noun::kProcess});
+  if (err.has_error())
+    return err;
+
+  // TODO(brettw) figure out how argument passing should work. From a user
+  // perspective it would be nicest to pass everything after "run" to the
+  // app. But this means we can't have any switches to "run". LLDB requires
+  // using "--" for this case to mark the end of switches.
+  if (cmd.args().empty()) {
+    // Use the args already set on the target.
+    if (cmd.target()->GetArgs().empty())
+      return Err("No program to run. Try \"run <program name>\".");
+  } else {
+    cmd.target()->SetArgs(cmd.args());
+  }
+
+  cmd.target()->Launch([](Target* target, const Err& err) {
+    Console* console = Console::get();
 
     OutputBuffer out;
+    out.Append(fxl::StringPrintf(
+        "Process %d ", console->context().IdForTarget(target)));
+
     if (err.has_error()) {
-      line << " launch failed.\n";
-      out.Append(line.str());
+      out.Append("launch failed.\n");
       out.OutputErr(err);
     } else {
-      line << " launched with koid " << target->process()->koid() << ".";
-      out.Append(line.str());
+      out.Append(fxl::StringPrintf(
+          "launched with koid %" PRIu64 ".", target->GetProcess()->GetKoid()));
     }
 
-    Console::get()->Output(std::move(out));
+    console->Output(std::move(out));
   });
   return Err();
 }

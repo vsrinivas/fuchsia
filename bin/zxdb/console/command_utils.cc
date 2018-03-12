@@ -12,13 +12,25 @@
 namespace zxdb {
 
 Err StringToUint64(const std::string& s, uint64_t* out) {
-  if (s.size() > 2 && s[0] == '0' && s[1] == 'x') {
-    if (sscanf(&s.c_str()[2], "%" PRIx64, out) == 1)
-      return Err();
+  *out = 0;
+  if (s.empty())
+    return Err(ErrType::kInput, "The empty string is not a number.");
+
+  bool is_hex = s.size() > 2u && s[0] == '0' && (s[1] == 'x' || s[1] == 'X');
+  if (is_hex) {
+    for (size_t i = 2; i < s.size(); i++) {
+      if (!isxdigit(s[i]))
+        return Err(ErrType::kInput, "Invalid hex number: + \"" + s + "\".");
+    }
+  } else {
+    for (size_t i = 0; i < s.size(); i++) {
+      if (!isdigit(s[i]))
+        return Err(ErrType::kInput, "Invalid number: \"" + s + "\".");
+    }
   }
-  if (sscanf(s.c_str(), "%" PRIu64, out) == 1)
-    return Err();
-  return Err(ErrType::kInput, "Invalid number \"" + s + "\".");
+
+  *out = strtoull(s.c_str(), nullptr, is_hex ? 16 : 10);
+  return Err();
 }
 
 }  // namespace zxdb

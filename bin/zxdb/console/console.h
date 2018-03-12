@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/line_input.h"
 #include "garnet/public/lib/fxl/macros.h"
 
@@ -23,6 +24,8 @@ class Console {
 
   static Console* get() { return singleton_; }
 
+  ConsoleContext& context() { return context_; }
+
   // Prints the first prompt to the screen. This only needs to be called once.
   void Init();
 
@@ -38,12 +41,9 @@ class Console {
 
   static Console* singleton_;
 
-  Session* session_;
+  ConsoleContext context_;
 
   LineInputStdout line_input_;
-
-  int target_state_change_callback_id_ = 0;
-  int thread_change_callback_id_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Console);
 };

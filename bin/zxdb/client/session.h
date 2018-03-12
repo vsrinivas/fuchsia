@@ -11,7 +11,7 @@
 
 #include "garnet/bin/zxdb/client/agent_connection.h"
 #include "garnet/bin/zxdb/client/err.h"
-#include "garnet/bin/zxdb/client/system.h"
+#include "garnet/bin/zxdb/client/system_impl.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/lib/debug_ipc/client_protocol.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
@@ -70,7 +70,7 @@ class Session : public AgentConnection::Sink {
   std::map<uint32_t, Callback> pending_;
   uint32_t next_transaction_id_ = 1;  // Reserve 0 for notifications.
 
-  System system_;
+  SystemImpl system_;
 };
 
 template <typename SendMsgType, typename RecvMsgType>
