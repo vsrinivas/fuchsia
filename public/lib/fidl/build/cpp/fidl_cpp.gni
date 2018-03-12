@@ -35,11 +35,11 @@ template("fidl_cpp") {
   file_stem = "$base_gen_dir/$library_name.fidl"
   c_header = "$file_stem.c.h"
 
-  fidl_target_gen_dir =
-      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-  json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
-
   if (current_toolchain == current_base_toolchain) {
+    fidl_target_gen_dir =
+        get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
+    json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
+
     compiled_action(generation_target_name) {
       visibility = [ ":*" ]
 
@@ -87,6 +87,8 @@ template("fidl_cpp") {
                "--files",
              ] + rebase_path(inputs, root_build_dir)
     }
+  } else {
+    not_needed(invoker, "*")
   }
 
   source_set(main_target_name) {
