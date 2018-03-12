@@ -25,6 +25,10 @@ TEST(VectorPtr, Control) {
   VectorPtr<int> other(std::move(vector));
   EXPECT_EQ(reference, *other);
 
+  std::vector<int> taken = other.take();
+  EXPECT_TRUE(other.is_null());
+  EXPECT_EQ(3u, taken.size());
+
   VectorPtr<int> sized(3);
   EXPECT_FALSE(sized.is_null());
   EXPECT_TRUE(sized);

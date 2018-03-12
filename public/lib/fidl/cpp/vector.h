@@ -56,6 +56,14 @@ class VectorPtr {
     return vec_;
   }
 
+  // Takes the std::vector from the VectorPtr.
+  //
+  // After this method returns, the VectorPtr is null.
+  std::vector<T> take() {
+    is_null_ = true;
+    return std::move(vec_);
+  }
+
   // Stores the given std::vector in this VectorPtr.
   //
   // After this method returns, the VectorPtr is non-null.
