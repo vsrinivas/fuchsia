@@ -27,9 +27,11 @@ source_set("sys_driver") {
   ]
 
   deps = [
+    "$magma_build_root/src/magma_util:command_buffer",
     "$magma_build_root/src/magma_util/platform:connection",
     "$magma_build_root/src/magma_util/platform:device",
     "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/magma_util/platform:thread",
   ]
 }
 
@@ -60,7 +62,8 @@ source_set("pci_driver_gtest") {
   ]
 
   deps = [
-    "//garnet/lib/magma/src/magma_util/platform:device",
+    "$magma_build_root/src/magma_util/platform:device",
+    "$magma_build_root/tests/helper:platform_device_helper",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
   ]
@@ -80,6 +83,7 @@ source_set("test_entry_pci") {
     "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
+    "//garnet/lib/magma/tests/helper:platform_device_helper",
     "//zircon/public/lib/zx",
   ]
 

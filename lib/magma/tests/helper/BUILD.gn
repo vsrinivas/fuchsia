@@ -21,6 +21,10 @@ source_set("platform_device_helper") {
 source_set("command_buffer_helper") {
   public_configs = [ "$magma_build_root:magma_tests_include_config" ]
 
+  public_deps = [
+    "$magma_build_root/src/magma_util/platform:device",
+  ]
+
   sources = [
     "command_buffer_helper.h",
   ]

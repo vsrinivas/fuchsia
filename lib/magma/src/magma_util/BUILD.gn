@@ -99,8 +99,10 @@ source_set("semaphore_port") {
   ]
 
   public_deps = [
+    ":common",
     "$magma_build_root/src/magma_util/platform:trace",
     "platform:port",
+    "platform:semaphore",
   ]
 }
 

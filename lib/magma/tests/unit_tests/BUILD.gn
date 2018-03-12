@@ -52,7 +52,7 @@ source_set("magma_util_tests") {
 
   deps = [
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/magma_util/platform:port",
+    "$magma_build_root/src/magma_util:semaphore_port",
     "//third_party/googletest:gtest",
   ]
 }
@@ -141,6 +141,8 @@ source_set("msd_abi_conformance_tests") {
   deps = [
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/sys_driver",
     "$magma_build_root/tests/helper:platform_device_helper",
     "//third_party/googletest:gtest",
   ]
