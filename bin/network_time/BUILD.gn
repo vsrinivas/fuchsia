@@ -43,7 +43,6 @@ package("network_time_tests") {
 
 source_set("lib") {
   sources = [
-    "logging.h",
     "roughtime_server.cc",
     "roughtime_server.h",
     "time_server_config.cc",
