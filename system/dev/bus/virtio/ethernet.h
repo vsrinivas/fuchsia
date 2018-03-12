@@ -25,7 +25,7 @@ namespace virtio {
 
 class EthernetDevice : public Device {
 public:
-    explicit EthernetDevice(zx_device_t* device, fbl::unique_ptr<Backend> backend);
+    explicit EthernetDevice(zx_device_t* device, zx::bti, fbl::unique_ptr<Backend> backend);
     virtual ~EthernetDevice();
 
     zx_status_t Init() override TA_EXCL(state_lock_);

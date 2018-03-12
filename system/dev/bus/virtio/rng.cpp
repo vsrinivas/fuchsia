@@ -11,8 +11,8 @@
 
 namespace virtio {
 
-RngDevice::RngDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
-    : Device(bus_device, fbl::move(backend)) {
+RngDevice::RngDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+    : Device(bus_device, fbl::move(bti), fbl::move(backend)) {
 }
 
 RngDevice::~RngDevice() {

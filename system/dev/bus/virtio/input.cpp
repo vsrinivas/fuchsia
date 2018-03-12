@@ -207,8 +207,8 @@ void InputDevice::virtio_input_stop(void* ctx) {
     inp->Stop();
 }
 
-InputDevice::InputDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
-    : Device(bus_device, fbl::move(backend)) {}
+InputDevice::InputDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+    : Device(bus_device, fbl::move(bti), fbl::move(backend)) {}
 
 InputDevice::~InputDevice() {}
 

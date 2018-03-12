@@ -179,9 +179,9 @@ uint8_t* GetFrameData(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc_id, siz
 
 } // namespace
 
-EthernetDevice::EthernetDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
-    : Device(bus_device, fbl::move(backend)), rx_(this), tx_(this), bufs_(nullptr), unkicked_(0),
-      ifc_(nullptr), cookie_(nullptr) {
+EthernetDevice::EthernetDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+    : Device(bus_device, fbl::move(bti), fbl::move(backend)), rx_(this), tx_(this), bufs_(nullptr),
+      unkicked_(0), ifc_(nullptr), cookie_(nullptr) {
 }
 
 EthernetDevice::~EthernetDevice() {

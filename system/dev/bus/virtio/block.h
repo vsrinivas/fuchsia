@@ -29,7 +29,7 @@ class Ring;
 
 class BlockDevice : public Device {
 public:
-    BlockDevice(zx_device_t* device, fbl::unique_ptr<Backend> backend);
+    BlockDevice(zx_device_t* device, zx::bti bti, fbl::unique_ptr<Backend> backend);
     virtual ~BlockDevice();
 
     virtual zx_status_t Init() override;

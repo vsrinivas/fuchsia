@@ -105,8 +105,8 @@ zx_status_t BlockDevice::virtio_block_ioctl(void* ctx, uint32_t op, const void* 
     }
 }
 
-BlockDevice::BlockDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
-    : Device(bus_device, fbl::move(backend)) {
+BlockDevice::BlockDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+    : Device(bus_device, fbl::move(bti), fbl::move(backend)) {
     completion_reset(&txn_signal_);
 
     memset(&blk_req_buf_, 0, sizeof(blk_req_buf_));

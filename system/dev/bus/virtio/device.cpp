@@ -22,8 +22,8 @@
 
 namespace virtio {
 
-Device::Device(zx_device_t* bus_device, ::fbl::unique_ptr<Backend> backend)
-    : backend_(fbl::move(backend)), bus_device_(bus_device) {
+Device::Device(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+    : bti_(fbl::move(bti)), backend_(fbl::move(backend)), bus_device_(bus_device) {
     LTRACE_ENTRY;
     device_ops_.version = DEVICE_OPS_VERSION;
 }

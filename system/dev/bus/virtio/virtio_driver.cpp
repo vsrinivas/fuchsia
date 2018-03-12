@@ -42,6 +42,12 @@ extern "C" zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device, void*
         return status;
     }
 
+    zx::bti bti;
+    status = pci_get_bti(&pci, 0, bti.reset_and_get_address());
+    if (status != ZX_OK) {
+        return status;
+    }
+
     // Due to the similarity between Virtio 0.9.5 legacy devices and Virtio 1.0
     // transitional devices we need to check whether modern capabilities exist.
     // If no vendor capabilities are found then we will default to the legacy
@@ -66,25 +72,29 @@ extern "C" zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device, void*
     switch (info.device_id) {
     case VIRTIO_DEV_TYPE_NETWORK:
     case VIRTIO_DEV_TYPE_T_NETWORK:
-        virtio_device.reset(new virtio::EthernetDevice(bus_device, fbl::move(backend)));
+        virtio_device.reset(new virtio::EthernetDevice(bus_device, fbl::move(bti),
+                                                       fbl::move(backend)));
         break;
     case VIRTIO_DEV_TYPE_BLOCK:
     case VIRTIO_DEV_TYPE_T_BLOCK:
-        virtio_device.reset(new virtio::BlockDevice(bus_device, fbl::move(backend)));
+        virtio_device.reset(new virtio::BlockDevice(bus_device, fbl::move(bti),
+                                                    fbl::move(backend)));
         break;
     case VIRTIO_DEV_TYPE_CONSOLE:
     case VIRTIO_DEV_TYPE_T_CONSOLE:
-        virtio_device.reset(new virtio::ConsoleDevice(bus_device, fbl::move(backend)));
+        virtio_device.reset(new virtio::ConsoleDevice(bus_device, fbl::move(bti),
+                                                      fbl::move(backend)));
         break;
     case VIRTIO_DEV_TYPE_GPU:
-        virtio_device.reset(new virtio::GpuDevice(bus_device, fbl::move(backend)));
+        virtio_device.reset(new virtio::GpuDevice(bus_device, fbl::move(bti), fbl::move(backend)));
         break;
     case VIRTIO_DEV_TYPE_ENTROPY:
     case VIRTIO_DEV_TYPE_T_ENTROPY:
-        virtio_device.reset(new virtio::RngDevice(bus_device, fbl::move(backend)));
+        virtio_device.reset(new virtio::RngDevice(bus_device, fbl::move(bti), fbl::move(backend)));
         break;
     case VIRTIO_DEV_TYPE_INPUT:
-        virtio_device.reset(new virtio::InputDevice(bus_device, fbl::move(backend)));
+        virtio_device.reset(new virtio::InputDevice(bus_device, fbl::move(bti),
+                                                    fbl::move(backend)));
         break;
     default:
         return ZX_ERR_NOT_SUPPORTED;

@@ -115,8 +115,8 @@ bool TransferQueue::IsEmpty() const {
     return queue_.is_empty();
 }
 
-ConsoleDevice::ConsoleDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
-    : Device(bus_device, fbl::move(backend)) {}
+ConsoleDevice::ConsoleDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+    : Device(bus_device, fbl::move(bti), fbl::move(backend)) {}
 
 ConsoleDevice::~ConsoleDevice() {}
 

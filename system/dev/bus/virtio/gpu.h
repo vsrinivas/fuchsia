@@ -21,7 +21,7 @@ class Ring;
 
 class GpuDevice : public Device {
 public:
-    GpuDevice(zx_device_t* device, fbl::unique_ptr<Backend> backend);
+    GpuDevice(zx_device_t* device, zx::bti bti, fbl::unique_ptr<Backend> backend);
     virtual ~GpuDevice();
 
     zx_status_t Init() override;

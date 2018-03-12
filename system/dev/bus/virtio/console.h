@@ -58,7 +58,7 @@ private:
 // Actual virtio console implementation
 class ConsoleDevice : public Device {
 public:
-    explicit ConsoleDevice(zx_device_t* device, fbl::unique_ptr<Backend> backend);
+    explicit ConsoleDevice(zx_device_t* device, zx::bti bti, fbl::unique_ptr<Backend> backend);
     virtual ~ConsoleDevice();
 
     virtual zx_status_t Init() override;

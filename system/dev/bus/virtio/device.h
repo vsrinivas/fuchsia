@@ -13,6 +13,7 @@
 #include <fbl/unique_ptr.h>
 #include <threads.h>
 #include <virtio/virtio.h>
+#include <zx/bti.h>
 #include <zx/handle.h>
 
 // Virtio devices are represented by a derived class specific to their type (eg
@@ -25,7 +26,7 @@ namespace virtio {
 
 class Device {
 public:
-    Device(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend);
+    Device(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend);
     virtual ~Device();
 
     virtual zx_status_t Init() = 0;
@@ -78,6 +79,8 @@ protected:
     static int IrqThreadEntry(void* arg);
     void IrqWorker();
 
+    // BTI for managing DMA
+    zx::bti bti_;
     // backend responsible for hardware io. Will be released when device goes out of scope
     fbl::unique_ptr<Backend> backend_;
     // irq thread object

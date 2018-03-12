@@ -83,8 +83,8 @@ void GpuDevice::virtio_gpu_flush(void* ctx) {
     gd->Flush();
 }
 
-GpuDevice::GpuDevice(zx_device_t* bus_device, fbl::unique_ptr<Backend> backend)
-    : Device(bus_device, fbl::move(backend)) {
+GpuDevice::GpuDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
+    : Device(bus_device, fbl::move(bti), fbl::move(backend)) {
     sem_init(&request_sem_, 0, 1);
     sem_init(&response_sem_, 0, 0);
     cnd_init(&flush_cond_);
