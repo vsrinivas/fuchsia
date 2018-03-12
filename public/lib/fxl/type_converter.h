@@ -9,7 +9,7 @@ namespace fxl {
 
 // Specialize the following class:
 //   template <typename T, typename U> struct TypeConverter;
-// to perform disired type conversions. Here, T is the target type; U is the
+// to perform desired type conversions. Here, T is the target type; U is the
 // input type.
 //
 // To convert from type Y to type X, create a specialization of TypeConverter
