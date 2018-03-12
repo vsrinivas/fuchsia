@@ -25,4 +25,4 @@ if [[ ! -d "${GOROOT}" ]]; then
 	exit 1
 fi
 
-ZIRCON="${FUCHSIA_DIR}/zircon" CC="${GOROOT}/misc/fuchsia/gccwrap.sh" ZIRCON_SYSROOT="${ZIRCON_BUILDROOT}/build-user-${ZARCH}/sysroot" GOOS=fuchsia GOARCH=${GOARCH} CGO_ENABLED=1 GOROOT="${GOROOT}" "${GOROOT}/bin/go" "$@"
+ZIRCON="${FUCHSIA_DIR}/zircon" CC="${GOROOT}/misc/fuchsia/gccwrap.sh" ZIRCON_SYSROOT="${ZIRCON_BUILDROOT}/build-${ZARCH}/sysroot" GOOS=fuchsia GOARCH=${GOARCH} CGO_ENABLED=1 GOROOT="${GOROOT}" "${GOROOT}/bin/go" "$@"
