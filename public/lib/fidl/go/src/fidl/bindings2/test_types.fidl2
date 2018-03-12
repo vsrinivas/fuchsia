@@ -86,3 +86,13 @@ struct TestVector2 {
     vector<vector<int8>>:2 b;
     vector<vector<string:5>:2?>:2 c;
 };
+
+struct TestStruct1 {
+    TestSimple a;
+};
+
+struct TestStruct2 {
+    TestArray1 a;
+    TestFloat1 b;
+    TestVector1 c;
+};

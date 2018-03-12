@@ -96,4 +96,26 @@ func TestEncodingIdentity(t *testing.T) {
 			C: []*[]string{nil, &v2},
 		}, 200, &TestVector2{})
 	})
+	t.Run("Structs", func(t *testing.T) {
+		testIdentity(t, &TestStruct1{
+			A: TestSimple{
+				X: -9999,
+			},
+		}, 8, &TestStruct1{})
+		v1 := []int64{101010}
+		testIdentity(t, &TestStruct2{
+			A: TestArray1{
+				A: [5]int8{1, 77, 2, 4, 5},
+			},
+			B: TestFloat1{
+				A: 2.81212,
+			},
+			C: TestVector1{
+				A: []int8{1, 2, 3, 4},
+				B: nil,
+				C: []int32{99},
+				D: &v1,
+			},
+		}, 104, &TestStruct2{})
+	})
 }

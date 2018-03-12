@@ -277,6 +277,30 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 		t = et
 	case types.PrimitiveType:
 		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
+	case types.IdentifierType:
+		// val.Identifier is a CompoundIdentifier, but we don't have the
+		// ability to look up the declaration type for identifiers in other
+		// libraries. We also don't know how cross-library identifier references
+		// are even going to look for Go. For now, just use the first component
+		// of the identifier and assume that the identifier is in this library.
+		e := changeIfReserved(exportIdentifier(val.Identifier[0]))
+		declType, ok := c.decls[val.Identifier[0]]
+		if !ok {
+			log.Fatal("Unknown identifier:", val.Identifier)
+		}
+		// TODO(mknyszek): Support unions and interfaces.
+		switch declType {
+		case types.EnumDeclType:
+			r = Type(e)
+		case types.StructDeclType:
+			if val.Nullable {
+				r = Type("*" + e)
+			} else {
+				r = Type(e)
+			}
+		default:
+			log.Fatal("Unknown declaration type:", declType)
+		}
 	default:
 		log.Fatal("Unknown type kind: ", val.Kind)
 	}

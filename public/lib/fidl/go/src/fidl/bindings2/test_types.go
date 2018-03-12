@@ -250,3 +250,33 @@ func (_ *TestVector2) InlineAlignment() int {
 func (_ *TestVector2) InlineSize() int {
 	return 64
 }
+
+type TestStruct1 struct {
+	A TestSimple
+}
+
+// Implements Payload.
+func (_ *TestStruct1) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *TestStruct1) InlineSize() int {
+	return 8
+}
+
+type TestStruct2 struct {
+	A TestArray1
+	B TestFloat1
+	C TestVector1
+}
+
+// Implements Payload.
+func (_ *TestStruct2) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *TestStruct2) InlineSize() int {
+	return 80
+}

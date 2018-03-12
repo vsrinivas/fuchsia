@@ -62,7 +62,7 @@ func vectorType(elementType types.Type, elementCount *int) types.Type {
 
 func stringType(elementCount *int) types.Type {
 	return types.Type{
-		Kind: types.StringType,
+		Kind:         types.StringType,
 		ElementCount: elementCount,
 	}
 }
@@ -216,7 +216,7 @@ func TestCompileStruct(t *testing.T) {
 				{
 					Type: "*string",
 					Name: "Max",
-					Tag: "`fidl:\"40\"`", 
+					Tag:  "`fidl:\"40\"`",
 				},
 				{
 					Type: "[27]string",
@@ -225,7 +225,7 @@ func TestCompileStruct(t *testing.T) {
 				{
 					Type: "[27]*string",
 					Name: "NestedNullableMax",
-					Tag: "`fidl:\"40\"`", 
+					Tag:  "`fidl:\"40\"`",
 				},
 			},
 		},
@@ -268,7 +268,7 @@ func TestCompileStruct(t *testing.T) {
 				{
 					Type: "[]uint8",
 					Name: "Max",
-					Tag: "`fidl:\"40\"`",
+					Tag:  "`fidl:\"40\"`",
 				},
 				{
 					Type: "[][]bool",
@@ -281,7 +281,7 @@ func TestCompileStruct(t *testing.T) {
 				{
 					Type: "[][][]uint8",
 					Name: "NestedMax",
-					Tag: "`fidl:\"40,,\"`",
+					Tag:  "`fidl:\"40,,\"`",
 				},
 			},
 		},
