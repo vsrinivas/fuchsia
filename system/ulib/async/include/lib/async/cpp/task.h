@@ -4,12 +4,17 @@
 
 #pragma once
 
-#include <lib/async/dispatcher.h>
-#include <lib/async/task.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
+#include <lib/async/dispatcher.h>
+#include <lib/async/task.h>
 
 namespace async {
+
+// Posts a task to |async|, given by |deadline| and a handler defined by
+// |closure|.
+zx_status_t PostTask(async_t* async, fbl::Function<void(void)> closure,
+                     zx_time_t deadline);
 
 // C++ wrapper for a pending task.
 //

@@ -6,6 +6,23 @@
 
 namespace async {
 
+zx_status_t PostTask(async_t* async, fbl::Function<void(void)> closure,
+                     zx_time_t deadline) {
+    async::Task* task = new async::Task(deadline, ASYNC_FLAG_HANDLE_SHUTDOWN);
+    task->set_handler([task, closure = fbl::move(closure)](async_t*, zx_status_t status) {
+        if (status == ZX_OK) {
+            closure();
+        }
+        delete task;
+        return ASYNC_TASK_FINISHED;
+    });
+    zx_status_t status = task->Post(async);
+    if (status != ZX_OK) {
+        delete task;
+    }
+    return status;
+}
+
 Task::Task(zx_time_t deadline, uint32_t flags)
     : async_task_t{{ASYNC_STATE_INIT}, &Task::CallHandler, deadline, flags, {}} {}
 
