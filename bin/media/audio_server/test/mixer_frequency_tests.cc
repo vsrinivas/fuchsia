@@ -372,6 +372,172 @@ TEST(DynamicRange, Down60) {
   EXPECT_EQ(level_db, AudioResult::LevelDown60);
   EXPECT_EQ(sinad_db, AudioResult::SinadDown60);
 }
+
+// Test our mix level and noise floor, when rechannelizing mono into stereo.
+TEST(DynamicRange, MonoToStereo) {
+  MixerPtr mixer =
+      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 2, 48000);
+
+  std::vector<int16_t> source(kFreqTestBufSize);
+  std::vector<int32_t> accum(kFreqTestBufSize * 2);
+  std::vector<int32_t> left(kFreqTestBufSize);
+
+  // Populate mono source buffer; mix it (no SRC/gain) to stereo accumulator
+  OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                  std::numeric_limits<int16_t>::max());
+
+  uint32_t dst_offset = 0;
+  int32_t frac_src_offset = 0;
+  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
+             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
+             Mixer::FRAC_ONE, Gain::kUnityScale, false);
+  EXPECT_EQ(kFreqTestBufSize, dst_offset);
+  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
+            frac_src_offset);
+
+  // Copy left result to double-float buffer, FFT (freq-analyze) it at high-res
+  // Only need to analyze left side, since we verified that right is identical.
+  for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
+    EXPECT_EQ(accum[idx * 2], accum[(idx * 2) + 1]);
+    left[idx] = accum[idx * 2];
+  }
+
+  double magn_left_signal, magn_left_other, level_left_db, sinad_left_db;
+  MeasureAudioFreq(left.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                   &magn_left_signal, &magn_left_other);
+
+  level_left_db =
+      ValToDb(magn_left_signal / std::numeric_limits<int16_t>::max());
+  sinad_left_db = ValToDb(magn_left_signal / magn_left_other);
+
+  EXPECT_GE(level_left_db, 0 - AudioResult::kLevelToleranceSource16);
+  EXPECT_LE(level_left_db, 0 + AudioResult::kLevelToleranceSource16);
+
+  EXPECT_GE(sinad_left_db, AudioResult::kPrevFloorSource16);
+}
+
+// Test our mix level and noise floor, when rechannelizing stereo into mono.
+TEST(DynamicRange, StereoToMono) {
+  MixerPtr mixer =
+      SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000);
+
+  std::vector<int16_t> mono(kFreqTestBufSize);
+  std::vector<int16_t> source(kFreqTestBufSize * 2);
+  std::vector<int32_t> accum(kFreqTestBufSize);
+
+  // Populate mono source buffer; copy it into stereo source buffer
+  OverwriteCosine(mono.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                  std::numeric_limits<int16_t>::max());
+  for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
+    source[idx * 2] = source[(idx * 2) + 1] = mono[idx];
+  }
+
+  uint32_t dst_offset = 0;
+  int32_t frac_src_offset = 0;
+  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
+             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
+             Mixer::FRAC_ONE, Gain::kUnityScale, false);
+  EXPECT_EQ(kFreqTestBufSize, dst_offset);
+  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
+            frac_src_offset);
+
+  // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
+  double magn_signal, magn_other, level_mono_db, sinad_mono_db;
+  MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                   &magn_signal, &magn_other);
+
+  level_mono_db = ValToDb(magn_signal / std::numeric_limits<int16_t>::max());
+  sinad_mono_db = ValToDb(magn_signal / magn_other);
+
+  // We added identical signals, so accuracy should be high. However, noise
+  // floor is doubled as well, so we expect 6dB reduction in sinad.
+  EXPECT_GE(level_mono_db, -AudioResult::kLevelToleranceSource16);
+  EXPECT_LE(level_mono_db, AudioResult::kLevelToleranceSource16);
+
+  EXPECT_GE(sinad_mono_db, AudioResult::kPrevFloorMix16);
+}
+
+// Test mix level and noise floor, when accumulating sources.
+// Mix 2 full-scale streams with gain exactly 50% (renderer 100%, master 50%),
+// then measure level and sinad. On systems with robust gain processing, a
+// post-SUM master gain stage reduces noise along with level, for the same noise
+// floor as a single FS signal with 100% gain (98,49 dB for 16,8 respectively).
+template <typename T>
+void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
+  MixerPtr mixer;
+  double amplitude;
+
+  if (std::is_same<T, uint8_t>::value) {
+    mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000);
+    amplitude = std::numeric_limits<int8_t>::max();
+  } else {
+    mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000);
+    amplitude = std::numeric_limits<int16_t>::max();
+  }
+  std::vector<T> source(kFreqTestBufSize);
+  std::vector<int32_t> accum(kFreqTestBufSize);
+
+  OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                  amplitude);
+  uint32_t dst_offset = 0;
+  int32_t frac_src_offset = 0;
+  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
+             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
+             Mixer::FRAC_ONE, Gain::kUnityScale >> 1, false);
+  EXPECT_EQ(kFreqTestBufSize, dst_offset);
+  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
+            frac_src_offset);
+
+  // Accumulate the same (reference-frequency) wave
+  dst_offset = 0;
+  frac_src_offset = 0;
+  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
+             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
+             Mixer::FRAC_ONE, Gain::kUnityScale >> 1, true);
+  EXPECT_EQ(kFreqTestBufSize, dst_offset);
+  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
+            frac_src_offset);
+
+  // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
+  double magn_signal, magn_other;
+  MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                   &magn_signal, &magn_other);
+
+  *level_mix_db = ValToDb(magn_signal / std::numeric_limits<int16_t>::max());
+  *sinad_mix_db = ValToDb(magn_signal / magn_other);
+}
+
+// Test our mix level and noise floor, when accumulating 8-bit sources.
+TEST(DynamicRange, Mix_8) {
+  MeasureMixFloor<uint8_t>(&AudioResult::LevelMix8, &AudioResult::FloorMix8);
+
+  EXPECT_GE(AudioResult::LevelMix8, -AudioResult::kLevelToleranceSource8);
+  EXPECT_LE(AudioResult::LevelMix8, AudioResult::kLevelToleranceSource8);
+
+  // When summing two full-scale streams, signal should be approx +6dBFS, and
+  // (8-bit) noise floor should be approx -43dBFS. If architecture contains
+  // post-SUM master gain, after 50% gain we would expect sinad of ~ 49 dB.
+  // Today master gain is combined with renderer gain, making it pre-Sum.
+  // Because 8-bit sources are normalized up to 16-bit level, they can take
+  // advantage of fractional "footroom"; hence we still expect sinad of ~ 49dB.
+  EXPECT_GE(AudioResult::FloorMix8, AudioResult::kPrevFloorMix8);
+}
+
+// Test our mix level and noise floor, when accumulating 16-bit sources.
+TEST(DynamicRange, Mix_16) {
+  MeasureMixFloor<int16_t>(&AudioResult::LevelMix16, &AudioResult::FloorMix16);
+
+  EXPECT_GE(AudioResult::LevelMix16, -AudioResult::kLevelToleranceSource16);
+  EXPECT_LE(AudioResult::LevelMix16, AudioResult::kLevelToleranceSource16);
+
+  // When summing two full-scale streams, signal should be approx +6dBFS, and
+  // (16-bit) noise floor should be approx -92dBFS. If architecture contains
+  // post-SUM master gain, after 50% gain we would expect sinad of ~ 98 dB.
+  // Today master gain is combined with renderer gain, making it pre-Sum. Noise
+  // is summed along with signal; therefore we expect sinad of ~ 90dB.
+  EXPECT_GE(AudioResult::FloorMix16, AudioResult::kPrevFloorMix16);
+}
+
 }  // namespace test
 }  // namespace audio
 }  // namespace media

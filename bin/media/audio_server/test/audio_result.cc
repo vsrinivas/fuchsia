@@ -32,15 +32,22 @@ constexpr double AudioResult::kGainToleranceMultiplier;
 // dBFS) includes level attenuation, making this metric a good proxy of
 // frequency-independent fidelity in our audio processing pipeline.
 double AudioResult::FloorSource8 = -INFINITY;
+double AudioResult::FloorMix8 = -INFINITY;
 double AudioResult::FloorOutput8 = -INFINITY;
 double AudioResult::FloorSource16 = -INFINITY;
+double AudioResult::FloorMix16 = -INFINITY;
 double AudioResult::FloorOutput16 = -INFINITY;
 
 // Val-being-checked (in dBr to reference signal) must be >= this value.
 constexpr double AudioResult::kPrevFloorSource8;
+constexpr double AudioResult::kPrevFloorMix8;
 constexpr double AudioResult::kPrevFloorOutput8;
 constexpr double AudioResult::kPrevFloorSource16;
+constexpr double AudioResult::kPrevFloorMix16;
 constexpr double AudioResult::kPrevFloorOutput16;
+
+double AudioResult::LevelMix8 = -INFINITY;
+double AudioResult::LevelMix16 = -INFINITY;
 
 //
 // What is our received level (in dBFS), when sending sinusoids through our

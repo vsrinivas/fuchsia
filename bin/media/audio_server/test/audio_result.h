@@ -32,10 +32,10 @@ class AudioResult {
   //
   // How close is a measured level to the reference dB level?  Val-being-checked
   // must be within this distance (above OR below) from the reference dB level.
-  static constexpr double kLevelToleranceSource8 = 0.1;
-  static constexpr double kLevelToleranceOutput8 = 0.1;
-  static constexpr double kLevelToleranceSource16 = 0.000001;
-  static constexpr double kLevelToleranceOutput16 = 0.000001;
+  static constexpr double kLevelToleranceSource8 = 0.067219077;
+  static constexpr double kLevelToleranceOutput8 = 0.065638245;
+  static constexpr double kLevelToleranceSource16 = 0.00000068542196;
+  static constexpr double kLevelToleranceOutput16 = 0.00000068541681;
 
   //
   // Purely when calculating gain (in dB) from gain_scale (fixed-point int),
@@ -49,15 +49,22 @@ class AudioResult {
   // dBFS) includes level attenuation, making this metric a good proxy of
   // frequency-independent fidelity in our audio processing pipeline.
   static double FloorSource8;
+  static double FloorMix8;
   static double FloorOutput8;
   static double FloorSource16;
+  static double FloorMix16;
   static double FloorOutput16;
 
   // Val-being-checked (in dBr to reference signal) must be >= this value.
   static constexpr double kPrevFloorSource8 = 49.952957;
+  static constexpr double kPrevFloorMix8 = 49.952957;
   static constexpr double kPrevFloorOutput8 = 45.920261;
   static constexpr double kPrevFloorSource16 = 98.104753;
+  static constexpr double kPrevFloorMix16 = 90.677369;
   static constexpr double kPrevFloorOutput16 = 98.104753;
+
+  static double LevelMix8;
+  static double LevelMix16;
 
   //
   // What is our received level (in dBFS), when sending sinusoids through our
