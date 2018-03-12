@@ -710,6 +710,7 @@ void sched_resched_internal(void) {
     newthread->state = THREAD_RUNNING;
 
     thread_t* oldthread = current_thread;
+    oldthread->preempt_pending = false;
 
     LOCAL_KTRACE2("resched old pri", (uint32_t)oldthread->user_tid, effec_priority(oldthread));
     LOCAL_KTRACE2("resched new pri", (uint32_t)newthread->user_tid, effec_priority(newthread));

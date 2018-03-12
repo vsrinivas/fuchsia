@@ -821,6 +821,25 @@ void thread_reschedule(void) {
     THREAD_UNLOCK(state);
 }
 
+void thread_check_preempt_pending(void) {
+    thread_t* current_thread = get_current_thread();
+
+    // First check preempt_pending without the expense of taking the lock.
+    // At this point, interrupts could be enabled, so an interrupt handler
+    // might preempt us and set preempt_pending to false after we read it.
+    if (unlikely(current_thread->preempt_pending)) {
+        THREAD_LOCK(state);
+        // Recheck preempt_pending just in case it got set to false after
+        // our earlier check.  Its value now cannot change because
+        // interrupts are now disabled.
+        if (likely(current_thread->preempt_pending)) {
+            // This will set preempt_pending = false for us.
+            sched_reschedule();
+        }
+        THREAD_UNLOCK(state);
+    }
+}
+
 /* timer callback to wake up a sleeping thread */
 static void thread_sleep_handler(timer_t* timer, zx_time_t now,
                                  void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {

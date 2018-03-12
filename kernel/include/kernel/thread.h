@@ -164,13 +164,20 @@ typedef struct thread {
     int retcode;
     struct wait_queue retcode_wait_queue;
 
-    /* This tracks whether preemption has been disabled by
-     * thread_preempt_disable().  This should only be true while inside an
-     * interrupt handler and while interrupts are disabled. */
-    bool preempt_disable;
-    /* This tracks whether a thread reschedule is pending.  This should
-     * only be true if preempt_disable is also true. */
-    bool preempt_pending;
+    /* Preemption of the thread is disabled while this counter is non-zero.
+     *
+     * The preempt_disable field is modified by interrupt handlers, but it
+     * is always restored to its original value before the interrupt
+     * handler returns, so modifications are not visible to the interrupted
+     * thread.  Despite that, "volatile" is still technically needed.
+     * Otherwise the compiler is technically allowed to compile
+     * "++thread->preempt_disable" into code that stores a junk value into
+     * preempt_disable temporarily. */
+    volatile uint32_t preempt_disable;
+    /* This tracks whether a thread reschedule is pending.  This is
+     * volatile because it can get set from true to false asynchronously by
+     * an interrupt handler. */
+    volatile bool preempt_pending;
 
     /* thread local storage, intialized to zero */
     void* tls[THREAD_MAX_TLS_ENTRY];
@@ -341,40 +348,37 @@ static inline void tls_set_callback(uint entry, thread_tls_callback_t cb) {
     get_current_thread()->tls_callback[entry] = cb;
 }
 
+void thread_check_preempt_pending(void);
+
 /* thread_preempt_disable() disables preempting the current thread until
  * thread_preempt_reenable() is called.  During this time, any call to
  * sched_reschedule() will only record that a reschedule is pending, and
  * won't do a context switch.
  *
- * This function is for use only in interrupt handlers while interrupts are
- * disabled.  Disabling preemption allows an interrupt to be fully handled
- * before the current CPU switches to another thread. */
+ * Note that this does not disallow blocking operations
+ * (e.g. mutex_acquire()).  Disabling preemption does not prevent switching
+ * away from the current thread if it blocks. */
 static inline void thread_preempt_disable(void) {
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(arch_in_int_handler());
     thread_t* current_thread = get_current_thread();
-    DEBUG_ASSERT(!current_thread->preempt_disable);
-
-    current_thread->preempt_disable = true;
+    atomic_signal_fence();
+    ++current_thread->preempt_disable;
+    atomic_signal_fence();
 }
 
 /* thread_preempt_reenable() re-enables preempting the current thread,
- * following a call to thread_preempt_disable().  It returns whether a
- * preemption is pending -- whether sched_reschedule() was called since the
- * call to thread_preempt_disable().
- *
- * Like thread_preempt_disable(), this is for use only in interrupt
- * handlers while interrupts are disabled. */
-static inline bool thread_preempt_reenable(void) {
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(arch_in_int_handler());
-    thread_t* current_thread = get_current_thread();
-    DEBUG_ASSERT(current_thread->preempt_disable);
+ * following a call to thread_preempt_disable(). */
+static inline void thread_preempt_reenable(void) {
+    DEBUG_ASSERT(!arch_ints_disabled());
+    DEBUG_ASSERT(!arch_in_int_handler());
 
-    bool preempt_pending = current_thread->preempt_pending;
-    current_thread->preempt_pending = false;
-    current_thread->preempt_disable = false;
-    return preempt_pending;
+    thread_t* current_thread = get_current_thread();
+    DEBUG_ASSERT(current_thread->preempt_disable > 0);
+    atomic_signal_fence();
+    uint32_t new_count = --current_thread->preempt_disable;
+    atomic_signal_fence();
+
+    if (new_count == 0)
+        thread_check_preempt_pending();
 }
 
 /* thread_preempt_set_pending() marks a preemption as pending for the

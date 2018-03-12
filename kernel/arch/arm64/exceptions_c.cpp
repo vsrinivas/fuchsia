@@ -347,7 +347,14 @@ extern "C" uint32_t arm64_irq(struct arm64_iframe_short* iframe, uint exception_
     kcounter_add(exceptions_irq, 1u);
     platform_irq(iframe);
 
-    bool preempt_pending = thread_preempt_reenable();
+    bool preempt_pending = false;
+    /* This logic is similar to thread_preempt_reenable() except that we
+     * call thread_preempt() below instead of thread_reschedule(). */
+    thread_t* current_thread = get_current_thread();
+    DEBUG_ASSERT(current_thread->preempt_disable > 0);
+    if (--current_thread->preempt_disable == 0) {
+        preempt_pending = current_thread->preempt_pending;
+    }
     arch_set_in_int_handler(false);
 
     /* if we came from user space, check to see if we have any signals to handle */

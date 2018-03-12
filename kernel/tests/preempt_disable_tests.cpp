@@ -7,6 +7,7 @@
 #include <kernel/event.h>
 #include <kernel/sched.h>
 #include <kernel/timer.h>
+#include <platform.h>
 #include <unittest.h>
 
 // Test that preempt_disable is set for timer callbacks and that, in this
@@ -65,7 +66,87 @@ static bool test_in_timer_callback() {
     END_TEST;
 }
 
+static void timer_set_preempt_pending(timer_t* timer, zx_time_t now,
+                                      void* arg) {
+    volatile bool* timer_ran = (volatile bool*)arg;
+
+    thread_preempt_set_pending();
+    *timer_ran = true;
+}
+
+static bool test_outside_interrupt() {
+    BEGIN_TEST;
+
+    thread_t* thread = get_current_thread();
+
+    // Test initial conditions.
+    ASSERT_EQ(thread->preempt_disable, 0u, "");
+    // While preemption is allowed, a preemption should not be pending.
+    ASSERT_EQ(thread->preempt_pending, false, "");
+
+    // Test incrementing and decrementing of preempt_disable.
+    thread_preempt_disable();
+    EXPECT_EQ(thread->preempt_disable, 1u, "");
+    thread_preempt_reenable();
+    EXPECT_EQ(thread->preempt_disable, 0u, "");
+
+    // Test nesting: multiple increments and decrements.
+    thread_preempt_disable();
+    thread_preempt_disable();
+    EXPECT_EQ(thread->preempt_disable, 2u, "");
+    thread_preempt_reenable();
+    thread_preempt_reenable();
+    EXPECT_EQ(thread->preempt_disable, 0u, "");
+
+    // Test that thread_preempt_reenable() clears preempt_pending.
+    thread_preempt_disable();
+    thread_reschedule();
+    // It should not be possible for an interrupt handler to block or
+    // otherwise cause a reschedule before our thread_preempt_reenable().
+    EXPECT_EQ(thread->preempt_pending, true, "");
+    thread_preempt_reenable();
+    EXPECT_EQ(thread->preempt_pending, false, "");
+
+    // It is OK to block while preemption is disabled.  In this case,
+    // blocking should clear preempt_pending.
+    thread_preempt_disable();
+    thread_reschedule();
+    EXPECT_EQ(thread->preempt_pending, true, "");
+    arch_disable_ints();
+    thread_sleep(current_time() + ZX_MSEC(10));
+    // Read preempt_pending with interrupts disabled because otherwise an
+    // interrupt handler could set it to true.
+    EXPECT_EQ(thread->preempt_pending, false, "");
+    arch_enable_ints();
+    thread_preempt_reenable();
+
+    // Test that interrupt handlers honor preempt_disable.
+    //
+    // We test that by setting a timer callback that will set
+    // preempt_pending from inside an interrupt handler.  preempt_pending
+    // should remain set after the interrupt handler returns.
+    //
+    // This assumes that timer_set() will run the callback on the same CPU
+    // that we invoked it from.  This also assumes that we don't
+    // accidentally call any blocking operations that cause our thread to
+    // be rescheduled to another CPU.
+    thread_preempt_disable();
+    volatile bool timer_ran = false;
+    timer_t timer;
+    timer_init(&timer);
+    timer_set(&timer, current_time() + ZX_USEC(100), TIMER_SLACK_CENTER, 0,
+              timer_set_preempt_pending, (void*)&timer_ran);
+    EXPECT_EQ(timer_ran, false, "");
+    // Spin until timer_ran is set by the interrupt handler.
+    while (!timer_ran) {}
+    EXPECT_EQ(thread->preempt_pending, true, "");
+    thread_preempt_reenable();
+
+    END_TEST;
+}
+
 UNITTEST_START_TESTCASE(preempt_disable_tests)
 UNITTEST("test_in_timer_callback", test_in_timer_callback)
+UNITTEST("test_outside_interrupt", test_outside_interrupt)
 UNITTEST_END_TESTCASE(preempt_disable_tests, "preempt_disable_tests",
                       "preempt_disable_tests");
