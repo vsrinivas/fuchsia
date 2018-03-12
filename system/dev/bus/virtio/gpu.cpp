@@ -124,7 +124,7 @@ void GpuDevice::send_command_response(const RequestType* cmd, ResponseType** res
 
     *res = reinterpret_cast<ResponseType*>(static_cast<uint8_t*>(gpu_req_) + cmd_len);
     zx_paddr_t res_phys = gpu_req_pa_ + cmd_len;
-    memset(res, 0, res_len);
+    memset(*res, 0, res_len);
 
     desc->addr = res_phys;
     desc->len = static_cast<uint32_t>(res_len);
