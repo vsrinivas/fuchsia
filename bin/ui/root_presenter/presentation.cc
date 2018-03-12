@@ -183,19 +183,8 @@ void Presentation::CreateViewTree(
   tree_container_->AddChild(kRootViewKey, std::move(root_view_owner),
                             std::move(root_view_host_import_token_));
 
-  FXL_DCHECK(!display_model_initialized_);
-
-  display_configuration::InitializeModelForDisplay(
-      display_info->width_in_px, display_info->height_in_px, &display_model_);
-  display_model_initialized_ = true;
-  display_usage_default_ = display_model_.environment_info().usage;
-
-  if (display_usage_override_ != mozart::DisplayUsage::UNKNOWN)
-    display_model_.environment_info().usage = display_usage_override_;
-
-  DisplayMetrics metrics = display_model_.GetMetrics();
-  display_configuration::LogDisplayMetrics(metrics);
-  SetDisplayMetrics(metrics);
+  // Get display parameters and propagate values appropriately.
+  InitializeDisplayModel(std::move(display_info));
 
   // Add content view to root view.
   mozart::ViewContainerListenerPtr view_container_listener;
@@ -209,54 +198,150 @@ void Presentation::CreateViewTree(
   PresentScene();
 }
 
-std::string DisplayUsageName(mozart::DisplayUsage usage) {
-  switch (usage) {
-    case mozart::DisplayUsage::UNKNOWN:
-      return "UNKNOWN";
-    case mozart::DisplayUsage::HANDHELD:
-      return "HANDHELD";
-    case mozart::DisplayUsage::CLOSE:
-      return "CLOSE";
-    case mozart::DisplayUsage::NEAR:
-      return "NEAR";
-    case mozart::DisplayUsage::MIDRANGE:
-      return "MIDRANGE";
-    case mozart::DisplayUsage::FAR:
-      return "FAR";
+void Presentation::InitializeDisplayModel(
+    ui::gfx::DisplayInfoPtr display_info) {
+  FXL_DCHECK(!display_model_initialized_);
+
+  // Save previous display values. These could have been overriden by earlier
+  // calls to SetDisplayUsage() and SetDisplaySizeInMm(); if not, they will
+  // be unknown or 0.
+  auto previous_display_usage =
+      display_model_simulated_.environment_info().usage;
+
+  auto previous_display_width_in_mm =
+      display_model_simulated_.display_info().width_in_mm;
+  auto previous_display_height_in_mm =
+      display_model_simulated_.display_info().height_in_mm;
+
+  // Initialize display model.
+  display_configuration::InitializeModelForDisplay(display_info->width_in_px,
+                                                   display_info->height_in_px,
+                                                   &display_model_actual_);
+  display_model_simulated_ = display_model_actual_;
+
+  display_model_initialized_ = true;
+
+  // Re-set the model with previous values. If they were unknown or 0, the
+  // actual/default values will be used.
+  SetDisplayUsageWithoutApplyingChanges(previous_display_usage);
+  SetDisplaySizeInMmWithoutApplyingChanges(previous_display_width_in_mm,
+                                           previous_display_height_in_mm, true);
+
+  ApplyDisplayModelChanges(true);
+}
+
+void Presentation::SetDisplaySizeInMm(float width_in_mm, float height_in_mm) {
+  uint32_t old_width_in_mm =
+      display_model_simulated_.display_info().width_in_mm;
+  uint32_t old_height_in_mm =
+      display_model_simulated_.display_info().height_in_mm;
+
+  SetDisplaySizeInMmWithoutApplyingChanges(width_in_mm, height_in_mm, true);
+
+  if (display_model_simulated_.display_info().width_in_mm == old_width_in_mm &&
+      display_model_simulated_.display_info().height_in_mm ==
+          old_height_in_mm) {
+    // Nothing needs to be changed.
+    return;
   }
+
+  FXL_LOG(INFO) << "Presentation::SetDisplaySizeInMm: changing display "
+                   "dimensions to "
+                << "width="
+                << display_model_simulated_.display_info().width_in_mm << "mm, "
+                << "height="
+                << display_model_simulated_.display_info().height_in_mm
+                << "mm.";
+
+  ApplyDisplayModelChanges(true);
+}
+
+bool Presentation::SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm,
+                                                            float height_in_mm,
+                                                            bool print_errors) {
+  if (width_in_mm == 0 || height_in_mm == 0) {
+    display_model_simulated_.display_info().width_in_px =
+        display_model_actual_.display_info().width_in_px;
+    display_model_simulated_.display_info().height_in_px =
+        display_model_actual_.display_info().height_in_px;
+    display_model_simulated_.display_info().width_in_mm =
+        display_model_actual_.display_info().width_in_mm;
+    display_model_simulated_.display_info().height_in_mm =
+        display_model_actual_.display_info().height_in_mm;
+    return true;
+  }
+
+  const float kPxPerMm =
+      display_model_actual_.display_info().density_in_px_per_mm;
+  uint32_t width_in_px = width_in_mm * kPxPerMm;
+  uint32_t height_in_px = height_in_mm * kPxPerMm;
+
+  if (width_in_px > display_model_actual_.display_info().width_in_px) {
+    if (print_errors) {
+      FXL_LOG(ERROR) << "Presentation::SetDisplaySizeInMm: tried to change "
+                        "display width to "
+                     << width_in_mm
+                     << ", which is larger than the actual display width "
+                     << display_model_actual_.display_info().width_in_px /
+                            kPxPerMm;
+    }
+    return false;
+  }
+  if (height_in_px > display_model_actual_.display_info().height_in_px) {
+    if (print_errors) {
+      FXL_LOG(ERROR) << "Presentation::SetDisplaySizeInMm: tried to change "
+                        "display height to "
+                     << height_in_mm
+                     << ", which is larger than the actual display height "
+                     << display_model_actual_.display_info().height_in_px /
+                            kPxPerMm;
+    }
+    return false;
+  }
+
+  display_model_simulated_.display_info().width_in_px = width_in_px;
+  display_model_simulated_.display_info().height_in_px = height_in_px;
+  display_model_simulated_.display_info().width_in_mm = width_in_mm;
+  display_model_simulated_.display_info().height_in_mm = height_in_mm;
+  return true;
 }
 
 void Presentation::SetDisplayUsage(mozart::DisplayUsage usage) {
-  if (display_usage_override_ == usage) {
-    FXL_DCHECK(display_model_.environment_info().usage ==
-               display_usage_override_);
+  mozart::DisplayUsage old_usage =
+      display_model_simulated_.environment_info().usage;
+  SetDisplayUsageWithoutApplyingChanges(usage);
+  if (display_model_simulated_.environment_info().usage == old_usage) {
+    // Nothing needs to be changed.
     return;
   }
-  display_usage_override_ = usage;
-  if (display_model_.environment_info().usage == display_usage_override_)
-    return;
 
-  if (display_usage_override_ == mozart::DisplayUsage::UNKNOWN) {
-    display_model_.environment_info().usage = display_usage_default_;
-  } else {
-    display_model_.environment_info().usage = display_usage_override_;
-  }
+  ApplyDisplayModelChanges(true);
 
-  DisplayMetrics new_metrics = display_model_.GetMetrics();
-  display_configuration::LogDisplayMetrics(new_metrics);
-  SetDisplayMetrics(new_metrics);
-
-  mozart::DisplayUsage new_usage = display_model_.environment_info().usage;
   FXL_LOG(INFO) << "Presentation::SetDisplayUsage: changing display usage to "
-                << DisplayUsageName(new_usage);
+                << GetDisplayUsageAsString(
+                       display_model_simulated_.environment_info().usage);
 }
 
-bool Presentation::SetDisplayMetrics(const DisplayMetrics& metrics) {
-  if (display_metrics_ == metrics)
-    return true;
+void Presentation::SetDisplayUsageWithoutApplyingChanges(
+    mozart::DisplayUsage usage) {
+  display_model_simulated_.environment_info().usage =
+      (usage == mozart::DisplayUsage::UNKNOWN)
+          ? display_model_actual_.environment_info().usage
+          : usage;
+}
 
+bool Presentation::ApplyDisplayModelChanges(bool print_log) {
   if (!display_model_initialized_)
     return false;
+
+  DisplayMetrics metrics = display_model_simulated_.GetMetrics();
+
+  if (print_log) {
+    display_configuration::LogDisplayMetrics(metrics);
+  }
+
+  if (display_metrics_ == metrics)
+    return true;
 
   display_metrics_ = metrics;
 
@@ -275,10 +360,24 @@ bool Presentation::SetDisplayMetrics(const DisplayMetrics& metrics) {
   root_properties->view_layout->inset = mozart::InsetF::New();
   tree_container_->SetChildProperties(kRootViewKey, std::move(root_properties));
 
+  // Apply device pixel ratio.
   scene_.SetScale(display_metrics_.x_scale_in_px_per_pp(),
                   display_metrics_.y_scale_in_px_per_pp(), 1.f);
-  layer_.SetSize(static_cast<float>(display_metrics_.width_in_px()),
-                 static_cast<float>(display_metrics_.height_in_px()));
+
+  // Center everything.
+  float left_offset = (display_model_actual_.display_info().width_in_px -
+                       display_metrics_.width_in_px()) /
+                      2;
+  float top_offset = (display_model_actual_.display_info().height_in_px -
+                      display_metrics_.height_in_px()) /
+                     2;
+  root_view_host_node_.SetTranslation(
+      left_offset / display_metrics_.x_scale_in_px_per_pp(),
+      top_offset / display_metrics_.y_scale_in_px_per_pp(), 0.f);
+
+  layer_.SetSize(
+      static_cast<float>(display_model_actual_.display_info().width_in_px),
+      static_cast<float>(display_model_actual_.display_info().height_in_px));
   return true;
 }
 
@@ -326,8 +425,8 @@ void Presentation::OnReport(uint32_t device_id,
 
   mozart::DeviceState* state = device_states_by_id_[device_id].second.get();
   mozart::Size size;
-  size.width = display_metrics_.width_in_px();
-  size.height = display_metrics_.height_in_px();
+  size.width = display_model_actual_.display_info().width_in_px;
+  size.height = display_model_actual_.display_info().height_in_px;
   state->Update(std::move(input_report), size);
 }
 
@@ -351,23 +450,22 @@ void Presentation::CaptureKeyboardEvent(
       KeyboardCaptureItem{std::move(event_to_capture), std::move(listener)});
 }
 
+bool Presentation::GlobalHooksHandleEvent(const mozart::InputEventPtr& event) {
+  return display_flipper_.OnEvent(event, this) ||
+         display_usage_switcher_.OnEvent(event, this) ||
+         display_size_switcher_.OnEvent(event, this) ||
+         perspective_demo_mode_.OnEvent(event, this);
+}
+
 void Presentation::OnEvent(mozart::InputEventPtr event) {
   FXL_VLOG(1) << "OnEvent " << *(event);
 
   bool invalidate = false;
   bool dispatch_event = true;
 
-  // Allow hooks to process event.
-  if (dispatch_event) {
-    invalidate |= display_flipper_.OnEvent(event, this, &dispatch_event);
-  }
-
-  if (dispatch_event) {
-    invalidate |= display_usage_switcher_.OnEvent(event, this, &dispatch_event);
-  }
-
-  if (dispatch_event) {
-    invalidate |= perspective_demo_mode_.OnEvent(event, this, &dispatch_event);
+  if (GlobalHooksHandleEvent(event)) {
+    invalidate = true;
+    dispatch_event = false;
   }
 
   // Process the event.
@@ -401,7 +499,6 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
       }
 
     } else if (event->is_keyboard()) {
-      // Alt-Backspace cycles through modes.
       const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
 
       for (size_t i = 0; i < captured_keybindings_.size(); i++) {
@@ -410,7 +507,6 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
             (event->phase == kbd->phase) &&
             (event->code_point == kbd->code_point)) {
           captured_keybindings_[i].listener->OnEvent(kbd.Clone());
-          invalidate = true;
         }
       }
     }

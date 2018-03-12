@@ -7,6 +7,7 @@
 
 #include "lib/fxl/macros.h"
 #include "lib/ui/input/fidl/input_events.fidl.h"
+#include "lib/ui/presentation/fidl/display_usage.fidl.h"
 #include "lib/ui/scenic/client/resources.h"
 
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
@@ -14,6 +15,8 @@
 namespace root_presenter {
 
 class Presentation;
+
+std::string GetDisplayUsageAsString(mozart::DisplayUsage usage);
 
 // This class hooks into Presenter to provide the following behavior: when
 // Alt-Equals is pressed, the current display usage is toggled.
@@ -25,13 +28,9 @@ class DisplayUsageSwitcher {
   //
   // |event| is the input event.
   // |presenter| is the root presenter.
-  // |continue_dispatch_out| is set to false if the event should no longer be
-  // dispatched.
   //
   // Returns true if the scene should be invalidated.
-  bool OnEvent(const mozart::InputEventPtr& event,
-               Presentation* presenter,
-               bool* continue_dispatch_out);
+  bool OnEvent(const mozart::InputEventPtr& event, Presentation* presenter);
 
  private:
   uint32_t current_display_usage_index_ = 0;

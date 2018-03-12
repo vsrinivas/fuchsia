@@ -31,11 +31,7 @@ constexpr float kPi = glm::pi<float>();
 PerspectiveDemoMode::PerspectiveDemoMode() {}
 
 bool PerspectiveDemoMode::OnEvent(const mozart::InputEventPtr& event,
-                                  Presentation* presenter,
-                                  bool* continue_dispatch_out) {
-  FXL_DCHECK(continue_dispatch_out);
-  bool invalidate = false;
-
+                                  Presentation* presenter) {
   if (event->is_pointer()) {
     const mozart::PointerEventPtr& pointer = event->get_pointer();
     if (animation_state_ == kTrackball) {
@@ -83,11 +79,11 @@ bool PerspectiveDemoMode::OnEvent(const mozart::InputEventPtr& event,
         kbd->code_point == 0 && kbd->hid_usage == 42 &&
         !trackball_pointer_down_) {
       HandleAltBackspace(presenter);
-      invalidate = true;
+      return true;
     }
   }
 
-  return invalidate;
+  return false;
 }
 
 void PerspectiveDemoMode::HandleAltBackspace(Presentation* presenter) {

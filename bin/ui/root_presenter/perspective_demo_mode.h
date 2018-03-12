@@ -28,10 +28,8 @@ class PerspectiveDemoMode {
   // |continue_dispatch_out| is set to false if the event should no longer be
   // dispatched.
   //
-  // Returns true if the scene should be invalidated.
-  bool OnEvent(const mozart::InputEventPtr& event,
-               Presentation* presenter,
-               bool* continue_dispatch_out);
+  // Returns true if the event was consumed and the scene is to be invalidated.
+  bool OnEvent(const mozart::InputEventPtr& event, Presentation* presenter);
 
   bool UpdateAnimation(Presentation* presenter, uint64_t presentation_time);
 

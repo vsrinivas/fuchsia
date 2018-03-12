@@ -11,38 +11,53 @@
 namespace root_presenter {
 namespace {
 
+// Global keyboard shortcut for switching display usage.
+const uint32_t kGlobalShortcutKeyCodePoint = 61;  // '=' key
+const uint32_t kGlobalShortcutKeyHidUsage = 46;   // '=' key
+
 static const std::array<mozart::DisplayUsage, 5> kDisplayUsages = {
     mozart::DisplayUsage::HANDHELD, mozart::DisplayUsage::CLOSE,
     mozart::DisplayUsage::NEAR, mozart::DisplayUsage::MIDRANGE,
     mozart::DisplayUsage::FAR};
 }  // namespace
 
+std::string GetDisplayUsageAsString(mozart::DisplayUsage usage) {
+  switch (usage) {
+    case mozart::DisplayUsage::UNKNOWN:
+      return "UNKNOWN";
+    case mozart::DisplayUsage::HANDHELD:
+      return "HANDHELD";
+    case mozart::DisplayUsage::CLOSE:
+      return "CLOSE";
+    case mozart::DisplayUsage::NEAR:
+      return "NEAR";
+    case mozart::DisplayUsage::MIDRANGE:
+      return "MIDRANGE";
+    case mozart::DisplayUsage::FAR:
+      return "FAR";
+  }
+}
+
 DisplayUsageSwitcher::DisplayUsageSwitcher() {}
 
 bool DisplayUsageSwitcher::OnEvent(const mozart::InputEventPtr& event,
-                                   Presentation* presenter,
-                                   bool* continue_dispatch_out) {
-  FXL_DCHECK(continue_dispatch_out);
-  bool invalidate = false;
+                                   Presentation* presenter) {
   if (event->is_keyboard()) {
     const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
-    const uint32_t kEqualsKeyCodePoint = 61;
-    const uint32_t kEqualsKeyHidUsage = 46;
     if ((kbd->modifiers & mozart::kModifierAlt) &&
         kbd->phase == mozart::KeyboardEvent::Phase::PRESSED &&
-        kbd->code_point == kEqualsKeyCodePoint &&
-        kbd->hid_usage == kEqualsKeyHidUsage) {
+        kbd->code_point == kGlobalShortcutKeyCodePoint &&
+        kbd->hid_usage == kGlobalShortcutKeyHidUsage) {
       // Switch to the next display usage value.
       current_display_usage_index_ =
           (current_display_usage_index_ + 1) % kDisplayUsages.size();
       presenter->SetDisplayUsage(kDisplayUsages[current_display_usage_index_]);
 
-      invalidate = true;
-      *continue_dispatch_out = false;
+      return true;
     }
   }
 
-  return invalidate;
+  return false;
 }
 
 }  // namespace root_presenter

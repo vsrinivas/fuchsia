@@ -29,10 +29,7 @@ constexpr float kPi = glm::pi<float>();
 DisplayFlipper::DisplayFlipper() {}
 
 bool DisplayFlipper::OnEvent(const mozart::InputEventPtr& event,
-                             Presentation* presentation,
-                             bool* continue_dispatch_out) {
-  FXL_DCHECK(continue_dispatch_out);
-  bool invalidate = false;
+                             Presentation* presentation) {
   if (event->is_keyboard()) {
     const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
     const uint32_t kVolumeDownKey = 232;
@@ -40,12 +37,11 @@ bool DisplayFlipper::OnEvent(const mozart::InputEventPtr& event,
         kbd->phase == mozart::KeyboardEvent::Phase::PRESSED &&
         kbd->code_point == 0 && kbd->hid_usage == kVolumeDownKey) {
       FlipDisplay(presentation);
-      invalidate = true;
-      *continue_dispatch_out = false;
+      return true;
     }
   }
 
-  return invalidate;
+  return false;
 }
 
 void DisplayFlipper::FlipDisplay(Presentation* p) {

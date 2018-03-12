@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "garnet/bin/ui/root_presenter/display_flipper.h"
+#include "garnet/bin/ui/root_presenter/display_size_switcher.h"
 #include "garnet/bin/ui/root_presenter/display_usage_switcher.h"
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
 #include "garnet/bin/ui/root_presenter/displays/display_model.h"
@@ -85,15 +86,12 @@ class Presentation : private mozart::ViewTreeListener,
   friend class DisplayFlipper;
   friend class DisplayUsageSwitcher;
   friend class PerspectiveDemoMode;
+  friend class DisplaySizeSwitcher;
 
-  // Gets the DisplayMetrics for the given |model|. If |display_usage_override|
-  // is not UNKNOWN, uses that value for purpose of calculating metrics.
-  static DisplayMetrics CalculateDisplayMetrics(
-      const DisplayModel& display_model,
-      mozart::DisplayUsage display_usage_override);
-  // Sets |display_metrics_| and updates view_manager and Scenic. Returns false
-  // if the updates were skipped (if initialization hasn't happened yet).
-  bool SetDisplayMetrics(const DisplayMetrics& metrics);
+  // Sets |display_metrics_| and updates view_manager and Scenic.
+  // Returns false if the updates were skipped (if display initialization hasn't
+  // happened yet).
+  bool ApplyDisplayModelChanges(bool print_log);
 
   // |ViewContainerListener|:
   void OnChildAttached(uint32_t child_key,
@@ -120,8 +118,21 @@ class Presentation : private mozart::ViewTreeListener,
   void SetRendererParams(
       ::f1dl::Array<ui::gfx::RendererParamPtr> params) override;
 
+  void InitializeDisplayModel(ui::gfx::DisplayInfoPtr display_info);
+
   // |Presentation|
   void SetDisplayUsage(mozart::DisplayUsage usage) override;
+
+  void SetDisplayUsageWithoutApplyingChanges(mozart::DisplayUsage usage_);
+
+  // |Presentation|
+  void SetDisplaySizeInMm(float width_in_mm, float height_in_mm) override;
+
+  // Returns false if the operation failed (e.g. the requested size is bigger
+  // than the actual display size).
+  bool SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm,
+                                                float height_in_mm,
+                                                bool print_errors);
 
   // |Presentation|
   void CaptureKeyboardEvent(
@@ -132,6 +143,10 @@ class Presentation : private mozart::ViewTreeListener,
       mozart::ViewOwnerPtr view_owner,
       f1dl::InterfaceRequest<mozart::Presentation> presentation_request,
       ui::gfx::DisplayInfoPtr display_info);
+
+  // Returns true if the event was consumed and the scene is to be invalidated.
+  bool GlobalHooksHandleEvent(const mozart::InputEventPtr& event);
+
   void OnEvent(mozart::InputEventPtr event);
 
   void PresentScene();
@@ -160,16 +175,13 @@ class Presentation : private mozart::ViewTreeListener,
   scenic_lib::RoundedRectangle cursor_shape_;
   scenic_lib::Material cursor_material_;
 
-  DisplayModel display_model_;
-  bool display_model_initialized_ = false;
-  // The display usage value set when |display_model_| was initialized.
-  mozart::DisplayUsage display_usage_default_ = mozart::DisplayUsage::UNKNOWN;
-  // Set by SetDisplayUsage. This value is used instead of
-  // |display_usage_default_| unless it's UNKNOWN.
-  mozart::DisplayUsage display_usage_override_ = mozart::DisplayUsage::UNKNOWN;
+  DisplayModel display_model_actual_;
+  DisplayModel display_model_simulated_;
 
-  // |display_metrics_| must be recalculated anytime |display_model_| changes
-  // using CalculateDisplayMetrics().
+  bool display_model_initialized_ = false;
+
+  // |display_metrics_| must be recalculated anytime
+  // |display_model_simulated_| changes using ApplyDisplayModelChanges().
   DisplayMetrics display_metrics_;
 
   mozart::ViewPtr root_view_;
@@ -196,6 +208,9 @@ class Presentation : private mozart::ViewTreeListener,
   DisplayUsageSwitcher display_usage_switcher_;
 
   PerspectiveDemoMode perspective_demo_mode_;
+
+  // Toggles through different display sizes.
+  DisplaySizeSwitcher display_size_switcher_;
 
   struct CursorState {
     bool created;

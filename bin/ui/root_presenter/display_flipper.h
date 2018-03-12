@@ -22,13 +22,9 @@ class DisplayFlipper {
   // degrees.
   //
   // |Presentation| is the root presenter.
-  // |continue_dispatch_out| is set to false if the event should no longer be
-  // dispatched.
   //
   // Returns true if the scene should be invalidated.
-  bool OnEvent(const mozart::InputEventPtr& event,
-               Presentation* presentation,
-               bool* continue_dispatch_out);
+  bool OnEvent(const mozart::InputEventPtr& event, Presentation* presentation);
 
  private:
   void FlipDisplay(Presentation* presentation);

@@ -28,7 +28,13 @@ interface Presentation {
   // NOTE: a single param would be better than an array; see TO-529.
   SetRendererParams@3(array<ui.gfx.RendererParam> params);
 
+  // Override the intended usage of the display.
   SetDisplayUsage@4(DisplayUsage usage);
+
+  // Override the dimensions of the display. Values must be less than the actual
+  // size of the display. If either of the values are 0, then they are ignored
+  // and the actual size of the display is used.
+  SetDisplaySizeInMm@6(float width_in_mm, float height_in_mm);
 
   // This call exists so that device shell can capture hotkeys and do special
   // things with it (e.g., switch a user shell). Only the codepoint, phase and

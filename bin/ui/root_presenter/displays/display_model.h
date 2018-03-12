@@ -79,8 +79,6 @@ class DisplayModel {
   DisplayInfo display_info_;
   EnvironmentInfo environment_info_;
   UserInfo user_info_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DisplayModel);
 };
 
 }  // namespace root_presenter
