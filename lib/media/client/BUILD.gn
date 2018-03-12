@@ -25,4 +25,8 @@ source_set("client") {
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/transport",
   ]
+
+  deps = [
+    "//garnet/public/lib/media/timeline",
+  ]
 }

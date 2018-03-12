@@ -14,6 +14,7 @@ executable("bin") {
   deps = [
     "//garnet/examples/fidl2/services:echo2",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
   ]

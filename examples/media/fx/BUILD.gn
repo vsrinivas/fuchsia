@@ -12,6 +12,7 @@ executable("fx") {
     "//garnet/lib/media/wav_writer",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",
     "//zircon/public/lib/audio-utils",
   ]

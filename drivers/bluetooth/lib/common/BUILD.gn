@@ -67,6 +67,7 @@ source_set("tests") {
 
   deps = [
     ":common",
+    "//garnet/public/lib/fsl",
     "//third_party/googletest:gtest",
   ]
 }

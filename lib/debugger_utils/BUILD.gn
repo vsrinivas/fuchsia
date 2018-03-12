@@ -71,6 +71,7 @@ executable("util-unittests") {
   ]
 
   deps = [
+    ":debugger_utils",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest",
   ]
