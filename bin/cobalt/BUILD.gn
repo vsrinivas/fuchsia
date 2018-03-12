@@ -98,10 +98,7 @@ executable("bin") {
     "//third_party/cobalt/config:cobalt_config_proto",
     "//third_party/cobalt/encoder",
     "//third_party/grpc:grpc++",
-
-    # TODO(rudominer) Change to protobuf_lite after we have a different way
-    # of deserializing a message from a human-readable string.
-    "//third_party/protobuf:protobuf_full",
+    "//third_party/protobuf:protobuf_lite",
   ]
 }
 
