@@ -152,7 +152,8 @@ zx_status_t BlockDevice::Init() {
     // allocate a queue of block requests
     size_t size = sizeof(virtio_blk_req_t) * blk_req_count + sizeof(uint8_t) * blk_req_count;
 
-    zx_status_t status = io_buffer_init(&blk_req_buf_, size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    zx_status_t status = io_buffer_init_with_bti(&blk_req_buf_, bti_.get(), size,
+                                                 IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         zxlogf(ERROR, "cannot alloc blk_req buffers %d\n", status);
         return status;

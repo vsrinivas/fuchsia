@@ -56,6 +56,8 @@ public:
     zx_device_t* device() { return device_; }
     virtual const char* tag() const = 0; // Implemented by derived devices
 
+    // Accessor for bti so that Rings can map IO buffers
+    const zx::bti& bti() { return bti_; }
 protected:
     // Methods for checking / acknowledging features
     bool DeviceFeatureSupported(uint32_t feature) { return backend_->ReadFeature(feature); }

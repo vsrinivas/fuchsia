@@ -57,7 +57,8 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
     size_t size = vring_size(count, PAGE_SIZE);
     LTRACEF("need %zu bytes\n", size);
 
-    zx_status_t status = io_buffer_init(&ring_buf_, size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    zx_status_t status = io_buffer_init_with_bti(&ring_buf_, device_->bti().get(), size,
+                                                 IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         return status;
     }

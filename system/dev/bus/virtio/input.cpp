@@ -270,8 +270,8 @@ zx_status_t InputDevice::Init() {
     // TODO: Avoid multiple allocations, allocate enough for all buffers once.
     for (uint16_t id = 0; id < kEventCount; ++id) {
         static_assert(sizeof(virtio_input_event_t) <= PAGE_SIZE, "");
-        status = io_buffer_init(&buffers_[id], sizeof(virtio_input_event_t),
-                                IO_BUFFER_RO | IO_BUFFER_CONTIG);
+        status = io_buffer_init_with_bti(&buffers_[id], bti_.get(), sizeof(virtio_input_event_t),
+                                         IO_BUFFER_RO | IO_BUFFER_CONTIG);
         if (status != ZX_OK) {
             zxlogf(ERROR, "Failed to allocate I/O buffers: %s\n", zx_status_get_string(status));
             return status;

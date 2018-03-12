@@ -29,7 +29,7 @@ public:
     TransferBuffer();
     ~TransferBuffer();
 
-    zx_status_t Init(size_t count, uint32_t chunk_size);
+    zx_status_t Init(const zx::bti& bti, size_t count, uint32_t chunk_size);
 
     TransferDescriptor* GetDescriptor(size_t index);
     TransferDescriptor* PhysicalToDescriptor(uintptr_t phys);
