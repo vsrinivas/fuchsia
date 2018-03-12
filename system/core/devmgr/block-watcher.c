@@ -257,20 +257,30 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
         break;
     }
 
+    uint8_t guid[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
+    ioctl_block_get_type_guid(fd, guid, sizeof(guid));
+
     // If we're in netbooting mode, then only bind drivers for partition
-    // containers, not filesystems themselves.
+    // containers and the install partition, not regular filesystems.
     if (netboot) {
+        const uint8_t expected_guid[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
+        if (memcmp(guid, expected_guid, sizeof(guid)) == 0) {
+            printf("devmgr: mounting install partition\n");
+            mount_options_t options = default_mount_options;
+            options.wait_until_ready = false;
+            mount_minfs(fd, &options);
+            return ZX_OK;
+        }
+
         close(fd);
         return ZX_OK;
     }
 
     switch (df) {
     case DISK_FORMAT_BLOBFS: {
-        uint8_t guid[GPT_GUID_LEN];
         const uint8_t expected_guid[GPT_GUID_LEN] = GUID_BLOB_VALUE;
 
-        if (ioctl_block_get_type_guid(fd, guid, sizeof(guid)) < 0 ||
-            memcmp(guid, expected_guid, sizeof(guid))) {
+        if (memcmp(guid, expected_guid, sizeof(guid))) {
             close(fd);
             return ZX_OK;
         }
@@ -289,7 +299,7 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
         return ZX_OK;
     }
     case DISK_FORMAT_MINFS: {
-        printf("devmgr: minfs\n");
+        printf("devmgr: mounting minfs\n");
         mount_options_t options = default_mount_options;
         options.wait_until_ready = false;
         mount_minfs(fd, &options);
@@ -311,7 +321,7 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
         char mountpath[FDIO_MAX_FILENAME + 64];
         snprintf(mountpath, sizeof(mountpath), "%s/fat-%d", "/fs" PATH_VOLUME, fat_counter++);
         options.wait_until_ready = false;
-        printf("devmgr: fatfs\n");
+        printf("devmgr: mounting fatfs\n");
         mount(fd, mountpath, df, &options, launch_fat);
         return ZX_OK;
     }
