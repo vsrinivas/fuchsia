@@ -30,7 +30,7 @@ source_set("unittests") {
 }
 
 group("cache") {
-  deps = [
+  public_deps = [
     ":lib",
   ]
 }
