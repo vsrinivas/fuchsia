@@ -74,7 +74,7 @@ class LinkImpl::ReadLinkDataCall : Operation<f1dl::String> {
             }
           }
 
-          result_.Swap(&value_as_string);
+          result_.reset(value_as_string);
         });
   }
 
@@ -449,7 +449,7 @@ class LinkImpl::GetEntityCall : Operation<f1dl::String> {
     std::string entity_reference;
     result_.reset();
     if (EntityReferenceFromJson(json, &entity_reference)) {
-      result_.Swap(&entity_reference);
+      result_.reset(std::move(entity_reference));
     }
   }
 

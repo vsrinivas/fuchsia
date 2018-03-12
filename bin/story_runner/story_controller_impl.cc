@@ -44,7 +44,10 @@ constexpr char kStoryScopeLabelPrefix[] = "story-";
 namespace {
 
 f1dl::String PathString(const f1dl::Array<f1dl::String>& module_path) {
-  return fxl::JoinStrings(module_path, ":");
+  std::vector<std::string> parts(module_path.size());
+  for (size_t i = 0; i < parts.size(); ++i)
+    parts[i] = std::move(module_path[i].get());
+  return fxl::JoinStrings(parts, ":");
 }
 
 f1dl::Array<f1dl::String> ParentModulePath(

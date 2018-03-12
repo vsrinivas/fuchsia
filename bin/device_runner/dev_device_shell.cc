@@ -128,8 +128,8 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
             std::string account_id;
             for (const auto& account : accounts) {
               FXL_LOG(INFO) << "Found user " << account->display_name;
-              if (account->display_name.size() >= settings_.user.size() &&
-                  account->display_name.get().substr(settings_.user.size()) ==
+              if (account->display_name->size() >= settings_.user.size() &&
+                  account->display_name->substr(settings_.user.size()) ==
                       settings_.user) {
                 account_id = account->id;
                 break;

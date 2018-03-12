@@ -369,7 +369,7 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
   // Given an entity of type "frob", find a module with verb
   // com.google.fuchsia.navigate.v1.
   f1dl::String location_entity = AddEntity({{"frob", ""}});
-  ASSERT_TRUE(!location_entity.empty());
+  ASSERT_TRUE(!location_entity->empty());
 
   query = QueryBuilder("com.google.fuchsia.navigate.v1")
               .AddEntityNoun("start", location_entity)
@@ -690,10 +690,10 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndMultipleNouns) {
   source->idle();
 
   f1dl::String start_entity = AddEntity({{"gps", "gps data"}});
-  ASSERT_TRUE(!start_entity.empty());
+  ASSERT_TRUE(!start_entity->empty());
 
   f1dl::String end_entity = AddEntity({{"not_gps", "not gps data"}});
-  ASSERT_TRUE(!end_entity.empty());
+  ASSERT_TRUE(!end_entity->empty());
 
   auto query = QueryBuilder()
                    .AddEntityNoun("noun1", start_entity)
@@ -739,10 +739,10 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndTwoNounsOfSameType) {
   source->idle();
 
   f1dl::String start_entity = AddEntity({{"gps", "gps data one"}});
-  ASSERT_TRUE(!start_entity.empty());
+  ASSERT_TRUE(!start_entity->empty());
 
   f1dl::String end_entity = AddEntity({{"gps", "gps data two"}});
-  ASSERT_TRUE(!end_entity.empty());
+  ASSERT_TRUE(!end_entity->empty());
 
   auto query = QueryBuilder()
                    .AddEntityNoun("noun1", start_entity)
@@ -809,13 +809,13 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndThreeNounsOfSameType) {
   source->idle();
 
   f1dl::String start_entity = AddEntity({{"gps", "gps data one"}});
-  ASSERT_TRUE(!start_entity.empty());
+  ASSERT_TRUE(!start_entity->empty());
 
   f1dl::String end_entity = AddEntity({{"gps", "gps data two"}});
-  ASSERT_TRUE(!end_entity.empty());
+  ASSERT_TRUE(!end_entity->empty());
 
   f1dl::String middle_entity = AddEntity({{"gps", "gps data three"}});
-  ASSERT_TRUE(!middle_entity.empty());
+  ASSERT_TRUE(!middle_entity->empty());
 
   auto query = QueryBuilder()
                    .AddEntityNoun("noun1", start_entity)
@@ -853,13 +853,13 @@ TEST_F(ModuleResolverImplTest,
   source->idle();
 
   f1dl::String start_entity = AddEntity({{"gps", "gps data one"}});
-  ASSERT_TRUE(!start_entity.empty());
+  ASSERT_TRUE(!start_entity->empty());
 
   f1dl::String end_entity = AddEntity({{"gps", "gps data two"}});
-  ASSERT_TRUE(!end_entity.empty());
+  ASSERT_TRUE(!end_entity->empty());
 
   f1dl::String middle_entity = AddEntity({{"gps", "gps data three"}});
-  ASSERT_TRUE(!middle_entity.empty());
+  ASSERT_TRUE(!middle_entity->empty());
 
   auto query = QueryBuilder()
                    .AddEntityNoun("noun1", start_entity)
@@ -897,7 +897,7 @@ TEST_F(ModuleResolverImplTest,
   source->idle();
 
   f1dl::String start_entity = AddEntity({{"gps", "gps data"}});
-  ASSERT_TRUE(!start_entity.empty());
+  ASSERT_TRUE(!start_entity->empty());
 
   // The query only contains an Entity for "noun1", but the module manifest
   // requires two nouns of type "gps."
@@ -928,7 +928,7 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbIncompatibleNounTypes) {
   source->idle();
 
   f1dl::String start_entity = AddEntity({{"not_gps", "not gps data"}});
-  ASSERT_TRUE(!start_entity.empty());
+  ASSERT_TRUE(!start_entity->empty());
 
   // The query only contains an Entity for "noun1", but the module manifest
   // requires two nouns of type "gps."

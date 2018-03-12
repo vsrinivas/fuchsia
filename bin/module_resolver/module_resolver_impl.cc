@@ -521,7 +521,7 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
   // share the same index instance here and there.
 
   f1dl::Array<ProposalPtr> proposals = f1dl::Array<ProposalPtr>::New(0);
-  if (query->text.empty()) {
+  if (query->text->empty()) {
     auto response = QueryResponse::New();
     response->proposals = std::move(proposals);
     done(std::move(response));

@@ -96,7 +96,7 @@ class LinkForwarder : modular::LinkWatcher {
     // if this is a new session, or it has json data if it's a restored session.
     // In either case, it should be ignored, otherwise we can get multiple
     // messages traveling at the same time.
-    if (!initial_update_ && json.size() > 0) {
+    if (!initial_update_ && json->size() > 0) {
       dst_->Set(nullptr, json);
     }
     initial_update_ = false;

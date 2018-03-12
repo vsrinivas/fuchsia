@@ -196,7 +196,7 @@ void LinkImpl::ReloadCall::Run() {
         if (changes.empty()) {
           if (!impl_->create_link_info_.is_null() &&
               !impl_->create_link_info_->initial_data.is_null() &&
-              !impl_->create_link_info_->initial_data.empty()) {
+              !impl_->create_link_info_->initial_data->empty()) {
             LinkChangePtr data = LinkChange::New();
             // Leave data->key null to signify a new entry
             data->op = LinkChangeOp::SET;
