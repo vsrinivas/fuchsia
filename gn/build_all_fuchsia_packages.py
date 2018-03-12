@@ -42,7 +42,8 @@ def package_build_worker(package_queue, blob_lines, pm, signing_key, packages_di
         with open(package_manifest) as s:
             for line in s:
                 dst, src = line.strip().split("=", 2)
-                sources[dst] = src
+                if not dst.startswith("meta/"):
+                    sources[dst] = src
 
         contents_manifest = os.path.join(package_dir, "meta", "contents")
 
