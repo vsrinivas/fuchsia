@@ -26,6 +26,8 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os,
                          const input::TouchscreenDescriptor& value);
 std::ostream& operator<<(std::ostream& os,
+                         const input::SensorDescriptor& value);
+std::ostream& operator<<(std::ostream& os,
                          const input::DeviceDescriptor& value);
 
 std::ostream& operator<<(std::ostream& os, const input::KeyboardReport& value);
@@ -34,6 +36,7 @@ std::ostream& operator<<(std::ostream& os, const input::StylusReport& value);
 std::ostream& operator<<(std::ostream& os, const input::Touch& value);
 std::ostream& operator<<(std::ostream& os,
                          const input::TouchscreenReport& value);
+std::ostream& operator<<(std::ostream& os, const input::SensorReport& value);
 std::ostream& operator<<(std::ostream& os, const input::InputReport& value);
 
 std::ostream& operator<<(std::ostream& os, const input::TextSelection& value);

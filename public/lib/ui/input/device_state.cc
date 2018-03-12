@@ -434,6 +434,11 @@ void TouchscreenState::Update(input::InputReport input_report,
   }
 }
 
+void SensorState::Update(input::InputReport input_report) {
+  FXL_DCHECK(input_report.sensor);
+  FXL_DCHECK(device_state_->sensor_descriptor());
+}
+
 #pragma mark - DeviceState
 
 DeviceState::DeviceState(uint32_t device_id,
@@ -445,7 +450,8 @@ DeviceState::DeviceState(uint32_t device_id,
       keyboard_(this),
       mouse_(this),
       stylus_(this),
-      touchscreen_(this) {}
+      touchscreen_(this),
+      sensor_(this) {}
 
 DeviceState::~DeviceState() {}
 
@@ -462,6 +468,9 @@ void DeviceState::OnRegistered() {
   if (descriptor_->touchscreen) {
     touchscreen_.OnRegistered();
   }
+  if (descriptor_->sensor) {
+    sensor_.OnRegistered();
+  }
 }
 
 void DeviceState::OnUnregistered() {
@@ -477,6 +486,9 @@ void DeviceState::OnUnregistered() {
   if (descriptor_->touchscreen) {
     touchscreen_.OnUnregistered();
   }
+  if (descriptor_->sensor) {
+    sensor_.OnUnregistered();
+  }
 }
 
 void DeviceState::Update(input::InputReport input_report,
@@ -489,6 +501,8 @@ void DeviceState::Update(input::InputReport input_report,
     stylus_.Update(std::move(input_report), display_size);
   } else if (input_report.touchscreen && descriptor_->touchscreen) {
     touchscreen_.Update(std::move(input_report), display_size);
+  } else if (input_report.sensor && descriptor_->sensor) {
+    sensor_.Update(std::move(input_report));
   }
 }
 

@@ -167,6 +167,51 @@ struct TouchscreenReport {
   vector<Touch> touches;
 };
 
+// Motion Sensors
+
+// Descriptive categories for sensor devices.
+// We assume that each (SensorType,SensorLocation) pair is unique to the system.
+
+enum SensorType {
+  ACCELEROMETER = 0;
+  GYROSCOPE = 1;
+  MAGNETOMETER = 2;
+  LIGHTMETER = 3;
+};
+
+enum SensorLocation {
+  BASE = 0;
+  LID = 1;
+};
+
+// |SensorDescriptor| describes the capabilities of a sensor device.  It does
+// not capture properties that can be changed after initialization, such as the
+// current sampling frequency.
+struct SensorDescriptor {
+  SensorType type;
+  SensorLocation loc;
+
+  // Min and max sampling frequencies for a sensor.
+  uint32 min_sampling_freq;
+  uint32 max_sampling_freq;
+  // Max number of sensor events that could be in hardware FIFO.
+  uint32 fifo_max_event_count;
+
+  // Physical range of a specific sensor.
+  // Accelerometer ranges are given in Gs.
+  // Gyroscope ranges are given in deg/s.
+  // Magnetometer ranges are given in multiples of 1/16 uT.
+  // Light meter ranges are given in lux (to be confirmed!).
+  int32 phys_min;
+  int32 phys_max;
+};
+
+// |SensorReport| describes the sensor event delivered from the event stream.
+union SensorReport {
+  array<int16>:3 @vector;
+  uint16 scalar;
+};
+
 // Device and Report
 
 struct DeviceInfo {
@@ -176,13 +221,14 @@ struct DeviceInfo {
   string name;
 };
 
-// |DeviceDescriptor| describes an input device.
+// |DeviceDescriptor| describes one input device.
 struct DeviceDescriptor {
   DeviceInfo? device_info;
   KeyboardDescriptor? keyboard;
   MouseDescriptor? mouse;
   StylusDescriptor? stylus;
   TouchscreenDescriptor? touchscreen;
+  SensorDescriptor? sensor;
 };
 
 // |InputReport| is an input |report| triggered by an input device.
@@ -194,4 +240,5 @@ struct InputReport {
   MouseReport? mouse;
   StylusReport? stylus;
   TouchscreenReport? touchscreen;
+  SensorReport? sensor;
 };

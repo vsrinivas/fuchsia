@@ -102,6 +102,16 @@ class TouchscreenState : public State {
   std::vector<input::PointerEvent> pointers_;
 };
 
+class SensorState : public State {
+ public:
+  SensorState(DeviceState* device_state) : device_state_(device_state) {}
+  void Update(input::InputReport report);
+
+ private:
+  DeviceState* device_state_;
+  // TODO(SCN-627): Remember sampling frequency and physical units.
+};
+
 class DeviceState {
  public:
   DeviceState(uint32_t device_id,
@@ -129,6 +139,9 @@ class DeviceState {
   input::TouchscreenDescriptor* touchscreen_descriptor() {
     return descriptor_->touchscreen.get();
   }
+  input::SensorDescriptor* sensor_descriptor() {
+    return descriptor_->sensor.get();
+  }
 
  private:
   uint32_t device_id_;
@@ -138,6 +151,7 @@ class DeviceState {
   MouseState mouse_;
   StylusState stylus_;
   TouchscreenState touchscreen_;
+  SensorState sensor_;
 };
 
 }  // namespace mozart

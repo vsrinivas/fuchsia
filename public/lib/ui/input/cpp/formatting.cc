@@ -4,6 +4,7 @@
 
 #include "lib/ui/input/cpp/formatting.h"
 
+#include <iomanip>
 #include <iostream>
 
 #include <fuchsia/cpp/input.h>
@@ -198,6 +199,19 @@ std::ostream& operator<<(std::ostream& os,
 }
 
 std::ostream& operator<<(std::ostream& os,
+                         const input::SensorDescriptor& value) {
+  os << "{Sensor:";
+  os << "type=" << value.type;
+  os << ", loc=" << value.loc;
+  os << ", min_sampling_freq=" << value.min_sampling_freq;
+  os << ", max_sampling_freq=" << value.max_sampling_freq;
+  os << ", fifo_max_event_count=" << value.fifo_max_event_count;
+  os << ", phys_min=" << value.phys_min;
+  os << ", phys_max=" << value.phys_max;
+  return os << "}";
+}
+
+std::ostream& operator<<(std::ostream& os,
                          const input::DeviceDescriptor& value) {
   os << "{DeviceDescriptor:";
   bool previous = false;
@@ -221,6 +235,12 @@ std::ostream& operator<<(std::ostream& os,
     if (previous)
       os << ", ";
     os << *(value.touchscreen);
+    previous = true;
+  }
+  if (value.sensor) {
+    if (previous)
+      os << ", ";
+    os << *(value.sensor);
     previous = true;
   }
   return os << "}";
@@ -291,6 +311,23 @@ std::ostream& operator<<(std::ostream& os,
   return os << "]}";
 }
 
+std::ostream& operator<<(std::ostream& os, const input::SensorReport& value) {
+  std::ios::fmtflags settings = os.flags();
+  os << "{SensorReport: [" << std::hex << std::setfill('0');
+  if (value.is_vector()) {
+    const fidl::Array<int16_t, 3>& data = value.vector();
+    for (size_t i = 0; i < data.count(); ++i) {
+      os << "0x" << std::setw(4) << data[i];
+      if (i + 1 < data.count())
+        os << ",";
+    }
+  } else {
+    os << "0x" << std::setw(4) << value.scalar();
+  }
+  os.flags(settings);
+  return os << "]}";
+}
+
 std::ostream& operator<<(std::ostream& os, const input::InputReport& value) {
   os << "{InputReport: event_time=" << value.event_time << ",";
 
@@ -302,6 +339,8 @@ std::ostream& operator<<(std::ostream& os, const input::InputReport& value) {
     os << *(value.stylus);
   } else if (value.touchscreen) {
     os << *(value.touchscreen);
+  } else if (value.sensor) {
+    os << *(value.sensor);
   } else {
     os << "{Unknown Report}";
   }

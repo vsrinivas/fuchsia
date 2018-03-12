@@ -15,8 +15,10 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 #include <zircon/device/device.h>
 #include <zircon/device/input.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <trace/event.h>
@@ -39,6 +41,9 @@ input::InputReport CloneReport(const input::InputReportPtr& report) {
   return result;
 }
 
+// TODO(SCN-473): Extract sensor IDs from HID.
+const size_t kParadiseAccLid = 0;
+const size_t kParadiseAccBase = 1;
 }  // namespace
 
 namespace mozart {
@@ -279,6 +284,23 @@ bool InputInterpreter::Initialize() {
       touchscreen_report_->touchscreen = input::TouchscreenReport::New();
 
       touch_device_type_ = TouchDeviceType::EGALAX;
+    } else if (is_paradise_sensor_report_desc(desc.data(), desc.size())) {
+      FXL_VLOG(2) << "Device " << name() << " has motion sensors";
+      sensor_device_type_ = SensorDeviceType::PARADISE;
+      has_sensors_ = true;
+
+      input::SensorDescriptorPtr acc_base = input::SensorDescriptor::New();
+      acc_base->type = input::SensorType::ACCELEROMETER;
+      acc_base->loc = input::SensorLocation::BASE;
+      sensor_descriptors_[kParadiseAccBase] = std::move(acc_base);
+
+      input::SensorDescriptorPtr acc_lid = input::SensorDescriptor::New();
+      acc_lid->type = input::SensorType::ACCELEROMETER;
+      acc_lid->loc = input::SensorLocation::LID;
+      sensor_descriptors_[kParadiseAccLid] = std::move(acc_lid);
+
+      sensor_report_ = input::InputReport::New();
+      sensor_report_->sensor = input::SensorReport::New();
     } else {
       FXL_VLOG(2) << "Device " << name() << " has unsupported HID device";
       return false;
@@ -298,6 +320,24 @@ bool InputInterpreter::Initialize() {
 }
 
 void InputInterpreter::NotifyRegistry() {
+  if (has_sensors_) {
+    FXL_DCHECK(kMaxSensorCount == sensor_descriptors_.size());
+    FXL_DCHECK(kMaxSensorCount == sensor_devices_.size());
+    for (size_t i = 0; i < kMaxSensorCount; ++i) {
+      if (sensor_descriptors_[i]) {
+        input::DeviceDescriptor descriptor;
+        zx_status_t status =
+            fidl::Clone(sensor_descriptors_[i], &descriptor.sensor);
+        FXL_DCHECK(status == ZX_OK)
+            << "Sensor descriptor: clone failed (status=" << status << ")";
+        registry_->RegisterDevice(std::move(descriptor),
+                                  sensor_devices_[i].NewRequest());
+      }
+    }
+    // Sensor devices can't be anything else, so don't bother with other types.
+    return;
+  }
+
   input::DeviceDescriptor descriptor;
   if (has_keyboard_) {
     fidl::Clone(keyboard_descriptor_, &descriptor.keyboard);
@@ -311,7 +351,6 @@ void InputInterpreter::NotifyRegistry() {
   if (has_touchscreen_) {
     fidl::Clone(touchscreen_descriptor_, &descriptor.touchscreen);
   }
-
   registry_->RegisterDevice(std::move(descriptor), input_device_.NewRequest());
 }
 
@@ -415,6 +454,21 @@ bool InputInterpreter::Read(bool discard) {
       }
       break;
 
+    default:
+      break;
+  }
+
+  switch (sensor_device_type_) {
+    case SensorDeviceType::PARADISE:
+      if (ParseParadiseSensorReport(report.data(), rc)) {
+        if (!discard) {
+          FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
+          FXL_DCHECK(sensor_devices_[sensor_idx_]);
+          sensor_devices_[sensor_idx_]->DispatchReport(
+              CloneReport(sensor_report_));
+        }
+      }
+      break;
     default:
       break;
   }
@@ -650,4 +704,42 @@ bool InputInterpreter::ParseParadiseTouchpadReport(uint8_t* r, size_t len) {
   return true;
 }
 
+// Writes out result to sensor_report_ and sensor_idx_.
+bool InputInterpreter::ParseParadiseSensorReport(uint8_t* r, size_t len) {
+  if (len != sizeof(paradise_sensor_vector_data_t) &&
+      len != sizeof(paradise_sensor_scalar_data_t)) {
+    FXL_LOG(INFO) << "paradise sensor data: wrong size " << len << ", expected "
+                  << sizeof(paradise_sensor_vector_data_t) << " or "
+                  << sizeof(paradise_sensor_scalar_data_t);
+    return false;
+  }
+
+  sensor_report_->event_time = InputEventTimestampNow();
+  sensor_idx_ = r[0];  // We know sensor structs start with sensor ID.
+  switch (sensor_idx_) {
+    case kParadiseAccLid:
+    case kParadiseAccBase: {
+      const auto& report =
+          *(reinterpret_cast<paradise_sensor_vector_data_t*>(r));
+      fidl::Array<int16_t, 3> data;
+      data[0] = report.vector[0];
+      data[1] = report.vector[1];
+      data[2] = report.vector[2];
+      sensor_report_->sensor->set_vector(std::move(data));
+    } break;
+    case 2:
+    case 3:
+    case 4:
+      // TODO(SCN-626): Expose other sensors.
+      return false;
+    default:
+      FXL_LOG(ERROR) << "paradise sensor unrecognized: " << sensor_idx_;
+      return false;
+  }
+
+  FXL_VLOG(2) << name()
+              << " parsed (sensor=" << static_cast<uint16_t>(sensor_idx_)
+              << "): " << *sensor_report_;
+  return true;
+}
 }  // namespace mozart
