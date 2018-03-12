@@ -78,6 +78,8 @@ typedef struct sdhci_device {
 
     sdhci_protocol_t sdhci;
 
+    zx_handle_t bti_handle;
+
     // DMA descriptors
     io_buffer_t iobuf;
     sdhci_adma64_desc_t* descs;
@@ -798,6 +800,8 @@ static void sdhci_unbind(void* ctx) {
 
 static void sdhci_release(void* ctx) {
     sdhci_device_t* dev = ctx;
+    zx_handle_close(irq_handle);
+    zx_handle_close(bti_handle);
     free(dev);
 }
 
@@ -832,8 +836,9 @@ static zx_status_t sdhci_controller_init(sdhci_device_t* dev) {
 
     // allocate and setup DMA descriptor
     if (sdhci_supports_adma2_64bit(dev)) {
-        status = io_buffer_init(&dev->iobuf, DMA_DESC_COUNT * sizeof(sdhci_adma64_desc_t),
-                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
+        status = io_buffer_init_with_bti(&dev->iobuf, dev->bti_handle,
+                                         DMA_DESC_COUNT * sizeof(sdhci_adma64_desc_t),
+                                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
         if (status != ZX_OK) {
             zxlogf(ERROR, "sdhci: error allocating DMA descriptors\n");
             goto fail;
@@ -933,6 +938,12 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    status = dev->sdhci.ops->get_bti(dev->sdhci.ctx, 0, &dev->bti_handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "sdhci: error %d in get_bti\n", status);
+        goto fail;
+    }
+
     status = dev->sdhci.ops->get_interrupt(dev->sdhci.ctx, &dev->irq_handle);
     if (status < 0) {
         zxlogf(ERROR, "sdhci: error %d in get_interrupt\n", status);
@@ -1009,6 +1020,9 @@ fail:
     if (dev) {
         if (dev->irq_handle != ZX_HANDLE_INVALID) {
             zx_handle_close(dev->irq_handle);
+        }
+        if (dev->bti_handle != ZX_HANDLE_INVALID) {
+            zx_handle_close(dev->bti_handle);
         }
         if (dev->iobuf.vmo_handle != ZX_HANDLE_INVALID) {
             zx_handle_close(dev->iobuf.vmo_handle);

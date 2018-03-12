@@ -25,6 +25,7 @@ typedef struct pci_sdhci_device {
     volatile sdhci_regs_t* regs;
     uint64_t regs_size;
     zx_handle_t regs_handle;
+    zx_handle_t bti_handle;
 } pci_sdhci_device_t;
 
 static zx_status_t pci_sdhci_get_interrupt(void* ctx, zx_handle_t* handle_out) {
@@ -63,6 +64,17 @@ static zx_status_t pci_sdhci_get_mmio(void* ctx, volatile sdhci_regs_t** out) {
     return ZX_OK;
 }
 
+static zx_status_t pci_sdhci_get_bti(void* ctx, uint32_t index, zx_handle_t* out_handle) {
+    pci_sdhci_device_t* dev = ctx;
+    if (dev->bti_handle == ZX_HANDLE_INVALID) {
+        zx_status_t st = pci_get_bti(&dev->pci, index, &dev->bti_handle);
+        if (st != ZX_OK) {
+            return st;
+        }
+    }
+    return zx_handle_duplicate(dev->bti_handle, ZX_RIGHT_SAME_RIGHTS, out_handle);
+}
+
 static uint32_t pci_sdhci_get_base_clock(void* ctx) {
     return 0;
 }
@@ -90,6 +102,7 @@ static void pci_sdhci_hw_reset(void* ctx) {
 static sdhci_protocol_ops_t pci_sdhci_sdhci_proto = {
     .get_interrupt = pci_sdhci_get_interrupt,
     .get_mmio = pci_sdhci_get_mmio,
+    .get_bti = pci_sdhci_get_bti,
     .get_base_clock = pci_sdhci_get_base_clock,
     .get_quirks = pci_sdhci_get_quirks,
     .hw_reset = pci_sdhci_hw_reset,
@@ -105,6 +118,7 @@ static void pci_sdhci_release(void* ctx) {
     if (dev->regs != NULL) {
         zx_handle_close(dev->regs_handle);
     }
+    zx_handle_close(dev->bti_handle);
     free(dev);
 }
 
