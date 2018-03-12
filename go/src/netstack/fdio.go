@@ -527,14 +527,12 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 	var ios *iostate
 	if iosOrig == nil {
 		ios = &iostate{
-			netProto:        netProto,
-			transProto:      transProto,
-			wq:              wq,
-			ep:              ep,
-			refs:            1,
-			writeLoopDone:   make(chan struct{}),
-			controlLoopDone: make(chan struct{}),
-			withNewSocket:   withNewSocket,
+			netProto:      netProto,
+			transProto:    transProto,
+			wq:            wq,
+			ep:            ep,
+			refs:          1,
+			withNewSocket: withNewSocket,
 		}
 		if ep != nil || withNewSocket {
 			switch transProto {
@@ -621,6 +619,7 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 	}
 
 	if withNewSocket {
+		ios.controlLoopDone = make(chan struct{})
 		go ios.loopControl(s, int64(newCookie))
 	} else if err := s.dispatcher.AddHandler(h, fdio.ServerHandler(s.fdioHandler), int64(newCookie)); err != nil {
 		h.Close()
@@ -645,10 +644,12 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 	switch transProto {
 	case tcp.ProtocolNumber:
 		if ep != nil {
+			ios.writeLoopDone = make(chan struct{})
 			go ios.loopSocketRead(s.stack)
 			go ios.loopSocketWrite(s.stack)
 		}
 	case udp.ProtocolNumber, ipv4.PingProtocolNumber:
+		ios.writeLoopDone = make(chan struct{})
 		go ios.loopDgramRead(s.stack)
 		go ios.loopDgramWrite(s.stack)
 	}
@@ -1443,35 +1444,37 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 	delete(s.io, cookie)
 	s.mu.Unlock()
 
-	if ios.ep != nil {
-		// Signal that we're about to close. This tells the various message loops to finish
-		// processing, and let us know when they're done.
-		err := zx.Handle(ios.dataHandle).Signal(0, LOCAL_SIGNAL_CLOSING)
-		if ios.listenLoopClosing != nil {
-			ios.listenLoopClosing <- struct{}{}
+	// Signal that we're about to close. This tells the various message loops to finish
+	// processing, and let us know when they're done.
+	err := zx.Handle(ios.dataHandle).Signal(0, LOCAL_SIGNAL_CLOSING)
+	if ios.listenLoopClosing != nil {
+		ios.listenLoopClosing <- struct{}{}
+	}
+
+	go func() {
+		switch mxerror.Status(err) {
+		case zx.ErrOk:
+			if ios.writeLoopDone != nil {
+				<-ios.writeLoopDone
+			}
+			if ios.controlLoopDone != nil {
+				<-ios.controlLoopDone
+			}
+			if ios.listenLoopDone != nil {
+				<-ios.listenLoopDone
+			}
+		default:
+			log.Printf("close: signal failed: %v", err)
 		}
 
-		go func() {
-			switch mxerror.Status(err) {
-			case zx.ErrOk:
-				<-ios.writeLoopDone
-				if ios.withNewSocket {
-					<-ios.controlLoopDone
-				}
-				if ios.listenLoopDone != nil {
-					<-ios.listenLoopDone
-				}
-			default:
-				log.Printf("close: signal failed: %v", err)
-			}
-
+		if ios.ep != nil {
 			ios.ep.Close()
-			ios.dataHandle.Close()
-			if ios.peerDataHandle != 0 {
-				ios.peerDataHandle.Close()
-			}
-		}()
-	}
+		}
+		ios.dataHandle.Close()
+		if ios.peerDataHandle != 0 {
+			ios.peerDataHandle.Close()
+		}
+	}()
 }
 
 func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64) zx.Status {
