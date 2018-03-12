@@ -13,14 +13,10 @@ import("//build/fidl/toolchain.gni")
 #   - sources.
 
 template("fidl_cpp") {
-  assert(current_toolchain == target_toolchain ||
-      current_toolchain == shlib_toolchain,
-      "This template can only be used in these toolchains: " +
-      "$target_toolchain, $shlib_toolchain.")
+  assert(current_base_toolchain == target_toolchain,
+         "This template can only be used in $target_toolchain.")
 
-  not_needed(invoker, [
-    "sdk_candidate",
-  ])
+  not_needed(invoker, [ "sdk_candidate" ])
 
   main_target_name = target_name
   generation_target_name = "${target_name}_cpp_generate"
@@ -30,79 +26,85 @@ template("fidl_cpp") {
   if (defined(invoker.name)) {
     library_name = invoker.name
   }
-  file_stem = "$target_gen_dir/$library_name.fidl"
+
+  # Generate the source code just once in the base toolchain, even
+  # if it gets compiled separately in multiple variant toolchains.
+  base_gen_dir = get_label_info(":${target_name}(${current_base_toolchain})",
+                                "target_gen_dir")
+
+  file_stem = "$base_gen_dir/$library_name.fidl"
   c_header = "$file_stem.c.h"
 
-  fidl_target_gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
+  fidl_target_gen_dir =
+      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
-  compiled_action(generation_target_name) {
-    visibility = [
-      ":*",
-    ]
+  if (current_toolchain == current_base_toolchain) {
+    compiled_action(generation_target_name) {
+      visibility = [ ":*" ]
 
-    tool = "//garnet/go/src/fidl:fidl_backend"
+      tool = "//garnet/go/src/fidl:fidl_backend"
 
-    inputs = [
-      json_representation,
-    ]
+      inputs = [
+        json_representation,
+      ]
 
-    outputs = [
-      "$file_stem.cc.h",
-      "$file_stem.cc",
-    ]
+      outputs = [
+        "$file_stem.cc.h",
+        "$file_stem.cc",
+      ]
 
-    args = [
-      "-fidl-json",
-      rebase_path(json_representation, root_build_dir),
-      "-fidl-stem",
-      rebase_path(file_stem, root_build_dir),
-      "--root-gen-dir",
-      rebase_path(root_gen_dir, root_build_dir),
-      "-generators",
-      "cpp",
-    ]
+      args = [
+        "-fidl-json",
+        rebase_path(json_representation, root_build_dir),
+        "-fidl-stem",
+        rebase_path(file_stem, root_build_dir),
+        "--root-gen-dir",
+        rebase_path(root_gen_dir, root_build_dir),
+        "-generators",
+        "cpp",
+      ]
 
-    deps = [
-      ":$main_target_name($fidl_toolchain)",
-    ]
-  }
+      deps = [
+        ":$main_target_name($fidl_toolchain)",
+      ]
+    }
 
-  compiled_action(c_generation_target_name) {
-    visibility = [
-      ":*",
-    ]
+    compiled_action(c_generation_target_name) {
+      visibility = [ ":*" ]
 
-    tool = "//zircon/public/tool/fidl2"
+      tool = "//zircon/public/tool/fidl2"
 
-    inputs = invoker.sources
+      inputs = invoker.sources
 
-    outputs = [
-      c_header,
-    ]
+      outputs = [
+        c_header,
+      ]
 
-    args = [
-      "--c-header",
-      rebase_path(c_header, root_build_dir),
-      "--files",
-    ] + rebase_path(inputs, root_build_dir)
+      args = [
+               "--c-header",
+               rebase_path(c_header, root_build_dir),
+               "--files",
+             ] + rebase_path(inputs, root_build_dir)
+    }
   }
 
   source_set(main_target_name) {
-    forward_variables_from(invoker, [
-      "testonly",
-      "visibility",
-    ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
     sources = [
-      c_header,
-      "$file_stem.cc.h",
       "$file_stem.cc",
+      "$file_stem.cc.h",
+      c_header,
     ]
 
     deps = [
-      ":$c_generation_target_name",
-      ":$generation_target_name",
+      ":${c_generation_target_name}(${current_base_toolchain})",
+      ":${generation_target_name}(${current_base_toolchain})",
       "//garnet/public/lib/fidl/cpp",
     ]
   }

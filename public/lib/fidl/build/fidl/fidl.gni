@@ -28,34 +28,26 @@ import("//build/fidl/toolchain.gni")
 #     Defaults to false.
 
 template("fidl") {
+  if (current_toolchain == fidl_toolchain) {
+    import("//garnet/public/lib/fidl/build/fidl/fidl_library.gni")
 
-if (current_toolchain == fidl_toolchain) {
+    fidl_library(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else if (current_toolchain == dart_toolchain) {
+    import("//garnet/public/lib/fidl/build/dart/fidl_dart.gni")
 
-import("//garnet/public/lib/fidl/build/fidl/fidl_library.gni")
+    fidl_dart(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else {
+    assert(current_base_toolchain == target_toolchain,
+           "Unable to process FIDL target in toolchain $current_toolchain.")
 
-fidl_library(target_name) {
-  forward_variables_from(invoker, "*")
-}
+    import("//garnet/public/lib/fidl/build/cpp/fidl_cpp.gni")
 
-} else if (current_toolchain == target_toolchain ||
-    current_toolchain == shlib_toolchain) {
-
-import("//garnet/public/lib/fidl/build/cpp/fidl_cpp.gni")
-
-fidl_cpp(target_name) {
-  forward_variables_from(invoker, "*")
-}
-
-} else if (current_toolchain == dart_toolchain) {
-
-import("//garnet/public/lib/fidl/build/dart/fidl_dart.gni")
-
-fidl_dart(target_name) {
-  forward_variables_from(invoker, "*")
-}
-
-} else {
-  assert(false, "Unable to process FIDL target in toolchain $current_toolchain.")
-}
-
+    fidl_cpp(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  }
 }
