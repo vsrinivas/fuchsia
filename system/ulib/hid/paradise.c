@@ -1660,3 +1660,135 @@ zx_status_t setup_paradise_touchpad(int fd) {
 
     return ZX_OK;
 }
+
+// Sensors
+
+static const uint8_t paradise_sensor_report_desc[] = {
+    // Base Sensor Set
+    0x05, 0x20,                   // HID Usage Page (Sensors)
+    0x09, 0x01,                   // HID Usage (Sensor)
+    0xa1, 0x01,                   // Collection (Application)
+
+    // Base Accelerometer
+    0x85, 0x01,                   // Report ID (1)
+    0x37, 0xfe, 0xff, 0xff, 0xff, // Physical Minimum (-2)
+    0x47, 0x02, 0x00, 0x00, 0x00, // Physical Maximum (2)
+    0x05, 0x20,                   // HID Usage Page (Sensors)
+    0x09, 0x73,                   // HID Usage (Accelerometer 3D)
+    0xa1, 0x00,                   // Collection (Physical)
+    0x05, 0x20,                   // HID Usage Page (Sensors)
+    0x16, 0x00, 0x80,             // Logical Minimum (-32768)
+    0x26, 0xff, 0x7f,             // Logical Maximum (32767)
+    0x75, 0x10,                   // Report Size (16)
+    0x95, 0x01,                   // Report Count (1)
+    0x0a, 0x53, 0x04,             // Usage (Acceleration Axis X)
+    0x81, 0x03,                   // Const Var Abs
+    0x0a, 0x54, 0x04,             // Usage (Acceleration Axis Y)
+    0x81, 0x03,                   // Const Var Abs
+    0x0a, 0x55, 0x04,             // Usage (Acceleration Axis Z)
+    0x81, 0x03,                   // Const Var Abs
+    0xc0,                         // End Collection
+
+    // Base Gyroscope
+    0x85, 0x02,                   // Report ID (2)
+    0x37, 0x18, 0xfc, 0xff, 0xff, // Physical Minimum (-1000)
+    0x47, 0xe8, 0x03, 0x00, 0x00, // Physical Maximum (1000)
+    0x05, 0x20,                   // HID Usage Page (Sensors)
+    0x09, 0x76,                   // HID Usage (Gyrometer 3D)
+    0xa1, 0x00,                   // Collection (Physical)
+    0x05, 0x20,                   // HID Usage Page (Sensors)
+    0x16, 0x00, 0x80,             // Logical Minimum (-32768)
+    0x26, 0xff, 0x7f,             // Logical Maximum (32767)
+    0x75, 0x10,                   // Report Size (16)
+    0x95, 0x01,                   // Report Count (1)
+    0x0a, 0x57, 0x04,             // Usage (Angular Velocity X)
+    0x81, 0x03,                   // Const Var Abs
+    0x0a, 0x58, 0x04,             // Usage (Angular Velocity Y)
+    0x81, 0x03,                   // Const Var Abs
+    0x0a, 0x59, 0x04,             // Usage (Angular Velocity Z)
+    0x81, 0x03,                   // Const Var Abs
+    0xc0,                         // End Collection
+
+    // Base Magnetometer
+    0x85, 0x03,                   // Report ID (3)
+    0x37, 0x00, 0x78, 0xec, 0xff, // Physical Minimum (-1280000)
+    0x47, 0x00, 0x88, 0x13, 0x00, // Physical Maximum (1280000)
+    0x05, 0x20,                   // HID Usage Page (Sensors)
+    0x09, 0x83,                   // HID Usage (Compass 3D)
+    0xa1, 0x00,                   // Collection (Physical)
+    0x05, 0x20,                   // HID Usage Page (Sensors)
+    0x16, 0x00, 0x80,             // Logical Minimum (-32768)
+    0x26, 0xff, 0x7f,             // Logical Maximum (32767)
+    0x55, 0x0d,                   // Unit Exponent (-3)
+    0x75, 0x10,                   // Report Size (16)
+    0x95, 0x01,                   // Report Count (1)
+    0x0a, 0x85, 0x04,             // Usage (Magnetic Flux X)
+    0x81, 0x03,                   // Const Var Abs
+    0x0a, 0x86, 0x04,             // Usage (Magnetic Flux Y)
+    0x81, 0x03,                   // Const Var Abs
+    0x0a, 0x87, 0x04,             // Usage (Magnetic Flux Z)
+    0x81, 0x03,                   // Const Var Abs
+    0xc0,                         // End Collection
+    0xc0,                         // End Collection
+
+    // Lid Sensor Set
+    0x05, 0x20,                   // HID Usage Page (Sensors)
+    0x09, 0x01,                   // HID Usage (Sensor)
+    0xa1, 0x01,                   // Collection (Application)
+
+    // Lid Accelerometer
+    0x85, 0x00,                   // Report ID (0)
+    0x37, 0xfe, 0xff, 0xff, 0xff, // Physical Minimum (-2)
+    0x47, 0x02, 0x00, 0x00, 0x00, // Physical Maximum (2)
+    0x05, 0x20,                   // HID Usage Page (Sensors)
+    0x09, 0x73,                   // HID Usage (Accelerometer 3D)
+    0xa1, 0x00,                   // Collection (Physical)
+    0x05, 0x20,                   // HID Usage Page (Sensors)
+    0x16, 0x00, 0x80,             // Logical Minimum (-32768)
+    0x26, 0xff, 0x7f,             // Logical Maximum (32767)
+    0x75, 0x10,                   // Report Size (16)
+    0x95, 0x01,                   // Report Count (1)
+    0x0a, 0x53, 0x04,             // Usage (Acceleration Axis X)
+    0x81, 0x03,                   // Const Var Abs
+    0x0a, 0x54, 0x04,             // Usage (Acceleration Axis Y)
+    0x81, 0x03,                   // Const Var Abs
+    0x0a, 0x55, 0x04,             // Usage (Acceleration Axis Z)
+    0x81, 0x03,                   // Const Var Abs
+    0xc0,                         // End Collection
+
+    // Lid Lightmeter
+    0x85, 0x04,                   // Report ID (4)
+    0x37, 0x00, 0x00, 0x00, 0x00, // Physical Minimum (0)
+    0x47, 0x70, 0x17, 0x00, 0x00, // Physical Maximum (6000)
+    0x05, 0x20,                   // HID Usage Page (Sensors)
+    0x09, 0x41,                   // HID Usage (Ambient Light)
+    0xa1, 0x00,                   // Collection (Physical)
+    0x05, 0x20,                   // HID Usage Page (Sensors)
+    0x15, 0x00,                   // Logical Minimum (0)
+    0x26, 0xff, 0x7f,             // Logical Maximum (32767)
+    0x75, 0x10,                   // Report Size (16)
+    0x95, 0x01,                   // Report Count (1)
+    0x0a, 0xd1, 0x04,             // Usage (Illuminance)
+    0x81, 0x03,                   // Const Var Abs
+    0xc0,                         // End Collection
+    0xc0,                         // End Collection
+
+    // 235 bytes
+};
+
+bool is_paradise_sensor_report_desc(const uint8_t* data, size_t len) {
+    if (!data)
+        return false;
+
+    if (len != sizeof(paradise_sensor_report_desc))
+        return false;
+
+    return (memcmp(data, paradise_sensor_report_desc, len) == 0);
+}
+
+zx_status_t setup_paradise_sensor(int fd) {
+    if (fd < 0)
+        return ZX_ERR_INVALID_ARGS;
+
+    return ZX_OK;
+}

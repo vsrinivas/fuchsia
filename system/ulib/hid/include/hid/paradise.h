@@ -151,4 +151,17 @@ bool is_paradise_touchpad_v2_report_desc(const uint8_t* data, size_t len);
 
 zx_status_t setup_paradise_touchpad(int fd);
 
+typedef struct paradise_sensor_vector_data {
+  uint8_t sensor_num;
+  int16_t vector[3];
+} __attribute__((packed)) paradise_sensor_vector_data_t;
+
+typedef struct paradise_sensor_scalar_data {
+  uint8_t sensor_num;
+  uint16_t scalar;
+} __attribute__((packed)) paradise_sensor_scalar_data_t;
+
+bool is_paradise_sensor_report_desc(const uint8_t* data, size_t len);
+zx_status_t setup_paradise_sensor(int fd);
+
 __END_CDECLS
