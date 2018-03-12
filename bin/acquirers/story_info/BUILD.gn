@@ -34,6 +34,7 @@ executable("story_info") {
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/entity/cpp",
+    "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/lifecycle/fidl",
     "//peridot/public/lib/story/fidl",
     "//peridot/public/lib/user/fidl",
