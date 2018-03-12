@@ -366,7 +366,7 @@ template("package") {
           ":${manifest_target_name}",
         ]
         if (defined(pkg.extra)) {
-          deps += [ ":${extra_target_name}" ]
+          deps = [ ":${extra_target_name}" ]
         }
       }
     } else if (pkg.fuchsia_package) {
@@ -439,7 +439,7 @@ template("package") {
           ":${manifest_target_name}",
         ]
         if (defined(pkg.extra)) {
-          deps += [ ":${extra_target_name}" ]
+          deps = [ ":${extra_target_name}" ]
         }
       }
     } else {
@@ -478,6 +478,7 @@ template("package") {
         public_deps = [
           ":${manifest_target_name}",
         ]
+        deps = []
         if (defined(pkg.extra)) {
           deps += [ ":${extra_target_name}" ]
         }
