@@ -156,7 +156,7 @@ zx_vaddr_t elf_load_bootfs(zx_handle_t log, struct bootfs *fs, zx_handle_t proc,
         char interp[sizeof(INTERP_PREFIX) + interp_len];
         memcpy(interp, INTERP_PREFIX, sizeof(INTERP_PREFIX) - 1);
         size_t n;
-        zx_status_t status = zx_vmo_read(
+        zx_status_t status = zx_vmo_read_old(
             vmo, &interp[sizeof(INTERP_PREFIX) - 1],
             interp_off, interp_len, &n);
         if (status < 0)

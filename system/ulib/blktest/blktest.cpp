@@ -179,7 +179,7 @@ bool blkdev_test_fifo_basic(void) {
     fill_random(buf.get(), vmo_size);
 
     size_t actual;
-    ASSERT_EQ(zx_vmo_write(vmo, buf.get(), 0, vmo_size, &actual), ZX_OK, "");
+    ASSERT_EQ(zx_vmo_write_old(vmo, buf.get(), 0, vmo_size, &actual), ZX_OK, "");
     ASSERT_EQ(actual, vmo_size, "");
 
     // Send a handle to the vmo to the block device, get a vmoid which identifies it
@@ -215,11 +215,11 @@ bool blkdev_test_fifo_basic(void) {
     fbl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[vmo_size]());
     ASSERT_TRUE(ac.check(), "");
 
-    ASSERT_EQ(zx_vmo_write(vmo, out.get(), 0, vmo_size, &actual), ZX_OK, "");
+    ASSERT_EQ(zx_vmo_write_old(vmo, out.get(), 0, vmo_size, &actual), ZX_OK, "");
     requests[0].opcode = BLOCKIO_READ;
     requests[1].opcode = BLOCKIO_READ;
     ASSERT_EQ(block_fifo_txn(client, &requests[0], fbl::count_of(requests)), ZX_OK, "");
-    ASSERT_EQ(zx_vmo_read(vmo, out.get(), 0, vmo_size, &actual), ZX_OK, "");
+    ASSERT_EQ(zx_vmo_read_old(vmo, out.get(), 0, vmo_size, &actual), ZX_OK, "");
     ASSERT_EQ(memcmp(buf.get(), out.get(), blk_size * 3), 0, "Read data not equal to written data");
 
     // Close the current vmo
@@ -255,7 +255,7 @@ bool blkdev_test_fifo_whole_disk(void) {
     fill_random(buf.get(), vmo_size);
 
     size_t actual;
-    ASSERT_EQ(zx_vmo_write(vmo, buf.get(), 0, vmo_size, &actual), ZX_OK, "");
+    ASSERT_EQ(zx_vmo_write_old(vmo, buf.get(), 0, vmo_size, &actual), ZX_OK, "");
     ASSERT_EQ(actual, vmo_size, "");
 
     // Send a handle to the vmo to the block device, get a vmoid which identifies it
@@ -283,10 +283,10 @@ bool blkdev_test_fifo_whole_disk(void) {
     fbl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[vmo_size]());
     ASSERT_TRUE(ac.check(), "");
 
-    ASSERT_EQ(zx_vmo_write(vmo, out.get(), 0, vmo_size, &actual), ZX_OK, "");
+    ASSERT_EQ(zx_vmo_write_old(vmo, out.get(), 0, vmo_size, &actual), ZX_OK, "");
     request.opcode = BLOCKIO_READ;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_OK, "");
-    ASSERT_EQ(zx_vmo_read(vmo, out.get(), 0, vmo_size, &actual), ZX_OK, "");
+    ASSERT_EQ(zx_vmo_read_old(vmo, out.get(), 0, vmo_size, &actual), ZX_OK, "");
     ASSERT_EQ(memcmp(buf.get(), out.get(), blk_size * 3), 0, "Read data not equal to written data");
 
     // Close the current vmo
@@ -317,7 +317,7 @@ bool create_vmo_helper(int fd, test_vmo_object_t* obj, size_t kBlockSize) {
     ASSERT_TRUE(ac.check(), "");
     fill_random(obj->buf.get(), obj->vmo_size);
     size_t actual;
-    ASSERT_EQ(zx_vmo_write(obj->vmo, obj->buf.get(), 0, obj->vmo_size, &actual),
+    ASSERT_EQ(zx_vmo_write_old(obj->vmo, obj->buf.get(), 0, obj->vmo_size, &actual),
               ZX_OK, "Failed to write to vmo");
     ASSERT_EQ(obj->vmo_size, actual, "Could not write entire VMO");
 
@@ -362,7 +362,7 @@ bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size
     fbl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[obj->vmo_size]());
     ASSERT_TRUE(ac.check(), "");
     size_t actual;
-    ASSERT_EQ(zx_vmo_write(obj->vmo, out.get(), 0, obj->vmo_size, &actual),
+    ASSERT_EQ(zx_vmo_write_old(obj->vmo, out.get(), 0, obj->vmo_size, &actual),
               ZX_OK, "");
 
     // Next, read to the vmo from the disk
@@ -382,7 +382,7 @@ bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size
 
     // Finally, write from the vmo to an out buffer, where we can compare
     // the results with the input buffer.
-    ASSERT_EQ(zx_vmo_read(obj->vmo, out.get(), 0, obj->vmo_size, &actual),
+    ASSERT_EQ(zx_vmo_read_old(obj->vmo, out.get(), 0, obj->vmo_size, &actual),
               ZX_OK, "");
     ASSERT_EQ(memcmp(obj->buf.get(), out.get(), obj->vmo_size), 0,
               "Read data not equal to written data");
@@ -883,7 +883,7 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
     ASSERT_TRUE(ac.check(), "");
     fill_random(obj.buf.get(), obj.vmo_size);
     size_t actual;
-    ASSERT_EQ(zx_vmo_write(obj.vmo, obj.buf.get(), 0, obj.vmo_size, &actual),
+    ASSERT_EQ(zx_vmo_write_old(obj.vmo, obj.buf.get(), 0, obj.vmo_size, &actual),
               ZX_OK, "Failed to write to vmo");
     ASSERT_EQ(obj.vmo_size, actual, "Could not write entire VMO");
     zx_handle_t xfer_vmo;

@@ -96,7 +96,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, ahci_device_t* contr
     int flags = 0;
     uint16_t devinfo[512 / sizeof(uint16_t)];
     size_t actual = 0;
-    status = zx_vmo_read(vmo, devinfo, 0, sizeof(devinfo), &actual);
+    status = zx_vmo_read_old(vmo, devinfo, 0, sizeof(devinfo), &actual);
     if ((status != ZX_OK) || (actual != sizeof(devinfo))) {
         zxlogf(ERROR, "sata: error %d in vmo_read, actual %zd\n", status, actual);
         return ZX_ERR_INTERNAL;

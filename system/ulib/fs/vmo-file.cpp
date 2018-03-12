@@ -77,7 +77,7 @@ zx_status_t VmoFile::Read(void* data, size_t length, size_t offset, size_t* out_
     if (length > remaining_length) {
         length = remaining_length;
     }
-    zx_status_t status = zx_vmo_read(vmo_handle_, data, offset_ + offset, length, &length);
+    zx_status_t status = zx_vmo_read_old(vmo_handle_, data, offset_ + offset, length, &length);
     if (status != ZX_OK) {
         return status;
     }
@@ -100,7 +100,7 @@ zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_
     if (length > remaining_length) {
         length = remaining_length;
     }
-    zx_status_t status = zx_vmo_write(vmo_handle_, data, offset_ + offset, length, &length);
+    zx_status_t status = zx_vmo_write_old(vmo_handle_, data, offset_ + offset, length, &length);
     if (status != ZX_OK) {
         return status;
     }

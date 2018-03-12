@@ -46,7 +46,7 @@ zx_status_t elf_load_prepare(zx_handle_t vmo, const void* hdr_buf, size_t buf_sz
         memcpy(&ehdr, hdr_buf, sizeof(ehdr));
     } else {
         size_t n;
-        zx_status_t status = zx_vmo_read(vmo, &ehdr, 0, sizeof(ehdr), &n);
+        zx_status_t status = zx_vmo_read_old(vmo, &ehdr, 0, sizeof(ehdr), &n);
         if (status != ZX_OK)
             return status;
         if (n != sizeof(ehdr))
@@ -80,7 +80,7 @@ zx_status_t elf_load_read_phdrs(zx_handle_t vmo, elf_phdr_t phdrs[],
                                 uintptr_t phoff, size_t phnum) {
     size_t phdrs_size = (size_t)phnum * sizeof(elf_phdr_t);
     size_t n;
-    zx_status_t status = zx_vmo_read(vmo, phdrs, phoff, phdrs_size, &n);
+    zx_status_t status = zx_vmo_read_old(vmo, phdrs, phoff, phdrs_size, &n);
     if (status != ZX_OK)
         return status;
     if (n != phdrs_size)
@@ -190,7 +190,7 @@ static zx_status_t finish_load_segment(
     if (partial_page > 0) {
         char buffer[PAGE_SIZE];
         size_t n;
-        status = zx_vmo_read(vmo, buffer, file_end, partial_page, &n);
+        status = zx_vmo_read_old(vmo, buffer, file_end, partial_page, &n);
         if (status != ZX_OK) {
             zx_handle_close(bss_vmo);
             return status;
@@ -199,7 +199,7 @@ static zx_status_t finish_load_segment(
             zx_handle_close(bss_vmo);
             return ERR_ELF_BAD_FORMAT;
         }
-        status = zx_vmo_write(bss_vmo, buffer, 0, n, &n);
+        status = zx_vmo_write_old(bss_vmo, buffer, 0, n, &n);
         if (status != ZX_OK) {
             zx_handle_close(bss_vmo);
             return status;

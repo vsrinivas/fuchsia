@@ -56,7 +56,7 @@ bool vmo_read_write_test() {
     EXPECT_EQ(status, ZX_OK, "vm_object_create");
 
     char buf[len];
-    status = zx_vmo_read(vmo, buf, 0, sizeof(buf), &size);
+    status = zx_vmo_read_old(vmo, buf, 0, sizeof(buf), &size);
     EXPECT_EQ(status, ZX_OK, "vm_object_read");
     EXPECT_EQ(sizeof(buf), size, "vm_object_read");
 
@@ -71,7 +71,7 @@ bool vmo_read_write_test() {
     }
 
     memset(buf, 0x99, sizeof(buf));
-    status = zx_vmo_write(vmo, buf, 0, sizeof(buf), &size);
+    status = zx_vmo_write_old(vmo, buf, 0, sizeof(buf), &size);
     EXPECT_EQ(status, ZX_OK, "vm_object_write");
     EXPECT_EQ(sizeof(buf), size, "vm_object_write");
 
@@ -473,32 +473,32 @@ bool vmo_rights_test() {
     EXPECT_EQ(kExpectedRights, kExpectedRights & get_handle_rights(vmo));
 
     // test that we can read/write it
-    status = zx_vmo_read(vmo, buf, 0, 0, &r);
+    status = zx_vmo_read_old(vmo, buf, 0, 0, &r);
     EXPECT_EQ(0, status, "vmo_read");
-    status = zx_vmo_write(vmo, buf, 0, 0, &r);
+    status = zx_vmo_write_old(vmo, buf, 0, 0, &r);
     EXPECT_EQ(0, status, "vmo_write");
 
     vmo2 = ZX_HANDLE_INVALID;
     zx_handle_duplicate(vmo, ZX_RIGHT_READ, &vmo2);
-    status = zx_vmo_read(vmo2, buf, 0, 0, &r);
+    status = zx_vmo_read_old(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(0, status, "vmo_read");
-    status = zx_vmo_write(vmo2, buf, 0, 0, &r);
+    status = zx_vmo_write_old(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(ZX_ERR_ACCESS_DENIED, status, "vmo_write");
     zx_handle_close(vmo2);
 
     vmo2 = ZX_HANDLE_INVALID;
     zx_handle_duplicate(vmo, ZX_RIGHT_WRITE, &vmo2);
-    status = zx_vmo_read(vmo2, buf, 0, 0, &r);
+    status = zx_vmo_read_old(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(ZX_ERR_ACCESS_DENIED, status, "vmo_read");
-    status = zx_vmo_write(vmo2, buf, 0, 0, &r);
+    status = zx_vmo_write_old(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(0, status, "vmo_write");
     zx_handle_close(vmo2);
 
     vmo2 = ZX_HANDLE_INVALID;
     zx_handle_duplicate(vmo, 0, &vmo2);
-    status = zx_vmo_read(vmo2, buf, 0, 0, &r);
+    status = zx_vmo_read_old(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(ZX_ERR_ACCESS_DENIED, status, "vmo_read");
-    status = zx_vmo_write(vmo2, buf, 0, 0, &r);
+    status = zx_vmo_write_old(vmo2, buf, 0, 0, &r);
     EXPECT_EQ(ZX_ERR_ACCESS_DENIED, status, "vmo_write");
     zx_handle_close(vmo2);
 
@@ -777,7 +777,7 @@ bool vmo_zero_page_test() {
     // write to the page via a vmo_write call
     uint32_t v = 100;
     size_t written;
-    status = zx_vmo_write(vmo, &v, PAGE_SIZE, sizeof(v), &written);
+    status = zx_vmo_write_old(vmo, &v, PAGE_SIZE, sizeof(v), &written);
     EXPECT_EQ(ZX_OK, status, "writing to vmo");
 
     // expect it to read back the new value
@@ -792,7 +792,7 @@ bool vmo_zero_page_test() {
     EXPECT_EQ(ZX_OK, status, "committing memory");
 
     // write to the third page
-    status = zx_vmo_write(vmo, &v, PAGE_SIZE * 2, sizeof(v), &written);
+    status = zx_vmo_write_old(vmo, &v, PAGE_SIZE * 2, sizeof(v), &written);
     EXPECT_EQ(ZX_OK, status, "writing to vmo");
 
     // expect it to read back the new value
@@ -863,7 +863,7 @@ bool vmo_clone_test_2() {
 
     // fill the original with stuff
     for (size_t off = 0; off < size; off += sizeof(off)) {
-        zx_vmo_write(vmo, &off, off, sizeof(off), &bytes_handled);
+        zx_vmo_write_old(vmo, &off, off, sizeof(off), &bytes_handled);
     }
 
     // clone it
@@ -875,7 +875,7 @@ bool vmo_clone_test_2() {
     for (size_t off = 0; off < size; off += sizeof(off)) {
         size_t val;
 
-        zx_vmo_read(clone_vmo[0], &val, off, sizeof(val), &bytes_handled);
+        zx_vmo_read_old(clone_vmo[0], &val, off, sizeof(val), &bytes_handled);
 
         if (val != off) {
             EXPECT_EQ(val, off, "vm_clone read back");
@@ -885,17 +885,17 @@ bool vmo_clone_test_2() {
 
     // write to part of the clone
     size_t val = 99;
-    zx_vmo_write(clone_vmo[0], &val, 0, sizeof(val), &bytes_handled);
+    zx_vmo_write_old(clone_vmo[0], &val, 0, sizeof(val), &bytes_handled);
 
     // verify the clone was written to
-    EXPECT_EQ(ZX_OK, zx_vmo_read(clone_vmo[0], &val, 0, sizeof(val), &bytes_handled), "writing to clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_read_old(clone_vmo[0], &val, 0, sizeof(val), &bytes_handled), "writing to clone");
 
     // verify it was written to
     EXPECT_EQ(99, val, "reading back from clone");
 
     // verify that the rest of the page it was written two was cloned
     for (size_t off = sizeof(val); off < PAGE_SIZE; off += sizeof(off)) {
-        zx_vmo_read(clone_vmo[0], &val, off, sizeof(val), &bytes_handled);
+        zx_vmo_read_old(clone_vmo[0], &val, off, sizeof(val), &bytes_handled);
 
         if (val != off) {
             EXPECT_EQ(val, off, "vm_clone read back");
@@ -905,7 +905,7 @@ bool vmo_clone_test_2() {
 
     // verify that it didn't trash the original
     for (size_t off = 0; off < size; off += sizeof(off)) {
-        zx_vmo_read(vmo, &val, off, sizeof(val), &bytes_handled);
+        zx_vmo_read_old(vmo, &val, off, sizeof(val), &bytes_handled);
 
         if (val != off) {
             EXPECT_EQ(val, off, "vm_clone read back of original");
@@ -916,8 +916,8 @@ bool vmo_clone_test_2() {
     // write to the original in the part that is still visible to the clone
     val = 99;
     uint64_t offset = PAGE_SIZE * 2;
-    EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &val, offset, sizeof(val), &bytes_handled), "writing to original");
-    EXPECT_EQ(ZX_OK, zx_vmo_read(clone_vmo[0], &val, offset, sizeof(val), &bytes_handled), "reading back original from clone");
+    EXPECT_EQ(ZX_OK, zx_vmo_write_old(vmo, &val, offset, sizeof(val), &bytes_handled), "writing to original");
+    EXPECT_EQ(ZX_OK, zx_vmo_read_old(clone_vmo[0], &val, offset, sizeof(val), &bytes_handled), "reading back original from clone");
     EXPECT_EQ(99, val, "checking value");
 
     // close the clone handles
@@ -1189,11 +1189,11 @@ bool vmo_cache_test() {
     char c;
     size_t actual;
     EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED));
-    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_read(vmo, &c, 0, sizeof(c), &actual));
-    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_write(vmo, &c, 0, sizeof(c), &actual));
+    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_read_old(vmo, &c, 0, sizeof(c), &actual));
+    EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_write_old(vmo, &c, 0, sizeof(c), &actual));
     EXPECT_EQ(ZX_OK, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
-    EXPECT_EQ(ZX_OK, zx_vmo_read(vmo, &c, 0, sizeof(c), &actual));
-    EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &c, 0, sizeof(c), &actual));
+    EXPECT_EQ(ZX_OK, zx_vmo_read_old(vmo, &c, 0, sizeof(c), &actual));
+    EXPECT_EQ(ZX_OK, zx_vmo_write_old(vmo, &c, 0, sizeof(c), &actual));
 
     EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "close handle");
     END_TEST;
@@ -1418,7 +1418,7 @@ bool vmo_clone_test_4() {
 
     // write to the new part of the original
     size_t val = 99;
-    EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &val, size, sizeof(val), &handled_bytes), "writing to original after extending");
+    EXPECT_EQ(ZX_OK, zx_vmo_write_old(vmo, &val, size, sizeof(val), &handled_bytes), "writing to original after extending");
 
     // verify that it is reflected in the clone
     EXPECT_EQ(99, cp[(size - PAGE_SIZE) / sizeof(*cp)], "modified newly exposed part of cow clone");

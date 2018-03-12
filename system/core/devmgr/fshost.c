@@ -163,7 +163,7 @@ static void setup_bootfs(void) {
     for (unsigned n = 0; (vmo = zx_get_startup_handle(HND_BOOTDATA(n))); n++) {
         bootdata_t bootdata;
         size_t actual;
-        zx_status_t status = zx_vmo_read(vmo, &bootdata, 0, sizeof(bootdata), &actual);
+        zx_status_t status = zx_vmo_read_old(vmo, &bootdata, 0, sizeof(bootdata), &actual);
         if ((status < 0) || (actual != sizeof(bootdata))) {
             goto done;
         }
@@ -180,7 +180,7 @@ static void setup_bootfs(void) {
         size_t off = sizeof(bootdata);
 
         while (len > sizeof(bootdata)) {
-            zx_status_t status = zx_vmo_read(vmo, &bootdata, off, sizeof(bootdata), &actual);
+            zx_status_t status = zx_vmo_read_old(vmo, &bootdata, off, sizeof(bootdata), &actual);
             if ((status < 0) || (actual != sizeof(bootdata))) {
                 break;
             }

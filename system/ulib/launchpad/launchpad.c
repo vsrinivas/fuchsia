@@ -676,7 +676,7 @@ zx_status_t launchpad_file_load(launchpad_t* lp, zx_handle_t vmo) {
 
     while (1) {
         // Read enough to get the interpreter specification of a script
-        status = zx_vmo_read(vmo, first_line, 0, sizeof(first_line),
+        status = zx_vmo_read_old(vmo, first_line, 0, sizeof(first_line),
                              &chars_read);
 
         // This is not a script -- load as an ELF file

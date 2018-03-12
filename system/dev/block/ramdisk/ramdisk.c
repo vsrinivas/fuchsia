@@ -91,7 +91,7 @@ static int worker_thread(void* arg) {
         if (dev->asleep) {
             status = ZX_ERR_UNAVAILABLE;
         } else if (txn->op.command == BLOCK_OP_READ) {
-            if ((zx_vmo_write(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
+            if ((zx_vmo_write_old(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
                               len, &actual) != ZX_OK) ||
                 (actual != len)) {
                 status = ZX_ERR_IO;
@@ -99,7 +99,7 @@ static int worker_thread(void* arg) {
                 dev->txn_count++;
             }
         } else { // BLOCK_OP_WRITE
-            if ((zx_vmo_read(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
+            if ((zx_vmo_read_old(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
                              len, &actual) != ZX_OK) ||
                 (actual != len)) {
                 status = ZX_ERR_IO;

@@ -33,7 +33,7 @@ namespace {
 
 zx_status_t vmo_read_exact(zx_handle_t h, void* data, uint64_t offset, size_t len) {
     size_t actual;
-    zx_status_t status = zx_vmo_read(h, data, offset, len, &actual);
+    zx_status_t status = zx_vmo_read_old(h, data, offset, len, &actual);
     if (status != ZX_OK) {
         return status;
     } else if (actual != len) {
@@ -44,7 +44,7 @@ zx_status_t vmo_read_exact(zx_handle_t h, void* data, uint64_t offset, size_t le
 
 zx_status_t vmo_write_exact(zx_handle_t h, const void* data, uint64_t offset, size_t len) {
     size_t actual;
-    zx_status_t status = zx_vmo_write(h, data, offset, len, &actual);
+    zx_status_t status = zx_vmo_write_old(h, data, offset, len, &actual);
     if (status != ZX_OK) {
         return status;
     } else if (actual != len) {
@@ -473,7 +473,7 @@ zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
     }
 
     const size_t data_start = MerkleTreeBlocks(*inode) * kBlobfsBlockSize;
-    return zx_vmo_read(blob_->GetVmo(), data, data_start + off, len, actual);
+    return zx_vmo_read_old(blob_->GetVmo(), data, data_start + off, len, actual);
 }
 
 void VnodeBlob::QueueUnlink() {

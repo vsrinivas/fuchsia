@@ -212,7 +212,7 @@ evalifsubshell(zx_handle_t ast_vmo)
 	char buffer[size];
 
 	size_t num_read;
-	status = zx_vmo_read(ast_vmo, buffer, 0, size, &num_read);
+	status = zx_vmo_read_old(ast_vmo, buffer, 0, size, &num_read);
 	if (status < 0 || (size_t)num_read != size)
 		exit(status);
 

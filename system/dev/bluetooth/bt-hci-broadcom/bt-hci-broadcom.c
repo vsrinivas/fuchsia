@@ -241,7 +241,7 @@ static int bcm_hci_start_thread(void* arg) {
             uint8_t buffer[255 + 3];
             size_t actual;
 
-            status = zx_vmo_read(fw_vmo, buffer, offset, sizeof(buffer), &actual);
+            status = zx_vmo_read_old(fw_vmo, buffer, offset, sizeof(buffer), &actual);
             if (status != ZX_OK) {
                 goto vmo_close_fail;
             }

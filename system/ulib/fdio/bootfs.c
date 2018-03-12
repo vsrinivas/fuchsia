@@ -17,7 +17,7 @@
 zx_status_t bootfs_create(bootfs_t* bfs, zx_handle_t vmo) {
     bootfs_header_t hdr;
     size_t rlen;
-    zx_status_t r = zx_vmo_read(vmo, &hdr, 0, sizeof(hdr), &rlen);
+    zx_status_t r = zx_vmo_read_old(vmo, &hdr, 0, sizeof(hdr), &rlen);
     if ((r < 0) || (rlen < sizeof(hdr))) {
         printf("bootfs_create: couldn't read boot_data - %d\n", r);
         return r;

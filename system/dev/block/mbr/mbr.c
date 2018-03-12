@@ -195,7 +195,7 @@ static void mbr_read_sync_complete(block_op_t* bop, zx_status_t status) {
 
 static zx_status_t vmo_read(zx_handle_t vmo, void* data, uint64_t off, size_t len) {
     size_t actual;
-    zx_status_t status = zx_vmo_read(vmo, data, off, len, &actual);
+    zx_status_t status = zx_vmo_read_old(vmo, data, off, len, &actual);
     if (status != ZX_OK) {
         return status;
     }

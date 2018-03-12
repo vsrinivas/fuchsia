@@ -69,7 +69,7 @@ void controller_init() {
   while (history_vmo_offset < history_vmo_size) {
     char buffer[kMaxHistoryEntrySize];
     size_t actually_read = 0;
-    status = zx_vmo_read(history_vmo, &buffer, history_vmo_offset,
+    status = zx_vmo_read_old(history_vmo, &buffer, history_vmo_offset,
                          sizeof(buffer), &actually_read);
     if (status != ZX_OK) {
       fprintf(stderr, "Failed to read from the history vmo.\n");

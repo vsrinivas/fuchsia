@@ -493,7 +493,7 @@ bool map_over_destroyed_test() {
     {
         uint8_t buf = 5;
         size_t len;
-        ASSERT_EQ(zx_vmo_write(vmo, &buf, 0, 1, &len), ZX_OK);
+        ASSERT_EQ(zx_vmo_write_old(vmo, &buf, 0, 1, &len), ZX_OK);
         EXPECT_EQ(len, 1U);
 
         buf = 0;
@@ -1439,9 +1439,9 @@ bool map_specific_overwrite_test() {
     // which.
     for (size_t i = 0; i < mapping_size / PAGE_SIZE; ++i) {
         buf[0] = 1;
-        ASSERT_EQ(zx_vmo_write(vmo, buf, i * PAGE_SIZE, 1, &len), ZX_OK);
+        ASSERT_EQ(zx_vmo_write_old(vmo, buf, i * PAGE_SIZE, 1, &len), ZX_OK);
         buf[0] = 2;
-        ASSERT_EQ(zx_vmo_write(vmo2, buf, i * PAGE_SIZE, 1, &len), ZX_OK);
+        ASSERT_EQ(zx_vmo_write_old(vmo2, buf, i * PAGE_SIZE, 1, &len), ZX_OK);
     }
 
     // Create a single mapping and overwrite it

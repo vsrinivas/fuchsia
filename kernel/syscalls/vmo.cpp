@@ -65,6 +65,11 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options,
 
 zx_status_t sys_vmo_read(zx_handle_t handle, user_out_ptr<void> _data,
                          uint64_t offset, size_t len, user_out_ptr<size_t> _actual) {
+    return sys_vmo_read_old(handle, _data, offset, len, _actual);
+}
+
+zx_status_t sys_vmo_read_old(zx_handle_t handle, user_out_ptr<void> _data,
+                             uint64_t offset, size_t len, user_out_ptr<size_t> _actual) {
     LTRACEF("handle %x, data %p, offset %#" PRIx64 ", len %#zx\n",
             handle, _data.get(), offset, len);
 
@@ -107,6 +112,11 @@ zx_status_t sys_vmo_read(zx_handle_t handle, user_out_ptr<void> _data,
 
 zx_status_t sys_vmo_write(zx_handle_t handle, user_in_ptr<const void> _data,
                           uint64_t offset, size_t len, user_out_ptr<size_t> _actual) {
+    return sys_vmo_write_old(handle, _data, offset, len, _actual);
+}
+
+zx_status_t sys_vmo_write_old(zx_handle_t handle, user_in_ptr<const void> _data,
+                              uint64_t offset, size_t len, user_out_ptr<size_t> _actual) {
     LTRACEF("handle %x, data %p, offset %#" PRIx64 ", len %#zx\n",
             handle, _data.get(), offset, len);
 

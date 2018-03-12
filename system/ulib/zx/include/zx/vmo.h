@@ -30,12 +30,12 @@ public:
 
     zx_status_t read(void* data, uint64_t offset, size_t len,
                      size_t* actual) const {
-        return zx_vmo_read(get(), data, offset, len, actual);
+        return zx_vmo_read_old(get(), data, offset, len, actual);
     }
 
     zx_status_t write(const void* data, uint64_t offset, size_t len,
                       size_t* actual) const {
-        return zx_vmo_write(get(), data, offset, len, actual);
+        return zx_vmo_write_old(get(), data, offset, len, actual);
     }
 
     zx_status_t get_size(uint64_t* size) const {

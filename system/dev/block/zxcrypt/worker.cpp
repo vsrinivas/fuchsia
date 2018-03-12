@@ -69,7 +69,7 @@ zx_status_t Worker::Loop() {
         size_t actual;
         switch (block->command) {
         case BLOCK_OP_WRITE:
-            if ((rc = zx_vmo_read(ex->vmo, ex->buf, ex->off, ex->len, &actual)) != ZX_OK ||
+            if ((rc = zx_vmo_read_old(ex->vmo, ex->buf, ex->off, ex->len, &actual)) != ZX_OK ||
                 (rc = encrypt_.Encrypt(ex->buf, ex->num, ex->len, ex->buf) != ZX_OK)) {
                 device_->BlockRelease(block, rc);
                 break;
@@ -79,7 +79,7 @@ zx_status_t Worker::Loop() {
 
         case BLOCK_OP_READ:
             if ((rc = decrypt_.Decrypt(ex->buf, ex->num, ex->len, ex->buf)) != ZX_OK ||
-                (rc = zx_vmo_write(ex->vmo, ex->buf, ex->off, ex->len, &actual)) != ZX_OK) {
+                (rc = zx_vmo_write_old(ex->vmo, ex->buf, ex->off, ex->len, &actual)) != ZX_OK) {
                 device_->BlockRelease(block, rc);
                 break;
             }
