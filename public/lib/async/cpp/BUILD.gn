@@ -23,4 +23,8 @@ source_set("operation") {
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/trace",
   ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+  ]
 }

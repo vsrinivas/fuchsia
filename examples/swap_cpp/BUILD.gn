@@ -17,6 +17,7 @@ executable("swap_module1") {
   deps = [
     ":module",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib/app_driver/cpp:app_driver",
   ]
 }
 
@@ -27,6 +28,7 @@ executable("swap_module2") {
   deps = [
     ":module",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib/app_driver/cpp:app_driver",
   ]
 }
 

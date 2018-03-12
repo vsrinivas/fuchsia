@@ -71,6 +71,7 @@ source_set("story_controller_mock") {
 
   public_deps = [
     "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib/surface/fidl",
   ]
 
   deps = [
