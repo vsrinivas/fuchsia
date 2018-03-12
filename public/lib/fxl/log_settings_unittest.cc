@@ -68,9 +68,9 @@ TEST(LogSettings, ParseValidOptions) {
   EXPECT_EQ(3, settings.min_log_level);
 
   EXPECT_TRUE(ParseLogSettings(
-      CommandLineFromInitializerList({"argv0", "--log-file=custom.log"}),
+      CommandLineFromInitializerList({"argv0", "--log-file=/tmp/custom.log"}),
       &settings));
-  EXPECT_EQ("custom.log", settings.log_file);
+  EXPECT_EQ("/tmp/custom.log", settings.log_file);
 }
 
 TEST(LogSettings, ParseInvalidOptions) {
