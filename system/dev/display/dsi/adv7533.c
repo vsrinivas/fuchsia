@@ -51,48 +51,27 @@ uint8_t* adv7533_get_edid_buffer(void) {
 static void adv7533_mainchn_write(dsi_t* dsi, uint8_t d1, uint8_t d2) {
     dsi->write_buf[0] = d1;
     dsi->write_buf[1] = d2;
-    i2c_transact_sync(&dsi->channel_main, dsi->write_buf, 2, NULL, 0, NULL);
+    i2c_transact_sync(&dsi->i2c_dev.i2c, I2C_MAIN, dsi->write_buf, 2, NULL, 0);
 }
 
 static void adv7533_mainchn_read(dsi_t* dsi, uint8_t d1, uint8_t len) {
-    size_t act_read = 0;
     dsi->write_buf[0] = d1;
-    i2c_transact_sync(&dsi->channel_main, dsi->write_buf, 1, dsi->write_buf, len, &act_read);
+    i2c_transact_sync(&dsi->i2c_dev.i2c, I2C_MAIN, dsi->write_buf, 1, dsi->write_buf, len);
 }
 
 static void adv7533_cecchn_write(dsi_t* dsi, uint8_t d1, uint8_t d2) {
     dsi->write_buf[0] = d1;
     dsi->write_buf[1] = d2;
-    i2c_transact_sync(&dsi->channel_cec, dsi->write_buf, 2, NULL, 0, NULL);
+    i2c_transact_sync(&dsi->i2c_dev.i2c, I2C_CEC, dsi->write_buf, 2, NULL, 0);
 }
 
 static void adv7533_edidchn_read(dsi_t* dsi, uint8_t d1, uint8_t len) {
-    size_t act_read = 0;
     dsi->write_buf[0] = d1;
-    i2c_transact_sync(&dsi->channel_edid, dsi->write_buf, 1, dsi->write_buf, len, &act_read);
+    i2c_transact_sync(&dsi->i2c_dev.i2c, I2C_EDID, dsi->write_buf, 1, dsi->write_buf, len);
 }
 
 zx_status_t adv7533_init(dsi_t* dsi) {
-    zx_status_t status;
     gpio_protocol_t* gpio = &dsi->hdmi_gpio.gpio;
-
-    status = i2c_get_channel(&dsi->i2c_dev.i2c, I2C_MAIN, &dsi->channel_main);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not obtain channel %d\n", __FUNCTION__, status);
-        return ZX_ERR_NO_RESOURCES;
-    }
-
-    status = i2c_get_channel(&dsi->i2c_dev.i2c, I2C_CEC, &dsi->channel_cec);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not obtain channel %d\n", __FUNCTION__, status);
-        return ZX_ERR_NO_RESOURCES;
-    }
-
-    status = i2c_get_channel(&dsi->i2c_dev.i2c, I2C_EDID, &dsi->channel_edid);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not obtain channel %d\n", __FUNCTION__, status);
-        return ZX_ERR_NO_RESOURCES;
-    }
 
     adv7533_mainchn_read(dsi, ADV7533_REG_CHIP_REVISION, 1);
     zxlogf(INFO, "%s: HDMI Ver 0x%x\n", __FUNCTION__, dsi->write_buf[0]);

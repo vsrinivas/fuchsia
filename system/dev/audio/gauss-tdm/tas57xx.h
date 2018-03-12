@@ -33,7 +33,7 @@ private:
 
     zx_status_t SetStandby(bool stdby);
 
-    i2c_channel_t ch_;
+    i2c_protocol_t i2c_;
 
     float current_gain_ = 0;
 };

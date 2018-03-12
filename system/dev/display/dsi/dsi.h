@@ -190,9 +190,6 @@ typedef struct {
     adv7533_i2c_t                       i2c_dev;        // ADV7533 I2C device
     hdmi_gpio_t                         hdmi_gpio;      // ADV7533-related GPIOs
 
-    i2c_channel_t                       channel_main;   // ADV7533 main i2c channel
-    i2c_channel_t                       channel_cec;    // ADV7533 CEC i2c channel
-    i2c_channel_t                       channel_edid;   // ADV7533 EDID i2c channel
     char                                write_buf[64];  // scratch buffer used for the i2c driver
 
     detailed_timing_t*                  std_raw_dtd;

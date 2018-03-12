@@ -443,9 +443,6 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
             return ZX_OK;
         }
         break;
-    case PDEV_I2C_SET_BITRATE:
-        resp.status = i2c_impl_set_bitrate(&dev->bus->i2c, req->index, req->i2c_bitrate);
-        break;
     case PDEV_SERIAL_CONFIG:
         resp.status = pdev_rpc_serial_config(dev, req->index, req->serial_config.baud_rate,
                                              req->serial_config.flags);

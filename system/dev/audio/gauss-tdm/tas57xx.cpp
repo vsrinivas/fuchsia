@@ -20,14 +20,11 @@ fbl::unique_ptr<Tas57xx> Tas57xx::Create(i2c_protocol_t *i2c, uint32_t index) {
     fbl::AllocChecker ac;
 
     auto ptr = fbl::unique_ptr<Tas57xx>(new (&ac) Tas57xx());
-    if (!ac.check())
-        return nullptr;
-
-    zx_status_t res = i2c_get_channel(i2c, index, &ptr->ch_);
-    if (res != ZX_OK) {
-        zxlogf(ERROR,"Tas57xx: failed to get i2c channel index %d - %d\n",index,res);
+    if (!ac.check()) {
         return nullptr;
     }
+
+    memcpy(&ptr->i2c_, i2c, sizeof(*i2c));
 
     return ptr;
 }
@@ -85,7 +82,7 @@ zx_status_t Tas57xx::WriteReg(uint8_t reg, uint8_t value) {
     uint8_t write_buf[2];
     write_buf[0] = reg;
     write_buf[1] = value;
-    return i2c_transact(&ch_, write_buf, 2, 0, NULL, NULL);
+    return i2c_transact(&i2c_, 0, write_buf, 2, 0, NULL, NULL);
 }
 } //namespace gauss
 } //namespace audio

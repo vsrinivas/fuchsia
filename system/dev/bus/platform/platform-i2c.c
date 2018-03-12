@@ -89,7 +89,7 @@ static int i2c_bus_thread(void *arg) {
                                                         read_buffer, txn->read_length);
             size_t actual = (status == ZX_OK ? txn->read_length : 0);
             platform_i2c_complete(txn, status, read_buffer, actual);
-    
+
             mtx_lock(&i2c_bus->lock);
             list_add_tail(&i2c_bus->free_txns, &txn->node);
         }
