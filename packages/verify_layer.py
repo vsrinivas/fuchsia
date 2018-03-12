@@ -13,11 +13,16 @@ import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Standard names for root packages in a layer.
+ROOT_CANONICAL_PACKAGES = [
+    'default',
+    'dev',
+    'dev_full'
+]
+
 # Standard names for packages in a layer.
 CANONICAL_PACKAGES = [
     'all',
-    'default',
-    'dev',
 ]
 
 # Directories which do not require aggregation.
@@ -61,7 +66,7 @@ def check_deps_exist(dep_map):
     return all_exist
 
 
-def check_all(directory, dep_map):
+def check_all(directory, dep_map, layer, is_root=True):
     '''Verifies that directories contain an "all" package and that this packages
        lists all the files in the directory.
        '''
@@ -69,7 +74,8 @@ def check_all(directory, dep_map):
         dirnames = [d for d in dirnames if d not in NO_AGGREGATION_DIRECTORIES]
         is_clean = True
         for dir in dirnames:
-            if not check_all(os.path.join(dirpath, dir), dep_map):
+            subdir = os.path.join(dirpath, dir)
+            if not check_all(subdir, dep_map, layer, is_root=False):
                 is_clean = False
         if not is_clean:
             return False
@@ -85,6 +91,8 @@ def check_all(directory, dep_map):
                 return False
             return True
         for file in filenames:
+            if is_root and (file in ROOT_CANONICAL_PACKAGES or file == layer):
+                continue
             if file in CANONICAL_PACKAGES:
                 continue
             package = os.path.join(dirpath, file)
@@ -130,7 +138,7 @@ def main():
     if not check_deps_exist(deps):
         return False
 
-    if not check_all(base, deps):
+    if not check_all(base, deps, layer):
         return False
 
     return True
