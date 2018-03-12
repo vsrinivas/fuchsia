@@ -900,6 +900,9 @@ zx_status_t platform_mp_prep_cpu_unplug(uint cpu_id) {
     return arch_mp_prep_cpu_unplug(cpu_id);
 }
 
+const char* manufacturer = "unknown";
+const char* product = "unknown";
+
 void platform_init(void) {
     pc_init_debug();
 
@@ -912,6 +915,17 @@ void platform_init(void) {
     platform_init_smp();
 
     pc_init_smbios();
+
+    smbios::WalkStructs([](smbios::SpecVersion version, const smbios::Header* h,
+                           const smbios::StringTable& st, void* ctx) -> zx_status_t {
+        if (h->type == 1 && version.IncludesVersion(2, 0)) {
+            auto entry = reinterpret_cast<const smbios::SystemInformationStruct2_0*>(h);
+            st.GetString(entry->manufacturer_str_idx, &manufacturer);
+            st.GetString(entry->product_name_str_idx, &product);
+        }
+        return ZX_OK;
+    }, nullptr);
+    printf("smbios: manufacturer=\"%s\" product=\"%s\"\n", manufacturer, product);
 }
 
 void platform_suspend(void) {
