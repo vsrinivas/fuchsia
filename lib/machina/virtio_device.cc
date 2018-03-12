@@ -28,10 +28,9 @@ VirtioDevice::VirtioDevice(uint8_t device_id,
       num_queues_(num_queues),
       phys_mem_(phys_mem),
       pci_(this) {
-  // Virt queue initialization.
   for (int i = 0; i < num_queues_; ++i) {
-    queues_[i].set_size(QUEUE_SIZE);
     queues_[i].set_device(this);
+    queues_[i].set_size_unsafe(QUEUE_SIZE);
   }
 }
 

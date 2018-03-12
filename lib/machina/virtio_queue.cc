@@ -34,18 +34,6 @@ VirtioQueue::VirtioQueue() {
   cnd_init(&avail_ring_cnd_);
 }
 
-// Returns a circular index into a Virtio ring.
-constexpr uint32_t ring_index(uint16_t queue_size, uint32_t index) {
-  return index % queue_size;
-}
-
-static bool ring_has_avail(virtio_queue_t* queue) {
-  if (queue->avail == nullptr) {
-    return 0;
-  }
-  return queue->avail->idx != queue->index;
-}
-
 static bool validate_queue_range(VirtioDevice* device,
                                  zx_vaddr_t addr,
                                  size_t size) {
@@ -68,6 +56,16 @@ static void queue_set_segment_addr(VirtioQueue* queue,
   *ptr = validate_queue_range(device, host_vaddr, size)
              ? reinterpret_cast<T*>(host_vaddr)
              : nullptr;
+}
+
+uint16_t VirtioQueue::size() const {
+  fbl::AutoLock lock(&mutex_);
+  return ring_.size;
+}
+
+void VirtioQueue::set_size(uint16_t size) {
+  fbl::AutoLock lock(&mutex_);
+  ring_.size = size;
 }
 
 void VirtioQueue::set_desc_addr(uint64_t desc_paddr) {
@@ -120,24 +118,35 @@ uint64_t VirtioQueue::used_addr() const {
 
 void VirtioQueue::Signal() {
   fbl::AutoLock lock(&mutex_);
-  if (ring_has_avail(&ring_)) {
+  if (HasAvailLocked()) {
     cnd_signal(&avail_ring_cnd_);
   }
 }
 
 // This must not return any errors besides |ZX_ERR_SHOULD_WAIT|.
 zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
-  if (!ring_has_avail(&ring_)) {
+  if (!HasAvailLocked()) {
     return ZX_ERR_SHOULD_WAIT;
   }
 
-  *index = ring_.avail->ring[ring_index(ring_.size, ring_.index++)];
+  *index = ring_.avail->ring[RingIndexLocked(ring_.index++)];
   return ZX_OK;
 }
 
 zx_status_t VirtioQueue::NextAvail(uint16_t* index) {
   fbl::AutoLock lock(&mutex_);
   return NextAvailLocked(index);
+}
+
+bool VirtioQueue::HasAvailLocked() const {
+  if (ring_.avail == nullptr) {
+    return false;
+  }
+  return ring_.avail->idx != ring_.index;
+}
+
+uint32_t VirtioQueue::RingIndexLocked(uint32_t index) const {
+  return index % ring_.size;
 }
 
 void VirtioQueue::Wait(uint16_t* index) {
@@ -232,7 +241,7 @@ void VirtioQueue::Return(uint16_t index, uint32_t len) {
   {
     fbl::AutoLock lock(&mutex_);
     volatile struct vring_used_elem* used =
-        &ring_.used->ring[ring_index(ring_.size, ring_.used->idx)];
+        &ring_.used->ring[RingIndexLocked(ring_.used->idx)];
 
     used->id = index;
     used->len = len;
@@ -295,7 +304,8 @@ zx_status_t VirtioQueue::HandleDescriptor(virtio_queue_fn_t handler,
   } while (desc->flags & VRING_DESC_F_NEXT);
 
   Return(head, used_len);
-  return ring_has_avail(&ring_) ? ZX_ERR_NEXT : ZX_OK;
+  fbl::AutoLock lock(&mutex_);
+  return HasAvailLocked() ? ZX_ERR_NEXT : ZX_OK;
 }
 
 }  // namespace machina

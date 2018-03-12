@@ -122,8 +122,11 @@ class VirtioQueue {
   void set_device(VirtioDevice* device) { device_ = device; }
 
   // Gets of sets the number of descriptors in the queue.
-  uint16_t size() const { return ring_.size; }
-  void set_size(uint16_t size) { ring_.size = size; }
+  uint16_t size() const;
+  void set_size(uint16_t size);
+  void set_size_unsafe(uint16_t size) __TA_NO_THREAD_SAFETY_ANALYSIS {
+    ring_.size = size;
+  };
 
   // Gets or sets the address of the descriptor table for this queue.
   // The address should be in guest physical address space.
@@ -187,14 +190,15 @@ class VirtioQueue {
 
  private:
   zx_status_t NextAvailLocked(uint16_t* index) __TA_REQUIRES(mutex_);
+  bool HasAvailLocked() const __TA_REQUIRES(mutex_);
 
   // Returns a circular index into a Virtio ring.
-  uint32_t RingIndex(uint32_t index) __TA_REQUIRES(mutex_);
+  uint32_t RingIndexLocked(uint32_t index) const __TA_REQUIRES(mutex_);
 
   mutable fbl::Mutex mutex_;
   cnd_t avail_ring_cnd_;
   VirtioDevice* device_;
-  virtio_queue_t ring_;
+  virtio_queue_t ring_ __TA_GUARDED(mutex_);
 };
 
 }  // namespace machina
