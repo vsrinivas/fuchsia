@@ -1563,7 +1563,7 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
 
         // We need at least five slices, so we can access three "middle"
         // slices and jitter to test off-by-one errors.
-        ASSERT_GE(vparts[i].slices_used, 5, "");
+        ASSERT_GE(vparts[i].slices_used, 5);
 
         {
             fbl::RefPtr<VmoClient> vc;
@@ -1781,19 +1781,15 @@ static bool TestPersistenceSimple(void) {
 
     // Now we can access the next slice...
     ASSERT_TRUE(CheckWrite(vp_fd, info.block_size * (last_block + 1),
-                           info.block_size, &buf[info.block_size]),
-                "");
+                           info.block_size, &buf[info.block_size]));
     ASSERT_TRUE(CheckRead(vp_fd, info.block_size * (last_block + 1),
-                          info.block_size, &buf[info.block_size]),
-                "");
+                          info.block_size, &buf[info.block_size]));
     // ... We can still access the previous slice...
     ASSERT_TRUE(CheckRead(vp_fd, info.block_size * last_block,
-                          info.block_size, &buf[0]),
-                "");
+                          info.block_size, &buf[0]));
     // ... And we can cross slices
     ASSERT_TRUE(CheckRead(vp_fd, info.block_size * last_block,
-                          info.block_size * 2, &buf[0]),
-                "");
+                          info.block_size * 2, &buf[0]));
 
     // Try allocating the rest of the slices, rebinding, and ensuring
     // that the size stays updated.
@@ -1902,21 +1898,21 @@ static bool TestCorruptMount(void) {
     // Create a file large enough to force slice extension
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[slice_size]);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     memset(buf.get(), 0, slice_size);
 
     char fname[128];
     snprintf(fname, sizeof(fname), "%s/wow", mount_path);
     int file_fd = open(fname, O_CREAT | O_RDWR | O_EXCL);
-    ASSERT_GT(file_fd, 0, "");
-    ASSERT_EQ(write(file_fd, buf.get(), slice_size), (ssize_t)slice_size, "");
-    ASSERT_EQ(close(file_fd), 0, "");
+    ASSERT_GT(file_fd, 0);
+    ASSERT_EQ(write(file_fd, buf.get(), slice_size), (ssize_t)slice_size);
+    ASSERT_EQ(close(file_fd), 0);
 
     // Clean up
     ASSERT_EQ(umount(mount_path), ZX_OK);
 
     vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
 
     // Verify that data slices increased and others were fixed on mount
     ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
@@ -2532,8 +2528,7 @@ int random_access_thread(void* arg) {
             size_t off = erequest.offset * st->slice_size;
             size_t len = extension_length * st->slice_size;
             ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd, off / st->block_size,
-                                           len / st->block_size),
-                        "");
+                                           len / st->block_size));
             ASSERT_EQ(ioctl_block_fvm_extend(self->vp_fd, &erequest), 0);
             self->extents[extent_index].len += extension_length;
 
@@ -2561,8 +2556,7 @@ int random_access_thread(void* arg) {
             size_t off = erequest.offset * st->slice_size;
             size_t len = extent.len * st->slice_size;
             ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd, off / st->block_size,
-                                           len / st->block_size),
-                        "");
+                                           len / st->block_size));
             ASSERT_EQ(ioctl_block_fvm_extend(self->vp_fd, &erequest), 0);
             ASSERT_TRUE(CheckWriteColor(self->vp_fd, off, len, color));
             ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
@@ -2623,8 +2617,7 @@ int random_access_thread(void* arg) {
             off = (self->extents[extent_index].start + 1) * st->slice_size;
             len = (shrink_length) * st->slice_size;
             ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd, off / st->block_size,
-                                           len / st->block_size),
-                        "");
+                                           len / st->block_size));
 
             // To avoid collisions between test extents, let's remove the
             // trailing extent.
@@ -2657,8 +2650,7 @@ int random_access_thread(void* arg) {
             ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
             ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd, &erequest), 0);
             ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd, off / st->block_size,
-                                           len / st->block_size),
-                        "");
+                                           len / st->block_size));
             {
                 fbl::AutoLock al(&st->lock);
                 st->slices_left += self->extents[extent_index].len;

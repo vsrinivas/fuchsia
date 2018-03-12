@@ -196,8 +196,7 @@ void join_wait_inf_thread(thrd_t wait_inf_thread) {
 bool expect_debugger_attached_eq(zx_handle_t inferior, bool expected, const char* msg) {
     zx_info_process_t info;
     // ZX_ASSERT returns false if the check fails.
-    ASSERT_EQ(zx_object_get_info(inferior, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK,
-              "");
+    ASSERT_EQ(zx_object_get_info(inferior, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK);
     ASSERT_EQ(info.debugger_attached, expected, msg);
     return true;
 }
@@ -217,7 +216,7 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_port_packet_t* packet)
         zx_info_thread_t info = tu_thread_get_info(thread);
         // The thread could still transition to DEAD here (if the
         // process exits), so check for either DYING or DEAD.
-        EXPECT_TRUE(info.state == ZX_THREAD_STATE_DYING || info.state == ZX_THREAD_STATE_DEAD, "");
+        EXPECT_TRUE(info.state == ZX_THREAD_STATE_DYING || info.state == ZX_THREAD_STATE_DEAD);
         // If the state is DYING it would be nice to check that the
         // value of |info.wait_exception_port_type| is DEBUGGER. Alas
         // if the process has exited then the thread will get
@@ -228,12 +227,11 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_port_packet_t* packet)
         // in an exception. Thus |info.wait_exception_port_type| can
         // either be DEBUGGER or NONE.
         EXPECT_TRUE(info.wait_exception_port_type == ZX_EXCEPTION_PORT_TYPE_NONE ||
-                        info.wait_exception_port_type == ZX_EXCEPTION_PORT_TYPE_DEBUGGER,
-                    "");
+                        info.wait_exception_port_type == ZX_EXCEPTION_PORT_TYPE_DEBUGGER);
         tu_handle_close(thread);
     } else {
-        EXPECT_EQ(status, ZX_ERR_NOT_FOUND, "");
-        EXPECT_TRUE(tu_process_has_exited(inferior), "");
+        EXPECT_EQ(status, ZX_ERR_NOT_FOUND);
+        EXPECT_TRUE(tu_process_has_exited(inferior));
     }
     unittest_printf("wait-inf: thread %" PRId64 " exited\n", tid);
     // A thread is gone, but we only care about the process.
@@ -275,7 +273,7 @@ bool handle_expected_page_fault(zx_handle_t inferior, const zx_port_packet_t* pa
 
     zx_status_t status = zx_task_resume(thread, ZX_RESUME_EXCEPTION);
     tu_handle_close(thread);
-    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_EQ(status, ZX_OK);
 
     END_HELPER;
 }
@@ -292,12 +290,12 @@ bool debugger_test_exception_handler(zx_handle_t inferior, const zx_port_packet_
     zx_koid_t pid = tu_get_koid(inferior);
 
     if (ZX_PKT_IS_SIGNAL_REP(packet->type)) {
-        ASSERT_TRUE(packet->key != pid, "");
+        ASSERT_TRUE(packet->key != pid);
         // Must be a signal on one of the threads.
         // Here we're only expecting TERMINATED.
-        ASSERT_TRUE(packet->signal.observed & ZX_THREAD_TERMINATED, "");
+        ASSERT_TRUE(packet->signal.observed & ZX_THREAD_TERMINATED);
     } else {
-        ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet->type), "");
+        ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet->type));
 
         zx_koid_t tid = packet->exception.tid;
 
@@ -311,12 +309,12 @@ bool debugger_test_exception_handler(zx_handle_t inferior, const zx_port_packet_
         case ZX_EXCP_THREAD_EXITING:
             // N.B. We could get thread exiting messages from previous
             // tests.
-            EXPECT_TRUE(handle_thread_exiting(inferior, packet), "");
+            EXPECT_TRUE(handle_thread_exiting(inferior, packet));
             break;
 
         case ZX_EXCP_FATAL_PAGE_FAULT:
-            ASSERT_NONNULL(segv_count, "");
-            ASSERT_TRUE(handle_expected_page_fault(inferior, packet, segv_count), "");
+            ASSERT_NONNULL(segv_count);
+            ASSERT_TRUE(handle_expected_page_fault(inferior, packet, segv_count));
             break;
 
         default: {
@@ -347,7 +345,7 @@ bool debugger_test() {
     inferior_data_t* inferior_data = attach_inferior(inferior, eport, max_threads);
     thrd_t wait_inf_thread =
         start_wait_inf_thread(inferior_data, debugger_test_exception_handler, &segv_count);
-    EXPECT_NE(eport, ZX_HANDLE_INVALID, "");
+    EXPECT_NE(eport, ZX_HANDLE_INVALID);
     expect_debugger_attached_eq(inferior, true, "debugger should appear attached");
 
     if (!start_inferior(lp))
@@ -394,7 +392,7 @@ bool debugger_thread_list_test() {
     inferior_data_t* inferior_data = attach_inferior(inferior, eport, max_threads);
     thrd_t wait_inf_thread =
         start_wait_inf_thread(inferior_data, debugger_test_exception_handler, NULL);
-    EXPECT_NE(eport, ZX_HANDLE_INVALID, "");
+    EXPECT_NE(eport, ZX_HANDLE_INVALID);
 
     if (!start_inferior(lp))
         return false;
@@ -414,7 +412,7 @@ bool debugger_thread_list_test() {
     zx_koid_t* threads = static_cast<zx_koid_t*>(tu_malloc(buf_size));
     zx_status_t status = zx_object_get_info(inferior, ZX_INFO_PROCESS_THREADS, threads, buf_size,
                                             &num_threads, NULL);
-    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_EQ(status, ZX_OK);
 
     // There should be at least 1+kNumExtraThreads threads in the result.
     ASSERT_GE(num_threads, 1 + kNumExtraThreads, "zx_object_get_info failed");
@@ -454,13 +452,13 @@ bool property_process_debug_addr_test() {
     uintptr_t debug_addr = 42;
     zx_status_t status =
         zx_object_set_property(self, ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr));
-    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED, "");
+    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
 
     // Some minimal verification that the value is correct.
 
     status =
         zx_object_get_property(self, ZX_PROP_PROCESS_DEBUG_ADDR, &debug_addr, sizeof(debug_addr));
-    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_EQ(status, ZX_OK);
 
     // These are all dsos we link with. See rules.mk.
     const char* launchpad_so = "liblaunchpad.so";
@@ -475,7 +473,7 @@ bool property_process_debug_addr_test() {
     const r_debug* debug = (r_debug*)debug_addr;
     const link_map* lmap = debug->r_map;
 
-    EXPECT_EQ(debug->r_state, r_debug::RT_CONSISTENT, "");
+    EXPECT_EQ(debug->r_state, r_debug::RT_CONSISTENT);
 
     while (lmap != NULL) {
         if (strcmp(lmap->l_name, launchpad_so) == 0)
@@ -489,10 +487,10 @@ bool property_process_debug_addr_test() {
         lmap = lmap->l_next;
     }
 
-    EXPECT_TRUE(found_launchpad, "");
-    EXPECT_TRUE(found_libc, "");
-    EXPECT_TRUE(found_test_utils, "");
-    EXPECT_TRUE(found_unittest, "");
+    EXPECT_TRUE(found_launchpad);
+    EXPECT_TRUE(found_libc);
+    EXPECT_TRUE(found_test_utils);
+    EXPECT_TRUE(found_unittest);
 
     END_TEST;
 }
@@ -519,14 +517,14 @@ bool write_text_segment() {
     uintptr_t addr = (uintptr_t)write_text_segment_helper + 1;
     uint8_t previous_byte;
     size_t size = read_inferior_memory(self, addr, &previous_byte, sizeof(previous_byte));
-    EXPECT_EQ(size, sizeof(previous_byte), "");
+    EXPECT_EQ(size, sizeof(previous_byte));
 
     uint8_t byte_to_write = 0;
     size = write_inferior_memory(self, addr, &byte_to_write, sizeof(byte_to_write));
-    EXPECT_EQ(size, sizeof(byte_to_write), "");
+    EXPECT_EQ(size, sizeof(byte_to_write));
 
     size = write_inferior_memory(self, addr, &previous_byte, sizeof(previous_byte));
-    EXPECT_EQ(size, sizeof(previous_byte), "");
+    EXPECT_EQ(size, sizeof(previous_byte));
 
     END_TEST;
 }
@@ -634,7 +632,7 @@ bool suspended_reg_access_test() {
     enum message msg;
     recv_msg(channel, &msg);
     // No need to send a ping.
-    ASSERT_EQ(msg, MSG_PONG, "");
+    ASSERT_EQ(msg, MSG_PONG);
 
     // Set up waiting for the thread to suspend via a port (since this is
     // what debuggers will typically do).
@@ -649,8 +647,8 @@ bool suspended_reg_access_test() {
     uint64_t test_reg = 0;
     while (test_reg != reg_access_initial_value) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
-        ASSERT_EQ(zx_task_suspend(thread), ZX_OK, "");
-        ASSERT_TRUE(wait_thread_suspended(self_proc, thread, eport), "");
+        ASSERT_EQ(zx_task_suspend(thread), ZX_OK);
+        ASSERT_TRUE(wait_thread_suspended(self_proc, thread, eport));
 
         read_inferior_gregs(thread, &regs);
         test_reg = regs.REG_ACCESS_TEST_REG;
@@ -661,19 +659,19 @@ bool suspended_reg_access_test() {
     regs.REG_ACCESS_TEST_REG = reg_access_write_test_value;
     write_inferior_gregs(thread, &regs);
 
-    ASSERT_EQ(zx_task_resume(thread, 0), ZX_OK, "");
+    ASSERT_EQ(zx_task_resume(thread, 0), ZX_OK);
     thrd_join(thread_c11, NULL);
     tu_handle_close(thread);
 
     // We can't test the pc value exactly as we don't know on which instruction
     // the thread will be suspended. But we can verify it is within some
     // minimal range.
-    EXPECT_GE(pc_value, arg.pc, "");
-    EXPECT_LE(pc_value, arg.pc + REG_ACCESS_MAX_LOOP_SIZE, "");
+    EXPECT_GE(pc_value, arg.pc);
+    EXPECT_LE(pc_value, arg.pc + REG_ACCESS_MAX_LOOP_SIZE);
 
-    EXPECT_EQ(sp_value, arg.sp, "");
+    EXPECT_EQ(sp_value, arg.sp);
 
-    EXPECT_EQ(reg_access_write_test_value, arg.result, "");
+    EXPECT_EQ(reg_access_write_test_value, arg.result);
 
     tu_handle_close(channel);
     tu_handle_close(eport);
@@ -724,15 +722,15 @@ int suspended_in_syscall_reg_access_thread_func(void* arg_) {
         };
         zx_status_t call_status = zx_channel_call(arg->syscall_handle, 0, ZX_TIME_INFINITE,
                                                   &call_args, &actual_bytes, &actual_handles, NULL);
-        ASSERT_EQ(call_status, ZX_OK, "");
-        EXPECT_EQ(actual_bytes, sizeof(recv_buf), "");
-        EXPECT_EQ(memcmp(recv_buf, "TXIDy", sizeof(recv_buf)), 0, "");
+        ASSERT_EQ(call_status, ZX_OK);
+        EXPECT_EQ(actual_bytes, sizeof(recv_buf));
+        EXPECT_EQ(memcmp(recv_buf, "TXIDy", sizeof(recv_buf)), 0);
     } else {
         zx_signals_t pending;
         zx_status_t status =
             zx_object_wait_one(arg->syscall_handle, ZX_EVENT_SIGNALED, ZX_TIME_INFINITE, &pending);
-        ASSERT_EQ(status, ZX_OK, "");
-        EXPECT_NE(pending & ZX_EVENT_SIGNALED, 0u, "");
+        ASSERT_EQ(status, ZX_OK);
+        EXPECT_NE(pending & ZX_EVENT_SIGNALED, 0u);
     }
 
     return 0;
@@ -755,7 +753,7 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
     zx_handle_t self_proc = zx_process_self();
 
     uintptr_t vdso_start = 0, vdso_end = 0;
-    EXPECT_TRUE(get_vdso_exec_range(&vdso_start, &vdso_end), "");
+    EXPECT_TRUE(get_vdso_exec_range(&vdso_start, &vdso_end));
 
     suspended_in_syscall_reg_access_arg arg = {};
     arg.do_channel_call = do_channel_call;
@@ -764,7 +762,7 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
     if (do_channel_call) {
         tu_channel_create(&arg.syscall_handle, &syscall_handle);
     } else {
-        ASSERT_EQ(zx_event_create(0u, &syscall_handle), ZX_OK, "");
+        ASSERT_EQ(zx_event_create(0u, &syscall_handle), ZX_OK);
         arg.syscall_handle = syscall_handle;
     }
 
@@ -783,11 +781,11 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
         thread_info = tu_thread_get_info(thread);
     } while (thread_info.state != ZX_THREAD_STATE_BLOCKED);
-    ASSERT_EQ(thread_info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE, "");
+    ASSERT_EQ(thread_info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE);
 
     // Extra sanity check for channels.
     if (do_channel_call) {
-        EXPECT_TRUE(tu_channel_wait_readable(syscall_handle), "");
+        EXPECT_TRUE(tu_channel_wait_readable(syscall_handle));
     }
 
     // Set up waiting for the thread to suspend via a port (since this is
@@ -796,24 +794,24 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
     zx_signals_t signals = ZX_THREAD_TERMINATED | ZX_THREAD_RUNNING | ZX_THREAD_SUSPENDED;
     tu_object_wait_async(thread, eport, signals);
 
-    ASSERT_EQ(zx_task_suspend(thread), ZX_OK, "");
+    ASSERT_EQ(zx_task_suspend(thread), ZX_OK);
 
-    ASSERT_TRUE(wait_thread_suspended(self_proc, thread, eport), "");
+    ASSERT_TRUE(wait_thread_suspended(self_proc, thread, eport));
 
     zx_thread_state_general_regs_t regs;
     read_inferior_gregs(thread, &regs);
 
     // Verify the pc is somewhere within the vdso.
     uint64_t pc_value = extract_pc_reg(&regs);
-    EXPECT_GE(pc_value, vdso_start, "");
-    EXPECT_LE(pc_value, vdso_end, "");
+    EXPECT_GE(pc_value, vdso_start);
+    EXPECT_LE(pc_value, vdso_end);
 
     // The stack pointer is somewhere within the syscall.
     // Just verify the value we have is within range.
     uint64_t sp_value = extract_sp_reg(&regs);
     uint64_t arg_sp = arg.sp.load();
-    EXPECT_LE(sp_value, arg_sp, "");
-    EXPECT_GE(sp_value + 1024, arg_sp, "");
+    EXPECT_LE(sp_value, arg_sp);
+    EXPECT_GE(sp_value + 1024, arg_sp);
 
     // wake the thread
     if (do_channel_call) {
@@ -821,28 +819,28 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
         uint32_t actual_bytes;
         ASSERT_EQ(
             zx_channel_read(syscall_handle, 0, buf, NULL, sizeof(buf), 0, &actual_bytes, NULL),
-            ZX_OK, "");
-        EXPECT_EQ(actual_bytes, sizeof(buf), "");
-        EXPECT_EQ(memcmp(buf, "TXIDx", sizeof(buf)), 0, "");
+            ZX_OK);
+        EXPECT_EQ(actual_bytes, sizeof(buf));
+        EXPECT_EQ(memcmp(buf, "TXIDx", sizeof(buf)), 0);
 
         // write a reply
         buf[sizeof(zx_txid_t)] = 'y';
-        ASSERT_EQ(zx_channel_write(syscall_handle, 0, buf, sizeof(buf), NULL, 0), ZX_OK, "");
+        ASSERT_EQ(zx_channel_write(syscall_handle, 0, buf, sizeof(buf), NULL, 0), ZX_OK);
 
         // Make sure the remote channel didn't get signaled
         EXPECT_EQ(zx_object_wait_one(arg.syscall_handle, ZX_CHANNEL_READABLE, 0, NULL),
-                  ZX_ERR_TIMED_OUT, "");
+                  ZX_ERR_TIMED_OUT);
 
         // Make sure we can't read from the remote channel (the message should have
         // been reserved for the other thread, even though it is suspended).
         EXPECT_EQ(
             zx_channel_read(arg.syscall_handle, 0, buf, NULL, sizeof(buf), 0, &actual_bytes, NULL),
-            ZX_ERR_SHOULD_WAIT, "");
+            ZX_ERR_SHOULD_WAIT);
     } else {
-        ASSERT_EQ(zx_object_signal(syscall_handle, 0u, ZX_EVENT_SIGNALED), ZX_OK, "");
+        ASSERT_EQ(zx_object_signal(syscall_handle, 0u, ZX_EVENT_SIGNALED), ZX_OK);
     }
 
-    ASSERT_EQ(zx_task_resume(thread, 0), ZX_OK, "");
+    ASSERT_EQ(zx_task_resume(thread, 0), ZX_OK);
     thrd_join(thread_c11, NULL);
     tu_handle_close(thread);
 
@@ -858,7 +856,7 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
 bool suspended_in_syscall_reg_access_test() {
     BEGIN_TEST;
 
-    EXPECT_TRUE(suspended_in_syscall_reg_access_worker(false), "");
+    EXPECT_TRUE(suspended_in_syscall_reg_access_worker(false));
 
     END_TEST;
 }
@@ -866,7 +864,7 @@ bool suspended_in_syscall_reg_access_test() {
 bool suspended_in_channel_call_reg_access_test() {
     BEGIN_TEST;
 
-    EXPECT_TRUE(suspended_in_syscall_reg_access_worker(true), "");
+    EXPECT_TRUE(suspended_in_syscall_reg_access_worker(true));
 
     END_TEST;
 }
@@ -890,7 +888,7 @@ bool suspended_in_exception_handler(zx_handle_t inferior, const zx_port_packet_t
 
     if (ZX_PKT_IS_SIGNAL_REP(packet->type)) {
         // Must be a signal on one of the threads.
-        ASSERT_TRUE(packet->key != data->process_id, "");
+        ASSERT_TRUE(packet->key != data->process_id);
         zx_koid_t pkt_tid = packet->key;
 
         // The following signals are expected here.  Note that
@@ -900,18 +898,18 @@ bool suspended_in_exception_handler(zx_handle_t inferior, const zx_port_packet_t
             // Nothing to do.
         }
         if (packet->signal.observed & ZX_THREAD_RUNNING) {
-            ASSERT_EQ(pkt_tid, data->thread_id, "");
+            ASSERT_EQ(pkt_tid, data->thread_id);
             atomic_fetch_add(&data->resume_count, 1);
         }
         if (packet->signal.observed & ZX_THREAD_SUSPENDED) {
-            ASSERT_EQ(pkt_tid, data->thread_id, "");
+            ASSERT_EQ(pkt_tid, data->thread_id);
             atomic_fetch_add(&data->suspend_count, 1);
-            ASSERT_EQ(zx_task_resume(data->thread_handle, 0), ZX_OK, "");
+            ASSERT_EQ(zx_task_resume(data->thread_handle, 0), ZX_OK);
             // At this point we should get ZX_THREAD_RUNNING, we'll
             // process it later.
         }
     } else {
-        ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet->type), "");
+        ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet->type));
 
         zx_koid_t pkt_tid = packet->exception.tid;
 
@@ -919,13 +917,13 @@ bool suspended_in_exception_handler(zx_handle_t inferior, const zx_port_packet_t
         case ZX_EXCP_THREAD_EXITING:
             // N.B. We could get thread exiting messages from previous
             // tests.
-            EXPECT_TRUE(handle_thread_exiting(inferior, packet), "");
+            EXPECT_TRUE(handle_thread_exiting(inferior, packet));
             break;
 
         case ZX_EXCP_FATAL_PAGE_FAULT: {
             unittest_printf("wait-inf: got page fault exception\n");
 
-            ASSERT_EQ(pkt_tid, data->thread_id, "");
+            ASSERT_EQ(pkt_tid, data->thread_id);
 
             // Verify that the fault is at the PC we expected.
             if (!test_segv_pc(data->thread_handle))
@@ -933,7 +931,7 @@ bool suspended_in_exception_handler(zx_handle_t inferior, const zx_port_packet_t
 
             // Suspend the thread before fixing the segv to verify register
             // access works while the thread is in an exception and suspended.
-            ASSERT_EQ(zx_task_suspend(data->thread_handle), ZX_OK, "");
+            ASSERT_EQ(zx_task_suspend(data->thread_handle), ZX_OK);
 
             // Waiting for the thread to suspend doesn't work here as the
             // thread stays in the exception until we pass ZX_RESUME_EXCEPTION.
@@ -951,7 +949,7 @@ bool suspended_in_exception_handler(zx_handle_t inferior, const zx_port_packet_t
 
             atomic_fetch_add(&data->segv_count, 1);
 
-            ASSERT_EQ(zx_task_resume(data->thread_handle, ZX_RESUME_EXCEPTION), ZX_OK, "");
+            ASSERT_EQ(zx_task_resume(data->thread_handle, ZX_RESUME_EXCEPTION), ZX_OK);
             // At this point we should get ZX_THREAD_SUSPENDED, we'll
             // process it later.
 
@@ -987,7 +985,7 @@ bool suspended_in_exception_reg_access_test() {
     data.segv_count.store(0);
     data.suspend_count.store(0);
     data.resume_count.store(0);
-    ASSERT_TRUE(get_inferior_thread_handle(channel, &data.thread_handle), "");
+    ASSERT_TRUE(get_inferior_thread_handle(channel, &data.thread_handle));
     data.process_id = tu_get_koid(inferior);
     data.thread_id = tu_get_koid(data.thread_handle);
 
@@ -999,7 +997,7 @@ bool suspended_in_exception_reg_access_test() {
     inferior_data_t* inferior_data = attach_inferior(inferior, eport, max_threads);
     thrd_t wait_inf_thread =
         start_wait_inf_thread(inferior_data, suspended_in_exception_handler, &data);
-    EXPECT_NE(eport, ZX_HANDLE_INVALID, "");
+    EXPECT_NE(eport, ZX_HANDLE_INVALID);
 
     enum message msg;
     send_msg(channel, MSG_CRASH_AND_RECOVER_TEST);
@@ -1007,7 +1005,7 @@ bool suspended_in_exception_reg_access_test() {
         return false;
     }
     // wait_inf_thread will process the crash and resume the inferior.
-    EXPECT_EQ(msg, MSG_RECOVERED_FROM_CRASH, "");
+    EXPECT_EQ(msg, MSG_RECOVERED_FROM_CRASH);
 
     if (!shutdown_inferior(channel, inferior))
         return false;
@@ -1020,11 +1018,11 @@ bool suspended_in_exception_reg_access_test() {
     // Don't check these until now to ensure the resume_count has been
     // updated (we're guaranteed that ZX_THREAD_RUNNING will be signalled
     // and processed before the waiter thread exits.
-    EXPECT_EQ(data.segv_count.load(), kNumSegvTries, "");
-    EXPECT_EQ(data.suspend_count.load(), kNumSegvTries, "");
+    EXPECT_EQ(data.segv_count.load(), kNumSegvTries);
+    EXPECT_EQ(data.suspend_count.load(), kNumSegvTries);
     // There's an initial "RUNNING" signal that the handler will see.
     // That is why we add one here.
-    EXPECT_EQ(data.resume_count.load(), kNumSegvTries + 1, "");
+    EXPECT_EQ(data.resume_count.load(), kNumSegvTries + 1);
 
     tu_handle_close(data.thread_handle);
     tu_handle_close(eport);

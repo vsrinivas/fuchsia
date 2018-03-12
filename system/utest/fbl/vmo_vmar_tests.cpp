@@ -71,8 +71,8 @@ bool probe_verify_region(void* start, size_t size, uint32_t access) {
     };
 
     for (void* probe_point : probe_points) {
-        ASSERT_TRUE(probe_access(probe_point, AccessType::Rd, access & ZX_VM_FLAG_PERM_READ), "");
-        ASSERT_TRUE(probe_access(probe_point, AccessType::Wr, access & ZX_VM_FLAG_PERM_WRITE), "");
+        ASSERT_TRUE(probe_access(probe_point, AccessType::Rd, access & ZX_VM_FLAG_PERM_READ));
+        ASSERT_TRUE(probe_access(probe_point, AccessType::Wr, access & ZX_VM_FLAG_PERM_WRITE));
     }
 
     END_TEST;
@@ -160,22 +160,22 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
                                                       t.vmo_rights);
                         t.test_size = kVmoTestSize;
 
-                        ASSERT_EQ(res, expected_cm_res, "");
-                        ASSERT_TRUE(vmo_handles[i].is_valid(), "");
+                        ASSERT_EQ(res, expected_cm_res);
+                        ASSERT_TRUE(vmo_handles[i].is_valid());
                     } else {
                         // If we are testing Map, and this is the first pass, create the VMOs we
                         // will pass to map, then do so.
                         if (create_map_pass == 0) {
                             res = zx::vmo::create(kVmoTestSize, 0, &vmo_handles[i]);
-                            ASSERT_EQ(res, ZX_OK, "");
-                            ASSERT_TRUE(vmo_handles[i].is_valid(), "");
+                            ASSERT_EQ(res, ZX_OK);
+                            ASSERT_TRUE(vmo_handles[i].is_valid());
                         }
 
                         res = mappers[i].Map(vmo_handles[i],
                                              t.test_size,
                                              t.access_flags,
                                              target_vmar);
-                        ASSERT_EQ(res, expected_cm_res, "");
+                        ASSERT_EQ(res, expected_cm_res);
 
                         // If this was the first VMO we have mapped during this test
                         // run, and we requested only a partial map, and it was mapped
@@ -196,8 +196,8 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
                             vmar_end += target_vmar->size();
                             if (vmo_end < vmar_end) {
                                 void* probe_tgt = reinterpret_cast<void*>(vmo_end);
-                                ASSERT_TRUE(probe_access(probe_tgt, AccessType::Rd, false), "");
-                                ASSERT_TRUE(probe_access(probe_tgt, AccessType::Wr, false), "");
+                                ASSERT_TRUE(probe_access(probe_tgt, AccessType::Rd, false));
+                                ASSERT_TRUE(probe_access(probe_tgt, AccessType::Wr, false));
                             }
                         }
                     }
@@ -209,7 +209,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
                 // If we mapped inside of a sub-vmar, then the mapping should be contained within
                 // the VMAR.
                 if (target_vmar != nullptr) {
-                    ASSERT_TRUE(contained_in(mappers[i], *target_vmar), "");
+                    ASSERT_TRUE(contained_in(mappers[i], *target_vmar));
                 }
 
                 if (test_create) {
@@ -227,7 +227,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
                     // If we mapped this VMO, and we passed zero for the map size, the Mapper should
                     // have mapped the entire VMO and its size should reflect that.
                     if (!t.test_size) {
-                        ASSERT_EQ(mappers[i].size(), kVmoTestSize, "");
+                        ASSERT_EQ(mappers[i].size(), kVmoTestSize);
                         t.test_size = kVmoTestSize;
                     }
                 }
@@ -237,7 +237,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
             // everything checks out by probing and looking for seg-faults
             // if/when we violate permissions.
             for (const auto& t : kVmoTests) {
-                ASSERT_TRUE(probe_verify_region(t.start, t.test_size, t.access_flags), "");
+                ASSERT_TRUE(probe_verify_region(t.start, t.test_size, t.access_flags));
             }
 
             // Release all of our VMO handles, then verify again.  Releasing
@@ -247,7 +247,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
             }
 
             for (const auto& t : kVmoTests) {
-                ASSERT_TRUE(probe_verify_region(t.start, t.test_size, t.access_flags), "");
+                ASSERT_TRUE(probe_verify_region(t.start, t.test_size, t.access_flags));
             }
 
             // If this is the first pass, manually unmap all of the VmoMappers
@@ -259,7 +259,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
                 }
 
                 for (const auto& t : kVmoTests) {
-                    ASSERT_TRUE(probe_verify_region(t.start, t.test_size, 0), "");
+                    ASSERT_TRUE(probe_verify_region(t.start, t.test_size, 0));
                 }
             }
         }
@@ -269,7 +269,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
         // auto-unmapped as it should.
         if (pass) {
             for (const auto& t : kVmoTests) {
-                ASSERT_TRUE(probe_verify_region(t.start, t.test_size, 0), "");
+                ASSERT_TRUE(probe_verify_region(t.start, t.test_size, 0));
             }
         }
     }
@@ -284,37 +284,37 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
 
 bool vmo_create_and_map_root_test() {
     BEGIN_TEST;
-    ASSERT_TRUE(vmar_vmo_core_test(0, true), "");
+    ASSERT_TRUE(vmar_vmo_core_test(0, true));
     END_TEST;
 }
 
 bool vmo_create_and_map_sub_vmar_test() {
     BEGIN_TEST;
-    ASSERT_TRUE(vmar_vmo_core_test(1, true), "");
+    ASSERT_TRUE(vmar_vmo_core_test(1, true));
     END_TEST;
 }
 
 bool vmo_create_and_map_sub_sub_vmar_test() {
     BEGIN_TEST;
-    ASSERT_TRUE(vmar_vmo_core_test(2, true), "");
+    ASSERT_TRUE(vmar_vmo_core_test(2, true));
     END_TEST;
 }
 
 bool vmo_map_root_test() {
     BEGIN_TEST;
-    ASSERT_TRUE(vmar_vmo_core_test(0, false), "");
+    ASSERT_TRUE(vmar_vmo_core_test(0, false));
     END_TEST;
 }
 
 bool vmo_map_sub_vmar_test() {
     BEGIN_TEST;
-    ASSERT_TRUE(vmar_vmo_core_test(1, false), "");
+    ASSERT_TRUE(vmar_vmo_core_test(1, false));
     END_TEST;
 }
 
 bool vmo_map_sub_sub_vmar_test() {
     BEGIN_TEST;
-    ASSERT_TRUE(vmar_vmo_core_test(2, false), "");
+    ASSERT_TRUE(vmar_vmo_core_test(2, false));
     END_TEST;
 }
 

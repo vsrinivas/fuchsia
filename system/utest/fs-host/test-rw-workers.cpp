@@ -149,7 +149,7 @@ int worker_writer(worker_t* w) {
 bool worker_new(const char* where, const char* fn,
                int (*work)(worker_t* w), uint32_t size, uint32_t flags) {
     worker_t* w = (worker_t*)calloc(1, sizeof(worker_t));
-    ASSERT_NE(w, nullptr, "");
+    ASSERT_NE(w, nullptr);
 
     snprintf(w->name, sizeof(w->name), "%s%s", where, fn);
     srand64(&w->rdata, w->name);
@@ -206,7 +206,7 @@ static bool init_environment() {
     const char* where = "::";
     for (unsigned n = 0; n < countof(WORK); n++) {
         ASSERT_TRUE(worker_new(where, WORK[n].name, WORK[n].work,
-                               WORK[n].size, WORK[n].flags), "");
+                               WORK[n].size, WORK[n].flags));
     }
     return true;
 }

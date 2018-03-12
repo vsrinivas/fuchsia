@@ -68,13 +68,13 @@ bool test_state() {
 bool test_is_enabled() {
     BEGIN_TRACE_TEST;
 
-    EXPECT_FALSE(trace_is_enabled(), "");
+    EXPECT_FALSE(trace_is_enabled());
 
     fixture_start_tracing();
-    EXPECT_TRUE(trace_is_enabled(), "");
+    EXPECT_TRUE(trace_is_enabled());
 
     fixture_stop_tracing();
-    EXPECT_FALSE(trace_is_enabled(), "");
+    EXPECT_FALSE(trace_is_enabled());
 
     END_TRACE_TEST;
 }
@@ -82,19 +82,19 @@ bool test_is_enabled() {
 bool test_is_category_enabled() {
     BEGIN_TRACE_TEST;
 
-    EXPECT_FALSE(trace_is_category_enabled("+enabled"), "");
-    EXPECT_FALSE(trace_is_category_enabled("-disabled"), "");
-    EXPECT_FALSE(trace_is_category_enabled(""), "");
+    EXPECT_FALSE(trace_is_category_enabled("+enabled"));
+    EXPECT_FALSE(trace_is_category_enabled("-disabled"));
+    EXPECT_FALSE(trace_is_category_enabled(""));
 
     fixture_start_tracing();
-    EXPECT_TRUE(trace_is_category_enabled("+enabled"), "");
-    EXPECT_FALSE(trace_is_category_enabled("-disabled"), "");
-    EXPECT_FALSE(trace_is_category_enabled(""), "");
+    EXPECT_TRUE(trace_is_category_enabled("+enabled"));
+    EXPECT_FALSE(trace_is_category_enabled("-disabled"));
+    EXPECT_FALSE(trace_is_category_enabled(""));
 
     fixture_stop_tracing();
-    EXPECT_FALSE(trace_is_category_enabled("+enabled"), "");
-    EXPECT_FALSE(trace_is_category_enabled("-disabled"), "");
-    EXPECT_FALSE(trace_is_category_enabled(""), "");
+    EXPECT_FALSE(trace_is_category_enabled("+enabled"));
+    EXPECT_FALSE(trace_is_category_enabled("-disabled"));
+    EXPECT_FALSE(trace_is_category_enabled(""));
 
     END_TRACE_TEST;
 }

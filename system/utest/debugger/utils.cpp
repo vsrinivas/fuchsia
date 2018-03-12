@@ -328,11 +328,11 @@ static bool recv_msg_handle(zx_handle_t channel, message expected_msg, zx_handle
     uint32_t num_bytes = sizeof(data);
     uint32_t num_handles = 1;
     tu_channel_read(channel, 0, &data, &num_bytes, handle, &num_handles);
-    ASSERT_EQ(num_bytes, sizeof(data), "");
-    ASSERT_EQ(num_handles, 1u, "");
+    ASSERT_EQ(num_bytes, sizeof(data));
+    ASSERT_EQ(num_handles, 1u);
 
     message msg = static_cast<message>(data);
-    ASSERT_EQ(msg, expected_msg, "");
+    ASSERT_EQ(msg, expected_msg);
 
     unittest_printf("received handle %d\n", *handle);
 
@@ -343,7 +343,7 @@ bool get_inferior_thread_handle(zx_handle_t channel, zx_handle_t* thread) {
     BEGIN_HELPER;
 
     send_msg(channel, MSG_GET_THREAD_HANDLE);
-    ASSERT_TRUE(recv_msg_handle(channel, MSG_THREAD_HANDLE, thread), "");
+    ASSERT_TRUE(recv_msg_handle(channel, MSG_THREAD_HANDLE, thread));
 
     END_HELPER;
 }
@@ -399,7 +399,7 @@ bool read_exception(zx_handle_t eport, zx_port_packet_t* packet) {
     ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, packet, 0), ZX_OK, "zx_port_wait failed");
 
     if (ZX_PKT_IS_EXCEPTION(packet->type))
-        ASSERT_EQ(packet->key, exception_port_key, "");
+        ASSERT_EQ(packet->key, exception_port_key);
 
     unittest_printf("read_exception: got exception/signal %d\n", packet->type);
 
@@ -430,17 +430,17 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t epo
             unittest_printf("%s: timed out???\n", __func__);
             continue;
         }
-        ASSERT_EQ(status, ZX_OK, "");
+        ASSERT_EQ(status, ZX_OK);
         if (ZX_PKT_IS_SIGNAL_REP(packet.type)) {
-            ASSERT_EQ(packet.key, tid, "");
+            ASSERT_EQ(packet.key, tid);
             if (packet.signal.observed & ZX_THREAD_SUSPENDED)
                 break;
-            ASSERT_TRUE(packet.signal.observed & ZX_THREAD_RUNNING, "");
+            ASSERT_TRUE(packet.signal.observed & ZX_THREAD_RUNNING);
         } else {
-            ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet.type), "");
+            ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet.type));
             zx_koid_t report_tid = packet.exception.tid;
-            ASSERT_NE(report_tid, tid, "");
-            ASSERT_EQ(packet.type, (uint32_t)ZX_EXCP_THREAD_EXITING, "");
+            ASSERT_NE(report_tid, tid);
+            ASSERT_EQ(packet.type, (uint32_t)ZX_EXCP_THREAD_EXITING);
             // Note the thread may be completely gone by now.
             zx_handle_t other_thread;
             zx_status_t status =
@@ -449,9 +449,9 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t epo
                 // And even if it's not gone it may be dead now.
                 status = zx_task_resume(other_thread, ZX_RESUME_EXCEPTION);
                 if (status == ZX_ERR_BAD_STATE)
-                    ASSERT_TRUE(tu_thread_is_dying_or_dead(other_thread), "");
+                    ASSERT_TRUE(tu_thread_is_dying_or_dead(other_thread));
                 else
-                    ASSERT_EQ(status, ZX_OK, "");
+                    ASSERT_EQ(status, ZX_OK);
                 tu_handle_close(other_thread);
             }
         }
@@ -459,8 +459,8 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t epo
 
     // Verify thread is suspended
     zx_info_thread_t info = tu_thread_get_info(thread);
-    ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED, "");
-    ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE, "");
+    ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
+    ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE);
 
     END_HELPER;
 }

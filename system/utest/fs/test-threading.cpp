@@ -26,19 +26,19 @@ template <bool reuse_subdirectory>
 bool test_inode_reuse(void) {
     BEGIN_TEST;
 
-    ASSERT_EQ(mkdir("::reuse", 0755), 0, "");
+    ASSERT_EQ(mkdir("::reuse", 0755), 0);
     DIR* d = opendir("::reuse");
-    ASSERT_NONNULL(d, "");
+    ASSERT_NONNULL(d);
     for (size_t i = 0; i < 1000; i++) {
-        ASSERT_EQ(mkdirat(dirfd(d), "foo", 0666), 0, "");
+        ASSERT_EQ(mkdirat(dirfd(d), "foo", 0666), 0);
         if (reuse_subdirectory) {
-            ASSERT_EQ(mkdirat(dirfd(d), "foo/bar", 0666), 0, "");
-            ASSERT_EQ(unlinkat(dirfd(d), "foo/bar", 0), 0, "");
+            ASSERT_EQ(mkdirat(dirfd(d), "foo/bar", 0666), 0);
+            ASSERT_EQ(unlinkat(dirfd(d), "foo/bar", 0), 0);
         }
-        ASSERT_EQ(unlinkat(dirfd(d), "foo", 0), 0, "");
+        ASSERT_EQ(unlinkat(dirfd(d), "foo", 0), 0);
     }
-    ASSERT_EQ(closedir(d), 0, "");
-    ASSERT_EQ(rmdir("::reuse"), 0, "");
+    ASSERT_EQ(closedir(d), 0);
+    ASSERT_EQ(rmdir("::reuse"), 0);
     END_TEST;
 }
 
