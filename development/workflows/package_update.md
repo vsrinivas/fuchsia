@@ -74,6 +74,9 @@ improve over time.
 
 ## Just the commands
 
+Most likely you will want to run the first three commands **every** time there are
+changes you want to build and push.
+
   * `fx full-build` or `fx build <target_name>`
   * `fx serve-updates` (messages about a port in use are okay)
   * `fx push-package <package_name>`
