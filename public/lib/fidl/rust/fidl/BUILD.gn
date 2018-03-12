@@ -8,5 +8,5 @@ rust_library("fidl") {
   deps = [
   ]
 
-  with_tests = true
+  with_unit_tests = true
 }

@@ -17,10 +17,10 @@ package("rust-crates-tests") {
   ]
 
   tests = [
-    { name = "fdio-lib-test" },
-    { name = "fuchsia_async-lib-test" },
-    { name = "fuchsia_vfs-lib-test" },
-    { name = "fuchsia_vfs_watcher-lib-test" },
-    { name = "fuchsia_zircon-lib-test" },
+    { name = "fdio-lib-unit-test" },
+    { name = "fuchsia_async-lib-unit-test" },
+    { name = "fuchsia_vfs-lib-unit-test" },
+    { name = "fuchsia_vfs_watcher-lib-unit-test" },
+    { name = "fuchsia_zircon-lib-unit-test" },
   ]
 }

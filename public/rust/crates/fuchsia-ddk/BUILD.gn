@@ -10,5 +10,5 @@ rust_library("fuchsia-ddk") {
     "//garnet/public/rust/crates/fuchsia-zircon",
     "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
   ]
-  with_tests = true
+  with_unit_tests = true
 }
