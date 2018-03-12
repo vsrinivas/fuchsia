@@ -19,6 +19,7 @@ executable("bin") {
     "//garnet/bin/mdns/service:lib",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/netstack/c",
   ]
 }
 
