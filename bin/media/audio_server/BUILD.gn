@@ -6,6 +6,7 @@ import("//build/test.gni")
 
 source_set("audio_mixer_lib") {
   sources = [
+    "constants.h",
     "gain.cc",
     "platform/generic/mixer.cc",
     "platform/generic/mixer.h",
@@ -68,7 +69,6 @@ executable("audio_server") {
     "audio_renderer2_impl.h",
     "audio_server_impl.cc",
     "audio_server_impl.h",
-    "constants.h",
     "driver_ring_buffer.cc",
     "driver_ring_buffer.h",
     "fwd_decls.h",
