@@ -7,19 +7,20 @@ use byteorder::{ByteOrder, LittleEndian};
 use futures::io;
 use futures::prelude::*;
 use libc::{c_char, c_int, uint32_t, uint64_t, uint8_t};
-use parking_lot::Mutex;
 use std::{mem, str};
-use std::sync::Arc;
-use zircon;
+use std::cell::RefCell;
+use zx;
+
+use garnet_public_lib_logger_fidl::LogMessage;
 
 type FxLogSeverityT = c_int;
 type ZxKoid = uint64_t;
 
-const FX_LOG_MAX_DATAGRAM_LEN: usize = 2032;
-const FX_LOG_MAX_TAGS: i8 = 5;
-const FX_LOG_MAX_TAG_LEN: i8 = 64;
+pub const FX_LOG_MAX_DATAGRAM_LEN: usize = 2032;
+pub const FX_LOG_MAX_TAGS: usize = 5;
+pub const FX_LOG_MAX_TAG_LEN: usize = 64;
 
-#[repr(C, packed)]
+#[repr(C)]
 #[derive(Debug, Copy, Clone, Default, Eq, PartialEq)]
 pub struct fx_log_metadata_t {
     pub pid: ZxKoid,
@@ -31,7 +32,8 @@ pub struct fx_log_metadata_t {
 
 const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
 
-#[repr(C, packed)]
+#[repr(C)]
+#[derive(Clone)]
 pub struct fx_log_packet_t {
     pub metadata: fx_log_metadata_t,
     // Contains concatenated tags and message and a null terminating character at
@@ -49,28 +51,21 @@ impl Default for fx_log_packet_t {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct LogMessage {
-    pub metadata: fx_log_metadata_t,
-    pub tags: Vec<String>,
-    pub msg: String,
-}
-
 #[must_use = "futures/streams"]
 pub struct LoggerStream {
     socket: async::Socket,
-    buf: Arc<Mutex<[u8; FX_LOG_MAX_DATAGRAM_LEN]>>,
+}
+
+thread_local! {
+    pub static BUFFER:
+        RefCell<[u8; FX_LOG_MAX_DATAGRAM_LEN]> = RefCell::new([0; FX_LOG_MAX_DATAGRAM_LEN]);
 }
 
 impl LoggerStream {
     /// Creates a new `LoggerStream` for given `socket`.
-    pub fn new(
-        socket: zircon::Socket,
-        buf: Arc<Mutex<[u8; FX_LOG_MAX_DATAGRAM_LEN]>>,
-    ) -> Result<LoggerStream, io::Error> {
+    pub fn new(socket: zx::Socket) -> Result<LoggerStream, io::Error> {
         let l = LoggerStream {
             socket: async::Socket::from_socket(socket)?,
-            buf: buf,
         };
         Ok(l)
     }
@@ -83,13 +78,11 @@ fn convert_to_log_message(bytes: &[u8]) -> Option<LogMessage> {
     }
 
     let mut l = LogMessage {
-        metadata: fx_log_metadata_t {
-            pid: LittleEndian::read_u64(&bytes[0..8]),
-            tid: LittleEndian::read_u64(&bytes[8..16]),
-            time: LittleEndian::read_u64(&bytes[16..24]),
-            severity: LittleEndian::read_i32(&bytes[24..28]),
-            dropped_logs: LittleEndian::read_u32(&bytes[28..METADATA_SIZE]),
-        },
+        pid: LittleEndian::read_u64(&bytes[0..8]),
+        tid: LittleEndian::read_u64(&bytes[8..16]),
+        time: LittleEndian::read_u64(&bytes[16..24]),
+        severity: LittleEndian::read_i32(&bytes[24..28]),
+        dropped_logs: LittleEndian::read_u32(&bytes[28..METADATA_SIZE]),
         tags: Vec::new(),
         msg: String::new(),
     };
@@ -97,10 +90,10 @@ fn convert_to_log_message(bytes: &[u8]) -> Option<LogMessage> {
     let mut pos = METADATA_SIZE;
     let mut tag_len = bytes[pos] as usize;
     while tag_len != 0 {
-        if l.tags.len() == FX_LOG_MAX_TAGS as usize {
+        if l.tags.len() == FX_LOG_MAX_TAGS {
             return None;
         }
-        if tag_len > FX_LOG_MAX_TAG_LEN as usize - 1 {
+        if tag_len > FX_LOG_MAX_TAG_LEN - 1 {
             return None;
         }
         if (pos + tag_len + 1) > bytes.len() {
@@ -145,29 +138,47 @@ impl Stream for LoggerStream {
     type Error = io::Error;
 
     fn poll_next(&mut self, cx: &mut task::Context) -> Poll<Option<Self::Item>, Self::Error> {
-        let len: usize;
-        {
-            let mut b = self.buf.lock();
-            len = try_ready!(self.socket.poll_read(cx, &mut *b));
-        }
-        if len == 0 {
-            return Ok(Async::Ready(None));
-        }
-        let bytes = self.buf.lock();
-        let l = convert_to_log_message(&bytes[0..len]);
-        Ok(Async::Ready(l))
+        BUFFER.with(|b| {
+            let mut b = b.borrow_mut();
+            let len = try_ready!(self.socket.poll_read(cx, &mut *b));
+            if len == 0 {
+                return Ok(Async::Ready(None));
+            }
+            Ok(Async::Ready(convert_to_log_message(&b[0..len])))
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use std::slice;
-    use zircon::prelude::*;
+    use zx::prelude::*;
+    use std::sync::Arc;
+    use parking_lot::Mutex;
+
+    #[repr(C, packed)]
+    pub struct fx_log_metadata_t_packed {
+        pub pid: ZxKoid,
+        pub tid: ZxKoid,
+        pub time: ZxKoid,
+        pub severity: FxLogSeverityT,
+        pub dropped_logs: uint32_t,
+    }
+
+    #[repr(C, packed)]
+    pub struct fx_log_packet_t_packed {
+        pub metadata: fx_log_metadata_t_packed,
+        // Contains concatenated tags and message and a null terminating character at
+        // the end.
+        // char(tag_len) + "tag1" + char(tag_len) + "tag2\0msg\0"
+        pub data: [c_char; FX_LOG_MAX_DATAGRAM_LEN - METADATA_SIZE],
+    }
 
     /// Function to convert fx_log_packet_t to &[u8].
-    /// This function is safe as it works on `fx_log_packet_t` which is `packed`
-    /// and doesn't have any uninitialized padding bits.
+    /// This function is safe as it works on `fx_log_packet_t` which
+    /// doesn't have any uninitialized padding bits.
     fn to_u8_slice(p: &fx_log_packet_t) -> &[u8] {
         // This code just converts to &[u8] so no need to explicity drop it as memory
         // location would be freed as soon as p is dropped.
@@ -191,24 +202,37 @@ mod tests {
         assert_eq!(FX_LOG_MAX_TAGS, 5);
         assert_eq!(FX_LOG_MAX_TAG_LEN, 64);
         assert_eq!(mem::size_of::<fx_log_packet_t>(), FX_LOG_MAX_DATAGRAM_LEN);
+
+        // Test that there is no padding
+        assert_eq!(
+            mem::size_of::<fx_log_packet_t>(),
+            mem::size_of::<fx_log_packet_t_packed>(),
+        );
+
+        assert_eq!(
+            mem::size_of::<fx_log_metadata_t>(),
+            mem::size_of::<fx_log_metadata_t_packed>(),
+        );
     }
 
     #[test]
     fn logger_stream_test() {
         let mut executor = async::Executor::new().unwrap();
-        let (sin, sout) = zircon::Socket::create(zircon::SocketOpts::DATAGRAM).unwrap();
-        let buf: [u8; FX_LOG_MAX_DATAGRAM_LEN] = [0; FX_LOG_MAX_DATAGRAM_LEN];
-        let c = Arc::new(Mutex::new(buf));
+        let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let mut p: fx_log_packet_t = Default::default();
         p.metadata.pid = 1;
         p.data[0] = 5;
         memset(&mut p.data[..], 1, 65, 5);
         memset(&mut p.data[..], 7, 66, 5);
 
-        let ls = LoggerStream::new(sout, c).unwrap();
+        let ls = LoggerStream::new(sout).unwrap();
         sin.write(to_u8_slice(&mut p)).unwrap();
         let mut expected_p = LogMessage {
-            metadata: p.metadata.clone(),
+            pid: p.metadata.pid,
+            tid: p.metadata.tid,
+            time: p.metadata.time,
+            severity: p.metadata.severity,
+            dropped_logs: p.metadata.dropped_logs,
             tags: Vec::with_capacity(1),
             msg: String::from("BBBBB"),
         };
@@ -227,16 +251,26 @@ mod tests {
             panic!("test fail {:?}", e);
         }));
 
-        let timeout = async::Timer::<()>::new(100.millis().after_now()).unwrap();
-        executor.run(timeout, 2).unwrap();
-
+        let tries = 100;
+        for _ in 0..tries {
+            if *calltimes.lock() == 1 {
+                break;
+            }
+            let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
+            executor.run(timeout, 2).unwrap();
+        }
         assert_eq!(1, *calltimes.lock());
 
         // write one more time
         sin.write(to_u8_slice(&p)).unwrap();
 
-        let timeout = async::Timer::<()>::new(100.millis().after_now()).unwrap();
-        executor.run(timeout, 2).unwrap();
+        for _ in 0..tries {
+            if *calltimes.lock() == 2 {
+                break;
+            }
+            let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
+            executor.run(timeout, 2).unwrap();
+        }
         assert_eq!(2, *calltimes.lock());
     }
 
@@ -275,7 +309,11 @@ mod tests {
         // test tags with message
 
         let mut expected_p = LogMessage {
-            metadata: p.metadata.clone(),
+            pid: p.metadata.pid,
+            tid: p.metadata.tid,
+            time: p.metadata.time,
+            severity: p.metadata.severity,
+            dropped_logs: p.metadata.dropped_logs,
             tags: Vec::with_capacity(1),
             msg: String::from("BBBBB"),
         };

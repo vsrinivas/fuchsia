@@ -4,8 +4,47 @@
 
 module logger;
 
-// Interface to get and listen to socket from syslogger
+struct LogFilterOptions {
+  bool filter_by_severity;
+  int32 min_severity;
+
+  bool filter_by_pid;
+  uint64 pid;
+
+  bool filter_by_tid;
+  uint64 tid;
+
+  // Return all messages which contains at least one tag.
+  // Passed tags should not be more than 63 bytes in length and max tags can be 5.
+  // Listener would be discarded if the limit is not followed.
+  array<string> tags;
+};
+
+struct LogMessage {
+  uint64 pid;
+  uint64 tid;
+  uint64 time;
+  int32 severity;
+  uint32 dropped_logs;
+  array<string> tags;
+  string msg;
+};
+
+// Interface to for LogListener to listen to.
 [ServiceName="logger::Log"]
 interface Log {
+  // Listener listens for logs
+  Listen@0(LogListener log_listener, LogFilterOptions? options);
+};
+
+// Interface to get and listen to socket from syslogger
+[ServiceName="logger::LogSink"]
+interface LogSink {
+  // Client connects to send logs over socket
   Connect@0(handle<socket> socket);
+};
+
+
+interface LogListener {
+  Log@0(LogMessage log);
 };
