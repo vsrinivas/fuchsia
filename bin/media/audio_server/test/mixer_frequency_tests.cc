@@ -282,6 +282,96 @@ TEST(FrequencyResponse, Linear_UpSamp) {
   EXPECT_GE(AudioResult::SinadLinearUp, AudioResult::kPrevSinadLinearUp);
 }
 
+// Ideal dynamic range measurement is exactly equal to the reduction in gain.
+// Ideal accompanying noise is ideal noise floor, minus the reduction in gain.
+void MeasureSummaryDynamicRange(Gain::AScale scale,
+                                double* level_db,
+                                double* sinad_db) {
+  MixerPtr mixer =
+      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000);
+  constexpr double amplitude = std::numeric_limits<int16_t>::max();
+
+  std::vector<int16_t> source(kFreqTestBufSize);
+  std::vector<int32_t> accum(kFreqTestBufSize);
+
+  // Populate source buffer; mix it (pass-thru) to accumulation buffer
+  OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                  amplitude);
+
+  uint32_t dst_offset = 0;
+  int32_t frac_src_offset = 0;
+  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
+             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
+             Mixer::FRAC_ONE, scale, false);
+  EXPECT_EQ(kFreqTestBufSize, dst_offset);
+  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
+            frac_src_offset);
+
+  // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
+  double magn_signal, magn_other;
+  MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                   &magn_signal, &magn_other);
+
+  *level_db = ValToDb(magn_signal / amplitude);
+  *sinad_db = ValToDb(magn_signal / magn_other);
+}
+
+// Measure dynamic range at two gain settings: less than 1.0 by the smallest
+// increment possible, as well as the smallest increment detectable (the
+// closest-to-1.0 gain that actually causes incoming data values to change).
+// For now (until MTWN-73 is fixed) these increments are actually the same.
+TEST(DynamicRange, Epsilon) {
+  double unity_level_db, unity_sinad_db;
+
+  MeasureSummaryDynamicRange(Gain::kUnityScale, &unity_level_db,
+                             &unity_sinad_db);
+  EXPECT_GE(unity_level_db, -AudioResult::kLevelToleranceSource16);
+  EXPECT_LE(unity_level_db, AudioResult::kLevelToleranceSource16);
+  EXPECT_GE(unity_sinad_db, AudioResult::kPrevFloorSource16);
+
+  // Highest (nearest 1.0) gain_scale at which we observe an effect on signals
+  constexpr Gain::AScale epsilon_scale = Gain::kUnityScale - 1;
+
+  // At this 'detectable reduction' scale, level and noise floor appear reduced
+  MeasureSummaryDynamicRange(epsilon_scale, &AudioResult::LevelDownEpsilon,
+                             &AudioResult::SinadDownEpsilon);
+  EXPECT_GE(
+      AudioResult::LevelDownEpsilon,
+      AudioResult::kPrevLevelDownEpsilon - AudioResult::kPrevDynRangeTolerance);
+  EXPECT_LE(
+      AudioResult::LevelDownEpsilon,
+      AudioResult::kPrevLevelDownEpsilon + AudioResult::kPrevDynRangeTolerance);
+  EXPECT_LT(AudioResult::LevelDownEpsilon, unity_level_db);
+
+  EXPECT_GE(AudioResult::SinadDownEpsilon, AudioResult::kPrevSinadDownEpsilon);
+}
+
+// Measure dynamic range (signal level, noise floor) when gain is -60dB.
+TEST(DynamicRange, Down60) {
+  Gain gain;
+
+  gain.SetRendererGain(-60.0f);
+  const Gain::AScale scale = gain.GetGainScale(0.0f);
+
+  MeasureSummaryDynamicRange(scale, &AudioResult::LevelDown60,
+                             &AudioResult::SinadDown60);
+
+  EXPECT_GE(AudioResult::LevelDown60,
+            -60.0 - AudioResult::kPrevDynRangeTolerance);
+  EXPECT_LE(AudioResult::LevelDown60,
+            -60.0 + AudioResult::kPrevDynRangeTolerance);
+  EXPECT_GE(AudioResult::SinadDown60, AudioResult::kPrevSinadDown60);
+
+  // Validate level & floor in equivalent gain combination (per-stream, master).
+  gain.SetRendererGain(0.0f);
+  const Gain::AScale scale2 = gain.GetGainScale(-60.0f);
+
+  double level_db, sinad_db;
+  MeasureSummaryDynamicRange(scale2, &level_db, &sinad_db);
+
+  EXPECT_EQ(level_db, AudioResult::LevelDown60);
+  EXPECT_EQ(sinad_db, AudioResult::SinadDown60);
+}
 }  // namespace test
 }  // namespace audio
 }  // namespace media

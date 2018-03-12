@@ -63,6 +63,7 @@ TEST(Recap, FreqResp) {
            AudioResult::FreqRespLinearUp[freq],
            AudioResult::kPrevFreqRespLinearUp[freq]);
   }
+
   printf("\n\n");
 }
 
@@ -83,6 +84,20 @@ TEST(Recap, SINAD) {
          AudioResult::SinadLinearDown, AudioResult::kPrevSinadLinearDown,
          AudioResult::SinadLinearUp, AudioResult::kPrevSinadLinearUp);
 
+  printf("\n\n");
+}
+
+TEST(Recap, DynamicRange) {
+  printf("\n Dynamic Range");
+  printf("\n   (in dB, with prior results)");
+
+  printf("\n\n           Input        Mixed Result          Usable Range\n");
+  printf("\n     -0.00000003   %10.6lf (%10.6lf)   %5.2lf (%5.2lf)",
+         AudioResult::LevelDownEpsilon, AudioResult::kPrevLevelDownEpsilon,
+         AudioResult::SinadDownEpsilon, AudioResult::kPrevSinadDownEpsilon);
+  printf("\n    -60.000000     %10.6lf (%10.6lf)   %5.2lf (%5.2lf)",
+         AudioResult::LevelDown60, -60.0 - AudioResult::kPrevDynRangeTolerance,
+         AudioResult::SinadDown60, AudioResult::kPrevSinadDown60);
   printf("\n\n");
 }
 

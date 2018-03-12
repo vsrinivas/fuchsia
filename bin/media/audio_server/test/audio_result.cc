@@ -94,6 +94,39 @@ constexpr double AudioResult::kPrevSinadPointDown;
 constexpr double AudioResult::kPrevSinadLinearDown;
 constexpr double AudioResult::kPrevSinadLinearUp;
 
+//
+// Dynamic Range (gain integrity and system response at low volume levels) is
+// measured at a single reference frequency (kReferenceFreq), on a lone mono
+// source without SRC. By determining the smallest possible change in gain
+// that causes a detectable change in output (our 'gain epsilon'), we
+// determine a system's sensitivity to gain changes. We measure not only the
+// output level of the signal, but also the noise level across all other
+// frequencies. Performing these same measurements (output level and noise
+// level) with a gain of -60 dB as well is the standard definition of Dynamic
+// Range testing: by adding 60 dB to the measured signal-to-noise, one
+// determines a system's usable range of data values (translatable into the
+// more accessible Effective Number Of Bits metric). The level measurement at
+// -60 dB is useful not only as a component of the "noise in the presence of
+// signal" calculation, but also as a second avenue toward measuring a
+// system's linearity/accuracy/precision with regard to data scaling and gain.
+
+// Level and unwanted artifacts, applying the smallest-detectable gain change.
+double AudioResult::LevelDownEpsilon = -INFINITY;
+double AudioResult::SinadDownEpsilon = -INFINITY;
+
+// Level and unwanted artifacts, applying -60dB gain (measures dynamic range).
+double AudioResult::LevelDown60 = -INFINITY;
+double AudioResult::SinadDown60 = -INFINITY;
+
+// Level-being-checked (in dBFS) should be within kLevelToleranceSource16 of the
+// dB gain setting. For SINAD, value-being-checked (in dBr, output signal to all
+// other frequencies) must be greater than or equal to the below cached value.
+constexpr double AudioResult::kPrevLevelDownEpsilon;
+constexpr double AudioResult::kPrevDynRangeTolerance;
+
+constexpr double AudioResult::kPrevSinadDownEpsilon;
+constexpr double AudioResult::kPrevSinadDown60;
+
 }  // namespace test
 }  // namespace audio
 }  // namespace media

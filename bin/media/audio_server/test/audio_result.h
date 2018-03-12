@@ -119,6 +119,36 @@ class AudioResult {
   static constexpr double kPrevSinadLinearDown = 74.421795;
   static constexpr double kPrevSinadLinearUp = 62.428449;
 
+  //
+  // Dynamic Range (gain integrity and system response at low volume levels) is
+  // measured at a single reference frequency (kReferenceFreq), on a lone mono
+  // source without SRC. By determining the smallest possible change in gain
+  // that causes a detectable change in output (our 'gain epsilon'), we
+  // determine a system's sensitivity to gain changes. We measure not only the
+  // output level of the signal, but also the noise level across all other
+  // frequencies. Performing these same measurements (output level and noise
+  // level) with a gain of -60 dB as well is the standard definition of Dynamic
+  // Range testing: by adding 60 dB to the measured signal-to-noise, one
+  // determines a system's usable range of data values (translatable into the
+  // more accessible Effective Number Of Bits metric). The level measurement at
+  // -60 dB is useful not only as a component of the "noise in the presence of
+  // signal" calculation, but also as a second avenue toward measuring a
+  // system's linearity/accuracy/precision with regard to data scaling and gain.
+
+  // Level and unwanted artifacts, applying the smallest-detectable gain change.
+  static double LevelDownEpsilon;
+  static double SinadDownEpsilon;
+
+  // Level and unwanted artifacts, applying -60dB gain (measures dynamic range).
+  static double LevelDown60;
+  static double SinadDown60;
+
+  static constexpr double kPrevLevelDownEpsilon = -0.00016807164;
+  static constexpr double kPrevDynRangeTolerance = 0.004922;
+
+  static constexpr double kPrevSinadDownEpsilon = 93.232593;
+  static constexpr double kPrevSinadDown60 = 34.196374;
+
   // class is static only - prevent attempts to instantiate it
   AudioResult() = delete;
 };

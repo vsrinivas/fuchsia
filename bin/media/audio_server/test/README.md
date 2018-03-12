@@ -9,6 +9,7 @@ OutputFormatter and Gain objects) at a unit level, using tests in these areas:
 4) **Timing**
 5) **Frequency Response**
 6) **Signal-to-Noise-and-Distortion (SINAD)**
+7) **Dynamic Range**
 
 Items 1 & 2 have been grouped into a __transparency tests__ file; item 3
 (__gain tests__) includes overflow, underflow validation; item 4 is included
@@ -17,19 +18,20 @@ results are separated into their own __audio_analysis.cc__ source file and
 tested in their own right. Items 5 & 6 use these test functions to perform
 audio fidelity testing in the frequency domain, ensuring that our processing
 does not color the input (frequency response) nor add additional artifacts
-(signal-to-noise-and-distortion, or SINAD): __frequency tests__.
+(signal-to-noise-and-distortion, or SINAD): __frequency tests__. Item 7
+(__dynamic range tests__) measures the accuracy of our gain control, as well
+as its impact on our noise floor.
 
 
 Future areas for mixer evaluation include:
 
-7) **Dynamic Range**
 8) **Impulse Response**
 9) **Phase Response**
 
 
-The frequency response and SINAD tests (as well as Noise Floor tests that
-were previously considered transparency tests) have been added as normal
-unit tests, as they are tightly related to these specific Mixer objects.
+Frequency Response/SINAD and Dynamic Range tests (as well as Noise Floor tests
+that were previously considered transparency tests) have been added as normal
+unit tests, as they are tightly related to mixer and gain objects respectively.
 Fuller versions of frequency response, SINAD, dynamic range and phase tests
 will be included in audio mixer profile tests that will execute post-submit,
 rather than as a part of the CQ test set.

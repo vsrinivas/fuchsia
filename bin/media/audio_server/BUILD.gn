@@ -8,6 +8,7 @@ source_set("audio_mixer_lib") {
   sources = [
     "constants.h",
     "gain.cc",
+    "gain.h",
     "platform/generic/mixer.cc",
     "platform/generic/mixer.h",
     "platform/generic/mixers/linear_sampler.cc",
