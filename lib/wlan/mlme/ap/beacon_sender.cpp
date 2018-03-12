@@ -70,10 +70,10 @@ zx_status_t BeaconSender::WriteBeacon() {
 
     // Write elements.
     ElementWriter w(bcn->elements, body_payload_len);
-    if (!w.write<SsidElement>(req_->ssid.data())) {
+    if (!w.write<SsidElement>(req_->ssid->data())) {
         // TODO(hahnr): Also log BSSID once BeaconSender has access to its BSS.
         errorf("[bcn-sender] [%s] could not write ssid \"%s\" to Beacon\n",
-               bssid.ToString().c_str(), req_->ssid.data());
+               bssid.ToString().c_str(), req_->ssid->data());
         return ZX_ERR_IO;
     }
 

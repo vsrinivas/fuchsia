@@ -33,26 +33,16 @@ class String {
   String(const char* chars, size_t num_chars)
       : str_(chars, num_chars), is_null_(false) {}
 
-  // Accesses the underlying std::string object.
-  //
-  // Asserts if the StringPtr is null.
-  std::string& get() {
-    // TODO(abarth): Add this assert once clients are ready.
-    // ZX_ASSERT_MSG(!is_null_, "cannot call get() on a null StringPtr");
-    return str_;
-  }
-  const std::string& get() const {
-    // TODO(abarth): Add this assert once clients are ready.
-    // ZX_ASSERT_MSG(!is_null_, "cannot call get() on a null StringPtr");
-    return str_;
-  }
+  const std::string& get() const { return str_; }
 
-  // Stores the given std::string in this StringPtr.
-  //
-  // After this method returns, the StringPtr is non-null.
   void reset(std::string str) {
     str_ = std::move(str);
     is_null_ = false;
+  }
+
+  void reset() {
+    str_.clear();
+    is_null_ = true;
   }
 
   void swap(String& other) {
@@ -61,34 +51,16 @@ class String {
     swap(is_null_, other.is_null_);
   }
 
-  // Whether this StringPtr is null.
-  //
-  // The null state is separate from the empty state.
   bool is_null() const { return is_null_; }
 
-  // Tests as true if non-null, false if null.
   explicit operator bool() const { return !is_null_; }
 
-  // Provides access to the underlying std::string. Asserts if the StringPtr is
-  // null.
-  std::string* operator->() {
-    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
-    return &str_;
-  }
-  const std::string* operator->() const {
-    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
-    return &str_;
-  }
+  std::string* operator->() { return &str_; }
+  const std::string* operator->() const { return &str_; }
 
-  // Provides access to the underlying std::string.
-  std::string& operator*() {
-    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
-    return str_;
-  }
-  const std::string& operator*() const {
-    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
-    return str_;
-  }
+  const std::string& operator*() const { return str_; }
+
+  operator const std::string&() const { return str_; }
 
   //////////////////////////////////////////////////////////////////////////////
   // FIDL1 INTERFACE
@@ -133,35 +105,6 @@ class String {
       str_.clear();
     }
     return *this;
-  }
-
-  void reset() {
-    str_.clear();
-    is_null_ = true;
-  }
-
-  size_t size() const { return str_.size(); }
-
-  bool empty() const { return str_.empty(); }
-
-  const char* data() const { return str_.data(); }
-
-  const char& at(size_t offset) const { return str_.at(offset); }
-  char& at(size_t offset) { return str_.at(offset); }
-
-  const char& operator[](size_t offset) const { return str_[offset]; }
-  char& operator[](size_t offset) { return str_[offset]; }
-
-  operator const std::string&() const { return str_; }
-
-  void Swap(String* other) {
-    std::swap(is_null_, other->is_null_);
-    str_.swap(other->str_);
-  }
-
-  void Swap(std::string* other) {
-    is_null_ = false;
-    str_.swap(*other);
   }
 
   // std::string iterators into the string. The behavior is undefined

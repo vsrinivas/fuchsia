@@ -88,11 +88,11 @@ FooPtr MakeFoo() {
 void CheckFoo(const Foo& foo) {
   const std::string kName("foopy");
   ASSERT_FALSE(foo.name.is_null());
-  EXPECT_EQ(kName.size(), foo.name.size());
-  for (size_t i = 0; i < std::min(kName.size(), foo.name.size()); i++) {
+  EXPECT_EQ(kName.size(), foo.name->size());
+  for (size_t i = 0; i < std::min(kName.size(), foo.name->size()); i++) {
     // Test both |operator[]| and |at|.
-    EXPECT_EQ(kName[i], foo.name.at(i)) << i;
-    EXPECT_EQ(kName[i], foo.name[i]) << i;
+    EXPECT_EQ(kName[i], foo.name->at(i)) << i;
+    EXPECT_EQ(kName[i], (*foo.name)[i]) << i;
   }
   EXPECT_EQ(kName, foo.name.get());
 
@@ -152,9 +152,7 @@ void Print(int depth, const char* name, uint8_t value) {
 }
 
 template <typename H>
-void Print(int depth,
-           const char* name,
-           const zx::object<H>& value) {
+void Print(int depth, const char* name, const zx::object<H>& value) {
   PrintSpacer(depth);
   std::cout << name << ": 0x" << std::hex << value.get() << std::endl;
 }
@@ -306,7 +304,7 @@ TEST(BindingsSampleTest, Basic) {
 
   PortPtr port;
   service->Frobinate(std::move(foo), Service::BazOptions::EXTRA,
-                     std::move(port), [](uint32_t){});
+                     std::move(port), [](uint32_t) {});
 
   delete service;
 }

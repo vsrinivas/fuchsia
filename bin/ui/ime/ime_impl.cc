@@ -103,7 +103,7 @@ void ImeImpl::InjectInput(mozart::InputEventPtr event) {
           state_->revision++;
           // TODO(jpoichet) actually pay attention to affinity
           state_->selection->extent =
-              (unsigned)state_->selection->extent < state_->text.size()
+              (unsigned)state_->selection->extent < state_->text->size()
                   ? state_->selection->extent + 1
                   : state_->selection->extent;
           if (keyboard->modifiers & mozart::kModifierShift) {

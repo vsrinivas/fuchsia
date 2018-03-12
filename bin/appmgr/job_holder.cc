@@ -187,8 +187,8 @@ struct ExportedDirChannels {
 
 ExportedDirChannels BindDirectory(ApplicationLaunchInfo* launch_info) {
   zx::channel exported_dir_server, exported_dir_client;
-  zx_status_t status = zx::channel::create(0u, &exported_dir_server,
-                                           &exported_dir_client);
+  zx_status_t status =
+      zx::channel::create(0u, &exported_dir_server, &exported_dir_client);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create channel for service directory: status="
                    << status;
@@ -197,7 +197,7 @@ ExportedDirChannels BindDirectory(ApplicationLaunchInfo* launch_info) {
 
   auto client_request = std::move(launch_info->directory_request);
   launch_info->directory_request = std::move(exported_dir_server);
-  return { std::move(exported_dir_client), std::move(client_request) };
+  return {std::move(exported_dir_client), std::move(client_request)};
 }
 
 }  // namespace
@@ -222,7 +222,7 @@ JobHolder::JobHolder(JobHolder* parent,
   FXL_CHECK(zx::job::create(parent_job, 0u, &job_) == ZX_OK);
   FXL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == ZX_OK);
 
-  if (label.size() == 0)
+  if (label->size() == 0)
     label_ = fxl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
   else
     label_ = label.get().substr(0, ApplicationEnvironment::kLabelMaxLength);
@@ -382,8 +382,7 @@ void JobHolder::CreateApplicationWithProcess(
         std::move(controller), this, nullptr, std::move(process), url,
         GetLabelFromURL(url), std::move(application_namespace),
         ExportedDirType::kPublicDebugCtrlLayout,
-        std::move(channels.exported_dir),
-        std::move(channels.client_request));
+        std::move(channels.exported_dir), std::move(channels.client_request));
     ApplicationControllerImpl* key = application.get();
     info_dir_->AddEntry(application->label(), application->info_dir());
     applications_.emplace(key, std::move(application));
@@ -414,9 +413,9 @@ void JobHolder::CreateApplicationFromPackage(
     pkg_fs->GetFileAsString(kSandboxPath, &sandbox_data);
     if (!pkg_fs->GetFileAsString(kRuntimePath, &runtime_data))
       app_data = pkg_fs->GetFileAsVMO(kAppPath);
-    exported_dir_layout = pkg_fs->IsFile(kLegacyFlatExportedDirPath) ?
-        ExportedDirType::kLegacyFlatLayout :
-        ExportedDirType::kPublicDebugCtrlLayout;
+    exported_dir_layout = pkg_fs->IsFile(kLegacyFlatExportedDirPath)
+                              ? ExportedDirType::kLegacyFlatLayout
+                              : ExportedDirType::kPublicDebugCtrlLayout;
   } else if (package->directory) {
     fxl::UniqueFD fd =
         fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
@@ -424,8 +423,8 @@ void JobHolder::CreateApplicationFromPackage(
     if (!files::ReadFileToStringAt(fd.get(), kRuntimePath, &runtime_data))
       VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
     exported_dir_layout = files::IsFileAt(fd.get(), kLegacyFlatExportedDirPath)
-        ? ExportedDirType::kLegacyFlatLayout :
-        ExportedDirType::kPublicDebugCtrlLayout;
+                              ? ExportedDirType::kLegacyFlatLayout
+                              : ExportedDirType::kPublicDebugCtrlLayout;
     // TODO(abarth): We shouldn't need to clone the channel here. Instead, we
     // should be able to tear down the file descriptor in a way that gives us
     // the channel back.

@@ -62,38 +62,27 @@ TEST(StringTest, Assignment) {
 
 TEST(StringTest, ConstAt) {
   const String s("abc");
-  EXPECT_EQ('a', s.at(0));
-  EXPECT_EQ('b', s.at(1));
-  EXPECT_EQ('c', s.at(2));
+  EXPECT_EQ('a', s->at(0));
+  EXPECT_EQ('b', s->at(1));
+  EXPECT_EQ('c', s->at(2));
 }
 
 TEST(StringTest, NonConstAt) {
   String s("abc");
-  EXPECT_EQ('a', s.at(0));
-  EXPECT_EQ('b', s.at(1));
-  s.at(0) = 'x';
-  s.at(1) = 'y';
-  EXPECT_EQ('x', s.at(0));
-  EXPECT_EQ('y', s.at(1));
-  EXPECT_EQ('c', s.at(2));
+  EXPECT_EQ('a', s->at(0));
+  EXPECT_EQ('b', s->at(1));
+  s->at(0) = 'x';
+  s->at(1) = 'y';
+  EXPECT_EQ('x', s->at(0));
+  EXPECT_EQ('y', s->at(1));
+  EXPECT_EQ('c', s->at(2));
 }
 
 TEST(StringTest, ConstArraySubscript) {
   const String s("abc");
-  EXPECT_EQ('a', s[0]);
-  EXPECT_EQ('b', s[1]);
-  EXPECT_EQ('c', s[2]);
-}
-
-TEST(StringTest, NonConstArraySubscript) {
-  String s("abc");
-  EXPECT_EQ('a', s[0]);
-  EXPECT_EQ('b', s[1]);
-  s[0] = 'x';
-  s[1] = 'y';
-  EXPECT_EQ('x', s[0]);
-  EXPECT_EQ('y', s[1]);
-  EXPECT_EQ('c', s[2]);
+  EXPECT_EQ('a', (*s)[0]);
+  EXPECT_EQ('b', (*s)[1]);
+  EXPECT_EQ('c', (*s)[2]);
 }
 
 TEST(StringTest, Equality) {
@@ -123,7 +112,7 @@ TEST(StringTest, OutputFormatting) {
   String null;
 
   std::ostringstream so;
-  so << "s=" << s << ", null=" << null;
+  so << "s=" << *s << ", null=" << null;
   EXPECT_EQ("s=abc, null=", so.str());
 }
 

@@ -8,8 +8,8 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/service.h>
 #include <wlan/mlme/sequence.h>
+#include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
 
@@ -286,8 +286,8 @@ zx_status_t Scanner::SendProbeRequest() {
     auto body = frame.body;
     ElementWriter w(body->elements, body_payload_len);
 
-    if (!w.write<SsidElement>(req_->ssid.data())) {
-        errorf("could not write ssid \"%s\" to probe request\n", req_->ssid.data());
+    if (!w.write<SsidElement>(req_->ssid->data())) {
+        errorf("could not write ssid \"%s\" to probe request\n", req_->ssid->data());
         return ZX_ERR_IO;
     }
 
@@ -331,7 +331,7 @@ zx_status_t Scanner::SendScanResponse() {
     debugfn();
 
     nbrs_bss_.ForEach([this](fbl::RefPtr<Bss> bss) {
-        if (req_->ssid.size() == 0 || req_->ssid == bss->SsidToString()) {
+        if (req_->ssid->size() == 0 || req_->ssid == bss->SsidToString()) {
             debugbss("%s\n", bss->ToString().c_str());
             resp_->bss_description_set.push_back(bss->ToFidl());
         }

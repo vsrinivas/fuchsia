@@ -87,8 +87,8 @@ NetMediaPlayerOutMessage::StatusNotification(MediaPlayerStatusPtr status) {
 }
 
 Serializer& operator<<(Serializer& serializer, const f1dl::String& value) {
-  serializer << value.size();
-  serializer.PutBytes(value.size(), value.data());
+  serializer << value->size();
+  serializer.PutBytes(value->size(), value->data());
   return serializer;
 }
 

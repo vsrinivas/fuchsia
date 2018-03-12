@@ -10,8 +10,8 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/service.h>
 #include <wlan/mlme/sequence.h>
+#include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 
 #include <cstring>
@@ -226,7 +226,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const DeauthenticateRequest& req) {
         // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
     }
 
-    infof("deauthenticating from %s, reason=%u\n", bss_->ssid.data(), req.reason_code);
+    infof("deauthenticating from %s, reason=%u\n", bss_->ssid->data(), req.reason_code);
 
     // TODO(hahnr): Refactor once we have the new state machine.
     state_ = WlanState::kUnauthenticated;
@@ -279,8 +279,8 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
 
     ElementWriter w(assoc->elements,
                     packet->len() - sizeof(MgmtFrameHeader) - sizeof(AssociationRequest));
-    if (!w.write<SsidElement>(bss_->ssid.data())) {
-        errorf("could not write ssid \"%s\" to association request\n", bss_->ssid.data());
+    if (!w.write<SsidElement>(bss_->ssid->data())) {
+        errorf("could not write ssid \"%s\" to association request\n", bss_->ssid->data());
         service::SendAssocResponse(device_, AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;
     }
@@ -371,7 +371,7 @@ zx_status_t Station::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
         join_timeout_ = zx::time();
         timer_->CancelTimer();
         state_ = WlanState::kUnauthenticated;
-        debugjoin("joined %s\n", bss_->ssid.data());
+        debugjoin("joined %s\n", bss_->ssid->data());
         return service::SendJoinResponse(device_, JoinResultCodes::SUCCESS);
     }
 
@@ -455,7 +455,7 @@ zx_status_t Station::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentic
     }
 
     auto deauth = frame.body;
-    infof("deauthenticating from %s, reason=%u\n", bss_->ssid.data(), deauth->reason_code);
+    infof("deauthenticating from %s, reason=%u\n", bss_->ssid->data(), deauth->reason_code);
 
     state_ = WlanState::kUnauthenticated;
     device_->SetStatus(0);
@@ -507,7 +507,7 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
 
     const common::MacAddr& mymac = device_->GetState()->address();
     infof("NIC %s associated with \"%s\"(%s) in channel %s, %s, %s\n", mymac.ToString().c_str(),
-          bss_->ssid.data(), bssid.ToString().c_str(), common::ChanStr(GetJoinChan()).c_str(),
+          bss_->ssid->data(), bssid.ToString().c_str(), common::ChanStr(GetJoinChan()).c_str(),
           common::BandStr(GetJoinChan()).c_str(), IsHTReady() ? "802.11n HT" : "802.11g/a");
 
     // TODO(porce): Time when to establish BlockAck session
@@ -531,7 +531,7 @@ zx_status_t Station::HandleDisassociation(const ImmutableMgmtFrame<Disassociatio
 
     auto disassoc = frame.body;
     common::MacAddr bssid(bss_->bssid.data());
-    infof("disassociating from %s(%s), reason=%u\n", MACSTR(bssid), bss_->ssid.data(),
+    infof("disassociating from %s(%s), reason=%u\n", MACSTR(bssid), bss_->ssid->data(),
           disassoc->reason_code);
 
     state_ = WlanState::kAuthenticated;

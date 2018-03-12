@@ -338,7 +338,7 @@ void TtsSpeaker::DoSpeak() {
       },
       this);
 
-  flite_text_to_speech(words_.data(), vox, "play");
+  flite_text_to_speech(words_->data(), vox, "play");
   delete_voice(vox);
 
   if (abort_playback_.load()) {
