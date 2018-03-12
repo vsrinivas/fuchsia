@@ -31,7 +31,7 @@ BENCHMARK_DEFINE_F(Vmo, Write)(benchmark::State& state) {
     return;
   }
   while(state.KeepRunning()) {
-    if(zx_vmo_write(vmo, buffer.data(), 0, buffer.size(), &bytes_written) != ZX_OK) {
+    if(zx_vmo_write_old(vmo, buffer.data(), 0, buffer.size(), &bytes_written) != ZX_OK) {
       state.SkipWithError("Failed to write to vmo");
     }
     state.PauseTiming();
@@ -57,7 +57,7 @@ BENCHMARK_DEFINE_F(Vmo, Read)(benchmark::State& state) {
     return;
   }
   while(state.KeepRunning()) {
-    if(zx_vmo_read(vmo, buffer.data(), 0, buffer.size(), &bytes_read) != ZX_OK) {
+    if(zx_vmo_read_old(vmo, buffer.data(), 0, buffer.size(), &bytes_read) != ZX_OK) {
       state.SkipWithError("Failed to read to vmo");
     }
     state.PauseTiming();

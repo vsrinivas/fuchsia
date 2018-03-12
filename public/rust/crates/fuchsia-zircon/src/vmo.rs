@@ -41,7 +41,7 @@ impl Vmo {
     pub fn read(&self, data: &mut [u8], offset: u64) -> Result<usize, Status> {
         unsafe {
             let mut actual = 0;
-            let status = sys::zx_vmo_read(self.raw_handle(), data.as_mut_ptr(),
+            let status = sys::zx_vmo_read_old(self.raw_handle(), data.as_mut_ptr(),
                 offset, data.len(), &mut actual);
             ok(status).map(|()| actual)
         }
@@ -53,7 +53,7 @@ impl Vmo {
     pub fn write(&self, data: &[u8], offset: u64) -> Result<usize, Status> {
         unsafe {
             let mut actual = 0;
-            let status = sys::zx_vmo_write(self.raw_handle(), data.as_ptr(),
+            let status = sys::zx_vmo_write_old(self.raw_handle(), data.as_ptr(),
                 offset, data.len(), &mut actual);
             ok(status).map(|()| actual)
         }

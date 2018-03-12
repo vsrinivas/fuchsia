@@ -125,7 +125,7 @@ bool Process::InitChildProcess(benchmark::State& state) {
     return false;
   }
   size_t actual = 0;
-  if (zx_vmo_write(stack_vmo, reinterpret_cast<void*>(&call_exit), 0, num_to_copy, &actual) !=
+  if (zx_vmo_write_old(stack_vmo, reinterpret_cast<void*>(&call_exit), 0, num_to_copy, &actual) !=
       ZX_OK) {
     state.SkipWithError("Failed to write vmo");
     return false;

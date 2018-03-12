@@ -406,7 +406,23 @@ extern {
         actual: *mut usize
         ) -> zx_status_t;
 
+    pub fn zx_vmo_read_old(
+        handle: zx_handle_t,
+        data: *mut u8,
+        offset: u64,
+        len: usize,
+        actual: *mut usize
+        ) -> zx_status_t;
+
     pub fn zx_vmo_write(
+        handle: zx_handle_t,
+        data: *const u8,
+        offset: u64,
+        len: usize,
+        actual: *mut usize
+        ) -> zx_status_t;
+
+    pub fn zx_vmo_write_old(
         handle: zx_handle_t,
         data: *const u8,
         offset: u64,
