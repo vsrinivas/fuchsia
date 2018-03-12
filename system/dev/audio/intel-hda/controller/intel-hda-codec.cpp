@@ -91,7 +91,13 @@ fbl::RefPtr<IntelHDACodec> IntelHDACodec::Create(IntelHDAController& controller,
                                                   uint8_t codec_id) {
     ZX_DEBUG_ASSERT(codec_id < HDA_MAX_CODECS);
 
-    auto ret = fbl::AdoptRef(new IntelHDACodec(controller, codec_id));
+    fbl::AllocChecker ac;
+    auto ret = fbl::AdoptRef(new (&ac) IntelHDACodec(controller, codec_id));
+    if (!ac.check()) {
+        GLOBAL_LOG("Out of memory attempting to allocate codec\n");
+        return nullptr;
+    }
+
     if (ret->default_domain_ == nullptr) {
         LOG_EX(*ret, "Out of memory attempting to allocate execution domain\n");
         return nullptr;

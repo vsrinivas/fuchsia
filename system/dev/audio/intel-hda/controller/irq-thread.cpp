@@ -18,10 +18,10 @@ namespace audio {
 namespace intel_hda {
 
 void IntelHDAController::WakeupIRQThread() {
-    ZX_DEBUG_ASSERT(irq_handle_ != ZX_HANDLE_INVALID);
+    ZX_DEBUG_ASSERT(irq_.is_valid());
 
     VERBOSE_LOG("Waking up IRQ thread\n");
-    zx_interrupt_signal(irq_handle_, ZX_INTERRUPT_SLOT_USER, 0);
+    irq_.signal(ZX_INTERRUPT_SLOT_USER, zx::time(0));
 }
 
 fbl::RefPtr<IntelHDACodec> IntelHDAController::GetCodec(uint id) {
@@ -36,20 +36,20 @@ void IntelHDAController::WaitForIrqOrWakeup() {
 
     VERBOSE_LOG("IRQ thread waiting on IRQ\n");
     uint64_t slots;
-    zx_interrupt_wait(irq_handle_, &slots);
+    irq_.wait(&slots);
     VERBOSE_LOG("IRQ thread woke up\n");
 
     // Disable IRQs at the device level
-    REG_WR(&regs_->intctl, 0u);
+    REG_WR(&regs()->intctl, 0u);
 }
 
 void IntelHDAController::SnapshotRIRB() {
     fbl::AutoLock rirb_lock(&rirb_lock_);
 
     ZX_DEBUG_ASSERT(rirb_ && rirb_entry_count_ && rirb_mask_);
-    uint8_t rirbsts = REG_RD(&regs_->rirbsts);
+    uint8_t rirbsts = REG_RD(&regs()->rirbsts);
 
-    unsigned int rirb_wr_ptr = REG_RD(&regs_->rirbwp) & rirb_mask_;
+    unsigned int rirb_wr_ptr = REG_RD(&regs()->rirbwp) & rirb_mask_;
     unsigned int pending     = (rirb_entry_count_ + rirb_wr_ptr - rirb_rd_ptr_) & rirb_mask_;
 
     // Copy the current state of the RIRB into our snapshot memory.  Note: we
@@ -77,7 +77,7 @@ void IntelHDAController::SnapshotRIRB() {
         pending -= todo;
     }
 
-    REG_WR(&regs_->rirbsts, rirbsts);
+    REG_WR(&regs()->rirbsts, rirbsts);
 
     ZX_DEBUG_ASSERT(!pending);
 
@@ -237,8 +237,8 @@ void IntelHDAController::ProcessCORB() {
     fbl::AutoLock corb_lock(&corb_lock_);
 
     // Check IRQ status for the CORB
-    uint8_t corbsts = REG_RD(&regs_->corbsts);
-    REG_WR(&regs_->corbsts, corbsts);
+    uint8_t corbsts = REG_RD(&regs()->corbsts);
+    REG_WR(&regs()->corbsts, corbsts);
 
     if (corbsts & HDA_REG_CORBSTS_MEI) {
         // TODO(johngro) : Implement proper controller reset behavior.
@@ -280,9 +280,9 @@ void IntelHDAController::ProcessCORB() {
 
 void IntelHDAController::ComputeCORBSpaceLocked() {
     ZX_DEBUG_ASSERT(corb_entry_count_ && corb_mask_);
-    ZX_DEBUG_ASSERT(corb_wr_ptr_ == REG_RD(&regs_->corbwp));
+    ZX_DEBUG_ASSERT(corb_wr_ptr_ == REG_RD(&regs()->corbwp));
 
-    unsigned int corb_rd_ptr = REG_RD(&regs_->corbrp) & corb_mask_;
+    unsigned int corb_rd_ptr = REG_RD(&regs()->corbrp) & corb_mask_;
     unsigned int corb_used   = (corb_entry_count_ + corb_wr_ptr_ - corb_rd_ptr) & corb_mask_;
 
     /* The way the Intel HDA command ring buffers work, it is impossible to ever
@@ -299,10 +299,10 @@ void IntelHDAController::CommitCORBLocked() {
     // running on an architecure where cache coherency is not automatically
     // managed for us via. snooping or by an explicit uncached or write-thru
     // policy set on our mapped pages in the MMU.
-    ZX_DEBUG_ASSERT(regs_);
+    ZX_DEBUG_ASSERT(regs());
     ZX_DEBUG_ASSERT(corb_entry_count_ && corb_mask_);
     ZX_DEBUG_ASSERT(corb_wr_ptr_ < corb_entry_count_);
-    REG_WR(&regs_->corbwp, corb_wr_ptr_);
+    REG_WR(&regs()->corbwp, corb_wr_ptr_);
 }
 
 void IntelHDAController::ProcessStreamIRQ(uint32_t intsts) {
@@ -317,9 +317,9 @@ void IntelHDAController::ProcessStreamIRQ(uint32_t intsts) {
 
 void IntelHDAController::ProcessControllerIRQ() {
     // Start by checking for codec wake events.
-    uint16_t statests = REG_RD(&regs_->statests) & HDA_REG_STATESTS_MASK;
+    uint16_t statests = REG_RD(&regs()->statests) & HDA_REG_STATESTS_MASK;
     if (statests) {
-        REG_WR(&regs_->statests, statests);
+        REG_WR(&regs()->statests, statests);
         uint32_t tmp = statests;
         for (uint8_t i = 0u; statests && (i < countof(codecs_)); ++i, tmp >>= 1) {
             if (!(tmp & 1u))
@@ -362,15 +362,15 @@ int IntelHDAController::IRQThread() {
 
     // Clear our STATESTS shadow, setup the WAKEEN register to wake us
     // up if there is any change to the codec enumeration status.
-    REG_SET_BITS(&regs_->wakeen, HDA_REG_STATESTS_MASK);
+    REG_SET_BITS(&regs()->wakeen, HDA_REG_STATESTS_MASK);
 
     // Allow unsolicited codec responses
-    REG_SET_BITS(&regs_->gctl, HDA_REG_GCTL_UNSOL);
+    REG_SET_BITS(&regs()->gctl, HDA_REG_GCTL_UNSOL);
 
     while (GetState() != State::SHUTTING_DOWN) {
         // Enable interrupts at the top level and wait for there to be Great
         // Things to do.
-        REG_WR(&regs_->intctl, interesting_irqs);
+        REG_WR(&regs()->intctl, interesting_irqs);
         WaitForIrqOrWakeup();
         if (GetState() == State::SHUTTING_DOWN)
             break;
@@ -381,7 +381,7 @@ int IntelHDAController::IRQThread() {
         // important IRQ tasks.
         SnapshotRIRB();
 
-        uint32_t intsts = REG_RD(&regs_->intsts);
+        uint32_t intsts = REG_RD(&regs()->intsts);
 
         if (intsts & HDA_REG_INTCTL_SIE_MASK)
             ProcessStreamIRQ(intsts & HDA_REG_INTCTL_SIE_MASK);
@@ -396,8 +396,8 @@ int IntelHDAController::IRQThread() {
     DEBUG_LOG("IRQ thread exiting!\n");
 
     // Disable all interrupts and place the device into reset on our way out.
-    REG_WR(&regs_->intctl, 0u);
-    REG_CLR_BITS(&regs_->gctl, HDA_REG_GCTL_HWINIT);
+    REG_WR(&regs()->intctl, 0u);
+    REG_CLR_BITS(&regs()->gctl, HDA_REG_GCTL_HWINIT);
 
     // Tell all the codecs to begin the process of shutting down.  Then wait for
     // them to finish.

@@ -5,16 +5,31 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <limits.h>
 #include <zircon/types.h>
+#include <zx/bti.h>
 #include <zx/channel.h>
 #include <zx/vmo.h>
 #include <fbl/macros.h>
+#include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/vmar_manager.h>
 
 #include <dispatcher-pool/dispatcher-channel.h>
 
 namespace audio {
 namespace intel_hda {
+
+// Constants
+
+// HDA controllers can have at most 30 stream contexts.
+constexpr size_t MAX_STREAMS_PER_CONTROLLER = 30;
+
+// CORB/RIRB should take no more than a page
+constexpr size_t MAPPED_CORB_RIRB_SIZE = PAGE_SIZE;
+
+// Individual BDLs should be 1 page each
+constexpr size_t MAPPED_BDL_SIZE = PAGE_SIZE;
 
 #define _SIC_ static inline constexpr
 template <typename T> _SIC_ T  OR(T x, T y) { return static_cast<T>(x | y); }
@@ -27,63 +42,27 @@ zx_status_t WaitCondition(zx_time_t timeout,
                           WaitConditionFn cond,
                           void* cond_ctx);
 
-// Utility method for determining the physical mapping of the pages committed
-// underneath a VMO.  Automatically coalesces adjacent pages and reports the
-// addresses and lengths of contiguous regions.
-//
-// @param vmo_handle A handle to the VMO to get region info for.
-// @param vmo_size The size of the region of the VMO to get info for (in bytes).
-// @param regions_out a pointer to an array of VMORegion structures which will
-//        hold the result of the operation.
-// @param num_regions_inout A pointer to an integer which holds the length of
-//        the regions_out array on input, and hold the number of populated
-//        elements of the array on output.  Only valid on output if the return
-//        code is ZX_OK.
-// @returns An zx_status_t indicating success or failure of the operation.
-struct VMORegion;
-zx_status_t GetVMORegionInfo(const zx::vmo& vmo,
-                             uint64_t       vmo_size,
-                             VMORegion*     regions_out,
-                             uint32_t*      num_regions_inout);
-struct VMORegion {
-    zx_paddr_t phys_addr;
-    uint64_t   size;
+// Static container for the driver wide VMARs that we stash all of our register
+// mappings in, in order to make efficient use of kernel PTEs
+class DriverVmars {
+  public:
+    static zx_status_t Initialize();
+    static void Shutdown();
+    static const fbl::RefPtr<fbl::VmarManager>& registers() { return registers_; }
+  private:
+    static fbl::RefPtr<fbl::VmarManager> registers_;
 };
 
-// Utility class for managing allocation and mapping of contiguous physical
-// memory.
-class ContigPhysMem {
-public:
-    ContigPhysMem() = default;
-    ~ContigPhysMem() { Release(); }
+// Utility class which manages a Bus Transaction Initiator using RefPtrs
+// (allowing the BTI to be shared by multiple objects)
+class RefCountedBti : public fbl::RefCounted<RefCountedBti> {
+  public:
+    static fbl::RefPtr<RefCountedBti> Create(zx::bti initiator);
+    const zx::bti& initiator() const { return initiator_; }
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(ContigPhysMem);
-
-    // Allocate at least size bytes of contiguous physical memory.  Allocatation
-    // will round up to the nearest page size.
-    zx_status_t Allocate(size_t size);
-
-    // Map a successfully allocated buffer into this address space with
-    // read/write permissions.
-    //
-    // TODO(johngro) : Should we provide control of permissions and cache policy
-    // here?
-    zx_status_t Map();
-
-    // If mapped, unmap.  Then, if allocated, deallocate.
-    void Release();
-
-    zx_paddr_t  phys()        const { return phys_; }
-    uintptr_t   virt()        const { return virt_; }
-    size_t      size()        const { return size_; }
-    size_t      actual_size() const { return actual_size_; }
-
-private:
-    zx::vmo     vmo_;
-    zx_paddr_t  phys_ = 0;
-    uintptr_t   virt_ = 0;
-    size_t      size_ = 0;
-    size_t      actual_size_ = 0;
+  private:
+    explicit RefCountedBti(zx::bti initiator) : initiator_(fbl::move(initiator)) { }
+    zx::bti initiator_;
 };
 
 struct StreamFormat {

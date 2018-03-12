@@ -18,7 +18,6 @@ namespace audio {
 namespace intel_hda {
 
 constexpr size_t IntelHDAStream::MAX_BDL_LENGTH;
-constexpr size_t IntelHDAStream::MAX_STREAMS_PER_CONTROLLER;
 
 namespace {
 // Note: these timeouts are arbitrary; the spec provides no guidance here.
@@ -35,23 +34,71 @@ void IntelHDAStream::PrintDebugPrefix() const {
     printf("[IHDA_SD #%u] ", id_);
 }
 
-IntelHDAStream::IntelHDAStream(Type                    type,
-                               uint16_t                id,
-                               hda_stream_desc_regs_t* regs,
-                               zx_paddr_t              bdl_phys,
-                               uintptr_t               bdl_virt)
-    : type_(type),
-      id_(id),
-      regs_(regs),
-      bdl_(reinterpret_cast<IntelHDABDLEntry*>(bdl_virt)),
-      bdl_phys_(bdl_phys) {
-    // Check the alignment restrictions
-    ZX_DEBUG_ASSERT(!(bdl_phys & static_cast<zx_paddr_t>(DMA_ALIGN_MASK)));
-    ZX_DEBUG_ASSERT(!(bdl_virt & static_cast<uintptr_t>(DMA_ALIGN_MASK)));
+fbl::RefPtr<IntelHDAStream> IntelHDAStream::Create(
+        Type type,
+        uint16_t id,
+        hda_stream_desc_regs_t* regs,
+        const fbl::RefPtr<RefCountedBti>& pci_bti) {
+    fbl::AllocChecker ac;
+    auto ret = fbl::AdoptRef(new (&ac) IntelHDAStream(type, id, regs, pci_bti));
+    if (!ac.check()) {
+        return nullptr;
+    }
+
+    zx_status_t res = ret->Initialize();
+    if (res != ZX_OK) {
+        // Initialize should have already logged the warning with the proper
+        // debug prefix for the stream.  Don't bother to do so here.
+        return nullptr;
+    }
+
+    return ret;
 }
 
 IntelHDAStream::~IntelHDAStream() {
     ZX_DEBUG_ASSERT(!running_);
+}
+
+zx_status_t IntelHDAStream::Initialize() {
+    // BDL entries should be 16 bytes long, meaning that we should be able to
+    // fit 256 of them perfectly into a single 4k page.
+    constexpr size_t MAX_BDL_BYTES = sizeof(IntelHDABDLEntry) * MAX_BDL_LENGTH;
+    static_assert(MAX_BDL_BYTES <= PAGE_SIZE, "A max length BDL must fit inside a single page!");
+
+    // Create a VMO made of a single page and map it for read/write so the CPU
+    // has access to it.
+    constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
+    zx::vmo bdl_vmo;
+    zx_status_t res;
+    res = bdl_cpu_mem_.CreateAndMap(PAGE_SIZE,
+                                    CPU_MAP_FLAGS,
+                                    DriverVmars::registers(),
+                                    &bdl_vmo,
+                                    ZX_RIGHT_SAME_RIGHTS,
+                                    ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    if (res != ZX_OK) {
+        LOG("Failed to create and map %u bytes for stream BDL! (res %d)\n", PAGE_SIZE, res);
+        return res;
+    }
+
+    // Pin this VMO and grant the controller access to it.  The controller
+    // should only need read access to buffer descriptor lists.
+    constexpr uint32_t HDA_MAP_FLAGS = ZX_BTI_PERM_READ;
+    ZX_DEBUG_ASSERT(pci_bti_ != nullptr);
+    res = bdl_hda_mem_.Pin(bdl_vmo, pci_bti_, HDA_MAP_FLAGS);
+    if (res != ZX_OK) {
+        LOG("Failed to pin pages for stream BDL! (res %d)\n", res);
+        return res;
+    }
+
+    // Sanity checks.  At this point, everything should be allocated, mapped,
+    // and should obey the alignment restrictions imposed by the HDA spec.
+    ZX_DEBUG_ASSERT(bdl_cpu_mem_.start() != 0);
+    ZX_DEBUG_ASSERT(!(reinterpret_cast<uintptr_t>(bdl_cpu_mem_.start()) & DMA_ALIGN_MASK));
+    ZX_DEBUG_ASSERT(bdl_hda_mem_.region_count() == 1);
+    ZX_DEBUG_ASSERT(!(bdl_hda_mem_.region(0).phys_addr & DMA_ALIGN_MASK));
+
+    return ZX_OK;
 }
 
 void IntelHDAStream::EnsureStopped(hda_stream_desc_regs_t* regs) {
@@ -406,6 +453,27 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
         goto finished;
     }
 
+    // Commit and pin the pages for this VMO so that our HW DMA can access them.
+    uint32_t hda_rights;
+    hda_rights = (configured_type() == Type::INPUT)
+               ? ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE
+               : ZX_BTI_PERM_READ;
+
+    resp.result = pinned_ring_buffer_.Pin(ring_buffer_vmo, pci_bti_, hda_rights);
+    if (resp.result != ZX_OK) {
+        DEBUG_LOG("Failed to commit and pin pages for %u bytes in ring buffer VMO (res %d)\n",
+                rb_size, resp.result);
+        goto finished;
+    }
+
+    ZX_DEBUG_ASSERT(pinned_ring_buffer_.region_count() >= 1);
+    if (pinned_ring_buffer_.region_count() > MAX_BDL_LENGTH) {
+        LOG("IntelHDA stream ring buffer is too fragmented (%u regions) to construct a valid BDL\n",
+            pinned_ring_buffer_.region_count());
+        resp.result = ZX_ERR_INTERNAL;
+        goto finished;
+    }
+
     // Create the client's copy of this VMO with some restricted rights.
     //
     // TODO(johngro) : strip the transfer right when we move this handle.
@@ -423,36 +491,6 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
 
     if (resp.result != ZX_OK) {
         DEBUG_LOG("Failed duplicate ring buffer VMO handle! (res %d)\n", resp.result);
-        goto finished;
-    }
-
-    // Commit the pages needed for this VMO and lock them so they cannot be
-    // moved out from under the HW DMA.
-    resp.result = ring_buffer_vmo.op_range(ZX_VMO_OP_COMMIT, 0, rb_size, nullptr, 0);
-    if (resp.result != ZX_OK) {
-        DEBUG_LOG("Failed to commit pages for %u bytes in ring buffer VMO (res %d)\n",
-                rb_size, resp.result);
-        goto finished;
-    }
-
-    // TODO(johngro) : Enable this when the kernel supports locking pages.
-#if 0
-    resp.result = ring_buffer_vmo.op_range(ZX_VMO_OP_LOCK, 0, rb_size, nullptr, 0);
-    if (resp.result != ZX_OK) {
-        DEBUG_LOG("Failed to lock pages for %u bytes in ring buffer VMO (res %d)\n",
-                rb_size, resp.result);
-        goto finished;
-    }
-#endif
-
-    // Fetch the scatter-gather list for the VMO.
-    VMORegion  regions[MAX_BDL_LENGTH];
-    uint32_t   num_regions;
-
-    num_regions = countof(regions);
-    resp.result = GetVMORegionInfo(ring_buffer_vmo, rb_size, regions, &num_regions);
-    if (resp.result != ZX_OK) {
-        DEBUG_LOG("Failed to fetch VMO scatter/gather map (res %d)\n", resp.result);
         goto finished;
     }
 
@@ -477,8 +515,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
     irqs_inserted = 0;
 
     for (entry = 0; (entry < MAX_BDL_LENGTH) && (amt_done < rb_size); ++entry) {
-        ZX_DEBUG_ASSERT(region_num < num_regions);
-        const auto& r = regions[region_num];
+        const auto& r = pinned_ring_buffer_.region(region_num);
 
         if (r.size > fbl::numeric_limits<uint32_t>::max()) {
             DEBUG_LOG("VMO region too large! (%" PRIu64" bytes)", r.size);
@@ -492,13 +529,13 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
         uint32_t todo        = fbl::min(amt_left, region_left);
 
         ZX_DEBUG_ASSERT(region_left >= DMA_ALIGN);
-        bdl_[entry].flags = 0;
+        bdl()[entry].flags = 0;
 
         if (nominal_irq_spacing) {
             uint32_t ipos = (next_irq_pos + DMA_ALIGN - 1) & ~DMA_ALIGN_MASK;
 
             if ((amt_done + todo) >= ipos) {
-                bdl_[entry].flags = IntelHDABDLEntry::IOC_FLAG;
+                bdl()[entry].flags = IntelHDABDLEntry::IOC_FLAG;
                 next_irq_pos += nominal_irq_spacing;
                 ++irqs_inserted;
 
@@ -511,10 +548,10 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
 
         ZX_DEBUG_ASSERT(!(todo & DMA_ALIGN_MASK) || (todo == amt_left));
 
-        bdl_[entry].address = r.phys_addr + region_offset;
-        bdl_[entry].length  = todo;
+        bdl()[entry].address = r.phys_addr + region_offset;
+        bdl()[entry].length  = todo;
 
-        ZX_DEBUG_ASSERT(!(bdl_[entry].address & DMA_ALIGN_MASK));
+        ZX_DEBUG_ASSERT(!(bdl()[entry].address & DMA_ALIGN_MASK));
 
         amt_done += todo;
         region_offset += todo;
@@ -528,7 +565,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
 
     ZX_DEBUG_ASSERT(entry > 0);
     if (irqs_inserted < req.notifications_per_ring) {
-        bdl_[entry - 1].flags = IntelHDABDLEntry::IOC_FLAG;
+        bdl()[entry - 1].flags = IntelHDABDLEntry::IOC_FLAG;
     }
 
     if (DEBUG_LOGGING) {
@@ -537,9 +574,9 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
         for (uint32_t i = 0; i < entry; ++i) {
             DEBUG_LOG("[%2u] : %016" PRIx64 " - 0x%04x %sIRQ\n",
                         i,
-                        bdl_[i].address,
-                        bdl_[i].length,
-                        bdl_[i].flags ? "" : "NO ");
+                        bdl()[i].address,
+                        bdl()[i].length,
+                        bdl()[i].flags ? "" : "NO ");
         }
     }
 
@@ -564,14 +601,10 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
 
 finished:
     if (resp.result == ZX_OK) {
-        // Success.  DMA is set up and ready to go.  If we manage to send the
-        // client their copy of the VMO handle, keep a hold of our handle.
-        // Otherwise, just let it go out of scope and be closed.
-        zx_status_t res = channel_->Write(&resp, sizeof(resp), fbl::move(client_rb_handle));
-        if (res == ZX_OK)
-            ring_buffer_vmo_ = fbl::move(ring_buffer_vmo);
-        return res;
+        // Success.  DMA is set up and ready to go.
+        return channel_->Write(&resp, sizeof(resp), fbl::move(client_rb_handle));
     } else {
+        ReleaseRingBufferLocked();
         return channel_->Write(&resp, sizeof(resp));
     }
 }
@@ -579,14 +612,16 @@ finished:
 zx_status_t IntelHDAStream::ProcessStartLocked(const audio_proto::RingBufStartReq& req) {
     audio_proto::RingBufStartResp resp = { };
     uint32_t ctl_val;
+    const auto bdl_phys = bdl_hda_mem_.region(0).phys_addr;
 
     resp.hdr = req.hdr;
     resp.result = ZX_OK;
 
     // We cannot start unless we have configured the ring buffer and are not already started.
-    if (!ring_buffer_vmo_.is_valid() || running_) {
+    bool ring_buffer_valid = pinned_ring_buffer_.region_count() >= 1;
+    if (!ring_buffer_valid || running_) {
         DEBUG_LOG("Bad state during start request %s%s.\n",
-                !ring_buffer_vmo_.is_valid() ? "(ring buffer not configured)" : "",
+                !ring_buffer_valid ? "(ring buffer not configured)" : "",
                 running_ ? "(already running)" : "");
         resp.result = ZX_ERR_BAD_STATE;
         goto finished;
@@ -604,8 +639,8 @@ zx_status_t IntelHDAStream::ProcessStartLocked(const audio_proto::RingBufStartRe
                                                : HDA_SD_REG_CTRL_DIR_OUT);
     REG_WR(&regs_->ctl_sts.w, ctl_val);
     REG_WR(&regs_->fmt, encoded_fmt_);
-    REG_WR(&regs_->bdpl, static_cast<uint32_t>(bdl_phys_ & 0xFFFFFFFFu));
-    REG_WR(&regs_->bdpu, static_cast<uint32_t>((bdl_phys_ >> 32) & 0xFFFFFFFFu));
+    REG_WR(&regs_->bdpl, static_cast<uint32_t>(bdl_phys & 0xFFFFFFFFu));
+    REG_WR(&regs_->bdpu, static_cast<uint32_t>((bdl_phys >> 32) & 0xFFFFFFFFu));
     REG_WR(&regs_->cbl, cyclic_buffer_length_);
     REG_WR(&regs_->lvi, bdl_last_valid_index_);
     hw_wmb();
@@ -676,9 +711,8 @@ zx_status_t IntelHDAStream::ProcessStopLocked(const audio_proto::RingBufStopReq&
 }
 
 void IntelHDAStream::ReleaseRingBufferLocked() {
-    ring_buffer_vmo_.reset();
-    ZX_DEBUG_ASSERT(bdl_);
-    memset(bdl_, 0, sizeof(*bdl_) * MAX_BDL_LENGTH);
+    pinned_ring_buffer_.Unpin();
+    memset(bdl_cpu_mem_.start(), 0, bdl_cpu_mem_.size());
 }
 
 }  // namespace intel_hda

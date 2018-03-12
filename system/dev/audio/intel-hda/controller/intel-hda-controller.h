@@ -12,7 +12,9 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/recycler.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/vmo_mapper.h>
 #include <threads.h>
+#include <zx/interrupt.h>
 
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <intel-hda/utils/codec-commands.h>
@@ -21,6 +23,7 @@
 
 #include "codec-cmd-job.h"
 #include "intel-hda-codec.h"
+#include "pinned-vmo.h"
 #include "thread-annotations.h"
 #include "utils.h"
 
@@ -61,6 +64,11 @@ private:
     };
 
     static constexpr uint RIRB_RESERVED_RESPONSE_SLOTS = 8u;
+
+    // Accessor for our mapped registers
+    hda_registers_t* regs() const {
+        return &reinterpret_cast<hda_all_registers_t*>(mapped_regs_.start())->regs;
+    }
 
     int  IRQThread();
     void WakeupIRQThread();
@@ -121,8 +129,8 @@ private:
 
     // IRQ thread and state machine.
     fbl::atomic<StateStorage> state_;
-    thrd_t                     irq_thread_;
-    bool                       irq_thread_started_ = false;
+    thrd_t                    irq_thread_;
+    bool                      irq_thread_started_ = false;
 
     // Debug stuff
     char debug_tag_[ZX_DEVICE_NAME_MAX] = { 0 };
@@ -138,17 +146,20 @@ private:
     zx_device_t* dev_node_ = nullptr;
 
     // PCI Registers and IRQ
-    zx_handle_t      irq_handle_  = ZX_HANDLE_INVALID;
-    zx_handle_t      regs_handle_ = ZX_HANDLE_INVALID;
-    hda_registers_t* regs_        = nullptr;
+    zx::interrupt    irq_;
+    fbl::VmoMapper   mapped_regs_;
 
-    // Contiguous physical memory allocated for the command buffer (CORB/RIRB)
-    // and Stream Buffer Desctiptor Lists (BDLs)
-    ContigPhysMem  bdl_mem_     TA_GUARDED(stream_pool_lock_);
-    ContigPhysMem  cmd_buf_mem_ TA_GUARDED(corb_lock_);
+    // A handle to the Bus Transaction Initiator for this PCI device.  Used to
+    // grant access to specific regions of physical mememory to the controller
+    // hardware so that it may DMA.
+    fbl::RefPtr<RefCountedBti> pci_bti_;
+
+    // Physical memory allocated for the command buffer (CORB/RIRB)
+    fbl::VmoMapper cmd_buf_cpu_mem_ TA_GUARDED(corb_lock_);
+    PinnedVmo      cmd_buf_hda_mem_ TA_GUARDED(corb_lock_);
 
     // Stream state
-    fbl::Mutex          stream_pool_lock_;
+    fbl::Mutex           stream_pool_lock_;
     IntelHDAStream::Tree free_input_streams_  TA_GUARDED(stream_pool_lock_);
     IntelHDAStream::Tree free_output_streams_ TA_GUARDED(stream_pool_lock_);
     IntelHDAStream::Tree free_bidir_streams_  TA_GUARDED(stream_pool_lock_);
@@ -156,10 +167,10 @@ private:
     uint16_t             free_output_tags_    TA_GUARDED(stream_pool_lock_) = 0xFFFEu;
 
     // Array of pointers to all possible streams (used for O(1) lookup during IRQ dispatch)
-    fbl::RefPtr<IntelHDAStream> all_streams_[IntelHDAStream::MAX_STREAMS_PER_CONTROLLER];
+    fbl::RefPtr<IntelHDAStream> all_streams_[MAX_STREAMS_PER_CONTROLLER];
 
     // Codec bus command ring-buffer state (CORB/RIRB)
-    fbl::Mutex    corb_lock_;
+    fbl::Mutex     corb_lock_;
     CodecCommand*  corb_               TA_GUARDED(corb_lock_) = nullptr;
     unsigned int   corb_entry_count_   TA_GUARDED(corb_lock_) = 0;
     unsigned int   corb_mask_          TA_GUARDED(corb_lock_) = 0;
@@ -167,7 +178,7 @@ private:
     unsigned int   corb_space_         TA_GUARDED(corb_lock_) = 0;
     unsigned int   corb_max_in_flight_ TA_GUARDED(corb_lock_) = 0;
 
-    fbl::Mutex    rirb_lock_          TA_ACQ_BEFORE(corb_lock_);
+    fbl::Mutex     rirb_lock_          TA_ACQ_BEFORE(corb_lock_);
     CodecResponse* rirb_               TA_GUARDED(rirb_lock_) = nullptr;
     unsigned int   rirb_entry_count_   TA_GUARDED(rirb_lock_) = 0;
     unsigned int   rirb_mask_          TA_GUARDED(rirb_lock_) = 0;

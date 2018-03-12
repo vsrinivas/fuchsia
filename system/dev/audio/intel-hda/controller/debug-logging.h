@@ -20,6 +20,18 @@
     printf("[IHDA Driver] " __VA_ARGS__); \
 } while (false)
 
+#define GLOBAL_DEBUG_LOG(...) do {              \
+    if (DEBUG_LOGGING) {                        \
+        printf("[IHDA Driver] " __VA_ARGS__);   \
+    }                                           \
+} while (false)
+
+#define GLOBAL_VERBOSE_LOG(...) do {            \
+    if (VERBOSE_LOGGING) {                      \
+        printf("[IHDA Driver] " __VA_ARGS__);   \
+    }                                           \
+} while (false)
+
 #define LOG_EX(obj, ...) do { \
     (obj).PrintDebugPrefix(); \
     printf(__VA_ARGS__);      \

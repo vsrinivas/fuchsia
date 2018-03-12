@@ -35,57 +35,57 @@ zx_status_t IntelHDAController::SnapshotRegs(dispatcher::Channel* channel,
     fbl::AutoLock lock(&snapshot_regs_buffer_lock);
 
     auto  regs_ptr = reinterpret_cast<hda_registers_t*>(snapshot_regs_buffer.snapshot);
-    auto& regs     = *regs_ptr;
+    auto& out_regs = *regs_ptr;
 
     static_assert(sizeof(snapshot_regs_buffer.snapshot) == sizeof(hda_registers_t),
                   "Register snapshot buffer size does not match  register file size!");
 
     snapshot_regs_buffer.hdr = req.hdr;
-    memset(&regs, 0, sizeof(regs));
+    memset(&out_regs, 0, sizeof(out_regs));
 
-    regs.gcap       = REG_RD(&regs_->gcap);
-    regs.vmin       = REG_RD(&regs_->vmin);
-    regs.vmaj       = REG_RD(&regs_->vmaj);
-    regs.outpay     = REG_RD(&regs_->outpay);
-    regs.inpay      = REG_RD(&regs_->inpay);
-    regs.gctl       = REG_RD(&regs_->gctl);
-    regs.wakeen     = REG_RD(&regs_->wakeen);
-    regs.statests   = REG_RD(&regs_->statests);
-    regs.gsts       = REG_RD(&regs_->gsts);
-    regs.outstrmpay = REG_RD(&regs_->outstrmpay);
-    regs.instrmpay  = REG_RD(&regs_->instrmpay);
-    regs.intctl     = REG_RD(&regs_->intctl);
-    regs.intsts     = REG_RD(&regs_->intsts);
-    regs.walclk     = REG_RD(&regs_->walclk);
-    regs.ssync      = REG_RD(&regs_->ssync);
-    regs.corblbase  = REG_RD(&regs_->corblbase);
-    regs.corbubase  = REG_RD(&regs_->corbubase);
-    regs.corbwp     = REG_RD(&regs_->corbwp);
-    regs.corbrp     = REG_RD(&regs_->corbrp);
-    regs.corbctl    = REG_RD(&regs_->corbctl);
-    regs.corbsts    = REG_RD(&regs_->corbsts);
-    regs.corbsize   = REG_RD(&regs_->corbsize);
-    regs.rirblbase  = REG_RD(&regs_->rirblbase);
-    regs.rirbubase  = REG_RD(&regs_->rirbubase);
-    regs.rirbwp     = REG_RD(&regs_->rirbwp);
-    regs.rintcnt    = REG_RD(&regs_->rintcnt);
-    regs.rirbctl    = REG_RD(&regs_->rirbctl);
-    regs.rirbsts    = REG_RD(&regs_->rirbsts);
-    regs.rirbsize   = REG_RD(&regs_->rirbsize);
-    regs.icoi       = REG_RD(&regs_->icoi);
-    regs.icii       = REG_RD(&regs_->icii);
-    regs.icis       = REG_RD(&regs_->icis);
-    regs.dpiblbase  = REG_RD(&regs_->dpiblbase);
-    regs.dpibubase  = REG_RD(&regs_->dpibubase);
+    out_regs.gcap       = REG_RD(&regs()->gcap);
+    out_regs.vmin       = REG_RD(&regs()->vmin);
+    out_regs.vmaj       = REG_RD(&regs()->vmaj);
+    out_regs.outpay     = REG_RD(&regs()->outpay);
+    out_regs.inpay      = REG_RD(&regs()->inpay);
+    out_regs.gctl       = REG_RD(&regs()->gctl);
+    out_regs.wakeen     = REG_RD(&regs()->wakeen);
+    out_regs.statests   = REG_RD(&regs()->statests);
+    out_regs.gsts       = REG_RD(&regs()->gsts);
+    out_regs.outstrmpay = REG_RD(&regs()->outstrmpay);
+    out_regs.instrmpay  = REG_RD(&regs()->instrmpay);
+    out_regs.intctl     = REG_RD(&regs()->intctl);
+    out_regs.intsts     = REG_RD(&regs()->intsts);
+    out_regs.walclk     = REG_RD(&regs()->walclk);
+    out_regs.ssync      = REG_RD(&regs()->ssync);
+    out_regs.corblbase  = REG_RD(&regs()->corblbase);
+    out_regs.corbubase  = REG_RD(&regs()->corbubase);
+    out_regs.corbwp     = REG_RD(&regs()->corbwp);
+    out_regs.corbrp     = REG_RD(&regs()->corbrp);
+    out_regs.corbctl    = REG_RD(&regs()->corbctl);
+    out_regs.corbsts    = REG_RD(&regs()->corbsts);
+    out_regs.corbsize   = REG_RD(&regs()->corbsize);
+    out_regs.rirblbase  = REG_RD(&regs()->rirblbase);
+    out_regs.rirbubase  = REG_RD(&regs()->rirbubase);
+    out_regs.rirbwp     = REG_RD(&regs()->rirbwp);
+    out_regs.rintcnt    = REG_RD(&regs()->rintcnt);
+    out_regs.rirbctl    = REG_RD(&regs()->rirbctl);
+    out_regs.rirbsts    = REG_RD(&regs()->rirbsts);
+    out_regs.rirbsize   = REG_RD(&regs()->rirbsize);
+    out_regs.icoi       = REG_RD(&regs()->icoi);
+    out_regs.icii       = REG_RD(&regs()->icii);
+    out_regs.icis       = REG_RD(&regs()->icis);
+    out_regs.dpiblbase  = REG_RD(&regs()->dpiblbase);
+    out_regs.dpibubase  = REG_RD(&regs()->dpibubase);
 
-    uint16_t gcap = REG_RD(&regs_->gcap);
+    uint16_t gcap = REG_RD(&regs()->gcap);
     unsigned int stream_cnt = HDA_REG_GCAP_ISS(gcap)
                             + HDA_REG_GCAP_OSS(gcap)
                             + HDA_REG_GCAP_BSS(gcap);
 
     for (unsigned int i = 0; i < stream_cnt; ++i) {
-        auto& sin  = regs_->stream_desc[i];
-        auto& sout = regs.stream_desc[i];
+        auto& sin  = regs()->stream_desc[i];
+        auto& sout = out_regs.stream_desc[i];
 
         sout.ctl_sts.w = REG_RD(&sin.ctl_sts.w);
         sout.lpib      = REG_RD(&sin.lpib);

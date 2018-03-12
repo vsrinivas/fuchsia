@@ -17,6 +17,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/intel-hda-controller-init.cpp \
     $(LOCAL_DIR)/intel-hda-stream.cpp \
     $(LOCAL_DIR)/irq-thread.cpp \
+    $(LOCAL_DIR)/pinned-vmo.cpp \
     $(LOCAL_DIR)/utils.cpp \
 
 MODULE_LIBS := \

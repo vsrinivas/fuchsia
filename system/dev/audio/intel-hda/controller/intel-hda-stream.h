@@ -10,12 +10,15 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/vmo_mapper.h>
 
 #include <audio-proto/audio-proto.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 
+#include "pinned-vmo.h"
 #include "thread-annotations.h"
+#include "utils.h"
 
 namespace audio {
 namespace intel_hda {
@@ -30,22 +33,14 @@ public:
     enum class Type { INVALID, INPUT, OUTPUT, BIDIR };
 
     // Hardware allows buffer descriptor lists (BDLs) to be up to 256
-    // entries long.  With 30 maximum stream contexts, and 16 bytes per
-    // entry, this works out to be about 123KB of RAM.  Pre-allocating this
-    // amount of RAM which would almost certainly never get used seems like
-    // a waste.  Limit the maximum desctiptor list length to 32 entries for
-    // now.  This results in a worst case of just less than 16KB.  For a
-    // system with 8 stream contexts (more typical) it works out to exactly
-    // one 4k page.
-    static constexpr size_t MAX_BDL_LENGTH = 32;
-    static constexpr size_t MAX_STREAMS_PER_CONTROLLER = 30;
+    // entries long.
+    static constexpr size_t MAX_BDL_LENGTH = 256;
 
-    // We carve our BDLs out of a contiguously allocated page aligned block
-    // of memory.  Provided that the length of the chunks is a multiple of
-    // 128 bytes, we can be certain that the start of all of our lists is on
-    // a 128 byte boundary, as required by section 3.3.42
-    static_assert(((sizeof(IntelHDABDLEntry) * MAX_BDL_LENGTH) % 128) == 0,
-                  "All BDLs must be 128 byte aligned!");
+    static fbl::RefPtr<IntelHDAStream> Create(
+        Type type,
+        uint16_t id,
+        hda_stream_desc_regs_t* regs,
+        const fbl::RefPtr<RefCountedBti>& pci_bti);
 
     Type     type()            const { return type_; }
     Type     configured_type() const { return configured_type_; }
@@ -61,17 +56,19 @@ public:
     void ProcessStreamIRQ() TA_EXCL(notif_lock_);
 
 private:
-    friend class IntelHDAController;            // Only controller may construct us.
+    friend class IntelHDAController;  // Controllers have access to stuff like Reset and Configure
     friend class fbl::RefPtr<IntelHDAStream>;  // Only our ref ptrs may destruct us.
 
-    IntelHDAStream(Type                    type,
-                   uint16_t                id,
+    IntelHDAStream(Type type,
+                   uint16_t id,
                    hda_stream_desc_regs_t* regs,
-                   zx_paddr_t              bdl_phys,
-                   uintptr_t               bdl_virt);
+                   const fbl::RefPtr<RefCountedBti>& pci_bti)
+        : type_(type), id_(id), regs_(regs), pci_bti_(pci_bti) {}
     ~IntelHDAStream();
 
     void PrintDebugPrefix() const;
+
+    zx_status_t Initialize();
 
     void DeactivateLocked() TA_REQ(channel_lock_);
     void EnsureStoppedLocked() TA_REQ(channel_lock_) { EnsureStopped(regs_); }
@@ -107,22 +104,34 @@ private:
     static void EnsureStopped(hda_stream_desc_regs_t* regs);
     static void Reset(hda_stream_desc_regs_t* regs);
 
+    // Accessor for the CPU accessble view of the Buffer Descriptor List
+    IntelHDABDLEntry* bdl() const {
+        return reinterpret_cast<IntelHDABDLEntry*>(bdl_cpu_mem_.start());
+    }
+
     // Paramters determined construction time.
-    const Type                    type_       = Type::INVALID;
-    const uint16_t                id_         = 0;
-    hda_stream_desc_regs_t* const regs_       = nullptr;
-    IntelHDABDLEntry*       const bdl_        = nullptr;
-    const zx_paddr_t              bdl_phys_   = 0;
+    const Type                    type_ = Type::INVALID;
+    const uint16_t                id_   = 0;
+    hda_stream_desc_regs_t* const regs_ = nullptr;
 
     // Parameters determined at allocation time.
     Type    configured_type_;
     uint8_t tag_;
 
+    // A reference to our controller's BTI.  We will need to this to grant the
+    // controller access to the BDLs and the ring buffers that this stream needs
+    // to operate.
+    const fbl::RefPtr<RefCountedBti> pci_bti_;
+
+    // Storage allocated for this stream context's buffer descriptor list.
+    fbl::VmoMapper bdl_cpu_mem_;
+    PinnedVmo      bdl_hda_mem_;
+
     // The channel used by the application to talk to us once our format has
     // been set by the codec.
     fbl::Mutex channel_lock_;
     fbl::RefPtr<dispatcher::Channel> channel_ TA_GUARDED(channel_lock_);
-    zx::vmo ring_buffer_vmo_ TA_GUARDED(channel_lock_);
+    PinnedVmo pinned_ring_buffer_ TA_GUARDED(channel_lock_);
 
     // Paramters determined after stream format configuration.
     uint16_t encoded_fmt_ = 0;
