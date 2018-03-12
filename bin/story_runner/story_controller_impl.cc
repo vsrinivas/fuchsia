@@ -44,10 +44,10 @@ constexpr char kStoryScopeLabelPrefix[] = "story-";
 namespace {
 
 f1dl::String PathString(const f1dl::Array<f1dl::String>& module_path) {
-  std::vector<std::string> parts(module_path.size());
-  for (size_t i = 0; i < parts.size(); ++i)
-    parts[i] = std::move(module_path[i].get());
-  return fxl::JoinStrings(parts, ":");
+  // f1dl::String no longer supports size(), begin() or end(). JoinStrings()
+  // only supports element types with those methods.
+  std::vector<std::string> path_vec(module_path.begin(), module_path.end());
+  return fxl::JoinStrings(path_vec, ":");
 }
 
 f1dl::Array<f1dl::String> ParentModulePath(
@@ -238,6 +238,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     // link value.
     if (i->module_data->module_url != module_data_->module_url ||
         !i->module_data->link_path->Equals(*module_data_->link_path) ||
+        !i->module_data->chain_data->Equals(*module_data_->chain_data) ||
         embed_module_watcher_.is_valid() || incoming_services_.is_valid()) {
       i->module_controller_impl->Teardown([this, flow] {
         // NOTE(mesch): i is invalid at this point.
@@ -1793,7 +1794,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
 
     new ResolveModulesCall(&operation_queue_, story_controller_impl_,
                            std::move(daisy_),
-                           std::move(requesting_module_path_),
+                           requesting_module_path_.Clone(),
                            [this, flow](FindModulesResultPtr result) {
                              StartModuleFromResult(flow, std::move(result));
                            });

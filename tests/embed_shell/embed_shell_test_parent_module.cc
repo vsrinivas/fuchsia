@@ -19,7 +19,7 @@ using modular::testing::TestPoint;
 namespace {
 
 constexpr char kChildModuleName[] = "child";
-constexpr char kChildModule[] =
+constexpr char kChildModuleUrl[] =
     "file:///system/test/modular_tests/embed_shell_test_child_module";
 
 class ParentApp {
@@ -53,10 +53,12 @@ class ParentApp {
   }
 
   void StartChildModule() {
-    module_host_->module_context()->StartModuleDeprecated(
-        kChildModuleName, kChildModule, nullptr /* link_name */,
-        nullptr /* incoming_services */, child_module_.NewRequest(),
-        child_view_.NewRequest());
+    auto daisy = modular::Daisy::New();
+    daisy->url = kChildModuleUrl;
+    module_host_->module_context()->EmbedModule(
+        kChildModuleName, std::move(daisy), nullptr /* incoming_services */,
+        child_module_.NewRequest(), child_view_.NewRequest(),
+        [](const modular::StartModuleStatus) {});
   }
 
   modular::ModuleHost* const module_host_;

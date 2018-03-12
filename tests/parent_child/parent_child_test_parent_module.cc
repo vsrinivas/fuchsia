@@ -20,11 +20,8 @@ namespace {
 constexpr int kTimeoutMilliseconds = 5000;
 
 constexpr char kChildModuleName[] = "child";
-constexpr char kChildModule[] =
+constexpr char kChildModuleUrl[] =
     "file:///system/test/modular_tests/parent_child_test_child_module";
-
-constexpr char kChildLink[] = "child";
-constexpr char kChildLinkAlternate[] = "child2";
 
 class ParentApp {
  public:
@@ -55,19 +52,34 @@ class ParentApp {
 
  private:
   void StartChildModuleTwice() {
-    module_host_->module_context()->StartModuleInShellDeprecated(
-        kChildModuleName, kChildModule, kChildLink, nullptr,
-        child_module_.NewRequest(), nullptr, true);
+    auto daisy = modular::Daisy::New();
+    daisy->url = kChildModuleUrl;
+    auto noun_entry = modular::NounEntry::New();
+    noun_entry->name = "link";
+    noun_entry->noun = modular::Noun::New();
+    noun_entry->noun->set_link_name("module1link");
+    daisy->nouns.push_back(std::move(noun_entry));
+    module_host_->module_context()->StartModule(
+        kChildModuleName, std::move(daisy), nullptr, child_module_.NewRequest(),
+        nullptr, [](const modular::StartModuleStatus) {});
 
     // Once the module starts, start the same module again, but with a different
-    // link. This stops the previous module instance and starts a new one.
+    // link mapping. This stops the previous module instance and starts a new one.
     modular::testing::GetStore()->Get(
         "child_module_init", [this](const f1dl::String&) {
           child_module_.set_error_handler([this] { OnChildModuleStopped(); });
 
-          module_host_->module_context()->StartModuleInShellDeprecated(
-              kChildModuleName, kChildModule, kChildLinkAlternate, nullptr,
-              child_module2_.NewRequest(), nullptr, true);
+          auto daisy = modular::Daisy::New();
+          daisy->url = kChildModuleUrl;
+          auto noun_entry = modular::NounEntry::New();
+          noun_entry->name = "link";
+          noun_entry->noun = modular::Noun::New();
+          noun_entry->noun->set_link_name("module2link");
+          daisy->nouns.push_back(std::move(noun_entry));
+          module_host_->module_context()->StartModule(
+              kChildModuleName, std::move(daisy), nullptr,
+              child_module2_.NewRequest(), nullptr,
+              [](const modular::StartModuleStatus) {});
         });
   }
 
