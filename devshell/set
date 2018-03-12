@@ -74,7 +74,7 @@ function main {
       arch=arm64
       ;;
     *)
-      echo Unknown zircon project \"$1\"
+      echo Unknown target \"$1\"
       fx-command-help
       return 1
       ;;
