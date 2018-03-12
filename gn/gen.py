@@ -120,8 +120,7 @@ def main():
         else:
             gn_command.append("--list")
     else:
-        # TODO(TO-734): reenable --check.
-        gn_command = ["gen", build_dir]
+        gn_command = ["gen", build_dir, "--check"]
 
     gn_args = [
         'target_cpu="%s"' % args.target_cpu,

@@ -29,8 +29,4 @@ default_args = {
 
 # Enable checking for the layers.
 check_targets = [
-  "//zircon/*",
-  "//garnet/*",
-  "//peridot/*",
-  "//topaz/*",
 ]
