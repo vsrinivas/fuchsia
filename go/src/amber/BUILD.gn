@@ -119,6 +119,10 @@ package("amber") {
       path = rebase_path("cmd/amber/meta/sandbox")
       dest = "sandbox"
     },
+    {
+      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+      dest = "legacy_flat_exported_dir"
+    }
   ]
 }
 
