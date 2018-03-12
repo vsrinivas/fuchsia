@@ -1,8 +1,0 @@
-{
-    "languages": [
-        "rust"
-    ],
-    "packages": {
-        "ledger-rs": "//peridot/examples/ledger-rs"
-    }
-}
