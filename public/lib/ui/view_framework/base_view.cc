@@ -118,7 +118,7 @@ void BaseView::HandleSessionEvents(f1dl::Array<ui_mozart::EventPtr> events) {
   scenic::Metrics* new_metrics = nullptr;
   for (const auto& event : events) {
     if (event->is_scenic()) {
-      scenic::EventPtr scenic_event = std::move(event->get_scenic());
+      const scenic::EventPtr& scenic_event = event->get_scenic();
       if (scenic_event->is_metrics() &&
           scenic_event->get_metrics()->node_id == parent_node_.id()) {
         new_metrics = scenic_event->get_metrics()->metrics.get();
