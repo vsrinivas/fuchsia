@@ -18,7 +18,7 @@ var errConnectionClosed = zx.Error{Status: zx.ErrPeerClosed}
 // thread-safe.
 type Connector struct {
 	mu      sync.RWMutex // protects channel handle
-	channel *zx.Channel
+	channel zx.Channel
 
 	done      chan struct{}
 	waitMutex sync.Mutex
@@ -30,7 +30,7 @@ type Connector struct {
 // receives messages from a provided channel handle.
 func NewConnector(handle zx.Handle, waiter AsyncWaiter) *Connector {
 	return &Connector{
-		channel:  &zx.Channel{handle},
+		channel:  zx.Channel(handle),
 		waiter:   waiter,
 		done:     make(chan struct{}),
 		waitChan: make(chan WaitResponse, 1),
@@ -52,7 +52,7 @@ func (c *Connector) ReadMessage() (*Message, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if !c.channel.Handle.IsValid() {
+	if !c.channel.Handle().IsValid() {
 		return nil, errConnectionClosed
 	}
 
@@ -69,7 +69,7 @@ retry:
 		handles = make([]zx.Handle, numHandles)
 		goto retry
 	case zx.ErrShouldWait:
-		waitId := c.waiter.AsyncWait(c.channel.Handle,
+		waitId := c.waiter.AsyncWait(zx.Handle(c.channel),
 			zx.SignalChannelReadable|zx.SignalChannelPeerClosed,
 			c.waitChan)
 		select {
@@ -91,7 +91,7 @@ func (c *Connector) WriteMessage(message *Message) error {
 	// Get read lock to use channel handle
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if !c.channel.Handle.IsValid() {
+	if !c.channel.Handle().IsValid() {
 		return errConnectionClosed
 	}
 	return c.channel.Write(message.Bytes, message.Handles, 0)

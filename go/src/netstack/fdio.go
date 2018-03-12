@@ -603,7 +603,8 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 	}()
 
 	if withNewSocket && isAccept {
-		if err := zx.Socket(h).Share(peerS); err != nil {
+		s := zx.Socket(h)
+		if err := s.Share(peerS); err != nil {
 			return err
 		}
 	} else {
@@ -633,13 +634,13 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 
 	if isAccept {
 		// Signal 'Connected' to the peer.
-		err := zx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_CONNECTED)
+		err := ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_CONNECTED)
 		if err != nil {
 			log.Printf("socket signal-peer ZXSIO_SIGNAL_CONNECTED: %v", err)
 			return err
 		}
 		// Signal 'Connected' locally.
-		err = zx.Handle(ios.dataHandle).Signal(0, ZXSIO_SIGNAL_CONNECTED)
+		err = ios.dataHandle.Signal(0, ZXSIO_SIGNAL_CONNECTED)
 		if err != nil {
 			log.Printf("socket signal ZXSIO_SIGNAL_CONNECTED: %v", err)
 			return err
@@ -755,7 +756,7 @@ func (s *socketServer) opAccept(h zx.Handle, ios *iostate, msg *fdio.Msg, path s
 		// If we just accepted the only queued incoming connection,
 		// clear the signal so the fdio client knows no incoming
 		// connection is available.
-		err := zx.Handle(ios.dataHandle).SignalPeer(ZXSIO_SIGNAL_INCOMING, 0)
+		err := ios.dataHandle.SignalPeer(ZXSIO_SIGNAL_INCOMING, 0)
 		switch mxerror.Status(err) {
 		case zx.ErrOk:
 			// NOP
@@ -1191,7 +1192,7 @@ func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status zx.Status) 
 			// signal the fdio socket that it exists. This allows
 			// the socket API client to implement a blocking accept.
 			for range inCh {
-				err := zx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_INCOMING)
+				err := ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_INCOMING)
 				switch mxerror.Status(err) {
 				case zx.ErrOk:
 					continue
@@ -1265,13 +1266,13 @@ func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status zx.Status)
 				ios.lastError = e
 				ios.mu.Unlock()
 				// Signal 'Outgoing' to the peer.
-				zx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_OUTGOING)
+				ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_OUTGOING)
 				return
 			}
 			// Signal 'Outgoing' and 'Connected' to the peer.
-			zx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_OUTGOING|ZXSIO_SIGNAL_CONNECTED)
+			ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_OUTGOING|ZXSIO_SIGNAL_CONNECTED)
 			// Signal 'Connected' locally.
-			zx.Handle(ios.dataHandle).Signal(0, ZXSIO_SIGNAL_CONNECTED)
+			ios.dataHandle.Signal(0, ZXSIO_SIGNAL_CONNECTED)
 		}()
 		return zx.ErrShouldWait
 	}
@@ -1285,7 +1286,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status zx.Status)
 	}
 	if ios.transProto == tcp.ProtocolNumber {
 		// Signal 'Connected' to the peer.
-		err := zx.Handle(ios.dataHandle).SignalPeer(0, ZXSIO_SIGNAL_CONNECTED)
+		err := ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_CONNECTED)
 		switch status := mxerror.Status(err); status {
 		case zx.ErrOk:
 			// NOP
@@ -1295,7 +1296,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status zx.Status)
 			log.Printf("connect: signal-peer failed: %v", err)
 		}
 		// Signal 'Connected' locally.
-		err = zx.Handle(ios.dataHandle).Signal(0, ZXSIO_SIGNAL_CONNECTED)
+		err = ios.dataHandle.Signal(0, ZXSIO_SIGNAL_CONNECTED)
 		switch status := mxerror.Status(err); status {
 		case zx.ErrOk:
 			// NOP
@@ -1449,7 +1450,7 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 
 	// Signal that we're about to close. This tells the various message loops to finish
 	// processing, and let us know when they're done.
-	err := zx.Handle(ios.dataHandle).Signal(0, LOCAL_SIGNAL_CLOSING)
+	err := ios.dataHandle.Signal(0, LOCAL_SIGNAL_CLOSING)
 	if ios.listenLoopClosing != nil {
 		ios.listenLoopClosing <- struct{}{}
 	}

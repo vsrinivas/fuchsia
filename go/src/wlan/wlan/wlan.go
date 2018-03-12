@@ -82,7 +82,7 @@ func NewClient(path string, config *Config, apConfig *APConfig) (*Client, error)
 		mlmeC:    make(chan *mlmeResult, 1),
 		path:     path,
 		f:        f,
-		mlmeChan: zx.Channel{ch},
+		mlmeChan: zx.Channel(ch),
 		cfg:      config,
 		apCfg:    apConfig,
 		state:    nil,
@@ -96,7 +96,7 @@ func (c *Client) Close() {
 	c.mlmeChan.Close()
 }
 
-func ConvertWapToAp(ap AP) (wlan_service.Ap) {
+func ConvertWapToAp(ap AP) wlan_service.Ap {
 	bssid := make([]uint8, len(ap.BSSID))
 	copy(bssid, ap.BSSID[:])
 	// Currently we indicate the AP is secure if it supports RSN.
@@ -107,7 +107,7 @@ func ConvertWapToAp(ap AP) (wlan_service.Ap) {
 	return wlan_service.Ap{bssid, ap.SSID, int32(last_rssi), is_secure}
 }
 
-func (c *Client) Status() (wlan_service.WlanStatus) {
+func (c *Client) Status() wlan_service.WlanStatus {
 	var state = wlan_service.State_Unknown
 
 	switch c.state.(type) {
@@ -132,11 +132,11 @@ func (c *Client) Status() (wlan_service.WlanStatus) {
 	var current_ap *wlan_service.Ap = nil
 
 	if c.ap != nil &&
-		 state != wlan_service.State_Scanning &&
-		 state != wlan_service.State_Bss &&
-		 state != wlan_service.State_Querying {
-			 ap := ConvertWapToAp(*c.ap)
-			 current_ap = &ap
+		state != wlan_service.State_Scanning &&
+		state != wlan_service.State_Bss &&
+		state != wlan_service.State_Querying {
+		ap := ConvertWapToAp(*c.ap)
+		current_ap = &ap
 	}
 
 	return wlan_service.WlanStatus{
@@ -273,7 +273,7 @@ func (c *Client) watchMLMEChan(timeout time.Duration) *mlmeResult {
 		deadline = zx.Sys_deadline_after(
 			zx.Duration(timeout.Nanoseconds()))
 	}
-	obs, err := c.mlmeChan.Handle.WaitOne(
+	obs, err := c.mlmeChan.Handle().WaitOne(
 		zx.SignalChannelReadable|zx.SignalChannelPeerClosed,
 		deadline)
 	return &mlmeResult{obs, err}

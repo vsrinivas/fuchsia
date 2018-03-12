@@ -240,7 +240,7 @@ func newAsyncWaiter() *asyncWaiterImpl {
 func (w *asyncWaiterImpl) wakeWorker() {
 	// Send a signal.
 	// TODO: Add Signal method to zx.Event type
-	err := zx.Handle(w.wakingEvent).Signal(0, zx.SignalUser0)
+	err := w.wakingEvent.Handle().Signal(0, zx.SignalUser0)
 	if err != nil {
 		panic("can't signal an event")
 	}

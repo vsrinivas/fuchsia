@@ -142,7 +142,7 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	h, err := zx.Handle(c.arena.iovmo).Duplicate(zx.RightSameRights)
+	h, err := c.arena.iovmo.Handle().Duplicate(zx.RightSameRights)
 	if err != nil {
 		c.closeLocked()
 		return nil, fmt.Errorf("eth: failed to duplicate vmo: %v", err)

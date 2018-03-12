@@ -26,7 +26,7 @@ import (
 type Manager struct {
 	Root    string
 	tmpDir  string
-	channel *zx.Channel
+	channel zx.Channel
 }
 
 // New constructs a new Manager for the blobfs mount at the given root.
@@ -54,7 +54,7 @@ func New(root, tmpDir string) (*Manager, error) {
 	for _, h := range handles[1:] {
 		h.Close()
 	}
-	channel := &zx.Channel{handles[0]}
+	channel := zx.Channel(handles[0])
 
 	return &Manager{Root: root, tmpDir: tmpDir, channel: channel}, nil
 }
@@ -85,7 +85,7 @@ func (m *Manager) Open(root string) (*os.File, error) {
 }
 
 // Channel returns an the FDIO directory handle for the blobfs root
-func (m *Manager) Channel() *zx.Channel {
+func (m *Manager) Channel() zx.Channel {
 	return m.channel
 }
 

@@ -157,9 +157,9 @@ func (f *Filesystem) DevicePath() string {
 }
 
 // Serve starts a Directory protocol RPC server on the given channel.
-func (f *Filesystem) Serve(c *zx.Channel) error {
+func (f *Filesystem) Serve(c zx.Channel) error {
 	// rpc.NewServer takes ownership of the Handle and will close it on error.
-	vfs, err := rpc.NewServer(f, c.Handle)
+	vfs, err := rpc.NewServer(f, zx.Handle(c))
 	if err != nil {
 		return fmt.Errorf("vfs server creation: %s", err)
 	}
@@ -185,7 +185,7 @@ func (f *Filesystem) Mount(path string) error {
 		return err
 	}
 
-	var rpcChan, mountChan *zx.Channel
+	var rpcChan, mountChan zx.Channel
 	rpcChan, mountChan, err = zx.NewChannel(0)
 	if err != nil {
 		syscall.Close(f.mountInfo.parentFd)
@@ -193,7 +193,7 @@ func (f *Filesystem) Mount(path string) error {
 		return fmt.Errorf("channel creation: %s", err)
 	}
 
-	if err := syscall.FDIOForFD(f.mountInfo.parentFd).IoctlSetHandle(fdio.IoctlVFSMountFS, mountChan.Handle); err != nil {
+	if err := syscall.FDIOForFD(f.mountInfo.parentFd).IoctlSetHandle(fdio.IoctlVFSMountFS, zx.Handle(mountChan)); err != nil {
 		mountChan.Close()
 		rpcChan.Close()
 		syscall.Close(f.mountInfo.parentFd)
@@ -214,7 +214,7 @@ func (f *Filesystem) Unmount() {
 			f.mountInfo.parentFd = -1
 		}
 		f.mountInfo.serveChannel.Close()
-		f.mountInfo.serveChannel = nil
+		f.mountInfo.serveChannel = 0
 	})
 }
 
@@ -229,7 +229,7 @@ func clean(path string) string {
 
 type mountInfo struct {
 	unmountOnce  sync.Once
-	serveChannel *zx.Channel
+	serveChannel zx.Channel
 	parentFd     int
 }
 

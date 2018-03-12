@@ -50,7 +50,7 @@ func NewWatcher(dir string) (*Watcher, error) {
 	w := &Watcher{
 		C: make(chan string),
 		f: os.NewFile(uintptr(syscall.OpenFDIO(m)), dir+" watcher"),
-		h: zx.Channel{Handle: h},
+		h: zx.Channel(h),
 		s: stopped,
 	}
 	w.start()
@@ -103,7 +103,7 @@ func (w *Watcher) start() {
 }
 
 func (w *Watcher) wait() (string, uint, error) {
-	_, err := w.h.Handle.WaitOne(zx.SignalChannelReadable|zx.SignalChannelPeerClosed, zx.TimensecInfinite)
+	_, err := w.h.Handle().WaitOne(zx.SignalChannelReadable|zx.SignalChannelPeerClosed, zx.TimensecInfinite)
 	if err != nil {
 		return "", 0, err
 	}
@@ -132,7 +132,7 @@ func ioctlVFSWatchDir(m fdio.FDIO) (h zx.Handle, err error) {
 	if err != nil {
 		return 0, fmt.Errorf("IOCTL_VFS_WATCH_DIR: %s", err)
 	}
-	msg := fdio.VFSWatchDirRequest{H: c1.Handle, Mask: fdio.VFSWatchMaskAdded, Options: 0}
+	msg := fdio.VFSWatchDirRequest{H: zx.Handle(c1), Mask: fdio.VFSWatchMaskAdded, Options: 0}
 
 	buf := new(bytes.Buffer)
 	// LE for our arm64 and amd64 archs
@@ -145,5 +145,5 @@ func ioctlVFSWatchDir(m fdio.FDIO) (h zx.Handle, err error) {
 	if err != nil {
 		return 0, fmt.Errorf("IOCTL_VFS_WATCH_DIR:  %s", err)
 	}
-	return c2.Handle, nil
+	return zx.Handle(c2), nil
 }

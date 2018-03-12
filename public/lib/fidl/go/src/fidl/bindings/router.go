@@ -31,7 +31,7 @@ type routeRequest struct {
 // to appropriate receivers. The work is done on a separate go routine.
 type routerWorker struct {
 	// The channel handle to send requests and receive responses.
-	channel *zx.Channel
+	channel zx.Channel
 	// Map from request id to response channel.
 	responders map[uint64]chan<- MessageReadResult
 	// The channel of incoming requests that require responses.
@@ -69,7 +69,7 @@ func (w *routerWorker) readAndDispatchOutstandingMessages() error {
 			handles = make([]zx.Handle, numHandles)
 			goto retry
 		case zx.ErrShouldWait:
-			w.waitId = w.waiter.AsyncWait(w.channel.Handle,
+			w.waitId = w.waiter.AsyncWait(zx.Handle(w.channel),
 				zx.SignalChannelReadable|zx.SignalChannelPeerClosed,
 				w.waitChan)
 			return nil
@@ -134,7 +134,7 @@ type Router struct {
 	// closed and the handle.
 	mu sync.Mutex
 	// The channel to send requests and receive responses.
-	channel *zx.Channel
+	channel zx.Channel
 	// Channel to communicate with worker.
 	requestChan chan<- routeRequest
 
@@ -152,7 +152,7 @@ func NewRouter(handle zx.Handle, waiter AsyncWaiter) *Router {
 	requestChan := make(chan routeRequest, 10)
 	doneChan := make(chan struct{})
 	workerDoneChan := make(chan struct{})
-	channel := &zx.Channel{handle}
+	channel := zx.Channel(handle)
 	router := &Router{
 		channel:     channel,
 		requestChan: requestChan,
@@ -177,7 +177,7 @@ func NewRouter(handle zx.Handle, waiter AsyncWaiter) *Router {
 func (r *Router) Close() {
 	r.closeOnce.Do(func() {
 		close(r.done)
-		<- r.workerDone
+		<-r.workerDone
 	})
 }
 
@@ -189,7 +189,7 @@ func (r *Router) Accept(message *Message) error {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if !r.channel.Handle.IsValid() {
+	if !r.channel.Handle().IsValid() {
 		return zx.Error{Status: zx.ErrPeerClosed, Text: "bindings.Router.Accept"}
 	}
 	r.requestChan <- routeRequest{message, nil}
@@ -246,7 +246,7 @@ func (r *Router) AcceptWithResponse(message *Message) <-chan MessageReadResult {
 	// Return an error before sending a request to requestChan if the router
 	// is closed so that we can safely close responseChan once we close the
 	// router.
-	if !r.channel.Handle.IsValid() {
+	if !r.channel.Handle().IsValid() {
 		responseChan <- MessageReadResult{nil, zx.Error{Status: zx.ErrPeerClosed, Text: "bindings.Router.AcceptWithResponse"}}
 		return responseChan
 	}

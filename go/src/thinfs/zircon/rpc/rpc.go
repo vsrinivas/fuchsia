@@ -114,7 +114,7 @@ func (dw *directoryWrapper) GetToken(cookie int64) (zx.Handle, error) {
 	if e1, err = e0.Duplicate(zx.RightSameRights); err != nil {
 		goto fail_event_created
 	}
-	if err := zx.Handle(e0).SetCookie(zx.ProcHandle, uint64(cookie)); err != nil {
+	if err := e0.Handle().SetCookie(zx.ProcHandle, uint64(cookie)); err != nil {
 		goto fail_event_duplicated
 	}
 	return zx.Handle(e1), nil
@@ -458,7 +458,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 		err := dir.Close()
 		vfs.Lock()
 		if dw.e != 0 {
-			zx.Handle(dw.e).SetCookie(zx.ProcHandle, 0)
+			dw.e.Handle().SetCookie(zx.ProcHandle, 0)
 		}
 		vfs.Unlock()
 		vfs.freeCookie(cookie)

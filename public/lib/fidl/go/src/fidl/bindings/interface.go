@@ -66,5 +66,5 @@ func CreateChannelForFidlInterface() (InterfaceRequest, InterfacePointer) {
 	if err != nil {
 		panic(fmt.Sprintf("can't create a channel: %v", err))
 	}
-	return InterfaceRequest{ChannelHandleOwner{c0.Handle}}, InterfacePointer{ChannelHandleOwner{c1.Handle}}
+	return InterfaceRequest{ChannelHandleOwner{zx.Handle(c0)}}, InterfacePointer{ChannelHandleOwner{zx.Handle(c1)}}
 }

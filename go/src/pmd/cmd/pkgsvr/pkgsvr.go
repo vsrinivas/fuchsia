@@ -88,7 +88,7 @@ func main() {
 			log.Fatalf("pkgfs: mount failed: %s", err)
 		}
 	} else {
-		if err := fs.Serve(&zx.Channel{h}); err != nil {
+		if err := fs.Serve(zx.Channel(h)); err != nil {
 			log.Fatalf("pkgfs: serve failed on startup handle: %s", err)
 		}
 	}
