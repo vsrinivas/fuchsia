@@ -28,6 +28,7 @@ compile_commands.json
 /prebuilt/config.mk
 /prebuilt/config.mk.bak
 /AnalysisResult/
+/public/config/
 /public/lib/
 /public/sysroot/
 /public/tool/
