@@ -138,6 +138,10 @@ void GenerateCosine(T* buffer,
   // If frequency is 0 (constant val), phase offset causes reduced amplitude
   FXL_DCHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
 
+  if (freq * 2.0 > buf_size) {
+    return;
+  }
+
   // freq is defined as: cosine recurs exactly 'freq' times within buf_size.
   const double mult = 2.0 * M_PI / buf_size * freq;
 
@@ -277,8 +281,9 @@ void MeasureAudioFreq(T* audio,
                       double* magn_signal,
                       double* magn_other) {
   FXL_DCHECK(fbl::is_pow2(buf_size));
+
   uint32_t buf_sz_2 = buf_size >> 1;
-  FXL_DCHECK(freq <= buf_sz_2);
+  bool freq_out_of_range = (freq > buf_sz_2);
 
   // Copy input to double buffer, before doing a high-res FFT (freq-analysis)
   // Note that we set imags[] to zero: MeasureAudioFreq retrieves a REAL (not
@@ -288,11 +293,11 @@ void MeasureAudioFreq(T* audio,
   std::vector<double> imags(buf_size);
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     reals[idx] = audio[idx];
-    imags[idx] = 0.0f;
+    imags[idx] = 0.0;
 
     // In case of uint8 input data, bias from a zero of 0x80 to 0.0
     if (std::is_same<T, uint8_t>::value) {
-      reals[idx] -= 128.0f;
+      reals[idx] -= 128.0;
     }
   }
   FFT(reals.data(), imags.data(), buf_size);
@@ -314,15 +319,18 @@ void MeasureAudioFreq(T* audio,
   reals[buf_sz_2] /= buf_size;  // we divide the real and imag values by
   imags[buf_sz_2] /= buf_size;  // buf_size instead of buf_sz_2.
 
-  // Calculate magnitude of primary signal
+  // Calculate magnitude of primary signal (even if out-of-range aliased back!)
+  if (freq_out_of_range) {
+    freq = buf_size - freq;
+  }
   *magn_signal =
       std::sqrt(reals[freq] * reals[freq] + imags[freq] * imags[freq]);
 
   // Calculate magnitude of all other frequencies
   if (magn_other) {
-    double sum_sq_magn_other = 0.0f;
-    for (uint32_t bin = 0; bin < buf_sz_2; ++bin) {
-      if (bin != freq) {
+    double sum_sq_magn_other = 0.0;
+    for (uint32_t bin = 0; bin <= buf_sz_2; ++bin) {
+      if (bin != freq || freq_out_of_range) {
         sum_sq_magn_other +=
             (reals[bin] * reals[bin] + imags[bin] * imags[bin]);
       }

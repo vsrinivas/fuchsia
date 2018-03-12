@@ -41,7 +41,7 @@ TEST(Recap, NoiseFloor) {
          AudioResult::kPrevFloorOutput8, AudioResult::FloorOutput16,
          AudioResult::kPrevFloorOutput16);
 
-  printf("\n\n\n");
+  printf("\n\n");
 }
 
 TEST(Recap, FreqResp) {
@@ -49,27 +49,45 @@ TEST(Recap, FreqResp) {
   printf("\n   (in dB, with prior results)");
 
   printf("\n\n   Point resampler");
-  printf("\n\t\t        No SRC                  96k->48k");
-  for (uint32_t freq = 0; freq < FrequencySet::kNumSummaryFreqs; ++freq) {
-    printf("\n   %8u Hz   %9.6lf  (%9.6lf)   %9.6lf  (%9.6lf)",
-           FrequencySet::kSummaryFreqsTranslated[freq],
-           AudioResult::FreqRespPointUnity[freq],
-           AudioResult::kPrevFreqRespPointUnity[freq],
-           AudioResult::FreqRespPointDown[freq],
-           AudioResult::kPrevFreqRespPointDown[freq]);
+  printf("\n\t\t          No SRC                    96k->48k");
+  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
+                           ? FrequencySet::kNumReferenceFreqs
+                           : FrequencySet::kNumSummaryIdxs;
+  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
+    uint32_t freq = FrequencySet::UseFullFrequencySet
+                        ? idx
+                        : FrequencySet::kSummaryIdxs[idx];
+    printf("\n   %8u Hz", FrequencySet::kRefFreqsTranslated[freq]);
+    if (AudioResult::kPrevFreqRespPointUnity[freq] != -INFINITY) {
+      printf("   %11.6lf  (%9.6lf)", AudioResult::FreqRespPointUnity[freq],
+             AudioResult::kPrevFreqRespPointUnity[freq]);
+    } else {
+      printf("                           ");
+    }
+    if (AudioResult::kPrevFreqRespPointDown[freq] != -INFINITY) {
+      printf("   %11.6lf  (%9.6lf)", AudioResult::FreqRespPointDown[freq],
+             AudioResult::kPrevFreqRespPointDown[freq]);
+    }
   }
 
   printf("\n\n   Linear resampler");
-  printf("\n\t\t      88.2k->48k               44.1k->48k");
-  for (uint32_t freq = 0; freq < FrequencySet::kNumSummaryFreqs; ++freq) {
-    printf("\n   %8u Hz   %9.6lf  (%9.6lf)   %9.6lf  (%9.6lf)",
-           FrequencySet::kSummaryFreqsTranslated[freq],
-           AudioResult::FreqRespLinearDown[freq],
-           AudioResult::kPrevFreqRespLinearDown[freq],
-           AudioResult::FreqRespLinearUp[freq],
-           AudioResult::kPrevFreqRespLinearUp[freq]);
+  printf("\n\t\t        88.2k->48k                 44.1k->48k");
+  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
+    uint32_t freq = FrequencySet::UseFullFrequencySet
+                        ? idx
+                        : FrequencySet::kSummaryIdxs[idx];
+    printf("\n   %8u Hz", FrequencySet::kRefFreqsTranslated[freq]);
+    if (AudioResult::kPrevFreqRespLinearDown[freq] != -INFINITY) {
+      printf("   %11.6lf  (%9.6lf)", AudioResult::FreqRespLinearDown[freq],
+             AudioResult::kPrevFreqRespLinearDown[freq]);
+    } else {
+      printf("                           ");
+    }
+    if (AudioResult::kPrevFreqRespLinearUp[freq] != -INFINITY) {
+      printf("   %11.6lf  (%9.6lf)", AudioResult::FreqRespLinearUp[freq],
+             AudioResult::kPrevFreqRespLinearUp[freq]);
+    }
   }
-
   printf("\n\n");
 }
 
@@ -78,18 +96,45 @@ TEST(Recap, SINAD) {
   printf("\n   (in dB, with prior results)");
 
   printf("\n\n   Point resampler");
-  printf("\n\t\t     No SRC          96k->48k");
-  printf("\n   %8u Hz    %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
-         FrequencySet::kSummaryFreqsTranslated[FrequencySet::kRefFreqBin],
-         AudioResult::SinadPointUnity, AudioResult::kPrevSinadPointUnity,
-         AudioResult::SinadPointDown, AudioResult::kPrevSinadPointDown);
+  printf("\n\t\t       No SRC            96k->48k");
+  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
+                           ? FrequencySet::kNumReferenceFreqs
+                           : FrequencySet::kNumSummaryIdxs;
+  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
+    uint32_t freq = FrequencySet::UseFullFrequencySet
+                        ? idx
+                        : FrequencySet::kSummaryIdxs[idx];
+    printf("\n   %8u Hz ", FrequencySet::kRefFreqsTranslated[freq]);
+    if (AudioResult::kPrevSinadPointUnity[freq] != -INFINITY) {
+      printf("     %5.2lf  (%5.2lf)", AudioResult::SinadPointUnity[freq],
+             AudioResult::kPrevSinadPointUnity[freq]);
+    } else {
+      printf("                   ");
+    }
+    if (AudioResult::kPrevSinadPointDown[freq] != -INFINITY) {
+      printf("     %5.2lf  (%5.2lf)", AudioResult::SinadPointDown[freq],
+             AudioResult::kPrevSinadPointDown[freq]);
+    }
+  }
 
   printf("\n\n   Linear resampler");
-  printf("\n\t\t   88.2k->48k       44.1k->48k");
-  printf("\n   %8u Hz    %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
-         FrequencySet::kSummaryFreqsTranslated[FrequencySet::kRefFreqBin],
-         AudioResult::SinadLinearDown, AudioResult::kPrevSinadLinearDown,
-         AudioResult::SinadLinearUp, AudioResult::kPrevSinadLinearUp);
+  printf("\n\t\t     88.2k->48k         44.1k->48k");
+  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
+    uint32_t freq = FrequencySet::UseFullFrequencySet
+                        ? idx
+                        : FrequencySet::kSummaryIdxs[idx];
+    printf("\n   %8u Hz ", FrequencySet::kRefFreqsTranslated[freq]);
+    if (AudioResult::kPrevSinadLinearDown[freq] != -INFINITY) {
+      printf("   %7.2lf  (%5.2lf)", AudioResult::SinadLinearDown[freq],
+             AudioResult::kPrevSinadLinearDown[freq]);
+    } else {
+      printf("                   ");
+    }
+    if (AudioResult::kPrevSinadLinearUp[freq] != -INFINITY) {
+      printf("   %7.2lf  (%5.2lf)", AudioResult::SinadLinearUp[freq],
+             AudioResult::kPrevSinadLinearUp[freq]);
+    }
+  }
 
   printf("\n\n");
 }

@@ -19,6 +19,7 @@ constexpr double AudioResult::kLevelToleranceSource8;
 constexpr double AudioResult::kLevelToleranceOutput8;
 constexpr double AudioResult::kLevelToleranceSource16;
 constexpr double AudioResult::kLevelToleranceOutput16;
+constexpr double AudioResult::kLevelToleranceInterp16;
 
 //
 // Purely when calculating gain (in dB) from gain_scale (fixed-point int),
@@ -64,42 +65,62 @@ double AudioResult::LevelMix16 = -INFINITY;
 // from frequency_set.h), storing the result at each frequency. As with
 // resampling ratios, subsequent CL contains a more exhaustive frequency set,
 // for in-depth testing and diagnostics to be done outside CQ.
-double AudioResult::FreqRespPointUnity[FrequencySet::kNumSummaryFreqs] = {
-    -INFINITY, -INFINITY, -INFINITY};
-double AudioResult::FreqRespPointDown[FrequencySet::kNumSummaryFreqs] = {
-    -INFINITY, -INFINITY, -INFINITY};
-double AudioResult::FreqRespLinearDown[FrequencySet::kNumSummaryFreqs] = {
-    -INFINITY, -INFINITY, -INFINITY};
-double AudioResult::FreqRespLinearUp[FrequencySet::kNumSummaryFreqs] = {
-    -INFINITY, -INFINITY, -INFINITY};
+double AudioResult::FreqRespPointUnity[FrequencySet::kNumReferenceFreqs] = {
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY};
+double AudioResult::FreqRespPointDown[FrequencySet::kNumReferenceFreqs] = {
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY};
+double AudioResult::FreqRespLinearDown[FrequencySet::kNumReferenceFreqs] = {
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY};
+double AudioResult::FreqRespLinearUp[FrequencySet::kNumReferenceFreqs] = {
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+    -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY};
 
 // Val-being-checked (in dBFS) must be greater than or equal to this value.
 //
 // Note: with rates other than N:1 or 1:N, interpolating resamplers dampen
 // high frequencies, as shown in the previously-saved LinearSampler results.
 constexpr double
-    AudioResult::kPrevFreqRespPointUnity[FrequencySet::kNumSummaryFreqs];
+    AudioResult::kPrevFreqRespPointUnity[FrequencySet::kNumReferenceFreqs];
 constexpr double
-    AudioResult::kPrevFreqRespPointDown[FrequencySet::kNumSummaryFreqs];
+    AudioResult::kPrevFreqRespPointDown[FrequencySet::kNumReferenceFreqs];
 constexpr double
-    AudioResult::kPrevFreqRespLinearDown[FrequencySet::kNumSummaryFreqs];
+    AudioResult::kPrevFreqRespLinearDown[FrequencySet::kNumReferenceFreqs];
 constexpr double
-    AudioResult::kPrevFreqRespLinearUp[FrequencySet::kNumSummaryFreqs];
+    AudioResult::kPrevFreqRespLinearUp[FrequencySet::kNumReferenceFreqs];
 
 //
 // Distortion is measured at a single reference frequency (kReferenceFreq).
 // Sinad (signal-to-noise-and-distortion) is the ratio (in dBr) of reference
 // signal (nominally 1kHz) to the combined power of all OTHER frequencies.
-double AudioResult::SinadPointUnity = -INFINITY;
-double AudioResult::SinadPointDown = -INFINITY;
-double AudioResult::SinadLinearDown = -INFINITY;
-double AudioResult::SinadLinearUp = -INFINITY;
+double AudioResult::SinadPointUnity[FrequencySet::kNumReferenceFreqs];
+double AudioResult::SinadPointDown[FrequencySet::kNumReferenceFreqs];
+double AudioResult::SinadLinearDown[FrequencySet::kNumReferenceFreqs];
+double AudioResult::SinadLinearUp[FrequencySet::kNumReferenceFreqs];
 
 // Val-being-checked (in dBFS) must be greater than or equal to this value.
-constexpr double AudioResult::kPrevSinadPointUnity;
-constexpr double AudioResult::kPrevSinadPointDown;
-constexpr double AudioResult::kPrevSinadLinearDown;
-constexpr double AudioResult::kPrevSinadLinearUp;
+constexpr double
+    AudioResult::kPrevSinadPointUnity[FrequencySet::kNumReferenceFreqs];
+constexpr double
+    AudioResult::kPrevSinadPointDown[FrequencySet::kNumReferenceFreqs];
+constexpr double
+    AudioResult::kPrevSinadLinearDown[FrequencySet::kNumReferenceFreqs];
+constexpr double
+    AudioResult::kPrevSinadLinearUp[FrequencySet::kNumReferenceFreqs];
 
 //
 // Dynamic Range (gain integrity and system response at low volume levels) is

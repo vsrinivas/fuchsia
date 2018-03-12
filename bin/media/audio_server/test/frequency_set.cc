@@ -8,6 +8,8 @@ namespace media {
 namespace audio {
 namespace test {
 
+bool FrequencySet::UseFullFrequencySet = false;
+
 //
 // In determining these, the values need not be perfectly precise (that is, our
 // "100 Hz" proxy need not be perfectly 100.0000). However, we DO make sure to
@@ -16,13 +18,18 @@ namespace test {
 // This is done to ensure that sampling occurs across a good statistical mix
 // of sinusoid's period, rather than hitting the same few locations on the wave.
 //
+// The extended audio analysis tests use a large set of standard frequencies.
+constexpr uint32_t FrequencySet::kNumReferenceFreqs;
+constexpr uint32_t
+    FrequencySet::kReferenceFreqs[FrequencySet::kNumReferenceFreqs];
+//
 // The summary audio analysis tests use a small set of standard frequencies.
-constexpr uint32_t FrequencySet::kNumSummaryFreqs;
-constexpr uint32_t FrequencySet::kSummaryFreqs[FrequencySet::kNumSummaryFreqs];
+constexpr uint32_t FrequencySet::kNumSummaryIdxs;
+constexpr uint32_t FrequencySet::kSummaryIdxs[FrequencySet::kNumSummaryIdxs];
 
 // Certain tests (such as noise floor and sinad) are evaluated with a sinusoidal
 // input at a single reference frequency (usually close to 1 kHz).
-constexpr uint32_t FrequencySet::kRefFreqBin;  // 1kHz reference tone
+constexpr uint32_t FrequencySet::kRefFreqIdx;  // 1kHz reference tone
 constexpr uint32_t FrequencySet::kReferenceFreq;
 
 // Because of translation between our power-of-two-sized buffers and our nominal
@@ -31,12 +38,11 @@ constexpr uint32_t FrequencySet::kReferenceFreq;
 // The below is an actual representation of the standard set of audio
 // frequencies for fidelity testing -- reverse-calculated from the above values.
 constexpr uint32_t
-    FrequencySet::kSummaryFreqsTranslated[FrequencySet::kNumSummaryFreqs];
+    FrequencySet::kRefFreqsTranslated[FrequencySet::kNumReferenceFreqs];
 
 static_assert(
-    (FrequencySet::kSummaryFreqsTranslated[FrequencySet::kRefFreqBin] > 980) &&
-        (FrequencySet::kSummaryFreqsTranslated[FrequencySet::kRefFreqBin] <
-         1020),
+    (FrequencySet::kRefFreqsTranslated[FrequencySet::kRefFreqIdx] > 980) &&
+        (FrequencySet::kRefFreqsTranslated[FrequencySet::kRefFreqIdx] < 1020),
     "Incorrect 1kHz reference frequency");
 
 }  // namespace test

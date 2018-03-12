@@ -153,10 +153,10 @@ TEST(NoiseFloor, Output_16) {
 
 // Ideal frequency response measurement is 0.00 dB across the audible spectrum
 // Ideal SINAD is at least 6 dB per signal-bit (which here is 16, so >96 dB).
-void MeasureSummaryFreqRespSinad(MixerPtr mixer,
-                                 uint32_t step_size,
-                                 double* level_db,
-                                 double* sinad_db) {
+void MeasureFreqRespSinad(MixerPtr mixer,
+                          uint32_t step_size,
+                          double* level_db,
+                          double* sinad_db) {
   const uint32_t src_buf_size =
       step_size * (kFreqTestBufSize >> kPtsFractionalBits);
 
@@ -164,12 +164,21 @@ void MeasureSummaryFreqRespSinad(MixerPtr mixer,
   std::vector<int16_t> source(src_buf_size + 1);
   std::vector<int32_t> accum(kFreqTestBufSize);
 
+  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
+                           ? FrequencySet::kNumReferenceFreqs
+                           : FrequencySet::kNumSummaryIdxs;
   // Measure frequency reseponse for each summary frequency
-  for (uint32_t freq = 0; freq < FrequencySet::kNumSummaryFreqs; ++freq) {
+  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
+    uint32_t freq_idx = idx;
+    if (FrequencySet::UseFullFrequencySet == false) {
+      freq_idx = FrequencySet::kSummaryIdxs[idx];
+    }
+
     // Populate source buffer; mix it (pass-thru) to accumulation buffer
     OverwriteCosine(source.data(), src_buf_size,
-                    FrequencySet::kSummaryFreqs[freq],
+                    FrequencySet::kReferenceFreqs[freq_idx],
                     std::numeric_limits<int16_t>::max());
+
     source[src_buf_size] = source[0];
 
     uint32_t dst_offset = 0;
@@ -182,17 +191,16 @@ void MeasureSummaryFreqRespSinad(MixerPtr mixer,
               frac_src_offset);
 
     // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
-    double magn_signal, magn_other;
+    double magn_signal = -INFINITY, magn_other = INFINITY;
     MeasureAudioFreq(accum.data(), kFreqTestBufSize,
-                     FrequencySet::kSummaryFreqs[freq], &magn_signal,
+                     FrequencySet::kReferenceFreqs[freq_idx], &magn_signal,
                      &magn_other);
 
-    if (FrequencySet::kSummaryFreqs[freq] == FrequencySet::kReferenceFreq) {
-      // Calculate Signal-to-Noise-And-Distortion (SINAD)
-      *sinad_db = ValToDb(magn_signal / magn_other);
-    }
+    // Calculate Signal-to-Noise-And-Distortion (SINAD)
+    sinad_db[freq_idx] = ValToDb(magn_signal / magn_other);
 
-    level_db[freq] = ValToDb(magn_signal / std::numeric_limits<int16_t>::max());
+    level_db[freq_idx] =
+        ValToDb(magn_signal / std::numeric_limits<int16_t>::max());
   }
 }
 
@@ -202,20 +210,29 @@ TEST(FrequencyResponse, Point_Unity) {
       SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000);
   constexpr uint32_t step_size = Mixer::FRAC_ONE;  // 48k->48k
 
-  MeasureSummaryFreqRespSinad(std::move(mixer), step_size,
-                              AudioResult::FreqRespPointUnity,
-                              &AudioResult::SinadPointUnity);
+  MeasureFreqRespSinad(std::move(mixer), step_size,
+                       AudioResult::FreqRespPointUnity,
+                       AudioResult::SinadPointUnity);
 
-  for (uint32_t freq = 0; freq < FrequencySet::kNumSummaryFreqs; ++freq) {
+  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
+                           ? FrequencySet::kNumReferenceFreqs
+                           : FrequencySet::kNumSummaryIdxs;
+  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
+    uint32_t freq = FrequencySet::UseFullFrequencySet
+                        ? idx
+                        : FrequencySet::kSummaryIdxs[idx];
     EXPECT_GE(AudioResult::FreqRespPointUnity[freq],
               AudioResult::kPrevFreqRespPointUnity[freq])
         << freq;
     EXPECT_LE(AudioResult::FreqRespPointUnity[freq],
-              0.0 + AudioResult::kLevelToleranceSource16)
+              0.0 + AudioResult::kLevelToleranceInterp16)
+        << freq;
+
+    EXPECT_TRUE((AudioResult::kPrevSinadPointUnity[freq] == -INFINITY) ||
+                (AudioResult::SinadPointUnity[freq] >=
+                 AudioResult::kPrevSinadPointUnity[freq]))
         << freq;
   }
-
-  EXPECT_GE(AudioResult::SinadPointUnity, AudioResult::kPrevSinadPointUnity);
 }
 
 // Measure summary Freq Response & SINAD for Point sampler, down-sampling.
@@ -224,20 +241,28 @@ TEST(FrequencyResponse, Point_DownSamp) {
       SelectMixer(AudioSampleFormat::SIGNED_16, 1, 96000, 1, 48000);
   constexpr uint32_t step_size = Mixer::FRAC_ONE << 1;  // 96k -> 48k
 
-  MeasureSummaryFreqRespSinad(std::move(mixer), step_size,
-                              AudioResult::FreqRespPointDown,
-                              &AudioResult::SinadPointDown);
+  MeasureFreqRespSinad(std::move(mixer), step_size,
+                       AudioResult::FreqRespPointDown,
+                       AudioResult::SinadPointDown);
 
-  for (uint32_t freq = 0; freq < FrequencySet::kNumSummaryFreqs; ++freq) {
+  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
+                           ? FrequencySet::kNumReferenceFreqs
+                           : FrequencySet::kNumSummaryIdxs;
+  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
+    uint32_t freq = FrequencySet::UseFullFrequencySet
+                        ? idx
+                        : FrequencySet::kSummaryIdxs[idx];
     EXPECT_GE(AudioResult::FreqRespPointDown[freq],
               AudioResult::kPrevFreqRespPointDown[freq])
         << freq;
     EXPECT_LE(AudioResult::FreqRespPointDown[freq],
-              0.0 + AudioResult::kLevelToleranceSource16)
+              0.0 + AudioResult::kLevelToleranceInterp16)
+        << freq;
+
+    EXPECT_GE(AudioResult::SinadPointDown[freq],
+              AudioResult::kPrevSinadPointDown[freq])
         << freq;
   }
-
-  EXPECT_GE(AudioResult::SinadPointDown, AudioResult::kPrevSinadPointDown);
 }
 
 // Measure summary Freq Response & SINAD for Linear sampler, down-sampling.
@@ -246,19 +271,28 @@ TEST(FrequencyResponse, Linear_DownSamp) {
       SelectMixer(AudioSampleFormat::SIGNED_16, 1, 88200, 1, 48000);
   constexpr uint32_t step_size = 0x1D67;  // 88.2k -> 48k
 
-  MeasureSummaryFreqRespSinad(std::move(mixer), step_size,
-                              AudioResult::FreqRespLinearDown,
-                              &AudioResult::SinadLinearDown);
+  MeasureFreqRespSinad(std::move(mixer), step_size,
+                       AudioResult::FreqRespLinearDown,
+                       AudioResult::SinadLinearDown);
 
-  for (uint32_t freq = 0; freq < FrequencySet::kNumSummaryFreqs; ++freq) {
+  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
+                           ? FrequencySet::kNumReferenceFreqs
+                           : FrequencySet::kNumSummaryIdxs;
+  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
+    uint32_t freq = FrequencySet::UseFullFrequencySet
+                        ? idx
+                        : FrequencySet::kSummaryIdxs[idx];
     EXPECT_GE(AudioResult::FreqRespLinearDown[freq],
               AudioResult::kPrevFreqRespLinearDown[freq])
         << freq;
     EXPECT_LE(AudioResult::FreqRespLinearDown[freq],
-              0.0 + AudioResult::kLevelToleranceSource16)
+              0.0 + AudioResult::kLevelToleranceInterp16)
+        << freq;
+
+    EXPECT_GE(AudioResult::SinadLinearDown[freq],
+              AudioResult::kPrevSinadLinearDown[freq])
         << freq;
   }
-  EXPECT_GE(AudioResult::SinadLinearDown, AudioResult::kPrevSinadLinearDown);
 }
 
 // Measure summary Freq Response & SINAD for Linear sampler, up-sampling.
@@ -267,19 +301,28 @@ TEST(FrequencyResponse, Linear_UpSamp) {
       SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 48000);
   constexpr uint32_t step_size = 0x0EB3;  // 44.1k -> 48k
 
-  MeasureSummaryFreqRespSinad(std::move(mixer), step_size,
-                              AudioResult::FreqRespLinearUp,
-                              &AudioResult::SinadLinearUp);
+  MeasureFreqRespSinad(std::move(mixer), step_size,
+                       AudioResult::FreqRespLinearUp,
+                       AudioResult::SinadLinearUp);
 
-  for (uint32_t freq = 0; freq < FrequencySet::kNumSummaryFreqs; ++freq) {
+  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
+                           ? FrequencySet::kNumReferenceFreqs
+                           : FrequencySet::kNumSummaryIdxs;
+  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
+    uint32_t freq = FrequencySet::UseFullFrequencySet
+                        ? idx
+                        : FrequencySet::kSummaryIdxs[idx];
     EXPECT_GE(AudioResult::FreqRespLinearUp[freq],
               AudioResult::kPrevFreqRespLinearUp[freq])
         << freq;
     EXPECT_LE(AudioResult::FreqRespLinearUp[freq],
-              0.0 + AudioResult::kLevelToleranceSource16)
+              0.0 + AudioResult::kLevelToleranceInterp16)
+        << freq;
+
+    EXPECT_GE(AudioResult::SinadLinearUp[freq],
+              AudioResult::kPrevSinadLinearUp[freq])
         << freq;
   }
-  EXPECT_GE(AudioResult::SinadLinearUp, AudioResult::kPrevSinadLinearUp);
 }
 
 // Ideal dynamic range measurement is exactly equal to the reduction in gain.
