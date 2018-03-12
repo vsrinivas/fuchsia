@@ -12,8 +12,6 @@
 #include <utility>
 
 #include "config/cobalt_config.pb.h"
-#include "config/encodings.pb.h"
-#include "config/metrics.pb.h"
 #include "grpc++/grpc++.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/cobalt/fidl/cobalt.fidl.h"
@@ -24,8 +22,7 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "third_party/cobalt/config/metric_config.h"
-#include "third_party/cobalt/config/report_config.h"
+#include "third_party/cobalt/config/client_config.h"
 #include "third_party/cobalt/encoder/client_secret.h"
 #include "third_party/cobalt/encoder/encoder.h"
 #include "third_party/cobalt/encoder/project_context.h"
@@ -44,8 +41,7 @@ using cobalt::ObservationValuePtr;
 using cobalt::Status;
 using cobalt::Value;
 using cobalt::ValuePtr;
-using cobalt::config::EncodingRegistry;
-using cobalt::config::MetricRegistry;
+using cobalt::config::ClientConfig;
 using cobalt::encoder::ClientSecret;
 using cobalt::encoder::Encoder;
 using cobalt::encoder::ProjectContext;
@@ -406,8 +402,7 @@ void CobaltControllerImpl::FailedSendAttempts(
 class CobaltEncoderFactoryImpl : public CobaltEncoderFactory {
  public:
   // Does not take ownerhsip of |shipping_manager| or |system_data|.
-  CobaltEncoderFactoryImpl(std::shared_ptr<MetricRegistry> metric_registry,
-                           std::shared_ptr<EncodingRegistry> encoding_registry,
+  CobaltEncoderFactoryImpl(std::shared_ptr<ClientConfig> client_config,
                            ClientSecret client_secret,
                            ShippingManager* shipping_manager,
                            const SystemData* system_data);
@@ -416,8 +411,7 @@ class CobaltEncoderFactoryImpl : public CobaltEncoderFactory {
   void GetEncoder(int32_t project_id,
                   f1dl::InterfaceRequest<CobaltEncoder> request);
 
-  std::shared_ptr<MetricRegistry> metric_registry_;
-  std::shared_ptr<EncodingRegistry> encoding_registry_;
+  std::shared_ptr<ClientConfig> client_config_;
   ClientSecret client_secret_;
   f1dl::BindingSet<CobaltEncoder, std::unique_ptr<CobaltEncoder>>
       cobalt_encoder_bindings_;
@@ -428,13 +422,11 @@ class CobaltEncoderFactoryImpl : public CobaltEncoderFactory {
 };
 
 CobaltEncoderFactoryImpl::CobaltEncoderFactoryImpl(
-    std::shared_ptr<MetricRegistry> metric_registry,
-    std::shared_ptr<EncodingRegistry> encoding_registry,
+    std::shared_ptr<ClientConfig> client_config,
     ClientSecret client_secret,
     ShippingManager* shipping_manager,
     const SystemData* system_data)
-    : metric_registry_(metric_registry),
-      encoding_registry_(encoding_registry),
+    : client_config_(client_config),
       client_secret_(std::move(client_secret)),
       shipping_manager_(shipping_manager),
       system_data_(system_data) {}
@@ -442,8 +434,8 @@ CobaltEncoderFactoryImpl::CobaltEncoderFactoryImpl(
 void CobaltEncoderFactoryImpl::GetEncoder(
     int32_t project_id,
     f1dl::InterfaceRequest<CobaltEncoder> request) {
-  std::unique_ptr<ProjectContext> project_context(new ProjectContext(
-      kFuchsiaCustomerId, project_id, metric_registry_, encoding_registry_));
+  std::unique_ptr<ProjectContext> project_context(
+      new ProjectContext(kFuchsiaCustomerId, project_id, client_config_));
 
   std::unique_ptr<CobaltEncoderImpl> cobalt_encoder_impl(
       new CobaltEncoderImpl(std::move(project_context), client_secret_,
@@ -473,8 +465,7 @@ class CobaltApp {
   SendRetryer send_retryer_;
   ShippingManager shipping_manager_;
 
-  std::shared_ptr<MetricRegistry> metric_registry_;
-  std::shared_ptr<EncodingRegistry> encoding_registry_;
+  std::shared_ptr<ClientConfig> client_config_;
 
   std::unique_ptr<CobaltController> controller_impl_;
   f1dl::BindingSet<CobaltController> controller_bindings_;
@@ -512,37 +503,24 @@ CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
   // Open the cobalt config file.
   std::ifstream config_file_stream;
   config_file_stream.open(kConfigBinProtoPath);
-  FXL_CHECK(config_file_stream)
-      << "Could not open cobalt config proto file: " << kConfigBinProtoPath;
+  FXL_CHECK(config_file_stream && config_file_stream.good())
+      << "Could not open the Cobalt config file: " << kConfigBinProtoPath;
+  std::string cobalt_config_bytes;
+  cobalt_config_bytes.assign(
+      (std::istreambuf_iterator<char>(config_file_stream)),
+      std::istreambuf_iterator<char>());
+  FXL_CHECK(!cobalt_config_bytes.empty())
+      << "Could not read the Cobalt config file: " << kConfigBinProtoPath;
 
-  // Parse the cobalt config file.
-  cobalt::CobaltConfig cobalt_config;
-  FXL_CHECK(cobalt_config.ParseFromIstream(&config_file_stream))
-      << "Could not parse the cobalt config proto file: "
-      << kConfigBinProtoPath;
-
-  // Parse the metric config string
-  cobalt::RegisteredMetrics registered_metrics;
-  registered_metrics.mutable_element()->Swap(
-      cobalt_config.mutable_metric_configs());
-  auto metric_parse_result =
-      MetricRegistry::TakeFrom(&registered_metrics, nullptr);
-  // TODO(rudominer) Checkfailing is probably not the right thing to do.
-  FXL_CHECK(cobalt::config::kOK == metric_parse_result.second);
-  metric_registry_.reset(metric_parse_result.first.release());
-
-  // Parse the encoding config string
-  cobalt::RegisteredEncodings registered_encodings;
-  registered_encodings.mutable_element()->Swap(
-      cobalt_config.mutable_encoding_configs());
-  auto encoding_parse_result =
-      EncodingRegistry::TakeFrom(&registered_encodings, nullptr);
-  FXL_CHECK(cobalt::config::kOK == encoding_parse_result.second);
-  encoding_registry_.reset(encoding_parse_result.first.release());
+  // Parse the data as a CobaltConfig, then extract the metric and encoding
+  // configs and construct a ClientConfig to house them.
+  client_config_.reset(
+      ClientConfig::CreateFromCobaltConfigBytes(cobalt_config_bytes).release());
+  FXL_CHECK(client_config_)
+      << "Could not parse the Cobalt config file: " << kConfigBinProtoPath;
 
   factory_impl_.reset(new CobaltEncoderFactoryImpl(
-      metric_registry_, encoding_registry_, getClientSecret(),
-      &shipping_manager_, &system_data_));
+      client_config_, getClientSecret(), &shipping_manager_, &system_data_));
 
   context_->outgoing_services()->AddService<CobaltEncoderFactory>(
       [this](f1dl::InterfaceRequest<CobaltEncoderFactory> request) {

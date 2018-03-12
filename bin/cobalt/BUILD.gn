@@ -13,15 +13,21 @@ package("cobalt") {
 
   binary = "cobalt"
 
-  meta = [ {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
 
-  resources = [ {
-    path = rebase_path(get_label_info("//third_party/cobalt_config", "target_gen_dir") + "/cobalt_config.binproto")
-    dest = "cobalt_config.binproto"
-  } ]
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info("//third_party/cobalt_config", "target_gen_dir") +
+              "/cobalt_config.binproto")
+      dest = "cobalt_config.binproto"
+    },
+  ]
 }
 
 package("cobalt_system_metrics") {
@@ -29,18 +35,19 @@ package("cobalt_system_metrics") {
     ":cobalt_system_metrics_bin",
   ]
 
-  meta = [ {
-        path = rebase_path("meta/system_metrics_sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/system_metrics_sandbox")
+      dest = "sandbox"
+    },
+  ]
 
-      binary = "cobalt_system_metrics"
+  binary = "cobalt_system_metrics"
 }
 
 package("cobalt_tests") {
   testonly = true
   system_image = true
-
 
   deps = [
     ":cobalt_testapp",
@@ -87,6 +94,7 @@ executable("bin") {
     "//garnet/public/lib/cobalt/fidl:fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//third_party/cobalt/config:client_config",
     "//third_party/cobalt/config:cobalt_config_proto",
     "//third_party/cobalt/encoder",
     "//third_party/grpc:grpc++",
@@ -101,7 +109,7 @@ executable("cobalt_system_metrics_bin") {
   output_name = "cobalt_system_metrics"
 
   sources = [
-    "system_metrics_main.cc"
+    "system_metrics_main.cc",
   ]
 
   deps = [
