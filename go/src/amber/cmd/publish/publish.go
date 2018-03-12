@@ -74,8 +74,10 @@ func main() {
 		return
 	}
 
-	if e := os.MkdirAll(*repoPath, os.ModePerm); e != nil {
-		log.Fatalf("Repository path %q does not exist and could not be created.\n",
+	// allow mkdir to fail, but check if the path exists afterward.
+	os.MkdirAll(*repoPath, os.ModePerm)
+	if _, err := os.Stat(*repoPath); err != nil {
+		log.Fatalf("Repository path %q does not exist or could not be read.\n",
 			*repoPath)
 	}
 
