@@ -90,27 +90,28 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
   }
 
   void SwapModule() {
-    StartModuleDeprecated(kModuleQueries[query_index_]);
+    StartModule(kModuleQueries[query_index_]);
     query_index_ = (query_index_ + 1) % kModuleQueries.size();
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this] { SwapModule(); }, fxl::TimeDelta::FromSeconds(kSwapSeconds));
   }
 
-  void StartModuleDeprecated(const std::string& module_query) {
+  void StartModule(const std::string& module_query) {
     if (module_) {
       module_->Stop([this, module_query] {
         module_.Unbind();
         module_view_.Unbind();
-        StartModuleDeprecated(module_query);
+        StartModule(module_query);
       });
       return;
     }
 
     // This module is named after its URL.
-    constexpr char kModuleLink[] = "module";
-    module_context_->StartModuleDeprecated(
-        module_query, module_query, kModuleLink, nullptr, module_.NewRequest(),
-        module_view_.NewRequest());
+    auto daisy = modular::Daisy::New();
+    daisy->url = module_query;
+    module_context_->EmbedModule(
+        module_query, std::move(daisy), nullptr, module_.NewRequest(),
+        module_view_.NewRequest(), [](const modular::StartModuleStatus&) {});
     SetChild();
   }
 
