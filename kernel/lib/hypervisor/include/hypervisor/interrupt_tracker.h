@@ -29,6 +29,15 @@ public:
         return bitmap_.Scan(0, N, false) != N;
     }
 
+    bool TryPop(uint32_t vector) {
+        AutoSpinLock lock(&lock_);
+        bool has_vector = bitmap_.GetOne(reverse(vector));
+        if (has_vector) {
+            bitmap_.ClearOne(vector);
+        }
+        return has_vector;
+    }
+
     // Pops the highest priority interrupt.
     zx_status_t Pop(uint32_t* vector) {
         uint32_t value;
@@ -40,8 +49,7 @@ public:
             }
             bitmap_.ClearOne(value);
         }
-        // Reverse the value to get the actual interrupt.
-        *vector = N - value - 1;
+        *vector = reverse(value);
         return ZX_OK;
     }
 
@@ -51,9 +59,7 @@ public:
             return ZX_ERR_OUT_OF_RANGE;
         }
         AutoSpinLock lock(&lock_);
-        // We reverse the value, as RawBitmapGeneric::Scan will return the
-        // lowest priority interrupt, but we need the highest priority.
-        return bitmap_.SetOne(N - vector - 1);
+        return bitmap_.SetOne(reverse(vector));
     }
 
     // Tracks the given interrupt, and signals any waiters.
@@ -87,6 +93,12 @@ private:
     event_t event_;
     SpinLock lock_;
     bitmap::RawBitmapGeneric<bitmap::FixedStorage<N>> bitmap_;
+
+    // We reverse the value, as RawBitmapGeneric::Scan will return the
+    // lowest priority interrupt, but we need the highest priority.
+    static uint32_t reverse(uint32_t vector) {
+        return N - vector - 1;
+    }
 };
 
 } // namespace hypervisor

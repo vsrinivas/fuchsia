@@ -20,6 +20,8 @@
 #include <zircon/types.h>
 
 static constexpr uint16_t kNumInterrupts = 256;
+static constexpr uint32_t kTimerVector = 27;
+static_assert(kTimerVector < kNumInterrupts, "Timer vector is out of range");
 
 typedef struct zx_port_packet zx_port_packet_t;
 using InterruptBitmap = bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>>;

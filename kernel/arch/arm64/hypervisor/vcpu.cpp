@@ -33,23 +33,39 @@ static uint64_t vmpidr_of(uint8_t vpid, uint64_t mpidr) {
 }
 
 static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
-    uint64_t prev_elrs = gic_read_gich_elrs();
-    uint64_t elrs = prev_elrs;
+    uint64_t elrs = gic_read_gich_elrs();
+    if (elrs == 0) {
+        // All list registers are in use, therefore return and indicate that we
+        // should raise an IRQ.
+        return true;
+    }
+    zx_status_t status;
+    uint32_t pending = 0;
+    uint32_t vector = kTimerVector;
+    if (gich_state->interrupt_tracker.TryPop(kTimerVector)) {
+        // We give timer interrupts precedence over all others. If we find a
+        // timer interrupt is pending, process it first.
+        goto has_timer;
+    }
     while (elrs != 0) {
-        uint32_t vector;
-        zx_status_t status = gich_state->interrupt_tracker.Pop(&vector);
+        status = gich_state->interrupt_tracker.Pop(&vector);
         if (status != ZX_OK) {
+            // There are no more pending interrupts.
             break;
         }
-        uint32_t lr_index = __builtin_ctzl(elrs);
-        elrs &= ~(1u << lr_index);
+    has_timer:
+        pending++;
         if (gich_state->active_interrupts.GetOne(vector)) {
+            // Skip an interrupt if it was already active.
             continue;
         }
+        uint32_t lr_index = __builtin_ctzl(elrs);
         uint32_t lr = GICH_LR_PENDING | (vector & GICH_LR_VIRTUAL_ID_MASK);
         gic_write_gich_lr(lr_index, lr);
+        elrs &= ~(1u << lr_index);
     }
-    return elrs != prev_elrs;
+    // If there are pending interrupts, indicate that we should raise an IRQ.
+    return pending > 0;
 }
 
 static void gich_active_interrupts(InterruptBitmap* active_interrupts) {

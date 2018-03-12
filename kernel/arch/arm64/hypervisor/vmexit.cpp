@@ -31,9 +31,6 @@
 
 static constexpr size_t kPageTableLevelShift = 3;
 static constexpr uint16_t kSmcPsci = 0;
-static constexpr uint32_t kTimerVector = 27;
-
-static_assert(kTimerVector < kNumInterrupts, "Timer vector is out of range");
 
 enum TimerControl : uint64_t {
     ENABLE = 1u << 0,
