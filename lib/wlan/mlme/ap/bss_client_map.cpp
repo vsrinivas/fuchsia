@@ -96,4 +96,9 @@ void BssClientMap::ClearAid(aid_t aid) {
     if (aid != kUnknownAid) { aid_bitmap_.ClearOne(aid); }
 }
 
+void BssClientMap::Clear() {
+    aid_bitmap_.Reset(kMaxBssClients);
+    clients_.clear();
+}
+
 }  // namespace wlan

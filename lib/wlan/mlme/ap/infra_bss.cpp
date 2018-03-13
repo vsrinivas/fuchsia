@@ -19,7 +19,35 @@ InfraBss::InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_se
 }
 
 InfraBss::~InfraBss() {
+    // The BSS should always be explicitly stopped.
+    // Throw in debug builds, stop in release ones.
+    ZX_DEBUG_ASSERT(!IsStarted());
+
+    // Ensure BSS is stopped correctly.
+    Stop();
+}
+
+void InfraBss::Start(const StartRequest& req) {
+    ZX_DEBUG_ASSERT(!IsStarted());
+    if (IsStarted()) { return; }
+
+    // Start sending Beacon frames.
+    started_at_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    bcn_sender_->Start(this, req);
+}
+
+void InfraBss::Stop() {
+    ZX_DEBUG_ASSERT(IsStarted());
+    if (!IsStarted()) { return; }
+
     bcn_sender_->Stop();
+    started_at_ = 0;
+    // TODO(hahnr): Send deauthentication frame to all associated clients.
+    clients_.Clear();
+}
+
+bool InfraBss::IsStarted() {
+    return started_at_ != 0;
 }
 
 zx_status_t InfraBss::HandleTimeout(const common::MacAddr& client_addr) {

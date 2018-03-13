@@ -37,7 +37,8 @@ zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
 
     // Only one BSS can be started at a time.
     if (bss_ != nullptr) {
-        errorf("received MLME-START.request with an already running BSS\n");
+        errorf("received MLME-START.request with an already running BSS on device: %s\n",
+               device_->GetState()->address().ToString().c_str());
         return ZX_OK;
     }
 
@@ -51,8 +52,9 @@ zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
     device_->ConfigureBss(&cfg);
 
     // Create and start BSS.
-    auto bcn_sender = fbl::make_unique<BeaconSender>(device_, req);
+    auto bcn_sender = fbl::make_unique<BeaconSender>(device_);
     bss_ = fbl::AdoptRef(new InfraBss(device_, fbl::move(bcn_sender), bssid));
+    bss_->Start(req);
     AddChildHandler(bss_);
 
     return ZX_OK;
@@ -61,8 +63,15 @@ zx_status_t ApMlme::HandleMlmeStartReq(const StartRequest& req) {
 zx_status_t ApMlme::HandleMlmeStopReq(const StopRequest& req) {
     debugfn();
 
+    if (bss_ == nullptr) {
+        errorf("received MLME-STOP.request but no BSS is running on device: %s\n",
+               device_->GetState()->address().ToString().c_str());
+        return ZX_OK;
+    }
+
     // Stop and destroy BSS.
     RemoveChildHandler(bss_);
+    bss_->Stop();
     bss_.reset();
 
     return ZX_OK;

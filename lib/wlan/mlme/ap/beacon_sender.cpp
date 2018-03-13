@@ -16,18 +16,17 @@
 
 namespace wlan {
 
-BeaconSender::BeaconSender(DeviceInterface* device, const StartRequest& req) : device_(device) {
-    req_ = req.Clone();
-}
+BeaconSender::BeaconSender(DeviceInterface* device) : device_(device) {}
 
 BeaconSender::~BeaconSender() {
     // Ensure Beaconing is stopped when the object is destroyed.
     Stop();
 }
 
-void BeaconSender::Start(BssInterface* bss) {
+void BeaconSender::Start(BssInterface* bss, const StartRequest& req) {
     ZX_DEBUG_ASSERT(!IsStarted());
     bss_ = bss;
+    req_ = req.Clone();
     WriteBeacon(nullptr);
     debugbss("[bcn-sender] [%s] started sending Beacons\n", bss_->bssid().ToString().c_str());
 }

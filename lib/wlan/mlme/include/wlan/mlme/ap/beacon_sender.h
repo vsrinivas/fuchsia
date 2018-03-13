@@ -18,10 +18,10 @@ class TrafficIndicationMap;
 // Configures the driver to send Beacon frames periodically.
 class BeaconSender {
    public:
-    BeaconSender(DeviceInterface* device, const StartRequest& req);
+    BeaconSender(DeviceInterface* device);
     ~BeaconSender();
 
-    void Start(BssInterface* bss);
+    void Start(BssInterface* bss, const StartRequest& req);
     void Stop();
     zx_status_t UpdateBeacon(const TrafficIndicationMap& tim);
 

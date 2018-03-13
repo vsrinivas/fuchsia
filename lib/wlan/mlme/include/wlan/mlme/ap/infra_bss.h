@@ -28,11 +28,14 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
              const common::MacAddr& bssid);
     virtual ~InfraBss();
 
+    bool IsStarted();
     zx_status_t HandleTimeout(const common::MacAddr& client_addr);
 
     // BssInterface implementation
     const common::MacAddr& bssid() const override;
     uint64_t timestamp() override;
+    void Start(const StartRequest& req) override;
+    void Stop() override;
     zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) override;
     zx_status_t ReleaseAid(const common::MacAddr& client) override;
     fbl::unique_ptr<Buffer> GetPowerSavingBuffer(size_t len) override;
