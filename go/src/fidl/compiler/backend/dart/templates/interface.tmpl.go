@@ -88,7 +88,7 @@ class {{ .ProxyName }} extends $fidl.Proxy<{{ .Name }}>
 
     final $fidl.Encoder $encoder = new $fidl.Encoder({{ .OrdinalName }});
     {{- if .Request }}
-    final int $offset = $encoder.alloc({{ .RequestSize }});
+    final int $offset = $encoder.alloc({{ .RequestSize }} - $fidl.kMessageHeaderSize);
     final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request;
     {{- end }}
     {{- range $index, $request := .Request }}
@@ -132,11 +132,11 @@ class {{ .BindingName }} extends $fidl.Binding<{{ .Name }}> {
     return ({{ template "Params" .Response }}) {
       final $fidl.Encoder $encoder = new $fidl.Encoder({{ .OrdinalName }});
       {{- if .Response }}
-      final int $offset = $encoder.alloc({{ .ResponseSize }});
+      $encoder.alloc({{ .ResponseSize }} - $fidl.kMessageHeaderSize);
       final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response;
       {{- end }}
       {{- range $index, $response := .Response }}
-      $types[{{ $index }}].encode($encoder, {{ .Name }}, $offset);
+      $types[{{ $index }}].encode($encoder, {{ .Name }}, 0);
       {{- end }}
       $fidl.Message $message = $encoder.message;
       $message.txid = $txid;

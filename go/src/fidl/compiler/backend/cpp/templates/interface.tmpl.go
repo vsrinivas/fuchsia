@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+ // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -175,11 +175,10 @@ class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
     }
       {{- if .Response }}
     ::fidl::Decoder decoder(std::move(message));
-    size_t offset = sizeof(fidl_message_header_t);
       {{- end }}
     callback_(
       {{- range $index, $param := .Response -}}
-        {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, offset + {{ .Offset }})
+        {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }})
       {{- end -}}
     );
     return ZX_OK;
@@ -198,9 +197,9 @@ class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
 void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
   ::fidl::Encoder encoder({{ .OrdinalName }});
     {{- if .Request }}
-  size_t offset = encoder.Alloc({{ .RequestSize }});
+  encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t) );
       {{- range .Request }}
-  ::fidl::Encode(&encoder, &{{ .Name }}, offset + {{ .Offset }});
+  ::fidl::Encode(&encoder, &{{ .Name }}, {{ .Offset }});
       {{- end }}
     {{- end }}
     {{- if .HasResponse }}
@@ -229,9 +228,9 @@ class {{ .ResponderType }} {
   void operator()({{ template "Params" .Response }}) {
     ::fidl::Encoder encoder({{ .OrdinalName }});
       {{- if .Response }}
-  size_t offset = encoder.Alloc({{ .ResponseSize }});
+  encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
         {{- range .Response }}
-  ::fidl::Encode(&encoder, &{{ .Name }}, offset + {{ .Offset }});
+  ::fidl::Encode(&encoder, &{{ .Name }}, {{ .Offset }});
         {{- end }}
       {{- end }}
     response_.Send(nullptr, encoder.GetMessage());
@@ -262,11 +261,10 @@ zx_status_t {{ .StubName }}::Dispatch(
       }
         {{- if .Request }}
       ::fidl::Decoder decoder(std::move(message));
-      size_t offset = sizeof(fidl_message_header_t);
         {{- end }}
       impl_->{{ .Name }}(
         {{- range $index, $param := .Request -}}
-          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, offset + {{ .Offset }})
+          {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }})
         {{- end -}}
         {{- if .HasResponse -}}
           {{- if .Request }}, {{ end -}}{{ .ResponderType }}(std::move(response))
@@ -294,9 +292,9 @@ zx_status_t {{ .StubName }}::Dispatch(
 zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }} {
   ::fidl::Encoder encoder_({{ .OrdinalName }});
     {{- if .Request }}
-  size_t offset_ = encoder_.Alloc({{ .RequestSize }});
+  encoder_.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
       {{- range .Request }}
-  ::fidl::Encode(&encoder_, &{{ .Name }}, offset_ + {{ .Offset }});
+  ::fidl::Encode(&encoder_, &{{ .Name }}, {{ .Offset }});
       {{- end }}
     {{- end }}
     {{- if .HasResponse }}
@@ -307,9 +305,8 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
     return status_;
       {{- if .Response }}
   ::fidl::Decoder decoder_(std::move(response_));
-  {{ if not .Request }}size_t {{ end }}offset_ = sizeof(fidl_message_header_t);
         {{- range $index, $param := .Response }}
-  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder_, offset_ + {{ .Offset }});
+  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder_, {{ .Offset }});
         {{- end }}
       {{- end }}
   return ZX_OK;
