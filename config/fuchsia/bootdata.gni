@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/clang/clang.gni")
-
-_mkbootfs = "//out/build-zircon/tools/mkbootfs"
+import("//build/config/fuchsia/zircon.gni")
 
 # Template for assembling a Zircon `bootdata.bin` file from inputs.
 # The inputs can be either other `BOOTDATA` format files, or manifest files
@@ -61,22 +59,16 @@ template("bootdata") {
     target_args = []
   }
 
-  action(target_name) {
+  zircon_tool_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "inputs",
                              "visibility",
                              "testonly",
                            ])
 
-    script = "//build/gn_run_binary.sh"
-    inputs = [
-      _mkbootfs,
-    ]
-    script_args = [
-      clang_prefix,
-      rebase_path(_mkbootfs, root_build_dir),
-    ]
+    tool = "mkbootfs"
 
     outputs = [
       output_file,
@@ -90,10 +82,7 @@ template("bootdata") {
       rebase_path(depfile, root_build_dir),
     ]
 
-    sources = invoker.inputs
-    input_args = rebase_path(sources, root_build_dir)
-
-    args = script_args + output_args + target_args + input_args
+    args = output_args + target_args + rebase_path(inputs, root_build_dir)
   }
 }
 
@@ -133,37 +122,26 @@ template("bootdata_cmdline") {
 
   output_file = "$root_out_dir/$output_file"
 
-  action(target_name) {
+  zircon_tool_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "inputs",
                              "visibility",
                              "testonly",
                            ])
-
-    script = "//build/gn_run_binary.sh"
-    inputs = [
-      _mkbootfs,
-    ]
-    script_args = [
-      clang_prefix,
-      rebase_path(_mkbootfs, root_build_dir),
-    ]
-
+    tool = "mkbootfs"
     outputs = [
       output_file,
     ]
-
-    inputs += invoker.inputs
-    assert(invoker.inputs == [ inputs[1] ],
+    assert(inputs == [ inputs[0] ],
            "$target_name inputs must contain exactly one file name")
-
-    args = script_args + [
-             "-o",
-             rebase_path(output_file, root_build_dir),
-             "-C",
-             rebase_path(inputs[1]),
-           ]
+    args = [
+      "-o",
+      rebase_path(output_file, root_build_dir),
+      "-C",
+      rebase_path(inputs[0]),
+    ]
   }
 }
 
@@ -201,33 +179,23 @@ template("bootdata_ramdisk") {
 
   output_file = "$root_out_dir/$output_file"
 
-  action(target_name) {
+  zircon_tool_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "inputs",
                              "visibility",
                              "testonly",
                            ])
-
-    script = "//build/gn_run_binary.sh"
-    inputs = [
-      _mkbootfs,
-    ]
-    script_args = [
-      clang_prefix,
-      rebase_path(_mkbootfs, root_build_dir),
-    ]
-
+    tool = "mkbootfs"
     outputs = [
       output_file,
     ]
-
-    inputs += invoker.inputs
-    args = script_args + [
+    args = [
              "-o",
              rebase_path(output_file, root_build_dir),
              "--ramdisk",
-           ] + rebase_path(invoker.inputs)
+           ] + rebase_path(inputs)
   }
 }
 
@@ -269,26 +237,16 @@ template("bootdata_platform") {
 
   output_file = "$root_out_dir/$output_file"
 
-  action(target_name) {
+  zircon_tool_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "visibility",
                              "testonly",
                            ])
-
-    script = "//build/gn_run_binary.sh"
-    inputs = [
-      _mkbootfs,
-    ]
-    script_args = [
-      clang_prefix,
-      rebase_path(_mkbootfs, root_build_dir),
-    ]
-
+    tool = "mkbootfs"
     outputs = [
       output_file,
     ]
-
     args = script_args + [
              "-o",
              rebase_path(output_file, root_build_dir),
@@ -297,7 +255,7 @@ template("bootdata_platform") {
              "--pid",
              invoker.pid,
              "--board",
-             invoker.board
+             invoker.board,
            ]
   }
 }

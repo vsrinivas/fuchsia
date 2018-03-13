@@ -4,6 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/bootdata.gni")
+import("//build/config/fuchsia/zircon.gni")
 import("//build/gn/packages.gni")
 import("//build/package.gni")
 
@@ -13,8 +14,33 @@ declare_args() {
   toolchain_manifests = [
     # clang_prefix is relative to root_build_dir.
     rebase_path("${clang_prefix}/../lib/${clang_target}.manifest",
-                "", root_build_dir)
+                "",
+                root_build_dir),
   ]
+
+  # Manifest files describing extra libraries from a Zircon build
+  # not included in `zircon_boot_manifests`, such as an ASan build.
+  # Can be either // source paths or absolute system paths.
+  #
+  # Since Zircon manifest files are relative to a Zircon source directory
+  # rather than to the directory containing the manifest, these are assumed
+  # to reside in a build directory that's a direct subdirectory of the
+  # Zircon source directory and thus their contents can be taken as
+  # relative to `get_path_info(entry, "dir") + "/.."`.
+  # TODO(mcgrathr): Make Zircon manifests self-relative too and then
+  # merge this and toolchain_manifests into generic aux_manifests.
+  zircon_aux_manifests = [ "${zircon_build_dir}-ulib/bootfs.manifest" ]
+
+  # Manifest files describing files to go into the `/boot` filesystem.
+  # Can be either // source paths or absolute system paths.
+  # `zircon_boot_groups` controls which files are actually selected.
+  #
+  # Since Zircon manifest files are relative to a Zircon source directory
+  # rather than to the directory containing the manifest, these are assumed
+  # to reside in a build directory that's a direct subdirectory of the
+  # Zircon source directory and thus their contents can be taken as
+  # relative to `get_path_info(entry, "dir") + "/.."`.
+  zircon_boot_manifests = [ "$zircon_build_dir/bootfs.manifest" ]
 
   # Groups to include from the Zircon /boot manifest into /boot.
   # This is either "all" or a comma-separated list of one or more of:
@@ -64,11 +90,6 @@ if (zircon_boot_groups == "all") {
          "zircon_system_groups cannot include core (or all)")
 }
 
-zircon_boot_manifest =
-    "//out/build-zircon/build-${current_cpu}/bootfs.manifest"
-zircon_ulib_manifest =
-    "//out/build-zircon/build-${current_cpu}-ulib/bootfs.manifest"
-
 final_boot_manifest = "$root_out_dir/boot.manifest"
 final_system_manifest = "$root_out_dir/system.manifest"
 
@@ -77,8 +98,10 @@ final_system_manifest = "$root_out_dir/system.manifest"
 # build.
 pkgsvr_index = "$root_gen_dir/pkgsvr_index"
 packages_dir = "$root_build_dir/package"
+
 # Packages blobs manifest is all the blobs from inside all Fuchsia packages, as well as their meta.fars.
 packages_blobs_manifest = "$root_build_dir/packages_blobs.manifest"
+
 # Final blob manifest is the packages_blobs_manifest.
 final_blob_manifest = "$root_build_dir/blob.manifest"
 
