@@ -1,0 +1,19 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/toolchain/clang_toolchain.gni")
+
+# A toolchain dedicated to processing Rust code.
+# The only targets in this toolchain are action() targets, so it
+# has no real tools.  But every toolchain needs stamp and copy.
+toolchain("rustlang") {
+  tool("stamp") {
+    command = stamp_command
+    description = stamp_description
+  }
+  tool("copy") {
+    command = copy_command
+    description = copy_description
+  }
+}
