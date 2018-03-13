@@ -273,6 +273,8 @@ def generate_board_list(package, context):
     """Generates a configuration file with the list of target boards."""
     build_path = os.path.join(context.out_dir, 'config', 'boards.gni')
     generate_build_file(build_path, 'boards.mako', package, context)
+    build_path = os.path.join(context.out_dir, 'config', 'BUILD.gn')
+    generate_build_file(build_path, 'main.mako', package, context)
 
 
 class GenerationContext(object):

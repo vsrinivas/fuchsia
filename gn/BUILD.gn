@@ -16,6 +16,7 @@ supporting_templates = [
   "//build/zircon/boards.mako",
   "//build/zircon/header.mako",
   "//build/zircon/host_tool.mako",
+  "//build/zircon/main.mako",
   "//build/zircon/shared_library.mako",
   "//build/zircon/source_library.mako",
   "//build/zircon/static_library.mako",
@@ -1009,6 +1010,7 @@ group("images") {
     ":fvm.blk",
     ":fvm.data.sparse.blk",
     ":fvm.sparse.blk",
+    "//zircon/public/config:boards",
   ]
 
   foreach(board, zircon_boards) {
