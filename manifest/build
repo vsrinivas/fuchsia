@@ -2,5 +2,6 @@
 <manifest>
   <imports>
     <localimport file="minimal"/>
+    <localimport file="third_party"/>
   </imports>
 </manifest>

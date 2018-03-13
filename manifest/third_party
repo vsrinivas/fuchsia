@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <imports>
+    <localimport file="minimal"/>
+  </imports>
+  <projects>
+    <!-- Third Party -->
+    <project name="third_party/rapidjson"
+             path="third_party/rapidjson"
+             remote="https://fuchsia.googlesource.com/third_party/rapidjson"
+             revision="815fc9c85e9501b245b0a0f3c18fa7d809bc21ac"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
+  </projects>
+</manifest>
