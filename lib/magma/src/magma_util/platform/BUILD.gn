@@ -92,6 +92,7 @@ source_set("connection") {
     ":semaphore",
     "$magma_build_root/src/magma_util",
     "//garnet/lib/magma/include:magma_abi",
+    "//garnet/lib/magma/include:msd_abi",
   ]
 
   deps = [
