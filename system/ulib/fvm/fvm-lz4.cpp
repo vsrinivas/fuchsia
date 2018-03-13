@@ -146,7 +146,7 @@ zx_status_t SparseReader::ReadData(uint8_t* data, size_t length, size_t* actual)
 #endif
     size_t total_size = 0;
     if (compressed_) {
-        if (to_read_ == 0) {
+        if (out_buf_.is_empty() && to_read_ == 0) {
             // There is no more to read
             return ZX_ERR_OUT_OF_RANGE;
         }
