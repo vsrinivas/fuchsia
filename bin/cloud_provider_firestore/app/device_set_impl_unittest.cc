@@ -55,58 +55,67 @@ class DeviceSetImplTest : public gtest::TestWithMessageLoop,
 
 TEST_F(DeviceSetImplTest, EmptyWhenDisconnected) {
   bool on_empty_called = false;
-  device_set_impl_.set_on_empty([this, &on_empty_called] {
-    on_empty_called = true;
-    message_loop_.PostQuitTask();
-  });
+  device_set_impl_.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   device_set_.Unbind();
   RunLoopUntilIdle();
   EXPECT_TRUE(on_empty_called);
 }
 
 TEST_F(DeviceSetImplTest, CheckFingerprintOk) {
+  bool callback_called = false;
   auto status = cloud_provider::Status::INTERNAL_ERROR;
   device_set_->CheckFingerprint(
       convert::ToArray("abc"),
-      [this, &status](auto got_status) { status = got_status; });
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
   RunLoopUntilIdle();
+  EXPECT_FALSE(callback_called);
   EXPECT_EQ(1u, firestore_service_.get_document_records.size());
+
   firestore_service_.get_document_records.front().callback(
       grpc::Status(), google::firestore::v1beta1::Document());
 
   RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
   EXPECT_EQ(cloud_provider::Status::OK, status);
 }
 
 TEST_F(DeviceSetImplTest, CheckFingerprintNotFound) {
+  bool callback_called = false;
   auto status = cloud_provider::Status::INTERNAL_ERROR;
   device_set_->CheckFingerprint(
       convert::ToArray("abc"),
-      [this, &status](auto got_status) { status = got_status; });
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
   RunLoopUntilIdle();
+  EXPECT_FALSE(callback_called);
   EXPECT_EQ(1u, firestore_service_.get_document_records.size());
+
   firestore_service_.get_document_records.front().callback(
       grpc::Status(grpc::NOT_FOUND, ""),
       google::firestore::v1beta1::Document());
 
   RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
   EXPECT_EQ(cloud_provider::Status::NOT_FOUND, status);
 }
 
 TEST_F(DeviceSetImplTest, SetFingerprint) {
+  bool callback_called = false;
   auto status = cloud_provider::Status::INTERNAL_ERROR;
   device_set_->SetFingerprint(
       convert::ToArray("abc"),
-      [this, &status](auto got_status) { status = got_status; });
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
   RunLoopUntilIdle();
+  EXPECT_FALSE(callback_called);
   EXPECT_EQ(1u, firestore_service_.create_document_records.size());
+
   firestore_service_.create_document_records.front().callback(
       grpc::Status(), google::firestore::v1beta1::Document());
 
   RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
   EXPECT_EQ(cloud_provider::Status::OK, status);
 }
 
