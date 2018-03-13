@@ -28,6 +28,9 @@ Read this all before? Here are the common case commands
 3. Make the install media
     * [[ insert USB drive into host ]]
     * `fx mkzedboot <usb_drive_device_path>`
+        * Mac users: If you see 'ERROR: Can't open /dev/disk[n]: Resource busy'
+          then you will have to unmount the usb drive.
+          For this run `hdiutil unmount /dev/disk[n]`
 4. Boot and pave
     * [[ move USB drive to target ]]
     * `fx boot <efi|vboot|nuc|cros|..>`
