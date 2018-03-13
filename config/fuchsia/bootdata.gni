@@ -247,7 +247,7 @@ template("bootdata_platform") {
     outputs = [
       output_file,
     ]
-    args = script_args + [
+    args = [
              "-o",
              rebase_path(output_file, root_build_dir),
              "--vid",
