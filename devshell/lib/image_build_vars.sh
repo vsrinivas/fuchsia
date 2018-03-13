@@ -20,6 +20,7 @@ fx-machine-types() {
   echo "  vboot"
   echo "Available board types for ${FUCHSIA_ARCH}:"
   cat "${board_list_file}"
+	echo
   echo "Note: currently efi,cros,acer,nuc,pixel and vboot all have the exact"
   echo "same behavior and target specific differences occur client side."
 }
@@ -36,7 +37,7 @@ arm64)
   exit 1
 esac
 
-board_list_file="${FUCHSIA_BUILD_DIR}/zircon-gn/export/boards.list"
+board_list_file="${FUCHSIA_BUILD_DIR}/zircon-boards.list"
 
 zircon_bin="zircon.bin"
 ramdisk_bin="bootdata-blob-${board}.bin"
