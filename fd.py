@@ -27,7 +27,7 @@ PICKLE_FILE = TMP_BASE + 'fd.pickle'
 
 EXCLUDE_DIRS = [
     '"*/.git"', './build', './buildtools', './out', './third_party',
-    './zircon/build', './zircon/prebuilt'
+    './zircon/build', './zircon/prebuilt', './cmake-build-debug', './zircon/third_party',
 ]
 
 
@@ -110,11 +110,8 @@ def build_trie():
   return t
 
 
-def get_trie(rebuild=False):
+def get_trie():
   """get_trie.
-
-  Args:
-    rebuild: false by default
 
   Returns:
     trie
@@ -129,9 +126,7 @@ def get_trie(rebuild=False):
       return pickle.load(f)
 
   if os.path.exists(PICKLE_FILE):
-    if not rebuild:
-      return load_pickle()
-    os.remove(PICKLE_FILE)
+    return load_pickle()
 
   t = build_trie()
   save_pickle(t)
@@ -270,13 +265,16 @@ def main():
       if os.path.exists(candidate):
         return candidate
 
-    t = get_trie(args.rebuild)
+    t = get_trie()
     return get_abs_path(choose_options(t, target, args.choice))
 
   args = parse_cmdline()
   if args.base:
     global SEARCH_BASE
     SEARCH_BASE = args.base
+
+  if args.rebuild:
+    os.remove(PICKLE_FILE)
 
   dest = derive_dest(args.target)
   dest = os.path.normpath(dest)
