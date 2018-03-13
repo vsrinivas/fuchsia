@@ -377,12 +377,12 @@ void Record::DoneTrace() {
 
 void Record::LaunchApp() {
   auto launch_info = app::ApplicationLaunchInfo::New();
-  launch_info->url = f1dl::String::From(options_.app);
+  launch_info->url = f1dl::String(options_.app);
   launch_info->arguments = f1dl::Array<f1dl::String>::From(options_.args);
 
   out() << "Launching " << launch_info->url << std::endl;
-  context()->launcher()->CreateApplication(std::move(launch_info),
-                                           application_controller_.NewRequest());
+  context()->launcher()->CreateApplication(
+      std::move(launch_info), application_controller_.NewRequest());
   application_controller_.set_error_handler([this] {
     out() << "Application terminated" << std::endl;
     if (!options_.decouple)

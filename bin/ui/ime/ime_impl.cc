@@ -61,7 +61,7 @@ void ImeImpl::InjectInput(mozart::InputEventPtr event) {
     if (keyboard->code_point) {
       FXL_VLOG(1) << "Appending character (state = " << *state_ << "')";
       state_->revision++;
-      std::string text = state_->text.To<std::string>();
+      std::string text = state_->text;
       // FIXME (jpoichet) Actually handle UTF8 here
       std::string replacement = "";
       replacement += static_cast<char>(keyboard->code_point);

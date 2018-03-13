@@ -66,53 +66,9 @@ class String {
   // FIDL1 INTERFACE
   //////////////////////////////////////////////////////////////////////////////
 
-  // Provide iterator access to the underlying std::string.
-  using ConstIterator = typename std::string::const_iterator;
-  using Iterator = typename std::string::iterator;
-
   typedef internal::String_Data Data_;
 
   String(const f1dl::String& str) : str_(str.str_), is_null_(str.is_null_) {}
-
-  template <size_t N>
-  String(const char chars[N]) : str_(chars, N - 1), is_null_(false) {}
-
-  template <typename U>
-  static String From(const U& other) {
-    return TypeConverter<String, U>::Convert(other);
-  }
-
-  template <typename U>
-  U To() const {
-    return TypeConverter<U, String>::Convert(*this);
-  }
-
-  String& operator=(const f1dl::String& str) {
-    str_ = str.str_;
-    is_null_ = str.is_null_;
-    return *this;
-  }
-  String& operator=(const std::string& str) {
-    str_ = str;
-    is_null_ = false;
-    return *this;
-  }
-  String& operator=(const char* chars) {
-    is_null_ = !chars;
-    if (chars) {
-      str_ = chars;
-    } else {
-      str_.clear();
-    }
-    return *this;
-  }
-
-  // std::string iterators into the string. The behavior is undefined
-  // if the string is null.
-  Iterator begin() { return str_.begin(); }
-  Iterator end() { return str_.end(); }
-  ConstIterator begin() const { return str_.begin(); }
-  ConstIterator end() const { return str_.end(); }
 
  private:
   std::string str_;
@@ -152,8 +108,6 @@ inline bool operator<(const String& a, const String& b) {
 
   return a.get() < b.get();
 }
-
-// TODO(darin): Add similar variants of operator<,<=,>,>=
 
 template <>
 struct TypeConverter<String, std::string> {

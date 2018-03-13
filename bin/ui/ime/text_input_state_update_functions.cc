@@ -14,7 +14,7 @@ void DeleteBackward(const mozart::TextInputStatePtr& current_state) {
 
   int64_t& base = current_state->selection->base;
   int64_t& extent = current_state->selection->extent;
-  std::string text = current_state->text.To<std::string>();
+  std::string text = current_state->text;
   current_state->revision++;
 
   if (base == -1 || extent == -1) {

@@ -6,11 +6,11 @@
 #include <utility>
 
 #include "gtest/gtest.h"
+#include "lib/fidl/compiler/interfaces/tests/sample_factory.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/internal/bindings_internal.h"
 #include "lib/fidl/cpp/bindings/tests/util/test_utils.h"
 #include "lib/fidl/cpp/bindings/tests/util/test_waiter.h"
-#include "lib/fidl/compiler/interfaces/tests/sample_factory.fidl.h"
 
 namespace f1dl {
 namespace test {
@@ -22,7 +22,7 @@ const char kText2[] = "world";
 class StringRecorder {
  public:
   explicit StringRecorder(std::string* buf) : buf_(buf) {}
-  void operator()(const String& a) const { *buf_ = a.To<std::string>(); }
+  void operator()(const String& a) const { *buf_ = a; }
 
  private:
   std::string* buf_;
@@ -48,7 +48,7 @@ class SampleNamedObjectImpl : public sample::NamedObject {
  public:
   explicit SampleNamedObjectImpl(InterfaceRequest<sample::NamedObject> request)
       : binding_(this, std::move(request)) {
-    binding_.set_error_handler([this](){ delete this; });
+    binding_.set_error_handler([this]() { delete this; });
   }
   void SetName(const f1dl::String& name) override { name_ = name; }
 
@@ -130,7 +130,8 @@ struct DoStuffCallback {
   DoStuffCallback(bool* got_response, std::string* got_text_reply)
       : got_response(got_response), got_text_reply(got_text_reply) {}
 
-  void operator()(sample::ResponsePtr response, const String& text_reply) const {
+  void operator()(sample::ResponsePtr response,
+                  const String& text_reply) const {
     *got_text_reply = text_reply;
 
     if (response->pipe) {
@@ -226,7 +227,7 @@ TEST_F(HandlePassingTest, PipesAreClosed) {
     request->more_pipes = std::move(pipes);
 
     factory->DoStuff(std::move(request), zx::channel(),
-                     [](sample::ResponsePtr, const String&){});
+                     [](sample::ResponsePtr, const String&) {});
   }
 
   // We expect the pipes to have been closed.

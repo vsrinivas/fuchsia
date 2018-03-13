@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdio>
 #include <fcntl.h>
+#include <cstdio>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/network/fidl/network_service.fidl.h"
-#include "lib/network/fidl/url_loader.fidl.h"
-#include "lib/fxl/files/unique_fd.h"
+#include "lib/fsl/socket/files.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/file_descriptor.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/fsl/socket/files.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/network/fidl/network_service.fidl.h"
+#include "lib/network/fidl/url_loader.fidl.h"
 
 namespace examples {
 
@@ -38,9 +37,8 @@ class ResponsePrinter {
     printf("  %s\n", response->status_line.get().c_str());
     if (response->headers) {
       for (size_t i = 0; i < response->headers.size(); ++i)
-        printf("  %s=%s\n",
-               response->headers[i]->name.To<std::string>().c_str(),
-               response->headers[i]->value.To<std::string>().c_str());
+        printf("  %s=%s\n", response->headers[i]->name->data(),
+               response->headers[i]->value->data());
     }
   }
 
@@ -72,8 +70,7 @@ class ResponsePrinter {
 
 class PostFileApp {
  public:
-  PostFileApp()
-      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  PostFileApp() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
   }
