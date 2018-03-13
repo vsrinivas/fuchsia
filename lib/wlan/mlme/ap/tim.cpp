@@ -26,7 +26,7 @@ void TrafficIndicationMap::SetTrafficIndication(aid_t aid, bool has_bu) {
 
 zx_status_t TrafficIndicationMap::WritePartialVirtualBitmap(uint8_t* buf, size_t buf_len,
                                                             size_t* bitmap_len,
-                                                            uint16_t* bitmap_offset) {
+                                                            uint8_t* bitmap_offset) const {
     size_t n1 = N1();
     size_t n2 = N2();
 
@@ -40,7 +40,7 @@ zx_status_t TrafficIndicationMap::WritePartialVirtualBitmap(uint8_t* buf, size_t
     return ZX_OK;
 }
 
-size_t TrafficIndicationMap::N1() {
+size_t TrafficIndicationMap::N1() const {
     size_t first_set_bit = aid_bitmap_.Scan(1, aid_bitmap_.size(), false);
     if (first_set_bit == aid_bitmap_.size()) {
         // No bit set.
@@ -50,7 +50,7 @@ size_t TrafficIndicationMap::N1() {
     return n1 % 2 == 0 ? n1 : (n1 - 1);
 }
 
-size_t TrafficIndicationMap::N2() {
+size_t TrafficIndicationMap::N2() const {
     // TODO(hahnr): Implement once ZX-1781 landed.
     // For now, let the bitmap be of the minimum one byte length (sufficient for testing).
     return N1();

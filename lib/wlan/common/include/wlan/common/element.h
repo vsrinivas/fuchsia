@@ -185,8 +185,8 @@ class BitmapControl : public common::BitField<uint8_t> {
 // IEEE Std 802.11-2016, 9.4.2.6
 struct TimElement : public Element<TimElement, element_id::kTim> {
     static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t dtim_count,
-                       uint8_t dtim_period, BitmapControl bmp_ctrl,
-                       const std::vector<uint8_t>& bmp);
+                       uint8_t dtim_period, BitmapControl bmp_ctrl, const uint8_t* bmp,
+                       size_t bmp_len);
     static const size_t kMinLenBmp = 1;
     static const size_t kMaxLenBmp = 251;
     static const size_t kFixedLenBody = 3;

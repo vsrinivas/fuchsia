@@ -6,6 +6,7 @@
 
 #include <wlan/common/logging.h>
 #include <wlan/mlme/ap/bss_interface.h>
+#include <wlan/mlme/ap/tim.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 
@@ -27,7 +28,7 @@ BeaconSender::~BeaconSender() {
 void BeaconSender::Start(BssInterface* bss) {
     ZX_DEBUG_ASSERT(!IsStarted());
     bss_ = bss;
-    WriteBeacon();
+    WriteBeacon(nullptr);
     debugbss("[bcn-sender] [%s] started sending Beacons\n", bss_->bssid().ToString().c_str());
 }
 
@@ -43,7 +44,12 @@ bool BeaconSender::IsStarted() {
     return bss_ != nullptr;
 }
 
-zx_status_t BeaconSender::WriteBeacon() {
+zx_status_t BeaconSender::UpdateBeacon(const TrafficIndicationMap& tim) {
+    debugfn();
+    return WriteBeacon(&tim);
+}
+
+zx_status_t BeaconSender::WriteBeacon(const TrafficIndicationMap* tim) {
     debugfn();
     ZX_DEBUG_ASSERT(IsStarted());
     if (!IsStarted()) { return ZX_ERR_BAD_STATE; }
@@ -91,7 +97,27 @@ zx_status_t BeaconSender::WriteBeacon() {
         return ZX_ERR_IO;
     }
 
-    // TODO(hahnr): Write TIM.
+    if (tim) {
+        size_t bmp_len;
+        uint8_t bmp_offset;
+        auto status = tim->WritePartialVirtualBitmap(pvb_, sizeof(pvb_), &bmp_len, &bmp_offset);
+        if (status != ZX_OK) {
+            errorf("[bcn-sender] [%s] could not write Partial Virtual Bitmap: %d\n",
+                   bssid.ToString().c_str(), status);
+            return status;
+        }
+
+        // TODO(NET-579): Add support for DTIM count. For now always send DTIMs with no BU.
+        uint8_t dtim_count = 0;
+        uint8_t dtim_period = req_->dtim_period;
+        BitmapControl bmp_ctrl;
+        bmp_ctrl.set_offset(bmp_offset);
+        // TODO(NET-579): Write group traffic indication to bitmap control.
+        if (!w.write<TimElement>(dtim_count, dtim_period, bmp_ctrl, pvb_, bmp_len)) {
+            errorf("[bcn-sender] [%s] could not write TIM element\n", bssid.ToString().c_str());
+            return ZX_ERR_IO;
+        }
+    }
 
     // Rates (in Mbps): 24, 36, 48, 54
     std::vector<uint8_t> ext_rates = {0x30, 0x48, 0x60, 0x6c};

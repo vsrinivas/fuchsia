@@ -13,6 +13,7 @@
 namespace wlan {
 
 class BssInterface;
+class TrafficIndicationMap;
 
 // Configures the driver to send Beacon frames periodically.
 class BeaconSender {
@@ -22,14 +23,18 @@ class BeaconSender {
 
     void Start(BssInterface* bss);
     void Stop();
+    zx_status_t UpdateBeacon(const TrafficIndicationMap& tim);
 
    private:
-    zx_status_t WriteBeacon();
+    zx_status_t WriteBeacon(const TrafficIndicationMap* tim);
     bool IsStarted();
 
     DeviceInterface* const device_;
     StartRequestPtr req_;
     BssInterface* bss_;
+    // Buffer to write the Partial Virtual Bitmap to which was derived from a Traffic Indication
+    // Map.
+    uint8_t pvb_[TimElement::kMaxLenBmp];
 };
 
 }  // namespace wlan

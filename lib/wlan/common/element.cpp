@@ -95,10 +95,10 @@ bool CfParamSetElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t
 }
 
 bool TimElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t dtim_count,
-                        uint8_t dtim_period, BitmapControl bmp_ctrl,
-                        const std::vector<uint8_t>& bmp) {
-    if (bmp.size() > kMaxLen) return false;
-    size_t elem_size = sizeof(TimElement) + bmp.size();
+                        uint8_t dtim_period, BitmapControl bmp_ctrl, const uint8_t* bmp,
+                        size_t bmp_len) {
+    if (bmp_len > kMaxLenBmp) return false;
+    size_t elem_size = sizeof(TimElement) + bmp_len;
     if (elem_size > len) return false;
 
     auto elem = reinterpret_cast<TimElement*>(buf);
@@ -107,7 +107,7 @@ bool TimElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t dtim_c
     elem->dtim_count = dtim_count;
     elem->dtim_period = dtim_period;
     elem->bmp_ctrl = bmp_ctrl;
-    std::copy(bmp.begin(), bmp.end(), elem->bmp);
+    memcpy(elem->bmp, bmp, bmp_len);
     *actual = elem_size;
     return true;
 }

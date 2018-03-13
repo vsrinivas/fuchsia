@@ -120,6 +120,7 @@ void InfraBss::HandleClientBuChange(const common::MacAddr& client, size_t bu_cou
     }
 
     tim_.SetTrafficIndication(aid, bu_count > 0);
+    bcn_sender_->UpdateBeacon(tim_);
 }
 
 zx_status_t InfraBss::AssignAid(const common::MacAddr& client, aid_t* out_aid) {
@@ -144,6 +145,7 @@ zx_status_t InfraBss::ReleaseAid(const common::MacAddr& client) {
     }
 
     tim_.SetTrafficIndication(aid, false);
+    bcn_sender_->UpdateBeacon(tim_);
     return clients_.ReleaseAid(client);
 }
 

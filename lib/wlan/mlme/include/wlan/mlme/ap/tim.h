@@ -22,7 +22,7 @@ class TrafficIndicationMap {
 
     // Write a Partial Virtual Bitmap into the given buffer.
     zx_status_t WritePartialVirtualBitmap(uint8_t* buf, size_t buf_len, size_t* bitmap_len,
-                                          uint16_t* bitmap_offset);
+                                          uint8_t* bitmap_offset) const;
 
    private:
     // N1 and N2 specify the start and end offsets of a range of AIDs which have buffered traffic.
@@ -30,8 +30,8 @@ class TrafficIndicationMap {
     // N2 is the smallest number such that AIDs from (N2 + 1) * 8 to 2007 have no buffered traffic.
     // These offsets are used to compute a Partial Virtual Bitmap.
     // See IEEE 802.11-2016, 9.4.2.6.
-    size_t N1();
-    size_t N2();
+    size_t N1() const;
+    size_t N2() const;
 
     bitmap::RawBitmapGeneric<bitmap::FixedStorage<kMaxBssClients>> aid_bitmap_;
 };

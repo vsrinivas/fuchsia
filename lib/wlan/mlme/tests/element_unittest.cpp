@@ -211,7 +211,8 @@ TEST_F(Elements, Tim) {
     BitmapControl bmp_ctrl = BitmapControl();
     bmp_ctrl.set_group_traffic_ind(1);
     bmp_ctrl.set_offset(7);
-    EXPECT_TRUE(TimElement::Create(buf_, sizeof(buf_), &actual_, 1, 2, bmp_ctrl, bmp));
+    EXPECT_TRUE(
+        TimElement::Create(buf_, sizeof(buf_), &actual_, 1, 2, bmp_ctrl, bmp.data(), bmp.size()));
     EXPECT_EQ(sizeof(TimElement) + bmp.size(), actual_);
 
     auto element = FromBytes<TimElement>(buf_, sizeof(buf_));
@@ -235,7 +236,8 @@ TEST_F(Elements, TimBufferedTraffic) {
     BitmapControl bmp_ctrl = BitmapControl();
     bmp_ctrl.set_group_traffic_ind(0);
     bmp_ctrl.set_offset(0);
-    EXPECT_TRUE(TimElement::Create(buf_, sizeof(buf_), &actual_, 1, 2, bmp_ctrl, bmp));
+    EXPECT_TRUE(
+        TimElement::Create(buf_, sizeof(buf_), &actual_, 1, 2, bmp_ctrl, bmp.data(), bmp.size()));
     EXPECT_EQ(sizeof(TimElement) + bmp.size(), actual_);
 
     auto element = FromBytes<TimElement>(buf_, sizeof(buf_));
@@ -255,7 +257,8 @@ TEST_F(Elements, TimPartialBitmapBufferedTraffic) {
     BitmapControl bmp_ctrl = BitmapControl();
     bmp_ctrl.set_group_traffic_ind(0);
     bmp_ctrl.set_offset(2);  // Skip first 32 aids
-    EXPECT_TRUE(TimElement::Create(buf_, sizeof(buf_), &actual_, 1, 2, bmp_ctrl, bmp));
+    EXPECT_TRUE(
+        TimElement::Create(buf_, sizeof(buf_), &actual_, 1, 2, bmp_ctrl, bmp.data(), bmp.size()));
 
     auto element = FromBytes<TimElement>(buf_, sizeof(buf_));
     ASSERT_NE(nullptr, element);
