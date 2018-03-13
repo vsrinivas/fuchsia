@@ -26,6 +26,7 @@ extern uint8_t _gdt[];
 static constexpr uint32_t kInterruptInfoValid = 1u << 31;
 static constexpr uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 static constexpr uint32_t kInterruptTypeHardwareException = 3u << 8;
+static constexpr uint32_t kInterruptTypeSoftwareException = 6u << 8;
 static constexpr uint16_t kBaseProcessorVpid = 1;
 
 static zx_status_t vmptrld(paddr_t pa) {
@@ -126,8 +127,14 @@ static bool has_error_code(uint32_t vector) {
 void AutoVmcs::IssueInterrupt(uint32_t vector) {
     DEBUG_ASSERT(vmcs_address_ != 0);
     uint32_t interrupt_info = kInterruptInfoValid | (vector & UINT8_MAX);
-    if (vector <= X86_INT_MAX_INTEL_DEFINED)
+    if (vector == X86_INT_BREAKPOINT || vector == X86_INT_OVERFLOW) {
+        // From Volume 3, Section 24.8.3. A VMM should use type hardware exception for all
+        // exceptions other than breakpoints and overflows, which should be software exceptions.
+        interrupt_info |= kInterruptTypeSoftwareException;
+    } else if (vector < X86_INT_PLATFORM_BASE) {
+        // From Volume 3, Section 6.15. Vectors from 0 to 32 (X86_INT_PLATFORM_BASE) are exceptions.
         interrupt_info |= kInterruptTypeHardwareException;
+    }
     if (has_error_code(vector)) {
         interrupt_info |= kInterruptInfoDeliverErrorCode;
         Write(VmcsField32::ENTRY_EXCEPTION_ERROR_CODE, 0);
@@ -675,10 +682,8 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
         return status == ZX_ERR_NOT_FOUND ? ZX_OK : status;
     }
 
-    if (vector <= X86_INT_MAX_INTEL_DEFINED ||
-        vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) {
-        // If the vector is non-maskable or interrupts are enabled, we inject
-        // an interrupt.
+    if (vector < X86_INT_PLATFORM_BASE || vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) {
+        // If the vector is non-maskable or interrupts are enabled, we inject an interrupt.
         vmcs->IssueInterrupt(vector);
     } else {
         local_apic_state->interrupt_tracker.Track(vector);

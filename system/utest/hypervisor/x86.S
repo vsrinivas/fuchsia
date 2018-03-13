@@ -18,7 +18,7 @@
     mov $GUEST_ENTRY + 0x1000, %rsp
     jmp end_of_\start
 
-int0_for_\start:
+int32_for_\start:
     movq $0, (EXIT_TEST_ADDR)
 
 .align 8
@@ -38,7 +38,8 @@ gdtr_for_\start:
 
 .align 8
 idt_for_\start:
-    .2byte INTERRUPT_ADDR(\start, int0_for_\start)  // Offset 15:00
+    .fill 64, 8, 0                                  // 32 null entries
+    .2byte INTERRUPT_ADDR(\start, int32_for_\start) // Offset 15:00
     .2byte CODE_64_SELECTOR                         // Segment selector
     .byte  0                                        // IST(000)
     .byte  0b10001110                               // P(1) DPL(00) 0 Type(1110)

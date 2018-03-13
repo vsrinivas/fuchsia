@@ -131,8 +131,8 @@ static bool setup_and_interrupt(test_t* test, const char* start, const char* end
     thrd_t thread;
     int ret = thrd_create(&thread, [](void* ctx) -> int {
         test_t* test = static_cast<test_t*>(ctx);
-        while (zx_vcpu_interrupt(test->vcpu, 0) == ZX_OK) {}
-        return thrd_success;
+        // Inject an interrupt with vector 32, the first user defined interrupt vector.
+        return zx_vcpu_interrupt(test->vcpu, 32) == ZX_OK ? thrd_success : thrd_error;
     },
                           test);
     ASSERT_EQ(ret, thrd_success);
