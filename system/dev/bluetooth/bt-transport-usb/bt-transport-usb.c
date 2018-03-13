@@ -143,7 +143,7 @@ static void hci_event_complete(usb_request_t* req, void* cookie) {
                         printf("bt-transport-usb: hci_event_complete failed to write: %s\n", zx_status_get_string(status));
                     }
                 }
-                snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_RECEIVED, buffer, length);
+                snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_EVT, true), buffer, length);
                 goto out;
             }
         }
@@ -171,7 +171,7 @@ static void hci_event_complete(usb_request_t* req, void* cookie) {
                 printf("bt-transport-usb: failed to write: %s\n", zx_status_get_string(status));
             }
 
-            snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_RECEIVED, hci->event_buffer, packet_size);
+            snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_EVT, true), hci->event_buffer, packet_size);
 
             uint32_t remaining = hci->event_buffer_offset - packet_size;
             memmove(hci->event_buffer, hci->event_buffer + packet_size, remaining);
@@ -211,7 +211,7 @@ static void hci_acl_read_complete(usb_request_t* req, void* cookie) {
 
         // If the snoop channel is open then try to write the packet even if acl_channel was closed.
         snoop_channel_write_locked(
-            hci, BT_HCI_SNOOP_FLAG_DATA | BT_HCI_SNOOP_FLAG_RECEIVED, buffer, req->response.actual);
+            hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_ACL, true), buffer, req->response.actual);
     }
 
     list_add_head(&hci->free_acl_read_reqs, &req->node);
@@ -237,7 +237,7 @@ static void hci_acl_write_complete(usb_request_t* req, void* cookie) {
         }
 
         snoop_channel_write_locked(
-            hci, BT_HCI_SNOOP_FLAG_DATA | BT_HCI_SNOOP_FLAG_SENT, buffer, req->response.actual);
+            hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_ACL, false), buffer, req->response.actual);
     }
 
     mtx_unlock(&hci->mutex);
@@ -297,7 +297,7 @@ static void hci_handle_cmd_read_events(hci_t* hci, zx_wait_item_t* cmd_item) {
         }
 
         mtx_lock(&hci->mutex);
-        snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_SENT, buf, length);
+        snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_CMD, false), buf, length);
         mtx_unlock(&hci->mutex);
     }
 

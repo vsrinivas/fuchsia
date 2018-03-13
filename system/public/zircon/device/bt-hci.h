@@ -13,9 +13,18 @@
 __BEGIN_CDECLS
 
 // Potential values for the flags bitfield in a snoop channel packet.
-#define BT_HCI_SNOOP_FLAG_SENT        0x00  // Host -> Controller
-#define BT_HCI_SNOOP_FLAG_RECEIVED    0x01  // Controller -> Host
-#define BT_HCI_SNOOP_FLAG_DATA        0x02  // Data packet
+typedef enum {
+  BT_HCI_SNOOP_TYPE_CMD = 0,
+  BT_HCI_SNOOP_TYPE_EVT = 1,
+  BT_HCI_SNOOP_TYPE_ACL = 2,
+  BT_HCI_SNOOP_TYPE_SCO = 3,
+} bt_hci_snoop_type_t;
+
+#define BT_HCI_SNOOP_FLAG_RECV 0x04 // Host -> Controller
+
+inline uint8_t bt_hci_snoop_flags(bt_hci_snoop_type_t type, bool is_received) {
+  return (uint8_t)(type | (is_received ? BT_HCI_SNOOP_FLAG_RECV : 0x00));
+}
 
 // Get a channel handle for a two-way HCI command channel for sending and
 // receiving HCI command and event packets, respectively.

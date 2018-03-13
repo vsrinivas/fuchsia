@@ -169,7 +169,7 @@ static void hci_handle_cmd_read_events(hci_t* hci, zx_wait_item_t* item) {
         }
 
         mtx_lock(&hci->mutex);
-        snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_SENT, buf + 1, length - 1);
+        snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_CMD, false), buf + 1, length - 1);
         mtx_unlock(&hci->mutex);
     }
 
@@ -202,7 +202,7 @@ static void hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* item) {
             goto fail;
         }
         snoop_channel_write_locked(
-            hci, BT_HCI_SNOOP_FLAG_DATA | BT_HCI_SNOOP_FLAG_SENT, buf + 1, length - 1);
+            hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_ACL, false), buf + 1, length - 1);
     }
 
     return;
@@ -267,7 +267,7 @@ static void hci_handle_uart_read_events(hci_t* hci, zx_wait_item_t* item) {
                         zxlogf(ERROR, "bt-transport-uart: failed to write event packet: %s\n",
                                zx_status_get_string(status));
                     }
-                    snoop_channel_write_locked(hci, BT_HCI_SNOOP_FLAG_RECEIVED,
+                    snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_EVT, true),
                                                &hci->event_buffer[1], packet_length - 1);
 
                     // reset buffer
@@ -306,7 +306,7 @@ static void hci_handle_uart_read_events(hci_t* hci, zx_wait_item_t* item) {
                     // If the snoop channel is open then try to write the packet
                     // even if acl_channel was closed.
                     snoop_channel_write_locked(hci,
-                                               BT_HCI_SNOOP_FLAG_DATA | BT_HCI_SNOOP_FLAG_RECEIVED,
+                                               bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_ACL, true),
                                                &hci->acl_buffer[1], packet_length - 1);
 
                     // reset buffer
