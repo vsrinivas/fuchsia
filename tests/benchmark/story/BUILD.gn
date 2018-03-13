@@ -25,6 +25,7 @@ executable("modular_benchmark_story_module") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/story/fidl",
   ]
 }
 
@@ -72,6 +73,7 @@ source_set("tracing_waiter") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
   ]
 }

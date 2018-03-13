@@ -25,6 +25,7 @@ executable("remote_test_module") {
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/lifecycle/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/remote/fidl",
     "//peridot/public/lib/story/fidl",

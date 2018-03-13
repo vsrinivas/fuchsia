@@ -23,6 +23,7 @@ executable("clipboard_test_module") {
     "//garnet/public/lib/test_runner/fidl",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/clipboard/fidl",
+    "//peridot/public/lib/component/fidl",
     "//peridot/lib/testing",
   ]
 }

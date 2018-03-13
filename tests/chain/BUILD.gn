@@ -31,6 +31,8 @@ executable("chain_test_user_shell") {
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib/daisy/fidl",
+    "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/user/fidl",
   ]
@@ -48,6 +50,7 @@ executable("chain_test_module") {
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
   ]
@@ -65,6 +68,7 @@ executable("chain_test_child_module") {
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/module/fidl",
     "//peridot/public/lib/story/fidl",
   ]
