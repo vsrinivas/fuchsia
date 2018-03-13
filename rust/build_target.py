@@ -24,13 +24,6 @@ def create_base_directory(file):
         # Already existed.
         pass
 
-# Returns the list of native libs inherited from the given dependencies.
-def extract_native_libs(dependency_infos):
-    all_libs = itertools.chain.from_iterable(map(lambda i: i["native_libs"],
-                                                 dependency_infos))
-    return list(set(all_libs))
-
-
 # Fixes the target path in the given depfile.
 def fix_depfile(depfile_path, base_path):
     with open(depfile_path, "r+") as depfile:
@@ -107,9 +100,6 @@ def main():
     parser.add_argument("--vendor-directory",
                         help="Path to the vendored crates",
                         required=True)
-    parser.add_argument("--deps",
-                        help="List of dependencies",
-                        nargs="*")
     parser.add_argument("--shared-libs-root",
                         help="Path to the location of shared libraries",
                         required=True)
@@ -125,7 +115,7 @@ def main():
         env["CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER"] = clang_c_compiler
         env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER"] = clang_c_compiler
         env["CARGO_TARGET_%s_LINKER" % args.target_triple.replace("-", "_").upper()] = clang_c_compiler
-        env["CARGO_TARGET_%s_RUSTFLAGS" % args.target_triple.replace("-", "_").upper()] = "-Clink-arg=--target=" + args.target_triple + " -Clink-arg=--sysroot=" + args.sysroot
+        env["CARGO_TARGET_%s_RUSTFLAGS" % args.target_triple.replace("-", "_").upper()] = "-Clink-arg=--target=" + args.target_triple + " -Clink-arg=--sysroot=" + args.sysroot + " -Lnative=" + args.shared_libs_root
     env["CARGO_TARGET_DIR"] = args.out_dir
     env["RUSTC"] = args.rustc
     env["RUST_BACKTRACE"] = "1"
@@ -144,7 +134,6 @@ def main():
     with open(original_manifest, "r") as manifest:
         config = pytoml.load(manifest)
         package_name = config["package"]["name"]
-        default_name = package_name.replace("-", "_")
 
     call_args = [
         args.cargo,
