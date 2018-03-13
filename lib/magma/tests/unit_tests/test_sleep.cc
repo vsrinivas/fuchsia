@@ -17,7 +17,7 @@ public:
 
         EXPECT_GE(elapsed.count(), ms);
         // Accept some delay due to scheduling, etc.
-        EXPECT_LT(elapsed.count(), ms + 10);
+        EXPECT_LT(elapsed.count(), ms + 200);
     }
 };
 
