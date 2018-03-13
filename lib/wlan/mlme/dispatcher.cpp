@@ -52,13 +52,11 @@ zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
     finspect("Packet: %s\n", debug::Describe(*packet).c_str());
 
     // If there is no active MLME, block all packets but service ones.
-    // MLME-JOIN.request and MLME-START.request implicitly select a mode and initialize the MLME.
-    // DEVICE_QUERY.request is used to obtain device capabilities.
+    // MLME-JOIN.request and MLME-START.request implicitly select a mode and initialize the
+    // MLME. DEVICE_QUERY.request is used to obtain device capabilities.
+
     auto service_msg = (packet->peer() == Packet::Peer::kService);
-    if (mlme_ == nullptr && !service_msg) {
-        errorf("received packet with no active MLME\n");
-        return ZX_OK;
-    }
+    if (mlme_ == nullptr && !service_msg) { return ZX_OK; }
 
     zx_status_t status = ZX_OK;
     switch (packet->peer()) {
