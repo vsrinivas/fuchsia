@@ -32,6 +32,8 @@ private:
     AddressManager* manager_;
 };
 
+static constexpr uint64_t kMemoryAttributes = 0x8848u;
+
 TEST(AddressManager, MultipleAtoms)
 {
     std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
@@ -51,14 +53,14 @@ TEST(AddressManager, MultipleAtoms)
     EXPECT_EQ(1u, atom2->address_slot_mapping()->slot_number());
 
     registers::AsRegisters as_regs(0);
-    EXPECT_EQ(0x8d4du, as_regs.MemoryAttributes().ReadFrom(reg_io.get()).reg_value());
+    EXPECT_EQ(kMemoryAttributes, as_regs.MemoryAttributes().ReadFrom(reg_io.get()).reg_value());
     uint64_t translation_table_entry1 =
         connection1->const_address_space()->translation_table_entry();
     EXPECT_EQ(translation_table_entry1,
               as_regs.TranslationTable().ReadFrom(reg_io.get()).reg_value());
 
     registers::AsRegisters as_regs1(1);
-    EXPECT_EQ(0x8d4du, as_regs1.MemoryAttributes().ReadFrom(reg_io.get()).reg_value());
+    EXPECT_EQ(kMemoryAttributes, as_regs1.MemoryAttributes().ReadFrom(reg_io.get()).reg_value());
     EXPECT_EQ(connection2->const_address_space()->translation_table_entry(),
               as_regs1.TranslationTable().ReadFrom(reg_io.get()).reg_value());
 
@@ -68,7 +70,7 @@ TEST(AddressManager, MultipleAtoms)
               as_regs.TranslationTable().ReadFrom(reg_io.get()).reg_value());
 
     address_manager.AtomFinished(atom1.get());
-    EXPECT_EQ(0x8d4du, as_regs.MemoryAttributes().ReadFrom(reg_io.get()).reg_value());
+    EXPECT_EQ(kMemoryAttributes, as_regs.MemoryAttributes().ReadFrom(reg_io.get()).reg_value());
     EXPECT_EQ(0u, as_regs.TranslationTable().ReadFrom(reg_io.get()).reg_value() & 0xff);
 
     EXPECT_FALSE(address_manager.AssignAddressSpace(atom1.get()));
@@ -121,7 +123,7 @@ TEST(AddressManager, ReuseSlot)
     }
 
     registers::AsRegisters as_regs(2);
-    EXPECT_EQ(0x8d4du, as_regs.MemoryAttributes().ReadFrom(reg_io.get()).reg_value());
+    EXPECT_EQ(kMemoryAttributes, as_regs.MemoryAttributes().ReadFrom(reg_io.get()).reg_value());
     uint64_t translation_table_entry =
         connections[2]->const_address_space()->translation_table_entry();
     EXPECT_EQ(translation_table_entry,
