@@ -50,10 +50,6 @@ void EmitUint32(std::ostream* file, uint32_t value) {
     *file << value;
 }
 
-void EmitUint64(std::ostream* file, uint64_t value) {
-    *file << value;
-}
-
 void EmitNewline(std::ostream* file) {
     *file << "\n";
 }
@@ -174,8 +170,8 @@ void JSONGenerator::Generate(SourceLocation value) {
     EmitString(&json_file_, value.data());
 }
 
-void JSONGenerator::Generate(uint64_t value) {
-    EmitUint64(&json_file_, value);
+void JSONGenerator::Generate(uint32_t value) {
+    EmitUint32(&json_file_, value);
 }
 
 void JSONGenerator::Generate(types::HandleSubtype value) {

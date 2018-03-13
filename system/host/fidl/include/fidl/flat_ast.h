@@ -58,7 +58,7 @@ private:
     IntType value_;
 };
 
-using Size = IntConstant<uint64_t>;
+using Size = IntConstant<uint32_t>;
 
 // TODO(TO-701) Handle multipart names.
 struct Name {
@@ -123,19 +123,19 @@ struct Type {
         Identifier,
     };
 
-    explicit Type(Kind kind, uint64_t size)
+    explicit Type(Kind kind, uint32_t size)
         : kind(kind), size(size) {}
 
     const Kind kind;
     // Set at construction time for most Types. Identifier types get
     // this set later, during compilation.
-    uint64_t size;
+    uint32_t size;
 
     bool operator<(const Type& other) const;
 };
 
 struct ArrayType : public Type {
-    ArrayType(uint64_t size, std::unique_ptr<Type> element_type, Size element_count)
+    ArrayType(uint32_t size, std::unique_ptr<Type> element_type, Size element_count)
         : Type(Kind::Array, size),
           element_type(std::move(element_type)),
           element_count(std::move(element_count)) {}
@@ -214,7 +214,7 @@ struct RequestHandleType : public Type {
 };
 
 struct PrimitiveType : public Type {
-    static uint64_t SubtypeSize(types::PrimitiveSubtype subtype) {
+    static uint32_t SubtypeSize(types::PrimitiveSubtype subtype) {
         switch (subtype) {
         case types::PrimitiveSubtype::Bool:
         case types::PrimitiveSubtype::Int8:

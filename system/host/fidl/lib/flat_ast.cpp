@@ -46,7 +46,7 @@ constexpr TypeShape kFloat32TypeShape = TypeShape(4u, 4u);
 constexpr TypeShape kFloat64TypeShape = TypeShape(8u, 8u);
 constexpr TypeShape kPointerTypeShape = TypeShape(8u, 8u);
 
-uint64_t AlignTo(uint64_t size, uint64_t alignment) {
+uint32_t AlignTo(uint32_t size, uint32_t alignment) {
     auto mask = alignment - 1;
     size += mask;
     size &= ~mask;
@@ -54,8 +54,8 @@ uint64_t AlignTo(uint64_t size, uint64_t alignment) {
 }
 
 TypeShape CStructTypeShape(std::vector<FieldShape*>* fields) {
-    uint64_t size = 0u;
-    uint64_t alignment = 1u;
+    uint32_t size = 0u;
+    uint32_t alignment = 1u;
 
     for (FieldShape* field : *fields) {
         field->SetOffset(size);
@@ -69,8 +69,8 @@ TypeShape CStructTypeShape(std::vector<FieldShape*>* fields) {
 }
 
 TypeShape CUnionTypeShape(const std::vector<flat::Union::Member>& members) {
-    uint64_t size = 0u;
-    uint64_t alignment = 1u;
+    uint32_t size = 0u;
+    uint32_t alignment = 1u;
     for (const auto& member : members) {
         const auto& fieldshape = member.fieldshape;
         size = std::max(size, fieldshape.Size());
@@ -85,7 +85,7 @@ TypeShape FidlStructTypeShape(std::vector<FieldShape*>* fields) {
     return CStructTypeShape(fields);
 }
 
-TypeShape ArrayTypeShape(TypeShape element, uint64_t count) {
+TypeShape ArrayTypeShape(TypeShape element, uint32_t count) {
     return TypeShape(element.Size() * count, element.Alignment());
 }
 
@@ -141,7 +141,7 @@ TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
 // so on.
 
 bool Library::ParseSize(std::unique_ptr<raw::Constant> raw_constant, Size* out_size) {
-    uint64_t value;
+    uint32_t value;
     if (!ParseIntegerConstant(raw_constant.get(), &value)) {
         *out_size = Size();
         return false;
@@ -167,7 +167,7 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
         if (!ParseSize(std::move(array_type->element_count), &element_count))
             return false;
         // TODO(kulakowski) Overflow checking.
-        uint64_t size = element_count.Value() * element_type->size;
+        uint32_t size = element_count.Value() * element_type->size;
         *out_type = std::make_unique<ArrayType>(size, std::move(element_type), std::move(element_count));
         break;
     }
