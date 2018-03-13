@@ -251,11 +251,63 @@ template("bootdata_platform") {
              "-o",
              rebase_path(output_file, root_build_dir),
              "--vid",
-             invoker.vid,
+             "${invoker.vid}",  # Turns integer into string.
              "--pid",
-             invoker.pid,
+             "${invoker.pid}",  # Turns integer into string.
              "--board",
              invoker.board,
            ]
+  }
+}
+
+# Template for compiling Zircon MDI files into BOOTDATA format, via `mdigen`.
+#
+# Parameters
+#
+#   output_name (optional, default: target_name)
+#   output_extension (optional, default: "bin")
+#   deps (usually required)
+#   visibility (optional)
+#   testonly (optional)
+#       Same as for `bootdata`, which see.
+#
+#   sources (required)
+#       [list of files] Source files, usually ending in `.mdi`.
+#
+template("bootdata_mdi") {
+  assert(defined(invoker.sources), "sources required for $target_name")
+
+  if (defined(invoker.output_name)) {
+    output_file = invoker.output_name
+  } else {
+    output_file = target_name
+  }
+
+  if (defined(invoker.output_extension)) {
+    if (invoker.output_extension != "") {
+      output_file += ".${invoker.output_extension}"
+    }
+  } else {
+    output_file += ".bin"
+  }
+
+  output_file = "$root_out_dir/$output_file"
+
+  zircon_tool_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "sources",
+                             "visibility",
+                             "testonly",
+                           ])
+    tool = "mdigen"
+    outputs = [
+      output_file,
+    ]
+    args = [
+             "-o",
+             rebase_path(output_file, root_build_dir),
+           ] + rebase_path(sources, root_build_dir)
   }
 }
