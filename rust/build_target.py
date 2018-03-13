@@ -24,18 +24,6 @@ def create_base_directory(file):
         # Already existed.
         pass
 
-# Fixes the target path in the given depfile.
-def fix_depfile(depfile_path, base_path):
-    with open(depfile_path, "r+") as depfile:
-        content = depfile.read()
-        content_split = content.split(': ', 1)
-        target_path = content_split[0]
-        adjusted_target_path = os.path.relpath(target_path, start=base_path)
-        new_content = "%s: %s" % (adjusted_target_path, content_split[1])
-        depfile.seek(0)
-        depfile.write(new_content)
-        depfile.truncate()
-
 
 # Runs the given command and returns its return code and output.
 def run_command(args, env, cwd):
@@ -117,6 +105,7 @@ def main():
         env["CARGO_TARGET_%s_LINKER" % args.target_triple.replace("-", "_").upper()] = clang_c_compiler
         env["CARGO_TARGET_%s_RUSTFLAGS" % args.target_triple.replace("-", "_").upper()] = "-Clink-arg=--target=" + args.target_triple + " -Clink-arg=--sysroot=" + args.sysroot + " -Lnative=" + args.shared_libs_root
     env["CARGO_TARGET_DIR"] = args.out_dir
+    env["CARGO_BUILD_DEP_INFO_BASEDIR"] = args.root_out_dir
     env["RUSTC"] = args.rustc
     env["RUST_BACKTRACE"] = "1"
     env["FUCHSIA_GEN_ROOT"] = args.root_gen_dir
@@ -164,7 +153,6 @@ def main():
     build_type = "release" if args.release else "debug"
     depfile_path = os.path.join(args.out_dir, args.target_triple, build_type,
                                 "%s.d" % output_name)
-    fix_depfile(depfile_path, args.root_out_dir)
 
     if args.with_tests:
         test_args = list(call_args)
