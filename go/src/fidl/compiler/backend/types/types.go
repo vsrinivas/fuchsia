@@ -267,7 +267,7 @@ type StructMember struct {
 	Type              Type       `json:"type"`
 	Name              Identifier `json:"name"`
 	Offset            int        `json:"offset"`
-	MaybeDefaultValue Constant   `json:"maybe_default_value,omitempty"`
+	MaybeDefaultValue *Constant  `json:"maybe_default_value,omitempty"`
 }
 
 // Interface represents the declaration of a FIDL2 interface.

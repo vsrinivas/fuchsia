@@ -54,10 +54,11 @@ type Struct struct {
 }
 
 type StructMember struct {
-	Type     Type
-	Name     string
-	Offset   int
-	typeExpr string
+	Type         Type
+	Name         string
+	DefaultValue string
+	Offset       int
+	typeExpr     string
 }
 
 type Interface struct {
@@ -303,7 +304,7 @@ func (c *compiler) compileLiteral(val types.Literal) string {
 	switch val.Kind {
 	case types.StringLiteral:
 		// TODO(abarth): Escape more characters (e.g., newline).
-		return fmt.Sprintf("\"%q\"", val.Value)
+		return fmt.Sprintf("%q", val.Value)
 	case types.NumericLiteral:
 		// TODO(abarth): Values larger than max int64 need to be encoded in hex.
 		return val.Value
@@ -499,12 +500,18 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 }
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
+	defaultValue := ""
+	if val.MaybeDefaultValue != nil {
+		defaultValue = c.compileConstant(*val.MaybeDefaultValue)
+	}
+
 	t := c.compileType(val.Type)
 	typeStr := fmt.Sprintf("type: %s", t.typeExpr)
 	offsetStr := fmt.Sprintf("offset: %v", val.Offset)
 	return StructMember{
 		t,
 		changeIfReserved(val.Name),
+		defaultValue,
 		val.Offset,
 		fmt.Sprintf("const $fidl.MemberType<%s>(%s, %s)", t.Decl, typeStr, offsetStr),
 	}

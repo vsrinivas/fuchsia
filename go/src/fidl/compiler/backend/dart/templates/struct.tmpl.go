@@ -9,7 +9,8 @@ const Struct = `
 class {{ .Name }} extends $fidl.Struct {
   const {{ .Name }}({
 {{- range .Members }}
-    {{ if not .Type.Nullable }}@required {{ end }}this.{{ .Name }},
+    {{ if not .Type.Nullable }}{{ if not .DefaultValue }}@required {{ end }}{{ end -}}
+    this.{{ .Name }}{{ if .DefaultValue }}: {{ .DefaultValue }}{{ end }},
 {{- end }}
   });
 

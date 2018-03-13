@@ -69,9 +69,10 @@ type Struct struct {
 }
 
 type StructMember struct {
-	Type        Type
-	Name        string
-	Offset      int
+	Type         Type
+	Name         string
+	DefaultValue string
+	Offset       int
 }
 
 type Interface struct {
@@ -528,9 +529,15 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 }
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
+	defaultValue := ""
+	if val.MaybeDefaultValue != nil {
+		defaultValue = c.compileConstant(*val.MaybeDefaultValue)
+	}
+
 	return StructMember{
 		c.compileType(val.Type),
 		changeIfReserved(val.Name),
+		defaultValue,
 		val.Offset,
 	}
 }

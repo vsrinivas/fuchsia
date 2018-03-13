@@ -21,7 +21,7 @@ class {{ .Name }}  {
   {{ .Name }}& operator=(const {{ .Name }}&) = delete;
 
   {{- range .Members }}
-  {{ .Type.Decl }} {{ .Name }};
+  {{ .Type.Decl }} {{ .Name }}{{ if .DefaultValue }} = {{ .DefaultValue }}{{ end }};
   {{- end }}
 
   void Encode(::fidl::Encoder* encoder, size_t offset);
