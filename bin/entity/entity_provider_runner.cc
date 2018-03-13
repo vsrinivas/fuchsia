@@ -27,7 +27,7 @@ std::string EncodeEntityReference(const std::string& agent_url,
   std::vector<std::string> parts(3);
   parts[0] = kEntityReferencePrefix;
   parts[1] = StringEscape(agent_url, "/");
-  auto cookie_str = cookie.To<std::string>();
+  std::string cookie_str = cookie;
   parts[2] = StringEscape(cookie_str, "/");
   return fxl::JoinStrings(parts, "/");
 }
