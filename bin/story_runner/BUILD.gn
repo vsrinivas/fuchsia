@@ -77,6 +77,10 @@ source_set("story_runner") {
     "//peridot/public/lib/user/fidl:focus",
     "//peridot/public/lib/user_intelligence/fidl",
   ]
+
+  deps = [
+    "//peridot/public/lib/module_resolver/fidl",
+  ]
 }
 
 executable("dev_story_shell_bin") {

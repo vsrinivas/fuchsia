@@ -34,7 +34,12 @@ executable("bin") {
     "//peridot/lib/module_manifest_source:directory_source",
     "//peridot/lib/module_manifest_source:firebase_source",
     "//peridot/public/lib/app_driver/cpp:app_driver",
+    "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/entity/cpp:json",
+    "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/module_resolver/fidl",
+    "//peridot/public/lib/suggestion/fidl",
+    "//peridot/public/lib/user_intelligence/fidl",
   ]
 }
 
@@ -59,6 +64,7 @@ source_set("module_resolver_impl") {
     "//peridot/lib/module_manifest_source",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/context/cpp:context_helper",
+    "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/entity/cpp:json",
     "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/module_resolver/fidl",

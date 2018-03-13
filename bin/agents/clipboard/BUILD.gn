@@ -12,6 +12,7 @@ source_set("clipboard_sources") {
 
   deps = [
     "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/public/lib/clipboard/fidl",

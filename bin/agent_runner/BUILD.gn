@@ -34,6 +34,7 @@ source_set("agent_runner") {
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/ledger/fidl",
     "//peridot/public/lib/lifecycle/fidl",
     "//peridot/public/lib/user_intelligence/fidl",
@@ -88,6 +89,7 @@ source_set("public") {
     "//peridot/public/lib/agent/fidl/agent_controller",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/auth/fidl",
+    "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/ledger/fidl",
     "//peridot/public/lib/user_intelligence/fidl",
   ]

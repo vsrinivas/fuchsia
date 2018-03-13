@@ -20,6 +20,7 @@ source_set("entity") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util",
+    "//peridot/public/lib/agent/fidl/agent_controller",
     "//peridot/public/lib/entity/fidl",
   ]
 }

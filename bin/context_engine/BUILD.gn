@@ -25,6 +25,7 @@ executable("bin") {
     "//garnet/public/lib/fsl",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib/entity/fidl",
   ]
 }
 
@@ -107,6 +108,7 @@ source_set("context_repository_unittest") {
   deps = [
     ":context_repository",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
@@ -127,6 +129,8 @@ source_set("context_writer_impl") {
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/entity/cpp",
+    "//peridot/public/lib/entity/cpp:json",
+    "//peridot/public/lib/entity/fidl",
     "//peridot/public/lib/user_intelligence/fidl:scope",
     "//third_party/rapidjson",
   ]
