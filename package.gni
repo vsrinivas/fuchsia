@@ -340,13 +340,20 @@ template("package") {
           rebase_path(partial_package_manifest, root_build_dir),
           "--manifest",
           rebase_path(partial_archive_manifest, root_build_dir),
-          "--manifest",
-          rebase_path(system_manifest, root_build_dir),
         ]
         if (pkg.boot_firmware_image) {
           args += [
             "--manifest",
+            rebase_path(system_manifest, root_build_dir),
+            "--manifest",
             rebase_path(boot_manifest, root_build_dir),
+          ]
+        } else {
+          args += [
+            "--manifest",
+            rebase_path(boot_manifest, root_build_dir),
+            "--manifest",
+            rebase_path(system_manifest, root_build_dir),
           ]
         }
 
@@ -483,7 +490,9 @@ template("package") {
         }
 
         archiver_label = "//garnet/bin/far:bin($host_toolchain)"
-        deps = [ archiver_label ]
+        deps = [
+          archiver_label,
+        ]
 
         archiver_out_dir = get_label_info(archiver_label, "root_out_dir")
         far_path = "$archiver_out_dir/far"

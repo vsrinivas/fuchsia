@@ -472,12 +472,6 @@ class input_manifest_action(argparse.Action):
             inputs.append(input_manifest(file, cwd, groups, output_group))
 
 
-class optional_input_manifest_action(input_manifest_action):
-    def __init__(self, *args, **kwargs):
-        super(optional_input_manifest_action, self).__init__(*args, **kwargs)
-        self.optional = True
-
-
 class input_binary_action(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         binaries = getattr(namespace, self.dest, None)
@@ -515,9 +509,6 @@ shared libraries and the like.
                         help='"all" or comma-separated groups to include')
     parser.add_argument('--manifest', action=input_manifest_action,
                         help='Input manifest file (must exist)')
-    parser.add_argument('--optional-manifest', dest='manifest',
-                        action=optional_input_manifest_action,
-                        help='Input manifest file (if it exists)')
     parser.add_argument('--binary', action=input_binary_action, default=[],
                         help='Take matching binaries from auxiliary manifests')
     return parser.parse_args()

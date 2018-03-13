@@ -133,8 +133,7 @@ action("finalize_manifests") {
 
     sources += [ package_manifest ]
 
-    args += [ "--optional-manifest=" +
-              rebase_path(package_manifest, root_build_dir) ]
+    args += [ "--manifest=" + rebase_path(package_manifest, root_build_dir) ]
   }
 
   # Finally, everything that will go into the final /system manifest.
@@ -169,8 +168,7 @@ action("finalize_manifests") {
 
     sources += [ package_manifest ]
 
-    args += [ "--optional-manifest=" +
-              rebase_path(package_manifest, root_build_dir) ]
+    args += [ "--manifest=" + rebase_path(package_manifest, root_build_dir) ]
   }
 
   foreach(package, _result.packages) {
