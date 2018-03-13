@@ -10,6 +10,9 @@
 ## target must be reachable from the host and most already know the host's IP
 ## address.
 ##
+## See https://fuchsia.googlesource.com/docs/+/master/development/workflows/package_update.md
+## for more information about using this workflow.
+##
 ## optional arguments (must be first):
 ##   -d|--device         IP address of the target
 
