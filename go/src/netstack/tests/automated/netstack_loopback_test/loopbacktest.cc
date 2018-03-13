@@ -176,8 +176,8 @@ void NonBlockingAcceptWrite() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetStreamTest, NonBlockingAcceptWrite) {
-  for (int i = 0; i < kRepeatEach; i++) {
+TEST(NetStreamTest, DISABLED_NonBlockingAcceptWrite) {
+  for (int i = 0; i < 1; i++) {
     NonBlockingAcceptWrite();
   }
 }
@@ -622,10 +622,10 @@ void DatagramConnectWrite() {
   EXPECT_EQ(0, close(ntfyfd[1]));
 }
 
-TEST(NetDatagramTest, DatagramConnectWrite) {
-    for (int i = 0; i < kRepeatEach; i++) {
-      DatagramConnectWrite();
-    }
+TEST(NetDatagramTest, DISABLED_DatagramConnectWrite) {
+  for (int i = 0; i < 100000; i++) {
+    DatagramConnectWrite();
+  }
 }
 
 // NetDatagramTest.Datagram.PartialRecv
