@@ -592,6 +592,9 @@ Parser::ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
     if (!Ok())
         Fail();
 
+    if (members.empty())
+        return Fail();
+
     return std::make_unique<raw::EnumDeclaration>(std::move(attributes), std::move(identifier),
                                                   std::move(subtype), std::move(members));
 }

@@ -70,7 +70,7 @@ declaration = const-declaration | enum-declaration | interface-declaration |
 const-declaration = ( attribute-list ) , "const" , type , IDENTIFIER , "=" , constant ;
 
 enum-declaration = ( attribute-list ) , "enum" , IDENTIFIER , ( ":" , integer-type ) ,
-                   "{" , ( enum-member , ";" )* , "}" ;
+                   "{" , ( enum-member , ";" )+ , "}" ;
 
 enum-member = IDENTIFIER , ( "=" , enum-member-value ) ;
 

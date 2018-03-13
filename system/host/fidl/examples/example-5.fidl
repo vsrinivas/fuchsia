@@ -8,7 +8,9 @@ union NotAPoint {
     uint32 y;
     uint16 z;
 };
-enum Enum {};
+enum Enum {
+    x = 23;
+};
 enum Enum2 : uint64 {
     enum_0 = 0;
     enum_1 = 23;

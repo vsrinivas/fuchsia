@@ -270,15 +270,33 @@ struct strings {
     string:strings_size? nullable_size_1_s;
 };
 
-enum default_enum {};
-enum i8_enum : int8 {};
-enum i16_enum : int16 {};
-enum i32_enum : int32 {};
-enum i64_enum : int64 {};
-enum u8_enum : uint8 {};
-enum u16_enum : uint16 {};
-enum u32_enum : uint32 {};
-enum u64_enum : uint64 {};
+enum default_enum {
+    x = 23;
+};
+enum i8_enum : int8 {
+    x = 23;
+};
+enum i16_enum : int16 {
+    x = 23;
+};
+enum i32_enum : int32 {
+    x = 23;
+};
+enum i64_enum : int64 {
+    x = 23;
+};
+enum u8_enum : uint8 {
+    x = 23;
+};
+enum u16_enum : uint16 {
+    x = 23;
+};
+enum u32_enum : uint32 {
+    x = 23;
+};
+enum u64_enum : uint64 {
+    x = 23;
+};
 
 struct structs {
     this_is_a_struct s;

@@ -3,7 +3,9 @@ library example_4;
 struct Point {
     uint64 x;
 };
-enum Enum {};
+enum Enum {
+    x = 23;
+};
 interface Interface {
     23: func(bool x) -> ();
 };

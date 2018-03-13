@@ -201,6 +201,7 @@ struct Sprite {
 *   Discrete subset of named values chosen from an underlying integer primitive
     type.
 *   Not nullable.
+*   Enums must have at least one member.
 
 ##### Declaration
 
