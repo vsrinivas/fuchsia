@@ -58,8 +58,8 @@ class Device {
     // ddk device methods
     void Unbind();
     void Release();
-    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                        size_t out_len, size_t* out_actual);
+    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len,
+                      size_t* out_actual);
     void MacUnbind();
     void MacRelease();
 
@@ -117,8 +117,8 @@ class Device {
     zx_status_t AddMacDevice();
 
     zx_status_t PhyQuery(uint8_t* buf, size_t len, size_t* actual) const;
-    zx_status_t CreateIface(const void* in_buf, size_t in_len, void* out_buf,
-                            size_t out_len, size_t* out_actual);
+    zx_status_t CreateIface(const void* in_buf, size_t in_len, void* out_buf, size_t out_len,
+                            size_t* out_actual);
     zx_status_t DestroyIface(const void* in_buf, size_t in_len);
 
     // read and write general registers

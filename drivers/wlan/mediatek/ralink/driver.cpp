@@ -53,9 +53,7 @@ extern "C" zx_status_t ralink_bind(void* ctx, zx_device_t* device) {
 
     auto rtdev = new ralink::Device(device, usb, blkin_endpt, std::move(blkout_endpts));
     zx_status_t status = rtdev->Bind();
-    if (status != ZX_OK) {
-        delete rtdev;
-    }
+    if (status != ZX_OK) { delete rtdev; }
 
     return status;
 }

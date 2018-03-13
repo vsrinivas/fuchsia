@@ -91,8 +91,7 @@ static zx_protocol_device_t wlanphy_device_ops = {
     .get_size = nullptr,
     .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                 size_t out_len, size_t* out_actual) -> zx_status_t {
-                    return DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len,
-                            out_actual);
+        return DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
     },
     .suspend = nullptr,
     .resume = nullptr,
@@ -3349,10 +3348,12 @@ zx_status_t Device::PhyQuery(uint8_t* buf, size_t len, size_t* actual) const {
     band24->supported_channels = wlan::phy::ChannelList::New();
     band24->description = "2.4 GHz";
     band24->ht_caps->ht_capability_info = 0x01fe;
-    band24->ht_caps->supported_mcs_set =
-        f1dl::Array<uint8_t>{
-            0xff, (rt_type_ == RT5592 ? 0xff : 0x00), 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00};
+    band24->ht_caps->supported_mcs_set = f1dl::Array<uint8_t>{
+        // clang-format off
+        0xff, (rt_type_ == RT5592 ? 0xff : 0x00), 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00
+        // clang-format on
+    };
     band24->basic_rates = f1dl::Array<uint8_t>{2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
     band24->supported_channels->base_freq = 2417;
     band24->supported_channels->channels =
@@ -3371,13 +3372,16 @@ zx_status_t Device::PhyQuery(uint8_t* buf, size_t len, size_t* actual) const {
                                  0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00};
         band5->basic_rates = f1dl::Array<uint8_t>{12, 18, 24, 36, 48, 72, 96, 108};
         band5->supported_channels->base_freq = 5000;
-        band5->supported_channels->channels =
-            f1dl::Array<uint8_t>{
-                        36,  38,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,
-                        60,  62,  64,  100, 102, 104, 106, 108, 110, 112, 114, 116,
-                        118, 120, 122, 124, 126, 128, 130, 132, 134, 136, 138, 140,
-                        149, 151, 153, 155, 157, 159, 161, 165, 184, 188, 192, 196,
-            };
+        band5->supported_channels->channels = f1dl::Array<uint8_t>{
+            // clang-format off
+            36,  38,  40,  42,  44,  46,  48,  50,
+            52,  54,  56,  58,  60,  62,  64,  100,
+            102, 104, 106, 108, 110, 112, 114, 116,
+            118, 120, 122, 124, 126, 128, 130, 132,
+            134, 136, 138, 140, 149, 151, 153, 155,
+            157, 159, 161, 165, 184, 188, 192, 196,
+            // clang-format on
+        };
 
         info->bands.push_back(std::move(band5));
     }
@@ -3387,13 +3391,11 @@ zx_status_t Device::PhyQuery(uint8_t* buf, size_t len, size_t* actual) const {
     return ZX_OK;
 }
 
-zx_status_t Device::CreateIface(const void* in_buf, size_t in_len, void* out_buf,
-                                size_t out_len, size_t* out_actual) {
+zx_status_t Device::CreateIface(const void* in_buf, size_t in_len, void* out_buf, size_t out_len,
+                                size_t* out_actual) {
     debugfn();
     auto req = wlan::phy::CreateIfaceRequest::New();
-    if (!req->Deserialize(const_cast<void*>(in_buf), in_len)) {
-        return ZX_ERR_IO;
-    }
+    if (!req->Deserialize(const_cast<void*>(in_buf), in_len)) { return ZX_ERR_IO; }
 
     std::lock_guard<std::mutex> guard(lock_);
     if (wlanmac_dev_ != nullptr) {
@@ -3430,9 +3432,7 @@ zx_status_t Device::CreateIface(const void* in_buf, size_t in_len, void* out_buf
 zx_status_t Device::DestroyIface(const void* in_buf, size_t in_len) {
     debugfn();
     auto req = wlan::phy::DestroyIfaceRequest::New();
-    if (!req->Deserialize(const_cast<void*>(in_buf), in_len)) {
-        return ZX_ERR_IO;
-    }
+    if (!req->Deserialize(const_cast<void*>(in_buf), in_len)) { return ZX_ERR_IO; }
 
     std::lock_guard<std::mutex> guard(lock_);
     if (wlanmac_dev_ == nullptr) {

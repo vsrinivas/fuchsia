@@ -8,7 +8,6 @@
 
 #include <type_traits>
 
-
 namespace ralink {
 
 using wlan::common::AddressableBitField;
