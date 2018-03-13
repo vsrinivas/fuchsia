@@ -101,6 +101,7 @@ action("finalize_manifests") {
     ]
   }
 
+  sources += zircon_aux_manifests
   foreach(manifest, zircon_aux_manifests) {
     manifest_cwd = get_path_info(rebase_path(manifest), "dir") + "/.."
     args += [
@@ -114,6 +115,7 @@ action("finalize_manifests") {
     "--output=" + rebase_path(final_boot_manifest, root_build_dir),
     "--groups=$zircon_boot_groups",
   ]
+  sources += zircon_boot_manifests
   foreach(manifest, zircon_boot_manifests) {
     manifest_cwd = get_path_info(rebase_path(manifest), "dir") + "/.."
     args += [
