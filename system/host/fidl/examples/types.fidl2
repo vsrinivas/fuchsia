@@ -27,6 +27,22 @@ struct primitive_types {
     float64 f64;
 };
 
+struct default_values {
+    bool b1 = true;
+    bool b2 = false;
+    int8 i8 = -23;
+    int16 i16 = 34;
+    int32 i32 = -34595;
+    int64 i64 = 3948038;
+    uint8 u8 = 0;
+    uint16 u16 = 348;
+    uint32 u32 = 9038;
+    uint64 u64 = 19835;
+    float32 f32 = 1.30;
+    float64 f64 = 0.0000054;
+    string s = "hello";
+};
+
 struct arrays {
     const uint32 arrays_size = 32;
 
