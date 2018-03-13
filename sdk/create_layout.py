@@ -31,63 +31,81 @@ def make_dir(path, is_dir=False):
             raise
 
 
-def install_cpp_atom(atom, metadata, output):
+def install_cpp_atom(atom, context):
     '''Installs an atom from the "c-pp" domain.'''
-    name = atom.id.name
     type = atom.tags['type']
     if type == 'compiled_shared':
-        install_cpp_prebuilt_atom(atom, metadata, output)
+        install_cpp_prebuilt_atom(atom, context)
     elif type == 'sources':
-        install_cpp_source_atom(atom, metadata, output)
+        install_cpp_source_atom(atom, context)
     else:
-        print('Atom type "%s" not handled, skipping %s.' % (type, name))
+        print('Atom type "%s" not handled, skipping %s.' % (type, atom.id))
 
 
-def install_cpp_prebuilt_atom(atom, metadata, output):
+def install_cpp_prebuilt_atom(atom, context):
     '''Installs a prebuilt atom from the "c-pp" domain.'''
-    name = atom.id.name
     if atom.tags['arch'] != 'target':
         print('Only libraries compiled for a target are supported, '
-              'skipping %s.' % name)
+              'skipping %s.' % atom.id)
+        return
     for file in atom.files:
         destination = file.destination
         extension = os.path.splitext(destination)[1][1:]
         if extension == 'so':
-            dest = os.path.join(output, 'arch', metadata['target-arch'],
+            dest = os.path.join(context.output, 'arch', context.target_arch,
                                 destination)
+            if os.path.isfile(dest):
+                raise Exception('File already exists: %s.' % dest)
             make_dir(dest)
             shutil.copyfile(file.source, dest)
+        elif context.is_overlay:
+            # Only binaries get installed in overlay mode.
+            continue
         elif extension == 'h' or extension == 'modulemap':
-            dest = os.path.join(output, 'pkg', name, destination)
+            dest = os.path.join(context.output, 'pkg', atom.id.name,
+                                destination)
             make_dir(dest)
             shutil.copyfile(file.source, dest)
         else:
             raise Exception('Error: unknow file extension "%s" for %s.' %
-                            (extension, name))
+                            (extension, atom.id))
 
 
-def install_cpp_source_atom(atom, metadata, output):
+def install_cpp_source_atom(atom, context):
     '''Installs a source atom from the "c-pp" domain.'''
-    name = atom.id.name
+    if context.is_overlay:
+        return
     for file in atom.files:
-        dest = os.path.join(output, 'pkg', name, file.destination)
+        dest = os.path.join(context.output, 'pkg', atom.id.name,
+                            file.destination)
         make_dir(dest)
         shutil.copyfile(file.source, dest)
 
 
-def install_exe_atom(atom, metadata, output):
+def install_exe_atom(atom, context):
     '''Installs an atom from the "exe" domain.'''
-    name = atom.id.name
     if atom.tags['arch'] != 'host':
-        print('Only host executables are supported, skipping %s.' % name)
+        print('Only host executables are supported, skipping %s.' % atom.id)
+        return
+    if context.is_overlay:
         return
     files = atom.files
     if len(files) != 1:
-        raise Exception('Error: executable with multiple files: %s' % name)
+        raise Exception('Error: executable with multiple files: %s.' % atom.id)
     file = files[0]
-    destination = os.path.join(output, 'tools', file.destination)
+    destination = os.path.join(context.output, 'tools', file.destination)
     make_dir(destination)
     shutil.copyfile(file.source, destination)
+
+
+class InstallationContext(object):
+    '''Represents the installation context of an atom.'''
+
+    def __init__(self, metadata, output, is_overlay):
+        self.target_arch = metadata['target-arch']
+        self.host_arch = metadata['host-arch']
+        self.output = output
+        self.is_overlay = is_overlay
 
 
 def main():
@@ -99,10 +117,20 @@ def main():
     parser.add_argument('--output',
                         help='Path to the directory where to install the SDK',
                         required=True)
+    parser.add_argument('--overlay',
+                        help='Whether to overlay target binaries on top of an '
+                             'existing layout',
+                        action='store_true')
     args = parser.parse_args()
 
     # Remove any existing output.
-    shutil.rmtree(args.output, True)
+    if args.overlay:
+        if not os.path.isdir(args.output) :
+            print('Cannot overlay on top of missing output directory: %s.' %
+                  args.output)
+            return 1
+    else:
+        shutil.rmtree(args.output, True)
 
     # Read the contents of the manifest.
     with open(args.manifest, 'r') as manifest_file:
@@ -123,12 +151,13 @@ def main():
         return 1
 
     # Install the various atoms in the output directory.
+    context = InstallationContext(metadata, args.output, args.overlay)
     for atom in atoms:
         domain = atom.id.domain
         if domain == 'c-pp':
-            install_cpp_atom(atom, metadata, args.output)
+            install_cpp_atom(atom, context)
         elif domain == 'exe':
-            install_exe_atom(atom, metadata, args.output)
+            install_exe_atom(atom, context)
         else:
             raise Exception('Unsupported domain: %s' % domain)
 
