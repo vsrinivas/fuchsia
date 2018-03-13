@@ -492,6 +492,32 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartRemoveSession) {
 }
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest,
+       ScanPeriodRemoveSessionDuringRestart) {
+  // Set a very short scan period for the sake of the test.
+  discovery_manager()->set_scan_period(1);
+  set_quit_message_loop_on_scan_state_change(true);
+
+  std::unique_ptr<LowEnergyDiscoverySession> session;
+  discovery_manager()->StartDiscovery(
+      [&session](auto cb_session) { session = std::move(cb_session); });
+
+  // We should observe the scan state become enabled -> disabled.
+  RunMessageLoop();
+  EXPECT_TRUE(scan_enabled());
+
+  RunMessageLoop();
+  EXPECT_FALSE(scan_enabled());
+
+  // Stop the session before the discovery manager processes the event. It
+  // should detect this and discontinue the scan.
+  session->Stop();
+  EXPECT_FALSE(scan_enabled());
+
+  message_loop()->RunUntilIdle();
+  EXPECT_FALSE(scan_enabled());
+}
+
+TEST_F(GAP_LowEnergyDiscoveryManagerTest,
        ScanPeriodRestartRemoveAndAddSession) {
   // Set a very short scan period for the sake of the test.
   discovery_manager()->set_scan_period(1);

@@ -154,7 +154,7 @@ bool LegacyLowEnergyScanner::StopScan() {
   FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
 
   if (state() == State::kStopping || state() == State::kIdle) {
-    FXL_LOG(ERROR)
+    FXL_VLOG(1)
         << "gap: LegacyLowEnergyScanner: cannot stop scan while in state: "
         << ScanStateToString(state());
     return false;

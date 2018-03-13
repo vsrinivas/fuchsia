@@ -237,14 +237,17 @@ void LowEnergyDiscoveryManager::OnScanStatus(
         StartScan();
       break;
     case hci::LowEnergyScanner::Status::kComplete:
-      FXL_VLOG(1) << "gap: LowEnergyDiscoveryManager: Continuing periodic scan";
-      FXL_DCHECK(!sessions_.empty());
-      FXL_DCHECK(pending_.empty());
-
+      FXL_VLOG(2) << "gap: LowEnergyDiscoveryManager: end of scan period";
       cached_scan_results_.clear();
 
-      // The scan period has completed. Restart scanning.
-      StartScan();
+      // If |sessions_| is empty this is because sessions were stopped while the
+      // scanner was shutting down after the end of the scan period. Restart the
+      // scan as long as clients are waiting for it.
+      if (!sessions_.empty() || !pending_.empty()) {
+        FXL_VLOG(2)
+            << "gap: LowEnergyDiscoveryManager: continuing periodic scan";
+        StartScan();
+      }
       break;
   }
 }
