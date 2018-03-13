@@ -432,7 +432,7 @@ static zx_status_t DebugStructWalk(smbios::SpecVersion ver,
                                    const smbios::Header* hdr, const smbios::StringTable& st,
                                    void* ctx) {
     switch (hdr->type) {
-        case 0: {
+        case smbios::StructType::BiosInfo: {
             if (ver.IncludesVersion(2, 4)) {
                 auto entry = reinterpret_cast<const smbios::BiosInformationStruct2_4*>(hdr);
                 entry->Dump(st);
@@ -444,7 +444,7 @@ static zx_status_t DebugStructWalk(smbios::SpecVersion ver,
             }
             break;
         }
-        case 1: {
+        case smbios::StructType::SystemInfo: {
             if (ver.IncludesVersion(2, 4)) {
                 auto entry = reinterpret_cast<const smbios::SystemInformationStruct2_4*>(hdr);
                 entry->Dump(st);
@@ -460,8 +460,10 @@ static zx_status_t DebugStructWalk(smbios::SpecVersion ver,
             }
             break;
         }
+        default: break;
     }
-    printf("smbios: found struct@%p: typ=%u len=%u st_len=%zu\n", hdr, hdr->type, hdr->length, st.length());
+    printf("smbios: found struct@%p: typ=%u len=%u st_len=%zu\n", hdr,
+           static_cast<uint8_t>(hdr->type), hdr->length, st.length());
     st.Dump();
 
     return ZX_OK;

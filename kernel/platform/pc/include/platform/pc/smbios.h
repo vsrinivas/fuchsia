@@ -14,12 +14,32 @@ void pc_init_smbios();
 
 namespace smbios {
 
+enum class StructType : uint8_t {
+    BiosInfo = 0,
+    SystemInfo = 1,
+    Baseboard = 2,
+    SystemEnclosure = 3,
+    Processor = 4,
+    MemoryController = 5,
+    MemoryModule = 6,
+    Cache = 7,
+    PortConnector = 8,
+    SystemSlots = 9,
+    OnBoardDevices = 10,
+    OemStrings = 11,
+    SystemConfigOptions = 12,
+    BiosLanguage = 13,
+
+    EndOfTable = 127,
+};
+
 // SMBIOS common struct header
 struct Header {
-    uint8_t type;
+    StructType type;
     uint8_t length;
     uint16_t handle;
 } __PACKED;
+static_assert(sizeof(Header) == 4, "");
 
 // Utility for working with the table of null-terminated strings after each
 // struct.
