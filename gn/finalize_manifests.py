@@ -38,6 +38,8 @@ import fnmatch
 import itertools
 import manifest
 import os
+import shlex
+import sys
 import variant
 
 
@@ -511,7 +513,12 @@ shared libraries and the like.
                         help='Input manifest file (must exist)')
     parser.add_argument('--binary', action=input_binary_action, default=[],
                         help='Take matching binaries from auxiliary manifests')
-    return parser.parse_args()
+    if len(sys.argv) == 2 and sys.argv[1][0] == '@':
+        with open(sys.argv[1][1:]) as rsp_file:
+            argv = shlex.split(rsp_file)
+    else:
+        argv = sys.argv[1:]
+    return parser.parse_args(argv)
 
 
 def main():
