@@ -831,7 +831,11 @@ static zx_driver_ops_t i8042_driver_ops = {
     .bind = i8042_bind,
 };
 
-//TODO: should bind against PC/ACPI instead of misc
-ZIRCON_DRIVER_BEGIN(i8042, i8042_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
+ZIRCON_DRIVER_BEGIN(i8042, i8042_driver_ops, "zircon", "0.1", 6)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ACPI),
+    BI_GOTO_IF(NE, BIND_ACPI_HID_0_3, 0x504e5030, 0), // PNP0303\0
+    BI_MATCH_IF(EQ, BIND_ACPI_HID_4_7, 0x33303300),
+    BI_LABEL(0),
+    BI_ABORT_IF(NE, BIND_ACPI_CID_0_3, 0x504e5030), // PNP0303\0
+    BI_MATCH_IF(EQ, BIND_ACPI_CID_4_7, 0x33303300),
 ZIRCON_DRIVER_END(i8042)

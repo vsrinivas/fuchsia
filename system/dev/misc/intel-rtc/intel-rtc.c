@@ -372,6 +372,11 @@ static zx_driver_ops_t intel_rtc_driver_ops = {
     .bind = intel_rtc_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(intel_rtc, intel_rtc_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
+ZIRCON_DRIVER_BEGIN(intel_rtc, intel_rtc_driver_ops, "zircon", "0.1", 6)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ACPI),
+    BI_GOTO_IF(NE, BIND_ACPI_HID_0_3, 0x504e5030, 0), // PNP0B00\0
+    BI_MATCH_IF(EQ, BIND_ACPI_HID_4_7, 0x42303000),
+    BI_LABEL(0),
+    BI_ABORT_IF(NE, BIND_ACPI_CID_0_3, 0x504e5030), // PNP0B00\0
+    BI_MATCH_IF(EQ, BIND_ACPI_CID_4_7, 0x42303000),
 ZIRCON_DRIVER_END(intel_rtc)
