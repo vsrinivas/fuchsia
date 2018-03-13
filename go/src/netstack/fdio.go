@@ -618,6 +618,11 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 		ro.Write(h, 0)
 	}
 
+	if ep != nil {
+		// This must be initialized before starting the control loop below, or it will race with iosCloseHandler.
+		ios.writeLoopDone = make(chan struct{})
+	}
+
 	if withNewSocket {
 		ios.controlLoopDone = make(chan struct{})
 		go ios.loopControl(s, int64(newCookie))
@@ -644,12 +649,10 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 	switch transProto {
 	case tcp.ProtocolNumber:
 		if ep != nil {
-			ios.writeLoopDone = make(chan struct{})
 			go ios.loopSocketRead(s.stack)
 			go ios.loopSocketWrite(s.stack)
 		}
 	case udp.ProtocolNumber, ipv4.PingProtocolNumber:
-		ios.writeLoopDone = make(chan struct{})
 		go ios.loopDgramRead(s.stack)
 		go ios.loopDgramWrite(s.stack)
 	}
