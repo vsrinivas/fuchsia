@@ -92,13 +92,42 @@ func getSize(t reflect.Type, v reflect.Value) (int, error) {
 	case reflect.Slice:
 		return 16, nil
 	case reflect.Struct:
-		payload, ok := v.Addr().Interface().(Payload)
-		if !ok {
-			return 0, fmt.Errorf("struct %s must implement Payload", t.Name())
-		}
-		return payload.InlineSize(), nil
+		return getStructSize(t, v)
 	}
 	return 0, fmt.Errorf("unsupported inline type kind %s for type %s", t.Kind(), t.Name())
+}
+
+func structAsPayload(t reflect.Type, v reflect.Value) (Payload, error) {
+	// Get the size and alignment for the struct.
+	//
+	// Note that Addr can fail if the originally derived value is not "addressable",
+	// meaning the root ValueOf() call was on a struct value, not a pointer. However,
+	// we guarantee the struct is addressable by forcing a Payload to be passed in
+	// (a struct value will never cast as an interface).
+	//
+	// We avoid using Implements(), MethodByName(), and Call() here because they're
+	// very slow.
+	payload, ok := v.Addr().Interface().(Payload)
+	if !ok {
+		return nil, fmt.Errorf("struct %s must implement Payload", t.Name())
+	}
+	return payload, nil
+}
+
+func getStructSize(t reflect.Type, v reflect.Value) (int, error) {
+	p, err := structAsPayload(t, v)
+	if err != nil {
+		return 0, err
+	}
+	return p.InlineSize(), nil
+}
+
+func getStructAlignment(t reflect.Type, v reflect.Value) (int, error) {
+	p, err := structAsPayload(t, v)
+	if err != nil {
+		return 0, err
+	}
+	return p.InlineAlignment(), nil
 }
 
 // fieldData contains metadata for a single struct field for use during encoding and
@@ -219,24 +248,51 @@ func (e *encoder) writeUint(val uint64, size int) {
 	e.head += size
 }
 
-// marshalStruct marshals a struct inline.
+// marshalStructInline first aligns head to the struct's alignment factor, and
+// then writes its fields inline.
+//
+// Expects the Type t and Value v to refer to a struct value, not a pointer.
+func (e *encoder) marshalStructInline(t reflect.Type, v reflect.Value) error {
+	a, err := getStructAlignment(t, v)
+	if err != nil {
+		return err
+	}
+	e.head = align(e.head, a)
+	return e.marshalStructFields(t, v)
+}
+
+// marshalStructPointer marshals a nullable struct's reference, and then marshals
+// the struct itself out-of-line.
+//
+// Expects the Type t and Value v to refer to a pointer to a struct.
+func (e *encoder) marshalStructPointer(t reflect.Type, v reflect.Value) error {
+	if v.IsNil() {
+		e.writeUint(noAlloc, 8)
+		return nil
+	}
+	e.writeUint(allocPresent, 8)
+	et := t.Elem()
+	ev := v.Elem()
+	// Encode the struct out-of-line.
+	s, err := getStructSize(et, ev)
+	if err != nil {
+		return err
+	}
+	oldHead := e.head
+	e.head = e.newObject(align(s, 8))
+	if err := e.marshalStructFields(et, ev); err != nil {
+		return err
+	}
+	e.head = oldHead
+	return nil
+}
+
+// marshalStructFields marshals the fields of a struct inline without any alignment.
+//
+// Expects the Type t and Value v to refer to a struct value, not a pointer.
 //
 // It marshals only exported struct fields.
-func (e *encoder) marshalStruct(t reflect.Type, v reflect.Value) error {
-	// Get the alignment for the struct, and then align to it.
-	//
-	// Note that Addr can fail if the originally derived value is not "addressable",
-	// meaning the root ValueOf() call was on a struct value, not a pointer. However,
-	// we guarantee the struct is addressable by forcing a Payload to be passed in
-	// (a struct value will never cast as an interface).
-	//
-	// We avoid using Implements(), MethodByName(), and Call() here because they're
-	// very slow.
-	payload, ok := v.Addr().Interface().(Payload)
-	if !ok {
-		return fmt.Errorf("struct %s must implement Payload", t.Name())
-	}
-	e.head = align(e.head, payload.InlineAlignment())
+func (e *encoder) marshalStructFields(t reflect.Type, v reflect.Value) error {
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		// If it's an unexported field, ignore it.
@@ -297,7 +353,7 @@ func (e *encoder) marshalInline(t reflect.Type, v reflect.Value, n nestedTypeDat
 	case reflect.Float64:
 		e.writeUint(math.Float64bits(v.Float()), 8)
 	case reflect.Struct:
-		return e.marshalStruct(t, v)
+		return e.marshalStructInline(t, v)
 	default:
 		return fmt.Errorf("unsupported inline type kind %s for type %s", t.Kind(), t.Name())
 	}
@@ -385,11 +441,13 @@ func (e *encoder) marshalHandle(v reflect.Value, n nestedTypeData) error {
 // indirections. The input type and value should be the dereference of the golang pointers,
 // that is, if we're marshalling *string, we should get string.
 func (e *encoder) marshalPointer(t reflect.Type, v reflect.Value, n nestedTypeData) error {
-	switch t.Kind() {
+	switch t.Elem().Kind() {
 	case reflect.Slice:
-		return e.marshalVector(t, v, n)
+		return e.marshalVector(t.Elem(), v.Elem(), n)
 	case reflect.String:
-		return e.marshalString(v, n)
+		return e.marshalString(v.Elem(), n)
+	case reflect.Struct:
+		return e.marshalStructPointer(t, v)
 	}
 	return fmt.Errorf("unsupported nullable type kind %s for type %s", t.Kind(), t.Name())
 }
@@ -400,7 +458,7 @@ func (e *encoder) marshalPointer(t reflect.Type, v reflect.Value, n nestedTypeDa
 func (e *encoder) marshal(t reflect.Type, v reflect.Value, n nestedTypeData) error {
 	switch t.Kind() {
 	case reflect.Ptr:
-		return e.marshalPointer(t.Elem(), v.Elem(), n)
+		return e.marshalPointer(t, v, n)
 	case reflect.Slice:
 		return e.marshalVector(t, v, n)
 	case reflect.String:
@@ -446,7 +504,7 @@ func Marshal(header *MessageHeader, s Payload) ([]byte, []zx.Handle, error) {
 	v := reflect.ValueOf(s).Elem()
 	e := encoder{buffer: marshalHeader(header)}
 	e.head = e.newObject(s.InlineSize())
-	if err := e.marshalStruct(t, v); err != nil {
+	if err := e.marshalStructFields(t, v); err != nil {
 		return nil, nil, err
 	}
 	return e.buffer, e.handles, nil
@@ -497,24 +555,57 @@ func (d *decoder) readUint(size int) uint64 {
 	return val
 }
 
-// unmarshalStruct unmarshals a struct inline based on Type t into Value v.
+// unmarshalStructInline unmarshals a struct inline based on Type t into Value v, first
+// aligning head to the alignment of the struct.
 //
-// It unmarshals only exported struct fields.
-func (d *decoder) unmarshalStruct(t reflect.Type, v reflect.Value) error {
-	// Get the alignment for the struct, and then align to it.
-	//
-	// Note that Addr can fail if the originally derived value is not "addressable",
-	// meaning the root ValueOf() call was on a struct value, not a pointer. However,
-	// we guarantee the struct is addressable by forcing a Payload to be passed in
-	// (a struct value will never cast as an interface).
-	//
-	// We avoid using Implements(), MethodByName(), and Call() here because they're
-	// very slow.
-	payload, ok := v.Addr().Interface().(Payload)
-	if !ok {
-		return fmt.Errorf("struct %s must implement Payload", t.Name())
+// Expects the Type t and Value v to refer to a struct value, not a pointer.
+func (d *decoder) unmarshalStructInline(t reflect.Type, v reflect.Value) error {
+	a, err := getStructAlignment(t, v)
+	if err != nil {
+		return err
 	}
-	d.head = align(d.head, payload.InlineAlignment())
+	d.head = align(d.head, a)
+	return d.unmarshalStructFields(t, v)
+}
+
+// unmarshalStructPointer unmarshals a pointer to a struct (i.e. a nullable FIDL struct)
+// into the Value v.
+//
+// Expects the Type t and Value v to refer to a pointer to a struct.
+func (d *decoder) unmarshalStructPointer(t reflect.Type, v reflect.Value) error {
+	if d.readUint(8) == noAlloc {
+		v.Set(reflect.Zero(t))
+		return nil
+	}
+	// Create the new struct.
+	v.Set(reflect.New(t.Elem()))
+	et := t.Elem()
+	ev := v.Elem()
+
+	// Set up the out-of-line space and the head.
+	oldHead := d.head
+	d.head = d.nextObject
+	s, err := getStructSize(et, ev)
+	if err != nil {
+		return err
+	}
+	d.nextObject += align(s, 8)
+
+	// Marshal all the fields of the struct out-of-line.
+	if err := d.unmarshalStructFields(et, ev); err != nil {
+		return err
+	}
+
+	// Fix up head to the old head if it's a nullable struct.
+	d.head = oldHead
+	return nil
+}
+
+// unmarshalStructFields unmarshals the exported fields of the struct at d.head into
+// the Value v.
+//
+// Expects the Type t and Value v to refer to a struct value, not a pointer.
+func (d *decoder) unmarshalStructFields(t reflect.Type, v reflect.Value) error {
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		// If it's an unexported field, ignore it.
@@ -581,7 +672,7 @@ func (d *decoder) unmarshalInline(t reflect.Type, v reflect.Value, n nestedTypeD
 	case reflect.Float64:
 		v.SetFloat(math.Float64frombits(d.readUint(8)))
 	case reflect.Struct:
-		return d.unmarshalStruct(t, v)
+		return d.unmarshalStructInline(t, v)
 	default:
 		return fmt.Errorf("unsupported inline type kind %s for type %s", t.Kind(), t.Name())
 	}
@@ -704,6 +795,8 @@ func (d *decoder) unmarshalPointer(t reflect.Type, v reflect.Value, n nestedType
 		return d.unmarshalVector(t, v, n)
 	case reflect.String:
 		return d.unmarshalString(t, v, n)
+	case reflect.Struct:
+		return d.unmarshalStructPointer(t, v)
 	}
 	return fmt.Errorf("unsupported nullable type kind %s for type %s", t.Kind(), t.Name())
 }
@@ -770,5 +863,5 @@ func Unmarshal(data []byte, handles []zx.Handle, s Payload) (*MessageHeader, err
 		handles:    handles,
 		nextObject: nextObject,
 	}
-	return &m, d.unmarshalStruct(t, reflect.ValueOf(s).Elem())
+	return &m, d.unmarshalStructFields(t, reflect.ValueOf(s).Elem())
 }

@@ -255,6 +255,7 @@ func (_ *TestVector2) InlineSize() int {
 
 type TestStruct1 struct {
 	A TestSimple
+	B *TestSimple
 }
 
 // Implements Payload.
@@ -264,13 +265,14 @@ func (_ *TestStruct1) InlineAlignment() int {
 
 // Implements Payload.
 func (_ *TestStruct1) InlineSize() int {
-	return 8
+	return 16
 }
 
 type TestStruct2 struct {
 	A TestArray1
 	B TestFloat1
 	C TestVector1
+	D *TestString1
 }
 
 // Implements Payload.
@@ -280,7 +282,7 @@ func (_ *TestStruct2) InlineAlignment() int {
 
 // Implements Payload.
 func (_ *TestStruct2) InlineSize() int {
-	return 80
+	return 88
 }
 
 type TestHandle1 struct {

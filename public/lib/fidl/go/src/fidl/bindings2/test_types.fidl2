@@ -89,12 +89,14 @@ struct TestVector2 {
 
 struct TestStruct1 {
     TestSimple a;
+    TestSimple? b;
 };
 
 struct TestStruct2 {
     TestArray1 a;
     TestFloat1 b;
     TestVector1 c;
+    TestString1? d;
 };
 
 struct TestHandle1 {

@@ -102,7 +102,10 @@ func TestEncodingIdentity(t *testing.T) {
 			A: TestSimple{
 				X: -9999,
 			},
-		}, 8, &TestStruct1{})
+			B: &TestSimple{
+				X: 1254125,
+			},
+		}, 24, &TestStruct1{})
 		v1 := []int64{101010}
 		testIdentity(t, &TestStruct2{
 			A: TestArray1{
@@ -117,7 +120,11 @@ func TestEncodingIdentity(t *testing.T) {
 				C: []int32{99},
 				D: &v1,
 			},
-		}, 104, &TestStruct2{})
+			D: &TestString1{
+				A: "str",
+				B: nil,
+			},
+		}, 152, &TestStruct2{})
 	})
 	t.Run("Handles", func(t *testing.T) {
 		vmo, err := zx.NewVMO(10, 0)
