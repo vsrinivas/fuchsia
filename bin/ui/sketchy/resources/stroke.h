@@ -15,7 +15,6 @@
 #include "garnet/bin/ui/sketchy/stroke/stroke_fitter.h"
 #include "garnet/bin/ui/sketchy/stroke/stroke_path.h"
 #include "garnet/bin/ui/sketchy/stroke/stroke_tessellator.h"
-#include "sketchy/stroke_segment.h"
 
 namespace sketchy_service {
 
