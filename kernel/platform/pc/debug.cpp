@@ -177,9 +177,7 @@ void pc_init_debug_early() {
 }
 
 void pc_init_debug(void) {
-#if !ENABLE_KERNEL_LL_DEBUG
-    bool irq_driven = false;
-#endif
+    bool tx_irq_driven = false;
     /* finish uart init to get rx going */
     cbuf_initialize(&console_input_buf, 1024);
 
@@ -199,18 +197,14 @@ void pc_init_debug(void) {
         uart_write(4, mcr | 0x8);
         printf("UART: started IRQ driven RX\n");
 #if !ENABLE_KERNEL_LL_DEBUG
-        irq_driven = true;
+        tx_irq_driven = true;
 #endif
     }
-#if ENABLE_KERNEL_LL_DEBUG
-    uart_tx_irq_enabled = false;
-#else
-    if (irq_driven) {
+    if (tx_irq_driven) {
         // start up tx driven output
         printf("UART: started IRQ driven TX\n");
         uart_tx_irq_enabled = true;
     }
-#endif
 }
 
 void pc_suspend_debug(void) {
@@ -275,8 +269,13 @@ static void platform_dputs(const char* str, size_t len,
     bool copied_CR = false;
     size_t wrote;
 
+    // drop strings if we haven't initialized the uart yet
+    if (unlikely(!output_enabled))
+        return;
+
     if (!uart_tx_irq_enabled)
         block = false;
+
     spin_lock_irqsave(&uart_spinlock, state);
     while (len > 0) {
         // Is FIFO empty ?
@@ -292,9 +291,10 @@ static void platform_dputs(const char* str, size_t len,
         // fifo's worth of Tx...
         str = debug_platform_tx_FIFO_bytes(str, &len, &copied_CR,
                                            &wrote, map_NL);
-        if (block && wrote > 0)
+        if (block && wrote > 0) {
             // If blocking/irq driven wakeps, enable rx/tx intrs
             uart_write(1, (1<<0)|(1<<1)); // rx and tx interrupt enable
+        }
     }
     spin_unlock_irqrestore(&uart_spinlock, state);
 }
