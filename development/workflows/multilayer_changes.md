@@ -70,4 +70,4 @@ your change will be preventing other changes in the lower layer from becoming
 available in the upper layers between steps 1 and 2.
 
 [getting-source]: /getting_source.md "Getting source"
-[layers]: /source_code/layers.md "Layers"
+[layers]: /development/source_code/layers.md "Layers"
