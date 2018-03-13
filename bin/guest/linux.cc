@@ -20,7 +20,10 @@
 #include "garnet/lib/machina/guest.h"
 #include "lib/fxl/strings/string_printf.h"
 
-#if __x86_64__
+#if __aarch64__
+static constexpr uintptr_t kKernelOffset = 0x80000;
+#elif __x86_64__
+static constexpr uintptr_t kKernelOffset = 0x200000;
 #include "garnet/lib/machina/arch/x86/e820.h"
 #endif
 
@@ -294,7 +297,7 @@ zx_status_t setup_linux(const GuestConfig cfg,
                         uintptr_t* guest_ip,
                         uintptr_t* boot_ptr) {
   // Read the kernel image.
-  zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem);
+  zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem, kKernelOffset);
   if (status != ZX_OK) {
     return status;
   }
