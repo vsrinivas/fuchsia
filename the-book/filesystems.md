@@ -84,7 +84,7 @@ according to application-launching policy.
 
 For more detail the mechanisms and policies applied to restricting process
 capability, refer to the documentation on
-[sandboxing](/sandboxing.md).
+[sandboxing](sandboxing.md).
 
 ### Passing Data
 
