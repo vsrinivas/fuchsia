@@ -12,7 +12,8 @@ zx_status_t VmoMapper::CreateAndMap(uint64_t size,
                                     uint32_t map_flags,
                                     RefPtr<VmarManager> vmar_manager,
                                     zx::vmo* vmo_out,
-                                    zx_rights_t vmo_rights) {
+                                    zx_rights_t vmo_rights,
+                                    uint32_t cache_policy) {
     if (size == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -26,6 +27,13 @@ zx_status_t VmoMapper::CreateAndMap(uint64_t size,
     zx_status_t ret = zx::vmo::create(size, 0, &vmo);
     if (ret != ZX_OK) {
         return ret;
+    }
+
+    if (cache_policy != 0) {
+        ret = vmo.set_cache_policy(cache_policy);
+        if (ret != ZX_OK) {
+            return ret;
+        }
     }
 
     ret = InternalMap(vmo, size, map_flags, fbl::move(vmar_manager));

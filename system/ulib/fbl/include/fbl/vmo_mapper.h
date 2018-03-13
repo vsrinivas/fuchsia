@@ -21,21 +21,24 @@ public:
     // flags and optional target VMAR.  If requested, return the created VMO
     // with the requested rights.
     //
-    // size       : The minimum size, in bytes, of the VMO to create.
-    // map_flags  : The flags to use when mapping the VMO.
-    // vmar       : A reference to a VmarManager to use when mapping the VMO, or
-    //              nullptr to map the VMO using the root VMAR.
-    // vmo_out    : A pointer which will receive the created VMO handle, or
-    //              nullptr if the handle should be simply closed after it has
-    //              been mapped.
-    // vmo_rights : The rights which should be applied to the VMO which is
-    //              passed back to the user via vmo_out, or ZX_RIGHT_SAME_RIGHTS
-    //              to leave the default rights.
+    // size         : The minimum size, in bytes, of the VMO to create.
+    // map_flags    : The flags to use when mapping the VMO.
+    // vmar         : A reference to a VmarManager to use when mapping the VMO, or
+    //                nullptr to map the VMO using the root VMAR.
+    // vmo_out      : A pointer which will receive the created VMO handle, or
+    //                nullptr if the handle should be simply closed after it has
+    //                been mapped.
+    // vmo_rights   : The rights which should be applied to the VMO which is
+    //                passed back to the user via vmo_out, or ZX_RIGHT_SAME_RIGHTS
+    //                to leave the default rights.
+    // cache_policy : When non-zero, indicates the cache policy to apply to the
+    //                created VMO.
     zx_status_t CreateAndMap(uint64_t size,
                              uint32_t map_flags,
                              RefPtr<VmarManager> vmar_manager = nullptr,
                              zx::vmo* vmo_out = nullptr,
-                             zx_rights_t vmo_rights = ZX_RIGHT_SAME_RIGHTS);
+                             zx_rights_t vmo_rights = ZX_RIGHT_SAME_RIGHTS,
+                             uint32_t cache_policy = 0);
 
     // Map an existing VMO our address space using the provided map
     // flags and optional target VMAR.
