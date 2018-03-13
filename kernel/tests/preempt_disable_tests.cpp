@@ -136,7 +136,6 @@ static bool test_outside_interrupt() {
     timer_init(&timer);
     timer_set(&timer, current_time() + ZX_USEC(100), TIMER_SLACK_CENTER, 0,
               timer_set_preempt_pending, (void*)&timer_ran);
-    EXPECT_EQ(timer_ran, false, "");
     // Spin until timer_ran is set by the interrupt handler.
     while (!timer_ran) {}
     EXPECT_EQ(thread->preempt_pending, true, "");
