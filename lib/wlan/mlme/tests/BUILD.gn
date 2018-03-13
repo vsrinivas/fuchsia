@@ -40,6 +40,7 @@ executable("mac_tests") {
     "mac_frame_unittest.cpp",
     "macaddr_unittest.cpp",
     "sequence_unittest.cpp",
+    "tim_unittest.cpp",
   ]
 
   deps = [

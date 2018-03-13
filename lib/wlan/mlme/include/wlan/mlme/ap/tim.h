@@ -25,6 +25,7 @@ class TrafficIndicationMap {
                                           uint8_t* bitmap_offset) const;
     bool HasDozingClients() const;
     bool HasGroupTraffic() const;
+    void Clear();
 
    private:
     // N1 and N2 specify the start and end offsets of a range of AIDs which have buffered traffic.

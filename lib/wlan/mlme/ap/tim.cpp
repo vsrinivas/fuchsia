@@ -49,19 +49,22 @@ bool TrafficIndicationMap::HasGroupTraffic() const {
     return aid_bitmap_.GetOne(kGroupAdressedAid);
 }
 
+void TrafficIndicationMap::Clear() {
+    aid_bitmap_.Reset(kMaxBssClients);
+}
+
 size_t TrafficIndicationMap::N1() const {
-    size_t first_set_bit = aid_bitmap_.Scan(1, aid_bitmap_.size(), false);
-    if (first_set_bit == aid_bitmap_.size()) {
-        // No bit set.
-        return 0;
-    }
+    size_t first_set_bit;
+    bool none_set = aid_bitmap_.Scan(1, aid_bitmap_.size(), false, &first_set_bit);
+    if (none_set) { return 0; }
     size_t n1 = first_set_bit / 8;
     return n1 % 2 == 0 ? n1 : (n1 - 1);
 }
 
 size_t TrafficIndicationMap::N2() const {
-    // TODO(hahnr): Implement once ZX-1781 landed.
-    // For now, let the bitmap be of the minimum one byte length (sufficient for testing).
-    return N1();
+    size_t last_set_bit;
+    bool none_set = aid_bitmap_.ReverseScan(1, aid_bitmap_.size(), false, &last_set_bit);
+    if (none_set) { return 0; }
+    return last_set_bit / 8;
 }
 }  // namespace wlan
