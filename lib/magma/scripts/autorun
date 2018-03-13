@@ -9,6 +9,7 @@ echo [MSD-INTEL-GEN START=]
 echo [MSD-INTEL-GEN END===]
 echo [SYS START=]
 /system/test/magma_sys_unit_tests
+/system/test/magma_sys_display_unit_tests
 /system/test/magma_integration_tests --gtest_filter=-*Stress*
 echo [SYS END===]
 echo [==========]

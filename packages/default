@@ -41,6 +41,7 @@
         "garnet/packages/logger",
         "garnet/packages/make-efi",
         "garnet/packages/make-fuchsia-vol",
+        "garnet/packages/magma-nonhardware-tests",
         "garnet/packages/mdns",
         "garnet/packages/mdns_service",
         "garnet/packages/mdns_standalone",
