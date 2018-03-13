@@ -5,23 +5,39 @@
 
 ### run bootserver in zedboot disk paver mode
 
-## usage: fx boot [--netboot|--bootfs] [--board <board>] [--no-data] [<type>] [bootserver arguments]
-##   <type>     see "--help" for list (default: x64 for x64 / none for arm64)
-##   --board    Specify Zircon board (if <type> is used, it takes precendence)
-##   --netboot  Boot from ramdisk containing FVM
-##   --bootfs   (deprecated) boot user.bootfs (old ramdisk)
-##   --no-data  Use FVM images without a /data partition (preserve existing data)
+## usage: fx boot [--netboot|--bootfs] [--board <board>] [--no-data]
+##                [--artifacts <dir>] [--zircon-dir <dir>] [--fuchsia-dir <dir>]
+##                [<type>] [bootserver arguments]
+##   <type>        see "--help" for list (default: x64 for x64 / none for arm64)
+##   --board       Specify Zircon board (if <type> is used, it takes
+##                 precendence)
+##   --netboot     Boot from ramdisk containing FVM
+##   --bootfs      (deprecated) boot user.bootfs (old ramdisk)
+##   --no-data     Use FVM images without a /data partition (preserve existing
+##                 data)
+##   --artifacts   a directory to load files to send to the target where the
+##                 root of the directory base zircon.bin and its bootdata file
+##                 and an images sub-directory has all the images to pave
+##   --zircon-dir  directory containing zircon
+##   --fuchsia-dir directory containing partitions images and bootdata to send
+##                 to the device
 ##
 ## If <type> is omitted, a guess is made based on $FUCHSIA_ARCH. For x64, all
 ## x64 images will be supplied (resulting in an FVM pave). For arm64 the default
 ## <type> is netboot, and the default board is <qemu>.
+##
+## If supplying --artifacts, --zircon-dir, or --fuchsia-dir some rules apply.
+## Either supply only --artifacts OR both --zircon-dir and --fuchsia-dir. If
+## none of these arguments is supplied the location of these directories is
+## assumed based on the build directory.
 
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 
 declare -a disks=()
-ramdisk="${FUCHSIA_BUILD_DIR}/${ramdisk_bin}"
+fuchsia_dir="${FUCHSIA_BUILD_DIR}"
+zircon_dir="${ZIRCON_BUILD_DIR}"
 add_fvm=true
 
 usage() {
@@ -36,7 +52,9 @@ netboot=false
 bootfs=false
 add_data=true
 ip_targ=()
-
+had_artifacts=false
+had_imgdir=false
+had_zirdir=false
 while [[ "$1" =~ ^- ]]; do
   case "$1" in
   -h|--help)
@@ -72,11 +90,36 @@ while [[ "$1" =~ ^- ]]; do
     echo "##"
     add_data=false
     ;;
+  --artifacts)
+    shift
+    fuchsia_dir="${1}"
+    zircon_dir="${1}"
+    had_artifacts=true
+    ;;
+  --images-dir)
+    shift
+    fuchsia_dir="${1}"
+    had_imgdir=true
+    ;;
+  --zircon-dir)
+    shift
+    zircon_dir="${1}"
+    had_zirdir=true
+    ;;
   *)
     break
   esac
   shift
 done
+
+if $had_artifacts && ( $had_zirdir || $had_imgdir ) ||
+    ( ! $had_artifacts && ( $had_zirdir || $had_imgdir ) &&
+        ( ! $had_zirdir || ! $had_imgdir ) ); then
+  echo >&2 "Invalid flags, either supply --artifacts or both --fuchsia-dir and --zircon-dir or none of these options to use defaults"
+  exit 1
+fi
+
+ramdisk="${fuchsia_dir}/${ramdisk_bin}"
 
 if [[ "$1" =~ ^- ]]; then
   machine_type=""
@@ -102,12 +145,12 @@ case "${machine_type}" in
     usage
   ;;
   zedboot)
-    ramdisk="${FUCHSIA_BUILD_DIR}/images/zedboot-${board}.bin"
+    ramdisk="${fuchsia_dir}/images/zedboot-${board}.bin"
     disks=()
     add_fvm=false
   ;;
   ram|netboot|--netboot)
-    ramdisk="${FUCHSIA_BUILD_DIR}/netboot-${board}.bin"
+    ramdisk="${fuchsia_dir}/netboot-${board}.bin"
     disks=()
     add_fvm=false
   ;;
@@ -116,19 +159,19 @@ case "${machine_type}" in
     echo "bootfs is deprecated, please try to use \"ram\" instead"
     echo
     sleep 5
-    ramdisk="${FUCHSIA_BUILD_DIR}/user.bootfs"
+    ramdisk="${fuchsia_dir}/user.bootfs"
     disks=()
     add_fvm=false
   ;;
   cros|pixel|vboot|efi|acer|nuc)
-    disks=("${disks[@]}" --efi "${FUCHSIA_BUILD_DIR}/${efi_block}")
-    disks=("${disks[@]}" --kernc "${FUCHSIA_BUILD_DIR}/${kernc_vboot}")
+    disks=("${disks[@]}" --efi "${fuchsia_dir}/${efi_block}")
+    disks=("${disks[@]}" --kernc "${fuchsia_dir}/${kernc_vboot}")
   ;;
   *)
     if [[ "$FUCHSIA_ARCH" == "x64" ]]; then
       machine_type="x64"
-      disks=("${disks[@]}" --efi "${FUCHSIA_BUILD_DIR}/${efi_block}" \
-        --kernc "${FUCHSIA_BUILD_DIR}/${kernc_vboot}")
+      disks=("${disks[@]}" --efi "${fuchsia_dir}/${efi_block}" \
+        --kernc "${fuchsia_dir}/${kernc_vboot}")
     else
       # For now all ARM64 boards are valid machine types and imply netboot.
       if grep "$machine_type" "${board_list_file}" > /dev/null; then
@@ -138,7 +181,7 @@ case "${machine_type}" in
           cat "${board_list_file}" >&2
           exit 1
         fi
-        ramdisk="${FUCHSIA_BUILD_DIR}/netboot-${board}.bin"
+        ramdisk="${fuchsia_dir}/netboot-${board}.bin"
         disks=()
         add_fvm=false
       else
@@ -155,7 +198,7 @@ bootserver_args=()
 if ! $add_fvm; then
   bootserver_args=("$@")
 else
-  disks=("${disks[@]}" --fvm "${FUCHSIA_BUILD_DIR}/${fvm_sparse_block}")
+  disks=("${disks[@]}" --fvm "${fuchsia_dir}/${fvm_sparse_block}")
 
   while [[ $# -gt 0 ]]; do
       bootserver_args=("${bootserver_args[@]}" "$1")
@@ -163,13 +206,13 @@ else
   done
 
   if $add_data; then
-    disks=("${disks[@]}" --fvm "${FUCHSIA_BUILD_DIR}/${fvm_data_sparse_block}")
+    disks=("${disks[@]}" --fvm "${fuchsia_dir}/${fvm_data_sparse_block}")
   fi
 fi
 
 exec "${ZIRCON_TOOLS_DIR}/bootserver" \
   "${ip_targ[@]}" \
   "${disks[@]}" \
-  "${ZIRCON_BUILD_DIR}/${zircon_bin}" \
+  "${zircon_dir}/${zircon_bin}" \
   "${ramdisk}" \
   "${bootserver_args[@]}"
