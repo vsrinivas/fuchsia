@@ -13,7 +13,7 @@ The rest of the build relies on Zircon being built ahead of time.
 ## Packages
 
 The contents of the generated image are controlled by a set of top level
-[packages][packages-source] defining what should go into the GN build.
+[packages](packages.md) defining what should go into the GN build.
 
 ## Build targets
 
@@ -75,7 +75,7 @@ This will create an `out/debug-<arch>` directory containing Ninja files.
 This is what gets run under the hood by `fx set`.
 
 For a list of all `gen.py` options, run `gen.py --help`.
-For documentation on the `--variants` flag, see [Variants](build_variants.md).
+For documentation on the `--variants` flag, see [Variants](variants.md).
 
 ### C
 
@@ -207,6 +207,5 @@ You likely forgot to run **A** before running **B**.
 [ninja-main]: https://ninja-build.org/
 [gn-reference]: https://chromium.googlesource.com/chromium/src/tools/gn/+/HEAD/docs/reference.md
 [build-project]: https://fuchsia.googlesource.com/build/+/master/
-[packages-source]: /build_packages.md
 [zircon-getting-started]: https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md
 [zircon-makefile-options]: https://fuchsia.googlesource.com/zircon/+/master/docs/makefile_options.md

@@ -118,12 +118,12 @@ the system package constraint.
 Packaging and pushing code that lives outside the Fuchsia tree is possible, but
 will require more work. The Fuchsia package format is quite simple. It consists
 of a metdata file describing the package contents which is described in more
-detail in the [Fuchsia package][pkg-struct] docuentation. The metadata file is
+detail in the [Fuchsia package][pkg-struct] documentation. The metadata file is
 added to a TUF file tree and each of the contents are named after their Merkle
 root hash and put in a directory at the root of the TUF file tree called 'blobs'.
 
 [pkg-struct]: https://fuchsia.googlesource.com/garnet/+/master/go/src/pm/README.md#structure-of-a-fuchsia-package "Package structure"
 [TUF-home]: https://theupdateframework.github.io "TUF Homepage"
-[pkg-doc]: https://fuchsia.googlesource.com/docs/+/master/build_packages.md "Packaging docs"
+[pkg-doc]: /development/build/packages.md "Packaging docs"
 [flutter-gni]: https://fuchsia.googlesource.com/topaz/+/master/runtime/flutter_runner/flutter_app.gni "Flutter GN build template"
-[paver]: https://fuchsia.googlesource.com/docs/+/master/fuchsia_paver.md "Fuchsia paver"
+[paver]: /fuchsia_paver.md "Fuchsia paver"

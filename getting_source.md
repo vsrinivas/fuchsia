@@ -12,7 +12,7 @@ For how to build, see Fuchsia's [Getting Started](/getting_started.md) doc.
 The bootstrap procedure requires that you have Go 1.6 or newer and Git
 installed and on your PATH.
 
-First, select the [layer](layers.md) of the system you wish to build. (If you're
+First, select the [layer](development/source_code/layers.md) of the system you wish to build. (If you're
 unsure, select `topaz`, which contains the lower layers). Then, run the
 following command:
 

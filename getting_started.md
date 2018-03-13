@@ -79,7 +79,7 @@ The second command actually executes the build, transforming the source code in
 build products. If you modify the source tree, you can do an incremental build
 by re-running the `fx full-build` command alone.
 
-Alternatively, you can use the [underlying build system directly](build_system.md).
+Alternatively, you can use the [underlying build system directly](development/build/README.md).
 
 #### [optional] Customize Build Environment
 
@@ -211,7 +211,7 @@ pressing Alt-Escape. In console mode, Alt-Tab will have the behavior described i
 section, and pressing Alt-Escape again will take you back to the graphical shell.
 
 If you would like to use a text shell inside a terminal emulator from within the graphical shell
-you can launch [moterm](https://fuchsia.googlesource.com/topaz/+/master/app/moterm) by selecting the
+you can launch the [term](https://fuchsia.googlesource.com/topaz/+/master/app/term) by selecting the
 "Ask Anything" box and typing `moterm`.
 
 ### Running tests
@@ -238,8 +238,5 @@ fx run-test <test name> [<test args>]
 
 * Using Zircon - copying files, network booting, log viewing, and more are [here](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md#Copying-files-to-and-from-Zircon)
 * [Fuchsia documentation](/README.md) hub
-* [Building with variants](build_variants.md), such as sanitizers or LTO.
-* Build [Fuchsia's toolchain](toolchain.md)
-* More about the [build commands](build_system.md) called under-the-hood by `fx full-build`
 * More information on the system bootstrap application is
 [here](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/).

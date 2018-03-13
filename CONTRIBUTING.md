@@ -112,7 +112,8 @@ revisions, you have two choices:
 
 ## Changes that span layers
 
-Fuchsia is divided into a number of [layers](layers.md). Each layer views the
+Fuchsia is divided into a number of [layers](development/source_code/layers.md).
+Each layer views the
 previous layers at pinned revisions, which means changes that land in one layer
 are not immediately visible to the upper layers.
 

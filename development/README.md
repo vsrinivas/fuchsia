@@ -14,12 +14,7 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Pushing changes](workflows/package_update.md)
  - [Debugging](../debugging.md)
  - [Tracing][tracing]
- - [Toolchain](../toolchain.md)
-
-## Build system
-
- - [Build system overview](../build_overview.md)
- - [Build system variants](../build_variants.md)
+ - [Build system](build/README.md)
 
 ## Languages
 
@@ -46,10 +41,10 @@ This section covers Fuchsia development hardware targets.
 
 This section covers Fuchsia-wide conventions and best practices.
 
- - [Layers](../layers.md) - the Fuchsia layer cake, ie. how Fuchsia subsystems are
-   split into a stack of layers
- - [Repository structure](../layer_repository_structure.md) - standard way of
-   organizing code within a Fuchsia layer repository
+ - [Layers](source_code/layers.md) - the Fuchsia layer cake, ie. how Fuchsia
+   subsystems are split into a stack of layers
+ - [Repository structure](source_code/layer_repository_structure.md) - standard way
+   of organizing code within a Fuchsia layer repository
  - [Documentation standards](../best-practices/documentation_standards.md)
  - [Testing best practices](../best-practices/testing.md)
 
