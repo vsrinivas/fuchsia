@@ -25,7 +25,7 @@ static_library("console") {
     "verbs.h",
     "verbs_control.cc",
     "verbs_memory.cc",
-    "verbs_run.cc",
+    "verbs_process.cc",
     "verbs_system.cc",
   ]
 

@@ -35,6 +35,8 @@ void Serialize(const NotifyThread& thread, MessageWriter* writer) {
   writer->WriteUint64(thread.thread_koid);
 }
 
+// Hello -----------------------------------------------------------------------
+
 bool ReadRequest(MessageReader* reader,
                  HelloRequest* request,
                  uint32_t* transaction_id) {
@@ -51,6 +53,8 @@ void WriteReply(const HelloReply& reply,
   writer->WriteHeader(MsgHeader::Type::kHello, transaction_id);
   writer->WriteBytes(&reply, sizeof(HelloReply));
 }
+
+// Launch ----------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader,
                  LaunchRequest* request,
@@ -71,6 +75,27 @@ void WriteReply(const LaunchReply& reply,
   writer->WriteUint64(reply.process_koid);
 }
 
+// Attach ----------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader,
+                 AttachRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return reader->ReadUint64(&request->koid);
+}
+
+void WriteReply(const AttachReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kAttach, transaction_id);
+  writer->WriteUint32(reply.status);
+}
+
+// ProcessTree -----------------------------------------------------------------
+
 bool ReadRequest(MessageReader* reader,
                  ProcessTreeRequest* request,
                  uint32_t* transaction_id) {
@@ -87,6 +112,8 @@ void WriteReply(const ProcessTreeReply& reply,
   writer->WriteHeader(MsgHeader::Type::kProcessTree, transaction_id);
   Serialize(reply.root, writer);
 }
+
+// Threads ---------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader,
                  ThreadsRequest* request,
@@ -106,6 +133,8 @@ void WriteReply(const ThreadsReply& reply,
   Serialize(reply.threads, writer);
 }
 
+// ReadMemory ------------------------------------------------------------------
+
 bool ReadRequest(MessageReader* reader,
                  ReadMemoryRequest* request,
                  uint32_t* transaction_id) {
@@ -122,6 +151,8 @@ void WriteReply(const ReadMemoryReply& reply,
   writer->WriteHeader(MsgHeader::Type::kReadMemory, transaction_id);
   Serialize(reply.blocks, writer);
 }
+
+// NotifyThread ----------------------------------------------------------------
 
 void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
                        MessageWriter* writer) {

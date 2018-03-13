@@ -38,6 +38,8 @@ class DebugAgent : public ExceptionHandler::Sink {
                debug_ipc::HelloReply* reply);
   void OnLaunch(const debug_ipc::LaunchRequest& request,
                 debug_ipc::LaunchReply* reply);
+  void OnAttach(const debug_ipc::AttachRequest& request,
+                debug_ipc::AttachReply* reply);
   void OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                      debug_ipc::ProcessTreeReply* reply);
   void OnThreads(const debug_ipc::ThreadsRequest& request,

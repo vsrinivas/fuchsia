@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "garnet/bin/zxdb/console/command.h"
+#include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
@@ -51,6 +52,8 @@ bool HandleThread(ConsoleContext* context, const Command& cmd) {
 void ListProcesses(ConsoleContext* context, const Command& cmd) {
   auto targets = context->session()->system().GetAllTargets();
 
+  int active_target_id = context->GetActiveTargetId();
+
   // Sort by ID.
   std::vector<std::pair<int, Target*>> id_targets;
   for (auto& target : targets)
@@ -59,21 +62,15 @@ void ListProcesses(ConsoleContext* context, const Command& cmd) {
 
   OutputBuffer out;
   for (const auto& pair : id_targets) {
-    out.Append(fxl::StringPrintf("%3d", pair.first));
+    // "Current process" marker.
+    if (pair.first == active_target_id)
+      out.Append(">");
+    else
+      out.Append(" ");
 
-    // Follow index by args (program name and params).
-    const auto& args = pair.second->GetArgs();
-    if (args.empty()) {
-      out.Append(" <no name>");
-    } else {
-      for (const auto& arg : pair.second->GetArgs()) {
-        out.Append(" ");
-        out.Append(arg);
-      }
-    }
+    out.Append(DescribeTarget(context, pair.second, true));
     out.Append("\n");
   }
-
   Console::get()->Output(std::move(out));
 }
 
@@ -92,6 +89,7 @@ bool HandleProcess(ConsoleContext* context, const Command& cmd) {
   // should be already resolved to a valid pointer if it was specified on the
   // command line (otherwise the command would have been rejected before here).
   context->SetActiveTarget(cmd.target());
+  Console::get()->Output(DescribeTarget(context, cmd.target(), false));
   return true;
 }
 

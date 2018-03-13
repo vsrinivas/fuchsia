@@ -6,12 +6,13 @@
 
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/system_observer.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 
 namespace zxdb {
 
 SystemImpl::SystemImpl(Session* session) : System(session) {
-  targets_.push_back(std::make_unique<TargetImpl>(this));
+  AddNewTarget(std::make_unique<TargetImpl>(this));
 }
 
 SystemImpl::~SystemImpl() = default;
@@ -43,6 +44,22 @@ void SystemImpl::GetProcessTree(ProcessTreeCallback callback) {
           debug_ipc::ProcessTreeReply reply) {
         callback(err, std::move(reply));
       });
+}
+
+Target* SystemImpl::CreateNewTarget(Target* clone) {
+  auto target = clone ? static_cast<TargetImpl*>(clone)->Clone(this)
+                      : std::make_unique<TargetImpl>(this);
+  Target* to_return = target.get();
+  AddNewTarget(std::move(target));
+  return to_return;
+}
+
+void SystemImpl::AddNewTarget(std::unique_ptr<TargetImpl> target) {
+  Target* for_observers = target.get();
+
+  targets_.push_back(std::move(target));
+  for (auto& observer : observers())
+    observer.DidCreateTarget(for_observers);
 }
 
 }  // namespace zxdb

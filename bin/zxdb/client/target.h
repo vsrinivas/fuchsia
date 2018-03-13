@@ -69,6 +69,10 @@ class Target : public ClientObject {
   // program name configured via SetArgs().
   virtual void Launch(LaunchCallback callback) = 0;
 
+  // Attaches to the process with the given koid. The callback will be
+  // executed with the attach is complete (or fails).
+  virtual void Attach(uint64_t koid, LaunchCallback callback) = 0;
+
  protected:
   explicit Target(Session* session);
 

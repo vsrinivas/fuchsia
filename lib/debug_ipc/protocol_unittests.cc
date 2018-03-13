@@ -47,6 +47,8 @@ bool SerializeDeserializeReply(const ReplyType& in, ReplyType* out) {
 
 }  // namespace
 
+// Hello -----------------------------------------------------------------------
+
 TEST(Protocol, HelloRequest) {
   HelloRequest initial;
   HelloRequest second;
@@ -60,6 +62,8 @@ TEST(Protocol, HelloReply) {
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
   EXPECT_EQ(initial.version, second.version);
 }
+
+// Launch ----------------------------------------------------------------------
 
 TEST(Protocol, LaunchRequest) {
   LaunchRequest initial;
@@ -83,6 +87,28 @@ TEST(Protocol, LaunchReply) {
   EXPECT_EQ(initial.status, second.status);
   EXPECT_EQ(initial.process_koid, second.process_koid);
 }
+
+// Attach ----------------------------------------------------------------------
+
+TEST(Protocol, AttachRequest) {
+  AttachRequest initial;
+  initial.koid = 5678;
+
+  AttachRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  EXPECT_EQ(initial.koid, second.koid);
+}
+
+TEST(Protocol, AttachReply) {
+  AttachReply initial;
+  initial.status = 67;
+
+  AttachReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  EXPECT_EQ(initial.status, second.status);
+}
+
+// ProcessTree -----------------------------------------------------------------
 
 TEST(Protocol, ProcessTreeRequest) {
   ProcessTreeRequest initial;
@@ -113,6 +139,8 @@ TEST(Protocol, ProcessTreeReply) {
   EXPECT_EQ(initial.root.children[0].name, second.root.children[0].name);
 }
 
+// Threads ---------------------------------------------------------------------
+
 TEST(Protocol, ThreadsRequest) {
   ThreadsRequest initial;
   initial.process_koid = 36473476;
@@ -139,6 +167,8 @@ TEST(Protocol, ThreadsReply) {
   EXPECT_EQ(initial.threads[1].koid, second.threads[1].koid);
   EXPECT_EQ(initial.threads[1].name, second.threads[1].name);
 }
+
+// ReadMemory ------------------------------------------------------------------
 
 TEST(Protocol, ReadMemoryRequest) {
   ReadMemoryRequest initial;

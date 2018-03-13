@@ -149,7 +149,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
   if (all_verbs.empty()) {
     AppendControlVerbs(&all_verbs);
     AppendMemoryVerbs(&all_verbs);
-    AppendRunVerbs(&all_verbs);
+    AppendProcessVerbs(&all_verbs);
     AppendSystemVerbs(&all_verbs);
 
     // Everything but Noun::kNone (= 0) should be in the map.

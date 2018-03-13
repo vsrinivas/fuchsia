@@ -31,7 +31,10 @@ class ConsoleContext
   int IdForTarget(Target* target) const;
   int IdForThread(Thread* thread) const;
 
+  // The active target will always exist except during setup and teardown.
   void SetActiveTarget(Target* target);
+  int GetActiveTargetId();
+  Target* GetActiveTarget();
 
   // Sets the active thread for its target. The active target is not affected.
   void SetActiveThreadInTarget(Thread* thread);
@@ -50,7 +53,7 @@ class ConsoleContext
 
     // The active ID will be 0 when there is no active thread (the case when
     // the process is not running).
-    int active_thread_id = -1;
+    int active_thread_id = 0;
 
     std::map<int, Thread*> id_to_thread;
     std::map<Thread*, int> thread_to_id;

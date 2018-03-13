@@ -55,6 +55,8 @@ bool Deserialize(MessageReader* reader, NotifyThread* thread) {
   return reader->ReadUint64(&thread->thread_koid);
 }
 
+// Hello -----------------------------------------------------------------------
+
 void WriteRequest(const HelloRequest& request,
                   uint32_t transaction_id,
                   MessageWriter* writer) {
@@ -70,6 +72,8 @@ bool ReadReply(MessageReader* reader,
   *transaction_id = header.transaction_id;
   return reader->ReadBytes(sizeof(HelloReply), reply);
 }
+
+// Launch ----------------------------------------------------------------------
 
 void WriteRequest(const LaunchRequest& request,
                   uint32_t transaction_id,
@@ -93,6 +97,30 @@ bool ReadReply(MessageReader* reader,
   return true;
 }
 
+// Attach ----------------------------------------------------------------------
+
+void WriteRequest(const AttachRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kAttach, transaction_id);
+  writer->WriteUint64(request.koid);
+}
+
+bool ReadReply(MessageReader* reader,
+               AttachReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  if (!reader->ReadUint32(&reply->status))
+    return false;
+  return true;
+}
+
+// ProcessTree -----------------------------------------------------------------
+
 void WriteRequest(const ProcessTreeRequest& request,
                   uint32_t transaction_id,
                   MessageWriter* writer) {
@@ -109,6 +137,8 @@ bool ReadReply(MessageReader* reader,
   *transaction_id = header.transaction_id;
   return Deserialize(reader, &reply->root);
 }
+
+// Threads ---------------------------------------------------------------------
 
 void WriteRequest(const ThreadsRequest& request,
                   uint32_t transaction_id,
@@ -128,6 +158,8 @@ bool ReadReply(MessageReader* reader,
   return Deserialize(reader, &reply->threads);
 }
 
+// ReadMemory ------------------------------------------------------------------
+
 void WriteRequest(const ReadMemoryRequest& request,
                   uint32_t transaction_id,
                   MessageWriter* writer) {
@@ -145,6 +177,8 @@ bool ReadReply(MessageReader* reader,
 
   return Deserialize(reader, &reply->blocks);
 }
+
+// NotifyThread ----------------------------------------------------------------
 
 bool ReadNotifyThread(MessageReader* reader, NotifyThread* thread) {
   MsgHeader header;

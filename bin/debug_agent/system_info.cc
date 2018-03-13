@@ -62,10 +62,33 @@ debug_ipc::ProcessTreeRecord GetProcessTreeRecord(
   return result;
 }
 
+// Searches the process tree rooted at "job" for a process with the given
+// koid. If found, puts it in *out* and returns true.
+bool FindProcess(const zx::job& job, zx_koid_t search_for, zx::process* out) {
+  for (auto& proc : GetChildProcesses(job.get())) {
+    if (KoidForObject(proc) == search_for) {
+      *out = std::move(proc);
+      return true;
+    }
+  }
+
+  for (const auto& job : GetChildJobs(job.get())) {
+    if (FindProcess(job, search_for, out))
+      return true;
+  }
+  return false;
+}
+
 }  // namespace
 
 zx_status_t GetProcessTree(debug_ipc::ProcessTreeRecord* root) {
   *root = GetProcessTreeRecord(
       GetRootJob(), debug_ipc::ProcessTreeRecord::Type::kJob);
   return ZX_OK;
+}
+
+zx::process GetProcessFromKoid(zx_koid_t koid) {
+  zx::process result;
+  FindProcess(GetRootJob(), koid, &result);
+  return result;
 }

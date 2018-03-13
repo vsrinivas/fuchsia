@@ -23,8 +23,11 @@ class SystemImpl : public System {
   std::vector<Target*> GetAllTargets() const override;
   Process* ProcessFromKoid(uint64_t koid) const override;
   void GetProcessTree(ProcessTreeCallback callback) override;
+  Target* CreateNewTarget(Target* clone) override;
 
  private:
+  void AddNewTarget(std::unique_ptr<TargetImpl> target);
+
   std::vector<std::unique_ptr<TargetImpl>> targets_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SystemImpl);

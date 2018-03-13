@@ -11,6 +11,7 @@ namespace debug_ipc {
 class MessageReader;
 class MessageWriter;
 
+// Hello.
 bool ReadRequest(MessageReader* reader,
                  HelloRequest* request,
                  uint32_t* transaction_id);
@@ -18,6 +19,7 @@ void WriteReply(const HelloReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer);
 
+// Launch.
 bool ReadRequest(MessageReader* reader,
                  LaunchRequest* request,
                  uint32_t* transaction_id);
@@ -25,6 +27,15 @@ void WriteReply(const LaunchReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer);
 
+// Attach.
+bool ReadRequest(MessageReader* reader,
+                 AttachRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const AttachReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer);
+
+// ProcessTree.
 bool ReadRequest(MessageReader* reader,
                  ProcessTreeRequest* request,
                  uint32_t* transaction_id);
@@ -32,6 +43,7 @@ void WriteReply(const ProcessTreeReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer);
 
+// Threads.
 bool ReadRequest(MessageReader* reader,
                  ThreadsRequest* request,
                  uint32_t* transaction_id);
@@ -39,6 +51,7 @@ void WriteReply(const ThreadsReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer);
 
+// ReadMemory.
 bool ReadRequest(MessageReader* reader,
                  ReadMemoryRequest* request,
                  uint32_t* transaction_id);

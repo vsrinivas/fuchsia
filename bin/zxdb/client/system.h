@@ -43,6 +43,11 @@ class System : public ClientObject {
   // Schedules a request for the system process tree.
   virtual void GetProcessTree(ProcessTreeCallback callback) = 0;
 
+  // Creates a new target in the system. If "clone" is given, the settings
+  // from that target will be cloned into the new one. If clone is null,
+  // an empty Target will be allocated.
+  virtual Target* CreateNewTarget(Target* clone) = 0;
+
  protected:
   fxl::ObserverList<SystemObserver>& observers() { return observers_; }
 

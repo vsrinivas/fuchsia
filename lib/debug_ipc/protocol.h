@@ -23,6 +23,7 @@ struct MsgHeader {
     kNone = 0,
     kHello,
     kLaunch,
+    kAttach,
     kProcessTree,
     kThreads,
     kReadMemory,
@@ -62,6 +63,13 @@ struct LaunchRequest {
 struct LaunchReply {
   uint32_t status = 0;  // zx_status_t value from launch, ZX_OK on success.
   uint64_t process_koid = 0;
+};
+
+struct AttachRequest {
+  uint64_t koid;
+};
+struct AttachReply {
+  uint32_t status = 0;  // zx_status_t value from attaching. ZX_OK on success.
 };
 
 struct ProcessTreeRequest {};

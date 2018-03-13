@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 
 #include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/console/command.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
@@ -45,6 +46,33 @@ TEST(CommandUtils, StringToUint64) {
   // Valid hex number with capital X prefix at the max of a 64-bit int.
   EXPECT_FALSE(StringToUint64("0XffffFFFFffffFFFF", &result).has_error());
   EXPECT_EQ(0xffffFFFFffffFFFFu, result);
+}
+
+TEST(CommandUtils, ReadUint64Arg) {
+  Command cmd;
+  uint64_t out;
+
+  Err err = ReadUint64Arg(cmd, 0, "code", &out);
+  EXPECT_TRUE(err.has_error());
+  EXPECT_EQ("Not enough arguments when reading the code.", err.msg());
+
+  std::vector<std::string> args;
+  args.push_back("12");
+  args.push_back("0x67");
+  args.push_back("notanumber");
+  cmd.set_args(std::move(args));
+
+  err = ReadUint64Arg(cmd, 0, "code", &out);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(12u, out);
+
+  err = ReadUint64Arg(cmd, 1, "code", &out);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(0x67u, out);
+
+  err = ReadUint64Arg(cmd, 2, "code", &out);
+  EXPECT_TRUE(err.has_error());
+  EXPECT_EQ("Invalid number \"notanumber\" when reading the code.", err.msg());
 }
 
 }  // namespace zxdb

@@ -20,16 +20,21 @@ class TargetImpl : public Target {
 
   ProcessImpl* process() { return process_.get(); }
 
+  // Allocates a new target with the same settings as this one. This isn't
+  // a real copy, because any process information is not cloned.
+  std::unique_ptr<TargetImpl> Clone(SystemImpl* system);
+
   // Target implementation:
   State GetState() const override;
   Process* GetProcess() const override;
   const std::vector<std::string>& GetArgs() const override;
   void SetArgs(std::vector<std::string> args) override;
   void Launch(LaunchCallback callback) override;
+  void Attach(uint64_t koid, LaunchCallback callback) override;
 
  private:
-  void OnLaunchReply(const Err& err, debug_ipc::LaunchReply reply,
-                     LaunchCallback callback);
+  void OnLaunchOrAttachReply(const Err& err, uint64_t koid, uint32_t status,
+                             LaunchCallback callback);
 
   State state_ = kStopped;
 

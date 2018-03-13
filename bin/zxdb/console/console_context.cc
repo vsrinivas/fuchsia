@@ -63,6 +63,17 @@ void ConsoleContext::SetActiveTarget(Target* target) {
   active_target_id_ = found->second;
 }
 
+int ConsoleContext::GetActiveTargetId() {
+  return active_target_id_;
+}
+
+Target* ConsoleContext::GetActiveTarget() {
+  auto found = id_to_target_.find(active_target_id_);
+  if (found == id_to_target_.end())
+    return nullptr;
+  return found->second.target;
+}
+
 void ConsoleContext::SetActiveThreadInTarget(Thread* thread) {
   TargetRecord* record = GetTargetRecord(thread->GetProcess()->GetTarget());
   if (!record)
@@ -138,8 +149,9 @@ void ConsoleContext::DidCreateTarget(Target* target) {
   id_to_target_[new_id] = std::move(record);
   target_to_id_[target] = new_id;
 
-  // New targets become the default for future commands.
-  active_target_id_ = new_id;
+  // Set the active target only if there's none already.
+  if (active_target_id_ == 0)
+    active_target_id_ = new_id;
 }
 
 void ConsoleContext::WillDestroyTarget(Target* target) {
@@ -210,8 +222,11 @@ void ConsoleContext::DidCreateThread(Process* process, Thread* thread) {
   record->id_to_thread[thread_id] = thread;
   record->thread_to_id[thread] = thread_id;
 
-  // New threads become the default for future commands.
-  record->active_thread_id = thread_id;
+  // Only make a new thread the default if there is no current thread,
+  // otherwise the context will be swapping out from under the user as the
+  // program runs.
+  if (record->active_thread_id == -1)
+    record->active_thread_id = thread_id;
 
   OutputBuffer out;
   out.Append(fxl::StringPrintf(

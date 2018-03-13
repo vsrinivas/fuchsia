@@ -84,6 +84,7 @@ void DebugAgent::OnStreamData() {
   switch (header.type) {
     DISPATCH(Hello);
     DISPATCH(Launch);
+    DISPATCH(Attach);
     DISPATCH(ProcessTree);
     DISPATCH(Threads);
     DISPATCH(ReadMemory);
@@ -154,6 +155,17 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
     RemoveDebuggedProcess(reply->process_koid);
     reply->process_koid = 0;
   }
+}
+
+void DebugAgent::OnAttach(const debug_ipc::AttachRequest& request,
+                          debug_ipc::AttachReply* reply) {
+  zx::process process = GetProcessFromKoid(request.koid);
+  if (!process.is_valid()) {
+    reply->status = ZX_ERR_NOT_FOUND;
+    return;
+  }
+  AddDebuggedProcess(request.koid, std::move(process));
+  reply->status = ZX_OK;
 }
 
 void DebugAgent::OnProcessTree(const debug_ipc::ProcessTreeRequest& request,

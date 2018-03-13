@@ -20,6 +20,12 @@ TargetImpl::TargetImpl(SystemImpl* system)
       weak_thunk_(std::make_shared<WeakThunk<TargetImpl>>(this)) {}
 TargetImpl::~TargetImpl() = default;
 
+std::unique_ptr<TargetImpl> TargetImpl::Clone(SystemImpl* system) {
+  auto result = std::make_unique<TargetImpl>(system);
+  result->args_ = args_;
+  return result;
+}
+
 Target::State TargetImpl::GetState() const {
   return state_;
 }
@@ -57,8 +63,8 @@ void TargetImpl::Launch(LaunchCallback callback) {
            Session*, uint32_t transaction_id, const Err& err,
            debug_ipc::LaunchReply reply) {
         if (auto ptr = thunk.lock()) {
-          ptr->thunk->OnLaunchReply(err, std::move(reply),
-                                    std::move(callback));
+          ptr->thunk->OnLaunchOrAttachReply(err, reply.process_koid,
+                                            reply.status, std::move(callback));
         } else {
           // The reply that the process was launched came after the local
           // objects were destroyed.
@@ -73,22 +79,46 @@ void TargetImpl::Launch(LaunchCallback callback) {
     observer.DidChangeTargetState(this, State::kStopped);
 }
 
-void TargetImpl::OnLaunchReply(const Err& err, debug_ipc::LaunchReply reply,
-                               LaunchCallback callback) {
+void TargetImpl::Attach(uint64_t koid, LaunchCallback callback) {
+  debug_ipc::AttachRequest request;
+  request.koid = koid;
+  session()->Send<debug_ipc::AttachRequest, debug_ipc::AttachReply>(
+      request,
+      [koid, thunk = std::weak_ptr<WeakThunk<TargetImpl>>(weak_thunk_),
+       callback = std::move(callback)](
+           Session*, uint32_t transaction_id, const Err& err,
+           debug_ipc::AttachReply reply) {
+        if (auto ptr = thunk.lock()) {
+          ptr->thunk->OnLaunchOrAttachReply(err, koid, reply.status,
+                                            std::move(callback));
+        } else {
+          // The reply that the process was launched came after the local
+          // objects were destroyed.
+          // TODO(brettw) handle this more gracefully. Maybe kill the remote
+          // process?
+          fprintf(stderr, "Warning: process launch race, extra process could "
+              "be running.\n");
+        }
+      });
+}
+
+void TargetImpl::OnLaunchOrAttachReply(const Err& err, uint64_t koid,
+                                       uint32_t status,
+                                       LaunchCallback callback) {
   FXL_DCHECK(state_ = State::kStarting);
   FXL_DCHECK(!process_.get());  // Shouldn't have a process.
   if (err.has_error()) {
     // Error from transport.
     state_ = State::kStopped;
     callback(this, err);
-  } else if (reply.status != 0) {
+  } else if (status != 0) {
     // Error from launching.
     state_ = State::kStopped;
     callback(this, Err(fxl::StringPrintf(
-            "Error launching, status = %d.", reply.status)));
+            "Error launching, status = %d.", status)));
   } else {
     state_ = State::kRunning;
-    process_ = std::make_unique<ProcessImpl>(this, reply.process_koid);
+    process_ = std::make_unique<ProcessImpl>(this, koid);
     callback(this, Err());
   }
 
