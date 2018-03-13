@@ -595,7 +595,9 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             return false;
         if (method.maybe_request != nullptr) {
             Scope<StringView> request_scope;
+            FieldShape header_field_shape(TypeShape(16u, 4u));
             std::vector<FieldShape*> request_struct;
+            request_struct.push_back(&header_field_shape);
             for (auto& param : method.maybe_request->parameters) {
                 if (!request_scope.Insert(param.name.data()))
                     return false;
@@ -607,7 +609,9 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
         }
         if (method.maybe_response != nullptr) {
             Scope<StringView> response_scope;
+            FieldShape header_field_shape(TypeShape(16u, 4u));
             std::vector<FieldShape*> response_struct;
+            response_struct.push_back(&header_field_shape);
             for (auto& param : method.maybe_response->parameters) {
                 if (!response_scope.Insert(param.name.data()))
                     return false;
