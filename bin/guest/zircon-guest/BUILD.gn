@@ -2,15 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/bootdata.gni")
+import("//build/config/fuchsia/zircon.gni")
 import("//build/gn/config.gni")
 import("//garnet/bin/guest/guest.gni")
-import("$root_out_dir/args.gn")
-
-zircon_cpu = target_cpu
-
-_mdigen = "//out/build-zircon/tools/mdigen"
 
 action("gpt_image") {
   visibility = [ ":*" ]
@@ -20,66 +15,42 @@ action("gpt_image") {
   args = [
     "-o",
     rebase_path("$target_out_dir"),
-    "$zircon_cpu",
+    target_cpu,
   ]
 
   outputs = [
-    "$gpt_image",
+    gpt_image,
   ]
 }
 
-action("guest-mdi") {
+bootdata_mdi("guest-mdi") {
   visibility = [ ":*" ]
-  script = "//build/gn_run_binary.sh"
-
-  mdi_inputs = [
-    "//zircon/system/public/zircon/mdi/zircon.mdi",
+  sources = [
     "//garnet/lib/machina/arch/arm64/mdi/board.mdi",
+    "//zircon/system/public/zircon/mdi/zircon.mdi",
   ]
-
-  inputs = [ _mdigen ] + mdi_inputs
-
-  script_args = [
-    clang_prefix,
-    rebase_path(_mdigen, root_build_dir),
-  ]
-
-  output_file = "$target_out_dir/guest-mdi.bin"
-  outputs = [
-    output_file,
-  ]
-
-  output_args = [
-    "-o",
-    rebase_path(output_file, root_build_dir),
-  ]
-
-  input_args = rebase_path(mdi_inputs, root_build_dir)
-
-  args = script_args + output_args + input_args
 }
 
 bootdata_platform("guest-platform-id") {
   visibility = [ ":*" ]
-  vid = "1"
-  pid = "1"
+  vid = 1
+  pid = 1
   board = "qemu-virt"
 }
 
 bootdata("guest-bootdata") {
   visibility = [ ":*" ]
   boot = true
-  inputs = [
-    "//out/build-zircon/build-${zircon_cpu}/bootfs.manifest",
-  ]
-
+  inputs = zircon_boot_manifests
+  deps = []
   if (target_cpu == "arm64") {
-    deps = [
+    deps += [
       ":guest-mdi",
       ":guest-platform-id",
     ]
-    inputs += get_target_outputs(":guest-mdi") +
-              get_target_outputs(":guest-platform-id")
+  }
+  foreach(label, deps) {
+    inputs += get_target_outputs(label)
   }
 }
 
@@ -92,13 +63,15 @@ guest_app("zircon-guest") {
   cmdline = "TERM=uart"
   bootdata_outputs = get_target_outputs(":guest-bootdata")
   ramdisk = bootdata_outputs[0]
-  zircon = "//out/build-zircon/build-${zircon_cpu}/zircon.bin"
+  zircon = "$zircon_build_dir/zircon.bin"
 
   gpt_outputs = get_target_outputs(":gpt_image")
   gpt_filename = "gpt.img"
-  resources = [ {
-        path = rebase_path(gpt_outputs[0])
-        dest = "${gpt_filename}"
-      } ]
+  resources = [
+    {
+      path = rebase_path(gpt_outputs[0])
+      dest = gpt_filename
+    },
+  ]
   block_devices = [ "/pkg/data/${gpt_filename},ro" ]
 }
