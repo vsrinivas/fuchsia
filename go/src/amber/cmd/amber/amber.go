@@ -27,7 +27,7 @@ import (
 	"application/lib/app/context"
 	"syscall/zx"
 
-	tuf "github.com/flynn/go-tuf/client"
+	tuf_data "github.com/flynn/go-tuf/data"
 )
 
 const lhIP = "http://127.0.0.1"
@@ -62,7 +62,31 @@ func main() {
 		return
 	}
 
-	client, _, err := source.InitNewTUFClient(*addr, *store, keys)
+	ticker := source.NewTickGenerator(source.InitBackoff)
+	dp := daemon.NewDaemonProvider()
+	go ticker.Run()
+
+	go startFIDLSvr(dp, ticker)
+
+	go startupDaemon(*addr, *store, keys, ticker, dp)
+	defer dp.Daemon().CancelAll()
+
+	//block forever
+	select {}
+}
+
+func startFIDLSvr(d *daemon.DaemonProvider, t *source.TickGenerator) {
+	cxt := context.CreateFromStartupInfo()
+	apiSrvr := ipcserver.NewControlSrvr(d, t)
+	cxt.OutgoingService.AddService(amber_fidl.ControlName, func(c zx.Channel) error {
+		return apiSrvr.Bind(c)
+	})
+	cxt.Serve()
+}
+
+func startupDaemon(srvAddr, store string, keys []*tuf_data.Key,
+	ticker *source.TickGenerator, dp *daemon.DaemonProvider) *daemon.Daemon {
+	client, _, err := source.InitNewTUFClient(srvAddr, store, keys, ticker)
 	if err != nil {
 		log.Printf("client initialization failed: %s\n", err)
 	}
@@ -72,25 +96,6 @@ func main() {
 		os.Exit(2)
 	}
 
-	d := startupDaemon(client, *addr)
-	log.Println("amber: monitoring for updates")
-	defer d.CancelAll()
-
-	startFIDLSvr(d)
-	//block forever
-	select {}
-}
-
-func startFIDLSvr(d *daemon.Daemon) {
-	cxt := context.CreateFromStartupInfo()
-	apiSrvr := ipcserver.NewControlSrvr(d)
-	cxt.OutgoingService.AddService(amber_fidl.ControlName, func(c zx.Channel) error {
-		return apiSrvr.Bind(c)
-	})
-	cxt.Serve()
-}
-
-func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
 	files := []string{"/pkg/bin/app"}
 	reqSet := pkg.NewPackageSet()
 
@@ -123,6 +128,8 @@ func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
 	} else {
 		log.Printf("amber: bad blob repo address %s\n", err)
 	}
+	dp.SetDaemon(checker)
+	log.Println("amber: monitoring for updates")
 	return checker
 }
 
