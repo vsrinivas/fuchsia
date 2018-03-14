@@ -216,7 +216,7 @@ class InterfacePtr {
   // Blocks the calling thread until either a message arrives on the previously
   // bound channel, an error occurs, or the |deadline| is exceeded.
   //
-  // Returns ZX_ERR_TIMED_OUT if the deadlien is exceeded.
+  // Returns ZX_ERR_TIMED_OUT if the deadline is exceeded.
   //
   // Returns an error if waiting for the message, reading the message, or
   // processing the message fails. If the error results in the channel being
