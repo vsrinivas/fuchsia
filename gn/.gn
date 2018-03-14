@@ -29,7 +29,6 @@ default_args = {
 
 # Enable checking for the layers.
 check_targets = [
-  "//garnet/examples/*",
-  "//garnet/public/*",
+  "//garnet/*",
   "//peridot/*",
 ]
