@@ -9,4 +9,3 @@ Modifications:
 - Ran gen-sources.sh to generate source files.
 - Removed src/mksignames.c
 - Added rules.mk
-- Added a controller protocol (see comments in controller.h).

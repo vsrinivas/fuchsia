@@ -5,7 +5,6 @@
 #include "mystring.h"
 #include "shell.h"
 #include "init.h"
-#include "controller.h"
 #include "eval.h"
 #include "expand.h"
 #include <stdio.h>
@@ -151,11 +150,6 @@ extern char **environ;
 
 void
 init() {
-
-      /* from controller.c: */
-      {
-	controller_init();
-      }
 
       /* from input.c: */
       {
