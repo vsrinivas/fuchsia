@@ -9,7 +9,7 @@ set up and synchronizing story state using the
 
 ### Devices
 
-Follow the steps at in the [top level docs](README.md) to:
+Follow the steps at in the [top level docs](../README.md) to:
 * Check out the source and build Fuchsia.
 * Install it on two devices (or emulators).
 * Connect the devices to the network.

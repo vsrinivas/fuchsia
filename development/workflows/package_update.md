@@ -126,4 +126,4 @@ root hash and put in a directory at the root of the TUF file tree called 'blobs'
 [TUF-home]: https://theupdateframework.github.io "TUF Homepage"
 [pkg-doc]: /development/build/packages.md "Packaging docs"
 [flutter-gni]: https://fuchsia.googlesource.com/topaz/+/master/runtime/flutter_runner/flutter_app.gni "Flutter GN build template"
-[paver]: /fuchsia_paver.md "Fuchsia paver"
+[paver]: fuchsia_paver.md "Fuchsia paver"

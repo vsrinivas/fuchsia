@@ -35,7 +35,7 @@ Read this all before? Here are the common case commands
 ## Building
 
 Detailed instructions for obtaining and building Fuchsia are available from the
-[Getting Started](getting_started.md) guide, but we'll assume here that the
+[Getting Started](/getting_started.md) guide, but we'll assume here that the
 target system is x86-based and that you want to build a complete system. To
 configure our build for this we can run `fx set x64` and then build with
 `fx full-build`.
@@ -66,7 +66,7 @@ through the steps to set the boot device, don't continue with any instructions o
 creating install media.
 * [Acer Switch Alpha 12](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md)
 * [Intel NUC](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/nuc.md)
-* [Google Pixelbook](development/hardware/pixelbook.md)
+* [Google Pixelbook](/development/hardware/pixelbook.md)
 
 Paving should occur automatically after the device is booted into Zedboot from the
 USB drive. After the paving process completes, the system should boot into the

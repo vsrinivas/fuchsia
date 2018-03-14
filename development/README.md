@@ -10,10 +10,10 @@ and debugging Fuchsia and programs running on Fuchsia.
 
  - [Getting started](../getting_started.md) - **start here**. This document
    covers getting the source, building and running Fuchsia.
- - [Multiple device setup](../multi_device.md)
+ - [Multiple device setup](workflows/multi_device.md)
  - [Pushing changes](workflows/package_update.md)
  - [Changes that span layers](workflows/multilayer_changes.md)
- - [Debugging](../debugging.md)
+ - [Debugging](workflows/debugging.md)
  - [Tracing][tracing]
  - [Build system](build/README.md)
 
@@ -51,8 +51,8 @@ This section covers Fuchsia-wide conventions and best practices.
 
 ## Miscellaneous
 
- - [CTU analysis in Zircon](../ctu_analysis.md)
- - [Persistent disks in QEMU](../qemu_persistent_disk.md)
+ - [CTU analysis in Zircon](workflows/ctu_analysis.md)
+ - [Persistent disks in QEMU](workflows/qemu_persistent_disk.md)
 
 
 [acer_12]: https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md "Acer 12"

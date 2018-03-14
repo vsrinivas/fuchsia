@@ -117,7 +117,7 @@ To override the default behaviors, pass flags to `fx set`:
 ### Installing and booting from hardware
 
 To get Fuchsia running on hardware requires using the paver, which these
-[instructions](fuchsia_paver.md) will help you get up and running with.
+[instructions](/development/workflows/fuchsia_paver.md) will help you get up and running with.
 
 ### Boot from QEMU
 
