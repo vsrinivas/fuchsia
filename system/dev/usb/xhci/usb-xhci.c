@@ -200,6 +200,7 @@ static void xhci_release(void* ctx) {
         zx_handle_close(xhci->mmio_handle);
     }
     zx_handle_close(xhci->cfg_handle);
+    zx_handle_close(xhci->bti_handle);
     xhci_free(xhci);
 }
 
@@ -334,6 +335,11 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
         goto error_return;
     }
 
+    status = pci_get_bti(pci, 0, &xhci->bti_handle);
+    if (status != ZX_OK) {
+        goto error_return;
+    }
+
     /*
      * eXtensible Host Controller Interface revision 1.1, section 5, xhci
      * should only use BARs 0 and 1. 0 for 32 bit addressing, and 0+1 for 64 bit addressing.
@@ -403,6 +409,7 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
     return ZX_OK;
 
 error_return:
+    zx_handle_close(xhci->bti_handle);
     free(xhci);
     for (uint32_t i = 0; i < num_irq_handles_initialized; i++) {
         zx_handle_close(xhci->irq_handles[i]);
@@ -424,6 +431,11 @@ static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, platform_device_proto
     xhci = calloc(1, sizeof(xhci_t));
     if (!xhci) {
         status = ZX_ERR_NO_MEMORY;
+        goto error_return;
+    }
+
+    status = pdev_get_bti(pdev, 0, &xhci->bti_handle);
+    if (status != ZX_OK) {
         goto error_return;
     }
 
@@ -454,6 +466,7 @@ static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, platform_device_proto
     return ZX_OK;
 
 error_return:
+    zx_handle_close(xhci->bti_handle);
     free(xhci);
     if (xhci->mmio) {
         zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)xhci->mmio, xhci->mmio_size);

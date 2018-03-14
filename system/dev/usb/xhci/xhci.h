@@ -204,6 +204,8 @@ struct xhci {
     // VMO buffer for scratch pad index
     io_buffer_t scratch_pad_index_buffer;
 
+    zx_handle_t bti_handle;
+
     // pool of control requests that can be reused
     usb_request_pool_t free_reqs;
 };

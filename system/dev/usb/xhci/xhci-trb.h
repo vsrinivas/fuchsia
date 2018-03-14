@@ -33,7 +33,7 @@ typedef struct xhci_event_ring {
 
 typedef struct xhci xhci_t;
 
-zx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* tr, int count);
+zx_status_t xhci_transfer_ring_init(xhci_t* xhci, xhci_transfer_ring_t* tr, int count);
 void xhci_transfer_ring_free(xhci_transfer_ring_t* ring);
 size_t xhci_transfer_ring_free_trbs(xhci_transfer_ring_t* ring);
 zx_status_t xhci_event_ring_init(xhci_t* xhci, int interrupter, int count);
