@@ -5,6 +5,9 @@
 import("//build/package.gni")
 
 executable("bin") {
+  # TODO(TO-887): remove me.
+  check_includes = false
+
   output_name = "sketchy_service"
 
   sources = [
