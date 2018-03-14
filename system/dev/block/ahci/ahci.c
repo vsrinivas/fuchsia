@@ -34,6 +34,8 @@
 #define HI32(val) (((val) >> 32) & 0xffffffff)
 #define LO32(val) ((val) & 0xffffffff)
 
+#define PAGE_MASK (PAGE_SIZE - 1)
+
 // port is implemented by the controller
 #define AHCI_PORT_FLAG_IMPLEMENTED (1 << 0)
 // a device is present on port
@@ -77,6 +79,8 @@ struct ahci_device {
 
     zx_handle_t irq_handle;
     thrd_t irq_thread;
+
+    zx_handle_t bti_handle;
 
     thrd_t worker_thread;
     completion_t worker_completion;
@@ -242,17 +246,16 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
 
     zx_handle_t vmo = txn->bop.rw.vmo;
     uint64_t offset_vmo = txn->bop.rw.offset_vmo * port->devinfo.block_size;
-    zx_status_t st = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, offset_vmo, bytes, NULL, 0);
+
+    bool is_write = cmd_is_write(txn->cmd);
+    uint32_t options = is_write ? ZX_BTI_PERM_READ : ZX_BTI_PERM_WRITE;
+    zx_status_t st = zx_bti_pin(dev->bti_handle, options, vmo, offset_vmo & ~PAGE_MASK,
+                    (bytes + PAGE_MASK) & ~(PAGE_MASK), pages, pagecount);
     if (st != ZX_OK) {
-        zxlogf(SPEW, "ahci.%d: failed to commit pages, err = %d\n", port->nr, st);
+        zxlogf(SPEW, "ahci.%d: failed to pin pages, err = %d\n", port->nr, st);
         return st;
     }
-    st = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP, offset_vmo, bytes, pages,
-                         AHCI_MAX_PAGES * sizeof(zx_paddr_t));
-    if (st != ZX_OK) {
-        zxlogf(SPEW, "ahci.%d: failed to lookup pages, err = %d\n", port->nr, st);
-        return st;
-    }
+    txn->phys = pages[0];
 
     phys_iter_buffer_t physbuf = {
         .phys = pages,
@@ -282,7 +285,7 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     // don't clear the cl since we set up ctba/ctbau at init
     cl->prdtl_flags_cfl = 0;
     cl->cfl = 5; // 20 bytes
-    cl->w = cmd_is_write(cmd) ? 1 : 0;
+    cl->w = is_write ? 1 : 0;
     cl->prdbc = 0;
     memset(port->ct[slot], 0, sizeof(ahci_ct_t));
 
@@ -368,7 +371,7 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     return ZX_OK;
 }
 
-static zx_status_t ahci_port_initialize(ahci_port_t* port) {
+static zx_status_t ahci_port_initialize(ahci_device_t* dev, ahci_port_t* port) {
     uint32_t cmd = ahci_read(&port->regs->cmd);
     if (cmd & (AHCI_PORT_CMD_ST | AHCI_PORT_CMD_FRE | AHCI_PORT_CMD_CR | AHCI_PORT_CMD_FR)) {
         zxlogf(ERROR, "ahci.%d: port busy\n", port->nr);
@@ -380,7 +383,8 @@ static zx_status_t ahci_port_initialize(ahci_port_t* port) {
     size_t ct_prd_padding = 0x80 - (ct_prd_sz & (0x80 - 1)); // 128-byte aligned
     size_t mem_sz = sizeof(ahci_fis_t) + sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS
                     + (ct_prd_sz + ct_prd_padding) * AHCI_MAX_COMMANDS;
-    zx_status_t status = io_buffer_init(&port->buffer, mem_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    zx_status_t status = io_buffer_init_with_bti(&port->buffer, dev->bti_handle,
+                                                 mem_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status < 0) {
         zxlogf(ERROR, "ahci.%d: error %d allocating dma memory\n", port->nr, status);
         return status;
@@ -479,6 +483,9 @@ void ahci_queue(ahci_device_t* device, int portnr, sata_txn_t* txn) {
     zxlogf(SPEW, "ahci.%d: queue_txn txn %p offset_dev 0x%" PRIx64 " length 0x%x\n",
             port->nr, txn, txn->bop.rw.offset_dev, txn->bop.rw.length);
 
+    // reset the physical address
+    txn->phys = 0;
+
     // put the cmd on the queue
     mtx_lock(&port->lock);
     list_add_tail(&port->txn_list, &txn->node);
@@ -491,6 +498,8 @@ void ahci_queue(ahci_device_t* device, int portnr, sata_txn_t* txn) {
 static void ahci_release(void* ctx) {
     // FIXME - join threads created by this driver
     ahci_device_t* device = ctx;
+    zx_handle_close(device->irq_handle);
+    zx_handle_close(device->bti_handle);
     free(device);
 }
 
@@ -518,6 +527,9 @@ static int ahci_worker_thread(void* arg) {
                             port->nr, slot);
                 } else {
                     mtx_unlock(&port->lock);
+                    if (txn->phys != 0) {
+                        zx_bti_unpin(dev->bti_handle, txn->phys);
+                    }
                     zxlogf(SPEW, "ahci.%d: complete txn %p\n", port->nr, txn);
                     block_complete(&txn->bop, ZX_OK);
                     mtx_lock(&port->lock);
@@ -724,7 +736,7 @@ static int ahci_init_thread(void* arg) {
         port->regs = &dev->regs->ports[i];
         list_initialize(&port->txn_list);
 
-        status = ahci_port_initialize(port);
+        status = ahci_port_initialize(dev, port);
         if (status) goto fail;
     }
 
@@ -838,6 +850,13 @@ static zx_status_t ahci_bind(void* ctx, zx_device_t* dev) {
     status = pci_set_irq_mode(&device->pci, irq_mode, 1);
     if (status != ZX_OK) {
         zxlogf(ERROR, "ahci: error %d setting irq mode\n", status);
+        goto fail;
+    }
+
+    // get bti handle
+    status = pci_get_bti(&device->pci, 0, &device->bti_handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: error %d getting bti handle\n", status);
         goto fail;
     }
 
