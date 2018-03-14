@@ -69,6 +69,27 @@ __BEGIN_CDECLS
 #define DDK_LOG_LDEBUG3  (ZX_LOG_DEBUG3 | ZX_LOG_LOCAL)
 #define DDK_LOG_LDEBUG4  (ZX_LOG_DEBUG4 | ZX_LOG_LOCAL)
 
+// zxlog_level_enabled_etc(...) is an internal macro which tests to see if a
+// given log level is currently enabled.  Users should not use this macro, they
+// should use zxlog_level_enabled(...) instead.
+#define zxlog_level_enabled_etc(flag) \
+    (((flag & ZX_LOG_LEVEL_MASK) & __zircon_driver_rec__.log_flags) != 0)
+
+// zxlog_level_enabled(...) provides a way for a driver to test to see if a
+// particular log level is currently enabled.  This allows for patterns where a
+// driver might want to log something at trace or spew level, but the something
+// that they want to log might involve a computation or for loop which cannot be
+// embedded into the log macro and therefor disabled without cost.
+//
+// Example:
+// if (zxlog_level_enabled(TRACE)) {
+//     zxlogf(TRACE, "Scatter gather table has %u entries\n", sg_table.count);
+//     for (uint32_t i = 0; i < sg_table.count; ++i) {
+//         zxlogf(TRACE, "[%u] : 0x%08x, %u\n",
+//                i, sg_table.entry[i].base, sg_table.entry[i].base);
+//     }
+// }
+#define zxlog_level_enabled(flag) zxlog_level_enabled_etc(DDK_LOG_##flag)
 
 void driver_printf(uint32_t flags, const char* fmt, ...) __PRINTFLIKE(2, 3);
 
@@ -87,7 +108,7 @@ void driver_printf(uint32_t flags, const char* fmt, ...) __PRINTFLIKE(2, 3);
 //
 #define zxlogf(flag, fmt...) \
     do { \
-        if ((DDK_LOG_##flag & ZX_LOG_LEVEL_MASK) & __zircon_driver_rec__.log_flags) { \
+        if (zxlog_level_enabled_etc(DDK_LOG_##flag)) { \
             driver_printf(DDK_LOG_##flag, fmt); \
         } \
     } while (0)
@@ -103,7 +124,7 @@ static inline uint32_t driver_get_log_flags(void) {
 typedef uint32_t DPRINTF_IS_DEPRECATED_USE_ZXLOGF __attribute__((deprecated));
 #define dprintf(flag, fmt...) \
     do { \
-        if ((DDK_LOG_##flag & ZX_LOG_LEVEL_MASK) & __zircon_driver_rec__.log_flags) { \
+        if (zxlog_level_enabled_etc(DDK_LOG_##flag)) { \
             driver_printf((DPRINTF_IS_DEPRECATED_USE_ZXLOGF)(DDK_LOG_##flag), fmt); \
         } \
     } while (0)
