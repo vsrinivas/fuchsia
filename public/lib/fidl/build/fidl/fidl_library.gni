@@ -23,11 +23,64 @@ template("fidl_library") {
     assert(false, "A FIDL library requires some sources.")
   }
 
-  json_representation = "$target_gen_dir/$target_name.fidl.json"
+  response_file = "$target_gen_dir/$target_name.args"
+  fidl_stem = "$target_gen_dir/$target_name.fidl"
+  json_representation = "$fidl_stem.json"
+  coding_tables = "$fidl_stem.tables.cc"
 
   main_target_name = target_name
+  response_file_target_name = "${target_name}_response_file"
   compilation_target_name = "${target_name}_compile"
   verification_target_name = "${target_name}_verify"
+
+  action(response_file_target_name) {
+    visibility = [
+      ":*",
+    ]
+
+    script = "//garnet/public/lib/fidl/build/fidl/gen_response_file.py"
+
+    forward_variables_from(invoker,
+                           [
+                             "sources",
+                             "deps",
+                           ])
+
+    libraries = "$target_gen_dir/$main_target_name.libraries"
+
+    outputs = [
+      response_file,
+      libraries,
+    ]
+
+    args = [
+      "--out-response-file",
+      rebase_path(response_file, root_build_dir),
+      "--out-libraries",
+      rebase_path(libraries, root_build_dir),
+      "--json",
+      rebase_path(json_representation, root_build_dir),
+      "--tables",
+      rebase_path(coding_tables, root_build_dir),
+      "--sources",
+    ] + rebase_path(sources, root_build_dir)
+
+    if (defined(invoker.deps)) {
+      dep_libraries = []
+
+      foreach(dep, invoker.deps) {
+        gen_dir = get_label_info(dep, "target_gen_dir")
+        name = get_label_info(dep, "name")
+        dep_libraries += [ "$gen_dir/$name.libraries" ]
+      }
+
+      inputs += dep_libraries
+
+      args += [
+        "--dep-libraries",
+      ] + rebase_path(dep_libraries, root_build_dir)
+    }
+  }
 
   compiled_action(compilation_target_name) {
     visibility = [
@@ -36,17 +89,24 @@ template("fidl_library") {
 
     tool = "//zircon/public/tool/fidl2"
 
-    inputs = invoker.sources
+    inputs = [
+      response_file,
+    ]
 
     outputs = [
+      coding_tables,
       json_representation,
     ]
 
+    rebased_response_file = rebase_path(response_file, root_build_dir)
+
     args = [
-      "--json",
-      rebase_path(json_representation, root_build_dir),
-      "--files",
-    ] + rebase_path(inputs, root_build_dir)
+      "@$rebased_response_file",
+    ]
+
+    deps = [
+      ":$response_file_target_name",
+    ]
   }
 
   compiled_action(verification_target_name) {

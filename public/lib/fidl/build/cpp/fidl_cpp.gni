@@ -16,11 +16,10 @@ template("fidl_cpp") {
   assert(current_base_toolchain == target_toolchain,
          "This template can only be used in $target_toolchain.")
 
-  not_needed(invoker, [ "sdk_candidate" ])
+  not_needed(invoker, [ "sdk_candidate", "sources" ])
 
   main_target_name = target_name
   generation_target_name = "${target_name}_cpp_generate"
-  c_generation_target_name = "${target_name}_c_generate"
 
   library_name = target_name
   if (defined(invoker.name)) {
@@ -33,12 +32,12 @@ template("fidl_cpp") {
                                 "target_gen_dir")
 
   file_stem = "$base_gen_dir/$library_name.fidl"
-  c_header = "$file_stem.c.h"
-  tables = "$file_stem.tables.cc"
+
+  fidl_target_gen_dir =
+      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
+  coding_tables = "$fidl_target_gen_dir/$target_name.fidl.tables.cc"
 
   if (current_toolchain == current_base_toolchain) {
-    fidl_target_gen_dir =
-        get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
     json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
     compiled_action(generation_target_name) {
@@ -56,40 +55,19 @@ template("fidl_cpp") {
       ]
 
       args = [
-        "-fidl-json",
+        "--fidl-json",
         rebase_path(json_representation, root_build_dir),
-        "-fidl-stem",
+        "--fidl-stem",
         rebase_path(file_stem, root_build_dir),
         "--root-gen-dir",
         rebase_path(root_gen_dir, root_build_dir),
-        "-generators",
+        "--generators",
         "cpp",
       ]
 
       deps = [
         ":$main_target_name($fidl_toolchain)",
       ]
-    }
-
-    compiled_action(c_generation_target_name) {
-      visibility = [ ":*" ]
-
-      tool = "//zircon/public/tool/fidl2"
-
-      inputs = invoker.sources
-
-      outputs = [
-        c_header,
-        tables,
-      ]
-
-      args = [
-               "--c-header",
-               rebase_path(c_header, root_build_dir),
-               "--tables",
-               rebase_path(tables, root_build_dir),
-               "--files",
-             ] + rebase_path(inputs, root_build_dir)
     }
   } else {
     not_needed(invoker, "*")
@@ -105,14 +83,17 @@ template("fidl_cpp") {
     sources = [
       "$file_stem.cc",
       "$file_stem.cc.h",
-      c_header,
-      tables,
+      coding_tables,
     ]
 
     deps = [
-      ":${c_generation_target_name}(${current_base_toolchain})",
       ":${generation_target_name}(${current_base_toolchain})",
+      ":$target_name($fidl_toolchain)",
       "//garnet/public/lib/fidl/cpp",
     ]
+
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
   }
 }
