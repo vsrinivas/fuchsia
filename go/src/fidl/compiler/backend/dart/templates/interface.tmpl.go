@@ -51,9 +51,7 @@ class {{ .ProxyName }} extends $fidl.Proxy<{{ .Name }}>
       $message.closeHandles();
       return;
     }
-    final $fidl.Decoder $decoder = new $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
-    const int $offset = $fidl.kMessageHeaderSize;
+    final $fidl.Decoder $decoder = new $fidl.Decoder($message);
     switch ($message.ordinal) {
 {{- range .Methods }}
   {{- if .HasRequest }}
@@ -63,7 +61,7 @@ class {{ .ProxyName }} extends $fidl.Proxy<{{ .Name }}>
         $decoder.claimMemory({{ .ResponseSize }});
         $callback(
       {{- range $index, $response := .Response }}
-          $types[{{ $index }}].decode($decoder, $offset),
+          $types[{{ $index }}].decode($decoder, 0),
       {{- end }}
         );
         break;
@@ -88,11 +86,11 @@ class {{ .ProxyName }} extends $fidl.Proxy<{{ .Name }}>
 
     final $fidl.Encoder $encoder = new $fidl.Encoder({{ .OrdinalName }});
     {{- if .Request }}
-    final int $offset = $encoder.alloc({{ .RequestSize }} - $fidl.kMessageHeaderSize);
+    $encoder.alloc({{ .RequestSize }} - $fidl.kMessageHeaderSize);
     final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request;
     {{- end }}
     {{- range $index, $request := .Request }}
-    $types[{{ $index }}].encode($encoder, {{ .Name }}, $offset);
+    $types[{{ $index }}].encode($encoder, {{ .Name }}, 0);
     {{- end }}
     {{- if .HasResponse }}
     Function $zonedCallback;
@@ -149,9 +147,7 @@ class {{ .BindingName }} extends $fidl.Binding<{{ .Name }}> {
 
   @override
   void handleMessage($fidl.Message $message, $fidl.MessageSink $respond) {
-    final $fidl.Decoder $decoder = new $fidl.Decoder($message)
-      ..claimMemory($fidl.kMessageHeaderSize);
-    const int $offset = $fidl.kMessageHeaderSize;
+    final $fidl.Decoder $decoder = new $fidl.Decoder($message);
     switch ($message.ordinal) {
 {{- range .Methods }}
   {{- if .HasRequest }}
@@ -160,7 +156,7 @@ class {{ .BindingName }} extends $fidl.Binding<{{ .Name }}> {
         $decoder.claimMemory({{ .RequestSize }});
         impl.{{ .Name }}(
     {{- range $index, $request := .Request }}
-          $types[{{ $index }}].decode($decoder, $offset),
+          $types[{{ $index }}].decode($decoder, 0),
     {{- end }}
     {{- if .HasResponse }}
           _{{ .Name }}Responder($respond, $message.txid),
