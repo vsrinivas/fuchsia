@@ -25,10 +25,14 @@ action("gpt_image") {
 
 bootdata_mdi("guest-mdi") {
   visibility = [ ":*" ]
+
+  # NOTE(abdulla): Order here matters, board.mdi relies on variables from
+  # zircon.mdi, therefore it must be listed first.
   sources = [
-    "//garnet/lib/machina/arch/arm64/mdi/board.mdi",
     "//zircon/system/public/zircon/mdi/zircon.mdi",
   ]
+
+  sources += [ "//garnet/lib/machina/arch/arm64/mdi/board.mdi" ]
 }
 
 bootdata_platform("guest-platform-id") {
