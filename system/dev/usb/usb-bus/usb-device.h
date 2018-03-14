@@ -20,11 +20,14 @@ typedef enum {
     CHILD_DEVICE
 } interface_status_t;
 
+typedef struct usb_bus usb_bus_t;
+
 // Represents a USB top-level device
 typedef struct usb_device {
     zx_device_t* zxdev;
     zx_device_t* hci_zxdev;
     usb_hci_protocol_t hci;
+    usb_bus_t* bus;
 
     // ID assigned by host controller
     uint32_t device_id;
@@ -49,8 +52,7 @@ typedef struct usb_device {
     usb_request_pool_t free_reqs;
 } usb_device_t;
 
-zx_status_t usb_device_add(zx_device_t* hci_device, usb_hci_protocol_t* hci_protocol,
-                           zx_device_t* parent,  uint32_t device_id, uint32_t hub_id,
+zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
                            usb_speed_t speed, usb_device_t** out_device);
 
 void usb_device_remove(usb_device_t* dev);

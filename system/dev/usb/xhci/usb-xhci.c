@@ -132,6 +132,12 @@ static zx_status_t xhci_cancel_all(void* ctx, uint32_t device_id, uint8_t ep_add
     return xhci_cancel_transfers(xhci, device_id, ep_address);
 }
 
+static zx_status_t xhci_get_bti(void* ctx, zx_handle_t* out_handle) {
+    xhci_t* xhci = ctx;
+    *out_handle = xhci->bti_handle;
+    return ZX_OK;
+}
+
 usb_hci_protocol_ops_t xhci_hci_protocol = {
     .request_queue = xhci_hci_request_queue,
     .set_bus_interface = xhci_set_bus_interface,
@@ -144,6 +150,7 @@ usb_hci_protocol_ops_t xhci_hci_protocol = {
     .reset_endpoint = xhci_reset_ep,
     .get_max_transfer_size = xhci_get_max_transfer_size,
     .cancel_all = xhci_cancel_all,
+    .get_bti = xhci_get_bti,
 };
 
 void xhci_request_queue(xhci_t* xhci, usb_request_t* req) {

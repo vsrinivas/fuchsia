@@ -36,6 +36,7 @@ typedef struct usb_hci_protocol_ops {
     zx_status_t (*reset_endpoint)(void* ctx, uint32_t device_id, uint8_t ep_address);
     size_t (*get_max_transfer_size)(void* ctx, uint32_t device_id, uint8_t ep_address);
     zx_status_t (*cancel_all)(void* ctx, uint32_t device_id, uint8_t ep_address);
+    zx_status_t (*get_bti)(void* ctx, zx_handle_t* out_handle);
 } usb_hci_protocol_ops_t;
 
 typedef struct usb_hci_protocol {
@@ -97,6 +98,11 @@ static inline size_t usb_hci_get_max_transfer_size(usb_hci_protocol_t* hci, uint
 static inline zx_status_t usb_hci_cancel_all(usb_hci_protocol_t* hci, uint32_t device_id,
                                              uint8_t ep_address) {
     return hci->ops->cancel_all(hci->ctx, device_id, ep_address);
+}
+
+// shares a copy of the HCI driver's BTI handle
+static inline zx_status_t usb_hci_get_bti(usb_hci_protocol_t* hci, zx_handle_t* out_handle) {
+    return hci->ops->get_bti(hci->ctx, out_handle);
 }
 
 __END_CDECLS;

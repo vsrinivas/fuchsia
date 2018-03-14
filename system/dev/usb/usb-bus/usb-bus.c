@@ -3,27 +3,15 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
-#include <ddk/device.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb-bus.h>
-#include <ddk/protocol/usb-hci.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "usb-bus.h"
 #include "usb-device.h"
 #include "usb-interface.h"
-
-// Represents a USB bus, which manages all devices for a USB host controller
-typedef struct usb_bus {
-    zx_device_t* zxdev;
-    zx_device_t* hci_zxdev;
-    usb_hci_protocol_t hci;
-
-    // top-level USB devices, indexed by device_id
-    usb_device_t** devices;
-    size_t max_device_count;
-} usb_bus_t;
 
 static zx_status_t bus_add_device(void* ctx, uint32_t device_id, uint32_t hub_id,
                                       usb_speed_t speed) {
@@ -32,8 +20,7 @@ static zx_status_t bus_add_device(void* ctx, uint32_t device_id, uint32_t hub_id
     if (device_id >= bus->max_device_count) return ZX_ERR_INVALID_ARGS;
 
     usb_device_t* usb_device;
-    zx_status_t result = usb_device_add(bus->hci_zxdev, &bus->hci, bus->zxdev, device_id,
-                                        hub_id, speed, &usb_device);
+    zx_status_t result = usb_device_add(bus, device_id, hub_id, speed, &usb_device);
     if (result == ZX_OK) {
         bus->devices[device_id] = usb_device;
     }
@@ -132,6 +119,12 @@ static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    zx_status_t status = usb_hci_get_bti(&bus->hci, &bus->bti_handle);
+    if (status != ZX_OK) {
+        free(bus);
+        return status;
+    }
+
     bus->hci_zxdev = device;
     bus->max_device_count = usb_hci_get_max_device_count(&bus->hci);
     bus->devices = calloc(bus->max_device_count, sizeof(usb_device_t *));
@@ -152,7 +145,7 @@ static zx_status_t usb_bus_bind(void* ctx, zx_device_t* device) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    zx_status_t status = device_add(device, &args, &bus->zxdev);
+    status = device_add(device, &args, &bus->zxdev);
     if (status == ZX_OK) {
         static usb_bus_interface_t bus_intf;
         bus_intf.ops = &_bus_interface;

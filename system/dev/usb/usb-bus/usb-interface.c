@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "usb-bus.h"
 #include "usb-device.h"
 #include "usb-interface.h"
 #include "util.h"
@@ -215,6 +216,31 @@ static zx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
     return status;
 }
 
+static zx_status_t usb_interface_req_alloc(void* ctx, usb_request_t** out, uint64_t data_size,
+                                           uint8_t ep_address) {
+    usb_interface_t* intf = ctx;
+
+    return usb_request_alloc_with_bti(out, intf->device->bus->bti_handle, data_size, ep_address);
+}
+
+static zx_status_t usb_interface_req_alloc_vmo(void* ctx, usb_request_t** out,
+                                               zx_handle_t vmo_handle, uint64_t vmo_offset,
+                                               uint64_t length, uint8_t ep_address) {
+    usb_interface_t* intf = ctx;
+
+    return usb_request_alloc_vmo_with_bti(out, intf->device->bus->bti_handle, vmo_handle,
+                                          vmo_offset, length, ep_address);
+}
+
+static zx_status_t usb_interface_req_init(void* ctx, usb_request_t* req, zx_handle_t vmo_handle,
+                                          uint64_t vmo_offset, uint64_t length,
+                                          uint8_t ep_address) {
+    usb_interface_t* intf = ctx;
+
+    return usb_request_init_with_bti(req, intf->device->bus->bti_handle, vmo_handle, vmo_offset,
+                                     length, ep_address);
+}
+
 static void usb_control_complete(usb_request_t* req, void* cookie) {
     completion_signal((completion_t*)cookie);
 }
@@ -418,6 +444,9 @@ static zx_status_t usb_interface_cancel_all(void* ctx, uint8_t ep_address) {
 }
 
 static usb_protocol_ops_t _usb_protocol = {
+    .req_alloc = usb_interface_req_alloc,
+    .req_alloc_vmo = usb_interface_req_alloc_vmo,
+    .req_init = usb_interface_req_init,
     .control = usb_interface_control,
     .request_queue = usb_interface_request_queue,
     .get_speed = usb_interface_get_speed,

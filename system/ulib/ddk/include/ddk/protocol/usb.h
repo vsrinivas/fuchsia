@@ -13,6 +13,12 @@
 __BEGIN_CDECLS;
 
 typedef struct usb_protocol_ops {
+    zx_status_t (*req_alloc)(void* ctx, usb_request_t** out, uint64_t data_size,
+                             uint8_t ep_address);
+    zx_status_t (*req_alloc_vmo)(void* ctx, usb_request_t** out, zx_handle_t vmo_handle,
+                                 uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
+    zx_status_t (*req_init)(void* ctx, usb_request_t* req, zx_handle_t vmo_handle,
+                            uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
     zx_status_t (*control)(void* ctx, uint8_t request_type, uint8_t request, uint16_t value,
                            uint16_t index, void* data, size_t length, zx_time_t timeout,
                            size_t* out_length);
@@ -36,6 +42,23 @@ typedef struct usb_protocol {
     usb_protocol_ops_t* ops;
     void* ctx;
 } usb_protocol_t;
+
+static inline zx_status_t usb_req_alloc(usb_protocol_t* usb, usb_request_t** out,
+                                        uint64_t data_size, uint8_t ep_address) {
+    return usb->ops->req_alloc(usb->ctx, out, data_size, ep_address);
+}
+
+static inline zx_status_t usb_req_alloc_vmo(usb_protocol_t* usb, usb_request_t** out,
+                                             zx_handle_t vmo_handle, uint64_t vmo_offset,
+                                             uint64_t length, uint8_t ep_address) {
+    return usb->ops->req_alloc_vmo(usb->ctx, out, vmo_handle, vmo_offset, length, ep_address);
+}
+
+static inline zx_status_t usb_req_init(usb_protocol_t* usb, usb_request_t* req,
+                                       zx_handle_t vmo_handle, uint64_t vmo_offset,
+                                       uint64_t length, uint8_t ep_address) {
+    return usb->ops->req_init(usb->ctx, req, vmo_handle, vmo_offset, length, ep_address);
+}
 
 // synchronously executes a control request on endpoint zero
 static inline zx_status_t usb_control(usb_protocol_t* usb, uint8_t request_type, uint8_t request,

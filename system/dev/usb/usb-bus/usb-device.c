@@ -11,6 +11,7 @@
 
 #include <driver/usb.h>
 
+#include "usb-bus.h"
 #include "usb-device.h"
 #include "usb-interface.h"
 #include "util.h"
@@ -389,8 +390,7 @@ static zx_status_t usb_device_add_interfaces(usb_device_t* parent,
     return result;
 }
 
-zx_status_t usb_device_add(zx_device_t* hci_zxdev, usb_hci_protocol_t* hci_protocol,
-                           zx_device_t* parent,  uint32_t device_id, uint32_t hub_id,
+zx_status_t usb_device_add(usb_bus_t* bus, uint32_t device_id, uint32_t hub_id,
                            usb_speed_t speed, usb_device_t** out_device) {
 
     usb_device_t* dev = calloc(1, sizeof(usb_device_t));
@@ -398,7 +398,8 @@ zx_status_t usb_device_add(zx_device_t* hci_zxdev, usb_hci_protocol_t* hci_proto
         return ZX_ERR_NO_MEMORY;
 
     // Needed for usb_device_control requests.
-    memcpy(&dev->hci, hci_protocol, sizeof(usb_hci_protocol_t));
+    memcpy(&dev->hci, &bus->hci, sizeof(usb_hci_protocol_t));
+    dev->bus = bus;
     dev->device_id = device_id;
     usb_request_pool_init(&dev->free_reqs);
 
@@ -478,7 +479,7 @@ zx_status_t usb_device_add(zx_device_t* hci_zxdev, usb_hci_protocol_t* hci_proto
             device_desc->bcdUSB & 0xff, configuration);
 
     list_initialize(&dev->children);
-    dev->hci_zxdev = hci_zxdev;
+    dev->hci_zxdev = bus->hci_zxdev;
     dev->hub_id = hub_id;
     dev->speed = speed;
     dev->config_descs = configs;
@@ -507,7 +508,7 @@ zx_status_t usb_device_add(zx_device_t* hci_zxdev, usb_hci_protocol_t* hci_proto
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    status = device_add(parent, &args, &dev->zxdev);
+    status = device_add(bus->zxdev, &args, &dev->zxdev);
     if (status == ZX_OK) {
         *out_device = dev;
     } else {
