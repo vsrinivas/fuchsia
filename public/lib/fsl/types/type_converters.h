@@ -16,9 +16,7 @@ namespace fxl {
 // Default conversion from a type to itself, to simplify container converters.
 template <typename T>
 struct TypeConverter<T, T> {
-  static T Convert(const T& value) {
-    return value;
-  }
+  static T Convert(const T& value) { return value; }
 };
 
 // Converts a vector to a FIDL VectorPtr.
@@ -27,7 +25,7 @@ struct TypeConverter<fidl::VectorPtr<T>, std::vector<U>> {
   static fidl::VectorPtr<T> Convert(const std::vector<U>& value) {
     fidl::VectorPtr<T> result(value.size());
     for (size_t i = 0; i < value.size(); ++i)
-      (*result)[i] = To<T>(value[i]);
+      result->at(i) = To<T>(value[i]);
     return result;
   }
 };
@@ -53,7 +51,7 @@ struct TypeConverter<fidl::VectorPtr<T>, fidl::Array<U, N>> {
   static fidl::VectorPtr<T> Convert(const fidl::Array<U, N>& value) {
     fidl::VectorPtr<T> result(value.count());
     for (size_t i = 0; i < value.count(); ++i) {
-      (*result)[i] = To<T>(value[i]);
+      result->at(i) = To<T>(value[i]);
     }
     return result;
   }

@@ -66,6 +66,8 @@ class String {
   bool is_null_;
 };
 
+using StringPtr = String;
+
 inline bool operator==(const String& a, const String& b) {
   return a.is_null() == b.is_null() && a.get() == b.get();
 }

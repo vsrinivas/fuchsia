@@ -28,7 +28,7 @@ class VectorPtr {
  public:
   VectorPtr() : is_null_(true) {}
   ~VectorPtr() = default;
-
+  VectorPtr(std::nullptr_t) : is_null_(true) {}
   explicit VectorPtr(size_t size)
       : vec_(std::vector<T>(size)), is_null_(false) {}
   explicit VectorPtr(std::vector<T> vec)
@@ -41,16 +41,7 @@ class VectorPtr {
   VectorPtr& operator=(VectorPtr&& other) = default;
 
   // Accesses the underlying std::vector object.
-  //
-  // Asserts if the VectorPtr is null.
-  std::vector<T>& get() {
-    ZX_ASSERT_MSG(!is_null_, "cannot call get() on a null VectorPtr");
-    return vec_;
-  }
-  const std::vector<T>& get() const {
-    ZX_ASSERT_MSG(!is_null_, "cannot call get() on a null VectorPtr");
-    return vec_;
-  }
+  const std::vector<T>& get() const { return vec_; }
 
   // Takes the std::vector from the VectorPtr.
   //
@@ -66,6 +57,11 @@ class VectorPtr {
   void reset(std::vector<T> vec) {
     vec_ = vec;
     is_null_ = false;
+  }
+
+  void reset() {
+    vec_.clear();
+    is_null_ = true;
   }
 
   // Resizes the underlying std::vector in this VectorPtr to the given size.
@@ -90,27 +86,14 @@ class VectorPtr {
   // Tests as true if non-null, false if null.
   explicit operator bool() const { return !is_null_; }
 
-  // Provides access to the underlying std::vector. Asserts if the VectorPtr is
-  // null.
-  std::vector<T>* operator->() {
-    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null VectorPtr");
-    return &vec_;
-  }
-  const std::vector<T>* operator->() const {
-    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null VectorPtr");
-    return &vec_;
-  }
+  // Provides access to the underlying std::vector.
+  std::vector<T>* operator->() { return &vec_; }
+  const std::vector<T>* operator->() const { return &vec_; }
 
-  // Provides access to the underlying std::vector. Asserts if the VectorPtr is
-  // null.
-  std::vector<T>& operator*() {
-    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null VectorPtr");
-    return vec_;
-  }
-  const std::vector<T>& operator*() const {
-    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null VectorPtr");
-    return vec_;
-  }
+  // Provides access to the underlying std::vector.
+  const std::vector<T>& operator*() const { return vec_; }
+
+  operator const std::vector<T>&() const { return vec_; }
 
  private:
   std::vector<T> vec_;

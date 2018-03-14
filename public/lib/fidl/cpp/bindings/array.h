@@ -28,6 +28,91 @@ namespace f1dl {
 template <typename T>
 class Array {
  public:
+  //////////////////////////////////////////////////////////////////////////////
+  // FIDL2 interface
+  //////////////////////////////////////////////////////////////////////////////
+
+  Array() : is_null_(true) {}
+  Array(std::nullptr_t) : is_null_(true) {}
+  explicit Array(size_t size) : vec_(std::vector<T>(size)), is_null_(false) {}
+  explicit Array(std::vector<T> vec) : vec_(std::move(vec)), is_null_(false) {}
+
+  Array(const Array&) = delete;
+  Array& operator=(const Array&) = delete;
+
+  Array(Array&& other)
+      : vec_(std::move(other.vec_)), is_null_(other.is_null_) {}
+
+  Array& operator=(Array&& other) {
+    vec_ = std::move(other.vec_);
+    is_null_ = other.is_null_;
+    return *this;
+  }
+
+  template <typename... U>
+  Array(U&&... t) : vec_{std::forward<T>(t)...} {
+    is_null_ = false;
+  }
+
+  // Accesses the underlying std::vector object.
+  const std::vector<T>& get() const { return vec_; }
+
+  // Takes the std::vector from the VectorPtr.
+  //
+  // After this method returns, the VectorPtr is null.
+  std::vector<T> take() {
+    is_null_ = true;
+    return std::move(vec_);
+  }
+
+  // Stores the given std::vector in this VectorPtr.
+  //
+  // After this method returns, the VectorPtr is non-null.
+  void reset(std::vector<T> vec) {
+    vec_ = vec;
+    is_null_ = false;
+  }
+
+  void reset() {
+    vec_.clear();
+    is_null_ = true;
+  }
+
+  // Resizes the underlying std::vector in this VectorPtr to the given size.
+  //
+  // After this method returns, the VectorPtr is non-null.
+  void resize(size_t size) {
+    vec_.resize(size);
+    is_null_ = false;
+  }
+
+  void swap(Array& other) {
+    using std::swap;
+    swap(vec_, other.vec_);
+    swap(is_null_, other.is_null_);
+  }
+
+  // Whether this VectorPtr is null.
+  //
+  // The null state is separate from the empty state.
+  bool is_null() const { return is_null_; }
+
+  // Tests as true if non-null, false if null.
+  explicit operator bool() const { return !is_null_; }
+
+  // Provides access to the underlying std::vector.
+  std::vector<T>* operator->() { return &vec_; }
+  const std::vector<T>* operator->() const { return &vec_; }
+
+  // Provides access to the underlying std::vector.
+  const std::vector<T>& operator*() const { return vec_; }
+
+  operator const std::vector<T>&() const { return vec_; }
+
+  //////////////////////////////////////////////////////////////////////////////
+  // FIDL1 interface
+  //////////////////////////////////////////////////////////////////////////////
+
   using ConstRefType = typename std::vector<T>::const_reference;
   using RefType = typename std::vector<T>::reference;
   using ConstIterator = typename std::vector<T>::const_iterator;
@@ -38,60 +123,6 @@ class Array {
 
   typedef internal::Array_Data<typename internal::WrapperTraits<T>::DataType>
       Data_;
-
-  // Constructs a new array that is null.
-  Array() : is_null_(true) {}
-
-  // Makes null arrays implicitly constructible from |nullptr|.
-  Array(std::nullptr_t) : is_null_(true) {}
-
-  ~Array() {}
-
-  // Moves the contents of |other| into this array.
-  Array(Array&& other) : is_null_(true) { Take(&other); }
-  Array& operator=(Array&& other) {
-    Take(&other);
-    return *this;
-  }
-
-  // Allows brace-syntax container initialization.
-  template <typename ...U>
-  Array(U&&...t) : vec_{std::forward<T>(t)...} {
-    is_null_ = false;
-  }
-
-  // Creates a non-null array of the specified size. The elements will be
-  // value-initialized (meaning that they will be initialized by their default
-  // constructor, if any, or else zero-initialized).
-  static Array New(size_t size) {
-    Array ret;
-    ret.resize(size);
-    return ret;
-  }
-
-  // Creates a new array with a copy of the contents of |other|.
-  template <typename U>
-  static Array From(const U& other) {
-    return TypeConverter<Array, U>::Convert(other);
-  }
-
-  // Copies the contents of this array to a new object of type |U|.
-  template <typename U>
-  U To() const {
-    return TypeConverter<U, Array>::Convert(*this);
-  }
-
-  // Resets the contents of this array back to null.
-  void reset() {
-    vec_.clear();
-    is_null_ = true;
-  }
-
-  // Tests as true if non-null, false if null.
-  explicit operator bool() const { return !is_null_; }
-
-  // Indicates whether the array is null (which is distinct from empty).
-  bool is_null() const { return is_null_; }
 
   // Indicates whether the array is empty. The behavior is undefined
   // if the array is null.
@@ -125,17 +156,9 @@ class Array {
     Traits::PushBack(&vec_, value);
   }
 
-  // Resizes the array to |size| and makes it non-null. Otherwise, works just
-  // like the resize method of |std::vector|.
-  void resize(size_t size) {
-    is_null_ = false;
-    vec_.resize(size);
-  }
-
   // Returns a const reference to the |std::vector| managed by this class. If
   // the array is null, this will be an empty vector.
   const std::vector<T>& storage() const { return vec_; }
-  operator const std::vector<T>&() const { return vec_; }
 
   // Swaps the contents of this array with the |other| array, including
   // nullness.
@@ -185,6 +208,27 @@ class Array {
     return true;
   }
 
+  // Creates a non-null array of the specified size. The elements will be
+  // value-initialized (meaning that they will be initialized by their default
+  // constructor, if any, or else zero-initialized).
+  static Array New(size_t size) {
+    Array ret;
+    ret.resize(size);
+    return ret;
+  }
+
+  // Creates a new array with a copy of the contents of |other|.
+  template <typename U>
+  static Array From(const U& other) {
+    return TypeConverter<Array, U>::Convert(other);
+  }
+
+  // Copies the contents of this array to a new object of type |U|.
+  template <typename U>
+  U To() const {
+    return TypeConverter<U, Array>::Convert(*this);
+  }
+
   Iterator begin() { return vec_.begin(); }
   Iterator end() { return vec_.end(); }
 
@@ -199,9 +243,10 @@ class Array {
 
   std::vector<T> vec_;
   bool is_null_;
-
-  FIDL_MOVE_ONLY_TYPE(Array);
 };
+
+template <typename T>
+using VectorPtr = Array<T>;
 
 // A |TypeConverter| that will create an |Array<T>| containing a copy of the
 // contents of an |std::vector<E>|, using |TypeConverter<T, E>| to copy each
