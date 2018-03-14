@@ -63,7 +63,7 @@ test_dns() {
 get_file_size() {
   filepath="$1"
   ls_output=$(ls -l "${filepath}")
-  filesize=$(echo "${ls_output}" | tr '\t' ' ' | cut -f5 -d " ")
+  filesize=$(echo "${ls_output}" | tr -s '[:space:]' | cut -f5 -d " ")
   echo "${filesize}"
 }
 
@@ -95,21 +95,43 @@ check_wlan_status() {
   echo "${status}"
 }
 
-test_wlan_association() {
-  # Confirm if WLAN interface is associated (and RSN-authenticated)
-  WLAN_STATUS_QUERY_PERIOD=5
+wlan_disconnect() {
+  WLAN_STATUS_QUERY_PERIOD=2
   WLAN_STATUS_QUERY_RETRY_MAX=10
   for i in $(seq 1 ${WLAN_STATUS_QUERY_RETRY_MAX}); do
     status=$(check_wlan_status)
-    if [ "${status}" = "associated" ]; then
-      wlan_network_info=$(wlan status | tail -n 1)
-      log_pass "associated to ${wlan_network_info}"
+    if [ "${status}" = "scanning" ]; then
+      log_pass "disconnect"
       return 0
     fi
-    log "querying WLAN status (${i} / ${WLAN_STATUS_QUERY_RETRY_MAX})"
+
+    log "attempting to disconnect (${i} / ${WLAN_STATUS_QUERY_RETRY_MAX})"
+    wlan disconnect > /dev/null
     sleep ${WLAN_STATUS_QUERY_PERIOD}
   done
-  log_fail "fails to get associated"
+  log_fail "fails to disconnect"
+  test_teardown
+  return 1
+}
+
+wlan_connect() {
+  WLAN_STATUS_QUERY_PERIOD=5
+  WLAN_STATUS_QUERY_RETRY_MAX=10
+
+  ssid=$1
+  for i in $(seq 1 ${WLAN_STATUS_QUERY_RETRY_MAX}); do
+    status=$(check_wlan_status)
+    if [ "${status}" = "associated" ]; then
+      log_pass "connect to ${ssid}"
+      return 0
+    fi
+
+    log "attempting to connect to ${ssid} (${i} / ${WLAN_STATUS_QUERY_RETRY_MAX})"
+    wlan connect ${ssid} > /dev/null
+    sleep ${WLAN_STATUS_QUERY_PERIOD}
+  done
+
+  log_fail "fails to connect to ${ssid}"
   test_teardown
   return 1
 }
@@ -122,7 +144,7 @@ get_eth_iface_name() {
 }
 
 test_setup() {
-  rm -rf "${TEST_LOG}"
+  rm -rf "${TEST_LOG}" > /dev/null
   eth_iface=$(get_eth_iface_name)
   ifconfig "${eth_iface}" down
 }
@@ -148,10 +170,14 @@ run() {
 main() {
   log "Start"
   run test_setup
-  run test_wlan_association
+  run wlan_disconnect
+  run wlan_connect GoogleGuest
+  log "Starting traffic tests"
   run test_ping
   run test_dns
   run test_wget
+  log "Ending traffic tests"
+  run wlan_disconnect
   run test_teardown
   log "End"
 }
