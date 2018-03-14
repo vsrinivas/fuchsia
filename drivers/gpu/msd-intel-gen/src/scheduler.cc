@@ -50,8 +50,10 @@ std::shared_ptr<MsdIntelContext> FifoScheduler::ScheduleContext()
 
     if (current_context_ == nullptr || current_context_ == context) {
         if(current_context_ == nullptr){
+            auto connection = context->connection().lock();
+            uint64_t id = connection ? connection->client_id() : 0;
             nonce_ = TRACE_NONCE();
-            TRACE_ASYNC_BEGIN("magma", "Context Exec", nonce_, "id", context.get());
+            TRACE_ASYNC_BEGIN("magma", "Context Exec", nonce_, "id", id);
         }
 
         fifo_.pop();
