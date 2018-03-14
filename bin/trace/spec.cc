@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 
@@ -208,7 +209,10 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   rapidjson::Document document;
   document.Parse(json.c_str(), json.size());
   if (document.HasParseError()) {
-    FXL_LOG(ERROR) << "Couldn't parse the tracing spec file.";
+    auto offset = document.GetErrorOffset();
+    auto code = document.GetParseError();
+    FXL_LOG(ERROR) << "Couldn't parse the tracing spec file: offset "
+                   << offset << ", " << GetParseError_En(code);
     return false;
   }
   if (!ValidateSchema(document, *root_schema)) {
