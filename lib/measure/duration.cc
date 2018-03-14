@@ -73,8 +73,9 @@ bool MeasureDuration::ProcessDurationEnd(const trace::Record::Event& event) {
   const auto key = event.process_thread;
   if (duration_stacks_.count(key) == 0 || duration_stacks_[key].empty()) {
     FXL_LOG(WARNING)
-        << "Ignoring a trace event: duration end not matched by a previous "
-        << "duration begin.";
+        << "Ignoring trace event " << event.category.c_str() << ":"
+        << event.name.c_str() << " @" << event.timestamp
+        << ": duration end not matched by a previous duration begin.";
     return false;
   }
 
