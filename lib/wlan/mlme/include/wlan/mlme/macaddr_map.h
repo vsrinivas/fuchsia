@@ -78,7 +78,6 @@ template <typename V, macaddr_map_type::MapType Type> class MacAddrMap {
         }
 
         map_.emplace(addr.ToU64(), v);
-        debugf("[MacAddrMap-%u] New Address inserted: %s\n", Type, MACSTR(addr));
         return ZX_OK;
     }
 

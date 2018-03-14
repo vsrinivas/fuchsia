@@ -195,7 +195,6 @@ zx_status_t Scanner::HandleTimeout() {
 
     // Reached max channel dwell time
     if (now >= channel_start_ + WLAN_TU(req_->max_channel_time)) {
-        debugf("reached max channel time\n");
         if (++channel_index_ >= req_->channel_list.size()) {
             timer_->CancelTimer();
             status = SendScanResponse();
@@ -213,7 +212,6 @@ zx_status_t Scanner::HandleTimeout() {
 
     // Reached min channel dwell time
     if (now >= channel_start_ + WLAN_TU(req_->min_channel_time)) {
-        debugf("Reached min channel time\n");
         // TODO(tkilbourn): if there was no sign of activity on this channel, skip ahead to the next
         // one
         // For now, just continue the scan.

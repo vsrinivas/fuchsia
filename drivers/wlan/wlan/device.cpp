@@ -522,12 +522,7 @@ void Device::MainLoop() {
 }
 
 void Device::ProcessChannelPacketLocked(const zx_port_packet_t& pkt) {
-    debugf("%s pkt{key=%" PRIu64 ", type=%u, status=%d}\n", __func__, pkt.key, pkt.type,
-           pkt.status);
-
     const auto& sig = pkt.signal;
-    debugf("signal trigger=%u observed=%u count=%" PRIu64 "\n", sig.trigger, sig.observed,
-           sig.count);
     if (sig.observed & ZX_CHANNEL_PEER_CLOSED) {
         infof("channel closed\n");
         channel_.reset();
@@ -546,7 +541,6 @@ void Device::ProcessChannelPacketLocked(const zx_port_packet_t& pkt) {
             channel_.reset();
             return;
         }
-        debugf("read %u bytes from channel_\n", read);
 
         auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), read));
         packet->set_peer(Packet::Peer::kService);
