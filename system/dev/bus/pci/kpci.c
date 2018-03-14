@@ -149,9 +149,21 @@ static zx_status_t kpci_get_bti(pci_msg_t* req, kpci_device_t* device, zx_handle
                    ((uint32_t)device->info.dev_id << 3) |
                    device->info.func_id;
     zx_handle_t bti;
-    zx_status_t status = pciroot_get_bti(&device->pciroot, bdf, req->bti_index, &bti);
-    if (status != ZX_OK) {
-        return status;
+    if (device->pciroot.ops) {
+        zx_status_t status = pciroot_get_bti(&device->pciroot, bdf, req->bti_index, &bti);
+        if (status != ZX_OK) {
+            return status;
+        }
+    } else if (device->pdev.ops) {
+        // TODO(teisenbe): This isn't quite right.  We need to develop a way to
+        // resolve which BTI should go to downstream.  However, we don't
+        // currently support any SMMUs for ARM, so this will work for now.
+        zx_status_t status = pdev_get_bti(&device->pdev, 0, &bti);
+        if (status != ZX_OK) {
+            return status;
+        }
+    } else {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     pci_msg_t resp = {};
@@ -296,7 +308,8 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
 
     // Store the PCIROOT protocol for use with get_auxdata in the pci protocol
     // It is not fatal if this fails, but auxdata protocol methods will not work.
-    status = device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &device->pciroot);
+    device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &device->pciroot);
+    device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &device->pdev);
 
     char name[20];
     snprintf(name, sizeof(name), "%02x:%02x.%1x", info.bus_id, info.dev_id, info.func_id);

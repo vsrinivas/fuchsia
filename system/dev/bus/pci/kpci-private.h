@@ -6,6 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/protocol/pciroot.h>
+#include <ddk/protocol/platform-device.h>
 #include <zircon/types.h>
 
 typedef struct kpci_device {
@@ -13,6 +14,7 @@ typedef struct kpci_device {
 
     // only set for non-shadow devices
     pciroot_protocol_t pciroot;
+    platform_device_protocol_t pdev;
 
     // only set for shadow devices
     zx_handle_t pciroot_rpcch;
