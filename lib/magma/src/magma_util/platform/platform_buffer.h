@@ -45,9 +45,8 @@ public:
 
     virtual bool MapAtCpuAddr(uint64_t addr) = 0;
 
-    virtual bool PinPages(uint32_t start_page_index, uint32_t page_count) = 0;
-    virtual bool UnpinPages(uint32_t start_page_index, uint32_t page_count) = 0;
-
+    // Mapping to the bus will commit pages, and may be slow if CommitPages hasn't already been
+    // called.
     virtual bool MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
                                  uint64_t addr_out[]) = 0;
     virtual bool UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count) = 0;

@@ -90,9 +90,6 @@ public:
             if (!buffer_)
                 return DRETF(false, "couldn't create buffer");
 
-            if (!buffer_->PinPages(0, 1))
-                return DRETF(false, "failed to pin pages");
-
             if (!buffer_->MapCpu(&mapping_))
                 return DRETF(false, "failed to map cpu");
 

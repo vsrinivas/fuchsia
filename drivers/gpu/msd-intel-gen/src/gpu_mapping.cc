@@ -16,7 +16,7 @@ GpuMapping::GpuMapping(std::shared_ptr<AddressSpace> address_space,
 
 GpuMapping::~GpuMapping()
 {
-    if (!buffer_->platform_buffer()->UnpinPages(offset_ / PAGE_SIZE, length_ / PAGE_SIZE))
+    if (!buffer_->platform_buffer()->UnmapPageRangeBus(offset_ / PAGE_SIZE, length_ / PAGE_SIZE))
         DLOG("failed to unpin pages");
 
     buffer_->RemoveSharedMapping(this);

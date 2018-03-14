@@ -117,9 +117,6 @@ bool GttCore::InitScratch()
 {
     scratch_ = magma::PlatformBuffer::Create(PAGE_SIZE, "gtt-scratch");
 
-    if (!scratch_->PinPages(0, 1))
-        return DRETF(false, "PinPages failed");
-
     if (!scratch_->MapPageRangeBus(0, 1, &scratch_bus_addr_))
         return DRETF(false, "MapPageBus failed");
 
@@ -223,9 +220,6 @@ bool GttCore::Insert(uint64_t addr, uint32_t buffer_handle, uint64_t offset, uin
 
     std::vector<uint64_t> bus_addr_array;
     bus_addr_array.resize(num_pages);
-
-    if (!buffer->PinPages(start_page_index, num_pages))
-        return DRETF(false, "failed to pin pages");
 
     if (!buffer->MapPageRangeBus(start_page_index, num_pages, bus_addr_array.data()))
         return DRETF(false, "failed obtaining bus addresses");

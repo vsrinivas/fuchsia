@@ -17,121 +17,12 @@
 
 namespace magma {
 
-class PinCountArray {
-public:
-    using pin_count_t = uint8_t;
-
-    static constexpr uint32_t kPinCounts = PAGE_SIZE / sizeof(pin_count_t);
-
-    PinCountArray() : count_(kPinCounts) {}
-
-    uint32_t pin_count(uint32_t index)
-    {
-        DASSERT(index < count_.size());
-        return count_[index];
-    }
-
-    void incr(uint32_t index)
-    {
-        DASSERT(index < count_.size());
-        total_count_++;
-        DASSERT(count_[index] < static_cast<pin_count_t>(~0));
-        ++count_[index];
-    }
-
-    // If pin count is positive, decrements the pin count and returns the new pin count.
-    // Otherwise returns -1.
-    int32_t decr(uint32_t index)
-    {
-        DASSERT(index < count_.size());
-        if (count_[index] == 0)
-            return -1;
-        DASSERT(total_count_ > 0);
-        --total_count_;
-        return --count_[index];
-    }
-
-    uint32_t total_count() { return total_count_; }
-
-private:
-    uint32_t total_count_{};
-    std::vector<pin_count_t> count_;
-};
-
-class PinCountSparseArray {
-public:
-    static std::unique_ptr<PinCountSparseArray> Create(uint32_t page_count)
-    {
-        uint32_t array_size = page_count / PinCountArray::kPinCounts;
-        if (page_count % PinCountArray::kPinCounts)
-            array_size++;
-        return std::unique_ptr<PinCountSparseArray>(new PinCountSparseArray(array_size));
-    }
-
-    uint32_t total_pin_count() { return total_pin_count_; }
-
-    uint32_t pin_count(uint32_t page_index)
-    {
-        uint32_t array_index = page_index / PinCountArray::kPinCounts;
-        uint32_t array_offset = page_index - PinCountArray::kPinCounts * array_index;
-
-        auto& array = sparse_array_[array_index];
-        if (!array)
-            return 0;
-
-        return array->pin_count(array_offset);
-    }
-
-    void incr(uint32_t page_index)
-    {
-        uint32_t array_index = page_index / PinCountArray::kPinCounts;
-        uint32_t array_offset = page_index - PinCountArray::kPinCounts * array_index;
-
-        if (!sparse_array_[array_index]) {
-            sparse_array_[array_index] = std::unique_ptr<PinCountArray>(new PinCountArray());
-        }
-
-        sparse_array_[array_index]->incr(array_offset);
-
-        ++total_pin_count_;
-    }
-
-    int32_t decr(uint32_t page_index)
-    {
-        uint32_t array_index = page_index / PinCountArray::kPinCounts;
-        uint32_t array_offset = page_index - PinCountArray::kPinCounts * array_index;
-
-        auto& array = sparse_array_[array_index];
-        if (!array)
-            return DRETF(false, "page not pinned");
-
-        int32_t ret = array->decr(array_offset);
-        if (ret < 0)
-            return DRET_MSG(ret, "page not pinned");
-
-        --total_pin_count_;
-
-        if (array->total_count() == 0)
-            array.reset();
-
-        return ret;
-    }
-
-private:
-    PinCountSparseArray(uint32_t array_size) : sparse_array_(array_size) {}
-
-    std::vector<std::unique_ptr<PinCountArray>> sparse_array_;
-    uint32_t total_pin_count_{};
-};
-
 class ZirconPlatformBuffer : public PlatformBuffer {
 public:
     ZirconPlatformBuffer(zx::vmo vmo, uint64_t size) : vmo_(std::move(vmo)), size_(size)
     {
         DLOG("ZirconPlatformBuffer ctor size %ld vmo 0x%x", size, vmo_.get());
-
         DASSERT(magma::is_page_aligned(size));
-        pin_count_array_ = PinCountSparseArray::Create(size / PAGE_SIZE);
 
         bool success = PlatformObject::IdFromHandle(vmo_.get(), &koid_);
         DASSERT(success);
@@ -141,7 +32,6 @@ public:
     {
         if (map_count_ > 0)
             vmar_unmap();
-        ReleasePages();
     }
 
     // PlatformBuffer implementation
@@ -167,9 +57,6 @@ public:
     bool UnmapCpu() override;
     bool MapAtCpuAddr(uint64_t addr) override;
 
-    bool PinPages(uint32_t start_page_index, uint32_t page_count) override;
-    bool UnpinPages(uint32_t start_page_index, uint32_t page_count) override;
-
     bool MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
                          uint64_t addr_out[]) override;
     bool UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count) override;
@@ -179,8 +66,6 @@ public:
     uint32_t num_pages() { return size_ / PAGE_SIZE; }
 
 private:
-    void ReleasePages();
-
     zx_status_t vmar_unmap()
     {
         zx_status_t status = vmar_.destroy();
@@ -197,7 +82,6 @@ private:
     uint64_t koid_;
     void* virt_addr_{};
     uint32_t map_count_ = 0;
-    std::unique_ptr<PinCountSparseArray> pin_count_array_;
 };
 
 bool ZirconPlatformBuffer::GetFd(int* fd_out) const
@@ -336,103 +220,15 @@ bool ZirconPlatformBuffer::CommitPages(uint32_t start_page_index, uint32_t page_
     return true;
 }
 
-bool ZirconPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_count)
-{
-    zx_status_t status;
-    if (!page_count)
-        return true;
-
-    if ((start_page_index + page_count) * PAGE_SIZE > size())
-        return DRETF(false, "offset + length greater than buffer size");
-
-    if (!CommitPages(start_page_index, page_count))
-        return DRETF(false, "failed to commit pages");
-
-    status = vmo_.op_range(ZX_VMO_OP_LOCK, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
-                           nullptr, 0);
-    if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED)
-        return DRETF(false, "failed to lock vmo pages: %d", status);
-
-    for (uint32_t i = 0; i < page_count; i++) {
-        pin_count_array_->incr(start_page_index + i);
-    }
-
-    return true;
-}
-
-bool ZirconPlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_count)
-{
-    TRACE_DURATION("magma", "UnPinPages");
-    if (!page_count)
-        return true;
-
-    if ((start_page_index + page_count) * PAGE_SIZE > size())
-        return DRETF(false, "offset + length greater than buffer size");
-
-    uint32_t pages_to_unpin = 0;
-
-    for (uint32_t i = 0; i < page_count; i++) {
-        uint32_t pin_count = pin_count_array_->pin_count(start_page_index + i);
-
-        if (pin_count == 0)
-            return DRETF(false, "page not pinned");
-
-        if (pin_count == 1)
-            pages_to_unpin++;
-    }
-
-    DLOG("pages_to_unpin %u page_count %u", pages_to_unpin, page_count);
-
-    if (pages_to_unpin == page_count) {
-        for (uint32_t i = 0; i < page_count; i++) {
-            pin_count_array_->decr(start_page_index + i);
-        }
-
-        // Unlock the entire range.
-        zx_status_t status = vmo_.op_range(ZX_VMO_OP_UNLOCK, start_page_index * PAGE_SIZE,
-                                           page_count * PAGE_SIZE, nullptr, 0);
-        if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED) {
-            return DRETF(false, "failed to unlock full range: %d", status);
-        }
-
-    } else {
-        // Unlock page by page
-        for (uint32_t page_index = start_page_index; page_index < start_page_index + page_count;
-             page_index++) {
-            if (pin_count_array_->decr(page_index) == 0) {
-                zx_status_t status =
-                    vmo_.op_range(ZX_VMO_OP_UNLOCK, page_index * PAGE_SIZE, PAGE_SIZE, nullptr, 0);
-                if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED) {
-                    return DRETF(false, "failed to unlock page_index %u: %u", page_index, status);
-                }
-            }
-        }
-    }
-
-    return true;
-}
-
-void ZirconPlatformBuffer::ReleasePages()
-{
-    TRACE_DURATION("magma", "ReleasePages");
-    if (pin_count_array_->total_pin_count()) {
-        // Still have some pinned pages, unlock.
-        zx_status_t status = vmo_.op_range(ZX_VMO_OP_UNLOCK, 0, size(), nullptr, 0);
-        if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED)
-            DLOG("failed to unlock pages: %d", status);
-    }
-}
-
 bool ZirconPlatformBuffer::MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
                                             uint64_t addr_out[])
 {
     TRACE_DURATION("magma", "MapPageRangeBus");
     static_assert(sizeof(zx_paddr_t) == sizeof(uint64_t), "unexpected sizeof(zx_paddr_t)");
 
-    for (uint32_t i = start_page_index; i < start_page_index + page_count; i++) {
-        if (pin_count_array_->pin_count(i) == 0)
-            return DRETF(false, "zero pin_count for page %u", i);
-    }
+    // This will be fast if pages have already been committed.
+    if (!CommitPages(start_page_index, page_count))
+        return DRETF(false, "failed to commit pages");
 
     zx_status_t status;
     {

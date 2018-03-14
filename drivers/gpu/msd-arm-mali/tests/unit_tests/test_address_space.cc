@@ -97,19 +97,11 @@ public:
         buffer[0] = magma::PlatformBuffer::Create(1000, "test");
         buffer[1] = magma::PlatformBuffer::Create(10000, "test");
 
-        // Try to insert without pinning
-        EXPECT_FALSE(address_space->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(), 0));
-
-        EXPECT_TRUE(buffer[0]->PinPages(0, buffer[0]->size() / PAGE_SIZE));
-        EXPECT_TRUE(buffer[1]->PinPages(0, buffer[1]->size() / PAGE_SIZE));
-
-        // Correct
         EXPECT_TRUE(address_space->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(),
                                           kAccessFlagRead | kAccessFlagNoExecute));
 
         check_pte_entries(address_space.get(), buffer[0].get(), addr[0], 0, (1 << 6) | (1l << 54));
 
-        // Also correct
         EXPECT_TRUE(address_space->Insert(addr[1], buffer[1].get(), 0, buffer[1]->size(),
                                           kAccessFlagWrite | kAccessFlagShareBoth));
 
@@ -158,8 +150,6 @@ public:
 
         auto buffer = magma::PlatformBuffer::Create(10000, "test");
 
-        EXPECT_TRUE(buffer->PinPages(1, buffer->size() / PAGE_SIZE - 1));
-
         EXPECT_TRUE(address_space->Insert(kAddr, buffer.get(), PAGE_SIZE,
                                           buffer->size() - PAGE_SIZE,
                                           kAccessFlagRead | kAccessFlagNoExecute));
@@ -180,9 +170,6 @@ public:
 
         buffer[0] = magma::PlatformBuffer::Create(PAGE_SIZE * 5, "test");
         buffer[1] = magma::PlatformBuffer::Create(PAGE_SIZE * 10, "test");
-
-        EXPECT_TRUE(buffer[0]->PinPages(0, buffer[0]->size() / PAGE_SIZE));
-        EXPECT_TRUE(buffer[1]->PinPages(0, buffer[1]->size() / PAGE_SIZE));
 
         EXPECT_TRUE(address_space->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(),
                                           kAccessFlagRead | kAccessFlagNoExecute));

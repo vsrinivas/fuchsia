@@ -247,8 +247,8 @@ bool MsdArmConnection::RemoveMapping(uint64_t gpu_va)
 
     auto buffer = it->second->buffer().lock();
     if (buffer) {
-        bool unpin_success = buffer->platform_buffer()->UnpinPages(it->second->page_offset(),
-                                                                   it->second->pinned_page_count());
+        bool unpin_success = buffer->platform_buffer()->UnmapPageRangeBus(
+            it->second->page_offset(), it->second->pinned_page_count());
         DASSERT(unpin_success);
     }
     gpu_mappings_.erase(gpu_va);
@@ -290,20 +290,15 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) FXL_NO_THREAD_
         address_space_->Clear(mapping->gpu_va() + committed_page_count * PAGE_SIZE,
                               pages_to_remove * PAGE_SIZE);
         bool unpin_success =
-            buffer->platform_buffer()->UnpinPages(page_offset_in_buffer, pages_to_remove);
+            buffer->platform_buffer()->UnmapPageRangeBus(page_offset_in_buffer, pages_to_remove);
         DASSERT(unpin_success);
         mapping->set_pinned_page_count(committed_page_count);
     } else {
         uint64_t pages_to_add = committed_page_count - prev_committed_page_count;
         uint64_t page_offset_in_buffer = mapping->page_offset() + prev_committed_page_count;
-        if (!buffer->platform_buffer()->PinPages(page_offset_in_buffer, pages_to_add))
-            return DRETF(false, "Pages can't be pinned");
         if (!address_space_->Insert(mapping->gpu_va() + prev_committed_page_count * PAGE_SIZE,
                                     buffer->platform_buffer(), page_offset_in_buffer * PAGE_SIZE,
                                     pages_to_add * PAGE_SIZE, access_flags)) {
-            bool unpin_success =
-                buffer->platform_buffer()->UnpinPages(page_offset_in_buffer, pages_to_add);
-            DASSERT(unpin_success);
             return DRETF(false, "Pages can't be inserted into address space");
         }
         mapping->set_pinned_page_count(committed_page_count);

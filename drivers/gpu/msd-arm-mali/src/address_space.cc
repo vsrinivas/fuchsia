@@ -245,9 +245,6 @@ std::unique_ptr<AddressSpace::PageTable> AddressSpace::PageTable::Create(uint32_
     if (!buffer)
         return DRETP(nullptr, "couldn't create buffer");
 
-    if (!buffer->PinPages(0, kPageCount))
-        return DRETP(nullptr, "failed to pin pages");
-
     PageTableGpu* gpu;
     if (!buffer->MapCpu(reinterpret_cast<void**>(&gpu)))
         return DRETP(nullptr, "failed to map cpu");

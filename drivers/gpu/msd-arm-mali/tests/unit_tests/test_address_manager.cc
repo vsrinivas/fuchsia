@@ -161,8 +161,6 @@ TEST(AddressManager, FlushAddressRange)
 
     buffer = magma::PlatformBuffer::Create(PAGE_SIZE * 3, "test");
 
-    EXPECT_TRUE(buffer->PinPages(0, buffer->size() / PAGE_SIZE));
-
     EXPECT_TRUE(connection->address_space_for_testing()->Insert(
         addr, buffer.get(), 0, buffer->size(), kAccessFlagRead | kAccessFlagNoExecute));
     // 3 pages should be cleared, so it should be rounded up to 4 (and log
