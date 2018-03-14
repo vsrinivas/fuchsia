@@ -13,6 +13,6 @@ MODULE := $(LOCAL_DIR)
 # arch_copy_to_user functions to use the higher-level functionality
 # present in this module.
 
-MODULE_SRCS := $(LOCAL_DIR)/empty.c
+MODULE_SRCS := $(LOCAL_DIR)/fake_user_ptr.cpp
 
 include make/module.mk

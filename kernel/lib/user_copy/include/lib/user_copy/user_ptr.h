@@ -21,7 +21,15 @@ enum InOutPolicy {
     kInOut = kIn | kOut,
 };
 
-template <typename T, InOutPolicy Policy>
+typedef zx_status_t (*CopyFunc)(void*, const void*, size_t);
+
+class RealUserCopyTraits {
+public:
+    constexpr static CopyFunc CopyTo = arch_copy_to_user;
+    constexpr static CopyFunc CopyFrom = arch_copy_from_user;
+};
+
+template <typename T, InOutPolicy Policy, typename UserCopyTraits>
 class user_ptr {
 public:
     static_assert(fbl::is_const<T>::value == (Policy == kIn),
@@ -39,7 +47,9 @@ public:
     T* get() const { return ptr_; }
 
     template <typename C>
-    user_ptr<C, Policy> reinterpret() const { return user_ptr<C, Policy>(reinterpret_cast<C*>(ptr_)); }
+    user_ptr<C, Policy, UserCopyTraits> reinterpret() const {
+        return user_ptr<C, Policy, UserCopyTraits>(reinterpret_cast<C*>(ptr_));
+    }
 
     // special operator to return the nullness of the pointer
     explicit operator bool() const { return ptr_ != nullptr; }
@@ -63,7 +73,7 @@ public:
     zx_status_t copy_to_user(const S& src) const {
         static_assert(fbl::is_same<S, T>::value, "Do not use the template parameter.");
         static_assert(Policy & kOut, "can only copy to user for kOut or kInOut user_ptr");
-        return arch_copy_to_user(ptr_, &src, sizeof(S));
+        return UserCopyTraits::CopyTo(ptr_, &src, sizeof(S));
     }
 
     // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
@@ -73,7 +83,7 @@ public:
         if (mul_overflow(count, internal::type_size<T>(), &len)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        return arch_copy_to_user(ptr_, src, len);
+        return UserCopyTraits::CopyTo(ptr_, src, len);
     }
 
     // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
@@ -83,14 +93,14 @@ public:
         if (mul_overflow(count, internal::type_size<T>(), &len)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        return arch_copy_to_user(ptr_ + offset, src, len);
+        return UserCopyTraits::CopyTo(ptr_ + offset, src, len);
     }
 
     // Copies a single T from user memory. (Using this will fail to compile if T is |void|.)
     zx_status_t copy_from_user(typename fbl::remove_const<T>::type* dst) const {
         static_assert(Policy & kIn, "can only copy from user for kIn or kInOut user_ptr");
         // Intentionally use sizeof(T) here, so *using* this method won't compile if T is |void|.
-        return arch_copy_from_user(dst, ptr_, sizeof(T));
+        return UserCopyTraits::CopyFrom(dst, ptr_, sizeof(T));
     }
 
     // Copies an array of T from user memory. Note: This takes a count not a size, unless T is
@@ -101,7 +111,7 @@ public:
         if (mul_overflow(count, internal::type_size<T>(), &len)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        return arch_copy_from_user(dst, ptr_, len);
+        return UserCopyTraits::CopyFrom(dst, ptr_, len);
     }
 
     // Copies a sub-array of T from user memory. Note: This takes a count not a size, unless T is
@@ -112,7 +122,7 @@ public:
         if (mul_overflow(count, internal::type_size<T>(), &len)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        return arch_copy_from_user(dst, ptr_ + offset, len);
+        return UserCopyTraits::CopyFrom(dst, ptr_ + offset, len);
     }
 
 private:
@@ -125,13 +135,13 @@ private:
 } // namespace internal
 
 template <typename T>
-using user_in_ptr = internal::user_ptr<T, internal::kIn>;
+using user_in_ptr = internal::user_ptr<T, internal::kIn, internal::RealUserCopyTraits>;
 
 template <typename T>
-using user_out_ptr = internal::user_ptr<T, internal::kOut>;
+using user_out_ptr = internal::user_ptr<T, internal::kOut, internal::RealUserCopyTraits>;
 
 template <typename T>
-using user_inout_ptr = internal::user_ptr<T, internal::kInOut>;
+using user_inout_ptr = internal::user_ptr<T, internal::kInOut, internal::RealUserCopyTraits>;
 
 template <typename T>
 user_in_ptr<T> make_user_in_ptr(T* p) { return user_in_ptr<T>(p); }
