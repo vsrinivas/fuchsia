@@ -31,7 +31,7 @@ class ScenicScanout : public machina::GpuScanout, public mozart::ViewProvider {
                 machina::InputDispatcher* input_dispatcher);
 
   // |GpuScanout|
-  void FlushRegion(const virtio_gpu_rect_t& rect) override;
+  void InvalidateRegion(const machina::GpuRect& rect) override;
 
   // |ViewProvider|
   void CreateView(

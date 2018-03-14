@@ -12,6 +12,16 @@ namespace machina {
 
 static constexpr uint8_t kSrcPixelSize = 4;
 
+bool GpuRect::Overlaps(const GpuRect& o) {
+  if (x > (o.x + o.width) || o.x > (x + width)) {
+    return false;
+  }
+  if (y > (o.y + o.height) || o.y > (y + height)) {
+    return false;
+  }
+  return true;
+}
+
 // NOTE(abdulla): These functions are lightly modified versions of the same
 // functions in the Zircon GFX library.
 
@@ -117,15 +127,20 @@ void GpuBitmap::DrawBitmap(const GpuBitmap& src_bitmap,
   if (src_rect.width != dst_rect.width || src_rect.height != dst_rect.height) {
     return;
   }
+  if (src_bitmap.pixelsize() != kSrcPixelSize) {
+    return;
+  }
+  if (src_rect.x > src_bitmap.width() || src_rect.y > src_bitmap.height() ||
+      dst_rect.x > width() || dst_rect.y > height()) {
+    return;
+  }
+  // TODO: Turn these into clamps.
   if (src_rect.x + src_rect.width > src_bitmap.width() ||
       src_rect.y + src_rect.height > src_bitmap.height()) {
     return;
   }
   if (dst_rect.x + dst_rect.width > width() ||
       dst_rect.y + dst_rect.height > height()) {
-    return;
-  }
-  if (src_bitmap.pixelsize() != kSrcPixelSize) {
     return;
   }
 

@@ -95,11 +95,11 @@ virtio_gpu_ctrl_type GpuResource::TransferToHost2D(
 virtio_gpu_ctrl_type GpuResource::Flush(
     const virtio_gpu_resource_flush_t* request) {
   GpuScanout* scanout = scanout_;
-  if (scanout == nullptr)
+  if (scanout == nullptr) {
     return VIRTIO_GPU_RESP_OK_NODATA;
+  }
 
-  // TODO: Convert r to scanout coordinates.
-  scanout->FlushRegion(request->r);
+  scanout->DrawScanoutResource(request->r);
   return VIRTIO_GPU_RESP_OK_NODATA;
 }
 

@@ -89,6 +89,10 @@ class VirtioGpu : public VirtioDevice {
   void ResourceFlush(const virtio_gpu_resource_flush_t* request,
                      virtio_gpu_ctrl_hdr_t* response);
 
+  // VIRTIO_GPU_CMD_UPDATE_CURSOR
+  // VIRTIO_GPU_CMD_MOVE_CURSOR
+  void MoveOrUpdateCursor(const virtio_gpu_update_cursor_t* request);
+
  private:
   GpuScanout* scanout_ = nullptr;
 

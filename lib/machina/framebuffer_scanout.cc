@@ -51,8 +51,7 @@ zx_status_t FramebufferScanout::Create(const char* path,
 FramebufferScanout::FramebufferScanout(GpuBitmap surface, fbl::unique_fd fd)
     : GpuScanout(fbl::move(surface)), fd_(fbl::move(fd)) {}
 
-void FramebufferScanout::FlushRegion(const virtio_gpu_rect_t& rect) {
-  GpuScanout::FlushRegion(rect);
+void FramebufferScanout::InvalidateRegion(const GpuRect& rect) {
   ioctl_display_region_t fb_region = {
       .x = rect.x,
       .y = rect.y,

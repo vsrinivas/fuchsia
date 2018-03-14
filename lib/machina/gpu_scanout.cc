@@ -8,7 +8,7 @@
 
 namespace machina {
 
-void GpuScanout::FlushRegion(const virtio_gpu_rect_t& rect) {
+void GpuScanout::DrawScanoutResource(const virtio_gpu_rect_t& rect) {
   GpuResource* res = resource_;
   if (res == nullptr) {
     return;
@@ -26,7 +26,17 @@ void GpuScanout::FlushRegion(const virtio_gpu_rect_t& rect) {
   dest_rect.width = rect.width;
   dest_rect.height = rect.height;
 
-  surface_.DrawBitmap(res->bitmap(), source_rect, dest_rect);
+  Draw(*res, source_rect, dest_rect);
+  if (cursor_resource_ && cursor_position_.Overlaps(dest_rect)) {
+    DrawCursor();
+  }
+  InvalidateRegion(dest_rect);
+}
+
+void GpuScanout::Draw(const GpuResource& res,
+                      const GpuRect& source_rect,
+                      const GpuRect& dest_rect) {
+  surface_.DrawBitmap(res.bitmap(), source_rect, dest_rect);
 }
 
 void GpuScanout::SetResource(GpuResource* res,
@@ -50,6 +60,51 @@ void GpuScanout::SetResource(GpuResource* res,
 void GpuScanout::WhenReady(OnReadyCallback callback) {
   ready_callback_ = fbl::move(callback);
   InvokeReadyCallback();
+}
+
+void GpuScanout::MoveOrUpdateCursor(GpuResource* cursor,
+                                    const virtio_gpu_update_cursor* request) {
+  EraseCursor();
+  if (request->hdr.type == VIRTIO_GPU_CMD_UPDATE_CURSOR) {
+    cursor_resource_ = cursor;
+  }
+
+  // Move Cursor.
+  if (cursor_resource_ != nullptr) {
+    cursor_position_.x = request->pos.x;
+    cursor_position_.y = request->pos.y;
+    cursor_position_.width = cursor_resource_->bitmap().width();
+    cursor_position_.height = cursor_resource_->bitmap().height();
+
+    DrawCursor();
+  }
+  InvalidateRegion(cursor_position_);
+}
+
+void GpuScanout::EraseCursor() {
+  if (cursor_resource_ == nullptr) {
+    return;
+  }
+  GpuRect source = {
+      rect_.x + cursor_position_.x,
+      rect_.y + cursor_position_.y,
+      cursor_position_.width,
+      cursor_position_.height,
+  };
+  Draw(*resource_, source, cursor_position_);
+}
+
+void GpuScanout::DrawCursor() {
+  if (cursor_resource_ == nullptr) {
+    return;
+  }
+  GpuRect source = {
+      0,
+      0,
+      cursor_resource_->bitmap().width(),
+      cursor_resource_->bitmap().height(),
+  };
+  Draw(*cursor_resource_, source, cursor_position_);
 }
 
 void GpuScanout::SetReady(bool ready) {

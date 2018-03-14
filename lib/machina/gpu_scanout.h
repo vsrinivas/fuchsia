@@ -29,9 +29,18 @@ class GpuScanout {
   uint32_t height() const { return surface_.height(); }
   uint8_t pixelsize() const { return surface_.pixelsize(); }
 
-  virtual void FlushRegion(const virtio_gpu_rect_t& rect);
+  // Draws |rect| from the backing resource to the display.
+  void DrawScanoutResource(const virtio_gpu_rect_t& rect);
+
+  // Called whenever the scanout bitmap has been redrawn.
+  virtual void InvalidateRegion(const GpuRect& rect) {}
+
+  void Draw(const GpuResource& res, const GpuRect& src, const GpuRect& dest);
 
   void SetResource(GpuResource* res, const virtio_gpu_set_scanout_t* request);
+
+  void MoveOrUpdateCursor(GpuResource* cursor,
+                          const virtio_gpu_update_cursor* request);
 
   using OnReadyCallback = fbl::Function<void()>;
   void WhenReady(OnReadyCallback callback);
@@ -41,12 +50,17 @@ class GpuScanout {
 
  private:
   void InvokeReadyCallback();
+  void DrawCursor();
+  void EraseCursor();
 
   GpuBitmap surface_;
 
   // Scanout parameters.
   GpuResource* resource_ = nullptr;
   GpuRect rect_;
+
+  GpuResource* cursor_resource_ = nullptr;
+  GpuRect cursor_position_;
 
   bool ready_ = true;
   OnReadyCallback ready_callback_;

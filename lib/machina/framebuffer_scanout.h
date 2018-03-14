@@ -20,7 +20,8 @@ class FramebufferScanout : public GpuScanout {
   // Create a scanout that owns a zircon framebuffer device.
   static zx_status_t Create(const char* path, fbl::unique_ptr<GpuScanout>* out);
 
-  void FlushRegion(const virtio_gpu_rect_t& rect) override;
+  // | GpuScanout|
+  void InvalidateRegion(const GpuRect& rect) override;
 
  private:
   FramebufferScanout(GpuBitmap surface, fbl::unique_fd fd);

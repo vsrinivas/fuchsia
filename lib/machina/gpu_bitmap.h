@@ -18,6 +18,9 @@ struct GpuRect {
   uint32_t y;
   uint32_t width;
   uint32_t height;
+
+  // Returns |true| iff any part of |o| overlaps the same area as this rect.
+  bool Overlaps(const GpuRect& o);
 };
 
 // A contiguous 2D display buffer.

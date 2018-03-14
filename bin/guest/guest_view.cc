@@ -56,8 +56,7 @@ void ScenicScanout::CreateView(
   SetReady(true);
 }
 
-void ScenicScanout::FlushRegion(const virtio_gpu_rect_t& rect) {
-  GpuScanout::FlushRegion(rect);
+void ScenicScanout::InvalidateRegion(const machina::GpuRect& rect) {
   task_runner_->PostTask([this] { view_->InvalidateScene(); });
 }
 

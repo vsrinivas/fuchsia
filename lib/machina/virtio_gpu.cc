@@ -66,11 +66,15 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue,
                                         uint32_t* used) {
   virtio_desc_t request_desc;
   queue->ReadDesc(head, &request_desc);
-
-  if (!request_desc.has_next) {
-    return ZX_ERR_INVALID_ARGS;
-  }
   auto header = reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(request_desc.addr);
+
+  // Cursor commands don't send a response (at least not in the linux driver).
+  if (!request_desc.has_next && header->type != VIRTIO_GPU_CMD_MOVE_CURSOR &&
+      header->type != VIRTIO_GPU_CMD_UPDATE_CURSOR) {
+    FXL_LOG(ERROR) << "Command " << header->type
+                   << " does not contain a response descriptor";
+    return ZX_OK;
+  }
 
   switch (header->type) {
     case VIRTIO_GPU_CMD_GET_DISPLAY_INFO: {
@@ -174,9 +178,14 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue,
       *used += sizeof(*response);
       return ZX_OK;
     }
-    // Not yet implemented.
     case VIRTIO_GPU_CMD_UPDATE_CURSOR:
-    case VIRTIO_GPU_CMD_MOVE_CURSOR:
+    case VIRTIO_GPU_CMD_MOVE_CURSOR: {
+      auto request =
+          reinterpret_cast<virtio_gpu_update_cursor_t*>(request_desc.addr);
+      MoveOrUpdateCursor(request);
+      *used = 0;
+      return ZX_OK;
+    }
     default: {
       FXL_LOG(ERROR) << "Unsupported GPU command " << header->type;
       // ACK.
@@ -297,6 +306,23 @@ void VirtioGpu::ResourceFlush(const virtio_gpu_resource_flush_t* request,
     return;
   }
   response->type = it->Flush(request);
+}
+
+void VirtioGpu::MoveOrUpdateCursor(const virtio_gpu_update_cursor_t* request) {
+  bool is_update = request->hdr.type == VIRTIO_GPU_CMD_UPDATE_CURSOR;
+  GpuResource* resource = nullptr;
+  if (is_update && request->resource_id != 0) {
+    auto it = resources_.find(request->resource_id);
+    if (it == resources_.end()) {
+      return;
+    }
+    resource = &*it;
+  }
+  if (request->pos.scanout_id != 0 || scanout_ == nullptr) {
+    // Only a single scanout is supported.
+    return;
+  }
+  scanout_->MoveOrUpdateCursor(resource, request);
 }
 
 }  // namespace machina
