@@ -5,4 +5,4 @@
 
 FUCHSIA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-exec ln -snf build/gn/.gn "${FUCHSIA_DIR}/.gn"
+exec ln -snf build/gn/dotfile.gn "${FUCHSIA_DIR}/.gn"
