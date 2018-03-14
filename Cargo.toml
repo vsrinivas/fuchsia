@@ -31,6 +31,7 @@ members =  [
   "public/rust/crates/fuchsia-app",
   "public/rust/crates/fuchsia-async",
   "public/rust/crates/fuchsia-llui",
+  "public/rust/crates/fuchsia-syslog",
   "public/rust/crates/fuchsia-vfs",
   "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
   "public/rust/crates/fuchsia-zircon",
@@ -62,6 +63,7 @@ eapol = { path = "lib/rust/crates/eapol" }
 fdio = { path = "public/rust/crates/fdio" }
 fidl = { path = "public/lib/fidl/rust/fidl" }
 fuchsia-app = { path = "public/rust/crates/fuchsia-app" }
+fuchsia-syslog = { path = "public/rust/crates/fuchsia-syslog" }
 fuchsia-async = { path = "public/rust/crates/fuchsia-async" }
 fuchsia-bluetooth = { path = "lib/rust/crates/fuchsia-bluetooth" }
 fuchsia-vfs-watcher = { path = "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher" }

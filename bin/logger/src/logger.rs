@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use async;
-use byteorder::{LittleEndian, ByteOrder};
+use byteorder::{ByteOrder, LittleEndian};
 use futures::io;
 use futures::prelude::*;
-use libc::{uint64_t, c_int, uint32_t, c_char, uint8_t};
+use libc::{c_char, c_int, uint32_t, uint64_t, uint8_t};
 use parking_lot::Mutex;
 use std::{mem, str};
 use std::sync::Arc;
@@ -75,8 +75,6 @@ impl LoggerStream {
         Ok(l)
     }
 }
-
-
 
 fn convert_to_log_message(bytes: &[u8]) -> Option<LogMessage> {
     // Check that data has metadata and first 1 byte is integer and last byte is NULL.
@@ -182,9 +180,9 @@ mod tests {
     }
 
     fn memset<T: Copy>(x: &mut [T], offset: usize, value: T, size: usize) {
-        x[offset..(offset + size)].iter_mut().for_each(
-            |x| *x = value,
-        );
+        x[offset..(offset + size)]
+            .iter_mut()
+            .for_each(|x| *x = value);
     }
 
     #[test]
@@ -192,10 +190,7 @@ mod tests {
         assert_eq!(METADATA_SIZE, 32);
         assert_eq!(FX_LOG_MAX_TAGS, 5);
         assert_eq!(FX_LOG_MAX_TAG_LEN, 64);
-        assert_eq!(
-            mem::size_of::<fx_log_packet_t>(),
-            FX_LOG_MAX_DATAGRAM_LEN
-        );
+        assert_eq!(mem::size_of::<fx_log_packet_t>(), FX_LOG_MAX_DATAGRAM_LEN);
     }
 
     #[test]
@@ -231,7 +226,7 @@ mod tests {
         async::spawn(f.recover(|e| {
             panic!("test fail {:?}", e);
         }));
-        
+
         let timeout = async::Timer::<()>::new(100.millis().after_now()).unwrap();
         executor.run(timeout, 2).unwrap();
 

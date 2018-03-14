@@ -52,5 +52,7 @@ fn main_wrapper() -> Result<(), Error> {
         .start()
         .map_err(|e| e.context("error starting service server"))?;
 
-    Ok(executor.run(server, /* threads */ 2).context("running server")?)
+    Ok(executor
+        .run(server, /* threads */ 2)
+        .context("running server")?)
 }
