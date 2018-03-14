@@ -3726,13 +3726,13 @@ void DumpTxwi(TxPacket* packet) {
     Txwi0& txwi0 = packet->txwi0;
     Txwi1& txwi1 = packet->txwi1;
 
-    debugf("txwi: frag %u mmps %u cfack %u ts %u ampdu %u mpdu_density %u txop %u mcs 0x%02x\n",
+    debugf("txwi:   frag %u mmps %u cfack %u ts %u ampdu %u mpdu_density %u txop %u mcs 0x%02x\n",
            txwi0.frag(), txwi0.mmps(), txwi0.cfack(), txwi0.ts(), txwi0.ampdu(),
            txwi0.mpdu_density(), txwi0.txop(), txwi0.mcs());
-    debugf("      bw %u sgi %u stbc %u phy_mode %u ack %u nseq %u ba_win_size %u wcid 0x%02x\n",
+    debugf("        bw %u sgi %u stbc %u phy_mode %u ack %u nseq %u ba_win_size %u wcid 0x%02x\n",
            txwi0.bw(), txwi0.sgi(), txwi0.stbc(), txwi0.phy_mode(), txwi1.ack(), txwi1.nseq(),
            txwi1.ba_win_size(), txwi1.wcid());
-    debugf("      mpdu_total_byte_count %u tx_packet_id 0x%x\n", txwi1.mpdu_total_byte_count(),
+    debugf("        mpdu_total_byte_count %u tx_packet_id 0x%x\n", txwi1.mpdu_total_byte_count(),
            txwi1.tx_packet_id());
 }
 
@@ -3820,8 +3820,10 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     usb_request_queue(&usb_, req);
 
 #if RALINK_DUMP_TX
+    debugf("[Ralink] Outbound WLAN packet meta info\n");
     DumpWlanTxInfo(pkt->info);
     DumpTxwi(packet);
+    DumpLengths(pkt, packet, req);
 #endif  // RALINK_DUMP_TX
 
     return ZX_OK;
@@ -4325,6 +4327,13 @@ void Device::WriteRequestComplete(usb_request_t* request, void* cookie) {
     auto dev = static_cast<Device*>(cookie);
     dev->HandleTxComplete(request);
 }
+uint8_t Device::GetRxAckPolicy(const wlan_tx_packet_t& wlan_packet) {
+    // TODO(NET-571): Honor what MLME instructs the chipset for this particular wlan_packet
+    // whether to wait for an acknowledgement from the recipient or not.
+    // It appears that Ralink has its own logic to override the instruction
+    // specified in txwi1.ack field. It shall be recorded here as it's found.
+    return 1;  // Wait for acknowledgement
+}
 
 size_t Device::tx_pkt_len(wlan_tx_packet_t* pkt) {
     auto len = pkt->packet_head->len;
@@ -4358,12 +4367,37 @@ size_t Device::usb_tx_pkt_len(wlan_tx_packet_t* pkt) {
     return sizeof(TxInfo) + txwi_len() + tx_pkt_len(pkt) + align_pad_len(pkt) + terminal_pad_len();
 }
 
-uint8_t Device::GetRxAckPolicy(const wlan_tx_packet_t& wlan_packet) {
-    // TODO(NET-571): Honor what MLME instructs the chipset for this particular wlan_packet
-    // whether to wait for an acknowledgement from the recipient or not.
-    // It appears that Ralink has its own logic to override the instruction
-    // specified in txwi1.ack field. It shall be recorded here as it's found.
-    return 1;  // Wait for acknowledgement
+void Device::DumpLengths(wlan_tx_packet_t* wlan_pkt, TxPacket* usb_pkt, usb_request_t* req) {
+    size_t txinfo_len = sizeof(TxInfo);
+    size_t align_len = align_pad_len(wlan_pkt);
+    size_t terminal_len = terminal_pad_len();
+
+    size_t wlan_pkt_len = tx_pkt_len(wlan_pkt);
+    uint16_t wlan_pkt_head_len = wlan_pkt->packet_head->len;
+    uint16_t wlan_pkt_tail_offset = wlan_pkt->tail_offset;
+    bool has_wlan_pkt_tail = (wlan_pkt->packet_tail != nullptr);
+    uint16_t wlan_pkt_tail_len = has_wlan_pkt_tail ? wlan_pkt->packet_tail->len : 0;
+
+    size_t usb_req_hdr_len = req->header.length;
+    size_t usb_tx_pkt_len = txinfo_len + txwi_len() + wlan_pkt_len + align_len + terminal_len;
+
+    // Following definitions are known so far:
+    // usb_pkt_txinfo_tx_pkt_len := txwi_len() + wlan_pkt_len + align_len;
+    //                            = usb_tx_pkt_len - txinfo_len - terminal_len
+    //                            = usb_tx_pkt_len - 8
+    size_t usb_pkt_txinfo_tx_pkt_len = usb_pkt->tx_info.tx_pkt_length();
+
+    size_t usb_pkt_payload_offset =
+        txwi_len() - 16;  // 0 or 4. TODO(porce): Convert to a constant literal.
+
+    debugf("len:    usb_req_hdr:%zu usb_tx_pkt:%zu usb_pkt_txinfo_tx_pkt:%zu\n", usb_req_hdr_len,
+           usb_tx_pkt_len, usb_pkt_txinfo_tx_pkt_len);
+    debugf("        wlan_pkt head:%u\n", wlan_pkt_head_len);
+    if (has_wlan_pkt_tail) {
+        debugf("        wlan_pkt tail:%u offset:%u\n", wlan_pkt_tail_len, wlan_pkt_tail_offset);
+    }
+    debugf("        txinfo:%zu txwi:%zu align:%zu terminal:%zu usb_pkt_payload_offset:%zu\n",
+           txinfo_len, txwi_len(), align_len, terminal_len, usb_pkt_payload_offset);
 }
 
 }  // namespace ralink

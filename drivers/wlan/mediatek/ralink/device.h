@@ -209,6 +209,7 @@ class Device {
     static void ReadRequestComplete(usb_request_t* request, void* cookie);
     static void WriteRequestComplete(usb_request_t* request, void* cookie);
 
+    void DumpLengths(wlan_tx_packet_t* wlan_pkt, TxPacket* usb_pkt, usb_request_t* req);
     size_t tx_pkt_len(wlan_tx_packet_t* pkt);
     size_t txwi_len();
     size_t align_pad_len(wlan_tx_packet_t* pkt);
