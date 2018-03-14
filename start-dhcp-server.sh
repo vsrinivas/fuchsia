@@ -66,7 +66,7 @@ then
   if [[ -n $nmstat && $nmstat != unmanaged ]]; then
     echo "$INTERFACE is managed by NetworkManager so can't be configured by this script."
     echo ""
-    echo "If you DON'T want this, create a file /etc/network/interfaces.d/$INTERFACE containing:"
+    echo "If you DON'T want this, create a file /etc/network/interfaces.d/$INTERFACE.conf containing:"
     echo "iface $INTERFACE inet manual"
     echo ""
     echo "Then restart Network manager with: sudo killall NetworkManager"
