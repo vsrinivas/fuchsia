@@ -12,6 +12,7 @@
 
 // BTI IDs for our devices
 enum {
+    BTI_BOARD,
     BTI_USB_DWC3,
     BTI_USB_XHCI,
     BTI_DSI,
@@ -22,6 +23,7 @@ typedef struct {
     platform_bus_protocol_t pbus;
     i2c_protocol_t i2c;
     zx_device_t* parent;
+    zx_handle_t bti_handle;
     hi3660_t* hi3660;
     usb_mode_switch_protocol_t usb_mode_switch;
     usb_mode_t usb_mode;

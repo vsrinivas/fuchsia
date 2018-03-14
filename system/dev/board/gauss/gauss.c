@@ -209,7 +209,7 @@ static zx_status_t gauss_bus_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    // get default BTI from the dummy IOMMU implementation in the platform bus
+    // get dummy IOMMU implementation in the platform bus
     status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &bus->iommu);
     if (status != ZX_OK) {
         zxlogf(ERROR, "gauss_bus_bind: could not get ZX_PROTOCOL_IOMMU\n");
