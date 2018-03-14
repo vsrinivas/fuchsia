@@ -29,7 +29,7 @@ public:
     using FreeList = ListType;
 
     constexpr RleBitmap()
-        : num_elems_(0) {}
+        : num_elems_(0), num_bits_(0) {}
     virtual ~RleBitmap() = default;
 
     RleBitmap(RleBitmap&& rhs) = default;
@@ -39,6 +39,12 @@ public:
 
     // Returns the current number of ranges.
     size_t num_ranges() const { return num_elems_; }
+
+    // Returns the current number of bits.
+    size_t num_bits() const { return num_bits_; }
+
+    zx_status_t Find(bool is_set, size_t bitoff, size_t bitmax,
+                     size_t run_len, size_t* out) const override;
 
     // Returns true if all the bits in [*bitoff*, *bitmax*) are set.  Afterwards,
     // *first_unset* will be set to the lesser of bitmax and the index of the
@@ -87,11 +93,16 @@ private:
     zx_status_t SetInternal(size_t bitoff, size_t bitmax, FreeList* free_list);
     zx_status_t ClearInternal(size_t bitoff, size_t bitmax, FreeList* free_list);
 
-    // The ranges of the bitmap.
+    // The ranges of the bitmap. Ranges are ordered by ascending |bitoff| value.
+    // When no "Set" operation is in progress, there should not be any overlapping ranges.
     ListType elems_;
 
     // The number of ranges in elems_.
     size_t num_elems_;
+
+    // The number of total bits in elems_; i.e. the sum of the bitlen field of all stored
+    // RleBitmapElements.
+    size_t num_bits_;
 };
 
 // Elements of the bitmap list
@@ -100,6 +111,9 @@ struct RleBitmapElement : public fbl::DoublyLinkedListable<fbl::unique_ptr<RleBi
     size_t bitoff;
     // The number of 1-bits in this run.
     size_t bitlen;
+
+    // The (exclusive) end of this run of 1-bits.
+    size_t end() const { return bitoff + bitlen; }
 };
 
 } // namespace bitmap

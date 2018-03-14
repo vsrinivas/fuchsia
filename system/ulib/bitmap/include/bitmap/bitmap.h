@@ -15,6 +15,13 @@ class Bitmap {
 public:
     virtual ~Bitmap() = default;
 
+    // Finds a run of |run_len| |is_set| bits, between |bitoff| and |bitmax|.
+    // Sets |out| with the start of the run, or |bitmax| if it is
+    // not found in the provided range.
+    // If the run is not found, "ZX_ERR_NO_RESOURCES" is returned.
+    virtual zx_status_t Find(bool is_set, size_t bitoff, size_t bitmax,
+                             size_t run_len, size_t* out) const = 0;
+
     // Returns true in the bit at bitoff is set.
     virtual bool GetOne(size_t bitoff) const {
         return Get(bitoff, bitoff + 1, nullptr);

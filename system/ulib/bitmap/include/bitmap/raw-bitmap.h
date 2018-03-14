@@ -60,7 +60,7 @@ public:
     // *out* and returns ZX_OK if a run is found, otherwise returns
     // ZX_ERR_NO_RESOURCES.
     zx_status_t Find(bool is_set, size_t bitoff, size_t bitmax, size_t run_len,
-                     size_t* out) const;
+                     size_t* out) const override;
     zx_status_t ReverseFind(bool is_set, size_t bitoff, size_t bitmax,
                             size_t run_len, size_t* out) const;
 
