@@ -22,6 +22,7 @@
 #include <intel-hda/utils/intel-hda-proto.h>
 
 #include "codec-cmd-job.h"
+#include "debug-logging.h"
 #include "intel-hda-codec.h"
 #include "pinned-vmo.h"
 #include "thread-annotations.h"
@@ -36,10 +37,13 @@ public:
     ~IntelHDAController();
 
     zx_status_t Init(zx_device_t* pci_dev);
-    void PrintDebugPrefix() const;
-    const char*  dev_name() const { return device_get_name(dev_node_); }
-    zx_device_t* dev_node() { return dev_node_; }
-    unsigned int id() const { return id_; }
+
+    // one-liner accessors.
+    const char*                  dev_name() const   { return device_get_name(dev_node_); }
+    zx_device_t*                 dev_node()         { return dev_node_; }
+    const zx_pcie_device_info_t& dev_info() const   { return pci_dev_info_; }
+    unsigned int                 id() const         { return id_; }
+    const char*                  log_prefix() const { return log_prefix_; }
 
     // CORB/RIRB
     zx_status_t QueueCodecCmd(fbl::unique_ptr<CodecCmdJob>&& job) TA_EXCL(corb_lock_);
@@ -132,8 +136,8 @@ private:
     thrd_t                    irq_thread_;
     bool                      irq_thread_started_ = false;
 
-    // Debug stuff
-    char debug_tag_[ZX_DEVICE_NAME_MAX] = { 0 };
+    // Log prefix storage
+    char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
 
     // Upstream PCI device, protocol interface, and device info.
     zx_device_t*          pci_dev_ = nullptr;

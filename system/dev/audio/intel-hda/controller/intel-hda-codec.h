@@ -22,6 +22,7 @@
 #include <intel-hda/utils/intel-hda-registers.h>
 
 #include "codec-cmd-job.h"
+#include "debug-logging.h"
 #include "intel-hda-stream.h"
 #include "thread-annotations.h"
 
@@ -44,7 +45,6 @@ public:
 
     static fbl::RefPtr<IntelHDACodec> Create(IntelHDAController& controller, uint8_t codec_id);
 
-    void PrintDebugPrefix() const;
     zx_status_t Startup();
     void ProcessSolicitedResponse(const CodecResponse& resp, fbl::unique_ptr<CodecCmdJob>&& job);
     void ProcessUnsolicitedResponse(const CodecResponse& resp);
@@ -59,6 +59,7 @@ public:
 
     uint8_t id()  const { return codec_id_; }
     State state() const { return state_; }
+    const char* log_prefix() const { return log_prefix_; }
 
     // Debug/Diags
     void DumpState();
@@ -137,6 +138,9 @@ private:
         uint8_t  rev_id;
         uint8_t  step_id;
     } props_;
+
+    // Log prefix storage
+    char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
 
     // Dispatcher framework state.
     fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;

@@ -17,6 +17,7 @@
 #include <intel-hda/utils/intel-hda-registers.h>
 
 #include "pinned-vmo.h"
+#include "debug-logging.h"
 #include "thread-annotations.h"
 #include "utils.h"
 
@@ -42,11 +43,12 @@ public:
         hda_stream_desc_regs_t* regs,
         const fbl::RefPtr<RefCountedBti>& pci_bti);
 
-    Type     type()            const { return type_; }
-    Type     configured_type() const { return configured_type_; }
-    uint8_t  tag()             const { return tag_; }
-    uint16_t id()              const { return id_; }
-    uint16_t GetKey()          const { return id(); }
+    const char* log_prefix()      const { return log_prefix_; }
+    Type        type()            const { return type_; }
+    Type        configured_type() const { return configured_type_; }
+    uint8_t     tag()             const { return tag_; }
+    uint16_t    id()              const { return id_; }
+    uint16_t    GetKey()          const { return id(); }
 
     zx_status_t SetStreamFormat(const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
                                 uint16_t encoded_fmt,
@@ -62,11 +64,8 @@ private:
     IntelHDAStream(Type type,
                    uint16_t id,
                    hda_stream_desc_regs_t* regs,
-                   const fbl::RefPtr<RefCountedBti>& pci_bti)
-        : type_(type), id_(id), regs_(regs), pci_bti_(pci_bti) {}
+                   const fbl::RefPtr<RefCountedBti>& pci_bti);
     ~IntelHDAStream();
-
-    void PrintDebugPrefix() const;
 
     zx_status_t Initialize();
 
@@ -117,6 +116,9 @@ private:
     // Parameters determined at allocation time.
     Type    configured_type_;
     uint8_t tag_;
+
+    // Log prefix storage
+    char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
 
     // A reference to our controller's BTI.  We will need to this to grant the
     // controller access to the BDLs and the ring buffers that this stream needs

@@ -44,7 +44,8 @@ zx_status_t IntelHDAController::ResetControllerHW() {
                                       + HDA_REG_GCAP_BSS(gcap);
 
         if (total_stream_cnt > countof(regs()->stream_desc)) {
-            LOG("Fatal error during reset!  Controller reports more streams (%u) "
+            LOG(ERROR,
+                "Fatal error during reset!  Controller reports more streams (%u) "
                 "than should be possible for IHDA hardware.  (GCAP = 0x%04hx)\n",
                 total_stream_cnt, gcap);
             return ZX_ERR_INTERNAL;
@@ -73,7 +74,7 @@ zx_status_t IntelHDAController::ResetControllerHW() {
                         regs());
 
     if (res != ZX_OK) {
-        LOG("Error attempting to enter reset! (res %d)\n", res);
+        LOG(ERROR, "Error attempting to enter reset! (res %d)\n", res);
         return res;
     }
 
@@ -93,7 +94,7 @@ zx_status_t IntelHDAController::ResetControllerHW() {
                         regs());
 
     if (res != ZX_OK) {
-        LOG("Error attempting to leave reset! (res %d)\n", res);
+        LOG(ERROR, "Error attempting to leave reset! (res %d)\n", res);
         return res;
     }
 
@@ -144,7 +145,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
 
     // Have we already been set up?
     if (pci_dev_ != nullptr) {
-        LOG("Device already initialized!\n");
+        LOG(ERROR, "Device already initialized!\n");
         return ZX_ERR_BAD_STATE;
     }
 
@@ -154,13 +155,10 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
 
     pci_dev_ = pci_dev;
 
-    // Generate a default debug tag for now.
-    snprintf(debug_tag_, sizeof(debug_tag_), "IHDA Controller (unknown BDF)");
-
     // The device had better be a PCI device, or we are very confused.
     res = device_get_protocol(pci_dev_, ZX_PROTOCOL_PCI, reinterpret_cast<void*>(&pci_));
     if (res != ZX_OK) {
-        LOG("PCI device does not support PCI protocol! (res %d)\n", res);
+        LOG(ERROR, "PCI device does not support PCI protocol! (res %d)\n", res);
         return res;
     }
 
@@ -169,11 +167,11 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
     ZX_DEBUG_ASSERT(pci_.ops != nullptr);
     res = pci_get_device_info(&pci_, &pci_dev_info_);
     if (res != ZX_OK) {
-        LOG("Failed to fetch basic PCI device info! (res %d)\n", res);
+        LOG(ERROR, "Failed to fetch basic PCI device info! (res %d)\n", res);
         return res;
     }
 
-    snprintf(debug_tag_, sizeof(debug_tag_), "IHDA Controller %02x:%02x.%01x",
+    snprintf(log_prefix_, sizeof(log_prefix_), "IHDA Controller %02x:%02x.%01x",
              pci_dev_info_.bus_id,
              pci_dev_info_.dev_id,
              pci_dev_info_.func_id);
@@ -184,13 +182,13 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
     zx::bti pci_bti;
     res = pci_get_bti(&pci_, 0, pci_bti.reset_and_get_address());
     if (res != ZX_OK) {
-        LOG("Failed to get BTI handle for IHDA Controller (res %d)\n", res);
+        LOG(ERROR, "Failed to get BTI handle for IHDA Controller (res %d)\n", res);
         return res;
     }
 
     pci_bti_ = RefCountedBti::Create(fbl::move(pci_bti));
     if (pci_bti_ == nullptr) {
-        LOG("Out of memory while attempting to allocate BTI wrapper for IHDA Controller\n");
+        LOG(ERROR, "Out of memory while attempting to allocate BTI wrapper for IHDA Controller\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -199,19 +197,20 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
     zx_pci_bar_t bar_info;
     res = pci_get_bar(&pci_, 0u, &bar_info);
     if (res != ZX_OK) {
-        LOG("Error attempting to fetch registers from PCI (res %d)\n", res);
+        LOG(ERROR, "Error attempting to fetch registers from PCI (res %d)\n", res);
         return res;
     }
 
     if (bar_info.type != PCI_BAR_TYPE_MMIO) {
-        LOG("Bad register window type (expected %u got %u)\n", PCI_BAR_TYPE_MMIO, bar_info.type);
+        LOG(ERROR, "Bad register window type (expected %u got %u)\n",
+                PCI_BAR_TYPE_MMIO, bar_info.type);
         return ZX_ERR_INTERNAL;
     }
 
     // We should have a valid handle now, make sure we don't leak it.
     zx::vmo bar_vmo(bar_info.handle);
     if (bar_info.size != sizeof(hda_all_registers_t)) {
-        LOG("Bad register window size (expected 0x%zx got 0x%zx)\n",
+        LOG(ERROR, "Bad register window size (expected 0x%zx got 0x%zx)\n",
             sizeof(hda_all_registers_t), bar_info.size);
         return ZX_ERR_INTERNAL;
     }
@@ -220,7 +219,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
     // cache policy to UNCACHED_DEVICE
     res = bar_vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (res != ZX_OK) {
-        LOG("Error attempting to set cache policy for PCI registers (res %d)\n", res);
+        LOG(ERROR, "Error attempting to set cache policy for PCI registers (res %d)\n", res);
         return res;
     }
 
@@ -229,7 +228,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
     constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
     res = mapped_regs_.Map(bar_vmo, bar_info.size, CPU_MAP_FLAGS, DriverVmars::registers());
     if (res != ZX_OK) {
-        LOG("Error attempting to map registers (res %d)\n", res);
+        LOG(ERROR, "Error attempting to map registers (res %d)\n", res);
         return res;
     }
 
@@ -245,24 +244,24 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
     if (res != ZX_OK) {
         res = pci_set_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_LEGACY, 1);
         if (res != ZX_OK) {
-            LOG("Failed to set IRQ mode (%d)!\n", res);
+            LOG(ERROR, "Failed to set IRQ mode (%d)!\n", res);
             return res;
         } else {
-            LOG("Falling back on legacy IRQ mode!\n");
+            LOG(ERROR, "Falling back on legacy IRQ mode!\n");
         }
     }
 
     ZX_DEBUG_ASSERT(!irq_.is_valid());
     res = pci_map_interrupt(&pci_, 0, irq_.reset_and_get_address());
     if (res != ZX_OK) {
-        LOG("Failed to map IRQ! (res %d)\n", res);
+        LOG(ERROR, "Failed to map IRQ! (res %d)\n", res);
         return res;
     }
 
     // Enable Bus Mastering so we can DMA data and receive MSIs
     res = pci_enable_bus_master(&pci_, true);
     if (res != ZX_OK) {
-        LOG("Failed to enable PCI bus mastering!\n");
+        LOG(ERROR, "Failed to enable PCI bus mastering!\n");
         return res;
     }
 
@@ -285,7 +284,7 @@ zx_status_t IntelHDAController::SetupStreamDescriptors() {
                   "Max stream count mismatch!");
 
     if (!total_stream_cnt || (total_stream_cnt > countof(regs()->stream_desc))) {
-        LOG("Invalid stream counts in GCAP register (In %u Out %u Bidir %u; Max %zu)\n",
+        LOG(ERROR, "Invalid stream counts in GCAP register (In %u Out %u Bidir %u; Max %zu)\n",
             input_stream_cnt, output_stream_cnt, bidir_stream_cnt, countof(regs()->stream_desc));
         return ZX_ERR_INTERNAL;
     }
@@ -301,7 +300,7 @@ zx_status_t IntelHDAController::SetupStreamDescriptors() {
 
         auto stream = IntelHDAStream::Create(type, stream_id, &regs()->stream_desc[i], pci_bti_);
         if (stream == nullptr) {
-            LOG("Failed to create HDA stream context %u/%u\n", i, total_stream_cnt);
+            LOG(ERROR, "Failed to create HDA stream context %u/%u\n", i, total_stream_cnt);
             return ZX_ERR_NO_MEMORY;
         }
 
@@ -331,7 +330,7 @@ zx_status_t IntelHDAController::SetupCommandBufferSize(uint8_t* size_reg,
         *entry_count = 2;
         cmd = HDA_REG_CORBSIZE_CFG_2ENT;
     } else {
-        LOG("Invalid ring buffer capabilities! (0x%02x)\n", tmp);
+        LOG(ERROR, "Invalid ring buffer capabilities! (0x%02x)\n", tmp);
         return ZX_ERR_BAD_STATE;
     }
 
@@ -358,7 +357,7 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
                                         ZX_CACHE_POLICY_UNCACHED_DEVICE);
 
     if (res != ZX_OK) {
-        LOG("Failed to create and map %u bytes for CORB/RIRB command buffers! (res %d)\n",
+        LOG(ERROR, "Failed to create and map %u bytes for CORB/RIRB command buffers! (res %d)\n",
             PAGE_SIZE, res);
         return res;
     }
@@ -375,7 +374,7 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
     constexpr uint32_t HDA_MAP_FLAGS = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE;
     res = cmd_buf_hda_mem_.Pin(cmd_buf_vmo, pci_bti_, HDA_MAP_FLAGS);
     if (res != ZX_OK) {
-        LOG("Failed to pin pages for CORB/RIRB command buffers! (res %d)\n", res);
+        LOG(ERROR, "Failed to pin pages for CORB/RIRB command buffers! (res %d)\n", res);
         return res;
     }
 
@@ -427,7 +426,7 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
     // our command buffers.
     bool gcap_64bit_ok = HDA_REG_GCAP_64OK(REG_RD(&regs()->gcap));
     if ((cmd_buf_paddr64 >> 32) && !gcap_64bit_ok) {
-        LOG("Intel HDA controller does not support 64-bit physical addressing!\n");
+        LOG(ERROR, "Intel HDA controller does not support 64-bit physical addressing!\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -494,7 +493,7 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
     minor = REG_RD(&regs()->vmin);
 
     if ((1 != major) || (0 != minor)) {
-        LOG("Unexpected HW revision %d.%d!\n", major, minor);
+        LOG(ERROR, "Unexpected HW revision %d.%d!\n", major, minor);
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -535,7 +534,7 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
 #endif
 
     if (c11_res < 0) {
-        LOG("Failed create IRQ thread! (res = %d)\n", c11_res);
+        LOG(ERROR, "Failed create IRQ thread! (res = %d)\n", c11_res);
         SetState(State::SHUT_DOWN);
         return ZX_ERR_INTERNAL;
     }
@@ -567,11 +566,12 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
     // our device.
 
     // Generate a device name and initialize our device structure
-    snprintf(debug_tag_, sizeof(debug_tag_), "intel-hda-%03u", id());
+    char dev_name[ZX_DEVICE_NAME_MAX] = { 0 };
+    snprintf(dev_name, sizeof(dev_name), "intel-hda-%03u", id());
 
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = debug_tag_;
+    args.name = dev_name;
     args.ctx = this;
     args.ops = &CONTROLLER_DEVICE_THUNKS;
     args.proto_id = ZX_PROTOCOL_IHDA;

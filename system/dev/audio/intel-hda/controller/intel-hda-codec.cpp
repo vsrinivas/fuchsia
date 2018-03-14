@@ -39,10 +39,6 @@ IntelHDACodec::ProbeCommandListEntry IntelHDACodec::PROBE_COMMANDS[] = {
     { .verb = GET_PARAM(CodecParam::REVISION_ID), .parse = &IntelHDACodec::ParseRevisionId },
 };
 
-void IntelHDACodec::PrintDebugPrefix() const {
-    printf("[%s:%u] ", controller_.dev_name(), codec_id_);
-}
-
 #define DEV (static_cast<IntelHDACodec*>(ctx))
 zx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = {
     .version      = DEVICE_OPS_VERSION,
@@ -85,6 +81,11 @@ IntelHDACodec::IntelHDACodec(IntelHDAController& controller, uint8_t codec_id)
     dev_props_[PROP_PROTOCOL].id    = BIND_PROTOCOL;
     dev_props_[PROP_PROTOCOL].value = ZX_PROTOCOL_IHDA_CODEC;
     default_domain_ = dispatcher::ExecutionDomain::Create();
+
+    const auto& info = controller_.dev_info();
+    snprintf(log_prefix_, sizeof(log_prefix_),
+            "IHDA Codec %02x:%02x.%01x/%02x",
+             info.bus_id, info.dev_id, info.func_id, codec_id_);
 }
 
 fbl::RefPtr<IntelHDACodec> IntelHDACodec::Create(IntelHDAController& controller,
@@ -94,12 +95,12 @@ fbl::RefPtr<IntelHDACodec> IntelHDACodec::Create(IntelHDAController& controller,
     fbl::AllocChecker ac;
     auto ret = fbl::AdoptRef(new (&ac) IntelHDACodec(controller, codec_id));
     if (!ac.check()) {
-        GLOBAL_LOG("Out of memory attempting to allocate codec\n");
+        GLOBAL_LOG(ERROR, "Out of memory attempting to allocate codec\n");
         return nullptr;
     }
 
     if (ret->default_domain_ == nullptr) {
-        LOG_EX(*ret, "Out of memory attempting to allocate execution domain\n");
+        LOG_EX(ERROR, *ret, "Out of memory attempting to allocate execution domain\n");
         return nullptr;
     }
 
@@ -114,13 +115,13 @@ zx_status_t IntelHDACodec::Startup() {
         auto job = CodecCmdJobAllocator::New(cmd);
 
         if (job == nullptr) {
-            LOG("Failed to allocate job during initial codec probe!\n");
+            LOG(ERROR, "Failed to allocate job during initial codec probe!\n");
             return ZX_ERR_NO_MEMORY;
         }
 
         zx_status_t res = controller_.QueueCodecCmd(fbl::move(job));
         if (res != ZX_OK) {
-            LOG("Failed to queue job (res = %d) during initial codec probe!\n", res);
+            LOG(ERROR, "Failed to queue job (res = %d) during initial codec probe!\n", res);
             return res;
         }
     }
@@ -141,8 +142,8 @@ void IntelHDACodec::SendCORBResponse(const fbl::RefPtr<dispatcher::Channel>& cha
 
     zx_status_t res = channel->Write(&payload, sizeof(payload));
     if (res != ZX_OK) {
-        DEBUG_LOG("Error writing CORB response (%08x, %08x) res = %d\n",
-                  resp.data, resp.data_ex, res);
+        LOG(TRACE, "Error writing CORB response (%08x, %08x) res = %d\n",
+                   resp.data, resp.data_ex, res);
     }
 }
 
@@ -160,14 +161,15 @@ void IntelHDACodec::ProcessSolicitedResponse(const CodecResponse& resp,
         if (res == ZX_OK) {
             ++probe_rx_ndx_;
         } else {
-            LOG("Error parsing solicited response during codec probe! (data %08x)\n",
-                    resp.data);
+            LOG(ERROR,
+                "Error parsing solicited response during codec probe! (data %08x)\n",
+                resp.data);
 
             // TODO(johngro) : shutdown and cleanup somehow.
             state_ = State::FATAL_ERROR;
         }
     } else if (job->response_channel() != nullptr) {
-        VERBOSE_LOG("Sending solicited response [%08x, %08x] to channel %p\n",
+        LOG(SPEW, "Sending solicited response [%08x, %08x] to channel %p\n",
                     resp.data, resp.data_ex, job->response_channel().get());
 
         // Does this job have a response channel?  If so, attempt to send the
@@ -199,7 +201,7 @@ void IntelHDACodec::ProcessWakeupEvt() {
     //
     // Currently, we support neither power management, nor hot-unplug.  Just log
     // the fact that we have been woken up and do nothing.
-    LOG("Wakeup event received!\n");
+    LOG(WARN, "Wakeup event received - Don't know how to handle this yet!\n");
 }
 
 void IntelHDACodec::BeginShutdown() {
@@ -245,7 +247,7 @@ zx_status_t IntelHDACodec::PublishDevice() {
     // Publish the device.
     zx_status_t res = device_add(controller_.dev_node(), &args, &dev_node_);
     if (res != ZX_OK) {
-        LOG("Failed to add codec device for \"%s\" (res %d)\n", name, res);
+        LOG(ERROR, "Failed to add codec device for \"%s\" (res %d)\n", name, res);
         return res;
     }
 
@@ -296,20 +298,20 @@ zx_status_t IntelHDACodec::DeviceIoctl(uint32_t op,
 #define PROCESS_CMD(_req_ack, _req_driver_chan, _ioctl, _payload, _handler) \
 case _ioctl:                                                                \
     if (req_size != sizeof(req._payload)) {                                 \
-        DEBUG_LOG("Bad " #_payload                                          \
-                  " request length (%u != %zu)\n",                          \
-                  req_size, sizeof(req._payload));                          \
+        LOG(TRACE, "Bad " #_payload                                         \
+                   " request length (%u != %zu)\n",                         \
+                   req_size, sizeof(req._payload));                         \
         return ZX_ERR_INVALID_ARGS;                                         \
     }                                                                       \
     if (_req_ack && (req.hdr.cmd & IHDA_NOACK_FLAG))  {                     \
-        DEBUG_LOG("Cmd " #_payload                                          \
-                  " requires acknowledgement, but the "                     \
-                  "NOACK flag was set!\n");                                 \
+        LOG(TRACE, "Cmd " #_payload                                         \
+                   " requires acknowledgement, but the "                    \
+                   "NOACK flag was set!\n");                                \
         return ZX_ERR_INVALID_ARGS;                                         \
     }                                                                       \
     if (_req_driver_chan  && !is_driver_channel) {                          \
-        DEBUG_LOG("Cmd " #_payload                                          \
-                  " requires a privileged driver channel.\n");              \
+        LOG(TRACE, "Cmd " #_payload                                         \
+                   " requires a privileged driver channel.\n");             \
         return ZX_ERR_ACCESS_DENIED;                                        \
     }                                                                       \
     return _handler(channel, req._payload)
@@ -332,25 +334,25 @@ zx_status_t IntelHDACodec::ProcessClientRequest(dispatcher::Channel* channel,
     ZX_DEBUG_ASSERT(channel != nullptr);
     res = channel->Read(&req, sizeof(req), &req_size);
     if (res != ZX_OK) {
-        DEBUG_LOG("Failed to read client request (res %d)\n", res);
+        LOG(TRACE, "Failed to read client request (res %d)\n", res);
         return res;
     }
 
     // Sanity checks.
     if (req_size < sizeof(req.hdr)) {
-        DEBUG_LOG("Client request too small to contain header (%u < %zu)\n",
+        LOG(TRACE,"Client request too small to contain header (%u < %zu)\n",
                 req_size, sizeof(req.hdr));
         return ZX_ERR_INVALID_ARGS;
     }
 
     auto cmd_id = static_cast<ihda_cmd_t>(req.hdr.cmd & ~IHDA_NOACK_FLAG);
     if (req.hdr.transaction_id == IHDA_INVALID_TRANSACTION_ID) {
-        DEBUG_LOG("Invalid transaction ID in client request 0x%04x\n", cmd_id);
+        LOG(TRACE, "Invalid transaction ID in client request 0x%04x\n", cmd_id);
         return ZX_ERR_INVALID_ARGS;
     }
 
     // Dispatch
-    VERBOSE_LOG("Client Request (cmd 0x%04x tid %u) len %u\n",
+    LOG(SPEW, "Client Request (cmd 0x%04x tid %u) len %u\n",
             req.hdr.cmd,
             req.hdr.transaction_id,
             req_size);
@@ -363,7 +365,7 @@ zx_status_t IntelHDACodec::ProcessClientRequest(dispatcher::Channel* channel,
     PROCESS_CMD(false, CodecVerb(req.corb_cmd.verb).is_set(),
                 IHDA_CODEC_SEND_CORB_CMD, corb_cmd, ProcessSendCORBCmd);
     default:
-        DEBUG_LOG("Unrecognized command ID 0x%04x\n", req.hdr.cmd);
+        LOG(TRACE, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
         return ZX_ERR_INVALID_ARGS;
     }
 }
@@ -420,7 +422,7 @@ zx_status_t IntelHDACodec::ProcessSendCORBCmd(dispatcher::Channel* channel,
 
     // Make sure that the command is well formed.
     if (!CodecCommand::SanityCheck(id(), req.nid, verb)) {
-        DEBUG_LOG("Bad SEND_CORB_CMD request values [%u, %hu, 0x%05x]\n",
+        LOG(TRACE, "Bad SEND_CORB_CMD request values [%u, %hu, 0x%05x]\n",
                 id(), req.nid, verb.val);
         return ZX_ERR_INVALID_ARGS;
     }
@@ -438,7 +440,7 @@ zx_status_t IntelHDACodec::ProcessSendCORBCmd(dispatcher::Channel* channel,
 
     zx_status_t res = controller_.QueueCodecCmd(fbl::move(job));
     if (res != ZX_OK) {
-        DEBUG_LOG("Failed to queue CORB command [%u, %hu, 0x%05x] (res %d)\n",
+        LOG(TRACE, "Failed to queue CORB command [%u, %hu, 0x%05x] (res %d)\n",
                 id(), req.nid, verb.val, res);
     }
 
@@ -512,7 +514,7 @@ zx_status_t IntelHDACodec::ProcessSetStreamFmt(dispatcher::Channel* channel,
 
     // Sanity check the requested format.
     if (!StreamFormat(req.format).SanityCheck()) {
-        DEBUG_LOG("Invalid encoded stream format 0x%04hx!\n", req.format);
+        LOG(TRACE, "Invalid encoded stream format 0x%04hx!\n", req.format);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -538,7 +540,7 @@ zx_status_t IntelHDACodec::ProcessSetStreamFmt(dispatcher::Channel* channel,
                                               req.format,
                                               &client_channel);
     if (res != ZX_OK) {
-        DEBUG_LOG("Failed to set stream format 0x%04hx for stream %hu (res %d)\n",
+        LOG(TRACE, "Failed to set stream format 0x%04hx for stream %hu (res %d)\n",
                   req.format, req.stream_id, res);
         return res;
     }
@@ -550,7 +552,7 @@ zx_status_t IntelHDACodec::ProcessSetStreamFmt(dispatcher::Channel* channel,
     res = channel->Write(&resp, sizeof(resp), fbl::move(client_channel));
 
     if (res != ZX_OK)
-        DEBUG_LOG("Failed to send stream channel back to codec driver (res %d)\n", res);
+        LOG(TRACE, "Failed to send stream channel back to codec driver (res %d)\n", res);
 
     return res;
 }

@@ -79,7 +79,7 @@ zx_status_t DriverVmars::Initialize() {
         ((MAX_CONTROLLERS * MAX_SIZE_PER_CONTROLLER) +
         (((MAX_CONTROLLERS * MAX_ALLOCS_PER_CONTROLLER) - 1) * (512u << 10)));
 
-    GLOBAL_DEBUG_LOG("Allocating 0x%zx byte VMAR for registers.\n", VMAR_SIZE);
+    GLOBAL_LOG(TRACE, "Allocating 0x%zx byte VMAR for registers.\n", VMAR_SIZE);
     registers_ = fbl::VmarManager::Create(VMAR_SIZE);
     if (registers_ == nullptr) {
         return ZX_ERR_NO_MEMORY;

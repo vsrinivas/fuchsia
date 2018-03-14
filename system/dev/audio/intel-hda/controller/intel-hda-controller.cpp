@@ -57,14 +57,10 @@ zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
 };
 #undef DEV
 
-void IntelHDAController::PrintDebugPrefix() const {
-    printf("[%s] ", debug_tag_);
-}
-
 IntelHDAController::IntelHDAController()
     : state_(static_cast<StateStorage>(State::STARTING)),
       id_(device_id_gen_.fetch_add(1u)) {
-    snprintf(debug_tag_, sizeof(debug_tag_), "Unknown IHDA Controller");
+    snprintf(log_prefix_, sizeof(log_prefix_), "IHDA Controller (unknown BDF)");
 }
 
 IntelHDAController::~IntelHDAController() {
@@ -245,23 +241,23 @@ zx_status_t IntelHDAController::ProcessClientRequest(dispatcher::Channel* channe
     ZX_DEBUG_ASSERT(channel != nullptr);
     res = channel->Read(&req, sizeof(req), &req_size);
     if (res != ZX_OK) {
-        DEBUG_LOG("Failed to read client request (res %d)\n", res);
+        LOG(TRACE, "Failed to read client request (res %d)\n", res);
         return res;
     }
 
     // Sanity checks
     if (req_size < sizeof(req.hdr)) {
-        DEBUG_LOG("Client request too small to contain header (%u < %zu)\n",
+        LOG(TRACE, "Client request too small to contain header (%u < %zu)\n",
                 req_size, sizeof(req.hdr));
         return ZX_ERR_INVALID_ARGS;
     }
 
     // Dispatch
-    VERBOSE_LOG("Client Request 0x%04x len %u\n", req.hdr.cmd, req_size);
+    LOG(SPEW, "Client Request 0x%04x len %u\n", req.hdr.cmd, req_size);
     switch (req.hdr.cmd) {
     case IHDA_CMD_GET_IDS: {
         if (req_size != sizeof(req.get_ids)) {
-            DEBUG_LOG("Bad GET_IDS request length (%u != %zu)\n",
+            LOG(TRACE, "Bad GET_IDS request length (%u != %zu)\n",
                     req_size, sizeof(req.get_ids));
             return ZX_ERR_INVALID_ARGS;
         }
@@ -283,7 +279,7 @@ zx_status_t IntelHDAController::ProcessClientRequest(dispatcher::Channel* channe
 
     case IHDA_CONTROLLER_CMD_SNAPSHOT_REGS:
         if (req_size != sizeof(req.snapshot_regs)) {
-            DEBUG_LOG("Bad SNAPSHOT_REGS request length (%u != %zu)\n",
+            LOG(TRACE, "Bad SNAPSHOT_REGS request length (%u != %zu)\n",
                     req_size, sizeof(req.snapshot_regs));
             return ZX_ERR_INVALID_ARGS;
         }
