@@ -47,7 +47,7 @@ public:
     const IgdOpRegion& igd_opregion() const { return igd_opregion_; }
     Power* power() { return &power_; }
 
-    void HandleHotplug(registers::Ddi ddi);
+    void HandleHotplug(registers::Ddi ddi, bool long_pulse);
     void HandlePipeVsync(registers::Pipe pipe);
 
     void ResetPipe(registers::Pipe pipe);

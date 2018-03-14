@@ -55,10 +55,11 @@ int Interrupts::IrqLoop() {
                     ::Get(registers::DDI_E).ReadFrom(controller_->mmio_space());
             for (uint32_t i = 0; i < registers::kDdiCount; i++) {
                 registers::Ddi ddi = registers::kDdis[i];
-                bool hp_detected = sde_int_identity.ddi_bit(ddi).get();
                 auto hp_ctrl = ddi < registers::DDI_E ? hp_ctrl1 : hp_ctrl2;
-                if (hp_detected && hp_ctrl.hpd_long_pulse(ddi).get()) {
-                    controller_->HandleHotplug(ddi);
+                bool hp_detected = sde_int_identity.ddi_bit(ddi).get()
+                        & (hp_ctrl.hpd_long_pulse(ddi).get() || hp_ctrl.hpd_short_pulse(ddi).get());
+                if (hp_detected) {
+                    controller_->HandleHotplug(ddi, hp_ctrl.hpd_long_pulse(ddi).get());
                 }
             }
             // Write back the register to clear the bits

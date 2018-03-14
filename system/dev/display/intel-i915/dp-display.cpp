@@ -864,6 +864,26 @@ bool DpDisplay::QueryDevice(zx_display_info* info) {
         return false;
     }
 
+    dpcd::DownStreamPortPresent dsp;
+    dsp.set_reg_value(dpcd_capabilities_[
+            dpcd::DPCD_DOWN_STREAM_PORT_PRESENT - dpcd::DPCD_CAP_START]);
+    if (dsp.is_branch()) {
+        dpcd::DownStreamPortCount count;
+        count.set_reg_value(dpcd_capabilities_[
+                dpcd::DPCD_DOWN_STREAM_PORT_COUNT - dpcd::DPCD_CAP_START]);
+        zxlogf(SPEW, "Found branch with %d ports\n", count.count());
+
+        dpcd::SinkCount sink_count;
+        if (!DpcdRead(dpcd::DPCD_SINK_COUNT, sink_count.reg_value_ptr(), 1)) {
+            return false;
+        }
+        // TODO(ZX-1416): Add support for MST
+        if (sink_count.count() != 1) {
+            zxlogf(ERROR, "MST not supported\n");
+            return false;
+        }
+    }
+
     if (controller()->igd_opregion().IsEdp(ddi())) {
         dpcd::EdpConfigCap edp_caps;
         edp_caps.set_reg_value(dpcd_capabilities_[dpcd::DPCD_EDP_CONFIG]);
@@ -1259,5 +1279,38 @@ bool DpDisplay::SetBacklightBrightness(double val) {
     }
 
     return true;
+}
+
+bool DpDisplay::HandleHotplug(bool long_pulse) {
+    if (!long_pulse) {
+        dpcd::SinkCount sink_count;
+        if (!DpcdRead(dpcd::DPCD_SINK_COUNT, sink_count.reg_value_ptr(), 1)) {
+            return false;
+        }
+
+        // The pulse was from a downstream monitor being connected
+        // TODO(ZX-1416): Add support for MST
+        if (sink_count.count() > 1) {
+            return true;
+        }
+
+        // The pulse was from a downstream monitor disconnecting
+        if (sink_count.count() == 0) {
+            return false;
+        }
+
+        dpcd::LaneAlignStatusUpdate status;
+        if (!DpcdRead(dpcd::DPCD_LANE_ALIGN_STATUS_UPDATED, status.reg_value_ptr(), 1)) {
+            return false;
+        }
+
+        if (status.interlane_align_done()) {
+            zxlogf(SPEW, "HPD event for trained link\n");
+            return true;
+        }
+
+        return DoLinkTraining();
+    }
+    return false;
 }
 } // namespace i915

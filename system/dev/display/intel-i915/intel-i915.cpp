@@ -77,12 +77,16 @@ void Controller::EnableBacklight(bool enable) {
     }
 }
 
-void Controller::HandleHotplug(registers::Ddi ddi) {
-    zxlogf(TRACE, "i915: hotplug detected %d\n", ddi);
+void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
+    zxlogf(TRACE, "i915: hotplug detected %d %d\n", ddi, long_pulse);
     DisplayDevice* device = nullptr;
     bool was_kernel_framebuffer = false;
     for (size_t i = 0; i < display_devices_.size(); i++) {
         if (display_devices_[i]->ddi() == ddi) {
+            if (display_devices_[i]->HandleHotplug(long_pulse)) {
+                zxlogf(SPEW, "i915: hotplug handled by device\n");
+                return;
+            }
             device = display_devices_.erase(i);
             was_kernel_framebuffer = i == 0;
             break;
@@ -102,6 +106,7 @@ void Controller::HandleHotplug(registers::Ddi ddi) {
             }
         }
         device->DdkRemove();
+        zxlogf(SPEW, "Display unplugged\n");
     } else { // New device was plugged in
         fbl::unique_ptr<DisplayDevice> device = InitDisplay(ddi);
         if (!device) {
@@ -111,6 +116,8 @@ void Controller::HandleHotplug(registers::Ddi ddi) {
 
         if (AddDisplay(fbl::move(device)) != ZX_OK) {
             zxlogf(INFO, "Failed to add display %d\n", ddi);
+        } else {
+            zxlogf(SPEW, "Display connected\n");
         }
     }
 }

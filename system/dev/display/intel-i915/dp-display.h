@@ -49,6 +49,8 @@ private:
     // brightness, then |val| will be clamped to [min, 1].
     bool SetBacklightBrightness(double val);
 
+    bool HandleHotplug(bool long_pulse) override;
+
     edid::Edid edid_;
     uint8_t dp_lane_count_;
     uint32_t dp_link_rate_mhz_;

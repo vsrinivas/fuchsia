@@ -15,6 +15,8 @@ enum {
     DPCD_REV = 0x0,
     DPCD_MAX_LINK_RATE = 0x1,
     DPCD_MAX_LANE_COUNT = 0x2,
+    DPCD_DOWN_STREAM_PORT_PRESENT = 0x5,
+    DPCD_DOWN_STREAM_PORT_COUNT = 0x7,
     DPCD_EDP_CONFIG = 0xd,
     DPCD_SUPPORTED_LINK_RATE_START = 0x10,
     DPCD_SUPPORTED_LINK_RATE_END = 0x1f,
@@ -26,7 +28,9 @@ enum {
     DPCD_TRAINING_LANE2_SET = 0x105,
     DPCD_TRAINING_LANE3_SET = 0x106,
     DPCD_LINK_RATE_SET = 0x115,
+    DPCD_SINK_COUNT = 0x200,
     DPCD_LANE0_1_STATUS = 0x202,
+    DPCD_LANE_ALIGN_STATUS_UPDATED = 0x204,
     DPCD_ADJUST_REQUEST_LANE0_1 = 0x206,
     DPCD_SET_POWER = 0x600,
     DPCD_EDP_CAP_START = 0x700,
@@ -188,6 +192,48 @@ public:
     DEF_BIT(3, tx_gtc_cap);
     DEF_BIT(4, tx_gtc_slave_cap);
     DEF_RSVDZ_FIELD(7, 5);
+};
+
+// DPCD registers:: DOWN_STREAM_PORT_PRESENT
+class DownStreamPortPresent : public hwreg::RegisterBase<DownStreamPortPresent, uint8_t> {
+public:
+    DEF_BIT(0, is_branch);
+    DEF_FIELD(2, 1, type);
+    static constexpr uint8_t kDp = 0;
+    static constexpr uint8_t kAnalog = 1;
+    static constexpr uint8_t kDviHdmiDpPlus = 2;
+    static constexpr uint8_t kOther = 3;
+    DEF_BIT(3, format_conversion);
+    DEF_BIT(4, detailed_cap_info_available);
+};
+
+// DPCD registers:: DOWN_STREAM_PORT_COUNT
+class DownStreamPortCount : public hwreg::RegisterBase<DownStreamPortCount, uint8_t> {
+public:
+    DEF_FIELD(3, 0, count);
+    DEF_BIT(6, msa_timing_par_ignored);
+    DEF_BIT(7, oui_supported);
+};
+
+// DPCD registers:: SINK_COUNT
+class SinkCount : public hwreg::RegisterBase<SinkCount, uint8_t> {
+public:
+    DEF_FIELD(5, 0, count_lo);
+    DEF_BIT(6, cp_ready);
+    DEF_BIT(7, count_hi);
+
+    uint8_t count() const {
+        return static_cast<uint8_t>(count_lo() | (count_hi() << 6));
+    }
+};
+
+// DPCD registers:: LANE_ALIGN_STATUS_UPDATED
+class LaneAlignStatusUpdate : public hwreg::RegisterBase<LaneAlignStatusUpdate, uint8_t> {
+public:
+    DEF_BIT(0, interlane_align_done);
+    DEF_BIT(1, post_lt_adj_req_in_progress);
+    DEF_BIT(6, downstream_port_status_changed);
+    DEF_BIT(7, link_status_updated);
 };
 
 } // dpcd

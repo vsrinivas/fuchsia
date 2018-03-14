@@ -62,6 +62,11 @@ public:
         return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
     }
 
+    hwreg::BitfieldRef<uint32_t> hpd_short_pulse(Ddi ddi) {
+        uint32_t bit = ddi_to_first_bit(ddi) + kHpdShortPulseBitSubOffset;
+        return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+    }
+
     static auto Get(Ddi ddi) {
         return hwreg::RegisterAddr<HotplugCtrl>(ddi == DDI_E ? kOffset2 : kOffset);
     }
@@ -70,6 +75,7 @@ private:
     static constexpr uint32_t kOffset = 0xc4030;
     static constexpr uint32_t kOffset2 = 0xc403c;
 
+    static constexpr uint32_t kHpdShortPulseBitSubOffset = 0;
     static constexpr uint32_t kHpdLongPulseBitSubOffset = 1;
     static constexpr uint32_t kHpdEnableBitSubOffset = 4;
 

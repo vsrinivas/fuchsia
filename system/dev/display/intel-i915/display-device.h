@@ -39,6 +39,10 @@ public:
 
     bool Init();
     bool Resume();
+    // Method to allow the display device to handle hotplug events. Returns
+    // true if the device can handle the event without disconnecting. Otherwise
+    // the device will be removed.
+    virtual bool HandleHotplug(bool long_pulse) { return false; }
 
     const zx::vmo& framebuffer_vmo() const { return framebuffer_vmo_; }
     uint32_t framebuffer_size() const { return framebuffer_size_; }
