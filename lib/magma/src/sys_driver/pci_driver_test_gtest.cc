@@ -14,8 +14,7 @@ void magma_indriver_test(magma::PlatformPciDevice* platform_device)
     DLOG("running magma unit tests");
     TestPlatformPciDevice::SetInstance(platform_device);
     const int kArgc = 3;
-    const char* argv[kArgc] = {"magma_indriver_test", "--gtest_output=xml:/data/test_out/",
-                               "--gtest_filter=-PlatformDevice*.*"};
+    const char* argv[kArgc] = {"magma_indriver_test", "--gtest_filter=-PlatformDevice*.*"};
     testing::InitGoogleTest(const_cast<int*>(&kArgc), const_cast<char**>(argv));
 
     printf("[DRV START=]\n");
