@@ -5,9 +5,37 @@
 
 ### start a remote interactive shell in the target device
 
+## usage: fx shell [-h|--help] [-d|--device <device>] [<command>]
+##
+## Creates an SSH connection with a device and executes a command
+## (if specified) on the device.
+##
+## Arguments:
+##   -h|--help    Print out this message.
+##   -d|--device  Fuchsia link-local name of the device. If not
+##                specified, will connect to the only available
+##                device on the link-local network.
+
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
-fx-command-run ssh -q "$(fx-command-run netaddr --fuchsia)" "$@"
+case $1 in
+  -h|--help)
+  fx-command-help
+  exit 0
+  ;;
+  -d|--device)
+  shift  # name
+  if [[ -z "$1" ]]; then
+      echo "Missing parameter: <device>" >&2
+      fx-command-help
+      exit 1
+  fi
+  device="$1"
+  shift  # value
+  ;;
+esac
+
+fx-command-run ssh -q "$(fx-command-run netaddr --fuchsia "${device}")" "$@"
 result=$?
 if [[ "${result}" -ne 0 ]]; then
   echo "ssh exited with a non-zero status: ${result}."
