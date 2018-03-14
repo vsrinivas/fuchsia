@@ -379,6 +379,7 @@ static void dwc3_release(void* ctx) {
     pdev_vmo_buffer_release(&dwc->ep0_buffer);
     pdev_vmo_buffer_release(&dwc->mmio);
     zx_handle_close(dwc->irq_handle);
+    zx_handle_close(dwc->bti_handle);
     free(dwc);
 }
 
@@ -407,6 +408,11 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
     }
 
     mtx_init(&dwc->lock, mtx_plain);
+
+    status = pdev_get_bti(&dwc->pdev, 0, &dwc->bti_handle);
+    if (status != ZX_OK) {
+        goto fail;
+    }
 
     for (unsigned i = 0; i < countof(dwc->eps); i++) {
         dwc3_endpoint_t* ep = &dwc->eps[i];
