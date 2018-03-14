@@ -209,7 +209,7 @@ zx_status_t usb_midi_source_create(zx_device_t* device, usb_protocol_t* usb, int
     }
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        zx_status_t status = usb_request_alloc(&req, packet_size, ep->bEndpointAddress);
+        zx_status_t status = usb_req_alloc(usb, &req, packet_size, ep->bEndpointAddress);
         if (status != ZX_OK) {
             usb_midi_source_free(source);
             return ZX_ERR_NO_MEMORY;

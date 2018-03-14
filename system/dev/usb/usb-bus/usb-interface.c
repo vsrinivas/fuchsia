@@ -257,7 +257,8 @@ static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
     }
 
     if (req == NULL) {
-        zx_status_t status = usb_request_alloc(&req, length, 0);
+        zx_status_t status = usb_request_alloc_with_bti(&req, intf->device->bus->bti_handle, length,
+                                                        0);
         if (status != ZX_OK) {
             return status;
         }

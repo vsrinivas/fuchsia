@@ -648,8 +648,9 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
 
     // Allocate interrupt transaction buffer
     usb_request_t* int_buf;
-    zx_status_t alloc_result = usb_request_alloc(&int_buf, ecm_ctx->int_endpoint.max_packet_size,
-                                                 ecm_ctx->int_endpoint.addr);
+    zx_status_t alloc_result = usb_req_alloc(&usb, &int_buf,
+                                             ecm_ctx->int_endpoint.max_packet_size,
+                                             ecm_ctx->int_endpoint.addr);
     if (alloc_result != ZX_OK) {
         result = alloc_result;
         goto fail;
@@ -670,8 +671,8 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     size_t tx_buf_remain = MAX_TX_BUF_SZ;
     while (tx_buf_remain >= tx_buf_sz) {
         usb_request_t* tx_buf;
-        zx_status_t alloc_result = usb_request_alloc(&tx_buf, tx_buf_sz,
-                                                     ecm_ctx->tx_endpoint.addr);
+        zx_status_t alloc_result = usb_req_alloc(&usb, &tx_buf, tx_buf_sz,
+                                                 ecm_ctx->tx_endpoint.addr);
         if (alloc_result != ZX_OK) {
             result = alloc_result;
             goto fail;
@@ -694,8 +695,8 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     size_t rx_buf_remain = MAX_RX_BUF_SZ;
     while (rx_buf_remain >= rx_buf_sz) {
         usb_request_t* rx_buf;
-        zx_status_t alloc_result = usb_request_alloc(&rx_buf, rx_buf_sz,
-                                                     ecm_ctx->rx_endpoint.addr);
+        zx_status_t alloc_result = usb_req_alloc(&usb, &rx_buf, rx_buf_sz,
+                                                 ecm_ctx->rx_endpoint.addr);
         if (alloc_result != ZX_OK) {
             result = alloc_result;
             goto fail;

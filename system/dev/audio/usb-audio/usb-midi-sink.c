@@ -214,7 +214,7 @@ zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int i
     }
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
-        zx_status_t status = usb_request_alloc(&req, usb_ep_max_packet(ep), ep->bEndpointAddress);
+        zx_status_t status = usb_req_alloc(usb, &req, usb_ep_max_packet(ep), ep->bEndpointAddress);
         if (status != ZX_OK) {
             usb_midi_sink_free(sink);
             return ZX_ERR_NO_MEMORY;

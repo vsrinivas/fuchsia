@@ -305,7 +305,7 @@ static zx_status_t usb_hid_bind(void* ctx, zx_device_t* dev) {
             usbhid->info.dev_class = HID_DEV_CLASS_POINTER;
         }
 
-        status = usb_request_alloc(&usbhid->req, usb_ep_max_packet(endpt),
+        status = usb_req_alloc(&usb, &usbhid->req, usb_ep_max_packet(endpt),
                                    endpt->bEndpointAddress);
         if (status != ZX_OK) {
             usb_desc_iter_release(&iter);

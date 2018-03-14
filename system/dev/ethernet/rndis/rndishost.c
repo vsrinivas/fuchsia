@@ -482,7 +482,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
 
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
-        zx_status_t alloc_result = usb_request_alloc(&req, RNDIS_BUFFER_SIZE, bulk_in_addr);
+        zx_status_t alloc_result = usb_req_alloc(&eth->usb, &req, RNDIS_BUFFER_SIZE, bulk_in_addr);
         if (alloc_result != ZX_OK) {
             status = alloc_result;
             goto fail;
@@ -494,7 +494,7 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* device) {
     for (int i = 0; i < WRITE_REQ_COUNT; i++) {
         usb_request_t* req;
         // TODO: Allocate based on mtu.
-        zx_status_t alloc_result = usb_request_alloc(&req, RNDIS_BUFFER_SIZE, bulk_out_addr);
+        zx_status_t alloc_result = usb_req_alloc(&eth->usb, &req, RNDIS_BUFFER_SIZE, bulk_out_addr);
         if (alloc_result != ZX_OK) {
             status = alloc_result;
             goto fail;

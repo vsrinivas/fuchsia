@@ -117,6 +117,7 @@ typedef struct dwc_usb {
     zx_device_t* zxdev;
     usb_bus_interface_t bus;
     zx_handle_t irq_handle;
+    zx_handle_t bti_handle;
     thrd_t irq_thread;
     zx_device_t* parent;
 
@@ -660,7 +661,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
 
     usb_request_t* get_desc = usb_request_pool_get(&dwc->free_usb_reqs, 64);
     if (get_desc == NULL) {
-        zx_status_t status = usb_request_alloc(&get_desc, 64, 0);
+        zx_status_t status = usb_request_alloc_with_bti(&get_desc, dwc->bti_handle, 64, 0);
         assert(status == ZX_OK);
     }
 
@@ -689,7 +690,7 @@ zx_status_t dwc_hub_device_added(void* _ctx, uint32_t hub_address, int port,
     // Set the Device ID of the newly added device.
     usb_request_t* set_addr = usb_request_pool_get(&dwc->free_usb_reqs, 64);
     if (set_addr == NULL) {
-        zx_status_t status = usb_request_alloc(&set_addr, 64, 0);
+        zx_status_t status = usb_request_alloc_with_bti(&set_addr, dwc->bti_handle, 64, 0);
         assert(status == ZX_OK);
     }
 
@@ -1610,7 +1611,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
                 req->setup_req = usb_request_pool_get(&dwc->free_usb_reqs, sizeof(usb_setup_t));
                 if (req->setup_req == NULL) {
                     zx_status_t status =
-                        usb_request_alloc(&req->setup_req, sizeof(usb_setup_t), 0);
+                        usb_request_alloc_with_bti(&req->setup_req, dwc->bti_handle, sizeof(usb_setup_t), 0);
                     assert(status == ZX_OK);
                 }
 
@@ -1756,6 +1757,12 @@ static zx_status_t usb_dwc_bind(void* ctx, zx_device_t* dev) {
         goto error_return;
     }
 
+    st = pdev_get_bti(&proto, 0, &usb_dwc->bti_handle);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "usb_dwc: bind failed to get bti handle.\n");
+        goto error_return;
+    }
+
     usb_dwc->parent = dev;
     list_initialize(&usb_dwc->rh_req_head);
 
@@ -1824,6 +1831,7 @@ error_return:
     zx_handle_close(mmio_handle);
     if (usb_dwc) {
         zx_handle_close(usb_dwc->irq_handle);
+        zx_handle_close(usb_dwc->bti_handle);
         free(usb_dwc);
     }
 
