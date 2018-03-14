@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,16 +27,6 @@ func Run(cfg *build.Config) error {
 		return err
 	}
 
-	pkgJSON, err := ioutil.ReadFile(mfest.Paths["meta/package"])
-	if err != nil {
-		return err
-	}
-
-	var p pkg.Package
-	if err := json.Unmarshal(pkgJSON, &p); err != nil {
-		return err
-	}
-
 	var archiveFiles = map[string]string{
 		"meta.far": cfg.MetaFAR(),
 	}
@@ -51,6 +40,17 @@ func Run(cfg *build.Config) error {
 	if err != nil {
 		return err
 	}
+
+	pkgJSON, err := fr.ReadFile("meta/package")
+	if err != nil {
+		return err
+	}
+
+	var p pkg.Package
+	if err := json.Unmarshal(pkgJSON, &p); err != nil {
+		return err
+	}
+
 	cd, err := fr.ReadFile("meta/contents")
 	if err != nil {
 		return err
