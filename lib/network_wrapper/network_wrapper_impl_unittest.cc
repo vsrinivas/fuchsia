@@ -177,10 +177,9 @@ TEST_F(NetworkWrapperImplTest, SimpleRequest) {
              }),
        &response](network::URLResponsePtr received_response) {
         response = std::move(received_response);
-        message_loop_.PostQuitTask();
       });
   EXPECT_FALSE(callback_destroyed);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(response);
   EXPECT_TRUE(callback_destroyed);
@@ -198,15 +197,13 @@ TEST_F(NetworkWrapperImplTest, CancelRequest) {
       [this, &received_response,
        destroy_watcher = DestroyWatcher::Create([this, &callback_destroyed] {
          callback_destroyed = true;
-         message_loop_.PostQuitTask();
        })](network::URLResponsePtr) {
         received_response = true;
-        message_loop_.PostQuitTask();
       });
 
   message_loop_.task_runner()->PostTask([cancel] { cancel->Cancel(); });
   cancel = nullptr;
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
   EXPECT_FALSE(received_response);
   EXPECT_TRUE(callback_destroyed);
 }
@@ -225,9 +222,8 @@ TEST_F(NetworkWrapperImplTest, NetworkDeleted) {
       },
       [this, &response](network::URLResponsePtr received_response) {
         response = std::move(received_response);
-        message_loop_.PostQuitTask();
       });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(response);
   EXPECT_EQ(2, request_count);
@@ -249,9 +245,8 @@ TEST_F(NetworkWrapperImplTest, Redirection) {
       },
       [this, &response](network::URLResponsePtr received_response) {
         response = std::move(received_response);
-        message_loop_.PostQuitTask();
       });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(response);
   EXPECT_EQ(2, request_count);
@@ -270,12 +265,11 @@ TEST_F(NetworkWrapperImplTest, CancelOnCallback) {
       [this, &request,
        &response](network::URLResponsePtr received_response) mutable {
         response = std::move(received_response);
-        message_loop_.PostQuitTask();
         request->Cancel();
         request = nullptr;
       });
   EXPECT_FALSE(response);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(response);
 }
