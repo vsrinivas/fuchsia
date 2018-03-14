@@ -28,6 +28,7 @@ static_library("console") {
   deps = []
   public_deps = [
     "//garnet/bin/zxdb/client",
+    "//garnet/public/lib/fxl",
   ]
 
   if (current_toolchain == host_toolchain) {
