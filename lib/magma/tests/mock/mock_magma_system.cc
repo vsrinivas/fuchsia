@@ -42,6 +42,9 @@ magma_status_t magma_query(int32_t fd, uint64_t id, uint64_t* value_out)
         case MAGMA_QUERY_VENDOR_PARAM_0:
             *value_out = (23l << 32) | 8;
             return MAGMA_STATUS_OK;
+        case MAGMA_QUERY_VENDOR_PARAM_0 + 1: // gtt size
+            *value_out = 1ull << 32;
+            return MAGMA_STATUS_OK;
     }
     return MAGMA_STATUS_INVALID_ARGS;
 }
