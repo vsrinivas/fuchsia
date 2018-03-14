@@ -207,6 +207,8 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
     TransactionQueue() = default;
     ~TransactionQueue() = default;
 
+    TransactionQueue(TransactionQueue&& other);
+
     // Returns the transaction that has been sent to the peer and is currently
     // pending completion.
     inline PendingTransaction* current() const { return current_.get(); }
@@ -290,7 +292,10 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   // Callback passed to l2cap::Channel::OnRxBFrame().
   fxl::CancelableCallback<void(const l2cap::SDU& sdu)> rx_task_;
 
-  // Channel closed callback.
+  // Callback that wraps our internal OnChannelClosed handler.
+  fxl::CancelableClosure chan_closed_cb_;
+
+  // Channel closed callback assigned to us via set_closed_callback().
   fxl::Closure closed_cb_;
 
   // The timeout interval (in milliseconds) used for local initiated ATT

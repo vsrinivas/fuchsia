@@ -47,6 +47,8 @@ class ATT_BearerTest : public l2cap::testing::FakeChannelTest {
     return fake_att_chan_.get();
   }
 
+  void DeleteBearer() { bearer_ = nullptr; }
+
  private:
   fbl::RefPtr<l2cap::testing::FakeChannel> fake_att_chan_;
   fxl::RefPtr<Bearer> bearer_;
@@ -537,6 +539,34 @@ TEST_F(ATT_BearerTest, SendRequestSuccess) {
 
   // The channel should remain open
   EXPECT_TRUE(bearer()->is_open());
+}
+
+// Closing the L2CAP channel while ATT requests have been queued will cause the
+// error callbacks to be called. The code should fail gracefully if one of these
+// callbacks deletes the attribute bearer.
+TEST_F(ATT_BearerTest, CloseChannelAndDeleteBearerWhileRequestsArePending) {
+  // We expect the callback to be called 3 times since we queue 3 transactions
+  // below.
+  constexpr size_t kExpectedCount = 3;
+
+  size_t cb_count = 0;
+  auto error_cb = [this, &cb_count](Status, Handle) {
+    cb_count++;
+
+    // Delete the bearer on the first callback. The remaining callbacks should
+    // still run gracefully.
+    DeleteBearer();
+  };
+
+  bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
+                             error_cb);
+  bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
+                             error_cb);
+  bearer()->StartTransaction(common::NewBuffer(kTestRequest), NopCallback,
+                             error_cb);
+
+  fake_chan()->Close();
+  EXPECT_EQ(kExpectedCount, cb_count);
 }
 
 TEST_F(ATT_BearerTest, SendManyRequests) {

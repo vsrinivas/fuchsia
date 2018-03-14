@@ -140,6 +140,13 @@ Bearer::PendingRemoteTransaction::PendingRemoteTransaction(TransactionId id,
                                                            OpCode opcode)
     : id(id), opcode(opcode) {}
 
+Bearer::TransactionQueue::TransactionQueue(TransactionQueue&& other)
+    : queue_(std::move(other.queue_)), current_(std::move(other.current_)) {
+  // The move constructor is only used during shut down below. So we simply
+  // cancel the task and not worry about moving it.
+  other.timeout_task_.Cancel();
+}
+
 Bearer::PendingTransactionPtr Bearer::TransactionQueue::ClearCurrent() {
   FXL_DCHECK(current_);
   FXL_DCHECK(timeout_task_.posted());
@@ -219,9 +226,11 @@ Bearer::~Bearer() {
 
 bool Bearer::Activate() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+
   rx_task_.Reset(fbl::BindMember(this, &Bearer::OnRxBFrame));
-  return chan_->Activate(rx_task_.callback(),
-                         fbl::BindMember(this, &Bearer::OnChannelClosed),
+  chan_closed_cb_.Reset(fbl::BindMember(this, &Bearer::OnChannelClosed));
+
+  return chan_->Activate(rx_task_.callback(), chan_closed_cb_.callback(),
                          fsl::MessageLoop::GetCurrent()->task_runner());
 }
 
@@ -237,22 +246,28 @@ void Bearer::ShutDownInternal(bool due_to_timeout) {
   FXL_VLOG(1) << "att: Bearer shutting down";
 
   rx_task_.Cancel();
+  chan_closed_cb_.Cancel();
 
   // This will have no effect if the channel is already closed (e.g. if
   // ShutDown() was called by OnChannelClosed()).
   chan_->SignalLinkError();
   chan_ = nullptr;
 
-  // Terminate all remaining procedures with an error.
-  Status status(due_to_timeout ? common::HostError::kTimedOut
-                               : common::HostError::kFailed);
-  request_queue_.InvokeErrorAll(status);
-  request_queue_.Reset();
-  indication_queue_.InvokeErrorAll(status);
-  indication_queue_.Reset();
+  // Move the contents to temporaries. This prevents a potential memory
+  // corruption in InvokeErrorAll if the Bearer gets deleted by one of the
+  // invoked error callbacks.
+  TransactionQueue req_queue(std::move(request_queue_));
+  TransactionQueue ind_queue(std::move(indication_queue_));
 
   if (closed_cb_)
     closed_cb_();
+
+  // Terminate all remaining procedures with an error. This is safe even if
+  // the bearer got deleted by |closed_cb_|.
+  Status status(due_to_timeout ? common::HostError::kTimedOut
+                               : common::HostError::kFailed);
+  req_queue.InvokeErrorAll(status);
+  ind_queue.InvokeErrorAll(status);
 }
 
 bool Bearer::StartTransaction(common::ByteBufferPtr pdu,
