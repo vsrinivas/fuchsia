@@ -58,7 +58,8 @@ Ensure `goma` is installed on your machine for faster builds.
 
 ### Get the source
 
-Follow [the instructions to get the Fuchsia source](getting_source.md) and then return to this document.
+Follow [the instructions to get the Fuchsia source](/development/source_code/README.md)
+and then return to this document.
 
 ### Build
 

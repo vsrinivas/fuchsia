@@ -69,5 +69,5 @@ Making a hard transition is more stressful than making a soft transition because
 your change will be preventing other changes in the lower layer from becoming
 available in the upper layers between steps 1 and 2.
 
-[getting-source]: /getting_source.md "Getting source"
+[getting-source]: /development/source_code/README.md "Getting source"
 [layers]: /development/source_code/layers.md "Layers"
