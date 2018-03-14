@@ -16,8 +16,7 @@ public:
         std::chrono::duration<double, std::milli> elapsed = end - start;
 
         EXPECT_GE(elapsed.count(), ms);
-        // Accept some delay due to scheduling, etc.
-        EXPECT_LT(elapsed.count(), ms + 200);
+        // The delay could be extremely high due to scheduling, particularly in a VM.
     }
 };
 
