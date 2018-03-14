@@ -77,7 +77,7 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, ui
     } else {
         const size_t num_pages = size / PAGE_SIZE;
         if (num_pages != mapped_addrs_count) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
+            return ZX_ERR_INVALID_ARGS;
         }
         const size_t min_contig = minimum_contiguity();
         size_t next_idx = 0;
