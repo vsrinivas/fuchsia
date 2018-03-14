@@ -58,9 +58,7 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
 
     // We assume that the code to execute is less than kSizeLimit bytes.
     const uint32_t kSizeLimit = 1000;
-    size_t actual;
-    status = zx_vmo_write_old(stack_vmo, &minipr_thread_loop, 0u, kSizeLimit,
-                          &actual);
+    status = zx_vmo_write(stack_vmo, &minipr_thread_loop, 0u, kSizeLimit);
     if (status != ZX_OK)
         goto exit;
 

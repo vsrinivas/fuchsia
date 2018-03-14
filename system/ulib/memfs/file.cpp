@@ -152,11 +152,10 @@ zx_status_t VnodeFile::Truncate(size_t len) {
         size_t ppage_size = PAGE_SIZE - (len % PAGE_SIZE);
         ppage_size = len + ppage_size < length_ ? ppage_size : length_ - len;
         memset(buf, 0, ppage_size);
-        size_t actual;
-        status = zx_vmo_write_old(vmo_, buf, len, ppage_size, &actual);
-        if ((status != ZX_OK) || (actual != ppage_size)) {
-            return status != ZX_OK ? ZX_ERR_IO : status;
-        } else if ((status = zx_vmo_set_size(vmo_, alignedLen)) != ZX_OK) {
+        if (zx_vmo_write(vmo_, buf, len, ppage_size) != ZX_OK) {
+            return ZX_ERR_IO;
+        }
+        if ((status = zx_vmo_set_size(vmo_, alignedLen)) != ZX_OK) {
             return status;
         }
     } else if ((status = zx_vmo_set_size(vmo_, alignedLen)) != ZX_OK) {

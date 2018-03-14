@@ -19,13 +19,9 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self,
     size_t off = 0;
     for (;;) {
         bootdata_t bootdata;
-        size_t actual;
-        zx_status_t status = zx_vmo_read_old(bootdata_vmo, &bootdata,
-                                         off, sizeof(bootdata), &actual);
+        zx_status_t status = zx_vmo_read(bootdata_vmo, &bootdata,
+                                         off, sizeof(bootdata));
         check(log, status, "zx_vmo_read failed on bootdata VMO");
-        if (actual != sizeof(bootdata))
-            fail(log, "short read on bootdata VMO");
-
         if (!(bootdata.flags & BOOTDATA_FLAG_V2)) {
             fail(log, "bootdata v1 no longer supported");
         }
@@ -50,9 +46,9 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self,
 
             // Signal that we've already processed this one.
             bootdata.type = BOOTDATA_BOOTFS_DISCARD;
-            check(log, zx_vmo_write_old(bootdata_vmo, &bootdata.type,
+            check(log, zx_vmo_write(bootdata_vmo, &bootdata.type,
                                     off + offsetof(bootdata_t, type),
-                                    sizeof(bootdata.type), &actual),
+                                    sizeof(bootdata.type)),
                   "zx_vmo_write failed on bootdata VMO\n");
 
             return bootfs_vmo;
