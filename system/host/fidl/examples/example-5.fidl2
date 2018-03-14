@@ -22,7 +22,7 @@ enum Enum23 : int32 {
 interface Thing {
     const int64 foo = 3;
     1: one_function(string s, bool b) -> ();
-    enum thing {};
+    enum inner_thing {};
     0x2: two_function(string s, bool b);
     const string foo_string = "3";
     3: three_function(string s, request<Thing> r);
