@@ -4,15 +4,13 @@
 
 #pragma once
 
-#include "edid.h"
 #include <assert.h>
-#include <ddk/protocol/display.h>
-#include <ddk/protocol/gpio.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/device/display.h>
+#include "edid.h"
+#include <ddk/protocol/gpio.h>
 
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -54,9 +52,7 @@ typedef struct {
     disp_timing_t                       std_disp_timing;
     disp_timing_t                       pref_disp_timing;
 
-    bool console_visible;
-    zx_display_cb_t ownership_change_callback;
-    void* ownership_change_cookie;
+
 } vim2_display_t;
 
 zx_status_t configure_canvas(vim2_display_t* display);
