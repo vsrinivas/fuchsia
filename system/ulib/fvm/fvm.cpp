@@ -280,24 +280,27 @@ zx_status_t fvm_overwrite(const char* path, size_t slice_size) {
 
 // Helper function to destroy FVM
 zx_status_t fvm_destroy(const char* path) {
-    char fvm_driver[PATH_MAX];
-    strcpy(fvm_driver, path);
-    strcat(fvm_driver, "/fvm");
-    int driver_fd = open(fvm_driver, O_RDWR);
+    char driver_path[PATH_MAX];
+    if (strlcpy(driver_path, path, sizeof(driver_path)) >= sizeof(driver_path)) {
+        return ZX_ERR_BAD_PATH;
+    }
+    if (strlcat(driver_path, "/fvm", sizeof(driver_path)) >= sizeof(driver_path)) {
+        return ZX_ERR_BAD_PATH;
+    }
+    fbl::unique_fd driver_fd(open(driver_path, O_RDWR));
 
-    if (driver_fd <= 0) {
-        fprintf(stderr, "fvm_destroy: Failed to open fvm driver: %d\n", driver_fd);
+    if (!driver_fd) {
+        fprintf(stderr, "fvm_destroy: Failed to open fvm driver: %s\n", driver_path);
         return -1;
     }
 
     fvm_info_t fvm_info;
     ssize_t r;
-    if ((r = ioctl_block_fvm_query(driver_fd, &fvm_info)) <= 0) {
+    if ((r = ioctl_block_fvm_query(driver_fd.get(), &fvm_info)) <= 0) {
         fprintf(stderr, "fvm_destroy: Failed to query fvm: %ld\n", r);
         return -1;
     }
 
-    close(driver_fd);
     return fvm_overwrite(path, fvm_info.slice_size);
 }
 
