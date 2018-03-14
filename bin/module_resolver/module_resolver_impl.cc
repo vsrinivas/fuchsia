@@ -241,7 +241,7 @@ class ModuleResolverImpl::FindModulesCall
         auto result = modular::ModuleResolverResult::New();
         result->module_id = entry->binary;
         result->manifest = entry.Clone();
-        CopyNounsToModuleResolverResult(query_, &result);
+        CopyNounsToModuleResolverResult(query_, result.get());
 
         result_->modules.push_back(std::move(result));
       }
@@ -278,7 +278,7 @@ class ModuleResolverImpl::FindModulesCall
       auto result = modular::ModuleResolverResult::New();
       result->module_id = entry->binary;
       result->manifest = entry.Clone();
-      CopyNounsToModuleResolverResult(query_, &result, noun_mapping);
+      CopyNounsToModuleResolverResult(query_, result.get(), noun_mapping);
       modules.push_back(std::move(result));
     }
 
@@ -403,10 +403,10 @@ class ModuleResolverImpl::FindModulesCall
   // will be used.
   void CopyNounsToModuleResolverResult(
       const modular::ResolverQueryPtr& query,
-      modular::ModuleResolverResultPtr* result,
+      modular::ModuleResolverResult* result,
       std::map<std::string, std::string> noun_mapping = {}) {
-    (*result)->create_chain_info = modular::CreateChainInfo::New();
-    auto& create_chain_info = (*result)->create_chain_info;  // For convenience.
+    result->create_chain_info = modular::CreateChainInfo::New();
+    auto& create_chain_info = result->create_chain_info;  // For convenience.
     for (const auto& query_noun : query->noun_constraints) {
       const auto& noun = query_noun->constraint;
       std::string name = query_noun->key;
@@ -465,7 +465,7 @@ class ModuleResolverImpl::FindModulesCall
       }
     }
 
-    CopyNounsToModuleResolverResult(query, &mod_result);
+    CopyNounsToModuleResolverResult(query, mod_result.get());
 
     result->modules[0] = std::move(mod_result);
     return result;
