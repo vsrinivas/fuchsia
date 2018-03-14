@@ -7,10 +7,10 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/display.h>
 #include <hwreg/mmio.h>
+#include <lib/edid/edid.h>
 #include <region-alloc/region-alloc.h>
 #include <zx/vmo.h>
 
-#include "edid.h"
 #include "gtt.h"
 #include "power.h"
 #include "registers-ddi.h"
@@ -51,11 +51,12 @@ public:
     registers::Pipe pipe() const { return pipe_; }
     registers::Trans trans() const { return trans_; }
     Controller* controller() { return controller_; }
+    const edid::Edid& edid() { return edid_; }
 
 protected:
     // Queries the DisplayDevice to see if there is a supported display attached. If
-    // there is, then returns true and populates |info|.
-    virtual bool QueryDevice(zx_display_info_t* info) = 0;
+    // there is, then returns true and populates |edid| and |info|.
+    virtual bool QueryDevice(edid::Edid* edid, zx_display_info_t* info) = 0;
     // Configures the hardware to display a framebuffer at the preferred resolution.
     virtual bool DefaultModeset() = 0;
 
@@ -82,6 +83,7 @@ private:
 
     bool inited_;
     zx_display_info_t info_;
+    edid::Edid edid_;
 };
 
 } // namespace i915

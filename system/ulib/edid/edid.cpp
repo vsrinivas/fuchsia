@@ -2,20 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
-
+#include <lib/edid/edid.h>
 #include <stddef.h>
 #include <string.h>
 #include <zircon/assert.h>
 
-#include "edid.h"
-
 namespace {
 
-template<typename T> bool base_validate(T* block) {
+template<typename T> bool base_validate(const T* block) {
     static_assert(sizeof(T) == edid::kBlockSize, "Size check for Edid struct");
 
-    uint8_t* edid_bytes = reinterpret_cast<uint8_t*>(block);
+    const uint8_t* edid_bytes = reinterpret_cast<const uint8_t*>(block);
     if (edid_bytes[0] != T::kTag) {
         return false;
     }
@@ -37,43 +34,85 @@ uint32_t round_div(double num, double div) {
 
 namespace edid {
 
-bool BaseEdid::validate() {
+bool BaseEdid::validate() const {
     static const uint8_t kEdidHeader[8] = {0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0};
     return base_validate<BaseEdid>(this) && memcmp(header, kEdidHeader, sizeof(kEdidHeader)) == 0;
 }
 
-bool BlockMap::validate() {
+bool BlockMap::validate() const {
     return base_validate<BlockMap>(this);
 }
 
-bool CeaEdidTimingExtension::validate() {
+bool CeaEdidTimingExtension::validate() const {
     return base_validate<CeaEdidTimingExtension>(this);
 }
 
-Edid::Edid(EdidSource* edid_source) : edid_source_(edid_source) { }
+bool Edid::Init(EdidDdcSource* edid_source, const char** err_msg) {
+    BaseEdid base_edid;
+    if (!edid_source->DdcRead(0, 0, reinterpret_cast<uint8_t*>(&base_edid), kBlockSize)) {
+        *err_msg = "Failed to read base edid";
+        return false;
+    } else if (!base_edid.validate()) {
+        *err_msg = "Failed to validate base edid";
+        return false;
+    }
 
-bool Edid::Init() {
-    // Initialize the base edid data
-    return ReadBlock(0, &base_edid_);
+    uint16_t edid_length = static_cast<uint16_t>((base_edid.num_extensions + 1) * kBlockSize);
+    fbl::AllocChecker ac;
+    edid_bytes_ = fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[edid_length]);
+    if (!ac.check()) {
+        *err_msg = "Failed to allocate edid storage";
+        return false;
+    }
+
+    memcpy(edid_bytes_.get(), reinterpret_cast<void*>(&base_edid), kBlockSize);
+    for (uint8_t i = 1; i && i <= base_edid.num_extensions; i++) {
+        uint8_t segment = i / 2;
+        uint8_t segment_offset = i % 2 ? kBlockSize : 0;
+        if (!edid_source->DdcRead(segment, segment_offset,
+                                  edid_bytes_.get() + i * kBlockSize, kBlockSize)) {
+            *err_msg = "Failed to read full edid";
+            return false;
+        }
+    }
+
+    return Init(edid_bytes_.get(), edid_length, err_msg);
 }
 
-template<typename T> bool Edid::ReadBlock(uint8_t block_num, T* block) {
-    uint8_t segment = block_num / 2;
-    uint8_t segment_offset = block_num % 2 ? 128 : 0;
-    if (!edid_source_->ReadEdid(segment, segment_offset,
-                                reinterpret_cast<uint8_t*>(block), kBlockSize)) {
-        zxlogf(TRACE, "Failed to read block %d\n", block_num);
+bool Edid::Init(const uint8_t* bytes, uint16_t len, const char** err_msg) {
+    // The maximum size of an edid is 255 * 128 bytes, so any 16 bit multiple is fine.
+    if (len == 0 || len % kBlockSize != 0) {
+        *err_msg = "Invalid edid length";
         return false;
-    } else if (!block->validate()) {
-        zxlogf(TRACE, "Failed to validate block %d\n", block_num);
+    }
+    bytes_ = bytes;
+    len_ = len;
+    if (!GetBlock(0, &base_edid_)) {
+        *err_msg = "Failed to find base edid";
+        return false;
+    }
+    if (((base_edid_.num_extensions + 1) * kBlockSize) != len) {
+        *err_msg = "Bad extension count";
+        return false;
+    }
+    // TODO(stevensd): validate all of the extensions
+    return true;
+}
+
+template<typename T> bool Edid::GetBlock(uint8_t block_num, T* block) const {
+    if (block_num * kBlockSize > len_) {
+        return false;
+    }
+    memcpy(reinterpret_cast<void*>(block), bytes_ + block_num * kBlockSize, kBlockSize);
+    if (!block->validate()) {
         return false;
     }
     return true;
 }
 
-bool Edid::CheckBlockMap(uint8_t block_num, bool* is_hdmi) {
+bool Edid::CheckBlockMap(uint8_t block_num, bool* is_hdmi) const {
     BlockMap map;
-    if (!ReadBlock(block_num, &map)) {
+    if (!GetBlock(block_num, &map)) {
         return false;
     }
     for (uint8_t i = 0; i < fbl::count_of(map.tag_map); i++) {
@@ -88,13 +127,12 @@ bool Edid::CheckBlockMap(uint8_t block_num, bool* is_hdmi) {
     return true;
 }
 
-bool Edid::CheckBlockForHdmiVendorData(uint8_t block_num, bool* is_hdmi) {
+bool Edid::CheckBlockForHdmiVendorData(uint8_t block_num, bool* is_hdmi) const {
     CeaEdidTimingExtension block;
-    if (!ReadBlock(block_num, &block)) {
+    if (!GetBlock(block_num, &block)) {
         return false;
     }
     if (block.revision_number < 0x03) {
-        zxlogf(TRACE, "Skipping block revision %d %d\n", block_num, block.revision_number);
         return true;
     }
     // dtd_start_idx == 0 means no detailed timing descriptors AND no data block collection.
@@ -111,7 +149,7 @@ bool Edid::CheckBlockForHdmiVendorData(uint8_t block_num, bool* is_hdmi) {
     uint32_t idx = 0;
     size_t end = block.dtd_start_idx - offsetof(CeaEdidTimingExtension, payload);
     while (idx < end) {
-        DataBlock* data_block = reinterpret_cast<DataBlock*>(block.payload + idx);
+        const DataBlock* data_block = reinterpret_cast<const DataBlock*>(block.payload + idx);
         // Compute the start of the next data block, and use that to ensure that the current
         // block doesn't run past the end of the data block collection.
         idx = idx + 1 + data_block->length();
@@ -132,9 +170,7 @@ bool Edid::CheckBlockForHdmiVendorData(uint8_t block_num, bool* is_hdmi) {
     return true;
 }
 
-bool Edid::CheckForHdmi(bool* is_hdmi) {
-    ZX_DEBUG_ASSERT(base_edid_.validate());
-
+bool Edid::CheckForHdmi(bool* is_hdmi) const {
     *is_hdmi = false;
     if (base_edid_.num_extensions == 0) {
         return true;
@@ -147,7 +183,7 @@ bool Edid::CheckForHdmi(bool* is_hdmi) {
     }
 }
 
-bool Edid::GetPreferredTiming(timing_params_t* params) {
+bool Edid::GetPreferredTiming(timing_params_t* params) const {
     if (base_edid_.preferred_timing.pixel_clock_10khz) {
         params->pixel_freq_10khz = base_edid_.preferred_timing.pixel_clock_10khz;
         params->horizontal_addressable = base_edid_.preferred_timing.horizontal_addressable();
@@ -176,7 +212,7 @@ bool Edid::GetPreferredTiming(timing_params_t* params) {
         uint32_t v_rate = 0;
 
         for (unsigned i = 0; i < fbl::count_of(base_edid_.standard_timings); i++) {
-            StandardTimingDescriptor* desc = base_edid_.standard_timings + i;
+            const StandardTimingDescriptor* desc = base_edid_.standard_timings + i;
             if (desc->byte1 == 0x01 && desc->byte2 == 0x01) {
                 continue;
             }
@@ -190,7 +226,6 @@ bool Edid::GetPreferredTiming(timing_params_t* params) {
         }
 
         if (!width || !height || !v_rate) {
-            zxlogf(ERROR, "Couldn't find preferred resolution\n");
             return false;
         }
 
@@ -239,6 +274,21 @@ bool Edid::GetPreferredTiming(timing_params_t* params) {
     }
 
     return true;
+}
+
+void Edid::Print(void (*print_fn)(const char* str)) const {
+    uint8_t bytes[kBlockSize];
+    char str_buf[128];
+    print_fn("Raw edid:\n");
+    for (unsigned i = 0; i < len_; i++) {
+        constexpr int kBytesPerLine = 16;
+        char *b = str_buf;
+        if (i % kBytesPerLine == 0) {
+            b += sprintf(b, "%04x: ", i);
+        }
+        sprintf(b, "%02x%s", bytes[i], i % kBytesPerLine == kBytesPerLine - 1? "\n" : " ");
+        print_fn(str_buf);
+    }
 }
 
 } // namespace edid

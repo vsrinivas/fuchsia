@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fbl/unique_ptr.h>
 #include <hwreg/bitfields.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -11,7 +12,7 @@
 namespace edid {
 
 // The size of an EDID block;
-static constexpr size_t kBlockSize = 128;
+static constexpr uint32_t kBlockSize = 128;
 
 // Definitions for parsing EDID data.
 
@@ -23,28 +24,28 @@ static constexpr size_t kBlockSize = 128;
 // See "Table 3.21 - Detailed Timing Definition - Part 1" (in Release
 // A, Revision 2 of the EDID spec, 2006).
 struct DetailedTimingDescriptor {
-    uint32_t horizontal_addressable() {
+    uint32_t horizontal_addressable() const {
         return horizontal_addressable_low | (horizontal_addressable_high() << 8);
     }
-    uint32_t horizontal_blanking() {
+    uint32_t horizontal_blanking() const {
         return horizontal_blanking_low | (horizontal_blanking_high() << 8);
     }
-    uint32_t vertical_addressable() {
+    uint32_t vertical_addressable() const {
         return vertical_addressable_low | (vertical_addressable_high() << 8);
     }
-    uint32_t vertical_blanking() {
+    uint32_t vertical_blanking() const {
         return vertical_blanking_low | (vertical_blanking_high() << 8);
     }
-    uint32_t horizontal_front_porch() {
+    uint32_t horizontal_front_porch() const {
         return horizontal_front_porch_low | (horizontal_front_porch_high() << 8);
     }
-    uint32_t horizontal_sync_pulse_width() {
+    uint32_t horizontal_sync_pulse_width() const {
         return horizontal_sync_pulse_width_low | (horizontal_sync_pulse_width_high() << 8);
     }
-    uint32_t vertical_front_porch() {
+    uint32_t vertical_front_porch() const {
         return vertical_front_porch_low() | (vertical_front_porch_high() << 4);
     }
-    uint32_t vertical_sync_pulse_width() {
+    uint32_t vertical_sync_pulse_width() const {
         return vertical_sync_pulse_width_low() |
                (vertical_sync_pulse_width_high() << 4);
     }
@@ -119,7 +120,7 @@ struct StandardTimingDescriptor {
 // See "Table 3.1 - EDID Structure Version 1, Revision 4" (in Release
 // A, Revision 2 of the EDID spec, 2006).
 struct BaseEdid {
-    bool validate();
+    bool validate() const;
     // Not actually a tag, but the first byte will always be this
     static constexpr uint8_t kTag = 0x00;
 
@@ -145,7 +146,7 @@ static_assert(offsetof(BaseEdid, preferred_timing) == 0x36, "Layout check");
 // of each entry in the tag_map
 struct BlockMap {
     static constexpr uint8_t kTag = 0xf0;
-    bool validate();
+    bool validate() const;
 
     uint8_t tag;
     uint8_t tag_map[126];
@@ -155,7 +156,7 @@ struct BlockMap {
 // Version 3 of the CEA EDID Timing Extension
 struct CeaEdidTimingExtension {
     static constexpr uint8_t kTag = 0x02;
-    bool validate();
+    bool validate() const;
 
     uint8_t tag;
     uint8_t revision_number;
@@ -241,14 +242,14 @@ struct DataBlock {
 };
 static_assert(sizeof(DataBlock) == 32, "Bad size for DataBlock");
 
-class EdidSource {
+class EdidDdcSource {
 public:
     // The I2C address for writing the DDC segment
     static constexpr int kDdcSegmentI2cAddress = 0x30;
     // The I2C address for writing the DDC data offset/reading DDC data
     static constexpr int kDdcDataI2cAddress = 0x50;
 
-    virtual bool ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) = 0;
+    virtual bool DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) = 0;
 };
 
 typedef struct timing_params {
@@ -271,18 +272,31 @@ typedef struct timing_params {
 
 class Edid {
 public:
-    explicit Edid(EdidSource* edid_source);
-    bool Init();
-    bool CheckForHdmi(bool* is_hdmi);
+    // Creates an Edid from the EdidDdcSource. Does not retain a reference to the source.
+    bool Init(EdidDdcSource* edid_source, const char** err_msg);
+    // Creates an Edid from raw bytes. The bytes array must remain valid for the duration
+    // of the Edid object's lifetime.
+    bool Init(const uint8_t* bytes, uint16_t len, const char** err_msg);
 
-    bool GetPreferredTiming(timing_params_t* params);
+    bool CheckForHdmi(bool* is_hdmi) const;
+    bool GetPreferredTiming(timing_params_t* params) const;
+
+    void Print(void (*print_fn)(const char* str)) const;
+
+    const uint8_t* edid_bytes() const { return bytes_; }
+    uint16_t edid_length() const { return len_; }
 private:
-    bool CheckBlockMap(uint8_t block_num, bool* is_hdmi);
-    bool CheckBlockForHdmiVendorData(uint8_t block_num, bool* is_hdmi);
-    template<typename T> bool ReadBlock(uint8_t block_num, T* block);
+    bool CheckBlockMap(uint8_t block_num, bool* is_hdmi) const;
+    bool CheckBlockForHdmiVendorData(uint8_t block_num, bool* is_hdmi) const;
+    template<typename T> bool GetBlock(uint8_t block_num, T* block) const;
 
-    EdidSource* edid_source_;
+    // TODO(stevensd): make this a pointer that refers directly to edid_bytes_
     BaseEdid base_edid_;
+
+    fbl::unique_ptr<uint8_t[]> edid_bytes_;
+
+    const uint8_t* bytes_;
+    uint16_t len_;
 };
 
 } // namespace edid

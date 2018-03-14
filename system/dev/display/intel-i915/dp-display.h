@@ -6,20 +6,19 @@
 
 #include "display-device.h"
 #include "dpcd.h"
-#include "edid.h"
 
 namespace i915 {
 
 class DpAuxMessage;
 
-class DpDisplay : public DisplayDevice, private edid::EdidSource {
+class DpDisplay : public DisplayDevice, private edid::EdidDdcSource {
 public:
     DpDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe);
 
 private:
-    bool QueryDevice(zx_display_info_t* info) final;
+    bool QueryDevice(edid::Edid* edid, zx_display_info_t* info) final;
     bool DefaultModeset() final;
-    bool ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) final;
+    bool DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) final;
 
     bool DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size);
     bool DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,
@@ -51,7 +50,6 @@ private:
 
     bool HandleHotplug(bool long_pulse) override;
 
-    edid::Edid edid_;
     uint8_t dp_lane_count_;
     uint32_t dp_link_rate_mhz_;
     uint8_t dp_link_rate_idx_plus1_;

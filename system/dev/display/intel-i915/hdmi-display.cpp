@@ -4,6 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <lib/edid/edid.h>
 
 #include "intel-i915.h"
 #include "hdmi-display.h"
@@ -164,8 +165,7 @@ bool i2c_send_byte(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, uint8_t by
 namespace i915 {
 
 HdmiDisplay::HdmiDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, ddi, static_cast<registers::Trans>(pipe), pipe)
-        , edid_(this) { }
+        : DisplayDevice(controller, ddi, static_cast<registers::Trans>(pipe), pipe) { }
 
 // Per the GMBUS Controller Programming Interface section of the Intel docs, GMBUS does not
 // directly support segment pointer addressing. Instead, the segment pointer needs to be
@@ -198,7 +198,7 @@ bool HdmiDisplay::SetDdcSegment(uint8_t segment_num) {
     return i2c_scl(mmio_space(), ddi(), 1);
 }
 
-bool HdmiDisplay::ReadEdid(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) {
+bool HdmiDisplay::DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) {
     registers::GMBus0::Get().FromValue(0).WriteTo(mmio_space());
 
     int retries = 0;
@@ -451,7 +451,7 @@ static bool calculate_params(uint32_t symbol_clock_khz,
 
 namespace i915 {
 
-bool HdmiDisplay::QueryDevice(zx_display_info* info) {
+bool HdmiDisplay::QueryDevice(edid::Edid* edid, zx_display_info* info) {
     // HDMI isn't supported on these DDIs
     if (ddi_to_pin(ddi()) == -1) {
         return false;
@@ -462,8 +462,13 @@ bool HdmiDisplay::QueryDevice(zx_display_info* info) {
     registers::GMBus4::Get().FromValue(0).WriteTo(mmio_space());
 
     edid::timing_params_t timing_params;
-    if (!edid_.Init() || !edid_.GetPreferredTiming(&timing_params)
-            || !edid_.CheckForHdmi(&is_hdmi_display_)) {
+    const char* edid_err;
+    if (!edid->Init(this, &edid_err)) {
+        zxlogf(TRACE, "i915: hdmi edid init failed \"%s\"\n", edid_err);
+        return false;
+    } else if (!edid->GetPreferredTiming(&timing_params)
+            || !edid->CheckForHdmi(&is_hdmi_display_)) {
+        zxlogf(TRACE, "i915: failed to find valid timing and hdmi\n");
         return false;
     }
     zxlogf(TRACE, "Found a %s monitor\n", is_hdmi_display_ ? "hdmi" : "dvi");
@@ -484,7 +489,7 @@ bool HdmiDisplay::DefaultModeset() {
     }
 
     edid::timing_params_t timing_params;
-    edid_.GetPreferredTiming(&timing_params);
+    edid().GetPreferredTiming(&timing_params);
 
     registers::Dpll dpll = controller()->SelectDpll(false /* is_edp */, true /* is_hdmi */,
                                                     timing_params.pixel_freq_10khz);

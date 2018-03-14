@@ -12,7 +12,7 @@ BootloaderDisplay::BootloaderDisplay(Controller* controller,
                                      registers::Ddi ddi, registers::Pipe pipe)
         : DisplayDevice(controller, ddi, registers::TRANS_A, pipe) {}
 
-bool BootloaderDisplay::QueryDevice(zx_display_info_t* di) {
+bool BootloaderDisplay::QueryDevice(edid::Edid* edid, zx_display_info_t* di) {
     uint32_t format, width, height, stride;
     zx_status_t status = zx_bootloader_fb_get_info(&format, &width, &height, &stride);
     if (status == ZX_OK) {

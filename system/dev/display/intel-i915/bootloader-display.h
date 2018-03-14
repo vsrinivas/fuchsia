@@ -13,7 +13,7 @@ public:
     BootloaderDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe);
 
 private:
-    bool QueryDevice(zx_display_info_t* info) final;
+    bool QueryDevice(edid::Edid* edid, zx_display_info_t* info) final;
     bool DefaultModeset() final;
 };
 

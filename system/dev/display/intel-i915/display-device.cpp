@@ -98,7 +98,7 @@ bool DisplayDevice::Init() {
     ddi_power_ = controller_->power()->GetDdiPowerWellRef(ddi_);
     pipe_power_ = controller_->power()->GetPipePowerWellRef(pipe_);
 
-    if (!QueryDevice(&info_) || !DefaultModeset()) {
+    if (!QueryDevice(&edid_, &info_) || !DefaultModeset()) {
         return false;
     }
     inited_ = true;

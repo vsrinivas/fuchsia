@@ -15,7 +15,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/bootloader-display.cpp \
     $(LOCAL_DIR)/display-device.cpp \
     $(LOCAL_DIR)/dp-display.cpp \
-    $(LOCAL_DIR)/edid.cpp \
     $(LOCAL_DIR)/gtt.cpp \
     $(LOCAL_DIR)/hdmi-display.cpp \
     $(LOCAL_DIR)/igd.cpp \
@@ -26,6 +25,7 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
+    system/ulib/edid \
     system/ulib/fbl \
     system/ulib/hwreg \
     system/ulib/region-alloc \
