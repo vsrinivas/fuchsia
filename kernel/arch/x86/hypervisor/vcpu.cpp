@@ -29,6 +29,19 @@ static constexpr uint32_t kInterruptTypeHardwareException = 3u << 8;
 static constexpr uint32_t kInterruptTypeSoftwareException = 6u << 8;
 static constexpr uint16_t kBaseProcessorVpid = 1;
 
+static zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
+    uint8_t err;
+    uint64_t descriptor[] = { eptp, 0 };
+
+    __asm__ volatile(
+        "invept %[descriptor], %[invalidation];" VMX_ERR_CHECK(err)
+        : [err] "=r"(err)
+        : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
+        : "cc");
+
+    return err ? ZX_ERR_INTERNAL : ZX_OK;
+}
+
 static zx_status_t vmptrld(paddr_t pa) {
     uint8_t err;
 
@@ -419,6 +432,11 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
     // physical addresses that are used to access memory.
     const auto eptp = ept_pointer(pml4_address);
     vmcs.Write(VmcsField64::EPT_POINTER, eptp);
+
+    // From Volume 3, Section 28.3.3.4: Software can use an INVEPT with type all
+    // ALL_CONTEXT to prevent undesired retention of cached EPT information. Here,
+    // we only care about invalidating information associated with this EPTP.
+    invept(InvEpt::SINGLE_CONTEXT, eptp);
 
     // Setup MSR handling.
     vmcs.Write(VmcsField64::MSR_BITMAPS_ADDRESS, msr_bitmaps_address);
