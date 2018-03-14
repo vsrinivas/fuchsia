@@ -65,6 +65,10 @@ class Target : public ClientObject {
   virtual const std::vector<std::string>& GetArgs() const = 0;
   virtual void SetArgs(std::vector<std::string> args) = 0;
 
+  // Returns the return code from the last time the process exited. If a
+  // process has not yet been run and exited, this will be 0.
+  virtual int64_t GetLastReturnCode() const = 0;
+
   // Launches the program. The program must be in a kStopped state and the
   // program name configured via SetArgs().
   virtual void Launch(LaunchCallback callback) = 0;
@@ -72,6 +76,9 @@ class Target : public ClientObject {
   // Attaches to the process with the given koid. The callback will be
   // executed with the attach is complete (or fails).
   virtual void Attach(uint64_t koid, LaunchCallback callback) = 0;
+
+  // Notification from the agent that a process has exited.
+  virtual void OnProcessExiting(int return_code) = 0;
 
  protected:
   explicit Target(Session* session);

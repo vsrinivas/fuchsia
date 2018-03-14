@@ -5,27 +5,67 @@
 #include "garnet/bin/zxdb/console/output_buffer.h"
 
 #include "garnet/bin/zxdb/client/err.h"
+#include "garnet/public/lib/fxl/strings/split_string.h"
 
 namespace zxdb {
+
+namespace {
+
+const char kNormalEscapeCode[] = "\x1b[0m";
+const char kBoldEscapeCode[] = "\x1b[1m";
+
+}  // namespace
+
+OutputBuffer::Span::Span(Syntax s, std::string t) : syntax(s), text(t) {}
 
 OutputBuffer::OutputBuffer() = default;
 OutputBuffer::~OutputBuffer() = default;
 
-void OutputBuffer::Append(const std::string& str) {
-  str_.append(str);
+void OutputBuffer::Append(std::string str) {
+  spans_.push_back(Span(Syntax::kNormal, std::move(str)));
+}
+
+void OutputBuffer::Append(Syntax syntax, std::string str) {
+  spans_.push_back(Span(syntax, std::move(str)));
 }
 
 void OutputBuffer::FormatHelp(const std::string& str) {
-  str_.append(str);
+  for (fxl::StringView line :
+       fxl::SplitString(str, "\n", fxl::kKeepWhitespace, fxl::kSplitWantAll)) {
+    Syntax syntax;
+    if (!line.empty() && line[0] != ' ') {
+      // Nonempty lines beginning with non-whitespace are headings.
+      syntax = Syntax::kHeading;
+    } else {
+      syntax = Syntax::kNormal;
+    }
+
+    spans_.push_back(Span(syntax, line.ToString()));
+    spans_.push_back(Span(Syntax::kNormal, "\n"));
+  }
 }
 
 void OutputBuffer::OutputErr(const Err& err) {
-  str_.append(err.msg());
+  spans_.push_back(Span(Syntax::kNormal, err.msg()));
 }
 
 void OutputBuffer::WriteToStdout() {
-  fwrite(str_.data(), 1, str_.size(), stdout);
-  fwrite("\n", 1, 1, stdout);
+  bool ended_in_newline = false;
+  for (const Span& span : spans_) {
+    if (span.syntax == Syntax::kHeading)
+      fwrite(kBoldEscapeCode, 1, strlen(kBoldEscapeCode), stdout);
+
+    fwrite(span.text.data(), 1, span.text.size(), stdout);
+
+    if (span.syntax != Syntax::kNormal)
+      fwrite(kNormalEscapeCode, 1, strlen(kNormalEscapeCode), stdout);
+
+    if (!span.text.empty())
+      ended_in_newline = span.text.back() == '\n';
+  }
+
+  if (!ended_in_newline)
+    fwrite("\n", 1, 1, stdout);
 }
 
 }  // namespace zxdb

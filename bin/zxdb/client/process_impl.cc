@@ -4,14 +4,19 @@
 
 #include "garnet/bin/zxdb/client/process_impl.h"
 
+#include <set>
+
+#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
 #include "garnet/public/lib/fxl/logging.h"
 
 namespace zxdb {
 
-ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid)
-    : Process(target->session()), target_(target), koid_(koid) {}
+ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid,
+                         const std::string& name)
+    : Process(target->session()), target_(target), koid_(koid), name_(name),
+      weak_thunk_(std::make_shared<WeakThunk<ProcessImpl>>(this)) {}
 ProcessImpl::~ProcessImpl() = default;
 
 Target* ProcessImpl::GetTarget() const {
@@ -22,6 +27,10 @@ uint64_t ProcessImpl::GetKoid() const {
   return koid_;
 }
 
+const std::string& ProcessImpl::GetName() const {
+  return name_;
+}
+
 std::vector<Thread*> ProcessImpl::GetThreads() const {
   std::vector<Thread*> result;
   result.reserve(threads_.size());
@@ -30,17 +39,33 @@ std::vector<Thread*> ProcessImpl::GetThreads() const {
   return result;
 }
 
-void ProcessImpl::OnThreadStarting(uint64_t thread_koid) {
-  auto thread = std::make_unique<ThreadImpl>(this, thread_koid);
+void ProcessImpl::SyncThreads(std::function<void()> callback) {
+  debug_ipc::ThreadsRequest request;
+  request.process_koid = koid_;
+  session()->Send<debug_ipc::ThreadsRequest, debug_ipc::ThreadsReply>(
+      request,
+      [callback = std::move(callback),
+       thunk = std::weak_ptr<WeakThunk<ProcessImpl>>(weak_thunk_)](
+          Session*, uint32_t, const Err& err, debug_ipc::ThreadsReply reply) {
+        if (auto ptr = thunk.lock()) {
+          ptr->thunk->UpdateThreads(reply.threads);
+          if (callback)
+            callback();
+        }
+      });
+}
+
+void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record) {
+  auto thread = std::make_unique<ThreadImpl>(this, record.koid, record.name);
   Thread* thread_ptr = thread.get();
-  threads_[thread_koid] = std::move(thread);
+  threads_[record.koid] = std::move(thread);
 
   for (auto& observer : observers())
     observer.DidCreateThread(this, thread_ptr);
 }
 
-void ProcessImpl::OnThreadExiting(uint64_t thread_koid) {
-  auto found = threads_.find(thread_koid);
+void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
+  auto found = threads_.find(record.koid);
   if (found == threads_.end()) {
     FXL_NOTREACHED();
     return;
@@ -50,6 +75,36 @@ void ProcessImpl::OnThreadExiting(uint64_t thread_koid) {
     observer.WillDestroyThread(this, found->second.get());
 
   threads_.erase(found);
+}
+
+void ProcessImpl::UpdateThreads(
+    const std::vector<debug_ipc::ThreadRecord>& new_threads) {
+  // Go through all new threads, checking to added ones and updating existing.
+  std::set<uint64_t> new_threads_koids;
+  for (const auto& record : new_threads) {
+    new_threads_koids.insert(record.koid);
+    auto found_existing = threads_.find(record.koid);
+    if (found_existing == threads_.end()) {
+      // New thread added.
+      OnThreadStarting(record);
+    } else {
+      // Existing one, make sure the name is up-to-date.
+      found_existing->second->set_name(record.name);
+    }
+  }
+
+  // Do the reverse lookup to check for threads not in the new list. Be careful
+  // not to mutate the threads_ list while iterating over it.
+  std::vector<uint64_t> existing_koids;
+  for (const auto& pair : threads_)
+    existing_koids.push_back(pair.first);
+  for (uint64_t existing_koid : existing_koids) {
+    if (new_threads_koids.find(existing_koid) == new_threads_koids.end()) {
+      debug_ipc::ThreadRecord record;
+      record.koid = existing_koid;
+      OnThreadExiting(record);
+    }
+  }
 }
 
 }  // namespace zxdb

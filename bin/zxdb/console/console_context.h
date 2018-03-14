@@ -36,8 +36,10 @@ class ConsoleContext
   int GetActiveTargetId();
   Target* GetActiveTarget();
 
-  // Sets the active thread for its target. The active target is not affected.
-  void SetActiveThreadInTarget(Thread* thread);
+  // The active thread for its target. The active target is not affected. The
+  // active thread ID for a target not running will be 0.
+  void SetActiveThreadForTarget(Thread* thread);
+  int GetActiveThreadIdForTarget(Target* target);
 
   // Fills the current effective process, thread, etc. into the given Command
   // structure based on what the command specifies and the current context.

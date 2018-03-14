@@ -30,11 +30,6 @@ void Serialize(const MemoryBlock& block, MessageWriter* writer) {
     writer->WriteBytes(&block.data[0], block.size);
 }
 
-void Serialize(const NotifyThread& thread, MessageWriter* writer) {
-  writer->WriteUint64(thread.process_koid);
-  writer->WriteUint64(thread.thread_koid);
-}
-
 // Hello -----------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader,
@@ -73,6 +68,7 @@ void WriteReply(const LaunchReply& reply,
   writer->WriteHeader(MsgHeader::Type::kLaunch, transaction_id);
   writer->WriteUint32(reply.status);
   writer->WriteUint64(reply.process_koid);
+  writer->WriteString(reply.process_name);
 }
 
 // Attach ----------------------------------------------------------------------
@@ -92,6 +88,7 @@ void WriteReply(const AttachReply& reply,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAttach, transaction_id);
   writer->WriteUint32(reply.status);
+  writer->WriteString(reply.process_name);
 }
 
 // ProcessTree -----------------------------------------------------------------
@@ -129,7 +126,6 @@ void WriteReply(const ThreadsReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kThreads, transaction_id);
-
   Serialize(reply.threads, writer);
 }
 
@@ -152,12 +148,19 @@ void WriteReply(const ReadMemoryReply& reply,
   Serialize(reply.blocks, writer);
 }
 
-// NotifyThread ----------------------------------------------------------------
+// Notifications ---------------------------------------------------------------
+
+void WriteNotifyProcess(const NotifyProcess& notify, MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kNotifyProcessExiting, 0);
+  writer->WriteUint64(notify.process_koid);
+  writer->WriteInt64(notify.return_code);
+}
 
 void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
                        MessageWriter* writer) {
   writer->WriteHeader(type, 0);
-  Serialize(notify, writer);
+  writer->WriteUint64(notify.process_koid);
+  Serialize(notify.record, writer);
 }
 
 }  // namespace debug_ipc

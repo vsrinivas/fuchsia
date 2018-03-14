@@ -14,6 +14,7 @@
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
 #include "garnet/lib/debug_ipc/stream_buffer.h"
+#include "garnet/public/lib/fxl/logging.h"
 
 namespace {
 
@@ -93,6 +94,7 @@ void DebugAgent::OnStreamData() {
     // but need to handle these "not a message" types to avoid this warning.
     case debug_ipc::MsgHeader::Type::kNone:
     case debug_ipc::MsgHeader::Type::kNumMessages:
+    case debug_ipc::MsgHeader::Type::kNotifyProcessExiting:
     case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
     case debug_ipc::MsgHeader::Type::kNotifyThreadExiting:
       break;  // Avoid warning
@@ -102,6 +104,23 @@ void DebugAgent::OnStreamData() {
 }
 
 void DebugAgent::OnProcessTerminated(zx_koid_t process_koid) {
+  DebuggedProcess* debugged = GetDebuggedProcess(process_koid);
+  if (!debugged) {
+    FXL_NOTREACHED();
+    return;
+  }
+
+  debug_ipc::NotifyProcess notify;
+  notify.process_koid = process_koid;
+
+  zx_info_process info;
+  GetProcessInfo(debugged->process().get(), &info);
+  notify.return_code = info.return_code;
+
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyProcess(notify, &writer);
+  stream().Write(writer.MessageComplete());
+
   RemoveDebuggedProcess(process_koid);
 }
 
@@ -109,7 +128,7 @@ void DebugAgent::OnThreadStarting(const zx::thread& thread, zx_koid_t proc_koid,
                                   zx_koid_t thread_koid) {
   debug_ipc::NotifyThread notify;
   notify.process_koid = proc_koid;
-  notify.thread_koid = thread_koid;
+  FillThreadRecord(thread, &notify.record);
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadStarting,
@@ -124,7 +143,7 @@ void DebugAgent::OnThreadExiting(const zx::thread& thread, zx_koid_t proc_koid,
                                  zx_koid_t thread_koid) {
   debug_ipc::NotifyThread notify;
   notify.process_koid = proc_koid;
-  notify.thread_koid = thread_koid;
+  FillThreadRecord(thread, &notify.record);
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadExiting,
@@ -148,6 +167,7 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
 
   zx::process process = launcher.GetProcess();
   reply->process_koid = KoidForObject(process);
+  reply->process_name = NameForObject(process);
   AddDebuggedProcess(reply->process_koid, std::move(process));
 
   reply->status = launcher.Start();
@@ -164,6 +184,7 @@ void DebugAgent::OnAttach(const debug_ipc::AttachRequest& request,
     reply->status = ZX_ERR_NOT_FOUND;
     return;
   }
+  reply->process_name = NameForObject(process);
   AddDebuggedProcess(request.koid, std::move(process));
   reply->status = ZX_OK;
 }
@@ -183,6 +204,13 @@ void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
 
 void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                               debug_ipc::ReadMemoryReply* reply) {
+}
+
+DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
+  auto found = procs_.find(koid);
+  if (found == procs_.end())
+    return nullptr;
+  return &found->second;
 }
 
 void DebugAgent::AddDebuggedProcess(zx_koid_t koid, zx::process proc) {

@@ -10,6 +10,7 @@
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/target.h"
+#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
@@ -71,7 +72,8 @@ std::string DescribeTarget(ConsoleContext* context, Target* target,
       break;
     case Target::State::kRunning:
       state = "Running";
-      koid_str = fxl::StringPrintf("%" PRIu64 " ",
+      koid_str = fxl::StringPrintf(columns ? "%" PRIu64 " "
+                                           : "koid=%" PRIu64 " ",
                                    target->GetProcess()->GetKoid());
       break;
   }
@@ -84,14 +86,33 @@ std::string DescribeTarget(ConsoleContext* context, Target* target,
   std::string result = fxl::StringPrintf(format_string, id, state,
                                          koid_str.c_str());
 
-  // Program name is the first arg.
-  const std::vector<std::string>& args = target->GetArgs();
-  if (args.empty())
-    result += "<no name>";
-  else
-    result += args[0];
+  // When running, use the object name if any.
+  std::string name;
+  if (target->GetState() == Target::State::kRunning)
+    name = target->GetProcess()->GetName();
+
+  // Otherwise fall back to the program name which is the first arg.
+  if (name.empty()) {
+    const std::vector<std::string>& args = target->GetArgs();
+    if (args.empty())
+      name += "<no name>";
+    else
+      name += args[0];
+  }
+  result += name;
 
   return result;
+}
+
+std::string DescribeThread(ConsoleContext* context, Thread* thread,
+                           bool columns) {
+  const char* format_string;
+  if (columns)
+    format_string = "%3d %8" PRIu64 " %s";
+  else
+    format_string = "Thread %d koid=%" PRIu64 " %s";
+  return fxl::StringPrintf(format_string, context->IdForThread(thread),
+                           thread->GetKoid(), thread->GetName().c_str());
 }
 
 }  // namespace zxdb

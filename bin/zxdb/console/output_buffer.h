@@ -6,10 +6,16 @@
 
 #include <stdio.h>
 #include <string>
+#include <vector>
 
 namespace zxdb {
 
 class Err;
+
+enum class Syntax {
+  kNormal,
+  kHeading
+};
 
 // This class collects output from commands so it can be put on the screen in
 // one chunk. It's not just a string because we want to add helper functions
@@ -20,7 +26,8 @@ class OutputBuffer {
   ~OutputBuffer();
 
   // Appends a string.
-  void Append(const std::string& str);
+  void Append(std::string str);
+  void Append(Syntax syntax, std::string str);
 
   // Outputs the given help string, applying help-style formatting.
   void FormatHelp(const std::string& str);
@@ -32,7 +39,13 @@ class OutputBuffer {
   void WriteToStdout();
 
  private:
-  std::string str_;
+  struct Span {
+    Span(Syntax s, std::string t);
+
+    Syntax syntax = Syntax::kNormal;
+    std::string text;
+  };
+  std::vector<Span> spans_;
 };
 
 }  // namespace zxdb

@@ -42,6 +42,10 @@ void TargetImpl::SetArgs(std::vector<std::string> args) {
   args_ = std::move(args);
 }
 
+int64_t TargetImpl::GetLastReturnCode() const {
+  return last_return_code_;
+}
+
 void TargetImpl::Launch(LaunchCallback callback) {
   if (state_ != State::kStopped) {
     // TODO(brettw) issue callback asynchronously to avoid reentering caller.
@@ -64,7 +68,8 @@ void TargetImpl::Launch(LaunchCallback callback) {
            debug_ipc::LaunchReply reply) {
         if (auto ptr = thunk.lock()) {
           ptr->thunk->OnLaunchOrAttachReply(err, reply.process_koid,
-                                            reply.status, std::move(callback));
+                                            reply.status, reply.process_name,
+                                            std::move(callback));
         } else {
           // The reply that the process was launched came after the local
           // objects were destroyed.
@@ -90,7 +95,14 @@ void TargetImpl::Attach(uint64_t koid, LaunchCallback callback) {
            debug_ipc::AttachReply reply) {
         if (auto ptr = thunk.lock()) {
           ptr->thunk->OnLaunchOrAttachReply(err, koid, reply.status,
+                                            reply.process_name,
                                             std::move(callback));
+          // Sync the current threads when we're attached.
+          // TODO(brettw) it would be nice if the agent pushed thread
+          // notifications to us after attaching. But this requires some
+          // re-working in the debug agent, like a "post task" equivalent.
+          if (ptr->thunk->process_.get())
+            ptr->thunk->process_->SyncThreads(std::function<void()>());
         } else {
           // The reply that the process was launched came after the local
           // objects were destroyed.
@@ -102,25 +114,39 @@ void TargetImpl::Attach(uint64_t koid, LaunchCallback callback) {
       });
 }
 
+void TargetImpl::OnProcessExiting(int return_code) {
+  FXL_DCHECK(state_ == State::kRunning);
+
+  last_return_code_ = return_code;
+  state_ = State::kStopped;
+  process_.reset();
+
+  for (auto& observer : observers())
+    observer.DidChangeTargetState(this, State::kRunning);
+}
+
 void TargetImpl::OnLaunchOrAttachReply(const Err& err, uint64_t koid,
                                        uint32_t status,
+                                       const std::string& process_name,
                                        LaunchCallback callback) {
   FXL_DCHECK(state_ = State::kStarting);
   FXL_DCHECK(!process_.get());  // Shouldn't have a process.
+
+  Err issue_err;  // Error to send in callback.
   if (err.has_error()) {
     // Error from transport.
-    state_ = State::kStopped;
-    callback(this, err);
+    issue_err = err;
   } else if (status != 0) {
     // Error from launching.
     state_ = State::kStopped;
-    callback(this, Err(fxl::StringPrintf(
-            "Error launching, status = %d.", status)));
+    issue_err = Err(fxl::StringPrintf("Error launching, status = %d.", status));
   } else {
     state_ = State::kRunning;
-    process_ = std::make_unique<ProcessImpl>(this, koid);
-    callback(this, Err());
+    process_ = std::make_unique<ProcessImpl>(this, koid, process_name);
   }
+
+  if (callback)
+    callback(this, issue_err);
 
   for (auto& observer : observers())
     observer.DidChangeTargetState(this, State::kStarting);

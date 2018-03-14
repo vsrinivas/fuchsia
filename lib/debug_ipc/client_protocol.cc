@@ -49,12 +49,6 @@ bool Deserialize(MessageReader* reader, MemoryBlock* block) {
   return true;
 }
 
-bool Deserialize(MessageReader* reader, NotifyThread* thread) {
-  if (!reader->ReadUint64(&thread->process_koid))
-    return false;
-  return reader->ReadUint64(&thread->thread_koid);
-}
-
 // Hello -----------------------------------------------------------------------
 
 void WriteRequest(const HelloRequest& request,
@@ -94,6 +88,8 @@ bool ReadReply(MessageReader* reader,
     return false;
   if (!reader->ReadUint64(&reply->process_koid))
     return false;
+  if (!reader->ReadString(&reply->process_name))
+    return false;
   return true;
 }
 
@@ -115,6 +111,8 @@ bool ReadReply(MessageReader* reader,
   *transaction_id = header.transaction_id;
 
   if (!reader->ReadUint32(&reply->status))
+    return false;
+  if (!reader->ReadString(&reply->process_name))
     return false;
   return true;
 }
@@ -178,13 +176,26 @@ bool ReadReply(MessageReader* reader,
   return Deserialize(reader, &reply->blocks);
 }
 
-// NotifyThread ----------------------------------------------------------------
+// Notifications ---------------------------------------------------------------
 
-bool ReadNotifyThread(MessageReader* reader, NotifyThread* thread) {
+bool ReadNotifyProcess(MessageReader* reader, NotifyProcess* process) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
-  return Deserialize(reader, thread);
+  if (!reader->ReadUint64(&process->process_koid))
+    return false;
+  if (!reader->ReadInt64(&process->return_code))
+    return false;
+  return true;
+}
+
+bool ReadNotifyThread(MessageReader* reader, NotifyThread* notify) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  if (!reader->ReadUint64(&notify->record.koid))
+    return false;
+  return Deserialize(reader, &notify->record);
 }
 
 }  // namespace debug_ipc

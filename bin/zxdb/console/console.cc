@@ -70,6 +70,12 @@ void Console::Output(const std::string& s) {
   Output(std::move(buffer));
 }
 
+void Console::Output(const Err& err) {
+  OutputBuffer buffer;
+  buffer.OutputErr(err);
+  Output(std::move(buffer));
+}
+
 Console::Result Console::DispatchInputLine(const std::string& line) {
   Command cmd;
   Err err = ParseCommand(line, &cmd);

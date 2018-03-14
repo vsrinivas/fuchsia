@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <string>
 
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/public/lib/fxl/macros.h"
@@ -23,6 +24,7 @@ class Thread : public ClientObject {
   virtual Process* GetProcess() const = 0;
 
   virtual uint64_t GetKoid() const = 0;
+  virtual const std::string& GetName() const = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Thread);

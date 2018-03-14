@@ -63,6 +63,7 @@ bool ReadReply(MessageReader* reader,
 //
 // (These don't have a "request"/"reply".)
 
-bool ReadNotifyThread(MessageReader* reader, NotifyThread* thread);
+bool ReadNotifyProcess(MessageReader* reader, NotifyProcess* notify);
+bool ReadNotifyThread(MessageReader* reader, NotifyThread* notify);
 
 }  // namespace debug_ipc

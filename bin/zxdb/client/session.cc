@@ -38,65 +38,67 @@ void Session::SetAgentConnection(std::unique_ptr<AgentConnection> connection) {
 }
 
 void Session::OnAgentData(debug_ipc::StreamBuffer* stream) {
-  if (!stream->IsAvailable(debug_ipc::MsgHeader::kSerializedHeaderSize))
-    return;
+  while (true) {
+    if (!stream->IsAvailable(debug_ipc::MsgHeader::kSerializedHeaderSize))
+      return;
 
-  std::vector<char> serialized_header;
-  serialized_header.resize(debug_ipc::MsgHeader::kSerializedHeaderSize);
-  stream->Peek(&serialized_header[0],
-               debug_ipc::MsgHeader::kSerializedHeaderSize);
+    std::vector<char> serialized_header;
+    serialized_header.resize(debug_ipc::MsgHeader::kSerializedHeaderSize);
+    stream->Peek(&serialized_header[0],
+                 debug_ipc::MsgHeader::kSerializedHeaderSize);
 
-  debug_ipc::MessageReader reader(std::move(serialized_header));
-  debug_ipc::MsgHeader header;
-  if (!reader.ReadHeader(&header)) {
-    // Since we already validated there is enough data for the header, the
-    // header read should not fail (it's just a memcpy).
-    FXL_NOTREACHED();
-    return;
+    debug_ipc::MessageReader reader(std::move(serialized_header));
+    debug_ipc::MsgHeader header;
+    if (!reader.ReadHeader(&header)) {
+      // Since we already validated there is enough data for the header, the
+      // header read should not fail (it's just a memcpy).
+      FXL_NOTREACHED();
+      return;
+    }
+
+    // Sanity checking on the size to prevent crashes.
+    if (header.size > kMaxMessageSize) {
+      fprintf(stderr,
+              "Bad message received of size %u.\n(type = %u, transaction = %u)\n",
+              static_cast<unsigned>(header.size),
+              static_cast<unsigned>(header.type),
+              static_cast<unsigned>(header.transaction_id));
+      // TODO(brettw) close the stream due to this fatal error.
+      return;
+    }
+
+    if (!stream->IsAvailable(header.size))
+      return;  // Wait for more data.
+
+    // Consume the message now that we know the size. Do this before doing
+    // anything else so the data is consumed if the size is right, even if the
+    // transaction ID is wrong.
+    std::vector<char> serialized;
+    serialized.resize(header.size);
+    stream->Read(&serialized[0], header.size);
+
+    // Transaction ID 0 is reserved for notifications.
+    if (header.transaction_id == 0) {
+      DispatchNotification(header, std::move(serialized));
+      continue;
+    }
+
+    // Find the transaction.
+    auto found = pending_.find(header.transaction_id);
+    if (found == pending_.end()) {
+      fprintf(stderr,
+              "Received reply for unexpected transaction %u (type = %u).\n",
+              static_cast<unsigned>(header.transaction_id),
+              static_cast<unsigned>(header.type));
+      // Just ignore this bad message.
+      continue;
+    }
+
+    // Do the type-specific deserialization and callback.
+    found->second(this, header.transaction_id, Err(), std::move(serialized));
+
+    pending_.erase(found);
   }
-
-  // Sanity checking on the size to prevent crashes.
-  if (header.size > kMaxMessageSize) {
-    fprintf(stderr,
-            "Bad message received of size %u.\n(type = %u, transaction = %u)\n",
-            static_cast<unsigned>(header.size),
-            static_cast<unsigned>(header.type),
-            static_cast<unsigned>(header.transaction_id));
-    // TODO(brettw) close the stream due to this fatal error.
-    return;
-  }
-
-  if (!stream->IsAvailable(header.size))
-    return;  // Wait for more data.
-
-  // Consume the message now that we know the size. Do this before doing
-  // anything else so the data is consumed if the size is right, even if the
-  // transaction ID is wrong.
-  std::vector<char> serialized;
-  serialized.resize(header.size);
-  stream->Read(&serialized[0], header.size);
-
-  // Transaction ID 0 is reserved for notifications.
-  if (header.transaction_id == 0) {
-    DispatchNotification(header, std::move(serialized));
-    return;
-  }
-
-  // Find the transaction.
-  auto found = pending_.find(header.transaction_id);
-  if (found == pending_.end()) {
-    fprintf(stderr,
-            "Received reply for unexpected transaction %u (type = %u).\n",
-            static_cast<unsigned>(header.transaction_id),
-            static_cast<unsigned>(header.type));
-    // Just ignore this bad message.
-    return;
-  }
-
-  // Do the type-specific deserialization and callback.
-  found->second(this, header.transaction_id, Err(), std::move(serialized));
-
-  pending_.erase(found);
 }
 
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
@@ -104,6 +106,16 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
   debug_ipc::MessageReader reader(std::move(data));
 
   switch (header.type) {
+    case debug_ipc::MsgHeader::Type::kNotifyProcessExiting: {
+      debug_ipc::NotifyProcess notify;
+      if (!debug_ipc::ReadNotifyProcess(&reader, &notify))
+        return;
+
+      Process* process = system_.ProcessFromKoid(notify.process_koid);
+      if (process)
+        process->GetTarget()->OnProcessExiting(notify.return_code);
+      break;
+    }
     case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
     case debug_ipc::MsgHeader::Type::kNotifyThreadExiting: {
       debug_ipc::NotifyThread thread;
@@ -113,9 +125,9 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
       Process* process = system_.ProcessFromKoid(thread.process_koid);
       if (process) {
         if (header.type == debug_ipc::MsgHeader::Type::kNotifyThreadStarting)
-          process->OnThreadStarting(thread.thread_koid);
+          process->OnThreadStarting(thread.record);
         else
-          process->OnThreadExiting(thread.thread_koid);
+          process->OnThreadExiting(thread.record);
       }
       break;
     }

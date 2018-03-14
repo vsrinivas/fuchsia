@@ -47,6 +47,9 @@ class DebugAgent : public ExceptionHandler::Sink {
   void OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                     debug_ipc::ReadMemoryReply* reply);
 
+  // Returns the debugged process for the given koid or null if not found.
+  DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
+
   void AddDebuggedProcess(zx_koid_t koid, zx::process proc);
   void RemoveDebuggedProcess(zx_koid_t koid);
 

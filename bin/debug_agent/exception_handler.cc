@@ -116,7 +116,7 @@ size_t ExceptionHandler::ConsumeStreamBufferData(const char* data, size_t len) {
 
 void ExceptionHandler::DoThread() {
   zx_port_packet_t packet;
-  while (port_.wait(zx::time::infinite(), &packet, 0) == ZX_OK) {
+  while (port_.wait(zx::time::infinite(), &packet, 1) == ZX_OK) {
     if (ZX_PKT_IS_EXCEPTION(packet.type)) {
       const WatchedProcess* proc = WatchedProcessForKoid(packet.exception.pid);
       if (!proc) {

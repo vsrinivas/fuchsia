@@ -58,9 +58,6 @@ class Session : public AgentConnection::Sink {
   // available from the debug_agent.
   void OnAgentData(debug_ipc::StreamBuffer* stream) override;
 
-  // Called when a complete message is available.
-  void OnMessage(std::vector<char> serialized);
-
   // Dispatches unsolicited notifications sent from the agent.
   void DispatchNotification(const debug_ipc::MsgHeader& header,
                             std::vector<char> data);
@@ -83,7 +80,7 @@ uint32_t Session::Send(
   }
 
   uint32_t transaction_id = next_transaction_id_;
-  transaction_id++;
+  next_transaction_id_++;
 
   debug_ipc::MessageWriter writer(sizeof(SendMsgType));
   debug_ipc::WriteRequest(send_msg, transaction_id, &writer);

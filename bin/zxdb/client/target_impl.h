@@ -5,6 +5,7 @@
 #pragma once
 
 #include "garnet/bin/zxdb/client/target.h"
+#include "garnet/bin/zxdb/client/weak_thunk.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace zxdb {
@@ -29,11 +30,14 @@ class TargetImpl : public Target {
   Process* GetProcess() const override;
   const std::vector<std::string>& GetArgs() const override;
   void SetArgs(std::vector<std::string> args) override;
+  int64_t GetLastReturnCode() const override;
   void Launch(LaunchCallback callback) override;
   void Attach(uint64_t koid, LaunchCallback callback) override;
+  void OnProcessExiting(int return_code) override;
 
  private:
   void OnLaunchOrAttachReply(const Err& err, uint64_t koid, uint32_t status,
+                             const std::string& process_name,
                              LaunchCallback callback);
 
   State state_ = kStopped;
@@ -42,6 +46,8 @@ class TargetImpl : public Target {
 
   // Associated process if there is one.
   std::unique_ptr<ProcessImpl> process_;
+
+  int64_t last_return_code_ = 0;
 
   std::shared_ptr<WeakThunk<TargetImpl>> weak_thunk_;
   // ^ Keep at the bottom to make sure it's destructed last.

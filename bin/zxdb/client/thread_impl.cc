@@ -8,11 +8,13 @@
 
 namespace zxdb {
 
-ThreadImpl::ThreadImpl(ProcessImpl* process, uint64_t koid)
-    : Thread(process->session()), process_(process), koid_(koid) {}
+ThreadImpl::ThreadImpl(ProcessImpl* process, uint64_t koid,
+                       const std::string& name)
+    : Thread(process->session()), process_(process), koid_(koid), name_(name) {}
 ThreadImpl::~ThreadImpl() = default;
 
 Process* ThreadImpl::GetProcess() const { return process_; }
 uint64_t ThreadImpl::GetKoid() const { return koid_; }
+const std::string& ThreadImpl::GetName() const { return name_; }
 
 }  // namespace zxdb

@@ -35,6 +35,7 @@ class Console {
   // Prints the buffer/string to the console.
   void Output(OutputBuffer output);
   void Output(const std::string& s);
+  void Output(const Err& err);
 
  private:
   Result DispatchInputLine(const std::string& line);

@@ -25,19 +25,75 @@ const char kFrameHelp[] =
 )";
 
 const char kThreadShortHelp[] =
-    "thread";
+    "thread: Select or list threads.";
 const char kThreadHelp[] =
-    R"(thread
+    R"(thread [ <id> [ <command> ... ] ]
 
-  TODO write me.
+  Selects or lists threads.
+
+  By itself, "thread" will list the threads in the current process.
+
+  With an ID following it ("thread 3"), selects that thread as the current
+  active thread. This thread will apply by default for subsequent commands
+  (like "step").
+
+  With an ID and another command following it ("thread 3 step"), modifies the
+  thread for that command only. This allows stepping or interrogating threads
+  regardless of which is the active one.
+
+Examples
+
+  thread
+      Lists all threads in the current process.
+
+  thread 1
+      Selects thread 1 to be the active thread in the current process.
+
+  process 2 thread 1
+      Selects process 2 as the active process and thread 1 within it as the
+      active thread.
+
+  process 2 thread
+      Lists all threads in process 2.
+
+  thread 1 step
+      Steps thread 1 in the current process, regardless of the active thread.
+
+  process 2 thread 1 step
+      Steps thread 1 in process 2, regardless of the active process or thread.
 )";
 
 const char kProcessShortHelp[] =
-    "process";
+    "process: Select or list process contexts.";
 const char kProcessHelp[] =
-    R"(process
+    R"(process [ <id> [ <command> ... ] ]
 
-  TODO write me.
+  Selects or lists process contexts.
+
+  By itself, "process" will list available process contexts with their IDs. New
+  process contexts can be created with the "new" command. This list of
+  debugger contexts is different than the list of processes on the target
+  system (use "ps" to list all running processes, and "attach" to attach a
+  context to a running process).
+
+  With an ID following it ("process 3"), selects that process context as the
+  current active context. This context will apply by default for subsequent
+  commands (like "run").
+
+  With an ID and another command following it ("process 3 run"), modifies the
+  process context for that command only. This allows running, pausing, etc.
+  processes regardless of which is the active one.
+
+Examples
+
+  process
+      Lists all process contexts.
+
+  process 2
+      Sets process context 2 as the active one.
+
+  process 2 run
+      Runs process context 2, regardless of the active one.
 )";
 
 }  // namespace

@@ -12,6 +12,7 @@ class Command;
 class ConsoleContext;
 class Err;
 class Target;
+class Thread;
 
 [[nodiscard]] Err StringToUint64(const std::string& s, uint64_t* out);
 
@@ -22,10 +23,12 @@ class Target;
 [[nodiscard]] Err ReadUint64Arg(const Command& cmd, size_t arg_index,
                                 const char* param_desc, uint64_t* out);
 
-// Returns a string describing the given target in the given context. If
-// columns is set, there will be extra padding added so that multiple targets
+// Returns a string describing the given thing in the given context. If
+// columns is set, there will be extra padding added so that multiple things
 // line up when printed vertically.
 std::string DescribeTarget(ConsoleContext* context, Target* target,
+                           bool columns);
+std::string DescribeThread(ConsoleContext* context, Thread* thread,
                            bool columns);
 
 }  // namespace zxdb

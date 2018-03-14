@@ -29,6 +29,7 @@ struct MsgHeader {
     kReadMemory,
 
     // The "notify" messages are sent unrequested from the agent to the client.
+    kNotifyProcessExiting,
     kNotifyThreadStarting,
     kNotifyThreadExiting,
 
@@ -63,6 +64,7 @@ struct LaunchRequest {
 struct LaunchReply {
   uint32_t status = 0;  // zx_status_t value from launch, ZX_OK on success.
   uint64_t process_koid = 0;
+  std::string process_name;
 };
 
 struct AttachRequest {
@@ -70,6 +72,7 @@ struct AttachRequest {
 };
 struct AttachReply {
   uint32_t status = 0;  // zx_status_t value from attaching. ZX_OK on success.
+  std::string process_name;
 };
 
 struct ProcessTreeRequest {};
@@ -94,10 +97,17 @@ struct ReadMemoryReply {
   std::vector<MemoryBlock> blocks;
 };
 
+// Data for process destroyed messages (process created messages are in
+// response to launch commands so is just the reply to that message).
+struct NotifyProcess {
+  uint64_t process_koid = 0;
+  int64_t return_code = 0;
+};
+
 // Data for thread created and destroyed messages.
 struct NotifyThread {
-  uint64_t process_koid;
-  uint64_t thread_koid;
+  uint64_t process_koid = 0;
+  ThreadRecord record;
 };
 
 #pragma pack(pop)

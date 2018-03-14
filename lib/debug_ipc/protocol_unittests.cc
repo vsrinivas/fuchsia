@@ -81,11 +81,13 @@ TEST(Protocol, LaunchReply) {
   LaunchReply initial;
   initial.status = 67;
   initial.process_koid = 0x1234;
+  initial.process_name = "winword.exe";
 
   LaunchReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
   EXPECT_EQ(initial.status, second.status);
   EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.process_name, second.process_name);
 }
 
 // Attach ----------------------------------------------------------------------
@@ -102,10 +104,12 @@ TEST(Protocol, AttachRequest) {
 TEST(Protocol, AttachReply) {
   AttachReply initial;
   initial.status = 67;
+  initial.process_name = "virtual console";
 
   AttachReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
   EXPECT_EQ(initial.status, second.status);
+  EXPECT_EQ(initial.process_name, second.process_name);
 }
 
 // ProcessTree -----------------------------------------------------------------

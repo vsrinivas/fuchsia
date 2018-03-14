@@ -14,6 +14,10 @@
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/observer_list.h"
 
+namespace debug_ipc {
+struct ThreadRecord;
+}
+
 namespace zxdb {
 
 class Target;
@@ -33,15 +37,36 @@ class Process : public ClientObject {
   // The Process koid is guaranteed non-null.
   virtual uint64_t GetKoid() const = 0;
 
-  // Returns all threads in the process. This is a as of the last update from
+  // Returns the "name" of the process. This is the process object name which
+  // is normally based on the file name, but isn't the same as the file name.
+  virtual const std::string& GetName() const = 0;
+
+  // Returns all threads in the process. This is as of the last update from
   // the system. If the program is currently running, the actual threads may be
-  // different since it can be asynchonously creating and destroying them. The
-  // pointers will only be valid until you return to the message loop.
+  // different since it can be asynchonously creating and destroying them.
+  //
+  // Some programs also change thread names dynamically, so the names may be
+  // stale. Call SyncThreads() to update the thread list with the debuggee.
+  //
+  // The pointers will only be valid until you return to the message loop.
   virtual std::vector<Thread*> GetThreads() const = 0;
 
+  // Asynchronously refreshes the thread list from the debugged process. This
+  // will ensure the thread names are up-to-date, and is also used after
+  // attaching when there are no thread notifications for existing threads.
+  //
+  // If the Process is destroyed before the call completes, the callback will
+  // not be issued. If this poses a problem in the future, we can add an
+  // error code to the callback, but will need to be careful to make clear the
+  // Process object is not valid at that point (callers may want to use it to
+  // format error messages).
+  //
+  // To get the computed threads, call GetThreads() once the callback runs.
+  virtual void SyncThreads(std::function<void()> callback) = 0;
+
   // Notifications from the agent that a thread has started or exited.
-  virtual void OnThreadStarting(uint64_t thread_koid) = 0;
-  virtual void OnThreadExiting(uint64_t thread_koid) = 0;
+  virtual void OnThreadStarting(const debug_ipc::ThreadRecord& record) = 0;
+  virtual void OnThreadExiting(const debug_ipc::ThreadRecord& record) = 0;
 
  protected:
   fxl::ObserverList<ProcessObserver>& observers() { return observers_; }

@@ -45,7 +45,7 @@ PlatformMainLoop::~PlatformMainLoop() {}
 void PlatformMainLoop::PlatformRun() {
   zx_port_packet_t packet;
   while (!should_quit() &&
-         port_.wait(zx::time::infinite(), &packet, 0) == ZX_OK) {
+         port_.wait(zx::time::infinite(), &packet, 1) == ZX_OK) {
     if (packet.key == kStdinKey) {
       // Event about stdin. __fdio_wait_end will convert the underlying-
       // handle-specific signal to a generic "read" one.

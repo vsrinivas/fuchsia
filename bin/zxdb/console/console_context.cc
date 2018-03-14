@@ -10,6 +10,7 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
+#include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/public/lib/fxl/logging.h"
@@ -74,7 +75,7 @@ Target* ConsoleContext::GetActiveTarget() {
   return found->second.target;
 }
 
-void ConsoleContext::SetActiveThreadInTarget(Thread* thread) {
+void ConsoleContext::SetActiveThreadForTarget(Thread* thread) {
   TargetRecord* record = GetTargetRecord(thread->GetProcess()->GetTarget());
   if (!record)
     return;
@@ -85,6 +86,15 @@ void ConsoleContext::SetActiveThreadInTarget(Thread* thread) {
     return;
   }
   record->active_thread_id = found->second;
+}
+
+int ConsoleContext::GetActiveThreadIdForTarget(Target* target) {
+  TargetRecord* record = GetTargetRecord(target);
+  if (!record) {
+    FXL_NOTREACHED();
+    return 0;
+  }
+  return record->active_thread_id;
 }
 
 Err ConsoleContext::FillOutCommand(Command* cmd) {
@@ -204,8 +214,12 @@ void ConsoleContext::DidChangeTargetState(Target* target,
     // callback will be called for succeeded and failed starts
     // (starting->stopped and starting->running) with the appropriate error
     // or information.
-    Console::get()->Output(fxl::StringPrintf(
-        "Process %d exited.", record->target_id));
+    Console* console = Console::get();
+    OutputBuffer out;
+    out.Append(DescribeTarget(&console->context(), target, false));
+    out.Append(fxl::StringPrintf(": exit code %" PRId64 ".",
+                                 target->GetLastReturnCode()));
+    Console::get()->Output(std::move(out));
   }
 }
 
@@ -225,14 +239,8 @@ void ConsoleContext::DidCreateThread(Process* process, Thread* thread) {
   // Only make a new thread the default if there is no current thread,
   // otherwise the context will be swapping out from under the user as the
   // program runs.
-  if (record->active_thread_id == -1)
+  if (record->active_thread_id == 0)
     record->active_thread_id = thread_id;
-
-  OutputBuffer out;
-  out.Append(fxl::StringPrintf(
-      "Process %d thread %d created with koid %" PRIu64 ".",
-      record->target_id, thread_id, thread->GetKoid()));
-  Console::get()->Output(out);
 }
 
 void ConsoleContext::WillDestroyThread(Process* process, Thread* thread) {
@@ -248,12 +256,6 @@ void ConsoleContext::WillDestroyThread(Process* process, Thread* thread) {
     return;
   }
   int thread_id = found_thread_to_id->second;
-
-  // Log to the consople.
-  OutputBuffer out;
-  out.Append(fxl::StringPrintf("Process %d thread %d exited.",
-                               record->target_id, thread_id));
-  Console::get()->Output(out);
 
   record->id_to_thread.erase(found_thread_to_id->second);
   record->thread_to_id.erase(found_thread_to_id);
