@@ -18,7 +18,7 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     SCRIPT_DIR))                 # zircon
 ZIRCON_ROOT = os.path.join(FUCHSIA_ROOT, 'zircon')
 
-sys.path += [os.path.join(FUCHSIA_ROOT, "third_party", "mako")]
+sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'mako')]
 from mako.lookup import TemplateLookup
 from mako.template import Template
 
@@ -28,7 +28,7 @@ SYSROOT_PACKAGES = ['c', 'zircon']
 
 
 def make_dir(path, is_dir=False):
-    """Creates the directory at `path`."""
+    '''Creates the directory at `path`.'''
     target = path if is_dir else os.path.dirname(path)
     try:
         os.makedirs(target)
@@ -40,8 +40,8 @@ def make_dir(path, is_dir=False):
 
 
 def try_remove(list, element):
-    """Attempts to remove an element from a list, returning `true` if
-       successful."""
+    '''Attempts to remove an element from a list, returning `true` if
+       successful.'''
     try:
         list.remove(element)
         return True
@@ -50,7 +50,7 @@ def try_remove(list, element):
 
 
 def parse_package(lines):
-    """Parses the content of a package file."""
+    '''Parses the content of a package file.'''
     result = {}
     section_exp = re.compile('^\[([^\]]+)\]$')
     attr_exp = re.compile('^([^=]+)=(.*)$')
@@ -82,7 +82,7 @@ def parse_package(lines):
 
 
 def extract_file(name, path, context, is_tool=False):
-    """Extracts file path and base folder path from a map entry."""
+    '''Extracts file path and base folder path from a map entry.'''
     # name: foo/bar.h
     # path: <SOURCE|BUILD>/somewhere/under/zircon/foo/bar.h
     (full_path, changes) = re.subn('^SOURCE', context.source_base, path)
@@ -99,12 +99,12 @@ def extract_file(name, path, context, is_tool=False):
 
 
 def filter_deps(deps):
-    """Sanitizes a given dependency list."""
+    '''Sanitizes a given dependency list.'''
     return filter(lambda x: x not in SYSROOT_PACKAGES, deps)
 
 
 def generate_build_file(path, template_name, data, context):
-    """Creates a build file based on a template."""
+    '''Creates a build file based on a template.'''
     make_dir(path)
     template = context.templates.get_template(template_name)
     contents = template.render(data=data)
@@ -113,9 +113,9 @@ def generate_build_file(path, template_name, data, context):
 
 
 class SourceLibrary(object):
-    """Represents a library built from sources.
+    '''Represents a library built from sources.
 
-       Convenience storage object to be consumed by Mako templates."""
+       Convenience storage object to be consumed by Mako templates.'''
 
     def __init__(self, name):
         self.name = name
@@ -127,7 +127,7 @@ class SourceLibrary(object):
 
 
 def generate_source_library(package, context):
-    """Generates the build glue for a library whose sources are provided."""
+    '''Generates the build glue for a library whose sources are provided.'''
     lib_name = package['package']['name']
     data = SourceLibrary(lib_name)
 
@@ -156,9 +156,9 @@ def generate_source_library(package, context):
 
 
 class CompiledLibrary(object):
-    """Represents a library already compiled by the Zircon build.
+    '''Represents a library already compiled by the Zircon build.
 
-       Convenience storage object to be consumed by Mako templates."""
+       Convenience storage object to be consumed by Mako templates.'''
 
     def __init__(self, name):
         self.name = name
@@ -171,7 +171,7 @@ class CompiledLibrary(object):
 
 
 def generate_compiled_library(package, context):
-    """Generates the build glue for a prebuilt library."""
+    '''Generates the build glue for a prebuilt library.'''
     lib_name = package['package']['name']
     data = CompiledLibrary(lib_name)
 
@@ -188,7 +188,7 @@ def generate_compiled_library(package, context):
         is_shared = False
         (name, path) = libs.items()[0]
         (file, _) = extract_file(name, path, context)
-        data.prebuilt = "//%s" % file
+        data.prebuilt = '//%s' % file
         data.lib_name = os.path.basename(file)
     elif len(libs) == 2:
         # Shared library.
@@ -215,16 +215,16 @@ def generate_compiled_library(package, context):
 
 
 class Sysroot(object):
-    """Represents the sysroot created by Zircon.
+    '''Represents the sysroot created by Zircon.
 
-       Convenience storage object to be consumed by Mako templates."""
+       Convenience storage object to be consumed by Mako templates.'''
 
     def __init__(self):
         self.files = {}
 
 
 def generate_sysroot(package, context):
-    """Generates the build glue for the sysroot."""
+    '''Generates the build glue for the sysroot.'''
     data = Sysroot()
 
     # Includes.
@@ -243,9 +243,9 @@ def generate_sysroot(package, context):
 
 
 class HostTool(object):
-    """Represents a host tool.
+    '''Represents a host tool.
 
-       Convenience storage object to be consumed by Mako templates."""
+       Convenience storage object to be consumed by Mako templates.'''
 
     def __init__(self, name):
         self.name = name
@@ -253,7 +253,7 @@ class HostTool(object):
 
 
 def generate_host_tool(package, context):
-    """Generates the build glue for a host tool."""
+    '''Generates the build glue for a host tool.'''
     name = package['package']['name']
     data = HostTool(name)
 
@@ -270,7 +270,7 @@ def generate_host_tool(package, context):
 
 
 def generate_board_list(package, context):
-    """Generates a configuration file with the list of target boards."""
+    '''Generates a configuration file with the list of target boards.'''
     build_path = os.path.join(context.out_dir, 'config', 'boards.gni')
     generate_build_file(build_path, 'boards.mako', package, context)
     build_path = os.path.join(context.out_dir, 'config', 'BUILD.gn')
@@ -278,7 +278,7 @@ def generate_board_list(package, context):
 
 
 class GenerationContext(object):
-    """Describes the context in which GN rules should be generated."""
+    '''Describes the context in which GN rules should be generated.'''
 
     def __init__(self, out_dir, source_base, user_build_base, tool_build_base,
                  templates):
@@ -388,5 +388,5 @@ def main():
         generate_board_list(package, context)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

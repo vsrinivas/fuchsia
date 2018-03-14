@@ -18,7 +18,7 @@ def main():
     args = parser.parse_args()
 
     with open(args.out, 'w') as out_file:
-        out_file.write("\n".join(args.boards))
+        out_file.write('\n'.join(args.boards))
 
 
 if __name__ == '__main__':

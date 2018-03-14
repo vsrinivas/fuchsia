@@ -27,5 +27,9 @@ generated targets.
 In order to keep the generated build files up-to-date, that process is repeated
 every time a file changes under `//zircon`.
 
+Note that the generated GN files should only depend on the Zircon source code.
+Invoking the Fuchsia build with different parameters on the same codebase should
+produce identical files.
+
 
 [zircon-public]: https://fuchsia.googlesource.com/zircon/+/master/public/
