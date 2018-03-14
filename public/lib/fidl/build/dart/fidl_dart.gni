@@ -90,6 +90,8 @@ template("fidl_dart") {
     ]
   }
 
+  target_label = get_label_info(":$target_name", "label_no_toolchain")
+
   dart_library(main_target_name) {
     forward_variables_from(invoker, [
       "testonly",
@@ -98,7 +100,7 @@ template("fidl_dart") {
 
     package_root = root_dir
 
-    package_name = library_name
+    package_label = target_label
 
     sources = [
       bindings_file,
