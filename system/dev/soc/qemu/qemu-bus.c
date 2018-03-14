@@ -131,11 +131,20 @@ static zx_status_t qemu_bus_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    pbus_bti_t pci_btis[] = {
+        {
+            .iommu_index = 0,
+            .bti_id = 0,
+        },
+    };
+
     pbus_dev_t pci_dev = {
         .name = "pci",
         .vid = PDEV_VID_GENERIC,
         .pid = PDEV_PID_GENERIC,
         .did = PDEV_DID_KPCI,
+        .btis = pci_btis,
+        .bti_count = countof(pci_btis),
     };
 
     status = pbus_device_add(&bus->pbus, &pci_dev, 0);
