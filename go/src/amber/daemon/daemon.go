@@ -424,7 +424,7 @@ func WriteUpdateToPkgFS(data *GetResult) (string, error) {
 	}
 	defer data.Close()
 
-	dstPath := filepath.Join(DstUpdate, data.Update.Name)
+	dstPath := filepath.Join(DstUpdate, data.Update.Merkle)
 	dst, e := os.Create(dstPath)
 	if e != nil {
 		return "", NewErrProcessPackage("couldn't open file to write update %s", e)
