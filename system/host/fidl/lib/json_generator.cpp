@@ -291,7 +291,9 @@ void JSONGenerator::Generate(const raw::Constant& value) {
         switch (value.kind) {
         case raw::Constant::Kind::Identifier: {
             auto type = static_cast<const raw::IdentifierConstant*>(&value);
-            GenerateObjectMember("identifier", type->identifier);
+            // TODO(TO-701) More complicated type names.
+            flat::Name name(type->identifier->components[0]->location);
+            GenerateObjectMember("identifier", name);
             break;
         }
         case raw::Constant::Kind::Literal: {
@@ -322,8 +324,12 @@ void JSONGenerator::Generate(const flat::Ordinal& value) {
 }
 
 void JSONGenerator::Generate(const flat::Name& value) {
-    std::vector<std::string> name_parts = {NameName(value)};
-    Generate(name_parts);
+    GenerateObject([&]() {
+        GenerateObjectMember("nested-decls", value.nested_decls(), Position::First);
+        GenerateObjectMember("name", value.name());
+        if (value.library())
+            GenerateObjectMember("library", value.library()->name());
+    });
 }
 
 void JSONGenerator::Generate(const flat::Const& value) {

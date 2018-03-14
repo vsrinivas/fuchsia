@@ -264,7 +264,7 @@ std::string NameFlatCType(const flat::Type* type) {
 
         case flat::Type::Kind::Identifier: {
             auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-            std::string name = identifier_type->name.data();
+            std::string name = identifier_type->name.name().data();
             if (identifier_type->nullability == types::Nullability::Nullable) {
                 name.push_back('*');
             }
@@ -281,7 +281,7 @@ std::string NameIdentifier(SourceLocation name) {
 
 std::string NameName(const flat::Name& name) {
     // TODO(TO-701) Handle complex names.
-    return name.data();
+    return name.name().data();
 }
 
 std::string NameInterface(const flat::Interface& interface) {

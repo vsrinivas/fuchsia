@@ -745,10 +745,23 @@
             "maximum": 4294967295
         },
         "compound-identifier": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-                "$ref": "#/definitions/identifier"
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "library": {
+                    "$ref": "#/definitions/identifier"
+                },
+                "nested-decls": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/identifier"
+                    }
+                },
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                }
             }
         },
         "identifier": {

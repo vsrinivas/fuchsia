@@ -60,6 +60,9 @@ private:
 
 using Size = IntConstant<uint32_t>;
 
+struct Decl;
+class Library;
+
 // TODO(TO-701) Handle multipart names.
 struct Name {
     Name()
@@ -71,7 +74,9 @@ struct Name {
     Name(Name&&) = default;
     Name& operator=(Name&&) = default;
 
-    StringView data() const { return name_.data(); }
+    const Library* library() const { return library_; }
+    const std::vector<SourceLocation>& nested_decls() const { return nested_decls_; }
+    SourceLocation name() const { return name_; }
 
     bool operator==(const Name& other) const {
         return name_.data() == other.name_.data();
@@ -85,6 +90,8 @@ struct Name {
     }
 
 private:
+    const Library* library_ = nullptr;
+    std::vector<SourceLocation> nested_decls_;
     SourceLocation name_;
 };
 
@@ -410,6 +417,8 @@ class Library {
 public:
     bool ConsumeFile(std::unique_ptr<raw::File> file);
     bool Resolve();
+
+    StringView name() const { return library_name_.data(); }
 
 private:
     bool ParseSize(std::unique_ptr<raw::Constant> raw_constant, Size* out_size);
