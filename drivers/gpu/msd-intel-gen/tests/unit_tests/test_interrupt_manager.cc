@@ -123,7 +123,8 @@ private:
     std::atomic_uint32_t callback_count_{};
 };
 
-TEST(InterruptManager, Basic)
-{
-    TestInterruptManager().Basic();
-}
+// TODO(MA-429): flaky
+// TEST(InterruptManager, Basic)
+// {
+//     TestInterruptManager().Basic();
+// }
