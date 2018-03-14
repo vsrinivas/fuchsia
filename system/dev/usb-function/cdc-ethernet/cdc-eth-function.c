@@ -293,7 +293,8 @@ static void cdc_intr_complete(usb_request_t* req, void* cookie) {
 
 static zx_status_t cdc_alloc_interrupt_req(usb_cdc_t* cdc, usb_request_t** out_req) {
     usb_request_t* req;
-    zx_status_t status = usb_request_alloc(&req, INTR_MAX_PACKET, cdc->intr_addr);
+    zx_status_t status = usb_function_req_alloc(&cdc->function, &req, INTR_MAX_PACKET,
+                                                cdc->intr_addr);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: usb_request_alloc failed %d\n", __FUNCTION__, status);
         return status;
@@ -609,7 +610,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     // allocate bulk out usb requests
     usb_request_t* req;
     for (int i = 0; i < BULK_TX_COUNT; i++) {
-        status = usb_request_alloc(&req, BULK_REQ_SIZE, cdc->bulk_out_addr);
+        status = usb_function_req_alloc(&cdc->function, &req, BULK_REQ_SIZE, cdc->bulk_out_addr);
         if (status != ZX_OK) {
             goto fail;
         }
@@ -619,7 +620,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     }
     // allocate bulk in usb requests
     for (int i = 0; i < BULK_RX_COUNT; i++) {
-        status = usb_request_alloc(&req, BULK_REQ_SIZE, cdc->bulk_in_addr);
+        status = usb_function_req_alloc(&cdc->function, &req, BULK_REQ_SIZE, cdc->bulk_in_addr);
         if (status != ZX_OK) {
             goto fail;
         }

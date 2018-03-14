@@ -49,6 +49,7 @@ typedef struct {
     zx_status_t (*disable_ep)(void* ctx, uint8_t ep_addr);
     zx_status_t (*ep_set_stall)(void* ctx, uint8_t ep_address);
     zx_status_t (*ep_clear_stall)(void* ctx, uint8_t ep_address);
+    zx_status_t (*get_bti)(void* ctx, zx_handle_t* out_handle);
 } usb_dci_protocol_ops_t;
 
 typedef struct {
@@ -81,6 +82,11 @@ static zx_status_t usb_dci_ep_set_stall(usb_dci_protocol_t* dci, uint8_t ep_addr
 
 static zx_status_t usb_dci_ep_clear_stall(usb_dci_protocol_t* dci, uint8_t ep_address) {
     return dci->ops->ep_clear_stall(dci->ctx, ep_address);
+}
+
+// shares a copy of the DCI driver's BTI handle
+static inline zx_status_t usb_dci_get_bti(usb_dci_protocol_t* dci, zx_handle_t* out_handle) {
+    return dci->ops->get_bti(dci->ctx, out_handle);
 }
 
 __END_CDECLS;

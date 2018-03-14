@@ -15,6 +15,7 @@ __BEGIN_CDECLS;
 
 // callbacks implemented by the function driver
 typedef struct {
+
     // return the descriptor list for the function
     // TODO(voydanoff) - descriptors will likely vary (different max packet sizes, etc)
     // depending on whether we are in low/full, high or super speed mode.
@@ -66,6 +67,12 @@ static inline zx_status_t usb_function_set_interface(usb_function_interface_t* i
 }
 
 typedef struct {
+    zx_status_t (*req_alloc)(void* ctx, usb_request_t** out, uint64_t data_size,
+                             uint8_t ep_address);
+    zx_status_t (*req_alloc_vmo)(void* ctx, usb_request_t** out, zx_handle_t vmo_handle,
+                                 uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
+    zx_status_t (*req_init)(void* ctx, usb_request_t* req, zx_handle_t vmo_handle,
+                            uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
     zx_status_t (*register_func)(void* ctx, usb_function_interface_t* intf);
     zx_status_t (*alloc_interface)(void* ctx, uint8_t* out_intf_num);
     zx_status_t (*alloc_ep)(void* ctx, uint8_t direction, uint8_t* out_address);
@@ -82,6 +89,24 @@ typedef struct {
     usb_function_protocol_ops_t* ops;
     void* ctx;
 } usb_function_protocol_t;
+
+static inline zx_status_t usb_function_req_alloc(usb_function_protocol_t* usb, usb_request_t** out,
+                                                 uint64_t data_size, uint8_t ep_address) {
+    return usb->ops->req_alloc(usb->ctx, out, data_size, ep_address);
+}
+
+static inline zx_status_t usb_function_req_alloc_vmo(usb_function_protocol_t* usb,
+                                                     usb_request_t** out, zx_handle_t vmo_handle,
+                                                     uint64_t vmo_offset, uint64_t length,
+                                                     uint8_t ep_address) {
+    return usb->ops->req_alloc_vmo(usb->ctx, out, vmo_handle, vmo_offset, length, ep_address);
+}
+
+static inline zx_status_t usb_function_req_init(usb_function_protocol_t* usb, usb_request_t* req,
+                                                zx_handle_t vmo_handle, uint64_t vmo_offset,
+                                                uint64_t length, uint8_t ep_address) {
+    return usb->ops->req_init(usb->ctx, req, vmo_handle, vmo_offset, length, ep_address);
+}
 
 // registers the function driver's callback interface
 static inline void usb_function_register(usb_function_protocol_t* func,

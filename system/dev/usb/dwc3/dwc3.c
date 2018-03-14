@@ -273,6 +273,12 @@ static zx_status_t dwc3_clear_stall(void* ctx, uint8_t ep_address) {
     return dwc3_ep_set_stall(dwc, dwc3_ep_num(ep_address), false);
 }
 
+static zx_status_t dwc3_get_bti(void* ctx, zx_handle_t* out_handle) {
+    dwc3_t* dwc = ctx;
+    *out_handle = dwc->bti_handle;
+    return ZX_OK;
+}
+
 usb_dci_protocol_ops_t dwc_dci_protocol = {
     .request_queue = dwc3_request_queue,
     .set_interface = dwc3_set_interface,
@@ -280,6 +286,7 @@ usb_dci_protocol_ops_t dwc_dci_protocol = {
     .disable_ep = dwc3_disable_ep,
     .ep_set_stall = dwc3_set_stall,
     .ep_clear_stall = dwc3_clear_stall,
+    .get_bti = dwc3_get_bti,
 };
 
 static zx_status_t dwc3_get_initial_mode(void* ctx, usb_mode_t* out_mode) {

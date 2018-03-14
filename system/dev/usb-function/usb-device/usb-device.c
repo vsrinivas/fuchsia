@@ -101,6 +101,8 @@ typedef struct usb_device {
     usb_function_t* interface_map[MAX_INTERFACES];
     // map from endpoint index to function
     usb_function_t* endpoint_map[USB_MAX_EPS];
+    // BTI handle shared from DCI layer
+    zx_handle_t bti_handle;
     // strings for USB string descriptors
     char* strings[256];
     // list of usb_function_t
@@ -227,6 +229,33 @@ static zx_status_t usb_device_function_registered(usb_device_t* dev) {
     zx_status_t status = usb_dev_state_changed_locked(dev);
     mtx_unlock(&dev->lock);
     return status;
+}
+
+static zx_status_t usb_func_req_alloc(void* ctx, usb_request_t** out, uint64_t data_size,
+                                     uint8_t ep_address) {
+    usb_function_t* function = ctx;
+    usb_device_t* dev = function->dev;
+
+    return usb_request_alloc_with_bti(out, dev->bti_handle, data_size, ep_address);
+}
+
+static zx_status_t usb_func_req_alloc_vmo(void* ctx, usb_request_t** out, zx_handle_t vmo_handle,
+                                          uint64_t vmo_offset, uint64_t length,
+                                          uint8_t ep_address) {
+    usb_function_t* function = ctx;
+    usb_device_t* dev = function->dev;
+
+    return usb_request_alloc_vmo_with_bti(out, dev->bti_handle, vmo_handle, vmo_offset, length,
+                                          ep_address);
+}
+
+static zx_status_t usb_func_req_init(void* ctx, usb_request_t* req, zx_handle_t vmo_handle,
+                                     uint64_t vmo_offset, uint64_t length, uint8_t ep_address) {
+    usb_function_t* function = ctx;
+    usb_device_t* dev = function->dev;
+
+    return usb_request_init_with_bti(req, dev->bti_handle, vmo_handle, vmo_offset, length,
+                                     ep_address);
 }
 
 static zx_status_t usb_func_register(void* ctx, usb_function_interface_t* interface) {
@@ -376,6 +405,9 @@ static zx_status_t usb_func_ep_clear_stall(void* ctx, uint8_t ep_address) {
 }
 
 usb_function_protocol_ops_t usb_function_proto = {
+    .req_alloc = usb_func_req_alloc,
+    .req_alloc_vmo = usb_func_req_alloc_vmo,
+    .req_init = usb_func_req_init,
     .register_func = usb_func_register,
     .alloc_interface = usb_func_alloc_interface,
     .alloc_ep = usb_func_alloc_ep,
@@ -955,6 +987,12 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    zx_status_t status = usb_dci_get_bti(&dev->usb_dci, &dev->bti_handle);
+    if (status != ZX_OK) {
+        free(dev);
+        return status;
+    }
+
     if (device_get_protocol(parent, ZX_PROTOCOL_USB_MODE_SWITCH, &dev->usb_mode_switch)) {
         free(dev);
         return ZX_ERR_NOT_SUPPORTED;
@@ -963,7 +1001,7 @@ zx_status_t usb_dev_bind(void* ctx, zx_device_t* parent) {
     // Starting USB mode is determined by the platform bus driver.
     // We read initial value and store it in dev->usb_mode, but do not actually
     // enable it until after all of our functions have bound.
-    zx_status_t status = usb_mode_switch_get_initial_mode(&dev->usb_mode_switch, &dev->usb_mode);
+    status = usb_mode_switch_get_initial_mode(&dev->usb_mode_switch, &dev->usb_mode);
     if (status != ZX_OK) {
         free(dev);
         return status;
