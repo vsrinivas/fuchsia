@@ -210,7 +210,6 @@ LINUX_FUNCVU(get_unaligned_be32)
 LINUX_FUNCVU(get_unaligned_le16)
 LINUX_FUNCVU(get_unaligned_le32)
 LINUX_FUNCUU(put_unaligned_le32)
-#define a (a)
 LINUX_FUNCVI(brcmf_dbg_hex_dump)
 LINUX_FUNCVI(trace_brcmf_hexdump)
 LINUX_FUNCVI(trace_brcmf_debug)
@@ -224,7 +223,6 @@ LINUX_FUNCII(schedule_timeout)
 LINUX_FUNCVV(remove_wait_queue)
 LINUX_FUNCVI(wake_up_interruptible)
 LINUX_FUNCIV(kmalloc)
-LINUX_FUNCIV(kmemdump)
 LINUX_FUNCcVV(kmemdup)
 LINUX_FUNCIV(vzalloc)
 LINUX_FUNCIV(kzalloc)
@@ -524,10 +522,6 @@ struct linuxwait {
 
 #define KBUILD_MODNAME "hi world"
 #define THIS_MODULE ((void*)0)
-#define PCI_D3hot 261
-#define PCI_CLASS_NETWORK_OTHER 12
-#define PCI_ANY_ID 1234
-#define PCI_VENDOR_ID_BROADCOM 4623
 #define BCMA_CORE_PCIE2 444
 #define BCMA_CORE_ARM_CR4 445
 #define BCMA_CORE_INTERNAL_MEM 446

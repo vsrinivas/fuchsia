@@ -463,7 +463,7 @@ static void brcmf_pcie_select_core(struct brcmf_pciedev_info* devinfo, uint16_t 
     if (core) {
         bar0_win = core->base;
         pci_write_config_dword(pdev, BRCMF_PCIE_BAR0_WINDOW, bar0_win);
-        if (pci_read_config_dword(pdev, BRCMF_PCIE_BAR0_WINDOW, &bar0_win) == 0) {
+        if (pci_read_config_dword(pdev, BRCMF_PCIE_BAR0_WINDOW, &bar0_win) == ZX_OK) {
             if (bar0_win != core->base) {
                 bar0_win = core->base;
                 pci_write_config_dword(pdev, BRCMF_PCIE_BAR0_WINDOW, bar0_win);
@@ -1753,45 +1753,10 @@ static const struct dev_pm_ops brcmf_pciedrvr_pm = {
 
 #endif /* CONFIG_PM */
 
-#define BRCMF_PCIE_DEVICE(dev_id)                                     \
-    {                                                                 \
-        BRCM_PCIE_VENDOR_ID_BROADCOM, dev_id, PCI_ANY_ID, PCI_ANY_ID, \
-            PCI_CLASS_NETWORK_OTHER << 8, 0xffff00, 0                 \
-    }
-#define BRCMF_PCIE_DEVICE_SUB(dev_id, subvend, subdev)                                       \
-    {                                                                                        \
-        BRCM_PCIE_VENDOR_ID_BROADCOM, dev_id, subvend, subdev, PCI_CLASS_NETWORK_OTHER << 8, \
-            0xffff00, 0                                                                      \
-    }
-
-static const struct pci_device_id brcmf_pcie_devid_table[] = {
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_4350_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_4356_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_43567_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_43570_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_4358_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_4359_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_43602_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_43602_2G_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_43602_5G_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_43602_RAW_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_4365_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_4365_2G_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_4365_5G_DEVICE_ID),
-    BRCMF_PCIE_DEVICE_SUB(0x4365, BRCM_PCIE_VENDOR_ID_BROADCOM, 0x4365),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_4366_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_4366_2G_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_4366_5G_DEVICE_ID),
-    BRCMF_PCIE_DEVICE(BRCM_PCIE_4371_DEVICE_ID),
-    {/* end: all zeroes */}
-};
-
-MODULE_DEVICE_TABLE(pci, brcmf_pcie_devid_table);
-
 static struct pci_driver brcmf_pciedrvr = {
     .node = {},
     .name = KBUILD_MODNAME,
-    .id_table = brcmf_pcie_devid_table,
+    //    .id_table = brcmf_pcie_devid_table,
     .probe = brcmf_pcie_probe,
     .remove = brcmf_pcie_remove,
 #ifdef CONFIG_PM
