@@ -46,11 +46,27 @@ func ToSnakeCase(name string) string {
 	return strings.Join(parts, "_")
 }
 
-// Convert a name to CamelCase style
-func ToCamelCase(name string) string {
+// Convert a name to UpperCamelCase style
+func ToUpperCamelCase(name string) string {
 	parts := nameParts(name)
 	for i := range parts {
 		parts[i] = strings.Title(strings.ToLower(parts[i]))
+		if parts[i] == "" {
+			parts[i] = "_"
+		}
+	}
+	return strings.Join(parts, "")
+}
+
+// Convert a name to lowerCamelCase style
+func ToLowerCamelCase(name string) string {
+	parts := nameParts(name)
+	for i := range parts {
+		if i == 0 {
+			parts[i] = strings.ToLower(parts[i])
+		} else {
+			parts[i] = strings.Title(strings.ToLower(parts[i]))
+		}
 		if parts[i] == "" {
 			parts[i] = "_"
 		}

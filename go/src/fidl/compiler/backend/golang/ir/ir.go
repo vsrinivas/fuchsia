@@ -226,7 +226,7 @@ var handleTypes = map[types.HandleSubtype]string{
 }
 
 func exportIdentifier(name types.Identifier) types.Identifier {
-	return types.Identifier(common.ToCamelCase(string(name)))
+	return types.Identifier(common.ToUpperCamelCase(string(name)))
 }
 
 func isReservedWord(str string) bool {

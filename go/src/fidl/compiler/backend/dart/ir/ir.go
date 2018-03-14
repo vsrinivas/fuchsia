@@ -5,6 +5,7 @@
 package ir
 
 import (
+	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/types"
 	"fmt"
 	"log"
@@ -300,10 +301,18 @@ type compiler struct {
 	decls *types.DeclMap
 }
 
+func (c *compiler) compileUpperCamelIdentifier(val types.Identifier) string {
+	return common.ToUpperCamelCase(changeIfReserved(val))
+}
+
+func (c *compiler) compileLowerCamelIdentifier(val types.Identifier) string {
+	return common.ToLowerCamelCase(changeIfReserved(val))
+}
+
 func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
 	for _, v := range val {
-		strs = append(strs, changeIfReserved(v))
+		strs = append(strs, c.compileUpperCamelIdentifier(v))
 	}
 	return strings.Join(strs, ".")
 }
@@ -331,7 +340,7 @@ func (c *compiler) compileLiteral(val types.Literal) string {
 func (c *compiler) compileConstant(val types.Constant) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
-		return c.compileCompoundIdentifier(val.Identifier)
+		return c.compileLowerCamelIdentifier(val.Identifier[0])
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	default:
@@ -439,7 +448,7 @@ func (c *compiler) compileType(val types.Type) Type {
 func (c *compiler) compileConst(val types.Const) Const {
 	r := Const{
 		c.compileType(val.Type),
-		changeIfReserved(val.Name[0]),
+		c.compileLowerCamelIdentifier(val.Name[0]),
 		c.compileConstant(val.Value),
 	}
 	if r.Type.declType == types.EnumDeclType {
@@ -449,7 +458,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 }
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
-	n := changeIfReserved(val.Name[0])
+	n := c.compileUpperCamelIdentifier(val.Name[0])
 	e := Enum{
 		n,
 		[]EnumMember{},
@@ -458,7 +467,7 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	}
 	for _, v := range val.Members {
 		e.Members = append(e.Members, EnumMember{
-			changeIfReserved(v.Name),
+			c.compileLowerCamelIdentifier(v.Name),
 			c.compileConstant(v.Value),
 		})
 	}
@@ -474,7 +483,7 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 		offsetStr := fmt.Sprintf("offset: %v", v.Offset)
 		p := Parameter{
 			t,
-			changeIfReserved(v.Name),
+			c.compileLowerCamelIdentifier(v.Name),
 			v.Offset,
 			fmt.Sprintf("const $fidl.MemberType<%s>(%s, %s)", t.Decl, typeStr, offsetStr),
 		}
@@ -486,10 +495,10 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
-		changeIfReserved(val.Name[0]),
+		c.compileUpperCamelIdentifier(val.Name[0]),
 		val.GetAttribute("ServiceName"),
-		changeIfReserved(val.Name[0] + "Proxy"),
-		changeIfReserved(val.Name[0] + "Binding"),
+		c.compileUpperCamelIdentifier(val.Name[0] + "Proxy"),
+		c.compileUpperCamelIdentifier(val.Name[0] + "Binding"),
 		[]Method{},
 	}
 
@@ -498,7 +507,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	}
 
 	for _, v := range val.Methods {
-		name := changeIfReserved(v.Name)
+		name := c.compileLowerCamelIdentifier(v.Name)
 		request := c.compileParameterArray(v.Request)
 		response := c.compileParameterArray(v.Response)
 		m := Method{
@@ -531,7 +540,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	offsetStr := fmt.Sprintf("offset: %v", val.Offset)
 	return StructMember{
 		t,
-		changeIfReserved(val.Name),
+		c.compileLowerCamelIdentifier(val.Name),
 		defaultValue,
 		val.Offset,
 		fmt.Sprintf("const $fidl.MemberType<%s>(%s, %s)", t.Decl, typeStr, offsetStr),
@@ -540,7 +549,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
-		changeIfReserved(val.Name[0]),
+		c.compileUpperCamelIdentifier(val.Name[0]),
 		[]StructMember{},
 		typeSymbolForIdentifier(val.Name[0]),
 		"",
@@ -564,7 +573,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	offsetStr := fmt.Sprintf("offset: %v", val.Offset)
 	return UnionMember{
 		t,
-		changeIfReserved(val.Name),
+		c.compileLowerCamelIdentifier(val.Name),
 		val.Offset,
 		fmt.Sprintf("const $fidl.MemberType<%s>(%s, %s)", t.Decl, typeStr, offsetStr),
 	}
@@ -572,8 +581,8 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
-		changeIfReserved(val.Name[0]),
-		changeIfReserved(val.Name[0] + "Tag"),
+		c.compileUpperCamelIdentifier(val.Name[0]),
+		c.compileUpperCamelIdentifier(val.Name[0] + "Tag"),
 		[]UnionMember{},
 		typeSymbolForIdentifier(val.Name[0]),
 		"",

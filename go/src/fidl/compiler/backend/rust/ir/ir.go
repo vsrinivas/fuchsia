@@ -213,7 +213,7 @@ func compileCompoundIdentifier(val types.CompoundIdentifier) string {
 		str := changeIfReserved(v)
 		if i == (len(val) - 1) {
 			// The last component should be camel-cased
-			str = common.ToCamelCase(str)
+			str = common.ToUpperCamelCase(str)
 		}
 		strs = append(strs, str)
 	}
@@ -221,7 +221,7 @@ func compileCompoundIdentifier(val types.CompoundIdentifier) string {
 }
 
 func compileCamelIdentifier(val types.Identifier) string {
-	return common.ToCamelCase(changeIfReserved(val))
+	return common.ToUpperCamelCase(changeIfReserved(val))
 }
 
 func compileSnakeIdentifier(val types.Identifier) string {

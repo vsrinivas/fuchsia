@@ -20,10 +20,8 @@ import 'package:zircon/zircon.dart';
 // ignore_for_file: always_specify_types
 // ignore_for_file: avoid_positional_boolean_parameters
 // ignore_for_file: avoid_returning_null
-// ignore_for_file: camel_case_types
 // ignore_for_file: cascade_invocations
 // ignore_for_file: constant_identifier_names
-// ignore_for_file: non_constant_identifier_names
 // ignore_for_file: one_member_abstracts
 // ignore_for_file: prefer_constructors_over_static_methods
 // ignore_for_file: prefer_single_quotes
