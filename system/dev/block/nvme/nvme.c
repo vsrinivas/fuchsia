@@ -56,10 +56,10 @@ typedef struct {
 #define UTXN_COUNT 63
 
 // There's no system constant for this.  Ensure it matches reality.
-#define PAGE_SHIFT 12
-static_assert(PAGE_SIZE == (1 << PAGE_SHIFT), "");
+#define PAGE_SHIFT (12ULL)
+static_assert(PAGE_SIZE == (1ULL << PAGE_SHIFT), "");
 
-#define PAGE_MASK (PAGE_SIZE - 1)
+#define PAGE_MASK (PAGE_SIZE - 1ULL)
 
 // Limit maximum transfer size to 1MB which fits comfortably
 // within our single scatter gather page per utxn setup
@@ -79,7 +79,9 @@ static_assert(PAGE_SIZE == (1 << PAGE_SHIFT), "");
 
 typedef struct {
     void* io;
+    zx_handle_t ioh;
     zx_handle_t irqh;
+    zx_handle_t bti;
     uint32_t flags;
     mtx_t lock;
 
@@ -138,7 +140,6 @@ typedef struct {
     zx_device_t* zxdev;
 
     size_t iosz;
-    zx_handle_t ioh;
 
     // source of physical pages for queues and admin commands
     io_buffer_t iob;
@@ -337,6 +338,7 @@ static inline void txn_complete(nvme_txn_t* txn, zx_status_t status) {
 static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
     zx_handle_t vmo = txn->op.rw.vmo;
     nvme_utxn_t* utxn;
+    zx_paddr_t* pages;
     zx_status_t r;
 
     for (;;) {
@@ -351,24 +353,29 @@ static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
             blocks = nvme->max_xfer;
         }
 
+        // Total transfer size in bytes
         size_t bytes = ((size_t) blocks) * ((size_t) nvme->info.block_size);
 
-        if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT,
-                                 txn->op.rw.offset_vmo, bytes, NULL, 0)) != ZX_OK) {
-            zxlogf(ERROR, "nvme: could not commit pages\n");
+        // Page offset of first page of transfer
+        size_t pageoffset = txn->op.rw.offset_vmo & (~PAGE_MASK);
+
+        // Byte offset into first page of transfer
+        size_t byteoffset = txn->op.rw.offset_vmo & PAGE_MASK;
+
+        // Total pages mapped / touched
+        size_t pagecount = (byteoffset + bytes + PAGE_MASK) >> PAGE_SHIFT;
+
+        // read disk (OP_READ) -> memory (PERM_WRITE) or
+        // write memory (PERM_READ) -> disk (OP_WRITE)
+        uint32_t opt = (txn->opcode == NVME_OP_READ) ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
+
+        pages = utxn->virt;
+
+        if ((r = zx_bti_pin(nvme->bti, opt, vmo, pageoffset, pagecount << PAGE_SHIFT,
+                            pages, pagecount)) != ZX_OK) {
+            zxlogf(ERROR, "nvme: could not pin pages: %d\n", r);
             break;
         }
-
-        zx_paddr_t* pages = utxn->virt;
-        if ((r = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP,
-                                 txn->op.rw.offset_vmo, bytes, pages, PAGE_SIZE)) != ZX_OK) {
-            zxlogf(ERROR, "nvme: could not lookup pages\n");
-            break;
-        }
-
-        // Take the starting byte into the initial page plus total bytes
-        // transferred, convert to page count (rounded up)
-        size_t pagecount = ((txn->op.rw.offset_vmo & PAGE_MASK) + bytes + PAGE_MASK) / PAGE_SIZE;
 
         nvme_cmd_t cmd;
         memset(&cmd, 0, sizeof(cmd));
@@ -380,7 +387,7 @@ static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
         // The first is always the pointer to the first page where data is.
         // The second is the second page if pagecount is 2.
         // The second is the address of an array of page 2..n if pagecount > 2
-        cmd.dptr.prp[0] = pages[0] | (txn->op.rw.offset_vmo & PAGE_MASK);
+        cmd.dptr.prp[0] = pages[0] | byteoffset;
         if (pagecount == 2) {
             cmd.dptr.prp[1] = pages[1];
         } else if (pagecount > 2) {
@@ -418,6 +425,9 @@ static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
     }
 
     // failure
+    if ((r = zx_bti_unpin(nvme->bti, pages[0])) != ZX_OK) {
+        zxlogf(ERROR, "nvme: cannot unpin io buffer: %d\n", r);
+    }
     utxn_put(nvme, utxn);
 
     mtx_lock(&nvme->lock);
@@ -491,6 +501,11 @@ static void io_process_cpls(nvme_device_t* nvme) {
             txn->op.rw.length = 0;
         } else {
             zxlogf(SPEW, "nvme: utxn #%u txn %p OKAY\n", cpl.cmd_id, txn);
+        }
+
+        zx_status_t r;
+        if ((r = zx_bti_unpin(nvme->bti, ((zx_paddr_t*)utxn->virt)[0])) != ZX_OK) {
+            zxlogf(ERROR, "nvme: cannot unpin io buffer: %d\n", r);
         }
 
         // release the microtransaction
@@ -665,6 +680,7 @@ static void nvme_release(void* ctx) {
     nvme->flags |= FLAG_SHUTDOWN;
     if (nvme->ioh != ZX_HANDLE_INVALID) {
         pci_enable_bus_master(&nvme->pci, false);
+        zx_handle_close(nvme->bti);
         zx_handle_close(nvme->ioh);
         // TODO: risks a handle use-after-close, will be resolved by IRQ api
         // changes coming soon
@@ -780,7 +796,8 @@ static zx_status_t nvme_init(nvme_device_t* nvme) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     // allocate pages for various queues and the utxn scatter lists
-    if (io_buffer_init(&nvme->iob, PAGE_SIZE * IO_PAGE_COUNT, IO_BUFFER_RW) ||
+    // TODO: these should all be RO to hardware apart from the scratch io page(s)
+    if (io_buffer_init_with_bti(&nvme->iob, nvme->bti, PAGE_SIZE * IO_PAGE_COUNT, IO_BUFFER_RW) ||
         io_buffer_physmap(&nvme->iob)) {
         zxlogf(ERROR, "nvme: could not allocate io buffers\n");
         return ZX_ERR_NO_MEMORY;
@@ -1100,6 +1117,10 @@ irq_configured:
     }
     if (pci_enable_bus_master(&nvme->pci, true)) {
         zxlogf(ERROR, "nvme: cannot enable bus mastering\n");
+        goto fail;
+    }
+    if (pci_get_bti(&nvme->pci, 0, &nvme->bti) != ZX_OK) {
+        zxlogf(ERROR, "nvme: cannot obtain bti handle\n");
         goto fail;
     }
 
