@@ -12,7 +12,6 @@
 #include "lib/escher/hmd/pose_buffer.h"
 #include "garnet/public/lib/escher/hmd/pose_buffer_latching_shader.h"
 
-#include <zx/time.h>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace escher {
@@ -95,8 +94,7 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
   // Initialize Vulkan.
   escher::VulkanInstance::Params instance_params(
       {{},
-       {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME,
-        VK_KHR_MAGMA_SURFACE_EXTENSION_NAME},
+       {VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
        true});
 
 // Only enable Vulkan validation layers when in debug mode.
@@ -112,7 +110,7 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
   escher::FramePtr frame = escher->NewFrame("PoseBufferLatchingTest");
 
   uint32_t num_entries = 8;
-  uint64_t base_time = zx::clock::get(ZX_CLOCK_MONOTONIC).get();
+  uint64_t base_time = 42L;  // Choose an arbitrary, non-zero time.
   uint64_t time_interval = 1024 * 1024;  // 1 ms
 
   vk::DeviceSize pose_buffer_size = num_entries * sizeof(escher::hmd::Pose);
