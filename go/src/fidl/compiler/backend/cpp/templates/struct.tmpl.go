@@ -12,14 +12,6 @@ class {{ .Name }};
 {{- define "StructDeclaration" }}
 class {{ .Name }}  {
  public:
-  {{ .Name }}();
-  {{ .Name }}({{ .Name }}&&);
-  {{ .Name }}(const {{ .Name }}&) = delete;
-  ~{{ .Name }}();
-
-  {{ .Name }}& operator=({{ .Name }}&&);
-  {{ .Name }}& operator=(const {{ .Name }}&) = delete;
-
   {{- range .Members }}
   {{ .Type.Decl }} {{ .Name }}{{ if .DefaultValue }} = {{ .DefaultValue }}{{ end }};
   {{- end }}
@@ -31,14 +23,6 @@ class {{ .Name }}  {
 {{- end }}
 
 {{- define "StructDefinition" }}
-{{ .Name }}::{{ .Name }}() = default;
-
-{{ .Name }}::{{ .Name }}({{ .Name }}&&) = default;
-
-{{ .Name }}::~{{ .Name }}() = default;
-
-{{ .Name }}& {{ .Name }}::operator=({{ .Name }}&&) = default;
-
 void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
   {{- range .Members }}
   ::fidl::Encode(encoder, &{{ .Name }}, offset + {{ .Offset }});

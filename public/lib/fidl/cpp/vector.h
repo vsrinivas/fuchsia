@@ -27,6 +27,8 @@ template <typename T>
 class VectorPtr {
  public:
   VectorPtr() : is_null_(true) {}
+  ~VectorPtr() = default;
+
   explicit VectorPtr(size_t size)
       : vec_(std::vector<T>(size)), is_null_(false) {}
   explicit VectorPtr(std::vector<T> vec)
@@ -35,14 +37,8 @@ class VectorPtr {
   VectorPtr(const VectorPtr&) = delete;
   VectorPtr& operator=(const VectorPtr&) = delete;
 
-  VectorPtr(VectorPtr&& other)
-      : vec_(std::move(other.vec_)), is_null_(other.is_null_) {}
-
-  VectorPtr& operator=(VectorPtr&& other) {
-    vec_ = std::move(other.vec_);
-    is_null_ = other.is_null_;
-    return *this;
-  }
+  VectorPtr(VectorPtr&& other) = default;
+  VectorPtr& operator=(VectorPtr&& other) = default;
 
   // Accesses the underlying std::vector object.
   //
