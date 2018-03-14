@@ -70,7 +70,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
       // TODO(abarth): These permissions should depend on the envionment
       // in some way so that a shell running at a user-level scope doesn't
       // have access to all the device drivers and such.
-      PushDirectoryFromPath("/blobstore");
+      PushDirectoryFromPath("/blob");
       PushDirectoryFromPath("/boot");
       PushDirectoryFromPath("/data");
       PushDirectoryFromPath("/dev");
