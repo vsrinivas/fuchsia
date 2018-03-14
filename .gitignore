@@ -32,3 +32,6 @@ compile_commands.json
 /public/lib/
 /public/sysroot/
 /public/tool/
+.idea/
+CMakeLists.txt
+cmake-build-debug/
