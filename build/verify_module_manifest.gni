@@ -1,0 +1,49 @@
+# Copyright 2018 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+module_manifest_schema =
+    "//peridot/bin/package_manager/metadata_schemas/module.json"
+
+# This template generates a target that will verify the supplied module
+# manifest.
+#
+# Parameters
+#
+#   original_target_name (required)
+#     This is the original parent-level target name for the package that calls
+#     this into template. This name is used for printing out a stamp file.
+#
+#   module_manifest (required)
+#     Path to the module manifest that needs to be verified.
+template("verify_module_manifest") {
+  assert(defined(invoker.original_target_name),
+         "Must specify original_target_name.")
+  assert(defined(invoker.module_manifest),
+         "Must specify path to module manifest.")
+
+  compiled_action(target_name) {
+    tool = "//build/tools/json_validator"
+
+    stamp_file = "$target_gen_dir/${invoker.original_target_name}.verified"
+    module_manifest_schema =
+        "//peridot/bin/package_manager/metadata_schemas/module.json"
+
+    inputs = [
+      invoker.module_manifest,
+      module_manifest_schema,
+    ]
+
+    outputs = [
+      stamp_file,
+    ]
+
+    args = [
+      rebase_path(module_manifest_schema),
+      rebase_path(invoker.module_manifest),
+      rebase_path(stamp_file),
+    ]
+  }
+}

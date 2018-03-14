@@ -26,6 +26,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/package.gni")
+import("//peridot/build/verify_module_manifest.gni")
 
 # NOTE: Using the package rule built below, the fully resolved path will be
 # /system/data/module_manifest_repository
@@ -37,45 +38,28 @@ template("module_manifest_package") {
 
   resources_entries = []
   verification_targets = []
-  foreach(metadata_file, invoker.sources) {
+  foreach(module_manifest, invoker.sources) {
     # TODO(thatguy): Add verb semantic validation of the manifest file.
     # TODO(thatguy): Ensure that the binary(s) referenced by the manifests
     # appear on the bootfs in the correct place (if possible).
 
     # Verifies that the manifest is valid.
-    file_part = get_path_info(metadata_file, "file")
-    file_abspath = get_path_info(metadata_file, "abspath")
-    verification_target_name = "${target_name}_verify_schema_${file_abspath}"
-    verification_targets += [ ":$verification_target_name" ]
-    compiled_action(verification_target_name) {
-      tool = "//build/tools/json_validator"
-
-      stamp_file = "$target_gen_dir/$verification_target_name.verified"
-      schema_file = "//peridot/bin/package_manager/metadata_schemas/module.json"
-
-      inputs = [
-        metadata_file,
-        schema_file,
-      ]
-
-      outputs = [
-        stamp_file,
-      ]
-
-      args = [
-        rebase_path(schema_file),
-        rebase_path(metadata_file),
-        rebase_path(stamp_file),
-      ]
+    manifest_abspath = get_path_info(module_manifest, "abspath")
+    verification_target_name = "${target_name}_verify_schema_${manifest_abspath}"
+    verify_module_manifest(verification_target_name) {
+      original_target_name = target_name
+      module_manifest = module_manifest
     }
+    verification_targets += [ ":$verification_target_name" ]
 
     package_name = target_name
     if (defined(invoker.package_name)) {
       package_name = invoker.package_name
     }
 
+    file_part = get_path_info(module_manifest, "file")
     resources_entries += [ {
-      path = rebase_path(metadata_file)
+      path = rebase_path(module_manifest)
       dest = _target_directory + "/" + package_name + "_" + file_part
     } ]
   }
