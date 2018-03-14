@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -42,7 +43,7 @@ const (
 )
 
 const x64BuildDir = "out/release-x64"
-const armBuildDir = "out/release-arm64/"
+const armBuildDir = "out/release-arm64"
 
 type component struct {
 	flag      *bool  // Flag controlling whether this component should be included
@@ -89,9 +90,9 @@ func init() {
 		hostOs = "mac"
 	}
 
-	zxBuildDir := "out/build-zircon/"
-	x64ZxBuildDir := zxBuildDir + "build-x64/"
-	armZxBuildDir := zxBuildDir + "build-arm64/"
+	zxBuildDir := "out/build-zircon"
+	x64ZxBuildDir := path.Join(zxBuildDir, "build-x64")
+	armZxBuildDir := path.Join(zxBuildDir, "build-arm64")
 	x64BuildBootfsDir := "out/release-x64-bootfs/"
 	armBuildBootfsDir := "out/release-arm64-bootfs/"
 	qemuDir := fmt.Sprintf("buildtools/%s-%s/qemu/", hostOs, hostCpu)
@@ -99,12 +100,12 @@ func init() {
 	dirs := []dir{
 		{
 			sysroot,
-			x64BuildDir + "sdks/zircon_sysroot/sysroot/",
+			path.Join(x64BuildDir, "sdks/zircon_sysroot/sysroot/"),
 			"sysroot/x86_64-fuchsia/",
 		},
 		{
 			sysroot,
-			armBuildDir + "sdks/zircon_sysroot/sysroot/",
+			path.Join(armBuildDir, "sdks/zircon_sysroot/sysroot/"),
 			"sysroot/aarch64-fuchsia",
 		},
 		{
@@ -119,12 +120,12 @@ func init() {
 		},
 		{
 			tools,
-			x64BuildDir + "host_x64/far",
+			path.Join(x64BuildDir, "host_x64/far"),
 			"tools/far",
 		},
 		{
 			tools,
-			x64BuildDir + "host_x64/pm",
+			path.Join(x64BuildDir, "host_x64/pm"),
 			"tools/pm",
 		},
 		{
@@ -168,12 +169,12 @@ func init() {
 		},
 		{
 			kernelImg,
-			armBuildDir + "bootdata-blob-qemu.bin",
+			path.Join(armBuildDir, "bootdata-blob-qemu.bin"),
 			"target/aarch64/bootdata-blob.bin",
 		},
 		{
 			kernelImg,
-			armBuildDir + "images/fvm.blk.qcow2",
+			path.Join(armBuildDir, "images/fvm.blk.qcow2"),
 			"target/aarch64/fvm.blk.qcow2",
 		},
 
@@ -184,39 +185,39 @@ func init() {
 		},
 		{
 			kernelImg,
-			x64BuildDir + "bootdata-blob-pc.bin",
+			path.Join(x64BuildDir, "bootdata-blob-pc.bin"),
 			"target/x86_64/bootdata-blob.bin",
 		},
 		{
 			kernelImg,
-			x64BuildDir + "images/local-pc.esp.blk",
+			path.Join(x64BuildDir, "images/local-pc.esp.blk"),
 			"target/x86_64/local.esp.blk",
 		},
 		{
 			kernelImg,
-			x64BuildDir + "images/zircon-pc.vboot",
+			path.Join(x64BuildDir, "images/zircon-pc.vboot"),
 			"target/x86_64/zircon.vboot",
 		},
 		{
 			kernelImg,
-			x64BuildDir + "images/fvm.blk.qcow2",
+			path.Join(x64BuildDir, "images/fvm.blk.qcow2"),
 			"target/x86_64/fvm.blk.qcow2",
 		},
 		{
 			kernelImg,
-			x64BuildDir + "images/fvm.sparse.blk",
+			path.Join(x64BuildDir, "images/fvm.sparse.blk"),
 			"target/x86_64/fvm.sparse.blk",
 		},
 
 		// TODO(marshallk): Remove this when bootfs is deprecated.
 		{
 			bootdata,
-			x64BuildBootfsDir + "user.bootfs",
+			path.Join(x64BuildBootfsDir, "user.bootfs"),
 			"target/x86_64/bootdata.bin",
 		},
 		{
 			bootdata,
-			armBuildBootfsDir + "user.bootfs",
+			path.Join(armBuildBootfsDir, "user.bootfs"),
 			"target/aarch64/bootdata.bin",
 		},
 	}
@@ -252,14 +253,14 @@ func init() {
 		},
 	}
 	for _, c := range clientHeaders {
-		files = append(files, file{c.flag, c.src, "sysroot/x86_64-fuchsia/include/" + c.dst})
-		files = append(files, file{c.flag, c.src, "sysroot/aarch64-fuchsia/include/" + c.dst})
+		files = append(files, file{c.flag, c.src, path.Join("sysroot/x86_64-fuchsia/include", c.dst)})
+		files = append(files, file{c.flag, c.src, path.Join("sysroot/aarch64-fuchsia/include", c.dst)})
 	}
 	for _, c := range clientLibs {
-		files = append(files, file{c.flag, x64BuildDir + "x64-shared/" + c.name, "sysroot/x86_64-fuchsia/lib/" + c.name})
-		files = append(files, file{c.flag, x64BuildDir + "x64-shared/lib.unstripped/" + c.name, "sysroot/x86_64-fuchsia/debug-info/" + c.name})
-		files = append(files, file{c.flag, armBuildDir + "arm64-shared/" + c.name, "sysroot/aarch64-fuchsia/lib/" + c.name})
-		files = append(files, file{c.flag, armBuildDir + "arm64-shared/lib.unstripped/" + c.name, "sysroot/aarch64-fuchsia/debug-info/" + c.name})
+		files = append(files, file{c.flag, path.Join(x64BuildDir, "x64-shared", c.name), path.Join("sysroot/x86_64-fuchsia/lib", c.name)})
+		files = append(files, file{c.flag, path.Join(x64BuildDir, "x64-shared/lib.unstripped", c.name), path.Join("sysroot/x86_64-fuchsia/debug-info", c.name)})
+		files = append(files, file{c.flag, path.Join(armBuildDir, "arm64-shared", c.name), path.Join("sysroot/aarch64-fuchsia/lib", c.name)})
+		files = append(files, file{c.flag, path.Join(armBuildDir, "arm64-shared/lib.unstripped", c.name), path.Join("sysroot/aarch64-fuchsia/debug-info", c.name)})
 	}
 	for _, d := range dirs {
 		components = append(components, component{d.flag, d.src, d.dst, dirType, nil})
