@@ -358,8 +358,26 @@ static zx_status_t sdhci_build_dma_desc(sdhci_device_t* dev, sdmmc_req_t* req) {
     block_op_t* bop = &req->txn->bop;
     uint64_t pagecount = ((bop->rw.offset_vmo & PAGE_MASK) + bop->rw.length + PAGE_MASK) /
                          PAGE_SIZE;
+    if (pagecount > SDMMC_PAGES_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // pin the vmo
+    zx_paddr_t phys[SDMMC_PAGES_COUNT];
+    // offset_vmo is converted to bytes by the sdmmc layer
+    uint32_t options = bop->command == BLOCK_OP_READ ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
+    zx_status_t st = zx_bti_pin(dev->bti_handle, options, bop->rw.vmo,
+                                bop->rw.offset_vmo & ~PAGE_MASK,
+                                pagecount * PAGE_SIZE, phys, pagecount);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "sdhci: error %d bti_pin\n", st);
+        return st;
+    }
+    // cache this for zx_bti_unpin() later
+    req->phys = phys[0];
+
     phys_iter_buffer_t buf = {
-        .phys = req->phys,
+        .phys = phys,
         .phys_count = pagecount,
         .length = bop->rw.length,
         .vmo_offset = bop->rw.offset_vmo,
@@ -487,6 +505,18 @@ static zx_status_t sdhci_start_req_locked(sdhci_device_t* dev, sdmmc_req_t* req)
     dev->data_done = false;
     return ZX_OK;
 err:
+    return st;
+}
+
+static zx_status_t sdhci_finish_req(sdhci_device_t* dev, sdmmc_req_t* req) {
+    zx_status_t st = ZX_OK;
+    if (req->use_dma && req->phys) {
+        st = zx_bti_unpin(dev->bti_handle, req->phys);
+        if (st != ZX_OK) {
+            zxlogf(ERROR, "sdhci: error %d in bti_unpin\n", st);
+        }
+        req->phys = 0;
+    }
     return st;
 }
 
@@ -724,15 +754,22 @@ static zx_status_t sdhci_request(void* ctx, sdmmc_req_t* req) {
     }
 
     st = sdhci_start_req_locked(dev, req);
+    if (st != ZX_OK) {
+        goto unlock_out;
+    }
 
     mtx_unlock(&dev->mtx);
 
     completion_wait(&dev->req_completion, ZX_TIME_INFINITE);
+
+    sdhci_finish_req(dev, req);
+
     completion_reset(&dev->req_completion);
 
     return req->status;
 
 unlock_out:
+    sdhci_finish_req(dev, req);
     mtx_unlock(&dev->mtx);
     return st;
 }
@@ -800,8 +837,8 @@ static void sdhci_unbind(void* ctx) {
 
 static void sdhci_release(void* ctx) {
     sdhci_device_t* dev = ctx;
-    zx_handle_close(irq_handle);
-    zx_handle_close(bti_handle);
+    zx_handle_close(dev->irq_handle);
+    zx_handle_close(dev->bti_handle);
     free(dev);
 }
 
