@@ -40,8 +40,6 @@ template("rust_artifact") {
     source_dir = invoker.source_dir
   }
 
-  target_label = get_label_info(":$target_name", "label_no_toolchain")
-
   assert(
       current_os == "mac" || current_os == "linux" || current_os == "fuchsia")
   if (current_os == "mac") {
@@ -72,12 +70,12 @@ template("rust_artifact") {
 
   if (type == "bin") {
     output_file = "$specific_out_dir/$name"
-    output_depfile = "$output_file.d"
+    output_depfile = "$base_out_dir/$name.d"
     build_target_name = "${target_name}_build"
   } else if (type == "lib") {
     output_base = "$specific_out_dir/lib$name"
     output_file = "$output_base.rlib"
-    output_depfile = "$output_base.d"
+    output_depfile = "$base_out_dir/lib${name}.d"
     build_target_name = "${target_name}_lib"
     group_deps += [ ":$build_target_name" ]
   }
@@ -153,12 +151,17 @@ template("rust_artifact") {
     group_deps += [ ":${main_target_name}_bin" ]
   }
 
+  test_binaries = []
+
   if ((defined(invoker.with_unit_tests) && invoker.with_unit_tests) ||
       (defined(invoker.with_tests) && invoker.with_tests)) {
+
+    test_output = "$base_out_dir/$name-$type-unit-test"
+    test_binaries += [ test_output ]
+
     copy("${target_name}_unit_test") {
-      base_out_dir = "$root_build_dir/rust_targets"
       sources = [
-        "$base_out_dir/$name-$type-unit-test",
+        test_output,
       ]
 
       outputs = [
@@ -175,10 +178,13 @@ template("rust_artifact") {
 
   if (defined(invoker.integration_tests)) {
     foreach(test_name, invoker.integration_tests) {
+
+      test_output = "$base_out_dir/$name-$test_name-$type-integration-test"
+      test_binaries += [ test_output ]
+
       copy("${target_name}_${test_name}_integration_test") {
-        base_out_dir = "$root_build_dir/rust_targets"
         sources = [
-          "$base_out_dir/$name-$test_name-$type-integration-test",
+          test_output,
         ]
 
         outputs = [
@@ -197,10 +203,9 @@ template("rust_artifact") {
   action(build_target_name) {
     script = "//build/rust/build_target.py"
 
-    depfile = output_depfile
-
-    base_out_dir = "$root_build_dir/rust_targets"
     base_gen_dir = "$target_gen_dir/$main_target_name.rust"
+
+    depfile = output_depfile
 
     inputs = [
       "${source_dir}/Cargo.toml",
@@ -210,16 +215,11 @@ template("rust_artifact") {
 
     outputs = [
       output_file,
-    ]
+    ] + test_binaries
 
-    deps = []
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
-    }
-    if (defined(invoker.non_rust_deps)) {
-      # TODO(raggi): invoker.non_rust_deps should just be deps now, and then
-      # use forward_variables_from instead.
-      deps += invoker.non_rust_deps
+    forward_variables_from(invoker, ["deps"])
+    if (!defined(deps)) {
+      deps = []
     }
 
     args = [
@@ -243,12 +243,8 @@ template("rust_artifact") {
              rebase_path("$rustc_prefix/rustc"),
              "--target-triple",
              target_triple,
-             "--label",
-             target_label,
              "--cmake-dir",
              rebase_path("//buildtools/cmake/bin"),
-             "--vendor-directory",
-             rebase_path("//third_party/rust-crates/vendor"),
            ]
 
     args += [
@@ -258,18 +254,9 @@ template("rust_artifact") {
     ]
 
     if ((defined(invoker.with_unit_tests) && invoker.with_unit_tests) ||
-        (defined(invoker.with_tests) && invoker.with_tests)) {
+        (defined(invoker.with_tests) && invoker.with_tests) ||
+        (defined(invoker.integration_tests) && invoker.integration_tests != [])) {
       args += [ "--with-tests" ]
-
-      outputs += [ "$base_out_dir/$name-$type-unit-test" ]
-    }
-
-    if (defined(invoker.integration_tests)) {
-      args += [ "--with-tests" ]
-
-      foreach(test_name, invoker.integration_tests) {
-        outputs += [ "$base_out_dir/$name-$test_name-$type-integration-test" ]
-      }
     }
 
     if (use_frozen_with_cargo) {

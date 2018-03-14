@@ -13,12 +13,7 @@ import("//build/rust/rust_artifact.gni")
 #     assumed to be the same as the target name.
 #
 #   deps (optional)
-#     List of labels for Rust libraries this library depends on.
-#
-#   non_rust_deps (optional)
-#     List of labels this target depends on that are not Rust libraries. This
-#     includes things like actions that generate Rust code. It typically doesn't
-#     need to be set.
+#     List of dependency labels.
 #
 #   with_tests (optional) #DEPRECATED
 #   with_unit_tests (optional)
