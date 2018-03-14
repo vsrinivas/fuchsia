@@ -9,6 +9,7 @@
 #include "garnet/lib/ui/gfx/resources/image.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
+#include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/image.h"
 
 namespace scene_manager {
@@ -74,7 +75,7 @@ class HostImage : public Image {
   uint64_t memory_offset_;
   // The format of the image stored in host memory.
   scenic::ImageInfo host_image_format_;
-  ImageConversionFunction image_conversion_function_ = nullptr;
+  escher::image_utils::ImageConversionFunction image_conversion_function_ = nullptr;
 };
 
 }  // namespace scene_manager

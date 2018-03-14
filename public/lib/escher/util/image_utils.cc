@@ -10,7 +10,6 @@
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/vk/gpu_mem.h"
 #include "lib/escher/vk/image_factory.h"
-#include "lib/escher/util/image_formats.h"
 
 namespace {
 struct RGBA {
@@ -125,7 +124,7 @@ void WritePixelsToImage(
     impl::GpuUploader* gpu_uploader,
     uint8_t* pixels,
     ImagePtr image,
-    const escher::image_formats::ImageConversionFunction& conversion_func) {
+    const ImageConversionFunction& conversion_func) {
   FXL_DCHECK(gpu_uploader);
   FXL_DCHECK(image);
   FXL_DCHECK(pixels);

@@ -7,8 +7,7 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/gpu_memory.h"
 #include "garnet/lib/ui/gfx/resources/host_memory.h"
-#include "lib/escher/util/image_formats.h"
-#include "lib/escher/util/image_utils.h"
+#include "garnet/lib/ui/gfx/util/image_formats.h"
 
 namespace scene_manager {
 
@@ -27,8 +26,7 @@ HostImage::HostImage(Session* session,
       memory_offset_(host_memory_offset),
       host_image_format_(host_image_format) {
   image_ = std::move(image);
-  image_conversion_function_ =
-      escher::image_formats::GetFunctionToConvertToBgra8(host_image_format);
+  image_conversion_function_ = image_formats::GetFunctionToConvertToBgra8(host_image_format);
 }
 
 ImagePtr HostImage::New(Session* session,
@@ -39,10 +37,8 @@ ImagePtr HostImage::New(Session* session,
                         mz::ErrorReporter* error_reporter) {
   // No matter what the incoming format, the gpu format will be BGRA:
   vk::Format gpu_image_pixel_format = vk::Format::eB8G8R8A8Unorm;
-  size_t bytes_per_pixel =
-      escher::image_formats::BytesPerPixel(host_image_info->pixel_format);
-  size_t pixel_alignment =
-      escher::image_formats::PixelAlignment(host_image_info->pixel_format);
+  size_t bytes_per_pixel = image_formats::BytesPerPixel(host_image_info->pixel_format);
+  size_t pixel_alignment = image_formats::PixelAlignment(host_image_info->pixel_format);
 
   if (host_image_info->width <= 0) {
     error_reporter->ERROR()

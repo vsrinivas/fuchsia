@@ -4,9 +4,12 @@
 
 #pragma once
 
+#ifdef __Fuchsia__
+#include <fbl/function.h>
+#endif
+
 #include "lib/escher/escher.h"
 #include "lib/escher/forward_declarations.h"
-#include "lib/escher/util/image_formats.h"
 #include "lib/escher/vk/image.h"
 
 namespace escher {
@@ -15,6 +18,14 @@ namespace impl {
 class GpuUploader;
 }
 namespace image_utils {
+
+#ifdef __Fuchsia__
+using ImageConversionFunction =
+    fbl::Function<void(void*, void*, uint32_t, uint32_t)>;
+#else
+using ImageConversionFunction =
+    std::function<void(void*, void*, uint32_t, uint32_t)>;
+#endif
 
 // Returns the number of bytes per pixel for the given format.
 size_t BytesPerPixel(vk::Format format);
@@ -66,7 +77,7 @@ ImagePtr NewImage(ImageFactory* image_factory,
 void WritePixelsToImage(impl::GpuUploader* gpu_uploader,
                         uint8_t* pixels,
                         ImagePtr gpu_image,
-                        const escher::image_formats::ImageConversionFunction&
+                        const escher::image_utils::ImageConversionFunction&
                             convertion_func = nullptr);
 
 // Return new Image containing the provided pixels.  Uses transfer queue to

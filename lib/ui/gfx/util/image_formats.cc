@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/util/image_formats.h"
+#include "lib/ui/gfx/util/image_formats.h"
 #include "lib/fxl/logging.h"
 
-namespace escher {
+namespace scene_manager {
 namespace image_formats {
 
 namespace {
@@ -104,7 +104,7 @@ size_t PixelAlignment(const scenic::ImageInfo::PixelFormat& pixel_format) {
   return 0;
 }
 
-ImageConversionFunction GetFunctionToConvertToBgra8(
+escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
     const scenic::ImageInfo& image_info) {
   size_t bpp = BytesPerPixel(image_info.pixel_format);
   switch (image_info.pixel_format) {
@@ -144,4 +144,4 @@ ImageConversionFunction GetFunctionToConvertToBgra8(
 }
 
 }  // namespace image_formats
-}  // namespace escher
+}  // namespace scene_manager
