@@ -15,8 +15,15 @@ import (
 type Type struct {
 	Decl          string
 	Nullable      bool
+	declType      types.DeclType
 	typedDataDecl string
 	typeExpr      string
+}
+
+type Const struct {
+	Type  Type
+	Name  string
+	Value string
 }
 
 type Enum struct {
@@ -91,6 +98,7 @@ type Parameter struct {
 }
 
 type Root struct {
+	Consts     []Const
 	Enums      []Enum
 	Interfaces []Interface
 	Structs    []Struct
@@ -400,7 +408,8 @@ func (c *compiler) compileType(val types.Type) Type {
 		if !ok {
 			log.Fatal("Unknown identifier:", val.Identifier)
 		}
-		switch declType {
+		r.declType = declType
+		switch r.declType {
 		case types.ConstDeclType:
 			fallthrough
 		case types.EnumDeclType:
@@ -419,10 +428,22 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.typeExpr = fmt.Sprintf("const $fidl.InterfaceHandleType<%s>(nullable: %s)",
 				t, formatBool(val.Nullable))
 		default:
-			log.Fatal("Unknown declaration type:", declType)
+			log.Fatal("Unknown declaration type:", r.declType)
 		}
 	default:
 		log.Fatal("Unknown type kind:", val.Kind)
+	}
+	return r
+}
+
+func (c *compiler) compileConst(val types.Const) Const {
+	r := Const{
+		c.compileType(val.Type),
+		changeIfReserved(val.Name[0]),
+		c.compileConstant(val.Value),
+	}
+	if r.Type.declType == types.EnumDeclType {
+		r.Value = fmt.Sprintf("%s.%s", r.Type.Decl, r.Value)
 	}
 	return r
 }
@@ -573,6 +594,10 @@ func (c *compiler) compileUnion(val types.Union) Union {
 func Compile(r types.Root) Root {
 	root := Root{}
 	c := compiler{&r.Decls}
+
+	for _, v := range r.Consts {
+		root.Consts = append(root.Consts, c.compileConst(v))
+	}
 
 	for _, v := range r.Enums {
 		root.Enums = append(root.Enums, c.compileEnum(v))

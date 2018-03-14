@@ -31,6 +31,9 @@ import 'package:zircon/zircon.dart';
 // ignore_for_file: unused_import
 // ignore_for_file: unused_local_variable
 
+{{ range $const := .Consts -}}
+{{ template "ConstDeclaration" $const }}
+{{ end -}}
 {{ range $enum := .Enums -}}
 {{ template "EnumDeclaration" $enum }}
 {{ end -}}
