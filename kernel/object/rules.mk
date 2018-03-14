@@ -50,6 +50,7 @@ MODULE_SRCS := \
 
 # Tests
 MODULE_SRCS += \
+    $(LOCAL_DIR)/mbuf_tests.cpp \
     $(LOCAL_DIR)/state_tracker_tests.cpp \
 
 MODULE_DEPS := \

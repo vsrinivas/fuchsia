@@ -8,20 +8,51 @@
 
 #include <stdint.h>
 
-#include <lib/user_copy/user_ptr.h>
+#include <lib/user_copy/testable_user_ptr.h>
 #include <zircon/types.h>
 #include <fbl/intrusive_single_list.h>
 
+// MBufChain is a container for storing a stream of bytes or a sequence of datagrams.
+//
+// It's designed to back sockets and channels.  Don't simultaneously store stream data and datagrams
+// in a single instance.
 class MBufChain {
 public:
     MBufChain() = default;
     ~MBufChain();
 
-    zx_status_t WriteStream(user_in_ptr<const void> src, size_t len, size_t* written);
-    zx_status_t WriteDatagram(user_in_ptr<const void> src, size_t len, size_t* written);
-    size_t Read(user_out_ptr<void> dst, size_t len, bool datagram);
+    // Writes |len| bytes of stream data from |src| and sets |written| to number of bytes written.
+    //
+    // Returns an error on failure.
+    template <typename UCT>
+    zx_status_t WriteStream(testable_user_in_ptr<const void, UCT> src, size_t len, size_t* written);
+
+    // Writes a datagram of |len| bytes from |src| and sets |written| to number of bytes written.
+    //
+    // This operation is atomic in that either the entire datagram is written successfully or the
+    // chain is unmodified.
+    //
+    // Returns an error on failure.
+    template <typename UCT>
+    zx_status_t WriteDatagram(testable_user_in_ptr<const void, UCT> src, size_t len,
+                              size_t* written);
+
+    // Reads upto |len| bytes from chain into |dst|.
+    //
+    // When |datagram| is false, the data in the chain is treated as a stream (no boundaries).
+    //
+    // When |datagram| is true, the data in the chain is treated as a sequence of datagrams and the
+    // call will read at most one datagram.  If |len| is too small to read a complete datagram, a
+    // partial datagram is returned and its remaining bytes are discarded.
+    //
+    // Returns number of bytes read.
+    template <typename UCT>
+    size_t Read(testable_user_out_ptr<void, UCT> dst, size_t len, bool datagram);
+
     bool is_full() const;
     bool is_empty() const;
+
+    // Returns number of bytes stored in the chain.
     size_t size() const { return size_; }
 
 private:
@@ -33,6 +64,7 @@ private:
         static constexpr size_t kMallocSize = 2048 - 16;
         static constexpr size_t kPayloadSize = kMallocSize - kHeaderSize;
 
+        // Returns number of bytes of free space in this MBuf.
         size_t rem() const;
 
         uint32_t off_ = 0u;

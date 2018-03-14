@@ -6,6 +6,7 @@
 
 #include <object/mbuf.h>
 
+#include <lib/user_copy/fake_user_ptr.h>
 #include <lib/user_copy/user_ptr.h>
 
 #include <fbl/algorithm.h>
@@ -37,7 +38,8 @@ bool MBufChain::is_empty() const {
     return size_ == 0;
 }
 
-size_t MBufChain::Read(user_out_ptr<void> dst, size_t len, bool datagram) {
+template <typename UCT>
+size_t MBufChain::Read(testable_user_out_ptr<void, UCT> dst, size_t len, bool datagram) {
     if (datagram && len > tail_.front().pkt_len_)
         len = tail_.front().pkt_len_;
 
@@ -72,8 +74,9 @@ size_t MBufChain::Read(user_out_ptr<void> dst, size_t len, bool datagram) {
     return pos;
 }
 
-zx_status_t MBufChain::WriteDatagram(user_in_ptr<const void> src,
-                                     size_t len, size_t* written) {
+template <typename UCT>
+zx_status_t MBufChain::WriteDatagram(testable_user_in_ptr<const void, UCT> src, size_t len,
+                                     size_t* written) {
     if (len + size_ > kSizeMax)
         return ZX_ERR_SHOULD_WAIT;
 
@@ -118,8 +121,8 @@ zx_status_t MBufChain::WriteDatagram(user_in_ptr<const void> src,
     return ZX_OK;
 }
 
-zx_status_t MBufChain::WriteStream(user_in_ptr<const void> src,
-                                   size_t len, size_t* written) {
+template <typename UCT>
+zx_status_t MBufChain::WriteStream(testable_user_in_ptr<const void, UCT> src, size_t len, size_t* written) {
     if (head_ == nullptr) {
         head_ = AllocMBuf();
         if (head_ == nullptr)
@@ -171,3 +174,16 @@ void MBufChain::FreeMBuf(MBuf* buf) {
     buf->len_ = 0u;
     freelist_.push_front(buf);
 }
+
+template zx_status_t MBufChain::WriteStream(user_in_ptr<const void> src, size_t len,
+                                            size_t* written);
+template zx_status_t MBufChain::WriteDatagram(user_in_ptr<const void> src, size_t len,
+                                              size_t* written);
+template size_t MBufChain::Read(user_out_ptr<void> dst, size_t len, bool datagram);
+
+template zx_status_t MBufChain::WriteStream(internal::testing::fake_user_in_ptr<const void> src,
+                                            size_t len, size_t* written);
+template zx_status_t MBufChain::WriteDatagram(internal::testing::fake_user_in_ptr<const void> src,
+                                              size_t len, size_t* written);
+template size_t MBufChain::Read(internal::testing::fake_user_out_ptr<void> dst, size_t len,
+                                bool datagram);
