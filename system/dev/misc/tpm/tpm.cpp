@@ -81,14 +81,14 @@ static zx_status_t GetRandom(Device* dev, void* buf, uint16_t count, size_t* act
     return ZX_OK;
 }
 
-static zx_status_t Shutdown(Device* dev, uint16_t type) {
+zx_status_t Device::ShutdownLocked(uint16_t type) {
     struct tpm_shutdown_cmd cmd;
     uint32_t resp_len = tpm_init_shutdown(&cmd, type);
     struct tpm_shutdown_resp resp;
     size_t actual;
 
-    zx_status_t status = dev->ExecuteCmd(0, (uint8_t*)&cmd, sizeof(cmd),
-                                         (uint8_t*)&resp, resp_len, &actual);
+    zx_status_t status = ExecuteCmdLocked(0, (uint8_t*)&cmd, sizeof(cmd),
+                                          (uint8_t*)&resp, resp_len, &actual);
     if (status != ZX_OK) {
         return status;
     }
@@ -105,7 +105,11 @@ static zx_status_t Shutdown(Device* dev, uint16_t type) {
 zx_status_t Device::ExecuteCmd(Locality loc, const uint8_t* cmd, size_t len,
                                uint8_t* resp, size_t max_len, size_t* actual) {
     fbl::AutoLock guard(&lock_);
+    return ExecuteCmdLocked(loc, cmd, len, resp, max_len, actual);
+}
 
+zx_status_t Device::ExecuteCmdLocked(Locality loc, const uint8_t* cmd, size_t len,
+                                     uint8_t* resp, size_t max_len, size_t* actual) {
     zx_status_t status = SendCmdLocked(loc, cmd, len);
     if (status != ZX_OK) {
         return status;
@@ -121,18 +125,24 @@ zx_status_t Device::DdkIoctl(uint32_t op,
                              const void* in_buf, size_t in_len,
                              void* out_buf, size_t out_len, size_t* out_actual) {
     switch (op) {
-        // TODO(teisenbe): don't hardcode 1
-        case IOCTL_TPM_SAVE_STATE: return Shutdown(this, 1);
+        case IOCTL_TPM_SAVE_STATE: {
+            fbl::AutoLock guard(&lock_);
+            return ShutdownLocked(TPM_SU_STATE);
+        }
     }
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Device::DdkSuspend(uint32_t flags) {
-    if (flags != DEVICE_SUSPEND_FLAG_MEXEC) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
     fbl::AutoLock guard(&lock_);
+
+    if (flags == DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
+        zx_status_t status = ShutdownLocked(TPM_SU_STATE);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "tpm: Failed to save state: %d\n", status);
+            return status;
+        }
+    }
 
     zx_status_t status = ReleaseLocalityLocked(0);
     if (status != ZX_OK) {

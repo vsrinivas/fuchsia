@@ -82,6 +82,11 @@ private:
     }
     zx_status_t Init();
 
+    // Send the given command packet to the TPM and wait for a response.
+    // |actual| is the number of bytes written into |resp|.
+    zx_status_t ExecuteCmdLocked(Locality loc, const uint8_t* cmd, size_t len,
+                                 uint8_t* resp, size_t max_len, size_t* actual) TA_REQ(lock_);
+
     // Request use of the given locality
     zx_status_t RequestLocalityLocked(Locality loc) TA_REQ(lock_);
     // Wait for access to the requested locality
@@ -90,10 +95,14 @@ private:
     zx_status_t ReleaseLocalityLocked(Locality loc) TA_REQ(lock_);
 
     // Perform the transmit half of a command
-    zx_status_t SendCmdLocked(Locality loc, const uint8_t* cmd, size_t len);
+    zx_status_t SendCmdLocked(Locality loc, const uint8_t* cmd, size_t len) TA_REQ(lock_);
     // Perform the receive half of a command.  |actual| will contain the total number of bytes in
     // the response, may be less than max_len.
-    zx_status_t RecvRespLocked(Locality loc, uint8_t* resp, size_t max_len, size_t* actual);
+    zx_status_t RecvRespLocked(Locality loc, uint8_t* resp, size_t max_len,
+                               size_t* actual) TA_REQ(lock_);
+
+    // Issue a TPM_CC_SHUTDOWN with the given type
+    zx_status_t ShutdownLocked(uint16_t type) TA_REQ(lock_);
 
     fbl::Mutex lock_;
     const fbl::unique_ptr<HardwareInterface> iface_;

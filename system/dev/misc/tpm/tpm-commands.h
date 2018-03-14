@@ -44,6 +44,10 @@ struct tpm_getrandom_resp {
 } __PACKED;
 uint32_t tpm_init_getrandom(struct tpm_getrandom_cmd *cmd, uint16_t bytes_requested);
 
+// Shutdown types
+#define TPM_SU_CLEAR 0
+#define TPM_SU_STATE 1
+
 struct tpm_shutdown_cmd {
     struct tpm_cmd_header hdr;
     uint16_t shutdown_type;
