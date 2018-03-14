@@ -25,8 +25,9 @@ zx_status_t FramebufferScanout::Create(const char* path,
   }
 
   ioctl_display_get_fb_t fb;
-  if (ioctl_display_get_fb(fd.get(), &fb) != sizeof(fb)) {
-    return ZX_ERR_NOT_FOUND;
+  ssize_t ret = ioctl_display_get_fb(fd.get(), &fb);
+  if (ret != sizeof(fb)) {
+    return ret;
   }
 
   // Map framebuffer VMO.
