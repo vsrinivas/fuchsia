@@ -144,10 +144,14 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
 static zx_status_t setup_zircon_framebuffer(
     machina::VirtioGpu* gpu,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
-  zx_status_t status = machina::FramebufferScanout::Create(
-      "/dev/class/framebuffer/000", scanout);
-  if (status != ZX_OK)
-    return status;
+  zx_status_t status =
+      machina::FramebufferScanout::Create("/dev/class/display/000", scanout);
+  if (status != ZX_OK) {
+    status = machina::FramebufferScanout::Create("/dev/class/framebuffer/000",
+                                                 scanout);
+    if (status != ZX_OK)
+      return status;
+  }
   return gpu->AddScanout(scanout->get());
 }
 
