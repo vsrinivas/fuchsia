@@ -15,7 +15,8 @@ class EventReporter;
 class ErrorReporter;
 }  // namespace mz
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 using SessionId = uint64_t;
 
@@ -84,6 +85,7 @@ class SessionManager {
   std::set<std::pair<uint64_t, fxl::RefPtr<Session>>> updatable_sessions_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_SESSION_MANAGER_H_

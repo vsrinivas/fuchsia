@@ -8,7 +8,8 @@
 #include "garnet/lib/ui/gfx/resources/gpu_memory.h"
 #include "lib/escher/vk/buffer.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // Wraps a Vulkan buffer object.
 class Buffer : public Resource {
@@ -34,6 +35,7 @@ class Buffer : public Resource {
 
 using BufferPtr = fxl::RefPtr<Buffer>;
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_BUFFER_H_

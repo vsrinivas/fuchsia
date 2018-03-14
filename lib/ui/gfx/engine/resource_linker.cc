@@ -7,7 +7,8 @@
 
 #include "garnet/lib/ui/gfx/resources/import.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 static zx_signals_t kEventPairDeathSignals = ZX_EPAIR_PEER_CLOSED;
 
@@ -313,4 +314,5 @@ void ResourceLinker::RemoveFromExportedResourceToImportKoidsMap(
   }
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

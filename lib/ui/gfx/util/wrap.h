@@ -8,7 +8,8 @@
 #include "lib/escher/geometry/transform.h"
 #include "lib/ui/gfx/fidl/types.fidl.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 inline scenic::mat4Ptr Wrap(const escher::mat4& args) {
   auto result = scenic::mat4::New();
@@ -42,6 +43,7 @@ inline scenic::vec4Ptr Wrap(const escher::vec4& p) {
   return result;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_UTIL_WRAP_H_

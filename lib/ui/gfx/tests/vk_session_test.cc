@@ -5,7 +5,8 @@
 #include "garnet/lib/ui/gfx/tests/vk_session_test.h"
 #include "garnet/lib/ui/gfx/util/vulkan_utils.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 std::unique_ptr<Engine> VkSessionTest::CreateEngine() {
@@ -34,4 +35,5 @@ std::unique_ptr<Engine> VkSessionTest::CreateEngine() {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

@@ -8,7 +8,8 @@
 
 #include "lib/fxl/logging.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 Display::Display(uint32_t width_in_px, uint32_t height_in_px)
     : last_vsync_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)),
@@ -48,4 +49,5 @@ void Display::Unclaim() {
   claimed_ = false;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

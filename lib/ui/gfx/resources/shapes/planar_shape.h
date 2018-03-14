@@ -7,7 +7,8 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // A shape that lies within the Z=0 plane of the local coordinate system.
 // As a result, |GetIntersection()| is implemented by intersecting a ray
@@ -27,6 +28,7 @@ class PlanarShape : public Shape {
               const ResourceTypeInfo& type_info);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_SHAPES_PLANAR_SHAPE_H_

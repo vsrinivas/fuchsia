@@ -11,14 +11,15 @@
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "lib/escher/flib/release_fence_signaller.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 class SessionForTest : public Session {
  public:
   SessionForTest(SessionId id,
                  Engine* engine,
-                 scene_manager::EventReporter* event_reporter,
+                 scenic::gfx::EventReporter* event_reporter,
                  mz::ErrorReporter* error_reporter);
 
   virtual void TearDown() override;
@@ -88,6 +89,7 @@ class EngineForTest : public Engine {
 };
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_TESTS_MOCKS_H_

@@ -12,7 +12,8 @@
 #include "lib/escher/vk/gpu_mem.h"
 #include "lib/fsl/vmo/shared_vmo.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class HostMemory;
 using HostMemoryPtr = fxl::RefPtr<HostMemory>;
@@ -56,6 +57,7 @@ class HostMemory : public Memory {
   uint64_t size_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_HOST_MEMORY_H_

@@ -6,7 +6,8 @@
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/public/lib/escher/util/type_utils.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo Camera::kTypeInfo = {ResourceType::kCamera, "Camera"};
 
@@ -83,4 +84,5 @@ std::pair<escher::ray4, escher::mat4> Camera::ProjectRayIntoScene(
           inverse_scene_transform * inverse_vp};
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

@@ -25,7 +25,8 @@ class PoseBufferLatchingShader;
 }
 }  // namespace escher
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class FrameTimings;
 class Layer;
@@ -87,6 +88,7 @@ class Compositor : public Resource {
   FXL_DISALLOW_COPY_AND_ASSIGN(Compositor);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_COMPOSITOR_H_

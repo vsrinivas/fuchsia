@@ -12,7 +12,8 @@
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/stage.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Camera final : public Resource {
  public:
@@ -70,6 +71,7 @@ class Camera final : public Resource {
 
 using CameraPtr = fxl::RefPtr<Camera>;
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_CAMERA_H_

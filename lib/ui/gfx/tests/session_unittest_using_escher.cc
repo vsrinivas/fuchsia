@@ -11,12 +11,12 @@
 #include "lib/test_runner/cpp/reporting/reporter.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 
-std::unique_ptr<scene_manager::test::EscherTestEnvironment> g_escher_env;
+std::unique_ptr<scenic::gfx::test::EscherTestEnvironment> g_escher_env;
 
 int main(int argc, char** argv) {
   // Add a global environment which will set up (and tear down) DemoHarness and
   // Escher. This also implicitly creates a message loop.
-  g_escher_env = std::make_unique<scene_manager::test::EscherTestEnvironment>();
+  g_escher_env = std::make_unique<scenic::gfx::test::EscherTestEnvironment>();
   g_escher_env->SetUp(argv[0]);
 
   // TestRunner setup. Copied from

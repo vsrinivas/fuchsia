@@ -7,7 +7,8 @@
 
 #include "lib/ui/gfx/fidl/events.fidl.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // Interface for a class that submits events to the SessionListener.
 class EventReporter {
@@ -16,6 +17,7 @@ class EventReporter {
   virtual void SendEvents(::f1dl::Array<scenic::EventPtr> buffered_events) = 0;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_EVENT_REPORTER_H_

@@ -10,7 +10,8 @@
 
 #include "gtest/gtest.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
@@ -22,7 +23,7 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
                                         ::f1dl::Array<zx::event>(),
                                         ::f1dl::Array<zx::event>(), callback));
   ExpectLastReportedError(
-      "scene_manager::Session: Present called with out-of-order presentation "
+      "scenic::gfx::Session: Present called with out-of-order presentation "
       "time. presentation_time=0, last scheduled presentation time=1.");
 }
 
@@ -43,7 +44,7 @@ TEST_F(SessionTest, ResourceIdAlreadyUsed) {
   ExpectLastReportedError(nullptr);
   EXPECT_FALSE(Apply(scenic_lib::NewCreateShapeNodeOp(2)));
   ExpectLastReportedError(
-      "scene_manager::ResourceMap::AddResource(): resource with ID 2 already "
+      "scenic::gfx::ResourceMap::AddResource(): resource with ID 2 already "
       "exists.");
 }
 
@@ -101,4 +102,5 @@ TEST_F(SessionTest, Labeling) {
 // - test that FindResource() cannot return resources that have the wrong type.
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

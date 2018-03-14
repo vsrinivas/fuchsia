@@ -7,7 +7,8 @@
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo RoundedRectangleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kRoundedRectangle,
@@ -32,4 +33,5 @@ escher::Object RoundedRectangleShape::GenerateRenderObject(
   return escher::Object(transform, mesh_, material);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

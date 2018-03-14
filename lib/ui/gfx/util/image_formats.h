@@ -12,7 +12,8 @@
 // TODO(MZ-547): Merge with existing image conversion libraries in media:
 // bin/media/video/video_converter.h
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace image_formats {
 
 // Returns the number of bytes per pixel for the given format.
@@ -27,4 +28,5 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
     const scenic::ImageInfo& image_info);
 
 }  // namespace image_formats
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

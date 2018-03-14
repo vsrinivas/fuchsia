@@ -11,6 +11,8 @@ using scenic::Resource;
 using scenic::ShadowTechnique;
 using scenic::Value;
 
+namespace scenic {
+
 std::ostream& operator<<(std::ostream& stream, const scenic::OpPtr& op) {
   switch (op->which()) {
     case Op::Tag::CREATE_RESOURCE:
@@ -207,6 +209,37 @@ std::ostream& operator<<(std::ostream& stream,
   stream << "SetColorOp(id:" << op->material_id;
   return stream << ")";
 }
+
+std::ostream& operator<<(std::ostream& stream, const scenic::Value::Tag& tag) {
+  switch (tag) {
+    case Value::Tag::VECTOR1:
+      return stream << "vec1";
+    case Value::Tag::VECTOR2:
+      return stream << "vec2";
+    case Value::Tag::VECTOR3:
+      return stream << "vec3";
+    case Value::Tag::VECTOR4:
+      return stream << "vec4";
+    case Value::Tag::MATRIX4X4:
+      return stream << "mat4";
+    case Value::Tag::COLOR_RGB:
+      return stream << "rgb";
+    case Value::Tag::COLOR_RGBA:
+      return stream << "rgba";
+    case Value::Tag::DEGREES:
+      return stream << "degrees";
+    case Value::Tag::QUATERNION:
+      return stream << "quat";
+    case Value::Tag::TRANSFORM:
+      return stream << "transform";
+    case Value::Tag::VARIABLE_ID:
+      return stream << "variable";
+    case Value::Tag::__UNKNOWN__:
+      return stream << "__UNKNOWN__";
+  }
+}
+
+}  // namespace scenic
 
 std::ostream& operator<<(std::ostream& stream, const scenic::Value::Tag& tag) {
   switch (tag) {

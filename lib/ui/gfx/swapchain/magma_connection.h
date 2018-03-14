@@ -10,7 +10,8 @@
 
 #include "garnet/lib/magma/include/magma_abi/magma.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // Wraps a magma_connection_t and takes care of releasing it on object
 // destruction.
@@ -49,6 +50,7 @@ class MagmaConnection {
   magma_connection_t* conn_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_SWAPCHAIN_MAGMA_CONNECTION_H_

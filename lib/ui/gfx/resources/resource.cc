@@ -10,7 +10,8 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo Resource::kTypeInfo = {0, "Resource"};
 
@@ -80,4 +81,5 @@ void Resource::SetExported(bool exported) {
   exported_ = exported;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

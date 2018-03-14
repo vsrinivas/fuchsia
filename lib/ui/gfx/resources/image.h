@@ -12,7 +12,8 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/escher/vk/image.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Image;
 using ImagePtr = fxl::RefPtr<Image>;
@@ -52,6 +53,7 @@ class Image : public ImageBase {
   escher::ImagePtr image_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_IMAGE_H_

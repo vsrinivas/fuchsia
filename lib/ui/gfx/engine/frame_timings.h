@@ -10,7 +10,8 @@
 
 #include "lib/escher/base/reffable.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class FrameTimings;
 class FrameScheduler;
@@ -63,6 +64,7 @@ class FrameTimings : public escher::Reffable {
   size_t frame_presented_count_ = 0;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_FRAME_TIMINGS_H_

@@ -8,7 +8,8 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/escher/geometry/types.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Light;
 class Scene;
@@ -34,6 +35,7 @@ class Light : public Resource {
   glm::vec3 color_ = {0.f, 0.f, 0.f};
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_LIGHTS_LIGHT_H_

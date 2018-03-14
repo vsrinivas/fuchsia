@@ -6,7 +6,8 @@
 
 #include "lib/images/fidl/memory_type.fidl.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo GpuMemory::kTypeInfo = {
     ResourceType::kMemory | ResourceType::kGpuMemory, "GpuMemory"};
@@ -27,7 +28,7 @@ GpuMemoryPtr GpuMemory::New(Session* session,
                             const scenic::MemoryPtr& args,
                             mz::ErrorReporter* error_reporter) {
   if (args->memory_type != scenic::MemoryType::VK_DEVICE_MEMORY) {
-    error_reporter->ERROR() << "scene_manager::GpuMemory::New(): "
+    error_reporter->ERROR() << "scenic::gfx::GpuMemory::New(): "
                                "Memory must be of type VK_DEVICE_MEMORY.";
     return nullptr;
   }
@@ -42,7 +43,7 @@ GpuMemoryPtr GpuMemory::New(Session* session,
   // TODO: Need to change driver semantics so that you can import a VMO twice.
 
   if (!device) {
-    error_reporter->ERROR() << "scene_manager::Session::CreateMemory(): "
+    error_reporter->ERROR() << "scenic::gfx::Session::CreateMemory(): "
                                "Getting VkDevice failed.";
     return nullptr;
   }
@@ -62,7 +63,7 @@ GpuMemoryPtr GpuMemory::New(Session* session,
   vk::Result err =
       device.allocateMemory(&memory_allocate_info, nullptr, &memory);
   if (err != vk::Result::eSuccess) {
-    error_reporter->ERROR() << "scene_manager::Session::CreateMemory(): "
+    error_reporter->ERROR() << "scenic::gfx::Session::CreateMemory(): "
                                "VkAllocateMemory failed.";
     return nullptr;
   }
@@ -76,4 +77,5 @@ GpuMemoryPtr GpuMemory::New(Session* session,
       vk::DeviceSize(vmo_size), memory_type_index);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

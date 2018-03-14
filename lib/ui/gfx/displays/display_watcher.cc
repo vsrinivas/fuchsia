@@ -11,7 +11,8 @@
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 static const std::string kDisplayDir = "/dev/class/display";
 
@@ -63,4 +64,5 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback,
   callback(description.info.width, description.info.height);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

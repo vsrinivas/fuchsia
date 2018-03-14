@@ -12,7 +12,8 @@
 
 #include "gtest/gtest.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 namespace {
 using escher::ray4;
@@ -227,4 +228,5 @@ TEST_F(ShapeTest, DISABLED_RoundedRectangle) {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

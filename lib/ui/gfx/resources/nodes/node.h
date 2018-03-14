@@ -13,7 +13,8 @@
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "lib/escher/geometry/transform.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Node;
 using NodePtr = fxl::RefPtr<Node>;
@@ -135,6 +136,7 @@ inline const escher::mat4& Node::GetGlobalTransform() const {
   return global_transform_;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_NODE_H_

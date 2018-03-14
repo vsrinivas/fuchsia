@@ -7,7 +7,8 @@
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo Scene::kTypeInfo = {
     ResourceType::kNode | ResourceType::kScene, "Scene"};
@@ -30,7 +31,7 @@ bool Scene::AddLight(const LightPtr& light) {
     return true;
   }
   error_reporter()->ERROR()
-      << "scene_manager::Scene::AddLight(): unrecognized light type.";
+      << "scenic::gfx::Scene::AddLight(): unrecognized light type.";
   return false;
 }
 
@@ -39,4 +40,5 @@ bool Scene::Detach() {
   return Resource::Detach();
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

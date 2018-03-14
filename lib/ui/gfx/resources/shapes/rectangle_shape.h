@@ -7,7 +7,8 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/planar_shape.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class RectangleShape final : public PlanarShape {
  public:
@@ -37,6 +38,7 @@ class RectangleShape final : public PlanarShape {
   float height_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_SHAPES_RECTANGLE_SHAPE_H_

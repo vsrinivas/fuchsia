@@ -22,7 +22,8 @@
 #include "lib/escher/renderer/shadow_map_renderer.h"
 #include "lib/fxl/functional/make_copyable.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
     : display_manager_(display_manager),
@@ -245,4 +246,5 @@ std::string Engine::DumpScenes() const {
   return output.str();
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

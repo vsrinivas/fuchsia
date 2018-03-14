@@ -8,7 +8,8 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 SessionHandler::SessionHandler(mz::CommandDispatcherContext dispatcher_context,
                                Engine* engine,
@@ -19,7 +20,7 @@ SessionHandler::SessionHandler(mz::CommandDispatcherContext dispatcher_context,
       session_manager_(engine->session_manager()),
       event_reporter_(event_reporter),
       error_reporter_(error_reporter),
-      session_(::fxl::MakeRefCounted<scene_manager::Session>(
+      session_(::fxl::MakeRefCounted<scenic::gfx::Session>(
           session_id,
           engine,
           static_cast<EventReporter*>(this),
@@ -98,4 +99,5 @@ void SessionHandler::TearDown() {
   }
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

@@ -7,7 +7,8 @@
 
 #include <cstdint>
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // All subclasses of Resource are represented here.
 enum ResourceType {
@@ -80,6 +81,7 @@ struct ResourceTypeInfo {
   }
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_RESOURCE_TYPE_INFO_H_

@@ -11,7 +11,8 @@
 #include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "lib/escher/util/image_utils.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo Image::kTypeInfo = {
     ResourceType::kImage | ResourceType::kImageBase, "Image"};
@@ -44,4 +45,5 @@ ImagePtr Image::New(Session* session,
   }
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

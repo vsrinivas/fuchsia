@@ -10,7 +10,8 @@
 
 class DemoHarness;
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 class EscherTestEnvironment {
@@ -25,6 +26,7 @@ class EscherTestEnvironment {
 };
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_TESTS_ESCHER_TEST_ENVIRONMENT_H_

@@ -9,7 +9,8 @@
 #include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "lib/escher/util/image_utils.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo GpuImage::kTypeInfo = {
     ResourceType::kGpuImage | ResourceType::kImage | ResourceType::kImageBase,
@@ -114,4 +115,5 @@ bool GpuImage::UpdatePixels() {
   return false;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

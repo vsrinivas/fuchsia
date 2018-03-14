@@ -4,7 +4,8 @@
 
 #include "garnet/lib/ui/gfx/resources/nodes/variable_binding.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 template <scenic::Value::Tag VT, typename T>
 TypedVariableBinding<VT, T>::TypedVariableBinding(
@@ -31,4 +32,5 @@ template class TypedVariableBinding<scenic::Value::Tag::VECTOR3, escher::vec3>;
 template class TypedVariableBinding<scenic::Value::Tag::QUATERNION,
                                     escher::quat>;
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

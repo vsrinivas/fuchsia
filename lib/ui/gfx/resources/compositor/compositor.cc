@@ -27,7 +27,8 @@
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo Compositor::kTypeInfo = {ResourceType::kCompositor,
                                                 "Compositor"};
@@ -73,7 +74,7 @@ static void InitEscherStage(
 
   if (ambient_lights.empty()) {
     constexpr float kIntensity = 0.3f;
-    FXL_LOG(WARNING) << "scene_manager::Compositor::InitEscherStage(): no "
+    FXL_LOG(WARNING) << "scenic::gfx::Compositor::InitEscherStage(): no "
                         "ambient light was provided.  Using one with "
                         "intensity: "
                      << kIntensity << ".";
@@ -81,7 +82,7 @@ static void InitEscherStage(
   } else {
     if (ambient_lights.size() > 1) {
       FXL_LOG(WARNING)
-          << "scene_manager::Compositor::InitEscherStage(): only a single "
+          << "scenic::gfx::Compositor::InitEscherStage(): only a single "
              "ambient light is supported, but "
           << ambient_lights.size() << " were provided.  Using the first one.";
     }
@@ -92,7 +93,7 @@ static void InitEscherStage(
     constexpr float kHeading = 1.5f * M_PI;
     constexpr float kElevation = 1.5f * M_PI;
     constexpr float kIntensity = 0.3f;
-    FXL_LOG(WARNING) << "scene_manager::Compositor::InitEscherStage(): no "
+    FXL_LOG(WARNING) << "scenic::gfx::Compositor::InitEscherStage(): no "
                         "directional light was provided (heading: "
                      << kHeading << ", elevation: " << kElevation
                      << ", intensity: " << kIntensity << ").";
@@ -102,7 +103,7 @@ static void InitEscherStage(
   } else {
     if (directional_lights.size() > 1) {
       FXL_LOG(WARNING)
-          << "scene_manager::Compositor::InitEscherStage(): only a single "
+          << "scenic::gfx::Compositor::InitEscherStage(): only a single "
              "directional light is supported, but "
           << directional_lights.size()
           << " were provided.  Using the first one.";
@@ -130,7 +131,7 @@ void Compositor::DrawLayer(const escher::FramePtr& frame,
     // TODO(MZ-248): Should be able to render into a viewport of the
     // output image, but we're not that fancy yet.
     layer->error_reporter()->ERROR()
-        << "TODO(MZ-248): scene_manager::Compositor::DrawLayer()"
+        << "TODO(MZ-248): scenic::gfx::Compositor::DrawLayer()"
            ": layer size of "
         << layer->size().x << "x" << layer->size().y
         << " does not match output image size of " << stage_width << "x"
@@ -265,4 +266,5 @@ escher::ImagePtr Compositor::GetLayerFramebufferImage(uint32_t width,
   return escher()->image_cache()->NewImage(info);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

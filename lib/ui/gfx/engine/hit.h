@@ -7,7 +7,8 @@
 
 #include "lib/escher/geometry/types.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // Describes where a hit occurred within the content of a tagged node.
 struct Hit {
@@ -29,6 +30,7 @@ struct Hit {
   float distance;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_HIT_H_

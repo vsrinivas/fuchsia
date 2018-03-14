@@ -6,7 +6,8 @@
 
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo Light::kTypeInfo = {ResourceType::kLight, "Light"};
 
@@ -20,7 +21,7 @@ Light::Light(Session* session,
 bool Light::SetColor(const glm::vec3& color) {
   if (color.x != color.y || color.y != color.z) {
     // TODO(MZ-398): This is a limitation of the SSDO shadows.
-    error_reporter()->ERROR() << "scene_manager::Light::SetColor(): "
+    error_reporter()->ERROR() << "scenic::gfx::Light::SetColor(): "
                                  "colored lights not supported.";
     return false;
   }
@@ -29,4 +30,5 @@ bool Light::SetColor(const glm::vec3& color) {
   return true;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

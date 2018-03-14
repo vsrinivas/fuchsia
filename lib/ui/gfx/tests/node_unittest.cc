@@ -9,7 +9,8 @@
 
 #include "gtest/gtest.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 using NodeTest = SessionTest;
@@ -98,4 +99,5 @@ TEST_F(NodeTest, SettingHitTestBehavior) {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

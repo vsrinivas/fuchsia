@@ -10,11 +10,19 @@
 
 #include <ostream>
 
+namespace scenic {
+
 std::ostream& operator<<(std::ostream& stream, const scenic::OpPtr& op);
 std::ostream& operator<<(std::ostream& stream,
                          const scenic::CreateResourceOpPtr& op);
 std::ostream& operator<<(std::ostream& stream,
                          const scenic::SetRendererParamOpPtr& op);
+std::ostream& operator<<(std::ostream& stream, const scenic::Value::Tag& tag);
+
+std::ostream& operator<<(std::ostream& stream, const scenic::Value::Tag& tag);
+
+}  // namespace scenic
+
 std::ostream& operator<<(std::ostream& stream, const scenic::Value::Tag& tag);
 
 #endif  // GARNET_LIB_UI_GFX_UTIL_PRINT_OP_H_

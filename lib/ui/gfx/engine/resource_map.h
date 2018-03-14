@@ -11,7 +11,8 @@
 
 #include <unordered_map>
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class ResourceMap {
  public:
@@ -95,6 +96,7 @@ class ResourceMap {
   mz::ErrorReporter* const error_reporter_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_RESOURCE_MAP_H_

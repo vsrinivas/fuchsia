@@ -9,7 +9,8 @@
 #include "lib/fxl/synchronization/waitable_event.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 void SceneManagerTest::SetUp() {
@@ -50,6 +51,7 @@ void SceneManagerTest::TearDown() {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 */

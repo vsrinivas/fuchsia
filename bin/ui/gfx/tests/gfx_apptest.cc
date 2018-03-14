@@ -15,7 +15,8 @@
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 TEST_F(SceneManagerTest, CreateAndDestroySession) {
@@ -187,6 +188,7 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 */

@@ -9,7 +9,8 @@
 static constexpr uint32_t kScreenWidth = 2160;
 static constexpr uint32_t kScreenHeight = 1440;
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 void EscherTestEnvironment::SetUp(std::string tests_name) {
@@ -27,4 +28,5 @@ void EscherTestEnvironment::TearDown() {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

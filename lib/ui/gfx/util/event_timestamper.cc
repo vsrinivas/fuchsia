@@ -7,7 +7,8 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 EventTimestamper::EventTimestamper()
     : main_loop_(fsl::MessageLoop::GetCurrent()), task_(0u) {
@@ -141,4 +142,5 @@ async_wait_result_t EventTimestamper::Wait::Handle(
   return ASYNC_WAIT_FINISHED;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

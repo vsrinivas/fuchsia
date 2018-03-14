@@ -11,7 +11,8 @@
 #include "garnet/lib/ui/gfx/engine/update_scheduler.h"
 #include "garnet/lib/ui/scenic/session.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 SessionManager::SessionManager(UpdateScheduler* update_scheduler)
     : update_scheduler_(update_scheduler) {
@@ -99,4 +100,5 @@ void SessionManager::TearDownSession(SessionId id) {
   }
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

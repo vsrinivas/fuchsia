@@ -4,7 +4,8 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/rectangle_shape.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo RectangleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kRectangle, "RectangleShape"};
@@ -36,4 +37,5 @@ escher::Object RectangleShape::GenerateRenderObject(
   return escher::Object::NewRect(transform * rect_transform, material);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

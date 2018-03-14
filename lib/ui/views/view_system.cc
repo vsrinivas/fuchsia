@@ -7,7 +7,7 @@
 namespace mz {
 
 ViewSystem::ViewSystem(mz::SystemContext context,
-                       scene_manager::ScenicSystem* scenic_system)
+                       scenic::gfx::ScenicSystem* scenic_system)
     : System(std::move(context)), scenic_system_(scenic_system) {}
 
 ViewSystem::~ViewSystem() = default;
@@ -20,7 +20,7 @@ std::unique_ptr<CommandDispatcher> ViewSystem::CreateCommandDispatcher(
 
 ViewCommandDispatcher::ViewCommandDispatcher(
     mz::CommandDispatcherContext context,
-    scene_manager::ScenicSystem* scenic_system)
+    scenic::gfx::ScenicSystem* scenic_system)
     : CommandDispatcher(std::move(context)), scenic_system_(scenic_system) {
   FXL_DCHECK(scenic_system_);
 }

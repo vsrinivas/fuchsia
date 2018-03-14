@@ -4,7 +4,8 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/circle_shape.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo CircleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kCircle, "CircleShape"};
@@ -25,4 +26,5 @@ escher::Object CircleShape::GenerateRenderObject(
   return escher::Object::NewCircle(transform, radius_, material);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

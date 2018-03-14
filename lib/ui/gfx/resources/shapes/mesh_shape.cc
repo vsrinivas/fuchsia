@@ -6,7 +6,8 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo MeshShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kMesh, "MeshShape"};
@@ -86,4 +87,5 @@ bool MeshShape::BindBuffers(BufferPtr index_buffer,
   return true;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

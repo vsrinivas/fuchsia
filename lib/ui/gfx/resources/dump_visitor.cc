@@ -29,7 +29,8 @@
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
 #include "lib/fxl/logging.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 DumpVisitor::DumpVisitor(std::ostream& output) : output_(output) {}
 
@@ -369,4 +370,5 @@ void DumpVisitor::EndLine() {
   property_count_ = 0u;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

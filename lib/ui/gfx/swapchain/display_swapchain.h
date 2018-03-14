@@ -22,7 +22,8 @@
 #include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Display;
 class EventTimestamper;
@@ -88,6 +89,7 @@ class DisplaySwapchain : public Swapchain {
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplaySwapchain);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_SWAPCHAIN_DISPLAY_SWAPCHAIN_H_

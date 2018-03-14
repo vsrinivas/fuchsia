@@ -12,7 +12,8 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 FrameScheduler::FrameScheduler(Display* display)
     : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner().get()),
@@ -83,14 +84,14 @@ FrameScheduler::ComputePresentationAndWakeupTimes() const {
   while (wakeup_time < now) {
     // TODO(MZ-400): This is insufficient.  It prevents Scenic from
     // overcommitting but it doesn't prevent apparent jank.  For example,
-    // consider apps like hello_scene_manager that don't render the next frame
+    // consider apps like hello_scenic that don't render the next frame
     // until they receive the async response to the present call, which contains
     // the actual presentation time.  Currently, it won't receive that response
     // until the defered frame is rendered, and so the animated content will be
     // at the wrong position.
     //
     // One solution is to evaluate animation inside Scenic.  However, there will
-    // probably always be apps that use the "hello_scene_manager pattern".  To
+    // probably always be apps that use the "hello_scenic pattern".  To
     // support this, the app needs to be notified of the dropped frame so that
     // it can make any necessary updates before the next frame is rendered.
     //
@@ -238,4 +239,5 @@ bool FrameScheduler::TooMuchBackPressure() {
   return false;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

@@ -12,7 +12,8 @@
 #include "garnet/lib/ui/gfx/swapchain/magma_connection.h"
 #include "lib/fxl/macros.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // Wraps a magma_semaphore_t and takes care of releasing it on object
 // destruction.
@@ -40,6 +41,7 @@ class MagmaSemaphore {
   FXL_DISALLOW_COPY_AND_ASSIGN(MagmaSemaphore);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_SWAPCHAIN_MAGMA_SEMAPHORE_H_

@@ -12,7 +12,8 @@
 #include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/escher/vk/vulkan_swapchain.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Display;
 class EventTimestamper;
@@ -52,6 +53,7 @@ class VulkanDisplaySwapchain : public Swapchain {
   FXL_DISALLOW_COPY_AND_ASSIGN(VulkanDisplaySwapchain);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_SWAPCHAIN_VULKAN_DISPLAY_SWAPCHAIN_H_

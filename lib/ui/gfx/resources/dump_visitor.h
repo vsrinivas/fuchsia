@@ -12,7 +12,8 @@
 
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Resource;
 
@@ -67,6 +68,7 @@ class DumpVisitor : public ResourceVisitor {
   uint32_t indentation_ = 0u;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_DUMP_VISITOR_H_

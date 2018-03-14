@@ -11,7 +11,8 @@
 #include "lib/escher/geometry/transform.h"
 #include "lib/escher/geometry/types.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Variable;
 template <scenic::Value::Tag VT, typename T>
@@ -89,6 +90,7 @@ using Matrix4x4VariablePtr = fxl::RefPtr<Matrix4x4Variable>;
 using QuaternionVariablePtr = fxl::RefPtr<QuaternionVariable>;
 // using TransformVariablePtr = fxl::RefPtr<TransformVariable>;
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_VARIABLE_H_

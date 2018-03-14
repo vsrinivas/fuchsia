@@ -16,7 +16,8 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 using SessionId = uint64_t;
 
@@ -306,6 +307,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   fxl::WeakPtrFactory<Session> weak_factory_;  // must be last
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_SESSION_H_

@@ -9,7 +9,8 @@
 
 #include "garnet/lib/ui/gfx/engine/hit.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Node;
 class Session;
@@ -112,6 +113,7 @@ class HitTester {
   RayInfo* ray_info_ = nullptr;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_HIT_TESTER_H_

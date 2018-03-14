@@ -12,7 +12,8 @@
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/image.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class HostImage;
 using HostImagePtr = fxl::RefPtr<Image>;
@@ -78,6 +79,7 @@ class HostImage : public Image {
   escher::image_utils::ImageConversionFunction image_conversion_function_ = nullptr;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_HOST_IMAGE_H_

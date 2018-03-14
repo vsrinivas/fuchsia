@@ -14,7 +14,8 @@
 #include "zircon/system/ulib/zx/include/zx/event.h"
 #include "zircon/system/ulib/zx/include/zx/eventpair.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 // How long to run the message loop when we want to allow a task in the
@@ -51,6 +52,7 @@ f1dl::Array<zx::event> CreateEventArray(size_t n);
 fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size);
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_TESTS_UTIL_H_

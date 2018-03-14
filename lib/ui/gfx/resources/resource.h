@@ -17,7 +17,8 @@ namespace mz {
 class ErrorReporter;
 }
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Import;
 class ResourceLinker;
@@ -127,6 +128,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
 
 using ResourcePtr = fxl::RefPtr<Resource>;
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_RESOURCE_H_

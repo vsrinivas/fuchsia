@@ -9,7 +9,8 @@
 
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 void SessionTest::SetUp() {
@@ -96,4 +97,5 @@ void SessionThreadedTest::PostTask(fxl::AutoResetWaitableEvent& latch,
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

@@ -14,7 +14,8 @@
 #include "lib/escher/vk/gpu_mem.h"
 #include "lib/fsl/tasks/message_loop.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 namespace {
 
@@ -293,4 +294,5 @@ bool VulkanDisplaySwapchain::DrawAndPresentFrame(
   return true;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

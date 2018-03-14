@@ -14,7 +14,8 @@
 #include "garnet/lib/ui/gfx/swapchain/magma_connection.h"
 #include "lib/fxl/macros.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // Wraps a magma_buffer_t and takes care of releasing it on object destruction.
 class MagmaBuffer {
@@ -36,6 +37,7 @@ class MagmaBuffer {
   FXL_DISALLOW_COPY_AND_ASSIGN(MagmaBuffer);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_SWAPCHAIN_MAGMA_BUFFER_H_

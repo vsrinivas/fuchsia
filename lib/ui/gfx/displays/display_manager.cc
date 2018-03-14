@@ -9,7 +9,8 @@
 #include "garnet/lib/ui/gfx/displays/display_watcher.h"
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 DisplayManager::DisplayManager() = default;
 
@@ -31,4 +32,5 @@ void DisplayManager::CreateDefaultDisplay(uint32_t width_in_px,
   default_display_ = std::make_unique<Display>(width_in_px, height_in_px);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

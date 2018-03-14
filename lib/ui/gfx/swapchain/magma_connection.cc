@@ -10,7 +10,8 @@
 
 #include "lib/fxl/logging.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace {
 // TODO(MZ-386): Don't hardcode display name.
 const char* kDeviceName = "/dev/class/display/000";
@@ -112,4 +113,5 @@ bool MagmaConnection::DisplayPageFlip(
   return true;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

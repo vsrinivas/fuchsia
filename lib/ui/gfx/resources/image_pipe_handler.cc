@@ -4,11 +4,12 @@
 
 #include "garnet/lib/ui/gfx/resources/image_pipe.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 ImagePipeHandler::ImagePipeHandler(
     ::f1dl::InterfaceRequest<scenic::ImagePipe> request,
-    scene_manager::ImagePipe* image_pipe)
+    scenic::gfx::ImagePipe* image_pipe)
     : binding_(this, std::move(request)), image_pipe_(image_pipe) {
   binding_.set_error_handler([image_pipe] { image_pipe->OnConnectionError(); });
 }
@@ -36,4 +37,5 @@ void ImagePipeHandler::PresentImage(uint32_t image_id,
                             std::move(release_fences), callback);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

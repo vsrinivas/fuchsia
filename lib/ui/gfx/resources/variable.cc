@@ -7,7 +7,8 @@
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo Variable::kTypeInfo = {ResourceType::kVariable,
                                               "Variable"};
@@ -53,4 +54,5 @@ template class TypedVariable<scenic::Value::Tag::QUATERNION, escher::quat>;
 // template class TypedVariable<scenic::Value::Tag::TRANSFORM,
 // escher::Transform>;
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

@@ -10,7 +10,8 @@
 #include "garnet/lib/ui/gfx/resources/material.h"
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class ShapeNode final : public Node {
  public:
@@ -34,6 +35,7 @@ class ShapeNode final : public Node {
   ShapePtr shape_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_SHAPE_NODE_H_

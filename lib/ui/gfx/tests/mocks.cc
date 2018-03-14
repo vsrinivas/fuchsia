@@ -6,12 +6,13 @@
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 SessionForTest::SessionForTest(SessionId id,
                                Engine* engine,
-                               scene_manager::EventReporter* event_reporter,
+                               scenic::gfx::EventReporter* event_reporter,
                                mz::ErrorReporter* error_reporter)
     : Session(id, engine, event_reporter, error_reporter) {}
 
@@ -81,4 +82,5 @@ std::unique_ptr<SessionManager> EngineForTest::InitializeSessionManager() {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

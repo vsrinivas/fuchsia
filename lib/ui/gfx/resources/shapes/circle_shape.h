@@ -7,7 +7,8 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/planar_shape.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class CircleShape final : public PlanarShape {
  public:
@@ -32,6 +33,7 @@ class CircleShape final : public PlanarShape {
   float radius_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_SHAPES_CIRCLE_SHAPE_H_

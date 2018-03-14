@@ -11,7 +11,8 @@
 #include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "lib/escher/flib/fence.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo ImagePipe::kTypeInfo = {
     ResourceType::kImagePipe | ResourceType::kImageBase, "ImagePipe"};
@@ -111,7 +112,7 @@ void ImagePipe::PresentImage(
   if (!frames_.empty() &&
       presentation_time < frames_.back().presentation_time) {
     session()->error_reporter()->ERROR()
-        << "scene_manager::ImagePipe: Present called with out-of-order "
+        << "scenic::gfx::ImagePipe: Present called with out-of-order "
            "presentation time."
         << "presentation_time=" << presentation_time
         << ", last scheduled presentation time="
@@ -223,4 +224,5 @@ const escher::ImagePtr& ImagePipe::GetEscherImage() {
   return kNullEscherImage;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

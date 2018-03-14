@@ -7,7 +7,8 @@
 
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class EntityNode final : public Node {
  public:
@@ -18,6 +19,7 @@ class EntityNode final : public Node {
   void Accept(class ResourceVisitor* visitor) override;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_ENTITY_NODE_H_

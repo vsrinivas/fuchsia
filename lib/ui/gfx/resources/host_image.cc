@@ -9,7 +9,8 @@
 #include "garnet/lib/ui/gfx/resources/host_memory.h"
 #include "garnet/lib/ui/gfx/util/image_formats.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo HostImage::kTypeInfo = {
     ResourceType::kHostImage | ResourceType::kImage | ResourceType::kImageBase,
@@ -139,4 +140,5 @@ ImagePtr HostImage::NewForTesting(Session* session,
                                      host_image_format));
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

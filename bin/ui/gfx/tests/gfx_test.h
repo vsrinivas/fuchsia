@@ -4,8 +4,8 @@
 
 // TODO(MZ-540): Re-enable tests.
 /*
-#ifndef GARNET_BIN_UI_SCENE_MANAGER_TESTS_SCENE_MANAGER_TEST_H_
-#define GARNET_BIN_UI_SCENE_MANAGER_TESTS_SCENE_MANAGER_TEST_H_
+#ifndef GARNET_BIN_UI_GFX_TESTS_GFX_TEST_H_
+#define GARNET_BIN_UI_GFX_TESTS_GFX_TEST_H_
 
 #include "lib/escher/forward_declarations.h"
 
@@ -17,7 +17,8 @@
 
 #include "gtest/gtest.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 class SceneManagerTest : public ::testing::Test {
@@ -48,6 +49,7 @@ class SceneManagerTest : public ::testing::Test {
 };
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_BIN_UI_SCENE_MANAGER_TESTS_SCENE_MANAGER_TEST_H_ */

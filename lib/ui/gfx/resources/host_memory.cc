@@ -4,7 +4,8 @@
 
 #include "garnet/lib/ui/gfx/resources/host_memory.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo HostMemory::kTypeInfo = {
     ResourceType::kMemory | ResourceType::kHostMemory, "HostMemory"};
@@ -24,7 +25,7 @@ HostMemoryPtr HostMemory::New(Session* session,
                               const scenic::MemoryPtr& args,
                               mz::ErrorReporter* error_reporter) {
   if (args->memory_type != scenic::MemoryType::HOST_MEMORY) {
-    error_reporter->ERROR() << "scene_manager::HostMemory::New(): "
+    error_reporter->ERROR() << "scenic::gfx::HostMemory::New(): "
                                "Memory must be of type HOST_MEMORY.";
     return nullptr;
   }
@@ -41,4 +42,5 @@ HostMemoryPtr HostMemory::New(Session* session,
   return fxl::MakeRefCounted<HostMemory>(session, id, std::move(vmo), vmo_size);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

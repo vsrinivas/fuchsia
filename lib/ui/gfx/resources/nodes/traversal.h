@@ -8,7 +8,8 @@
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 //
 // Front-to-back traversals.
@@ -104,6 +105,7 @@ bool ForEachChildAndImportFrontToBackUntilTrue(const Node& node,
          ForEachImportFrontToBackUntilTrue(node, func);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_TRAVERSAL_H_

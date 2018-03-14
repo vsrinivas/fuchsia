@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_UI_HELLO_SCENE_MANAGER_APP_H_
-#define GARNET_EXAMPLES_UI_HELLO_SCENE_MANAGER_APP_H_
+#ifndef GARNET_EXAMPLES_UI_HELLO_SCENIC_APP_H_
+#define GARNET_EXAMPLES_UI_HELLO_SCENIC_APP_H_
 
 #include "lib/app/cpp/application_context.h"
 
@@ -12,7 +12,7 @@
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
 
-namespace hello_scene_manager {
+namespace hello_scenic {
 
 class App {
  public:
@@ -54,6 +54,6 @@ class App {
   bool camera_anim_returning_ = false;
 };
 
-}  // namespace hello_scene_manager
+}  // namespace hello_scenic
 
-#endif  // GARNET_EXAMPLES_UI_HELLO_SCENE_MANAGER_APP_H_
+#endif  // GARNET_EXAMPLES_UI_HELLO_SCENIC_APP_H_

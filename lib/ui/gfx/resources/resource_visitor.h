@@ -5,7 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_RESOURCE_VISITOR_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_RESOURCE_VISITOR_H_
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Import;
 class GpuMemory;
@@ -71,6 +72,7 @@ class ResourceVisitor {
   virtual void Visit(Import* r) = 0;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_RESOURCE_VISITOR_H_

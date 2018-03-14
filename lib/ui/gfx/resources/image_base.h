@@ -8,7 +8,8 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // Abstract superclass for Image and ImagePipe.
 class ImageBase : public Resource {
@@ -26,6 +27,7 @@ class ImageBase : public Resource {
 
 using ImageBasePtr = fxl::RefPtr<ImageBase>;
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_IMAGE_BASE_H_

@@ -12,12 +12,13 @@
 #include "lib/fsl/threading/thread.h"
 #include "lib/fxl/synchronization/waitable_event.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 class SessionTest : public ::testing::Test,
                     public mz::ErrorReporter,
-                    public scene_manager::EventReporter {
+                    public scenic::gfx::EventReporter {
  public:
   // ::testing::Test virtual method.
   void SetUp() override;
@@ -81,6 +82,7 @@ class SessionThreadedTest : public SessionTest {
 };
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_TESTS_SESSION_TEST_H_

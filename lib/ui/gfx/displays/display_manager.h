@@ -12,7 +12,8 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // Provides support for enumerating available displays.
 class DisplayManager {
@@ -42,6 +43,7 @@ class DisplayManager {
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplayManager);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_MANAGER_H_

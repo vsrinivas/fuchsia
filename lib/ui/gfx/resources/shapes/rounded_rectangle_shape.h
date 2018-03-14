@@ -10,7 +10,8 @@
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/shape/rounded_rect.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class RoundedRectangleShape final : public PlanarShape {
  public:
@@ -44,6 +45,7 @@ class RoundedRectangleShape final : public PlanarShape {
   escher::MeshPtr mesh_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_SHAPES_ROUNDED_RECTANGLE_SHAPE_H_

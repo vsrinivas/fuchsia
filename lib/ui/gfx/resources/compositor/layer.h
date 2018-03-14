@@ -11,7 +11,8 @@
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/scene/viewing_volume.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Layer;
 class LayerStack;
@@ -81,6 +82,7 @@ class Layer : public Resource {
   LayerStack* layer_stack_ = nullptr;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_LAYER_H_

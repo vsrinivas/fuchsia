@@ -12,7 +12,8 @@
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 TEST(EventTimestamper, DISABLED_SmokeTest) {
@@ -55,4 +56,5 @@ TEST(EventTimestamper, DISABLED_SmokeTest) {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

@@ -6,7 +6,8 @@
 
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo DirectionalLight::kTypeInfo = {
     ResourceType::kLight | ResourceType::kDirectionalLight, "DirectionalLight"};
@@ -17,7 +18,7 @@ DirectionalLight::DirectionalLight(Session* session, scenic::ResourceId id)
 bool DirectionalLight::SetDirection(const glm::vec3& direction) {
   float length = glm::length(direction);
   if (length < 0.001f) {
-    error_reporter()->ERROR() << "scene_manager::DirectionalLight::"
+    error_reporter()->ERROR() << "scenic::gfx::DirectionalLight::"
                                  "SetDirection(): length of direction vector "
                                  "is near zero.";
     return false;
@@ -26,4 +27,5 @@ bool DirectionalLight::SetDirection(const glm::vec3& direction) {
   return true;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

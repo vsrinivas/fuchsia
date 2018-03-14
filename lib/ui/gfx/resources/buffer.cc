@@ -6,7 +6,8 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo Buffer::kTypeInfo = {ResourceType::kBuffer, "Buffer"};
 
@@ -26,4 +27,5 @@ Buffer::Buffer(Session* session,
                               size,
                               offset)) {}
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

@@ -9,7 +9,8 @@
 #include "garnet/lib/ui/gfx/resources/image_base.h"
 #include "garnet/lib/ui/gfx/resources/image_pipe.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo Material::kTypeInfo = {ResourceType::kMaterial,
                                               "Material"};
@@ -46,4 +47,5 @@ void Material::UpdateEscherMaterial() {
   }
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

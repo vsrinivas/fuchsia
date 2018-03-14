@@ -10,7 +10,8 @@
 #include "lib/escher/geometry/types.h"
 #include "lib/ui/gfx/fidl/types.fidl.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 inline escher::vec2 Unwrap(const scenic::vec2Ptr& args) {
   return {args->x, args->y};
@@ -194,6 +195,7 @@ inline bool Unwrap(const scenic::ValuePtr& value, escher::Transform* out) {
   return false;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_UTIL_UNWRAP_H_

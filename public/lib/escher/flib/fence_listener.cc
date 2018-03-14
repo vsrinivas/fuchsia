@@ -86,4 +86,4 @@ async_wait_result_t FenceListener::OnFenceSignalled(
   }
 }
 
-}  // namespace scene_manager
+}  // namespace escher

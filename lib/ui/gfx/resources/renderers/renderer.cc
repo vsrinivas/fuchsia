@@ -23,7 +23,8 @@
 #include "garnet/lib/ui/gfx/resources/shapes/circle_shape.h"
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo Renderer::kTypeInfo = {ResourceType::kRenderer,
                                               "Renderer"};
@@ -240,4 +241,5 @@ void Renderer::Visitor::Visit(DirectionalLight* r) {
   FXL_CHECK(false);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

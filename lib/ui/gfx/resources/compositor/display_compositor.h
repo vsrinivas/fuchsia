@@ -7,7 +7,8 @@
 
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Display;
 class DisplaySwapchain;
@@ -33,6 +34,7 @@ class DisplayCompositor : public Compositor {
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplayCompositor);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_DISPLAY_COMPOSITOR_H_

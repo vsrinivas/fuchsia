@@ -10,7 +10,8 @@
 #include "garnet/lib/ui/scenic/system.h"
 #include "lib/escher/escher.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class ScenicSystem : public mz::TempSystemDelegate {
  public:
@@ -46,6 +47,7 @@ class ScenicSystem : public mz::TempSystemDelegate {
   std::unique_ptr<Engine> engine_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_SCENIC_SYSTEM_H_

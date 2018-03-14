@@ -6,7 +6,8 @@
 
 #include <utility>
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo ShapeNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kShapeNode, "ShapeNode"};
@@ -27,4 +28,5 @@ bool ShapeNode::GetIntersection(const escher::ray4& ray,
   return shape_ && shape_->GetIntersection(ray, out_distance);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

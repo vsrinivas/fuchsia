@@ -15,7 +15,8 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/ui/gfx/fidl/ops.fidl-common.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 /// Allows linking of resources in different sessions.
 
@@ -137,6 +138,7 @@ class ResourceLinker {
   FXL_DISALLOW_COPY_AND_ASSIGN(ResourceLinker);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_RESOURCE_LINKER_H_

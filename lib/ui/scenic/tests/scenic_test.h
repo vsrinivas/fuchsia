@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_UI_SCENIC_TESTS_MOZART_TEST_H_
-#define GARNET_LIB_UI_SCENIC_TESTS_MOZART_TEST_H_
+#ifndef GARNET_LIB_UI_SCENIC_TESTS_SCENIC_TEST_H_
+#define GARNET_LIB_UI_SCENIC_TESTS_SCENIC_TEST_H_
 
 #include "garnet/lib/ui/gfx/engine/event_reporter.h"
 #include "garnet/lib/ui/scenic/scenic.h"
@@ -63,4 +63,4 @@ class ScenicTest : public ::testing::Test,
 }  // namespace test
 }  // namespace mz
 
-#endif  // GARNET_LIB_UI_SCENIC_TESTS_MOZART_TEST_H_
+#endif  // GARNET_LIB_UI_SCENIC_TESTS_SCENIC_TEST_H_

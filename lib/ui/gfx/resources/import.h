@@ -10,7 +10,8 @@
 #include "lib/ui/gfx/fidl/resources.fidl.h"
 #include "zircon/system/ulib/zx/include/zx/eventpair.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Import;
 using ImportPtr = fxl::RefPtr<Import>;
@@ -91,6 +92,7 @@ class Import final : public Resource {
   FXL_DISALLOW_COPY_AND_ASSIGN(Import);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_IMPORT_H_

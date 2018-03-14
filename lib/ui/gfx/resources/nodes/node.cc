@@ -11,7 +11,8 @@
 
 #include "lib/escher/geometry/types.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 namespace {
 
@@ -61,7 +62,7 @@ bool Node::AddChild(NodePtr child_node) {
 
   if (!(type_flags() & kHasChildren)) {
     error_reporter()->ERROR()
-        << "scene_manager::Node::AddChild(): node of type '" << type_name()
+        << "scenic::gfx::Node::AddChild(): node of type '" << type_name()
         << "' cannot have children.";
     return false;
   }
@@ -82,7 +83,7 @@ bool Node::AddChild(NodePtr child_node) {
 
 bool Node::AddPart(NodePtr part_node) {
   if (!(type_flags() & kHasParts)) {
-    error_reporter()->ERROR() << "scene_manager::Node::AddPart(): node of type "
+    error_reporter()->ERROR() << "scenic::gfx::Node::AddPart(): node of type "
                               << type_name() << " cannot have parts.";
     return false;
   }
@@ -144,7 +145,7 @@ void Node::EraseChild(Node* child) {
 bool Node::DetachChildren() {
   if (!(type_flags() & kHasChildren)) {
     error_reporter()->ERROR()
-        << "scene_manager::Node::DetachChildren(): node of type '"
+        << "scenic::gfx::Node::DetachChildren(): node of type '"
         << type_name() << "' cannot have children.";
     return false;
   }
@@ -165,7 +166,7 @@ bool Node::SetTagValue(uint32_t tag_value) {
 bool Node::SetTransform(const escher::Transform& transform) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter()->ERROR()
-        << "scene_manager::Node::SetTransform(): node of type " << type_name()
+        << "scenic::gfx::Node::SetTransform(): node of type " << type_name()
         << " cannot have transform set.";
     return false;
   }
@@ -177,7 +178,7 @@ bool Node::SetTransform(const escher::Transform& transform) {
 bool Node::SetTranslation(const escher::vec3& translation) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter()->ERROR()
-        << "scene_manager::Node::SetTranslation(): node of type " << type_name()
+        << "scenic::gfx::Node::SetTranslation(): node of type " << type_name()
         << " cannot have translation set.";
     return false;
   }
@@ -191,7 +192,7 @@ bool Node::SetTranslation(const escher::vec3& translation) {
 bool Node::SetTranslation(Vector3VariablePtr translation_variable) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter()->ERROR()
-        << "scene_manager::Node::SetTranslation(): node of type " << type_name()
+        << "scenic::gfx::Node::SetTranslation(): node of type " << type_name()
         << " cannot have translation set.";
     return false;
   }
@@ -208,7 +209,7 @@ bool Node::SetTranslation(Vector3VariablePtr translation_variable) {
 bool Node::SetScale(const escher::vec3& scale) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter()->ERROR()
-        << "scene_manager::Node::SetScale(): node of type " << type_name()
+        << "scenic::gfx::Node::SetScale(): node of type " << type_name()
         << " cannot have scale set.";
     return false;
   }
@@ -221,7 +222,7 @@ bool Node::SetScale(const escher::vec3& scale) {
 bool Node::SetScale(Vector3VariablePtr scale_variable) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter()->ERROR()
-        << "scene_manager::Node::SetScale(): node of type " << type_name()
+        << "scenic::gfx::Node::SetScale(): node of type " << type_name()
         << " cannot have scale set.";
     return false;
   }
@@ -237,7 +238,7 @@ bool Node::SetScale(Vector3VariablePtr scale_variable) {
 bool Node::SetRotation(const escher::quat& rotation) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter()->ERROR()
-        << "scene_manager::Node::SetRotation(): node of type " << type_name()
+        << "scenic::gfx::Node::SetRotation(): node of type " << type_name()
         << " cannot have rotation set.";
     return false;
   }
@@ -250,7 +251,7 @@ bool Node::SetRotation(const escher::quat& rotation) {
 bool Node::SetRotation(QuaternionVariablePtr rotation_variable) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter()->ERROR()
-        << "scene_manager::Node::SetRotation(): node of type " << type_name()
+        << "scenic::gfx::Node::SetRotation(): node of type " << type_name()
         << " cannot have rotation set.";
     return false;
   }
@@ -266,7 +267,7 @@ bool Node::SetRotation(QuaternionVariablePtr rotation_variable) {
 bool Node::SetAnchor(const escher::vec3& anchor) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter()->ERROR()
-        << "scene_manager::Node::SetAnchor(): node of type " << type_name()
+        << "scenic::gfx::Node::SetAnchor(): node of type " << type_name()
         << " cannot have anchor set.";
     return false;
   }
@@ -279,7 +280,7 @@ bool Node::SetAnchor(const escher::vec3& anchor) {
 bool Node::SetAnchor(Vector3VariablePtr anchor_variable) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter()->ERROR()
-        << "scene_manager::Node::SetAnchor(): node of type " << type_name()
+        << "scenic::gfx::Node::SetAnchor(): node of type " << type_name()
         << " cannot have anchor set.";
     return false;
   }
@@ -295,7 +296,7 @@ bool Node::SetAnchor(Vector3VariablePtr anchor_variable) {
 bool Node::SetClipToSelf(bool clip_to_self) {
   if (!(type_flags() & kHasClip)) {
     error_reporter()->ERROR()
-        << "scene_manager::Node::SetClipToSelf(): node of type " << type_name()
+        << "scenic::gfx::Node::SetClipToSelf(): node of type " << type_name()
         << " cannot have clip params set.";
     return false;
   }
@@ -351,4 +352,5 @@ bool Node::GetIntersection(const escher::ray4& ray, float* out_distance) const {
   return false;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

@@ -4,7 +4,8 @@
 
 #include "garnet/lib/ui/gfx/resources/image_base.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo ImageBase::kTypeInfo = {ResourceType::kImageBase,
                                                "ImageBase"};
@@ -16,4 +17,5 @@ ImageBase::ImageBase(Session* session,
   FXL_DCHECK(type_info.IsKindOf(ImageBase::kTypeInfo));
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

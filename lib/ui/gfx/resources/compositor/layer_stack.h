@@ -10,7 +10,8 @@
 
 #include <unordered_set>
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Layer;
 class LayerStack;
@@ -46,6 +47,7 @@ class LayerStack : public Resource {
   std::unordered_set<LayerPtr> layers_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_LAYER_STACK_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/ui/hello_scene_manager/app.h"
+#include "garnet/examples/ui/hello_scenic/app.h"
 
 #if defined(countof)
 // Workaround for compiler error due to Zircon defining countof() as a macro.
@@ -34,7 +34,7 @@
 using namespace mozart;
 using namespace scenic_lib;
 
-namespace hello_scene_manager {
+namespace hello_scenic {
 
 static constexpr uint64_t kBillion = 1000000000;
 
@@ -295,4 +295,4 @@ void App::ReleaseSessionResources() {
   session_.reset();
 }
 
-}  // namespace hello_scene_manager
+}  // namespace hello_scenic

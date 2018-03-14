@@ -7,7 +7,8 @@
 #include "garnet/lib/ui/gfx/engine/resource_linker.h"
 #include "lib/fsl/tasks/message_loop.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 static zx_signals_t kEventPairDeathSignals = ZX_EPAIR_PEER_CLOSED;
 
@@ -158,4 +159,5 @@ async_wait_result_t UnresolvedImports::OnTokenPeerDeath(
   return ASYNC_WAIT_FINISHED;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

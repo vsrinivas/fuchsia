@@ -12,7 +12,8 @@
 #include "lib/escher/escher_process_init.h"
 #include "lib/fxl/functional/make_copyable.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 ScenicSystem::ScenicSystem(mz::SystemContext context)
     : mz::TempSystemDelegate(std::move(context), false) {
@@ -107,4 +108,5 @@ void ScenicSystem::GetDisplayInfo(
   }
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

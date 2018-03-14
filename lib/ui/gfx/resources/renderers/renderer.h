@@ -10,7 +10,8 @@
 #include "lib/escher/scene/object.h"
 #include "lib/ui/gfx/fidl/renderer.fidl.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Camera;
 class Scene;
@@ -101,6 +102,7 @@ class Renderer : public Resource {
 
 using RendererPtr = fxl::RefPtr<Renderer>;
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_RENDERERS_RENDERER_H_

@@ -7,7 +7,8 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace {
 ResourcePtr CreateDelegate(Session* session,
                            scenic::ResourceId id,
@@ -59,4 +60,5 @@ void Import::UnbindImportedResource() {
   session()->EnqueueEvent(std::move(event));
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

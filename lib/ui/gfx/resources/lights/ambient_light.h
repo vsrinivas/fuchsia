@@ -7,7 +7,8 @@
 
 #include "garnet/lib/ui/gfx/resources/lights/light.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class AmbientLight final : public Light {
  public:
@@ -19,6 +20,7 @@ class AmbientLight final : public Light {
   void Accept(class ResourceVisitor* visitor) override;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_LIGHTS_AMBIENT_LIGHT_H_

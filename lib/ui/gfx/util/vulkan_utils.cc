@@ -6,7 +6,8 @@
 
 #include "lib/escher/vk/gpu_mem.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 vk::SurfaceKHR CreateVulkanMagmaSurface(const vk::Instance& instance) {
   VkMagmaSurfaceCreateInfoKHR create_info = {
@@ -20,4 +21,5 @@ vk::SurfaceKHR CreateVulkanMagmaSurface(const vk::Instance& instance) {
   return surface;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

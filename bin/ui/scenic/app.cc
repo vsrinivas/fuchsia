@@ -26,7 +26,7 @@ App::App(app::ApplicationContext* app_context)
           fsl::MessageLoop::GetCurrent()->task_runner().get(),
           &clock_)) {
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto scenic = scenic_->RegisterSystem<scene_manager::ScenicSystem>();
+  auto scenic = scenic_->RegisterSystem<scenic::gfx::ScenicSystem>();
   FXL_DCHECK(scenic);
 #endif
 

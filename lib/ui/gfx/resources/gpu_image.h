@@ -12,7 +12,8 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/escher/vk/image.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class GpuImage;
 using GpuImagePtr = fxl::RefPtr<GpuImage>;
@@ -64,6 +65,7 @@ class GpuImage : public Image {
   GpuMemoryPtr memory_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_GPU_IMAGE_H_

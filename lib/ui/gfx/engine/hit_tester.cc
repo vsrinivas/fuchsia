@@ -8,7 +8,8 @@
 #include "lib/escher/util/type_utils.h"
 #include "lib/fxl/logging.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 HitTester::HitTester() {}
 
@@ -137,4 +138,5 @@ bool HitTester::IsRayWithinClippedContentInner(Node* node,
   });
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

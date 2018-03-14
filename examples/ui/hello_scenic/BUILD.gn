@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("hello_scene_manager") {
-  output_name = "hello_scene_manager"
+executable("hello_scenic") {
+  output_name = "hello_scenic"
 
   sources = [
     "app.cc",

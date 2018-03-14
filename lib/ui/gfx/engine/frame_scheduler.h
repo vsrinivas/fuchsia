@@ -16,7 +16,8 @@ namespace fxl {
 class TaskRunner;
 }  // namespace fxl
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Display;
 class FrameTimings;
@@ -111,6 +112,7 @@ class FrameScheduler {
   FXL_DISALLOW_COPY_AND_ASSIGN(FrameScheduler);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_FRAME_SCHEDULER_H_

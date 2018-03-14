@@ -33,13 +33,23 @@
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/gfx/util/wrap.h"
+#include "lib/ui/gfx/fidl/types.fidl.h"
 
 #include "lib/escher/hmd/pose_buffer.h"
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
 #include "lib/escher/util/type_utils.h"
 
-namespace scene_manager {
+namespace {
+// TODO(SCN-616): Workaround for namespace resolution issue.
+template <class T>
+std::ostream& OStreamInsert(std::ostream& stream, const T& t) {
+  return stream << t;
+}
+}  // namespace
+
+namespace scenic {
+namespace gfx {
 
 namespace {
 
@@ -173,8 +183,7 @@ bool Session::ApplyCreateResourceOp(const scenic::CreateResourceOpPtr& op) {
   const scenic::ResourceId id = op->id;
   if (id == 0) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplyCreateResourceOp(): invalid ID: "
-        << op;
+        << "scenic::gfx::Session::ApplyCreateResourceOp(): invalid ID: " << op;
     return false;
   }
 
@@ -241,7 +250,7 @@ bool Session::ApplyReleaseResourceOp(const scenic::ReleaseResourceOpPtr& op) {
 bool Session::ApplyExportResourceOp(const scenic::ExportResourceOpPtr& op) {
   if (!op->token) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplyExportResourceOp(): "
+        << "scenic::gfx::Session::ApplyExportResourceOp(): "
            "no token provided.";
     return false;
   }
@@ -255,7 +264,7 @@ bool Session::ApplyExportResourceOp(const scenic::ExportResourceOpPtr& op) {
 bool Session::ApplyImportResourceOp(const scenic::ImportResourceOpPtr& op) {
   if (!op->token) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplyImportResourceOp(): "
+        << "scenic::gfx::Session::ApplyImportResourceOp(): "
            "no token provided.";
     return false;
   }
@@ -364,7 +373,7 @@ bool Session::ApplySetAnchorOp(const scenic::SetAnchorOpPtr& op) {
 bool Session::ApplySetSizeOp(const scenic::SetSizeOpPtr& op) {
   if (auto layer = resources_.FindResource<Layer>(op->id)) {
     if (IsVariable(op->value)) {
-      error_reporter_->ERROR() << "scene_manager::Session::ApplySetSizeOp(): "
+      error_reporter_->ERROR() << "scenic::gfx::Session::ApplySetSizeOp(): "
                                   "unimplemented for variable value.";
       return false;
     }
@@ -396,9 +405,8 @@ bool Session::ApplySetMaterialOp(const scenic::SetMaterialOpPtr& op) {
 bool Session::ApplySetClipOp(const scenic::SetClipOpPtr& op) {
   if (op->clip_id != 0) {
     // TODO(MZ-167): Support non-zero clip_id.
-    error_reporter_->ERROR()
-        << "scene_manager::Session::ApplySetClipOp(): only "
-           "clip_to_self is implemented.";
+    error_reporter_->ERROR() << "scenic::gfx::Session::ApplySetClipOp(): only "
+                                "clip_to_self is implemented.";
     return false;
   }
 
@@ -448,7 +456,7 @@ bool Session::ApplySetTextureOp(const scenic::SetTextureOpPtr& op) {
 bool Session::ApplySetColorOp(const scenic::SetColorOpPtr& op) {
   if (auto material = resources_.FindResource<Material>(op->material_id)) {
     if (IsVariable(op->color)) {
-      error_reporter_->ERROR() << "scene_manager::Session::ApplySetColorOp(): "
+      error_reporter_->ERROR() << "scenic::gfx::Session::ApplySetColorOp(): "
                                   "unimplemented for variable color.";
       return false;
     }
@@ -513,7 +521,7 @@ bool Session::ApplySetRendererParamOp(const scenic::SetRendererParamOpPtr& op) {
         return renderer->SetShadowTechnique(op->param->get_shadow_technique());
       case scenic::RendererParam::Tag::__UNKNOWN__:
         error_reporter_->ERROR()
-            << "scene_manager::Session::ApplySetRendererParamOp(): "
+            << "scenic::gfx::Session::ApplySetRendererParamOp(): "
                "unknown param.";
     }
   }
@@ -533,7 +541,7 @@ bool Session::ApplySetCameraProjectionOp(
   if (IsVariable(op->eye_position) || IsVariable(op->eye_look_at) ||
       IsVariable(op->eye_up) || IsVariable(op->fovy)) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplySetCameraProjectionOp(): "
+        << "scenic::gfx::Session::ApplySetCameraProjectionOp(): "
            "unimplemented: variable properties.";
     return false;
   } else if (auto camera = resources_.FindResource<Camera>(op->camera_id)) {
@@ -549,7 +557,7 @@ bool Session::ApplySetCameraPoseBufferOp(
     const scenic::SetCameraPoseBufferOpPtr& op) {
   if (op->base_time > zx::clock::get(ZX_CLOCK_MONOTONIC).get()) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplySetCameraPoseBufferOp(): "
+        << "scenic::gfx::Session::ApplySetCameraPoseBufferOp(): "
            "base time not in the past";
     return false;
   }
@@ -557,21 +565,21 @@ bool Session::ApplySetCameraPoseBufferOp(
   auto buffer = resources_.FindResource<Buffer>(op->buffer_id);
   if (!buffer) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplySetCameraPoseBufferOp(): "
+        << "scenic::gfx::Session::ApplySetCameraPoseBufferOp(): "
            "invalid buffer ID";
     return false;
   }
 
   if (op->num_entries < 1) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplySetCameraPoseBufferOp(): "
+        << "scenic::gfx::Session::ApplySetCameraPoseBufferOp(): "
            "must have at least one entry in the pose buffer";
     return false;
   }
 
   if (buffer->size() < op->num_entries * sizeof(escher::hmd::Pose)) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplySetCameraPoseBufferOp(): "
+        << "scenic::gfx::Session::ApplySetCameraPoseBufferOp(): "
            "buffer is not large enough";
     return false;
   }
@@ -579,7 +587,7 @@ bool Session::ApplySetCameraPoseBufferOp(
   auto camera = resources_.FindResource<Camera>(op->camera_id);
   if (!camera) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplySetCameraPoseBufferOp(): "
+        << "scenic::gfx::Session::ApplySetCameraPoseBufferOp(): "
            "invalid camera ID";
     return false;
   }
@@ -593,9 +601,8 @@ bool Session::ApplySetCameraPoseBufferOp(
 bool Session::ApplySetLightColorOp(const scenic::SetLightColorOpPtr& op) {
   // TODO(MZ-123): support variables.
   if (op->color->variable_id) {
-    error_reporter_->ERROR()
-        << "scene_manager::Session::ApplySetLightColorOp(): "
-           "unimplemented: variable color.";
+    error_reporter_->ERROR() << "scenic::gfx::Session::ApplySetLightColorOp(): "
+                                "unimplemented: variable color.";
     return false;
   } else if (auto light = resources_.FindResource<Light>(op->light_id)) {
     return light->SetColor(Unwrap(op->color->value));
@@ -608,7 +615,7 @@ bool Session::ApplySetLightDirectionOp(
   // TODO(MZ-123): support variables.
   if (op->direction->variable_id) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplySetLightDirectionOp(): "
+        << "scenic::gfx::Session::ApplySetLightDirectionOp(): "
            "unimplemented: variable direction.";
     return false;
   } else if (auto light =
@@ -626,19 +633,19 @@ bool Session::ApplyAddLightOp(const scenic::AddLightOpPtr& op) {
   }
 
   error_reporter_->ERROR()
-      << "scene_manager::Session::ApplyAddLightOp(): unimplemented.";
+      << "scenic::gfx::Session::ApplyAddLightOp(): unimplemented.";
   return false;
 }
 
 bool Session::ApplyDetachLightOp(const scenic::DetachLightOpPtr& op) {
   error_reporter_->ERROR()
-      << "scene_manager::Session::ApplyDetachLightOp(): unimplemented.";
+      << "scenic::gfx::Session::ApplyDetachLightOp(): unimplemented.";
   return false;
 }
 
 bool Session::ApplyDetachLightsOp(const scenic::DetachLightsOpPtr& op) {
   error_reporter_->ERROR()
-      << "scene_manager::Session::ApplyDetachLightsOp(): unimplemented.";
+      << "scenic::gfx::Session::ApplyDetachLightsOp(): unimplemented.";
   return false;
 }
 
@@ -733,9 +740,8 @@ bool Session::ApplyCreateRectangle(scenic::ResourceId id,
 
   // TODO(MZ-123): support variables.
   if (IsVariable(args->width) || IsVariable(args->height)) {
-    error_reporter_->ERROR()
-        << "scene_manager::Session::ApplyCreateRectangle(): "
-           "unimplemented: variable width/height.";
+    error_reporter_->ERROR() << "scenic::gfx::Session::ApplyCreateRectangle(): "
+                                "unimplemented: variable width/height.";
     return false;
   }
 
@@ -762,7 +768,7 @@ bool Session::ApplyCreateRoundedRectangle(
       IsVariable(args->bottom_left_radius) ||
       IsVariable(args->bottom_right_radius)) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::ApplyCreateRoundedRectangle(): "
+        << "scenic::gfx::Session::ApplyCreateRoundedRectangle(): "
            "unimplemented: variable width/height/radii.";
     return false;
   }
@@ -788,7 +794,7 @@ bool Session::ApplyCreateCircle(scenic::ResourceId id,
 
   // TODO(MZ-123): support variables.
   if (IsVariable(args->radius)) {
-    error_reporter_->ERROR() << "scene_manager::Session::ApplyCreateCircle(): "
+    error_reporter_->ERROR() << "scenic::gfx::Session::ApplyCreateCircle(): "
                                 "unimplemented: variable radius.";
     return false;
   }
@@ -884,7 +890,7 @@ ResourcePtr Session::CreateBuffer(scenic::ResourceId id,
                                   uint32_t num_bytes) {
   if (!memory->IsKindOf<GpuMemory>()) {
     // TODO(MZ-273): host memory should also be supported.
-    error_reporter_->ERROR() << "scene_manager::Session::CreateBuffer(): "
+    error_reporter_->ERROR() << "scenic::gfx::Session::CreateBuffer(): "
                                 "memory must be of type "
                                 "scenic.MemoryType.VK_DEVICE_MEMORY";
     return ResourcePtr();
@@ -892,7 +898,7 @@ ResourcePtr Session::CreateBuffer(scenic::ResourceId id,
 
   auto gpu_memory = memory->As<GpuMemory>();
   if (memory_offset + num_bytes > gpu_memory->size()) {
-    error_reporter_->ERROR() << "scene_manager::Session::CreateBuffer(): "
+    error_reporter_->ERROR() << "scenic::gfx::Session::CreateBuffer(): "
                                 "buffer does not fit within memory (buffer "
                                 "offset: "
                              << memory_offset << ", buffer size: " << num_bytes
@@ -932,7 +938,7 @@ ResourcePtr Session::CreateDirectionalLight(scenic::ResourceId id) {
 
 ResourcePtr Session::CreateClipNode(scenic::ResourceId id,
                                     const scenic::ClipNodePtr& args) {
-  error_reporter_->ERROR() << "scene_manager::Session::CreateClipNode(): "
+  error_reporter_->ERROR() << "scenic::gfx::Session::CreateClipNode(): "
                               "unimplemented.";
   return ResourcePtr();
 }
@@ -970,7 +976,7 @@ ResourcePtr Session::CreateImagePipeCompositor(
     const scenic::ImagePipeCompositorPtr& args) {
   // TODO(MZ-179)
   error_reporter_->ERROR()
-      << "scene_manager::Session::ApplyCreateImagePipeCompositor() "
+      << "scenic::gfx::Session::ApplyCreateImagePipeCompositor() "
          "is unimplemented (MZ-179)";
   return ResourcePtr();
 }
@@ -1048,7 +1054,7 @@ ResourcePtr Session::CreateRoundedRectangle(scenic::ResourceId id,
   auto factory = engine()->escher_rounded_rect_factory();
   if (!factory) {
     error_reporter_->ERROR()
-        << "scene_manager::Session::CreateRoundedRectangle(): "
+        << "scenic::gfx::Session::CreateRoundedRectangle(): "
            "no RoundedRectFactory available.";
     return ResourcePtr();
   }
@@ -1133,15 +1139,19 @@ bool Session::AssertValueIsOfType(const scenic::ValuePtr& value,
   }
   std::ostringstream str;
   if (tag_count == 1) {
-    str << ", which is not the expected type: " << tags[0] << ".";
+    str << ", which is not the expected type: ";
+    OStreamInsert<scenic::Value::Tag>(str, tags[0]);
+    str << ".";
   } else {
-    str << ", which is not one of the expected types (" << tags[0];
+    str << ", which is not one of the expected types (";
+    OStreamInsert<scenic::Value::Tag>(str, tags[0]);
     for (size_t i = 1; i < tag_count; ++i) {
-      str << ", " << tags[i];
+      str << ", ";
+      OStreamInsert<scenic::Value::Tag>(str, tags[i]);
     }
     str << ").";
   }
-  error_reporter_->ERROR() << "scene_manager::Session: received value of type: "
+  error_reporter_->ERROR() << "scenic::gfx::Session: received value of type: "
                            << value->which() << str.str();
   return false;
 }
@@ -1162,7 +1172,7 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
 
     if (presentation_time < last_scheduled_presentation_time) {
       error_reporter_->ERROR()
-          << "scene_manager::Session: Present called with out-of-order "
+          << "scenic::gfx::Session: Present called with out-of-order "
              "presentation time. "
           << "presentation_time=" << presentation_time
           << ", last scheduled presentation time="
@@ -1207,7 +1217,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
 
   if (presentation_time < last_presentation_time_) {
     error_reporter_->ERROR()
-        << "scene_manager::Session: ApplyScheduledUpdates called with "
+        << "scenic::gfx::Session: ApplyScheduledUpdates called with "
            "presentation_time="
         << presentation_time << ", which is less than last_presentation_time_="
         << last_presentation_time_ << ".";
@@ -1293,7 +1303,7 @@ bool Session::ApplyUpdate(Session::Update* update) {
     for (auto& op : update->ops) {
       if (!ApplyOp(op)) {
         error_reporter_->ERROR()
-            << "scene_manager::Session::ApplyOp() failed to apply Op: " << op;
+            << "scenic::gfx::Session::ApplyOp() failed to apply Op: " << op;
         return false;
       }
     }
@@ -1344,4 +1354,5 @@ void Session::BeginTearDown() {
   FXL_DCHECK(!is_valid());
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

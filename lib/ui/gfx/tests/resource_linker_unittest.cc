@@ -17,7 +17,8 @@
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 using ResourceLinkerTest = SessionTest;
@@ -155,7 +156,7 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
 
   fxl::AutoResetWaitableEvent latch;
   ResourceLinker* linker = engine_->resource_linker();
-  scene_manager::ResourcePtr resource;
+  scenic::gfx::ResourcePtr resource;
   ImportPtr import;
 
   thread.TaskRunner()->PostTask(
@@ -251,7 +252,7 @@ TEST_F(ResourceLinkerTest, CanExportWithDeadDestinationHandle) {
   thread.Run();
 
   fxl::AutoResetWaitableEvent latch;
-  scene_manager::ResourcePtr resource;
+  scenic::gfx::ResourcePtr resource;
 
   thread.TaskRunner()->PostTask(fxl::MakeCopyable(
       [this, &resource, linker, &latch, source = std::move(source)]() mutable {
@@ -291,7 +292,7 @@ TEST_F(ResourceLinkerTest,
 
   fxl::AutoResetWaitableEvent latch;
   ResourceLinker* linker = engine_->resource_linker();
-  scene_manager::ResourcePtr resource;
+  scenic::gfx::ResourcePtr resource;
 
   thread.TaskRunner()->PostTask(
       fxl::MakeCopyable([this, &resource, linker, &latch,
@@ -335,7 +336,7 @@ TEST_F(ResourceLinkerTest,
 
   fxl::AutoResetWaitableEvent latch;
   ResourceLinker* linker = engine_->resource_linker();
-  scene_manager::ResourcePtr resource;
+  scenic::gfx::ResourcePtr resource;
   ImportPtr import;
 
   thread.TaskRunner()->PostTask(fxl::MakeCopyable([this, &import, &resource,
@@ -586,4 +587,5 @@ TEST_F(ResourceLinkerTest, UnresolvedImportIsRemovedIfDestroyed) {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

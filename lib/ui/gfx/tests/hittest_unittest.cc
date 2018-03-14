@@ -10,7 +10,8 @@
 
 #include "gtest/gtest.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 namespace {
 using vec3 = escher::vec3;
@@ -296,4 +297,5 @@ TEST_F(HitTestTest, Clipping) {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

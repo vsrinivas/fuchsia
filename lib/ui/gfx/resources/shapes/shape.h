@@ -9,7 +9,8 @@
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/scene/object.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Shape : public Resource {
  public:
@@ -39,6 +40,7 @@ class Shape : public Resource {
 
 using ShapePtr = fxl::RefPtr<Shape>;
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_SHAPES_SHAPE_H_

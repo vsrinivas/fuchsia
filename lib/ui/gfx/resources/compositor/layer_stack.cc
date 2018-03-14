@@ -7,7 +7,8 @@
 #include "garnet/lib/ui/gfx/resources/compositor/layer.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo LayerStack::kTypeInfo = {ResourceType::kLayerStack,
                                                 "LayerStack"};
@@ -46,4 +47,5 @@ void LayerStack::RemoveLayer(Layer* layer) {
   layers_.erase(it);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

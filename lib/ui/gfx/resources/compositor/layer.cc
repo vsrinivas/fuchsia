@@ -11,7 +11,8 @@
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "garnet/public/lib/escher/util/type_utils.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo Layer::kTypeInfo = {ResourceType::kLayer, "Layer"};
 
@@ -32,7 +33,7 @@ bool Layer::SetSize(const escher::vec2& size) {
   if (size.x <= 0 || size.y <= 0) {
     if (size != escher::vec2(0, 0)) {
       error_reporter()->ERROR()
-          << "scene_manager::Layer::SetSize(): size must be positive";
+          << "scenic::gfx::Layer::SetSize(): size must be positive";
       return false;
     }
   }
@@ -116,4 +117,5 @@ escher::ViewingVolume Layer::GetViewingVolume() const {
   return escher::ViewingVolume(size_.x, size_.y, kTop, kBottom);
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

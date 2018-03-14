@@ -4,7 +4,8 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/planar_shape.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 PlanarShape::PlanarShape(Session* session,
                          scenic::ResourceId id,
@@ -37,4 +38,5 @@ bool PlanarShape::GetIntersection(const escher::ray4& ray,
   return true;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

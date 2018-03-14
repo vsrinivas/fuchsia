@@ -5,7 +5,8 @@
 #include "lib/ui/gfx/util/image_formats.h"
 #include "lib/fxl/logging.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace image_formats {
 
 namespace {
@@ -144,4 +145,5 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
 }
 
 }  // namespace image_formats
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic 

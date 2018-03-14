@@ -9,7 +9,8 @@
 #include <unistd.h>
 
 #include "lib/fxl/logging.h"
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 MagmaBuffer::MagmaBuffer() : magma_connection_(nullptr), buffer_(0) {}
 
@@ -44,4 +45,5 @@ MagmaBuffer MagmaBuffer::NewFromVmo(MagmaConnection* magma_connection,
   return success ? MagmaBuffer(magma_connection, buffer) : MagmaBuffer();
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

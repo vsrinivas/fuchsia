@@ -11,7 +11,8 @@
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "lib/escher/vk/gpu_mem.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class GpuMemory;
 using GpuMemoryPtr = fxl::RefPtr<GpuMemory>;
@@ -57,6 +58,7 @@ class GpuMemory : public Memory {
   escher::GpuMemPtr escher_gpu_mem_ = nullptr;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_GPU_MEMORY_H_

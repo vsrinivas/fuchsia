@@ -8,7 +8,8 @@
 
 #include "gtest/gtest.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 using PoseBufferTest = VkSessionTest;
@@ -65,4 +66,5 @@ VK_TEST_F(PoseBufferTest, Validation) {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

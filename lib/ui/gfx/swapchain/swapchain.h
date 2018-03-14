@@ -16,7 +16,8 @@ using ImagePtr = fxl::RefPtr<Image>;
 using SemaphorePtr = fxl::RefPtr<Semaphore>;
 };  // namespace escher
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class FrameTimings;
 using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
@@ -45,6 +46,7 @@ class Swapchain {
   virtual ~Swapchain() = default;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_SWAPCHAIN_SWAPCHAIN_H_

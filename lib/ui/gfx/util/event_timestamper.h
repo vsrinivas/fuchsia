@@ -15,7 +15,8 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // EventTimestamper uses a background thread to watch for signals specified
 // by EventTimestamper::Watch objects.  When a signal is observed, a task is
@@ -118,6 +119,7 @@ class EventTimestamper {
   FXL_DISALLOW_COPY_AND_ASSIGN(EventTimestamper);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_UTIL_EVENT_TIMESTAMPER_H_

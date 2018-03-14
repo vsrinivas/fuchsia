@@ -5,7 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_UPDATE_SCHEDULER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_UPDATE_SCHEDULER_H_
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class UpdateScheduler {
  public:
@@ -13,6 +14,7 @@ class UpdateScheduler {
   virtual ~UpdateScheduler() = default;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_UPDATE_SCHEDULER_H_

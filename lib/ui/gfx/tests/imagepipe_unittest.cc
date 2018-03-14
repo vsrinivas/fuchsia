@@ -14,7 +14,8 @@
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 class ImagePipeTest : public SessionTest, public escher::ResourceManager {
@@ -140,7 +141,7 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
                            CopyEventIntoFidlArray(CreateEvent()), callback);
 
   EXPECT_EQ(
-      "scene_manager::ImagePipe: Present called with out-of-order presentation "
+      "scenic::gfx::ImagePipe: Present called with out-of-order presentation "
       "time.presentation_time=0, last scheduled presentation time=1",
       reported_errors_.back());
 }
@@ -273,4 +274,5 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 // - Test what happens if you present an image twice.
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

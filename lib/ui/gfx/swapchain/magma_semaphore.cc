@@ -6,7 +6,8 @@
 
 #include "lib/fxl/logging.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 MagmaSemaphore::MagmaSemaphore() : magma_connection_(nullptr), semaphore_(0) {}
 
@@ -44,4 +45,5 @@ MagmaSemaphore MagmaSemaphore::NewFromEvent(MagmaConnection* magma_connection,
                  : MagmaSemaphore();
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

@@ -4,7 +4,8 @@
 
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo Shape::kTypeInfo = {ResourceType::kShape, "Shape"};
 
@@ -15,4 +16,5 @@ Shape::Shape(Session* session,
   FXL_DCHECK(type_info.IsKindOf(Shape::kTypeInfo));
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

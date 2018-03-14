@@ -10,7 +10,8 @@
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/macros.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // Waits for a display device to be available, and returns the display
 // attributes through a callback.
@@ -37,6 +38,7 @@ class DisplayWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplayWatcher);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_WATCHER_H_

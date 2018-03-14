@@ -7,7 +7,8 @@
 
 #include "garnet/lib/ui/gfx/resources/variable.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class Node;
 
@@ -39,6 +40,7 @@ using Vector3VariableBinding =
 using QuaternionVariableBinding =
     TypedVariableBinding<scenic::Value::Tag::QUATERNION, escher::quat>;
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_VARIABLE_BINDING_H_

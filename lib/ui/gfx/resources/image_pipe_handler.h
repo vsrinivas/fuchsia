@@ -8,14 +8,15 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/images/fidl/image_pipe.fidl.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class ImagePipe;
 
 class ImagePipeHandler : public scenic::ImagePipe {
  public:
   ImagePipeHandler(::f1dl::InterfaceRequest<scenic::ImagePipe> request,
-                   scene_manager::ImagePipe* image_pipe);
+                   scenic::gfx::ImagePipe* image_pipe);
 
  private:
   void AddImage(uint32_t image_id,
@@ -32,9 +33,10 @@ class ImagePipeHandler : public scenic::ImagePipe {
                     const PresentImageCallback& callback) override;
 
   ::f1dl::Binding<scenic::ImagePipe> binding_;
-  scene_manager::ImagePipe* image_pipe_;
+  scenic::gfx::ImagePipe* image_pipe_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_HANDLER_H_

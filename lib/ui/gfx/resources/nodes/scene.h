@@ -8,7 +8,8 @@
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 #include "lib/fxl/macros.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class AmbientLight;
 class DirectionalLight;
@@ -49,6 +50,7 @@ class Scene final : public Node {
   FXL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_NODES_SCENE_H_

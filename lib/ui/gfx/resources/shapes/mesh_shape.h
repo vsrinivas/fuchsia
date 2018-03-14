@@ -10,7 +10,8 @@
 
 #include "lib/escher/shape/mesh.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // Encapsulates an Escher mesh.  The Scenic API allows clients to dynamically
 // change the index/vertex buffers used by a MeshShape.
@@ -54,6 +55,7 @@ class MeshShape final : public Shape {
   BufferPtr vertex_buffer_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_SHAPES_MESH_SHAPE_H_

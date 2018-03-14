@@ -8,7 +8,8 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/escher/material/material.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class ImageBase;
 using ImageBasePtr = fxl::RefPtr<ImageBase>;
@@ -47,6 +48,7 @@ class Material : public Resource {
   ImageBasePtr texture_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_MATERIAL_H_

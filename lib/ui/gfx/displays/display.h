@@ -10,7 +10,8 @@
 
 #include "lib/fxl/macros.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 // Display is a placeholder that provides make-believe values for screen
 // resolution, vsync interval, last vsync time, etc.
@@ -48,6 +49,7 @@ class Display {
   FXL_DISALLOW_COPY_AND_ASSIGN(Display);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_DISPLAYS_DISPLAY_H_

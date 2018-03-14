@@ -16,7 +16,8 @@
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "lib/ui/scenic/fidl/events.fidl.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class SceneManagerImpl;
 
@@ -33,7 +34,7 @@ class SessionHandler : public mz::TempSessionDelegate, public EventReporter {
                  mz::ErrorReporter* error_reporter);
   virtual ~SessionHandler();
 
-  scene_manager::Session* session() const { return session_.get(); }
+  scenic::gfx::Session* session() const { return session_.get(); }
 
   // Flushes enqueued session events to the session listener as a batch.
   void SendEvents(::f1dl::Array<scenic::EventPtr> events) override;
@@ -72,11 +73,12 @@ class SessionHandler : public mz::TempSessionDelegate, public EventReporter {
 
   mz::EventReporter* const event_reporter_;
   mz::ErrorReporter* const error_reporter_;
-  scene_manager::SessionPtr session_;
+  scenic::gfx::SessionPtr session_;
 
   ::f1dl::Array<scenic::OpPtr> buffered_ops_;
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_ENGINE_SESSION_HANDLER_H_

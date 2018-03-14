@@ -7,7 +7,8 @@
 
 #include "garnet/lib/ui/gfx/resources/lights/light.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class DirectionalLight final : public Light {
  public:
@@ -29,6 +30,7 @@ class DirectionalLight final : public Light {
   glm::vec3 direction_ = {0.f, 0.f, -1.f};
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_LIGHTS_DIRECTIONAL_LIGHT_H_

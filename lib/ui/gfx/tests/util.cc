@@ -8,7 +8,8 @@
 
 #include "lib/fxl/synchronization/waitable_event.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 bool IsEventSignalled(const zx::event& fence, zx_signals_t signal) {
@@ -81,4 +82,5 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

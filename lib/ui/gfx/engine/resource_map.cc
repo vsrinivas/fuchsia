@@ -4,7 +4,8 @@
 
 #include "garnet/lib/ui/gfx/engine/resource_map.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 ResourceMap::ResourceMap(mz::ErrorReporter* error_reporter)
     : error_reporter_(error_reporter) {}
@@ -21,7 +22,7 @@ bool ResourceMap::AddResource(scenic::ResourceId id, ResourcePtr resource) {
   auto result = resources_.insert(std::make_pair(id, std::move(resource)));
   if (!result.second) {
     error_reporter_->ERROR()
-        << "scene_manager::ResourceMap::AddResource(): resource with ID " << id
+        << "scenic::gfx::ResourceMap::AddResource(): resource with ID " << id
         << " already exists.";
     return false;
   }
@@ -32,11 +33,12 @@ bool ResourceMap::RemoveResource(scenic::ResourceId id) {
   size_t erased_count = resources_.erase(id);
   if (erased_count == 0) {
     error_reporter_->ERROR()
-        << "scene_manager::ResourceMap::RemoveResource(): no resource with ID "
+        << "scenic::gfx::ResourceMap::RemoveResource(): no resource with ID "
         << id;
     return false;
   }
   return true;
 }
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

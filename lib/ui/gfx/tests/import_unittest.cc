@@ -15,7 +15,8 @@
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 namespace test {
 
 using ImportTest = SessionTest;
@@ -985,4 +986,5 @@ TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
 }
 
 }  // namespace test
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic

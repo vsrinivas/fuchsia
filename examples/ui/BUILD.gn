@@ -7,7 +7,7 @@ import("//build/package.gni")
 group("ui") {
   public_deps = [
     "hello_pose_buffer",
-    "hello_scene_manager",
+    "hello_scenic",
     "shadertoy/client",
     "shadertoy/service",
     "shapes",
@@ -17,16 +17,16 @@ group("ui") {
   ]
 }
 
-package("hello_scene_manager") {
+package("hello_scenic") {
   system_image = true
 
   deps = [
-    "hello_scene_manager",
+    "hello_scenic",
   ]
 
   binaries = [
     {
-      name = "hello_scene_manager"
+      name = "hello_scenic"
     },
   ]
 }

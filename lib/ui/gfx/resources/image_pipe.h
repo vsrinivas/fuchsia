@@ -21,7 +21,8 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/images/fidl/image_pipe.fidl.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 class ImagePipe;
 using ImagePipePtr = fxl::RefPtr<ImagePipe>;
@@ -108,6 +109,7 @@ class ImagePipe : public ImageBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(ImagePipe);
 };
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_H_

@@ -7,7 +7,8 @@
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
 
-namespace scene_manager {
+namespace scenic {
+namespace gfx {
 
 const ResourceTypeInfo DisplayCompositor::kTypeInfo = {
     ResourceType::kCompositor | ResourceType::kDisplayCompositor,
@@ -27,4 +28,5 @@ DisplayCompositor::DisplayCompositor(Session* session,
 
 DisplayCompositor::~DisplayCompositor() = default;
 
-}  // namespace scene_manager
+}  // namespace gfx
+}  // namespace scenic
