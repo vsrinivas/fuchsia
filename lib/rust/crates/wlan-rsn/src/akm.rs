@@ -123,7 +123,7 @@ impl<'a> Akm<'a> {
 
         // IEEE 802.11-2016, 12.7.3, Table 12-8
         match self.suite_type {
-            1 ... 13 => Some(Box::new(keywrap::NistAes)),
+            1 ... 13 => Some(Box::new(keywrap::aes::NistAes)),
             _ => None
         }
     }
