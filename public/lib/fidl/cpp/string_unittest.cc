@@ -24,6 +24,19 @@ TEST(StringPtr, Control) {
 
   StringPtr other(std::move(string));
   EXPECT_EQ("hello, world", *other);
+
+  StringPtr other2 = other;
+  EXPECT_EQ("hello, world", *other);
+  EXPECT_EQ("hello, world", *other2);
+  EXPECT_EQ(other, other2);
+
+  other2.reset();
+  EXPECT_TRUE(other2.is_null());
+
+  other2.swap(other);
+  EXPECT_TRUE(other.is_null());
+  EXPECT_EQ("hello, world", *other2);
+  EXPECT_NE(other, other2);
 }
 
 TEST(StringPtr, Conversions) {
@@ -37,6 +50,28 @@ TEST(StringPtr, Conversions) {
 
   StringPtr null = nullptr;
   EXPECT_TRUE(null.is_null());
+  EXPECT_EQ("", *null);
+
+  std::string helloStr = hello;
+  EXPECT_EQ("hello", helloStr);
+
+  std::string nullStr = null;
+  EXPECT_EQ("", nullStr);
+}
+
+TEST(StringPtr, Map) {
+  std::map<StringPtr, int> map;
+  StringPtr a = "a";
+  StringPtr b = "b";
+  StringPtr null;
+
+  map[a] = 1;
+  map[b] = 2;
+  map[null] = 3;
+
+  EXPECT_EQ(1, map[a]);
+  EXPECT_EQ(2, map[b]);
+  EXPECT_EQ(3, map[null]);
 }
 
 }  // namespace

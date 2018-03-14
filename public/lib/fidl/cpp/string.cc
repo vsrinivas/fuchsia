@@ -12,6 +12,8 @@ namespace fidl {
 
 StringPtr::StringPtr() : is_null_(true) {}
 
+StringPtr::StringPtr(const StringPtr& other) = default;
+
 StringPtr::StringPtr(std::string str) : str_(std::move(str)), is_null_(false) {}
 
 StringPtr::StringPtr(const char* str)
@@ -24,6 +26,8 @@ StringPtr::~StringPtr() = default;
 
 StringPtr::StringPtr(StringPtr&& other)
     : str_(std::move(other.str_)), is_null_(other.is_null_) {}
+
+StringPtr& StringPtr::operator=(const StringPtr& other) = default;
 
 StringPtr& StringPtr::operator=(StringPtr&& other) {
   str_ = std::move(other.str_);

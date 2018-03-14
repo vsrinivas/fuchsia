@@ -20,11 +20,10 @@ namespace f1dl {
 // object.
 class String {
  public:
-  //////////////////////////////////////////////////////////////////////////////
-  // FIDL2 INTERFACE
-  //////////////////////////////////////////////////////////////////////////////
+  typedef internal::String_Data Data_;
 
   String() : is_null_(true) {}
+  String(const f1dl::String& str) : str_(str.str_), is_null_(str.is_null_) {}
   String(const std::string& str) : str_(str), is_null_(false) {}
   String(const char* chars) : is_null_(!chars) {
     if (chars)
@@ -61,14 +60,6 @@ class String {
   const std::string& operator*() const { return str_; }
 
   operator const std::string&() const { return str_; }
-
-  //////////////////////////////////////////////////////////////////////////////
-  // FIDL1 INTERFACE
-  //////////////////////////////////////////////////////////////////////////////
-
-  typedef internal::String_Data Data_;
-
-  String(const f1dl::String& str) : str_(str.str_), is_null_(str.is_null_) {}
 
  private:
   std::string str_;

@@ -8,6 +8,7 @@
 #include <fidl/cpp/builder.h>
 #include <fidl/cpp/string_view.h>
 
+#include <iosfwd>
 #include <string>
 #include <utility>
 
@@ -27,29 +28,18 @@ namespace fidl {
 class StringPtr {
  public:
   StringPtr();
+  StringPtr(const StringPtr& other);
+  StringPtr(StringPtr&& other);
   StringPtr(std::string str);
   StringPtr(const char* str);
   StringPtr(const char* str, size_t length);
   ~StringPtr();
 
-  StringPtr(const StringPtr&) = delete;
-  StringPtr& operator=(const StringPtr&) = delete;
-
-  StringPtr(StringPtr&& other);
-
+  StringPtr& operator=(const StringPtr&);
   StringPtr& operator=(StringPtr&& other);
 
   // Accesses the underlying std::string object.
-  //
-  // Asserts if the StringPtr is null.
-  std::string& get() {
-    ZX_ASSERT_MSG(!is_null_, "cannot call get() on a null StringPtr");
-    return str_;
-  }
-  const std::string& get() const {
-    ZX_ASSERT_MSG(!is_null_, "cannot call get() on a null StringPtr");
-    return str_;
-  }
+  const std::string& get() const { return str_; }
 
   // Stores the given std::string in this StringPtr.
   //
@@ -57,6 +47,12 @@ class StringPtr {
   void reset(std::string str) {
     str_ = std::move(str);
     is_null_ = false;
+  }
+
+  // Causes this StringPtr to become null.
+  void reset() {
+    str_.clear();
+    is_null_ = true;
   }
 
   void swap(StringPtr& other) {
@@ -73,26 +69,14 @@ class StringPtr {
   // Tests as true if non-null, false if null.
   explicit operator bool() const { return !is_null_; }
 
-  // Provides access to the underlying std::string. Asserts if the StringPtr is
-  // null.
-  std::string* operator->() {
-    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
-    return &str_;
-  }
-  const std::string* operator->() const {
-    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
-    return &str_;
-  }
+  // Provides access to the underlying std::string.
+  std::string* operator->() { return &str_; }
+  const std::string* operator->() const { return &str_; }
 
   // Provides access to the underlying std::string.
-  std::string& operator*() {
-    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
-    return str_;
-  }
-  const std::string& operator*() const {
-    ZX_ASSERT_MSG(!is_null_, "cannot dereference a null StringPtr");
-    return str_;
-  }
+  const std::string& operator*() const { return str_; }
+
+  operator const std::string&() const { return str_; }
 
   void Encode(Encoder* encoder, size_t offset);
   static void Decode(Decoder* decoder, StringPtr* value, size_t offset);
@@ -101,6 +85,43 @@ class StringPtr {
   std::string str_;
   bool is_null_;
 };
+
+inline bool operator==(const StringPtr& a, const StringPtr& b) {
+  return a.is_null() == b.is_null() && a.get() == b.get();
+}
+
+inline bool operator==(const char* a, const StringPtr& b) {
+  return !b.is_null() && a == b.get();
+}
+
+inline bool operator==(const StringPtr& a, const char* b) {
+  return !a.is_null() && a.get() == b;
+}
+
+inline bool operator!=(const StringPtr& a, const StringPtr& b) {
+  return !(a == b);
+}
+
+inline bool operator!=(const char* a, const StringPtr& b) {
+  return !(a == b);
+}
+
+inline bool operator!=(const StringPtr& a, const char* b) {
+  return !(a == b);
+}
+
+inline std::ostream& operator<<(std::ostream& out, const StringPtr& str) {
+  return out << str.get();
+}
+
+// For use in std::map and elsewhere.
+inline bool operator<(const StringPtr& a, const StringPtr& b) {
+  if (a.is_null())
+    return !b.is_null();
+  if (b.is_null())
+    return false;
+  return a.get() < b.get();
+}
 
 template <>
 struct CodingTraits<StringPtr>
