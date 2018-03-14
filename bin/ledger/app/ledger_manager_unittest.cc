@@ -88,8 +88,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
 
 class FakeLedgerSync : public cloud_sync::LedgerSync {
  public:
-  explicit FakeLedgerSync(fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : called(false), task_runner_(std::move(task_runner)) {}
+  FakeLedgerSync() {}
   ~FakeLedgerSync() override {}
 
   std::unique_ptr<cloud_sync::PageSyncContext> CreatePageContext(
@@ -98,11 +97,9 @@ class FakeLedgerSync : public cloud_sync::LedgerSync {
     return nullptr;
   }
 
-  bool called;
+  bool called = false;
 
  private:
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
 };
 
@@ -116,8 +113,7 @@ class LedgerManagerTest : public gtest::TestWithMessageLoop {
     std::unique_ptr<FakeLedgerStorage> storage =
         std::make_unique<FakeLedgerStorage>(message_loop_.task_runner());
     storage_ptr = storage.get();
-    std::unique_ptr<FakeLedgerSync> sync =
-        std::make_unique<FakeLedgerSync>(message_loop_.task_runner());
+    std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
     sync_ptr = sync.get();
     ledger_manager_ = std::make_unique<LedgerManager>(
         &environment_,
