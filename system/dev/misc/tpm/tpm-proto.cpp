@@ -385,8 +385,9 @@ zx_status_t Device::RecvRespLocked(Locality loc, uint8_t* resp, size_t max_len, 
         }
 
         size_t to_read = burst_count;
-        if (to_read > max_len) {
-            to_read = max_len;
+        size_t remaining = max_len - bytes_recvd;
+        if (to_read > remaining) {
+            to_read = remaining;
         }
         status = iface_->ReadDataFifo(loc, &resp[bytes_recvd], to_read);
         if (status != ZX_OK) {
