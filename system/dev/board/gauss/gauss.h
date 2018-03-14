@@ -38,6 +38,7 @@ typedef struct {
     usb_mode_switch_protocol_t usb_mode_switch;
     clk_protocol_t clk;
     iommu_protocol_t iommu;
+    zx_handle_t bti_handle;
     io_buffer_t usb_phy;
     zx_handle_t usb_phy_irq_handle;
     thrd_t phy_irq_thread;

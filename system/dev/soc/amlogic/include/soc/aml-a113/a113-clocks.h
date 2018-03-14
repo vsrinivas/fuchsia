@@ -30,6 +30,6 @@ static inline uint32_t a113_clk_set_reg(a113_clk_dev_t *dev, uint32_t offset, ui
     return   ((volatile uint32_t *)dev->virt_regs)[offset];
 }
 
-zx_status_t a113_clk_init(a113_clk_dev_t **device);
+zx_status_t a113_clk_init(zx_handle_t bti, a113_clk_dev_t **device);
 zx_status_t a113_clk_set_mpll2(a113_clk_dev_t *device, uint64_t rate,
                                uint64_t *actual);
