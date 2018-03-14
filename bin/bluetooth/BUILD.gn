@@ -45,6 +45,7 @@ executable("bluetooth_unittests") {
   testonly = true
 
   deps = [
+    "//garnet/drivers/bluetooth/lib:tests",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
