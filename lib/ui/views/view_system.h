@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_UI_VIEWS_VIEW_SYSTEM_H_
 #define GARNET_LIB_UI_VIEWS_VIEW_SYSTEM_H_
 
-#include "garnet/lib/ui/mozart/system.h"
-#include "garnet/lib/ui/scenic/scenic_system.h"
+#include "garnet/lib/ui/gfx/scenic_system.h"
+#include "garnet/lib/ui/scenic/system.h"
 
 namespace mz {
 
@@ -33,7 +33,7 @@ class ViewCommandDispatcher : public CommandDispatcher {
                         scene_manager::ScenicSystem* scenic_system);
   ~ViewCommandDispatcher() override;
 
-  bool ApplyCommand(const ui_mozart::CommandPtr& command) override;
+  bool ApplyCommand(const ui::CommandPtr& command) override;
 
  private:
   scene_manager::ScenicSystem* scenic_system_;

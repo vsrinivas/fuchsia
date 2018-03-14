@@ -19,8 +19,7 @@ class ViewManagerImpl : public mozart::ViewManager {
 
  private:
   // |ViewManager|:
-  void GetMozart(
-      f1dl::InterfaceRequest<ui_mozart::Mozart> mozart_request) override;
+  void GetScenic(f1dl::InterfaceRequest<ui::Scenic> scenic_request) override;
   void CreateView(f1dl::InterfaceRequest<mozart::View> view_request,
                   f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   f1dl::InterfaceHandle<mozart::ViewListener> view_listener,

@@ -57,8 +57,7 @@ class GuestView : public mozart::BaseView {
 
  private:
   // |BaseView|:
-  void OnSceneInvalidated(
-      ui_mozart::PresentationInfoPtr presentation_info) override;
+  void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) override;
   bool OnInputEvent(mozart::InputEventPtr event) override;
 
   scenic_lib::ShapeNode background_node_;

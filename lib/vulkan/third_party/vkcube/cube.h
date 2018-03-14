@@ -43,7 +43,7 @@
 #include "garnet/lib/magma/src/display_pipe/client/buffer.h"
 #include "garnet/lib/magma/src/display_pipe/services/display_provider.fidl.h"
 
-#include "garnet/public/lib/ui/scenic/fidl/ops.fidl.h"
+#include "garnet/public/lib/ui/gfx/fidl/ops.fidl.h"
 #include "garnet/public/lib/ui/scenic/fidl_helpers.h"
 #include "garnet/public/lib/ui/scenic/types.h"
 #include "lib/ui/scenic/client/resources.h"

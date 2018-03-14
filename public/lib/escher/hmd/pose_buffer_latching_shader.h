@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_PUBLIC_LIB_ESCHER_HMD_POSE_BUFFER_LATCHING_SHADER_H_
-#define GARNET_PUBLIC_LIB_ESCHER_HMD_POSE_BUFFER_LATCHING_SHADER_H_
+#ifndef LIB_ESCHER_HMD_POSE_BUFFER_LATCHING_SHADER_H_
+#define LIB_ESCHER_HMD_POSE_BUFFER_LATCHING_SHADER_H_
 
 #include "lib/escher/hmd/pose_buffer.h"
 #include "lib/escher/impl/compute_shader.h"
@@ -12,7 +12,7 @@ namespace escher {
 namespace hmd {
 
 // Uses a simple compute shader to latch a pose out of the pose buffer.
-// See //garnet/public/lib/ui/scenic/fidl/ops.fidl for details on pose buffer.
+// See //garnet/public/lib/ui/gfx/fidl/ops.fidl for details on pose buffer.
 class PoseBufferLatchingShader {
  public:
   PoseBufferLatchingShader(Escher* escher);
@@ -29,7 +29,7 @@ class PoseBufferLatchingShader {
   // }
   //
   // For details on pose buffers and the layout of the Pose struct see
-  // //garnet/public/lib/ui/scenic/fidl/ops.fidl
+  // //garnet/public/lib/ui/gfx/fidl/ops.fidl
   BufferPtr LatchPose(const FramePtr& frame,
                       const Camera& camera,
                       PoseBuffer pose_buffer,
@@ -42,7 +42,7 @@ class PoseBufferLatchingShader {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PoseBufferLatchingShader);
 };
-}
-}
+}  // namespace hmd
+}  // namespace escher
 
-#endif  // GARNET_PUBLIC_LIB_ESCHER_HMD_POSE_BUFFER_LATCHING_SHADER_H_
+#endif  // LIB_ESCHER_HMD_POSE_BUFFER_LATCHING_SHADER_H_

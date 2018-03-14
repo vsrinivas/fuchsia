@@ -60,7 +60,7 @@ class ShadertoyState : public escher::Resource {
   void Close();
 
   // Subclasses must call this from DrawFrame().
-  void OnFramePresented(const ui_mozart::PresentationInfoPtr& info);
+  void OnFramePresented(const ui::PresentationInfoPtr& info);
 
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }

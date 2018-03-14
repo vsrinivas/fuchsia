@@ -1,0 +1,30 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":apptests",
+  ]
+}
+
+executable("apptests") {
+  output_name = "gfx_apptests"
+
+  testonly = true
+
+  sources = [
+    "gfx_apptest.cc",
+    "gfx_test.cc",
+    "gfx_test.h",
+  ]
+
+  deps = [
+    "//garnet/bin/ui/tests:main",
+    "//garnet/lib/ui/gfx/tests:testing_deps",
+  ]
+}

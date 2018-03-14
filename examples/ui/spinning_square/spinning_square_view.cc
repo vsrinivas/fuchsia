@@ -41,7 +41,7 @@ SpinningSquareView::SpinningSquareView(
 SpinningSquareView::~SpinningSquareView() {}
 
 void SpinningSquareView::OnSceneInvalidated(
-    ui_mozart::PresentationInfoPtr presentation_info) {
+    ui::PresentationInfoPtr presentation_info) {
   if (!has_logical_size())
     return;
 

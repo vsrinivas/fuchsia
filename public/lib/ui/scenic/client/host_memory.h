@@ -11,8 +11,8 @@
 
 #include <zx/vmo.h>
 
-#include "lib/ui/scenic/client/resources.h"
 #include "lib/fxl/memory/ref_counted.h"
+#include "lib/ui/scenic/client/resources.h"
 
 namespace scenic_lib {
 

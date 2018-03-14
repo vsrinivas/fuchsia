@@ -13,10 +13,10 @@
 namespace mozart {
 namespace {
 
-ui_mozart::MozartPtr GetMozart(ViewManager* view_manager) {
-  ui_mozart::MozartPtr mozart;
-  view_manager->GetMozart(mozart.NewRequest());
-  return mozart;
+ui::ScenicPtr GetScenic(ViewManager* view_manager) {
+  ui::ScenicPtr scenic;
+  view_manager->GetScenic(scenic.NewRequest());
+  return scenic;
 }
 
 }  // namespace
@@ -28,7 +28,7 @@ BaseView::BaseView(ViewManagerPtr view_manager,
       view_listener_binding_(this),
       view_container_listener_binding_(this),
       input_listener_binding_(this),
-      session_(GetMozart(view_manager_.get()).get()),
+      session_(GetScenic(view_manager_.get()).get()),
       parent_node_(&session_) {
   FXL_DCHECK(view_manager_);
   FXL_DCHECK(view_owner_request);
@@ -94,27 +94,26 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
   // Session.Present(), for use in InvalidateScene().
   last_presentation_time_ = presentation_time;
 
-  session()->Present(
-      presentation_time, [this](ui_mozart::PresentationInfoPtr info) {
-        FXL_DCHECK(present_pending_);
+  session()->Present(presentation_time, [this](ui::PresentationInfoPtr info) {
+    FXL_DCHECK(present_pending_);
 
-        zx_time_t next_presentation_time =
-            info->presentation_time + info->presentation_interval;
+    zx_time_t next_presentation_time =
+        info->presentation_time + info->presentation_interval;
 
-        bool present_needed = false;
-        if (invalidate_pending_) {
-          invalidate_pending_ = false;
-          OnSceneInvalidated(std::move(info));
-          present_needed = true;
-        }
+    bool present_needed = false;
+    if (invalidate_pending_) {
+      invalidate_pending_ = false;
+      OnSceneInvalidated(std::move(info));
+      present_needed = true;
+    }
 
-        present_pending_ = false;
-        if (present_needed)
-          PresentScene(next_presentation_time);
-      });
+    present_pending_ = false;
+    if (present_needed)
+      PresentScene(next_presentation_time);
+  });
 }
 
-void BaseView::HandleSessionEvents(f1dl::Array<ui_mozart::EventPtr> events) {
+void BaseView::HandleSessionEvents(f1dl::Array<ui::EventPtr> events) {
   scenic::Metrics* new_metrics = nullptr;
   for (const auto& event : events) {
     if (event->is_scenic()) {
@@ -156,10 +155,9 @@ void BaseView::AdjustMetricsAndPhysicalSize() {
 
 void BaseView::OnPropertiesChanged(ViewPropertiesPtr old_properties) {}
 
-void BaseView::OnSceneInvalidated(
-    ui_mozart::PresentationInfoPtr presentation_info) {}
+void BaseView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {}
 
-void BaseView::OnSessionEvent(f1dl::Array<ui_mozart::EventPtr> events) {}
+void BaseView::OnSessionEvent(f1dl::Array<ui::EventPtr> events) {}
 
 bool BaseView::OnInputEvent(mozart::InputEventPtr event) {
   return false;

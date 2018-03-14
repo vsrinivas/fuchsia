@@ -10,8 +10,8 @@
 
 namespace scenic_lib {
 
-ui_mozart::CommandPtr NewCommand(scenic::OpPtr op) {
-  ui_mozart::CommandPtr command = ui_mozart::Command::New();
+ui::CommandPtr NewCommand(scenic::OpPtr op) {
+  ui::CommandPtr command = ui::Command::New();
   command->set_scenic(std::move(op));
   return command;
 }

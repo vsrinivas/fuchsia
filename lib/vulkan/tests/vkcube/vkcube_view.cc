@@ -18,7 +18,7 @@ VkCubeView::VkCubeView(
 
 VkCubeView::~VkCubeView() {}
 
-void VkCubeView::OnSceneInvalidated(ui_mozart::PresentationInfoPtr presentation_info)
+void VkCubeView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info)
 {
     if (size_.Equals(logical_size()))
         return;

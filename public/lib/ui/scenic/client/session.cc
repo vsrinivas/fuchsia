@@ -9,16 +9,15 @@
 
 namespace scenic_lib {
 
-Session::Session(
-    ui_mozart::SessionPtr session,
-    f1dl::InterfaceRequest<ui_mozart::SessionListener> session_listener)
+Session::Session(ui::SessionPtr session,
+                 f1dl::InterfaceRequest<ui::SessionListener> session_listener)
     : session_(std::move(session)), session_listener_binding_(this) {
   FXL_DCHECK(session_);
   if (session_listener.is_valid())
     session_listener_binding_.Bind(std::move(session_listener));
 }
 
-Session::Session(ui_mozart::Mozart* mozart) : session_listener_binding_(this) {
+Session::Session(ui::Scenic* mozart) : session_listener_binding_(this) {
   FXL_DCHECK(mozart);
   mozart->CreateSession(session_.NewRequest(),
                         session_listener_binding_.NewBinding());
@@ -93,7 +92,7 @@ void Session::HitTest(uint32_t node_id,
 void Session::HitTestDeviceRay(
     const float ray_origin[3],
     const float ray_direction[3],
-    const ui_mozart::Session::HitTestDeviceRayCallback& callback) {
+    const ui::Session::HitTestDeviceRayCallback& callback) {
   auto ray_origin_vec = scenic::vec3::New();
   ray_origin_vec->x = ray_origin[0];
   ray_origin_vec->y = ray_origin[1];
@@ -112,7 +111,7 @@ void Session::OnError(const f1dl::String& error) {
   FXL_LOG(ERROR) << "Session error: " << error;
 }
 
-void Session::OnEvent(f1dl::Array<ui_mozart::EventPtr> events) {
+void Session::OnEvent(f1dl::Array<ui::EventPtr> events) {
   if (event_handler_)
     event_handler_(std::move(events));
 }

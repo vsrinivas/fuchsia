@@ -48,10 +48,10 @@ constexpr float kCursorElevation = 800;
 }  // namespace
 
 Presentation::Presentation(mozart::ViewManager* view_manager,
-                           ui_mozart::Mozart* mozart)
+                           ui::Scenic* scenic)
     : view_manager_(view_manager),
-      mozart_(mozart),
-      session_(mozart_),
+      scenic_(scenic),
+      session_(scenic_),
       compositor_(&session_),
       layer_stack_(&session_),
       layer_(&session_),
@@ -116,7 +116,7 @@ void Presentation::Present(
 
   shutdown_callback_ = std::move(shutdown_callback);
 
-  mozart_->GetDisplayInfo(fxl::MakeCopyable(
+  scenic_->GetDisplayInfo(fxl::MakeCopyable(
       [weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
        presentation_request = std::move(presentation_request)](
           scenic::DisplayInfoPtr display_info) mutable {
@@ -634,16 +634,16 @@ void Presentation::PresentScene() {
     }
   }
 
-  session_.Present(0, [weak = weak_factory_.GetWeakPtr()](
-                          ui_mozart::PresentationInfoPtr info) {
-    if (auto self = weak.get()) {
-      uint64_t next_presentation_time =
-          info->presentation_time + info->presentation_interval;
-      if (self->UpdateAnimation(next_presentation_time)) {
-        self->PresentScene();
-      }
-    }
-  });
+  session_.Present(
+      0, [weak = weak_factory_.GetWeakPtr()](ui::PresentationInfoPtr info) {
+        if (auto self = weak.get()) {
+          uint64_t next_presentation_time =
+              info->presentation_time + info->presentation_interval;
+          if (self->UpdateAnimation(next_presentation_time)) {
+            self->PresentScene();
+          }
+        }
+      });
 }
 
 void Presentation::Shutdown() {
@@ -655,7 +655,7 @@ void Presentation::SetRendererParams(
   for (auto& param : params) {
     renderer_.SetParam(std::move(param));
   }
-  session_.Present(0, [](ui_mozart::PresentationInfoPtr info) {});
+  session_.Present(0, [](ui::PresentationInfoPtr info) {});
 }
 
 }  // namespace root_presenter

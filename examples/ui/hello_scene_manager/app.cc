@@ -25,9 +25,9 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
-#include "garnet/lib/ui/scenic/tests/util.h"
+#include "garnet/lib/ui/gfx/tests/util.h"
+#include "lib/ui/gfx/fidl/ops.fidl.h"
 #include "lib/ui/scenic/client/host_memory.h"
-#include "lib/ui/scenic/fidl/ops.fidl.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/scenic/types.h"
 
@@ -42,13 +42,12 @@ App::App()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       loop_(fsl::MessageLoop::GetCurrent()) {
   // Connect to the SceneManager service.
-  mozart_ =
-      application_context_->ConnectToEnvironmentService<ui_mozart::Mozart>();
-  mozart_.set_error_handler([this] {
+  scenic_ = application_context_->ConnectToEnvironmentService<ui::Scenic>();
+  scenic_.set_error_handler([this] {
     FXL_LOG(INFO) << "Lost connection to Mozart service.";
     loop_->QuitNow();
   });
-  mozart_->GetDisplayInfo([this](scenic::DisplayInfoPtr display_info) {
+  scenic_->GetDisplayInfo([this](scenic::DisplayInfoPtr display_info) {
     Init(std::move(display_info));
   });
 }
@@ -199,7 +198,7 @@ void App::Init(scenic::DisplayInfoPtr display_info) {
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
-  session_ = std::make_unique<scenic_lib::Session>(mozart_.get());
+  session_ = std::make_unique<scenic_lib::Session>(scenic_.get());
   session_->set_error_handler([this] {
     FXL_LOG(INFO) << "Session terminated.";
     loop_->QuitNow();
@@ -279,7 +278,7 @@ void App::Update(uint64_t next_presentation_time) {
 
   // Present
   session_->Present(
-      next_presentation_time, [this](ui_mozart::PresentationInfoPtr info) {
+      next_presentation_time, [this](ui::PresentationInfoPtr info) {
         Update(info->presentation_time + info->presentation_interval);
       });
 }

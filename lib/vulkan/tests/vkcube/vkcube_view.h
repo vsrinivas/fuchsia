@@ -20,7 +20,7 @@ public:
 
 private:
     // |BaseView|:
-    void OnSceneInvalidated(ui_mozart::PresentationInfoPtr presentation_info) override;
+    void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) override;
 
     mozart::SizeF size_;
     scenic_lib::ShapeNode pane_node_;

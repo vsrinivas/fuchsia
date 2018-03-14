@@ -6,7 +6,7 @@ module sketchy;
 
 import "lib/ui/fun/sketchy/fidl/resources.fidl";
 import "lib/ui/fun/sketchy/fidl/types.fidl";
-import "lib/ui/scenic/fidl/ops.fidl";
+import "lib/ui/gfx/fidl/ops.fidl";
 
 union Op {
   // Resource creation and lifecycle.

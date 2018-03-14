@@ -45,10 +45,10 @@ source_set("lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/geometry/cpp",
+    "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/scenic:client",
-    "//garnet/public/lib/ui/scenic/fidl",
     "//garnet/public/lib/ui/views/cpp",
     "//garnet/public/lib/ui/views/fidl",
   ]

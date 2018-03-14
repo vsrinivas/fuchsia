@@ -12,15 +12,15 @@ executable("hello_pose_buffer") {
   ]
 
   deps = [
-    "//garnet/lib/ui/scenic/tests:util",
+    "//garnet/lib/ui/gfx/tests:util",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
-    "//garnet/public/lib/ui/scenic/fidl",
   ]
 
   include_dirs = [

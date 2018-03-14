@@ -52,8 +52,7 @@ class TileView : public mozart::BaseView,
   void OnChildAttached(uint32_t child_key,
                        mozart::ViewInfoPtr child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
-  void OnSceneInvalidated(
-      ui_mozart::PresentationInfoPtr presentation_info) override;
+  void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) override;
 
   // |Presenter|:
   void Present(

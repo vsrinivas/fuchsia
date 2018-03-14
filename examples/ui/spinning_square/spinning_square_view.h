@@ -5,9 +5,9 @@
 #ifndef GARNET_EXAMPLES_UI_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 #define GARNET_EXAMPLES_UI_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 
+#include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/fxl/macros.h"
 
 namespace examples {
 
@@ -20,8 +20,7 @@ class SpinningSquareView : public mozart::BaseView {
 
  private:
   // |BaseView|:
-  void OnSceneInvalidated(
-      ui_mozart::PresentationInfoPtr presentation_info) override;
+  void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) override;
 
   scenic_lib::ShapeNode background_node_;
   scenic_lib::ShapeNode square_node_;

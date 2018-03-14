@@ -13,6 +13,6 @@ fidl("fidl") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/ui/mozart/fidl:presentation_info",
+    "//garnet/public/lib/ui/scenic/fidl:presentation_info",
   ]
 }

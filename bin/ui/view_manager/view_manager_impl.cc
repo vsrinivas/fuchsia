@@ -16,9 +16,9 @@ ViewManagerImpl::ViewManagerImpl(ViewRegistry* registry)
 
 ViewManagerImpl::~ViewManagerImpl() {}
 
-void ViewManagerImpl::GetMozart(
-    f1dl::InterfaceRequest<ui_mozart::Mozart> mozart_request) {
-  registry_->GetMozart(std::move(mozart_request));
+void ViewManagerImpl::GetScenic(
+    f1dl::InterfaceRequest<ui::Scenic> scenic_request) {
+  registry_->GetScenic(std::move(scenic_request));
 }
 
 void ViewManagerImpl::CreateView(

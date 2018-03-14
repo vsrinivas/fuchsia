@@ -33,7 +33,7 @@ class App {
 
   std::unique_ptr<app::ApplicationContext> application_context_;
   fsl::MessageLoop* loop_;
-  ui_mozart::MozartPtr mozart_;
+  ui::ScenicPtr scenic_;
 
   std::unique_ptr<scenic_lib::Session> session_;
   std::unique_ptr<scenic_lib::DisplayCompositor> compositor_;

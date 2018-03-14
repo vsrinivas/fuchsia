@@ -2,10 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_PUBLIC_LIB_ESCHER_HMD_POSE_BUFFER_H_
-#define GARNET_PUBLIC_LIB_ESCHER_HMD_POSE_BUFFER_H_
+#ifndef LIB_ESCHER_HMD_POSE_BUFFER_H_
+#define LIB_ESCHER_HMD_POSE_BUFFER_H_
 
 #include "lib/escher/vk/buffer.h"
+
+#if defined(countof)
+// Workaround for compiler error due to Zircon defining countof() as a macro.
+// Redefines countof() using GLM_COUNTOF(), which currently provides a more
+// sophisticated implementation anyway.
+#undef countof
+#include <glm/glm.hpp>
+#define countof(X) GLM_COUNTOF(X)
+#else
+// No workaround required.
+#include <glm/glm.hpp>
+#endif
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -70,4 +82,4 @@ struct PoseBuffer {
 }  // namespace hmd
 }  // namespace escher
 
-#endif  // GARNET_PUBLIC_LIB_ESCHER_HMD_POSE_BUFFER_H_
+#endif  // LIB_ESCHER_HMD_POSE_BUFFER_H_

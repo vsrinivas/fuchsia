@@ -4,7 +4,7 @@
 
 module mozart;
 
-import "lib/ui/mozart/fidl/mozart.fidl";
+import "lib/ui/scenic/fidl/scenic.fidl";
 import "lib/ui/views/fidl/view_trees.fidl";
 import "lib/ui/views/fidl/views.fidl";
 
@@ -23,10 +23,10 @@ interface ViewManager {
   // Maximum length for a view or view tree label.
   const uint32 kLabelMaxLength = 32;
 
-  // Gets the scene manager associated with this view manager.
+  // Gets the scenic instance associated with this view manager.
   // All graphical content for this view manager's views and view trees
-  // must come from sessions created by this |scene_manager|.
-  GetMozart@0(ui_mozart.Mozart& mozart);
+  // must come from sessions created by this |scenic| instance.
+  GetScenic@0(ui.Scenic& scenic);
 
   // Creates a view.
   //

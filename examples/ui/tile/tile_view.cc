@@ -130,8 +130,7 @@ void TileView::RemoveChildView(uint32_t child_key) {
   InvalidateScene();
 }
 
-void TileView::OnSceneInvalidated(
-    ui_mozart::PresentationInfoPtr presentation_info) {
+void TileView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
   if (!has_logical_size() || views_.empty())
     return;
 

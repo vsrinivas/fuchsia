@@ -3,18 +3,17 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//garnet/public/lib/ui/config.gni")
 
-package("mozart_tests") {
+package("scenic_tests") {
   testonly = true
   system_image = true
 
   deps = [
+    "gfx/tests",
     "ime/tests",
     "input_reader/tests",
-    "scene_manager/tests",
     "view_manager/tests",
-    "//garnet/lib/ui/mozart/tests",
+    "//garnet/lib/ui/gfx/tests",
     "//garnet/lib/ui/scenic/tests",
     "//garnet/public/lib/ui/geometry/cpp:apptests",
   ]
@@ -24,10 +23,10 @@ package("mozart_tests") {
       name = "ime_unittests"
     },
     {
-      name = "scene_manager_apptests"
+      name = "gfx_apptests"
     },
     {
-      name = "scene_manager_unittests"
+      name = "gfx_unittests"
     },
     {
       name = "geometry_util_unittests"
@@ -36,7 +35,7 @@ package("mozart_tests") {
       name = "input_apptests"
     },
     {
-      name = "mozart_unittests"
+      name = "scenic_unittests"
     },
     {
       name = "view_manager_apptests"
@@ -82,22 +81,22 @@ package("view_manager") {
   binary = "view_manager"
 }
 
-package("mozart") {
+package("scenic") {
   deps = [
-    "mozart",
+    "scenic",
   ]
 
-  binary = "mozart"
+  binary = "scenic"
 
   meta = [
     {
-      path = rebase_path("mozart/meta/sandbox")
+      path = rebase_path("scenic/meta/sandbox")
       dest = "sandbox"
     },
   ]
 }
 
-package("mozart_tools") {
+package("scenic_tools") {
   system_image = true
 
   deps = [

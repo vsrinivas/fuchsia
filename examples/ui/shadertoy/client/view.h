@@ -28,8 +28,7 @@ class View : public mozart::BaseView {
 
  private:
   // |BaseView|.
-  void OnSceneInvalidated(
-      ui_mozart::PresentationInfoPtr presentation_info) override;
+  void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) override;
 
   app::ApplicationContext* const application_context_;
   fsl::MessageLoop* loop_;

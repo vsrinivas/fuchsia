@@ -27,7 +27,7 @@ ViewCommandDispatcher::ViewCommandDispatcher(
 
 ViewCommandDispatcher::~ViewCommandDispatcher() = default;
 
-bool ViewCommandDispatcher::ApplyCommand(const ui_mozart::CommandPtr& command) {
+bool ViewCommandDispatcher::ApplyCommand(const ui::CommandPtr& command) {
   FXL_CHECK(false) << "not implemented";
   return false;
 }

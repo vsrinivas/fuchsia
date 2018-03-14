@@ -7,8 +7,8 @@
 #include <zx/vmar.h>
 #include <zx/vmo.h>
 
-#include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/fxl/logging.h"
+#include "lib/ui/scenic/fidl_helpers.h"
 
 namespace scenic_lib {
 namespace {
@@ -28,9 +28,8 @@ std::pair<zx::vmo, fxl::RefPtr<HostData>> AllocateMemory(size_t size) {
 
   // Drop rights before we transfer the VMO to the session manager.
   zx::vmo remote_vmo;
-  status = local_vmo.replace(
-      ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
-      &remote_vmo);
+  status = local_vmo.replace(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
+                             &remote_vmo);
   FXL_CHECK(status == ZX_OK) << "replace rights failed: status=" << status;
   return std::make_pair(std::move(remote_vmo), std::move(data));
 }

@@ -21,8 +21,7 @@ namespace shadertoy {
 ShadertoyStateForImagePipe::ShadertoyStateForImagePipe(
     App* app,
     ::f1dl::InterfaceHandle<scenic::ImagePipe> image_pipe)
-    : ShadertoyState(app),
-      image_pipe_(image_pipe.Bind()) {
+    : ShadertoyState(app), image_pipe_(image_pipe.Bind()) {
   image_pipe_.set_error_handler([this] { this->Close(); });
 }
 
@@ -63,10 +62,8 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
   for (size_t i = 0; i < kNumFramebuffers; ++i) {
     auto& fb = framebuffers_[i];
 
-    auto acquire_semaphore_pair =
-        escher::NewSemaphoreEventPair(escher());
-    auto release_semaphore_pair =
-        escher::NewSemaphoreEventPair(escher());
+    auto acquire_semaphore_pair = escher::NewSemaphoreEventPair(escher());
+    auto release_semaphore_pair = escher::NewSemaphoreEventPair(escher());
     if (!acquire_semaphore_pair.first || !release_semaphore_pair.first) {
       FXL_LOG(ERROR) << "OnSetResolution() failed.";
       ClearFramebuffers();
@@ -146,13 +143,13 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
                         fb.release_semaphore, fb.acquire_semaphore);
 
   // Present the image and request another frame.
-  auto present_image_callback = [weak = weak_ptr_factory()->GetWeakPtr()](
-                                    ui_mozart::PresentationInfoPtr info) {
-    // Need this cast in order to call protected member of superclass.
-    if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
-      self->OnFramePresented(info);
-    }
-  };
+  auto present_image_callback =
+      [weak = weak_ptr_factory()->GetWeakPtr()](ui::PresentationInfoPtr info) {
+        // Need this cast in order to call protected member of superclass.
+        if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
+          self->OnFramePresented(info);
+        }
+      };
 
   auto acquire_fences = f1dl::Array<zx::event>::New(1);
   acquire_fences[0] = std::move(acquire_fence);

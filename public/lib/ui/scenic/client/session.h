@@ -12,39 +12,38 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/mozart/fidl/mozart.fidl.h"
-#include "lib/ui/mozart/fidl/session.fidl.h"
+#include "lib/ui/scenic/fidl/scenic.fidl.h"
+#include "lib/ui/scenic/fidl/session.fidl.h"
 
-#include "lib/ui/scenic/fidl/display_info.fidl.h"
+#include "lib/ui/gfx/fidl/display_info.fidl.h"
 
 namespace scenic_lib {
 
-// Wraps a Mozart session.
+// Wraps a Scenic session.
 // Maintains a queue of pending operations and assists with allocation of
 // resource ids.
-class Session : private ui_mozart::SessionListener {
+class Session : private ui::SessionListener {
  public:
   // Provides timing information about a presentation request which has
   // been applied by the scene manager.
-  using PresentCallback =
-      std::function<void(ui_mozart::PresentationInfoPtr info)>;
+  using PresentCallback = std::function<void(ui::PresentationInfoPtr info)>;
 
   // Provide information about hits.
   using HitTestCallback = std::function<void(f1dl::Array<scenic::HitPtr> hits)>;
 
   // Called when session events are received.
-  using EventHandler = std::function<void(f1dl::Array<ui_mozart::EventPtr>)>;
+  using EventHandler = std::function<void(f1dl::Array<ui::EventPtr>)>;
 
   // Wraps the provided session and session listener.
   // The listener is optional.
-  explicit Session(ui_mozart::SessionPtr session,
-                   f1dl::InterfaceRequest<ui_mozart::SessionListener>
-                       session_listener = nullptr);
+  explicit Session(
+      ui::SessionPtr session,
+      f1dl::InterfaceRequest<ui::SessionListener> session_listener = nullptr);
 
   // Creates a new session using the provided scene manager and binds the
   // session listener to this object.
   // The scene manager itself is not retained after construction.
-  explicit Session(ui_mozart::Mozart* mozart);
+  explicit Session(ui::Scenic* mozart);
 
   // Destroys the session.
   // All resources must be released prior to destruction.
@@ -61,7 +60,7 @@ class Session : private ui_mozart::SessionListener {
   }
 
   // Gets a pointer to the underlying session interface.
-  ui_mozart::Session* session() { return session_.get(); }
+  ui::Session* session() { return session_.get(); }
 
   // Allocates a new unique resource id.
   uint32_t AllocResourceId();
@@ -98,26 +97,25 @@ class Session : private ui_mozart::SessionListener {
 
   // Performs a hit test along the specified ray into the engine's first
   // compositor.
-  void HitTestDeviceRay(
-      const float ray_origin[3],
-      const float ray_direction[3],
-      const ui_mozart::Session::HitTestDeviceRayCallback& callback);
+  void HitTestDeviceRay(const float ray_origin[3],
+                        const float ray_direction[3],
+                        const ui::Session::HitTestDeviceRayCallback& callback);
 
  private:
-  // |ui_mozart::SessionListener|
+  // |ui::SessionListener|
   void OnError(const f1dl::String& error) override;
-  void OnEvent(f1dl::Array<ui_mozart::EventPtr> events) override;
+  void OnEvent(f1dl::Array<ui::EventPtr> events) override;
 
-  ui_mozart::SessionPtr session_;
+  ui::SessionPtr session_;
   uint32_t next_resource_id_ = 1u;
   uint32_t resource_count_ = 0u;
 
-  f1dl::Array<ui_mozart::CommandPtr> commands_;
+  f1dl::Array<ui::CommandPtr> commands_;
   f1dl::Array<zx::event> acquire_fences_;
   f1dl::Array<zx::event> release_fences_;
 
   EventHandler event_handler_;
-  f1dl::Binding<ui_mozart::SessionListener> session_listener_binding_;
+  f1dl::Binding<ui::SessionListener> session_listener_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Session);
 };

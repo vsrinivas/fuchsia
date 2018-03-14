@@ -43,8 +43,7 @@ ShapesView::ShapesView(
 
 ShapesView::~ShapesView() {}
 
-void ShapesView::OnSceneInvalidated(
-    ui_mozart::PresentationInfoPtr presentation_info) {
+void ShapesView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
   if (!has_logical_size())
     return;
 

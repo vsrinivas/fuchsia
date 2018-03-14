@@ -19,9 +19,9 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/ui/mozart/fidl/mozart.fidl.h"
+#include "lib/ui/gfx/fidl/hit.fidl.h"
 #include "lib/ui/scenic/client/session.h"
-#include "lib/ui/scenic/fidl/hit.fidl.h"
+#include "lib/ui/scenic/fidl/scenic.fidl.h"
 #include "lib/ui/views/fidl/view_trees.fidl.h"
 #include "lib/ui/views/fidl/views.fidl.h"
 
@@ -36,7 +36,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // VIEW MANAGER REQUESTS
 
-  void GetMozart(f1dl::InterfaceRequest<ui_mozart::Mozart> mozart_request);
+  void GetScenic(f1dl::InterfaceRequest<ui::Scenic> scenic_request);
   void CreateView(f1dl::InterfaceRequest<mozart::View> view_request,
                   f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   mozart::ViewListenerPtr view_listener,
@@ -222,7 +222,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   }
 
   app::ApplicationContext* application_context_;
-  ui_mozart::MozartPtr mozart_;
+  ui::ScenicPtr scenic_;
   scenic_lib::Session session_;
 
   bool traversal_scheduled_ = false;

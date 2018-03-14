@@ -122,13 +122,12 @@ class BaseView : private ViewListener,
   // invalidation.  The new contents are presented once this function returns.
   //
   // The default implementation does nothing.
-  virtual void OnSceneInvalidated(
-      ui_mozart::PresentationInfoPtr presentation_info);
+  virtual void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info);
 
   // Called when session events are received.
   //
   // The default implementation does nothing.
-  virtual void OnSessionEvent(f1dl::Array<ui_mozart::EventPtr> events);
+  virtual void OnSessionEvent(f1dl::Array<ui::EventPtr> events);
 
   // Called to handle an input event.
   // Returns true if the view will handle the event, false if the event
@@ -165,7 +164,7 @@ class BaseView : private ViewListener,
                const OnEventCallback& callback) override;
 
   void PresentScene(zx_time_t presentation_time);
-  void HandleSessionEvents(f1dl::Array<ui_mozart::EventPtr> events);
+  void HandleSessionEvents(f1dl::Array<ui::EventPtr> events);
   void AdjustMetricsAndPhysicalSize();
 
   ViewManagerPtr view_manager_;

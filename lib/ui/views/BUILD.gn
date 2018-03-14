@@ -9,7 +9,7 @@ source_set("views") {
   ]
 
   public_deps = [
-    "//garnet/lib/ui/mozart",
+    "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic",
   ]
 }

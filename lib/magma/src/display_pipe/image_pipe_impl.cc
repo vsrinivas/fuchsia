@@ -75,7 +75,7 @@ void ImagePipeImpl::PresentImage(uint32_t image_id,
   for (auto signal_semaphore : signal_semaphores)
     conn_->ReleaseSemaphore(signal_semaphore);
 
-  auto info = ui_mozart::PresentationInfo::New();
+  auto info = ui::PresentationInfo::New();
   info->presentation_time = presentation_time;
   info->presentation_interval = 0;
   callback(std::move(info));

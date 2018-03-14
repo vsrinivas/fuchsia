@@ -6,9 +6,9 @@
 #define LIB_UI_SKETCHY_RESOURCES_H_
 
 #include <garnet/public/lib/fxl/memory/ref_counted.h>
-#include "lib/ui/scenic/client/session.h"
 #include "lib/ui/fun/sketchy/fidl/ops.fidl.h"
 #include "lib/ui/fun/sketchy/fidl/resources.fidl.h"
+#include "lib/ui/scenic/client/session.h"
 #include "lib/ui/sketchy/types.h"
 
 namespace sketchy_lib {
@@ -63,8 +63,7 @@ class Resource {
 };
 
 // Represents a stroke in a canvas.
-class Stroke final : public Resource,
-                     public fxl::RefCountedThreadSafe<Stroke> {
+class Stroke final : public Resource, public fxl::RefCountedThreadSafe<Stroke> {
  public:
   explicit Stroke(Canvas* canvas);
   void SetPath(const StrokePath& path) const;

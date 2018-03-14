@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "lib/ui/mozart/fidl/commands.fidl.h"
+#include "lib/ui/scenic/fidl/commands.fidl.h"
 
 namespace scenic_lib {
 
@@ -17,7 +17,7 @@ constexpr float kOnesFloat3[3] = {1.f, 1.f, 1.f};
 constexpr float kQuaternionDefault[4] = {0.f, 0.f, 0.f, 1.f};
 
 // Helper function for wrapping Scenic ops as Mozart commands.
-ui_mozart::CommandPtr NewCommand(scenic::OpPtr op);
+ui::CommandPtr NewCommand(scenic::OpPtr op);
 
 // Resource creation.
 scenic::OpPtr NewCreateMemoryOp(uint32_t id,

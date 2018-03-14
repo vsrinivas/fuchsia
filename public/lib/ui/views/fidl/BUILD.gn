@@ -18,8 +18,8 @@ fidl("fidl") {
   public_deps = [
     ":view_token",
     "//garnet/public/lib/app/fidl:service_provider",
+    "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/ui/input/fidl",
-    "//garnet/public/lib/ui/mozart/fidl",
     "//garnet/public/lib/ui/scenic/fidl",
   ]
 }
@@ -35,8 +35,8 @@ fidl("view_system_fidl") {
   public_deps = [
     "//garnet/public/lib/app/fidl:service_provider",
     "//garnet/public/lib/ui/geometry/fidl",
+    "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/ui/input/fidl",
-    "//garnet/public/lib/ui/scenic/fidl",
   ]
 }
 
