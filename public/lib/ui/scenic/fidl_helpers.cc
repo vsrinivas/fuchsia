@@ -18,7 +18,7 @@ ui::CommandPtr NewCommand(scenic::OpPtr op) {
 
 // Helper function for all resource creation functions.
 static scenic::OpPtr NewCreateResourceOp(uint32_t id,
-                                         scenic::ResourcePtr resource) {
+                                         scenic::ResourceArgsPtr resource) {
   auto create_resource = scenic::CreateResourceOp::New();
   create_resource->id = id;
   create_resource->resource = std::move(resource);
@@ -32,11 +32,11 @@ static scenic::OpPtr NewCreateResourceOp(uint32_t id,
 scenic::OpPtr NewCreateMemoryOp(uint32_t id,
                                 zx::vmo vmo,
                                 scenic::MemoryType memory_type) {
-  auto memory = scenic::Memory::New();
+  auto memory = scenic::MemoryArgs::New();
   memory->vmo = std::move(vmo);
   memory->memory_type = memory_type;
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_memory(std::move(memory));
 
   return NewCreateResourceOp(id, std::move(resource));
@@ -46,12 +46,12 @@ scenic::OpPtr NewCreateImageOp(uint32_t id,
                                uint32_t memory_id,
                                uint32_t memory_offset,
                                scenic::ImageInfoPtr info) {
-  auto image = scenic::Image::New();
+  auto image = scenic::ImageArgs::New();
   image->memory_id = memory_id;
   image->memory_offset = memory_offset;
   image->info = std::move(info);
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_image(std::move(image));
 
   return NewCreateResourceOp(id, std::move(resource));
@@ -63,7 +63,7 @@ scenic::OpPtr NewCreateImagePipeOp(
   auto image_pipe = scenic::ImagePipeArgs::New();
   image_pipe->image_pipe_request = std::move(request);
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_image_pipe(std::move(image_pipe));
   return NewCreateResourceOp(id, std::move(resource));
 }
@@ -91,85 +91,85 @@ scenic::OpPtr NewCreateBufferOp(uint32_t id,
                                 uint32_t memory_id,
                                 uint32_t memory_offset,
                                 uint32_t num_bytes) {
-  auto buffer = scenic::Buffer::New();
+  auto buffer = scenic::BufferArgs::New();
   buffer->memory_id = memory_id;
   buffer->memory_offset = memory_offset;
   buffer->num_bytes = num_bytes;
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_buffer(std::move(buffer));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateDisplayCompositorOp(uint32_t id) {
-  auto display_compositor = scenic::DisplayCompositor::New();
+  auto display_compositor = scenic::DisplayCompositorArgs::New();
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_display_compositor(std::move(display_compositor));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateLayerStackOp(uint32_t id) {
-  auto layer_stack = scenic::LayerStack::New();
+  auto layer_stack = scenic::LayerStackArgs::New();
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_layer_stack(std::move(layer_stack));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateLayerOp(uint32_t id) {
-  auto layer = scenic::Layer::New();
+  auto layer = scenic::LayerArgs::New();
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_layer(std::move(layer));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateSceneOp(uint32_t id) {
-  auto scene = scenic::Scene::New();
+  auto scene = scenic::SceneArgs::New();
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_scene(std::move(scene));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateCameraOp(uint32_t id, uint32_t scene_id) {
-  auto camera = scenic::Camera::New();
+  auto camera = scenic::CameraArgs::New();
   camera->scene_id = scene_id;
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_camera(std::move(camera));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateRendererOp(uint32_t id) {
-  auto renderer = scenic::Renderer::New();
+  auto renderer = scenic::RendererArgs::New();
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_renderer(std::move(renderer));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateAmbientLightOp(uint32_t id) {
-  auto ambient_light = scenic::AmbientLight::New();
+  auto ambient_light = scenic::AmbientLightArgs::New();
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_ambient_light(std::move(ambient_light));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateDirectionalLightOp(uint32_t id) {
-  auto directional_light = scenic::DirectionalLight::New();
+  auto directional_light = scenic::DirectionalLightArgs::New();
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_directional_light(std::move(directional_light));
 
   return NewCreateResourceOp(id, std::move(resource));
@@ -179,10 +179,10 @@ scenic::OpPtr NewCreateCircleOp(uint32_t id, float radius) {
   auto radius_value = scenic::Value::New();
   radius_value->set_vector1(radius);
 
-  auto circle = scenic::Circle::New();
+  auto circle = scenic::CircleArgs::New();
   circle->radius = std::move(radius_value);
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_circle(std::move(circle));
 
   return NewCreateResourceOp(id, std::move(resource));
@@ -195,11 +195,11 @@ scenic::OpPtr NewCreateRectangleOp(uint32_t id, float width, float height) {
   auto height_value = scenic::Value::New();
   height_value->set_vector1(height);
 
-  auto rectangle = scenic::Rectangle::New();
+  auto rectangle = scenic::RectangleArgs::New();
   rectangle->width = std::move(width_value);
   rectangle->height = std::move(height_value);
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_rectangle(std::move(rectangle));
 
   return NewCreateResourceOp(id, std::move(resource));
@@ -230,7 +230,7 @@ scenic::OpPtr NewCreateRoundedRectangleOp(uint32_t id,
   auto bottom_left_radius_value = scenic::Value::New();
   bottom_left_radius_value->set_vector1(bottom_left_radius);
 
-  auto rectangle = scenic::RoundedRectangle::New();
+  auto rectangle = scenic::RoundedRectangleArgs::New();
   rectangle->width = std::move(width_value);
   rectangle->height = std::move(height_value);
   rectangle->top_left_radius = std::move(top_left_radius_value);
@@ -238,7 +238,7 @@ scenic::OpPtr NewCreateRoundedRectangleOp(uint32_t id,
   rectangle->bottom_right_radius = std::move(bottom_right_radius_value);
   rectangle->bottom_left_radius = std::move(bottom_left_radius_value);
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_rounded_rectangle(std::move(rectangle));
 
   return NewCreateResourceOp(id, std::move(resource));
@@ -250,10 +250,10 @@ scenic::OpPtr NewCreateVarCircleOp(uint32_t id,
   auto radius_value = scenic::Value::New();
   radius_value->set_variable_id(radius_var_id);
 
-  auto circle = scenic::Circle::New();
+  auto circle = scenic::CircleArgs::New();
   circle->radius = std::move(radius_value);
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_circle(std::move(circle));
 
   return NewCreateResourceOp(id, std::move(resource));
@@ -268,11 +268,11 @@ scenic::OpPtr NewCreateVarRectangleOp(uint32_t id,
   auto height_value = scenic::Value::New();
   height_value->set_variable_id(height_var_id);
 
-  auto rectangle = scenic::Rectangle::New();
+  auto rectangle = scenic::RectangleArgs::New();
   rectangle->width = std::move(width_value);
   rectangle->height = std::move(height_value);
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_rectangle(std::move(rectangle));
 
   return NewCreateResourceOp(id, std::move(resource));
@@ -304,7 +304,7 @@ scenic::OpPtr NewCreateVarRoundedRectangleOp(
   auto bottom_right_radius_value = scenic::Value::New();
   bottom_right_radius_value->set_variable_id(bottom_right_radius_var_id);
 
-  auto rectangle = scenic::RoundedRectangle::New();
+  auto rectangle = scenic::RoundedRectangleArgs::New();
   rectangle->width = std::move(width_value);
   rectangle->height = std::move(height_value);
   rectangle->top_left_radius = std::move(top_left_radius_value);
@@ -312,59 +312,59 @@ scenic::OpPtr NewCreateVarRoundedRectangleOp(
   rectangle->bottom_left_radius = std::move(bottom_left_radius_value);
   rectangle->bottom_right_radius = std::move(bottom_right_radius_value);
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_rounded_rectangle(std::move(rectangle));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateMeshOp(uint32_t id) {
-  auto mesh = scenic::Mesh::New();
+  auto mesh = scenic::MeshArgs::New();
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_mesh(std::move(mesh));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateMaterialOp(uint32_t id) {
-  auto material = scenic::Material::New();
+  auto material = scenic::MaterialArgs::New();
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_material(std::move(material));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateClipNodeOp(uint32_t id) {
-  auto node = scenic::ClipNode::New();
+  auto node = scenic::ClipNodeArgs::New();
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_clip_node(std::move(node));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateEntityNodeOp(uint32_t id) {
-  auto node = scenic::EntityNode::New();
+  auto node = scenic::EntityNodeArgs::New();
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_entity_node(std::move(node));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateShapeNodeOp(uint32_t id) {
-  auto node = scenic::ShapeNode::New();
+  auto node = scenic::ShapeNodeArgs::New();
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_shape_node(std::move(node));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
 
 scenic::OpPtr NewCreateVariableOp(uint32_t id, scenic::ValuePtr value) {
-  auto variable = scenic::Variable::New();
+  auto variable = scenic::VariableArgs::New();
   switch (value->which()) {
     case scenic::Value::Tag::VECTOR1:
       variable->type = scenic::ValueType::kVector1;
@@ -404,7 +404,7 @@ scenic::OpPtr NewCreateVariableOp(uint32_t id, scenic::ValuePtr value) {
   }
   variable->initial_value = std::move(value);
 
-  auto resource = scenic::Resource::New();
+  auto resource = scenic::ResourceArgs::New();
   resource->set_variable(std::move(variable));
 
   return NewCreateResourceOp(id, std::move(resource));

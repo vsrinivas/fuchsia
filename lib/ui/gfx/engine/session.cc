@@ -188,55 +188,55 @@ bool Session::ApplyCreateResourceOp(const scenic::CreateResourceOpPtr& op) {
   }
 
   switch (op->resource->which()) {
-    case scenic::Resource::Tag::MEMORY:
+    case scenic::ResourceArgs::Tag::MEMORY:
       return ApplyCreateMemory(id, op->resource->get_memory());
-    case scenic::Resource::Tag::IMAGE:
+    case scenic::ResourceArgs::Tag::IMAGE:
       return ApplyCreateImage(id, op->resource->get_image());
-    case scenic::Resource::Tag::IMAGE_PIPE:
+    case scenic::ResourceArgs::Tag::IMAGE_PIPE:
       return ApplyCreateImagePipe(id, op->resource->get_image_pipe());
-    case scenic::Resource::Tag::BUFFER:
+    case scenic::ResourceArgs::Tag::BUFFER:
       return ApplyCreateBuffer(id, op->resource->get_buffer());
-    case scenic::Resource::Tag::SCENE:
+    case scenic::ResourceArgs::Tag::SCENE:
       return ApplyCreateScene(id, op->resource->get_scene());
-    case scenic::Resource::Tag::CAMERA:
+    case scenic::ResourceArgs::Tag::CAMERA:
       return ApplyCreateCamera(id, op->resource->get_camera());
-    case scenic::Resource::Tag::RENDERER:
+    case scenic::ResourceArgs::Tag::RENDERER:
       return ApplyCreateRenderer(id, op->resource->get_renderer());
-    case scenic::Resource::Tag::AMBIENT_LIGHT:
+    case scenic::ResourceArgs::Tag::AMBIENT_LIGHT:
       return ApplyCreateAmbientLight(id, op->resource->get_ambient_light());
-    case scenic::Resource::Tag::DIRECTIONAL_LIGHT:
+    case scenic::ResourceArgs::Tag::DIRECTIONAL_LIGHT:
       return ApplyCreateDirectionalLight(id,
                                          op->resource->get_directional_light());
-    case scenic::Resource::Tag::RECTANGLE:
+    case scenic::ResourceArgs::Tag::RECTANGLE:
       return ApplyCreateRectangle(id, op->resource->get_rectangle());
-    case scenic::Resource::Tag::ROUNDED_RECTANGLE:
+    case scenic::ResourceArgs::Tag::ROUNDED_RECTANGLE:
       return ApplyCreateRoundedRectangle(id,
                                          op->resource->get_rounded_rectangle());
-    case scenic::Resource::Tag::CIRCLE:
+    case scenic::ResourceArgs::Tag::CIRCLE:
       return ApplyCreateCircle(id, op->resource->get_circle());
-    case scenic::Resource::Tag::MESH:
+    case scenic::ResourceArgs::Tag::MESH:
       return ApplyCreateMesh(id, op->resource->get_mesh());
-    case scenic::Resource::Tag::MATERIAL:
+    case scenic::ResourceArgs::Tag::MATERIAL:
       return ApplyCreateMaterial(id, op->resource->get_material());
-    case scenic::Resource::Tag::CLIP_NODE:
+    case scenic::ResourceArgs::Tag::CLIP_NODE:
       return ApplyCreateClipNode(id, op->resource->get_clip_node());
-    case scenic::Resource::Tag::ENTITY_NODE:
+    case scenic::ResourceArgs::Tag::ENTITY_NODE:
       return ApplyCreateEntityNode(id, op->resource->get_entity_node());
-    case scenic::Resource::Tag::SHAPE_NODE:
+    case scenic::ResourceArgs::Tag::SHAPE_NODE:
       return ApplyCreateShapeNode(id, op->resource->get_shape_node());
-    case scenic::Resource::Tag::DISPLAY_COMPOSITOR:
+    case scenic::ResourceArgs::Tag::DISPLAY_COMPOSITOR:
       return ApplyCreateDisplayCompositor(
           id, op->resource->get_display_compositor());
-    case scenic::Resource::Tag::IMAGE_PIPE_COMPOSITOR:
+    case scenic::ResourceArgs::Tag::IMAGE_PIPE_COMPOSITOR:
       return ApplyCreateImagePipeCompositor(
           id, op->resource->get_image_pipe_compositor());
-    case scenic::Resource::Tag::LAYER_STACK:
+    case scenic::ResourceArgs::Tag::LAYER_STACK:
       return ApplyCreateLayerStack(id, op->resource->get_layer_stack());
-    case scenic::Resource::Tag::LAYER:
+    case scenic::ResourceArgs::Tag::LAYER:
       return ApplyCreateLayer(id, op->resource->get_layer());
-    case scenic::Resource::Tag::VARIABLE:
+    case scenic::ResourceArgs::Tag::VARIABLE:
       return ApplyCreateVariable(id, op->resource->get_variable());
-    case scenic::Resource::Tag::__UNKNOWN__:
+    case scenic::ResourceArgs::Tag::__UNKNOWN__:
       // FIDL validation should make this impossible.
       FXL_CHECK(false);
       return false;
@@ -666,13 +666,13 @@ bool Session::ApplySetDisableClippingOp(
 }
 
 bool Session::ApplyCreateMemory(scenic::ResourceId id,
-                                const scenic::MemoryPtr& args) {
+                                const scenic::MemoryArgsPtr& args) {
   auto memory = CreateMemory(id, args);
   return memory ? resources_.AddResource(id, std::move(memory)) : false;
 }
 
 bool Session::ApplyCreateImage(scenic::ResourceId id,
-                               const scenic::ImagePtr& args) {
+                               const scenic::ImageArgsPtr& args) {
   if (auto memory = resources_.FindResource<Memory>(args->memory_id)) {
     if (auto image = CreateImage(id, std::move(memory), args)) {
       return resources_.AddResource(id, std::move(image));
@@ -690,7 +690,7 @@ bool Session::ApplyCreateImagePipe(scenic::ResourceId id,
 }
 
 bool Session::ApplyCreateBuffer(scenic::ResourceId id,
-                                const scenic::BufferPtr& args) {
+                                const scenic::BufferArgsPtr& args) {
   if (auto memory = resources_.FindResource<Memory>(args->memory_id)) {
     if (auto buffer = CreateBuffer(id, std::move(memory), args->memory_offset,
                                    args->num_bytes)) {
@@ -701,38 +701,38 @@ bool Session::ApplyCreateBuffer(scenic::ResourceId id,
 }
 
 bool Session::ApplyCreateScene(scenic::ResourceId id,
-                               const scenic::ScenePtr& args) {
+                               const scenic::SceneArgsPtr& args) {
   auto scene = CreateScene(id, args);
   return scene ? resources_.AddResource(id, std::move(scene)) : false;
 }
 
 bool Session::ApplyCreateCamera(scenic::ResourceId id,
-                                const scenic::CameraPtr& args) {
+                                const scenic::CameraArgsPtr& args) {
   auto camera = CreateCamera(id, args);
   return camera ? resources_.AddResource(id, std::move(camera)) : false;
 }
 
 bool Session::ApplyCreateRenderer(scenic::ResourceId id,
-                                  const scenic::RendererPtr& args) {
+                                  const scenic::RendererArgsPtr& args) {
   auto renderer = CreateRenderer(id, args);
   return renderer ? resources_.AddResource(id, std::move(renderer)) : false;
 }
 
 bool Session::ApplyCreateAmbientLight(scenic::ResourceId id,
-                                      const scenic::AmbientLightPtr& args) {
+                                      const scenic::AmbientLightArgsPtr& args) {
   auto light = CreateAmbientLight(id);
   return light ? resources_.AddResource(id, std::move(light)) : false;
 }
 
 bool Session::ApplyCreateDirectionalLight(
     scenic::ResourceId id,
-    const scenic::DirectionalLightPtr& args) {
+    const scenic::DirectionalLightArgsPtr& args) {
   auto light = CreateDirectionalLight(id);
   return light ? resources_.AddResource(id, std::move(light)) : false;
 }
 
 bool Session::ApplyCreateRectangle(scenic::ResourceId id,
-                                   const scenic::RectanglePtr& args) {
+                                   const scenic::RectangleArgsPtr& args) {
   if (!AssertValueIsOfType(args->width, kFloatValueTypes) ||
       !AssertValueIsOfType(args->height, kFloatValueTypes)) {
     return false;
@@ -752,7 +752,7 @@ bool Session::ApplyCreateRectangle(scenic::ResourceId id,
 
 bool Session::ApplyCreateRoundedRectangle(
     scenic::ResourceId id,
-    const scenic::RoundedRectanglePtr& args) {
+    const scenic::RoundedRectangleArgsPtr& args) {
   if (!AssertValueIsOfType(args->width, kFloatValueTypes) ||
       !AssertValueIsOfType(args->height, kFloatValueTypes) ||
       !AssertValueIsOfType(args->top_left_radius, kFloatValueTypes) ||
@@ -787,7 +787,7 @@ bool Session::ApplyCreateRoundedRectangle(
 }
 
 bool Session::ApplyCreateCircle(scenic::ResourceId id,
-                                const scenic::CirclePtr& args) {
+                                const scenic::CircleArgsPtr& args) {
   if (!AssertValueIsOfType(args->radius, kFloatValueTypes)) {
     return false;
   }
@@ -804,70 +804,70 @@ bool Session::ApplyCreateCircle(scenic::ResourceId id,
 }
 
 bool Session::ApplyCreateMesh(scenic::ResourceId id,
-                              const scenic::MeshPtr& args) {
+                              const scenic::MeshArgsPtr& args) {
   auto mesh = CreateMesh(id);
   return mesh ? resources_.AddResource(id, std::move(mesh)) : false;
 }
 
 bool Session::ApplyCreateMaterial(scenic::ResourceId id,
-                                  const scenic::MaterialPtr& args) {
+                                  const scenic::MaterialArgsPtr& args) {
   auto material = CreateMaterial(id);
   return material ? resources_.AddResource(id, std::move(material)) : false;
 }
 
 bool Session::ApplyCreateClipNode(scenic::ResourceId id,
-                                  const scenic::ClipNodePtr& args) {
+                                  const scenic::ClipNodeArgsPtr& args) {
   auto node = CreateClipNode(id, args);
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
 bool Session::ApplyCreateEntityNode(scenic::ResourceId id,
-                                    const scenic::EntityNodePtr& args) {
+                                    const scenic::EntityNodeArgsPtr& args) {
   auto node = CreateEntityNode(id, args);
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
 bool Session::ApplyCreateShapeNode(scenic::ResourceId id,
-                                   const scenic::ShapeNodePtr& args) {
+                                   const scenic::ShapeNodeArgsPtr& args) {
   auto node = CreateShapeNode(id, args);
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
 bool Session::ApplyCreateDisplayCompositor(
     scenic::ResourceId id,
-    const scenic::DisplayCompositorPtr& args) {
+    const scenic::DisplayCompositorArgsPtr& args) {
   auto compositor = CreateDisplayCompositor(id, args);
   return compositor ? resources_.AddResource(id, std::move(compositor)) : false;
 }
 
 bool Session::ApplyCreateImagePipeCompositor(
     scenic::ResourceId id,
-    const scenic::ImagePipeCompositorPtr& args) {
+    const scenic::ImagePipeCompositorArgsPtr& args) {
   auto compositor = CreateImagePipeCompositor(id, args);
   return compositor ? resources_.AddResource(id, std::move(compositor)) : false;
 }
 
 bool Session::ApplyCreateLayerStack(scenic::ResourceId id,
-                                    const scenic::LayerStackPtr& args) {
+                                    const scenic::LayerStackArgsPtr& args) {
   auto layer_stack = CreateLayerStack(id, args);
   return layer_stack ? resources_.AddResource(id, std::move(layer_stack))
                      : false;
 }
 
 bool Session::ApplyCreateLayer(scenic::ResourceId id,
-                               const scenic::LayerPtr& args) {
+                               const scenic::LayerArgsPtr& args) {
   auto layer = CreateLayer(id, args);
   return layer ? resources_.AddResource(id, std::move(layer)) : false;
 }
 
 bool Session::ApplyCreateVariable(scenic::ResourceId id,
-                                  const scenic::VariablePtr& args) {
+                                  const scenic::VariableArgsPtr& args) {
   auto variable = CreateVariable(id, args);
   return variable ? resources_.AddResource(id, std::move(variable)) : false;
 }
 
 ResourcePtr Session::CreateMemory(scenic::ResourceId id,
-                                  const scenic::MemoryPtr& args) {
+                                  const scenic::MemoryArgsPtr& args) {
   vk::Device device = engine()->vk_device();
   switch (args->memory_type) {
     case scenic::MemoryType::VK_DEVICE_MEMORY:
@@ -879,7 +879,7 @@ ResourcePtr Session::CreateMemory(scenic::ResourceId id,
 
 ResourcePtr Session::CreateImage(scenic::ResourceId id,
                                  MemoryPtr memory,
-                                 const scenic::ImagePtr& args) {
+                                 const scenic::ImageArgsPtr& args) {
   return Image::New(this, id, memory, args->info, args->memory_offset,
                     error_reporter_);
 }
@@ -911,12 +911,12 @@ ResourcePtr Session::CreateBuffer(scenic::ResourceId id,
 }
 
 ResourcePtr Session::CreateScene(scenic::ResourceId id,
-                                 const scenic::ScenePtr& args) {
+                                 const scenic::SceneArgsPtr& args) {
   return fxl::MakeRefCounted<Scene>(this, id);
 }
 
 ResourcePtr Session::CreateCamera(scenic::ResourceId id,
-                                  const scenic::CameraPtr& args) {
+                                  const scenic::CameraArgsPtr& args) {
   if (auto scene = resources_.FindResource<Scene>(args->scene_id)) {
     return fxl::MakeRefCounted<Camera>(this, id, std::move(scene));
   }
@@ -924,7 +924,7 @@ ResourcePtr Session::CreateCamera(scenic::ResourceId id,
 }
 
 ResourcePtr Session::CreateRenderer(scenic::ResourceId id,
-                                    const scenic::RendererPtr& args) {
+                                    const scenic::RendererArgsPtr& args) {
   return fxl::MakeRefCounted<Renderer>(this, id);
 }
 
@@ -937,25 +937,25 @@ ResourcePtr Session::CreateDirectionalLight(scenic::ResourceId id) {
 }
 
 ResourcePtr Session::CreateClipNode(scenic::ResourceId id,
-                                    const scenic::ClipNodePtr& args) {
+                                    const scenic::ClipNodeArgsPtr& args) {
   error_reporter_->ERROR() << "scenic::gfx::Session::CreateClipNode(): "
                               "unimplemented.";
   return ResourcePtr();
 }
 
 ResourcePtr Session::CreateEntityNode(scenic::ResourceId id,
-                                      const scenic::EntityNodePtr& args) {
+                                      const scenic::EntityNodeArgsPtr& args) {
   return fxl::MakeRefCounted<EntityNode>(this, id);
 }
 
 ResourcePtr Session::CreateShapeNode(scenic::ResourceId id,
-                                     const scenic::ShapeNodePtr& args) {
+                                     const scenic::ShapeNodeArgsPtr& args) {
   return fxl::MakeRefCounted<ShapeNode>(this, id);
 }
 
 ResourcePtr Session::CreateDisplayCompositor(
     scenic::ResourceId id,
-    const scenic::DisplayCompositorPtr& args) {
+    const scenic::DisplayCompositorArgsPtr& args) {
   Display* display = engine()->display_manager()->default_display();
   if (!display) {
     error_reporter_->ERROR() << "There is no default display available.";
@@ -973,7 +973,7 @@ ResourcePtr Session::CreateDisplayCompositor(
 
 ResourcePtr Session::CreateImagePipeCompositor(
     scenic::ResourceId id,
-    const scenic::ImagePipeCompositorPtr& args) {
+    const scenic::ImagePipeCompositorArgsPtr& args) {
   // TODO(MZ-179)
   error_reporter_->ERROR()
       << "scenic::gfx::Session::ApplyCreateImagePipeCompositor() "
@@ -982,12 +982,12 @@ ResourcePtr Session::CreateImagePipeCompositor(
 }
 
 ResourcePtr Session::CreateLayerStack(scenic::ResourceId id,
-                                      const scenic::LayerStackPtr& args) {
+                                      const scenic::LayerStackArgsPtr& args) {
   return fxl::MakeRefCounted<LayerStack>(this, id);
 }
 
 ResourcePtr Session::CreateVariable(scenic::ResourceId id,
-                                    const scenic::VariablePtr& args) {
+                                    const scenic::VariableArgsPtr& args) {
   fxl::RefPtr<Variable> variable;
   switch (args->type) {
     case scenic::ValueType::kVector1:
@@ -1030,7 +1030,7 @@ ResourcePtr Session::CreateVariable(scenic::ResourceId id,
 }
 
 ResourcePtr Session::CreateLayer(scenic::ResourceId id,
-                                 const scenic::LayerPtr& args) {
+                                 const scenic::LayerArgsPtr& args) {
   return fxl::MakeRefCounted<Layer>(this, id);
 }
 

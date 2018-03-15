@@ -11,7 +11,7 @@ import "lib/ui/geometry/fidl/geometry.fidl";
 // an |ObjectNode|, and to define the clip region of a |ClipNode|.
 
 // Rectangle centered at (0,0).
-struct Rectangle {
+struct RectangleArgs {
   Value width;  // float
   Value height; // float
 };
@@ -23,7 +23,7 @@ struct Rectangle {
 //   - bottom_left_radius + bottom_right_radius <= width
 //   - top_left_radius + bottom_left_radius <= height
 //   - top_right_radius + bottom_right_radius <= height
-struct RoundedRectangle {
+struct RoundedRectangleArgs {
   Value width;                // float
   Value height;               // float
   Value top_left_radius;      // float
@@ -32,10 +32,10 @@ struct RoundedRectangle {
   Value bottom_left_radius;   // float
 };
 
-struct Circle {
+struct CircleArgs {
   Value radius;  // float
 };
 
 // A Mesh cannot be rendered until it has been bound to vertex/index buffers;
 // see BindMeshBuffersOp.
-struct Mesh {};
+struct MeshArgs {};

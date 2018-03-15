@@ -163,75 +163,86 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplySetDisableClippingOp(const scenic::SetDisableClippingOpPtr& op);
 
   // Resource creation functions, called by ApplyCreateResourceOp().
-  bool ApplyCreateMemory(scenic::ResourceId id, const scenic::MemoryPtr& args);
-  bool ApplyCreateImage(scenic::ResourceId id, const scenic::ImagePtr& args);
+  bool ApplyCreateMemory(scenic::ResourceId id,
+                         const scenic::MemoryArgsPtr& args);
+  bool ApplyCreateImage(scenic::ResourceId id,
+                        const scenic::ImageArgsPtr& args);
   bool ApplyCreateImagePipe(scenic::ResourceId id,
                             const scenic::ImagePipeArgsPtr& args);
-  bool ApplyCreateBuffer(scenic::ResourceId id, const scenic::BufferPtr& args);
-  bool ApplyCreateScene(scenic::ResourceId id, const scenic::ScenePtr& args);
-  bool ApplyCreateCamera(scenic::ResourceId id, const scenic::CameraPtr& args);
+  bool ApplyCreateBuffer(scenic::ResourceId id,
+                         const scenic::BufferArgsPtr& args);
+  bool ApplyCreateScene(scenic::ResourceId id,
+                        const scenic::SceneArgsPtr& args);
+  bool ApplyCreateCamera(scenic::ResourceId id,
+                         const scenic::CameraArgsPtr& args);
   bool ApplyCreateRenderer(scenic::ResourceId id,
-                           const scenic::RendererPtr& args);
+                           const scenic::RendererArgsPtr& args);
   bool ApplyCreateAmbientLight(scenic::ResourceId id,
-                               const scenic::AmbientLightPtr& args);
+                               const scenic::AmbientLightArgsPtr& args);
   bool ApplyCreateDirectionalLight(scenic::ResourceId id,
-                                   const scenic::DirectionalLightPtr& args);
+                                   const scenic::DirectionalLightArgsPtr& args);
   bool ApplyCreateRectangle(scenic::ResourceId id,
-                            const scenic::RectanglePtr& args);
+                            const scenic::RectangleArgsPtr& args);
   bool ApplyCreateRoundedRectangle(scenic::ResourceId id,
-                                   const scenic::RoundedRectanglePtr& args);
-  bool ApplyCreateCircle(scenic::ResourceId id, const scenic::CirclePtr& args);
-  bool ApplyCreateMesh(scenic::ResourceId id, const scenic::MeshPtr& args);
+                                   const scenic::RoundedRectangleArgsPtr& args);
+  bool ApplyCreateCircle(scenic::ResourceId id,
+                         const scenic::CircleArgsPtr& args);
+  bool ApplyCreateMesh(scenic::ResourceId id, const scenic::MeshArgsPtr& args);
   bool ApplyCreateMaterial(scenic::ResourceId id,
-                           const scenic::MaterialPtr& args);
+                           const scenic::MaterialArgsPtr& args);
   bool ApplyCreateClipNode(scenic::ResourceId id,
-                           const scenic::ClipNodePtr& args);
+                           const scenic::ClipNodeArgsPtr& args);
   bool ApplyCreateEntityNode(scenic::ResourceId id,
-                             const scenic::EntityNodePtr& args);
+                             const scenic::EntityNodeArgsPtr& args);
   bool ApplyCreateShapeNode(scenic::ResourceId id,
-                            const scenic::ShapeNodePtr& args);
-  bool ApplyCreateDisplayCompositor(scenic::ResourceId id,
-                                    const scenic::DisplayCompositorPtr& args);
+                            const scenic::ShapeNodeArgsPtr& args);
+  bool ApplyCreateDisplayCompositor(
+      scenic::ResourceId id,
+      const scenic::DisplayCompositorArgsPtr& args);
   bool ApplyCreateImagePipeCompositor(
       scenic::ResourceId id,
-      const scenic::ImagePipeCompositorPtr& args);
+      const scenic::ImagePipeCompositorArgsPtr& args);
   bool ApplyCreateLayerStack(scenic::ResourceId id,
-                             const scenic::LayerStackPtr& args);
-  bool ApplyCreateLayer(scenic::ResourceId id, const scenic::LayerPtr& args);
+                             const scenic::LayerStackArgsPtr& args);
+  bool ApplyCreateLayer(scenic::ResourceId id,
+                        const scenic::LayerArgsPtr& args);
   bool ApplyCreateVariable(scenic::ResourceId id,
-                           const scenic::VariablePtr& args);
+                           const scenic::VariableArgsPtr& args);
 
   // Actually create resources.
   ResourcePtr CreateMemory(scenic::ResourceId id,
-                           const scenic::MemoryPtr& args);
+                           const scenic::MemoryArgsPtr& args);
   ResourcePtr CreateImage(scenic::ResourceId id,
                           MemoryPtr memory,
-                          const scenic::ImagePtr& args);
+                          const scenic::ImageArgsPtr& args);
   ResourcePtr CreateBuffer(scenic::ResourceId id,
                            MemoryPtr memory,
                            uint32_t memory_offset,
                            uint32_t num_bytes);
-  ResourcePtr CreateScene(scenic::ResourceId id, const scenic::ScenePtr& args);
+  ResourcePtr CreateScene(scenic::ResourceId id,
+                          const scenic::SceneArgsPtr& args);
   ResourcePtr CreateCamera(scenic::ResourceId id,
-                           const scenic::CameraPtr& args);
+                           const scenic::CameraArgsPtr& args);
   ResourcePtr CreateRenderer(scenic::ResourceId id,
-                             const scenic::RendererPtr& args);
+                             const scenic::RendererArgsPtr& args);
   ResourcePtr CreateAmbientLight(scenic::ResourceId id);
   ResourcePtr CreateDirectionalLight(scenic::ResourceId id);
   ResourcePtr CreateClipNode(scenic::ResourceId id,
-                             const scenic::ClipNodePtr& args);
+                             const scenic::ClipNodeArgsPtr& args);
   ResourcePtr CreateEntityNode(scenic::ResourceId id,
-                               const scenic::EntityNodePtr& args);
+                               const scenic::EntityNodeArgsPtr& args);
   ResourcePtr CreateShapeNode(scenic::ResourceId id,
-                              const scenic::ShapeNodePtr& args);
-  ResourcePtr CreateDisplayCompositor(scenic::ResourceId id,
-                                      const scenic::DisplayCompositorPtr& args);
+                              const scenic::ShapeNodeArgsPtr& args);
+  ResourcePtr CreateDisplayCompositor(
+      scenic::ResourceId id,
+      const scenic::DisplayCompositorArgsPtr& args);
   ResourcePtr CreateImagePipeCompositor(
       scenic::ResourceId id,
-      const scenic::ImagePipeCompositorPtr& args);
+      const scenic::ImagePipeCompositorArgsPtr& args);
   ResourcePtr CreateLayerStack(scenic::ResourceId id,
-                               const scenic::LayerStackPtr& args);
-  ResourcePtr CreateLayer(scenic::ResourceId id, const scenic::LayerPtr& args);
+                               const scenic::LayerStackArgsPtr& args);
+  ResourcePtr CreateLayer(scenic::ResourceId id,
+                          const scenic::LayerArgsPtr& args);
   ResourcePtr CreateCircle(scenic::ResourceId id, float initial_radius);
   ResourcePtr CreateRectangle(scenic::ResourceId id, float width, float height);
   ResourcePtr CreateRoundedRectangle(scenic::ResourceId id,
@@ -244,7 +255,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateMesh(scenic::ResourceId id);
   ResourcePtr CreateMaterial(scenic::ResourceId id);
   ResourcePtr CreateVariable(scenic::ResourceId id,
-                             const scenic::VariablePtr& args);
+                             const scenic::VariableArgsPtr& args);
 
   // Return false and log an error if the value is not of the expected type.
   // NOTE: although failure does not halt execution of the program, it does

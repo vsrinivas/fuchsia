@@ -7,7 +7,7 @@
 using scenic::Op;
 using scenic::OpPtr;
 using scenic::RendererParam;
-using scenic::Resource;
+using scenic::ResourceArgs;
 using scenic::ShadowTechnique;
 using scenic::Value;
 
@@ -96,73 +96,73 @@ std::ostream& operator<<(std::ostream& stream,
                          const scenic::CreateResourceOpPtr& op) {
   stream << "CreateResourceOp(id:" << op->id << " ";
   switch (op->resource->which()) {
-    case Resource::Tag::MEMORY:
+    case ResourceArgs::Tag::MEMORY:
       stream << "Memory";
       break;
-    case Resource::Tag::IMAGE:
+    case ResourceArgs::Tag::IMAGE:
       stream << "Image";
       break;
-    case Resource::Tag::IMAGE_PIPE:
+    case ResourceArgs::Tag::IMAGE_PIPE:
       stream << "ImagePipe";
       break;
-    case Resource::Tag::BUFFER:
+    case ResourceArgs::Tag::BUFFER:
       stream << "Buffer";
       break;
-    case Resource::Tag::SCENE:
+    case ResourceArgs::Tag::SCENE:
       stream << "Scene";
       break;
-    case Resource::Tag::CAMERA:
+    case ResourceArgs::Tag::CAMERA:
       stream << "Camera";
       break;
-    case Resource::Tag::RENDERER:
+    case ResourceArgs::Tag::RENDERER:
       stream << "Renderer";
       break;
-    case Resource::Tag::AMBIENT_LIGHT:
+    case ResourceArgs::Tag::AMBIENT_LIGHT:
       stream << "AmbientLight";
       break;
-    case Resource::Tag::DIRECTIONAL_LIGHT:
+    case ResourceArgs::Tag::DIRECTIONAL_LIGHT:
       stream << "DirectionalLight";
       break;
-    case Resource::Tag::RECTANGLE:
+    case ResourceArgs::Tag::RECTANGLE:
       stream << "Rectangle";
       break;
-    case Resource::Tag::ROUNDED_RECTANGLE:
+    case ResourceArgs::Tag::ROUNDED_RECTANGLE:
       stream << "RoundedRectangle";
       break;
-    case Resource::Tag::CIRCLE:
+    case ResourceArgs::Tag::CIRCLE:
       stream << "Circle";
       break;
-    case Resource::Tag::MESH:
+    case ResourceArgs::Tag::MESH:
       stream << "Mesh";
       break;
-    case Resource::Tag::MATERIAL:
+    case ResourceArgs::Tag::MATERIAL:
       stream << "Material";
       break;
-    case Resource::Tag::CLIP_NODE:
+    case ResourceArgs::Tag::CLIP_NODE:
       stream << "ClipNode";
       break;
-    case Resource::Tag::ENTITY_NODE:
+    case ResourceArgs::Tag::ENTITY_NODE:
       stream << "EntityNode";
       break;
-    case Resource::Tag::SHAPE_NODE:
+    case ResourceArgs::Tag::SHAPE_NODE:
       stream << "ShapeNode";
       break;
-    case Resource::Tag::DISPLAY_COMPOSITOR:
+    case ResourceArgs::Tag::DISPLAY_COMPOSITOR:
       stream << "DisplayCompositor";
       break;
-    case Resource::Tag::IMAGE_PIPE_COMPOSITOR:
+    case ResourceArgs::Tag::IMAGE_PIPE_COMPOSITOR:
       stream << "ImagePipeCompositor";
       break;
-    case Resource::Tag::LAYER_STACK:
+    case ResourceArgs::Tag::LAYER_STACK:
       stream << "LayerStack";
       break;
-    case Resource::Tag::LAYER:
+    case ResourceArgs::Tag::LAYER:
       stream << "Layer";
       break;
-    case Resource::Tag::VARIABLE:
+    case ResourceArgs::Tag::VARIABLE:
       stream << "Variable";
       break;
-    case Resource::Tag::__UNKNOWN__:
+    case ResourceArgs::Tag::__UNKNOWN__:
       stream << "__UNKNOWN__";
       break;
   }

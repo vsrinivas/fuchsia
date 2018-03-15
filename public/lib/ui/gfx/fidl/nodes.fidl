@@ -25,17 +25,17 @@ module scenic;
 // - has_transform
 // - is_clip
 // - has_parts
-struct ClipNode {};
+struct ClipNodeArgs {};
 
 // Characteristics:
 // - has_transform
 // - has_children
 // - has_parts
 // - has_clip
-struct EntityNode {};
+struct EntityNodeArgs {};
 
 // Characteristics:
 // - has_transform
 // - has_shape
 // - has_material
-struct ShapeNode {};
+struct ShapeNodeArgs {};

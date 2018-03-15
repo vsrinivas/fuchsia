@@ -25,7 +25,7 @@ GpuMemory::GpuMemory(Session* session,
 GpuMemoryPtr GpuMemory::New(Session* session,
                             scenic::ResourceId id,
                             vk::Device device,
-                            const scenic::MemoryPtr& args,
+                            const scenic::MemoryArgsPtr& args,
                             mz::ErrorReporter* error_reporter) {
   if (args->memory_type != scenic::MemoryType::VK_DEVICE_MEMORY) {
     error_reporter->ERROR() << "scenic::gfx::GpuMemory::New(): "

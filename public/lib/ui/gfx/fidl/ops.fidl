@@ -75,7 +75,7 @@ union Op {
 struct CreateResourceOp {
   // An ID that is currently not used within the session.
   uint32 id;
-  Resource resource;
+  ResourceArgs resource;
 };
 
 // Releases the client's reference to the resource; it is then illegal to use

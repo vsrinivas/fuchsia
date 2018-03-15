@@ -44,7 +44,7 @@ class HostMemory : public Memory {
   static HostMemoryPtr New(Session* session,
                            scenic::ResourceId id,
                            vk::Device device,
-                           const scenic::MemoryPtr& args,
+                           const scenic::MemoryArgsPtr& args,
                            mz::ErrorReporter* error_reporter);
 
   void Accept(class ResourceVisitor* visitor) override;

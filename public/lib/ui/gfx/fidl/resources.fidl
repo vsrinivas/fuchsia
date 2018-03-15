@@ -13,44 +13,44 @@ import "lib/images/fidl/memory_type.fidl";
 
 // These are all of the types of resources that can be created within a
 // |Session|.
-union Resource {
+union ResourceArgs {
   // Memory resources.
-  Memory memory;
-  Image image;
+  MemoryArgs memory;
+  ImageArgs image;
   ImagePipeArgs image_pipe;
-  Buffer buffer;
+  BufferArgs buffer;
 
   // Shapes (see shapes.fidl).
-  Rectangle rectangle;
-  RoundedRectangle rounded_rectangle;
-  Circle circle;
-  Mesh mesh;
+  RectangleArgs rectangle;
+  RoundedRectangleArgs rounded_rectangle;
+  CircleArgs circle;
+  MeshArgs mesh;
 
   // Materials.
-  Material material;
+  MaterialArgs material;
 
   // Nodes.
-  ClipNode clip_node;
-  EntityNode entity_node;
-  ShapeNode shape_node;
+  ClipNodeArgs clip_node;
+  EntityNodeArgs entity_node;
+  ShapeNodeArgs shape_node;
 
   // Layers.
-  DisplayCompositor display_compositor;
-  ImagePipeCompositor image_pipe_compositor;
-  LayerStack layer_stack;
-  Layer layer;
+  DisplayCompositorArgs display_compositor;
+  ImagePipeCompositorArgs image_pipe_compositor;
+  LayerStackArgs layer_stack;
+  LayerArgs layer;
 
   // Scene representation and display.
-  Scene scene;
-  Camera camera;
-  Renderer renderer;
+  SceneArgs scene;
+  CameraArgs camera;
+  RendererArgs renderer;
 
   // Lighting.
-  AmbientLight ambient_light;
-  DirectionalLight directional_light;
+  AmbientLightArgs ambient_light;
+  DirectionalLightArgs directional_light;
 
   // A value that can be used in place of a constant value.
-  Variable variable;
+  VariableArgs variable;
 };
 
 struct ImagePipeArgs {
@@ -60,7 +60,7 @@ struct ImagePipeArgs {
 // |Memory| is a |Resource| that wraps a client-provided Zircon vmo to register
 // it with Scenic.
 // TODO: specify resizing behavior.  Who can resize?  Client/Scenic/both/none?
-struct Memory {
+struct MemoryArgs {
   // The VMO which backs this memory.
   handle<vmo> vmo;
 
@@ -71,7 +71,7 @@ struct Memory {
 
 // An image mapped to a range of a |Memory| resource.
 // TODO: more precise and extensive docs.
-struct Image {
+struct ImageArgs {
   scenic.ImageInfo info;
 
   uint32 memory_id;      // id of a |Memory| resource
@@ -79,7 +79,7 @@ struct Image {
 };
 
 // A buffer mapped to a range of |Memory|.
-struct Buffer {
+struct BufferArgs {
   uint32 memory_id;      // id of a |Memory| resource
   uint32 memory_offset;  // byte offset of buffer within |Memory| resource
   uint32 num_bytes;
@@ -87,12 +87,12 @@ struct Buffer {
 
 // A DisplayCompositor draws its attached |LayerStack| into an image that is
 // presented on a display.
-struct DisplayCompositor {
+struct DisplayCompositorArgs {
 };
 
 // An ImagePipeCompositor draws its attached |LayerStack| into an image that is
 // presented on an image-pipe.
-struct ImagePipeCompositor {
+struct ImagePipeCompositorArgs {
   scenic.ImagePipe target;
 };
 
@@ -103,7 +103,7 @@ struct ImagePipeCompositor {
 //
 // Supported operations:
 // - AddLayer
-struct LayerStack {
+struct LayerStackArgs {
 };
 
 // Supported operations:
@@ -118,7 +118,7 @@ struct LayerStack {
 // - SetScale
 //
 // A layer is not drawn unless it has a camera, texture, or color.
-struct Layer {
+struct LayerArgs {
 };
 
 
@@ -127,7 +127,7 @@ struct Layer {
 // may be  applied to a Scene (see ops.fidl):
 //   - Add/RemoveLight
 //   - AddChild
-struct Scene {
+struct SceneArgs {
 };
 
 // A Camera is used to render a Scene from a particular Viewpoint.  This is
@@ -135,7 +135,7 @@ struct Scene {
 // may be applied to a Camera (see ops.fidl):
 //   - SetTransform
 //   - SetCameraProjection
-struct Camera {
+struct CameraArgs {
   // The scene that the camera is viewing.
   uint32 scene_id;
 };
@@ -144,7 +144,7 @@ struct Camera {
 // applied to a Renderer (see ops.fidl):
 //   - SetCamera
 //   - SetRendererParam
-struct Renderer {
+struct RendererArgs {
 };
 
 // An AmbientLight is a Light that is is assumed to be everywhere in the scene,
@@ -152,7 +152,7 @@ struct Renderer {
 //
 // The following operations may be applied to an AmbientLight (see ops.fidl):
 //   - SetLightColor
-struct AmbientLight {};
+struct AmbientLightArgs {};
 
 // A DirectionalLight is a Light that is emitted from a point at infinity.
 //
@@ -164,7 +164,7 @@ struct AmbientLight {};
 // The following operations may be applied to a DirectionalLight (see ops.fidl):
 //   - SetLightColor
 //   - SetDirection
-struct DirectionalLight {};
+struct DirectionalLightArgs {};
 
 // Simple texture-mapped material.
 //
@@ -172,10 +172,10 @@ struct DirectionalLight {};
 // SetTextureOp will set the texture, or it can be left as zero (no texture).
 //   The texture can be an Image or ImagePipe.
 // SetColorOp will set the color.
-struct Material {
+struct MaterialArgs {
 };
 
-struct Variable {
+struct VariableArgs {
   ValueType type;
   Value initial_value;  // Must match type.  Must not be a variable_id.
 };
