@@ -4,6 +4,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
+#include <unistd.h>
 
 #include "fvm/container.h"
 
@@ -112,6 +113,17 @@ int main(int argc, char** argv) {
     }
 
     if (!strcmp(command, "create")) {
+
+        // If length was specified, an offset was not, we were asked to create a
+        // file, and the file does not exist, truncate it to the given length.
+        if (length != 0 && offset == 0) {
+            fbl::unique_fd fd(open(path, O_CREAT|O_EXCL|O_WRONLY, 0644));
+
+            if (fd) {
+                ftruncate(fd.get(), length);
+            }
+        }
+
         fbl::unique_ptr<FvmContainer> fvmContainer;
         if (FvmContainer::Create(path, slice_size, offset, length, &fvmContainer) != ZX_OK) {
             return -1;
