@@ -42,8 +42,7 @@ constexpr char kDefaultLabel[] = "sys";
 constexpr char kConfigDir[] = "/system/data/sysmgr/";
 
 App::App()
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
-      env_host_binding_(this) {
+    : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
   FXL_DCHECK(application_context_);
 
   Config config;
@@ -73,11 +72,9 @@ App::App()
   }
 
   // Set up environment for the programs we will run.
-  app::ApplicationEnvironmentHostPtr env_host;
-  env_host_binding_.Bind(env_host.NewRequest());
   application_context_->environment()->CreateNestedEnvironment(
-      std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(),
-      kDefaultLabel);
+      service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
+      env_controller_.NewRequest(), kDefaultLabel);
   env_->GetApplicationLauncher(env_launcher_.NewRequest());
 
   // Register services.
@@ -85,9 +82,9 @@ App::App()
     RegisterSingleton(pair.first, std::move(pair.second));
 
   // Ordering note: The impl of CreateNestedEnvironment will resolve the
-  // delegating app loader. However, since its call back to the env host won't
-  // happen until the next (first) message loop iteration, we'll be set up by
-  // then.
+  // delegating app loader. However, since its call back to the host directory
+  // won't happen until the next (first) message loop iteration, we'll be set up
+  // by then.
   RegisterAppLoaders(config.TakeAppLoaders());
 
   // Launch startup applications.
@@ -96,15 +93,15 @@ App::App()
 
   // TODO(abarth): Remove this hard-coded mention of netstack once netstack is
   // fully converted to using service namespaces.
-  LaunchNetstack(&env_services_);
-  LaunchWlanstack(&env_services_);
+  LaunchNetstack(&service_provider_bridge_);
+  LaunchWlanstack(&service_provider_bridge_);
 }
 
 App::~App() {}
 
 void App::RegisterSingleton(std::string service_name,
                             app::ApplicationLaunchInfoPtr launch_info) {
-  env_services_.AddServiceForName(
+  service_provider_bridge_.AddServiceForName(
       fxl::MakeCopyable([
         this, service_name, launch_info = std::move(launch_info),
         controller = app::ApplicationControllerPtr()
@@ -144,7 +141,7 @@ void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
       application_context_
           ->ConnectToEnvironmentService<app::ApplicationLoader>());
 
-  env_services_.AddService<app::ApplicationLoader>(
+  service_provider_bridge_.AddService<app::ApplicationLoader>(
       [this](f1dl::InterfaceRequest<app::ApplicationLoader> request) {
         app_loader_bindings_.AddBinding(app_loader_.get(), std::move(request));
       });
@@ -153,11 +150,6 @@ void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
 void App::LaunchApplication(app::ApplicationLaunchInfoPtr launch_info) {
   FXL_VLOG(1) << "Launching application " << launch_info->url;
   env_launcher_->CreateApplication(std::move(launch_info), nullptr);
-}
-
-void App::GetApplicationEnvironmentServices(
-    f1dl::InterfaceRequest<app::ServiceProvider> environment_services) {
-  env_services_.AddBinding(std::move(environment_services));
 }
 
 }  // namespace sysmgr

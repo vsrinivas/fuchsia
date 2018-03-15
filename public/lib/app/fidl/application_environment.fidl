@@ -6,7 +6,6 @@ module app;
 
 import "lib/app/fidl/application_launcher.fidl";
 import "lib/app/fidl/application_environment_controller.fidl";
-import "lib/app/fidl/application_environment_host.fidl";
 import "lib/app/fidl/service_provider.fidl";
 
 // An interface for managing a set of applications.
@@ -22,16 +21,16 @@ interface ApplicationEnvironment {
   //
   // When applications are created inside the nested environment using the
   // environment's |ApplicationLauncher|, the environment requests the
-  // environment services from |host| before passing those services to
+  // environment services from |host_directory| before passing those services to
   // the newly created application in its |ApplicationStartupInfo|.
   //
-  // Typically the |host| will make the newly created |environment| available in
-  // the environment services, giving child applications to launch other
-  // applications in the environment and to create nested environments.
+  // Typically the |host_directory| will make the newly created |environment|
+  // available in the environment services, giving child applications to launch
+  // other applications in the environment and to create nested environments.
   //
-  // The |host| must provide an |ApplicationLoader| service (or inherit one from
-  // its parent) if it wishes to allow new applications to be loaded in the
-  // nested environment.
+  // The |host_directory| must provide an |ApplicationLoader| service (or
+  // inherit one from its parent) if it wishes to allow new applications to be
+  // loaded in the nested environment.
   //
   // The |controller| can be used to control the lifecycle of the created
   // environment. If an |ApplicationEnvironmentController|'s interface is
@@ -40,7 +39,7 @@ interface ApplicationEnvironment {
   // The |label| is an optional name to associate with the environment for
   // diagnostic purposes.  The label will be truncated if it is longer
   // than |kLabelMaxLength|.
-  CreateNestedEnvironment@0(ApplicationEnvironmentHost host,
+  CreateNestedEnvironment@0(handle<channel> host_directory,
                             ApplicationEnvironment& environment,
                             ApplicationEnvironmentController&? controller,
                             string? label);
@@ -48,11 +47,14 @@ interface ApplicationEnvironment {
   // Gets the ApplicationLauncher associated with this environment.
   //
   // Applications created using this application launcher will be given the
-  // environment services provided by this environment's
-  // |ApplicationEnvironmentHost|.
+  // environment services provided by this environment's |host_directory|.
   GetApplicationLauncher@1(ApplicationLauncher& launcher);
 
-  // Gets the services provided by this environment's
-  // |ApplicationEnvironmentHost|.
+  // Gets a superset of services provided by this environment's
+  // |host_directory|.
   GetServices@2(ServiceProvider& services);
+
+  // Gets a superset of services provided by this environment's
+  // |host_directory|.
+  GetDirectory@3(handle<channel> directory_request);
 };

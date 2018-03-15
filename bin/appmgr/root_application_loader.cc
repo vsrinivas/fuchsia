@@ -73,4 +73,9 @@ void RootApplicationLoader::LoadApplication(
   callback(nullptr);
 }
 
+void RootApplicationLoader::AddBinding(
+    f1dl::InterfaceRequest<ApplicationLoader> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
+
 }  // namespace app

@@ -13,6 +13,7 @@
 #include <zx/vmo.h>
 
 #include "lib/app/fidl/application_loader.fidl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
 
 namespace app {
@@ -26,8 +27,12 @@ class RootApplicationLoader : public ApplicationLoader {
       const f1dl::String& url,
       const ApplicationLoader::LoadApplicationCallback& callback) override;
 
+  void AddBinding(f1dl::InterfaceRequest<ApplicationLoader> request);
+
  private:
   std::vector<std::string> path_;
+
+  f1dl::BindingSet<ApplicationLoader> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RootApplicationLoader);
 };

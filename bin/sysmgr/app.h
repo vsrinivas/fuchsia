@@ -12,6 +12,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/svc/cpp/service_namespace.h"
 #include "lib/svc/cpp/services.h"
+#include "lib/svc/cpp/service_provider_bridge.h"
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "garnet/bin/sysmgr/delegating_application_loader.h"
@@ -25,17 +26,12 @@ namespace sysmgr {
 // The nested environment consists of the following system applications
 // which are started on demand then retained as singletons for the lifetime
 // of the environment.
-class App : public app::ApplicationEnvironmentHost {
+class App {
  public:
   App();
   ~App();
 
  private:
-  // |ApplicationEnvironmentHost|:
-  void GetApplicationEnvironmentServices(
-      f1dl::InterfaceRequest<app::ServiceProvider> environment_services)
-      override;
-
   void RegisterSingleton(std::string service_name,
                          app::ApplicationLaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
@@ -50,8 +46,7 @@ class App : public app::ApplicationEnvironmentHost {
   // Nested environment within which the apps started by sysmgr will run.
   app::ApplicationEnvironmentPtr env_;
   app::ApplicationEnvironmentControllerPtr env_controller_;
-  f1dl::Binding<app::ApplicationEnvironmentHost> env_host_binding_;
-  app::ServiceNamespace env_services_;
+  app::ServiceProviderBridge service_provider_bridge_;
   app::ApplicationLauncherPtr env_launcher_;
 
   std::unique_ptr<DelegatingApplicationLoader> app_loader_;

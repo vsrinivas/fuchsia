@@ -17,7 +17,6 @@ TileView::TileView(mozart::ViewManagerPtr view_manager,
                    app::ApplicationContext* application_context,
                    const TileParams& params)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
-      env_host_binding_(this),
       application_context_(application_context),
       params_(params),
       container_node_(session()) {
@@ -60,30 +59,24 @@ void TileView::ConnectViews() {
   }
 }
 
-void TileView::GetApplicationEnvironmentServices(
-    f1dl::InterfaceRequest<app::ServiceProvider> environment_services) {
-  env_services_.AddBinding(std::move(environment_services));
-}
 
 void TileView::CreateNestedEnvironment() {
-  app::ApplicationEnvironmentHostPtr env_host;
-  env_host_binding_.Bind(env_host.NewRequest());
   application_context_->environment()->CreateNestedEnvironment(
-      std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(),
-      "tile");
+      service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
+      env_controller_.NewRequest(), "tile");
   env_->GetApplicationLauncher(env_launcher_.NewRequest());
 
   // Add a binding for the presenter service
-  env_services_.AddService<mozart::Presenter>(
+  service_provider_bridge_.AddService<mozart::Presenter>(
       [this](f1dl::InterfaceRequest<mozart::Presenter> request) {
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
-  env_services_.SetDefaultServiceConnector(
-      [this](std::string service_name, zx::channel channel) {
-        application_context_->ConnectToEnvironmentService(service_name,
-                                                          std::move(channel));
-      });
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) < 0)
+    return
+  application_context_->environment()->GetDirectory(std::move(h1));
+  service_provider_bridge_.set_backing_dir(std::move(h2));
 }
 
 void TileView::OnChildAttached(uint32_t child_key,

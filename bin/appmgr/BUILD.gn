@@ -26,8 +26,6 @@ source_set("lib") {
     "namespace_builder.h",
     "root_application_loader.cc",
     "root_application_loader.h",
-    "root_environment_host.cc",
-    "root_environment_host.h",
     "runtime_metadata.cc",
     "runtime_metadata.h",
     "sandbox_metadata.cc",

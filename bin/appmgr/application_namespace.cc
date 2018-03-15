@@ -51,11 +51,12 @@ void ApplicationNamespace::AddBinding(
 }
 
 void ApplicationNamespace::CreateNestedEnvironment(
-    f1dl::InterfaceHandle<ApplicationEnvironmentHost> host,
+    zx::channel host_directory,
     f1dl::InterfaceRequest<ApplicationEnvironment> environment,
     f1dl::InterfaceRequest<ApplicationEnvironmentController> controller,
     const f1dl::String& label) {
-  job_holder_->CreateNestedJob(std::move(host), std::move(environment),
+  job_holder_->CreateNestedJob(std::move(host_directory),
+                               std::move(environment),
                                std::move(controller), label);
 }
 
@@ -67,6 +68,10 @@ void ApplicationNamespace::GetApplicationLauncher(
 void ApplicationNamespace::GetServices(
     f1dl::InterfaceRequest<ServiceProvider> services) {
   services_.AddBinding(std::move(services));
+}
+
+void ApplicationNamespace::GetDirectory(zx::channel directory_request) {
+  services_.ServeDirectory(std::move(directory_request));
 }
 
 void ApplicationNamespace::CreateApplication(

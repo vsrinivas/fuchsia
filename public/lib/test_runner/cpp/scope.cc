@@ -7,14 +7,15 @@
 namespace test_runner {
 
 Scope::Scope(const app::ApplicationEnvironmentPtr& parent_env,
-             const std::string& label)
-    : binding_(this) {
-  app::ServiceProviderPtr parent_env_service_provider;
-  parent_env->GetServices(parent_env_service_provider.NewRequest());
-  service_provider_impl_.SetDefaultServiceProvider(
-      std::move(parent_env_service_provider));
-  parent_env->CreateNestedEnvironment(binding_.NewBinding(), env_.NewRequest(),
-                                      env_controller_.NewRequest(), label);
+             const std::string& label) {
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) < 0)
+    return;
+  parent_env->GetDirectory(std::move(h1));
+  service_provider_bridge_.set_backing_dir(std::move(h2));
+  parent_env->CreateNestedEnvironment(
+      service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
+      env_controller_.NewRequest(), label);
 }
 
 app::ApplicationLauncher* Scope::GetLauncher() {
@@ -22,12 +23,6 @@ app::ApplicationLauncher* Scope::GetLauncher() {
     env_->GetApplicationLauncher(env_launcher_.NewRequest());
   }
   return env_launcher_.get();
-}
-
-// |ApplicationEnvironmentHost|:
-void Scope::GetApplicationEnvironmentServices(
-    f1dl::InterfaceRequest<app::ServiceProvider> environment_services) {
-  service_provider_impl_.AddBinding(std::move(environment_services));
 }
 
 }  // namespace test_runner

@@ -32,7 +32,7 @@ class ApplicationNamespace
   // ApplicationEnvironment implementation:
 
   void CreateNestedEnvironment(
-      f1dl::InterfaceHandle<ApplicationEnvironmentHost> host,
+      zx::channel host_directory,
       f1dl::InterfaceRequest<ApplicationEnvironment> environment,
       f1dl::InterfaceRequest<ApplicationEnvironmentController> controller,
       const f1dl::String& label) override;
@@ -41,6 +41,8 @@ class ApplicationNamespace
       f1dl::InterfaceRequest<ApplicationLauncher> launcher) override;
 
   void GetServices(f1dl::InterfaceRequest<ServiceProvider> services) override;
+
+  void GetDirectory(zx::channel directory_request) override;
 
   // ApplicationLauncher implementation:
 

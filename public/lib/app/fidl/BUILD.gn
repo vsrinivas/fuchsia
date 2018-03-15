@@ -9,7 +9,6 @@ fidl("fidl") {
     "application_controller.fidl",
     "application_environment.fidl",
     "application_environment_controller.fidl",
-    "application_environment_host.fidl",
     "application_launcher.fidl",
     "application_loader.fidl",
     "application_runner.fidl",

@@ -13,6 +13,7 @@
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
+#include "lib/svc/cpp/service_provider_bridge.h"
 #include "lib/ui/presentation/fidl/presenter.fidl.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
@@ -21,7 +22,6 @@
 namespace examples {
 
 class TileView : public mozart::BaseView,
-                 public app::ApplicationEnvironmentHost,
                  public mozart::Presenter {
  public:
   TileView(mozart::ViewManagerPtr view_manager,
@@ -59,11 +59,6 @@ class TileView : public mozart::BaseView,
       f1dl::InterfaceHandle<mozart::ViewOwner> view_owner,
       f1dl::InterfaceRequest<mozart::Presentation> presentation) override;
 
-  // |ApplicationEnvironmentHost|:
-  void GetApplicationEnvironmentServices(
-      f1dl::InterfaceRequest<app::ServiceProvider> environment_services)
-      override;
-
   // Set up environment with a |Presenter| service.
   // We launch apps with this environment.
   void CreateNestedEnvironment();
@@ -79,8 +74,7 @@ class TileView : public mozart::BaseView,
   // Nested environment within which the apps started by TileView will run.
   app::ApplicationEnvironmentPtr env_;
   app::ApplicationEnvironmentControllerPtr env_controller_;
-  f1dl::Binding<app::ApplicationEnvironmentHost> env_host_binding_;
-  app::ServiceProviderImpl env_services_;
+  app::ServiceProviderBridge service_provider_bridge_;
   app::ApplicationLauncherPtr env_launcher_;
 
   // Context inherited when TileView is launched.

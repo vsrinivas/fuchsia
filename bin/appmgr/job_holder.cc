@@ -42,7 +42,6 @@ constexpr char kAppArv0[] = "/pkg/bin/app";
 constexpr char kLegacyFlatExportedDirPath[] = "meta/legacy_flat_exported_dir";
 constexpr char kRuntimePath[] = "meta/runtime";
 constexpr char kSandboxPath[] = "meta/sandbox";
-constexpr char kInfoDirPath[] = "/info_experimental";
 
 enum class LaunchType {
   kProcess,
@@ -205,16 +204,12 @@ ExportedDirChannels BindDirectory(ApplicationLaunchInfo* launch_info) {
 uint32_t JobHolder::next_numbered_label_ = 1u;
 
 JobHolder::JobHolder(JobHolder* parent,
-                     fs::Vfs* vfs,
-                     f1dl::InterfaceHandle<ApplicationEnvironmentHost> host,
+                     zx::channel host_directory,
                      const f1dl::String& label)
     : parent_(parent),
-      vfs_(vfs),
       default_namespace_(
           fxl::MakeRefCounted<ApplicationNamespace>(nullptr, this, nullptr)),
       info_dir_(fbl::AdoptRef(new fs::PseudoDir())) {
-  host_.Bind(std::move(host));
-
   // parent_ is null if this is the root application environment. if so, we
   // derive from the application manager's job.
   zx_handle_t parent_job =
@@ -229,9 +224,7 @@ JobHolder::JobHolder(JobHolder* parent,
 
   fsl::SetObjectName(job_.get(), label_);
 
-  app::ServiceProviderPtr services_backend;
-  host_->GetApplicationEnvironmentServices(services_backend.NewRequest());
-  default_namespace_->services().set_backend(std::move(services_backend));
+  default_namespace_->services().set_backing_dir(std::move(host_directory));
 
   ServiceProviderPtr service_provider;
   default_namespace_->services().AddBinding(service_provider.NewRequest());
@@ -243,13 +236,14 @@ JobHolder::~JobHolder() {
 }
 
 void JobHolder::CreateNestedJob(
-    f1dl::InterfaceHandle<ApplicationEnvironmentHost> host,
+    zx::channel host_directory,
     f1dl::InterfaceRequest<ApplicationEnvironment> environment,
     f1dl::InterfaceRequest<ApplicationEnvironmentController> controller_request,
     const f1dl::String& label) {
   auto controller = std::make_unique<ApplicationEnvironmentControllerImpl>(
       std::move(controller_request),
-      std::make_unique<JobHolder>(this, vfs_, std::move(host), label));
+      std::make_unique<JobHolder>(
+          this, std::move(host_directory), label));
   JobHolder* child = controller->job_holder();
   child->AddBinding(std::move(environment));
   info_dir_->AddEntry(child->label(), child->info_dir());
@@ -355,7 +349,6 @@ void JobHolder::CreateApplicationWithProcess(
 
   NamespaceBuilder builder;
   builder.AddServices(std::move(svc));
-  AddInfoDir(&builder);
 
   // Add the custom namespace.
   // Note that this must be the last |builder| step adding entries to the
@@ -440,7 +433,6 @@ void JobHolder::CreateApplicationFromPackage(
   NamespaceBuilder builder;
   builder.AddPackage(std::move(pkg));
   builder.AddServices(std::move(svc));
-  AddInfoDir(&builder);
 
   if (!sandbox_data.empty()) {
     SandboxMetadata sandbox;
@@ -536,20 +528,6 @@ ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
   }
 
   return result.first->second.get();
-}
-
-void JobHolder::AddInfoDir(NamespaceBuilder* builder) {
-  zx::channel server, client;
-  zx_status_t status = zx::channel::create(0u, &server, &client);
-  if (status == ZX_OK) {
-    status = vfs_->ServeDirectory(info_dir_, fbl::move(server));
-    if (status == ZX_OK) {
-      builder->AddDirectoryIfNotPresent(kInfoDirPath, fbl::move(client));
-      return;
-    }
-  }
-
-  FXL_LOG(ERROR) << "Failed to serve info directory: status=" << status;
 }
 
 }  // namespace app

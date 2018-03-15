@@ -11,16 +11,15 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/app/fidl/application_environment.fidl.h"
-#include "lib/app/fidl/application_environment_host.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/svc/cpp/service_provider_bridge.h"
 
 namespace test_runner {
 
-// A simple implementation of the ApplicationEnvironmentHost that provides fate
-// separation of sets of applications run by one application. The environment
-// services are delegated to the parent environment.
-class Scope : public app::ApplicationEnvironmentHost {
+// Provides fate separation of sets of applications run by one application. The
+// environment services are delegated to the parent environment.
+class Scope {
  public:
   Scope(const app::ApplicationEnvironmentPtr& parent_env,
         const std::string& label);
@@ -29,7 +28,7 @@ class Scope : public app::ApplicationEnvironmentHost {
   void AddService(
       app::ServiceProviderImpl::InterfaceRequestHandler<Interface> handler,
       const std::string& service_name = Interface::Name_) {
-    service_provider_impl_.AddService(handler, service_name);
+    service_provider_bridge_.AddService(handler, service_name);
   }
 
   app::ApplicationLauncher* GetLauncher();
@@ -37,16 +36,10 @@ class Scope : public app::ApplicationEnvironmentHost {
   app::ApplicationEnvironmentPtr& environment() { return env_; }
 
  private:
-  // |ApplicationEnvironmentHost|:
-  void GetApplicationEnvironmentServices(
-      f1dl::InterfaceRequest<app::ServiceProvider> environment_services)
-      override;
-
-  f1dl::Binding<app::ApplicationEnvironmentHost> binding_;
+  app::ServiceProviderBridge service_provider_bridge_;
   app::ApplicationEnvironmentPtr env_;
   app::ApplicationLauncherPtr env_launcher_;
   app::ApplicationEnvironmentControllerPtr env_controller_;
-  app::ServiceProviderImpl service_provider_impl_;
 };
 
 }  // namespace test_runner

@@ -55,6 +55,10 @@ class ServiceProviderBridge : public app::ServiceProvider {
     backend_ = std::move(backend);
   }
 
+  void set_backing_dir(zx::channel backing_dir) {
+    backing_dir_ = std::move(backing_dir);
+  }
+
   void AddBinding(f1dl::InterfaceRequest<app::ServiceProvider> request);
   bool ServeDirectory(zx::channel channel);
 
@@ -89,6 +93,7 @@ class ServiceProviderBridge : public app::ServiceProvider {
 
   std::map<std::string, ServiceConnector> name_to_service_connector_;
   app::ServiceProviderPtr backend_;
+  zx::channel backing_dir_;
 
   fxl::WeakPtrFactory<ServiceProviderBridge> weak_factory_;
 

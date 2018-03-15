@@ -62,8 +62,11 @@ void ServiceProviderBridge::ConnectToService(const f1dl::String& service_name,
   auto it = name_to_service_connector_.find(service_name.get());
   if (it != name_to_service_connector_.end())
     it->second(std::move(channel));
-  else
+  else if (backend_)
     backend_->ConnectToService(service_name, std::move(channel));
+  else if (backing_dir_)
+    fdio_service_connect_at(backing_dir_.get(), service_name->c_str(),
+                            channel.release());
 }
 
 ServiceProviderBridge::ServiceProviderDir::ServiceProviderDir(
