@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <projects>
+    <project name="tools"
+             path="go/src/fuchsia.googlesource.com/tools"
+             remote="https://fuchsia.googlesource.com/tools"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
+  </projects>
+</manifest>
