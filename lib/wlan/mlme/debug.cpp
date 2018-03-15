@@ -83,7 +83,12 @@ std::string Describe(const FrameHeader& hdr) {
     char buf[1024];
     size_t offset = 0;
 
-    BUFFER("fc: %s dur:%u\n        ", Describe(hdr.fc).c_str(), hdr.duration);
+    BUFFER("[fc] %s dur:%u", Describe(hdr.fc).c_str(), hdr.duration);
+    if (hdr.fc.type() == FrameType::kManagement || hdr.fc.type() == FrameType::kData) {
+        BUFFER("[seq] %s", Describe(hdr.sc).c_str());
+    }
+    BUFFER("\n        ");
+
     // IEEE Std 802.11-2016, Table 9-26
     uint8_t ds = (hdr.fc.to_ds() << 1) + hdr.fc.from_ds();
     switch (ds) {
@@ -106,6 +111,14 @@ std::string Describe(const FrameHeader& hdr) {
     default:
         break;
     }
+
+    return std::string(buf);
+}
+
+std::string Describe(const MgmtFrameHeader& hdr) {
+    char buf[1024];
+    size_t offset = 0;
+    BUFFER("%s", Describe(*reinterpret_cast<const FrameHeader*>(&hdr)).c_str());
 
     return std::string(buf);
 }
