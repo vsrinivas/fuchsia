@@ -8,6 +8,7 @@ import("//build/package.gni")
 rust_binary("echo_client_rust_bin") {
   name = "echo_client_rust"
   deps = [
+    "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/fidl_crates/garnet_examples_fidl_services",
   ]
 }

@@ -11,6 +11,7 @@ rust_binary("bin") {
   name = "wlanstack2"
 
   deps = [
+    "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/lib/rust/fidl_crates/garnet_lib_wlan_fidl",
     "//garnet/lib/rust/fidl_crates/garnet_lib_wlan_fidl_service",
   ]

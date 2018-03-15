@@ -9,6 +9,7 @@ rust_binary("echo_server_rust_bin") {
   name = "echo_server_rust"
 
   deps = [
+    "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/fidl_crates/garnet_examples_fidl_services",
   ]
 }

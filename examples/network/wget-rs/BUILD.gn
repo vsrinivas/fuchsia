@@ -8,6 +8,7 @@ import("//build/package.gni")
 rust_binary("bin") {
   name = "wget-rs"
   deps = [
+    "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/fidl_crates/garnet_public_lib_fsl_fidl",
     "//garnet/public/rust/fidl_crates/garnet_public_lib_netstack_fidl_net_address",
     "//garnet/public/rust/fidl_crates/garnet_public_lib_network_fidl",

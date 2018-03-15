@@ -9,6 +9,7 @@ rust_binary("bin") {
   name = "xi_core"
 
   deps = [
+    "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/fidl_crates/garnet_public_lib_app_fidl",
     "//garnet/public/rust/fidl_crates/garnet_public_lib_xi_fidl",
   ]
