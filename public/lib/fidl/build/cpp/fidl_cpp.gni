@@ -16,7 +16,11 @@ template("fidl_cpp") {
   assert(current_base_toolchain == target_toolchain,
          "This template can only be used in $target_toolchain.")
 
-  not_needed(invoker, [ "sdk_candidate", "sources" ])
+  not_needed(invoker,
+             [
+               "sdk_candidate",
+               "sources",
+             ])
 
   main_target_name = target_name
   generation_target_name = "${target_name}_cpp_generate"
@@ -26,22 +30,28 @@ template("fidl_cpp") {
     library_name = invoker.name
   }
 
-  # Generate the source code just once in the base toolchain, even
-  # if it gets compiled separately in multiple variant toolchains.
-  base_gen_dir = get_label_info(":${target_name}(${current_base_toolchain})",
-                                "target_gen_dir")
-
-  file_stem = "$base_gen_dir/$library_name.fidl"
-
+  # Generate the source code just once in the base toolchain, even if it
+  # gets compiled separately in multiple variants of the target toolchains.
+  # The generation happens in the base (C++) toolchain, but put its output
+  # into fidl_toolchain's gen/ directory instead so that a single
+  # `-Ifidling/gen` lets `#include "path/to/dir/library.fidl.h"` find the
+  # files without adding `-Igen` when gen/ is for a different actual C++
+  # toolchain.  Since `fidling/gen` contains nothing but FIDL-generated
+  # code, it's not so scary to have that included in code built by multiple
+  # other toolchains.
   fidl_target_gen_dir =
-      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
+      get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
+
+  file_stem = "$fidl_target_gen_dir/$library_name.fidl"
   coding_tables = "$fidl_target_gen_dir/$target_name.fidl.tables.cc"
 
   if (current_toolchain == current_base_toolchain) {
+    fidl_root_gen_dir =
+        get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
     json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
     compiled_action(generation_target_name) {
-      visibility = [ ":*" ]
+      visibility = [ ":$main_target_name" ]
 
       tool = "//garnet/go/src/fidl:fidl_backend"
 
@@ -60,7 +70,7 @@ template("fidl_cpp") {
         "--fidl-stem",
         rebase_path(file_stem, root_build_dir),
         "--root-gen-dir",
-        rebase_path(root_gen_dir, root_build_dir),
+        rebase_path(fidl_root_gen_dir, root_build_dir),
         "--generators",
         "cpp",
       ]
@@ -86,9 +96,12 @@ template("fidl_cpp") {
       coding_tables,
     ]
 
+    # Let dependencies use `#include "$file_stem.cc.h"`.
+    public_configs = [ "//garnet/public/lib/fidl/build/cpp:fidl_gen_config" ]
+
     deps = [
-      ":${generation_target_name}(${current_base_toolchain})",
-      ":$target_name($fidl_toolchain)",
+      ":$generation_target_name($current_base_toolchain)",
+      ":$main_target_name($fidl_toolchain)",
       "//garnet/public/lib/fidl/cpp",
     ]
 
