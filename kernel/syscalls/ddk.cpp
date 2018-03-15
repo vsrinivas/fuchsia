@@ -419,23 +419,19 @@ zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,
     return out->make(fbl::move(dispatcher), rights);
 }
 
-zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
-                        uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count) {
+static zx_status_t bti_pin_impl(fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher,
+                                uint32_t options, zx_handle_t vmo, uint64_t offset,
+                                uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count,
+                                fbl::RefPtr<Dispatcher>* pmt, zx_rights_t* pmt_rights) {
     auto up = ProcessDispatcher::GetCurrent();
 
     if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(size)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
-    zx_status_t status = up->GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
-    if (status != ZX_OK) {
-        return status;
-    }
-
     fbl::RefPtr<VmObjectDispatcher> vmo_dispatcher;
     zx_rights_t vmo_rights;
-    status = up->GetDispatcherAndRights(vmo, &vmo_dispatcher, &vmo_rights);
+    zx_status_t status = up->GetDispatcherAndRights(vmo, &vmo_dispatcher, &vmo_rights);
     if (status != ZX_OK) {
         return status;
     }
@@ -482,23 +478,69 @@ zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = bti_dispatcher->Pin(vmo_dispatcher->vmo(), offset, size, iommu_perms,
-                                 compress_results, mapped_addrs.get(), addrs_count);
+    fbl::RefPtr<Dispatcher> new_pmt;
+    zx_rights_t new_pmt_rights;
+    status = bti_dispatcher->Pin(vmo_dispatcher->vmo(), offset, size, iommu_perms, &new_pmt,
+                                 &new_pmt_rights);
     if (status != ZX_OK) {
         return status;
     }
 
-    auto pin_cleanup = fbl::MakeAutoCall([&bti_dispatcher, &mapped_addrs]() {
-        bti_dispatcher->Unpin(mapped_addrs[0]);
-    });
+    status = static_cast<PinnedMemoryTokenDispatcher*>(new_pmt.get())
+            ->EncodeAddrs(compress_results, mapped_addrs.get(), addrs_count);
+    if (status != ZX_OK) {
+        return status;
+    }
 
     static_assert(sizeof(dev_vaddr_t) == sizeof(zx_paddr_t), "mismatched types");
     if ((status = addrs.copy_array_to_user(mapped_addrs.get(), addrs_count)) != ZX_OK) {
         return status;
     }
 
-    pin_cleanup.cancel();
+    *pmt = fbl::move(new_pmt);
+    *pmt_rights = new_pmt_rights;
     return ZX_OK;
+}
+
+zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
+                        uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count) {
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
+    zx_status_t status = up->GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fbl::RefPtr<Dispatcher> new_pmt;
+    zx_rights_t rights;
+    status = bti_pin_impl(bti_dispatcher, options, vmo, offset, size, addrs, addrs_count,
+                          &new_pmt, &rights);
+    if (status != ZX_OK) {
+        return status;
+    }
+    bti_dispatcher->ConvertToLegacy(DownCastDispatcher<PinnedMemoryTokenDispatcher>(&new_pmt));
+    return ZX_OK;
+}
+
+zx_status_t sys_bti_pin_new(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
+                            uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count,
+                            user_out_handle* pmt) {
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
+    zx_status_t status = up->GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fbl::RefPtr<Dispatcher> new_pmt;
+    zx_rights_t rights;
+    status = bti_pin_impl(fbl::move(bti_dispatcher), options, vmo, offset, size,
+                          addrs, addrs_count, &new_pmt, &rights);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return pmt->make(fbl::move(new_pmt), rights);
 }
 
 zx_status_t sys_bti_unpin(zx_handle_t bti, zx_paddr_t base_addr) {
@@ -511,6 +553,30 @@ zx_status_t sys_bti_unpin(zx_handle_t bti, zx_paddr_t base_addr) {
     }
 
     return bti_dispatcher->Unpin(base_addr);
+}
+
+// Having a single-purpose syscall like this is a bit of an anti-pattern in our
+// syscall API, but we feel there is benefit in this over trying to extend the
+// semantics of handle closing in sys_handle_close and process death.  In
+// particular, PMTs are the only objects in the system that track the lifetime
+// of something external to the process model (external hardware DMA
+// capabilities).
+zx_status_t sys_pmt_unpin(zx_handle_t pmt) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt_dispatcher;
+    zx_status_t status = up->GetDispatcher(pmt, &pmt_dispatcher);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    pmt_dispatcher->MarkUnpinned();
+
+    HandleOwner handle(up->RemoveHandle(pmt));
+    if (!handle) {
+        return ZX_ERR_BAD_HANDLE;
+    }
+    return ZX_OK;
 }
 
 zx_status_t sys_irq_create(zx_handle_t src_obj, uint32_t src_num,

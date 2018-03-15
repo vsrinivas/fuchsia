@@ -33,7 +33,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/message_packet.cpp \
     $(LOCAL_DIR)/pci_device_dispatcher.cpp \
     $(LOCAL_DIR)/pci_interrupt_dispatcher.cpp \
-    $(LOCAL_DIR)/pinned_memory_object.cpp \
+    $(LOCAL_DIR)/pinned_memory_token_dispatcher.cpp \
     $(LOCAL_DIR)/policy_manager.cpp \
     $(LOCAL_DIR)/port_dispatcher.cpp \
     $(LOCAL_DIR)/process_dispatcher.cpp \

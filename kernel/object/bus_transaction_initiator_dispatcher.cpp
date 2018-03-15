@@ -42,11 +42,9 @@ BusTransactionInitiatorDispatcher::~BusTransactionInitiatorDispatcher() {
 
 zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, uint64_t offset,
                                                    uint64_t size, uint32_t perms,
-                                                   bool compress_results,
-                                                   dev_vaddr_t* mapped_addrs,
-                                                   size_t mapped_addrs_count) {
+                                                   fbl::RefPtr<Dispatcher>* pmt,
+                                                   zx_rights_t* pmt_rights) {
 
-    DEBUG_ASSERT(mapped_addrs);
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
 
@@ -60,39 +58,8 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, ui
         return ZX_ERR_BAD_STATE;
     }
 
-    fbl::unique_ptr<PinnedMemoryObject> pmo;
-    zx_status_t status = PinnedMemoryObject::Create(*this, fbl::move(vmo),
-                                                    offset, size, perms, &pmo);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    const fbl::Array<dev_vaddr_t>& pmo_addrs = pmo->mapped_addrs();
-    const size_t found_addrs = pmo_addrs.size();
-    if (compress_results) {
-        if (found_addrs != mapped_addrs_count) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        memcpy(mapped_addrs, pmo_addrs.get(), found_addrs * sizeof(dev_vaddr_t));
-    } else {
-        const size_t num_pages = size / PAGE_SIZE;
-        if (num_pages != mapped_addrs_count) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        const size_t min_contig = minimum_contiguity();
-        size_t next_idx = 0;
-        for (size_t i = 0; i < found_addrs; ++i) {
-            dev_vaddr_t extent_base = pmo_addrs[i];
-            for (dev_vaddr_t addr = extent_base;
-                 addr < extent_base + min_contig && next_idx < num_pages;
-                 addr += PAGE_SIZE, ++next_idx) {
-                mapped_addrs[next_idx] = addr;
-            }
-        }
-    }
-
-    pinned_memory_.push_back(fbl::move(pmo));
-    return ZX_OK;
+    return PinnedMemoryTokenDispatcher::Create(fbl::WrapRefPtr(this), fbl::move(vmo),
+                                               offset, size, perms, pmt, pmt_rights);
 }
 
 zx_status_t BusTransactionInitiatorDispatcher::Unpin(const dev_vaddr_t base_addr) {
@@ -102,11 +69,14 @@ zx_status_t BusTransactionInitiatorDispatcher::Unpin(const dev_vaddr_t base_addr
         return ZX_ERR_BAD_STATE;
     }
 
-    for (auto& pmo : pinned_memory_) {
-        const fbl::Array<dev_vaddr_t>& pmo_addrs = pmo.mapped_addrs();
-        if (pmo_addrs[0] == base_addr) {
-            // The PMO dtor will take care of the actual unpinning.
-            pinned_memory_.erase(pmo);
+    for (auto& pmt : legacy_pinned_memory_) {
+        const fbl::Array<dev_vaddr_t>& pmt_addrs = pmt.mapped_addrs();
+        if (pmt_addrs[0] == base_addr) {
+            // The PMT dtor will take care of the actual unpinning.
+            auto ptr = legacy_pinned_memory_.erase(pmt);
+            // When |ptr| goes out of scope, its dtor will be run.  Drop the
+            // lock since the dtor will call RemovePmo, which takes the lock.
+            guard.release();
             return ZX_OK;
         }
     }
@@ -115,9 +85,34 @@ zx_status_t BusTransactionInitiatorDispatcher::Unpin(const dev_vaddr_t base_addr
 }
 
 void BusTransactionInitiatorDispatcher::on_zero_handles() {
-    fbl::AutoLock guard(&lock_);
-    while (!pinned_memory_.is_empty()) {
-        pinned_memory_.pop_front();
+    // We need to drop the lock before letting PMT dtors run, since the
+    // PMT dtor calls RemovePmo, which takes the lock again.
+    LegacyPmoList tmp;
+    {
+        fbl::AutoLock guard(&lock_);
+        // Prevent new pinning from happening.  The Dispatcher will stick around
+        // until all of the PMTs are closed.
+        zero_handles_ = true;
+
+        legacy_pinned_memory_.swap(tmp);
     }
-    zero_handles_ = true;
+
+}
+
+void BusTransactionInitiatorDispatcher::AddPmoLocked(PinnedMemoryTokenDispatcher* pmt) {
+    DEBUG_ASSERT(!pmt->dll_pmt_.InContainer());
+    pinned_memory_.push_back(pmt);
+}
+
+void BusTransactionInitiatorDispatcher::RemovePmo(PinnedMemoryTokenDispatcher* pmt) {
+    fbl::AutoLock guard(&lock_);
+    DEBUG_ASSERT(pmt->dll_pmt_.InContainer());
+    pinned_memory_.erase(*pmt);
+}
+
+void BusTransactionInitiatorDispatcher::ConvertToLegacy(
+        fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt) {
+    fbl::AutoLock guard(&lock_);
+
+    legacy_pinned_memory_.push_back(fbl::move(pmt));
 }

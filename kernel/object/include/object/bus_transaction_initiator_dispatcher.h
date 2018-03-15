@@ -10,7 +10,7 @@
 #include <fbl/canary.h>
 #include <fbl/mutex.h>
 #include <object/dispatcher.h>
-#include <object/pinned_memory_object.h>
+#include <object/pinned_memory_token_dispatcher.h>
 
 #include <sys/types.h>
 
@@ -25,7 +25,8 @@ public:
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_BTI; }
     bool has_state_tracker() const final { return true; }
 
-    // Pins the given VMO range and writes the addresses into |mapped_addrs|.
+    // Pins the given VMO range and returns an PinnedMemoryTokenDispatcher
+    // representing the pinned range.
     //
     // |mapped_addrs_count| must be either
     // 1) If |compress_results|, |size|/|minimum_contiguity()|, rounded up, in which
@@ -39,12 +40,18 @@ public:
     // Returns ZX_ERR_INVALID_ARGS if |mapped_addrs_count| is not exactly the
     //   value described above.
     zx_status_t Pin(fbl::RefPtr<VmObject> vmo, uint64_t offset, uint64_t size, uint32_t perms,
-                    bool compress_results, dev_vaddr_t* mapped_addrs, size_t mapped_addrs_count);
+                    fbl::RefPtr<Dispatcher>* pmt, zx_rights_t* rights);
 
     // Unpins the region previously created by Pin() that starts with |base_addr|.
     // Returns an error if |base_addr| does not correspond to something returned
     // by a previous call to Pin().
+    // TODO(teisenbe): Remove this once bti_unpin syscall is gone
     zx_status_t Unpin(dev_vaddr_t base_addr);
+
+    // TODO(teisenbe): Remove this once bti_unpin syscall is gone
+    // Mark this PMT as legacy (i.e., usermode does not have a handle to it, and
+    // will try to unpin it using the unpin syscall).
+    void ConvertToLegacy(fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt);
 
     void on_zero_handles() final;
 
@@ -60,15 +67,31 @@ public:
     // The number of bytes in the address space (UINT64_MAX if 2^64).
     uint64_t aspace_size() const { return iommu_->aspace_size(bti_id_); }
 
+protected:
+    friend PinnedMemoryTokenDispatcher;
+    // Used to register a PMT pointer during PMT construction
+    void AddPmoLocked(PinnedMemoryTokenDispatcher* pmt) TA_REQ(lock_);
+    // Used to unregister a PMT pointer during PMT destruction
+    void RemovePmo(PinnedMemoryTokenDispatcher* pmt);
+
 private:
     BusTransactionInitiatorDispatcher(fbl::RefPtr<Iommu> iommu, uint64_t bti_id);
 
     fbl::Canary<fbl::magic("BTID")> canary_;
 
+    // TODO(teisenbe): Unify this lock with the SoloDispatcher lock
     fbl::Mutex lock_;
     const fbl::RefPtr<Iommu> iommu_;
     const uint64_t bti_id_;
 
-    fbl::DoublyLinkedList<fbl::unique_ptr<PinnedMemoryObject>> pinned_memory_ TA_GUARDED(lock_);
+    using PmoList = fbl::DoublyLinkedList<PinnedMemoryTokenDispatcher*,
+          PinnedMemoryTokenDispatcher::PinnedMemoryTokenListTraits>;
+    PmoList pinned_memory_ TA_GUARDED(lock_);
+
+    // TODO(teisenbe): Remove this once the bti_unpin syscall is gone
+    using LegacyPmoList = fbl::DoublyLinkedList<fbl::RefPtr<PinnedMemoryTokenDispatcher>,
+          PinnedMemoryTokenDispatcher::LegacyPinnedMemoryTokenListTraits>;
+    LegacyPmoList legacy_pinned_memory_ TA_GUARDED(lock_);
+
     bool zero_handles_ TA_GUARDED(lock_);
 };

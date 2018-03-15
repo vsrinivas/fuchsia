@@ -358,7 +358,8 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_IOMMU           ((zx_obj_type_t)23u)
 #define ZX_OBJ_TYPE_BTI             ((zx_obj_type_t)24u)
 #define ZX_OBJ_TYPE_PROFILE         ((zx_obj_type_t)25u)
-#define ZX_OBJ_TYPE_LAST            ((zx_obj_type_t)26u)
+#define ZX_OBJ_TYPE_PMT             ((zx_obj_type_t)26u)
+#define ZX_OBJ_TYPE_LAST            ((zx_obj_type_t)27u)
 
 typedef struct {
     zx_handle_t handle;

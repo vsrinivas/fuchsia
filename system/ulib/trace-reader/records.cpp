@@ -43,7 +43,7 @@ const char* ThreadStateToString(ThreadState state) {
 }
 
 const char* ObjectTypeToString(zx_obj_type_t type) {
-    static_assert(ZX_OBJ_TYPE_LAST == 26, "need to update switch below");
+    static_assert(ZX_OBJ_TYPE_LAST == 27, "need to update switch below");
 
     switch (type) {
     case ZX_OBJ_TYPE_PROCESS:
@@ -88,6 +88,8 @@ const char* ObjectTypeToString(zx_obj_type_t type) {
         return "bti";
     case ZX_OBJ_TYPE_PROFILE:
         return "profile";
+    case ZX_OBJ_TYPE_PMT:
+        return "pmt";
     default:
         return "???";
     }
