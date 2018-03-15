@@ -28,21 +28,21 @@ SessionHandler* SessionManager::FindSession(SessionId id) {
 }
 
 std::unique_ptr<SessionHandler> SessionManager::CreateSessionHandler(
-    mz::CommandDispatcherContext context,
+    CommandDispatcherContext context,
     Engine* engine,
     SessionId session_id,
-    mz::EventReporter* event_reporter,
-    mz::ErrorReporter* error_reporter) const {
+    EventReporter* event_reporter,
+    ErrorReporter* error_reporter) const {
   return std::make_unique<SessionHandler>(
       std::move(context), engine, session_id, event_reporter, error_reporter);
 }
 
-std::unique_ptr<mz::CommandDispatcher> SessionManager::CreateCommandDispatcher(
-    mz::CommandDispatcherContext context,
+std::unique_ptr<CommandDispatcher> SessionManager::CreateCommandDispatcher(
+    CommandDispatcherContext context,
     Engine* engine) {
   SessionId session_id = next_session_id_++;
 
-  mz::Session* session = context.session();
+  scenic::Session* session = context.session();
   auto handler = CreateSessionHandler(std::move(context), engine, session_id,
                                       session, session->error_reporter());
   session_manager_.insert({session_id, handler.get()});

@@ -39,7 +39,7 @@ class GpuImage : public Image {
                          GpuMemoryPtr memory,
                          const scenic::ImageInfoPtr& image_info,
                          uint64_t memory_offset,
-                         mz::ErrorReporter* error_reporter);
+                         ErrorReporter* error_reporter);
 
   void Accept(class ResourceVisitor* visitor) override;
 

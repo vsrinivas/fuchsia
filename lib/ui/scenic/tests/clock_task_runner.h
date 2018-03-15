@@ -12,7 +12,7 @@
 #include "garnet/lib/ui/scenic/clock.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-namespace mz {
+namespace scenic {
 namespace test {
 
 // Implements both Clock and TaskRunner.
@@ -57,6 +57,6 @@ class ClockTaskRunner : public fxl::TaskRunner, public Clock {
 };
 
 }  // namespace test
-}  // namespace mz
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_SCENIC_TESTS_CLOCK_TASK_RUNNER_H_

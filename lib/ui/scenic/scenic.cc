@@ -7,7 +7,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/functional/make_copyable.h"
 
-namespace mz {
+namespace scenic {
 
 Scenic::Scenic(app::ApplicationContext* app_context,
                fxl::TaskRunner* task_runner,
@@ -93,4 +93,4 @@ void Scenic::GetDisplayInfo(
   delegate->GetDisplayInfo(callback);
 }
 
-}  // namespace mz
+}  // namespace scenic

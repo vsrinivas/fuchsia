@@ -6,7 +6,7 @@
 
 #include "garnet/lib/ui/scenic/scenic.h"
 
-namespace mz {
+namespace scenic {
 
 SystemContext::SystemContext(app::ApplicationContext* app_context,
                              fxl::TaskRunner* task_runner,
@@ -44,4 +44,4 @@ TempSystemDelegate::TempSystemDelegate(SystemContext context,
                                        bool initialized_after_construction)
     : System(std::move(context), initialized_after_construction) {}
 
-}  // namespace mz
+}  // namespace scenic

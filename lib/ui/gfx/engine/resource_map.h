@@ -17,7 +17,7 @@ namespace gfx {
 class ResourceMap {
  public:
   explicit ResourceMap(
-      mz::ErrorReporter* error_reporter = mz::ErrorReporter::Default());
+      ErrorReporter* error_reporter = ErrorReporter::Default());
   ~ResourceMap();
 
   void Clear();
@@ -93,7 +93,7 @@ class ResourceMap {
 
  private:
   std::unordered_map<scenic::ResourceId, ResourcePtr> resources_;
-  mz::ErrorReporter* const error_reporter_;
+  ErrorReporter* const error_reporter_;
 };
 
 }  // namespace gfx

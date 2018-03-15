@@ -26,7 +26,7 @@ GpuMemoryPtr GpuMemory::New(Session* session,
                             scenic::ResourceId id,
                             vk::Device device,
                             const scenic::MemoryArgsPtr& args,
-                            mz::ErrorReporter* error_reporter) {
+                            ErrorReporter* error_reporter) {
   if (args->memory_type != scenic::MemoryType::VK_DEVICE_MEMORY) {
     error_reporter->ERROR() << "scenic::gfx::GpuMemory::New(): "
                                "Memory must be of type VK_DEVICE_MEMORY.";
@@ -39,7 +39,7 @@ GpuMemoryPtr GpuMemory::New(Session* session,
                             scenic::ResourceId id,
                             vk::Device device,
                             zx::vmo vmo,
-                            mz::ErrorReporter* error_reporter) {
+                            ErrorReporter* error_reporter) {
   // TODO: Need to change driver semantics so that you can import a VMO twice.
 
   if (!device) {

@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/scenic/tests/dummy_system.h"
 
-namespace mz {
+namespace scenic {
 namespace test {
 
 DummySystem::DummySystem(SystemContext context,
@@ -27,4 +27,4 @@ bool DummyCommandDispatcher::ApplyCommand(const ui::CommandPtr& command) {
 }
 
 }  // namespace test
-}  // namespace mz
+}  // namespace scenic

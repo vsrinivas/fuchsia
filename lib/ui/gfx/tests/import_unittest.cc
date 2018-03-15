@@ -195,9 +195,10 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
 
   // Verify that we got an ImportUnboundEvent.
   EXPECT_EQ(1u, events_.size());
-  scenic::EventPtr event = std::move(events_[0]);
-  EXPECT_EQ(scenic::Event::Tag::IMPORT_UNBOUND, event->which());
-  ASSERT_EQ(import_node, event->get_import_unbound()->resource_id);
+  ui::EventPtr event = std::move(events_[0]);
+  EXPECT_EQ(ui::Event::Tag::SCENIC, event->which());
+  EXPECT_EQ(scenic::Event::Tag::IMPORT_UNBOUND, event->get_scenic()->which());
+  ASSERT_EQ(import_node, event->get_scenic()->get_import_unbound()->resource_id);
 }
 
 TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
@@ -224,9 +225,10 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
 
   // Verify that we got an ImportUnboundEvent.
   EXPECT_EQ(1u, events_.size());
-  scenic::EventPtr event = std::move(events_[0]);
-  EXPECT_EQ(scenic::Event::Tag::IMPORT_UNBOUND, event->which());
-  ASSERT_EQ(import_node, event->get_import_unbound()->resource_id);
+  ui::EventPtr event = std::move(events_[0]);
+  EXPECT_EQ(ui::Event::Tag::SCENIC, event->which());
+  EXPECT_EQ(scenic::Event::Tag::IMPORT_UNBOUND, event->get_scenic()->which());
+  ASSERT_EQ(import_node, event->get_scenic()->get_import_unbound()->resource_id);
 }
 
 TEST_F(ImportThreadedTest, KillingImportedResourceEvictsFromResourceLinker) {

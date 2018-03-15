@@ -19,19 +19,19 @@ class SessionForTest : public Session {
  public:
   SessionForTest(SessionId id,
                  Engine* engine,
-                 scenic::gfx::EventReporter* event_reporter,
-                 mz::ErrorReporter* error_reporter);
+                 EventReporter* event_reporter,
+                 ErrorReporter* error_reporter);
 
   virtual void TearDown() override;
 };
 
 class SessionHandlerForTest : public SessionHandler {
  public:
-  SessionHandlerForTest(mz::CommandDispatcherContext context,
+  SessionHandlerForTest(CommandDispatcherContext context,
                         Engine* engine,
                         SessionId session_id,
-                        mz::EventReporter* event_reporter,
-                        mz::ErrorReporter* error_reporter);
+                        EventReporter* event_reporter,
+                        ErrorReporter* error_reporter);
 
   // scenic::Session interface methods.
   void Enqueue(::f1dl::Array<ui::CommandPtr> ops) override;
@@ -71,11 +71,11 @@ class SessionManagerForTest : public SessionManager {
 
  private:
   std::unique_ptr<SessionHandler> CreateSessionHandler(
-      mz::CommandDispatcherContext context,
+      CommandDispatcherContext context,
       Engine* engine,
       SessionId session_id,
-      mz::EventReporter* event_reporter,
-      mz::ErrorReporter* error_reporter) const override;
+      EventReporter* event_reporter,
+      ErrorReporter* error_reporter) const override;
 };
 
 class EngineForTest : public Engine {

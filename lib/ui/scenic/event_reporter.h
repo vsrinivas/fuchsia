@@ -7,7 +7,7 @@
 
 #include "lib/ui/scenic/fidl/events.fidl.h"
 
-namespace mz {
+namespace scenic {
 
 // Interface for a class that submits events to the SessionListener.
 class EventReporter {
@@ -16,6 +16,6 @@ class EventReporter {
   virtual void SendEvents(::f1dl::Array<ui::EventPtr> buffered_events) = 0;
 };
 
-}  // namespace mz
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_SCENIC_EVENT_REPORTER_H_

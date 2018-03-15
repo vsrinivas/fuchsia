@@ -5,7 +5,7 @@
 #include "garnet/lib/ui/scenic/tests/dummy_system.h"
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
 
-namespace mz {
+namespace scenic {
 namespace test {
 
 namespace {
@@ -39,4 +39,4 @@ TEST_F(ScenicTest, SessionCreatedAfterAllSystemsInitialized) {
 }
 
 }  // namespace test
-}  // namespace mz
+}  // namespace scenic

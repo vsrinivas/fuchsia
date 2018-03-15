@@ -13,15 +13,15 @@
 namespace scenic {
 namespace gfx {
 
-class ScenicSystem : public mz::TempSystemDelegate {
+class ScenicSystem : public TempSystemDelegate {
  public:
   static constexpr TypeId kTypeId = kScenic;
 
-  explicit ScenicSystem(mz::SystemContext context);
+  explicit ScenicSystem(SystemContext context);
   ~ScenicSystem();
 
-  std::unique_ptr<mz::CommandDispatcher> CreateCommandDispatcher(
-      mz::CommandDispatcherContext context) override;
+  std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
+      CommandDispatcherContext context) override;
 
   // TODO(MZ-452): Remove this when we externalize Displays.
   void GetDisplayInfo(

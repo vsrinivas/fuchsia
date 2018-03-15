@@ -11,12 +11,12 @@
 namespace scenic {
 namespace gfx {
 
-SessionHandler::SessionHandler(mz::CommandDispatcherContext dispatcher_context,
+SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
                                Engine* engine,
                                SessionId session_id,
-                               mz::EventReporter* event_reporter,
-                               mz::ErrorReporter* error_reporter)
-    : mz::TempSessionDelegate(std::move(dispatcher_context)),
+                               EventReporter* event_reporter,
+                               ErrorReporter* error_reporter)
+    : TempSessionDelegate(std::move(dispatcher_context)),
       session_manager_(engine->session_manager()),
       event_reporter_(event_reporter),
       error_reporter_(error_reporter),
@@ -32,14 +32,8 @@ SessionHandler::~SessionHandler() {
   TearDown();
 }
 
-void SessionHandler::SendEvents(::f1dl::Array<scenic::EventPtr> events) {
-  auto scenic_events = ::f1dl::Array<ui::EventPtr>::New(events.size());
-  for (size_t i = 0; i < events.size(); i++) {
-    scenic_events[i] = ui::Event::New();
-    scenic_events[i]->set_scenic(std::move(events[i]));
-  }
-
-  event_reporter_->SendEvents(std::move(scenic_events));
+void SessionHandler::SendEvents(::f1dl::Array<ui::EventPtr> events) {
+  event_reporter_->SendEvents(std::move(events));
 }
 
 void SessionHandler::Enqueue(::f1dl::Array<ui::CommandPtr> commands) {

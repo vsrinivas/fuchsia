@@ -10,7 +10,7 @@
 #include "garnet/lib/ui/scenic/clock.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 
-namespace mz {
+namespace scenic {
 
 class App {
  public:
@@ -22,6 +22,6 @@ class App {
   f1dl::BindingSet<Scenic> bindings_;
 };
 
-}  // namespace mz
+}  // namespace scenic
 
 #endif  // GARNET_BIN_UI_SCENIC_APP_H_

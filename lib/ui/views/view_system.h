@@ -8,19 +8,19 @@
 #include "garnet/lib/ui/gfx/scenic_system.h"
 #include "garnet/lib/ui/scenic/system.h"
 
-namespace mz {
+namespace scenic {
 
 // TODO(MZ-552): document.
 class ViewSystem : public System {
  public:
   static constexpr TypeId kTypeId = kViews;
 
-  explicit ViewSystem(mz::SystemContext context,
+  explicit ViewSystem(SystemContext context,
                       scenic::gfx::ScenicSystem* scenic);
   ~ViewSystem() override;
 
   std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
-      mz::CommandDispatcherContext context) override;
+      CommandDispatcherContext context) override;
 
  private:
   scenic::gfx::ScenicSystem* scenic_system_;
@@ -29,7 +29,7 @@ class ViewSystem : public System {
 // TODO(MZ-552): document.
 class ViewCommandDispatcher : public CommandDispatcher {
  public:
-  ViewCommandDispatcher(mz::CommandDispatcherContext context,
+  ViewCommandDispatcher(CommandDispatcherContext context,
                         scenic::gfx::ScenicSystem* scenic_system);
   ~ViewCommandDispatcher() override;
 
@@ -39,6 +39,6 @@ class ViewCommandDispatcher : public CommandDispatcher {
   scenic::gfx::ScenicSystem* scenic_system_;
 };
 
-}  // namespace mz
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_VIEWS_VIEW_SYSTEM_H_

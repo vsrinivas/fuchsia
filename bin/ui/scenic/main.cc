@@ -24,7 +24,7 @@ int main(int argc, const char** argv) {
   std::unique_ptr<app::ApplicationContext> app_context(
       app::ApplicationContext::CreateFromStartupInfo());
 
-  mz::App app(app_context.get());
+  scenic::App app(app_context.get());
 
   loop.Run();
 

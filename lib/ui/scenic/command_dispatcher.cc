@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 
-namespace mz {
+namespace scenic {
 
 CommandDispatcherContext::CommandDispatcherContext(Scenic* scenic,
                                                    Session* session)
@@ -30,4 +30,4 @@ CommandDispatcher::~CommandDispatcher() = default;
 TempSessionDelegate::TempSessionDelegate(CommandDispatcherContext context)
     : CommandDispatcher(std::move(context)) {}
 
-}  // namespace mz
+}  // namespace scenic

@@ -25,19 +25,19 @@ class SceneManagerImpl;
 // operations from Enqueue() before passing them all to |session_| when
 // Commit() is called.  Eventually, this class may do more work if performance
 // profiling suggests to.
-class SessionHandler : public mz::TempSessionDelegate, public EventReporter {
+class SessionHandler : public TempSessionDelegate, public EventReporter {
  public:
-  SessionHandler(mz::CommandDispatcherContext context,
+  SessionHandler(CommandDispatcherContext context,
                  Engine* engine,
                  SessionId session_id,
-                 mz::EventReporter* event_reporter,
-                 mz::ErrorReporter* error_reporter);
+                 EventReporter* event_reporter,
+                 ErrorReporter* error_reporter);
   virtual ~SessionHandler();
 
   scenic::gfx::Session* session() const { return session_.get(); }
 
   // Flushes enqueued session events to the session listener as a batch.
-  void SendEvents(::f1dl::Array<scenic::EventPtr> events) override;
+  void SendEvents(::f1dl::Array<ui::EventPtr> events) override;
 
  protected:
   // |ui::Session|
@@ -71,8 +71,8 @@ class SessionHandler : public mz::TempSessionDelegate, public EventReporter {
 
   SessionManager* const session_manager_;
 
-  mz::EventReporter* const event_reporter_;
-  mz::ErrorReporter* const error_reporter_;
+  EventReporter* const event_reporter_;
+  ErrorReporter* const error_reporter_;
   scenic::gfx::SessionPtr session_;
 
   ::f1dl::Array<scenic::OpPtr> buffered_ops_;

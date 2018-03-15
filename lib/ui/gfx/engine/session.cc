@@ -83,7 +83,7 @@ f1dl::Array<scenic::HitPtr> WrapHits(const std::vector<Hit>& hits) {
 Session::Session(SessionId id,
                  Engine* engine,
                  EventReporter* event_reporter,
-                 mz::ErrorReporter* error_reporter)
+                 ErrorReporter* error_reporter)
     : id_(id),
       engine_(engine),
       error_reporter_(error_reporter),
@@ -1124,8 +1124,8 @@ void Session::TearDown() {
   error_reporter_ = nullptr;
 }
 
-mz::ErrorReporter* Session::error_reporter() const {
-  return error_reporter_ ? error_reporter_ : mz::ErrorReporter::Default();
+ErrorReporter* Session::error_reporter() const {
+  return error_reporter_ ? error_reporter_ : ErrorReporter::Default();
 }
 
 bool Session::AssertValueIsOfType(const scenic::ValuePtr& value,
@@ -1287,7 +1287,9 @@ void Session::EnqueueEvent(scenic::EventPtr event) {
               weak->FlushEvents();
           });
     }
-    buffered_events_.push_back(std::move(event));
+    auto scenic_event = ui::Event::New();
+    scenic_event->set_scenic(std::move(event));
+    buffered_events_.push_back(std::move(scenic_event));
   }
 }
 

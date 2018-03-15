@@ -12,7 +12,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/fidl/scenic.fidl.h"
 
-namespace mz {
+namespace scenic {
 
 class Clock;
 
@@ -98,6 +98,6 @@ SystemT* Scenic::RegisterSystem(Args... args) {
   return system;
 }
 
-}  // namespace mz
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_SCENIC_SCENIC_H_

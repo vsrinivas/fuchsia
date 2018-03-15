@@ -13,7 +13,7 @@
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/ui/scenic/types.h"
 
-namespace mz {
+namespace scenic {
 class ErrorReporter;
 }
 
@@ -44,7 +44,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
 
   // An error reporter associated with the Resource's session. When operating
   // on this resource, always log errors to the ErrorReporter before failing.
-  mz::ErrorReporter* error_reporter() const;
+  ErrorReporter* error_reporter() const;
 
   // The diagnostic label.
   const std::string label() const { return label_; }

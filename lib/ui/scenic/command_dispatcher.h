@@ -11,7 +11,7 @@
 // TODO(MZ-469): Remove this once Scenic's session is factored away.
 #include "lib/ui/scenic/fidl/session.fidl.h"
 
-namespace mz {
+namespace scenic {
 
 class Scenic;
 class Session;
@@ -69,6 +69,6 @@ class TempSessionDelegate : public CommandDispatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(TempSessionDelegate);
 };
 
-}  // namespace mz
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_SCENIC_COMMAND_DISPATCHER_H_

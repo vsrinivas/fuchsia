@@ -6,7 +6,7 @@
 
 #include <zircon/syscalls.h>
 
-namespace mz {
+namespace scenic {
 
 Clock::Clock() = default;
 Clock::~Clock() = default;
@@ -15,4 +15,4 @@ zx_time_t Clock::GetNanos() {
   return zx_clock_get(ZX_CLOCK_MONOTONIC);
 }
 
-}  // namespace mz
+}  // namespace scenic

@@ -7,7 +7,7 @@
 
 #include <zircon/types.h>
 
-namespace mz {
+namespace scenic {
 
 // Clock supports querying the current time.  The default implementation returns
 // zx_clock_get(ZX_CLOCK_MONOTONIC).  Subclasses may override this behavior, for
@@ -21,6 +21,6 @@ class Clock {
   virtual zx_time_t GetNanos();
 };
 
-}  // namespace mz
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_SCENIC_CLOCK_H_

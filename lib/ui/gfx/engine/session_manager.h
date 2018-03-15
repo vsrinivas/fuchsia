@@ -10,10 +10,10 @@
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 
-namespace mz {
+namespace scenic {
 class EventReporter;
 class ErrorReporter;
-}  // namespace mz
+}  // namespace scenic
 
 namespace scenic {
 namespace gfx {
@@ -44,8 +44,8 @@ class SessionManager {
 
   // Returns a SessionHandler, which is casted as a CommandDispatcher. Used by
   // ScenicSystem.
-  std::unique_ptr<mz::CommandDispatcher> CreateCommandDispatcher(
-      mz::CommandDispatcherContext context,
+  std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
+      CommandDispatcherContext context,
       Engine* engine);
 
   // Tell the FrameScheduler to schedule a frame, and remember the Session so
@@ -67,11 +67,11 @@ class SessionManager {
   void TearDownSession(SessionId id);
 
   virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
-      mz::CommandDispatcherContext context,
+      CommandDispatcherContext context,
       Engine* engine,
       SessionId session_id,
-      mz::EventReporter* event_reporter,
-      mz::ErrorReporter* error_reporter) const;
+      EventReporter* event_reporter,
+      ErrorReporter* error_reporter) const;
 
   UpdateScheduler* const update_scheduler_;
 

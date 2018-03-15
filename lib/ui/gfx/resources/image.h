@@ -36,7 +36,7 @@ class Image : public ImageBase {
                       MemoryPtr memory,
                       const scenic::ImageInfoPtr& image_info,
                       uint64_t memory_offset,
-                      mz::ErrorReporter* error_reporter);
+                      ErrorReporter* error_reporter);
 
   // Updates pixels before rendering, if needed. Returns true if contents were
   // updated.

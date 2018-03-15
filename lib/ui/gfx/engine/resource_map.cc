@@ -7,7 +7,7 @@
 namespace scenic {
 namespace gfx {
 
-ResourceMap::ResourceMap(mz::ErrorReporter* error_reporter)
+ResourceMap::ResourceMap(ErrorReporter* error_reporter)
     : error_reporter_(error_reporter) {}
 
 ResourceMap::~ResourceMap() {}

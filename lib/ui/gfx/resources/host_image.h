@@ -43,7 +43,7 @@ class HostImage : public Image {
                       HostMemoryPtr memory,
                       const scenic::ImageInfoPtr& host_image_info,
                       uint64_t memory_offset,
-                      mz::ErrorReporter* error_reporter);
+                      ErrorReporter* error_reporter);
 
   static ImagePtr NewForTesting(Session* session,
                                 scenic::ResourceId id,

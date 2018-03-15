@@ -16,7 +16,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/scenic/fidl/session.fidl.h"
 
-namespace mz {
+namespace scenic {
 
 class CommandDispatcher;
 class Scenic;
@@ -60,11 +60,11 @@ class Session final : public ui::Session,
                         scenic::vec3Ptr ray_direction,
                         const HitTestCallback& callback) override;
 
-  // |mz::EventReporter|
+  // |EventReporter|
   void SendEvents(::f1dl::Array<ui::EventPtr> events) override;
 
-  // |mz::ErrorReporter|
-  // Customize behavior of mz::ErrorReporter::ReportError().
+  // |ErrorReporter|
+  // Customize behavior of ErrorReporter::ReportError().
   void ReportError(fxl::LogSeverity severity,
                    std::string error_string) override;
 
@@ -85,6 +85,6 @@ class Session final : public ui::Session,
   FXL_DISALLOW_COPY_AND_ASSIGN(Session);
 };
 
-}  // namespace mz
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_SCENIC_SESSION_H_

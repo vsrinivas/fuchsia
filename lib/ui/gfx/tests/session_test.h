@@ -17,8 +17,8 @@ namespace gfx {
 namespace test {
 
 class SessionTest : public ::testing::Test,
-                    public mz::ErrorReporter,
-                    public scenic::gfx::EventReporter {
+                    public ErrorReporter,
+                    public EventReporter {
  public:
   // ::testing::Test virtual method.
   void SetUp() override;
@@ -30,12 +30,12 @@ class SessionTest : public ::testing::Test,
   virtual std::unique_ptr<Engine> CreateEngine();
 
  protected:
-  // |mz::ErrorReporter|
+  // |ErrorReporter|
   void ReportError(fxl::LogSeverity severity,
                    std::string error_string) override;
 
   // |EventReporter|
-  void SendEvents(::f1dl::Array<scenic::EventPtr> events) override;
+  void SendEvents(::f1dl::Array<ui::EventPtr> events) override;
 
   // Apply the specified Op, and verify that it succeeds.
   bool Apply(scenic::OpPtr op) { return session_->ApplyOp(std::move(op)); }
@@ -59,7 +59,7 @@ class SessionTest : public ::testing::Test,
   std::unique_ptr<Engine> engine_;
   fxl::RefPtr<SessionForTest> session_;
   std::vector<std::string> reported_errors_;
-  std::vector<scenic::EventPtr> events_;
+  std::vector<ui::EventPtr> events_;
 };
 
 class SessionThreadedTest : public SessionTest {

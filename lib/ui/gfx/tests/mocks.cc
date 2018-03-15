@@ -12,20 +12,19 @@ namespace test {
 
 SessionForTest::SessionForTest(SessionId id,
                                Engine* engine,
-                               scenic::gfx::EventReporter* event_reporter,
-                               mz::ErrorReporter* error_reporter)
+                               EventReporter* event_reporter,
+                               ErrorReporter* error_reporter)
     : Session(id, engine, event_reporter, error_reporter) {}
 
 void SessionForTest::TearDown() {
   Session::TearDown();
 }
 
-SessionHandlerForTest::SessionHandlerForTest(
-    mz::CommandDispatcherContext context,
-    Engine* engine,
-    SessionId session_id,
-    mz::EventReporter* event_reporter,
-    mz::ErrorReporter* error_reporter)
+SessionHandlerForTest::SessionHandlerForTest(CommandDispatcherContext context,
+                                             Engine* engine,
+                                             SessionId session_id,
+                                             EventReporter* event_reporter,
+                                             ErrorReporter* error_reporter)
     : SessionHandler(std::move(context),
                      engine,
                      session_id,
@@ -63,11 +62,11 @@ SessionManagerForTest::SessionManagerForTest(UpdateScheduler* update_scheduler)
     : SessionManager(update_scheduler) {}
 
 std::unique_ptr<SessionHandler> SessionManagerForTest::CreateSessionHandler(
-    mz::CommandDispatcherContext context,
+    CommandDispatcherContext context,
     Engine* engine,
     SessionId session_id,
-    mz::EventReporter* event_reporter,
-    mz::ErrorReporter* error_reporter) const {
+    EventReporter* event_reporter,
+    ErrorReporter* error_reporter) const {
   return std::make_unique<SessionHandlerForTest>(
       std::move(context), engine, session_id, event_reporter, error_reporter);
 }

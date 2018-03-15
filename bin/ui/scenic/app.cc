@@ -18,7 +18,7 @@
 #include "garnet/lib/ui/scenic/tests/dummy_system.h"
 #endif
 
-namespace mz {
+namespace scenic {
 
 App::App(app::ApplicationContext* app_context)
     : scenic_(std::make_unique<Scenic>(
@@ -32,7 +32,7 @@ App::App(app::ApplicationContext* app_context)
 
 #ifdef SCENIC_ENABLE_VIEWS_SUBSYSTEM
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto views = scenic_->RegisterSystem<mz::ViewSystem>(scenic);
+  auto views = scenic_->RegisterSystem<ViewSystem>(scenic);
   FXL_DCHECK(views);
 #else
 #error Views require Scenic.
@@ -44,4 +44,4 @@ App::App(app::ApplicationContext* app_context)
 #endif
 }
 
-}  // namespace mz
+}  // namespace scenic

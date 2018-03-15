@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/scenic/tests/clock_task_runner.h"
 
-namespace mz {
+namespace scenic {
 namespace test {
 
 fxl::RefPtr<ClockTaskRunner> ClockTaskRunner::New(zx_time_t initial_nanos) {
@@ -90,4 +90,4 @@ void ClockTaskRunner::RunRunnableTasks() {
 }
 
 }  // namespace test
-}  // namespace mz
+}  // namespace scenic

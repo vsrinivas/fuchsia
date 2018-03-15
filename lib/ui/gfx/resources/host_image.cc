@@ -35,7 +35,7 @@ ImagePtr HostImage::New(Session* session,
                         HostMemoryPtr host_memory,
                         const scenic::ImageInfoPtr& host_image_info,
                         uint64_t memory_offset,
-                        mz::ErrorReporter* error_reporter) {
+                        ErrorReporter* error_reporter) {
   // No matter what the incoming format, the gpu format will be BGRA:
   vk::Format gpu_image_pixel_format = vk::Format::eB8G8R8A8Unorm;
   size_t bytes_per_pixel = image_formats::BytesPerPixel(host_image_info->pixel_format);

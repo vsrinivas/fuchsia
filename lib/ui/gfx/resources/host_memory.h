@@ -37,7 +37,7 @@ class HostMemory : public Memory {
                            scenic::ResourceId id,
                            vk::Device device,
                            zx::vmo vmo,
-                           mz::ErrorReporter* error_reporter);
+                           ErrorReporter* error_reporter);
 
   // Helper method that calls the above method with the VMO from |args|. Also
   // checks the memory type in debug mode.
@@ -45,7 +45,7 @@ class HostMemory : public Memory {
                            scenic::ResourceId id,
                            vk::Device device,
                            const scenic::MemoryArgsPtr& args,
-                           mz::ErrorReporter* error_reporter);
+                           ErrorReporter* error_reporter);
 
   void Accept(class ResourceVisitor* visitor) override;
 

@@ -7,7 +7,7 @@
 #include <array>
 #include "gtest/gtest.h"
 
-namespace mz {
+namespace scenic {
 namespace test {
 
 TEST(ClockTaskRunner, BasicClockFunctionality) {
@@ -210,4 +210,4 @@ TEST(ClockTaskRunner, ExecutionTime) {
 }
 
 }  // namespace test
-}  // namespace mz
+}  // namespace scenic

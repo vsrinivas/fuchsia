@@ -18,7 +18,7 @@ namespace fxl {
 class TaskRunner;
 }  // namespace fxl
 
-namespace mz {
+namespace scenic {
 
 class Clock;
 class Session;
@@ -104,6 +104,6 @@ class TempSystemDelegate : public System {
       const ui::Scenic::GetDisplayInfoCallback& callback) = 0;
 };
 
-}  // namespace mz
+}  // namespace scenic
 
 #endif  // GARNET_LIB_UI_SCENIC_SYSTEM_H_

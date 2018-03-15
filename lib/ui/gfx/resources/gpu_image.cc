@@ -34,7 +34,7 @@ GpuImagePtr GpuImage::New(Session* session,
                           GpuMemoryPtr memory,
                           const scenic::ImageInfoPtr& image_info,
                           uint64_t memory_offset,
-                          mz::ErrorReporter* error_reporter) {
+                          ErrorReporter* error_reporter) {
   vk::Format pixel_format = vk::Format::eUndefined;
   size_t bytes_per_pixel;
   size_t pixel_alignment;

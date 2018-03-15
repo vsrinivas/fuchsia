@@ -6,7 +6,7 @@
 
 extern std::unique_ptr<app::ApplicationContext> g_application_context;
 
-namespace mz {
+namespace scenic {
 namespace test {
 
 void ScenicTest::SetUp() {
@@ -55,4 +55,4 @@ void ScenicTest::SendEvents(::f1dl::Array<ui::EventPtr> events) {
 }
 
 }  // namespace test
-}  // namespace mz
+}  // namespace scenic

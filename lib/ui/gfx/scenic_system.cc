@@ -15,8 +15,8 @@
 namespace scenic {
 namespace gfx {
 
-ScenicSystem::ScenicSystem(mz::SystemContext context)
-    : mz::TempSystemDelegate(std::move(context), false) {
+ScenicSystem::ScenicSystem(SystemContext context)
+    : TempSystemDelegate(std::move(context), false) {
   display_manager_.WaitForDefaultDisplay([this]() {
     // Don't initialize Vulkan and the system until display is ready.
     Initialize();
@@ -37,8 +37,8 @@ ScenicSystem::~ScenicSystem() {
   }
 }
 
-std::unique_ptr<mz::CommandDispatcher> ScenicSystem::CreateCommandDispatcher(
-    mz::CommandDispatcherContext context) {
+std::unique_ptr<CommandDispatcher> ScenicSystem::CreateCommandDispatcher(
+    CommandDispatcherContext context) {
   return engine_->session_manager()->CreateCommandDispatcher(std::move(context),
                                                              engine_.get());
 }

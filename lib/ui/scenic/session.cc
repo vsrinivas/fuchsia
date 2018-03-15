@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/scenic/session.h"
 
-namespace mz {
+namespace scenic {
 
 Session::Session(Scenic* owner,
                  SessionId id,
@@ -122,4 +122,4 @@ void Session::ReportError(fxl::LogSeverity severity, std::string error_string) {
   }
 }
 
-}  // namespace mz
+}  // namespace scenic
