@@ -40,8 +40,6 @@ typedef struct {
     ethmac_ifc_t* ethmac_ifc;
     void* ethmac_cookie;
 
-    uint64_t ticks_per_second;
-
     // Device attributes
     uint8_t mac_addr[ETH_MAC_SIZE];
     uint16_t mtu;
@@ -62,7 +60,6 @@ typedef struct {
     ecm_endpoint_t tx_endpoint;
     list_node_t tx_txn_bufs;        // list of usb_request_t
     list_node_t tx_pending_infos;   // list of ethmac_netbuf_t
-    uint64_t tx_drop_notice_ticks;
     bool unbound;                   // set to true when device is going away. Guarded by tx_mutex
 
     // Receive context
@@ -529,7 +526,6 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     list_initialize(&ecm_ctx->tx_pending_infos);
     mtx_init(&ecm_ctx->ethmac_mutex, mtx_plain);
     mtx_init(&ecm_ctx->tx_mutex, mtx_plain);
-    ecm_ctx->ticks_per_second = zx_ticks_per_second();
 
     usb_desc_iter_t iter;
     result = usb_desc_iter_init(&usb, &iter);
