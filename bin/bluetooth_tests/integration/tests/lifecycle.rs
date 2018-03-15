@@ -6,18 +6,30 @@ extern crate rand;
 pub extern crate fuchsia_bluetooth as bluetooth;
 
 use std::path::PathBuf;
+use std::{thread, time};
 use bluetooth::hci;
 
 mod common;
+
+// The maximum amount of time spent polling
+const MAX_POLL_MS: u64 = 30000;
+const SLEEP_MS: u64 = 500;
+const ITERATIONS: u64 = MAX_POLL_MS / SLEEP_MS;
+
+fn sleep() -> () {
+    thread::sleep(time::Duration::from_millis(SLEEP_MS));
+}
 
 #[test]
 fn bt_host_lifecycle() {
     let original_hosts = hci::list_host_devices();
     let (hci_device, _) = hci::create_and_bind_device().unwrap();
 
+    // TODO(armansito): Use a device watcher instead of polling.
+
     let mut bthost = PathBuf::from("");
     let mut retry = 0;
-    'find_device: while retry < 1000 {
+    'find_device: while retry < ITERATIONS {
         retry += 1;
         let new_hosts = hci::list_host_devices();
         for host in new_hosts {
@@ -26,6 +38,7 @@ fn bt_host_lifecycle() {
                 break 'find_device;
             }
         }
+        sleep();
     }
 
     // Check a device showed up within an acceptable timeout
@@ -48,13 +61,14 @@ fn bt_host_lifecycle() {
     let post_destroy_hosts = hci::list_host_devices();
     let mut device_found = true;
     let mut retry = 0;
-    while retry < 1000 {
+    while retry < ITERATIONS {
         retry += 1;
         let new_hosts = hci::list_host_devices();
         if !new_hosts.contains(&bthost) {
             device_found = false;
             break;
         }
+        sleep();
     }
     assert!(!device_found);
 }
