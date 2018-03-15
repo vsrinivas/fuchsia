@@ -135,8 +135,7 @@ typedef struct zx_protocol_device {
     // data becomes available `device_state_set(DEVICE_STATE_READABLE)` may be used to
     // signal waiting clients.
     //
-    // This hook **must not block**.  Use `iotxn_queue` to handle IO which
-    // requires processing and delayed status.
+    // This hook **must not block**.
     //
     // The default read implementation returns **ZX_ERR_NOT_SUPPORTED**.
     //
@@ -153,8 +152,7 @@ typedef struct zx_protocol_device {
     // be returned and when it is again possible to write,
     // `device_state_set(DEVICE_STATE_WRITABLE)` may be used to signal waiting clients.
     //
-    // This hook **must not block**.  Use `iotxn_queue` to handle IO which
-    // requires processing and delayed status.
+    // This hook **must not block**.
     //
     // The default write implementation returns **ZX_ERR_NOT_SUPPORTED**.
     //
@@ -172,7 +170,7 @@ typedef struct zx_protocol_device {
     //@ ## ioctl
     // The ioctl hook allows support for device-specific operations.
     //
-    // These, like read, write, and iotxn_queue, must not block.
+    // These, like read and write, must not block.
     //
     // On success, **ZX_OK** must be returned and *out_actual* must be set
     // to the number of output bytes provided (0 if none).

@@ -103,8 +103,7 @@ If no data is available now, **ZX_ERR_SHOULD_WAIT** must be returned and when
 data becomes available `device_state_set(DEVICE_STATE_READABLE)` may be used to
 signal waiting clients.
 
-This hook **must not block**.  Use `iotxn_queue` to handle IO which
-requires processing and delayed status.
+This hook **must not block**.
 
 The default read implementation returns **ZX_ERR_NOT_SUPPORTED**.
 
@@ -123,34 +122,13 @@ If it is not possible to write data at present **ZX_ERR_SHOULD_WAIT** must
 be returned and when it is again possible to write,
 `device_state_set(DEVICE_STATE_WRITABLE)` may be used to signal waiting clients.
 
-This hook **must not block**.  Use `iotxn_queue` to handle IO which
-requires processing and delayed status.
+This hook **must not block**.
 
 The default write implementation returns **ZX_ERR_NOT_SUPPORTED**.
 
 ```
 zx_status_t (*write)(void* ctx, const void* buf, size_t count,
                      zx_off_t off, size_t* actual);
-```
-
-## iotxn_queue
-The iotxn_queue hook is the core mechanism for asynchronous IO.  A driver that
-implements iotxn_queue should not implement read or write, as iotxn_queue takes
-precedence over them.
-
-The iotxn_queue hook may not block.  It is expected to start the IO operation
-and return immediately, having taken ownership of *txn*.
-
-When the operation succeeds or fails, the completion callback on *txn* must be
-called to finish the operation.  If the request is invalid, the completion
-callback may be called from within the iotxn_queue hook.  Otherwise it is
-usually called from an irq handler or worker thread that observes the success
-or failure of the requested IO operation.
-
-There is no default iotxn_queue implementation.
-
-```
-void (*iotxn_queue)(void* ctx, iotxn_t* txn);
 ```
 
 ## get_size
@@ -166,7 +144,7 @@ zx_off_t (*get_size)(void* ctx);
 ## ioctl
 The ioctl hook allows support for device-specific operations.
 
-These, like read, write, and iotxn_queue, must not block.
+These, like read and write, must not block.
 
 On success, **ZX_OK** must be returned and *out_actual* must be set
 to the number of output bytes provided (0 if none).
