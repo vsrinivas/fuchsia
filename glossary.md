@@ -47,10 +47,11 @@ selection of user shells, and device recovery.
 
 #### **Component**
 
-Analogous to a software package, a component encapsulates a single installable
-resource. It may contain data, code, assets or a combination thereof. Components
-contain a JSON manifest that describes a number of facets. Components include,
-but are certainly not limited to modules and agents.
+A component is a unit of execution and accounting. It consists of a manifest
+file and associated code, which comes from a Fuchsia package. A component runs
+in a sandbox, accesses objects via its [namespace](#Namespace) and publishes
+objects via its export directory. [Modules](#Module) and [Agents](#Agent) are
+examples of components.
 
 #### **Channel**
 
