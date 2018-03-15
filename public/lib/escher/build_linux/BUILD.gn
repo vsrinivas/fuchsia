@@ -8,7 +8,6 @@
 
 group("examples") {
   deps = [
-    "//garnet/examples/escher/sketchy($host_toolchain)",
     "//garnet/examples/escher/waterfall($host_toolchain)",
   ]
 }
