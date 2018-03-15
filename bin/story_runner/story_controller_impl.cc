@@ -204,19 +204,6 @@ void XdrPerDeviceStoryInfo(XdrContext* const xdr,
   xdr->Field("state", &info->state);
 }
 
-void XdrStoryContextEntry(XdrContext* const xdr,
-                          StoryContextEntry* const entry) {
-  xdr->Field("key", &entry->key);
-  xdr->Field("value", &entry->value);
-}
-
-void XdrStoryContextLog(XdrContext* const xdr, StoryContextLog* const data) {
-  xdr->Field("context", &data->context, XdrStoryContextEntry);
-  xdr->Field("device_id", &data->device_id);
-  xdr->Field("time", &data->time);
-  xdr->Field("signal", &data->signal);
-}
-
 }  // namespace
 
 class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
@@ -1397,87 +1384,6 @@ class StoryControllerImpl::StartCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(StartCall);
 };
 
-class StoryControllerImpl::GetImportanceCall : Operation<float> {
- public:
-  GetImportanceCall(OperationContainer* const container,
-                    StoryControllerImpl* const story_controller_impl,
-                    const ContextState& context_state,
-                    ResultCall result_call)
-      : Operation("StoryControllerImpl::GetImportanceCall",
-                  container,
-                  std::move(result_call)),
-        story_controller_impl_(story_controller_impl),
-        context_state_(context_state.Clone()) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this, &result_};
-
-    new ReadAllDataCall<StoryContextLog>(
-        &operation_queue_, story_controller_impl_->page(),
-        kStoryContextLogKeyPrefix, XdrStoryContextLog,
-        [this, flow](f1dl::VectorPtr<StoryContextLogPtr> log) {
-          log_ = std::move(log);
-          Cont(flow);
-        });
-  }
-
-  void Cont(FlowToken /*flow*/) {
-    // HACK(mesch): Hardcoded importance computation. Will be delegated
-    // somewhere more flexible eventually.
-    auto i = std::find_if(
-        context_state_->begin(), context_state_->end(),
-        [](auto const& e) { return e->key == kStoryImportanceContext; });
-    if (i == context_state_->end()) {
-      result_ = 1.0;
-      return;
-    }
-
-    const auto& context_value = (*i)->value;
-
-    float score = 0.0;
-    float count = 0.0;
-
-    for (auto& entry : *log_) {
-      const auto& c = entry->context;
-      auto i = std::find_if(c->begin(), c->end(), [](auto const& e) {
-        return e->key == kStoryImportanceContext;
-      });
-      if (i == c->end()) {
-        continue;
-      }
-
-      // Any log entry with context relevant to importance counts.
-      count += 1.0;
-
-      const auto& log_value = (*i)->value;
-      if (context_value != log_value) {
-        continue;
-      }
-
-      // Any log entry with context relevant to importance increases the
-      // importance score.
-      score += 1.0;
-    }
-
-    if (count > 0.0) {
-      result_ = score / count;
-    }
-  }
-
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  const ContextState context_state_;
-  f1dl::VectorPtr<StoryContextLogPtr> log_;
-
-  float result_{0.0};
-
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
-};
-
 class StoryControllerImpl::LedgerNotificationCall : Operation<> {
  public:
   LedgerNotificationCall(OperationContainer* const container,
@@ -2024,21 +1930,8 @@ StoryState StoryControllerImpl::GetStoryState() const {
   return state_;
 }
 
-void StoryControllerImpl::Log(StoryContextLogPtr log_entry) {
-  new WriteDataCall<StoryContextLog>(
-      &operation_queue_, page(),
-      MakeStoryContextLogKey(log_entry->signal, log_entry->time),
-      XdrStoryContextLog, std::move(log_entry), [] {});
-}
-
 void StoryControllerImpl::Sync(const std::function<void()>& done) {
   new SyncCall(&operation_queue_, done);
-}
-
-void StoryControllerImpl::GetImportance(
-    const ContextState& context_state,
-    const std::function<void(float)>& result) {
-  new GetImportanceCall(&operation_queue_, this, context_state, result);
 }
 
 void StoryControllerImpl::FocusModule(

@@ -9,11 +9,6 @@ import "lib/story/fidl/story_controller.fidl";
 import "lib/story/fidl/story_info.fidl";
 import "lib/story/fidl/story_state.fidl";
 
-struct StoryImportanceEntry {
-  string id;
-  float importance;
-};
-
 // UserRunner creates an instance of this service and passes it to the UserShell
 // so it can operate on stories for the user. It is also passed to other
 // services that monitor or manipulate stories, specifically the maxwell
@@ -71,30 +66,15 @@ interface StoryProvider {
   // Registers a listener for changes in the story collection.
   Watch@7(StoryProviderWatcher watcher);
 
-  // Gets the relative importance of stories in the current story collection in
-  // the current context. The map is from story ID to importance. Stories not in
-  // the map have zero importance. To be called initially when setting up the
-  // user shell display of the story collection, and when
-  // StoryImportanceWatcher.OnImportanceChange() is called.
-  //
-  // TODO(mesch): Importance computation is currently confined to those stories
-  // for which the user shell holds a story controller. This will change,
-  // especially as it makes sense that the user shell uses importance to decide
-  // which stories to get a controller for and start.
-  GetImportance@8() => (array<StoryImportanceEntry>? importance_list);
-
-  // Registers a listener for changes in the story collection.
-  WatchImportance@9(StoryImportanceWatcher watcher);
-
   // Creates a duplicate connection to this StoryProvider.
-  Duplicate@10(StoryProvider& request);
+  Duplicate@8(StoryProvider& request);
 
   // Obtains a connection to a Link that behaves for the purpose of sending
   // updates to it as if the updates come from another device. This is available
   // only in developer mode and is mainly useful for testing. Note right now
   // there is only developer mode, i.e. this is always available.
-  GetLinkPeer@11(string story_id, array<string>? module_path, string link_name,
-              Link& request);
+  GetLinkPeer@9(string story_id, array<string>? module_path, string link_name,
+               Link& request);
 };
 
 // This interface is implemented by clients of StoryProvider.
@@ -124,11 +104,4 @@ interface StoryProviderWatcher {
 
   // A Story was deleted.
   OnDelete@1(string story_id);
-};
-
-// The relative importance of stories in the story collection may have changed,
-// because the context has changed. In order to obtain the changed importance,
-// the client calls StoryProvider.GetImportance().
-interface StoryImportanceWatcher {
-  OnImportanceChange@0();
 };

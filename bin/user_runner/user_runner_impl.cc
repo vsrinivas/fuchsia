@@ -478,11 +478,6 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
   user_intelligence_provider_->StartAgents(
       std::move(maxwell_app_component_context));
 
-  auto component_scope = maxwell::ComponentScope::New();
-  component_scope->set_global_scope(maxwell::GlobalScope::New());
-  user_intelligence_provider_->GetComponentIntelligenceServices(
-      std::move(component_scope), intelligence_services_.NewRequest());
-
   user_scope_->AddService<resolver::Resolver>(
       [this](f1dl::InterfaceRequest<resolver::Resolver> request) {
         if (user_intelligence_provider_) {
@@ -557,7 +552,7 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
       user_scope_.get(), device_map_impl_->current_device_id(),
       ledger_client_.get(), f1dl::VectorPtr<uint8_t>::New(16),
       std::move(story_shell), component_context_info,
-      std::move(focus_provider_story_provider), intelligence_services_.get(),
+      std::move(focus_provider_story_provider),
       user_intelligence_provider_.get(), module_resolver_service_.get(),
       test_));
   story_provider_impl_->Connect(std::move(story_provider_request));

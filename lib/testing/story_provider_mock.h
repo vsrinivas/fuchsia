@@ -79,17 +79,6 @@ class StoryProviderMock : public StoryProvider {
   }
 
   // |StoryProvider|
-  void GetImportance(const GetImportanceCallback& callback) override {
-    callback(f1dl::VectorPtr<StoryImportanceEntryPtr>());
-  }
-
-  // |StoryProvider|
-  void WatchImportance(
-      f1dl::InterfaceHandle<modular::StoryImportanceWatcher> watcher) override {
-    importance_watchers_.AddInterfacePtr(watcher.Bind());
-  }
-
-  // |StoryProvider|
   void RunningStories(const RunningStoriesCallback& callback) override {
     callback(f1dl::VectorPtr<f1dl::StringPtr>::New(0));
   }
@@ -111,7 +100,6 @@ class StoryProviderMock : public StoryProvider {
   modular::StoryControllerMock controller_mock_;
   f1dl::BindingSet<modular::StoryController> binding_set_;
   f1dl::InterfacePtrSet<modular::StoryProviderWatcher> watchers_;
-  f1dl::InterfacePtrSet<modular::StoryImportanceWatcher> importance_watchers_;
 };
 
 }  // namespace modular

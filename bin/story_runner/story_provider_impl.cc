@@ -200,12 +200,9 @@ class StoryProviderImpl::CreateStoryCall : Operation<f1dl::StringPtr> {
   }
 
   void Cont2(FlowToken flow) {
-    controller_->Log(story_provider_impl_->MakeLogEntry(StorySignal::CREATED));
-
     // We ensure that everything has been written to the story page before this
     // operation is done.
-    controller_->Sync(
-        [this, flow] { story_provider_impl_->NotifyImportanceWatchers(); });
+    controller_->Sync([flow] {});
 
     ReportStoryLaunchTime(zx_clock_get(ZX_CLOCK_UTC) - start_time_);
   }
@@ -451,40 +448,6 @@ class StoryProviderImpl::StopStoryShellCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(StopStoryShellCall);
 };
 
-class StoryProviderImpl::GetImportanceCall : Operation<ImportanceList> {
- public:
-  GetImportanceCall(OperationContainer* const container,
-                    StoryProviderImpl* const story_provider_impl,
-                    ResultCall result_call)
-      : Operation("StoryProviderImpl::GetImportanceCall",
-                  container,
-                  std::move(result_call)),
-        story_provider_impl_(story_provider_impl) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this, &importance_};
-
-    for (auto& story : story_provider_impl_->story_controller_impls_) {
-      story.second.impl->GetImportance(
-          story_provider_impl_->context_handler_.values(),
-          [this, id = story.first, flow](float importance) {
-            auto entry = StoryImportanceEntry::New();
-            entry->id = id;
-            entry->importance = importance;
-            importance_.push_back(std::move(entry));
-          });
-    }
-  }
-
-  StoryProviderImpl* const story_provider_impl_;  // not owned
-  ImportanceList importance_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
-};
-
 struct StoryProviderImpl::LinkPeer {
   std::unique_ptr<LedgerClient> ledger;
   std::unique_ptr<LinkImpl> link;
@@ -627,7 +590,6 @@ StoryProviderImpl::StoryProviderImpl(
     AppConfigPtr story_shell,
     const ComponentContextInfo& component_context_info,
     FocusProviderPtr focus_provider,
-    maxwell::IntelligenceServices* const intelligence_services,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider,
     ModuleResolver* module_resolver,
     const bool test)
@@ -643,13 +605,10 @@ StoryProviderImpl::StoryProviderImpl(
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider),
       module_resolver_(module_resolver),
-      context_handler_(intelligence_services),
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this),
       weak_factory_(this) {
   focus_provider_->Watch(focus_watcher_binding_.NewBinding());
-  context_handler_.Watch([this] { OnContextChange(); });
-  context_handler_.SelectTopics({kStoryImportanceContext});
   if (!test_) {
     // As an optimization, since app startup time is long, we optimistically
     // load a story shell instance even if there are no stories that need it
@@ -865,23 +824,6 @@ void StoryProviderImpl::RunningStories(const RunningStoriesCallback& callback) {
   callback(std::move(stories));
 }
 
-// |StoryProvider|
-void StoryProviderImpl::GetImportance(const GetImportanceCallback& callback) {
-  // This is an Operation on the queue mostly so a story controller cannot be
-  // deleted while we wait for it to compute its importance.
-  //
-  // TODO(mesch): Should be cached or precomputed really. For now we happily use
-  // the opportunity to put some load on the ledger, so gather performance
-  // metrics.
-  new GetImportanceCall(&operation_queue_, this, callback);
-}
-
-// |StoryProvider|
-void StoryProviderImpl::WatchImportance(
-    f1dl::InterfaceHandle<StoryImportanceWatcher> watcher) {
-  importance_watchers_.AddInterfacePtr(watcher.Bind());
-}
-
 // |PageClient|
 void StoryProviderImpl::OnPageChange(const std::string& /*key*/,
                                      const std::string& value) {
@@ -938,10 +880,6 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
     return;
   }
 
-  // Focusing changes importance, but the log needs to be written first.
-  i->second.impl->Log(MakeLogEntry(StorySignal::FOCUSED));
-  i->second.impl->Sync([this] { NotifyImportanceWatchers(); });
-
   // Last focus time is recorded in the ledger, and story provider watchers are
   // notified through the page watcher.
   auto mutate = [time =
@@ -953,38 +891,12 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
                           mutate, [] {});
 }
 
-void StoryProviderImpl::OnContextChange() {
-  NotifyImportanceWatchers();
-}
-
-void StoryProviderImpl::NotifyImportanceWatchers() {
-  // TODO(mesch): This notification may be triggered because context changes,
-  // which can change importance of all stories, or because single story
-  // changed, which would require to compute importance only of the single
-  // story. But here we cannot distinguish, and will always recompute
-  // everything.
-  importance_watchers_.ForAllPtrs(
-      [this](StoryImportanceWatcher* const watcher) {
-        watcher->OnImportanceChange();
-      });
-}
-
 void StoryProviderImpl::NotifyStoryWatchers(const StoryInfo* const story_info,
                                             const StoryState story_state) {
   watchers_.ForAllPtrs(
       [story_info, story_state](StoryProviderWatcher* const watcher) {
         watcher->OnChange(story_info->Clone(), story_state);
       });
-}
-
-StoryContextLogPtr StoryProviderImpl::MakeLogEntry(const StorySignal signal) {
-  auto log_entry = StoryContextLog::New();
-  log_entry->context = context_handler_.values().Clone();
-  log_entry->device_id = device_id_;
-  log_entry->time = zx_clock_get(ZX_CLOCK_UTC);
-  log_entry->signal = signal;
-
-  return log_entry;
 }
 
 void StoryProviderImpl::GetLinkPeer(const f1dl::StringPtr& story_id,

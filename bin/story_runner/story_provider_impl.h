@@ -28,7 +28,6 @@
 #include "peridot/bin/agent_runner/agent_runner.h"
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
-#include "peridot/bin/story_runner/context_handler.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/fidl/scope.h"
@@ -50,7 +49,6 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
       AppConfigPtr story_shell,
       const ComponentContextInfo& component_context_info,
       FocusProviderPtr focus_provider,
-      maxwell::IntelligenceServices* intelligence_services,
       maxwell::UserIntelligenceProvider* user_intelligence_provider,
       ModuleResolver* module_resolver,
       bool test);
@@ -113,8 +111,6 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void DumpState(const std::function<void(const std::string&)>& callback);
 
  private:
-  using ImportanceList = f1dl::VectorPtr<StoryImportanceEntryPtr>;
-
   // |StoryProvider|
   void CreateStory(const f1dl::StringPtr& module_url,
                    const CreateStoryCallback& callback) override;
@@ -144,13 +140,6 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void Watch(f1dl::InterfaceHandle<StoryProviderWatcher> watcher) override;
 
   // |StoryProvider|
-  void GetImportance(const GetImportanceCallback& callback) override;
-
-  // |StoryProvider|
-  void WatchImportance(
-      f1dl::InterfaceHandle<StoryImportanceWatcher> watcher) override;
-
-  // |StoryProvider|
   void Duplicate(f1dl::InterfaceRequest<StoryProvider> request) override;
 
   // |StoryProvider|
@@ -174,8 +163,6 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void NotifyImportanceWatchers();
 
   void NotifyStoryWatchers(const StoryInfo* story_info, StoryState story_state);
-
-  StoryContextLogPtr MakeLogEntry(StorySignal signal);
 
   void MaybeLoadStoryShell();
 
@@ -236,10 +223,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // a record of the current context in the story page. So we need to watch the
   // context and the focus. This serves to compute relative importance of
   // stories in the timeline, as determined by the current context.
-  ContextHandler context_handler_;
   FocusProviderPtr focus_provider_;
   f1dl::Binding<FocusWatcher> focus_watcher_binding_;
-  f1dl::InterfacePtrSet<StoryImportanceWatcher> importance_watchers_;
 
   // Machinery to support StoryProvider.GetLinkPeer().
   struct LinkPeer;

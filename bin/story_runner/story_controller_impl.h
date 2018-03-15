@@ -60,11 +60,6 @@ class StoryProviderImpl;
 constexpr char kRootLink[] = "root";
 constexpr char kRootModuleName[] = "root";
 
-// HACK(mesch): The context topics that influence story importance is hardcoded
-// to a single one right now. This will be generalized, but we cannot simply
-// look at the whole context, because it's too big.
-constexpr char kStoryImportanceContext[] = "location/home_work";
-
 // The story runner, which holds all the links and runs all the modules as well
 // as the story shell. It also implements the StoryController service to give
 // clients control over the story.
@@ -107,10 +102,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // Called by StoryProviderImpl.
   StoryState GetStoryState() const;
-  void Log(StoryContextLogPtr log_entry);
   void Sync(const std::function<void()>& done);
-  void GetImportance(const ContextState& context_state,
-                     const std::function<void(float)>& result);
 
   // Called by ModuleControllerImpl and ModuleContextImpl.
   void FocusModule(const f1dl::VectorPtr<f1dl::StringPtr>& module_path);
@@ -375,7 +367,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   class ConnectLinkCall;
   class InitializeChainCall;
   class StartCall;
-  class GetImportanceCall;
   class LedgerNotificationCall;
   class FocusCall;
   class DefocusCall;

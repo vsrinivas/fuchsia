@@ -59,7 +59,6 @@ constexpr char kLinkKeyPrefix[] =
     "Link|2/";  // version 2: kEnableIncrementalLinks
 constexpr char kModuleKeyPrefix[] = "Module/";
 constexpr char kPerDeviceKeyPrefix[] = "PerDevice/";
-constexpr char kStoryContextLogKeyPrefix[] = "StoryContextLog/";
 
 // 2. ID values, separated by slashes, to identify the data item under this
 //    key. The set of ID values under each key is defined by the arguments of
@@ -68,7 +67,6 @@ constexpr char kStoryContextLogKeyPrefix[] = "StoryContextLog/";
 std::string MakeStoryKey(const f1dl::StringPtr& story_id);
 std::string MakeDeviceKey(const f1dl::StringPtr& device_name);
 std::string MakePerDeviceKey(const f1dl::StringPtr& device_name);
-std::string MakeStoryContextLogKey(StorySignal signal, uint64_t time);
 std::string MakeFocusKey(const f1dl::StringPtr& device_name);
 std::string MakeMessageQueuesPrefix(const std::string& component_namespace);
 std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
