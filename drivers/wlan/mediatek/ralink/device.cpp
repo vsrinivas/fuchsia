@@ -3597,7 +3597,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     // Initialize queues
     for (size_t i = 0; i < kReadReqCount; i++) {
         usb_request_t* req;
-        zx_status_t status = usb_request_alloc(&req, kReadBufSize, rx_endpt_);
+        zx_status_t status = usb_req_alloc(&usb_, &req, kReadBufSize, rx_endpt_);
         if (status != ZX_OK) {
             errorf("failed to allocate rx usb request\n");
             return status;
@@ -3610,7 +3610,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     auto tx_endpt = tx_endpts_.front();
     for (size_t i = 0; i < kWriteReqCount; i++) {
         usb_request_t* req;
-        zx_status_t status = usb_request_alloc(&req, kWriteBufSize, tx_endpt);
+        zx_status_t status = usb_req_alloc(&usb_, &req, kWriteBufSize, tx_endpt);
         if (status != ZX_OK) {
             errorf("failed to allocate tx usb request\n");
             return status;
