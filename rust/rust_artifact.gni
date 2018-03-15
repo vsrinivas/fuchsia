@@ -29,6 +29,9 @@ template("rust_artifact") {
     name = invoker.name
   } else {
     if (type == "lib") {
+      # TODO(raggi): we must assert that the target_name and library name are
+      # related following the Cargo conventions, otherwise
+      # local_dependencies.py could fail.
       name = exec_script("//build/rust/sanitize_target_name.py",
                          [ target_name ],
                          "trim string")
@@ -209,20 +212,37 @@ template("rust_artifact") {
 
     depfile = output_depfile
 
-    inputs = [
-      "${source_dir}/Cargo.toml",
-      "//garnet/Cargo.toml",
-      "//garnet/Cargo.lock",
-    ]
-
-    outputs = [
-      output_file,
-    ] + test_binaries
-
     forward_variables_from(invoker, ["deps"])
     if (!defined(deps)) {
       deps = []
     }
+
+    target_toml = "${source_dir}/Cargo.toml"
+    workspace_toml = "//garnet/Cargo.toml"
+    workspace_lock = "//garnet/Cargo.lock"
+
+    inputs = [
+      target_toml,
+      workspace_toml,
+      workspace_lock
+    ]
+
+    cargo_deps = exec_script("//build/rust/local_dependencies.py", [
+      "--target-toml",
+      rebase_path(target_toml),
+      "--workspace-toml",
+      rebase_path(workspace_toml),
+      "--workspace-lock",
+      rebase_path(workspace_lock),
+      "--fuchsia-dir",
+      rebase_path("//"),
+    ], "list lines", [target_toml, workspace_toml, workspace_lock])
+
+    deps += cargo_deps
+
+    outputs = [
+      output_file,
+    ] + test_binaries
 
     args = [
              "--type",

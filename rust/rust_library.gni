@@ -10,10 +10,14 @@ import("//build/rust/rust_artifact.gni")
 #
 #   name
 #     Name of the crate as defined in its manifest file. If not specified, it is
-#     assumed to be the same as the target name.
+#     assumed to be the same as the target name. The name must match the name of
+#     the crate as written in Cargo.toml. This convention is required in order for
+#     automatic crate dependency computation to work.
 #
 #   deps (optional)
-#     List of dependency labels.
+#     List of dependency labels. Only dependencies that are not declared via
+#     Cargo.toml need to be listed here. Any Rust crates that are dependencies from
+#     Cargo.toml will be added during the gen phase of the build.
 #
 #   with_tests (optional) #DEPRECATED
 #   with_unit_tests (optional)
@@ -42,6 +46,11 @@ template("rust_library") {
                              "with_unit_tests",
                              "integration_tests",
                            ])
+    if (defined(name)) {
+      # This assertion is a requirement of local_dependencies.py in order to compute
+      # the label name for rust_library rules.
+      assert(name == target_name, "name must equal target_name must equal crate name")
+    }
     type = "lib"
   }
 }
