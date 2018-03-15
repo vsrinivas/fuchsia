@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/coding.h>
+#include <lib/fidl/coding.h>
 
 #include <stdalign.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#include <fidl/internal.h>
+#include <lib/fidl/internal.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 

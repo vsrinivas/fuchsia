@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <fidl/coding.h>
+#include <lib/fidl/coding.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>

@@ -186,7 +186,7 @@ void CGenerator::GeneratePrologues() {
     EmitBlank(&header_file_);
     EmitIncludeHeader(&header_file_, "<stdbool.h>");
     EmitIncludeHeader(&header_file_, "<stdint.h>");
-    EmitIncludeHeader(&header_file_, "<fidl/coding.h>");
+    EmitIncludeHeader(&header_file_, "<lib/fidl/coding.h>");
     EmitIncludeHeader(&header_file_, "<zircon/fidl.h>");
     EmitIncludeHeader(&header_file_, "<zircon/syscalls/object.h>");
     EmitIncludeHeader(&header_file_, "<zircon/types.h>");

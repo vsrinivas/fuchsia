@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 
-#include <fidl/cpp/builder.h>
-#include <fidl/cpp/message.h>
+#include <lib/fidl/cpp/builder.h>
+#include <lib/fidl/cpp/message.h>
 #include <zircon/fidl.h>
 #include <zircon/types.h>
 

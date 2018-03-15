@@ -7,7 +7,7 @@
 #include <stdalign.h>
 #include <stdint.h>
 
-#include <fidl/cpp/message_part.h>
+#include <lib/fidl/cpp/message_part.h>
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
 #include <zircon/types.h>

@@ -4,8 +4,8 @@
 
 #include <fbl/type_support.h>
 
-#include <fidl/coding.h>
-#include <fidl/internal.h>
+#include <lib/fidl/coding.h>
+#include <lib/fidl/internal.h>
 
 namespace fidl {
 namespace {

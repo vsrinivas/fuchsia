@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/cpp/builder.h>
+#include <lib/fidl/cpp/builder.h>
 
 #include <string.h>
 
-#include <fidl/internal.h>
+#include <lib/fidl/internal.h>
 
 namespace fidl {
 

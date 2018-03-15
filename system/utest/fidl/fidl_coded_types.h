@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fidl/coding.h>
+#include <lib/fidl/coding.h>
 
 #if defined(__cplusplus)
 extern "C" {

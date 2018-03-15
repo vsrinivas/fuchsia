@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/cpp/array.h>
-#include <fidl/cpp/builder.h>
-#include <fidl/cpp/string_view.h>
-#include <fidl/cpp/vector_view.h>
+#include <lib/fidl/cpp/array.h>
+#include <lib/fidl/cpp/builder.h>
+#include <lib/fidl/cpp/string_view.h>
+#include <lib/fidl/cpp/vector_view.h>
 
 #include <unittest/unittest.h>
 

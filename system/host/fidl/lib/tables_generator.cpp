@@ -68,7 +68,7 @@ void TablesGenerator::GenerateInclude(StringView filename) {
 }
 
 void TablesGenerator::GenerateFilePreamble() {
-    GenerateInclude("<fidl/internal.h>");
+    GenerateInclude("<lib/fidl/internal.h>");
     Emit(&tables_file_, "\nextern \"C\" {\n");
     Emit(&tables_file_, "\n");
 }

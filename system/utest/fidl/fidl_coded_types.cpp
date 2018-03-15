@@ -4,7 +4,7 @@
 
 #include "fidl_coded_types.h"
 
-#include <fidl/internal.h>
+#include <lib/fidl/internal.h>
 
 #include "fidl_structs.h"
 

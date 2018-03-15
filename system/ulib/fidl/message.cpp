@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/cpp/message.h>
+#include <lib/fidl/cpp/message.h>
 
 #include <string.h>
 
-#include <fidl/coding.h>
-#include <fidl/cpp/builder.h>
+#include <lib/fidl/coding.h>
+#include <lib/fidl/cpp/builder.h>
 #include <zircon/syscalls.h>
 
 namespace fidl {

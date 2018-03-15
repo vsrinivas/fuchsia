@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <fidl/coding.h>
-#include <fidl/cpp/message_part.h>
+#include <lib/fidl/coding.h>
+#include <lib/fidl/cpp/message_part.h>
 #include <zircon/fidl.h>
 
 namespace fidl {

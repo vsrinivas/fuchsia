@@ -7,7 +7,7 @@
 #include <fbl/type_support.h>
 
 #include <stdalign.h>
-#include <fidl/coding.h>
+#include <lib/fidl/coding.h>
 
 // Handle types.
 struct alignas(FIDL_ALIGNMENT) nonnullable_handle_inline_data {
