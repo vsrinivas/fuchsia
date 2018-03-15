@@ -102,15 +102,7 @@ class ModuleResolverImpl::FindModulesCall
       return;
     }
 
-    if (!query_->verb) {
-      std::transform(
-          module_resolver_impl_->entries_.begin(),
-          module_resolver_impl_->entries_.end(),
-          std::inserter(candidates_, candidates_.begin()),
-          [](std::pair<const EntryId, modular::ModuleManifestPtr>& key_value) {
-            return key_value.first;
-          });
-    } else {
+    if (query_->verb) {
       auto verb_it = module_resolver_impl_->verb_to_entries_.find(query_->verb);
       if (verb_it == module_resolver_impl_->verb_to_entries_.end()) {
         result_ = CreateEmptyResult();
@@ -151,28 +143,36 @@ class ModuleResolverImpl::FindModulesCall
   // name and types. If false, only the types are matched.
   void ProcessNounTypes(const std::string& noun_name,
                         std::vector<std::string> types,
-                        const bool match_name) {
+                        const bool query_contains_verb) {
     noun_types_cache_[noun_name] = types;
 
-    // The types list we have is an OR - any Module that can handle any of the
-    // types for this noun is valid, so we union all valid resolutions. First,
-    // we gather all such modules, regardless of if they handle the verb.
     std::set<EntryId> noun_type_entries;
     for (const auto& type : types) {
       std::set<EntryId> found_entries =
-          match_name ? GetEntriesMatchingNounByTypeAndName(type, noun_name)
-                     : GetEntriesMatchingNounByType(type);
+          query_contains_verb
+              ? GetEntriesMatchingNounByTypeAndName(type, noun_name)
+              : GetEntriesMatchingNounByType(type);
       noun_type_entries.insert(found_entries.begin(), found_entries.end());
     }
 
-    // The target Module must match the types in every noun specified in the
-    // ResolverQuery, so here we do a set intersection with our possible set of
-    // candidates.
     std::set<EntryId> new_result_entries;
-    std::set_intersection(
-        candidates_.begin(), candidates_.end(), noun_type_entries.begin(),
-        noun_type_entries.end(),
-        std::inserter(new_result_entries, new_result_entries.begin()));
+    if (query_contains_verb) {
+      // If the query contains a verb, the nouns are parameters to that verb and
+      // therefore all nouns in the query must be handled by the candidates. For
+      // each noun that is processed, filter out any existing results that can't
+      // also handle the new noun type.
+      std::set_intersection(
+          candidates_.begin(), candidates_.end(), noun_type_entries.begin(),
+          noun_type_entries.end(),
+          std::inserter(new_result_entries, new_result_entries.begin()));
+    } else {
+      // If the query does not contain a verb, the search is widened to include
+      // modules that are able to handle a proper subset of the query nouns.
+      std::set_union(
+          candidates_.begin(), candidates_.end(), noun_type_entries.begin(),
+          noun_type_entries.end(),
+          std::inserter(new_result_entries, new_result_entries.begin()));
+    }
     candidates_.swap(new_result_entries);
   }
 

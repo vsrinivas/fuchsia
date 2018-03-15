@@ -17,21 +17,20 @@ namespace {
 std::pair<bool, modular::CreateChainPropertyInfo*> GetProperty(
     modular::CreateChainInfoPtr& chain_info,
     const std::string& key) {
-  for (auto& it: chain_info->property_info) {
+  for (auto& it : chain_info->property_info) {
     if (it->key == key) {
       return std::make_pair<bool, modular::CreateChainPropertyInfo*>(
           true, it->value.get());
     }
   }
 
-  return std::make_pair<bool, modular::CreateChainPropertyInfo*>(
-      false, nullptr);
+  return std::make_pair<bool, modular::CreateChainPropertyInfo*>(false,
+                                                                 nullptr);
 }
 
 class QueryBuilder {
  public:
-  QueryBuilder() : query(modular::ResolverQuery::New()) {
-  }
+  QueryBuilder() : query(modular::ResolverQuery::New()) {}
   QueryBuilder(std::string verb) : query(modular::ResolverQuery::New()) {
     SetVerb(verb);
   }
@@ -53,20 +52,24 @@ class QueryBuilder {
     auto noun = modular::ResolverNounConstraint::New();
     auto types_array = f1dl::Array<f1dl::String>::From(types);
     noun->set_entity_type(std::move(types_array));
-    auto resolver_noun_constraint_entry = modular::ResolverNounConstraintEntry::New();
+    auto resolver_noun_constraint_entry =
+        modular::ResolverNounConstraintEntry::New();
     resolver_noun_constraint_entry->key = name;
     resolver_noun_constraint_entry->constraint = std::move(noun);
-    query->noun_constraints.push_back(std::move(resolver_noun_constraint_entry));
+    query->noun_constraints.push_back(
+        std::move(resolver_noun_constraint_entry));
     return *this;
   }
 
   QueryBuilder& AddEntityNoun(std::string name, std::string entity_reference) {
     auto noun = modular::ResolverNounConstraint::New();
     noun->set_entity_reference(entity_reference);
-    auto resolver_noun_constraint_entry = modular::ResolverNounConstraintEntry::New();
+    auto resolver_noun_constraint_entry =
+        modular::ResolverNounConstraintEntry::New();
     resolver_noun_constraint_entry->key = name;
     resolver_noun_constraint_entry->constraint = std::move(noun);
-    query->noun_constraints.push_back(std::move(resolver_noun_constraint_entry));
+    query->noun_constraints.push_back(
+        std::move(resolver_noun_constraint_entry));
     return *this;
   }
 
@@ -74,10 +77,12 @@ class QueryBuilder {
   QueryBuilder& AddJsonNoun(std::string name, std::string json) {
     auto noun = modular::ResolverNounConstraint::New();
     noun->set_json(json);
-    auto resolver_noun_constraint_entry = modular::ResolverNounConstraintEntry::New();
+    auto resolver_noun_constraint_entry =
+        modular::ResolverNounConstraintEntry::New();
     resolver_noun_constraint_entry->key = name;
     resolver_noun_constraint_entry->constraint = std::move(noun);
-    query->noun_constraints.push_back(std::move(resolver_noun_constraint_entry));
+    query->noun_constraints.push_back(
+        std::move(resolver_noun_constraint_entry));
     return *this;
   }
 
@@ -97,10 +102,12 @@ class QueryBuilder {
 
     auto noun = modular::ResolverNounConstraint::New();
     noun->set_link_info(std::move(link_info));
-    auto resolver_noun_constraint_entry = modular::ResolverNounConstraintEntry::New();
+    auto resolver_noun_constraint_entry =
+        modular::ResolverNounConstraintEntry::New();
     resolver_noun_constraint_entry->key = name;
     resolver_noun_constraint_entry->constraint = std::move(noun);
-    query->noun_constraints.push_back(std::move(resolver_noun_constraint_entry));
+    query->noun_constraints.push_back(
+        std::move(resolver_noun_constraint_entry));
     return *this;
   }
 
@@ -121,10 +128,12 @@ class QueryBuilder {
 
     auto noun = modular::ResolverNounConstraint::New();
     noun->set_link_info(std::move(link_info));
-    auto resolver_noun_constraint_entry = modular::ResolverNounConstraintEntry::New();
+    auto resolver_noun_constraint_entry =
+        modular::ResolverNounConstraintEntry::New();
     resolver_noun_constraint_entry->key = name;
     resolver_noun_constraint_entry->constraint = std::move(noun);
-    query->noun_constraints.push_back(std::move(resolver_noun_constraint_entry));
+    query->noun_constraints.push_back(
+        std::move(resolver_noun_constraint_entry));
     return *this;
   }
 
@@ -626,7 +635,6 @@ TEST_F(ModuleResolverImplTest, CorrectNounTypeWithNoVerbOrUrlMultipleMatches) {
     noun->types = {"foo", "baz"};
     entry->noun_constraints.push_back(std::move(noun));
     source->add("2", std::move(entry));
-
   }
 
   source->idle();
@@ -664,6 +672,35 @@ TEST_F(ModuleResolverImplTest, IncorrectNounTypeWithNoVerbOrUrl) {
   FindModules(std::move(query));
 
   EXPECT_EQ(0lu, results().size());
+}
+
+// Tests that a query without a verb or url, that contains more nouns than the
+// potential result, still returns that result.
+TEST_F(ModuleResolverImplTest, QueryWithMoreNounsThanEntry) {
+  auto source = AddSource("test");
+  ResetResolver();
+
+  {
+    auto entry = modular::ModuleManifest::New();
+    entry->binary = "module1";
+    entry->verb = "com.google.fuchsia.navigate.v1";
+    auto noun = modular::NounConstraint::New();
+    noun->name = "start";
+    noun->types = {"gps"};
+    entry->noun_constraints.push_back(std::move(noun));
+    source->add("1", std::move(entry));
+  }
+
+  source->idle();
+
+  auto query = QueryBuilder()
+                   .AddNounTypes("start", {"gps", "bar"})
+                   .AddNounTypes("end", {"foo", "bar"})
+                   .build();
+
+  FindModules(std::move(query));
+
+  EXPECT_EQ(1lu, results().size());
 }
 
 // Tests that for a query with multiple nouns, each noun gets assigned to the
@@ -705,12 +742,12 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndMultipleNouns) {
   ASSERT_EQ(1lu, results().size());
   auto result = results()[0].get();
 
-  EXPECT_EQ(GetProperty(result->create_chain_info, "start").second
-                ->get_create_link()
+  EXPECT_EQ(GetProperty(result->create_chain_info, "start")
+                .second->get_create_link()
                 ->initial_data,
             modular::EntityReferenceToJson(start_entity));
-  EXPECT_EQ(GetProperty(result->create_chain_info, "end").second
-                ->get_create_link()
+  EXPECT_EQ(GetProperty(result->create_chain_info, "end")
+                .second->get_create_link()
                 ->initial_data,
             modular::EntityReferenceToJson(end_entity));
 }
@@ -758,20 +795,20 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndTwoNounsOfSameType) {
 
   for (const auto& result : results()) {
     bool start_mapped_to_start =
-        GetProperty(result->create_chain_info, "start").second
-            ->get_create_link()
+        GetProperty(result->create_chain_info, "start")
+            .second->get_create_link()
             ->initial_data == modular::EntityReferenceToJson(start_entity);
     bool start_mapped_to_end =
-        GetProperty(result->create_chain_info, "start").second
-            ->get_create_link()
+        GetProperty(result->create_chain_info, "start")
+            .second->get_create_link()
             ->initial_data == modular::EntityReferenceToJson(end_entity);
     bool end_mapped_to_end =
-        GetProperty(result->create_chain_info, "end").second
-            ->get_create_link()
+        GetProperty(result->create_chain_info, "end")
+            .second->get_create_link()
             ->initial_data == modular::EntityReferenceToJson(end_entity);
     bool end_mapped_to_start =
-        GetProperty(result->create_chain_info, "end").second
-            ->get_create_link()
+        GetProperty(result->create_chain_info, "end")
+            .second->get_create_link()
             ->initial_data == modular::EntityReferenceToJson(start_entity);
     found_first_mapping |= start_mapped_to_start && end_mapped_to_end;
     found_second_mapping |= start_mapped_to_end && end_mapped_to_start;
