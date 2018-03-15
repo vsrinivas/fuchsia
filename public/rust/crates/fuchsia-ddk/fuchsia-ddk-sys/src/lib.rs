@@ -338,6 +338,27 @@ pub struct usb_device_descriptor_t {
     pub bNumConfigurations: u8,
 }
 
+impl Default for usb_device_descriptor_t {
+    fn default() -> Self {
+        usb_device_descriptor_t {
+            bLength: 0,
+            bDescriptorType: 0,
+            bcdUSB: 0,
+            bDeviceClass: 0,
+            bDeviceSubClass: 0,
+            bDeviceProtocol: 0,
+            bMaxPacketSize0: 0,
+            idVendor: 0,
+            idProduct: 0,
+            bcdDevice: 0,
+            iManufacturer: 0,
+            iProduct: 0,
+            iSerialNumber: 0,
+            bNumConfigurations: 0,
+        }
+    }
+}
+
 #[repr(C, packed)]
 pub struct usb_configuration_descriptor_t {
     pub bLength: u8,
