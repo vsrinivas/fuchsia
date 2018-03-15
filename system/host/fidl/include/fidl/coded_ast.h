@@ -115,8 +115,8 @@ struct RequestHandleType : public Type {
 };
 
 struct StructType : public Type {
-    StructType(std::string name, std::vector<Field> fields, uint32_t size)
-        : Type(Kind::kStruct, std::move(name), SomeFieldIsNeeded(fields)), fields(std::move(fields)), size(size) {}
+ StructType(std::string name, std::vector<Field> fields, uint32_t size, CodingNeeded coding_needed)
+        : Type(Kind::kStruct, std::move(name), coding_needed), fields(std::move(fields)), size(size) {}
 
     const std::vector<Field> fields;
     const uint32_t size;

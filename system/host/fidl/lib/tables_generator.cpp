@@ -390,7 +390,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
                     if (coded_parameter_type->coding_needed == coded::CodingNeeded::kNeeded)
                         request_fields.emplace_back(coded_parameter_type, parameter.fieldshape.Offset());
                 }
-                coded_types_.push_back(std::make_unique<coded::StructType>(std::move(request_name), std::move(request_fields), message.typeshape.Size()));
+                coded_types_.push_back(std::make_unique<coded::StructType>(std::move(request_name), std::move(request_fields), message.typeshape.Size(), coded::CodingNeeded::kNeeded));
             };
             if (method.maybe_request) {
                 CreateMessage(*method.maybe_request, types::MessageKind::kRequest);
@@ -412,7 +412,8 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
             if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded)
                 struct_fields.emplace_back(coded_member_type, member.fieldshape.Offset());
         }
-        coded_types_.push_back(std::make_unique<coded::StructType>(std::move(struct_name), std::move(struct_fields), struct_decl->typeshape.Size()));
+        auto coding_needed = SomeFieldIsNeeded(struct_fields);
+        coded_types_.push_back(std::make_unique<coded::StructType>(std::move(struct_name), std::move(struct_fields), struct_decl->typeshape.Size(), coding_needed));
         named_type_map_[&decl->name] = coded_types_.back().get();
         break;
     }
