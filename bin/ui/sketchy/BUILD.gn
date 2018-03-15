@@ -11,8 +11,6 @@ executable("bin") {
   output_name = "sketchy_service"
 
   sources = [
-    "//garnet/examples/escher/sketchy/sketchy/cubic_bezier.cc",
-    "//garnet/examples/escher/sketchy/sketchy/cubic_bezier.h",
     "app.cc",
     "app.h",
     "buffer/escher_buffer.cc",
@@ -39,6 +37,8 @@ executable("bin") {
     "resources/stroke_group.cc",
     "resources/stroke_group.h",
     "resources/types.h",
+    "stroke/cubic_bezier.cc",
+    "stroke/cubic_bezier.h",
     "stroke/divided_stroke_path.cc",
     "stroke/divided_stroke_path.h",
     "stroke/stroke_path.cc",
@@ -49,6 +49,7 @@ executable("bin") {
     "stroke/stroke_manager.h",
     "stroke/stroke_tessellator.cc",
     "stroke/stroke_tessellator.h",
+    "util/glm_types.h"
   ]
 
   deps = [
@@ -60,7 +61,6 @@ executable("bin") {
   ]
 
   include_dirs = [
-    "//garnet/examples/escher/sketchy",
     "//third_party/glm",
   ]
 }

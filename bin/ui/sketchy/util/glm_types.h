@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_UTIL_GLM_TYPES_H_
+#define GARNET_BIN_UI_SKETCHY_UTIL_GLM_TYPES_H_
 
 #include "lib/escher/forward_declarations.h"
 
 // Safely include <glm/glm.hpp> despite Zircon countof() macro.
 #include "lib/escher/geometry/types.h"
 
-namespace sketchy {
+namespace sketchy_service {
 
 using glm::dot;
 using glm::length;
@@ -23,4 +24,6 @@ float distance(VecT a, VecT b) {
   return length(b - a);
 }
 
-}  // namespace sketchy
+}  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_UTIL_GLM_TYPES_H_

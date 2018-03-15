@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_UI_SKETCHY_STROKE_CUBIC_BEZIER_H_
+#define GARNET_BIN_UI_SKETCHY_STROKE_CUBIC_BEZIER_H_
 
 #include <utility>
 
-#include "sketchy/types.h"
+#include "garnet/bin/ui/sketchy/util/glm_types.h"
 
-namespace sketchy {
+namespace sketchy_service {
 
 template <typename VecT>
 struct CubicBezier;
@@ -71,4 +72,6 @@ CubicBezier2f FitCubicBezier2f(const vec2* pts,
 std::pair<vec2, vec2> EvaluatePointAndNormal(const CubicBezier<vec2>& bez,
                                              float t);
 
-}  // namespace sketchy
+}  // namespace sketchy_service
+
+#endif  // GARNET_BIN_UI_SKETCHY_STROKE_CUBIC_BEZIER_H_

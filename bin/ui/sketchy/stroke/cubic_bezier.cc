@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sketchy/cubic_bezier.h"
+#include "garnet/bin/ui/sketchy/stroke/cubic_bezier.h"
 
 #include "lib/fxl/logging.h"
 
-namespace sketchy {
+namespace sketchy_service {
 
 template <typename VecT>
 VecT CubicBezier<VecT>::Evaluate(float t) const {
@@ -314,4 +314,4 @@ std::pair<vec2, vec2> EvaluatePointAndNormal(const CubicBezier<vec2>& bez,
 template struct CubicBezier<float>;
 template struct CubicBezier<vec2>;
 
-}  // namespace sketchy
+}  // namespace sketchy_service

@@ -11,7 +11,7 @@ namespace {
 constexpr float kEpsilon = 6e-6;
 constexpr float kErrorThreshold = 10;
 
-inline std::ostream& operator<<(std::ostream& os, const sketchy::vec2& pt) {
+inline std::ostream& operator<<(std::ostream& os, const glm::vec2& pt) {
   return os << "(" << pt.x << "," << pt.y << ")";
 }
 
@@ -48,7 +48,8 @@ void StrokeFitter::Extend(const std::vector<glm::vec2>& sampled_pts) {
   FitSampleRange(0, static_cast<int>(end_index), left_tangent, right_tangent);
 }
 
-void StrokeFitter::FitSampleRange(int start_index, int end_index,
+void StrokeFitter::FitSampleRange(int start_index,
+                                  int end_index,
                                   glm::vec2 left_tangent,
                                   glm::vec2 right_tangent) {
   FXL_DCHECK(glm::length(left_tangent) > 0 && glm::length(right_tangent))
@@ -60,7 +61,7 @@ void StrokeFitter::FitSampleRange(int start_index, int end_index,
     // TODO: Double-check this heuristic (perhaps normalization needed?)
     // TODO: Perhaps this segment can be omitted entirely, e.g. by blending
     //       endpoints of the adjacent segments.
-    sketchy::CubicBezier2f line;
+    CubicBezier2f line;
     line.pts[0] = points_[start_index];
     line.pts[3] = points_[end_index];
     line.pts[1] = line.pts[0] + (left_tangent * 0.25f);
@@ -81,11 +82,10 @@ void StrokeFitter::FitSampleRange(int start_index, int end_index,
   float param_shift = -params_[start_index];
   float param_scale = 1.0 / (params_[end_index] + param_shift);
 
-  sketchy::CubicBezier2f curve =
-      sketchy::FitCubicBezier2f(
-          &(points_[start_index]), end_index - start_index + 1,
-          &(params_[start_index]), param_shift, param_scale,
-          left_tangent, right_tangent);
+  CubicBezier2f curve =
+      FitCubicBezier2f(&(points_[start_index]), end_index - start_index + 1,
+                       &(params_[start_index]), param_shift, param_scale,
+                       left_tangent, right_tangent);
 
   int split_index = (end_index + start_index + 1) / 2;
   float max_error = 0.f;

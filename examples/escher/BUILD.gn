@@ -8,15 +8,10 @@ package("escher_examples") {
   system_image = true
 
   deps = [
-    "sketchy",
     "waterfall",
   ]
 
   binaries = [
-    {
-      name = "sketchy_demo"
-      dest = "sketchy"
-    },
     {
       name = "waterfall"
     },
