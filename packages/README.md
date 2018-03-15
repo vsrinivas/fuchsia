@@ -10,9 +10,10 @@ This tool verifies that a given layer's `packages/` directory is properly
 organized. It checks that:
 - all files in the directory are JSON files;
 - all files in the directory are valid according to [the schema][schema];
-- all subdirectories have a file named `all` which contains all files in that
-  subdirectory;
-- all packages files listed as import are valid files.
+- all subdirectories (except a few canonical ones for which it does not make
+  sense) have a file named `all` which contains all files in that subdirectory;
+- all packages files listed as import are valid files;
+- the root directory contains a set of canonical files.
 
 The tool relies on a JSON validator commonly built as part of the Fuchsia build.
 The validator can be found at:
