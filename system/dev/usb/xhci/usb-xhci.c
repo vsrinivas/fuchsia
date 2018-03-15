@@ -207,7 +207,6 @@ static void xhci_release(void* ctx) {
         zx_handle_close(xhci->mmio_handle);
     }
     zx_handle_close(xhci->cfg_handle);
-    zx_handle_close(xhci->bti_handle);
     xhci_free(xhci);
 }
 

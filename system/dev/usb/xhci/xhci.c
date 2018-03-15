@@ -470,6 +470,8 @@ void xhci_stop(xhci_t* xhci) {
     volatile uint32_t* usbcmd = &xhci->op_regs->usbcmd;
     volatile uint32_t* usbsts = &xhci->op_regs->usbsts;
 
+    // stop device thread and root hubs before turning off controller
+    xhci_stop_device_thread(xhci);
     xhci_stop_root_hubs(xhci);
 
     // stop controller
@@ -480,8 +482,6 @@ void xhci_stop(xhci_t* xhci) {
     for (uint32_t i = 1; i <= xhci->max_slots; i++) {
         xhci_slot_stop(&xhci->slots[i]);
     }
-
-    xhci_stop_device_thread(xhci);
 }
 
 void xhci_free(xhci_t* xhci) {
@@ -511,6 +511,10 @@ void xhci_free(xhci_t* xhci) {
     io_buffer_release(&xhci->input_context_buffer);
     io_buffer_release(&xhci->scratch_pad_pages_buffer);
     io_buffer_release(&xhci->scratch_pad_index_buffer);
+
+    // this must done after releasing anything that relies
+    // on our bti, like our io_buffers
+    zx_handle_close(xhci->bti_handle);
 
     free(xhci);
 }
