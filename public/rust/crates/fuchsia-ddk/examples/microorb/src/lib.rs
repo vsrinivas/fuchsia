@@ -19,22 +19,22 @@ const IOCTL_GETSERIAL: u32 = 1;
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 enum OrbCapabilityFlags {      // Does the orb ...
-    HAS_GET_COLOR    = 0x01,   // ... have the GETCOLOR operation implemented ?
-    HAS_GET_SEQUENCE = 0x02,   // ... have the GET_SEQUENCE operation implemented?
-    HAS_AUX          = 0x04,   // ... have an AUX port and SETAUX implemented ?
-    HAS_GAMMA_CORRECT= 0x08,   // ... have built-in gamma correction ?
-    HAS_CURRENT_LIMIT= 0x10,   // ... behave well on 500mA USB port ?
+    HasGetColor     = 0x01,   // ... have the GETCOLOR operation implemented ?
+    HasGetSequence  = 0x02,   // ... have the GET_SEQUENCE operation implemented?
+    HasAux          = 0x04,   // ... have an AUX port and SETAUX implemented ?
+    HasGammaCorrect = 0x08,   // ... have built-in gamma correction ?
+    HasCurrentLimit = 0x10,   // ... behave well on 500mA USB port ?
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 enum OrbRequest {
-    ORB_SETSEQUENCE        = 0,  // IN  orb_sequence_t    ; always implemented.
-    ORB_GETCAPABILITIES    = 1,  // OUT orb_capabilities_t; always implemented.
-    ORB_SETAUX             = 2,  // IN  byte              ; optional (see flags)
-    ORB_GETCOLOR           = 3,  // OUT orb_rgb_t         ; optional (see flags)
-    ORB_GETSEQUENCE        = 4,  // OUT orb_sequence_t    ; optional (see flags)
-    ORB_POKE_EEPROM        = 5,  // IN  <offset> <bytes>  ; optional (Orb4)
+    OrbSetSequence        = 0,  // IN  orb_sequence_t    ; always implemented.
+    OrbGetCapabilities    = 1,  // OUT orb_capabilities_t; always implemented.
+    OrbSetAux             = 2,  // IN  byte              ; optional (see flags)
+    OrbGetColor           = 3,  // OUT orb_rgb_t         ; optional (see flags)
+    OrbGetSequence        = 4,  // OUT orb_sequence_t    ; optional (see flags)
+    OrbPokeEeprom         = 5,  // IN  <offset> <bytes>  ; optional (Orb4)
 }
 
 #[repr(C)]
@@ -194,7 +194,7 @@ impl DeviceOps for MicroOrb {
         Ok(buf.len())
     }
 
-    fn ioctl(&mut self, op: u32, in_buf: &[u8], out_buf: &mut [u8]) -> Result<usize, Status> {
+    fn ioctl(&mut self, op: u32, _in_buf: &[u8], out_buf: &mut [u8]) -> Result<usize, Status> {
         match op {
             IOCTL_GETSERIAL => {
                 let serial = self.get_cached_serial()?;
@@ -258,7 +258,7 @@ impl MicroOrb {
                 slice.copy_from_slice(as_slice(color_period));
             }
         }
-        self.send(OrbRequest::ORB_SETSEQUENCE, &data)
+        self.send(OrbRequest::OrbSetSequence, &data)
         // TODO: Get sequence back and check that it matches, or else retry.
     }
 
@@ -274,7 +274,7 @@ impl MicroOrb {
     fn get_sequence(&mut self) -> Result<Sequence, Status> {
         let period_size = size_of::<orb_color_period_t>();
         let mut data = vec![0; size_of::<u8>() + ORB_MAX_SEQUENCE * period_size];
-        let received_length = self.receive(OrbRequest::ORB_GETSEQUENCE, &mut data)?;
+        let received_length = self.receive(OrbRequest::OrbGetSequence, &mut data)?;
         let sequence_length = data[0] as usize;
         if received_length != size_of::<u8>() + sequence_length * period_size {
             return Err(Status::IO);
