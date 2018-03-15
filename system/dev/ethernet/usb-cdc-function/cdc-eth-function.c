@@ -40,6 +40,7 @@ typedef struct {
     list_node_t bulk_out_reqs;      // list of usb_request_t
     list_node_t bulk_in_reqs;       // list of usb_request_t
     list_node_t tx_pending_infos;   // list of ethmac_netbuf_t
+    bool unbound;                   // set to true when device is going away. Guarded by tx_mutex
 
     // Device attributes
     uint8_t mac_addr[ETH_MAC_SIZE];
@@ -260,6 +261,7 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
 static zx_status_t cdc_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_netbuf_t* netbuf) {
     usb_cdc_t* cdc = cookie;
     size_t length = netbuf->len;
+    zx_status_t status;
 
     if (!cdc->online || length > ETH_MTU || length == 0) {
         return ZX_ERR_INVALID_ARGS;
@@ -268,15 +270,22 @@ static zx_status_t cdc_ethmac_queue_tx(void* cookie, uint32_t options, ethmac_ne
     zxlogf(LTRACE, "%s: sending %zu bytes\n", __FUNCTION__, length);
 
     mtx_lock(&cdc->tx_mutex);
-
-    zx_status_t status = cdc_send_locked(cdc, netbuf);
-    if (status == ZX_ERR_SHOULD_WAIT) {
-        // No buffers available, queue it up
-        list_add_tail(&cdc->tx_pending_infos, &netbuf->node);
+    if (cdc->unbound) {
+        status = ZX_ERR_IO_NOT_PRESENT;
+    } else {
+        status = cdc_send_locked(cdc, netbuf);
+        if (status == ZX_ERR_SHOULD_WAIT) {
+            // No buffers available, queue it up
+            list_add_tail(&cdc->tx_pending_infos, &netbuf->node);
+        }
     }
 
     mtx_unlock(&cdc->tx_mutex);
     return status;
+}
+
+static zx_status_t ethmac_set_param(void *cookie, uint32_t param, int32_t value, void* data) {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static ethmac_protocol_ops_t ethmac_ops = {
@@ -284,6 +293,7 @@ static ethmac_protocol_ops_t ethmac_ops = {
     .stop = cdc_ethmac_stop,
     .start = cdc_ethmac_start,
     .queue_tx = cdc_ethmac_queue_tx,
+    .set_param = ethmac_set_param,
 };
 
 static void cdc_intr_complete(usb_request_t* req, void* cookie) {
@@ -512,6 +522,18 @@ usb_function_interface_ops_t device_ops = {
 static void usb_cdc_unbind(void* ctx) {
     zxlogf(TRACE, "%s\n", __FUNCTION__);
     usb_cdc_t* cdc = ctx;
+
+    mtx_lock(&cdc->tx_mutex);
+    cdc->unbound = true;
+    if (cdc->ethmac_ifc) {
+        ethmac_netbuf_t* netbuf;
+        while ((netbuf = list_remove_head_type(&cdc->tx_pending_infos, ethmac_netbuf_t, node)) !=
+               NULL) {
+            cdc->ethmac_ifc->complete_tx(cdc->ethmac_cookie, netbuf, ZX_ERR_PEER_CLOSED);
+        }
+    }
+    mtx_unlock(&cdc->tx_mutex);
+
     device_remove(cdc->zxdev);
 }
 
@@ -525,13 +547,6 @@ static void usb_cdc_release(void* ctx) {
     }
     while ((req = list_remove_head_type(&cdc->bulk_in_reqs, usb_request_t, node)) != NULL) {
         usb_request_release(req);
-    }
-    if (cdc->ethmac_ifc) {
-        ethmac_netbuf_t* netbuf;
-        while ((netbuf = list_remove_head_type(&cdc->tx_pending_infos, ethmac_netbuf_t, node)) !=
-               NULL) {
-            cdc->ethmac_ifc->complete_tx(cdc->ethmac_cookie, netbuf, ZX_ERR_PEER_CLOSED);
-        }
     }
     mtx_destroy(&cdc->ethmac_mutex);
     mtx_destroy(&cdc->tx_mutex);
