@@ -172,6 +172,7 @@ zx_status_t Station::HandleMlmeAuthReq(const AuthenticateRequest& req) {
     auth->auth_txn_seq_number = 1;
     auth->status_code = 0;  // Reserved, so set to 0
 
+    finspect("Outbound Mgmt Frame(Auth): %s\n", debug::Describe(*hdr).c_str());
     zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send auth packet: %d\n", status);
@@ -220,6 +221,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const DeauthenticateRequest& req) {
     auto deauth = frame.body;
     deauth->reason_code = req.reason_code;
 
+    finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*hdr).c_str());
     zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send deauth packet: %d\n", status);
@@ -329,6 +331,7 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
         return status;
     }
 
+    finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*hdr).c_str());
     status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send assoc packet: %d\n", status);
@@ -594,6 +597,9 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
 
     resp->timeout = addbar->timeout;
 
+    finspect("Outbound ADDBA Resp frame: len %zu\n", packet->len());
+    finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*hdr).c_str());
+
     zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send AddBaResponse: %d\n", status);
@@ -818,8 +824,6 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
 
     wlan_packet->CopyCtrlFrom(txinfo);
 
-    debugf("%s: wlan hdr: %s\n", __FUNCTION__, debug::Describe(*hdr).c_str());
-
     zx_status_t status = device_->SendWlan(std::move(wlan_packet));
     if (status != ZX_OK) { errorf("could not send wlan data: %d\n", status); }
     return status;
@@ -930,6 +934,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
 
     finspect("Outbound ADDBA Req frame: len %zu\n", packet->len());
     finspect("  addba req: %s\n", debug::Describe(*req).c_str());
+    finspect("Outbound Mgmt Frame(ADDBA Req): %s\n", debug::Describe(*hdr).c_str());
 
     zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
