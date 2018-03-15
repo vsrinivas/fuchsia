@@ -11,7 +11,7 @@ usage: bootstrap [zircon|garnet|peridot|topaz]
 
 Bootstrap a Fuchsia development environment for the given layer. Defaults to
 boostraping at the topaz layer. For more information about the Fuchsia layer
-cake, see <https://fuchsia.googlesource.com/docs/+/master/layers.md>.
+cake, see <https://fuchsia.googlesource.com/docs/+/master/development/source_code/layers.md>.
 END
 }
 
