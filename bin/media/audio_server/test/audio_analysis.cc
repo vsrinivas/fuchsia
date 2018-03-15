@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "audio_analysis.h"
-
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -331,16 +330,16 @@ void MeasureAudioFreq(T* audio,
   }
 }
 
-template bool CompareBuffers<int32_t>(const int32_t*,
-                                      const int32_t*,
+template bool CompareBuffers<uint8_t>(const uint8_t*,
+                                      const uint8_t*,
                                       uint32_t,
                                       bool);
 template bool CompareBuffers<int16_t>(const int16_t*,
                                       const int16_t*,
                                       uint32_t,
                                       bool);
-template bool CompareBuffers<uint8_t>(const uint8_t*,
-                                      const uint8_t*,
+template bool CompareBuffers<int32_t>(const int32_t*,
+                                      const int32_t*,
                                       uint32_t,
                                       bool);
 template bool CompareBuffers<double>(const double*,
@@ -348,16 +347,16 @@ template bool CompareBuffers<double>(const double*,
                                      uint32_t,
                                      bool);
 
-template bool CompareBufferToVal<int32_t>(const int32_t*,
-                                          int32_t,
+template bool CompareBufferToVal<uint8_t>(const uint8_t*,
+                                          uint8_t,
                                           uint32_t,
                                           bool);
 template bool CompareBufferToVal<int16_t>(const int16_t*,
                                           int16_t,
                                           uint32_t,
                                           bool);
-template bool CompareBufferToVal<uint8_t>(const uint8_t*,
-                                          uint8_t,
+template bool CompareBufferToVal<int32_t>(const int32_t*,
+                                          int32_t,
                                           uint32_t,
                                           bool);
 

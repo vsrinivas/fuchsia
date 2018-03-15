@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
-
 #include "audio_analysis.h"
 #include "mixer_tests_shared.h"
 
@@ -29,7 +28,7 @@ namespace test {
 // Verify that PointSampler mixes from/to correct buffer locations. Also ensure
 // that it doesn't touch other buffer sections, regardless of 'accumulate'.
 // This first test uses integer lengths/offsets, and a step_size of ONE.
-TEST(Timing, SampleAccuracyPointSamplerBasic) {
+TEST(Timing, Position_Basic_Point) {
   uint32_t frac_step_size = media::audio::Mixer::FRAC_ONE;
   bool mix_result;
   audio::MixerPtr mixer =
@@ -76,7 +75,7 @@ TEST(Timing, SampleAccuracyPointSamplerBasic) {
 // Ensure it doesn't touch other buffer sections, regardless of 'accumulate'
 // flag. Check scenarios when supply > demand, and vice versa, and ==.
 // This first test uses integer lengths/offsets, and a step_size of ONE.
-TEST(Timing, SampleAccuracyLinearSamplerBasic) {
+TEST(Timing, Position_Basic_Linear) {
   uint32_t frac_step_size = media::audio::Mixer::FRAC_ONE;
   bool mix_result;
   // Even though we specify a resampling rate of one, we list divergent sample
@@ -146,7 +145,7 @@ TEST(Timing, SampleAccuracyLinearSamplerBasic) {
 // This test uses fractional lengths/offsets, still with a step_size of ONE.
 // TODO(mpuryear): Change frac_src_frames parameter to be (integer) src_frames,
 // as number of frames was never intended to be fractional.
-TEST(Timing, SampleAccuracyPointSamplerFractional) {
+TEST(Timing, Position_Fractional_Point) {
   uint32_t frac_step_size = media::audio::Mixer::FRAC_ONE;
   bool mix_result;
   audio::MixerPtr mixer =
@@ -195,7 +194,7 @@ TEST(Timing, SampleAccuracyPointSamplerFractional) {
 // This test uses fractional lengths/offsets, still with a step_size of ONE.
 // Today's interpolator divides w/out rounding, leading to slight inaccuracy.
 // TODO(mpuryear): When MTWN-77 and MTWN-74 are fixed, adjust expected values.
-TEST(Timing, SampleAccuracyLinearSamplerFractional) {
+TEST(Timing, Position_Fractional_Linear) {
   uint32_t frac_step_size = media::audio::Mixer::FRAC_ONE;
   bool mix_result;
   // Even though we specify a resampling rate of one, we list divergent sample
@@ -265,7 +264,7 @@ TEST(Timing, SampleAccuracyLinearSamplerFractional) {
 // Inputs trigger various +/- values that should be rounded each direction.
 // Test varies the fractional starting offsets, still with step_size ONE.
 // TODO(mpuryear): After MTWN-74 is fixed, tighten expectations below
-TEST(Timing, InterpolationAccuracy) {
+TEST(Timing, Interpolation_Values) {
   uint32_t frac_step_size = media::audio::Mixer::FRAC_ONE;
   bool mix_result;
   // Even though we specify a resampling rate of one, we list divergent sample
@@ -361,7 +360,7 @@ TEST(Timing, InterpolationAccuracy) {
 // it depends on frac_src_pos, not the frac_step_size into/out of that pos.
 // dst_offset andfrac_src_offset should continue to advance accurately
 // TODO(mpuryear): After MTWN-74 is fixed, tighten expectations below
-TEST(Timing, InterpolationRateAccuracy) {
+TEST(Timing, Interpolation_Rates) {
   bool mix_result;
   audio::MixerPtr mixer =
       SelectMixer(AudioSampleFormat::SIGNED_16, 1, 24000, 1, 44100);

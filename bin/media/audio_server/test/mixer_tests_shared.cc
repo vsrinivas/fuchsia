@@ -50,7 +50,7 @@ audio::OutputFormatterPtr SelectOutputFormatter(ASF dst_format,
   AudioMediaTypeDetailsPtr dst_details = AudioMediaTypeDetails::New();
   dst_details->sample_format = dst_format;
   dst_details->channels = num_channels;
-  dst_details->frames_per_second = 1000;
+  dst_details->frames_per_second = 48000;
 
   audio::OutputFormatterPtr output_formatter =
       audio::OutputFormatter::Select(dst_details);

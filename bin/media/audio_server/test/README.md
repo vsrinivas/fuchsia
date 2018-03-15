@@ -101,8 +101,8 @@ appropriately.
 
 *   MTWN-74
 
-    During resampling, our interpolation uses fractional rates and positions
-for the 'source' data, when creating each 'destination' sample on an integer
+    During resampling, our interpolation uses *fractional* rates and positions
+for the 'source' data as it creates each 'destination' sample on an *integer*
 position. During interpolation, as we scale audio data up and down, we
 down-scale without first rounding, leading to off-by-one inaccuracies.
 

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
-
 #include "audio_analysis.h"
 #include "gtest/gtest.h"
 
@@ -33,7 +32,7 @@ TEST(AnalysisHelpers, GainScaleToDb) {
 }
 
 // Test uint8 version of CompareBuffers, which we use to test output buffers
-TEST(AnalysisHelpers, CompareBuffers8) {
+TEST(AnalysisHelpers, CompareBuffers_8) {
   uint8_t source[] = {0x42, 0x55};
   uint8_t expect[] = {0x42, 0xAA};
 
@@ -44,7 +43,7 @@ TEST(AnalysisHelpers, CompareBuffers8) {
 }
 
 // Test int16 version of CompareBuffers, which we use to test output buffers
-TEST(AnalysisHelpers, CompareBuffers16) {
+TEST(AnalysisHelpers, CompareBuffers_16) {
   int16_t source[] = {-1, 0x1157, 0x5555};
   int16_t expect[] = {-1, 0x1357, 0x5555};
 
@@ -55,7 +54,7 @@ TEST(AnalysisHelpers, CompareBuffers16) {
 }
 
 // Test int32 version of CompareBuffers, which we use to test accum buffers
-TEST(AnalysisHelpers, CompareBuffers32) {
+TEST(AnalysisHelpers, CompareBuffers_32) {
   int32_t source[] = {0x13579BDF, 0x26AE048C, -0x76543210, 0x1234567};
   int32_t expect[] = {0x13579BDF, 0x26AE048C, -0x76543210, 0x7654321};
 
@@ -66,7 +65,7 @@ TEST(AnalysisHelpers, CompareBuffers32) {
 }
 
 // Test uint8 version of this func, which we use to test output buffers
-TEST(AnalysisHelpers, CompareBuffToVal8) {
+TEST(AnalysisHelpers, CompareBuffToVal_8) {
   uint8_t source[] = {0xBB, 0xBB};
 
   // No match ...
@@ -78,7 +77,7 @@ TEST(AnalysisHelpers, CompareBuffToVal8) {
 }
 
 // Test int16 version of this func, which we use to test output buffers
-TEST(AnalysisHelpers, CompareBuffToVal16) {
+TEST(AnalysisHelpers, CompareBuffToVal_16) {
   int16_t source[] = {0xBAD, 0xCAD};
 
   // No match ...
@@ -89,7 +88,7 @@ TEST(AnalysisHelpers, CompareBuffToVal16) {
 }
 
 // Test int32 version of this func, which we use to test accum buffers
-TEST(AnalysisHelpers, CompareBuffToVal32) {
+TEST(AnalysisHelpers, CompareBuffToVal_32) {
   int32_t source[] = {0xF00CAFE, 0xBADF00D};
 
   // No match ...
@@ -101,21 +100,23 @@ TEST(AnalysisHelpers, CompareBuffToVal32) {
 
 // GenerateCosine writes a cosine wave into given buffer & length, at given
 // frequency, magnitude (default 1.0), and phase offset (default false).
-// OverwriteCosine/AccumulateCosine variants eliminate the 'accum' flag.
+// The 'accumulate' flag specifies whether to add into previous contents.
+// OverwriteCosine/AccumulateCosine variants eliminate this flag.
 //
 // The uint8_t variant also provides the 0x80 offset to generated values.
-TEST(AnalysisHelpers, GenerateCosine8) {
+TEST(AnalysisHelpers, GenerateCosine_8) {
   uint8_t source[] = {0, 0xFF};
-  GenerateCosine(source, 2, 0.0, false, 0.0, 0.0);  // false:overwrite source[]
+  // false: overwrite previous values in source[]
+  GenerateCosine(source, fbl::count_of(source), 0.0, false, 0.0, 0.0);
 
-  // Frequency of 0.0 produces constant value, with 0 offset to 0x80..
+  // Frequency 0.0 produces constant value. Val 0 is shifted to 0x80.
   EXPECT_TRUE(CompareBufferToVal(source, static_cast<uint8_t>(0x80),
                                  fbl::count_of(source)));
 }
 
-TEST(AnalysisHelpers, GenerateCosine16) {
+TEST(AnalysisHelpers, GenerateCosine_16) {
   int16_t source[] = {12345, -6543};
-  GenerateCosine(source, 2, 0.0, false, -32766.4);  // overwrite source[]
+  GenerateCosine(source, fbl::count_of(source), 0.0, false, -32766.4);
 
   // Frequency of 0.0 produces constant value, with -.4 rounded toward zero.
   EXPECT_TRUE(CompareBufferToVal(source, static_cast<int16_t>(-32766),
@@ -129,20 +130,23 @@ TEST(AnalysisHelpers, GenerateCosine16) {
   EXPECT_EQ(source[1], -32766);
 }
 
-TEST(AnalysisHelpers, GenerateCosine32) {
+TEST(AnalysisHelpers, GenerateCosine_32) {
   int32_t source[] = {-4000, 0, 4000, 8000};
-  GenerateCosine(source, 4, 1.0, true, 12345.6, M_PI);  // true: accumulate
+
+  // true: add generated signal into existing source[] values
+  GenerateCosine(source, fbl::count_of(source), 1.0, true, 12345.6, M_PI);
 
   // PI phase leads to effective magnitude of -12345.6.
   // At frequency 1.0, the change to the buffer is [-12345.6, 0, +12345.6, 0],
-  // as .6 values are rounded away from zero.
+  // with +.6 values being rounded away from zero.
   int32_t expect[] = {-16346, 0, 16346, 8000};
   EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source)));
 }
 
-TEST(AnalysisHelpers, GenerateCosineDouble) {
+TEST(AnalysisHelpers, GenerateCosine_Double) {
   double source[] = {-4000.0, -83000.0, 4000.0, 78000.0};
-  AccumulateCosine(source, 4, 1.0, 12345.5, M_PI);  // add to existing
+  AccumulateCosine(source, fbl::count_of(source), 1.0, 12345.5,
+                   M_PI);  // add to existing
 
   // PI phase leads to effective magnitude of -12345.5.
   // At frequency 1.0, the change to the buffer is [-12345.5, 0, +12345.5, 0],
@@ -224,7 +228,7 @@ TEST(AnalysisHelpers, FFT) {
     EXPECT_GE(imags[idx], -epsilon) << idx;
   }
 
-  // That same cosine, shifted by PI/2, should have identical reesults, but
+  // That same cosine, shifted by PI/2, should have identical results, but
   // flipped between real and imaginary domains.
   OverwriteCosine(reals, buf_size, 1.0, test_val, -M_PI / 2.0);
   OverwriteCosine(imags, buf_size, 0.0, 0.0, 0.0);
@@ -244,7 +248,7 @@ TEST(AnalysisHelpers, FFT) {
 // frequency at which to analyze audio. It returns magnitude of signal at that
 // frequency, and combined (root-sum-square) magnitude of all OTHER frequencies.
 // For inputs of magnitude 3 and 4, their combination equals 5.
-TEST(AnalysisHelpers, MeasureAudioFreq) {
+TEST(AnalysisHelpers, MeasureAudioFreq_32) {
   int32_t reals[] = {5, -3, 13, -3};  // sinusoids at freq 0,1,2; magns 3,4,6
   double magn_signal = -54.32;        // will be overwritten
   double magn_other = 42.0;           // will be overwritten

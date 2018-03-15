@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
-
 #include "audio_analysis.h"
 #include "mixer_tests_shared.h"
 
@@ -20,7 +19,7 @@ namespace test {
 // Gain tests using the Gain and AScale objects only
 //
 // Do renderer and output gains correctly combine to produce unity scaling?
-TEST(Gain, UnityGain) {
+TEST(Gain, Unity) {
   audio::Gain gain;
   audio::Gain::AScale amplitude_scale;
 
@@ -41,7 +40,7 @@ TEST(Gain, UnityGain) {
 
 // Gain caches any previously set Renderer gain, using it if needed.
 // This verifies the default and caching behavior of the Gain object
-TEST(Gain, GainCaching) {
+TEST(Gain, Caching) {
   audio::Gain gain, expect_gain;
   audio::Gain::AScale amplitude_scale, expect_amplitude_scale;
 
@@ -70,7 +69,7 @@ TEST(Gain, GainCaching) {
 // System independently limits RendererGain and OutputGain to kMaxGain (+24.0
 // dB), intending for their sum to fit into a fixed-point (4.28) container.
 // MTWN-70 relates to audio::Gain's statefulness. Does it need this complexity?
-TEST(Gain, MaxGainClamp) {
+TEST(Gain, MaxClamp) {
   audio::Gain gain, expect_gain;
   audio::Gain::AScale amplitude_scale;
 
@@ -104,7 +103,7 @@ TEST(Gain, MaxGainClamp) {
 
 // System independently limits RendererGain and OutputGain to kMinGain (-160dB).
 // Is scale set to zero, if either (or the combo) is at or below kMinGain?
-TEST(Gain, MinGainMute) {
+TEST(Gain, MinMute) {
   audio::Gain gain;
   audio::Gain::AScale amplitude_scale;
 
@@ -129,7 +128,7 @@ TEST(Gain, MinGainMute) {
 // Does GetGainScale round appropriately when converting dB into AScale?
 // SetRendererGain just saves the given float; GetGainScale produces a
 // fixed-point uint32 (4.28 format), truncating (not rounding) in the process.
-TEST(Gain, GainPrecision) {
+TEST(Gain, Precision) {
   audio::Gain gain;
   gain.SetRendererGain(-159.99f);
   audio::Gain::AScale amplitude_scale = gain.GetGainScale(0.0f);
@@ -158,7 +157,7 @@ TEST(Gain, GainPrecision) {
 //
 // Verify whether per-stream gain interacts linearly with accumulation buffer.
 // TODO(mpuryear): when we fix MTWN-82, update our expected values.
-TEST(Gain, DataScalingLinearity) {
+TEST(Gain, Scaling_Linearity) {
   int16_t source[] = {3300, 3276, 35, 4, -14, -25, -3276, -3291};
   int32_t accum[8];
   audio::Gain gain;
@@ -198,7 +197,7 @@ TEST(Gain, DataScalingLinearity) {
 // are unable to attenuate negative vals to 0 (even -0.00000001 stays -1).
 // In the future, the system should round fractional data values away from 0.
 // By "round away from zero", we mean: 1.5 --> 2; -1.5 --> -2; -1.1 --> -1.
-TEST(Gain, DataScalingPrecision) {
+TEST(Gain, Scaling_Precision) {
   // TODO(mpuryear): when MTWN-73 is fixed, amend these values
   int16_t source[] = {32767, -32768, -1, 1};  // max/min values
   int32_t accum[4];
@@ -261,7 +260,7 @@ TEST(Gain, Accumulator) {
 }
 
 // How does our accumulator behave at its limits? Does it clamp or rollover?
-TEST(Gain, AccumulatorClamp) {
+TEST(Gain, Accumulator_Clamp) {
   int16_t source[] = {32767, -32768};
   // if we add these vals, accum SHOULD clamp to int32::max and int32::min
   // Today, our accumulator actually rolls over. Fix the test when it clamps.
