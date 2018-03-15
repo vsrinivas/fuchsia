@@ -217,6 +217,9 @@ evalifsubshell(zx_handle_t ast_vmo)
 		exit(status);
 
 	struct nodelist *nlist = codec_decode(buffer, size);
+	if (nlist == NULL) {
+		return;
+	}
 	while (nlist->next) {
 		evaltree(nlist->n, 0);
 		nlist = nlist->next;
