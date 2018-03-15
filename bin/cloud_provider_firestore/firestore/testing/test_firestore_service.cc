@@ -42,6 +42,15 @@ void TestFirestoreService::GetDocument(
   get_document_records.push_back({std::move(request), std::move(callback)});
 }
 
+void TestFirestoreService::ListDocuments(
+    google::firestore::v1beta1::ListDocumentsRequest request,
+    std::shared_ptr<grpc::CallCredentials> call_credentials,
+    std::function<void(grpc::Status,
+                       google::firestore::v1beta1::ListDocumentsResponse)>
+        callback) {
+  list_documents_records.push_back({std::move(request), std::move(callback)});
+}
+
 void TestFirestoreService::CreateDocument(
     google::firestore::v1beta1::CreateDocumentRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,
@@ -51,9 +60,11 @@ void TestFirestoreService::CreateDocument(
 }
 
 void TestFirestoreService::DeleteDocument(
-    google::firestore::v1beta1::DeleteDocumentRequest /*request*/,
+    google::firestore::v1beta1::DeleteDocumentRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,
-    std::function<void(grpc::Status)> /*callback*/) {}
+    std::function<void(grpc::Status)> callback) {
+  delete_document_records.push_back({std::move(request), std::move(callback)});
+}
 
 std::unique_ptr<ListenCallHandler> TestFirestoreService::Listen(
     std::shared_ptr<grpc::CallCredentials> call_credentials,

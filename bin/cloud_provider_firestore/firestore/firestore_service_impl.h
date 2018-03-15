@@ -44,6 +44,9 @@ struct SingleResponseCall {
 using DocumentResponseCall =
     SingleResponseCall<google::firestore::v1beta1::Document>;
 
+using ListDocumentsResponseCall =
+    SingleResponseCall<google::firestore::v1beta1::ListDocumentsResponse>;
+
 using EmptyResponseCall = SingleResponseCall<google::protobuf::Empty>;
 
 // Implementation of the FirestoreService interface.
@@ -68,6 +71,13 @@ class FirestoreServiceImpl : public FirestoreService {
       google::firestore::v1beta1::GetDocumentRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
       std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+          callback) override;
+
+  void ListDocuments(
+      google::firestore::v1beta1::ListDocumentsRequest request,
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
+      std::function<void(grpc::Status,
+                         google::firestore::v1beta1::ListDocumentsResponse)>
           callback) override;
 
   void CreateDocument(
@@ -100,6 +110,8 @@ class FirestoreServiceImpl : public FirestoreService {
   grpc::CompletionQueue cq_;
 
   callback::AutoCleanableSet<DocumentResponseCall> document_response_calls_;
+  callback::AutoCleanableSet<ListDocumentsResponseCall>
+      list_documents_response_calls_;
   callback::AutoCleanableSet<EmptyResponseCall> empty_response_calls_;
 
   callback::AutoCleanableSet<ListenCall> listen_calls_;

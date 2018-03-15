@@ -47,6 +47,14 @@ class FirestoreService {
       std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
           callback) = 0;
 
+  // Lists documents.
+  virtual void ListDocuments(
+      google::firestore::v1beta1::ListDocumentsRequest request,
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
+      std::function<void(grpc::Status,
+                         google::firestore::v1beta1::ListDocumentsResponse)>
+          callback) = 0;
+
   // Creates a new document.
   virtual void CreateDocument(
       google::firestore::v1beta1::CreateDocumentRequest request,

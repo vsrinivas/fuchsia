@@ -20,10 +20,22 @@ struct GetDocumentRecord {
       callback;
 };
 
+struct ListDocumentsRecord {
+  google::firestore::v1beta1::ListDocumentsRequest request;
+  std::function<void(grpc::Status,
+                     google::firestore::v1beta1::ListDocumentsResponse)>
+      callback;
+};
+
 struct CreateDocumentRecord {
   google::firestore::v1beta1::CreateDocumentRequest request;
   std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
       callback;
+};
+
+struct DeleteDocumentRecord {
+  google::firestore::v1beta1::DeleteDocumentRequest request;
+  std::function<void(grpc::Status)> callback;
 };
 
 class TestFirestoreService : public FirestoreService {
@@ -40,6 +52,13 @@ class TestFirestoreService : public FirestoreService {
       google::firestore::v1beta1::GetDocumentRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
       std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
+          callback) override;
+
+  void ListDocuments(
+      google::firestore::v1beta1::ListDocumentsRequest request,
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
+      std::function<void(grpc::Status,
+                         google::firestore::v1beta1::ListDocumentsResponse)>
           callback) override;
 
   void CreateDocument(
@@ -59,7 +78,9 @@ class TestFirestoreService : public FirestoreService {
   void ShutDown(fxl::Closure callback) override;
 
   std::vector<GetDocumentRecord> get_document_records;
+  std::vector<ListDocumentsRecord> list_documents_records;
   std::vector<CreateDocumentRecord> create_document_records;
+  std::vector<DeleteDocumentRecord> delete_document_records;
   std::vector<ListenCallClient*> listen_clients;
 
   fxl::Closure shutdown_callback;

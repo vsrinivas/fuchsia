@@ -81,6 +81,21 @@ void FirestoreServiceImpl::GetDocument(
       &call, std::move(response_reader), std::move(callback));
 }
 
+void FirestoreServiceImpl::ListDocuments(
+    google::firestore::v1beta1::ListDocumentsRequest request,
+    std::shared_ptr<grpc::CallCredentials> call_credentials,
+    std::function<void(grpc::Status,
+                       google::firestore::v1beta1::ListDocumentsResponse)>
+        callback) {
+  FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+  ListDocumentsResponseCall& call = list_documents_response_calls_.emplace();
+  call.context.set_credentials(call_credentials);
+  auto response_reader =
+      firestore_->AsyncListDocuments(&call.context, std::move(request), &cq_);
+  MakeCall<google::firestore::v1beta1::ListDocumentsResponse>(
+      &call, std::move(response_reader), std::move(callback));
+}
+
 void FirestoreServiceImpl::CreateDocument(
     google::firestore::v1beta1::CreateDocumentRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,

@@ -6,6 +6,8 @@
 
 #include <google/firestore/v1beta1/firestore.pb.h>
 
+#include "garnet/lib/callback/scoped_callback.h"
+#include "garnet/lib/callback/waiter.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
@@ -26,6 +28,34 @@ std::string GetDevicePath(fxl::StringView user_path,
   return fxl::Concatenate({user_path, kSeparator, kDeviceCollection, kSeparator,
                            encoded_fingerprint});
 }
+
+class GrpcStatusAccumulator {
+ public:
+  bool PrepareCall() { return true; }
+
+  bool Update(bool /*token*/, grpc::Status status) {
+    result_status_ = status;
+    return result_status_.ok();
+  }
+
+  grpc::Status Result() { return result_status_; }
+
+ private:
+  grpc::Status result_status_ = grpc::Status::OK;
+};
+
+class GrpcStatusWaiter : public callback::BaseWaiter<GrpcStatusAccumulator,
+                                                     grpc::Status,
+                                                     grpc::Status> {
+ public:
+  GrpcStatusWaiter()
+      : callback::BaseWaiter<GrpcStatusAccumulator, grpc::Status, grpc::Status>(
+            GrpcStatusAccumulator()) {}
+
+  static fxl::RefPtr<GrpcStatusWaiter> Create() {
+    return fxl::MakeRefCounted<GrpcStatusWaiter>();
+  }
+};
 }  // namespace
 
 DeviceSetImpl::DeviceSetImpl(
@@ -36,7 +66,8 @@ DeviceSetImpl::DeviceSetImpl(
     : user_path_(std::move(user_path)),
       credentials_provider_(credentials_provider),
       firestore_service_(firestore_service),
-      binding_(this, std::move(request)) {
+      binding_(this, std::move(request)),
+      weak_ptr_factory_(this) {
   FXL_DCHECK(!user_path_.empty());
   FXL_DCHECK(credentials_provider_);
   FXL_DCHECK(firestore_service_);
@@ -123,8 +154,61 @@ void DeviceSetImpl::SetWatcher(
 }
 
 void DeviceSetImpl::Erase(const EraseCallback& callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
+  auto request = google::firestore::v1beta1::ListDocumentsRequest();
+  request.set_parent(user_path_);
+  request.set_collection_id(kDeviceCollection);
+
+  credentials_provider_->GetCredentials(
+      [this, request = std::move(request),
+       callback](auto call_credentials) mutable {
+        firestore_service_->ListDocuments(
+            std::move(request), call_credentials,
+            [this, call_credentials, callback = std::move(callback)](
+                auto status, auto result) mutable {
+              if (!status.ok()) {
+                FXL_LOG(ERROR) << "Server request failed, "
+                               << "error message: " << status.error_message()
+                               << ", error details: " << status.error_details();
+                callback(ConvertGrpcStatus(status.error_code()));
+                return;
+              }
+              OnGotDocumentsToErase(std::move(call_credentials),
+                                    std::move(result), std::move(callback));
+            });
+      });
+}
+
+void DeviceSetImpl::OnGotDocumentsToErase(
+    std::shared_ptr<grpc::CallCredentials> call_credentials,
+    google::firestore::v1beta1::ListDocumentsResponse documents_response,
+    EraseCallback callback) {
+  if (!documents_response.next_page_token().empty()) {
+    // TODO(ppi): handle paginated response.
+    FXL_LOG(ERROR)
+        << "Failed to erase the device map - too many devices in the map.";
+    callback(cloud_provider::Status::INTERNAL_ERROR);
+    return;
+  }
+
+  auto waiter = GrpcStatusWaiter::Create();
+  for (const auto& document : documents_response.documents()) {
+    auto request = google::firestore::v1beta1::DeleteDocumentRequest();
+    request.set_name(document.name());
+    firestore_service_->DeleteDocument(std::move(request), call_credentials,
+                                       waiter->NewCallback());
+  }
+  waiter->Finalize(callback::MakeScoped(
+      weak_ptr_factory_.GetWeakPtr(),
+      [callback = std::move(callback)](grpc::Status status) {
+        if (!status.ok()) {
+          FXL_LOG(ERROR) << "Server request failed, "
+                         << "error message: " << status.error_message()
+                         << ", error details: " << status.error_details();
+          callback(ConvertGrpcStatus(status.error_code()));
+          return;
+        }
+        callback(cloud_provider::Status::OK);
+      }));
 }
 
 void DeviceSetImpl::OnConnected() {

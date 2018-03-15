@@ -11,6 +11,7 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call_client.h"
@@ -46,6 +47,11 @@ class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
 
   void Erase(const EraseCallback& callback) override;
 
+  void OnGotDocumentsToErase(
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
+      google::firestore::v1beta1::ListDocumentsResponse documents_response,
+      EraseCallback callback);
+
   // ListenCallClient:
   void OnConnected() override;
 
@@ -65,6 +71,9 @@ class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
   std::string watched_fingerprint_;
   SetWatcherCallback set_watcher_callback_;
   std::unique_ptr<ListenCallHandler> listen_call_handler_;
+
+  // Must be the last member.
+  fxl::WeakPtrFactory<DeviceSetImpl> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceSetImpl);
 };

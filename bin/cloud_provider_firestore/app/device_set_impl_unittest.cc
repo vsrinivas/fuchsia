@@ -166,5 +166,62 @@ TEST_F(DeviceSetImplTest, SetWatcherResultCloudErased) {
   EXPECT_EQ(1, on_cloud_erased_calls_);
 }
 
+TEST_F(DeviceSetImplTest, Erase) {
+  bool callback_called = false;
+  auto status = cloud_provider::Status::INTERNAL_ERROR;
+  device_set_->Erase(
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(callback_called);
+  EXPECT_EQ(1u, firestore_service_.list_documents_records.size());
+
+  auto response = google::firestore::v1beta1::ListDocumentsResponse();
+  response.add_documents()->set_name("some/document/name");
+  response.add_documents()->set_name("some/other/name");
+  firestore_service_.list_documents_records[0].callback(grpc::Status::OK,
+                                                        std::move(response));
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(callback_called);
+  EXPECT_EQ(2u, firestore_service_.delete_document_records.size());
+  EXPECT_EQ("some/document/name",
+            firestore_service_.delete_document_records[0].request.name());
+  EXPECT_EQ("some/other/name",
+            firestore_service_.delete_document_records[1].request.name());
+
+  firestore_service_.delete_document_records[0].callback(grpc::Status::OK);
+  firestore_service_.delete_document_records[1].callback(grpc::Status::OK);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+}
+
+// Paginated response from the device map list is not currently handled - we
+// give up and return INTERNAL_ERROR. When we add support for pagination, this
+// test should be edited to verify the correct behavior.
+TEST_F(DeviceSetImplTest, EraseWithPaginatedDeviceListResponse) {
+  bool callback_called = false;
+  auto status = cloud_provider::Status::OK;
+  device_set_->Erase(
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(callback_called);
+  EXPECT_EQ(1u, firestore_service_.list_documents_records.size());
+
+  auto response = google::firestore::v1beta1::ListDocumentsResponse();
+  response.add_documents()->set_name("some/document/name");
+  response.add_documents()->set_name("some/other/name");
+  response.set_next_page_token("token");
+  firestore_service_.list_documents_records[0].callback(grpc::Status::OK,
+                                                        std::move(response));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(cloud_provider::Status::INTERNAL_ERROR, status);
+}
+
 }  // namespace
 }  // namespace cloud_provider_firestore
