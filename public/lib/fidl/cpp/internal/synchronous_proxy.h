@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_SYNCHRONOUS_PROXY_H_
 #define LIB_FIDL_CPP_INTERNAL_SYNCHRONOUS_PROXY_H_
 
-#include <fidl/cpp/message.h>
+#include <lib/fidl/cpp/message.h>
 #include <zircon/fidl.h>
 #include <zx/channel.h>
 

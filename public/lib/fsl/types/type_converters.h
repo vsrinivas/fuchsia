@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_TYPE_CONVERTERS_H_
 #define LIB_FIDL_CPP_TYPE_CONVERTERS_H_
 
-#include <fidl/cpp/array.h>
+#include <lib/fidl/cpp/array.h>
 
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/vector.h"

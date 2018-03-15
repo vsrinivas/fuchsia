@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_CODING_TRAITS_H_
 #define LIB_FIDL_CPP_CODING_TRAITS_H_
 
-#include <fidl/cpp/array.h>
+#include <lib/fidl/cpp/array.h>
 
 #include <memory>
 

@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_MESSAGE_HANDLER_H_
 #define LIB_FIDL_CPP_INTERNAL_MESSAGE_HANDLER_H_
 
-#include <fidl/cpp/message.h>
+#include <lib/fidl/cpp/message.h>
 #include <zircon/types.h>
 
 namespace fidl {

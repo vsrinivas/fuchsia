@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_HEADER_H_
 #define LIB_FIDL_CPP_INTERNAL_HEADER_H_
 
-#include <fidl/cpp/array.h>
+#include <lib/fidl/cpp/array.h>
 #include <zx/channel.h>
 #include <zx/event.h>
 #include <zx/eventpair.h>

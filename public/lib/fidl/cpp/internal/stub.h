@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_STUB_H_
 #define LIB_FIDL_CPP_INTERNAL_STUB_H_
 
-#include <fidl/cpp/message.h>
+#include <lib/fidl/cpp/message.h>
 #include <zircon/types.h>
 
 #include "lib/fidl/cpp/internal/pending_response.h"

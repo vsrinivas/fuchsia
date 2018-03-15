@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/test/fidl_types.h"
 
-#include <fidl/internal.h>
+#include <lib/fidl/internal.h>
 #include <stdint.h>
 
 // All sizes in fidl encoding tables are 32 bits. The fidl compiler

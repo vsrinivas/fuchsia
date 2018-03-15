@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_STUB_CONTROLLER_H_
 #define LIB_FIDL_CPP_INTERNAL_STUB_CONTROLLER_H_
 
-#include <fidl/cpp/message.h>
+#include <lib/fidl/cpp/message.h>
 #include <zx/channel.h>
 
 #include <memory>

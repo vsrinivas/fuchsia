@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_TEST_FIDL_TYPES_H_
 #define LIB_FIDL_CPP_TEST_FIDL_TYPES_H_
 
-#include <fidl/coding.h>
+#include <lib/fidl/coding.h>
 
 #if defined(__cplusplus)
 extern "C" {

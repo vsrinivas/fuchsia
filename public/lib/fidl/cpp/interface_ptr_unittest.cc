@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/interface_ptr.h"
 
-#include <fidl/cpp/message_buffer.h>
+#include <lib/fidl/cpp/message_buffer.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"

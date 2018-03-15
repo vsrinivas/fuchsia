@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/interface_ptr.h"
 
-#include <fidl/cpp/message_buffer.h>
+#include <lib/fidl/cpp/message_buffer.h>
 
 #include <thread>
 

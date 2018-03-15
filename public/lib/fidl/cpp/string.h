@@ -5,8 +5,8 @@
 #ifndef LIB_FIDL_CPP_STRING_H_
 #define LIB_FIDL_CPP_STRING_H_
 
-#include <fidl/cpp/builder.h>
-#include <fidl/cpp/string_view.h>
+#include <lib/fidl/cpp/builder.h>
+#include <lib/fidl/cpp/string_view.h>
 
 #include <iosfwd>
 #include <string>

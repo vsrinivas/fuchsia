@@ -5,8 +5,8 @@
 #ifndef LIB_FIDL_CPP_VECTOR_H_
 #define LIB_FIDL_CPP_VECTOR_H_
 
-#include <fidl/cpp/builder.h>
-#include <fidl/cpp/vector_view.h>
+#include <lib/fidl/cpp/builder.h>
+#include <lib/fidl/cpp/vector_view.h>
 
 #include <utility>
 #include <vector>

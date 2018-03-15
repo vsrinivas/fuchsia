@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/cpp/array.h>
+#include <lib/fidl/cpp/array.h>
 #include <zircon/compiler.h>
 
 #include "lib/fidl/cpp/vector.h"

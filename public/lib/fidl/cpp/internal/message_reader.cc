@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/internal/message_reader.h"
 
-#include <fidl/cpp/message_buffer.h>
+#include <lib/fidl/cpp/message_buffer.h>
 #include <lib/async/default.h>
 #include <zircon/assert.h>
 
