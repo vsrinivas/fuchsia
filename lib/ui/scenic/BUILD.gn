@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 
 source_set("scenic") {
+  # TODO(TO-887): remove me.
+  check_includes = false
+
   sources = [
     "clock.cc",
     "clock.h",

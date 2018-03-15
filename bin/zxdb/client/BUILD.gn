@@ -4,6 +4,7 @@
 
 static_library("client") {
   public = [
+    "agent_connection.h",
     "client_object.h",
     "err.h",
     "process.h",
@@ -18,7 +19,6 @@ static_library("client") {
 
   sources = [
     "agent_connection.cc",
-    "agent_connection.h",
     "client_object.cc",
     "err.cc",
     "process.cc",
