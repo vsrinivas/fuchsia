@@ -6,6 +6,7 @@
 
 #include <zx/handle.h>
 #include <zx/object.h>
+#include <zx/pmt.h>
 #include <zx/vmo.h>
 
 namespace zx {
@@ -34,6 +35,12 @@ public:
 
     zx_status_t unpin(zx_paddr_t base) const {
         return zx_bti_unpin(get(), base);
+    }
+
+    zx_status_t pin_new(uint32_t options, const vmo& vmo, uint64_t offset, uint64_t size,
+                        zx_paddr_t* addrs, size_t addrs_count, pmt* pmt) const {
+        return zx_bti_pin_new(get(), options, vmo.get(), offset, size, addrs, addrs_count,
+                              pmt->reset_and_get_address());
     }
 };
 

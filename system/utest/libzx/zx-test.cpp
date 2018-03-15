@@ -121,6 +121,13 @@ static bool bti_compilation_test() {
     END_TEST;
 }
 
+static bool pmt_compilation_test() {
+    BEGIN_TEST;
+    zx::pmt pmt;
+    // TODO(teisenbe): test more.
+    END_TEST;
+}
+
 static bool channel_test() {
     BEGIN_TEST;
     zx::channel channel[2];
@@ -368,6 +375,7 @@ RUN_TEST(handle_replace_test)
 RUN_TEST(event_test)
 RUN_TEST(event_duplicate_test)
 RUN_TEST(bti_compilation_test)
+RUN_TEST(pmt_compilation_test)
 RUN_TEST(channel_test)
 RUN_TEST(channel_rw_test)
 RUN_TEST(channel_rw_etc_test)
