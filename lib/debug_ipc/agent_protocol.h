@@ -66,5 +66,6 @@ void WriteReply(const ReadMemoryReply& reply,
 void WriteNotifyProcess(const NotifyProcess& notify, MessageWriter* writer);
 void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
                        MessageWriter* writer);
+void WriteNotifyException(const NotifyException& notify, MessageWriter* writer);
 
 }  // namespace debug_ipc

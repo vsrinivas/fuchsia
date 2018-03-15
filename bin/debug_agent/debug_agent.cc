@@ -4,6 +4,7 @@
 
 #include "garnet/bin/debug_agent/debug_agent.h"
 
+#include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
 #include "garnet/bin/debug_agent/launcher.h"
@@ -85,10 +86,16 @@ void DebugAgent::OnStreamData() {
   switch (header.type) {
     DISPATCH(Hello);
     DISPATCH(Launch);
-    DISPATCH(Attach);
     DISPATCH(ProcessTree);
     DISPATCH(Threads);
     DISPATCH(ReadMemory);
+
+    // Attach is special because it needs to follow the reply immediately with
+    // a series of notifications about the current threads. This means it
+    // can't use the automatic reply sending of the DispatchMessage function.
+    case debug_ipc::MsgHeader::Type::kAttach:
+      OnAttach(std::move(buffer));
+      break;
 
     // Explicitly no "default" to get warnings about unhandled message types,
     // but need to handle these "not a message" types to avoid this warning.
@@ -97,6 +104,7 @@ void DebugAgent::OnStreamData() {
     case debug_ipc::MsgHeader::Type::kNotifyProcessExiting:
     case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
     case debug_ipc::MsgHeader::Type::kNotifyThreadExiting:
+    case debug_ipc::MsgHeader::Type::kNotifyException:
       break;  // Avoid warning
   }
 
@@ -126,17 +134,51 @@ void DebugAgent::OnProcessTerminated(zx_koid_t process_koid) {
 
 void DebugAgent::OnThreadStarting(const zx::thread& thread, zx_koid_t proc_koid,
                                   zx_koid_t thread_koid) {
-  debug_ipc::NotifyThread notify;
-  notify.process_koid = proc_koid;
-  FillThreadRecord(thread, &notify.record);
-
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadStarting,
-                               notify, &writer);
-  stream().Write(writer.MessageComplete());
+  debug_ipc::ThreadRecord record;
+  FillThreadRecord(thread, &record);
+  SendThreadNotification(proc_koid, record);
 
   // The thread will currently be in a suspended state, resume it.
   thread.resume(ZX_RESUME_EXCEPTION);
+}
+
+void DebugAgent::OnException(const zx::thread& thread, zx_koid_t proc_koid,
+                             uint32_t type) {
+  debug_ipc::NotifyException notify;
+  notify.process_koid = proc_koid;
+  FillThreadRecord(thread, &notify.thread);
+
+  switch (type) {
+    case ZX_EXCP_SW_BREAKPOINT:
+      notify.type = debug_ipc::NotifyException::Type::kSoftware;
+      break;
+    case ZX_EXCP_HW_BREAKPOINT:
+      notify.type = debug_ipc::NotifyException::Type::kHardware;
+      break;
+    default:
+      notify.type = debug_ipc::NotifyException::Type::kGeneral;
+      break;
+  }
+
+  zx_thread_state_general_regs regs;
+  zx_thread_read_state(thread.get(), ZX_THREAD_STATE_GENERAL_REGS, &regs,
+                       sizeof(regs));
+#if defined(__x86_64__)
+  notify.ip = regs.rip;
+  notify.sp = regs.rsp;
+#elif defined(__aarch64__)
+  notify.ip = regs.pc;
+  notify.sp = regs.sp;
+#else
+  #error Unsupported architecture.
+#endif
+
+  // Send notification.
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyException(notify, &writer);
+  stream().Write(writer.MessageComplete());
+
+  // Keep the thread suspended for the client.
 }
 
 void DebugAgent::OnThreadExiting(const zx::thread& thread, zx_koid_t proc_koid,
@@ -177,16 +219,36 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
   }
 }
 
-void DebugAgent::OnAttach(const debug_ipc::AttachRequest& request,
-                          debug_ipc::AttachReply* reply) {
-  zx::process process = GetProcessFromKoid(request.koid);
-  if (!process.is_valid()) {
-    reply->status = ZX_ERR_NOT_FOUND;
+void DebugAgent::OnAttach(std::vector<char> serialized) {
+  debug_ipc::MessageReader reader(std::move(serialized));
+  debug_ipc::AttachRequest request;
+  uint32_t transaction_id = 0;
+  if (!debug_ipc::ReadRequest(&reader, &request, &transaction_id)) {
+    fprintf(stderr, "Got bad debugger attach request, ignoring.\n");
     return;
   }
-  reply->process_name = NameForObject(process);
-  AddDebuggedProcess(request.koid, std::move(process));
-  reply->status = ZX_OK;
+
+  // Don't return early since we must send the reply at the bottom.
+  debug_ipc::AttachReply reply;
+
+  zx::process process = GetProcessFromKoid(request.koid);
+  zx_handle_t process_handle = process.get();
+  if (process.is_valid()) {
+    reply.process_name = NameForObject(process);
+    AddDebuggedProcess(request.koid, std::move(process));
+    reply.status = ZX_OK;
+  } else {
+    reply.status = ZX_ERR_NOT_FOUND;
+  }
+
+  // Send the reply.
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteReply(reply, transaction_id, &writer);
+  stream().Write(writer.MessageComplete());
+
+  // For valid attaches, follow up with the current thread list.
+  if (process_handle)
+    SendCurrentThreads(process_handle, request.koid);
 }
 
 void DebugAgent::OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
@@ -204,6 +266,7 @@ void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
 
 void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                               debug_ipc::ReadMemoryReply* reply) {
+  // TODO(brettw) implement this.
 }
 
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
@@ -227,4 +290,24 @@ void DebugAgent::RemoveDebuggedProcess(zx_koid_t koid) {
 
   handler_->Detach(found->second.koid());
   procs_.erase(found);
+}
+
+void DebugAgent::SendCurrentThreads(zx_handle_t process,
+                                    zx_koid_t proc_koid) {
+  std::vector<debug_ipc::ThreadRecord> threads;
+  GetProcessThreads(process, &threads);
+  for (const auto& thread : threads)
+    SendThreadNotification(proc_koid, thread);
+}
+
+void DebugAgent::SendThreadNotification(zx_koid_t proc_koid,
+                                        const debug_ipc::ThreadRecord& record) {
+  debug_ipc::NotifyThread notify;
+  notify.process_koid = proc_koid;
+  notify.record = record;
+
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadStarting,
+                               notify, &writer);
+  stream().Write(writer.MessageComplete());
 }

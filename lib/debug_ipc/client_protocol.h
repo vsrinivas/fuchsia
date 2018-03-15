@@ -65,5 +65,6 @@ bool ReadReply(MessageReader* reader,
 
 bool ReadNotifyProcess(MessageReader* reader, NotifyProcess* notify);
 bool ReadNotifyThread(MessageReader* reader, NotifyThread* notify);
+bool ReadNotifyException(MessageReader* reader, NotifyException* notify);
 
 }  // namespace debug_ipc

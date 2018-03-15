@@ -6,7 +6,8 @@
 
 #include <stdio.h>
 
-#include "garnet/bin/zxdb/client/process.h"
+#include "garnet/bin/zxdb/client/process_impl.h"
+#include "garnet/bin/zxdb/client/thread_impl.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -128,12 +129,33 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
           process->OnThreadStarting(thread.record);
         else
           process->OnThreadExiting(thread.record);
+      } else {
+        fprintf(stderr, "Warning: received thread notification for an "
+                "unexpected process.");
       }
+      break;
+    }
+    case debug_ipc::MsgHeader::Type::kNotifyException: {
+      debug_ipc::NotifyException notify;
+      if (!debug_ipc::ReadNotifyException(&reader, &notify))
+        return;
+      ThreadImpl* thread = ThreadImplFromKoid(
+          notify.process_koid, notify.thread.koid);
+      if (thread)
+        thread->OnException(notify);
       break;
     }
     default:
       FXL_NOTREACHED();  // Unexpected notification.
   }
+}
+
+ThreadImpl* Session::ThreadImplFromKoid(uint64_t process_koid,
+                                        uint64_t thread_koid) {
+  ProcessImpl* process = system_.ProcessImplFromKoid(process_koid);
+  if (!process)
+    return nullptr;
+  return process->GetThreadImplFromKoid(thread_koid);
 }
 
 }  // namespace zxdb

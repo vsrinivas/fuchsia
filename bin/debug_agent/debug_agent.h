@@ -31,6 +31,8 @@ class DebugAgent : public ExceptionHandler::Sink {
                         zx_koid_t thread_koid) override;
   void OnThreadExiting(const zx::thread& thread, zx_koid_t proc_koid,
                         zx_koid_t thread_koid) override;
+  void OnException(const zx::thread& thread, zx_koid_t proc_koid,
+                   uint32_t type) override;
 
  private:
   // IPC handlers.
@@ -38,20 +40,24 @@ class DebugAgent : public ExceptionHandler::Sink {
                debug_ipc::HelloReply* reply);
   void OnLaunch(const debug_ipc::LaunchRequest& request,
                 debug_ipc::LaunchReply* reply);
-  void OnAttach(const debug_ipc::AttachRequest& request,
-                debug_ipc::AttachReply* reply);
+  void OnAttach(std::vector<char> serialized);
   void OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                      debug_ipc::ProcessTreeReply* reply);
   void OnThreads(const debug_ipc::ThreadsRequest& request,
                  debug_ipc::ThreadsReply* reply);
   void OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                     debug_ipc::ReadMemoryReply* reply);
-
   // Returns the debugged process for the given koid or null if not found.
   DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
 
   void AddDebuggedProcess(zx_koid_t koid, zx::process proc);
   void RemoveDebuggedProcess(zx_koid_t koid);
+
+  // Sends all current threads or one specific thread information as new thread
+  // notifications about the given process.
+  void SendCurrentThreads(zx_handle_t process, zx_koid_t proc_koid);
+  void SendThreadNotification(zx_koid_t proc_koid,
+                              const debug_ipc::ThreadRecord& record);
 
   ExceptionHandler* handler_;  // Non-owning.
 

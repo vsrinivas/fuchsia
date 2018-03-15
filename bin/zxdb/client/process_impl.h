@@ -22,11 +22,14 @@ class ProcessImpl : public Process {
   ProcessImpl(TargetImpl* target, uint64_t koid, const std::string& name);
   ~ProcessImpl() override;
 
+  ThreadImpl* GetThreadImplFromKoid(uint64_t koid);
+
   // Process implementation:
   Target* GetTarget() const override;
   uint64_t GetKoid() const override;
   const std::string& GetName() const override;
   std::vector<Thread*> GetThreads() const override;
+  Thread* GetThreadFromKoid(uint64_t koid) override;
   void SyncThreads(std::function<void()> callback) override;
   void OnThreadStarting(const debug_ipc::ThreadRecord& record) override;
   void OnThreadExiting(const debug_ipc::ThreadRecord& record) override;

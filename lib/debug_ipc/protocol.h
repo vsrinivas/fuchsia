@@ -32,6 +32,7 @@ struct MsgHeader {
     kNotifyProcessExiting,
     kNotifyThreadStarting,
     kNotifyThreadExiting,
+    kNotifyException,
 
     kNumMessages
   };
@@ -67,6 +68,8 @@ struct LaunchReply {
   std::string process_name;
 };
 
+// The debug agent will follow a successful AttachReply with notifications for
+// all threads currently existing in the attached process.
 struct AttachRequest {
   uint64_t koid;
 };
@@ -108,6 +111,25 @@ struct NotifyProcess {
 struct NotifyThread {
   uint64_t process_koid = 0;
   ThreadRecord record;
+};
+
+// Data passed for exceptions.
+struct NotifyException {
+  enum class Type : uint32_t {
+    kGeneral = 0,
+    kHardware,
+    kSoftware,
+
+    kLast  // Not an actual exception type, for range checking.
+  };
+
+  uint64_t process_koid = 0;
+  ThreadRecord thread;
+
+  Type type = Type::kGeneral;
+
+  uint64_t ip = 0;  // Instruction pointer.
+  uint64_t sp = 0;  // Stack pointer.
 };
 
 #pragma pack(pop)

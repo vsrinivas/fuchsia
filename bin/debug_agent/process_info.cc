@@ -9,6 +9,33 @@
 #include <zx/thread.h>
 
 #include "garnet/bin/debug_agent/object_util.h"
+#include "garnet/public/lib/fxl/logging.h"
+
+namespace {
+
+debug_ipc::ThreadRecord::State ThreadStateToEnum(uint32_t state) {
+  struct Mapping {
+    uint32_t int_state;
+    debug_ipc::ThreadRecord::State enum_state;
+  };
+  static const Mapping mappings[] = {
+    { ZX_THREAD_STATE_NEW, debug_ipc::ThreadRecord::State::kNew },
+    { ZX_THREAD_STATE_RUNNING, debug_ipc::ThreadRecord::State::kRunning },
+    { ZX_THREAD_STATE_SUSPENDED, debug_ipc::ThreadRecord::State::kSuspended },
+    { ZX_THREAD_STATE_BLOCKED, debug_ipc::ThreadRecord::State::kBlocked },
+    { ZX_THREAD_STATE_DYING, debug_ipc::ThreadRecord::State::kDying },
+    { ZX_THREAD_STATE_DEAD, debug_ipc::ThreadRecord::State::kDead }
+  };
+
+  for (const Mapping& mapping : mappings) {
+    if (mapping.int_state == state)
+      return mapping.enum_state;
+  }
+  FXL_NOTREACHED();
+  return debug_ipc::ThreadRecord::State::kDead;
+}
+
+}  // namespace
 
 zx_status_t GetProcessInfo(zx_handle_t process, zx_info_process* info) {
   return zx_object_get_info(process, ZX_INFO_PROCESS, info,
@@ -35,4 +62,13 @@ void FillThreadRecord(const zx::thread& thread,
                       debug_ipc::ThreadRecord* record) {
   record->koid = KoidForObject(thread);
   record->name = NameForObject(thread);
+
+  zx_info_thread info;
+  if (thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr) ==
+      ZX_OK) {
+    record->state = ThreadStateToEnum(info.state);
+  } else {
+    FXL_NOTREACHED();
+    record->state = debug_ipc::ThreadRecord::State::kDead;
+  }
 }

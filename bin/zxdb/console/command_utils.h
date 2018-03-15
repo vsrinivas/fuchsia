@@ -6,6 +6,8 @@
 
 #include <string>
 
+#include "garnet/lib/debug_ipc/records.h"
+
 namespace zxdb {
 
 class Command;
@@ -22,6 +24,8 @@ class Thread;
 // The param_desc will be used in the error string, for example "process koid".
 [[nodiscard]] Err ReadUint64Arg(const Command& cmd, size_t arg_index,
                                 const char* param_desc, uint64_t* out);
+
+std::string ThreadStateToString(debug_ipc::ThreadRecord::State state);
 
 // Returns a string describing the given thing in the given context. If
 // columns is set, there will be extra padding added so that multiple things

@@ -219,7 +219,7 @@ void ConsoleContext::DidChangeTargetState(Target* target,
     out.Append(DescribeTarget(&console->context(), target, false));
     out.Append(fxl::StringPrintf(": exit code %" PRId64 ".",
                                  target->GetLastReturnCode()));
-    Console::get()->Output(std::move(out));
+    console->Output(std::move(out));
   }
 }
 
@@ -229,6 +229,8 @@ void ConsoleContext::DidCreateThread(Process* process, Thread* thread) {
     FXL_NOTREACHED();
     return;
   }
+
+  thread->AddObserver(this);
 
   int thread_id = record->next_thread_id;
   record->next_thread_id++;
@@ -249,6 +251,8 @@ void ConsoleContext::WillDestroyThread(Process* process, Thread* thread) {
     FXL_NOTREACHED();
     return;
   }
+
+  thread->RemoveObserver(this);
 
   auto found_thread_to_id = record->thread_to_id.find(thread);
   if (found_thread_to_id == record->thread_to_id.end()) {
@@ -271,6 +275,17 @@ void ConsoleContext::WillDestroyThread(Process* process, Thread* thread) {
       record->active_thread_id = record->id_to_thread.begin()->first;
     }
   }
+}
+
+void ConsoleContext::OnThreadStopped(Thread* thread) {
+  // Set this process and thread as active.
+  SetActiveTarget(thread->GetProcess()->GetTarget());
+  SetActiveThreadForTarget(thread);
+
+  Console* console = Console::get();
+  OutputBuffer out;
+  out.Append(DescribeThread(&console->context(), thread, false));
+  console->Output(std::move(out));
 }
 
 ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(int target_id) {

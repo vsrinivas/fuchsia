@@ -7,6 +7,7 @@
 #include "garnet/bin/zxdb/client/process_observer.h"
 #include "garnet/bin/zxdb/client/system_observer.h"
 #include "garnet/bin/zxdb/client/target_observer.h"
+#include "garnet/bin/zxdb/client/thread_observer.h"
 
 namespace zxdb {
 
@@ -20,7 +21,8 @@ class Session;
 //
 // This class maintains the mapping between objects and IDs.
 class ConsoleContext
-    : public ProcessObserver, public SystemObserver, public TargetObserver {
+    : public ProcessObserver, public SystemObserver, public TargetObserver,
+      public ThreadObserver {
  public:
   explicit ConsoleContext(Session* session);
   ~ConsoleContext();
@@ -71,6 +73,9 @@ class ConsoleContext
   // ProcessObserver implementation:
   void DidCreateThread(Process* process, Thread* thread) override;
   void WillDestroyThread(Process* process, Thread* thread) override;
+
+  // ThreadObserver implementation:
+  void OnThreadStopped(Thread* thread) override;
 
   // Returns the record for the given target, or null (+ assertion) if not
   // found. These pointers are not stable across target list changes.

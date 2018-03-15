@@ -54,6 +54,28 @@ Err ReadUint64Arg(const Command& cmd, size_t arg_index,
   return Err();
 }
 
+std::string ThreadStateToString(debug_ipc::ThreadRecord::State state) {
+  struct Mapping {
+    debug_ipc::ThreadRecord::State state;
+    const char* string;
+  };
+  static const Mapping mappings[] = {
+    { debug_ipc::ThreadRecord::State::kNew, "New" },
+    { debug_ipc::ThreadRecord::State::kRunning, "Running" },
+    { debug_ipc::ThreadRecord::State::kSuspended, "Suspended" },
+    { debug_ipc::ThreadRecord::State::kBlocked, "Blocked" },
+    { debug_ipc::ThreadRecord::State::kDying, "Dying" },
+    { debug_ipc::ThreadRecord::State::kDead, "Dead" }
+  };
+
+  for (const Mapping& mapping : mappings) {
+    if (mapping.state == state)
+      return mapping.string;
+  }
+  FXL_NOTREACHED();
+  return std::string();
+}
+
 std::string DescribeTarget(ConsoleContext* context, Target* target,
                            bool columns) {
   int id = context->IdForTarget(target);
@@ -106,13 +128,16 @@ std::string DescribeTarget(ConsoleContext* context, Target* target,
 
 std::string DescribeThread(ConsoleContext* context, Thread* thread,
                            bool columns) {
+  std::string state = ThreadStateToString(thread->GetState());
+
   const char* format_string;
   if (columns)
-    format_string = "%3d %8" PRIu64 " %s";
+    format_string = "%3d %9s %8" PRIu64 " %s";
   else
-    format_string = "Thread %d koid=%" PRIu64 " %s";
+    format_string = "Thread %d %s koid=%" PRIu64 " %s";
   return fxl::StringPrintf(format_string, context->IdForThread(thread),
-                           thread->GetKoid(), thread->GetName().c_str());
+                           state.c_str(), thread->GetKoid(),
+                           thread->GetName().c_str());
 }
 
 }  // namespace zxdb

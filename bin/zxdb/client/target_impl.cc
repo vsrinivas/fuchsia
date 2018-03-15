@@ -97,12 +97,6 @@ void TargetImpl::Attach(uint64_t koid, LaunchCallback callback) {
           ptr->thunk->OnLaunchOrAttachReply(err, koid, reply.status,
                                             reply.process_name,
                                             std::move(callback));
-          // Sync the current threads when we're attached.
-          // TODO(brettw) it would be nice if the agent pushed thread
-          // notifications to us after attaching. But this requires some
-          // re-working in the debug agent, like a "post task" equivalent.
-          if (ptr->thunk->process_.get())
-            ptr->thunk->process_->SyncThreads(std::function<void()>());
         } else {
           // The reply that the process was launched came after the local
           // objects were destroyed.

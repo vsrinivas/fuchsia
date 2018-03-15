@@ -126,32 +126,20 @@ void ExceptionHandler::DoThread() {
       zx::thread thread = ThreadForKoid(proc->process, packet.exception.tid);
 
       switch (packet.type) {
-        case ZX_EXCP_GENERAL:
-          OnGeneralException(packet, thread);
-          break;
-        case ZX_EXCP_FATAL_PAGE_FAULT:
-          OnFatalPageFault(packet, thread);
-          break;
-        case ZX_EXCP_UNDEFINED_INSTRUCTION:
-          OnUndefinedInstruction(packet, thread);
-          break;
-        case ZX_EXCP_SW_BREAKPOINT:
-          OnSoftwareBreakpoint(packet, thread);
-          break;
-        case ZX_EXCP_HW_BREAKPOINT:
-          OnHardwareBreakpoint(packet, thread);
-          break;
-        case ZX_EXCP_UNALIGNED_ACCESS:
-          OnUnalignedAccess(packet, thread);
-          break;
         case ZX_EXCP_THREAD_STARTING:
           sink_->OnThreadStarting(thread, proc->koid, packet.exception.tid);
           break;
         case ZX_EXCP_THREAD_EXITING:
           sink_->OnThreadExiting(thread, proc->koid, packet.exception.tid);
           break;
+        case ZX_EXCP_GENERAL:
+        case ZX_EXCP_FATAL_PAGE_FAULT:
+        case ZX_EXCP_UNDEFINED_INSTRUCTION:
+        case ZX_EXCP_SW_BREAKPOINT:
+        case ZX_EXCP_HW_BREAKPOINT:
+        case ZX_EXCP_UNALIGNED_ACCESS:
         case ZX_EXCP_POLICY_ERROR:
-          OnThreadPolicyError(packet, thread);
+          sink_->OnException(thread, proc->koid, packet.type);
           break;
         default:
           fprintf(stderr, "Unknown exception.\n");
@@ -200,41 +188,6 @@ void ExceptionHandler::OnSocketReadable() {
   }
 
   sink_->OnStreamData();
-}
-
-void ExceptionHandler::OnGeneralException(const zx_port_packet_t& packet,
-                                          const zx::thread& thread) {
-  fprintf(stderr, "Exception: general.\n");
-}
-
-void ExceptionHandler::OnFatalPageFault(const zx_port_packet_t& packet,
-                                        const zx::thread& thread) {
-  fprintf(stderr, "Exception: page fault.\n");
-}
-
-void ExceptionHandler::OnUndefinedInstruction(const zx_port_packet_t& packet,
-                                              const zx::thread& thread) {
-  fprintf(stderr, "Exception: undefined instruction.\n");
-}
-
-void ExceptionHandler::OnSoftwareBreakpoint(const zx_port_packet_t& packet,
-                                            const zx::thread& thread) {
-  fprintf(stderr, "Exception: software breakpoint.\n");
-}
-
-void ExceptionHandler::OnHardwareBreakpoint(const zx_port_packet_t& packet,
-                                            const zx::thread& thread) {
-  fprintf(stderr, "Exception: hardware breakpoint.\n");
-}
-
-void ExceptionHandler::OnUnalignedAccess(const zx_port_packet_t& packet,
-                                         const zx::thread& thread) {
-  fprintf(stderr, "Exception: unaligned access.\n");
-}
-
-void ExceptionHandler::OnThreadPolicyError(const zx_port_packet_t& packet,
-                                           const zx::thread& thread) {
-  fprintf(stderr, "Exception: thread policy error.\n");
 }
 
 const ExceptionHandler::WatchedProcess* ExceptionHandler::WatchedProcessForKoid(

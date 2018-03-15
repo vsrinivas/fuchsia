@@ -19,6 +19,13 @@ ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid,
       weak_thunk_(std::make_shared<WeakThunk<ProcessImpl>>(this)) {}
 ProcessImpl::~ProcessImpl() = default;
 
+ThreadImpl* ProcessImpl::GetThreadImplFromKoid(uint64_t koid) {
+  auto found = threads_.find(koid);
+  if (found == threads_.end())
+    return nullptr;
+  return found->second.get();
+}
+
 Target* ProcessImpl::GetTarget() const {
   return target_;
 }
@@ -39,6 +46,10 @@ std::vector<Thread*> ProcessImpl::GetThreads() const {
   return result;
 }
 
+Thread* ProcessImpl::GetThreadFromKoid(uint64_t koid) {
+  return GetThreadImplFromKoid(koid);
+}
+
 void ProcessImpl::SyncThreads(std::function<void()> callback) {
   debug_ipc::ThreadsRequest request;
   request.process_koid = koid_;
@@ -56,7 +67,14 @@ void ProcessImpl::SyncThreads(std::function<void()> callback) {
 }
 
 void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record) {
-  auto thread = std::make_unique<ThreadImpl>(this, record.koid, record.name);
+  if (threads_.find(record.koid) != threads_.end()) {
+    // Duplicate new thread notification. Some legitimate cases could cause
+    // this, like the client requeusting a thread list (which will add missing
+    // ones and get here) racing with the notification for just-created thread.
+    return;
+  }
+
+  auto thread = std::make_unique<ThreadImpl>(this, record);
   Thread* thread_ptr = thread.get();
   threads_[record.koid] = std::move(thread);
 
@@ -67,7 +85,8 @@ void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record) {
 void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
   auto found = threads_.find(record.koid);
   if (found == threads_.end()) {
-    FXL_NOTREACHED();
+    // Duplicate exit thread notification. Some legitimate cases could cause
+    // this as in OnThreadStarting().
     return;
   }
 
@@ -88,8 +107,8 @@ void ProcessImpl::UpdateThreads(
       // New thread added.
       OnThreadStarting(record);
     } else {
-      // Existing one, make sure the name is up-to-date.
-      found_existing->second->set_name(record.name);
+      // Existing one, update everything.
+      found_existing->second->SetMetadata(record);
     }
   }
 

@@ -20,6 +20,7 @@ void Serialize(const ProcessTreeRecord& record, MessageWriter* writer) {
 void Serialize(const ThreadRecord& record, MessageWriter* writer) {
   writer->WriteUint64(record.koid);
   writer->WriteString(record.name);
+  writer->WriteUint32(static_cast<uint32_t>(record.state));
 }
 
 void Serialize(const MemoryBlock& block, MessageWriter* writer) {
@@ -161,6 +162,16 @@ void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
   writer->WriteHeader(type, 0);
   writer->WriteUint64(notify.process_koid);
   Serialize(notify.record, writer);
+}
+
+void WriteNotifyException(const NotifyException& notify,
+                          MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kNotifyException, 0);
+  writer->WriteUint64(notify.process_koid);
+  Serialize(notify.thread, writer);
+  writer->WriteUint32(static_cast<uint32_t>(notify.type));
+  writer->WriteUint64(notify.ip);
+  writer->WriteUint64(notify.sp);
 }
 
 }  // namespace debug_ipc

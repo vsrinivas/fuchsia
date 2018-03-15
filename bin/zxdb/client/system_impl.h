@@ -12,12 +12,15 @@
 
 namespace zxdb {
 
+class ProcessImpl;
 class TargetImpl;
 
 class SystemImpl : public System {
  public:
   explicit SystemImpl(Session* session);
   ~SystemImpl() override;
+
+  ProcessImpl* ProcessImplFromKoid(uint64_t koid) const;
 
   // System implementation:
   std::vector<Target*> GetAllTargets() const override;

@@ -51,6 +51,9 @@ class Process : public ClientObject {
   // The pointers will only be valid until you return to the message loop.
   virtual std::vector<Thread*> GetThreads() const = 0;
 
+  // Returns the thread in this process associated with the given koid.
+  virtual Thread* GetThreadFromKoid(uint64_t koid) = 0;
+
   // Asynchronously refreshes the thread list from the debugged process. This
   // will ensure the thread names are up-to-date, and is also used after
   // attaching when there are no thread notifications for existing threads.

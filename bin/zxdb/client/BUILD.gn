@@ -15,6 +15,7 @@ static_library("client") {
     "target.h",
     "target_observer.h",
     "thread.h",
+    "thread_observer.h",
   ]
 
   sources = [
@@ -37,9 +38,7 @@ static_library("client") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
-  ]
-  deps = [
     "//garnet/lib/debug_ipc:client",
+    "//garnet/public/lib/fxl",
   ]
 }

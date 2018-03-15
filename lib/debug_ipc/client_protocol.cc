@@ -25,6 +25,13 @@ bool Deserialize(MessageReader* reader, ThreadRecord* record) {
     return false;
   if (!reader->ReadString(&record->name))
     return false;
+
+  uint32_t state;
+  if (!reader->ReadUint32(&state))
+    return false;
+  if (state >= static_cast<uint32_t>(ThreadRecord::State::kLast))
+    return false;
+  record->state = static_cast<ThreadRecord::State>(state);
   return true;
 }
 
@@ -193,9 +200,32 @@ bool ReadNotifyThread(MessageReader* reader, NotifyThread* notify) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
-  if (!reader->ReadUint64(&notify->record.koid))
+  if (!reader->ReadUint64(&notify->process_koid))
     return false;
   return Deserialize(reader, &notify->record);
+}
+
+bool ReadNotifyException(MessageReader* reader, NotifyException* notify) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  if (!reader->ReadUint64(&notify->process_koid))
+    return false;
+  if (!Deserialize(reader, &notify->thread))
+    return false;
+
+  uint32_t type;
+  if (!reader->ReadUint32(&type) ||
+      type >= static_cast<uint32_t>(NotifyException::Type::kLast))
+    return false;
+  notify->type = static_cast<NotifyException::Type>(type);
+
+  if (!reader->ReadUint64(&notify->ip))
+    return false;
+  if (!reader->ReadUint64(&notify->sp))
+    return false;
+
+  return true;
 }
 
 }  // namespace debug_ipc

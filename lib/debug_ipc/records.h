@@ -26,8 +26,20 @@ struct ProcessTreeRecord {
 };
 
 struct ThreadRecord {
+  enum class State : uint32_t {
+    kNew = 0,
+    kRunning,
+    kSuspended,
+    kBlocked,
+    kDying,
+    kDead,
+
+    kLast  // Not an actual thread state, for range checking.
+  };
+
   uint64_t koid = 0;
   std::string name;
+  State state = State::kNew;
 };
 
 struct MemoryBlock {

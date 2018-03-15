@@ -12,21 +12,26 @@ class ProcessImpl;
 
 class ThreadImpl : public Thread {
  public:
-  ThreadImpl(ProcessImpl* process, uint64_t koid, const std::string& name);
+  ThreadImpl(ProcessImpl* process, const debug_ipc::ThreadRecord& record);
   ~ThreadImpl() override;
-
-  // Updates the name. See GetName (implemented from Thread) for getter.
-  void set_name(const std::string& name) { name_ = name; }
 
   // Thread implementation:
   Process* GetProcess() const override;
   uint64_t GetKoid() const override;
   const std::string& GetName() const override;
+  debug_ipc::ThreadRecord::State GetState() const override;
+
+  // Updates the thread metadata with new state from the agent.
+  void SetMetadata(const debug_ipc::ThreadRecord& record);
+
+  // Notification from the agent of an exception.
+  void OnException(const debug_ipc::NotifyException& notify);
 
  private:
   ProcessImpl* const process_;
   uint64_t koid_;
   std::string name_;
+  debug_ipc::ThreadRecord::State state_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ThreadImpl);
 };

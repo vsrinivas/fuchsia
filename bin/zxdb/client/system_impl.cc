@@ -17,6 +17,15 @@ SystemImpl::SystemImpl(Session* session) : System(session) {
 
 SystemImpl::~SystemImpl() = default;
 
+ProcessImpl* SystemImpl::ProcessImplFromKoid(uint64_t koid) const {
+  for (const auto& target : targets_) {
+    ProcessImpl* process = target->process();
+    if (process && process->GetKoid() == koid)
+      return process;
+  }
+  return nullptr;
+}
+
 std::vector<Target*> SystemImpl::GetAllTargets() const {
   std::vector<Target*> result;
   result.reserve(targets_.size());
@@ -26,12 +35,7 @@ std::vector<Target*> SystemImpl::GetAllTargets() const {
 }
 
 Process* SystemImpl::ProcessFromKoid(uint64_t koid) const {
-  for (const auto& target : targets_) {
-    Process* process = target->process();
-    if (process && process->GetKoid() == koid)
-      return process;
-  }
-  return nullptr;
+  return ProcessImplFromKoid(koid);
 }
 
 void SystemImpl::GetProcessTree(ProcessTreeCallback callback) {

@@ -9,7 +9,10 @@
 #include <string>
 
 #include "garnet/bin/zxdb/client/client_object.h"
+#include "garnet/bin/zxdb/client/thread_observer.h"
+#include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"
+#include "garnet/public/lib/fxl/observer_list.h"
 
 namespace zxdb {
 
@@ -20,13 +23,22 @@ class Thread : public ClientObject {
   explicit Thread(Session* session);
   ~Thread() override;
 
+  void AddObserver(ThreadObserver* observer);
+  void RemoveObserver(ThreadObserver* observer);
+
   // Guaranteed non-null.
   virtual Process* GetProcess() const = 0;
 
   virtual uint64_t GetKoid() const = 0;
   virtual const std::string& GetName() const = 0;
+  virtual debug_ipc::ThreadRecord::State GetState() const = 0;
+
+ protected:
+  fxl::ObserverList<ThreadObserver>& observers() { return observers_; }
 
  private:
+  fxl::ObserverList<ThreadObserver> observers_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(Thread);
 };
 

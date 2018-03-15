@@ -20,6 +20,9 @@
 
 namespace zxdb {
 
+class ProcessImpl;
+class ThreadImpl;
+
 class Session : public AgentConnection::Sink {
  public:
   Session();
@@ -61,6 +64,9 @@ class Session : public AgentConnection::Sink {
   // Dispatches unsolicited notifications sent from the agent.
   void DispatchNotification(const debug_ipc::MsgHeader& header,
                             std::vector<char> data);
+
+  // Returns the thread object from the given koids, or null.
+  ThreadImpl* ThreadImplFromKoid(uint64_t process_koid, uint64_t thread_koid);
 
   std::unique_ptr<AgentConnection> agent_connection_;
 

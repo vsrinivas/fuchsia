@@ -45,6 +45,19 @@ bool SerializeDeserializeReply(const ReplyType& in, ReplyType* out) {
   return true;
 }
 
+template<typename NotificationType>
+bool SerializeDeserializeNotification(
+    const NotificationType& in,
+    NotificationType* out,
+    void (*write_fn)(const NotificationType&, MessageWriter*),
+    bool (*read_fn)(MessageReader*, NotificationType*)) {
+  MessageWriter writer;
+  write_fn(in, &writer);
+
+  MessageReader reader(writer.MessageComplete());
+  return read_fn(&reader, out);
+}
+
 }  // namespace
 
 // Hello -----------------------------------------------------------------------
@@ -216,6 +229,47 @@ TEST(Protocol, ReadMemoryReply) {
   EXPECT_EQ(initial.blocks[1].valid, second.blocks[1].valid);
   EXPECT_EQ(initial.blocks[1].size, second.blocks[1].size);
   EXPECT_TRUE(second.blocks[1].data.empty());
+}
+
+// Notifications ---------------------------------------------------------------
+
+TEST(Protocol, NotifyThread) {
+  NotifyThread initial;
+  initial.process_koid = 9887;
+  initial.record.koid = 1234;
+  initial.record.name = "Wolfgang";
+  initial.record.state = ThreadRecord::State::kDying;
+
+  MessageWriter writer;
+  WriteNotifyThread(MsgHeader::Type::kNotifyThreadStarting, initial, &writer);
+
+  MessageReader reader(writer.MessageComplete());
+  NotifyThread second;
+  ASSERT_TRUE(ReadNotifyThread(&reader, &second));
+
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.record.koid, second.record.koid);
+  EXPECT_EQ(initial.record.name, second.record.name);
+  EXPECT_EQ(initial.record.state, second.record.state);
+}
+
+TEST(Protocol, NotifyException) {
+  NotifyException initial;
+  initial.process_koid = 23;
+  initial.thread.name = "foo";
+  initial.type = NotifyException::Type::kHardware;
+  initial.ip = 0x7647342634;
+  initial.sp = 0x9861238251;
+
+  NotifyException second;
+  ASSERT_TRUE(SerializeDeserializeNotification(
+      initial, &second, &WriteNotifyException, &ReadNotifyException));
+
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.thread.name, second.thread.name);
+  EXPECT_EQ(initial.type, second.type);
+  EXPECT_EQ(initial.ip, second.ip);
+  EXPECT_EQ(initial.sp, second.sp);
 }
 
 }  // namespace debug_ipc
