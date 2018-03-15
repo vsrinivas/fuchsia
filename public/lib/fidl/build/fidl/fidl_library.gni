@@ -74,7 +74,7 @@ template("fidl_library") {
         dep_libraries += [ "$gen_dir/$name.libraries" ]
       }
 
-      inputs += dep_libraries
+      inputs = dep_libraries
 
       args += [
         "--dep-libraries",
