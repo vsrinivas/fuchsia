@@ -89,48 +89,6 @@ impl Default for zx_driver_ops_t {
     }
 }
 
-// References to Zircon DDK's iotxn.h
-
-pub const IOTXN_OP_READ: u8 = 1;
-pub const IOTXN_OP_WRITE: u8 = 2;
-
-pub const IOTXN_CACHE_INVALIDATE: u32 = sys::ZX_VMO_OP_CACHE_INVALIDATE;
-pub const IOTXN_CACHE_CLEAN: u32 = sys::ZX_VMO_OP_CACHE_CLEAN;
-pub const IOTXN_CACHE_CLEAN_INVALIDATE: u32 = sys::ZX_VMO_OP_CACHE_CLEAN_INVALIDATE;
-pub const IOTXN_CACHE_SYNC: u32 = sys::ZX_VMO_OP_CACHE_SYNC;
-
-pub const IOTXN_SYNC_BEFORE: u8 = 1;
-pub const IOTXN_SYNC_AFTER: u8 = 2;
-
-pub type iotxn_proto_data_t = [u64; 6];
-pub type iotxn_extra_data_t = [u64; 6];
-
-#[repr(C)]
-pub struct iotxn_t {
-    pub opcode: u32,
-    pub flags: u32,
-    pub offset: sys::zx_off_t,
-    pub length: sys::zx_off_t,
-    pub protocol: u32,
-    pub status: sys::zx_status_t,
-    pub actual: sys::zx_off_t,
-    pub pflags: u32,
-    pub vmo_handle: sys::zx_handle_t,
-    pub vmo_offset: u64,
-    pub vmo_length: u64,
-    pub phys: *mut sys::zx_paddr_t,
-    pub phys_count: u64,
-    pub protocol_data: iotxn_proto_data_t,
-    pub extra: iotxn_extra_data_t,
-    pub node: list_node_t,
-    pub context: *mut u8,
-    pub virt: *mut u8,
-    pub complete_cb: Option<unsafe extern "C" fn (txn: *mut iotxn_t, cookie: *mut u8)>,
-    pub cookie: *mut u8,
-    pub release_cb: Option<unsafe extern "C" fn (txn: *mut iotxn_t)>,
-    pub phys_inline: [sys::zx_paddr_t; 3],
-}
-
 const DEVICE_OPS_VERSION: u64 = 0xc9410d2a24f57424;
 
 #[repr(C)]
@@ -145,7 +103,6 @@ pub struct zx_protocol_device_t {
     pub release: Option<unsafe extern "C" fn (ctx: *mut u8)>,
     pub read: Option<unsafe extern "C" fn (ctx: *mut u8, buf: *mut u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t>,
     pub write: Option<unsafe extern "C" fn (ctx: *mut u8, buf: *const u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t>,
-    pub iotxn_queue: Option<unsafe extern "C" fn (ctx: *mut u8, txn: *mut iotxn_t)>,
     pub get_size: Option<unsafe extern "C" fn (ctx: *mut u8) -> sys::zx_off_t>,
     pub ioctl: Option<unsafe extern "C" fn (ctx: *mut u8, op: u32, in_buf: *const u8, in_len: usize, out_buf: *mut u8, out_len: usize, out_actual: *mut usize) -> sys::zx_status_t>,
     pub suspend: Option<unsafe extern "C" fn (ctx: *mut u8, flags: u32) -> sys::zx_status_t>,
@@ -165,7 +122,6 @@ pub const DEFAULT_PROTOCOL_DEVICE: zx_protocol_device_t = zx_protocol_device_t {
     release: None,
     read: None,
     write: None,
-    iotxn_queue: None,
     get_size: None,
     ioctl: None,
     suspend: None,
@@ -446,6 +402,5 @@ extern "C" {
     pub fn device_write(dev: *mut zx_device_t, buf: *const u8, count: usize, off: sys::zx_off_t, actual: *mut usize) -> sys::zx_status_t;
     pub fn device_get_size(dev: *mut zx_device_t) -> sys::zx_off_t;
     pub fn device_ioctl(dev: *mut zx_device_t, op: u32, in_buf: *const u8, in_len: usize, out_buf: *mut u8, out_len: usize, out_actual: *mut usize) -> sys::zx_status_t;
-    pub fn device_iotxn_queue(dev: *mut zx_device_t, txn: *mut iotxn_t) -> sys::zx_status_t;
     pub fn device_state_clr_set(dev: *mut zx_device_t, clearflag: sys::zx_signals_t, setflag: sys::zx_signals_t);
 }

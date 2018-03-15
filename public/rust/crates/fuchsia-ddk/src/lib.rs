@@ -355,7 +355,6 @@ static mut DEVICE_OPS: sys::zx_protocol_device_t = sys::zx_protocol_device_t {
     release: Some(ddk_release),
     read: Some(ddk_read),
     write: Some(ddk_write),
-    iotxn_queue: None,
     get_size: Some(ddk_get_size),
     ioctl: Some(ddk_ioctl),
     suspend: Some(ddk_suspend),
