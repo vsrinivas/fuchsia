@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/prod/zxdb"
+    ],
+    "packages": {
+        "zxdb_tests": "//garnet/bin/zxdb:zxdb_tests"
+    }
+}

@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "debug_agent": "//garnet/bin/debug_agent",
-        "debug_agent_tests": "//garnet/bin/debug_agent:debug_agent_tests"
-    }
-}

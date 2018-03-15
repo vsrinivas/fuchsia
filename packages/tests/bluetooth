@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/prod/bluetooth"
+    ],
+    "packages": {
+        "bluetooth_tests": "//garnet/bin/bluetooth:bluetooth_tests"
+    }
+}

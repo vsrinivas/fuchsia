@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/prod/scenic"
+    ],
+    "packages": {
+        "scenic_tests": "//garnet/bin/ui:scenic_tests"
+    }
+}

@@ -1,8 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "labels": [
-        "//garnet/public/sdk:zircon_sysroot_export"
-    ]
-}

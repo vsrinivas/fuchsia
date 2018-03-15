@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "labels": [
+        "//garnet/bin/auth:token_manager"
+    ],
+    "packages": {
+        "token_manager": "//garnet/bin/auth:token_manager"
+    }
+}

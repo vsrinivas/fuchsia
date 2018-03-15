@@ -1,0 +1,12 @@
+{
+    "languages": [
+        "rust",
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/prod/logger"
+    ],
+    "packages": {
+        "logger_tests": "//garnet/bin/logger:logger_tests"
+    }
+}

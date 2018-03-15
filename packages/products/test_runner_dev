@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "test_runner_tests": "//garnet/bin/test_runner:test_runner_tests"
+    }
+}

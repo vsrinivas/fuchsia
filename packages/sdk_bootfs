@@ -1,6 +1,0 @@
-{
-    "imports": [
-        "build/packages/bootfs",
-        "garnet/packages/sdk"
-    ]
-}

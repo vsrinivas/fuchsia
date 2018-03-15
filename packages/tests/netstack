@@ -1,0 +1,14 @@
+{
+    "languages": [
+        "cpp",
+        "go"
+    ],
+    "imports": [
+        "garnet/packages/prod/netstack"
+    ],
+    "packages": {
+        "netstack_gotests" : "//garnet/go/src/netstack:netstack_gotests",
+        "netstack_manual_tests": "//garnet/go/src/netstack/tests:netstack_manual_tests",
+        "netstack_tests": "//garnet/go/src/netstack/tests:netstack_tests"
+    }
+}

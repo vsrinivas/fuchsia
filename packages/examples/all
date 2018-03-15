@@ -1,0 +1,16 @@
+{
+    "imports": [
+        "garnet/packages/examples/auth",
+        "garnet/packages/examples/benchmark",
+        "garnet/packages/examples/bluetooth",
+        "garnet/packages/examples/escher",
+        "garnet/packages/examples/fidl_echo",
+        "garnet/packages/examples/fidl2",
+        "garnet/packages/examples/media",
+        "garnet/packages/examples/netconnector",
+        "garnet/packages/examples/netstack",
+        "garnet/packages/examples/network",
+        "garnet/packages/examples/rust",
+        "garnet/packages/examples/scenic"
+    ]
+}

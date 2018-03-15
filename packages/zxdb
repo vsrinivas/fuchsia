@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "zxdb": "//garnet/bin/zxdb",
-        "zxdb_tests": "//garnet/bin/zxdb:zxdb_tests"
-    }
-}

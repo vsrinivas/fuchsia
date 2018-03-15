@@ -1,0 +1,13 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "bluetooth": "//garnet/bin/bluetooth",
+        "bluetooth_tools": "//garnet/bin/bluetooth_tools",
+        "bthci_fake": "//garnet/drivers/bluetooth/hci/fake:bthci_fake",
+        "bthci_passthrough": "//garnet/drivers/bluetooth/hci/passthrough:bthci_passthrough",
+        "bthost": "//garnet/drivers/bluetooth/host:bthost",
+        "btintel": "//garnet/drivers/bluetooth/hci/intel:btintel"
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/prod/network"
+    ],
+    "packages": {
+        "mwget": "//garnet/bin/network/tests/manual/mwget"
+    }
+}

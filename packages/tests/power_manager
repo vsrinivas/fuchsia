@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "go"
+    ],
+    "imports": [
+        "garnet/packages/prod/power_manager"
+    ],
+    "packages": {
+        "power_manager_gotests": "//garnet/go/src/power_manager:power_manager_gotests"
+    }
+}

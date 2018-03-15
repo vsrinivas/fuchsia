@@ -1,0 +1,12 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/prod/netstack"
+    ],
+    "packages": {
+        "network": "//garnet/bin/network",
+        "network_application_loader": "//garnet/bin/network_application_loader"
+    }
+}

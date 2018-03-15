@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/prod/debugserver"
+    ],
+    "packages": {
+        "debugserver_tests": "//garnet/bin/debugserver:debugserver_tests"
+    }
+}

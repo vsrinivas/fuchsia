@@ -1,0 +1,10 @@
+{
+    "languages": [
+        "cpp",
+        "go"
+    ],
+    "packages": {
+        "netstack": "//garnet/go/src/netstack",
+        "netstack_tools": "//garnet/go/src/netstack:netstack_tools"
+    }
+}

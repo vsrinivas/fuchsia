@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/prod/boringssl"
+    ],
+    "packages": {
+        "boringssl_tests": "//third_party/boringssl:boringssl_tests"
+    }
+}

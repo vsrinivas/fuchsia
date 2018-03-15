@@ -1,0 +1,13 @@
+{
+    "languages": [
+        "go"
+    ],
+    "labels": [
+        "//garnet/go/src/amber:amber-srv-keys",
+        "//garnet/go/src/amber:amber_host_tools"
+    ],
+    "packages": {
+        "amber": "//garnet/go/src/amber",
+        "amber_tools": "//garnet/go/src/amber:amber_tools"
+    }
+}

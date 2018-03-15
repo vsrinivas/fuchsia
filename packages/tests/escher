@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "escher_tests": "//garnet/public/lib/escher:escher_tests"
+    }
+}

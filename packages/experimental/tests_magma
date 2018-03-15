@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/prod/sbase"
+    ],
+    "packages": {
+        "magma-test": "//garnet/lib/magma/tests:magma-test"
+    }
+}

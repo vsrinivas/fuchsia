@@ -1,0 +1,12 @@
+{
+    "imports": [
+        "garnet/packages/prod/drivers",
+        "garnet/packages/benchmarks/zircon",
+        "garnet/packages/prod/netstack",
+        "garnet/packages/prod/openssh",
+        "garnet/packages/prod/openssh-keys",
+        "garnet/packages/prod/sbase",
+        "garnet/packages/prod/thinfs",
+        "garnet/packages/prod/vim"
+    ]
+}

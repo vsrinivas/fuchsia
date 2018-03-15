@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "debugserver": "//garnet/bin/debugserver",
-        "debugserver_tests": "//garnet/bin/debugserver:debugserver_tests"
-    }
-}

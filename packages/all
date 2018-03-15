@@ -1,0 +1,9 @@
+{
+    "imports": [
+        "garnet/packages/benchmarks/all",
+        "garnet/packages/examples/all",
+        "garnet/packages/prod/all",
+        "garnet/packages/tests/all",
+        "garnet/packages/tools/all"
+    ]
+}

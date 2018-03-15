@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/prod/auth"
+    ],
+    "packages": {
+        "token_manager_tests": "//garnet/bin/auth:tests"
+    }
+}

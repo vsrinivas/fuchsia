@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "imports": [
+        "garnet/packages/prod/network_time"
+    ],
+    "packages": {
+        "network_time_tests": "//garnet/bin/network_time:network_time_tests"
+    }
+}

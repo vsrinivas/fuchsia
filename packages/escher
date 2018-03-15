@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "escher_examples": "//garnet/examples/escher:escher_examples",
-        "escher_tests": "//garnet/public/lib/escher:escher_tests"
-    }
-}
