@@ -201,7 +201,6 @@ static ssize_t eth_rebuild_multicast_filter_locked(ethdev_t* edev) {
     }
     return edev0->mac.ops->set_param(edev0->mac.ctx, ETHMAC_SETPARAM_MULTICAST_FILTER,
                                      n_multicast, multicast);
-    return true;
 }
 
 static int eth_multicast_addr_index(ethdev_t* edev, uint8_t* mac) {
