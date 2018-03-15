@@ -106,6 +106,20 @@ TEST_F(SequenceTest, Racing) {
     EXPECT_EQ(seq.Sns1(addr1)->GetLastUsed() + 10, seq.Sns1(addr2)->GetLastUsed());
 }
 
+TEST_F(SequenceTest, MultipleSNS) {
+    Sequence seq;
+    uint8_t tid = 0;
+    uint8_t aci = 0;
+
+    seq.Sns1(addr1)->SetTo(10);
+    seq.Sns2(addr1, tid)->SetTo(20);
+    seq.Sns4(addr1, aci)->SetTo(30);
+
+    EXPECT_EQ(seq.Sns1(addr1)->GetLastUsed(), 10);
+    EXPECT_EQ(seq.Sns2(addr1, tid)->GetLastUsed(), 20);
+    EXPECT_EQ(seq.Sns4(addr1, aci)->GetLastUsed(), 30);
+}
+
 }  // namespace
 }  // namespace common
 }  // namespace wlan

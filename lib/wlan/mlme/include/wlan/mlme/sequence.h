@@ -40,14 +40,15 @@ using SnsMap = std::unordered_map<seq_hash_t, SequenceNumberSpace<modulo_divisor
 class Sequence {
    public:
     Sns<4096>* Sns1(const common::MacAddr& addr) {
-        auto hash = Hasher(addr, 0);
+        auto hash = addr.ToU64();
         return Fetch<4096>(hash);
     }
 
     Sns<4096>* Sns2(const common::MacAddr& addr, uint8_t tid) {
         // IEEE Std 802.11-2016, 9.2.4.5.2
         // TID is 4 bit long.
-        auto hash = Hasher(addr, tid);
+        // Insert 0x10 to generate a unique hash.
+        auto hash = addr.ToU64() + ((0x10 | tid) << common::kMacAddrLen);
         return Fetch<4096>(hash);
     }
 
@@ -56,8 +57,8 @@ class Sequence {
     Sns<1024>* Sns4(const common::MacAddr& addr, uint8_t aci) {
         // IEEE Std 802.11-2016, 9.2.4.4.2
         // ACI subfield is 2 bit long.
-        const uint8_t kTidBitLen = 4;
-        auto hash = Hasher(addr, aci << kTidBitLen);  // Shift aci to avoid collision with TID
+        // Insert 0x20 to generate a unique hash.
+        auto hash = addr.ToU64() + ((0x20 | aci) << common::kMacAddrLen);
         return Fetch<1024>(hash);
     }
 
@@ -68,15 +69,6 @@ class Sequence {
     }
 
    private:
-    // A bucket is a value for either TID or ACI.
-    seq_hash_t Hasher(const common::MacAddr& addr, uint8_t bucket = 0) const {
-        // This hash takes advantage of MacAddr::ToU64()'s implementation
-        // where most significant two bytes are unused.
-        seq_hash_t hash = addr.ToU64();
-        hash |= (bucket << common::kMacAddrLen);
-        return hash;
-    }
-
     template <seq_t modulo_divisor> Sns<modulo_divisor>* Fetch(seq_hash_t hash) {
         auto& map = GetSnsMap<modulo_divisor>();
         auto iter = map.find(hash);
