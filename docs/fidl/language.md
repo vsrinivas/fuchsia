@@ -259,27 +259,27 @@ Enums may be scoped within: **library, struct, union, interface**.
 ```
 // An enum declared at library scope.
 enum Beverage : uint8 {
-    WATER = 0,
-    COFFEE = 1,
-    TEA = 2,
-    WHISKEY = 3,
+    WATER = 0;
+    COFFEE = 1;
+    TEA = 2;
+    WHISKEY = 3;
 };
 
 // An enum declared at library scope.
 // Underlying type is assumed to be uint32.
 enum Vessel {
-    CUP = 0,
-    BOWL = 1,
-    TUREEN = 2,
-    JUG = 3,
+    CUP = 0;
+    BOWL = 1;
+    TUREEN = 2;
+    JUG = 3;
 };
 
 // An enum declared within an interface scope.
 interface VendingMachine {
     enum PaymentMethod {
-        CASH = 0,
-        CREDIT = 1,
-        HONOR_SYSTEM = 2,
+        CASH = 0;
+        CREDIT = 1;
+        HONOR_SYSTEM = 2;
     };
 };
 ```
