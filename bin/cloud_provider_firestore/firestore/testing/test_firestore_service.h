@@ -31,8 +31,6 @@ class TestFirestoreService : public FirestoreService {
   TestFirestoreService();
   ~TestFirestoreService() override;
 
-  void SetOnRequest(fxl::Closure on_request);
-
   // FirestoreService:
   const std::string& GetDatabasePath() override;
 
@@ -69,8 +67,6 @@ class TestFirestoreService : public FirestoreService {
  private:
   const std::string db_path_;
   const std::string root_path_;
-
-  fxl::Closure on_request_;
 };
 
 }  // namespace cloud_provider_firestore

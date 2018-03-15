@@ -26,10 +26,6 @@ class TestListenCallHandler : public ListenCallHandler {
 TestFirestoreService::TestFirestoreService() : db_path_(), root_path_() {}
 TestFirestoreService::~TestFirestoreService() {}
 
-void TestFirestoreService::SetOnRequest(fxl::Closure on_request) {
-  on_request_ = std::move(on_request);
-}
-
 const std::string& TestFirestoreService::GetDatabasePath() {
   return db_path_;
 }
@@ -44,9 +40,6 @@ void TestFirestoreService::GetDocument(
     std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
         callback) {
   get_document_records.push_back({std::move(request), std::move(callback)});
-  if (on_request_) {
-    on_request_();
-  }
 }
 
 void TestFirestoreService::CreateDocument(
@@ -55,9 +48,6 @@ void TestFirestoreService::CreateDocument(
     std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
         callback) {
   create_document_records.push_back({std::move(request), std::move(callback)});
-  if (on_request_) {
-    on_request_();
-  }
 }
 
 void TestFirestoreService::DeleteDocument(
