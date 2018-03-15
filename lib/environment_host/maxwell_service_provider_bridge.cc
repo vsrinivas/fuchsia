@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/environment_host/application_environment_host_impl.h"
+#include "peridot/lib/environment_host/maxwell_service_provider_bridge.h"
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_loader.fidl.h"
@@ -16,7 +16,7 @@ constexpr char kNetstack[] = "net.Netstack";
 
 }  // namespace
 
-ApplicationEnvironmentHostImpl::ApplicationEnvironmentHostImpl(
+MaxwellServiceProviderBridge::MaxwellServiceProviderBridge(
     app::ApplicationEnvironment* parent_env) {
   AddService<app::ApplicationLoader>(
       [parent_env](f1dl::InterfaceRequest<app::ApplicationLoader> request) {
@@ -31,11 +31,6 @@ ApplicationEnvironmentHostImpl::ApplicationEnvironmentHostImpl(
         services->ConnectToService(kNetstack, std::move(request));
       },
       kNetstack);
-}
-
-void ApplicationEnvironmentHostImpl::GetApplicationEnvironmentServices(
-    f1dl::InterfaceRequest<app::ServiceProvider> environment_services) {
-  AddBinding(std::move(environment_services));
 }
 
 }  // namespace maxwell

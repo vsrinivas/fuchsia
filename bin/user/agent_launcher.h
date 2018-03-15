@@ -8,7 +8,7 @@
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/svc/cpp/services.h"
-#include "peridot/lib/environment_host/application_environment_host_impl.h"
+#include "peridot/lib/environment_host/maxwell_service_provider_bridge.h"
 
 namespace maxwell {
 
@@ -18,14 +18,12 @@ class AgentLauncher {
       : environment_(environment) {}
   app::Services StartAgent(
       const std::string& url,
-      std::unique_ptr<app::ApplicationEnvironmentHost> env_host);
+      std::unique_ptr<MaxwellServiceProviderBridge> bridge);
 
  private:
   app::ApplicationEnvironment* environment_;
 
-  f1dl::BindingSet<app::ApplicationEnvironmentHost,
-                   std::unique_ptr<app::ApplicationEnvironmentHost>>
-      agent_host_bindings_;
+  std::unique_ptr<MaxwellServiceProviderBridge> bridge_;
 };
 
 }  // namespace maxwell

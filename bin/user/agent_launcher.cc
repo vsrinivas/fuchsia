@@ -15,12 +15,10 @@ constexpr char kEnvironmentLabel[] = "agent";
 
 app::Services AgentLauncher::StartAgent(
     const std::string& url,
-    std::unique_ptr<app::ApplicationEnvironmentHost> env_host) {
-  f1dl::InterfaceHandle<app::ApplicationEnvironmentHost> agent_host_handle =
-      agent_host_bindings_.AddBinding(std::move(env_host));
-
+    std::unique_ptr<MaxwellServiceProviderBridge> bridge) {
+  bridge_ = std::move(bridge);
   app::ApplicationEnvironmentPtr agent_env;
-  environment_->CreateNestedEnvironment(std::move(agent_host_handle),
+  environment_->CreateNestedEnvironment(bridge_->OpenAsDirectory(),
                                         agent_env.NewRequest(), NULL,
                                         kEnvironmentLabel);
 

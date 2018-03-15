@@ -226,9 +226,9 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   StoryProviderMock* story_provider() { return &story_provider_; }
 
   void StartSuggestionAgent(const std::string& url) {
-    auto agent_host =
-        std::make_unique<ApplicationEnvironmentHostImpl>(root_environment());
-    agent_host->AddService<ContextReader>(
+    auto agent_bridge =
+        std::make_unique<MaxwellServiceProviderBridge>(root_environment());
+    agent_bridge->AddService<ContextReader>(
         [this, url](f1dl::InterfaceRequest<ContextReader> request) {
           auto scope = ComponentScope::New();
           auto agent_scope = AgentScope::New();
@@ -236,12 +236,12 @@ class SuggestionEngineTest : public ContextEngineTestBase {
           scope->set_agent_scope(std::move(agent_scope));
           context_engine()->GetReader(std::move(scope), std::move(request));
         });
-    agent_host->AddService<ProposalPublisher>(
+    agent_bridge->AddService<ProposalPublisher>(
         [this, url](f1dl::InterfaceRequest<ProposalPublisher> request) {
           suggestion_engine_->RegisterProposalPublisher(url,
                                                         std::move(request));
         });
-    StartAgent(url, std::move(agent_host));
+    StartAgent(url, std::move(agent_bridge));
   }
 
   void AcceptSuggestion(const std::string& suggestion_id) {

@@ -4,8 +4,8 @@
 
 source_set("environment_host") {
   sources = [
-    "application_environment_host_impl.cc",
-    "application_environment_host_impl.h",
+    "maxwell_service_provider_bridge.cc",
+    "maxwell_service_provider_bridge.h",
   ]
 
   public_deps = [

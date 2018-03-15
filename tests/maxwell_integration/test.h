@@ -13,7 +13,6 @@
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
 #include "peridot/bin/user/agent_launcher.h"
-#include "peridot/lib/environment_host/application_environment_host_impl.h"
 #include "peridot/lib/testing/component_context_fake.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
@@ -100,8 +99,8 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
   virtual ~MaxwellTestBase() = default;
 
   void StartAgent(const std::string& url,
-                  std::unique_ptr<app::ApplicationEnvironmentHost> env_host) {
-    agent_launcher_->StartAgent(url, std::move(env_host));
+                  std::unique_ptr<MaxwellServiceProviderBridge> bridge) {
+    agent_launcher_->StartAgent(url, std::move(bridge));
   }
 
   app::Services StartServices(const std::string& url);
