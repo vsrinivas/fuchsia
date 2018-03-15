@@ -9,6 +9,7 @@
 
 #include <zircon/syscalls/pci.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/syscalls/profile.h>
 
 __BEGIN_CDECLS
 

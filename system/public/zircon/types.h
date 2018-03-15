@@ -202,6 +202,7 @@ typedef uint32_t zx_rights_t;
 #define ZX_RIGHT_MANAGE_JOB       ((zx_rights_t)1u << 16)
 #define ZX_RIGHT_MANAGE_PROCESS   ((zx_rights_t)1u << 17)
 #define ZX_RIGHT_MANAGE_THREAD    ((zx_rights_t)1u << 18)
+#define ZX_RIGHT_APPLY_PROFILE    ((zx_rights_t)1u << 19)
 #define ZX_RIGHT_SAME_RIGHTS      ((zx_rights_t)1u << 31)
 
 // Convenient names for commonly grouped rights
@@ -355,7 +356,8 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_TIMER           ((zx_obj_type_t)22u)
 #define ZX_OBJ_TYPE_IOMMU           ((zx_obj_type_t)23u)
 #define ZX_OBJ_TYPE_BTI             ((zx_obj_type_t)24u)
-#define ZX_OBJ_TYPE_LAST            ((zx_obj_type_t)25u)
+#define ZX_OBJ_TYPE_PROFILE         ((zx_obj_type_t)25u)
+#define ZX_OBJ_TYPE_LAST            ((zx_obj_type_t)26u)
 
 typedef struct {
     zx_handle_t handle;

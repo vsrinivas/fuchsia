@@ -93,6 +93,10 @@ module Zircon [system] [extern_c] {
       header "syscalls/resource.h"
       export *
     }
+    module profile {
+      header "syscalls/profile.h"
+      export *
+    }
     module system {
       header "syscalls/system.h"
       export *

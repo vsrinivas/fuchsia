@@ -33,6 +33,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/object.cpp \
     $(LOCAL_DIR)/object_wait.cpp \
     $(LOCAL_DIR)/port.cpp \
+    $(LOCAL_DIR)/profile.cpp \
     $(LOCAL_DIR)/resource.cpp \
     $(LOCAL_DIR)/socket.cpp \
     $(LOCAL_DIR)/system.cpp \
