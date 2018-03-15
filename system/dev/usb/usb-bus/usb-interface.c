@@ -220,7 +220,7 @@ static zx_status_t usb_interface_req_alloc(void* ctx, usb_request_t** out, uint6
                                            uint8_t ep_address) {
     usb_interface_t* intf = ctx;
 
-    return usb_request_alloc_with_bti(out, intf->device->bus->bti_handle, data_size, ep_address);
+    return usb_request_alloc(out, intf->device->bus->bti_handle, data_size, ep_address);
 }
 
 static zx_status_t usb_interface_req_alloc_vmo(void* ctx, usb_request_t** out,
@@ -228,8 +228,8 @@ static zx_status_t usb_interface_req_alloc_vmo(void* ctx, usb_request_t** out,
                                                uint64_t length, uint8_t ep_address) {
     usb_interface_t* intf = ctx;
 
-    return usb_request_alloc_vmo_with_bti(out, intf->device->bus->bti_handle, vmo_handle,
-                                          vmo_offset, length, ep_address);
+    return usb_request_alloc_vmo(out, intf->device->bus->bti_handle, vmo_handle, vmo_offset, length,
+                                 ep_address);
 }
 
 static zx_status_t usb_interface_req_init(void* ctx, usb_request_t* req, zx_handle_t vmo_handle,
@@ -237,8 +237,8 @@ static zx_status_t usb_interface_req_init(void* ctx, usb_request_t* req, zx_hand
                                           uint8_t ep_address) {
     usb_interface_t* intf = ctx;
 
-    return usb_request_init_with_bti(req, intf->device->bus->bti_handle, vmo_handle, vmo_offset,
-                                     length, ep_address);
+    return usb_request_init(req, intf->device->bus->bti_handle, vmo_handle, vmo_offset, length,
+                            ep_address);
 }
 
 static void usb_control_complete(usb_request_t* req, void* cookie) {
@@ -257,8 +257,7 @@ static zx_status_t usb_interface_control(void* ctx, uint8_t request_type, uint8_
     }
 
     if (req == NULL) {
-        zx_status_t status = usb_request_alloc_with_bti(&req, intf->device->bus->bti_handle, length,
-                                                        0);
+        zx_status_t status = usb_request_alloc(&req, intf->device->bus->bti_handle, length, 0);
         if (status != ZX_OK) {
             return status;
         }

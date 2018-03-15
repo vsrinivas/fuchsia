@@ -236,7 +236,7 @@ static zx_status_t usb_func_req_alloc(void* ctx, usb_request_t** out, uint64_t d
     usb_function_t* function = ctx;
     usb_device_t* dev = function->dev;
 
-    return usb_request_alloc_with_bti(out, dev->bti_handle, data_size, ep_address);
+    return usb_request_alloc(out, dev->bti_handle, data_size, ep_address);
 }
 
 static zx_status_t usb_func_req_alloc_vmo(void* ctx, usb_request_t** out, zx_handle_t vmo_handle,
@@ -245,8 +245,7 @@ static zx_status_t usb_func_req_alloc_vmo(void* ctx, usb_request_t** out, zx_han
     usb_function_t* function = ctx;
     usb_device_t* dev = function->dev;
 
-    return usb_request_alloc_vmo_with_bti(out, dev->bti_handle, vmo_handle, vmo_offset, length,
-                                          ep_address);
+    return usb_request_alloc_vmo(out, dev->bti_handle, vmo_handle, vmo_offset, length, ep_address);
 }
 
 static zx_status_t usb_func_req_init(void* ctx, usb_request_t* req, zx_handle_t vmo_handle,
@@ -254,8 +253,7 @@ static zx_status_t usb_func_req_init(void* ctx, usb_request_t* req, zx_handle_t 
     usb_function_t* function = ctx;
     usb_device_t* dev = function->dev;
 
-    return usb_request_init_with_bti(req, dev->bti_handle, vmo_handle, vmo_offset, length,
-                                     ep_address);
+    return usb_request_init(req, dev->bti_handle, vmo_handle, vmo_offset, length, ep_address);
 }
 
 static zx_status_t usb_func_register(void* ctx, usb_function_interface_t* interface) {

@@ -19,7 +19,7 @@ static bool test_alloc_simple(void) {
     ASSERT_EQ(zx_bti_create(iommu_handle, 0, 0, &bti_handle), ZX_OK, "");
 
     usb_request_t* req;
-    ASSERT_EQ(usb_request_alloc_with_bti(&req, bti_handle, PAGE_SIZE * 3, 1), ZX_OK, "");
+    ASSERT_EQ(usb_request_alloc(&req, bti_handle, PAGE_SIZE * 3, 1), ZX_OK, "");
     ASSERT_NONNULL(req, "");
     ASSERT_TRUE(io_buffer_is_valid(&req->buffer), "");
 
@@ -46,7 +46,7 @@ static bool test_alloc_vmo(void) {
     ASSERT_EQ(zx_vmo_create(PAGE_SIZE * 4, 0, &vmo), ZX_OK, "");
 
     usb_request_t* req;
-    ASSERT_EQ(usb_request_alloc_vmo_with_bti(&req, bti_handle, vmo, PAGE_SIZE, PAGE_SIZE * 3, 0), ZX_OK, "");
+    ASSERT_EQ(usb_request_alloc_vmo(&req, bti_handle, vmo, PAGE_SIZE, PAGE_SIZE * 3, 0), ZX_OK, "");
 
     // Try copying some random data to and from the request.
     void* data = malloc(PAGE_SIZE * 4);
@@ -77,12 +77,12 @@ static bool test_pool(void) {
     ASSERT_EQ(zx_bti_create(iommu_handle, 0, 0, &bti_handle), ZX_OK, "");
 
     usb_request_t* req;
-    ASSERT_EQ(usb_request_alloc_with_bti(&req, bti_handle, 8u, 1), ZX_OK, "");
+    ASSERT_EQ(usb_request_alloc(&req, bti_handle, 8u, 1), ZX_OK, "");
     ASSERT_NONNULL(req, "");
     ASSERT_TRUE(io_buffer_is_valid(&req->buffer), "");
 
     usb_request_t* zero_req;
-    ASSERT_EQ(usb_request_alloc_with_bti(&zero_req, bti_handle, 0, 1), ZX_OK, "");
+    ASSERT_EQ(usb_request_alloc(&zero_req, bti_handle, 0, 1), ZX_OK, "");
     ASSERT_NONNULL(zero_req, "");
 
     usb_request_pool_t pool;

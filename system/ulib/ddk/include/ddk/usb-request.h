@@ -97,31 +97,18 @@ typedef struct {
 } usb_request_pool_t;
 
 // usb_request_alloc() creates a new usb request with payload space of data_size.
-zx_status_t usb_request_alloc_with_bti(usb_request_t** out, zx_handle_t bti_handle,
-                                       uint64_t data_size, uint8_t ep_address);
+zx_status_t usb_request_alloc(usb_request_t** out, zx_handle_t bti_handle, uint64_t data_size,
+                              uint8_t ep_address);
 
 // usb_request_alloc_vmo() creates a new usb request with the given VMO.
-zx_status_t usb_request_alloc_vmo_with_bti(usb_request_t** out, zx_handle_t bti_handle,
-                                           zx_handle_t vmo_handle, uint64_t vmo_offset,
-                                           uint64_t length, uint8_t ep_address);
+zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t bti_handle,
+                                  zx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t length,
+                                  uint8_t ep_address);
 
 // usb_request_init() initializes the statically allocated usb request with the given VMO.
 // This will free any resources allocated by the usb request but not the usb request itself.
-zx_status_t usb_request_init_with_bti(usb_request_t* req, zx_handle_t bti_handle,
-                                      zx_handle_t vmo_handle, uint64_t vmo_offset,
-                                      uint64_t length, uint8_t ep_address);
-
-// usb_request_alloc() creates a new usb request with payload space of data_size.
-zx_status_t usb_request_alloc(usb_request_t** out, uint64_t data_size, uint8_t ep_address);
-
-// usb_request_alloc_vmo() creates a new usb request with the given VMO.
-zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t vmo_handle,
-                                  uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
-
-// usb_request_init() initializes the statically allocated usb request with the given VMO.
-// This will free any resources allocated by the usb request but not the usb request itself.
-zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle, uint64_t vmo_offset,
-                             uint64_t length, uint8_t ep_address);
+zx_status_t usb_request_init(usb_request_t* req, zx_handle_t bti_handle, zx_handle_t vmo_handle,
+                             uint64_t vmo_offset, uint64_t length, uint8_t ep_address);
 
 // usb_request_copyfrom() copies data from the usb_request's vm object.
 // Out of range operations are ignored.

@@ -25,7 +25,7 @@ zx_status_t usb_device_control(usb_device_t* dev, uint8_t request_type,
         req = usb_request_pool_get(&dev->free_reqs, length);
     }
     if (req == NULL) {
-        zx_status_t status = usb_request_alloc_with_bti(&req, dev->bus->bti_handle, length, 0);
+        zx_status_t status = usb_request_alloc(&req, dev->bus->bti_handle, length, 0);
         if (status != ZX_OK) return status;
     }
 
