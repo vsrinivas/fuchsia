@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang.gni")
+import("//build/fidl/toolchain.gni")
 
 declare_args() {
   # Allows Cargo.lock to be updated when performing local builds.
@@ -204,6 +205,7 @@ template("rust_artifact") {
     script = "//build/rust/build_target.py"
 
     base_gen_dir = "$target_gen_dir/$main_target_name.rust"
+    fidl_gen_dir = get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
 
     depfile = output_depfile
 
@@ -235,6 +237,8 @@ template("rust_artifact") {
              rebase_path(root_build_dir),
              "--root-gen-dir",
              rebase_path(root_gen_dir),
+             "--fidl-gen-dir",
+             rebase_path(fidl_gen_dir),
              "--crate-root",
              rebase_path(source_dir),
              "--cargo",

@@ -61,6 +61,9 @@ def main():
     parser.add_argument("--root-gen-dir",
                         help="Path to the root gen directory",
                         required=True)
+    parser.add_argument("--fidl-gen-dir",
+                        help="Path to the root fidl gen directory",
+                        required=True)
     parser.add_argument("--crate-root",
                         help="Path to the crate root",
                         required=True)
@@ -110,6 +113,7 @@ def main():
     env["RUSTC"] = args.rustc
     env["RUST_BACKTRACE"] = "1"
     env["FUCHSIA_GEN_ROOT"] = args.root_gen_dir
+    env["FIDL_GEN_ROOT"] = args.fidl_gen_dir
     env["CC"] = clang_c_compiler
     env["CXX"] = args.clang_prefix + '/clang++'
     env["AR"] = args.clang_prefix + '/llvm-ar'
