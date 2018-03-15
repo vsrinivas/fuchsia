@@ -771,6 +771,7 @@ zx_status_t VnodeMinfs::UnlinkChild(WritebackWork* wb,
 
     if (!(de->reclen & kMinfsReclenLast) && (coalesced_size >= kMinfsReclenMask)) {
         // Should only be possible if the on-disk record format is corrupted
+        FS_TRACE_ERROR("unlink: Corrupted direntry with impossibly large size\n");
         return ZX_ERR_IO;
     }
     de->ino = 0;
@@ -1167,6 +1168,7 @@ zx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
         if (bno != 0) {
             char bdata[kMinfsBlockSize];
             if (fs_->ReadDat(bno, bdata)) {
+                FS_TRACE_ERROR("minfs: Failed to read data block %u\n", bno);
                 return ZX_ERR_IO;
             }
             memcpy(data, bdata + adjust, xfer);
@@ -1416,10 +1418,12 @@ zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t 
         size_t off_recovered = 0;
         while (off_recovered < off) {
             if (off_recovered + MINFS_DIRENT_SIZE >= kMinfsMaxDirectorySize) {
+                FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent; dirent reclen too large\n");
                 goto fail;
             }
             zx_status_t status = ReadInternal(de, kMinfsMaxDirentSize, off_recovered, &r);
             if ((status != ZX_OK) || (validate_dirent(de, r, off_recovered) != ZX_OK)) {
+                FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent unreadable/failed validation\n");
                 goto fail;
             }
             off_recovered += MinfsReclen(de, off_recovered);
@@ -1430,8 +1434,10 @@ zx_status_t VnodeMinfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t 
     while (off + MINFS_DIRENT_SIZE < kMinfsMaxDirectorySize) {
         zx_status_t status = ReadInternal(de, kMinfsMaxDirentSize, off, &r);
         if (status != ZX_OK) {
+            FS_TRACE_ERROR("minfs: Readdir: Unreadable dirent\n");
             goto fail;
         } else if (validate_dirent(de, r, off) != ZX_OK) {
+            FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent failed validation\n");
             goto fail;
         }
 
@@ -1543,7 +1549,8 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece nam
         char bdata[DirentSize(1) + DirentSize(2)];
         minfs_dir_init(bdata, vn->ino_, ino_);
         size_t expected = DirentSize(1) + DirentSize(2);
-        if (vn->WriteExactInternal(wb->txn(), bdata, expected, 0) != ZX_OK) {
+        if ((status = vn->WriteExactInternal(wb->txn(), bdata, expected, 0)) != ZX_OK) {
+            FS_TRACE_ERROR("minfs: Create: Failed to initialize empty directory: %d\n", status);
             return ZX_ERR_IO;
         }
         vn->inode_.dirent_count = 2;
@@ -1683,7 +1690,8 @@ zx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
 #ifdef __Fuchsia__
     // TODO(smklein): We should only init up to 'len'; no need
     // to read in the portion of a large file we plan on deleting.
-    if (InitVmo() != ZX_OK) {
+    if ((r = InitVmo()) != ZX_OK) {
+        FS_TRACE_ERROR("minfs: Truncate failed to initialize VMO: %d\n", r);
         return ZX_ERR_IO;
     }
 #endif
@@ -1710,18 +1718,21 @@ zx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
         if (len < inode_.size) {
             char bdata[kMinfsBlockSize];
             blk_t rel_bno = static_cast<blk_t>(len / kMinfsBlockSize);
-            if (BlockGet(nullptr, rel_bno, &bno) != ZX_OK) {
+            if ((r = BlockGet(nullptr, rel_bno, &bno)) != ZX_OK) {
+                FS_TRACE_ERROR("minfs: Truncate failed to get block %u of file: %d\n", rel_bno, r);
                 return ZX_ERR_IO;
             }
             if (bno != 0) {
                 size_t adjust = len % kMinfsBlockSize;
 #ifdef __Fuchsia__
                 if ((r = vmo_.read(bdata, len - adjust, adjust)) != ZX_OK) {
+                    FS_TRACE_ERROR("minfs: Truncate failed to read last block: %d\n", r);
                     return ZX_ERR_IO;
                 }
                 memset(bdata + adjust, 0, kMinfsBlockSize - adjust);
 
                 if ((r = vmo_.write(bdata, len - adjust, kMinfsBlockSize)) != ZX_OK) {
+                    FS_TRACE_ERROR("minfs: Truncate failed to write last block: %d\n", r);
                     return ZX_ERR_IO;
                 }
                 txn->Enqueue(vmo_.get(), rel_bno, bno + fs_->info_.dat_block, 1);

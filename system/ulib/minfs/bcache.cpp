@@ -69,15 +69,20 @@ zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint
     ssize_t r;
 
     if ((r = ioctl_block_get_info(bc->fd_.get(), &bc->info_)) < 0) {
+        FS_TRACE_ERROR("minfs: Cannot acquire block device information: %" PRId64 "\n", r);
         return static_cast<zx_status_t>(r);
     } else if (kMinfsBlockSize % bc->info_.block_size != 0) {
-        return ZX_ERR_IO;
+        FS_TRACE_ERROR("minfs: minfs Block size not multiple of underlying block size\n");
+        return ZX_ERR_BAD_STATE;
     } else if ((r = ioctl_block_get_fifos(bc->fd_.get(), &fifo)) < 0) {
+        FS_TRACE_ERROR("minfs: Cannot acquire block device fifo: %" PRId64 "\n", r);
         return static_cast<zx_status_t>(r);
     } else if (bc->TxnId() == TXNID_INVALID) {
+        FS_TRACE_ERROR("minfs: Cannot acquire block device txn\n");
         zx_handle_close(fifo);
         return ZX_ERR_NO_RESOURCES;
     } else if ((status = block_fifo_create_client(fifo, &bc->fifo_client_)) != ZX_OK) {
+        FS_TRACE_ERROR("minfs: Cannot create block fifo client: %d\n", status);
         bc->FreeTxnId();
         zx_handle_close(fifo);
         return status;
