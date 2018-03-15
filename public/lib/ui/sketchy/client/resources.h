@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_SKETCHY_RESOURCES_H_
-#define LIB_UI_SKETCHY_RESOURCES_H_
+#ifndef LIB_UI_SKETCHY_CLIENT_RESOURCES_H_
+#define LIB_UI_SKETCHY_CLIENT_RESOURCES_H_
 
 #include <garnet/public/lib/fxl/memory/ref_counted.h>
-#include "lib/ui/fun/sketchy/fidl/ops.fidl.h"
-#include "lib/ui/fun/sketchy/fidl/resources.fidl.h"
 #include "lib/ui/scenic/client/session.h"
-#include "lib/ui/sketchy/types.h"
+#include "lib/ui/sketchy/client/types.h"
+#include "lib/ui/sketchy/fidl/ops.fidl.h"
+#include "lib/ui/sketchy/fidl/resources.fidl.h"
 
 namespace sketchy_lib {
 
@@ -102,4 +102,4 @@ class ImportNode final : public Resource {
 
 }  // namespace sketchy_lib
 
-#endif  // LIB_UI_SKETCHY_RESOURCES_H_
+#endif  // LIB_UI_SKETCHY_CLIENT_RESOURCES_H_

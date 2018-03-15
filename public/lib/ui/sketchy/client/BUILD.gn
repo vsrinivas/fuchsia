@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("sketchy") {
+source_set("client") {
   sources = [
     "canvas.cc",
     "canvas.h",
@@ -15,7 +15,7 @@ source_set("sketchy") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/fun/sketchy/fidl",
+    "//garnet/public/lib/ui/sketchy/fidl",
     "//garnet/public/lib/ui/scenic:client",
   ]
 

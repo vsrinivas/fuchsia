@@ -9,7 +9,7 @@
 #include "garnet/bin/ui/sketchy/stroke/cubic_bezier.h"
 #include "garnet/public/lib/escher/geometry/bounding_box.h"
 #include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/ui/fun/sketchy/fidl/types.fidl.h"
+#include "garnet/public/lib/ui/sketchy/fidl/types.fidl.h"
 
 namespace sketchy_service {
 

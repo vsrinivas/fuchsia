@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_UI_SKETCHY_TYPES_H_
-#define LIB_UI_SKETCHY_TYPES_H_
+#ifndef LIB_UI_SKETCHY_CLIENT_TYPES_H_
+#define LIB_UI_SKETCHY_CLIENT_TYPES_H_
 
-#include "lib/ui/fun/sketchy/fidl/types.fidl.h"
-#include "lib/ui/sketchy/glm_hack.h"
+#include "lib/ui/sketchy/client/glm_hack.h"
+#include "lib/ui/sketchy/fidl/types.fidl.h"
 
 namespace sketchy_lib {
 
 // C++ wrapper for sketchy::CubicBezier2.
 class CubicBezier2 {
  public:
-  CubicBezier2(glm::vec2 pt0, glm::vec2 pt1,
-               glm::vec2 pt2, glm::vec2 pt3);
+  CubicBezier2(glm::vec2 pt0, glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3);
   sketchy::CubicBezier2Ptr NewSketchyCubicBezier2() const;
 
  private:
@@ -34,6 +33,6 @@ class StrokePath {
   std::vector<CubicBezier2> segments_;
 };
 
-}  // sketchy_lib
+}  // namespace sketchy_lib
 
-#endif  // LIB_UI_SKETCHY_TYPES_H_
+#endif  // LIB_UI_SKETCHY_CLIENT_TYPES_H_

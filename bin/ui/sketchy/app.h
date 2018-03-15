@@ -10,7 +10,7 @@
 #include "lib/escher/escher.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/ui/fun/sketchy/fidl/canvas.fidl.h"
+#include "lib/ui/sketchy/fidl/canvas.fidl.h"
 
 namespace sketchy_service {
 

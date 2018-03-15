@@ -7,8 +7,8 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/sketchy/canvas.h"
-#include "lib/ui/sketchy/resources.h"
+#include "lib/ui/sketchy/client/canvas.h"
+#include "lib/ui/sketchy/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
 
 namespace sketchy_example {

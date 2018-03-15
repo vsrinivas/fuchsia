@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ui/sketchy/types.h"
+#include "lib/ui/sketchy/client/types.h"
 
 namespace sketchy_lib {
 
-CubicBezier2::CubicBezier2(glm::vec2 pt0, glm::vec2 pt1,
-                           glm::vec2 pt2, glm::vec2 pt3)
+CubicBezier2::CubicBezier2(glm::vec2 pt0,
+                           glm::vec2 pt1,
+                           glm::vec2 pt2,
+                           glm::vec2 pt3)
     : pt0_(pt0), pt1_(pt1), pt2_(pt2), pt3_(pt3) {}
 
 sketchy::CubicBezier2Ptr CubicBezier2::NewSketchyCubicBezier2() const {
@@ -31,8 +33,7 @@ StrokePath::StrokePath(std::vector<CubicBezier2> segments)
     : segments_(segments) {}
 
 sketchy::StrokePathPtr StrokePath::NewSketchyStrokePath() const {
-  auto sketchy_segments =
-      f1dl::Array<sketchy::CubicBezier2Ptr>::New(0);
+  auto sketchy_segments = f1dl::Array<sketchy::CubicBezier2Ptr>::New(0);
   for (auto& segment : segments_) {
     auto sketchy_segment = segment.NewSketchyCubicBezier2();
     sketchy_segments.push_back(std::move(sketchy_segment));
@@ -42,4 +43,4 @@ sketchy::StrokePathPtr StrokePath::NewSketchyStrokePath() const {
   return sketchy_stroke_path;
 }
 
-}  // sketchy_lib
+}  // namespace sketchy_lib
