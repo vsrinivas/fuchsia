@@ -250,7 +250,7 @@ impl ClientInner {
         // one happens on this call.
 
         // Look to see if there are messages available
-        if self.received_messages_count.load(Ordering::AcqRel) > 0 {
+        if self.received_messages_count.load(Ordering::Acquire) > 0 {
             let mut message_interests = self.message_interests.lock().unwrap();
 
             // If a message was received for the ID in question,
