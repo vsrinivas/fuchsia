@@ -329,9 +329,13 @@ type compiler struct {
 
 func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
-	for _, v := range val {
+	if (val.Library != "") {
+		strs = append(strs, changeIfReserved(val.Library))
+	}
+	for _, v := range val.NestedDecls {
 		strs = append(strs, changeIfReserved(v))
 	}
+	strs = append(strs, changeIfReserved(val.Name))
 	return strings.Join(strs, "::")
 }
 
@@ -402,7 +406,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		// ability to look up the declaration type for identifiers in other
 		// libraries. For now, just use the first component of the identifier
 		// and assume that the identifier is in this library.
-		declType, ok := (*c.decls)[val.Identifier[0]]
+		declType, ok := (*c.decls)[val.Identifier.Name]
 		if !ok {
 			log.Fatal("Unknown identifier:", val.Identifier)
 		}
@@ -442,7 +446,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 			Type{
 				Decl: "char",
 			},
-			changeIfReserved(val.Name[0]) + "[]",
+			changeIfReserved(val.Name.Name) + "[]",
 			c.compileConstant(val.Value),
 		}
 		return r
@@ -451,7 +455,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 			false,
 			"constexpr",
 			c.compileType(val.Type),
-			changeIfReserved(val.Name[0]),
+			changeIfReserved(val.Name.Name),
 			c.compileConstant(val.Value),
 		}
 		if r.Type.DeclType == types.EnumDeclType {
@@ -465,7 +469,7 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
 		c.namespace,
 		c.compilePrimitiveSubtype(val.Type),
-		changeIfReserved(val.Name[0]),
+		changeIfReserved(val.Name.Name),
 		[]EnumMember{},
 	}
 	for _, v := range val.Members {
@@ -495,12 +499,12 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		c.namespace,
-		changeIfReserved(val.Name[0]),
+		changeIfReserved(val.Name.Name),
 		val.GetAttribute("ServiceName"),
-		changeIfReserved(val.Name[0] + "_Proxy"),
-		changeIfReserved(val.Name[0] + "_Stub"),
-		changeIfReserved(val.Name[0] + "_Sync"),
-		changeIfReserved(val.Name[0] + "_SyncProxy"),
+		changeIfReserved(val.Name.Name + "_Proxy"),
+		changeIfReserved(val.Name.Name + "_Stub"),
+		changeIfReserved(val.Name.Name + "_Sync"),
+		changeIfReserved(val.Name.Name + "_SyncProxy"),
 		[]Method{},
 	}
 
@@ -547,7 +551,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
-	name := changeIfReserved(val.Name[0])
+	name := changeIfReserved(val.Name.Name)
 	r := Struct{
 		c.namespace,
 		name,
@@ -575,7 +579,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
 		c.namespace,
-		changeIfReserved(val.Name[0]),
+		changeIfReserved(val.Name.Name),
 		[]UnionMember{},
 		val.Size,
 	}
@@ -600,31 +604,31 @@ func Compile(r types.Root) Root {
 
 	for _, v := range r.Consts {
 		d := c.compileConst(v)
-		decls[v.Name[0]] = &d
+		decls[v.Name.Name] = &d
 	}
 
 	for _, v := range r.Enums {
 		d := c.compileEnum(v)
-		decls[v.Name[0]] = &d
+		decls[v.Name.Name] = &d
 	}
 
 	for _, v := range r.Interfaces {
 		d := c.compileInterface(v)
-		decls[v.Name[0]] = &d
+		decls[v.Name.Name] = &d
 	}
 
 	for _, v := range r.Structs {
 		d := c.compileStruct(v)
-		decls[v.Name[0]] = &d
+		decls[v.Name.Name] = &d
 	}
 
 	for _, v := range r.Unions {
 		d := c.compileUnion(v)
-		decls[v.Name[0]] = &d
+		decls[v.Name.Name] = &d
 	}
 
 	for _, v := range r.DeclOrder {
-		root.Decls = append(root.Decls, decls[v[0]])
+		root.Decls = append(root.Decls, decls[v.Name])
 	}
 
 	return root

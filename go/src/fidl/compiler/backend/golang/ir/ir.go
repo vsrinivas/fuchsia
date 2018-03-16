@@ -319,8 +319,8 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 		// libraries. We also don't know how cross-library identifier references
 		// are even going to look for Go. For now, just use the first component
 		// of the identifier and assume that the identifier is in this library.
-		e := changeIfReserved(exportIdentifier(val.Identifier[0]))
-		declType, ok := c.decls[val.Identifier[0]]
+		e := changeIfReserved(exportIdentifier(val.Identifier.Name))
+		declType, ok := c.decls[val.Identifier.Name]
 		if !ok {
 			log.Fatal("Unknown identifier:", val.Identifier)
 		}
@@ -352,7 +352,7 @@ func (c *compiler) compileEnumMember(val types.EnumMember) EnumMember {
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
-		Name: changeIfReserved(exportIdentifier(val.Name[0])),
+		Name: changeIfReserved(exportIdentifier(val.Name.Name)),
 		Type: c.compilePrimitiveSubtype(val.Type),
 	}
 	for _, v := range val.Members {
@@ -372,7 +372,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
-		Name:      changeIfReserved(exportIdentifier(val.Name[0])),
+		Name:      changeIfReserved(exportIdentifier(val.Name.Name)),
 		Size:      val.Size,
 		Alignment: val.Alignment,
 	}

@@ -25,7 +25,11 @@ implement field, name, or type resolution and analysis.
 
 type Identifier string
 
-type CompoundIdentifier []Identifier
+type CompoundIdentifier struct {
+	Library     Identifier   `json:"library,omitempty"`
+	NestedDecls []Identifier `json:"nested-decls,omitempty"`
+	Name        Identifier   `json:"name"`
+}
 
 type Ordinal uint32
 

@@ -240,14 +240,15 @@ type compiler struct {
 
 func compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
-	for i, v := range val {
+	if val.Library != "" {
+		strs = append(strs, changeIfReserved(val.Library))
+	}
+	for _, v := range val.NestedDecls {
 		str := changeIfReserved(v)
-		if i == (len(val) - 1) {
-			// The last component should be camel-cased
-			str = common.ToUpperCamelCase(str)
-		}
 		strs = append(strs, str)
 	}
+	str := common.ToUpperCamelCase(changeIfReserved(val.Name))
+	strs = append(strs, str)
 	return strings.Join(strs, "::")
 }
 
@@ -299,13 +300,13 @@ func (c *compiler) compileConst(val types.Const) Const {
 	if val.Type.Kind == types.StringType {
 		r = Const{
 			Type:  "&str",
-			Name:  compileScreamingSnakeIdentifier(val.Name[0]),
+			Name:  compileScreamingSnakeIdentifier(val.Name.Name),
 			Value: compileConstant(val.Value),
 		}
 	} else {
 		r = Const{
 			Type:  c.compileType(val.Type).Decl,
-			Name:  compileScreamingSnakeIdentifier(val.Name[0]),
+			Name:  compileScreamingSnakeIdentifier(val.Name.Name),
 			Value: compileConstant(val.Value),
 		}
 	}
@@ -348,7 +349,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
 		t := compileCompoundIdentifier(val.Identifier)
-		declType, ok := (*c.decls)[val.Identifier[0]]
+		declType, ok := (*c.decls)[val.Identifier.Name]
 		if !ok {
 			log.Fatal("unknown identifier:", val.Identifier)
 		}
@@ -382,7 +383,7 @@ func (c *compiler) compileType(val types.Type) Type {
 
 func compileEnum(val types.Enum) Enum {
 	e := Enum{
-		compileCamelIdentifier(val.Name[0]),
+		compileCamelIdentifier(val.Name.Name),
 		compilePrimitiveSubtype(val.Type),
 		[]EnumMember{},
 	}
@@ -413,7 +414,7 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
-		compileCamelIdentifier(val.Name[0]),
+		compileCamelIdentifier(val.Name.Name),
 		[]Method{},
 	}
 
@@ -449,7 +450,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
-	name := compileCamelIdentifier(val.Name[0])
+	name := compileCamelIdentifier(val.Name.Name)
 	r := Struct{
 		Name:      name,
 		Members:   []StructMember{},
@@ -474,7 +475,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
-		Name:      compileCamelIdentifier(val.Name[0]),
+		Name:      compileCamelIdentifier(val.Name.Name),
 		Members:   []UnionMember{},
 		Size:      val.Size,
 		Alignment: val.Alignment,
