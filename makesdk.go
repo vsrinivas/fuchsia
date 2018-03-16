@@ -271,18 +271,23 @@ func init() {
 }
 
 func createLayout(manifest, fuchsiaRoot, outDir string) {
-	manifestPath := filepath.Join(fuchsiaRoot, x64BuildDir, "sdk-manifests", manifest)
-	cmd := filepath.Join(fuchsiaRoot, "scripts", "sdk", "create_layout.py")
-	args := []string{"--manifest", manifestPath, "--output", outDir}
-	if *verbose || *dryRun {
-		fmt.Println("createLayout", cmd, args)
-	}
-	if *dryRun {
-		return
-	}
-	out, err := exec.Command(cmd, args...).Output()
-	if err != nil {
-		log.Fatal("create_layout.py failed with output", string(out), "error", err)
+	for idx, buildDir := range []string{x64BuildDir, armBuildDir} {
+		manifestPath := filepath.Join(fuchsiaRoot, buildDir, "sdk-manifests", manifest)
+		cmd := filepath.Join(fuchsiaRoot, "scripts", "sdk", "create_layout.py")
+		args := []string{"--manifest", manifestPath, "--output", outDir}
+		if idx > 0 {
+			args = append(args, "--overlay")
+		}
+		if *verbose || *dryRun {
+			fmt.Println("createLayout", cmd, args)
+		}
+		if *dryRun {
+			return
+		}
+		out, err := exec.Command(cmd, args...).Output()
+		if err != nil {
+			log.Fatal("create_layout.py failed with output", string(out), "error", err)
+		}
 	}
 }
 
