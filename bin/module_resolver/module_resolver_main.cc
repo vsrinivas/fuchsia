@@ -38,7 +38,7 @@ constexpr char kContextListenerEntitiesKey[] = "entities";
 
 class ModuleResolverApp : ContextListener {
  public:
-  ModuleResolverApp(app::ApplicationContext* const context, bool is_test)
+  ModuleResolverApp(component::ApplicationContext* const context, bool is_test)
       : app_context_(context), context_listener_binding_(this) {
     modular::ComponentContextPtr component_context;
     app_context_->ConnectToEnvironmentService<modular::ComponentContext>(
@@ -272,7 +272,7 @@ class ModuleResolverApp : ContextListener {
 
   IntelligenceServicesPtr intelligence_services_;
 
-  app::ApplicationContext* const app_context_;
+  component::ApplicationContext* const app_context_;
 
   ContextReaderPtr context_reader_;
   f1dl::Binding<ContextListener> context_listener_binding_;
@@ -293,7 +293,7 @@ int main(int argc, const char** argv) {
     return 0;
   }
   auto is_test = command_line.HasOption("test");
-  auto context = app::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<maxwell::ModuleResolverApp> driver(
       context->outgoing_services(),
       std::make_unique<maxwell::ModuleResolverApp>(context.get(), is_test),

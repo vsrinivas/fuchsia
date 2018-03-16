@@ -20,7 +20,8 @@ namespace {
 class App : public modular::Lifecycle {
  public:
   App()
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      : application_context_(
+            component::ApplicationContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()),
         network_wrapper_(
             loop_.task_runner(),
@@ -49,7 +50,7 @@ class App : public modular::Lifecycle {
 
  private:
   fsl::MessageLoop loop_;
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   trace::TraceProvider trace_provider_;
 
   network_wrapper::NetworkWrapperImpl network_wrapper_;

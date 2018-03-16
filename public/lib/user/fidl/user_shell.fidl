@@ -21,7 +21,7 @@ import "lib/user_intelligence/fidl/intelligence_services.fidl";
 //
 // In one component instance there can only be one UserShell service instance.
 // The ViewOwner request is sent to the separate ViewProvider service. This way,
-// the user shell may be implemented as a flutter app.
+// the user shell may be implemented as a flutter component.
 //
 // Teardown may be initiated by the user shell calling
 // UserShellContext.Logout(), by the user runner being terminated, or by the

@@ -41,7 +41,7 @@ class StoryInfoAcquirer : public modular::VisibleStoriesWatcher,
   ~StoryInfoAcquirer() override;
 
   // Called by AgentDriver.
-  void Connect(f1dl::InterfaceRequest<app::ServiceProvider> services);
+  void Connect(f1dl::InterfaceRequest<component::ServiceProvider> services);
 
   // Called by AgentDriver.
   void RunTask(const f1dl::String& task_id,
@@ -91,7 +91,7 @@ class StoryInfoAcquirer : public modular::VisibleStoriesWatcher,
   // the StoryWatcher instances.
   std::map<std::string, std::unique_ptr<StoryWatcherImpl>> stories_;
 
-  app::ServiceNamespace agent_services_;
+  component::ServiceNamespace agent_services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryInfoAcquirer);
 };

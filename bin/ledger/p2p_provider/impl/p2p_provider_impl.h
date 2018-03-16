@@ -88,7 +88,7 @@ class P2PProviderImpl : public P2PProvider {
   // down, ...), we remove it from this set.
   std::set<std::string, convert::StringViewComparator> contacted_hosts_;
 
-  app::ServiceProviderImpl network_service_provider_;
+  component::ServiceProviderImpl network_service_provider_;
   std::string const host_name_;
   netconnector::NetConnectorPtr const net_connector_;
   std::unique_ptr<p2p_provider::UserIdProvider> const user_id_provider_;

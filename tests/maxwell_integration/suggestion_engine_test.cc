@@ -185,7 +185,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   void SetUp() override {
     ContextEngineTestBase::SetUp();
 
-    app::Services suggestion_services = StartServices("suggestion_engine");
+    component::Services suggestion_services =
+        StartServices("suggestion_engine");
     suggestion_engine_ =
         suggestion_services.ConnectToService<SuggestionEngine>();
     suggestion_provider_ =

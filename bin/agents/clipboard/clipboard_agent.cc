@@ -37,7 +37,8 @@ class ClipboardAgent {
         });
   }
 
-  void Connect(f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) {
+  void Connect(
+      f1dl::InterfaceRequest<component::ServiceProvider> outgoing_services) {
     services_.AddBinding(std::move(outgoing_services));
   }
 
@@ -54,7 +55,7 @@ class ClipboardAgent {
   std::unique_ptr<ClipboardImpl> clipboard_;
 
   // The service namespace that the Clipboard is added to.
-  app::ServiceNamespace services_;
+  component::ServiceNamespace services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ClipboardAgent);
 };
@@ -63,7 +64,7 @@ class ClipboardAgent {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AgentDriver<modular::ClipboardAgent> driver(
       app_context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();

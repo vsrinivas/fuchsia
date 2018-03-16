@@ -45,8 +45,9 @@ class Settings {
 class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
                           modular::UserWatcher {
  public:
-  explicit DevDeviceShellApp(app::ApplicationContext* const application_context,
-                             Settings settings)
+  explicit DevDeviceShellApp(
+      component::ApplicationContext* const application_context,
+      Settings settings)
       : SingleServiceApp(application_context),
         settings_(std::move(settings)),
         user_watcher_binding_(this) {
@@ -70,7 +71,8 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
   // |SingleServiceApp|
   void CreateView(
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
   }
@@ -164,7 +166,7 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
 
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<DevDeviceShellApp> driver(
       app_context->outgoing_services(),
       std::make_unique<DevDeviceShellApp>(app_context.get(), settings),

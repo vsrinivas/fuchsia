@@ -47,13 +47,13 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
  public:
   LedgerEndToEndTest()
       : application_context_(
-            app::ApplicationContext::CreateFromStartupInfoNotChecked()) {}
+            component::ApplicationContext::CreateFromStartupInfoNotChecked()) {}
   ~LedgerEndToEndTest() override {}
 
  protected:
   void Init(std::vector<std::string> additional_args) {
-    app::Services child_services;
-    auto launch_info = app::ApplicationLaunchInfo::New();
+    component::Services child_services;
+    auto launch_info = component::ApplicationLaunchInfo::New();
     launch_info->url = "ledger";
     launch_info->directory_request = child_services.NewRequest();
     launch_info->arguments.push_back("--no_minfs_wait");
@@ -128,14 +128,14 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     return ::testing::AssertionSuccess();
   }
 
-  app::ApplicationContext* application_context() {
+  component::ApplicationContext* application_context() {
     return application_context_.get();
   }
 
  private:
-  app::ApplicationControllerPtr ledger_controller_;
+  component::ApplicationControllerPtr ledger_controller_;
   std::vector<std::function<void()>> ledger_shutdown_callbacks_;
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
 
  protected:
   ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;

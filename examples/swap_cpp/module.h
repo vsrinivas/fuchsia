@@ -33,19 +33,19 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
       mozart::ViewManagerPtr,
       f1dl::InterfaceRequest<mozart::ViewOwner>)>;
 
-  explicit ModuleApp(app::ApplicationContext* const application_context,
+  explicit ModuleApp(component::ApplicationContext* const application_context,
                      CreateViewCallback create);
 
  private:
   // |SingleServiceApp|
   void CreateView(
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<app::ServiceProvider> services) override;
+      f1dl::InterfaceRequest<component::ServiceProvider> services) override;
 
   // |Module|
-  void Initialize(
-      f1dl::InterfaceHandle<modular::ModuleContext> moduleContext,
-      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
+  void Initialize(f1dl::InterfaceHandle<modular::ModuleContext> moduleContext,
+                  f1dl::InterfaceRequest<component::ServiceProvider>
+                      outgoing_services) override;
 
   CreateViewCallback create_;
   std::unique_ptr<mozart::BaseView> view_;

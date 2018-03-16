@@ -74,7 +74,7 @@ class SuggestionEngineImpl : public ContextListener,
                              public SuggestionEngine,
                              public SuggestionProvider {
  public:
-  SuggestionEngineImpl(app::ApplicationContext* app_context);
+  SuggestionEngineImpl(component::ApplicationContext* app_context);
   ~SuggestionEngineImpl();
 
   // TODO(andrewosh): The following two methods should be removed. New

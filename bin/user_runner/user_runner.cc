@@ -14,9 +14,8 @@
 #include "peridot/bin/user_runner/user_runner_impl.h"
 
 fxl::AutoCall<fxl::Closure> SetupCobalt(
-    const bool disable_statistics,
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
-    app::ApplicationContext* const application_context) {
+    const bool disable_statistics, fxl::RefPtr<fxl::TaskRunner> task_runner,
+    component::ApplicationContext* const application_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});
   }
@@ -29,8 +28,8 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
-  std::unique_ptr<app::ApplicationContext> app_context =
-      app::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<component::ApplicationContext> app_context =
+      component::ApplicationContext::CreateFromStartupInfo();
 
   fxl::AutoCall<fxl::Closure> cobalt_cleanup = SetupCobalt(
       test, std::move(loop.task_runner()), app_context.get());

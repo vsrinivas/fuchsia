@@ -44,8 +44,7 @@ class CobaltObservation {
 class CobaltContext {
  public:
   CobaltContext(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                app::ApplicationContext* app_context,
-                int32_t project_id);
+                component::ApplicationContext* app_context, int32_t project_id);
   ~CobaltContext();
 
   void ReportObservation(CobaltObservation observation);
@@ -59,7 +58,7 @@ class CobaltContext {
 
   backoff::ExponentialBackoff backoff_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
-  app::ApplicationContext* app_context_;
+  component::ApplicationContext* app_context_;
   CobaltEncoderPtr encoder_;
   const int32_t project_id_;
 
@@ -73,8 +72,7 @@ class CobaltContext {
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
-    app::ApplicationContext* app_context,
-    int32_t project_id,
+    component::ApplicationContext* app_context, int32_t project_id,
     CobaltContext** cobalt_context);
 
 // Report an observation to Cobalt.

@@ -59,11 +59,9 @@ std::string GetRandomId() {
 }  // namespace
 
 UserProviderImpl::UserProviderImpl(
-    std::shared_ptr<app::ApplicationContext> app_context,
-    const AppConfig& user_runner,
-    const AppConfig& default_user_shell,
-    const AppConfig& story_shell,
-    auth::AccountProvider* const account_provider)
+    std::shared_ptr<component::ApplicationContext> app_context,
+    const AppConfig& user_runner, const AppConfig& default_user_shell,
+    const AppConfig& story_shell, auth::AccountProvider* const account_provider)
     : app_context_(std::move(app_context)),
       user_runner_(user_runner),
       default_user_shell_(default_user_shell),

@@ -43,14 +43,14 @@ modular::AgentControllerPtr StartStoryInfoAgent(
     f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
     f1dl::InterfaceHandle<modular::VisibleStoriesProvider>
         visible_stories_provider) {
-  app::ServiceProviderPtr agent_services;
+  component::ServiceProviderPtr agent_services;
   modular::AgentControllerPtr controller;
   component_context->ConnectToAgent("acquirers/story_info_main",
                                     agent_services.NewRequest(),
                                     controller.NewRequest());
 
   auto initializer =
-      app::ConnectToService<StoryInfoInitializer>(agent_services.get());
+      component::ConnectToService<StoryInfoInitializer>(agent_services.get());
   initializer->Initialize(std::move(story_provider), std::move(focus_provider),
                           std::move(visible_stories_provider));
 
@@ -60,8 +60,7 @@ modular::AgentControllerPtr StartStoryInfoAgent(
 }  // namespace
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
-    app::ApplicationContext* app_context,
-    const Config& config,
+    component::ApplicationContext* app_context, const Config& config,
     f1dl::InterfaceHandle<maxwell::ContextEngine> context_engine_handle,
     f1dl::InterfaceHandle<modular::StoryProvider> story_provider_handle,
     f1dl::InterfaceHandle<modular::FocusProvider> focus_provider_handle,
@@ -115,7 +114,7 @@ void UserIntelligenceProviderImpl::GetSuggestionProvider(
 void UserIntelligenceProviderImpl::GetSpeechToText(
     f1dl::InterfaceRequest<speech::SpeechToText> request) {
   if (kronk_services_) {
-    app::ConnectToService(kronk_services_.get(), std::move(request));
+    component::ConnectToService(kronk_services_.get(), std::move(request));
   } else {
     FXL_LOG(WARNING) << "No speech-to-text agent loaded";
   }
@@ -155,16 +154,16 @@ void UserIntelligenceProviderImpl::StartAgents(
 void UserIntelligenceProviderImpl::GetServicesForAgent(
     const f1dl::String& url,
     const GetServicesForAgentCallback& callback) {
-  auto service_list = app::ServiceList::New();
+  auto service_list = component::ServiceList::New();
   agent_namespaces_.emplace_back(service_list->provider.NewRequest());
   service_list->names = AddStandardServices(url, &agent_namespaces_.back());
   callback(std::move(service_list));
 }
 
-app::Services UserIntelligenceProviderImpl::StartTrustedApp(
+component::Services UserIntelligenceProviderImpl::StartTrustedApp(
     const std::string& url) {
-  app::Services services;
-  auto launch_info = app::ApplicationLaunchInfo::New();
+  component::Services services;
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = url;
   launch_info->directory_request = services.NewRequest();
   app_context_->launcher()->CreateApplication(std::move(launch_info), NULL);
@@ -173,7 +172,7 @@ app::Services UserIntelligenceProviderImpl::StartTrustedApp(
 
 void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
   modular::AgentControllerPtr controller;
-  app::ServiceProviderPtr services;
+  component::ServiceProviderPtr services;
   component_context_->ConnectToAgent(url, services.NewRequest(),
                                      controller.NewRequest());
   agent_controllers_.push_back(std::move(controller));
@@ -182,7 +181,7 @@ void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
 void UserIntelligenceProviderImpl::StartActionLog(
     SuggestionEngine* suggestion_engine) {
   std::string url = "action_log";
-  app::Services action_log_services = StartTrustedApp(url);
+  component::Services action_log_services = StartTrustedApp(url);
   maxwell::UserActionLogFactoryPtr action_log_factory =
       action_log_services.ConnectToService<maxwell::UserActionLogFactory>();
   maxwell::ProposalPublisherPtr proposal_publisher;
@@ -223,8 +222,7 @@ void UserIntelligenceProviderImpl::StartKronk() {
 }
 
 f1dl::Array<f1dl::String> UserIntelligenceProviderImpl::AddStandardServices(
-    const std::string& url,
-    app::ServiceNamespace* agent_host) {
+    const std::string& url, component::ServiceNamespace* agent_host) {
   auto agent_info = ComponentScope::New();
   auto agent_scope = AgentScope::New();
   agent_scope->url = url;
@@ -295,8 +293,7 @@ f1dl::Array<f1dl::String> UserIntelligenceProviderImpl::AddStandardServices(
 //////////////////////////////////////////////////////////////////////////////
 
 UserIntelligenceProviderFactoryImpl::UserIntelligenceProviderFactoryImpl(
-    app::ApplicationContext* app_context,
-    const Config& config)
+    component::ApplicationContext* app_context, const Config& config)
     : app_context_(app_context), config_(config) {}
 
 void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(

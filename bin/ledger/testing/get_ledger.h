@@ -26,8 +26,8 @@ namespace test {
 // TODO(ppi): take the server_id as std::optional<std::string> and drop bool
 // sync once we're on C++17.
 ledger::Status GetLedger(fsl::MessageLoop* loop,
-                         app::ApplicationContext* context,
-                         app::ApplicationControllerPtr* controller,
+                         component::ApplicationContext* context,
+                         component::ApplicationControllerPtr* controller,
                          cloud_provider::CloudProviderPtr cloud_provider,
                          std::string ledger_name,
                          std::string ledger_repository_path,

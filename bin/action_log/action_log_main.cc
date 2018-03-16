@@ -42,7 +42,7 @@ class UserActionLogFactoryImpl : public UserActionLogFactory {
 class UserActionLogFactoryApp {
  public:
   UserActionLogFactoryApp()
-      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
     std::unique_ptr<UserActionLogFactoryImpl> factory_impl(
         new UserActionLogFactoryImpl());
     factory_impl_.swap(factory_impl);
@@ -55,7 +55,7 @@ class UserActionLogFactoryApp {
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   std::unique_ptr<UserActionLogFactoryImpl> factory_impl_;
   f1dl::BindingSet<UserActionLogFactory> factory_bindings_;
 

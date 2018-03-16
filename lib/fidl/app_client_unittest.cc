@@ -24,11 +24,12 @@ AppConfigPtr GetTestAppConfig() {
   return app_config;
 }
 
-class TestApplicationController : app::ApplicationController {
+class TestApplicationController : component::ApplicationController {
  public:
   TestApplicationController() : binding_(this) {}
 
-  void Connect(f1dl::InterfaceRequest<app::ApplicationController> request) {
+  void Connect(
+      f1dl::InterfaceRequest<component::ApplicationController> request) {
     binding_.Bind(std::move(request));
     binding_.set_error_handler([this] { Kill(); });
   }
@@ -42,7 +43,7 @@ class TestApplicationController : app::ApplicationController {
 
   void Wait(const WaitCallback& callback) override {}
 
-  f1dl::Binding<app::ApplicationController> binding_;
+  f1dl::Binding<component::ApplicationController> binding_;
 
   bool killed_{};
 
@@ -55,9 +56,10 @@ TEST_F(AppClientTest, BaseRun_Success) {
   bool callback_called = false;
   FakeApplicationLauncher launcher;
   launcher.RegisterApplication(
-      kTestUrl, [&callback_called](
-                    app::ApplicationLaunchInfoPtr launch_info,
-                    f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
+      kTestUrl,
+      [&callback_called](
+          component::ApplicationLaunchInfoPtr launch_info,
+          f1dl::InterfaceRequest<component::ApplicationController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info->url);
         callback_called = true;
       });
@@ -71,9 +73,10 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
   TestApplicationController controller;
   bool callback_called = false;
   launcher.RegisterApplication(
-      kTestUrl, [&callback_called, &controller](
-                    app::ApplicationLaunchInfoPtr launch_info,
-                    f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
+      kTestUrl,
+      [&callback_called, &controller](
+          component::ApplicationLaunchInfoPtr launch_info,
+          f1dl::InterfaceRequest<component::ApplicationController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info->url);
         callback_called = true;
         controller.Connect(std::move(ctrl));
@@ -100,9 +103,10 @@ TEST_F(AppClientTest, Run_Success) {
   bool callback_called = false;
   FakeApplicationLauncher launcher;
   launcher.RegisterApplication(
-      kTestUrl, [&callback_called](
-                    app::ApplicationLaunchInfoPtr launch_info,
-                    f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
+      kTestUrl,
+      [&callback_called](
+          component::ApplicationLaunchInfoPtr launch_info,
+          f1dl::InterfaceRequest<component::ApplicationController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info->url);
         callback_called = true;
       });
@@ -113,7 +117,7 @@ TEST_F(AppClientTest, Run_Success) {
 }
 
 TEST_F(AppClientTest, RunWithParams_Success) {
-  app::ServiceListPtr additional_services = app::ServiceList::New();
+  component::ServiceListPtr additional_services = component::ServiceList::New();
   additional_services->names.push_back(kServiceName);
   // We just need |provider_request| to stay around till the end of this test.
   auto provider_request = additional_services->provider.NewRequest();
@@ -121,9 +125,10 @@ TEST_F(AppClientTest, RunWithParams_Success) {
   bool callback_called = false;
   FakeApplicationLauncher launcher;
   launcher.RegisterApplication(
-      kTestUrl, [&callback_called](
-                    app::ApplicationLaunchInfoPtr launch_info,
-                    f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
+      kTestUrl,
+      [&callback_called](
+          component::ApplicationLaunchInfoPtr launch_info,
+          f1dl::InterfaceRequest<component::ApplicationController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info->url);
         auto additional_services = std::move(launch_info->additional_services);
         EXPECT_FALSE(additional_services.is_null());

@@ -22,9 +22,8 @@ constexpr char kAppUrl[] = "cloud_provider_firestore";
 class CloudProviderFactory::TokenProviderContainer {
  public:
   TokenProviderContainer(
-      app::ApplicationContext* application_context,
-      fxl::RefPtr<fxl::TaskRunner> task_runner,
-      std::string credentials_path,
+      component::ApplicationContext* application_context,
+      fxl::RefPtr<fxl::TaskRunner> task_runner, std::string credentials_path,
       f1dl::InterfaceRequest<modular::auth::TokenProvider> request)
       : application_context_(application_context),
         network_wrapper_(
@@ -47,7 +46,7 @@ class CloudProviderFactory::TokenProviderContainer {
   }
 
  private:
-  app::ApplicationContext* const application_context_;
+  component::ApplicationContext* const application_context_;
   network_wrapper::NetworkWrapperImpl network_wrapper_;
   service_account::ServiceAccountTokenProvider token_provider_;
   f1dl::Binding<modular::auth::TokenProvider> binding_;
@@ -56,7 +55,7 @@ class CloudProviderFactory::TokenProviderContainer {
 };
 
 CloudProviderFactory::CloudProviderFactory(
-    app::ApplicationContext* application_context,
+    component::ApplicationContext* application_context,
     std::string credentials_path)
     : application_context_(application_context),
       credentials_path_(std::move(credentials_path)) {}
@@ -69,8 +68,8 @@ CloudProviderFactory::~CloudProviderFactory() {
 
 void CloudProviderFactory::Init() {
   services_thread_ = fsl::CreateThread(&services_task_runner_);
-  app::Services child_services;
-  auto launch_info = app::ApplicationLaunchInfo::New();
+  component::Services child_services;
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = kAppUrl;
   launch_info->directory_request = child_services.NewRequest();
   application_context_->launcher()->CreateApplication(

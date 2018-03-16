@@ -45,11 +45,11 @@ class ModuleContextImpl : ModuleContext {
   // property. The last item in this list is this module's name. |module_path|
   // can be used to internally name resources that belong to this module
   // (message queues, Links).
-  ModuleContextImpl(
-      const ModuleContextInfo& info,
-      const ModuleData* module_data,
-      ModuleControllerImpl* module_controller_impl,
-      f1dl::InterfaceRequest<app::ServiceProvider> service_provider_request);
+  ModuleContextImpl(const ModuleContextInfo& info,
+                    const ModuleData* module_data,
+                    ModuleControllerImpl* module_controller_impl,
+                    f1dl::InterfaceRequest<component::ServiceProvider>
+                        service_provider_request);
 
   ~ModuleContextImpl() override;
 
@@ -59,34 +59,29 @@ class ModuleContextImpl : ModuleContext {
                f1dl::InterfaceRequest<Link> request) override;
   // |ModuleContext|
   void StartModuleDeprecated(
-      const f1dl::String& name,
-      const f1dl::String& query,
+      const f1dl::String& name, const f1dl::String& query,
       const f1dl::String& link_name,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   // |ModuleContext|
   void EmbedModule(
-      const f1dl::String& name,
-      DaisyPtr daisy,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      const f1dl::String& name, DaisyPtr daisy,
+      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner,
       const EmbedModuleCallback& callback) override;
   // |ModuleContext|
   void StartModuleInShellDeprecated(
-      const f1dl::String& name,
-      const f1dl::String& query,
+      const f1dl::String& name, const f1dl::String& query,
       const f1dl::String& link_name,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
-      SurfaceRelationPtr surface_relation,
-      bool focus) override;
+      SurfaceRelationPtr surface_relation, bool focus) override;
   // |ModuleContext|
   void StartModule(
-      const f1dl::String& name,
-      DaisyPtr daisy,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      const f1dl::String& name, DaisyPtr daisy,
+      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
       const StartModuleCallback& callback) override;
@@ -98,10 +93,9 @@ class ModuleContextImpl : ModuleContext {
       f1dl::Array<ContainerNodePtr> nodes) override;
   // |ModuleContext|
   void EmbedModuleDeprecated(
-      const f1dl::String& name,
-      const f1dl::String& query,
+      const f1dl::String& name, const f1dl::String& query,
       const f1dl::String& link_name,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
@@ -140,7 +134,7 @@ class ModuleContextImpl : ModuleContext {
 
   // A service provider that represents the services to be added into an
   // application's namespace.
-  app::ServiceProviderImpl service_provider_impl_;
+  component::ServiceProviderImpl service_provider_impl_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleContextImpl);
 };

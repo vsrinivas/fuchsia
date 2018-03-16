@@ -42,7 +42,7 @@ class XdrContext;
 // manages the life time of a running agent.
 class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
  public:
-  AgentRunner(app::ApplicationLauncher* application_launcher,
+  AgentRunner(component::ApplicationLauncher* application_launcher,
               MessageQueueManager* message_queue_manager,
               ledger::LedgerRepository* ledger_repository,
               AgentRunnerStorage* agent_runner_storage,
@@ -60,9 +60,9 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // Connects to an agent (and starts it up if it doesn't exist) through
   // |Agent.Connect|. Called using ComponentContext.
   void ConnectToAgent(
-      const std::string& requestor_url,
-      const std::string& agent_url,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+      const std::string& requestor_url, const std::string& agent_url,
+      f1dl::InterfaceRequest<component::ServiceProvider>
+          incoming_services_request,
       f1dl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Connects to an agent (and starts it up if it doesn't exist) through its
@@ -143,7 +143,8 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // agent is in a terminating state.
   struct PendingAgentConnectionEntry {
     const std::string requestor_url;
-    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request;
+    f1dl::InterfaceRequest<component::ServiceProvider>
+        incoming_services_request;
     f1dl::InterfaceRequest<AgentController> agent_controller_request;
   };
   std::map<std::string, std::vector<struct PendingAgentConnectionEntry>>
@@ -178,7 +179,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   std::map<std::string, std::pair<std::string, std::string>>
       task_by_ledger_key_;
 
-  app::ApplicationLauncher* const application_launcher_;
+  component::ApplicationLauncher* const application_launcher_;
   MessageQueueManager* const message_queue_manager_;
   ledger::LedgerRepository* const ledger_repository_;
   // |agent_runner_storage_| must outlive this class.

@@ -29,7 +29,7 @@ const char kLocationTopic[] = "location/region";
 class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
  public:
   IdeasAgentApp()
-      : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         binding_(this),
         out_(app_context_->ConnectToEnvironmentService<ProposalPublisher>()) {
@@ -81,7 +81,7 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> app_context_;
+  std::unique_ptr<component::ApplicationContext> app_context_;
 
   ContextReaderPtr reader_;
   f1dl::Binding<ContextListener> binding_;

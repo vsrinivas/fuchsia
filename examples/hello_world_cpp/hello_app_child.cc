@@ -18,7 +18,7 @@ namespace {
 
 class HelloAppChild : public Hello {
  public:
-  HelloAppChild(app::ApplicationContext* app_context) {
+  HelloAppChild(component::ApplicationContext* app_context) {
     app_context->outgoing_services()->AddService<Hello>(
         [this](f1dl::InterfaceRequest<Hello> request) {
           hello_binding_.AddBinding(this, std::move(request));
@@ -45,7 +45,7 @@ class HelloAppChild : public Hello {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<HelloAppChild> driver(
       app_context->outgoing_services(),
       std::make_unique<HelloAppChild>(app_context.get()),

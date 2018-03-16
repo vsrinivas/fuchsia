@@ -38,14 +38,13 @@ class UserControllerImpl : UserController, UserContext {
   using DoneCallback = std::function<void(UserControllerImpl*)>;
 
   UserControllerImpl(
-      app::ApplicationLauncher* application_launcher,
-      AppConfigPtr user_runner,
-      AppConfigPtr user_shell,
+      component::ApplicationLauncher* application_launcher,
+      AppConfigPtr user_runner, AppConfigPtr user_shell,
       AppConfigPtr story_shell,
       f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       auth::AccountPtr account,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      f1dl::InterfaceHandle<app::ServiceProvider> device_shell_services,
+      f1dl::InterfaceHandle<component::ServiceProvider> device_shell_services,
       f1dl::InterfaceRequest<UserController> user_controller_request,
       DoneCallback done);
 
@@ -81,7 +80,7 @@ class UserControllerImpl : UserController, UserContext {
 
   std::vector<LogoutCallback> logout_response_callbacks_;
 
-  app::ServiceProviderPtr device_shell_services_;
+  component::ServiceProviderPtr device_shell_services_;
 
   DoneCallback done_;
 

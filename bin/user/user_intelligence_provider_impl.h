@@ -25,8 +25,7 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
  public:
   // |app_context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
-      app::ApplicationContext* app_context,
-      const Config& config,
+      component::ApplicationContext* app_context, const Config& config,
       f1dl::InterfaceHandle<maxwell::ContextEngine> context_engine,
       f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
       f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
@@ -54,36 +53,34 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
       const GetServicesForAgentCallback& callback) override;
 
  private:
-  using ServiceProviderInitializer =
-      std::function<void(const std::string& url,
-                         app::ServiceNamespace* agent_host)>;
+  using ServiceProviderInitializer = std::function<void(
+      const std::string& url, component::ServiceNamespace* agent_host)>;
   // A ServiceProviderInitializer that adds standard agent services, including
   // attributed context and suggestion service entry points. Returns the names
   // of the services added.
   f1dl::Array<f1dl::String> AddStandardServices(
-      const std::string& url,
-      app::ServiceNamespace* agent_host);
+      const std::string& url, component::ServiceNamespace* agent_host);
 
   // Starts an app in the parent environment, with full access to environment
   // services.
-  app::Services StartTrustedApp(const std::string& url);
+  component::Services StartTrustedApp(const std::string& url);
 
   void StartAgent(const std::string& url);
 
   void StartActionLog(SuggestionEngine* suggestion_engine);
   void StartKronk();
 
-  app::ApplicationContext* app_context_;  // Not owned.
+  component::ApplicationContext* app_context_;  // Not owned.
   const Config config_;
 
   ContextEnginePtr context_engine_;
-  app::Services suggestion_services_;
+  component::Services suggestion_services_;
   SuggestionEnginePtr suggestion_engine_;
   UserActionLogPtr user_action_log_;
 
   std::string kronk_url_;
   modular::RateLimitedRetry kronk_restart_;
-  app::ServiceProviderPtr kronk_services_;
+  component::ServiceProviderPtr kronk_services_;
   modular::AgentControllerPtr kronk_controller_;
 
   f1dl::BindingSet<IntelligenceServices, std::unique_ptr<IntelligenceServices>>
@@ -100,15 +97,15 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
 
   // ServiceNamespace(s) backing the services provided to these agents via its
   // namespace.
-  std::deque<app::ServiceNamespace> agent_namespaces_;
+  std::deque<component::ServiceNamespace> agent_namespaces_;
 };
 
 class UserIntelligenceProviderFactoryImpl
     : public UserIntelligenceProviderFactory {
  public:
   // |app_context| is not owned and must outlive this instance.
-  UserIntelligenceProviderFactoryImpl(app::ApplicationContext* app_context,
-                                      const Config& config);
+  UserIntelligenceProviderFactoryImpl(
+      component::ApplicationContext* app_context, const Config& config);
   ~UserIntelligenceProviderFactoryImpl() override = default;
 
   void GetUserIntelligenceProvider(
@@ -121,7 +118,7 @@ class UserIntelligenceProviderFactoryImpl
           user_intelligence_provider_request) override;
 
  private:
-  app::ApplicationContext* app_context_;  // Not owned.
+  component::ApplicationContext* app_context_;  // Not owned.
   const Config config_;
 
   // We expect a 1:1 relationship between instances of this Factory and

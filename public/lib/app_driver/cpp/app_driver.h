@@ -21,9 +21,9 @@ namespace modular {
 
 // AppDriver is a wrapper that simplifies participating in lifecycle management
 // by the application's parent. It does this by exposing the Lifecycle service
-// in app::ApplicationContext::outgoing_services() and proxies the Terminate()
-// call of modular::Lifecycle to the Terminate() method on your application's
-// class instance.
+// in component::ApplicationContext::outgoing_services() and proxies the
+// Terminate() call of modular::Lifecycle to the Terminate() method on your
+// application's class instance.
 //
 // Usage:
 //
@@ -37,7 +37,7 @@ namespace modular {
 //
 // class HelloWorldApp {
 //  public:
-//   HelloWorldApp(app::ApplicationContext* app_context) {
+//   HelloWorldApp(component::ApplicationContext* app_context) {
 //     app_context->outgoing_services()->AddService<..>(...);
 //   }
 //
@@ -48,7 +48,7 @@ namespace modular {
 //
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
-//   auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+//   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
 //   modular::AppDriver<HelloWorldApp> driver(
 //       app_context->outgoing_services(),
 //       std::make_unique<HelloWorldApp>(app_context.get()),
@@ -59,9 +59,8 @@ namespace modular {
 template <typename Impl>
 class AppDriver : LifecycleImpl::Delegate {
  public:
-  AppDriver(app::ServiceNamespace* const outgoing_services,
-            std::unique_ptr<Impl> impl,
-            std::function<void()> on_terminated)
+  AppDriver(component::ServiceNamespace* const outgoing_services,
+            std::unique_ptr<Impl> impl, std::function<void()> on_terminated)
       : lifecycle_impl_(outgoing_services, this),
         impl_(std::move(impl)),
         on_terminated_(std::move(on_terminated)) {}

@@ -167,7 +167,7 @@ class ContextListenerImpl : maxwell::ContextListener {
 // the importance of the second story.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  TestApp(app::ApplicationContext* const application_context)
+  TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
     TestInit(__FILE__);
   }

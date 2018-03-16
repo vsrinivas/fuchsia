@@ -25,7 +25,8 @@ void ComponentContextFake::GetLedger(
 
 void ComponentContextFake::ConnectToAgent(
     const f1dl::String& url,
-    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+    f1dl::InterfaceRequest<component::ServiceProvider>
+        incoming_services_request,
     f1dl::InterfaceRequest<AgentController> agent_controller_request) {
   FXL_NOTIMPLEMENTED();
 }

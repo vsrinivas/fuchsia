@@ -32,10 +32,10 @@ class GetPageBenchmark {
 
   files::ScopedTempDir tmp_dir_;
   test::DataGenerator generator_;
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   const size_t requests_count_;
   const bool reuse_;
-  app::ApplicationControllerPtr application_controller_;
+  component::ApplicationControllerPtr application_controller_;
   ledger::LedgerPtr ledger_;
   f1dl::Array<uint8_t> page_id_;
   std::vector<ledger::PagePtr> pages_;

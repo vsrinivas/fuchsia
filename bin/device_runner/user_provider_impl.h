@@ -20,7 +20,7 @@ struct UsersStorage;
 
 class UserProviderImpl : UserProvider {
  public:
-  UserProviderImpl(std::shared_ptr<app::ApplicationContext> app_context,
+  UserProviderImpl(std::shared_ptr<component::ApplicationContext> app_context,
                    const AppConfig& user_runner,
                    const AppConfig& default_user_shell,
                    const AppConfig& story_shell,
@@ -54,7 +54,7 @@ class UserProviderImpl : UserProvider {
 
   f1dl::BindingSet<UserProvider> bindings_;
 
-  std::shared_ptr<app::ApplicationContext> app_context_;
+  std::shared_ptr<component::ApplicationContext> app_context_;
   const AppConfig& user_runner_;         // Neither owned nor copied.
   const AppConfig& default_user_shell_;  // Neither owned nor copied.
   const AppConfig& story_shell_;         // Neither owned nor copied.

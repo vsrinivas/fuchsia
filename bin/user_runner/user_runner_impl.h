@@ -59,7 +59,7 @@ class UserRunnerImpl : UserRunner,
                        EntityProviderLauncher,
                        UserRunnerDebug {
  public:
-  UserRunnerImpl(app::ApplicationContext* application_context, bool test);
+  UserRunnerImpl(component::ApplicationContext* application_context, bool test);
 
   ~UserRunnerImpl() override;
 
@@ -137,8 +137,8 @@ class UserRunnerImpl : UserRunner,
   // |UserRunnerDebug|
   void DumpState(const DumpStateCallback& callback) override;
 
-  app::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
-  app::ServiceProviderPtr GetServiceProvider(const std::string& url);
+  component::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
+  component::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
   cloud_provider::CloudProviderPtr GetCloudProvider();
 
@@ -166,7 +166,7 @@ class UserRunnerImpl : UserRunner,
   // execution steps are stored in at_end_.
   void TerminateRecurse(int i);
 
-  app::ApplicationContext* const application_context_;
+  component::ApplicationContext* const application_context_;
   const bool test_;
 
   f1dl::BindingSet<UserRunner> bindings_;
@@ -182,7 +182,7 @@ class UserRunnerImpl : UserRunner,
   ledger::LedgerRepositoryPtr ledger_repository_;
   std::unique_ptr<LedgerClient> ledger_client_;
   // Provides services to the Ledger
-  app::ServiceProviderImpl ledger_service_provider_;
+  component::ServiceProviderImpl ledger_service_provider_;
 
   std::unique_ptr<Scope> user_scope_;
 
@@ -206,7 +206,7 @@ class UserRunnerImpl : UserRunner,
   std::string device_name_;
 
   // Services we provide to |context_engine_app_|.
-  app::ServiceProviderImpl context_engine_ns_services_;
+  component::ServiceProviderImpl context_engine_ns_services_;
 
   // These component contexts are supplied to:
   // - the user intelligence provider (from |maxwell_app_|) so it can run agents
@@ -224,7 +224,7 @@ class UserRunnerImpl : UserRunner,
   f1dl::InterfacePtr<maxwell::IntelligenceServices> intelligence_services_;
 
   // Services we provide to the module resolver's namespace.
-  app::ServiceProviderImpl module_resolver_ns_services_;
+  component::ServiceProviderImpl module_resolver_ns_services_;
   ModuleResolverPtr module_resolver_service_;
 
   std::unique_ptr<FocusHandler> focus_handler_;
@@ -253,7 +253,7 @@ class UserRunnerImpl : UserRunner,
 
   // The service provider used to connect to services advertised by the
   // clipboard agent.
-  app::ServiceProviderPtr services_from_clipboard_agent_;
+  component::ServiceProviderPtr services_from_clipboard_agent_;
 
   // The agent controller used to control the clipboard agent.
   AgentControllerPtr clipboard_agent_controller_;

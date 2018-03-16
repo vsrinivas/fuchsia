@@ -36,17 +36,15 @@ std::string HashModuleUrl(const std::string& module_url) {
 
 ModuleControllerImpl::ModuleControllerImpl(
     StoryControllerImpl* const story_controller_impl,
-    app::ApplicationLauncher* const application_launcher,
-    AppConfigPtr module_config,
-    const ModuleData* const module_data,
-    app::ServiceListPtr service_list,
+    component::ApplicationLauncher* const application_launcher,
+    AppConfigPtr module_config, const ModuleData* const module_data,
+    component::ServiceListPtr service_list,
     f1dl::InterfaceHandle<ModuleContext> module_context,
     f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
-    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services)
+    f1dl::InterfaceRequest<component::ServiceProvider> incoming_services)
     : story_controller_impl_(story_controller_impl),
       app_client_(
-          application_launcher,
-          module_config.Clone(),
+          application_launcher, module_config.Clone(),
           std::string(kAppStoragePath) + HashModuleUrl(module_config->url),
           std::move(service_list)),
       module_data_(module_data) {

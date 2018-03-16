@@ -40,10 +40,10 @@ constexpr size_t kKeySize = 100;
 namespace test {
 namespace benchmark {
 
-ConvergenceBenchmark::ConvergenceBenchmark(int entry_count,
-                                           int value_size,
+ConvergenceBenchmark::ConvergenceBenchmark(int entry_count, int value_size,
                                            std::string server_id)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(application_context_.get()),
       entry_count_(entry_count),
       value_size_(value_size),

@@ -49,12 +49,11 @@ namespace test {
 namespace benchmark {
 
 SyncBenchmark::SyncBenchmark(
-    size_t change_count,
-    size_t value_size,
-    size_t entries_per_change,
+    size_t change_count, size_t value_size, size_t entries_per_change,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     std::string server_id)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(application_context_.get()),
       change_count_(change_count),
       value_size_(value_size),

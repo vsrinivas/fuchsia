@@ -18,7 +18,8 @@ namespace {
 class App : public modular::Lifecycle {
  public:
   App()
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      : application_context_(
+            component::ApplicationContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()),
         factory_impl_(loop_.task_runner()) {
     FXL_DCHECK(application_context_);
@@ -42,7 +43,7 @@ class App : public modular::Lifecycle {
 
  private:
   fsl::MessageLoop loop_;
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   trace::TraceProvider trace_provider_;
 
   FactoryImpl factory_impl_;

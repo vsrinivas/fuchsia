@@ -23,18 +23,19 @@ class ModuleImpl : public Module {
   // parameters.
   class Delegate {
    public:
-    virtual void ModuleInit(
-        f1dl::InterfaceHandle<ModuleContext> module_context,
-        f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) = 0;
+    virtual void ModuleInit(f1dl::InterfaceHandle<ModuleContext> module_context,
+                            f1dl::InterfaceRequest<component::ServiceProvider>
+                                outgoing_services) = 0;
   };
 
-  ModuleImpl(app::ServiceNamespace* service_namespace, Delegate* delegate);
+  ModuleImpl(component::ServiceNamespace* service_namespace,
+             Delegate* delegate);
 
  private:
   // |Module|
-  void Initialize(
-      f1dl::InterfaceHandle<ModuleContext> module_context,
-      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
+  void Initialize(f1dl::InterfaceHandle<ModuleContext> module_context,
+                  f1dl::InterfaceRequest<component::ServiceProvider>
+                      outgoing_services) override;
 
   Delegate* const delegate_;
   f1dl::Binding<Module> binding_;

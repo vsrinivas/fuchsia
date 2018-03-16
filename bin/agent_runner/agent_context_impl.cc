@@ -36,11 +36,9 @@ class AgentContextImpl::InitializeCall : Operation<> {
  public:
   InitializeCall(OperationContainer* const container,
                  AgentContextImpl* const agent_context_impl,
-                 app::ApplicationLauncher* const app_launcher,
+                 component::ApplicationLauncher* const app_launcher,
                  AppConfigPtr agent_config)
-      : Operation("AgentContextImpl::InitializeCall",
-                  container,
-                  [] {},
+      : Operation("AgentContextImpl::InitializeCall", container, [] {},
                   agent_context_impl->url_),
         agent_context_impl_(agent_context_impl),
         app_launcher_(app_launcher),
@@ -57,15 +55,15 @@ class AgentContextImpl::InitializeCall : Operation<> {
     // No user intelligence provider is available during testing. We want to
     // keep going without it.
     if (!agent_context_impl_->user_intelligence_provider_) {
-      auto service_list = app::ServiceList::New();
+      auto service_list = component::ServiceList::New();
       Continue(std::move(service_list), flow);
       return;
     }
 
     agent_context_impl_->user_intelligence_provider_->GetServicesForAgent(
         agent_context_impl_->url_,
-        [this, flow](app::ServiceListPtr maxwell_service_list) {
-          auto service_list = app::ServiceList::New();
+        [this, flow](component::ServiceListPtr maxwell_service_list) {
+          auto service_list = component::ServiceList::New();
           service_list->names = std::move(maxwell_service_list->names);
           agent_context_impl_->service_provider_impl_.SetDefaultServiceProvider(
               maxwell_service_list->provider.Bind());
@@ -73,7 +71,7 @@ class AgentContextImpl::InitializeCall : Operation<> {
         });
   }
 
-  void Continue(app::ServiceListPtr service_list, FlowToken flow) {
+  void Continue(component::ServiceListPtr service_list, FlowToken flow) {
     service_list->names.push_back(AgentContext::Name_);
     agent_context_impl_->service_provider_impl_.AddBinding(
         service_list->provider.NewRequest());
@@ -110,7 +108,7 @@ class AgentContextImpl::InitializeCall : Operation<> {
   }
 
   AgentContextImpl* const agent_context_impl_;
-  app::ApplicationLauncher* const app_launcher_;
+  component::ApplicationLauncher* const app_launcher_;
   AppConfigPtr agent_config_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
@@ -193,7 +191,8 @@ AgentContextImpl::~AgentContextImpl() = default;
 
 void AgentContextImpl::NewAgentConnection(
     const std::string& requestor_url,
-    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+    f1dl::InterfaceRequest<component::ServiceProvider>
+        incoming_services_request,
     f1dl::InterfaceRequest<AgentController> agent_controller_request) {
   // Queue adding the connection
   new SyncCall(

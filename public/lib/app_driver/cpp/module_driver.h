@@ -24,7 +24,7 @@ namespace modular {
 // This interface is passed to the |Impl| object that ModuleDriver initializes.
 class ModuleHost {
  public:
-  virtual app::ApplicationContext* application_context() = 0;
+  virtual component::ApplicationContext* application_context() = 0;
   virtual ModuleContext* module_context() = 0;
 };
 
@@ -39,7 +39,8 @@ class ModuleHost {
 //      Constructor(
 //           modular::ModuleHost* module_host,
 //           f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
-//           f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services);
+//           f1dl::InterfaceRequest<component::ServiceProvider>
+//           outgoing_services);
 //
 //   |outgoing_services| must contain the services that this module wants to
 //   expose to the module that created it.
@@ -55,7 +56,7 @@ class ModuleHost {
 //   HelloWorldModule(
 //      modular::ModuleHost* module_host,
 //      f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
-//      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) {}
+//      f1dl::InterfaceRequest<component::ServiceProvider> outgoing_services) {}
 //
 //   // Called by ModuleDriver.
 //   void Terminate(const std::function<void()>& done) { done(); }
@@ -63,7 +64,7 @@ class ModuleHost {
 //
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
-//   auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+//   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
 //   modular::ModuleDriver<HelloWorldApp> driver(app_context.get(),
 //                                               [&loop] { loop.QuitNow(); });
 //   loop.Run();
@@ -72,7 +73,7 @@ class ModuleHost {
 template <typename Impl>
 class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
  public:
-  ModuleDriver(app::ApplicationContext* const app_context,
+  ModuleDriver(component::ApplicationContext* const app_context,
                std::function<void()> on_terminated)
       : app_context_(app_context),
         lifecycle_impl_(app_context->outgoing_services(), this),
@@ -92,7 +93,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
 
  private:
   // |ModuleHost|
-  app::ApplicationContext* application_context() override {
+  component::ApplicationContext* application_context() override {
     return app_context_;
   }
 
@@ -103,9 +104,9 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
   }
 
   // |ModuleImpl::Delegate|
-  void ModuleInit(
-      f1dl::InterfaceHandle<ModuleContext> module_context,
-      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
+  void ModuleInit(f1dl::InterfaceHandle<ModuleContext> module_context,
+                  f1dl::InterfaceRequest<component::ServiceProvider>
+                      outgoing_services) override {
     module_context_.Bind(std::move(module_context));
     outgoing_module_services_ = std::move(outgoing_services);
     MaybeInstantiateImpl();
@@ -139,7 +140,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
     }
   }
 
-  app::ApplicationContext* const app_context_;
+  component::ApplicationContext* const app_context_;
   LifecycleImpl lifecycle_impl_;
   std::unique_ptr<ModuleImpl> module_impl_;
   std::function<void()> on_terminated_;
@@ -147,7 +148,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
 
   // The following are only valid until |impl_| is instantiated.
   f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request_;
-  f1dl::InterfaceRequest<app::ServiceProvider> outgoing_module_services_;
+  f1dl::InterfaceRequest<component::ServiceProvider> outgoing_module_services_;
 
   std::unique_ptr<Impl> impl_;
 

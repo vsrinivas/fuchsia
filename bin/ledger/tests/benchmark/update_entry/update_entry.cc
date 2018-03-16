@@ -43,7 +43,8 @@ namespace benchmark {
 UpdateEntryBenchmark::UpdateEntryBenchmark(int entry_count,
                                            int transaction_size)
     : tmp_dir_(kStoragePath),
-      application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(kKeySize),

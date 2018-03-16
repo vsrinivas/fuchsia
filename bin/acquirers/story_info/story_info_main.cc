@@ -10,7 +10,7 @@
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AgentDriver<maxwell::StoryInfoAcquirer> driver(
       app_context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();

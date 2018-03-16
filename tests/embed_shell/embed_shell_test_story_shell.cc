@@ -22,7 +22,7 @@ namespace {
 
 class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
  public:
-  TestApp(app::ApplicationContext* const application_context)
+  TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
     TestInit(__FILE__);
   }

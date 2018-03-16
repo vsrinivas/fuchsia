@@ -23,7 +23,7 @@ class TestApp {
   TestApp(
       ModuleHost* module_host,
       f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
     component_context_->GetEntityResolver(entity_resolver_.NewRequest());
@@ -110,7 +110,7 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::ModuleDriver<modular::TestApp> driver(app_context.get(),
                                                  [&loop] { loop.QuitNow(); });
   loop.Run();

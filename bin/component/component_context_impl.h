@@ -59,11 +59,11 @@ class ComponentContextImpl : public ComponentContext {
                  const GetLedgerCallback& result) override;
 
   // |ComponentContext|
-  void ConnectToAgent(
-      const f1dl::String& url,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
-      f1dl::InterfaceRequest<AgentController> agent_controller_request)
-      override;
+  void ConnectToAgent(const f1dl::String& url,
+                      f1dl::InterfaceRequest<component::ServiceProvider>
+                          incoming_services_request,
+                      f1dl::InterfaceRequest<AgentController>
+                          agent_controller_request) override;
 
   // |ComponentContext|
   void ObtainMessageQueue(

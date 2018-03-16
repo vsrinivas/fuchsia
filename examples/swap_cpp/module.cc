@@ -35,13 +35,13 @@ void ModuleView::OnPropertiesChanged(
   InvalidateScene();
 }
 
-ModuleApp::ModuleApp(app::ApplicationContext* const application_context,
+ModuleApp::ModuleApp(component::ApplicationContext* const application_context,
                      CreateViewCallback create)
     : SingleServiceApp(application_context), create_(std::move(create)) {}
 
 void ModuleApp::CreateView(
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) {
+    f1dl::InterfaceRequest<component::ServiceProvider> /*services*/) {
   view_.reset(create_(
       application_context()->ConnectToEnvironmentService<mozart::ViewManager>(),
       std::move(view_owner_request)));
@@ -49,6 +49,6 @@ void ModuleApp::CreateView(
 
 void ModuleApp::Initialize(
     f1dl::InterfaceHandle<modular::ModuleContext> /*moduleContext*/,
-    f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {}
+    f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/) {}
 
 }  // namespace modular_example

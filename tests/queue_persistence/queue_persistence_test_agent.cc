@@ -45,7 +45,7 @@ class TestAgentApp : modular::QueuePersistenceTestService {
   }
 
   // Called by AgentDriver.
-  void Connect(f1dl::InterfaceRequest<app::ServiceProvider> services) {
+  void Connect(f1dl::InterfaceRequest<component::ServiceProvider> services) {
     services_.AddBinding(std::move(services));
     modular::testing::GetStore()->Put("queue_persistence_test_agent_connected",
                                       "", [] {});
@@ -81,7 +81,7 @@ class TestAgentApp : modular::QueuePersistenceTestService {
 
   std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
-  app::ServiceNamespace services_;
+  component::ServiceNamespace services_;
   f1dl::BindingSet<modular::QueuePersistenceTestService> services_bindings_;
 };
 
@@ -89,7 +89,7 @@ class TestAgentApp : modular::QueuePersistenceTestService {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AgentDriver<TestAgentApp> driver(app_context.get(),
                                             [&loop] { loop.QuitNow(); });
   loop.Run();

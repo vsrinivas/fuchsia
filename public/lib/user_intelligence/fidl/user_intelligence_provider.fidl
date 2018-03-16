@@ -55,5 +55,5 @@ interface UserIntelligenceProvider {
   StartAgents@4(modular.ComponentContext user_intelligence_context);
 
   // A standard set of services provided to all agents at startup.
-  GetServicesForAgent(string url) => (app.ServiceList service_list);
+  GetServicesForAgent(string url) => (component.ServiceList service_list);
 };

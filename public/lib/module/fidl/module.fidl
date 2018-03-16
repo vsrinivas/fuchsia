@@ -32,7 +32,7 @@ import "lib/module/fidl/module_context.fidl";
 // Other connections the Module instance may hold, such as to Link, LinkWatcher,
 // ModuleController of other Module instances, are closed after
 // Lifecycle.Terminate() is called.
-[ServiceName="modular.Module"]  // Created by each module app.
+[ServiceName="modular.Module"]  // Created by each module component.
 interface Module {
   // The arguments to Initialize() are the ModuleContext instance that created
   // the Module instance and a Link instance provided by the caller of
@@ -51,5 +51,5 @@ interface Module {
   //
   // TODO(vardhan): Move outgoing_services as getter into ModuleContext.
   Initialize@0(ModuleContext module_context,
-               app.ServiceProvider&? outgoing_services);
+               component.ServiceProvider&? outgoing_services);
 };

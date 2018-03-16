@@ -44,7 +44,7 @@ void StoryInfoAcquirer::DropStoryWatcher(const std::string& story_id) {
 }
 
 void StoryInfoAcquirer::Connect(
-    f1dl::InterfaceRequest<app::ServiceProvider> services) {
+    f1dl::InterfaceRequest<component::ServiceProvider> services) {
   agent_services_.AddBinding(std::move(services));
 }
 

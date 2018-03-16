@@ -13,21 +13,21 @@ constexpr char kEnvironmentLabel[] = "agent";
 
 }  // namespace
 
-app::Services AgentLauncher::StartAgent(
+component::Services AgentLauncher::StartAgent(
     const std::string& url,
     std::unique_ptr<MaxwellServiceProviderBridge> bridge) {
   bridge_ = std::move(bridge);
-  app::ApplicationEnvironmentPtr agent_env;
+  component::ApplicationEnvironmentPtr agent_env;
   environment_->CreateNestedEnvironment(bridge_->OpenAsDirectory(),
                                         agent_env.NewRequest(), NULL,
                                         kEnvironmentLabel);
 
-  app::ApplicationLauncherPtr agent_launcher;
+  component::ApplicationLauncherPtr agent_launcher;
   agent_env->GetApplicationLauncher(agent_launcher.NewRequest());
 
-  auto launch_info = app::ApplicationLaunchInfo::New();
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = url;
-  app::Services services;
+  component::Services services;
   launch_info->directory_request = services.NewRequest();
   FXL_LOG(INFO) << "Starting Maxwell agent " << url;
   agent_launcher->CreateApplication(std::move(launch_info), NULL);

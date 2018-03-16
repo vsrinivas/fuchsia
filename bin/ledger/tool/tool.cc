@@ -21,7 +21,7 @@ namespace tool {
 
 ToolApp::ToolApp(fxl::CommandLine command_line)
     : command_line_(std::move(command_line)),
-      context_(app::ApplicationContext::CreateFromStartupInfo()) {
+      context_(component::ApplicationContext::CreateFromStartupInfo()) {
   if (Initialize()) {
     Start();
   } else {

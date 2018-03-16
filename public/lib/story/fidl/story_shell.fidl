@@ -15,7 +15,7 @@ import "lib/module/fidl/module_manifest.fidl";
 //
 // In one component instance there can only be one StoryShell service instance.
 // The ViewOwner request is sent to the separate ViewProvider service. This way,
-// the story shell may be implemented as a flutter app.
+// the story shell may be implemented as a flutter component.
 //
 // Teardown may be initiated by the user shell calling StoryController.Stop(),
 // by the user runner being terminated, or by the system shutting down.

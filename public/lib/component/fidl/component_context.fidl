@@ -25,7 +25,7 @@ interface ComponentContext {
   GetLedger@0(ledger.Ledger& request) => (ledger.Status status);
 
   // Used to start a new agent in the user scope and connect to it.
-  ConnectToAgent@1(string url, app.ServiceProvider& incoming_services,
+  ConnectToAgent@1(string url, component.ServiceProvider& incoming_services,
                    AgentController& controller);
 
   // Used to create / delete a message queue or retrieve an existing queue

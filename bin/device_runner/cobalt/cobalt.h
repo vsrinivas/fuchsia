@@ -38,7 +38,7 @@ enum class ModularEvent : uint32_t {
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
-    app::ApplicationContext* app_context);
+    component::ApplicationContext* app_context);
 
 // Report a modular event to Cobalt.
 void ReportEvent(ModularEvent event);

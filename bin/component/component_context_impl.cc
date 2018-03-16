@@ -51,7 +51,8 @@ void ComponentContextImpl::GetLedger(
 
 void ComponentContextImpl::ConnectToAgent(
     const f1dl::String& url,
-    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+    f1dl::InterfaceRequest<component::ServiceProvider>
+        incoming_services_request,
     f1dl::InterfaceRequest<AgentController> agent_controller_request) {
   agent_runner_->ConnectToAgent(component_instance_id_, url,
                                 std::move(incoming_services_request),

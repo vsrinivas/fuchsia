@@ -78,7 +78,7 @@ class ParentApp {
   ParentApp(
       modular::ModuleHost* module_host,
       f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : steps_(kTotalSimultaneousTests,
                [this, module_host] { module_host->module_context()->Done(); }),
         weak_ptr_factory_(this) {
@@ -90,7 +90,7 @@ class ParentApp {
     module_host->module_context()->GetComponentContext(
         component_context_.NewRequest());
 
-    app::ServiceProviderPtr one_agent_services;
+    component::ServiceProviderPtr one_agent_services;
     component_context_->ConnectToAgent(kOneAgentUrl,
                                        one_agent_services.NewRequest(),
                                        one_agent_controller.NewRequest());
@@ -172,7 +172,7 @@ class ParentApp {
 
   // Start an agent that will not stop of its own accord.
   void TestUnstoppableAgent(std::function<void()> done_cb) {
-    app::ServiceProviderPtr unstoppable_agent_services;
+    component::ServiceProviderPtr unstoppable_agent_services;
     component_context_->ConnectToAgent(
         kUnstoppableAgent, unstoppable_agent_services.NewRequest(),
         unstoppable_agent_controller_.NewRequest());
@@ -208,7 +208,7 @@ class ParentApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::ModuleDriver<ParentApp> driver(app_context.get(),
                                           [&loop] { loop.QuitNow(); });
   loop.Run();

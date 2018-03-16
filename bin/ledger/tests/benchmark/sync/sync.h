@@ -55,7 +55,7 @@ class SyncBenchmark : public ledger::PageWatcher {
 
   test::DataGenerator generator_;
   PageDataGenerator page_data_generator_;
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
   const size_t change_count_;
   const size_t value_size_;
@@ -65,8 +65,8 @@ class SyncBenchmark : public ledger::PageWatcher {
   f1dl::Binding<ledger::PageWatcher> page_watcher_binding_;
   files::ScopedTempDir alpha_tmp_dir_;
   files::ScopedTempDir beta_tmp_dir_;
-  app::ApplicationControllerPtr alpha_controller_;
-  app::ApplicationControllerPtr beta_controller_;
+  component::ApplicationControllerPtr alpha_controller_;
+  component::ApplicationControllerPtr beta_controller_;
   f1dl::Array<uint8_t> page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;

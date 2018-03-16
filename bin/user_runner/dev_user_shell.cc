@@ -51,8 +51,9 @@ class DevUserShellApp : modular::StoryWatcher,
                         maxwell::NextListener,
                         public modular::SingleServiceApp<modular::UserShell> {
  public:
-  explicit DevUserShellApp(app::ApplicationContext* const application_context,
-                           Settings settings)
+  explicit DevUserShellApp(
+      component::ApplicationContext* const application_context,
+      Settings settings)
       : SingleServiceApp(application_context),
         settings_(std::move(settings)),
         story_watcher_binding_(this) {}
@@ -63,7 +64,8 @@ class DevUserShellApp : modular::StoryWatcher,
   // |SingleServiceApp|
   void CreateView(
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
   }
@@ -204,7 +206,7 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
 
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<DevUserShellApp> driver(
       app_context->outgoing_services(),
       std::make_unique<DevUserShellApp>(app_context.get(), std::move(settings)),

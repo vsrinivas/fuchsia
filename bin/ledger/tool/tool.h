@@ -34,7 +34,7 @@ class ToolApp {
   void Start();
 
   fxl::CommandLine command_line_;
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   std::unique_ptr<Command> command_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ToolApp);

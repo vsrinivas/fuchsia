@@ -73,11 +73,11 @@ class AgentRunnerTest : public TestWithLedger {
 };
 
 class MyDummyAgent : Agent,
-                     public app::ApplicationController,
+                     public component::ApplicationController,
                      public testing::MockBase {
  public:
   MyDummyAgent(zx::channel directory_request,
-               f1dl::InterfaceRequest<app::ApplicationController> ctrl)
+               f1dl::InterfaceRequest<component::ApplicationController> ctrl)
       : vfs_(async_get_default()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
         app_controller_(this, std::move(ctrl)),
@@ -104,9 +104,9 @@ class MyDummyAgent : Agent,
   void Wait(const WaitCallback& callback) override { ++counts["Wait"]; }
 
   // |Agent|
-  void Connect(
-      const f1dl::String& /*requestor_url*/,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+  void Connect(const f1dl::String& /*requestor_url*/,
+               f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      override {
     ++counts["Connect"];
   }
 
@@ -119,7 +119,7 @@ class MyDummyAgent : Agent,
  private:
   fs::ManagedVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> outgoing_directory_;
-  f1dl::Binding<app::ApplicationController> app_controller_;
+  f1dl::Binding<component::ApplicationController> app_controller_;
   f1dl::Binding<modular::Agent> agent_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyDummyAgent);
@@ -134,14 +134,14 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
   launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent, &agent_launch_count](
-          app::ApplicationLaunchInfoPtr launch_info,
-          f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
+          component::ApplicationLaunchInfoPtr launch_info,
+          f1dl::InterfaceRequest<component::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
             std::move(launch_info->directory_request), std::move(ctrl));
         ++agent_launch_count;
       });
 
-  app::ServiceProviderPtr incoming_services;
+  component::ServiceProviderPtr incoming_services;
   AgentControllerPtr agent_controller;
   agent_runner()->ConnectToAgent("requestor_url", kMyAgentUrl,
                                  incoming_services.NewRequest(),
@@ -159,7 +159,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
   // but should call |Connect()|.
 
   AgentControllerPtr agent_controller2;
-  app::ServiceProviderPtr incoming_services2;
+  component::ServiceProviderPtr incoming_services2;
   agent_runner()->ConnectToAgent("requestor_url2", kMyAgentUrl,
                                  incoming_services2.NewRequest(),
                                  agent_controller2.NewRequest());
@@ -179,13 +179,14 @@ TEST_F(AgentRunnerTest, AgentController) {
   constexpr char kMyAgentUrl[] = "file:///my_agent";
   launcher()->RegisterApplication(
       kMyAgentUrl,
-      [&dummy_agent](app::ApplicationLaunchInfoPtr launch_info,
-                     f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
+      [&dummy_agent](
+          component::ApplicationLaunchInfoPtr launch_info,
+          f1dl::InterfaceRequest<component::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
             std::move(launch_info->directory_request), std::move(ctrl));
       });
 
-  app::ServiceProviderPtr incoming_services;
+  component::ServiceProviderPtr incoming_services;
   AgentControllerPtr agent_controller;
   agent_runner()->ConnectToAgent("requestor_url", kMyAgentUrl,
                                  incoming_services.NewRequest(),

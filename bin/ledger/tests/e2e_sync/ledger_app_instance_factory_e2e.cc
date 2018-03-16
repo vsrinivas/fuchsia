@@ -29,7 +29,7 @@ class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
  public:
   LedgerAppInstanceImpl(
-      app::ApplicationControllerPtr controller,
+      component::ApplicationControllerPtr controller,
       ledger::LedgerRepositoryFactoryPtr ledger_repository_factory,
       CloudProviderFirebaseFactory* cloud_provider_firebase_factory,
       std::string server_id);
@@ -37,19 +37,18 @@ class LedgerAppInstanceImpl final
  private:
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
 
-  app::ApplicationControllerPtr controller_;
+  component::ApplicationControllerPtr controller_;
   CloudProviderFirebaseFactory* const cloud_provider_firebase_factory_;
   const std::string server_id_;
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
-    app::ApplicationControllerPtr controller,
+    component::ApplicationControllerPtr controller,
     ledger::LedgerRepositoryFactoryPtr ledger_repository_factory,
     CloudProviderFirebaseFactory* cloud_provider_firebase_factory,
     std::string server_id)
     : test::LedgerAppInstanceFactory::LedgerAppInstance(
-          convert::ToArray(kLedgerName),
-          std::move(ledger_repository_factory)),
+          convert::ToArray(kLedgerName), std::move(ledger_repository_factory)),
       controller_(std::move(controller)),
       cloud_provider_firebase_factory_(cloud_provider_firebase_factory),
       server_id_(std::move(server_id)) {}
@@ -65,7 +64,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
   LedgerAppInstanceFactoryImpl()
       : application_context_(
-            app::ApplicationContext::CreateFromStartupInfoNotChecked()),
+            component::ApplicationContext::CreateFromStartupInfoNotChecked()),
         cloud_provider_firebase_factory_(application_context_.get()) {}
   ~LedgerAppInstanceFactoryImpl() override;
   void Init();
@@ -75,7 +74,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;
 
  private:
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
 
   std::string server_id_;
@@ -93,10 +92,10 @@ void LedgerAppInstanceFactoryImpl::SetServerId(std::string server_id) {
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
 LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
-  app::ApplicationControllerPtr controller;
+  component::ApplicationControllerPtr controller;
   ledger::LedgerRepositoryFactoryPtr repository_factory;
-  app::Services child_services;
-  auto launch_info = app::ApplicationLaunchInfo::New();
+  component::Services child_services;
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = "ledger";
   launch_info->directory_request = child_services.NewRequest();
   launch_info->arguments.push_back("--no_minfs_wait");

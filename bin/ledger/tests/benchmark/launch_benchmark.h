@@ -45,8 +45,8 @@ class LaunchBenchmark {
   int step_;
   std::vector<std::string> args_;
 
-  std::unique_ptr<app::ApplicationContext> context_;
-  app::ApplicationControllerPtr application_controller_;
+  std::unique_ptr<component::ApplicationContext> context_;
+  component::ApplicationControllerPtr application_controller_;
 };
 
 #endif  // PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_LAUNCH_BENCHMARK_H_

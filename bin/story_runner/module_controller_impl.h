@@ -33,13 +33,12 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
  public:
   ModuleControllerImpl(
       StoryControllerImpl* story_controller_impl,
-      app::ApplicationLauncher* application_launcher,
-      AppConfigPtr module_config,
-      const ModuleData* module_data,
-      app::ServiceListPtr service_list,
+      component::ApplicationLauncher* application_launcher,
+      AppConfigPtr module_config, const ModuleData* module_data,
+      component::ServiceListPtr service_list,
       f1dl::InterfaceHandle<ModuleContext> module_context,
       f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services);
+      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services);
 
   ~ModuleControllerImpl() override;
 

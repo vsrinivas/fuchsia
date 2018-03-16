@@ -22,7 +22,7 @@ namespace {
 
 class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
  public:
-  DevStoryShellApp(app::ApplicationContext* const application_context)
+  DevStoryShellApp(component::ApplicationContext* const application_context)
       : SingleServiceApp(application_context) {}
 
   ~DevStoryShellApp() override = default;
@@ -31,7 +31,7 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   // |SingleServiceApp|
   void CreateView(
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*services_request*/)
+      f1dl::InterfaceRequest<component::ServiceProvider> /*services_request*/)
       override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
@@ -104,7 +104,7 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<DevStoryShellApp> driver(
       app_context->outgoing_services(),
       std::make_unique<DevStoryShellApp>(app_context.get()),

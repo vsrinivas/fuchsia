@@ -8,7 +8,7 @@
 
 namespace modular {
 
-AgentImpl::AgentImpl(app::ServiceNamespace* const service_namespace,
+AgentImpl::AgentImpl(component::ServiceNamespace* const service_namespace,
                      Delegate* const delegate)
     : delegate_(delegate), binding_(this) {
   service_namespace->AddService<Agent>(
@@ -31,7 +31,7 @@ AgentImpl::AgentImpl(fbl::RefPtr<fs::PseudoDir> directory,
 // |Agent|
 void AgentImpl::Connect(
     const f1dl::String& requestor_url,
-    f1dl::InterfaceRequest<app::ServiceProvider> services_request) {
+    f1dl::InterfaceRequest<component::ServiceProvider> services_request) {
   delegate_->Connect(std::move(services_request));
 }
 

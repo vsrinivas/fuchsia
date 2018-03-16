@@ -28,7 +28,7 @@ enum class CobaltEvent : uint32_t {
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
-    app::ApplicationContext* app_context);
+    component::ApplicationContext* app_context);
 
 // Report an event to Cobalt.
 void ReportEvent(CobaltEvent event);

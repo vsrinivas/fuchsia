@@ -106,7 +106,7 @@ void NetConnectorFactory::GetDevicesNames(
 
 void NetConnectorFactory::ConnectToServiceProvider(
     std::string device_name,
-    f1dl::InterfaceRequest<app::ServiceProvider> request) {
+    f1dl::InterfaceRequest<component::ServiceProvider> request) {
   auto it = net_connectors_.find(device_name);
   if (it == net_connectors_.end()) {
     return;

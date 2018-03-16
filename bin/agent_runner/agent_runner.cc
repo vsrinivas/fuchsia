@@ -22,7 +22,7 @@ namespace modular {
 constexpr fxl::TimeDelta kTeardownTimeout = fxl::TimeDelta::FromSeconds(3);
 
 AgentRunner::AgentRunner(
-    app::ApplicationLauncher* const application_launcher,
+    component::ApplicationLauncher* const application_launcher,
     MessageQueueManager* const message_queue_manager,
     ledger::LedgerRepository* const ledger_repository,
     AgentRunnerStorage* const agent_runner_storage,
@@ -136,9 +136,9 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
 }
 
 void AgentRunner::ConnectToAgent(
-    const std::string& requestor_url,
-    const std::string& agent_url,
-    f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+    const std::string& requestor_url, const std::string& agent_url,
+    f1dl::InterfaceRequest<component::ServiceProvider>
+        incoming_services_request,
     f1dl::InterfaceRequest<AgentController> agent_controller_request) {
   // Drop all new requests if AgentRunner is terminating.
   if (*terminating_) {

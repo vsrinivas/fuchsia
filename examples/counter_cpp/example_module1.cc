@@ -109,7 +109,7 @@ class MultiplierImpl : public modular::examples::Multiplier {
 // Module implementation that acts as a leaf module. It implements Module.
 class Module1App : modular::SingleServiceApp<modular::Module> {
  public:
-  explicit Module1App(app::ApplicationContext* const application_context)
+  explicit Module1App(component::ApplicationContext* const application_context)
       : SingleServiceApp(application_context),
         store_(kModuleName),
         weak_ptr_factory_(this) {
@@ -139,7 +139,8 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
   // |SingleServiceApp|
   void CreateView(
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      override {
     view_ = std::make_unique<Module1View>(
         &store_,
         application_context()
@@ -148,9 +149,9 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
   }
 
   // |Module|
-  void Initialize(
-      f1dl::InterfaceHandle<modular::ModuleContext> module_context,
-      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
+  void Initialize(f1dl::InterfaceHandle<modular::ModuleContext> module_context,
+                  f1dl::InterfaceRequest<component::ServiceProvider>
+                      outgoing_services) override {
     FXL_CHECK(outgoing_services.is_valid());
 
     module_context_.Bind(std::move(module_context));
@@ -201,7 +202,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
   // demonstrate the use of a service exchange.
   f1dl::BindingSet<modular::examples::Multiplier> multiplier_clients_;
   MultiplierImpl multiplier_service_;
-  app::ServiceNamespace outgoing_services_;
+  component::ServiceNamespace outgoing_services_;
 
   std::unique_ptr<Module1View> view_;
   modular::ModuleContextPtr module_context_;
@@ -219,7 +220,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<Module1App> driver(
       app_context->outgoing_services(),
       std::make_unique<Module1App>(app_context.get()),

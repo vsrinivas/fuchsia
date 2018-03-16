@@ -57,7 +57,7 @@ class ModuleWatcherImpl : modular::ModuleWatcher {
 // Tests how modules are updated in a story.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  TestApp(app::ApplicationContext* const application_context)
+  TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
     TestInit(__FILE__);
   }

@@ -103,7 +103,7 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
     agent_launcher_->StartAgent(url, std::move(bridge));
   }
 
-  app::Services StartServices(const std::string& url);
+  component::Services StartServices(const std::string& url);
 
   template <typename Interface>
   f1dl::InterfacePtr<Interface> ConnectToService(const std::string& url) {
@@ -111,17 +111,17 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
     return services.ConnectToService<Interface>();
   }
 
-  app::ApplicationEnvironment* root_environment();
+  component::ApplicationEnvironment* root_environment();
 
   modular::EntityResolverFake& entity_resolver() {
     return child_component_context_.entity_resolver_fake();
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> startup_context_;
+  std::unique_ptr<component::ApplicationContext> startup_context_;
   std::unique_ptr<AgentLauncher> agent_launcher_;
 
-  app::ServiceProviderImpl child_app_services_;
+  component::ServiceProviderImpl child_app_services_;
   modular::ComponentContextFake child_component_context_;
 };
 

@@ -23,7 +23,7 @@ namespace modular {
 // This interface is passed to the Impl object that AgentDriver initializes.
 class AgentHost {
  public:
-  virtual app::ApplicationContext* application_context() = 0;
+  virtual component::ApplicationContext* application_context() = 0;
   virtual AgentContext* agent_context() = 0;
 };
 
@@ -47,7 +47,7 @@ class AgentHost {
 //
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
-//   auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+//   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
 //   modular::AgentDriver<HelloAgent> driver(app_context.get(),
 //                                               [&loop] { loop.QuitNow(); });
 //   loop.Run();
@@ -56,7 +56,7 @@ class AgentHost {
 template <typename Impl>
 class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
  public:
-  AgentDriver(app::ApplicationContext* const app_context,
+  AgentDriver(component::ApplicationContext* const app_context,
               std::function<void()> on_terminated)
       : app_context_(app_context),
         lifecycle_impl_(app_context->outgoing_services(), this),
@@ -70,7 +70,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
 
  private:
   // |AgentHost|
-  app::ApplicationContext* application_context() override {
+  component::ApplicationContext* application_context() override {
     return app_context_;
   }
 
@@ -81,7 +81,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
   }
 
   // |AgentImpl::Delegate|
-  void Connect(f1dl::InterfaceRequest<app::ServiceProvider>
+  void Connect(f1dl::InterfaceRequest<component::ServiceProvider>
                    outgoing_services_request) override {
     impl_->Connect(std::move(outgoing_services_request));
   };
@@ -107,7 +107,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
     }
   }
 
-  app::ApplicationContext* const app_context_;
+  component::ApplicationContext* const app_context_;
   LifecycleImpl lifecycle_impl_;
   std::unique_ptr<AgentImpl> agent_impl_;
   std::function<void()> on_terminated_;

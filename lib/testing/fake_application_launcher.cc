@@ -8,8 +8,8 @@ namespace modular {
 namespace testing {
 
 void FakeApplicationLauncher::CreateApplication(
-    app::ApplicationLaunchInfoPtr launch_info,
-    f1dl::InterfaceRequest<app::ApplicationController> controller) {
+    component::ApplicationLaunchInfoPtr launch_info,
+    f1dl::InterfaceRequest<component::ApplicationController> controller) {
   auto it = connectors_.find(launch_info->url);
   if (it != connectors_.end()) {
     it->second(std::move(launch_info), std::move(controller));

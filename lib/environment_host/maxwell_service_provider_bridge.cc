@@ -17,16 +17,17 @@ constexpr char kNetstack[] = "net.Netstack";
 }  // namespace
 
 MaxwellServiceProviderBridge::MaxwellServiceProviderBridge(
-    app::ApplicationEnvironment* parent_env) {
-  AddService<app::ApplicationLoader>(
-      [parent_env](f1dl::InterfaceRequest<app::ApplicationLoader> request) {
-        app::ServiceProviderPtr services;
+    component::ApplicationEnvironment* parent_env) {
+  AddService<component::ApplicationLoader>(
+      [parent_env](
+          f1dl::InterfaceRequest<component::ApplicationLoader> request) {
+        component::ServiceProviderPtr services;
         parent_env->GetServices(services.NewRequest());
-        app::ConnectToService(services.get(), std::move(request));
+        component::ConnectToService(services.get(), std::move(request));
       });
   AddServiceForName(
       [parent_env](zx::channel request) {
-        app::ServiceProviderPtr services;
+        component::ServiceProviderPtr services;
         parent_env->GetServices(services.NewRequest());
         services->ConnectToService(kNetstack, std::move(request));
       },

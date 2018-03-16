@@ -23,9 +23,8 @@ class NullModule : modular::LinkWatcher {
   NullModule(
       modular::ModuleHost* const module_host,
       f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
-      : module_host_(module_host),
-        link_watcher_binding_(this) {
+      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      : module_host_(module_host), link_watcher_binding_(this) {
     module_host_->module_context()->Ready();
     module_host_->module_context()->GetLink(nullptr, link_.NewRequest());
 
@@ -75,7 +74,7 @@ class NullModule : modular::LinkWatcher {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::ModuleDriver<NullModule> driver(app_context.get(),
                                            [&loop] { loop.QuitNow(); });
   loop.Run();

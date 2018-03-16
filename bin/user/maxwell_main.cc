@@ -22,7 +22,7 @@ namespace {
 
 class App {
  public:
-  App(app::ApplicationContext* app_context, const Config& config)
+  App(component::ApplicationContext* app_context, const Config& config)
       : factory_impl_(app_context, config) {
     auto services = app_context->outgoing_services();
     services->AddService<UserIntelligenceProviderFactory>(
@@ -162,7 +162,7 @@ int main(int argc, const char** argv) {
   FXL_LOG(INFO) << "Starting Maxwell with config: \n" << config;
 
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   maxwell::App app(app_context.get(), config);
   loop.Run();
   return 0;

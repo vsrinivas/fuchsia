@@ -51,12 +51,11 @@ namespace test {
 namespace benchmark {
 
 BacklogBenchmark::BacklogBenchmark(
-    size_t unique_key_count,
-    size_t value_size,
-    size_t commit_count,
+    size_t unique_key_count, size_t value_size, size_t commit_count,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     std::string server_id)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(application_context_.get()),
       sync_watcher_binding_(this),
       unique_key_count_(unique_key_count),

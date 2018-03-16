@@ -25,7 +25,8 @@ class LifecycleImpl : Lifecycle {
 
   // |Delegate.Terminate()| is called when a Lifecycle.Terminate message is
   // received.
-  LifecycleImpl(app::ServiceNamespace* service_namespace, Delegate* delegate);
+  LifecycleImpl(component::ServiceNamespace* service_namespace,
+                Delegate* delegate);
 
  private:
   // |Lifecycle|

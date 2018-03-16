@@ -6,7 +6,7 @@
 
 namespace modular {
 
-LifecycleImpl::LifecycleImpl(app::ServiceNamespace* service_namespace,
+LifecycleImpl::LifecycleImpl(component::ServiceNamespace* service_namespace,
                              LifecycleImpl::Delegate* delegate)
     : delegate_(delegate), binding_(this) {
   service_namespace->AddService<Lifecycle>(

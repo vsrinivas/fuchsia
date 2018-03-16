@@ -21,7 +21,7 @@ namespace maxwell {
 class SelectedEntityFinder : ContextListener {
  public:
   SelectedEntityFinder()
-      : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         writer_(app_context_->ConnectToEnvironmentService<ContextWriter>()),
         binding_(this) {
@@ -99,7 +99,7 @@ class SelectedEntityFinder : ContextListener {
                                                   start_and_end.second));
   }
 
-  std::unique_ptr<app::ApplicationContext> app_context_;
+  std::unique_ptr<component::ApplicationContext> app_context_;
   ContextReaderPtr reader_;
   ContextWriterPtr writer_;
   f1dl::Binding<ContextListener> binding_;

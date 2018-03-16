@@ -43,9 +43,8 @@ struct AppParams {
 };
 
 fxl::AutoCall<fxl::Closure> SetupCobalt(
-    bool disable_statistics,
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
-    app::ApplicationContext* application_context) {
+    bool disable_statistics, fxl::RefPtr<fxl::TaskRunner> task_runner,
+    component::ApplicationContext* application_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});
   }
@@ -63,7 +62,8 @@ class App : public LedgerController {
   explicit App(AppParams app_params)
       : app_params_(app_params),
         trace_provider_(loop_.async()),
-        application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+        application_context_(
+            component::ApplicationContext::CreateFromStartupInfo()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
                                     loop_.task_runner(),
                                     application_context_.get())) {
@@ -102,7 +102,7 @@ class App : public LedgerController {
   const AppParams app_params_;
   fsl::MessageLoop loop_;
   trace::TraceProvider trace_provider_;
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   fxl::AutoCall<fxl::Closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;

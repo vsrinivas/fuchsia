@@ -83,7 +83,7 @@ class ContextListenerImpl : maxwell::ContextListener {
 // link and listen for the expected context topic to show up.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  TestApp(app::ApplicationContext* const application_context)
+  TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
     TestInit(__FILE__);
   }

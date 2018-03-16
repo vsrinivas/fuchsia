@@ -137,8 +137,7 @@ std::function<void(std::function<void()>)> Teardown(
 }  // namespace
 
 UserRunnerImpl::UserRunnerImpl(
-    app::ApplicationContext* const application_context,
-    const bool test)
+    component::ApplicationContext* const application_context, const bool test)
     : application_context_(application_context),
       test_(test),
       user_shell_context_binding_(this),
@@ -204,9 +203,9 @@ void UserRunnerImpl::InitializeLedger() {
   ledger_config->url = kLedgerAppUrl;
   ledger_config->args.push_back(kLedgerNoMinfsWaitFlag);
 
-  app::ServiceListPtr service_list = nullptr;
+  component::ServiceListPtr service_list = nullptr;
   if (account_) {
-    service_list = app::ServiceList::New();
+    service_list = component::ServiceList::New();
     service_list->names.push_back(auth::TokenProvider::Name_);
     ledger_service_provider_.AddService<auth::TokenProvider>(
         [this](f1dl::InterfaceRequest<auth::TokenProvider> request) {
@@ -455,7 +454,7 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::String& user_shell_url,
                   kContextEngineUrl, kContextEngineUrl),
               std::move(request));
         });
-    auto service_list = app::ServiceList::New();
+    auto service_list = component::ServiceList::New();
     service_list->names.push_back(ComponentContext::Name_);
     context_engine_ns_services_.AddBinding(service_list->provider.NewRequest());
 
@@ -513,7 +512,7 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::String& user_shell_url,
                   kModuleResolverUrl, kModuleResolverUrl),
               std::move(request));
         });
-    auto service_list = app::ServiceList::New();
+    auto service_list = component::ServiceList::New();
     service_list->names.push_back(maxwell::IntelligenceServices::Name_);
     service_list->names.push_back(modular::ComponentContext::Name_);
     module_resolver_ns_services_.AddBinding(

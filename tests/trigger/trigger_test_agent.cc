@@ -45,7 +45,7 @@ class TestAgentApp : modular::TriggerTestService {
   }
 
   // Called by AgentDriver.
-  void Connect(f1dl::InterfaceRequest<app::ServiceProvider> services) {
+  void Connect(f1dl::InterfaceRequest<component::ServiceProvider> services) {
     agent_services_.AddBinding(std::move(services));
     modular::testing::GetStore()->Put("trigger_test_agent_connected", "",
                                       [] {});
@@ -72,7 +72,7 @@ class TestAgentApp : modular::TriggerTestService {
         [callback](const f1dl::String& token) { callback(token); });
   }
 
-  app::ServiceNamespace agent_services_;
+  component::ServiceNamespace agent_services_;
 
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
@@ -84,7 +84,7 @@ class TestAgentApp : modular::TriggerTestService {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AgentDriver<TestAgentApp> driver(app_context.get(),
                                             [&loop] { loop.QuitNow(); });
   loop.Run();

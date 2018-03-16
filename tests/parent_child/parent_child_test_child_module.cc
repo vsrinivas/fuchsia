@@ -18,7 +18,8 @@ class ChildApp {
   ChildApp(
       modular::ModuleHost* module_host,
       f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
+      f1dl::InterfaceRequest<
+          component::ServiceProvider> /*outgoing_services*/) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     modular::testing::GetStore()->Put("child_module_init", "", [] {});
   }
@@ -38,7 +39,7 @@ class ChildApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::ModuleDriver<ChildApp> driver(app_context.get(),
                                          [&loop] { loop.QuitNow(); });
   loop.Run();

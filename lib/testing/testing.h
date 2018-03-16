@@ -18,7 +18,8 @@ namespace testing {
 // test is expected to call either Done() or Teardown() before terminating
 // itself in order for the TestRunner service to know that a test process did
 // not crash, or that the test has completed and should be torn down.
-void Init(app::ApplicationContext* app_context, const std::string& identity);
+void Init(component::ApplicationContext* app_context,
+          const std::string& identity);
 
 // Marks the test a failure with the given |log_msg| message, but does not tear
 // it down; the test may continue running. Once the test signals teardown by

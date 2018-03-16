@@ -51,12 +51,9 @@ bool GetPositiveIntValue(const fxl::CommandLine& command_line,
 
 }  // namespace
 
-LaunchBenchmark::LaunchBenchmark(std::string app_url,
-                                 std::string test_arg,
-                                 int min_value,
-                                 int max_value,
-                                 SequenceType sequence_type,
-                                 int step,
+LaunchBenchmark::LaunchBenchmark(std::string app_url, std::string test_arg,
+                                 int min_value, int max_value,
+                                 SequenceType sequence_type, int step,
                                  std::vector<std::string> args)
     : app_url_(std::move(app_url)),
       test_arg_(std::move(test_arg)),
@@ -65,7 +62,7 @@ LaunchBenchmark::LaunchBenchmark(std::string app_url,
       sequence_type_(sequence_type),
       step_(step),
       args_(std::move(args)),
-      context_(app::ApplicationContext::CreateFromStartupInfo()) {
+      context_(component::ApplicationContext::CreateFromStartupInfo()) {
   FXL_DCHECK(step > 0);
   FXL_DCHECK(max_value_ >= min_value);
 }
@@ -76,7 +73,7 @@ void LaunchBenchmark::StartNext() {
     return;
   }
 
-  auto launch_info = app::ApplicationLaunchInfo::New();
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = app_url_;
   launch_info->arguments.push_back("--" + test_arg_ + "=" +
                                    fxl::NumberToString(current_value_));

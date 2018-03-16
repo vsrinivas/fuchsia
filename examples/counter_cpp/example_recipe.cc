@@ -174,7 +174,7 @@ class AdderImpl : public modular::examples::Adder {
 // to run more module instances.
 class RecipeApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  RecipeApp(app::ApplicationContext* const application_context)
+  RecipeApp(component::ApplicationContext* const application_context)
       : SingleServiceApp(application_context) {}
 
   ~RecipeApp() override = default;
@@ -183,7 +183,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Initialize(
       f1dl::InterfaceHandle<modular::ModuleContext> module_context,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       override {
     module_context_.Bind(std::move(module_context));
     module_context_->GetLink(nullptr, link_.NewRequest());
@@ -216,7 +216,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     noun_entry->name = "theOneLink";
     noun_entry->noun = std::move(noun);
     daisy->nouns.push_back(std::move(noun_entry));
-    app::ServiceProviderPtr services_from_module1;
+    component::ServiceProviderPtr services_from_module1;
     module_context_->StartModule("module1", std::move(daisy),
                                  services_from_module1.NewRequest(),
                                  module1_.NewRequest(), nullptr,
@@ -224,7 +224,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
 
     // Consume services from Module 1.
     auto multiplier_service =
-        app::ConnectToService<modular::examples::Multiplier>(
+        component::ConnectToService<modular::examples::Multiplier>(
             services_from_module1.get());
     multiplier_service.set_error_handler([] {
       FXL_CHECK(false)
@@ -246,7 +246,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     noun_entry->name = "theOneLink";
     noun_entry->noun = std::move(noun);
     daisy->nouns.push_back(std::move(noun_entry));
-    app::ServiceProviderPtr services_from_module2;
+    component::ServiceProviderPtr services_from_module2;
     module_context_->StartModule("module2", std::move(daisy), nullptr,
                                  module2_.NewRequest(), nullptr,
                                  [](const modular::StartModuleStatus&) {});
@@ -371,7 +371,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
   // demonstrate the use of a service exchange.
   f1dl::BindingSet<modular::examples::Adder> adder_clients_;
   AdderImpl adder_service_;
-  app::ServiceNamespace outgoing_services_;
+  component::ServiceNamespace outgoing_services_;
 
   // The following ledger interfaces are stored here to make life-time
   // management easier when chaining together lambda callbacks.
@@ -401,7 +401,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<RecipeApp> driver(
       app_context->outgoing_services(),
       std::make_unique<RecipeApp>(app_context.get()),

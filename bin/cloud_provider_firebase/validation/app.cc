@@ -33,8 +33,8 @@ int main(int argc, char** argv) {
   }
 
   fsl::MessageLoop message_loop;
-  std::unique_ptr<app::ApplicationContext> application_context =
-      app::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<component::ApplicationContext> application_context =
+      component::ApplicationContext::CreateFromStartupInfo();
   test::CloudProviderFirebaseFactory factory(application_context.get());
 
   cloud_provider::ValidationTestsLauncher launcher(

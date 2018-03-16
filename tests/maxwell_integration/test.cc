@@ -66,7 +66,7 @@ void Sleep() {
 namespace maxwell {
 
 MaxwellTestBase::MaxwellTestBase() {
-  startup_context_ = app::ApplicationContext::CreateFromStartupInfo();
+  startup_context_ = component::ApplicationContext::CreateFromStartupInfo();
   auto root_environment = startup_context_->environment().get();
   FXL_CHECK(root_environment != nullptr);
 
@@ -79,13 +79,13 @@ MaxwellTestBase::MaxwellTestBase() {
       });
 }
 
-app::Services MaxwellTestBase::StartServices(const std::string& url) {
-  app::Services services;
-  auto launch_info = app::ApplicationLaunchInfo::New();
+component::Services MaxwellTestBase::StartServices(const std::string& url) {
+  component::Services services;
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = url;
   launch_info->directory_request = services.NewRequest();
 
-  auto service_list = app::ServiceList::New();
+  auto service_list = component::ServiceList::New();
   service_list->names.push_back(modular::ComponentContext::Name_);
   child_app_services_.AddBinding(service_list->provider.NewRequest());
   launch_info->additional_services = std::move(service_list);
@@ -95,7 +95,7 @@ app::Services MaxwellTestBase::StartServices(const std::string& url) {
   return services;
 }
 
-app::ApplicationEnvironment* MaxwellTestBase::root_environment() {
+component::ApplicationEnvironment* MaxwellTestBase::root_environment() {
   return startup_context_->environment().get();
 }
 

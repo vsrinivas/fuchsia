@@ -56,7 +56,7 @@ struct UserLoginParams {
 
   // Services provided by the |DeviceShell| that can be offered to the
   // |UserShell| that is being logged into.
-  app.ServiceProvider? services;
+  component.ServiceProvider? services;
 
   // If login fails, |user_controller| is closed.
   UserController& user_controller;

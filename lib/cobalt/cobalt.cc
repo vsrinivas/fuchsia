@@ -168,9 +168,10 @@ CobaltObservation& CobaltObservation::operator=(CobaltObservation&& rhs) {
 }
 
 CobaltContext::CobaltContext(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                             app::ApplicationContext* app_context,
+                             component::ApplicationContext* app_context,
                              int32_t project_id)
-    : task_runner_(std::move(task_runner)), app_context_(app_context),
+    : task_runner_(std::move(task_runner)),
+      app_context_(app_context),
       project_id_(project_id) {
   ConnectToCobaltApplication();
 }
@@ -294,8 +295,7 @@ void CobaltContext::AddObservationCallback(CobaltObservation observation,
 
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
-    app::ApplicationContext* app_context,
-    int32_t project_id,
+    component::ApplicationContext* app_context, int32_t project_id,
     CobaltContext** cobalt_context) {
   FXL_DCHECK(!*cobalt_context);
   auto context = std::make_unique<CobaltContext>(std::move(task_runner),

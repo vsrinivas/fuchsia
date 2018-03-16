@@ -28,7 +28,7 @@ class FakeNetConnector : public netconnector::NetConnector {
     // Connects to the ServiceProvider from host |device_name|.
     virtual void ConnectToServiceProvider(
         std::string device_name,
-        f1dl::InterfaceRequest<app::ServiceProvider> request) = 0;
+        f1dl::InterfaceRequest<component::ServiceProvider> request) = 0;
   };
 
   explicit FakeNetConnector(Delegate* delegate);
@@ -36,21 +36,22 @@ class FakeNetConnector : public netconnector::NetConnector {
 
   // Connects to the service provider of this (virtual) host
   void ConnectToServiceProvider(
-      f1dl::InterfaceRequest<app::ServiceProvider> request);
+      f1dl::InterfaceRequest<component::ServiceProvider> request);
 
  private:
   // NetConnector implementation:
-  void RegisterServiceProvider(
-      const f1dl::String& name,
-      f1dl::InterfaceHandle<app::ServiceProvider> service_provider) override;
+  void RegisterServiceProvider(const f1dl::String& name,
+                               f1dl::InterfaceHandle<component::ServiceProvider>
+                                   service_provider) override;
   void GetDeviceServiceProvider(
       const f1dl::String& device_name,
-      f1dl::InterfaceRequest<app::ServiceProvider> service_provider) override;
+      f1dl::InterfaceRequest<component::ServiceProvider> service_provider)
+      override;
   void GetKnownDeviceNames(
       uint64_t version_last_seen,
       const GetKnownDeviceNamesCallback& callback) override;
 
-  app::ServiceProviderImpl service_provider_impl_;
+  component::ServiceProviderImpl service_provider_impl_;
   Delegate* const delegate_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeNetConnector);

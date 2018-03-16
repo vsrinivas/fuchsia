@@ -193,7 +193,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
  public:
   explicit DeviceRunnerApp(
       const Settings& settings,
-      std::shared_ptr<app::ApplicationContext> const app_context,
+      std::shared_ptr<component::ApplicationContext> const app_context,
       std::function<void()> on_shutdown)
       : settings_(settings),
         user_provider_impl_("UserProviderImpl"),
@@ -355,7 +355,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   const Settings& settings_;  // Not owned nor copied.
   AsyncHolder<UserProviderImpl> user_provider_impl_;
 
-  std::shared_ptr<app::ApplicationContext> const app_context_;
+  std::shared_ptr<component::ApplicationContext> const app_context_;
   DeviceRunnerMonitorPtr monitor_;
   std::function<void()> on_shutdown_;
 
@@ -370,9 +370,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
 };
 
 fxl::AutoCall<fxl::Closure> SetupCobalt(
-    Settings& settings,
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
-    app::ApplicationContext* app_context) {
+    Settings& settings, fxl::RefPtr<fxl::TaskRunner> task_runner,
+    component::ApplicationContext* app_context) {
   if (settings.disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});
   }
@@ -392,8 +391,8 @@ int main(int argc, const char** argv) {
   modular::Settings settings(command_line);
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
-  auto app_context = std::shared_ptr<app::ApplicationContext>(
-      app::ApplicationContext::CreateFromStartupInfo());
+  auto app_context = std::shared_ptr<component::ApplicationContext>(
+      component::ApplicationContext::CreateFromStartupInfo());
   fxl::AutoCall<fxl::Closure> cobalt_cleanup =
       SetupCobalt(settings, std::move(loop.task_runner()), app_context.get());
 

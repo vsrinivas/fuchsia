@@ -97,11 +97,12 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
 
 class MyEntityProvider : AgentImpl::Delegate,
                          EntityProvider,
-                         public app::ApplicationController,
+                         public component::ApplicationController,
                          public testing::MockBase {
  public:
-  MyEntityProvider(app::ApplicationLaunchInfoPtr launch_info,
-                   f1dl::InterfaceRequest<app::ApplicationController> ctrl)
+  MyEntityProvider(
+      component::ApplicationLaunchInfoPtr launch_info,
+      f1dl::InterfaceRequest<component::ApplicationController> ctrl)
       : vfs_(async_get_default()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
         app_controller_(this, std::move(ctrl)),
@@ -124,8 +125,8 @@ class MyEntityProvider : AgentImpl::Delegate,
     FXL_CHECK(launch_info_->additional_services->provider.is_valid());
     auto additional_services =
         launch_info_->additional_services->provider.Bind();
-    app::ConnectToService(additional_services.get(),
-                          agent_context_.NewRequest());
+    component::ConnectToService(additional_services.get(),
+                                agent_context_.NewRequest());
     ComponentContextPtr component_context;
     agent_context_->GetComponentContext(component_context.NewRequest());
     component_context->GetEntityResolver(entity_resolver_.NewRequest());
@@ -144,8 +145,8 @@ class MyEntityProvider : AgentImpl::Delegate,
   void Wait(const WaitCallback& callback) override { ++counts["Wait"]; }
 
   // |AgentImpl::Delegate|
-  void Connect(
-      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
+  void Connect(f1dl::InterfaceRequest<component::ServiceProvider>
+                   outgoing_services) override {
     ++counts["Connect"];
   }
   // |AgentImpl::Delegate|
@@ -175,9 +176,9 @@ class MyEntityProvider : AgentImpl::Delegate,
   AgentContextPtr agent_context_;
   std::unique_ptr<AgentImpl> agent_impl_;
   EntityResolverPtr entity_resolver_;
-  f1dl::Binding<app::ApplicationController> app_controller_;
+  f1dl::Binding<component::ApplicationController> app_controller_;
   f1dl::Binding<modular::EntityProvider> entity_provider_binding_;
-  app::ApplicationLaunchInfoPtr launch_info_;
+  component::ApplicationLaunchInfoPtr launch_info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyEntityProvider);
 };
@@ -187,14 +188,15 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   constexpr char kMyAgentUrl[] = "file:///my_agent";
   launcher()->RegisterApplication(
       kMyAgentUrl,
-      [&dummy_agent](app::ApplicationLaunchInfoPtr launch_info,
-                     f1dl::InterfaceRequest<app::ApplicationController> ctrl) {
+      [&dummy_agent](
+          component::ApplicationLaunchInfoPtr launch_info,
+          f1dl::InterfaceRequest<component::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyEntityProvider>(std::move(launch_info),
                                                          std::move(ctrl));
       });
 
   // 1. Start up the entity provider agent.
-  app::ServiceProviderPtr incoming_services;
+  component::ServiceProviderPtr incoming_services;
   AgentControllerPtr agent_controller;
   agent_runner()->ConnectToAgent("dummy_requestor_url", kMyAgentUrl,
                                  incoming_services.NewRequest(),

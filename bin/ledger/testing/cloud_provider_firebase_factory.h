@@ -24,7 +24,7 @@ namespace test {
 class CloudProviderFirebaseFactory {
  public:
   explicit CloudProviderFirebaseFactory(
-      app::ApplicationContext* application_context);
+      component::ApplicationContext* application_context);
   ~CloudProviderFirebaseFactory();
 
   void Init();
@@ -35,7 +35,7 @@ class CloudProviderFirebaseFactory {
       f1dl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
  private:
-  app::ApplicationContext* application_context_;
+  component::ApplicationContext* application_context_;
 
   // Thread used to run the fake token manager on.
   std::thread services_thread_;
@@ -45,7 +45,7 @@ class CloudProviderFirebaseFactory {
                                           firebase_auth::FakeTokenProvider>
       token_provider_;
 
-  app::ApplicationControllerPtr cloud_provider_controller_;
+  component::ApplicationControllerPtr cloud_provider_controller_;
   cloud_provider_firebase::FactoryPtr cloud_provider_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderFirebaseFactory);

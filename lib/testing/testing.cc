@@ -17,7 +17,8 @@ std::set<std::string> g_test_points;
 bool g_connected;
 }  // namespace
 
-void Init(app::ApplicationContext* app_context, const std::string& identity) {
+void Init(component::ApplicationContext* app_context,
+          const std::string& identity) {
   FXL_CHECK(app_context);
   FXL_CHECK(!g_test_runner.is_bound());
   FXL_CHECK(!g_test_runner_store.is_bound());

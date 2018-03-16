@@ -39,7 +39,7 @@ interface ModuleContext {
   // is null then a default relation is used.
   // TODO(thatguy): Rename to StartModuleDeprecated().
   StartModule@1(string name, Daisy daisy,
-                app.ServiceProvider&? incoming_services,
+                component.ServiceProvider&? incoming_services,
                 ModuleController& module_controller,
                 SurfaceRelation? surface_relation)
                 => (StartModuleStatus status);
@@ -60,19 +60,19 @@ interface ModuleContext {
   // request is supplied.
   // TODO(thatguy): Rename to EmbedModule().
   EmbedModule@2(string name, Daisy daisy,
-                app.ServiceProvider&? incoming_services,
+                component.ServiceProvider&? incoming_services,
                 ModuleController& module_controller,
                 mozart.ViewOwner& view_owner) => (StartModuleStatus status);
 
   // DEPRECATED: Use EmbedDaisy().
   StartModuleDeprecated@3(string name, string module_url, string? link_name,
-                          app.ServiceProvider&? incoming_services,
+                          component.ServiceProvider&? incoming_services,
                           ModuleController& module_controller,
                           mozart.ViewOwner& view_owner);
 
   // DEPRECATED: Use StartDaisy().
   StartModuleInShellDeprecated@4(string name, string module_url, string? link_name,
-                                 app.ServiceProvider&? incoming_services,
+                                 component.ServiceProvider&? incoming_services,
                                  ModuleController& module_controller,
                                  SurfaceRelation? surface_relation,
                                  bool focused);
@@ -109,7 +109,7 @@ interface ModuleContext {
   // TODO(thatguy): This doesn't appear to be used outside peridot tests.
   // Consider removing it if it's not in fact used.
   EmbedModuleDeprecated@5(string name, string module_url, string? link_name,
-                          app.ServiceProvider&? incoming_services,
+                          component.ServiceProvider&? incoming_services,
                           ModuleController& module_controller,
                           EmbedModuleWatcher? embed_module_watcher,
                           mozart.ViewOwner& view_owner);

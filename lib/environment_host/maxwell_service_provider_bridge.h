@@ -11,9 +11,9 @@
 namespace maxwell {
 
 // Environment surfacing only explicitly given environment services.
-class MaxwellServiceProviderBridge : public app::ServiceProviderBridge {
+class MaxwellServiceProviderBridge : public component::ServiceProviderBridge {
  public:
-  MaxwellServiceProviderBridge(app::ApplicationEnvironment* parent_env);
+  MaxwellServiceProviderBridge(component::ApplicationEnvironment* parent_env);
 };
 
 }  // namespace maxwell

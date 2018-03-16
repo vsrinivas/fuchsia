@@ -29,9 +29,9 @@ class TodoApp : public modular::Module,
   TodoApp();
 
   // modular::Module:
-  void Initialize(
-      f1dl::InterfaceHandle<modular::ModuleContext> module_context,
-      f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
+  void Initialize(f1dl::InterfaceHandle<modular::ModuleContext> module_context,
+                  f1dl::InterfaceRequest<component::ServiceProvider>
+                      outgoing_services) override;
 
   // ledger::PageWatcher:
   void OnChange(ledger::PageChangePtr page_change,
@@ -56,7 +56,7 @@ class TodoApp : public modular::Module,
   std::normal_distribution<> size_distribution_;
   std::uniform_int_distribution<> delay_distribution_;
   Generator generator_;
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   f1dl::Binding<modular::Module> module_binding_;
   f1dl::InterfacePtr<modular::ModuleContext> module_context_;
   modular::ComponentContextPtr component_context_;

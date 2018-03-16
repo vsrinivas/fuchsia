@@ -16,14 +16,12 @@
 namespace modular {
 
 UserControllerImpl::UserControllerImpl(
-    app::ApplicationLauncher* const application_launcher,
-    AppConfigPtr user_runner,
-    AppConfigPtr user_shell,
-    AppConfigPtr story_shell,
+    component::ApplicationLauncher* const application_launcher,
+    AppConfigPtr user_runner, AppConfigPtr user_shell, AppConfigPtr story_shell,
     f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     auth::AccountPtr account,
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    f1dl::InterfaceHandle<app::ServiceProvider> device_shell_services,
+    f1dl::InterfaceHandle<component::ServiceProvider> device_shell_services,
     f1dl::InterfaceRequest<UserController> user_controller_request,
     DoneCallback done)
     : user_context_binding_(this),

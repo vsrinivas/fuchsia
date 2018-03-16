@@ -129,8 +129,8 @@ TEST_F(NetConnectorFactoryTest, ServiceProvider) {
   netconnector::NetConnectorPtr netconnector1;
   factory_.AddBinding("host1", netconnector1.NewRequest());
 
-  f1dl::InterfaceHandle<app::ServiceProvider> handle;
-  app::ServiceProviderImpl service_provider1;
+  f1dl::InterfaceHandle<component::ServiceProvider> handle;
+  component::ServiceProviderImpl service_provider1;
   std::vector<std::unique_ptr<netconnector::MessageRelay>> relays_host1;
   service_provider1.AddBinding(handle.NewRequest());
   service_provider1.AddServiceForName(
@@ -153,7 +153,7 @@ TEST_F(NetConnectorFactoryTest, ServiceProvider) {
 
   FXL_CHECK(status == ZX_OK) << "zx::channel::create failed, status " << status;
 
-  app::ServiceProviderPtr service_provider_ptr;
+  component::ServiceProviderPtr service_provider_ptr;
   netconnector2->GetDeviceServiceProvider("host1",
                                           service_provider_ptr.NewRequest());
 

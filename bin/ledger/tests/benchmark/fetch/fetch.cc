@@ -44,11 +44,10 @@ void PrintUsage(const char* executable_name) {
 namespace test {
 namespace benchmark {
 
-FetchBenchmark::FetchBenchmark(size_t entry_count,
-                               size_t value_size,
-                               size_t part_size,
-                               std::string server_id)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+FetchBenchmark::FetchBenchmark(size_t entry_count, size_t value_size,
+                               size_t part_size, std::string server_id)
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(application_context_.get()),
       sync_watcher_binding_(this),
       entry_count_(entry_count),

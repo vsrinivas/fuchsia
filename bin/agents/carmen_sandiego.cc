@@ -18,7 +18,7 @@ namespace {
 class CarmenSandiegoApp : public ContextListener {
  public:
   CarmenSandiegoApp()
-      : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
         writer_(app_context_->ConnectToEnvironmentService<ContextWriter>()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         binding_(this) {
@@ -64,7 +64,7 @@ class CarmenSandiegoApp : public ContextListener {
     writer_->WriteEntityTopic("/location/region", json.str());
   }
 
-  std::unique_ptr<app::ApplicationContext> app_context_;
+  std::unique_ptr<component::ApplicationContext> app_context_;
 
   ContextWriterPtr writer_;
   ContextReaderPtr reader_;

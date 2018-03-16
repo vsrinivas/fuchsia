@@ -21,9 +21,9 @@ namespace {
 
 class HelloAppParent {
  public:
-  explicit HelloAppParent(app::ApplicationContext* app_context,
+  explicit HelloAppParent(component::ApplicationContext* app_context,
                           fxl::CommandLine command_line) {
-    auto launch_info = app::ApplicationLaunchInfo::New();
+    auto launch_info = component::ApplicationLaunchInfo::New();
     const std::vector<std::string>& args = command_line.positional_args();
     if (args.empty()) {
       launch_info->url = "hello_app_child";
@@ -53,8 +53,8 @@ class HelloAppParent {
     });
   }
 
-  app::ApplicationControllerPtr child_;
-  app::Services child_services_;
+  component::ApplicationControllerPtr child_;
+  component::Services child_services_;
   HelloPtr hello_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(HelloAppParent);
@@ -64,7 +64,7 @@ class HelloAppParent {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<HelloAppParent> driver(
       app_context->outgoing_services(),
       std::make_unique<HelloAppParent>(

@@ -161,7 +161,7 @@ class StoryStateWatcherImpl : modular::StoryWatcher {
 // here.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  explicit TestApp(app::ApplicationContext* const application_context,
+  explicit TestApp(component::ApplicationContext* const application_context,
                    Settings settings)
       : ComponentBase(application_context), settings_(std::move(settings)) {
     TestInit(__FILE__);

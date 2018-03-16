@@ -146,7 +146,7 @@ class CobaltTest : public gtest::TestWithMessageLoop {
         task_runner_(FakeTaskRunner::Create()) {}
   ~CobaltTest() override {}
 
-  app::ApplicationContext* app_context() { return app_context_.get(); }
+  component::ApplicationContext* app_context() { return app_context_.get(); }
 
   fxl::RefPtr<FakeTaskRunner> task_runner() { return task_runner_; }
 
@@ -155,32 +155,34 @@ class CobaltTest : public gtest::TestWithMessageLoop {
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> InitApplicationContext() {
+  std::unique_ptr<component::ApplicationContext> InitApplicationContext() {
     factory_impl_.reset(new FakeCobaltEncoderFactoryImpl());
     service_provider.AddService<CobaltEncoderFactory>(
         [this](f1dl::InterfaceRequest<CobaltEncoderFactory> request) {
           factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });
-    service_provider.AddService<app::ApplicationEnvironment>(
-        [this](f1dl::InterfaceRequest<app::ApplicationEnvironment> request) {
+    service_provider.AddService<component::ApplicationEnvironment>(
+        [this](
+            f1dl::InterfaceRequest<component::ApplicationEnvironment> request) {
           app_environment_request_ = std::move(request);
         });
-    service_provider.AddService<app::ApplicationLauncher>(
-        [this](f1dl::InterfaceRequest<app::ApplicationLauncher> request) {
+    service_provider.AddService<component::ApplicationLauncher>(
+        [this](f1dl::InterfaceRequest<component::ApplicationLauncher> request) {
           app_launcher_request_ = std::move(request);
         });
-    return std::make_unique<app::ApplicationContext>(
+    return std::make_unique<component::ApplicationContext>(
         service_provider.OpenAsDirectory(), zx::channel());
   }
 
-  app::ServiceProviderBridge service_provider;
+  component::ServiceProviderBridge service_provider;
   std::unique_ptr<FakeCobaltEncoderFactoryImpl> factory_impl_;
   std::unique_ptr<FakeCobaltEncoderImpl> cobalt_encoder_;
-  std::unique_ptr<app::ApplicationContext> app_context_;
+  std::unique_ptr<component::ApplicationContext> app_context_;
   f1dl::BindingSet<CobaltEncoderFactory> factory_bindings_;
   fxl::RefPtr<FakeTaskRunner> task_runner_;
-  f1dl::InterfaceRequest<app::ApplicationLauncher> app_launcher_request_;
-  f1dl::InterfaceRequest<app::ApplicationEnvironment> app_environment_request_;
+  f1dl::InterfaceRequest<component::ApplicationLauncher> app_launcher_request_;
+  f1dl::InterfaceRequest<component::ApplicationEnvironment>
+      app_environment_request_;
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTest);
 };
 

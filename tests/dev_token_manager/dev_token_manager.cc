@@ -39,7 +39,7 @@ class AccountProviderImpl : AccountProvider {
 
   std::string GenerateAccountId();
 
-  std::shared_ptr<app::ApplicationContext> application_context_;
+  std::shared_ptr<component::ApplicationContext> application_context_;
   AccountProviderContextPtr account_provider_context_;
   f1dl::Binding<AccountProvider> binding_;
 
@@ -47,7 +47,8 @@ class AccountProviderImpl : AccountProvider {
 };
 
 AccountProviderImpl::AccountProviderImpl()
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       binding_(this) {
   application_context_->outgoing_services()->AddService<AccountProvider>(
       [this](f1dl::InterfaceRequest<AccountProvider> request) {

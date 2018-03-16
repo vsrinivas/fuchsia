@@ -17,7 +17,7 @@ namespace {
 
 class ContextEngineApp {
  public:
-  ContextEngineApp(app::ApplicationContext* app_context) {
+  ContextEngineApp(component::ApplicationContext* app_context) {
     auto component_context =
         app_context->ConnectToEnvironmentService<modular::ComponentContext>();
     component_context->GetEntityResolver(entity_resolver_.NewRequest());
@@ -43,7 +43,7 @@ class ContextEngineApp {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto context = app::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<maxwell::ContextEngineApp> driver(
       context->outgoing_services(),
       std::make_unique<maxwell::ContextEngineApp>(context.get()),

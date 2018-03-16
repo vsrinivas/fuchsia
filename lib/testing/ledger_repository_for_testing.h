@@ -32,7 +32,7 @@ class LedgerRepositoryForTesting {
   void Terminate(std::function<void()> done);
 
  private:
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<AppClient<ledger::LedgerController>> ledger_app_client_;
   ledger::LedgerRepositoryFactoryPtr ledger_repo_factory_;

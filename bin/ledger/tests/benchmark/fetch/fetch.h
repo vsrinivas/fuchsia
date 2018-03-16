@@ -54,7 +54,7 @@ class FetchBenchmark : public ledger::SyncWatcher {
 
   test::DataGenerator generator_;
   test::benchmark::PageDataGenerator page_data_generator_;
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
   f1dl::Binding<ledger::SyncWatcher> sync_watcher_binding_;
   const size_t entry_count_;
@@ -63,8 +63,8 @@ class FetchBenchmark : public ledger::SyncWatcher {
   std::string server_id_;
   files::ScopedTempDir writer_tmp_dir_;
   files::ScopedTempDir reader_tmp_dir_;
-  app::ApplicationControllerPtr writer_controller_;
-  app::ApplicationControllerPtr reader_controller_;
+  component::ApplicationControllerPtr writer_controller_;
+  component::ApplicationControllerPtr reader_controller_;
   ledger::LedgerPtr writer_;
   ledger::LedgerPtr reader_;
   f1dl::Array<uint8_t> page_id_;

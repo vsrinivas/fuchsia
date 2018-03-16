@@ -25,7 +25,7 @@ namespace cloud_provider_firestore {
 // the cloud provider.
 class CloudProviderFactory {
  public:
-  CloudProviderFactory(app::ApplicationContext* application_context,
+  CloudProviderFactory(component::ApplicationContext* application_context,
                        std::string credentials_path);
   ~CloudProviderFactory();
 
@@ -38,7 +38,7 @@ class CloudProviderFactory {
 
  private:
   class TokenProviderContainer;
-  app::ApplicationContext* const application_context_;
+  component::ApplicationContext* const application_context_;
   const std::string credentials_path_;
 
   // Thread used to run the token manager on.
@@ -47,7 +47,7 @@ class CloudProviderFactory {
 
   callback::AutoCleanableSet<TokenProviderContainer> token_providers_;
 
-  app::ApplicationControllerPtr cloud_provider_controller_;
+  component::ApplicationControllerPtr cloud_provider_controller_;
   FactoryPtr cloud_provider_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderFactory);

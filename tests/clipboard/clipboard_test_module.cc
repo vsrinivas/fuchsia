@@ -25,7 +25,7 @@ class ClipboardTestApp {
   ClipboardTestApp(
       modular::ModuleHost* const module_host,
       f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -54,7 +54,7 @@ class ClipboardTestApp {
     module_host_->module_context()->GetComponentContext(
         component_context_.NewRequest());
 
-    app::ServiceProviderPtr agent_services;
+    component::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kClipboardAgentUrl,
                                        agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
@@ -71,7 +71,7 @@ class ClipboardTestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::ModuleDriver<ClipboardTestApp> driver(app_context.get(),
                                                  [&loop] { loop.QuitNow(); });
   loop.Run();

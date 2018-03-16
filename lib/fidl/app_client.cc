@@ -43,12 +43,11 @@ zx::channel CloneChannel(int fd) {
 
 }  // namespace
 
-AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
-                             AppConfigPtr config,
-                             std::string data_origin,
-                             app::ServiceListPtr additional_services)
+AppClientBase::AppClientBase(component::ApplicationLauncher* const launcher,
+                             AppConfigPtr config, std::string data_origin,
+                             component::ServiceListPtr additional_services)
     : AsyncHolderBase(config->url) {
-  auto launch_info = app::ApplicationLaunchInfo::New();
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->directory_request = services_.NewRequest();
   launch_info->url = config->url;
   launch_info->arguments = config->args.Clone();
@@ -58,7 +57,7 @@ AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
       FXL_LOG(ERROR) << "Unable to create directory at " << data_origin;
       return;
     }
-    launch_info->flat_namespace = app::FlatNamespace::New();
+    launch_info->flat_namespace = component::FlatNamespace::New();
     launch_info->flat_namespace->paths.push_back("/data");
 
     fxl::UniqueFD dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));

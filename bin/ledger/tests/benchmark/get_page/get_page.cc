@@ -34,7 +34,8 @@ namespace benchmark {
 
 GetPageBenchmark::GetPageBenchmark(size_t requests_count, bool reuse)
     : tmp_dir_(kStoragePath),
-      application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       requests_count_(requests_count),
       reuse_(reuse) {
   FXL_DCHECK(requests_count_ > 0);

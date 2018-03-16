@@ -42,7 +42,7 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
                            callback) override;
   void ConnectToServiceProvider(
       std::string device_name,
-      f1dl::InterfaceRequest<app::ServiceProvider> request) override;
+      f1dl::InterfaceRequest<component::ServiceProvider> request) override;
 
   // Counter incremented each time a NetConnector is added or removed; denotes
   // the version of the current device list.

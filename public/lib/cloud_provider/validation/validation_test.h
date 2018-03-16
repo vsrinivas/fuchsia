@@ -25,7 +25,7 @@ class ValidationTest : public ::testing::Test {
 
  private:
   fsl::MessageLoop message_loop_;
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ValidationTest);
 };

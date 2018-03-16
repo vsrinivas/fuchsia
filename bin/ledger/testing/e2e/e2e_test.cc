@@ -22,7 +22,8 @@ int TestMain(int argc, char** argv) {
 
   {
     fsl::MessageLoop message_loop;
-    auto context = app::ApplicationContext::CreateFromStartupInfoNotChecked();
+    auto context =
+        component::ApplicationContext::CreateFromStartupInfoNotChecked();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

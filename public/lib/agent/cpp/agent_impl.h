@@ -24,21 +24,21 @@ class AgentImpl : public Agent {
   // framework.
   class Delegate {
    public:
-    virtual void Connect(
-        f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) = 0;
+    virtual void Connect(f1dl::InterfaceRequest<component::ServiceProvider>
+                             outgoing_services) = 0;
     virtual void RunTask(const f1dl::String& task_id,
                          const std::function<void()>& done) = 0;
   };
 
-  AgentImpl(app::ServiceNamespace* service_namespace, Delegate* delegate);
+  AgentImpl(component::ServiceNamespace* service_namespace, Delegate* delegate);
 
   AgentImpl(fbl::RefPtr<fs::PseudoDir> directory, Delegate* delegate);
 
  private:
   // |Agent|
-  void Connect(
-      const f1dl::String& requestor_url,
-      f1dl::InterfaceRequest<app::ServiceProvider> services_request) override;
+  void Connect(const f1dl::String& requestor_url,
+               f1dl::InterfaceRequest<component::ServiceProvider>
+                   services_request) override;
   // |Agent|
   void RunTask(const f1dl::String& task_id,
                const RunTaskCallback& callback) override;

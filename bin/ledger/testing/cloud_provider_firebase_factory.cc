@@ -17,7 +17,7 @@ constexpr char kCloudProviderFirebaseAppUrl[] = "cloud_provider_firebase";
 }  // namespace
 
 CloudProviderFirebaseFactory::CloudProviderFirebaseFactory(
-    app::ApplicationContext* application_context)
+    component::ApplicationContext* application_context)
     : application_context_(application_context) {}
 
 CloudProviderFirebaseFactory::~CloudProviderFirebaseFactory() {
@@ -28,8 +28,8 @@ CloudProviderFirebaseFactory::~CloudProviderFirebaseFactory() {
 
 void CloudProviderFirebaseFactory::Init() {
   services_thread_ = fsl::CreateThread(&services_task_runner_);
-  app::Services child_services;
-  auto launch_info = app::ApplicationLaunchInfo::New();
+  component::Services child_services;
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = kCloudProviderFirebaseAppUrl;
   launch_info->directory_request = child_services.NewRequest();
   application_context_->launcher()->CreateApplication(

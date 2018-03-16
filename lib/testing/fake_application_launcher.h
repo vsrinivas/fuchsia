@@ -16,11 +16,11 @@
 namespace modular {
 namespace testing {
 
-class FakeApplicationLauncher : public app::ApplicationLauncher {
+class FakeApplicationLauncher : public component::ApplicationLauncher {
  public:
-  using ApplicationConnectorFn =
-      std::function<void(app::ApplicationLaunchInfoPtr,
-                         f1dl::InterfaceRequest<app::ApplicationController>)>;
+  using ApplicationConnectorFn = std::function<void(
+      component::ApplicationLaunchInfoPtr,
+      f1dl::InterfaceRequest<component::ApplicationController>)>;
 
   // Registers an application located at "url" with a connector. When someone
   // tries to CreateApplication() with this |url|, the supplied |connector| is
@@ -36,8 +36,9 @@ class FakeApplicationLauncher : public app::ApplicationLauncher {
   // this call is dropped.
   // |ApplicationLauncher|
   void CreateApplication(
-      app::ApplicationLaunchInfoPtr launch_info,
-      f1dl::InterfaceRequest<app::ApplicationController> controller) override;
+      component::ApplicationLaunchInfoPtr launch_info,
+      f1dl::InterfaceRequest<component::ApplicationController> controller)
+      override;
 
   std::map<std::string, ApplicationConnectorFn> connectors_;
 };

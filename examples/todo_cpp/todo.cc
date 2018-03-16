@@ -99,7 +99,7 @@ TodoApp::TodoApp()
       size_distribution_(kMeanListSize, kListSizeStdDev),
       delay_distribution_(kMinDelaySeconds, kMaxDelaySeconds),
       generator_(&rng_),
-      context_(app::ApplicationContext::CreateFromStartupInfo()),
+      context_(component::ApplicationContext::CreateFromStartupInfo()),
       module_binding_(this),
       page_watcher_binding_(this) {
   context_->outgoing_services()->AddService<modular::Module>(
@@ -111,7 +111,7 @@ TodoApp::TodoApp()
 
 void TodoApp::Initialize(
     f1dl::InterfaceHandle<modular::ModuleContext> module_context,
-    f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
+    f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/) {
   module_context_.Bind(std::move(module_context));
   module_context_->GetComponentContext(component_context_.NewRequest());
   component_context_->GetLedger(ledger_.NewRequest(),

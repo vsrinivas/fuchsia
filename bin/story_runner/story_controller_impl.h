@@ -152,12 +152,10 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // MI4-739
   void StartModuleDeprecated(
       const f1dl::Array<f1dl::String>& parent_module_path,
-      const f1dl::String& module_name,
-      const f1dl::String& module_url,
-      const f1dl::String& link_name,
-      const modular::ModuleManifestPtr manifest,
+      const f1dl::String& module_name, const f1dl::String& module_url,
+      const f1dl::String& link_name, const modular::ModuleManifestPtr manifest,
       CreateChainInfoPtr create_chain_info,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       ModuleSource module_source);
@@ -167,23 +165,19 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // MI4-739
   void StartModuleInShellDeprecated(
       const f1dl::Array<f1dl::String>& parent_module_path,
-      const f1dl::String& module_name,
-      const f1dl::String& module_url,
-      const f1dl::String& link_name,
-      const modular::ModuleManifestPtr manifest,
+      const f1dl::String& module_name, const f1dl::String& module_url,
+      const f1dl::String& link_name, const modular::ModuleManifestPtr manifest,
       CreateChainInfoPtr create_chain_info,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
-      SurfaceRelationPtr surface_relation,
-      bool focus,
+      SurfaceRelationPtr surface_relation, bool focus,
       ModuleSource module_source);
 
   // Called by ModuleContextImpl.
   void EmbedModule(
       const f1dl::Array<f1dl::String>& parent_module_path,
-      const f1dl::String& module_name,
-      DaisyPtr daisy,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      const f1dl::String& module_name, DaisyPtr daisy,
+      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       ModuleSource module_source,
@@ -192,12 +186,10 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // Called by ModuleContextImpl.
   void StartModule(
       const f1dl::Array<f1dl::String>& parent_module_path,
-      const f1dl::String& module_name,
-      DaisyPtr daisy,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      const f1dl::String& module_name, DaisyPtr daisy,
+      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
-      SurfaceRelationPtr surface_relation,
-      ModuleSource module_source,
+      SurfaceRelationPtr surface_relation, ModuleSource module_source,
       std::function<void(StartModuleStatus)> callback);
 
   // Called by ModuleContextImpl. Note this is always from an internal module
@@ -206,11 +198,9 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // MI4-739
   void EmbedModuleDeprecated(
       const f1dl::Array<f1dl::String>& parent_module_path,
-      const f1dl::String& module_name,
-      const f1dl::String& module_url,
-      const f1dl::String& link_name,
-      CreateChainInfoPtr create_chain_info,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services,
+      const f1dl::String& module_name, const f1dl::String& module_url,
+      const f1dl::String& link_name, CreateChainInfoPtr create_chain_info,
+      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
       f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);

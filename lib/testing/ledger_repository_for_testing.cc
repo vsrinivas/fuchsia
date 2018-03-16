@@ -17,7 +17,8 @@ namespace testing {
 
 LedgerRepositoryForTesting::LedgerRepositoryForTesting(
     const std::string& repository_name)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       tmp_dir_("/tmp/" + repository_name) {
   AppConfigPtr ledger_config = AppConfig::New();
   ledger_config->url = kLedgerAppUrl;

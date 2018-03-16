@@ -45,7 +45,7 @@ ProposalPtr MkUrlProposal(const std::string& query) {
 class ProposalMaker : ContextListener {
  public:
   ProposalMaker()
-      : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         proposal_out_(
             app_context_->ConnectToEnvironmentService<ProposalPublisher>()),
@@ -80,7 +80,7 @@ class ProposalMaker : ContextListener {
     // TODO(travismart): UnPropose an unselected entity.
   }
 
-  std::unique_ptr<app::ApplicationContext> app_context_;
+  std::unique_ptr<component::ApplicationContext> app_context_;
   ContextReaderPtr reader_;
   ProposalPublisherPtr proposal_out_;
   f1dl::Binding<ContextListener> binding_;

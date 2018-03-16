@@ -129,7 +129,8 @@ class LinkWatcherImpl : modular::LinkWatcher {
 class TestApp : public modular::SingleServiceApp<modular::UserShell> {
  public:
   using Base = modular::SingleServiceApp<modular::UserShell>;
-  TestApp(app::ApplicationContext* const application_context, Settings settings)
+  TestApp(component::ApplicationContext* const application_context,
+          Settings settings)
       : Base(application_context), settings_(std::move(settings)) {}
 
   ~TestApp() override = default;

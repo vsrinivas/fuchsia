@@ -63,7 +63,7 @@ class RecipeView : public mozart::BaseView {
 
 class RecipeApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  RecipeApp(app::ApplicationContext* const application_context)
+  RecipeApp(component::ApplicationContext* const application_context)
       : SingleServiceApp(application_context) {}
 
   ~RecipeApp() override = default;
@@ -72,7 +72,8 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
   // |SingleServiceApp|
   void CreateView(
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      override {
     view_ = std::make_unique<RecipeView>(
         application_context()
             ->ConnectToEnvironmentService<mozart::ViewManager>(),
@@ -83,7 +84,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Initialize(
       f1dl::InterfaceHandle<modular::ModuleContext> module_context,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       override {
     module_context_.Bind(std::move(module_context));
     SwapModule();
@@ -134,7 +135,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<RecipeApp> driver(
       app_context->outgoing_services(),
       std::make_unique<RecipeApp>(app_context.get()),

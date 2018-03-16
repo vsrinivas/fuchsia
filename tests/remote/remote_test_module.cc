@@ -37,7 +37,7 @@ class ParentApp {
   ParentApp(
       modular::ModuleHost* module_host,
       f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -77,8 +77,8 @@ class ParentApp {
 
  private:
   modular::ModuleHost* module_host_;
-  app::ServiceProviderPtr incoming_services_;
-  app::ServiceProviderPtr outgoing_services_;
+  component::ServiceProviderPtr incoming_services_;
+  component::ServiceProviderPtr outgoing_services_;
   modular::ComponentContextPtr component_context_;
   modular::RemoteInvokerPtr remote_invoker_;
 
@@ -94,7 +94,7 @@ class ParentApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::ModuleDriver<ParentApp> driver(app_context.get(),
                                           [&loop] { loop.QuitNow(); });
   loop.Run();

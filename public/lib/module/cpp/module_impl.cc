@@ -6,7 +6,7 @@
 
 namespace modular {
 
-ModuleImpl::ModuleImpl(app::ServiceNamespace* service_namespace,
+ModuleImpl::ModuleImpl(component::ServiceNamespace* service_namespace,
                        Delegate* delegate)
     : delegate_(delegate), binding_(this) {
   service_namespace->AddService<Module>(
@@ -18,7 +18,7 @@ ModuleImpl::ModuleImpl(app::ServiceNamespace* service_namespace,
 // |Module|
 void ModuleImpl::Initialize(
     f1dl::InterfaceHandle<ModuleContext> module_context,
-    f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services) {
+    f1dl::InterfaceRequest<component::ServiceProvider> outgoing_services) {
   delegate_->ModuleInit(std::move(module_context),
                         std::move(outgoing_services));
 }

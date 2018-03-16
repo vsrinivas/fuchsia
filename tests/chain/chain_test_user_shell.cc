@@ -36,7 +36,7 @@ class TestApp : public testing::ComponentBase<UserShell>,
                 StoryWatcher,
                 ModuleWatcher {
  public:
-  TestApp(app::ApplicationContext* const application_context)
+  TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context),
         story_watcher_binding_(this),
         module_watcher_binding_(this) {

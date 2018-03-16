@@ -27,7 +27,8 @@
 
 namespace maxwell {
 
-SuggestionEngineImpl::SuggestionEngineImpl(app::ApplicationContext* app_context)
+SuggestionEngineImpl::SuggestionEngineImpl(
+    component::ApplicationContext* app_context)
     : next_processor_(this), context_listener_binding_(this) {
   app_context->outgoing_services()->AddService<SuggestionEngine>(
       [this](f1dl::InterfaceRequest<SuggestionEngine> request) {
@@ -485,7 +486,7 @@ void SuggestionEngineImpl::OnContextUpdate(ContextUpdatePtr update) {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto context = app::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<maxwell::SuggestionEngineImpl> driver(
       context->outgoing_services(),
       std::make_unique<maxwell::SuggestionEngineImpl>(context.get()),

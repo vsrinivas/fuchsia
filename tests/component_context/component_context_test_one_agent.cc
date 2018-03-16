@@ -30,14 +30,14 @@ class TestAgentApp : modular::ComponentContextTestService {
         });
 
     // Connecting to the agent should start it up.
-    app::ServiceProviderPtr agent_services;
+    component::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTwoAgentUrl,
                                        agent_services.NewRequest(),
                                        two_agent_controller_.NewRequest());
   }
 
   // Called by AgentDriver.
-  void Connect(f1dl::InterfaceRequest<app::ServiceProvider> request) {
+  void Connect(f1dl::InterfaceRequest<component::ServiceProvider> request) {
     agent_services_.AddBinding(std::move(request));
     modular::testing::GetStore()->Put("one_agent_connected", "", [] {});
   }
@@ -76,7 +76,7 @@ class TestAgentApp : modular::ComponentContextTestService {
   modular::ComponentContextPtr component_context_;
   modular::AgentControllerPtr two_agent_controller_;
 
-  app::ServiceNamespace agent_services_;
+  component::ServiceNamespace agent_services_;
   f1dl::BindingSet<modular::ComponentContextTestService> agent_interface_;
 };
 
@@ -84,7 +84,7 @@ class TestAgentApp : modular::ComponentContextTestService {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AgentDriver<TestAgentApp> driver(app_context.get(),
                                             [&loop] { loop.QuitNow(); });
   loop.Run();

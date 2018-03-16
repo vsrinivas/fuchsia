@@ -25,16 +25,13 @@ namespace test {
 namespace benchmark {
 
 PutBenchmark::PutBenchmark(
-    int entry_count,
-    int transaction_size,
-    int key_size,
-    int value_size,
-    bool update,
-    PageDataGenerator::ReferenceStrategy reference_strategy,
+    int entry_count, int transaction_size, int key_size, int value_size,
+    bool update, PageDataGenerator::ReferenceStrategy reference_strategy,
     uint64_t seed)
     : generator_(seed),
       tmp_dir_(kStoragePath),
-      application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),

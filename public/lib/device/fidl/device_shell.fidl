@@ -15,7 +15,7 @@ import "lib/ui/views/fidl/view_token.fidl";
 //
 // In one component instance there can only be one DeviceShell service instance.
 // The ViewOwner request is sent to the separate ViewProvider service. This way,
-// the device shell may be implemented as a flutter app.
+// the device shell may be implemented as a flutter component.
 //
 // Teardown may be initiated by the device shell calling
 // DeviceShellContext.Shutdown(), or by the system shutting down.

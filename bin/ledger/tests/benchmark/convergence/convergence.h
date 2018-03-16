@@ -45,7 +45,7 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   void ShutDown();
 
   test::DataGenerator generator_;
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
   const int entry_count_;
   const int value_size_;
@@ -54,8 +54,8 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   f1dl::Binding<ledger::PageWatcher> beta_watcher_binding_;
   files::ScopedTempDir alpha_tmp_dir_;
   files::ScopedTempDir beta_tmp_dir_;
-  app::ApplicationControllerPtr alpha_controller_;
-  app::ApplicationControllerPtr beta_controller_;
+  component::ApplicationControllerPtr alpha_controller_;
+  component::ApplicationControllerPtr beta_controller_;
   ledger::LedgerPtr alpha_ledger_;
   ledger::LedgerPtr beta_ledger_;
   f1dl::Array<uint8_t> page_id_;

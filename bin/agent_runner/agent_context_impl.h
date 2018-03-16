@@ -34,7 +34,7 @@ class AgentRunner;
 // The parameters of agent context that do not vary by instance.
 struct AgentContextInfo {
   const ComponentContextInfo component_context_info;
-  app::ApplicationLauncher* const app_launcher;
+  component::ApplicationLauncher* const app_launcher;
   auth::TokenProviderFactory* const token_provider_factory;
   maxwell::UserIntelligenceProvider* const user_intelligence_provider;
 };
@@ -59,7 +59,8 @@ class AgentContextImpl : AgentContext, AgentController {
   // point all connections will be forwarded to the agent.
   void NewAgentConnection(
       const std::string& requestor_url,
-      f1dl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
+      f1dl::InterfaceRequest<component::ServiceProvider>
+          incoming_services_request,
       f1dl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Called by AgentRunner when the framework wants to talk to the
@@ -114,7 +115,7 @@ class AgentContextImpl : AgentContext, AgentController {
 
   // A service provider that represents the services to be added into an
   // application's namespace.
-  app::ServiceProviderImpl service_provider_impl_;
+  component::ServiceProviderImpl service_provider_impl_;
 
   auth::TokenProviderFactory* const token_provider_factory_;  // Not owned.
   EntityProviderRunner* const entity_provider_runner_;        // Not owned.

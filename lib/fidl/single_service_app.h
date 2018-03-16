@@ -22,7 +22,7 @@ namespace modular {
 template <class Service>
 class SingleServiceApp : protected Service, private mozart::ViewProvider {
  public:
-  SingleServiceApp(app::ApplicationContext* const application_context)
+  SingleServiceApp(component::ApplicationContext* const application_context)
       : application_context_(application_context),
         service_binding_(new f1dl::Binding<Service>(this)),
         view_provider_binding_(this) {
@@ -43,7 +43,7 @@ class SingleServiceApp : protected Service, private mozart::ViewProvider {
   virtual void Terminate(std::function<void()> done) { done(); }
 
  protected:
-  app::ApplicationContext* application_context() const {
+  component::ApplicationContext* application_context() const {
     return application_context_;
   }
 
@@ -51,9 +51,10 @@ class SingleServiceApp : protected Service, private mozart::ViewProvider {
   // |ViewProvider| -- Derived classes may override this method.
   void CreateView(
       f1dl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {}
+      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      override {}
 
-  app::ApplicationContext* const application_context_;
+  component::ApplicationContext* const application_context_;
   std::unique_ptr<f1dl::Binding<Service>> service_binding_;
   f1dl::Binding<mozart::ViewProvider> view_provider_binding_;
 

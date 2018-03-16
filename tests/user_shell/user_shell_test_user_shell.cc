@@ -266,7 +266,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
 // shell normally would.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  explicit TestApp(app::ApplicationContext* const application_context,
+  explicit TestApp(component::ApplicationContext* const application_context,
                    Settings settings)
       : ComponentBase(application_context), settings_(std::move(settings)) {
     TestInit(__FILE__);
@@ -282,7 +282,8 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   // |SingleServiceApp|
   void CreateView(
       f1dl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
-      f1dl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      override {
     create_view_.Pass();
   }
 
