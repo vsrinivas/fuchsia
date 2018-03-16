@@ -372,9 +372,15 @@ const coded::Type* TablesGenerator::Compile(const flat::Type* type) {
 void TablesGenerator::Compile(const flat::Decl* decl) {
     switch (decl->kind) {
     case flat::Decl::Kind::kConst:
-    case flat::Decl::Kind::kEnum:
-        // Nothing to do for const or enum declarations.
+        // Nothing to do for const declarations.
         break;
+    case flat::Decl::Kind::kEnum: {
+        auto enum_decl = static_cast<const flat::Enum*>(decl);
+        std::string enum_name = NameName(enum_decl->name);
+        coded_types_.push_back(std::make_unique<coded::PrimitiveType>(std::move(enum_name), enum_decl->type));
+        named_type_map_[&enum_decl->name] = coded_types_.back().get();
+        break;
+    }
     case flat::Decl::Kind::kInterface: {
         auto interface_decl = static_cast<const flat::Interface*>(decl);
         std::string interface_name = NameInterface(*interface_decl);
