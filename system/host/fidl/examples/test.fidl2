@@ -21,6 +21,10 @@ struct VectorOfPoints {
     vector<Point>:4 p;
 };
 
+struct VectorOfDirections {
+    vector<Direction>:4 d;
+};
+
 union Points {
     Point one_point;
     ArraysOfPoints many_points;
