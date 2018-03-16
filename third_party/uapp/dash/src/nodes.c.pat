@@ -382,7 +382,6 @@ struct nodelist *codec_decode(char *buffer, size_t length)
 	if (length < sizeof(size_t)) {
 		return NULL;
 	}
-	size_t total_size = *(size_t*)buffer;
 
 	struct state_header header;
 	memcpy(&header, buffer, sizeof(header));
