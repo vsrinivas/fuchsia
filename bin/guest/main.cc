@@ -145,12 +145,9 @@ static zx_status_t setup_zircon_framebuffer(
     machina::VirtioGpu* gpu,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
   zx_status_t status =
-      machina::FramebufferScanout::Create("/dev/class/display/000", scanout);
+      machina::FramebufferScanout::Create("/dev/class/framebuffer/000", scanout);
   if (status != ZX_OK) {
-    status = machina::FramebufferScanout::Create("/dev/class/framebuffer/000",
-                                                 scanout);
-    if (status != ZX_OK)
-      return status;
+    return status;
   }
   return gpu->AddScanout(scanout->get());
 }
@@ -406,7 +403,7 @@ int main(int argc, char** argv) {
   machina::VirtioGpu gpu(guest.phys_mem());
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
 
-  if (cfg.enable_gpu()) {
+  if (cfg.display() != GuestDisplay::NONE) {
     // Setup input device.
     status = input.Start();
     if (status != ZX_OK) {
@@ -417,18 +414,25 @@ int main(int argc, char** argv) {
       return status;
     }
 
-    // Setup GPU device.
-    status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
-    if (status == ZX_OK) {
-      // If we were able to acquire the zircon framebuffer then no compositor
-      // is present. In this case we should read input events directly from the
-      // input devics.
+    if (cfg.display() == GuestDisplay::FRAMEBUFFER) {
+      // Setup GPU device.
+      status = setup_zircon_framebuffer(&gpu, &gpu_scanout);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to acquire framebuffer " << status;
+        return status;
+      }
+      // When displaying to the framebuffer, we should read input events
+      // directly from the input devics.
       status = hid_event_source.Start();
     } else {
       // Expose a view that can be composited by mozart. Input events will be
       // injected by the view events.
       status = setup_scenic_framebuffer(application_context.get(), &gpu,
                                         &input_dispatcher, &gpu_scanout);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to create scenic view " << status;
+        return status;
+      }
     }
     if (status == ZX_OK) {
       status = gpu.Init();
@@ -439,8 +443,6 @@ int main(int argc, char** argv) {
       if (status != ZX_OK) {
         return status;
       }
-    } else {
-      FXL_LOG(INFO) << "Could not find a GPU backend";
     }
   }
 

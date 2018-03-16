@@ -37,7 +37,9 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t                                or --cmdline-append.\n";
   std::cerr << "\t--cmdline-append=[cmdline]      Appends string 'cmdline' to the existing kernel command\n";
   std::cerr << "\t                                line\n";
-  std::cerr << "\t--nogpu                         Disable GPU device and graphics output\n";
+  std::cerr << "\t--display={scenic,framebuffer,  Configures the display back-end to use for the guest. 'scenic'\n";
+  std::cerr << "\t           none}                (default) will render to a scenic view. 'framebuffer will draw\n";
+  std::cerr << "\t                                to a zircon framebuffer. 'none' disables graphical output.\n";
   std::cerr << "\t--balloon-interval=[seconds]    Poll the virtio-balloon device every 'seconds' seconds\n";
   std::cerr << "\t                                and adjust the balloon size based on the amount of\n";
   std::cerr << "\t                                unused guest memory\n";
@@ -292,6 +294,27 @@ static GuestConfigParser::OptionHandler save_kernel(std::string* out,
   };
 }
 
+static GuestConfigParser::OptionHandler parse_display(GuestDisplay* out) {
+  return [out](const std::string& key, const std::string& value) {
+    if (value.empty()) {
+      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
+                     << "=<value>)";
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (value == "scenic") {
+      *out = GuestDisplay::SCENIC;
+    } else if (value == "framebuffer") {
+      *out = GuestDisplay::FRAMEBUFFER;
+    } else if (value == "none") {
+      *out = GuestDisplay::NONE;
+    } else {
+      FXL_LOG(ERROR) << "Invalid display value: " << value;
+      return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
+  };
+}
+
 GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
   {"zircon", save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
       {"linux",
@@ -308,7 +331,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
       {"balloon-demand-page", set_flag(&cfg_->balloon_demand_page_, true)},
       {"balloon-interval", parse_number(&cfg_->balloon_interval_seconds_)},
       {"balloon-threshold", parse_number(&cfg_->balloon_pages_threshold_)},
-      {"nogpu", set_flag(&cfg_->enable_gpu_, false)},
+      {"display", parse_display(&cfg_->display_)},
       {"block-wait", set_flag(&cfg_->block_wait_, true)},
 }
 {}

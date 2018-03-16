@@ -276,5 +276,26 @@ TEST_PARSE_MEM_SIZE_ERROR(NonNumber, abc);
 
 #endif
 
+TEST(GuestConfigParserTest, DisplayType) {
+  GuestConfig config;
+  GuestConfigParser parser(&config);
+
+  const char* display_none_argv[] = {"exe_name", "--display=none"};
+  ASSERT_EQ(ZX_OK, parser.ParseArgcArgv(countof(display_none_argv),
+                                        const_cast<char**>(display_none_argv)));
+  ASSERT_EQ(GuestDisplay::NONE, config.display());
+
+  const char* display_fb_argv[] = {"exe_name", "--display=framebuffer"};
+  ASSERT_EQ(ZX_OK, parser.ParseArgcArgv(countof(display_fb_argv),
+                                        const_cast<char**>(display_fb_argv)));
+  ASSERT_EQ(GuestDisplay::FRAMEBUFFER, config.display());
+
+  const char* display_scenic_argv[] = {"exe_name", "--display=scenic"};
+  ASSERT_EQ(ZX_OK,
+            parser.ParseArgcArgv(countof(display_scenic_argv),
+                                 const_cast<char**>(display_scenic_argv)));
+  ASSERT_EQ(GuestDisplay::SCENIC, config.display());
+}
+
 }  // namespace
 }  // namespace guest
