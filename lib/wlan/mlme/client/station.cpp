@@ -798,7 +798,7 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
 
     if (hdr->HasQosCtrl()) {  // QoS Control field
         auto qos_ctrl = hdr->qos_ctrl();
-        qos_ctrl->set_tid(0);
+        qos_ctrl->set_tid(GetTid(frame));
         qos_ctrl->set_eosp(0);
         qos_ctrl->set_ack_policy(ack_policy::kNormalAck);
         qos_ctrl->set_amsdu_present(0);
@@ -931,7 +931,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
     req->dialog_token = 0x01;
     req->params.set_amsdu(0);
     req->params.set_policy(BlockAckParameters::BlockAckPolicy::kImmediate);
-    req->params.set_tid(0x0);  // TODO(porce): Communicate this with lower MAC.
+    req->params.set_tid(GetTid());  // TODO(porce): Communicate this with lower MAC.
     // TODO(porce): Fix the discrepancy of this value from the Ralink's TXWI ba_win_size setting
     req->params.set_buffer_size(64);
     req->timeout = 0;               // Disables the timeout
@@ -1260,4 +1260,18 @@ HtCapabilities Station::BuildHtCapabilities() const {
     return htc;  // 28 bytes.
 }
 
+uint8_t Station::GetTid() {
+    // IEEE Std 802.11-2016, 3.1(Traffic Identifier), 5.1.1.1 (Data Service - General), 9.4.2.30
+    // (Access Policy), 9.2.4.5.2 (TID subfield) Related topics: QoS facility, TSPEC, WM, QMF, TXOP.
+    // A TID is from [0, 15], and is assigned to an MSDU in the layers above the MAC.
+    // [0, 7] identify Traffic Categories (TCs)
+    // [8, 15] identify parameterized Traffic Streams (TSs).
+
+    // TODO(NET-599): Implement QoS policy engine.
+    return 0;
+}
+
+uint8_t Station::GetTid(const ImmutableBaseFrame<EthernetII>& frame) {
+    return GetTid();
+}
 }  // namespace wlan

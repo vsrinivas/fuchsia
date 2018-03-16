@@ -128,6 +128,8 @@ class Station : public FrameHandler {
     bool IsCbw40RxReady() const;
     bool IsCbw40TxReady() const;
     HtCapabilities BuildHtCapabilities() const;
+    uint8_t GetTid();
+    uint8_t GetTid(const ImmutableBaseFrame<EthernetII>& frame);
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
