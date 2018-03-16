@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/root_presenter/display_flipper.h"
+#include "garnet/bin/ui/root_presenter/display_rotater.h"
 
 #if defined(countof)
 // Workaround for compiler error due to Zircon defining countof() as a macro.
@@ -26,9 +26,9 @@ namespace {
 constexpr float kPi = glm::pi<float>();
 }
 
-DisplayFlipper::DisplayFlipper() {}
+DisplayRotater::DisplayRotater() {}
 
-bool DisplayFlipper::OnEvent(const mozart::InputEventPtr& event,
+bool DisplayRotater::OnEvent(const mozart::InputEventPtr& event,
                              Presentation* presentation) {
   if (event->is_keyboard()) {
     const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
@@ -44,7 +44,7 @@ bool DisplayFlipper::OnEvent(const mozart::InputEventPtr& event,
   return false;
 }
 
-void DisplayFlipper::FlipDisplay(Presentation* p) {
+void DisplayRotater::FlipDisplay(Presentation* p) {
   if (display_flipped_) {
     p->scene_.SetAnchor(0, 0, 0);
     p->scene_.SetRotation(0, 0, 0, 0);

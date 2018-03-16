@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_FLIPPER_H_
-#define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_FLIPPER_H_
+#ifndef GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_ROTATER_H_
+#define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_ROTATER_H_
 
 #include "lib/fxl/macros.h"
 #include "lib/ui/input/fidl/input_events.fidl.h"
@@ -15,9 +15,9 @@ class Presentation;
 
 // This class plugs in "Display flip" behavior to the Presenter; i.e. the
 // display gets flipped when a particular key (volume down) is pressed.
-class DisplayFlipper {
+class DisplayRotater {
  public:
-  DisplayFlipper();
+  DisplayRotater();
   // Modifies |scene| if a volume down key press is detected by rotating it 180
   // degrees.
   //
@@ -31,9 +31,9 @@ class DisplayFlipper {
 
   bool display_flipped_ = false;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(DisplayFlipper);
+  FXL_DISALLOW_COPY_AND_ASSIGN(DisplayRotater);
 };
 
 }  // namespace root_presenter
 
-#endif  // GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_FLIPPER_H_
+#endif  // GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_ROTATER_H_

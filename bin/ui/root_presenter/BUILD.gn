@@ -6,8 +6,8 @@ executable("root_presenter") {
   sources = [
     "app.cc",
     "app.h",
-    "display_flipper.cc",
-    "display_flipper.h",
+    "display_rotater.cc",
+    "display_rotater.h",
     "display_size_switcher.cc",
     "display_size_switcher.h",
     "display_usage_switcher.cc",

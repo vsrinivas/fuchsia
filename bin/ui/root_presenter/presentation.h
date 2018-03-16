@@ -8,7 +8,7 @@
 #include <map>
 #include <memory>
 
-#include "garnet/bin/ui/root_presenter/display_flipper.h"
+#include "garnet/bin/ui/root_presenter/display_rotater.h"
 #include "garnet/bin/ui/root_presenter/display_size_switcher.h"
 #include "garnet/bin/ui/root_presenter/display_usage_switcher.h"
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
@@ -83,7 +83,7 @@ class Presentation : private mozart::ViewTreeListener,
   void OnDeviceRemoved(uint32_t device_id);
 
  private:
-  friend class DisplayFlipper;
+  friend class DisplayRotater;
   friend class DisplayUsageSwitcher;
   friend class PerspectiveDemoMode;
   friend class DisplaySizeSwitcher;
@@ -202,7 +202,7 @@ class Presentation : private mozart::ViewTreeListener,
   mozart::InputDispatcherPtr input_dispatcher_;
 
   // Rotates the display 180 degrees in response to events.
-  DisplayFlipper display_flipper_;
+  DisplayRotater display_rotater_;
 
   // Toggles through different display usage values.
   DisplayUsageSwitcher display_usage_switcher_;

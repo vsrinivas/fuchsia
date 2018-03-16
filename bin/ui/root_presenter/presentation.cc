@@ -451,7 +451,7 @@ void Presentation::CaptureKeyboardEvent(
 }
 
 bool Presentation::GlobalHooksHandleEvent(const mozart::InputEventPtr& event) {
-  return display_flipper_.OnEvent(event, this) ||
+  return display_rotater_.OnEvent(event, this) ||
          display_usage_switcher_.OnEvent(event, this) ||
          display_size_switcher_.OnEvent(event, this) ||
          perspective_demo_mode_.OnEvent(event, this);
