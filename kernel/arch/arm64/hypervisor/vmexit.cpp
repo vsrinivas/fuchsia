@@ -103,7 +103,8 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
     return gich_state->interrupt_tracker.Wait(nullptr);
 }
 
-static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state) {
+static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
+                                          zx_port_packet_t* packet) {
     const SmcInstruction si(iss);
     if (si.imm != kSmcPsci)
         return ZX_ERR_NOT_SUPPORTED;
@@ -111,10 +112,15 @@ static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state)
     next_pc(guest_state);
     switch (guest_state->x[0]) {
     case PSCI64_CPU_ON:
-        // Set return value of PSCI call.
-        guest_state->x[0] = ZX_ERR_NOT_SUPPORTED;
-        return ZX_OK;
+        memset(packet, 0, sizeof(*packet));
+        packet->type = ZX_PKT_TYPE_GUEST_VCPU;
+        packet->guest_vcpu.type = ZX_PKT_GUEST_VCPU_STARTUP;
+        packet->guest_vcpu.startup.id = guest_state->x[1];
+        packet->guest_vcpu.startup.entry = guest_state->x[2];
+        guest_state->x[0] = PSCI_SUCCESS;
+        return ZX_ERR_NEXT;
     default:
+        guest_state->x[0] = PSCI_NOT_SUPPORTED;
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
@@ -277,7 +283,7 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
     case ExceptionClass::SMC_INSTRUCTION:
         LTRACEF("handling smc instruction, iss %#x func %#lx\n", syndrome.iss, guest_state->x[0]);
         ktrace_vcpu(TAG_VCPU_EXIT, VCPU_SMC_INSTRUCTION);
-        return handle_smc_instruction(syndrome.iss, guest_state);
+        return handle_smc_instruction(syndrome.iss, guest_state, packet);
     case ExceptionClass::SYSTEM_INSTRUCTION:
         LTRACEF("handling system instruction\n");
         ktrace_vcpu(TAG_VCPU_EXIT, VCPU_SYSTEM_INSTRUCTION);

@@ -30,6 +30,17 @@
 #define PSCI64_PSCI_STAT_RESIDENCY          (0xC4000010)
 #define PSCI64_PSCI_STAT_COUNT              (0xC4000011)
 
+#define PSCI_SUCCESS                        0
+#define PSCI_NOT_SUPPORTED                  -1
+#define PSCI_INVALID_PARAMETERS             -2
+#define PSCI_DENIED                         -3
+#define PSCI_ALREADY_ON                     -4
+#define PSCI_ON_PENDING                     -5
+#define PSCI_INTERNAL_FAILURE               -6
+#define PSCI_NOT_PRESENT                    -7
+#define PSCI_DISABLED                       -8
+#define PSCI_INVALID_ADDRESS                -9
+
 /* TODO NOTE: - currently these routines assume cpu topologies that are described only in AFF0 and AFF1.
             If a system is architected such that AFF2 or AFF3 are non-zero then this code will need
             to be revisited

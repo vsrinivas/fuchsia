@@ -111,6 +111,6 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
 
 void gicv2_hw_interface_register(void) {
     // Populate GICH
-    gich = reinterpret_cast<volatile Gich*>(GICH_ADDRESS + 0x1000);
+    gich = reinterpret_cast<volatile Gich*>(GICH_ADDRESS);
     arm_gic_hw_interface_register(&gic_hw_register_ops);
 }
