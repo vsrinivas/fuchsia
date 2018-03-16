@@ -436,8 +436,13 @@ class StoryProviderImpl::StopStoryShellCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
     if (story_provider_impl_->preloaded_story_shell_) {
+      // Calling Teardown() below will branch |flow| into normal and timeout
+      // paths. |flow| must go out of scope when either of the paths finishes.
+      FlowTokenHolder branch{flow};
       story_provider_impl_->preloaded_story_shell_->story_shell_app->Teardown(
-          kBasicTimeout, [flow] {});
+          kBasicTimeout, [branch] {
+            std::unique_ptr<FlowToken> flow = branch.Continue();
+          });
     }
   }
 
