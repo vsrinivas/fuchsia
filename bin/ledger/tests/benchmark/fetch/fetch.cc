@@ -4,14 +4,14 @@
 
 #include "peridot/bin/ledger/tests/benchmark/fetch/fetch.h"
 
-#include <trace/event.h>
-#include <zx/time.h>
-
 #include <iostream>
 
 #include <fuchsia/cpp/cloud_provider.h>
 
 #include "lib/fidl/cpp/optional.h"
+#include <lib/zx/time.h>
+#include <trace/event.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"

@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 
+#include <lib/zx/time.h>
 #include <trace/event.h>
-#include <zx/time.h>
 
 #include <fuchsia/cpp/ledger.h>
 #include "garnet/lib/callback/auto_cleanable.h"

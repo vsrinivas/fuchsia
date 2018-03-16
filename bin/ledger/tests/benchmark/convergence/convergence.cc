@@ -4,10 +4,10 @@
 
 #include "peridot/bin/ledger/tests/benchmark/convergence/convergence.h"
 
-#include <trace/event.h>
-#include <zx/time.h>
-
 #include <iostream>
+
+#include <lib/zx/time.h>
+#include <trace/event.h>
 
 #include "garnet/lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"

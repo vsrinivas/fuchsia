@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/testing/get_ledger.h"
 
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include <utility>
 

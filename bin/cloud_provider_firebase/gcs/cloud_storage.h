@@ -8,10 +8,11 @@
 #include <functional>
 #include <string>
 
+#include <lib/zx/socket.h>
+
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/status.h"
-#include "zx/socket.h"
 
 namespace gcs {
 

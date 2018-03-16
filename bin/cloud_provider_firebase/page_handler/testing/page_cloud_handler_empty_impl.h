@@ -9,9 +9,10 @@
 #include <string>
 #include <vector>
 
+#include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
+
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"
-#include "zx/socket.h"
-#include "zx/vmo.h"
 
 namespace cloud_provider_firebase {
 

@@ -10,6 +10,8 @@
 #include <vector>
 
 #include <lib/async/cpp/task.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
 
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
@@ -25,8 +27,6 @@
 #include "peridot/lib/firebase/encoding.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/status.h"
-#include "zx/socket.h"
-#include "zx/vmo.h"
 
 #include <rapidjson/document.h>
 

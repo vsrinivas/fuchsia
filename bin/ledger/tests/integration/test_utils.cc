@@ -4,14 +4,14 @@
 
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 
-#include <zx/time.h>
-
 #include <string>
 #include <utility>
 #include <vector>
 
 #include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/ledger_internal.h>
+#include <lib/zx/time.h>
+
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"

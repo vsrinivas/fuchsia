@@ -9,13 +9,14 @@
 #include <string>
 #include <vector>
 
+#include <lib/zx/socket.h>
+
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit_watcher.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/record.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/types.h"
-#include "zx/socket.h"
 
 namespace cloud_provider_firebase {
 

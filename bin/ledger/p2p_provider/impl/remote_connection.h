@@ -8,7 +8,7 @@
 #include <string>
 
 #include <flatbuffers/flatbuffers.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/strings/string_view.h"

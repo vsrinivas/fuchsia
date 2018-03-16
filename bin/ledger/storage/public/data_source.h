@@ -10,12 +10,13 @@
 #include <functional>
 #include <memory>
 
+#include <lib/zx/socket.h>
+
 #include "lib/fidl/cpp/array.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
-#include "zx/socket.h"
 
 namespace storage {
 

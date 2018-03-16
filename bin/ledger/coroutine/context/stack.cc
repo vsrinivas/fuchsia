@@ -6,8 +6,9 @@
 
 #include <stdlib.h>
 
+#include <lib/zx/vmar.h>
+
 #include "lib/fxl/logging.h"
-#include "zx/vmar.h"
 
 namespace context {
 

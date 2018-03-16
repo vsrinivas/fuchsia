@@ -16,7 +16,7 @@
 #include <fuchsia/cpp/views_v1.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/interface_handle.h"

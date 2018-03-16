@@ -16,6 +16,8 @@
 #include <map>
 #include <utility>
 
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <trace/event.h>
 
 #include "garnet/lib/callback/trace_callback.h"
@@ -44,8 +46,6 @@
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
 #include "peridot/bin/ledger/storage/impl/split.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
-#include "zx/vmar.h"
-#include "zx/vmo.h"
 
 namespace storage {
 

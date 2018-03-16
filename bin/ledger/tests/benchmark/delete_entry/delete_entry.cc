@@ -4,10 +4,10 @@
 
 #include "peridot/bin/ledger/tests/benchmark/delete_entry/delete_entry.h"
 
-#include <trace/event.h>
-#include <zx/time.h>
-
 #include <iostream>
+
+#include <lib/zx/time.h>
+#include <trace/event.h>
 
 #include "garnet/lib/callback/waiter.h"
 #include "lib/fsl/tasks/message_loop.h"

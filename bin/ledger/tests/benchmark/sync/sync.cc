@@ -4,12 +4,12 @@
 
 #include "peridot/bin/ledger/tests/benchmark/sync/sync.h"
 
-#include <trace/event.h>
-#include <zx/time.h>
-
 #include <iostream>
 
 #include <fuchsia/cpp/cloud_provider.h>
+
+#include <lib/zx/time.h>
+#include <trace/event.h>
 
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"

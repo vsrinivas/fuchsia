@@ -5,14 +5,15 @@
 #ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_IMPL_H_
 #define PERIDOT_BIN_LEDGER_STORAGE_IMPL_OBJECT_IMPL_H_
 
+#include <memory>
+
+#include <lib/zx/vmar.h>
+
 #include "peridot/bin/ledger/storage/public/object.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/lib/convert/convert.h"
 #include "third_party/leveldb/include/leveldb/iterator.h"
-#include "zx/vmar.h"
-
-#include <memory>
 
 namespace storage {
 

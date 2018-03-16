@@ -5,9 +5,10 @@
 #ifndef PERIDOT_LIB_SOCKET_SOCKET_PAIR_H_
 #define PERIDOT_LIB_SOCKET_SOCKET_PAIR_H_
 
+#include <lib/zx/socket.h>
+
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "zx/socket.h"
 
 namespace socket {
 

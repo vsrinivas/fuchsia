@@ -8,12 +8,13 @@
 #include <functional>
 #include <vector>
 
+#include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
+
 #include "garnet/lib/callback/cancellable.h"
 #include "garnet/lib/network_wrapper/network_wrapper.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
-#include "zx/socket.h"
-#include "zx/vmo.h"
 
 namespace gcs {
 

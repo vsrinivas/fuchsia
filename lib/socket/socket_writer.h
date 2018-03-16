@@ -11,10 +11,10 @@
 
 #include <lib/async/cpp/auto_wait.h>
 #include <lib/async/default.h>
+#include <lib/zx/socket.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "zx/socket.h"
 
 namespace socket {
 

@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/tests/benchmark/put/put.h"
 
+#include <lib/zx/time.h>
 #include <trace/event.h>
-#include <zx/time.h>
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
