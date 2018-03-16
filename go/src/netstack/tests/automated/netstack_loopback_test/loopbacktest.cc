@@ -127,6 +127,59 @@ TEST(NetStreamTest, BlockingAcceptWrite) {
   }
 }
 
+// NetStreamTest.BlockAcceptDupWrite
+
+void BlockingAcceptDupWrite() {
+  int acptfd = socket(AF_INET, SOCK_STREAM, 0);
+  ASSERT_GE(acptfd, 0);
+
+  struct sockaddr_in addr;
+  addr.sin_family = AF_INET;
+  addr.sin_port = 0;
+  addr.sin_addr.s_addr = INADDR_ANY;
+  int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
+  ASSERT_EQ(0, ret) << "bind failed: " << errno;
+
+  socklen_t addrlen = sizeof(addr);
+  ret = getsockname(acptfd, (struct sockaddr*)&addr, &addrlen);
+  ASSERT_EQ(0, ret) << "getsockname failed: " << errno;
+
+  int ntfyfd[2];
+  ASSERT_EQ(0, pipe(ntfyfd));
+
+  ret = listen(acptfd, 10);
+  ASSERT_EQ(0, ret) << "listen failed: " << errno;
+
+  std::string out;
+  std::thread thrd(StreamConnectRead, &addr, &out, ntfyfd[1]);
+
+  int connfd = accept(acptfd, nullptr, nullptr);
+  ASSERT_GE(connfd, 0) << "accept failed: " << errno;
+
+  int dupfd = dup(connfd);
+  ASSERT_GE(dupfd, 0) << "dup failed: " << errno;
+  ASSERT_EQ(0, close(connfd));
+
+  const char* msg = "hello";
+  ASSERT_EQ((ssize_t)strlen(msg), write(dupfd, msg, strlen(msg)));
+  ASSERT_EQ(0, close(dupfd));
+
+  ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
+  thrd.join();
+
+  EXPECT_STREQ(msg, out.c_str());
+
+  EXPECT_EQ(0, close(acptfd));
+  EXPECT_EQ(0, close(ntfyfd[0]));
+  EXPECT_EQ(0, close(ntfyfd[1]));
+}
+
+TEST(NetStreamTest, BlockingAcceptDupWrite) {
+  for (int i = 0; i < kRepeatEach; i++) {
+    BlockingAcceptDupWrite();
+  }
+}
+
 // NetStreamTest.NonBlockingAcceptWrite
 
 void NonBlockingAcceptWrite() {
@@ -179,6 +232,65 @@ void NonBlockingAcceptWrite() {
 TEST(NetStreamTest, NonBlockingAcceptWrite) {
   for (int i = 0; i < kRepeatEach; i++) {
     NonBlockingAcceptWrite();
+  }
+}
+
+// NetStreamTest.NonBlockingAcceptDupWrite
+
+void NonBlockingAcceptDupWrite() {
+  int acptfd = socket(AF_INET, SOCK_STREAM, 0);
+  ASSERT_GE(acptfd, 0);
+
+  struct sockaddr_in addr;
+  addr.sin_family = AF_INET;
+  addr.sin_port = 0;
+  addr.sin_addr.s_addr = INADDR_ANY;
+  int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
+  ASSERT_EQ(0, ret) << "bind failed: " << errno;
+
+  socklen_t addrlen = sizeof(addr);
+  ret = getsockname(acptfd, (struct sockaddr*)&addr, &addrlen);
+  ASSERT_EQ(0, ret) << "getsockname failed: " << errno;
+
+  int ntfyfd[2];
+  ASSERT_EQ(0, pipe(ntfyfd));
+
+  ret = listen(acptfd, 10);
+  ASSERT_EQ(0, ret) << "listen failed: " << errno;
+
+  std::string out;
+  std::thread thrd(StreamConnectRead, &addr, &out, ntfyfd[1]);
+
+  int status = fcntl(acptfd, F_GETFL, 0);
+  ASSERT_EQ(0, fcntl(acptfd, F_SETFL, status | O_NONBLOCK));
+
+  struct pollfd pfd = {acptfd, POLLIN, 0};
+  ASSERT_EQ(1, poll(&pfd, 1, kTimeout));
+
+  int connfd = accept(acptfd, nullptr, nullptr);
+  ASSERT_GE(connfd, 0) << "accept failed: " << errno;
+
+  int dupfd = dup(connfd);
+  ASSERT_GE(dupfd, 0) << "dup failed: " << errno;
+  ASSERT_EQ(0, close(connfd));
+
+  const char* msg = "hello";
+  ASSERT_EQ((ssize_t)strlen(msg), write(dupfd, msg, strlen(msg)));
+  ASSERT_EQ(0, close(dupfd));
+
+  ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
+  thrd.join();
+
+  EXPECT_STREQ(msg, out.c_str());
+
+  EXPECT_EQ(0, close(acptfd));
+  EXPECT_EQ(0, close(ntfyfd[0]));
+  EXPECT_EQ(0, close(ntfyfd[1]));
+}
+
+TEST(NetStreamTest, NonBlockingAcceptDupWrite) {
+  for (int i = 0; i < kRepeatEach; i++) {
+    NonBlockingAcceptDupWrite();
   }
 }
 
