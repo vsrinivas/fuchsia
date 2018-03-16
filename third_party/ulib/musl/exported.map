@@ -185,6 +185,7 @@
     execv;
     execve;
     execvp;
+    _Exit;
     _exit;
     exit;
     exp;
