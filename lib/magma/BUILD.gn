@@ -17,7 +17,7 @@ group("platform_driver_nodeps") {
   if (!build_intel_gen) {
     assert_no_deps += [ "//third_party/mesa/*" ]
   }
-  if (!build_libvulkan_arm_mali) {
+  if (build_libvulkan_arm_mali == []) {
     assert_no_deps += [ "//third_party/arm-mali-bifrost/*" ]
   }
   deps = [
@@ -31,21 +31,23 @@ icd_list = []
 if (build_intel_gen) {
   icd_list += [
     {
-      name = "intel"
+      name = "libvulkan_intel"
     },
   ]
 }
 
-if (build_libvulkan_arm_mali) {
-  icd_list += [
-    {
-      name = "arm"
-    },
-  ]
+if (build_libvulkan_arm_mali != []) {
+  foreach(entry, build_libvulkan_arm_mali) {
+    icd_list += [
+      {
+        name = get_label_info(entry, "name")
+      },
+    ]
+  }
 } else if (have_prebuilt_libvulkan_arm) {
   icd_list += [
     {
-      name = "arm"
+      name = "libvulkan_arm"
       library_path = "$libvulkan_gen_path/libvulkan_arm.so"
     },
   ]
@@ -54,11 +56,12 @@ if (build_libvulkan_arm_mali) {
 foreach(entry, icd_list) {
   icd_name = entry.name
   filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
+  icd_data = []
   icd_data = [
     "{",
     "\"file_format_version\": \"1.0.0\",",
     "\"ICD\": {",
-    "\"library_path\": \"libvulkan_$icd_name.so\",",
+    "\"library_path\": \"$icd_name.so\",",
     "\"abi_versions\": \"1.0.3\"",
     "}",
     "}",
@@ -142,13 +145,13 @@ package("magma") {
       libraries += [
         {
           source = entry.library_path
-          name = "libvulkan_$icd_name.so"
+          name = "$icd_name.so"
         },
       ]
     } else {
       libraries += [
         {
-          name = "libvulkan_$icd_name.so"
+          name = "$icd_name.so"
         },
       ]
     }
@@ -222,11 +225,9 @@ if (build_intel_gen) {
       "$mesa_build_root:magma_vulkan",
     ]
   }
-} else if (build_libvulkan_arm_mali) {
+} else if (build_libvulkan_arm_mali != []) {
   group("libvulkan") {
-    public_deps = [
-      "$mali_build_root:libvulkan_arm",
-    ]
+    public_deps = build_libvulkan_arm_mali
   }
 } else if (have_prebuilt_libvulkan_arm) {
   config("libvulkan_config") {
