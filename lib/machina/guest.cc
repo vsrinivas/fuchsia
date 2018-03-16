@@ -25,7 +25,7 @@
 static constexpr char kResourcePath[] = "/dev/misc/sysinfo";
 
 // Number of threads reading from the async device port.
-static constexpr size_t kNumAsyncWorkers = 1;
+static constexpr size_t kNumAsyncWorkers = 2;
 
 static zx_status_t guest_get_resource(zx_handle_t* resource) {
   int fd = open(kResourcePath, O_RDWR);
