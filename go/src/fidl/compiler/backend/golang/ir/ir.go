@@ -142,6 +142,9 @@ type Interface struct {
 	// StubName is the name of the stub type for this FIDL interface.
 	StubName string
 
+	// RequestName is the name of the interface request type for this FIDL interface.
+	RequestName string
+
 	// ServiceName is the service name for this FIDL interface.
 	ServiceName string
 
@@ -335,7 +338,6 @@ func (_ *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 }
 
 func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
-	// TODO(mknyszek): Support requests and identifiers.
 	switch val.Kind {
 	case types.ArrayType:
 		e, et := c.compileType(*val.ElementType)
@@ -355,6 +357,12 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 			// handle subtype.
 			e = handleTypes[types.Handle]
 		}
+		if val.Nullable {
+			t.Nullable = true
+		}
+		r = Type(e)
+	case types.RequestType:
+		e := c.compileCompoundIdentifier(val.RequestSubtype, RequestSuffix)
 		if val.Nullable {
 			t.Nullable = true
 		}
@@ -486,6 +494,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		Name:        c.compileCompoundIdentifier(val.Name, ""),
 		ProxyName:   c.compileCompoundIdentifier(val.Name, ProxySuffix),
 		StubName:    c.compileCompoundIdentifier(val.Name, StubSuffix),
+		RequestName: c.compileCompoundIdentifier(val.Name, RequestSuffix),
 		ServiceName: val.GetAttribute("ServiceName"),
 	}
 	for _, v := range val.Methods {

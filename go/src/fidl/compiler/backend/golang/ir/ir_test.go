@@ -435,6 +435,7 @@ func TestCompileInterface(t *testing.T) {
 		ProxyName:   "TestProxy",
 		StubName:    "TestStub",
 		ServiceName: "Test",
+		RequestName: "TestInterfaceRequest",
 		Methods: []Method{
 			{
 				Ordinal: types.Ordinal(1),
@@ -498,6 +499,7 @@ func TestCompileInterface(t *testing.T) {
 		Name:        "Test",
 		ProxyName:   "TestProxy",
 		StubName:    "TestStub",
+		RequestName: "TestInterfaceRequest",
 		ServiceName: "Test",
 		Methods: []Method{
 			{

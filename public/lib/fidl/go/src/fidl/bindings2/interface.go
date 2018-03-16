@@ -10,6 +10,10 @@ import (
 	"syscall/zx"
 )
 
+// InterfaceRequest represents the server endpoint of the FIDL interface
+// on the client side, which then may be sent to the server.
+type InterfaceRequest zx.Channel
+
 // Proxy represents the client side of a FIDL interface.
 type Proxy struct {
 	// Channel is the underlying channel endpoint for this interface.

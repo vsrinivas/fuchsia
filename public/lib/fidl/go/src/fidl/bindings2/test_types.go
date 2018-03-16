@@ -4,7 +4,10 @@
 
 package bindings2
 
-import _zx "syscall/zx"
+import (
+	"fmt"
+	_zx "syscall/zx"
+)
 
 type TestSimple struct {
 	X int64
@@ -320,6 +323,8 @@ func (_ *TestHandle2) InlineSize() int {
 type TestInterface1 struct {
 	A Test1Interface
 	B Test1Interface `fidl:"*"`
+	C Test1InterfaceRequest
+	D Test1InterfaceRequest `fidl:"*"`
 }
 
 // Implements Payload.
@@ -329,7 +334,7 @@ func (_ *TestInterface1) InlineAlignment() int {
 
 // Implements Payload.
 func (_ *TestInterface1) InlineSize() int {
-	return 8
+	return 16
 }
 
 // Request for Echo.
@@ -371,4 +376,30 @@ func (p *Test1Interface) Echo(in *string) (*string, error) {
 	resp_ := Test1EchoResponse{}
 	err := ((*Proxy)(p)).Call(10, &req_, &resp_)
 	return resp_.Out, err
+}
+
+type Test1 interface {
+	Echo(in *string) (out *string, err error)
+}
+
+type Test1InterfaceRequest InterfaceRequest
+
+type Test1Stub struct {
+	Impl Test1
+}
+
+func (s *Test1Stub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (Payload, error) {
+	switch ord {
+	case 10:
+		in_ := Test1EchoRequest{}
+		if err_ := Unmarshal(b_, h_, &in_); err_ != nil {
+			return nil, err_
+		}
+		out_ := Test1EchoResponse{}
+		out, err_ := s.Impl.Echo(in_.In)
+		out_.Out = out
+		return &out_, err_
+	}
+	// TODO(mknyszek): Use a well-defined error here.
+	return nil, fmt.Errorf("Unknown ordinal %d", ord)
 }

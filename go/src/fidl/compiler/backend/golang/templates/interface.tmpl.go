@@ -89,6 +89,8 @@ type {{ .Name }} interface {
 {{- end }}
 }
 
+type {{ .RequestName }} _bindings.InterfaceRequest
+
 type {{ .StubName }} struct {
 	Impl {{ .Name }}
 }

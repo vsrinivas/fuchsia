@@ -4,7 +4,7 @@
 
 package bindings2
 
-// TODO(mknyszek): Support unions and interfaces.
+// TODO(mknyszek): Support unions.
 // TODO(mknyszek): Create a proper set of error values.
 
 import (

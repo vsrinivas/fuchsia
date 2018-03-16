@@ -118,4 +118,6 @@ interface Test1 {
 struct TestInterface1 {
     Test1 a;
     Test1? b;
+    request<Test1> c;
+    request<Test1>? d;
 };
