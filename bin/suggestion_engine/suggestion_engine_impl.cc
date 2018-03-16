@@ -294,7 +294,7 @@ void SuggestionEngineImpl::PerformActions(
         break;
       }
       case Action::Tag::ADD_MODULE: {
-        PerformAddModuleAction(action, source_url);
+        PerformAddModuleAction(action);
         break;
       }
       case Action::Tag::CUSTOM_ACTION: {
@@ -333,10 +333,10 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
           story_controller->GetInfo(fxl::MakeCopyable(
               // TODO(thatguy): We should not be std::move()ing
               // story_controller *while we're calling it*.
-              [this, controller = std::move(story_controller)](
+              [ this, controller = std::move(story_controller) ](
                   modular::StoryInfoPtr story_info, modular::StoryState state) {
-                FXL_LOG(INFO)
-                    << "Requesting focus for story_id " << story_info->id;
+                FXL_LOG(INFO) << "Requesting focus for story_id "
+                              << story_info->id;
                 focus_provider_ptr_->Request(story_info->id);
               }));
         });
@@ -381,19 +381,14 @@ void SuggestionEngineImpl::PerformAddModuleToStoryAction(
   }
 }
 
-void SuggestionEngineImpl::PerformAddModuleAction(
-    const ActionPtr& action,
-    const std::string& source_url) {
+void SuggestionEngineImpl::PerformAddModuleAction(const ActionPtr& action) {
   if (story_provider_) {
     const auto& add_module = action->get_add_module();
     const auto& module_name = add_module->module_name;
     const auto& story_id = add_module->story_id;
     modular::StoryControllerPtr story_controller;
     story_provider_->GetController(story_id, story_controller.NewRequest());
-    f1dl::Array<f1dl::String> path;
-    path.push_back(source_url);
-    story_controller->AddModule(std::move(path), module_name,
-                                add_module->daisy.Clone(),
+    story_controller->AddModule({}, module_name, add_module->daisy.Clone(),
                                 add_module->surface_relation.Clone());
   } else {
     FXL_LOG(WARNING) << "Unable to add module; no story provider";
@@ -404,12 +399,12 @@ void SuggestionEngineImpl::PerformCustomAction(const ActionPtr& action,
                                                const std::string& source_url,
                                                uint32_t story_color) {
   auto custom_action = action->get_custom_action().Bind();
-  custom_action->Execute(fxl::MakeCopyable(
-      [this, custom_action = std::move(custom_action), source_url,
-       story_color](f1dl::Array<maxwell::ActionPtr> actions) {
-        if (actions)
-          PerformActions(std::move(actions), source_url, story_color);
-      }));
+  custom_action->Execute(fxl::MakeCopyable([
+    this, custom_action = std::move(custom_action), source_url, story_color
+  ](f1dl::Array<maxwell::ActionPtr> actions) {
+    if (actions)
+      PerformActions(std::move(actions), source_url, story_color);
+  }));
 }
 
 void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {

@@ -192,8 +192,7 @@ class SuggestionEngineImpl : public ContextListener,
   // replaced by the AddModule action.
   void PerformAddModuleToStoryAction(const ActionPtr& action);
 
-  void PerformAddModuleAction(const ActionPtr& action,
-                              const std::string& source_url);
+  void PerformAddModuleAction(const ActionPtr& action);
 
   void PerformCustomAction(const ActionPtr& action,
                            const std::string& source_url,
