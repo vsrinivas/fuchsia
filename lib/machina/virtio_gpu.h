@@ -7,6 +7,7 @@
 
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
+#include <lib/async/cpp/wait.h>
 #include <virtio/gpu.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -36,7 +37,7 @@ class VirtioGpu : public VirtioDevice {
   VirtioQueue& cursor_queue() { return queues_[VIRTIO_GPU_Q_CURSORQ]; }
 
   // Begins processing any descriptors that become available in the queues.
-  zx_status_t Init();
+  zx_status_t Init(async_t* async);
 
   // Adds a scanout to the GPU.
   //
@@ -109,6 +110,8 @@ class VirtioGpu : public VirtioDevice {
   ResourceTable resources_;
   VirtioQueue queues_[VIRTIO_GPU_Q_COUNT];
   virtio_gpu_config_t config_ = {};
+  async::Wait control_queue_wait_;
+  async::Wait cursor_queue_wait_;
 };
 
 }  // namespace machina

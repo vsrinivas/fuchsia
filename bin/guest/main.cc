@@ -434,7 +434,7 @@ int main(int argc, char** argv) {
       }
     }
     if (status == ZX_OK) {
-      status = gpu.Init();
+      status = gpu.Init(guest.device_async());
       if (status != ZX_OK) {
         return status;
       }

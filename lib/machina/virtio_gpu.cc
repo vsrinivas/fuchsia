@@ -27,20 +27,14 @@ VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
 
 VirtioGpu::~VirtioGpu() = default;
 
-zx_status_t VirtioGpu::Init() {
-  zx_status_t status = queues_[VIRTIO_GPU_Q_CONTROLQ].Poll(
-      &VirtioGpu::QueueHandler, this, "virtio-gpu-control");
-  if (status != ZX_OK) {
-    return status;
+zx_status_t VirtioGpu::Init(async_t* async) {
+  zx_status_t status = control_queue().PollAsync(
+      async, &control_queue_wait_, &VirtioGpu::QueueHandler, this);
+  if (status == ZX_OK) {
+    status = cursor_queue().PollAsync(async, &cursor_queue_wait_,
+                                      &VirtioGpu::QueueHandler, this);
   }
-
-  status = queues_[VIRTIO_GPU_Q_CURSORQ].Poll(&VirtioGpu::QueueHandler, this,
-                                              "virtio-gpu-cursor");
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return ZX_OK;
+  return status;
 }
 
 zx_status_t VirtioGpu::AddScanout(GpuScanout* scanout) {
