@@ -46,9 +46,9 @@ source_set("trace_app") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//zircon/public/lib/launchpad",
     "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/tracing/fidl",
+    "//zircon/public/lib/launchpad",
     "//zircon/public/lib/trace-reader",
   ]
 
@@ -78,9 +78,11 @@ package("trace") {
     ":bin",
   ]
 
-  binaries = [ {
-        name = "trace"
-      } ]
+  binaries = [
+    {
+      name = "trace"
+    },
+  ]
 
   # If your build includes the target trace tool, your $host_tools_dir
   # contains the utilities to work with traces copied from the target.
@@ -109,10 +111,9 @@ package("trace_tests") {
     ":trace_tests_bin",
   ]
 
-  tests = [ {
-        name = "trace_tests"
-
-        # Disabled because several tests are crashing on release builds.
-        disabled = true
-      } ]
+  tests = [
+    {
+      name = "trace_tests"
+    },
+  ]
 }
