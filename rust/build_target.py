@@ -141,10 +141,15 @@ def main():
 
     if args.with_tests:
         call_args.append("--tests")
-        call_args.append("--message-format=json")
+
+    call_args.append("--message-format=json")
 
     retcode, stdout, stderr = run_command(call_args, env, args.crate_root)
     if retcode != 0:
+        # The output is not particularly useful as it is formatted in JSON.
+        # Re-run the command with a user-friendly format instead.
+        del call_args[-1]
+        _, stdout, stderr = run_command(call_args, env, args.crate_root)
         print(stdout + stderr)
         return retcode
 
