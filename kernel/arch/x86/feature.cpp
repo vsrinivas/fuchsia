@@ -236,6 +236,7 @@ void x86_feature_debug(void) {
         {X86_FEATURE_FXSR, "fxsr"},
         {X86_FEATURE_PCID, "pcid"},
         {X86_FEATURE_XSAVE, "xsave"},
+        {X86_FEATURE_MON, "mon"},
         {X86_FEATURE_AESNI, "aesni"},
         {X86_FEATURE_CLFLUSH, "clflush"},
         {X86_FEATURE_CLFLUSHOPT, "clflushopt"},
