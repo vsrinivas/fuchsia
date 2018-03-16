@@ -136,6 +136,7 @@ template("fidl_library") {
   group(main_target_name) {
     public_deps = [
       ":$compilation_target_name",
+      ":$response_file_target_name",
     ]
 
     deps = [

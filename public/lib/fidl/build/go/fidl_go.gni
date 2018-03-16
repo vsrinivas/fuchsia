@@ -69,5 +69,9 @@ template("fidl_go") {
     deps = [
       ":$generation_target_name",
     ]
+
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
   }
 }

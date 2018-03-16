@@ -68,5 +68,9 @@ template("fidl_rust") {
     deps = [
       ":$generation_target_name",
     ]
+
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
   }
 }

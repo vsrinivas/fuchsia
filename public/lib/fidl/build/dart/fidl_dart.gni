@@ -111,6 +111,10 @@ template("fidl_dart") {
       "//topaz/public/dart/zircon",
     ]
 
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+
     non_dart_deps = [
       ":$copy_options_target_name",
       ":$copy_pubspec_target_name",
