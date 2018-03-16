@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,12 +13,19 @@
 #include <unistd.h>
 
 #include <zircon/syscalls.h>
+#include <zircon/threads.h>
 #include <unittest/unittest.h>
 
 #include <zircon/compiler.h>
 
 #define ASSERT_NOT_REACHED() \
     assert(0)
+
+// We have to poll a thread's state as there is no way to wait for it to
+// transition states. Wait this amount of time. Generally the thread won't
+// take very long so this is a compromise between polling too frequently and
+// waiting too long.
+#define THREAD_BLOCKED_WAIT_DURATION ZX_MSEC(1)
 
 enum message {
     MSG_EXIT,
@@ -54,6 +62,7 @@ typedef struct wait_data {
 static zx_handle_t thread1_channel[2];
 static zx_handle_t thread2_channel[2];
 
+static atomic_int in_wait_event = ATOMIC_VAR_INIT(0);
 static zx_handle_t event_handle;
 
 // Wait until |handle| is readable or peer is closed (or wait is cancelled).
@@ -77,7 +86,9 @@ static bool wait_readable(zx_handle_t handle, enum wait_result* result) {
     return true;
 }
 
-static bool wait_signaled(zx_handle_t handle, enum wait_result* result) {
+// N.B. This must use zx_object_wait_one.
+// See wait_thread_blocked_in_wait_event.
+static bool wait_event_worker(zx_handle_t handle, enum wait_result* result) {
     zx_signals_t pending;
     zx_signals_t signals = ZX_EVENT_SIGNALED;
     zx_time_t deadline = ZX_TIME_INFINITE;
@@ -90,6 +101,33 @@ static bool wait_signaled(zx_handle_t handle, enum wait_result* result) {
     ASSERT_NE(pending & ZX_EVENT_SIGNALED, 0u,
               "unexpected return in wait_signaled");
     *result = WAIT_SIGNALED;
+    return true;
+}
+
+static bool wait_event(enum wait_result* result) {
+    atomic_store(&in_wait_event, 1);
+    bool pass = wait_event_worker(event_handle, result);
+    atomic_store(&in_wait_event, 0);
+    return pass;
+}
+
+// Wait for |thread| to be blocked inside wait_event().
+// We wait forever and let Unittest's watchdog handle errors.
+// Returns true if |thread| successfully enters the blocked state,
+// false if there's an error somewhere.
+// N.B. We assume wait_event() uses zx_object_wait_one.
+static bool wait_thread_blocked_in_wait_event(zx_handle_t thread) {
+    while (true) {
+        if (atomic_load(&in_wait_event)) {
+            zx_info_thread_t info;
+            ASSERT_EQ(zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info), NULL, NULL),
+                      ZX_OK, "");
+            if (info.state == ZX_THREAD_STATE_BLOCKED_WAIT_ONE)
+                break;
+        }
+        zx_nanosleep(zx_deadline_after(THREAD_BLOCKED_WAIT_DURATION));
+    }
+
     return true;
 }
 
@@ -151,7 +189,7 @@ static bool msg_loop(zx_handle_t channel) {
             send_msg(channel, MSG_PONG);
             break;
         case MSG_WAIT_EVENT:
-            ASSERT_TRUE(wait_signaled(event_handle, &result), "Error during wait signal call");
+            ASSERT_TRUE(wait_event(&result), "Error during wait signal call");
             switch (result) {
             case WAIT_SIGNALED:
                 send_msg(channel, MSG_WAIT_EVENT_SIGNALED);
@@ -222,9 +260,10 @@ bool handle_wait_test(void) {
 
     // Verify thread 1 is woken up when we close the handle it's waiting on
     // when there exists a duplicate of the handle.
-    // N.B. We're assuming thread 1 is waiting on event_handle at this point.
-    // TODO(vtl): This is a flaky assumption, though the following sleep should help.
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
+    // But first make sure the thread is waiting on |event_handle| before we
+    // close it.
+    zx_handle_t thread1_handle = thrd_get_zx_handle(thread1);
+    ASSERT_TRUE(wait_thread_blocked_in_wait_event(thread1_handle), "");
 
     zx_handle_t event_handle_dup = ZX_HANDLE_INVALID;
     zx_status_t status = zx_handle_duplicate(event_handle, ZX_RIGHT_SAME_RIGHTS, &event_handle_dup);
