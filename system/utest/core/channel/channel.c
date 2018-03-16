@@ -803,6 +803,10 @@ static bool channel_call2(void) {
     EXPECT_EQ(r, ZX_ERR_CALL_FAILED, "");
     EXPECT_EQ(rs, ZX_ERR_PEER_CLOSED, "");
 
+    int retv = 0;
+    EXPECT_EQ(thrd_join(t, &retv), thrd_success, "");
+    EXPECT_EQ(retv, 0, "");
+
     END_TEST;
 }
 
