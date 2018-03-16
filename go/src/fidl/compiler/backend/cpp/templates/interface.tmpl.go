@@ -202,7 +202,7 @@ class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
 void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
   ::fidl::Encoder encoder({{ .OrdinalName }});
     {{- if .Request }}
-  encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t) );
+  encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
       {{- range .Request }}
   ::fidl::Encode(&encoder, &{{ .Name }}, {{ .Offset }});
       {{- end }}
