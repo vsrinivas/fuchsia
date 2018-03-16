@@ -709,11 +709,12 @@ using PartitionCreateCb = bool (*)(uint8_t* type_out, uint64_t* size_bytes_out,
                                    const char** name_out);
 
 // Optional callback.
-// Returns "true" if the partition has been updated.
+// |modified| identifies if the partition has been updated.
 //
 // Allows the partition updater to modify attributes of the
 // partition (like flags) after writing it to disk.
-using PartitionFinalizeCb = bool (*)(gpt_partition_t* partition);
+using PartitionFinalizeCb = zx_status_t (*)(const block_info_t* info,
+                                            gpt_device_t* gpt, bool* modified);
 
 // Returns a file descriptor to a partition which can be paved,
 // if one exists.
@@ -949,14 +950,27 @@ bool efi_create_cb(uint8_t* type_out, uint64_t* size_bytes_out, const char** nam
     return true;
 }
 
+const char* kernaName = "KERN-A";
+const char* kernbName = "KERN-B";
 const char* kerncName = "KERN-C";
 
-bool kernc_filter_cb(const block_info_t* info, const gpt_partition_t* part) {
-    uint8_t kernc_type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
+bool kern_filter_cb(const block_info_t* info, const gpt_partition_t* part,
+                    const char* kernName) {
+    uint8_t kern_type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
     char cstring_name[GPT_NAME_LEN];
     utf16_to_cstring(cstring_name, (uint16_t*)part->name, GPT_NAME_LEN);
-    return memcmp(part->type, kernc_type, GPT_GUID_LEN) == 0 &&
-           strncmp(cstring_name, kerncName, strlen(kerncName)) == 0;
+    return memcmp(part->type, kern_type, GPT_GUID_LEN) == 0 &&
+           strncmp(cstring_name, kernName, strlen(kernName)) == 0;
+}
+
+bool kerna_filter_cb(const block_info_t* info, const gpt_partition_t* part) {
+    return kern_filter_cb(info, part, kernaName);
+}
+bool kernb_filter_cb(const block_info_t* info, const gpt_partition_t* part) {
+    return kern_filter_cb(info, part, kernbName);
+}
+bool kernc_filter_cb(const block_info_t* info, const gpt_partition_t* part) {
+    return kern_filter_cb(info, part, kerncName);
 }
 
 bool kernc_create_cb(uint8_t* type_out, uint64_t* size_bytes_out, const char** name_out) {
@@ -967,17 +981,53 @@ bool kernc_create_cb(uint8_t* type_out, uint64_t* size_bytes_out, const char** n
     return true;
 }
 
-bool kernc_finalize_cb(gpt_partition_t* partition) {
-    // Priority set to '3', making Kern C higher priority than
-    // the typical '1' and '2' reserved for Kern A and Kern B.
-    gpt_cros_attr_set_priority(&partition->flags, 3);
+zx_status_t kernc_finalize_cb(const block_info_t* info, gpt_device_t* gpt, bool* modified) {
+    // First, find the priority of the KERN-A and KERN-B partitions.
+    gpt_partition_t* partition;
+    zx_status_t status;
+    if ((status = partition_find<kerna_filter_cb>(info, gpt, &partition, nullptr)) != ZX_OK) {
+        ERROR("Cannot find KERN-A partition\n");
+        return status;
+    }
+    uint8_t priorityA = gpt_cros_attr_get_priority(partition->flags);
+    if ((status = partition_find<kernb_filter_cb>(info, gpt, &partition, nullptr)) != ZX_OK) {
+        ERROR("Cannot find KERN-B partition\n");
+        return status;
+    }
+    uint8_t priorityB = gpt_cros_attr_get_priority(partition->flags);
+
+    if ((status = partition_find<kernc_filter_cb>(info, gpt, &partition, nullptr)) != ZX_OK) {
+        ERROR("Cannot find KERN-C partition\n");
+        return status;
+    }
+
+    // Priority for Kern C set to higher priority than Kern A and Kern B.
+    uint8_t priorityC = fbl::max(priorityA, priorityB);
+    if (priorityC + 1 <= priorityC) {
+        ERROR("Cannot set CrOS partition priority higher than A and B\n");
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    priorityC++;
+    if (priorityC <= gpt_cros_attr_get_priority(partition->flags)) {
+        // No modification required; the priority is already high enough.
+        return ZX_OK;
+    }
+
+    if (gpt_cros_attr_set_priority(&partition->flags, priorityC) != 0) {
+        ERROR("Cannot set CrOS partition priority for KERN-C\n");
+        return ZX_ERR_OUT_OF_RANGE;
+    }
     // Successful set to 'true' to encourage the bootloader to
     // use this partition.
     gpt_cros_attr_set_successful(&partition->flags, true);
     // Maximize the number of attempts to boot this partition before
     // we fall back to a different kernel.
-    gpt_cros_attr_set_tries(&partition->flags, 15);
-    return true;
+    if (gpt_cros_attr_set_tries(&partition->flags, 15) != 0) {
+        ERROR("Cannot set CrOS partition 'tries' for KERN-C\n");
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    *modified = true;
+    return ZX_OK;
 }
 
 } // namespace
@@ -1091,15 +1141,17 @@ zx_status_t partition_pave(fbl::unique_fd fd) {
             ERROR("Cannot re-initialize GPT\n");
             return status;
         }
-        gpt_partition_t* partition;
-        if ((status = partition_find<filterCb>(&info, gpt, &partition, nullptr)) != ZX_OK) {
-            ERROR("Cannot re-find partition\n");
+        auto cleanup = fbl::MakeAutoCall([&gpt] {
+            gpt_device_release(gpt);
+        });
+        bool modified = false;
+        if ((status = finalizeCb(&info, gpt, &modified)) != ZX_OK) {
+            ERROR("Failed to finalize GPT partition\n");
             return status;
         }
-        if (finalizeCb(partition)) {
+        if (modified) {
             gpt_device_sync(gpt);
         }
-        gpt_device_release(gpt);
     }
 
     LOG("Completed successfully\n");
