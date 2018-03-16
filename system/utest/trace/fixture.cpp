@@ -11,13 +11,13 @@
 
 #include <zircon/assert.h>
 
-#include <lib/async-loop/cpp/loop.h>
-#include <zx/event.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/vector.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/zx/event.h>
 #include <trace-reader/reader.h>
 #include <trace/handler.h>
 #include <unittest/unittest.h>

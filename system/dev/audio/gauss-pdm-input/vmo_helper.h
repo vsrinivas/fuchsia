@@ -5,7 +5,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
 #include <zircon/types.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 namespace audio {
 namespace gauss {

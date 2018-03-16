@@ -15,7 +15,7 @@
 #ifdef __Fuchsia__
 #include <fs/mapped-vmo.h>
 #include <zircon/syscalls.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 #endif
 
 #include <fbl/unique_fd.h>

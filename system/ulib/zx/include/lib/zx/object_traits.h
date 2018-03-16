@@ -9,7 +9,6 @@ namespace zx {
 class channel;
 class eventpair;
 class log;
-class pmt;
 class socket;
 class vmo;
 class vmar;
@@ -60,13 +59,6 @@ template <> struct object_traits<log> {
     static constexpr bool supports_duplication = true;
     static constexpr bool supports_user_signal = false;
     static constexpr bool supports_wait = true;
-    static constexpr bool has_peer_handle = false;
-};
-
-template <> struct object_traits<pmt> {
-    static constexpr bool supports_duplication = false;
-    static constexpr bool supports_user_signal = false;
-    static constexpr bool supports_wait = false;
     static constexpr bool has_peer_handle = false;
 };
 

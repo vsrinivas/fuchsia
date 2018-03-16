@@ -6,8 +6,8 @@
 #include <lib/fidl/cpp/message_builder.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/string_view.h>
-#include <zx/channel.h>
-#include <zx/event.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 
 #include <unittest/unittest.h>
 

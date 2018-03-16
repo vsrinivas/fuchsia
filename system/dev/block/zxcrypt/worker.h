@@ -9,7 +9,7 @@
 
 #include <crypto/cipher.h>
 #include <zircon/types.h>
-#include <zx/port.h>
+#include <lib/zx/port.h>
 #include <zxcrypt/volume.h>
 
 #include "extra.h"

@@ -10,10 +10,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
-#include <zx/port.h>
-#include <zx/process.h>
-#include <zx/thread.h>
-#include <zx/time.h>
+#include <lib/zx/port.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
+#include <lib/zx/time.h>
 
 enum class Instruction {
     SGDT,

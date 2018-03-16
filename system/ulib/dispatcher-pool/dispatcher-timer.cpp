@@ -4,7 +4,7 @@
 
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <zx/timer.h>
+#include <lib/zx/timer.h>
 
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <dispatcher-pool/dispatcher-timer.h>

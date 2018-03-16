@@ -12,7 +12,7 @@
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include "registers-ddi.h"
 

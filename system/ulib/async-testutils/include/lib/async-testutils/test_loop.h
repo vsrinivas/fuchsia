@@ -7,7 +7,7 @@
 #include "test_loop_dispatcher.h"
 
 #include <lib/async/dispatcher.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 namespace async {
 

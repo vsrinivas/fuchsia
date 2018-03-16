@@ -6,8 +6,8 @@
 
 #include <ddk/protocol/test.h>
 #include <zircon/assert.h>
-#include <zx/channel.h>
-#include <zx/socket.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/socket.h>
 
 // DDK test protocol support
 //

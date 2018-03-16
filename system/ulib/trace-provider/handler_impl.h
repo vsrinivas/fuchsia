@@ -6,8 +6,8 @@
 
 #include <trace/handler.h>
 
-#include <zx/eventpair.h>
-#include <zx/vmo.h>
+#include <lib/zx/eventpair.h>
+#include <lib/zx/vmo.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/macros.h>
 #include <fbl/string.h>

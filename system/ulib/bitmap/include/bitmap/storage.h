@@ -16,7 +16,7 @@
 #include <fbl/macros.h>
 
 #if !defined _KERNEL && defined __Fuchsia__
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 #include <zircon/syscalls.h>
 #endif
 

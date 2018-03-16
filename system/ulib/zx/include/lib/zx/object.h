@@ -6,8 +6,8 @@
 
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <zx/object_traits.h>
-#include <zx/time.h>
+#include <lib/zx/object_traits.h>
+#include <lib/zx/time.h>
 
 namespace zx {
 

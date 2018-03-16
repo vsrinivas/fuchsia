@@ -10,7 +10,8 @@
 #include <ddktl/device.h>
 #include <ddktl/device-internal.h>
 #include <zircon/listnode.h>
-#include <zx/bti.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/vmo.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 

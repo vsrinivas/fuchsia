@@ -32,8 +32,8 @@
 #include <block-client/client.h>
 #include <fs/mapped-vmo.h>
 #include <trace/event.h>
-#include <zx/event.h>
-#include <zx/vmo.h>
+#include <lib/zx/event.h>
+#include <lib/zx/vmo.h>
 
 #include <blobfs/common.h>
 #include <blobfs/format.h>

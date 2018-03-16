@@ -7,7 +7,7 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <zircon/types.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 namespace video {
 namespace usb {

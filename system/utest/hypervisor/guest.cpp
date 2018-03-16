@@ -13,8 +13,8 @@
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
-#include <zx/port.h>
-#include <zx/vmar.h>
+#include <lib/zx/port.h>
+#include <lib/zx/vmar.h>
 
 #include "constants_priv.h"
 

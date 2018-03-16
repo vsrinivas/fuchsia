@@ -19,7 +19,7 @@
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
-#include <zx/fifo.h>
+#include <lib/zx/fifo.h>
 
 #include "server.h"
 

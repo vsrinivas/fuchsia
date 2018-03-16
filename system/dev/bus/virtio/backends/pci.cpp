@@ -8,7 +8,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <virtio/virtio.h>
-#include <zx/handle.h>
+#include <lib/zx/handle.h>
 
 #include "pci.h"
 

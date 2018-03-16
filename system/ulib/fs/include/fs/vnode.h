@@ -23,7 +23,7 @@
 #include <zircon/types.h>
 
 #ifdef __Fuchsia__
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 #endif // __Fuchsia__
 
 namespace fs {

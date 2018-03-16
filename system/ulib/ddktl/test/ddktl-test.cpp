@@ -6,7 +6,7 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/protocol/test.h>
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 #include <unittest/unittest.h>
 #include <stddef.h>

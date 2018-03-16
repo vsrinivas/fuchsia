@@ -25,7 +25,7 @@
 
 #include <sync/completion.h>
 
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include <blobfs/blobfs.h>
 #include <blobfs/format.h>

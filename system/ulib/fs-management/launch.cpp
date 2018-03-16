@@ -20,7 +20,7 @@
 #include <zircon/compiler.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <zx/process.h>
+#include <lib/zx/process.h>
 
 namespace {
 

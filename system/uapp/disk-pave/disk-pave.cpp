@@ -29,8 +29,8 @@
 #include <zircon/device/device.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <zx/fifo.h>
-#include <zx/vmo.h>
+#include <lib/zx/fifo.h>
+#include <lib/zx/vmo.h>
 
 #include "fvm/fvm-sparse.h"
 #include "fvm/fvm.h"

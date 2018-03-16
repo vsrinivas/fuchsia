@@ -11,7 +11,7 @@
 #include <zircon/syscalls.h>
 
 #include <trace-provider/provider.h>
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 #include <fbl/type_support.h>
 
 namespace trace {

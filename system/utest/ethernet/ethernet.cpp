@@ -16,11 +16,11 @@
 #include <zircon/device/ethertap.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-#include <zx/fifo.h>
-#include <zx/socket.h>
-#include <zx/time.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/fifo.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/time.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 
 #include <errno.h>
 #include <fcntl.h>

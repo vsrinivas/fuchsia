@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
-#include <zx/port.h>
-#include <zx/process.h>
-#include <zx/thread.h>
+#include <lib/zx/port.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 
 namespace {
 

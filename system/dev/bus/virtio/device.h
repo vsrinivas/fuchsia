@@ -13,8 +13,8 @@
 #include <fbl/unique_ptr.h>
 #include <threads.h>
 #include <virtio/virtio.h>
-#include <zx/bti.h>
-#include <zx/handle.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/handle.h>
 
 // Virtio devices are represented by a derived class specific to their type (eg
 // gpu) with a virtio::Device base. The device class handles general work around

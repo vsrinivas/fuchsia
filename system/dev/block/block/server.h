@@ -22,9 +22,9 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <lib/zx/fifo.h>
+#include <lib/zx/vmo.h>
 #include <sync/completion.h>
-#include <zx/fifo.h>
-#include <zx/vmo.h>
 
 // Represents the mapping of "vmoid --> VMO"
 class IoBuffer : public fbl::WAVLTreeContainable<fbl::RefPtr<IoBuffer>>,

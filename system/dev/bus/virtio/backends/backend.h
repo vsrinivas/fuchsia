@@ -7,7 +7,7 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <virtio/virtio.h>
-#include <zx/handle.h>
+#include <lib/zx/handle.h>
 
 // Each backend will implement their own method for initialization / binding
 // based on their own internal functionality. Since we will have different

@@ -11,10 +11,10 @@
 #include <zircon/device/audio.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <zx/channel.h>
-#include <zx/handle.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>

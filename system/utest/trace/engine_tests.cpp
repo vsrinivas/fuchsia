@@ -10,7 +10,7 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
-#include <zx/event.h>
+#include <lib/zx/event.h>
 #include <trace-engine/instrumentation.h>
 
 namespace {

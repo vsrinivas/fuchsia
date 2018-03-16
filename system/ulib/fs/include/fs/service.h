@@ -6,7 +6,7 @@
 
 #include <fbl/function.h>
 #include <fbl/macros.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "vnode.h"
 

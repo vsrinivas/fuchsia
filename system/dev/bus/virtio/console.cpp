@@ -9,7 +9,7 @@
 #include <fbl/auto_lock.h>
 #include <string.h>
 #include <virtio/virtio.h>
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 #define LOCAL_TRACE 0
 

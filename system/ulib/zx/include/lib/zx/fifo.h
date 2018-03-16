@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <zx/handle.h>
-#include <zx/object.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/object.h>
 
 namespace zx {
 

@@ -14,7 +14,7 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vmo_mapper.h>
 #include <threads.h>
-#include <zx/interrupt.h>
+#include <lib/zx/interrupt.h>
 
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 #include <intel-hda/utils/codec-commands.h>

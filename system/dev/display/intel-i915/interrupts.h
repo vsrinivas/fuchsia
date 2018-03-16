@@ -7,7 +7,7 @@
 #include <fbl/macros.h>
 #include <threads.h>
 #include <zircon/types.h>
-#include <zx/handle.h>
+#include <lib/zx/handle.h>
 
 #include "registers-pipe.h"
 

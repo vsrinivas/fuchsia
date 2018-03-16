@@ -12,7 +12,7 @@
 #ifdef __Fuchsia__
 #include <block-client/client.h>
 #include <fs/fvm.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 #else
 #include <fbl/vector.h>
 #endif

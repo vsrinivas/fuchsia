@@ -25,7 +25,7 @@
 #include <fdio/remoteio.h>
 #include <fdio/util.h>
 #include <fdio/vfs.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "private-fidl.h"
 

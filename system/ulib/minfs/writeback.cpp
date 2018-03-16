@@ -8,7 +8,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 #endif
 
 #include <fbl/algorithm.h>

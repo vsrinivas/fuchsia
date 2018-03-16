@@ -14,7 +14,7 @@
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <zircon/device/vfs.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 namespace fs {
 

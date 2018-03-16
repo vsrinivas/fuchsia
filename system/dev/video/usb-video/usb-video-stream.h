@@ -13,7 +13,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/vector.h>
 #include <zircon/device/camera-proto.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include "usb-video.h"
 #include "video-buffer.h"

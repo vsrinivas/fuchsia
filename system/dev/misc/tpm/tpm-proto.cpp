@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <zircon/syscalls.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 #include "tpm.h"
 
 // TPM_ACCESS bitmasks

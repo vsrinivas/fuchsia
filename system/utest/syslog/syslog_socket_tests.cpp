@@ -7,7 +7,7 @@
 #include <syslog/global.h>
 #include <syslog/wire_format.h>
 #include <unittest/unittest.h>
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 #include <errno.h>
 #include <fcntl.h>

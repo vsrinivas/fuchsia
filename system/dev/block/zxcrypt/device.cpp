@@ -21,9 +21,9 @@
 #include <zircon/status.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
-#include <zx/port.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/port.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <zxcrypt/volume.h>
 
 #include "device.h"

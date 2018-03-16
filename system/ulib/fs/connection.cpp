@@ -19,7 +19,7 @@
 #include <fs/trace.h>
 #include <fs/vnode.h>
 #include <zircon/assert.h>
-#include <zx/handle.h>
+#include <lib/zx/handle.h>
 
 #define ZXDEBUG 0
 

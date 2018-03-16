@@ -20,9 +20,9 @@
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
 #include <fdio/io.h>
-#include <zx/channel.h>
-#include <zx/event.h>
-#include <zx/vmo.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/event.h>
+#include <lib/zx/vmo.h>
 #include <fbl/mutex.h>
 #endif // __Fuchsia__
 

@@ -8,9 +8,9 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
-#include <zx/event.h>
-#include <zx/handle.h>
-#include <zx/port.h>
+#include <lib/zx/event.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/port.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/auto_lock.h>

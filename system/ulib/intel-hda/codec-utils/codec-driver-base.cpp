@@ -4,7 +4,7 @@
 
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 #include <fbl/auto_lock.h>
 #include <fbl/limits.h>
 #include <string.h>

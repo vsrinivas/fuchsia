@@ -9,7 +9,7 @@
 #include <zircon/assert.h>
 
 #include <lib/async/cpp/wait.h>
-#include <zx/event.h>
+#include <lib/zx/event.h>
 #include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

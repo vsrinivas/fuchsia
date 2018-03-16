@@ -18,7 +18,7 @@
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include "fvm-private.h"
 

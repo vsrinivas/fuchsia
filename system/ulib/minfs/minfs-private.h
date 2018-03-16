@@ -14,7 +14,7 @@
 #include <fs/remote.h>
 #include <fs/watcher.h>
 #include <sync/completion.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 #endif
 
 #include <fbl/algorithm.h>

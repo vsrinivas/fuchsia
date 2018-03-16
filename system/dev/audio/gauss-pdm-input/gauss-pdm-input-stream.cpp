@@ -8,7 +8,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/limits.h>
 #include <zircon/device/audio.h>
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 #include "a113-pdm.h"
 #include "dispatcher-pool/dispatcher-thread-pool.h"

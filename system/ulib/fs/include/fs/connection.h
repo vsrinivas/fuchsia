@@ -16,7 +16,7 @@
 #include <fbl/unique_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <zx/event.h>
+#include <lib/zx/event.h>
 
 namespace fs {
 

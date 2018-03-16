@@ -20,9 +20,9 @@
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
-#include <zx/port.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/port.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 
 #include "extra.h"
 #include "worker.h"

@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <threads.h>
 
-#include <zx/timer.h>
+#include <lib/zx/timer.h>
 
 #include <fbl/type_support.h>
 

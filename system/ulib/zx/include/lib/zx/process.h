@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <zx/object.h>
-#include <zx/task.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/object.h>
+#include <lib/zx/task.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <zircon/process.h>
 
 namespace zx {

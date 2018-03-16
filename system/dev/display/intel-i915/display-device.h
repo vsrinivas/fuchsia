@@ -9,7 +9,7 @@
 #include <hwreg/mmio.h>
 #include <lib/edid/edid.h>
 #include <region-alloc/region-alloc.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include "gtt.h"
 #include "power.h"

@@ -6,7 +6,7 @@
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>

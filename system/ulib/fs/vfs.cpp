@@ -19,7 +19,7 @@
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <zx/event.h>
+#include <lib/zx/event.h>
 #endif
 
 #include <fs/trace.h>

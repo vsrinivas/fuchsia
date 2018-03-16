@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <zx/object.h>
-#include <zx/vmo.h>
+#include <lib/zx/object.h>
+#include <lib/zx/vmo.h>
 #include <zircon/process.h>
 
 namespace zx {

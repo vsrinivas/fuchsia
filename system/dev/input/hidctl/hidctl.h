@@ -13,7 +13,7 @@
 #include <zircon/compiler.h>
 #include <zircon/device/hidctl.h>
 #include <zircon/types.h>
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 namespace hidctl {
 

@@ -4,7 +4,7 @@
 
 #include <ddk/debug.h>
 #include <string.h>
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 #include "video-buffer.h"
 

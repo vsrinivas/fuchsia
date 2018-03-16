@@ -7,8 +7,8 @@
 #include <cpuid.h>
 #include <string.h>
 
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 
 #include "display-device.h"
 #include "intel-i915.h"

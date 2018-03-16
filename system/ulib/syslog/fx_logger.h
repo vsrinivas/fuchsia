@@ -8,9 +8,9 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <zx/process.h>
-#include <zx/socket.h>
-#include <zx/thread.h>
+#include <lib/zx/process.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/thread.h>
 
 #include "syslog/logger.h"
 

@@ -12,7 +12,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <zircon/device/ethertap.h>
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <threads.h>

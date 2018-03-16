@@ -8,7 +8,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <string.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 namespace tpm {
 

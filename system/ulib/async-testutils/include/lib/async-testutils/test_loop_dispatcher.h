@@ -10,8 +10,8 @@
 #include <lib/async/task.h>
 #include <lib/async/wait.h>
 
-#include <zx/port.h>
-#include <zx/time.h>
+#include <lib/zx/port.h>
+#include <lib/zx/time.h>
 
 namespace async {
 

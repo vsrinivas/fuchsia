@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zx/object.h>
+#include <lib/zx/object.h>
 
 namespace zx {
 

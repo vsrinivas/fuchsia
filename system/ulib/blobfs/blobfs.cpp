@@ -19,7 +19,7 @@
 #include <fs/block-txn.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <zx/event.h>
+#include <lib/zx/event.h>
 
 #define ZXDEBUG 0
 

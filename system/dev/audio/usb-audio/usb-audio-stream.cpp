@@ -9,7 +9,7 @@
 #include <zircon/hw/usb-audio.h>
 #include <zircon/process.h>
 #include <zircon/types.h>
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 #include <fbl/algorithm.h>
 #include <fbl/limits.h>
 #include <string.h>

@@ -8,9 +8,9 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zxcpp/new.h>
-#include <zx/process.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/process.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <fbl/array.h>
 #include <string.h>
 #include <unittest/unittest.h>

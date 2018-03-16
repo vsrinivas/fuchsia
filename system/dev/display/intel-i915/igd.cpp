@@ -5,8 +5,8 @@
 #include <limits.h>
 #include <ddk/debug.h>
 #include <hwreg/bitfields.h>
-#include <zx/object.h>
-#include <zx/vmar.h>
+#include <lib/zx/object.h>
+#include <lib/zx/vmar.h>
 
 #include "igd.h"
 #include "intel-i915.h"

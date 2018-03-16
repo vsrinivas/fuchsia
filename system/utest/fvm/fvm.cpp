@@ -38,7 +38,7 @@
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include <unittest/unittest.h>
 

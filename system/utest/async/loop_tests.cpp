@@ -16,8 +16,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
+#include <lib/zx/event.h>
 #include <unittest/unittest.h>
-#include <zx/event.h>
 
 namespace {
 

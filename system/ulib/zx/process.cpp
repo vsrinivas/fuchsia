@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zx/process.h>
+#include <lib/zx/process.h>
 
 #include <zircon/syscalls.h>
 
-#include <zx/job.h>
-#include <zx/thread.h>
-#include <zx/vmar.h>
+#include <lib/zx/job.h>
+#include <lib/zx/thread.h>
+#include <lib/zx/vmar.h>
 
 namespace zx {
 

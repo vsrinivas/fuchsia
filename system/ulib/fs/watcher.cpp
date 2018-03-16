@@ -17,7 +17,7 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <fs/watcher.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 namespace fs {
 

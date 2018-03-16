@@ -4,7 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddktl/device.h>
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 #include "vmo_helper.h"
 

@@ -9,7 +9,7 @@
 #endif
 
 #include <fs/vfs.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 namespace fs {
 

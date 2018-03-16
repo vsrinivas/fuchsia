@@ -7,7 +7,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 namespace fbl {
 

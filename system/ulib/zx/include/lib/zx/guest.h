@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <zx/handle.h>
-#include <zx/object.h>
-#include <zx/port.h>
-#include <zx/resource.h>
-#include <zx/vmo.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/object.h>
+#include <lib/zx/port.h>
+#include <lib/zx/resource.h>
+#include <lib/zx/vmo.h>
 
 namespace zx {
 

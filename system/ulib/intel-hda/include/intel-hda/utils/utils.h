@@ -6,9 +6,9 @@
 
 #include <zircon/device/audio.h>
 #include <zircon/types.h>
-#include <zx/channel.h>
-#include <zx/handle.h>
-#include <zx/vmo.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/vmo.h>
 #include <fbl/type_support.h>
 #include <fbl/vector.h>
 

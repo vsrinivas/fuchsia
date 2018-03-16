@@ -8,10 +8,10 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/eventpair.h>
+#include <lib/zx/vmo.h>
 #include <trace-provider/provider.h>
-#include <zx/channel.h>
-#include <zx/eventpair.h>
-#include <zx/vmo.h>
 
 // Provide a definition for the opaque type declared in provider.h.
 struct trace_provider {};

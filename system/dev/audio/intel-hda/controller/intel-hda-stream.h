@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <zx/handle.h>
-#include <zx/vmo.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/vmo.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

@@ -6,8 +6,8 @@
 
 #include <zircon/device/audio.h>
 #include <zircon/types.h>
-#include <zx/channel.h>
-#include <zx/vmo.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/vmo.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 

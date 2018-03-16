@@ -7,8 +7,8 @@
 #include <fbl/unique_ptr.h>
 #include <hwreg/mmio.h>
 #include <region-alloc/region-alloc.h>
-#include <zx/bti.h>
-#include <zx/vmo.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/vmo.h>
 
 namespace i915 {
 

@@ -8,7 +8,7 @@
 #include <fbl/vmar_manager.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/ref_counted.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 namespace fbl {
 

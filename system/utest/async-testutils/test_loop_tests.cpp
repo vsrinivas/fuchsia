@@ -7,10 +7,11 @@
 #include <lib/async/cpp/time.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
+
+#include <lib/zx/event.h>
+#include <lib/zx/time.h>
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
-#include <zx/event.h>
-#include <zx/time.h>
 
 namespace {
 

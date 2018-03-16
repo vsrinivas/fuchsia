@@ -22,8 +22,8 @@
 
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 
 #include "bootloader-display.h"
 #include "dp-display.h"

@@ -7,9 +7,9 @@
 #include <ddk/device.h>
 #include <limits.h>
 #include <zircon/types.h>
-#include <zx/bti.h>
-#include <zx/channel.h>
-#include <zx/vmo.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/vmo.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

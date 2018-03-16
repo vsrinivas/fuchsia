@@ -28,7 +28,7 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 #include <zxcrypt/volume.h>
 
 #define ZXDEBUG 0

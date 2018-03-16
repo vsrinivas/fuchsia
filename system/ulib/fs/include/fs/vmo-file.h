@@ -6,7 +6,7 @@
 
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include "vnode.h"
 

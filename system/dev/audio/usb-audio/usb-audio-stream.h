@@ -8,7 +8,7 @@
 #include <ddktl/device-internal.h>
 #include <driver/usb.h>
 #include <zircon/listnode.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 

@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/device/usb.h>
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 #include "usb-video-stream.h"
 #include "video-util.h"

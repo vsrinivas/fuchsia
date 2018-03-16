@@ -10,7 +10,7 @@
 #include <zircon/syscalls/object.h>
 
 #include <unittest/unittest.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 namespace {
 

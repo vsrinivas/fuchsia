@@ -22,7 +22,7 @@
 
 #ifdef __Fuchsia__
 #include <fbl/auto_lock.h>
-#include <zx/event.h>
+#include <lib/zx/event.h>
 #endif
 
 #include <minfs/fsck.h>

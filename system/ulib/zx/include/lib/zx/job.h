@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zx/task.h>
+#include <lib/zx/task.h>
 #include <zircon/process.h>
 
 namespace zx {
