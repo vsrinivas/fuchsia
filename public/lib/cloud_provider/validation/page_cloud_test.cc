@@ -29,7 +29,7 @@ CommitPtr MakeCommit(const std::string& id, const std::string& data) {
     const std::string& data) {
   f1dl::Array<uint8_t> id_array = ToArray(id);
   f1dl::Array<uint8_t> data_array = ToArray(data);
-  for (auto& commit : commits) {
+  for (auto& commit : *commits) {
     if (!commit->id.Equals(id_array)) {
       continue;
     }
@@ -120,8 +120,8 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
                     f1dl::Array<uint8_t> position_token,
                     const OnNewCommitsCallback& callback) override {
     on_new_commits_calls_++;
-    for (auto& commit : commits) {
-      on_new_commits_commits_.push_back(std::move(commit));
+    for (size_t i = 0; i < commits->size(); ++i) {
+      on_new_commits_commits_.push_back(std::move(commits->at(i)));
     }
     on_new_commits_position_token_ = std::move(position_token);
     on_new_commits_commits_callback_ = callback;

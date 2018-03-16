@@ -39,7 +39,7 @@ constexpr fxl::StringView kBucketNameSuffix = ".appspot.com";
 network::HttpHeaderPtr GetHeader(
     const f1dl::Array<network::HttpHeaderPtr>& headers,
     const std::string& header_name) {
-  for (const auto& header : headers.storage()) {
+  for (const auto& header : *headers) {
     if (fxl::EqualsCaseInsensitiveASCII(header->name.get(), header_name)) {
       return header.Clone();
     }

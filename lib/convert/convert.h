@@ -28,9 +28,12 @@ namespace convert {
 // implicit conversion is intended.
 class ExtendedStringView : public fxl::StringView {
  public:
-  ExtendedStringView(const f1dl::Array<uint8_t>& array)  // NOLINT
+  ExtendedStringView(const std::vector<uint8_t>& array)  // NOLINT
       : fxl::StringView(reinterpret_cast<const char*>(array.data()),
                         array.size()) {}
+  ExtendedStringView(const f1dl::Array<uint8_t>& array)  // NOLINT
+      : fxl::StringView(reinterpret_cast<const char*>(array->data()),
+                        array->size()) {}
   ExtendedStringView(const leveldb::Slice& slice)  // NOLINT
       : fxl::StringView(slice.data(), slice.size()) {}
   ExtendedStringView(const std::string& string)  // NOLINT

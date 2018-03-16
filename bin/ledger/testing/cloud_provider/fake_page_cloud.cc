@@ -119,8 +119,8 @@ void FakePageCloud::SendPendingCommits() {
 
 void FakePageCloud::AddCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
                                const AddCommitsCallback& callback) {
-  for (auto& commit : commits) {
-    commits_.push_back(std::move(commit));
+  for (size_t i = 0; i < commits.size(); ++i) {
+    commits_.push_back(std::move(commits->at(i)));
   }
   SendPendingCommits();
   callback(cloud_provider::Status::OK);

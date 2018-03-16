@@ -14,9 +14,9 @@ ChainImpl::~ChainImpl() = default;
 
 LinkPathPtr ChainImpl::GetLinkPathForKey(const f1dl::String& key) {
   auto it = std::find_if(
-      chain_data_->key_to_link_map.begin(), chain_data_->key_to_link_map.end(),
+      chain_data_->key_to_link_map->begin(), chain_data_->key_to_link_map->end(),
       [&key](const ChainKeyToLinkDataPtr& data) { return data->key == key; });
-  if (it == chain_data_->key_to_link_map.end())
+  if (it == chain_data_->key_to_link_map->end())
     return nullptr;
 
   return (*it)->link_path.Clone();

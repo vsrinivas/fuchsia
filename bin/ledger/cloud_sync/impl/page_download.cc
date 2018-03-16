@@ -108,7 +108,7 @@ void PageDownload::StartDownload() {
                   }
                   backoff_->Reset();
 
-                  if (commits.empty()) {
+                  if (commits->empty()) {
                     // If there is no remote commits to add, announce that
                     // we're done.
                     FXL_VLOG(1)
@@ -116,12 +116,12 @@ void PageDownload::StartDownload() {
                         << "initial sync finished, no new remote commits";
                     BacklogDownloaded();
                   } else {
-                    FXL_VLOG(1) << log_prefix_ << "retrieved " << commits.size()
+                    FXL_VLOG(1) << log_prefix_ << "retrieved " << commits->size()
                                 << " (possibly) new remote commits, "
                                 << "adding them to storage.";
                     // If not, fire the backlog download callback when the
                     // remote commits are downloaded.
-                    const auto commit_count = commits.size();
+                    const auto commit_count = commits->size();
                     DownloadBatch(std::move(commits), std::move(position_token),
                                   [this, commit_count] {
                                     FXL_VLOG(1)
@@ -202,8 +202,8 @@ void PageDownload::OnNewCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
   if (batch_download_) {
     // If there is already a commit batch being downloaded, save the new commits
     // to be downloaded when it is done.
-    for (auto& commit : commits) {
-      commits_to_download_.push_back(std::move(commit));
+    for (size_t i = 0; i < commits->size(); ++i) {
+      commits_to_download_.push_back(std::move(commits->at(i)));
     }
     position_token_ = std::move(position_token);
     callback();
@@ -262,7 +262,7 @@ void PageDownload::DownloadBatch(f1dl::Array<cloud_provider::CommitPtr> commits,
         }
         batch_download_.reset();
 
-        if (commits_to_download_.empty()) {
+        if (commits_to_download_->empty()) {
           // Don't set to idle if we're in process of setting the remote
           // watcher.
           if (commit_state_ == DOWNLOAD_IN_PROGRESS) {

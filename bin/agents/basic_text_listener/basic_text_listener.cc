@@ -72,13 +72,13 @@ class BasicTextListener : ContextListener {
   // |ContextListener|
   void OnContextUpdate(ContextUpdatePtr result) override {
     auto r = TakeContextValue(result.get(), kRawTextTopic);
-    if (!r.first || r.second.empty())
+    if (!r.first || r.second->empty())
       return;
     rapidjson::Document text_doc;
     // TODO(thatguy): This is only taking the first raw_text entry. We should be
     // keeping track of each one, and writing N new context values out for
     // Entities we extracted.
-    text_doc.Parse(r.second[0]->content);
+    text_doc.Parse(r.second->at(0)->content);
     // TODO(travismart): What to do if there are multiple topics, or if
     // topics_[0] has more than one entry?
     if (!text_doc.HasMember("text") || !text_doc["text"].IsString()) {

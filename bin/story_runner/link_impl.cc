@@ -277,7 +277,7 @@ class LinkImpl::GetCall : Operation<f1dl::String> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    auto p = CreatePointer(impl_->doc_, path_).Get(impl_->doc_);
+    auto p = CreatePointer(impl_->doc_, *path_).Get(impl_->doc_);
 
     if (p != nullptr) {
       result_ = f1dl::String(JsonValueToString(*p));
@@ -315,7 +315,7 @@ class LinkImpl::SetCall : Operation<> {
       return;
     }
 
-    CrtJsonPointer ptr = CreatePointer(impl_->doc_, path_);
+    CrtJsonPointer ptr = CreatePointer(impl_->doc_, *path_);
     const bool success = impl_->ApplySetOp(ptr, json_);
     if (success) {
       impl_->ValidateSchema("LinkImpl::SetCall", ptr, json_);
@@ -361,7 +361,7 @@ class LinkImpl::UpdateObjectCall : Operation<> {
       return;
     }
 
-    CrtJsonPointer ptr = CreatePointer(impl_->doc_, path_);
+    CrtJsonPointer ptr = CreatePointer(impl_->doc_, *path_);
     const bool success = impl_->ApplyUpdateOp(ptr, json_);
     if (success) {
       impl_->ValidateSchema("LinkImpl::UpdateObject", ptr, json_);
@@ -405,7 +405,7 @@ class LinkImpl::EraseCall : Operation<> {
       return;
     }
 
-    CrtJsonPointer ptr = CreatePointer(impl_->doc_, path_);
+    CrtJsonPointer ptr = CreatePointer(impl_->doc_, *path_);
     const bool success = impl_->ApplyEraseOp(ptr);
     if (success) {
       impl_->ValidateSchema("LinkImpl::EraseCall", ptr, std::string());

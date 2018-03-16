@@ -42,7 +42,7 @@ class CarmenSandiegoApp : public ContextListener {
     std::string hlloc = "somewhere";
 
     rapidjson::Document d;
-    d.Parse(p.second[0]->content);
+    d.Parse(p.second->at(0)->content);
 
     if (d.IsObject()) {
       const float latitude = d["lat"].GetFloat(),

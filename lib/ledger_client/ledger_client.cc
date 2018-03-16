@@ -65,7 +65,7 @@ void GetDiffRecursive(ledger::MergeResultProvider* const result,
           return;
         }
 
-        for (auto& diff_entry : change_delta) {
+        for (auto& diff_entry : *change_delta) {
           (*conflicts)[to_string(diff_entry->key)] =
               ToConflict(diff_entry.get());
         }
@@ -201,7 +201,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
         }
       }
 
-      if (!merge_changes.empty()) {
+      if (!merge_changes->empty()) {
         merge_count_++;
         result_provider_->Merge(
             std::move(merge_changes), [this, flow](ledger::Status status) {

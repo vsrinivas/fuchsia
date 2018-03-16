@@ -37,7 +37,7 @@ void TestPageCloud::RunPendingCallbacks() {
 void TestPageCloud::AddCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
                                const AddCommitsCallback& callback) {
   add_commits_calls++;
-  for (auto& commit : commits) {
+  for (auto& commit : *commits) {
     ReceivedCommit received_commit;
     received_commit.id = convert::ToString(commit->id);
     received_commit.data = convert::ToString(commit->data);

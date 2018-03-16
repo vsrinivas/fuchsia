@@ -51,7 +51,7 @@ void LedgerRepositoryImpl::GetLedger(
     const GetLedgerCallback& callback) {
   TRACE_DURATION("ledger", "repository_get_ledger");
 
-  if (ledger_name.empty()) {
+  if (ledger_name->empty()) {
     callback(Status::INVALID_ARGUMENT);
     return;
   }

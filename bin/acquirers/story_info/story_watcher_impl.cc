@@ -46,7 +46,7 @@ StoryWatcherImpl::StoryWatcherImpl(StoryInfoAcquirer* const owner,
   story_controller_->GetActiveLinks(
       story_links_watcher_binding_.NewBinding(),
       [this](f1dl::Array<modular::LinkPathPtr> links) {
-        for (auto& link_path : links) {
+        for (auto& link_path : *links) {
           WatchLink(link_path);
         }
       });

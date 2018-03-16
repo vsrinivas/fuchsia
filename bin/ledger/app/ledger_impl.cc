@@ -23,7 +23,7 @@ namespace {
 
 void GenerateRandomId(f1dl::Array<uint8_t>* id) {
   id->resize(kPageIdSize);
-  fxl::RandBytes(id->data(), kPageIdSize);
+  fxl::RandBytes((*id)->data(), kPageIdSize);
 }
 
 }  // namespace

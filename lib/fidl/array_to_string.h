@@ -13,11 +13,11 @@
 
 namespace modular {
 
-inline std::string to_string(f1dl::Array<uint8_t>& data) {
+inline std::string to_string(const f1dl::Array<uint8_t>& data) {
   std::string ret;
-  ret.reserve(data.size());
+  ret.reserve(data->size());
 
-  for (uint8_t val : data) {
+  for (uint8_t val : *data) {
     ret += static_cast<char>(val);
   }
 
@@ -27,8 +27,8 @@ inline std::string to_string(f1dl::Array<uint8_t>& data) {
 inline std::string to_hex_string(const f1dl::Array<uint8_t>& data) {
   constexpr char kHexadecimalCharacters[] = "0123456789abcdef";
   std::string ret;
-  ret.reserve(data.size() * 2);
-  for (unsigned char i : data) {
+  ret.reserve(data->size() * 2);
+  for (unsigned char i : *data) {
     ret.push_back(kHexadecimalCharacters[i >> 4]);
     ret.push_back(kHexadecimalCharacters[i & 0xf]);
   }

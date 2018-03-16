@@ -36,17 +36,17 @@ void ReportModuleLaunchTime(std::string module_url, zx_time_t time_nanos) {
  auto parts = f1dl::Array<cobalt::ObservationValuePtr>::New(2);
  const int64_t time_micros = static_cast<int64_t>(time_nanos / ZX_USEC(1));
 
- parts[0] = cobalt::ObservationValue::New();
- parts[0]->name = "module_url";
- parts[0]->encoding_id = kCobaltNoOpEncodingId;
- parts[0]->value = cobalt::Value::New();
- parts[0]->value->set_string_value(module_url);
+ parts->at(0) = cobalt::ObservationValue::New();
+ parts->at(0)->name = "module_url";
+ parts->at(0)->encoding_id = kCobaltNoOpEncodingId;
+ parts->at(0)->value = cobalt::Value::New();
+ parts->at(0)->value->set_string_value(module_url);
 
- parts[1] = cobalt::ObservationValue::New();
- parts[1]->name = "launch_time_micros";
- parts[1]->encoding_id = kCobaltNoOpEncodingId;
- parts[1]->value = cobalt::Value::New();
- parts[1]->value->set_int_value(time_micros);
+ parts->at(1) = cobalt::ObservationValue::New();
+ parts->at(1)->name = "launch_time_micros";
+ parts->at(1)->encoding_id = kCobaltNoOpEncodingId;
+ parts->at(1)->value = cobalt::Value::New();
+ parts->at(1)->value->set_int_value(time_micros);
 
  cobalt::CobaltObservation observation(
      static_cast<uint32_t>(CobaltMetric::MODULE_LAUNCH_LATENCY), std::move(parts));

@@ -121,8 +121,8 @@ void PageDelegate::PutWithPriority(
     f1dl::Array<uint8_t> value,
     Priority priority,
     const Page::PutWithPriorityCallback& callback) {
-  if (key.size() > kMaxKeySize) {
-    FXL_VLOG(1) << "Key too large: " << key.size()
+  if (key->size() > kMaxKeySize) {
+    FXL_VLOG(1) << "Key too large: " << key->size()
                 << " bytes long, which is more than the maximum allowed size ("
                 << kMaxKeySize << ").";
     callback(Status::KEY_TOO_LARGE);
@@ -165,8 +165,8 @@ void PageDelegate::PutReference(f1dl::Array<uint8_t> key,
                                 ReferencePtr reference,
                                 Priority priority,
                                 const Page::PutReferenceCallback& callback) {
-  if (key.size() > kMaxKeySize) {
-    FXL_VLOG(1) << "Key too large: " << key.size()
+  if (key->size() > kMaxKeySize) {
+    FXL_VLOG(1) << "Key too large: " << key->size()
                 << " bytes long, which is more than the maximum allowed size ("
                 << kMaxKeySize << ").";
     callback(Status::KEY_TOO_LARGE);

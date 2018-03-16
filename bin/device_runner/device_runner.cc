@@ -171,7 +171,7 @@ class Settings {
     const std::string kRootModule = "--root_module";
     std::string result = user_shell;
 
-    for (const auto& user_shell_arg : user_shell_args) {
+    for (const auto& user_shell_arg : *user_shell_args) {
       const auto& arg = user_shell_arg.get();
       if (arg.substr(0, kRootModule.size()) == kRootModule) {
         result = arg.substr(kRootModule.size());

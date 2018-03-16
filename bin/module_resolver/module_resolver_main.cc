@@ -103,13 +103,13 @@ class ModuleResolverApp : ContextListener {
 
   void OnContextUpdate(ContextUpdatePtr update) {
     f1dl::Array<ContextValuePtr> values;
-    for (const auto& entry : update->values) {
+    for (const auto& entry : *update->values) {
       if (entry->key == kContextListenerEntitiesKey) {
         values = std::move(entry->value);
         break;
       }
     }
-    if (values.empty()) {
+    if (values->empty()) {
       return;
     }
 
@@ -117,7 +117,7 @@ class ModuleResolverApp : ContextListener {
     // The story id to be extracted from the context update.
     std::string story_id;
 
-    for (const auto& value : values) {
+    for (const auto& value : *values) {
       if (value->meta->story.is_null() || value->meta->link.is_null() ||
           value->meta->entity.is_null()) {
         continue;
@@ -134,7 +134,7 @@ class ModuleResolverApp : ContextListener {
           std::vector<ProposalPtr> new_proposals;
           std::vector<modular::DaisyPtr> new_daisies;  // Only for comparison.
           int proposal_count = 0;
-          for (const auto& module : result->modules) {
+          for (const auto& module : *result->modules) {
             modular::DaisyPtr daisy;
             new_proposals.push_back(CreateProposalFromModuleResolverResult(
                 module, story_id, proposal_count++, &daisy));
@@ -188,7 +188,7 @@ class ModuleResolverApp : ContextListener {
     daisy->url = module_result->module_id;
     f1dl::Array<modular::NounEntryPtr> nouns;
     for (const modular::ChainEntryPtr& chain_entry :
-         module_result->create_chain_info->property_info) {
+         *module_result->create_chain_info->property_info) {
       auto noun_entry = modular::NounEntry::New();
       noun_entry->name = chain_entry->key;
       auto noun = modular::Noun::New();

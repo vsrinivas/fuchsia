@@ -43,7 +43,7 @@ void BatchDownload::Start() {
   auto waiter = callback::Waiter<
       encryption::Status,
       storage::PageStorage::CommitIdAndBytes>::Create(encryption::Status::OK);
-  for (auto& commit : commits_) {
+  for (auto& commit : *commits_) {
     encryption_service_->DecryptCommit(
         convert::ToString(commit->data),
         [id = convert::ToString(commit->id), callback = waiter->NewCallback()](

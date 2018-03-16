@@ -226,7 +226,7 @@ void ConflictResolverClient::Merge(f1dl::Array<MergedValuePtr> merged_values,
         auto waiter =
             callback::Waiter<storage::Status, storage::ObjectIdentifier>::
                 Create(storage::Status::OK);
-        for (const MergedValuePtr& merged_value : merged_values) {
+        for (const MergedValuePtr& merged_value : *merged_values) {
           weak_this->OnNextMergeResult(merged_value, waiter);
         }
         waiter->Finalize(fxl::MakeCopyable(fxl::MakeCopyable(
@@ -249,8 +249,8 @@ void ConflictResolverClient::Merge(f1dl::Array<MergedValuePtr> merged_values,
                   continue;
                 }
                 weak_this->journal_->Put(
-                    merged_values[i]->key, object_identifiers[i],
-                    merged_values[i]->priority == Priority::EAGER
+                    merged_values->at(i)->key, object_identifiers[i],
+                    merged_values->at(i)->priority == Priority::EAGER
                         ? storage::KeyPriority::EAGER
                         : storage::KeyPriority::LAZY,
                     waiter->NewCallback());

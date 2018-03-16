@@ -64,7 +64,7 @@ class ProposalMaker : ContextListener {
   // |ContextListener|
   void OnContextUpdate(ContextUpdatePtr result) override {
     auto p = TakeContextValue(result.get(), kSelectedEntitiesTopic);
-    if (!p.first || p.second.empty())
+    if (!p.first || p.second->empty())
       return;
     const std::vector<EntitySpan> entities =
         EntitySpan::FromContextValues(p.second);

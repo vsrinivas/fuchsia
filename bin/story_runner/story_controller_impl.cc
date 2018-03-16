@@ -46,16 +46,16 @@ namespace {
 f1dl::String PathString(const f1dl::Array<f1dl::String>& module_path) {
   // f1dl::String no longer supports size(), begin() or end(). JoinStrings()
   // only supports element types with those methods.
-  std::vector<std::string> path_vec(module_path.begin(), module_path.end());
+  std::vector<std::string> path_vec(module_path->begin(), module_path->end());
   return fxl::JoinStrings(path_vec, ":");
 }
 
 f1dl::Array<f1dl::String> ParentModulePath(
     const f1dl::Array<f1dl::String>& module_path) {
   auto ret = module_path.Clone();
-  if (ret.size() > 0) {
+  if (ret->size() > 0) {
     // Root is its own parent.
-    ret.resize(ret.size() - 1);
+    ret.resize(ret->size() - 1);
   }
   return ret;
 }
@@ -530,7 +530,7 @@ class StoryControllerImpl::InitializeChainCall : Operation<ChainDataPtr> {
     // a) Copy the |link_path| to |result_| directly or
     // b) Create & populate a new Link and add the correct mapping to
     // |result_|.
-    for (auto& entry : create_chain_info_->property_info) {
+    for (auto& entry : *create_chain_info_->property_info) {
       const auto& key = entry->key;
       const auto& info = entry->value;
 
@@ -620,8 +620,8 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
     // If this is a root Module and we don't have a link name, give it a root
     // link of the same name.
-    if (!link_name_ && ParentModulePath(module_path_).empty()) {
-      link_name_ = module_path_[0];
+    if (!link_name_ && ParentModulePath(module_path_)->empty()) {
+      link_name_ = module_path_->at(0);
     }
 
     // TODO(thatguy): Remove any root link initialization. MI4-739
@@ -781,7 +781,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     // We only add a module to story shell if its either a root module or its
     // anchor is already known to story shell.
 
-    if (module_path_.size() == 1) {
+    if (module_path_->size() == 1) {
       ConnectView(flow, "");
       return;
     }
@@ -1272,7 +1272,7 @@ class StoryControllerImpl::StartCall : Operation<> {
     new ReadAllDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(), kModuleKeyPrefix,
         XdrModuleData, [this, flow](f1dl::Array<ModuleDataPtr> data) {
-          for (auto& module_data : data) {
+          for (auto& module_data : *data) {
             if (module_data->module_source == ModuleSource::EXTERNAL &&
                 !module_data->module_stopped) {
               new StartModuleInShellCall(
@@ -1331,9 +1331,9 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
     // HACK(mesch): Hardcoded importance computation. Will be delegated
     // somewhere more flexible eventually.
     auto i = std::find_if(
-        context_state_.begin(), context_state_.end(),
+        context_state_->begin(), context_state_->end(),
         [](auto const& e) { return e->key == kStoryImportanceContext; });
-    if (i == context_state_.end()) {
+    if (i == context_state_->end()) {
       result_ = 1.0;
       return;
     }
@@ -1343,12 +1343,12 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
     float score = 0.0;
     float count = 0.0;
 
-    for (auto& entry : log_) {
+    for (auto& entry : *log_) {
       const auto& c = entry->context;
-      auto i = std::find_if(c.begin(), c.end(), [](auto const& e) {
+      auto i = std::find_if(c->begin(), c->end(), [](auto const& e) {
         return e->key == kStoryImportanceContext;
       });
-      if (i == c.end()) {
+      if (i == c->end()) {
         continue;
       }
 
@@ -1539,7 +1539,7 @@ class StoryControllerImpl::ResolveModulesCall
     resolver_query_->url = daisy_->url;
 
     std::shared_ptr<int> outstanding_requests{new int{0}};
-    for (const auto& entry : daisy_->nouns) {
+    for (const auto& entry : *daisy_->nouns) {
       const auto& name = entry->name;
       const auto& noun = entry->noun;
 
@@ -1671,7 +1671,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
         nodes_(std::move(nodes)) {
     Ready();
 
-    for (auto& relationship : relationships_) {
+    for (auto& relationship : *relationships_) {
       relation_map_[relationship->node_name] = relationship.Clone();
     }
   }
@@ -1683,9 +1683,9 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
     // containers
     f1dl::Array<f1dl::String> module_path = parent_module_path_.Clone();
     module_path.push_back(container_name_);
-    for (size_t i = 0; i < nodes_.size(); ++i) {
+    for (size_t i = 0; i < nodes_->size(); ++i) {
       new ResolveModulesCall(&operation_queue_, story_controller_impl_,
-                             nodes_[i]->daisy.Clone(),
+                             nodes_->at(i)->daisy.Clone(),
                              std::move(module_path),  // May be wrong.
                              [this, flow, i](FindModulesResultPtr result) {
                                Cont(flow, i, std::move(result));
@@ -1694,15 +1694,15 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
   }
 
   void Cont(FlowToken flow, const size_t i, FindModulesResultPtr result) {
-    if (result->modules.size() > 0) {
+    if (result->modules->size() > 0) {
       // We just run the first module in story shell.
       // TODO(alhaad/thatguy): Revisit the assumption.
-      const auto& module_result = result->modules[0];
+      const auto& module_result = result->modules->at(0);
       mozart::ViewOwnerPtr view_owner;
-      node_views_[nodes_[i]->node_name] = std::move(view_owner);
+      node_views_[nodes_->at(i)->node_name] = std::move(view_owner);
       f1dl::Array<f1dl::String> module_path = parent_module_path_.Clone();
       module_path.push_back(container_name_);
-      module_path.push_back(nodes_[i]->node_name);
+      module_path.push_back(nodes_->at(i)->node_name);
       new StartModuleCall(
           &operation_queue_, story_controller_impl_, std::move(module_path),
           module_result->module_id, nullptr /* link_name */,
@@ -1711,7 +1711,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
           nullptr /* surface_relation */, nullptr /* incoming_services */,
           nullptr /* module_controller_request */,
           nullptr /* embed_module_watcher */,
-          node_views_[nodes_[i]->node_name].NewRequest(),
+          node_views_[nodes_->at(i)->node_name].NewRequest(),
           [this, flow] { Cont2(flow); });
     } else {
       Cont2(flow);
@@ -1721,18 +1721,18 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
   void Cont2(FlowToken flow) {
     nodes_done_++;
 
-    if (nodes_done_ < nodes_.size()) {
+    if (nodes_done_ < nodes_->size()) {
       return;
     }
     if (!story_controller_impl_->story_shell_) {
       return;
     }
-    auto views = f1dl::Array<modular::ContainerViewPtr>::New(nodes_.size());
-    for (size_t i = 0; i < nodes_.size(); i++) {
+    auto views = f1dl::Array<modular::ContainerViewPtr>::New(nodes_->size());
+    for (size_t i = 0; i < nodes_->size(); i++) {
       ContainerViewPtr view = ContainerView::New();
-      view->node_name = nodes_[i]->node_name;
-      view->owner = std::move(node_views_[nodes_[i]->node_name]);
-      views[i] = std::move(view);
+      view->node_name = nodes_->at(i)->node_name;
+      view->owner = std::move(node_views_[nodes_->at(i)->node_name]);
+      views->at(i) = std::move(view);
     }
     story_controller_impl_->story_shell_->AddContainer(
         container_name_, PathString(parent_module_path_), nullptr,
@@ -1801,9 +1801,9 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
   }
 
   void StartModuleFromResult(FlowToken flow, FindModulesResultPtr result) {
-    if (!result->modules.empty()) {
+    if (!result->modules->empty()) {
       // Runs the first module in story shell.
-      const auto& module_result = result->modules[0];
+      const auto& module_result = result->modules->at(0);
       const auto& manifest = module_result->manifest;
       const auto& module_url = module_result->module_id;
       const auto& create_chain_info = module_result->create_chain_info;
@@ -2472,8 +2472,8 @@ void StoryControllerImpl::UpdateStoryState(const ModuleState state) {
 StoryControllerImpl::Connection* StoryControllerImpl::FindConnection(
     const f1dl::Array<f1dl::String>& module_path) {
   f1dl::String path;
-  if (module_path.size() >= 1) {
-    f1dl::String path = module_path[module_path.size() - 1];
+  if (module_path->size() >= 1) {
+    f1dl::String path = module_path->at(module_path->size() - 1);
   }
   for (auto& c : connections_) {
     if (c.module_data->module_path.Equals(module_path)) {

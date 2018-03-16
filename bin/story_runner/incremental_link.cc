@@ -152,7 +152,7 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
                      [this, flow] { Cont1(flow, kOnChangeConnectionId); });
     } else {
       if (impl_->ApplyChange(data_.get())) {
-        CrtJsonPointer ptr = CreatePointer(impl_->doc_, data_->pointer);
+        CrtJsonPointer ptr = CreatePointer(impl_->doc_, *data_->pointer);
         impl_->ValidateSchema("LinkImpl::IncrementalChangeCall::Run", ptr,
                               data_->json);
       } else {
@@ -193,7 +193,7 @@ void LinkImpl::ReloadCall::Run() {
   new ReadAllDataCall<LinkChange>(
       &operation_queue_, impl_->page(), MakeLinkKey(impl_->link_path_),
       XdrLinkChange, [this, flow](f1dl::Array<LinkChangePtr> changes) {
-        if (changes.empty()) {
+        if (changes->empty()) {
           if (!impl_->create_link_info_.is_null() &&
               !impl_->create_link_info_->initial_data.is_null() &&
               !impl_->create_link_info_->initial_data->empty()) {
@@ -213,12 +213,12 @@ void LinkImpl::ReloadCall::Run() {
 
 void LinkImpl::Replay(f1dl::Array<LinkChangePtr> changes) {
   doc_ = CrtJsonDoc();
-  auto it1 = changes.begin();
+  auto it1 = changes->begin();
   auto it2 = pending_ops_.begin();
 
   LinkChange* change{};
   for (;;) {
-    bool it1_done = it1 == changes.end();
+    bool it1_done = it1 == changes->end();
     bool it2_done = it2 == pending_ops_.end();
 
     FXL_DCHECK(it1_done || !(*it1)->key.is_null());
@@ -265,7 +265,7 @@ void LinkImpl::Replay(f1dl::Array<LinkChangePtr> changes) {
 }
 
 bool LinkImpl::ApplyChange(LinkChange* change) {
-  CrtJsonPointer ptr = CreatePointer(doc_, change->pointer);
+  CrtJsonPointer ptr = CreatePointer(doc_, *change->pointer);
 
   switch (change->op) {
     case LinkChangeOp::SET:

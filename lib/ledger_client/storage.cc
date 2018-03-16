@@ -82,8 +82,8 @@ std::string MakeMessageQueueKey(const std::string& queue_token) {
 
 std::string EncodeModulePath(const f1dl::Array<f1dl::String>& module_path) {
   std::vector<std::string> segments;
-  segments.reserve(module_path.size());
-  for (const auto& module_path_part : module_path) {
+  segments.reserve(module_path->size());
+  for (const auto& module_path_part : *module_path) {
     segments.emplace_back(
         StringEscape(module_path_part.get(), kCharsToEscape, kEscaper));
   }
@@ -121,9 +121,9 @@ std::string MakeLinkKey(const LinkPathPtr& link_path) {
 }
 
 std::string MakeModuleKey(const f1dl::Array<f1dl::String>& module_path) {
-  FXL_DCHECK(!module_path.is_null() && module_path.size() > 0)
+  FXL_DCHECK(!module_path.is_null() && module_path->size() > 0)
       << EncodeModulePath(module_path);
-  FXL_DCHECK(module_path[0]->size() > 0) << EncodeModulePath(module_path);
+  FXL_DCHECK(module_path->at(0)->size() > 0) << EncodeModulePath(module_path);
   std::string key{kModuleKeyPrefix};
   key.append(EncodeModulePath(module_path));
   return key;

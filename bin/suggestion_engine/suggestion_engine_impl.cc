@@ -278,7 +278,7 @@ void SuggestionEngineImpl::PerformActions(
   // TODO(rosswang): If we're asked to add multiple modules, we probably
   // want to add them to the same story. We can't do that yet, but we need
   // to receive a StoryController anyway (not optional atm.).
-  for (const auto& action : actions) {
+  for (const auto& action : *actions) {
     switch (action->which()) {
       case Action::Tag::CREATE_STORY: {
         PerformCreateStoryAction(action, story_color);
@@ -316,9 +316,9 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
     auto extra_info = f1dl::Array<modular::StoryInfoExtraEntryPtr>::New(1);
     char hex_color[11];
     snprintf(hex_color, sizeof(hex_color), "0x%x", story_color);
-    extra_info[0] = modular::StoryInfoExtraEntry::New();
-    extra_info[0]->key = "color";
-    extra_info[0]->value = hex_color;
+    extra_info->at(0) = modular::StoryInfoExtraEntry::New();
+    extra_info->at(0)->key = "color";
+    extra_info->at(0)->value = hex_color;
     auto& initial_data = create_story->initial_data;
     auto& module_id = create_story->module_id;
     story_provider_->CreateStoryWithInfo(
@@ -389,7 +389,9 @@ void SuggestionEngineImpl::PerformAddModuleAction(
     const auto& story_id = add_module->story_id;
     modular::StoryControllerPtr story_controller;
     story_provider_->GetController(story_id, story_controller.NewRequest());
-    story_controller->AddModule({source_url}, module_name,
+    f1dl::Array<f1dl::String> path;
+    path.push_back(source_url);
+    story_controller->AddModule(std::move(path), module_name,
                                 add_module->daisy.Clone(),
                                 add_module->surface_relation.Clone());
   } else {

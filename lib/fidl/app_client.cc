@@ -59,9 +59,7 @@ AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
       return;
     }
     launch_info->flat_namespace = app::FlatNamespace::New();
-    launch_info->flat_namespace->paths.resize(1);
-    launch_info->flat_namespace->paths[0] = "/data";
-    launch_info->flat_namespace->directories.resize(1);
+    launch_info->flat_namespace->paths.push_back("/data");
 
     fxl::UniqueFD dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));
     if (!dir.is_valid()) {
@@ -70,8 +68,8 @@ AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
       return;
     }
 
-    launch_info->flat_namespace->directories[0] = CloneChannel(dir.get());
-    if (!launch_info->flat_namespace->directories[0]) {
+    launch_info->flat_namespace->directories.push_back(CloneChannel(dir.get()));
+    if (!launch_info->flat_namespace->directories->at(0)) {
       FXL_LOG(ERROR) << "Unable create a handle from  " << data_origin;
       return;
     }

@@ -11,7 +11,7 @@ namespace {
 
 f1dl::Array<uint8_t> ToArray(const std::string& str) {
   auto array = f1dl::Array<uint8_t>::New(str.size());
-  memcpy(array.data(), str.data(), str.size());
+  memcpy(array->data(), str.data(), str.size());
   return array;
 }
 

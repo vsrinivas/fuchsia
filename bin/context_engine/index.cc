@@ -63,7 +63,7 @@ std::set<std::string> EncodeMetadataAndType(
       if (metadata->mod->path) {
         std::ostringstream str;
         str << kModPathKey;
-        for (const auto& part : metadata->mod->path) {
+        for (const auto& part : *metadata->mod->path) {
           str << '\0' << part;
         }
         ret.insert(str.str());
@@ -77,7 +77,7 @@ std::set<std::string> EncodeMetadataAndType(
         ret.insert(str.str());
       }
       if (metadata->entity->type) {
-        for (const auto& type : metadata->entity->type) {
+        for (const auto& type : *metadata->entity->type) {
           std::ostringstream str;
           str << kEntityTypeKey << type;
           ret.insert(str.str());

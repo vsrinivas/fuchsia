@@ -48,7 +48,7 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
     if (!r.first)
       return;
     rapidjson::Document d;
-    d.Parse(r.second[0]->content->data());
+    d.Parse(r.second->at(0)->content->data());
 
     if (d.IsString()) {
       const std::string region = d.GetString();

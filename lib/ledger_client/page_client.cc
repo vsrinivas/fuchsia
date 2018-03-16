@@ -68,7 +68,7 @@ void PageClient::OnChange(ledger::PageChangePtr page,
   // According to their fidl spec, neither page nor page->changed_entries
   // should be null.
   FXL_DCHECK(page && page->changed_entries);
-  for (auto& entry : page->changed_entries) {
+  for (auto& entry : *page->changed_entries) {
     // Remove prefix maybe?
     const std::string key = to_string(entry->key);
     std::string value;
@@ -81,7 +81,7 @@ void PageClient::OnChange(ledger::PageChangePtr page,
     OnPageChange(key, value);
   }
 
-  for (auto& key : page->deleted_keys) {
+  for (auto& key : *page->deleted_keys) {
     OnPageDelete(to_string(key));
   }
 
@@ -122,8 +122,8 @@ void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
           callback(status);
           return;
         }
-        for (auto& entry : new_entries) {
-          entries->push_back(std::move(entry));
+        for (size_t i = 0; i < new_entries->size(); ++i) {
+          entries->push_back(std::move(new_entries->at(i)));
         }
         if (status == ledger::Status::OK) {
           callback(ledger::Status::OK);

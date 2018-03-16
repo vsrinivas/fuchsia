@@ -579,8 +579,8 @@ class StoryProviderImpl::DumpStateCall : Operation<std::string> {
     new ReadAllDataCall<StoryData>(
         &operation_queue_, story_provider_impl_->page(), kStoryKeyPrefix,
         XdrStoryData, [this, flow](f1dl::Array<StoryDataPtr> data) {
-          for (auto& story_data : data) {
-            DumpStoryPage(std::move(story_data), flow);
+          for (size_t i = 0; i < data->size(); ++i) {
+            DumpStoryPage(std::move(data->at(i)), flow);
           }
 
           // This needs to be the last operations on |operation_queue_| since we
@@ -826,7 +826,7 @@ void StoryProviderImpl::PreviousStories(
         f1dl::Array<f1dl::String> result;
         result.resize(0);
 
-        for (auto& story_data : data) {
+        for (auto& story_data : *data) {
           result.push_back(story_data->story_info->id);
         }
 

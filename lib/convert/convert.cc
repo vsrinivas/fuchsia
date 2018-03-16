@@ -15,7 +15,7 @@ const char kHexDigits[] = "0123456789ABCDEF";
 
 f1dl::Array<uint8_t> ExtendedStringView::ToArray() {
   f1dl::Array<uint8_t> result = f1dl::Array<uint8_t>::New(size());
-  memcpy(result.data(), data(), size());
+  memcpy(result->data(), data(), size());
   return result;
 }
 

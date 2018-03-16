@@ -85,7 +85,7 @@ void ComponentContextImpl::CreateEntityWithData(
     f1dl::Array<TypeToDataEntryPtr> type_to_data,
     const CreateEntityWithDataCallback& result) {
   std::map<std::string, std::string> copy;
-  for (const auto& it : type_to_data) {
+  for (const auto& it : *type_to_data) {
     copy[it->type] = it->data;
   }
   result(entity_provider_runner_->CreateReferenceFromData(std::move(copy)));

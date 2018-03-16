@@ -202,8 +202,7 @@ void UserRunnerImpl::InitializeUser(
 void UserRunnerImpl::InitializeLedger() {
   AppConfigPtr ledger_config = AppConfig::New();
   ledger_config->url = kLedgerAppUrl;
-  ledger_config->args = f1dl::Array<f1dl::String>::New(1);
-  ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
+  ledger_config->args.push_back(kLedgerNoMinfsWaitFlag);
 
   app::ServiceListPtr service_list = nullptr;
   if (account_) {

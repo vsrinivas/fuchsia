@@ -28,8 +28,8 @@ void ConvertRecords(const std::vector<Record>& records,
     token = convert::ToArray(records.back().timestamp);
   }
 
-  out_commits->Swap(&commits);
-  out_token->Swap(&token);
+  out_commits->swap(commits);
+  out_token->swap(token);
 }
 
 }  // namespace
@@ -114,7 +114,7 @@ void PageCloudImpl::AddCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
         }
 
         std::vector<Commit> handler_commits;
-        for (auto& commit : commits) {
+        for (auto& commit : *commits) {
           handler_commits.emplace_back(convert::ToString(commit->id),
                                        convert::ToString(commit->data));
         }

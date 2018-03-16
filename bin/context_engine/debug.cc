@@ -66,8 +66,8 @@ void ContextDebugImpl::Watch(
 }
 
 void ContextDebugImpl::DispatchOneValue(ContextDebugValuePtr value) {
-  auto values = f1dl::Array<ContextDebugValuePtr>::New(1);
-  values[0] = value.Clone();
+  f1dl::Array<ContextDebugValuePtr> values;
+  values.push_back(value.Clone());
   DispatchValues(std::move(values));
 }
 
@@ -80,8 +80,8 @@ void ContextDebugImpl::DispatchValues(
 
 void ContextDebugImpl::DispatchOneSubscription(
     ContextDebugSubscriptionPtr value) {
-  auto values = f1dl::Array<ContextDebugSubscriptionPtr>::New(1);
-  values[0] = value.Clone();
+  f1dl::Array<ContextDebugSubscriptionPtr> values;
+  values.push_back(value.Clone());
   DispatchSubscriptions(std::move(values));
 }
 

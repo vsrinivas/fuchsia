@@ -53,8 +53,8 @@ void NounTypeInferenceHelper::GetNounTypes(
     const std::function<void(std::vector<std::string>)>& result_callback) {
   if (noun_constraint->is_entity_type()) {
     result_callback(
-        std::vector<std::string>(noun_constraint->get_entity_type().begin(),
-                                 noun_constraint->get_entity_type().end()));
+        std::vector<std::string>(noun_constraint->get_entity_type()->begin(),
+                                 noun_constraint->get_entity_type()->end()));
   } else if (noun_constraint->is_json()) {
     std::vector<std::string> types;
     if (!modular::ExtractEntityTypesFromJson(noun_constraint->get_json(),
@@ -73,9 +73,9 @@ void NounTypeInferenceHelper::GetNounTypes(
     if (noun_constraint->get_link_info()->allowed_types) {
       std::vector<std::string> types(
           noun_constraint->get_link_info()
-              ->allowed_types->allowed_entity_types.begin(),
+              ->allowed_types->allowed_entity_types->begin(),
           noun_constraint->get_link_info()
-              ->allowed_types->allowed_entity_types.end());
+              ->allowed_types->allowed_entity_types->end());
       result_callback(std::move(types));
     } else if (noun_constraint->get_link_info()->content_snapshot) {
       // TODO(thatguy): See if there's an Entity reference on the Link. If so,

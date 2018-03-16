@@ -19,8 +19,8 @@ size_t GetEntrySize(size_t key_length) {
 }
 
 size_t GetInlinedEntrySize(const InlinedEntryPtr& entry) {
-  size_t key_size = kPointerSize + GetByteArraySize(entry->key.size());
-  size_t object_size = kPointerSize + GetByteArraySize(entry->value.size());
+  size_t key_size = kPointerSize + GetByteArraySize(entry->key->size());
+  size_t object_size = kPointerSize + GetByteArraySize(entry->value->size());
   return kPointerSize + kStructHeaderSize + key_size + object_size +
          f1dl::internal::Align(kEnumSize);
 }

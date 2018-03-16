@@ -87,13 +87,13 @@ class SelectedEntityFinder : ContextListener {
     auto focal_entities = TakeContextValue(result.get(), kFocalEntitiesTopic);
     auto text_selection = TakeContextValue(result.get(), kRawTextSelectionTopic);
     if (!focal_entities.first || !text_selection.first ||
-        focal_entities.second.empty() || text_selection.second.empty()) {
+        focal_entities.second->empty() || text_selection.second->empty()) {
       return;
     }
     const std::vector<EntitySpan> entities =
         EntitySpan::FromContextValues(focal_entities.second);
     const std::pair<int, int> start_and_end = GetSelectionFromJson(
-        text_selection.second[0]->content);
+        text_selection.second->at(0)->content);
     writer_->WriteEntityTopic(kSelectedEntitiesTopic,
                               GetSelectedEntities(entities, start_and_end.first,
                                                   start_and_end.second));

@@ -17,10 +17,10 @@ SuggestionPtr CreateSuggestion(const SuggestionPrototype& prototype) {
   auto suggestion = Suggestion::New();
   suggestion->uuid = prototype.suggestion_id;
   suggestion->display = prototype.proposal->display->Clone();
-  if (!prototype.proposal->on_selected.empty()) {
+  if (!prototype.proposal->on_selected->empty()) {
     // TODO(thatguy): Proposal.on_select should be single Action, not an array
     // https://fuchsia.atlassian.net/browse/MW-118
-    const auto& selected_action = prototype.proposal->on_selected[0];
+    const auto& selected_action = prototype.proposal->on_selected->at(0);
     switch (selected_action->which()) {
       case Action::Tag::FOCUS_STORY:
         suggestion->story_id = selected_action->get_focus_story()->story_id;

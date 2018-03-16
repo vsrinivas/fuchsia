@@ -241,10 +241,10 @@ class XdrContext {
 
         } else {
           value_->SetArray();
-          value_->Reserve(data->size(), allocator());
+          value_->Reserve((*data)->size(), allocator());
 
-          for (size_t i = 0; i < data->size(); ++i) {
-            Element(i).Value(&data->at(i), filter);
+          for (size_t i = 0; i < (*data)->size(); ++i) {
+            Element(i).Value(&(*data)->at(i), filter);
           }
         }
         break;
@@ -271,7 +271,7 @@ class XdrContext {
           data->resize(value_->Size());
 
           for (size_t i = 0; i < value_->Size(); ++i) {
-            Element(i).Value(&data->at(i), filter);
+            Element(i).Value(&(*data)->at(i), filter);
           }
         }
     }

@@ -74,8 +74,8 @@ void GetEntries(ledger::PageSnapshotPtr snapshot,
               callback(status, {});
               return;
             }
-            for (auto& entry : new_entries) {
-              entries.push_back(std::move(entry));
+            for (size_t i = 0; i < new_entries->size(); ++i) {
+              entries.push_back(std::move(new_entries->at(i)));
             }
             if (status == ledger::Status::OK) {
               callback(ledger::Status::OK, std::move(entries));

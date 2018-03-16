@@ -68,7 +68,7 @@ std::vector<EntitySpan> EntitiesFromJson(const std::string& json_string) {
 std::vector<EntitySpan> EntitySpan::FromContextValues(
     const f1dl::Array<ContextValuePtr>& values) {
   // TODO(travismart): Pass entities as a fidl Array, not a Json array.
-  return EntitiesFromJson(values[0]->content);
+  return EntitiesFromJson(values->at(0)->content);
 }
 
 void EntitySpan::Init(const std::string& content,

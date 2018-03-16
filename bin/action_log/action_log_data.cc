@@ -26,8 +26,8 @@ ActionLogger ActionLogData::GetActionLogger(ComponentScopePtr scope) {
     component_url = scope->get_module_scope()->url;
     story_id = scope->get_module_scope()->story_id;
     module_path.insert(module_path.begin(),
-                       scope->get_module_scope()->module_path.begin(),
-                       scope->get_module_scope()->module_path.end());
+                       scope->get_module_scope()->module_path->begin(),
+                       scope->get_module_scope()->module_path->end());
   }
 
   return [this, story_id, component_url, module_path](

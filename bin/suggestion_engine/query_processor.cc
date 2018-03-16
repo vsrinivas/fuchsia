@@ -100,8 +100,8 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
   }
 
   // Ranking currently happens as each set of proposals are added.
-  for (auto& proposal : response->proposals) {
-    AddProposal(handler_url, std::move(proposal));
+  for (size_t i = 0; i < response->proposals->size(); ++i) {
+    AddProposal(handler_url, std::move(response->proposals->at(i)));
   }
   engine_->query_suggestions_.Rank(*input_);
   // Rank includes an invalidate dispatch

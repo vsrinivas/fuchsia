@@ -52,7 +52,7 @@ size_t HandleUsed<InlinedEntry>() {
 
 // Computes the size of an Entry.
 size_t ComputeEntrySize(const EntryPtr& entry) {
-  return fidl_serialization::GetEntrySize(entry->key.size());
+  return fidl_serialization::GetEntrySize(entry->key->size());
 }
 
 // Computes the size of an InlinedEntry.
@@ -140,7 +140,7 @@ void FillEntries(
     context->handle_count += HandleUsed<EntryType>();
     if ((context->size > fidl_serialization::kMaxInlineDataSize ||
          context->handle_count > fidl_serialization::kMaxMessageHandles) &&
-        !context->entries.empty()) {
+        !context->entries->empty()) {
       context->next_token = convert::ToArray(entry.key);
       return false;
     }
@@ -180,16 +180,16 @@ void FillEntries(
                 callback(Status::IO_ERROR, nullptr, nullptr);
                 return;
               }
-              FXL_DCHECK(context->entries.size() == results.size());
+              FXL_DCHECK(context->entries->size() == results.size());
               size_t real_size = 0;
               size_t i = 0;
               for (; i < results.size(); i++) {
-                f1dl::StructPtr<EntryType>& entry_ptr = context->entries[i];
+                f1dl::StructPtr<EntryType>& entry_ptr = context->entries->at(i);
                 size_t next_token_size =
                     i + 1 >= results.size()
                         ? 0
                         : fidl_serialization::GetByteArraySize(
-                              context->entries[i + 1]->key.size());
+                              context->entries->at(i + 1)->key->size());
                 if (!results[i]) {
                   size_t entry_size = ComputeEntrySize(entry_ptr);
                   if (real_size + entry_size + next_token_size >
@@ -226,10 +226,10 @@ void FillEntries(
                 }
                 // We had to bail out early because the result would be too big
                 // otherwise.
-                context->next_token = std::move(context->entries[i]->key);
+                context->next_token = std::move(context->entries->at(i)->key);
                 context->entries.resize(i);
               }
-              if (!context->next_token.empty()) {
+              if (!context->next_token->empty()) {
                 callback(Status::PARTIAL_RESULT, std::move(context->entries),
                          std::move(context->next_token));
                 return;

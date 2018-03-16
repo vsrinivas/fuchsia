@@ -19,8 +19,8 @@ TimelineStoriesFilter::~TimelineStoriesFilter() = default;
 
 bool TimelineStoriesFilter::operator()(const Proposal& proposal) {
   // TODO(rosswang) Why can't we foreach a const f1dl::Array???
-  for (size_t i = 0; i < proposal.on_selected.size(); i++) {
-    const auto& action = proposal.on_selected[i];
+  for (size_t i = 0; i < proposal.on_selected->size(); i++) {
+    const auto& action = proposal.on_selected->at(i);
     if (action->is_create_story()) {
       const auto& create_story = action->get_create_story();
       const auto& module_url = create_story->module_id.get();

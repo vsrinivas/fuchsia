@@ -52,7 +52,7 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<f1dl::String> {
 
     // TODO(planders) Use Zac's function to generate page id (once it's ready)
     f1dl::Array<uint8_t> page_id = to_array(device_id_);
-    if (page_id.size() != 16) {
+    if (page_id->size() != 16) {
       // WARNING: HACK! Ledger page ids are 16 bytes but often we use non-16
       // byte page ids. This makes sure that the page id will be 16 bytes.
       page_id.resize(16);

@@ -42,15 +42,15 @@ void ContextHandler::Watch(const std::function<void()>& watcher) {
 
 void ContextHandler::OnContextUpdate(maxwell::ContextUpdatePtr update) {
   state_ = f1dl::Array<StoryContextEntryPtr>();
-  for (const auto& it : update->values) {
-    if (it->value.empty())
+  for (const auto& it : *update->values) {
+    if (it->value->empty())
       continue;
     // HACK(thatguy): It is possible to have more than one value come back per
     // ContextSelector. Use just the first value, as that will at least be
     // deterministically the first until the value is deleted.
     auto entry = StoryContextEntry::New();
     entry->key = it->key;
-    entry->value = it->value[0]->content;
+    entry->value = it->value->at(0)->content;
     state_.push_back(std::move(entry));
   }
 

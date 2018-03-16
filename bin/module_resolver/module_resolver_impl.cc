@@ -115,13 +115,13 @@ class ModuleResolverImpl::FindModulesCall
     // For each noun in the ResolverQuery, try to find Modules that provide the
     // types in the noun as constraints.
     if (query_->noun_constraints.is_null() ||
-        query_->noun_constraints.size() == 0) {
+        query_->noun_constraints->size() == 0) {
       Finally(flow);
       return;
     }
 
-    num_nouns_countdown_ = query_->noun_constraints.size();
-    for (const auto& noun_entry : query_->noun_constraints) {
+    num_nouns_countdown_ = query_->noun_constraints->size();
+    for (const auto& noun_entry : *query_->noun_constraints) {
       const auto& noun_name = noun_entry->key;
       const auto& noun_constraints = noun_entry->constraint;
 
@@ -233,8 +233,8 @@ class ModuleResolverImpl::FindModulesCall
         // interchangeable), so the result set may contain multiple entries for
         // the same candidate.
         auto new_results = MatchQueryNounsToEntryNounsByType(entry);
-        for (auto& result : new_results) {
-          result_->modules.push_back(std::move(result));
+        for (size_t i = 0; i < new_results->size(); ++i) {
+          result_->modules.push_back(std::move(new_results->at(i)));
         }
 
       } else {
@@ -258,7 +258,7 @@ class ModuleResolverImpl::FindModulesCall
     f1dl::Array<modular::ModuleResolverResultPtr> modules;
     modules.resize(0);
     // TODO(MI4-866): Handle entries with optional nouns.
-    if (query_->noun_constraints.size() < entry->noun_constraints.size()) {
+    if (query_->noun_constraints->size() < entry->noun_constraints->size()) {
       return modules;
     }
 
@@ -290,9 +290,9 @@ class ModuleResolverImpl::FindModulesCall
   std::map<std::string, std::vector<std::string>>
   MapEntryNounsToCompatibleQueryNouns(const modular::ModuleManifestPtr& entry) {
     std::map<std::string, std::vector<std::string>> entry_noun_to_query_nouns;
-    for (const auto& entry_noun : entry->noun_constraints) {
+    for (const auto& entry_noun : *entry->noun_constraints) {
       std::vector<std::string> matching_query_nouns;
-      for (const auto& query_noun : query_->noun_constraints) {
+      for (const auto& query_noun : *query_->noun_constraints) {
         std::vector<std::string> entry_noun_types = ToArray(entry_noun->types);
         if (DoTypesIntersect(noun_types_cache_[query_noun->key],
                              entry_noun_types)) {
@@ -390,7 +390,7 @@ class ModuleResolverImpl::FindModulesCall
 
   std::vector<std::string> ToArray(f1dl::Array<f1dl::String>& values) {
     std::vector<std::string> ret;
-    for (f1dl::String str : values.storage()) {
+    for (f1dl::String str : *values) {
       ret.push_back(str.get());
     }
     return ret;
@@ -407,7 +407,7 @@ class ModuleResolverImpl::FindModulesCall
       std::map<std::string, std::string> noun_mapping = {}) {
     result->create_chain_info = modular::CreateChainInfo::New();
     auto& create_chain_info = result->create_chain_info;  // For convenience.
-    for (const auto& query_noun : query->noun_constraints) {
+    for (const auto& query_noun : *query->noun_constraints) {
       const auto& noun = query_noun->constraint;
       std::string name = query_noun->key;
       auto it = noun_mapping.find(query_noun->key);
@@ -453,10 +453,6 @@ class ModuleResolverImpl::FindModulesCall
 
   modular::FindModulesResultPtr HandleUrlQuery(
       const modular::ResolverQueryPtr& query) {
-    auto result = modular::FindModulesResult::New();
-
-    result->modules.resize(1);
-
     auto mod_result = modular::ModuleResolverResult::New();
     mod_result->module_id = query->url;
     for (const auto& iter : module_resolver_impl_->entries_) {
@@ -467,7 +463,8 @@ class ModuleResolverImpl::FindModulesCall
 
     CopyNounsToModuleResolverResult(query, mod_result.get());
 
-    result->modules[0] = std::move(mod_result);
+    auto result = modular::FindModulesResult::New();
+    result->modules.push_back(std::move(mod_result));
     return result;
   }
 
@@ -560,7 +557,7 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
     }
   }
 
-  if (proposals.size() > 10) {
+  if (proposals->size() > 10) {
     proposals.resize(10);
   }
 
@@ -606,8 +603,8 @@ void ModuleResolverImpl::OnNewManifestEntry(
   const auto& entry = ret.first->second;
   verb_to_entries_[entry->verb].insert(id);
 
-  for (const auto& constraint : entry->noun_constraints) {
-    for (const auto& type : constraint->types) {
+  for (const auto& constraint : *entry->noun_constraints) {
+    for (const auto& type : *constraint->types) {
       noun_type_and_name_to_entries_[std::make_pair(type, constraint->name)]
           .insert(id);
       noun_type_to_entries_[type].insert(id);
@@ -627,8 +624,8 @@ void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& source_name,
   const auto& entry = it->second;
   verb_to_entries_[entry->verb].erase(id);
 
-  for (const auto& constraint : entry->noun_constraints) {
-    for (const auto& type : constraint->types) {
+  for (const auto& constraint : *entry->noun_constraints) {
+    for (const auto& type : *constraint->types) {
       noun_type_and_name_to_entries_[std::make_pair(type, constraint->name)]
           .erase(id);
       noun_type_to_entries_[type].erase(id);

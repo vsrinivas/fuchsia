@@ -152,8 +152,8 @@ void ComputePageChange(
       callback(PageUtils::ConvertStatus(status), std::make_pair(nullptr, ""));
       return;
     }
-    if (context->page_change->changed_entries.empty()) {
-      if (context->page_change->deleted_keys.empty()) {
+    if (context->page_change->changed_entries->empty()) {
+      if (context->page_change->deleted_keys->empty()) {
         callback(Status::OK, std::make_pair(nullptr, ""));
       } else {
         callback(Status::OK,
@@ -178,9 +178,9 @@ void ComputePageChange(
         return;
       }
       FXL_DCHECK(results.size() ==
-                 context->page_change->changed_entries.size());
+                 context->page_change->changed_entries->size());
       for (size_t i = 0; i < results.size(); i++) {
-        context->page_change->changed_entries[i]->value =
+        context->page_change->changed_entries->at(i)->value =
             std::move(results[i]).ToTransport();
       }
       callback(Status::OK, std::make_pair(std::move(context->page_change),
@@ -279,7 +279,7 @@ void ComputeThreeWayDiff(
       callback(PageUtils::ConvertStatus(status), std::make_pair(nullptr, ""));
       return;
     }
-    if (context->changes.empty()) {
+    if (context->changes->empty()) {
       callback(Status::OK, std::make_pair(nullptr, ""));
       return;
     }
@@ -299,18 +299,18 @@ void ComputeThreeWayDiff(
         callback(status, std::make_pair(nullptr, ""));
         return;
       }
-      FXL_DCHECK(results.size() == 3 * context->changes.size());
-      for (size_t i = 0; i < context->changes.size(); i++) {
+      FXL_DCHECK(results.size() == 3 * context->changes->size());
+      for (size_t i = 0; i < context->changes->size(); i++) {
         if (results[3 * i]) {
-          context->changes[i]->base->value =
+          context->changes->at(i)->base->value =
               std::move(results[3 * i]).ToTransport();
         }
         if (results[3 * i + 1]) {
-          context->changes[i]->left->value =
+          context->changes->at(i)->left->value =
               std::move(results[3 * i + 1]).ToTransport();
         }
         if (results[3 * i + 2]) {
-          context->changes[i]->right->value =
+          context->changes->at(i)->right->value =
               std::move(results[3 * i + 2]).ToTransport();
         }
       }
