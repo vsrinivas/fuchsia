@@ -20,7 +20,7 @@ enum AnnoyanceType {
 // Information for the main image of the Suggestion.
 struct SuggestionDisplayImage {
   // The image as a vmo.
-  scenic.EncodedImage image;
+  ui.gfx.EncodedImage image;
 
   // Information about the content contained in the image
   SuggestionImageType image_type;
