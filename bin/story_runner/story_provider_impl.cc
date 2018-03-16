@@ -645,12 +645,16 @@ StoryProviderImpl::StoryProviderImpl(
       module_resolver_(module_resolver),
       context_handler_(intelligence_services),
       focus_provider_(std::move(focus_provider)),
-      focus_watcher_binding_(this) {
+      focus_watcher_binding_(this),
+      weak_factory_(this) {
   focus_provider_->Watch(focus_watcher_binding_.NewBinding());
   context_handler_.Watch([this] { OnContextChange(); });
   context_handler_.SelectTopics({kStoryImportanceContext});
   if (!test_) {
-    LoadStoryShell();
+    // As an optimization, since app startup time is long, we optimistically
+    // load a story shell instance even if there are no stories that need it
+    // yet. This can reduce the time to first frame.
+    MaybeLoadStoryShellDelayed();
   }
 }
 
@@ -694,9 +698,7 @@ void StoryProviderImpl::Duplicate(
 
 std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
     f1dl::InterfaceRequest<mozart::ViewOwner> request) {
-  if (!preloaded_story_shell_) {
-    LoadStoryShell();
-  }
+  MaybeLoadStoryShell();
 
   auto preloaded_story_shell = std::move(preloaded_story_shell_);
   auto app_client = std::move(preloaded_story_shell->story_shell_app);
@@ -706,15 +708,33 @@ std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
 
   // Kickoff another StoryShell, to make it faster for next story. We optimize
   // even further by delaying the loading of the next story shell instance by
-  // doing that on the operation queue.
+  // waiting a few seconds.
   if (!test_) {
-    new SyncCall(&operation_queue_, [this] { LoadStoryShell(); });
+    MaybeLoadStoryShellDelayed();
   }
 
   return app_client;
 }
 
-void StoryProviderImpl::LoadStoryShell() {
+void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
+  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+      [weak_this = weak_factory_.GetWeakPtr()] {
+        if (weak_this) {
+          new SyncCall(&weak_this->operation_queue_, [weak_this] {
+            if (weak_this) {
+              weak_this->MaybeLoadStoryShell();
+            }
+          });
+        }
+      },
+      fxl::TimeDelta::FromSeconds(5));
+}
+
+void StoryProviderImpl::MaybeLoadStoryShell() {
+  if (preloaded_story_shell_) {
+    return;
+  }
+
   auto story_shell_app = std::make_unique<AppClient<Lifecycle>>(
       user_scope_->GetLauncher(), story_shell_.Clone());
 

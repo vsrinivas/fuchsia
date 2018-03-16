@@ -177,7 +177,9 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   StoryContextLogPtr MakeLogEntry(StorySignal signal);
 
-  void LoadStoryShell();
+  void MaybeLoadStoryShell();
+
+  void MaybeLoadStoryShellDelayed();
 
   Scope* const user_scope_;
 
@@ -258,6 +260,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // it's a per story operation even if it affects the per story key in the root
   // page, and then the update of story info is bounded by the outer operation.
   OperationQueue operation_queue_;
+
+  fxl::WeakPtrFactory<StoryProviderImpl> weak_factory_;
 
   // Operations implemented here.
   class MutateStoryDataCall;
