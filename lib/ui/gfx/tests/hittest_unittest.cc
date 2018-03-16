@@ -59,48 +59,48 @@ class HitTestTest : public SessionTest {
   void SetUp() override {
     SessionTest::SetUp();
 
-    Apply(scenic_lib::NewCreateRectangleOp(20, 8.f, 8.f));
+    Apply(scenic_lib::NewCreateRectangleCommand(20, 8.f, 8.f));
 
-    Apply(scenic_lib::NewCreateEntityNodeOp(1));
+    Apply(scenic_lib::NewCreateEntityNodeCommand(1));
 
-    Apply(scenic_lib::NewCreateEntityNodeOp(2));
-    Apply(scenic_lib::NewSetTagOp(2, 100));
-    Apply(scenic_lib::NewAddChildOp(1, 2));
+    Apply(scenic_lib::NewCreateEntityNodeCommand(2));
+    Apply(scenic_lib::NewSetTagCommand(2, 100));
+    Apply(scenic_lib::NewAddChildCommand(1, 2));
 
-    Apply(scenic_lib::NewCreateEntityNodeOp(3));
-    Apply(scenic_lib::NewSetTagOp(3, 25));
-    Apply(scenic_lib::NewSetTranslationOp(3, (float[3]){4.f, 4.f, 0.f}));
-    Apply(scenic_lib::NewAddChildOp(2, 3));
+    Apply(scenic_lib::NewCreateEntityNodeCommand(3));
+    Apply(scenic_lib::NewSetTagCommand(3, 25));
+    Apply(scenic_lib::NewSetTranslationCommand(3, (float[3]){4.f, 4.f, 0.f}));
+    Apply(scenic_lib::NewAddChildCommand(2, 3));
 
-    Apply(scenic_lib::NewCreateShapeNodeOp(4));
-    Apply(scenic_lib::NewSetTagOp(4, 10));
-    Apply(scenic_lib::NewSetShapeOp(4, 20));
-    Apply(scenic_lib::NewSetTranslationOp(4, (float[3]){0.f, 0.f, 2.f}));
-    Apply(scenic_lib::NewAddChildOp(3, 4));
+    Apply(scenic_lib::NewCreateShapeNodeCommand(4));
+    Apply(scenic_lib::NewSetTagCommand(4, 10));
+    Apply(scenic_lib::NewSetShapeCommand(4, 20));
+    Apply(scenic_lib::NewSetTranslationCommand(4, (float[3]){0.f, 0.f, 2.f}));
+    Apply(scenic_lib::NewAddChildCommand(3, 4));
 
-    Apply(scenic_lib::NewCreateEntityNodeOp(5));
-    Apply(scenic_lib::NewSetTagOp(5, 20));
-    Apply(scenic_lib::NewSetTranslationOp(5, (float[3]){5.f, 5.f, 1.f}));
-    Apply(scenic_lib::NewAddChildOp(3, 5));
+    Apply(scenic_lib::NewCreateEntityNodeCommand(5));
+    Apply(scenic_lib::NewSetTagCommand(5, 20));
+    Apply(scenic_lib::NewSetTranslationCommand(5, (float[3]){5.f, 5.f, 1.f}));
+    Apply(scenic_lib::NewAddChildCommand(3, 5));
 
-    Apply(scenic_lib::NewCreateShapeNodeOp(6));
-    Apply(scenic_lib::NewSetShapeOp(6, 20));
-    Apply(scenic_lib::NewAddChildOp(5, 6));
+    Apply(scenic_lib::NewCreateShapeNodeCommand(6));
+    Apply(scenic_lib::NewSetShapeCommand(6, 20));
+    Apply(scenic_lib::NewAddChildCommand(5, 6));
 
-    Apply(scenic_lib::NewCreateEntityNodeOp(7));
-    Apply(scenic_lib::NewSetTagOp(7, 35));
-    Apply(scenic_lib::NewSetTranslationOp(7, (float[3]){10.f, 0.f, 1.f}));
-    Apply(scenic_lib::NewAddChildOp(2, 7));
+    Apply(scenic_lib::NewCreateEntityNodeCommand(7));
+    Apply(scenic_lib::NewSetTagCommand(7, 35));
+    Apply(scenic_lib::NewSetTranslationCommand(7, (float[3]){10.f, 0.f, 1.f}));
+    Apply(scenic_lib::NewAddChildCommand(2, 7));
 
-    Apply(scenic_lib::NewCreateShapeNodeOp(8));
-    Apply(scenic_lib::NewSetTagOp(8, 30));
-    Apply(scenic_lib::NewSetShapeOp(8, 20));
-    Apply(scenic_lib::NewSetTranslationOp(8, (float[3]){4.f, 4.f, 0.f}));
-    Apply(scenic_lib::NewAddChildOp(7, 8));
+    Apply(scenic_lib::NewCreateShapeNodeCommand(8));
+    Apply(scenic_lib::NewSetTagCommand(8, 30));
+    Apply(scenic_lib::NewSetShapeCommand(8, 20));
+    Apply(scenic_lib::NewSetTranslationCommand(8, (float[3]){4.f, 4.f, 0.f}));
+    Apply(scenic_lib::NewAddChildCommand(7, 8));
 
-    Apply(scenic_lib::NewCreateEntityNodeOp(9));
-    Apply(scenic_lib::NewSetTagOp(9, 1));
-    Apply(scenic_lib::NewAddChildOp(1, 9));
+    Apply(scenic_lib::NewCreateEntityNodeCommand(9));
+    Apply(scenic_lib::NewSetTagCommand(9, 1));
+    Apply(scenic_lib::NewAddChildCommand(1, 9));
   }
 
  protected:
@@ -117,20 +117,20 @@ class HitTestTest : public SessionTest {
                   const vec3& ray_direction,
                   std::vector<ExpectedHit> expected_hits,
                   bool expected_null = false) {
-    scenic::vec3 wrapped_ray_origin;
+    ui::gfx::vec3 wrapped_ray_origin;
     wrapped_ray_origin.x = ray_origin.x;
     wrapped_ray_origin.y = ray_origin.y;
     wrapped_ray_origin.z = ray_origin.z;
 
-    scenic::vec3 wrapped_ray_direction;
+    ui::gfx::vec3 wrapped_ray_direction;
     wrapped_ray_direction.x = ray_direction.x;
     wrapped_ray_direction.y = ray_direction.y;
     wrapped_ray_direction.z = ray_direction.z;
 
-    f1dl::Array<scenic::HitPtr> actual_hits;
+    f1dl::Array<ui::gfx::HitPtr> actual_hits;
     session_->HitTest(node_id, wrapped_ray_origin.Clone(),
                       wrapped_ray_direction.Clone(),
-                      [&actual_hits](f1dl::Array<scenic::HitPtr> hits) {
+                      [&actual_hits](f1dl::Array<ui::gfx::HitPtr> hits) {
                         actual_hits = std::move(hits);
                       });
 
@@ -252,8 +252,8 @@ TEST_F(HitTestTest, HitBoth20And30FromNode1) {
 }
 
 TEST_F(HitTestTest, SuppressNode25FromNode1) {
-  Apply(scenic_lib::NewSetHitTestBehaviorOp(
-      3, scenic::HitTestBehavior::kSuppress));
+  Apply(scenic_lib::NewSetHitTestBehaviorCommand(
+      3, ui::gfx::HitTestBehavior::kSuppress));
 
   // While we would have hit 20 and 25, we suppressed node 3 so neither appears.
   ExpectHits(1, vec3(12.f, 6.f, 10.f), kDownVector,
@@ -267,20 +267,20 @@ TEST_F(HitTestTest, Clipping) {
   // to a rectangle added as a part in 25, which contains 10.
   // We move this part around and turn clipping on and off to see what happens
   // when the clip is intersected or not.
-  Apply(scenic_lib::NewCreateEntityNodeOp(11));
-  Apply(scenic_lib::NewAddPartOp(3, 11));
-  Apply(scenic_lib::NewCreateShapeNodeOp(12));
-  Apply(scenic_lib::NewSetShapeOp(12, 20));
-  Apply(scenic_lib::NewAddChildOp(11, 12));
+  Apply(scenic_lib::NewCreateEntityNodeCommand(11));
+  Apply(scenic_lib::NewAddPartCommand(3, 11));
+  Apply(scenic_lib::NewCreateShapeNodeCommand(12));
+  Apply(scenic_lib::NewSetShapeCommand(12, 20));
+  Apply(scenic_lib::NewAddChildCommand(11, 12));
 
   // Initially, position the clip shape someplace far away from the content.
   // This causes 10 to be outside of its containing clip region.
-  Apply(scenic_lib::NewSetTranslationOp(11, (float[3]){20.f, 20.f, 0.f}));
-  Apply(scenic_lib::NewSetClipOp(3, 0, true));
+  Apply(scenic_lib::NewSetTranslationCommand(11, (float[3]){20.f, 20.f, 0.f}));
+  Apply(scenic_lib::NewSetClipCommand(3, 0, true));
   ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector, {});
 
   // Now disable clipping and try again.
-  Apply(scenic_lib::NewSetClipOp(3, 0, false));
+  Apply(scenic_lib::NewSetClipCommand(3, 0, false));
   ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector,
              {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},
@@ -288,8 +288,8 @@ TEST_F(HitTestTest, Clipping) {
 
   // Move the clip shape so it covers the part of 10 that we're hitting
   // and reenable clipping.
-  Apply(scenic_lib::NewSetTranslationOp(11, (float[3]){-4.f, -4.f, 0.f}));
-  Apply(scenic_lib::NewSetClipOp(3, 0, true));
+  Apply(scenic_lib::NewSetTranslationCommand(11, (float[3]){-4.f, -4.f, 0.f}));
+  Apply(scenic_lib::NewSetClipCommand(3, 0, true));
   ExpectHits(1, vec3(0.f, 0.f, 10.f), kDownVector,
              {{.tag = 10, .tx = -4.f, .ty = -4.f, .tz = -2.f, .d = 8.f},
               {.tag = 25, .tx = -4.f, .ty = -4.f, .tz = 0.f, .d = 8.f},

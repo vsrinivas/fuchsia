@@ -159,16 +159,16 @@ void Compositor::DrawLayer(const escher::FramePtr& frame,
   // Set the renderer's shadow mode, and generate a shadow map if necessary.
   escher::ShadowMapPtr shadow_map;
   switch (renderer->shadow_technique()) {
-    case scenic::ShadowTechnique::UNSHADOWED:
+    case ui::gfx::ShadowTechnique::UNSHADOWED:
       escher_renderer->set_shadow_type(escher::PaperRendererShadowType::kNone);
       break;
-    case scenic::ShadowTechnique::SCREEN_SPACE:
+    case ui::gfx::ShadowTechnique::SCREEN_SPACE:
       escher_renderer->set_shadow_type(escher::PaperRendererShadowType::kSsdo);
       break;
-    case scenic::ShadowTechnique::MOMENT_SHADOW_MAP:
+    case ui::gfx::ShadowTechnique::MOMENT_SHADOW_MAP:
       FXL_DLOG(WARNING) << "Moment shadow maps not implemented";
     // Fallthrough to regular shadow maps.
-    case scenic::ShadowTechnique::SHADOW_MAP:
+    case ui::gfx::ShadowTechnique::SHADOW_MAP:
       escher_renderer->set_shadow_type(
           escher::PaperRendererShadowType::kShadowMap);
 

@@ -60,12 +60,12 @@ class Resource {
 // TODO(MZ-268): Make this class final, and add public move constructor.
 class Memory : public Resource {
  public:
-  Memory(Session* session, zx::vmo vmo, scenic::MemoryType memory_type);
+  Memory(Session* session, zx::vmo vmo, ui::gfx::MemoryType memory_type);
   ~Memory();
 
   // Gets the underlying VMO's memory type, indicating whether it represents
   // host or GPU memory.
-  scenic::MemoryType memory_type() const { return memory_type_; }
+  ui::gfx::MemoryType memory_type() const { return memory_type_; }
 
  protected:
   Memory(Memory&& moved);
@@ -73,7 +73,7 @@ class Memory : public Resource {
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Memory);
 
-  scenic::MemoryType const memory_type_;
+  ui::gfx::MemoryType const memory_type_;
 };
 
 // Represents an abstract shape resource in a session.
@@ -132,28 +132,28 @@ class RoundedRectangle final : public Shape {
 class Image : public Resource {
  public:
   // Creates an image resource bound to a session.
-  Image(const Memory& memory, off_t memory_offset, scenic::ImageInfoPtr info);
+  Image(const Memory& memory, off_t memory_offset, ui::gfx::ImageInfoPtr info);
   Image(Session* session,
         uint32_t memory_id,
         off_t memory_offset,
-        scenic::ImageInfoPtr info);
+        ui::gfx::ImageInfoPtr info);
   ~Image();
 
   // Returns the number of bytes needed to represent an image.
-  static size_t ComputeSize(const scenic::ImageInfo& image_info);
+  static size_t ComputeSize(const ui::gfx::ImageInfo& image_info);
 
   // Gets the byte offset of the image within its memory resource.
   off_t memory_offset() const { return memory_offset_; }
 
   // Gets information about the image's layout.
-  const scenic::ImageInfo& info() const { return info_; }
+  const ui::gfx::ImageInfo& info() const { return info_; }
 
  protected:
   Image(Image&& moved);
 
  private:
   off_t const memory_offset_;
-  scenic::ImageInfo const info_;
+  ui::gfx::ImageInfo const info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Image);
 };
@@ -181,13 +181,13 @@ class Mesh final : public Shape {
   Mesh(Mesh&& moved);
   ~Mesh();
 
-  // These arguments are documented in ops.fidl; see BindMeshBuffersOp.
+  // These arguments are documented in commands.fidl; see BindMeshBuffersCommand.
   void BindBuffers(const Buffer& index_buffer,
-                   scenic::MeshIndexFormat index_format,
+                   ui::gfx::MeshIndexFormat index_format,
                    uint64_t index_offset,
                    uint32_t index_count,
                    const Buffer& vertex_buffer,
-                   scenic::MeshVertexFormatPtr vertex_format,
+                   ui::gfx::MeshVertexFormatPtr vertex_format,
                    uint64_t vertex_offset,
                    uint32_t vertex_count,
                    const float bounding_box_min[3],
@@ -245,7 +245,7 @@ class Node : public Resource {
   void SetTag(uint32_t tag_value);
 
   // Sets the node's hit test behavior.
-  void SetHitTestBehavior(scenic::HitTestBehavior hit_test_behavior);
+  void SetHitTestBehavior(ui::gfx::HitTestBehavior hit_test_behavior);
 
   // Detaches the node from its parent.
   void Detach();
@@ -368,7 +368,7 @@ class OpacityNode final : public ContainerNode {
 // A value that can be used in place of a constant value.
 class Variable final : public Resource {
  public:
-  explicit Variable(Session* session, scenic::ValuePtr initial_value);
+  explicit Variable(Session* session, ui::gfx::ValuePtr initial_value);
   Variable(Variable&& moved);
   ~Variable();
 
@@ -480,10 +480,10 @@ class Renderer final : public Resource {
   void SetCamera(const Camera& camera) { SetCamera(camera.id()); }
   void SetCamera(uint32_t camera_id);
 
-  void SetParam(scenic::RendererParamPtr param);
+  void SetParam(ui::gfx::RendererParamPtr param);
 
   // Convenient wrapper for SetParam().
-  void SetShadowTechnique(scenic::ShadowTechnique technique);
+  void SetShadowTechnique(ui::gfx::ShadowTechnique technique);
 
   // Set whether clipping is disabled for this renderer.
   // NOTE: disabling clipping only has a visual effect; hit-testing is not

@@ -12,7 +12,7 @@ namespace escher {
 namespace hmd {
 
 // Uses a simple compute shader to latch a pose out of the pose buffer.
-// See //garnet/public/lib/ui/gfx/fidl/ops.fidl for details on pose buffer.
+// public/lib/ui/gfx/fidl/commands.fidl for details on pose buffer.
 class PoseBufferLatchingShader {
  public:
   PoseBufferLatchingShader(Escher* escher);
@@ -29,7 +29,7 @@ class PoseBufferLatchingShader {
   // }
   //
   // For details on pose buffers and the layout of the Pose struct see
-  // //garnet/public/lib/ui/gfx/fidl/ops.fidl
+  // //garnet/public/lib/ui/gfx/fidl/commands.fidl
   BufferPtr LatchPose(const FramePtr& frame,
                       const Camera& camera,
                       PoseBuffer pose_buffer,

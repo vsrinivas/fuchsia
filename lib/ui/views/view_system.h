@@ -15,8 +15,7 @@ class ViewSystem : public System {
  public:
   static constexpr TypeId kTypeId = kViews;
 
-  explicit ViewSystem(SystemContext context,
-                      scenic::gfx::ScenicSystem* scenic);
+  explicit ViewSystem(SystemContext context, scenic::gfx::ScenicSystem* scenic);
   ~ViewSystem() override;
 
   std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(

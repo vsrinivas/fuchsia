@@ -75,7 +75,7 @@ GuestView::GuestView(
   image_info_.width = kDisplayWidth;
   image_info_.height = kDisplayHeight;
   image_info_.stride = kDisplayWidth * 4;
-  image_info_.pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
+  image_info_.pixel_format = ui::gfx::ImageInfo::PixelFormat::BGRA_8;
 
   // Allocate a framebuffer and attach it as a GPU scanout.
   memory_ = fbl::make_unique<scenic_lib::HostMemory>(

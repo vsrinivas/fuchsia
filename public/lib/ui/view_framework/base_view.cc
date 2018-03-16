@@ -45,7 +45,7 @@ BaseView::BaseView(ViewManagerPtr view_manager,
 
   session_.set_event_handler(
       std::bind(&BaseView::HandleSessionEvents, this, std::placeholders::_1));
-  parent_node_.SetEventMask(scenic::kMetricsEventMask);
+  parent_node_.SetEventMask(ui::gfx::kMetricsEventMask);
 }
 
 BaseView::~BaseView() = default;
@@ -114,10 +114,10 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
 }
 
 void BaseView::HandleSessionEvents(f1dl::Array<ui::EventPtr> events) {
-  scenic::Metrics* new_metrics = nullptr;
+  ui::gfx::Metrics* new_metrics = nullptr;
   for (const auto& event : events) {
-    if (event->is_scenic()) {
-      const scenic::EventPtr& scenic_event = event->get_scenic();
+    if (event->is_gfx()) {
+      const ui::gfx::EventPtr& scenic_event = event->get_gfx();
       if (scenic_event->is_metrics() &&
           scenic_event->get_metrics()->node_id == parent_node_.id()) {
         new_metrics = scenic_event->get_metrics()->metrics.get();

@@ -62,7 +62,7 @@ class GuestView : public mozart::BaseView {
 
   scenic_lib::ShapeNode background_node_;
   scenic_lib::Material material_;
-  scenic::ImageInfo image_info_;
+  ui::gfx::ImageInfo image_info_;
   fbl::unique_ptr<scenic_lib::HostMemory> memory_;
 
   machina::InputDispatcher* input_dispatcher_;

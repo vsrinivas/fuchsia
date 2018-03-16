@@ -4,7 +4,7 @@
 
 module sketchy;
 
-// Specifies the type of a resource created via CreateResourceOp, along with
+// Specifies the type of a resource created via CreateResourceCommand, along with
 // any other required data.
 union ResourceArgs {
   Stroke stroke;
@@ -25,7 +25,7 @@ union ResourceArgs {
 // SetPath or Begin/Extend/FinishStroke) since it was created, or the last time
 // that Clear was called.
 //
-// Ops:
+// Commands:
 // - ClearStroke
 // - SetStrokePath
 // - SetStrokeStyle
@@ -37,14 +37,14 @@ struct Stroke {
 };
 
 // A stroke-group is a container of strokes, which can be inserted into a Scenic
-// scene-graph by importing adding it as a child of an imported |scenic.Node|.
+// scene-graph by importing adding it as a child of an imported |ui.gfx.Node|.
 //
-// Ops:
+// Commands:
 // - ClearGroup
 // - AddStroke
 // - RemoveStroke
-// - scenic.Detach
-// - scenic.AddChild (as arg)
+// - ui.gfx.Detach
+// - ui.gfx.AddChild (as arg)
 struct StrokeGroup {
 };
 
@@ -52,7 +52,7 @@ struct StrokeGroup {
 // A pen handles user input to create a path for a stroke.
 // TODO(MZ-246): expose access to stroke-fitter parameters.
 //
-// Ops:
+// Commands:
 // - BeginStroke
 // - ExtendStroke
 // - FinishStroke
@@ -63,7 +63,7 @@ struct Pen {
 
 // The classic Escher Sketcy Demo wobbly style that you know and love.
 //
-// Ops:
+// Commands:
 // - SetPenStyle (as arg).
 // - SetStrokeStyle (as arg).
 struct WobblyStyle {
@@ -82,7 +82,7 @@ struct WobblyStyle {
 // proportionally to the arc-length of the stroke.  An example use-case is a
 // to visualize the frequency spectrum of an audio signal.
 //
-// Ops:
+// Commands:
 // - SetPenStyle (as arg)
 // - SetStrokeStyle (as arg).
 struct ExplicitWidthStyle {

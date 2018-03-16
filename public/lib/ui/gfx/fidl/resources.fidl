@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module scenic;
+module ui.gfx;
 
 import "lib/ui/gfx/fidl/nodes.fidl";
 import "lib/ui/gfx/fidl/shapes.fidl";
@@ -54,7 +54,7 @@ union ResourceArgs {
 };
 
 struct ImagePipeArgs {
-  scenic.ImagePipe& image_pipe_request;
+  ui.gfx.ImagePipe& image_pipe_request;
 };
 
 // |Memory| is a |Resource| that wraps a client-provided Zircon vmo to register
@@ -66,13 +66,13 @@ struct MemoryArgs {
 
   // The type of memory stored in the VMO, namely whether it's GPU memory or
   // host memory.
-  scenic.MemoryType memory_type;
+  ui.gfx.MemoryType memory_type;
 };
 
 // An image mapped to a range of a |Memory| resource.
 // TODO: more precise and extensive docs.
 struct ImageArgs {
-  scenic.ImageInfo info;
+  ui.gfx.ImageInfo info;
 
   uint32 memory_id;      // id of a |Memory| resource
   uint32 memory_offset;  // byte offset of image within |Memory| resource
@@ -93,7 +93,7 @@ struct DisplayCompositorArgs {
 // An ImagePipeCompositor draws its attached |LayerStack| into an image that is
 // presented on an image-pipe.
 struct ImagePipeCompositorArgs {
-  scenic.ImagePipe target;
+  ui.gfx.ImagePipe target;
 };
 
 // A LayerStack is a stack of layers that are attached to a Compositor, which
@@ -101,12 +101,12 @@ struct ImagePipeCompositorArgs {
 // of drawing them in that order: it may apply any optimizations that don't
 // affect the output).
 //
-// Supported operations:
+// Supported commands:
 // - AddLayer
 struct LayerStackArgs {
 };
 
-// Supported operations:
+// Supported commands:
 // - Detach
 // - SetCamera
 // - SetColor
@@ -123,16 +123,16 @@ struct LayerArgs {
 
 
 // A Scene is the root of a scene-graph, and defines the rendering environment
-// (lighting, etc.) for the tree of nodes beneath it.  The following operations
-// may be  applied to a Scene (see ops.fidl):
+// (lighting, etc.) for the tree of nodes beneath it.  The following commands
+// may be  applied to a Scene (public/lib/ui/gfx/fidl/commands.fidl):
 //   - Add/RemoveLight
 //   - AddChild
 struct SceneArgs {
 };
 
 // A Camera is used to render a Scene from a particular Viewpoint.  This is
-// achieved by setting a Renderer to use the camera.  The following operations
-// may be applied to a Camera (see ops.fidl):
+// achieved by setting a Renderer to use the camera.  The following commands
+// may be applied to a Camera (public/lib/ui/gfx/fidl/commands.fidl):
 //   - SetTransform
 //   - SetCameraProjection
 struct CameraArgs {
@@ -140,8 +140,8 @@ struct CameraArgs {
   uint32 scene_id;
 };
 
-// A Renderer renders a Scene via a Camera.  The following operations may be
-// applied to a Renderer (see ops.fidl):
+// A Renderer renders a Scene via a Camera.  The following commands may be
+// applied to a Renderer (public/lib/ui/gfx/fidl/commands.fidl):
 //   - SetCamera
 //   - SetRendererParam
 struct RendererArgs {
@@ -150,7 +150,7 @@ struct RendererArgs {
 // An AmbientLight is a Light that is is assumed to be everywhere in the scene,
 // in all directions.
 //
-// The following operations may be applied to an AmbientLight (see ops.fidl):
+// The following commands may be applied to an AmbientLight (public/lib/ui/gfx/fidl/commands.fidl):
 //   - SetLightColor
 struct AmbientLightArgs {};
 
@@ -161,17 +161,17 @@ struct AmbientLightArgs {};
 // assume the dispersion of the light source is symmetric about the light's
 // primary direction.
 //
-// The following operations may be applied to a DirectionalLight (see ops.fidl):
+// The following commands may be applied to a DirectionalLight (public/lib/ui/gfx/fidl/commands.fidl):
 //   - SetLightColor
 //   - SetDirection
 struct DirectionalLightArgs {};
 
 // Simple texture-mapped material.
 //
-// Operations that can be performed later:
-// SetTextureOp will set the texture, or it can be left as zero (no texture).
+// Commands that can be performed later:
+// SetTextureCommand will set the texture, or it can be left as zero (no texture).
 //   The texture can be an Image or ImagePipe.
-// SetColorOp will set the color.
+// SetColorCommand will set the color.
 struct MaterialArgs {
 };
 
@@ -180,7 +180,7 @@ struct VariableArgs {
   Value initial_value;  // Must match type.  Must not be a variable_id.
 };
 
-// Describes an exported resource that is to be imported by an ImportResourceOp.
+// Describes an exported resource that is to be imported by an ImportResourceCommand.
 // NOTE: Currently just an enum of importable resource types, but may later be
 // expanded to express concepts like "meshes with a particular vertex format".
 enum ImportSpec {

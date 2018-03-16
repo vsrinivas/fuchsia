@@ -59,7 +59,7 @@ HostMemory::HostMemory(Session* session, size_t size)
 
 HostMemory::HostMemory(Session* session,
                        std::pair<zx::vmo, fxl::RefPtr<HostData>> init)
-    : Memory(session, std::move(init.first), scenic::MemoryType::HOST_MEMORY),
+    : Memory(session, std::move(init.first), ui::gfx::MemoryType::HOST_MEMORY),
       data_(std::move(init.second)) {}
 
 HostMemory::HostMemory(HostMemory&& moved)
@@ -69,7 +69,7 @@ HostMemory::~HostMemory() = default;
 
 HostImage::HostImage(const HostMemory& memory,
                      off_t memory_offset,
-                     scenic::ImageInfoPtr info)
+                     ui::gfx::ImageInfoPtr info)
     : HostImage(memory.session(),
                 memory.id(),
                 memory_offset,
@@ -80,7 +80,7 @@ HostImage::HostImage(Session* session,
                      uint32_t memory_id,
                      off_t memory_offset,
                      fxl::RefPtr<HostData> data,
-                     scenic::ImageInfoPtr info)
+                     ui::gfx::ImageInfoPtr info)
     : Image(session, memory_id, memory_offset, std::move(info)),
       data_(std::move(data)) {}
 
@@ -94,7 +94,7 @@ HostImagePool::HostImagePool(Session* session, uint32_t num_images)
 
 HostImagePool::~HostImagePool() = default;
 
-bool HostImagePool::Configure(const scenic::ImageInfo* image_info) {
+bool HostImagePool::Configure(const ui::gfx::ImageInfo* image_info) {
   if (image_info) {
     if (image_info_ && image_info->Equals(*image_info_.get()))
       return false;  // no change

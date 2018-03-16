@@ -183,8 +183,8 @@ void VideoRendererImpl::View::OnSceneInvalidated(
   // Update the image.
   const scenic_lib::HostImage* image = image_cycler_.AcquireImage(
       video_size.width, video_size.height, video_size.width * 4u,
-      scenic::ImageInfo::PixelFormat::BGRA_8,
-      scenic::ImageInfo::ColorSpace::SRGB);
+      ui::gfx::ImageInfo::PixelFormat::BGRA_8,
+      ui::gfx::ImageInfo::ColorSpace::SRGB);
   FXL_DCHECK(image);
   video_frame_source_->GetRgbaFrame(static_cast<uint8_t*>(image->image_ptr()),
                                     video_size);

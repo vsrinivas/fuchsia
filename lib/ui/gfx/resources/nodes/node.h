@@ -44,7 +44,7 @@ class Node : public Resource {
   bool SetAnchor(const escher::vec3& anchor);
   bool SetAnchor(Vector3VariablePtr anchor);
   bool SetClipToSelf(bool clip_to_self);
-  bool SetHitTestBehavior(scenic::HitTestBehavior behavior);
+  bool SetHitTestBehavior(ui::gfx::HitTestBehavior behavior);
 
   const escher::mat4& GetGlobalTransform() const;
 
@@ -54,17 +54,17 @@ class Node : public Resource {
   const escher::quat& rotation() const { return transform_.rotation; }
   const escher::vec3& anchor() const { return transform_.anchor; }
   bool clip_to_self() const { return clip_to_self_; }
-  scenic::HitTestBehavior hit_test_behavior() const {
+  ui::gfx::HitTestBehavior hit_test_behavior() const {
     return hit_test_behavior_;
   }
 
   // The node's metrics as reported to the session listener.
-  scenic::Metrics reported_metrics() const { return reported_metrics_; }
-  void set_reported_metrics(scenic::Metrics metrics) {
+  ui::gfx::Metrics reported_metrics() const { return reported_metrics_; }
+  void set_reported_metrics(ui::gfx::Metrics metrics) {
     reported_metrics_ = metrics;
   }
 
-  // |Resource|, DetachOp.
+  // |Resource|, DetachCommand.
   bool Detach() override;
 
   Node* parent() const { return parent_; }
@@ -121,9 +121,9 @@ class Node : public Resource {
   mutable escher::mat4 global_transform_;
   mutable bool global_transform_dirty_ = true;
   bool clip_to_self_ = false;
-  scenic::HitTestBehavior hit_test_behavior_ =
-      scenic::HitTestBehavior::kDefault;
-  scenic::Metrics reported_metrics_;
+  ui::gfx::HitTestBehavior hit_test_behavior_ =
+      ui::gfx::HitTestBehavior::kDefault;
+  ui::gfx::Metrics reported_metrics_;
 };
 
 // Inline functions.

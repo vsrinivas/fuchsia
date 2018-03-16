@@ -14,5 +14,5 @@ struct DisplayInfo {
 [ServiceName="display_pipe::DisplayProvider"]
 interface DisplayProvider {
   GetInfo@0() => (DisplayInfo info);
-  BindPipe@1(scenic.ImagePipe &pipe);
+  BindPipe@1(ui.gfx.ImagePipe &pipe);
 };

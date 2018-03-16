@@ -27,7 +27,7 @@
 
 #include "garnet/lib/ui/gfx/tests/util.h"
 #include "lib/escher/hmd/pose_buffer.h"
-#include "lib/ui/gfx/fidl/ops.fidl.h"
+#include "lib/ui/gfx/fidl/commands.fidl.h"
 #include "lib/ui/scenic/client/host_memory.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/scenic/types.h"
@@ -51,7 +51,7 @@ App::App()
     FXL_LOG(INFO) << "Lost connection to Mozart service.";
     loop_->QuitNow();
   });
-  scenic_->GetDisplayInfo([this](scenic::DisplayInfoPtr display_info) {
+  scenic_->GetDisplayInfo([this](ui::gfx::DisplayInfoPtr display_info) {
     Init(std::move(display_info));
   });
 }
@@ -141,13 +141,13 @@ void App::CreateExampleScene(float display_width, float display_height) {
   uint64_t time_interval = 1024 * 1024 * 60 / 3.0;  // 16.67 ms
   uint32_t num_entries = 1;
 
-  Memory mem(session, std::move(vmo), scenic::MemoryType::VK_DEVICE_MEMORY);
+  Memory mem(session, std::move(vmo), ui::gfx::MemoryType::VK_DEVICE_MEMORY);
   Buffer pose_buffer(mem, 0, vmo_size);
 
   camera_->SetPoseBuffer(pose_buffer, num_entries, base_time, time_interval);
 }
 
-void App::Init(scenic::DisplayInfoPtr display_info) {
+void App::Init(ui::gfx::DisplayInfoPtr display_info) {
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.

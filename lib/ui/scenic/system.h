@@ -53,7 +53,7 @@ class SystemContext final {
 class System {
  public:
   enum TypeId {
-    kScenic = 0,
+    kGfx = 0,
     kViews = 1,
     kDummySystem = 2,
     kMaxSystems = 3,

@@ -44,7 +44,7 @@ class Compositor : public Resource {
 
   ~Compositor() override;
 
-  // SetLayerStackOp.
+  // SetLayerStackCommand.
   bool SetLayerStack(LayerStackPtr layer_stack);
   const LayerStackPtr& layer_stack() const { return layer_stack_; }
 

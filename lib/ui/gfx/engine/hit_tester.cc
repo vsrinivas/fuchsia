@@ -64,7 +64,7 @@ void HitTester::AccumulateHitsOuter(Node* node) {
 
 void HitTester::AccumulateHitsLocal(Node* node) {
   // Bail if hit testing is suppressed.
-  if (node->hit_test_behavior() == scenic::HitTestBehavior::kSuppress)
+  if (node->hit_test_behavior() == ui::gfx::HitTestBehavior::kSuppress)
     return;
 
   // Take a fast path if the node does not contribute a tag to the hit test.

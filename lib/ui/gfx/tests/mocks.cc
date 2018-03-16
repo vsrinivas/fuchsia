@@ -33,8 +33,8 @@ SessionHandlerForTest::SessionHandlerForTest(CommandDispatcherContext context,
       enqueue_count_(0),
       present_count_(0) {}
 
-void SessionHandlerForTest::Enqueue(::f1dl::Array<ui::CommandPtr> ops) {
-  SessionHandler::Enqueue(std::move(ops));
+void SessionHandlerForTest::Enqueue(::f1dl::Array<ui::CommandPtr> commands) {
+  SessionHandler::Enqueue(std::move(commands));
   ++enqueue_count_;
 }
 

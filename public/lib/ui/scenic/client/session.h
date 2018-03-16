@@ -29,7 +29,7 @@ class Session : private ui::SessionListener {
   using PresentCallback = std::function<void(ui::PresentationInfoPtr info)>;
 
   // Provide information about hits.
-  using HitTestCallback = std::function<void(f1dl::Array<scenic::HitPtr> hits)>;
+  using HitTestCallback = std::function<void(f1dl::Array<ui::gfx::HitPtr> hits)>;
 
   // Called when session events are received.
   using EventHandler = std::function<void(f1dl::Array<ui::EventPtr>)>;
@@ -71,7 +71,7 @@ class Session : private ui::SessionListener {
   // Enqueues an operation.
   // The session will queue operations locally to batch submission of operations
   // until |Flush()| or |Present()| is called.
-  void Enqueue(scenic::OpPtr op);
+  void Enqueue(ui::gfx::CommandPtr command);
 
   // Registers an acquire fence to be submitted during the subsequent call to
   // |Present()|.

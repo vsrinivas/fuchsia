@@ -13,7 +13,7 @@ source_set("scenic") {
     "command_dispatcher.h",
     "event_reporter.h",
     "scenic.cc",
-    "scenic.h",
+    "ui.gfx.h",
     "session.cc",
     "session.h",
     "system.cc",

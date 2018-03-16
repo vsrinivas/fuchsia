@@ -53,10 +53,10 @@ fxl::RefPtr<fsl::SharedVmo> CreateVmoWithCheckerboardPixels(size_t w,
   return CreateVmoWithBuffer(pixels_size, std::move(pixels));
 }
 
-scenic::ImageInfoPtr CreateImageInfoForBgra8Image(size_t w, size_t h) {
-  auto image_info = scenic::ImageInfo::New();
-  image_info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
-  image_info->tiling = scenic::ImageInfo::Tiling::LINEAR;
+ui::gfx::ImageInfoPtr CreateImageInfoForBgra8Image(size_t w, size_t h) {
+  auto image_info = ui::gfx::ImageInfo::New();
+  image_info->pixel_format = ui::gfx::ImageInfo::PixelFormat::BGRA_8;
+  image_info->tiling = ui::gfx::ImageInfo::Tiling::LINEAR;
   image_info->width = w;
   image_info->height = h;
   image_info->stride = w;
@@ -82,7 +82,7 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
   // Override to create an Image without a backing escher::Image.
   ImagePtr CreateImage(Session* session,
                        MemoryPtr memory,
-                       const scenic::ImageInfoPtr& image_info,
+                       const ui::gfx::ImageInfoPtr& image_info,
                        uint64_t memory_offset,
                        ErrorReporter* error_reporter) override {
     return HostImage::NewForTesting(session, 0u, dummy_resource_manager_,
@@ -108,7 +108,7 @@ TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
     // Add the image to the image pipe with ImagePipe.AddImage().
     image_pipe->AddImage(imageId1, std::move(image_info),
                          CopyVmo(checkerboard->vmo()),
-                         scenic::MemoryType::HOST_MEMORY, 0);
+                         ui::gfx::MemoryType::HOST_MEMORY, 0);
 
     EXPECT_EQ("ImagePipe::AddImage: Image can not be assigned an ID of 0.",
               reported_errors_.back());
@@ -131,9 +131,9 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
     // Add the image to the image pipe with ImagePipe.AddImage().
     image_pipe->AddImage(imageId1, std::move(image_info),
                          CopyVmo(checkerboard->vmo()),
-                         scenic::MemoryType::HOST_MEMORY, 0);
+                         ui::gfx::MemoryType::HOST_MEMORY, 0);
   }
-  scenic::ImagePipe::PresentImageCallback callback = [](auto) {};
+  ui::gfx::ImagePipe::PresentImageCallback callback = [](auto) {};
 
   image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
                            CopyEventIntoFidlArray(CreateEvent()), callback);
@@ -162,9 +162,9 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
     // Add the image to the image pipe with ImagePipe.AddImage().
     image_pipe->AddImage(imageId1, std::move(image_info),
                          CopyVmo(checkerboard->vmo()),
-                         scenic::MemoryType::HOST_MEMORY, 0);
+                         ui::gfx::MemoryType::HOST_MEMORY, 0);
   }
-  scenic::ImagePipe::PresentImageCallback callback = [](auto) {};
+  ui::gfx::ImagePipe::PresentImageCallback callback = [](auto) {};
 
   image_pipe->PresentImage(imageId1, 1, CopyEventIntoFidlArray(CreateEvent()),
                            CopyEventIntoFidlArray(CreateEvent()), callback);
@@ -192,7 +192,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
     // Add the image to the image pipe with ImagePipe.AddImage().
     image_pipe->AddImage(imageId1, std::move(image_info),
                          CopyVmo(checkerboard->vmo()),
-                         scenic::MemoryType::HOST_MEMORY, 0);
+                         ui::gfx::MemoryType::HOST_MEMORY, 0);
   }
 
   // Make checkerboard the currently displayed image.
@@ -232,7 +232,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
     // Add the image to the image pipe.
     image_pipe->AddImage(imageId2, std::move(image_info),
                          CopyVmo(gradient->vmo()),
-                         scenic::MemoryType::HOST_MEMORY, 0);
+                         ui::gfx::MemoryType::HOST_MEMORY, 0);
   }
 
   // The first image should not have been released.

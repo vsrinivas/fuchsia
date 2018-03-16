@@ -33,8 +33,8 @@ class SessionHandlerForTest : public SessionHandler {
                         EventReporter* event_reporter,
                         ErrorReporter* error_reporter);
 
-  // scenic::Session interface methods.
-  void Enqueue(::f1dl::Array<ui::CommandPtr> ops) override;
+  // ui::gfx::Session interface methods.
+  void Enqueue(::f1dl::Array<ui::CommandPtr> commands) override;
   void Present(uint64_t presentation_time,
                ::f1dl::Array<zx::event> acquire_fences,
                ::f1dl::Array<zx::event> release_fences,

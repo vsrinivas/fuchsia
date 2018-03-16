@@ -28,15 +28,15 @@ bool MeshShape::GetIntersection(const escher::ray4& ray,
 }
 
 bool MeshShape::BindBuffers(BufferPtr index_buffer,
-                            scenic::MeshIndexFormat index_format,
+                            ui::gfx::MeshIndexFormat index_format,
                             uint64_t index_offset,
                             uint32_t index_count,
                             BufferPtr vertex_buffer,
-                            const scenic::MeshVertexFormatPtr& vertex_format,
+                            const ui::gfx::MeshVertexFormatPtr& vertex_format,
                             uint64_t vertex_offset,
                             uint32_t vertex_count,
                             escher::BoundingBox bounding_box) {
-  if (index_format != scenic::MeshIndexFormat::kUint32) {
+  if (index_format != ui::gfx::MeshIndexFormat::kUint32) {
     // TODO(MZ-275): only 32-bit indices are supported.
     session()->error_reporter()->ERROR() << "BindBuffers::BindBuffers(): "
                                             "TODO(MZ-275): only 32-bit indices "
@@ -45,10 +45,10 @@ bool MeshShape::BindBuffers(BufferPtr index_buffer,
   }
   escher::MeshSpec spec;
   switch (vertex_format->position_type) {
-    case scenic::ValueType::kVector2:
+    case ui::gfx::ValueType::kVector2:
       spec.flags |= escher::MeshAttribute::kPosition2D;
       break;
-    case scenic::ValueType::kVector3:
+    case ui::gfx::ValueType::kVector3:
       spec.flags |= escher::MeshAttribute::kPosition3D;
       break;
     default:
@@ -57,7 +57,7 @@ bool MeshShape::BindBuffers(BufferPtr index_buffer,
       return false;
   }
   switch (vertex_format->normal_type) {
-    case scenic::ValueType::kNone:
+    case ui::gfx::ValueType::kNone:
       break;
     default:
       session()->error_reporter()->ERROR()
@@ -65,10 +65,10 @@ bool MeshShape::BindBuffers(BufferPtr index_buffer,
       return false;
   }
   switch (vertex_format->tex_coord_type) {
-    case scenic::ValueType::kVector2:
+    case ui::gfx::ValueType::kVector2:
       spec.flags |= escher::MeshAttribute::kUV;
       break;
-    case scenic::ValueType::kNone:
+    case ui::gfx::ValueType::kNone:
       break;
     default:
       session()->error_reporter()->ERROR()

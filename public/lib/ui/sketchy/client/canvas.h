@@ -25,7 +25,7 @@ class Canvas final {
   ResourceId AllocateResourceId();
 
   sketchy::CanvasPtr canvas_;
-  f1dl::Array<sketchy::OpPtr> ops_;
+  f1dl::Array<sketchy::CommandPtr> commands_;
   ResourceId next_resource_id_;
 };
 

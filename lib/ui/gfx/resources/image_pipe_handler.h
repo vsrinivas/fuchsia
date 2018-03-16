@@ -13,16 +13,16 @@ namespace gfx {
 
 class ImagePipe;
 
-class ImagePipeHandler : public scenic::ImagePipe {
+class ImagePipeHandler : public ui::gfx::ImagePipe {
  public:
-  ImagePipeHandler(::f1dl::InterfaceRequest<scenic::ImagePipe> request,
+  ImagePipeHandler(::f1dl::InterfaceRequest<ui::gfx::ImagePipe> request,
                    scenic::gfx::ImagePipe* image_pipe);
 
  private:
   void AddImage(uint32_t image_id,
-                scenic::ImageInfoPtr image_info,
+                ui::gfx::ImageInfoPtr image_info,
                 zx::vmo memory,
-                scenic::MemoryType memory_type,
+                ui::gfx::MemoryType memory_type,
                 uint64_t memory_offset) override;
   void RemoveImage(uint32_t image_id) override;
 
@@ -32,7 +32,7 @@ class ImagePipeHandler : public scenic::ImagePipe {
                     ::f1dl::Array<zx::event> release_fences,
                     const PresentImageCallback& callback) override;
 
-  ::f1dl::Binding<scenic::ImagePipe> binding_;
+  ::f1dl::Binding<ui::gfx::ImagePipe> binding_;
   scenic::gfx::ImagePipe* image_pipe_;
 };
 

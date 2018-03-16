@@ -2,100 +2,99 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/gfx/util/print_op.h"
+#include "garnet/lib/ui/gfx/util/print_command.h"
 
-using scenic::Op;
-using scenic::OpPtr;
-using scenic::RendererParam;
-using scenic::ResourceArgs;
-using scenic::ShadowTechnique;
-using scenic::Value;
+using ui::gfx::Command;
+using ui::gfx::CommandPtr;
+using ui::gfx::RendererParam;
+using ui::gfx::ResourceArgs;
+using ui::gfx::ShadowTechnique;
+using ui::gfx::Value;
 
-namespace scenic {
-
-std::ostream& operator<<(std::ostream& stream, const scenic::OpPtr& op) {
-  switch (op->which()) {
-    case Op::Tag::CREATE_RESOURCE:
-      return stream << op->get_create_resource();
-    case Op::Tag::EXPORT_RESOURCE:
+std::ostream& operator<<(std::ostream& stream,
+                         const ui::gfx::CommandPtr& command) {
+  switch (command->which()) {
+    case Command::Tag::CREATE_RESOURCE:
+      return stream << command->get_create_resource();
+    case Command::Tag::EXPORT_RESOURCE:
       return stream << "EXPORT_RESOURCE";
-    case Op::Tag::IMPORT_RESOURCE:
+    case Command::Tag::IMPORT_RESOURCE:
       return stream << "IMPORT_RESOURCE";
-    case Op::Tag::RELEASE_RESOURCE:
+    case Command::Tag::RELEASE_RESOURCE:
       return stream << "RELEASE_RESOURCE";
-    case Op::Tag::SET_TRANSLATION:
+    case Command::Tag::SET_TRANSLATION:
       return stream << "SET_TRANSLATION";
-    case Op::Tag::SET_SCALE:
+    case Command::Tag::SET_SCALE:
       return stream << "SET_SCALE";
-    case Op::Tag::SET_ROTATION:
+    case Command::Tag::SET_ROTATION:
       return stream << "SET_ROTATION";
-    case Op::Tag::SET_ANCHOR:
+    case Command::Tag::SET_ANCHOR:
       return stream << "SET_ANCHOR";
-    case Op::Tag::SET_SIZE:
+    case Command::Tag::SET_SIZE:
       return stream << "SET_SIZE";
-    case Op::Tag::SET_TAG:
+    case Command::Tag::SET_TAG:
       return stream << "SET_TAG";
-    case Op::Tag::ADD_CHILD:
+    case Command::Tag::ADD_CHILD:
       return stream << "ADD_CHILD";
-    case Op::Tag::ADD_PART:
+    case Command::Tag::ADD_PART:
       return stream << "ADD_PART";
-    case Op::Tag::DETACH:
+    case Command::Tag::DETACH:
       return stream << "DETACH";
-    case Op::Tag::DETACH_CHILDREN:
+    case Command::Tag::DETACH_CHILDREN:
       return stream << "DETACH_CHILDREN";
-    case Op::Tag::SET_SHAPE:
+    case Command::Tag::SET_SHAPE:
       return stream << "SET_SHAPE";
-    case Op::Tag::SET_MATERIAL:
+    case Command::Tag::SET_MATERIAL:
       return stream << "SET_MATERIAL";
-    case Op::Tag::SET_CLIP:
+    case Command::Tag::SET_CLIP:
       return stream << "SET_CLIP";
-    case Op::Tag::SET_HIT_TEST_BEHAVIOR:
+    case Command::Tag::SET_HIT_TEST_BEHAVIOR:
       return stream << "SET_HIT_TEST_BEHAVIOR";
-    case Op::Tag::SET_CAMERA:
+    case Command::Tag::SET_CAMERA:
       return stream << "SET_CAMERA";
-    case Op::Tag::SET_CAMERA_PROJECTION:
+    case Command::Tag::SET_CAMERA_PROJECTION:
       return stream << "SET_CAMERA_PROJECTION";
-    case scenic::Op::Tag::SET_CAMERA_POSE_BUFFER:
+    case ui::gfx::Command::Tag::SET_CAMERA_POSE_BUFFER:
       return stream << "SET_CAMERA_POSE_BUFFER";
-    case Op::Tag::SET_LIGHT_COLOR:
+    case Command::Tag::SET_LIGHT_COLOR:
       return stream << "SET_LIGHT_COLOR";
-    case Op::Tag::SET_LIGHT_DIRECTION:
+    case Command::Tag::SET_LIGHT_DIRECTION:
       return stream << "SET_LIGHT_DIRECTION";
-    case Op::Tag::ADD_LIGHT:
+    case Command::Tag::ADD_LIGHT:
       return stream << "ADD_LIGHT";
-    case Op::Tag::DETACH_LIGHT:
+    case Command::Tag::DETACH_LIGHT:
       return stream << "DETACH_LIGHT";
-    case Op::Tag::DETACH_LIGHTS:
+    case Command::Tag::DETACH_LIGHTS:
       return stream << "DETACH_LIGHTS";
-    case Op::Tag::SET_TEXTURE:
+    case Command::Tag::SET_TEXTURE:
       return stream << "SET_TEXTURE";
-    case Op::Tag::SET_COLOR:
+    case Command::Tag::SET_COLOR:
       return stream << "SET_COLOR";
-    case Op::Tag::BIND_MESH_BUFFERS:
+    case Command::Tag::BIND_MESH_BUFFERS:
       return stream << "BIND_MESH_BUFFERS";
-    case Op::Tag::ADD_LAYER:
+    case Command::Tag::ADD_LAYER:
       return stream << "ADD_LAYER";
-    case Op::Tag::SET_LAYER_STACK:
+    case Command::Tag::SET_LAYER_STACK:
       return stream << "SET_LAYER_STACK";
-    case Op::Tag::SET_RENDERER:
+    case Command::Tag::SET_RENDERER:
       return stream << "SET_RENDERER";
-    case Op::Tag::SET_RENDERER_PARAM:
-      return stream << op->get_set_renderer_param();
-    case Op::Tag::SET_EVENT_MASK:
+    case Command::Tag::SET_RENDERER_PARAM:
+      return stream << command->get_set_renderer_param();
+    case Command::Tag::SET_EVENT_MASK:
       return stream << "SET_EVENT_MASK";
-    case Op::Tag::SET_LABEL:
+    case Command::Tag::SET_LABEL:
       return stream << "SET_LABEL";
-    case Op::Tag::SET_DISABLE_CLIPPING:
+    case Command::Tag::SET_DISABLE_CLIPPING:
       return stream << "SET_DISABLE_CLIPPING";
-    case Op::Tag::__UNKNOWN__:
+    case Command::Tag::__UNKNOWN__:
       return stream << "__UNKNOWN__";
   }
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const scenic::CreateResourceOpPtr& op) {
-  stream << "CreateResourceOp(id:" << op->id << " ";
-  switch (op->resource->which()) {
+                         const ui::gfx::CreateResourceCommandPtr& command) {
+  stream << "CreateResourceCommand(id:" << command->id << " ";
+  switch (command->resource->which()) {
     case ResourceArgs::Tag::MEMORY:
       stream << "Memory";
       break;
@@ -170,12 +169,12 @@ std::ostream& operator<<(std::ostream& stream,
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const scenic::SetRendererParamOpPtr& op) {
-  stream << "SetRendererParamOp(id=" << op->renderer_id << " ";
-  switch (op->param->which()) {
+                         const ui::gfx::SetRendererParamCommandPtr& command) {
+  stream << "SetRendererParamCommand(id=" << command->renderer_id << " ";
+  switch (command->param->which()) {
     case RendererParam::Tag::SHADOW_TECHNIQUE:
       stream << "shadow_technique=";
-      switch (op->param->get_shadow_technique()) {
+      switch (command->param->get_shadow_technique()) {
         case ShadowTechnique::UNSHADOWED:
           stream << "UNSHADOWED";
           break;
@@ -198,50 +197,19 @@ std::ostream& operator<<(std::ostream& stream,
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const scenic::SetTextureOpPtr& op) {
-  stream << "SetTextureOp(id:" << op->material_id
-         << " texture: " << op->texture_id;
+                         const ui::gfx::SetTextureCommandPtr& command) {
+  stream << "SetTextureCommand(id:" << command->material_id
+         << " texture: " << command->texture_id;
   return stream << ")";
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const scenic::SetColorOpPtr& op) {
-  stream << "SetColorOp(id:" << op->material_id;
+                         const ui::gfx::SetColorCommandPtr& command) {
+  stream << "SetColorCommand(id:" << command->material_id;
   return stream << ")";
 }
 
-std::ostream& operator<<(std::ostream& stream, const scenic::Value::Tag& tag) {
-  switch (tag) {
-    case Value::Tag::VECTOR1:
-      return stream << "vec1";
-    case Value::Tag::VECTOR2:
-      return stream << "vec2";
-    case Value::Tag::VECTOR3:
-      return stream << "vec3";
-    case Value::Tag::VECTOR4:
-      return stream << "vec4";
-    case Value::Tag::MATRIX4X4:
-      return stream << "mat4";
-    case Value::Tag::COLOR_RGB:
-      return stream << "rgb";
-    case Value::Tag::COLOR_RGBA:
-      return stream << "rgba";
-    case Value::Tag::DEGREES:
-      return stream << "degrees";
-    case Value::Tag::QUATERNION:
-      return stream << "quat";
-    case Value::Tag::TRANSFORM:
-      return stream << "transform";
-    case Value::Tag::VARIABLE_ID:
-      return stream << "variable";
-    case Value::Tag::__UNKNOWN__:
-      return stream << "__UNKNOWN__";
-  }
-}
-
-}  // namespace scenic
-
-std::ostream& operator<<(std::ostream& stream, const scenic::Value::Tag& tag) {
+std::ostream& operator<<(std::ostream& stream, const ui::gfx::Value::Tag& tag) {
   switch (tag) {
     case Value::Tag::VECTOR1:
       return stream << "vec1";

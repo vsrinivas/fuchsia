@@ -87,9 +87,9 @@ void Scenic::CreateSessionImmediately(
 
 void Scenic::GetDisplayInfo(
     const ui::Scenic::GetDisplayInfoCallback& callback) {
-  FXL_DCHECK(systems_[System::kScenic]);
+  FXL_DCHECK(systems_[System::kGfx]);
   TempSystemDelegate* delegate =
-      reinterpret_cast<TempSystemDelegate*>(systems_[System::kScenic].get());
+      reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
   delegate->GetDisplayInfo(callback);
 }
 

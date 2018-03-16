@@ -48,12 +48,12 @@ class SessionHandler : public TempSessionDelegate, public EventReporter {
                const ui::Session::PresentCallback& callback) override;
 
   void HitTest(uint32_t node_id,
-               scenic::vec3Ptr ray_origin,
-               scenic::vec3Ptr ray_direction,
+               ui::gfx::vec3Ptr ray_origin,
+               ui::gfx::vec3Ptr ray_direction,
                const ui::Session::HitTestCallback& callback) override;
 
-  void HitTestDeviceRay(scenic::vec3Ptr ray_origin,
-                        scenic::vec3Ptr ray_direction,
+  void HitTestDeviceRay(ui::gfx::vec3Ptr ray_origin,
+                        ui::gfx::vec3Ptr ray_direction,
                         const ui::Session::HitTestCallback& clback) override;
 
   bool ApplyCommand(const ui::CommandPtr& command) override;
@@ -75,7 +75,7 @@ class SessionHandler : public TempSessionDelegate, public EventReporter {
   ErrorReporter* const error_reporter_;
   scenic::gfx::SessionPtr session_;
 
-  ::f1dl::Array<scenic::OpPtr> buffered_ops_;
+  ::f1dl::Array<ui::gfx::CommandPtr> buffered_commands_;
 };
 
 }  // namespace gfx

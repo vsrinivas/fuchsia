@@ -5,7 +5,7 @@
 module sketchy;
 
 import "lib/ui/scenic/fidl/presentation_info.fidl";
-import "lib/ui/sketchy/fidl/ops.fidl";
+import "lib/ui/sketchy/fidl/commands.fidl";
 import "lib/ui/sketchy/fidl/types.fidl";
 
 // A Canvas allows clients to draw strokes, which are dynamically tessellated
@@ -20,14 +20,14 @@ interface Canvas {
   // Present(); the effect is the same as if all operations had been
   // concatenated into a single Enqueue() call.
   //
-  // Akin to scenic::Session.Enqueue(); see scenic/session.fidl for details.
-  Enqueue@1(array<Op> ops);
+  // Akin to ui::gfx::Session.Enqueue(); see scenic/session.fidl for details.
+  Enqueue@1(array<Command> commands);
 
   // Present all previously enqueued operations.  In order to pipeline the
   // preparation of the resources required to render the scene, two lists of
   // fences (implemented as events) are passed.
   //
-  // Akin to scenic::Session.Present(); see scenic/session.fidl for details.
+  // Akin to ui::gfx::Session.Present(); see scenic/session.fidl for details.
   Present@2(uint64 presentation_time) =>
       (ui.PresentationInfo presentation_info);
 };

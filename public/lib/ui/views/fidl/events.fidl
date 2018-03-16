@@ -28,11 +28,11 @@ struct ViewPropertiesChangedEvent {
 
   // The size of the view in logical pixels.
   // Must be non-negative.
-  scenic.BoundingBox size;
+  ui.gfx.BoundingBox size;
 
   // The inset of the view in logical pixels.
   // Must be non-negative.
-  scenic.vec3 inset;
+  ui.gfx.vec3 inset;
 };
 
 // Called when a child view is attached.

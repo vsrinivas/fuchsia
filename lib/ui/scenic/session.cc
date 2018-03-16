@@ -17,7 +17,7 @@ Session::~Session() = default;
 
 void Session::Enqueue(::f1dl::Array<ui::CommandPtr> cmds) {
   // TODO(MZ-469): Move Present logic into Session.
-  auto& dispatcher = dispatchers_[System::TypeId::kScenic];
+  auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
   TempSessionDelegate* delegate =
       reinterpret_cast<TempSessionDelegate*>(dispatcher.get());
@@ -29,7 +29,7 @@ void Session::Present(uint64_t presentation_time,
                       ::f1dl::Array<zx::event> release_fences,
                       const PresentCallback& callback) {
   // TODO(MZ-469): Move Present logic into Session.
-  auto& dispatcher = dispatchers_[System::TypeId::kScenic];
+  auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
   TempSessionDelegate* delegate =
       reinterpret_cast<TempSessionDelegate*>(dispatcher.get());
@@ -48,8 +48,8 @@ void Session::SetCommandDispatchers(
 bool Session::ApplyCommand(const ui::CommandPtr& command) {
   System::TypeId system_type = System::TypeId::kMaxSystems;  // invalid
   switch (command->which()) {
-    case ui::Command::Tag::SCENIC:
-      system_type = System::TypeId::kScenic;
+    case ui::Command::Tag::GFX:
+      system_type = System::TypeId::kGfx;
       break;
     case ui::Command::Tag::VIEWS:
       system_type = System::TypeId::kViews;
@@ -71,10 +71,10 @@ bool Session::ApplyCommand(const ui::CommandPtr& command) {
 }
 
 void Session::HitTest(uint32_t node_id,
-                      scenic::vec3Ptr ray_origin,
-                      scenic::vec3Ptr ray_direction,
+                      ui::gfx::vec3Ptr ray_origin,
+                      ui::gfx::vec3Ptr ray_direction,
                       const HitTestCallback& callback) {
-  auto& dispatcher = dispatchers_[System::TypeId::kScenic];
+  auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
   TempSessionDelegate* delegate =
       reinterpret_cast<TempSessionDelegate*>(dispatcher.get());
@@ -82,10 +82,10 @@ void Session::HitTest(uint32_t node_id,
                     callback);
 }
 
-void Session::HitTestDeviceRay(scenic::vec3Ptr ray_origin,
-                               scenic::vec3Ptr ray_direction,
+void Session::HitTestDeviceRay(ui::gfx::vec3Ptr ray_origin,
+                               ui::gfx::vec3Ptr ray_direction,
                                const HitTestCallback& callback) {
-  auto& dispatcher = dispatchers_[System::TypeId::kScenic];
+  auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
   TempSessionDelegate* delegate =
       reinterpret_cast<TempSessionDelegate*>(dispatcher.get());

@@ -30,7 +30,7 @@ std::unique_ptr<scenic_lib::Buffer> NewScenicBufferFromEscherBuffer(
       escher::ExportMemoryAsVmo(buffer->escher(), buffer->mem());
 
   scenic_lib::Memory memory(session, std::move(vmo),
-                            scenic::MemoryType::VK_DEVICE_MEMORY);
+                            ui::gfx::MemoryType::VK_DEVICE_MEMORY);
   return std::make_unique<scenic_lib::Buffer>(memory, 0, buffer->size());
 }
 

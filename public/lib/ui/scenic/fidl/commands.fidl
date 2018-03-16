@@ -5,11 +5,11 @@
 module ui;
 
 import "lib/ui/scenic/fidl/dummy_system/commands.fidl";
-import "lib/ui/gfx/fidl/ops.fidl";
+import "lib/ui/gfx/fidl/commands.fidl";
 import "lib/ui/views/fidl/commands.fidl";
 
 union Command {
-  scenic.Op scenic;
+  ui.gfx.Command gfx;
   ui_views.Command views;
   DummySystemCommand dummy;
 };

@@ -7,7 +7,7 @@
 
 #include <sstream>
 
-#include "garnet/lib/ui/gfx/util/print_op.h"
+#include "garnet/lib/ui/gfx/util/print_command.h"
 #include "lib/fxl/logging.h"
 
 namespace scenic {

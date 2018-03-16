@@ -47,7 +47,7 @@ View::View(app::ApplicationContext* application_context,
 
   // Create an ImagePipe and pass one end of it to the ShadertoyFactory in
   // order to obtain a Shadertoy.
-  f1dl::InterfaceHandle<scenic::ImagePipe> image_pipe_handle;
+  f1dl::InterfaceHandle<ui::gfx::ImagePipe> image_pipe_handle;
   auto image_pipe_request = image_pipe_handle.NewRequest();
   shadertoy_factory_->NewImagePipeShadertoy(shadertoy_.NewRequest(),
                                             std::move(image_pipe_handle));
@@ -72,7 +72,7 @@ View::View(app::ApplicationContext* application_context,
   // Pass the other end of the ImagePipe to the Session, and wrap the
   // resulting resource in a Material.
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(scenic_lib::NewCreateImagePipeOp(
+  session()->Enqueue(scenic_lib::NewCreateImagePipeCommand(
       image_pipe_id, std::move(image_pipe_request)));
   scenic_lib::Material material(session());
   material.SetTexture(image_pipe_id);

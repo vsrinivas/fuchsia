@@ -21,7 +21,7 @@ HostImage::HostImage(Session* session,
                      HostMemoryPtr memory,
                      escher::ImagePtr image,
                      uint64_t host_memory_offset,
-                     scenic::ImageInfo host_image_format)
+                     ui::gfx::ImageInfo host_image_format)
     : Image(session, id, HostImage::kTypeInfo),
       memory_(std::move(memory)),
       memory_offset_(host_memory_offset),
@@ -33,7 +33,7 @@ HostImage::HostImage(Session* session,
 ImagePtr HostImage::New(Session* session,
                         scenic::ResourceId id,
                         HostMemoryPtr host_memory,
-                        const scenic::ImageInfoPtr& host_image_info,
+                        const ui::gfx::ImageInfoPtr& host_image_info,
                         uint64_t memory_offset,
                         ErrorReporter* error_reporter) {
   // No matter what the incoming format, the gpu format will be BGRA:
@@ -76,7 +76,7 @@ ImagePtr HostImage::New(Session* session,
         << "Image::CreateFromMemory(): stride must preserve pixel alignment.";
     return nullptr;
   }
-  if (host_image_info->tiling != scenic::ImageInfo::Tiling::LINEAR) {
+  if (host_image_info->tiling != ui::gfx::ImageInfo::Tiling::LINEAR) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): tiling must be LINEAR for images "
         << "created using host memory.";
@@ -134,8 +134,8 @@ ImagePtr HostImage::NewForTesting(Session* session,
   escher::ImagePtr escher_image = escher::Image::New(
       image_owner, escher::ImageInfo(), vk::Image(), nullptr);
   FXL_CHECK(escher_image);
-  scenic::ImageInfo host_image_format;
-  host_image_format.pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
+  ui::gfx::ImageInfo host_image_format;
+  host_image_format.pixel_format = ui::gfx::ImageInfo::PixelFormat::BGRA_8;
   return fxl::AdoptRef(new HostImage(session, id, host_memory, escher_image, 0,
                                      host_image_format));
 }

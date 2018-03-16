@@ -7,7 +7,7 @@
 namespace scenic {
 namespace gfx {
 
-template <scenic::Value::Tag VT, typename T>
+template <ui::gfx::Value::Tag VT, typename T>
 TypedVariableBinding<VT, T>::TypedVariableBinding(
     fxl::RefPtr<TypedVariable<VT, T>> variable,
     std::function<void(T value)> on_value_changed_callback)
@@ -17,19 +17,19 @@ TypedVariableBinding<VT, T>::TypedVariableBinding(
   variable_->AddListener(this);
 }
 
-template <scenic::Value::Tag VT, typename T>
+template <ui::gfx::Value::Tag VT, typename T>
 TypedVariableBinding<VT, T>::~TypedVariableBinding() {
   variable_->RemoveListener(this);
 }
 
-template <scenic::Value::Tag VT, typename T>
+template <ui::gfx::Value::Tag VT, typename T>
 void TypedVariableBinding<VT, T>::OnVariableValueChanged(
     TypedVariable<VT, T>* v) {
   on_value_changed_callback_(v->value());
 }
 
-template class TypedVariableBinding<scenic::Value::Tag::VECTOR3, escher::vec3>;
-template class TypedVariableBinding<scenic::Value::Tag::QUATERNION,
+template class TypedVariableBinding<ui::gfx::Value::Tag::VECTOR3, escher::vec3>;
+template class TypedVariableBinding<ui::gfx::Value::Tag::QUATERNION,
                                     escher::quat>;
 
 }  // namespace gfx

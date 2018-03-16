@@ -29,7 +29,7 @@ class GpuMemory : public Memory {
             vk::DeviceSize size,
             uint32_t memory_type_index);
 
-  // Helper method for creating GpuMemory object from a scenic::Memory.
+  // Helper method for creating GpuMemory object from a ui::gfx::Memory.
   // Create a GpuMemory resource object from a VMO that represents a
   // VkDeviceMemory. Releases the VMO.
   //
@@ -45,7 +45,7 @@ class GpuMemory : public Memory {
   static GpuMemoryPtr New(Session* session,
                           scenic::ResourceId id,
                           vk::Device device,
-                          const scenic::MemoryArgsPtr& args,
+                          const ui::gfx::MemoryArgsPtr& args,
                           ErrorReporter* error_reporter);
 
   void Accept(class ResourceVisitor* visitor) override;

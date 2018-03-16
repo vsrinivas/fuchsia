@@ -56,7 +56,7 @@ void Renderer::SetCamera(CameraPtr camera) {
   camera_ = std::move(camera);
 }
 
-bool Renderer::SetShadowTechnique(scenic::ShadowTechnique technique) {
+bool Renderer::SetShadowTechnique(ui::gfx::ShadowTechnique technique) {
   shadow_technique_ = technique;
   return true;
 }

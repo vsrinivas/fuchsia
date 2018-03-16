@@ -10,7 +10,7 @@ fidl("fidl") {
     "hit.fidl",
     "events.fidl",
     "nodes.fidl",
-    "ops.fidl",
+    "commands.fidl",
     "renderer.fidl",
     "resources.fidl",
     "shapes.fidl",

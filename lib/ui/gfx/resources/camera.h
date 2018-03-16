@@ -31,8 +31,8 @@ class Camera final : public Resource {
                      const glm::vec3& eye_up,
                      float fovy);
 
-  // Sets the buffer for this camera. For details see SetCameraPoseBufferOp in
-  // //garnet/public/lib/ui/gfx/fidl/ops.fidl
+  // Sets the buffer for this camera. For details see SetCameraPoseBufferCommand in
+  // //garnet/public/lib/ui/gfx/fidl/commands.fidl
   void SetPoseBuffer(fxl::RefPtr<Buffer> buffer,
                      uint32_t num_entries,
                      uint64_t base_time,

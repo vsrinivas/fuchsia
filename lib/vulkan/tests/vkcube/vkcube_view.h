@@ -14,7 +14,7 @@ public:
     VkCubeView(mozart::ViewManagerPtr view_manager,
                f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                std::function<void(float width, float height,
-                                  f1dl::InterfaceHandle<scenic::ImagePipe> interface_request)>
+                                  f1dl::InterfaceHandle<ui::gfx::ImagePipe> interface_request)>
                    resize_callback);
     ~VkCubeView() override;
 
@@ -25,7 +25,7 @@ private:
     mozart::SizeF size_;
     scenic_lib::ShapeNode pane_node_;
     std::function<void(float width, float height,
-                       f1dl::InterfaceHandle<scenic::ImagePipe> interface_request)>
+                       f1dl::InterfaceHandle<ui::gfx::ImagePipe> interface_request)>
         resize_callback_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(VkCubeView);

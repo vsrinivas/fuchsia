@@ -2,121 +2,121 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module scenic;
+module ui.gfx;
 
 import "lib/ui/gfx/fidl/events.fidl";
 import "lib/ui/gfx/fidl/renderer.fidl";
 import "lib/ui/gfx/fidl/resources.fidl";
 
-// Operations that are used to modify the state of a |Session|.
-// TODO(MZ-237): reorder Op definitions to match the order in this union.
-union Op {
-  CreateResourceOp create_resource;
-  ReleaseResourceOp release_resource;
-  ExportResourceOp export_resource;
-  ImportResourceOp import_resource;
+// Commands that are used to modify the state of a |Session|.
+// TODO(MZ-237): reorder Command definitions to match the order in this union.
+union Command {
+  CreateResourceCommand create_resource;
+  ReleaseResourceCommand release_resource;
+  ExportResourceCommand export_resource;
+  ImportResourceCommand import_resource;
 
-  // Tagging operations.
-  SetTagOp set_tag;
+  // Tagging commands.
+  SetTagCommand set_tag;
 
-  // Grouping operations.
-  DetachOp detach;
+  // Grouping commands.
+  DetachCommand detach;
 
-  // Spatial operations.
-  SetTranslationOp set_translation;
-  SetScaleOp set_scale;
-  SetRotationOp set_rotation;
-  SetAnchorOp set_anchor;
-  SetSizeOp set_size;
+  // Spatial commands.
+  SetTranslationCommand set_translation;
+  SetScaleCommand set_scale;
+  SetRotationCommand set_rotation;
+  SetAnchorCommand set_anchor;
+  SetSizeCommand set_size;
 
-  // Node-specific operations.
-  AddChildOp add_child; // TODO: Should we require a DetachOp before re-parenting?
-  AddPartOp add_part;
-  DetachChildrenOp detach_children;
-  SetShapeOp set_shape;
-  SetMaterialOp set_material;
-  SetClipOp set_clip;
-  SetHitTestBehaviorOp set_hit_test_behavior;
+  // Node-specific commands.
+  AddChildCommand add_child; // TODO: Should we require a DetachCommand before re-parenting?
+  AddPartCommand add_part;
+  DetachChildrenCommand detach_children;
+  SetShapeCommand set_shape;
+  SetMaterialCommand set_material;
+  SetClipCommand set_clip;
+  SetHitTestBehaviorCommand set_hit_test_behavior;
 
-  // Camera and lighting operations.
-  SetCameraOp set_camera;
-  SetCameraProjectionOp set_camera_projection;
-  SetCameraPoseBufferOp set_camera_pose_buffer;
-  SetLightColorOp set_light_color;
-  SetLightDirectionOp set_light_direction;
-  AddLightOp add_light;
-  DetachLightOp detach_light;
-  DetachLightsOp detach_lights;
+  // Camera and lighting commands.
+  SetCameraCommand set_camera;
+  SetCameraProjectionCommand set_camera_projection;
+  SetCameraPoseBufferCommand set_camera_pose_buffer;
+  SetLightColorCommand set_light_color;
+  SetLightDirectionCommand set_light_direction;
+  AddLightCommand add_light;
+  DetachLightCommand detach_light;
+  DetachLightsCommand detach_lights;
 
-  SetTextureOp set_texture;
-  SetColorOp set_color;
+  SetTextureCommand set_texture;
+  SetColorCommand set_color;
 
-  // Mesh operations.
-  BindMeshBuffersOp bind_mesh_buffers;
+  // Mesh commands.
+  BindMeshBuffersCommand bind_mesh_buffers;
 
-  // Layer and renderer operations.
-  AddLayerOp add_layer;
-  SetLayerStackOp set_layer_stack;
-  SetRendererOp set_renderer;
-  SetRendererParamOp set_renderer_param;
+  // Layer and renderer commands.
+  AddLayerCommand add_layer;
+  SetLayerStackCommand set_layer_stack;
+  SetRendererCommand set_renderer;
+  SetRendererParamCommand set_renderer_param;
 
   // Events.
-  SetEventMaskOp set_event_mask;
+  SetEventMaskCommand set_event_mask;
 
-  // Diagnostic operations.
-  SetLabelOp set_label;
+  // Diagnostic commands.
+  SetLabelCommand set_label;
 
-  // Debugging operations.
-  SetDisableClippingOp set_disable_clipping;
+  // Debugging commands.
+  SetDisableClippingCommand set_disable_clipping;
 };
 
 // Instructs the compositor to create the specified |Resource|, and to register
-// it in a table so that it can be referenced by subsequent operations.
-struct CreateResourceOp {
+// it in a table so that it can be referenced by subsequent commands.
+struct CreateResourceCommand {
   // An ID that is currently not used within the session.
   uint32 id;
   ResourceArgs resource;
 };
 
 // Releases the client's reference to the resource; it is then illegal to use
-// the ID in subsequent Ops.  Other references to the resource may exist, so
+// the ID in subsequent Commands.  Other references to the resource may exist, so
 // releasing the resource does not result in its immediate destruction; it is
 // only destroyed once the last reference is released.  For example, the
 // resource may be required to render an in-progress frame, or it may be
 // referred to by another resource).  However, the ID will be immediately
 // unregistered, and may be reused to create a new resource.
-struct ReleaseResourceOp {
+struct ReleaseResourceCommand {
   // ID of the resource to be dereferenced.
   uint32 id;
 };
 
 // Create an external reference to the specified resource, which can then be
 // imported into another Session by passing a handle to |token|'s peer to
-// ImportResourceOp; see that comment for more details.
+// ImportResourceCommand; see that comment for more details.
 //
 // The importing client is typically in a different process than the exporter.
 // No specific mechanism is provided for transferring a token from an exporter
 // to an importer; collaborators may choose any out-of-band API they wish to do
 // so.
-struct ExportResourceOp {
+struct ExportResourceCommand {
   uint32 id;
   handle<eventpair> token;
 };
 
-// Import a resource that was exported via ExportResourceOp().  |token| is a
+// Import a resource that was exported via ExportResourceCommand().  |token| is a
 // handle to the eventpair peer that was used to export the resource, and |spec|
-// describes the type of the imported resource, and the ops which can legally be
+// describes the type of the imported resource, and the commands which can legally be
 // applied to it.  Afterward, |id| can be used to refer to the resource in an
-// Op, similarly (but not identically: see below) to a resource that was created
+// Command, similarly (but not identically: see below) to a resource that was created
 // in the session.  For example, you can add children to an imported EntityNode
-// via AddChildOp.
+// via AddChildCommand.
 //
 // However, note that the importer does not gain full access to the imported
 // resource, but rather to an attenuated subset of its capabilities.  For
-// example, you cannot use a DetachOp to detach an imported EntityNode from its
+// example, you cannot use a DetachCommand to detach an imported EntityNode from its
 // parent.
 //
-// Unlike ExportResourceOp, there is no configurable timeout.  There is an
+// Unlike ExportResourceCommand, there is no configurable timeout.  There is an
 // expectation that the exported resource will become available in a short
 // amount of time.  TODO: this needs elaboration... e.g. we might notify via the
 // SessionListener when we know that the link will never be made (e.g. if the
@@ -125,7 +125,7 @@ struct ExportResourceOp {
 // TODO: describe how the imported resource behaves if the exported resource
 // isn't yet available, or becomes unavailable (e.g. an imported Material might
 // act as a plain white texture).
-struct ImportResourceOp {
+struct ImportResourceCommand {
   uint32 id;
   handle<eventpair> token;
   ImportSpec spec;
@@ -144,7 +144,7 @@ const uint32 kLabelMaxLength = 32;
 // Constraints:
 // - The label's maximum length is |kLabelMaxLength| characters.
 // - Setting the label to an empty string clears it.
-struct SetLabelOp {
+struct SetLabelCommand {
   uint32 id;
   string label;
 };
@@ -156,9 +156,9 @@ struct SetLabelOp {
 // - |child_id| refs any Node.
 //
 // Discussion:
-// The child node is first removed from its existing parent, as if DetachOp
+// The child node is first removed from its existing parent, as if DetachCommand
 // was applied first.
-struct AddChildOp {
+struct AddChildCommand {
   uint32 node_id;
   uint32 child_id;
 };
@@ -166,7 +166,7 @@ struct AddChildOp {
 // Add a node as a part of another node.  The implications of being a part
 // rather than a child differ based on the type of the part.  However, one
 // implication is constant: removing all of a node's children (e.g. via
-// DetachChildrenOp) does not affect its parts.  This is similar to the "shadow
+// DetachChildrenCommand) does not affect its parts.  This is similar to the "shadow
 // DOM" in a web browser: the controls of a <video> element are implemented as
 // using the shadow DOM, and do no show up amongst the children of that element.
 //
@@ -175,29 +175,29 @@ struct AddChildOp {
 // - |part_id| refs any Node.
 //
 // Discussion:
-// The part node is first removed from its existing parent, as if DetachOp
+// The part node is first removed from its existing parent, as if DetachCommand
 // was applied first.
-struct AddPartOp {
+struct AddPartCommand {
   uint32 node_id;
   uint32 part_id;
 };
 
 // Detaches a parentable object from its parent (e.g. a node from a parent node,
-// or a layer from a layer stack).  It is illegal to apply this op to a
+// or a layer from a layer stack).  It is illegal to apply this command to a
 // non-parentable object.  No-op if the target object currently has no parent.
 //
 // Constraints:
 // - |id| refs a parentable object
 //
 // Discussion:
-// For nodes, this op will detach a node from its parent, regardless of whether
+// For nodes, this command will detach a node from its parent, regardless of whether
 // it is a part or a child of its parent.
-struct DetachOp {
+struct DetachCommand {
   uint32 id;
 };
 
 // Detaches all of a node's children (but not its parts).
-struct DetachChildrenOp {
+struct DetachChildrenCommand {
   uint32 node_id;
 };
 
@@ -215,7 +215,7 @@ struct DetachChildrenOp {
 // Constraints:
 // - |node_id| refs a |Node|.
 // - |tag_value| is the tag value to assign, or 0 to remove the tag.
-struct SetTagOp {
+struct SetTagCommand {
   uint32 node_id;
   uint32 tag_value;
 };
@@ -224,7 +224,7 @@ struct SetTagOp {
 //
 // Constraints:
 // - |id| refs a Resource with the has_transform characteristic.
-struct SetTranslationOp {
+struct SetTranslationCommand {
   uint32 id;
   Vector3Value value;
 };
@@ -233,7 +233,7 @@ struct SetTranslationOp {
 //
 // Constraints:
 // - |id| refs a Resource with the has_transform characteristic.
-struct SetScaleOp {
+struct SetScaleCommand {
   uint32 id;
   Vector3Value value;
 };
@@ -242,7 +242,7 @@ struct SetScaleOp {
 //
 // Constraints:
 // - |id| refs a Resource with the has_transform characteristic.
-struct SetRotationOp {
+struct SetRotationCommand {
   uint32 id;
   QuaternionValue value;
 };
@@ -251,7 +251,7 @@ struct SetRotationOp {
 //
 // Constraints:
 // - |id| refs a Resource with the has_transform characteristic.
-struct SetAnchorOp {
+struct SetAnchorCommand {
   uint32 id;
   Vector3Value value;
 };
@@ -260,9 +260,9 @@ struct SetAnchorOp {
 //
 // Constraints:
 // - |id| refs a resizeable object.
-// - some objects that support this op may have additional constraints (e.g.
+// - some objects that support this command may have additional constraints (e.g.
 //   in some cases |depth| must be zero).
-struct SetSizeOp {
+struct SetSizeCommand {
   uint32 id;
   Vector2Value value;
 };
@@ -272,7 +272,7 @@ struct SetSizeOp {
 // Constraints:
 // - |node_id| refs a |Node| with the has_shape characteristic.
 // - |shape_id| refs a |Shape|, or nothing.
-// - if this op causes the target to have both a |Shape| and a |Material|,
+// - if this command causes the target to have both a |Shape| and a |Material|,
 //   then these must be compatible with each other (see README.md regarding
 //   "Shape/Material Compatibility").
 // TODO: add "Shape/Material Compatibility section"
@@ -281,7 +281,7 @@ struct SetSizeOp {
 // In order to be painted, a node requires both a |Shape| and a |Material|.
 // Without a material, a node can still participate in hit-testing and clipping.
 // Without a shape, a node cannot do any of the above.
-struct SetShapeOp {
+struct SetShapeCommand {
   uint32 node_id;
   uint32 shape_id;
 };
@@ -291,7 +291,7 @@ struct SetShapeOp {
 // Constraints:
 // - |node_id| refs a |Node| with the has_material characteristic.
 // - |material_id| refs a |Material|, or nothing.
-// - if this op causes the target to have both a |Shape| and a |Material|,
+// - if this command causes the target to have both a |Shape| and a |Material|,
 //   then these must be compatible with each other (see README.md regarding
 //   "Shape/Material Compatibility").
 // TODO: add "Shape/Material Compatibility section"
@@ -300,7 +300,7 @@ struct SetShapeOp {
 // In order to be painted, a node requires both a |Shape| and a |Material|.
 // Without a material, a node can still participate in hit-testing and clipping.
 // Without a shape, a node cannot do any of the above.
-struct SetMaterialOp {
+struct SetMaterialCommand {
   uint32 node_id;
   uint32 material_id;
 };
@@ -325,7 +325,7 @@ struct SetMaterialOp {
 // For example, consider a 3D space that looks through a portal into a 2D space
 // that uses a clip for a circular reveal.  It would not be meaningful to clip
 // objects on the outside (i.e. in the 3D space).
-struct SetClipOp {
+struct SetClipCommand {
   uint32 node_id;
   uint32 clip_id;
   bool clip_to_self;
@@ -336,7 +336,7 @@ struct SetClipOp {
 // Discussion:
 // By default, hit testing is performed on the node's content, its parts,
 // and its children.
-struct SetHitTestBehaviorOp {
+struct SetHitTestBehaviorCommand {
   uint32 node_id;
   HitTestBehavior hit_test_behavior;
 };
@@ -347,7 +347,7 @@ struct SetHitTestBehaviorOp {
 // - |renderer_id| refs a |Renderer|.
 // - |camera_id| refs a |Camera|, or stops rendering by passing zero.
 // - |matrix| is a value or variable of type kMatrix4x4.
-struct SetCameraOp {
+struct SetCameraCommand {
   uint32 renderer_id;
   uint32 camera_id;
 };
@@ -363,7 +363,7 @@ struct SetCameraOp {
 //
 // NOTE: A default orthographic projection is specified by setting |fovy| to
 // zero.  In this case, all other parameters are ignored.
-struct SetCameraProjectionOp {
+struct SetCameraProjectionCommand {
   uint32 camera_id;
   Vector3Value eye_position;
   Vector3Value eye_look_at;
@@ -440,9 +440,9 @@ struct SetCameraProjectionOp {
 // locally flat. For more details on the encoding of rotations in quaterions
 // see https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
 //
-// This operation is intended for late latching camera pose to support
+// This commanderation is intended for late latching camera pose to support
 // low-latency motion-tracked rendering.
-struct SetCameraPoseBufferOp {
+struct SetCameraPoseBufferCommand {
   uint32 camera_id;
   uint32 buffer_id;
   uint32 num_entries;
@@ -451,32 +451,32 @@ struct SetCameraPoseBufferOp {
 };
 
 // Sets the color of the Light identified by |light_id|.
-struct SetLightColorOp {
+struct SetLightColorCommand {
   uint32 light_id;
   ColorRgbValue color;
 };
 
 // Sets the direction of the DirectionalLight identified by |light_id|.
-struct SetLightDirectionOp {
+struct SetLightDirectionCommand {
   uint32 light_id;
   Vector3Value direction;
 };
 
 // Adds the light specified by |light_id| specified by |light_id| to the scene
 // identified by |scene_id|.
-struct AddLightOp {
+struct AddLightCommand {
   uint32 scene_id;
   uint32 light_id;
 };
 
 // Detach the light specified by |light_id| from the scene that it is attached
 // to, if any.
-struct DetachLightOp {
+struct DetachLightCommand {
   uint32 light_id;
 };
 
 // Detach all lights from the scene specified by |scene_id|.
-struct DetachLightsOp {
+struct DetachLightsCommand {
   uint32 scene_id;
 };
 
@@ -489,7 +489,7 @@ struct DetachLightsOp {
 // If no texture is provided (i.e. |texture_id| is zero), a solid color is used.
 // If a texture is provided, then the value sampled from the texture is
 // multiplied by the color.
-struct SetTextureOp {
+struct SetTextureCommand {
   uint32 material_id;
   uint32 texture_id;  // Refers to an Image resource.  May be zero (no texture).
 };
@@ -501,7 +501,7 @@ struct SetTextureOp {
 //
 // If a texture is set on the material, then the value sampled from the texture
 // is multiplied by the color.
-struct SetColorOp {
+struct SetColorCommand {
   uint32 material_id;
   ColorRgbaValue color;
 };
@@ -540,7 +540,7 @@ struct MeshVertexFormat {
   // kVector2 or kNone.
   ValueType tex_coord_type;
 };
-struct BindMeshBuffersOp {
+struct BindMeshBuffersCommand {
   uint32 mesh_id;
   uint32 index_buffer_id;
   MeshIndexFormat index_format;
@@ -559,7 +559,7 @@ struct BindMeshBuffersOp {
 // - |layer_id| refs a |Layer|.
 // - The layer must not already belong to a different stack; it must first be
 //   detached.
-struct AddLayerOp {
+struct AddLayerCommand {
   uint32 layer_stack_id;
   uint32 layer_id;
 };
@@ -568,7 +568,7 @@ struct AddLayerOp {
 // Constraints:
 // - |compositor_id| refs a |DisplayCompositor| or |ImagePipeCompositor|.
 // - |layer_stack_id| refs a |LayerStack|.
-struct SetLayerStackOp {
+struct SetLayerStackCommand {
   uint32 compositor_id;
   uint32 layer_stack_id;
 };
@@ -577,7 +577,7 @@ struct SetLayerStackOp {
 // Constraints:
 // - |layer_id| refs a |Layer|.
 // - |renderer_id| refs a |Renderer|.
-struct SetRendererOp {
+struct SetRendererCommand {
   uint32 layer_id;
   uint32 renderer_id;
 };
@@ -586,13 +586,13 @@ struct SetRendererOp {
 //
 // |renderer_id| refs the Renderer that is being modified.
 // |param| describes the parameter that should be set, and to what.
-struct SetRendererParamOp {
+struct SetRendererParamCommand {
   uint32 renderer_id;
   RendererParam param;
 };
 
 // Sets which events a resource should deliver to the session listener.
-// This operation replaces any prior event mask for the resource.
+// This commanderation replaces any prior event mask for the resource.
 //
 // The initial event mask for a resource is zero, meaning no events are
 // reported.
@@ -600,7 +600,7 @@ struct SetRendererParamOp {
 // Constraints:
 // - |resource_id| is a valid resource id
 // - |event_mask| is zero or a combination of |k*EventMask| bits OR'ed together.
-struct SetEventMaskOp {
+struct SetEventMaskCommand {
   uint32 id;
   uint32 event_mask;
 };
@@ -614,7 +614,7 @@ struct SetEventMaskOp {
 //
 // |renderer_id| refs the target renderer.
 // |disable_clipping| specifies whether the clipping should be disabled.
-struct SetDisableClippingOp {
+struct SetDisableClippingCommand {
   uint32 renderer_id;
   bool disable_clipping;
 };

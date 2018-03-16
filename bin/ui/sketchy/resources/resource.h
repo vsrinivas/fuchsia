@@ -17,9 +17,9 @@ class Resource : public escher::TypedReffable<ResourceTypeInfo> {
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
   // For the given resource type info, returns the resource that will act as
-  // the target for ops directed at this resource. Subclasses (notably the
+  // the target for commands directed at this resource. Subclasses (notably the
   // |Import| since their binding are not mutable) may return alternate
-  // resources to act as the recipients of ops.
+  // resources to act as the recipients of commands.
   Resource* GetDelegate(const ResourceTypeInfo& type_info);
 
  protected:

@@ -37,11 +37,11 @@ class SceneManagerTest : public ::testing::Test {
     return manager_impl_.get();
   }
   Engine* engine() { return manager_impl()->engine(); }
-  scenic::SceneManagerPtr manager_;
+  ui::gfx::SceneManagerPtr manager_;
   escher::impl::CommandBufferSequencer command_buffer_sequencer_;
   DisplayManager display_manager_;
   std::unique_ptr<Display> display_;
-  std::unique_ptr<f1dl::Binding<scenic::SceneManager>> manager_binding_;
+  std::unique_ptr<f1dl::Binding<ui::gfx::SceneManager>> manager_binding_;
   std::unique_ptr<fsl::Thread> thread_;
 
  private:

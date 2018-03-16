@@ -64,7 +64,7 @@ struct SupportedImageProperties {
 };
 
 struct ImagePipeSurface {
-  scenic::ImagePipeSyncPtr image_pipe;
+  ui::gfx::ImagePipeSyncPtr image_pipe;
   SupportedImageProperties supported_properties;
 };
 
@@ -76,7 +76,7 @@ struct PendingImageInfo {
 class ImagePipeSwapchain {
  public:
   ImagePipeSwapchain(SupportedImageProperties supported_properties,
-                     scenic::ImagePipeSyncPtr image_pipe)
+                     ui::gfx::ImagePipeSyncPtr image_pipe)
       : supported_properties_(supported_properties),
         image_pipe_(std::move(image_pipe)),
         image_pipe_closed_(false),
@@ -99,7 +99,7 @@ class ImagePipeSwapchain {
 
  private:
   SupportedImageProperties supported_properties_;
-  scenic::ImagePipeSyncPtr image_pipe_;
+  ui::gfx::ImagePipeSyncPtr image_pipe_;
   std::vector<VkImage> images_;
   std::vector<zx::event> acquire_events_;
   std::vector<VkDeviceMemory> memories_;
@@ -274,16 +274,16 @@ VkResult ImagePipeSwapchain::Initialize(
 
     zx::vmo vmo(vmo_handle);
 
-    auto image_info = scenic::ImageInfo::New();
+    auto image_info = ui::gfx::ImageInfo::New();
     image_info->width = width;
     image_info->height = height;
     image_info->stride = 0; // Meaningless for optimal tiling.
-    image_info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
-    image_info->color_space = scenic::ImageInfo::ColorSpace::SRGB;
-    image_info->tiling = scenic::ImageInfo::Tiling::GPU_OPTIMAL;
+    image_info->pixel_format = ui::gfx::ImageInfo::PixelFormat::BGRA_8;
+    image_info->color_space = ui::gfx::ImageInfo::ColorSpace::SRGB;
+    image_info->tiling = ui::gfx::ImageInfo::Tiling::GPU_OPTIMAL;
 
     image_pipe_->AddImage(ImageIdFromIndex(i), std::move(image_info),
-                          std::move(vmo), scenic::MemoryType::VK_DEVICE_MEMORY,
+                          std::move(vmo), ui::gfx::MemoryType::VK_DEVICE_MEMORY,
                           0);
 
     available_ids_.push_back(i);
@@ -582,7 +582,7 @@ CreateMagmaSurfaceKHR(VkInstance instance,
   surface->supported_properties = {{pCreateInfo->width, pCreateInfo->height},
                                    formats};
   surface->image_pipe =
-      scenic::ImagePipeSyncPtr::Create(f1dl::InterfaceHandle<scenic::ImagePipe>(
+      ui::gfx::ImagePipeSyncPtr::Create(f1dl::InterfaceHandle<ui::gfx::ImagePipe>(
           zx::channel(pCreateInfo->imagePipeHandle)));
   *pSurface = reinterpret_cast<VkSurfaceKHR>(surface);
   return VK_SUCCESS;

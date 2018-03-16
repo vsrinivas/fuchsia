@@ -57,12 +57,12 @@ class TempSessionDelegate : public CommandDispatcher {
                        const ui::Session::PresentCallback& callback) = 0;
 
   virtual void HitTest(uint32_t node_id,
-                       scenic::vec3Ptr ray_origin,
-                       scenic::vec3Ptr ray_direction,
+                       ui::gfx::vec3Ptr ray_origin,
+                       ui::gfx::vec3Ptr ray_direction,
                        const ui::Session::HitTestCallback& callback) = 0;
 
-  virtual void HitTestDeviceRay(scenic::vec3Ptr ray_origin,
-                                scenic::vec3Ptr ray_direction,
+  virtual void HitTestDeviceRay(ui::gfx::vec3Ptr ray_origin,
+                                ui::gfx::vec3Ptr ray_direction,
                                 const ui::Session::HitTestCallback& clback) = 0;
 
  private:

@@ -26,7 +26,7 @@ interface Presentation {
 
   // Set parameters such as the shadow algorithm used to render the scene.
   // NOTE: a single param would be better than an array; see TO-529.
-  SetRendererParams@3(array<scenic.RendererParam> params);
+  SetRendererParams@3(array<ui.gfx.RendererParam> params);
 
   SetDisplayUsage@4(DisplayUsage usage);
 

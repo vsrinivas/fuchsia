@@ -31,11 +31,11 @@ class ShadertoyImpl : public mozart::example::Shadertoy {
   void SetResolution(uint32_t width, uint32_t height) override;
 
   // |Shadertoy|
-  void SetMouse(scenic::vec4Ptr i_mouse) override;
+  void SetMouse(ui::gfx::vec4Ptr i_mouse) override;
 
   // |Shadertoy|
   void SetImage(uint32_t channel,
-                ::f1dl::InterfaceRequest<scenic::ImagePipe> request) override;
+                ::f1dl::InterfaceRequest<ui::gfx::ImagePipe> request) override;
 
   fxl::RefPtr<ShadertoyState> state_;
 

@@ -40,10 +40,10 @@ interface Shadertoy {
   // i_mouse.zw
   //   - (when mouse is down) the current position of the mouse
   //   - (when mouse is up) the position of the last mouse-up event
-  SetMouse@3(scenic.vec4 i_mouse);
+  SetMouse@3(ui.gfx.vec4 i_mouse);
 
   // Corresponds to Shadertoy's 'iChannel0..3' parameters.  Currently only 2D
   // samplers are supported (no cubemaps).  |channel| must be one of 0, 1, 2, 3.
   // TODO: implement cubemap support.
-  SetImage@4(uint32 channel, scenic.ImagePipe& image_pipe);
+  SetImage@4(uint32 channel, ui.gfx.ImagePipe& image_pipe);
 };

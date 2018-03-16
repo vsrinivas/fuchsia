@@ -29,7 +29,7 @@ App::~App() = default;
 
 void App::NewImagePipeShadertoy(
     ::f1dl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
-    ::f1dl::InterfaceHandle<scenic::ImagePipe> image_pipe) {
+    ::f1dl::InterfaceHandle<ui::gfx::ImagePipe> image_pipe) {
   shadertoy_bindings_.AddBinding(
       std::make_unique<ShadertoyImpl>(
           ShadertoyState::NewForImagePipe(this, std::move(image_pipe))),

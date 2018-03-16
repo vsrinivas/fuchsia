@@ -41,8 +41,8 @@ void SessionHandler::Enqueue(::f1dl::Array<ui::CommandPtr> commands) {
   // is that ::fidl::Array doesn't support this.  Or, at least reserve
   // enough space.  But ::fidl::Array doesn't support this, either.
   for (auto& command : commands) {
-    FXL_CHECK(command->which() == ui::Command::Tag::SCENIC);
-    buffered_ops_.push_back(std::move(command->get_scenic()));
+    FXL_CHECK(command->which() == ui::Command::Tag::GFX);
+    buffered_commands_.push_back(std::move(command->get_gfx()));
   }
 }
 
@@ -50,24 +50,24 @@ void SessionHandler::Present(uint64_t presentation_time,
                              ::f1dl::Array<zx::event> acquire_fences,
                              ::f1dl::Array<zx::event> release_fences,
                              const ui::Session::PresentCallback& callback) {
-  if (!session_->ScheduleUpdate(presentation_time, std::move(buffered_ops_),
-                                std::move(acquire_fences),
-                                std::move(release_fences), callback)) {
+  if (!session_->ScheduleUpdate(
+          presentation_time, std::move(buffered_commands_),
+          std::move(acquire_fences), std::move(release_fences), callback)) {
     BeginTearDown();
   }
 }
 
 void SessionHandler::HitTest(uint32_t node_id,
-                             scenic::vec3Ptr ray_origin,
-                             scenic::vec3Ptr ray_direction,
+                             ui::gfx::vec3Ptr ray_origin,
+                             ui::gfx::vec3Ptr ray_direction,
                              const ui::Session::HitTestCallback& callback) {
   session_->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
                     callback);
 }
 
 void SessionHandler::HitTestDeviceRay(
-    scenic::vec3Ptr ray_origin,
-    scenic::vec3Ptr ray_direction,
+    ui::gfx::vec3Ptr ray_origin,
+    ui::gfx::vec3Ptr ray_direction,
     const ui::Session::HitTestDeviceRayCallback& callback) {
   session_->HitTestDeviceRay(std::move(ray_origin), std::move(ray_direction),
                              callback);

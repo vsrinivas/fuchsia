@@ -36,7 +36,7 @@ class MeshBuffer final {
       Frame* frame, uint32_t vertex_count, uint32_t index_count,
       const escher::BoundingBox& bbox);
 
-  // Provide all the necessary parameters to scenic::Mesh::BindBuffers().
+  // Provide all the necessary parameters to ui::gfx::Mesh::BindBuffers().
   void ProvideBuffersToScenicMesh(scenic_lib::Mesh* scenic_mesh);
 
   uint32_t vertex_count() const { return vertex_count_; }

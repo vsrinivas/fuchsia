@@ -42,14 +42,14 @@ class Renderer : public Resource {
 
   // Set the shadow algorithm that the |Renderer| should use when lighting
   // the scene.
-  bool SetShadowTechnique(scenic::ShadowTechnique technique);
+  bool SetShadowTechnique(ui::gfx::ShadowTechnique technique);
 
   // Set whether clipping is disabled; false by default.
   void DisableClipping(bool disable_clipping);
 
   Camera* camera() const { return camera_.get(); }
 
-  scenic::ShadowTechnique shadow_technique() const { return shadow_technique_; }
+  ui::gfx::ShadowTechnique shadow_technique() const { return shadow_technique_; }
 
  private:
   class Visitor : public ResourceVisitor {
@@ -93,8 +93,8 @@ class Renderer : public Resource {
 
   CameraPtr camera_;
   escher::MaterialPtr default_material_;
-  scenic::ShadowTechnique shadow_technique_ =
-      scenic::ShadowTechnique::SCREEN_SPACE;
+  ui::gfx::ShadowTechnique shadow_technique_ =
+      ui::gfx::ShadowTechnique::SCREEN_SPACE;
   bool disable_clipping_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);

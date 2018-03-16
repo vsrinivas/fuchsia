@@ -18,12 +18,12 @@ using NodeTest = SessionTest;
 TEST_F(NodeTest, Tagging) {
   const scenic::ResourceId kNodeId = 1;
 
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeOp(kNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCommand(kNodeId)));
   auto shape_node = FindResource<ShapeNode>(kNodeId);
   EXPECT_EQ(0u, shape_node->tag_value());
-  EXPECT_TRUE(Apply(scenic_lib::NewSetTagOp(kNodeId, 42u)));
+  EXPECT_TRUE(Apply(scenic_lib::NewSetTagCommand(kNodeId, 42u)));
   EXPECT_EQ(42u, shape_node->tag_value());
-  EXPECT_TRUE(Apply(scenic_lib::NewSetTagOp(kNodeId, 0u)));
+  EXPECT_TRUE(Apply(scenic_lib::NewSetTagCommand(kNodeId, 0u)));
   EXPECT_EQ(0u, shape_node->tag_value());
 }
 
@@ -32,14 +32,14 @@ TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
   const scenic::ResourceId kMaterialId = 2;
   const scenic::ResourceId kShapeId = 3;
 
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeOp(kNodeId)));
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateMaterialOp(kMaterialId)));
-  EXPECT_TRUE(Apply(scenic_lib::NewSetTextureOp(kMaterialId, 0)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCommand(kNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateMaterialCommand(kMaterialId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewSetTextureCommand(kMaterialId, 0)));
   EXPECT_TRUE(
-      Apply(scenic_lib::NewSetColorOp(kMaterialId, 255, 100, 100, 255)));
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateCircleOp(kShapeId, 50.f)));
-  EXPECT_TRUE(Apply(scenic_lib::NewSetMaterialOp(kNodeId, kMaterialId)));
-  EXPECT_TRUE(Apply(scenic_lib::NewSetShapeOp(kNodeId, kShapeId)));
+      Apply(scenic_lib::NewSetColorCommand(kMaterialId, 255, 100, 100, 255)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateCircleCommand(kShapeId, 50.f)));
+  EXPECT_TRUE(Apply(scenic_lib::NewSetMaterialCommand(kNodeId, kMaterialId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewSetShapeCommand(kNodeId, kShapeId)));
   auto shape_node = FindResource<ShapeNode>(kNodeId);
   auto material = FindResource<Material>(kMaterialId);
   auto circle = FindResource<Shape>(kShapeId);
@@ -53,48 +53,48 @@ TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
 TEST_F(NodeTest, NodesWithChildren) {
   // Child node that we will attach to various types of nodes.
   const scenic::ResourceId kChildNodeId = 1;
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeOp(kChildNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCommand(kChildNodeId)));
   auto child_node = FindResource<Node>(kChildNodeId);
 
   // OK to detach a child that hasn't been attached.
-  EXPECT_TRUE(Apply(scenic_lib::NewDetachOp(kChildNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewDetachCommand(kChildNodeId)));
 
   const scenic::ResourceId kEntityNodeId = 10;
   const scenic::ResourceId kShapeNodeId = 11;
   // TODO: const scenic::ResourceId kClipNodeId = 12;
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateEntityNodeOp(kEntityNodeId)));
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeOp(kShapeNodeId)));
-  // TODO: EXPECT_TRUE(Apply(scenic_lib::NewCreateClipNodeOp(kClipNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCommand(kEntityNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCommand(kShapeNodeId)));
+  // TODO: EXPECT_TRUE(Apply(scenic_lib::NewCreateClipNodeCommand(kClipNodeId)));
   auto entity_node = FindResource<EntityNode>(kEntityNodeId);
   auto shape_node = FindResource<ShapeNode>(kShapeNodeId);
   // auto clip_node = FindResource<ClipNode>(kClipNodeId);
 
   // We expect to be able to add children to these types.
-  EXPECT_TRUE(Apply(scenic_lib::NewAddChildOp(kEntityNodeId, kChildNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewAddChildCommand(kEntityNodeId, kChildNodeId)));
   EXPECT_EQ(entity_node.get(), child_node->parent());
-  EXPECT_TRUE(Apply(scenic_lib::NewDetachOp(kChildNodeId)));
-  // EXPECT_TRUE(Apply(scenic_lib::NewDetachOp(kChildNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewDetachCommand(kChildNodeId)));
+  // EXPECT_TRUE(Apply(scenic_lib::NewDetachCommand(kChildNodeId)));
 
   // We do not expect to be able to add children to these types.
   // TODO:
-  // EXPECT_FALSE(Apply(scenic_lib::NewAddChildOp(kClipNodeId, kChildNodeId)));
+  // EXPECT_FALSE(Apply(scenic_lib::NewAddChildCommand(kClipNodeId, kChildNodeId)));
   // EXPECT_EQ(nullptr, child_node->parent());
   // EXPECT_EQ(nullptr, child_node->parent());
-  EXPECT_FALSE(Apply(scenic_lib::NewAddChildOp(kShapeNodeId, kChildNodeId)));
+  EXPECT_FALSE(Apply(scenic_lib::NewAddChildCommand(kShapeNodeId, kChildNodeId)));
   EXPECT_EQ(nullptr, child_node->parent());
 }
 
 TEST_F(NodeTest, SettingHitTestBehavior) {
   const scenic::ResourceId kNodeId = 1;
 
-  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeOp(kNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCommand(kNodeId)));
 
   auto shape_node = FindResource<ShapeNode>(kNodeId);
-  EXPECT_EQ(scenic::HitTestBehavior::kDefault, shape_node->hit_test_behavior());
+  EXPECT_EQ(ui::gfx::HitTestBehavior::kDefault, shape_node->hit_test_behavior());
 
-  EXPECT_TRUE(Apply(scenic_lib::NewSetHitTestBehaviorOp(
-      kNodeId, scenic::HitTestBehavior::kSuppress)));
-  EXPECT_EQ(scenic::HitTestBehavior::kSuppress,
+  EXPECT_TRUE(Apply(scenic_lib::NewSetHitTestBehaviorCommand(
+      kNodeId, ui::gfx::HitTestBehavior::kSuppress)));
+  EXPECT_EQ(ui::gfx::HitTestBehavior::kSuppress,
             shape_node->hit_test_behavior());
 }
 

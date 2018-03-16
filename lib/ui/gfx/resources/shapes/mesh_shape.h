@@ -21,13 +21,13 @@ class MeshShape final : public Shape {
 
   MeshShape(Session* session, scenic::ResourceId id);
 
-  // These correspond to BindMeshBuffersOp in ops.fidl.
+  // These correspond to BindMeshBuffersCommand in commands.fidl.
   bool BindBuffers(BufferPtr index_buffer,
-                   scenic::MeshIndexFormat index_format,
+                   ui::gfx::MeshIndexFormat index_format,
                    uint64_t index_offset,
                    uint32_t index_count,
                    BufferPtr vertex_buffer,
-                   const scenic::MeshVertexFormatPtr& vertex_format,
+                   const ui::gfx::MeshVertexFormatPtr& vertex_format,
                    uint64_t vertex_offset,
                    uint32_t vertex_count,
                    escher::BoundingBox bounding_box);

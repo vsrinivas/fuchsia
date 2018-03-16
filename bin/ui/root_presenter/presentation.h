@@ -118,7 +118,7 @@ class Presentation : private mozart::ViewTreeListener,
 
   // |Presentation|
   void SetRendererParams(
-      ::f1dl::Array<scenic::RendererParamPtr> params) override;
+      ::f1dl::Array<ui::gfx::RendererParamPtr> params) override;
 
   // |Presentation|
   void SetDisplayUsage(mozart::DisplayUsage usage) override;
@@ -131,7 +131,7 @@ class Presentation : private mozart::ViewTreeListener,
   void CreateViewTree(
       mozart::ViewOwnerPtr view_owner,
       f1dl::InterfaceRequest<mozart::Presentation> presentation_request,
-      scenic::DisplayInfoPtr display_info);
+      ui::gfx::DisplayInfoPtr display_info);
   void OnEvent(mozart::InputEventPtr event);
 
   void PresentScene();

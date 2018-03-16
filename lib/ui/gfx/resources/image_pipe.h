@@ -34,13 +34,13 @@ class ImagePipe : public ImageBase {
   ImagePipe(Session* session, scenic::ResourceId id);
   ImagePipe(Session* session,
             scenic::ResourceId id,
-            ::f1dl::InterfaceRequest<scenic::ImagePipe> request);
+            ::f1dl::InterfaceRequest<ui::gfx::ImagePipe> request);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
   void AddImage(uint32_t image_id,
-                scenic::ImageInfoPtr image_info,
+                ui::gfx::ImageInfoPtr image_info,
                 zx::vmo memory,
-                scenic::MemoryType memory_type,
+                ui::gfx::MemoryType memory_type,
                 uint64_t memory_offset);
   void RemoveImage(uint32_t image_id);
 
@@ -48,7 +48,7 @@ class ImagePipe : public ImageBase {
                     uint64_t presentation_time,
                     ::f1dl::Array<zx::event> acquire_fences,
                     ::f1dl::Array<zx::event> release_fences,
-                    const scenic::ImagePipe::PresentImageCallback& callback);
+                    const ui::gfx::ImagePipe::PresentImageCallback& callback);
 
   void Accept(class ResourceVisitor* visitor) override;
 
@@ -78,7 +78,7 @@ class ImagePipe : public ImageBase {
   // Virtual so that test subclasses can override.
   virtual ImagePtr CreateImage(Session* session,
                                MemoryPtr memory,
-                               const scenic::ImageInfoPtr& image_info,
+                               const ui::gfx::ImageInfoPtr& image_info,
                                uint64_t memory_offset,
                                ErrorReporter* error_reporter);
 
@@ -94,7 +94,7 @@ class ImagePipe : public ImageBase {
 
     // Callback to report when the update has been applied in response to
     // an invocation of |ImagePipe.PresentImage()|.
-    scenic::ImagePipe::PresentImageCallback present_image_callback;
+    ui::gfx::ImagePipe::PresentImageCallback present_image_callback;
   };
   std::queue<Frame> frames_;
   std::unique_ptr<ImagePipeHandler> handler_;

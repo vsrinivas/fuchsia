@@ -50,14 +50,14 @@ class Session final : public ui::Session,
   // |ui::Session|
   // TODO(MZ-422): Remove this after it's removed from session.fidl.
   void HitTest(uint32_t node_id,
-               scenic::vec3Ptr ray_origin,
-               scenic::vec3Ptr ray_direction,
+               ui::gfx::vec3Ptr ray_origin,
+               ui::gfx::vec3Ptr ray_direction,
                const HitTestCallback& callback) override;
 
   // |ui::Session|
   // TODO(MZ-422): Remove this after it's removed from session.fidl.
-  void HitTestDeviceRay(scenic::vec3Ptr ray_origin,
-                        scenic::vec3Ptr ray_direction,
+  void HitTestDeviceRay(ui::gfx::vec3Ptr ray_origin,
+                        ui::gfx::vec3Ptr ray_direction,
                         const HitTestCallback& callback) override;
 
   // |EventReporter|

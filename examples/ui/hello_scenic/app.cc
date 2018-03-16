@@ -26,7 +26,7 @@
 #include "lib/fxl/logging.h"
 
 #include "garnet/lib/ui/gfx/tests/util.h"
-#include "lib/ui/gfx/fidl/ops.fidl.h"
+#include "lib/ui/gfx/fidl/commands.fidl.h"
 #include "lib/ui/scenic/client/host_memory.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/scenic/types.h"
@@ -47,7 +47,7 @@ App::App()
     FXL_LOG(INFO) << "Lost connection to Mozart service.";
     loop_->QuitNow();
   });
-  scenic_->GetDisplayInfo([this](scenic::DisplayInfoPtr display_info) {
+  scenic_->GetDisplayInfo([this](ui::gfx::DisplayInfoPtr display_info) {
     Init(std::move(display_info));
   });
 }
@@ -70,15 +70,15 @@ void App::InitCheckerboardMaterial(Material* uninitialized_material) {
          checkerboard_pixels_size);
 
   // Create an Image to wrap the checkerboard.
-  auto checkerboard_image_info = scenic::ImageInfo::New();
+  auto checkerboard_image_info = ui::gfx::ImageInfo::New();
   checkerboard_image_info->width = checkerboard_width;
   checkerboard_image_info->height = checkerboard_height;
   const size_t kBytesPerPixel = 4u;
   checkerboard_image_info->stride = checkerboard_width * kBytesPerPixel;
   checkerboard_image_info->pixel_format =
-      scenic::ImageInfo::PixelFormat::BGRA_8;
-  checkerboard_image_info->color_space = scenic::ImageInfo::ColorSpace::SRGB;
-  checkerboard_image_info->tiling = scenic::ImageInfo::Tiling::LINEAR;
+      ui::gfx::ImageInfo::PixelFormat::BGRA_8;
+  checkerboard_image_info->color_space = ui::gfx::ImageInfo::ColorSpace::SRGB;
+  checkerboard_image_info->tiling = ui::gfx::ImageInfo::Tiling::LINEAR;
 
   HostImage checkerboard_image(checkerboard_memory, 0,
                                std::move(checkerboard_image_info));
@@ -194,7 +194,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
   pane_2_contents.SetTranslation(0, 0, 10);
 }
 
-void App::Init(scenic::DisplayInfoPtr display_info) {
+void App::Init(ui::gfx::DisplayInfoPtr display_info) {
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.

@@ -14,13 +14,13 @@
 
 namespace display_pipe {
 
-class ImagePipeImpl : public scenic::ImagePipe {
+class ImagePipeImpl : public ui::gfx::ImagePipe {
 public:
     ImagePipeImpl(std::shared_ptr<MagmaConnection> conn);
     ~ImagePipeImpl() override;
 
-    void AddImage(uint32_t image_id, scenic::ImageInfoPtr image_info, zx::vmo memory,
-                  scenic::MemoryType memory_type, uint64_t memory_offset) override;
+    void AddImage(uint32_t image_id, ui::gfx::ImageInfoPtr image_info, zx::vmo memory,
+                  ui::gfx::MemoryType memory_type, uint64_t memory_offset) override;
     void RemoveImage(uint32_t image_id) override;
     void PresentImage(uint32_t image_id,
                       uint64_t presetation_time,
@@ -33,7 +33,7 @@ public:
 private:
     std::shared_ptr<MagmaConnection> conn_;
     std::unordered_map<uint32_t, std::unique_ptr<Image>> images_;
-    f1dl::BindingSet<scenic::ImagePipe> bindings_;
+    f1dl::BindingSet<ui::gfx::ImagePipe> bindings_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(ImagePipeImpl);
 };

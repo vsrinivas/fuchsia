@@ -93,7 +93,7 @@ class BaseView : private ViewListener,
 
   // Gets the view's metrics.
   // This value is zero until the view receives metrics from its session.
-  const scenic::Metrics& metrics() const { return adjusted_metrics_; }
+  const ui::gfx::Metrics& metrics() const { return adjusted_metrics_; }
 
   // Gets the input connection.
   InputConnection* input_connection() { return input_connection_.get(); }
@@ -180,8 +180,8 @@ class BaseView : private ViewListener,
   SizeF logical_size_;
   Size physical_size_;
   bool need_square_metrics_ = false;
-  scenic::Metrics original_metrics_;
-  scenic::Metrics adjusted_metrics_;
+  ui::gfx::Metrics original_metrics_;
+  ui::gfx::Metrics adjusted_metrics_;
   scenic_lib::Session session_;
   scenic_lib::ImportNode parent_node_;
 

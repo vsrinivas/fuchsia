@@ -20,7 +20,7 @@ namespace shadertoy {
 
 ShadertoyStateForImagePipe::ShadertoyStateForImagePipe(
     App* app,
-    ::f1dl::InterfaceHandle<scenic::ImagePipe> image_pipe)
+    ::f1dl::InterfaceHandle<ui::gfx::ImagePipe> image_pipe)
     : ShadertoyState(app), image_pipe_(image_pipe.Bind()) {
   image_pipe_.set_error_handler([this] { this->Close(); });
 }
@@ -93,14 +93,14 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     fb.release_fence = std::move(release_semaphore_pair.second);
     fb.image_pipe_id = next_image_pipe_id_++;
 
-    auto image_info = scenic::ImageInfo::New();
+    auto image_info = ui::gfx::ImageInfo::New();
     image_info->width = width();
     image_info->height = height();
     image_info->stride = 0;  // inapplicable to GPU_OPTIMAL tiling.
-    image_info->tiling = scenic::ImageInfo::Tiling::GPU_OPTIMAL;
+    image_info->tiling = ui::gfx::ImageInfo::Tiling::GPU_OPTIMAL;
 
     image_pipe_->AddImage(fb.image_pipe_id, std::move(image_info),
-                          std::move(vmo), scenic::MemoryType::VK_DEVICE_MEMORY,
+                          std::move(vmo), ui::gfx::MemoryType::VK_DEVICE_MEMORY,
                           image->memory_offset());
   }
 }

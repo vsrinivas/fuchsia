@@ -8,16 +8,16 @@ namespace scenic {
 namespace gfx {
 
 ImagePipeHandler::ImagePipeHandler(
-    ::f1dl::InterfaceRequest<scenic::ImagePipe> request,
+    ::f1dl::InterfaceRequest<ui::gfx::ImagePipe> request,
     scenic::gfx::ImagePipe* image_pipe)
     : binding_(this, std::move(request)), image_pipe_(image_pipe) {
   binding_.set_error_handler([image_pipe] { image_pipe->OnConnectionError(); });
 }
 
 void ImagePipeHandler::AddImage(uint32_t image_id,
-                                scenic::ImageInfoPtr image_info,
+                                ui::gfx::ImageInfoPtr image_info,
                                 zx::vmo memory,
-                                scenic::MemoryType memory_type,
+                                ui::gfx::MemoryType memory_type,
                                 uint64_t memory_offset) {
   image_pipe_->AddImage(image_id, std::move(image_info), std::move(memory),
                         memory_type, memory_offset);

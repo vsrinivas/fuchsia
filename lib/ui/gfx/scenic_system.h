@@ -15,7 +15,7 @@ namespace gfx {
 
 class ScenicSystem : public TempSystemDelegate {
  public:
-  static constexpr TypeId kTypeId = kScenic;
+  static constexpr TypeId kTypeId = kGfx;
 
   explicit ScenicSystem(SystemContext context);
   ~ScenicSystem();

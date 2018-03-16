@@ -82,12 +82,12 @@ class HostImage final : public Image {
  public:
   HostImage(const HostMemory& memory,
             off_t memory_offset,
-            scenic::ImageInfoPtr info);
+            ui::gfx::ImageInfoPtr info);
   HostImage(Session* session,
             uint32_t memory_id,
             off_t memory_offset,
             fxl::RefPtr<HostData> data,
-            scenic::ImageInfoPtr info);
+            ui::gfx::ImageInfoPtr info);
   HostImage(HostImage&& moved);
   ~HostImage();
 
@@ -118,14 +118,14 @@ class HostImagePool {
 
   // Gets information about the images in the pool, or nullptr if the
   // pool is not configured.
-  const scenic::ImageInfo* image_info() const { return image_info_.get(); }
+  const ui::gfx::ImageInfo* image_info() const { return image_info_.get(); }
 
   // Sets the image information for images in the pool.
   // Previously created images are released but their memory may be reused.
   // If |image_info| is nullptr, the pool reverts to an non-configured state;
   // all images are released but the memory is retained for recycling.
   // Returns true if the configuration changed.
-  bool Configure(const scenic::ImageInfo* image_info);
+  bool Configure(const ui::gfx::ImageInfo* image_info);
 
   // Gets the image with the specified index.
   // The |index| must be between 0 and |num_images() - 1|.
@@ -140,7 +140,7 @@ class HostImagePool {
  private:
   Session* const session_;
 
-  scenic::ImageInfoPtr image_info_;
+  ui::gfx::ImageInfoPtr image_info_;
   std::vector<std::unique_ptr<HostImage>> image_ptrs_;
   std::vector<std::unique_ptr<HostMemory>> memory_ptrs_;
 

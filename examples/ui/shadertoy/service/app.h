@@ -41,7 +41,7 @@ class App : public mozart::example::ShadertoyFactory {
   // |ShadertoyFactory|
   void NewImagePipeShadertoy(
       ::f1dl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
-      ::f1dl::InterfaceHandle<scenic::ImagePipe> image_pipe) override;
+      ::f1dl::InterfaceHandle<ui::gfx::ImagePipe> image_pipe) override;
 
   // |ShadertoyFactory|
   void NewViewShadertoy(

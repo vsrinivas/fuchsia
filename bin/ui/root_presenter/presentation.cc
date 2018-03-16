@@ -117,7 +117,7 @@ void Presentation::Present(
   scenic_->GetDisplayInfo(fxl::MakeCopyable(
       [weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
        presentation_request = std::move(presentation_request)](
-          scenic::DisplayInfoPtr display_info) mutable {
+          ui::gfx::DisplayInfoPtr display_info) mutable {
         if (weak)
           weak->CreateViewTree(std::move(view_owner),
                                std::move(presentation_request),
@@ -128,7 +128,7 @@ void Presentation::Present(
 void Presentation::CreateViewTree(
     mozart::ViewOwnerPtr view_owner,
     f1dl::InterfaceRequest<mozart::Presentation> presentation_request,
-    scenic::DisplayInfoPtr display_info) {
+    ui::gfx::DisplayInfoPtr display_info) {
   FXL_DCHECK(display_info);
 
   if (presentation_request) {
@@ -514,7 +514,7 @@ void Presentation::Shutdown() {
 }
 
 void Presentation::SetRendererParams(
-    ::f1dl::Array<scenic::RendererParamPtr> params) {
+    ::f1dl::Array<ui::gfx::RendererParamPtr> params) {
   for (auto& param : params) {
     renderer_.SetParam(std::move(param));
   }

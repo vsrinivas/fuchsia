@@ -156,7 +156,7 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
 
   // TODO(MZ-216): Traversing the whole graph just to compute this is pretty
   // inefficient.  We should optimize this.
-  scenic::Metrics metrics;
+  ui::gfx::Metrics metrics;
   metrics.scale_x = 1.f;
   metrics.scale_y = 1.f;
   metrics.scale_z = 1.f;
@@ -171,8 +171,8 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
   // have some kind of backpointer from a session to its handler.
   for (auto node : updated_nodes) {
     if (node->session()) {
-      auto event = scenic::Event::New();
-      event->set_metrics(scenic::MetricsEvent::New());
+      auto event = ui::gfx::Event::New();
+      event->set_metrics(ui::gfx::MetricsEvent::New());
       event->get_metrics()->node_id = node->id();
       event->get_metrics()->metrics = node->reported_metrics().Clone();
 
@@ -182,14 +182,14 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
 }
 
 void Engine::UpdateMetrics(Node* node,
-                           const scenic::Metrics& parent_metrics,
+                           const ui::gfx::Metrics& parent_metrics,
                            std::vector<Node*>* updated_nodes) {
-  scenic::Metrics local_metrics;
+  ui::gfx::Metrics local_metrics;
   local_metrics.scale_x = parent_metrics.scale_x * node->scale().x;
   local_metrics.scale_y = parent_metrics.scale_y * node->scale().y;
   local_metrics.scale_z = parent_metrics.scale_z * node->scale().z;
 
-  if ((node->event_mask() & scenic::kMetricsEventMask) &&
+  if ((node->event_mask() & ui::gfx::kMetricsEventMask) &&
       !node->reported_metrics().Equals(local_metrics)) {
     node->set_reported_metrics(local_metrics);
     updated_nodes->push_back(node);

@@ -35,19 +35,19 @@ class Layer : public Resource {
   // | Resource |
   void Accept(class ResourceVisitor* visitor) override;
 
-  // SetRendererOp.
+  // SetRendererCommand.
   bool SetRenderer(RendererPtr renderer);
   const RendererPtr& renderer() const { return renderer_; }
 
-  // SetSizeOp.
+  // SetSizeCommand.
   bool SetSize(const escher::vec2& size);
   const escher::vec2& size() const { return size_; }
 
-  // SetColorOp.
+  // SetColorCommand.
   bool SetColor(const escher::vec4& color);
   const escher::vec4& color() const { return color_; }
 
-  // |Resource|, DetachOp.
+  // |Resource|, DetachCommand.
   bool Detach() override;
 
   // Add the scene rendered by this layer, if any, to |scenes_out|.

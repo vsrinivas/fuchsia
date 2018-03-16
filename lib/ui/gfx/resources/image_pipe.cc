@@ -24,16 +24,16 @@ ImagePipe::ImagePipe(Session* session, scenic::ResourceId id)
 
 ImagePipe::ImagePipe(Session* session,
                      scenic::ResourceId id,
-                     ::f1dl::InterfaceRequest<scenic::ImagePipe> request)
+                     ::f1dl::InterfaceRequest<ui::gfx::ImagePipe> request)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
       weak_ptr_factory_(this),
       handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)),
       images_(session->error_reporter()) {}
 
 void ImagePipe::AddImage(uint32_t image_id,
-                         scenic::ImageInfoPtr image_info,
+                         ui::gfx::ImageInfoPtr image_info,
                          zx::vmo vmo,
-                         scenic::MemoryType memory_type,
+                         ui::gfx::MemoryType memory_type,
                          uint64_t memory_offset) {
   if (image_id == 0) {
     session()->error_reporter()->ERROR()
@@ -44,11 +44,11 @@ void ImagePipe::AddImage(uint32_t image_id,
   vk::Device device = session()->engine()->vk_device();
   MemoryPtr memory;
   switch (memory_type) {
-    case scenic::MemoryType::VK_DEVICE_MEMORY:
+    case ui::gfx::MemoryType::VK_DEVICE_MEMORY:
       memory = GpuMemory::New(session(), 0u, device, std::move(vmo),
                               session()->error_reporter());
       break;
-    case scenic::MemoryType::HOST_MEMORY:
+    case ui::gfx::MemoryType::HOST_MEMORY:
       memory = HostMemory::New(session(), 0u, device, std::move(vmo),
                                session()->error_reporter());
       break;
@@ -86,7 +86,7 @@ void ImagePipe::OnConnectionError() {
 
 ImagePtr ImagePipe::CreateImage(Session* session,
                                 MemoryPtr memory,
-                                const scenic::ImageInfoPtr& image_info,
+                                const ui::gfx::ImageInfoPtr& image_info,
                                 uint64_t memory_offset,
                                 ErrorReporter* error_reporter) {
   return Image::New(session, 0u, memory, image_info, memory_offset,
@@ -108,7 +108,7 @@ void ImagePipe::PresentImage(
     uint64_t presentation_time,
     ::f1dl::Array<zx::event> acquire_fences,
     ::f1dl::Array<zx::event> release_fences,
-    const scenic::ImagePipe::PresentImageCallback& callback) {
+    const ui::gfx::ImagePipe::PresentImageCallback& callback) {
   if (!frames_.empty() &&
       presentation_time < frames_.back().presentation_time) {
     session()->error_reporter()->ERROR()

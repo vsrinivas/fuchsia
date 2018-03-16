@@ -8,7 +8,7 @@
 #include <garnet/public/lib/fxl/memory/ref_counted.h>
 #include "lib/ui/scenic/client/session.h"
 #include "lib/ui/sketchy/client/types.h"
-#include "lib/ui/sketchy/fidl/ops.fidl.h"
+#include "lib/ui/sketchy/fidl/commands.fidl.h"
 #include "lib/ui/sketchy/fidl/resources.fidl.h"
 
 namespace sketchy_lib {
@@ -22,8 +22,8 @@ class Canvas;
 // corresponds to a separate canvas resource.
 //
 // Resource is the base class for these other classes.
-// provides lifecycle management; the constructor enqueues a CreateResourceOp
-// and the destructor enqueues a ReleaseResourceOp.
+// provides lifecycle management; the constructor enqueues a CreateResourceCommand
+// and the destructor enqueues a ReleaseResourceCommand.
 class Resource {
  public:
   Canvas* canvas() const { return canvas_; }
@@ -39,7 +39,7 @@ class Resource {
 
   // Enqueue an op in canvas to create a resource. Called in the constructor of
   // concrete resources to be created.
-  void EnqueueCreateResourceOp(ResourceId resource_id,
+  void EnqueueCreateResourceCommand(ResourceId resource_id,
                                sketchy::ResourceArgsPtr args) const;
 
   // Enqueue an op in canvas to import the resource. Called in the constructor
@@ -48,12 +48,12 @@ class Resource {
   // |token| Token that is exported by the local resource, with which the remote
   //     canvas can import.
   // |spec| Type of the resource.
-  void EnqueueImportResourceOp(ResourceId resource_id,
+  void EnqueueImportResourceCommand(ResourceId resource_id,
                                zx::eventpair token,
-                               scenic::ImportSpec spec) const;
+                               ui::gfx::ImportSpec spec) const;
 
   // Enqueue an op in canvas.
-  void EnqueueOp(sketchy::OpPtr op) const;
+  void EnqueueCommand(sketchy::CommandPtr command) const;
 
  private:
   Canvas* const canvas_;

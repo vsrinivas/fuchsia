@@ -22,7 +22,7 @@ class GpuImage : public Image {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  // Create Image given a MemoryPtr, scenic::ImageInfoPtr, and memory_offset.
+  // Create Image given a MemoryPtr, ui::gfx::ImageInfoPtr, and memory_offset.
   //
   // |session| is the Session that this image can be referenced from.
   // |id| is the ID of the resource.
@@ -37,7 +37,7 @@ class GpuImage : public Image {
   static GpuImagePtr New(Session* session,
                          scenic::ResourceId id,
                          GpuMemoryPtr memory,
-                         const scenic::ImageInfoPtr& image_info,
+                         const ui::gfx::ImageInfoPtr& image_info,
                          uint64_t memory_offset,
                          ErrorReporter* error_reporter);
 

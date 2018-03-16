@@ -15,7 +15,7 @@
 #include "garnet/lib/magma/src/display_pipe/services/display_provider.fidl.h"
 
 display_pipe::DisplayProviderPtr display;
-scenic::ImagePipePtr image_pipe;
+ui::gfx::ImagePipePtr image_pipe;
 uint64_t hsv_index;
 
 // HSV code adopted from:
@@ -130,17 +130,17 @@ void allocate_buffer(uint32_t index, uint32_t width, uint32_t height) {
     Buffer *buffer = Buffer::NewBuffer(width, height);
     buffers[index] = buffer;
 
-    auto info = scenic::ImageInfo::New();
+    auto info = ui::gfx::ImageInfo::New();
     info->width = width;
     info->height = height;
     info->stride = width * 4;
-    info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
-    info->color_space = scenic::ImageInfo::ColorSpace::SRGB;
+    info->pixel_format = ui::gfx::ImageInfo::PixelFormat::BGRA_8;
+    info->color_space = ui::gfx::ImageInfo::ColorSpace::SRGB;
 
     zx::vmo vmo;
     buffer->dupVmo(&vmo);
     image_pipe->AddImage(index, std::move(info), std::move(vmo),
-                         scenic::MemoryType::HOST_MEMORY, 0);
+                         ui::gfx::MemoryType::HOST_MEMORY, 0);
 
     handlers[index] = new BufferHandler(buffer, index);
 }

@@ -48,7 +48,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // Apply the operation to the current session state.  Return true if
   // successful, and false if the op is somehow invalid.  In the latter case,
   // the Session is left unchanged.
-  bool ApplyOp(const scenic::OpPtr& op);
+  bool ApplyCommand(const ui::gfx::CommandPtr& command);
 
   SessionId id() const { return id_; }
   Engine* engine() const { return engine_; }
@@ -58,9 +58,9 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   size_t GetTotalResourceCount() const { return resource_count_; }
 
   // Return the number of resources that a client can identify via a
-  // scenic::ResourceId. This number is decremented when a ReleaseResourceOp is
-  // applied.  However, the resource may continue to exist if it is referenced
-  // by other resources.
+  // scenic::ResourceId. This number is decremented when a
+  // ReleaseResourceCommand is applied.  However, the resource may continue to
+  // exist if it is referenced by other resources.
   size_t GetMappedResourceCount() const { return resources_.size(); }
 
   // Session becomes invalid once TearDown is called.
@@ -73,7 +73,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // Called by SessionHandler::Present().  Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().
   bool ScheduleUpdate(uint64_t presentation_time,
-                      ::f1dl::Array<scenic::OpPtr> ops,
+                      ::f1dl::Array<ui::gfx::CommandPtr> commands,
                       ::f1dl::Array<zx::event> acquire_fences,
                       ::f1dl::Array<zx::event> release_fences,
                       const ui::Session::PresentCallback& callback);
@@ -91,17 +91,17 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 
   // Add an event to our queue, which will be scheduled to be flushed and sent
   // to the event reporter later.
-  void EnqueueEvent(scenic::EventPtr event);
+  void EnqueueEvent(ui::gfx::EventPtr event);
 
   // Called by SessionHandler::HitTest().
   void HitTest(uint32_t node_id,
-               scenic::vec3Ptr ray_origin,
-               scenic::vec3Ptr ray_direction,
+               ui::gfx::vec3Ptr ray_origin,
+               ui::gfx::vec3Ptr ray_direction,
                const ui::Session::HitTestCallback& callback);
 
   // Called by SessionHandler::HitTestDeviceRay().
-  void HitTestDeviceRay(scenic::vec3Ptr ray_origin,
-                        scenic::vec3Ptr ray_direction,
+  void HitTestDeviceRay(ui::gfx::vec3Ptr ray_origin,
+                        ui::gfx::vec3Ptr ray_direction,
                         const ui::Session::HitTestCallback& callback);
 
  protected:
@@ -123,125 +123,142 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // Called internally to initiate teardown.
   void BeginTearDown();
 
-  // Operation application functions, called by ApplyOp().
-  bool ApplyCreateResourceOp(const scenic::CreateResourceOpPtr& op);
-  bool ApplyReleaseResourceOp(const scenic::ReleaseResourceOpPtr& op);
-  bool ApplyExportResourceOp(const scenic::ExportResourceOpPtr& op);
-  bool ApplyImportResourceOp(const scenic::ImportResourceOpPtr& op);
-  bool ApplyAddChildOp(const scenic::AddChildOpPtr& op);
-  bool ApplyAddPartOp(const scenic::AddPartOpPtr& op);
-  bool ApplyDetachOp(const scenic::DetachOpPtr& op);
-  bool ApplyDetachChildrenOp(const scenic::DetachChildrenOpPtr& op);
-  bool ApplySetTagOp(const scenic::SetTagOpPtr& op);
-  bool ApplySetTranslationOp(const scenic::SetTranslationOpPtr& op);
-  bool ApplySetScaleOp(const scenic::SetScaleOpPtr& op);
-  bool ApplySetRotationOp(const scenic::SetRotationOpPtr& op);
-  bool ApplySetAnchorOp(const scenic::SetAnchorOpPtr& op);
-  bool ApplySetSizeOp(const scenic::SetSizeOpPtr& op);
-  bool ApplySetShapeOp(const scenic::SetShapeOpPtr& op);
-  bool ApplySetMaterialOp(const scenic::SetMaterialOpPtr& op);
-  bool ApplySetClipOp(const scenic::SetClipOpPtr& op);
-  bool ApplySetHitTestBehaviorOp(const scenic::SetHitTestBehaviorOpPtr& op);
-  bool ApplySetCameraOp(const scenic::SetCameraOpPtr& op);
-  bool ApplySetCameraProjectionOp(const scenic::SetCameraProjectionOpPtr& op);
-  bool ApplySetCameraPoseBufferOp(const scenic::SetCameraPoseBufferOpPtr& op);
-  bool ApplySetLightColorOp(const scenic::SetLightColorOpPtr& op);
-  bool ApplySetLightDirectionOp(const scenic::SetLightDirectionOpPtr& op);
-  bool ApplyAddLightOp(const scenic::AddLightOpPtr& op);
-  bool ApplyDetachLightOp(const scenic::DetachLightOpPtr& op);
-  bool ApplyDetachLightsOp(const scenic::DetachLightsOpPtr& op);
-  bool ApplySetTextureOp(const scenic::SetTextureOpPtr& op);
-  bool ApplySetColorOp(const scenic::SetColorOpPtr& op);
-  bool ApplyBindMeshBuffersOp(const scenic::BindMeshBuffersOpPtr& op);
-  bool ApplyAddLayerOp(const scenic::AddLayerOpPtr& op);
-  bool ApplySetLayerStackOp(const scenic::SetLayerStackOpPtr& op);
-  bool ApplySetRendererOp(const scenic::SetRendererOpPtr& op);
-  bool ApplySetRendererParamOp(const scenic::SetRendererParamOpPtr& op);
-  bool ApplySetEventMaskOp(const scenic::SetEventMaskOpPtr& op);
-  bool ApplySetLabelOp(const scenic::SetLabelOpPtr& op);
-  bool ApplySetDisableClippingOp(const scenic::SetDisableClippingOpPtr& op);
+  // Commanderation application functions, called by ApplyCommand().
+  bool ApplyCreateResourceCommand(
+      const ui::gfx::CreateResourceCommandPtr& command);
+  bool ApplyReleaseResourceCommand(
+      const ui::gfx::ReleaseResourceCommandPtr& command);
+  bool ApplyExportResourceCommand(
+      const ui::gfx::ExportResourceCommandPtr& command);
+  bool ApplyImportResourceCommand(
+      const ui::gfx::ImportResourceCommandPtr& command);
+  bool ApplyAddChildCommand(const ui::gfx::AddChildCommandPtr& command);
+  bool ApplyAddPartCommand(const ui::gfx::AddPartCommandPtr& command);
+  bool ApplyDetachCommand(const ui::gfx::DetachCommandPtr& command);
+  bool ApplyDetachChildrenCommand(
+      const ui::gfx::DetachChildrenCommandPtr& command);
+  bool ApplySetTagCommand(const ui::gfx::SetTagCommandPtr& command);
+  bool ApplySetTranslationCommand(
+      const ui::gfx::SetTranslationCommandPtr& command);
+  bool ApplySetScaleCommand(const ui::gfx::SetScaleCommandPtr& command);
+  bool ApplySetRotationCommand(const ui::gfx::SetRotationCommandPtr& command);
+  bool ApplySetAnchorCommand(const ui::gfx::SetAnchorCommandPtr& command);
+  bool ApplySetSizeCommand(const ui::gfx::SetSizeCommandPtr& command);
+  bool ApplySetShapeCommand(const ui::gfx::SetShapeCommandPtr& command);
+  bool ApplySetMaterialCommand(const ui::gfx::SetMaterialCommandPtr& command);
+  bool ApplySetClipCommand(const ui::gfx::SetClipCommandPtr& command);
+  bool ApplySetHitTestBehaviorCommand(
+      const ui::gfx::SetHitTestBehaviorCommandPtr& command);
+  bool ApplySetCameraCommand(const ui::gfx::SetCameraCommandPtr& command);
+  bool ApplySetCameraProjectionCommand(
+      const ui::gfx::SetCameraProjectionCommandPtr& command);
+  bool ApplySetCameraPoseBufferCommand(
+      const ui::gfx::SetCameraPoseBufferCommandPtr& command);
+  bool ApplySetLightColorCommand(
+      const ui::gfx::SetLightColorCommandPtr& command);
+  bool ApplySetLightDirectionCommand(
+      const ui::gfx::SetLightDirectionCommandPtr& command);
+  bool ApplyAddLightCommand(const ui::gfx::AddLightCommandPtr& command);
+  bool ApplyDetachLightCommand(const ui::gfx::DetachLightCommandPtr& command);
+  bool ApplyDetachLightsCommand(const ui::gfx::DetachLightsCommandPtr& command);
+  bool ApplySetTextureCommand(const ui::gfx::SetTextureCommandPtr& command);
+  bool ApplySetColorCommand(const ui::gfx::SetColorCommandPtr& command);
+  bool ApplyBindMeshBuffersCommand(
+      const ui::gfx::BindMeshBuffersCommandPtr& command);
+  bool ApplyAddLayerCommand(const ui::gfx::AddLayerCommandPtr& command);
+  bool ApplySetLayerStackCommand(
+      const ui::gfx::SetLayerStackCommandPtr& command);
+  bool ApplySetRendererCommand(const ui::gfx::SetRendererCommandPtr& command);
+  bool ApplySetRendererParamCommand(
+      const ui::gfx::SetRendererParamCommandPtr& command);
+  bool ApplySetEventMaskCommand(const ui::gfx::SetEventMaskCommandPtr& command);
+  bool ApplySetLabelCommand(const ui::gfx::SetLabelCommandPtr& command);
+  bool ApplySetDisableClippingCommand(
+      const ui::gfx::SetDisableClippingCommandPtr& command);
 
-  // Resource creation functions, called by ApplyCreateResourceOp().
+  // Resource creation functions, called by ApplyCreateResourceCommand().
   bool ApplyCreateMemory(scenic::ResourceId id,
-                         const scenic::MemoryArgsPtr& args);
+                         const ui::gfx::MemoryArgsPtr& args);
   bool ApplyCreateImage(scenic::ResourceId id,
-                        const scenic::ImageArgsPtr& args);
+                        const ui::gfx::ImageArgsPtr& args);
   bool ApplyCreateImagePipe(scenic::ResourceId id,
-                            const scenic::ImagePipeArgsPtr& args);
+                            const ui::gfx::ImagePipeArgsPtr& args);
   bool ApplyCreateBuffer(scenic::ResourceId id,
-                         const scenic::BufferArgsPtr& args);
+                         const ui::gfx::BufferArgsPtr& args);
   bool ApplyCreateScene(scenic::ResourceId id,
-                        const scenic::SceneArgsPtr& args);
+                        const ui::gfx::SceneArgsPtr& args);
   bool ApplyCreateCamera(scenic::ResourceId id,
-                         const scenic::CameraArgsPtr& args);
+                         const ui::gfx::CameraArgsPtr& args);
   bool ApplyCreateRenderer(scenic::ResourceId id,
-                           const scenic::RendererArgsPtr& args);
+                           const ui::gfx::RendererArgsPtr& args);
   bool ApplyCreateAmbientLight(scenic::ResourceId id,
-                               const scenic::AmbientLightArgsPtr& args);
-  bool ApplyCreateDirectionalLight(scenic::ResourceId id,
-                                   const scenic::DirectionalLightArgsPtr& args);
+                               const ui::gfx::AmbientLightArgsPtr& args);
+  bool ApplyCreateDirectionalLight(
+      scenic::ResourceId id,
+      const ui::gfx::DirectionalLightArgsPtr& args);
   bool ApplyCreateRectangle(scenic::ResourceId id,
-                            const scenic::RectangleArgsPtr& args);
-  bool ApplyCreateRoundedRectangle(scenic::ResourceId id,
-                                   const scenic::RoundedRectangleArgsPtr& args);
+                            const ui::gfx::RectangleArgsPtr& args);
+  bool ApplyCreateRoundedRectangle(
+      scenic::ResourceId id,
+      const ui::gfx::RoundedRectangleArgsPtr& args);
   bool ApplyCreateCircle(scenic::ResourceId id,
-                         const scenic::CircleArgsPtr& args);
-  bool ApplyCreateMesh(scenic::ResourceId id, const scenic::MeshArgsPtr& args);
+                         const ui::gfx::CircleArgsPtr& args);
+  bool ApplyCreateMesh(scenic::ResourceId id, const ui::gfx::MeshArgsPtr& args);
   bool ApplyCreateMaterial(scenic::ResourceId id,
-                           const scenic::MaterialArgsPtr& args);
+                           const ui::gfx::MaterialArgsPtr& args);
   bool ApplyCreateClipNode(scenic::ResourceId id,
-                           const scenic::ClipNodeArgsPtr& args);
+                           const ui::gfx::ClipNodeArgsPtr& args);
   bool ApplyCreateEntityNode(scenic::ResourceId id,
-                             const scenic::EntityNodeArgsPtr& args);
+                             const ui::gfx::EntityNodeArgsPtr& args);
   bool ApplyCreateShapeNode(scenic::ResourceId id,
-                            const scenic::ShapeNodeArgsPtr& args);
+                            const ui::gfx::ShapeNodeArgsPtr& args);
   bool ApplyCreateDisplayCompositor(
       scenic::ResourceId id,
-      const scenic::DisplayCompositorArgsPtr& args);
+      const ui::gfx::DisplayCompositorArgsPtr& args);
   bool ApplyCreateImagePipeCompositor(
       scenic::ResourceId id,
-      const scenic::ImagePipeCompositorArgsPtr& args);
+      const ui::gfx::ImagePipeCompositorArgsPtr& args);
   bool ApplyCreateLayerStack(scenic::ResourceId id,
-                             const scenic::LayerStackArgsPtr& args);
+                             const ui::gfx::LayerStackArgsPtr& args);
   bool ApplyCreateLayer(scenic::ResourceId id,
-                        const scenic::LayerArgsPtr& args);
+                        const ui::gfx::LayerArgsPtr& args);
   bool ApplyCreateVariable(scenic::ResourceId id,
-                           const scenic::VariableArgsPtr& args);
+                           const ui::gfx::VariableArgsPtr& args);
 
   // Actually create resources.
   ResourcePtr CreateMemory(scenic::ResourceId id,
-                           const scenic::MemoryArgsPtr& args);
+                           const ui::gfx::MemoryArgsPtr& args);
   ResourcePtr CreateImage(scenic::ResourceId id,
                           MemoryPtr memory,
-                          const scenic::ImageArgsPtr& args);
+                          const ui::gfx::ImageArgsPtr& args);
   ResourcePtr CreateBuffer(scenic::ResourceId id,
                            MemoryPtr memory,
                            uint32_t memory_offset,
                            uint32_t num_bytes);
   ResourcePtr CreateScene(scenic::ResourceId id,
-                          const scenic::SceneArgsPtr& args);
+                          const ui::gfx::SceneArgsPtr& args);
   ResourcePtr CreateCamera(scenic::ResourceId id,
-                           const scenic::CameraArgsPtr& args);
+                           const ui::gfx::CameraArgsPtr& args);
   ResourcePtr CreateRenderer(scenic::ResourceId id,
-                             const scenic::RendererArgsPtr& args);
+                             const ui::gfx::RendererArgsPtr& args);
   ResourcePtr CreateAmbientLight(scenic::ResourceId id);
   ResourcePtr CreateDirectionalLight(scenic::ResourceId id);
   ResourcePtr CreateClipNode(scenic::ResourceId id,
-                             const scenic::ClipNodeArgsPtr& args);
+                             const ui::gfx::ClipNodeArgsPtr& args);
   ResourcePtr CreateEntityNode(scenic::ResourceId id,
-                               const scenic::EntityNodeArgsPtr& args);
+                               const ui::gfx::EntityNodeArgsPtr& args);
   ResourcePtr CreateShapeNode(scenic::ResourceId id,
-                              const scenic::ShapeNodeArgsPtr& args);
+                              const ui::gfx::ShapeNodeArgsPtr& args);
   ResourcePtr CreateDisplayCompositor(
       scenic::ResourceId id,
-      const scenic::DisplayCompositorArgsPtr& args);
+      const ui::gfx::DisplayCompositorArgsPtr& args);
   ResourcePtr CreateImagePipeCompositor(
       scenic::ResourceId id,
-      const scenic::ImagePipeCompositorArgsPtr& args);
+      const ui::gfx::ImagePipeCompositorArgsPtr& args);
   ResourcePtr CreateLayerStack(scenic::ResourceId id,
-                               const scenic::LayerStackArgsPtr& args);
+                               const ui::gfx::LayerStackArgsPtr& args);
   ResourcePtr CreateLayer(scenic::ResourceId id,
-                          const scenic::LayerArgsPtr& args);
+                          const ui::gfx::LayerArgsPtr& args);
   ResourcePtr CreateCircle(scenic::ResourceId id, float initial_radius);
   ResourcePtr CreateRectangle(scenic::ResourceId id, float width, float height);
   ResourcePtr CreateRoundedRectangle(scenic::ResourceId id,
@@ -254,18 +271,18 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateMesh(scenic::ResourceId id);
   ResourcePtr CreateMaterial(scenic::ResourceId id);
   ResourcePtr CreateVariable(scenic::ResourceId id,
-                             const scenic::VariableArgsPtr& args);
+                             const ui::gfx::VariableArgsPtr& args);
 
   // Return false and log an error if the value is not of the expected type.
   // NOTE: although failure does not halt execution of the program, it does
   // indicate client error, and will be used by the caller to tear down the
   // Session.
-  bool AssertValueIsOfType(const scenic::ValuePtr& value,
-                           const scenic::Value::Tag* tags,
+  bool AssertValueIsOfType(const ui::gfx::ValuePtr& value,
+                           const ui::gfx::Value::Tag* tags,
                            size_t tag_count);
   template <size_t N>
-  bool AssertValueIsOfType(const scenic::ValuePtr& value,
-                           const std::array<scenic::Value::Tag, N>& tags) {
+  bool AssertValueIsOfType(const ui::gfx::ValuePtr& value,
+                           const std::array<ui::gfx::Value::Tag, N>& tags) {
     return AssertValueIsOfType(value, tags.data(), N);
   }
 
@@ -278,7 +295,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   struct Update {
     uint64_t presentation_time;
 
-    ::f1dl::Array<scenic::OpPtr> ops;
+    ::f1dl::Array<ui::gfx::CommandPtr> commands;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
     ::f1dl::Array<zx::event> release_fences;
 

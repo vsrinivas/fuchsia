@@ -8,8 +8,8 @@ ImagePipeImpl::ImagePipeImpl(std::shared_ptr<MagmaConnection> conn) : conn_(conn
 
 ImagePipeImpl::~ImagePipeImpl() = default;
 
-void ImagePipeImpl::AddImage(uint32_t image_id, scenic::ImageInfoPtr image_info, zx::vmo memory,
-                             scenic::MemoryType memory_type, uint64_t memory_offset)
+void ImagePipeImpl::AddImage(uint32_t image_id, ui::gfx::ImageInfoPtr image_info, zx::vmo memory,
+                             ui::gfx::MemoryType memory_type, uint64_t memory_offset)
 {
     if (images_.find(image_id) != images_.end()) {
         FXL_LOG(ERROR) << "Image id " << image_id << " already added.";

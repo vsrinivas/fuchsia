@@ -37,8 +37,10 @@ class SessionTest : public ::testing::Test,
   // |EventReporter|
   void SendEvents(::f1dl::Array<ui::EventPtr> events) override;
 
-  // Apply the specified Op, and verify that it succeeds.
-  bool Apply(scenic::OpPtr op) { return session_->ApplyOp(std::move(op)); }
+  // Apply the specified Command, and verify that it succeeds.
+  bool Apply(ui::gfx::CommandPtr command) {
+    return session_->ApplyCommand(std::move(command));
+  }
 
   template <class ResourceT>
   fxl::RefPtr<ResourceT> FindResource(scenic::ResourceId id) {

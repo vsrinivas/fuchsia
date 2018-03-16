@@ -13,7 +13,7 @@
 
 #include "garnet/lib/ui/gfx/engine/unresolved_imports.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
-#include "lib/ui/gfx/fidl/ops.fidl-common.h"
+#include "lib/ui/gfx/fidl/commands.fidl-common.h"
 
 namespace scenic {
 namespace gfx {
@@ -44,7 +44,7 @@ class ResourceLinker {
   ~ResourceLinker();
 
   // Register a |resource| so that it can be imported into a different session
-  // via ImportResourceOp with the peer of |export_token|.
+  // via ImportResourceCommand with the peer of |export_token|.
   //
   // Returns true if there are no errors.
   bool ExportResource(Resource* resource, zx::eventpair export_token);
@@ -58,7 +58,7 @@ class ResourceLinker {
   //
   // Returns true if there are no errors.
   bool ImportResource(Import* import,
-                      scenic::ImportSpec spec,
+                      ui::gfx::ImportSpec spec,
                       zx::eventpair import_token);
 
   size_t NumExports() const;

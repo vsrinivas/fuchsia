@@ -98,14 +98,14 @@ FrameScheduler::ComputePresentationAndWakeupTimes() const {
     // This seems simple enough, but it is tricky to specify/implement:
     //
     // It is critical to maintain the invariant that receiving the Present()
-    // response means that your ops enqueued before that Present() were actually
-    // applied in the session.  Currently, we only do this when rendering a
-    // frame, but we would have to do it earlier.  Also, is this even the right
-    // invariant? See discussion in session.fidl
+    // response means that your commands enqueued before that Present() were
+    // actually applied in the session.  Currently, we only do this when
+    // rendering a frame, but we would have to do it earlier.  Also, is this
+    // even the right invariant? See discussion in session.fidl
     //
     // But when do we do it?  Immediately?  That might be well before the
     // desired presentation time; is that a problem?  Do we sleep twice, once to
-    // wake up and apply ops without rendering, and again to render?
+    // wake up and apply commands without rendering, and again to render?
     //
     // If we do that, what presentation time should we return to clients, given
     // that our only access to Vsync times is via an event signaled by Magma?

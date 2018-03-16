@@ -25,7 +25,7 @@ class ResourceLinker;
 class Session;
 
 // Resource is the base class for all client-created objects (i.e. those that
-// are created in response to a CreateResourceOp operation).
+// are created in response to a CreateResourceCommand).
 // TODO: use unsafe ref-counting for better performance (our architecture
 // guarantees that this is safe).
 class Resource : public fxl::RefCountedThreadSafe<Resource> {
@@ -91,7 +91,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   virtual void RemoveImport(Import* import);
 
   // Detach the resource from its parent.  Return false if this fails for some
-  // reason (including if this is an object for which the operation makes no
+  // reason (including if this is an object for which the command makes no
   // sense).
   virtual bool Detach();
 
@@ -104,9 +104,9 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   friend class ResourceMap;
   friend class Import;
   /// For the given resource type info, returns the resource that will act as
-  /// the target for ops directed at this resource. Subclasses (notably the
+  /// the target for commands directed at this resource. Subclasses (notably the
   /// |Import| since their binding are not mutable) may return alternate
-  /// resources to act as the recipients of ops.
+  /// resources to act as the recipients of commands.
   virtual Resource* GetDelegate(const ResourceTypeInfo& type_info);
 
   // Sets a flag that indicates if this resource is exported in ResourceLinker.

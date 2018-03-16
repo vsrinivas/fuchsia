@@ -7,16 +7,16 @@ module sketchy;
 import "lib/ui/gfx/fidl/types.fidl";
 
 struct Touch {
-  scenic.vec2 position;
+  ui.gfx.vec2 position;
   uint32 nanoseconds;
   float pressure;
 };
 
 struct CubicBezier2 {
-  scenic.vec2 pt0;
-  scenic.vec2 pt1;
-  scenic.vec2 pt2;
-  scenic.vec2 pt3;
+  ui.gfx.vec2 pt0;
+  ui.gfx.vec2 pt1;
+  ui.gfx.vec2 pt2;
+  ui.gfx.vec2 pt3;
 };
 
 struct StrokePath {

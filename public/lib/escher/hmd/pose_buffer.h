@@ -26,7 +26,7 @@ namespace escher {
 namespace hmd {
 
 // A packed combination of a quaternion and a 3D position intended to be packed
-// into a PoseBuffer for late latched head tracking applications. See ops.fidl
+// into a PoseBuffer for late latched head tracking applications. See commands.fidl
 // for details on PoseBuffer
 struct Pose {
   Pose(glm::quat quaternion, glm::vec3 position) {

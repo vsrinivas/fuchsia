@@ -50,8 +50,8 @@ bool Node::SetEventMask(uint32_t event_mask) {
 
   // If the client unsubscribed from the event, ensure that we will deliver
   // fresh metrics next time they subscribe.
-  if (!(event_mask & scenic::kMetricsEventMask)) {
-    reported_metrics_ = scenic::Metrics();
+  if (!(event_mask & ui::gfx::kMetricsEventMask)) {
+    reported_metrics_ = ui::gfx::Metrics();
   }
   return true;
 }
@@ -304,7 +304,7 @@ bool Node::SetClipToSelf(bool clip_to_self) {
   return true;
 }
 
-bool Node::SetHitTestBehavior(scenic::HitTestBehavior hit_test_behavior) {
+bool Node::SetHitTestBehavior(ui::gfx::HitTestBehavior hit_test_behavior) {
   hit_test_behavior_ = hit_test_behavior;
   return true;
 }

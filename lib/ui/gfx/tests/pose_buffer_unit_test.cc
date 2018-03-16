@@ -21,8 +21,8 @@ VK_TEST_F(PoseBufferTest, Validation) {
   const scenic::ResourceId memory_id = 3;
   const scenic::ResourceId buffer_id = 4;
 
-  ASSERT_TRUE(Apply(scenic_lib::NewCreateSceneOp(scene_id)));
-  ASSERT_TRUE(Apply(scenic_lib::NewCreateCameraOp(camera_id, scene_id)));
+  ASSERT_TRUE(Apply(scenic_lib::NewCreateSceneCommand(scene_id)));
+  ASSERT_TRUE(Apply(scenic_lib::NewCreateCameraCommand(camera_id, scene_id)));
 
   uint64_t vmo_size = PAGE_SIZE;
   zx::vmo vmo;
@@ -33,35 +33,35 @@ VK_TEST_F(PoseBufferTest, Validation) {
   uint64_t time_interval = 1024 * 1024;  // 1 ms
   uint32_t num_entries = 1;
 
-  ASSERT_TRUE(Apply(scenic_lib::NewCreateMemoryOp(
-      memory_id, std::move(vmo), scenic::MemoryType::VK_DEVICE_MEMORY)));
+  ASSERT_TRUE(Apply(scenic_lib::NewCreateMemoryCommand(
+      memory_id, std::move(vmo), ui::gfx::MemoryType::VK_DEVICE_MEMORY)));
   ASSERT_TRUE(
-      Apply(scenic_lib::NewCreateBufferOp(buffer_id, memory_id, 0, vmo_size)));
+      Apply(scenic_lib::NewCreateBufferCommand(buffer_id, memory_id, 0, vmo_size)));
 
   // Actual Tests
 
   // Basic case: all arguments valid
-  EXPECT_TRUE(Apply(scenic_lib::NewSetCameraPoseBufferOp(
+  EXPECT_TRUE(Apply(scenic_lib::NewSetCameraPoseBufferCommand(
       camera_id, buffer_id, num_entries, base_time, time_interval)));
 
   // Invalid base time in the future
-  EXPECT_FALSE(Apply(scenic_lib::NewSetCameraPoseBufferOp(
+  EXPECT_FALSE(Apply(scenic_lib::NewSetCameraPoseBufferCommand(
       camera_id, buffer_id, num_entries, UINT64_MAX, time_interval)));
 
   // Invalid buffer id
-  EXPECT_FALSE(Apply(scenic_lib::NewSetCameraPoseBufferOp(
+  EXPECT_FALSE(Apply(scenic_lib::NewSetCameraPoseBufferCommand(
       camera_id, invalid_id, num_entries, base_time, time_interval)));
 
   // Invalid camera id
-  EXPECT_FALSE(Apply(scenic_lib::NewSetCameraPoseBufferOp(
+  EXPECT_FALSE(Apply(scenic_lib::NewSetCameraPoseBufferCommand(
       invalid_id, buffer_id, num_entries, base_time, time_interval)));
 
   // num_entries too small
-  EXPECT_FALSE(Apply(scenic_lib::NewSetCameraPoseBufferOp(
+  EXPECT_FALSE(Apply(scenic_lib::NewSetCameraPoseBufferCommand(
       camera_id, buffer_id, 0, base_time, time_interval)));
 
   // num_entries too large
-  EXPECT_FALSE(Apply(scenic_lib::NewSetCameraPoseBufferOp(
+  EXPECT_FALSE(Apply(scenic_lib::NewSetCameraPoseBufferCommand(
       camera_id, buffer_id, UINT32_MAX, base_time, time_interval)));
 }
 

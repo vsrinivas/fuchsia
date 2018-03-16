@@ -22,9 +22,9 @@ HostMemory::HostMemory(Session* session,
 HostMemoryPtr HostMemory::New(Session* session,
                               scenic::ResourceId id,
                               vk::Device device,
-                              const scenic::MemoryArgsPtr& args,
+                              const ui::gfx::MemoryArgsPtr& args,
                               ErrorReporter* error_reporter) {
-  if (args->memory_type != scenic::MemoryType::HOST_MEMORY) {
+  if (args->memory_type != ui::gfx::MemoryType::HOST_MEMORY) {
     error_reporter->ERROR() << "scenic::gfx::HostMemory::New(): "
                                "Memory must be of type HOST_MEMORY.";
     return nullptr;

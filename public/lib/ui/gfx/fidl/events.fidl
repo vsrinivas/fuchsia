@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module scenic;
+module ui.gfx;
 
 import "lib/ui/gfx/fidl/types.fidl";
 
@@ -11,7 +11,7 @@ import "lib/ui/gfx/fidl/types.fidl";
 const uint32 kMetricsEventMask = 1;
 
 // These are all of the types of events which can be reported by a |Session|.
-// Use |SetEventMaskOp| to enable event delivery for a resource.
+// Use |SetEventMaskCommand| to enable event delivery for a resource.
 union Event {
   MetricsEvent metrics;
   ImportUnboundEvent import_unbound;
