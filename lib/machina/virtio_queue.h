@@ -10,6 +10,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
+#include <lib/async/cpp/wait.h>
 #include <virtio/virtio.h>
 #include <zircon/types.h>
 #include <zx/event.h>
@@ -191,6 +192,15 @@ class VirtioQueue {
                    void* ctx,
                    std::string thread_name);
 
+  // Monitors the queue signal for available descriptors and run the callback
+  // when one is available.
+  //
+  // TODO(PD-103): Use a c++ style function object here.
+  zx_status_t PollAsync(async_t* async,
+                        async::Wait* wait,
+                        virtio_queue_poll_fn_t handler,
+                        void* ctx);
+
   // Handles the next available descriptor in a Virtio queue, calling handler to
   // process individual payload buffers.
   //
@@ -205,6 +215,9 @@ class VirtioQueue {
 
   // Returns a circular index into a Virtio ring.
   uint32_t RingIndexLocked(uint32_t index) const __TA_REQUIRES(mutex_);
+
+  async_wait_result_t InvokeAsyncHandler(virtio_queue_poll_fn_t handler,
+                                         void* ctx);
 
   mutable fbl::Mutex mutex_;
   VirtioDevice* device_;
