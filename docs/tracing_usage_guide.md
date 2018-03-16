@@ -116,7 +116,7 @@ The second section defines a `duration` measurement:
 ```
 A `duration` measurement targets a single trace event and computes the
 duration of its occurences. The target trace event can be recorded as a
-duration or as an async event. Takes arguments: `event_name`,
+duration, an async, or a flow event. Takes arguments: `event_name`,
 `event_category`.
 
 The third section defines a `time_between` measurement:
@@ -133,7 +133,7 @@ The third section defines a `time_between` measurement:
 A `time_between` measurement targets two trace events with the specified
 anchors (either the beginning or the end of the events) and computes the time
 between the consecutive occurrences of the two. The target events can be
-"duration", "async" or "instant" (in which case the anchor doesn't matter).
+"duration", "async", "flow" or "instant" (in which case the anchor doesn't matter).
 Takes arguments: `first_event_name`, `first_event_category`,
 `first_event_anchor`, `second_event_name`, `second_event_category`,
 `second_event_anchor`.

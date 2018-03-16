@@ -105,6 +105,28 @@ TEST(MeasureDurationTest, Async) {
   EXPECT_EQ(std::vector<uint64_t>({4u, 4u}), results[42u]);
 }
 
+TEST(MeasureDurationTest, Flow) {
+  std::vector<DurationSpec> specs = {
+      DurationSpec({42u, {"event_foo", "category_bar"}})};
+
+  MeasureDuration measure(std::move(specs));
+  // Add a begin event of id 1u.
+  measure.Process(test::FlowBegin(1u, "event_foo", "category_bar", 10u));
+
+  // Add a begin event of id 2u.
+  measure.Process(test::FlowBegin(2u, "event_foo", "category_bar", 12u));
+
+  // Add an end event for id 1u.
+  measure.Process(test::FlowEnd(1u, "event_foo", "category_bar", 14u));
+
+  // Add an end event for id 2u.
+  measure.Process(test::FlowEnd(2u, "event_foo", "category_bar", 16u));
+
+  auto results = measure.results();
+  EXPECT_EQ(1u, results.size());
+  EXPECT_EQ(std::vector<uint64_t>({4u, 4u}), results[42u]);
+}
+
 TEST(MeasureDurationTest, DurationAsyncTwoMeasurements) {
   std::vector<DurationSpec> specs = {
       DurationSpec({42u, {"event_foo", "category_bar"}}),

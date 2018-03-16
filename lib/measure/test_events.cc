@@ -9,42 +9,60 @@ namespace measure {
 namespace test {
 
 trace::Record::Event DurationBegin(fbl::String name,
-                                    fbl::String category,
-                                    uint64_t timestamp) {
+                                   fbl::String category,
+                                   uint64_t timestamp) {
   return trace::Record::Event{
       timestamp, {}, category,
       name,      {}, trace::EventData(trace::EventData::DurationBegin{})};
 }
 
 trace::Record::Event DurationEnd(fbl::String name,
-                                  fbl::String category,
-                                  uint64_t timestamp) {
+                                 fbl::String category,
+                                 uint64_t timestamp) {
   return trace::Record::Event{
       timestamp, {}, category,
       name,      {}, trace::EventData(trace::EventData::DurationEnd{})};
 }
 
 trace::Record::Event AsyncBegin(uint64_t id,
-                                 fbl::String name,
-                                 fbl::String category,
-                                 uint64_t timestamp) {
+                                fbl::String name,
+                                fbl::String category,
+                                uint64_t timestamp) {
   return trace::Record::Event{
       timestamp, {}, category,
       name,      {}, trace::EventData(trace::EventData::AsyncBegin{id})};
 }
 
 trace::Record::Event AsyncEnd(uint64_t id,
-                               fbl::String name,
-                               fbl::String category,
-                               uint64_t timestamp) {
+                              fbl::String name,
+                              fbl::String category,
+                              uint64_t timestamp) {
   return trace::Record::Event{
       timestamp, {}, category,
       name,      {}, trace::EventData(trace::EventData::AsyncEnd{id})};
 }
 
+trace::Record::Event FlowBegin(uint64_t id,
+                               fbl::String name,
+                               fbl::String category,
+                               uint64_t timestamp) {
+  return trace::Record::Event{
+      timestamp, {}, category,
+      name,      {}, trace::EventData(trace::EventData::FlowBegin{id})};
+}
+
+trace::Record::Event FlowEnd(uint64_t id,
+                             fbl::String name,
+                             fbl::String category,
+                             uint64_t timestamp) {
+  return trace::Record::Event{
+      timestamp, {}, category,
+      name,      {}, trace::EventData(trace::EventData::FlowEnd{id})};
+}
+
 trace::Record::Event Instant(fbl::String name,
-                              fbl::String category,
-                              uint64_t timestamp) {
+                             fbl::String category,
+                             uint64_t timestamp) {
   return trace::Record::Event{
       timestamp, {}, category,
       name,      {}, trace::EventData(trace::EventData::Instant{})};

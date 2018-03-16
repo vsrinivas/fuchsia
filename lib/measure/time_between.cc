@@ -12,8 +12,10 @@ bool IsOfSupportedType(const trace::Record::Event& event) {
   return event.type() == trace::EventType::kInstant ||
          event.type() == trace::EventType::kAsyncBegin ||
          event.type() == trace::EventType::kDurationBegin ||
+         event.type() == trace::EventType::kFlowBegin ||
          event.type() == trace::EventType::kAsyncEnd ||
-         event.type() == trace::EventType::kDurationEnd;
+         event.type() == trace::EventType::kDurationEnd ||
+         event.type() == trace::EventType::kFlowEnd;
 }
 
 bool EventMatchesSpecWithAnchor(const trace::Record::Event& event,
@@ -26,10 +28,12 @@ bool EventMatchesSpecWithAnchor(const trace::Record::Event& event,
   if (event.type() == trace::EventType::kInstant) {
     return true;
   } else if (event.type() == trace::EventType::kAsyncBegin ||
-             event.type() == trace::EventType::kDurationBegin) {
+             event.type() == trace::EventType::kDurationBegin ||
+             event.type() == trace::EventType::kFlowBegin) {
     return anchor == Anchor::Begin;
   } else if (event.type() == trace::EventType::kAsyncEnd ||
-             event.type() == trace::EventType::kDurationEnd) {
+             event.type() == trace::EventType::kDurationEnd ||
+             event.type() == trace::EventType::kFlowEnd) {
     return anchor == Anchor::End;
   } else {
     return false;
@@ -64,7 +68,9 @@ bool MeasureTimeBetween::Process(const trace::Record::Event& event) {
   return true;
 }
 
-void MeasureTimeBetween::AddResult(uint64_t spec_id, trace_ticks_t from, trace_ticks_t to) {
+void MeasureTimeBetween::AddResult(uint64_t spec_id,
+                                   trace_ticks_t from,
+                                   trace_ticks_t to) {
   results_[spec_id].push_back(to - from);
 }
 

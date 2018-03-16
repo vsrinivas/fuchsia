@@ -15,11 +15,13 @@ MeasureDuration::MeasureDuration(std::vector<DurationSpec> specs)
 bool MeasureDuration::Process(const trace::Record::Event& event) {
   switch (event.type()) {
     case trace::EventType::kAsyncBegin:
-      return ProcessAsyncStart(event);
+    case trace::EventType::kFlowBegin:
+      return ProcessAsyncOrFlowBegin(event);
     case trace::EventType::kAsyncEnd:
-      return ProcessAsyncEnd(event);
+    case trace::EventType::kFlowEnd:
+      return ProcessAsyncOrFlowEnd(event);
     case trace::EventType::kDurationBegin:
-      return ProcessDurationStart(event);
+      return ProcessDurationBegin(event);
     case trace::EventType::kDurationEnd:
       return ProcessDurationEnd(event);
     default:
@@ -27,31 +29,56 @@ bool MeasureDuration::Process(const trace::Record::Event& event) {
   }
 }
 
-bool MeasureDuration::ProcessAsyncStart(const trace::Record::Event& event) {
-  FXL_DCHECK(event.type() == trace::EventType::kAsyncBegin);
-  const PendingAsyncKey key = {event.category, event.name,
-                               event.data.GetAsyncBegin().id};
-  if (pending_async_begins_.count(key)) {
-    FXL_LOG(WARNING) << "Ignoring a trace event: duplicate async begin event";
+MeasureDuration::PendingBeginKey MeasureDuration::MakeKey(
+    const trace::Record::Event& event) {
+  PendingBeginKey key;
+  key.category = event.category;
+  key.name = event.name;
+  switch (event.type()) {
+    case trace::EventType::kAsyncBegin:
+      key.type = PendingBeginKey::Type::Async;
+      key.id = event.data.GetAsyncBegin().id;
+      break;
+    case trace::EventType::kAsyncEnd:
+      key.type = PendingBeginKey::Type::Async;
+      key.id = event.data.GetAsyncEnd().id;
+      break;
+    case trace::EventType::kFlowBegin:
+      key.type = PendingBeginKey::Type::Flow;
+      key.id = event.data.GetFlowBegin().id;
+      break;
+    case trace::EventType::kFlowEnd:
+      key.type = PendingBeginKey::Type::Flow;
+      key.id = event.data.GetFlowEnd().id;
+      break;
+    default:
+      FXL_NOTREACHED();
+  }
+  return key;
+}
+
+bool MeasureDuration::ProcessAsyncOrFlowBegin(
+    const trace::Record::Event& event) {
+  const PendingBeginKey key = MakeKey(event);
+  if (pending_begins_.count(key)) {
+    FXL_LOG(WARNING)
+        << "Ignoring a trace event: duplicate async or flow begin event";
     return false;
   }
-  pending_async_begins_[key] = event.timestamp;
+  pending_begins_[key] = event.timestamp;
   return true;
 }
 
-bool MeasureDuration::ProcessAsyncEnd(const trace::Record::Event& event) {
-  FXL_DCHECK(event.type() == trace::EventType::kAsyncEnd);
-
-  const PendingAsyncKey key = {event.category, event.name,
-                               event.data.GetAsyncEnd().id};
-  if (pending_async_begins_.count(key) == 0) {
+bool MeasureDuration::ProcessAsyncOrFlowEnd(const trace::Record::Event& event) {
+  const PendingBeginKey key = MakeKey(event);
+  if (pending_begins_.count(key) == 0) {
     FXL_LOG(WARNING)
-        << "Ignoring a trace event: async end not preceded by async begin.";
+        << "Ignoring a trace event: async or flow end not preceded by begin.";
     return false;
   }
 
-  const auto begin_timestamp = pending_async_begins_[key];
-  pending_async_begins_.erase(key);
+  const auto begin_timestamp = pending_begins_[key];
+  pending_begins_.erase(key);
   for (const DurationSpec& spec : specs_) {
     if (!EventMatchesSpec(event, spec.event)) {
       continue;
@@ -62,7 +89,7 @@ bool MeasureDuration::ProcessAsyncEnd(const trace::Record::Event& event) {
   return true;
 }
 
-bool MeasureDuration::ProcessDurationStart(const trace::Record::Event& event) {
+bool MeasureDuration::ProcessDurationBegin(const trace::Record::Event& event) {
   FXL_DCHECK(event.type() == trace::EventType::kDurationBegin);
   duration_stacks_[event.process_thread].push(event.timestamp);
   return true;
@@ -94,12 +121,17 @@ bool MeasureDuration::ProcessDurationEnd(const trace::Record::Event& event) {
   return true;
 }
 
-void MeasureDuration::AddResult(uint64_t spec_id, trace_ticks_t from, trace_ticks_t to) {
+void MeasureDuration::AddResult(uint64_t spec_id,
+                                trace_ticks_t from,
+                                trace_ticks_t to) {
   results_[spec_id].push_back(to - from);
 }
 
-bool MeasureDuration::PendingAsyncKey::operator<(
-    const PendingAsyncKey& other) const {
+bool MeasureDuration::PendingBeginKey::operator<(
+    const PendingBeginKey& other) const {
+  if (type != other.type) {
+    return type < other.type;
+  }
   if (category != other.category) {
     return category < other.category;
   }

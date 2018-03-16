@@ -41,9 +41,24 @@ class MeasureDuration {
   }
 
  private:
-  bool ProcessAsyncStart(const trace::Record::Event& event);
-  bool ProcessAsyncEnd(const trace::Record::Event& event);
-  bool ProcessDurationStart(const trace::Record::Event& event);
+  // Async and flow event ids are scoped to event names. To match "end" events
+  // with "begin" events, we keep a map of unmatched begin events.
+  struct PendingBeginKey {
+    enum class Type { Async, Flow };
+
+    Type type;
+    fbl::String category;
+    fbl::String name;
+    uint64_t id;
+
+    bool operator<(const PendingBeginKey& other) const;
+  };
+
+  PendingBeginKey MakeKey(const trace::Record::Event& event);
+
+  bool ProcessAsyncOrFlowBegin(const trace::Record::Event& event);
+  bool ProcessAsyncOrFlowEnd(const trace::Record::Event& event);
+  bool ProcessDurationBegin(const trace::Record::Event& event);
   bool ProcessDurationEnd(const trace::Record::Event& event);
 
   void AddResult(uint64_t spec_id, trace_ticks_t from, trace_ticks_t to);
@@ -51,16 +66,7 @@ class MeasureDuration {
   std::vector<DurationSpec> specs_;
   std::unordered_map<uint64_t, std::vector<trace_ticks_t>> results_;
 
-  // Async event ids are scoped to names. To match "end" events
-  // with "begin" events, we keep a map of unmatched begin events.
-  struct PendingAsyncKey {
-    fbl::String category;
-    fbl::String name;
-    uint64_t id;
-
-    bool operator<(const PendingAsyncKey& other) const;
-  };
-  std::map<PendingAsyncKey, trace_ticks_t> pending_async_begins_;
+  std::map<PendingBeginKey, trace_ticks_t> pending_begins_;
 
   // Duration events recorded on a thread can be nested. To match "end" events
   // with "begin" events, we keep a per-thread stack of timestamps of unmatched

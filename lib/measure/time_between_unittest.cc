@@ -115,6 +115,24 @@ TEST(MeasureTimeBetweenTest, AnchorsSameEvent) {
   EXPECT_EQ(std::vector<uint64_t>({1u, 8u}), results[42u]);
 }
 
+TEST(MeasureTimeBetweenTest, AsyncAndFlow) {
+  std::vector<TimeBetweenSpec> specs = {TimeBetweenSpec({42u,
+                                                         {"bar", "async_event"},
+                                                         Anchor::End,
+                                                         {"bar", "flow_event"},
+                                                         Anchor::Begin})};
+
+  MeasureTimeBetween measure(std::move(specs));
+  measure.Process(test::AsyncBegin(1000u, "bar", "async_event", 1u));
+  measure.Process(test::AsyncEnd(1000u, "bar", "async_event", 5u));
+  measure.Process(test::FlowBegin(1001u, "bar", "flow_event", 7u));
+  measure.Process(test::FlowEnd(1001u, "bar", "flow_event", 10u));
+
+  auto results = measure.results();
+  EXPECT_EQ(1u, results.size());
+  EXPECT_EQ(std::vector<uint64_t>({2u}), results[42u]);
+}
+
 }  // namespace
 
 }  // namespace measure
