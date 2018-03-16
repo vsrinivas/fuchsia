@@ -30,7 +30,7 @@ class FenceSetListener {
   void WaitReadyAsync(fxl::Closure ready_callback);
 
   // Returns whether all the fences have been signalled.
-  bool ready() const { return num_signalled_fences_ == fences_.size(); }
+  bool ready() const { return num_signalled_fences_ == fences_->size(); }
 
  private:
   async_wait_result_t OnFenceSignalled(zx_koid_t import_koid,

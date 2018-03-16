@@ -4,6 +4,8 @@
 
 #include <lib/async/cpp/auto_wait.h>
 
+#include "garnet/lib/magma/src/display_pipe/client/buffer.h"
+#include "garnet/lib/magma/src/display_pipe/services/display_provider.fidl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -11,8 +13,6 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "zircon/status.h"
-#include "garnet/lib/magma/src/display_pipe/client/buffer.h"
-#include "garnet/lib/magma/src/display_pipe/services/display_provider.fidl.h"
 
 display_pipe::DisplayProviderPtr display;
 ui::gfx::ImagePipePtr image_pipe;
@@ -20,7 +20,8 @@ uint64_t hsv_index;
 
 // HSV code adopted from:
 //   https://github.com/konkers/lk-firmware/blob/master/app/robot/hsv.h
-static void hsv_color(uint32_t index, uint8_t *r, uint8_t *g, uint8_t *b) {
+static void hsv_color(uint32_t index, uint8_t* r, uint8_t* g, uint8_t* b)
+{
     uint8_t pos = index & 0xff;
     uint8_t neg = 0xff - (index & 0xff);
     uint8_t phase = (index >> 8) & 0x7;
@@ -65,7 +66,8 @@ static void hsv_color(uint32_t index, uint8_t *r, uint8_t *g, uint8_t *b) {
     }
 }
 
-static uint32_t hsv_inc(uint32_t index, int16_t inc) {
+static uint32_t hsv_inc(uint32_t index, int16_t inc)
+{
     int32_t signed_index = index + inc;
     while (signed_index >= 0x600)
         signed_index -= 0x600;
@@ -75,59 +77,59 @@ static uint32_t hsv_inc(uint32_t index, int16_t inc) {
 }
 
 class BufferHandler {
- public:
-  BufferHandler(Buffer *buffer, uint32_t index) :
-      buffer_(buffer),
-      index_(index),
-      wait_(fsl::MessageLoop::GetCurrent()->async(),
-            buffer->release_fence().get(), ZX_EVENT_SIGNALED) {
-    wait_.set_handler(fbl::BindMember(this, &BufferHandler::Handler));
-    auto status = wait_.Begin();
-    FXL_DCHECK(status == ZX_OK);
-  }
+public:
+    BufferHandler(Buffer* buffer, uint32_t index)
+        : buffer_(buffer), index_(index), wait_(fsl::MessageLoop::GetCurrent()->async(),
+                                                buffer->release_fence().get(), ZX_EVENT_SIGNALED)
+    {
+        wait_.set_handler(fbl::BindMember(this, &BufferHandler::Handler));
+        auto status = wait_.Begin();
+        FXL_DCHECK(status == ZX_OK);
+    }
 
-  ~BufferHandler() = default;
+    ~BufferHandler() = default;
 
-  async_wait_result_t Handler(async_t* async, zx_status_t status,
-                              const zx_packet_signal* signal) {
-      if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "BufferHandler received an error ("
-                       << zx_status_get_string(status) << ").  Exiting.";
-        wait_.Cancel();
-        fsl::MessageLoop::GetCurrent()->PostQuitTask();
-        return ASYNC_WAIT_FINISHED;
-      }
+    async_wait_result_t Handler(async_t* async, zx_status_t status, const zx_packet_signal* signal)
+    {
+        if (status != ZX_OK) {
+            FXL_LOG(ERROR) << "BufferHandler received an error (" << zx_status_get_string(status)
+                           << ").  Exiting.";
+            wait_.Cancel();
+            fsl::MessageLoop::GetCurrent()->PostQuitTask();
+            return ASYNC_WAIT_FINISHED;
+        }
 
-      buffer_->Reset();
+        buffer_->Reset();
 
-      auto acq = f1dl::Array<zx::event>::New(1);
-      auto rel = f1dl::Array<zx::event>::New(1);
-      buffer_->dupAcquireFence(&acq.front());
-      buffer_->dupReleaseFence(&rel.front());
+        auto acq = f1dl::Array<zx::event>::New(1);
+        auto rel = f1dl::Array<zx::event>::New(1);
+        buffer_->dupAcquireFence(&acq->front());
+        buffer_->dupReleaseFence(&rel->front());
 
-      image_pipe->PresentImage(index_, 0, std::move(acq), std::move(rel),
-                               [](ui::PresentationInfoPtr info) {});
+        image_pipe->PresentImage(index_, 0, std::move(acq), std::move(rel),
+                                 [](ui::PresentationInfoPtr info) {});
 
-      uint8_t r, g, b;
-      hsv_color(hsv_index, &r, &g, &b);
-      hsv_index = hsv_inc(hsv_index, 3);
-      buffer_->Fill(r, g, b);
+        uint8_t r, g, b;
+        hsv_color(hsv_index, &r, &g, &b);
+        hsv_index = hsv_inc(hsv_index, 3);
+        buffer_->Fill(r, g, b);
 
-      buffer_->Signal();
-      return ASYNC_WAIT_AGAIN;
-  }
+        buffer_->Signal();
+        return ASYNC_WAIT_AGAIN;
+    }
 
- private:
-  Buffer *buffer_;
-  uint32_t index_;
-  async::AutoWait wait_;
+private:
+    Buffer* buffer_;
+    uint32_t index_;
+    async::AutoWait wait_;
 };
 
-Buffer *buffers[2];
-BufferHandler *handlers[2];
+Buffer* buffers[2];
+BufferHandler* handlers[2];
 
-void allocate_buffer(uint32_t index, uint32_t width, uint32_t height) {
-    Buffer *buffer = Buffer::NewBuffer(width, height);
+void allocate_buffer(uint32_t index, uint32_t width, uint32_t height)
+{
+    Buffer* buffer = Buffer::NewBuffer(width, height);
     buffers[index] = buffer;
 
     auto info = ui::gfx::ImageInfo::New();
@@ -145,31 +147,31 @@ void allocate_buffer(uint32_t index, uint32_t width, uint32_t height) {
     handlers[index] = new BufferHandler(buffer, index);
 }
 
-int main(int argc, char* argv[]) {
-  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(command_line))
-    return 1;
+int main(int argc, char* argv[])
+{
+    auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+    if (!fxl::SetLogSettingsFromCommandLine(command_line))
+        return 1;
 
-  fsl::MessageLoop loop;
+    fsl::MessageLoop loop;
 
-  auto application_context_ = app::ApplicationContext::CreateFromStartupInfo();
-  app::ServiceProviderPtr services;
-  display =
-      application_context_->ConnectToEnvironmentService<display_pipe::DisplayProvider>();
+    auto application_context_ = app::ApplicationContext::CreateFromStartupInfo();
+    app::ServiceProviderPtr services;
+    display = application_context_->ConnectToEnvironmentService<display_pipe::DisplayProvider>();
 
-  display->GetInfo([](display_pipe::DisplayInfoPtr info) {
-      printf("%d x %d\n", info->width, info->height);
-      display->BindPipe(image_pipe.NewRequest());
-      allocate_buffer(0, info->width, info->height);
-      allocate_buffer(1, info->width, info->height);
-  });
+    display->GetInfo([](display_pipe::DisplayInfoPtr info) {
+        printf("%d x %d\n", info->width, info->height);
+        display->BindPipe(image_pipe.NewRequest());
+        allocate_buffer(0, info->width, info->height);
+        allocate_buffer(1, info->width, info->height);
+    });
 
-  loop.Run();
+    loop.Run();
 
-  // In lieu of a clean shutdown, we signal all our buffer to ensure we don't
-  // hang the display.
-  buffers[0]->Signal();
-  buffers[1]->Signal();
+    // In lieu of a clean shutdown, we signal all our buffer to ensure we don't
+    // hang the display.
+    buffers[0]->Signal();
+    buffers[1]->Signal();
 
-  return 0;
+    return 0;
 }

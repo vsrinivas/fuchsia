@@ -143,18 +143,18 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
                         fb.release_semaphore, fb.acquire_semaphore);
 
   // Present the image and request another frame.
-  auto present_image_callback =
-      [weak = weak_ptr_factory()->GetWeakPtr()](ui::PresentationInfoPtr info) {
-        // Need this cast in order to call protected member of superclass.
-        if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
-          self->OnFramePresented(info);
-        }
-      };
+  auto present_image_callback = [weak = weak_ptr_factory()->GetWeakPtr()](
+      ui::PresentationInfoPtr info) {
+    // Need this cast in order to call protected member of superclass.
+    if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
+      self->OnFramePresented(info);
+    }
+  };
 
-  auto acquire_fences = f1dl::Array<zx::event>::New(1);
-  acquire_fences[0] = std::move(acquire_fence);
-  auto release_fences = f1dl::Array<zx::event>::New(1);
-  release_fences[0] = std::move(release_fence);
+  f1dl::Array<zx::event> acquire_fences;
+  acquire_fences.push_back(std::move(acquire_fence));
+  f1dl::Array<zx::event> release_fences;
+  release_fences.push_back(std::move(release_fence));
   image_pipe_->PresentImage(fb.image_pipe_id, presentation_time,
                             std::move(acquire_fences),
                             std::move(release_fences), present_image_callback);

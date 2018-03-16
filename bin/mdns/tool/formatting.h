@@ -18,12 +18,12 @@ std::ostream& outdent(std::ostream& os);
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const f1dl::Array<T>& value) {
-  if (value.size() == 0) {
+  if (value->size() == 0) {
     return os << "<empty>";
   }
 
   int index = 0;
-  for (const T& element : value) {
+  for (const T& element : *value) {
     os << "\n" << begl << "[" << index++ << "] " << element;
   }
 

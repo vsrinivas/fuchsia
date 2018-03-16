@@ -60,7 +60,7 @@ void KeyboardState::Update(mozart::InputReportPtr input_report) {
   keys_.clear();
   repeat_keys_.clear();
 
-  for (uint32_t key : input_report->keyboard->pressed_keys) {
+  for (uint32_t key : *input_report->keyboard->pressed_keys) {
     keys_.push_back(key);
     auto it = std::find(old_keys.begin(), old_keys.end(), key);
     if (it != old_keys.end()) {
@@ -171,7 +171,7 @@ void KeyboardState::Repeat(uint64_t sequence) {
 
 void KeyboardState::ScheduleRepeat(uint64_t sequence, fxl::TimeDelta delta) {
   task_runner_->PostDelayedTask(
-      [weak = weak_ptr_factory_.GetWeakPtr(), sequence] {
+      [ weak = weak_ptr_factory_.GetWeakPtr(), sequence ] {
         if (weak)
           weak->Repeat(sequence);
       },
@@ -351,7 +351,7 @@ void TouchscreenState::Update(mozart::InputReportPtr input_report,
 
   uint64_t now = input_report->event_time;
 
-  for (auto& touch : input_report->touchscreen->touches) {
+  for (auto& touch : *input_report->touchscreen->touches) {
     auto ev = mozart::InputEvent::New();
     auto pt = mozart::PointerEvent::New();
     pt->event_time = now;

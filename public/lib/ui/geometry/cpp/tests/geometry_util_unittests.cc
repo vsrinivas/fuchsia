@@ -15,7 +15,7 @@ TransformPtr CreateTransformFromData(const std::array<float, 16>& data) {
   TransformPtr transform = Transform::New();
   transform->matrix = f1dl::Array<float>::New(16);
 
-  memcpy(transform->matrix.data(), &data.front(), 16 * sizeof(float));
+  memcpy(transform->matrix->data(), &data.front(), 16 * sizeof(float));
   return transform;
 }
 
@@ -30,8 +30,8 @@ void ExpectTransformsAreFloatEq(const TransformPtr& lhs,
   for (size_t row = 0; row < 4; row++) {
     for (size_t col = 0; col < 4; col++) {
       size_t idx = row * 4 + col;
-      EXPECT_FLOAT_EQ(lhs->matrix[idx], rhs->matrix[idx]) << "row=" << row
-                                                          << ", col=" << col;
+      EXPECT_FLOAT_EQ(lhs->matrix->at(idx), rhs->matrix->at(idx))
+          << "row=" << row << ", col=" << col;
     }
   }
 }
@@ -133,9 +133,9 @@ TEST(TransformFunctionsTest, Translate) {
   TransformPtr transform_pristine = transform->Clone();
   TransformPtr transformed = transform->Clone();
 
-  transform_pristine->matrix[0 * 4 + 3] += x;
-  transform_pristine->matrix[1 * 4 + 3] += y;
-  transform_pristine->matrix[2 * 4 + 3] += z;
+  transform_pristine->matrix->at(0 * 4 + 3) += x;
+  transform_pristine->matrix->at(1 * 4 + 3) += y;
+  transform_pristine->matrix->at(2 * 4 + 3) += z;
 
   transformed = Translate(std::move(transformed), x, y, z);
   Translate(transform.get(), x, y, z);
@@ -153,9 +153,9 @@ TEST(TransformFunctionsTest, Scale) {
   TransformPtr transform_pristine = transform->Clone();
   TransformPtr transformed = transform->Clone();
 
-  transform_pristine->matrix[0 * 4 + 0] *= x;
-  transform_pristine->matrix[1 * 4 + 1] *= y;
-  transform_pristine->matrix[2 * 4 + 2] *= z;
+  transform_pristine->matrix->at(0 * 4 + 0) *= x;
+  transform_pristine->matrix->at(1 * 4 + 1) *= y;
+  transform_pristine->matrix->at(2 * 4 + 2) *= z;
 
   transformed = Scale(std::move(transformed), x, y, z);
   Scale(transform.get(), x, y, z);

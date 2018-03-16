@@ -79,9 +79,8 @@ mozart::TransformPtr ToTransform(ui::gfx::mat4Ptr matrix) {
   FXL_DCHECK(matrix);
   // Note: mat4 is column-major but transform is row-major
   auto transform = mozart::Transform::New();
-  const auto& in = matrix->matrix;
-  auto& out = transform->matrix;
-  out.resize(16u);
+  const auto& in = *matrix->matrix;
+  std::vector<float> out(16u);
   out[0] = in[0];
   out[1] = in[4];
   out[2] = in[8];
@@ -98,6 +97,7 @@ mozart::TransformPtr ToTransform(ui::gfx::mat4Ptr matrix) {
   out[13] = in[7];
   out[14] = in[11];
   out[15] = in[15];
+  transform->matrix.reset(std::move(out));
   return transform;
 }
 
@@ -731,8 +731,8 @@ void ViewRegistry::HitTest(const mozart::ViewTreeToken& view_tree_token,
       [this, callback = std::move(callback), ray_origin,
        ray_direction](f1dl::Array<ui::gfx::HitPtr> hits) {
         std::vector<ViewHit> view_hits;
-        view_hits.reserve(hits.size());
-        for (auto& hit : hits) {
+        view_hits.reserve(hits->size());
+        for (auto& hit : *hits) {
           auto it = views_by_token_.find(hit->tag_value);
           if (it != views_by_token_.end()) {
             ViewState* view_state = it->second;

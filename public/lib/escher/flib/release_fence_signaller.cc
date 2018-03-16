@@ -51,8 +51,8 @@ void ReleaseFenceSignaller::AddCPUReleaseFence(zx::event fence) {
 
 // Must be called on the same thread that we're submitting frames to Escher.
 void ReleaseFenceSignaller::AddCPUReleaseFences(f1dl::Array<zx::event> fences) {
-  for (auto& fence : fences) {
-    AddCPUReleaseFence(std::move(fence));
+  for (size_t i = 0; i < fences->size(); ++i) {
+    AddCPUReleaseFence(std::move(fences->at(i)));
   }
 }
 

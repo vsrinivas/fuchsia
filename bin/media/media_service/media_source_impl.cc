@@ -51,7 +51,7 @@ MediaSourceImpl::MediaSourceImpl(
     std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
 
     size_t stream_index = 0;
-    for (MediaTypePtr& stream_media_type : stream_media_types) {
+    for (const MediaTypePtr& stream_media_type : *stream_media_types) {
       streams_.emplace_back(new Stream(
           stream_index, this->owner(),
           [this,
@@ -85,7 +85,7 @@ void MediaSourceImpl::Describe(const DescribeCallback& callback) {
     f1dl::Array<MediaTypePtr> result =
         f1dl::Array<MediaTypePtr>::New(streams_.size());
     for (size_t i = 0; i < streams_.size(); i++) {
-      result[i] = streams_[i]->media_type();
+      result->at(i) = streams_[i]->media_type();
     }
 
     callback(std::move(result));

@@ -27,11 +27,11 @@ void FenceSetListener::WaitReadyAsync(fxl::Closure ready_callback) {
   }
 
   FXL_DCHECK(waiters_.empty());
-  waiters_.reserve(fences_.size());
+  waiters_.reserve(fences_->size());
   int waiter_index = 0;
 
   // Wait for |kFenceSignalled| on each fence.
-  for (auto& fence : fences_) {
+  for (auto& fence : *fences_) {
     auto wait = std::make_unique<async::AutoWait>(
         fsl::MessageLoop::GetCurrent()->async(),  // async dispatcher
         fence.get(),                              // handle

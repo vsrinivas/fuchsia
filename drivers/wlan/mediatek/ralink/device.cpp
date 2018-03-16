@@ -3331,7 +3331,7 @@ zx_status_t Device::AddMacDevice() {
 zx_status_t Device::PhyQuery(uint8_t* buf, size_t len, size_t* actual) const {
     debugfn();
     auto info = wlan::phy::WlanPhyInfo::New();
-    info->driver_features = f1dl::Array<wlan::phy::DriverFeature>::New(0);
+    info->driver_features.resize(0);
 
     info->supported_phys.push_back(wlan::phy::SupportedPhy::DSSS);
     info->supported_phys.push_back(wlan::phy::SupportedPhy::CCK);
@@ -3348,16 +3348,16 @@ zx_status_t Device::PhyQuery(uint8_t* buf, size_t len, size_t* actual) const {
     band24->supported_channels = wlan::phy::ChannelList::New();
     band24->description = "2.4 GHz";
     band24->ht_caps->ht_capability_info = 0x01fe;
-    band24->ht_caps->supported_mcs_set = f1dl::Array<uint8_t>{
+    band24->ht_caps->supported_mcs_set.reset(std::vector<uint8_t>{
         // clang-format off
-        0xff, (rt_type_ == RT5592 ? 0xff : 0x00), 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
+        0xff, static_cast<uint8_t>(rt_type_ == RT5592 ? 0xff : 0x00), 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00
         // clang-format on
-    };
-    band24->basic_rates = f1dl::Array<uint8_t>{2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
+    });
+    band24->basic_rates.reset(std::vector<uint8_t>{2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108});
     band24->supported_channels->base_freq = 2417;
-    band24->supported_channels->channels =
-        f1dl::Array<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
+    band24->supported_channels->channels.reset(
+        std::vector<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14});
 
     info->bands.push_back(std::move(band24));
 
@@ -3367,12 +3367,12 @@ zx_status_t Device::PhyQuery(uint8_t* buf, size_t len, size_t* actual) const {
         band5->supported_channels = wlan::phy::ChannelList::New();
         band5->description = "5 GHz";
         band5->ht_caps->ht_capability_info = 0x01fe;
-        band5->ht_caps->supported_mcs_set =
-            f1dl::Array<uint8_t>{0xff, 0xff, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00};
-        band5->basic_rates = f1dl::Array<uint8_t>{12, 18, 24, 36, 48, 72, 96, 108};
+        band5->ht_caps->supported_mcs_set.reset(
+            std::vector<uint8_t>{0xff, 0xff, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                 0x00, 0x10, 0x00, 0x00, 0x00});
+        band5->basic_rates.reset(std::vector<uint8_t>{12, 18, 24, 36, 48, 72, 96, 108});
         band5->supported_channels->base_freq = 5000;
-        band5->supported_channels->channels = f1dl::Array<uint8_t>{
+        band5->supported_channels->channels.reset(std::vector<uint8_t>{
             // clang-format off
             36,  38,  40,  42,  44,  46,  48,  50,
             52,  54,  56,  58,  60,  62,  64,  100,
@@ -3381,7 +3381,7 @@ zx_status_t Device::PhyQuery(uint8_t* buf, size_t len, size_t* actual) const {
             134, 136, 138, 140, 149, 151, 153, 155,
             157, 159, 161, 165, 184, 188, 192, 196,
             // clang-format on
-        };
+        });
 
         info->bands.push_back(std::move(band5));
     }

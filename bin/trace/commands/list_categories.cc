@@ -30,17 +30,16 @@ void ListCategories::Run(const fxl::CommandLine& command_line,
           << "command invocation" << std::endl;
   }
 
-  trace_controller()->GetKnownCategories(
-      [on_done = std::move(on_done)](
-          f1dl::Array<KnownCategoryPtr> known_categories) {
-        out() << "Known categories" << std::endl;
-        for (const auto& it : known_categories) {
-          out() << "  " << it->name.get() << ": " << it->description.get()
-                << std::endl;
-        }
+  trace_controller()->GetKnownCategories([on_done = std::move(on_done)](
+      f1dl::Array<KnownCategoryPtr> known_categories) {
+    out() << "Known categories" << std::endl;
+    for (const auto& it : *known_categories) {
+      out() << "  " << it->name.get() << ": " << it->description.get()
+            << std::endl;
+    }
 
-        on_done(0);
-      });
+    on_done(0);
+  });
 }
 
 }  // namespace tracing

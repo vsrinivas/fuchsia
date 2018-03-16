@@ -185,7 +185,8 @@ class CobaltTestApp {
   // |num_observations_per_batch_| times using the given parameters. Then
   // invokes CheckForSuccessfulSend().
   bool EncodeIntDistributionAndSend(
-      uint32_t metric_id, uint32_t encoding_config_id,
+      uint32_t metric_id,
+      uint32_t encoding_config_id,
       std::map<uint32_t, uint64_t> distribution_map,
       bool use_request_send_soon);
 
@@ -540,8 +541,10 @@ bool CobaltTestApp::EncodeIntAndSend(uint32_t metric_id,
 }
 
 bool CobaltTestApp::EncodeIntDistributionAndSend(
-    uint32_t metric_id, uint32_t encoding_config_id,
-    std::map<uint32_t, uint64_t> distribution_map, bool use_request_send_soon) {
+    uint32_t metric_id,
+    uint32_t encoding_config_id,
+    std::map<uint32_t, uint64_t> distribution_map,
+    bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
     f1dl::Array<cobalt::BucketDistributionEntryPtr> distribution;
@@ -637,16 +640,16 @@ bool CobaltTestApp::EncodeStringPairAndSend(uint32_t metric_id,
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
     auto parts = Array<ObservationValuePtr>::New(2);
-    parts[0] = ObservationValue::New();
-    parts[0]->name = part0;
-    parts[0]->encoding_id = encoding_id0;
-    parts[0]->value = cobalt::Value::New();
-    parts[0]->value->set_string_value(val0);
-    parts[1] = ObservationValue::New();
-    parts[1]->name = part1;
-    parts[1]->encoding_id = encoding_id1;
-    parts[1]->value = cobalt::Value::New();
-    parts[1]->value->set_string_value(val1);
+    parts->at(0) = ObservationValue::New();
+    parts->at(0)->name = part0;
+    parts->at(0)->encoding_id = encoding_id0;
+    parts->at(0)->value = cobalt::Value::New();
+    parts->at(0)->value->set_string_value(val0);
+    parts->at(1) = ObservationValue::New();
+    parts->at(1)->name = part1;
+    parts->at(1)->encoding_id = encoding_id1;
+    parts->at(1)->value = cobalt::Value::New();
+    parts->at(1)->value->set_string_value(val1);
     encoder_->AddMultipartObservation(metric_id, std::move(parts), &status);
     FXL_VLOG(1) << "AddMultipartObservation(" << val0 << ", " << val1 << ") => "
                 << StatusToString(status);

@@ -131,7 +131,7 @@ void MediaDemuxImpl::Describe(const DescribeCallback& callback) {
     f1dl::Array<MediaTypePtr> result =
         f1dl::Array<MediaTypePtr>::New(streams_.size());
     for (size_t i = 0; i < streams_.size(); i++) {
-      result[i] = fxl::To<MediaTypePtr>(streams_[i]->stream_type());
+      result->at(i) = fxl::To<MediaTypePtr>(streams_[i]->stream_type());
     }
 
     callback(std::move(result));

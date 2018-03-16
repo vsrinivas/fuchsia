@@ -8,15 +8,15 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/input/fidl/input_device_registry.fidl.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/input/fidl/input_device_registry.fidl.h"
 
 namespace {
 int64_t InputEventTimestampNow() {
@@ -191,7 +191,7 @@ class InputApp {
     keyboard->keys.resize(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
     for (size_t index = HID_USAGE_KEY_A; index < HID_USAGE_KEY_RIGHT_GUI;
          ++index) {
-      keyboard->keys[index - HID_USAGE_KEY_A] = index;
+      keyboard->keys->at(index - HID_USAGE_KEY_A) = index;
     }
     mozart::DeviceDescriptorPtr descriptor = mozart::DeviceDescriptor::New();
     descriptor->keyboard = std::move(keyboard);
@@ -248,8 +248,7 @@ class InputApp {
     touch->x = x;
     touch->y = y;
     mozart::TouchscreenReportPtr touchscreen = mozart::TouchscreenReport::New();
-    touchscreen->touches.resize(1);
-    touchscreen->touches[0] = std::move(touch);
+    touchscreen->touches.push_back(std::move(touch));
 
     mozart::InputReportPtr report = mozart::InputReport::New();
     report->event_time = InputEventTimestampNow();
@@ -282,8 +281,7 @@ class InputApp {
                     uint32_t duration_ms) {
     // PRESSED
     mozart::KeyboardReportPtr keyboard = mozart::KeyboardReport::New();
-    keyboard->pressed_keys.resize(1);
-    keyboard->pressed_keys[0] = usage;
+    keyboard->pressed_keys.push_back(usage);
 
     mozart::InputReportPtr report = mozart::InputReport::New();
     report->event_time = InputEventTimestampNow();
@@ -321,8 +319,7 @@ class InputApp {
     touch->x = x0;
     touch->y = y0;
     mozart::TouchscreenReportPtr touchscreen = mozart::TouchscreenReport::New();
-    touchscreen->touches.resize(1);
-    touchscreen->touches[0] = std::move(touch);
+    touchscreen->touches.push_back(std::move(touch));
 
     mozart::InputReportPtr report = mozart::InputReport::New();
     report->event_time = InputEventTimestampNow();
@@ -341,8 +338,7 @@ class InputApp {
               touch->y = y1;
               mozart::TouchscreenReportPtr touchscreen =
                   mozart::TouchscreenReport::New();
-              touchscreen->touches.resize(1);
-              touchscreen->touches[0] = std::move(touch);
+              touchscreen->touches.push_back(std::move(touch));
 
               mozart::InputReportPtr report = mozart::InputReport::New();
               report->event_time = InputEventTimestampNow();

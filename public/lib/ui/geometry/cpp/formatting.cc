@@ -67,7 +67,7 @@ std::ostream& operator<<(std::ostream& os, const Transform& value) {
       for (size_t j = 0; j < 4; j++) {
         if (j != 0)
           os << ", ";
-        os << value.matrix[i * 4 + j];
+        os << value.matrix->at(i * 4 + j);
       }
       os << "]";
     }

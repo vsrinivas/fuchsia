@@ -134,7 +134,7 @@ void ImagePipe::PresentImage(
   auto acquire_fences_listener =
       std::make_unique<escher::FenceSetListener>(std::move(acquire_fences));
   acquire_fences_listener->WaitReadyAsync(
-      [weak = weak_ptr_factory_.GetWeakPtr(), presentation_time] {
+      [ weak = weak_ptr_factory_.GetWeakPtr(), presentation_time ] {
         if (weak) {
           weak->session()->ScheduleImagePipeUpdate(presentation_time,
                                                    ImagePipePtr(weak.get()));
@@ -160,10 +160,10 @@ bool ImagePipe::Update(uint64_t presentation_time,
          frames_.front().presentation_time <= presentation_time &&
          frames_.front().acquire_fences->ready()) {
     next_image_id = frames_.front().image_id;
-    if (!next_release_fences.empty()) {
+    if (!next_release_fences->empty()) {
       // We're skipping a frame, so we can immediately signal its release
       // fences.
-      for (auto& fence : next_release_fences) {
+      for (auto& fence : *next_release_fences) {
         fence.signal(0u, escher::kFenceSignalled);
       }
     }

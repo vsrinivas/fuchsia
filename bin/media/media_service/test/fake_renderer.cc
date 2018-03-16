@@ -57,9 +57,8 @@ void FakeRenderer::GetSupportedMediaTypes(
   supported_type->medium = MediaTypeMedium::AUDIO;
   supported_type->details = MediaTypeSetDetails::New();
   supported_type->details->set_audio(std::move(audio_details));
-  supported_type->encodings = f1dl::Array<f1dl::String>::New(1);
-  supported_type->encodings[0] = MediaType::kAudioEncodingLpcm;
-  supported_types[0] = std::move(supported_type);
+  supported_type->encodings.push_back(MediaType::kAudioEncodingLpcm);
+  supported_types->at(0) = std::move(supported_type);
 
   VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
   video_details->min_width = 1;
@@ -70,9 +69,8 @@ void FakeRenderer::GetSupportedMediaTypes(
   supported_type->medium = MediaTypeMedium::VIDEO;
   supported_type->details = MediaTypeSetDetails::New();
   supported_type->details->set_video(std::move(video_details));
-  supported_type->encodings = f1dl::Array<f1dl::String>::New(1);
-  supported_type->encodings[0] = MediaType::kVideoEncodingUncompressed;
-  supported_types[1] = std::move(supported_type);
+  supported_type->encodings.push_back(MediaType::kVideoEncodingUncompressed);
+  supported_types->at(1) = std::move(supported_type);
 
   callback(std::move(supported_types));
 }

@@ -36,13 +36,13 @@ bool HandleListAdapters(const App* app,
       [complete_cb](f1dl::Array<bluetooth::control::AdapterInfoPtr> adapters) {
         auto ac = fxl::MakeAutoCall(complete_cb);
 
-        if (!adapters || adapters.size() == 0) {
+        if (!adapters || adapters->size() == 0) {
           CLI_LOG() << "No adapters";
           return;
         }
 
         size_t i = 0;
-        for (auto& adapter : adapters) {
+        for (auto& adapter : *adapters) {
           CLI_LOG() << "Adapter " << i++ << ":";
           PrintAdapterInfo(adapter, 1);
         }

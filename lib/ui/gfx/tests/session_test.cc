@@ -54,8 +54,8 @@ void SessionTest::ReportError(fxl::LogSeverity severity,
 }
 
 void SessionTest::SendEvents(::f1dl::Array<ui::EventPtr> events) {
-  for (auto& event : events) {
-    events_.push_back(std::move(event));
+  for (size_t i = 0; i < events->size(); ++i) {
+    events_.push_back(std::move(events->at(i)));
   }
 }
 

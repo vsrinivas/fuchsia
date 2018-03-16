@@ -43,7 +43,7 @@ TokenManagerImpl::TokenManagerImpl(
   FXL_CHECK(app_context);
   // TODO: Start the auth provider only when someone does a request to it,
   // instead of starting all the configured providers in advance.
-  for (auto& config : auth_provider_configs) {
+  for (auto& config : *auth_provider_configs) {
     if (config->url.get().empty()) {
       FXL_LOG(ERROR) << "Auth provider config url is not set.";
       continue;

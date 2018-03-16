@@ -24,7 +24,7 @@ struct f1dl::TypeConverter<f1dl::Array<unsigned char>, T> {
     static_assert(std::is_base_of<::btlib::common::ByteBuffer, T>::value, "");
 
     Array<unsigned char> result = Array<unsigned char>::New(input.size());
-    memcpy(result.data(), input.data(), input.size());
+    memcpy(result->data(), input.data(), input.size());
     return result;
   }
 };
@@ -303,21 +303,21 @@ void AdvertisingData::FromFidl(
   FXL_DCHECK(fidl_ad);
   FXL_DCHECK(out_ad);
   common::UUID uuid;
-  for (const auto& uuid_str : fidl_ad->service_uuids) {
+  for (const auto& uuid_str : *fidl_ad->service_uuids) {
     if (common::StringToUuid(uuid_str, &uuid)) {
       out_ad->AddServiceUuid(uuid);
     }
   }
 
-  for (const auto& it : fidl_ad->manufacturer_specific_data) {
+  for (const auto& it : *fidl_ad->manufacturer_specific_data) {
     f1dl::Array<uint8_t>& data = it->data;
-    common::BufferView manuf_view(data.data(), data.size());
+    common::BufferView manuf_view(data->data(), data->size());
     out_ad->SetManufacturerData(it->company_id, manuf_view);
   }
 
-  for (const auto& it : fidl_ad->service_data) {
+  for (const auto& it : *fidl_ad->service_data) {
     f1dl::Array<uint8_t>& data = it->data;
-    common::BufferView servdata_view(data.data(), data.size());
+    common::BufferView servdata_view(data->data(), data->size());
     common::UUID servdata_uuid;
     if (StringToUuid(it->uuid.get(), &servdata_uuid)) {
       out_ad->SetServiceData(servdata_uuid, servdata_view);

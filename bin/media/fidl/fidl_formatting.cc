@@ -30,7 +30,7 @@ std::ostream& operator<<(std::ostream& os, const MediaTypePtr& value) {
   os << begl << "string encoding: " << value->encoding << "\n";
   if (value->encoding_parameters) {
     os << begl << "array<uint8>? encoding_parameters: "
-       << value->encoding_parameters.size() << " bytes\n";
+       << value->encoding_parameters->size() << " bytes\n";
   } else {
     os << begl << "array<uint8>? encoding_parameters: <nullptr>\n";
   }

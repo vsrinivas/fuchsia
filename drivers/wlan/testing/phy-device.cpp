@@ -4,16 +4,16 @@
 
 #include "phy-device.h"
 
-#include "iface-device.h"
 #include "garnet/lib/wlan/fidl/iface.fidl.h"
 #include "garnet/lib/wlan/fidl/phy.fidl.h"
+#include "iface-device.h"
 
 #include <ddk/debug.h>
 #include <wlan/protocol/ioctl.h>
 #include <wlan/protocol/phy.h>
 
-#include <algorithm>
 #include <stdio.h>
+#include <algorithm>
 
 namespace wlan {
 namespace testing {
@@ -32,8 +32,7 @@ static zx_protocol_device_t wlanphy_test_device_ops = {
     .get_size = nullptr,
     .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                 size_t out_len, size_t* out_actual) -> zx_status_t {
-                    return DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len,
-                            out_actual);
+        return DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
     },
     .suspend = nullptr,
     .resume = nullptr,
@@ -76,26 +75,26 @@ void PhyDevice::Release() {
 }
 
 zx_status_t PhyDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
-                          size_t out_len, size_t* out_actual) {
+                             size_t out_len, size_t* out_actual) {
     zxlogf(INFO, "wlan::testing::phy::PhyDevice::Ioctl()\n");
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     switch (op) {
-        case IOCTL_WLANPHY_QUERY:
-            zxlogf(INFO, "wlanphy ioctl: query len=%zu\n", out_len);
-            status = Query(static_cast<uint8_t*>(out_buf), out_len, out_actual);
-            break;
-        case IOCTL_WLANPHY_CREATE_IFACE:
-            zxlogf(INFO, "wlanphy ioctl: create if inlen=%zu outlen=%zu\n", in_len, out_len);
-            status = CreateIface(in_buf, in_len, out_buf, out_len, out_actual);
-            break;
-        case IOCTL_WLANPHY_DESTROY_IFACE:
-            zxlogf(INFO, "wlanphy ioctl: destroy if inlen=%zu\n", in_len);
-            status = DestroyIface(in_buf, in_len);
-            *out_actual = 0;
-            break;
-        default:
-            zxlogf(ERROR, "wlanphy ioctl: unknown (%u)\n", op);
-            break;
+    case IOCTL_WLANPHY_QUERY:
+        zxlogf(INFO, "wlanphy ioctl: query len=%zu\n", out_len);
+        status = Query(static_cast<uint8_t*>(out_buf), out_len, out_actual);
+        break;
+    case IOCTL_WLANPHY_CREATE_IFACE:
+        zxlogf(INFO, "wlanphy ioctl: create if inlen=%zu outlen=%zu\n", in_len, out_len);
+        status = CreateIface(in_buf, in_len, out_buf, out_len, out_actual);
+        break;
+    case IOCTL_WLANPHY_DESTROY_IFACE:
+        zxlogf(INFO, "wlanphy ioctl: destroy if inlen=%zu\n", in_len);
+        status = DestroyIface(in_buf, in_len);
+        *out_actual = 0;
+        break;
+    default:
+        zxlogf(ERROR, "wlanphy ioctl: unknown (%u)\n", op);
+        break;
     }
     return status;
 }
@@ -103,9 +102,7 @@ zx_status_t PhyDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len, voi
 zx_status_t PhyDevice::Query(uint8_t* buf, size_t len, size_t* actual) {
     zxlogf(INFO, "wlan::testing::PhyDevice::Query()\n");
     std::lock_guard<std::mutex> guard(lock_);
-    if (dead_) {
-        return ZX_ERR_PEER_CLOSED;
-    }
+    if (dead_) { return ZX_ERR_PEER_CLOSED; }
 
     auto info = wlan::phy::WlanPhyInfo::New();
     info->supported_phys = f1dl::Array<wlan::phy::SupportedPhy>::New(0);
@@ -130,13 +127,13 @@ zx_status_t PhyDevice::Query(uint8_t* buf, size_t len, size_t* actual) {
     band24->supported_channels = wlan::phy::ChannelList::New();
     band24->description = "2.4 GHz";
     band24->ht_caps->ht_capability_info = 0x01fe;
-    band24->ht_caps->supported_mcs_set =
-        f1dl::Array<uint8_t>{0xff, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
-                             0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00};
-    band24->basic_rates = f1dl::Array<uint8_t>{2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108};
+    band24->ht_caps->supported_mcs_set.reset(
+        std::vector<uint8_t>{0xff, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                             0x10, 0x00, 0x00, 0x00});
+    band24->basic_rates.reset(std::vector<uint8_t>{2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108});
     band24->supported_channels->base_freq = 2417;
-    band24->supported_channels->channels =
-        f1dl::Array<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
+    band24->supported_channels->channels.reset(
+        std::vector<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14});
 
     info->bands.push_back(std::move(band24));
 
@@ -145,16 +142,15 @@ zx_status_t PhyDevice::Query(uint8_t* buf, size_t len, size_t* actual) {
     band5->supported_channels = wlan::phy::ChannelList::New();
     band5->description = "5 GHz";
     band5->ht_caps->ht_capability_info = 0x01fe;
-    band5->ht_caps->supported_mcs_set =
-        f1dl::Array<uint8_t>{0xff, 0xff, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
-                             0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00};
-    band5->basic_rates = f1dl::Array<uint8_t>{12, 18, 24, 36, 48, 72, 96, 108};
+    band5->ht_caps->supported_mcs_set.reset(std::vector<uint8_t>{0xff, 0xff, 0x00, 0x80, 0x00, 0x00,
+                                                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                                                 0x10, 0x00, 0x00, 0x00});
+    band5->basic_rates.reset(std::vector<uint8_t>{12, 18, 24, 36, 48, 72, 96, 108});
     band5->supported_channels->base_freq = 5000;
-    band5->supported_channels->channels =
-        f1dl::Array<uint8_t>{36, 38,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,
-                             60,  62,  64,  100, 102, 104, 106, 108, 110, 112, 114, 116,
-                             118, 120, 122, 124, 126, 128, 130, 132, 134, 136, 138, 140,
-                             149, 151, 153, 155, 157, 159, 161, 165, 184, 188, 192, 196};
+    band5->supported_channels->channels.reset(std::vector<uint8_t>{
+        36,  38,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,  60,  62,  64,  100,
+        102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126, 128, 130, 132,
+        134, 136, 138, 140, 149, 151, 153, 155, 157, 159, 161, 165, 184, 188, 192, 196});
 
     info->bands.push_back(std::move(band5));
 
@@ -163,17 +159,13 @@ zx_status_t PhyDevice::Query(uint8_t* buf, size_t len, size_t* actual) {
     return ZX_OK;
 }
 
-zx_status_t PhyDevice::CreateIface(const void* in_buf, size_t in_len, void* out_buf,
-        size_t out_len, size_t* out_actual) {
+zx_status_t PhyDevice::CreateIface(const void* in_buf, size_t in_len, void* out_buf, size_t out_len,
+                                   size_t* out_actual) {
     auto req = wlan::phy::CreateIfaceRequest::New();
-    if (!req->Deserialize(const_cast<void*>(in_buf), in_len)) {
-        return ZX_ERR_IO;
-    }
+    if (!req->Deserialize(const_cast<void*>(in_buf), in_len)) { return ZX_ERR_IO; }
     zxlogf(INFO, "CreateRequest: role=%u\n", req->role);
     std::lock_guard<std::mutex> guard(lock_);
-    if (dead_) {
-        return ZX_ERR_PEER_CLOSED;
-    }
+    if (dead_) { return ZX_ERR_PEER_CLOSED; }
 
     // We leverage wrapping of unsigned ints to cycle back through ids to find an unused one.
     bool found_unused = false;
@@ -222,15 +214,11 @@ zx_status_t PhyDevice::CreateIface(const void* in_buf, size_t in_len, void* out_
 
 zx_status_t PhyDevice::DestroyIface(const void* in_buf, size_t in_len) {
     auto req = wlan::phy::DestroyIfaceRequest::New();
-    if (!req->Deserialize(const_cast<void*>(in_buf), in_len)) {
-        return ZX_ERR_IO;
-    }
+    if (!req->Deserialize(const_cast<void*>(in_buf), in_len)) { return ZX_ERR_IO; }
     zxlogf(INFO, "DestroyRequest: id=%u\n", req->id);
 
     std::lock_guard<std::mutex> guard(lock_);
-    if (dead_) {
-        return ZX_ERR_PEER_CLOSED;
-    }
+    if (dead_) { return ZX_ERR_PEER_CLOSED; }
 
     auto intf = ifaces_.find(req->id);
     if (intf == ifaces_.end()) { return ZX_ERR_NOT_FOUND; }

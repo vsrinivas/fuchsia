@@ -40,7 +40,7 @@ void SessionHandler::Enqueue(::f1dl::Array<ui::CommandPtr> commands) {
   // TODO: Add them all at once instead of iterating.  The problem
   // is that ::fidl::Array doesn't support this.  Or, at least reserve
   // enough space.  But ::fidl::Array doesn't support this, either.
-  for (auto& command : commands) {
+  for (auto& command : *commands) {
     FXL_CHECK(command->which() == ui::Command::Tag::GFX);
     buffered_commands_.push_back(std::move(command->get_gfx()));
   }

@@ -135,11 +135,12 @@ class HitTestTest : public SessionTest {
                       });
 
     EXPECT_EQ(expected_null, actual_hits.is_null());
-    EXPECT_EQ(expected_hits.size(), actual_hits.size());
-    for (uint32_t i = 0; i < std::min(expected_hits.size(), actual_hits.size());
-         i++) {
-      EXPECT_EQ(expected_hits[i].tag, actual_hits[i]->tag_value) << "i=" << i;
-      const auto& m = actual_hits[i]->inverse_transform->matrix;
+    EXPECT_EQ(expected_hits.size(), actual_hits->size());
+    for (uint32_t i = 0;
+         i < std::min(expected_hits.size(), actual_hits->size()); i++) {
+      EXPECT_EQ(expected_hits[i].tag, actual_hits->at(i)->tag_value)
+          << "i=" << i;
+      const auto& m = *actual_hits->at(i)->inverse_transform->matrix;
       EXPECT_EQ(1.f, m[0]) << "i=" << i;
       EXPECT_EQ(0.f, m[1]) << "i=" << i;
       EXPECT_EQ(0.f, m[2]) << "i=" << i;
@@ -156,7 +157,7 @@ class HitTestTest : public SessionTest {
       EXPECT_EQ(expected_hits[i].ty, m[13]) << "i=" << i;
       EXPECT_EQ(expected_hits[i].tz, m[14]) << "i=" << i;
       EXPECT_EQ(1.f, m[15]) << "i=" << i;
-      EXPECT_EQ(expected_hits[i].d, actual_hits[i]->distance) << "i=" << i;
+      EXPECT_EQ(expected_hits[i].d, actual_hits->at(i)->distance) << "i=" << i;
     }
   }
 };

@@ -25,7 +25,7 @@ ResourceId Canvas::AllocateResourceId() {
 
 void Canvas::Present(uint64_t time,
                      scenic_lib::Session::PresentCallback callback) {
-  if (!commands_.empty()) {
+  if (!commands_->empty()) {
     canvas_->Enqueue(std::move(commands_));
   }
   canvas_->Present(time, std::move(callback));

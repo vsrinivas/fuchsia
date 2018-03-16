@@ -55,8 +55,8 @@ void ParseProperties(const f1dl::Array<CharacteristicProperty>& properties,
 
   *out_props = 0;
   *out_ext_props = 0;
-  if (properties && !properties.empty()) {
-    for (const auto& prop : properties) {
+  if (properties && !properties->empty()) {
+    for (const auto& prop : *properties) {
       switch (prop) {
         case CharacteristicProperty::BROADCAST:
           *out_props |= ::btlib::gatt::Property::kBroadcast;
@@ -163,8 +163,8 @@ CharacteristicResult NewCharacteristic(const Characteristic& fidl_chrc) {
 
   auto chrc = std::make_unique<::btlib::gatt::Characteristic>(
       fidl_chrc.id, type, props, ext_props, read_reqs, write_reqs, update_reqs);
-  if (fidl_chrc.descriptors && !fidl_chrc.descriptors.empty()) {
-    for (const auto& fidl_desc : fidl_chrc.descriptors) {
+  if (fidl_chrc.descriptors && !fidl_chrc.descriptors->empty()) {
+    for (const auto& fidl_desc : *fidl_chrc.descriptors) {
       if (!fidl_desc) {
         return CharacteristicResult("null descriptor");
       }
@@ -248,8 +248,8 @@ class GattServerServer::ServiceImpl
     }
 
     gatt->server()->SendNotification(
-        config.handle, ::btlib::common::BufferView(value.data(), value.size()),
-        confirm);
+        config.handle,
+        ::btlib::common::BufferView(value->data(), value->size()), confirm);
   }
 
   // Unregisters the underlying service if it is still active.
@@ -326,7 +326,7 @@ void GattServerServer::PublishService(
   auto service = std::make_unique<::btlib::gatt::Service>(service_info->primary,
                                                           service_type);
   if (service_info->characteristics) {
-    for (const auto& fidl_chrc : service_info->characteristics) {
+    for (const auto& fidl_chrc : *service_info->characteristics) {
       if (!fidl_chrc) {
         auto error = fidl_helpers::NewErrorStatus(ErrorCode::INVALID_ARGUMENTS,
                                                   "null characteristic");
@@ -416,7 +416,7 @@ void GattServerServer::OnReadRequest(
 
   auto cb = [responder](f1dl::Array<uint8_t> value, auto error_code) {
     responder(GattErrorCodeFromFidl(error_code, true /* is_read */),
-              ::btlib::common::BufferView(value.data(), value.size()));
+              ::btlib::common::BufferView(value->data(), value->size()));
   };
 
   auto* delegate = iter->second->delegate();

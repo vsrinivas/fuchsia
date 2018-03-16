@@ -387,15 +387,13 @@ f1dl::Array<MediaTypeSetPtr> AudioRenderer1Impl::SupportedMediaTypes() {
   f1dl::Array<MediaTypeSetPtr> supported_media_types =
       f1dl::Array<MediaTypeSetPtr>::New(arraysize(kSupportedAudioTypeSets));
 
-  for (size_t i = 0; i < supported_media_types.size(); ++i) {
+  for (size_t i = 0; i < supported_media_types->size(); ++i) {
     const MediaTypeSetPtr& mts =
-        (supported_media_types[i] = MediaTypeSet::New());
+        (supported_media_types->at(i) = MediaTypeSet::New());
 
     mts->medium = MediaTypeMedium::AUDIO;
-    mts->encodings = f1dl::Array<f1dl::String>::New(1);
+    mts->encodings.push_back(MediaType::kAudioEncodingLpcm);
     mts->details = MediaTypeSetDetails::New();
-
-    mts->encodings[0] = MediaType::kAudioEncodingLpcm;
 
     const auto& s = kSupportedAudioTypeSets[i];
     AudioMediaTypeSetDetailsPtr audio_detail = AudioMediaTypeSetDetails::New();

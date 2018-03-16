@@ -134,7 +134,7 @@ TEST_F(ScannerTest, Start_InvalidChannelTimes) {
     EXPECT_EQ(0u, CurrentChannel());
 
     EXPECT_EQ(ZX_OK, DeserializeResponse());
-    EXPECT_EQ(0u, resp_->bss_description_set.size());
+    EXPECT_EQ(0u, resp_->bss_description_set->size());
     EXPECT_EQ(ScanResultCodes::NOT_SUPPORTED, resp_->result_code);
 }
 
@@ -149,7 +149,7 @@ TEST_F(ScannerTest, Start_NoChannels) {
     EXPECT_EQ(0u, CurrentChannel());
 
     EXPECT_EQ(ZX_OK, DeserializeResponse());
-    EXPECT_EQ(0u, resp_->bss_description_set.size());
+    EXPECT_EQ(0u, resp_->bss_description_set->size());
     EXPECT_EQ(ScanResultCodes::NOT_SUPPORTED, resp_->result_code);
 }
 
@@ -209,7 +209,7 @@ TEST_F(ScannerTest, Timeout_MaxChannelTime) {
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 
     EXPECT_EQ(ZX_OK, DeserializeResponse());
-    EXPECT_EQ(0u, resp_->bss_description_set.size());
+    EXPECT_EQ(0u, resp_->bss_description_set->size());
     EXPECT_EQ(ScanResultCodes::SUCCESS, resp_->result_code);
 }
 
@@ -273,11 +273,11 @@ TEST_F(ScannerTest, ScanResponse) {
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 
     EXPECT_EQ(ZX_OK, DeserializeResponse());
-    ASSERT_EQ(1u, resp_->bss_description_set.size());
+    ASSERT_EQ(1u, resp_->bss_description_set->size());
     EXPECT_EQ(ScanResultCodes::SUCCESS, resp_->result_code);
 
-    auto bss = resp_->bss_description_set[0].get();
-    EXPECT_EQ(0, std::memcmp(kBeacon + 16, bss->bssid.data(), 6));
+    auto bss = resp_->bss_description_set->at(0).get();
+    EXPECT_EQ(0, std::memcmp(kBeacon + 16, bss->bssid->data(), 6));
     EXPECT_STREQ("test ssid", bss->ssid.get().c_str());
     EXPECT_EQ(BSSTypes::INFRASTRUCTURE, bss->bss_type);
     EXPECT_EQ(100u, bss->beacon_period);

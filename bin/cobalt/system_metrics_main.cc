@@ -112,7 +112,8 @@ void SystemMetricsApp::GatherMetrics() {
   LogMemoryUsage(uptime_minutes);
 }
 
-cobalt::Status SystemMetricsApp::LogUptime(std::chrono::minutes uptime_minutes) {
+cobalt::Status SystemMetricsApp::LogUptime(
+    std::chrono::minutes uptime_minutes) {
   while (next_uptime_bucket_ <= uptime_minutes.count()) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
 
@@ -157,26 +158,26 @@ cobalt::Status SystemMetricsApp::LogMemoryUsage(
   }
 
   auto values = f1dl::Array<cobalt::ObservationValuePtr>::New(3);
-  values[0] = cobalt::ObservationValue::New();
+  values->at(0) = cobalt::ObservationValue::New();
   // Metric part name as defined in the corresponding metric config.
-  values[0]->name = "system_uptime_minutes";
-  values[0]->value = cobalt::Value::New();
-  values[0]->value->set_int_value(uptime_minutes.count());
-  values[0]->encoding_id = kRawEncodingId;
+  values->at(0)->name = "system_uptime_minutes";
+  values->at(0)->value = cobalt::Value::New();
+  values->at(0)->value->set_int_value(uptime_minutes.count());
+  values->at(0)->encoding_id = kRawEncodingId;
 
-  values[1] = cobalt::ObservationValue::New();
+  values->at(1) = cobalt::ObservationValue::New();
   // Metric part name as defined in the corresponding metric config.
-  values[1]->name = "total_system_memory";
-  values[1]->value = cobalt::Value::New();
-  values[1]->value->set_int_value(stats.total_bytes);
-  values[1]->encoding_id = kRawEncodingId;
+  values->at(1)->name = "total_system_memory";
+  values->at(1)->value = cobalt::Value::New();
+  values->at(1)->value->set_int_value(stats.total_bytes);
+  values->at(1)->encoding_id = kRawEncodingId;
 
-  values[2] = cobalt::ObservationValue::New();
+  values->at(2) = cobalt::ObservationValue::New();
   // Metric part name as defined in the corresponding metric config.
-  values[2]->name = "free_memory";
-  values[2]->value = cobalt::Value::New();
-  values[2]->value->set_int_value(stats.free_bytes);
-  values[2]->encoding_id = kRawEncodingId;
+  values->at(2)->name = "free_memory";
+  values->at(2)->value = cobalt::Value::New();
+  values->at(2)->value->set_int_value(stats.free_bytes);
+  values->at(2)->encoding_id = kRawEncodingId;
 
   cobalt::Status cobalt_status = cobalt::Status::INTERNAL_ERROR;
   encoder_->AddMultipartObservation(kMemoryUsageMetricId, std::move(values),

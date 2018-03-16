@@ -71,7 +71,7 @@ NetworkReaderImpl::NetworkReaderImpl(
           return;
         }
 
-        for (const network::HttpHeaderPtr& header : response->headers) {
+        for (const network::HttpHeaderPtr& header : *response->headers) {
           if (header->name == kContentLengthHeaderName) {
             size_ = std::stoull(header->value);
           } else if (header->name == kAcceptRangesHeaderName &&
@@ -116,7 +116,7 @@ void NetworkReaderImpl::ReadAt(uint64_t position,
       header->value = value.str();
 
       request->headers = f1dl::Array<network::HttpHeaderPtr>::New(1);
-      request->headers[0] = std::move(header);
+      request->headers->at(0) = std::move(header);
     }
 
     url_loader_->Start(

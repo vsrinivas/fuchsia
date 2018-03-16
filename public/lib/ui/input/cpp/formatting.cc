@@ -6,8 +6,8 @@
 
 #include <iostream>
 
-#include "lib/ui/input/fidl/usages.fidl.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "lib/ui/input/fidl/usages.fidl.h"
 
 namespace mozart {
 
@@ -134,12 +134,12 @@ std::ostream& operator<<(std::ostream& os, const Axis& value) {
 std::ostream& operator<<(std::ostream& os, const KeyboardDescriptor& value) {
   os << "{Keyboard:";
   bool first = true;
-  for (size_t index = 0; index < value.keys.size(); ++index) {
+  for (size_t index = 0; index < value.keys->size(); ++index) {
     if (first) {
       first = false;
-      os << value.keys[index];
+      os << value.keys->at(index);
     } else {
-      os << ", " << value.keys[index];
+      os << ", " << value.keys->at(index);
     }
   }
   return os << "}";
@@ -224,12 +224,12 @@ std::ostream& operator<<(std::ostream& os, const DeviceDescriptor& value) {
 std::ostream& operator<<(std::ostream& os, const KeyboardReport& value) {
   os << "{KeyboardReport: pressed_keys=[";
   bool first = true;
-  for (size_t index = 0; index < value.pressed_keys.size(); ++index) {
+  for (size_t index = 0; index < value.pressed_keys->size(); ++index) {
     if (first) {
       first = false;
-      os << value.pressed_keys[index];
+      os << value.pressed_keys->at(index);
     } else {
-      os << ", " << value.pressed_keys[index];
+      os << ", " << value.pressed_keys->at(index);
     }
   }
   return os << "]}";
@@ -273,12 +273,12 @@ std::ostream& operator<<(std::ostream& os, const Touch& value) {
 std::ostream& operator<<(std::ostream& os, const TouchscreenReport& value) {
   os << "{TouchscreenReport: touches=[";
   bool first = true;
-  for (size_t index = 0; index < value.touches.size(); ++index) {
+  for (size_t index = 0; index < value.touches->size(); ++index) {
     if (first) {
       first = false;
-      os << *(value.touches[index]);
+      os << *(value.touches->at(index));
     } else {
-      os << ", " << *(value.touches[index]);
+      os << ", " << *(value.touches->at(index));
     }
   }
 

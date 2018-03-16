@@ -69,7 +69,7 @@ struct ArraySerializer<
                             void>::type> {
   static_assert(sizeof(E) == sizeof(F), "Incorrect array serializer");
   static size_t GetSerializedSize(const Array<E>& input) {
-    return sizeof(Array_Data<F>) + Align(input.size() * sizeof(E));
+    return sizeof(Array_Data<F>) + Align(input->size() * sizeof(E));
   }
 
   template <typename Iterator>
@@ -111,7 +111,7 @@ struct ArraySerializer<
     std::vector<E> result(input->size());
     if (input->size())
       memcpy(&result[0], input->storage(), input->size() * sizeof(E));
-    output->Swap(&result);
+    output->reset(std::move(result));
   }
 };
 
@@ -119,7 +119,7 @@ struct ArraySerializer<
 template <>
 struct ArraySerializer<bool, bool, false> {
   static size_t GetSerializedSize(const Array<bool>& input) {
-    return sizeof(Array_Data<bool>) + Align((input.size() + 7) / 8);
+    return sizeof(Array_Data<bool>) + Align((input->size() + 7) / 8);
   }
 
   template <typename Iterator>
@@ -146,8 +146,8 @@ struct ArraySerializer<bool, bool, false> {
     auto result = Array<bool>::New(input->size());
     // TODO(darin): Can this be a memcpy somehow instead of a bit-by-bit copy?
     for (size_t i = 0; i < input->size(); ++i)
-      result.at(i) = input->at(i);
-    output->Swap(&result);
+      result->at(i) = input->at(i);
+    output->swap(result);
   }
 };
 
@@ -159,7 +159,7 @@ struct ArraySerializer<H,
                        typename std::enable_if<IsHandleType<H>::value>::type> {
   static size_t GetSerializedSize(const Array<H>& input) {
     return sizeof(Array_Data<WrappedHandle>) +
-           Align(input.size() * sizeof(WrappedHandle));
+           Align(input->size() * sizeof(WrappedHandle));
   }
 
   template <typename Iterator>
@@ -181,7 +181,8 @@ struct ArraySerializer<H,
             ValidationError::UNEXPECTED_INVALID_HANDLE,
             MakeMessageWithArrayIndex(
                 "invalid handle in array expecting valid handles", num_elements,
-                i).c_str());
+                i)
+                .c_str());
         return ValidationError::UNEXPECTED_INVALID_HANDLE;
       }
     }
@@ -193,8 +194,8 @@ struct ArraySerializer<H,
                                   Array<H>* output) {
     auto result = Array<H>::New(input->size());
     for (size_t i = 0; i < input->size(); ++i)
-      result.at(i) = UnwrapHandle<H>(FetchAndReset(&input->at(i)));
-    output->Swap(&result);
+      result->at(i) = UnwrapHandle<H>(FetchAndReset(&input->at(i)));
+    output->swap(result);
   }
 };
 
@@ -203,7 +204,7 @@ template <typename I>
 struct ArraySerializer<InterfaceRequest<I>, WrappedHandle, false> {
   static size_t GetSerializedSize(const Array<InterfaceRequest<I>>& input) {
     return sizeof(Array_Data<WrappedHandle>) +
-           Align(input.size() * sizeof(WrappedHandle));
+           Align(input->size() * sizeof(WrappedHandle));
   }
 
   template <typename Iterator>
@@ -225,7 +226,8 @@ struct ArraySerializer<InterfaceRequest<I>, WrappedHandle, false> {
             ValidationError::UNEXPECTED_INVALID_HANDLE,
             MakeMessageWithArrayIndex(
                 "invalid channel handle in array expecting valid handles",
-                num_elements, i).c_str());
+                num_elements, i)
+                .c_str());
         return ValidationError::UNEXPECTED_INVALID_HANDLE;
       }
     }
@@ -237,9 +239,9 @@ struct ArraySerializer<InterfaceRequest<I>, WrappedHandle, false> {
                                   Array<InterfaceRequest<I>>* output) {
     auto result = Array<InterfaceRequest<I>>::New(input->size());
     for (size_t i = 0; i < input->size(); ++i)
-      result.at(i) = InterfaceRequest<I>(
+      result->at(i) = InterfaceRequest<I>(
           UnwrapHandle<zx::channel>(FetchAndReset(&input->at(i))));
-    output->Swap(&result);
+    output->swap(result);
   }
 };
 
@@ -249,7 +251,7 @@ struct ArraySerializer<InterfaceHandle<Interface>, Interface_Data, false> {
   static size_t GetSerializedSize(
       const Array<InterfaceHandle<Interface>>& input) {
     return sizeof(Array_Data<Interface_Data>) +
-           Align(input.size() * sizeof(Interface_Data));
+           Align(input->size() * sizeof(Interface_Data));
   }
 
   template <typename Iterator>
@@ -271,7 +273,8 @@ struct ArraySerializer<InterfaceHandle<Interface>, Interface_Data, false> {
             ValidationError::UNEXPECTED_INVALID_HANDLE,
             MakeMessageWithArrayIndex(
                 "invalid handle in array expecting valid handles", num_elements,
-                i).c_str());
+                i)
+                .c_str());
         return ValidationError::UNEXPECTED_INVALID_HANDLE;
       }
     }
@@ -283,8 +286,8 @@ struct ArraySerializer<InterfaceHandle<Interface>, Interface_Data, false> {
                                   Array<InterfaceHandle<Interface>>* output) {
     auto result = Array<InterfaceHandle<Interface>>::New(input->size());
     for (size_t i = 0; i < input->size(); ++i)
-      internal::InterfaceDataToHandle(&input->at(i), &result.at(i));
-    output->Swap(&result);
+      internal::InterfaceDataToHandle(&input->at(i), &result->at(i));
+    output->swap(result);
   }
 };
 
@@ -302,10 +305,11 @@ struct ArraySerializer<
       typename std::remove_pointer<typename WrapperTraits<S>::DataType>::type;
   static size_t GetSerializedSize(const Array<S>& input) {
     size_t size = sizeof(Array_Data<S_Data*>) +
-                  input.size() * sizeof(StructPointer<S_Data>);
-    for (size_t i = 0; i < input.size(); ++i) {
-      if (!input[i].is_null())
-        size += GetSerializedSize_(*(UnwrapConstStructPtr<S>::value(input[i])));
+                  input->size() * sizeof(StructPointer<S_Data>);
+    for (size_t i = 0; i < input->size(); ++i) {
+      if (!input->at(i).is_null())
+        size +=
+            GetSerializedSize_(*(UnwrapConstStructPtr<S>::value(input->at(i))));
     }
     return size;
   }
@@ -329,7 +333,8 @@ struct ArraySerializer<
         FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(
             ValidationError::UNEXPECTED_NULL_POINTER,
             MakeMessageWithArrayIndex("null in array expecting valid pointers",
-                                      num_elements, i).c_str());
+                                      num_elements, i)
+                .c_str());
         return ValidationError::UNEXPECTED_NULL_POINTER;
       }
     }
@@ -341,9 +346,9 @@ struct ArraySerializer<
                                   Array<S>* output) {
     auto result = Array<S>::New(input->size());
     for (size_t i = 0; i < input->size(); ++i) {
-      DeserializeCaller::Run(input->at(i), &result[i]);
+      DeserializeCaller::Run(input->at(i), &result->at(i));
     }
-    output->Swap(&result);
+    output->swap(result);
   }
 
  private:
@@ -372,9 +377,10 @@ struct ArraySerializer<
                                String_Data** output,
                                const ArrayValidateParams* validate_params) {
       // String type has unexpected array validate params.
-      ZX_DEBUG_ASSERT(validate_params && !validate_params->element_validate_params &&
-                 !validate_params->element_is_nullable &&
-                 validate_params->expected_num_elements == 0);
+      ZX_DEBUG_ASSERT(validate_params &&
+                      !validate_params->element_validate_params &&
+                      !validate_params->element_is_nullable &&
+                      validate_params->expected_num_elements == 0);
       SerializeString_(*input, buf, output);
       return ValidationError::NONE;
     }
@@ -432,10 +438,10 @@ template <typename U, typename U_Data>
 struct ArraySerializer<U, U_Data, true> {
   static size_t GetSerializedSize(const Array<U>& input) {
     size_t size = sizeof(Array_Data<U_Data>);
-    for (size_t i = 0; i < input.size(); ++i) {
+    for (size_t i = 0; i < input->size(); ++i) {
       // GetSerializedSize_ will account for both the data in the union and the
       // space in the array used to hold the union.
-      size += GetSerializedSize_(input[i]);
+      size += GetSerializedSize_(input->at(i));
     }
     return size;
   }
@@ -457,7 +463,8 @@ struct ArraySerializer<U, U_Data, true> {
 
             ValidationError::UNEXPECTED_NULL_POINTER,
             MakeMessageWithArrayIndex("null in array expecting valid unions",
-                                      num_elements, i).c_str());
+                                      num_elements, i)
+                .c_str());
         return ValidationError::UNEXPECTED_NULL_POINTER;
       }
     }
@@ -471,11 +478,11 @@ struct ArraySerializer<U, U_Data, true> {
       auto& elem = input->at(i);
       if (!elem.is_null()) {
         using UnwrapedUnionType = typename RemoveStructPtr<U>::type;
-        result[i] = UnwrapedUnionType::New();
-        Deserialize_(&elem, result[i].get());
+        result->at(i) = UnwrapedUnionType::New();
+        Deserialize_(&elem, result->at(i).get());
       }
     }
-    output->Swap(&result);
+    output->swap(result);
   }
 };
 
@@ -508,19 +515,20 @@ inline internal::ValidationError SerializeArray_(
   }
 
   if (validate_params->expected_num_elements != 0 &&
-      input->size() != validate_params->expected_num_elements) {
+      (*input)->size() != validate_params->expected_num_elements) {
     FIDL_INTERNAL_DLOG_SERIALIZATION_FAILURE(
         internal::ValidationError::UNEXPECTED_ARRAY_HEADER,
         internal::MakeMessageWithExpectedArraySize(
-            "fixed-size array has wrong number of elements", input->size(),
-            validate_params->expected_num_elements).c_str());
+            "fixed-size array has wrong number of elements", (*input)->size(),
+            validate_params->expected_num_elements)
+            .c_str());
     return internal::ValidationError::UNEXPECTED_ARRAY_HEADER;
   }
 
   internal::Array_Data<F>* result =
-      internal::Array_Data<F>::New(input->size(), buf);
+      internal::Array_Data<F>::New((*input)->size(), buf);
   auto retval = internal::ArraySerializer<E, F>::SerializeElements(
-      input->begin(), input->size(), buf, result, validate_params);
+      (*input)->begin(), (*input)->size(), buf, result, validate_params);
   if (retval != internal::ValidationError::NONE)
     return retval;
 

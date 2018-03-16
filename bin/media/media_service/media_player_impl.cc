@@ -38,7 +38,7 @@ MediaPlayerImpl::MediaPlayerImpl(f1dl::InterfaceRequest<MediaPlayer> request,
         status->end_of_stream = end_of_stream_;
 
         if (stream_types_) {
-          for (MediaTypePtr& stream_type : stream_types_) {
+          for (const MediaTypePtr& stream_type : *stream_types_) {
             switch (stream_type->medium) {
               case MediaTypeMedium::AUDIO:
                 status->content_has_audio = true;
@@ -151,7 +151,7 @@ void MediaPlayerImpl::ConnectSinks() {
 
   size_t stream_index = 0;
 
-  for (MediaTypePtr& stream_type : stream_types_) {
+  for (const MediaTypePtr& stream_type : *stream_types_) {
     MaybeCreateRenderer(stream_type->medium);
 
     auto iter = streams_by_medium_.find(stream_type->medium);
@@ -263,7 +263,7 @@ void MediaPlayerImpl::Update() {
         if (!reader_transition_pending_) {
           return;
         }
-      // Falls through.
+        // Falls through.
 
       case State::kFlushed:
         // Presentation time is not progressing, and the pipeline is clear of

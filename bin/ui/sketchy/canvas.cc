@@ -24,8 +24,8 @@ void CanvasImpl::Init(f1dl::InterfaceHandle<sketchy::CanvasListener> listener) {
 
 void CanvasImpl::Enqueue(f1dl::Array<sketchy::CommandPtr> commands) {
   // TODO: Use `AddAll()` when f1dl::Array supports it.
-  for (auto& command : commands) {
-    commands_.push_back(std::move(command));
+  for (size_t i = 0; i < commands->size(); ++i) {
+    commands_.push_back(std::move(commands->at(i)));
   }
 }
 
@@ -36,7 +36,7 @@ void CanvasImpl::Present(uint64_t presentation_time,
   // be triggered and the Commands enqueue; when the corresponding frame is
   // processed all Commands that are scheduled for the current frame's
   // presentation time are applied.
-  for (auto& command : commands_) {
+  for (auto& command : *commands_) {
     if (!ApplyCommand(command)) {
       fsl::MessageLoop::GetCurrent()->QuitNow();
     }
@@ -52,8 +52,8 @@ void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
   }
   is_scenic_present_requested_ = true;
 
-  auto session_callback = [this, callbacks = std::move(callbacks_)](
-                              ui::PresentationInfoPtr info) {
+  auto session_callback = [ this, callbacks = std::move(callbacks_) ](
+      ui::PresentationInfoPtr info) {
     FXL_DCHECK(is_scenic_present_requested_);
     is_scenic_present_requested_ = false;
     for (auto& callback : callbacks) {
@@ -206,8 +206,8 @@ bool CanvasImpl::ApplyExtendStrokeCommand(
     return false;
   }
   std::vector<glm::vec2> pts;
-  pts.reserve(command->touches.size());
-  for (const auto& touch : command->touches) {
+  pts.reserve(command->touches->size());
+  for (const auto& touch : *command->touches) {
     pts.push_back({touch->position->x, touch->position->y});
   }
   return stroke_manager_.ExtendStroke(stroke, pts);

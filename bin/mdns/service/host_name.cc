@@ -53,7 +53,7 @@ IpAddress GetHostAddress() {
 
   NetstackClient::GetInterfaces(
       [](const f1dl::Array<netstack::NetInterfacePtr>& interfaces) {
-        for (const auto& interface : interfaces) {
+        for (const auto& interface : *interfaces) {
           if (interface->addr->family == netstack::NetAddressFamily::IPV4) {
             ip_address = MdnsFidlUtil::IpAddressFrom(interface->addr.get());
             break;

@@ -74,14 +74,14 @@ template <typename T>
 std::ostream& operator<<(std::ostream& os, const f1dl::Array<T>& value) {
   if (!value) {
     return os << "<nullptr>\n";
-  } else if (value.size() == 0) {
+  } else if (value->size() == 0) {
     return os << "<empty>\n";
   } else {
     os << "\n";
   }
 
   int index = 0;
-  for (T& element : const_cast<f1dl::Array<T>&>(value)) {
+  for (const T& element : *value) {
     os << begl << "[" << index++ << "] " << element;
   }
 
@@ -98,11 +98,11 @@ template <typename T>
 std::ostream& operator<<(std::ostream& os, AsInlineArray<T> value) {
   if (!value.value_) {
     return os << "<nullptr>";
-  } else if (value.value_.size() == 0) {
+  } else if (value.value_->size() == 0) {
     return os << "<empty>";
   }
 
-  for (T& element : const_cast<f1dl::Array<T>&>(value.value_)) {
+  for (const T& element : *value.value_) {
     os << element << ' ';
   }
 

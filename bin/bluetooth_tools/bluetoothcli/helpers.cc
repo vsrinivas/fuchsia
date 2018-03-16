@@ -182,9 +182,9 @@ void PrintRemoteDevice(const bluetooth::control::RemoteDevicePtr& remote_device,
   CLI_LOG_INDENT(indent) << "appearance: "
                          << AppearanceToString(remote_device->appearance);
 
-  if (!remote_device->service_uuids.empty()) {
+  if (!remote_device->service_uuids->empty()) {
     CLI_LOG_INDENT(indent) << "services: ";
-    for (const auto& service : remote_device->service_uuids) {
+    for (const auto& service : *remote_device->service_uuids) {
       CLI_LOG_INDENT(indent + 1) << service;
     }
   }

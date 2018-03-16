@@ -51,9 +51,9 @@ enum class LaunchType {
 std::vector<const char*> GetArgv(const std::string& argv0,
                                  const ApplicationLaunchInfoPtr& launch_info) {
   std::vector<const char*> argv;
-  argv.reserve(launch_info->arguments.size() + 1);
+  argv.reserve(launch_info->arguments->size() + 1);
   argv.push_back(argv0.c_str());
-  for (const auto& argument : launch_info->arguments)
+  for (const auto& argument : *launch_info->arguments)
     argv.push_back(argument.get().c_str());
   return argv;
 }
@@ -242,8 +242,7 @@ void JobHolder::CreateNestedJob(
     const f1dl::String& label) {
   auto controller = std::make_unique<ApplicationEnvironmentControllerImpl>(
       std::move(controller_request),
-      std::make_unique<JobHolder>(
-          this, std::move(host_directory), label));
+      std::make_unique<JobHolder>(this, std::move(host_directory), label));
   JobHolder* child = controller->job_holder();
   child->AddBinding(std::move(environment));
   info_dir_->AddEntry(child->label(), child->info_dir());

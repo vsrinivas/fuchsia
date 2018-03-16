@@ -220,8 +220,8 @@ TEST_F(HandlePassingTest, PipesAreClosed) {
 
   {
     auto pipes = Array<zx::channel>::New(2);
-    pipes[0] = std::move(handle0);
-    pipes[1] = std::move(handle1);
+    pipes->at(0) = std::move(handle0);
+    pipes->at(1) = std::move(handle1);
 
     sample::RequestPtr request(sample::Request::New());
     request->more_pipes = std::move(pipes);

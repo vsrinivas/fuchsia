@@ -21,9 +21,8 @@ constexpr char kServiceRootPath[] = "/svc";
 
 }  // namespace
 
-ApplicationContext::ApplicationContext(
-    zx::channel service_root,
-    zx::channel directory_request)
+ApplicationContext::ApplicationContext(zx::channel service_root,
+                                       zx::channel directory_request)
     : vfs_(async_get_default()),
       export_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       public_export_dir_(fbl::AdoptRef(new fs::PseudoDir())),
@@ -62,13 +61,13 @@ ApplicationContext::CreateFromStartupInfoNotChecked() {
 std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
     ApplicationStartupInfoPtr startup_info) {
   const FlatNamespacePtr& flat = startup_info->flat_namespace;
-  if (flat->paths.size() != flat->directories.size())
+  if (flat->paths->size() != flat->directories->size())
     return nullptr;
 
   zx::channel service_root;
-  for (size_t i = 0; i < flat->paths.size(); ++i) {
-    if (flat->paths[i] == kServiceRootPath) {
-      service_root = std::move(flat->directories[i]);
+  for (size_t i = 0; i < flat->paths->size(); ++i) {
+    if (flat->paths->at(i) == kServiceRootPath) {
+      service_root = std::move(flat->directories->at(i));
       break;
     }
   }

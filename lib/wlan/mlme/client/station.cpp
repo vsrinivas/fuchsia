@@ -66,7 +66,7 @@ zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
     // Clone request to take ownership of the BSS>
     auto req_clone = req.Clone();
     bss_ = std::move(req_clone->selected_bss);
-    bssid_.Set(bss_->bssid.data());
+    bssid_.Set(bss_->bssid->data());
 
     if (bss_->chan.is_null()) {
         errorf("Requested BSS to join has missing channel\n");
@@ -203,7 +203,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const DeauthenticateRequest& req) {
     if (bss_.is_null()) { return ZX_ERR_BAD_STATE; }
 
     // Check whether the request wants to deauthenticate from this STA's BSS.
-    common::MacAddr peer_sta_addr(req.peer_sta_address.data());
+    common::MacAddr peer_sta_addr(req.peer_sta_address->data());
     if (bssid_ != peer_sta_addr) { return ZX_OK; }
 
     fbl::unique_ptr<Packet> packet = nullptr;
@@ -305,7 +305,7 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
 
     // Write RSNE from MLME-Association.request if available.
     if (req.rsn) {
-        if (!w.write<RsnElement>(req.rsn.data(), req.rsn.size())) { return ZX_ERR_IO; }
+        if (!w.write<RsnElement>(req.rsn->data(), req.rsn->size())) { return ZX_ERR_IO; }
     }
 
     if (IsHTReady()) {
@@ -364,7 +364,7 @@ zx_status_t Station::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
     debugfn();
     ZX_DEBUG_ASSERT(!bss_.is_null());
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kBeacon);
-    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
 
     avg_rssi_.add(rxinfo.rssi);
 
@@ -406,7 +406,7 @@ zx_status_t Station::HandleAuthentication(const ImmutableMgmtFrame<Authenticatio
                                           const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kAuthentication);
-    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
 
     if (state_ != WlanState::kUnauthenticated) {
         // TODO(tkilbourn): should we process this Authentication packet anyway? The spec is
@@ -437,7 +437,7 @@ zx_status_t Station::HandleAuthentication(const ImmutableMgmtFrame<Authenticatio
         return ZX_ERR_BAD_STATE;
     }
 
-    common::MacAddr bssid(bss_->bssid.data());
+    common::MacAddr bssid(bss_->bssid->data());
     debugjoin("authenticated to %s\n", MACSTR(bssid));
     state_ = WlanState::kAuthenticated;
     auth_timeout_ = zx::time();
@@ -450,7 +450,7 @@ zx_status_t Station::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentic
                                             const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kDeauthentication);
-    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
 
     if (state_ != WlanState::kAssociated && state_ != WlanState::kAuthenticated) {
         debugjoin("got spurious deauthenticate; ignoring\n");
@@ -471,7 +471,7 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
                                                const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kAssociationResponse);
-    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
 
     if (state_ != WlanState::kAuthenticated) {
         // TODO(tkilbourn): should we process this Association response packet anyway? The spec is
@@ -488,7 +488,7 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
         return ZX_ERR_BAD_STATE;
     }
 
-    common::MacAddr bssid(bss_->bssid.data());
+    common::MacAddr bssid(bss_->bssid->data());
     state_ = WlanState::kAssociated;
     assoc_timeout_ = zx::time();
     aid_ = assoc->aid & kAidMask;
@@ -525,7 +525,7 @@ zx_status_t Station::HandleDisassociation(const ImmutableMgmtFrame<Disassociatio
                                           const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kDisassociation);
-    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
 
     if (state_ != WlanState::kAssociated) {
         debugjoin("got spurious disassociate; ignoring\n");
@@ -533,7 +533,7 @@ zx_status_t Station::HandleDisassociation(const ImmutableMgmtFrame<Disassociatio
     }
 
     auto disassoc = frame.body;
-    common::MacAddr bssid(bss_->bssid.data());
+    common::MacAddr bssid(bss_->bssid->data());
     infof("disassociating from %s(%s), reason=%u\n", MACSTR(bssid), bss_->ssid->data(),
           disassoc->reason_code);
 
@@ -551,7 +551,7 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
                                              const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(rx_frame.hdr->fc.subtype() == ManagementSubtype::kAction);
-    ZX_DEBUG_ASSERT(rx_frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
+    ZX_DEBUG_ASSERT(rx_frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
     ZX_DEBUG_ASSERT(rx_frame.body->category == action::Category::kBlockAck);
     ZX_DEBUG_ASSERT(rx_frame.body->action == action::BaAction::kAddBaRequest);
 
@@ -615,7 +615,7 @@ zx_status_t Station::HandleAddBaResponseFrame(
     ZX_DEBUG_ASSERT(rx_frame.hdr != nullptr);
     ZX_DEBUG_ASSERT(rx_frame.body != nullptr);
     ZX_DEBUG_ASSERT(rx_frame.hdr->fc.subtype() == ManagementSubtype::kAction);
-    ZX_DEBUG_ASSERT(rx_frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
+    ZX_DEBUG_ASSERT(rx_frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
     ZX_DEBUG_ASSERT(rx_frame.body->category == action::Category::kBlockAck);
     ZX_DEBUG_ASSERT(rx_frame.body->action == action::BaAction::kAddBaResponse);
 
@@ -641,7 +641,7 @@ zx_status_t Station::HandleNullDataFrame(const ImmutableDataFrame<NilHeader>& fr
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == DataSubtype::kNull);
     ZX_DEBUG_ASSERT(bssid() != nullptr);
-    ZX_DEBUG_ASSERT(frame.hdr->addr2 == common::MacAddr(bss_->bssid.data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr2 == common::MacAddr(bss_->bssid->data()));
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     // Take signal strength into account.
@@ -666,7 +666,7 @@ zx_status_t Station::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
     }
 
     ZX_DEBUG_ASSERT(bssid() != nullptr);
-    ZX_DEBUG_ASSERT(frame.hdr->addr2 == common::MacAddr(bss_->bssid.data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr2 == common::MacAddr(bss_->bssid->data()));
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     switch (frame.hdr->fc.subtype()) {
@@ -778,7 +778,7 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
         txinfo.tx_flags |= WLAN_TX_INFO_FLAGS_PROTECTED;
     }
 
-    hdr->addr1 = common::MacAddr(bss_->bssid.data());
+    hdr->addr1 = common::MacAddr(bss_->bssid->data());
     hdr->addr2 = eth->src;
     hdr->addr3 = eth->dest;
 
@@ -882,7 +882,7 @@ zx_status_t Station::SendKeepAliveResponse() {
     hdr->fc.set_subtype(DataSubtype::kNull);
     hdr->fc.set_to_ds(1);
 
-    common::MacAddr bssid(bss_->bssid.data());
+    common::MacAddr bssid(bss_->bssid->data());
     hdr->addr1 = bssid;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid;
@@ -954,7 +954,7 @@ zx_status_t Station::HandleMlmeEapolReq(const EapolRequest& req) {
         return ZX_OK;
     }
 
-    size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req.data.size();
+    size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req.data->size();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
@@ -964,9 +964,9 @@ zx_status_t Station::HandleMlmeEapolReq(const EapolRequest& req) {
     hdr->fc.set_type(FrameType::kData);
     hdr->fc.set_to_ds(1);
 
-    hdr->addr1.Set(req.dst_addr.data());
-    hdr->addr2.Set(req.src_addr.data());
-    hdr->addr3.Set(req.dst_addr.data());
+    hdr->addr1.Set(req.dst_addr->data());
+    hdr->addr2.Set(req.src_addr->data());
+    hdr->addr3.Set(req.dst_addr->data());
 
     SetSeqNo(hdr, &seq_);
 
@@ -976,7 +976,7 @@ zx_status_t Station::HandleMlmeEapolReq(const EapolRequest& req) {
     llc->control = kLlcUnnumberedInformation;
     std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
     llc->protocol_id = htobe16(kEapolProtocolId);
-    std::memcpy(llc->payload, req.data.data(), req.data.size());
+    std::memcpy(llc->payload, req.data->data(), req.data->size());
 
     zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
@@ -993,7 +993,7 @@ zx_status_t Station::HandleMlmeEapolReq(const EapolRequest& req) {
 zx_status_t Station::HandleMlmeSetKeysReq(const SetKeysRequest& req) {
     debugfn();
 
-    for (auto& keyPtr : req.keylist) {
+    for (auto& keyPtr : *req.keylist) {
         if (keyPtr.is_null() || keyPtr->key.is_null()) { return ZX_ERR_NOT_SUPPORTED; }
 
         uint8_t key_type;
@@ -1013,16 +1013,16 @@ zx_status_t Station::HandleMlmeSetKeysReq(const SetKeysRequest& req) {
         }
 
         wlan_key_config_t key_config = {};
-        memcpy(key_config.key, keyPtr->key.data(), keyPtr->length);
+        memcpy(key_config.key, keyPtr->key->data(), keyPtr->length);
         key_config.key_type = key_type;
         key_config.key_len = static_cast<uint8_t>(keyPtr->length);
         key_config.key_idx = keyPtr->key_id;
         key_config.protection = WLAN_PROTECTION_RX_TX;
         key_config.cipher_type = keyPtr->cipher_suite_type;
-        memcpy(key_config.cipher_oui, keyPtr->cipher_suite_oui.data(),
+        memcpy(key_config.cipher_oui, keyPtr->cipher_suite_oui->data(),
                sizeof(key_config.cipher_oui));
         if (!keyPtr->address.is_null()) {
-            memcpy(key_config.peer_addr, keyPtr->address.data(), sizeof(key_config.peer_addr));
+            memcpy(key_config.peer_addr, keyPtr->address->data(), sizeof(key_config.peer_addr));
         }
 
         auto status = device_->SetKey(&key_config);
@@ -1107,7 +1107,7 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     hdr->fc.set_pwr_mgmt(ps_mode);
     hdr->fc.set_to_ds(1);
 
-    common::MacAddr bssid(bss_->bssid.data());
+    common::MacAddr bssid(bss_->bssid->data());
     hdr->addr1 = bssid;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid;
@@ -1142,7 +1142,7 @@ zx_status_t Station::SendPsPoll() {
     frame->fc.set_subtype(ControlSubtype::kPsPoll);
     frame->aid = aid_;
 
-    frame->bssid = common::MacAddr(bss_->bssid.data());
+    frame->bssid = common::MacAddr(bss_->bssid->data());
     frame->ta = mymac;
 
     zx_status_t status = device_->SendWlan(std::move(packet));

@@ -72,7 +72,7 @@ const std::string& ViewState::FormattedLabel() const {
 app::ServiceProvider* ViewState::GetServiceProviderIfSupports(
     std::string service_name) {
   if (service_names_) {
-    auto& v = service_names_.storage();
+    auto& v = *service_names_;
     if (std::find(v.begin(), v.end(), service_name) != v.end()) {
       return service_provider_.get();
     }

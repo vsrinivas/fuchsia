@@ -124,9 +124,8 @@ void TraceManager::RegisterTraceProvider(
   FXL_VLOG(1) << "Registering provider with label: " << label;
 
   auto it = providers_.emplace(
-      providers_.end(),
-      TraceProviderBundle{handle.Bind(),
-                          next_provider_id_++, SanitizeLabel(label)});
+      providers_.end(), TraceProviderBundle{handle.Bind(), next_provider_id_++,
+                                            SanitizeLabel(label)});
 
   it->provider.set_error_handler([this, it]() {
     if (session_)
@@ -156,7 +155,7 @@ void TraceManager::LaunchConfiguredProviders() {
     FXL_VLOG(2) << "URL: " << pair.second->url;
     if (FXL_VLOG_IS_ON(2)) {
       std::string args;
-      for (const auto& arg : pair.second->arguments) {
+      for (const auto& arg : *pair.second->arguments) {
         args += " ";
         args += arg;
       }

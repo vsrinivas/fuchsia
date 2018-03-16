@@ -41,13 +41,12 @@ class NetworkWrapperImpl::RunningRequest {
 
   void set_callback(std::function<void(network::URLResponsePtr)> callback) {
     // Once this class calls its callback, it must notify its container.
-    callback_ = [this, callback = std::move(callback)](
-                    network::URLResponsePtr response) mutable {
+    callback_ = [ this, callback = std::move(callback) ](
+        network::URLResponsePtr response) mutable {
       FXL_DCHECK(on_empty_callback_);
-      if (destruction_sentinel_.DestructedWhile(
-              [callback = std::move(callback), &response] {
-                callback(std::move(response));
-              })) {
+      if (destruction_sentinel_.DestructedWhile([
+            callback = std::move(callback), &response
+          ] { callback(std::move(response)); })) {
         return;
       }
       on_empty_callback_();
@@ -64,7 +63,8 @@ class NetworkWrapperImpl::RunningRequest {
     url_loader_.Unbind();
 
     // If no network service has been set, bail out and wait to be called again.
-    if (!network_service_) return;
+    if (!network_service_)
+      return;
 
     auto request = request_factory_();
 
@@ -75,7 +75,8 @@ class NetworkWrapperImpl::RunningRequest {
     }
 
     // If last response was a redirect, follow it.
-    if (!next_url_.empty()) request->url = next_url_;
+    if (!next_url_.empty())
+      request->url = next_url_;
 
     network_service_->CreateURLLoader(url_loader_.NewRequest());
 
@@ -118,7 +119,7 @@ class NetworkWrapperImpl::RunningRequest {
 
   void HandleRedirect(network::URLResponsePtr response) {
     // Follow the redirect if a Location header is found.
-    for (const auto& header : response->headers) {
+    for (const auto& header : *response->headers) {
       if (fxl::EqualsCaseInsensitiveASCII(header->name.get(), "location")) {
         ++redirect_count_;
         if (redirect_count_ >= kMaxRedirectCount) {

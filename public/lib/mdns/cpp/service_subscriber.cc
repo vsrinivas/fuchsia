@@ -11,13 +11,13 @@ namespace {
 
 template <typename T>
 bool operator==(const f1dl::Array<T>& array_a, const f1dl::Array<T>& array_b) {
-  if (array_a.size() != array_b.size()) {
+  if (array_a->size() != array_b->size()) {
     return false;
   }
 
-  auto iter_a = array_a.begin();
-  for (auto& item_b : array_b) {
-    FXL_DCHECK(iter_a != array_a.end());
+  auto iter_a = array_a->begin();
+  for (auto& item_b : *array_b) {
+    FXL_DCHECK(iter_a != array_a->end());
     if (*iter_a != item_b) {
       return false;
     }
@@ -96,11 +96,11 @@ void ServiceSubscriber::IssueCallbacks(
     const f1dl::Array<MdnsServiceInstancePtr>& instances) {
   // For each instance in the update, see if it represents a new instance or
   // a change with respect to an old instance.
-  for (auto& new_instance : instances) {
+  for (auto& new_instance : *instances) {
     bool found = false;
 
     // Search the old instances to see if there's a match.
-    for (auto& old_instance : instances_) {
+    for (auto& old_instance : *instances_) {
       if (new_instance->service_name == old_instance->service_name &&
           new_instance->instance_name == old_instance->instance_name) {
         // Found a match. If there's been a change, issue a callback to
@@ -123,11 +123,11 @@ void ServiceSubscriber::IssueCallbacks(
   }
 
   // For each old instance, determine whether it has been removed.
-  for (auto& old_instance : instances_) {
+  for (auto& old_instance : *instances_) {
     bool found = false;
 
     // Search the new instances to see if there's a match.
-    for (auto& new_instance : instances) {
+    for (auto& new_instance : *instances) {
       if (new_instance->service_name == old_instance->service_name &&
           new_instance->instance_name == old_instance->instance_name) {
         found = true;

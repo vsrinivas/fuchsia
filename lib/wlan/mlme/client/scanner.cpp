@@ -44,7 +44,7 @@ zx_status_t Scanner::Start(const ScanRequest& req) {
     resp_->bss_description_set = f1dl::Array<BSSDescriptionPtr>::New(0);
     resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
 
-    if (req.channel_list.size() == 0) { return SendScanResponse(); }
+    if (req.channel_list->size() == 0) { return SendScanResponse(); }
     if (req.max_channel_time < req.min_channel_time) { return SendScanResponse(); }
     if (!BSSTypes_IsValidValue(req.bss_type) || !ScanTypes_IsValidValue(req.scan_type)) {
         return SendScanResponse();
@@ -104,9 +104,9 @@ Scanner::Type Scanner::ScanType() const {
 wlan_channel_t Scanner::ScanChannel() const {
     debugfn();
     ZX_DEBUG_ASSERT(IsRunning());
-    ZX_DEBUG_ASSERT(channel_index_ < req_->channel_list.size());
+    ZX_DEBUG_ASSERT(channel_index_ < req_->channel_list->size());
     return wlan_channel_t{
-        .primary = req_->channel_list[channel_index_],
+        .primary = req_->channel_list->at(channel_index_),
     };
 }
 
@@ -195,7 +195,7 @@ zx_status_t Scanner::HandleTimeout() {
 
     // Reached max channel dwell time
     if (now >= channel_start_ + WLAN_TU(req_->max_channel_time)) {
-        if (++channel_index_ >= req_->channel_list.size()) {
+        if (++channel_index_ >= req_->channel_list->size()) {
             timer_->CancelTimer();
             status = SendScanResponse();
             Reset();
@@ -271,7 +271,7 @@ zx_status_t Scanner::SendProbeRequest() {
 
     auto hdr = frame.hdr;
     const common::MacAddr& mymac = device_->GetState()->address();
-    const common::MacAddr& bssid = common::MacAddr(req_->bssid.data());
+    const common::MacAddr& bssid = common::MacAddr(req_->bssid->data());
 
     hdr->addr1 = common::kBcastMac;
     hdr->addr2 = mymac;

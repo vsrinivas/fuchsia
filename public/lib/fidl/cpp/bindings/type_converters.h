@@ -17,7 +17,7 @@ struct TypeConverter<f1dl::Array<T>, std::vector<T>> {
   static f1dl::Array<T> Convert(const std::vector<T>& value) {
     auto result = f1dl::Array<T>::New(value.size());
     for (size_t i = 0; i < value.size(); ++i)
-      result[i] = value[i];
+      result->at(i) = value[i];
     return result;
   }
 };
@@ -28,7 +28,7 @@ struct TypeConverter<f1dl::Array<T>, std::vector<U>> {
   static f1dl::Array<T> Convert(const std::vector<U>& value) {
     auto result = f1dl::Array<T>::New(value.size());
     for (size_t i = 0; i < value.size(); ++i)
-      result[i] = To<T>(value[i]);
+      result->at(i) = To<T>(value[i]);
 
     return result;
   }
@@ -40,9 +40,9 @@ struct TypeConverter<std::vector<T>, f1dl::Array<U>> {
   static std::vector<T> Convert(const f1dl::Array<U>& value) {
     std::vector<T> result;
     if (!value.is_null()) {
-      result.resize(value.size());
-      for (size_t i = 0; i < value.size(); ++i)
-        result[i] = To<T>(value[i]);
+      result.resize(value->size());
+      for (size_t i = 0; i < value->size(); ++i)
+        result[i] = To<T>(value->at(i));
     }
 
     return result;
@@ -60,9 +60,9 @@ struct TypeConverter<std::unique_ptr<std::vector<T>>, f1dl::Array<U>> {
 
     std::vector<T> result;
     if (!value.is_null()) {
-      result.resize(value.size());
-      for (size_t i = 0; i < value.size(); ++i)
-        result[i] = To<T>(value[i]);
+      result.resize(value->size());
+      for (size_t i = 0; i < value->size(); ++i)
+        result[i] = To<T>(value->at(i));
     }
 
     return std::make_unique<std::vector<T>>(std::move(result));

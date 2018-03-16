@@ -275,7 +275,7 @@ void CobaltEncoderImpl::AddMultipartObservation(
     f1dl::Array<ObservationValuePtr> observation,
     const AddMultipartObservationCallback& callback) {
   Encoder::Value value;
-  for (const auto& obs_val : observation) {
+  for (const auto& obs_val : *observation) {
     switch (obs_val->value->which()) {
       case Value::Tag::STRING_VALUE: {
         value.AddStringPart(obs_val->encoding_id, obs_val->name,
@@ -299,8 +299,8 @@ void CobaltEncoderImpl::AddMultipartObservation(
       }
       case Value::Tag::INT_BUCKET_DISTRIBUTION: {
         std::map<uint32_t, uint64_t> distribution_map;
-        for (auto it = obs_val->value->get_int_bucket_distribution().begin();
-             obs_val->value->get_int_bucket_distribution().end() != it; it++) {
+        for (auto it = obs_val->value->get_int_bucket_distribution()->begin();
+             obs_val->value->get_int_bucket_distribution()->end() != it; it++) {
           distribution_map[(*it)->index] = (*it)->count;
         }
         value.AddIntBucketDistributionPart(obs_val->encoding_id, obs_val->name,
@@ -325,7 +325,7 @@ void CobaltEncoderImpl::AddIntBucketDistribution(
     f1dl::Array<BucketDistributionEntryPtr> distribution,
     const AddIntBucketDistributionCallback& callback) {
   std::map<uint32_t, uint64_t> distribution_map;
-  for (auto it = distribution.begin(); distribution.end() != it; it++) {
+  for (auto it = distribution->begin(); distribution->end() != it; it++) {
     distribution_map[(*it)->index] = (*it)->count;
   }
   auto result = encoder_.EncodeIntBucketDistribution(metric_id, encoding_id,

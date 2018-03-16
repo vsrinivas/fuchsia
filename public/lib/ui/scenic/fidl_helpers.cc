@@ -1082,8 +1082,7 @@ ui::gfx::QuaternionValuePtr NewQuaternionValue(uint32_t variable_id) {
 }
 
 ui::gfx::mat4Ptr NewMatrix4(const float matrix[16]) {
-  ui::gfx::mat4Ptr val = ui::gfx::mat4::New();
-  auto& m = val->matrix;
+  std::vector<float> m(16);
   m[0] = matrix[0];
   m[1] = matrix[1];
   m[2] = matrix[2];
@@ -1100,6 +1099,8 @@ ui::gfx::mat4Ptr NewMatrix4(const float matrix[16]) {
   m[13] = matrix[13];
   m[14] = matrix[14];
   m[15] = matrix[15];
+  ui::gfx::mat4Ptr val = ui::gfx::mat4::New();
+  val->matrix.reset(std::move(m));
   return val;
 }
 

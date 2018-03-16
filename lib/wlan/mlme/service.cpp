@@ -38,7 +38,7 @@ zx_status_t SendAuthResponse(DeviceInterface* device, const common::MacAddr& pee
 
     auto resp = AuthenticateResponse::New();
     resp->peer_sta_address = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
-    peer_sta.CopyTo(resp->peer_sta_address.data());
+    peer_sta.CopyTo(resp->peer_sta_address->data());
     // TODO(tkilbourn): set this based on the actual auth type
     resp->auth_type = AuthenticationTypes::OPEN_SYSTEM;
     resp->result_code = code;
@@ -64,7 +64,7 @@ zx_status_t SendDeauthResponse(DeviceInterface* device, const common::MacAddr& p
 
     auto resp = DeauthenticateResponse::New();
     resp->peer_sta_address = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
-    peer_sta.CopyTo(resp->peer_sta_address.data());
+    peer_sta.CopyTo(resp->peer_sta_address->data());
 
     size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
     auto buffer = GetBuffer(buf_len);
@@ -88,7 +88,7 @@ zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr&
 
     auto ind = DeauthenticateIndication::New();
     ind->peer_sta_address = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
-    peer_sta.CopyTo(ind->peer_sta_address.data());
+    peer_sta.CopyTo(ind->peer_sta_address->data());
     ind->reason_code = code;
 
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
@@ -137,7 +137,7 @@ zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::Ma
 
     auto ind = DisassociateIndication::New();
     ind->peer_sta_address = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
-    peer_sta.CopyTo(ind->peer_sta_address.data());
+    peer_sta.CopyTo(ind->peer_sta_address->data());
     ind->reason_code = code;
 
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
@@ -212,11 +212,11 @@ zx_status_t SendEapolIndication(DeviceInterface* device, const EapolFrame& eapol
 
     auto ind = EapolIndication::New();
     ind->data = ::f1dl::Array<uint8_t>::New(len);
-    std::memcpy(ind->data.data(), &eapol, len);
+    std::memcpy(ind->data->data(), &eapol, len);
     ind->src_addr = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
     ind->dst_addr = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
-    src.CopyTo(ind->src_addr.data());
-    dst.CopyTo(ind->dst_addr.data());
+    src.CopyTo(ind->src_addr->data());
+    dst.CopyTo(ind->dst_addr->data());
 
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
     auto buffer = GetBuffer(buf_len);

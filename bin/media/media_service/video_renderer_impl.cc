@@ -142,11 +142,9 @@ f1dl::Array<MediaTypeSetPtr> VideoRendererImpl::SupportedMediaTypes() {
   supported_type->medium = MediaTypeMedium::VIDEO;
   supported_type->details = MediaTypeSetDetails::New();
   supported_type->details->set_video(std::move(video_details));
-  supported_type->encodings = f1dl::Array<f1dl::String>::New(1);
-  supported_type->encodings[0] = MediaType::kVideoEncodingUncompressed;
-  f1dl::Array<MediaTypeSetPtr> supported_types =
-      f1dl::Array<MediaTypeSetPtr>::New(1);
-  supported_types[0] = std::move(supported_type);
+  supported_type->encodings.push_back(MediaType::kVideoEncodingUncompressed);
+  f1dl::Array<MediaTypeSetPtr> supported_types;
+  supported_types.push_back(std::move(supported_type));
   return supported_types;
 }
 

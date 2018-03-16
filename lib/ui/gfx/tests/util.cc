@@ -27,7 +27,7 @@ zx::event CopyEvent(const zx::event& event) {
 
 f1dl::Array<zx::event> CopyEventIntoFidlArray(const zx::event& event) {
   auto event_array = f1dl::Array<zx::event>::New(1);
-  event_array[0] = CopyEvent(event);
+  event_array->at(0) = CopyEvent(event);
   return event_array;
 }
 

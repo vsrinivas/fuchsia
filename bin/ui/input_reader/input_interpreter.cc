@@ -6,24 +6,24 @@
 
 #include <fcntl.h>
 #include <hid/acer12.h>
-#include <hid/hid.h>
 #include <hid/egalax.h>
+#include <hid/hid.h>
 #include <hid/paradise.h>
 #include <hid/samsung.h>
 #include <hid/usages.h>
-#include <zircon/device/device.h>
-#include <zircon/device/input.h>
-#include <zircon/types.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <zircon/device/device.h>
+#include <zircon/device/input.h>
+#include <zircon/types.h>
 
 #include <trace/event.h>
 
-#include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/input/fidl/usages.fidl.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/input/fidl/usages.fidl.h"
 
 namespace {
 int64_t InputEventTimestampNow() {
@@ -77,7 +77,7 @@ bool InputInterpreter::Initialize() {
                                       HID_USAGE_KEY_A + 1);
     for (size_t index = HID_USAGE_KEY_A; index <= HID_USAGE_KEY_RIGHT_GUI;
          ++index) {
-      keyboard_descriptor_->keys[index - HID_USAGE_KEY_A] = index;
+      keyboard_descriptor_->keys->at(index - HID_USAGE_KEY_A) = index;
     }
 
     keyboard_report_ = mozart::InputReport::New();
@@ -427,14 +427,16 @@ bool InputInterpreter::Read(bool discard) {
       }
       break;
     case MouseDeviceType::PARADISEv1:
-      if (ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(report_.data(), rc)) {
+      if (ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(report_.data(),
+                                                              rc)) {
         if (!discard) {
           input_device_->DispatchReport(mouse_report_.Clone());
         }
       }
       break;
     case MouseDeviceType::PARADISEv2:
-      if (ParseParadiseTouchpadReport<paradise_touchpad_v2_t>(report_.data(), rc)) {
+      if (ParseParadiseTouchpadReport<paradise_touchpad_v2_t>(report_.data(),
+                                                              rc)) {
         if (!discard) {
           input_device_->DispatchReport(mouse_report_.Clone());
         }
@@ -473,7 +475,8 @@ bool InputInterpreter::Read(bool discard) {
 
     case TouchDeviceType::PARADISEv1:
       if (report_[0] == PARADISE_RPT_ID_TOUCH) {
-        if (ParseParadiseTouchscreenReport<paradise_touch_t>(report_.data(), rc)) {
+        if (ParseParadiseTouchscreenReport<paradise_touch_t>(report_.data(),
+                                                             rc)) {
           if (!discard) {
             input_device_->DispatchReport(touchscreen_report_.Clone());
           }
@@ -482,7 +485,8 @@ bool InputInterpreter::Read(bool discard) {
       break;
     case TouchDeviceType::PARADISEv2:
       if (report_[0] == PARADISE_RPT_ID_TOUCH) {
-        if (ParseParadiseTouchscreenReport<paradise_touch_v2_t>(report_.data(), rc)) {
+        if (ParseParadiseTouchscreenReport<paradise_touch_v2_t>(report_.data(),
+                                                                rc)) {
           if (!discard) {
             input_device_->DispatchReport(touchscreen_report_.Clone());
           }
@@ -498,7 +502,6 @@ bool InputInterpreter::Read(bool discard) {
         }
       }
       break;
-
 
     default:
       break;
@@ -517,7 +520,7 @@ void InputInterpreter::ParseKeyboardReport(uint8_t* report, size_t len) {
   keyboard_report_->keyboard->pressed_keys.resize(index);
   hid_for_every_key(&key_state, keycode) {
     keyboard_report_->keyboard->pressed_keys.resize(index + 1);
-    keyboard_report_->keyboard->pressed_keys[index] = keycode;
+    keyboard_report_->keyboard->pressed_keys->at(index) = keycode;
     index++;
   }
   FXL_VLOG(2) << name_ << " parsed: " << *keyboard_report_;
@@ -599,7 +602,7 @@ bool InputInterpreter::ParseAcer12TouchscreenReport(uint8_t* r, size_t len) {
       touch->width = acer12_touch_reports_[i].fingers[c].width;
       touch->height = acer12_touch_reports_[i].fingers[c].height;
       touchscreen_report_->touchscreen->touches.resize(index + 1);
-      touchscreen_report_->touchscreen->touches[index++] = std::move(touch);
+      touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
     }
   }
   FXL_VLOG(2) << name_ << " parsed: " << *touchscreen_report_;
@@ -630,7 +633,7 @@ bool InputInterpreter::ParseSamsungTouchscreenReport(uint8_t* r, size_t len) {
     touch->width = report.fingers[i].width;
     touch->height = report.fingers[i].height;
     touchscreen_report_->touchscreen->touches.resize(index + 1);
-    touchscreen_report_->touchscreen->touches[index++] = std::move(touch);
+    touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
   }
 
   return true;
@@ -657,20 +660,20 @@ bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
     touch->finger_id = report.fingers[i].finger_id;
     touch->x = report.fingers[i].x;
     touch->y = report.fingers[i].y;
-    touch->width = 5;   // TODO(cpu): Don't hardcode |width| or |height|.
+    touch->width = 5;  // TODO(cpu): Don't hardcode |width| or |height|.
     touch->height = 5;
     touchscreen_report_->touchscreen->touches.resize(index + 1);
-    touchscreen_report_->touchscreen->touches[index++] = std::move(touch);
+    touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
   }
 
   FXL_VLOG(2) << name_ << " parsed: " << *touchscreen_report_;
   return true;
 }
 
-bool InputInterpreter::ParseEGalaxTouchscreenReport(uint8_t *r, size_t len) {
+bool InputInterpreter::ParseEGalaxTouchscreenReport(uint8_t* r, size_t len) {
   if (len != sizeof(egalax_touch_t)) {
-    FXL_LOG(INFO) << "egalax wrong size " << len << " expected " <<
-        sizeof(egalax_touch_t);
+    FXL_LOG(INFO) << "egalax wrong size " << len << " expected "
+                  << sizeof(egalax_touch_t);
     return false;
   }
 
@@ -684,7 +687,7 @@ bool InputInterpreter::ParseEGalaxTouchscreenReport(uint8_t *r, size_t len) {
     touch->width = 5;
     touch->height = 5;
     touchscreen_report_->touchscreen->touches.resize(1);
-    touchscreen_report_->touchscreen->touches[0] = std::move(touch);
+    touchscreen_report_->touchscreen->touches->at(0) = std::move(touch);
   } else {
     // if the button isn't pressed, send an empty report, this will terminate
     // the finger session
@@ -734,7 +737,6 @@ bool InputInterpreter::ParseParadiseTouchpadReport(uint8_t* r, size_t len) {
 
   return true;
 }
-
 
 zx_status_t InputInterpreter::GetProtocol(int* out_proto) {
   ssize_t rc = ioctl_input_get_protocol(fd_, out_proto);

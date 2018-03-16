@@ -12,9 +12,7 @@ namespace scenic {
 namespace gfx {
 
 inline ui::gfx::mat4Ptr Wrap(const escher::mat4& args) {
-  auto result = ui::gfx::mat4::New();
-  auto& m = result->matrix;
-  m.resize(16);
+  std::vector<float> m(16);
   m[0] = args[0][0];
   m[1] = args[0][1];
   m[2] = args[0][2];
@@ -31,6 +29,8 @@ inline ui::gfx::mat4Ptr Wrap(const escher::mat4& args) {
   m[13] = args[3][1];
   m[14] = args[3][2];
   m[15] = args[3][3];
+  auto result = ui::gfx::mat4::New();
+  result->matrix.reset(std::move(m));
   return result;
 }
 

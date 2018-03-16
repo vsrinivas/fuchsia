@@ -149,7 +149,7 @@ bool IsScanFilterValid(const ::btfidl::low_energy::ScanFilter& fidl_filter) {
   if (!fidl_filter.service_uuids)
     return true;
 
-  for (const auto& uuid_str : fidl_filter.service_uuids) {
+  for (const auto& uuid_str : *fidl_filter.service_uuids) {
     if (!::btlib::common::IsStringValidUuid(uuid_str))
       return false;
   }
@@ -164,7 +164,7 @@ bool PopulateDiscoveryFilter(
 
   if (fidl_filter.service_uuids) {
     std::vector<::btlib::common::UUID> uuids;
-    for (const auto& uuid_str : fidl_filter.service_uuids) {
+    for (const auto& uuid_str : *fidl_filter.service_uuids) {
       ::btlib::common::UUID uuid;
       if (!::btlib::common::StringToUuid(uuid_str, &uuid)) {
         FXL_VLOG(1) << "Invalid parameters given to scan filter";
@@ -207,7 +207,7 @@ Array<uint8_t>
 TypeConverter<Array<uint8_t>, ::btlib::common::ByteBuffer>::Convert(
     const ::btlib::common::ByteBuffer& from) {
   auto to = Array<uint8_t>::New(from.size());
-  ::btlib::common::MutableBufferView view(to.data(), to.size());
+  ::btlib::common::MutableBufferView view(to->data(), to->size());
   view.Write(from);
   return to;
 }

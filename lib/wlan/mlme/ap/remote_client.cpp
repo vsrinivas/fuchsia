@@ -382,7 +382,7 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
 }
 
 zx_status_t AssociatedState::HandleMlmeEapolReq(const EapolRequest& req) {
-    size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req.data.size();
+    size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req.data->size();
     auto buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
@@ -393,9 +393,9 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const EapolRequest& req) {
     auto hdr = packet->mut_field<DataFrameHeader>(0);
     hdr->fc.set_type(FrameType::kData);
     hdr->fc.set_from_ds(1);
-    hdr->addr1.Set(req.dst_addr.data());
+    hdr->addr1.Set(req.dst_addr->data());
     hdr->addr2 = client_->bss()->bssid();
-    hdr->addr3.Set(req.src_addr.data());
+    hdr->addr3.Set(req.src_addr->data());
     hdr->sc.set_seq(client_->bss()->NextSeq(*hdr));
 
     auto llc = packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
@@ -404,7 +404,7 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const EapolRequest& req) {
     llc->control = kLlcUnnumberedInformation;
     std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
     llc->protocol_id = htobe16(kEapolProtocolId);
-    std::memcpy(llc->payload, req.data.data(), req.data.size());
+    std::memcpy(llc->payload, req.data->data(), req.data->size());
 
     auto status = client_->SendDataFrame(fbl::move(packet));
     if (status != ZX_OK) {
@@ -447,9 +447,7 @@ void RemoteClient::MoveToState(fbl::unique_ptr<BaseState> to) {
     auto to_id = to->id();
     fsm::StateMachine<BaseState>::MoveToState(fbl::move(to));
 
-    if (listener_ != nullptr) {
-        listener_->HandleClientStateChange(addr_, from_id, to_id);
-    }
+    if (listener_ != nullptr) { listener_->HandleClientStateChange(addr_, from_id, to_id); }
 }
 
 void RemoteClient::HandleTimeout() {

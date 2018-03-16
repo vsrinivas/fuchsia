@@ -20,8 +20,7 @@ void ConnectToIsolate(f1dl::InterfaceRequest<Interface> request,
                       app::ApplicationLauncher* launcher) {
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->url = kIsolateUrl;
-  launch_info->arguments = f1dl::Array<f1dl::String>::New(1);
-  launch_info->arguments[0] = kIsolateArgument;
+  launch_info->arguments.push_back(kIsolateArgument);
   app::Services services;
   launch_info->directory_request = services.NewRequest();
 

@@ -33,7 +33,7 @@ ApplicationNamespace::ApplicationNamespace(
   if (!service_list.is_null()) {
     auto& names = service_list->names;
     additional_services_ = service_list->provider.Bind();
-    for (auto& name : names) {
+    for (auto& name : *names) {
       services_.AddServiceForName(
           [this, name](zx::channel channel) {
             additional_services_->ConnectToService(name, std::move(channel));
@@ -56,8 +56,8 @@ void ApplicationNamespace::CreateNestedEnvironment(
     f1dl::InterfaceRequest<ApplicationEnvironmentController> controller,
     const f1dl::String& label) {
   job_holder_->CreateNestedJob(std::move(host_directory),
-                               std::move(environment),
-                               std::move(controller), label);
+                               std::move(environment), std::move(controller),
+                               label);
 }
 
 void ApplicationNamespace::GetApplicationLauncher(

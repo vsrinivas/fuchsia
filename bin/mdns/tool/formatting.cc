@@ -64,7 +64,7 @@ std::ostream& operator<<(std::ostream& os,
 
   if (value.addr->family == netstack::NetAddressFamily::IPV4) {
     const uint8_t* bytes =
-        reinterpret_cast<const uint8_t*>(value.addr->ipv4.data());
+        reinterpret_cast<const uint8_t*>(value.addr->ipv4->data());
     os << static_cast<int>(bytes[0]) << '.' << static_cast<int>(bytes[1]) << '.'
        << static_cast<int>(bytes[2]) << '.' << static_cast<int>(bytes[3]);
   } else {
@@ -76,7 +76,7 @@ std::ostream& operator<<(std::ostream& os,
     // 4) Use lower-case hexadecimal.
 
     const uint16_t* words =
-        reinterpret_cast<const uint16_t*>(value.addr->ipv6.data());
+        reinterpret_cast<const uint16_t*>(value.addr->ipv6->data());
 
     // Figure out where the longest span of zeros is.
     uint8_t start_of_zeros;

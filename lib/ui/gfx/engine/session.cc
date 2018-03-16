@@ -65,7 +65,7 @@ f1dl::Array<ui::gfx::HitPtr> WrapHits(const std::vector<Hit>& hits) {
     wrapped_hit->ray_direction = Wrap(hit.ray.direction);
     wrapped_hit->inverse_transform = Wrap(hit.inverse_transform);
     wrapped_hit->distance = hit.distance;
-    wrapped_hits[i] = std::move(wrapped_hit);
+    wrapped_hits->at(i) = std::move(wrapped_hit);
   }
   return wrapped_hits;
 }
@@ -1214,7 +1214,7 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
     // zero acquire fences).
 
     acquire_fence_set->WaitReadyAsync(
-        [weak = weak_factory_.GetWeakPtr(), presentation_time] {
+        [ weak = weak_factory_.GetWeakPtr(), presentation_time ] {
           if (weak)
             weak->engine_->session_manager()->ScheduleUpdateForSession(
                 presentation_time, SessionPtr(weak.get()));
@@ -1268,9 +1268,9 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
       last_applied_update_presentation_time_ =
           scheduled_updates_.front().presentation_time;
 
-      for (auto& fence : fences_to_release_on_next_update_) {
+      for (size_t i = 0; i < fences_to_release_on_next_update_->size(); ++i) {
         engine()->release_fence_signaller()->AddCPUReleaseFence(
-            std::move(fence));
+            std::move(fences_to_release_on_next_update_->at(i)));
       }
       fences_to_release_on_next_update_ =
           std::move(scheduled_updates_.front().release_fences);
@@ -1308,7 +1308,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
 void Session::EnqueueEvent(ui::gfx::EventPtr event) {
   if (is_valid()) {
     FXL_DCHECK(event);
-    if (buffered_events_.empty()) {
+    if (buffered_events_->empty()) {
       fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
           [weak = weak_factory_.GetWeakPtr()] {
             if (weak)
@@ -1322,7 +1322,7 @@ void Session::EnqueueEvent(ui::gfx::EventPtr event) {
 }
 
 void Session::FlushEvents() {
-  if (!buffered_events_.empty() && event_reporter_) {
+  if (!buffered_events_->empty() && event_reporter_) {
     event_reporter_->SendEvents(std::move(buffered_events_));
   }
 }
@@ -1330,7 +1330,7 @@ void Session::FlushEvents() {
 bool Session::ApplyUpdate(Session::Update* update) {
   TRACE_DURATION("gfx", "Session::ApplyUpdate");
   if (is_valid()) {
-    for (auto& command : update->commands) {
+    for (auto& command : *update->commands) {
       if (!ApplyCommand(command)) {
         error_reporter_->ERROR()
             << "scenic::gfx::Session::ApplyCommand() failed to apply Command: "

@@ -237,7 +237,7 @@ BSSDescriptionPtr Bss::ToFidl() {
     auto fidl = fidl_ptr.get();
 
     fidl->bssid = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
-    std::memcpy(fidl->bssid.data(), bssid_.byte, common::kMacAddrLen);
+    std::memcpy(fidl->bssid->data(), bssid_.byte, common::kMacAddrLen);
 
     fidl->bss_type = GetBssType();
     fidl->ssid = SsidToFidlString();
@@ -258,7 +258,7 @@ BSSDescriptionPtr Bss::ToFidl() {
     fidl->rsn.reset();
     if (rsne_len_ > 0) {
         fidl->rsn = f1dl::Array<uint8_t>::New(rsne_len_);
-        memcpy(fidl->rsn.data(), rsne_.get(), rsne_len_);
+        memcpy(fidl->rsn->data(), rsne_.get(), rsne_len_);
     }
 
     return fidl_ptr;

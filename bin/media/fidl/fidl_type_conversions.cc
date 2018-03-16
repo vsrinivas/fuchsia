@@ -650,7 +650,7 @@ TypeConverter<f1dl::Array<uint8_t>, std::unique_ptr<media::Bytes>>::Convert(
   }
 
   f1dl::Array<uint8_t> array = f1dl::Array<uint8_t>::New(input->size());
-  std::memcpy(array.data(), input->data(), input->size());
+  std::memcpy(array->data(), input->data(), input->size());
 
   return array;
 }
@@ -662,8 +662,8 @@ TypeConverter<std::unique_ptr<media::Bytes>, f1dl::Array<uint8_t>>::Convert(
     return nullptr;
   }
 
-  std::unique_ptr<media::Bytes> bytes = media::Bytes::Create(input.size());
-  std::memcpy(bytes->data(), input.data(), input.size());
+  std::unique_ptr<media::Bytes> bytes = media::Bytes::Create(input->size());
+  std::memcpy(bytes->data(), input->data(), input->size());
 
   return bytes;
 }

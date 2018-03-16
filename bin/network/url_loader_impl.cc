@@ -76,8 +76,9 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
   std::unique_ptr<UploadElementReader> request_body_reader;
 
   if (request->headers) {
-    for (size_t i = 0; i < request->headers.size(); ++i)
-      extra_headers[request->headers[i]->name] = request->headers[i]->value;
+    for (size_t i = 0; i < request->headers->size(); ++i)
+      extra_headers[request->headers->at(i)->name] =
+          request->headers->at(i)->value;
   }
 
   if (request->body) {

@@ -22,9 +22,10 @@ NamespaceBuilder::NamespaceBuilder() = default;
 NamespaceBuilder::~NamespaceBuilder() = default;
 
 void NamespaceBuilder::AddFlatNamespace(FlatNamespacePtr ns) {
-  if (!ns.is_null() && ns->paths.size() == ns->directories.size()) {
-    for (size_t i = 0; i < ns->paths.size(); ++i) {
-      AddDirectoryIfNotPresent(ns->paths[i], std::move(ns->directories[i]));
+  if (!ns.is_null() && ns->paths->size() == ns->directories->size()) {
+    for (size_t i = 0; i < ns->paths->size(); ++i) {
+      AddDirectoryIfNotPresent(ns->paths->at(i),
+                               std::move(ns->directories->at(i)));
     }
   }
 }
@@ -150,9 +151,11 @@ fdio_flat_namespace_t* NamespaceBuilder::Build() {
 
 FlatNamespacePtr NamespaceBuilder::BuildForRunner() {
   auto flat_namespace = FlatNamespace::New();
+
   for (auto& path : paths_) {
     flat_namespace->paths.push_back(std::move(path));
   }
+
   for (auto& handle : handle_pool_) {
     flat_namespace->directories.push_back(std::move(handle));
   }

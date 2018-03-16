@@ -56,7 +56,7 @@ void Session::EnqueueReleaseFence(zx::event fence) {
 }
 
 void Session::Flush() {
-  if (!commands_.empty())
+  if (!commands_->empty())
     session_->Enqueue(std::move(commands_));
 }
 

@@ -47,10 +47,10 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
           NetConnector::kInitialKnownDeviceNames,
           fxl::MakeCopyable([ this, net_connector = std::move(net_connector) ](
               uint64_t version, f1dl::Array<f1dl::String> device_names) {
-            if (device_names.size() == 0) {
+            if (device_names->size() == 0) {
               std::cout << "No remote devices found\n";
             } else {
-              for (auto& device_name : device_names) {
+              for (auto& device_name : *device_names) {
                 std::cout << device_name << "\n";
               }
             }

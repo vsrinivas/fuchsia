@@ -5,14 +5,14 @@
 #include "garnet/bin/ui/view_manager/input/input_dispatcher_impl.h"
 
 #include <queue>
-#include "lib/ui/geometry/cpp/geometry_util.h"
-#include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/views/cpp/formatting.h"
 #include "garnet/bin/ui/view_manager/internal/input_owner.h"
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "lib/escher/util/type_utils.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/ui/geometry/cpp/geometry_util.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/views/cpp/formatting.h"
 
 namespace view_manager {
 namespace {
@@ -34,7 +34,7 @@ std::pair<mozart::Point3F, mozart::Point3F> DefaultRayForHitTestingScreenPoint(
 // Converts a mozart::Transform into a escher::mat4 suitable for use in
 // mathematical operations.
 escher::mat4 Unwrap(const mozart::Transform& matrix) {
-  const auto& in = matrix.matrix;
+  const auto& in = *matrix.matrix;
   return {in[0], in[4], in[8],  in[12], in[1], in[5], in[9],  in[13],
           in[2], in[6], in[10], in[14], in[3], in[7], in[11], in[15]};
 }
@@ -97,8 +97,7 @@ InputDispatcherImpl::InputDispatcherImpl(
   FXL_DCHECK(inspector_);
   FXL_DCHECK(view_tree_token_);
 
-  binding_.set_error_handler(
-      [this] { owner_->OnInputDispatcherDied(this); });
+  binding_.set_error_handler([this] { owner_->OnInputDispatcherDied(this); });
 }
 
 InputDispatcherImpl::~InputDispatcherImpl() {}
@@ -141,9 +140,9 @@ void InputDispatcherImpl::ProcessNextEvent() {
       }
     } else if (event->is_keyboard()) {
       inspector_->ResolveFocusChain(
-          view_tree_token_.Clone(),
-          [weak = weak_factory_.GetWeakPtr()](
-              std::unique_ptr<FocusChain> focus_chain) {
+          view_tree_token_.Clone(), [weak = weak_factory_.GetWeakPtr()](
+                                        std::unique_ptr<FocusChain>
+                                            focus_chain) {
             if (weak) {
               // Make sure to keep processing events when no focus is defined
               if (focus_chain) {
@@ -278,9 +277,8 @@ void InputDispatcherImpl::OnHitTestResult(const mozart::PointF& point,
   inspector_->ActivateFocusChain(
       view_hits.front().view_token.Clone(),
       [this](std::unique_ptr<FocusChain> new_chain) {
-        if (!active_focus_chain_ ||
-            active_focus_chain_->chain.front()->value !=
-                new_chain->chain.front()->value) {
+        if (!active_focus_chain_ || active_focus_chain_->chain.front()->value !=
+                                        new_chain->chain.front()->value) {
           if (active_focus_chain_) {
             FXL_VLOG(1) << "Input focus lost by "
                         << *(active_focus_chain_->chain.front().get());

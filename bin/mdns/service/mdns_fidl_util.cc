@@ -72,9 +72,9 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
   result->addr->ipv4 = f1dl::Array<uint8_t>::New(4);
   result->port = 0;
 
-  FXL_DCHECK(result->addr->ipv4.size() == ip_address.byte_count());
-  std::memcpy(result->addr->ipv4.data(), ip_address.as_bytes(),
-              result->addr->ipv4.size());
+  FXL_DCHECK(result->addr->ipv4->size() == ip_address.byte_count());
+  std::memcpy(result->addr->ipv4->data(), ip_address.as_bytes(),
+              result->addr->ipv4->size());
 
   return result;
 }
@@ -94,9 +94,9 @@ netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
   result->addr->ipv6 = f1dl::Array<uint8_t>::New(16);
   result->port = 0;
 
-  FXL_DCHECK(result->addr->ipv6.size() == ip_address.byte_count());
-  std::memcpy(result->addr->ipv6.data(), ip_address.as_bytes(),
-              result->addr->ipv6.size());
+  FXL_DCHECK(result->addr->ipv6->size() == ip_address.byte_count());
+  std::memcpy(result->addr->ipv6->data(), ip_address.as_bytes(),
+              result->addr->ipv6->size());
 
   return result;
 }
@@ -144,15 +144,15 @@ IpAddress MdnsFidlUtil::IpAddressFrom(const netstack::NetAddress* addr) {
         return IpAddress();
       }
 
-      FXL_DCHECK(addr->ipv4.size() == sizeof(in_addr));
-      return IpAddress(*reinterpret_cast<const in_addr*>(addr->ipv4.data()));
+      FXL_DCHECK(addr->ipv4->size() == sizeof(in_addr));
+      return IpAddress(*reinterpret_cast<const in_addr*>(addr->ipv4->data()));
     case netstack::NetAddressFamily::IPV6:
       if (!addr->ipv6) {
         return IpAddress();
       }
 
-      FXL_DCHECK(addr->ipv6.size() == sizeof(in6_addr));
-      return IpAddress(*reinterpret_cast<const in6_addr*>(addr->ipv6.data()));
+      FXL_DCHECK(addr->ipv6->size() == sizeof(in6_addr));
+      return IpAddress(*reinterpret_cast<const in6_addr*>(addr->ipv6->data()));
     default:
       return IpAddress();
   }

@@ -115,7 +115,7 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
 
 void BaseView::HandleSessionEvents(f1dl::Array<ui::EventPtr> events) {
   ui::gfx::Metrics* new_metrics = nullptr;
-  for (const auto& event : events) {
+  for (const auto& event : *events) {
     if (event->is_gfx()) {
       const ui::gfx::EventPtr& scenic_event = event->get_gfx();
       if (scenic_event->is_metrics() &&

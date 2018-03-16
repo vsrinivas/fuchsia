@@ -436,7 +436,7 @@ void Presentation::CaptureKeyboardEvent(
   mozart::KeyboardCaptureListenerPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
-  listener.set_error_handler([this, listener = listener.get()] {
+  listener.set_error_handler([ this, listener = listener.get() ] {
     captured_keybindings_.erase(
         std::remove_if(captured_keybindings_.begin(),
                        captured_keybindings_.end(),
@@ -611,8 +611,8 @@ void Presentation::Shutdown() {
 
 void Presentation::SetRendererParams(
     ::f1dl::Array<ui::gfx::RendererParamPtr> params) {
-  for (auto& param : params) {
-    renderer_.SetParam(std::move(param));
+  for (size_t i = 0; i < params->size(); ++i) {
+    renderer_.SetParam(std::move(params->at(i)));
   }
   session_.Present(0, [](ui::PresentationInfoPtr info) {});
 }

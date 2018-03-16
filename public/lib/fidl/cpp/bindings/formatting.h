@@ -20,8 +20,7 @@ std::ostream& operator<<(std::ostream& os, const f1dl::Array<T>& array) {
   if (array) {
     os << "[";
     bool first = true;
-    for (auto it = array.storage().cbegin(); it != array.storage().cend();
-         ++it) {
+    for (auto it = array->cbegin(); it != array->cend(); ++it) {
       if (first)
         first = false;
       else
