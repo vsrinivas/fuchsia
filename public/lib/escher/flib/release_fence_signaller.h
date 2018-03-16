@@ -7,7 +7,7 @@
 #include <deque>
 #include <queue>
 
-#include <zx/event.h>
+#include <lib/zx/event.h>
 #include "lib/escher/flib/fence.h"
 #include "lib/escher/impl/command_buffer_sequencer.h"
 #include "lib/fidl/cpp/vector.h"

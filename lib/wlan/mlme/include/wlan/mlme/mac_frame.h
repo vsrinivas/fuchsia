@@ -8,12 +8,12 @@
 
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
+#include <lib/zx/time.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/common/macaddr.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <zx/time.h>
 
 #include <cstdint>
 

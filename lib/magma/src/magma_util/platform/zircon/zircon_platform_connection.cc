@@ -5,9 +5,10 @@
 #include "platform_connection.h"
 #include "zircon_platform_event.h"
 
-#include "zx/channel.h"
-#include <fdio/io.h>
 #include <list>
+
+#include <fdio/io.h>
+#include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 

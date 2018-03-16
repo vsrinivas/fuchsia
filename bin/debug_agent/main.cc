@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fdio/io.h>
 #include <stdio.h>
+
+#include <fdio/io.h>
 #include <launchpad/launchpad.h>
-#include <zx/process.h>
+#include <lib/zx/process.h>
 
 #include "garnet/bin/debug_agent/debug_agent.h"
 #include "garnet/bin/debug_agent/exception_handler.h"

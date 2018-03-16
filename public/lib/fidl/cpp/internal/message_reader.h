@@ -5,10 +5,10 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_MESSAGE_READER_H_
 #define LIB_FIDL_CPP_INTERNAL_MESSAGE_READER_H_
 
+#include <lib/async/wait.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_buffer.h>
-#include <lib/async/wait.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <functional>
 #include <memory>

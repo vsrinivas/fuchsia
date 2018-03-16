@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/media_service/network_reader_impl.h"
 
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 #include <fuchsia/cpp/network.h>
 #include "garnet/bin/network/net_errors.h"

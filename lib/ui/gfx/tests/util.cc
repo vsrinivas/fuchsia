@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/gfx/tests/util.h"
 
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include "lib/fxl/synchronization/waitable_event.h"
 

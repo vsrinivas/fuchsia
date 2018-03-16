@@ -18,10 +18,10 @@
 #include <fbl/unique_fd.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
+#include <lib/zx/event.h>
+#include <lib/zx/time.h>
+#include <lib/zx/timer.h>
 #include <zircon/status.h>
-#include <zx/event.h>
-#include <zx/time.h>
-#include <zx/timer.h>
 
 #include "bt_intel.h"
 

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "lib/fxl/files/unique_fd.h"
 

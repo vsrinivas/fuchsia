@@ -10,7 +10,7 @@
 #include <fuchsia/cpp/media.h>
 #include <lib/async/cpp/auto_wait.h>
 #include <lib/async/cpp/task.h>
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 #include "garnet/bin/media/demux/reader.h"
 #include "garnet/bin/media/util/incident.h"

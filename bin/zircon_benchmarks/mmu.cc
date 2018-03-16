@@ -4,12 +4,12 @@
 
 #include <benchmark/benchmark.h>
 #include <fbl/algorithm.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
 
-#define KB(n) ((n) * 1024ull)
+#define KB(n) ((n)*1024ull)
 #define MB(n) (KB(n) * 1024ull)
 #define GB(n) (MB(n) * 1024ull)
 
@@ -17,9 +17,10 @@ class Mmu : public benchmark::Fixture {
  private:
   void SetUp(benchmark::State& state) override {
     vmar_size_ = GB(1);
-    if (zx::vmar::root_self().allocate(0, vmar_size_,
-                                       ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_SPECIFIC,
-                                       &vmar_, &vmar_base_) != ZX_OK) {
+    if (zx::vmar::root_self().allocate(
+            0, vmar_size_,
+            ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_SPECIFIC, &vmar_,
+            &vmar_base_) != ZX_OK) {
       state.SkipWithError("Failed to create vmar");
       return;
     }

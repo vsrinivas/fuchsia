@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 
 #include <fuchsia/cpp/views_v1.h>
 #include "lib/fxl/macros.h"

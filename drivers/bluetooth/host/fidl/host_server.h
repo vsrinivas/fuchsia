@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"

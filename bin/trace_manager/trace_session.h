@@ -11,8 +11,8 @@
 #include <vector>
 
 #include <fuchsia/cpp/trace_link.h>
-#include <zx/socket.h>
-#include <zx/vmo.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
 
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
 #include "garnet/bin/trace_manager/tracee.h"

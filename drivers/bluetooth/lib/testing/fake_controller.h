@@ -9,7 +9,7 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"

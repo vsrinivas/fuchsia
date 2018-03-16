@@ -11,9 +11,9 @@
 #include <thread>
 #include <unordered_map>
 
+#include <lib/zx/port.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
-#include <zx/port.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"

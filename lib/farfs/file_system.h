@@ -6,9 +6,9 @@
 #define GARNET_LIB_FARFS_FILE_SYSTEM_H_
 
 #include <fs/managed-vfs.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/vmo.h>
 #include <vmofs/vmofs.h>
-#include <zx/channel.h>
-#include <zx/vmo.h>
 
 #include <memory>
 

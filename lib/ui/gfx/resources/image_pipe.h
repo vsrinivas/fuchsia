@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_H_
 
-#include <zx/event.h>
-#include <zx/vmo.h>
+#include <lib/zx/event.h>
+#include <lib/zx/vmo.h>
 
 #include <queue>
 

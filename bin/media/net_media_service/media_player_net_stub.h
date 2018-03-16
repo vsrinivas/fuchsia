@@ -7,7 +7,7 @@
 #include <memory>
 
 #include <endian.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "garnet/bin/media/net_media_service/media_player_messages.h"
 #include "lib/fxl/macros.h"

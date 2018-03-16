@@ -7,8 +7,8 @@
 
 #include <fbl/unique_fd.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/zx/channel.h>
 #include <zircon/types.h>
-#include <zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 

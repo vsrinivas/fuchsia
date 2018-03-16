@@ -6,8 +6,8 @@
 #include <launchpad/launchpad.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
+#include <lib/zx/process.h>
 #include <zircon/processargs.h>
-#include <zx/process.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"

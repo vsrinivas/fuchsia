@@ -5,12 +5,12 @@
 #include "garnet/bin/debug_agent/system_info.h"
 
 #include <fcntl.h>
+#include <lib/zx/job.h>
+#include <lib/zx/process.h>
 #include <unistd.h>
 #include <zircon/device/sysinfo.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-#include <zx/job.h>
-#include <zx/process.h>
 
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/public/lib/fxl/logging.h"

@@ -5,9 +5,10 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_IMPORT_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_IMPORT_H_
 
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 
 #include <fuchsia/cpp/gfx.h>
+
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/fxl/macros.h"
 

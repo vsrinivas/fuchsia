@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "garnet/bin/media/audio_server/audio_device.h"
 #include "garnet/bin/media/audio_server/audio_driver.h"

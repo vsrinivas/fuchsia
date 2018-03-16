@@ -11,7 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 namespace btintel {
 

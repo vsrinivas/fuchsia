@@ -8,7 +8,7 @@
 #include <fbl/ref_ptr.h>
 #include <fs/managed-vfs.h>
 #include <fs/pseudo-dir.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <functional>
 #include <string>

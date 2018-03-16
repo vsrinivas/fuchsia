@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_NETWORK_NETWORK_SERVICE_IMPL_H_
 #define GARNET_BIN_NETWORK_NETWORK_SERVICE_IMPL_H_
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <list>
 #include <queue>

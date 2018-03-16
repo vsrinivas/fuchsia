@@ -7,6 +7,11 @@
 #include "platform_trace.h"
 #include "zircon_platform_handle.h"
 #include <ddk/driver.h>
+#include <limits.h> // PAGE_SIZE
+#include <map>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
+#include <vector>
 
 namespace magma {
 

@@ -6,14 +6,14 @@
 #define GARNET_BIN_APPMGR_NAMESPACE_BUILDER_H_
 
 #include <fdio/namespace.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <vector>
 
 #include "garnet/bin/appmgr/job_holder.h"
 #include "garnet/bin/appmgr/sandbox_metadata.h"
-#include <fuchsia/cpp/component.h>
 #include "lib/fxl/macros.h"
+#include <fuchsia/cpp/component.h>
 
 namespace component {
 

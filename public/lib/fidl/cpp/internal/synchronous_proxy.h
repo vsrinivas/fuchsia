@@ -6,8 +6,8 @@
 #define LIB_FIDL_CPP_INTERNAL_SYNCHRONOUS_PROXY_H_
 
 #include <lib/fidl/cpp/message.h>
+#include <lib/zx/channel.h>
 #include <zircon/fidl.h>
-#include <zx/channel.h>
 
 #include <atomic>
 

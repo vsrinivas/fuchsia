@@ -11,7 +11,7 @@
 #include <bitmap/rle-bitmap.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include "garnet/lib/machina/block_dispatcher.h"
 

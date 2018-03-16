@@ -6,8 +6,8 @@
 #define LIB_FIDL_CPP_BINDING_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/zx/channel.h>
 #include <zircon/assert.h>
-#include <zx/channel.h>
 
 #include <memory>
 #include <utility>

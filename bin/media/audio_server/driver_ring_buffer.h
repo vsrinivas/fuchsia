@@ -6,7 +6,7 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 namespace media {
 namespace audio {

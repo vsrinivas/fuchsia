@@ -5,7 +5,7 @@
 #include "lib/fidl/cpp/clone.h"
 #include "gtest/gtest.h"
 
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 namespace fidl {
 namespace {

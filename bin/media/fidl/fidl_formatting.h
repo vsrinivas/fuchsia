@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zx/handle.h>
+#include <lib/zx/handle.h>
 
 #include <fuchsia/cpp/media.h>
 #include <fuchsia/cpp/network.h>

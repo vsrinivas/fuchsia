@@ -16,9 +16,9 @@
 
 #include <fuchsia/cpp/wlan_mlme.h>
 
+#include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
-#include <zx/time.h>
 
 #include <cinttypes>
 #include <cstring>

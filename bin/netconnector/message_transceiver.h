@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <lib/async/dispatcher.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/files/unique_fd.h"

@@ -5,9 +5,10 @@
 #pragma once
 
 #include <vector>
+
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <zircon/types.h>
-#include <zx/process.h>
-#include <zx/thread.h>
 
 #include "garnet/lib/debug_ipc/records.h"
 

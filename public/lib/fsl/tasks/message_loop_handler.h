@@ -20,7 +20,7 @@ namespace fsl {
 //
 // #include <lib/async/cpp/auto_wait.h>
 // #include <fbl/function.h>
-// #include <zx/channel.h>
+// #include <lib/zx/channel.h>
 //
 // class MyWaiter {
 // public:

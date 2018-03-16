@@ -6,8 +6,8 @@
 #define LIB_ESCHER_FLIB_FENCE_LISTENER_H_
 
 #include <lib/async/cpp/auto_wait.h>
+#include <lib/zx/event.h>
 #include <zircon/syscalls/port.h>
-#include <zx/event.h>
 
 #include "lib/escher/flib/fence.h"
 #include "lib/fxl/functional/closure.h"

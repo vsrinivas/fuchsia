@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/ui/scenic/client/resources.h"

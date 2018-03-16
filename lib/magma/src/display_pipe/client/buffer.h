@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 
-#include <zx/event.h>
-#include <zx/vmo.h>
+#include <lib/zx/event.h>
+#include <lib/zx/vmo.h>
 
 struct Buffer {
  public:

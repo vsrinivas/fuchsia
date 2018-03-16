@@ -5,10 +5,10 @@
 #ifndef GARNET_LIB_CPUPERF_READER_H_
 #define GARNET_LIB_CPUPERF_READER_H_
 
-#include <zircon/types.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <zircon/device/cpu-trace/cpu-perf.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <zircon/types.h>
 
 #include "lib/fxl/macros.h"
 

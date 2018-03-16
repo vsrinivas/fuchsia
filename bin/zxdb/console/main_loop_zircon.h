@@ -5,7 +5,7 @@
 #pragma once
 
 #include <fdio/private.h>
-#include <zx/port.h>
+#include <lib/zx/port.h>
 
 #include "garnet/bin/zxdb/console/main_loop.h"
 
@@ -19,10 +19,10 @@ class PlatformMainLoop : public MainLoop {
  protected:
   // MainLoop implementation.
   void PlatformRun() override;
-  void PlatformStartWatchingConnection(
-      size_t connection_id, AgentConnection* connection) override;
-  void PlatformStopWatchingConnection(
-      size_t connection_id, AgentConnection* connection) override;
+  void PlatformStartWatchingConnection(size_t connection_id,
+                                       AgentConnection* connection) override;
+  void PlatformStopWatchingConnection(size_t connection_id,
+                                      AgentConnection* connection) override;
 
  private:
   zx::port port_;

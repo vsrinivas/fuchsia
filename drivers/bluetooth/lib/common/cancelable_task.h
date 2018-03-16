@@ -6,7 +6,7 @@
 #define GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_CANCELABLE_TASK_H_
 
 #include <lib/async/cpp/task.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

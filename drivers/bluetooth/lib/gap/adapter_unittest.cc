@@ -7,7 +7,7 @@
 #include <memory>
 
 #include <lib/async/cpp/task.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "gtest/gtest.h"
 

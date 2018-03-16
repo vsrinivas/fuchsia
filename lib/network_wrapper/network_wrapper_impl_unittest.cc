@@ -4,15 +4,14 @@
 
 #include "garnet/lib/network_wrapper/network_wrapper_impl.h"
 
-#include <fuchsia/cpp/netstack.h>
-#include <fuchsia/cpp/network.h>
-#include <zx/socket.h>
-
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include <fuchsia/cpp/netstack.h>
+#include <fuchsia/cpp/network.h>
 #include <lib/async/cpp/task.h>
+#include <lib/zx/socket.h>
 
 #include "garnet/lib/backoff/testing/test_backoff.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"

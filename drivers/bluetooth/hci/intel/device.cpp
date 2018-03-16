@@ -5,10 +5,10 @@
 #include "device.h"
 
 #include <fbl/string_printf.h>
+#include <lib/zx/vmo.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
-#include <zx/vmo.h>
 
 #include "firmware_loader.h"
 #include "logging.h"

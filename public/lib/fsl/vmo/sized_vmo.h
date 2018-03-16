@@ -7,7 +7,7 @@
 
 #include <fuchsia/cpp/mem.h>
 
-#include "zx/vmo.h"
+#include <lib/zx/vmo.h>
 
 namespace fsl {
 

@@ -5,7 +5,7 @@
 #ifndef LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_
 #define LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <functional>
 #include <string>

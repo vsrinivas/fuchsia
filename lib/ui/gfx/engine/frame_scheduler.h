@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_FRAME_SCHEDULER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_FRAME_SCHEDULER_H_
 
-#include <zx/time.h>
+#include <lib/zx/time.h>
 #include <queue>
 
 #include "lib/fxl/macros.h"

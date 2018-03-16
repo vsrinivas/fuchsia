@@ -8,9 +8,9 @@
 #include <dispatcher-pool/dispatcher-timer.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/vmo.h>
 #include <zircon/device/audio.h>
-#include <zx/channel.h>
-#include <zx/vmo.h>
 
 #include <mutex>
 #include <string>

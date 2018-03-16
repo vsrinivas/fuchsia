@@ -9,8 +9,8 @@
 #include <memory>
 #include <vector>
 
+#include <lib/zx/vmo.h>
 #include <zircon/types.h>
-#include <zx/vmo.h>
 
 #include "lib/media/transport/mapped_shared_buffer.h"
 

@@ -4,11 +4,12 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 
+#include <utility>
+
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/zx/time.h>
 #include <trace/event.h>
-#include <zx/time.h>
-#include <utility>
 
 #include <fuchsia/cpp/gfx.h>
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"

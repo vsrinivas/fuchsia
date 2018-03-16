@@ -4,9 +4,9 @@
 
 #include <fcntl.h>
 
+#include <lib/zx/socket.h>
 #include <syslog/global.h>
 #include <syslog/wire_format.h>
-#include <zx/socket.h>
 
 #include "gtest/gtest.h"
 #include "lib/syslog/cpp/logger.h"

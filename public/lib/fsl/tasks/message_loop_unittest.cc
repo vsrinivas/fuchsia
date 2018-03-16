@@ -4,9 +4,9 @@
 
 #include "lib/fsl/tasks/message_loop.h"
 
-#include <zx/channel.h>
-#include <zx/event.h>
 #include <fdio/io.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 
 #include <poll.h>
 
@@ -17,11 +17,11 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
-#include "lib/fsl/tasks/fd_waiter.h"
 
 namespace fsl {
 namespace {

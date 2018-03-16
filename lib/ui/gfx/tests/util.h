@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_TESTS_UTIL_H_
 #define GARNET_LIB_UI_GFX_TESTS_UTIL_H_
 
-#include <zx/event.h>
-#include <zx/eventpair.h>
+#include <lib/zx/event.h>
+#include <lib/zx/eventpair.h>
 
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fsl/vmo/shared_vmo.h"

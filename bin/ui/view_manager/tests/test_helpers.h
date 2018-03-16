@@ -7,7 +7,6 @@
 
 #include <utility>
 
-#include "lib/ui/views/fidl/view_associates.fidl.h"
 #include "lib/fxl/functional/closure.h"
 
 namespace test {

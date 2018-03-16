@@ -7,7 +7,7 @@
 
 #include <mutex>
 
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include "lib/fxl/fxl_export.h"
 #include "lib/fxl/macros.h"

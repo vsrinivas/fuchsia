@@ -6,12 +6,12 @@
 
 #include "control.h"
 
-#include <cinttypes>
 #include <fcntl.h>
 #include <link.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <cinttypes>
 
 #include <iostream>
 
@@ -20,9 +20,9 @@
 #include <zircon/ktrace.h>
 #include <zircon/syscalls.h>
 
-#include <zx/handle.h>
-#include <zx/vmo.h>
 #include <fdio/util.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/vmo.h>
 
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"

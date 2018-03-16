@@ -6,7 +6,7 @@
 #define GARNET_DRIVERS_BLUETOOTH_LIB_TESTING_FAKE_CONTROLLER_BASE_H_
 
 #include <lib/async/cpp/wait.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"

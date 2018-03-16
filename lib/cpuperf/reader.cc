@@ -6,9 +6,9 @@
 
 #include <inttypes.h>
 
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <zircon/syscalls.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -16,16 +16,14 @@
 namespace cpuperf {
 
 Reader::Reader(int fd, uint32_t buffer_size)
-    : fd_(fd),
-      buffer_size_(buffer_size),
-      num_cpus_(zx_system_get_num_cpus()) {
+    : fd_(fd), buffer_size_(buffer_size), num_cpus_(zx_system_get_num_cpus()) {
   FXL_DCHECK(fd_ >= 0);
   uintptr_t addr;
-  auto status = zx::vmar::root_self().allocate(0u, buffer_size_,
-                                               ZX_VM_FLAG_CAN_MAP_READ,
-                                               &vmar_, &addr);
+  auto status = zx::vmar::root_self().allocate(
+      0u, buffer_size_, ZX_VM_FLAG_CAN_MAP_READ, &vmar_, &addr);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to obtain vmar for reading trace data: " << status;
+    FXL_LOG(ERROR) << "Unable to obtain vmar for reading trace data: "
+                   << status;
   }
 }
 

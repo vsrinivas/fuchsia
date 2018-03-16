@@ -4,10 +4,10 @@
 
 #include "garnet/bin/debug_agent/object_util.h"
 
+#include <lib/zx/job.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <zircon/syscalls/object.h>
-#include <zx/job.h>
-#include <zx/process.h>
-#include <zx/thread.h>
 
 namespace debug_agent {
 

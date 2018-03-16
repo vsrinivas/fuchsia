@@ -5,26 +5,26 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_HEADER_H_
 #define LIB_FIDL_CPP_INTERNAL_HEADER_H_
 
-#include <lib/fidl/cpp/array.h>
-#include <zx/channel.h>
-#include <zx/event.h>
-#include <zx/eventpair.h>
-#include <zx/fifo.h>
-#include <zx/guest.h>
-#include <zx/interrupt.h>
-#include <zx/job.h>
-#include <zx/log.h>
-#include <zx/port.h>
-#include <zx/process.h>
-#include <zx/resource.h>
-#include <zx/socket.h>
-#include <zx/thread.h>
-#include <zx/timer.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
-
 #include <functional>
 #include <ostream>
+
+#include <lib/fidl/cpp/array.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/event.h>
+#include <lib/zx/eventpair.h>
+#include <lib/zx/fifo.h>
+#include <lib/zx/guest.h>
+#include <lib/zx/interrupt.h>
+#include <lib/zx/job.h>
+#include <lib/zx/log.h>
+#include <lib/zx/port.h>
+#include <lib/zx/process.h>
+#include <lib/zx/resource.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/thread.h>
+#include <lib/zx/timer.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 
 #include "lib/fidl/cpp/coding_traits.h"
 #include "lib/fidl/cpp/interface_ptr.h"

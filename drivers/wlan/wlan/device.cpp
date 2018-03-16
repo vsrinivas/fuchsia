@@ -6,6 +6,8 @@
 
 #include <ddk/device.h>
 #include <fbl/limits.h>
+#include <lib/zx/thread.h>
+#include <lib/zx/time.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/service.h>
@@ -16,8 +18,6 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
-#include <zx/thread.h>
-#include <zx/time.h>
 
 #include <cinttypes>
 #include <cstdarg>

@@ -5,11 +5,12 @@
 #ifndef GARNET_BIN_UI_SKETCHY_FRAME_H_
 #define GARNET_BIN_UI_SKETCHY_FRAME_H_
 
+#include <lib/zx/event.h>
+
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/profiling/timestamp_profiler.h"
 #include "lib/escher/vk/buffer_factory.h"
 #include "lib/ui/scenic/client/session.h"
-#include "zx/event.h"
 
 namespace sketchy_service {
 

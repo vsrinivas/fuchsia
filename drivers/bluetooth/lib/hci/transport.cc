@@ -5,8 +5,8 @@
 #include "transport.h"
 
 #include <lib/async/default.h>
+#include <lib/zx/channel.h>
 #include <zircon/status.h>
-#include <zx/channel.h>
 
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/logging.h"

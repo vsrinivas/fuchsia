@@ -8,10 +8,10 @@
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <fbl/unique_ptr.h>
+#include <lib/zx/time.h>
 #include <wlan/async/dispatcher.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/compiler.h>
-#include <zx/time.h>
 
 #include <fuchsia/cpp/wlan_device.h>
 

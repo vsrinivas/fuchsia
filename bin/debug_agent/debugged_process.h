@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <map>
 #include <memory>
-#include <zx/process.h>
-#include <zx/thread.h>
 
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"

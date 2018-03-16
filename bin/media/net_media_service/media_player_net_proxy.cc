@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <fuchsia/cpp/netconnector.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"

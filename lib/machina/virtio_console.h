@@ -5,9 +5,9 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_CONSOLE_H_
 #define GARNET_LIB_MACHINA_VIRTIO_CONSOLE_H_
 
+#include <lib/zx/socket.h>
 #include <virtio/console.h>
 #include <virtio/virtio_ids.h>
-#include <zx/socket.h>
 
 #include "garnet/lib/machina/virtio_device.h"
 #include "garnet/lib/machina/virtio_queue_waiter.h"

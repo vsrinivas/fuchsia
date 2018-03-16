@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include <zx/event.h>
+#include <lib/zx/event.h>
 
 #include <fuchsia/cpp/gfx.h>
 #include <fuchsia/cpp/images.h>

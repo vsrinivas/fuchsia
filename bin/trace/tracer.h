@@ -11,8 +11,8 @@
 
 #include <fuchsia/cpp/tracing.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/zx/socket.h>
 #include <trace-reader/reader.h>
-#include <zx/socket.h>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

@@ -10,7 +10,6 @@
 #include <fbl/unique_ptr.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <zircon/types.h>
-#include <zx/port.h>
 
 #include "garnet/lib/machina/phys_mem.h"
 #include "garnet/lib/machina/vcpu.h"

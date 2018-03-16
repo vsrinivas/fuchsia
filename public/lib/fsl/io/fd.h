@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_IO_FD_H_
 #define LIB_FSL_IO_FD_H_
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/fxl_export.h"
@@ -19,5 +19,3 @@ FXL_EXPORT fxl::UniqueFD OpenChannelAsFileDescriptor(zx::channel channel);
 }  // namespace fsl
 
 #endif  // LIB_FSL_IO_REDIRECTION_H_
-
-

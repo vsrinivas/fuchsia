@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_SOCKET_STRINGS_H_
 #define LIB_FSL_SOCKET_STRINGS_H_
 
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 #include <string>
 

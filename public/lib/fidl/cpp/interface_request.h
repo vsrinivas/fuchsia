@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_INTERFACE_REQUEST_H_
 #define LIB_FIDL_CPP_INTERFACE_REQUEST_H_
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <cstddef>
 #include <utility>

@@ -5,13 +5,13 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_STUB_CONTROLLER_H_
 #define LIB_FIDL_CPP_INTERNAL_STUB_CONTROLLER_H_
 
-#include <lib/fidl/cpp/message.h>
-#include <zx/channel.h>
-
 #include <memory>
 
-#include "lib/fidl/cpp/internal/message_reader.h"
+#include <lib/fidl/cpp/message.h>
+#include <lib/zx/channel.h>
+
 #include "lib/fidl/cpp/internal/message_handler.h"
+#include "lib/fidl/cpp/internal/message_reader.h"
 #include "lib/fidl/cpp/internal/stub.h"
 
 namespace fidl {

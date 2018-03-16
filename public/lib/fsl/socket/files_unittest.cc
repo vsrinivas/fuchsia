@@ -5,15 +5,15 @@
 #include "lib/fsl/socket/files.h"
 
 #include <fcntl.h>
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/files/file.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/files/file.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
 
 namespace fsl {
 namespace {

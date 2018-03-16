@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include <string>
 

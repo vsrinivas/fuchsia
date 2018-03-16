@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include <zx/event.h>
-#include <zx/vmo.h>
+#include <lib/zx/event.h>
+#include <lib/zx/vmo.h>
 
 #include "garnet/lib/magma/include/magma_abi/magma.h"
 #include "garnet/lib/ui/gfx/swapchain/magma_connection.h"

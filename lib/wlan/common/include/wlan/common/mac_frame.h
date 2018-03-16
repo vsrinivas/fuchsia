@@ -5,13 +5,13 @@
 #pragma once
 
 #include <fbl/type_support.h>
+#include <lib/zx/time.h>
 #include <wlan/common/action_frame.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element.h>
 #include <wlan/common/macaddr.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <zx/time.h>
 
 #include <cstdint>
 

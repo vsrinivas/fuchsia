@@ -15,8 +15,8 @@
 #include <unordered_set>
 
 #include <lib/async/cpp/wait.h>
+#include <lib/zx/channel.h>
 #include <zircon/compiler.h>
-#include <zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/cancelable_task.h"

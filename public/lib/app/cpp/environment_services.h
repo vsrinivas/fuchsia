@@ -5,7 +5,7 @@
 #ifndef LIB_APP_CPP_ENVIRONMENT_SERVICES_H_
 #define LIB_APP_CPP_ENVIRONMENT_SERVICES_H_
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <string>
 

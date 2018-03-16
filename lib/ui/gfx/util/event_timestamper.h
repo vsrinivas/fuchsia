@@ -10,7 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
-#include <zx/event.h>
+#include <lib/zx/event.h>
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"

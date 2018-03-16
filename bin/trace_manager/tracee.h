@@ -6,8 +6,8 @@
 #define GARNET_BIN_TRACE_MANAGER_TRACEE_H_
 
 #include <lib/async/cpp/wait.h>
-#include <zx/socket.h>
-#include <zx/vmo.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
 
 #include <functional>
 #include <iosfwd>

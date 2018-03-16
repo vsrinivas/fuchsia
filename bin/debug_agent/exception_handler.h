@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <zx/event.h>
-#include <zx/port.h>
-#include <zx/process.h>
-#include <zx/socket.h>
-#include <zx/thread.h>
+#include <lib/zx/event.h>
+#include <lib/zx/port.h>
+#include <lib/zx/process.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/thread.h>
 #include <memory>
 #include <mutex>
 #include <thread>

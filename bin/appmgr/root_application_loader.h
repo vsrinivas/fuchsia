@@ -10,7 +10,7 @@
 #include <tuple>
 #include <vector>
 
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include <fuchsia/cpp/component.h>
 #include "lib/fidl/cpp/binding_set.h"

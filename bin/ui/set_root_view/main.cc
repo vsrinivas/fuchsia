@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/views_v1.h>

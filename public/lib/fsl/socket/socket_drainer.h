@@ -7,7 +7,7 @@
 
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 #include "lib/fxl/fxl_export.h"
 #include "lib/fxl/macros.h"

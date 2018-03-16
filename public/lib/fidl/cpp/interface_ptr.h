@@ -10,8 +10,8 @@
 #include <functional>
 #include <utility>
 
+#include <lib/zx/channel.h>
 #include <zircon/assert.h>
-#include <zx/channel.h>
 
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"

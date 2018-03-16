@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_SWAPCHAIN_MAGMA_CONNECTION_H_
 #define GARNET_LIB_UI_GFX_SWAPCHAIN_MAGMA_CONNECTION_H_
 
-#include <zx/event.h>
-#include <zx/vmo.h>
+#include <lib/zx/event.h>
+#include <lib/zx/vmo.h>
 
 #include "garnet/lib/magma/include/magma_abi/magma.h"
 

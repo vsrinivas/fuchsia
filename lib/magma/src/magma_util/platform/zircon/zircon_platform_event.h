@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "magma_util/macros.h"
-#include <zx/event.h>
-#include <zx/time.h>
+#include <lib/zx/event.h>
+#include <lib/zx/time.h>
 #include "platform_event.h"
 
 namespace magma {

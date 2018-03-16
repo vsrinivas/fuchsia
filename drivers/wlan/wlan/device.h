@@ -11,13 +11,13 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/port.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/dispatcher.h>
 #include <wlan/mlme/packet.h>
 #include <zircon/compiler.h>
-#include <zx/channel.h>
-#include <zx/port.h>
 
 #include <mutex>
 #include <thread>

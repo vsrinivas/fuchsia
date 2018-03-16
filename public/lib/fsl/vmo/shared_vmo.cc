@@ -4,7 +4,7 @@
 
 #include "lib/fsl/vmo/shared_vmo.h"
 
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 #include "lib/fxl/logging.h"
 

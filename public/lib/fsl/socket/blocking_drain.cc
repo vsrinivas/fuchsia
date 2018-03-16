@@ -4,7 +4,7 @@
 
 #include "lib/fsl/socket/blocking_drain.h"
 
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 #include <vector>
 
 #include "lib/fxl/logging.h"

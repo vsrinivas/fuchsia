@@ -6,11 +6,11 @@
 
 #include <thread>
 
+#include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 #include <zircon/process.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/threads.h>
-#include <zx/channel.h>
-#include <zx/event.h>
 
 #include "gtest/gtest.h"
 

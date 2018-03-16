@@ -5,7 +5,7 @@
 #ifndef LIB_SVC_CPP_SERVICES_H_
 #define LIB_SVC_CPP_SERVICES_H_
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <string>
 

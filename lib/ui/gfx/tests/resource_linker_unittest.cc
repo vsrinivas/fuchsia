@@ -2,12 +2,13 @@
 // Use of source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 
 #include "garnet/lib/ui/gfx/engine/resource_linker.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/gfx/tests/util.h"
+
 #include "gtest/gtest.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/tasks/message_loop.h"

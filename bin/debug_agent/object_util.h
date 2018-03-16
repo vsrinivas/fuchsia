@@ -6,14 +6,15 @@
 
 #include <string>
 #include <vector>
+
+#include <lib/zx/object.h>
 #include <zircon/types.h>
-#include <zx/object.h>
 
 namespace zx {
 class job;
 class process;
 class thread;
-}
+}  // namespace zx
 
 namespace debug_agent {
 

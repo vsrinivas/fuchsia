@@ -9,9 +9,9 @@
 
 #include <utility>
 
-#include "zx/handle.h"
 #include <ddk/device.h>
 #include <ddk/protocol/pci.h>
+#include <lib/zx/handle.h>
 
 namespace magma {
 

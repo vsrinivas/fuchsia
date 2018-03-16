@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_FRAME_TIMINGS_H_
 #define GARNET_LIB_UI_GFX_ENGINE_FRAME_TIMINGS_H_
 
-#include <zx/time.h>
+#include <lib/zx/time.h>
 #include <vector>
 
 #include "lib/escher/base/reffable.h"

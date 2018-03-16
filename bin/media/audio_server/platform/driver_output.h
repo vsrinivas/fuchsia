@@ -5,9 +5,9 @@
 #pragma once
 
 #include <dispatcher-pool/dispatcher-channel.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/vmo.h>
 #include <zircon/device/audio.h>
-#include <zx/channel.h>
-#include <zx/vmo.h>
 
 #include "garnet/bin/media/audio_server/audio_driver.h"
 #include "garnet/bin/media/audio_server/platform/generic/standard_output_base.h"

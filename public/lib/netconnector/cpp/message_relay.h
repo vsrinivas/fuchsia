@@ -6,7 +6,7 @@
 #define LIB_NETCONNECTOR_CPP_MESSAGE_RELAY_H_
 
 #include <lib/async/cpp/auto_wait.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <queue>
 #include <vector>

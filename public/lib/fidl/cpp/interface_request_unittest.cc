@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/interface_request.h"
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <utility>
 

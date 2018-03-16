@@ -11,6 +11,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <sync/completion.h>
+#include <lib/zx/vmo.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/cipher.h>
 #include <wlan/common/logging.h>
@@ -21,7 +22,6 @@
 #include <wlan/protocol/phy.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
-#include <zx/vmo.h>
 
 #include <endian.h>
 #include <inttypes.h>

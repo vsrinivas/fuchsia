@@ -6,9 +6,9 @@
 #define GARNET_BIN_UI_INPUT_READER_INPUT_INTERPRETER_H_
 
 #include <hid/acer12.h>
+#include <lib/zx/event.h>
 #include <zircon/device/input.h>
 #include <zircon/types.h>
-#include <zx/event.h>
 
 #include <array>
 #include <string>

@@ -6,7 +6,7 @@
 
 // A loader for Intel Bluetooth Firmware files.
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "vendor_hci.h"
 

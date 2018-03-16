@@ -10,6 +10,8 @@
 #include <lib/async/cpp/auto_wait.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
+#include <lib/zx/job.h>
+#include <lib/zx/process.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <poll.h>
@@ -20,8 +22,6 @@
 #include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-#include <zx/job.h>
-#include <zx/process.h>
 
 #include <map>
 #include <memory>

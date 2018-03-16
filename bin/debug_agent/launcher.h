@@ -6,8 +6,9 @@
 
 #include <string>
 #include <vector>
+
 #include <launchpad/launchpad.h>
-#include <zx/process.h>
+#include <lib/zx/process.h>
 
 #include "garnet/public/lib/fxl/macros.h"
 

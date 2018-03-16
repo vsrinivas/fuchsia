@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zx/event.h>
+#include <lib/zx/event.h>
 
 namespace escher {
 

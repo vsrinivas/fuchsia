@@ -9,13 +9,13 @@
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fcntl.h>
+#include <lib/zx/channel.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/device/audio.h>
 #include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
-#include <zx/channel.h>
 
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_input.h"

@@ -8,7 +8,7 @@
 
 #include <fuchsia/cpp/media.h>
 #include <lib/async/cpp/auto_wait.h>
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"

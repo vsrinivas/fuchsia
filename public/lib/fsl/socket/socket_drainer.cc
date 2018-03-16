@@ -4,7 +4,7 @@
 
 #include "lib/fsl/socket/socket_drainer.h"
 
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 #include <utility>
 #include <vector>
 
@@ -15,9 +15,7 @@ namespace fsl {
 SocketDrainer::Client::~Client() = default;
 
 SocketDrainer::SocketDrainer(Client* client, async_t* async)
-    : client_(client),
-      async_(async),
-      destruction_sentinel_(nullptr) {
+    : client_(client), async_(async), destruction_sentinel_(nullptr) {
   FXL_DCHECK(client_);
 }
 

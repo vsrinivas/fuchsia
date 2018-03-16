@@ -5,7 +5,7 @@
 #pragma once
 
 #include <fuchsia/cpp/mdns.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "garnet/bin/mdns/tool/mdns_params.h"
 #include "lib/app/cpp/application_context.h"

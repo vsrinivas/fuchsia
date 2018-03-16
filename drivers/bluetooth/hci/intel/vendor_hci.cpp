@@ -6,8 +6,8 @@
 #include "logging.h"
 
 #include <fbl/algorithm.h>
+#include <lib/zx/time.h>
 #include <zircon/status.h>
-#include <zx/time.h>
 
 namespace btintel {
 

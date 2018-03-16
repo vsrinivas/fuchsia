@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/audio_server/driver_ring_buffer.h"
 
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 #include "lib/fxl/logging.h"
 

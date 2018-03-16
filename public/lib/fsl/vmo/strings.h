@@ -5,10 +5,11 @@
 #ifndef LIB_FSL_VMO_STRINGS_H_
 #define LIB_FSL_VMO_STRINGS_H_
 
-#include <fuchsia/cpp/mem.h>
-#include <zx/vmo.h>
-
 #include <string>
+
+#include <fuchsia/cpp/mem.h>
+
+#include <lib/zx/vmo.h>
 
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/fxl_export.h"

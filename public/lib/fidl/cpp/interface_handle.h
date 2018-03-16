@@ -5,8 +5,8 @@
 #ifndef LIB_FIDL_CPP_INTERFACE_HANDLE_H_
 #define LIB_FIDL_CPP_INTERFACE_HANDLE_H_
 
+#include <lib/zx/channel.h>
 #include <zircon/assert.h>
-#include <zx/channel.h>
 
 #include <cstddef>
 #include <utility>

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zx/process.h>
-#include <zx/thread.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/bin/debug_agent/process_info.h"

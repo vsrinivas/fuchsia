@@ -5,9 +5,9 @@
 #include "garnet/bin/zxdb/console/main_loop_zircon.h"
 
 #include <fdio/io.h>
+#include <lib/zx/event.h>
 #include <unistd.h>
 #include <zircon/syscalls/port.h>
-#include <zx/event.h>
 
 #include "garnet/bin/zxdb/client/agent_connection.h"
 #include "lib/fxl/logging.h"

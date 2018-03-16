@@ -6,8 +6,8 @@
 #define LIB_FIDL_CPP_DECODER_H_
 
 #include <lib/fidl/cpp/message.h>
+#include <lib/zx/object.h>
 #include <zircon/fidl.h>
-#include <zx/object.h>
 
 namespace fidl {
 

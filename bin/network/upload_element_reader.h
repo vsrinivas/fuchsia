@@ -5,12 +5,12 @@
 #ifndef GARNET_BIN_NETWORK_UPLOAD_ELEMENT_READER_H_
 #define GARNET_BIN_NETWORK_UPLOAD_ELEMENT_READER_H_
 
-#include "lib/fxl/macros.h"
-#include "zx/socket.h"
-#include "zx/vmo.h"
-
 #include <array>
 #include <limits>
+
+#include <lib/fxl/macros.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
 
 namespace network {
 

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"
 #include "lib/app/cpp/application_context.h"

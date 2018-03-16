@@ -5,10 +5,10 @@
 #ifndef GARNET_BIN_FONTS_FONT_PROVIDER_IMPL_H_
 #define GARNET_BIN_FONTS_FONT_PROVIDER_IMPL_H_
 
-#include <zx/vmo.h>
-
 #include <unordered_map>
 #include <vector>
+
+#include <lib/zx/vmo.h>
 
 #include <fuchsia/cpp/fonts.h>
 #include "garnet/bin/fonts/font_family.h"

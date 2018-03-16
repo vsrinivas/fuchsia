@@ -4,7 +4,7 @@
 
 #include "lib/media/transport/shared_buffer_set.h"
 
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include "lib/fxl/logging.h"
 

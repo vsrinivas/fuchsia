@@ -4,8 +4,8 @@
 
 #include "garnet/lib/machina/phys_mem.h"
 
+#include <lib/zx/vmar.h>
 #include <zircon/process.h>
-#include <zx/vmar.h>
 
 static constexpr uint32_t kMapFlags =
     ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;

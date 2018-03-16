@@ -5,7 +5,7 @@
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_impl.h"
 
 #include <lib/async/default.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include <fuchsia/cpp/netconnector.h>
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"

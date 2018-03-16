@@ -9,11 +9,11 @@
 #include <fdio/util.h>
 #include <launchpad/launchpad.h>
 #include <lib/async/default.h>
+#include <lib/zx/process.h>
 #include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
-#include <zx/process.h>
 
 #include <utility>
 

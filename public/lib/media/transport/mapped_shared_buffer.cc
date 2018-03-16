@@ -4,9 +4,9 @@
 
 #include "lib/media/transport/mapped_shared_buffer.h"
 
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <zircon/types.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
 
 #include <fuchsia/cpp/media.h>
 #include "lib/fxl/logging.h"

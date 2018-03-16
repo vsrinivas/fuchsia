@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/optional.h"

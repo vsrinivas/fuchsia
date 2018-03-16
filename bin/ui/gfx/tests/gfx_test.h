@@ -13,7 +13,6 @@
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "lib/fsl/threading/thread.h"
-#include "lib/ui/gfx/fidl/scene_manager.fidl.h"
 
 #include "gtest/gtest.h"
 

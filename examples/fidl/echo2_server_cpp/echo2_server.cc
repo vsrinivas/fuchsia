@@ -4,7 +4,7 @@
 
 #include <fuchsia/cpp/echo2.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"

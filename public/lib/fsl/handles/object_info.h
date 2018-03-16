@@ -5,9 +5,9 @@
 #ifndef LIB_FSL_HANDLES_OBJECT_INFO_H_
 #define LIB_FSL_HANDLES_OBJECT_INFO_H_
 
+#include <lib/zx/time.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
-#include <zx/time.h>
 
 #include <string>
 

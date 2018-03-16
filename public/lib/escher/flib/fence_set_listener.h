@@ -5,7 +5,7 @@
 #ifndef LIB_ESCHER_FLIB_FENCE_SET_LISTENER_H_
 #define LIB_ESCHER_FLIB_FENCE_SET_LISTENER_H_
 
-#include <zx/event.h>
+#include <lib/zx/event.h>
 
 #include <lib/async/cpp/auto_wait.h>
 #include "lib/escher/flib/fence.h"

@@ -10,9 +10,9 @@
 #include <fuchsia/cpp/wlan_mlme.h>
 
 #include <fbl/unique_ptr.h>
+#include <lib/zx/time.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
-#include <zx/time.h>
 
 #include <unordered_map>
 

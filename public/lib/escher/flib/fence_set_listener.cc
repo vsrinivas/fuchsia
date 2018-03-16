@@ -6,7 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"

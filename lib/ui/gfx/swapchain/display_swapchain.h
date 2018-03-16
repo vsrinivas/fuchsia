@@ -7,9 +7,9 @@
 
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
 
-#include <zx/event.h>
-#include <zx/handle.h>
-#include <zx/vmo.h>
+#include <lib/zx/event.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/vmo.h>
 #include <vulkan/vulkan.hpp>
 
 #include "garnet/lib/ui/gfx/swapchain/magma_buffer.h"

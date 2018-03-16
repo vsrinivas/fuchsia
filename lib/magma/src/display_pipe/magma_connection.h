@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_MAGMA_CONNECTION_H_
 #define GARNET_LIB_MAGMA_SRC_DISPLAY_PIPE_MAGMA_CONNECTION_H_
 
-#include <zx/event.h>
-#include <zx/vmo.h>
+#include <lib/zx/event.h>
+#include <lib/zx/vmo.h>
 
 #include "magma.h"
 

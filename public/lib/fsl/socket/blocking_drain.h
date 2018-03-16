@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_SOCKET_BLOCKING_DRAIN_H_
 #define LIB_FSL_SOCKET_BLOCKING_DRAIN_H_
 
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 #include <functional>
 

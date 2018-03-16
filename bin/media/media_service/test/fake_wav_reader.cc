@@ -5,7 +5,7 @@
 #include "garnet/bin/media/media_service/test/fake_wav_reader.h"
 
 #include <lib/async/default.h>
-#include <zx/socket.h>
+#include <lib/zx/socket.h>
 
 namespace media {
 

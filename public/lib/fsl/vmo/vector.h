@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_VMO_VECTOR_H_
 #define LIB_FSL_VMO_VECTOR_H_
 
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include <vector>
 

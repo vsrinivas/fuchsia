@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include <lib/zx/time.h>
 #include <zircon/types.h>
-#include <zx/time.h>
 
 #include <cstdint>
 

@@ -7,15 +7,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "zx/channel.h"
+#include <atomic>
+#include <set>
+#include <thread>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/intel-gpu-core.h>
-
-#include <atomic>
-#include <set>
-#include <thread>
+#include <lib/zx/channel.h>
 #include <zircon/process.h>
 #include <zircon/types.h>
 

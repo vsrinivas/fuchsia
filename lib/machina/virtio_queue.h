@@ -11,9 +11,9 @@
 #include <fbl/function.h>
 #include <fbl/mutex.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/zx/event.h>
 #include <virtio/virtio.h>
 #include <zircon/types.h>
-#include <zx/event.h>
 
 struct vring_desc;
 struct vring_avail;

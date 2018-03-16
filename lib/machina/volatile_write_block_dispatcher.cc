@@ -5,7 +5,7 @@
 #include "garnet/lib/machina/volatile_write_block_dispatcher.h"
 
 #include <fbl/auto_lock.h>
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 #include "garnet/lib/machina/bits.h"
 #include "lib/fxl/logging.h"

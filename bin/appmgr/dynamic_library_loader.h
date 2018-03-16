@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_APPMGR_DYNAMIC_LIBRARY_LOADER_H_
 #define GARNET_BIN_APPMGR_DYNAMIC_LIBRARY_LOADER_H_
 
+#include <lib/zx/channel.h>
 #include <zircon/types.h>
-#include <zx/channel.h>
 
 #include "lib/fxl/files/unique_fd.h"
 

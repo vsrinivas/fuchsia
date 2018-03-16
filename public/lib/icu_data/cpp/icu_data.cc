@@ -4,7 +4,7 @@
 
 #include "lib/icu_data/cpp/icu_data.h"
 
-#include <zx/vmar.h>
+#include <lib/zx/vmar.h>
 
 #include <fuchsia/cpp/icu_data.h>
 #include "lib/app/cpp/application_context.h"

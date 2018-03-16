@@ -16,8 +16,8 @@
 #include "lib/fidl/cpp/vector.h"
 
 #include <fbl/unique_ptr.h>
+#include <lib/zx/time.h>
 #include <zircon/assert.h>
-#include <zx/time.h>
 
 #include <cinttypes>
 #include <utility>

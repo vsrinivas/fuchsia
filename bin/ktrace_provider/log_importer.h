@@ -6,8 +6,8 @@
 #define GARNET_BIN_KTRACE_PROVIDER_LOG_IMPORTER_H_
 
 #include <lib/async/cpp/wait.h>
+#include <lib/zx/log.h>
 #include <trace-engine/types.h>
-#include <zx/log.h>
 
 #include "lib/fxl/macros.h"
 

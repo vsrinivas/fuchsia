@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <zx/event.h>
+#include <lib/zx/event.h>
 
 #include "garnet/lib/ui/gfx/swapchain/magma_connection.h"
 #include "lib/fxl/macros.h"

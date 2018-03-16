@@ -5,8 +5,9 @@
 #ifndef ZIRCON_PLATFORM_SEMAPHORE_H
 #define ZIRCON_PLATFORM_SEMAPHORE_H
 
+#include <lib/zx/event.h>
+
 #include "magma_util/macros.h"
-#include "zx/event.h"
 #include "platform_semaphore.h"
 #include "platform_trace.h"
 

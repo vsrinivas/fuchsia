@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_APPMGR_APPLICATION_RUNNER_HOLDER_H_
 #define GARNET_BIN_APPMGR_APPLICATION_RUNNER_HOLDER_H_
 
-#include <zx/vmo.h>
+#include <lib/zx/vmo.h>
 
 #include "garnet/bin/appmgr/application_namespace.h"
 #include "garnet/lib/farfs/file_system.h"

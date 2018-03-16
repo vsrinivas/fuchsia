@@ -7,7 +7,7 @@
 
 #include <fs/pseudo-dir.h>
 #include <lib/async/cpp/auto_wait.h>
-#include <zx/process.h>
+#include <lib/zx/process.h>
 
 #include "garnet/bin/appmgr/application_namespace.h"
 #include "garnet/lib/farfs/file_system.h"

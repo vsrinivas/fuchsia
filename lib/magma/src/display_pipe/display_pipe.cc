@@ -7,8 +7,8 @@
 #include <unistd.h> // for close
 
 #include <zircon/syscalls.h>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"

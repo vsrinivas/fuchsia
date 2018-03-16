@@ -9,16 +9,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "zx/channel.h"
+#include <atomic>
+#include <map>
+#include <unordered_map>
+#include <thread>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/intel-gpu-core.h>
 
-#include <atomic>
-#include <map>
-#include <thread>
+#include <lib/zx/channel.h>
+
 #include <zircon/process.h>
 #include <zircon/types.h>
 

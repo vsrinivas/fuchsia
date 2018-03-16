@@ -5,8 +5,8 @@
 #include "zircon_platform_semaphore.h"
 #include "platform_port.h"
 
-#include "zircon/syscalls/port.h"
-#include "zx/port.h"
+#include <lib/zx/port.h>
+#include <zircon/syscalls/port.h>
 
 namespace magma {
 

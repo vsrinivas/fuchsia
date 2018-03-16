@@ -5,9 +5,9 @@
 #include "garnet/bin/debug_agent/process_info.h"
 
 #include <link.h>
+#include <lib/zx/thread.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-#include <zx/thread.h>
 
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/public/lib/fxl/logging.h"

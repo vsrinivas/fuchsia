@@ -4,7 +4,7 @@
 
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/fidl/cpp/message_builder.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/internal/proxy_controller.h"

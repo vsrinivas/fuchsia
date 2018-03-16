@@ -5,8 +5,8 @@
 #ifndef LIB_FSL_IO_REDIRECTION_H_
 #define LIB_FSL_IO_REDIRECTION_H_
 
-#include <zx/handle.h>
-#include <zx/socket.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/socket.h>
 
 #include "lib/fxl/fxl_export.h"
 
