@@ -620,9 +620,8 @@ constexpr uint8_t kLlcSnapExtension = 0xaa;
 constexpr uint8_t kLlcUnnumberedInformation = 0x03;
 const uint8_t kLlcOui[3] = {};
 
-// Define the size of a non-QoS, non-HT data header, including the 802.2 framing
-constexpr size_t kDataPayloadHeader = sizeof(DataFrameHeader) + sizeof(LlcHeader);
-static_assert(kDataPayloadHeader == 32, "check the data payload header size");
+constexpr size_t kDataFrameHdrLenMax =
+    sizeof(DataFrameHeader) + common::kMacAddrLen + kQosCtrlLen + kHtCtrlLen;
 
 // IEEE Std 802.11-2016, 9.2.3
 struct FrameHeader {

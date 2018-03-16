@@ -184,7 +184,7 @@ zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
         errorf("short data packet len=%zu\n", packet->len());
         return ZX_ERR_IO;
     }
-    if (packet->len() < kDataPayloadHeader) {
+    if (packet->len() < hdr->len() + sizeof(LlcHeader)) {
         errorf("short LLC packet len=%zu\n", packet->len());
         return ZX_ERR_IO;
     }

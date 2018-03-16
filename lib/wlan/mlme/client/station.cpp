@@ -736,8 +736,8 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
     if (!bss_setup || !associated) { return ZX_OK; }
 
     auto eth = frame.hdr;
-    const size_t wlan_len = kDataPayloadHeader + frame.body_len;
-    auto buffer = GetBuffer(wlan_len);
+    const size_t buf_len = kDataFrameHdrLenMax + sizeof(LlcHeader) + frame.body_len;
+    auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     wlan_tx_info_t txinfo = {
@@ -750,7 +750,7 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
         //.mcs = 0x0,
     };
 
-    auto wlan_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), wlan_len));
+    auto wlan_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     // no need to clear the whole packet; we memset the headers instead and copy over all bytes in
     // the payload
     wlan_packet->set_peer(Packet::Peer::kWlan);
@@ -764,8 +764,7 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
     bool has_ht_ctrl = false;  // TODO(porce): make this dynamic
 
     // Set header
-    size_t hdr_len_max = sizeof(DataFrameHeader) + kHtCtrlLen + kQosCtrlLen;
-    std::memset(hdr, 0, hdr_len_max);
+    std::memset(hdr, 0, kDataFrameHdrLenMax);
     hdr->fc.set_type(FrameType::kData);
     hdr->fc.set_subtype(has_qos_ctrl ? DataSubtype::kQosdata : DataSubtype::kDataSubtype);
     hdr->fc.set_to_ds(1);
@@ -817,6 +816,13 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
 
     std::memcpy(llc->payload, eth->payload, frame.body_len);
 
+    auto frame_len = hdr->len() + sizeof(LlcHeader) + frame.body_len;
+    auto status = wlan_packet->set_len(frame_len);
+    if (status != ZX_OK) {
+        errorf("could not set data frame length to %zu: %d\n", frame_len, status);
+        return status;
+    }
+
     finspect("Outbound data frame: len %zu\n", wlan_packet->len());
     finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
     finspect("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
@@ -824,7 +830,7 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
 
     wlan_packet->CopyCtrlFrom(txinfo);
 
-    zx_status_t status = device_->SendWlan(std::move(wlan_packet));
+    status = device_->SendWlan(std::move(wlan_packet));
     if (status != ZX_OK) { errorf("could not send wlan data: %d\n", status); }
     return status;
 }

@@ -624,11 +624,11 @@ bool RemoteClient::HasBufferedFrames() const {
 
 zx_status_t RemoteClient::ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
                                                      fbl::unique_ptr<Packet>* out_packet) {
-    const size_t data_frame_len = kDataPayloadHeader + frame.body_len;
-    auto buffer = GetBuffer(data_frame_len);
+    const size_t buf_len = kDataFrameHdrLenMax + sizeof(LlcHeader) + frame.body_len;
+    auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    *out_packet = fbl::make_unique<Packet>(std::move(buffer), data_frame_len);
+    *out_packet = fbl::make_unique<Packet>(std::move(buffer), buf_len);
     (*out_packet)->set_peer(Packet::Peer::kWlan);
 
     auto hdr = (*out_packet)->mut_field<DataFrameHeader>(0);
@@ -653,6 +653,15 @@ zx_status_t RemoteClient::ConvertEthernetToDataFrame(const ImmutableBaseFrame<Et
     wlan_tx_info_t txinfo = {
         // TODO(hahnr): Fill wlan_tx_info_t.
     };
+
+    auto frame_len = hdr->len() + sizeof(LlcHeader) + frame.body_len;
+    auto status = (*out_packet)->set_len(frame_len);
+    if (status != ZX_OK) {
+        errorf("[client] [%s] could not set data frame length to %zu: %d\n",
+               addr_.ToString().c_str(), frame_len, status);
+        return status;
+    }
+
     (*out_packet)->CopyCtrlFrom(txinfo);
 
     return ZX_OK;
