@@ -14,96 +14,127 @@
 
 namespace machina {
 
-VirtioConsole::VirtioConsole(const PhysMem& phys_mem, zx::socket socket)
+VirtioConsole::Stream::Stream(async_t* async,
+                              VirtioQueue* queue,
+                              zx_handle_t socket)
+    : async_(async), socket_(socket), queue_(queue), queue_wait_(async) {
+  socket_wait_.set_handler(
+      fbl::BindMember(this, &VirtioConsole::Stream::OnSocketReady));
+}
+
+zx_status_t VirtioConsole::Stream::Start() {
+  return WaitOnQueue();
+}
+
+void VirtioConsole::Stream::Stop() {
+  socket_wait_.Cancel(async_);
+  queue_wait_.Cancel();
+}
+
+zx_status_t VirtioConsole::Stream::WaitOnQueue() {
+  return queue_wait_.Wait(
+      queue_, fbl::BindMember(this, &VirtioConsole::Stream::OnQueueReady));
+}
+
+void VirtioConsole::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
+  if (status == ZX_OK) {
+    head_ = index;
+    status = queue_->ReadDesc(head_, &desc_);
+  }
+  if (status != ZX_OK) {
+    OnStreamClosed(status, "reading descriptor");
+    return;
+  }
+  status = WaitOnSocket();
+  if (status != ZX_OK) {
+    OnStreamClosed(status, "waiting on socket");
+  }
+}
+
+zx_status_t VirtioConsole::Stream::WaitOnSocket() {
+  zx_signals_t signals = ZX_SOCKET_PEER_CLOSED;
+  signals |= desc_.writable ? ZX_SOCKET_READABLE : ZX_SOCKET_WRITABLE;
+  socket_wait_.set_object(socket_);
+  socket_wait_.set_trigger(signals);
+  return socket_wait_.Begin(async_);
+}
+
+async_wait_result_t VirtioConsole::Stream::OnSocketReady(
+    async_t* async,
+    zx_status_t status,
+    const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    OnStreamClosed(status, "async wait on socket");
+    return ASYNC_WAIT_FINISHED;
+  }
+
+  const bool do_read = desc_.writable;
+  bool short_write = false;
+  size_t actual = 0;
+  if (do_read) {
+    status = zx_socket_read(socket_, 0, static_cast<void*>(desc_.addr),
+                            desc_.len, &actual);
+  } else {
+    status = zx_socket_write(socket_, 0, static_cast<const void*>(desc_.addr),
+                             desc_.len, &actual);
+    // It's possible only part of the descriptor has been written to the
+    // socket. If so we need to wait on ZX_SOCKET_WRITABLE again to write the
+    // remainder of the payload.
+    if (status == ZX_OK && desc_.len > actual) {
+      desc_.addr = reinterpret_cast<void*>(
+          reinterpret_cast<uintptr_t>(desc_.addr) + actual);
+      desc_.len -= actual;
+      short_write = true;
+    }
+  }
+  if (status == ZX_ERR_SHOULD_WAIT || short_write) {
+    return ASYNC_WAIT_AGAIN;
+  }
+  if (status != ZX_OK) {
+    OnStreamClosed(status, do_read ? "read from socket" : "write to socket");
+    return ASYNC_WAIT_FINISHED;
+  }
+  queue_->Return(head_, do_read ? actual : 0);
+
+  status = queue_->device()->NotifyGuest();
+  if (status != ZX_OK) {
+    FXL_LOG(WARNING) << "Failed to notify device " << status;
+  }
+  status = WaitOnQueue();
+  if (status != ZX_OK) {
+    OnStreamClosed(status, "wait on queue");
+  }
+  return ASYNC_WAIT_FINISHED;
+}
+
+void VirtioConsole::Stream::OnStreamClosed(zx_status_t status,
+                                           const char* action) {
+  Stop();
+  FXL_LOG(ERROR) << "Stream closed during step '" << action << "' (" << status
+                 << ")";
+}
+
+VirtioConsole::VirtioConsole(const PhysMem& phys_mem,
+                             async_t* async,
+                             zx::socket socket)
     : VirtioDevice(VIRTIO_ID_CONSOLE,
                    &config_,
                    sizeof(config_),
                    queues_,
                    kNumQueues,
                    phys_mem),
-      socket_(fbl::move(socket)) {}
+      socket_(fbl::move(socket)),
+      rx_stream_(async, rx_queue(), socket_.get()),
+      tx_stream_(async, tx_queue(), socket_.get()) {}
 
 VirtioConsole::~VirtioConsole() = default;
 
 zx_status_t VirtioConsole::Start() {
-  zx_status_t status;
-
-  auto tx_entry =
-      +[](VirtioQueue* queue, uint16_t head, uint32_t* used, void* ctx) {
-        return static_cast<VirtioConsole*>(ctx)->Transmit(queue, head, used);
-      };
-  status = tx_queue()->Poll(tx_entry, this, "virtio-console-tx");
-  if (status != ZX_OK) {
-    return status;
+  zx_status_t status = rx_stream_.Start();
+  if (status == ZX_OK) {
+    status = tx_stream_.Start();
   }
-
-  auto rx_entry =
-      +[](VirtioQueue* queue, uint16_t head, uint32_t* used, void* ctx) {
-        return static_cast<VirtioConsole*>(ctx)->Receive(queue, head, used);
-      };
-  status = rx_queue()->Poll(rx_entry, this, "virtio-console-rx");
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t VirtioConsole::Transmit(VirtioQueue* queue,
-                                    uint16_t head,
-                                    uint32_t* used) {
-  uint16_t index = head;
-  virtio_desc_t desc;
-  do {
-    zx_status_t status = queue->ReadDesc(index, &desc);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    status =
-        socket_.wait_one(ZX_SOCKET_WRITABLE, zx::time::infinite(), nullptr);
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = socket_.write(0, static_cast<const void*>(desc.addr), desc.len,
-                           nullptr);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to write to socket";
-      return status;
-    }
-
-    index = desc.next;
-  } while (desc.has_next);
-  return ZX_OK;
-}
-
-zx_status_t VirtioConsole::Receive(VirtioQueue* queue,
-                                   uint16_t head,
-                                   uint32_t* used) {
-  uint16_t index = head;
-  virtio_desc_t desc;
-  zx_status_t status = queue->ReadDesc(index, &desc);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  size_t bytes_read = 0;
-  do {
-    status =
-        socket_.wait_one(ZX_SOCKET_READABLE, zx::time::infinite(), nullptr);
-    if (status != ZX_OK) {
-      return status;
-    }
-    status =
-        socket_.read(0, static_cast<void*>(desc.addr), desc.len, &bytes_read);
-  } while (status == ZX_ERR_SHOULD_WAIT);
-
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *used = bytes_read;
-  return ZX_OK;
+  return status;
 }
 
 }  // namespace machina

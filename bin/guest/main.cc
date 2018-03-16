@@ -393,7 +393,8 @@ int main(int argc, char** argv) {
   }
 
   // Setup console
-  machina::VirtioConsole console(guest.phys_mem(), inspect_svc.TakeSocket());
+  machina::VirtioConsole console(guest.phys_mem(), guest.device_async(),
+                                 inspect_svc.TakeSocket());
   status = console.Start();
   if (status != ZX_OK) {
     return status;
