@@ -47,7 +47,8 @@ public:
     // version number and update the default version.  Zero indicates an error state.
     enum Version : uint32_t {
         kUninitialized = 0,
-        kAES256_XTS_SHA256 = 1,
+        kAES256_XTS_SHA256,
+        kAES128_CTR_SHA256,
     };
 
     // The default version, used when sealing a new volume.
