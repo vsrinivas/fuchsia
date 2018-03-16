@@ -28,9 +28,9 @@ template("fidl_rust") {
   if (defined(invoker.name)) {
     library_name = invoker.name
   }
-  file_stem = "$target_gen_dir/$library_name.fidl"
 
   fidl_target_gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
+  file_stem = "$fidl_target_gen_dir/$library_name.fidl"
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
   compiled_action(generation_target_name) {
@@ -45,7 +45,7 @@ template("fidl_rust") {
     ]
 
     outputs = [
-      "$file_stem.rust",
+      "$file_stem.rs",
     ]
 
     args = [

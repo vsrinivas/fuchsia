@@ -9,7 +9,6 @@ import (
 	"fidl/compiler/backend/rust/templates"
 	"fidl/compiler/backend/types"
 	"os"
-	"path/filepath"
 	"text/template"
 )
 
@@ -30,14 +29,7 @@ func writeFile(outputFilename string,
 func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
 	tree := ir.Compile(fidl)
 
-	relStem, err := filepath.Rel(config.RootGenDir, config.FidlStem)
-	if err != nil {
-		return err
-	}
-
-	// TODO(cramertj)-- why is the gen prefix needed here?
-	// Why isn't it added at a higher level like it is in the other backends?
-	srcPath := "gen/" + relStem + ".rs"
+	srcPath := config.FidlStem + ".rs"
 
 	tmpls := template.New("RustTemplates")
 	template.Must(tmpls.Parse(templates.SourceFile))
