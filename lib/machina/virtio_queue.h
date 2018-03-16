@@ -12,6 +12,7 @@
 #include <fbl/mutex.h>
 #include <virtio/virtio.h>
 #include <zircon/types.h>
+#include <zx/event.h>
 
 struct vring_desc;
 struct vring_avail;
@@ -103,6 +104,9 @@ typedef struct virtio_desc {
 
 class VirtioQueue {
  public:
+  // The signal asserted when there are available descriptors in the queue.
+  static constexpr zx_signals_t SIGNAL_QUEUE_AVAIL = ZX_USER_SIGNAL_0;
+
   VirtioQueue();
 
   // TODO(tjdetwiler): Temporary escape hatches to allow access the the
@@ -143,6 +147,11 @@ class VirtioQueue {
   void set_used_addr(uint64_t used_addr);
   uint64_t used_addr() const;
 
+  // Returns a handle that can waited on for available descriptors in the.
+  // While buffers are available in the queue |ZX_USER_SIGNAL_0| will be
+  // asserted.
+  zx_handle_t event() const { return event_.get(); }
+
   // Get the index of the next descriptor in the available ring.
   //
   // If a buffer is a available, the descriptor index is written to |index|, the
@@ -152,11 +161,13 @@ class VirtioQueue {
   zx_status_t NextAvail(uint16_t* index);
 
   // Blocking variant of virtio_queue_next_avail.
+  //
+  // TODO(PD-107): Allow this method to fail.
   void Wait(uint16_t* index);
 
   // Notify waiting threads blocked on |virtio_queue_wait| that the avail ring
   // has descriptors available.
-  void Signal();
+  zx_status_t Signal();
 
   // Return a descriptor to the used ring.
   //
@@ -196,9 +207,9 @@ class VirtioQueue {
   uint32_t RingIndexLocked(uint32_t index) const __TA_REQUIRES(mutex_);
 
   mutable fbl::Mutex mutex_;
-  cnd_t avail_ring_cnd_;
   VirtioDevice* device_;
   virtio_queue_t ring_ __TA_GUARDED(mutex_);
+  zx::event event_;
 };
 
 }  // namespace machina

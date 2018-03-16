@@ -66,8 +66,7 @@ zx_status_t VirtioDevice::Kick(uint16_t kicked_queue) {
 
   // Notify threads waiting on a descriptor.
   fbl::AutoLock lock(&mutex_);
-  queues_[kicked_queue].Signal();
-  return ZX_OK;
+  return queues_[kicked_queue].Signal();
 }
 
 zx_status_t VirtioDevice::ReadConfig(uint64_t addr, IoValue* value) {

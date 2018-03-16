@@ -20,6 +20,7 @@
 namespace machina {
 
 VirtioQueue::VirtioQueue() {
+  FXL_CHECK(zx::event::create(0, &event_) == ZX_OK);
   // TODO(PD-94): VirtioDevice will call set_size and set_device before the
   // constructor has run so we need to be careful what we initialize here.
   ring_.index = 0;
@@ -31,7 +32,6 @@ VirtioQueue::VirtioQueue() {
   ring_.addr.desc = 0;
   ring_.addr.avail = 0;
   ring_.addr.used = 0;
-  cnd_init(&avail_ring_cnd_);
 }
 
 static bool validate_queue_range(VirtioDevice* device,
@@ -116,20 +116,23 @@ uint64_t VirtioQueue::used_addr() const {
   return ring_.addr.used;
 }
 
-void VirtioQueue::Signal() {
+zx_status_t VirtioQueue::Signal() {
   fbl::AutoLock lock(&mutex_);
   if (HasAvailLocked()) {
-    cnd_signal(&avail_ring_cnd_);
+    return event_.signal(0, SIGNAL_QUEUE_AVAIL);
   }
+  return ZX_OK;
 }
 
-// This must not return any errors besides |ZX_ERR_SHOULD_WAIT|.
 zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
   if (!HasAvailLocked()) {
     return ZX_ERR_SHOULD_WAIT;
   }
 
   *index = ring_.avail->ring[RingIndexLocked(ring_.index++)];
+  if (!HasAvailLocked()) {
+    return event_.signal(SIGNAL_QUEUE_AVAIL, 0);
+  }
   return ZX_OK;
 }
 
@@ -150,10 +153,11 @@ uint32_t VirtioQueue::RingIndexLocked(uint32_t index) const {
 }
 
 void VirtioQueue::Wait(uint16_t* index) {
-  fbl::AutoLock lock(&mutex_);
-  while (NextAvailLocked(index) == ZX_ERR_SHOULD_WAIT) {
-    cnd_wait(&avail_ring_cnd_, mutex_.GetInternal());
+  zx_status_t status;
+  while ((status = NextAvail(index)) == ZX_ERR_SHOULD_WAIT) {
+    event_.wait_one(SIGNAL_QUEUE_AVAIL, zx::time::infinite(), nullptr);
   }
+  FXL_CHECK(status == ZX_OK);
 }
 
 struct poll_task_args_t {
