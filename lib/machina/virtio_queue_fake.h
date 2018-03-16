@@ -110,6 +110,6 @@ class VirtioQueueFake {
   uint16_t next_free_desc_ = 0;
 };
 
-#endif  // GARNET_LIB_MACHINA_VIRTIO_QUEUE_FAKE_H_
-
 }  // namespace machina
+
+#endif  // GARNET_LIB_MACHINA_VIRTIO_QUEUE_FAKE_H_

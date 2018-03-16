@@ -4,6 +4,7 @@
 
 #include "garnet/lib/machina/phys_mem_fake.h"
 #include "garnet/lib/machina/virtio_device.h"
+#include "garnet/lib/machina/virtio_device_fake.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"
 #include "gtest/gtest.h"
 
@@ -13,25 +14,8 @@
 namespace machina {
 namespace {
 
-class TestDevice : public VirtioDevice {
- public:
-  TestDevice()
-      : VirtioDevice(VIRTIO_TEST_ID, nullptr, 0, &queue_, 1, phys_mem_),
-        queue_fake_(&queue_) {}
-
-  zx_status_t Init() { return queue_fake_.Init(QUEUE_SIZE); }
-
-  VirtioQueue& queue() { return queue_; }
-  VirtioQueueFake& queue_fake() { return queue_fake_; }
-
- private:
-  VirtioQueue queue_;
-  PhysMemFake phys_mem_;
-  VirtioQueueFake queue_fake_;
-};
-
 TEST(VirtioQueueTest, HandleOverflow) {
-  TestDevice device;
+  VirtioDeviceFake device;
   ASSERT_EQ(device.Init(), ZX_OK);
   VirtioQueue& queue = device.queue();
   VirtioQueueFake& queue_fake = device.queue_fake();

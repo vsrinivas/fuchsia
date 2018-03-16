@@ -53,6 +53,8 @@ shared_library("machina") {
     "virtio_pci.h",
     "virtio_queue.cc",
     "virtio_queue.h",
+    "virtio_queue_waiter.cc",
+    "virtio_queue_waiter.h",
     "volatile_write_block_dispatcher.cc",
     "volatile_write_block_dispatcher.h",
   ]
@@ -126,11 +128,13 @@ executable("machina_unittests") {
     "pci-unittest.cc",
     "run_all_unittests.cc",
     "virtio_block-unittest.cc",
+    "virtio_device_fake.h",
     "virtio_gpu-unittest.cc",
     "virtio_net-unittest.cc",
     "virtio_queue-unittest.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
+    "virtio_queue_waiter-unittest.cc",
     "volatile_write_block_dispatcher-unittest.cc",
   ]
 
@@ -143,6 +147,7 @@ executable("machina_unittests") {
 
   deps = [
     ":machina",
+    "//garnet/public/lib/fsl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
