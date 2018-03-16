@@ -35,7 +35,7 @@ while getopts a:ACdhlLqr FLAG; do
         d) ARGS+=" DEBUG_HARD=1";;
         l) ARGS+=" USE_THINLTO=true";;
         L) ARGS+=" USE_LTO=true";;
-        q) QUIET=1;;
+        q) ARGS+=" QUIET=1";;
         r) ARGS+=" DEBUG=0";;
         h) HELP ;;
         \?)
@@ -50,4 +50,4 @@ if [[ ! ${ARCH} ]]; then
     HELP
 fi
 
-${DIR}/make-parallel ${ARCH} ${ARGS} QUIET=${QUIET}
+${DIR}/make-parallel ${ARCH} ${ARGS} "$@"
