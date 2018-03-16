@@ -1,4 +1,3 @@
-// header file
 #pragma once
 
 #include <stdbool.h>
@@ -15,150 +14,344 @@ extern "C" {
 
 // Forward declarations
 
+typedef struct Service Service;
+typedef struct DirectoryOpenRequest DirectoryOpenRequest;
+typedef struct DirectoryUnlinkRequest DirectoryUnlinkRequest;
+typedef struct DirectoryUnlinkResponse DirectoryUnlinkResponse;
+typedef struct DirectoryReadDirentsRequest DirectoryReadDirentsRequest;
+typedef struct DirectoryReadDirentsResponse DirectoryReadDirentsResponse;
+typedef struct DirectoryRewindRequest DirectoryRewindRequest;
+typedef struct DirectoryRewindResponse DirectoryRewindResponse;
+typedef struct DirectoryGetTokenRequest DirectoryGetTokenRequest;
+typedef struct DirectoryGetTokenResponse DirectoryGetTokenResponse;
+typedef struct DirectoryRenameRequest DirectoryRenameRequest;
+typedef struct DirectoryRenameResponse DirectoryRenameResponse;
+typedef struct DirectoryLinkRequest DirectoryLinkRequest;
+typedef struct DirectoryLinkResponse DirectoryLinkResponse;
 typedef uint32_t SeekOrigin;
 #define SeekOrigin_Start UINT32_C(0)
 #define SeekOrigin_Current UINT32_C(1)
 #define SeekOrigin_End UINT32_C(2)
 
-typedef struct ObjectCloneMsg ObjectCloneMsg;
-typedef struct ObjectCloseMsg ObjectCloseMsg;
-typedef struct ObjectCloseRsp ObjectCloseRsp;
-typedef struct ObjectListInterfacesMsg ObjectListInterfacesMsg;
-typedef struct ObjectListInterfacesRsp ObjectListInterfacesRsp;
-typedef struct ObjectBindMsg ObjectBindMsg;
-typedef struct ObjectDescribeMsg ObjectDescribeMsg;
-typedef struct ObjectDescribeRsp ObjectDescribeRsp;
-typedef struct ObjectOnOpenEvt ObjectOnOpenEvt;
-typedef struct NodeSyncMsg NodeSyncMsg;
-typedef struct NodeSyncRsp NodeSyncRsp;
-typedef struct NodeGetAttrMsg NodeGetAttrMsg;
-typedef struct NodeGetAttrRsp NodeGetAttrRsp;
-typedef struct NodeSetAttrMsg NodeSetAttrMsg;
-typedef struct NodeSetAttrRsp NodeSetAttrRsp;
-typedef struct NodeIoctlMsg NodeIoctlMsg;
-typedef struct NodeIoctlRsp NodeIoctlRsp;
-typedef struct FileReadMsg FileReadMsg;
-typedef struct FileReadRsp FileReadRsp;
-typedef struct FileReadAtMsg FileReadAtMsg;
-typedef struct FileReadAtRsp FileReadAtRsp;
-typedef struct FileWriteMsg FileWriteMsg;
-typedef struct FileWriteRsp FileWriteRsp;
-typedef struct FileWriteAtMsg FileWriteAtMsg;
-typedef struct FileWriteAtRsp FileWriteAtRsp;
-typedef struct FileSeekMsg FileSeekMsg;
-typedef struct FileSeekRsp FileSeekRsp;
-typedef struct FileTruncateMsg FileTruncateMsg;
-typedef struct FileTruncateRsp FileTruncateRsp;
-typedef struct FileGetFlagsMsg FileGetFlagsMsg;
-typedef struct FileGetFlagsRsp FileGetFlagsRsp;
-typedef struct FileSetFlagsMsg FileSetFlagsMsg;
-typedef struct FileSetFlagsRsp FileSetFlagsRsp;
-typedef struct FileGetVmoMsg FileGetVmoMsg;
-typedef struct FileGetVmoRsp FileGetVmoRsp;
-typedef struct FileGetVmoAtMsg FileGetVmoAtMsg;
-typedef struct FileGetVmoAtRsp FileGetVmoAtRsp;
-typedef struct DirectoryOpenMsg DirectoryOpenMsg;
-typedef struct DirectoryUnlinkMsg DirectoryUnlinkMsg;
-typedef struct DirectoryUnlinkRsp DirectoryUnlinkRsp;
-typedef struct DirectoryReadDirentsMsg DirectoryReadDirentsMsg;
-typedef struct DirectoryReadDirentsRsp DirectoryReadDirentsRsp;
-typedef struct DirectoryRewindMsg DirectoryRewindMsg;
-typedef struct DirectoryRewindRsp DirectoryRewindRsp;
-typedef struct DirectoryGetTokenMsg DirectoryGetTokenMsg;
-typedef struct DirectoryGetTokenRsp DirectoryGetTokenRsp;
-typedef struct DirectoryRenameMsg DirectoryRenameMsg;
-typedef struct DirectoryRenameRsp DirectoryRenameRsp;
-typedef struct DirectoryLinkMsg DirectoryLinkMsg;
-typedef struct DirectoryLinkRsp DirectoryLinkRsp;
-typedef struct Service Service;
-typedef struct File File;
-typedef struct Directory Directory;
-typedef struct Pipe Pipe;
-typedef struct Vmofile Vmofile;
-typedef struct Device Device;
+typedef struct FileReadRequest FileReadRequest;
+typedef struct FileReadResponse FileReadResponse;
+typedef struct FileReadAtRequest FileReadAtRequest;
+typedef struct FileReadAtResponse FileReadAtResponse;
+typedef struct FileWriteRequest FileWriteRequest;
+typedef struct FileWriteResponse FileWriteResponse;
+typedef struct FileWriteAtRequest FileWriteAtRequest;
+typedef struct FileWriteAtResponse FileWriteAtResponse;
+typedef struct FileSeekRequest FileSeekRequest;
+typedef struct FileSeekResponse FileSeekResponse;
+typedef struct FileTruncateRequest FileTruncateRequest;
+typedef struct FileTruncateResponse FileTruncateResponse;
+typedef struct FileGetFlagsRequest FileGetFlagsRequest;
+typedef struct FileGetFlagsResponse FileGetFlagsResponse;
+typedef struct FileSetFlagsRequest FileSetFlagsRequest;
+typedef struct FileSetFlagsResponse FileSetFlagsResponse;
+typedef struct FileGetVmoRequest FileGetVmoRequest;
+typedef struct FileGetVmoResponse FileGetVmoResponse;
+typedef struct FileGetVmoAtRequest FileGetVmoAtRequest;
+typedef struct FileGetVmoAtResponse FileGetVmoAtResponse;
 typedef struct NodeAttributes NodeAttributes;
+typedef struct NodeSyncRequest NodeSyncRequest;
+typedef struct NodeSyncResponse NodeSyncResponse;
+typedef struct NodeGetAttrRequest NodeGetAttrRequest;
+typedef struct NodeGetAttrResponse NodeGetAttrResponse;
+typedef struct NodeSetAttrRequest NodeSetAttrRequest;
+typedef struct NodeSetAttrResponse NodeSetAttrResponse;
+typedef struct NodeIoctlRequest NodeIoctlRequest;
+typedef struct NodeIoctlResponse NodeIoctlResponse;
+typedef struct Device Device;
+typedef struct Vmofile Vmofile;
+typedef struct Pipe Pipe;
+typedef struct DirectoryObject DirectoryObject;
+typedef struct FileObject FileObject;
 typedef struct ObjectInfo ObjectInfo;
+typedef struct ObjectCloneRequest ObjectCloneRequest;
+typedef struct ObjectCloseRequest ObjectCloseRequest;
+typedef struct ObjectCloseResponse ObjectCloseResponse;
+typedef struct ObjectListInterfacesRequest ObjectListInterfacesRequest;
+typedef struct ObjectListInterfacesResponse ObjectListInterfacesResponse;
+typedef struct ObjectBindRequest ObjectBindRequest;
+typedef struct ObjectDescribeRequest ObjectDescribeRequest;
+typedef struct ObjectDescribeResponse ObjectDescribeResponse;
+typedef struct ObjectOnOpenEvent ObjectOnOpenEvent;
 
 // Extern declarations
 
-extern const fidl_type_t ObjectCloneReqCoded;
-extern const fidl_type_t ObjectCloseReqCoded;
-extern const fidl_type_t ObjectCloseRspCoded;
-extern const fidl_type_t ObjectListInterfacesReqCoded;
-extern const fidl_type_t ObjectListInterfacesRspCoded;
-extern const fidl_type_t ObjectBindReqCoded;
-extern const fidl_type_t ObjectDescribeReqCoded;
-extern const fidl_type_t ObjectDescribeRspCoded;
-extern const fidl_type_t ObjectOnOpenEvtCoded;
-extern const fidl_type_t NodeSyncReqCoded;
-extern const fidl_type_t NodeSyncRspCoded;
-extern const fidl_type_t NodeGetAttrReqCoded;
-extern const fidl_type_t NodeGetAttrRspCoded;
-extern const fidl_type_t NodeSetAttrReqCoded;
-extern const fidl_type_t NodeSetAttrRspCoded;
-extern const fidl_type_t NodeIoctlReqCoded;
-extern const fidl_type_t NodeIoctlRspCoded;
-extern const fidl_type_t FileReadReqCoded;
-extern const fidl_type_t FileReadRspCoded;
-extern const fidl_type_t FileReadAtReqCoded;
-extern const fidl_type_t FileReadAtRspCoded;
-extern const fidl_type_t FileWriteReqCoded;
-extern const fidl_type_t FileWriteRspCoded;
-extern const fidl_type_t FileWriteAtReqCoded;
-extern const fidl_type_t FileWriteAtRspCoded;
-extern const fidl_type_t FileSeekReqCoded;
-extern const fidl_type_t FileSeekRspCoded;
-extern const fidl_type_t FileTruncateReqCoded;
-extern const fidl_type_t FileTruncateRspCoded;
-extern const fidl_type_t FileGetFlagsReqCoded;
-extern const fidl_type_t FileGetFlagsRspCoded;
-extern const fidl_type_t FileSetFlagsReqCoded;
-extern const fidl_type_t FileSetFlagsRspCoded;
-extern const fidl_type_t FileGetVmoReqCoded;
-extern const fidl_type_t FileGetVmoRspCoded;
-extern const fidl_type_t FileGetVmoAtReqCoded;
-extern const fidl_type_t FileGetVmoAtRspCoded;
-extern const fidl_type_t DirectoryOpenReqCoded;
-extern const fidl_type_t DirectoryUnlinkReqCoded;
-extern const fidl_type_t DirectoryUnlinkRspCoded;
-extern const fidl_type_t DirectoryReadDirentsReqCoded;
-extern const fidl_type_t DirectoryReadDirentsRspCoded;
-extern const fidl_type_t DirectoryRewindReqCoded;
-extern const fidl_type_t DirectoryRewindRspCoded;
-extern const fidl_type_t DirectoryGetTokenReqCoded;
-extern const fidl_type_t DirectoryGetTokenRspCoded;
-extern const fidl_type_t DirectoryRenameReqCoded;
-extern const fidl_type_t DirectoryRenameRspCoded;
-extern const fidl_type_t DirectoryLinkReqCoded;
-extern const fidl_type_t DirectoryLinkRspCoded;
+extern const fidl_type_t DirectoryOpenRequestTable;
+extern const fidl_type_t DirectoryUnlinkRequestTable;
+extern const fidl_type_t DirectoryUnlinkResponseTable;
+extern const fidl_type_t DirectoryReadDirentsRequestTable;
+extern const fidl_type_t DirectoryReadDirentsResponseTable;
+extern const fidl_type_t DirectoryRewindRequestTable;
+extern const fidl_type_t DirectoryRewindResponseTable;
+extern const fidl_type_t DirectoryGetTokenRequestTable;
+extern const fidl_type_t DirectoryGetTokenResponseTable;
+extern const fidl_type_t DirectoryRenameRequestTable;
+extern const fidl_type_t DirectoryRenameResponseTable;
+extern const fidl_type_t DirectoryLinkRequestTable;
+extern const fidl_type_t DirectoryLinkResponseTable;
+extern const fidl_type_t FileReadRequestTable;
+extern const fidl_type_t FileReadResponseTable;
+extern const fidl_type_t FileReadAtRequestTable;
+extern const fidl_type_t FileReadAtResponseTable;
+extern const fidl_type_t FileWriteRequestTable;
+extern const fidl_type_t FileWriteResponseTable;
+extern const fidl_type_t FileWriteAtRequestTable;
+extern const fidl_type_t FileWriteAtResponseTable;
+extern const fidl_type_t FileSeekRequestTable;
+extern const fidl_type_t FileSeekResponseTable;
+extern const fidl_type_t FileTruncateRequestTable;
+extern const fidl_type_t FileTruncateResponseTable;
+extern const fidl_type_t FileGetFlagsRequestTable;
+extern const fidl_type_t FileGetFlagsResponseTable;
+extern const fidl_type_t FileSetFlagsRequestTable;
+extern const fidl_type_t FileSetFlagsResponseTable;
+extern const fidl_type_t FileGetVmoRequestTable;
+extern const fidl_type_t FileGetVmoResponseTable;
+extern const fidl_type_t FileGetVmoAtRequestTable;
+extern const fidl_type_t FileGetVmoAtResponseTable;
+extern const fidl_type_t NodeSyncRequestTable;
+extern const fidl_type_t NodeSyncResponseTable;
+extern const fidl_type_t NodeGetAttrRequestTable;
+extern const fidl_type_t NodeGetAttrResponseTable;
+extern const fidl_type_t NodeSetAttrRequestTable;
+extern const fidl_type_t NodeSetAttrResponseTable;
+extern const fidl_type_t NodeIoctlRequestTable;
+extern const fidl_type_t NodeIoctlResponseTable;
+extern const fidl_type_t ObjectCloneRequestTable;
+extern const fidl_type_t ObjectCloseRequestTable;
+extern const fidl_type_t ObjectCloseResponseTable;
+extern const fidl_type_t ObjectListInterfacesRequestTable;
+extern const fidl_type_t ObjectListInterfacesResponseTable;
+extern const fidl_type_t ObjectBindRequestTable;
+extern const fidl_type_t ObjectDescribeRequestTable;
+extern const fidl_type_t ObjectDescribeResponseTable;
+extern const fidl_type_t ObjectOnOpenEventTable;
 
 // Declarations
 
+
+
+
+
+
+
 struct Service {
-    uint8_t reserved; // Manually inserted to cope with zero-size struct issues
+    uint8_t reserved;
 };
 
-struct File {
-    zx_handle_t e;
+struct DirectoryOpenRequest {
+    fidl_message_header_t hdr;
+    uint32_t flags;
+    uint32_t mode;
+    fidl_string_t path;
+    zx_handle_t object;
 };
 
-struct Directory {
-    uint8_t reserved; // Manually inserted to cope with zero-size struct issues
+struct DirectoryUnlinkRequest {
+    fidl_message_header_t hdr;
+    fidl_string_t path;
 };
 
-struct Pipe {
-    zx_handle_t s;
+struct DirectoryUnlinkResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
 };
 
-struct Vmofile {
-    zx_handle_t v;
+struct DirectoryReadDirentsRequest {
+    fidl_message_header_t hdr;
+    uint64_t max_out;
+};
+
+struct DirectoryReadDirentsResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    fidl_vector_t dirents;
+};
+
+struct DirectoryRewindRequest {
+    fidl_message_header_t hdr;
+};
+
+struct DirectoryRewindResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+struct DirectoryGetTokenRequest {
+    fidl_message_header_t hdr;
+};
+
+struct DirectoryGetTokenResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    zx_handle_t token;
+};
+
+struct DirectoryRenameRequest {
+    fidl_message_header_t hdr;
+    fidl_string_t src;
+    zx_handle_t dst_parent_token;
+    fidl_string_t dst;
+};
+
+struct DirectoryRenameResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+struct DirectoryLinkRequest {
+    fidl_message_header_t hdr;
+    fidl_string_t src;
+    zx_handle_t dst_parent_token;
+    fidl_string_t dst;
+};
+
+struct DirectoryLinkResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct FileReadRequest {
+    fidl_message_header_t hdr;
+    uint64_t count;
+};
+
+struct FileReadResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    fidl_vector_t data;
+};
+
+struct FileReadAtRequest {
+    fidl_message_header_t hdr;
+    uint64_t count;
+    uint64_t offset;
+};
+
+struct FileReadAtResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    fidl_vector_t data;
+};
+
+struct FileWriteRequest {
+    fidl_message_header_t hdr;
+    fidl_vector_t data;
+};
+
+struct FileWriteResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    uint64_t actual;
+};
+
+struct FileWriteAtRequest {
+    fidl_message_header_t hdr;
+    fidl_vector_t data;
+    uint64_t offset;
+};
+
+struct FileWriteAtResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    uint64_t actual;
+};
+
+struct FileSeekRequest {
+    fidl_message_header_t hdr;
+    int64_t offset;
+    SeekOrigin start;
+};
+
+struct FileSeekResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    uint64_t offset;
+};
+
+struct FileTruncateRequest {
+    fidl_message_header_t hdr;
+    uint64_t length;
+};
+
+struct FileTruncateResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+struct FileGetFlagsRequest {
+    fidl_message_header_t hdr;
+};
+
+struct FileGetFlagsResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    uint32_t flags;
+};
+
+struct FileSetFlagsRequest {
+    fidl_message_header_t hdr;
+    uint32_t flags;
+};
+
+struct FileSetFlagsResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+};
+
+struct FileGetVmoRequest {
+    fidl_message_header_t hdr;
+    uint32_t flags;
+};
+
+struct FileGetVmoResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    zx_handle_t vmo;
+};
+
+struct FileGetVmoAtRequest {
+    fidl_message_header_t hdr;
+    uint32_t flags;
     uint64_t offset;
     uint64_t length;
 };
 
-struct Device {
-    zx_handle_t e;
+struct FileGetVmoAtResponse {
+    fidl_message_header_t hdr;
+    zx_status_t s;
+    zx_handle_t vmo;
 };
+
+
+
+
 
 struct NodeAttributes {
     uint32_t mode;
@@ -170,125 +363,37 @@ struct NodeAttributes {
     uint64_t modification_time;
 };
 
-struct ObjectInfo {
-    fidl_union_tag_t tag;
-    union {
-        Service service;
-        File file;
-        Directory directory;
-        Pipe pipe;
-        Vmofile vmofile;
-        Device device;
-    };
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-struct ObjectCloneMsg {
-    fidl_message_header_t hdr;
-    uint32_t flags;
-    zx_handle_t object;
-};
-
-struct ObjectCloseMsg {
+struct NodeSyncRequest {
     fidl_message_header_t hdr;
 };
 
-struct ObjectCloseRsp {
+struct NodeSyncResponse {
     fidl_message_header_t hdr;
     zx_status_t s;
 };
 
-struct ObjectListInterfacesMsg {
+struct NodeGetAttrRequest {
     fidl_message_header_t hdr;
 };
 
-struct ObjectListInterfacesRsp {
-    fidl_message_header_t hdr;
-    fidl_vector_t interfaces;
-};
-
-struct ObjectBindMsg {
-    fidl_message_header_t hdr;
-    fidl_string_t iface;
-};
-
-struct ObjectDescribeMsg {
-    fidl_message_header_t hdr;
-};
-
-struct ObjectDescribeRsp {
-    fidl_message_header_t hdr;
-    ObjectInfo info;
-};
-
-struct ObjectOnOpenEvt {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-    ObjectInfo* info;
-};
-
-struct NodeSyncMsg {
-    fidl_message_header_t hdr;
-};
-
-struct NodeSyncRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-};
-
-struct NodeGetAttrMsg {
-    fidl_message_header_t hdr;
-};
-
-struct NodeGetAttrRsp {
+struct NodeGetAttrResponse {
     fidl_message_header_t hdr;
     zx_status_t s;
     NodeAttributes attributes;
 };
 
-struct NodeSetAttrMsg {
+struct NodeSetAttrRequest {
     fidl_message_header_t hdr;
     uint32_t flags;
     NodeAttributes attributes;
 };
 
-struct NodeSetAttrRsp {
+struct NodeSetAttrResponse {
     fidl_message_header_t hdr;
     zx_status_t s;
 };
 
-struct NodeIoctlMsg {
+struct NodeIoctlRequest {
     fidl_message_header_t hdr;
     uint32_t opcode;
     uint64_t max_out;
@@ -296,203 +401,97 @@ struct NodeIoctlMsg {
     fidl_vector_t in;
 };
 
-struct NodeIoctlRsp {
+struct NodeIoctlResponse {
     fidl_message_header_t hdr;
     zx_status_t s;
     fidl_vector_t handles;
     fidl_vector_t out;
 };
 
-struct FileReadMsg {
-    fidl_message_header_t hdr;
-    uint64_t count;
+struct Device {
+    zx_handle_t event;
 };
 
-struct FileReadRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-    fidl_vector_t data;
-};
-
-struct FileReadAtMsg {
-    fidl_message_header_t hdr;
-    uint64_t count;
-    uint64_t offset;
-};
-
-struct FileReadAtRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-    fidl_vector_t data;
-};
-
-struct FileWriteMsg {
-    fidl_message_header_t hdr;
-    fidl_vector_t data;
-};
-
-struct FileWriteRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-    uint64_t actual;
-};
-
-struct FileWriteAtMsg {
-    fidl_message_header_t hdr;
-    fidl_vector_t data;
-    uint64_t offset;
-};
-
-struct FileWriteAtRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-    uint64_t actual;
-};
-
-struct FileSeekMsg {
-    fidl_message_header_t hdr;
-    int64_t offset;
-    SeekOrigin start;
-};
-
-struct FileSeekRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-    uint64_t offset;
-};
-
-struct FileTruncateMsg {
-    fidl_message_header_t hdr;
-    uint64_t length;
-};
-
-struct FileTruncateRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-};
-
-struct FileGetFlagsMsg {
-    fidl_message_header_t hdr;
-};
-
-struct FileGetFlagsRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-    uint32_t flags;
-};
-
-struct FileSetFlagsMsg {
-    fidl_message_header_t hdr;
-    uint32_t flags;
-};
-
-struct FileSetFlagsRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-};
-
-struct FileGetVmoMsg {
-    fidl_message_header_t hdr;
-    uint32_t flags;
-};
-
-struct FileGetVmoRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-    zx_handle_t v;
-};
-
-struct FileGetVmoAtMsg {
-    fidl_message_header_t hdr;
-    uint32_t flags;
+struct Vmofile {
+    zx_handle_t vmo;
     uint64_t offset;
     uint64_t length;
 };
 
-struct FileGetVmoAtRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-    zx_handle_t v;
+
+struct Pipe {
+    zx_handle_t socket;
 };
 
-struct DirectoryOpenMsg {
+struct DirectoryObject {
+    uint8_t reserved;
+};
+
+struct FileObject {
+    zx_handle_t event;
+};
+
+struct ObjectInfo {
+    fidl_union_tag_t tag;
+    union {
+        Service service;
+        FileObject file;
+        DirectoryObject directory;
+        Pipe pipe;
+        Vmofile vmofile;
+        Device device;
+    };
+};
+#define ObjectInfoTagservice UINT32_C(0)
+#define ObjectInfoTagfile UINT32_C(1)
+#define ObjectInfoTagdirectory UINT32_C(2)
+#define ObjectInfoTagpipe UINT32_C(3)
+#define ObjectInfoTagvmofile UINT32_C(4)
+#define ObjectInfoTagdevice UINT32_C(5)
+
+struct ObjectCloneRequest {
     fidl_message_header_t hdr;
     uint32_t flags;
-    uint32_t mode;
-    fidl_string_t path;
     zx_handle_t object;
 };
 
-struct DirectoryUnlinkMsg {
-    fidl_message_header_t hdr;
-    fidl_string_t path;
-};
-
-struct DirectoryUnlinkRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-};
-
-struct DirectoryReadDirentsMsg {
-    fidl_message_header_t hdr;
-    uint64_t max_out;
-};
-
-struct DirectoryReadDirentsRsp {
-    fidl_message_header_t hdr;
-    zx_status_t s;
-    fidl_vector_t dirents;
-};
-
-struct DirectoryRewindMsg {
+struct ObjectCloseRequest {
     fidl_message_header_t hdr;
 };
 
-struct DirectoryRewindRsp {
+struct ObjectCloseResponse {
     fidl_message_header_t hdr;
     zx_status_t s;
 };
 
-struct DirectoryGetTokenMsg {
+struct ObjectListInterfacesRequest {
     fidl_message_header_t hdr;
 };
 
-struct DirectoryGetTokenRsp {
+struct ObjectListInterfacesResponse {
     fidl_message_header_t hdr;
-    zx_status_t s;
-    zx_handle_t token;
+    fidl_vector_t interfaces;
 };
 
-struct DirectoryRenameMsg {
+struct ObjectBindRequest {
     fidl_message_header_t hdr;
-    fidl_string_t src;
-    zx_handle_t dst_parent_token;
-    fidl_string_t dst;
+    fidl_string_t iface;
 };
 
-struct DirectoryRenameRsp {
+struct ObjectDescribeRequest {
     fidl_message_header_t hdr;
-    zx_status_t s;
 };
 
-struct DirectoryLinkMsg {
+struct ObjectDescribeResponse {
     fidl_message_header_t hdr;
-    fidl_string_t src;
-    zx_handle_t dst_parent_token;
-    fidl_string_t dst;
+    ObjectInfo info;
 };
 
-struct DirectoryLinkRsp {
+struct ObjectOnOpenEvent {
     fidl_message_header_t hdr;
     zx_status_t s;
+    ObjectInfo* info;
 };
-
-#define ObjectInfo_tag_service UINT32_C(0)
-#define ObjectInfo_tag_file UINT32_C(1)
-#define ObjectInfo_tag_directory UINT32_C(2)
-#define ObjectInfo_tag_pipe UINT32_C(3)
-#define ObjectInfo_tag_vmofile UINT32_C(4)
-#define ObjectInfo_tag_device UINT32_C(5)
 
 #if defined(__cplusplus)
 }

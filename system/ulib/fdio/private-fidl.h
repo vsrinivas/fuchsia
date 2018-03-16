@@ -25,7 +25,7 @@ zx_status_t zxrio_write_response(zx_handle_t h, zx_status_t status, zxrio_msg_t*
 zx_status_t zxrio_read_request(zx_handle_t h, zxrio_msg_t* msg);
 
 typedef struct fidl_open_response {
-    alignas(FIDL_ALIGNMENT) ObjectOnOpenEvt response;
+    alignas(FIDL_ALIGNMENT) ObjectOnOpenEvent response;
     alignas(FIDL_ALIGNMENT) ObjectInfo info;
 } fidl_open_response_t;
 

@@ -4,17 +4,24 @@ library io;
 // returned when calling Open or Describe:
 
 // The default protocol, interface information must be acquired via ListInterfaces.
-struct Service {};
+struct Service {
+  uint8 reserved;
+};
+
 // The object may be cast to interface 'File'.
-struct File {
+struct FileObject {
   handle<event>? event;
 };
 // The object may be cast to interface 'Directory'.
-struct Directory {};
+struct DirectoryObject {
+  uint8 reserved;
+};
+
 // The object is accompanied by a pipe.
 struct Pipe {
   handle<socket> socket;
 };
+
 // The object is accompanied by a VMO.
 struct Vmofile {
   handle<vmo> vmo;
@@ -30,8 +37,8 @@ struct Device {
 // how to interpret the optional handle.
 union ObjectInfo {
   Service service;
-  File file;
-  Directory directory;
+  FileObject file;
+  DirectoryObject directory;
   Pipe pipe;
   Vmofile vmofile;
   Device device;

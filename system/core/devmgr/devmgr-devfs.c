@@ -548,17 +548,17 @@ fail:
     zxrio_msg_t msg;
     uint32_t msize;
 #ifdef ZXRIO_FIDL
-    DirectoryOpenMsg* request = (DirectoryOpenMsg*) &msg;
-    memset(request, 0, sizeof(DirectoryOpenMsg));
+    DirectoryOpenRequest* request = (DirectoryOpenRequest*) &msg;
+    memset(request, 0, sizeof(DirectoryOpenRequest));
     request->hdr.ordinal = ZXFIDL_OPEN;
     request->path.size = strlen(path);
     request->path.data = (char*) FIDL_ALLOC_PRESENT;
     request->flags = flags;
     request->object = FIDL_HANDLE_PRESENT;
     void* secondary = (void*)((uintptr_t)(request) +
-                              FIDL_ALIGN(sizeof(DirectoryOpenMsg)));
+                              FIDL_ALIGN(sizeof(DirectoryOpenRequest)));
     memcpy(secondary, path, request->path.size);
-    msize = FIDL_ALIGN(sizeof(DirectoryOpenMsg)) + FIDL_ALIGN(request->path.size);
+    msize = FIDL_ALIGN(sizeof(DirectoryOpenRequest)) + FIDL_ALIGN(request->path.size);
 #else
     memset(&msg, 0, ZXRIO_HDR_SZ);
     msg.op = ZXRIO_OPEN;
@@ -654,7 +654,7 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
     switch (ZXRIO_OP(msg->op)) {
     case ZXFIDL_CLONE:
     case ZXRIO_CLONE: {
-        ObjectCloneMsg* request = (ObjectCloneMsg*) msg;
+        ObjectCloneRequest* request = (ObjectCloneRequest*) msg;
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
         zx_handle_t h;
         uint32_t flags;
@@ -672,7 +672,7 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
     }
     case ZXFIDL_OPEN:
     case ZXRIO_OPEN: {
-        DirectoryOpenMsg* request = (DirectoryOpenMsg*) msg;
+        DirectoryOpenRequest* request = (DirectoryOpenRequest*) msg;
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
         zx_handle_t h;
         char* path;
@@ -698,7 +698,7 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
     case ZXFIDL_STAT:
     case ZXRIO_STAT: {
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        NodeGetAttrRsp* response = (NodeGetAttrRsp*) msg;
+        NodeGetAttrResponse* response = (NodeGetAttrResponse*) msg;
 
         uint32_t mode;
         if (devnode_is_dir(dn)) {
@@ -732,13 +732,13 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
     case ZXFIDL_READDIR:
     case ZXRIO_READDIR: {
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        DirectoryReadDirentsMsg* request = (DirectoryReadDirentsMsg*) msg;
-        DirectoryReadDirentsRsp* response = (DirectoryReadDirentsRsp*) msg;
+        DirectoryReadDirentsRequest* request = (DirectoryReadDirentsRequest*) msg;
+        DirectoryReadDirentsResponse* response = (DirectoryReadDirentsResponse*) msg;
         uint32_t max_out;
         void* data;
 
         if (fidl) {
-            data = (void*)((uintptr_t)(response) + FIDL_ALIGN(sizeof(DirectoryReadDirentsRsp)));
+            data = (void*)((uintptr_t)(response) + FIDL_ALIGN(sizeof(DirectoryReadDirentsResponse)));
             max_out = request->max_out;
         } else {
             max_out = arg;
@@ -766,9 +766,9 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
     case ZXRIO_IOCTL:
     case ZXRIO_IOCTL_1H: {
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        NodeIoctlMsg* request = (NodeIoctlMsg*) msg;
-        NodeIoctlRsp* response = (NodeIoctlRsp*) msg;
-        void* secondary = (void*)((uintptr_t)(msg) + FIDL_ALIGN(sizeof(NodeIoctlRsp)));
+        NodeIoctlRequest* request = (NodeIoctlRequest*) msg;
+        NodeIoctlResponse* response = (NodeIoctlResponse*) msg;
+        void* secondary = (void*)((uintptr_t)(msg) + FIDL_ALIGN(sizeof(NodeIoctlResponse)));
 
         uint32_t op;
         void* in_data;

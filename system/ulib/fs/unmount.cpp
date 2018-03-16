@@ -17,9 +17,9 @@
 zx_status_t vfs_unmount_handle(zx_handle_t srv, zx_time_t deadline) {
     // TODO(smklein): use shared ioctl impl?
 #ifdef ZXRIO_FIDL
-    uint8_t msg[FIDL_ALIGN(sizeof(NodeIoctlMsg)) + FDIO_CHUNK_SIZE];
-    NodeIoctlMsg* request = (NodeIoctlMsg*) msg;
-    NodeIoctlRsp* response = (NodeIoctlRsp*) msg;
+    uint8_t msg[FIDL_ALIGN(sizeof(NodeIoctlRequest)) + FDIO_CHUNK_SIZE];
+    NodeIoctlRequest* request = (NodeIoctlRequest*) msg;
+    NodeIoctlResponse* response = (NodeIoctlResponse*) msg;
 
     // the only other messages we ever send are no-reply OPEN or CLONE with
     // txid of 0.
@@ -37,9 +37,9 @@ zx_status_t vfs_unmount_handle(zx_handle_t srv, zx_time_t deadline) {
     args.wr_handles = NULL;
     args.rd_bytes = response;
     args.rd_handles = NULL;
-    args.wr_num_bytes = FIDL_ALIGN(sizeof(NodeIoctlMsg));
+    args.wr_num_bytes = FIDL_ALIGN(sizeof(NodeIoctlRequest));
     args.wr_num_handles = 0;
-    args.rd_num_bytes = FIDL_ALIGN(sizeof(NodeIoctlRsp));
+    args.rd_num_bytes = FIDL_ALIGN(sizeof(NodeIoctlResponse));
     args.rd_num_handles = 0;
 
     uint32_t dsize;
@@ -57,7 +57,7 @@ zx_status_t vfs_unmount_handle(zx_handle_t srv, zx_time_t deadline) {
     } else if (status == ZX_OK) {
         // Read phase succeeded. If the target filesystem returned an error, we
         // should parse it.
-        if (dsize < FIDL_ALIGN(sizeof(NodeIoctlRsp))) {
+        if (dsize < FIDL_ALIGN(sizeof(NodeIoctlResponse))) {
             status = ZX_ERR_IO;
         } else {
             status = response->s;
