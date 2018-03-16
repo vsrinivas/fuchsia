@@ -3,7 +3,10 @@
 # found in the LICENSE file.
 
 declare_args() {
-  scene_manager_vulkan_swapchain = false
+  # 0 - use normal swapchain
+  # 1 - use vulkan swapchain, but wait for real display
+  # 2 - use vulkan swapchain with fixed-size fake display
+  scene_manager_vulkan_swapchain = 0
 }
 
 config("common_include_dirs") {
@@ -142,10 +145,7 @@ source_set("gfx") {
     "util/wrap.h",
   ]
 
-  defines = []
-  if (scene_manager_vulkan_swapchain) {
-    defines += [ "SCENE_MANAGER_VULKAN_SWAPCHAIN" ]
-  }
+  defines = [ "SCENE_MANAGER_VULKAN_SWAPCHAIN=$scene_manager_vulkan_swapchain" ]
 
   public_configs = [ ":common_include_dirs" ]
 
