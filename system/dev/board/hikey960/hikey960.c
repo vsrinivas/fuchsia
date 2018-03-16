@@ -27,7 +27,8 @@
 #include "hikey960-hw.h"
 
 static zx_status_t hikey960_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
-    *out_mode = USB_MODE_HOST;
+    hikey960_t* hikey = ctx;
+    *out_mode = hikey->initial_usb_mode;
     return ZX_OK;
 }
 
@@ -41,19 +42,13 @@ static zx_status_t hikey960_set_mode(void* ctx, usb_mode_t mode) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    gpio_protocol_t gpio;
-    zx_status_t status = hi3660_get_protocol(hikey->hi3660, ZX_PROTOCOL_GPIO, &gpio);
-    if (status != ZX_OK) {
-        return status;
-    }
+    gpio_config(&hikey->gpio, GPIO_HUB_VDD33_EN, GPIO_DIR_OUT);
+    gpio_config(&hikey->gpio, GPIO_VBUS_TYPEC, GPIO_DIR_OUT);
+    gpio_config(&hikey->gpio, GPIO_USBSW_SW_SEL, GPIO_DIR_OUT);
 
-    gpio_config(&gpio, GPIO_HUB_VDD33_EN, GPIO_DIR_OUT);
-    gpio_config(&gpio, GPIO_VBUS_TYPEC, GPIO_DIR_OUT);
-    gpio_config(&gpio, GPIO_USBSW_SW_SEL, GPIO_DIR_OUT);
-
-    gpio_write(&gpio, GPIO_HUB_VDD33_EN, mode == USB_MODE_HOST);
-    gpio_write(&gpio, GPIO_VBUS_TYPEC, mode == USB_MODE_HOST);
-    gpio_write(&gpio, GPIO_USBSW_SW_SEL, mode == USB_MODE_HOST);
+    gpio_write(&hikey->gpio, GPIO_HUB_VDD33_EN, mode == USB_MODE_HOST);
+    gpio_write(&hikey->gpio, GPIO_VBUS_TYPEC, mode == USB_MODE_HOST);
+    gpio_write(&hikey->gpio, GPIO_USBSW_SW_SEL, mode == USB_MODE_HOST);
 
     // add or remove XHCI device
     pbus_device_enable(&hikey->pbus, PDEV_VID_GENERIC, PDEV_PID_GENERIC, PDEV_DID_USB_XHCI,
@@ -90,18 +85,23 @@ static int hikey960_start_thread(void* arg) {
     hikey->usb_mode_switch.ops = &usb_mode_switch_ops;
     hikey->usb_mode_switch.ctx = hikey;
 
-    zx_status_t status = pbus_set_protocol(&hikey->pbus, ZX_PROTOCOL_USB_MODE_SWITCH,
-                                           &hikey->usb_mode_switch);
+    zx_status_t status = hi3660_get_protocol(hikey->hi3660, ZX_PROTOCOL_GPIO, &hikey->gpio);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+    status = pbus_set_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO, &hikey->gpio);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    gpio_protocol_t gpio;
-    status = hi3660_get_protocol(hikey->hi3660, ZX_PROTOCOL_GPIO, &gpio);
-    if (status != ZX_OK) {
-        goto fail;
-    }
-    status = pbus_set_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO, &gpio);
+    // Use USB device mode by default if power button is pressed at boot
+    uint8_t state;
+    gpio_config(&hikey->gpio, GPIO_PWRON_DET, GPIO_DIR_IN);
+    gpio_read(&hikey->gpio, GPIO_PWRON_DET, &state);
+    // button is active low
+    hikey->initial_usb_mode = (state ? USB_MODE_HOST : USB_MODE_DEVICE);
+
+    status = pbus_set_protocol(&hikey->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &hikey->usb_mode_switch);
     if (status != ZX_OK) {
         goto fail;
     }

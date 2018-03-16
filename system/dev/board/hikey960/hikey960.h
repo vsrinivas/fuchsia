@@ -21,12 +21,14 @@ enum {
 
 typedef struct {
     platform_bus_protocol_t pbus;
+    gpio_protocol_t gpio;
     i2c_protocol_t i2c;
     zx_device_t* parent;
     zx_handle_t bti_handle;
     hi3660_t* hi3660;
     usb_mode_switch_protocol_t usb_mode_switch;
     usb_mode_t usb_mode;
+    usb_mode_t initial_usb_mode;
 } hikey960_t;
 
 // hikey960-devices.c
