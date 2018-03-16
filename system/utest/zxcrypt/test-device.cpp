@@ -34,70 +34,45 @@ namespace zxcrypt {
 namespace testing {
 namespace {
 
-const zx::duration kTimeout = zx::sec(3);
-
 // Takes a given |result|, e.g. from an ioctl, and translates into a zx_status_t.
 zx_status_t ToStatus(ssize_t result) {
     return result < 0 ? static_cast<zx_status_t>(result) : ZX_OK;
 }
 
-// Returns whether a given |path| is present.
-bool Exists(const char* path) {
-    struct stat buf;
-    return stat(path, &buf) == 0;
-}
-
-// Returns the parent directory of a given |child| path via |out_parent|.  |out_parent| must have as
-// much room to hold |child|.
-void DirName(const char* child, char* out_parent) {
-    char* sep = strrchr(child, '/');
-    ZX_DEBUG_ASSERT(sep);
-    *sep = 0;
-    strcpy(out_parent, child);
-    *sep = '/';
-}
-
-// Directory watch callback invoked on watch events, e.g. when a device is added.
-zx_status_t Watcher(int dirfd, int event, const char* filename, void* cookie) {
-    const char* wanted = reinterpret_cast<const char*>(cookie);
-    if (event == WATCH_EVENT_ADD_FILE && strcmp(filename, wanted) == 0) {
-        return ZX_ERR_STOP;
-    }
-    return ZX_OK;
-}
-
-// Watches the parent directory of the given |child| path for it to be added.
-bool WaitFor(char* child) {
-    BEGIN_HELPER;
-
-    // Recursively wait for parent directories to exist
-    char* parent = child;
-    child = strrchr(child, '/');
-    *child++ = '\0';
-    if (!Exists(parent)) {
-        ASSERT_TRUE(WaitFor(parent));
-    }
-    DIR* dir = opendir(parent);
-    auto cleanup = fbl::MakeAutoCall([&] { closedir(dir); });
-
-    // Wait for the expected child to show up in the parent directory.
-    fdio_watch_directory(dirfd(dir), Watcher, zx::deadline_after(kTimeout).get(), child);
-    *--child = '/';
-    child = parent;
-    ASSERT_TRUE(Exists(child));
-
-    END_HELPER;
+// Helper function to build error messages
+char* Error(const char* fmt, ...) {
+    static char err[256];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(err, sizeof(err), fmt, ap);
+    va_end(ap);
+    return err;
 }
 
 // Waits for the given |path| to be opened, opens it, and returns the file descriptor via |out|.
 bool WaitAndOpen(char* path, fbl::unique_fd* out) {
     BEGIN_HELPER;
-    if (!Exists(path)) {
-        ASSERT_TRUE(WaitFor(path));
+
+    // Recursively wait for parent directories to exist
+    char* parent = path;
+    char* sep = strrchr(path, '/');
+    char* child = sep + 1;
+    ASSERT_NONNULL(child);
+    *sep = '\0';
+    ASSERT_GT(strlen(parent), 0);
+    struct stat buf;
+    if (stat(parent, &buf) != 0) {
+        ASSERT_TRUE(WaitAndOpen(parent, nullptr), Error("failed to open %s", parent));
     }
+    ASSERT_EQ(wait_for_driver_bind(parent, child), 0,
+              Error("failed while waiting to bind %s to %s", child, parent));
+    *sep = '/';
     fbl::unique_fd fd(open(path, O_RDWR));
-    ASSERT_TRUE(fd);
-    out->swap(fd);
+    ASSERT_TRUE(fd, Error("failed to open %s", path));
+    if (out) {
+        out->swap(fd);
+    }
+
     END_HELPER;
 }
 
@@ -110,7 +85,7 @@ bool BindAndOpen(const fbl::unique_fd& parent, const char* child, const char* dr
     ASSERT_OK(ToStatus(ioctl_device_bind(parent.get(), driver, strlen(driver))));
     ASSERT_OK(ToStatus(ioctl_device_get_topo_path(parent.get(), path, sizeof(path))));
     ASSERT_GE(snprintf(path, sizeof(path), "%s/%s", path, child), 0);
-    ASSERT_TRUE(WaitAndOpen(path, out));
+    ASSERT_TRUE(WaitAndOpen(path, out), Error("failed to open %s", path));
     END_HELPER;
 }
 
@@ -182,9 +157,10 @@ bool TestDevice::Rebind() {
     zxcrypt_.reset();
     fvm_part_.reset();
     ramdisk_.reset();
-    ASSERT_TRUE(WaitAndOpen(ramdisk_path_, &ramdisk_));
+    ASSERT_TRUE(WaitAndOpen(ramdisk_path_, &ramdisk_), Error("failed to open %s", ramdisk_path_));
     if (strlen(fvm_part_path_) != 0) {
-        ASSERT_TRUE(WaitAndOpen(fvm_part_path_, &fvm_part_));
+        ASSERT_TRUE(WaitAndOpen(fvm_part_path_, &fvm_part_),
+                    Error("failed to open %s", fvm_part_path_));
     }
 
     ASSERT_TRUE(Connect());
@@ -260,7 +236,7 @@ bool TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
 
     ASSERT_EQ(create_ramdisk(block_size, count, ramdisk_path_), 0);
     ramdisk_.reset(open(ramdisk_path_, O_RDWR));
-    ASSERT_TRUE(ramdisk_);
+    ASSERT_TRUE(ramdisk_, Error("failed to open %s", ramdisk_path_));
 
     block_size_ = block_size;
     block_count_ = count;
@@ -285,7 +261,8 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     // Format the ramdisk as FVM and bind to it
     fbl::unique_fd fvm_fd;
     ASSERT_OK(fvm_init(ramdisk_.get(), FVM_BLOCK_SIZE));
-    ASSERT_TRUE(BindAndOpen(ramdisk_, "fvm", "/boot/driver/fvm.so", &fvm_fd));
+    ASSERT_TRUE(BindAndOpen(ramdisk_, "fvm", "/boot/driver/fvm.so", &fvm_fd),
+                Error("failed to bind and open fvm"));
 
     // Allocate a FVM partition with the last slice unallocated.
     alloc_req_t req;
@@ -310,7 +287,8 @@ bool TestDevice::Connect() {
     BEGIN_HELPER;
     ZX_DEBUG_ASSERT(!zxcrypt_);
 
-    ASSERT_TRUE(BindAndOpen(parent(), "zxcrypt/block", "/boot/driver/zxcrypt.so", &zxcrypt_));
+    ASSERT_TRUE(BindAndOpen(parent(), "zxcrypt/block", "/boot/driver/zxcrypt.so", &zxcrypt_),
+                Error("failed to bind and open zxcrypt"));
 
     block_info_t blk;
     ASSERT_OK(ToStatus(ioctl_block_get_info(zxcrypt_.get(), &blk)));
