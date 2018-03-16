@@ -25,7 +25,7 @@ zx_status_t SynchronousProxy::Send(const fidl_type_t* type, Message message) {
   const char* error_msg = nullptr;
   zx_status_t status = message.Validate(type, &error_msg);
   if (status != ZX_OK) {
-    fprintf(stderr, "error: fidl_valdate: %s\n", error_msg);
+    fprintf(stderr, "error: fidl_validate: %s\n", error_msg);
     return status;
   }
   return message.Write(channel_.get(), 0);
@@ -39,7 +39,7 @@ zx_status_t SynchronousProxy::Call(const fidl_type_t* request_type,
   const char* error_msg = nullptr;
   zx_status_t status = request.Validate(request_type, &error_msg);
   if (status != ZX_OK) {
-    fprintf(stderr, "error: fidl_valdate: %s\n", error_msg);
+    fprintf(stderr, "error: fidl_validate: %s\n", error_msg);
     return status;
   }
   status = request.Call(channel_.get(), 0, ZX_TIME_INFINITE, nullptr, response);
