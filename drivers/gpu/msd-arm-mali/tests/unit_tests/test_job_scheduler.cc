@@ -22,7 +22,7 @@ public:
     void RunAtom(MsdArmAtom* atom) override { run_list_.push_back(atom); }
     void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result_code) override
     {
-        atom->set_finished();
+        atom->set_result_code(result_code);
         completed_list_.push_back(ResultPair(atom, result_code));
     }
     void HardStopAtom(MsdArmAtom* atom) override { stopped_atoms_.push_back(atom); }
@@ -153,14 +153,15 @@ public:
             std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
 
         auto atom2 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
-        atom2->set_dependencies({unqueued_atom1});
+        atom2->set_dependencies({MsdArmAtom::Dependency{kArmMaliDependencyOrder, unqueued_atom1}});
         scheduler.EnqueueAtom(atom2);
 
         auto atom3 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
         scheduler.EnqueueAtom(atom3);
 
         auto atom4 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
-        atom4->set_dependencies({atom3, unqueued_atom2});
+        atom4->set_dependencies({MsdArmAtom::Dependency{kArmMaliDependencyOrder, atom3},
+                                 MsdArmAtom::Dependency{kArmMaliDependencyOrder, unqueued_atom2}});
         scheduler.EnqueueAtom(atom4);
 
         EXPECT_EQ(3u, scheduler.GetAtomListSize());
@@ -176,24 +177,70 @@ public:
         EXPECT_EQ(nullptr, scheduler.executing_atom());
         EXPECT_EQ(2u, scheduler.GetAtomListSize());
 
-        atom3->set_finished();
         scheduler.TryToSchedule();
 
         // one dependency of atom2 isn't finished yet
         EXPECT_EQ(nullptr, scheduler.executing_atom());
         EXPECT_EQ(2u, scheduler.GetAtomListSize());
 
-        unqueued_atom2->set_finished();
+        unqueued_atom2->set_result_code(kArmMaliResultTerminated);
         scheduler.TryToSchedule();
 
         EXPECT_EQ(atom4.get(), scheduler.executing_atom());
         EXPECT_EQ(1u, scheduler.GetAtomListSize());
 
+        unqueued_atom1->set_result_code(kArmMaliResultSuccess);
         unqueued_atom1.reset();
 
         scheduler.JobCompleted(0, kArmMaliResultSuccess);
         EXPECT_EQ(atom2.get(), scheduler.executing_atom());
         EXPECT_EQ(0u, scheduler.GetAtomListSize());
+    }
+
+    void TestDataDependency()
+    {
+        TestOwner owner;
+        TestConnectionOwner connection_owner;
+        std::shared_ptr<MsdArmConnection> connection =
+            MsdArmConnection::Create(0, &connection_owner);
+        JobScheduler scheduler(&owner, 1);
+
+        auto unqueued_atom1 =
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+
+        auto unqueued_atom2 =
+            std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+
+        auto atom2 = std::make_shared<MsdArmAtom>(connection, 1, 0, 0, magma_arm_mali_user_data());
+
+        atom2->set_dependencies({MsdArmAtom::Dependency{kArmMaliDependencyData, unqueued_atom1},
+                                 MsdArmAtom::Dependency{kArmMaliDependencyData, unqueued_atom2}});
+        scheduler.EnqueueAtom(atom2);
+
+        EXPECT_EQ(1u, scheduler.GetAtomListSize());
+        EXPECT_EQ(nullptr, scheduler.executing_atom());
+
+        scheduler.TryToSchedule();
+
+        EXPECT_EQ(1u, scheduler.GetAtomListSize());
+        EXPECT_EQ(nullptr, scheduler.executing_atom());
+
+        unqueued_atom2->set_result_code(kArmMaliResultUnknownFault);
+
+        scheduler.TryToSchedule();
+        // Needs second dependency before scheduling
+        EXPECT_EQ(1u, scheduler.GetAtomListSize());
+        EXPECT_EQ(nullptr, scheduler.executing_atom());
+
+        unqueued_atom1->set_result_code(kArmMaliResultSuccess);
+        scheduler.TryToSchedule();
+
+        EXPECT_EQ(0u, scheduler.GetAtomListSize());
+        EXPECT_EQ(nullptr, scheduler.executing_atom());
+
+        // Error result should be propagated.
+        EXPECT_EQ(1u, owner.completed_list().size());
+        EXPECT_EQ(kArmMaliResultUnknownFault, owner.completed_list()[0].second);
     }
 
     void TestTimeout()
@@ -389,7 +436,8 @@ public:
 
         auto atom_null =
             std::make_shared<MsdArmAtom>(connection, 0u, 0, 0, magma_arm_mali_user_data());
-        atom_null->set_dependencies(MsdArmAtom::DependencyList{atom_semaphore});
+        atom_null->set_dependencies(MsdArmAtom::DependencyList{
+            MsdArmAtom::Dependency{kArmMaliDependencyData, atom_semaphore}});
         scheduler.EnqueueAtom(atom_null);
 
         auto atom_slot0 =
@@ -398,7 +446,8 @@ public:
 
         auto atom_slot1 =
             std::make_shared<MsdArmAtom>(connection, 1u, 1u, 0, magma_arm_mali_user_data());
-        atom_slot1->set_dependencies(MsdArmAtom::DependencyList{atom_null});
+        atom_slot1->set_dependencies(
+            MsdArmAtom::DependencyList{MsdArmAtom::Dependency{kArmMaliDependencyData, atom_null}});
         scheduler.EnqueueAtom(atom_slot1);
 
         semaphore->Signal();
@@ -424,6 +473,8 @@ TEST(JobScheduler, RunBasic) { TestJobScheduler().TestRunBasic(); }
 TEST(JobScheduler, CancelJob) { TestJobScheduler().TestCancelJob(); }
 
 TEST(JobScheduler, JobDependencies) { TestJobScheduler().TestJobDependencies(); }
+
+TEST(JobScheduler, DataDependency) { TestJobScheduler().TestDataDependency(); }
 
 TEST(JobScheduler, Timeout) { TestJobScheduler().TestTimeout(); }
 

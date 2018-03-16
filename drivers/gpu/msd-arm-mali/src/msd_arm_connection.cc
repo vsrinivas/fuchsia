@@ -46,6 +46,12 @@ bool MsdArmConnection::ExecuteAtom(
     std::deque<std::shared_ptr<magma::PlatformSemaphore>>* semaphores)
 {
     uint8_t atom_number = atom->atom_number;
+    if (outstanding_atoms_[atom_number] &&
+        outstanding_atoms_[atom_number]->result_code() == kArmMaliResultRunning) {
+        magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Submitted atom number already in use",
+                   client_id_);
+        return false;
+    }
     uint32_t flags = atom->flags;
     magma_arm_mali_user_data user_data;
     user_data.data[0] = atom->data.data[0];
@@ -54,11 +60,13 @@ bool MsdArmConnection::ExecuteAtom(
     if (flags & kAtomFlagSoftware) {
         if (flags != kAtomFlagSemaphoreSet && flags != kAtomFlagSemaphoreReset &&
             flags != kAtomFlagSemaphoreWait && flags != kAtomFlagSemaphoreWaitAndReset) {
-            magma::log(magma::LOG_WARNING, "Invalid soft atom flags 0x%x\n", flags);
+            magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Invalid soft atom flags 0x%x\n",
+                       client_id_, flags);
             return false;
         }
         if (semaphores->empty()) {
-            magma::log(magma::LOG_WARNING, "No remaining semaphores");
+            magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": No remaining semaphores",
+                       client_id_);
             return false;
         }
 
@@ -69,7 +77,8 @@ bool MsdArmConnection::ExecuteAtom(
     } else {
         uint32_t slot = flags & kAtomFlagRequireFragmentShader ? 0 : 1;
         if (slot == 0 && (flags & (kAtomFlagRequireComputeShader | kAtomFlagRequireTiler))) {
-            magma::log(magma::LOG_WARNING, "Invalid atom flags 0x%x\n", flags);
+            magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Invalid atom flags 0x%x\n",
+                       client_id_, flags);
             return false;
         }
         msd_atom = std::make_shared<MsdArmAtom>(shared_from_this(), atom->job_chain_addr, slot,
@@ -82,9 +91,24 @@ bool MsdArmConnection::ExecuteAtom(
 
         MsdArmAtom::DependencyList dependencies;
         for (size_t i = 0; i < arraysize(atom->dependencies); i++) {
-            uint8_t dependency = atom->dependencies[i];
-            if (dependency)
-                dependencies.push_back(outstanding_atoms_[dependency]);
+            uint8_t dependency = atom->dependencies[i].atom_number;
+            if (dependency) {
+                if (!outstanding_atoms_[dependency]) {
+                    magma::log(magma::LOG_WARNING,
+                               "Client %" PRIu64
+                               ": Dependency on atom that hasn't been submitted yet",
+                               client_id_);
+                    return false;
+                }
+                auto type = static_cast<ArmMaliDependencyType>(atom->dependencies[i].type);
+                if (type != kArmMaliDependencyOrder && type != kArmMaliDependencyData) {
+                    magma::log(magma::LOG_WARNING,
+                               "Client %" PRIu64 ": Invalid dependency type: %d", client_id_, type);
+                    return false;
+                }
+                dependencies.push_back(
+                    MsdArmAtom::Dependency{type, outstanding_atoms_[dependency]});
+            }
         }
         msd_atom->set_dependencies(dependencies);
 
@@ -365,7 +389,6 @@ void MsdArmConnection::SetNotificationChannel(msd_channel_send_callback_t send_c
 void MsdArmConnection::SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode status)
 {
     std::lock_guard<std::mutex> lock(channel_lock_);
-    outstanding_atoms_[atom->atom_number()].reset();
     // It may already have been destroyed on the main thread.
     if (!return_channel_)
         return;

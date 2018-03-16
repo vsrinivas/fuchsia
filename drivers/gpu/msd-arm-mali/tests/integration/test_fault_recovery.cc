@@ -61,9 +61,9 @@ public:
             magma_release_connection(connection_);
     }
 
-    enum How { NORMAL, JOB_FAULT, MMU_FAULT };
+    enum How { NORMAL, NORMAL_ORDER, NORMAL_DATA, JOB_FAULT, MMU_FAULT };
 
-    void SubmitCommandBuffer(How how)
+    void SubmitCommandBuffer(How how, uint8_t atom_number, uint8_t atom_dependency)
     {
         ASSERT_NE(connection_, nullptr);
 
@@ -76,7 +76,8 @@ public:
 
         std::vector<uint8_t> vaddr(sizeof(magma_arm_mali_atom));
 
-        ASSERT_TRUE(InitBatchBuffer(vaddr.data(), vaddr.size(), job_va, how));
+        ASSERT_TRUE(
+            InitBatchBuffer(vaddr.data(), vaddr.size(), job_va, atom_number, atom_dependency, how));
 
         magma_system_inline_command_buffer command_buffer;
         command_buffer.data = vaddr.data();
@@ -95,14 +96,16 @@ public:
         EXPECT_EQ(MAGMA_STATUS_OK, magma_read_notification_channel(connection_, &status,
                                                                    sizeof(status), &status_size));
         EXPECT_EQ(status_size, sizeof(status));
-        EXPECT_EQ(1u, status.atom_number);
+        EXPECT_EQ(atom_number, status.atom_number);
 
         switch (how) {
             case NORMAL:
+            case NORMAL_ORDER:
                 EXPECT_EQ(kArmMaliResultSuccess, status.result_code);
                 break;
 
             case JOB_FAULT:
+            case NORMAL_DATA:
                 EXPECT_NE(kArmMaliResultReadFault, status.result_code);
                 EXPECT_NE(kArmMaliResultSuccess, status.result_code);
                 break;
@@ -115,7 +118,8 @@ public:
         magma_release_buffer(connection_, job_buffer);
     }
 
-    bool InitBatchBuffer(void* vaddr, uint64_t size, uint64_t job_va, How how)
+    bool InitBatchBuffer(void* vaddr, uint64_t size, uint64_t job_va, uint8_t atom_number,
+                         uint8_t atom_dependency, How how)
     {
         memset(vaddr, 0, size);
 
@@ -127,7 +131,10 @@ public:
         } else {
             atom->job_chain_addr = job_va;
         }
-        atom->atom_number = 1;
+        atom->atom_number = atom_number;
+        atom->dependencies[0].atom_number = atom_dependency;
+        atom->dependencies[0].type =
+            how == NORMAL_DATA ? kArmMaliDependencyData : kArmMaliDependencyOrder;
 
         return true;
     }
@@ -168,20 +175,38 @@ TEST(FaultRecovery, Test)
 {
     std::unique_ptr<TestConnection> test;
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::NORMAL);
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0);
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::JOB_FAULT);
+    test->SubmitCommandBuffer(TestConnection::JOB_FAULT, 1, 0);
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::NORMAL);
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0);
+}
+
+TEST(FaultRecovery, TestOrderDependency)
+{
+    std::unique_ptr<TestConnection> test;
+    test.reset(new TestConnection());
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0);
+    test->SubmitCommandBuffer(TestConnection::JOB_FAULT, 2, 1);
+    test->SubmitCommandBuffer(TestConnection::NORMAL_ORDER, 3, 2);
+}
+
+TEST(FaultRecovery, TestDataDependency)
+{
+    std::unique_ptr<TestConnection> test;
+    test.reset(new TestConnection());
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0);
+    test->SubmitCommandBuffer(TestConnection::JOB_FAULT, 2, 1);
+    test->SubmitCommandBuffer(TestConnection::NORMAL_DATA, 3, 2);
 }
 
 TEST(FaultRecovery, TestMmu)
 {
     std::unique_ptr<TestConnection> test;
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::NORMAL);
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0);
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::MMU_FAULT);
+    test->SubmitCommandBuffer(TestConnection::MMU_FAULT, 1, 0);
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(TestConnection::NORMAL);
+    test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0);
 }

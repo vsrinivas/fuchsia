@@ -47,6 +47,8 @@ enum ArmMaliResultCodeFlags {
 };
 
 enum ArmMaliResultCode {
+    kArmMaliResultRunning = 0,
+
     // These codes match the result codes from hardware.
     kArmMaliResultSuccess = 1,
     // The atom was terminated with a hard stop.
@@ -89,6 +91,19 @@ enum ArmMaliCacheCoherencyStatus {
     kArmMaliCacheCoherencyNone = 31,
 };
 
+enum ArmMaliDependencyType {
+    // Data dependencies cause dependent atoms to fail.
+    kArmMaliDependencyData = 0,
+
+    // Order dependencies allow dependent atoms to execute, even on failure.
+    kArmMaliDependencyOrder = 1,
+};
+
+struct magma_arm_mali_dependency {
+    uint8_t type;        // ArmMaliDependencyType
+    uint8_t atom_number; // 0 means no dependency.
+} __attribute__((packed));
+
 // This is arbitrary user data that's used to identify an atom.
 struct magma_arm_mali_user_data {
     uint64_t data[2];
@@ -100,8 +115,7 @@ struct magma_arm_mali_atom {
     uint32_t flags; // a set of AtomFlags.
     uint8_t atom_number;
 
-    // The atom numbers of the atoms this depends on. 0 means no dependency.
-    uint8_t dependencies[2];
+    magma_arm_mali_dependency dependencies[2];
 } __attribute__((packed));
 
 struct magma_arm_mali_status {

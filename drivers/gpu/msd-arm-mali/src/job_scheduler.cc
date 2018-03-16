@@ -41,27 +41,37 @@ void JobScheduler::TryToSchedule()
             return;
         bool found_atom = false;
         for (auto it = atoms_.begin(); it != atoms_.end(); ++it) {
-            if ((*it)->AreDependenciesFinished()) {
-                auto soft_atom = MsdArmSoftAtom::cast(*it);
+            std::shared_ptr<MsdArmAtom> atom = *it;
+            bool dependencies_finished;
+            atom->UpdateDependencies(&dependencies_finished);
+            if (dependencies_finished) {
+                ArmMaliResultCode dep_status = atom->GetFinalDependencyResult();
+                if (dep_status != kArmMaliResultSuccess) {
+                    owner_->AtomCompleted(it->get(), dep_status);
+                    atoms_.erase(it);
+                    break;
+                }
+
+                auto soft_atom = MsdArmSoftAtom::cast(atom);
                 if (soft_atom) {
                     found_atom = true;
                     atoms_.erase(it);
                     soft_atom->SetExecutionStarted();
                     ProcessSoftAtom(soft_atom);
                     break;
-                } else if ((*it)->IsDependencyOnly()) {
+                } else if (atom->IsDependencyOnly()) {
                     found_atom = true;
                     owner_->AtomCompleted(it->get(), kArmMaliResultSuccess);
                     atoms_.erase(it);
                     break;
 
                 } else {
-                    uint32_t slot = (*it)->slot();
+                    uint32_t slot = atom->slot();
                     DASSERT(slot < executing_atoms_.size());
                     if (!executing_atoms_[slot]) {
                         found_atom = true;
-                        (*it)->SetExecutionStarted();
-                        executing_atoms_[slot] = *it;
+                        atom->SetExecutionStarted();
+                        executing_atoms_[slot] = atom;
                         atoms_.erase(it);
                         TRACE_ASYNC_BEGIN("magma", AtomRunningString(slot),
                                           executing_atoms_[slot]->trace_nonce());
@@ -70,7 +80,7 @@ void JobScheduler::TryToSchedule()
                     }
                 }
             } else {
-                DLOG("Skipping atom %lx due to dependency", (*it)->gpu_address());
+                DLOG("Skipping atom %lx due to dependency", (atom)->gpu_address());
             }
         }
         if (!found_atom)

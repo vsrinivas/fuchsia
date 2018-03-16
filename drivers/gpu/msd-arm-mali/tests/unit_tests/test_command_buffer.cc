@@ -19,12 +19,76 @@ public:
         auto ctx = InitializeContext();
         ASSERT_TRUE(ctx);
 
-        magma_arm_mali_atom atom;
-        atom.atom_number = 0;
-        atom.flags = 1;
+        magma_arm_mali_atom atom[2];
+        atom[0].atom_number = 1;
+        atom[0].flags = 1;
+        atom[0].dependencies[0].atom_number = 0;
+        atom[0].dependencies[1].atom_number = 0;
+        atom[1].atom_number = 2;
+        atom[1].flags = 1;
+        atom[1].dependencies[0].atom_number = 1;
+        atom[1].dependencies[0].type = kArmMaliDependencyOrder;
+        atom[1].dependencies[1].atom_number = 0;
 
         magma::Status status = ctx->ExecuteImmediateCommands(sizeof(atom), &atom, 0, nullptr);
         EXPECT_EQ(MAGMA_STATUS_OK, status.get());
+    }
+
+    void TestInvalidInUse()
+    {
+        auto ctx = InitializeContext();
+        ASSERT_TRUE(ctx);
+
+        magma_arm_mali_atom atom[2];
+        atom[0].atom_number = 0;
+        atom[0].flags = 1;
+        atom[0].dependencies[0].atom_number = 0;
+        atom[0].dependencies[1].atom_number = 0;
+        atom[1].atom_number = 0;
+        atom[1].flags = 1;
+        atom[1].dependencies[0].atom_number = 0;
+        atom[1].dependencies[1].atom_number = 0;
+
+        magma::Status status = ctx->ExecuteImmediateCommands(sizeof(atom), &atom, 0, nullptr);
+        // There's no device thread, so the atoms shouldn't be able to complete.
+        EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, status.get());
+    }
+
+    void TestInvalidDependencyNotSubmitted()
+    {
+        auto ctx = InitializeContext();
+        ASSERT_TRUE(ctx);
+
+        magma_arm_mali_atom atom;
+        atom.atom_number = 1;
+        atom.flags = 1;
+        // Can't depend on self or on later atoms.
+        atom.dependencies[0].atom_number = 1;
+        atom.dependencies[0].type = kArmMaliDependencyOrder;
+        atom.dependencies[1].atom_number = 0;
+
+        magma::Status status = ctx->ExecuteImmediateCommands(sizeof(atom), &atom, 0, nullptr);
+        EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, status.get());
+    }
+
+    void TestInvalidDependencyType()
+    {
+        auto ctx = InitializeContext();
+        ASSERT_TRUE(ctx);
+
+        magma_arm_mali_atom atom[2];
+        atom[0].atom_number = 1;
+        atom[0].flags = 1;
+        atom[0].dependencies[0].atom_number = 0;
+        atom[0].dependencies[1].atom_number = 0;
+        atom[1].atom_number = 2;
+        atom[1].flags = 1;
+        atom[1].dependencies[0].atom_number = 1;
+        atom[1].dependencies[0].type = 5;
+        atom[1].dependencies[1].atom_number = 0;
+
+        magma::Status status = ctx->ExecuteImmediateCommands(sizeof(atom), &atom, 0, nullptr);
+        EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, status.get());
     }
 
     void TestInvalidSemaphoreImmediate()
@@ -35,6 +99,8 @@ public:
         magma_arm_mali_atom atom;
         atom.atom_number = 0;
         atom.flags = kAtomFlagSemaphoreSet;
+        atom.dependencies[0].atom_number = 0;
+        atom.dependencies[1].atom_number = 0;
 
         magma::Status status = ctx->ExecuteImmediateCommands(sizeof(atom), &atom, 0, nullptr);
         EXPECT_EQ(MAGMA_STATUS_CONTEXT_KILLED, status.get());
@@ -52,6 +118,8 @@ public:
         magma_arm_mali_atom atom;
         atom.atom_number = 0;
         atom.flags = kAtomFlagSemaphoreSet;
+        atom.dependencies[0].atom_number = 0;
+        atom.dependencies[1].atom_number = 0;
         uint64_t semaphores[] = {platform_semaphore->id()};
 
         magma::Status status = ctx->ExecuteImmediateCommands(sizeof(atom), &atom, 1, semaphores);
@@ -100,4 +168,10 @@ private:
 TEST(CommandBuffer, TestInvalidSemaphoreImmediate) { ::Test().TestInvalidSemaphoreImmediate(); }
 TEST(CommandBuffer, TestSemaphoreImmediate) { ::Test().TestSemaphoreImmediate(); }
 TEST(CommandBuffer, TestValidImmediate) { ::Test().TestValidImmediate(); }
+TEST(CommandBuffer, TestInvalidInUse) { ::Test().TestInvalidInUse(); }
+TEST(CommandBuffer, TestInvalidDependencyType) { ::Test().TestInvalidDependencyType(); }
+TEST(CommandBuffer, TestInvalidDependencyNotSubmitted)
+{
+    ::Test().TestInvalidDependencyNotSubmitted();
+}
 }

@@ -16,7 +16,12 @@
 
 class MsdArmAtom {
 public:
-    using DependencyList = std::vector<std::weak_ptr<MsdArmAtom>>;
+    struct Dependency {
+        ArmMaliDependencyType type;
+        std::shared_ptr<MsdArmAtom> atom;
+        ArmMaliResultCode saved_result = kArmMaliResultRunning;
+    };
+    using DependencyList = std::vector<Dependency>;
 
     static constexpr uint64_t kInvalidGpuAddress = ~0ul;
 
@@ -33,11 +38,20 @@ public:
     bool IsDependencyOnly() const { return !gpu_address_; }
 
     void set_dependencies(const DependencyList& dependencies);
-    bool AreDependenciesFinished();
+    void UpdateDependencies(bool* all_finished_out);
+
+    // Returns a failure result code if a data dependency of this atom failed.
+    ArmMaliResultCode GetFinalDependencyResult() const;
+
+    ArmMaliResultCode result_code() const { return result_code_; }
 
     // These methods should only be called on the device thread.
-    bool finished() const { return finished_; }
-    void set_finished() { finished_ = true; }
+    void set_result_code(ArmMaliResultCode code)
+    {
+        DASSERT(result_code_ == kArmMaliResultRunning);
+
+        result_code_ = code;
+    }
     bool hard_stopped() const { return hard_stopped_; }
     void set_hard_stopped() { hard_stopped_ = true; }
     void SetExecutionStarted();
@@ -68,7 +82,7 @@ private:
     const magma_arm_mali_user_data user_data_;
 
     // This data is mutable after construction from the device thread.
-    bool finished_ = false;
+    ArmMaliResultCode result_code_ = kArmMaliResultRunning;
     std::shared_ptr<AddressSlotMapping> address_slot_mapping_;
     std::chrono::time_point<std::chrono::steady_clock> execution_start_time_;
     bool hard_stopped_ = false;

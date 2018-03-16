@@ -108,7 +108,7 @@ private:
     std::mutex channel_lock_;
     msd_channel_send_callback_t send_callback_;
     msd_channel_t return_channel_ = {};
-    std::weak_ptr<MsdArmAtom> outstanding_atoms_[256] = {};
+    std::shared_ptr<MsdArmAtom> outstanding_atoms_[256];
 };
 
 class MsdArmAbiConnection : public msd_connection_t {

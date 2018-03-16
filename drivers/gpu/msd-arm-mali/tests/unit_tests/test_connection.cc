@@ -323,7 +323,7 @@ public:
         auto connection = MsdArmConnection::Create(0, &owner);
         EXPECT_TRUE(connection);
 
-        magma_arm_mali_atom client_atom;
+        magma_arm_mali_atom client_atom = {};
         client_atom.flags = kAtomFlagSemaphoreWait;
         std::deque<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
         EXPECT_FALSE(connection->ExecuteAtom(&client_atom, &semaphores));

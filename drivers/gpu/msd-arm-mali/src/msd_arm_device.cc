@@ -695,7 +695,9 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* register_io
     TRACE_DURATION("magma", "ExecuteAtomOnDevice", "address", atom->gpu_address(), "slot",
                    atom->slot());
     DASSERT(atom->slot() < 2u);
-    DASSERT(atom->AreDependenciesFinished());
+    bool dependencies_finished;
+    atom->UpdateDependencies(&dependencies_finished);
+    DASSERT(dependencies_finished);
     DASSERT(atom->gpu_address());
 
     // Skip atom if address space can't be assigned.
@@ -728,7 +730,7 @@ void MsdArmDevice::AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result)
     TRACE_DURATION("magma", "AtomCompleted", "address", atom->gpu_address());
     DLOG("Completed job atom: 0x%lx\n", atom->gpu_address());
     address_manager_->AtomFinished(atom);
-    atom->set_finished();
+    atom->set_result_code(result);
     auto connection = atom->connection().lock();
     if (connection)
         connection->SendNotificationData(atom, result);
