@@ -50,4 +50,4 @@ if [[ ! ${ARCH} ]]; then
     HELP
 fi
 
-${DIR}/make-parallel ${ARCH} ${ARGS} "$@"
+exec ${DIR}/make-parallel ${ARCH} ${ARGS} "$@"

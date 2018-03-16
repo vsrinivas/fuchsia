@@ -25,4 +25,4 @@ FreeBSD)
     ;;
 esac
 
-$MAKE $PARALLEL "$@"
+exec $MAKE $PARALLEL "$@"
