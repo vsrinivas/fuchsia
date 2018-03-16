@@ -7,6 +7,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
+MODULE_EXPORT := a
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/mdi.c \
