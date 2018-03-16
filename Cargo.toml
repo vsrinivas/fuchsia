@@ -91,4 +91,8 @@ tokio-core = { path = "../third_party/rust-mirrors/tokio-core" }
 wlan-rsn = { path = "lib/rust/crates/wlan-rsn" }
 wlan-sme = { path = "lib/rust/crates/wlan-sme" }
 xi-core-lib = { path = "../third_party/rust-mirrors/xi-editor/rust/core-lib" }
+xi-rope = { path = "../third_party/rust-mirrors/xi-editor/rust/rope" }
 xi-rpc = { path = "../third_party/rust-mirrors/xi-editor/rust/rpc" }
+xi-trace = { path = "../third_party/rust-mirrors/xi-editor/rust/trace" }
+xi-trace-dump = { path = "../third_party/rust-mirrors/xi-editor/rust/trace-dump" }
+xi-unicode = { path = "../third_party/rust-mirrors/xi-editor/rust/unicode" }
