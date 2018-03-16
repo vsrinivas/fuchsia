@@ -23,12 +23,13 @@ class ResponsePrinter {
 
 class EchoClientApp {
  public:
-  EchoClientApp() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  EchoClientApp()
+      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
     FXL_DCHECK(context_);
   }
 
   bool Start(std::string server_url, std::string msg) {
-    auto launch_info = app::ApplicationLaunchInfo::New();
+    auto launch_info = component::ApplicationLaunchInfo::New();
     launch_info->url = server_url;
     launch_info->directory_request = echo_provider_.NewRequest();
 
@@ -46,9 +47,9 @@ class EchoClientApp {
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> context_;
-  app::Services echo_provider_;
-  app::ApplicationControllerPtr controller_;
+  std::unique_ptr<component::ApplicationContext> context_;
+  component::Services echo_provider_;
+  component::ApplicationControllerPtr controller_;
   echo::EchoPtr echo_;
 };
 

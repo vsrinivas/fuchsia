@@ -15,7 +15,7 @@
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/files/unique_fd.h"
 
-namespace app {
+namespace component {
 
 NamespaceBuilder::NamespaceBuilder() = default;
 
@@ -168,4 +168,4 @@ void NamespaceBuilder::Release() {
   handle_pool_.clear();
 }
 
-}  // namespace app
+}  // namespace component

@@ -25,7 +25,7 @@ class NetConnectorParams {
   bool show_devices() const { return show_devices_; }
   bool mdns_verbose() const { return mdns_verbose_; }
 
-  std::unordered_map<std::string, app::ApplicationLaunchInfoPtr>
+  std::unordered_map<std::string, component::ApplicationLaunchInfoPtr>
   MoveServices() {
     return std::move(launch_infos_by_service_name_);
   }
@@ -46,13 +46,13 @@ class NetConnectorParams {
   bool ParseConfig(const std::string& string);
 
   void RegisterService(const std::string& selector,
-                       app::ApplicationLaunchInfoPtr launch_info);
+                       component::ApplicationLaunchInfoPtr launch_info);
 
   bool is_valid_;
   bool listen_ = false;
   bool show_devices_ = false;
   bool mdns_verbose_ = false;
-  std::unordered_map<std::string, app::ApplicationLaunchInfoPtr>
+  std::unordered_map<std::string, component::ApplicationLaunchInfoPtr>
       launch_infos_by_service_name_;
   std::unordered_map<std::string, IpAddress> device_addresses_by_name_;
 

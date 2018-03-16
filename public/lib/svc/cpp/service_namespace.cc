@@ -14,13 +14,13 @@
 
 #include "lib/fxl/files/unique_fd.h"
 
-namespace app {
+namespace component {
 
 ServiceNamespace::ServiceNamespace()
     : directory_(fbl::AdoptRef(new fs::PseudoDir())) {}
 
 ServiceNamespace::ServiceNamespace(
-    f1dl::InterfaceRequest<app::ServiceProvider> request)
+    f1dl::InterfaceRequest<component::ServiceProvider> request)
     : ServiceNamespace() {
   AddBinding(std::move(request));
 }
@@ -31,7 +31,7 @@ ServiceNamespace::ServiceNamespace(fbl::RefPtr<fs::PseudoDir> directory)
 ServiceNamespace::~ServiceNamespace() = default;
 
 void ServiceNamespace::AddBinding(
-    f1dl::InterfaceRequest<app::ServiceProvider> request) {
+    f1dl::InterfaceRequest<component::ServiceProvider> request) {
   if (request)
     bindings_.AddBinding(this, std::move(request));
 }
@@ -74,4 +74,4 @@ void ServiceNamespace::ConnectCommon(const std::string& service_name,
     it->second(std::move(channel));
 }
 
-}  // namespace app
+}  // namespace component

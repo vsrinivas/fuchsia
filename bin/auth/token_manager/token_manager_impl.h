@@ -28,7 +28,7 @@ constexpr int kMaxCacheSize = 10;
 
 class TokenManagerImpl : public TokenManager {
  public:
-  TokenManagerImpl(app::ApplicationContext* context,
+  TokenManagerImpl(component::ApplicationContext* context,
                    std::unique_ptr<store::AuthDb> auth_db,
                    f1dl::Array<AuthProviderConfigPtr> auth_provider_configs);
 
@@ -62,7 +62,7 @@ class TokenManagerImpl : public TokenManager {
                        const f1dl::String& user_profile_id,
                        const DeleteAllTokensCallback& callback) override;
 
-  std::map<AuthProviderType, app::ApplicationControllerPtr>
+  std::map<AuthProviderType, component::ApplicationControllerPtr>
       auth_provider_controllers_;
 
   std::map<AuthProviderType, auth::AuthProviderPtr> auth_providers_;

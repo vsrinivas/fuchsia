@@ -21,9 +21,8 @@ class Clock;
 //   - provide a host environment for Services
 class Scenic : public ui::Scenic {
  public:
-  Scenic(app::ApplicationContext* app_context,
-         fxl::TaskRunner* task_runner,
-         Clock* clock);
+  Scenic(component::ApplicationContext* app_context,
+         fxl::TaskRunner* task_runner, Clock* clock);
   ~Scenic();
 
   // Create and register a new system of the specified type.  At most one System
@@ -39,14 +38,14 @@ class Scenic : public ui::Scenic {
       ::f1dl::InterfaceRequest<ui::Session> session,
       ::f1dl::InterfaceHandle<ui::SessionListener> listener) override;
 
-  app::ApplicationContext* app_context() const { return app_context_; }
+  component::ApplicationContext* app_context() const { return app_context_; }
   fxl::TaskRunner* task_runner() const { return task_runner_; }
   Clock* clock() const { return clock_; }
 
   size_t num_sessions() { return session_bindings_.size(); }
 
  private:
-  app::ApplicationContext* const app_context_;
+  component::ApplicationContext* const app_context_;
   fxl::TaskRunner* const task_runner_;
   Clock* clock_;
 

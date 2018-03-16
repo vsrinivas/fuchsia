@@ -40,8 +40,8 @@ const auth::AuthProviderType kDevAuthProvider = auth::AuthProviderType::DEV;
 class DevTokenManagerAppTest : public gtest::TestWithMessageLoop {
  public:
   DevTokenManagerAppTest()
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
-  }
+      : application_context_(
+            component::ApplicationContext::CreateFromStartupInfo()) {}
 
   ~DevTokenManagerAppTest() {}
 
@@ -49,8 +49,8 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop {
   // ::testing::Test:
   void SetUp() override {
     auth::Status status;
-    app::Services services;
-    auto launch_info = app::ApplicationLaunchInfo::New();
+    component::Services services;
+    auto launch_info = component::ApplicationLaunchInfo::New();
     launch_info->url = "token_manager";
     launch_info->directory_request = services.NewRequest();
     {
@@ -84,8 +84,8 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop {
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> application_context_;
-  app::ApplicationControllerPtr app_controller_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
+  component::ApplicationControllerPtr app_controller_;
   f1dl::Array<auth::AuthProviderConfigPtr> auth_provider_configs_;
 
  protected:
@@ -374,7 +374,8 @@ int main(int argc, char** argv) {
 
   {
     fsl::MessageLoop message_loop;
-    auto context = app::ApplicationContext::CreateFromStartupInfoNotChecked();
+    auto context =
+        component::ApplicationContext::CreateFromStartupInfoNotChecked();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

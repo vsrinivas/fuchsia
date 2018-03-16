@@ -25,7 +25,7 @@ class ViewManagerApp {
   ~ViewManagerApp();
 
  private:
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
 
   std::unique_ptr<ViewRegistry> registry_;
   f1dl::BindingSet<mozart::ViewManager, std::unique_ptr<ViewManagerImpl>>

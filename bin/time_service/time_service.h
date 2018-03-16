@@ -10,7 +10,7 @@
 #include "lib/time_service/fidl/time_service.fidl.h"
 #include "third_party/icu/source/common/unicode/strenum.h"
 
-namespace app {
+namespace component {
 class ApplicationContext;
 }
 

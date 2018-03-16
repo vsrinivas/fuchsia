@@ -14,7 +14,7 @@ namespace fonts {
 
 class App {
  public:
-  App() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  App() : context_(component::ApplicationContext::CreateFromStartupInfo()) {
     if (!font_provider_.LoadFonts())
       exit(ZX_ERR_UNAVAILABLE);
     context_->outgoing_services()->AddService<FontProvider>(
@@ -24,7 +24,7 @@ class App {
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   FontProviderImpl font_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

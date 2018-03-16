@@ -16,8 +16,8 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
 
-  std::unique_ptr<app::ApplicationContext> application_context =
-      app::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<component::ApplicationContext> application_context =
+      component::ApplicationContext::CreateFromStartupInfo();
 
   mdns::MdnsImpl impl(application_context.get(), &params);
 

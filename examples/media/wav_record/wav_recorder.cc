@@ -39,7 +39,7 @@ WavRecorder::~WavRecorder() {
   }
 }
 
-void WavRecorder::Run(app::ApplicationContext* app_context) {
+void WavRecorder::Run(component::ApplicationContext* app_context) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
   const auto& pos_args = cmd_line_.positional_args();
 

@@ -107,10 +107,11 @@ class ViewState : public ViewContainerState {
     return focus_chain_.get();
   }
 
-  app::ServiceProvider* GetServiceProviderIfSupports(std::string service_name);
+  component::ServiceProvider* GetServiceProviderIfSupports(
+      std::string service_name);
 
   void SetServiceProvider(
-      f1dl::InterfaceHandle<app::ServiceProvider> service_provider,
+      f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
       f1dl::Array<f1dl::String> service_names);
 
  private:
@@ -134,7 +135,7 @@ class ViewState : public ViewContainerState {
   uint32_t invalidation_flags_ = 0u;
 
   std::unique_ptr<FocusChain> focus_chain_;
-  app::ServiceProviderPtr service_provider_;
+  component::ServiceProviderPtr service_provider_;
   f1dl::Array<f1dl::String> service_names_;
 
   fxl::WeakPtrFactory<ViewState> weak_factory_;  // must be last

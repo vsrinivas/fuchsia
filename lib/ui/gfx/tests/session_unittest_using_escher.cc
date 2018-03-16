@@ -28,7 +28,8 @@ int main(int argc, char** argv) {
   int status = RUN_ALL_TESTS();
   testing::UnitTest::GetInstance()->listeners().Release(&listener);
 
-  auto context = app::ApplicationContext::CreateFromStartupInfoNotChecked();
+  auto context =
+      component::ApplicationContext::CreateFromStartupInfoNotChecked();
   test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
 
   g_escher_env->TearDown();

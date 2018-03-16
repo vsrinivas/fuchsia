@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
 
   {
     fsl::MessageLoop message_loop;
-    auto context = app::ApplicationContext::CreateFromStartupInfo();
+    auto context = component::ApplicationContext::CreateFromStartupInfo();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

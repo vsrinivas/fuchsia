@@ -70,7 +70,7 @@ class ResponsePrinter {
 
 class WGetApp {
  public:
-  WGetApp() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  WGetApp() : context_(component::ApplicationContext::CreateFromStartupInfo()) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
     FXL_DCHECK(network_service_);
@@ -103,7 +103,7 @@ class WGetApp {
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
 
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;

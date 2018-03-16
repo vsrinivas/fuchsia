@@ -15,7 +15,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 
-namespace app {
+namespace component {
 
 RootApplicationLoader::RootApplicationLoader(std::vector<std::string> path)
     : path_(std::move(path)) {}
@@ -78,4 +78,4 @@ void RootApplicationLoader::AddBinding(
   bindings_.AddBinding(this, std::move(request));
 }
 
-}  // namespace app
+}  // namespace component

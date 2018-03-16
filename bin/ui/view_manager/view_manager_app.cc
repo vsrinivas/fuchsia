@@ -10,7 +10,8 @@
 namespace view_manager {
 
 ViewManagerApp::ViewManagerApp()
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()) {
   FXL_DCHECK(application_context_);
 
   registry_.reset(new ViewRegistry(application_context_.get()));

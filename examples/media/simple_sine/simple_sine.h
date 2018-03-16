@@ -17,10 +17,10 @@ class MediaApp {
   MediaApp();
   ~MediaApp();
 
-  void Run(app::ApplicationContext* app_context);
+  void Run(component::ApplicationContext* app_context);
 
  private:
-  void AcquireRenderer(app::ApplicationContext* app_context);
+  void AcquireRenderer(component::ApplicationContext* app_context);
   void SetMediaType();
 
   zx_status_t CreateMemoryMapping();

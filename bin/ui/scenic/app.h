@@ -14,7 +14,7 @@ namespace scenic {
 
 class App {
  public:
-  explicit App(app::ApplicationContext* app_context);
+  explicit App(component::ApplicationContext* app_context);
 
  private:
   Clock clock_;

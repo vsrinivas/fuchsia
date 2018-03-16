@@ -13,7 +13,7 @@
 
 extern crate failure;
 extern crate fidl;
-extern crate fuchsia_app as app;
+extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_vfs_watcher as vfs_watcher;
 extern crate fuchsia_wlan_dev as wlan_dev;
@@ -29,7 +29,7 @@ mod logger;
 mod device;
 mod service;
 
-use app::server::ServicesServer;
+use component::server::ServicesServer;
 use failure::{Error, ResultExt};
 use futures::prelude::*;
 use parking_lot::Mutex;

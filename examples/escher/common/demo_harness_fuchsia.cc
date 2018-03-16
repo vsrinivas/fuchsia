@@ -19,7 +19,8 @@ DemoHarnessFuchsia::DemoHarnessFuchsia(WindowParams window_params)
     : DemoHarness(window_params),
       loop_(fsl::MessageLoop::GetCurrent()),
       owned_loop_(loop_ ? nullptr : new fsl::MessageLoop()),
-      application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       escher_demo_binding_(this) {
   if (!loop_) {
     loop_ = owned_loop_.get();

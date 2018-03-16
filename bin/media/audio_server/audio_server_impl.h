@@ -27,7 +27,8 @@ namespace audio {
 
 class AudioServerImpl : public AudioServer {
  public:
-  AudioServerImpl(std::unique_ptr<app::ApplicationContext> application_context);
+  AudioServerImpl(
+      std::unique_ptr<component::ApplicationContext> application_context);
   ~AudioServerImpl() override;
 
   // AudioServer
@@ -70,7 +71,7 @@ class AudioServerImpl : public AudioServer {
   void Shutdown();
   void DoPacketCleanup();
 
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   f1dl::BindingSet<AudioServer> bindings_;
 
   // A reference to our message loop's task runner.  Allows us to post events to

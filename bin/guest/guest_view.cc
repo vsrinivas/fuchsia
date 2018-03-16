@@ -16,14 +16,15 @@ static constexpr uint32_t kDisplayWidth = 1024;
 static constexpr uint32_t kDisplayHeight = 768;
 
 // static
-zx_status_t ScenicScanout::Create(app::ApplicationContext* application_context,
-                                  machina::InputDispatcher* input_dispatcher,
-                                  fbl::unique_ptr<GpuScanout>* out) {
+zx_status_t ScenicScanout::Create(
+    component::ApplicationContext* application_context,
+    machina::InputDispatcher* input_dispatcher,
+    fbl::unique_ptr<GpuScanout>* out) {
   *out = fbl::make_unique<ScenicScanout>(application_context, input_dispatcher);
   return ZX_OK;
 }
 
-ScenicScanout::ScenicScanout(app::ApplicationContext* application_context,
+ScenicScanout::ScenicScanout(component::ApplicationContext* application_context,
                              machina::InputDispatcher* input_dispatcher)
     : input_dispatcher_(input_dispatcher),
       application_context_(application_context),
@@ -40,7 +41,7 @@ ScenicScanout::ScenicScanout(app::ApplicationContext* application_context,
 
 void ScenicScanout::CreateView(
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    f1dl::InterfaceRequest<app::ServiceProvider> view_services) {
+    f1dl::InterfaceRequest<component::ServiceProvider> view_services) {
   if (view_) {
     FXL_LOG(ERROR) << "CreateView called when a view already exists";
     return;

@@ -6,11 +6,10 @@
 
 namespace sketchy_example {
 
-View::View(app::ApplicationContext* application_context,
+View::View(component::ApplicationContext* application_context,
            mozart::ViewManagerPtr view_manager,
            f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-    : BaseView(std::move(view_manager),
-               std::move(view_owner_request),
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Sketchy Example"),
       canvas_(application_context),
       background_node_(session()),

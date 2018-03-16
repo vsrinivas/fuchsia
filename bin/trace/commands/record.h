@@ -43,7 +43,7 @@ class Record : public CommandWithTraceController {
 
   static Info Describe();
 
-  explicit Record(app::ApplicationContext* context);
+  explicit Record(component::ApplicationContext* context);
   void Run(const fxl::CommandLine& command_line,
            OnDoneCallback on_done) override;
 
@@ -55,7 +55,7 @@ class Record : public CommandWithTraceController {
   void LaunchTool();
   void StartTimer();
 
-  app::ApplicationControllerPtr application_controller_;
+  component::ApplicationControllerPtr application_controller_;
   std::unique_ptr<ChromiumExporter> exporter_;
   std::unique_ptr<Tracer> tracer_;
   // Aggregate events if there are any measurements to be performed, so that we

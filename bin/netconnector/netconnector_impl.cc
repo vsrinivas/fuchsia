@@ -24,7 +24,8 @@ const std::string NetConnectorImpl::kLocalDeviceName = "local";
 
 NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     : params_(params),
-      application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       // TODO(dalesat): Create a new RespondingServiceHost per user.
       // Requestors should provide user credentials allowing a ServiceAgent
       // to obtain a user environment. A RespondingServiceHost should be
@@ -183,7 +184,7 @@ void NetConnectorImpl::ReleaseServiceAgent(ServiceAgent* service_agent) {
 
 void NetConnectorImpl::GetDeviceServiceProvider(
     const f1dl::String& device_name,
-    f1dl::InterfaceRequest<app::ServiceProvider> request) {
+    f1dl::InterfaceRequest<component::ServiceProvider> request) {
   if (device_name == host_name_ || device_name == kLocalDeviceName) {
     responding_service_host_.AddBinding(std::move(request));
     return;
@@ -208,7 +209,7 @@ void NetConnectorImpl::GetKnownDeviceNames(
 
 void NetConnectorImpl::RegisterServiceProvider(
     const f1dl::String& name,
-    f1dl::InterfaceHandle<app::ServiceProvider> handle) {
+    f1dl::InterfaceHandle<component::ServiceProvider> handle) {
   FXL_LOG(INFO) << "Service '" << name << "' provider registered.";
   responding_service_host_.RegisterProvider(name, std::move(handle));
 }

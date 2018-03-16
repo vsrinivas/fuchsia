@@ -7,9 +7,9 @@
 namespace mozart {
 
 ViewProviderApp::ViewProviderApp(ViewFactory factory)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
-      service_(application_context_.get(), std::move(factory)) {
-}
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
+      service_(application_context_.get(), std::move(factory)) {}
 
 ViewProviderApp::~ViewProviderApp() {}
 

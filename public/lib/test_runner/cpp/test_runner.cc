@@ -154,11 +154,9 @@ void TestRunnerImpl::PassTestPoint() {
 }
 
 TestRunContext::TestRunContext(
-    std::shared_ptr<app::ApplicationContext> app_context,
-    TestRunObserver* connection,
-    const std::string& test_id,
-    const std::string& url,
-    const std::vector<std::string>& args)
+    std::shared_ptr<component::ApplicationContext> app_context,
+    TestRunObserver* connection, const std::string& test_id,
+    const std::string& url, const std::vector<std::string>& args)
     : test_runner_connection_(connection), test_id_(test_id), success_(true) {
   // 1. Make a child environment to run the command.
   child_env_scope_ =
@@ -176,11 +174,11 @@ TestRunContext::TestRunContext(
       });
 
   // 2. Launch the test command.
-  app::ApplicationLauncherPtr launcher;
+  component::ApplicationLauncherPtr launcher;
   child_env_scope_->environment()->GetApplicationLauncher(
       launcher.NewRequest());
 
-  auto info = app::ApplicationLaunchInfo::New();
+  auto info = component::ApplicationLaunchInfo::New();
   info->url = url;
   info->arguments = f1dl::Array<f1dl::String>::From(args);
   launcher->CreateApplication(std::move(info),

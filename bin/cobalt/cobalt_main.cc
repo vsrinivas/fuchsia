@@ -459,7 +459,7 @@ class CobaltApp {
 
   SystemData system_data_;
 
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
 
   ShufflerClient shuffler_client_;
   SendRetryer send_retryer_;
@@ -479,19 +479,16 @@ class CobaltApp {
 CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
                      std::chrono::seconds schedule_interval,
                      std::chrono::seconds min_interval)
-    : context_(app::ApplicationContext::CreateFromStartupInfo()),
+    : context_(component::ApplicationContext::CreateFromStartupInfo()),
       shuffler_client_(kCloudShufflerUri, true),
       send_retryer_(&shuffler_client_),
       shipping_manager_(
           ShippingManager::SizeParams(cobalt::kMaxBytesPerObservation,
-                                      kMaxBytesPerEnvelope,
-                                      kMaxBytesTotal,
+                                      kMaxBytesPerEnvelope, kMaxBytesTotal,
                                       kMinEnvelopeSendSize),
           ShippingManager::ScheduleParams(schedule_interval, min_interval),
           // TODO(rudominer): Enable encryption.
-          ShippingManager::EnvelopeMakerParams("",
-                                               EncryptedMessage::NONE,
-                                               "",
+          ShippingManager::EnvelopeMakerParams("", EncryptedMessage::NONE, "",
                                                EncryptedMessage::NONE),
           ShippingManager::SendRetryerParams(kInitialRpcDeadline,
                                              kDeadlinePerSendAttempt),

@@ -23,9 +23,8 @@ namespace {
 
 class TokenManagerApp {
  public:
-  TokenManagerApp(std::unique_ptr<app::ApplicationContext> context)
-      : app_context_(std::move(context)),
-        factory_impl_(app_context_.get()) {
+  TokenManagerApp(std::unique_ptr<component::ApplicationContext> context)
+      : app_context_(std::move(context)), factory_impl_(app_context_.get()) {
     app_context_->outgoing_services()->AddService<auth::TokenManagerFactory>(
         [this](f1dl::InterfaceRequest<auth::TokenManagerFactory> request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));
@@ -33,7 +32,7 @@ class TokenManagerApp {
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> app_context_;
+  std::unique_ptr<component::ApplicationContext> app_context_;
 
   auth::TokenManagerFactoryImpl factory_impl_;
   f1dl::BindingSet<auth::TokenManagerFactory> factory_bindings_;
@@ -51,7 +50,7 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
-  TokenManagerApp app(app::ApplicationContext::CreateFromStartupInfo());
+  TokenManagerApp app(component::ApplicationContext::CreateFromStartupInfo());
   loop.Run();
   return 0;
 }

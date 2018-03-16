@@ -23,7 +23,7 @@
 namespace media {
 
 MediaComponentFactory::MediaComponentFactory(
-    std::unique_ptr<app::ApplicationContext> context)
+    std::unique_ptr<component::ApplicationContext> context)
     : FactoryServiceBase(std::move(context)),
       task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {
   multiproc_task_runner_ =

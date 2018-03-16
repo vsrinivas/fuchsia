@@ -44,7 +44,7 @@ class BaseView : private ViewListener,
   View* view() { return view_.get(); }
 
   // Gets the service provider for the view.
-  app::ServiceProvider* GetViewServiceProvider();
+  component::ServiceProvider* GetViewServiceProvider();
 
   // Gets the underlying view container interface.
   ViewContainer* GetViewContainer();
@@ -173,7 +173,7 @@ class BaseView : private ViewListener,
   f1dl::Binding<InputListener> input_listener_binding_;
 
   ViewPtr view_;
-  app::ServiceProviderPtr view_service_provider_;
+  component::ServiceProviderPtr view_service_provider_;
   ViewContainerPtr view_container_;
   InputConnectionPtr input_connection_;
   ViewPropertiesPtr properties_;

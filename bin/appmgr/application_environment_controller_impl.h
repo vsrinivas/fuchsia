@@ -11,7 +11,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/macros.h"
 
-namespace app {
+namespace component {
 class JobHolder;
 
 class ApplicationEnvironmentControllerImpl
@@ -37,6 +37,6 @@ class ApplicationEnvironmentControllerImpl
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationEnvironmentControllerImpl);
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_APPLICATION_ENVIRONMENT_CONTROLLER_IMPL_H_

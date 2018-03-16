@@ -31,7 +31,7 @@ namespace view_manager {
 // All ViewState objects are owned by the registry.
 class ViewRegistry : public ViewInspector, public InputOwner {
  public:
-  explicit ViewRegistry(app::ApplicationContext* application_context);
+  explicit ViewRegistry(component::ApplicationContext* application_context);
   ~ViewRegistry() override;
 
   // VIEW MANAGER REQUESTS
@@ -200,8 +200,8 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // Walk up the view tree starting at |view_token| to find a service
   // provider that offers a service named |service_name|.
-  app::ServiceProvider* FindViewServiceProvider(uint32_t view_token,
-                                                std::string service_name);
+  component::ServiceProvider* FindViewServiceProvider(uint32_t view_token,
+                                                      std::string service_name);
 
   ViewState* FindView(uint32_t view_token_value);
   ViewTreeState* FindViewTree(uint32_t view_tree_token_value);
@@ -221,7 +221,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
             IsViewTreeStateRegisteredDebug(container_state->AsViewTreeState()));
   }
 
-  app::ApplicationContext* application_context_;
+  component::ApplicationContext* application_context_;
   ui::ScenicPtr scenic_;
   scenic_lib::Session session_;
 

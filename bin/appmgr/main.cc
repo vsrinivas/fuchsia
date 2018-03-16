@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
   if (config_file.empty() && positional_args.empty())
     config_file = kDefaultConfigPath;
 
-  app::Config config;
+  component::Config config;
   if (!config_file.empty()) {
     config.ReadIfExistsFrom(config_file);
   }
@@ -45,13 +45,14 @@ int main(int argc, char** argv) {
   fsl::MessageLoop message_loop;
 
   fs::ManagedVfs vfs(message_loop.async());
-  app::RootApplicationLoader root_loader(config.TakePath());
+  component::RootApplicationLoader root_loader(config.TakePath());
   fbl::RefPtr<fs::PseudoDir> directory(fbl::AdoptRef(new fs::PseudoDir()));
   directory->AddEntry(
-      app::ApplicationLoader::Name_,
+      component::ApplicationLoader::Name_,
       fbl::AdoptRef(new fs::Service([&root_loader](zx::channel channel) {
-        root_loader.AddBinding(f1dl::InterfaceRequest<app::ApplicationLoader>(
-            std::move(channel)));
+        root_loader.AddBinding(
+            f1dl::InterfaceRequest<component::ApplicationLoader>(
+                std::move(channel)));
         return ZX_OK;
       })));
 
@@ -60,11 +61,11 @@ int main(int argc, char** argv) {
     return -1;
   if (vfs.ServeDirectory(directory, std::move(h2)) != ZX_OK)
     return -1;
-  app::JobHolder root_job_holder(nullptr, std::move(h1), kRootLabel);
+  component::JobHolder root_job_holder(nullptr, std::move(h1), kRootLabel);
 
-  app::ApplicationControllerPtr sysmgr;
+  component::ApplicationControllerPtr sysmgr;
   auto run_sysmgr = [&root_job_holder, &sysmgr] {
-    auto launch_info = app::ApplicationLaunchInfo::New();
+    auto launch_info = component::ApplicationLaunchInfo::New();
     launch_info->url = "sysmgr";
     root_job_holder.CreateApplication(
         std::move(launch_info), sysmgr.NewRequest());

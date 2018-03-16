@@ -6,7 +6,7 @@
 
 extern crate failure;
 extern crate fidl;
-extern crate fuchsia_app as app;
+extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 #[macro_use]
 extern crate structopt;
@@ -23,7 +23,7 @@ use garnet_examples_fidl_services::Echo;
 use failure::{Error, ResultExt};
 
 // The fuchsia_app crate allows us to start up applications.
-use app::client::Launcher;
+use component::client::Launcher;
 
 fn main() {
     if let Err(e) = main_res() {

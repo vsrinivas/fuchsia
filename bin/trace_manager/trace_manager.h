@@ -23,7 +23,7 @@ namespace tracing {
 
 class TraceManager : public TraceRegistry, public TraceController {
  public:
-  TraceManager(app::ApplicationContext* context, const Config& config);
+  TraceManager(component::ApplicationContext* context, const Config& config);
   ~TraceManager() override;
 
  private:
@@ -45,7 +45,7 @@ class TraceManager : public TraceRegistry, public TraceController {
   void FinalizeTracing();
   void LaunchConfiguredProviders();
 
-  app::ApplicationContext* const context_;
+  component::ApplicationContext* const context_;
   const Config& config_;
 
   uint32_t next_provider_id_ = 1u;

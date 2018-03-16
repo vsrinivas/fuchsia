@@ -14,7 +14,7 @@ namespace media {
 namespace audio {
 
 AudioServerImpl::AudioServerImpl(
-    std::unique_ptr<app::ApplicationContext> application_context)
+    std::unique_ptr<component::ApplicationContext> application_context)
     : application_context_(std::move(application_context)),
       device_manager_(this) {
   FXL_DCHECK(application_context_);

@@ -8,7 +8,7 @@
 
 namespace sketchy_lib {
 
-Canvas::Canvas(app::ApplicationContext* context)
+Canvas::Canvas(component::ApplicationContext* context)
     : Canvas(context->ConnectToEnvironmentService<sketchy::Canvas>()) {}
 
 Canvas::Canvas(sketchy::CanvasPtr canvas)

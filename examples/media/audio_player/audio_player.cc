@@ -20,7 +20,8 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params)
     : quit_when_done_(!params.stay()) {
   FXL_DCHECK(params.is_valid());
 
-  auto application_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto application_context =
+      component::ApplicationContext::CreateFromStartupInfo();
 
   auto media_player =
       application_context->ConnectToEnvironmentService<media::MediaPlayer>();

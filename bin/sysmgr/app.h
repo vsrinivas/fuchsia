@@ -33,24 +33,24 @@ class App {
 
  private:
   void RegisterSingleton(std::string service_name,
-                         app::ApplicationLaunchInfoPtr launch_info);
+                         component::ApplicationLaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
   void RegisterAppLoaders(Config::ServiceMap app_loaders);
-  void LaunchApplication(app::ApplicationLaunchInfoPtr launch_info);
+  void LaunchApplication(component::ApplicationLaunchInfoPtr launch_info);
 
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
 
   // Keep track of all services, indexed by url.
-  std::map<std::string, app::Services> services_;
+  std::map<std::string, component::Services> services_;
 
   // Nested environment within which the apps started by sysmgr will run.
-  app::ApplicationEnvironmentPtr env_;
-  app::ApplicationEnvironmentControllerPtr env_controller_;
-  app::ServiceProviderBridge service_provider_bridge_;
-  app::ApplicationLauncherPtr env_launcher_;
+  component::ApplicationEnvironmentPtr env_;
+  component::ApplicationEnvironmentControllerPtr env_controller_;
+  component::ServiceProviderBridge service_provider_bridge_;
+  component::ApplicationLauncherPtr env_launcher_;
 
   std::unique_ptr<DelegatingApplicationLoader> app_loader_;
-  f1dl::BindingSet<app::ApplicationLoader> app_loader_bindings_;
+  f1dl::BindingSet<component::ApplicationLoader> app_loader_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

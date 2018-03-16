@@ -10,7 +10,7 @@ int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
 
   media::audio::AudioServerImpl impl(
-      app::ApplicationContext::CreateFromStartupInfo());
+      component::ApplicationContext::CreateFromStartupInfo());
 
   loop.Run();
   return 0;

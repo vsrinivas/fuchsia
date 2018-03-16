@@ -6,7 +6,7 @@
 
 #include <fdio/util.h>
 
-namespace app {
+namespace component {
 
 // static
 void ConnectToEnvironmentService(const std::string& interface_name,
@@ -30,6 +30,18 @@ zx::channel CreateStaticServiceRootHandle() {
   if (fdio_service_connect("/svc/.", h1.release()) != ZX_OK)
     return zx::channel();
   return h2;
+}
+
+}  // namespace subtle
+
+}  // namespace component
+
+namespace app {
+namespace subtle {
+
+// static
+zx::channel CreateStaticServiceRootHandle() {
+  return component::subtle::CreateStaticServiceRootHandle();
 }
 
 }  // namespace subtle

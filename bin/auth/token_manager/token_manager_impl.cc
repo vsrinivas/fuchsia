@@ -36,7 +36,7 @@ using auth::AuthProviderStatus;
 using auth::Status;
 
 TokenManagerImpl::TokenManagerImpl(
-    app::ApplicationContext* app_context,
+    component::ApplicationContext* app_context,
     std::unique_ptr<store::AuthDb> auth_db,
     f1dl::Array<AuthProviderConfigPtr> auth_provider_configs)
     : token_cache_(kMaxCacheSize), auth_db_(std::move(auth_db)) {
@@ -49,12 +49,12 @@ TokenManagerImpl::TokenManagerImpl(
       continue;
     }
 
-    auto launch_info = app::ApplicationLaunchInfo::New();
+    auto launch_info = component::ApplicationLaunchInfo::New();
     launch_info->url = config->url;
-    app::Services services;
+    component::Services services;
     launch_info->directory_request = services.NewRequest();
 
-    app::ApplicationControllerPtr controller;
+    component::ApplicationControllerPtr controller;
     app_context->launcher()->CreateApplication(std::move(launch_info),
                                                controller.NewRequest());
     controller.set_error_handler([this, &config] {

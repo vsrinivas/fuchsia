@@ -16,7 +16,7 @@
 
 namespace mdns {
 
-MdnsImpl::MdnsImpl(app::ApplicationContext* application_context,
+MdnsImpl::MdnsImpl(component::ApplicationContext* application_context,
                    MdnsParams* params)
     : binding_(this) {
   FXL_DCHECK(application_context);

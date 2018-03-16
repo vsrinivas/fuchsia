@@ -20,7 +20,7 @@ class TraceManagerApp {
   ~TraceManagerApp();
 
  private:
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   TraceManager trace_manager_;
   f1dl::BindingSet<TraceRegistry> trace_registry_bindings_;
   f1dl::BindingSet<TraceController> trace_controller_bindings_;

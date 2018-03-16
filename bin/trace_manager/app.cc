@@ -9,7 +9,7 @@
 namespace tracing {
 
 TraceManagerApp::TraceManagerApp(const Config& config)
-    : context_(app::ApplicationContext::CreateFromStartupInfo()),
+    : context_(component::ApplicationContext::CreateFromStartupInfo()),
       trace_manager_(context_.get(), config) {
   context_->outgoing_services()->AddService<TraceRegistry>(
       [this](f1dl::InterfaceRequest<TraceRegistry> request) {

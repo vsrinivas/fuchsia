@@ -8,14 +8,14 @@
 #include "lib/test_runner/cpp/reporting/reporter.h"
 #include "gtest/gtest.h"
 
-std::unique_ptr<app::ApplicationContext> g_application_context;
+std::unique_ptr<component::ApplicationContext> g_application_context;
 
 int main(int argc, char** argv) {
   test_runner::GTestListener listener(argv[0]);
 
   fsl::MessageLoop message_loop;
   g_application_context =
-      app::ApplicationContext::CreateFromStartupInfoNotChecked();
+      component::ApplicationContext::CreateFromStartupInfoNotChecked();
 
   testing::InitGoogleTest(&argc, argv);
   testing::UnitTest::GetInstance()->listeners().Append(&listener);

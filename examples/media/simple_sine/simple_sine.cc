@@ -43,7 +43,7 @@ MediaApp::MediaApp() {}
 MediaApp::~MediaApp() {}
 
 // Prepare for playback, submit initial data and start the presentation timeline
-void MediaApp::Run(app::ApplicationContext* app_context) {
+void MediaApp::Run(component::ApplicationContext* app_context) {
   AcquireRenderer(app_context);
   SetMediaType();
 
@@ -63,7 +63,7 @@ void MediaApp::Run(app::ApplicationContext* app_context) {
 
 // Use ApplicationContext to acquire AudioServerPtr, MediaRendererPtr and
 // PacketConsumerPtr in turn. Set error handlers, in case of channel closures.
-void MediaApp::AcquireRenderer(app::ApplicationContext* app_context) {
+void MediaApp::AcquireRenderer(component::ApplicationContext* app_context) {
   // AudioServer is needed only long enough to create the renderer(s).
   media::AudioServerPtr audio_server =
       app_context->ConnectToEnvironmentService<media::AudioServer>();

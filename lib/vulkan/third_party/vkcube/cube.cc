@@ -2757,7 +2757,8 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
     trace::TraceProvider trace_provider(demo->fuchsia_state->loop.async());
 #endif
 
-    auto application_context_ = app::ApplicationContext::CreateFromStartupInfo();
+    auto application_context_ =
+        component::ApplicationContext::CreateFromStartupInfo();
 
 #if defined(CUBE_USE_MOZART)
     demo->fuchsia_state->view_provider_service = std::make_unique<mozart::ViewProviderService>(

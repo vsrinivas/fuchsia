@@ -9,7 +9,7 @@
 #include "garnet/bin/appmgr/job_holder.h"
 #include "lib/fxl/functional/closure.h"
 
-namespace app {
+namespace component {
 
 ApplicationEnvironmentControllerImpl::ApplicationEnvironmentControllerImpl(
     f1dl::InterfaceRequest<ApplicationEnvironmentController> request,
@@ -40,4 +40,4 @@ void ApplicationEnvironmentControllerImpl::Detach() {
   binding_.set_error_handler(fxl::Closure());
 }
 
-}  // namespace app
+}  // namespace component

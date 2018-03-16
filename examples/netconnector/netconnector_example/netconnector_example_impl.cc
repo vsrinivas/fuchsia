@@ -22,7 +22,8 @@ static const std::vector<std::string> kConversation = {
 
 NetConnectorExampleImpl::NetConnectorExampleImpl(
     NetConnectorExampleParams* params)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()) {
   // The MessageRelay makes using the channel easier. Hook up its callbacks.
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) { HandleReceivedMessage(message); });
@@ -61,7 +62,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
           application_context_
               ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
-      f1dl::InterfaceHandle<app::ServiceProvider> handle;
+      f1dl::InterfaceHandle<component::ServiceProvider> handle;
       application_context_->outgoing_services()->AddBinding(
           handle.NewRequest());
 
@@ -89,7 +90,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
     message_relay_.SetChannel(std::move(local));
 
     // Pass the remote end to NetConnector.
-    app::ServiceProviderPtr device_service_provider;
+    component::ServiceProviderPtr device_service_provider;
     connector->GetDeviceServiceProvider(params->request_device_name(),
                                         device_service_provider.NewRequest());
 

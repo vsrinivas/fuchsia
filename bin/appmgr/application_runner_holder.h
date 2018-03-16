@@ -16,7 +16,7 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/svc/cpp/services.h"
 
-namespace app {
+namespace component {
 
 class ApplicationRunnerHolder {
  public:
@@ -44,6 +44,6 @@ class ApplicationRunnerHolder {
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationRunnerHolder);
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_APPLICATION_RUNNER_HOLDER_H_

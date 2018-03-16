@@ -11,7 +11,7 @@
 
 namespace bluetooth_service {
 
-App::App(std::unique_ptr<app::ApplicationContext> application_context)
+App::App(std::unique_ptr<component::ApplicationContext> application_context)
     : application_context_(std::move(application_context)),
       weak_ptr_factory_(this) {
   FXL_DCHECK(application_context_);

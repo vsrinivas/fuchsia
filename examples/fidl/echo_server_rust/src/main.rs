@@ -8,7 +8,7 @@
 extern crate failure;
 extern crate fidl;
 extern crate fuchsia_async as async;
-extern crate fuchsia_app as app;
+extern crate fuchsia_app as component;
 extern crate futures;
 
 // The `failure` crate provides an error trait called `Fail`,
@@ -19,7 +19,7 @@ use failure::{Error, ResultExt};
 extern crate garnet_examples_fidl_services;
 use garnet_examples_fidl_services::Echo;
 
-use app::server::ServicesServer;
+use component::server::ServicesServer;
 use futures::future;
 
 // A function which returns a type implementing the `Echo::Server` trait

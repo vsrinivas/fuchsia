@@ -38,16 +38,17 @@ int main(int argc, const char** argv) {
   }
 
   fsl::MessageLoop loop;
-  auto application_context_ = app::ApplicationContext::CreateFromStartupInfo();
+  auto application_context_ =
+      component::ApplicationContext::CreateFromStartupInfo();
 
   // Launch application.
-  app::Services services;
-  auto launch_info = app::ApplicationLaunchInfo::New();
+  component::Services services;
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = positional_args[0];
   for (size_t i = 1; i < positional_args.size(); ++i)
     launch_info->arguments.push_back(positional_args[i]);
   launch_info->directory_request = services.NewRequest();
-  app::ApplicationControllerPtr controller;
+  component::ApplicationControllerPtr controller;
   application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                       controller.NewRequest());
   controller.set_error_handler([&loop] {

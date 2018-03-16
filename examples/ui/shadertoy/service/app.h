@@ -23,7 +23,7 @@ class ShadertoyState;
 // ShadertoyFactory.  What is the best-practice pattern to use here?
 class App : public mozart::example::ShadertoyFactory {
  public:
-  App(app::ApplicationContext* app_context, escher::Escher* escher);
+  App(component::ApplicationContext* app_context, escher::Escher* escher);
   ~App();
 
   escher::Escher* escher() const { return escher_; }

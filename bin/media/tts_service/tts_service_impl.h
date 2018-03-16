@@ -15,7 +15,8 @@ class TtsSpeaker;
 
 class TtsServiceImpl {
  public:
-  TtsServiceImpl(std::unique_ptr<app::ApplicationContext> application_context);
+  TtsServiceImpl(
+      std::unique_ptr<component::ApplicationContext> application_context);
   ~TtsServiceImpl();
 
   zx_status_t Init();
@@ -45,7 +46,7 @@ class TtsServiceImpl {
 
   friend class Client;
 
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   std::set<Client*> clients_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TtsServiceImpl);

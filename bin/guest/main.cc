@@ -153,8 +153,7 @@ static zx_status_t setup_zircon_framebuffer(
 }
 
 static zx_status_t setup_scenic_framebuffer(
-    app::ApplicationContext* application_context,
-    machina::VirtioGpu* gpu,
+    component::ApplicationContext* application_context, machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
   // Check if we have a display. Since this is a device file, many file
@@ -189,8 +188,8 @@ static zx_status_t read_guest_cfg(const char* cfg_path,
 
 int main(int argc, char** argv) {
   fsl::MessageLoop loop;
-  std::unique_ptr<app::ApplicationContext> application_context =
-      app::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<component::ApplicationContext> application_context =
+      component::ApplicationContext::CreateFromStartupInfo();
 
   GuestConfig cfg;
   zx_status_t status = read_guest_cfg("/pkg/data/guest.cfg", argc, argv, &cfg);

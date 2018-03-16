@@ -9,7 +9,7 @@
 
 #include "gtest/gtest.h"
 
-namespace app {
+namespace component {
 namespace {
 
 TEST(NamespaceBuilder, Control) {
@@ -45,4 +45,4 @@ TEST(NamespaceBuilder, Control) {
 }
 
 }  // namespace
-}  // namespace app
+}  // namespace component

@@ -34,11 +34,9 @@ class LpcmOutputStream : public LpcmPayload::Owner {
   // which payloads are allocated (via |CreatePayload|).
   // TODO(dalesat): Replace |channel_count| with |channel_configuration|.
   static fxl::RefPtr<LpcmOutputStream> Create(
-      app::ApplicationContext* application_context,
-      AudioSampleFormat sample_format,
-      uint32_t channel_count,
-      uint32_t frames_per_second,
-      size_t payload_pool_frames);
+      component::ApplicationContext* application_context,
+      AudioSampleFormat sample_format, uint32_t channel_count,
+      uint32_t frames_per_second, size_t payload_pool_frames);
 
   // Destroys this |LpcmOutputStream|.
   ~LpcmOutputStream();
@@ -233,11 +231,9 @@ class LpcmOutputStream : public LpcmPayload::Owner {
     return fxl::RefPtr<LpcmOutputStream>(this);
   }
 
-  LpcmOutputStream(app::ApplicationContext* application_context,
-                   AudioSampleFormat sample_format,
-                   uint32_t channel_count,
-                   uint32_t frames_per_second,
-                   size_t payload_pool_frames);
+  LpcmOutputStream(component::ApplicationContext* application_context,
+                   AudioSampleFormat sample_format, uint32_t channel_count,
+                   uint32_t frames_per_second, size_t payload_pool_frames);
 
   // Called after |AdoptRef|.
   void Init();

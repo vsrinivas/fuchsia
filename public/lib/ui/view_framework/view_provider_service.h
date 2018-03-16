@@ -19,10 +19,10 @@ namespace mozart {
 
 // Parameters for creating a view.
 struct ViewContext {
-  app::ApplicationContext* application_context;
+  component::ApplicationContext* application_context;
   ViewManagerPtr view_manager;
   f1dl::InterfaceRequest<ViewOwner> view_owner_request;
-  f1dl::InterfaceRequest<app::ServiceProvider> outgoing_services;
+  f1dl::InterfaceRequest<component::ServiceProvider> outgoing_services;
 };
 
 // A callback to create a view in response to a call to
@@ -37,17 +37,17 @@ using ViewFactory =
 // This is only intended to be used for simple example programs.
 class ViewProviderService : public ViewProvider {
  public:
-  explicit ViewProviderService(app::ApplicationContext* application_context,
-                               ViewFactory factory);
+  explicit ViewProviderService(
+      component::ApplicationContext* application_context, ViewFactory factory);
   ~ViewProviderService();
 
   // |ViewProvider|
-  void CreateView(
-      f1dl::InterfaceRequest<ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<app::ServiceProvider> view_services) override;
+  void CreateView(f1dl::InterfaceRequest<ViewOwner> view_owner_request,
+                  f1dl::InterfaceRequest<component::ServiceProvider>
+                      view_services) override;
 
  private:
-  app::ApplicationContext* application_context_;
+  component::ApplicationContext* application_context_;
   ViewFactory view_factory_;
 
   f1dl::BindingSet<ViewProvider> bindings_;

@@ -75,7 +75,8 @@ static const std::map<int, float> notes_by_key_ = {
 }  // namespace
 
 Tones::Tones(bool interactive) : interactive_(interactive) {
-  auto application_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto application_context =
+      component::ApplicationContext::CreateFromStartupInfo();
 
   // Open the output stream.
   lpcm_output_stream_ = media::LpcmOutputStream::Create(

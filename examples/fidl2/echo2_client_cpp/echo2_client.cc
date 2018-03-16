@@ -18,12 +18,12 @@ namespace echo2 {
 class EchoClientApp {
  public:
   EchoClientApp()
-      : context_(app::ApplicationContext::CreateFromStartupInfo()) {}
+      : context_(component::ApplicationContext::CreateFromStartupInfo()) {}
 
   echo2::EchoPtr& echo() { return echo_; }
 
   void Start(std::string server_url, std::string msg) {
-    auto launch_info = app::ApplicationLaunchInfo::New();
+    auto launch_info = component::ApplicationLaunchInfo::New();
     launch_info->url = server_url;
     launch_info->directory_request = echo_provider_.NewRequest();
     context_->launcher()->CreateApplication(std::move(launch_info),
@@ -37,10 +37,10 @@ class EchoClientApp {
   EchoClientApp(const EchoClientApp&) = delete;
   EchoClientApp& operator=(const EchoClientApp&) = delete;
 
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   zx::process server_;
-  app::Services echo_provider_;
-  app::ApplicationControllerPtr controller_;
+  component::Services echo_provider_;
+  component::ApplicationControllerPtr controller_;
   echo2::EchoPtr echo_;
 };
 

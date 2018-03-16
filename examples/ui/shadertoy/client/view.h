@@ -17,7 +17,7 @@ namespace shadertoy_client {
 
 class View : public mozart::BaseView {
  public:
-  View(app::ApplicationContext* application_context,
+  View(component::ApplicationContext* application_context,
        mozart::ViewManagerPtr view_manager,
        f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
@@ -30,7 +30,7 @@ class View : public mozart::BaseView {
   // |BaseView|.
   void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) override;
 
-  app::ApplicationContext* const application_context_;
+  component::ApplicationContext* const application_context_;
   fsl::MessageLoop* loop_;
 
   mozart::example::ShadertoyFactoryPtr shadertoy_factory_;

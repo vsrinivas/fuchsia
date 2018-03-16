@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
 
-extern std::unique_ptr<app::ApplicationContext> g_application_context;
+extern std::unique_ptr<component::ApplicationContext> g_application_context;
 
 namespace scenic {
 namespace test {

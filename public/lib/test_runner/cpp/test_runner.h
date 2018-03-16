@@ -83,11 +83,9 @@ class TestRunnerImpl : public TestRunner {
 // reporting anything, we declare the test a failure.
 class TestRunContext {
  public:
-  TestRunContext(std::shared_ptr<app::ApplicationContext> app_context,
-                 TestRunObserver* connection,
-                 const std::string& test_id,
-                 const std::string& url,
-                 const std::vector<std::string>& args);
+  TestRunContext(std::shared_ptr<component::ApplicationContext> app_context,
+                 TestRunObserver* connection, const std::string& test_id,
+                 const std::string& url, const std::vector<std::string>& args);
 
   // Called from TestRunnerImpl, the actual implemention of |TestRunner|.
   void StopTrackingClient(TestRunnerImpl* client, bool crashed);
@@ -96,7 +94,7 @@ class TestRunContext {
   void Teardown(TestRunnerImpl* teardown_client);
 
  private:
-  app::ApplicationControllerPtr child_app_controller_;
+  component::ApplicationControllerPtr child_app_controller_;
   std::unique_ptr<Scope> child_env_scope_;
 
   TestRunObserver* const test_runner_connection_;

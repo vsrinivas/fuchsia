@@ -16,7 +16,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
-namespace app {
+namespace component {
 class JobHolder;
 
 enum class ExportedDirType {
@@ -80,6 +80,6 @@ class ApplicationControllerImpl : public ApplicationController {
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationControllerImpl);
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_

@@ -19,7 +19,7 @@ class ViewState;
 class ViewImpl : public mozart::View,
                  public mozart::ViewContainer,
                  public mozart::ViewOwner,
-                 public app::ServiceProvider {
+                 public component::ServiceProvider {
  public:
   ViewImpl(ViewRegistry* registry, ViewState* state);
   ~ViewImpl() override;
@@ -27,10 +27,10 @@ class ViewImpl : public mozart::View,
  private:
   // |View|:
   void GetToken(const mozart::View::GetTokenCallback& callback) override;
-  void GetServiceProvider(f1dl::InterfaceRequest<app::ServiceProvider>
+  void GetServiceProvider(f1dl::InterfaceRequest<component::ServiceProvider>
                               service_provider_request) override;
   void OfferServiceProvider(
-      f1dl::InterfaceHandle<app::ServiceProvider> service_provider,
+      f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
       f1dl::Array<f1dl::String> service_names) override;
   void GetContainer(f1dl::InterfaceRequest<mozart::ViewContainer>
                         view_container_request) override;
@@ -49,13 +49,13 @@ class ViewImpl : public mozart::View,
       mozart::ViewPropertiesPtr child_view_properties) override;
   void RequestFocus(uint32_t child_key) override;
 
-  // |app::ServiceProvider|:
+  // |component::ServiceProvider|:
   void ConnectToService(const f1dl::String& service_name,
                         zx::channel client_handle) override;
 
   ViewRegistry* const registry_;
   ViewState* const state_;
-  f1dl::BindingSet<app::ServiceProvider> service_provider_bindings_;
+  f1dl::BindingSet<component::ServiceProvider> service_provider_bindings_;
   f1dl::BindingSet<mozart::ViewContainer> container_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewImpl);

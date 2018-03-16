@@ -35,7 +35,7 @@ class NetConnectorImpl : public NetConnector {
   ~NetConnectorImpl() override;
 
   // Returns the service provider exposed to remote requestors.
-  app::ServiceProvider* responding_services() {
+  component::ServiceProvider* responding_services() {
     return responding_service_host_.services();
   }
 
@@ -54,13 +54,14 @@ class NetConnectorImpl : public NetConnector {
   void ReleaseServiceAgent(ServiceAgent* service_agent);
 
   // NetConnector implementation.
-  void RegisterServiceProvider(
-      const f1dl::String& name,
-      f1dl::InterfaceHandle<app::ServiceProvider> service_provider) override;
+  void RegisterServiceProvider(const f1dl::String& name,
+                               f1dl::InterfaceHandle<component::ServiceProvider>
+                                   service_provider) override;
 
   void GetDeviceServiceProvider(
       const f1dl::String& device_name,
-      f1dl::InterfaceRequest<app::ServiceProvider> service_provider) override;
+      f1dl::InterfaceRequest<component::ServiceProvider> service_provider)
+      override;
 
   void GetKnownDeviceNames(
       uint64_t version_last_seen,
@@ -79,7 +80,7 @@ class NetConnectorImpl : public NetConnector {
   void AddServiceAgent(std::unique_ptr<ServiceAgent> service_agent);
 
   NetConnectorParams* params_;
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   std::string host_name_;
   f1dl::BindingSet<NetConnector> bindings_;
   Listener listener_;

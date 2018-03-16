@@ -17,7 +17,7 @@ namespace mdns {
 
 class MdnsServiceImpl : public MdnsService {
  public:
-  MdnsServiceImpl(app::ApplicationContext* application_context);
+  MdnsServiceImpl(component::ApplicationContext* application_context);
 
   ~MdnsServiceImpl() override;
 
@@ -138,7 +138,7 @@ class MdnsServiceImpl : public MdnsService {
   // Starts the service.
   void Start();
 
-  app::ApplicationContext* application_context_;
+  component::ApplicationContext* application_context_;
   f1dl::BindingSet<MdnsService> bindings_;
   mdns::Mdns mdns_;
   size_t next_subscriber_id_ = 0;

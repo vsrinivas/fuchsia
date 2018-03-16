@@ -49,7 +49,7 @@ TtsSpeaker::~TtsSpeaker() {
 }
 
 zx_status_t TtsSpeaker::Init(
-    const std::unique_ptr<app::ApplicationContext>& application_context) {
+    const std::unique_ptr<component::ApplicationContext>& application_context) {
   zx_status_t res;
 
   if (wakeup_event_.is_valid()) {

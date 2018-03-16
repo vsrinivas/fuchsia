@@ -11,7 +11,7 @@
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/fxl/macros.h"
 
-namespace app {
+namespace component {
 
 // The configuration file should be specified as:
 // {
@@ -43,6 +43,6 @@ class Config {
   FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_CONFIG_H_

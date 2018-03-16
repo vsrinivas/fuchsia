@@ -21,7 +21,7 @@
 #include "lib/fxl/strings/string_view.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 
-namespace app {
+namespace component {
 
 class NamespaceBuilder;
 
@@ -106,6 +106,6 @@ class JobHolder {
   FXL_DISALLOW_COPY_AND_ASSIGN(JobHolder);
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_JOB_HOLDER_H_

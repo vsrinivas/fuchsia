@@ -53,7 +53,8 @@ std::ostream& operator<<(std::ostream& os, const AudioPolicyStatus& value) {
 class VolApp {
  public:
   VolApp(int argc, const char** argv)
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+      : application_context_(
+            component::ApplicationContext::CreateFromStartupInfo()) {
     fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
     if (command_line.HasOption("help")) {
@@ -215,7 +216,7 @@ class VolApp {
     WaitForKeystroke();
   }
 
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   AudioPolicyServicePtr audio_policy_service_;
   bool interactive_ = true;
   bool mute_ = false;

@@ -54,7 +54,7 @@ class App final : public bluetooth::control::AdapterManagerDelegate,
 
   bluetooth_tools::CommandDispatcher command_dispatcher_;
 
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   bluetooth::control::AdapterManagerPtr adapter_manager_;
   bluetooth::control::AdapterPtr active_adapter_;
 

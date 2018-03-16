@@ -54,7 +54,7 @@ class App : public mozart::Presenter,
   void InitializeServices();
   void Reset();
 
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   f1dl::BindingSet<mozart::Presenter> presenter_bindings_;
   f1dl::BindingSet<mozart::InputDeviceRegistry> input_receiver_bindings_;
   mozart::input::InputReader input_reader_;

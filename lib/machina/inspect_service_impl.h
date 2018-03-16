@@ -14,7 +14,7 @@ namespace machina {
 
 class InspectServiceImpl : public InspectService {
  public:
-  InspectServiceImpl(app::ApplicationContext* application_context,
+  InspectServiceImpl(component::ApplicationContext* application_context,
                      const PhysMem& phys_mem);
 
   // |InspectService|

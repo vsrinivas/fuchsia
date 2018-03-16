@@ -4,7 +4,7 @@
 
 extern crate fidl;
 extern crate failure;
-extern crate fuchsia_app as app;
+extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
@@ -12,7 +12,7 @@ extern crate garnet_examples_fidl2_services_echo2;
 #[macro_use]
 extern crate structopt;
 
-use app::client::Launcher;
+use component::client::Launcher;
 use failure::{Error, ResultExt};
 use futures::prelude::*;
 use garnet_examples_fidl2_services_echo2::EchoProxy;

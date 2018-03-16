@@ -15,11 +15,9 @@ namespace media {
 
 // static
 fxl::RefPtr<LpcmOutputStream> LpcmOutputStream::Create(
-    app::ApplicationContext* application_context,
-    AudioSampleFormat sample_format,
-    uint32_t channel_count,
-    uint32_t frames_per_second,
-    size_t payload_pool_frames) {
+    component::ApplicationContext* application_context,
+    AudioSampleFormat sample_format, uint32_t channel_count,
+    uint32_t frames_per_second, size_t payload_pool_frames) {
   auto result = fxl::AdoptRef(
       new LpcmOutputStream(application_context, sample_format, channel_count,
                            frames_per_second, payload_pool_frames));
@@ -27,11 +25,10 @@ fxl::RefPtr<LpcmOutputStream> LpcmOutputStream::Create(
   return result;
 }
 
-LpcmOutputStream::LpcmOutputStream(app::ApplicationContext* application_context,
-                                   AudioSampleFormat sample_format,
-                                   uint32_t channel_count,
-                                   uint32_t frames_per_second,
-                                   size_t payload_pool_frames)
+LpcmOutputStream::LpcmOutputStream(
+    component::ApplicationContext* application_context,
+    AudioSampleFormat sample_format, uint32_t channel_count,
+    uint32_t frames_per_second, size_t payload_pool_frames)
     : LpcmPayload::Owner(sample_format, channel_count),
       task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       frames_per_second_(frames_per_second),

@@ -80,7 +80,7 @@ int MediaApp::Run() {
 // Connect to AudioServer and MediaRenderer services.
 bool MediaApp::AcquireRenderer() {
   media::AudioServerSyncPtr audio_server;
-  app::ConnectToEnvironmentService(GetSynchronousProxy(&audio_server));
+  component::ConnectToEnvironmentService(GetSynchronousProxy(&audio_server));
 
   // Only one of [AudioRenderer or MediaRenderer] must be kept open for playback
   media::AudioRendererSyncPtr audio_renderer;

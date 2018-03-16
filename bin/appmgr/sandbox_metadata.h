@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace app {
+namespace component {
 
 class SandboxMetadata {
  public:
@@ -30,6 +30,6 @@ class SandboxMetadata {
   std::vector<std::string> features_;
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_SANDBOX_METADATA_H_

@@ -21,25 +21,26 @@ namespace test_runner {
 // environment services are delegated to the parent environment.
 class Scope {
  public:
-  Scope(const app::ApplicationEnvironmentPtr& parent_env,
+  Scope(const component::ApplicationEnvironmentPtr& parent_env,
         const std::string& label);
 
   template <typename Interface>
   void AddService(
-      app::ServiceProviderImpl::InterfaceRequestHandler<Interface> handler,
+      component::ServiceProviderImpl::InterfaceRequestHandler<Interface>
+          handler,
       const std::string& service_name = Interface::Name_) {
     service_provider_bridge_.AddService(handler, service_name);
   }
 
-  app::ApplicationLauncher* GetLauncher();
+  component::ApplicationLauncher* GetLauncher();
 
-  app::ApplicationEnvironmentPtr& environment() { return env_; }
+  component::ApplicationEnvironmentPtr& environment() { return env_; }
 
  private:
-  app::ServiceProviderBridge service_provider_bridge_;
-  app::ApplicationEnvironmentPtr env_;
-  app::ApplicationLauncherPtr env_launcher_;
-  app::ApplicationEnvironmentControllerPtr env_controller_;
+  component::ServiceProviderBridge service_provider_bridge_;
+  component::ApplicationEnvironmentPtr env_;
+  component::ApplicationLauncherPtr env_launcher_;
+  component::ApplicationEnvironmentControllerPtr env_controller_;
 };
 
 }  // namespace test_runner

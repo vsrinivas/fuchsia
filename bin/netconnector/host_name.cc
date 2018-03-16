@@ -32,13 +32,13 @@ class NetstackClient {
 
  private:
   NetstackClient()
-      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
     FXL_DCHECK(context_);
     netstack_ = context_->ConnectToEnvironmentService<netstack::Netstack>();
     FXL_DCHECK(netstack_);
   }
 
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   netstack::NetstackPtr netstack_;
 };
 

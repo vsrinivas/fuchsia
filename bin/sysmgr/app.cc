@@ -20,7 +20,7 @@ namespace {
 // We explicitly launch netstack because netstack registers itself as
 // |/dev/socket|, which needs to happen eagerly, instead of being discovered
 // via |/svc/net.Netstack|, which can happen asynchronously.
-void LaunchNetstack(app::ServiceProvider* provider) {
+void LaunchNetstack(component::ServiceProvider* provider) {
   zx::channel h1, h2;
   zx::channel::create(0, &h1, &h2);
   provider->ConnectToService("net.Netstack", std::move(h1));
@@ -30,7 +30,7 @@ void LaunchNetstack(app::ServiceProvider* provider) {
 // SSID is configured.
 // TODO: Remove this hard-coded logic once we have a more sophisticated
 // system service manager that can do this sort of thing using config files.
-void LaunchWlanstack(app::ServiceProvider* provider) {
+void LaunchWlanstack(component::ServiceProvider* provider) {
   zx::channel h1, h2;
   zx::channel::create(0, &h1, &h2);
   provider->ConnectToService("wlan::WlanService", std::move(h1));
@@ -42,7 +42,8 @@ constexpr char kDefaultLabel[] = "sys";
 constexpr char kConfigDir[] = "/system/data/sysmgr/";
 
 App::App()
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()) {
   FXL_DCHECK(application_context_);
 
   Config config;
@@ -100,20 +101,20 @@ App::App()
 App::~App() {}
 
 void App::RegisterSingleton(std::string service_name,
-                            app::ApplicationLaunchInfoPtr launch_info) {
+                            component::ApplicationLaunchInfoPtr launch_info) {
   service_provider_bridge_.AddServiceForName(
-      fxl::MakeCopyable([
-        this, service_name, launch_info = std::move(launch_info),
-        controller = app::ApplicationControllerPtr()
-      ](zx::channel client_handle) mutable {
+      fxl::MakeCopyable([this, service_name,
+                         launch_info = std::move(launch_info),
+                         controller = component::ApplicationControllerPtr()](
+                            zx::channel client_handle) mutable {
         FXL_VLOG(2) << "Servicing singleton service request for "
                     << service_name;
         auto it = services_.find(launch_info->url);
         if (it == services_.end()) {
           FXL_VLOG(1) << "Starting singleton " << launch_info->url
                       << " for service " << service_name;
-          app::Services services;
-          auto dup_launch_info = app::ApplicationLaunchInfo::New();
+          component::Services services;
+          auto dup_launch_info = component::ApplicationLaunchInfo::New();
           dup_launch_info->url = launch_info->url;
           dup_launch_info->arguments = launch_info->arguments.Clone();
           dup_launch_info->directory_request = services.NewRequest();
@@ -139,15 +140,15 @@ void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
   app_loader_ = std::make_unique<DelegatingApplicationLoader>(
       std::move(app_loaders), env_launcher_.get(),
       application_context_
-          ->ConnectToEnvironmentService<app::ApplicationLoader>());
+          ->ConnectToEnvironmentService<component::ApplicationLoader>());
 
-  service_provider_bridge_.AddService<app::ApplicationLoader>(
-      [this](f1dl::InterfaceRequest<app::ApplicationLoader> request) {
+  service_provider_bridge_.AddService<component::ApplicationLoader>(
+      [this](f1dl::InterfaceRequest<component::ApplicationLoader> request) {
         app_loader_bindings_.AddBinding(app_loader_.get(), std::move(request));
       });
 }
 
-void App::LaunchApplication(app::ApplicationLaunchInfoPtr launch_info) {
+void App::LaunchApplication(component::ApplicationLaunchInfoPtr launch_info) {
   FXL_VLOG(1) << "Launching application " << launch_info->url;
   env_launcher_->CreateApplication(std::move(launch_info), nullptr);
 }

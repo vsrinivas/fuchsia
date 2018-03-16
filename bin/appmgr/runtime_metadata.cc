@@ -6,7 +6,7 @@
 
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace app {
+namespace component {
 
 constexpr char kRunner[] = "runner";
 
@@ -31,4 +31,4 @@ bool RuntimeMetadata::Parse(const std::string& data) {
   return true;
 }
 
-}  // namespace app
+}  // namespace component

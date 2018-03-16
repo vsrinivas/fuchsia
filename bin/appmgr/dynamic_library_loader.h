@@ -10,12 +10,12 @@
 
 #include "lib/fxl/files/unique_fd.h"
 
-namespace app {
+namespace component {
 namespace DynamicLibraryLoader {
 
 zx_status_t Start(fxl::UniqueFD fd, zx::channel* result);
 
 }  // namespace DynamicLibraryLoader
-}  // namespace app
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_DYNAMIC_LIBRARY_LOADER_H_

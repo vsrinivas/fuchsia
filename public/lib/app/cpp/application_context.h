@@ -18,7 +18,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/svc/cpp/service_namespace.h"
 
-namespace app {
+namespace component {
 
 // Provides access to the application's environment and allows the application
 // to publish outgoing services back to its creator.
@@ -143,6 +143,6 @@ class ApplicationContext {
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationContext);
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // LIB_APP_CPP_APPLICATION_CONTEXT_H_

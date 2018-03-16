@@ -19,13 +19,13 @@ interface NetConnector {
   // running in a user context can register with a |netconnector| running in a
   // device context.
   RegisterServiceProvider@0(string service_name,
-                            app.ServiceProvider service_provider);
+                            component.ServiceProvider service_provider);
 
   // Gets a provider for services on the specified device. Services provided
   // on the local device can be accessed by passing a |device_name| of "local"
   // or the actual name of the local device.
   GetDeviceServiceProvider@1(string device_name,
-                             app.ServiceProvider& service_provider);
+                             component.ServiceProvider& service_provider);
 
   // Gets the names of known devices. To get the list immediately, call
   // |GetKnownDeviceNames(kInitialKnownDeviceNames)|. To get updates thereafter,

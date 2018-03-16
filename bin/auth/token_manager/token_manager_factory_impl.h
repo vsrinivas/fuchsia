@@ -24,7 +24,7 @@ const std::string kAuthDbPostfix = "token_store.db";
 
 class TokenManagerFactoryImpl : public TokenManagerFactory {
  public:
-  TokenManagerFactoryImpl(app::ApplicationContext* context);
+  TokenManagerFactoryImpl(component::ApplicationContext* context);
 
   ~TokenManagerFactoryImpl() override;
 
@@ -34,7 +34,7 @@ class TokenManagerFactoryImpl : public TokenManagerFactory {
                        f1dl::Array<AuthProviderConfigPtr> auth_provider_configs,
                        f1dl::InterfaceRequest<TokenManager> request) override;
 
-  app::ApplicationContext* const app_context_;
+  component::ApplicationContext* const app_context_;
 
   f1dl::BindingSet<TokenManager, std::unique_ptr<TokenManager>>
       token_manager_bindings_;

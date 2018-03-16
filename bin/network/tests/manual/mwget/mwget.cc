@@ -57,7 +57,8 @@ class MWGetApp {
  public:
   static constexpr int MAX_LOADERS = 100;
 
-  MWGetApp() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  MWGetApp()
+      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
     FXL_DCHECK(network_service_);
@@ -104,7 +105,7 @@ class MWGetApp {
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
 
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_[MAX_LOADERS];

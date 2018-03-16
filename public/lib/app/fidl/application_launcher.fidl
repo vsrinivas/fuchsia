@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module app;
+module component;
 
 import "lib/app/fidl/application_controller.fidl";
 import "lib/app/fidl/flat_namespace.fidl";
@@ -73,7 +73,7 @@ struct ServiceList {
 // An interface for creating application instances.
 //
 // Typically obtained via |ApplicationEnvironment.GetApplicationLauncher|.
-[ServiceName="app.ApplicationLauncher"]
+[ServiceName="component.ApplicationLauncher"]
 interface ApplicationLauncher {
   // Creates a new instance of the application described by |launch_info|.
   //

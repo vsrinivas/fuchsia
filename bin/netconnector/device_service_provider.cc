@@ -15,18 +15,16 @@ namespace netconnector {
 
 // static
 std::unique_ptr<DeviceServiceProvider> DeviceServiceProvider::Create(
-    const std::string& device_name,
-    const SocketAddress& address,
-    f1dl::InterfaceRequest<app::ServiceProvider> request,
+    const std::string& device_name, const SocketAddress& address,
+    f1dl::InterfaceRequest<component::ServiceProvider> request,
     NetConnectorImpl* owner) {
   return std::unique_ptr<DeviceServiceProvider>(new DeviceServiceProvider(
       device_name, address, std::move(request), owner));
 }
 
 DeviceServiceProvider::DeviceServiceProvider(
-    const std::string& device_name,
-    const SocketAddress& address,
-    f1dl::InterfaceRequest<app::ServiceProvider> request,
+    const std::string& device_name, const SocketAddress& address,
+    f1dl::InterfaceRequest<component::ServiceProvider> request,
     NetConnectorImpl* owner)
     : device_name_(device_name),
       address_(address),

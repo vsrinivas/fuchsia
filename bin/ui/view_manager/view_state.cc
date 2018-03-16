@@ -69,7 +69,7 @@ const std::string& ViewState::FormattedLabel() const {
   }
   return formatted_label_cache_;
 }
-app::ServiceProvider* ViewState::GetServiceProviderIfSupports(
+component::ServiceProvider* ViewState::GetServiceProviderIfSupports(
     std::string service_name) {
   if (service_names_) {
     auto& v = *service_names_;
@@ -81,7 +81,7 @@ app::ServiceProvider* ViewState::GetServiceProviderIfSupports(
 }
 
 void ViewState::SetServiceProvider(
-    f1dl::InterfaceHandle<app::ServiceProvider> service_provider,
+    f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
     f1dl::Array<f1dl::String> service_names) {
   if (service_provider) {
     service_provider_ = service_provider.Bind();

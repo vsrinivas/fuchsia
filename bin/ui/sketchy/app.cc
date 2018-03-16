@@ -8,7 +8,7 @@ namespace sketchy_service {
 
 App::App(escher::Escher* escher)
     : loop_(fsl::MessageLoop::GetCurrent()),
-      context_(app::ApplicationContext::CreateFromStartupInfo()),
+      context_(component::ApplicationContext::CreateFromStartupInfo()),
       scenic_(context_->ConnectToEnvironmentService<ui::Scenic>()),
       session_(std::make_unique<scenic_lib::Session>(scenic_.get())),
       canvas_(std::make_unique<CanvasImpl>(session_.get(), escher)) {

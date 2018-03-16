@@ -15,7 +15,8 @@
 namespace ime {
 
 App::App(const fxl::CommandLine& command_line)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()) {
   FXL_DCHECK(application_context_);
   application_context_->outgoing_services()->AddService<mozart::ImeService>(
       [this](f1dl::InterfaceRequest<mozart::ImeService> request) {

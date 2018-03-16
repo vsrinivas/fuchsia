@@ -13,7 +13,7 @@ int main(int argc, const char** argv) {
     return 1;
 
   fsl::MessageLoop loop;
-  auto context = app::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::ApplicationContext::CreateFromStartupInfo();
 
   tracing::App app(context.get());
   int32_t return_code = 0;

@@ -17,14 +17,14 @@ const std::string kIsolateArgument = "--transient";
 // Connects to the requested service in a media_service isolate.
 template <typename Interface>
 void ConnectToIsolate(f1dl::InterfaceRequest<Interface> request,
-                      app::ApplicationLauncher* launcher) {
-  auto launch_info = app::ApplicationLaunchInfo::New();
+                      component::ApplicationLauncher* launcher) {
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = kIsolateUrl;
   launch_info->arguments.push_back(kIsolateArgument);
-  app::Services services;
+  component::Services services;
   launch_info->directory_request = services.NewRequest();
 
-  app::ApplicationControllerPtr controller;
+  component::ApplicationControllerPtr controller;
   launcher->CreateApplication(std::move(launch_info), controller.NewRequest());
 
   services.ConnectToService(std::move(request), Interface::Name_);
@@ -44,8 +44,8 @@ int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
 
-  std::unique_ptr<app::ApplicationContext> application_context =
-      app::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<component::ApplicationContext> application_context =
+      component::ApplicationContext::CreateFromStartupInfo();
 
   if (transient) {
     media::MediaComponentFactory factory(std::move(application_context));
@@ -59,7 +59,7 @@ int main(int argc, const char** argv) {
 
     loop.Run();
   } else {
-    app::ApplicationLauncherPtr launcher;
+    component::ApplicationLauncherPtr launcher;
     application_context->environment()->GetApplicationLauncher(
         launcher.NewRequest());
 

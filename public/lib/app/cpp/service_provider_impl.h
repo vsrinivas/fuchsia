@@ -16,7 +16,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
 
-namespace app {
+namespace component {
 
 // An implementation of |ServiceProvider|, which can be customized appropriately
 // (to select what services it provides).
@@ -129,6 +129,6 @@ class ServiceProviderImpl : public ServiceProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderImpl);
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_

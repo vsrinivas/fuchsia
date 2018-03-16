@@ -35,7 +35,7 @@ class App : public mozart::ImeService {
 
   void OnImeDisconnected(ImeImpl* ime);
 
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   std::vector<std::unique_ptr<ImeImpl>> ime_;
   f1dl::BindingSet<mozart::ImeService> ime_bindings_;
 

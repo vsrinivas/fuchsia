@@ -7,7 +7,7 @@
 
 #include <string>
 
-namespace app {
+namespace component {
 
 class RuntimeMetadata {
  public:
@@ -22,6 +22,6 @@ class RuntimeMetadata {
   std::string runner_;
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_RUNTIME_METADATA_H_

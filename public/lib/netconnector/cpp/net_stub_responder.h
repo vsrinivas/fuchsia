@@ -21,9 +21,8 @@ template <typename TInterface, typename TStub>
 class NetStubResponder {
  public:
   // Constructor. |actual| must outlive this.
-  NetStubResponder(TInterface* actual,
-                   const std::string& service_name,
-                   app::ApplicationContext* application_context)
+  NetStubResponder(TInterface* actual, const std::string& service_name,
+                   component::ApplicationContext* application_context)
       : actual_(actual) {
     FXL_DCHECK(actual_);
     FXL_DCHECK(!service_name.empty());
@@ -40,7 +39,7 @@ class NetStubResponder {
         application_context
             ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
-    f1dl::InterfaceHandle<app::ServiceProvider> handle;
+    f1dl::InterfaceHandle<component::ServiceProvider> handle;
     service_namespace_.AddBinding(handle.NewRequest());
     FXL_DCHECK(handle);
 
@@ -53,7 +52,7 @@ class NetStubResponder {
 
  private:
   TInterface* actual_;
-  app::ServiceNamespace service_namespace_;
+  component::ServiceNamespace service_namespace_;
   std::unordered_set<std::shared_ptr<TStub>> stubs_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NetStubResponder);

@@ -31,7 +31,7 @@ class EchoImpl : public Echo {
 class EchoDelegate {
  public:
   EchoDelegate()
-    : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
     context_->outgoing_services()->AddService<Echo>(
       [this](f1dl::InterfaceRequest<Echo> request) {
         echo_provider_.AddBinding(std::move(request));
@@ -41,7 +41,7 @@ class EchoDelegate {
   ~EchoDelegate() {}
 
  private:
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   echo::EchoImpl echo_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EchoDelegate);

@@ -20,10 +20,9 @@
 
 namespace scenic {
 
-App::App(app::ApplicationContext* app_context)
+App::App(component::ApplicationContext* app_context)
     : scenic_(std::make_unique<Scenic>(
-          app_context,
-          fsl::MessageLoop::GetCurrent()->task_runner().get(),
+          app_context, fsl::MessageLoop::GetCurrent()->task_runner().get(),
           &clock_)) {
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
   auto scenic = scenic_->RegisterSystem<scenic::gfx::ScenicSystem>();

@@ -27,7 +27,8 @@ namespace bluetooth_service {
 // long as the device exists and remains the active adapter.
 class App final {
  public:
-  explicit App(std::unique_ptr<app::ApplicationContext> application_context);
+  explicit App(
+      std::unique_ptr<component::ApplicationContext> application_context);
   ~App() = default;
 
   // Returns the underlying AdapterManager that owns the gap::Adapter instances.
@@ -65,7 +66,7 @@ class App final {
 
   // Provides access to the environment. This is used to publish outgoing
   // services.
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
 
   // Watches for Bluetooth HCI devices and notifies us when adapters get added
   // and removed.

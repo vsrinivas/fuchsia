@@ -7,7 +7,7 @@
 
 extern crate failure;
 extern crate fidl;
-extern crate fuchsia_app as app;
+extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
@@ -63,7 +63,7 @@ fn main() {
 
 fn main_res() -> Result<(), Error> {
     let mut executor = async::Executor::new().context("error creating event loop")?;
-    let wlan_svc = app::client::connect_to_service::<DeviceService::Service>()
+    let wlan_svc = component::client::connect_to_service::<DeviceService::Service>()
         .context("failed to connect to device service")?;
 
     let (remote, local) = zx::Channel::create().context("failed to create zx channel")?;

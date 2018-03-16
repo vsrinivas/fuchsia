@@ -29,7 +29,7 @@ std::string SanitizeLabel(const f1dl::String& label) {
 
 }  // namespace
 
-TraceManager::TraceManager(app::ApplicationContext* context,
+TraceManager::TraceManager(component::ApplicationContext* context,
                            const Config& config)
     : context_(context), config_(config) {
   // TODO(jeffbrown): We should do this in StartTracing() and take care
@@ -161,7 +161,7 @@ void TraceManager::LaunchConfiguredProviders() {
       }
       FXL_VLOG(2) << "Args:" << args;
     }
-    auto launch_info = app::ApplicationLaunchInfo::New();
+    auto launch_info = component::ApplicationLaunchInfo::New();
     launch_info->url = pair.second->url;
     launch_info->arguments = pair.second->arguments.Clone();
     context_->launcher()->CreateApplication(std::move(launch_info), nullptr);

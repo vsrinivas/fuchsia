@@ -18,7 +18,7 @@ class ViewTreeState;
 // This object is owned by its associated ViewTreeState.
 class ViewTreeImpl : public mozart::ViewTree,
                      public mozart::ViewContainer,
-                     public app::ServiceProvider {
+                     public component::ServiceProvider {
  public:
   ViewTreeImpl(ViewRegistry* registry, ViewTreeState* state);
   ~ViewTreeImpl() override;
@@ -26,8 +26,8 @@ class ViewTreeImpl : public mozart::ViewTree,
  private:
   // |ViewTree|:
   void GetToken(const GetTokenCallback& callback) override;
-  void GetServiceProvider(
-      f1dl::InterfaceRequest<app::ServiceProvider> service_provider) override;
+  void GetServiceProvider(f1dl::InterfaceRequest<component::ServiceProvider>
+                              service_provider) override;
   void GetContainer(f1dl::InterfaceRequest<mozart::ViewContainer>
                         view_container_request) override;
 
@@ -45,13 +45,13 @@ class ViewTreeImpl : public mozart::ViewTree,
       mozart::ViewPropertiesPtr child_view_properties) override;
   void RequestFocus(uint32_t child_key) override;
 
-  // |app::ServiceProvider|:
+  // |component::ServiceProvider|:
   void ConnectToService(const f1dl::String& service_name,
                         zx::channel client_handle) override;
 
   ViewRegistry* const registry_;
   ViewTreeState* const state_;
-  f1dl::BindingSet<app::ServiceProvider> service_provider_bindings_;
+  f1dl::BindingSet<component::ServiceProvider> service_provider_bindings_;
   f1dl::BindingSet<mozart::ViewContainer> container_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewTreeImpl);

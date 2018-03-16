@@ -29,14 +29,14 @@ class Config {
   }
 
   // Well-known providers to start automatically.
-  const std::map<std::string, app::ApplicationLaunchInfoPtr>& providers()
+  const std::map<std::string, component::ApplicationLaunchInfoPtr>& providers()
       const {
     return providers_;
   }
 
  private:
   std::map<std::string, std::string> known_categories_;
-  std::map<std::string, app::ApplicationLaunchInfoPtr> providers_;
+  std::map<std::string, component::ApplicationLaunchInfoPtr> providers_;
 };
 
 }  // namespace tracing

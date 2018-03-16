@@ -13,7 +13,7 @@
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fxl/logging.h"
 
-namespace app {
+namespace component {
 
 namespace {
 
@@ -84,4 +84,4 @@ void ApplicationContext::ConnectToEnvironmentService(
                           channel.release());
 }
 
-}  // namespace app
+}  // namespace component

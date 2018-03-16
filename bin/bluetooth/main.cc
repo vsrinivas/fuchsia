@@ -35,7 +35,8 @@ int main(int argc, const char* argv[]) {
 
   fsl::MessageLoop message_loop;
 
-  bluetooth_service::App app(app::ApplicationContext::CreateFromStartupInfo());
+  bluetooth_service::App app(
+      component::ApplicationContext::CreateFromStartupInfo());
 
   message_loop.Run();
 

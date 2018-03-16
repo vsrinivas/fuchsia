@@ -10,7 +10,7 @@
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 
-static app::FileDescriptorPtr CloneFileDescriptor(int fd) {
+static component::FileDescriptorPtr CloneFileDescriptor(int fd) {
   zx_handle_t handles[FDIO_MAX_HANDLES] = { 0, 0, 0 };
   uint32_t types[FDIO_MAX_HANDLES] = {
     ZX_HANDLE_INVALID,
@@ -20,7 +20,7 @@ static app::FileDescriptorPtr CloneFileDescriptor(int fd) {
   zx_status_t status = fdio_clone_fd(fd, 0, handles, types);
   if (status <= 0)
     return nullptr;
-  app::FileDescriptorPtr result = app::FileDescriptor::New();
+  component::FileDescriptorPtr result = component::FileDescriptor::New();
   result->type0 = types[0];
   result->handle0 = zx::handle(handles[0]);
   result->type1 = types[1];
@@ -35,7 +35,7 @@ int main(int argc, const char** argv) {
     fprintf(stderr, "Usage: run <program> <args>*\n");
     return 1;
   }
-  auto launch_info = app::ApplicationLaunchInfo::New();
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = argv[1];
   for (int i = 0; i < argc - 2; ++i) {
     launch_info->arguments.push_back(argv[2 + i]);
@@ -45,10 +45,10 @@ int main(int argc, const char** argv) {
   launch_info->err = CloneFileDescriptor(STDERR_FILENO);
 
   // Connect to the ApplicationLauncher service through our static environment.
-  app::ApplicationLauncherSyncPtr launcher;
-  app::ConnectToEnvironmentService(GetSynchronousProxy(&launcher));
+  component::ApplicationLauncherSyncPtr launcher;
+  component::ConnectToEnvironmentService(GetSynchronousProxy(&launcher));
 
-  app::ApplicationControllerSyncPtr controller;
+  component::ApplicationControllerSyncPtr controller;
   launcher->CreateApplication(std::move(launch_info),
                               GetSynchronousProxy(&controller));
 

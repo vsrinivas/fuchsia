@@ -20,7 +20,7 @@ class App {
 
  private:
   fsl::MessageLoop* loop_;
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   ui::ScenicPtr scenic_;
   std::unique_ptr<scenic_lib::Session> session_;
   f1dl::BindingSet<sketchy::Canvas> bindings_;

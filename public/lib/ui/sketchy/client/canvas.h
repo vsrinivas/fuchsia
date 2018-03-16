@@ -16,7 +16,7 @@ namespace sketchy_lib {
 // Convenient C++ wrapper for sketchy::Canvas service.
 class Canvas final {
  public:
-  Canvas(app::ApplicationContext* context);
+  Canvas(component::ApplicationContext* context);
   Canvas(sketchy::CanvasPtr canvas);
   void Present(uint64_t time, scenic_lib::Session::PresentCallback callback);
 

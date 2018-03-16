@@ -20,8 +20,8 @@ namespace sysmgr {
 class Config {
  public:
   using ServiceMap =
-      std::unordered_map<std::string, app::ApplicationLaunchInfoPtr>;
-  using AppVector = std::vector<app::ApplicationLaunchInfoPtr>;
+      std::unordered_map<std::string, component::ApplicationLaunchInfoPtr>;
+  using AppVector = std::vector<component::ApplicationLaunchInfoPtr>;
 
   Config();
   ~Config();

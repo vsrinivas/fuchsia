@@ -105,13 +105,12 @@ std::string StatusToString(cobalt::Status status) {
 
 class CobaltTestApp {
  public:
-  CobaltTestApp(bool use_network,
-                bool do_environment_test,
+  CobaltTestApp(bool use_network, bool do_environment_test,
                 int num_observations_per_batch)
       : use_network_(use_network),
         do_environment_test_(do_environment_test),
         num_observations_per_batch_(num_observations_per_batch),
-        context_(app::ApplicationContext::CreateFromStartupInfo()) {}
+        context_(component::ApplicationContext::CreateFromStartupInfo()) {}
 
   // We have multiple testing strategies based on the method we use to
   // connect to the FIDL service and the method we use to determine whether
@@ -234,8 +233,8 @@ class CobaltTestApp {
   bool do_environment_test_;
   int num_observations_per_batch_;
   int previous_value_of_num_send_attempts_ = 0;
-  std::unique_ptr<app::ApplicationContext> context_;
-  app::ApplicationControllerPtr app_controller_;
+  std::unique_ptr<component::ApplicationContext> context_;
+  component::ApplicationControllerPtr app_controller_;
   cobalt::CobaltEncoderSyncPtr encoder_;
   cobalt::CobaltControllerSyncPtr cobalt_controller_;
 
@@ -261,8 +260,8 @@ bool CobaltTestApp::RunAllTestingStrategies() {
 void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
                             uint32_t min_interval_seconds) {
   app_controller_.Unbind();
-  app::Services services;
-  auto launch_info = app::ApplicationLaunchInfo::New();
+  component::Services services;
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = "cobalt";
   launch_info->directory_request = services.NewRequest();
   {

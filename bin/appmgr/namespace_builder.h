@@ -14,7 +14,7 @@
 #include "garnet/bin/appmgr/sandbox_metadata.h"
 #include "lib/fxl/macros.h"
 
-namespace app {
+namespace component {
 
 class NamespaceBuilder {
  public:
@@ -67,6 +67,6 @@ class NamespaceBuilder {
   FXL_DISALLOW_COPY_AND_ASSIGN(NamespaceBuilder);
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_NAMESPACE_BUILDER_H_

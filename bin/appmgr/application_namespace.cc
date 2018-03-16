@@ -8,14 +8,14 @@
 
 #include "garnet/bin/appmgr/job_holder.h"
 
-namespace app {
+namespace component {
 
 ApplicationNamespace::ApplicationNamespace(
     fxl::RefPtr<ApplicationNamespace> parent,
     JobHolder* job_holder,
     ServiceListPtr service_list)
     : parent_(parent), job_holder_(job_holder) {
-  app::ServiceProviderPtr services_backend;
+  component::ServiceProviderPtr services_backend;
   if (parent_) {
     parent_->services().AddBinding(services_backend.NewRequest());
   }
@@ -80,4 +80,4 @@ void ApplicationNamespace::CreateApplication(
   job_holder_->CreateApplication(std::move(launch_info), std::move(controller));
 }
 
-}  // namespace app
+}  // namespace component

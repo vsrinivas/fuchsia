@@ -7,7 +7,7 @@
 #include <lib/async/loop.h>
 #include <loader-service/loader-service.h>
 
-namespace app {
+namespace component {
 namespace DynamicLibraryLoader {
 
 static async_t* ld_async = nullptr;
@@ -35,4 +35,4 @@ zx_status_t Start(fxl::UniqueFD fd, zx::channel* result) {
 }
 
 }  // namespace DynamicLibraryLoader
-}  // namespace app
+}  // namespace component

@@ -202,7 +202,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
 
 Command::Info Record::Describe() {
   return Command::Info{
-      [](app::ApplicationContext* context) {
+      [](component::ApplicationContext* context) {
         return std::make_unique<Record>(context);
       },
       "record",
@@ -231,7 +231,7 @@ Command::Info Record::Describe() {
         "tracing ends unless --detach is specified"}}};
 }
 
-Record::Record(app::ApplicationContext* context)
+Record::Record(component::ApplicationContext* context)
     : CommandWithTraceController(context), weak_ptr_factory_(this) {}
 
 void Record::Run(const fxl::CommandLine& command_line, OnDoneCallback on_done) {
@@ -376,7 +376,7 @@ void Record::DoneTrace() {
 }
 
 void Record::LaunchApp() {
-  auto launch_info = app::ApplicationLaunchInfo::New();
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = f1dl::String(options_.app);
   launch_info->arguments = f1dl::Array<f1dl::String>::From(options_.args);
 

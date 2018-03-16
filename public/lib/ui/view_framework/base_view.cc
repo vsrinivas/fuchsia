@@ -39,8 +39,8 @@ BaseView::BaseView(ViewManagerPtr view_manager,
                             view_listener_binding_.NewBinding(),
                             std::move(parent_export_token), label);
 
-  app::ConnectToService(GetViewServiceProvider(),
-                        input_connection_.NewRequest());
+  component::ConnectToService(GetViewServiceProvider(),
+                              input_connection_.NewRequest());
   input_connection_->SetEventListener(input_listener_binding_.NewBinding());
 
   session_.set_event_handler(
@@ -50,7 +50,7 @@ BaseView::BaseView(ViewManagerPtr view_manager,
 
 BaseView::~BaseView() = default;
 
-app::ServiceProvider* BaseView::GetViewServiceProvider() {
+component::ServiceProvider* BaseView::GetViewServiceProvider() {
   if (!view_service_provider_)
     view_->GetServiceProvider(view_service_provider_.NewRequest());
   return view_service_provider_.get();

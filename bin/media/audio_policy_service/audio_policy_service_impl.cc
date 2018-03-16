@@ -23,7 +23,7 @@ static const std::string kStatusFileDir =
 }  // namespace
 
 AudioPolicyServiceImpl::AudioPolicyServiceImpl(
-    std::unique_ptr<app::ApplicationContext> application_context)
+    std::unique_ptr<component::ApplicationContext> application_context)
     : application_context_(std::move(application_context)),
       initialize_attempts_remaining_(kInitializeAttempts) {
   application_context_->outgoing_services()->AddService<AudioPolicyService>(

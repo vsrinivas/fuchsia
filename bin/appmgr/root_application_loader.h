@@ -16,7 +16,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
 
-namespace app {
+namespace component {
 
 class RootApplicationLoader : public ApplicationLoader {
  public:
@@ -37,6 +37,6 @@ class RootApplicationLoader : public ApplicationLoader {
   FXL_DISALLOW_COPY_AND_ASSIGN(RootApplicationLoader);
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // GARNET_BIN_APPMGR_ROOT_APPLICATION_LOADER_H_

@@ -770,8 +770,8 @@ int main(int argc, char** argv) {
 
   fsl::MessageLoop loop;
 
-  std::unique_ptr<app::ApplicationContext> application_context =
-      app::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<component::ApplicationContext> application_context =
+      component::ApplicationContext::CreateFromStartupInfo();
 
   media::AudioServerPtr audio_server =
       application_context->ConnectToEnvironmentService<media::AudioServer>();

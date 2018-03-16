@@ -8,9 +8,8 @@
 
 namespace scenic {
 
-SystemContext::SystemContext(app::ApplicationContext* app_context,
-                             fxl::TaskRunner* task_runner,
-                             Clock* clock)
+SystemContext::SystemContext(component::ApplicationContext* app_context,
+                             fxl::TaskRunner* task_runner, Clock* clock)
     : app_context_(app_context), task_runner_(task_runner), clock_(clock) {
   FXL_DCHECK(app_context_);
   FXL_DCHECK(task_runner_);

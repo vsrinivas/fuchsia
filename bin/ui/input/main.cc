@@ -29,7 +29,8 @@ namespace input {
 class InputApp {
  public:
   InputApp()
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+      : application_context_(
+            component::ApplicationContext::CreateFromStartupInfo()) {
     registry_ =
         application_context_
             ->ConnectToEnvironmentService<mozart::InputDeviceRegistry>();
@@ -361,7 +362,7 @@ class InputApp {
         delta);
   }
 
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   f1dl::InterfacePtr<mozart::InputDeviceRegistry> registry_;
 };
 }  // namespace input

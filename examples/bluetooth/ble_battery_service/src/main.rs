@@ -6,7 +6,7 @@
 
 extern crate failure;
 extern crate fidl;
-extern crate fuchsia_app as app;
+extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
@@ -20,7 +20,7 @@ use bt::gatt;
 use bt::low_energy as le;
 use garnet_public_lib_bluetooth_fidl as bt;
 
-use app::client::connect_to_service;
+use component::client::connect_to_service;
 use cancelable_future::{Cancelable, CancelHandle};
 use failure::{Error, Fail};
 use fidl::{ClientEnd, FidlService, InterfacePtr};

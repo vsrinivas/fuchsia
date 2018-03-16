@@ -16,7 +16,7 @@
 #include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/ui/views/fidl/views.fidl.h"
 
-extern std::unique_ptr<app::ApplicationContext> g_application_context;
+extern std::unique_ptr<component::ApplicationContext> g_application_context;
 
 namespace view_manager {
 namespace test {

@@ -8,7 +8,7 @@
 
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace app {
+namespace component {
 namespace {
 
 template <typename Value>
@@ -75,4 +75,4 @@ bool SandboxMetadata::HasFeature(const std::string& feature) {
          features_.end();
 }
 
-}  // namespace app
+}  // namespace component

@@ -33,7 +33,7 @@ class App {
 
   void InitCheckerboardMaterial(scenic_lib::Material* uninitialized_material);
 
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   fsl::MessageLoop* loop_;
   ui::ScenicPtr scenic_;
 

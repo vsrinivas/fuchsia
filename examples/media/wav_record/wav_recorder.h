@@ -18,7 +18,7 @@ class WavRecorder : public media::AudioCapturerClient {
   WavRecorder(fxl::CommandLine cmd_line)
       : async_binding_(this), cmd_line_(std::move(cmd_line)) {}
   ~WavRecorder();
-  void Run(app::ApplicationContext* app_context);
+  void Run(component::ApplicationContext* app_context);
 
  private:
   void Usage();

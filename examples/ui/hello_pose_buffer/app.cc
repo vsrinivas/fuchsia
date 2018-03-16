@@ -43,7 +43,8 @@ static constexpr float kEdgeLength = 900;
 static constexpr uint64_t kBillion = 1000000000;
 
 App::App()
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       loop_(fsl::MessageLoop::GetCurrent()) {
   // Connect to the Mozart service.
   scenic_ = application_context_->ConnectToEnvironmentService<ui::Scenic>();

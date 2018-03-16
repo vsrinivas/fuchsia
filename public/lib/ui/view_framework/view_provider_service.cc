@@ -12,7 +12,7 @@
 namespace mozart {
 
 ViewProviderService::ViewProviderService(
-    app::ApplicationContext* application_context,
+    component::ApplicationContext* application_context,
     ViewFactory view_factory)
     : application_context_(application_context), view_factory_(view_factory) {
   FXL_DCHECK(application_context_);
@@ -29,7 +29,7 @@ ViewProviderService::~ViewProviderService() {
 
 void ViewProviderService::CreateView(
     f1dl::InterfaceRequest<ViewOwner> view_owner_request,
-    f1dl::InterfaceRequest<app::ServiceProvider> view_services) {
+    f1dl::InterfaceRequest<component::ServiceProvider> view_services) {
   ViewContext view_context;
   view_context.application_context = application_context_;
   view_context.view_manager =

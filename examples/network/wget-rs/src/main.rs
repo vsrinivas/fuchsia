@@ -6,7 +6,7 @@
 
 extern crate failure;
 extern crate fidl;
-extern crate fuchsia_app as app;
+extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate futures;
 extern crate garnet_public_lib_network_fidl;
@@ -56,7 +56,7 @@ fn main_res() -> Result<(), Error> {
     let mut exec = async::Executor::new()?;
 
     // Connect to the network service
-    let net = app::client::connect_to_service::<netsvc::NetworkService::Service>()?;
+    let net = component::client::connect_to_service::<netsvc::NetworkService::Service>()?;
 
     // Create a URLLoader instance
     let (loader_proxy, loader_server) = netsvc::URLLoader::Service::new_pair()?;

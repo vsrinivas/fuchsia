@@ -8,7 +8,7 @@
 
 #include "lib/fxl/functional/make_copyable.h"
 
-namespace app {
+namespace component {
 
 ServiceProviderImpl::ServiceProviderImpl() {}
 
@@ -69,4 +69,4 @@ void ServiceProviderImpl::SetDefaultServiceProvider(
       });
 }
 
-}  // namespace app
+}  // namespace component

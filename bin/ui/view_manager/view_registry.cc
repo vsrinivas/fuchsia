@@ -103,7 +103,7 @@ mozart::TransformPtr ToTransform(ui::gfx::mat4Ptr matrix) {
 
 }  // namespace
 
-ViewRegistry::ViewRegistry(app::ApplicationContext* application_context)
+ViewRegistry::ViewRegistry(component::ApplicationContext* application_context)
     : application_context_(application_context),
       scenic_(application_context_->ConnectToEnvironmentService<ui::Scenic>()),
       session_(scenic_.get()),
@@ -801,9 +801,8 @@ void ViewRegistry::HasFocus(mozart::ViewTokenPtr view_token,
   callback(false);
 }
 
-app::ServiceProvider* ViewRegistry::FindViewServiceProvider(
-    uint32_t view_token,
-    std::string service_name) {
+component::ServiceProvider* ViewRegistry::FindViewServiceProvider(
+    uint32_t view_token, std::string service_name) {
   ViewState* view_state = FindView(view_token);
   if (!view_state) {
     return nullptr;
@@ -829,7 +828,7 @@ void ViewRegistry::GetSoftKeyboardContainer(
   auto provider = FindViewServiceProvider(view_token->value,
                                           mozart::SoftKeyboardContainer::Name_);
   if (provider) {
-    app::ConnectToService(provider, std::move(container));
+    component::ConnectToService(provider, std::move(container));
   }
 }
 
@@ -843,7 +842,7 @@ void ViewRegistry::GetImeService(
   auto provider =
       FindViewServiceProvider(view_token->value, mozart::ImeService::Name_);
   if (provider) {
-    app::ConnectToService(provider, std::move(ime_service));
+    component::ConnectToService(provider, std::move(ime_service));
   } else {
     application_context_->ConnectToEnvironmentService(std::move(ime_service));
   }

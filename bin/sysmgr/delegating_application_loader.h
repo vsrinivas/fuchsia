@@ -19,12 +19,12 @@ namespace sysmgr {
 // This loader executes in the sysmgr environment, reads a config file, and
 // can delegate mapped URI schemes to app loaders capable of handling them,
 // falling back on the root app loader for unmapped schemes.
-class DelegatingApplicationLoader : public app::ApplicationLoader {
+class DelegatingApplicationLoader : public component::ApplicationLoader {
  public:
   explicit DelegatingApplicationLoader(
       Config::ServiceMap delegates,
-      app::ApplicationLauncher* delegate_launcher,
-      app::ApplicationLoaderPtr fallback);
+      component::ApplicationLauncher* delegate_launcher,
+      component::ApplicationLoaderPtr fallback);
   ~DelegatingApplicationLoader() override;
 
   // |ApplicationLoader|:
@@ -34,9 +34,9 @@ class DelegatingApplicationLoader : public app::ApplicationLoader {
 
  private:
   struct ApplicationLoaderRecord {
-    app::ApplicationLaunchInfoPtr launch_info;
-    app::ApplicationLoaderPtr loader;
-    app::ApplicationControllerPtr controller;
+    component::ApplicationLaunchInfoPtr launch_info;
+    component::ApplicationLoaderPtr loader;
+    component::ApplicationControllerPtr controller;
   };
 
   void StartDelegate(ApplicationLoaderRecord* record);
@@ -45,8 +45,8 @@ class DelegatingApplicationLoader : public app::ApplicationLoader {
   // sysmgr app implementation.
   std::unordered_map<std::string, ApplicationLoaderRecord> delegate_instances_;
 
-  app::ApplicationLauncher* delegate_launcher_;
-  app::ApplicationLoaderPtr fallback_;
+  component::ApplicationLauncher* delegate_launcher_;
+  component::ApplicationLoaderPtr fallback_;
 
   // indexed by scheme. ApplicationLoaderRecord instances are owned by
   // delegate_instances_.

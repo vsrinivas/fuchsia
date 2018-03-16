@@ -5,13 +5,13 @@
 #ifndef LIB_ICU_DATA_CPP_ICU_DATA_H_
 #define LIB_ICU_DATA_CPP_ICU_DATA_H_
 
-namespace app {
+namespace component {
 class ApplicationContext;
 }
 
 namespace icu_data {
 
-bool Initialize(app::ApplicationContext* context);
+bool Initialize(component::ApplicationContext* context);
 bool Release();
 
 }  // namespace icu_data

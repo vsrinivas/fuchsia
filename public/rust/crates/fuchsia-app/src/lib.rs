@@ -128,7 +128,7 @@ pub mod server {
     use futures::{Future, Poll};
 
     use self::errors::*;
-    /// New root-level errors that may occur when using the `fuchsia_app::server` module.
+    /// New root-level errors that may occur when using the `fuchsia_component::server` module.
     /// Note that these are not the only kinds of errors that may occur: errors the module
     /// may also be caused by `fidl::Error` or `zircon::Status`.
     pub mod errors {

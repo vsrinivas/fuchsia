@@ -45,9 +45,8 @@ class TestRunObserverImpl : public test_runner::TestRunObserver {
   bool success_;
 };
 
-bool RunTest(std::shared_ptr<app::ApplicationContext> app_context,
-             const std::string& url,
-             const std::vector<std::string>& args) {
+bool RunTest(std::shared_ptr<component::ApplicationContext> app_context,
+             const std::string& url, const std::vector<std::string>& args) {
   uint64_t random_number;
   size_t random_size;
   zx_cprng_draw(&random_number, sizeof random_number, &random_size);
@@ -91,8 +90,8 @@ int RunIntegrationTestsMain(int argc, char** argv) {
 
   TestRunnerConfig config(test_file);
 
-  std::shared_ptr<app::ApplicationContext> app_context =
-      app::ApplicationContext::CreateFromStartupInfo();
+  std::shared_ptr<component::ApplicationContext> app_context =
+      component::ApplicationContext::CreateFromStartupInfo();
 
   std::vector<std::string> test_names = settings.positional_args();
   if (test_names.empty()) {

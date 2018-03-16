@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
   }
 
   fsl::MessageLoop message_loop;
-  auto app_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   auto test_runner =
       app_context->ConnectToEnvironmentService<test_runner::TestRunner>();
   Reporter reporter(name, test_runner.get());

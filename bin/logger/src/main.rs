@@ -8,7 +8,7 @@
 extern crate byteorder;
 extern crate failure;
 extern crate fidl;
-extern crate fuchsia_app as app;
+extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zircon;
 #[macro_use]
@@ -17,7 +17,7 @@ extern crate libc;
 extern crate parking_lot;
 
 use failure::{Error, ResultExt};
-use app::server::ServicesServer;
+use component::server::ServicesServer;
 use futures::future::ok as fok;
 
 extern crate garnet_public_lib_logger_fidl;

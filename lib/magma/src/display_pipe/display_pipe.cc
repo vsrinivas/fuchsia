@@ -26,7 +26,7 @@ namespace display_pipe {
 
 class App {
  public:
-  App() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  App() : context_(component::ApplicationContext::CreateFromStartupInfo()) {
     context_->outgoing_services()->AddService<DisplayProvider>(
         [this](f1dl::InterfaceRequest<DisplayProvider> request) {
           display_provider_.AddBinding(std::move(request));
@@ -34,7 +34,7 @@ class App {
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   DisplayProviderImpl display_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

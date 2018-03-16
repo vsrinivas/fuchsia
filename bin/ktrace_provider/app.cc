@@ -66,7 +66,8 @@ void IoctlKtraceStart(int fd, uint32_t group_mask) {
 }  // namespace
 
 App::App(const fxl::CommandLine& command_line)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()) {
   trace_observer_.Start(fsl::MessageLoop::GetCurrent()->async(),
                         [this] { UpdateState(); });
 }

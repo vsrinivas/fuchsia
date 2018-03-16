@@ -14,7 +14,7 @@ namespace examples {
 
 TileView::TileView(mozart::ViewManagerPtr view_manager,
                    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-                   app::ApplicationContext* application_context,
+                   component::ApplicationContext* application_context,
                    const TileParams& params)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
       application_context_(application_context),
@@ -37,10 +37,10 @@ void TileView::Present(
 
 void TileView::ConnectViews() {
   for (const auto& url : params_.view_urls) {
-    app::Services services;
-    app::ApplicationControllerPtr controller;
+    component::Services services;
+    component::ApplicationControllerPtr controller;
 
-    auto launch_info = app::ApplicationLaunchInfo::New();
+    auto launch_info = component::ApplicationLaunchInfo::New();
     launch_info->url = url;
     launch_info->directory_request = services.NewRequest();
 
@@ -96,7 +96,7 @@ void TileView::OnChildUnavailable(uint32_t child_key) {
 void TileView::AddChildView(
     f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
     const std::string& url,
-    app::ApplicationControllerPtr app_controller) {
+    component::ApplicationControllerPtr app_controller) {
   const uint32_t view_key = next_child_view_key_++;
 
   auto view_data = std::make_unique<ViewData>(
@@ -177,9 +177,8 @@ void TileView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
   }
 }
 
-TileView::ViewData::ViewData(const std::string& url,
-                             uint32_t key,
-                             app::ApplicationControllerPtr controller,
+TileView::ViewData::ViewData(const std::string& url, uint32_t key,
+                             component::ApplicationControllerPtr controller,
                              scenic_lib::Session* session)
     : url(url),
       key(key),

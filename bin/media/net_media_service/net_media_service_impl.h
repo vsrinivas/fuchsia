@@ -16,7 +16,7 @@ class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
                             public NetMediaService {
  public:
   NetMediaServiceImpl(
-      std::unique_ptr<app::ApplicationContext> application_context);
+      std::unique_ptr<component::ApplicationContext> application_context);
   ~NetMediaServiceImpl() override;
 
   // NetMediaService implementation.

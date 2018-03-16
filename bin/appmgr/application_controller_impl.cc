@@ -18,7 +18,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
 
-namespace app {
+namespace component {
 
 ApplicationControllerImpl::ApplicationControllerImpl(
     f1dl::InterfaceRequest<ApplicationController> request,
@@ -151,4 +151,4 @@ async_wait_result_t ApplicationControllerImpl::Handler(
   return ASYNC_WAIT_FINISHED;
 }
 
-}  // namespace app
+}  // namespace component

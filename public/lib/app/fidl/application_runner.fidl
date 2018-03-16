@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module app;
+module component;
 
 import "lib/app/fidl/application_controller.fidl";
 import "lib/app/fidl/application_environment.fidl";
@@ -49,7 +49,7 @@ struct ApplicationPackage {
 // Typically exposed by applications that provide execution environments for
 // particular classes of programs. For example, the Dart virtual machine exposes
 // this interface to run Dart programs.
-[ServiceName="app.ApplicationRunner"]
+[ServiceName="component.ApplicationRunner"]
 interface ApplicationRunner {
   // Execute the given application.
   //

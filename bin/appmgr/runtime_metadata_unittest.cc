@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 
-namespace app {
+namespace component {
 namespace {
 
 TEST(RuntimeMetadata, Parse) {
@@ -22,4 +22,4 @@ TEST(RuntimeMetadata, Parse) {
 }
 
 }  // namespace
-}  // namespace app
+}  // namespace component

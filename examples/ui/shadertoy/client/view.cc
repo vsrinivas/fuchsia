@@ -27,11 +27,10 @@ constexpr uint32_t kShapeWidth = 384;
 constexpr uint32_t kShapeHeight = 288;
 }  // namespace
 
-View::View(app::ApplicationContext* application_context,
+View::View(component::ApplicationContext* application_context,
            mozart::ViewManagerPtr view_manager,
            f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
-    : BaseView(std::move(view_manager),
-               std::move(view_owner_request),
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Shadertoy Example"),
       application_context_(application_context),
       loop_(fsl::MessageLoop::GetCurrent()),

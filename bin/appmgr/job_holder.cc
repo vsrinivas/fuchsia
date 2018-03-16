@@ -31,7 +31,7 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/svc/cpp/services.h"
 
-namespace app {
+namespace component {
 namespace {
 
 constexpr zx_rights_t kChildJobRights = ZX_RIGHTS_BASIC | ZX_RIGHTS_IO;
@@ -78,8 +78,7 @@ std::string GetLabelFromURL(const std::string& url) {
   return url.substr(last_slash + 1);
 }
 
-void PushFileDescriptor(app::FileDescriptorPtr fd,
-                        int new_fd,
+void PushFileDescriptor(component::FileDescriptorPtr fd, int new_fd,
                         std::vector<uint32_t>* ids,
                         std::vector<zx_handle_t>* handles) {
   if (!fd)
@@ -529,4 +528,4 @@ ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
   return result.first->second.get();
 }
 
-}  // namespace app
+}  // namespace component

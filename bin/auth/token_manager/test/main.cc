@@ -25,7 +25,7 @@ namespace {
 class DevAuthProviderApp {
  public:
   DevAuthProviderApp()
-      : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()) {
     FXL_CHECK(app_context_);
   }
@@ -40,7 +40,7 @@ class DevAuthProviderApp {
 
  private:
   fsl::MessageLoop loop_;
-  std::unique_ptr<app::ApplicationContext> app_context_;
+  std::unique_ptr<component::ApplicationContext> app_context_;
   trace::TraceProvider trace_provider_;
 
   auth::dev_auth_provider::FactoryImpl factory_impl_;

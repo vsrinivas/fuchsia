@@ -12,7 +12,8 @@
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
 
-  auto application_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto application_context =
+      component::ApplicationContext::CreateFromStartupInfo();
   examples::MediaApp media_app;
   media_app.Run(application_context.get());
 

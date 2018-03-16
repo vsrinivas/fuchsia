@@ -27,8 +27,8 @@ class GrallocImpl : public gralloc::Gralloc {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  std::unique_ptr<app::ApplicationContext> app_context(
-      app::ApplicationContext::CreateFromStartupInfo());
+  std::unique_ptr<component::ApplicationContext> app_context(
+      component::ApplicationContext::CreateFromStartupInfo());
 
   GrallocImpl grallocator;
 

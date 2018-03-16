@@ -20,7 +20,7 @@ class TtsClient {
 };
 
 TtsClient::TtsClient() {
-  auto app_ctx = app::ApplicationContext::CreateFromStartupInfo();
+  auto app_ctx = component::ApplicationContext::CreateFromStartupInfo();
   tts_service_ = app_ctx->ConnectToEnvironmentService<media::TtsService>();
   tts_service_.set_error_handler([]() {
     printf("Connection error when trying to talk to the TtsService\n");

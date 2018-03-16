@@ -35,7 +35,7 @@ private:
   // This is the max value cpu-trace will accept
   static constexpr uint32_t kMaxBufferSizeInMb = 256;
 
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   trace::TraceObserver trace_observer_;
   TraceConfig trace_config_;
   trace_context_t* context_ = nullptr;

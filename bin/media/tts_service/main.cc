@@ -9,7 +9,7 @@ int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
 
   media::tts::TtsServiceImpl impl(
-      app::ApplicationContext::CreateFromStartupInfo());
+      component::ApplicationContext::CreateFromStartupInfo());
 
   if (impl.Init() != ZX_OK)
     return -1;

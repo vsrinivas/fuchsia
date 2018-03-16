@@ -14,7 +14,8 @@ namespace echo2 {
 
 class EchoServerApp : public Echo {
  public:
-  EchoServerApp() : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  EchoServerApp()
+      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
     context_->outgoing_services()->AddServiceForName(
         [this](zx::channel request) {
           bindings_.AddBinding(
@@ -34,7 +35,7 @@ class EchoServerApp : public Echo {
   EchoServerApp(const EchoServerApp&) = delete;
   EchoServerApp& operator=(const EchoServerApp&) = delete;
 
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   fidl::BindingSet<Echo> bindings_;
 };
 

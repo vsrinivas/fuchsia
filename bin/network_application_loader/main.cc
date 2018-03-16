@@ -17,9 +17,8 @@ namespace {
 class RetryingLoader {
  public:
   RetryingLoader(
-      network::URLLoaderPtr url_loader,
-      const std::string& url,
-      const app::ApplicationLoader::LoadApplicationCallback& callback)
+      network::URLLoaderPtr url_loader, const std::string& url,
+      const component::ApplicationLoader::LoadApplicationCallback& callback)
       : url_loader_(std::move(url_loader)),
         url_(url),
         callback_(callback),
@@ -56,7 +55,7 @@ class RetryingLoader {
 
   void ProcessResponse(const network::URLResponsePtr& response) {
     if (response->status_code == 200) {
-      auto package = app::ApplicationPackage::New();
+      auto package = component::ApplicationPackage::New();
       package->data = std::move(response->body->get_sized_buffer());
       package->resolved_url = std::move(response->url);
       SendResponse(std::move(package));
@@ -98,7 +97,7 @@ class RetryingLoader {
     }
   }
 
-  void SendResponse(app::ApplicationPackagePtr package) {
+  void SendResponse(component::ApplicationPackagePtr package) {
     FXL_DCHECK(!package || package->resolved_url);
     callback_(std::move(package));
     deleter_();
@@ -106,7 +105,7 @@ class RetryingLoader {
 
   const network::URLLoaderPtr url_loader_;
   const std::string url_;
-  const app::ApplicationLoader::LoadApplicationCallback callback_;
+  const component::ApplicationLoader::LoadApplicationCallback callback_;
   fxl::Closure deleter_;
   // Tries before an error is printed. No errors will be printed afterwards
   // either.
@@ -116,12 +115,12 @@ class RetryingLoader {
   fxl::WeakPtrFactory<RetryingLoader> weak_ptr_factory_;
 };
 
-class NetworkApplicationLoader : public app::ApplicationLoader {
+class NetworkApplicationLoader : public component::ApplicationLoader {
  public:
   NetworkApplicationLoader()
-      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
-    context_->outgoing_services()->AddService<app::ApplicationLoader>(
-        [this](f1dl::InterfaceRequest<app::ApplicationLoader> request) {
+      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
+    context_->outgoing_services()->AddService<component::ApplicationLoader>(
+        [this](f1dl::InterfaceRequest<component::ApplicationLoader> request) {
           bindings_.AddBinding(this, std::move(request));
         });
 
@@ -143,8 +142,8 @@ class NetworkApplicationLoader : public app::ApplicationLoader {
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> context_;
-  f1dl::BindingSet<app::ApplicationLoader> bindings_;
+  std::unique_ptr<component::ApplicationContext> context_;
+  f1dl::BindingSet<component::ApplicationLoader> bindings_;
 
   network::NetworkServicePtr net_;
   std::unordered_map<RetryingLoader*, std::unique_ptr<RetryingLoader>> loaders_;

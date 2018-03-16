@@ -12,7 +12,7 @@
 
 #include "lib/fsl/vmo/file.h"
 
-namespace app {
+namespace component {
 
 ApplicationRunnerHolder::ApplicationRunnerHolder(
     Services services,
@@ -35,4 +35,4 @@ void ApplicationRunnerHolder::StartApplication(
                             std::move(controller));
 }
 
-}  // namespace app
+}  // namespace component

@@ -65,8 +65,7 @@ void NetConnectorParams::Usage() {
 }
 
 void NetConnectorParams::RegisterService(
-    const std::string& name,
-    app::ApplicationLaunchInfoPtr launch_info) {
+    const std::string& name, component::ApplicationLaunchInfoPtr launch_info) {
   auto result =
       launch_infos_by_service_name_.emplace(name, std::move(launch_info));
 
@@ -114,7 +113,7 @@ bool NetConnectorParams::ParseConfig(const std::string& string) {
         return false;
       }
 
-      auto launch_info = app::ApplicationLaunchInfo::New();
+      auto launch_info = component::ApplicationLaunchInfo::New();
       if (pair.value.IsString()) {
         launch_info->url = pair.value.GetString();
       } else if (pair.value.IsArray()) {

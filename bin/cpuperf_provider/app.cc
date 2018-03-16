@@ -45,7 +45,8 @@ bool ParseNumber(const char* name, const fxl::StringView& arg,
 }  // namespace
 
 App::App(const fxl::CommandLine& command_line)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()) {
   if (command_line.HasOption("help")) {
     PrintHelp();
     exit(EXIT_SUCCESS);

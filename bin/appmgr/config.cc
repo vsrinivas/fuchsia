@@ -10,7 +10,7 @@
 #include "lib/fxl/files/file.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace app {
+namespace component {
 namespace {
 
 constexpr char kPath[] = "path";
@@ -71,4 +71,4 @@ std::vector<std::string> Config::TakePath() {
   return std::move(path_);
 }
 
-}  // namespace app
+}  // namespace component

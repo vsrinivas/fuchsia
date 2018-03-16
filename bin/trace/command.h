@@ -26,7 +26,7 @@ class Command {
   using OnDoneCallback = std::function<void(int32_t)>;
   struct Info {
     using CommandFactory =
-        std::function<std::unique_ptr<Command>(app::ApplicationContext*)>;
+        std::function<std::unique_ptr<Command>(component::ApplicationContext*)>;
 
     CommandFactory factory;
     std::string name;
@@ -44,25 +44,25 @@ class Command {
   static std::ostream& out();
   static std::ostream& err();
 
-  explicit Command(app::ApplicationContext* context);
+  explicit Command(component::ApplicationContext* context);
 
-  app::ApplicationContext* context();
-  app::ApplicationContext* context() const;
+  component::ApplicationContext* context();
+  component::ApplicationContext* context() const;
 
  private:
-  app::ApplicationContext* context_;
+  component::ApplicationContext* context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(Command);
 };
 
 class CommandWithTraceController : public Command {
  protected:
-  explicit CommandWithTraceController(app::ApplicationContext* context);
+  explicit CommandWithTraceController(component::ApplicationContext* context);
 
   TraceControllerPtr& trace_controller();
   const TraceControllerPtr& trace_controller() const;
 
  private:
-  std::unique_ptr<app::ApplicationContext> context_;
+  std::unique_ptr<component::ApplicationContext> context_;
   TraceControllerPtr trace_controller_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandWithTraceController);

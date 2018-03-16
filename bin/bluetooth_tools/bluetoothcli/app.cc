@@ -20,7 +20,7 @@
 namespace bluetoothcli {
 
 App::App()
-    : context_(app::ApplicationContext::CreateFromStartupInfo()),
+    : context_(component::ApplicationContext::CreateFromStartupInfo()),
       manager_delegate_(this),
       adapter_delegate_(this) {
   FXL_DCHECK(context_);

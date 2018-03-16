@@ -12,8 +12,7 @@
 
 namespace test_runner {
 
-void ReportResult(std::string identity,
-                  app::ApplicationContext* context,
+void ReportResult(std::string identity, component::ApplicationContext* context,
                   std::vector<TestResultPtr> results);
 
 }  // namespace test_runner

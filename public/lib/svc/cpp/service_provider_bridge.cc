@@ -12,7 +12,7 @@
 
 #include <utility>
 
-namespace app {
+namespace component {
 
 ServiceProviderBridge::ServiceProviderBridge()
     : vfs_(async_get_default()), weak_factory_(this) {
@@ -23,7 +23,7 @@ ServiceProviderBridge::ServiceProviderBridge()
 ServiceProviderBridge::~ServiceProviderBridge() = default;
 
 void ServiceProviderBridge::AddBinding(
-    f1dl::InterfaceRequest<app::ServiceProvider> request) {
+    f1dl::InterfaceRequest<component::ServiceProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -97,4 +97,4 @@ zx_status_t ServiceProviderBridge::ServiceProviderDir::Getattr(vnattr_t* attr) {
   return ZX_OK;
 }
 
-}  // namespace app
+}  // namespace component

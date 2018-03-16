@@ -10,9 +10,9 @@
 // TODO(MZ-453): Don't support GetDisplayInfo in scenic fidl API.
 #include "lib/ui/scenic/fidl/scenic.fidl.h"
 
-namespace app {
+namespace component {
 class ApplicationContext;
-}  // namespace app
+}  // namespace component
 
 namespace fxl {
 class TaskRunner;
@@ -27,17 +27,16 @@ class Session;
 // exposing the system's host (typically a Scenic, except for testing).
 class SystemContext final {
  public:
-  explicit SystemContext(app::ApplicationContext* app_context,
-                         fxl::TaskRunner* task_runner,
-                         Clock* clock);
+  explicit SystemContext(component::ApplicationContext* app_context,
+                         fxl::TaskRunner* task_runner, Clock* clock);
   SystemContext(SystemContext&& context);
 
-  app::ApplicationContext* app_context() const { return app_context_; }
+  component::ApplicationContext* app_context() const { return app_context_; }
   fxl::TaskRunner* task_runner() const { return task_runner_; }
   Clock* clock() const { return clock_; }
 
  private:
-  app::ApplicationContext* app_context_;
+  component::ApplicationContext* app_context_;
   fxl::TaskRunner* task_runner_;
   Clock* clock_;
 };

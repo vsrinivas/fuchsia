@@ -9,7 +9,7 @@
 namespace auth {
 
 TokenManagerFactoryImpl::TokenManagerFactoryImpl(
-    app::ApplicationContext* context)
+    component::ApplicationContext* context)
     : app_context_(context) {
   FXL_CHECK(app_context_);
 }

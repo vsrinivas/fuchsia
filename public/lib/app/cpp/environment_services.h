@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef LIB_APP_CPP_ENVIRONMENT_SERVICES_H_
+#define LIB_APP_CPP_ENVIRONMENT_SERVICES_H_
+
 #include <zx/channel.h>
 
 #include <string>
@@ -9,7 +12,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 
-namespace app {
+namespace component {
 
 // These helper functions help connect to environment services through the
 // application's static environment. Multi-tenanted applications should connect
@@ -50,4 +53,15 @@ zx::channel CreateStaticServiceRootHandle();
 
 }  // namespace subtle
 
+}  // namespace component
+
+// TODO(alhaad): This namespace is temporary. Use 'component' namespace when
+// we migrate dart/runtime/vm/os_fuchsia.cc
+namespace app {
+namespace subtle {
+zx::channel CreateStaticServiceRootHandle();
+
+}  // namespace subtle
 }  // namespace app
+
+#endif  // LIB_APP_CPP_ENVIRONMENT_SERVICES_H_

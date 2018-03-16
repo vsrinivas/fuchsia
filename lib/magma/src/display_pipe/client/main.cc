@@ -155,9 +155,11 @@ int main(int argc, char* argv[])
 
     fsl::MessageLoop loop;
 
-    auto application_context_ = app::ApplicationContext::CreateFromStartupInfo();
-    app::ServiceProviderPtr services;
-    display = application_context_->ConnectToEnvironmentService<display_pipe::DisplayProvider>();
+    auto application_context_ =
+        component::ApplicationContext::CreateFromStartupInfo();
+    component::ServiceProviderPtr services;
+    display =
+        application_context_->ConnectToEnvironmentService<display_pipe::DisplayProvider>();
 
     display->GetInfo([](display_pipe::DisplayInfoPtr info) {
         printf("%d x %d\n", info->width, info->height);

@@ -15,7 +15,8 @@
 
 namespace mdns {
 
-MdnsServiceImpl::MdnsServiceImpl(app::ApplicationContext* application_context)
+MdnsServiceImpl::MdnsServiceImpl(
+    component::ApplicationContext* application_context)
     : application_context_(application_context) {
   application_context_->outgoing_services()->AddService<MdnsService>(
       [this](f1dl::InterfaceRequest<MdnsService> request) {

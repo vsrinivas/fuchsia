@@ -18,7 +18,8 @@ namespace test {
 class MediaPlayerTester {
  public:
   MediaPlayerTester()
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+      : application_context_(
+            component::ApplicationContext::CreateFromStartupInfo()) {
     FXL_LOG(INFO) << "MediaPlayerTest starting";
 
     FXL_LOG(INFO) << "creating player";
@@ -85,7 +86,7 @@ class MediaPlayerTester {
         });
   }
 
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   FakeWavReader fake_reader_;
   FakeRenderer fake_renderer_;
   MediaPlayerPtr media_player_;

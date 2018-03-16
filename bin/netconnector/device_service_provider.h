@@ -17,12 +17,11 @@ namespace netconnector {
 class NetConnectorImpl;
 
 // Provides services on a remote device.
-class DeviceServiceProvider : public app::ServiceProvider {
+class DeviceServiceProvider : public component::ServiceProvider {
  public:
   static std::unique_ptr<DeviceServiceProvider> Create(
-      const std::string& device_name,
-      const SocketAddress& address,
-      f1dl::InterfaceRequest<app::ServiceProvider> request,
+      const std::string& device_name, const SocketAddress& address,
+      f1dl::InterfaceRequest<component::ServiceProvider> request,
       NetConnectorImpl* owner);
 
   ~DeviceServiceProvider() override;
@@ -31,14 +30,14 @@ class DeviceServiceProvider : public app::ServiceProvider {
                         zx::channel channel) override;
 
  private:
-  DeviceServiceProvider(const std::string& device_name,
-                        const SocketAddress& address,
-                        f1dl::InterfaceRequest<app::ServiceProvider> request,
-                        NetConnectorImpl* owner);
+  DeviceServiceProvider(
+      const std::string& device_name, const SocketAddress& address,
+      f1dl::InterfaceRequest<component::ServiceProvider> request,
+      NetConnectorImpl* owner);
 
   std::string device_name_;
   SocketAddress address_;
-  f1dl::Binding<app::ServiceProvider> binding_;
+  f1dl::Binding<component::ServiceProvider> binding_;
   NetConnectorImpl* owner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceServiceProvider);

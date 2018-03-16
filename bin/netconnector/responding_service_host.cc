@@ -11,7 +11,7 @@
 namespace netconnector {
 
 RespondingServiceHost::RespondingServiceHost(
-    const app::ApplicationEnvironmentPtr& environment) {
+    const component::ApplicationEnvironmentPtr& environment) {
   FXL_DCHECK(environment);
   environment->GetApplicationLauncher(launcher_.NewRequest());
 }
@@ -20,7 +20,7 @@ RespondingServiceHost::~RespondingServiceHost() {}
 
 void RespondingServiceHost::RegisterSingleton(
     const std::string& service_name,
-    app::ApplicationLaunchInfoPtr launch_info) {
+    component::ApplicationLaunchInfoPtr launch_info) {
   service_namespace_.AddServiceForName(
       fxl::MakeCopyable([
         this, service_name, launch_info = std::move(launch_info)
@@ -38,13 +38,13 @@ void RespondingServiceHost::RegisterSingleton(
           // the constructor. Instead, we should be launching it in a new
           // environment that is restricted based on app permissions.
 
-          auto dup_launch_info = app::ApplicationLaunchInfo::New();
+          auto dup_launch_info = component::ApplicationLaunchInfo::New();
           dup_launch_info->url = launch_info->url;
           dup_launch_info->arguments = launch_info->arguments.Clone();
-          app::Services services;
+          component::Services services;
           dup_launch_info->directory_request = services.NewRequest();
 
-          app::ApplicationControllerPtr controller;
+          component::ApplicationControllerPtr controller;
           launcher_->CreateApplication(std::move(dup_launch_info),
                                        controller.NewRequest());
 
@@ -67,8 +67,8 @@ void RespondingServiceHost::RegisterSingleton(
 
 void RespondingServiceHost::RegisterProvider(
     const std::string& service_name,
-    f1dl::InterfaceHandle<app::ServiceProvider> handle) {
-  app::ServiceProviderPtr service_provider = handle.Bind();
+    f1dl::InterfaceHandle<component::ServiceProvider> handle) {
+  component::ServiceProviderPtr service_provider = handle.Bind();
 
   service_provider.set_error_handler([this, service_name] {
     FXL_LOG(INFO) << "Service " << service_name << " provider disconnected";

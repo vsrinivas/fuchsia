@@ -15,7 +15,8 @@
 namespace root_presenter {
 
 App::App(const fxl::CommandLine& command_line)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+    : application_context_(
+          component::ApplicationContext::CreateFromStartupInfo()),
       input_reader_(this) {
   FXL_DCHECK(application_context_);
 

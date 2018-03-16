@@ -16,9 +16,9 @@
 // Service directory channel.
 static zx::channel directory;
 // Application controller.
-static app::ApplicationControllerPtr controller;
+static component::ApplicationControllerPtr controller;
 
-static app::FileDescriptorPtr CloneFileDescriptor(int fd) {
+static component::FileDescriptorPtr CloneFileDescriptor(int fd) {
   zx_handle_t handles[FDIO_MAX_HANDLES] = {0, 0, 0};
   uint32_t types[FDIO_MAX_HANDLES] = {
       ZX_HANDLE_INVALID,
@@ -29,7 +29,7 @@ static app::FileDescriptorPtr CloneFileDescriptor(int fd) {
   if (status <= 0) {
     return nullptr;
   }
-  app::FileDescriptorPtr result = app::FileDescriptor::New();
+  component::FileDescriptorPtr result = component::FileDescriptor::New();
   result->type0 = types[0];
   result->handle0 = zx::handle(handles[0]);
   result->type1 = types[1];
@@ -41,7 +41,7 @@ static app::FileDescriptorPtr CloneFileDescriptor(int fd) {
 
 void handle_launch(int argc, const char** argv) {
   // Setup launch request.
-  auto launch_info = app::ApplicationLaunchInfo::New();
+  auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = argv[0];
   for (int i = 0; i < argc - 1; ++i) {
     launch_info->arguments.push_back(argv[1 + i]);
@@ -55,8 +55,8 @@ void handle_launch(int argc, const char** argv) {
   FXL_CHECK(status == ZX_OK) << "Unable to create directory";
 
   // Connect to application launcher and create guest.
-  app::ApplicationLauncherSyncPtr launcher;
-  app::ConnectToEnvironmentService(GetSynchronousProxy(&launcher));
+  component::ApplicationLauncherSyncPtr launcher;
+  component::ConnectToEnvironmentService(GetSynchronousProxy(&launcher));
   launcher->CreateApplication(std::move(launch_info), controller.NewRequest());
 
   // Open the serial service of the guest and process IO.

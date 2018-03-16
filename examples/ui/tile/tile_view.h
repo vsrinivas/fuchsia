@@ -26,22 +26,21 @@ class TileView : public mozart::BaseView,
  public:
   TileView(mozart::ViewManagerPtr view_manager,
            f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-           app::ApplicationContext* application_context,
+           component::ApplicationContext* application_context,
            const TileParams& tile_params);
 
   ~TileView() override;
 
  private:
   struct ViewData {
-    explicit ViewData(const std::string& url,
-                      uint32_t key,
-                      app::ApplicationControllerPtr controller,
+    explicit ViewData(const std::string& url, uint32_t key,
+                      component::ApplicationControllerPtr controller,
                       scenic_lib::Session* session);
     ~ViewData();
 
     const std::string url;
     const uint32_t key;
-    app::ApplicationControllerPtr controller;
+    component::ApplicationControllerPtr controller;
     scenic_lib::EntityNode host_node;
 
     mozart::ViewPropertiesPtr view_properties;
@@ -68,17 +67,17 @@ class TileView : public mozart::BaseView,
 
   void AddChildView(f1dl::InterfaceHandle<mozart::ViewOwner> view_owner,
                     const std::string& url,
-                    app::ApplicationControllerPtr);
+                    component::ApplicationControllerPtr);
   void RemoveChildView(uint32_t child_key);
 
   // Nested environment within which the apps started by TileView will run.
-  app::ApplicationEnvironmentPtr env_;
-  app::ApplicationEnvironmentControllerPtr env_controller_;
-  app::ServiceProviderBridge service_provider_bridge_;
-  app::ApplicationLauncherPtr env_launcher_;
+  component::ApplicationEnvironmentPtr env_;
+  component::ApplicationEnvironmentControllerPtr env_controller_;
+  component::ServiceProviderBridge service_provider_bridge_;
+  component::ApplicationLauncherPtr env_launcher_;
 
   // Context inherited when TileView is launched.
-  app::ApplicationContext* application_context_;
+  component::ApplicationContext* application_context_;
 
   // Parsed command-line parameters for this program.
   TileParams params_;

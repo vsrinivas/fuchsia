@@ -17,7 +17,8 @@ namespace mdns {
 
 class MdnsImpl : public MdnsResponder {
  public:
-  MdnsImpl(app::ApplicationContext* application_context, MdnsParams* params);
+  MdnsImpl(component::ApplicationContext* application_context,
+           MdnsParams* params);
 
   ~MdnsImpl() override;
 

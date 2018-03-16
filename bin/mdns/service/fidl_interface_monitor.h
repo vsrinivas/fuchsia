@@ -17,9 +17,9 @@ class FidlInterfaceMonitor : public netstack::NotificationListener,
                              public InterfaceMonitor {
  public:
   static std::unique_ptr<InterfaceMonitor> Create(
-      app::ApplicationContext* application_context);
+      component::ApplicationContext* application_context);
 
-  FidlInterfaceMonitor(app::ApplicationContext* application_context);
+  FidlInterfaceMonitor(component::ApplicationContext* application_context);
 
   ~FidlInterfaceMonitor();
 

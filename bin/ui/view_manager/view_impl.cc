@@ -19,13 +19,14 @@ void ViewImpl::GetToken(const mozart::View::GetTokenCallback& callback) {
 }
 
 void ViewImpl::GetServiceProvider(
-    f1dl::InterfaceRequest<app::ServiceProvider> service_provider_request) {
+    f1dl::InterfaceRequest<component::ServiceProvider>
+        service_provider_request) {
   service_provider_bindings_.AddBinding(this,
                                         std::move(service_provider_request));
 }
 
 void ViewImpl::OfferServiceProvider(
-    f1dl::InterfaceHandle<app::ServiceProvider> service_provider,
+    f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
     f1dl::Array<f1dl::String> service_names) {
   state_->SetServiceProvider(std::move(service_provider),
                              std::move(service_names));

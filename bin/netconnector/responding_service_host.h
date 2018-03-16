@@ -17,46 +17,48 @@ namespace netconnector {
 // Provides services based on service registrations.
 class RespondingServiceHost {
  public:
-  RespondingServiceHost(const app::ApplicationEnvironmentPtr& environment);
+  RespondingServiceHost(
+      const component::ApplicationEnvironmentPtr& environment);
 
   ~RespondingServiceHost();
 
   // Registers a singleton service.
   void RegisterSingleton(const std::string& service_name,
-                         app::ApplicationLaunchInfoPtr launch_info);
+                         component::ApplicationLaunchInfoPtr launch_info);
 
   // Registers a provider for a singleton service.
-  void RegisterProvider(const std::string& service_name,
-                        f1dl::InterfaceHandle<app::ServiceProvider> handle);
+  void RegisterProvider(
+      const std::string& service_name,
+      f1dl::InterfaceHandle<component::ServiceProvider> handle);
 
-  app::ServiceProvider* services() {
-    return static_cast<app::ServiceProvider*>(&service_namespace_);
+  component::ServiceProvider* services() {
+    return static_cast<component::ServiceProvider*>(&service_namespace_);
   }
 
   // Adds a binding to the service provider.
-  void AddBinding(f1dl::InterfaceRequest<app::ServiceProvider> request) {
+  void AddBinding(f1dl::InterfaceRequest<component::ServiceProvider> request) {
     service_namespace_.AddBinding(std::move(request));
   }
 
  private:
   class ServicesHolder {
    public:
-    ServicesHolder(app::Services services,
-                   app::ApplicationControllerPtr controller)
+    ServicesHolder(component::Services services,
+                   component::ApplicationControllerPtr controller)
         : services_(std::move(services)) {}
-    ServicesHolder(app::ServiceProviderPtr service_provider)
+    ServicesHolder(component::ServiceProviderPtr service_provider)
         : service_provider_(std::move(service_provider)),
           is_service_provider_(true) {}
     void ConnectToService(const std::string& service_name, zx::channel c);
    private:
-    app::Services services_;
-    app::ServiceProviderPtr service_provider_;
+    component::Services services_;
+    component::ServiceProviderPtr service_provider_;
     const bool is_service_provider_{};
   };
   std::unordered_map<std::string, ServicesHolder> service_providers_by_name_;
 
-  app::ServiceNamespace service_namespace_;
-  app::ApplicationLauncherPtr launcher_;
+  component::ServiceNamespace service_namespace_;
+  component::ApplicationLauncherPtr launcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RespondingServiceHost);
 };

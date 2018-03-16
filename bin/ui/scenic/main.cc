@@ -21,8 +21,8 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
-  std::unique_ptr<app::ApplicationContext> app_context(
-      app::ApplicationContext::CreateFromStartupInfo());
+  std::unique_ptr<component::ApplicationContext> app_context(
+      component::ApplicationContext::CreateFromStartupInfo());
 
   scenic::App app(app_context.get());
 

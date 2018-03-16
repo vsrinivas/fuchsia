@@ -103,14 +103,14 @@ class FactoryServiceBase {
   };
 
   FactoryServiceBase(
-      std::unique_ptr<app::ApplicationContext> application_context)
+      std::unique_ptr<component::ApplicationContext> application_context)
       : application_context_(std::move(application_context)),
         task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {}
 
   virtual ~FactoryServiceBase() {}
 
   // Gets the application context.
-  app::ApplicationContext* application_context() {
+  component::ApplicationContext* application_context() {
     return application_context_.get();
   }
 
@@ -160,7 +160,7 @@ class FactoryServiceBase {
   virtual void OnLastProductRemoved() {}
 
  private:
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   mutable std::mutex mutex_;
   std::unordered_set<std::shared_ptr<ProductBase>> products_

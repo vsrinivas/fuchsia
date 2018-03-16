@@ -12,7 +12,7 @@ namespace time_service {
 class MainService {
  public:
   MainService()
-      : app_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+      : app_context_(component::ApplicationContext::CreateFromStartupInfo()) {
     app_context_->outgoing_services()->AddService<TimeService>(
         [this](f1dl::InterfaceRequest<TimeService> request) {
           time_svc_.AddBinding(std::move(request));
@@ -20,7 +20,7 @@ class MainService {
   }
 
  private:
-  std::unique_ptr<app::ApplicationContext> app_context_;
+  std::unique_ptr<component::ApplicationContext> app_context_;
   TimeServiceImpl time_svc_;
 };
 

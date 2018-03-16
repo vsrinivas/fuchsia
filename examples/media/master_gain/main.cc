@@ -39,7 +39,8 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
 
-  auto application_context = app::ApplicationContext::CreateFromStartupInfo();
+  auto application_context =
+      component::ApplicationContext::CreateFromStartupInfo();
 
   auto audio_server =
       application_context->ConnectToEnvironmentService<media::AudioServer>();

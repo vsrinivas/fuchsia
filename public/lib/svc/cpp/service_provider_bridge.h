@@ -19,7 +19,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace app {
+namespace component {
 
 // ServiceProviderBridge is a bridge between a service provider and a service
 // directory.
@@ -27,7 +27,7 @@ namespace app {
 // The bridge takes a service provider to use as a backend and exposes both the
 // service provider interface and the directory interface, which will make it
 // easier to migrate clients to the directory interface.
-class ServiceProviderBridge : public app::ServiceProvider {
+class ServiceProviderBridge : public component::ServiceProvider {
  public:
   ServiceProviderBridge();
   ~ServiceProviderBridge() override;
@@ -51,7 +51,7 @@ class ServiceProviderBridge : public app::ServiceProvider {
         service_name);
   }
 
-  void set_backend(app::ServiceProviderPtr backend) {
+  void set_backend(component::ServiceProviderPtr backend) {
     backend_ = std::move(backend);
   }
 
@@ -59,7 +59,7 @@ class ServiceProviderBridge : public app::ServiceProvider {
     backing_dir_ = std::move(backing_dir);
   }
 
-  void AddBinding(f1dl::InterfaceRequest<app::ServiceProvider> request);
+  void AddBinding(f1dl::InterfaceRequest<component::ServiceProvider> request);
   bool ServeDirectory(zx::channel channel);
 
   zx::channel OpenAsDirectory();
@@ -83,16 +83,16 @@ class ServiceProviderBridge : public app::ServiceProvider {
     fxl::WeakPtr<ServiceProviderBridge> const bridge_;
   };
 
-  // Overridden from |app::ServiceProvider|:
+  // Overridden from |component::ServiceProvider|:
   void ConnectToService(const f1dl::String& service_name,
                         zx::channel channel) override;
 
   fs::ManagedVfs vfs_;
-  f1dl::BindingSet<app::ServiceProvider> bindings_;
+  f1dl::BindingSet<component::ServiceProvider> bindings_;
   fbl::RefPtr<ServiceProviderDir> directory_;
 
   std::map<std::string, ServiceConnector> name_to_service_connector_;
-  app::ServiceProviderPtr backend_;
+  component::ServiceProviderPtr backend_;
   zx::channel backing_dir_;
 
   fxl::WeakPtrFactory<ServiceProviderBridge> weak_factory_;
@@ -100,6 +100,6 @@ class ServiceProviderBridge : public app::ServiceProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderBridge);
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // LIB_SVC_CPP_SERVICE_PROVIDER_BRIDGE_H_

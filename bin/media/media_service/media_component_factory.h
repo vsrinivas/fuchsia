@@ -22,7 +22,7 @@ class VideoRendererImpl;
 class MediaComponentFactory : public FactoryServiceBase<MediaComponentFactory> {
  public:
   MediaComponentFactory(
-      std::unique_ptr<app::ApplicationContext> application_context);
+      std::unique_ptr<component::ApplicationContext> application_context);
 
   ~MediaComponentFactory() override;
 

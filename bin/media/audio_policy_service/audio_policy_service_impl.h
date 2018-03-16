@@ -19,7 +19,7 @@ namespace media {
 class AudioPolicyServiceImpl : public AudioPolicyService {
  public:
   AudioPolicyServiceImpl(
-      std::unique_ptr<app::ApplicationContext> application_context);
+      std::unique_ptr<component::ApplicationContext> application_context);
   ~AudioPolicyServiceImpl() override;
 
   // AudioPolicyService implementation.
@@ -62,7 +62,7 @@ class AudioPolicyServiceImpl : public AudioPolicyService {
                                : system_audio_gain_db_;
   }
 
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   f1dl::BindingSet<AudioPolicyService> bindings_;
   float system_audio_gain_db_ = kDefaultSystemAudioGainDb;
   bool system_audio_muted_ = kDefaultSystemMuted;

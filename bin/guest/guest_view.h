@@ -23,24 +23,24 @@ class GuestView;
 
 class ScenicScanout : public machina::GpuScanout, public mozart::ViewProvider {
  public:
-  static zx_status_t Create(app::ApplicationContext* application_context,
+  static zx_status_t Create(component::ApplicationContext* application_context,
                             machina::InputDispatcher* input_dispatcher,
                             fbl::unique_ptr<GpuScanout>* out);
 
-  ScenicScanout(app::ApplicationContext* application_context,
+  ScenicScanout(component::ApplicationContext* application_context,
                 machina::InputDispatcher* input_dispatcher);
 
   // |GpuScanout|
   void InvalidateRegion(const machina::GpuRect& rect) override;
 
   // |ViewProvider|
-  void CreateView(
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<app::ServiceProvider> view_services) override;
+  void CreateView(f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+                  f1dl::InterfaceRequest<component::ServiceProvider>
+                      view_services) override;
 
  private:
   machina::InputDispatcher* input_dispatcher_;
-  app::ApplicationContext* application_context_;
+  component::ApplicationContext* application_context_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   f1dl::BindingSet<ViewProvider> bindings_;
   fbl::unique_ptr<GuestView> view_;

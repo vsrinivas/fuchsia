@@ -21,7 +21,7 @@ static constexpr char kGetTimezoneIdCmd[] = "get_timezone_id";
 class TzUtil {
  public:
   TzUtil() {
-    app::ConnectToEnvironmentService(GetSynchronousProxy(&time_svc_));
+    component::ConnectToEnvironmentService(GetSynchronousProxy(&time_svc_));
   }
 
   void Run(fxl::CommandLine command_line) {

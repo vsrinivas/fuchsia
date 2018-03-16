@@ -26,7 +26,7 @@ class App {
   void StartKTrace(uint32_t group_mask);
   void StopKTrace();
 
-  std::unique_ptr<app::ApplicationContext> application_context_;
+  std::unique_ptr<component::ApplicationContext> application_context_;
   trace::TraceObserver trace_observer_;
   LogImporter log_importer_;
   uint32_t current_group_mask_ = 0u;

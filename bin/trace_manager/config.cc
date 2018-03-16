@@ -63,7 +63,7 @@ bool Config::ReadFrom(const std::string& config_file) {
       if (!reg.name.IsString())
         return false;
 
-      auto launch_info = app::ApplicationLaunchInfo::New();
+      auto launch_info = component::ApplicationLaunchInfo::New();
       if (reg.value.IsString()) {
         launch_info->url = reg.value.GetString();
       } else if (reg.value.IsArray()) {

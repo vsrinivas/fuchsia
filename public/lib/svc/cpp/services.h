@@ -12,7 +12,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
 
-namespace app {
+namespace component {
 
 // Connects to a service located at a path within the directory and binds it to
 // an untyped interface request.
@@ -78,7 +78,7 @@ class Services {
   // to an untyped interface request.
   // By default, uses the interface name as the service's path.
   void ConnectToService(zx::channel request, const std::string& service_path) {
-    app::ConnectToService(directory_, std::move(request), service_path);
+    component::ConnectToService(directory_, std::move(request), service_path);
   }
 
   // Connects to a service located at a path within the directory and binds it
@@ -87,8 +87,8 @@ class Services {
   template <typename Interface>
   void ConnectToService(f1dl::InterfaceRequest<Interface> request,
                         const std::string& service_path = Interface::Name_) {
-    app::ConnectToService<Interface>(directory_, std::move(request),
-                                     service_path);
+    component::ConnectToService<Interface>(directory_, std::move(request),
+                                           service_path);
   }
 
   // Connects to a service located at a path within the directory and returns a
@@ -97,7 +97,7 @@ class Services {
   template <typename Interface>
   f1dl::InterfacePtr<Interface> ConnectToService(
       const std::string& service_path = Interface::Name_) {
-    return app::ConnectToService<Interface>(directory_, service_path);
+    return component::ConnectToService<Interface>(directory_, service_path);
   }
 
   const zx::channel& directory() const { return directory_; }
@@ -108,6 +108,6 @@ class Services {
   FXL_DISALLOW_COPY_AND_ASSIGN(Services);
 };
 
-}  // namespace app
+}  // namespace component
 
 #endif  // LIB_SVC_CPP_SERVICES_H_
