@@ -78,6 +78,11 @@ func (r {{$interface.Name}}_Request) NewStub(impl {{$interface.Name}}, waiter bi
 
 type {{$interface.Name}}_Pointer bindings.InterfacePointer
 
+func (p *{{$interface.Name}}_Pointer) NewRequest() (*{{$interface.Name}}_Request, *{{$interface.Name}}_Pointer) {
+	r, ptr := NewChannelFor{{$interface.Name}}()
+	return &r, &ptr
+}
+
 type {{$interface.Name}}_ServiceBinder struct{
 	Delegate {{$interface.Name}}_Binder
 }
