@@ -28,6 +28,7 @@ TEST(GuestConfigParserTest, DefaultValues) {
   ASSERT_EQ(Kernel::ZIRCON, config.kernel());
   ASSERT_TRUE(config.kernel_path().empty());
   ASSERT_TRUE(config.ramdisk_path().empty());
+  ASSERT_EQ(1, config.num_cpus());
   ASSERT_TRUE(config.block_devices().empty());
   ASSERT_TRUE(config.cmdline().empty());
   ASSERT_EQ(0, config.balloon_interval());
@@ -44,6 +45,7 @@ TEST(GuestConfigParserTest, ParseConfig) {
                        R"JSON({
           "zircon": "zircon_path",
           "ramdisk": "ramdisk_path",
+          "cpus": "4",
           "block": "/pkg/data/block_path",
           "cmdline": "kernel cmdline",
           "balloon-interval": "1234",
@@ -54,6 +56,7 @@ TEST(GuestConfigParserTest, ParseConfig) {
   ASSERT_EQ(Kernel::ZIRCON, config.kernel());
   ASSERT_EQ("zircon_path", config.kernel_path());
   ASSERT_EQ("ramdisk_path", config.ramdisk_path());
+  ASSERT_EQ(4, config.num_cpus());
   ASSERT_EQ(1, config.block_devices().size());
   ASSERT_EQ("/pkg/data/block_path", config.block_devices()[0].path);
   ASSERT_EQ("kernel cmdline", config.cmdline());
@@ -70,6 +73,7 @@ TEST(GuestConfigParserTest, ParseArgs) {
   const char* argv[] = {"exe_name",
                         "--linux=linux_path",
                         "--ramdisk=ramdisk_path",
+                        "--cpus=4",
                         "--block=/pkg/data/block_path",
                         "--cmdline=kernel_cmdline",
                         "--balloon-interval=1234",
@@ -81,6 +85,7 @@ TEST(GuestConfigParserTest, ParseArgs) {
   ASSERT_EQ(Kernel::LINUX, config.kernel());
   ASSERT_EQ("linux_path", config.kernel_path());
   ASSERT_EQ("ramdisk_path", config.ramdisk_path());
+  ASSERT_EQ(4, config.num_cpus());
   ASSERT_EQ(1, config.block_devices().size());
   ASSERT_EQ("/pkg/data/block_path", config.block_devices()[0].path);
   ASSERT_EQ("kernel_cmdline", config.cmdline());

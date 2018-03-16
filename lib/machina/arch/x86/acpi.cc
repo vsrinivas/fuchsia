@@ -77,7 +77,7 @@ static T* madt_subtable(void* base, uint32_t off, uint8_t type) {
 
 static zx_status_t create_madt(ACPI_TABLE_MADT* madt,
                                zx_vaddr_t io_apic_addr,
-                               size_t num_cpus,
+                               uint8_t num_cpus,
                                uint32_t* actual) {
   uint32_t table_size = static_cast<uint32_t>(
       sizeof(ACPI_TABLE_MADT) + (num_cpus * sizeof(ACPI_MADT_LOCAL_APIC)) +

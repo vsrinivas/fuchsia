@@ -26,6 +26,7 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--zircon=[kernel.bin]           Load a Zircon kernel from 'kernel.bin'\n";
   std::cerr << "\t--linux=[kernel.bin]            Load a Linux kernel from 'kernel.bin'\n";
   std::cerr << "\t--ramdisk=[ramdisk.bin]         Use file 'ramdisk.bin' as an initial RAM disk\n";
+  std::cerr << "\t--cpus=[cpus]                   Number of virtual CPUs the guest is allowed to use\n";
   std::cerr << "\t--memory=[bytes]                Allocate 'bytes' of physical memory for the guest. The\n";
   std::cerr << "\t                                suffixes 'k', 'M', and 'G' are accepted (currently x64 only)\n";
   std::cerr << "\t--block=[block_spec]            Adds a block device with the given parameters\n";
@@ -300,6 +301,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
        append_option<BlockSpec>(&cfg_->block_specs_, parse_block_spec)},
       {"cmdline", save_option(&cfg_->cmdline_)},
       {"cmdline-append", append_string(&cfg_->cmdline_, " ")},
+      {"cpus", parse_number(&cfg_->num_cpus_)},
 #if __x86_64__
       {"memory", parse_mem_size(&cfg_->memory_)},
 #endif

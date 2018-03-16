@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
       .dsdt_path = kDsdtPath,
       .mcfg_path = kMcfgPath,
       .io_apic_addr = machina::kIoApicPhysBase,
-      .num_cpus = 1,
+      .num_cpus = cfg.num_cpus(),
   };
   status = machina::create_acpi_table(acpi_cfg, guest.phys_mem(), pt_end_off);
   if (status != ZX_OK) {
