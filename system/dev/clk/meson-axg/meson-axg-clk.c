@@ -104,5 +104,5 @@ static zx_driver_ops_t meson_axg_clk_driver_ops = {
 ZIRCON_DRIVER_BEGIN(meson_axg_clk, meson_axg_clk_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_AXG_CLK),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_AXG_CLK),
 ZIRCON_DRIVER_END(meson_axg_clk)
