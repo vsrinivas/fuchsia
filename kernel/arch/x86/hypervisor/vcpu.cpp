@@ -11,6 +11,7 @@
 #include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
 #include <kernel/mp.h>
+#include <lib/ktrace.h>
 #include <vm/fault.h>
 #include <vm/pmm.h>
 #include <vm/vm_object.h>
@@ -732,6 +733,8 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
         // Updates guest system time if the guest subscribed to updates.
         pvclock_update_system_time(&pvclock_state_, guest_->AddressSpace());
 
+        cpu_num_t cpu_num = arch_curr_cpu_num();
+        ktrace_tiny(TAG_VCPU_ENTER, cpu_num);
         running_.store(true);
         status = vmx_enter(&vmx_state_);
         running_.store(false);
@@ -740,6 +743,8 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             vmx_state_.guest_state.xcr0 = x86_xgetbv(0);
             x86_xsetbv(0, vmx_state_.host_state.xcr0);
         }
+        ktrace_tiny(TAG_VCPU_EXIT, cpu_num);
+
         if (status != ZX_OK) {
             uint64_t error = vmcs.Read(VmcsField32::INSTRUCTION_ERROR);
             dprintf(INFO, "VCPU resume failed: %#lx\n", error);

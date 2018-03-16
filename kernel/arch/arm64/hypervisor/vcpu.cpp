@@ -15,6 +15,7 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
+#include <lib/ktrace.h>
 #include <platform/timer.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -187,9 +188,14 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             if (gich_maybe_interrupt(guest_state, &gich_state_)) {
                 curr_hcr |= HCR_EL2_VI;
             }
+
+            cpu_num_t cpu_num = arch_curr_cpu_num();
+            ktrace_tiny(TAG_VCPU_ENTER, cpu_num);
             running_.store(true);
             status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), curr_hcr);
             running_.store(false);
+            ktrace_tiny(TAG_VCPU_EXIT, cpu_num);
+
             gich_active_interrupts(&gich_state_.active_interrupts);
         }
         if (status == ZX_ERR_NEXT) {

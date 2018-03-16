@@ -13,7 +13,7 @@
 // clang-format off
 
 // VM exit reasons.
-enum class ExitReason : uint32_t {
+enum ExitReason : uint32_t {
     EXCEPTION                   = 0u,  // NMI is an exception too
     EXTERNAL_INTERRUPT          = 1u,
     TRIPLE_FAULT                = 2u,

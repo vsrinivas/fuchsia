@@ -17,6 +17,7 @@ KTRACE_DEF(0x022,NAME,PROC_NAME,META) // pid, 0, name[]
 KTRACE_DEF(0x023,NAME,SYSCALL_NAME,META) // num, 0, name[]
 KTRACE_DEF(0x024,NAME,IRQ_NAME,META) // num, 0, name[]
 KTRACE_DEF(0x025,NAME,PROBE_NAME,META) // num, 0, name[]
+KTRACE_DEF(0x026,NAME,VCPU_REASON,META) // num, cpu, name[]
 
 KTRACE_DEF(0x030,16B,IRQ_ENTER,IRQ) // (irqn << 8) | cpu
 KTRACE_DEF(0x031,16B,IRQ_EXIT,IRQ) // (irqn << 8) | cpu
@@ -55,6 +56,9 @@ KTRACE_DEF(0x151,32B,WAIT_ONE_DONE,IPC) // id, status, pending
 KTRACE_DEF(0x160,32B,KWAIT_BLOCK,SCHEDULER) // queue_hi, queue_hi
 KTRACE_DEF(0x161,32B,KWAIT_WAKE,SCHEDULER) // queue_hi, queue_hi, is_mutex
 KTRACE_DEF(0x162,32B,KWAIT_UNBLOCK,SCHEDULER) // queue_hi, queue_hi, blocked_status
+
+KTRACE_DEF(0x170,16B,VCPU_ENTER,TASKS) // cpu
+KTRACE_DEF(0x171,16B,VCPU_EXIT,TASKS) // cpu
 
 // events from 0x200-0x2ff are for arch-specific needs
 

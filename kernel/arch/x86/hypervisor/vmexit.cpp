@@ -20,6 +20,7 @@
 #include <fbl/canary.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <kernel/auto_lock.h>
+#include <lib/ktrace.h>
 #include <platform.h>
 #include <platform/pc/timer.h>
 #include <vm/fault.h>
@@ -378,8 +379,8 @@ static zx_status_t register_value(AutoVmcs* vmcs, GuestState* guest_state, uint8
     }
 }
 
-static zx_status_t handle_cr_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                    GuestState* guest_state) {
+static zx_status_t handle_control_register_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                                                  GuestState* guest_state) {
     CrAccessInfo cr_access_info(exit_info.exit_qualification);
     switch (cr_access_info.access_type) {
     case CrAccessType::MOV_TO_CR: {
@@ -933,42 +934,55 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
                            LocalApicState* local_apic_state, PvClockState* pvclock,
                            hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
                            zx_port_packet_t* packet) {
+    cpu_num_t cpu_num = arch_curr_cpu_num();
     ExitInfo exit_info(*vmcs);
-
     switch (exit_info.exit_reason) {
     case ExitReason::EXTERNAL_INTERRUPT:
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "external-interrupt");
         return handle_external_interrupt(vmcs, local_apic_state);
     case ExitReason::INTERRUPT_WINDOW:
         LTRACEF("handling interrupt window\n\n");
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "interrupt-window");
         return handle_interrupt_window(vmcs, local_apic_state);
     case ExitReason::CPUID:
-        LTRACEF("handling CPUID instruction\n\n");
+        LTRACEF("handling CPUID\n\n");
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "cpuid");
         return handle_cpuid(exit_info, vmcs, guest_state);
     case ExitReason::HLT:
-        LTRACEF("handling HLT instruction\n\n");
+        LTRACEF("handling HLT\n\n");
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "hlt");
         return handle_hlt(exit_info, vmcs, local_apic_state);
     case ExitReason::CONTROL_REGISTER_ACCESS:
-        LTRACEF("handling control register access\n\n");
-        return handle_cr_access(exit_info, vmcs, guest_state);
+        LTRACEF("handling control-register access\n\n");
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "control-register-access");
+        return handle_control_register_access(exit_info, vmcs, guest_state);
     case ExitReason::IO_INSTRUCTION:
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "io-instruction");
         return handle_io_instruction(exit_info, vmcs, guest_state, traps, packet);
     case ExitReason::RDMSR:
-        LTRACEF("handling RDMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
+        LTRACEF("handling RDMSR %#" PRIx64 "\n\n", guest_state->rcx);
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "rdmsr");
         return handle_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
     case ExitReason::WRMSR:
-        LTRACEF("handling WRMSR instruction %#" PRIx64 "\n\n", guest_state->rcx);
+        LTRACEF("handling WRMSR %#" PRIx64 "\n\n", guest_state->rcx);
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "wrmsr");
         return handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pvclock, gpas, packet);
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
         LTRACEF("handling VM entry failure\n\n");
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "vm-entry-failure");
         return ZX_ERR_BAD_STATE;
     case ExitReason::EPT_VIOLATION:
         LTRACEF("handling EPT violation\n\n");
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "ept-violation");
         return handle_ept_violation(exit_info, vmcs, gpas, traps, packet);
     case ExitReason::XSETBV:
-        LTRACEF("handling XSETBV instruction\n\n");
+        LTRACEF("handling XSETBV\n\n");
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "xsetbv");
         return handle_xsetbv(exit_info, vmcs, guest_state);
     case ExitReason::PAUSE:
+        LTRACEF("handling PAUSE\n\n");
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "pause");
         return handle_pause(exit_info, vmcs);
     case ExitReason::EXCEPTION:
         // Currently all exceptions except NMI delivered to guest directly. NMI causes vmexit
@@ -976,6 +990,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
     default:
         dprintf(CRITICAL, "Unhandled VM exit %u (%s)\n", static_cast<uint32_t>(exit_info.exit_reason),
                 exit_reason_name(exit_info.exit_reason));
+        ktrace_name(TAG_VCPU_REASON, exit_info.exit_reason, cpu_num, "unknown");
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
