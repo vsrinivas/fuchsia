@@ -197,7 +197,7 @@ VnodeDir* vfs_create_global_root() {
 
 zx_status_t memfs_mount(VnodeDir* parent, const char* name, VnodeDir* subtree) {
     fbl::RefPtr<fs::Vnode> vn;
-    zx_status_t status = parent->Create(&vn, fbl::StringPiece(name), S_IFDIR);
+    zx_status_t status = parent->Lookup(&vn, fbl::StringPiece(name));
     if (status != ZX_OK)
         return status;
     zx_handle_t h;
