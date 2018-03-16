@@ -130,7 +130,7 @@ void ExceptionHandler::DoThread() {
           sink_->OnThreadStarting(thread, proc->koid, packet.exception.tid);
           break;
         case ZX_EXCP_THREAD_EXITING:
-          sink_->OnThreadExiting(thread, proc->koid, packet.exception.tid);
+          sink_->OnThreadExiting(proc->koid, packet.exception.tid);
           break;
         case ZX_EXCP_GENERAL:
         case ZX_EXCP_FATAL_PAGE_FAULT:

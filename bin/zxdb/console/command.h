@@ -40,6 +40,7 @@ enum class Verb {
   kNone = 0,
 
   kAttach,
+  kContinue,
   kHelp,
   kListProcesses,
   kMemRead,

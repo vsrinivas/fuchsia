@@ -27,6 +27,7 @@ class SystemImpl : public System {
   Process* ProcessFromKoid(uint64_t koid) const override;
   void GetProcessTree(ProcessTreeCallback callback) override;
   Target* CreateNewTarget(Target* clone) override;
+  void Continue() override;
 
  private:
   void AddNewTarget(std::unique_ptr<TargetImpl> target);

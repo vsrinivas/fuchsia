@@ -27,6 +27,7 @@ static_library("console") {
     "verbs_memory.cc",
     "verbs_process.cc",
     "verbs_system.cc",
+    "verbs_thread.cc",
   ]
 
   deps = []

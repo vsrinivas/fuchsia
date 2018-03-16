@@ -205,8 +205,13 @@ void ConsoleContext::DidChangeTargetState(Target* target,
 
   // When starting a new process, register for notifications.
   Target::State new_state = target->GetState();
-  if (new_state == Target::State::kRunning)
+  if (new_state == Target::State::kRunning) {
     target->GetProcess()->AddObserver(this);
+
+    // Restart the thread ID counting when the process starts in case this
+    // target was previously running (we want to restart numbering every time).
+    record->next_thread_id = 1;
+  }
 
   if (new_state == Target::State::kStopped &&
       old_state == Target::State::kRunning) {

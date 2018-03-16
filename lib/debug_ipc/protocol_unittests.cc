@@ -125,6 +125,19 @@ TEST(Protocol, AttachReply) {
   EXPECT_EQ(initial.process_name, second.process_name);
 }
 
+// Continue --------------------------------------------------------------------
+
+TEST(Protocol, ContinueRequest) {
+  ContinueRequest initial;
+  initial.process_koid = 3746234;
+  initial.thread_koid = 123523;
+
+  ContinueRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.thread_koid, second.thread_koid);
+}
+
 // ProcessTree -----------------------------------------------------------------
 
 TEST(Protocol, ProcessTreeRequest) {

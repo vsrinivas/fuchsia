@@ -33,6 +33,10 @@ class Thread : public ClientObject {
   virtual const std::string& GetName() const = 0;
   virtual debug_ipc::ThreadRecord::State GetState() const = 0;
 
+  // Resumes this thread only (other threads in the process which are suspended
+  // will remain so).
+  virtual void Continue() = 0;
+
  protected:
   fxl::ObserverList<ThreadObserver>& observers() { return observers_; }
 

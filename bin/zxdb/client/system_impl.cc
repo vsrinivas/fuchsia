@@ -58,6 +58,15 @@ Target* SystemImpl::CreateNewTarget(Target* clone) {
   return to_return;
 }
 
+void SystemImpl::Continue() {
+  debug_ipc::ContinueRequest request;
+  request.process_koid = 0;  // 0 means all processes.
+  request.thread_koid = 0;  // 0 means all threads.
+  session()->Send<debug_ipc::ContinueRequest, debug_ipc::ContinueReply>(
+      request,
+      [](Session*, uint32_t, const Err& err, debug_ipc::ContinueReply) {});
+}
+
 void SystemImpl::AddNewTarget(std::unique_ptr<TargetImpl> target) {
   Target* for_observers = target.get();
 

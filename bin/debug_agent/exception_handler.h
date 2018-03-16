@@ -43,8 +43,7 @@ class ExceptionHandler : public debug_ipc::StreamBuffer::Writer {
     virtual void OnThreadStarting(const zx::thread& thread,
                                   zx_koid_t proc_koid,
                                   zx_koid_t thread_koid) = 0;
-    virtual void OnThreadExiting(const zx::thread& thread,
-                                 zx_koid_t proc_koid,
+    virtual void OnThreadExiting(zx_koid_t proc_koid,
                                  zx_koid_t thread_koid) = 0;
     virtual void OnException(const zx::thread& thread,
                              zx_koid_t proc_koid,

@@ -207,6 +207,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     AppendMemoryVerbs(&all_verbs);
     AppendProcessVerbs(&all_verbs);
     AppendSystemVerbs(&all_verbs);
+    AppendThreadVerbs(&all_verbs);
 
     // Everything but Noun::kNone (= 0) should be in the map.
     FXL_DCHECK(all_verbs.size() == static_cast<size_t>(Verb::kLast) - 1)

@@ -66,6 +66,15 @@ void ProcessImpl::SyncThreads(std::function<void()> callback) {
       });
 }
 
+void ProcessImpl::Continue() {
+  debug_ipc::ContinueRequest request;
+  request.process_koid = koid_;
+  request.thread_koid = 0;  // 0 means all threads.
+  session()->Send<debug_ipc::ContinueRequest, debug_ipc::ContinueReply>(
+      request,
+      [](Session*, uint32_t, const Err& err, debug_ipc::ContinueReply) {});
+}
+
 void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record) {
   if (threads_.find(record.koid) != threads_.end()) {
     // Duplicate new thread notification. Some legitimate cases could cause

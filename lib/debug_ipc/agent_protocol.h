@@ -35,6 +35,14 @@ void WriteReply(const AttachReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer);
 
+// Continue.
+bool ReadRequest(MessageReader* reader,
+                 ContinueRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const ContinueReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer);
+
 // ProcessTree.
 bool ReadRequest(MessageReader* reader,
                  ProcessTreeRequest* request,

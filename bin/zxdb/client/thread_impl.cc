@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/client/thread_impl.h"
 
 #include "garnet/bin/zxdb/client/process_impl.h"
+#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/public/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -20,6 +21,15 @@ Process* ThreadImpl::GetProcess() const { return process_; }
 uint64_t ThreadImpl::GetKoid() const { return koid_; }
 const std::string& ThreadImpl::GetName() const { return name_; }
 debug_ipc::ThreadRecord::State ThreadImpl::GetState() const { return state_; }
+
+void ThreadImpl::Continue() {
+  debug_ipc::ContinueRequest request;
+  request.process_koid = process_->GetKoid();
+  request.thread_koid = koid_;
+  session()->Send<debug_ipc::ContinueRequest, debug_ipc::ContinueReply>(
+      request,
+      [](Session*, uint32_t, const Err& err, debug_ipc::ContinueReply) {});
+}
 
 void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
   FXL_DCHECK(koid_ == record.koid);

@@ -124,6 +124,26 @@ bool ReadReply(MessageReader* reader,
   return true;
 }
 
+// Continue --------------------------------------------------------------------
+
+void WriteRequest(const ContinueRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kContinue, transaction_id);
+  writer->WriteUint64(request.process_koid);
+  writer->WriteUint64(request.thread_koid);
+}
+
+bool ReadReply(MessageReader* reader,
+               ContinueReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return true;
+}
+
 // ProcessTree -----------------------------------------------------------------
 
 void WriteRequest(const ProcessTreeRequest& request,

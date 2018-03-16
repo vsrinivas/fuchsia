@@ -24,6 +24,7 @@ struct MsgHeader {
     kHello,
     kLaunch,
     kAttach,
+    kContinue,
     kProcessTree,
     kThreads,
     kReadMemory,
@@ -76,6 +77,16 @@ struct AttachRequest {
 struct AttachReply {
   uint32_t status = 0;  // zx_status_t value from attaching. ZX_OK on success.
   std::string process_name;
+};
+
+struct ContinueRequest {
+  // If 0, all debugged processes will be continued.
+  uint64_t process_koid = 0;
+
+  // If 0, all threads in the given process will be continued.
+  uint64_t thread_koid = 0;
+};
+struct ContinueReply {
 };
 
 struct ProcessTreeRequest {};

@@ -48,6 +48,9 @@ class System : public ClientObject {
   // an empty Target will be allocated.
   virtual Target* CreateNewTarget(Target* clone) = 0;
 
+  // Continues execution of all threads in all debugged processes.
+  virtual void Continue() = 0;
+
  protected:
   fxl::ObserverList<SystemObserver>& observers() { return observers_; }
 

@@ -31,8 +31,11 @@ class ProcessImpl : public Process {
   std::vector<Thread*> GetThreads() const override;
   Thread* GetThreadFromKoid(uint64_t koid) override;
   void SyncThreads(std::function<void()> callback) override;
-  void OnThreadStarting(const debug_ipc::ThreadRecord& record) override;
-  void OnThreadExiting(const debug_ipc::ThreadRecord& record) override;
+  void Continue() override;
+
+  // Notifications from the agent that a thread has started or exited.
+  void OnThreadStarting(const debug_ipc::ThreadRecord& record);
+  void OnThreadExiting(const debug_ipc::ThreadRecord& record);
 
  private:
   // Syncs the threads_ list to the new list of threads passed in .

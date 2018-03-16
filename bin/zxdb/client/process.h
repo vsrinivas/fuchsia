@@ -67,9 +67,8 @@ class Process : public ClientObject {
   // To get the computed threads, call GetThreads() once the callback runs.
   virtual void SyncThreads(std::function<void()> callback) = 0;
 
-  // Notifications from the agent that a thread has started or exited.
-  virtual void OnThreadStarting(const debug_ipc::ThreadRecord& record) = 0;
-  virtual void OnThreadExiting(const debug_ipc::ThreadRecord& record) = 0;
+  // Continues execution of all threads in the process.
+  virtual void Continue() = 0;
 
  protected:
   fxl::ObserverList<ProcessObserver>& observers() { return observers_; }

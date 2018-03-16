@@ -20,6 +20,7 @@ class ThreadImpl : public Thread {
   uint64_t GetKoid() const override;
   const std::string& GetName() const override;
   debug_ipc::ThreadRecord::State GetState() const override;
+  void Continue() override;
 
   // Updates the thread metadata with new state from the agent.
   void SetMetadata(const debug_ipc::ThreadRecord& record);

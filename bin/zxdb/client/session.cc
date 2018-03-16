@@ -123,7 +123,7 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
       if (!debug_ipc::ReadNotifyThread(&reader, &thread))
         return;
 
-      Process* process = system_.ProcessFromKoid(thread.process_koid);
+      ProcessImpl* process = system_.ProcessImplFromKoid(thread.process_koid);
       if (process) {
         if (header.type == debug_ipc::MsgHeader::Type::kNotifyThreadStarting)
           process->OnThreadStarting(thread.record);

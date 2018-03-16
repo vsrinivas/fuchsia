@@ -85,6 +85,7 @@ void DebugAgent::OnStreamData() {
 
   switch (header.type) {
     DISPATCH(Hello);
+    DISPATCH(Continue);
     DISPATCH(Launch);
     DISPATCH(ProcessTree);
     DISPATCH(Threads);
@@ -144,6 +145,14 @@ void DebugAgent::OnThreadStarting(const zx::thread& thread, zx_koid_t proc_koid,
 
 void DebugAgent::OnException(const zx::thread& thread, zx_koid_t proc_koid,
                              uint32_t type) {
+  // Suspend all threads in the excepting process.
+  DebuggedProcess* proc = GetDebuggedProcess(proc_koid);
+  if (!proc) {
+    FXL_NOTREACHED();
+    return;
+  }
+  proc->OnException(thread);
+
   debug_ipc::NotifyException notify;
   notify.process_koid = proc_koid;
   FillThreadRecord(thread, &notify.thread);
@@ -181,18 +190,17 @@ void DebugAgent::OnException(const zx::thread& thread, zx_koid_t proc_koid,
   // Keep the thread suspended for the client.
 }
 
-void DebugAgent::OnThreadExiting(const zx::thread& thread, zx_koid_t proc_koid,
-                                 zx_koid_t thread_koid) {
+void DebugAgent::OnThreadExiting(zx_koid_t proc_koid, zx_koid_t thread_koid) {
+  // Can't call FillThreadRecord since the thread doesn't exist any more.
   debug_ipc::NotifyThread notify;
   notify.process_koid = proc_koid;
-  FillThreadRecord(thread, &notify.record);
+  notify.record.koid = thread_koid;
+  notify.record.state = debug_ipc::ThreadRecord::State::kDead;
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadExiting,
                                notify, &writer);
   stream().Write(writer.MessageComplete());
-
-  thread.resume(ZX_RESUME_EXCEPTION);
 }
 
 void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
@@ -251,6 +259,20 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
     SendCurrentThreads(process_handle, request.koid);
 }
 
+void DebugAgent::OnContinue(const debug_ipc::ContinueRequest& request,
+                            debug_ipc::ContinueReply* reply) {
+  if (request.process_koid) {
+    // Single process.
+    DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
+    if (proc)
+      proc->OnContinue(request);
+  } else {
+    // All debugged processes.
+    for (const auto& pair : procs_)
+      pair.second->OnContinue(request);
+  }
+}
+
 void DebugAgent::OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                                debug_ipc::ProcessTreeReply* reply) {
   GetProcessTree(&reply->root);
@@ -261,7 +283,7 @@ void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
   auto found = procs_.find(request.process_koid);
   if (found == procs_.end())
     return;
-  GetProcessThreads(found->second.process().get(), &reply->threads);
+  GetProcessThreads(found->second->process().get(), &reply->threads);
 }
 
 void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
@@ -273,14 +295,12 @@ DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
   auto found = procs_.find(koid);
   if (found == procs_.end())
     return nullptr;
-  return &found->second;
+  return found->second.get();
 }
 
 void DebugAgent::AddDebuggedProcess(zx_koid_t koid, zx::process proc) {
   handler_->Attach(koid, proc.get());
-  procs_.emplace(std::piecewise_construct,
-                 std::forward_as_tuple(koid),
-                 std::forward_as_tuple(koid, std::move(proc)));
+  procs_[koid] = std::make_unique<DebuggedProcess>(koid, std::move(proc));
 }
 
 void DebugAgent::RemoveDebuggedProcess(zx_koid_t koid) {
@@ -288,7 +308,7 @@ void DebugAgent::RemoveDebuggedProcess(zx_koid_t koid) {
   if (found == procs_.end())
     return;
 
-  handler_->Detach(found->second.koid());
+  handler_->Detach(found->second->koid());
   procs_.erase(found);
 }
 

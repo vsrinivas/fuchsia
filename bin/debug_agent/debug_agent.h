@@ -5,6 +5,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 
 #include "garnet/bin/debug_agent/debugged_process.h"
 #include "garnet/bin/debug_agent/exception_handler.h"
@@ -29,8 +30,7 @@ class DebugAgent : public ExceptionHandler::Sink {
   void OnProcessTerminated(zx_koid_t process_koid) override;
   void OnThreadStarting(const zx::thread& thread, zx_koid_t proc_koid,
                         zx_koid_t thread_koid) override;
-  void OnThreadExiting(const zx::thread& thread, zx_koid_t proc_koid,
-                        zx_koid_t thread_koid) override;
+  void OnThreadExiting(zx_koid_t proc_koid, zx_koid_t thread_koid) override;
   void OnException(const zx::thread& thread, zx_koid_t proc_koid,
                    uint32_t type) override;
 
@@ -41,6 +41,8 @@ class DebugAgent : public ExceptionHandler::Sink {
   void OnLaunch(const debug_ipc::LaunchRequest& request,
                 debug_ipc::LaunchReply* reply);
   void OnAttach(std::vector<char> serialized);
+  void OnContinue(const debug_ipc::ContinueRequest& request,
+                  debug_ipc::ContinueReply* reply);
   void OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                      debug_ipc::ProcessTreeReply* reply);
   void OnThreads(const debug_ipc::ThreadsRequest& request,
@@ -61,7 +63,7 @@ class DebugAgent : public ExceptionHandler::Sink {
 
   ExceptionHandler* handler_;  // Non-owning.
 
-  std::map<zx_koid_t, DebuggedProcess> procs_;
+  std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebugAgent);
 };
