@@ -22,7 +22,8 @@ public:
     // Algorithm enumerates the supported secret key ciphers.
     enum Algorithm {
         kUninitialized = 0,
-        kAES256_XTS,
+        kAES128_CTR, // NOT a "tweaked" cipher; this MUST NOT be used for disk encryption
+        kAES256_XTS, // A "tweaked cipher
     };
 
     // Indicates whether the objects turns plaintext into ciphertext or vice versa.

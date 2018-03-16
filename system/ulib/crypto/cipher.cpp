@@ -42,6 +42,10 @@ zx_status_t GetCipher(Cipher::Algorithm cipher, const EVP_CIPHER** out) {
         xprintf("not initialized\n");
         return ZX_ERR_INVALID_ARGS;
 
+    case Cipher::kAES128_CTR:
+        *out = EVP_aes_128_ctr();
+        return ZX_OK;
+
     case Cipher::kAES256_XTS:
         *out = EVP_aes_256_xts();
         return ZX_OK;
@@ -142,6 +146,15 @@ zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Bytes& key, 
         }
         // White-list tweaked codebook ciphers
         switch (algo) {
+        case kAES128_CTR:
+            // !!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // TODO(security): ZX-1811.
+            // CTR is NOT a tweaked codebook mode, so reusing a nonce and key on two different
+            // plain-texts can allow an attacker to "cancel out" the encryption.  Incorrectly
+            // marking this as a tweaked mode is a TEMPORARY WORKAROUND to unblock zxcrypt
+            // development.  this is not adequate disk encryption and  MUST BE FIXED before zxcrypt
+            // can provide reasonable protection to encrypted data.
+            // !!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         case kAES256_XTS:
             break;
         default:

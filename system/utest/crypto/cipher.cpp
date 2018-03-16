@@ -19,7 +19,9 @@ namespace testing {
 namespace {
 
 // See utils.h; the following macros allow reusing tests for each of the supported Ciphers.
-#define EACH_PARAM(OP, Test) OP(Test, Cipher, AES256_XTS)
+#define EACH_PARAM(OP, Test)                                                                       \
+    OP(Test, Cipher, AES128_CTR)                                                                   \
+    OP(Test, Cipher, AES256_XTS)
 
 bool TestGetLengths_Uninitialized(void) {
     BEGIN_TEST;
@@ -29,6 +31,26 @@ bool TestGetLengths_Uninitialized(void) {
     EXPECT_ZX(Cipher::GetIVLen(Cipher::kUninitialized, &len), ZX_ERR_INVALID_ARGS);
     END_TEST;
 }
+
+bool TestGetLengths_AES128_CTR(void) {
+    BEGIN_TEST;
+    size_t key_len;
+    EXPECT_ZX(Cipher::GetKeyLen(Cipher::kAES128_CTR, nullptr), ZX_ERR_INVALID_ARGS);
+    EXPECT_OK(Cipher::GetKeyLen(Cipher::kAES128_CTR, &key_len));
+    EXPECT_EQ(key_len, 16U);
+
+    size_t iv_len;
+    EXPECT_ZX(Cipher::GetIVLen(Cipher::kAES128_CTR, nullptr), ZX_ERR_INVALID_ARGS);
+    EXPECT_OK(Cipher::GetIVLen(Cipher::kAES128_CTR, &iv_len));
+    EXPECT_EQ(iv_len, 16U);
+
+    size_t block_size;
+    EXPECT_ZX(Cipher::GetIVLen(Cipher::kAES128_CTR, nullptr), ZX_ERR_INVALID_ARGS);
+    EXPECT_OK(Cipher::GetIVLen(Cipher::kAES128_CTR, &block_size));
+    EXPECT_EQ(block_size, 16U);
+    END_TEST;
+}
+
 
 bool TestGetLengths_AES256_XTS(void) {
     BEGIN_TEST;
@@ -319,7 +341,8 @@ DEFINE_EACH(TestDecryptRandomAccess)
 // The following tests are taken from NIST's SP 800-38E.  The non-byte aligned tests vectors are
 // omitted; as they are not supported.  Of those remaining, every tenth is selected up to number 200
 // as a representative sample.
-bool TestSP800_38E_TC(const char* xkey, const char* xiv, const char* xptext, const char* xctext) {
+bool TestSP800_TC(Cipher::Algorithm cipher, const char* xkey, const char* xiv, const char* xptext,
+                  const char* xctext) {
     BEGIN_TEST;
     Bytes key, iv, ctext, ptext;
     ASSERT_OK(HexToBytes(xkey, &key));
@@ -330,20 +353,35 @@ bool TestSP800_38E_TC(const char* xkey, const char* xiv, const char* xptext, con
     uint8_t tmp[len];
 
     Cipher encrypt;
-    EXPECT_OK(encrypt.InitEncrypt(Cipher::kAES256_XTS, key, iv));
+    EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv));
     EXPECT_OK(encrypt.Encrypt(ptext.get(), len, tmp));
     EXPECT_EQ(memcmp(tmp, ctext.get(), len), 0);
 
     Cipher decrypt;
-    EXPECT_OK(decrypt.InitDecrypt(Cipher::kAES256_XTS, key, iv));
+    EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv));
     EXPECT_OK(decrypt.Decrypt(ctext.get(), len, tmp));
     EXPECT_EQ(memcmp(tmp, ptext.get(), len), 0);
     END_TEST;
 }
 
 // clang-format off
+
+// See https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
+bool TestSP800_38A_F5(void) {
+    return TestSP800_TC(Cipher::kAES128_CTR,
+        // key
+        "2b7e151628aed2a6abf7158809cf4f3c",
+        // iv
+        "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+        // ptext
+        "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+        // ctext
+        "874d6191b620e3261bef6864990db6ce9806f66b7970fdff8617187bb9fffdff5ae4df3edbd5d35e5b4f09020db03eab1e031dda2fbe03d1792170a0f3009cee");
+}
+
+// See https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/aes/XTSTestVectors.zip
 bool TestSP800_38E_TC010(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "5d4240766e71216ab73da19ea88027488759c3c83aad8223bcb60ad5559f913d1fa858154fbb8217c04ca352b22e492cf9ea81d1a87838125c90a1340d04f8cf",
         // iv
@@ -355,7 +393,7 @@ bool TestSP800_38E_TC010(void) {
 }
 
 bool TestSP800_38E_TC020(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "c9032290ea6c1b8fe8448fdb6e7e48ef0d81c1a0bc84a9052e40807e515733ed93e55838a88ff1c78509c62afb26d52a8ff687846601b0930771e6df1d1f3c4d",
         // iv
@@ -367,7 +405,7 @@ bool TestSP800_38E_TC020(void) {
 }
 
 bool TestSP800_38E_TC030(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "d9dd2f932b39b82c666352b104b15b31f714cde49d9d2e019aa1e73db3818b8eddaf4f47f6f1fc173eec2e0c30674803de8780f945d8005d9fe995785912354b",
         // iv
@@ -379,7 +417,7 @@ bool TestSP800_38E_TC030(void) {
 }
 
 bool TestSP800_38E_TC040(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "d77104e5756ca260c3c5912439b7f8c81716d5c4a457e24d104ae50b40167a80ff03e0682729d824dfa8c84c794b80303dc9ff0585088ee6532565bec63ad7c2",
         // iv
@@ -391,7 +429,7 @@ bool TestSP800_38E_TC040(void) {
 }
 
 bool TestSP800_38E_TC050(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "0406cefa3e16325e0b820591b5d45bbf21164b521ded97628835f2d3be7ecca18d1ba0e5d47f10b969420f59c02e731161a2a262b55b5f35f6f8ef365159f50d",
         // iv
@@ -403,7 +441,7 @@ bool TestSP800_38E_TC050(void) {
 }
 
 bool TestSP800_38E_TC060(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "bade4d98d950bc1c0f9af6c0449df05955ad9db136fdab98b07f359b3a3781d44ccd04a9bdbf2191099dd74705811c9cbf26173dba5ca9c1c89566f061d0c943",
         // iv
@@ -415,7 +453,7 @@ bool TestSP800_38E_TC060(void) {
 }
 
 bool TestSP800_38E_TC070(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "b353e17f495d6b6a24357a6a6c30372d8e6d79923f0e0b62224af47240123ed909f5a94a299a0cbda4ba99e864698803101507e7027041fe04eed90336d89c76",
         // iv
@@ -427,7 +465,7 @@ bool TestSP800_38E_TC070(void) {
 }
 
 bool TestSP800_38E_TC080(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "2c7ca38b0445ca7345c53d05e433a84e93617723ec4f22a9e3c4d822fdda9a88748d653b83ea170668fae1b22525afd3aa78e1f09106a22d640d853524a80b5a",
         // iv
@@ -439,7 +477,7 @@ bool TestSP800_38E_TC080(void) {
 }
 
 bool TestSP800_38E_TC090(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "9051e843a1a216c0bbad5d67e2e30ee414ae0ec29675deca56507ef011ba7f3f273edd58ea12c02ad03ebe2405702a0b8ac33016d216e22af0f1141998ea488b",
         // iv
@@ -451,7 +489,7 @@ bool TestSP800_38E_TC090(void) {
 }
 
 bool TestSP800_38E_TC100(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "198363340a2c104edecef6ada540a9c3a752c4fdcab8d16fff1823d98d959389b92bfd43a9df083600e07f712d6f04a20456d452ec6cb7e836da36581ff7ea33",
         // iv
@@ -463,7 +501,7 @@ bool TestSP800_38E_TC100(void) {
 }
 
 bool TestSP800_38E_TC110(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "6b1984c24e7eb6628e3a11c9ccd2594033a3a0d9016eae65c2f24e09b9a66e9fe9d163a506dfbccf2d93e8991e2fc560e10435b890b5889a5003e4bf817dc3e0",
         // iv
@@ -475,7 +513,7 @@ bool TestSP800_38E_TC110(void) {
 }
 
 bool TestSP800_38E_TC120(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "10c2e0ee117d7c83bcc1422b1c75445fdca94530eac7c9292e76a2766766368d7f852c6f6b25e8448e9e315b761dcb1a31290b643535a66de5c2bc1e5e3978f7",
         // iv
@@ -487,7 +525,7 @@ bool TestSP800_38E_TC120(void) {
 }
 
 bool TestSP800_38E_TC130(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "43401c1696961f2cfa7f2f825c0bd08683219ef7a3b8f2352c6a27afa14424de31ceb11b0983b981b3cc59f712d7513bbd78b97724544fba99a7370698c1f586",
         // iv
@@ -499,7 +537,7 @@ bool TestSP800_38E_TC130(void) {
 }
 
 bool TestSP800_38E_TC140(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "1e30686246d41359c6b98bc474ca7c70bfd1b1167183d099443b50050b9abc031d2491249b64dae81532d55e5ec4b8fc0942956b8016e70c05c07c2f9281294a",
         // iv
@@ -511,7 +549,7 @@ bool TestSP800_38E_TC140(void) {
 }
 
 bool TestSP800_38E_TC150(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "b4713941c6a4ffdbfe2bffdcca09631911e91f1260e650d389803b1aa89f5789fb8ead890218105b63c6d8af1cdaecb8da8c807a16e97ebdab860c169431f596",
         // iv
@@ -523,7 +561,7 @@ bool TestSP800_38E_TC150(void) {
 }
 
 bool TestSP800_38E_TC160(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "02f5f16166ff196ecbd88d90ece619f1815e6dcfce2827a407fe1201c4a4c82956318912d9c7a6e12ab2f69e17b83c0ec42fc9abb25629e66c37b8583c2ef9bb",
         // iv
@@ -535,7 +573,7 @@ bool TestSP800_38E_TC160(void) {
 }
 
 bool TestSP800_38E_TC170(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "b67995bece5a587ffdfa9d63ce82700eabaec701312aac591ae4c13045b17832fbffb96fe953be24ad4e22ac146eff566453fb9abec7c80b7d4f849dba96ec2d",
         // iv
@@ -547,7 +585,7 @@ bool TestSP800_38E_TC170(void) {
 }
 
 bool TestSP800_38E_TC180(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "4324b0fcdcfedc5af7f8170c157ef68680197f5901fb5f3c9b9f85db8319293066a4e1a61c5943865e7b2de129dd3a6db5d8865ac55722399a58822c4e51d0df",
         // iv
@@ -559,7 +597,7 @@ bool TestSP800_38E_TC180(void) {
 }
 
 bool TestSP800_38E_TC190(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "458dfebe5a6e381da894a1551b95467f19fd475be6a61930ea7707c4f21f88cddd7283c59cc4211af68cc4273ab0e31bf24bee161a5690c754f46ee6392eb6fd",
         // iv
@@ -571,7 +609,7 @@ bool TestSP800_38E_TC190(void) {
 }
 
 bool TestSP800_38E_TC200(void) {
-    return TestSP800_38E_TC(
+    return TestSP800_TC(Cipher::kAES256_XTS,
         // key
         "28ab33a47b32dbe9ac4e33a7dd3bdea0fc47deae790c3f5c24cc4e97229ce0c0a15160ff5cc544e2b4e03b4ccd55cc685e93e4ddb2fad8879d0774e92780c521",
         // iv
@@ -594,6 +632,7 @@ RUN_EACH(TestEncryptStream)
 RUN_EACH(TestEncryptRandomAccess)
 RUN_EACH(TestDecryptStream)
 RUN_EACH(TestDecryptRandomAccess)
+RUN_TEST(TestSP800_38A_F5)
 RUN_TEST(TestSP800_38E_TC010)
 RUN_TEST(TestSP800_38E_TC020)
 RUN_TEST(TestSP800_38E_TC030)
