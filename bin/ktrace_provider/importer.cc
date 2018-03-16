@@ -60,6 +60,7 @@ Importer::Importer(trace_context_t* context)
       probe_category_ref_(MAKE_STRING("kernel:probe")),
       syscall_category_ref_(MAKE_STRING("kernel:syscall")),
       channel_category_ref_(MAKE_STRING("kernel:channel")),
+      vcpu_category_ref_(MAKE_STRING("kernel:vcpu")),
       channel_read_name_ref_(MAKE_STRING("read")),
       channel_write_name_ref_(MAKE_STRING("write")),
       num_bytes_name_ref_(MAKE_STRING("num_bytes")),
@@ -214,6 +215,14 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
     case KTRACE_EVENT(TAG_WAIT_ONE_DONE):
       return HandleWaitOneDone(record->ts, record->tid, record->a, record->b,
                                record->c);
+    case KTRACE_EVENT(TAG_VCPU_ENTER):
+      return HandleVcpuEnter(record->ts, record->tid);
+    case KTRACE_EVENT(TAG_VCPU_EXIT):
+      return HandleVcpuExit(record->ts, record->tid, record->a);
+    case KTRACE_EVENT(TAG_VCPU_BLOCK):
+      return HandleVcpuBlock(record->ts, record->tid, record->a);
+    case KTRACE_EVENT(TAG_VCPU_UNBLOCK):
+      return HandleVcpuUnblock(record->ts, record->tid, record->a);
     default:
       return false;
   }
@@ -240,6 +249,8 @@ bool Importer::ImportNameRecord(const ktrace_rec_name_t* record,
       return HandleIRQName(record->id, name);
     case KTRACE_EVENT(TAG_PROBE_NAME):
       return HandleProbeName(record->id, name);
+    case KTRACE_EVENT(TAG_VCPU_META):
+      return HandleVcpuMeta(record->id, name);
     default:
       return false;
   }
@@ -319,6 +330,12 @@ bool Importer::HandleIRQName(uint32_t irq, const fbl::StringPiece& name) {
 bool Importer::HandleProbeName(uint32_t probe, const fbl::StringPiece& name) {
   probe_names_.emplace(probe, trace_context_make_registered_string_copy(
                                   context_, name.data(), name.length()));
+  return true;
+}
+
+bool Importer::HandleVcpuMeta(uint32_t meta, const fbl::StringPiece& name) {
+  vcpu_meta_.emplace(meta, trace_context_make_registered_string_copy(
+                               context_, name.data(), name.length()));
   return true;
 }
 
@@ -595,6 +612,59 @@ bool Importer::HandleProbe(trace_ticks_t event_time,
   return true;
 }
 
+bool Importer::HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread) {
+  auto& duration = vcpu_durations_[thread];
+  if (duration.valid) {
+    FXL_LOG(WARNING) << "VCPU duration for thread " << thread
+                     << " already exists";
+    return false;
+  }
+  duration = VcpuDuration{.begin = event_time, .valid = true};
+  return true;
+}
+
+bool Importer::HandleVcpuExit(trace_ticks_t event_time,
+                              zx_koid_t thread,
+                              uint32_t meta) {
+  auto& duration = vcpu_durations_[thread];
+  if (!duration.valid) {
+    FXL_LOG(WARNING) << "VCPU duration for thread " << thread
+                     << " does not have a beginning";
+    return false;
+  }
+
+  trace_thread_ref_t thread_ref = GetThreadRef(thread);
+  trace_string_ref_t name_ref = GetVcpuMetaNameRef(meta);
+  trace_context_write_duration_event_record(
+      context_, duration.begin, event_time, &thread_ref, &vcpu_category_ref_,
+      &name_ref, nullptr, 0);
+
+  duration.valid = false;
+  return true;
+}
+
+bool Importer::HandleVcpuBlock(trace_ticks_t event_time,
+                               zx_koid_t thread,
+                               uint32_t meta) {
+  trace_thread_ref_t thread_ref = GetThreadRef(thread);
+  trace_string_ref_t name_ref = GetVcpuMetaNameRef(meta);
+  trace_context_write_duration_begin_event_record(
+      context_, event_time, &thread_ref, &vcpu_category_ref_, &name_ref,
+      nullptr, 0u);
+  return true;
+}
+
+bool Importer::HandleVcpuUnblock(trace_ticks_t event_time,
+                                 zx_koid_t thread,
+                                 uint32_t meta) {
+  trace_thread_ref_t thread_ref = GetThreadRef(thread);
+  trace_string_ref_t name_ref = GetVcpuMetaNameRef(meta);
+  trace_context_write_duration_end_event_record(
+      context_, event_time, &thread_ref, &vcpu_category_ref_, &name_ref,
+      nullptr, 0u);
+  return true;
+}
+
 trace_thread_ref_t Importer::GetCpuCurrentThread(
     trace_cpu_number_t cpu_number) {
   if (cpu_number >= cpu_infos_.size())
@@ -624,10 +694,21 @@ const trace_string_ref_t& Importer::GetNameRef(
     uint32_t id) {
   auto it = table.find(id);
   if (it == table.end()) {
-    fbl::String name = fbl::StringPrintf("%s 0x%x", kind, id);
+    fbl::String name = fbl::StringPrintf("%s %#x", kind, id);
     std::tie(it, std::ignore) =
         table.emplace(id, trace_context_make_registered_string_copy(
                               context_, name.data(), name.length()));
+  }
+  return it->second;
+}
+
+const trace_string_ref_t& Importer::GetVcpuMetaNameRef(uint32_t meta) {
+  auto it = vcpu_meta_.find(meta);
+  if (it == vcpu_meta_.end()) {
+    fbl::String str = fbl::StringPrintf("meta:%#x", meta);
+    std::tie(it, std::ignore) =
+        vcpu_meta_.emplace(meta, trace_context_make_registered_string_copy(
+                                     context_, str.data(), str.length()));
   }
   return it->second;
 }

@@ -8,6 +8,7 @@
 #include "stddef.h"
 #include "stdint.h"
 
+#include <array>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -52,6 +53,7 @@ class Importer {
   bool HandleSyscallName(uint32_t syscall, const fbl::StringPiece& name);
   bool HandleIRQName(uint32_t irq, const fbl::StringPiece& name);
   bool HandleProbeName(uint32_t probe, const fbl::StringPiece& name);
+  bool HandleVcpuMeta(uint32_t meta, const fbl::StringPiece& name);
 
   bool HandleIRQEnter(trace_ticks_t event_time,
                       trace_cpu_number_t cpu_number,
@@ -142,6 +144,16 @@ class Importer {
                    uint32_t probe,
                    uint32_t arg0,
                    uint32_t arg1);
+  bool HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread);
+  bool HandleVcpuExit(trace_ticks_t event_time,
+                      zx_koid_t thread,
+                      uint32_t meta);
+  bool HandleVcpuBlock(trace_ticks_t event_time,
+                       zx_koid_t thread,
+                       uint32_t meta);
+  bool HandleVcpuUnblock(trace_ticks_t event_time,
+                         zx_koid_t thread,
+                         uint32_t meta);
 
   struct CpuInfo {
     trace_thread_ref_t current_thread_ref = trace_make_unknown_thread_ref();
@@ -157,6 +169,7 @@ class Importer {
       std::unordered_map<uint32_t, trace_string_ref_t>& table,
       const char* kind,
       uint32_t id);
+  const trace_string_ref_t& GetVcpuMetaNameRef(uint32_t meta);
   const trace_thread_ref_t& GetThreadRef(zx_koid_t thread);
   const trace_thread_ref_t& GetKernelThreadRef(KernelThread kernel_thread);
 
@@ -169,6 +182,7 @@ class Importer {
   trace_string_ref_t const probe_category_ref_;
   trace_string_ref_t const syscall_category_ref_;
   trace_string_ref_t const channel_category_ref_;
+  trace_string_ref_t const vcpu_category_ref_;
   trace_string_ref_t const channel_read_name_ref_;
   trace_string_ref_t const channel_write_name_ref_;
   trace_string_ref_t const num_bytes_name_ref_;
@@ -186,9 +200,16 @@ class Importer {
   std::unordered_map<KernelThread, trace_thread_ref_t> kernel_thread_refs_;
   std::unordered_map<zx_koid_t, trace_thread_ref_t> thread_refs_;
 
+  struct VcpuDuration {
+    trace_ticks_t begin;
+    bool valid = false;
+  };
+  std::unordered_map<zx_koid_t, VcpuDuration> vcpu_durations_;
+
   std::unordered_map<uint32_t, trace_string_ref_t> irq_names_;
   std::unordered_map<uint32_t, trace_string_ref_t> probe_names_;
   std::unordered_map<uint32_t, trace_string_ref_t> syscall_names_;
+  std::unordered_map<uint32_t, trace_string_ref_t> vcpu_meta_;
 
   struct Channels {
     using ChannelId = uint64_t;
