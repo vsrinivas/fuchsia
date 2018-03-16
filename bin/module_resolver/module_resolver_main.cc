@@ -128,21 +128,47 @@ class ModuleResolverApp : ContextListener {
           CreateResolverNounConstraintFromContextValue(value));
     }
 
-    // Make sure to remove any existing proposal before creating new ones. This
-    // is outside the find call to make sure that stale suggestions are cleared
-    // regardless of the resolver results.
-    for (const auto& proposal_id : current_proposal_ids_) {
-      proposal_publisher_->Remove(proposal_id);
-    }
-    current_proposal_ids_.clear();
-
     resolver_impl_->FindModules(
         std::move(query),
         [this, story_id](const modular::FindModulesResultPtr& result) {
+          std::vector<ProposalPtr> new_proposals;
+          std::vector<modular::DaisyPtr> new_daisies;  // Only for comparison.
           int proposal_count = 0;
           for (const auto& module : result->modules) {
-            proposal_publisher_->Propose(CreateProposalFromModuleResolverResult(
-                module, story_id, proposal_count++));
+            modular::DaisyPtr daisy;
+            new_proposals.push_back(CreateProposalFromModuleResolverResult(
+                module, story_id, proposal_count++, &daisy));
+            new_daisies.push_back(std::move(daisy));
+          }
+
+          // Compare the old daisies and the new daisies. This is a proxy
+          // for comparing the set of proposals themselves, because proposals
+          // cannot be cloned, which makes it hard to compare them.
+          bool push_new_proposals = true;
+          if (new_daisies.size() == current_proposal_daisies_.size()) {
+            push_new_proposals = false;
+            for (uint32_t i = 0; i < new_daisies.size(); ++i) {
+              if (!new_daisies[i].Equals(current_proposal_daisies_[i])) {
+                push_new_proposals = true;
+                break;
+              }
+            }
+          }
+
+          if (push_new_proposals) {
+            // Make sure to remove any existing proposal before creating new
+            // ones. This
+            // is outside the find call to make sure that stale suggestions are
+            // cleared regardless of the resolver results.
+            for (const auto& proposal_id : current_proposal_ids_) {
+              proposal_publisher_->Remove(proposal_id);
+            }
+            current_proposal_ids_.clear();
+            for (uint32_t i = 0; i < new_proposals.size(); ++i) {
+              current_proposal_ids_.push_back(new_proposals[i]->id);
+              proposal_publisher_->Propose(std::move(new_proposals[i]));
+            }
+            current_proposal_daisies_ = std::move(new_daisies);
           }
         });
   }
@@ -156,7 +182,8 @@ class ModuleResolverApp : ContextListener {
   ProposalPtr CreateProposalFromModuleResolverResult(
       const modular::ModuleResolverResultPtr& module_result,
       const std::string& story_id,
-      int proposal_id) {
+      int proposal_id,
+      modular::DaisyPtr* daisy_out) {
     auto daisy = modular::Daisy::New();
     daisy->url = module_result->module_id;
     f1dl::Array<modular::NounEntryPtr> nouns;
@@ -179,6 +206,7 @@ class ModuleResolverApp : ContextListener {
     daisy->nouns = std::move(nouns);
 
     auto add_module = AddModule::New();
+    *daisy_out = daisy.Clone();
     add_module->daisy = std::move(daisy);
     add_module->module_name = module_result->module_id;
     add_module->story_id = story_id;
@@ -189,7 +217,6 @@ class ModuleResolverApp : ContextListener {
     auto proposal = Proposal::New();
     proposal->id = std::to_string(proposal_id);
     proposal->on_selected.push_back(std::move(action));
-    current_proposal_ids_.push_back(proposal->id);
 
     auto display = SuggestionDisplay::New();
     display->headline = module_result->module_id;
@@ -237,6 +264,11 @@ class ModuleResolverApp : ContextListener {
 
   // A vector of the ids last passed to the proposal publisher.
   std::vector<std::string> current_proposal_ids_;
+  // Used to compare the old proposal to the new proposals.
+  // NOTE(thatguy): This is only necessary because context can change
+  // frequently but not result in new proposals, causing churn in the
+  // "Next" section of suggestions at a high rate.
+  std::vector<modular::DaisyPtr> current_proposal_daisies_;
 
   IntelligenceServicesPtr intelligence_services_;
 
