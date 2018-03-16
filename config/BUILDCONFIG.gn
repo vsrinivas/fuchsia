@@ -915,6 +915,12 @@ template("executable") {
     deps = []
     target_name = _executable_name
 
+    # TODO(aarongreen): This shouldn't be required, but without it the
+    # fuzzers fail to link.  Investigate and remove when resolved.
+    if (defined(invoker._target_type)) {
+      _target_type = invoker._target_type
+    }
+
     # Explicitly forward visibility, implicitly forward everything else.
     # See comment in template("shared_library") above for details.
     forward_variables_from(invoker, [ "visibility" ])
