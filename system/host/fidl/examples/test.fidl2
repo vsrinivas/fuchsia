@@ -17,6 +17,10 @@ struct ArraysOfPoints {
     ArraysOfPoints? more_points;
 };
 
+struct VectorOfPoints {
+    vector<Point>:4 p;
+};
+
 union Points {
     Point one_point;
     ArraysOfPoints many_points;
