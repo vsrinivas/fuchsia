@@ -40,13 +40,14 @@ go_binary("echo_server_go_bin") {
 }
 
 package("echo_server_go") {
-  system_image = true
-
   deps = [
     ":echo_server_go_bin",
   ]
 
-  binaries = [ {
-        name = "echo_server_go"
+  binary = "echo_server_go"
+
+  meta = [ {
+        path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+        dest = "legacy_flat_exported_dir"
       } ]
 }
