@@ -40,7 +40,7 @@ public:
         return zx_thread_start(get(), thread_entry, stack, arg1, arg2);
     }
 
-    zx_status_t read_state(uint32_t kind, void* buffer, size_t len) {
+    zx_status_t read_state(uint32_t kind, void* buffer, size_t len) const {
         return zx_thread_read_state(get(), kind, buffer, len);
     }
     zx_status_t write_state(uint32_t kind, const void* buffer, size_t len) {
