@@ -48,7 +48,7 @@ class PageManager : public PageDebug {
   // deleted when it goes away.
   PageManager(Environment* environment,
               std::unique_ptr<storage::PageStorage> page_storage,
-              std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context,
+              std::unique_ptr<cloud_sync::PageSync> page_sync,
               std::unique_ptr<MergeResolver> merge_resolver,
               PageManager::PageStorageState state,
               fxl::TimeDelta sync_timeout = fxl::TimeDelta::FromSeconds(5));
@@ -95,7 +95,7 @@ class PageManager : public PageDebug {
 
   Environment* const environment_;
   std::unique_ptr<storage::PageStorage> page_storage_;
-  std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context_;
+  std::unique_ptr<cloud_sync::PageSync> page_sync_;
   std::unique_ptr<MergeResolver> merge_resolver_;
   const fxl::TimeDelta sync_timeout_;
   callback::AutoCleanableSet<

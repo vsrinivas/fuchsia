@@ -14,16 +14,15 @@
 
 namespace ledger {
 
-PageManager::PageManager(
-    Environment* environment,
-    std::unique_ptr<storage::PageStorage> page_storage,
-    std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context,
-    std::unique_ptr<MergeResolver> merge_resolver,
-    PageManager::PageStorageState state,
-    fxl::TimeDelta sync_timeout)
+PageManager::PageManager(Environment* environment,
+                         std::unique_ptr<storage::PageStorage> page_storage,
+                         std::unique_ptr<cloud_sync::PageSync> page_sync,
+                         std::unique_ptr<MergeResolver> merge_resolver,
+                         PageManager::PageStorageState state,
+                         fxl::TimeDelta sync_timeout)
     : environment_(environment),
       page_storage_(std::move(page_storage)),
-      page_sync_context_(std::move(page_sync_context)),
+      page_sync_(std::move(page_sync)),
       merge_resolver_(std::move(merge_resolver)),
       sync_timeout_(sync_timeout),
       task_runner_(environment->main_runner()) {
@@ -31,12 +30,11 @@ PageManager::PageManager(
   snapshots_.set_on_empty([this] { CheckEmpty(); });
   page_debug_bindings_.set_empty_set_handler([this] { CheckEmpty(); });
 
-  if (page_sync_context_) {
-    page_sync_context_->page_sync->SetSyncWatcher(&watchers_);
-    page_sync_context_->page_sync->SetOnIdle([this] { CheckEmpty(); });
-    page_sync_context_->page_sync->SetOnBacklogDownloaded(
-        [this] { OnSyncBacklogDownloaded(); });
-    page_sync_context_->page_sync->Start();
+  if (page_sync_) {
+    page_sync_->SetSyncWatcher(&watchers_);
+    page_sync_->SetOnIdle([this] { CheckEmpty(); });
+    page_sync_->SetOnBacklogDownloaded([this] { OnSyncBacklogDownloaded(); });
+    page_sync_->Start();
     if (state == PageManager::PageStorageState::NEW) {
       // The page storage was created locally. We wait a bit in order to get the
       // initial state from the network before accepting requests.
@@ -123,7 +121,7 @@ Status PageManager::ResolveReference(
 void PageManager::CheckEmpty() {
   if (on_empty_callback_ && pages_.empty() && snapshots_.empty() &&
       page_requests_.empty() && merge_resolver_->IsEmpty() &&
-      (!page_sync_context_ || page_sync_context_->page_sync->IsIdle()) &&
+      (!page_sync_ || page_sync_->IsIdle()) &&
       page_debug_bindings_.size() == 0) {
     on_empty_callback_();
   }

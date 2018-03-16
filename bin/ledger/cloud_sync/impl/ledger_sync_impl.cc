@@ -34,12 +34,11 @@ LedgerSyncImpl::~LedgerSyncImpl() {
   }
 }
 
-std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
+std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
     storage::PageStorage* page_storage,
     fxl::Closure error_callback) {
   FXL_DCHECK(page_storage);
 
-  auto result = std::make_unique<PageSyncContext>();
   cloud_provider::PageCloudPtr page_cloud;
   user_config_->cloud_provider->GetPageCloud(
       convert::ToArray(app_id_), convert::ToArray(page_storage->GetId()),
@@ -62,8 +61,7 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
   page_sync->set_on_delete([this, page_sync = page_sync.get()]() {
     active_page_syncs_.erase(page_sync);
   });
-  result->page_sync = std::move(page_sync);
-  return result;
+  return page_sync;
 }
 
 void LedgerSyncImpl::EnableUpload() {

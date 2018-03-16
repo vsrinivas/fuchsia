@@ -16,11 +16,6 @@
 
 namespace cloud_sync {
 
-// Page sync along with associated objects that it uses.
-struct PageSyncContext {
-  std::unique_ptr<PageSync> page_sync;
-};
-
 // Manages Cloud Sync for a particular ledger.
 class LedgerSync {
  public:
@@ -32,7 +27,7 @@ class LedgerSync {
   //
   // The provided |error_callback| is called when sync is stopped due to an
   // unrecoverable error.
-  virtual std::unique_ptr<PageSyncContext> CreatePageContext(
+  virtual std::unique_ptr<PageSync> CreatePageSync(
       storage::PageStorage* page_storage,
       fxl::Closure error_callback) = 0;
 

@@ -27,7 +27,7 @@ class LedgerSyncImpl : public LedgerSync {
                  std::unique_ptr<SyncStateWatcher> watcher);
   ~LedgerSyncImpl() override;
 
-  std::unique_ptr<PageSyncContext> CreatePageContext(
+  std::unique_ptr<PageSync> CreatePageSync(
       storage::PageStorage* page_storage,
       fxl::Closure error_callback) override;
 

@@ -212,8 +212,6 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
 TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   auto fake_page_sync = std::make_unique<FakePageSync>();
   auto fake_page_sync_ptr = fake_page_sync.get();
-  auto page_sync_context = std::make_unique<cloud_sync::PageSyncContext>();
-  page_sync_context->page_sync = std::move(fake_page_sync);
   auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
   auto merger = GetDummyResolver(&environment_, storage.get());
 
@@ -222,7 +220,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
   PageManager page_manager(&environment_, std::move(storage),
-                           std::move(page_sync_context), std::move(merger),
+                           std::move(fake_page_sync), std::move(merger),
                            PageManager::PageStorageState::NEW);
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
@@ -271,8 +269,6 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
 TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   auto fake_page_sync = std::make_unique<FakePageSync>();
   auto fake_page_sync_ptr = fake_page_sync.get();
-  auto page_sync_context = std::make_unique<cloud_sync::PageSyncContext>();
-  page_sync_context->page_sync = std::move(fake_page_sync);
   auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
   auto merger = GetDummyResolver(&environment_, storage.get());
 
@@ -281,7 +277,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
   PageManager page_manager(&environment_, std::move(storage),
-                           std::move(page_sync_context), std::move(merger),
+                           std::move(fake_page_sync), std::move(merger),
                            PageManager::PageStorageState::NEW,
                            fxl::TimeDelta::FromSeconds(0));
 
@@ -308,8 +304,6 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
 TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
   auto fake_page_sync = std::make_unique<FakePageSync>();
   auto fake_page_sync_ptr = fake_page_sync.get();
-  auto page_sync_context = std::make_unique<cloud_sync::PageSyncContext>();
-  page_sync_context->page_sync = std::move(fake_page_sync);
   auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
   auto merger = GetDummyResolver(&environment_, storage.get());
 
@@ -318,7 +312,7 @@ TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
   PageManager page_manager(&environment_, std::move(storage),
-                           std::move(page_sync_context), std::move(merger),
+                           std::move(fake_page_sync), std::move(merger),
                            PageManager::PageStorageState::NEW,
                            fxl::TimeDelta::FromSeconds(0));
 
@@ -340,8 +334,6 @@ TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
 TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
   auto fake_page_sync = std::make_unique<FakePageSync>();
   auto fake_page_sync_ptr = fake_page_sync.get();
-  auto page_sync_context = std::make_unique<cloud_sync::PageSyncContext>();
-  page_sync_context->page_sync = std::move(fake_page_sync);
   auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
   auto merger = GetDummyResolver(&environment_, storage.get());
 
@@ -350,7 +342,7 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
   PageManager page_manager(
-      &environment_, std::move(storage), std::move(page_sync_context),
+      &environment_, std::move(storage), std::move(fake_page_sync),
       std::move(merger), PageManager::PageStorageState::EXISTING,
       // Use a long timeout to ensure the test does not hit it.
       fxl::TimeDelta::FromSeconds(3600));
