@@ -202,7 +202,7 @@ void TablesGenerator::Generate(const coded::ArrayType& array_type) {
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedArray(&");
     Emit(&tables_file_, NameTable(array_type.element_type->coded_name));
     Emit(&tables_file_, ", ");
-    Emit(&tables_file_, array_type.array_size);
+    Emit(&tables_file_, array_type.size);
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, array_type.element_size);
     Emit(&tables_file_, "));\n\n");
@@ -273,7 +273,7 @@ const coded::Type* TablesGenerator::Compile(const flat::Type* type) {
             return iter->second;
         auto coded_element_type = Compile(vector_type->element_type.get());
         uint32_t max_count = vector_type->element_count.Value();
-        uint32_t element_size = vector_type->element_type->size;
+        uint32_t element_size = coded_element_type->size;
         StringView element_name = coded_element_type->coded_name;
         auto name = NameCodedVector(element_name, max_count, vector_type->nullability);
         auto coded_vector_type = std::make_unique<coded::VectorType>(std::move(name), coded_element_type, max_count, element_size, vector_type->nullability);
@@ -321,7 +321,7 @@ const coded::Type* TablesGenerator::Compile(const flat::Type* type) {
         if (iter != primitive_type_map_.end())
             return iter->second;
         auto name = NamePrimitiveSubtype(primitive_type->subtype);
-        auto coded_primitive_type = std::make_unique<coded::PrimitiveType>(std::move(name), primitive_type->subtype);
+        auto coded_primitive_type = std::make_unique<coded::PrimitiveType>(std::move(name), primitive_type->subtype, flat::PrimitiveType::SubtypeSize(primitive_type->subtype));
         primitive_type_map_[primitive_type] = coded_primitive_type.get();
         coded_types_.push_back(std::move(coded_primitive_type));
         return coded_types_.back().get();
@@ -377,7 +377,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
     case flat::Decl::Kind::kEnum: {
         auto enum_decl = static_cast<const flat::Enum*>(decl);
         std::string enum_name = NameName(enum_decl->name);
-        coded_types_.push_back(std::make_unique<coded::PrimitiveType>(std::move(enum_name), enum_decl->type));
+        coded_types_.push_back(std::make_unique<coded::PrimitiveType>(std::move(enum_name), enum_decl->type, flat::PrimitiveType::SubtypeSize(enum_decl->type)));
         named_type_map_[&enum_decl->name] = coded_types_.back().get();
         break;
     }
