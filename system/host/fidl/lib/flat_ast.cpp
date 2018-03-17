@@ -58,10 +58,10 @@ TypeShape CStructTypeShape(std::vector<FieldShape*>* fields) {
     uint32_t alignment = 1u;
 
     for (FieldShape* field : *fields) {
-        field->SetOffset(size);
         TypeShape typeshape = field->Typeshape();
         alignment = std::max(alignment, typeshape.Alignment());
         size = AlignTo(size, typeshape.Alignment());
+        field->SetOffset(size);
         size += typeshape.Size();
     }
 
