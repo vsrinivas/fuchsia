@@ -137,8 +137,6 @@ source_set("gfx") {
     "util/event_timestamper.h",
     "util/image_formats.cc",
     "util/image_formats.h",
-    "util/print_command.cc",
-    "util/print_command.h",
     "util/unwrap.h",
     "util/vulkan_utils.cc",
     "util/vulkan_utils.h",

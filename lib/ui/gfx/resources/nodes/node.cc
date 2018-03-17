@@ -8,6 +8,7 @@
 
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
+#include "lib/ui/gfx/fidl/events.fidl.h"
 
 #include "lib/escher/geometry/types.h"
 
@@ -61,9 +62,8 @@ bool Node::AddChild(NodePtr child_node) {
   // add verification to reject such operations.
 
   if (!(type_flags() & kHasChildren)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::AddChild(): node of type '" << type_name()
-        << "' cannot have children.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::AddChild(): node of type '"
+                              << type_name() << "' cannot have children.";
     return false;
   }
 
@@ -145,8 +145,8 @@ void Node::EraseChild(Node* child) {
 bool Node::DetachChildren() {
   if (!(type_flags() & kHasChildren)) {
     error_reporter()->ERROR()
-        << "scenic::gfx::Node::DetachChildren(): node of type '"
-        << type_name() << "' cannot have children.";
+        << "scenic::gfx::Node::DetachChildren(): node of type '" << type_name()
+        << "' cannot have children.";
     return false;
   }
   for (auto& child : children_) {
@@ -208,9 +208,8 @@ bool Node::SetTranslation(Vector3VariablePtr translation_variable) {
 
 bool Node::SetScale(const escher::vec3& scale) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetScale(): node of type " << type_name()
-        << " cannot have scale set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetScale(): node of type "
+                              << type_name() << " cannot have scale set.";
     return false;
   }
   bound_variables_.erase(NodeProperty::kScale);
@@ -221,9 +220,8 @@ bool Node::SetScale(const escher::vec3& scale) {
 
 bool Node::SetScale(Vector3VariablePtr scale_variable) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetScale(): node of type " << type_name()
-        << " cannot have scale set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetScale(): node of type "
+                              << type_name() << " cannot have scale set.";
     return false;
   }
   bound_variables_[NodeProperty::kScale] =
@@ -266,9 +264,8 @@ bool Node::SetRotation(QuaternionVariablePtr rotation_variable) {
 
 bool Node::SetAnchor(const escher::vec3& anchor) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetAnchor(): node of type " << type_name()
-        << " cannot have anchor set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetAnchor(): node of type "
+                              << type_name() << " cannot have anchor set.";
     return false;
   }
   bound_variables_.erase(NodeProperty::kAnchor);
@@ -279,9 +276,8 @@ bool Node::SetAnchor(const escher::vec3& anchor) {
 
 bool Node::SetAnchor(Vector3VariablePtr anchor_variable) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetAnchor(): node of type " << type_name()
-        << " cannot have anchor set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetAnchor(): node of type "
+                              << type_name() << " cannot have anchor set.";
     return false;
   }
   bound_variables_[NodeProperty::kAnchor] =

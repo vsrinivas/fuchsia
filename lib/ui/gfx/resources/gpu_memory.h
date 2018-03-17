@@ -10,6 +10,7 @@
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "lib/escher/vk/gpu_mem.h"
+#include "lib/ui/gfx/fidl/resources.fidl.h"
 
 namespace scenic {
 namespace gfx {

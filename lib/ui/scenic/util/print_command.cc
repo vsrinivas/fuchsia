@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/gfx/util/print_command.h"
+#include "garnet/lib/ui/scenic/util/print_command.h"
 
 using ui::gfx::Command;
 using ui::gfx::CommandPtr;

@@ -11,6 +11,7 @@
 #include "garnet/lib/ui/gfx/engine/resource_map.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
+#include "garnet/lib/ui/scenic/util/print_command.h"
 #include "lib/escher/flib/fence_set_listener.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"

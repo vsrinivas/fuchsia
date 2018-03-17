@@ -13,13 +13,15 @@ source_set("scenic") {
     "command_dispatcher.h",
     "event_reporter.h",
     "scenic.cc",
-    "ui.gfx.h",
+    "scenic.h",
     "session.cc",
     "session.h",
     "system.cc",
     "system.h",
     "util/error_reporter.cc",
     "util/error_reporter.h",
+    "util/print_command.cc",
+    "util/print_command.h",
   ]
 
   public_deps = [

@@ -7,6 +7,7 @@
 
 #include "garnet/lib/ui/gfx/resources/buffer.h"
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
+#include "lib/ui/gfx/fidl/commands.fidl.h"
 
 #include "lib/escher/shape/mesh.h"
 

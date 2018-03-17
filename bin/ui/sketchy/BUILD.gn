@@ -5,9 +5,6 @@
 import("//build/package.gni")
 
 executable("bin") {
-  # TODO(TO-887): remove me.
-  check_includes = false
-
   output_name = "sketchy_service"
 
   sources = [
@@ -41,28 +38,26 @@ executable("bin") {
     "stroke/cubic_bezier.h",
     "stroke/divided_stroke_path.cc",
     "stroke/divided_stroke_path.h",
-    "stroke/stroke_path.cc",
-    "stroke/stroke_path.h",
     "stroke/stroke_fitter.cc",
     "stroke/stroke_fitter.h",
     "stroke/stroke_manager.cc",
     "stroke/stroke_manager.h",
+    "stroke/stroke_path.cc",
+    "stroke/stroke_path.h",
     "stroke/stroke_tessellator.cc",
     "stroke/stroke_tessellator.h",
-    "util/glm_types.h"
+    "util/glm_types.h",
   ]
 
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/escher",
-    "//garnet/public/lib/ui/sketchy/fidl",
     "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/sketchy/fidl",
     "//zircon/public/lib/trace-provider",
   ]
 
-  include_dirs = [
-    "//third_party/glm",
-  ]
+  include_dirs = [ "//third_party/glm" ]
 }
 
 package("sketchy_service") {
@@ -72,8 +67,10 @@ package("sketchy_service") {
 
   binary = "sketchy_service"
 
-  meta = [ {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
 }
