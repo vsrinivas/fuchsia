@@ -116,8 +116,8 @@ struct RequestHandleType : public Type {
 };
 
 struct StructType : public Type {
- StructType(std::string name, std::vector<Field> fields, uint32_t size, CodingNeeded coding_needed)
-        : Type(Kind::kStruct, std::move(name), size, coding_needed), fields(std::move(fields)) {}
+    StructType(std::string name, std::vector<Field> fields, uint32_t size)
+        : Type(Kind::kStruct, std::move(name), size, CodingNeeded::kNeeded), fields(std::move(fields)) {}
 
     const std::vector<Field> fields;
     bool referenced_by_pointer = false;
