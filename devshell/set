@@ -245,7 +245,12 @@ function main {
     gn_args+=" use_ccache=true"
   fi
 
-  gn_args+=" fuchsia_packages=\"${packages}${extra_packages}\""
+  gn_args+=" fuchsia_packages=["
+  IFS=,
+  for package in ${packages}${extra_packages}; do
+    gn_args+="\"${package}\","
+  done
+  gn_args+="]"
 
   if [[ -n "${variant}" ]]; then
     gn_args+=" select_variant=[${variant}]"
