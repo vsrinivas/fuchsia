@@ -129,6 +129,7 @@ void x86_ipi_generic_handler(void);
 void x86_ipi_reschedule_handler(void);
 void x86_ipi_halt_handler(void) __NO_RETURN;
 void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread);
+void x86_force_halt_all_but_local_and_bsp(void);
 
 __END_CDECLS
 

@@ -5,16 +5,17 @@
 // https://opensource.org/licenses/MIT
 //
 
+#include <arch/x86/apic.h>
 #include <arch/mp.h>
 #include <arch/x86.h>
 #include <arch/x86/mp.h>
+#include <fbl/atomic.h>
 #include <stdio.h>
 #include <string.h>
 
 #include <platform.h>
 #include <platform/keyboard.h>
 
-#include <arch/x86/apic.h>
 #include <lib/console.h>
 #include <lib/version.h>
 
@@ -30,33 +31,43 @@ static void reboot(void) {
     outp(0xCF9, 0x06);
 }
 
-static volatile int panic_started;
+static fbl::atomic<cpu_mask_t> halted_cpus(0);
 
 static void halt_other_cpus(void) {
-    static volatile int halted = 0;
+    static fbl::atomic<int> halted(0);
 
-    if (atomic_swap(&halted, 1) == 0) {
+    if (halted.exchange(1) == 0) {
         // stop the other cpus
         printf("stopping other cpus\n");
         arch_mp_send_ipi(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, MP_IPI_HALT);
 
+        cpu_mask_t targets = mp_get_online_mask() & ~cpu_num_to_mask(arch_curr_cpu_num());
         // spin for a while
         // TODO: find a better way to spin at this low level
         for (volatile int i = 0; i < 100000000; i++) {
+            if (halted_cpus.load() == targets) {
+                break;
+            }
             __asm volatile("nop");
         }
+
+        // Don't send an INIT IPI to the BSP, since that may cause the system to
+        // reboot
+        x86_force_halt_all_but_local_and_bsp();
     }
 }
 
 void platform_halt_cpu(void) {
-    apic_send_self_ipi(0x00, DELIVERY_MODE_INIT);
+    // Signal that this CPU is in its halt loop
+    halted_cpus.fetch_or(cpu_num_to_mask(arch_curr_cpu_num()));
 }
 
 void platform_panic_start(void) {
     platform_debug_panic_start();
     arch_disable_ints();
 
-    if (atomic_swap(&panic_started, 1) == 0) {
+    static fbl::atomic<int> panic_started(0);
+    if (panic_started.exchange(1) == 0) {
 #if WITH_LIB_DEBUGLOG
         dlog_bluescreen_init();
 #endif

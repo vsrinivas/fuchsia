@@ -354,6 +354,20 @@ void x86_ipi_halt_handler(void) {
     }
 }
 
+// Forcibly stops all other CPUs except the current one and the BSP (which is
+// cpu 0)
+void x86_force_halt_all_but_local_and_bsp(void) {
+    cpu_num_t self = arch_curr_cpu_num();
+    for (cpu_num_t i = 1; i < x86_num_cpus; ++i) {
+        if (i == self) {
+            continue;
+        }
+        uint32_t dst_apic_id = ap_percpus[i - 1].apic_id;
+        apic_send_ipi(0, static_cast<uint8_t>(dst_apic_id),
+                      DELIVERY_MODE_INIT);
+    }
+}
+
 zx_status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
     if (cpu_id == 0 || cpu_id >= x86_num_cpus) {
         return ZX_ERR_INVALID_ARGS;
