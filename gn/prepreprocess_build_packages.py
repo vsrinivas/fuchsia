@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import json
 import sys
 
 from package_imports_resolver import PackageImportsResolver
@@ -30,7 +31,7 @@ def main():
 
     observer = PackageLabelObserver()
     imports_resolver = PackageImportsResolver(observer)
-    imported = imports_resolver.resolve_imports(args.packages.split(","))
+    imported = imports_resolver.resolve_imports(json.loads(args.packages))
     labels = observer.labels
 
     sys.stdout.write("imported = [%s]\n" %

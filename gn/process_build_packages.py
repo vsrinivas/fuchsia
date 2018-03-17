@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import json
 import os
 import paths
 import re
@@ -99,7 +100,7 @@ def main():
 
     amalgamation = Amalgamation(args.build_root)
     imports_resolver = PackageImportsResolver(amalgamation)
-    imported = imports_resolver.resolve_imports(args.packages.split(","))
+    imported = imports_resolver.resolve_imports(json.loads(args.packages))
     if not imported:
         return 1
 

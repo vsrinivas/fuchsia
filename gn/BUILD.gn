@@ -65,8 +65,8 @@ action("finalize_manifests") {
                           rebase_path(packages_file),
                           "--system-manifest",
                           rebase_path(system_manifest_file),
-                          "--packages",
-                          fuchsia_packages,
+                          # A list of strings in GN syntax is valid JSON too.
+                          "--packages=$fuchsia_packages",
                           "--build-root",
                           rebase_path(root_build_dir),
                         ],
