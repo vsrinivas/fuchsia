@@ -49,6 +49,11 @@ class Array {
     return *this;
   }
 
+  template <typename... U>
+  Array(U&&... t) : vec_{std::forward<T>(t)...} {
+    is_null_ = false;
+  }
+
   // Accesses the underlying std::vector object.
   const std::vector<T>& get() const { return vec_; }
 
@@ -79,18 +84,6 @@ class Array {
   void resize(size_t size) {
     vec_.resize(size);
     is_null_ = false;
-  }
-
-  // Pushes |value| onto the back of the array. If this array was null, it
-  // will become non-null with a size of 1.
-  void push_back(const T& value) {
-    is_null_ = false;
-    vec_.push_back(value);
-  }
-
-  void push_back(T&& value) {
-    is_null_ = false;
-    vec_.push_back(std::forward<T>(value));
   }
 
   void swap(Array& other) {
@@ -131,6 +124,57 @@ class Array {
   typedef internal::Array_Data<typename internal::WrapperTraits<T>::DataType>
       Data_;
 
+  // Indicates whether the array is empty. The behavior is undefined
+  // if the array is null.
+  bool empty() const { return vec_.empty(); }
+
+  // Returns a reference to the first element of the array. Calling this on a
+  // null or empty array causes undefined behavior.
+  ConstRefType front() const { return vec_.front(); }
+  RefType front() { return vec_.front(); }
+
+  // Returns the size of the array, which will be zero if the array is null.
+  size_t size() const { return vec_.size(); }
+
+  // For non-null arrays of non-bool types, returns a pointer to the first
+  // element, if any. (If the array is empty, the semantics are the same as for
+  // |std::vector<T>::data()|. The behavior is undefined if the array is null.)
+  const T* data() const { return vec_.data(); }
+  T* data() { return vec_.data(); }
+
+  // Returns a reference to the element at zero-based |offset|. Calling this on
+  // an array with size less than |offset|+1 causes undefined behavior.
+  ConstRefType at(size_t offset) const { return vec_.at(offset); }
+  ConstRefType operator[](size_t offset) const { return at(offset); }
+  RefType at(size_t offset) { return vec_.at(offset); }
+  RefType operator[](size_t offset) { return at(offset); }
+
+  // Pushes |value| onto the back of the array. If this array was null, it will
+  // become non-null with a size of 1.
+  void push_back(ForwardType value) {
+    is_null_ = false;
+    Traits::PushBack(&vec_, value);
+  }
+
+  // Returns a const reference to the |std::vector| managed by this class. If
+  // the array is null, this will be an empty vector.
+  const std::vector<T>& storage() const { return vec_; }
+
+  // Swaps the contents of this array with the |other| array, including
+  // nullness.
+  void Swap(Array* other) {
+    std::swap(is_null_, other->is_null_);
+    vec_.swap(other->vec_);
+  }
+
+  // Swaps the contents of this array with the specified vector, making this
+  // array non-null. Since the vector cannot represent null, it will just be
+  // made empty if this array is null.
+  void Swap(std::vector<T>* other) {
+    is_null_ = false;
+    vec_.swap(*other);
+  }
+
   // Returns a copy of the array where each value of the new array has been
   // "cloned" from the corresponding value of this array. If this array contains
   // primitive data types, this is equivalent to simply copying the contents.
@@ -155,10 +199,10 @@ class Array {
   bool Equals(const Array& other) const {
     if (is_null() != other.is_null())
       return false;
-    if (vec_.size() != other->size())
+    if (size() != other.size())
       return false;
-    for (size_t i = 0; i < vec_.size(); ++i) {
-      if (!internal::ValueTraits<T>::Equals(vec_.at(i), other->at(i)))
+    for (size_t i = 0; i < size(); ++i) {
+      if (!internal::ValueTraits<T>::Equals(at(i), other.at(i)))
         return false;
     }
     return true;
@@ -185,6 +229,12 @@ class Array {
     return TypeConverter<U, Array>::Convert(*this);
   }
 
+  Iterator begin() { return vec_.begin(); }
+  Iterator end() { return vec_.end(); }
+
+  ConstIterator begin() const { return vec_.begin(); }
+  ConstIterator end() const { return vec_.end(); }
+
  private:
   void Take(Array* other) {
     reset();
@@ -206,7 +256,7 @@ struct TypeConverter<Array<T>, std::vector<E>> {
   static Array<T> Convert(const std::vector<E>& input) {
     auto result = Array<T>::New(input.size());
     for (size_t i = 0; i < input.size(); ++i)
-      result->at(i) = TypeConverter<T, E>::Convert(input[i]);
+      result[i] = TypeConverter<T, E>::Convert(input[i]);
     return result;
   }
 };
@@ -219,9 +269,9 @@ struct TypeConverter<std::vector<E>, Array<T>> {
   static std::vector<E> Convert(const Array<T>& input) {
     std::vector<E> result;
     if (!input.is_null()) {
-      result.resize(input->size());
-      for (size_t i = 0; i < input->size(); ++i)
-        result[i] = TypeConverter<E, T>::Convert(input->at(i));
+      result.resize(input.size());
+      for (size_t i = 0; i < input.size(); ++i)
+        result[i] = TypeConverter<E, T>::Convert(input[i]);
     }
     return result;
   }
@@ -248,8 +298,8 @@ struct TypeConverter<std::set<E>, Array<T>> {
   static std::set<E> Convert(const Array<T>& input) {
     std::set<E> result;
     if (!input.is_null()) {
-      for (size_t i = 0; i < input->size(); ++i)
-        result.insert(TypeConverter<E, T>::Convert(input->at(i)));
+      for (size_t i = 0; i < input.size(); ++i)
+        result.insert(TypeConverter<E, T>::Convert(input[i]));
     }
     return result;
   }
