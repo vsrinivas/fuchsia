@@ -38,8 +38,10 @@ class LowEnergyCentralServer
   void StartScan(::bluetooth_low_energy::ScanFilterPtr filter,
                  StartScanCallback callback) override;
   void StopScan() override;
-  void ConnectPeripheral(::fidl::StringPtr identifier,
-                         ConnectPeripheralCallback callback) override;
+  void ConnectPeripheral(
+      ::fidl::StringPtr identifier,
+      ::fidl::InterfaceRequest<bluetooth_gatt::Client> client_request,
+      ConnectPeripheralCallback callback) override;
   void DisconnectPeripheral(
       ::fidl::StringPtr identifier,
       DisconnectPeripheralCallback callback) override;

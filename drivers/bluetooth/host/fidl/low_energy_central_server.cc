@@ -14,6 +14,7 @@ using bluetooth::ErrorCode;
 using bluetooth::Int8;
 using bluetooth::Status;
 
+using bluetooth_gatt::Client;
 using bluetooth_low_energy::CentralDelegate;
 using bluetooth_low_energy::CentralDelegatePtr;
 using bluetooth_low_energy::ScanFilterPtr;
@@ -133,6 +134,7 @@ void LowEnergyCentralServer::StopScan() {
 
 void LowEnergyCentralServer::ConnectPeripheral(
     ::fidl::StringPtr identifier,
+    ::fidl::InterfaceRequest<bluetooth_gatt::Client> client_request,
     ConnectPeripheralCallback callback) {
   FXL_VLOG(1) << "Low Energy Central ConnectPeripheral()";
 
@@ -157,7 +159,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
     auto iter = self->connections_.find(id);
     if (iter == self->connections_.end()) {
       FXL_VLOG(1) << "Connect request canceled";
-      auto error = fidl_helpers::NewFidlError(ErrorCode::CANCELED,
+      auto error = fidl_helpers::NewFidlError(ErrorCode::FAILED,
                                               "Connect request canceled");
       callback(std::move(error));
       return;
@@ -176,17 +178,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
     FXL_DCHECK(conn_ref);
     FXL_DCHECK(id == conn_ref->device_identifier());
 
-    if (!iter->second) {
-      // This is in response to a pending connect request.
-      conn_ref->set_closed_callback([self, id] {
-        if (!self)
-          return;
-
-        self->connections_.erase(id);
-        self->NotifyPeripheralDisconnected(id);
-      });
-      self->connections_[id] = std::move(conn_ref);
-    } else {
+    if (iter->second) {
       // This can happen if a connect is requested after a previous request was
       // canceled (e.g. if ConnectPeripheral, DisconnectPeripheral,
       // ConnectPeripheral are called in quick succession). In this case we
@@ -196,6 +188,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
                      "connection attempt";
     }
 
+    // TODO(armansito): Bind |client_request| here.
     callback(Status());
   };
 

@@ -31,13 +31,13 @@ class GattServerServer : public GattServerBase<bluetooth_gatt::Server> {
   void RemoveService(uint64_t id);
 
  private:
-  class ServiceImpl;
+  class LocalServiceImpl;
 
   // ::bluetooth_gatt::Server overrides:
   void PublishService(
       bluetooth_gatt::ServiceInfo service_info,
-      fidl::InterfaceHandle<bluetooth_gatt::ServiceDelegate> delegate,
-      fidl::InterfaceRequest<bluetooth_gatt::Service> service_iface,
+      fidl::InterfaceHandle<bluetooth_gatt::LocalServiceDelegate> delegate,
+      fidl::InterfaceRequest<bluetooth_gatt::LocalService> service_iface,
       PublishServiceCallback callback) override;
 
   // Called when a remote device issues a read request to one of our services.
@@ -63,7 +63,7 @@ class GattServerServer : public GattServerBase<bluetooth_gatt::Server> {
 
   // The mapping between service identifiers and FIDL Service implementations.
   // TODO(armansito): Consider using fbl::HashTable.
-  std::unordered_map<uint64_t, std::unique_ptr<ServiceImpl>> services_;
+  std::unordered_map<uint64_t, std::unique_ptr<LocalServiceImpl>> services_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.

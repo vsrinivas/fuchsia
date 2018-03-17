@@ -50,7 +50,7 @@ template <typename ProtocolErrorCode>
   error->error_code = HostErrorToFidl(status.error());
   error->description = msg.empty() ? status.ToString() : std::move(msg);
   if (status.is_protocol_error()) {
-    error->protocol_error_code = status.protocol_error();
+    error->protocol_error_code = static_cast<uint32_t>(status.protocol_error());
   }
 
   fidl_status.error = std::move(error);

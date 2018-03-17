@@ -5,7 +5,7 @@
 library bluetooth_gatt;
 
 // Codes that can be returned in the |protocol_error_code| field of a
-// common.Error.
+// bluetooth.Error.
 enum ErrorCode {
   // Indicates that the operation was successful.
   NO_ERROR = 0;
@@ -60,19 +60,17 @@ struct AttributePermissions {
   SecurityRequirements? update;
 };
 
-// Possible values of characteristic properties. These specify the GATT
-// procedures that are allowed for a particular characteristic.
-enum CharacteristicProperty {
-  BROADCAST = 0;
-  READ = 1;
-  WRITE_WITHOUT_RESPONSE = 2;
-  WRITE = 3;
-  NOTIFY = 4;
-  INDICATE = 5;
-  AUTHENTICATED_SIGNED_WRITES = 6;
-  RELIABLE_WRITE = 7;
-  WRITABLE_AUXILIARIES = 8;
-};
+// Possible values for the characteristic properties bitfield. These specify the
+// GATT procedures that are allowed for a particular characteristic.
+const uint32 kPropertyBroadcast = 1;
+const uint32 kPropertyRead = 2;
+const uint32 kPropertyWriteWithoutResponse = 4;
+const uint32 kPropertyWrite = 8;
+const uint32 kPropertyNotify = 16;
+const uint32 kPropertyIndicate = 32;
+const uint32 kPropertyAuthenticatedSignedWrites = 64;
+const uint32 kPropertyReliableWrite = 256;
+const uint32 kPropertyWritableAuxiliaries= 512;
 
 // Represents a local or remote GATT service.
 struct ServiceInfo {
@@ -90,8 +88,8 @@ struct ServiceInfo {
   // The characteristics of this service.
   vector<Characteristic>? characteristics;
 
-  // Other services that are included from this service.
-  vector<Service>? includes;
+  // Ids of other services that are included by this service.
+  vector<uint64>? includes;
 };
 
 // Represents a local or remote GATT characteristic.
@@ -103,8 +101,9 @@ struct Characteristic {
   // string in the canonical 8-4-4-4-12 format.
   string type;
 
-  // The properties of this characteristic.
-  vector<CharacteristicProperty> properties;
+  // The characteristic properties bitfield. See kProperty* above for possible
+  // values.
+  uint32 properties;
 
   // The attribute permissions of this characteristic. For remote
   // characteristics, this value will be null until the permissions are
@@ -136,7 +135,7 @@ struct Descriptor {
 };
 
 // Interface for responding to requests on a local service.
-interface ServiceDelegate {
+interface LocalServiceDelegate {
   // Notifies the delegate when a remote device with |peer_id| enables or
   // disables notifications or indications on the characteristic with the given
   // |characteristic_id|.
@@ -162,7 +161,7 @@ interface ServiceDelegate {
 };
 
 // Interface for communicating with a published service.
-interface Service {
+interface LocalService {
   // Removes the service that this interface instance corresponds to. Does
   // nothing if the service is already removed.
   1: RemoveService();
@@ -182,7 +181,7 @@ interface Service {
 [ServiceName="bluetooth::gatt::Server"]
 interface Server {
   // Publishes the given service so that it is available to all remote peers.
-  // A ServiceDelegate must be provided over which to receive service requests.
+  // A LocalServiceDelegate must be provided over which to receive service requests.
   //
   // The caller must assign distinct identifiers to the characteristics and
   // descriptors listed in |info|. These identifiers will be used in requests
@@ -193,5 +192,39 @@ interface Server {
   //
   // Returns the success or failure @status of the call and a unique identifier
   // that can be used to unregister the service.
-  1: PublishService(ServiceInfo info, ServiceDelegate delegate, request<Service> service) -> (bluetooth.Status @status);
+  1: PublishService(ServiceInfo info, LocalServiceDelegate delegate, request<LocalService> service) -> (bluetooth.Status @status);
+};
+
+// Interface for interacting with a remote GATT service.
+// TODO(armansito): Turn this into an "event" instead. Or perhaps use a
+// zx::socket.
+interface RemoteServiceDelegate {
+  // Called when a characteristic value notification or indication is received.
+  1: OnCharacteristicValueUpdated(uint64 characteristic_id, vector<uint8> value);
+};
+
+interface RemoteService {
+  // Assigns a RemoteServiceDelegate on this RemoteService instances. |delegate|
+  // will replace any existing delegate.
+  1: SetDelegate(RemoteServiceDelegate delegate);
+
+  // Returns the characteristics and characteristic descriptors that belong to
+  // this service.
+  2: DiscoverCharacteristics() -> (bluetooth.Status @status, vector<Characteristic> characteristics);
+
+  // TODO(armansito): Define service API
+};
+
+interface Client {
+  // Enumerates services found on the peer that this Client represents. Results
+  // can be restricted by specifying a list of UUIDs in |uuids|. The returned
+  // ServiceInfo structures will contain only basic information about each
+  // service and the |characteristics| and |includes| fields will be null.
+  //
+  // To further interact with services, clients must obtain a RemoteService
+  // handle by calling ConnectToService().
+  1: ListServices(vector<string>? uuids) -> (bluetooth.Status @status, vector<ServiceInfo> services);
+
+  // Connects the RemoteService with the given identifier.
+  2: ConnectToService(uint64 id, request<RemoteService> service);
 };

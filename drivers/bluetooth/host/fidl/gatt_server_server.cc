@@ -19,13 +19,12 @@ using bluetooth::Status;
 using GattErrorCode = bluetooth_gatt::ErrorCode;
 
 using bluetooth_gatt::Characteristic;
-using bluetooth_gatt::CharacteristicProperty;
 using bluetooth_gatt::Descriptor;
+using bluetooth_gatt::LocalService;
+using bluetooth_gatt::LocalServiceDelegate;
+using bluetooth_gatt::LocalServiceDelegatePtr;
 using bluetooth_gatt::SecurityRequirementsPtr;
-using bluetooth_gatt::Service;
-using bluetooth_gatt::ServiceDelegate;
-using bluetooth_gatt::ServiceDelegatePtr;
-using bluetooth_gatt::ServiceInfoPtr;
+using bluetooth_gatt::ServiceInfo;
 
 namespace bthost {
 namespace {
@@ -47,52 +46,6 @@ namespace {
       break;
   }
   return ::btlib::att::ErrorCode::kUnlikelyError;
-}
-
-void ParseProperties(const fidl::VectorPtr<CharacteristicProperty>& properties,
-                     uint8_t* out_props,
-                     uint16_t* out_ext_props) {
-  FXL_DCHECK(out_props);
-  FXL_DCHECK(out_ext_props);
-
-  *out_props = 0;
-  *out_ext_props = 0;
-  if (properties && !properties->empty()) {
-    for (const auto& prop : *properties) {
-      switch (prop) {
-        case CharacteristicProperty::BROADCAST:
-          *out_props |= ::btlib::gatt::Property::kBroadcast;
-          break;
-        case CharacteristicProperty::READ:
-          *out_props |= ::btlib::gatt::Property::kRead;
-          break;
-        case CharacteristicProperty::WRITE_WITHOUT_RESPONSE:
-          *out_props |= ::btlib::gatt::Property::kWriteWithoutResponse;
-          break;
-        case CharacteristicProperty::WRITE:
-          *out_props |= ::btlib::gatt::Property::kWrite;
-          break;
-        case CharacteristicProperty::NOTIFY:
-          *out_props |= ::btlib::gatt::Property::kNotify;
-          break;
-        case CharacteristicProperty::INDICATE:
-          *out_props |= ::btlib::gatt::Property::kIndicate;
-          break;
-        case CharacteristicProperty::AUTHENTICATED_SIGNED_WRITES:
-          *out_props |= ::btlib::gatt::Property::kAuthenticatedSignedWrites;
-          break;
-        case CharacteristicProperty::RELIABLE_WRITE:
-          *out_props |= ::btlib::gatt::Property::kExtendedProperties;
-          *out_ext_props |= ::btlib::gatt::ExtendedProperty::kReliableWrite;
-          break;
-        case CharacteristicProperty::WRITABLE_AUXILIARIES:
-          *out_props |= ::btlib::gatt::Property::kExtendedProperties;
-          *out_ext_props |=
-              ::btlib::gatt::ExtendedProperty::kWritableAuxiliaries;
-          break;
-      }
-    }
-  }
 }
 
 ::btlib::att::AccessRequirements ParseSecurityRequirements(
@@ -138,9 +91,8 @@ DescriptorResult NewDescriptor(const Descriptor& fidl_desc) {
 
 using CharacteristicResult = MaybeResult<::btlib::gatt::CharacteristicPtr>;
 CharacteristicResult NewCharacteristic(const Characteristic& fidl_chrc) {
-  uint8_t props;
-  uint16_t ext_props;
-  ParseProperties(fidl_chrc.properties, &props, &ext_props);
+  uint8_t props = fidl_chrc.properties & 0xFF;
+  uint16_t ext_props = (fidl_chrc.properties & 0xFF00) >> 8;
 
   if (!fidl_chrc.permissions) {
     return CharacteristicResult("Characteristic permissions missing");
@@ -181,15 +133,15 @@ CharacteristicResult NewCharacteristic(const Characteristic& fidl_chrc) {
 
 }  // namespace
 
-// Implements the gatt::Service FIDL interface. Instances of this class are only
-// created by a GattServerServer.
-class GattServerServer::ServiceImpl
-    : public GattServerBase<::bluetooth_gatt::Service> {
+// Implements the gatt::LocalService FIDL interface. Instances of this class are
+// only created by a GattServerServer.
+class GattServerServer::LocalServiceImpl
+    : public GattServerBase<::bluetooth_gatt::LocalService> {
  public:
-  ServiceImpl(GattServerServer* owner,
-              uint64_t id,
-              ::bluetooth_gatt::ServiceDelegatePtr delegate,
-              ::fidl::InterfaceRequest<::bluetooth_gatt::Service> request)
+  LocalServiceImpl(GattServerServer* owner,
+                   uint64_t id,
+                   LocalServiceDelegatePtr delegate,
+                   ::fidl::InterfaceRequest<LocalService> request)
       : GattServerBase(owner->gatt(), this, std::move(request)),
         owner_(owner),
         id_(id),
@@ -199,7 +151,7 @@ class GattServerServer::ServiceImpl
   }
 
   // The destructor removes the GATT service
-  ~ServiceImpl() override {
+  ~LocalServiceImpl() override {
     CleanUp();
 
     // Do not notify the owner in this case. If we got here it means that
@@ -208,7 +160,7 @@ class GattServerServer::ServiceImpl
 
   // Returns the current delegate. Returns nullptr if the delegate was
   // disconnected (e.g. due to a call to RemoveService()).
-  ::bluetooth_gatt::ServiceDelegate* delegate() { return delegate_.get(); }
+  LocalServiceDelegate* delegate() { return delegate_.get(); }
 
  private:
   // ::bluetooth_gatt::Service overrides:
@@ -238,9 +190,9 @@ class GattServerServer::ServiceImpl
   // The delegate connection for the corresponding service instance. This gets
   // cleared when the service is unregistered (via RemoveService() or
   // destruction).
-  ::bluetooth_gatt::ServiceDelegatePtr delegate_;
+  LocalServiceDelegatePtr delegate_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ServiceImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LocalServiceImpl);
 };
 
 GattServerServer::GattServerServer(
@@ -262,11 +214,10 @@ void GattServerServer::RemoveService(uint64_t id) {
 }
 
 void GattServerServer::PublishService(
-    bluetooth_gatt::ServiceInfo service_info,
-    fidl::InterfaceHandle<ServiceDelegate> delegate,
-    fidl::InterfaceRequest<Service> service_iface,
+    ServiceInfo service_info,
+    fidl::InterfaceHandle<LocalServiceDelegate> delegate,
+    fidl::InterfaceRequest<LocalService> service_iface,
     PublishServiceCallback callback) {
-
   if (!delegate) {
     auto error = fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
                                             "A delegate is required");
@@ -361,7 +312,7 @@ void GattServerServer::PublishService(
     auto delegate_ptr = delegate.Bind();
     delegate_ptr.set_error_handler(connection_error_cb);
 
-    auto service_server = std::make_unique<ServiceImpl>(
+    auto service_server = std::make_unique<LocalServiceImpl>(
         self.get(), id, std::move(delegate_ptr), std::move(service_iface));
     service_server->set_error_handler(connection_error_cb);
     self->services_[id] = std::move(service_server);

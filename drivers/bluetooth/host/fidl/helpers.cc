@@ -62,6 +62,8 @@ namespace {
       return ::bluetooth::ErrorCode::IN_PROGRESS;
     case ::btlib::common::HostError::kNotSupported:
       return ::bluetooth::ErrorCode::NOT_SUPPORTED;
+    case ::btlib::common::HostError::kNotFound:
+      return ::bluetooth::ErrorCode::NOT_FOUND;
     case ::btlib::common::HostError::kProtocolError:
       return ::bluetooth::ErrorCode::PROTOCOL_ERROR;
     default:

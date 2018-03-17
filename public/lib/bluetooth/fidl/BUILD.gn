@@ -37,5 +37,8 @@ fidl("bluetooth_low_energy") {
   sources = [
     "low_energy.fidl",
   ]
-  deps = [ ":bluetooth", ]
+  deps = [
+    ":bluetooth",
+    ":bluetooth_gatt",
+  ]
 }
