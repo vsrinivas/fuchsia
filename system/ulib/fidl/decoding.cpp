@@ -472,7 +472,7 @@ zx_status_t FidlDecoder::DecodeMessage() {
             if (frame->vector_state.element) {
                 // Continue by decoding the vector elements as an array.
                 *frame = Frame(frame->vector_state.element, size,
-                               static_cast<uint32_t>(vector_ptr->count), frame->offset);
+                               frame->vector_state.element_size, frame->offset);
             } else {
                 // If there is no element type pointer, there is
                 // nothing to decode in the vector secondary
