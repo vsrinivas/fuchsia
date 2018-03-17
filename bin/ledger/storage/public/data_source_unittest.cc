@@ -58,7 +58,7 @@ TEST_F(DataSourceTest, Array) {
 
   f1dl::Array<uint8_t> array;
   array.resize(value.size());
-  memcpy(&array[0], value.data(), value.size());
+  memcpy(&array->at(0), value.data(), value.size());
 
   EXPECT_TRUE(TestDataSource(value, DataSource::Create(std::move(array))));
 }

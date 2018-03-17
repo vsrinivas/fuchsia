@@ -17,7 +17,7 @@ namespace {
 std::pair<bool, modular::CreateChainPropertyInfo*> GetProperty(
     modular::CreateChainInfoPtr& chain_info,
     const std::string& key) {
-  for (auto& it : chain_info->property_info) {
+  for (auto& it : *chain_info->property_info) {
     if (it->key == key) {
       return std::make_pair<bool, modular::CreateChainPropertyInfo*>(
           true, it->value.get());
@@ -229,7 +229,7 @@ TEST_F(ModuleResolverImplTest, Null) {
   FindModules(std::move(query));
 
   // The Resolver returns an empty candidate list
-  ASSERT_EQ(0lu, results().size());
+  ASSERT_EQ(0lu, results()->size());
 }
 
 TEST_F(ModuleResolverImplTest, ExplicitUrl) {
@@ -249,8 +249,8 @@ TEST_F(ModuleResolverImplTest, ExplicitUrl) {
   // Even though the query has a verb set that matches another Module, we
   // ignore it and prefer only the one URL. It's OK that the referenced Module
   // ("another URL") doesn't have a manifest entry.
-  ASSERT_EQ(1u, results().size());
-  EXPECT_EQ("another URL", results()[0]->module_id);
+  ASSERT_EQ(1u, results()->size());
+  EXPECT_EQ("another URL", results()->at(0)->module_id);
 }
 
 TEST_F(ModuleResolverImplTest, SimpleVerb) {
@@ -299,9 +299,9 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
   ASSERT_TRUE(
       RunLoopUntilWithTimeout([&got_response] { return got_response; }));
 
-  ASSERT_EQ(2lu, results().size());
-  EXPECT_EQ("module1", results()[0]->module_id);
-  EXPECT_EQ("module2", results()[1]->module_id);
+  ASSERT_EQ(2lu, results()->size());
+  EXPECT_EQ("module1", results()->at(0)->module_id);
+  EXPECT_EQ("module2", results()->at(1)->module_id);
 
   // Remove the entries and we should see no more results. Our
   // TestManifestSource implementation above doesn't send its tasks to the
@@ -310,7 +310,7 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
   source2->remove("1");
 
   FindModules(QueryBuilder("com.google.fuchsia.navigate.v1").build());
-  ASSERT_EQ(0lu, results().size());
+  ASSERT_EQ(0lu, results()->size());
 }
 
 TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
@@ -363,8 +363,8 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
                    .AddNounTypes("start", {"foo", "tangoTown"})
                    .build();
   FindModules(std::move(query));
-  ASSERT_EQ(1lu, results().size());
-  EXPECT_EQ("module1", results()[0]->module_id);
+  ASSERT_EQ(1lu, results()->size());
+  EXPECT_EQ("module1", results()->at(0)->module_id);
 
   // This one will match one of the two noun constraints on module1, but not
   // both, so no match at all is expected.
@@ -373,7 +373,7 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
               .AddNounTypes("destination", {"notbaz"})
               .build();
   FindModules(std::move(query));
-  ASSERT_EQ(0lu, results().size());
+  ASSERT_EQ(0lu, results()->size());
 
   // Given an entity of type "frob", find a module with verb
   // com.google.fuchsia.navigate.v1.
@@ -384,8 +384,8 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
               .AddEntityNoun("start", location_entity)
               .build();
   FindModules(std::move(query));
-  ASSERT_EQ(1u, results().size());
-  auto& res = results()[0];
+  ASSERT_EQ(1u, results()->size());
+  auto& res = results()->at(0);
   EXPECT_EQ("module2", res->module_id);
 
   // Verify that |create_chain_info| is set up correctly.
@@ -459,8 +459,8 @@ TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
                    .AddJsonNoun("destination", destinationJson)
                    .build();
   FindModules(std::move(query));
-  ASSERT_EQ(1lu, results().size());
-  auto& res = results()[0];
+  ASSERT_EQ(1lu, results()->size());
+  auto& res = results()->at(0);
   EXPECT_EQ("module1", res->module_id);
 
   // Verify that |create_chain_info| is set up correctly.
@@ -508,8 +508,8 @@ TEST_F(ModuleResolverImplTest, LinkInfoNounType) {
                        "start", {{"a", "b"}, "c"}, {"foo"})
                    .build();
   FindModules(std::move(query));
-  ASSERT_EQ(1lu, results().size());
-  EXPECT_EQ("module1", results()[0]->module_id);
+  ASSERT_EQ(1lu, results()->size());
+  EXPECT_EQ("module1", results()->at(0)->module_id);
 
   // Same thing should happen if there aren't any allowed types, but the Link's
   // content encodes an Entity reference.
@@ -519,8 +519,8 @@ TEST_F(ModuleResolverImplTest, LinkInfoNounType) {
                                           entity_reference)
               .build();
   FindModules(std::move(query));
-  ASSERT_EQ(1lu, results().size());
-  auto& res = results()[0];
+  ASSERT_EQ(1lu, results()->size());
+  auto& res = results()->at(0);
   EXPECT_EQ("module1", res->module_id);
 
   // Verify that |create_chain_info| is set up correctly.
@@ -547,13 +547,13 @@ TEST_F(ModuleResolverImplTest, ReAddExistingEntries) {
   source->add("1", entry.Clone());
   source->idle();
   FindModules(QueryBuilder("verb1").build());
-  ASSERT_EQ(1lu, results().size());
-  EXPECT_EQ("id1", results()[0]->module_id);
+  ASSERT_EQ(1lu, results()->size());
+  EXPECT_EQ("id1", results()->at(0)->module_id);
 
   source->add("1", entry.Clone());
   FindModules(QueryBuilder("verb1").build());
-  ASSERT_EQ(1lu, results().size());
-  EXPECT_EQ("id1", results()[0]->module_id);
+  ASSERT_EQ(1lu, results()->size());
+  EXPECT_EQ("id1", results()->at(0)->module_id);
 }
 
 // Tests that a query that does not contain a verb or a URL matches a noun with
@@ -579,8 +579,8 @@ TEST_F(ModuleResolverImplTest, MatchingNounWithNoVerbOrUrl) {
 
   FindModules(std::move(query));
 
-  ASSERT_EQ(1lu, results().size());
-  EXPECT_EQ("module1", results()[0]->module_id);
+  ASSERT_EQ(1lu, results()->size());
+  EXPECT_EQ("module1", results()->at(0)->module_id);
 }
 
 // Tests that a query that does not contain a verb or a URL matches when the
@@ -606,8 +606,8 @@ TEST_F(ModuleResolverImplTest, CorrectNounTypeWithNoVerbOrUrl) {
 
   FindModules(std::move(query));
 
-  ASSERT_EQ(1lu, results().size());
-  EXPECT_EQ("module1", results()[0]->module_id);
+  ASSERT_EQ(1lu, results()->size());
+  EXPECT_EQ("module1", results()->at(0)->module_id);
 }
 
 // Tests that a query that does not contain a verb or a URL returns results for
@@ -643,9 +643,9 @@ TEST_F(ModuleResolverImplTest, CorrectNounTypeWithNoVerbOrUrlMultipleMatches) {
 
   FindModules(std::move(query));
 
-  ASSERT_EQ(2lu, results().size());
-  EXPECT_EQ("module1", results()[0]->module_id);
-  EXPECT_EQ("module2", results()[1]->module_id);
+  ASSERT_EQ(2lu, results()->size());
+  EXPECT_EQ("module1", results()->at(0)->module_id);
+  EXPECT_EQ("module2", results()->at(1)->module_id);
 }
 
 // Tests that a query that does not contain a verb or a URL does not match when
@@ -671,7 +671,7 @@ TEST_F(ModuleResolverImplTest, IncorrectNounTypeWithNoVerbOrUrl) {
 
   FindModules(std::move(query));
 
-  EXPECT_EQ(0lu, results().size());
+  EXPECT_EQ(0lu, results()->size());
 }
 
 // Tests that a query without a verb or url, that contains more nouns than the
@@ -700,7 +700,7 @@ TEST_F(ModuleResolverImplTest, QueryWithMoreNounsThanEntry) {
 
   FindModules(std::move(query));
 
-  EXPECT_EQ(1lu, results().size());
+  EXPECT_EQ(1lu, results()->size());
 }
 
 // Tests that for a query with multiple nouns, each noun gets assigned to the
@@ -739,8 +739,8 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndMultipleNouns) {
 
   FindModules(std::move(query));
 
-  ASSERT_EQ(1lu, results().size());
-  auto result = results()[0].get();
+  ASSERT_EQ(1lu, results()->size());
+  auto result = results()->at(0).get();
 
   EXPECT_EQ(GetProperty(result->create_chain_info, "start")
                 .second->get_create_link()
@@ -788,7 +788,7 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndTwoNounsOfSameType) {
 
   FindModules(std::move(query));
 
-  EXPECT_EQ(2lu, results().size());
+  EXPECT_EQ(2lu, results()->size());
 
   bool found_first_mapping = false;
   bool found_second_mapping = false;
@@ -862,7 +862,7 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndThreeNounsOfSameType) {
 
   FindModules(std::move(query));
 
-  EXPECT_EQ(6lu, results().size());
+  EXPECT_EQ(6lu, results()->size());
 }
 
 // Tests that a query with three nouns of the same type matches an entry with
@@ -906,7 +906,7 @@ TEST_F(ModuleResolverImplTest,
 
   FindModules(std::move(query));
 
-  EXPECT_EQ(6lu, results().size());
+  EXPECT_EQ(6lu, results()->size());
 }
 
 // Tests that a query without a verb does not match a module that requires a
@@ -942,7 +942,7 @@ TEST_F(ModuleResolverImplTest,
 
   FindModules(std::move(query));
 
-  EXPECT_EQ(0lu, results().size());
+  EXPECT_EQ(0lu, results()->size());
 }
 
 // Tests that a query without a verb does not match an entry where the noun
@@ -973,7 +973,7 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbIncompatibleNounTypes) {
 
   FindModules(std::move(query));
 
-  EXPECT_EQ(0lu, results().size());
+  EXPECT_EQ(0lu, results()->size());
 }
 
 // Tests that a query with a verb requires noun name and type to match (i.e.
@@ -1002,7 +1002,7 @@ TEST_F(ModuleResolverImplTest, QueryWithVerbMatchesBothNounNamesAndTypes) {
 
   FindModules(std::move(query));
 
-  EXPECT_EQ(0lu, results().size());
+  EXPECT_EQ(0lu, results()->size());
 }
 
 }  // namespace

@@ -30,12 +30,12 @@ f1dl::Array<uint8_t> RandomArray(size_t size,
   EXPECT_TRUE(size >= prefix.size());
   f1dl::Array<uint8_t> array = f1dl::Array<uint8_t>::New(size);
   for (size_t i = 0; i < prefix.size(); ++i) {
-    array[i] = prefix[i];
+    array->at(i) = prefix[i];
   }
   for (size_t i = prefix.size(); i < size / 4; ++i) {
     int random = std::rand();
     for (size_t j = 0; j < 4 && 4 * i + j < size; ++j) {
-      array[4 * i + j] = random & 0xFF;
+      array->at(4 * i + j) = random & 0xFF;
       random = random >> 8;
     }
   }

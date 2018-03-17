@@ -24,11 +24,11 @@ bool TokenToPosition(const f1dl::Array<uint8_t>& token, size_t* result) {
     return true;
   }
 
-  if (token.size() != sizeof(*result)) {
+  if (token->size() != sizeof(*result)) {
     return false;
   }
 
-  memcpy(result, token.data(), sizeof(*result));
+  memcpy(result, token->data(), sizeof(*result));
   return true;
 }
 
@@ -74,7 +74,7 @@ void FakePageCloud::WatcherContainer::SendCommits(
     fxl::Closure on_ack) {
   FXL_DCHECK(watcher_.is_bound());
   FXL_DCHECK(!waiting_for_watcher_ack_);
-  FXL_DCHECK(!commits.empty());
+  FXL_DCHECK(!commits->empty());
 
   waiting_for_watcher_ack_ = true;
   next_commit_index_ = next_commit_index;
@@ -103,23 +103,23 @@ void FakePageCloud::Bind(
 void FakePageCloud::SendPendingCommits() {
   for (auto& container : containers_) {
     if (container.WaitingForWatcherAck() ||
-        container.NextCommitIndex() >= commits_.size()) {
+        container.NextCommitIndex() >= commits_->size()) {
       continue;
     }
 
     f1dl::Array<cloud_provider::CommitPtr> commits;
-    for (size_t i = container.NextCommitIndex(); i < commits_.size(); i++) {
-      commits.push_back(commits_[i].Clone());
+    for (size_t i = container.NextCommitIndex(); i < commits_->size(); i++) {
+      commits.push_back(commits_->at(i).Clone());
     }
 
-    container.SendCommits(std::move(commits), commits_.size(),
+    container.SendCommits(std::move(commits), commits_->size(),
                           [this] { SendPendingCommits(); });
   }
 }
 
 void FakePageCloud::AddCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
                                const AddCommitsCallback& callback) {
-  for (size_t i = 0; i < commits.size(); ++i) {
+  for (size_t i = 0; i < commits->size(); ++i) {
     commits_.push_back(std::move(commits->at(i)));
   }
   SendPendingCommits();
@@ -135,15 +135,15 @@ void FakePageCloud::GetCommits(f1dl::Array<uint8_t> min_position_token,
     return;
   }
 
-  for (size_t i = start; i < commits_.size(); i++) {
-    result.push_back(commits_[i].Clone());
+  for (size_t i = start; i < commits_->size(); i++) {
+    result.push_back(commits_->at(i).Clone());
   }
   f1dl::Array<uint8_t> token;
-  if (!result.empty()) {
+  if (!result->empty()) {
     // This will cause the last commit to be delivered again when the token is
     // used for the next GetCommits() call. This is allowed by the FIDL contract
     // and should be handled correctly by the client.
-    token = PositionToToken(commits_.size() - 1);
+    token = PositionToToken(commits_->size() - 1);
   }
   callback(cloud_provider::Status::OK, std::move(result), std::move(token));
 }

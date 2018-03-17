@@ -140,11 +140,11 @@ TEST_F(PageCloudImplTest, GetCommits) {
       callback::Capture(MakeQuitTask(), &status, &commits, &token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_provider::Status::OK, status);
-  EXPECT_EQ(2u, commits.size());
-  EXPECT_EQ("id_0", convert::ToString(commits[0]->id));
-  EXPECT_EQ("data_0", convert::ToString(commits[0]->data));
-  EXPECT_EQ("id_1", convert::ToString(commits[1]->id));
-  EXPECT_EQ("data_1", convert::ToString(commits[1]->data));
+  EXPECT_EQ(2u, commits->size());
+  EXPECT_EQ("id_0", convert::ToString(commits->at(0)->id));
+  EXPECT_EQ("data_0", convert::ToString(commits->at(0)->data));
+  EXPECT_EQ("id_1", convert::ToString(commits->at(1)->id));
+  EXPECT_EQ("data_1", convert::ToString(commits->at(1)->data));
   EXPECT_EQ("43", convert::ToString(token));
 }
 
@@ -158,7 +158,7 @@ TEST_F(PageCloudImplTest, GetCommitsEmpty) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_provider::Status::OK, status);
   EXPECT_FALSE(commits.is_null());
-  EXPECT_EQ(0u, commits.size());
+  EXPECT_EQ(0u, commits->size());
   EXPECT_TRUE(token.is_null());
 }
 
@@ -173,9 +173,9 @@ TEST_F(PageCloudImplTest, GetCommitsNullToken) {
       nullptr, callback::Capture(MakeQuitTask(), &status, &commits, &token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_provider::Status::OK, status);
-  EXPECT_EQ(1u, commits.size());
-  EXPECT_EQ("id_0", convert::ToString(commits[0]->id));
-  EXPECT_EQ("data_0", convert::ToString(commits[0]->data));
+  EXPECT_EQ(1u, commits->size());
+  EXPECT_EQ("id_0", convert::ToString(commits->at(0)->id));
+  EXPECT_EQ("data_0", convert::ToString(commits->at(0)->data));
   EXPECT_EQ("42", convert::ToString(token));
 }
 
@@ -256,7 +256,7 @@ TEST_F(PageCloudImplTest, SetWatcher) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_provider::Status::OK, status);
 
-  EXPECT_TRUE(on_new_commits_commits_.empty());
+  EXPECT_TRUE(on_new_commits_commits_->empty());
   handler_->notifications_to_deliver.emplace_back(
       cloud_provider_firebase::Commit("id_0", "data_0"), "42");
   handler_->notifications_to_deliver.emplace_back(
@@ -264,11 +264,11 @@ TEST_F(PageCloudImplTest, SetWatcher) {
 
   handler_->DeliverRemoteCommits();
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(2u, on_new_commits_commits_.size());
-  EXPECT_EQ("id_0", convert::ToString(on_new_commits_commits_[0]->id));
-  EXPECT_EQ("data_0", convert::ToString(on_new_commits_commits_[0]->data));
-  EXPECT_EQ("id_1", convert::ToString(on_new_commits_commits_[1]->id));
-  EXPECT_EQ("data_1", convert::ToString(on_new_commits_commits_[1]->data));
+  EXPECT_EQ(2u, on_new_commits_commits_->size());
+  EXPECT_EQ("id_0", convert::ToString(on_new_commits_commits_->at(0)->id));
+  EXPECT_EQ("data_0", convert::ToString(on_new_commits_commits_->at(0)->data));
+  EXPECT_EQ("id_1", convert::ToString(on_new_commits_commits_->at(1)->id));
+  EXPECT_EQ("data_1", convert::ToString(on_new_commits_commits_->at(1)->data));
   EXPECT_EQ("43", convert::ToString(on_new_commits_position_token_));
   on_new_commits_commits_callback_();
 }
@@ -294,12 +294,12 @@ TEST_F(PageCloudImplTest, SetWatcherNotificationsOneAtATime) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_provider::Status::OK, status);
 
-  EXPECT_TRUE(on_new_commits_commits_.empty());
+  EXPECT_TRUE(on_new_commits_commits_->empty());
   handler_->notifications_to_deliver.emplace_back(
       cloud_provider_firebase::Commit("id_0", "data_0"), "42");
   handler_->DeliverRemoteCommits();
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(1u, on_new_commits_commits_.size());
+  EXPECT_EQ(1u, on_new_commits_commits_->size());
   EXPECT_EQ(1, on_new_commits_calls_);
 
   handler_->notifications_to_deliver.emplace_back(
@@ -310,14 +310,14 @@ TEST_F(PageCloudImplTest, SetWatcherNotificationsOneAtATime) {
       [this] { message_loop_.PostQuitTask(); },
       fxl::TimeDelta::FromMilliseconds(1));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(1u, on_new_commits_commits_.size());
+  EXPECT_EQ(1u, on_new_commits_commits_->size());
   EXPECT_EQ(1, on_new_commits_calls_);
 
   // Call the pending callback and verify that the client did receive the next
   // notification.
   on_new_commits_commits_callback_();
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(1u, on_new_commits_commits_.size());
+  EXPECT_EQ(1u, on_new_commits_commits_->size());
   EXPECT_EQ(2, on_new_commits_calls_);
   on_new_commits_commits_callback_();
 }

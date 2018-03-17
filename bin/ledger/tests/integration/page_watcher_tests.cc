@@ -84,9 +84,9 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
   ledger::PageChangePtr change = std::move(watcher.last_page_change_);
-  ASSERT_EQ(1u, change->changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Alice", ToString(change->changed_entries[0]->value));
+  ASSERT_EQ(1u, change->changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Alice", ToString(change->changed_entries->at(0)->value));
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
@@ -174,7 +174,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
   ASSERT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
   ledger::PageChangePtr change = std::move(watcher.last_page_change_);
-  EXPECT_EQ(0u, change->changed_entries.size());
+  EXPECT_EQ(0u, change->changed_entries->size());
   ASSERT_EQ(1u, change->deleted_keys.size());
   EXPECT_EQ("foo", convert::ToString(change->deleted_keys[0]));
 }
@@ -229,12 +229,12 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(watcher.last_result_state_, ledger::ResultState::PARTIAL_STARTED);
   ledger::PageChangePtr change = std::move(watcher.last_page_change_);
-  size_t initial_size = change->changed_entries.size();
+  size_t initial_size = change->changed_entries->size();
   for (size_t i = 0; i < initial_size; ++i) {
     EXPECT_EQ(key_generator(i),
-              convert::ToString(change->changed_entries[i]->key));
-    EXPECT_EQ("value", ToString(change->changed_entries[i]->value));
-    EXPECT_EQ(ledger::Priority::EAGER, change->changed_entries[i]->priority);
+              convert::ToString(change->changed_entries->at(i)->key));
+    EXPECT_EQ("value", ToString(change->changed_entries->at(i)->value));
+    EXPECT_EQ(ledger::Priority::EAGER, change->changed_entries->at(i)->priority);
   }
 
   // Get the second OnChagne call.
@@ -243,12 +243,12 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   EXPECT_EQ(ledger::ResultState::PARTIAL_COMPLETED, watcher.last_result_state_);
   change = std::move(watcher.last_page_change_);
 
-  ASSERT_EQ(entry_count, initial_size + change->changed_entries.size());
-  for (size_t i = 0; i < change->changed_entries.size(); ++i) {
+  ASSERT_EQ(entry_count, initial_size + change->changed_entries->size());
+  for (size_t i = 0; i < change->changed_entries->size(); ++i) {
     EXPECT_EQ(key_generator(i + initial_size),
-              convert::ToString(change->changed_entries[i]->key));
-    EXPECT_EQ("value", ToString(change->changed_entries[i]->value));
-    EXPECT_EQ(ledger::Priority::EAGER, change->changed_entries[i]->priority);
+              convert::ToString(change->changed_entries->at(i)->key));
+    EXPECT_EQ("value", ToString(change->changed_entries->at(i)->value));
+    EXPECT_EQ(ledger::Priority::EAGER, change->changed_entries->at(i)->priority);
   }
 }
 
@@ -289,12 +289,12 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(watcher.last_result_state_, ledger::ResultState::PARTIAL_STARTED);
   ledger::PageChangePtr change = std::move(watcher.last_page_change_);
-  size_t initial_size = change->changed_entries.size();
+  size_t initial_size = change->changed_entries->size();
   for (size_t i = 0; i < initial_size; ++i) {
     EXPECT_EQ(fxl::StringPrintf("key%02" PRIuMAX, i),
-              convert::ToString(change->changed_entries[i]->key));
-    EXPECT_EQ("value", ToString(change->changed_entries[i]->value));
-    EXPECT_EQ(ledger::Priority::EAGER, change->changed_entries[i]->priority);
+              convert::ToString(change->changed_entries->at(i)->key));
+    EXPECT_EQ("value", ToString(change->changed_entries->at(i)->value));
+    EXPECT_EQ(ledger::Priority::EAGER, change->changed_entries->at(i)->priority);
   }
 
   // Get the second OnChagne call.
@@ -303,12 +303,12 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   EXPECT_EQ(ledger::ResultState::PARTIAL_COMPLETED, watcher.last_result_state_);
   change = std::move(watcher.last_page_change_);
 
-  ASSERT_EQ(entry_count, initial_size + change->changed_entries.size());
-  for (size_t i = 0; i < change->changed_entries.size(); ++i) {
+  ASSERT_EQ(entry_count, initial_size + change->changed_entries->size());
+  for (size_t i = 0; i < change->changed_entries->size(); ++i) {
     EXPECT_EQ(fxl::StringPrintf("key%02" PRIuMAX, i + initial_size),
-              convert::ToString(change->changed_entries[i]->key));
-    EXPECT_EQ("value", ToString(change->changed_entries[i]->value));
-    EXPECT_EQ(ledger::Priority::EAGER, change->changed_entries[i]->priority);
+              convert::ToString(change->changed_entries->at(i)->key));
+    EXPECT_EQ("value", ToString(change->changed_entries->at(i)->value));
+    EXPECT_EQ(ledger::Priority::EAGER, change->changed_entries->at(i)->priority);
   }
 }
 
@@ -373,9 +373,9 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
   ledger::PageChangePtr change = std::move(watcher.last_page_change_);
-  ASSERT_EQ(1u, change->changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Alice", ToString(change->changed_entries[0]->value));
+  ASSERT_EQ(1u, change->changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Alice", ToString(change->changed_entries->at(0)->value));
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
@@ -431,9 +431,9 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ(1u, watcher1.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher1.last_result_state_);
   ledger::PageChangePtr change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(1u, change->changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Alice", ToString(change->changed_entries[0]->value));
+  ASSERT_EQ(1u, change->changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Alice", ToString(change->changed_entries->at(0)->value));
 
   page2->Commit(
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
@@ -443,9 +443,9 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ(1u, watcher2.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher2.last_result_state_);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change->changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Bob", ToString(change->changed_entries[0]->value));
+  ASSERT_EQ(1u, change->changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Bob", ToString(change->changed_entries->at(0)->value));
 
   fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); },
@@ -457,9 +457,9 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ(1u, watcher2.changes_seen);
 
   change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(1u, change->changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Bob", ToString(change->changed_entries[0]->value));
+  ASSERT_EQ(1u, change->changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Bob", ToString(change->changed_entries->at(0)->value));
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
@@ -526,16 +526,16 @@ TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   ASSERT_EQ(1u, watcher1.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher1.last_result_state_);
   ledger::PageChangePtr change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(1u, change->changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Alice", ToString(change->changed_entries[0]->value));
+  ASSERT_EQ(1u, change->changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Alice", ToString(change->changed_entries->at(0)->value));
 
   ASSERT_EQ(1u, watcher2.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher2.last_result_state_);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change->changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Alice", ToString(change->changed_entries[0]->value));
+  ASSERT_EQ(1u, change->changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Alice", ToString(change->changed_entries->at(0)->value));
 }
 
 class WaitingWatcher : public ledger::PageWatcher {
@@ -669,8 +669,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherPrefix) {
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
   ledger::PageChangePtr change = std::move(watcher.last_page_change_);
-  ASSERT_EQ(1u, change->changed_entries.size());
-  EXPECT_EQ("01-key", convert::ToString(change->changed_entries[0]->key));
+  ASSERT_EQ(1u, change->changed_entries->size());
+  EXPECT_EQ("01-key", convert::ToString(change->changed_entries->at(0)->key));
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {

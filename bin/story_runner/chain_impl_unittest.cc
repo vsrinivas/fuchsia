@@ -16,7 +16,7 @@ namespace {
 
 class ChainImplTest : public gtest::TestWithMessageLoop {
  public:
-  void Reset(f1dl::Array<f1dl::String> path,
+  void Reset(std::vector<f1dl::String> path,
              std::map<std::string, std::vector<std::string>> link_map) {
     auto chain_data = ChainData::New();
     for (const auto& entry : link_map) {
@@ -27,7 +27,8 @@ class ChainImplTest : public gtest::TestWithMessageLoop {
       key_link_data->link_path = std::move(link_path);
       chain_data->key_to_link_map.push_back(std::move(key_link_data));
     }
-    impl_.reset(new ChainImpl(std::move(path), std::move(chain_data)));
+    f1dl::Array<f1dl::String> tmp_path(std::move(path));
+    impl_.reset(new ChainImpl(std::move(tmp_path), std::move(chain_data)));
   }
 
  protected:
@@ -38,9 +39,9 @@ TEST_F(ChainImplTest, Empty) {
   Reset({"one", "two"}, {});
 
   const auto& path = impl_->chain_path();
-  ASSERT_EQ(2lu, path.size());
-  EXPECT_EQ("one", path[0]);
-  EXPECT_EQ("two", path[1]);
+  ASSERT_EQ(2lu, path->size());
+  EXPECT_EQ("one", path->at(0));
+  EXPECT_EQ("two", path->at(1));
 
   EXPECT_FALSE(impl_->GetLinkPathForKey("foo"));
 }

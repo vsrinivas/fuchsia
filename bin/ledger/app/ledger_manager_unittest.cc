@@ -279,7 +279,7 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
 
   f1dl::Array<f1dl::Array<uint8_t>> actual_pages_list;
 
-  EXPECT_EQ(0u, actual_pages_list.size());
+  EXPECT_EQ(0u, actual_pages_list->size());
 
   auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
   for (size_t i = 0; i < pages.size(); ++i) {
@@ -299,11 +299,11 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  EXPECT_EQ(pages.size(), actual_pages_list.size());
+  EXPECT_EQ(pages.size(), actual_pages_list->size());
 
   std::sort(ids.begin(), ids.end());
   for (size_t i = 0; i < ids.size(); i++)
-    EXPECT_EQ(ids[i], convert::ToString(actual_pages_list[i]));
+    EXPECT_EQ(ids[i], convert::ToString(actual_pages_list->at(i)));
 }
 
 }  // namespace

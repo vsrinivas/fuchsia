@@ -135,7 +135,7 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
     ::testing::AssertionResult Merge(
         f1dl::Array<ledger::MergedValuePtr> results,
         MergeType merge_type = MergeType::SIMPLE) {
-      FXL_DCHECK(merge_type == MergeType::SIMPLE || results.size() >= 2);
+      FXL_DCHECK(merge_type == MergeType::SIMPLE || results->size() >= 2);
       if (merge_type == MergeType::SIMPLE) {
         ::testing::AssertionResult merge_status =
             PartialMerge(std::move(results));
@@ -143,10 +143,10 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
           return merge_status;
         }
       } else {
-        size_t part1_size = results.size() / 2;
+        size_t part1_size = results->size() / 2;
         f1dl::Array<ledger::MergedValuePtr> part2;
-        for (size_t i = part1_size; i < results.size(); ++i) {
-          part2.push_back(std::move(results[i]));
+        for (size_t i = part1_size; i < results->size(); ++i) {
+          part2.push_back(std::move(results->at(i)));
         }
         results.resize(part1_size);
 

@@ -87,7 +87,7 @@ void PutBenchmark::Run() {
 void PutBenchmark::OnChange(ledger::PageChangePtr page_change,
                             ledger::ResultState /*result_state*/,
                             const OnChangeCallback& callback) {
-  for (auto const& change : page_change->changed_entries) {
+  for (auto const& change : *page_change->changed_entries) {
     size_t key_number = std::stoul(convert::ToString(change->key));
     if (keys_to_receive_.find(key_number) != keys_to_receive_.end()) {
       TRACE_ASYNC_END("benchmark", "local_change_notification", key_number);

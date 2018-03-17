@@ -226,7 +226,7 @@ void BacklogBenchmark::GetEntriesStep(f1dl::Array<uint8_t> token,
                                                auto entries,
                                                auto next_token) mutable {
           TRACE_ASYNC_END("benchmark", "get entries partial", entries_left);
-          CheckStatusAndGetMore(status, entries_left - entries.size(),
+          CheckStatusAndGetMore(status, entries_left - entries->size(),
                                 std::move(next_token));
         }));
   } else {
@@ -236,7 +236,7 @@ void BacklogBenchmark::GetEntriesStep(f1dl::Array<uint8_t> token,
                                                auto entries,
                                                auto next_token) mutable {
           TRACE_ASYNC_END("benchmark", "get entries partial", entries_left);
-          CheckStatusAndGetMore(status, entries_left - entries.size(),
+          CheckStatusAndGetMore(status, entries_left - entries->size(),
                                 std::move(next_token));
         }));
   }

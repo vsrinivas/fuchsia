@@ -40,7 +40,7 @@ f1dl::Array<uint8_t> DataGenerator::MakePageId() {
 
 f1dl::Array<uint8_t> DataGenerator::MakeValue(size_t size) {
   auto data = f1dl::Array<uint8_t>::New(size);
-  std::generate(data.begin(), data.end(), std::ref(generator_));
+  std::generate(data->begin(), data->end(), std::ref(generator_));
   return data;
 }
 

@@ -20,7 +20,7 @@ void Server::Serve(
   FXL_DCHECK(!request->body || request->body->is_sized_buffer());
 
   if (request->method == "GET") {
-    for (const auto& header : request->headers) {
+    for (const auto& header : *request->headers) {
       if (header->name == "Accept" && header->value == "text/event-stream") {
         HandleGetStream(std::move(request), callback);
         return;

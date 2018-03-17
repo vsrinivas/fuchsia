@@ -599,14 +599,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  ASSERT_EQ(2u, actual_entries.size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
-  EXPECT_EQ(eager_value, ToString(actual_entries[0]->value));
-  EXPECT_EQ(Priority::EAGER, actual_entries[0]->priority);
+  ASSERT_EQ(2u, actual_entries->size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
+  EXPECT_EQ(eager_value, ToString(actual_entries->at(0)->value));
+  EXPECT_EQ(Priority::EAGER, actual_entries->at(0)->priority);
 
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[1]->key));
-  EXPECT_EQ(lazy_value, ToString(actual_entries[1]->value));
-  EXPECT_EQ(Priority::LAZY, actual_entries[1]->priority);
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1)->key));
+  EXPECT_EQ(lazy_value, ToString(actual_entries->at(1)->value));
+  EXPECT_EQ(Priority::LAZY, actual_entries->at(1)->priority);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
@@ -640,14 +640,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(next_token.is_null());
 
-  ASSERT_EQ(2u, actual_entries.size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
-  EXPECT_EQ(eager_value, convert::ToString(actual_entries[0]->value));
-  EXPECT_EQ(Priority::EAGER, actual_entries[0]->priority);
+  ASSERT_EQ(2u, actual_entries->size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
+  EXPECT_EQ(eager_value, convert::ToString(actual_entries->at(0)->value));
+  EXPECT_EQ(Priority::EAGER, actual_entries->at(0)->priority);
 
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[1]->key));
-  EXPECT_EQ(lazy_value, convert::ToString(actual_entries[1]->value));
-  EXPECT_EQ(Priority::LAZY, actual_entries[1]->priority);
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1)->key));
+  EXPECT_EQ(lazy_value, convert::ToString(actual_entries->at(1)->value));
+  EXPECT_EQ(Priority::LAZY, actual_entries->at(1)->priority);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
@@ -689,7 +689,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
     for (auto& entry : entries) {
       actual_entries.push_back(std::move(entry));
     }
-    EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
+    EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
     message_loop_.PostQuitTask();
   };
   snapshot->GetEntries(nullptr, std::move(actual_next_token),
@@ -698,7 +698,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
-  for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
+  for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
     ASSERT_EQ(GetKey(i, min_key_size),
               convert::ToString(actual_entries[i]->key));
     ASSERT_EQ(GetValue(i, 0), ToString(actual_entries[i]->value));
@@ -737,11 +737,11 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   for (auto& entry : actual_entries2) {
     actual_entries.push_back(std::move(entry));
   }
-  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
+  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
-  for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
+  for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
     ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries[i]->key));
     ASSERT_EQ(GetValue(i, min_value_size),
               convert::ToString(actual_entries[i]->value));
@@ -791,11 +791,11 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   for (auto& entry : actual_entries2) {
     actual_entries.push_back(std::move(entry));
   }
-  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
+  EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
-  for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
+  for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
     ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries[i]->key));
     ASSERT_EQ(GetValue(i, min_value_size),
               convert::ToString(actual_entries[i]->value));
@@ -831,7 +831,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
     for (auto& entry : entries) {
       actual_entries.push_back(std::move(entry));
     }
-    EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
+    EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
     message_loop_.PostQuitTask();
   };
   snapshot->GetEntries(nullptr, std::move(actual_next_token),
@@ -840,7 +840,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
-  for (int i = 0; i < static_cast<int>(actual_entries.size()); ++i) {
+  for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
     ASSERT_EQ(GetKey(i), convert::ToString(actual_entries[i]->key));
     ASSERT_EQ(GetValue(i, 0), ToString(actual_entries[i]->value));
   }
@@ -884,14 +884,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  ASSERT_EQ(2u, actual_entries.size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
-  EXPECT_EQ(eager_value, ToString(actual_entries[0]->value));
-  EXPECT_EQ(Priority::EAGER, actual_entries[0]->priority);
+  ASSERT_EQ(2u, actual_entries->size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
+  EXPECT_EQ(eager_value, ToString(actual_entries->at(0)->value));
+  EXPECT_EQ(Priority::EAGER, actual_entries->at(0)->priority);
 
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[1]->key));
-  EXPECT_FALSE(actual_entries[1]->value);
-  EXPECT_EQ(Priority::LAZY, actual_entries[1]->priority);
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1)->key));
+  EXPECT_FALSE(actual_entries->at(1)->value);
+  EXPECT_EQ(Priority::LAZY, actual_entries->at(1)->priority);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
@@ -926,16 +926,16 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  ASSERT_EQ(1u, actual_entries.size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
+  ASSERT_EQ(1u, actual_entries->size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
 
   snapshot = GetSnapshot(convert::ToArray("00"));
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  ASSERT_EQ(2u, actual_entries.size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[1]->key));
+  ASSERT_EQ(2u, actual_entries->size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1)->key));
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
@@ -970,15 +970,15 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
   snapshot->GetEntries(convert::ToArray("002"), nullptr, callback_getentries);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  ASSERT_EQ(1u, actual_entries.size());
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[0]->key));
+  ASSERT_EQ(1u, actual_entries->size());
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(0)->key));
 
   snapshot->GetEntries(convert::ToArray("001"), nullptr, callback_getentries);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  ASSERT_EQ(2u, actual_entries.size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries[0]->key));
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries[1]->key));
+  ASSERT_EQ(2u, actual_entries->size());
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1)->key));
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeys) {

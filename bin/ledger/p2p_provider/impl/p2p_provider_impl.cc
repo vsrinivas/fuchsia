@@ -178,7 +178,7 @@ void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
   net_connector_->GetKnownDeviceNames(
       version, [this](uint64_t new_version, f1dl::Array<f1dl::String> devices) {
         std::vector<std::string> seen_devices;
-        for (auto& remote_name : devices) {
+        for (auto& remote_name : *devices) {
           seen_devices.push_back(remote_name);
           if (contacted_hosts_.find(remote_name) != contacted_hosts_.end()) {
             continue;

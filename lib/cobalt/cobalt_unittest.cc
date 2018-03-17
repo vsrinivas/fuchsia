@@ -250,12 +250,12 @@ TEST_F(CobaltTest, ReportStringObservation) {
 TEST_F(CobaltTest, ReportIntBucketObservation) {
   ValuePtr value = Value::New();
   auto distribution = f1dl::Array<BucketDistributionEntryPtr>::New(2);
-  distribution[0] = BucketDistributionEntry::New();
-  distribution[0]->index = 1;
-  distribution[0]->count = 2;
-  distribution[1] = BucketDistributionEntry::New();
-  distribution[1]->index = 2;
-  distribution[1]->count = 3;
+  distribution->at(0) = BucketDistributionEntry::New();
+  distribution->at(0)->index = 1;
+  distribution->at(0)->count = 2;
+  distribution->at(1) = BucketDistributionEntry::New();
+  distribution->at(1)->index = 2;
+  distribution->at(1)->count = 3;
   value->set_int_bucket_distribution(std::move(distribution));
   CobaltObservation observation(
       kFakeCobaltMetricId, kFakeCobaltEncodingId, value.Clone());
@@ -269,17 +269,17 @@ TEST_F(CobaltTest, ReportIntBucketObservation) {
 
 TEST_F(CobaltTest, ReportMultipartObservation) {
   auto parts = f1dl::Array<cobalt::ObservationValuePtr>::New(2);
-  parts[0] = cobalt::ObservationValue::New();
-  parts[0]->name = "part1";
-  parts[0]->encoding_id = kFakeCobaltEncodingId;
-  parts[0]->value = cobalt::Value::New();
-  parts[0]->value->set_string_value("test");
+  parts->at(0) = cobalt::ObservationValue::New();
+  parts->at(0)->name = "part1";
+  parts->at(0)->encoding_id = kFakeCobaltEncodingId;
+  parts->at(0)->value = cobalt::Value::New();
+  parts->at(0)->value->set_string_value("test");
 
-  parts[1] = cobalt::ObservationValue::New();
-  parts[1]->name = "part2";
-  parts[1]->encoding_id = kFakeCobaltEncodingId;
-  parts[1]->value = cobalt::Value::New();
-  parts[1]->value->set_int_value(2);
+  parts->at(1) = cobalt::ObservationValue::New();
+  parts->at(1)->name = "part2";
+  parts->at(1)->encoding_id = kFakeCobaltEncodingId;
+  parts->at(1)->value = cobalt::Value::New();
+  parts->at(1)->value->set_int_value(2);
 
   CobaltObservation observation(
       static_cast<uint32_t>(kFakeCobaltMetricId), parts.Clone());

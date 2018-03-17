@@ -63,7 +63,7 @@ TEST_F(SyncIntegrationTest, SerialConnection) {
     if (!GetEntries(page.get(), &entries)) {
       return true;
     }
-    return !entries.empty();
+    return !entries->empty();
   }));
 
   ledger::PageSnapshotPtr snapshot;
@@ -100,7 +100,7 @@ TEST_F(SyncIntegrationTest, ConcurrentConnection) {
     if (!GetEntries(page2.get(), &entries)) {
       return true;
     }
-    return !entries.empty();
+    return !entries->empty();
   }));
 
   ledger::PageSnapshotPtr snapshot;

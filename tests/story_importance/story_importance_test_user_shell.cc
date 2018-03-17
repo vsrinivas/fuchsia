@@ -34,7 +34,7 @@ constexpr char kTopic[] = "location/home_work";
 float GetImportance(
     const f1dl::Array<modular::StoryImportanceEntryPtr>& importance_list,
     const std::string& id) {
-  for (auto const& it : importance_list) {
+  for (auto const& it : *importance_list) {
     if (it->id == id) {
       return it->importance;
     }

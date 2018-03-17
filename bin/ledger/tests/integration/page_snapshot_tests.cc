@@ -165,7 +165,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   f1dl::Array<f1dl::Array<uint8_t>> result =
       SnapshotGetKeys(&snapshot, f1dl::Array<uint8_t>());
-  EXPECT_EQ(0u, result.size());
+  EXPECT_EQ(0u, result->size());
 
   // Add entries and grab a new snapshot.
   const size_t N = 4;
@@ -185,48 +185,48 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
 
   // Get all keys.
   result = SnapshotGetKeys(&snapshot, f1dl::Array<uint8_t>());
-  EXPECT_EQ(N, result.size());
+  EXPECT_EQ(N, result->size());
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_TRUE(keys[i].Equals(result[i]));
+    EXPECT_TRUE(keys[i].Equals(result->at(i)));
   }
 
   // Get keys matching the prefix "0".
   snapshot = PageGetSnapshot(
       &page, f1dl::Array<uint8_t>::From(std::vector<uint8_t>{0}));
   result = SnapshotGetKeys(&snapshot, f1dl::Array<uint8_t>());
-  EXPECT_EQ(N, result.size());
+  EXPECT_EQ(N, result->size());
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_TRUE(keys[i].Equals(result[i]));
+    EXPECT_TRUE(keys[i].Equals(result->at(i)));
   }
 
   // Get keys matching the prefix "00".
   snapshot = PageGetSnapshot(
       &page, f1dl::Array<uint8_t>::From(std::vector<uint8_t>{0, 0}));
   result = SnapshotGetKeys(&snapshot, f1dl::Array<uint8_t>());
-  ASSERT_EQ(2u, result.size());
+  ASSERT_EQ(2u, result->size());
   for (size_t i = 0; i < 2u; ++i) {
-    EXPECT_TRUE(keys[i].Equals(result[i]));
+    EXPECT_TRUE(keys[i].Equals(result->at(i)));
   }
 
   // Get keys matching the prefix "010".
   snapshot = PageGetSnapshot(
       &page, f1dl::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
   result = SnapshotGetKeys(&snapshot, f1dl::Array<uint8_t>());
-  ASSERT_EQ(1u, result.size());
-  EXPECT_TRUE(keys[2].Equals(result[0]));
+  ASSERT_EQ(1u, result->size());
+  EXPECT_TRUE(keys[2].Equals(result->at(0)));
 
   // Get keys matching the prefix "5".
   snapshot = PageGetSnapshot(
       &page, f1dl::Array<uint8_t>::From(std::vector<uint8_t>{5}));
   result = SnapshotGetKeys(&snapshot, f1dl::Array<uint8_t>());
-  EXPECT_EQ(0u, result.size());
+  EXPECT_EQ(0u, result->size());
 
   // Get keys matching the prefix "0" and starting with the key "010".
   snapshot = PageGetSnapshot(
       &page, f1dl::Array<uint8_t>::From(std::vector<uint8_t>{0}));
   result = SnapshotGetKeys(
       &snapshot, f1dl::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
-  EXPECT_EQ(2u, result.size());
+  EXPECT_EQ(2u, result->size());
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
@@ -239,7 +239,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   int num_queries;
   f1dl::Array<f1dl::Array<uint8_t>> result =
       SnapshotGetKeys(&snapshot, f1dl::Array<uint8_t>(), &num_queries);
-  EXPECT_EQ(0u, result.size());
+  EXPECT_EQ(0u, result->size());
   EXPECT_EQ(1, num_queries);
 
   // Add entries and grab a new snapshot.
@@ -267,9 +267,9 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   // Get all keys.
   result = SnapshotGetKeys(&snapshot, f1dl::Array<uint8_t>(), &num_queries);
   EXPECT_TRUE(num_queries > 1);
-  ASSERT_EQ(N, result.size());
+  ASSERT_EQ(N, result->size());
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_TRUE(keys[i].Equals(result[i]));
+    EXPECT_TRUE(keys[i].Equals(result->at(i)));
   }
 }
 
@@ -480,10 +480,10 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   // Verify that GetKeys() results are sorted.
   f1dl::Array<f1dl::Array<uint8_t>> result =
       SnapshotGetKeys(&snapshot, f1dl::Array<uint8_t>());
-  EXPECT_TRUE(keys[3].Equals(result[0]));
-  EXPECT_TRUE(keys[0].Equals(result[1]));
-  EXPECT_TRUE(keys[2].Equals(result[2]));
-  EXPECT_TRUE(keys[1].Equals(result[3]));
+  EXPECT_TRUE(keys[3].Equals(result->at(0)));
+  EXPECT_TRUE(keys[0].Equals(result->at(1)));
+  EXPECT_TRUE(keys[2].Equals(result->at(2)));
+  EXPECT_TRUE(keys[1].Equals(result->at(3)));
 
   // Verify that GetEntries() results are sorted.
   f1dl::Array<ledger::EntryPtr> entries =

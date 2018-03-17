@@ -31,9 +31,9 @@ namespace {
 
 template <class A>
 bool Equals(const f1dl::Array<uint8_t>& a1, const A& a2) {
-  if (a1.size() != a2.size())
+  if (a1->size() != a2.size())
     return false;
-  return memcmp(a1.data(), a2.data(), a1.size()) == 0;
+  return memcmp(a1->data(), a2.data(), a1->size()) == 0;
 }
 
 f1dl::Array<uint8_t> TestArray() {

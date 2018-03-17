@@ -400,7 +400,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
       callback::Capture(MakeQuitTask(), &status, &heads1));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, heads1.size());
+  EXPECT_EQ(1u, heads1->size());
 
   std::string key2("002-some_key2");
   std::string value2("another value");
@@ -415,18 +415,18 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
       callback::Capture(MakeQuitTask(), &status, &heads2));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, heads2.size());
+  EXPECT_EQ(1u, heads2->size());
 
-  EXPECT_NE(convert::ToString(heads1[0]), convert::ToString(heads2[0]));
+  EXPECT_NE(convert::ToString(heads1->at(0)), convert::ToString(heads2->at(0)));
 
   PageSnapshotPtr snapshot1;
-  page_debug->GetSnapshot(std::move(heads1[0]), snapshot1.NewRequest(),
+  page_debug->GetSnapshot(std::move(heads1->at(0)), snapshot1.NewRequest(),
                           callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 
   PageSnapshotPtr snapshot2;
-  page_debug->GetSnapshot(std::move(heads2[0]), snapshot2.NewRequest(),
+  page_debug->GetSnapshot(std::move(heads2->at(0)), snapshot2.NewRequest(),
                           callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
@@ -438,7 +438,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
                                           &expected_entries1, &next_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, expected_entries1.size());
+  EXPECT_EQ(1u, expected_entries1->size());
   EXPECT_EQ(key1, convert::ToString(expected_entries1[0]->key));
   EXPECT_EQ(value1, ToString(expected_entries1[0]->value));
 
@@ -448,7 +448,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
                                           &expected_entries2, &next_token));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(2u, expected_entries2.size());
+  EXPECT_EQ(2u, expected_entries2->size());
   EXPECT_EQ(key1, convert::ToString(expected_entries2[0]->key));
   EXPECT_EQ(value1, ToString(expected_entries2[0]->value));
   EXPECT_EQ(key2, convert::ToString(expected_entries2[1]->key));
@@ -487,7 +487,7 @@ TEST_F(PageManagerTest, GetCommit) {
       callback::Capture(MakeQuitTask(), &status, &heads1));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, heads1.size());
+  EXPECT_EQ(1u, heads1->size());
 
   std::string key2("002-some_key2");
   std::string value2("another value");
@@ -502,20 +502,20 @@ TEST_F(PageManagerTest, GetCommit) {
       callback::Capture(MakeQuitTask(), &status, &heads2));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, heads2.size());
+  EXPECT_EQ(1u, heads2->size());
 
   ledger::CommitPtr commit_struct = ledger::Commit::New();
-  f1dl::Array<uint8_t> currHeadCommit = heads2[0].Clone();
+  f1dl::Array<uint8_t> currHeadCommit = heads2->at(0).Clone();
   page_debug->GetCommit(
       std::move(currHeadCommit),
       callback::Capture(MakeQuitTask(), &status, &commit_struct));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(convert::ToString(heads2[0]),
+  EXPECT_EQ(convert::ToString(heads2->at(0)),
             convert::ToString(commit_struct->commit_id));
-  EXPECT_EQ(1u, commit_struct->parents_ids.size());
+  EXPECT_EQ(1u, commit_struct->parents_ids->size());
   EXPECT_EQ(1u, commit_struct->generation);
-  EXPECT_EQ(convert::ToString(heads1[0]),
+  EXPECT_EQ(convert::ToString(heads1->at(0)),
             convert::ToString(commit_struct->parents_ids[0]));
 }
 

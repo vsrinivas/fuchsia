@@ -122,7 +122,7 @@ void SyncBenchmark::Run() {
 void SyncBenchmark::OnChange(ledger::PageChangePtr page_change,
                              ledger::ResultState result_state,
                              const OnChangeCallback& callback) {
-  FXL_DCHECK(page_change->changed_entries.size() > 0);
+  FXL_DCHECK(page_change->changed_entries->size() > 0);
   size_t i =
       std::stoul(convert::ToString(page_change->changed_entries[0]->key));
   changed_entries_received_ += page_change->changed_entries.size();

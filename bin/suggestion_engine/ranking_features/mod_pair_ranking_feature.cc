@@ -47,7 +47,7 @@ double ModPairRankingFeature::ComputeFeatureInternal(
     const f1dl::Array<ContextValuePtr>& context_update_values) {
   double prob = 0.0;
 
-  for (auto& action : suggestion.prototype->proposal->on_selected) {
+  for (auto& action : *suggestion.prototype->proposal->on_selected) {
     f1dl::String module_url;
     switch (action->which()) {
       case Action::Tag::CREATE_STORY: {
@@ -72,7 +72,7 @@ double ModPairRankingFeature::ComputeFeatureInternal(
     }
     // Currently computing: max{P(m|mi) for mi in modules_in_source_story}
     // TODO(miguelfrde): compute P(module_url | modules in source story)
-    for (auto& context_value : context_update_values) {
+    for (auto& context_value : *context_update_values) {
       std::string existing_mod_url = context_value->meta->mod->url;
       if (module_pairs_.count(existing_mod_url) &&
           module_pairs_[existing_mod_url].count(module_url)) {
