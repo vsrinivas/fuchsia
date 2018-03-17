@@ -17,6 +17,17 @@ import (
 	"amber/publish"
 )
 
+type RepeatedArg []string
+
+func (r *RepeatedArg) Set(s string) error {
+	*r = append(*r, s)
+	return nil
+}
+
+func (r *RepeatedArg) String() string {
+	return strings.Join(*r, " ")
+}
+
 type manifestEntry struct {
 	localPath  string
 	remotePath string
@@ -27,20 +38,20 @@ var fuchsiaBuildDir = os.Getenv("FUCHSIA_BUILD_DIR")
 const serverBase = "amber-files"
 
 var (
-	usage = "usage: publish (-p|-b|-m) [-k=<keys_dir>] [-n=<name>] [-r=<repo_path>] -f=file "
-	// TODO(jmatt) support publishing batches of files instead of just singles
+	filePaths    = RepeatedArg{}
+	usage        = "usage: publish (-p|-b|-m) [-k=<keys_dir>] [-n=<name>] [-r=<repo_path>] -f=file "
 	tufFile      = flag.Bool("p", false, "Publish a package.")
 	packageSet   = flag.Bool("ps", false, "Publish a set of packages from a manifest.")
 	regFile      = flag.Bool("b", false, "Publish a content blob.")
 	blobSet      = flag.Bool("bs", false, "Publish a set of blobs from a manifest.")
 	manifestFile = flag.Bool("m", false, "Publish a the contents of a manifest as as content blobs.")
-	filePath     = flag.String("f", "", "Path of the file to publish")
 	name         = flag.String("n", "", "Name/path used for the published file. This only applies to '-p', package files If not supplied, the relative path supplied to '-f' will be used.")
 	repoPath     = flag.String("r", "", "Path to the TUF repository directory.")
 	keySrc       = flag.String("k", fuchsiaBuildDir, "Directory containing the signing keys.")
 )
 
 func main() {
+	flag.Var(&filePaths, "f", "Path(s) of the file(s) to publish")
 	flag.CommandLine.Usage = func() {
 		fmt.Println(usage)
 		flag.CommandLine.PrintDefaults()
@@ -69,9 +80,14 @@ func main() {
 		log.Fatal("A mode, -p, -ps, -b, or -m must be selected")
 	}
 
-	if _, e := os.Stat(*filePath); e != nil {
-		log.Fatal("File path must be valid")
-		return
+	if len(filePaths) == 0 {
+		log.Fatal("No file path supplied.")
+	}
+	for _, k := range filePaths {
+		if _, e := os.Stat(k); e != nil {
+			log.Fatalf("File path %q is not valid.\n", k)
+			return
+		}
 	}
 
 	// allow mkdir to fail, but check if the path exists afterward.
@@ -88,7 +104,10 @@ func main() {
 	}
 
 	if *packageSet {
-		f, err := os.Open(*filePath)
+		if len(filePaths) != 1 {
+			log.Fatalf("Too many file paths supplied.")
+		}
+		f, err := os.Open(filePaths[0])
 		if err != nil {
 			log.Fatalf("error reading package set manifest: %s", err)
 		}
@@ -110,7 +129,10 @@ func main() {
 			log.Fatalf("error committing repository updates: %s", err)
 		}
 	} else if *blobSet {
-		f, err := os.Open(*filePath)
+		if len(filePaths) != 1 {
+			log.Fatalf("Too many file paths supplied.")
+		}
+		f, err := os.Open(filePaths[0])
 		if err != nil {
 			log.Fatalf("error reading package set manifest: %s", err)
 		}
@@ -133,10 +155,13 @@ func main() {
 		}
 
 	} else if *tufFile {
-		if len(*name) == 0 {
-			name = filePath
+		if len(filePaths) != 1 {
+			log.Fatalf("Too many file paths supplied.")
 		}
-		if err = repo.AddPackageFile(*filePath, *name); err != nil {
+		if len(*name) == 0 {
+			name = &filePaths[0]
+		}
+		if err = repo.AddPackageFile(filePaths[0], *name); err != nil {
 			log.Fatalf("Problem adding signed file: %s\n", err)
 		}
 		if err = repo.CommitUpdates(); err != nil {
@@ -147,15 +172,18 @@ func main() {
 			log.Fatal("Name is not a valid argument for content addressed files")
 			return
 		}
-		//var filename string
-		if *name, err = repo.AddContentBlob(*filePath); err != nil {
-			log.Fatalf("Error adding regular file: %s\n", err)
-			return
+		for _, path := range filePaths {
+			//var filename string
+			if *name, err = repo.AddContentBlob(path); err != nil && err != os.ErrExist {
+				log.Fatalf("Error adding regular file: %s %s\n", path, err)
+				return
+			}
 		}
-
-		fmt.Printf("Added file as %s\n", *name)
 	} else {
-		if err = publishManifest(*filePath, repo); err != nil {
+		if len(filePaths) != 1 {
+			log.Fatalf("Too many file paths supplied.")
+		}
+		if err = publishManifest(filePaths[0], repo); err != nil {
 			fmt.Printf("Error processing manifest: %s\n", err)
 			os.Exit(1)
 		}
