@@ -32,7 +32,7 @@ void HostServer::RequestAdapter(
 
 void HostServer::RequestLowEnergyCentral(
     fidl::InterfaceRequest<bluetooth_low_energy::Central> request) {
-  BindServer<LowEnergyCentralServer>(std::move(request));
+  BindServer<LowEnergyCentralServer>(std::move(request), gatt_host_);
 }
 
 void HostServer::RequestLowEnergyPeripheral(

@@ -17,7 +17,8 @@
 
 namespace bthost {
 
-class Server;
+class GattClientServer;
+class GattServerServer;
 
 // This object is responsible for bridging the GATT profile to the outside
 // world.
@@ -42,31 +43,51 @@ class GattHost final : public fbl::RefCounted<GattHost>,
 
   void Initialize();
 
-  // This MUST be called to cleanly destroy this object.
+  // This MUST be called to cleanly destroy this object. This method is
+  // thread-safe.
   void ShutDown();
 
   // Closes all open FIDL interface handles.
   void CloseServers();
 
-  // Binds the given request to a FIDL server.
+  // Binds the given GATT server request to a FIDL server.
   void BindGattServer(fidl::InterfaceRequest<bluetooth_gatt::Server> request);
+
+  // Binds the given GATT client request to a FIDL server.
+  void BindGattClient(std::string peer_id,
+                      fidl::InterfaceRequest<bluetooth_gatt::Client> request);
+
+  // Unbinds a previously bound GATT client server associated with |peer_id|.
+  void UnbindGattClient(std::string peer_id);
 
   // Returns the GATT profile implementation.
   fbl::RefPtr<btlib::gatt::GATT> profile() const { return gatt_; }
+
+  // Sets a remote service handler to be notified when remote GATT services are
+  // discovered. These are used by HostDevice to publish bt-gatt-svc devices.
+  // This method is thread-safe. |callback| will not be called after ShutDown().
+  void SetRemoteServiceWatcher(
+      btlib::gatt::GATT::RemoteServiceWatcher callback);
 
  private:
   BT_FRIEND_TASK_DOMAIN(GattHost);
   friend class fbl::RefPtr<GattHost>;
 
   explicit GattHost(std::string thread_name);
-  ~GattHost() override = default;
+  ~GattHost() override;
 
   // Called by TaskDomain during shutdown. This must be called on the GATT task
   // runner.
   void CleanUp();
 
-  // Adds a new FIDL server. Must be called on GATT task runner's thread.
-  void AddServer(std::unique_ptr<Server> server);
+  // Closes the active FIDL servers. This must be called on the GATT thread.
+  void CloseServersInternal();
+
+  std::mutex mtx_;
+  btlib::gatt::GATT::RemoteServiceWatcher remote_service_watcher_
+      __TA_GUARDED(mtx_);
+
+  // NOTE: All members below must be accessed on the GATT thread
 
   // The GATT profile.
   fbl::RefPtr<btlib::gatt::GATT> gatt_;
@@ -74,7 +95,13 @@ class GattHost final : public fbl::RefCounted<GattHost>,
   // All currently active FIDL connections. These involve FIDL bindings that are
   // bound to |task_runner_|. These objects are highly thread hostile and must
   // be accessed only from |task_runner_|'s thread.
-  std::unordered_map<Server*, std::unique_ptr<Server>> servers_;
+  std::unordered_map<GattServerServer*, std::unique_ptr<GattServerServer>>
+      server_servers_;
+
+  // Mapping from peer identifiers to GattClient pointers. These are tracked by
+  // the peer IDs for easy removal on disconnection.
+  std::unordered_map<std::string, std::unique_ptr<GattClientServer>>
+      client_servers_;
 
   fxl::WeakPtrFactory<GattHost> weak_ptr_factory_;
 

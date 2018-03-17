@@ -96,6 +96,8 @@ zx_status_t HostDevice::Bind() {
 
         if (success) {
           FXL_VLOG(1) << "bt-host: Adapter initialized; make device visible";
+          host_->gatt_host()->SetRemoteServiceWatcher(
+              fbl::BindMember(this, &HostDevice::OnRemoteGattServiceAdded));
           device_make_visible(dev_);
           return;
         }
@@ -118,6 +120,9 @@ void HostDevice::Unbind() {
   FXL_VLOG(1) << "bt-host: unbind";
 
   std::lock_guard<std::mutex> lock(mtx_);
+
+  // Do this immediately to stop receiving new service callbacks.
+  host_->gatt_host()->SetRemoteServiceWatcher({});
 
   host_thread_runner_->PostTask([host = host_] {
     host->ShutDown();
@@ -171,6 +176,12 @@ zx_status_t HostDevice::Ioctl(uint32_t op,
   *out_actual = sizeof(zx_handle_t);
 
   return ZX_OK;
+}
+
+void HostDevice::OnRemoteGattServiceAdded(
+    const std::string& peer_id,
+    fbl::RefPtr<btlib::gatt::RemoteService> service) {
+  // TODO(armansito): Publish a bt-gatt-svc device attached to |service|.
 }
 
 void HostDevice::CleanUp() {

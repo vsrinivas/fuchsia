@@ -114,9 +114,9 @@ class LowEnergyConnectionManager final {
   //
   // |callback| is posted on the creation thread's task runner.
   using ConnectionResultCallback =
-      std::function<void(hci::Status, LowEnergyConnectionRefPtr)>;
+      fbl::Function<void(hci::Status, LowEnergyConnectionRefPtr)>;
   bool Connect(const std::string& device_identifier,
-               const ConnectionResultCallback& callback);
+               ConnectionResultCallback callback);
 
   // Disconnects any existing LE connection to |device_identifier|, invalidating
   // all active LowEnergyConnectionRefs. Returns false if |device_identifier| is
@@ -170,15 +170,15 @@ class LowEnergyConnectionManager final {
   class PendingRequestData {
    public:
     PendingRequestData(const common::DeviceAddress& address,
-                       const ConnectionResultCallback& first_callback);
+                       ConnectionResultCallback first_callback);
     PendingRequestData() = default;
     ~PendingRequestData() = default;
 
     PendingRequestData(PendingRequestData&&) = default;
     PendingRequestData& operator=(PendingRequestData&&) = default;
 
-    void AddCallback(const ConnectionResultCallback& cb) {
-      callbacks_.push_back(cb);
+    void AddCallback(ConnectionResultCallback cb) {
+      callbacks_.push_back(std::move(cb));
     }
 
     // Notifies all elements in |callbacks| with |status| and the result of

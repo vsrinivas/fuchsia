@@ -150,6 +150,13 @@ class TaskDomain {
     FXL_DCHECK(async_get_default() == dispatcher());
   }
 
+  // Returns true if this domain is still alive. This function is only safe to
+  // call on the domain thread.
+  bool alive() const {
+    FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+    return alive_;
+  }
+
  private:
   void Init(T* obj) {
     FXL_DCHECK(obj);

@@ -54,6 +54,11 @@ class HostDevice final {
                     size_t out_len,
                     size_t* out_actual);
 
+  // Called when a new remote GATT service has been found.
+  void OnRemoteGattServiceAdded(
+      const std::string& peer_id,
+      fbl::RefPtr<btlib::gatt::RemoteService> service);
+
   void CleanUp() __TA_REQUIRES(mtx_);
 
   zx_device_t* dev_;     // The bt-host device we published.

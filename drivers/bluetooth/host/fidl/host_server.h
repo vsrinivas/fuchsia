@@ -50,10 +50,10 @@ class HostServer : public AdapterServerBase<::bluetooth_host::Host> {
 
   // Helper for binding a fidl::InterfaceRequest to a FIDL server of type
   // ServerType.
-  template <typename ServerType, typename InterfaceType>
-  void BindServer(fidl::InterfaceRequest<InterfaceType> request) {
+  template <typename ServerType, typename... Args>
+  void BindServer(Args... args) {
     auto server = std::make_unique<ServerType>(adapter()->AsWeakPtr(),
-                                               std::move(request));
+                                               std::move(args)...);
     server->set_error_handler(
         std::bind(&HostServer::OnConnectionError, this, server.get()));
     servers_[server.get()] = std::move(server);

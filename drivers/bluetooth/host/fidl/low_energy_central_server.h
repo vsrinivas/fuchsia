@@ -12,6 +12,7 @@
 #include "lib/fxl/macros.h"
 
 #include "garnet/drivers/bluetooth/host/fidl/server_base.h"
+#include "garnet/drivers/bluetooth/host/gatt_host.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
 
@@ -23,7 +24,8 @@ class LowEnergyCentralServer
  public:
   LowEnergyCentralServer(
       fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-      ::fidl::InterfaceRequest<::bluetooth_low_energy::Central> request);
+      ::fidl::InterfaceRequest<::bluetooth_low_energy::Central> request,
+      fbl::RefPtr<GattHost> gatt_host);
   ~LowEnergyCentralServer() override = default;
 
  private:
@@ -55,6 +57,9 @@ class LowEnergyCentralServer
   // Notifies the delegate that the device with the given identifier has been
   // disconnected.
   void NotifyPeripheralDisconnected(const std::string& identifier);
+
+  // The GATT host is used to instantiate GATT Clients upon connection.
+  fbl::RefPtr<GattHost> gatt_host_;
 
   // The currently active LE discovery session. This is initialized when a
   // client requests to perform a scan.

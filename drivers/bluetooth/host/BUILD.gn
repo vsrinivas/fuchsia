@@ -27,6 +27,8 @@ source_set("sources") {
     # FIDL servers
     "fidl/adapter_server.cc",
     "fidl/adapter_server.h",
+    "fidl/gatt_client_server.cc",
+    "fidl/gatt_client_server.h",
     "fidl/gatt_server_server.cc",
     "fidl/gatt_server_server.h",
     "fidl/helpers.cc",

@@ -162,8 +162,10 @@ void LowEnergyConnectionRef::MarkClosed() {
 
 LowEnergyConnectionManager::PendingRequestData::PendingRequestData(
     const common::DeviceAddress& address,
-    const ConnectionResultCallback& first_callback)
-    : address_(address), callbacks_{first_callback} {}
+    ConnectionResultCallback first_callback)
+    : address_(address) {
+  callbacks_.push_back(std::move(first_callback));
+}
 
 void LowEnergyConnectionManager::PendingRequestData::NotifyCallbacks(
     hci::Status status,
@@ -246,9 +248,8 @@ LowEnergyConnectionManager::~LowEnergyConnectionManager() {
   connections_.clear();
 }
 
-bool LowEnergyConnectionManager::Connect(
-    const std::string& device_identifier,
-    const ConnectionResultCallback& callback) {
+bool LowEnergyConnectionManager::Connect(const std::string& device_identifier,
+                                         ConnectionResultCallback callback) {
   if (!connector_) {
     FXL_LOG(WARNING)
         << "gap: LowEnergyConnectionManager: Connect called during shutdown!";
@@ -285,7 +286,7 @@ bool LowEnergyConnectionManager::Connect(
     FXL_DCHECK(connections_.find(device_identifier) == connections_.end());
     FXL_DCHECK(connector_->request_pending());
 
-    pending_iter->second.AddCallback(callback);
+    pending_iter->second.AddCallback(std::move(callback));
     return true;
   }
 
@@ -293,8 +294,9 @@ bool LowEnergyConnectionManager::Connect(
   // succeed.
   auto conn_ref = AddConnectionRef(device_identifier);
   if (conn_ref) {
-    task_runner_->PostTask(fxl::MakeCopyable(
-        [ conn_ref = std::move(conn_ref), callback ]() mutable {
+    task_runner_->PostTask(
+        fxl::MakeCopyable([conn_ref = std::move(conn_ref),
+                           callback = std::move(callback)]() mutable {
           // Do not report success if the link has been disconnected (e.g. via
           // Disconnect() or other circumstances).
           if (!conn_ref->active()) {
@@ -312,7 +314,7 @@ bool LowEnergyConnectionManager::Connect(
 
   peer->set_connection_state(RemoteDevice::ConnectionState::kInitializing);
   pending_requests_[device_identifier] =
-      PendingRequestData(peer->address(), callback);
+      PendingRequestData(peer->address(), std::move(callback));
 
   TryCreateNextConnection();
 

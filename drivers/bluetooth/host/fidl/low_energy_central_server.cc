@@ -23,10 +23,14 @@ namespace bthost {
 
 LowEnergyCentralServer::LowEnergyCentralServer(
     fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-    fidl::InterfaceRequest<Central> request)
+    fidl::InterfaceRequest<Central> request,
+    fbl::RefPtr<GattHost> gatt_host)
     : AdapterServerBase(adapter, this, std::move(request)),
+      gatt_host_(gatt_host),
       requesting_scan_(false),
-      weak_ptr_factory_(this) {}
+      weak_ptr_factory_(this) {
+  FXL_DCHECK(gatt_host_);
+}
 
 void LowEnergyCentralServer::SetDelegate(
     ::fidl::InterfaceHandle<CentralDelegate> delegate) {
@@ -151,8 +155,9 @@ void LowEnergyCentralServer::ConnectPeripheral(
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  auto conn_cb = [self, callback, id = identifier.get()](auto status,
-                                                         auto conn_ref) {
+  auto conn_cb = [self, callback, id = identifier.get(),
+                  request = std::move(client_request)](auto status,
+                                                       auto conn_ref) mutable {
     if (!self)
       return;
 
@@ -188,11 +193,21 @@ void LowEnergyCentralServer::ConnectPeripheral(
                      "connection attempt";
     }
 
-    // TODO(armansito): Bind |client_request| here.
+    self->gatt_host_->BindGattClient(id, std::move(request));
+
+    conn_ref->set_closed_callback([self, id] {
+      if (self && self->connections_.erase(id) != 0) {
+        self->gatt_host_->UnbindGattClient(id);
+        self->NotifyPeripheralDisconnected(id);
+      }
+    });
+
+    iter->second = std::move(conn_ref);
     callback(Status());
   };
 
-  if (!adapter()->le_connection_manager()->Connect(identifier.get(), conn_cb)) {
+  if (!adapter()->le_connection_manager()->Connect(identifier.get(),
+                                                   std::move(conn_cb))) {
     auto msg = fxl::StringPrintf("Cannot connect to unknown device id: %s",
                                  identifier.get().c_str());
     FXL_VLOG(1) << msg;
@@ -222,7 +237,9 @@ void LowEnergyCentralServer::DisconnectPeripheral(
   if (was_pending) {
     FXL_VLOG(1) << "Canceling ConnectPeripheral";
   } else {
-    NotifyPeripheralDisconnected(identifier.get());
+    const std::string& peer_id = identifier.get();
+    gatt_host_->UnbindGattClient(peer_id);
+    NotifyPeripheralDisconnected(peer_id);
   }
 
   callback(Status());
