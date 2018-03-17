@@ -3,8 +3,23 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # list of packages
+  # List of packages (a comma-separated string).  If unset, guessed based
+  # on which layer is found in the //.jiri_manifest file.
+  # TODO(mcgrathr): This should be a GN list, not a string with commas.
   fuchsia_packages = ""
+}
+
+if (fuchsia_packages == "") {
+  _jiri_manifest = "//.jiri_manifest"
+  foreach(layer, exec_script("//build/gn/guess_layer.py",
+                             [rebase_path(_jiri_manifest)],
+                             "list lines",
+                             [_jiri_manifest])) {
+    if (fuchsia_packages != "") {
+      fuchsia_packages += ","
+    }
+    fuchsia_packages += "$layer/packages/default"
+  }
 }
 
 _preprocessed_packages = exec_script("prepreprocess_build_packages.py",
