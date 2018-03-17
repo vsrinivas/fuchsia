@@ -418,8 +418,11 @@ Decl* Library::LookupType(const flat::Type* type) {
         case flat::Type::Kind::Handle:
         case flat::Type::Kind::RequestHandle:
         case flat::Type::Kind::Primitive:
-        case flat::Type::Kind::Vector:
             return nullptr;
+        case flat::Type::Kind::Vector: {
+            type = static_cast<const flat::VectorType*>(type)->element_type.get();
+            continue;
+        }
         case flat::Type::Kind::Array: {
             type = static_cast<const flat::ArrayType*>(type)->element_type.get();
             continue;
