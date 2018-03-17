@@ -127,10 +127,12 @@ def main():
     # Note: Package versions will be utilized in the future
     package_version = 0
 
+    meta_fars = []
     with open(args.amber_package_list, "w+") as amber_package_list:
         for package in packages:
             meta_far = os.path.join(args.packages_dir, package, "meta.far")
             amber_package_list.write("%s/%s=%s\n" % (package, package_version, meta_far))
+            meta_fars.append(meta_far)
         if not packages:
             amber_package_list.write("")
 
@@ -142,6 +144,12 @@ def main():
 
     subprocess.check_call([args.amber_publish, "-bs", "-f", args.amber_blobs_manifest, "-r", args.amber_repo, "-k", args.amber_keys])
 
+    if len(meta_fars) > 0:
+        blob_fars_args = [args.amber_publish, "-b", "-r", args.amber_repo, "-k", args.amber_keys]
+        for mf in meta_fars:
+            blob_fars_args.append("-f")
+            blob_fars_args.append(mf)
+        subprocess.check_call(blob_fars_args)
 
     blob_manifest_dir = os.path.dirname(args.blob_manifest)
     with open(args.blob_manifest, "w+") as blob_manifest:
