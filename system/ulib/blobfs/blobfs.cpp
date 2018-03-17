@@ -708,26 +708,30 @@ zx_status_t Blobfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
 
 zx_status_t Blobfs::LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
     TRACE_DURATION("blobfs", "Blobfs::LookupBlob");
+    fbl::RefPtr<VnodeBlob> vn;
     // Look up blob in the fast map (is the blob open elsewhere?)
     {
+        // Avoid releasing a reference to |vn| while holding |hash_lock_|.
         fbl::AutoLock lock(&hash_lock_);
         auto raw_vn = hash_.find(digest.AcquireBytes()).CopyPointer();
         digest.ReleaseBytes();
 
         if (raw_vn != nullptr) {
-            auto vn = fbl::internal::MakeRefPtrUpgradeFromRaw(raw_vn, hash_lock_);
+            vn = fbl::internal::MakeRefPtrUpgradeFromRaw(raw_vn, hash_lock_);
 
             if (vn == nullptr) {
                 // Blob was found but is being deleted - remove from hash so we don't collide
                 VnodeReleaseLocked(raw_vn);
-            } else {
-                if (out != nullptr) {
-                    UpdateLookupMetrics(vn->SizeData());
-                    *out = fbl::move(vn);
-                }
-                return ZX_OK;
             }
         }
+    }
+
+    if (vn != nullptr) {
+        if (out != nullptr) {
+            UpdateLookupMetrics(vn->SizeData());
+            *out = fbl::move(vn);
+        }
+        return ZX_OK;
     }
 
     // Look up blob in the slow map
@@ -737,8 +741,7 @@ zx_status_t Blobfs::LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out
                 if (out != nullptr) {
                     // Found it. Attempt to wrap the blob in a vnode.
                     fbl::AllocChecker ac;
-                    fbl::RefPtr<VnodeBlob> vn =
-                        fbl::AdoptRef(new (&ac) VnodeBlob(fbl::RefPtr<Blobfs>(this), digest));
+                    vn = fbl::AdoptRef(new (&ac) VnodeBlob(fbl::RefPtr<Blobfs>(this), digest));
                     if (!ac.check()) {
                         return ZX_ERR_NO_MEMORY;
                     }

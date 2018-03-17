@@ -1050,7 +1050,8 @@ zx_status_t VnodeMinfs::ForEachDirent(DirArgs* args, const DirentCallback func) 
 }
 
 void VnodeMinfs::fbl_recycle() {
-    if (fd_count_ != 0 || !IsUnlinked()) {
+    ZX_DEBUG_ASSERT(fd_count_ == 0);
+    if (!IsUnlinked()) {
         // If this node has not been purged already, remove it from the
         // hash map. If it has been purged; it will already be absent
         // from the map (and may have already been replaced with a new

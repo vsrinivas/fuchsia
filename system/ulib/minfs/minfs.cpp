@@ -658,23 +658,28 @@ void Minfs::VnodeInsert(VnodeMinfs* vn) {
 
 fbl::RefPtr<VnodeMinfs> Minfs::VnodeLookup(uint32_t ino) {
 #ifdef __Fuchsia__
-    fbl::AutoLock lock(&hash_lock_);
-    auto rawVn = vnode_hash_.find(ino);
-    if (!rawVn.IsValid()) {
-        // Nothing exists in the lookup table
-        return nullptr;
+    fbl::RefPtr<VnodeMinfs> vn;
+    {
+        // Avoid releasing a reference to |vn| while holding |hash_lock_|.
+        fbl::AutoLock lock(&hash_lock_);
+        auto rawVn = vnode_hash_.find(ino);
+        if (!rawVn.IsValid()) {
+            // Nothing exists in the lookup table
+            return nullptr;
+        }
+        vn = fbl::internal::MakeRefPtrUpgradeFromRaw(rawVn.CopyPointer(), hash_lock_);
+        if (vn == nullptr) {
+            // The vn 'exists' in the map, but it is being deleted.
+            // Remove it (by key) so the next person doesn't trip on it,
+            // and so we can insert another node with the same key into the hash
+            // map.
+            // Notably, VnodeReleaseLocked erases the vnode by object, not key,
+            // so it will not attempt to replace any distinct Vnodes that happen
+            // to be re-using the same inode.
+            vnode_hash_.erase(ino);
+        }
     }
-    auto vn = fbl::internal::MakeRefPtrUpgradeFromRaw(rawVn.CopyPointer(), hash_lock_);
-    if (vn == nullptr) {
-        // The vn 'exists' in the map, but it is being deleted.
-        // Remove it (by key) so the next person doesn't trip on it,
-        // and so we can insert another node with the same key into the hash
-        // map.
-        // Notably, VnodeReleaseLocked erases the vnode by object, not key,
-        // so it will not attempt to replace any distinct Vnodes that happen
-        // to be re-using the same inode.
-        vnode_hash_.erase(ino);
-    } else if (vn->IsUnlinked()) {
+    if (vn != nullptr && vn->IsUnlinked()) {
         vn = nullptr;
     }
     return vn;
