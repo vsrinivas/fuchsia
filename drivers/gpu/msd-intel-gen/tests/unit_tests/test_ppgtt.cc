@@ -10,6 +10,22 @@
 
 class TestPerProcessGtt {
 public:
+    class MockBusMapping : public magma::PlatformBuffer::BusMapping {
+    public:
+        MockBusMapping(uint64_t page_offset, uint64_t page_count)
+            : page_offset_(page_offset), phys_addr_(page_count)
+        {
+        }
+
+        uint64_t page_offset() override { return page_offset_; }
+        uint64_t page_count() override { return phys_addr_.size(); }
+        std::vector<uint64_t>& Get() override { return phys_addr_; }
+
+    private:
+        uint64_t page_offset_;
+        std::vector<uint64_t> phys_addr_;
+    };
+
     static uint32_t cache_bits(CachingType caching_type)
     {
         switch (caching_type) {
@@ -35,30 +51,26 @@ public:
         }
     }
 
-    static void check_pte_entries(PerProcessGtt* ppgtt, magma::PlatformBuffer* buffer,
-                                  uint64_t gpu_addr, CachingType caching_type)
+    static void check_pte_entries(PerProcessGtt* ppgtt,
+                                  magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t gpu_addr,
+                                  CachingType caching_type)
     {
-        ASSERT_TRUE(magma::is_page_aligned(buffer->size()));
-        uint32_t page_count = buffer->size() / PAGE_SIZE;
+        auto& bus_addr_array = bus_mapping->Get();
 
-        uint64_t bus_addr[page_count];
-        EXPECT_TRUE(buffer->MapPageRangeBus(0, page_count, bus_addr));
-
-        for (unsigned int i = 0;
-             i < page_count + PerProcessGtt::kOverfetchPageCount + PerProcessGtt::kGuardPageCount;
+        for (unsigned int i = 0; i < bus_addr_array.size() + PerProcessGtt::kOverfetchPageCount +
+                                         PerProcessGtt::kGuardPageCount;
              i++) {
             uint64_t pte = ppgtt->get_pte(gpu_addr + i * PAGE_SIZE);
-            if (i < page_count) {
-                EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr[i]);
+            if (i < bus_addr_array.size()) {
+                EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr_array[i]);
             } else {
                 EXPECT_EQ(pte & ~(PAGE_SIZE - 1), ppgtt->pml4_table()->scratch_page_bus_addr());
             }
 
             EXPECT_TRUE(pte & (1 << 0));
-            EXPECT_EQ(static_cast<bool>(pte & (1 << 1)), i < page_count); // writeable
+            EXPECT_EQ(static_cast<bool>(pte & (1 << 1)), i < bus_addr_array.size()); // writeable
             EXPECT_EQ(pte & cache_bits(caching_type), cache_bits(caching_type));
         }
-        EXPECT_TRUE(buffer->UnmapPageRangeBus(0, page_count));
     }
 
     static void Init()
@@ -90,11 +102,13 @@ public:
         EXPECT_TRUE(ppgtt->Alloc(buffer[1]->size(), 0, &addr[1]));
 
         // Mismatch addr and buffer
-        EXPECT_FALSE(ppgtt->Insert(addr[1], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE));
+        MockBusMapping mapping(0, 0);
+        EXPECT_FALSE(
+            ppgtt->Insert(addr[1], &mapping, 0, buffer[0]->size() / PAGE_SIZE, CACHING_NONE));
 
         // Totally bogus addr
         EXPECT_FALSE(
-            ppgtt->Insert(0xdead1000, buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE));
+            ppgtt->Insert(0xdead1000, &mapping, 0, buffer[0]->size() / PAGE_SIZE, CACHING_NONE));
 
         // Bogus addr
         EXPECT_FALSE(ppgtt->Clear(0xdead1000));
@@ -110,6 +124,7 @@ public:
 
         std::vector<uint64_t> addr(2);
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
+        std::vector<std::unique_ptr<MockBusMapping>> bus_mapping(2);
 
         // Placeholder occupies most of the first page directory
         uint64_t placeholder_addr;
@@ -122,11 +137,24 @@ public:
         buffer[1] = magma::PlatformBuffer::Create(10000, "test");
         EXPECT_TRUE(ppgtt->Alloc(buffer[1]->size(), 0, &addr[1]));
 
-        EXPECT_TRUE(ppgtt->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE));
-        check_pte_entries(ppgtt.get(), buffer[0].get(), addr[0], CACHING_NONE);
+        bus_mapping[0] = std::make_unique<MockBusMapping>(0, buffer[0]->size() / PAGE_SIZE);
+        uint64_t phys_addr_base = 0xabcd1000;
+        for (auto& phys_addr : bus_mapping[0]->Get()) {
+            phys_addr = phys_addr_base += PAGE_SIZE;
+        }
 
-        EXPECT_TRUE(ppgtt->Insert(addr[1], buffer[1].get(), 0, buffer[1]->size(), CACHING_NONE));
-        check_pte_entries(ppgtt.get(), buffer[1].get(), addr[1], CACHING_NONE);
+        bus_mapping[1] = std::make_unique<MockBusMapping>(0, buffer[1]->size() / PAGE_SIZE);
+        for (auto& phys_addr : bus_mapping[1]->Get()) {
+            phys_addr = phys_addr_base += PAGE_SIZE;
+        }
+
+        EXPECT_TRUE(ppgtt->Insert(addr[0], bus_mapping[0].get(), 0, buffer[0]->size() / PAGE_SIZE,
+                                  CACHING_NONE));
+        check_pte_entries(ppgtt.get(), bus_mapping[0].get(), addr[0], CACHING_NONE);
+
+        EXPECT_TRUE(ppgtt->Insert(addr[1], bus_mapping[1].get(), 0, buffer[1]->size() / PAGE_SIZE,
+                                  CACHING_NONE));
+        check_pte_entries(ppgtt.get(), bus_mapping[1].get(), addr[1], CACHING_NONE);
 
         EXPECT_TRUE(ppgtt->Clear(addr[1]));
         check_pte_entries_clear(ppgtt.get(), addr[1], buffer[1]->size());

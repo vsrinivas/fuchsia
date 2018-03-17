@@ -5,8 +5,11 @@
 #ifndef GPU_MAPPING_H_
 #define GPU_MAPPING_H_
 
+#include "magma_util/macros.h"
+#include "platform_buffer.h"
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 class MsdArmBuffer;
 class MsdArmConnection;
@@ -32,10 +35,17 @@ public:
     uint64_t page_offset() const { return page_offset_; }
     uint64_t size() const { return size_; }
     uint64_t flags() const { return flags_; }
+
     uint64_t pinned_page_count() const { return pinned_page_count_; }
-    void set_pinned_page_count(uint64_t pinned_page_count)
+    void shrink_pinned_pages(uint64_t pages_removed)
     {
-        pinned_page_count_ = pinned_page_count;
+        DASSERT(pinned_page_count_ >= pages_removed);
+        pinned_page_count_ -= pages_removed;
+    }
+    void grow_pinned_pages(std::unique_ptr<magma::PlatformBuffer::BusMapping> bus_mapping)
+    {
+        pinned_page_count_ += bus_mapping->page_count();
+        bus_mappings_.push_back(std::move(bus_mapping));
     }
 
     std::weak_ptr<MsdArmBuffer> buffer() const;
@@ -50,6 +60,7 @@ private:
     Owner* const owner_;
     uint64_t pinned_page_count_ = 0;
     std::weak_ptr<MsdArmBuffer> buffer_;
+    std::vector<std::unique_ptr<magma::PlatformBuffer::BusMapping>> bus_mappings_;
 };
 
 #endif // GPU_MAPPING_H_

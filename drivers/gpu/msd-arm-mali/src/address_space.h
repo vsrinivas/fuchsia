@@ -73,8 +73,8 @@ public:
 
     ~AddressSpace();
 
-    bool Insert(gpu_addr_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
-                uint64_t flags);
+    bool Insert(gpu_addr_t addr, magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t offset,
+                uint64_t length, uint64_t flags);
 
     bool Clear(gpu_addr_t start, uint64_t length);
     void Unlock() { owner_->GetAddressSpaceObserver()->UnlockAddressSpace(this); }
@@ -112,7 +112,7 @@ private:
 
         void WritePte(uint64_t page_index, mali_pte_t pte);
 
-        uint64_t page_bus_address() const { return page_bus_address_; }
+        uint64_t page_bus_address() const { return bus_mapping_->Get()[0]; }
 
         // Collect empty page tables that are in the path to page_number, and
         // put them in |empty_tables|. |is_empty| is set if the page table is
@@ -125,14 +125,14 @@ private:
 
         PageTable(uint32_t level, bool cache_coherent,
                   std::unique_ptr<magma::PlatformBuffer> buffer, PageTableGpu* gpu,
-                  uint64_t page_bus_address);
+                  std::unique_ptr<magma::PlatformBuffer::BusMapping> bus_mapping);
 
         // The root page table has level 3, and the leaves have level 0.
         const uint32_t level_;
         const bool cache_coherent_;
         std::unique_ptr<magma::PlatformBuffer> buffer_;
         PageTableGpu* gpu_;
-        uint64_t page_bus_address_;
+        std::unique_ptr<magma::PlatformBuffer::BusMapping> bus_mapping_;
         std::vector<std::unique_ptr<PageTable>> next_levels_;
 
         friend class TestAddressSpace;

@@ -17,7 +17,7 @@
 #include <ddk/protocol/intel-gpu-core.h>
 
 #include <atomic>
-#include <set>
+#include <map>
 #include <thread>
 #include <zircon/process.h>
 #include <zircon/types.h>
@@ -46,7 +46,7 @@ struct sysdrv_device_t {
     zx_display_cb_t ownership_change_callback{nullptr};
     void* ownership_change_cookie{nullptr};
 
-    std::set<uint64_t> client_gtt_allocations;
+    std::map<uint64_t, std::unique_ptr<magma::PlatformBuffer::BusMapping>> client_gtt_allocations;
     std::unordered_map<uint32_t, std::unique_ptr<magma::PlatformMmio>> client_mmio_allocations;
 
     std::unique_ptr<MagmaDriver> magma_driver;
@@ -117,7 +117,7 @@ static zx_status_t gtt_alloc(void* ctx, uint64_t size, uint64_t* addr_out)
 {
     if (!get_device(ctx)->core_device->gtt()->Alloc(size * PAGE_SIZE, 0, addr_out))
         return DRET_MSG(ZX_ERR_INTERNAL, "Alloc failed");
-    get_device(ctx)->client_gtt_allocations.insert(*addr_out);
+    get_device(ctx)->client_gtt_allocations[*addr_out] = nullptr;
     return ZX_OK;
 }
 
@@ -136,12 +136,26 @@ static zx_status_t gtt_clear(void* ctx, uint64_t addr)
     return ZX_OK;
 }
 
-static zx_status_t gtt_insert(void* ctx, uint64_t addr, zx_handle_t buffer, uint64_t page_offset,
-                              uint64_t page_count)
+static zx_status_t gtt_insert(void* ctx, uint64_t addr, zx_handle_t buffer_handle,
+                              uint64_t page_offset, uint64_t page_count)
 {
-    if (!get_device(ctx)->core_device->gtt()->Insert(addr, buffer, page_offset * PAGE_SIZE,
-                                                     page_count * PAGE_SIZE, CACHING_LLC))
+    auto iter = get_device(ctx)->client_gtt_allocations.find(addr);
+    if (iter == get_device(ctx)->client_gtt_allocations.end())
+        return DRET_MSG(ZX_ERR_INVALID_ARGS, "couldn't find addr in client_gtt_allocations");
+
+    auto buffer = magma::PlatformBuffer::Import(buffer_handle);
+    if (!buffer)
+        return DRET_MSG(ZX_ERR_NO_MEMORY, "failed to import buffer handle");
+
+    auto bus_mapping = buffer->MapPageRangeBus(page_offset, page_count);
+    if (!bus_mapping)
+        return DRET_MSG(ZX_ERR_NO_MEMORY, "failed to map page range to bus");
+
+    if (!get_device(ctx)->core_device->gtt()->Insert(addr, bus_mapping.get(), page_offset,
+                                                     page_count, CACHING_LLC))
         return DRET_MSG(ZX_ERR_INTERNAL, "Insert failed");
+
+    iter->second = std::move(bus_mapping);
     return ZX_OK;
 }
 

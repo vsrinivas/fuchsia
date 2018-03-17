@@ -27,8 +27,15 @@ public:
     bool Free(uint64_t addr) override;
 
     bool Clear(uint64_t addr) override;
-    bool Insert(uint64_t addr, uint32_t buffer_handle, uint64_t offset, uint64_t length,
-                CachingType caching_type) override;
+
+    bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer,
+                         magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t page_offset,
+                         uint64_t page_count, CachingType caching_type) override
+    {
+        return Insert(addr, bus_mapping, page_offset, page_count, caching_type);
+    }
+    bool Insert(uint64_t addr, magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t page_offset,
+                uint64_t page_count, CachingType caching_type) override;
 
 private:
     uint64_t pte_mmio_offset() { return mmio_->size() / 2; }
@@ -49,7 +56,7 @@ private:
     // Protect all AddressSpace methods because of access from gpu and core device.
     std::mutex mutex_;
 
-    uint64_t scratch_bus_addr_;
+    std::unique_ptr<magma::PlatformBuffer::BusMapping> scratch_bus_mapping_;
     uint64_t size_;
 
     friend class TestGtt;
@@ -117,7 +124,8 @@ bool GttCore::InitScratch()
 {
     scratch_ = magma::PlatformBuffer::Create(PAGE_SIZE, "gtt-scratch");
 
-    if (!scratch_->MapPageRangeBus(0, 1, &scratch_bus_addr_))
+    scratch_bus_mapping_ = scratch_->MapPageRangeBus(0, 1);
+    if (!scratch_bus_mapping_)
         return DRETF(false, "MapPageBus failed");
 
     return true;
@@ -171,7 +179,7 @@ bool GttCore::Clear(uint64_t start, uint64_t length)
     if (first_entry + num_entries > max_entries)
         return DRETF(false, "exceeded max_entries");
 
-    gen_pte_t pte = gen_pte_encode(scratch_bus_addr_, false);
+    gen_pte_t pte = gen_pte_encode(scratch_bus_mapping_->Get()[0], false);
 
     uint64_t pte_offset = pte_mmio_offset() + first_entry * sizeof(gen_pte_t);
 
@@ -184,20 +192,10 @@ bool GttCore::Clear(uint64_t start, uint64_t length)
     return true;
 }
 
-bool GttCore::Insert(uint64_t addr, uint32_t buffer_handle, uint64_t offset, uint64_t length,
-                     CachingType caching_type)
+bool GttCore::Insert(uint64_t addr, magma::PlatformBuffer::BusMapping* bus_mapping,
+                     uint64_t page_offset, uint64_t page_count, CachingType caching_type)
 {
     DLOG("InsertEntries addr 0x%lx", addr);
-    DASSERT(magma::is_page_aligned(offset));
-    DASSERT(magma::is_page_aligned(length));
-
-    // When this platform buffer goes out of scope, the vmo will be unpinned.
-    // To ensure the pages stay pinned, we re-pin in Gtt::Insert; this ping-pong
-    // isn't ideal but pin doesn't actually mean anything currently, and this
-    // core device implementation will be going away shortly.
-    auto buffer = magma::PlatformBuffer::Import(buffer_handle);
-    if (!buffer)
-        return DRETF(false, "failed to import buffer handle");
 
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -206,37 +204,30 @@ bool GttCore::Insert(uint64_t addr, uint32_t buffer_handle, uint64_t offset, uin
         return DRETF(false, "couldn't get allocated length for addr");
 
     // add an extra page to length to account for the overfetch protection page
-    if (length + PAGE_SIZE != allocated_length)
+    if (page_count * PAGE_SIZE + PAGE_SIZE != allocated_length)
         return DRETF(false, "allocated length (0x%zx) doesn't match length (0x%" PRIx64 ")",
-                     allocated_length, length);
+                     allocated_length, page_count * PAGE_SIZE);
 
-    uint32_t start_page_index = offset / PAGE_SIZE;
-    uint32_t num_pages = length / PAGE_SIZE;
-
-    DLOG("start_page_index 0x%x num_pages 0x%x", start_page_index, num_pages);
+    auto& bus_addr_array = bus_mapping->Get();
+    if (bus_addr_array.size() != page_count)
+        return DRETF(false, "incorrect bus mapping length");
 
     uint64_t first_entry = addr >> PAGE_SHIFT;
     uint64_t pte_offset = pte_mmio_offset() + first_entry * sizeof(gen_pte_t);
 
-    std::vector<uint64_t> bus_addr_array;
-    bus_addr_array.resize(num_pages);
-
-    if (!buffer->MapPageRangeBus(start_page_index, num_pages, bus_addr_array.data()))
-        return DRETF(false, "failed obtaining bus addresses");
-
-    for (unsigned int i = 0; i < num_pages; i++) {
+    for (unsigned int i = 0; i < page_count; i++) {
         auto pte = gen_pte_encode(bus_addr_array[i], true);
         mmio_->Write64(pte_offset + i * sizeof(gen_pte_t), static_cast<uint64_t>(pte));
     }
 
     // insert pte for overfetch protection page
-    auto pte = gen_pte_encode(scratch_bus_addr_, true);
-    mmio_->Write64(pte_offset + (num_pages) * sizeof(gen_pte_t), static_cast<uint64_t>(pte));
+    auto pte = gen_pte_encode(scratch_bus_mapping_->Get()[0], true);
+    mmio_->Write64(pte_offset + (page_count) * sizeof(gen_pte_t), static_cast<uint64_t>(pte));
 
-    uint64_t readback = mmio_->PostingRead64(pte_offset + (num_pages - 1) * sizeof(gen_pte_t));
+    uint64_t readback = mmio_->PostingRead64(pte_offset + (page_count - 1) * sizeof(gen_pte_t));
 
     if (magma::kDebug) {
-        auto expected = gen_pte_encode(bus_addr_array[num_pages - 1], true);
+        auto expected = gen_pte_encode(bus_addr_array[page_count - 1], true);
         if (readback != expected) {
             DLOG("Mismatch posting read: 0x%0lx != 0x%0lx", readback, expected);
             DASSERT(false);

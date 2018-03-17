@@ -35,8 +35,8 @@ public:
 
     // Inserts the pages for the given buffer into page table entries for the allocation at the
     // given address.
-    virtual bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset,
-                        uint64_t length, CachingType caching_type) = 0;
+    virtual bool Insert(uint64_t addr, magma::PlatformBuffer::BusMapping* bus_mapping,
+                        uint64_t page_offset, uint64_t page_count, CachingType caching_type) = 0;
 
     static std::unique_ptr<GpuMapping> MapBufferGpu(std::shared_ptr<AddressSpace> address_space,
                                                     std::shared_ptr<MsdIntelBuffer> buffer,

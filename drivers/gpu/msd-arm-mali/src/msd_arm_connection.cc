@@ -269,12 +269,6 @@ bool MsdArmConnection::RemoveMapping(uint64_t gpu_va)
 
     address_space_->Clear(it->second->gpu_va(), it->second->size());
 
-    auto buffer = it->second->buffer().lock();
-    if (buffer) {
-        bool unpin_success = buffer->platform_buffer()->UnmapPageRangeBus(
-            it->second->page_offset(), it->second->pinned_page_count());
-        DASSERT(unpin_success);
-    }
     gpu_mappings_.erase(gpu_va);
     return true;
 }
@@ -310,23 +304,26 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) FXL_NO_THREAD_
 
     if (committed_page_count < prev_committed_page_count) {
         uint64_t pages_to_remove = prev_committed_page_count - committed_page_count;
-        uint64_t page_offset_in_buffer = mapping->page_offset() + committed_page_count;
         address_space_->Clear(mapping->gpu_va() + committed_page_count * PAGE_SIZE,
                               pages_to_remove * PAGE_SIZE);
-        bool unpin_success =
-            buffer->platform_buffer()->UnmapPageRangeBus(page_offset_in_buffer, pages_to_remove);
-        DASSERT(unpin_success);
-        mapping->set_pinned_page_count(committed_page_count);
+        mapping->shrink_pinned_pages(pages_to_remove);
+
     } else {
         uint64_t pages_to_add = committed_page_count - prev_committed_page_count;
         uint64_t page_offset_in_buffer = mapping->page_offset() + prev_committed_page_count;
+
+        std::unique_ptr<magma::PlatformBuffer::BusMapping> bus_mapping =
+            buffer->platform_buffer()->MapPageRangeBus(page_offset_in_buffer, pages_to_add);
+
         if (!address_space_->Insert(mapping->gpu_va() + prev_committed_page_count * PAGE_SIZE,
-                                    buffer->platform_buffer(), page_offset_in_buffer * PAGE_SIZE,
+                                    bus_mapping.get(), page_offset_in_buffer * PAGE_SIZE,
                                     pages_to_add * PAGE_SIZE, access_flags)) {
             return DRETF(false, "Pages can't be inserted into address space");
         }
-        mapping->set_pinned_page_count(committed_page_count);
+
+        mapping->grow_pinned_pages(std::move(bus_mapping));
     }
+
     return true;
 }
 

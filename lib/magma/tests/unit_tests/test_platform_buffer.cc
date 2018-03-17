@@ -49,16 +49,34 @@ public:
         EXPECT_EQ(first_word, *reinterpret_cast<uint32_t*>(virt_addr));
         EXPECT_EQ(last_word, *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(virt_addr) +
                                                           buffer->size() - 4));
-
-        uint64_t bus_addr;
-        EXPECT_TRUE(buffer->MapPageRangeBus(0, 1, &bus_addr));
-        EXPECT_TRUE(buffer->MapPageRangeBus(num_pages - 1, 1, &bus_addr));
-
         EXPECT_TRUE(buffer->UnmapCpu());
-        EXPECT_TRUE(buffer->UnmapPageRangeBus(0, 1));
 
-        if (size > PAGE_SIZE)
-            EXPECT_TRUE(buffer->UnmapPageRangeBus(num_pages - 1, 1));
+        std::vector<std::unique_ptr<magma::PlatformBuffer::BusMapping>> mappings;
+
+        if (num_pages >= 1) {
+            auto mapping = buffer->MapPageRangeBus(0, 1);
+            ASSERT_NE(mapping, nullptr);
+            EXPECT_TRUE(mapping->Get().size() == 1);
+            EXPECT_EQ(0u, mapping->page_offset());
+            EXPECT_EQ(1u, mapping->page_count());
+            mappings.push_back(std::move(mapping));
+        }
+
+        if (num_pages >= 2) {
+            auto mapping = buffer->MapPageRangeBus(num_pages - 1, 1);
+            ASSERT_NE(mapping, nullptr);
+            EXPECT_TRUE(mapping->Get().size() == 1);
+            EXPECT_EQ(num_pages - 1, mapping->page_offset());
+            EXPECT_EQ(1u, mapping->page_count());
+            mappings.push_back(std::move(mapping));
+
+            mapping = buffer->MapPageRangeBus(1, num_pages - 1);
+            ASSERT_NE(mapping, nullptr);
+            EXPECT_TRUE(mapping->Get().size() == num_pages - 1);
+            EXPECT_EQ(1u, mapping->page_offset());
+            EXPECT_EQ(num_pages - 1, mapping->page_count());
+            mappings.push_back(std::move(mapping));
+        }
     }
 
     static void MapSpecific()

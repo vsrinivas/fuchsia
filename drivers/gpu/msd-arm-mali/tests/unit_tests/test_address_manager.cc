@@ -161,8 +161,11 @@ TEST(AddressManager, FlushAddressRange)
 
     buffer = magma::PlatformBuffer::Create(PAGE_SIZE * 3, "test");
 
+    auto bus_mapping = buffer->MapPageRangeBus(0, buffer->size() / PAGE_SIZE);
+    ASSERT_NE(nullptr, bus_mapping);
+
     EXPECT_TRUE(connection->address_space_for_testing()->Insert(
-        addr, buffer.get(), 0, buffer->size(), kAccessFlagRead | kAccessFlagNoExecute));
+        addr, bus_mapping.get(), 0, buffer->size(), kAccessFlagRead | kAccessFlagNoExecute));
     // 3 pages should be cleared, so it should be rounded up to 4 (and log
     // base 2 is 2).
     constexpr uint64_t kLockOffset = 13;

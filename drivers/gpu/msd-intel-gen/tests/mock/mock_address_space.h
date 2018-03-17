@@ -12,7 +12,7 @@
 class MockAddressSpace : public AddressSpace {
 public:
     MockAddressSpace(uint64_t base, uint64_t size, std::shared_ptr<GpuMappingCache> cache = nullptr)
-        : AddressSpace(ADDRESS_SPACE_GGTT, std::move(cache)), size_(size), next_addr_(base)
+        : AddressSpace(ADDRESS_SPACE_PPGTT, std::move(cache)), size_(size), next_addr_(base)
     {
     }
 
@@ -21,8 +21,8 @@ public:
     bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
     bool Free(uint64_t addr) override;
     bool Clear(uint64_t addr) override;
-    bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
-                CachingType caching_type) override;
+    bool Insert(uint64_t addr, magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t offset,
+                uint64_t length, CachingType caching_type) override;
 
     bool is_allocated(uint64_t addr)
     {

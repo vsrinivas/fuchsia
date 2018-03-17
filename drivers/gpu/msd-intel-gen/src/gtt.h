@@ -20,19 +20,10 @@ public:
 
     virtual bool Init(uint64_t gtt_size) = 0;
 
-    // Takes ownership of |buffer_handle|.
-    virtual bool Insert(uint64_t addr, uint32_t buffer_handle, uint64_t offset, uint64_t length,
-                        CachingType caching_type) = 0;
-
-    bool Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, uint64_t length,
-                CachingType caching_type) override
-    {
-        uint32_t handle;
-        if (!buffer->duplicate_handle(&handle))
-            return DRETF(false, "failed to duplicate handle");
-
-        return Insert(addr, handle, offset, length, caching_type);
-    }
+    virtual bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer,
+                                 magma::PlatformBuffer::BusMapping* bus_mapping,
+                                 uint64_t page_offset, uint64_t page_count,
+                                 CachingType caching_type) = 0;
 
     static std::unique_ptr<Gtt> CreateShim(Owner* owner);
     static std::unique_ptr<Gtt> CreateCore(Owner* owner);

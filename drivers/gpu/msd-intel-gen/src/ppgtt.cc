@@ -251,37 +251,29 @@ bool PerProcessGtt::Free(uint64_t addr)
     return allocator_->Free(addr);
 }
 
-bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset,
-                           uint64_t length, CachingType caching_type)
+bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBuffer::BusMapping* bus_mapping,
+                           uint64_t page_offset, uint64_t page_count, CachingType caching_type)
 {
     if (kLogEnable)
         magma::log(magma::LOG_INFO,
                    "ppgtt insert (%p) 0x%" PRIx64 "-0x%" PRIx64 " length 0x%" PRIx64, this, addr,
-                   addr + length - 1, length);
+                   addr + page_count * PAGE_SIZE - 1, page_count * PAGE_SIZE);
 
     DASSERT(initialized_);
-    DASSERT(magma::is_page_aligned(offset));
-    DASSERT(magma::is_page_aligned(length));
 
     size_t allocated_length;
     if (!allocator_->GetSize(addr, &allocated_length))
         return DRETF(false, "couldn't get allocated length for addr");
 
     // add extra pages to length to account for overfetch and guard pages
-    if (length + (kOverfetchPageCount + kGuardPageCount) * PAGE_SIZE != allocated_length)
+    if (page_count * PAGE_SIZE + (kOverfetchPageCount + kGuardPageCount) * PAGE_SIZE !=
+        allocated_length)
         return DRETF(false, "allocated length (0x%zx) doesn't match length (0x%" PRIx64 ")",
-                     allocated_length, length);
+                     allocated_length, page_count * PAGE_SIZE);
 
-    uint32_t start_page_index = offset / PAGE_SIZE;
-    uint32_t num_pages = length / PAGE_SIZE;
-
-    DLOG("start_page_index 0x%x num_pages 0x%x", start_page_index, num_pages);
-
-    std::vector<uint64_t> bus_addr_array;
-    bus_addr_array.resize(num_pages);
-
-    if (!buffer->MapPageRangeBus(start_page_index, num_pages, bus_addr_array.data()))
-        return DRETF(false, "failed obtaining bus addresses");
+    auto& bus_addr_array = bus_mapping->Get();
+    if (bus_addr_array.size() != page_count)
+        return DRETF(false, "incorrect bus mapping length");
 
     uint32_t page_table_index = (addr >>= PAGE_SHIFT) & kPageTableMask;
     uint32_t page_directory_index = (addr >>= kPageTableShift) & kPageDirectoryMask;
@@ -296,12 +288,12 @@ bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_
         page_directory ? page_directory->page_table_entry(page_directory_index, page_table_index)
                        : nullptr;
 
-    for (uint64_t i = 0; i < num_pages + kOverfetchPageCount + kGuardPageCount; i++) {
+    for (uint64_t i = 0; i < page_count + kOverfetchPageCount + kGuardPageCount; i++) {
         gen_pte_t pte;
-        if (i < num_pages) {
+        if (i < page_count) {
             // buffer pages
             pte = gen_pte_encode(bus_addr_array[i], caching_type, true, true);
-        } else if (i < num_pages + kOverfetchPageCount) {
+        } else if (i < page_count + kOverfetchPageCount) {
             // overfetch page: readable
             pte = gen_pte_encode(pml4_table_->scratch_page_bus_addr(), CACHING_NONE, true, false);
         } else {

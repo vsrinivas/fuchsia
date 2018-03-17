@@ -54,29 +54,24 @@ void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr, uint6
     }
 }
 
-void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer, uint64_t gpu_addr,
-                       CachingType caching_type)
+void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer::BusMapping* bus_mapping,
+                       uint64_t gpu_addr, CachingType caching_type)
 {
     ASSERT_NE(mmio, nullptr);
 
     uint64_t* pte_array =
         reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mmio->addr()) + mmio->size() / 2);
 
-    ASSERT_TRUE(magma::is_page_aligned(buffer->size()));
-    uint32_t page_count = buffer->size() / PAGE_SIZE;
+    auto& bus_addr_array = bus_mapping->Get();
 
-    uint64_t bus_addr[page_count];
-    EXPECT_TRUE(buffer->MapPageRangeBus(0, page_count, bus_addr));
-
-    for (unsigned int i = 0; i < page_count; i++) {
+    for (unsigned int i = 0; i < bus_addr_array.size(); i++) {
         uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + i];
-        EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr[i]);
+        EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr_array[i]);
         EXPECT_TRUE(pte & 0x1); // page present
         EXPECT_TRUE(pte & 0x3); // rw
     }
-    EXPECT_TRUE(buffer->UnmapPageRangeBus(0, page_count));
 
-    uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + page_count];
+    uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + bus_addr_array.size()];
     EXPECT_NE(pte & ~(PAGE_SIZE - 1), 0u);
     EXPECT_TRUE(pte & 0x1); // page present
     EXPECT_TRUE(pte & 0x3); // rw
@@ -84,6 +79,22 @@ void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer,
 
 class TestDevice : public Gtt::Owner {
 public:
+    class MockBusMapping : public magma::PlatformBuffer::BusMapping {
+    public:
+        MockBusMapping(uint64_t page_offset, uint64_t page_count)
+            : page_offset_(page_offset), phys_addr_(page_count)
+        {
+        }
+
+        uint64_t page_offset() override { return page_offset_; }
+        uint64_t page_count() override { return phys_addr_.size(); }
+        std::vector<uint64_t>& Get() override { return phys_addr_; }
+
+    private:
+        uint64_t page_offset_;
+        std::vector<uint64_t> phys_addr_;
+    };
+
     magma::PlatformPciDevice* platform_device() override { return platform_device_.get(); }
 
     // size_bits: 1 (2MB), 2 (4MB), 3 (8MB)
@@ -122,6 +133,7 @@ public:
         // create some buffers
         std::vector<uint64_t> addr(2);
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
+        std::vector<std::unique_ptr<magma::PlatformBuffer::BusMapping>> bus_mapping(2);
 
         buffer[0] = magma::PlatformBuffer::Create(1000, "test");
         EXPECT_TRUE(gtt->Alloc(buffer[0]->size(), 0, &addr[0]));
@@ -129,21 +141,34 @@ public:
         buffer[1] = magma::PlatformBuffer::Create(10000, "test");
         EXPECT_TRUE(gtt->Alloc(buffer[1]->size(), 0, &addr[1]));
 
+        bus_mapping[0] = std::make_unique<MockBusMapping>(0, buffer[0]->size() / PAGE_SIZE);
+        uint64_t phys_addr_base = 0xabcd0000;
+        for (auto& phys_addr : bus_mapping[0]->Get()) {
+            phys_addr = phys_addr_base += PAGE_SIZE;
+        }
+
+        bus_mapping[1] = std::make_unique<MockBusMapping>(0, buffer[1]->size() / PAGE_SIZE);
+        for (auto& phys_addr : bus_mapping[1]->Get()) {
+            phys_addr = phys_addr_base += PAGE_SIZE;
+        }
+
         // Mismatch addr and buffer
-        EXPECT_FALSE(gtt->Insert(addr[1], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE));
+        EXPECT_FALSE(gtt->Insert(addr[1], bus_mapping[0].get(), 0, buffer[0]->size() / PAGE_SIZE,
+                                 CACHING_NONE));
 
         // Totally bogus addr
-        EXPECT_FALSE(gtt->Insert(0xdead1000, buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE));
+        EXPECT_FALSE(gtt->Insert(0xdead1000, bus_mapping[0].get(), 0, buffer[0]->size() / PAGE_SIZE,
+                                 CACHING_NONE));
 
-        // Correct
-        EXPECT_TRUE(gtt->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE));
+        EXPECT_TRUE(gtt->Insert(addr[0], bus_mapping[0].get(), 0, buffer[0]->size() / PAGE_SIZE,
+                                CACHING_NONE));
 
-        check_pte_entries(platform_device_->mmio(), buffer[0].get(), addr[0], CACHING_NONE);
+        check_pte_entries(platform_device_->mmio(), bus_mapping[0].get(), addr[0], CACHING_NONE);
 
-        // Also correct
-        EXPECT_TRUE(gtt->Insert(addr[1], buffer[1].get(), 0, buffer[1]->size(), CACHING_NONE));
+        EXPECT_TRUE(gtt->Insert(addr[1], bus_mapping[1].get(), 0, buffer[1]->size() / PAGE_SIZE,
+                                CACHING_NONE));
 
-        check_pte_entries(platform_device_->mmio(), buffer[1].get(), addr[1], CACHING_NONE);
+        check_pte_entries(platform_device_->mmio(), bus_mapping[1].get(), addr[1], CACHING_NONE);
 
         // Bogus addr
         EXPECT_FALSE(gtt->Clear(0xdead1000));

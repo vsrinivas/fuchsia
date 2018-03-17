@@ -125,7 +125,7 @@ public:
     {
         std::shared_ptr<MockAddressSpace> address_space(
             new MockAddressSpace(0, magma::round_up(size, PAGE_SIZE)));
-        ASSERT_EQ(address_space->type(), ADDRESS_SPACE_GGTT);
+        ASSERT_EQ(address_space->type(), ADDRESS_SPACE_PPGTT);
 
         std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(size, "test"));
         ASSERT_NE(buffer, nullptr);
@@ -199,7 +199,7 @@ public:
     static void OverlappedMapping(uint32_t alignment)
     {
         std::shared_ptr<MockAddressSpace> address_space(new MockAddressSpace(0, PAGE_SIZE * 10));
-        ASSERT_EQ(address_space->type(), ADDRESS_SPACE_GGTT);
+        ASSERT_EQ(address_space->type(), ADDRESS_SPACE_PPGTT);
 
         constexpr uint32_t kBufferSize = PAGE_SIZE * 6;
         std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize, "test"));

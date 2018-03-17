@@ -55,9 +55,25 @@ public:
     bool UnmapCpu() override;
     bool MapAtCpuAddr(uint64_t addr) override;
 
-    bool MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
-                         uint64_t addr_out[]) override;
-    bool UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count) override;
+    class ZirconBusMapping : public BusMapping {
+    public:
+        ZirconBusMapping(uint64_t page_offset, uint64_t page_count)
+            : page_offset_(page_offset), page_addr_(page_count)
+        {
+        }
+
+        uint64_t page_offset() override { return page_offset_; }
+        uint64_t page_count() override { return page_addr_.size(); }
+        std::vector<uint64_t>& Get() override { return page_addr_; }
+
+    private:
+        uint64_t page_offset_;
+        std::vector<uint64_t> page_addr_;
+    };
+
+    std::unique_ptr<BusMapping> MapPageRangeBus(uint32_t start_page_index,
+                                                uint32_t page_count) override;
+
     bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) override;
     bool SetCachePolicy(magma_cache_policy_t cache_policy) override;
 
@@ -205,31 +221,29 @@ bool ZirconPlatformBuffer::CommitPages(uint32_t start_page_index, uint32_t page_
     return true;
 }
 
-bool ZirconPlatformBuffer::MapPageRangeBus(uint32_t start_page_index, uint32_t page_count,
-                                            uint64_t addr_out[])
+std::unique_ptr<PlatformBuffer::BusMapping>
+ZirconPlatformBuffer::MapPageRangeBus(uint32_t start_page_index, uint32_t page_count)
 {
     TRACE_DURATION("magma", "MapPageRangeBus");
     static_assert(sizeof(zx_paddr_t) == sizeof(uint64_t), "unexpected sizeof(zx_paddr_t)");
 
     // This will be fast if pages have already been committed.
     if (!CommitPages(start_page_index, page_count))
-        return DRETF(false, "failed to commit pages");
+        return DRETP(nullptr, "failed to commit pages");
+
+    auto mapping = std::make_unique<ZirconBusMapping>(start_page_index, page_count);
 
     zx_status_t status;
     {
         TRACE_DURATION("magma", "vmo lookup");
-        status = vmo_.op_range(ZX_VMO_OP_LOOKUP, start_page_index * PAGE_SIZE,
-                               page_count * PAGE_SIZE, addr_out, page_count * sizeof(addr_out[0]));
+        status =
+            vmo_.op_range(ZX_VMO_OP_LOOKUP, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
+                          mapping->Get().data(), page_count * sizeof(uint64_t));
     }
     if (status != ZX_OK)
-        return DRETF(false, "failed to lookup vmo");
+        return DRETP(nullptr, "failed to lookup vmo");
 
-    return true;
-}
-
-bool ZirconPlatformBuffer::UnmapPageRangeBus(uint32_t start_page_index, uint32_t page_count)
-{
-    return true;
+    return mapping;
 }
 
 bool ZirconPlatformBuffer::CleanCache(uint64_t offset, uint64_t length, bool invalidate)

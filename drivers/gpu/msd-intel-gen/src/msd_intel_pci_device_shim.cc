@@ -52,13 +52,24 @@ public:
         return true;
     }
 
-    bool Insert(uint64_t addr, uint32_t buffer_handle, uint64_t offset, uint64_t length,
-                CachingType caching_type) override
+    bool Insert(uint64_t addr, magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t page_offset,
+                uint64_t page_count, CachingType caching_type) override
     {
-        DASSERT(offset % PAGE_SIZE == 0);
-        DASSERT(length % PAGE_SIZE == 0);
-        zx_status_t status = owner_->ops()->gtt_insert(owner_->context(), addr, buffer_handle,
-                                                       offset / PAGE_SIZE, length / PAGE_SIZE);
+        DASSERT(false);
+        return false;
+    }
+
+    bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer,
+                         magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t page_offset,
+                         uint64_t page_count, CachingType caching_type) override
+    {
+        // Bus mapping will be redone in the core driver.
+        uint32_t handle;
+        if (!buffer->duplicate_handle(&handle))
+            return DRETF(false, "failed to duplicate handle");
+
+        zx_status_t status =
+            owner_->ops()->gtt_insert(owner_->context(), addr, handle, page_offset, page_count);
         if (status != ZX_OK)
             return DRETF(false, "gtt_insert failed: %d", status);
         return true;

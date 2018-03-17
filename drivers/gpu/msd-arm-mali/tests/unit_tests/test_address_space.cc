@@ -44,18 +44,15 @@ public:
         EXPECT_EQ(nullptr, page_directory->next_levels_[offset]);
     }
 
-    static void check_pte_entries(AddressSpace* address_space, magma::PlatformBuffer* buffer,
-                                  uint64_t gpu_addr, uint64_t page_offset, uint64_t flags)
+    static void check_pte_entries(AddressSpace* address_space,
+                                  magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t gpu_addr,
+                                  uint64_t page_offset, uint64_t flags)
     {
         ASSERT_NE(address_space, nullptr);
 
-        ASSERT_TRUE(magma::is_page_aligned(buffer->size()));
-        uint32_t page_count = (buffer->size() - page_offset) / PAGE_SIZE;
+        std::vector<uint64_t>& bus_addr = bus_mapping->Get();
 
-        uint64_t bus_addr[page_count];
-        EXPECT_TRUE(buffer->MapPageRangeBus(page_offset, page_count, bus_addr));
-
-        for (unsigned int i = 0; i < page_count; i++) {
+        for (unsigned int i = 0; i < bus_addr.size(); i++) {
             uint64_t pte = get_pte(address_space, gpu_addr + i * PAGE_SIZE);
             static constexpr uint64_t kFlagBits = (1l << 54) | (0xf << 6);
             EXPECT_EQ(pte & ~kFlagBits & ~(PAGE_SIZE - 1), bus_addr[i]);
@@ -63,7 +60,6 @@ public:
             EXPECT_EQ(1u, pte & 3);
             EXPECT_EQ(flags, pte & kFlagBits);
         }
-        EXPECT_TRUE(buffer->UnmapPageRangeBus(0, page_count));
     }
 
     static void Init()
@@ -93,19 +89,25 @@ public:
         // create some buffers
         std::vector<uint64_t> addr = {PAGE_SIZE * 0xbdefcccef, PAGE_SIZE * 100};
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
+        std::vector<std::unique_ptr<magma::PlatformBuffer::BusMapping>> bus_mapping(2);
 
         buffer[0] = magma::PlatformBuffer::Create(1000, "test");
         buffer[1] = magma::PlatformBuffer::Create(10000, "test");
 
-        EXPECT_TRUE(address_space->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(),
+        bus_mapping[0] = buffer[0]->MapPageRangeBus(0, buffer[0]->size() / PAGE_SIZE);
+        bus_mapping[1] = buffer[1]->MapPageRangeBus(0, buffer[1]->size() / PAGE_SIZE);
+
+        EXPECT_TRUE(address_space->Insert(addr[0], bus_mapping[0].get(), 0, buffer[0]->size(),
                                           kAccessFlagRead | kAccessFlagNoExecute));
 
-        check_pte_entries(address_space.get(), buffer[0].get(), addr[0], 0, (1 << 6) | (1l << 54));
+        check_pte_entries(address_space.get(), bus_mapping[0].get(), addr[0], 0,
+                          (1 << 6) | (1l << 54));
 
-        EXPECT_TRUE(address_space->Insert(addr[1], buffer[1].get(), 0, buffer[1]->size(),
+        EXPECT_TRUE(address_space->Insert(addr[1], bus_mapping[1].get(), 0, buffer[1]->size(),
                                           kAccessFlagWrite | kAccessFlagShareBoth));
 
-        check_pte_entries(address_space.get(), buffer[1].get(), addr[1], 0, (2 << 8) | (1 << 7));
+        check_pte_entries(address_space.get(), bus_mapping[1].get(), addr[1], 0,
+                          (2 << 8) | (1 << 7));
 
         auto page_directory = address_space->root_page_directory_.get();
         for (int i = 3; i >= 0; i--) {
@@ -136,7 +138,7 @@ public:
         // Extend outside of address space.
         EXPECT_FALSE(address_space->Clear((1l << 48) - PAGE_SIZE * 10, PAGE_SIZE * 11));
 
-        EXPECT_FALSE(address_space->Insert((1l << 48) - PAGE_SIZE, buffer[1].get(), 0,
+        EXPECT_FALSE(address_space->Insert((1l << 48) - PAGE_SIZE, bus_mapping[1].get(), 0,
                                            buffer[1]->size(),
                                            kAccessFlagRead | kAccessFlagNoExecute));
     }
@@ -149,12 +151,13 @@ public:
         static constexpr uint64_t kAddr = PAGE_SIZE * 100;
 
         auto buffer = magma::PlatformBuffer::Create(10000, "test");
+        auto bus_mapping = buffer->MapPageRangeBus(1, (buffer->size() - PAGE_SIZE) / PAGE_SIZE);
 
-        EXPECT_TRUE(address_space->Insert(kAddr, buffer.get(), PAGE_SIZE,
+        EXPECT_TRUE(address_space->Insert(kAddr, bus_mapping.get(), PAGE_SIZE,
                                           buffer->size() - PAGE_SIZE,
                                           kAccessFlagRead | kAccessFlagNoExecute));
 
-        check_pte_entries(address_space.get(), buffer.get(), kAddr, 1, (1 << 6) | (1l << 54));
+        check_pte_entries(address_space.get(), bus_mapping.get(), kAddr, 1, (1 << 6) | (1l << 54));
     }
 
     static void GarbageCollect()
@@ -167,20 +170,27 @@ public:
         // create some buffers
         std::vector<uint64_t> addr = {kInitialAddress, kInitialAddress + PAGE_SIZE * 5};
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
+        std::vector<std::unique_ptr<magma::PlatformBuffer::BusMapping>> bus_mapping(2);
 
         buffer[0] = magma::PlatformBuffer::Create(PAGE_SIZE * 5, "test");
         buffer[1] = magma::PlatformBuffer::Create(PAGE_SIZE * 10, "test");
 
-        EXPECT_TRUE(address_space->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(),
+        bus_mapping[0] = buffer[0]->MapPageRangeBus(0, buffer[0]->size() / PAGE_SIZE);
+        bus_mapping[1] = buffer[1]->MapPageRangeBus(0, buffer[1]->size() / PAGE_SIZE);
+
+        EXPECT_TRUE(address_space->Insert(addr[0], bus_mapping[0].get(), 0, buffer[0]->size(),
                                           kAccessFlagRead | kAccessFlagNoExecute));
-        check_pte_entries(address_space.get(), buffer[0].get(), addr[0], 0, (1 << 6) | (1l << 54));
-        EXPECT_TRUE(address_space->Insert(addr[1], buffer[1].get(), 0, buffer[1]->size(),
+        check_pte_entries(address_space.get(), bus_mapping[0].get(), addr[0], 0,
+                          (1 << 6) | (1l << 54));
+
+        EXPECT_TRUE(address_space->Insert(addr[1], bus_mapping[1].get(), 0, buffer[1]->size(),
                                           kAccessFlagRead | kAccessFlagNoExecute));
 
         EXPECT_TRUE(address_space->Clear(addr[0], buffer[0]->size()));
 
         // Buffer 1 should remain mapped.
-        check_pte_entries(address_space.get(), buffer[1].get(), addr[1], 0, (1 << 6) | (1l << 54));
+        check_pte_entries(address_space.get(), bus_mapping[1].get(), addr[1], 0,
+                          (1 << 6) | (1l << 54));
 
         auto page_directory3 = address_space->root_page_directory_.get();
 
