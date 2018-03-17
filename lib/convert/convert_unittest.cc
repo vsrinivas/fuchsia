@@ -32,12 +32,12 @@ TEST(Convert, ToArray) {
   std::string str = "Hello";
   f1dl::Array<uint8_t> array = ToArray(str);
   EXPECT_EQ(str,
-            std::string(reinterpret_cast<char*>(array.data()), array.size()));
+            std::string(reinterpret_cast<char*>(array->data()), array.size()));
 
   leveldb::Slice slice(str.data(), str.size());
   array = ToArray(slice);
   EXPECT_EQ(str,
-            std::string(reinterpret_cast<char*>(array.data()), array.size()));
+            std::string(reinterpret_cast<char*>(array->data()), array.size()));
 }
 
 TEST(Convert, ToString) {
