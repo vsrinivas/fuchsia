@@ -43,9 +43,9 @@ impl {{ $interface.Name }}Proxy {
   )
   {{- if $method.HasResponse -}}
   -> fidl::client2::QueryResponseFut<
-   {{- range $index, $request := $method.Request -}}
-   {{- if (eq $index 0) -}} {{ $request.Type }}
-   {{- else -}}, {{ $request.Type }} {{- end -}}
+   {{- range $index, $response := $method.Response -}}
+   {{- if (eq $index 0) -}} {{ $response.Type }}
+   {{- else -}}, {{ $response.Type }} {{- end -}}
    {{- end -}}
   > {
    self.client.send_query(&mut (

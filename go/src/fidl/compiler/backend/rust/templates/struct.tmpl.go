@@ -25,6 +25,6 @@ fidl2_struct! {
   ],
   size: {{ .Size }},
   align: {{ .Alignment }},
-};
+}
 {{- end }}
 `

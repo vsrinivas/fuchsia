@@ -911,7 +911,7 @@ macro_rules! fidl2_struct {
         name: $name:ty,
         members: [$(
             $member_name:ident {
-                ty: $member_ty:ident,
+                ty: $member_ty:ty,
                 offset: $member_offset:expr,
             },
         )*],
