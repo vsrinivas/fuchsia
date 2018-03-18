@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module wlan_device;
+library wlan_device;
 
 enum ChannelBandwidth {
-  CBW20,
-  CBW40,
-  CBW40ABOVE = CBW40,
-  CBW40BELOW,
-  CBW80,
-  CBW160,
-  CBW80P80,
+  CBW20 = 0;
+  CBW40ABOVE = 1;
+  CBW40BELOW = 2;
+  CBW80 = 3;
+  CBW160 = 4;
+  CBW80P80 = 5;
 };
 
 struct Channel {
@@ -21,34 +20,34 @@ struct Channel {
 };
 
 enum SupportedPhy {
-  DSSS,
-  CCK,
-  OFDM,
-  HT,
-  VHT,
+  DSSS = 0;
+  CCK = 1;
+  OFDM = 2;
+  HT = 3;
+  VHT = 4;
 };
 
 enum DriverFeature {
-  SCAN_OFFLOAD,
-  RATE_SELECTION,
+  SCAN_OFFLOAD = 0;
+  RATE_SELECTION = 1;
 };
 
 enum MacRole {
-  CLIENT,
-  AP,
+  CLIENT = 0;
+  AP = 1;
 };
 
 enum Capability {
-  SHORT_PREAMBLE,
-  SPECTRUM_MGMT,
-  SHORT_SLOT_TIME,
-  RADIO_MGMT,
+  SHORT_PREAMBLE = 0;
+  SPECTRUM_MGMT = 1;
+  SHORT_SLOT_TIME = 2;
+  RADIO_MGMT = 3;
 };
 
 struct HtCapabilities {
   uint16 ht_capability_info;
   uint8 ampdu_params;
-  array<uint8> supported_mcs_set;
+  array<uint8>:16 supported_mcs_set;
   uint16 ht_ext_capabilities;
   uint32 tx_beamforming_capabilities;
   uint8 asel_capabilities;
@@ -61,33 +60,52 @@ struct VhtCapabilities {
 
 struct ChannelList {
   uint16 base_freq;
-  array<uint8> channels;
+  vector<uint8>:200 channels;
 };
 
 struct BandInfo {
   string description;
   HtCapabilities ht_caps;
   VhtCapabilities? vht_caps;
-  array<uint8> basic_rates;
+  vector<uint8>:16 basic_rates;
   ChannelList supported_channels;
 };
 
-struct WlanPhyInfo {
+struct PhyInfo {
   // The id is not set by the device node, as it has no way of knowing what its id is, but this
   // field may be used by external systems to provide an identifier for a WlanPhy.
   uint16 id;
 
-  array<SupportedPhy> supported_phys;
-  array<DriverFeature> driver_features;
-  array<MacRole> mac_roles;
-  array<Capability> caps;
-  array<BandInfo> bands;
+  vector<SupportedPhy>:8 supported_phys;
+  vector<DriverFeature>:8 driver_features;
+  vector<MacRole>:8 mac_roles;
+  vector<Capability>:8 caps;
+  vector<BandInfo>:8 bands;
+};
+
+struct QueryResponse {
+  PhyInfo info;
 };
 
 struct CreateIfaceRequest {
-    MacRole role;
+  MacRole role;
+};
+
+struct CreateIfaceResponse {
+  int32 @status;
+  IfaceInfo info;
 };
 
 struct DestroyIfaceRequest {
-    uint16 id;
+  uint16 id;
+};
+
+struct DestroyIfaceResponse {
+  int32 @status;
+};
+
+interface Phy {
+  1: Query() -> (QueryResponse resp);
+  2: CreateIface(CreateIfaceRequest req) -> (CreateIfaceResponse resp);
+  3: DestroyIface(DestroyIfaceRequest req) -> (DestroyIfaceResponse resp);
 };

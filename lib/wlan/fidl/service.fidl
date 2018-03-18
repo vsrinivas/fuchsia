@@ -2,22 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module wlan_device_service;
+library wlan_device_service;
 
-import "garnet/lib/wlan/fidl/phy.fidl";
-import "garnet/lib/wlan/fidl/iface.fidl";
+using wlan_device;
 
 struct ListPhysResponse {
-    array<wlan.phy.WlanPhyInfo> phys;
+    vector<wlan_device.PhyInfo> phys;
 };
 
 struct ListIfacesResponse {
-    array<wlan.iface.WlanIfaceInfo> ifaces;
+    vector<wlan_device.IfaceInfo> ifaces;
 };
 
 struct CreateIfaceRequest {
     uint16 phy_id;
-    wlan.phy.MacRole role;
+    wlan_device.MacRole role;
 };
 
 struct CreateIfaceResponse {
@@ -32,23 +31,23 @@ struct DestroyIfaceRequest {
 // TODO(tkilbourn): replace this with FIDL2 events
 interface DeviceListener {
     // Called when a phy device is added
-    OnPhyAdded@0(uint16 id);
+    1: OnPhyAdded(uint16 id);
     // Called when a phy device is removed
-    OnPhyRemoved@1(uint16 phy_id);
+    2: OnPhyRemoved(uint16 phy_id);
     // Called when an iface device is added
-    OnIfaceAdded@2(uint16 phy_id, uint16 iface_id);
+    3: OnIfaceAdded(uint16 phy_id, uint16 iface_id);
     // Called when an iface device is removed
-    OnIfaceRemoved@3(uint16 phy_id, uint16 iface_id);
+    4: OnIfaceRemoved(uint16 phy_id, uint16 iface_id);
 };
 
 [ServiceName="wlan::DeviceService"]
 interface DeviceService {
-  ListPhys@0() => (ListPhysResponse resp);
-  ListIfaces@1() => (ListIfacesResponse resp);
-  CreateIface@2(CreateIfaceRequest req) => (CreateIfaceResponse resp);
-  DestroyIface@3(DestroyIfaceRequest req);
+  1: ListPhys() -> (ListPhysResponse resp);
+  2: ListIfaces() -> (ListIfacesResponse resp);
+  3: CreateIface(CreateIfaceRequest req) -> (CreateIfaceResponse resp);
+  4: DestroyIface(DestroyIfaceRequest req);
 
   // Each client may register one DeviceListener to be notified of device
   // events. A client is unregistered by closing the channel.
-  RegisterListener@4(DeviceListener listener);
+  5: RegisterListener(DeviceListener listener);
 };

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module wlan_device;
+library wlan_device;
 
-struct WlanIfaceInfo {
+struct IfaceInfo {
     uint16 id;
 };
