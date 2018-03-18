@@ -17,4 +17,12 @@ toolchain("zircon_toolchain") {
     command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
     description = "COPY {{source}} {{output}}"
   }
+
+  toolchain_args = {
+    toolchain_variant = {
+    }
+    toolchain_variant = {
+      base = get_label_info(":zircon_toolchain", "label_no_toolchain")
+    }
+  }
 }

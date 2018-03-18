@@ -16,4 +16,12 @@ toolchain("fidling") {
     command = copy_command
     description = copy_description
   }
+
+  toolchain_args = {
+    toolchain_variant = {
+    }
+    toolchain_variant = {
+      base = get_label_info(":fidling", "label_no_toolchain")
+    }
+  }
 }

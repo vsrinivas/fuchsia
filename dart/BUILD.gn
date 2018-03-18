@@ -23,6 +23,14 @@ if (current_toolchain == dart_toolchain) {
       command = copy_command
       description = copy_description
     }
+
+    toolchain_args = {
+      toolchain_variant = {
+      }
+      toolchain_variant = {
+        base = get_label_info(":dartlang", "label_no_toolchain")
+      }
+    }
   }
 
   # $dart_host_sdk_toolchain points to this.  It's the toolchain
