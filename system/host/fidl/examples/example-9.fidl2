@@ -5,12 +5,18 @@ enum EchoMe {
     one = 1;
 };
 
+struct EchoMore {
+    uint32 first;
+    uint64 second;
+};
+
 interface Echo {
   1: Echo32(uint32 @uint32) -> (uint32 response);
   2: Echo64(uint64 @uint64) -> (uint64 response);
   3: EchoEnum(EchoMe req) -> (EchoMe response);
   4: EchoHandle(handle req) -> (handle response);
   5: EchoChannel(handle<channel> req) -> (handle<channel> response);
+  6: EchoStruct(EchoMore req) ->(EchoMore response);
 };
 
 const EchoMe favorite_echo = zero;
