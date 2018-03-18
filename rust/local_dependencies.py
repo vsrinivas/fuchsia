@@ -55,7 +55,7 @@ def main():
             break
 
     if not lock_config:
-        sys.stderr.write("%s does not contain crate %s\n" % (args.lock, args.toml))
+        sys.stderr.write("%s does not contain crate %s\n" % (args.workspace_lock, args.target_toml))
         return 1
 
     if not "dependencies" in lock_config:
