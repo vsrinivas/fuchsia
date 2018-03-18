@@ -37,7 +37,7 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t                                or --cmdline-append.\n";
   std::cerr << "\t--cmdline-append=[cmdline]      Appends string 'cmdline' to the existing kernel command\n";
   std::cerr << "\t                                line\n";
-  std::cerr << "\t--display={scenic,framebuffer,  Configures the display back-end to use for the guest. 'scenic'\n";
+  std::cerr << "\t--display={scenic,framebuffer,  Configures the display backend to use for the guest. 'scenic'\n";
   std::cerr << "\t           none}                (default) will render to a scenic view. 'framebuffer will draw\n";
   std::cerr << "\t                                to a zircon framebuffer. 'none' disables graphical output.\n";
   std::cerr << "\t--balloon-interval=[seconds]    Poll the virtio-balloon device every 'seconds' seconds\n";

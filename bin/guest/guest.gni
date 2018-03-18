@@ -4,6 +4,10 @@
 
 import("//build/package.gni")
 
+declare_args() {
+  guest_display = "scenic"
+}
+
 # Defines a guest package.
 #
 # Parameters
@@ -33,23 +37,42 @@ template("guest_app") {
 
     args = []
     if (defined(invoker.zircon)) {
-      args += ["--zircon", "/pkg/data/kernel"]
+      args += [
+        "--zircon",
+        "/pkg/data/kernel",
+      ]
     }
     if (defined(invoker.linux)) {
-      args += ["--linux", "/pkg/data/kernel"]
+      args += [
+        "--linux",
+        "/pkg/data/kernel",
+      ]
     }
     if (defined(invoker.ramdisk)) {
-      args += ["--ramdisk", "/pkg/data/ramdisk"]
+      args += [
+        "--ramdisk",
+        "/pkg/data/ramdisk",
+      ]
     }
     if (defined(invoker.cmdline)) {
-      args += ["--cmdline", invoker.cmdline]
+      args += [
+        "--cmdline",
+        invoker.cmdline,
+      ]
     }
     if (defined(invoker.block_devices)) {
       foreach(block_spec, invoker.block_devices) {
-        args += ["--block", block_spec]
+        args += [
+          "--block",
+          block_spec,
+        ]
       }
     }
-    args += [ rebase_path("$guest_config_file") ]
+    args += [
+      "--display",
+      guest_display,
+      rebase_path("$guest_config_file"),
+    ]
   }
 
   package(target_name) {
