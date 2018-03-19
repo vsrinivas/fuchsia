@@ -51,6 +51,7 @@ Design documentation:
 
  - [Architecture](architecture.md)
  - [Conflict Resolution](conflict_resolution.md)
+ - [Life of a Put](life_of_a_put.md)
 
 
 [cloud provider]: https://fuchsia.googlesource.com/peridot/+/master/public/lib/cloud_provider/fidl/cloud_provider.fidl
