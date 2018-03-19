@@ -128,8 +128,8 @@ void MediaDemuxImpl::ReportProblem(const std::string& type,
 
 void MediaDemuxImpl::Describe(const DescribeCallback& callback) {
   init_complete_.When([this, callback]() {
-    f1dl::Array<MediaTypePtr> result =
-        f1dl::Array<MediaTypePtr>::New(streams_.size());
+    f1dl::VectorPtr<MediaTypePtr> result =
+        f1dl::VectorPtr<MediaTypePtr>::New(streams_.size());
     for (size_t i = 0; i < streams_.size(); i++) {
       result->at(i) = fxl::To<MediaTypePtr>(streams_[i]->stream_type());
     }

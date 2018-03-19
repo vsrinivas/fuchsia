@@ -114,7 +114,7 @@ TEST(GAP_AdvertisingDataTest, ParseFIDL) {
   fidl_ad->service_uuids.push_back(kId1AsString);
   fidl_ad->service_uuids.push_back(kId3AsString);
 
-  auto array = f1dl::Array<uint8_t>::New(4);
+  auto array = f1dl::VectorPtr<uint8_t>::New(4);
   for (size_t i = 0; i < array->size(); i++) {
     array->at(i) = static_cast<uint8_t>(i * 3);
   }

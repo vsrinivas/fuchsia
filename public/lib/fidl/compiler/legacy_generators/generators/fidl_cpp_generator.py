@@ -124,7 +124,7 @@ def GetCppArrayArgWrapperType(kind):
   if mojom.IsStructKind(kind) or mojom.IsUnionKind(kind):
     return "%sPtr" % GetNameForKind(kind)
   if mojom.IsArrayKind(kind):
-    return "::f1dl::Array<%s> " % GetCppArrayArgWrapperType(kind.kind)
+    return "::f1dl::VectorPtr<%s> " % GetCppArrayArgWrapperType(kind.kind)
   if mojom.IsMapKind(kind):
     return "::f1dl::Map<%s, %s> " % (GetCppArrayArgWrapperType(kind.key_kind),
                                    GetCppArrayArgWrapperType(kind.value_kind))
@@ -162,7 +162,7 @@ def GetCppResultWrapperType(kind):
   if mojom.IsStructKind(kind) or mojom.IsUnionKind(kind):
     return "%sPtr" % GetNameForKind(kind)
   if mojom.IsArrayKind(kind):
-    return "::f1dl::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
+    return "::f1dl::VectorPtr<%s>" % GetCppArrayArgWrapperType(kind.kind)
   if mojom.IsMapKind(kind):
     return "::f1dl::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
                                   GetCppArrayArgWrapperType(kind.value_kind))
@@ -200,7 +200,7 @@ def GetCppWrapperType(kind):
   if mojom.IsStructKind(kind) or mojom.IsUnionKind(kind):
     return "%sPtr" % GetNameForKind(kind)
   if mojom.IsArrayKind(kind):
-    return "::f1dl::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
+    return "::f1dl::VectorPtr<%s>" % GetCppArrayArgWrapperType(kind.kind)
   if mojom.IsMapKind(kind):
     return "::f1dl::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
                                   GetCppArrayArgWrapperType(kind.value_kind))
@@ -236,7 +236,7 @@ def GetCppConstWrapperType(kind):
   if mojom.IsStructKind(kind) or mojom.IsUnionKind(kind):
     return "%sPtr" % GetNameForKind(kind)
   if mojom.IsArrayKind(kind):
-    return "::f1dl::Array<%s>" % GetCppArrayArgWrapperType(kind.kind)
+    return "::f1dl::VectorPtr<%s>" % GetCppArrayArgWrapperType(kind.kind)
   if mojom.IsMapKind(kind):
     return "::f1dl::Map<%s, %s>" % (GetCppArrayArgWrapperType(kind.key_kind),
                                   GetCppArrayArgWrapperType(kind.value_kind))

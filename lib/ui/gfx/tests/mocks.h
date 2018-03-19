@@ -34,10 +34,10 @@ class SessionHandlerForTest : public SessionHandler {
                         ErrorReporter* error_reporter);
 
   // ui::gfx::Session interface methods.
-  void Enqueue(::f1dl::Array<ui::CommandPtr> commands) override;
+  void Enqueue(::f1dl::VectorPtr<ui::CommandPtr> commands) override;
   void Present(uint64_t presentation_time,
-               ::f1dl::Array<zx::event> acquire_fences,
-               ::f1dl::Array<zx::event> release_fences,
+               ::f1dl::VectorPtr<zx::event> acquire_fences,
+               ::f1dl::VectorPtr<zx::event> release_fences,
                const ui::Session::PresentCallback& callback) override;
 
   // Return the number of Enqueue()/Present()/Connect() messages that have

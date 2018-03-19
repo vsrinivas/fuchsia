@@ -42,7 +42,7 @@ void LowEnergyCentralServer::SetDelegate(
 }
 
 void LowEnergyCentralServer::GetPeripherals(
-    ::f1dl::Array<::f1dl::StringPtr> service_uuids,
+    ::f1dl::VectorPtr<::f1dl::StringPtr> service_uuids,
     const GetPeripheralsCallback& callback) {
   // TODO:
   FXL_NOTIMPLEMENTED();

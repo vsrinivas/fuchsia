@@ -16,11 +16,11 @@
 
 // A partial f1dl::TypeConverter template specialization for copying the
 // contents of a type that derives from common::ByteBuffer into a
-// f1dl::Array<unsigned char>. If the input array is empty, the output array
+// f1dl::VectorPtr<unsigned char>. If the input array is empty, the output array
 // will be empty. Used by Array<uint8_t>::From() in AsLEAdvertisingData()
 template <typename T>
-struct f1dl::TypeConverter<f1dl::Array<unsigned char>, T> {
-  static f1dl::Array<unsigned char> Convert(const T& input) {
+struct f1dl::TypeConverter<f1dl::VectorPtr<unsigned char>, T> {
+  static f1dl::VectorPtr<unsigned char> Convert(const T& input) {
     static_assert(std::is_base_of<::btlib::common::ByteBuffer, T>::value, "");
 
     Array<unsigned char> result = Array<unsigned char>::New(input.size());
@@ -271,14 +271,14 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
   for (const auto& pair : manufacturer_data_) {
     auto entry = ::btfidl::low_energy::ManufacturerSpecificDataEntry::New();
     entry->company_id = pair.first;
-    entry->data = f1dl::Array<unsigned char>::From(pair.second);
+    entry->data = f1dl::VectorPtr<unsigned char>::From(pair.second);
     fidl_data->manufacturer_specific_data.push_back(std::move(entry));
   }
 
   for (const auto& pair : service_data_) {
     auto entry = ::btfidl::low_energy::ServiceDataEntry::New();
     entry->uuid = pair.first.ToString();
-    entry->data = f1dl::Array<unsigned char>::From(pair.second);
+    entry->data = f1dl::VectorPtr<unsigned char>::From(pair.second);
     fidl_data->service_data.push_back(std::move(entry));
   }
 
@@ -310,13 +310,13 @@ void AdvertisingData::FromFidl(
   }
 
   for (const auto& it : *fidl_ad->manufacturer_specific_data) {
-    f1dl::Array<uint8_t>& data = it->data;
+    f1dl::VectorPtr<uint8_t>& data = it->data;
     common::BufferView manuf_view(data->data(), data->size());
     out_ad->SetManufacturerData(it->company_id, manuf_view);
   }
 
   for (const auto& it : *fidl_ad->service_data) {
-    f1dl::Array<uint8_t>& data = it->data;
+    f1dl::VectorPtr<uint8_t>& data = it->data;
     common::BufferView servdata_view(data->data(), data->size());
     common::UUID servdata_uuid;
     if (StringToUuid(it->uuid.get(), &servdata_uuid)) {

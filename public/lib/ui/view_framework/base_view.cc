@@ -113,7 +113,7 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
   });
 }
 
-void BaseView::HandleSessionEvents(f1dl::Array<ui::EventPtr> events) {
+void BaseView::HandleSessionEvents(f1dl::VectorPtr<ui::EventPtr> events) {
   ui::gfx::Metrics* new_metrics = nullptr;
   for (const auto& event : *events) {
     if (event->is_gfx()) {
@@ -157,7 +157,7 @@ void BaseView::OnPropertiesChanged(ViewPropertiesPtr old_properties) {}
 
 void BaseView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {}
 
-void BaseView::OnSessionEvent(f1dl::Array<ui::EventPtr> events) {}
+void BaseView::OnSessionEvent(f1dl::VectorPtr<ui::EventPtr> events) {}
 
 bool BaseView::OnInputEvent(mozart::InputEventPtr event) {
   return false;

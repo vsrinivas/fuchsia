@@ -17,7 +17,7 @@ std::ostream& indent(std::ostream& os);
 std::ostream& outdent(std::ostream& os);
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const f1dl::Array<T>& value) {
+std::ostream& operator<<(std::ostream& os, const f1dl::VectorPtr<T>& value) {
   if (value->size() == 0) {
     return os << "<empty>";
   }

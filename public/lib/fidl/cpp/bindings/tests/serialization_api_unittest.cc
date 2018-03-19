@@ -63,12 +63,12 @@ TEST_F(StructSerializationAPITest, GetSerializedSize) {
   EXPECT_EQ(24u, handle_struct.GetSerializedSize());
 
   // + 8 bytes for initialized array, 0-sized array.
-  handle_struct.array_h = f1dl::Array<zx::channel>::New(0);
+  handle_struct.array_h = f1dl::VectorPtr<zx::channel>::New(0);
   EXPECT_EQ(32u, handle_struct.GetSerializedSize());
 
   // + 4 bytes for array of size 1.
   // + 4 more bytes to make the array serialization 8-byte aligned.
-  handle_struct.array_h = f1dl::Array<zx::channel>::New(1);
+  handle_struct.array_h = f1dl::VectorPtr<zx::channel>::New(1);
   EXPECT_EQ(16u, GetSerializedSize_(handle_struct.array_h));
   EXPECT_EQ(40u, handle_struct.GetSerializedSize());
 }

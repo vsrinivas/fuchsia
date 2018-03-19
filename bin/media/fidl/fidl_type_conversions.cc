@@ -383,7 +383,7 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
       media_type->details = std::move(details);
       media_type->encoding = input->encoding();
       media_type->encoding_parameters =
-          To<f1dl::Array<uint8_t>>(input->encoding_parameters());
+          To<f1dl::VectorPtr<uint8_t>>(input->encoding_parameters());
       return media_type;
     }
     case media::StreamType::Medium::kVideo: {
@@ -404,9 +404,9 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
       video_details->pixel_aspect_ratio_height =
           input->video()->pixel_aspect_ratio_height();
       video_details->line_stride =
-          To<f1dl::Array<uint32_t>>(input->video()->line_stride());
+          To<f1dl::VectorPtr<uint32_t>>(input->video()->line_stride());
       video_details->plane_offset =
-          To<f1dl::Array<uint32_t>>(input->video()->plane_offset());
+          To<f1dl::VectorPtr<uint32_t>>(input->video()->plane_offset());
       media::MediaTypeDetailsPtr details = media::MediaTypeDetails::New();
       details->set_video(std::move(video_details));
       media::MediaTypePtr media_type = media::MediaType::New();
@@ -414,7 +414,7 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
       media_type->details = std::move(details);
       media_type->encoding = input->encoding();
       media_type->encoding_parameters =
-          To<f1dl::Array<uint8_t>>(input->encoding_parameters());
+          To<f1dl::VectorPtr<uint8_t>>(input->encoding_parameters());
       return media_type;
     }
     case media::StreamType::Medium::kText: {
@@ -425,7 +425,7 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
       media_type->details = std::move(details);
       media_type->encoding = input->encoding();
       media_type->encoding_parameters =
-          To<f1dl::Array<uint8_t>>(input->encoding_parameters());
+          To<f1dl::VectorPtr<uint8_t>>(input->encoding_parameters());
       return media_type;
     }
     case media::StreamType::Medium::kSubpicture: {
@@ -436,7 +436,7 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
       media_type->details = std::move(details);
       media_type->encoding = input->encoding();
       media_type->encoding_parameters =
-          To<f1dl::Array<uint8_t>>(input->encoding_parameters());
+          To<f1dl::VectorPtr<uint8_t>>(input->encoding_parameters());
       return media_type;
     }
   }
@@ -521,7 +521,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media_type_set->medium = media::MediaTypeMedium::AUDIO;
       media_type_set->details = std::move(details);
       media_type_set->encodings =
-          To<f1dl::Array<f1dl::StringPtr>>(input->encodings());
+          To<f1dl::VectorPtr<f1dl::StringPtr>>(input->encodings());
       return media_type_set;
     }
     case media::StreamType::Medium::kVideo: {
@@ -537,7 +537,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media_type_set->medium = media::MediaTypeMedium::VIDEO;
       media_type_set->details = std::move(details);
       media_type_set->encodings =
-          To<f1dl::Array<f1dl::StringPtr>>(input->encodings());
+          To<f1dl::VectorPtr<f1dl::StringPtr>>(input->encodings());
       return media_type_set;
     }
     case media::StreamType::Medium::kText: {
@@ -547,7 +547,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media_type_set->medium = media::MediaTypeMedium::TEXT;
       media_type_set->details = std::move(details);
       media_type_set->encodings =
-          To<f1dl::Array<f1dl::StringPtr>>(input->encodings());
+          To<f1dl::VectorPtr<f1dl::StringPtr>>(input->encodings());
       return media_type_set;
     }
     case media::StreamType::Medium::kSubpicture: {
@@ -557,7 +557,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media_type_set->medium = media::MediaTypeMedium::SUBPICTURE;
       media_type_set->details = std::move(details);
       media_type_set->encodings =
-          To<f1dl::Array<f1dl::StringPtr>>(input->encodings());
+          To<f1dl::VectorPtr<f1dl::StringPtr>>(input->encodings());
       return media_type_set;
     }
   }
@@ -642,22 +642,22 @@ std::unique_ptr<media::Metadata> TypeConverter<
                                  input->composer);
 }
 
-f1dl::Array<uint8_t>
-TypeConverter<f1dl::Array<uint8_t>, std::unique_ptr<media::Bytes>>::Convert(
+f1dl::VectorPtr<uint8_t>
+TypeConverter<f1dl::VectorPtr<uint8_t>, std::unique_ptr<media::Bytes>>::Convert(
     const std::unique_ptr<media::Bytes>& input) {
   if (input == nullptr) {
     return nullptr;
   }
 
-  f1dl::Array<uint8_t> array = f1dl::Array<uint8_t>::New(input->size());
+  f1dl::VectorPtr<uint8_t> array = f1dl::VectorPtr<uint8_t>::New(input->size());
   std::memcpy(array->data(), input->data(), input->size());
 
   return array;
 }
 
 std::unique_ptr<media::Bytes>
-TypeConverter<std::unique_ptr<media::Bytes>, f1dl::Array<uint8_t>>::Convert(
-    const f1dl::Array<uint8_t>& input) {
+TypeConverter<std::unique_ptr<media::Bytes>, f1dl::VectorPtr<uint8_t>>::Convert(
+    const f1dl::VectorPtr<uint8_t>& input) {
   if (input.is_null()) {
     return nullptr;
   }

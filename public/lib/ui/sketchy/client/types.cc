@@ -33,7 +33,7 @@ StrokePath::StrokePath(std::vector<CubicBezier2> segments)
     : segments_(segments) {}
 
 sketchy::StrokePathPtr StrokePath::NewSketchyStrokePath() const {
-  auto sketchy_segments = f1dl::Array<sketchy::CubicBezier2Ptr>::New(0);
+  auto sketchy_segments = f1dl::VectorPtr<sketchy::CubicBezier2Ptr>::New(0);
   for (auto& segment : segments_) {
     auto sketchy_segment = segment.NewSketchyCubicBezier2();
     sketchy_segments.push_back(std::move(sketchy_segment));

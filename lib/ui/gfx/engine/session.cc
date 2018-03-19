@@ -54,8 +54,8 @@ constexpr std::array<ui::gfx::Value::Tag, 2> kFloatValueTypes{
 
 // Converts the provided vector of scene_manager hits into a fidl array of
 // HitPtrs.
-f1dl::Array<ui::gfx::HitPtr> WrapHits(const std::vector<Hit>& hits) {
-  f1dl::Array<ui::gfx::HitPtr> wrapped_hits;
+f1dl::VectorPtr<ui::gfx::HitPtr> WrapHits(const std::vector<Hit>& hits) {
+  f1dl::VectorPtr<ui::gfx::HitPtr> wrapped_hits;
   wrapped_hits.resize(hits.size());
   for (size_t i = 0; i < hits.size(); ++i) {
     const Hit& hit = hits[i];
@@ -1185,9 +1185,9 @@ bool Session::AssertValueIsOfType(const ui::gfx::ValuePtr& value,
 }
 
 bool Session::ScheduleUpdate(uint64_t presentation_time,
-                             ::f1dl::Array<ui::gfx::CommandPtr> commands,
-                             ::f1dl::Array<zx::event> acquire_fences,
-                             ::f1dl::Array<zx::event> release_events,
+                             ::f1dl::VectorPtr<ui::gfx::CommandPtr> commands,
+                             ::f1dl::VectorPtr<zx::event> acquire_fences,
+                             ::f1dl::VectorPtr<zx::event> release_events,
                              const ui::Session::PresentCallback& callback) {
   if (is_valid()) {
     uint64_t last_scheduled_presentation_time =

@@ -47,7 +47,7 @@ class Map {
 
   // Constructs a non-null Map containing the specified |keys| mapped to the
   // corresponding |values|.
-  Map(f1dl::Array<KeyType> keys, f1dl::Array<ValueType> values)
+  Map(f1dl::VectorPtr<KeyType> keys, f1dl::VectorPtr<ValueType> values)
       : is_null_(false) {
     ZX_DEBUG_ASSERT(keys.size() == values.size());
     for (size_t i = 0; i < keys.size(); ++i)

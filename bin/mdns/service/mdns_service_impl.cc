@@ -80,7 +80,7 @@ void MdnsServiceImpl::PublishServiceInstance(
     const f1dl::StringPtr& service_name,
     const f1dl::StringPtr& instance_name,
     uint16_t port,
-    f1dl::Array<f1dl::StringPtr> text,
+    f1dl::VectorPtr<f1dl::StringPtr> text,
     const PublishServiceInstanceCallback& callback) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
     callback(MdnsResult::INVALID_SERVICE_NAME);
@@ -174,7 +174,7 @@ void MdnsServiceImpl::AddResponder(
 
 void MdnsServiceImpl::SetSubtypes(const f1dl::StringPtr& service_name,
                                   const f1dl::StringPtr& instance_name,
-                                  f1dl::Array<f1dl::StringPtr> subtypes) {
+                                  f1dl::VectorPtr<f1dl::StringPtr> subtypes) {
   if (!MdnsNames::IsValidServiceName(service_name) ||
       !MdnsNames::IsValidInstanceName(instance_name)) {
     return;
@@ -224,8 +224,8 @@ MdnsServiceImpl::Subscriber::Subscriber(
 
   instances_publisher_.SetCallbackRunner(
       [this](const GetInstancesCallback& callback, uint64_t version) {
-        f1dl::Array<MdnsServiceInstancePtr> instances =
-            f1dl::Array<MdnsServiceInstancePtr>::New(0);
+        f1dl::VectorPtr<MdnsServiceInstancePtr> instances =
+            f1dl::VectorPtr<MdnsServiceInstancePtr>::New(0);
 
         for (auto& pair : instances_by_name_) {
           instances.push_back(pair.second.Clone());
@@ -278,7 +278,7 @@ void MdnsServiceImpl::Subscriber::GetInstances(
 
 MdnsServiceImpl::SimplePublisher::SimplePublisher(
     IpPort port,
-    f1dl::Array<f1dl::StringPtr> text,
+    f1dl::VectorPtr<f1dl::StringPtr> text,
     const PublishServiceInstanceCallback& callback)
     : port_(port),
       text_(text.To<std::vector<std::string>>()),

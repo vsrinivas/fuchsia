@@ -92,7 +92,7 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
 
   // Returns the media types supported by this video renderer.
-  f1dl::Array<MediaTypeSetPtr> SupportedMediaTypes();
+  f1dl::VectorPtr<MediaTypeSetPtr> SupportedMediaTypes();
 
   f1dl::Binding<VideoRenderer> video_renderer_binding_;
   FidlPublisher<GetStatusCallback> status_publisher_;

@@ -31,8 +31,8 @@ void ImagePipeImpl::RemoveImage(uint32_t image_id)
 }
 
 void ImagePipeImpl::PresentImage(uint32_t image_id, uint64_t presentation_time,
-                                 ::f1dl::Array<zx::event> acquire_fences,
-                                 ::f1dl::Array<zx::event> release_fences,
+                                 ::f1dl::VectorPtr<zx::event> acquire_fences,
+                                 ::f1dl::VectorPtr<zx::event> release_fences,
                                  const PresentImageCallback& callback)
 {
     auto i = images_.find(image_id);

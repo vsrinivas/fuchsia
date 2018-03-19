@@ -151,9 +151,9 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
     }
   };
 
-  f1dl::Array<zx::event> acquire_fences;
+  f1dl::VectorPtr<zx::event> acquire_fences;
   acquire_fences.push_back(std::move(acquire_fence));
-  f1dl::Array<zx::event> release_fences;
+  f1dl::VectorPtr<zx::event> release_fences;
   release_fences.push_back(std::move(release_fence));
   image_pipe_->PresentImage(fb.image_pipe_id, presentation_time,
                             std::move(acquire_fences),

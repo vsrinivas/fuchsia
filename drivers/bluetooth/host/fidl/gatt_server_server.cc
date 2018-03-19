@@ -49,7 +49,7 @@ namespace {
   return ::btlib::att::ErrorCode::kUnlikelyError;
 }
 
-void ParseProperties(const f1dl::Array<CharacteristicProperty>& properties,
+void ParseProperties(const f1dl::VectorPtr<CharacteristicProperty>& properties,
                      uint8_t* out_props,
                      uint16_t* out_ext_props) {
   FXL_DCHECK(out_props);
@@ -222,7 +222,7 @@ class GattServerServer::ServiceImpl
 
   void NotifyValue(uint64_t characteristic_id,
                    const ::f1dl::StringPtr& peer_id,
-                   ::f1dl::Array<uint8_t> value,
+                   ::f1dl::VectorPtr<uint8_t> value,
                    bool confirm) override {
     gatt()->SendNotification(id_, characteristic_id, peer_id, std::move(value),
                              confirm);
@@ -403,7 +403,7 @@ void GattServerServer::OnReadRequest(
     return;
   }
 
-  auto cb = [responder](f1dl::Array<uint8_t> value, auto error_code) {
+  auto cb = [responder](f1dl::VectorPtr<uint8_t> value, auto error_code) {
     responder(GattErrorCodeFromFidl(error_code, true /* is_read */),
               ::btlib::common::BufferView(value->data(), value->size()));
   };
@@ -425,7 +425,7 @@ void GattServerServer::OnWriteRequest(
     return;
   }
 
-  auto fidl_value = f1dl::Array<uint8_t>::From(value);
+  auto fidl_value = f1dl::VectorPtr<uint8_t>::From(value);
   auto* delegate = iter->second->delegate();
   FXL_DCHECK(delegate);
 

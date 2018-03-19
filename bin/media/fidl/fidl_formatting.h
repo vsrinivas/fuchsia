@@ -71,7 +71,7 @@ std::ostream& operator<<(std::ostream& os, const zx::object<T>& value) {
 }
 
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const f1dl::Array<T>& value) {
+std::ostream& operator<<(std::ostream& os, const f1dl::VectorPtr<T>& value) {
   if (!value) {
     return os << "<nullptr>\n";
   } else if (value->size() == 0) {
@@ -90,8 +90,8 @@ std::ostream& operator<<(std::ostream& os, const f1dl::Array<T>& value) {
 
 template <typename T>
 struct AsInlineArray {
-  explicit AsInlineArray(const f1dl::Array<T>& value) : value_(value) {}
-  const f1dl::Array<T>& value_;
+  explicit AsInlineArray(const f1dl::VectorPtr<T>& value) : value_(value) {}
+  const f1dl::VectorPtr<T>& value_;
 };
 
 template <typename T>

@@ -293,7 +293,7 @@ std::ostream& operator<<(std::ostream& os,
   os << begl << "f1dl::StringPtr url: " << value->url << "\n";
   os << begl << "f1dl::StringPtr method: " << value->method << "\n";
   os << begl
-     << "f1dl::Array<network::HttpHeaderPtr> headers: " << value->headers;
+     << "f1dl::VectorPtr<network::HttpHeaderPtr> headers: " << value->headers;
   os << begl << "network::URLBody body: " << value->body;
   os << begl << "uint32_t response_body_buffer_size: "
      << value->response_body_buffer_size << "\n";
@@ -320,7 +320,7 @@ std::ostream& operator<<(std::ostream& os,
   os << begl << "uint32_t status_code: " << value->status_code << "\n";
   os << begl << "f1dl::StringPtr status_line: " << value->status_line << "\n";
   os << begl
-     << "f1dl::Array<network::HttpHeaderPtr> headers: " << value->headers;
+     << "f1dl::VectorPtr<network::HttpHeaderPtr> headers: " << value->headers;
   os << begl << "f1dl::StringPtr mime_type: " << value->mime_type << "\n";
   os << begl << "f1dl::StringPtr charset: " << value->charset << "\n";
   os << begl << "f1dl::StringPtr redirect_method: " << value->redirect_method

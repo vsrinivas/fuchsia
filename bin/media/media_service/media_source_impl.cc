@@ -17,7 +17,7 @@ namespace media {
 // static
 std::shared_ptr<MediaSourceImpl> MediaSourceImpl::Create(
     f1dl::InterfaceHandle<SeekingReader> reader,
-    const f1dl::Array<MediaTypeSetPtr>& allowed_media_types,
+    const f1dl::VectorPtr<MediaTypeSetPtr>& allowed_media_types,
     f1dl::InterfaceRequest<MediaSource> request,
     MediaComponentFactory* owner) {
   return std::shared_ptr<MediaSourceImpl>(new MediaSourceImpl(
@@ -26,7 +26,7 @@ std::shared_ptr<MediaSourceImpl> MediaSourceImpl::Create(
 
 MediaSourceImpl::MediaSourceImpl(
     f1dl::InterfaceHandle<SeekingReader> reader,
-    const f1dl::Array<MediaTypeSetPtr>& allowed_media_types,
+    const f1dl::VectorPtr<MediaTypeSetPtr>& allowed_media_types,
     f1dl::InterfaceRequest<MediaSource> request,
     MediaComponentFactory* owner)
     : MediaComponentFactory::Product<MediaSource>(this,
@@ -47,7 +47,7 @@ MediaSourceImpl::MediaSourceImpl(
   owner->CreateDemux(std::move(reader), demux_.NewRequest());
   HandleDemuxStatusUpdates();
 
-  demux_->Describe([this](f1dl::Array<MediaTypePtr> stream_media_types) {
+  demux_->Describe([this](f1dl::VectorPtr<MediaTypePtr> stream_media_types) {
     std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
 
     size_t stream_index = 0;
@@ -82,8 +82,8 @@ MediaSourceImpl::~MediaSourceImpl() {}
 
 void MediaSourceImpl::Describe(const DescribeCallback& callback) {
   init_complete_.When([this, callback]() {
-    f1dl::Array<MediaTypePtr> result =
-        f1dl::Array<MediaTypePtr>::New(streams_.size());
+    f1dl::VectorPtr<MediaTypePtr> result =
+        f1dl::VectorPtr<MediaTypePtr>::New(streams_.size());
     for (size_t i = 0; i < streams_.size(); i++) {
       result->at(i) = streams_[i]->media_type();
     }

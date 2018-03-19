@@ -729,7 +729,7 @@ void ViewRegistry::HitTest(const mozart::ViewTreeToken& view_tree_token,
       (float[3]){ray_origin.x, ray_origin.y, ray_origin.z},
       (float[3]){ray_direction.x, ray_direction.y, ray_direction.z},
       [this, callback = std::move(callback), ray_origin,
-       ray_direction](f1dl::Array<ui::gfx::HitPtr> hits) {
+       ray_direction](f1dl::VectorPtr<ui::gfx::HitPtr> hits) {
         std::vector<ViewHit> view_hits;
         view_hits.reserve(hits->size());
         for (auto& hit : *hits) {

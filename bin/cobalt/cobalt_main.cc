@@ -149,13 +149,13 @@ class CobaltEncoderImpl : public CobaltEncoder {
 
   void AddMultipartObservation(
       uint32_t metric_id,
-      f1dl::Array<ObservationValuePtr> observation,
+      f1dl::VectorPtr<ObservationValuePtr> observation,
       const AddMultipartObservationCallback& callback) override;
 
   void AddIntBucketDistribution(
       uint32_t metric_id,
       uint32_t encoding_id,
-      f1dl::Array<BucketDistributionEntryPtr> distribution,
+      f1dl::VectorPtr<BucketDistributionEntryPtr> distribution,
       const AddIntBucketDistributionCallback& callback) override;
 
   void SendObservations(const SendObservationsCallback& callback) override;
@@ -272,7 +272,7 @@ void CobaltEncoderImpl::AddObservation(uint32_t metric_id,
 
 void CobaltEncoderImpl::AddMultipartObservation(
     uint32_t metric_id,
-    f1dl::Array<ObservationValuePtr> observation,
+    f1dl::VectorPtr<ObservationValuePtr> observation,
     const AddMultipartObservationCallback& callback) {
   Encoder::Value value;
   for (const auto& obs_val : *observation) {
@@ -322,7 +322,7 @@ void CobaltEncoderImpl::AddMultipartObservation(
 void CobaltEncoderImpl::AddIntBucketDistribution(
     uint32_t metric_id,
     uint32_t encoding_id,
-    f1dl::Array<BucketDistributionEntryPtr> distribution,
+    f1dl::VectorPtr<BucketDistributionEntryPtr> distribution,
     const AddIntBucketDistributionCallback& callback) {
   std::map<uint32_t, uint64_t> distribution_map;
   for (auto it = distribution->begin(); distribution->end() != it; it++) {

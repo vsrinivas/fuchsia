@@ -22,8 +22,8 @@ void CanvasImpl::Init(f1dl::InterfaceHandle<sketchy::CanvasListener> listener) {
   FXL_LOG(ERROR) << "Init: unimplemented.";
 }
 
-void CanvasImpl::Enqueue(f1dl::Array<sketchy::CommandPtr> commands) {
-  // TODO: Use `AddAll()` when f1dl::Array supports it.
+void CanvasImpl::Enqueue(f1dl::VectorPtr<sketchy::CommandPtr> commands) {
+  // TODO: Use `AddAll()` when f1dl::VectorPtr supports it.
   for (size_t i = 0; i < commands->size(); ++i) {
     commands_.push_back(std::move(commands->at(i)));
   }

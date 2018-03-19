@@ -132,7 +132,7 @@ void VideoRendererImpl::CreateView(
              std::move(view_owner_request));
 }
 
-f1dl::Array<MediaTypeSetPtr> VideoRendererImpl::SupportedMediaTypes() {
+f1dl::VectorPtr<MediaTypeSetPtr> VideoRendererImpl::SupportedMediaTypes() {
   VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
   video_details->min_width = 0;
   video_details->max_width = std::numeric_limits<uint32_t>::max();
@@ -143,7 +143,7 @@ f1dl::Array<MediaTypeSetPtr> VideoRendererImpl::SupportedMediaTypes() {
   supported_type->details = MediaTypeSetDetails::New();
   supported_type->details->set_video(std::move(video_details));
   supported_type->encodings.push_back(MediaType::kVideoEncodingUncompressed);
-  f1dl::Array<MediaTypeSetPtr> supported_types;
+  f1dl::VectorPtr<MediaTypeSetPtr> supported_types;
   supported_types.push_back(std::move(supported_type));
   return supported_types;
 }

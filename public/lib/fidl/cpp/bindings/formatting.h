@@ -16,7 +16,7 @@ namespace f1dl {
 // Prints the contents of an array to an output stream in a human-readable
 // format.
 template <typename T>
-std::ostream& operator<<(std::ostream& os, const f1dl::Array<T>& array) {
+std::ostream& operator<<(std::ostream& os, const f1dl::VectorPtr<T>& array) {
   if (array) {
     os << "[";
     bool first = true;

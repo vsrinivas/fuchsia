@@ -84,7 +84,7 @@ class VideoFrameSource : public MediaPacketConsumerBase {
   void OnFailure() override;
 
   // Returns the supported media types.
-  f1dl::Array<MediaTypeSetPtr> SupportedMediaTypes();
+  f1dl::VectorPtr<MediaTypeSetPtr> SupportedMediaTypes();
 
   // Discards packets that are older than pts_.
   void DiscardOldPackets();

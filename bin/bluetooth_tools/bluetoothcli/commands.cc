@@ -33,7 +33,7 @@ bool HandleListAdapters(const App* app,
                         const fxl::CommandLine& cmd_line,
                         const fxl::Closure& complete_cb) {
   app->adapter_manager()->ListAdapters(
-      [complete_cb](f1dl::Array<bluetooth::control::AdapterInfoPtr> adapters) {
+      [complete_cb](f1dl::VectorPtr<bluetooth::control::AdapterInfoPtr> adapters) {
         auto ac = fxl::MakeAutoCall(complete_cb);
 
         if (!adapters || adapters->size() == 0) {

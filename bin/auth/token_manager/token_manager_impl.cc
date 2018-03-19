@@ -38,7 +38,7 @@ using auth::Status;
 TokenManagerImpl::TokenManagerImpl(
     component::ApplicationContext* app_context,
     std::unique_ptr<store::AuthDb> auth_db,
-    f1dl::Array<AuthProviderConfigPtr> auth_provider_configs)
+    f1dl::VectorPtr<AuthProviderConfigPtr> auth_provider_configs)
     : token_cache_(kMaxCacheSize), auth_db_(std::move(auth_db)) {
   FXL_CHECK(app_context);
   // TODO: Start the auth provider only when someone does a request to it,
@@ -127,7 +127,7 @@ void TokenManagerImpl::GetAccessToken(
     const auth::AuthProviderType auth_provider_type,
     const f1dl::StringPtr& user_profile_id,
     const f1dl::StringPtr& app_client_id,
-    f1dl::Array<f1dl::StringPtr> app_scopes,
+    f1dl::VectorPtr<f1dl::StringPtr> app_scopes,
     const GetAccessTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {

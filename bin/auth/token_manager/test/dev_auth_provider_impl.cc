@@ -41,7 +41,7 @@ void DevAuthProviderImpl::GetPersistentCredential(
 void DevAuthProviderImpl::GetAppAccessToken(
     const f1dl::StringPtr& credential,
     const f1dl::StringPtr& app_client_id,
-    const f1dl::Array<f1dl::StringPtr> app_scopes,
+    const f1dl::VectorPtr<f1dl::StringPtr> app_scopes,
     const GetAppAccessTokenCallback& callback) {
   AuthTokenPtr access_token = auth::AuthToken::New();
   access_token->token =

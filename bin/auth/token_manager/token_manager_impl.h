@@ -30,7 +30,7 @@ class TokenManagerImpl : public TokenManager {
  public:
   TokenManagerImpl(component::ApplicationContext* context,
                    std::unique_ptr<store::AuthDb> auth_db,
-                   f1dl::Array<AuthProviderConfigPtr> auth_provider_configs);
+                   f1dl::VectorPtr<AuthProviderConfigPtr> auth_provider_configs);
 
   ~TokenManagerImpl() override;
 
@@ -44,7 +44,7 @@ class TokenManagerImpl : public TokenManager {
   void GetAccessToken(const auth::AuthProviderType auth_provider_type,
                       const f1dl::StringPtr& user_profile_id,
                       const f1dl::StringPtr& app_client_id,
-                      const f1dl::Array<f1dl::StringPtr> app_scopes,
+                      const f1dl::VectorPtr<f1dl::StringPtr> app_scopes,
                       const GetAccessTokenCallback& callback) override;
 
   void GetIdToken(const auth::AuthProviderType auth_provider_type,

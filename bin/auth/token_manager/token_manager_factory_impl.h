@@ -31,7 +31,7 @@ class TokenManagerFactoryImpl : public TokenManagerFactory {
  private:
   // |TokenManagerFactory|
   void GetTokenManager(const f1dl::StringPtr& user_id,
-                       f1dl::Array<AuthProviderConfigPtr> auth_provider_configs,
+                       f1dl::VectorPtr<AuthProviderConfigPtr> auth_provider_configs,
                        f1dl::InterfaceRequest<TokenManager> request) override;
 
   component::ApplicationContext* const app_context_;

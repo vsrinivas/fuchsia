@@ -27,7 +27,7 @@ void ViewImpl::GetServiceProvider(
 
 void ViewImpl::OfferServiceProvider(
     f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
-    f1dl::Array<f1dl::StringPtr> service_names) {
+    f1dl::VectorPtr<f1dl::StringPtr> service_names) {
   state_->SetServiceProvider(std::move(service_provider),
                              std::move(service_names));
 }

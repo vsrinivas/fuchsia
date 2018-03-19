@@ -52,7 +52,7 @@ class Tracee {
 
   bool operator==(TraceProviderBundle* bundle) const;
   bool Start(size_t buffer_size,
-             f1dl::Array<f1dl::StringPtr> categories,
+             f1dl::VectorPtr<f1dl::StringPtr> categories,
              fxl::Closure started_callback,
              fxl::Closure stopped_callback);
   void Stop();

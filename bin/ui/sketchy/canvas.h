@@ -24,7 +24,7 @@ class CanvasImpl final : public sketchy::Canvas {
 
   // |sketchy::Canvas|
   void Init(::f1dl::InterfaceHandle<sketchy::CanvasListener> listener) override;
-  void Enqueue(::f1dl::Array<sketchy::CommandPtr> commands) override;
+  void Enqueue(::f1dl::VectorPtr<sketchy::CommandPtr> commands) override;
   void Present(uint64_t presentation_time,
                const PresentCallback& callback) override;
 
@@ -67,7 +67,7 @@ class CanvasImpl final : public sketchy::Canvas {
   scenic_lib::Session* const session_;
   SharedBufferPool shared_buffer_pool_;
 
-  ::f1dl::Array<sketchy::CommandPtr> commands_;
+  ::f1dl::VectorPtr<sketchy::CommandPtr> commands_;
   ResourceMap resource_map_;
   bool is_scenic_present_requested_ = false;
   std::vector<scenic_lib::Session::PresentCallback> callbacks_;

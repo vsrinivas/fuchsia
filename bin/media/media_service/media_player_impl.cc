@@ -107,7 +107,7 @@ void MediaPlayerImpl::MaybeCreateSource() {
   HandleSourceStatusUpdates();
 
   source_->Describe(
-      fxl::MakeCopyable([this](f1dl::Array<MediaTypePtr> stream_types) mutable {
+      fxl::MakeCopyable([this](f1dl::VectorPtr<MediaTypePtr> stream_types) mutable {
         stream_types_ = std::move(stream_types);
         ConnectSinks();
       }));

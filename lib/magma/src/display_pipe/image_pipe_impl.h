@@ -24,8 +24,8 @@ public:
     void RemoveImage(uint32_t image_id) override;
     void PresentImage(uint32_t image_id,
                       uint64_t presetation_time,
-                      ::f1dl::Array<zx::event> acquire_fences,
-                      ::f1dl::Array<zx::event> release_fences,
+                      ::f1dl::VectorPtr<zx::event> acquire_fences,
+                      ::f1dl::VectorPtr<zx::event> release_fences,
                       const PresentImageCallback& callback) override;
 
     void AddBinding(f1dl::InterfaceRequest<ImagePipe> request);

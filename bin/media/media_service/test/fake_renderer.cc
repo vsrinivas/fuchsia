@@ -44,8 +44,8 @@ void FakeRenderer::Bind(
 
 void FakeRenderer::GetSupportedMediaTypes(
     const GetSupportedMediaTypesCallback& callback) {
-  f1dl::Array<MediaTypeSetPtr> supported_types =
-      f1dl::Array<MediaTypeSetPtr>::New(2);
+  f1dl::VectorPtr<MediaTypeSetPtr> supported_types =
+      f1dl::VectorPtr<MediaTypeSetPtr>::New(2);
 
   AudioMediaTypeSetDetailsPtr audio_details = AudioMediaTypeSetDetails::New();
   audio_details->sample_format = AudioSampleFormat::ANY;

@@ -37,14 +37,14 @@ class SessionHandler : public TempSessionDelegate, public EventReporter {
   scenic::gfx::Session* session() const { return session_.get(); }
 
   // Flushes enqueued session events to the session listener as a batch.
-  void SendEvents(::f1dl::Array<ui::EventPtr> events) override;
+  void SendEvents(::f1dl::VectorPtr<ui::EventPtr> events) override;
 
  protected:
   // |ui::Session|
-  void Enqueue(::f1dl::Array<ui::CommandPtr> commands) override;
+  void Enqueue(::f1dl::VectorPtr<ui::CommandPtr> commands) override;
   void Present(uint64_t presentation_time,
-               ::f1dl::Array<zx::event> acquire_fences,
-               ::f1dl::Array<zx::event> release_fences,
+               ::f1dl::VectorPtr<zx::event> acquire_fences,
+               ::f1dl::VectorPtr<zx::event> release_fences,
                const ui::Session::PresentCallback& callback) override;
 
   void HitTest(uint32_t node_id,
@@ -75,7 +75,7 @@ class SessionHandler : public TempSessionDelegate, public EventReporter {
   ErrorReporter* const error_reporter_;
   scenic::gfx::SessionPtr session_;
 
-  ::f1dl::Array<ui::gfx::CommandPtr> buffered_commands_;
+  ::f1dl::VectorPtr<ui::gfx::CommandPtr> buffered_commands_;
 };
 
 }  // namespace gfx

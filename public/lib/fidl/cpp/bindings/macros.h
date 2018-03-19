@@ -6,7 +6,7 @@
 #define LIB_FIDL_CPP_BINDINGS_MACROS_H_
 
 // Used to make a type move-only. The MoveOnlyTypeForCPP03 typedef is for
-// f1dl::Array to tell that this type is move-only. This is typically used like:
+// f1dl::VectorPtr to tell that this type is move-only. This is typically used like:
 //
 //   class MyMoveOnlyClass {
 //    public:

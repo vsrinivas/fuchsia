@@ -115,7 +115,7 @@ class GATT : public fbl::RefCounted<GATT> {
   virtual void SendNotification(IdType service_id,
                                 IdType chrc_id,
                                 std::string peer_id,
-                                ::f1dl::Array<uint8_t> value,
+                                ::f1dl::VectorPtr<uint8_t> value,
                                 bool indicate) = 0;
 
  protected:

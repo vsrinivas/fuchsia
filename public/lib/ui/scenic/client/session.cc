@@ -111,7 +111,7 @@ void Session::OnError(const f1dl::StringPtr& error) {
   FXL_LOG(ERROR) << "Session error: " << error;
 }
 
-void Session::OnEvent(f1dl::Array<ui::EventPtr> events) {
+void Session::OnEvent(f1dl::VectorPtr<ui::EventPtr> events) {
   if (event_handler_)
     event_handler_(std::move(events));
 }

@@ -25,8 +25,8 @@ zx::event CopyEvent(const zx::event& event) {
   return event_copy;
 }
 
-f1dl::Array<zx::event> CopyEventIntoFidlArray(const zx::event& event) {
-  auto event_array = f1dl::Array<zx::event>::New(1);
+f1dl::VectorPtr<zx::event> CopyEventIntoFidlArray(const zx::event& event) {
+  auto event_array = f1dl::VectorPtr<zx::event>::New(1);
   event_array->at(0) = CopyEvent(event);
   return event_array;
 }
@@ -51,8 +51,8 @@ zx::event CreateEvent() {
   return event;
 }
 
-f1dl::Array<zx::event> CreateEventArray(size_t n) {
-  ::f1dl::Array<zx::event> events;
+f1dl::VectorPtr<zx::event> CreateEventArray(size_t n) {
+  ::f1dl::VectorPtr<zx::event> events;
   for (size_t i = 0; i < n; i++) {
     events.push_back(CreateEvent());
   }

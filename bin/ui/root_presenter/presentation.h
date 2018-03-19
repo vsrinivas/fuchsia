@@ -116,7 +116,7 @@ class Presentation : private mozart::ViewTreeListener,
 
   // |Presentation|
   void SetRendererParams(
-      ::f1dl::Array<ui::gfx::RendererParamPtr> params) override;
+      ::f1dl::VectorPtr<ui::gfx::RendererParamPtr> params) override;
 
   void InitializeDisplayModel(ui::gfx::DisplayInfoPtr display_info);
 

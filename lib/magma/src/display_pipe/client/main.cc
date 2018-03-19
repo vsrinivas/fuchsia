@@ -101,8 +101,8 @@ public:
 
         buffer_->Reset();
 
-        auto acq = f1dl::Array<zx::event>::New(1);
-        auto rel = f1dl::Array<zx::event>::New(1);
+        auto acq = f1dl::VectorPtr<zx::event>::New(1);
+        auto rel = f1dl::VectorPtr<zx::event>::New(1);
         buffer_->dupAcquireFence(&acq->front());
         buffer_->dupReleaseFence(&rel->front());
 

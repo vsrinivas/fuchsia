@@ -13,9 +13,9 @@ namespace fxl {
 
 // Converts a vector to a FIDL Array with the same element type.
 template <typename T>
-struct TypeConverter<f1dl::Array<T>, std::vector<T>> {
-  static f1dl::Array<T> Convert(const std::vector<T>& value) {
-    auto result = f1dl::Array<T>::New(value.size());
+struct TypeConverter<f1dl::VectorPtr<T>, std::vector<T>> {
+  static f1dl::VectorPtr<T> Convert(const std::vector<T>& value) {
+    auto result = f1dl::VectorPtr<T>::New(value.size());
     for (size_t i = 0; i < value.size(); ++i)
       result->at(i) = value[i];
     return result;
@@ -24,9 +24,9 @@ struct TypeConverter<f1dl::Array<T>, std::vector<T>> {
 
 // Converts a vector to a FIDL Array with a different element type.
 template <typename T, typename U>
-struct TypeConverter<f1dl::Array<T>, std::vector<U>> {
-  static f1dl::Array<T> Convert(const std::vector<U>& value) {
-    auto result = f1dl::Array<T>::New(value.size());
+struct TypeConverter<f1dl::VectorPtr<T>, std::vector<U>> {
+  static f1dl::VectorPtr<T> Convert(const std::vector<U>& value) {
+    auto result = f1dl::VectorPtr<T>::New(value.size());
     for (size_t i = 0; i < value.size(); ++i)
       result->at(i) = To<T>(value[i]);
 
@@ -36,8 +36,8 @@ struct TypeConverter<f1dl::Array<T>, std::vector<U>> {
 
 // Converts a FIDL Array to a vector with a different element type.
 template <typename T, typename U>
-struct TypeConverter<std::vector<T>, f1dl::Array<U>> {
-  static std::vector<T> Convert(const f1dl::Array<U>& value) {
+struct TypeConverter<std::vector<T>, f1dl::VectorPtr<U>> {
+  static std::vector<T> Convert(const f1dl::VectorPtr<U>& value) {
     std::vector<T> result;
     if (!value.is_null()) {
       result.resize(value->size());
@@ -52,8 +52,8 @@ struct TypeConverter<std::vector<T>, f1dl::Array<U>> {
 // Converts a FIDL Array to a unique_ptr to a vector with a different element
 // type.
 template <typename T, typename U>
-struct TypeConverter<std::unique_ptr<std::vector<T>>, f1dl::Array<U>> {
-  static std::unique_ptr<std::vector<T>> Convert(const f1dl::Array<U>& value) {
+struct TypeConverter<std::unique_ptr<std::vector<T>>, f1dl::VectorPtr<U>> {
+  static std::unique_ptr<std::vector<T>> Convert(const f1dl::VectorPtr<U>& value) {
     if (!value) {
       return nullptr;
     }

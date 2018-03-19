@@ -34,7 +34,7 @@ class MdnsServiceImpl : public MdnsService {
       const f1dl::StringPtr& service_name,
       const f1dl::StringPtr& instance_name,
       uint16_t port,
-      f1dl::Array<f1dl::StringPtr> text,
+      f1dl::VectorPtr<f1dl::StringPtr> text,
       const PublishServiceInstanceCallback& callback) override;
 
   void UnpublishServiceInstance(const f1dl::StringPtr& service_name,
@@ -47,7 +47,7 @@ class MdnsServiceImpl : public MdnsService {
 
   void SetSubtypes(const f1dl::StringPtr& service_name,
                    const f1dl::StringPtr& instance_name,
-                   f1dl::Array<f1dl::StringPtr> subtypes) override;
+                   f1dl::VectorPtr<f1dl::StringPtr> subtypes) override;
 
   void ReannounceInstance(const f1dl::StringPtr& service_name,
                           const f1dl::StringPtr& instance_name) override;
@@ -96,7 +96,7 @@ class MdnsServiceImpl : public MdnsService {
   class SimplePublisher : public Mdns::Publisher {
    public:
     SimplePublisher(IpPort port,
-                    f1dl::Array<f1dl::StringPtr> text,
+                    f1dl::VectorPtr<f1dl::StringPtr> text,
                     const PublishServiceInstanceCallback& callback);
 
    private:

@@ -78,7 +78,7 @@ class AudioRenderer1Impl : public AudioRendererImpl,
   // AudioRenderer1Impl (just that we implement its interface).
   void OnPacketReceived(fbl::RefPtr<AudioPacketRef> packet);
   bool OnFlushRequested(const MediaPacketConsumer::FlushCallback& cbk);
-  f1dl::Array<MediaTypeSetPtr> SupportedMediaTypes();
+  f1dl::VectorPtr<MediaTypeSetPtr> SupportedMediaTypes();
 
   AudioServerImpl* owner_;
   f1dl::Binding<AudioRenderer> audio_renderer_binding_;

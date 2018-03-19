@@ -30,7 +30,7 @@ MediaSinkImpl::MediaSinkImpl(
       renderer_(renderer_handle.Bind()) {
   FXL_DCHECK(renderer_);
 
-  renderer_->GetSupportedMediaTypes([this](f1dl::Array<MediaTypeSetPtr>
+  renderer_->GetSupportedMediaTypes([this](f1dl::VectorPtr<MediaTypeSetPtr>
                                                supported_media_types) {
     FXL_DCHECK(supported_media_types);
 

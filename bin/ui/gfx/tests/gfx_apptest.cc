@@ -93,7 +93,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   auto handler = static_cast<SessionHandlerForTest*>(engine()->FindSession(1));
 
   {
-    ::f1dl::Array<ui::gfx::CommandPtr> ops;
+    ::f1dl::VectorPtr<ui::gfx::CommandPtr> ops;
     ops.push_back(scenic_lib::NewCreateCircleOp(1, 50.f));
     ops.push_back(scenic_lib::NewCreateCircleOp(2, 25.f));
     session->Enqueue(std::move(ops));
@@ -102,7 +102,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   EXPECT_EQ(1u, handler->enqueue_count());
 
   // Create release fences
-  ::f1dl::Array<zx::event> release_fences = CreateEventArray(2);
+  ::f1dl::VectorPtr<zx::event> release_fences = CreateEventArray(2);
   zx::event release_fence1 = CopyEvent(release_fences[0]);
   zx::event release_fence2 = CopyEvent(release_fences[1]);
 
@@ -110,7 +110,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   EXPECT_FALSE(IsFenceSignalled(release_fence2));
 
   // Call Present with release fences.
-  session->Present(0u, ::f1dl::Array<zx::event>::New(0),
+  session->Present(0u, ::f1dl::VectorPtr<zx::event>::New(0),
                    std::move(release_fences),
                    [](ui::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 1);
@@ -119,8 +119,8 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   EXPECT_FALSE(IsFenceSignalled(release_fence1));
   EXPECT_FALSE(IsFenceSignalled(release_fence2));
   // Call Present again with no release fences.
-  session->Present(0u, ::f1dl::Array<zx::event>::New(0),
-                   ::f1dl::Array<zx::event>::New(0),
+  session->Present(0u, ::f1dl::VectorPtr<zx::event>::New(0),
+                   ::f1dl::VectorPtr<zx::event>::New(0),
                    [](ui::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 2);
   EXPECT_EQ(2u, handler->present_count());
@@ -143,7 +143,7 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   auto handler = static_cast<SessionHandlerForTest*>(engine()->FindSession(1));
 
   {
-    ::f1dl::Array<ui::gfx::CommandPtr> ops;
+    ::f1dl::VectorPtr<ui::gfx::CommandPtr> ops;
     ops.push_back(scenic_lib::NewCreateCircleOp(1, 50.f));
     ops.push_back(scenic_lib::NewCreateCircleOp(2, 25.f));
     session->Enqueue(std::move(ops));
@@ -157,10 +157,10 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   zx::event release_fence;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &release_fence));
 
-  ::f1dl::Array<zx::event> acquire_fences;
+  ::f1dl::VectorPtr<zx::event> acquire_fences;
   acquire_fences.push_back(CopyEvent(acquire_fence));
 
-  ::f1dl::Array<zx::event> release_fences;
+  ::f1dl::VectorPtr<zx::event> release_fences;
   release_fences.push_back(CopyEvent(release_fence));
 
   // Call Present with both the acquire and release fences.
@@ -172,8 +172,8 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   EXPECT_FALSE(IsFenceSignalled(release_fence));
 
   // Call Present again with no fences.
-  session->Present(0u, ::f1dl::Array<zx::event>::New(0),
-                   ::f1dl::Array<zx::event>::New(0),
+  session->Present(0u, ::f1dl::VectorPtr<zx::event>::New(0),
+                   ::f1dl::VectorPtr<zx::event>::New(0),
                    [](ui::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 2);
 

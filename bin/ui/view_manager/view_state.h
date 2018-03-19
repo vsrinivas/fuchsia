@@ -112,7 +112,7 @@ class ViewState : public ViewContainerState {
 
   void SetServiceProvider(
       f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
-      f1dl::Array<f1dl::StringPtr> service_names);
+      f1dl::VectorPtr<f1dl::StringPtr> service_names);
 
  private:
   void RebuildFocusChain();
@@ -136,7 +136,7 @@ class ViewState : public ViewContainerState {
 
   std::unique_ptr<FocusChain> focus_chain_;
   component::ServiceProviderPtr service_provider_;
-  f1dl::Array<f1dl::StringPtr> service_names_;
+  f1dl::VectorPtr<f1dl::StringPtr> service_names_;
 
   fxl::WeakPtrFactory<ViewState> weak_factory_;  // must be last
 

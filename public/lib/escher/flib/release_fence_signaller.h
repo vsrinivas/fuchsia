@@ -30,13 +30,13 @@ class ReleaseFenceSignaller
   void AddVulkanReleaseFence(zx::event fence);
 
   // Must be called on the same thread that we're submitting frames to Escher.
-  void AddVulkanReleaseFences(f1dl::Array<zx::event> fences);
+  void AddVulkanReleaseFences(f1dl::VectorPtr<zx::event> fences);
 
   // Must be called on the same thread that we're submitting frames to Escher.
   virtual void AddCPUReleaseFence(zx::event fence);
 
   // Must be called on the same thread that we're submitting frames to Escher.
-  virtual void AddCPUReleaseFences(f1dl::Array<zx::event> fences);
+  virtual void AddCPUReleaseFences(f1dl::VectorPtr<zx::event> fences);
 
  private:
   // The sequence number for the most recently finished CommandBuffer.

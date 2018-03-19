@@ -53,7 +53,7 @@ void SessionTest::ReportError(fxl::LogSeverity severity,
   reported_errors_.push_back(error_string);
 }
 
-void SessionTest::SendEvents(::f1dl::Array<ui::EventPtr> events) {
+void SessionTest::SendEvents(::f1dl::VectorPtr<ui::EventPtr> events) {
   for (size_t i = 0; i < events->size(); ++i) {
     events_.push_back(std::move(events->at(i)));
   }

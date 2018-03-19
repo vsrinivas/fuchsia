@@ -28,8 +28,8 @@ class ImagePipeHandler : public ui::gfx::ImagePipe {
 
   void PresentImage(uint32_t image_id,
                     uint64_t presentation_time,
-                    ::f1dl::Array<zx::event> acquire_fences,
-                    ::f1dl::Array<zx::event> release_fences,
+                    ::f1dl::VectorPtr<zx::event> acquire_fences,
+                    ::f1dl::VectorPtr<zx::event> release_fences,
                     const PresentImageCallback& callback) override;
 
   ::f1dl::Binding<ui::gfx::ImagePipe> binding_;

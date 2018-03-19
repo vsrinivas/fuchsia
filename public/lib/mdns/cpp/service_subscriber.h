@@ -37,7 +37,7 @@ class ServiceSubscriber {
   MdnsServiceSubscriptionPtr Reset();
 
   // Returns the current set of service instances.
-  const f1dl::Array<MdnsServiceInstancePtr>& instances() const {
+  const f1dl::VectorPtr<MdnsServiceInstancePtr>& instances() const {
     return instances_;
   }
 
@@ -49,13 +49,13 @@ class ServiceSubscriber {
  private:
   void HandleInstanceUpdates(
       uint64_t version = MdnsServiceSubscription::kInitialInstances,
-      f1dl::Array<MdnsServiceInstancePtr> instances = nullptr);
+      f1dl::VectorPtr<MdnsServiceInstancePtr> instances = nullptr);
 
-  void IssueCallbacks(const f1dl::Array<MdnsServiceInstancePtr>& instances);
+  void IssueCallbacks(const f1dl::VectorPtr<MdnsServiceInstancePtr>& instances);
 
   MdnsServiceSubscriptionPtr subscription_;
   UpdateCallback callback_;
-  f1dl::Array<MdnsServiceInstancePtr> instances_;
+  f1dl::VectorPtr<MdnsServiceInstancePtr> instances_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceSubscriber);
 };

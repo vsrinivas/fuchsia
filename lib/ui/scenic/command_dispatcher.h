@@ -50,10 +50,10 @@ class TempSessionDelegate : public CommandDispatcher {
  public:
   explicit TempSessionDelegate(CommandDispatcherContext context);
 
-  virtual void Enqueue(::f1dl::Array<ui::CommandPtr> ops) = 0;
+  virtual void Enqueue(::f1dl::VectorPtr<ui::CommandPtr> ops) = 0;
   virtual void Present(uint64_t presentation_time,
-                       ::f1dl::Array<zx::event> acquire_fences,
-                       ::f1dl::Array<zx::event> release_fences,
+                       ::f1dl::VectorPtr<zx::event> acquire_fences,
+                       ::f1dl::VectorPtr<zx::event> release_fences,
                        const ui::Session::PresentCallback& callback) = 0;
 
   virtual void HitTest(uint32_t node_id,

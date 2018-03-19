@@ -45,7 +45,7 @@ void Scale(Transform* transform, float x, float y, float z) {
 
 TransformPtr CreateIdentityTransform() {
   TransformPtr result = Transform::New();
-  result->matrix = f1dl::Array<float>::New(16);
+  result->matrix = f1dl::VectorPtr<float>::New(16);
   SetIdentityTransform(result.get());
   return result;
 }

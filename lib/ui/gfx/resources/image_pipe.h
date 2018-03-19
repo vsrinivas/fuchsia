@@ -46,8 +46,8 @@ class ImagePipe : public ImageBase {
 
   void PresentImage(uint32_t image_id,
                     uint64_t presentation_time,
-                    ::f1dl::Array<zx::event> acquire_fences,
-                    ::f1dl::Array<zx::event> release_fences,
+                    ::f1dl::VectorPtr<zx::event> acquire_fences,
+                    ::f1dl::VectorPtr<zx::event> release_fences,
                     const ui::gfx::ImagePipe::PresentImageCallback& callback);
 
   void Accept(class ResourceVisitor* visitor) override;
@@ -90,7 +90,7 @@ class ImagePipe : public ImageBase {
     scenic::ResourceId image_id;
     uint64_t presentation_time;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
-    ::f1dl::Array<zx::event> release_fences;
+    ::f1dl::VectorPtr<zx::event> release_fences;
 
     // Callback to report when the update has been applied in response to
     // an invocation of |ImagePipe.PresentImage()|.
@@ -101,7 +101,7 @@ class ImagePipe : public ImageBase {
 
   scenic::ResourceId current_image_id_ = 0;
   ImagePtr current_image_;
-  ::f1dl::Array<zx::event> current_release_fences_;
+  ::f1dl::VectorPtr<zx::event> current_release_fences_;
 
   ResourceMap images_;
   bool is_valid_ = true;

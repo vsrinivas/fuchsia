@@ -85,7 +85,7 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop {
  private:
   std::unique_ptr<component::ApplicationContext> application_context_;
   component::ApplicationControllerPtr app_controller_;
-  f1dl::Array<auth::AuthProviderConfigPtr> auth_provider_configs_;
+  f1dl::VectorPtr<auth::AuthProviderConfigPtr> auth_provider_configs_;
 
  protected:
   auth::TokenManagerSyncPtr token_mgr_;
@@ -110,7 +110,7 @@ TEST_F(DevTokenManagerAppTest, Authorize) {
 }
 
 TEST_F(DevTokenManagerAppTest, GetAccessToken) {
-  auto scopes = f1dl::Array<f1dl::StringPtr>::New(0);
+  auto scopes = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
   auth::Status status;
   f1dl::StringPtr access_token;
 
@@ -173,7 +173,7 @@ TEST_F(DevTokenManagerAppTest, GetCachedFirebaseToken) {
 }
 
 TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
-  auto scopes = f1dl::Array<f1dl::StringPtr>::New(0);
+  auto scopes = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
   auth::Status status;
 
   f1dl::StringPtr old_id_token;
@@ -198,7 +198,7 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
   token_mgr_->DeleteAllTokens(kDevAuthProvider, kTestUserProfileId, &status);
   ASSERT_EQ(auth::Status::OK, status);
 
-  scopes = f1dl::Array<f1dl::String>::New(0);
+  scopes = f1dl::VectorPtr<f1dl::String>::New(0);
   token_mgr_->GetIdToken(kDevAuthProvider, kTestUserProfileId, "", &status,
                          &new_id_token);
   ASSERT_EQ(auth::Status::OK, status);
@@ -242,7 +242,7 @@ TEST_F(DevTokenManagerAppTest, GetIdTokenFromCache) {
 }
 
 TEST_F(DevTokenManagerAppTest, GetAccessTokenFromCache) {
-  auto scopes = f1dl::Array<f1dl::StringPtr>::New(0);
+  auto scopes = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
   auth::Status status;
   f1dl::StringPtr id_token;
   f1dl::StringPtr access_token;
@@ -256,7 +256,7 @@ TEST_F(DevTokenManagerAppTest, GetAccessTokenFromCache) {
                          &id_token);
   ASSERT_EQ(auth::Status::OK, status);
 
-  scopes = f1dl::Array<f1dl::String>::New(0);
+  scopes = f1dl::VectorPtr<f1dl::String>::New(0);
   token_mgr_->GetAccessToken(kDevAuthProvider, kTestUserProfileId, "",
                              std::move(scopes), &status, &cached_access_token);
   ASSERT_EQ(auth::Status::OK, status);
@@ -272,7 +272,7 @@ TEST_F(DevTokenManagerAppTest, GetAndRevokeCredential) {
 
   std::string credential;
   f1dl::StringPtr token;
-  auto scopes = f1dl::Array<f1dl::StringPtr>::New(0);
+  auto scopes = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
 
   token_mgr_->Authorize(kDevAuthProvider, std::move(auth_ui_context), &status,
                         &user_info);

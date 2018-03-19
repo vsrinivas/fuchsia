@@ -31,7 +31,7 @@ class LowEnergyCentralServer
   void SetDelegate(
       ::f1dl::InterfaceHandle<::bluetooth::low_energy::CentralDelegate>
           delegate) override;
-  void GetPeripherals(::f1dl::Array<::f1dl::StringPtr> service_uuids,
+  void GetPeripherals(::f1dl::VectorPtr<::f1dl::StringPtr> service_uuids,
                       const GetPeripheralsCallback& callback) override;
   void GetPeripheral(const ::f1dl::StringPtr& identifier,
                      const GetPeripheralCallback& callback) override;

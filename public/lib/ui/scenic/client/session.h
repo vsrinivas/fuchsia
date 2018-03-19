@@ -29,10 +29,10 @@ class Session : private ui::SessionListener {
   using PresentCallback = std::function<void(ui::PresentationInfoPtr info)>;
 
   // Provide information about hits.
-  using HitTestCallback = std::function<void(f1dl::Array<ui::gfx::HitPtr> hits)>;
+  using HitTestCallback = std::function<void(f1dl::VectorPtr<ui::gfx::HitPtr> hits)>;
 
   // Called when session events are received.
-  using EventHandler = std::function<void(f1dl::Array<ui::EventPtr>)>;
+  using EventHandler = std::function<void(f1dl::VectorPtr<ui::EventPtr>)>;
 
   // Wraps the provided session and session listener.
   // The listener is optional.
@@ -104,15 +104,15 @@ class Session : private ui::SessionListener {
  private:
   // |ui::SessionListener|
   void OnError(const f1dl::StringPtr& error) override;
-  void OnEvent(f1dl::Array<ui::EventPtr> events) override;
+  void OnEvent(f1dl::VectorPtr<ui::EventPtr> events) override;
 
   ui::SessionPtr session_;
   uint32_t next_resource_id_ = 1u;
   uint32_t resource_count_ = 0u;
 
-  f1dl::Array<ui::CommandPtr> commands_;
-  f1dl::Array<zx::event> acquire_fences_;
-  f1dl::Array<zx::event> release_fences_;
+  f1dl::VectorPtr<ui::CommandPtr> commands_;
+  f1dl::VectorPtr<zx::event> acquire_fences_;
+  f1dl::VectorPtr<zx::event> release_fences_;
 
   EventHandler event_handler_;
   f1dl::Binding<ui::SessionListener> session_listener_binding_;

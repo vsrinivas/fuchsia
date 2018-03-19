@@ -127,10 +127,10 @@ class HitTestTest : public SessionTest {
     wrapped_ray_direction.y = ray_direction.y;
     wrapped_ray_direction.z = ray_direction.z;
 
-    f1dl::Array<ui::gfx::HitPtr> actual_hits;
+    f1dl::VectorPtr<ui::gfx::HitPtr> actual_hits;
     session_->HitTest(node_id, wrapped_ray_origin.Clone(),
                       wrapped_ray_direction.Clone(),
-                      [&actual_hits](f1dl::Array<ui::gfx::HitPtr> hits) {
+                      [&actual_hits](f1dl::VectorPtr<ui::gfx::HitPtr> hits) {
                         actual_hits = std::move(hits);
                       });
 

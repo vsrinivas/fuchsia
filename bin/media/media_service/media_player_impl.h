@@ -130,7 +130,7 @@ class MediaPlayerImpl : public MediaComponentFactory::Product<MediaPlayer>,
 
   f1dl::InterfaceHandle<SeekingReader> reader_handle_;
   MediaSourcePtr source_;
-  f1dl::Array<MediaTypePtr> stream_types_;
+  f1dl::VectorPtr<MediaTypePtr> stream_types_;
   std::unordered_map<MediaTypeMedium, Stream> streams_by_medium_;
   MediaTimelineControllerPtr timeline_controller_;
   MediaTimelineControlPointPtr timeline_control_point_;

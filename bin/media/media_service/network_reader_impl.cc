@@ -115,7 +115,7 @@ void NetworkReaderImpl::ReadAt(uint64_t position,
       header->name = kRangeHeaderName;
       header->value = value.str();
 
-      request->headers = f1dl::Array<network::HttpHeaderPtr>::New(1);
+      request->headers = f1dl::VectorPtr<network::HttpHeaderPtr>::New(1);
       request->headers->at(0) = std::move(header);
     }
 

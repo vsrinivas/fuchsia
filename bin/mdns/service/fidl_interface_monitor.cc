@@ -34,7 +34,7 @@ FidlInterfaceMonitor::FidlInterfaceMonitor(
   netstack_->RegisterListener(std::move(listener_handle));
 
   netstack_->GetInterfaces(
-      [this](f1dl::Array<netstack::NetInterfacePtr> interfaces) {
+      [this](f1dl::VectorPtr<netstack::NetInterfacePtr> interfaces) {
         OnInterfacesChanged(std::move(interfaces));
       });
 }
@@ -57,7 +57,7 @@ FidlInterfaceMonitor::GetInterfaces() {
 }
 
 void FidlInterfaceMonitor::OnInterfacesChanged(
-    f1dl::Array<netstack::NetInterfacePtr> interfaces) {
+    f1dl::VectorPtr<netstack::NetInterfacePtr> interfaces) {
   bool link_change = false;
 
   for (const auto& if_info : *interfaces) {

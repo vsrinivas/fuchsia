@@ -180,7 +180,7 @@ TestRunContext::TestRunContext(
 
   auto info = component::ApplicationLaunchInfo::New();
   info->url = url;
-  info->arguments = f1dl::Array<f1dl::StringPtr>::From(args);
+  info->arguments = f1dl::VectorPtr<f1dl::StringPtr>::From(args);
   launcher->CreateApplication(std::move(info),
                               child_app_controller_.NewRequest());
 

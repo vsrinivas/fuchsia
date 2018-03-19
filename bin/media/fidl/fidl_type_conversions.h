@@ -126,15 +126,15 @@ struct TypeConverter<std::unique_ptr<media::Metadata>,
 };
 
 template <>
-struct TypeConverter<f1dl::Array<uint8_t>, std::unique_ptr<media::Bytes>> {
-  static f1dl::Array<uint8_t> Convert(
+struct TypeConverter<f1dl::VectorPtr<uint8_t>, std::unique_ptr<media::Bytes>> {
+  static f1dl::VectorPtr<uint8_t> Convert(
       const std::unique_ptr<media::Bytes>& input);
 };
 
 template <>
-struct TypeConverter<std::unique_ptr<media::Bytes>, f1dl::Array<uint8_t>> {
+struct TypeConverter<std::unique_ptr<media::Bytes>, f1dl::VectorPtr<uint8_t>> {
   static std::unique_ptr<media::Bytes> Convert(
-      const f1dl::Array<uint8_t>& input);
+      const f1dl::VectorPtr<uint8_t>& input);
 };
 
 }  // namespace fxl

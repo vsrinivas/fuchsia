@@ -610,7 +610,7 @@ void Presentation::Shutdown() {
 }
 
 void Presentation::SetRendererParams(
-    ::f1dl::Array<ui::gfx::RendererParamPtr> params) {
+    ::f1dl::VectorPtr<ui::gfx::RendererParamPtr> params) {
   for (size_t i = 0; i < params->size(); ++i) {
     renderer_.SetParam(std::move(params->at(i)));
   }

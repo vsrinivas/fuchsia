@@ -25,7 +25,7 @@ class MediaSourceImpl : public MediaComponentFactory::Product<MediaSource>,
  public:
   static std::shared_ptr<MediaSourceImpl> Create(
       f1dl::InterfaceHandle<SeekingReader> reader,
-      const f1dl::Array<MediaTypeSetPtr>& allowed_media_types,
+      const f1dl::VectorPtr<MediaTypeSetPtr>& allowed_media_types,
       f1dl::InterfaceRequest<MediaSource> request,
       MediaComponentFactory* owner);
 
@@ -47,7 +47,7 @@ class MediaSourceImpl : public MediaComponentFactory::Product<MediaSource>,
 
  private:
   MediaSourceImpl(f1dl::InterfaceHandle<SeekingReader> reader,
-                  const f1dl::Array<MediaTypeSetPtr>& allowed_media_types,
+                  const f1dl::VectorPtr<MediaTypeSetPtr>& allowed_media_types,
                   f1dl::InterfaceRequest<MediaSource> request,
                   MediaComponentFactory* owner);
 

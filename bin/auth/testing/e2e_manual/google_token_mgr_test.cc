@@ -117,7 +117,7 @@ class GoogleTokenManagerApp {
   }
 
   void FetchAndVerifyAccessToken() {
-    auto scopes = f1dl::Array<f1dl::String>::New(0);
+    auto scopes = f1dl::VectorPtr<f1dl::String>::New(0);
     scopes.push_back("https://www.googleapis.com/auth/plus.me");
     scopes.push_back("https://www.googleapis.com/auth/userinfo.email");
 
@@ -163,7 +163,7 @@ class GoogleTokenManagerApp {
   const std::string refresh_token_;
   std::unique_ptr<component::ApplicationContext> application_context_;
   component::ApplicationControllerPtr app_controller_;
-  f1dl::Array<auth::AuthProviderConfigPtr> auth_provider_configs_;
+  f1dl::VectorPtr<auth::AuthProviderConfigPtr> auth_provider_configs_;
 
   auth::TokenManagerSyncPtr token_mgr_;
   auth::TokenManagerFactorySyncPtr token_mgr_factory_;

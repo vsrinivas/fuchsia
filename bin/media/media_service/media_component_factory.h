@@ -33,7 +33,7 @@ class MediaComponentFactory : public FactoryServiceBase<MediaComponentFactory> {
   void CreateMediaPlayer(f1dl::InterfaceRequest<MediaPlayer> player);
 
   void CreateSource(f1dl::InterfaceHandle<SeekingReader> reader,
-                    f1dl::Array<MediaTypeSetPtr> allowed_media_types,
+                    f1dl::VectorPtr<MediaTypeSetPtr> allowed_media_types,
                     f1dl::InterfaceRequest<MediaSource> source);
 
   void CreateSink(f1dl::InterfaceHandle<MediaRenderer> renderer,

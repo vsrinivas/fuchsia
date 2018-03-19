@@ -106,8 +106,8 @@ void ImagePipe::RemoveImage(uint32_t image_id) {
 void ImagePipe::PresentImage(
     uint32_t image_id,
     uint64_t presentation_time,
-    ::f1dl::Array<zx::event> acquire_fences,
-    ::f1dl::Array<zx::event> release_fences,
+    ::f1dl::VectorPtr<zx::event> acquire_fences,
+    ::f1dl::VectorPtr<zx::event> release_fences,
     const ui::gfx::ImagePipe::PresentImageCallback& callback) {
   if (!frames_.empty() &&
       presentation_time < frames_.back().presentation_time) {
@@ -154,7 +154,7 @@ bool ImagePipe::Update(uint64_t presentation_time,
 
   bool present_next_image = false;
   scenic::ResourceId next_image_id = current_image_id_;
-  ::f1dl::Array<zx::event> next_release_fences;
+  ::f1dl::VectorPtr<zx::event> next_release_fences;
 
   while (!frames_.empty() &&
          frames_.front().presentation_time <= presentation_time &&

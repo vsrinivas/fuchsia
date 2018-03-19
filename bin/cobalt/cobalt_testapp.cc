@@ -30,7 +30,7 @@
 
 using cobalt::ObservationValue;
 using cobalt::ObservationValuePtr;
-using f1dl::Array;
+using f1dl::VectorPtr;
 
 // Command-line flags
 
@@ -546,7 +546,7 @@ bool CobaltTestApp::EncodeIntDistributionAndSend(
     bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-    f1dl::Array<cobalt::BucketDistributionEntryPtr> distribution;
+    f1dl::VectorPtr<cobalt::BucketDistributionEntryPtr> distribution;
     for (auto it = distribution_map.begin(); distribution_map.end() != it;
          it++) {
       auto entry = cobalt::BucketDistributionEntry::New();
@@ -638,7 +638,7 @@ bool CobaltTestApp::EncodeStringPairAndSend(uint32_t metric_id,
                                             bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-    auto parts = Array<ObservationValuePtr>::New(2);
+    f1dl::VectorPtr<ObservationValuePtr> parts(2);
     parts->at(0) = ObservationValue::New();
     parts->at(0)->name = part0;
     parts->at(0)->encoding_id = encoding_id0;

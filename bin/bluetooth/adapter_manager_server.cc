@@ -97,7 +97,7 @@ void AdapterManagerServer::ListAdapters(const ListAdaptersCallback& callback) {
     if (!self)
       return;
 
-    f1dl::Array<AdapterInfoPtr> adapters;
+    f1dl::VectorPtr<AdapterInfoPtr> adapters;
     for (const auto& iter : adapter_map) {
       adapters.push_back(iter.second->info().Clone());
     }

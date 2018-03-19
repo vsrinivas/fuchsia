@@ -37,7 +37,7 @@ zx_status_t SendAuthResponse(DeviceInterface* device, const common::MacAddr& pee
     debugfn();
 
     auto resp = AuthenticateResponse::New();
-    resp->peer_sta_address = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
+    resp->peer_sta_address = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
     peer_sta.CopyTo(resp->peer_sta_address->data());
     // TODO(tkilbourn): set this based on the actual auth type
     resp->auth_type = AuthenticationTypes::OPEN_SYSTEM;
@@ -63,7 +63,7 @@ zx_status_t SendDeauthResponse(DeviceInterface* device, const common::MacAddr& p
     debugfn();
 
     auto resp = DeauthenticateResponse::New();
-    resp->peer_sta_address = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
+    resp->peer_sta_address = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
     peer_sta.CopyTo(resp->peer_sta_address->data());
 
     size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
@@ -87,7 +87,7 @@ zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr&
     debugfn();
 
     auto ind = DeauthenticateIndication::New();
-    ind->peer_sta_address = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
+    ind->peer_sta_address = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
     peer_sta.CopyTo(ind->peer_sta_address->data());
     ind->reason_code = code;
 
@@ -136,7 +136,7 @@ zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::Ma
     debugfn();
 
     auto ind = DisassociateIndication::New();
-    ind->peer_sta_address = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
+    ind->peer_sta_address = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
     peer_sta.CopyTo(ind->peer_sta_address->data());
     ind->reason_code = code;
 
@@ -211,10 +211,10 @@ zx_status_t SendEapolIndication(DeviceInterface* device, const EapolFrame& eapol
     if (len > 255) { return ZX_OK; }
 
     auto ind = EapolIndication::New();
-    ind->data = ::f1dl::Array<uint8_t>::New(len);
+    ind->data = ::f1dl::VectorPtr<uint8_t>::New(len);
     std::memcpy(ind->data->data(), &eapol, len);
-    ind->src_addr = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
-    ind->dst_addr = f1dl::Array<uint8_t>::New(common::kMacAddrLen);
+    ind->src_addr = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
+    ind->dst_addr = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
     src.CopyTo(ind->src_addr->data());
     dst.CopyTo(ind->dst_addr->data());
 

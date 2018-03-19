@@ -32,7 +32,7 @@ zx::event CopyEvent(const zx::event& event);
 
 // Create a duplicate of the event, and create a new fidl Array of size one to
 // wrap it.
-f1dl::Array<zx::event> CopyEventIntoFidlArray(const zx::event& event);
+f1dl::VectorPtr<zx::event> CopyEventIntoFidlArray(const zx::event& event);
 
 // Create a duplicate of the eventpair.
 zx::eventpair CopyEventPair(const zx::eventpair& eventpair);
@@ -43,8 +43,8 @@ zx::vmo CopyVmo(const zx::vmo& vmo);
 // Create an event.
 zx::event CreateEvent();
 
-// Create a f1dl::Array and populate with |n| newly created events.
-f1dl::Array<zx::event> CreateEventArray(size_t n);
+// Create a f1dl::VectorPtr and populate with |n| newly created events.
+f1dl::VectorPtr<zx::event> CreateEventArray(size_t n);
 
 // Creates a VMO with the specified size, immediately allocate physical memory
 // for it, and wraps in a |fsl::SharedVmo| to make it easy to map it into the

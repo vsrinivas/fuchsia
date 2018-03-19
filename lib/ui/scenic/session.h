@@ -39,12 +39,12 @@ class Session final : public ui::Session,
   bool ApplyCommand(const ui::CommandPtr& command);
 
   // |ui::Session|
-  void Enqueue(::f1dl::Array<ui::CommandPtr> cmds) override;
+  void Enqueue(::f1dl::VectorPtr<ui::CommandPtr> cmds) override;
 
   // |ui::Session|
   void Present(uint64_t presentation_time,
-               ::f1dl::Array<zx::event> acquire_fences,
-               ::f1dl::Array<zx::event> release_fences,
+               ::f1dl::VectorPtr<zx::event> acquire_fences,
+               ::f1dl::VectorPtr<zx::event> release_fences,
                const PresentCallback& callback) override;
 
   // |ui::Session|
@@ -61,7 +61,7 @@ class Session final : public ui::Session,
                         const HitTestCallback& callback) override;
 
   // |EventReporter|
-  void SendEvents(::f1dl::Array<ui::EventPtr> events) override;
+  void SendEvents(::f1dl::VectorPtr<ui::EventPtr> events) override;
 
   // |ErrorReporter|
   // Customize behavior of ErrorReporter::ReportError().

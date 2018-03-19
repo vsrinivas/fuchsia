@@ -105,11 +105,11 @@ zx_status_t PhyDevice::Query(uint8_t* buf, size_t len, size_t* actual) {
     if (dead_) { return ZX_ERR_PEER_CLOSED; }
 
     auto info = wlan::phy::WlanPhyInfo::New();
-    info->supported_phys = f1dl::Array<wlan::phy::SupportedPhy>::New(0);
-    info->driver_features = f1dl::Array<wlan::phy::DriverFeature>::New(0);
-    info->mac_roles = f1dl::Array<wlan::phy::MacRole>::New(0);
-    info->caps = f1dl::Array<wlan::phy::Capability>::New(0);
-    info->bands = f1dl::Array<wlan::phy::BandInfoPtr>::New(0);
+    info->supported_phys = f1dl::VectorPtr<wlan::phy::SupportedPhy>::New(0);
+    info->driver_features = f1dl::VectorPtr<wlan::phy::DriverFeature>::New(0);
+    info->mac_roles = f1dl::VectorPtr<wlan::phy::MacRole>::New(0);
+    info->caps = f1dl::VectorPtr<wlan::phy::Capability>::New(0);
+    info->bands = f1dl::VectorPtr<wlan::phy::BandInfoPtr>::New(0);
 
     info->supported_phys.push_back(wlan::phy::SupportedPhy::DSSS);
     info->supported_phys.push_back(wlan::phy::SupportedPhy::CCK);

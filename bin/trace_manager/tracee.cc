@@ -71,7 +71,7 @@ bool Tracee::operator==(TraceProviderBundle* bundle) const {
 }
 
 bool Tracee::Start(size_t buffer_size,
-                   f1dl::Array<f1dl::StringPtr> categories,
+                   f1dl::VectorPtr<f1dl::StringPtr> categories,
                    fxl::Closure started_callback,
                    fxl::Closure stopped_callback) {
   FXL_DCHECK(state_ == State::kReady);

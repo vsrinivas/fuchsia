@@ -32,11 +32,11 @@ SessionHandler::~SessionHandler() {
   TearDown();
 }
 
-void SessionHandler::SendEvents(::f1dl::Array<ui::EventPtr> events) {
+void SessionHandler::SendEvents(::f1dl::VectorPtr<ui::EventPtr> events) {
   event_reporter_->SendEvents(std::move(events));
 }
 
-void SessionHandler::Enqueue(::f1dl::Array<ui::CommandPtr> commands) {
+void SessionHandler::Enqueue(::f1dl::VectorPtr<ui::CommandPtr> commands) {
   // TODO: Add them all at once instead of iterating.  The problem
   // is that ::fidl::Array doesn't support this.  Or, at least reserve
   // enough space.  But ::fidl::Array doesn't support this, either.
@@ -47,8 +47,8 @@ void SessionHandler::Enqueue(::f1dl::Array<ui::CommandPtr> commands) {
 }
 
 void SessionHandler::Present(uint64_t presentation_time,
-                             ::f1dl::Array<zx::event> acquire_fences,
-                             ::f1dl::Array<zx::event> release_fences,
+                             ::f1dl::VectorPtr<zx::event> acquire_fences,
+                             ::f1dl::VectorPtr<zx::event> release_fences,
                              const ui::Session::PresentCallback& callback) {
   if (!session_->ScheduleUpdate(
           presentation_time, std::move(buffered_commands_),

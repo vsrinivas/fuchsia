@@ -500,7 +500,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue,
     return VK_ERROR_SURFACE_LOST_KHR;
   }
 
-  auto acquire_fences = f1dl::Array<zx::event>::New(1);
+  auto acquire_fences = f1dl::VectorPtr<zx::event>::New(1);
 
   VkSemaphoreGetFuchsiaHandleInfoKHR semaphore_info = {
       .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
@@ -537,7 +537,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue,
 
   pending_images_.push_back({std::move(image_release_fence), index});
 
-  f1dl::Array<zx::event> release_fences;
+  f1dl::VectorPtr<zx::event> release_fences;
   release_fences.push_back(std::move(release_fence));
 
   ui::PresentationInfoPtr info;

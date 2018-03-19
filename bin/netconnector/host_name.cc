@@ -24,7 +24,7 @@ class NetstackClient {
       const netstack::Netstack::GetInterfacesCallback& callback) {
     NetstackClient* client = new NetstackClient();
     client->netstack_->GetInterfaces(
-        [client, callback](f1dl::Array<netstack::NetInterfacePtr> interfaces) {
+        [client, callback](f1dl::VectorPtr<netstack::NetInterfacePtr> interfaces) {
           callback(std::move(interfaces));
           delete client;
         });
@@ -51,7 +51,7 @@ IpAddress GetHostAddress() {
     return ip_address;
 
   NetstackClient::GetInterfaces(
-      [](const f1dl::Array<netstack::NetInterfacePtr>& interfaces) {
+      [](const f1dl::VectorPtr<netstack::NetInterfacePtr>& interfaces) {
         for (const auto& interface : *interfaces) {
           if (interface->addr->family == netstack::NetAddressFamily::IPV4) {
             ip_address = IpAddress(interface->addr.get());

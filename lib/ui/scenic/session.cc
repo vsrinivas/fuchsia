@@ -15,7 +15,7 @@ Session::Session(Scenic* owner,
 
 Session::~Session() = default;
 
-void Session::Enqueue(::f1dl::Array<ui::CommandPtr> cmds) {
+void Session::Enqueue(::f1dl::VectorPtr<ui::CommandPtr> cmds) {
   // TODO(MZ-469): Move Present logic into Session.
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
@@ -25,8 +25,8 @@ void Session::Enqueue(::f1dl::Array<ui::CommandPtr> cmds) {
 }
 
 void Session::Present(uint64_t presentation_time,
-                      ::f1dl::Array<zx::event> acquire_fences,
-                      ::f1dl::Array<zx::event> release_fences,
+                      ::f1dl::VectorPtr<zx::event> acquire_fences,
+                      ::f1dl::VectorPtr<zx::event> release_fences,
                       const PresentCallback& callback) {
   // TODO(MZ-469): Move Present logic into Session.
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
@@ -93,7 +93,7 @@ void Session::HitTestDeviceRay(ui::gfx::vec3Ptr ray_origin,
                              callback);
 }
 
-void Session::SendEvents(::f1dl::Array<ui::EventPtr> events) {
+void Session::SendEvents(::f1dl::VectorPtr<ui::EventPtr> events) {
   if (listener_) {
     listener_->OnEvent(std::move(events));
   }

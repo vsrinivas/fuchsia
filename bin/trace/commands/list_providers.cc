@@ -31,7 +31,7 @@ void ListProviders::Run(const fxl::CommandLine& command_line,
   }
 
   trace_controller()->GetRegisteredProviders([on_done = std::move(on_done)](
-      f1dl::Array<TraceProviderInfoPtr> providers) {
+      f1dl::VectorPtr<TraceProviderInfoPtr> providers) {
     out() << "Registered providers" << std::endl;
     for (const auto& provider : *providers) {
       out() << "  #" << provider->id << ": '" << provider->label << "'"

@@ -32,7 +32,7 @@ class FidlInterfaceMonitor : public netstack::NotificationListener,
  private:
   // NotificationListener implementation.
   void OnInterfacesChanged(
-      f1dl::Array<netstack::NetInterfacePtr> interfaces) override;
+      f1dl::VectorPtr<netstack::NetInterfacePtr> interfaces) override;
 
   netstack::NetstackPtr netstack_;
   f1dl::Binding<netstack::NotificationListener> binding_;

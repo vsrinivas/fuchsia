@@ -157,7 +157,7 @@ cobalt::Status SystemMetricsApp::LogMemoryUsage(
     return cobalt::Status::INTERNAL_ERROR;
   }
 
-  auto values = f1dl::Array<cobalt::ObservationValuePtr>::New(3);
+  auto values = f1dl::VectorPtr<cobalt::ObservationValuePtr>::New(3);
   values->at(0) = cobalt::ObservationValue::New();
   // Metric part name as defined in the corresponding metric config.
   values->at(0)->name = "system_uptime_minutes";

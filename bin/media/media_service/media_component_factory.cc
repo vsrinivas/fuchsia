@@ -39,7 +39,7 @@ void MediaComponentFactory::CreateMediaPlayer(
 
 void MediaComponentFactory::CreateSource(
     f1dl::InterfaceHandle<SeekingReader> reader,
-    f1dl::Array<MediaTypeSetPtr> media_types,
+    f1dl::VectorPtr<MediaTypeSetPtr> media_types,
     f1dl::InterfaceRequest<MediaSource> source) {
   AddProduct(MediaSourceImpl::Create(std::move(reader), media_types,
                                      std::move(source), this));
