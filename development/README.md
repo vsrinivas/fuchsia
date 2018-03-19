@@ -16,6 +16,7 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Changes that span layers](workflows/multilayer_changes.md)
  - [Debugging](workflows/debugging.md)
  - [Tracing][tracing]
+ - [Benchmarking][benchmarking]
  - [Build system](build/README.md)
 
 ## Languages
@@ -61,3 +62,4 @@ This section covers Fuchsia-wide conventions and best practices.
 [pixelbook]: hardware/pixelbook.md "Pixelbook"
 [flutter_module]: https://fuchsia.googlesource.com/peridot/+/master/examples/HOWTO_FLUTTER.md "Flutter modules"
 [tracing]: https://fuchsia.googlesource.com/garnet/+/master/docs/tracing_usage_guide.md
+[benchmarking]: https://fuchsia.googlesource.com/garnet/+/master/docs/benchmarking.md
