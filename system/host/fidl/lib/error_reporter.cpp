@@ -6,8 +6,8 @@
 
 namespace fidl {
 
-void ErrorReporter::ReportError(StringView error) {
-    errors_.push_back(error);
+void ErrorReporter::ReportError(std::string error) {
+    errors_.push_back(std::move(error));
 }
 
 void ErrorReporter::PrintReports() {

@@ -8,13 +8,11 @@
 #include <string>
 #include <vector>
 
-#include "string_view.h"
-
 namespace fidl {
 
 class ErrorReporter {
 public:
-    void ReportError(StringView error);
+    void ReportError(std::string error);
     void PrintReports();
 
 private:

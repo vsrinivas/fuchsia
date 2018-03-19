@@ -142,7 +142,7 @@ TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
 
 bool Library::Fail(StringView message) {
     auto formatted_message = std::string(message) + "\n";
-    error_reporter_->ReportError(formatted_message);
+    error_reporter_->ReportError(std::move(formatted_message));
     return false;
 }
 

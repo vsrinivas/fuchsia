@@ -97,7 +97,7 @@ decltype(nullptr) Parser::Fail() {
         error += surrounding_line;
         error += squiggle + "\n";
 
-        error_reporter_->ReportError(error);
+        error_reporter_->ReportError(std::move(error));
         ok_ = false;
     }
     return nullptr;
