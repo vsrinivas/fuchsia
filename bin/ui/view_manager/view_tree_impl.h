@@ -46,7 +46,7 @@ class ViewTreeImpl : public mozart::ViewTree,
   void RequestFocus(uint32_t child_key) override;
 
   // |component::ServiceProvider|:
-  void ConnectToService(const f1dl::String& service_name,
+  void ConnectToService(const f1dl::StringPtr& service_name,
                         zx::channel client_handle) override;
 
   ViewRegistry* const registry_;

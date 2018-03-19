@@ -31,7 +31,7 @@ class MediaPlayerImpl : public MediaComponentFactory::Product<MediaPlayer>,
   ~MediaPlayerImpl() override;
 
   // MediaPlayer implementation.
-  void SetHttpSource(const f1dl::String& http_url) override;
+  void SetHttpSource(const f1dl::StringPtr& http_url) override;
 
   void SetFileSource(zx::channel file_channel) override;
 

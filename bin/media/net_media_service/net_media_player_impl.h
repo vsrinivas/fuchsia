@@ -17,7 +17,7 @@ class NetMediaPlayerImpl : public NetMediaServiceImpl::Product<NetMediaPlayer>,
                            public NetMediaPlayer {
  public:
   static std::shared_ptr<NetMediaPlayerImpl> Create(
-      const f1dl::String& service_name,
+      const f1dl::StringPtr& service_name,
       f1dl::InterfaceHandle<MediaPlayer> media_player,
       f1dl::InterfaceRequest<NetMediaPlayer> net_media_player_request,
       NetMediaServiceImpl* owner);
@@ -25,7 +25,7 @@ class NetMediaPlayerImpl : public NetMediaServiceImpl::Product<NetMediaPlayer>,
   ~NetMediaPlayerImpl() override;
 
   // NetMediaPlayer implementation.
-  void SetUrl(const f1dl::String& url) override;
+  void SetUrl(const f1dl::StringPtr& url) override;
 
   void Play() override;
 
@@ -38,7 +38,7 @@ class NetMediaPlayerImpl : public NetMediaServiceImpl::Product<NetMediaPlayer>,
 
  private:
   NetMediaPlayerImpl(
-      const f1dl::String& service_name,
+      const f1dl::StringPtr& service_name,
       f1dl::InterfaceHandle<MediaPlayer> media_player,
       f1dl::InterfaceRequest<NetMediaPlayer> net_media_player_request,
       NetMediaServiceImpl* owner);

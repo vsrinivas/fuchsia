@@ -107,7 +107,7 @@ void Session::HitTestDeviceRay(
                              std::move(ray_direction_vec), callback);
 }
 
-void Session::OnError(const f1dl::String& error) {
+void Session::OnError(const f1dl::StringPtr& error) {
   FXL_LOG(ERROR) << "Session error: " << error;
 }
 

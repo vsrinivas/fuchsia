@@ -103,7 +103,7 @@ class Session : private ui::SessionListener {
 
  private:
   // |ui::SessionListener|
-  void OnError(const f1dl::String& error) override;
+  void OnError(const f1dl::StringPtr& error) override;
   void OnEvent(f1dl::Array<ui::EventPtr> events) override;
 
   ui::SessionPtr session_;

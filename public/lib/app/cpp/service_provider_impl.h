@@ -118,7 +118,7 @@ class ServiceProviderImpl : public ServiceProvider {
 
  private:
   // Overridden from |ServiceProvider|:
-  void ConnectToService(const f1dl::String& service_name,
+  void ConnectToService(const f1dl::StringPtr& service_name,
                         zx::channel client_handle) override;
 
   f1dl::BindingSet<ServiceProvider> bindings_;

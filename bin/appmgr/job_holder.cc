@@ -204,7 +204,7 @@ uint32_t JobHolder::next_numbered_label_ = 1u;
 
 JobHolder::JobHolder(JobHolder* parent,
                      zx::channel host_directory,
-                     const f1dl::String& label)
+                     const f1dl::StringPtr& label)
     : parent_(parent),
       default_namespace_(
           fxl::MakeRefCounted<ApplicationNamespace>(nullptr, this, nullptr)),
@@ -238,7 +238,7 @@ void JobHolder::CreateNestedJob(
     zx::channel host_directory,
     f1dl::InterfaceRequest<ApplicationEnvironment> environment,
     f1dl::InterfaceRequest<ApplicationEnvironmentController> controller_request,
-    const f1dl::String& label) {
+    const f1dl::StringPtr& label) {
   auto controller = std::make_unique<ApplicationEnvironmentControllerImpl>(
       std::move(controller_request),
       std::make_unique<JobHolder>(this, std::move(host_directory), label));
@@ -268,7 +268,7 @@ void JobHolder::CreateApplication(
   launch_info->url = canon_url;
 
   // launch_info is moved before LoadApplication() gets at its first argument.
-  f1dl::String url = launch_info->url;
+  f1dl::StringPtr url = launch_info->url;
   loader_->LoadApplication(
       url, fxl::MakeCopyable([
         this, launch_info = std::move(launch_info),

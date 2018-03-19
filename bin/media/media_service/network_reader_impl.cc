@@ -20,7 +20,7 @@ const char* NetworkReaderImpl::kRangeHeaderName = "Range";
 
 // static
 std::shared_ptr<NetworkReaderImpl> NetworkReaderImpl::Create(
-    const f1dl::String& url,
+    const f1dl::StringPtr& url,
     f1dl::InterfaceRequest<SeekingReader> request,
     MediaComponentFactory* owner) {
   return std::shared_ptr<NetworkReaderImpl>(
@@ -28,7 +28,7 @@ std::shared_ptr<NetworkReaderImpl> NetworkReaderImpl::Create(
 }
 
 NetworkReaderImpl::NetworkReaderImpl(
-    const f1dl::String& url,
+    const f1dl::StringPtr& url,
     f1dl::InterfaceRequest<SeekingReader> request,
     MediaComponentFactory* owner)
     : MediaComponentFactory::Product<SeekingReader>(this,

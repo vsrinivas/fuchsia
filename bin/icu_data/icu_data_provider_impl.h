@@ -24,7 +24,7 @@ class ICUDataProviderImpl : public ICUDataProvider {
 
  private:
   // |ICUData| implementation:
-  void ICUDataWithSha1(const f1dl::String& request,
+  void ICUDataWithSha1(const f1dl::StringPtr& request,
                        const ICUDataWithSha1Callback& callback) override;
 
   f1dl::BindingSet<ICUDataProvider> bindings_;

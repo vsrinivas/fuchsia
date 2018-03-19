@@ -15,7 +15,7 @@ void ShadertoyImpl::SetPaused(bool paused) {
   state_->SetPaused(paused);
 }
 
-void ShadertoyImpl::SetShaderCode(const ::f1dl::String& glsl,
+void ShadertoyImpl::SetShaderCode(const ::f1dl::StringPtr& glsl,
                                   const SetShaderCodeCallback& callback) {
   state_->SetShaderCode(std::string(glsl), callback);
 }

@@ -27,7 +27,7 @@ void ViewImpl::GetServiceProvider(
 
 void ViewImpl::OfferServiceProvider(
     f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
-    f1dl::Array<f1dl::String> service_names) {
+    f1dl::Array<f1dl::StringPtr> service_names) {
   state_->SetServiceProvider(std::move(service_provider),
                              std::move(service_names));
 }
@@ -68,7 +68,7 @@ void ViewImpl::RequestFocus(uint32_t child_key) {
   registry_->RequestFocus(state_, child_key);
 }
 
-void ViewImpl::ConnectToService(const f1dl::String& service_name,
+void ViewImpl::ConnectToService(const f1dl::StringPtr& service_name,
                                 zx::channel client_handle) {
   registry_->ConnectToViewService(state_, service_name,
                                   std::move(client_handle));

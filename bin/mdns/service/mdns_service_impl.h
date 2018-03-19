@@ -22,35 +22,35 @@ class MdnsServiceImpl : public MdnsService {
   ~MdnsServiceImpl() override;
 
   // MdnsService implementation.
-  void ResolveHostName(const f1dl::String& host_name,
+  void ResolveHostName(const f1dl::StringPtr& host_name,
                        uint32_t timeout_ms,
                        const ResolveHostNameCallback& callback) override;
 
-  void SubscribeToService(const f1dl::String& service_name,
+  void SubscribeToService(const f1dl::StringPtr& service_name,
                           f1dl::InterfaceRequest<MdnsServiceSubscription>
                               subscription_request) override;
 
   void PublishServiceInstance(
-      const f1dl::String& service_name,
-      const f1dl::String& instance_name,
+      const f1dl::StringPtr& service_name,
+      const f1dl::StringPtr& instance_name,
       uint16_t port,
-      f1dl::Array<f1dl::String> text,
+      f1dl::Array<f1dl::StringPtr> text,
       const PublishServiceInstanceCallback& callback) override;
 
-  void UnpublishServiceInstance(const f1dl::String& service_name,
-                                const f1dl::String& instance_name) override;
+  void UnpublishServiceInstance(const f1dl::StringPtr& service_name,
+                                const f1dl::StringPtr& instance_name) override;
 
   void AddResponder(
-      const f1dl::String& service_name,
-      const f1dl::String& instance_name,
+      const f1dl::StringPtr& service_name,
+      const f1dl::StringPtr& instance_name,
       f1dl::InterfaceHandle<MdnsResponder> responder_handle) override;
 
-  void SetSubtypes(const f1dl::String& service_name,
-                   const f1dl::String& instance_name,
-                   f1dl::Array<f1dl::String> subtypes) override;
+  void SetSubtypes(const f1dl::StringPtr& service_name,
+                   const f1dl::StringPtr& instance_name,
+                   f1dl::Array<f1dl::StringPtr> subtypes) override;
 
-  void ReannounceInstance(const f1dl::String& service_name,
-                          const f1dl::String& instance_name) override;
+  void ReannounceInstance(const f1dl::StringPtr& service_name,
+                          const f1dl::StringPtr& instance_name) override;
 
   void SetVerbose(bool value) override;
 
@@ -96,7 +96,7 @@ class MdnsServiceImpl : public MdnsService {
   class SimplePublisher : public Mdns::Publisher {
    public:
     SimplePublisher(IpPort port,
-                    f1dl::Array<f1dl::String> text,
+                    f1dl::Array<f1dl::StringPtr> text,
                     const PublishServiceInstanceCallback& callback);
 
    private:

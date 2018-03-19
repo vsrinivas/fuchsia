@@ -13,13 +13,13 @@ void TestRunnerStoreImpl::AddBinding(
   binding_set_.AddBinding(this, std::move(req));
 }
 
-void TestRunnerStoreImpl::Get(const f1dl::String& key, const GetCallback& cb) {
+void TestRunnerStoreImpl::Get(const f1dl::StringPtr& key, const GetCallback& cb) {
   get_queue_[key].push(cb);
   MaybeNotify(key);
 }
 
-void TestRunnerStoreImpl::Put(const f1dl::String& key,
-                              const f1dl::String& value,
+void TestRunnerStoreImpl::Put(const f1dl::StringPtr& key,
+                              const f1dl::StringPtr& value,
                               const PutCallback& cb) {
   store_[key].push(value);
   MaybeNotify(key);

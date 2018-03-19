@@ -145,7 +145,7 @@ void LowEnergyPeripheralServer::StartAdvertising(
 }
 
 void LowEnergyPeripheralServer::StopAdvertising(
-    const ::f1dl::String& id,
+    const ::f1dl::StringPtr& id,
     const StopAdvertisingCallback& callback) {
   if (StopAdvertisingInternal(id)) {
     callback(Status::New());

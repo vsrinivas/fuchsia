@@ -24,7 +24,7 @@ class RootApplicationLoader : public ApplicationLoader {
   ~RootApplicationLoader() override;
 
   void LoadApplication(
-      const f1dl::String& url,
+      const f1dl::StringPtr& url,
       const ApplicationLoader::LoadApplicationCallback& callback) override;
 
   void AddBinding(f1dl::InterfaceRequest<ApplicationLoader> request);

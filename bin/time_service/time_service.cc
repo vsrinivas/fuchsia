@@ -71,7 +71,7 @@ void TimeServiceImpl::GetTimezoneOffsetMinutes(
     callback(0, 0);
     return;
   }
-  f1dl::String timezone_id = GetTimezoneIdImpl();
+  f1dl::StringPtr timezone_id = GetTimezoneIdImpl();
   std::unique_ptr<icu::TimeZone> timezone(
       icu::TimeZone::createTimeZone(timezone_id.get().c_str()));
   int32_t local_offset = 0, dst_offset = 0;
@@ -89,13 +89,13 @@ void TimeServiceImpl::GetTimezoneOffsetMinutes(
   callback(local_offset, dst_offset);
 }
 
-void TimeServiceImpl::NotifyWatchers(const f1dl::String& new_timezone_id) {
+void TimeServiceImpl::NotifyWatchers(const f1dl::StringPtr& new_timezone_id) {
   for (auto& watcher : watchers_) {
     watcher->OnTimezoneOffsetChange(new_timezone_id);
   }
 }
 
-bool TimeServiceImpl::IsValidTimezoneId(const f1dl::String& timezone_id) {
+bool TimeServiceImpl::IsValidTimezoneId(const f1dl::StringPtr& timezone_id) {
   std::unique_ptr<icu::TimeZone> timezone(
       icu::TimeZone::createTimeZone(timezone_id.get().c_str()));
   if ((*timezone) == icu::TimeZone::getUnknown()) {
@@ -104,7 +104,7 @@ bool TimeServiceImpl::IsValidTimezoneId(const f1dl::String& timezone_id) {
   return true;
 }
 
-void TimeServiceImpl::SetTimezone(const f1dl::String& timezone_id,
+void TimeServiceImpl::SetTimezone(const f1dl::StringPtr& timezone_id,
                                   const SetTimezoneCallback& callback) {
   if (!valid_) {
     FXL_LOG(ERROR) << "Time service is not valid.";
@@ -132,7 +132,7 @@ void TimeServiceImpl::GetTimezoneId(const GetTimezoneIdCallback& callback) {
   callback(GetTimezoneIdImpl());
 }
 
-f1dl::String TimeServiceImpl::GetTimezoneIdImpl() {
+f1dl::StringPtr TimeServiceImpl::GetTimezoneIdImpl() {
   if (!valid_) {
     return kDefaultTimezone;
   }

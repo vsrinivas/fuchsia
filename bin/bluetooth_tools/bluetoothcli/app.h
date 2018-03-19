@@ -45,7 +45,7 @@ class App final : public bluetooth::control::AdapterManagerDelegate,
   void OnActiveAdapterChanged(
       bluetooth::control::AdapterInfoPtr active_adapter) override;
   void OnAdapterAdded(bluetooth::control::AdapterInfoPtr adapter) override;
-  void OnAdapterRemoved(const ::f1dl::String& identifier) override;
+  void OnAdapterRemoved(const ::f1dl::StringPtr& identifier) override;
 
   // bluetooth::control::AdapterDelegate overrides:
   void OnAdapterStateChanged(

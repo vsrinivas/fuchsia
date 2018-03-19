@@ -31,7 +31,7 @@ class ViewImpl : public mozart::View,
                               service_provider_request) override;
   void OfferServiceProvider(
       f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
-      f1dl::Array<f1dl::String> service_names) override;
+      f1dl::Array<f1dl::StringPtr> service_names) override;
   void GetContainer(f1dl::InterfaceRequest<mozart::ViewContainer>
                         view_container_request) override;
 
@@ -50,7 +50,7 @@ class ViewImpl : public mozart::View,
   void RequestFocus(uint32_t child_key) override;
 
   // |component::ServiceProvider|:
-  void ConnectToService(const f1dl::String& service_name,
+  void ConnectToService(const f1dl::StringPtr& service_name,
                         zx::channel client_handle) override;
 
   ViewRegistry* const registry_;

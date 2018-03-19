@@ -84,7 +84,7 @@ void TestRunnerImpl::TeardownAfterTermination() {
   teardown_after_termination_ = true;
 }
 
-void TestRunnerImpl::Identify(const f1dl::String& program_name,
+void TestRunnerImpl::Identify(const f1dl::StringPtr& program_name,
                               const IdentifyCallback& callback) {
   program_name_ = program_name;
   callback();
@@ -94,7 +94,7 @@ void TestRunnerImpl::ReportResult(TestResultPtr result) {
   test_run_context_->ReportResult(std::move(result));
 }
 
-void TestRunnerImpl::Fail(const f1dl::String& log_message) {
+void TestRunnerImpl::Fail(const f1dl::StringPtr& log_message) {
   test_run_context_->Fail(log_message);
 }
 
@@ -180,7 +180,7 @@ TestRunContext::TestRunContext(
 
   auto info = component::ApplicationLaunchInfo::New();
   info->url = url;
-  info->arguments = f1dl::Array<f1dl::String>::From(args);
+  info->arguments = f1dl::Array<f1dl::StringPtr>::From(args);
   launcher->CreateApplication(std::move(info),
                               child_app_controller_.NewRequest());
 
@@ -213,7 +213,7 @@ void TestRunContext::ReportResult(TestResultPtr result) {
   test_runner_connection_->SendMessage(test_id_, "result", buffer.GetString());
 }
 
-void TestRunContext::Fail(const f1dl::String& log_msg) {
+void TestRunContext::Fail(const f1dl::StringPtr& log_msg) {
   success_ = false;
   std::string msg("FAIL: ");
   msg += log_msg;

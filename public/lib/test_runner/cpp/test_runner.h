@@ -47,12 +47,12 @@ class TestRunnerImpl : public TestRunner {
 
  private:
   // |TestRunner|
-  void Identify(const f1dl::String& program_name,
+  void Identify(const f1dl::StringPtr& program_name,
                 const IdentifyCallback& callback) override;
   // |TestRunner|
   void ReportResult(TestResultPtr result) override;
   // |TestRunner|
-  void Fail(const f1dl::String& log_message) override;
+  void Fail(const f1dl::StringPtr& log_message) override;
   // |TestRunner|
   void Done(const DoneCallback& callback) override;
   // |TestRunner|
@@ -90,7 +90,7 @@ class TestRunContext {
   // Called from TestRunnerImpl, the actual implemention of |TestRunner|.
   void StopTrackingClient(TestRunnerImpl* client, bool crashed);
   void ReportResult(TestResultPtr result);
-  void Fail(const f1dl::String& log_message);
+  void Fail(const f1dl::StringPtr& log_message);
   void Teardown(TestRunnerImpl* teardown_client);
 
  private:

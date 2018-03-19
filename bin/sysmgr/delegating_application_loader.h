@@ -29,7 +29,7 @@ class DelegatingApplicationLoader : public component::ApplicationLoader {
 
   // |ApplicationLoader|:
   void LoadApplication(
-      const f1dl::String& url,
+      const f1dl::StringPtr& url,
       const ApplicationLoader::LoadApplicationCallback& callback) override;
 
  private:

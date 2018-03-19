@@ -59,7 +59,7 @@ void ViewTreeImpl::RequestFocus(uint32_t child_key) {
   registry_->RequestFocus(state_, child_key);
 }
 
-void ViewTreeImpl::ConnectToService(const f1dl::String& service_name,
+void ViewTreeImpl::ConnectToService(const f1dl::StringPtr& service_name,
                                     zx::channel client_handle) {
   registry_->ConnectToViewTreeService(state_, service_name,
                                       std::move(client_handle));

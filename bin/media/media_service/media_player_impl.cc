@@ -475,7 +475,7 @@ TimelineTransformPtr MediaPlayerImpl::CreateTimelineTransform(
   return result;
 }
 
-void MediaPlayerImpl::SetHttpSource(const f1dl::String& http_url) {
+void MediaPlayerImpl::SetHttpSource(const f1dl::StringPtr& http_url) {
   f1dl::InterfaceHandle<SeekingReader> reader;
   owner()->CreateHttpReader(http_url, reader.NewRequest());
   SetReader(std::move(reader));

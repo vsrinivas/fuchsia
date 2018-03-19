@@ -30,7 +30,7 @@ class TokenManagerFactoryImpl : public TokenManagerFactory {
 
  private:
   // |TokenManagerFactory|
-  void GetTokenManager(const f1dl::String& user_id,
+  void GetTokenManager(const f1dl::StringPtr& user_id,
                        f1dl::Array<AuthProviderConfigPtr> auth_provider_configs,
                        f1dl::InterfaceRequest<TokenManager> request) override;
 

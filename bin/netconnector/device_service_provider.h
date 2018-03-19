@@ -26,7 +26,7 @@ class DeviceServiceProvider : public component::ServiceProvider {
 
   ~DeviceServiceProvider() override;
 
-  void ConnectToService(const f1dl::String& service_name,
+  void ConnectToService(const f1dl::StringPtr& service_name,
                         zx::channel channel) override;
 
  private:

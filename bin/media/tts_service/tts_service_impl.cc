@@ -63,7 +63,7 @@ void TtsServiceImpl::Client::Shutdown() {
   owner_->clients_.erase(owner_->clients_.find(this));
 }
 
-void TtsServiceImpl::Client::Say(const f1dl::String& words,
+void TtsServiceImpl::Client::Say(const f1dl::StringPtr& words,
                                  uint64_t token,
                                  const SayCallback& cbk) {
   auto cleanup = fbl::MakeAutoCall([this] { Shutdown(); });

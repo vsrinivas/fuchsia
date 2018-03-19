@@ -32,7 +32,7 @@ class TimeServiceImpl : public TimeService {
   void GetTimezoneOffsetMinutes(
       int64_t milliseconds,
       const GetTimezoneOffsetMinutesCallback& callback) override;
-  void SetTimezone(const f1dl::String& timezone_id,
+  void SetTimezone(const f1dl::StringPtr& timezone_id,
                    const SetTimezoneCallback& callback) override;
   void GetTimezoneId(const GetTimezoneIdCallback& callback) override;
   void Watch(f1dl::InterfaceHandle<TimeServiceWatcher> watcher) override;
@@ -44,12 +44,12 @@ class TimeServiceImpl : public TimeService {
   // Destroys a watcher proxy (called upon a connection error).
   void ReleaseWatcher(TimeServiceWatcher* watcher);
   // Alerts all watchers when an update has occurred.
-  void NotifyWatchers(const f1dl::String& new_timezone_id);
+  void NotifyWatchers(const f1dl::StringPtr& new_timezone_id);
   // Returns true if |timezone_id| is a valid timezone.
-  bool IsValidTimezoneId(const f1dl::String& timezone_id);
+  bool IsValidTimezoneId(const f1dl::StringPtr& timezone_id);
   // Private implementation of TimeServiceImpl::GetTimezoneId, for use in other
   // methods. Returns a guaranteed-valid timezone ID.
-  f1dl::String GetTimezoneIdImpl();
+  f1dl::StringPtr GetTimezoneIdImpl();
 
   // Set to true iff |icu_data_| has been mapped, and the data contained therein
   // is the correct format (when Init() is successful).

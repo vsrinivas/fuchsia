@@ -136,7 +136,7 @@ void MdnsImpl::Publish(const std::string& service_name,
             << service_name << "\n";
   mdns_service_->PublishServiceInstance(
       service_name, instance_name, port,
-      fxl::To<f1dl::Array<f1dl::String>>(text), [this](MdnsResult result) {
+      fxl::To<f1dl::Array<f1dl::StringPtr>>(text), [this](MdnsResult result) {
         UpdateStatus(result);
         fsl::MessageLoop::GetCurrent()->PostQuitTask();
       });
@@ -176,7 +176,7 @@ void MdnsImpl::Respond(const std::string& service_name,
 
   if (!announce.empty()) {
     mdns_service_->SetSubtypes(service_name, instance_name,
-                               fxl::To<f1dl::Array<f1dl::String>>(announce));
+                               fxl::To<f1dl::Array<f1dl::StringPtr>>(announce));
   }
 
   WaitForKeystroke();
@@ -208,7 +208,7 @@ void MdnsImpl::UpdateStatus(MdnsResult result) {
 }
 
 void MdnsImpl::GetPublication(bool query,
-                              const f1dl::String& subtype,
+                              const f1dl::StringPtr& subtype,
                               const GetPublicationCallback& callback) {
   std::cout << (query ? "query" : "initial publication");
   if (subtype) {
@@ -219,7 +219,7 @@ void MdnsImpl::GetPublication(bool query,
 
   auto publication = MdnsPublication::New();
   publication->port = publication_port_;
-  publication->text = fxl::To<f1dl::Array<f1dl::String>>(publication_text_);
+  publication->text = fxl::To<f1dl::Array<f1dl::StringPtr>>(publication_text_);
 
   callback(std::move(publication));
 }

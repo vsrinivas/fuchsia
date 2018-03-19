@@ -108,7 +108,7 @@ class ServiceNamespace : public component::ServiceProvider {
 
  private:
   // Overridden from |component::ServiceProvider|:
-  void ConnectToService(const f1dl::String& service_name,
+  void ConnectToService(const f1dl::StringPtr& service_name,
                         zx::channel channel) override;
 
   void Connect(fbl::StringPiece name, zx::channel channel);

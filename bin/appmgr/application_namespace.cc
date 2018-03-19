@@ -54,7 +54,7 @@ void ApplicationNamespace::CreateNestedEnvironment(
     zx::channel host_directory,
     f1dl::InterfaceRequest<ApplicationEnvironment> environment,
     f1dl::InterfaceRequest<ApplicationEnvironmentController> controller,
-    const f1dl::String& label) {
+    const f1dl::StringPtr& label) {
   job_holder_->CreateNestedJob(std::move(host_directory),
                                std::move(environment), std::move(controller),
                                label);

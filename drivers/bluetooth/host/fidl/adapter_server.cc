@@ -64,8 +64,8 @@ void AdapterServer::SetDelegate(
   }
 }
 
-void AdapterServer::SetLocalName(const f1dl::String& local_name,
-                                 const f1dl::String& shortened_local_name,
+void AdapterServer::SetLocalName(const f1dl::StringPtr& local_name,
+                                 const f1dl::StringPtr& shortened_local_name,
                                  const SetLocalNameCallback& callback) {
   FXL_NOTIMPLEMENTED();
 }

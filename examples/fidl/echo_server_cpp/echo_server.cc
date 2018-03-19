@@ -18,7 +18,7 @@ class EchoImpl : public Echo {
     bindings_.AddBinding(this, std::move(request));
   }
 
-  void EchoString(const f1dl::String& value,
+  void EchoString(const f1dl::StringPtr& value,
                   const EchoStringCallback& callback) override {
     FXL_LOG(INFO) << "EchoString: " << value;
     callback(value);

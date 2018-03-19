@@ -19,7 +19,7 @@ class NetworkReaderImpl : public MediaComponentFactory::Product<SeekingReader>,
                           public SeekingReader {
  public:
   static std::shared_ptr<NetworkReaderImpl> Create(
-      const f1dl::String& url,
+      const f1dl::StringPtr& url,
       f1dl::InterfaceRequest<SeekingReader> request,
       MediaComponentFactory* owner);
 
@@ -39,7 +39,7 @@ class NetworkReaderImpl : public MediaComponentFactory::Product<SeekingReader>,
   static constexpr uint32_t kStatusPartialContent = 206u;
   static constexpr uint32_t kStatusNotFound = 404u;
 
-  NetworkReaderImpl(const f1dl::String& url,
+  NetworkReaderImpl(const f1dl::StringPtr& url,
                     f1dl::InterfaceRequest<SeekingReader> request,
                     MediaComponentFactory* owner);
 

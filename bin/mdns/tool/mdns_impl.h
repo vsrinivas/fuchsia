@@ -49,7 +49,7 @@ class MdnsImpl : public MdnsResponder {
   void UpdateStatus(MdnsResult result) override;
 
   void GetPublication(bool query,
-                      const f1dl::String& subtype,
+                      const f1dl::StringPtr& subtype,
                       const GetPublicationCallback& callback) override;
 
   MdnsServicePtr mdns_service_;

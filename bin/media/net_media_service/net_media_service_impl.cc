@@ -21,7 +21,7 @@ NetMediaServiceImpl::NetMediaServiceImpl(
 NetMediaServiceImpl::~NetMediaServiceImpl() {}
 
 void NetMediaServiceImpl::CreateNetMediaPlayer(
-    const f1dl::String& service_name,
+    const f1dl::StringPtr& service_name,
     f1dl::InterfaceHandle<MediaPlayer> media_player,
     f1dl::InterfaceRequest<NetMediaPlayer> net_media_player_request) {
   AddProduct(NetMediaPlayerImpl::Create(service_name, std::move(media_player),
@@ -30,8 +30,8 @@ void NetMediaServiceImpl::CreateNetMediaPlayer(
 }
 
 void NetMediaServiceImpl::CreateNetMediaPlayerProxy(
-    const f1dl::String& device_name,
-    const f1dl::String& service_name,
+    const f1dl::StringPtr& device_name,
+    const f1dl::StringPtr& service_name,
     f1dl::InterfaceRequest<NetMediaPlayer> net_media_player_request) {
   AddProduct(NetMediaPlayerNetProxy::Create(
       device_name, service_name, std::move(net_media_player_request), this));

@@ -68,7 +68,7 @@ class LowEnergyPeripheralServer
       bool anonymous,
       const StartAdvertisingCallback& callback) override;
 
-  void StopAdvertising(const ::f1dl::String& advertisement_id,
+  void StopAdvertising(const ::f1dl::StringPtr& advertisement_id,
                        const StopAdvertisingCallback& callback) override;
   bool StopAdvertisingInternal(const std::string& id);
 

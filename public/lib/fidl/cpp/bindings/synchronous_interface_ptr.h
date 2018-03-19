@@ -115,7 +115,7 @@ class SynchronousInterfacePtr {
 //   SynchronousInterfacePtr<Echo> client;
 //   InterfaceRequest<Echo> impl = GetSynchronousProxy(&client);
 //   // .. pass |impl| off to an implementation.
-//   f1dl::String out;
+//   f1dl::StringPtr out;
 //   client->EchoString("hello!", &out);
 //
 // TODO(abarth): Delete this function in favor of NewRequest().

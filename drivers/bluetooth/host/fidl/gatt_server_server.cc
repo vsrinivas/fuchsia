@@ -221,7 +221,7 @@ class GattServerServer::ServiceImpl
   }
 
   void NotifyValue(uint64_t characteristic_id,
-                   const ::f1dl::String& peer_id,
+                   const ::f1dl::StringPtr& peer_id,
                    ::f1dl::Array<uint8_t> value,
                    bool confirm) override {
     gatt()->SendNotification(id_, characteristic_id, peer_id, std::move(value),

@@ -24,7 +24,7 @@ DelegatingApplicationLoader::DelegatingApplicationLoader(
 DelegatingApplicationLoader::~DelegatingApplicationLoader() = default;
 
 void DelegatingApplicationLoader::LoadApplication(
-    const f1dl::String& url,
+    const f1dl::StringPtr& url,
     const ApplicationLoader::LoadApplicationCallback& callback) {
   const url::GURL gurl(url);
   if (gurl.is_valid()) {

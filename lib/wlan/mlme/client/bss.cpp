@@ -224,9 +224,9 @@ BeaconHash Bss::GetBeaconSignature(const Beacon* beacon, size_t len) const {
     return hash;
 }
 
-f1dl::String Bss::SsidToFidlString() {
+f1dl::StringPtr Bss::SsidToFidlString() {
     // TODO(porce): Merge into SSID Element upon IE revamp.
-    return f1dl::String(reinterpret_cast<const char*>(ssid_), ssid_len_);
+    return f1dl::StringPtr(reinterpret_cast<const char*>(ssid_), ssid_len_);
 }
 
 BSSDescriptionPtr Bss::ToFidl() {

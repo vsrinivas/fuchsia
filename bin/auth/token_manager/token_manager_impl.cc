@@ -14,7 +14,7 @@ namespace auth {
 namespace {
 
 const cache::CacheKey GetCacheKey(auth::AuthProviderType auth_provider_type,
-                                  const f1dl::String& user_profile_id) {
+                                  const f1dl::StringPtr& user_profile_id) {
   // TODO: consider replacing the static cast with a string map (more type safe)
   return cache::CacheKey(std::to_string(static_cast<int>(auth_provider_type)),
                          user_profile_id.get());
@@ -101,7 +101,7 @@ void TokenManagerImpl::Authorize(
   it->second->GetPersistentCredential(
       std::move(auth_ui_context),
       [this, auth_provider_type, callback](
-          AuthProviderStatus status, f1dl::String credential,
+          AuthProviderStatus status, f1dl::StringPtr credential,
           UserProfileInfoPtr user_profile_info) {
         if (status != AuthProviderStatus::OK || credential.get().empty()) {
           callback(Status::INTERNAL_ERROR, nullptr);
@@ -125,9 +125,9 @@ void TokenManagerImpl::Authorize(
 
 void TokenManagerImpl::GetAccessToken(
     const auth::AuthProviderType auth_provider_type,
-    const f1dl::String& user_profile_id,
-    const f1dl::String& app_client_id,
-    f1dl::Array<f1dl::String> app_scopes,
+    const f1dl::StringPtr& user_profile_id,
+    const f1dl::StringPtr& app_client_id,
+    f1dl::Array<f1dl::StringPtr> app_scopes,
     const GetAccessTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
@@ -150,7 +150,7 @@ void TokenManagerImpl::GetAccessToken(
   }
 
   it->second->GetAppAccessToken(
-      f1dl::String(credential), app_client_id, std::move(app_scopes),
+      f1dl::StringPtr(credential), app_client_id, std::move(app_scopes),
       [this, callback, cache_key, &tokens](AuthProviderStatus status,
                                            AuthTokenPtr access_token) {
         std::string access_token_val;
@@ -182,8 +182,8 @@ void TokenManagerImpl::GetAccessToken(
 
 void TokenManagerImpl::GetIdToken(
     const auth::AuthProviderType auth_provider_type,
-    const f1dl::String& user_profile_id,
-    const f1dl::String& audience,
+    const f1dl::StringPtr& user_profile_id,
+    const f1dl::StringPtr& audience,
     const GetIdTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
@@ -204,7 +204,7 @@ void TokenManagerImpl::GetIdToken(
   }
 
   it->second->GetAppIdToken(
-      f1dl::String(credential), audience,
+      f1dl::StringPtr(credential), audience,
       [this, callback, cache_key, &tokens](AuthProviderStatus status,
                                            AuthTokenPtr id_token) {
         std::string id_token_val;
@@ -236,9 +236,9 @@ void TokenManagerImpl::GetIdToken(
 
 void TokenManagerImpl::GetFirebaseToken(
     const auth::AuthProviderType auth_provider_type,
-    const f1dl::String& user_profile_id,
-    const f1dl::String& audience,
-    const f1dl::String& firebase_api_key,
+    const f1dl::StringPtr& user_profile_id,
+    const f1dl::StringPtr& audience,
+    const f1dl::StringPtr& firebase_api_key,
     const GetFirebaseTokenCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
@@ -263,7 +263,7 @@ void TokenManagerImpl::GetFirebaseToken(
 
   GetIdToken(auth_provider_type, user_profile_id, audience,
              [this, it, callback, cache_key, firebase_api_key](
-                 Status status, f1dl::String id_token) {
+                 Status status, f1dl::StringPtr id_token) {
                if (status != Status::OK) {
                  callback(Status::AUTH_PROVIDER_SERVER_ERROR, nullptr);
                  // TODO: log error here
@@ -303,7 +303,7 @@ void TokenManagerImpl::GetFirebaseToken(
 
 void TokenManagerImpl::DeleteAllTokens(
     const auth::AuthProviderType auth_provider_type,
-    const f1dl::String& user_profile_id,
+    const f1dl::StringPtr& user_profile_id,
     const DeleteAllTokensCallback& callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
@@ -318,7 +318,7 @@ void TokenManagerImpl::DeleteAllTokens(
   auth_db_->GetRefreshToken(cred_id, &credential);
 
   it->second->RevokeAppOrPersistentCredential(
-      f1dl::String(credential), [this, auth_provider_type, user_profile_id,
+      f1dl::StringPtr(credential), [this, auth_provider_type, user_profile_id,
                                  callback](AuthProviderStatus status) {
         if (status != AuthProviderStatus::OK) {
           callback(Status::AUTH_PROVIDER_SERVER_ERROR);

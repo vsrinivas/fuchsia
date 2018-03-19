@@ -111,7 +111,7 @@ void App::OnAdapterAdded(bluetooth::control::AdapterInfoPtr adapter) {
   CLI_LOG() << "\n>>>> Adapter added (id=" << adapter->identifier << ")\n";
 }
 
-void App::OnAdapterRemoved(const ::f1dl::String& identifier) {
+void App::OnAdapterRemoved(const ::f1dl::StringPtr& identifier) {
   CLI_LOG() << "\n>>>> Adapter removed (id=" << identifier << ")\n";
 }
 

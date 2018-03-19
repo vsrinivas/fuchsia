@@ -41,7 +41,7 @@ void ServiceProviderImpl::RemoveServiceForName(
     name_to_service_connector_.erase(it);
 }
 
-void ServiceProviderImpl::ConnectToService(const f1dl::String& service_name,
+void ServiceProviderImpl::ConnectToService(const f1dl::StringPtr& service_name,
                                            zx::channel client_handle) {
   auto it = name_to_service_connector_.find(service_name);
   if (it != name_to_service_connector_.end())

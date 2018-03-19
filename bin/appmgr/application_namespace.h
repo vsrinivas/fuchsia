@@ -35,7 +35,7 @@ class ApplicationNamespace
       zx::channel host_directory,
       f1dl::InterfaceRequest<ApplicationEnvironment> environment,
       f1dl::InterfaceRequest<ApplicationEnvironmentController> controller,
-      const f1dl::String& label) override;
+      const f1dl::StringPtr& label) override;
 
   void GetApplicationLauncher(
       f1dl::InterfaceRequest<ApplicationLauncher> launcher) override;

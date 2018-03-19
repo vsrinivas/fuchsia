@@ -42,14 +42,14 @@ void LowEnergyCentralServer::SetDelegate(
 }
 
 void LowEnergyCentralServer::GetPeripherals(
-    ::f1dl::Array<::f1dl::String> service_uuids,
+    ::f1dl::Array<::f1dl::StringPtr> service_uuids,
     const GetPeripheralsCallback& callback) {
   // TODO:
   FXL_NOTIMPLEMENTED();
 }
 
 void LowEnergyCentralServer::GetPeripheral(
-    const ::f1dl::String& identifier,
+    const ::f1dl::StringPtr& identifier,
     const GetPeripheralCallback& callback) {
   // TODO:
   FXL_NOTIMPLEMENTED();
@@ -132,7 +132,7 @@ void LowEnergyCentralServer::StopScan() {
 }
 
 void LowEnergyCentralServer::ConnectPeripheral(
-    const ::f1dl::String& identifier,
+    const ::f1dl::StringPtr& identifier,
     const ConnectPeripheralCallback& callback) {
   FXL_VLOG(1) << "Low Energy Central ConnectPeripheral()";
 
@@ -216,7 +216,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
 }
 
 void LowEnergyCentralServer::DisconnectPeripheral(
-    const ::f1dl::String& identifier,
+    const ::f1dl::StringPtr& identifier,
     const DisconnectPeripheralCallback& callback) {
   auto iter = connections_.find(identifier.get());
   if (iter == connections_.end()) {

@@ -45,7 +45,7 @@ struct NetMediaPlayerTimeCheckResponse {
 
 // Sent by the proxy to request a url change.
 struct NetMediaPlayerSetUrlRequest {
-  f1dl::String url_;
+  f1dl::StringPtr url_;
 };
 
 // Play and Pause have no parameters, so there is no NetMediaPlayerPlayRequest
@@ -67,7 +67,7 @@ struct NetMediaPlayerInMessage {
   static std::unique_ptr<NetMediaPlayerInMessage> TimeCheckRequest(
       int64_t requestor_time);
   static std::unique_ptr<NetMediaPlayerInMessage> SetUrlRequest(
-      const f1dl::String& url);
+      const f1dl::StringPtr& url);
   static std::unique_ptr<NetMediaPlayerInMessage> PlayRequest();
   static std::unique_ptr<NetMediaPlayerInMessage> PauseRequest();
   static std::unique_ptr<NetMediaPlayerInMessage> SeekRequest(int64_t position);
@@ -95,7 +95,7 @@ struct NetMediaPlayerOutMessage {
 };
 
 // Serialization overrides.
-Serializer& operator<<(Serializer& serializer, const f1dl::String& value);
+Serializer& operator<<(Serializer& serializer, const f1dl::StringPtr& value);
 Serializer& operator<<(Serializer& serializer,
                        NetMediaPlayerInMessageType value);
 Serializer& operator<<(Serializer& serializer,
@@ -126,7 +126,7 @@ Serializer& operator<<(Serializer& serializer,
                        const std::unique_ptr<NetMediaPlayerOutMessage>& value);
 
 // Deserialization overrides.
-Deserializer& operator>>(Deserializer& deserializer, f1dl::String& value);
+Deserializer& operator>>(Deserializer& deserializer, f1dl::StringPtr& value);
 Deserializer& operator>>(Deserializer& deserializer,
                          NetMediaPlayerInMessageType& value);
 Deserializer& operator>>(Deserializer& deserializer,

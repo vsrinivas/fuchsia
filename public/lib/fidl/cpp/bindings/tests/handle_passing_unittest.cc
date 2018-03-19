@@ -50,9 +50,9 @@ class SampleNamedObjectImpl : public sample::NamedObject {
       : binding_(this, std::move(request)) {
     binding_.set_error_handler([this]() { delete this; });
   }
-  void SetName(const f1dl::String& name) override { name_ = name; }
+  void SetName(const f1dl::StringPtr& name) override { name_ = name; }
 
-  void GetName(const std::function<void(f1dl::String)>& callback) override {
+  void GetName(const std::function<void(f1dl::StringPtr)>& callback) override {
     callback(name_);
   }
 

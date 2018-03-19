@@ -521,7 +521,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media_type_set->medium = media::MediaTypeMedium::AUDIO;
       media_type_set->details = std::move(details);
       media_type_set->encodings =
-          To<f1dl::Array<f1dl::String>>(input->encodings());
+          To<f1dl::Array<f1dl::StringPtr>>(input->encodings());
       return media_type_set;
     }
     case media::StreamType::Medium::kVideo: {
@@ -537,7 +537,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media_type_set->medium = media::MediaTypeMedium::VIDEO;
       media_type_set->details = std::move(details);
       media_type_set->encodings =
-          To<f1dl::Array<f1dl::String>>(input->encodings());
+          To<f1dl::Array<f1dl::StringPtr>>(input->encodings());
       return media_type_set;
     }
     case media::StreamType::Medium::kText: {
@@ -547,7 +547,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media_type_set->medium = media::MediaTypeMedium::TEXT;
       media_type_set->details = std::move(details);
       media_type_set->encodings =
-          To<f1dl::Array<f1dl::String>>(input->encodings());
+          To<f1dl::Array<f1dl::StringPtr>>(input->encodings());
       return media_type_set;
     }
     case media::StreamType::Medium::kSubpicture: {
@@ -557,7 +557,7 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
       media_type_set->medium = media::MediaTypeMedium::SUBPICTURE;
       media_type_set->details = std::move(details);
       media_type_set->encodings =
-          To<f1dl::Array<f1dl::String>>(input->encodings());
+          To<f1dl::Array<f1dl::StringPtr>>(input->encodings());
       return media_type_set;
     }
   }
@@ -614,19 +614,19 @@ TypeConverter<media::MediaMetadataPtr, std::unique_ptr<media::Metadata>>::
   media::MediaMetadataPtr result = media::MediaMetadata::New();
   result->duration = input->duration_ns();
   result->title =
-      input->title().empty() ? f1dl::String() : f1dl::String(input->title());
+      input->title().empty() ? f1dl::StringPtr() : f1dl::StringPtr(input->title());
   result->artist =
-      input->artist().empty() ? f1dl::String() : f1dl::String(input->artist());
+      input->artist().empty() ? f1dl::StringPtr() : f1dl::StringPtr(input->artist());
   result->album =
-      input->album().empty() ? f1dl::String() : f1dl::String(input->album());
+      input->album().empty() ? f1dl::StringPtr() : f1dl::StringPtr(input->album());
   result->publisher = input->publisher().empty()
-                          ? f1dl::String()
-                          : f1dl::String(input->publisher());
+                          ? f1dl::StringPtr()
+                          : f1dl::StringPtr(input->publisher());
   result->genre =
-      input->genre().empty() ? f1dl::String() : f1dl::String(input->genre());
+      input->genre().empty() ? f1dl::StringPtr() : f1dl::StringPtr(input->genre());
   result->composer = input->composer().empty()
-                         ? f1dl::String()
-                         : f1dl::String(input->composer());
+                         ? f1dl::StringPtr()
+                         : f1dl::StringPtr(input->composer());
   return result;
 }
 

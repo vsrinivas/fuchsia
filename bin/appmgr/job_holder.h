@@ -29,7 +29,7 @@ class JobHolder {
  public:
   JobHolder(JobHolder* parent,
             zx::channel host_directory,
-            const f1dl::String& label);
+            const f1dl::StringPtr& label);
   ~JobHolder();
 
   JobHolder* parent() const { return parent_; }
@@ -41,7 +41,7 @@ class JobHolder {
       zx::channel host_directory,
       f1dl::InterfaceRequest<ApplicationEnvironment> environment,
       f1dl::InterfaceRequest<ApplicationEnvironmentController> controller,
-      const f1dl::String& label);
+      const f1dl::StringPtr& label);
 
   void CreateApplication(
       ApplicationLaunchInfoPtr launch_info,

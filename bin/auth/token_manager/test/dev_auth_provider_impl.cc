@@ -38,9 +38,9 @@ void DevAuthProviderImpl::GetPersistentCredential(
 }
 
 void DevAuthProviderImpl::GetAppAccessToken(
-    const f1dl::String& credential,
-    const f1dl::String& app_client_id,
-    const f1dl::Array<f1dl::String> app_scopes,
+    const f1dl::StringPtr& credential,
+    const f1dl::StringPtr& app_client_id,
+    const f1dl::Array<f1dl::StringPtr> app_scopes,
     const GetAppAccessTokenCallback& callback) {
   AuthTokenPtr access_token = auth::AuthToken::New();
   access_token->token =
@@ -51,8 +51,8 @@ void DevAuthProviderImpl::GetAppAccessToken(
   callback(AuthProviderStatus::OK, std::move(access_token));
 }
 
-void DevAuthProviderImpl::GetAppIdToken(const f1dl::String& credential,
-                                        const f1dl::String& audience,
+void DevAuthProviderImpl::GetAppIdToken(const f1dl::StringPtr& credential,
+                                        const f1dl::StringPtr& audience,
                                         const GetAppIdTokenCallback& callback) {
   AuthTokenPtr id_token = auth::AuthToken::New();
   id_token->token = std::string(credential) + ":idt_" + GenerateRandomString();
@@ -63,8 +63,8 @@ void DevAuthProviderImpl::GetAppIdToken(const f1dl::String& credential,
 }
 
 void DevAuthProviderImpl::GetAppFirebaseToken(
-    const f1dl::String& id_token,
-    const f1dl::String& firebase_api_key,
+    const f1dl::StringPtr& id_token,
+    const f1dl::StringPtr& firebase_api_key,
     const GetAppFirebaseTokenCallback& callback) {
   FirebaseTokenPtr fb_token = auth::FirebaseToken::New();
   fb_token->id_token =
@@ -77,7 +77,7 @@ void DevAuthProviderImpl::GetAppFirebaseToken(
 }
 
 void DevAuthProviderImpl::RevokeAppOrPersistentCredential(
-    const f1dl::String& credential,
+    const f1dl::StringPtr& credential,
     const RevokeAppOrPersistentCredentialCallback& callback) {
   callback(AuthProviderStatus::OK);
 }

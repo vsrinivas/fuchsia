@@ -122,7 +122,7 @@ class CobaltEncoderImpl : public CobaltEncoder {
   void AddStringObservation(
       uint32_t metric_id,
       uint32_t encoding_id,
-      const f1dl::String& observation,
+      const f1dl::StringPtr& observation,
       const AddStringObservationCallback& callback) override;
 
   void AddIntObservation(uint32_t metric_id,
@@ -199,7 +199,7 @@ void CobaltEncoderImpl::AddEncodedObservation(Encoder::Result* result,
 void CobaltEncoderImpl::AddStringObservation(
     uint32_t metric_id,
     uint32_t encoding_id,
-    const f1dl::String& observation,
+    const f1dl::StringPtr& observation,
     const AddStringObservationCallback& callback) {
   auto result = encoder_.EncodeString(metric_id, encoding_id, observation);
   AddEncodedObservation(&result, callback);

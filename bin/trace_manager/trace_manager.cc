@@ -19,7 +19,7 @@ const fxl::TimeDelta kStopTimeout = fxl::TimeDelta::FromSeconds(60);
 static constexpr uint32_t kMinBufferSizeMegabytes = 1;
 static constexpr uint32_t kMaxBufferSizeMegabytes = 64;
 
-std::string SanitizeLabel(const f1dl::String& label) {
+std::string SanitizeLabel(const f1dl::StringPtr& label) {
   std::string result =
       label.get().substr(0, tracing::TraceRegistry::kLabelMaxLength);
   if (result.empty())
@@ -120,7 +120,7 @@ void TraceManager::GetRegisteredProviders(
 
 void TraceManager::RegisterTraceProvider(
     f1dl::InterfaceHandle<TraceProvider> handle,
-    const f1dl::String& label) {
+    const f1dl::StringPtr& label) {
   FXL_VLOG(1) << "Registering provider with label: " << label;
 
   auto it = providers_.emplace(

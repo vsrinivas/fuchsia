@@ -290,8 +290,8 @@ std::ostream& operator<<(std::ostream& os,
   }
 
   os << indent;
-  os << begl << "f1dl::String url: " << value->url << "\n";
-  os << begl << "f1dl::String method: " << value->method << "\n";
+  os << begl << "f1dl::StringPtr url: " << value->url << "\n";
+  os << begl << "f1dl::StringPtr method: " << value->method << "\n";
   os << begl
      << "f1dl::Array<network::HttpHeaderPtr> headers: " << value->headers;
   os << begl << "network::URLBody body: " << value->body;
@@ -316,17 +316,17 @@ std::ostream& operator<<(std::ostream& os,
   os << indent;
   os << begl << "network::NetworkErrorPtr error: " << value->error;
   os << begl << "zx::socket body: " << value->body << "\n";
-  os << begl << "f1dl::String url: " << value->url << "\n";
+  os << begl << "f1dl::StringPtr url: " << value->url << "\n";
   os << begl << "uint32_t status_code: " << value->status_code << "\n";
-  os << begl << "f1dl::String status_line: " << value->status_line << "\n";
+  os << begl << "f1dl::StringPtr status_line: " << value->status_line << "\n";
   os << begl
      << "f1dl::Array<network::HttpHeaderPtr> headers: " << value->headers;
-  os << begl << "f1dl::String mime_type: " << value->mime_type << "\n";
-  os << begl << "f1dl::String charset: " << value->charset << "\n";
-  os << begl << "f1dl::String redirect_method: " << value->redirect_method
+  os << begl << "f1dl::StringPtr mime_type: " << value->mime_type << "\n";
+  os << begl << "f1dl::StringPtr charset: " << value->charset << "\n";
+  os << begl << "f1dl::StringPtr redirect_method: " << value->redirect_method
      << "\n";
-  os << begl << "f1dl::String redirect_url: " << value->redirect_url << "\n";
-  os << begl << "f1dl::String redirect_referrer: " << value->redirect_referrer
+  os << begl << "f1dl::StringPtr redirect_url: " << value->redirect_url << "\n";
+  os << begl << "f1dl::StringPtr redirect_referrer: " << value->redirect_referrer
      << "\n";
   return os << outdent;
 }
@@ -341,7 +341,7 @@ std::ostream& operator<<(std::ostream& os,
 
   os << indent;
   os << begl << "int32_t code: " << value->code << "\n";
-  os << begl << "f1dl::String description: " << value->description << "\n";
+  os << begl << "f1dl::StringPtr description: " << value->description << "\n";
   return os << outdent;
 }
 

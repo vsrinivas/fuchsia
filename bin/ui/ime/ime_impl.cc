@@ -70,7 +70,7 @@ void ImeImpl::InjectInput(mozart::InputEventPtr event) {
       int64_t extent = state_->selection->extent;
       extent = extent == -1 ? 0 : extent;
       text.replace(base, extent - base, replacement);
-      state_->text = f1dl::String(text);
+      state_->text = f1dl::StringPtr(text);
       state_->selection->base = base + replacement.length();
       state_->selection->extent = state_->selection->base;
 

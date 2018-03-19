@@ -118,9 +118,9 @@ TEST_F(GoogleTokenManagerAppTest, Authorize) {
 }
 
 TEST_F(GoogleTokenManagerAppTest, GetAccessToken) {
-  auto scopes = f1dl::Array<f1dl::String>::New(0);
+  auto scopes = f1dl::Array<f1dl::StringPtr>::New(0);
   auth::Status status;
-  f1dl::String access_token;
+  f1dl::StringPtr access_token;
 
   token_mgr_->GetAccessToken(
       kGoogleAuthProvider, kTestUserProfileId, "", std::move(scopes),
@@ -132,7 +132,7 @@ TEST_F(GoogleTokenManagerAppTest, GetAccessToken) {
 
 TEST_F(GoogleTokenManagerAppTest, GetIdToken) {
   auth::Status status;
-  f1dl::String id_token;
+  f1dl::StringPtr id_token;
 
   token_mgr_->GetIdToken(kGoogleAuthProvider, kTestUserProfileId, "",
                          callback::Capture(MakeQuitTask(), &status, &id_token));

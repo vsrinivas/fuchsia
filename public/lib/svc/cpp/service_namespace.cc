@@ -62,7 +62,7 @@ void ServiceNamespace::Connect(fbl::StringPiece name, zx::channel channel) {
   ConnectCommon(std::string(name.data(), name.length()), std::move(channel));
 }
 
-void ServiceNamespace::ConnectToService(const f1dl::String& service_name,
+void ServiceNamespace::ConnectToService(const f1dl::StringPtr& service_name,
                                         zx::channel channel) {
   ConnectCommon(service_name, std::move(channel));
 }

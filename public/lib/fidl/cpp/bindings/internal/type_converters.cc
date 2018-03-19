@@ -6,14 +6,14 @@
 
 namespace fxl {
 
-std::string TypeConverter<std::string, f1dl::String>::Convert(
-    f1dl::String value) {
+std::string TypeConverter<std::string, f1dl::StringPtr>::Convert(
+    f1dl::StringPtr value) {
   return value;
 }
 
-f1dl::String TypeConverter<f1dl::String, std::string>::Convert(
+f1dl::StringPtr TypeConverter<f1dl::StringPtr, std::string>::Convert(
     std::string value) {
-  return f1dl::String(value);
+  return f1dl::StringPtr(value);
 }
 
 }  // namespace fxl

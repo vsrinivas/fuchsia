@@ -24,11 +24,11 @@ class ViewManagerImpl : public mozart::ViewManager {
                   f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   f1dl::InterfaceHandle<mozart::ViewListener> view_listener,
                   zx::eventpair parent_export_token,
-                  const f1dl::String& label) override;
+                  const f1dl::StringPtr& label) override;
   void CreateViewTree(
       f1dl::InterfaceRequest<mozart::ViewTree> view_tree_request,
       f1dl::InterfaceHandle<mozart::ViewTreeListener> view_tree_listener,
-      const f1dl::String& label) override;
+      const f1dl::StringPtr& label) override;
 
   ViewRegistry* registry_;
 

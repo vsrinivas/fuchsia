@@ -15,7 +15,7 @@ namespace media {
 
 // static
 std::shared_ptr<NetMediaPlayerImpl> NetMediaPlayerImpl::Create(
-    const f1dl::String& service_name,
+    const f1dl::StringPtr& service_name,
     f1dl::InterfaceHandle<MediaPlayer> media_player,
     f1dl::InterfaceRequest<NetMediaPlayer> net_media_player_request,
     NetMediaServiceImpl* owner) {
@@ -25,7 +25,7 @@ std::shared_ptr<NetMediaPlayerImpl> NetMediaPlayerImpl::Create(
 }
 
 NetMediaPlayerImpl::NetMediaPlayerImpl(
-    const f1dl::String& service_name,
+    const f1dl::StringPtr& service_name,
     f1dl::InterfaceHandle<MediaPlayer> media_player,
     f1dl::InterfaceRequest<NetMediaPlayer> net_media_player_request,
     NetMediaServiceImpl* owner)
@@ -47,7 +47,7 @@ NetMediaPlayerImpl::~NetMediaPlayerImpl() {
   media_player_.Unbind();
 }
 
-void NetMediaPlayerImpl::SetUrl(const f1dl::String& url_as_string) {
+void NetMediaPlayerImpl::SetUrl(const f1dl::StringPtr& url_as_string) {
   url::GURL url = url::GURL(url_as_string);
 
   if (!url.is_valid()) {

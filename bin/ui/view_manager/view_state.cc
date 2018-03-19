@@ -82,7 +82,7 @@ component::ServiceProvider* ViewState::GetServiceProviderIfSupports(
 
 void ViewState::SetServiceProvider(
     f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
-    f1dl::Array<f1dl::String> service_names) {
+    f1dl::Array<f1dl::StringPtr> service_names) {
   if (service_provider) {
     service_provider_ = service_provider.Bind();
     service_names_ = std::move(service_names);

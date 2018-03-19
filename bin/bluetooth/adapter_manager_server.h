@@ -41,7 +41,7 @@ class AdapterManagerServer : public bluetooth::control::AdapterManager {
       f1dl::InterfaceHandle<::bluetooth::control::AdapterManagerDelegate>
           delegate) override;
   void ListAdapters(const ListAdaptersCallback& callback) override;
-  void SetActiveAdapter(const f1dl::String& identifier,
+  void SetActiveAdapter(const f1dl::StringPtr& identifier,
                         const SetActiveAdapterCallback& callback) override;
   void GetActiveAdapter(
       f1dl::InterfaceRequest<::bluetooth::control::Adapter> adapter) override;

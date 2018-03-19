@@ -128,7 +128,7 @@ class NetworkApplicationLoader : public component::ApplicationLoader {
   }
 
   void LoadApplication(
-      const f1dl::String& url,
+      const f1dl::StringPtr& url,
       const ApplicationLoader::LoadApplicationCallback& callback) override {
     network::URLLoaderPtr loader;
     net_->CreateURLLoader(loader.NewRequest());

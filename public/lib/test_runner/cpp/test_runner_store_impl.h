@@ -22,16 +22,16 @@ class TestRunnerStoreImpl : public TestRunnerStore {
 
  private:
   // |TestRunnerStore|
-  void Get(const f1dl::String& key, const GetCallback& cb) override;
+  void Get(const f1dl::StringPtr& key, const GetCallback& cb) override;
   // |TestRunnerStore|
-  void Put(const f1dl::String& key,
-           const f1dl::String& value,
+  void Put(const f1dl::StringPtr& key,
+           const f1dl::StringPtr& value,
            const PutCallback& cb) override;
 
   void MaybeNotify(const std::string& key);
 
-  std::map<f1dl::String, std::queue<GetCallback>> get_queue_;
-  std::map<f1dl::String, std::queue<std::string>> store_;
+  std::map<f1dl::StringPtr, std::queue<GetCallback>> get_queue_;
+  std::map<f1dl::StringPtr, std::queue<std::string>> store_;
   f1dl::BindingSet<TestRunnerStore> binding_set_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestRunnerStoreImpl);

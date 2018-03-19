@@ -24,7 +24,7 @@ class ShadertoyImpl : public mozart::example::Shadertoy {
   void SetPaused(bool paused) override;
 
   // |Shadertoy|
-  void SetShaderCode(const ::f1dl::String& glsl,
+  void SetShaderCode(const ::f1dl::StringPtr& glsl,
                      const SetShaderCodeCallback& callback) override;
 
   // |Shadertoy|

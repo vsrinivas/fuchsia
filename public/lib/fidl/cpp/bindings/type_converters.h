@@ -71,14 +71,14 @@ struct TypeConverter<std::unique_ptr<std::vector<T>>, f1dl::Array<U>> {
 
 // Converts a FIDL String to a std::string.
 template <>
-struct TypeConverter<std::string, f1dl::String> {
-  static std::string Convert(f1dl::String value);
+struct TypeConverter<std::string, f1dl::StringPtr> {
+  static std::string Convert(f1dl::StringPtr value);
 };
 
 // Converts a std::string to a FIDL String.
 template <>
-struct TypeConverter<f1dl::String, std::string> {
-  static f1dl::String Convert(std::string value);
+struct TypeConverter<f1dl::StringPtr, std::string> {
+  static f1dl::StringPtr Convert(std::string value);
 };
 
 }  // namespace fxl

@@ -133,7 +133,7 @@ def GetCppArrayArgWrapperType(kind):
   if mojom.IsInterfaceRequestKind(kind):
     return "::f1dl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
   if mojom.IsStringKind(kind):
-    return "::f1dl::String"
+    return "::f1dl::StringPtr"
   if mojom.IsGenericHandleKind(kind):
     return "zx::handle"
   if mojom.IsChannelKind(kind):
@@ -171,7 +171,7 @@ def GetCppResultWrapperType(kind):
   if mojom.IsInterfaceRequestKind(kind):
     return "::f1dl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
   if mojom.IsStringKind(kind):
-    return "::f1dl::String"
+    return "::f1dl::StringPtr"
   if mojom.IsGenericHandleKind(kind):
     return "zx::handle"
   if mojom.IsChannelKind(kind):
@@ -209,7 +209,7 @@ def GetCppWrapperType(kind):
   if mojom.IsInterfaceRequestKind(kind):
     return "::f1dl::InterfaceRequest<%s>" % GetNameForKind(kind.kind)
   if mojom.IsStringKind(kind):
-    return "::f1dl::String"
+    return "::f1dl::StringPtr"
   if mojom.IsGenericHandleKind(kind):
     return "zx::handle"
   if mojom.IsChannelKind(kind):
@@ -247,7 +247,7 @@ def GetCppConstWrapperType(kind):
   if mojom.IsEnumKind(kind):
     return GetNameForKind(kind)
   if mojom.IsStringKind(kind):
-    return "const ::f1dl::String&"
+    return "const ::f1dl::StringPtr&"
   if mojom.IsGenericHandleKind(kind):
     return "zx::handle"
   if mojom.IsChannelKind(kind):

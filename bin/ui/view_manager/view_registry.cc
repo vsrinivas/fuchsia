@@ -58,7 +58,7 @@ void ApplyOverrides(mozart::ViewProperties* value,
     value->view_layout = overrides->view_layout.Clone();
 }
 
-std::string SanitizeLabel(const f1dl::String& label) {
+std::string SanitizeLabel(const f1dl::StringPtr& label) {
   return label.get().substr(0, mozart::ViewManager::kLabelMaxLength);
 }
 
@@ -138,7 +138,7 @@ void ViewRegistry::CreateView(
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     mozart::ViewListenerPtr view_listener,
     zx::eventpair parent_export_token,
-    const f1dl::String& label) {
+    const f1dl::StringPtr& label) {
   FXL_DCHECK(view_request.is_valid());
   FXL_DCHECK(view_owner_request.is_valid());
   FXL_DCHECK(view_listener);
@@ -199,7 +199,7 @@ void ViewRegistry::UnregisterView(ViewState* view_state) {
 void ViewRegistry::CreateViewTree(
     f1dl::InterfaceRequest<mozart::ViewTree> view_tree_request,
     mozart::ViewTreeListenerPtr view_tree_listener,
-    const f1dl::String& label) {
+    const f1dl::StringPtr& label) {
   FXL_DCHECK(view_tree_request.is_valid());
   FXL_DCHECK(view_tree_listener);
 
@@ -689,7 +689,7 @@ void ViewRegistry::PresentSession() {
 // VIEW AND VIEW TREE SERVICE PROVIDERS
 
 void ViewRegistry::ConnectToViewService(ViewState* view_state,
-                                        const f1dl::String& service_name,
+                                        const f1dl::StringPtr& service_name,
                                         zx::channel client_handle) {
   FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
   if (service_name == mozart::InputConnection::Name_) {
@@ -700,7 +700,7 @@ void ViewRegistry::ConnectToViewService(ViewState* view_state,
 }
 
 void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
-                                            const f1dl::String& service_name,
+                                            const f1dl::StringPtr& service_name,
                                             zx::channel client_handle) {
   FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   if (service_name == mozart::InputDispatcher::Name_) {

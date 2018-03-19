@@ -47,7 +47,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
       net_connector->GetKnownDeviceNames(
           NetConnector::kInitialKnownDeviceNames,
           fxl::MakeCopyable([ this, net_connector = std::move(net_connector) ](
-              uint64_t version, f1dl::Array<f1dl::String> device_names) {
+              uint64_t version, f1dl::Array<f1dl::StringPtr> device_names) {
             if (device_names->size() == 0) {
               std::cout << "No remote devices found\n";
             } else {
@@ -73,8 +73,8 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
 
   device_names_publisher_.SetCallbackRunner(
       [this](const GetKnownDeviceNamesCallback& callback, uint64_t version) {
-        f1dl::Array<f1dl::String> device_names =
-            f1dl::Array<f1dl::String>::New(0);
+        f1dl::Array<f1dl::StringPtr> device_names =
+            f1dl::Array<f1dl::StringPtr>::New(0);
 
         for (auto& pair : params_->devices()) {
           device_names.push_back(pair.first);
@@ -112,7 +112,7 @@ void NetConnectorImpl::StartListener() {
 
   mdns_service_->PublishServiceInstance(
       kFuchsiaServiceName, host_name_, kPort.as_uint16_t(),
-      f1dl::Array<f1dl::String>(), [this](mdns::MdnsResult result) {
+      f1dl::Array<f1dl::StringPtr>(), [this](mdns::MdnsResult result) {
         switch (result) {
           case mdns::MdnsResult::OK:
             break;
@@ -183,7 +183,7 @@ void NetConnectorImpl::ReleaseServiceAgent(ServiceAgent* service_agent) {
 }
 
 void NetConnectorImpl::GetDeviceServiceProvider(
-    const f1dl::String& device_name,
+    const f1dl::StringPtr& device_name,
     f1dl::InterfaceRequest<component::ServiceProvider> request) {
   if (device_name == host_name_ || device_name == kLocalDeviceName) {
     responding_service_host_.AddBinding(std::move(request));
@@ -208,7 +208,7 @@ void NetConnectorImpl::GetKnownDeviceNames(
 }
 
 void NetConnectorImpl::RegisterServiceProvider(
-    const f1dl::String& name,
+    const f1dl::StringPtr& name,
     f1dl::InterfaceHandle<component::ServiceProvider> handle) {
   FXL_LOG(INFO) << "Service '" << name << "' provider registered.";
   responding_service_host_.RegisterProvider(name, std::move(handle));

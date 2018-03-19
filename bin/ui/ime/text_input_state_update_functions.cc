@@ -39,7 +39,7 @@ void DeleteBackward(const mozart::TextInputStatePtr& current_state) {
   FXL_DCHECK(base < extent);
   FXL_DCHECK(extent <= static_cast<int64_t>(text.size()));
   text.erase(base, extent - base);
-  current_state->text = f1dl::String(std::move(text));
+  current_state->text = f1dl::StringPtr(std::move(text));
   extent = base;
 }
 

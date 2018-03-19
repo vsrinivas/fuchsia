@@ -41,7 +41,7 @@ void ICUDataProviderImpl::AddBinding(
 }
 
 void ICUDataProviderImpl::ICUDataWithSha1(
-    const f1dl::String& sha1hash,
+    const f1dl::StringPtr& sha1hash,
     const ICUDataWithSha1Callback& callback) {
   if (!icu_data_vmo_) {
     callback(nullptr);

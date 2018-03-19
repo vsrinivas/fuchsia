@@ -23,7 +23,7 @@ RootApplicationLoader::RootApplicationLoader(std::vector<std::string> path)
 RootApplicationLoader::~RootApplicationLoader() {}
 
 void RootApplicationLoader::LoadApplication(
-    const f1dl::String& url,
+    const f1dl::StringPtr& url,
     const ApplicationLoader::LoadApplicationCallback& callback) {
   std::string path = GetPathFromURL(url);
   if (path.empty()) {

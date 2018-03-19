@@ -23,7 +23,7 @@ MdnsServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
 
   service_instance->service_name = service_name;
   service_instance->instance_name = instance_name;
-  service_instance->text = fxl::To<f1dl::Array<f1dl::String>>(text);
+  service_instance->text = fxl::To<f1dl::Array<f1dl::StringPtr>>(text);
 
   if (v4_address.is_valid()) {
     service_instance->v4_address = CreateSocketAddressIPv4(v4_address);
@@ -42,7 +42,7 @@ void MdnsFidlUtil::UpdateServiceInstance(
     const SocketAddress& v4_address,
     const SocketAddress& v6_address,
     const std::vector<std::string>& text) {
-  service_instance->text = fxl::To<f1dl::Array<f1dl::String>>(text);
+  service_instance->text = fxl::To<f1dl::Array<f1dl::StringPtr>>(text);
 
   if (v4_address.is_valid()) {
     service_instance->v4_address = CreateSocketAddressIPv4(v4_address);

@@ -42,24 +42,24 @@ class TokenManagerImpl : public TokenManager {
                  const AuthorizeCallback& callback) override;
 
   void GetAccessToken(const auth::AuthProviderType auth_provider_type,
-                      const f1dl::String& user_profile_id,
-                      const f1dl::String& app_client_id,
-                      const f1dl::Array<f1dl::String> app_scopes,
+                      const f1dl::StringPtr& user_profile_id,
+                      const f1dl::StringPtr& app_client_id,
+                      const f1dl::Array<f1dl::StringPtr> app_scopes,
                       const GetAccessTokenCallback& callback) override;
 
   void GetIdToken(const auth::AuthProviderType auth_provider_type,
-                  const f1dl::String& user_profile_id,
-                  const f1dl::String& audience,
+                  const f1dl::StringPtr& user_profile_id,
+                  const f1dl::StringPtr& audience,
                   const GetIdTokenCallback& callback) override;
 
   void GetFirebaseToken(const auth::AuthProviderType auth_provider_type,
-                        const f1dl::String& user_profile_id,
-                        const f1dl::String& audience,
-                        const f1dl::String& firebase_api_key,
+                        const f1dl::StringPtr& user_profile_id,
+                        const f1dl::StringPtr& audience,
+                        const f1dl::StringPtr& firebase_api_key,
                         const GetFirebaseTokenCallback& callback) override;
 
   void DeleteAllTokens(const auth::AuthProviderType auth_provider_type,
-                       const f1dl::String& user_profile_id,
+                       const f1dl::StringPtr& user_profile_id,
                        const DeleteAllTokensCallback& callback) override;
 
   std::map<AuthProviderType, component::ApplicationControllerPtr>

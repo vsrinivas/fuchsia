@@ -41,11 +41,11 @@ class ViewRegistry : public ViewInspector, public InputOwner {
                   f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   mozart::ViewListenerPtr view_listener,
                   zx::eventpair parent_export_token,
-                  const f1dl::String& label);
+                  const f1dl::StringPtr& label);
   void CreateViewTree(
       f1dl::InterfaceRequest<mozart::ViewTree> view_tree_request,
       mozart::ViewTreeListenerPtr view_tree_listener,
-      const f1dl::String& label);
+      const f1dl::StringPtr& label);
 
   // VIEW STUB REQUESTS
 
@@ -95,13 +95,13 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // Connects to a view service.
   // Destroys |view_state| if an error occurs.
   void ConnectToViewService(ViewState* view_state,
-                            const f1dl::String& service_name,
+                            const f1dl::StringPtr& service_name,
                             zx::channel client_handle);
 
   // Connects to a view service.
   // Destroys |view_state| if an error occurs.
   void ConnectToViewTreeService(ViewTreeState* tree_state,
-                                const f1dl::String& service_name,
+                                const f1dl::StringPtr& service_name,
                                 zx::channel client_handle);
 
   // VIEW INSPECTOR REQUESTS

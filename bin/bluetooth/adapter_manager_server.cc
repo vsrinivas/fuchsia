@@ -107,7 +107,7 @@ void AdapterManagerServer::ListAdapters(const ListAdaptersCallback& callback) {
 }
 
 void AdapterManagerServer::SetActiveAdapter(
-    const ::f1dl::String& identifier,
+    const ::f1dl::StringPtr& identifier,
     const SetActiveAdapterCallback& callback) {
   auto status = Status::New();
   auto ac =

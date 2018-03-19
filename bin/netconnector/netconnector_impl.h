@@ -54,12 +54,12 @@ class NetConnectorImpl : public NetConnector {
   void ReleaseServiceAgent(ServiceAgent* service_agent);
 
   // NetConnector implementation.
-  void RegisterServiceProvider(const f1dl::String& name,
+  void RegisterServiceProvider(const f1dl::StringPtr& name,
                                f1dl::InterfaceHandle<component::ServiceProvider>
                                    service_provider) override;
 
   void GetDeviceServiceProvider(
-      const f1dl::String& device_name,
+      const f1dl::StringPtr& device_name,
       f1dl::InterfaceRequest<component::ServiceProvider> service_provider)
       override;
 

@@ -31,17 +31,17 @@ class LowEnergyCentralServer
   void SetDelegate(
       ::f1dl::InterfaceHandle<::bluetooth::low_energy::CentralDelegate>
           delegate) override;
-  void GetPeripherals(::f1dl::Array<::f1dl::String> service_uuids,
+  void GetPeripherals(::f1dl::Array<::f1dl::StringPtr> service_uuids,
                       const GetPeripheralsCallback& callback) override;
-  void GetPeripheral(const ::f1dl::String& identifier,
+  void GetPeripheral(const ::f1dl::StringPtr& identifier,
                      const GetPeripheralCallback& callback) override;
   void StartScan(::bluetooth::low_energy::ScanFilterPtr filter,
                  const StartScanCallback& callback) override;
   void StopScan() override;
-  void ConnectPeripheral(const ::f1dl::String& identifier,
+  void ConnectPeripheral(const ::f1dl::StringPtr& identifier,
                          const ConnectPeripheralCallback& callback) override;
   void DisconnectPeripheral(
-      const ::f1dl::String& identifier,
+      const ::f1dl::StringPtr& identifier,
       const DisconnectPeripheralCallback& callback) override;
 
   // Called by |scan_session_| when a device is discovered.

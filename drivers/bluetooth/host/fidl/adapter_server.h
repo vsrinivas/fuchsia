@@ -36,8 +36,8 @@ class AdapterServer : public AdapterServerBase<::bluetooth::control::Adapter> {
   void SetDelegate(
       ::f1dl::InterfaceHandle<::bluetooth::control::AdapterDelegate> delegate)
       override;
-  void SetLocalName(const ::f1dl::String& local_name,
-                    const ::f1dl::String& shortened_local_name,
+  void SetLocalName(const ::f1dl::StringPtr& local_name,
+                    const ::f1dl::StringPtr& shortened_local_name,
                     const SetLocalNameCallback& callback) override;
   void SetPowered(bool powered, const SetPoweredCallback& callback) override;
   void StartDiscovery(const StartDiscoveryCallback& callback) override;

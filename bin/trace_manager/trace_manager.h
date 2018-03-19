@@ -40,7 +40,7 @@ class TraceManager : public TraceRegistry, public TraceController {
   // |TraceRegistry| implementation.
   void RegisterTraceProvider(
       f1dl::InterfaceHandle<tracing::TraceProvider> provider,
-      const f1dl::String& label) override;
+      const f1dl::StringPtr& label) override;
 
   void FinalizeTracing();
   void LaunchConfiguredProviders();

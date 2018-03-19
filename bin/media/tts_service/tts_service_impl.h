@@ -30,7 +30,7 @@ class TtsServiceImpl {
     void Shutdown();
 
     // TtsService
-    void Say(const f1dl::String& words,
+    void Say(const f1dl::StringPtr& words,
              uint64_t token,
              const SayCallback& cbk) override;
 
