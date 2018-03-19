@@ -71,13 +71,13 @@ zx_status_t io_buffer_init_physical_with_bti(io_buffer_t* buffer, zx_handle_t bt
                                              zx_handle_t resource, uint32_t cache_policy);
 
 // Legacy variants of the above
-zx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags) __DEPRECATE;
+zx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags) __DDK_DEPRECATE;
 zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t alignment_log2,
-                                   uint32_t flags) __DEPRECATE;
+                                   uint32_t flags) __DDK_DEPRECATE;
 zx_status_t io_buffer_init_vmo(io_buffer_t* buffer, zx_handle_t vmo_handle,
-                               zx_off_t offset, uint32_t flags) __DEPRECATE;
+                               zx_off_t offset, uint32_t flags) __DDK_DEPRECATE;
 zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_paddr_t addr, size_t size,
-                                    zx_handle_t resource, uint32_t cache_policy) __DEPRECATE;
+                                    zx_handle_t resource, uint32_t cache_policy) __DDK_DEPRECATE;
 
 zx_status_t io_buffer_cache_op(io_buffer_t* buffer, const uint32_t op,
                                const zx_off_t offset, const size_t size);
