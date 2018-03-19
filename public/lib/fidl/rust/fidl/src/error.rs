@@ -68,6 +68,10 @@ pub enum Error {
     #[fail(display = "A FIDL future was polled after it had already completed.")]
     PollAfterCompletion,
 
+    /// A response message was received with txid 0.
+    #[fail(display = "Invalid response with txid 0.")]
+    InvalidResponseTxid,
+
     /// A FIDL server encountered an IO error writing a response to a channel.
     #[fail(display = "A server encountered an IO error writing a FIDL response to a channel: {}", _0)]
     ServerResponseWrite(#[cause] zircon::Status),

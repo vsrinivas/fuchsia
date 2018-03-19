@@ -233,8 +233,8 @@ impl ClientInner {
     fn register_msg_interest(&self) -> u32 {
         // TODO(cramertj) use `try_from` here and assert that the conversion from
         // `usize` to `u32` hasn't overflowed.
-        self.message_interests.lock().unwrap().insert(
-            MessageInterest::WillPoll) as u32
+        (self.message_interests.lock().unwrap().insert(
+            MessageInterest::WillPoll) + 1) as u32
     }
 
     /// Check for receipt of a message with a given ID.
@@ -244,7 +244,12 @@ impl ClientInner {
         waker_to_register_opt: Option<&Waker>,
         cx: &mut task::Context
     ) -> Poll<MessageBuf, Error> {
-        let id = id as usize;
+        if id == 0 {
+            return Err(Error::InvalidResponseTxid);
+        }
+        let txid = id as usize;
+        // The message interest ids are 0-based, while FIDL txids are 1-based.
+        let interest_id = txid - 1;
 
         // TODO(cramertj) return errors if one has occured _ever_ in poll_recv, not just if
         // one happens on this call.
@@ -255,8 +260,8 @@ impl ClientInner {
 
             // If a message was received for the ID in question,
             // remove the message interest entry and return the response.
-            if message_interests.get(id).expect("Polled unregistered interest").is_received() {
-                let buf = message_interests.remove(id).unwrap_received();
+            if message_interests.get(interest_id).expect("Polled unregistered interest").is_received() {
+                let buf = message_interests.remove(interest_id).unwrap_received();
                 self.received_messages_count.fetch_sub(1, Ordering::AcqRel);
                 return Ok(Async::Ready(buf));
             }
@@ -272,19 +277,19 @@ impl ClientInner {
             {
                 let mut message_interests = self.message_interests.lock().unwrap();
 
-                if message_interests.get(id)
+                if message_interests.get(interest_id)
                     .expect("Polled unregistered interst")
                     .is_received()
                 {
                     // If, by happy accident, we just raced to getting the result,
                     // then yay! Return success.
-                    let buf = message_interests.remove(id).unwrap_received();
+                    let buf = message_interests.remove(interest_id).unwrap_received();
                     self.received_messages_count.fetch_sub(1, Ordering::AcqRel);
                     return Ok(Async::Ready(buf));
                 } else {
                     // Set the current waker to be notified when a response arrives.
                     if let Some(waker_to_register) = waker_to_register_opt {
-                        *message_interests.get_mut(id)
+                        *message_interests.get_mut(interest_id)
                             .expect("Polled unregistered interest") =
                                 MessageInterest::Waiting(waker_to_register.clone());
                     }
@@ -294,21 +299,25 @@ impl ClientInner {
 
             // TODO(cramertj) handle control messages (e.g. epitaph)
             let recvd_id = response_header_tx_id(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
+            if recvd_id == 0 {
+                return Err(Error::InvalidResponseTxid);
+            }
 
             // TODO(cramertj) use TryFrom here after stabilization
-            let recvd_id = recvd_id as usize;
+            let recvd_txid = recvd_id as usize;
+            let recvd_interest_id = recvd_txid - 1;
 
             // If a message was received for the ID in question,
             // remove the message interest entry and return the response.
-            if recvd_id == id {
-                self.message_interests.lock().unwrap().remove(id);
+            if recvd_txid == txid {
+                self.message_interests.lock().unwrap().remove(interest_id);
                 return Ok(Async::Ready(buf));
             }
 
             // Look for a message interest with the given ID.
             // If one is found, store the message so that it can be picked up later.
             let mut message_interests = self.message_interests.lock().unwrap();
-            if let Some(entry) = message_interests.get_mut(recvd_id) {
+            if let Some(entry) = message_interests.get_mut(recvd_interest_id) {
                 let old_entry = mem::replace(entry, MessageInterest::Received(buf));
                 self.received_messages_count.fetch_add(1, Ordering::AcqRel);
                 if let MessageInterest::Waiting(waker) = old_entry {
@@ -338,16 +347,16 @@ mod tests {
     use zircon::{self, MessageBuf};
     use super::*;
 
-    const EXPECTED: &[u8] = &[
-        0, 0, 0, 0, 0, 0, 0, 0, // 32 bit tx_id followed by 32 bits of padding
-        0, 0, 0, 0, // 32 bits for flags
-        42, 0, 0, 0, // 32 bit ordinal
-        55, // 8 bit data
-        0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after our 1 byte of data
-    ];
-
     #[test]
     fn client() {
+        const EXPECTED: &[u8] = &[
+            0, 0, 0, 0, 0, 0, 0, 0, // 32 bit tx_id followed by 32 bits of padding
+            0, 0, 0, 0, // 32 bits for flags
+            42, 0, 0, 0, // 32 bit ordinal
+            55, // 8 bit data
+            0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after our 1 byte of data
+        ];
+
         let mut executor = async::Executor::new().unwrap();
 
         let (client_end, server_end) = zircon::Channel::create().unwrap();
@@ -375,6 +384,14 @@ mod tests {
 
     #[test]
     fn client_with_response() {
+        const EXPECTED: &[u8] = &[
+            1, 0, 0, 0, 0, 0, 0, 0, // 32 bit tx_id followed by 32 bits of padding
+            0, 0, 0, 0, // 32 bits for flags
+            42, 0, 0, 0, // 32 bit ordinal
+            55, // 8 bit data
+            0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after our 1 byte of data
+        ];
+
         let mut executor = async::Executor::new().unwrap();
 
         let (client_end, server_end) = zircon::Channel::create().unwrap();
@@ -385,7 +402,8 @@ mod tests {
         let mut buffer = MessageBuf::new();
         let receiver = server.recv_msg(&mut buffer).map(|(chan, buf)| {
             assert_eq!(EXPECTED, buf.bytes());
-            let id = 0; // internally, the first slot in a slab returns a `0`.
+            let id = 1; // internally, the first slot in a slab returns a `0`. We then add one
+                        // since FIDL txids start with `1`.
 
             let response = &mut TransactionMessage {
                 header: TransactionHeader {
