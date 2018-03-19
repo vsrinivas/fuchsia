@@ -12,7 +12,7 @@ under [tracing](tracing_usage_guide.md) and analyzing the collected traces to
 compute performance metrics.
 
 For a typical **service** application (application to which clients connect over
-FIDL) has the following components participating in a benchmarking run:
+FIDL), the following components participate in a benchmarking run:
 
  - **service binary** - the service being benchmarked.
  - **benchmark app** - a client app that connects to the service and
