@@ -17,6 +17,17 @@
 
 namespace zxdb {
 
+Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
+                        Target* target) {
+  Target::State state = target->GetState();
+  if (state == Target::State::kRunning)
+    return Err();
+  return Err(ErrType::kInput, fxl::StringPrintf(
+      "%s requires a running process but process %d is %s.",
+      command_name, context->IdForTarget(target),
+      TargetStateToString(state).c_str()));
+}
+
 Err StringToUint64(const std::string& s, uint64_t* out) {
   *out = 0;
   if (s.empty())
@@ -54,6 +65,25 @@ Err ReadUint64Arg(const Command& cmd, size_t arg_index,
   return Err();
 }
 
+std::string TargetStateToString(Target::State state) {
+  struct Mapping {
+    Target::State state;
+    const char* string;
+  };
+  static const Mapping mappings[] = {
+    { Target::State::kStopped, "Stopped" },
+    { Target::State::kStarting, "Starting" },
+    { Target::State::kRunning, "Running" }
+  };
+
+  for (const Mapping& mapping : mappings) {
+    if (mapping.state == state)
+      return mapping.string;
+  }
+  FXL_NOTREACHED();
+  return std::string();
+}
+
 std::string ThreadStateToString(debug_ipc::ThreadRecord::State state) {
   struct Mapping {
     debug_ipc::ThreadRecord::State state;
@@ -79,25 +109,15 @@ std::string ThreadStateToString(debug_ipc::ThreadRecord::State state) {
 std::string DescribeTarget(ConsoleContext* context, Target* target,
                            bool columns) {
   int id = context->IdForTarget(target);
+  std::string state = TargetStateToString(target->GetState());
 
   // Koid string. This includes a trailing space when present so it can be
   // concat'd even when not present and things look nice.
   std::string koid_str;
-
-  const char* state = nullptr;
-  switch (target->GetState()) {
-    case Target::State::kStopped:
-      state = "Stopped";
-      break;
-    case Target::State::kStarting:
-      state = "Starting";
-      break;
-    case Target::State::kRunning:
-      state = "Running";
-      koid_str = fxl::StringPrintf(columns ? "%" PRIu64 " "
-                                           : "koid=%" PRIu64 " ",
-                                   target->GetProcess()->GetKoid());
-      break;
+  if (target->GetState() == Target::State::kRunning) {
+    koid_str = fxl::StringPrintf(columns ? "%" PRIu64 " "
+                                         : "koid=%" PRIu64 " ",
+                                 target->GetProcess()->GetKoid());
   }
 
   const char* format_string;
@@ -105,7 +125,7 @@ std::string DescribeTarget(ConsoleContext* context, Target* target,
     format_string = "%3d %8s %8s";
   else
     format_string = "Process %d %s %s";
-  std::string result = fxl::StringPrintf(format_string, id, state,
+  std::string result = fxl::StringPrintf(format_string, id, state.c_str(),
                                          koid_str.c_str());
 
   // When running, use the object name if any.

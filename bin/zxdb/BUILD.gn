@@ -67,6 +67,7 @@ executable("unittests") {
   ]
 
   deps = [
+    "//garnet/bin/zxdb/client:tests",
     "//garnet/bin/zxdb/console:tests",
     "//third_party/googletest:gtest_main",
     "//third_party/googletest:gtest",

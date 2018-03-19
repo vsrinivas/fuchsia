@@ -18,6 +18,8 @@ static_library("console") {
     "line_input.h",
     "main_loop.cc",
     "main_loop.h",
+    "memory_format.cc",
+    "memory_format.h",
     "nouns.cc",
     "nouns.h",
     "output_buffer.cc",
@@ -57,6 +59,7 @@ source_set("tests") {
     "command_parser_unittest.cc",
     "command_utils_unittest.cc",
     "line_input_unittest.cc",
+    "memory_format_unittest.cc",
   ]
 
   deps = [

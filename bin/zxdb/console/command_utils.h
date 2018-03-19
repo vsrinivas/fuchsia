@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include "garnet/bin/zxdb/client/target.h"
 #include "garnet/lib/debug_ipc/records.h"
 
 namespace zxdb {
@@ -13,8 +14,13 @@ namespace zxdb {
 class Command;
 class ConsoleContext;
 class Err;
-class Target;
 class Thread;
+
+// Ensures the target is currently running (it has a current Process associated
+// with it. If not, generates an error of the form
+// "<command_name> requires a running target".
+Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
+                        Target* target);
 
 [[nodiscard]] Err StringToUint64(const std::string& s, uint64_t* out);
 
@@ -25,6 +31,7 @@ class Thread;
 [[nodiscard]] Err ReadUint64Arg(const Command& cmd, size_t arg_index,
                                 const char* param_desc, uint64_t* out);
 
+std::string TargetStateToString(Target::State state);
 std::string ThreadStateToString(debug_ipc::ThreadRecord::State state);
 
 // Returns a string describing the given thing in the given context. If

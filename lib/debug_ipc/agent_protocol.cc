@@ -26,7 +26,7 @@ void Serialize(const ThreadRecord& record, MessageWriter* writer) {
 void Serialize(const MemoryBlock& block, MessageWriter* writer) {
   writer->WriteUint64(block.address);
   writer->WriteUint32(block.valid ? 1 : 0);
-  writer->WriteUint64(block.size);
+  writer->WriteUint32(block.size);
   if (block.valid && block.size > 0)
     writer->WriteBytes(&block.data[0], block.size);
 }

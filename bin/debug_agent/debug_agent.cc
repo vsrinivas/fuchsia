@@ -288,7 +288,9 @@ void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
 
 void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                               debug_ipc::ReadMemoryReply* reply) {
-  // TODO(brettw) implement this.
+  DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
+  if (proc)
+    proc->OnReadMemory(request, reply);
 }
 
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {

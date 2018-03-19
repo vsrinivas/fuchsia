@@ -44,11 +44,12 @@ bool Deserialize(MessageReader* reader, MemoryBlock* block) {
     return false;
   block->valid = !!valid_flag;
 
-  if (!reader->ReadUint64(&block->size))
+  if (!reader->ReadUint32(&block->size))
     return false;
-  if (block->size > reader->remaining())
-    return false;
-  if (block->valid && block->size > 0) {
+  if (block->valid) {
+    if (block->size > reader->remaining())
+      return false;
+
     block->data.resize(block->size);
     if (!reader->ReadBytes(block->size, &block->data[0]))
       return false;

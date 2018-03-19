@@ -40,6 +40,28 @@ void DebuggedProcess::OnContinue(const debug_ipc::ContinueRequest& request) {
   }
 }
 
+void DebuggedProcess::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
+                                   debug_ipc::ReadMemoryReply* reply) {
+  // TODO(brettw) break into blocks if a portion of the memory range is mapped
+  // but a portion isn't. Currently this assumes the entire range is in one
+  // block.
+  debug_ipc::MemoryBlock block;
+  block.address = request.address;
+  block.size = request.size;
+  block.data.resize(request.size);
+
+  size_t bytes_read = 0;
+  if (process_.read_memory(request.address, &block.data[0], block.size,
+                           &bytes_read) == ZX_OK && bytes_read == block.size) {
+    block.valid = true;
+  } else {
+    block.valid = false;
+    block.data.resize(0);
+  }
+
+  reply->blocks.emplace_back(std::move(block));
+}
+
 void DebuggedProcess::OnException(const zx::thread& thread) {
   // TODO(brettw) add a policy for whether all threads are suspended during
   // execution, or just the current one.

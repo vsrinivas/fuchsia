@@ -28,7 +28,7 @@ void ThreadImpl::Continue() {
   request.thread_koid = koid_;
   session()->Send<debug_ipc::ContinueRequest, debug_ipc::ContinueReply>(
       request,
-      [](Session*, uint32_t, const Err& err, debug_ipc::ContinueReply) {});
+      [](const Err& err, debug_ipc::ContinueReply) {});
 }
 
 void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {

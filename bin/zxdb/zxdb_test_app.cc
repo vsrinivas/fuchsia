@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
+
+#include <zircon/syscalls.h>
 
 // This is a simple app for testing various aspects of the debugger. To build,
 // set include_test_app to true in the BUILD.gn file in this directory.
@@ -21,6 +24,12 @@ void DebugBreak() {
 }
 
 int main(int arch, char* argv[]) {
+  // Print out the address of main to the system debug log.
+  char buf[128];
+  snprintf(buf, sizeof(buf), "zxdb_test_app, &main = 0x%llx\n",
+           static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(&main)));
+  zx_debug_write(buf, strlen(buf));
+
   DebugBreak();
   return 0;
 }

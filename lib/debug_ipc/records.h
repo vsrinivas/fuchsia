@@ -47,13 +47,14 @@ struct MemoryBlock {
   uint64_t address = 0;
 
   // When true, indicates this is valid memory, with the data containing the
-  // memory. False means
-  // that this range is not mapped in the process and the data will be empty.
+  // memory. False means that this range is not mapped in the process and the
+  // data will be empty.
   bool valid = false;
 
   // Length of this range. When valid == true, this will be the same as
-  // data.size().
-  uint64_t size = 0;
+  // data.size(). When valid == false, this will be whatever the length of
+  // the invalid region is, and data will be empty.
+  uint32_t size = 0;
 
   // The actual memory. Filled in only if valid == true.
   std::vector<uint8_t> data;

@@ -39,15 +39,8 @@ Process* SystemImpl::ProcessFromKoid(uint64_t koid) const {
 }
 
 void SystemImpl::GetProcessTree(ProcessTreeCallback callback) {
-  // Since this System object is owned by the Session calling us, we don't
-  // have to worry about lifetime issues of "this".
   session()->Send<debug_ipc::ProcessTreeRequest, debug_ipc::ProcessTreeReply>(
-      debug_ipc::ProcessTreeRequest(),
-      [callback = std::move(callback), this](
-          Session*, uint32_t, const Err& err,
-          debug_ipc::ProcessTreeReply reply) {
-        callback(err, std::move(reply));
-      });
+      debug_ipc::ProcessTreeRequest(), std::move(callback));
 }
 
 Target* SystemImpl::CreateNewTarget(Target* clone) {
@@ -61,10 +54,10 @@ Target* SystemImpl::CreateNewTarget(Target* clone) {
 void SystemImpl::Continue() {
   debug_ipc::ContinueRequest request;
   request.process_koid = 0;  // 0 means all processes.
-  request.thread_koid = 0;  // 0 means all threads.
+  request.thread_koid = 0;   // 0 means all threads.
   session()->Send<debug_ipc::ContinueRequest, debug_ipc::ContinueReply>(
       request,
-      [](Session*, uint32_t, const Err& err, debug_ipc::ContinueReply) {});
+      std::function<void(const Err&, debug_ipc::ContinueReply)>());
 }
 
 void SystemImpl::AddNewTarget(std::unique_ptr<TargetImpl> target) {

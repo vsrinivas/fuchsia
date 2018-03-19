@@ -15,11 +15,14 @@
 #include "garnet/public/lib/fxl/observer_list.h"
 
 namespace debug_ipc {
+struct MemoryBlock;
 struct ThreadRecord;
 }
 
 namespace zxdb {
 
+class Err;
+class MemoryDump;
 class Target;
 class Thread;
 
@@ -69,6 +72,12 @@ class Process : public ClientObject {
 
   // Continues execution of all threads in the process.
   virtual void Continue() = 0;
+
+  // Reads memory from the debugged process.
+  virtual void ReadMemory(
+      uint64_t address,
+      uint32_t size,
+      std::function<void(const Err&, MemoryDump)> callback) = 0;
 
  protected:
   fxl::ObserverList<ProcessObserver>& observers() { return observers_; }

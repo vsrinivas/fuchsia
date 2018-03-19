@@ -64,8 +64,7 @@ void TargetImpl::Launch(LaunchCallback callback) {
       request,
       [thunk = std::weak_ptr<WeakThunk<TargetImpl>>(weak_thunk_),
        callback = std::move(callback)](
-           Session*, uint32_t transaction_id, const Err& err,
-           debug_ipc::LaunchReply reply) {
+           const Err& err, debug_ipc::LaunchReply reply) {
         if (auto ptr = thunk.lock()) {
           ptr->thunk->OnLaunchOrAttachReply(err, reply.process_koid,
                                             reply.status, reply.process_name,
@@ -90,9 +89,8 @@ void TargetImpl::Attach(uint64_t koid, LaunchCallback callback) {
   session()->Send<debug_ipc::AttachRequest, debug_ipc::AttachReply>(
       request,
       [koid, thunk = std::weak_ptr<WeakThunk<TargetImpl>>(weak_thunk_),
-       callback = std::move(callback)](
-           Session*, uint32_t transaction_id, const Err& err,
-           debug_ipc::AttachReply reply) {
+       callback](
+           const Err& err, debug_ipc::AttachReply reply) {
         if (auto ptr = thunk.lock()) {
           ptr->thunk->OnLaunchOrAttachReply(err, koid, reply.status,
                                             reply.process_name,
@@ -142,8 +140,11 @@ void TargetImpl::OnLaunchOrAttachReply(const Err& err, uint64_t koid,
   if (callback)
     callback(this, issue_err);
 
-  for (auto& observer : observers())
+  for (auto& observer : observers()) {
+    // Note state argument is the old state of the target (which is asserted at
+    // the top is "Starting").
     observer.DidChangeTargetState(this, State::kStarting);
+  }
 }
 
 }  // namespace zxdb

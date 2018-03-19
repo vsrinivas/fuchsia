@@ -25,12 +25,14 @@ namespace {
 Err AssertRunnableTarget(Target* target) {
   Target::State state = target->GetState();
   if (state == Target::State::kStarting) {
-    return Err("The current process is in the process of starting.\n"
-               "Either \"kill\" it or create a \"new\" process context.");
+    return Err(
+        "The current process is in the process of starting.\n"
+        "Either \"kill\" it or create a \"new\" process context.");
   }
   if (state == Target::State::kRunning) {
-    return Err("The current process is already running.\n"
-               "Either \"kill\" it or create a \"new\" process context.");
+    return Err(
+        "The current process is already running.\n"
+        "Either \"kill\" it or create a \"new\" process context.");
   }
   return Err();
 }
@@ -43,8 +45,7 @@ void RunAndAttachCallback(const char* verb, Target* target, const Err& err) {
   OutputBuffer out;
   if (err.has_error()) {
     out.Append(fxl::StringPrintf("Process %d %s failed.\n",
-                                 console->context().IdForTarget(target),
-                                 verb));
+                                 console->context().IdForTarget(target), verb));
     out.OutputErr(err);
   } else {
     out.Append(DescribeTarget(&console->context(), target, false));
@@ -142,7 +143,8 @@ Err DoRun(ConsoleContext* context, const Command& cmd) {
   }
 
   cmd.target()->Launch([](Target* target, const Err& err) {
-      RunAndAttachCallback("launch", target, err); });
+    RunAndAttachCallback("launch", target, err);
+  });
   return Err();
 }
 
@@ -184,7 +186,7 @@ Err DoAttach(ConsoleContext* context, const Command& cmd) {
     return err;
 
   cmd.target()->Attach(koid, [](Target* target, const Err& err) {
-      RunAndAttachCallback("attach", target, err);
+    RunAndAttachCallback("attach", target, err);
   });
   return Err();
 }
@@ -192,8 +194,7 @@ Err DoAttach(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
-  (*verbs)[Verb::kNew] =
-      VerbRecord(&DoNew, {"new"}, kNewShortHelp, kNewHelp);
+  (*verbs)[Verb::kNew] = VerbRecord(&DoNew, {"new"}, kNewShortHelp, kNewHelp);
   (*verbs)[Verb::kRun] =
       VerbRecord(&DoRun, {"run", "r"}, kRunShortHelp, kRunHelp);
   (*verbs)[Verb::kAttach] =

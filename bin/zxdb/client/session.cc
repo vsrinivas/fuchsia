@@ -33,8 +33,10 @@ void Session::SetAgentConnection(std::unique_ptr<AgentConnection> connection) {
 
   if (!old_pending.empty()) {
     Err err(ErrType::kNoConnection, "Connection lost.");
-    for (const auto& pair : old_pending)
-      pair.second(this, pair.first, err, std::vector<char>());
+    for (const auto& pair : old_pending) {
+      if (pair.second)
+        pair.second(err, std::vector<char>());
+    }
   }
 }
 
@@ -96,7 +98,7 @@ void Session::OnAgentData(debug_ipc::StreamBuffer* stream) {
     }
 
     // Do the type-specific deserialization and callback.
-    found->second(this, header.transaction_id, Err(), std::move(serialized));
+    found->second(Err(), std::move(serialized));
 
     pending_.erase(found);
   }

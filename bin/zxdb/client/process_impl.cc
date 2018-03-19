@@ -6,6 +6,7 @@
 
 #include <set>
 
+#include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
@@ -13,9 +14,13 @@
 
 namespace zxdb {
 
-ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid,
+ProcessImpl::ProcessImpl(TargetImpl* target,
+                         uint64_t koid,
                          const std::string& name)
-    : Process(target->session()), target_(target), koid_(koid), name_(name),
+    : Process(target->session()),
+      target_(target),
+      koid_(koid),
+      name_(name),
       weak_thunk_(std::make_shared<WeakThunk<ProcessImpl>>(this)) {}
 ProcessImpl::~ProcessImpl() = default;
 
@@ -53,17 +58,16 @@ Thread* ProcessImpl::GetThreadFromKoid(uint64_t koid) {
 void ProcessImpl::SyncThreads(std::function<void()> callback) {
   debug_ipc::ThreadsRequest request;
   request.process_koid = koid_;
-  session()->Send<debug_ipc::ThreadsRequest, debug_ipc::ThreadsReply>(
-      request,
-      [callback = std::move(callback),
-       thunk = std::weak_ptr<WeakThunk<ProcessImpl>>(weak_thunk_)](
-          Session*, uint32_t, const Err& err, debug_ipc::ThreadsReply reply) {
-        if (auto ptr = thunk.lock()) {
-          ptr->thunk->UpdateThreads(reply.threads);
-          if (callback)
-            callback();
-        }
-      });
+  session()->Send<debug_ipc::ThreadsRequest, debug_ipc::ThreadsReply>(request, [
+    callback,
+    thunk = std::weak_ptr<WeakThunk<ProcessImpl>>(weak_thunk_)
+  ](const Err& err, debug_ipc::ThreadsReply reply) {
+    if (auto ptr = thunk.lock()) {
+      ptr->thunk->UpdateThreads(reply.threads);
+      if (callback)
+        callback();
+    }
+  });
 }
 
 void ProcessImpl::Continue() {
@@ -71,8 +75,21 @@ void ProcessImpl::Continue() {
   request.process_koid = koid_;
   request.thread_koid = 0;  // 0 means all threads.
   session()->Send<debug_ipc::ContinueRequest, debug_ipc::ContinueReply>(
-      request,
-      [](Session*, uint32_t, const Err& err, debug_ipc::ContinueReply) {});
+      request, [](const Err& err, debug_ipc::ContinueReply) {});
+}
+
+void ProcessImpl::ReadMemory(
+    uint64_t address,
+    uint32_t size,
+    std::function<void(const Err&, MemoryDump)> callback) {
+  debug_ipc::ReadMemoryRequest request;
+  request.process_koid = koid_;
+  request.address = address;
+  request.size = size;
+  session()->Send<debug_ipc::ReadMemoryRequest, debug_ipc::ReadMemoryReply>(
+      request, [callback](const Err& err, debug_ipc::ReadMemoryReply reply) {
+        callback(err, MemoryDump(std::move(reply.blocks)));
+      });
 }
 
 void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record) {

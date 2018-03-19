@@ -21,6 +21,8 @@ class DebuggedProcess {
 
   // IPC handlers.
   void OnContinue(const debug_ipc::ContinueRequest& request);
+  void OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
+                    debug_ipc::ReadMemoryReply* reply);
 
   // Notification that an exception has happened on the given thread. The
   // thread will be in a "suspended on exception" state.

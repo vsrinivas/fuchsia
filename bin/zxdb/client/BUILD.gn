@@ -7,6 +7,7 @@ static_library("client") {
     "agent_connection.h",
     "client_object.h",
     "err.h",
+    "memory_dump.h",
     "process.h",
     "process_observer.h",
     "session.h",
@@ -22,6 +23,7 @@ static_library("client") {
     "agent_connection.cc",
     "client_object.cc",
     "err.cc",
+    "memory_dump.cc",
     "process.cc",
     "process_impl.cc",
     "process_impl.h",
@@ -42,3 +44,16 @@ static_library("client") {
     "//garnet/public/lib/fxl",
   ]
 }
+
+source_set("tests") {
+  testonly = true
+  sources = [
+    "memory_dump_unittest.cc",
+  ]
+
+  deps = [
+    ":client",
+    "//third_party/googletest:gtest",
+  ]
+}
+

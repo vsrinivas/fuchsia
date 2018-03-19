@@ -32,6 +32,10 @@ class ProcessImpl : public Process {
   Thread* GetThreadFromKoid(uint64_t koid) override;
   void SyncThreads(std::function<void()> callback) override;
   void Continue() override;
+  void ReadMemory(
+      uint64_t address,
+      uint32_t size,
+      std::function<void(const Err&, MemoryDump)> callback) override;
 
   // Notifications from the agent that a thread has started or exited.
   void OnThreadStarting(const debug_ipc::ThreadRecord& record);

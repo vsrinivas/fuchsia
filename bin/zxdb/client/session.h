@@ -46,8 +46,7 @@ class Session : public AgentConnection::Sink {
   // default-constructed data).
   template <typename SendMsgType, typename RecvMsgType>
   uint32_t Send(const SendMsgType& send_msg,
-                std::function<void(Session*, uint32_t, const Err&, RecvMsgType)>
-                    callback);
+                std::function<void(const Err&, RecvMsgType)> callback);
 
  private:
   // Nonspecific callback type. Implemented by SessionDispatchCallback (with
@@ -55,7 +54,7 @@ class Session : public AgentConnection::Sink {
   // ID. If the error is set, the data will be invalid and the callback should
   // be issued with the error instead of trying to deserialize.
   using Callback =
-      std::function<void(Session*, uint32_t, const Err&, std::vector<char>)>;
+      std::function<void(const Err&, std::vector<char>)>;
 
   // AgentConnection::Sink implementation. This is called when data is
   // available from the debug_agent.
@@ -79,7 +78,7 @@ class Session : public AgentConnection::Sink {
 template <typename SendMsgType, typename RecvMsgType>
 uint32_t Session::Send(
     const SendMsgType& send_msg,
-    std::function<void(Session*, uint32_t, const Err&, RecvMsgType)> callback) {
+    std::function<void(const Err&, RecvMsgType)> callback) {
   if (!agent_connection_.get()) {
     // TODO(brettw) asynchronously post an error back to the callback.
     return 0;
@@ -97,27 +96,28 @@ uint32_t Session::Send(
   // This is the reply callback that unpacks the data in a vector, converts it
   // to the requested RecvMsgType struct, and issues the callback.
   Callback dispatch_callback = [callback = std::move(callback)](
-      Session* session, uint32_t transaction_id, const Err& err,
-      std::vector<char> data) {
+      const Err& err, std::vector<char> data) {
     RecvMsgType reply;
     if (err.has_error()) {
       // Forward the error and ignore all data.
-      callback(session, transaction_id, err, std::move(reply));
+      if (callback)
+        callback(err, std::move(reply));
       return;
     }
 
     debug_ipc::MessageReader reader(std::move(data));
 
-    uint32_t dup_transaction_id = 0;
+    uint32_t transaction_id = 0;
     Err deserialization_err;
-    if (!debug_ipc::ReadReply(&reader, &reply, &dup_transaction_id)) {
+    if (!debug_ipc::ReadReply(&reader, &reply, &transaction_id)) {
       reply = RecvMsgType();  // Could be in a half-read state.
       deserialization_err =
           Err(ErrType::kCorruptMessage, fxl::StringPrintf(
                 "Corrupt reply message for transaction %u.", transaction_id));
     }
 
-    callback(session, transaction_id, deserialization_err, std::move(reply));
+    if (callback)
+      callback(deserialization_err, std::move(reply));
   };
 
   pending_.emplace(std::piecewise_construct,
