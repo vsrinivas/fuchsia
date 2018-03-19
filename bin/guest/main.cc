@@ -145,8 +145,7 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
 }
 
 static zx_status_t setup_zircon_framebuffer(
-    machina::VirtioGpu* gpu,
-    fbl::unique_ptr<machina::GpuScanout>* scanout) {
+    machina::VirtioGpu* gpu, fbl::unique_ptr<machina::GpuScanout>* scanout) {
   // Try software framebuffer.
   zx_status_t status = machina::FramebufferScanout::Create(
       "/dev/class/framebuffer/000", scanout);
@@ -162,8 +161,7 @@ static zx_status_t setup_zircon_framebuffer(
 }
 
 static zx_status_t setup_scenic_framebuffer(
-    component::ApplicationContext* application_context,
-    machina::VirtioGpu* gpu,
+    component::ApplicationContext* application_context, machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
   // Check if we have a display. Since this is a device file, many file
@@ -181,9 +179,7 @@ static zx_status_t setup_scenic_framebuffer(
   return gpu->AddScanout(scanout->get());
 }
 
-static zx_status_t read_guest_cfg(const char* cfg_path,
-                                  int argc,
-                                  char** argv,
+static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
                                   GuestConfig* cfg) {
   GuestConfigParser parser(cfg);
   std::string cfg_str;
@@ -413,9 +409,12 @@ int main(int argc, char** argv) {
   machina::VirtioKeyboard keyboard(input_dispatcher.Keyboard(),
                                    guest.phys_mem(), "machina-keyboard",
                                    "serial-number");
-  machina::VirtioRelativePointer pointer(input_dispatcher.Pointer(),
-                                         guest.phys_mem(), "machina-pointer",
-                                         "serial-number");
+  machina::VirtioRelativePointer mouse(input_dispatcher.Mouse(),
+                                       guest.phys_mem(), "machina-mouse",
+                                       "serial-number");
+  machina::VirtioAbsolutePointer touch(
+      input_dispatcher.Touch(), guest.phys_mem(), "machina-touch",
+      "serial-number", kGuestViewDisplayWidth, kGuestViewDisplayHeight);
   machina::VirtioGpu gpu(guest.phys_mem());
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
 
@@ -429,12 +428,25 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    // Setup pointer device.
-    status = pointer.Start();
+
+    // Setup mouse device.
+    status = mouse.Start();
     if (status != ZX_OK) {
       return status;
     }
-    status = bus.Connect(pointer.pci_device());
+    status = bus.Connect(mouse.pci_device());
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // Setup touch device. Note that this device is used for all pointer events
+    // when using a scenic framebuffer because the pointer positions are
+    // absolute even when using a mouse.
+    status = touch.Start();
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = bus.Connect(touch.pci_device());
     if (status != ZX_OK) {
       return status;
     }

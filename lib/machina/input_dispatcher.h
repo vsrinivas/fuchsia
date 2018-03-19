@@ -90,14 +90,16 @@ class InputEventQueue {
 class InputDispatcher {
  public:
   InputDispatcher(size_t queue_depth)
-      : keyboard_(queue_depth), pointer_(queue_depth) {}
+      : keyboard_(queue_depth), mouse_(queue_depth), touch_(queue_depth) {}
 
   InputEventQueue* Keyboard() { return &keyboard_; }
-  InputEventQueue* Pointer() { return &pointer_; }
+  InputEventQueue* Mouse() { return &mouse_; }
+  InputEventQueue* Touch() { return &touch_; }
 
  private:
   InputEventQueue keyboard_;
-  InputEventQueue pointer_;
+  InputEventQueue mouse_;
+  InputEventQueue touch_;
 };
 
 }  // namespace machina

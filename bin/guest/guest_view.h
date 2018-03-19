@@ -19,6 +19,13 @@
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
 
+// For now we expose a fixed size display to the guest. Scenic will scale this
+// buffer to the actual window size on the host.
+// TODO(PD-109): Support resizing the display.
+// TODO(PD-108): Support resizing the input to match the display.
+static constexpr uint32_t kGuestViewDisplayWidth = 1024;
+static constexpr uint32_t kGuestViewDisplayHeight = 768;
+
 class GuestView;
 
 class ScenicScanout : public machina::GpuScanout,
@@ -51,8 +58,7 @@ class ScenicScanout : public machina::GpuScanout,
 class GuestView : public mozart::BaseView {
  public:
   GuestView(
-      machina::GpuScanout* scanout,
-      machina::InputDispatcher* input_dispatcher,
+      machina::GpuScanout* scanout, machina::InputDispatcher* input_dispatcher,
       views_v1::ViewManagerPtr view_manager,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
@@ -69,8 +75,10 @@ class GuestView : public mozart::BaseView {
   fbl::unique_ptr<scenic_lib::HostMemory> memory_;
 
   machina::InputDispatcher* input_dispatcher_;
-  float previous_pointer_x_;
-  float previous_pointer_y_;
+
+  float pointer_scale_x_ = 0.0f;
+  float pointer_scale_y_ = 0.0f;
+  bool view_ready_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GuestView);
 };

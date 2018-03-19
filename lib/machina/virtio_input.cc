@@ -178,10 +178,8 @@ constexpr uint32_t kButtonMousePrimaryCode = 0x110;
 constexpr uint32_t kButtonMouseSecondaryCode = 0x111;
 constexpr uint32_t kButtonMouseTertiaryCode = 0x112;
 
-VirtioInput::VirtioInput(InputEventQueue* event_queue,
-                         const PhysMem& phys_mem,
-                         const char* device_name,
-                         const char* device_serial)
+VirtioInput::VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
+                         const char* device_name, const char* device_serial)
     : VirtioDeviceBase(phys_mem),
       device_name_(device_name),
       device_serial_(device_serial),
@@ -303,6 +301,39 @@ zx_status_t VirtioRelativePointer::WriteConfig(uint64_t addr,
   return ZX_OK;
 }
 
+zx_status_t VirtioAbsolutePointer::WriteConfig(uint64_t addr,
+                                               const IoValue& value) {
+  zx_status_t status = VirtioInput::WriteConfig(addr, value);
+  if (status != ZX_OK) {
+    return status;
+  }
+  fbl::AutoLock lock(&config_mutex_);
+  if (config_.select == VIRTIO_INPUT_CFG_EV_BITS) {
+    if (config_.subsel == VIRTIO_INPUT_EV_KEY) {
+      SetConfigBit(kButtonMousePrimaryCode, &config_);
+      SetConfigBit(kButtonMouseSecondaryCode, &config_);
+      SetConfigBit(kButtonMouseTertiaryCode, &config_);
+      config_.size = sizeof(config_.u);
+    } else if (config_.subsel == VIRTIO_INPUT_EV_ABS) {
+      memset(&config_.u, 0, sizeof(config_.u));
+      SetConfigBit(VIRTIO_INPUT_EV_ABS_X, &config_);
+      SetConfigBit(VIRTIO_INPUT_EV_ABS_Y, &config_);
+      config_.size = 1;
+    }
+  } else if (config_.select == VIRTIO_INPUT_CFG_ABS_INFO) {
+    if (config_.subsel == VIRTIO_INPUT_EV_ABS_X) {
+      config_.u.abs.min = 0;
+      config_.u.abs.max = max_width_;
+      config_.size = sizeof(config_.u.abs);
+    } else if (config_.subsel == VIRTIO_INPUT_EV_ABS_Y) {
+      config_.u.abs.min = 0;
+      config_.u.abs.max = max_height_;
+      config_.size = sizeof(config_.u.abs);
+    }
+  }
+  return ZX_OK;
+}
+
 zx_status_t VirtioInput::Start() {
   thrd_t thread;
   auto poll_thread = [](void* arg) {
@@ -360,11 +391,23 @@ zx_status_t VirtioInput::OnKeyEvent(const KeyEvent& key_event) {
 
 zx_status_t VirtioInput::OnPointerEvent(const PointerEvent& pointer_event) {
   virtio_input_event_t x_event, y_event;
-  x_event.type = VIRTIO_INPUT_EV_REL;
-  x_event.code = VIRTIO_INPUT_EV_REL_X;
+  switch (pointer_event.type) {
+    case PointerType::RELATIVE:
+      x_event.type = VIRTIO_INPUT_EV_REL;
+      x_event.code = VIRTIO_INPUT_EV_REL_X;
+      y_event.type = VIRTIO_INPUT_EV_REL;
+      y_event.code = VIRTIO_INPUT_EV_REL_Y;
+      break;
+    case PointerType::ABSOLUTE:
+      x_event.type = VIRTIO_INPUT_EV_ABS;
+      x_event.code = VIRTIO_INPUT_EV_ABS_X;
+      y_event.type = VIRTIO_INPUT_EV_ABS;
+      y_event.code = VIRTIO_INPUT_EV_ABS_Y;
+      break;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
   x_event.value = static_cast<int32_t>(pointer_event.x);
-  y_event.type = VIRTIO_INPUT_EV_REL;
-  y_event.code = VIRTIO_INPUT_EV_REL_Y;
   y_event.value = static_cast<int32_t>(pointer_event.y);
   zx_status_t status = SendVirtioEvent(x_event);
   if (status != ZX_OK) {

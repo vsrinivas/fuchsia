@@ -12,7 +12,8 @@ TEST(InputDispatcherTest, EmptyQueue) {
   InputDispatcher dispatcher(1);
 
   EXPECT_EQ(0u, dispatcher.Keyboard()->size());
-  EXPECT_EQ(0u, dispatcher.Pointer()->size());
+  EXPECT_EQ(0u, dispatcher.Mouse()->size());
+  EXPECT_EQ(0u, dispatcher.Touch()->size());
 }
 
 TEST(InputDispatcherTest, AddToQueue) {
@@ -20,10 +21,12 @@ TEST(InputDispatcherTest, AddToQueue) {
 
   InputEvent event = {};
   dispatcher.Keyboard()->PostEvent(event);
-  dispatcher.Pointer()->PostEvent(event);
+  dispatcher.Mouse()->PostEvent(event);
+  dispatcher.Touch()->PostEvent(event);
 
   EXPECT_EQ(1u, dispatcher.Keyboard()->size());
-  EXPECT_EQ(1u, dispatcher.Pointer()->size());
+  EXPECT_EQ(1u, dispatcher.Mouse()->size());
+  EXPECT_EQ(1u, dispatcher.Touch()->size());
 }
 
 TEST(InputDispatcherTest, Overflow) {
@@ -33,7 +36,7 @@ TEST(InputDispatcherTest, Overflow) {
   event.key.hid_usage = 0;
   event.key.state = KeyState::PRESSED;
 
-  // Post 3 events with differnt HID codes. The oldest 2 will be dropped.
+  // Post 3 events with different HID codes. The oldest 2 will be dropped.
   event.key.hid_usage = 1;
   dispatcher.Keyboard()->PostEvent(event);
   event.key.hid_usage = 2;

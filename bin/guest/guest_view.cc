@@ -9,11 +9,6 @@
 #include <fuchsia/cpp/views_v1.h>
 #include "lib/fsl/tasks/message_loop.h"
 
-// For now we expose a fixed size display to the guest. Scenic will scale this
-// buffer to the actual window size on the host.
-static constexpr uint32_t kDisplayWidth = 1024;
-static constexpr uint32_t kDisplayHeight = 768;
-
 // static
 zx_status_t ScenicScanout::Create(
     component::ApplicationContext* application_context,
@@ -69,21 +64,19 @@ GuestView::GuestView(
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Guest"),
       background_node_(session()),
       material_(session()),
-      input_dispatcher_(input_dispatcher),
-      previous_pointer_x_(kDisplayWidth * .5f),
-      previous_pointer_y_(kDisplayHeight * .5f) {
+      input_dispatcher_(input_dispatcher) {
   background_node_.SetMaterial(material_);
   parent_node().AddChild(background_node_);
 
-  image_info_.width = kDisplayWidth;
-  image_info_.height = kDisplayHeight;
-  image_info_.stride = kDisplayWidth * 4;
+  image_info_.width = kGuestViewDisplayWidth;
+  image_info_.height = kGuestViewDisplayHeight;
+  image_info_.stride = kGuestViewDisplayWidth * 4;
   image_info_.pixel_format = images::PixelFormat::BGRA_8;
 
   // Allocate a framebuffer and attach it as a GPU scanout.
   memory_ = fbl::make_unique<scenic_lib::HostMemory>(
       session(), scenic_lib::Image::ComputeSize(image_info_));
-  machina::GpuBitmap bitmap(kDisplayWidth, kDisplayHeight,
+  machina::GpuBitmap bitmap(kGuestViewDisplayWidth, kGuestViewDisplayHeight,
                             ZX_PIXEL_FORMAT_ARGB_8888,
                             reinterpret_cast<uint8_t*>(memory_->data_ptr()));
   scanout->SetBitmap(std::move(bitmap));
@@ -108,6 +101,10 @@ void GuestView::OnSceneInvalidated(images::PresentationInfo presentation_info) {
 
   scenic_lib::HostImage image(*memory_, 0u, image_info_);
   material_.SetTexture(image);
+
+  pointer_scale_x_ = static_cast<float>(kGuestViewDisplayWidth) / width;
+  pointer_scale_y_ = static_cast<float>(kGuestViewDisplayHeight) / height;
+  view_ready_ = true;
 }
 
 zx_status_t FromMozartButton(uint32_t event, machina::Button* button) {
@@ -149,17 +146,17 @@ bool GuestView::OnInputEvent(input::InputEvent event) {
     return true;
   } else if (event.is_pointer()) {
     const input::PointerEvent& pointer_event = event.pointer();
-
+    if (!view_ready_) {
+      // Ignore pointer events that come in before the view is ready.
+      return true;
+    }
     machina::InputEvent event;
     switch (pointer_event.phase) {
       case input::PointerEventPhase::MOVE:
         event.type = machina::InputEventType::POINTER;
-        // TODO(PD-102): Convert this to use absolute pointer events.
-        event.pointer.x = pointer_event.x - previous_pointer_x_;
-        event.pointer.y = pointer_event.y - previous_pointer_y_;
-        event.pointer.type = machina::PointerType::RELATIVE;
-        previous_pointer_x_ = pointer_event.x;
-        previous_pointer_y_ = pointer_event.y;
+        event.pointer.x = pointer_event.x * pointer_scale_x_;
+        event.pointer.y = pointer_event.y * pointer_scale_y_;
+        event.pointer.type = machina::PointerType::ABSOLUTE;
         break;
       case input::PointerEventPhase::DOWN:
         event.type = machina::InputEventType::BUTTON;
@@ -183,7 +180,9 @@ bool GuestView::OnInputEvent(input::InputEvent event) {
         // Ignore events for unsupported phases.
         return true;
     }
-    input_dispatcher_->Pointer()->PostEvent(event, true);
+    // The pointer events get routed to the touch event queue because the
+    // pointer positions are always absolute.
+    input_dispatcher_->Touch()->PostEvent(event, true);
     return true;
   }
   return false;
