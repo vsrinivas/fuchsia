@@ -88,6 +88,7 @@ class ModuleContextImpl : ModuleContext {
   // |ModuleContext|
   void StartContainerInShell(
       const f1dl::StringPtr& name,
+      SurfaceRelationPtr parent_relation,
       f1dl::VectorPtr<ContainerLayoutPtr> layout,
       f1dl::VectorPtr<ContainerRelationEntryPtr> relationships,
       f1dl::VectorPtr<ContainerNodePtr> nodes) override;

@@ -109,12 +109,13 @@ void ModuleContextImpl::StartModule(
 
 void ModuleContextImpl::StartContainerInShell(
     const f1dl::StringPtr& name,
+    SurfaceRelationPtr parent_relation,
     f1dl::VectorPtr<ContainerLayoutPtr> layout,
     f1dl::VectorPtr<ContainerRelationEntryPtr> relationships,
     f1dl::VectorPtr<ContainerNodePtr> nodes) {
   story_controller_impl_->StartContainerInShell(
-      module_data_->module_path, name, std::move(layout),
-      std::move(relationships), std::move(nodes));
+      module_data_->module_path, name, std::move(parent_relation),
+      std::move(layout), std::move(relationships), std::move(nodes));
 }
 
 void ModuleContextImpl::EmbedModuleDeprecated(

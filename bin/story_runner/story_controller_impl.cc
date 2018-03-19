@@ -1660,6 +1660,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
       StoryControllerImpl* const story_controller_impl,
       f1dl::VectorPtr<f1dl::StringPtr> parent_module_path,
       const f1dl::StringPtr& container_name,
+      SurfaceRelationPtr parent_relation,
       f1dl::VectorPtr<ContainerLayoutPtr> layout,
       f1dl::VectorPtr<ContainerRelationEntryPtr> relationships,
       f1dl::VectorPtr<ContainerNodePtr> nodes)
@@ -1669,6 +1670,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
         story_controller_impl_(story_controller_impl),
         parent_module_path_(std::move(parent_module_path)),
         container_name_(container_name),
+        parent_relation_(std::move(parent_relation)),
         layout_(std::move(layout)),
         relationships_(std::move(relationships)),
         nodes_(std::move(nodes)) {
@@ -1685,7 +1687,11 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
     // parent + container used as module path of requesting module for
     // containers
     f1dl::VectorPtr<f1dl::StringPtr> module_path = parent_module_path_.Clone();
-    module_path.push_back(container_name_);
+    // module_path.push_back(container_name_);
+    // Adding non-module 'container_name_' to the module path results in
+    // Ledger Client issuing a ReadData() call and failing with a fatal error
+    // when module_data cannot be found
+    // TODO(djmurphy): follow up, probably make containers modules
     for (size_t i = 0; i < nodes_->size(); ++i) {
       new ResolveModulesCall(&operation_queue_, story_controller_impl_,
                              nodes_->at(i)->daisy.Clone(),
@@ -1704,14 +1710,16 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
       mozart::ViewOwnerPtr view_owner;
       node_views_[nodes_->at(i)->node_name] = std::move(view_owner);
       f1dl::VectorPtr<f1dl::StringPtr> module_path = parent_module_path_.Clone();
-      module_path.push_back(container_name_);
+      // module_path.push_back(container_name_);
+      // same issue as documented in Run()
       module_path.push_back(nodes_->at(i)->node_name);
       new StartModuleCall(
           &operation_queue_, story_controller_impl_, std::move(module_path),
           module_result->module_id, nullptr /* link_name */,
           nullptr /* module_manifest */,
           module_result->create_chain_info.Clone(), ModuleSource::INTERNAL,
-          nullptr /* surface_relation */, nullptr /* incoming_services */,
+          std::move(relation_map_[nodes_->at(i)->node_name]->relationship),
+          nullptr /* incoming_services */,
           nullptr /* module_controller_request */,
           nullptr /* embed_module_watcher */,
           node_views_[nodes_->at(i)->node_name].NewRequest(),
@@ -1739,8 +1747,9 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
       views->at(i) = std::move(view);
     }
     story_controller_impl_->story_shell_->AddContainer(
-        container_name_, PathString(parent_module_path_), nullptr,
-        std::move(layout_), std::move(relationships_), std::move(views));
+        container_name_, PathString(parent_module_path_),
+        std::move(parent_relation_), std::move(layout_),
+        std::move(relationships_), std::move(views));
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -1748,6 +1757,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
   const f1dl::VectorPtr<f1dl::StringPtr> parent_module_path_;
   const f1dl::StringPtr container_name_;
 
+  SurfaceRelationPtr parent_relation_;
   f1dl::VectorPtr<ContainerLayoutPtr> layout_;
   f1dl::VectorPtr<ContainerRelationEntryPtr> relationships_;
   const f1dl::VectorPtr<ContainerNodePtr> nodes_;
@@ -2066,12 +2076,14 @@ void StoryControllerImpl::StartModule(
 void StoryControllerImpl::StartContainerInShell(
     const f1dl::VectorPtr<f1dl::StringPtr>& parent_module_path,
     const f1dl::StringPtr& name,
+    SurfaceRelationPtr parent_relation,
     f1dl::VectorPtr<ContainerLayoutPtr> layout,
     f1dl::VectorPtr<ContainerRelationEntryPtr> relationships,
     f1dl::VectorPtr<ContainerNodePtr> nodes) {
   new StartContainerInShellCall(
       &operation_queue_, this, parent_module_path.Clone(), name,
-      std::move(layout), std::move(relationships), std::move(nodes));
+      std::move(parent_relation), std::move(layout), std::move(relationships),
+      std::move(nodes));
 }
 
 void StoryControllerImpl::EmbedModuleDeprecated(

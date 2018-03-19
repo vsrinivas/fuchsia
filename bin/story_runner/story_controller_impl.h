@@ -201,6 +201,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void StartContainerInShell(
       const f1dl::VectorPtr<f1dl::StringPtr>& parent_module_path,
       const f1dl::StringPtr& name,
+      SurfaceRelationPtr parent_relation,
       f1dl::VectorPtr<ContainerLayoutPtr> layout,
       f1dl::VectorPtr<ContainerRelationEntryPtr> relationships,
       f1dl::VectorPtr<ContainerNodePtr> nodes);

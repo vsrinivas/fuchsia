@@ -82,6 +82,7 @@ interface ModuleContext {
   //
   // There are multiple layouts specified, for different screen sizes etc.
   StartContainerInShell@13(string container_name,
+                           SurfaceRelation parent_relation,
                            array<ContainerLayout> layout,
                            array<ContainerRelationEntry> relationships,
                            array<ContainerNode> nodes);
