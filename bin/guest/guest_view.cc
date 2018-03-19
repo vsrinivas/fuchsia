@@ -144,7 +144,7 @@ bool GuestView::OnInputEvent(mozart::InputEventPtr event) {
         // Ignore events for unsupported phases.
         return true;
     }
-    input_dispatcher_->PostEvent(event, true);
+    input_dispatcher_->Keyboard()->PostEvent(event, true);
     return true;
   } else if (event->is_pointer()) {
     const mozart::PointerEventPtr& pointer_event = event->get_pointer();
@@ -182,7 +182,7 @@ bool GuestView::OnInputEvent(mozart::InputEventPtr event) {
         // Ignore events for unsupported phases.
         return true;
     }
-    input_dispatcher_->PostEvent(event, true);
+    input_dispatcher_->Pointer()->PostEvent(event, true);
     return true;
   }
   return false;

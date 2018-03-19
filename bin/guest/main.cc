@@ -142,10 +142,9 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
 }
 
 static zx_status_t setup_zircon_framebuffer(
-    machina::VirtioGpu* gpu,
-    fbl::unique_ptr<machina::GpuScanout>* scanout) {
-  zx_status_t status =
-      machina::FramebufferScanout::Create("/dev/class/framebuffer/000", scanout);
+    machina::VirtioGpu* gpu, fbl::unique_ptr<machina::GpuScanout>* scanout) {
+  zx_status_t status = machina::FramebufferScanout::Create(
+      "/dev/class/framebuffer/000", scanout);
   if (status != ZX_OK) {
     return status;
   }
@@ -171,9 +170,7 @@ static zx_status_t setup_scenic_framebuffer(
   return gpu->AddScanout(scanout->get());
 }
 
-static zx_status_t read_guest_cfg(const char* cfg_path,
-                                  int argc,
-                                  char** argv,
+static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
                                   GuestConfig* cfg) {
   GuestConfigParser parser(cfg);
   std::string cfg_str;
@@ -199,8 +196,9 @@ int main(int argc, char** argv) {
 
   machina::Guest guest;
   status = guest.Init(cfg.memory());
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Instantiate the inspect service.
   machina::InspectServiceImpl inspect_svc(application_context.get(),
@@ -397,18 +395,31 @@ int main(int argc, char** argv) {
 
   machina::InputDispatcher input_dispatcher(kInputQueueDepth);
   machina::HidEventSource hid_event_source(&input_dispatcher);
-  machina::VirtioInput input(&input_dispatcher, guest.phys_mem(),
-                             "machina-input", "serial-number");
+  machina::VirtioKeyboard keyboard(input_dispatcher.Keyboard(),
+                                   guest.phys_mem(), "machina-keyboard",
+                                   "serial-number");
+  machina::VirtioRelativePointer pointer(input_dispatcher.Pointer(),
+                                         guest.phys_mem(), "machina-pointer",
+                                         "serial-number");
   machina::VirtioGpu gpu(guest.phys_mem());
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
 
   if (cfg.display() != GuestDisplay::NONE) {
-    // Setup input device.
-    status = input.Start();
+    // Setup keyboard device.
+    status = keyboard.Start();
     if (status != ZX_OK) {
       return status;
     }
-    status = bus.Connect(input.pci_device());
+    status = bus.Connect(keyboard.pci_device());
+    if (status != ZX_OK) {
+      return status;
+    }
+    // Setup pointer device.
+    status = pointer.Start();
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = bus.Connect(pointer.pci_device());
     if (status != ZX_OK) {
       return status;
     }

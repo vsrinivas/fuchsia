@@ -25,7 +25,7 @@ namespace machina {
 // Virtio input device.
 class VirtioInput : public VirtioDevice {
  public:
-  VirtioInput(InputDispatcher* input_dispatcher, const PhysMem& phys_mem,
+  VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
               const char* device_name, const char* device_serial);
 
   zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
@@ -36,8 +36,12 @@ class VirtioInput : public VirtioDevice {
   // the corresponding event source will be created to poll for events.
   zx_status_t Start();
 
+ protected:
+  fbl::Mutex mutex_;
+  virtio_input_config_t config_ __TA_GUARDED(config_mutex_) = {};
+
  private:
-  zx_status_t PollInputDispatcher();
+  zx_status_t PollEventQueue();
 
   zx_status_t OnInputEvent(const InputEvent& event);
   zx_status_t OnPointerEvent(const PointerEvent& pointer_event);
@@ -47,13 +51,28 @@ class VirtioInput : public VirtioDevice {
 
   zx_status_t SendVirtioEvent(const virtio_input_event_t& event);
 
-  InputDispatcher* input_dispatcher_;
-
-  fbl::Mutex mutex_;
   const char* device_name_;
   const char* device_serial_;
   VirtioQueue queues_[VIRTIO_INPUT_Q_COUNT];
-  virtio_input_config_t config_ __TA_GUARDED(config_mutex_) = {};
+  InputEventQueue* event_queue_;
+};
+
+class VirtioKeyboard : public VirtioInput {
+ public:
+  VirtioKeyboard(InputEventQueue* event_queue, const PhysMem& phys_mem,
+                 const char* device_name, const char* device_serial)
+      : VirtioInput(event_queue, phys_mem, device_name, device_serial) {}
+
+  zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
+};
+
+class VirtioRelativePointer : public VirtioInput {
+ public:
+  VirtioRelativePointer(InputEventQueue* event_queue, const PhysMem& phys_mem,
+                        const char* device_name, const char* device_serial)
+      : VirtioInput(event_queue, phys_mem, device_name, device_serial) {}
+
+  zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
 };
 
 }  // namespace machina

@@ -179,14 +179,13 @@ constexpr uint32_t kButtonMousePrimaryCode = 0x110;
 constexpr uint32_t kButtonMouseSecondaryCode = 0x111;
 constexpr uint32_t kButtonMouseTertiaryCode = 0x112;
 
-VirtioInput::VirtioInput(InputDispatcher* input_dispatcher,
-                         const PhysMem& phys_mem, const char* device_name,
-                         const char* device_serial)
+VirtioInput::VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
+                         const char* device_name, const char* device_serial)
     : VirtioDevice(VIRTIO_ID_INPUT, &config_, sizeof(config_), queues_,
                    VIRTIO_INPUT_Q_COUNT, phys_mem),
-      input_dispatcher_(input_dispatcher),
       device_name_(device_name),
-      device_serial_(device_serial) {}
+      device_serial_(device_serial),
+      event_queue_(event_queue) {}
 
 static void SetConfigBit(uint32_t event_code, virtio_input_config_t* config) {
   config->u.bitmap[event_code / 8] |= 1u << (event_code % 8);
@@ -219,50 +218,7 @@ zx_status_t VirtioInput::WriteConfig(uint64_t addr, const IoValue& value) {
       memcpy(&config_.u, device_serial_, len);
       return ZX_OK;
     }
-
-    // VIRTIO_INPUT_CFG_EV_BITS: subsel specifies the event type (EV_*).
-    // If size is non-zero the event type is supported and a bitmap the of
-    // supported event codes is returned in u.bitmap.
     case VIRTIO_INPUT_CFG_EV_BITS:
-      if (config_.subsel == VIRTIO_INPUT_EV_KEY) {
-        // Say we support all key events. This isn't true but it's
-        // simple.
-        static_assert(kATKeyboardFirstCode % 8 == 0,
-                      "First scan code must be byte aligned.");
-        static_assert((kATKeyboardLastCode + 1 - kATKeyboardFirstCode) % 8 == 0,
-                      "Scan code range must be byte aligned.");
-        static_assert(kMediaKeyboardFirstCode % 8 == 0,
-                      "First scan code must be byte aligned.");
-        static_assert(
-            (kMediaKeyboardLastCode + 1 - kMediaKeyboardFirstCode) % 8 == 0,
-            "Scan code range must be byte aligned.");
-        static_assert((kATKeyboardLastCode + 7) / 8 <
-                          sizeof(virtio_input_config_t().u.bitmap),
-                      "Last scan code cannot exceed allowed range.");
-        static_assert((kMediaKeyboardLastCode + 7) / 8 <
-                          sizeof(virtio_input_config_t().u.bitmap),
-                      "Last scan code cannot exceed allowed range.");
-
-        memset(&config_.u, 0, sizeof(config_.u));
-        memset(&config_.u.bitmap[kATKeyboardFirstCode / 8], 0xff,
-               (kATKeyboardLastCode + 1 - kATKeyboardFirstCode) / 8);
-        memset(&config_.u.bitmap[kMediaKeyboardFirstCode / 8], 0xff,
-               (kMediaKeyboardLastCode + 1 - kMediaKeyboardFirstCode) / 8);
-
-        SetConfigBit(kButtonMousePrimaryCode, &config_);
-        SetConfigBit(kButtonMouseSecondaryCode, &config_);
-        SetConfigBit(kButtonMouseTertiaryCode, &config_);
-        config_.size = sizeof(config_.u);
-        return ZX_OK;
-      } else if (config_.subsel == VIRTIO_INPUT_EV_REL) {
-        memset(&config_.u, 0, sizeof(config_.u));
-        SetConfigBit(VIRTIO_INPUT_EV_REL_X, &config_);
-        SetConfigBit(VIRTIO_INPUT_EV_REL_Y, &config_);
-        config_.size = 1;
-        return ZX_OK;
-      }
-      // Fall-through.
-
     case VIRTIO_INPUT_CFG_UNSET:
     case VIRTIO_INPUT_CFG_ID_DEVIDS:
     case VIRTIO_INPUT_CFG_PROP_BITS:
@@ -277,10 +233,80 @@ zx_status_t VirtioInput::WriteConfig(uint64_t addr, const IoValue& value) {
   return ZX_OK;
 }
 
+zx_status_t VirtioKeyboard::WriteConfig(uint64_t addr, const IoValue& value) {
+  zx_status_t status = VirtioInput::WriteConfig(addr, value);
+  if (status != ZX_OK) {
+    return status;
+  }
+  fbl::AutoLock lock(&config_mutex_);
+  if (config_.select != VIRTIO_INPUT_CFG_EV_BITS) {
+    return ZX_OK;
+  }
+
+  // VIRTIO_INPUT_CFG_EV_BITS: subsel specifies the event type (EV_*).
+  // If size is non-zero the event type is supported and a bitmap the of
+  // supported event codes is returned in u.bitmap.
+  if (config_.subsel == VIRTIO_INPUT_EV_KEY) {
+    static_assert(kATKeyboardFirstCode % 8 == 0,
+                  "First scan code must be byte aligned.");
+    static_assert((kATKeyboardLastCode + 1 - kATKeyboardFirstCode) % 8 == 0,
+                  "Scan code range must be byte aligned.");
+    static_assert(kMediaKeyboardFirstCode % 8 == 0,
+                  "First scan code must be byte aligned.");
+    static_assert(
+        (kMediaKeyboardLastCode + 1 - kMediaKeyboardFirstCode) % 8 == 0,
+        "Scan code range must be byte aligned.");
+    static_assert((kATKeyboardLastCode + 7) / 8 <
+                      sizeof(virtio_input_config_t().u.bitmap),
+                  "Last scan code cannot exceed allowed range.");
+    static_assert((kMediaKeyboardLastCode + 7) / 8 <
+                      sizeof(virtio_input_config_t().u.bitmap),
+                  "Last scan code cannot exceed allowed range.");
+
+    memset(&config_.u, 0, sizeof(config_.u));
+    memset(&config_.u.bitmap[kATKeyboardFirstCode / 8], 0xff,
+           (kATKeyboardLastCode + 1 - kATKeyboardFirstCode) / 8);
+    memset(&config_.u.bitmap[kMediaKeyboardFirstCode / 8], 0xff,
+           (kMediaKeyboardLastCode + 1 - kMediaKeyboardFirstCode) / 8);
+    config_.size = sizeof(config_.u);
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t VirtioRelativePointer::WriteConfig(uint64_t addr,
+                                               const IoValue& value) {
+  zx_status_t status = VirtioInput::WriteConfig(addr, value);
+  if (status != ZX_OK) {
+    return status;
+  }
+  fbl::AutoLock lock(&config_mutex_);
+  if (config_.select != VIRTIO_INPUT_CFG_EV_BITS) {
+    return ZX_OK;
+  }
+
+  // VIRTIO_INPUT_CFG_EV_BITS: subsel specifies the event type (EV_*).
+  // If size is non-zero the event type is supported and a bitmap the of
+  // supported event codes is returned in u.bitmap.
+  if (config_.subsel == VIRTIO_INPUT_EV_KEY) {
+    SetConfigBit(kButtonMousePrimaryCode, &config_);
+    SetConfigBit(kButtonMouseSecondaryCode, &config_);
+    SetConfigBit(kButtonMouseTertiaryCode, &config_);
+    config_.size = sizeof(config_.u);
+  } else if (config_.subsel == VIRTIO_INPUT_EV_REL) {
+    memset(&config_.u, 0, sizeof(config_.u));
+    SetConfigBit(VIRTIO_INPUT_EV_REL_X, &config_);
+    SetConfigBit(VIRTIO_INPUT_EV_REL_Y, &config_);
+    config_.size = 1;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t VirtioInput::Start() {
   thrd_t thread;
   auto poll_thread = [](void* arg) {
-    return reinterpret_cast<VirtioInput*>(arg)->PollInputDispatcher();
+    return reinterpret_cast<VirtioInput*>(arg)->PollEventQueue();
   };
   int ret = thrd_create_with_name(&thread, poll_thread, this, "virtio-input");
   if (ret != thrd_success) {
@@ -293,9 +319,9 @@ zx_status_t VirtioInput::Start() {
   return ZX_OK;
 }
 
-zx_status_t VirtioInput::PollInputDispatcher() {
+zx_status_t VirtioInput::PollEventQueue() {
   while (true) {
-    InputEvent event = input_dispatcher_->Wait();
+    InputEvent event = event_queue_->Wait();
     zx_status_t status = OnInputEvent(event);
     if (status != ZX_OK) {
       return status;

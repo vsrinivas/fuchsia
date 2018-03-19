@@ -59,7 +59,7 @@ zx_status_t HidInputDevice::HandleHidKeys(const hid_keys_t& curr_keys) {
   }
 
   if (send_barrier) {
-    SendBarrier();
+    SendBarrier(input_dispatcher_->Keyboard());
   }
 
   prev_keys_ = curr_keys;
@@ -94,13 +94,13 @@ void HidInputDevice::SendKeyEvent(uint32_t hid_usage, bool pressed) {
       .hid_usage = hid_usage,
       .state = pressed ? KeyState::PRESSED : KeyState::RELEASED,
   };
-  input_dispatcher_->PostEvent(event);
+  input_dispatcher_->Keyboard()->PostEvent(event);
 }
 
-void HidInputDevice::SendBarrier() {
+void HidInputDevice::SendBarrier(InputEventQueue* event_queue) {
   InputEvent event;
   event.type = InputEventType::BARRIER;
-  input_dispatcher_->PostEvent(event);
+  event_queue->PostEvent(event);
 }
 
 zx_status_t HidEventSource::Start() {
@@ -128,8 +128,7 @@ zx_status_t HidEventSource::WatchInputDirectory(void* arg) {
   return fdio_watch_directory(dir_fd.get(), callback, ZX_TIME_INFINITE, arg);
 }
 
-zx_status_t HidEventSource::AddInputDevice(int dirfd,
-                                           int event,
+zx_status_t HidEventSource::AddInputDevice(int dirfd, int event,
                                            const char* fn) {
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;

@@ -28,8 +28,8 @@ class InputDispatcherVerifier {
 
   void Reset(InputDispatcher* dispatcher) {
     queued_events_.reset();
-    while (dispatcher->size() > 0) {
-      InputEvent event = dispatcher->Wait();
+    while (dispatcher->Keyboard()->size() > 0) {
+      InputEvent event = dispatcher->Keyboard()->Wait();
       queued_events_.push_back(event);
     }
   }

@@ -35,7 +35,7 @@ class HidInputDevice
  private:
   zx_status_t HidEventLoop();
   void SendKeyEvent(uint32_t scancode, bool pressed);
-  void SendBarrier();
+  void SendBarrier(InputEventQueue* event_queue);
 
   fbl::unique_fd fd_;
   hid_keys_t prev_keys_ = {};

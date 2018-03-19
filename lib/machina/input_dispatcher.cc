@@ -12,17 +12,17 @@ static constexpr InputEvent kBarrierEvent = {
     .type = InputEventType::BARRIER,
 };
 
-InputDispatcher::InputDispatcher(size_t queue_depth)
+InputEventQueue::InputEventQueue(size_t queue_depth)
     : pending_(new InputEvent[queue_depth], queue_depth) {
   cnd_init(&signal_);
 }
 
-size_t InputDispatcher::size() const {
+size_t InputEventQueue::size() const {
   fbl::AutoLock lock(&mutex_);
   return size_;
 }
 
-void InputDispatcher::PostEvent(const InputEvent& event, bool flush) {
+void InputEventQueue::PostEvent(const InputEvent& event, bool flush) {
   fbl::AutoLock lock(&mutex_);
   WriteEventToRingLocked(event);
   if (flush) {
@@ -31,7 +31,7 @@ void InputDispatcher::PostEvent(const InputEvent& event, bool flush) {
   cnd_signal(&signal_);
 }
 
-InputEvent InputDispatcher::Wait() {
+InputEvent InputEventQueue::Wait() {
   fbl::AutoLock lock(&mutex_);
   while (size_ == 0) {
     cnd_wait(&signal_, mutex_.GetInternal());
@@ -42,7 +42,7 @@ InputEvent InputDispatcher::Wait() {
   return result;
 }
 
-void InputDispatcher::WriteEventToRingLocked(const InputEvent& event) {
+void InputEventQueue::WriteEventToRingLocked(const InputEvent& event) {
   pending_[(index_ + size_) % pending_.size()] = event;
   if (size_ < pending_.size()) {
     size_++;
@@ -52,7 +52,7 @@ void InputDispatcher::WriteEventToRingLocked(const InputEvent& event) {
   }
 }
 
-void InputDispatcher::DropOldestLocked() {
+void InputEventQueue::DropOldestLocked() {
   index_ = (index_ + 1) % pending_.size();
 }
 
