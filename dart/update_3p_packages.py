@@ -16,6 +16,7 @@ ROOT_PUBSPECS = [
     'third_party/dart/pkg/analysis_server',
     'third_party/dart/pkg/analyzer',
     'third_party/dart/pkg/analyzer_cli',
+    'third_party/dart/pkg/front_end',
     'third_party/dart/pkg/kernel',
     'third_party/dart/pkg/telemetry',
     'third_party/dart-pkg/git/flutter/examples/flutter_gallery',
@@ -53,6 +54,12 @@ def main():
                                'pub')
     flutter_root = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
                                 'git', 'flutter');
+
+    # flutter --version has the side effect of creating a version file that pub
+    # uses to find which package versions are compatible with the current version
+    # of flutter
+    flutter_tool = os.path.join(flutter_root, 'bin', 'flutter')
+    subprocess.check_call([flutter_tool, "--version"])
 
     args = [importer_path]
     args.append('--pub')
