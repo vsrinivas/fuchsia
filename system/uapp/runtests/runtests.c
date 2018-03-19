@@ -64,10 +64,14 @@ static list_node_t tests = LIST_INITIAL_VALUE(tests);
 static int verbosity = -1;
 
 static const char* default_test_dirs[] = {
+    // zircon builds place everything in ramdisks so tests are located in /boot
     "/boot/test/core", "/boot/test/libc", "/boot/test/ddk", "/boot/test/sys",
-    "/boot/test/fs"
+    "/boot/test/fs",
+    // layers above garnet use fs images rather than ramdisks and place tests in /system
+    "/system/test/core", "/system/test/libc", "/system/test/ddk", "/system/test/sys",
+    "/system/test/fs",
 };
-#define DEFAULT_NUM_TEST_DIRS 5
+#define DEFAULT_NUM_TEST_DIRS (sizeof(default_test_dirs)/sizeof(default_test_dirs[0]))
 
 static bool parse_test_names(char* input, char*** output, int* output_len) {
     // Count number of names via delimiter ','.
@@ -413,10 +417,17 @@ int usage(char* name) {
             "\n"
             "The optional [directories ...] is a list of           \n"
             "directories containing tests to run, non-recursively. \n"
-            "If not specified, the default set of directories is:  \n"
-            "  /boot/test/core, /boot/test/libc, /boot/test/ddk,   \n"
-            "  /boot/test/sys, /boot/test/fs                       \n"
-            "\n"
+            "If not specified, the default set of directories is:  \n", name);
+    for (size_t i = 0; i < DEFAULT_NUM_TEST_DIRS; i++) {
+        fprintf(stderr, "   %s", default_test_dirs[i]);
+        if (i < DEFAULT_NUM_TEST_DIRS - 1) {
+            fprintf(stderr, ",\n");
+        } else {
+            fprintf(stderr, "\n\n");
+        }
+
+    }
+    fprintf(stderr,
             "options:                                              \n"
             "   -h: See this message                               \n"
             "   -v: Verbose output                                 \n"
@@ -441,7 +452,7 @@ int usage(char* name) {
             "The summary contains a listing of the tests executed  \n"
             "by full path (e.g. /boot/test/core/futex_test) as well\n"
             "as whether the test passed or failed. For details, see\n"
-            "//system/uapp/runtests/summary-schema.json            \n", name);
+            "//system/uapp/runtests/summary-schema.json            \n");
     return -1;
 }
 
@@ -529,13 +540,16 @@ int main(int argc, char** argv) {
     int failed_count = 0;
     int total_count = 0;
     for (i = 0; i < num_test_dirs; i++) {
+        // In the event of failures around a directory not existing or being an empty node
+        // we will continue to the next entries rather than aborting. This allows us to handle
+        // different sets of default test directories.
         if (stat(test_dirs[i], &st) < 0) {
-            printf("Error: Could not open %s\n", test_dirs[i]);
-            return -1;
+            printf("Could not open %s, skipping...\n", test_dirs[i]);
+            continue;
         }
         if (!S_ISDIR(st.st_mode)) {
-            printf("Error: %s is not a directory\n", test_dirs[i]);
-            return -1;
+            printf("Error: %s is not a directory!\n", test_dirs[i]);
+            continue;
         }
 
         // Resolve an absolute path to the test directory to ensure output
@@ -543,7 +557,7 @@ int main(int argc, char** argv) {
         char abs_test_dir[PATH_MAX];
         if (realpath(test_dirs[i], abs_test_dir) == NULL) {
             printf("Error: Could not resolve path %s: %s\n", test_dirs[i], strerror(errno));
-            return -1;
+            continue;
         }
 
         // Ensure the output directory for this test binary's output exists.
