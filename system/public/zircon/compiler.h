@@ -79,6 +79,12 @@
 
 #define __DEPRECATE __attribute__((__deprecated__))
 
+#if ENABLE_DDK_DEPRECATIONS
+#define __DDK_DEPRECATE __DEPRECATE
+#else
+#define __DDK_DEPRECATE
+#endif
+
 #else  // if __GNUC__ || defined(__clang__)
 
 #warning "Unrecognized compiler!  Please update global/include/compiler.h"

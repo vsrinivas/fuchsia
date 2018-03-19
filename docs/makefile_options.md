@@ -10,6 +10,8 @@ while setting **DEBUG=0** will disable more debugging code.
 
 * **ENABLE_ACPI_DEBUG**: See [ACPI debugging](debugging/acpi.md).
 
+* **ENABLE_DDK_DEPRECATIONS**: Turn on deprecation warnings for DDK APIs.
+
 * **GLOBAL_DEBUGFLAGS**: See [debugging tips](debugging/tips.md).
 
 * **GOMACC**: Path to the Goma compiler wrapper, **gomacc**, for use within
