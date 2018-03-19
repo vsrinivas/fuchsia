@@ -14,6 +14,7 @@
 #include <set>
 #include <vector>
 
+#include "error_reporter.h"
 #include "raw_ast.h"
 #include "type_shape.h"
 
@@ -418,7 +419,8 @@ struct Union : public Decl {
 
 class Library {
 public:
-    explicit Library(const std::map<StringView, std::unique_ptr<Library>>* dependencies);
+    Library(const std::map<StringView, std::unique_ptr<Library>>* dependencies,
+            ErrorReporter* error_reporter);
 
     bool ConsumeFile(std::unique_ptr<raw::File> file);
     bool Compile();
@@ -426,6 +428,8 @@ public:
     StringView name() const { return library_name_.data(); }
 
 private:
+    bool Fail(StringView message);
+
     bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
                                    Name* name_out);
 
@@ -560,6 +564,8 @@ private:
     // All Name and Decl pointers here are non-null and are owned by the
     // various foo_declarations_.
     std::map<const Name*, Decl*, PtrCompare<Name>> declarations_;
+
+    ErrorReporter* error_reporter_;
 };
 
 } // namespace flat

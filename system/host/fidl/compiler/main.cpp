@@ -151,15 +151,11 @@ bool Parse(const fidl::SourceFile& source_file, fidl::IdentifierTable* identifie
     fidl::Parser parser(&lexer, error_reporter);
     auto ast = parser.Parse();
     if (!parser.Ok()) {
-        error_reporter->PrintReports();
         return false;
     }
-
     if (!library->ConsumeFile(std::move(ast))) {
-        fprintf(stderr, "Parse failed!\n");
         return false;
     }
-
     return true;
 }
 
@@ -234,14 +230,15 @@ int main(int argc, char* argv[]) {
     std::map<fidl::StringView, std::unique_ptr<fidl::flat::Library>> compiled_libraries;
     const fidl::flat::Library* final_library = nullptr;
     for (const auto& source_manager : source_managers) {
-        auto library = std::make_unique<fidl::flat::Library>(&compiled_libraries);
+        auto library = std::make_unique<fidl::flat::Library>(&compiled_libraries, &error_reporter);
         for (const auto& source_file : source_manager.sources()) {
             if (!Parse(source_file, &identifier_table, &error_reporter, library.get())) {
+                error_reporter.PrintReports();
                 return 1;
             }
         }
         if (!library->Compile()) {
-            fprintf(stderr, "flat::Library resolution failed!\n");
+            error_reporter.PrintReports();
             return 1;
         }
         final_library = library.get();

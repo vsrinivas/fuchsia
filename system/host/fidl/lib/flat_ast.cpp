@@ -140,8 +140,15 @@ TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
 // a struct declaration inside an interface out to the top level and
 // so on.
 
-Library::Library(const std::map<StringView, std::unique_ptr<Library>>* dependencies)
-    : dependencies_(dependencies) {
+bool Library::Fail(StringView message) {
+    auto formatted_message = std::string(message) + "\n";
+    error_reporter_->ReportError(formatted_message);
+    return false;
+}
+
+Library::Library(const std::map<StringView, std::unique_ptr<Library>>* dependencies,
+                 ErrorReporter* error_reporter)
+    : dependencies_(dependencies), error_reporter_(error_reporter) {
     for (const auto& dep : *dependencies_) {
         const std::unique_ptr<Library>& library = dep.second;
         const auto& declarations = library->declarations_;
@@ -160,15 +167,14 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
         auto library_name = components[0]->location.data();
         auto iter = dependencies_->find(library_name);
         if (iter == dependencies_->end()) {
-            return false;
+            return Fail("Could not find identifier in library dependency");
         }
         const std::unique_ptr<Library>& library = iter->second;
         auto decl_name = components[1]->location;
         *name_out = Name(library.get(), {}, decl_name);
         return true;
     }
-    // TODO(TO-701) Handle longer names.
-    return false;
+    return Fail("TODO(TO-701) Handle nested declarations");
 }
 
 bool Library::ParseSize(std::unique_ptr<raw::Constant> raw_constant, Size* out_size) {
@@ -196,7 +202,7 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
             return false;
         Size element_count;
         if (!ParseSize(std::move(array_type->element_count), &element_count))
-            return false;
+            return Fail("Unable to parse array element count");
         // TODO(kulakowski) Overflow checking.
         uint32_t size = element_count.Value() * element_type->size;
         *out_type = std::make_unique<ArrayType>(size, std::move(element_type), std::move(element_count));
@@ -210,7 +216,7 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
         Size element_count = Size::Max();
         if (vector_type->maybe_element_count) {
             if (!ParseSize(std::move(vector_type->maybe_element_count), &element_count))
-                return false;
+                return Fail("Unable to parse vector size bound");
         }
         *out_type = std::make_unique<VectorType>(std::move(element_type), std::move(element_count), vector_type->nullability);
         break;
@@ -220,7 +226,7 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
         Size element_count = Size::Max();
         if (string_type->maybe_element_count) {
             if (!ParseSize(std::move(string_type->maybe_element_count), &element_count))
-                return false;
+                return Fail("Unable to parse string size bound");
         }
         *out_type = std::make_unique<StringType>(std::move(element_count), string_type->nullability);
         break;
@@ -304,9 +310,9 @@ bool Library::ConsumeInterfaceDeclaration(
         auto ordinal_literal = std::move(method->ordinal);
         uint32_t value;
         if (!ParseIntegerLiteral<decltype(value)>(ordinal_literal.get(), &value))
-            return false;
+            return Fail("Unable to parse ordinal");
         if (value == 0u)
-            return false;
+            return Fail("Fidl ordinals cannot be 0");
         Ordinal ordinal(std::move(ordinal_literal), value);
 
         SourceLocation method_name = method->identifier->location;
@@ -394,7 +400,7 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
         StringView current_name = library_name_.data();
         StringView new_name = library_name.data();
         if (current_name != new_name) {
-            return false;
+            return Fail("Two files in the library disagree about the name of the library");
         }
     } else {
         library_name_ = library_name;
@@ -546,7 +552,7 @@ bool Library::SortDeclarations() {
         for (Decl* dep : deps) {
             inverse_dependencies[dep].push_back(decl);
         }
-    }
+   }
 
     // Start with all decls that have no incoming edges.
     std::vector<Decl*> decls_without_deps;
@@ -577,7 +583,7 @@ bool Library::SortDeclarations() {
 
     if (declaration_order_.size() != degrees.size()) {
         // We didn't visit all the edges! There was a cycle.
-        return false;
+        return Fail("There is an includes-cycle in declarations");
     }
 
     assert(declaration_order_.size() != 0u);
@@ -612,7 +618,7 @@ bool Library::CompileEnum(Enum* enum_declaration) {
     case types::PrimitiveSubtype::Float32:
     case types::PrimitiveSubtype::Float64:
         // These are not allowed as enum subtypes.
-        return false;
+        return Fail("Enums cannot be bools, statuses, or floats");
     }
 
     // TODO(TO-702) Validate values.
@@ -625,9 +631,9 @@ bool Library::CompileInterface(Interface* interface_declaration) {
     Scope<uint32_t> ordinal_scope;
     for (auto& method : interface_declaration->methods) {
         if (!name_scope.Insert(method.name.data()))
-            return false;
+            return Fail("Multiple methods with the same name in an interface");
         if (!ordinal_scope.Insert(method.ordinal.Value()))
-            return false;
+            return Fail("Mulitple methods with the same ordinal in an interface");
         auto CreateMessage = [&](Interface::Method::Message* message) -> bool{
             Scope<StringView> scope;
             auto header_field_shape = FieldShape(TypeShape(16u, 4u));
@@ -635,7 +641,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
             message_struct.push_back(&header_field_shape);
             for (auto& param : message->parameters) {
                 if (!scope.Insert(param.name.data()))
-                    return false;
+                    return Fail("Multiple parameters with the same name in a method");
                 if (!CompileType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
                 message_struct.push_back(&param.fieldshape);
@@ -660,7 +666,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
     std::vector<FieldShape*> fidl_struct;
     for (auto& member : struct_declaration->members) {
         if (!scope.Insert(member.name.data()))
-            return false;
+            return Fail("Multiple struct fields with the same name");
         if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
         fidl_struct.push_back(&member.fieldshape);
@@ -675,7 +681,7 @@ bool Library::CompileUnion(Union* union_declaration) {
     Scope<StringView> scope;
     for (auto& member : union_declaration->members) {
         if (!scope.Insert(member.name.data()))
-            return false;
+            return Fail("Multiple union members with the same name");
         if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
     }
@@ -775,7 +781,7 @@ bool Library::CompileHandleType(flat::HandleType* handle_type, TypeShape* out_ty
 bool Library::CompileRequestHandleType(flat::RequestHandleType* request_type, TypeShape* out_typeshape) {
     auto named_decl = LookupType(request_type->name);
     if (!named_decl || named_decl->kind != Decl::Kind::kInterface)
-        return false;
+        return Fail("Undefined reference in request handle name");
 
     *out_typeshape = kHandleTypeShape;
     return true;
@@ -793,17 +799,17 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
 
     auto named_decl = LookupType(identifier_type->name);
     if (!named_decl)
-        return false;
+        return Fail("Undefined reference in identifier type name");
 
     switch (named_decl->kind) {
     case Decl::Kind::kConst: {
         // A constant isn't a type!
-        return false;
+        return Fail("The name of a constant was used where a type was expected");
     }
     case Decl::Kind::kEnum: {
         if (identifier_type->nullability == types::Nullability::Nullable) {
             // Enums aren't nullable!
-            return false;
+            return Fail("An enum was referred to as 'nullable'");
         } else {
             typeshape = static_cast<const Enum*>(named_decl)->typeshape;
         }
