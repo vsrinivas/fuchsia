@@ -31,14 +31,15 @@ var (
 	// TODO(mknyszek): Add support here for process, thread, job, resource,
 	// interrupt, eventpair, fifo, guest, and time once these are actually
 	// supported in the Go runtime.
-	// TODO(mknyszek): Add channel, log, and port once the underlying types
-	// are unified to uint32.
-	handleType reflect.Type = reflect.TypeOf(zx.Handle(0))
-	vmoType                 = reflect.TypeOf(zx.VMO(0))
-	eventType               = reflect.TypeOf(zx.Event(0))
-	socketType              = reflect.TypeOf(zx.Socket(0))
-	vmarType                = reflect.TypeOf(zx.VMAR(0))
-	proxyType               = reflect.TypeOf(Proxy{})
+	handleType  reflect.Type = reflect.TypeOf(zx.Handle(0))
+	channelType              = reflect.TypeOf(zx.Channel(0))
+	logType                  = reflect.TypeOf(zx.Log(0))
+	portType                 = reflect.TypeOf(zx.Port(0))
+	vmoType                  = reflect.TypeOf(zx.VMO(0))
+	eventType                = reflect.TypeOf(zx.Event(0))
+	socketType               = reflect.TypeOf(zx.Socket(0))
+	vmarType                 = reflect.TypeOf(zx.VMAR(0))
+	proxyType                = reflect.TypeOf(Proxy{})
 )
 
 // isHandleType returns true if the reflected type is a Fuchsia handle type.
