@@ -31,14 +31,17 @@ class TargetImpl : public Target {
   const std::vector<std::string>& GetArgs() const override;
   void SetArgs(std::vector<std::string> args) override;
   int64_t GetLastReturnCode() const override;
-  void Launch(LaunchCallback callback) override;
-  void Attach(uint64_t koid, LaunchCallback callback) override;
+  void Launch(Callback callback) override;
+  void Attach(uint64_t koid, Callback callback) override;
+  void Detach(Callback callback) override;
   void OnProcessExiting(int return_code) override;
 
  private:
   void OnLaunchOrAttachReply(const Err& err, uint64_t koid, uint32_t status,
                              const std::string& process_name,
-                             LaunchCallback callback);
+                             Callback callback);
+
+  void OnDetachReply(const Err& err, uint32_t status, Callback callback);
 
   State state_ = kStopped;
 

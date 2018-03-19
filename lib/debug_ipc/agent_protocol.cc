@@ -92,6 +92,25 @@ void WriteReply(const AttachReply& reply,
   writer->WriteString(reply.process_name);
 }
 
+// Detach ----------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader,
+                 DetachRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return reader->ReadUint64(&request->process_koid);
+}
+
+void WriteReply(const DetachReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kDetach, transaction_id);
+  writer->WriteUint32(reply.status);
+}
+
 // Continue --------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader,

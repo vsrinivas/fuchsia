@@ -125,6 +125,28 @@ bool ReadReply(MessageReader* reader,
   return true;
 }
 
+// Detach ----------------------------------------------------------------------
+
+void WriteRequest(const DetachRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kDetach, transaction_id);
+  writer->WriteUint64(request.process_koid);
+}
+
+bool ReadReply(MessageReader* reader,
+               DetachReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  if (!reader->ReadUint32(&reply->status))
+    return false;
+  return true;
+}
+
 // Continue --------------------------------------------------------------------
 
 void WriteRequest(const ContinueRequest& request,

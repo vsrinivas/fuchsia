@@ -35,6 +35,14 @@ void WriteReply(const AttachReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer);
 
+// Detach.
+bool ReadRequest(MessageReader* reader,
+                 DetachRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const DetachReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer);
+
 // Continue.
 bool ReadRequest(MessageReader* reader,
                  ContinueRequest* request,

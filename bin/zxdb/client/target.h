@@ -32,7 +32,8 @@ class TargetObserver;
 // launch the process again with the same configuration.
 class Target : public ClientObject {
  public:
-  using LaunchCallback = std::function<void(Target*, const Err&)>;
+  using Callback = std::function<void(Target*, const Err&)>;
+
 
   enum State {
     // The process has not been started or has stopped. From here, it can only
@@ -71,11 +72,15 @@ class Target : public ClientObject {
 
   // Launches the program. The program must be in a kStopped state and the
   // program name configured via SetArgs().
-  virtual void Launch(LaunchCallback callback) = 0;
+  virtual void Launch(Callback callback) = 0;
 
   // Attaches to the process with the given koid. The callback will be
   // executed with the attach is complete (or fails).
-  virtual void Attach(uint64_t koid, LaunchCallback callback) = 0;
+  virtual void Attach(uint64_t koid, Callback callback) = 0;
+
+  // Detaches from the process with the given koid. The callback will be
+  // executed with the detach is complete (or fails).
+  virtual void Detach(Callback callback) = 0;
 
   // Notification from the agent that a process has exited.
   virtual void OnProcessExiting(int return_code) = 0;

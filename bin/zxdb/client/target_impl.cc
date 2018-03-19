@@ -46,7 +46,7 @@ int64_t TargetImpl::GetLastReturnCode() const {
   return last_return_code_;
 }
 
-void TargetImpl::Launch(LaunchCallback callback) {
+void TargetImpl::Launch(Callback callback) {
   if (state_ != State::kStopped) {
     // TODO(brettw) issue callback asynchronously to avoid reentering caller.
     callback(this, Err("Can't launch, program is already running."));
@@ -83,7 +83,7 @@ void TargetImpl::Launch(LaunchCallback callback) {
     observer.DidChangeTargetState(this, State::kStopped);
 }
 
-void TargetImpl::Attach(uint64_t koid, LaunchCallback callback) {
+void TargetImpl::Attach(uint64_t koid, Callback callback) {
   debug_ipc::AttachRequest request;
   request.koid = koid;
   session()->Send<debug_ipc::AttachRequest, debug_ipc::AttachReply>(
@@ -96,12 +96,38 @@ void TargetImpl::Attach(uint64_t koid, LaunchCallback callback) {
                                             reply.process_name,
                                             std::move(callback));
         } else {
+          // The reply that the process was attached came after the local
+          // objects were destroyed.
+          // TODO(brettw) handle this more gracefully. Maybe kill the remote
+          // process?
+          fprintf(stderr, "Warning: process attach race, extra process could "
+              "be running.\n");
+        }
+      });
+}
+
+void TargetImpl::Detach(Callback callback) {
+  if (!process_.get()) {
+    // TODO(brettw): Send this asynchronously so as not to surprise callers.
+    callback(this, Err("Error detaching: No process."));
+    return;
+  }
+
+  debug_ipc::DetachRequest request;
+  request.process_koid = process_->GetKoid();
+  session()->Send<debug_ipc::DetachRequest, debug_ipc::DetachReply>(
+      request,
+      [thunk = std::weak_ptr<WeakThunk<TargetImpl>>(weak_thunk_),
+       callback](
+           const Err& err, debug_ipc::DetachReply reply) {
+        if (auto ptr = thunk.lock()) {
+          ptr->thunk->OnDetachReply(err, reply.status, std::move(callback));
+        } else {
           // The reply that the process was launched came after the local
           // objects were destroyed.
           // TODO(brettw) handle this more gracefully. Maybe kill the remote
           // process?
-          fprintf(stderr, "Warning: process launch race, extra process could "
-              "be running.\n");
+          fprintf(stderr, "Warning: process detach race\n");
         }
       });
 }
@@ -120,7 +146,7 @@ void TargetImpl::OnProcessExiting(int return_code) {
 void TargetImpl::OnLaunchOrAttachReply(const Err& err, uint64_t koid,
                                        uint32_t status,
                                        const std::string& process_name,
-                                       LaunchCallback callback) {
+                                       Callback callback) {
   FXL_DCHECK(state_ = State::kStarting);
   FXL_DCHECK(!process_.get());  // Shouldn't have a process.
 
@@ -144,6 +170,31 @@ void TargetImpl::OnLaunchOrAttachReply(const Err& err, uint64_t koid,
     // Note state argument is the old state of the target (which is asserted at
     // the top is "Starting").
     observer.DidChangeTargetState(this, State::kStarting);
+  }
+}
+
+void TargetImpl::OnDetachReply(const Err& err, uint32_t status, Callback callback) {
+  FXL_DCHECK(process_.get());  // Should have a process.
+
+  auto previous_state = state_;
+  Err issue_err;  // Error to send in callback.
+  if (err.has_error()) {
+    // Error from transport.
+    issue_err = err;
+  } else if (status != 0) {
+    // Error from detaching.
+    // TODO(davemoore): Not sure what state the target should be if we error upon detach.
+    issue_err = Err(fxl::StringPrintf("Error detaching, status = %d.", status));
+  } else {
+    state_ = State::kStopped;
+  }
+
+  if (callback)
+    callback(this, issue_err);
+
+  if (state_ != previous_state) {
+    for (auto& observer : observers())
+      observer.DidChangeTargetState(this, previous_state);
   }
 }
 

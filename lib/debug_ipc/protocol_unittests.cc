@@ -125,6 +125,26 @@ TEST(Protocol, AttachReply) {
   EXPECT_EQ(initial.process_name, second.process_name);
 }
 
+// Detach ----------------------------------------------------------------------
+
+TEST(Protocol, DetachRequest) {
+  DetachRequest initial;
+  initial.process_koid = 5678;
+
+  DetachRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+}
+
+TEST(Protocol, DetachReply) {
+  DetachReply initial;
+  initial.status = 67;
+
+  DetachReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  EXPECT_EQ(initial.status, second.status);
+}
+
 // Continue --------------------------------------------------------------------
 
 TEST(Protocol, ContinueRequest) {

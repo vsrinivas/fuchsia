@@ -24,6 +24,7 @@ struct MsgHeader {
     kHello,
     kLaunch,
     kAttach,
+    kDetach,
     kContinue,
     kProcessTree,
     kThreads,
@@ -77,6 +78,13 @@ struct AttachRequest {
 struct AttachReply {
   uint32_t status = 0;  // zx_status_t value from attaching. ZX_OK on success.
   std::string process_name;
+};
+
+struct DetachRequest {
+  uint64_t process_koid = 0;
+};
+struct DetachReply {
+  uint32_t status = 0;
 };
 
 struct ContinueRequest {

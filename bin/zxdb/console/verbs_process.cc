@@ -54,6 +54,22 @@ void RunAndAttachCallback(const char* verb, Target* target, const Err& err) {
   console->Output(std::move(out));
 }
 
+// Callback for "detach".
+void DetachCallback(Target* target, const Err& err) {
+  Console* console = Console::get();
+
+  OutputBuffer out;
+  if (err.has_error()) {
+    out.Append(fxl::StringPrintf("Process %d detach failed.\n",
+                                 console->context().IdForTarget(target)));
+    out.OutputErr(err);
+  } else {
+    out.Append(DescribeTarget(&console->context(), target, false));
+  }
+
+  console->Output(std::move(out));
+}
+
 // new -------------------------------------------------------------------------
 
 const char kNewShortHelp[] = "new: Create a new process context.";
@@ -191,6 +207,37 @@ Err DoAttach(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// detach ----------------------------------------------------------------------
+
+const char kDetachShortHelp[] = "detach: Detach from a process context.";
+const char kDetachHelp[] =
+    R"(detach
+  Detaches a process from the debugger.
+Hints
+
+  By default the current process is detached.
+  To detach a different process prefix with "process N"
+
+Examples
+
+  detach
+      Detaches from the current process.
+
+  process 4 detach
+      Detaches from process context 4.
+)";
+Err DoDetach(ConsoleContext* context, const Command& cmd) {
+  // Only a process can be detached.
+  Err err = cmd.ValidateNouns({Noun::kProcess});
+  if (err.has_error())
+    return err;
+
+  cmd.target()->Detach([](Target* target, const Err& err) {
+      DetachCallback(target, err);
+  });
+  return Err();
+}
+
 }  // namespace
 
 void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
@@ -199,6 +246,8 @@ void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
       VerbRecord(&DoRun, {"run", "r"}, kRunShortHelp, kRunHelp);
   (*verbs)[Verb::kAttach] =
       VerbRecord(&DoAttach, {"attach"}, kAttachShortHelp, kAttachHelp);
+  (*verbs)[Verb::kDetach] =
+      VerbRecord(&DoDetach, {"detach"}, kDetachShortHelp, kDetachHelp);
 }
 
 }  // namespace zxdb

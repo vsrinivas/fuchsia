@@ -90,9 +90,10 @@ void DebugAgent::OnStreamData() {
     DISPATCH(ProcessTree);
     DISPATCH(Threads);
     DISPATCH(ReadMemory);
+    DISPATCH(Detach);
 
-    // Attach is special because it needs to follow the reply immediately with
-    // a series of notifications about the current threads. This means it
+    // Attach and detach are special because they need to follow the reply immediately with
+    // a series of notifications about the current threads. This means they
     // can't use the automatic reply sending of the DispatchMessage function.
     case debug_ipc::MsgHeader::Type::kAttach:
       OnAttach(std::move(buffer));
@@ -257,6 +258,18 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
   // For valid attaches, follow up with the current thread list.
   if (process_handle)
     SendCurrentThreads(process_handle, request.koid);
+}
+
+void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,
+                          debug_ipc::DetachReply* reply) {
+  auto debug_process = GetDebuggedProcess(request.process_koid);
+
+  if (debug_process->process().is_valid()) {
+    RemoveDebuggedProcess(request.process_koid);
+    reply->status = ZX_OK;
+  } else {
+    reply->status = ZX_ERR_NOT_FOUND;
+  }
 }
 
 void DebugAgent::OnContinue(const debug_ipc::ContinueRequest& request,
