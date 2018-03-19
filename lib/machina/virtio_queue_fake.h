@@ -73,6 +73,9 @@ class VirtioQueueFake {
   // to use those buffers.
   zx_status_t Init(uint16_t size);
 
+  // Access the underlying VirtioQueue.
+  VirtioQueue* queue() const { return queue_; }
+
   // Allocate and write a descriptor. |addr|, |len|, and |flags| correspond
   // to the fields in vring_desc.
   //

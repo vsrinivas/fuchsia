@@ -51,8 +51,6 @@ TEST_F(VirtioNetTest, DrainQueue) {
   // an entry in the fifo.
   uint32_t count;
   eth_fifo_entry_t entry[fifos_.rx_depth];
-  ASSERT_EQ(ZX_OK, net_.DrainQueue(net_.rx_queue(), fifos_.rx_depth,
-                                   fifos_.rx_fifo, true));
 
   // We should have no work at this point as all the buffers will be owned by
   // the ethernet device.
@@ -83,11 +81,10 @@ TEST_F(VirtioNetTest, HeaderOnDifferentBuffer) {
                 .AppendReadable(packet_ptr, packet_len)
                 .Build(),
             ZX_OK);
+  loop_.RunUntilIdle();
 
   uint32_t count;
   eth_fifo_entry_t entry[fifos_.rx_depth];
-  ASSERT_EQ(ZX_OK, net_.DrainQueue(net_.rx_queue(), fifos_.rx_depth,
-                                   fifos_.rx_fifo, true));
 
   // Read the fifo entry.
   ASSERT_EQ(ZX_OK, zx_fifo_read(fifo_[0], entry, sizeof(entry), &count));
@@ -106,23 +103,21 @@ TEST_F(VirtioNetTest, InvalidDesc) {
                 .Build(),
             ZX_OK);
 
+  // Expect nothing is written to the FIFO.
+  loop_.RunUntilIdle();
   uint32_t count;
-  eth_fifo_entry_t entry = {};
-  ASSERT_EQ(zx_fifo_write(fifo_[1], &entry, sizeof(entry), &count), ZX_OK);
-  ASSERT_EQ(count, 1u);
-  ASSERT_EQ(net_.DrainQueue(net_.rx_queue(), QUEUE_SIZE, fifo_[0], true),
-            ZX_ERR_IO_DATA_INTEGRITY);
+  eth_fifo_entry_t entry[fifos_.rx_depth];
+  ASSERT_EQ(zx_fifo_read(fifo_[0], entry, sizeof(entry), &count),
+            ZX_ERR_SHOULD_WAIT);
 }
 
 TEST_F(VirtioNetTest, PeerClosed) {
   virtio_net_hdr_t hdr = {};
   ASSERT_EQ(queue_.BuildDescriptor().AppendReadable(&hdr, sizeof(hdr)).Build(),
             ZX_OK);
-
   ASSERT_EQ(zx_handle_close(fifo_[0]), ZX_OK);
-  ASSERT_EQ(
-      net_.DrainQueue(net_.rx_queue(), fifos_.rx_depth, fifos_.rx_fifo, true),
-      ZX_ERR_PEER_CLOSED);
+  ASSERT_EQ(zx_handle_close(fifo_[1]), ZX_OK);
+  loop_.RunUntilIdle();
 }
 
 }  // namespace
