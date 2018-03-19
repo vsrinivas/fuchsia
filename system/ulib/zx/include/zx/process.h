@@ -41,6 +41,14 @@ public:
     zx_status_t start(const thread& thread_handle, uintptr_t entry,
                       uintptr_t stack, handle arg_handle, uintptr_t arg2) const;
 
+    zx_status_t read_memory(uintptr_t vaddr, void* buffer, size_t len, size_t* actual) const {
+        return zx_process_read_memory(get(), vaddr, buffer, len, actual);
+    }
+
+    zx_status_t write_memory(uintptr_t vaddr, const void* buffer, size_t len, size_t* actual) {
+        return zx_process_write_memory(get(), vaddr, buffer, len, actual);
+    }
+
     static inline const unowned<process> self() {
         return unowned<process>(zx_process_self());
     }
