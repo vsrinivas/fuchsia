@@ -416,7 +416,7 @@ struct Union : public Decl {
 class Library {
 public:
     bool ConsumeFile(std::unique_ptr<raw::File> file);
-    bool Resolve();
+    bool Compile();
 
     StringView name() const { return library_name_.data(); }
 
@@ -447,20 +447,20 @@ private:
 
     bool SortDeclarations();
 
-    bool ResolveConst(Const* const_declaration);
-    bool ResolveEnum(Enum* enum_declaration);
-    bool ResolveInterface(Interface* interface_declaration);
-    bool ResolveStruct(Struct* struct_declaration);
-    bool ResolveUnion(Union* union_declaration);
+    bool CompileConst(Const* const_declaration);
+    bool CompileEnum(Enum* enum_declaration);
+    bool CompileInterface(Interface* interface_declaration);
+    bool CompileStruct(Struct* struct_declaration);
+    bool CompileUnion(Union* union_declaration);
 
-    bool ResolveArrayType(ArrayType* array_type, TypeShape* out_type_metadata);
-    bool ResolveVectorType(VectorType* vector_type, TypeShape* out_type_metadata);
-    bool ResolveStringType(StringType* string_type, TypeShape* out_type_metadata);
-    bool ResolveHandleType(HandleType* handle_type, TypeShape* out_type_metadata);
-    bool ResolveRequestHandleType(RequestHandleType* request_type, TypeShape* out_type_metadata);
-    bool ResolvePrimitiveType(PrimitiveType* primitive_type, TypeShape* out_type_metadata);
-    bool ResolveIdentifierType(IdentifierType* identifier_type, TypeShape* out_type_metadata);
-    bool ResolveType(Type* type, TypeShape* out_type_metadata);
+    bool CompileArrayType(ArrayType* array_type, TypeShape* out_type_metadata);
+    bool CompileVectorType(VectorType* vector_type, TypeShape* out_type_metadata);
+    bool CompileStringType(StringType* string_type, TypeShape* out_type_metadata);
+    bool CompileHandleType(HandleType* handle_type, TypeShape* out_type_metadata);
+    bool CompileRequestHandleType(RequestHandleType* request_type, TypeShape* out_type_metadata);
+    bool CompilePrimitiveType(PrimitiveType* primitive_type, TypeShape* out_type_metadata);
+    bool CompileIdentifierType(IdentifierType* identifier_type, TypeShape* out_type_metadata);
+    bool CompileType(Type* type, TypeShape* out_type_metadata);
 
 public:
     // TODO(TO-702) Add a validate literal function. Some things

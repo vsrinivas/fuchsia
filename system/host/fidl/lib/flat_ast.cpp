@@ -552,16 +552,16 @@ bool Library::SortDeclarations() {
     return true;
 }
 
-bool Library::ResolveConst(Const* const_declaration) {
+bool Library::CompileConst(Const* const_declaration) {
     TypeShape typeshape;
-    if (!ResolveType(const_declaration->type.get(), &typeshape)) {
+    if (!CompileType(const_declaration->type.get(), &typeshape)) {
         return false;
     }
-    // TODO(TO-702) Resolve const declarations.
+    // TODO(TO-702) Compile const declarations.
     return true;
 }
 
-bool Library::ResolveEnum(Enum* enum_declaration) {
+bool Library::CompileEnum(Enum* enum_declaration) {
     switch (enum_declaration->type) {
     case types::PrimitiveSubtype::Int8:
     case types::PrimitiveSubtype::Int16:
@@ -571,7 +571,7 @@ bool Library::ResolveEnum(Enum* enum_declaration) {
     case types::PrimitiveSubtype::Uint16:
     case types::PrimitiveSubtype::Uint32:
     case types::PrimitiveSubtype::Uint64:
-        // These are allowed as enum subtypes. Resolve the size and alignment.
+        // These are allowed as enum subtypes. Compile the size and alignment.
         enum_declaration->typeshape = PrimitiveTypeShape(enum_declaration->type);
         break;
 
@@ -587,7 +587,7 @@ bool Library::ResolveEnum(Enum* enum_declaration) {
     return true;
 }
 
-bool Library::ResolveInterface(Interface* interface_declaration) {
+bool Library::CompileInterface(Interface* interface_declaration) {
     // TODO(TO-703) Add subinterfaces here.
     Scope<StringView> name_scope;
     Scope<uint32_t> ordinal_scope;
@@ -604,7 +604,7 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
             for (auto& param : message->parameters) {
                 if (!scope.Insert(param.name.data()))
                     return false;
-                if (!ResolveType(param.type.get(), &param.fieldshape.Typeshape()))
+                if (!CompileType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
                 message_struct.push_back(&param.fieldshape);
             }
@@ -623,13 +623,13 @@ bool Library::ResolveInterface(Interface* interface_declaration) {
     return true;
 }
 
-bool Library::ResolveStruct(Struct* struct_declaration) {
+bool Library::CompileStruct(Struct* struct_declaration) {
     Scope<StringView> scope;
     std::vector<FieldShape*> fidl_struct;
     for (auto& member : struct_declaration->members) {
         if (!scope.Insert(member.name.data()))
             return false;
-        if (!ResolveType(member.type.get(), &member.fieldshape.Typeshape()))
+        if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
         fidl_struct.push_back(&member.fieldshape);
     }
@@ -639,12 +639,12 @@ bool Library::ResolveStruct(Struct* struct_declaration) {
     return true;
 }
 
-bool Library::ResolveUnion(Union* union_declaration) {
+bool Library::CompileUnion(Union* union_declaration) {
     Scope<StringView> scope;
     for (auto& member : union_declaration->members) {
         if (!scope.Insert(member.name.data()))
             return false;
-        if (!ResolveType(member.type.get(), &member.fieldshape.Typeshape()))
+        if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
     }
 
@@ -663,7 +663,7 @@ bool Library::ResolveUnion(Union* union_declaration) {
     return true;
 }
 
-bool Library::Resolve() {
+bool Library::Compile() {
     if (!SortDeclarations()) {
         return false;
     }
@@ -675,35 +675,35 @@ bool Library::Resolve() {
         switch (decl->kind) {
         case Decl::Kind::kConst: {
             auto const_decl = static_cast<Const*>(decl);
-            if (!ResolveConst(const_decl)) {
+            if (!CompileConst(const_decl)) {
                 return false;
             }
             break;
         }
         case Decl::Kind::kEnum: {
             auto enum_decl = static_cast<Enum*>(decl);
-            if (!ResolveEnum(enum_decl)) {
+            if (!CompileEnum(enum_decl)) {
                 return false;
             }
             break;
         }
         case Decl::Kind::kInterface: {
             auto interface_decl = static_cast<Interface*>(decl);
-            if (!ResolveInterface(interface_decl)) {
+            if (!CompileInterface(interface_decl)) {
                 return false;
             }
             break;
         }
         case Decl::Kind::kStruct: {
             auto struct_decl = static_cast<Struct*>(decl);
-            if (!ResolveStruct(struct_decl)) {
+            if (!CompileStruct(struct_decl)) {
                 return false;
             }
             break;
         }
         case Decl::Kind::kUnion: {
             auto union_decl = static_cast<Union*>(decl);
-            if (!ResolveUnion(union_decl)) {
+            if (!CompileUnion(union_decl)) {
                 return false;
             }
             break;
@@ -716,31 +716,31 @@ bool Library::Resolve() {
     return true;
 }
 
-bool Library::ResolveArrayType(flat::ArrayType* array_type, TypeShape* out_typeshape) {
+bool Library::CompileArrayType(flat::ArrayType* array_type, TypeShape* out_typeshape) {
     TypeShape element_typeshape;
-    if (!ResolveType(array_type->element_type.get(), &element_typeshape))
+    if (!CompileType(array_type->element_type.get(), &element_typeshape))
         return false;
     *out_typeshape = ArrayTypeShape(element_typeshape, array_type->element_count.Value());
     return true;
 }
 
-bool Library::ResolveVectorType(flat::VectorType* vector_type, TypeShape* out_typeshape) {
+bool Library::CompileVectorType(flat::VectorType* vector_type, TypeShape* out_typeshape) {
     *out_typeshape = VectorTypeShape();
     return true;
 }
 
-bool Library::ResolveStringType(flat::StringType* string_type, TypeShape* out_typeshape) {
+bool Library::CompileStringType(flat::StringType* string_type, TypeShape* out_typeshape) {
     *out_typeshape = StringTypeShape();
     return true;
 }
 
-bool Library::ResolveHandleType(flat::HandleType* handle_type, TypeShape* out_typeshape) {
+bool Library::CompileHandleType(flat::HandleType* handle_type, TypeShape* out_typeshape) {
     // Nothing to check.
     *out_typeshape = kHandleTypeShape;
     return true;
 }
 
-bool Library::ResolveRequestHandleType(flat::RequestHandleType* request_type, TypeShape* out_typeshape) {
+bool Library::CompileRequestHandleType(flat::RequestHandleType* request_type, TypeShape* out_typeshape) {
     auto named_decl = LookupType(request_type->name);
     if (!named_decl || named_decl->kind != Decl::Kind::kInterface)
         return false;
@@ -749,13 +749,13 @@ bool Library::ResolveRequestHandleType(flat::RequestHandleType* request_type, Ty
     return true;
 }
 
-bool Library::ResolvePrimitiveType(flat::PrimitiveType* primitive_type,
+bool Library::CompilePrimitiveType(flat::PrimitiveType* primitive_type,
                                    TypeShape* out_typeshape) {
     *out_typeshape = PrimitiveTypeShape(primitive_type->subtype);
     return true;
 }
 
-bool Library::ResolveIdentifierType(flat::IdentifierType* identifier_type,
+bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
                                     TypeShape* out_typeshape) {
     TypeShape typeshape;
 
@@ -807,41 +807,41 @@ bool Library::ResolveIdentifierType(flat::IdentifierType* identifier_type,
     return true;
 }
 
-bool Library::ResolveType(Type* type, TypeShape* out_typeshape) {
+bool Library::CompileType(Type* type, TypeShape* out_typeshape) {
     switch (type->kind) {
     case Type::Kind::Array: {
         auto array_type = static_cast<ArrayType*>(type);
-        return ResolveArrayType(array_type, out_typeshape);
+        return CompileArrayType(array_type, out_typeshape);
     }
 
     case Type::Kind::Vector: {
         auto vector_type = static_cast<VectorType*>(type);
-        return ResolveVectorType(vector_type, out_typeshape);
+        return CompileVectorType(vector_type, out_typeshape);
     }
 
     case Type::Kind::String: {
         auto string_type = static_cast<StringType*>(type);
-        return ResolveStringType(string_type, out_typeshape);
+        return CompileStringType(string_type, out_typeshape);
     }
 
     case Type::Kind::Handle: {
         auto handle_type = static_cast<HandleType*>(type);
-        return ResolveHandleType(handle_type, out_typeshape);
+        return CompileHandleType(handle_type, out_typeshape);
     }
 
     case Type::Kind::RequestHandle: {
         auto request_type = static_cast<RequestHandleType*>(type);
-        return ResolveRequestHandleType(request_type, out_typeshape);
+        return CompileRequestHandleType(request_type, out_typeshape);
     }
 
     case Type::Kind::Primitive: {
         auto primitive_type = static_cast<PrimitiveType*>(type);
-        return ResolvePrimitiveType(primitive_type, out_typeshape);
+        return CompilePrimitiveType(primitive_type, out_typeshape);
     }
 
     case Type::Kind::Identifier: {
         auto identifier_type = static_cast<IdentifierType*>(type);
-        return ResolveIdentifierType(identifier_type, out_typeshape);
+        return CompileIdentifierType(identifier_type, out_typeshape);
     }
     }
 }

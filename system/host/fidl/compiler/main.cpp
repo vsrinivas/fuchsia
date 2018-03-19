@@ -240,7 +240,7 @@ int main(int argc, char* argv[]) {
         }
     }
     for (auto& library : libraries) {
-        if (!library.Resolve()) {
+        if (!library.Compile()) {
             fprintf(stderr, "flat::Library resolution failed!\n");
             return 1;
         }
