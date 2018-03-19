@@ -142,8 +142,7 @@ void AudioRenderer2Impl::ComputePtsToFracFrames(int64_t first_pts) {
   // We should not be calling this function if the transformation is already
   // valid.
   FXL_DCHECK(!pts_to_frac_frames_valid_);
-  pts_to_frac_frames_ = TimelineFunction(first_pts,
-                                         next_frac_frame_pts_,
+  pts_to_frac_frames_ = TimelineFunction(next_frac_frame_pts_, first_pts,
                                          frac_frames_per_pts_tick_);
   pts_to_frac_frames_valid_ = true;
 }
@@ -555,9 +554,8 @@ void AudioRenderer2Impl::Play(int64_t reference_time,
   // is the place to do it.
   {
     fbl::AutoLock lock(&ref_to_ff_lock_);
-    ref_clock_to_frac_frames_ = TimelineFunction(reference_time,
-                                                 frac_frame_media_time,
-                                                 frac_frames_per_ref_tick_);
+    ref_clock_to_frac_frames_ = TimelineFunction(
+        frac_frame_media_time, reference_time, frac_frames_per_ref_tick_);
     ref_clock_to_frac_frames_gen_.Next();
   }
 
@@ -595,9 +593,8 @@ void AudioRenderer2Impl::Pause(const PauseCallback& callback) {
     pause_time_frac_frames_ = ref_clock_to_frac_frames_.Apply(ref_clock_now);
     pause_time_frac_frames_valid_ = true;
 
-    ref_clock_to_frac_frames_ = TimelineFunction(ref_clock_now,
-                                                 pause_time_frac_frames_,
-                                                 { 0, 1 });
+    ref_clock_to_frac_frames_ =
+        TimelineFunction(pause_time_frac_frames_, ref_clock_now, {0, 1});
     ref_clock_to_frac_frames_gen_.Next();
   }
 

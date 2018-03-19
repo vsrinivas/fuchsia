@@ -230,13 +230,13 @@ void FakeRenderer::SetTimelineTransformNoReply(
 
   // Queue up the new pending change.
   pending_timeline_function_ = TimelineFunction(
-      reference_time, subject_time, timeline_transform->reference_delta,
-      timeline_transform->subject_delta);
+      subject_time, reference_time, timeline_transform->subject_delta,
+      timeline_transform->reference_delta);
 }
 
 void FakeRenderer::ClearPendingTimelineFunction(bool completed) {
   pending_timeline_function_ =
-      TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
+      TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 0, 1);
   if (set_timeline_transform_callback_) {
     set_timeline_transform_callback_(completed);
     set_timeline_transform_callback_ = nullptr;
@@ -251,7 +251,7 @@ void FakeRenderer::MaybeApplyPendingTimelineChange(int64_t reference_time) {
 
   current_timeline_function_ = pending_timeline_function_;
   pending_timeline_function_ =
-      TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
+      TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 0, 1);
 
   if (set_timeline_transform_callback_) {
     set_timeline_transform_callback_(true);

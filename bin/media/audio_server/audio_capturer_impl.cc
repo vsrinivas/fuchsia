@@ -704,7 +704,7 @@ zx_status_t AudioCapturerImpl::Process() {
       // time.  Since the frame rate we supply is already reduced, this step
       // should go pretty quickly.
       frames_to_clock_mono_ =
-          TimelineFunction(frame_count_, now, frames_to_clock_mono_rate_);
+          TimelineFunction(now, frame_count_, frames_to_clock_mono_rate_);
       frames_to_clock_mono_gen_.Next();
       FXL_DCHECK(frames_to_clock_mono_.invertable());
     }
@@ -783,7 +783,7 @@ zx_status_t AudioCapturerImpl::Process() {
           // timeline function, we will re-establish it and flag a discontinuity
           // next time we have work to do.
           frames_to_clock_mono_ =
-              TimelineFunction(frame_count_, now, frames_to_clock_mono_rate_);
+              TimelineFunction(now, frame_count_, frames_to_clock_mono_rate_);
           frames_to_clock_mono_gen_.Next();
         }
       }
@@ -1122,7 +1122,7 @@ void AudioCapturerImpl::UpdateTransformation(
   TimelineRate frac_frames_to_frames(1u, 1u << kPtsFractionalBits);
   int64_t offset = static_cast<int64_t>(rb_snap.position_to_end_fence_frames);
   bk->clock_mono_to_src_frames_fence = TimelineFunction::Compose(
-      TimelineFunction(0, -offset, frac_frames_to_frames),
+      TimelineFunction(-offset, 0, frac_frames_to_frames),
       src_clock_mono_to_ring_pos_frac_frames);
 
   // TODO(johngro): Fix this.  See MTWN-49

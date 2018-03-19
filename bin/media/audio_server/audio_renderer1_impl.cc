@@ -314,11 +314,10 @@ void AudioRenderer1Impl::SnapshotCurrentTimelineFunction(int64_t ref_time,
 
     TimelineRate rate_in_frames_per_ns = tcp_fn.rate() * frac_frames_per_ns;
 
-    *out =
-        TimelineFunction(tcp_fn.reference_time(),
-                         tcp_fn.subject_time() * format_info()->frames_per_ns(),
-                         rate_in_frames_per_ns.reference_delta(),
-                         rate_in_frames_per_ns.subject_delta());
+    *out = TimelineFunction(
+        tcp_fn.subject_time() * format_info()->frames_per_ns(),
+        tcp_fn.reference_time(), rate_in_frames_per_ns.subject_delta(),
+        rate_in_frames_per_ns.reference_delta());
 
     *generation = tcp_gen;
   }

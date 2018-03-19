@@ -401,7 +401,7 @@ void DriverOutput::OnDriverStartComplete() {
   // manually calling Process.
   uint32_t bytes_per_frame = driver_->bytes_per_frame();
   int64_t offset = static_cast<int64_t>(1) - bytes_per_frame;
-  const TimelineFunction bytes_to_frames(offset, 0, bytes_per_frame, 1);
+  const TimelineFunction bytes_to_frames(0, offset, 1, bytes_per_frame);
   const TimelineFunction& t_bytes = driver_clock_mono_to_ring_pos_bytes();
 
   clock_mono_to_ring_buf_pos_frames_ =

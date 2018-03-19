@@ -134,7 +134,7 @@ void NetMediaPlayerNetProxy::HandleReceivedMessage(
       // Create a function that translates remote system time to local system
       // time. We assume that both clocks run at the same rate (hence 1, 1).
       remote_to_local_ = TimelineFunction(
-          message->time_check_response_->responder_time_, local_then, 1, 1);
+          local_then, message->time_check_response_->responder_time_, 1, 1);
     } break;
 
     case NetMediaPlayerOutMessageType::kStatusNotification:

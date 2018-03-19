@@ -189,8 +189,8 @@ void TimelineControlPoint::SetTimelineTransformLocked(
 
   // Queue up the new pending change.
   pending_timeline_function_ = TimelineFunction(
-      reference_time, subject_time, timeline_transform->reference_delta,
-      timeline_transform->subject_delta);
+      subject_time, reference_time, timeline_transform->subject_delta,
+      timeline_transform->reference_delta);
 
   if (progress_started_callback_ && !was_progressing && ProgressingInternal()) {
     task_runner_->PostTask([this]() {
@@ -217,7 +217,7 @@ void TimelineControlPoint::ApplyPendingChanges(int64_t reference_time) {
 
 void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
   pending_timeline_function_ =
-      TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
+      TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 0, 1);
   if (set_timeline_transform_callback_) {
     SetTimelineTransformCallback callback = set_timeline_transform_callback_;
     set_timeline_transform_callback_ = nullptr;

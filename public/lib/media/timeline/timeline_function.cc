@@ -13,8 +13,8 @@ namespace media {
 
 // static
 int64_t TimelineFunction::Apply(
-    int64_t reference_time,
     int64_t subject_time,
+    int64_t reference_time,
     TimelineRate rate,  // subject_delta / reference_delta
     int64_t reference_input) {
   return rate.Scale(reference_input - reference_time) + subject_time;
@@ -29,22 +29,22 @@ TimelineFunction TimelineFunction::Compose(const TimelineFunction& bc,
   // range and accuracy (in some cases) for simplicity. It should be replaced
   // with something that provides maximum range and accuracy without adding a
   // lot of runtime cost.
-  return TimelineFunction(ab.reference_time(), bc.Apply(ab.subject_time()),
+  return TimelineFunction(bc.Apply(ab.subject_time()), ab.reference_time(),
                           TimelineRate::Product(ab.rate(), bc.rate(), exact));
 }
 
 TimelineFunction::TimelineFunction(const TimelineTransformPtr& from)
-    : reference_time_(from ? from->reference_time : 0),
-      subject_time_(from ? from->subject_time : 0),
+    : subject_time_(from ? from->subject_time : 0),
+      reference_time_(from ? from->reference_time : 0),
       rate_(from ? TimelineRate(from->subject_delta, from->reference_delta)
                  : TimelineRate()) {}
 
 TimelineFunction::operator TimelineTransformPtr() const {
   TimelineTransformPtr result = TimelineTransform::New();
-  result->reference_time = reference_time();
   result->subject_time = subject_time();
-  result->reference_delta = reference_delta();
+  result->reference_time = reference_time();
   result->subject_delta = subject_delta();
+  result->reference_delta = reference_delta();
   return result;
 }
 

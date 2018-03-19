@@ -246,7 +246,7 @@ class LpcmOutputStream : public LpcmPayload::Owner {
 
   // Starts the audio renderer timeline.
   void Start(const TimelineFunction& timeline =
-                 TimelineFunction(kUnspecifiedTime, 0, 1, 1));
+                 TimelineFunction(0, kUnspecifiedTime, 1, 1));
 
   // Restarts a stream that has ended.
   void Restart();

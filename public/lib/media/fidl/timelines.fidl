@@ -27,13 +27,6 @@ const int64 kMaxTime = 0x7ffffffffffffffe;
 //   (s - subject_time) * reference_delta / subject_delta + reference_time
 //
 struct TimelineTransform {
-  // A value from the reference timeline that correlates to subject_time.
-  // When TimelineTransform is used in TimelineConsumer.SetTimelineTransform,
-  // reference_time is also the effective time at which the transform should
-  // be applied. In that case, it may be kUnspecifiedTime, to indicate that the
-  // transform should be applied as soon as possible.
-  int64 reference_time = 0;
-
   // A value from the subject timeline that correlates to reference_time. When
   // TimelineTransform is used in TimelineConsumer.SetTimelineTransform,
   // subject_time may be kUnspecifiedTime to indicate that the transition
@@ -44,12 +37,19 @@ struct TimelineTransform {
   // specified.
   int64 subject_time = 0;
 
-  // The change in the reference timeline corresponding to subject_delta.
-  // Cannot be zero.
-  uint32 reference_delta = 1;
+  // A value from the reference timeline that correlates to subject_time.
+  // When TimelineTransform is used in TimelineConsumer.SetTimelineTransform,
+  // reference_time is also the effective time at which the transform should
+  // be applied. In that case, it may be kUnspecifiedTime, to indicate that the
+  // transform should be applied as soon as possible.
+  int64 reference_time = 0;
 
   // The change in the subject timeline corresponding to reference_delta.
   uint32 subject_delta = 0;
+
+  // The change in the reference timeline corresponding to subject_delta.
+  // Cannot be zero.
+  uint32 reference_delta = 1;
 };
 
 // A push-mode consumer of timeline updates.

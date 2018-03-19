@@ -287,7 +287,7 @@ void FxProcessor::Startup() {
   }
 
   clock_mono_to_input_wr_ptr_ = media::TimelineFunction(
-      input_->start_time(), -fifo_frames, frames_per_nsec);
+      -fifo_frames, input_->start_time(), frames_per_nsec);
 
   // Compute the time at which the input will have a chunk of data to process,
   // and schedule a DPC for then.

@@ -16,25 +16,25 @@ namespace media {
 // translates reference timeline values into subject timeline values (the
 // 'subject' being the timeline that's represented by the function). The
 // representation is in point-slope form. The point is represented as two
-// int64_t time values (reference_time, subject_time), and the slope (rate) is
+// int64_t time values (subject_time, reference_time), and the slope (rate) is
 // represented as a TimelineRate, the ratio of two uint32_t values
 // (subject_delta / reference_delta).
 class TimelineFunction {
  public:
   // Applies a timeline function.
-  static int64_t Apply(int64_t reference_time,
-                       int64_t subject_time,
+  static int64_t Apply(int64_t subject_time,
+                       int64_t reference_time,
                        TimelineRate rate,  // subject_delta / reference_delta
                        int64_t reference_input);
 
   // Applies the inverse of a timeline function.
   static int64_t ApplyInverse(
-      int64_t reference_time,
       int64_t subject_time,
+      int64_t reference_time,
       TimelineRate rate,  // subject_delta / reference_delta
       int64_t subject_input) {
     FXL_DCHECK(rate.reference_delta() != 0u);
-    return Apply(subject_time, reference_time, rate.Inverse(), subject_input);
+    return Apply(reference_time, subject_time, rate.Inverse(), subject_input);
   }
 
   // Composes two timeline functions B->C and A->B producing A->C. If exact is
@@ -43,26 +43,25 @@ class TimelineFunction {
                                   const TimelineFunction& ab,
                                   bool exact = true);
 
-  TimelineFunction() : reference_time_(0), subject_time_(0) {}
+  TimelineFunction() : subject_time_(0), reference_time_(0) {}
 
-  TimelineFunction(int64_t reference_time,
-                   int64_t subject_time,
-                   uint32_t reference_delta,
-                   uint32_t subject_delta)
-      : reference_time_(reference_time),
-        subject_time_(subject_time),
+  TimelineFunction(int64_t subject_time,
+                   int64_t reference_time,
+                   uint32_t subject_delta,
+                   uint32_t reference_delta)
+      : subject_time_(subject_time),
+        reference_time_(reference_time),
         rate_(subject_delta, reference_delta) {}
 
-  TimelineFunction(int64_t reference_time,
-                   int64_t subject_time,
-                   TimelineRate rate)  // subject_delta / reference_delta
-      : reference_time_(reference_time),
-        subject_time_(subject_time),
+  TimelineFunction(int64_t subject_time,
+                   int64_t reference_time,
+                   TimelineRate rate)
+      : subject_time_(subject_time),
+        reference_time_(reference_time),
         rate_(rate) {}
 
-  explicit TimelineFunction(
-      TimelineRate rate)  // subject_delta / reference_delta
-      : reference_time_(0), subject_time_(0), rate_(rate) {}
+  explicit TimelineFunction(TimelineRate rate)
+      : subject_time_(0), reference_time_(0), rate_(rate) {}
 
   explicit TimelineFunction(const TimelineTransformPtr& from);
 
@@ -73,14 +72,14 @@ class TimelineFunction {
 
   // Applies the function. Returns TimelineRate::kOverflow on overflow.
   int64_t Apply(int64_t reference_input) const {
-    return Apply(reference_time_, subject_time_, rate_, reference_input);
+    return Apply(subject_time_, reference_time_, rate_, reference_input);
   }
 
   // Applies the inverse of the function. Returns TimelineRate::kOverflow on
   // overflow.
   int64_t ApplyInverse(int64_t subject_input) const {
     FXL_DCHECK(rate_.reference_delta() != 0u);
-    return ApplyInverse(reference_time_, subject_time_, rate_, subject_input);
+    return ApplyInverse(subject_time_, reference_time_, rate_, subject_input);
   }
 
   // Applies the function.  Returns TimelineRate::kOverflow on overflow.
@@ -91,30 +90,30 @@ class TimelineFunction {
   // Returns a timeline function that is the inverse if this timeline function.
   TimelineFunction Inverse() const {
     FXL_DCHECK(rate_.reference_delta() != 0u);
-    return TimelineFunction(subject_time_, reference_time_, rate_.Inverse());
+    return TimelineFunction(reference_time_, subject_time_, rate_.Inverse());
   }
-
-  int64_t reference_time() const { return reference_time_; }
 
   int64_t subject_time() const { return subject_time_; }
 
-  const TimelineRate& rate() const { return rate_; }
+  int64_t reference_time() const { return reference_time_; }
 
-  uint32_t reference_delta() const { return rate_.reference_delta(); }
+  const TimelineRate& rate() const { return rate_; }
 
   uint32_t subject_delta() const { return rate_.subject_delta(); }
 
+  uint32_t reference_delta() const { return rate_.reference_delta(); }
+
  private:
-  int64_t reference_time_;
   int64_t subject_time_;
+  int64_t reference_time_;
   TimelineRate rate_;  // subject_delta / reference_delta
 };
 
 // Tests two timeline functions for equality. Equality requires equal basis
 // values.
 inline bool operator==(const TimelineFunction& a, const TimelineFunction& b) {
-  return a.reference_time() == b.reference_time() &&
-         a.subject_time() == b.subject_time() && a.rate() == b.rate();
+  return a.subject_time() == b.subject_time() &&
+         a.reference_time() == b.reference_time() && a.rate() == b.rate();
 }
 
 // Tests two timeline functions for inequality. Equality requires equal basis

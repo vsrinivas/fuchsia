@@ -780,8 +780,8 @@ zx_status_t AudioDriver::ProcessStartResponse(
   // Now that we have started up, compute the transformation from clock
   // monotonic to the ring buffer position (in bytes) Then update the ring
   // buffer state's transformation and bump the generation counter.
-  TimelineFunction func(resp.start_time, 0, ZX_SEC(1),
-                        frames_per_sec_ * bytes_per_frame_);
+  TimelineFunction func(0, resp.start_time, frames_per_sec_ * bytes_per_frame_,
+                        ZX_SEC(1));
   {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
     FXL_DCHECK(!clock_mono_to_ring_pos_bytes_.invertable());
