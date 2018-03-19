@@ -64,6 +64,7 @@ TypeShape CStructTypeShape(std::vector<FieldShape*>* fields) {
         field->SetOffset(size);
         size += typeshape.Size();
     }
+    size = AlignTo(size, alignment);
 
     return TypeShape(size, alignment);
 }
