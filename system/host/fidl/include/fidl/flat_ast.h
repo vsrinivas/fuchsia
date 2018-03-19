@@ -68,6 +68,9 @@ struct Name {
     Name()
         : name_(SourceLocation()) {}
 
+    Name(const Library* library, std::vector<SourceLocation> nested_decls, SourceLocation name)
+        : library_(library), nested_decls_(std::move(nested_decls)), name_(name) {}
+
     explicit Name(SourceLocation name)
         : name_(name) {}
 
@@ -415,12 +418,17 @@ struct Union : public Decl {
 
 class Library {
 public:
+    explicit Library(const std::map<StringView, std::unique_ptr<Library>>* dependencies);
+
     bool ConsumeFile(std::unique_ptr<raw::File> file);
     bool Compile();
 
     StringView name() const { return library_name_.data(); }
 
 private:
+    bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
+                                   Name* name_out);
+
     bool ParseSize(std::unique_ptr<raw::Constant> raw_constant, Size* out_size);
 
     bool RegisterDecl(Decl* decl);
@@ -437,11 +445,11 @@ private:
     // declaration. For example, if |type| refers to int32 or if it is
     // a struct pointer, this will return null. If it is a struct, it
     // will return a pointer to the declaration of the type.
-    Decl* LookupType(const flat::Type* type);
+    Decl* LookupType(const flat::Type* type) const;
 
     // Returns nullptr when the |name| cannot be resolved to a
     // Name. Otherwise it returns the declaration.
-    Decl* LookupType(const Name& name);
+    Decl* LookupType(const Name& name) const;
 
     std::set<Decl*> DeclDependencies(Decl* decl);
 
@@ -467,7 +475,7 @@ public:
     // (e.g. array indexes) want to check the value but print the
     // constant, say.
     template <typename IntType>
-    bool ParseIntegerLiteral(const raw::NumericLiteral* literal, IntType* out_value) {
+    bool ParseIntegerLiteral(const raw::NumericLiteral* literal, IntType* out_value) const {
         if (!literal) {
             return false;
         }
@@ -499,7 +507,7 @@ public:
     }
 
     template <typename IntType>
-    bool ParseIntegerConstant(const raw::Constant* constant, IntType* out_value) {
+    bool ParseIntegerConstant(const raw::Constant* constant, IntType* out_value) const {
         if (!constant) {
             return false;
         }
@@ -533,6 +541,8 @@ public:
         }
         }
     }
+
+    const std::map<StringView, std::unique_ptr<Library>>* dependencies_;
 
     SourceLocation library_name_;
 

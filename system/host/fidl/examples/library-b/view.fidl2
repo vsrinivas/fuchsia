@@ -1,0 +1,7 @@
+library view;
+
+using point;
+
+interface View {
+    1: View(point.Point p);
+};

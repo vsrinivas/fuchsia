@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -230,42 +231,48 @@ int main(int argc, char* argv[]) {
 
     fidl::IdentifierTable identifier_table;
     fidl::ErrorReporter error_reporter;
-    std::vector<fidl::flat::Library> libraries;
+    std::map<fidl::StringView, std::unique_ptr<fidl::flat::Library>> compiled_libraries;
+    const fidl::flat::Library* final_library = nullptr;
     for (const auto& source_manager : source_managers) {
-        libraries.emplace_back();
+        auto library = std::make_unique<fidl::flat::Library>(&compiled_libraries);
         for (const auto& source_file : source_manager.sources()) {
-            if (!Parse(source_file, &identifier_table, &error_reporter, &libraries.back())) {
+            if (!Parse(source_file, &identifier_table, &error_reporter, library.get())) {
                 return 1;
             }
         }
-    }
-    for (auto& library : libraries) {
-        if (!library.Compile()) {
+        if (!library->Compile()) {
             fprintf(stderr, "flat::Library resolution failed!\n");
             return 1;
+        }
+        final_library = library.get();
+        auto name_and_library = std::make_pair(library->name(), std::move(library));
+        auto iter = compiled_libraries.insert(std::move(name_and_library));
+        if (!iter.second) {
+            auto name = iter.first->first;
+            fprintf(stderr, "Mulitple libraries with the same name: '%.*s'",
+                    static_cast<int>(name.size()), name.data());
         }
     }
 
     // We recompile dependencies, and only emit output for the final
     // library.
-    fidl::flat::Library* library = &libraries.back();
     for (auto& output : outputs) {
         auto& behavior = output.first;
         auto& output_file = output.second;
 
         switch (behavior) {
         case Behavior::CHeader: {
-            fidl::CGenerator generator(library);
+            fidl::CGenerator generator(final_library);
             Generate(&generator, std::move(output_file));
             break;
         }
         case Behavior::Tables: {
-            fidl::TablesGenerator generator(library);
+            fidl::TablesGenerator generator(final_library);
             Generate(&generator, std::move(output_file));
             break;
         }
         case Behavior::JSON: {
-            fidl::JSONGenerator generator(library);
+            fidl::JSONGenerator generator(final_library);
             Generate(&generator, std::move(output_file));
             break;
         }

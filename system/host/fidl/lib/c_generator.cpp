@@ -52,7 +52,7 @@ void EmitBlank(std::ostream* file) {
 // Various computational helper routines.
 
 void EnumValue(types::PrimitiveSubtype type, const raw::Constant* constant,
-               flat::Library* library, std::string* out_value) {
+               const flat::Library* library, std::string* out_value) {
     // TODO(kulakowski) Move this into library resolution.
 
     std::ostringstream member_value;
@@ -145,7 +145,7 @@ void EnumValue(types::PrimitiveSubtype type, const raw::Constant* constant,
     *out_value = member_value.str();
 }
 
-std::vector<uint32_t> ArrayCounts(flat::Library* library, const flat::Type* type) {
+std::vector<uint32_t> ArrayCounts(const flat::Library* library, const flat::Type* type) {
     std::vector<uint32_t> array_counts;
     for (;;) {
         switch (type->kind) {
@@ -161,14 +161,14 @@ std::vector<uint32_t> ArrayCounts(flat::Library* library, const flat::Type* type
     }
 }
 
-CGenerator::Member CreateMember(flat::Library* library, const flat::Type* type, StringView name) {
+CGenerator::Member CreateMember(const flat::Library* library, const flat::Type* type, StringView name) {
     auto type_name = NameFlatCType(type);
     std::vector<uint32_t> array_counts = ArrayCounts(library, type);
     return CGenerator::Member{type_name, name, std::move(array_counts)};
 }
 
 std::vector<CGenerator::Member>
-GenerateMembers(flat::Library* library, const std::vector<flat::Union::Member>& union_members) {
+GenerateMembers(const flat::Library* library, const std::vector<flat::Union::Member>& union_members) {
     std::vector<CGenerator::Member> members;
     members.reserve(union_members.size());
     for (const auto& union_member : union_members) {

@@ -140,6 +140,37 @@ TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
 // a struct declaration inside an interface out to the top level and
 // so on.
 
+Library::Library(const std::map<StringView, std::unique_ptr<Library>>* dependencies)
+    : dependencies_(dependencies) {
+    for (const auto& dep : *dependencies_) {
+        const std::unique_ptr<Library>& library = dep.second;
+        const auto& declarations = library->declarations_;
+        declarations_.insert(declarations.begin(), declarations.end());
+    }
+}
+
+bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
+                                        Name* name_out) {
+    if (compound_identifier->components.size() == 1) {
+        *name_out = Name(compound_identifier->components[0]->location);
+        return true;
+    }
+    if (compound_identifier->components.size() == 2) {
+        const auto& components = compound_identifier->components;
+        auto library_name = components[0]->location.data();
+        auto iter = dependencies_->find(library_name);
+        if (iter == dependencies_->end()) {
+            return false;
+        }
+        const std::unique_ptr<Library>& library = iter->second;
+        auto decl_name = components[1]->location;
+        *name_out = Name(library.get(), {}, decl_name);
+        return true;
+    }
+    // TODO(TO-701) Handle longer names.
+    return false;
+}
+
 bool Library::ParseSize(std::unique_ptr<raw::Constant> raw_constant, Size* out_size) {
     uint32_t value;
     if (!ParseIntegerConstant(raw_constant.get(), &value)) {
@@ -201,8 +232,10 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
     }
     case raw::Type::Kind::RequestHandle: {
         auto request_type = static_cast<raw::RequestHandleType*>(raw_type.get());
-        // TODO(TO-701) Handle longer names.
-        Name name(request_type->identifier->components[0]->location);
+        Name name;
+        if (!CompileCompoundIdentifier(request_type->identifier.get(), &name)) {
+            return false;
+        }
         *out_type = std::make_unique<RequestHandleType>(std::move(name), std::move(request_type->nullability));
         break;
     }
@@ -213,8 +246,10 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
     }
     case raw::Type::Kind::Identifier: {
         auto identifier_type = static_cast<raw::IdentifierType*>(raw_type.get());
-        // TODO(TO-701) Handle longer names.
-        Name name(identifier_type->identifier->components[0]->location);
+        Name name;
+        if (!CompileCompoundIdentifier(identifier_type->identifier.get(), &name)) {
+            return false;
+        }
         *out_type = std::make_unique<IdentifierType>(std::move(name), identifier_type->nullability);
         break;
     }
@@ -411,7 +446,7 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
 // Library resolution is concerned with resolving identifiers to their
 // declarations, and with computing type sizes and alignments.
 
-Decl* Library::LookupType(const flat::Type* type) {
+Decl* Library::LookupType(const flat::Type* type) const {
     for (;;) {
         switch (type->kind) {
         case flat::Type::Kind::String:
@@ -438,7 +473,7 @@ Decl* Library::LookupType(const flat::Type* type) {
     }
 }
 
-Decl* Library::LookupType(const Name& name) {
+Decl* Library::LookupType(const Name& name) const {
     auto iter = declarations_.find(&name);
     if (iter == declarations_.end()) {
         return nullptr;

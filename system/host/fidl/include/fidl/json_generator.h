@@ -27,7 +27,7 @@ namespace fidl {
 
 class JSONGenerator {
 public:
-    explicit JSONGenerator(flat::Library* library)
+    explicit JSONGenerator(const flat::Library* library)
         : library_(library) {}
 
     ~JSONGenerator() = default;
@@ -93,7 +93,7 @@ private:
 
     void GenerateDeclarationMapEntry(int count, const flat::Name& name, StringView decl);
 
-    flat::Library* library_;
+    const flat::Library* library_;
     int indent_level_;
     std::ostringstream json_file_;
 };

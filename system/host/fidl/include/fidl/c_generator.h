@@ -26,7 +26,7 @@ namespace fidl {
 
 class CGenerator {
 public:
-    explicit CGenerator(flat::Library* library)
+    explicit CGenerator(const flat::Library* library)
         : library_(library) {}
 
     ~CGenerator() = default;
@@ -106,7 +106,7 @@ private:
     void ProduceStructDeclaration(const NamedStruct& named_struct);
     void ProduceUnionDeclaration(const NamedUnion& named_union);
 
-    flat::Library* library_;
+    const flat::Library* library_;
     std::ostringstream header_file_;
 };
 
