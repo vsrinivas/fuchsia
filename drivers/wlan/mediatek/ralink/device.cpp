@@ -4032,7 +4032,7 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
 
     size_t mpdu_len = GetMpduLen(*wlan_pkt);
     txwi1.set_mpdu_total_byte_count(mpdu_len);
-    txwi1.set_tx_packet_id(10);
+    txwi1.set_tx_packet_id(0);
 
     Txwi2& txwi2 = aggr->txwi2;
     txwi2.set_iv(0);

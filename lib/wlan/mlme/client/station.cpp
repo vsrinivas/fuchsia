@@ -760,13 +760,8 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
     wlan_packet->set_peer(Packet::Peer::kWlan);
     auto hdr = wlan_packet->mut_field<DataFrameHeader>(0);
 
-    // TODO(porce): Investigate. When this should be the case
-    // TP-Link 2GHz does not require QoS ctrl field
-    // whiles its 5GHz does require.
-    // has_qos_ctrl = txinfo.cbw != CBW20;
-    bool has_qos_ctrl = false;
-    bool has_ht_ctrl = false;  // TODO(porce): make this dynamic
-
+    bool has_qos_ctrl = IsQosReady();
+    bool has_ht_ctrl = false;
     // Set header
     std::memset(hdr, 0, kDataFrameHdrLenMax);
     hdr->fc.set_type(FrameType::kData);
@@ -784,8 +779,6 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
     hdr->addr1 = common::MacAddr(bss_->bssid.data());
     hdr->addr2 = eth->src;
     hdr->addr3 = eth->dest;
-
-    SetSeqNo(hdr, &seq_);
 
     // TODO(porce): Construct addr4 field
 
@@ -811,6 +804,8 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
 
     // TODO(porce): Construct htc_order field
 
+    SetSeqNo(hdr, &seq_);
+
     auto llc = wlan_packet->mut_field<LlcHeader>(hdr->len());
     llc->dsap = kLlcSnapExtension;
     llc->ssap = kLlcSnapExtension;
@@ -827,10 +822,11 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
         return status;
     }
 
-    finspect("Outbound data frame: len %zu\n", wlan_packet->len());
+    finspect("Outbound data frame: len %zu, hdr_len:%u body_len:%zu frame_len:%zu\n",
+             wlan_packet->len(), hdr->len(), frame.body_len, frame_len);
     finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
     finspect("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
-    finspect("  payload : %s\n", debug::HexDump(llc->payload, frame.body_len).c_str());
+    finspect("  frame   : %s\n", debug::HexDump(wlan_packet->data(), frame_len).c_str());
 
     wlan_packet->CopyCtrlFrom(txinfo);
 
@@ -1180,6 +1176,16 @@ bool Station::IsCbw40RxReady() const {
 bool Station::IsCbw40TxReady() const {
     // TODO(porce): Test capabilites and configurations of the client and its BSS.
     // TODO(porce): Ralink dependency on BlockAck, AMPDU handling
+    return false;
+}
+
+bool Station::IsQosReady() const {
+    // TODO(NET-567,NET-599): Determine for each outbound data frame,
+    // given the result of the dynamic capability negotiation, data frame
+    // classification, and QoS policy.
+
+    // Aruba / Ubiquiti are confirmed to be compatible with QoS field for the BlockAck session,
+    // independently of 40MHz operation.
     return false;
 }
 
