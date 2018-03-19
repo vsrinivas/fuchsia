@@ -8,6 +8,8 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <hypervisor/ktrace.h>
+#include <lib/ktrace.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/types.h>
 
@@ -22,7 +24,9 @@ zx_status_t BlockingPortAllocator::Init() {
 }
 
 PortPacket* BlockingPortAllocator::AllocBlocking() {
+    ktrace_vcpu(TAG_VCPU_BLOCK, VCPU_PORT);
     zx_status_t status = semaphore_.Wait(ZX_TIME_INFINITE, nullptr);
+    ktrace_vcpu(TAG_VCPU_UNBLOCK, VCPU_PORT);
     if (status != ZX_OK)
         return nullptr;
     return Alloc();

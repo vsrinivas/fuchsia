@@ -13,6 +13,7 @@
 #include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/ktrace.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <lib/ktrace.h>
@@ -189,12 +190,10 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
                 curr_hcr |= HCR_EL2_VI;
             }
 
-            cpu_num_t cpu_num = arch_curr_cpu_num();
-            ktrace_tiny(TAG_VCPU_ENTER, cpu_num);
+            ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
             running_.store(true);
             status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), curr_hcr);
             running_.store(false);
-            ktrace_tiny(TAG_VCPU_EXIT, cpu_num);
 
             gich_active_interrupts(&gich_state_.active_interrupts);
         }
@@ -202,11 +201,13 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             // We received a physical interrupt. If it was due to the thread
             // being killed, then we should exit with an error, otherwise return
             // to the guest.
-            status = get_current_thread()->signals & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
+            ktrace_vcpu(TAG_VCPU_EXIT, VCPU_PHYSICAL_INTERRUPT);
+            status = thread_->signals & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
         } else if (status == ZX_OK) {
             status = vmexit_handler(&hcr_, guest_state, &gich_state_, guest_->AddressSpace(),
                                     guest_->Traps(), packet);
         } else {
+            ktrace_vcpu(TAG_VCPU_EXIT, VCPU_FAILURE);
             dprintf(INFO, "VCPU resume failed: %d\n", status);
         }
     } while (status == ZX_OK);

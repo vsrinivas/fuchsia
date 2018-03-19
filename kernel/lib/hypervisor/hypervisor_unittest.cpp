@@ -16,7 +16,7 @@
 #include <unittest.h>
 
 static bool hypervisor_supported() {
-#ifdef ARCH_ARM64
+#if ARCH_ARM64
     if (arm64_get_boot_el() < 2) {
         unittest_printf("Hypervisor not supported\n");
         return false;
@@ -49,7 +49,7 @@ static zx_status_t create_vmo(size_t vmo_size, fbl::RefPtr<VmObject>* vmo_out) {
 
 static zx_status_t create_gpas(fbl::RefPtr<VmObject> guest_phys_mem,
                                fbl::unique_ptr<hypervisor::GuestPhysicalAddressSpace>* gpas) {
-#ifdef ARCH_ARM64
+#if ARCH_ARM64
     return hypervisor::GuestPhysicalAddressSpace::Create(guest_phys_mem, 1 /* vmid */, gpas);
 #elif ARCH_X86
     return hypervisor::GuestPhysicalAddressSpace::Create(guest_phys_mem, gpas);

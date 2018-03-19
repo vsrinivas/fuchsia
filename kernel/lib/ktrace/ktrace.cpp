@@ -11,17 +11,16 @@
 
 #include <arch/ops.h>
 #include <arch/user_copy.h>
+#include <hypervisor/ktrace.h>
 #include <kernel/cmdline.h>
-#include <vm/vm_aspace.h>
 #include <lib/ktrace.h>
 #include <lk/init.h>
-#include <zircon/thread_annotations.h>
 #include <object/thread_dispatcher.h>
+#include <vm/vm_aspace.h>
+#include <zircon/thread_annotations.h>
 
 #define ktrace_timestamp() current_ticks();
 #define ktrace_ticks_per_ms() (ticks_per_second() / 1000)
-
-static void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always);
 
 // Generated struct that has the syscall index and name.
 static struct ktrace_syscall_info {
@@ -156,6 +155,7 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
         atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
         ktrace_report_syscalls(kt_syscall_info);
         ktrace_report_probes();
+        ktrace_report_vcpu_meta();
         break;
     case KTRACE_ACTION_NEW_PROBE: {
         fbl::AutoLock lock(&probe_list_lock);
@@ -235,6 +235,9 @@ void ktrace_init(unsigned level) {
     // report names of existing threads
     ktrace_report_live_threads();
 
+    // report metadata for VCPUs
+    ktrace_report_vcpu_meta();
+
     // Report an event for "tracing is all set up now".  This also
     // serves to ensure that there will be at least one static probe
     // entry so that the __{start,stop}_ktrace_probe symbols above
@@ -279,7 +282,7 @@ void* ktrace_open(uint32_t tag) {
     return hdr + 1;
 }
 
-static void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always) {
+void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always) {
     ktrace_state_t* ks = &KTRACE_STATE;
     if ((tag & atomic_load(&ks->grpmask)) || always) {
         uint32_t len = static_cast<uint32_t>(strnlen(name, ZX_MAX_NAME_LEN - 1));
@@ -300,10 +303,6 @@ static void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char*
             rec->name[len] = 0;
         }
     }
-}
-
-void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* name) {
-    ktrace_name_etc(tag, id, arg, name, false);
 }
 
 LK_INIT_HOOK(ktrace, ktrace_init, LK_INIT_LEVEL_USER);

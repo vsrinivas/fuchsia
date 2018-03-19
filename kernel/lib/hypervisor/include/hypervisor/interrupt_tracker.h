@@ -8,9 +8,11 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
+#include <hypervisor/ktrace.h>
 #include <hypervisor/state_invalidator.h>
 #include <kernel/auto_lock.h>
 #include <kernel/event.h>
+#include <lib/ktrace.h>
 
 namespace hypervisor {
 
@@ -79,12 +81,15 @@ public:
         if (invalidator != nullptr) {
             invalidator->Invalidate();
         }
+        ktrace_vcpu(TAG_VCPU_BLOCK, VCPU_INTERRUPT);
         do {
             zx_status_t status = event_wait_deadline(&event_, ZX_TIME_INFINITE, true);
             if (status != ZX_OK) {
+                ktrace_vcpu(TAG_VCPU_UNBLOCK, VCPU_INTERRUPT);
                 return ZX_ERR_CANCELED;
             }
         } while (!Pending());
+        ktrace_vcpu(TAG_VCPU_UNBLOCK, VCPU_INTERRUPT);
         return ZX_OK;
     }
 

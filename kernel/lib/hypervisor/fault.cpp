@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "hypervisor/fault.h"
+#include <hypervisor/fault.h>
 
 zx_status_t vmm_guest_page_fault_handler(vaddr_t guest_paddr, uint flags,
                                          fbl::RefPtr<VmAspace> paspace) {

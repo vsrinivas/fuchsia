@@ -18,7 +18,7 @@ struct GichState;
 // clang-format off
 
 // Exception class of an exception syndrome.
-enum ExceptionClass : uint8_t {
+enum class ExceptionClass : uint8_t {
     WFI_WFE_INSTRUCTION = 0b000001,
     SMC_INSTRUCTION     = 0b010111,
     SYSTEM_INSTRUCTION  = 0b011000,
