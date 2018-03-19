@@ -55,46 +55,46 @@ class ModuleContextImpl : ModuleContext {
 
  private:
   // |ModuleContext|
-  void GetLink(const f1dl::String& name,
+  void GetLink(const f1dl::StringPtr& name,
                f1dl::InterfaceRequest<Link> request) override;
   // |ModuleContext|
   void StartModuleDeprecated(
-      const f1dl::String& name, const f1dl::String& query,
-      const f1dl::String& link_name,
+      const f1dl::StringPtr& name, const f1dl::StringPtr& query,
+      const f1dl::StringPtr& link_name,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   // |ModuleContext|
   void EmbedModule(
-      const f1dl::String& name, DaisyPtr daisy,
+      const f1dl::StringPtr& name, DaisyPtr daisy,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner,
       const EmbedModuleCallback& callback) override;
   // |ModuleContext|
   void StartModuleInShellDeprecated(
-      const f1dl::String& name, const f1dl::String& query,
-      const f1dl::String& link_name,
+      const f1dl::StringPtr& name, const f1dl::StringPtr& query,
+      const f1dl::StringPtr& link_name,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation, bool focus) override;
   // |ModuleContext|
   void StartModule(
-      const f1dl::String& name, DaisyPtr daisy,
+      const f1dl::StringPtr& name, DaisyPtr daisy,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
       const StartModuleCallback& callback) override;
   // |ModuleContext|
   void StartContainerInShell(
-      const f1dl::String& name,
-      f1dl::Array<ContainerLayoutPtr> layout,
-      f1dl::Array<ContainerRelationEntryPtr> relationships,
-      f1dl::Array<ContainerNodePtr> nodes) override;
+      const f1dl::StringPtr& name,
+      f1dl::VectorPtr<ContainerLayoutPtr> layout,
+      f1dl::VectorPtr<ContainerRelationEntryPtr> relationships,
+      f1dl::VectorPtr<ContainerNodePtr> nodes) override;
   // |ModuleContext|
   void EmbedModuleDeprecated(
-      const f1dl::String& name, const f1dl::String& query,
-      const f1dl::String& link_name,
+      const f1dl::StringPtr& name, const f1dl::StringPtr& query,
+      const f1dl::StringPtr& link_name,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,

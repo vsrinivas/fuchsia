@@ -13,7 +13,7 @@ KronkRankingFeature::~KronkRankingFeature() = default;
 double KronkRankingFeature::ComputeFeatureInternal(
     const UserInput& query,
     const RankedSuggestion& suggestion,
-    const f1dl::Array<ContextValuePtr>& context_update_values) {
+    const f1dl::VectorPtr<ContextValuePtr>& context_update_values) {
   if (suggestion.prototype->source_url.find("kronk") != std::string::npos) {
     return kMaxConfidence;
   } else {

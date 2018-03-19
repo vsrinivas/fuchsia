@@ -22,7 +22,7 @@ class ModPairRankingFeature : public RankingFeature {
  protected:
   double ComputeFeatureInternal(
       const UserInput& query, const RankedSuggestion& suggestion,
-      const f1dl::Array<ContextValuePtr>& context_update_values) override;
+      const f1dl::VectorPtr<ContextValuePtr>& context_update_values) override;
 
   ContextSelectorPtr CreateContextSelectorInternal() override;
 

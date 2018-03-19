@@ -23,8 +23,8 @@ void FakeCloudProvider::GetDeviceSet(
 }
 
 void FakeCloudProvider::GetPageCloud(
-    f1dl::Array<uint8_t> app_id,
-    f1dl::Array<uint8_t> page_id,
+    f1dl::VectorPtr<uint8_t> app_id,
+    f1dl::VectorPtr<uint8_t> page_id,
     f1dl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
     const GetPageCloudCallback& callback) {
   const std::string key =

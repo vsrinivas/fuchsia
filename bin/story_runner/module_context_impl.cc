@@ -37,7 +37,7 @@ ModuleContextImpl::ModuleContextImpl(
 
 ModuleContextImpl::~ModuleContextImpl() {}
 
-void ModuleContextImpl::GetLink(const f1dl::String& name,
+void ModuleContextImpl::GetLink(const f1dl::StringPtr& name,
                                 f1dl::InterfaceRequest<Link> request) {
   LinkPathPtr link_path;
   LinkImpl::ConnectionType connection_type{LinkImpl::ConnectionType::Secondary};
@@ -59,8 +59,8 @@ void ModuleContextImpl::GetLink(const f1dl::String& name,
 }
 
 void ModuleContextImpl::StartModuleDeprecated(
-    const f1dl::String& name, const f1dl::String& query,
-    const f1dl::String& link_name,
+    const f1dl::StringPtr& name, const f1dl::StringPtr& query,
+    const f1dl::StringPtr& link_name,
     f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) {
@@ -72,7 +72,7 @@ void ModuleContextImpl::StartModuleDeprecated(
 }
 
 void ModuleContextImpl::EmbedModule(
-    const f1dl::String& name, DaisyPtr daisy,
+    const f1dl::StringPtr& name, DaisyPtr daisy,
     f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner,
@@ -84,8 +84,8 @@ void ModuleContextImpl::EmbedModule(
 }
 
 void ModuleContextImpl::StartModuleInShellDeprecated(
-    const f1dl::String& name, const f1dl::String& query,
-    const f1dl::String& link_name,
+    const f1dl::StringPtr& name, const f1dl::StringPtr& query,
+    const f1dl::StringPtr& link_name,
     f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation, const bool focus) {
@@ -97,7 +97,7 @@ void ModuleContextImpl::StartModuleInShellDeprecated(
 }
 
 void ModuleContextImpl::StartModule(
-    const f1dl::String& name, DaisyPtr daisy,
+    const f1dl::StringPtr& name, DaisyPtr daisy,
     f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation, const StartModuleCallback& callback) {
@@ -108,18 +108,18 @@ void ModuleContextImpl::StartModule(
 }
 
 void ModuleContextImpl::StartContainerInShell(
-    const f1dl::String& name,
-    f1dl::Array<ContainerLayoutPtr> layout,
-    f1dl::Array<ContainerRelationEntryPtr> relationships,
-    f1dl::Array<ContainerNodePtr> nodes) {
+    const f1dl::StringPtr& name,
+    f1dl::VectorPtr<ContainerLayoutPtr> layout,
+    f1dl::VectorPtr<ContainerRelationEntryPtr> relationships,
+    f1dl::VectorPtr<ContainerNodePtr> nodes) {
   story_controller_impl_->StartContainerInShell(
       module_data_->module_path, name, std::move(layout),
       std::move(relationships), std::move(nodes));
 }
 
 void ModuleContextImpl::EmbedModuleDeprecated(
-    const f1dl::String& name, const f1dl::String& query,
-    const f1dl::String& link_name,
+    const f1dl::StringPtr& name, const f1dl::StringPtr& query,
+    const f1dl::StringPtr& link_name,
     f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
     f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,

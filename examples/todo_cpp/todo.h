@@ -20,7 +20,7 @@
 
 namespace todo {
 
-using Key = f1dl::Array<uint8_t>;
+using Key = f1dl::VectorPtr<uint8_t>;
 
 class TodoApp : public modular::Module,
                 public ledger::PageWatcher,
@@ -44,11 +44,11 @@ class TodoApp : public modular::Module,
 
   void List(ledger::PageSnapshotPtr snapshot);
 
-  void GetKeys(std::function<void(f1dl::Array<Key>)> callback);
+  void GetKeys(std::function<void(f1dl::VectorPtr<Key>)> callback);
 
   void AddNew();
 
-  void DeleteOne(f1dl::Array<Key> keys);
+  void DeleteOne(f1dl::VectorPtr<Key> keys);
 
   void Act();
 

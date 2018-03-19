@@ -134,7 +134,7 @@ class Settings {
 
  private:
   void ParseShellArgs(const std::string& value,
-                      f1dl::Array<f1dl::String>* args) {
+                      f1dl::VectorPtr<f1dl::StringPtr>* args) {
     bool escape = false;
     std::string arg;
     for (char i : value) {
@@ -166,8 +166,8 @@ class Settings {
   // Extract the test name using knowledge of how Modular structures its
   // command lines for testing.
   static std::string FindTestName(
-      const f1dl::String& user_shell,
-      const f1dl::Array<f1dl::String>& user_shell_args) {
+      const f1dl::StringPtr& user_shell,
+      const f1dl::VectorPtr<f1dl::StringPtr>& user_shell_args) {
     const std::string kRootModule = "--root_module";
     std::string result = user_shell;
 
@@ -347,7 +347,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
 
   // |AccountProviderContext|
   void GetAuthenticationContext(
-      const f1dl::String& account_id,
+      const f1dl::StringPtr& account_id,
       f1dl::InterfaceRequest<AuthenticationContext> request) override {
     device_shell_->GetAuthenticationContext(account_id, std::move(request));
   }

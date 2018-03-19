@@ -49,7 +49,7 @@ class DeleteEntryBenchmark {
   const size_t value_size_;
   component::ApplicationControllerPtr application_controller_;
   ledger::PagePtr page_;
-  std::vector<f1dl::Array<uint8_t>> keys_;
+  std::vector<f1dl::VectorPtr<uint8_t>> keys_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeleteEntryBenchmark);
 };

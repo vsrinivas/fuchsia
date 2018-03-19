@@ -22,25 +22,25 @@ class PageImpl : public Page {
   void GetId(const GetIdCallback& callback) override;
 
   void GetSnapshot(f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
-                   f1dl::Array<uint8_t> key_prefix,
+                   f1dl::VectorPtr<uint8_t> key_prefix,
                    f1dl::InterfaceHandle<PageWatcher> watcher,
                    const GetSnapshotCallback& callback) override;
 
-  void Put(f1dl::Array<uint8_t> key,
-           f1dl::Array<uint8_t> value,
+  void Put(f1dl::VectorPtr<uint8_t> key,
+           f1dl::VectorPtr<uint8_t> value,
            const PutCallback& callback) override;
 
-  void PutWithPriority(f1dl::Array<uint8_t> key,
-                       f1dl::Array<uint8_t> value,
+  void PutWithPriority(f1dl::VectorPtr<uint8_t> key,
+                       f1dl::VectorPtr<uint8_t> value,
                        Priority priority,
                        const PutWithPriorityCallback& callback) override;
 
-  void PutReference(f1dl::Array<uint8_t> key,
+  void PutReference(f1dl::VectorPtr<uint8_t> key,
                     ReferencePtr reference,
                     Priority priority,
                     const PutReferenceCallback& callback) override;
 
-  void Delete(f1dl::Array<uint8_t> key,
+  void Delete(f1dl::VectorPtr<uint8_t> key,
               const DeleteCallback& callback) override;
 
   void CreateReferenceFromSocket(

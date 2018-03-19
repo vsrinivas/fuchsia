@@ -82,7 +82,7 @@ DeviceSetImpl::DeviceSetImpl(
 
 DeviceSetImpl::~DeviceSetImpl() {}
 
-void DeviceSetImpl::CheckFingerprint(f1dl::Array<uint8_t> fingerprint,
+void DeviceSetImpl::CheckFingerprint(f1dl::VectorPtr<uint8_t> fingerprint,
                                      const CheckFingerprintCallback& callback) {
   auto request = google::firestore::v1beta1::GetDocumentRequest();
   request.set_name(
@@ -107,7 +107,7 @@ void DeviceSetImpl::CheckFingerprint(f1dl::Array<uint8_t> fingerprint,
       });
 }
 
-void DeviceSetImpl::SetFingerprint(f1dl::Array<uint8_t> fingerprint,
+void DeviceSetImpl::SetFingerprint(f1dl::VectorPtr<uint8_t> fingerprint,
                                    const SetFingerprintCallback& callback) {
   auto request = google::firestore::v1beta1::CreateDocumentRequest();
   request.set_parent(user_path_);
@@ -138,7 +138,7 @@ void DeviceSetImpl::SetFingerprint(f1dl::Array<uint8_t> fingerprint,
 }
 
 void DeviceSetImpl::SetWatcher(
-    f1dl::Array<uint8_t> fingerprint,
+    f1dl::VectorPtr<uint8_t> fingerprint,
     f1dl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
     const SetWatcherCallback& callback) {
   watcher_ = watcher.Bind();

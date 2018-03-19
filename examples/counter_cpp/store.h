@@ -74,7 +74,7 @@ class Store : modular::LinkWatcher {
 
  private:
   // |LinkWatcher|
-  void Notify(const f1dl::String& json) override;
+  void Notify(const f1dl::StringPtr& json) override;
 
   // Process an update from the Link and write it to our local copy.
   // The update is ignored if:

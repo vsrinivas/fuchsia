@@ -48,7 +48,7 @@ class DataSource {
 
   // Factory methods.
   static std::unique_ptr<DataSource> Create(std::string value);
-  static std::unique_ptr<DataSource> Create(f1dl::Array<uint8_t> value);
+  static std::unique_ptr<DataSource> Create(f1dl::VectorPtr<uint8_t> value);
   static std::unique_ptr<DataSource> Create(fsl::SizedVmo vmo);
   static std::unique_ptr<DataSource> Create(zx::socket socket, uint64_t size);
 

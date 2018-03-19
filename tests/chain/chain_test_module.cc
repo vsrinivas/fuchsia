@@ -37,12 +37,12 @@ class TestApp : public ModuleWatcher {
     // the resolution process to choose a compatible Module.
     // TODO(thatguy): We should be specifying type constraints when we create
     // the Link.
-    auto entity_data = f1dl::Array<TypeToDataEntryPtr>::New(1);
+    auto entity_data = f1dl::VectorPtr<TypeToDataEntryPtr>::New(1);
     entity_data->at(0) = TypeToDataEntry::New();
     entity_data->at(0)->type = "myType";
     entity_data->at(0)->data = "1337";
     component_context_->CreateEntityWithData(
-        std::move(entity_data), [this](const f1dl::String& reference) {
+        std::move(entity_data), [this](const f1dl::StringPtr& reference) {
           entity_one_reference_ = reference;
           EmbedModule();
         });
@@ -125,7 +125,7 @@ class TestApp : public ModuleWatcher {
   ModuleControllerPtr child_module_;
   mozart::ViewOwnerPtr child_view_;
 
-  f1dl::String entity_one_reference_;
+  f1dl::StringPtr entity_one_reference_;
   DaisyPtr daisy_;
 
   LinkPtr link_one_;

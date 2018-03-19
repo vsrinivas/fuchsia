@@ -57,8 +57,8 @@ class ComponentActionLogImpl : public ComponentActionLog {
   ComponentActionLogImpl(ActionLogger log_action);
   ~ComponentActionLogImpl() override;
 
-  void LogAction(const f1dl::String& method,
-                 const f1dl::String& params) override;
+  void LogAction(const f1dl::StringPtr& method,
+                 const f1dl::StringPtr& params) override;
 
  private:
   const ActionLogger log_action_;

@@ -97,7 +97,7 @@ void NextProcessor::NotifyOfResults(const NextListenerPtr& listener,
                                     const size_t max_results) {
   const auto& suggestion_vector = engine_->next_suggestions_.Get();
 
-  f1dl::Array<SuggestionPtr> window;
+  f1dl::VectorPtr<SuggestionPtr> window;
   // Prefer to return an array of size 0 vs. null
   window.resize(0);
   for (size_t i = 0; i < max_results && i < suggestion_vector.size(); i++) {

@@ -43,7 +43,7 @@ class TestAgentApp : modular::ComponentContextTestService {
   }
 
   // Called by AgentDriver.
-  void RunTask(const f1dl::String& /*task_id*/,
+  void RunTask(const f1dl::StringPtr& /*task_id*/,
                const std::function<void()>& /*callback*/) {}
 
   TestPoint two_agent_connected_{"Two agent accepted connection"};
@@ -52,7 +52,7 @@ class TestAgentApp : modular::ComponentContextTestService {
   void Terminate(const std::function<void()>& done) {
     // Before reporting that we stop, we wait until two_agent has connected.
     modular::testing::GetStore()->Get(
-        "two_agent_connected", [this, done](const f1dl::String&) {
+        "two_agent_connected", [this, done](const f1dl::StringPtr&) {
           // Killing the agent controller should stop it.
           two_agent_controller_.Unbind();
           two_agent_connected_.Pass();
@@ -64,8 +64,8 @@ class TestAgentApp : modular::ComponentContextTestService {
 
  private:
   // |Agent1Interface|
-  void SendToMessageQueue(const f1dl::String& message_queue_token,
-                          const f1dl::String& message_to_send) override {
+  void SendToMessageQueue(const f1dl::StringPtr& message_queue_token,
+                          const f1dl::StringPtr& message_to_send) override {
     modular::MessageSenderPtr message_sender;
     component_context_->GetMessageSender(message_queue_token,
                                          message_sender.NewRequest());

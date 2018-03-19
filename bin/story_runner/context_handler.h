@@ -34,7 +34,7 @@ class ContextHandler : maxwell::ContextListener {
   //
   // To be notified of updates, register a listener by calling Watch() before
   // calling SelectTopics().
-  void SelectTopics(const std::vector<f1dl::String>& topics);
+  void SelectTopics(const std::vector<f1dl::StringPtr>& topics);
 
   void Watch(const std::function<void()>& watcher);
 

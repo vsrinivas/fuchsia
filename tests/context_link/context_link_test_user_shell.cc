@@ -119,7 +119,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void CreateStory() {
     story_provider_->CreateStory(kModuleUrl,
-                                 [this](const f1dl::String& story_id) {
+                                 [this](const f1dl::StringPtr& story_id) {
                                    story_id_ = story_id;
                                    create_story_.Pass();
                                    StartStory();
@@ -261,7 +261,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
 
-  f1dl::String story_id_;
+  f1dl::StringPtr story_id_;
   modular::StoryControllerPtr story_controller_;
 
   maxwell::ContextReaderPtr context_reader_;

@@ -28,7 +28,7 @@ class TimelineStoriesWatcher : public modular::StoryProviderWatcher {
  private:
   void OnChange(modular::StoryInfoPtr story_info,
                 modular::StoryState state) override;
-  void OnDelete(const f1dl::String& story_id) override;
+  void OnDelete(const f1dl::StringPtr& story_id) override;
 
   f1dl::Binding<StoryProviderWatcher> binding_;
 

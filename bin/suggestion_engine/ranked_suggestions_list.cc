@@ -66,7 +66,7 @@ void RankedSuggestionsList::Rank(
   for (auto& suggestion : suggestions_) {
     double confidence = 0.0;
     for (auto& feature : ranking_features_) {
-      f1dl::Array<ContextValuePtr> context_values = TakeContextValue(
+      f1dl::VectorPtr<ContextValuePtr> context_values = TakeContextValue(
           context_update.get(), feature.second->UniqueId()).second;
       confidence +=
           feature.first *

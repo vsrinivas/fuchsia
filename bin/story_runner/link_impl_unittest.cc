@@ -154,7 +154,7 @@ class LinkImplTestBase : public testing::TestWithLedger, modular::LinkWatcher {
 
   void ClearCalls() { operations_.clear(); }
 
-  void Notify(const f1dl::String& json) override {
+  void Notify(const f1dl::StringPtr& json) override {
     step_++;
     last_json_notify_ = json;
     continue_();
@@ -296,7 +296,7 @@ TEST_F(LinkImplTest, Erase) {
   link_->Set(nullptr, "{ \"value\": 4 }");
 
   std::vector<std::string> segments{"value"};
-  link_->Erase(f1dl::Array<f1dl::String>::From(segments));
+  link_->Erase(f1dl::VectorPtr<f1dl::StringPtr>::From(segments));
 
   bool synced{};
   link_->Sync([&synced] { synced = true; });
@@ -338,7 +338,7 @@ TEST_F(LinkImplTest, SetEntity) {
   EXPECT_EQ(entity_ref_json, last_json_notify_);
 
   bool done{};
-  link_->GetEntity([entity_ref, &done](const f1dl::String value) {
+  link_->GetEntity([entity_ref, &done](const f1dl::StringPtr value) {
     EXPECT_EQ(entity_ref, value);
     done = true;
   });

@@ -26,12 +26,12 @@ class EntityResolverFake : public EntityResolver {
 
   // Returns an Entity reference that will resolve to an Entity.
   // |types_and_data| is a map of data type to data bytes.
-  f1dl::String AddEntity(std::map<std::string, std::string> types_and_data);
+  f1dl::StringPtr AddEntity(std::map<std::string, std::string> types_and_data);
 
  private:
   class EntityImpl;
 
-  void ResolveEntity(const f1dl::String& entity_reference,
+  void ResolveEntity(const f1dl::StringPtr& entity_reference,
                      f1dl::InterfaceRequest<Entity> entity_request) override;
 
   int next_entity_id_{0};

@@ -30,7 +30,7 @@ void TimelineStoriesWatcher::OnChange(modular::StoryInfoPtr story_info,
   }
 }
 
-void TimelineStoriesWatcher::OnDelete(const f1dl::String& story_id) {
+void TimelineStoriesWatcher::OnDelete(const f1dl::StringPtr& story_id) {
   auto it = id_to_url_.find(story_id.get());
   if (it != id_to_url_.end()) {
     // TODO(rosswang): use a multiset for story_urls (for stories with duplicate

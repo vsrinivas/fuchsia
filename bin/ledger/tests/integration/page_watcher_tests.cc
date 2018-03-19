@@ -381,8 +381,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
 TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page1 = instance->GetTestPage();
-  f1dl::Array<uint8_t> test_page_id;
-  page1->GetId([&test_page_id](f1dl::Array<uint8_t> page_id) {
+  f1dl::VectorPtr<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](f1dl::VectorPtr<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForResponse());
@@ -489,8 +489,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
 TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page1 = instance->GetTestPage();
-  f1dl::Array<uint8_t> test_page_id;
-  page1->GetId([&test_page_id](f1dl::Array<uint8_t> page_id) {
+  f1dl::VectorPtr<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](f1dl::VectorPtr<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForResponse());

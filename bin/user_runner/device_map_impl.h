@@ -44,7 +44,7 @@ class DeviceMapImpl : DeviceMap, PageClient {
   void GetCurrentDevice(const GetCurrentDeviceCallback& callback) override;
 
   // |DeviceMap|
-  void SetCurrentDeviceProfile(const ::f1dl::String& profile) override;
+  void SetCurrentDeviceProfile(const ::f1dl::StringPtr& profile) override;
 
   // |DeviceMap|
   void WatchDeviceMap(f1dl::InterfaceHandle<DeviceMapWatcher> watcher) override;

@@ -124,17 +124,17 @@ class SuggestionEngineImpl : public ContextListener,
   //    it came from there.
   //
   // |SuggestionProvider|
-  void NotifyInteraction(const f1dl::String& suggestion_uuid,
+  void NotifyInteraction(const f1dl::StringPtr& suggestion_uuid,
                          InteractionPtr interaction) override;
 
   // |SuggestionEngine|
   void RegisterProposalPublisher(
-      const f1dl::String& url,
+      const f1dl::StringPtr& url,
       f1dl::InterfaceRequest<ProposalPublisher> publisher) override;
 
   // |SuggestionEngine|
   void RegisterQueryHandler(
-      const f1dl::String& url,
+      const f1dl::StringPtr& url,
       f1dl::InterfaceHandle<QueryHandler> query_handler) override;
 
   // |SuggestionEngine|
@@ -180,7 +180,7 @@ class SuggestionEngineImpl : public ContextListener,
   // interface that's passed to the SuggestionEngineImpl.
   // |source_url| is the url of the source of the proposal containing the
   // provided actions.
-  void PerformActions(const f1dl::Array<maxwell::ActionPtr>& actions,
+  void PerformActions(const f1dl::VectorPtr<maxwell::ActionPtr>& actions,
                       const std::string& source_url,
                       uint32_t story_color);
 

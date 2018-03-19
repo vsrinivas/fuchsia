@@ -23,7 +23,7 @@ class FakeNetConnector : public netconnector::NetConnector {
     // for more details.
     virtual void GetDevicesNames(
         uint64_t last_version,
-        std::function<void(uint64_t, f1dl::Array<f1dl::String>)> callback) = 0;
+        std::function<void(uint64_t, f1dl::VectorPtr<f1dl::StringPtr>)> callback) = 0;
 
     // Connects to the ServiceProvider from host |device_name|.
     virtual void ConnectToServiceProvider(
@@ -40,11 +40,11 @@ class FakeNetConnector : public netconnector::NetConnector {
 
  private:
   // NetConnector implementation:
-  void RegisterServiceProvider(const f1dl::String& name,
+  void RegisterServiceProvider(const f1dl::StringPtr& name,
                                f1dl::InterfaceHandle<component::ServiceProvider>
                                    service_provider) override;
   void GetDeviceServiceProvider(
-      const f1dl::String& device_name,
+      const f1dl::StringPtr& device_name,
       f1dl::InterfaceRequest<component::ServiceProvider> service_provider)
       override;
   void GetKnownDeviceNames(

@@ -404,7 +404,7 @@ void AgentRunner::DeleteTask(const std::string& agent_url,
   agent_runner_storage_->DeleteTask(agent_url, task_id, [](bool) {});
 }
 
-f1dl::Array<f1dl::String> AgentRunner::GetAllAgents() {
+f1dl::VectorPtr<f1dl::StringPtr> AgentRunner::GetAllAgents() {
   // A set of all agents that are either running or scheduled to be run.
   std::set<std::string> agents;
   for (auto const& it : running_agents_) {
@@ -417,7 +417,7 @@ f1dl::Array<f1dl::String> AgentRunner::GetAllAgents() {
     agents.insert(it.first);
   }
 
-  f1dl::Array<f1dl::String> agent_urls;
+  f1dl::VectorPtr<f1dl::StringPtr> agent_urls;
   // Initialize the size to force non-null.
   agent_urls.resize(0);
   for (auto const& it : agents) {

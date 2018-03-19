@@ -49,17 +49,17 @@ class ParentApp {
     ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
     modular::testing::GetStore()->Get(
-        "trigger_test_agent_connected", [this](const f1dl::String&) {
+        "trigger_test_agent_connected", [this](const f1dl::StringPtr&) {
           agent_connected_.Pass();
           agent_service_->GetMessageQueueToken(
-              [this](const f1dl::String& token) {
+              [this](const f1dl::StringPtr& token) {
                 received_trigger_token_.Pass();
 
                 // Stop the agent.
                 agent_controller_.Unbind();
                 modular::testing::GetStore()->Get(
                     "trigger_test_agent_stopped",
-                    [this, token](const f1dl::String&) {
+                    [this, token](const f1dl::StringPtr&) {
                       agent_stopped_.Pass();
 
                       // Send a message to the stopped agent which should
@@ -71,12 +71,12 @@ class ParentApp {
 
                       modular::testing::GetStore()->Get(
                           "trigger_test_agent_run_task",
-                          [this](const f1dl::String&) {
+                          [this](const f1dl::StringPtr&) {
                             task_triggered_.Pass();
 
                             modular::testing::GetStore()->Get(
                                 "trigger_test_agent_stopped",
-                                [this](const f1dl::String&) {
+                                [this](const f1dl::StringPtr&) {
                                   module_host_->module_context()->Done();
                                 });
                           });

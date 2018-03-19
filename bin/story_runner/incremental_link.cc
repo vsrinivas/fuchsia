@@ -192,7 +192,7 @@ void LinkImpl::ReloadCall::Run() {
   FlowToken flow{this};
   new ReadAllDataCall<LinkChange>(
       &operation_queue_, impl_->page(), MakeLinkKey(impl_->link_path_),
-      XdrLinkChange, [this, flow](f1dl::Array<LinkChangePtr> changes) {
+      XdrLinkChange, [this, flow](f1dl::VectorPtr<LinkChangePtr> changes) {
         if (changes->empty()) {
           if (!impl_->create_link_info_.is_null() &&
               !impl_->create_link_info_->initial_data.is_null() &&
@@ -200,7 +200,7 @@ void LinkImpl::ReloadCall::Run() {
             LinkChangePtr data = LinkChange::New();
             // Leave data->key null to signify a new entry
             data->op = LinkChangeOp::SET;
-            data->pointer = f1dl::Array<f1dl::String>::New(0);
+            data->pointer = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
             data->json = std::move(impl_->create_link_info_->initial_data);
             new IncrementalChangeCall(&operation_queue_, impl_, std::move(data),
                                       kWatchAllConnectionId, [flow] {});
@@ -211,7 +211,7 @@ void LinkImpl::ReloadCall::Run() {
       });
 }
 
-void LinkImpl::Replay(f1dl::Array<LinkChangePtr> changes) {
+void LinkImpl::Replay(f1dl::VectorPtr<LinkChangePtr> changes) {
   doc_ = CrtJsonDoc();
   auto it1 = changes->begin();
   auto it2 = pending_ops_.begin();

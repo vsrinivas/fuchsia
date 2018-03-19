@@ -21,7 +21,7 @@ namespace ledger {
 
 namespace {
 
-void GenerateRandomId(f1dl::Array<uint8_t>* id) {
+void GenerateRandomId(f1dl::VectorPtr<uint8_t>* id) {
   id->resize(kPageIdSize);
   fxl::RandBytes((*id)->data(), kPageIdSize);
 }
@@ -41,7 +41,7 @@ void LedgerImpl::GetRootPage(f1dl::InterfaceRequest<Page> page_request,
 }
 
 // GetPage(array<uint8, 16>? id, Page& page) => (Status status);
-void LedgerImpl::GetPage(f1dl::Array<uint8_t> id,
+void LedgerImpl::GetPage(f1dl::VectorPtr<uint8_t> id,
                          f1dl::InterfaceRequest<Page> page_request,
                          const GetPageCallback& callback) {
   if (!id) {
@@ -52,7 +52,7 @@ void LedgerImpl::GetPage(f1dl::Array<uint8_t> id,
 }
 
 // DeletePage(array<uint8> id) => (Status status);
-void LedgerImpl::DeletePage(f1dl::Array<uint8_t> id,
+void LedgerImpl::DeletePage(f1dl::VectorPtr<uint8_t> id,
                             const DeletePageCallback& callback) {
   TRACE_DURATION("ledger", "ledger_delete_page");
 

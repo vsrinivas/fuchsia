@@ -43,8 +43,8 @@ ContextWriterImpl::~ContextWriterImpl() {}
 
 namespace {
 
-f1dl::Array<f1dl::String> Deprecated_GetTypesFromJsonEntity(
-    const f1dl::String& content) {
+f1dl::VectorPtr<f1dl::StringPtr> Deprecated_GetTypesFromJsonEntity(
+    const f1dl::StringPtr& content) {
   // If the content has the @type attribute, take its contents and populate the
   // EntityMetadata appropriately, overriding whatever is there.
   std::vector<std::string> types;
@@ -55,10 +55,10 @@ f1dl::Array<f1dl::String> Deprecated_GetTypesFromJsonEntity(
   if (types.empty())
     return {};
 
-  return f1dl::Array<f1dl::String>::From(types);
+  return f1dl::VectorPtr<f1dl::StringPtr>::From(types);
 }
 
-void MaybeFillEntityTypeMetadata(const f1dl::Array<f1dl::String>& types,
+void MaybeFillEntityTypeMetadata(const f1dl::VectorPtr<f1dl::StringPtr>& types,
                                  ContextValuePtr* value_ptr) {
   auto& value = *value_ptr;
   if (value->type != ContextValueType::ENTITY || !types)
@@ -124,8 +124,8 @@ void ContextWriterImpl::DestroyContextValueWriter(ContextValueWriterImpl* ptr) {
   value_writer_storage_.erase(it, value_writer_storage_.end());
 }
 
-void ContextWriterImpl::WriteEntityTopic(const f1dl::String& topic,
-                                         const f1dl::String& value) {
+void ContextWriterImpl::WriteEntityTopic(const f1dl::StringPtr& topic,
+                                         const f1dl::StringPtr& value) {
   if (!value) {
     // Remove this value.
     auto it = topic_value_ids_.find(topic);
@@ -136,7 +136,7 @@ void ContextWriterImpl::WriteEntityTopic(const f1dl::String& topic,
   }
 
   GetEntityTypesFromEntityReference(
-      value, [this, topic, value](const f1dl::Array<f1dl::String>& types) {
+      value, [this, topic, value](const f1dl::VectorPtr<f1dl::StringPtr>& types) {
         auto value_ptr = ContextValue::New();
         value_ptr->type = ContextValueType::ENTITY;
         value_ptr->content = value;
@@ -163,8 +163,8 @@ void ContextWriterImpl::WriteEntityTopic(const f1dl::String& topic,
 }
 
 void ContextWriterImpl::GetEntityTypesFromEntityReference(
-    const f1dl::String& reference,
-    std::function<void(const f1dl::Array<f1dl::String>&)> done) {
+    const f1dl::StringPtr& reference,
+    std::function<void(const f1dl::VectorPtr<f1dl::StringPtr>&)> done) {
   // TODO(thatguy): This function could be re-used in multiple places. Move it
   // to somewhere where other places can reach it.
   std::shared_ptr<modular::EntityPtr> entity(new modular::EntityPtr);
@@ -179,7 +179,7 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
       });
 
   (*entity)->GetTypes([weak_this = weak_factory_.GetWeakPtr(), entity,
-                       done](const f1dl::Array<f1dl::String>& types) {
+                       done](const f1dl::VectorPtr<f1dl::StringPtr>& types) {
     if (!weak_this)
       return;
     done(types);
@@ -221,12 +221,12 @@ void ContextValueWriterImpl::CreateChildValue(
       }));
 }
 
-void ContextValueWriterImpl::Set(const f1dl::String& content,
+void ContextValueWriterImpl::Set(const f1dl::StringPtr& content,
                                  ContextMetadataPtr metadata) {
   auto done_getting_types =
       [weak_this = weak_factory_.GetWeakPtr(), content,
        metadata = std::move(metadata)](
-          const f1dl::Array<f1dl::String>& entity_types) mutable {
+          const f1dl::VectorPtr<f1dl::StringPtr>& entity_types) mutable {
         if (!weak_this)
           return;
         if (!weak_this->value_id_) {

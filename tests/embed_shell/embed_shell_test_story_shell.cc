@@ -42,8 +42,8 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
 
   // |StoryShell|
   void ConnectView(f1dl::InterfaceHandle<mozart::ViewOwner> view_owner,
-                   const f1dl::String& view_id,
-                   const f1dl::String& anchor_id,
+                   const f1dl::StringPtr& view_id,
+                   const f1dl::StringPtr& anchor_id,
                    modular::SurfaceRelationPtr /*surface_relation*/,
                    modular::ModuleManifestPtr /*module_manifest*/) override {
     if (view_id == "root:child:child" && anchor_id == "root") {
@@ -55,23 +55,23 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
   }
 
   // |StoryShell|
-  void FocusView(const f1dl::String& /*view_id*/,
-                 const f1dl::String& /*relative_view_id*/) override {}
+  void FocusView(const f1dl::StringPtr& /*view_id*/,
+                 const f1dl::StringPtr& /*relative_view_id*/) override {}
 
   // |StoryShell|
-  void DefocusView(const f1dl::String& /*view_id*/,
+  void DefocusView(const f1dl::StringPtr& /*view_id*/,
                    const DefocusViewCallback& callback) override {
     callback();
   }
 
   // |StoryShell|
   void AddContainer(
-      const f1dl::String& /*container_name*/,
-      const f1dl::String& /*parent_id*/,
+      const f1dl::StringPtr& /*container_name*/,
+      const f1dl::StringPtr& /*parent_id*/,
       modular::SurfaceRelationPtr /*relation*/,
-      f1dl::Array<modular::ContainerLayoutPtr> /*layout*/,
-      f1dl::Array<modular::ContainerRelationEntryPtr> /* relationships */,
-      f1dl::Array<modular::ContainerViewPtr> /* views */) override {}
+      f1dl::VectorPtr<modular::ContainerLayoutPtr> /*layout*/,
+      f1dl::VectorPtr<modular::ContainerRelationEntryPtr> /* relationships */,
+      f1dl::VectorPtr<modular::ContainerViewPtr> /* views */) override {}
 
   modular::StoryContextPtr story_context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);

@@ -87,7 +87,7 @@ class ModuleResolverApp : ContextListener {
     auto selector_entry = ContextQueryEntry::New();
     selector_entry->key = kContextListenerEntitiesKey;
     selector_entry->value = std::move(selector);
-    f1dl::Array<ContextQueryEntryPtr> selector_array;
+    f1dl::VectorPtr<ContextQueryEntryPtr> selector_array;
     selector_array.push_back(std::move(selector_entry));
     query->selector = std::move(selector_array);
     context_reader_->Subscribe(std::move(query),
@@ -102,7 +102,7 @@ class ModuleResolverApp : ContextListener {
   void Terminate(const std::function<void()>& done) { done(); }
 
   void OnContextUpdate(ContextUpdatePtr update) {
-    f1dl::Array<ContextValuePtr> values;
+    f1dl::VectorPtr<ContextValuePtr> values;
     for (const auto& entry : *update->values) {
       if (entry->key == kContextListenerEntitiesKey) {
         values = std::move(entry->value);
@@ -186,7 +186,7 @@ class ModuleResolverApp : ContextListener {
       modular::DaisyPtr* daisy_out) {
     auto daisy = modular::Daisy::New();
     daisy->url = module_result->module_id;
-    f1dl::Array<modular::NounEntryPtr> nouns;
+    f1dl::VectorPtr<modular::NounEntryPtr> nouns;
     for (const modular::ChainEntryPtr& chain_entry :
          *module_result->create_chain_info->property_info) {
       auto noun_entry = modular::NounEntry::New();
@@ -233,7 +233,7 @@ class ModuleResolverApp : ContextListener {
   // that link_info can be constructed for the noun constraint.
   modular::ResolverNounConstraintEntryPtr
   CreateResolverNounConstraintFromContextValue(const ContextValuePtr& value) {
-    f1dl::Array<f1dl::String> entity_types = value->meta->entity->type.Clone();
+    f1dl::VectorPtr<f1dl::StringPtr> entity_types = value->meta->entity->type.Clone();
     const LinkMetadataPtr& link_metadata = value->meta->link;
 
     auto link_info = modular::ResolverLinkInfo::New();

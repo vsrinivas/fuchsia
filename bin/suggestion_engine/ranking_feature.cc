@@ -21,7 +21,7 @@ RankingFeature::~RankingFeature() = default;
 
 double RankingFeature::ComputeFeature(
     const UserInput& query, const RankedSuggestion& suggestion,
-    const f1dl::Array<ContextValuePtr>& context_update_values) {
+    const f1dl::VectorPtr<ContextValuePtr>& context_update_values) {
   const double feature = ComputeFeatureInternal(
       query, suggestion, context_update_values);
   FXL_CHECK(feature <= kMaxConfidence);

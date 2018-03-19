@@ -38,7 +38,7 @@ class AgentHost {
 //   void Connect(f1dl::InterfaceRequest<ServiceProvider> outgoing_services) {}
 //
 //   // Called by AgentDriver.
-//   void RunTask(const f1dl::String& task_id,
+//   void RunTask(const f1dl::StringPtr& task_id,
 //                const std::function<void()>& done) { done(); }
 //
 //   // Called by AgentDriver.
@@ -86,7 +86,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
     impl_->Connect(std::move(outgoing_services_request));
   };
   // |AgentImpl::Delegate|
-  void RunTask(const f1dl::String& task_id,
+  void RunTask(const f1dl::StringPtr& task_id,
                const std::function<void()>& done) override {
     impl_->RunTask(task_id, done);
   };

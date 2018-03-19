@@ -44,7 +44,7 @@ class StoryInfoAcquirer : public modular::VisibleStoriesWatcher,
   void Connect(f1dl::InterfaceRequest<component::ServiceProvider> services);
 
   // Called by AgentDriver.
-  void RunTask(const f1dl::String& task_id,
+  void RunTask(const f1dl::StringPtr& task_id,
                const modular::Agent::RunTaskCallback& callback);
 
   // Called by AgentDriver.
@@ -64,11 +64,11 @@ class StoryInfoAcquirer : public modular::VisibleStoriesWatcher,
   void OnFocusChange(modular::FocusInfoPtr info) override;
 
   // |VisibleStoriesWatcher|
-  void OnVisibleStoriesChange(f1dl::Array<f1dl::String> ids) override;
+  void OnVisibleStoriesChange(f1dl::VectorPtr<f1dl::StringPtr> ids) override;
 
   // |StoryProviderWatcher|
   void OnChange(modular::StoryInfoPtr info, modular::StoryState state) override;
-  void OnDelete(const f1dl::String& story_id) override;
+  void OnDelete(const f1dl::StringPtr& story_id) override;
 
   ContextWriterPtr context_writer_;
   ContextReaderPtr context_reader_;
@@ -83,9 +83,9 @@ class StoryInfoAcquirer : public modular::VisibleStoriesWatcher,
 
   // Local state.
   // story id -> context value id
-  std::map<f1dl::String, f1dl::String> story_value_ids_;
-  f1dl::String focused_story_id_;
-  std::set<f1dl::String> visible_story_ids_;
+  std::map<f1dl::StringPtr, f1dl::StringPtr> story_value_ids_;
+  f1dl::StringPtr focused_story_id_;
+  std::set<f1dl::StringPtr> visible_story_ids_;
 
   // A collection of all active stories we watch. Keys are story IDs, Values are
   // the StoryWatcher instances.

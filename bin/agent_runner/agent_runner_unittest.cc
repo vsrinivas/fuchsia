@@ -104,14 +104,14 @@ class MyDummyAgent : Agent,
   void Wait(const WaitCallback& callback) override { ++counts["Wait"]; }
 
   // |Agent|
-  void Connect(const f1dl::String& /*requestor_url*/,
+  void Connect(const f1dl::StringPtr& /*requestor_url*/,
                f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     ++counts["Connect"];
   }
 
   // |Agent|
-  void RunTask(const f1dl::String& /*task_id*/,
+  void RunTask(const f1dl::StringPtr& /*task_id*/,
                const RunTaskCallback& /*callback*/) override {
     ++counts["RunTask"];
   }

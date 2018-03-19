@@ -52,7 +52,7 @@ class TestAgentApp : modular::TriggerTestService {
   }
 
   // Called by AgentDriver.
-  void RunTask(const f1dl::String& /*task_id*/,
+  void RunTask(const f1dl::StringPtr& /*task_id*/,
                const std::function<void()>& callback) {
     modular::testing::GetStore()->Put("trigger_test_agent_run_task", "",
                                       callback);
@@ -69,7 +69,7 @@ class TestAgentApp : modular::TriggerTestService {
   void GetMessageQueueToken(
       const GetMessageQueueTokenCallback& callback) override {
     msg_queue_->GetToken(
-        [callback](const f1dl::String& token) { callback(token); });
+        [callback](const f1dl::StringPtr& token) { callback(token); });
   }
 
   component::ServiceNamespace agent_services_;

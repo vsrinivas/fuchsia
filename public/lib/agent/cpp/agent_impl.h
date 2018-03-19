@@ -26,7 +26,7 @@ class AgentImpl : public Agent {
    public:
     virtual void Connect(f1dl::InterfaceRequest<component::ServiceProvider>
                              outgoing_services) = 0;
-    virtual void RunTask(const f1dl::String& task_id,
+    virtual void RunTask(const f1dl::StringPtr& task_id,
                          const std::function<void()>& done) = 0;
   };
 
@@ -36,11 +36,11 @@ class AgentImpl : public Agent {
 
  private:
   // |Agent|
-  void Connect(const f1dl::String& requestor_url,
+  void Connect(const f1dl::StringPtr& requestor_url,
                f1dl::InterfaceRequest<component::ServiceProvider>
                    services_request) override;
   // |Agent|
-  void RunTask(const f1dl::String& task_id,
+  void RunTask(const f1dl::StringPtr& task_id,
                const RunTaskCallback& callback) override;
 
   Delegate* const delegate_;

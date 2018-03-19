@@ -20,13 +20,13 @@ class TestSuggestionListener : public maxwell::NextListener,
   void OnInterrupt(maxwell::SuggestionPtr suggestion) override;
 
   // |NextListener|
-  void OnNextResults(f1dl::Array<maxwell::SuggestionPtr> suggestions) override;
+  void OnNextResults(f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) override;
 
   // |NextListener|
   void OnProcessingChange(bool processing) override;
 
   // |QueryListener|
-  void OnQueryResults(f1dl::Array<maxwell::SuggestionPtr> suggestions) override;
+  void OnQueryResults(f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) override;
 
   // |QueryListener|
   void OnQueryComplete() override;
@@ -63,7 +63,7 @@ class TestSuggestionListener : public maxwell::NextListener,
   }
 
  private:
-  void OnAnyResults(f1dl::Array<maxwell::SuggestionPtr>& suggestions);
+  void OnAnyResults(f1dl::VectorPtr<maxwell::SuggestionPtr>& suggestions);
 
   std::map<std::string, maxwell::SuggestionPtr> suggestions_by_id_;
   std::vector<maxwell::Suggestion*> ordered_suggestions_;
@@ -77,7 +77,7 @@ class TestProposalListener {
   int proposal_count() const { return proposals_.size(); }
 
  protected:
-  void UpdateProposals(f1dl::Array<maxwell::ProposalSummaryPtr> proposals) {
+  void UpdateProposals(f1dl::VectorPtr<maxwell::ProposalSummaryPtr> proposals) {
     proposals_.clear();
     for (size_t i = 0; i < proposals->size(); ++i) {
       proposals_.push_back(std::move(proposals->at(i)));
@@ -90,7 +90,7 @@ class TestDebugNextListener : public maxwell::NextProposalListener,
                               public TestProposalListener {
  public:
   void OnNextUpdate(
-      f1dl::Array<maxwell::ProposalSummaryPtr> proposals) override {
+      f1dl::VectorPtr<maxwell::ProposalSummaryPtr> proposals) override {
     FXL_LOG(INFO) << "In OnNextUpdate debug";
     UpdateProposals(std::move(proposals));
   }
@@ -99,8 +99,8 @@ class TestDebugNextListener : public maxwell::NextProposalListener,
 class TestDebugAskListener : public maxwell::AskProposalListener,
                              public TestProposalListener {
  public:
-  void OnAskStart(const f1dl::String& query,
-                  f1dl::Array<maxwell::ProposalSummaryPtr> proposals) override {
+  void OnAskStart(const f1dl::StringPtr& query,
+                  f1dl::VectorPtr<maxwell::ProposalSummaryPtr> proposals) override {
     UpdateProposals(std::move(proposals));
     query_ = query.get();
   }

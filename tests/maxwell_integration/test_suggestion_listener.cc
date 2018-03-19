@@ -27,21 +27,21 @@ void TestSuggestionListener::OnInterrupt(maxwell::SuggestionPtr suggestion) {
 }
 
 void TestSuggestionListener::OnNextResults(
-    f1dl::Array<maxwell::SuggestionPtr> suggestions) {
+    f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) {
   FXL_LOG(INFO) << "OnNextResults(" << suggestions << ")";
 
   OnAnyResults(suggestions);
 }
 
 void TestSuggestionListener::OnQueryResults(
-    f1dl::Array<maxwell::SuggestionPtr> suggestions) {
+    f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) {
   FXL_LOG(INFO) << "OnQueryResults(" << suggestions << ")";
 
   OnAnyResults(suggestions);
 }
 
 void TestSuggestionListener::OnAnyResults(
-    f1dl::Array<maxwell::SuggestionPtr>& suggestions) {
+    f1dl::VectorPtr<maxwell::SuggestionPtr>& suggestions) {
   ClearSuggestions();
 
   auto insert_head = ordered_suggestions_.begin();

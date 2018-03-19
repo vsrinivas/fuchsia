@@ -34,7 +34,7 @@ class ClipboardTestApp {
 
     const std::string expected_value = "hello there";
     clipboard_->Push(expected_value);
-    clipboard_->Peek([this, expected_value](const f1dl::String& text) {
+    clipboard_->Peek([this, expected_value](const f1dl::StringPtr& text) {
       if (expected_value == text) {
         successful_peek_.Pass();
       }

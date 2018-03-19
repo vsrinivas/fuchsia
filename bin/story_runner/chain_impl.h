@@ -17,15 +17,15 @@ namespace modular {
 
 class ChainImpl {
  public:
-  ChainImpl(f1dl::Array<f1dl::String> path, ChainDataPtr chain_data);
+  ChainImpl(f1dl::VectorPtr<f1dl::StringPtr> path, ChainDataPtr chain_data);
   ~ChainImpl();
 
-  const f1dl::Array<f1dl::String>& chain_path() const { return path_; }
+  const f1dl::VectorPtr<f1dl::StringPtr>& chain_path() const { return path_; }
 
-  LinkPathPtr GetLinkPathForKey(const f1dl::String& key);
+  LinkPathPtr GetLinkPathForKey(const f1dl::StringPtr& key);
 
  private:
-  const f1dl::Array<f1dl::String> path_;
+  const f1dl::VectorPtr<f1dl::StringPtr> path_;
   const ChainDataPtr chain_data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChainImpl);

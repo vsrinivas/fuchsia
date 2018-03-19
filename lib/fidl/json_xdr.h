@@ -201,7 +201,7 @@ class XdrContext {
 
   // A fidl String is mapped to either (i.e., the union type of) JSON
   // null or JSON string.
-  void Value(f1dl::String* data);
+  void Value(f1dl::StringPtr* data);
 
   // An STL string is mapped to a JSON string.
   void Value(std::string* data);
@@ -233,7 +233,7 @@ class XdrContext {
   // A fidl array is mapped to JSON null and JSON Array with a custom
   // filter for the elements.
   template <typename D, typename V>
-  void Value(f1dl::Array<D>* const data, const XdrFilterType<V> filter) {
+  void Value(f1dl::VectorPtr<D>* const data, const XdrFilterType<V> filter) {
     switch (op_) {
       case XdrOp::TO_JSON:
         if (data->is_null()) {
@@ -280,7 +280,7 @@ class XdrContext {
   // A fidl array with a simple element type can infer its element
   // value filter from the type parameters of the array.
   template <typename V>
-  void Value(f1dl::Array<V>* const data) {
+  void Value(f1dl::VectorPtr<V>* const data) {
     Value(data, XdrFilter<V>);
   }
 

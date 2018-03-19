@@ -34,7 +34,7 @@ class AccountProviderImpl : AccountProvider {
                      bool revoke_all,
                      const RemoveAccountCallback& callback) override;
   void GetTokenProviderFactory(
-      const f1dl::String& account_id,
+      const f1dl::StringPtr& account_id,
       f1dl::InterfaceRequest<TokenProviderFactory> request) override;
 
   std::string GenerateAccountId();
@@ -99,7 +99,7 @@ void AccountProviderImpl::RemoveAccount(AccountPtr account,
 }
 
 void AccountProviderImpl::GetTokenProviderFactory(
-    const f1dl::String& account_id,
+    const f1dl::StringPtr& account_id,
     f1dl::InterfaceRequest<TokenProviderFactory> request) {}
 
 }  // namespace auth

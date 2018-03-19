@@ -23,33 +23,33 @@ class LinkMockBase : protected Link, public testing::MockBase {
 
   ~LinkMockBase() override = default;
 
-  void SetSchema(const f1dl::String& /*json_schema*/) override {
+  void SetSchema(const f1dl::StringPtr& /*json_schema*/) override {
     ++counts["SetSchema"];
   }
 
-  void Get(f1dl::Array<f1dl::String> /*path*/,
+  void Get(f1dl::VectorPtr<f1dl::StringPtr> /*path*/,
            const GetCallback& /*callback*/) override {
     ++counts["Get"];
   }
 
-  void Set(f1dl::Array<f1dl::String> /*path*/,
-           const f1dl::String& /*json*/) override {
+  void Set(f1dl::VectorPtr<f1dl::StringPtr> /*path*/,
+           const f1dl::StringPtr& /*json*/) override {
     ++counts["Set"];
   }
 
-  void UpdateObject(f1dl::Array<f1dl::String> /*path*/,
-                    const f1dl::String& /*json*/) override {
+  void UpdateObject(f1dl::VectorPtr<f1dl::StringPtr> /*path*/,
+                    const f1dl::StringPtr& /*json*/) override {
     ++counts["UpdateObject"];
   }
 
-  void Erase(f1dl::Array<f1dl::String> /*path*/) override { ++counts["Erase"]; }
+  void Erase(f1dl::VectorPtr<f1dl::StringPtr> /*path*/) override { ++counts["Erase"]; }
 
   void GetEntity(const Link::GetEntityCallback& callback) override {
     ++counts["GetEntity"];
     callback("");
   }
 
-  void SetEntity(const f1dl::String& /*entity_reference*/) override {
+  void SetEntity(const f1dl::StringPtr& /*entity_reference*/) override {
     ++counts["SetEntity"];
   }
 
@@ -77,8 +77,8 @@ class LinkMock : public LinkMockBase {
     LinkMockBase::Watch(std::move(watcher_handle));
   }
 
-  void UpdateObject(f1dl::Array<f1dl::String> path,
-                    const f1dl::String& json) override {
+  void UpdateObject(f1dl::VectorPtr<f1dl::StringPtr> path,
+                    const f1dl::StringPtr& json) override {
     LinkMockBase::UpdateObject(std::move(path), json);
     fsl::MessageLoop::GetCurrent()->QuitNow();
   }

@@ -18,7 +18,7 @@ ClipboardImpl::ClipboardImpl(LedgerClient* ledger_client)
 
 ClipboardImpl::~ClipboardImpl() = default;
 
-void ClipboardImpl::Push(const f1dl::String& text) {
+void ClipboardImpl::Push(const f1dl::StringPtr& text) {
   storage_.Push(text);
 }
 

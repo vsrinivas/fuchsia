@@ -20,7 +20,7 @@ class CobaltObservation {
  public:
   CobaltObservation(uint32_t metric_id, uint32_t encoding_id, ValuePtr value);
   CobaltObservation(uint32_t metric_id,
-                    f1dl::Array<cobalt::ObservationValuePtr> parts);
+                    f1dl::VectorPtr<cobalt::ObservationValuePtr> parts);
   CobaltObservation(const CobaltObservation&);
   CobaltObservation(CobaltObservation&&);
   ~CobaltObservation();
@@ -38,7 +38,7 @@ class CobaltObservation {
       const ObservationValuePtr& observationValue,
       const ObservationValuePtr& rhsObservationValue) const;
   uint32_t metric_id_;
-  f1dl::Array<cobalt::ObservationValuePtr> parts_;
+  f1dl::VectorPtr<cobalt::ObservationValuePtr> parts_;
 };
 
 class CobaltContext {
@@ -81,7 +81,7 @@ void ReportObservation(CobaltObservation observation,
 
 // Report a multipart observation to Cobalt.
 void ReportMultipartObservation(uint32_t metric_id,
-                                f1dl::Array<cobalt::ObservationValuePtr> parts,
+                                f1dl::VectorPtr<cobalt::ObservationValuePtr> parts,
                                 CobaltContext* cobalt_context);
 
 };  // namespace cobalt

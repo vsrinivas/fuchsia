@@ -142,8 +142,8 @@ void PageManager::OnSyncBacklogDownloaded() {
 void PageManager::GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) {
   page_storage_->GetHeadCommitIds(
       [callback](storage::Status status, std::vector<storage::CommitId> heads) {
-        f1dl::Array<f1dl::Array<uint8_t>> result =
-            f1dl::Array<f1dl::Array<uint8_t>>::New(0);
+        f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> result =
+            f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>>::New(0);
         for (const auto& head : heads)
           result.push_back(convert::ToArray(head));
 
@@ -153,7 +153,7 @@ void PageManager::GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) {
 }
 
 void PageManager::GetSnapshot(
-    f1dl::Array<uint8_t> commit_id,
+    f1dl::VectorPtr<uint8_t> commit_id,
     f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
     const GetSnapshotCallback& callback) {
   page_storage_->GetCommit(
@@ -171,7 +171,7 @@ void PageManager::GetSnapshot(
           }));
 }
 
-void PageManager::GetCommit(f1dl::Array<uint8_t> commit_id,
+void PageManager::GetCommit(f1dl::VectorPtr<uint8_t> commit_id,
                             const GetCommitCallback& callback) {
   page_storage_->GetCommit(
       convert::ToStringView(commit_id),
@@ -184,7 +184,7 @@ void PageManager::GetCommit(f1dl::Array<uint8_t> commit_id,
               commit_struct = ledger::Commit::New();
               commit_struct->commit_id = convert::ToArray(commit->GetId());
               commit_struct->parents_ids =
-                  f1dl::Array<f1dl::Array<uint8_t>>::New(0);
+                  f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>>::New(0);
               for (storage::CommitIdView parent : commit->GetParentIds()) {
                 commit_struct->parents_ids.push_back(convert::ToArray(parent));
               }

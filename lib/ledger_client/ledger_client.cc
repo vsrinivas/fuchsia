@@ -57,7 +57,7 @@ void GetDiffRecursive(ledger::MergeResultProvider* const result,
                       std::function<void(ledger::Status)> callback) {
   auto cont = fxl::MakeCopyable(
       [result, conflicts, callback = std::move(callback)](
-          ledger::Status status, f1dl::Array<ledger::DiffEntryPtr> change_delta,
+          ledger::Status status, f1dl::VectorPtr<ledger::DiffEntryPtr> change_delta,
           LedgerPageKey token) mutable {
         if (status != ledger::Status::OK &&
             status != ledger::Status::PARTIAL_RESULT) {
@@ -161,7 +161,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
 
     for (auto& pair : conflicts_) {
       const PageClient::Conflict& conflict = pair.second;
-      f1dl::Array<ledger::MergedValuePtr> merge_changes;
+      f1dl::VectorPtr<ledger::MergedValuePtr> merge_changes;
 
       if (conflict.has_left && conflict.has_right) {
         for (PageClient* const page_client : page_clients) {

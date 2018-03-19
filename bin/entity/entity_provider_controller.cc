@@ -37,7 +37,7 @@ class EntityProviderController::EntityImpl : Entity {
   }
 
   // |Entity|
-  void GetData(const f1dl::String& type,
+  void GetData(const f1dl::StringPtr& type,
                const GetDataCallback& callback) override {
     entity_provider_->GetData(cookie_, type, callback);
   }

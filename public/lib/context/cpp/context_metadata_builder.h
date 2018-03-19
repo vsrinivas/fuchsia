@@ -14,20 +14,20 @@ class ContextMetadataBuilder {
   ContextMetadataBuilder();
   explicit ContextMetadataBuilder(ContextMetadataPtr initial_value);
 
-  ContextMetadataBuilder& SetStoryId(const f1dl::String& story_id);
+  ContextMetadataBuilder& SetStoryId(const f1dl::StringPtr& story_id);
   ContextMetadataBuilder& SetStoryFocused(bool focused);
 
-  ContextMetadataBuilder& SetModuleUrl(const f1dl::String& url);
-  ContextMetadataBuilder& SetModulePath(const f1dl::Array<f1dl::String>& path);
+  ContextMetadataBuilder& SetModuleUrl(const f1dl::StringPtr& url);
+  ContextMetadataBuilder& SetModulePath(const f1dl::VectorPtr<f1dl::StringPtr>& path);
 
-  ContextMetadataBuilder& SetEntityTopic(const f1dl::String& topic);
-  ContextMetadataBuilder& AddEntityType(const f1dl::String& type);
+  ContextMetadataBuilder& SetEntityTopic(const f1dl::StringPtr& topic);
+  ContextMetadataBuilder& AddEntityType(const f1dl::StringPtr& type);
   ContextMetadataBuilder& SetEntityTypes(
-      const f1dl::Array<f1dl::String>& types);
+      const f1dl::VectorPtr<f1dl::StringPtr>& types);
 
   ContextMetadataBuilder& SetLinkPath(
-      const f1dl::Array<f1dl::String>& module_path,
-      const f1dl::String& name);
+      const f1dl::VectorPtr<f1dl::StringPtr>& module_path,
+      const f1dl::StringPtr& name);
 
   // Build() can be called only once, as it moves |m_|.
   ContextMetadataPtr Build();

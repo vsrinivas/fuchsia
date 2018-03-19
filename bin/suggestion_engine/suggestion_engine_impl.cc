@@ -133,7 +133,7 @@ void SuggestionEngineImpl::RegisterFeedbackListener(
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::NotifyInteraction(
-    const f1dl::String& suggestion_uuid,
+    const f1dl::StringPtr& suggestion_uuid,
     InteractionPtr interaction) {
   // Find the suggestion
   bool suggestion_in_ask = false;
@@ -179,7 +179,7 @@ void SuggestionEngineImpl::NotifyInteraction(
 
 // |SuggestionEngine|
 void SuggestionEngineImpl::RegisterProposalPublisher(
-    const f1dl::String& url,
+    const f1dl::StringPtr& url,
     f1dl::InterfaceRequest<ProposalPublisher> publisher) {
   // Check to see if a ProposalPublisher has already been created for the
   // component with this url. If not, create one.
@@ -193,7 +193,7 @@ void SuggestionEngineImpl::RegisterProposalPublisher(
 
 // |SuggestionEngine|
 void SuggestionEngineImpl::RegisterQueryHandler(
-    const f1dl::String& url,
+    const f1dl::StringPtr& url,
     f1dl::InterfaceHandle<QueryHandler> query_handler_handle) {
   auto query_handler = query_handler_handle.Bind();
   query_handlers_.emplace_back(std::move(query_handler), url);
@@ -273,7 +273,7 @@ SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
 }
 
 void SuggestionEngineImpl::PerformActions(
-    const f1dl::Array<maxwell::ActionPtr>& actions,
+    const f1dl::VectorPtr<maxwell::ActionPtr>& actions,
     const std::string& source_url,
     uint32_t story_color) {
   // TODO(rosswang): If we're asked to add multiple modules, we probably
@@ -314,7 +314,7 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
   if (story_provider_) {
     // TODO(afergan): Make this more robust later. For now, we
     // always assume that there's extra info and that it's a color.
-    auto extra_info = f1dl::Array<modular::StoryInfoExtraEntryPtr>::New(1);
+    auto extra_info = f1dl::VectorPtr<modular::StoryInfoExtraEntryPtr>::New(1);
     char hex_color[11];
     snprintf(hex_color, sizeof(hex_color), "0x%x", story_color);
     extra_info->at(0) = modular::StoryInfoExtraEntry::New();
@@ -324,7 +324,7 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
     auto& module_id = create_story->module_id;
     story_provider_->CreateStoryWithInfo(
         create_story->module_id, std::move(extra_info), std::move(initial_data),
-        [this, module_id](const f1dl::String& story_id) {
+        [this, module_id](const f1dl::StringPtr& story_id) {
           modular::StoryControllerPtr story_controller;
           story_provider_->GetController(story_id,
                                          story_controller.NewRequest());
@@ -401,7 +401,7 @@ void SuggestionEngineImpl::PerformCustomAction(const ActionPtr& action,
   auto custom_action = action->get_custom_action().Bind();
   custom_action->Execute(fxl::MakeCopyable([
     this, custom_action = std::move(custom_action), source_url, story_color
-  ](f1dl::Array<maxwell::ActionPtr> actions) {
+  ](f1dl::VectorPtr<maxwell::ActionPtr> actions) {
     if (actions)
       PerformActions(std::move(actions), source_url, story_color);
   }));

@@ -14,7 +14,7 @@ void FakeNetConnector::ConnectToServiceProvider(
 }
 
 void FakeNetConnector::RegisterServiceProvider(
-    const f1dl::String& name,
+    const f1dl::StringPtr& name,
     f1dl::InterfaceHandle<component::ServiceProvider> service_provider) {
   component::ServiceProviderPtr service_provider_ptr = service_provider.Bind();
   service_provider_impl_.AddServiceForName(
@@ -26,7 +26,7 @@ void FakeNetConnector::RegisterServiceProvider(
 }
 
 void FakeNetConnector::GetDeviceServiceProvider(
-    const f1dl::String& device_name,
+    const f1dl::StringPtr& device_name,
     f1dl::InterfaceRequest<component::ServiceProvider> service_provider) {
   delegate_->ConnectToServiceProvider(device_name, std::move(service_provider));
 }

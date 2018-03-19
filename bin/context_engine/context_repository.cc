@@ -307,7 +307,7 @@ ContextRepository::QueryInternal(const ContextQueryPtr& query) {
 
     auto update_entry = ContextUpdateEntry::New();
     update_entry->key = key;
-    update_entry->value = f1dl::Array<ContextValuePtr>::New(0);
+    update_entry->value = f1dl::VectorPtr<ContextValuePtr>::New(0);
     update->values.push_back(std::move(update_entry));
     for (const auto& id : values) {
       auto it = values_.find(id);

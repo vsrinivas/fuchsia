@@ -171,8 +171,8 @@ TEST_F(ConflictResolverClientTest, Error) {
   EXPECT_EQ(1u, conflict_resolver_impl.requests.size());
 
   // Create a bogus conflict resolution.
-  f1dl::Array<MergedValuePtr> merged_values =
-      f1dl::Array<MergedValuePtr>::New(0);
+  f1dl::VectorPtr<MergedValuePtr> merged_values =
+      f1dl::VectorPtr<MergedValuePtr>::New(0);
   {
     MergedValuePtr merged_value = MergedValue::New();
     merged_value->key = convert::ToArray("unknown_key");
@@ -293,8 +293,8 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   EXPECT_EQ(1u, conflict_resolver_impl.requests.size());
 
   Status status;
-  f1dl::Array<MergedValuePtr> merged_values =
-      f1dl::Array<MergedValuePtr>::New(0);
+  f1dl::VectorPtr<MergedValuePtr> merged_values =
+      f1dl::VectorPtr<MergedValuePtr>::New(0);
   {
     MergedValuePtr merged_value = MergedValue::New();
     merged_value->key = convert::ToArray("key1");

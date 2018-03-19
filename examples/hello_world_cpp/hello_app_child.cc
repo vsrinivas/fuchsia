@@ -32,7 +32,7 @@ class HelloAppChild : public Hello {
 
  private:
   // |examples::Hello| implementation:
-  void Say(const f1dl::String& request, const SayCallback& callback) override {
+  void Say(const f1dl::StringPtr& request, const SayCallback& callback) override {
     callback((request.get() == "hello") ? "hola!" : "adios!");
   }
 

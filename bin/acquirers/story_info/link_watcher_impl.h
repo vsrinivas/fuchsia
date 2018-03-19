@@ -32,10 +32,10 @@ class LinkWatcherImpl : modular::LinkWatcher {
 
  private:
   // |LinkWatcher|
-  void Notify(const f1dl::String& json) override;
+  void Notify(const f1dl::StringPtr& json) override;
 
-  void ProcessNewValue(const f1dl::String& json);
-  void MaybeProcessContextLink(const f1dl::String& value);
+  void ProcessNewValue(const f1dl::StringPtr& json);
+  void MaybeProcessContextLink(const f1dl::StringPtr& value);
 
   StoryWatcherImpl* const owner_;
   modular::StoryController* const story_controller_;
@@ -58,7 +58,7 @@ class LinkWatcherImpl : modular::LinkWatcher {
 
   // Per context link topic, the context value.
   // TODO(thatguy): Deprecate this usage in favor of Links.
-  std::map<f1dl::String, ContextValueWriterPtr> topic_node_writers_;
+  std::map<f1dl::StringPtr, ContextValueWriterPtr> topic_node_writers_;
 
   f1dl::Binding<modular::LinkWatcher> link_watcher_binding_;
 

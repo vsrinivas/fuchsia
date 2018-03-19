@@ -23,7 +23,7 @@ constexpr size_t kDataEntityMaxByteSize = 1024 * 16;
 
 // Given an agent_url and a cookie, encodes it into an entity reference.
 std::string EncodeEntityReference(const std::string& agent_url,
-                                  const f1dl::String& cookie) {
+                                  const f1dl::StringPtr& cookie) {
   std::vector<std::string> parts(3);
   parts[0] = kEntityReferencePrefix;
   parts[1] = StringEscape(agent_url, "/");
@@ -89,7 +89,7 @@ class EntityProviderRunner::EntityReferenceFactoryImpl
 
  private:
   // |EntityReferenceFactory|
-  void CreateReference(const f1dl::String& cookie,
+  void CreateReference(const f1dl::StringPtr& cookie,
                        const CreateReferenceCallback& callback) override {
     entity_provider_runner_->CreateReference(agent_url_, cookie, callback);
   }
@@ -125,10 +125,10 @@ class EntityProviderRunner::DataEntity : Entity {
  private:
   // |Entity|
   void GetTypes(const GetTypesCallback& result) {
-    result(f1dl::Array<f1dl::String>::From<>(types_));
+    result(f1dl::VectorPtr<f1dl::StringPtr>::From<>(types_));
   }
   // |Entity|
-  void GetData(const f1dl::String& type, const GetDataCallback& result) {
+  void GetData(const f1dl::StringPtr& type, const GetDataCallback& result) {
     auto it = data_.find(type);
     if (it != data_.end()) {
       result(it->second);
@@ -194,14 +194,14 @@ std::string EntityProviderRunner::CreateReferenceFromData(
 
 void EntityProviderRunner::CreateReference(
     const std::string& agent_url,
-    const f1dl::String& cookie,
+    const f1dl::StringPtr& cookie,
     const EntityReferenceFactory::CreateReferenceCallback& callback) {
   auto entity_ref = EncodeEntityReference(agent_url, cookie);
   callback(entity_ref);
 }
 
 void EntityProviderRunner::ResolveDataEntity(
-    const f1dl::String& entity_reference,
+    const f1dl::StringPtr& entity_reference,
     f1dl::InterfaceRequest<Entity> entity_request) {
   std::map<std::string, std::string> entity_data;
   if (!DecodeEntityDataReference(entity_reference, &entity_data)) {
@@ -226,7 +226,7 @@ void EntityProviderRunner::OnDataEntityFinished(
 }
 
 void EntityProviderRunner::ResolveEntity(
-    const f1dl::String& entity_reference,
+    const f1dl::StringPtr& entity_reference,
     f1dl::InterfaceRequest<Entity> entity_request) {
   if (entity_reference.get().find(kEntityDataReferencePrefix) == 0ul) {
     ResolveDataEntity(entity_reference, std::move(entity_request));

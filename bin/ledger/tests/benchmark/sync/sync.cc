@@ -100,7 +100,7 @@ void SyncBenchmark::Run() {
                       std::move(cloud_provider_beta), "sync", beta_path, &beta);
   QuitOnError(status, "beta ledger");
 
-  f1dl::Array<uint8_t> id;
+  f1dl::VectorPtr<uint8_t> id;
   status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
                                           &alpha, nullptr, &alpha_page_, &id);
   QuitOnError(status, "alpha page initialization");
@@ -144,7 +144,7 @@ void SyncBenchmark::RunSingleChange(size_t change_number) {
     return;
   }
 
-  std::vector<f1dl::Array<uint8_t>> keys(entries_per_change_);
+  std::vector<f1dl::VectorPtr<uint8_t>> keys(entries_per_change_);
   for (size_t i = 0; i < entries_per_change_; i++) {
     // Keys are distinct, but have the common prefix <i>.
     keys[i] = generator_.MakeKey(change_number, kKeySize);

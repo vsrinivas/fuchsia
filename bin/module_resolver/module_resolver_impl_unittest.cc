@@ -50,7 +50,7 @@ class QueryBuilder {
   // Creates a noun that's just Entity types.
   QueryBuilder& AddNounTypes(std::string name, std::vector<std::string> types) {
     auto noun = modular::ResolverNounConstraint::New();
-    auto types_array = f1dl::Array<f1dl::String>::From(types);
+    auto types_array = f1dl::VectorPtr<f1dl::StringPtr>::From(types);
     noun->set_entity_type(std::move(types_array));
     auto resolver_noun_constraint_entry =
         modular::ResolverNounConstraintEntry::New();
@@ -92,7 +92,7 @@ class QueryBuilder {
       std::pair<std::vector<std::string>, std::string> path_parts,
       std::string entity_reference) {
     auto link_path = modular::LinkPath::New();
-    link_path->module_path = f1dl::Array<f1dl::String>::From(path_parts.first);
+    link_path->module_path = f1dl::VectorPtr<f1dl::StringPtr>::From(path_parts.first);
     link_path->link_name = path_parts.second;
 
     auto link_info = modular::ResolverLinkInfo::New();
@@ -117,14 +117,14 @@ class QueryBuilder {
       std::pair<std::vector<std::string>, std::string> path_parts,
       std::vector<std::string> allowed_types) {
     auto link_path = modular::LinkPath::New();
-    link_path->module_path = f1dl::Array<f1dl::String>::From(path_parts.first);
+    link_path->module_path = f1dl::VectorPtr<f1dl::StringPtr>::From(path_parts.first);
     link_path->link_name = path_parts.second;
 
     auto link_info = modular::ResolverLinkInfo::New();
     link_info->path = std::move(link_path);
     link_info->allowed_types = modular::LinkAllowedTypes::New();
     link_info->allowed_types->allowed_entity_types =
-        f1dl::Array<f1dl::String>::From(allowed_types);
+        f1dl::VectorPtr<f1dl::StringPtr>::From(allowed_types);
 
     auto noun = modular::ResolverNounConstraint::New();
     noun->set_link_info(std::move(link_info));
@@ -183,7 +183,7 @@ class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
     return ptr;
   }
 
-  f1dl::String AddEntity(std::map<std::string, std::string> entity_data) {
+  f1dl::StringPtr AddEntity(std::map<std::string, std::string> entity_data) {
     return entity_resolver_->AddEntity(std::move(entity_data));
   }
 
@@ -201,7 +201,7 @@ class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
         RunLoopUntilWithTimeout([&got_response] { return got_response; }));
   }
 
-  const f1dl::Array<modular::ModuleResolverResultPtr>& results() const {
+  const f1dl::VectorPtr<modular::ModuleResolverResultPtr>& results() const {
     return result_->modules;
   }
 
@@ -377,7 +377,7 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
 
   // Given an entity of type "frob", find a module with verb
   // com.google.fuchsia.navigate.v1.
-  f1dl::String location_entity = AddEntity({{"frob", ""}});
+  f1dl::StringPtr location_entity = AddEntity({{"frob", ""}});
   ASSERT_TRUE(!location_entity->empty());
 
   query = QueryBuilder("com.google.fuchsia.navigate.v1")
@@ -513,7 +513,7 @@ TEST_F(ModuleResolverImplTest, LinkInfoNounType) {
 
   // Same thing should happen if there aren't any allowed types, but the Link's
   // content encodes an Entity reference.
-  f1dl::String entity_reference = AddEntity({{"foo", ""}});
+  f1dl::StringPtr entity_reference = AddEntity({{"foo", ""}});
   query = QueryBuilder("com.google.fuchsia.navigate.v1")
               .AddLinkInfoNounWithContent("start", {{"a", "b"}, "c"},
                                           entity_reference)
@@ -726,10 +726,10 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndMultipleNouns) {
 
   source->idle();
 
-  f1dl::String start_entity = AddEntity({{"gps", "gps data"}});
+  f1dl::StringPtr start_entity = AddEntity({{"gps", "gps data"}});
   ASSERT_TRUE(!start_entity->empty());
 
-  f1dl::String end_entity = AddEntity({{"not_gps", "not gps data"}});
+  f1dl::StringPtr end_entity = AddEntity({{"not_gps", "not gps data"}});
   ASSERT_TRUE(!end_entity->empty());
 
   auto query = QueryBuilder()
@@ -775,10 +775,10 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndTwoNounsOfSameType) {
 
   source->idle();
 
-  f1dl::String start_entity = AddEntity({{"gps", "gps data one"}});
+  f1dl::StringPtr start_entity = AddEntity({{"gps", "gps data one"}});
   ASSERT_TRUE(!start_entity->empty());
 
-  f1dl::String end_entity = AddEntity({{"gps", "gps data two"}});
+  f1dl::StringPtr end_entity = AddEntity({{"gps", "gps data two"}});
   ASSERT_TRUE(!end_entity->empty());
 
   auto query = QueryBuilder()
@@ -845,13 +845,13 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndThreeNounsOfSameType) {
 
   source->idle();
 
-  f1dl::String start_entity = AddEntity({{"gps", "gps data one"}});
+  f1dl::StringPtr start_entity = AddEntity({{"gps", "gps data one"}});
   ASSERT_TRUE(!start_entity->empty());
 
-  f1dl::String end_entity = AddEntity({{"gps", "gps data two"}});
+  f1dl::StringPtr end_entity = AddEntity({{"gps", "gps data two"}});
   ASSERT_TRUE(!end_entity->empty());
 
-  f1dl::String middle_entity = AddEntity({{"gps", "gps data three"}});
+  f1dl::StringPtr middle_entity = AddEntity({{"gps", "gps data three"}});
   ASSERT_TRUE(!middle_entity->empty());
 
   auto query = QueryBuilder()
@@ -889,13 +889,13 @@ TEST_F(ModuleResolverImplTest,
 
   source->idle();
 
-  f1dl::String start_entity = AddEntity({{"gps", "gps data one"}});
+  f1dl::StringPtr start_entity = AddEntity({{"gps", "gps data one"}});
   ASSERT_TRUE(!start_entity->empty());
 
-  f1dl::String end_entity = AddEntity({{"gps", "gps data two"}});
+  f1dl::StringPtr end_entity = AddEntity({{"gps", "gps data two"}});
   ASSERT_TRUE(!end_entity->empty());
 
-  f1dl::String middle_entity = AddEntity({{"gps", "gps data three"}});
+  f1dl::StringPtr middle_entity = AddEntity({{"gps", "gps data three"}});
   ASSERT_TRUE(!middle_entity->empty());
 
   auto query = QueryBuilder()
@@ -933,7 +933,7 @@ TEST_F(ModuleResolverImplTest,
 
   source->idle();
 
-  f1dl::String start_entity = AddEntity({{"gps", "gps data"}});
+  f1dl::StringPtr start_entity = AddEntity({{"gps", "gps data"}});
   ASSERT_TRUE(!start_entity->empty());
 
   // The query only contains an Entity for "noun1", but the module manifest
@@ -964,7 +964,7 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbIncompatibleNounTypes) {
 
   source->idle();
 
-  f1dl::String start_entity = AddEntity({{"not_gps", "not gps data"}});
+  f1dl::StringPtr start_entity = AddEntity({{"not_gps", "not gps data"}});
   ASSERT_TRUE(!start_entity->empty());
 
   // The query only contains an Entity for "noun1", but the module manifest

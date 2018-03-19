@@ -28,7 +28,7 @@ void ProposalPublisherImpl::Propose(ProposalPtr proposal) {
   engine_->UpdateRanking();
 }
 
-void ProposalPublisherImpl::Remove(const f1dl::String& proposal_id) {
+void ProposalPublisherImpl::Remove(const f1dl::StringPtr& proposal_id) {
   engine_->RemoveNextProposal(component_url_, proposal_id);
   engine_->UpdateRanking();
 }

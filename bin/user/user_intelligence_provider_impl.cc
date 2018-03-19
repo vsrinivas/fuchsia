@@ -152,7 +152,7 @@ void UserIntelligenceProviderImpl::StartAgents(
 }
 
 void UserIntelligenceProviderImpl::GetServicesForAgent(
-    const f1dl::String& url,
+    const f1dl::StringPtr& url,
     const GetServicesForAgentCallback& callback) {
   auto service_list = component::ServiceList::New();
   agent_namespaces_.emplace_back(service_list->provider.NewRequest());
@@ -221,13 +221,13 @@ void UserIntelligenceProviderImpl::StartKronk() {
   });
 }
 
-f1dl::Array<f1dl::String> UserIntelligenceProviderImpl::AddStandardServices(
+f1dl::VectorPtr<f1dl::StringPtr> UserIntelligenceProviderImpl::AddStandardServices(
     const std::string& url, component::ServiceNamespace* agent_host) {
   auto agent_info = ComponentScope::New();
   auto agent_scope = AgentScope::New();
   agent_scope->url = url;
   agent_info->set_agent_scope(std::move(agent_scope));
-  f1dl::Array<f1dl::String> service_names;
+  f1dl::VectorPtr<f1dl::StringPtr> service_names;
 
   service_names.push_back(maxwell::ContextWriter::Name_);
   agent_host->AddService<maxwell::ContextWriter>(fxl::MakeCopyable(

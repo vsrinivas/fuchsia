@@ -41,7 +41,7 @@ class ParentApp {
  private:
   void ScheduleDone() {
     auto check = [this,
-                  done = std::make_shared<int>(0)](const f1dl::String& value) {
+                  done = std::make_shared<int>(0)](const f1dl::StringPtr& value) {
       ++*done;
       if (*done == 2) {
         module_host_->module_context()->Done();

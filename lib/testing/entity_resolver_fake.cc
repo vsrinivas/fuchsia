@@ -18,7 +18,7 @@ class EntityResolverFake::EntityImpl : Entity {
  private:
   // |Entity|
   void GetTypes(const GetTypesCallback& callback) override {
-    f1dl::Array<f1dl::String> types;
+    f1dl::VectorPtr<f1dl::StringPtr> types;
     for (const auto& entry : types_and_data_) {
       types.push_back(entry.first);
     }
@@ -26,7 +26,7 @@ class EntityResolverFake::EntityImpl : Entity {
   }
 
   // |Entity|
-  void GetData(const f1dl::String& type,
+  void GetData(const f1dl::StringPtr& type,
                const GetDataCallback& callback) override {
     auto it = types_and_data_.find(type);
     if (it == types_and_data_.end()) {
@@ -51,7 +51,7 @@ void EntityResolverFake::Connect(
 
 // Returns an Entity reference that will resolve to an Entity.
 // |types_and_data| is a map of data type to data bytes.
-f1dl::String EntityResolverFake::AddEntity(
+f1dl::StringPtr EntityResolverFake::AddEntity(
     std::map<std::string, std::string> types_and_data) {
   const std::string id = std::to_string(next_entity_id_++);
 
@@ -61,7 +61,7 @@ f1dl::String EntityResolverFake::AddEntity(
 }
 
 void EntityResolverFake::ResolveEntity(
-    const f1dl::String& entity_reference,
+    const f1dl::StringPtr& entity_reference,
     f1dl::InterfaceRequest<Entity> entity_request) {
   auto it = entities_.find(entity_reference);
   if (it == entities_.end()) {

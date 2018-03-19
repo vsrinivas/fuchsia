@@ -53,15 +53,15 @@ class PutBenchmark : public ledger::PageWatcher {
   // on updating entries, it also adds these keys in the ledger with some
   // initial values.
   void InitializeKeys(
-      std::function<void(std::vector<f1dl::Array<uint8_t>>)> on_done);
+      std::function<void(std::vector<f1dl::VectorPtr<uint8_t>>)> on_done);
 
-  void BindWatcher(std::vector<f1dl::Array<uint8_t>> keys);
-  void RunSingle(int i, std::vector<f1dl::Array<uint8_t>> keys);
+  void BindWatcher(std::vector<f1dl::VectorPtr<uint8_t>> keys);
+  void RunSingle(int i, std::vector<f1dl::VectorPtr<uint8_t>> keys);
   void CommitAndRunNext(int i,
                         size_t key_number,
-                        std::vector<f1dl::Array<uint8_t>> keys);
-  void PutEntry(f1dl::Array<uint8_t> key,
-                f1dl::Array<uint8_t> value,
+                        std::vector<f1dl::VectorPtr<uint8_t>> keys);
+  void PutEntry(f1dl::VectorPtr<uint8_t> key,
+                f1dl::VectorPtr<uint8_t> value,
                 std::function<void()> on_done);
 
   void ShutDown();

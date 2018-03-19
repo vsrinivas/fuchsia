@@ -162,8 +162,8 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
 }
 
 void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
-  f1dl::Array<auth::AccountPtr> accounts =
-      f1dl::Array<auth::AccountPtr>::New(0);
+  f1dl::VectorPtr<auth::AccountPtr> accounts =
+      f1dl::VectorPtr<auth::AccountPtr>::New(0);
   if (users_storage_) {
     for (const auto* user : *users_storage_->users()) {
       accounts.push_back(Convert(user));
@@ -177,7 +177,7 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
   account_provider_->AddAccount(
       identity_provider,
       [this, identity_provider, callback](auth::AccountPtr account,
-                                          const f1dl::String& error_code) {
+                                          const f1dl::StringPtr& error_code) {
         if (account.is_null()) {
           callback(nullptr, error_code);
           return;
@@ -234,7 +234,7 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
       });
 }
 
-void UserProviderImpl::RemoveUser(const f1dl::String& account_id,
+void UserProviderImpl::RemoveUser(const f1dl::StringPtr& account_id,
                                   const RemoveUserCallback& callback) {
   auth::AccountPtr account;
   if (users_storage_) {

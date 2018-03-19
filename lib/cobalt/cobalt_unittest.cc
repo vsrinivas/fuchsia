@@ -53,7 +53,7 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
   void AddStringObservation(
       uint32_t metric_id,
       uint32_t encoding_id,
-      const f1dl::String& observation,
+      const f1dl::StringPtr& observation,
       const AddStringObservationCallback& callback) override {};
 
   void AddIntObservation(
@@ -70,11 +70,11 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
 
   void AddIntBucketDistribution(
       uint32_t metric_id, uint32_t encoding_id,
-      f1dl::Array<BucketDistributionEntryPtr> distribution,
+      f1dl::VectorPtr<BucketDistributionEntryPtr> distribution,
       const AddIntBucketDistributionCallback& callback) override {}
 
   void AddMultipartObservation(
-      uint32_t metric_id, f1dl::Array<ObservationValuePtr> observation,
+      uint32_t metric_id, f1dl::VectorPtr<ObservationValuePtr> observation,
       const AddMultipartObservationCallback& callback) override {
     RecordCall("AddMultipartObservation", observation);
     callback(Status::OK);
@@ -93,11 +93,11 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
   }
 
   void ExpectCalledOnceWith(const std::string& func,
-                            f1dl::Array<ObservationValuePtr>& expected_parts) {
+                            f1dl::VectorPtr<ObservationValuePtr>& expected_parts) {
     EXPECT_EQ(1U, multipart_calls_.count(func));
     if (multipart_calls_.count(func) > 0) {
       EXPECT_EQ(1U, multipart_calls_[func].size());
-      f1dl::Array<ObservationValuePtr>& actual = multipart_calls_[func][0];
+      f1dl::VectorPtr<ObservationValuePtr>& actual = multipart_calls_[func][0];
       EXPECT_TRUE(actual.Equals(expected_parts));
     }
   }
@@ -108,12 +108,12 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
   }
 
   void RecordCall(const std::string& func,
-                  f1dl::Array<ObservationValuePtr>& parts) {
+                  f1dl::VectorPtr<ObservationValuePtr>& parts) {
     multipart_calls_[func].push_back(std::move(parts));
   }
 
   std::map<std::string, std::vector<ValuePtr>> calls_;
-  std::map<std::string, std::vector<f1dl::Array<ObservationValuePtr>>>
+  std::map<std::string, std::vector<f1dl::VectorPtr<ObservationValuePtr>>>
       multipart_calls_;
 };
 
@@ -249,7 +249,7 @@ TEST_F(CobaltTest, ReportStringObservation) {
 
 TEST_F(CobaltTest, ReportIntBucketObservation) {
   ValuePtr value = Value::New();
-  auto distribution = f1dl::Array<BucketDistributionEntryPtr>::New(2);
+  auto distribution = f1dl::VectorPtr<BucketDistributionEntryPtr>::New(2);
   distribution->at(0) = BucketDistributionEntry::New();
   distribution->at(0)->index = 1;
   distribution->at(0)->count = 2;
@@ -268,7 +268,7 @@ TEST_F(CobaltTest, ReportIntBucketObservation) {
 }
 
 TEST_F(CobaltTest, ReportMultipartObservation) {
-  auto parts = f1dl::Array<cobalt::ObservationValuePtr>::New(2);
+  auto parts = f1dl::VectorPtr<cobalt::ObservationValuePtr>::New(2);
   parts->at(0) = cobalt::ObservationValue::New();
   parts->at(0)->name = "part1";
   parts->at(0)->encoding_id = kFakeCobaltEncodingId;

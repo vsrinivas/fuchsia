@@ -55,25 +55,25 @@ class PageDelegate {
   void GetId(const Page::GetIdCallback& callback);
 
   void GetSnapshot(f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
-                   f1dl::Array<uint8_t> key_prefix,
+                   f1dl::VectorPtr<uint8_t> key_prefix,
                    f1dl::InterfaceHandle<PageWatcher> watcher,
                    const Page::GetSnapshotCallback& callback);
 
-  void Put(f1dl::Array<uint8_t> key,
-           f1dl::Array<uint8_t> value,
+  void Put(f1dl::VectorPtr<uint8_t> key,
+           f1dl::VectorPtr<uint8_t> value,
            const Page::PutCallback& callback);
 
-  void PutWithPriority(f1dl::Array<uint8_t> key,
-                       f1dl::Array<uint8_t> value,
+  void PutWithPriority(f1dl::VectorPtr<uint8_t> key,
+                       f1dl::VectorPtr<uint8_t> value,
                        Priority priority,
                        const Page::PutWithPriorityCallback& callback);
 
-  void PutReference(f1dl::Array<uint8_t> key,
+  void PutReference(f1dl::VectorPtr<uint8_t> key,
                     ReferencePtr reference,
                     Priority priority,
                     const Page::PutReferenceCallback& callback);
 
-  void Delete(f1dl::Array<uint8_t> key, const Page::DeleteCallback& callback);
+  void Delete(f1dl::VectorPtr<uint8_t> key, const Page::DeleteCallback& callback);
 
   void CreateReference(std::unique_ptr<storage::DataSource> data,
                        std::function<void(Status, ReferencePtr)> callback);
@@ -95,7 +95,7 @@ class PageDelegate {
 
   const storage::CommitId& GetCurrentCommitId();
 
-  void PutInCommit(f1dl::Array<uint8_t> key,
+  void PutInCommit(f1dl::VectorPtr<uint8_t> key,
                    storage::ObjectIdentifier object_identifier,
                    storage::KeyPriority priority,
                    StatusCallback callback);

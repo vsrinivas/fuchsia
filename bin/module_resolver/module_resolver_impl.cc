@@ -253,9 +253,9 @@ class ModuleResolverImpl::FindModulesCall
   //
   // In order for a query to match an entry, it must contain enough nouns to
   // populate each of the entry nouns.
-  f1dl::Array<modular::ModuleResolverResultPtr>
+  f1dl::VectorPtr<modular::ModuleResolverResultPtr>
   MatchQueryNounsToEntryNounsByType(const modular::ModuleManifestPtr& entry) {
-    f1dl::Array<modular::ModuleResolverResultPtr> modules;
+    f1dl::VectorPtr<modular::ModuleResolverResultPtr> modules;
     modules.resize(0);
     // TODO(MI4-866): Handle entries with optional nouns.
     if (query_->noun_constraints->size() < entry->noun_constraints->size()) {
@@ -388,9 +388,9 @@ class ModuleResolverImpl::FindModulesCall
     return !intersection.empty();
   }
 
-  std::vector<std::string> ToArray(f1dl::Array<f1dl::String>& values) {
+  std::vector<std::string> ToArray(f1dl::VectorPtr<f1dl::StringPtr>& values) {
     std::vector<std::string> ret;
-    for (f1dl::String str : *values) {
+    for (f1dl::StringPtr str : *values) {
       ret.push_back(str.get());
     }
     return ret;
@@ -517,7 +517,7 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
   // out into its own class. Then, make a new class to handle OnQuery() and
   // share the same index instance here and there.
 
-  f1dl::Array<ProposalPtr> proposals = f1dl::Array<ProposalPtr>::New(0);
+  f1dl::VectorPtr<ProposalPtr> proposals = f1dl::VectorPtr<ProposalPtr>::New(0);
   if (query->text->empty()) {
     auto response = QueryResponse::New();
     response->proposals = std::move(proposals);

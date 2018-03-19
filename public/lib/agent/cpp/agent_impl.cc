@@ -30,13 +30,13 @@ AgentImpl::AgentImpl(fbl::RefPtr<fs::PseudoDir> directory,
 
 // |Agent|
 void AgentImpl::Connect(
-    const f1dl::String& requestor_url,
+    const f1dl::StringPtr& requestor_url,
     f1dl::InterfaceRequest<component::ServiceProvider> services_request) {
   delegate_->Connect(std::move(services_request));
 }
 
 // |Agent|
-void AgentImpl::RunTask(const f1dl::String& task_id,
+void AgentImpl::RunTask(const f1dl::StringPtr& task_id,
                         const RunTaskCallback& callback) {
   delegate_->RunTask(task_id, callback);
 }

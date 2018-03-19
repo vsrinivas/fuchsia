@@ -75,7 +75,7 @@ class LinkChangeCountWatcherImpl : modular::LinkWatcher {
 
  private:
   // |LinkWatcher|
-  void Notify(const f1dl::String& json) override {
+  void Notify(const f1dl::StringPtr& json) override {
     modular_example::Counter counter =
         modular_example::Store::ParseCounterJson(json.get(), "test_link_data");
 
@@ -197,7 +197,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     story_provider_->CreateStoryWithInfo(url, nullptr  /* info_entra */,
                                          modular::JsonValueToString(doc),
-                                         [this](const f1dl::String& story_id) {
+                                         [this](const f1dl::StringPtr& story_id) {
                                            story1_create_.Pass();
                                            TestStory1_GetController(story_id);
                                          });
@@ -205,7 +205,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   TestPoint story1_get_controller_{"Story1 GetController"};
 
-  void TestStory1_GetController(const f1dl::String& story_id) {
+  void TestStory1_GetController(const f1dl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_->GetInfo(
         [this](modular::StoryInfoPtr story_info, modular::StoryState state) {
@@ -221,7 +221,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_controller_->GetLink(nullptr, "root", root_link_.NewRequest());
 
     std::vector<std::string> segments{kUserShell};
-    root_link_->Set(f1dl::Array<f1dl::String>::From(segments),
+    root_link_->Set(f1dl::VectorPtr<f1dl::StringPtr>::From(segments),
                     modular::JsonValueToString(modular::JsonValue(kTestApp)));
 
     TestStory1_Run(0);
@@ -281,7 +281,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
             // Can't use the StoryController here because we closed it
             // in TeardownStoryController().
             story_provider_->RunningStories(
-                [this, round](f1dl::Array<f1dl::String> story_ids) {
+                [this, round](f1dl::VectorPtr<f1dl::StringPtr> story_ids) {
                   auto n = count(story_ids->begin(), story_ids->end(),
                                  story_info_->id);
                   FXL_CHECK(n == 0);

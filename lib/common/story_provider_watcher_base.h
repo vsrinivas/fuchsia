@@ -36,7 +36,7 @@ class StoryProviderWatcherBase : modular::StoryProviderWatcher {
 
  private:
   // |StoryProviderWatcher|
-  void OnDelete(const ::f1dl::String& story_id) override;
+  void OnDelete(const ::f1dl::StringPtr& story_id) override;
 
   // |StoryProviderWatcher|
   void OnChange(modular::StoryInfoPtr story_info,

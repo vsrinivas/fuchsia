@@ -46,7 +46,7 @@ LedgerRepositoryImpl::Unbind() {
 }
 
 void LedgerRepositoryImpl::GetLedger(
-    f1dl::Array<uint8_t> ledger_name,
+    f1dl::VectorPtr<uint8_t> ledger_name,
     f1dl::InterfaceRequest<Ledger> ledger_request,
     const GetLedgerCallback& callback) {
   TRACE_DURATION("ledger", "repository_get_ledger");
@@ -115,8 +115,8 @@ void LedgerRepositoryImpl::GetLedgerRepositoryDebug(
 
 void LedgerRepositoryImpl::GetInstancesList(
     const GetInstancesListCallback& callback) {
-  f1dl::Array<f1dl::Array<uint8_t>> result =
-      f1dl::Array<f1dl::Array<uint8_t>>::New(0);
+  f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> result =
+      f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>>::New(0);
   for (const auto& key_value : ledger_managers_) {
     result.push_back(convert::ToArray(key_value.first));
   }
@@ -124,7 +124,7 @@ void LedgerRepositoryImpl::GetInstancesList(
 }
 
 void LedgerRepositoryImpl::GetLedgerDebug(
-    f1dl::Array<uint8_t> ledger_name,
+    f1dl::VectorPtr<uint8_t> ledger_name,
     f1dl::InterfaceRequest<LedgerDebug> request,
     const GetLedgerDebugCallback& callback) {
   auto it = ledger_managers_.find(ledger_name);

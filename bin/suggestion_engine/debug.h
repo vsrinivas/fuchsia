@@ -51,7 +51,7 @@ class SuggestionDebugImpl : public SuggestionDebug {
   f1dl::InterfacePtrSet<NextProposalListener> next_proposal_listeners_;
 
   // The cached set of next proposals.
-  f1dl::Array<ProposalSummaryPtr> cached_next_proposals_;
+  f1dl::VectorPtr<ProposalSummaryPtr> cached_next_proposals_;
 };
 
 }  // namespace maxwell

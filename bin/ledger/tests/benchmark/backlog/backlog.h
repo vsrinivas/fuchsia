@@ -64,10 +64,10 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   void WaitForReaderDownload();
 
   void GetReaderSnapshot();
-  void GetEntriesStep(f1dl::Array<uint8_t> token, size_t entries_left);
+  void GetEntriesStep(f1dl::VectorPtr<uint8_t> token, size_t entries_left);
   void CheckStatusAndGetMore(ledger::Status status,
                              size_t entries_read,
-                             f1dl::Array<uint8_t> next_token);
+                             f1dl::VectorPtr<uint8_t> next_token);
 
   void ShutDown();
 
@@ -87,7 +87,7 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   component::ApplicationControllerPtr reader_controller_;
   ledger::LedgerPtr writer_;
   ledger::LedgerPtr reader_;
-  f1dl::Array<uint8_t> page_id_;
+  f1dl::VectorPtr<uint8_t> page_id_;
   ledger::PagePtr writer_page_;
   ledger::PagePtr reader_page_;
   ledger::PageSnapshotPtr reader_snapshot_;

@@ -49,7 +49,7 @@ void StoryInfoAcquirer::Connect(
 }
 
 void StoryInfoAcquirer::RunTask(
-    const f1dl::String& task_id,
+    const f1dl::StringPtr& task_id,
     const modular::Agent::RunTaskCallback& callback) {
   FXL_LOG(FATAL) << "Not implemented.";
 }
@@ -102,7 +102,7 @@ void StoryInfoAcquirer::OnFocusChange(modular::FocusInfoPtr info) {
   }
 }
 
-void StoryInfoAcquirer::OnVisibleStoriesChange(f1dl::Array<f1dl::String> ids) {
+void StoryInfoAcquirer::OnVisibleStoriesChange(f1dl::VectorPtr<f1dl::StringPtr> ids) {
   // TODO(thatguy)
 }
 
@@ -121,7 +121,7 @@ void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info,
   it->second->OnStoryStateChange(std::move(info), state);
 }
 
-void StoryInfoAcquirer::OnDelete(const f1dl::String& story_id) {
+void StoryInfoAcquirer::OnDelete(const f1dl::StringPtr& story_id) {
   const std::string id = story_id.get();
   // TODO(thatguy)
 }

@@ -33,7 +33,7 @@ void IntelligenceServicesImpl::GetContextWriter(
 
 void IntelligenceServicesImpl::GetProposalPublisher(
     f1dl::InterfaceRequest<ProposalPublisher> request) {
-  f1dl::String component_id;
+  f1dl::StringPtr component_id;
   if (scope_->is_agent_scope()) {
     component_id = scope_->get_agent_scope()->url;
   } else if (scope_->is_module_scope()) {
@@ -55,7 +55,7 @@ void IntelligenceServicesImpl::GetActionLog(
 
 void IntelligenceServicesImpl::RegisterQueryHandler(
     f1dl::InterfaceHandle<QueryHandler> query_handler) {
-  f1dl::String component_id;
+  f1dl::StringPtr component_id;
   if (scope_->is_agent_scope()) {
     component_id = scope_->get_agent_scope()->url;
   } else if (scope_->is_module_scope()) {

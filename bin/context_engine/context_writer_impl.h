@@ -42,8 +42,8 @@ class ContextWriterImpl : ContextWriter {
 
   // Used by ContextValueWriterImpl.
   void GetEntityTypesFromEntityReference(
-      const f1dl::String& reference,
-      std::function<void(const f1dl::Array<f1dl::String>&)> done);
+      const f1dl::StringPtr& reference,
+      std::function<void(const f1dl::VectorPtr<f1dl::StringPtr>&)> done);
 
  private:
   // |ContextWriter|
@@ -51,8 +51,8 @@ class ContextWriterImpl : ContextWriter {
                    ContextValueType type) override;
 
   // |ContextWriter|
-  void WriteEntityTopic(const f1dl::String& topic,
-                        const f1dl::String& value) override;
+  void WriteEntityTopic(const f1dl::StringPtr& topic,
+                        const f1dl::StringPtr& value) override;
 
   f1dl::Binding<ContextWriter> binding_;
 
@@ -61,7 +61,7 @@ class ContextWriterImpl : ContextWriter {
   modular::EntityResolver* const entity_resolver_;
 
   // Supports WriteEntityTopic.
-  std::map<f1dl::String, ContextRepository::Id> topic_value_ids_;
+  std::map<f1dl::StringPtr, ContextRepository::Id> topic_value_ids_;
 
   // Supports CreateValue().
   std::vector<std::unique_ptr<ContextValueWriterImpl>> value_writer_storage_;
@@ -92,7 +92,7 @@ class ContextValueWriterImpl : ContextValueWriter {
                         ContextValueType type) override;
 
   // |ContextValueWriter|
-  void Set(const f1dl::String& content, ContextMetadataPtr metadata) override;
+  void Set(const f1dl::StringPtr& content, ContextMetadataPtr metadata) override;
 
   f1dl::Binding<ContextValueWriter> binding_;
 

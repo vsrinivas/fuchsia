@@ -82,7 +82,7 @@ void XdrContext::Value(unsigned char* const data) {
   }
 }
 
-void XdrContext::Value(f1dl::String* const data) {
+void XdrContext::Value(f1dl::StringPtr* const data) {
   switch (op_) {
     case XdrOp::TO_JSON:
       if (data->is_null()) {
@@ -98,7 +98,7 @@ void XdrContext::Value(f1dl::String* const data) {
       } else if (value_->IsString()) {
         *data = value_->GetString();
       } else {
-        AddError("Value() of f1dl::String: string expected");
+        AddError("Value() of f1dl::StringPtr: string expected");
       }
       break;
   }

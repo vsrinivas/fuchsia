@@ -150,22 +150,22 @@ class MyEntityProvider : AgentImpl::Delegate,
     ++counts["Connect"];
   }
   // |AgentImpl::Delegate|
-  void RunTask(const f1dl::String& task_id,
+  void RunTask(const f1dl::StringPtr& task_id,
                const std::function<void()>& done) override {
     ++counts["RunTask"];
     done();
   }
 
   // |EntityProvider|
-  void GetTypes(const f1dl::String& cookie,
+  void GetTypes(const f1dl::StringPtr& cookie,
                 const GetTypesCallback& callback) override {
     callback(
-        f1dl::Array<f1dl::String>::From(std::vector<std::string>{"MyType"}));
+        f1dl::VectorPtr<f1dl::StringPtr>::From(std::vector<std::string>{"MyType"}));
   }
 
   // |EntityProvider|
-  void GetData(const f1dl::String& cookie,
-               const f1dl::String& type,
+  void GetData(const f1dl::StringPtr& cookie,
+               const f1dl::StringPtr& type,
                const GetDataCallback& callback) override {
     callback(type.get() + ":MyData");
   }
@@ -213,10 +213,10 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   // references.
   EntityReferenceFactoryPtr factory;
   dummy_agent->agent_context()->GetEntityReferenceFactory(factory.NewRequest());
-  f1dl::String entity_ref;
+  f1dl::StringPtr entity_ref;
   factory->CreateReference(
       "my_cookie",
-      [&entity_ref](const f1dl::String& retval) { entity_ref = retval; });
+      [&entity_ref](const f1dl::StringPtr& retval) { entity_ref = retval; });
 
   RunLoopUntilWithTimeout([&entity_ref] { return !entity_ref.is_null(); });
   EXPECT_FALSE(entity_ref.is_null());
@@ -228,12 +228,12 @@ TEST_F(EntityProviderRunnerTest, Basic) {
                                                 entity.NewRequest());
 
   std::map<std::string, uint32_t> counts;
-  entity->GetTypes([&counts](const f1dl::Array<f1dl::String>& types) {
+  entity->GetTypes([&counts](const f1dl::VectorPtr<f1dl::StringPtr>& types) {
     EXPECT_EQ(1u, types->size());
     EXPECT_EQ("MyType", types->at(0));
     counts["GetTypes"]++;
   });
-  entity->GetData("MyType", [&counts](const f1dl::String& data) {
+  entity->GetData("MyType", [&counts](const f1dl::StringPtr& data) {
     EXPECT_EQ("MyType:MyData", data.get());
     counts["GetData"]++;
   });
@@ -254,8 +254,8 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   EntityPtr entity;
   entity_resolver->ResolveEntity(entity_ref, entity.NewRequest());
 
-  f1dl::Array<f1dl::String> output_types;
-  entity->GetTypes([&output_types](f1dl::Array<f1dl::String> result) {
+  f1dl::VectorPtr<f1dl::StringPtr> output_types;
+  entity->GetTypes([&output_types](f1dl::VectorPtr<f1dl::StringPtr> result) {
     output_types = std::move(result);
   });
   RunLoopUntilWithTimeout([&output_types] { return !output_types.is_null(); });
@@ -263,9 +263,9 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   EXPECT_EQ(data.size(), output_types->size());
   EXPECT_EQ("type1", output_types->at(0));
 
-  f1dl::String output_data;
+  f1dl::StringPtr output_data;
   entity->GetData(
-      "type1", [&output_data](f1dl::String result) { output_data = result; });
+      "type1", [&output_data](f1dl::StringPtr result) { output_data = result; });
   RunLoopUntilWithTimeout([&output_data] { return !output_data.is_null(); });
   EXPECT_EQ("data1", output_data);
 }

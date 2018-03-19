@@ -66,7 +66,7 @@ class ParentApp {
     // Once the module starts, start the same module again, but with a different
     // link mapping. This stops the previous module instance and starts a new one.
     modular::testing::GetStore()->Get(
-        "child_module_init", [this](const f1dl::String&) {
+        "child_module_init", [this](const f1dl::StringPtr&) {
           child_module_.set_error_handler([this] { OnChildModuleStopped(); });
 
           auto daisy = modular::Daisy::New();
@@ -91,7 +91,7 @@ class ParentApp {
     // Confirm that the first module instance stopped, and then stop the second
     // module instance.
     modular::testing::GetStore()->Get(
-        "child_module_stop", [this](const f1dl::String&) {
+        "child_module_stop", [this](const f1dl::StringPtr&) {
           child_module2_->Stop([this] { OnChildModule2Stopped(); });
         });
   }

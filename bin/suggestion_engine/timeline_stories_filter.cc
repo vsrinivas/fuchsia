@@ -18,7 +18,7 @@ TimelineStoriesFilter::TimelineStoriesFilter(
 TimelineStoriesFilter::~TimelineStoriesFilter() = default;
 
 bool TimelineStoriesFilter::operator()(const Proposal& proposal) {
-  // TODO(rosswang) Why can't we foreach a const f1dl::Array???
+  // TODO(rosswang) Why can't we foreach a const f1dl::VectorPtr???
   for (size_t i = 0; i < proposal.on_selected->size(); i++) {
     const auto& action = proposal.on_selected->at(i);
     if (action->is_create_story()) {

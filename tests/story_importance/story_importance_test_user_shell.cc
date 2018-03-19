@@ -32,7 +32,7 @@ constexpr char kModuleUrl[] =
 constexpr char kTopic[] = "location/home_work";
 
 float GetImportance(
-    const f1dl::Array<modular::StoryImportanceEntryPtr>& importance_list,
+    const f1dl::VectorPtr<modular::StoryImportanceEntryPtr>& importance_list,
     const std::string& id) {
   for (auto const& it : *importance_list) {
     if (it->id == id) {
@@ -116,7 +116,7 @@ class FocusWatcherImpl : modular::FocusWatcher {
 class ContextListenerImpl : maxwell::ContextListener {
  public:
   ContextListenerImpl() : binding_(this) {
-    handler_ = [](f1dl::String, f1dl::String) {};
+    handler_ = [](f1dl::StringPtr, f1dl::StringPtr) {};
   }
 
   ~ContextListenerImpl() override = default;
@@ -136,7 +136,7 @@ class ContextListenerImpl : maxwell::ContextListener {
         [] { FXL_LOG(ERROR) << "Lost connection to ContextReader."; });
   }
 
-  using Handler = std::function<void(f1dl::String, f1dl::String)>;
+  using Handler = std::function<void(f1dl::StringPtr, f1dl::StringPtr)>;
 
   void Handle(const Handler& handler) { handler_ = handler; }
 
@@ -206,7 +206,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void SetContextHome() {
     context_listener_.Handle(
-        [this](const f1dl::String& key, const f1dl::String& value) {
+        [this](const f1dl::StringPtr& key, const f1dl::StringPtr& value) {
           GetContextHome(key, value);
         });
     context_writer_->WriteEntityTopic(kTopic, "\"home\"");
@@ -215,7 +215,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   TestPoint get_context_home_{"GetContextHome()"};
 
-  void GetContextHome(const f1dl::String& topic, const f1dl::String& value) {
+  void GetContextHome(const f1dl::StringPtr& topic, const f1dl::StringPtr& value) {
     FXL_VLOG(4) << "Context " << topic << " " << value;
     if (topic == kTopic && value == "\"home\"" && !story1_context_) {
       story1_context_ = true;
@@ -228,7 +228,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void CreateStory1() {
     story_provider_->CreateStory(kModuleUrl,
-                                 [this](const f1dl::String& story_id) {
+                                 [this](const f1dl::StringPtr& story_id) {
                                    story1_id_ = story_id;
                                    create_story1_.Pass();
                                    StartStory1();
@@ -255,7 +255,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void SetContextWork() {
     context_listener_.Handle(
-        [this](const f1dl::String& key, const f1dl::String& value) {
+        [this](const f1dl::StringPtr& key, const f1dl::StringPtr& value) {
           GetContextWork(key, value);
         });
     context_writer_->WriteEntityTopic(kTopic, "\"work\"");
@@ -264,7 +264,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   TestPoint get_context_work_{"GetContextWork()"};
 
-  void GetContextWork(const f1dl::String& topic, const f1dl::String& value) {
+  void GetContextWork(const f1dl::StringPtr& topic, const f1dl::StringPtr& value) {
     if (topic == kTopic && value == "\"work\"" && !story2_context_) {
       story2_context_ = true;
       get_context_work_.Pass();
@@ -276,7 +276,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void CreateStory2() {
     story_provider_->CreateStory(kModuleUrl,
-                                 [this](const f1dl::String& story_id) {
+                                 [this](const f1dl::StringPtr& story_id) {
                                    story2_id_ = story_id;
                                    create_story2_.Pass();
                                    StartStory2();
@@ -303,7 +303,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void GetImportance1() {
     story_provider_->GetImportance(
-        [this](f1dl::Array<modular::StoryImportanceEntryPtr> importance_list) {
+        [this](f1dl::VectorPtr<modular::StoryImportanceEntryPtr> importance_list) {
           get_importance1_.Pass();
 
           auto story1_importance = GetImportance(importance_list, story1_id_);
@@ -351,7 +351,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void GetImportance2() {
     story_provider_->GetImportance(
-        [this](f1dl::Array<modular::StoryImportanceEntryPtr> importance_list) {
+        [this](f1dl::VectorPtr<modular::StoryImportanceEntryPtr> importance_list) {
           get_importance2_.Pass();
 
           auto story1_importance = GetImportance(importance_list, story1_id_);
@@ -380,12 +380,12 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   FocusWatcherImpl focus_watcher_;
 
   bool story1_context_{};
-  f1dl::String story1_id_;
+  f1dl::StringPtr story1_id_;
   modular::StoryControllerPtr story1_controller_;
   StoryWatcherImpl story1_watcher_;
 
   bool story2_context_{};
-  f1dl::String story2_id_;
+  f1dl::StringPtr story2_id_;
   modular::StoryControllerPtr story2_controller_;
   StoryWatcherImpl story2_watcher_;
 

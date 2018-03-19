@@ -86,11 +86,11 @@ class PageManager : public PageDebug {
 
   void GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) override;
 
-  void GetSnapshot(f1dl::Array<uint8_t> commit_id,
+  void GetSnapshot(f1dl::VectorPtr<uint8_t> commit_id,
                    f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
                    const GetSnapshotCallback& callback) override;
 
-  void GetCommit(f1dl::Array<uint8_t> commit_id,
+  void GetCommit(f1dl::VectorPtr<uint8_t> commit_id,
                  const GetCommitCallback& callback) override;
 
   Environment* const environment_;

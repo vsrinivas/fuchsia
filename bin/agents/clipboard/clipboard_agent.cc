@@ -42,7 +42,7 @@ class ClipboardAgent {
     services_.AddBinding(std::move(outgoing_services));
   }
 
-  void RunTask(const f1dl::String& task_id, const std::function<void()>& done) {
+  void RunTask(const f1dl::StringPtr& task_id, const std::function<void()>& done) {
     done();
   }
 

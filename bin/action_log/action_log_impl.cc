@@ -206,8 +206,8 @@ ComponentActionLogImpl::ComponentActionLogImpl(ActionLogger log_action) : log_ac
 
 ComponentActionLogImpl::~ComponentActionLogImpl() = default;
 
-void ComponentActionLogImpl::LogAction(const f1dl::String& method,
-                                       const f1dl::String& json_params) {
+void ComponentActionLogImpl::LogAction(const f1dl::StringPtr& method,
+                                       const f1dl::StringPtr& json_params) {
   rapidjson::Document params;
   if (params.Parse(json_params.get().c_str()).HasParseError()) {
     FXL_LOG(WARNING) << "Parse error.";

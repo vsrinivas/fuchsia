@@ -67,7 +67,7 @@ class SyncBenchmark : public ledger::PageWatcher {
   files::ScopedTempDir beta_tmp_dir_;
   component::ApplicationControllerPtr alpha_controller_;
   component::ApplicationControllerPtr beta_controller_;
-  f1dl::Array<uint8_t> page_id_;
+  f1dl::VectorPtr<uint8_t> page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;
 

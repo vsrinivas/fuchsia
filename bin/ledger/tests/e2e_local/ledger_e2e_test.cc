@@ -30,15 +30,15 @@ namespace e2e_local {
 namespace {
 
 template <class A>
-bool Equals(const f1dl::Array<uint8_t>& a1, const A& a2) {
+bool Equals(const f1dl::VectorPtr<uint8_t>& a1, const A& a2) {
   if (a1->size() != a2.size())
     return false;
   return memcmp(a1->data(), a2.data(), a1->size()) == 0;
 }
 
-f1dl::Array<uint8_t> TestArray() {
+f1dl::VectorPtr<uint8_t> TestArray() {
   std::string value = "value";
-  f1dl::Array<uint8_t> result(value.size());
+  f1dl::VectorPtr<uint8_t> result(value.size());
   memcpy(&result->at(0), &value[0], value.size());
   return result;
 }
@@ -80,7 +80,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
 
   ::testing::AssertionResult GetRootPage(
       ledger::LedgerRepositoryPtr* ledger_repository,
-      f1dl::Array<uint8_t> ledger_name,
+      f1dl::VectorPtr<uint8_t> ledger_name,
       ledger::PagePtr* page) {
     ledger::Status status;
     ledger::LedgerPtr ledger;
@@ -114,8 +114,8 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
       return ::testing::AssertionFailure()
              << "GetSnapshot failed with status " << status;
     }
-    f1dl::Array<ledger::InlinedEntryPtr> entries;
-    f1dl::Array<uint8_t> next_token;
+    f1dl::VectorPtr<ledger::InlinedEntryPtr> entries;
+    f1dl::VectorPtr<uint8_t> next_token;
     snapshot->GetEntriesInline(
         nullptr, nullptr,
         callback::Capture(MakeQuitTask(), &status, &entries, &next_token));

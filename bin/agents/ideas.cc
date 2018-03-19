@@ -67,7 +67,7 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
       } else {
         auto p = Proposal::New();
         p->id = kIdeaId;
-        p->on_selected = f1dl::Array<ActionPtr>::New(0);
+        p->on_selected = f1dl::VectorPtr<ActionPtr>::New(0);
         auto d = SuggestionDisplay::New();
 
         d->headline = idea;

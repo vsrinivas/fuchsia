@@ -231,7 +231,7 @@ void UserRunnerImpl::InitializeLedger() {
     // for syncing.
     AppConfigPtr cloud_provider_config = AppConfig::New();
     cloud_provider_config->url = kCloudProviderFirebaseAppUrl;
-    cloud_provider_config->args = f1dl::Array<f1dl::String>::New(0);
+    cloud_provider_config->args = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
     cloud_provider_app_ = std::make_unique<AppClient<Lifecycle>>(
         user_scope_->GetLauncher(), std::move(cloud_provider_config));
     cloud_provider_app_->services().ConnectToService(
@@ -316,7 +316,7 @@ void UserRunnerImpl::InitializeDeviceMap() {
 
   device_map_impl_ = std::make_unique<DeviceMapImpl>(
       device_name_, device_id, device_profile, ledger_client_.get(),
-      f1dl::Array<uint8_t>::New(16));
+      f1dl::VectorPtr<uint8_t>::New(16));
   user_scope_->AddService<DeviceMap>(
       [this](f1dl::InterfaceRequest<DeviceMap> request) {
         // device_map_impl_ may be reset before user_scope_.
@@ -366,7 +366,7 @@ void UserRunnerImpl::InitializeMessageQueueManager() {
   AtEnd(Reset(&message_queue_manager_));
 }
 
-void UserRunnerImpl::InitializeMaxwell(const f1dl::String& user_shell_url,
+void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
                                        AppConfigPtr story_shell) {
   // NOTE: There is an awkward service exchange here between
   // UserIntelligenceProvider, AgentRunner, StoryProviderImpl,
@@ -555,7 +555,7 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::String& user_shell_url,
   // story lifetimes.
   story_provider_impl_.reset(new StoryProviderImpl(
       user_scope_.get(), device_map_impl_->current_device_id(),
-      ledger_client_.get(), f1dl::Array<uint8_t>::New(16),
+      ledger_client_.get(), f1dl::VectorPtr<uint8_t>::New(16),
       std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider), intelligence_services_.get(),
       user_intelligence_provider_.get(), module_resolver_service_.get(),
@@ -567,7 +567,7 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::String& user_shell_url,
 
   focus_handler_ = std::make_unique<FocusHandler>(
       device_map_impl_->current_device_id(), ledger_client_.get(),
-      f1dl::Array<uint8_t>::New(16));
+      f1dl::VectorPtr<uint8_t>::New(16));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(
       std::move(focus_provider_request_story_provider));
@@ -731,10 +731,10 @@ void UserRunnerImpl::GetLink(f1dl::InterfaceRequest<Link> request) {
   }
 
   LinkPathPtr link_path = LinkPath::New();
-  link_path->module_path = f1dl::Array<f1dl::String>::New(0);
+  link_path->module_path = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
   link_path->link_name = kUserShellLinkName;
   user_shell_link_ = std::make_unique<LinkImpl>(ledger_client_.get(),
-                                                f1dl::Array<uint8_t>::New(16),
+                                                f1dl::VectorPtr<uint8_t>::New(16),
                                                 std::move(link_path), nullptr);
   user_shell_link_->Connect(std::move(request),
                             LinkImpl::ConnectionType::Secondary);

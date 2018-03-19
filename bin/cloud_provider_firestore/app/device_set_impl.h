@@ -34,14 +34,14 @@ class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
 
  private:
   // cloud_provider::DeviceSet:
-  void CheckFingerprint(f1dl::Array<uint8_t> fingerprint,
+  void CheckFingerprint(f1dl::VectorPtr<uint8_t> fingerprint,
                         const CheckFingerprintCallback& callback) override;
 
-  void SetFingerprint(f1dl::Array<uint8_t> fingerprint,
+  void SetFingerprint(f1dl::VectorPtr<uint8_t> fingerprint,
                       const SetFingerprintCallback& callback) override;
 
   void SetWatcher(
-      f1dl::Array<uint8_t> fingerprint,
+      f1dl::VectorPtr<uint8_t> fingerprint,
       f1dl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
       const SetWatcherCallback& callback) override;
 

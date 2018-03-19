@@ -15,7 +15,7 @@ namespace modular {
 // data member, so we abbreviate its type to reduce verbosity slightly.
 //
 // The map is from context topic to its json value.
-using ContextState = f1dl::Array<StoryContextEntryPtr>;
+using ContextState = f1dl::VectorPtr<StoryContextEntryPtr>;
 
 }  // namespace modular
 

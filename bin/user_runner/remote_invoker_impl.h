@@ -25,8 +25,8 @@ class RemoteInvokerImpl : RemoteInvoker {
 
  private:
   // |RemoteInvoker|
-  void StartOnDevice(const f1dl::String& device_id,
-                     const f1dl::String& story_id,
+  void StartOnDevice(const f1dl::StringPtr& device_id,
+                     const f1dl::StringPtr& story_id,
                      const StartOnDeviceCallback& callback) override;
 
   f1dl::BindingSet<RemoteInvoker> bindings_;

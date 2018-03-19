@@ -69,7 +69,7 @@ void PageDelegate::GetId(const Page::GetIdCallback& callback) {
 // GetSnapshot(PageSnapshot& snapshot, PageWatcher& watcher) => (Status status);
 void PageDelegate::GetSnapshot(
     f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
-    f1dl::Array<uint8_t> key_prefix,
+    f1dl::VectorPtr<uint8_t> key_prefix,
     f1dl::InterfaceHandle<PageWatcher> watcher,
     const Page::GetSnapshotCallback& callback) {
   // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
@@ -108,8 +108,8 @@ void PageDelegate::GetSnapshot(
 }
 
 // Put(array<uint8> key, array<uint8> value) => (Status status);
-void PageDelegate::Put(f1dl::Array<uint8_t> key,
-                       f1dl::Array<uint8_t> value,
+void PageDelegate::Put(f1dl::VectorPtr<uint8_t> key,
+                       f1dl::VectorPtr<uint8_t> value,
                        const Page::PutCallback& callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER, callback);
 }
@@ -117,8 +117,8 @@ void PageDelegate::Put(f1dl::Array<uint8_t> key,
 // PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
 //   => (Status status);
 void PageDelegate::PutWithPriority(
-    f1dl::Array<uint8_t> key,
-    f1dl::Array<uint8_t> value,
+    f1dl::VectorPtr<uint8_t> key,
+    f1dl::VectorPtr<uint8_t> value,
     Priority priority,
     const Page::PutWithPriorityCallback& callback) {
   if (key->size() > kMaxKeySize) {
@@ -161,7 +161,7 @@ void PageDelegate::PutWithPriority(
 
 // PutReference(array<uint8> key, Reference? reference, Priority priority)
 //   => (Status status);
-void PageDelegate::PutReference(f1dl::Array<uint8_t> key,
+void PageDelegate::PutReference(f1dl::VectorPtr<uint8_t> key,
                                 ReferencePtr reference,
                                 Priority priority,
                                 const Page::PutReferenceCallback& callback) {
@@ -215,7 +215,7 @@ void PageDelegate::PutReference(f1dl::Array<uint8_t> key,
 }
 
 // Delete(array<uint8> key) => (Status status);
-void PageDelegate::Delete(f1dl::Array<uint8_t> key,
+void PageDelegate::Delete(f1dl::VectorPtr<uint8_t> key,
                           const Page::DeleteCallback& callback) {
   operation_serializer_.Serialize<Status>(
       callback, fxl::MakeCopyable([this, key = std::move(key)](
@@ -351,7 +351,7 @@ const storage::CommitId& PageDelegate::GetCurrentCommitId() {
   return journal_parent_commit_;
 }
 
-void PageDelegate::PutInCommit(f1dl::Array<uint8_t> key,
+void PageDelegate::PutInCommit(f1dl::VectorPtr<uint8_t> key,
                                storage::ObjectIdentifier object_identifier,
                                storage::KeyPriority priority,
                                std::function<void(Status)> callback) {

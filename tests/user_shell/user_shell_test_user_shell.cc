@@ -101,7 +101,7 @@ class StoryModulesWatcherImpl : modular::StoryModulesWatcher {
   void Watch(modular::StoryControllerPtr* const story_controller) {
     (*story_controller)
         ->GetActiveModules(binding_.NewBinding(),
-                           [this](f1dl::Array<modular::ModuleDataPtr> data) {
+                           [this](f1dl::VectorPtr<modular::ModuleDataPtr> data) {
                              FXL_LOG(INFO)
                                  << "StoryModulesWatcherImpl GetModules(): "
                                  << data->size() << " modules";
@@ -138,7 +138,7 @@ class StoryLinksWatcherImpl : modular::StoryLinksWatcher {
   void Watch(modular::StoryControllerPtr* const story_controller) {
     (*story_controller)
         ->GetActiveLinks(binding_.NewBinding(),
-                         [this](f1dl::Array<modular::LinkPathPtr> data) {
+                         [this](f1dl::VectorPtr<modular::LinkPathPtr> data) {
                            FXL_LOG(INFO) << "StoryLinksWatcherImpl GetLinks(): "
                                          << data->size() << " links";
                          });
@@ -178,7 +178,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
   int on_delete_called_{};
 
   // |StoryProviderWatcher|
-  void OnDelete(const f1dl::String& story_id) override {
+  void OnDelete(const f1dl::StringPtr& story_id) override {
     FXL_LOG(INFO) << "StoryProviderStateWatcherImpl::OnDelete() " << story_id;
 
     if (++on_delete_called_ == 1) {
@@ -318,7 +318,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void TestUserShellContext_GetLink() {
     user_shell_context_->GetLink(user_shell_link_.NewRequest());
-    user_shell_link_->Get(nullptr, [this](const f1dl::String& value) {
+    user_shell_link_->Get(nullptr, [this](const f1dl::StringPtr& value) {
       get_link_.Pass();
       TestStoryProvider_PreviousStories();
     });
@@ -327,7 +327,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint previous_stories_{"StoryProvider.PreviousStories()"};
 
   void TestStoryProvider_PreviousStories() {
-    story_provider_->PreviousStories([this](f1dl::Array<f1dl::String> stories) {
+    story_provider_->PreviousStories([this](f1dl::VectorPtr<f1dl::StringPtr> stories) {
       previous_stories_.Pass();
       TestStoryProvider_GetStoryInfo(std::move(stories));
     });
@@ -335,7 +335,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   TestPoint get_story_info_{"StoryProvider.GetStoryInfo()"};
 
-  void TestStoryProvider_GetStoryInfo(f1dl::Array<f1dl::String> stories) {
+  void TestStoryProvider_GetStoryInfo(f1dl::VectorPtr<f1dl::StringPtr> stories) {
     if (stories->empty()) {
       get_story_info_.Pass();
       TestStory1();
@@ -377,7 +377,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     story_provider_->CreateStoryWithInfo(url, nullptr  /* extra_info */,
                                          modular::JsonValueToString(doc),
-                                         [this](const f1dl::String& story_id) {
+                                         [this](const f1dl::StringPtr& story_id) {
                                            story1_create_.Pass();
                                            TestStory1_GetController(story_id);
                                          });
@@ -385,7 +385,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   TestPoint story1_get_controller_{"Story1 GetController"};
 
-  void TestStory1_GetController(const f1dl::String& story_id) {
+  void TestStory1_GetController(const f1dl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_->GetInfo(
         [this](modular::StoryInfoPtr story_info, modular::StoryState state) {
@@ -431,7 +431,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     story_provider_->CreateStoryWithInfo(url, nullptr  /* extra_info */,
                                          modular::JsonValueToString(doc),
-                                         [this](const f1dl::String& story_id) {
+                                         [this](const f1dl::StringPtr& story_id) {
                                            story2_create_.Pass();
                                            TestStory2_GetController(story_id);
                                          });
@@ -439,7 +439,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   TestPoint story2_get_controller_{"Story2 Get Controller"};
 
-  void TestStory2_GetController(const f1dl::String& story_id) {
+  void TestStory2_GetController(const f1dl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_->GetInfo(
         [this](modular::StoryInfoPtr story_info, modular::StoryState state) {
@@ -455,7 +455,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void TestStory2_GetModules() {
     story_controller_->GetModules(
-        [this](f1dl::Array<modular::ModuleDataPtr> modules) {
+        [this](f1dl::VectorPtr<modular::ModuleDataPtr> modules) {
           story2_get_modules_.Pass();
 
           FXL_LOG(INFO) << "TestUserShell MODULES:";

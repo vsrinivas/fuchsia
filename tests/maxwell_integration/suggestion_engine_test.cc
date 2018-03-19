@@ -45,7 +45,7 @@ class NWriter {
 
 ProposalPtr CreateProposal(const std::string& id,
                            const std::string& headline,
-                           f1dl::Array<ActionPtr> actions,
+                           f1dl::VectorPtr<ActionPtr> actions,
                            maxwell::AnnoyanceType annoyance) {
   auto p = Proposal::New();
   p->id = id;
@@ -63,7 +63,7 @@ ProposalPtr CreateProposal(const std::string& id,
 class Proposinator {
  public:
   Proposinator(SuggestionEngine* suggestion_engine,
-               const f1dl::String& url = "Proposinator") {
+               const f1dl::StringPtr& url = "Proposinator") {
     suggestion_engine->RegisterProposalPublisher("Proposinator",
                                                  out_.NewRequest());
   }
@@ -72,7 +72,7 @@ class Proposinator {
 
   void Propose(
       const std::string& id,
-      f1dl::Array<ActionPtr> actions = f1dl::Array<ActionPtr>::New(0)) {
+      f1dl::VectorPtr<ActionPtr> actions = f1dl::VectorPtr<ActionPtr>::New(0)) {
     Propose(id, id, maxwell::AnnoyanceType::NONE, std::move(actions));
   }
 
@@ -80,7 +80,7 @@ class Proposinator {
       const std::string& id,
       const std::string& headline,
       maxwell::AnnoyanceType annoyance = maxwell::AnnoyanceType::NONE,
-      f1dl::Array<ActionPtr> actions = f1dl::Array<ActionPtr>::New(0)) {
+      f1dl::VectorPtr<ActionPtr> actions = f1dl::VectorPtr<ActionPtr>::New(0)) {
     out_->Propose(CreateProposal(id, headline, std::move(actions), annoyance));
   }
 
@@ -95,7 +95,7 @@ class Proposinator {
 class AskProposinator : public Proposinator, public QueryHandler {
  public:
   AskProposinator(SuggestionEngine* suggestion_engine,
-                  const f1dl::String& url = "AskProposinator")
+                  const f1dl::StringPtr& url = "AskProposinator")
       : Proposinator(suggestion_engine, url), ask_binding_(this) {
     f1dl::InterfaceHandle<QueryHandler> query_handle;
     ask_binding_.Bind(query_handle.NewRequest());
@@ -114,10 +114,10 @@ class AskProposinator : public Proposinator, public QueryHandler {
     query_callback_(std::move(response));
   }
 
-  f1dl::String query() const { return query_ ? query_->text : nullptr; }
+  f1dl::StringPtr query() const { return query_ ? query_->text : nullptr; }
 
   void ProposeForAsk(const std::string& id) {
-    auto actions = f1dl::Array<ActionPtr>::New(0);
+    auto actions = f1dl::VectorPtr<ActionPtr>::New(0);
     ProposeForAsk(id, id, maxwell::AnnoyanceType::NONE, std::move(actions));
   }
 
@@ -125,7 +125,7 @@ class AskProposinator : public Proposinator, public QueryHandler {
       const std::string& id,
       const std::string& headline,
       maxwell::AnnoyanceType annoyance = maxwell::AnnoyanceType::NONE,
-      f1dl::Array<ActionPtr> actions = f1dl::Array<ActionPtr>::New(0)) {
+      f1dl::VectorPtr<ActionPtr> actions = f1dl::VectorPtr<ActionPtr>::New(0)) {
     query_proposals_.push_back(
         CreateProposal(id, headline, std::move(actions), annoyance));
   }
@@ -133,7 +133,7 @@ class AskProposinator : public Proposinator, public QueryHandler {
  private:
   f1dl::Binding<QueryHandler> ask_binding_;
   UserInputPtr query_;
-  f1dl::Array<ProposalPtr> query_proposals_;
+  f1dl::VectorPtr<ProposalPtr> query_proposals_;
   OnQueryCallback query_callback_;
 };
 
@@ -629,7 +629,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   create_story->module_id = "foo://bar";
   auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  f1dl::Array<ActionPtr> actions;
+  f1dl::VectorPtr<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -652,7 +652,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   create_story->initial_data = modular::JsonValueToString(doc);
 
   action->set_create_story(std::move(create_story));
-  f1dl::Array<ActionPtr> actions;
+  f1dl::VectorPtr<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -672,13 +672,13 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
   add_module_to_story->story_id = "foo://bar";
   add_module_to_story->module_name = module_id;
   add_module_to_story->module_url = module_id;
-  add_module_to_story->module_path = f1dl::Array<f1dl::String>::New(0);
+  add_module_to_story->module_path = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
   add_module_to_story->link_name = "";
   add_module_to_story->surface_relation = modular::SurfaceRelation::New();
 
   auto action = Action::New();
   action->set_add_module_to_story(std::move(add_module_to_story));
-  f1dl::Array<ActionPtr> actions;
+  f1dl::VectorPtr<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -871,7 +871,7 @@ TEST_F(SuggestionFilteringTest, Baseline) {
   create_story->module_id = "foo://bar";
   auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  f1dl::Array<ActionPtr> actions;
+  f1dl::VectorPtr<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -897,7 +897,7 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   create_story->module_id = "foo://bar";
   auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  f1dl::Array<ActionPtr> actions;
+  f1dl::VectorPtr<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   CHECK_RESULT_COUNT(1);
@@ -927,7 +927,7 @@ TEST_F(SuggestionFilteringTest, FilterOnPropose) {
   create_story->module_id = "foo://bar";
   auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  f1dl::Array<ActionPtr> actions;
+  f1dl::VectorPtr<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   p.Propose("2");
@@ -952,7 +952,7 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
     create_story->module_id = "foo://bar";
     auto action = Action::New();
     action->set_create_story(std::move(create_story));
-    f1dl::Array<ActionPtr> actions;
+    f1dl::VectorPtr<ActionPtr> actions;
     actions.push_back(std::move(action));
 
     p.Propose("1", std::move(actions));

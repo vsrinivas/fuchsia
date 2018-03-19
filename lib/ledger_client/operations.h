@@ -107,7 +107,7 @@ class ReadDataCall : Operation<DataPtr> {
 
 template <typename Data,
           typename DataPtr = f1dl::StructPtr<Data>,
-          typename DataArray = f1dl::Array<DataPtr>,
+          typename DataArray = f1dl::VectorPtr<DataPtr>,
           typename DataFilter = XdrFilterType<Data>>
 class ReadAllDataCall : Operation<DataArray> {
  public:

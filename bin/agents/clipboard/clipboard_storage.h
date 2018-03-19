@@ -25,11 +25,11 @@ class ClipboardStorage : public PageClient {
   ~ClipboardStorage();
 
   // Stores the provided text.
-  void Push(const f1dl::String& text);
+  void Push(const f1dl::StringPtr& text);
 
   // Returns the most recent value that was passed to |Push()|, or "" if nothing
   // has been pushed yet.
-  void Peek(const std::function<void(f1dl::String)>& callback);
+  void Peek(const std::function<void(f1dl::StringPtr)>& callback);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ClipboardStorage);

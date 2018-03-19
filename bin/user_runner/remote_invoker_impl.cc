@@ -28,12 +28,12 @@ void XdrStoryData(XdrContext* const xdr, StoryEntry* const data) {
 
 // Asynchronous operations of this service.
 
-class RemoteInvokerImpl::StartOnDeviceCall : Operation<f1dl::String> {
+class RemoteInvokerImpl::StartOnDeviceCall : Operation<f1dl::StringPtr> {
  public:
   StartOnDeviceCall(OperationContainer* const container,
                     ledger::Ledger* const ledger,
-                    const f1dl::String& device_id,
-                    const f1dl::String& story_id,
+                    const f1dl::StringPtr& device_id,
+                    const f1dl::StringPtr& story_id,
                     ResultCall result_call)
       : Operation("RemoteInvokerImpl::StartOnDeviceCall",
                   container,
@@ -51,7 +51,7 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<f1dl::String> {
     FlowToken flow{this, &page_id_};
 
     // TODO(planders) Use Zac's function to generate page id (once it's ready)
-    f1dl::Array<uint8_t> page_id = to_array(device_id_);
+    f1dl::VectorPtr<uint8_t> page_id = to_array(device_id_);
     if (page_id->size() != 16) {
       // WARNING: HACK! Ledger page ids are 16 bytes but often we use non-16
       // byte page ids. This makes sure that the page id will be 16 bytes.
@@ -115,7 +115,7 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<f1dl::String> {
   }
 
   void Cont4(FlowToken flow) {
-    device_page_->GetId([this, flow](f1dl::Array<uint8_t> page_id) {
+    device_page_->GetId([this, flow](f1dl::VectorPtr<uint8_t> page_id) {
       FXL_LOG(INFO) << trace_name() << " "
                     << "Retrieved page " << to_string(page_id);
       page_id_ = to_string(page_id);
@@ -123,11 +123,11 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<f1dl::String> {
   }
 
   ledger::Ledger* const ledger_;  // not owned
-  const f1dl::String device_id_;
-  const f1dl::String story_id_;
-  const f1dl::String timestamp_;
+  const f1dl::StringPtr device_id_;
+  const f1dl::StringPtr story_id_;
+  const f1dl::StringPtr timestamp_;
   ledger::PagePtr device_page_;
-  f1dl::String page_id_;
+  f1dl::StringPtr page_id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StartOnDeviceCall);
 };
@@ -136,8 +136,8 @@ RemoteInvokerImpl::RemoteInvokerImpl(ledger::Ledger* const ledger)
     : ledger_(ledger) {}
 
 // | RemoteService |
-void RemoteInvokerImpl::StartOnDevice(const f1dl::String& device_id,
-                                      const f1dl::String& story_id,
+void RemoteInvokerImpl::StartOnDevice(const f1dl::StringPtr& device_id,
+                                      const f1dl::StringPtr& story_id,
                                       const StartOnDeviceCallback& callback) {
   FXL_LOG(INFO) << "Starting rehydrate call for story " << story_id
                 << " on device " << device_id;

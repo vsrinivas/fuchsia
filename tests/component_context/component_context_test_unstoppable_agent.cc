@@ -29,7 +29,7 @@ class UnstoppableAgentApp {
       f1dl::InterfaceRequest<component::ServiceProvider> /*services*/) {}
 
   // Called by AgentDriver.
-  void RunTask(const f1dl::String& /*task_id*/,
+  void RunTask(const f1dl::StringPtr& /*task_id*/,
                const std::function<void()>& /*callback*/) {}
 
   TestPoint stopped_{"Unstoppable agent stopped"};

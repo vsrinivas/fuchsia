@@ -40,7 +40,7 @@ class SuggestionApp {
         proposal_publisher_.NewRequest());
 
     module_host_->module_context()->GetStoryId(
-        [this](const f1dl::String& story_id) {
+        [this](const f1dl::StringPtr& story_id) {
           received_story_id_.Pass();
 
           auto focus_story = maxwell::FocusStory::New();
@@ -64,7 +64,7 @@ class SuggestionApp {
           proposal_publisher_->Propose(std::move(proposal));
 
           modular::testing::GetStore()->Get(
-              "suggestion_proposal_received", [this](const f1dl::String&) {
+              "suggestion_proposal_received", [this](const f1dl::StringPtr&) {
                 module_host_->module_context()->Done();
               });
         });

@@ -107,13 +107,13 @@ class DevUserShellApp : modular::StoryWatcher,
     if (settings_.story_id.empty()) {
       story_provider_->CreateStory(
           settings_.root_module,
-          [this](const f1dl::String& story_id) { StartStoryById(story_id); });
+          [this](const f1dl::StringPtr& story_id) { StartStoryById(story_id); });
     } else {
       StartStoryById(settings_.story_id);
     }
   }
 
-  void StartStoryById(const f1dl::String& story_id) {
+  void StartStoryById(const f1dl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_.set_error_handler([this, story_id] {
       FXL_LOG(ERROR) << "Story controller for story " << story_id
@@ -127,7 +127,7 @@ class DevUserShellApp : modular::StoryWatcher,
     story_controller_->Start(root_module_view.NewRequest());
     view_->ConnectView(std::move(root_module_view));
     focus_controller_->Set(story_id);
-    auto visible_stories = f1dl::Array<f1dl::String>::New(0);
+    auto visible_stories = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
     visible_stories.push_back(story_id);
     visible_stories_controller_->Set(std::move(visible_stories));
 
@@ -157,7 +157,7 @@ class DevUserShellApp : modular::StoryWatcher,
   void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
 
   // |NextListener|
-  void OnNextResults(f1dl::Array<maxwell::SuggestionPtr> suggestions) override {
+  void OnNextResults(f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) override {
     FXL_VLOG(4) << "DevUserShell/NextListener::OnNextResults()";
     for (auto& suggestion : *suggestions) {
       FXL_LOG(INFO) << "  " << suggestion->uuid << " "

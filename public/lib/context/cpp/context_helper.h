@@ -12,7 +12,7 @@
 
 namespace maxwell {
 
-std::pair<bool, f1dl::Array<ContextValuePtr>> TakeContextValue(
+std::pair<bool, f1dl::VectorPtr<ContextValuePtr>> TakeContextValue(
     ContextUpdate* update, const std::string& key);
 
 void AddToContextQuery(ContextQuery* query, const std::string& key,

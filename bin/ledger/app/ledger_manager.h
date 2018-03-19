@@ -80,7 +80,7 @@ class LedgerManager : public LedgerImpl::Delegate, public LedgerDebug {
   // LedgerDebug:
   void GetPagesList(const GetPagesListCallback& callback) override;
 
-  void GetPageDebug(f1dl::Array<uint8_t> page_id,
+  void GetPageDebug(f1dl::VectorPtr<uint8_t> page_id,
                     f1dl::InterfaceRequest<PageDebug> page_debug,
                     const GetPageDebugCallback& callback) override;
 

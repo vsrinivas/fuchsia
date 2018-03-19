@@ -48,7 +48,7 @@ class NullModule : modular::LinkWatcher {
   }
 
   // |LinkWatcher|
-  void Notify(const f1dl::String& json) override {
+  void Notify(const f1dl::StringPtr& json) override {
     // First invocation is from WatchAll(); next from Set().
     if (count_ == -1) {
       count_ = 0;

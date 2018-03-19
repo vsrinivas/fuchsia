@@ -41,7 +41,7 @@ class ComponentContextFake : public ComponentContext {
                  const GetLedgerCallback& result) override;
 
   // |ComponentContext|
-  void ConnectToAgent(const f1dl::String& url,
+  void ConnectToAgent(const f1dl::StringPtr& url,
                       f1dl::InterfaceRequest<component::ServiceProvider>
                           incoming_services_request,
                       f1dl::InterfaceRequest<AgentController>
@@ -49,14 +49,14 @@ class ComponentContextFake : public ComponentContext {
 
   // |ComponentContext|
   void ObtainMessageQueue(
-      const f1dl::String& name,
+      const f1dl::StringPtr& name,
       f1dl::InterfaceRequest<MessageQueue> request) override;
 
   // |ComponentContext|
-  void DeleteMessageQueue(const f1dl::String& name) override;
+  void DeleteMessageQueue(const f1dl::StringPtr& name) override;
 
   // |ComponentContext|
-  void GetMessageSender(const f1dl::String& queue_token,
+  void GetMessageSender(const f1dl::StringPtr& queue_token,
                         f1dl::InterfaceRequest<MessageSender> request) override;
 
   // |ComponentContext|
@@ -65,7 +65,7 @@ class ComponentContextFake : public ComponentContext {
 
   // |ComponentContext|
   void CreateEntityWithData(
-      f1dl::Array<TypeToDataEntryPtr> type_to_data,
+      f1dl::VectorPtr<TypeToDataEntryPtr> type_to_data,
       const CreateEntityWithDataCallback& result) override;
 
   EntityResolverFake entity_resolver_;

@@ -79,7 +79,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     story_provider_->CreateStory(kModuleUrl,
-                                 [this](const f1dl::String& story_id) {
+                                 [this](const f1dl::StringPtr& story_id) {
                                    story_create_.Pass();
                                    GetController(story_id);
                                  });
@@ -87,13 +87,13 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   TestPoint root_running_{"Root Module RUNNING"};
 
-  void GetController(const f1dl::String& story_id) {
+  void GetController(const f1dl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
     f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
-    f1dl::Array<f1dl::String> module_path;
+    f1dl::VectorPtr<f1dl::StringPtr> module_path;
     module_path.push_back("root");
     story_controller_->GetModuleController(std::move(module_path),
                                            module0_controller_.NewRequest());
@@ -134,7 +134,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
                                  std::move(daisy),
                                  nullptr /* surface_relation */);
 
-    f1dl::Array<f1dl::String> module_path;
+    f1dl::VectorPtr<f1dl::StringPtr> module_path;
     module_path.push_back("module1");
     story_controller_->GetModuleController(std::move(module_path),
                                            module1_controller_.NewRequest());
@@ -151,7 +151,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void GetActiveModules1() {
     story_controller_->GetActiveModules(
-        nullptr, [this](f1dl::Array<modular::ModuleDataPtr> modules) {
+        nullptr, [this](f1dl::VectorPtr<modular::ModuleDataPtr> modules) {
           if (modules->size() == 1) {
             module1_gone_.Pass();
           }
@@ -193,7 +193,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
                                  std::move(daisy),
                                  nullptr /* surface_relation */);
 
-    f1dl::Array<f1dl::String> module_path;
+    f1dl::VectorPtr<f1dl::StringPtr> module_path;
     module_path.push_back("module2");
     story_controller_->GetModuleController(std::move(module_path),
                                            module2_controller_.NewRequest());
@@ -212,7 +212,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void GetActiveModules2() {
     story_controller_->GetActiveModules(
-        nullptr, [this](f1dl::Array<modular::ModuleDataPtr> modules) {
+        nullptr, [this](f1dl::VectorPtr<modular::ModuleDataPtr> modules) {
           if (modules->size() == 1) {
             module2_gone_.Pass();
           }

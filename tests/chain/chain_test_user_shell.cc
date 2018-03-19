@@ -83,7 +83,7 @@ class TestApp : public testing::ComponentBase<UserShell>,
   void CreateStory() {
     // Create an empty Story. Once it has been created, add our first Module.
     story_provider_->CreateStory(
-        nullptr /* module_url */, [this](const f1dl::String& story_id) {
+        nullptr /* module_url */, [this](const f1dl::StringPtr& story_id) {
           create_story_.Pass();
           story_id_ = story_id;
           story_provider_->GetController(story_id_,
@@ -104,7 +104,7 @@ class TestApp : public testing::ComponentBase<UserShell>,
     daisy->nouns.push_back(std::move(entry));
     story_controller_->AddModule({}, "rootMod", std::move(daisy),
                                  nullptr /* surface_relation */);
-    f1dl::Array<f1dl::String> path;
+    f1dl::VectorPtr<f1dl::StringPtr> path;
     path.reset({"rootMod"});
     story_controller_->GetModuleController(std::move(path),
                                            child_module_.NewRequest());
@@ -130,7 +130,7 @@ class TestApp : public testing::ComponentBase<UserShell>,
   UserShellContextPtr user_shell_context_;
   StoryProviderPtr story_provider_;
 
-  f1dl::String story_id_;
+  f1dl::StringPtr story_id_;
   StoryControllerPtr story_controller_;
 
   ModuleControllerPtr child_module_;

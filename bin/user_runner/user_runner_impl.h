@@ -93,7 +93,7 @@ class UserRunnerImpl : UserRunner,
   void InitializeClipboard();
   void InitializeRemoteInvoker();
   void InitializeMessageQueueManager();
-  void InitializeMaxwell(const f1dl::String& user_shell_url,
+  void InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
                          AppConfigPtr story_shell);
   void InitializeUserShell(
       AppConfigPtr user_shell,

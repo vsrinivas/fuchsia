@@ -24,7 +24,7 @@ void ComponentContextFake::GetLedger(
 }
 
 void ComponentContextFake::ConnectToAgent(
-    const f1dl::String& url,
+    const f1dl::StringPtr& url,
     f1dl::InterfaceRequest<component::ServiceProvider>
         incoming_services_request,
     f1dl::InterfaceRequest<AgentController> agent_controller_request) {
@@ -32,17 +32,17 @@ void ComponentContextFake::ConnectToAgent(
 }
 
 void ComponentContextFake::ObtainMessageQueue(
-    const f1dl::String& name,
+    const f1dl::StringPtr& name,
     f1dl::InterfaceRequest<MessageQueue> request) {
   FXL_NOTIMPLEMENTED();
 }
 
-void ComponentContextFake::DeleteMessageQueue(const f1dl::String& name) {
+void ComponentContextFake::DeleteMessageQueue(const f1dl::StringPtr& name) {
   FXL_NOTIMPLEMENTED();
 }
 
 void ComponentContextFake::GetMessageSender(
-    const f1dl::String& queue_token,
+    const f1dl::StringPtr& queue_token,
     f1dl::InterfaceRequest<MessageSender> request) {
   FXL_NOTIMPLEMENTED();
 }
@@ -53,7 +53,7 @@ void ComponentContextFake::GetEntityResolver(
 }
 
 void ComponentContextFake::CreateEntityWithData(
-    f1dl::Array<TypeToDataEntryPtr> type_to_data,
+    f1dl::VectorPtr<TypeToDataEntryPtr> type_to_data,
     const CreateEntityWithDataCallback& result) {
   FXL_NOTIMPLEMENTED();
 }

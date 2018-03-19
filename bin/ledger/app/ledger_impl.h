@@ -46,10 +46,10 @@ class LedgerImpl : public Ledger {
   // Ledger:
   void GetRootPage(f1dl::InterfaceRequest<Page> page_request,
                    const GetRootPageCallback& callback) override;
-  void GetPage(f1dl::Array<uint8_t> id,
+  void GetPage(f1dl::VectorPtr<uint8_t> id,
                f1dl::InterfaceRequest<Page> page_request,
                const GetPageCallback& callback) override;
-  void DeletePage(f1dl::Array<uint8_t> id,
+  void DeletePage(f1dl::VectorPtr<uint8_t> id,
                   const DeletePageCallback& callback) override;
 
   void SetConflictResolverFactory(

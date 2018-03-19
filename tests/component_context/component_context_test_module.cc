@@ -98,7 +98,7 @@ class ParentApp {
                      one_agent_interface_.NewRequest());
 
     modular::testing::GetStore()->Get(
-        "one_agent_connected", [this](const f1dl::String&) {
+        "one_agent_connected", [this](const f1dl::StringPtr&) {
           one_agent_connected_.Pass();
           TestMessageQueue([this] {
             TestAgentController(callback::MakeScoped(
@@ -139,7 +139,7 @@ class ParentApp {
     // MessageQueueManager shouldn't send us anything just yet.
     msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
         msg_queue_.get(),
-        [this, done_cb, kTestMessage](const f1dl::String& msg,
+        [this, done_cb, kTestMessage](const f1dl::StringPtr& msg,
                                       std::function<void()> ack) {
           ack();
           // We only want one message.
@@ -151,7 +151,7 @@ class ParentApp {
           done_cb();
         });
 
-    msg_queue_->GetToken([this, kTestMessage](const f1dl::String& token) {
+    msg_queue_->GetToken([this, kTestMessage](const f1dl::StringPtr& token) {
       one_agent_interface_->SendToMessageQueue(token, kTestMessage);
     });
   }
@@ -164,7 +164,7 @@ class ParentApp {
     one_agent_controller.Unbind();
 
     modular::testing::GetStore()->Get("one_agent_stopped",
-                                      [this, done_cb](const f1dl::String&) {
+                                      [this, done_cb](const f1dl::StringPtr&) {
                                         one_agent_stopped_.Pass();
                                         done_cb();
                                       });

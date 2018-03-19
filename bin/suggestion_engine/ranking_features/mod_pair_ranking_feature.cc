@@ -44,11 +44,11 @@ void ModPairRankingFeature::InitData() {
 double ModPairRankingFeature::ComputeFeatureInternal(
     const UserInput& query,
     const RankedSuggestion& suggestion,
-    const f1dl::Array<ContextValuePtr>& context_update_values) {
+    const f1dl::VectorPtr<ContextValuePtr>& context_update_values) {
   double prob = 0.0;
 
   for (auto& action : *suggestion.prototype->proposal->on_selected) {
-    f1dl::String module_url;
+    f1dl::StringPtr module_url;
     switch (action->which()) {
       case Action::Tag::CREATE_STORY: {
         module_url = action->get_create_story()->module_id;

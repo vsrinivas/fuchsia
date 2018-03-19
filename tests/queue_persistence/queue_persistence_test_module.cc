@@ -41,7 +41,7 @@ class ParentApp {
 
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_connected",
-        [this](const f1dl::String&) { AgentConnected(); });
+        [this](const f1dl::StringPtr&) { AgentConnected(); });
 
     // Start a timer to call Story.Done() in case the test agent misbehaves and
     // we time out. If that happens, the module will exit normally through
@@ -64,10 +64,10 @@ class ParentApp {
   void AgentConnected() {
     agent_connected_.Pass();
     agent_service_->GetMessageQueueToken(
-        [this](const f1dl::String& token) { ReceivedQueueToken(token); });
+        [this](const f1dl::StringPtr& token) { ReceivedQueueToken(token); });
   }
 
-  void ReceivedQueueToken(const f1dl::String& token) {
+  void ReceivedQueueToken(const f1dl::StringPtr& token) {
     queue_token_ = token;
     received_queue_persistence_token_.Pass();
 
@@ -76,7 +76,7 @@ class ParentApp {
     agent_service_.Unbind();
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_stopped",
-        [this](const f1dl::String&) { AgentStopped(); });
+        [this](const f1dl::StringPtr&) { AgentStopped(); });
   }
 
   void AgentStopped() {
@@ -97,14 +97,14 @@ class ParentApp {
 
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_connected",
-        [this](const f1dl::String&) { AgentConnectedAgain(); });
+        [this](const f1dl::StringPtr&) { AgentConnectedAgain(); });
   }
 
   void AgentConnectedAgain() {
     agent_connected_again_.Pass();
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_received_message",
-        [this](const f1dl::String&) { AgentReceivedMessage(); });
+        [this](const f1dl::StringPtr&) { AgentReceivedMessage(); });
   }
 
   void AgentReceivedMessage() {
@@ -114,7 +114,7 @@ class ParentApp {
     agent_controller_.Unbind();
     agent_service_.Unbind();
     modular::testing::GetStore()->Get("queue_persistence_test_agent_stopped",
-                                      [this](const f1dl::String&) {
+                                      [this](const f1dl::StringPtr&) {
                                         module_host_->module_context()->Done();
                                       });
   }

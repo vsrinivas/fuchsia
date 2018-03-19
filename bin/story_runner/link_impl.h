@@ -115,18 +115,18 @@ class LinkImpl : PageClient {
                ConnectionType connection_type);
 
   // Used by LinkConnection.
-  void SetSchema(const f1dl::String& json_schema);
-  void UpdateObject(f1dl::Array<f1dl::String> path,
-                    const f1dl::String& json,
+  void SetSchema(const f1dl::StringPtr& json_schema);
+  void UpdateObject(f1dl::VectorPtr<f1dl::StringPtr> path,
+                    const f1dl::StringPtr& json,
                     uint32_t src);
-  void Set(f1dl::Array<f1dl::String> path,
-           const f1dl::String& json,
+  void Set(f1dl::VectorPtr<f1dl::StringPtr> path,
+           const f1dl::StringPtr& json,
            uint32_t src);
-  void Get(f1dl::Array<f1dl::String> path,
-           const std::function<void(f1dl::String)>& callback);
+  void Get(f1dl::VectorPtr<f1dl::StringPtr> path,
+           const std::function<void(f1dl::StringPtr)>& callback);
   void GetEntity(const Link::GetEntityCallback& callback);
-  void SetEntity(const f1dl::String& entity_reference, const uint32_t src);
-  void Erase(f1dl::Array<f1dl::String> path, uint32_t src);
+  void SetEntity(const f1dl::StringPtr& entity_reference, const uint32_t src);
+  void Erase(f1dl::VectorPtr<f1dl::StringPtr> path, uint32_t src);
   void AddConnection(LinkConnection* connection);
   void RemoveConnection(LinkConnection* connection);
   void Sync(const std::function<void()>& callback);
@@ -152,7 +152,7 @@ class LinkImpl : PageClient {
   // Applies the given |changes| to the current document. The current list of
   // pending operations is merged into the change stream. Implemented in
   // incremental_link.cc.
-  void Replay(f1dl::Array<LinkChangePtr> changes);
+  void Replay(f1dl::VectorPtr<LinkChangePtr> changes);
 
   // Applies a single LinkChange. Implemented in incremental_link.cc.
   bool ApplyChange(LinkChange* change);
@@ -162,8 +162,8 @@ class LinkImpl : PageClient {
   void MakeIncrementalWriteCall(LinkChangePtr data, std::function<void()> done);
   void MakeIncrementalChangeCall(LinkChangePtr data, uint32_t src);
 
-  bool ApplySetOp(const CrtJsonPointer& ptr, const f1dl::String& json);
-  bool ApplyUpdateOp(const CrtJsonPointer& ptr, const f1dl::String& json);
+  bool ApplySetOp(const CrtJsonPointer& ptr, const f1dl::StringPtr& json);
+  bool ApplyUpdateOp(const CrtJsonPointer& ptr, const f1dl::StringPtr& json);
   bool ApplyEraseOp(const CrtJsonPointer& ptr);
 
   static bool MergeObject(CrtJsonValue& target,
@@ -289,15 +289,15 @@ class LinkConnection : Link {
                  f1dl::InterfaceRequest<Link> link_request);
 
   // |Link|
-  void SetSchema(const f1dl::String& json_schema) override;
-  void UpdateObject(f1dl::Array<f1dl::String> path,
-                    const f1dl::String& json) override;
-  void Set(f1dl::Array<f1dl::String> path, const f1dl::String& json) override;
-  void Get(f1dl::Array<f1dl::String> path,
+  void SetSchema(const f1dl::StringPtr& json_schema) override;
+  void UpdateObject(f1dl::VectorPtr<f1dl::StringPtr> path,
+                    const f1dl::StringPtr& json) override;
+  void Set(f1dl::VectorPtr<f1dl::StringPtr> path, const f1dl::StringPtr& json) override;
+  void Get(f1dl::VectorPtr<f1dl::StringPtr> path,
            const GetCallback& callback) override;
-  void Erase(f1dl::Array<f1dl::String> path) override;
+  void Erase(f1dl::VectorPtr<f1dl::StringPtr> path) override;
   void GetEntity(const GetEntityCallback& callback) override;
-  void SetEntity(const f1dl::String& entity_reference) override;
+  void SetEntity(const f1dl::StringPtr& entity_reference) override;
   void Watch(f1dl::InterfaceHandle<LinkWatcher> watcher) override;
   void WatchAll(f1dl::InterfaceHandle<LinkWatcher> watcher) override;
   void Sync(const SyncCallback& callback) override;
@@ -325,7 +325,7 @@ class LinkWatcherConnection {
 
   // Notifies the LinkWatcher in this connection, unless src is the
   // LinkConnection this Watcher was registered on.
-  void Notify(const f1dl::String& value, uint32_t src);
+  void Notify(const f1dl::StringPtr& value, uint32_t src);
 
  private:
   // The LinkImpl this instance belongs to.

@@ -81,7 +81,7 @@ class BatchDownloadTest : public gtest::TestWithMessageLoop {
 TEST_F(BatchDownloadTest, AddCommit) {
   int done_calls = 0;
   int error_calls = 0;
-  f1dl::Array<cloud_provider::CommitPtr> commits;
+  f1dl::VectorPtr<cloud_provider::CommitPtr> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   BatchDownload batch_download(&storage_, &encryption_service_,
                                std::move(commits), convert::ToArray("42"),
@@ -100,7 +100,7 @@ TEST_F(BatchDownloadTest, AddCommit) {
 TEST_F(BatchDownloadTest, AddMultipleCommits) {
   int done_calls = 0;
   int error_calls = 0;
-  f1dl::Array<cloud_provider::CommitPtr> commits;
+  f1dl::VectorPtr<cloud_provider::CommitPtr> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   commits.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
   BatchDownload batch_download(&storage_, &encryption_service_,
@@ -121,7 +121,7 @@ TEST_F(BatchDownloadTest, AddMultipleCommits) {
 TEST_F(BatchDownloadTest, FailToAddCommit) {
   int done_calls = 0;
   int error_calls = 0;
-  f1dl::Array<cloud_provider::CommitPtr> commits;
+  f1dl::VectorPtr<cloud_provider::CommitPtr> commits;
   commits.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   BatchDownload batch_download(&storage_, &encryption_service_,
                                std::move(commits), convert::ToArray("42"),

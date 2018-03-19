@@ -33,8 +33,8 @@ class PageCloudImplTest : public gtest::TestWithMessageLoop,
   }
 
   // cloud_provider::PageCloudWatcher:
-  void OnNewCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
-                    f1dl::Array<uint8_t> position_token,
+  void OnNewCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
+                    f1dl::VectorPtr<uint8_t> position_token,
                     const OnNewCommitsCallback& callback) override {
     on_new_commits_calls_++;
     on_new_commits_commits_ = std::move(commits);
@@ -43,7 +43,7 @@ class PageCloudImplTest : public gtest::TestWithMessageLoop,
     message_loop_.PostQuitTask();
   }
 
-  void OnNewObject(f1dl::Array<uint8_t> id,
+  void OnNewObject(f1dl::VectorPtr<uint8_t> id,
                    fsl::SizedVmoTransportPtr data,
                    const OnNewObjectCallback& callback) override {
     FXL_NOTIMPLEMENTED();
@@ -62,8 +62,8 @@ class PageCloudImplTest : public gtest::TestWithMessageLoop,
   f1dl::Binding<cloud_provider::PageCloudWatcher> watcher_binding_;
 
   int on_new_commits_calls_ = 0;
-  f1dl::Array<cloud_provider::CommitPtr> on_new_commits_commits_;
-  f1dl::Array<uint8_t> on_new_commits_position_token_;
+  f1dl::VectorPtr<cloud_provider::CommitPtr> on_new_commits_commits_;
+  f1dl::VectorPtr<uint8_t> on_new_commits_position_token_;
   OnNewCommitsCallback on_new_commits_commits_callback_;
 
   cloud_provider::Status on_error_status_ = cloud_provider::Status::OK;
@@ -83,7 +83,7 @@ TEST_F(PageCloudImplTest, EmptyWhenDisconnected) {
 }
 
 TEST_F(PageCloudImplTest, AddCommits) {
-  f1dl::Array<cloud_provider::CommitPtr> commits;
+  f1dl::VectorPtr<cloud_provider::CommitPtr> commits;
   {
     auto commit = cloud_provider::Commit::New();
     commit->id = convert::ToArray("id_0");
@@ -110,7 +110,7 @@ TEST_F(PageCloudImplTest, AddCommits) {
 }
 
 TEST_F(PageCloudImplTest, AddCommitsNetworkError) {
-  f1dl::Array<cloud_provider::CommitPtr> commits;
+  f1dl::VectorPtr<cloud_provider::CommitPtr> commits;
   {
     auto commit = cloud_provider::Commit::New();
     commit->id = convert::ToArray("id_0");
@@ -133,8 +133,8 @@ TEST_F(PageCloudImplTest, GetCommits) {
       cloud_provider_firebase::Commit("id_1", "data_1"), "43");
 
   cloud_provider::Status status;
-  f1dl::Array<cloud_provider::CommitPtr> commits;
-  f1dl::Array<uint8_t> token;
+  f1dl::VectorPtr<cloud_provider::CommitPtr> commits;
+  f1dl::VectorPtr<uint8_t> token;
   page_cloud_->GetCommits(
       convert::ToArray("5"),
       callback::Capture(MakeQuitTask(), &status, &commits, &token));
@@ -150,8 +150,8 @@ TEST_F(PageCloudImplTest, GetCommits) {
 
 TEST_F(PageCloudImplTest, GetCommitsEmpty) {
   cloud_provider::Status status;
-  f1dl::Array<cloud_provider::CommitPtr> commits;
-  f1dl::Array<uint8_t> token;
+  f1dl::VectorPtr<cloud_provider::CommitPtr> commits;
+  f1dl::VectorPtr<uint8_t> token;
   page_cloud_->GetCommits(
       convert::ToArray("5"),
       callback::Capture(MakeQuitTask(), &status, &commits, &token));
@@ -167,8 +167,8 @@ TEST_F(PageCloudImplTest, GetCommitsNullToken) {
       cloud_provider_firebase::Commit("id_0", "data_0"), "42");
 
   cloud_provider::Status status;
-  f1dl::Array<cloud_provider::CommitPtr> commits;
-  f1dl::Array<uint8_t> token;
+  f1dl::VectorPtr<cloud_provider::CommitPtr> commits;
+  f1dl::VectorPtr<uint8_t> token;
   page_cloud_->GetCommits(
       nullptr, callback::Capture(MakeQuitTask(), &status, &commits, &token));
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -182,8 +182,8 @@ TEST_F(PageCloudImplTest, GetCommitsNullToken) {
 TEST_F(PageCloudImplTest, GetCommitsNetworkError) {
   handler_->status_to_return = cloud_provider_firebase::Status::NETWORK_ERROR;
   cloud_provider::Status status;
-  f1dl::Array<cloud_provider::CommitPtr> commits;
-  f1dl::Array<uint8_t> token;
+  f1dl::VectorPtr<cloud_provider::CommitPtr> commits;
+  f1dl::VectorPtr<uint8_t> token;
   page_cloud_->GetCommits(
       convert::ToArray("5"),
       callback::Capture(MakeQuitTask(), &status, &commits, &token));

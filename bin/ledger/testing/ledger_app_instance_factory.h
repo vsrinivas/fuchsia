@@ -28,7 +28,7 @@ class LedgerAppInstanceFactory {
   class LedgerAppInstance {
    public:
     LedgerAppInstance(
-        f1dl::Array<uint8_t> test_ledger_name,
+        f1dl::VectorPtr<uint8_t> test_ledger_name,
         ledger::LedgerRepositoryFactoryPtr ledger_repository_factory);
     virtual ~LedgerAppInstance();
 
@@ -44,16 +44,16 @@ class LedgerAppInstanceFactory {
     // Ledger object.
     ledger::PagePtr GetTestPage();
     // Returns a connection to the given page on the default Ledger object.
-    ledger::PagePtr GetPage(const f1dl::Array<uint8_t>& page_id,
+    ledger::PagePtr GetPage(const f1dl::VectorPtr<uint8_t>& page_id,
                             ledger::Status expected_status);
     // Deletes the given page on the default Ledger object.
-    void DeletePage(const f1dl::Array<uint8_t>& page_id,
+    void DeletePage(const f1dl::VectorPtr<uint8_t>& page_id,
                     ledger::Status expected_status);
 
    private:
     virtual cloud_provider::CloudProviderPtr MakeCloudProvider() = 0;
 
-    f1dl::Array<uint8_t> test_ledger_name_;
+    f1dl::VectorPtr<uint8_t> test_ledger_name_;
     ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
 
     files::ScopedTempDir dir_;

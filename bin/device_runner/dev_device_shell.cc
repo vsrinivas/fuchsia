@@ -89,7 +89,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
 
   // |DeviceShell|
   void GetAuthenticationContext(
-      const f1dl::String& /*username*/,
+      const f1dl::StringPtr& /*username*/,
       f1dl::InterfaceRequest<modular::AuthenticationContext> /*request*/)
       override {
     FXL_LOG(INFO)
@@ -120,7 +120,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
       }
 
       user_provider_->PreviousUsers(
-          [this](f1dl::Array<modular::auth::AccountPtr> accounts) {
+          [this](f1dl::VectorPtr<modular::auth::AccountPtr> accounts) {
             FXL_LOG(INFO) << "Found " << accounts->size()
                           << " users in the user "
                           << "database";
@@ -141,7 +141,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
               user_provider_->AddUser(
                   modular::auth::IdentityProvider::DEV,
                   [this](modular::auth::AccountPtr account,
-                         const f1dl::String& status) { Login(account->id); });
+                         const f1dl::StringPtr& status) { Login(account->id); });
             } else {
               Login(account_id);
             }

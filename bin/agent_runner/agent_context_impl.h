@@ -86,7 +86,7 @@ class AgentContextImpl : AgentContext, AgentController {
   // |AgentContext|
   void ScheduleTask(TaskInfoPtr task_info) override;
   // |AgentContext|
-  void DeleteTask(const f1dl::String& task_id) override;
+  void DeleteTask(const f1dl::StringPtr& task_id) override;
   // |AgentContext|
   void Done() override;
   // |AgentContext|

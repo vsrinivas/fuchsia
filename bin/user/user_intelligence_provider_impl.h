@@ -49,7 +49,7 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
                        component_context) override;
 
   void GetServicesForAgent(
-      const f1dl::String& url,
+      const f1dl::StringPtr& url,
       const GetServicesForAgentCallback& callback) override;
 
  private:
@@ -58,7 +58,7 @@ class UserIntelligenceProviderImpl : public UserIntelligenceProvider {
   // A ServiceProviderInitializer that adds standard agent services, including
   // attributed context and suggestion service entry points. Returns the names
   // of the services added.
-  f1dl::Array<f1dl::String> AddStandardServices(
+  f1dl::VectorPtr<f1dl::StringPtr> AddStandardServices(
       const std::string& url, component::ServiceNamespace* agent_host);
 
   // Starts an app in the parent environment, with full access to environment

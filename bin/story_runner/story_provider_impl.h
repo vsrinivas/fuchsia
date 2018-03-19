@@ -94,44 +94,44 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
       f1dl::InterfaceRequest<mozart::ViewOwner> request);
 
   // Called by StoryControllerImpl.
-  void SetStoryInfoExtra(const f1dl::String& story_id,
-                         const f1dl::String& name,
-                         const f1dl::String& value,
+  void SetStoryInfoExtra(const f1dl::StringPtr& story_id,
+                         const f1dl::StringPtr& name,
+                         const f1dl::StringPtr& value,
                          const std::function<void()>& done);
 
   // |StoryProvider|, also used by StoryControllerImpl.
-  void GetStoryInfo(const f1dl::String& story_id,
+  void GetStoryInfo(const f1dl::StringPtr& story_id,
                     const GetStoryInfoCallback& callback) override;
 
   // Called by StoryControllerImpl. Sends request to FocusProvider
-  void RequestStoryFocus(const f1dl::String& story_id);
+  void RequestStoryFocus(const f1dl::StringPtr& story_id);
 
   // Called by StoryControllerImpl.
-  void NotifyStoryStateChange(const f1dl::String& story_id,
+  void NotifyStoryStateChange(const f1dl::StringPtr& story_id,
                               StoryState story_state);
 
   void DumpState(const std::function<void(const std::string&)>& callback);
 
  private:
-  using ImportanceList = f1dl::Array<StoryImportanceEntryPtr>;
+  using ImportanceList = f1dl::VectorPtr<StoryImportanceEntryPtr>;
 
   // |StoryProvider|
-  void CreateStory(const f1dl::String& module_url,
+  void CreateStory(const f1dl::StringPtr& module_url,
                    const CreateStoryCallback& callback) override;
 
   // |StoryProvider|
   void CreateStoryWithInfo(
-      const f1dl::String& module_url,
-      f1dl::Array<StoryInfoExtraEntryPtr> extra_info,
-      const f1dl::String& root_json,
+      const f1dl::StringPtr& module_url,
+      f1dl::VectorPtr<StoryInfoExtraEntryPtr> extra_info,
+      const f1dl::StringPtr& root_json,
       const CreateStoryWithInfoCallback& callback) override;
 
   // |StoryProvider|
-  void DeleteStory(const f1dl::String& story_id,
+  void DeleteStory(const f1dl::StringPtr& story_id,
                    const DeleteStoryCallback& callback) override;
 
   // |StoryProvider|
-  void GetController(const f1dl::String& story_id,
+  void GetController(const f1dl::StringPtr& story_id,
                      f1dl::InterfaceRequest<StoryController> request) override;
 
   // |StoryProvider|
@@ -154,9 +154,9 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void Duplicate(f1dl::InterfaceRequest<StoryProvider> request) override;
 
   // |StoryProvider|
-  void GetLinkPeer(const f1dl::String& story_id,
-                   f1dl::Array<f1dl::String> module_path,
-                   const f1dl::String& link_name,
+  void GetLinkPeer(const f1dl::StringPtr& story_id,
+                   f1dl::VectorPtr<f1dl::StringPtr> module_path,
+                   const f1dl::StringPtr& link_name,
                    f1dl::InterfaceRequest<Link> request) override;
 
   // |PageClient|

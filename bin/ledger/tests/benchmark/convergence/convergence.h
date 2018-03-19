@@ -58,7 +58,7 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   component::ApplicationControllerPtr beta_controller_;
   ledger::LedgerPtr alpha_ledger_;
   ledger::LedgerPtr beta_ledger_;
-  f1dl::Array<uint8_t> page_id_;
+  f1dl::VectorPtr<uint8_t> page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;
   std::multiset<std::string> remaining_keys_;

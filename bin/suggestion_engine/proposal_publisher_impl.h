@@ -33,7 +33,7 @@ class ProposalPublisherImpl : public ProposalPublisher {
   void AddBinding(f1dl::InterfaceRequest<ProposalPublisher> request);
 
   void Propose(ProposalPtr proposal) override;
-  void Remove(const f1dl::String& proposal_id) override;
+  void Remove(const f1dl::StringPtr& proposal_id) override;
 
   const std::string component_url() { return component_url_; }
 

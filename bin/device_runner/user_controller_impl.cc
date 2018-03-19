@@ -63,7 +63,7 @@ std::string UserControllerImpl::DumpState() {
   UserRunnerDebugSyncPtr debug;
   user_runner_app_->services().ConnectToService(
       f1dl::GetSynchronousProxy(&debug));
-  f1dl::String output;
+  f1dl::StringPtr output;
   debug->DumpState(&output);
   return output;
 }

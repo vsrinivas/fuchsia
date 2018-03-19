@@ -26,17 +26,17 @@ class PageCloudImpl : public cloud_provider::PageCloud {
 
  private:
   // cloud_provider::PageCloud:
-  void AddCommits(f1dl::Array<cloud_provider::CommitPtr> commits,
+  void AddCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
                   const AddCommitsCallback& callback) override;
-  void GetCommits(f1dl::Array<uint8_t> min_position_token,
+  void GetCommits(f1dl::VectorPtr<uint8_t> min_position_token,
                   const GetCommitsCallback& callback) override;
-  void AddObject(f1dl::Array<uint8_t> id,
+  void AddObject(f1dl::VectorPtr<uint8_t> id,
                  fsl::SizedVmoTransportPtr data,
                  const AddObjectCallback& callback) override;
-  void GetObject(f1dl::Array<uint8_t> id,
+  void GetObject(f1dl::VectorPtr<uint8_t> id,
                  const GetObjectCallback& callback) override;
   void SetWatcher(
-      f1dl::Array<uint8_t> min_position_token,
+      f1dl::VectorPtr<uint8_t> min_position_token,
       f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
       const SetWatcherCallback& callback) override;
 

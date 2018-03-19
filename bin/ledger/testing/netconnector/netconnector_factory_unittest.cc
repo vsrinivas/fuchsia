@@ -39,7 +39,7 @@ TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
 
   bool called = false;
   uint64_t version = 0;
-  f1dl::Array<f1dl::String> host_list;
+  f1dl::VectorPtr<f1dl::StringPtr> host_list;
   netconnector1->GetKnownDeviceNames(
       netconnector::NetConnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
@@ -69,7 +69,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
 
   bool called = false;
   uint64_t version = 0;
-  f1dl::Array<f1dl::String> host_list;
+  f1dl::VectorPtr<f1dl::StringPtr> host_list;
   netconnector1->GetKnownDeviceNames(
       netconnector::NetConnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,

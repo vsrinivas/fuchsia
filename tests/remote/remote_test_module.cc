@@ -58,7 +58,7 @@ class ParentApp {
     module_host_->module_context()->Ready();
 
     remote_invoker_->StartOnDevice(
-        "test1", "test2", [this](f1dl::String page_id) {
+        "test1", "test2", [this](f1dl::StringPtr page_id) {
           if (page_id.get().empty()) {
             FXL_LOG(INFO) << "Failed to send rehydrate";
           } else {

@@ -14,39 +14,39 @@
 namespace test {
 namespace integration {
 
-f1dl::Array<uint8_t> RandomArray(size_t size,
+f1dl::VectorPtr<uint8_t> RandomArray(size_t size,
                                  const std::vector<uint8_t>& prefix);
 
-f1dl::Array<uint8_t> RandomArray(int size);
+f1dl::VectorPtr<uint8_t> RandomArray(int size);
 
-f1dl::Array<uint8_t> PageGetId(ledger::PagePtr* page);
+f1dl::VectorPtr<uint8_t> PageGetId(ledger::PagePtr* page);
 
 ledger::PageSnapshotPtr PageGetSnapshot(ledger::PagePtr* page,
-                                        f1dl::Array<uint8_t> prefix = nullptr);
+                                        f1dl::VectorPtr<uint8_t> prefix = nullptr);
 
-f1dl::Array<f1dl::Array<uint8_t>> SnapshotGetKeys(
+f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> SnapshotGetKeys(
     ledger::PageSnapshotPtr* snapshot,
-    f1dl::Array<uint8_t> start);
-f1dl::Array<f1dl::Array<uint8_t>> SnapshotGetKeys(
+    f1dl::VectorPtr<uint8_t> start);
+f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> SnapshotGetKeys(
     ledger::PageSnapshotPtr* snapshot,
-    f1dl::Array<uint8_t> start,
+    f1dl::VectorPtr<uint8_t> start,
     int* num_queries);
 
-f1dl::Array<ledger::EntryPtr> SnapshotGetEntries(
+f1dl::VectorPtr<ledger::EntryPtr> SnapshotGetEntries(
     ledger::PageSnapshotPtr* snapshot,
-    f1dl::Array<uint8_t> start);
-f1dl::Array<ledger::EntryPtr> SnapshotGetEntries(
+    f1dl::VectorPtr<uint8_t> start);
+f1dl::VectorPtr<ledger::EntryPtr> SnapshotGetEntries(
     ledger::PageSnapshotPtr* snapshot,
-    f1dl::Array<uint8_t> start,
+    f1dl::VectorPtr<uint8_t> start,
     int* num_queries);
 
 std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
-                                 f1dl::Array<uint8_t> key,
+                                 f1dl::VectorPtr<uint8_t> key,
                                  int64_t offset,
                                  int64_t max_size);
 
 std::string ToString(const fsl::SizedVmoTransportPtr& vmo);
-f1dl::Array<uint8_t> ToArray(const fsl::SizedVmoTransportPtr& vmo);
+f1dl::VectorPtr<uint8_t> ToArray(const fsl::SizedVmoTransportPtr& vmo);
 
 }  // namespace integration
 }  // namespace test

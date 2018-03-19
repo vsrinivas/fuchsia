@@ -24,7 +24,7 @@ class RankingFeature {
   // in the range of [0.0,1.0]
   double ComputeFeature(
       const UserInput& query, const RankedSuggestion& suggestion,
-      const f1dl::Array<ContextValuePtr>& context_update_values);
+      const f1dl::VectorPtr<ContextValuePtr>& context_update_values);
 
   // Fills the context selector with the values and meta the feature needs to
   // request from the context. Returns true if it filled anything, false
@@ -39,7 +39,7 @@ class RankingFeature {
   // Compute the numeric feature for a feature, to be overridden by subclasses
   virtual double ComputeFeatureInternal(
       const UserInput& query, const RankedSuggestion& suggestion,
-      const f1dl::Array<ContextValuePtr>& context_update_values) = 0;
+      const f1dl::VectorPtr<ContextValuePtr>& context_update_values) = 0;
 
   // Create the context selector. Returns nullptr if the feature doesn't require
   // context.

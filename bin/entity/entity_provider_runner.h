@@ -60,14 +60,14 @@ class EntityProviderRunner : EntityResolver {
   // Called by |EntityReferenceFactoryImpl|.
   void CreateReference(
       const std::string& agent_url,
-      const f1dl::String& cookie,
+      const f1dl::StringPtr& cookie,
       const EntityReferenceFactory::CreateReferenceCallback& callback);
 
   // |EntityResolver|
-  void ResolveEntity(const f1dl::String& entity_reference,
+  void ResolveEntity(const f1dl::StringPtr& entity_reference,
                      f1dl::InterfaceRequest<Entity> entity_request) override;
 
-  void ResolveDataEntity(const f1dl::String& entity_reference,
+  void ResolveDataEntity(const f1dl::StringPtr& entity_reference,
                          f1dl::InterfaceRequest<Entity> entity_request);
 
   EntityProviderLauncher* const entity_provider_launcher_;

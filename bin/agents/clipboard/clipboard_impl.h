@@ -24,7 +24,7 @@ class ClipboardImpl : Clipboard {
 
  private:
   // |Clipboard|
-  void Push(const f1dl::String& text) override;
+  void Push(const f1dl::StringPtr& text) override;
 
   // |Clipboard|
   void Peek(const PeekCallback& callback) override;

@@ -31,8 +31,8 @@ class UpdateEntryBenchmark {
   void Run();
 
  private:
-  void RunSingle(int i, f1dl::Array<uint8_t> key);
-  void CommitAndRunNext(int i, f1dl::Array<uint8_t> key);
+  void RunSingle(int i, f1dl::VectorPtr<uint8_t> key);
+  void CommitAndRunNext(int i, f1dl::VectorPtr<uint8_t> key);
 
   void CommitAndShutDown();
   void ShutDown();

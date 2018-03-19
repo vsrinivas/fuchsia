@@ -29,7 +29,7 @@ class TestAgentApp : modular::QueuePersistenceTestService {
                                            msg_queue_.NewRequest());
     msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
         msg_queue_.get(),
-        [this](const f1dl::String& message, std::function<void()> ack) {
+        [this](const f1dl::StringPtr& message, std::function<void()> ack) {
           ack();
           modular::testing::GetStore()->Put(
               "queue_persistence_test_agent_received_message", "", [] {});
@@ -52,7 +52,7 @@ class TestAgentApp : modular::QueuePersistenceTestService {
   }
 
   // Called by AgentDriver.
-  void RunTask(const f1dl::String& /*task_id*/,
+  void RunTask(const f1dl::StringPtr& /*task_id*/,
                const std::function<void()>& /*callback*/) {}
 
   // Called by AgentDriver.
@@ -71,7 +71,7 @@ class TestAgentApp : modular::QueuePersistenceTestService {
   void GetMessageQueueToken(
       const GetMessageQueueTokenCallback& callback) override {
     msg_queue_->GetToken(
-        [callback](const f1dl::String& token) { callback(token); });
+        [callback](const f1dl::StringPtr& token) { callback(token); });
   }
 
   TestPoint initialized_{"Queue persistence test agent initialized"};

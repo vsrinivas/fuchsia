@@ -97,7 +97,7 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   AddToContextQuery(query.get(), "a", std::move(selector));
 
   TestListener listener;
-  f1dl::Array<ContextValuePtr> result;
+  f1dl::VectorPtr<ContextValuePtr> result;
   reader_->Subscribe(std::move(query), listener.GetHandle());
   ASSERT_TRUE(RunLoopUntilWithTimeout([&listener, &result] {
     return listener.last_update &&
@@ -167,7 +167,7 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
   const std::string value1 = R"({ "@type": "someType", "foo": "frob" })";
   const std::string value2 = R"({ "@type": "someType", "foo": "borf" })";
 
-  f1dl::Array<ContextValuePtr> result;
+  f1dl::VectorPtr<ContextValuePtr> result;
   value->Set(value1, meta->Clone());
 
   TestListener listener;
@@ -262,7 +262,7 @@ TEST_F(ContextEngineTest, GetContext) {
   reader_->Get(
       std::move(query),
       [&callback_called](const ContextUpdatePtr& update) {
-    std::pair<bool, f1dl::Array<ContextValuePtr>> result =
+    std::pair<bool, f1dl::VectorPtr<ContextValuePtr>> result =
         TakeContextValue(update.get(), "a");
     EXPECT_TRUE(result.first);
     EXPECT_EQ(result.second->size(), 2u);

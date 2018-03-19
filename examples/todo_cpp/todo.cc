@@ -37,8 +37,8 @@ std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
   return ret;
 }
 
-f1dl::Array<uint8_t> ToArray(const std::string& val) {
-  auto ret = f1dl::Array<uint8_t>::New(val.size());
+f1dl::VectorPtr<uint8_t> ToArray(const std::string& val) {
+  auto ret = f1dl::VectorPtr<uint8_t>::New(val.size());
   memcpy(ret->data(), val.data(), val.size());
   return ret;
 }
@@ -58,7 +58,7 @@ std::function<void(ledger::Status)> HandleResponse(std::string description) {
 
 void GetEntries(ledger::PageSnapshotPtr snapshot,
                 std::vector<ledger::EntryPtr> entries,
-                f1dl::Array<uint8_t> token,
+                f1dl::VectorPtr<uint8_t> token,
                 std::function<void(ledger::Status,
                                    std::vector<ledger::EntryPtr>)> callback) {
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
@@ -162,7 +162,7 @@ void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
   });
 }
 
-void TodoApp::GetKeys(std::function<void(f1dl::Array<Key>)> callback) {
+void TodoApp::GetKeys(std::function<void(f1dl::VectorPtr<Key>)> callback) {
   ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
                      HandleResponse("GetSnapshot"));
@@ -180,14 +180,14 @@ void TodoApp::AddNew() {
   page_->Put(MakeKey(), ToArray(generator_.Generate()), HandleResponse("Put"));
 }
 
-void TodoApp::DeleteOne(f1dl::Array<Key> keys) {
+void TodoApp::DeleteOne(f1dl::VectorPtr<Key> keys) {
   FXL_DCHECK(keys->size());
   std::uniform_int_distribution<> distribution(0, keys->size() - 1);
   page_->Delete(std::move(keys->at(distribution(rng_))), HandleResponse("Delete"));
 }
 
 void TodoApp::Act() {
-  GetKeys([this](f1dl::Array<Key> keys) {
+  GetKeys([this](f1dl::VectorPtr<Key> keys) {
     size_t target_size = std::round(size_distribution_(rng_));
     if (keys->size() > std::max(static_cast<size_t>(0), target_size)) {
       DeleteOne(std::move(keys));

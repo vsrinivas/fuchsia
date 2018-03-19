@@ -14,7 +14,7 @@ namespace modular {
 namespace {
 
 TEST(Storage, EncodeModulePath) {
-  f1dl::Array<f1dl::String> fidl_array;
+  f1dl::VectorPtr<f1dl::StringPtr> fidl_array;
   for (auto s : {"foo", ":bar", "/baz"}) {
     fidl_array.push_back(s);
   }
@@ -22,7 +22,7 @@ TEST(Storage, EncodeModulePath) {
 }
 
 TEST(Storage, EncodeLinkPath) {
-  f1dl::Array<f1dl::String> fidl_array;
+  f1dl::VectorPtr<f1dl::StringPtr> fidl_array;
   for (auto s : {"foo", ":bar"}) {
     fidl_array.push_back(s);
   }

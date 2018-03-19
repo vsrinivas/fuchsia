@@ -12,17 +12,17 @@
 
 namespace modular {
 
-std::string MakeStoryKey(const f1dl::String& story_id) {
+std::string MakeStoryKey(const f1dl::StringPtr& story_id) {
   // Not escaped, because only one component after the prefix.
   return kStoryKeyPrefix + story_id.get();
 }
 
-std::string MakeDeviceKey(const f1dl::String& device_name) {
+std::string MakeDeviceKey(const f1dl::StringPtr& device_name) {
   // Not escaped, because only one component after the prefix.
   return kDeviceKeyPrefix + device_name.get();
 }
 
-std::string MakePerDeviceKey(const f1dl::String& device_name) {
+std::string MakePerDeviceKey(const f1dl::StringPtr& device_name) {
   // Not escaped, because only one component after the prefix.
   return kPerDeviceKeyPrefix + device_name.get();
 }
@@ -51,7 +51,7 @@ std::string MakeStoryContextLogKey(const StorySignal signal,
   return key;
 }
 
-std::string MakeFocusKey(const f1dl::String& device_name) {
+std::string MakeFocusKey(const f1dl::StringPtr& device_name) {
   // Not escaped, because only one component after the prefix.
   return kFocusKeyPrefix + device_name.get();
 }
@@ -80,7 +80,7 @@ std::string MakeMessageQueueKey(const std::string& queue_token) {
   return kMessageQueueKeyPrefix + queue_token;
 }
 
-std::string EncodeModulePath(const f1dl::Array<f1dl::String>& module_path) {
+std::string EncodeModulePath(const f1dl::VectorPtr<f1dl::StringPtr>& module_path) {
   std::vector<std::string> segments;
   segments.reserve(module_path->size());
   for (const auto& module_path_part : *module_path) {
@@ -120,7 +120,7 @@ std::string MakeLinkKey(const LinkPathPtr& link_path) {
   return key;
 }
 
-std::string MakeModuleKey(const f1dl::Array<f1dl::String>& module_path) {
+std::string MakeModuleKey(const f1dl::VectorPtr<f1dl::StringPtr>& module_path) {
   FXL_DCHECK(!module_path.is_null() && module_path->size() > 0)
       << EncodeModulePath(module_path);
   FXL_DCHECK(module_path->at(0)->size() > 0) << EncodeModulePath(module_path);

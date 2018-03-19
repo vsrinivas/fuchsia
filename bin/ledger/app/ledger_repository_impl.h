@@ -43,7 +43,7 @@ class LedgerRepositoryImpl : public LedgerRepository,
 
  private:
   // LedgerRepository:
-  void GetLedger(f1dl::Array<uint8_t> ledger_name,
+  void GetLedger(f1dl::VectorPtr<uint8_t> ledger_name,
                  f1dl::InterfaceRequest<Ledger> ledger_request,
                  const GetLedgerCallback& callback) override;
   void Duplicate(f1dl::InterfaceRequest<LedgerRepository> request,
@@ -61,7 +61,7 @@ class LedgerRepositoryImpl : public LedgerRepository,
   // LedgerRepositoryDebug:
   void GetInstancesList(const GetInstancesListCallback& callback) override;
 
-  void GetLedgerDebug(f1dl::Array<uint8_t> ledger_name,
+  void GetLedgerDebug(f1dl::VectorPtr<uint8_t> ledger_name,
                       f1dl::InterfaceRequest<LedgerDebug> request,
                       const GetLedgerDebugCallback& callback) override;
 

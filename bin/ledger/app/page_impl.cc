@@ -25,7 +25,7 @@ void PageImpl::GetId(const GetIdCallback& callback) {
 // GetSnapshot(PageSnapshot& snapshot, PageWatcher& watcher) => (Status status);
 void PageImpl::GetSnapshot(
     f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
-    f1dl::Array<uint8_t> key_prefix,
+    f1dl::VectorPtr<uint8_t> key_prefix,
     f1dl::InterfaceHandle<PageWatcher> watcher,
     const GetSnapshotCallback& callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "page_get_snapshot");
@@ -34,16 +34,16 @@ void PageImpl::GetSnapshot(
 }
 
 // Put(array<uint8> key, array<uint8> value) => (Status status);
-void PageImpl::Put(f1dl::Array<uint8_t> key,
-                   f1dl::Array<uint8_t> value,
+void PageImpl::Put(f1dl::VectorPtr<uint8_t> key,
+                   f1dl::VectorPtr<uint8_t> value,
                    const PutCallback& callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER, callback);
 }
 
 // PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
 //   => (Status status);
-void PageImpl::PutWithPriority(f1dl::Array<uint8_t> key,
-                               f1dl::Array<uint8_t> value,
+void PageImpl::PutWithPriority(f1dl::VectorPtr<uint8_t> key,
+                               f1dl::VectorPtr<uint8_t> value,
                                Priority priority,
                                const PutWithPriorityCallback& callback) {
   auto timed_callback =
@@ -54,7 +54,7 @@ void PageImpl::PutWithPriority(f1dl::Array<uint8_t> key,
 
 // PutReference(array<uint8> key, Reference? reference, Priority priority)
 //   => (Status status);
-void PageImpl::PutReference(f1dl::Array<uint8_t> key,
+void PageImpl::PutReference(f1dl::VectorPtr<uint8_t> key,
                             ReferencePtr reference,
                             Priority priority,
                             const PutReferenceCallback& callback) {
@@ -65,7 +65,7 @@ void PageImpl::PutReference(f1dl::Array<uint8_t> key,
 }
 
 // Delete(array<uint8> key) => (Status status);
-void PageImpl::Delete(f1dl::Array<uint8_t> key,
+void PageImpl::Delete(f1dl::VectorPtr<uint8_t> key,
                       const DeleteCallback& callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "page_delete");
   delegate_->Delete(std::move(key), std::move(timed_callback));

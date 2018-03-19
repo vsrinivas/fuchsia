@@ -90,7 +90,7 @@ class LinkForwarder : modular::LinkWatcher {
     src_->Watch(src_binding_.NewBinding());
   }
 
-  void Notify(const f1dl::String& json) override {
+  void Notify(const f1dl::StringPtr& json) override {
     // We receive an initial update when the Link initializes. It's "null"
     // (meaning the value of the json string is the four letters n-u-l-l)
     // if this is a new session, or it has json data if it's a restored session.
@@ -190,7 +190,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
 
     // Read initial Link data. We expect the shell to tell us what it
     // is.
-    link_->Get(nullptr, [this](const f1dl::String& json) {
+    link_->Get(nullptr, [this](const f1dl::StringPtr& json) {
       rapidjson::Document doc;
       doc.Parse(json);
       if (doc.HasParseError()) {
@@ -268,17 +268,17 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     module_monitors_.emplace_back(
         new ModuleMonitor(module2_.get(), module_context_.get()));
 
-    module1_link_->Get(nullptr, [this](const f1dl::String& json) {
+    module1_link_->Get(nullptr, [this](const f1dl::StringPtr& json) {
       if (json == "null") {
         // This must come last, otherwise LinkConnection gets a
         // notification of our own write because of the "send
         // initial values" code.
         std::vector<std::string> segments{modular_example::kJsonSegment,
                                           modular_example::kDocId};
-        module1_link_->Set(f1dl::Array<f1dl::String>::From(segments),
+        module1_link_->Set(f1dl::VectorPtr<f1dl::StringPtr>::From(segments),
                            kInitialJson);
       } else {
-        link_->Get(nullptr, [this](const f1dl::String& json) {
+        link_->Get(nullptr, [this](const f1dl::StringPtr& json) {
           // There is a possiblity that on re-inflation we start with a
           // deadlocked state such that neither of the child modules make
           // progress. This can happen because there is no synchronization
@@ -318,7 +318,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
                             if (status == ledger::Status::KEY_NOT_FOUND) {
                               FXL_LOG(INFO) << "No counter in root page. "
                                                "Initializing to 1.";
-                              f1dl::Array<uint8_t> data;
+                              f1dl::VectorPtr<uint8_t> data;
                               data.push_back(1);
                               module_root_page_->Put(
                                   to_array(kLedgerCounterKey), std::move(data),
@@ -351,7 +351,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     device_map_ = application_context()
                       ->ConnectToEnvironmentService<modular::DeviceMap>();
 
-    device_map_->Query([this](f1dl::Array<modular::DeviceMapEntryPtr> devices) {
+    device_map_->Query([this](f1dl::VectorPtr<modular::DeviceMapEntryPtr> devices) {
       FXL_LOG(INFO) << "Devices from device_map_->Query():";
       for (modular::DeviceMapEntryPtr& device : devices.take()) {
         FXL_LOG(INFO) << " - " << device->name;

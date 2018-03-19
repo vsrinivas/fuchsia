@@ -273,7 +273,7 @@ void AgentContextImpl::ScheduleTask(TaskInfoPtr task_info) {
   agent_runner_->ScheduleTask(url_, std::move(task_info));
 }
 
-void AgentContextImpl::DeleteTask(const f1dl::String& task_id) {
+void AgentContextImpl::DeleteTask(const f1dl::StringPtr& task_id) {
   agent_runner_->DeleteTask(url_, task_id);
 }
 

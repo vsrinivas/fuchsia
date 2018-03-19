@@ -32,7 +32,7 @@ class StoryProviderMock : public StoryProvider {
 
  private:
   // |StoryProvider|
-  void CreateStory(const f1dl::String& url,
+  void CreateStory(const f1dl::StringPtr& url,
                    const CreateStoryCallback& callback) override {
     last_created_story_ = url;
     callback("foo");
@@ -40,9 +40,9 @@ class StoryProviderMock : public StoryProvider {
 
   // |StoryProvider|
   void CreateStoryWithInfo(
-      const f1dl::String& url,
-      f1dl::Array<StoryInfoExtraEntryPtr> extra_info,
-      const f1dl::String& json,
+      const f1dl::StringPtr& url,
+      f1dl::VectorPtr<StoryInfoExtraEntryPtr> extra_info,
+      const f1dl::StringPtr& json,
       const CreateStoryWithInfoCallback& callback) override {
     last_created_story_ = url;
     callback("foo");
@@ -55,32 +55,32 @@ class StoryProviderMock : public StoryProvider {
   }
 
   // |StoryProvider|
-  void DeleteStory(const f1dl::String& story_id,
+  void DeleteStory(const f1dl::StringPtr& story_id,
                    const DeleteStoryCallback& callback) override {
     callback();
   }
 
   // |StoryProvider|
-  void GetStoryInfo(const f1dl::String& story_id,
+  void GetStoryInfo(const f1dl::StringPtr& story_id,
                     const GetStoryInfoCallback& callback) override {
     callback(nullptr);
   }
 
   // |StoryProvider|
   void GetController(
-      const f1dl::String& story_id,
+      const f1dl::StringPtr& story_id,
       f1dl::InterfaceRequest<modular::StoryController> story) override {
     binding_set_.AddBinding(&controller_mock_, std::move(story));
   }
 
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override {
-    callback(f1dl::Array<f1dl::String>::New(0));
+    callback(f1dl::VectorPtr<f1dl::StringPtr>::New(0));
   }
 
   // |StoryProvider|
   void GetImportance(const GetImportanceCallback& callback) override {
-    callback(f1dl::Array<StoryImportanceEntryPtr>());
+    callback(f1dl::VectorPtr<StoryImportanceEntryPtr>());
   }
 
   // |StoryProvider|
@@ -91,7 +91,7 @@ class StoryProviderMock : public StoryProvider {
 
   // |StoryProvider|
   void RunningStories(const RunningStoriesCallback& callback) override {
-    callback(f1dl::Array<f1dl::String>::New(0));
+    callback(f1dl::VectorPtr<f1dl::StringPtr>::New(0));
   }
 
   // |StoryProvider|
@@ -100,9 +100,9 @@ class StoryProviderMock : public StoryProvider {
   }
 
   // |StoryProvider|
-  void GetLinkPeer(const f1dl::String& story_id,
-                   f1dl::Array<f1dl::String> module_path,
-                   const f1dl::String& link_path,
+  void GetLinkPeer(const f1dl::StringPtr& story_id,
+                   f1dl::VectorPtr<f1dl::StringPtr> module_path,
+                   const f1dl::StringPtr& link_path,
                    f1dl::InterfaceRequest<Link> request) override {
     FXL_LOG(FATAL) << "StoryProviderMock::GetLinkPeer() not implemented.";
   }

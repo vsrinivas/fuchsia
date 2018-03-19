@@ -114,7 +114,7 @@ class MessageQueueStorage : MessageSender {
   }
 
   // |MessageSender|
-  void Send(const f1dl::String& message) override {
+  void Send(const f1dl::StringPtr& message) override {
     queue_data_.Enqueue(message);
     MaybeSendNextMessage();
     if (watcher_) {
@@ -187,7 +187,7 @@ struct MessageQueueManager::MessageQueueInfo {
   }
 };
 
-class MessageQueueManager::GetQueueTokenCall : Operation<f1dl::String> {
+class MessageQueueManager::GetQueueTokenCall : Operation<f1dl::StringPtr> {
  public:
   GetQueueTokenCall(OperationContainer* const container,
                     ledger::Page* const page,
@@ -261,7 +261,7 @@ class MessageQueueManager::GetQueueTokenCall : Operation<f1dl::String> {
   ledger::PageSnapshotPtr snapshot_;
   std::string key_;
 
-  f1dl::String result_;
+  f1dl::StringPtr result_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetQueueTokenCall);
 };
@@ -378,7 +378,7 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<> {
     new GetQueueTokenCall(
         &operation_collection_, page_, message_queue_info_.component_namespace,
         message_queue_info_.component_instance_id,
-        message_queue_info_.queue_name, [this, flow](f1dl::String token) {
+        message_queue_info_.queue_name, [this, flow](f1dl::StringPtr token) {
           if (token) {
             // Queue token was found in the ledger.
             message_queue_info_.queue_token = token.get();
@@ -489,7 +489,7 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<> {
     new GetQueueTokenCall(
         &operation_collection_, page_, message_queue_info_.component_namespace,
         message_queue_info_.component_instance_id,
-        message_queue_info_.queue_name, [this, flow](f1dl::String token) {
+        message_queue_info_.queue_name, [this, flow](f1dl::StringPtr token) {
           if (!token) {
             FXL_LOG(WARNING)
                 << trace_name() << " " << message_queue_info_.queue_name << " "

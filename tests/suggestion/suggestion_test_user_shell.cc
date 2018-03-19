@@ -47,11 +47,11 @@ class TestApp : modular::StoryWatcher,
 
     story_provider_->CreateStory(
         "file:///system/test/modular_tests/suggestion_test_module",
-        [this](const f1dl::String& story_id) { StartStoryById(story_id); });
+        [this](const f1dl::StringPtr& story_id) { StartStoryById(story_id); });
     initialized_.Pass();
   }
 
-  void StartStoryById(const f1dl::String& story_id) {
+  void StartStoryById(const f1dl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_.set_error_handler([this, story_id] {
       FXL_LOG(ERROR) << "Story controller for story " << story_id
@@ -82,7 +82,7 @@ class TestApp : modular::StoryWatcher,
   TestPoint received_suggestion_{"SuggestionTestUserShell received suggestion"};
 
   // |NextListener|
-  void OnNextResults(f1dl::Array<maxwell::SuggestionPtr> suggestions) override {
+  void OnNextResults(f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) override {
     for (auto& suggestion : *suggestions) {
       auto& display = suggestion->display;
       if (display->headline == "foo" && display->subheadline == "bar" &&

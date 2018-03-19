@@ -50,7 +50,7 @@ void ComponentContextImpl::GetLedger(
 }
 
 void ComponentContextImpl::ConnectToAgent(
-    const f1dl::String& url,
+    const f1dl::StringPtr& url,
     f1dl::InterfaceRequest<component::ServiceProvider>
         incoming_services_request,
     f1dl::InterfaceRequest<AgentController> agent_controller_request) {
@@ -60,19 +60,19 @@ void ComponentContextImpl::ConnectToAgent(
 }
 
 void ComponentContextImpl::ObtainMessageQueue(
-    const f1dl::String& name,
+    const f1dl::StringPtr& name,
     f1dl::InterfaceRequest<MessageQueue> request) {
   message_queue_manager_->ObtainMessageQueue(
       component_namespace_, component_instance_id_, name, std::move(request));
 }
 
-void ComponentContextImpl::DeleteMessageQueue(const f1dl::String& name) {
+void ComponentContextImpl::DeleteMessageQueue(const f1dl::StringPtr& name) {
   message_queue_manager_->DeleteMessageQueue(component_namespace_,
                                              component_instance_id_, name);
 }
 
 void ComponentContextImpl::GetMessageSender(
-    const f1dl::String& queue_token,
+    const f1dl::StringPtr& queue_token,
     f1dl::InterfaceRequest<MessageSender> request) {
   message_queue_manager_->GetMessageSender(queue_token, std::move(request));
 }
@@ -83,7 +83,7 @@ void ComponentContextImpl::GetEntityResolver(
 }
 
 void ComponentContextImpl::CreateEntityWithData(
-    f1dl::Array<TypeToDataEntryPtr> type_to_data,
+    f1dl::VectorPtr<TypeToDataEntryPtr> type_to_data,
     const CreateEntityWithDataCallback& result) {
   std::map<std::string, std::string> copy;
   for (const auto& it : *type_to_data) {

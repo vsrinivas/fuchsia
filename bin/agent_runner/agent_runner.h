@@ -117,7 +117,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
                        const std::string& task_id);
 
   // A set of all agents that are either running or scheduled to be run.
-  f1dl::Array<f1dl::String> GetAllAgents();
+  f1dl::VectorPtr<f1dl::StringPtr> GetAllAgents();
 
   // |UpdateWatchers| will not notify watchers if we are tearing down.
   void UpdateWatchers();

@@ -15,7 +15,7 @@ void ContextDebugImpl::OnValueChanged(const std::set<Id>& parent_ids,
                                       const Id& id,
                                       const ContextValuePtr& value) {
   auto update = ContextDebugValue::New();
-  update->parent_ids = f1dl::Array<f1dl::String>::From(parent_ids);
+  update->parent_ids = f1dl::VectorPtr<f1dl::StringPtr>::From(parent_ids);
   update->id = id;
   update->value = value.Clone();
   DispatchOneValue(std::move(update));
@@ -24,7 +24,7 @@ void ContextDebugImpl::OnValueChanged(const std::set<Id>& parent_ids,
 void ContextDebugImpl::OnValueRemoved(const Id& id) {
   auto update = ContextDebugValue::New();
   update->id = id;
-  update->parent_ids = f1dl::Array<f1dl::String>::New(0);
+  update->parent_ids = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
   DispatchOneValue(std::move(update));
 }
 
@@ -50,12 +50,12 @@ void ContextDebugImpl::Watch(
   FXL_LOG(INFO) << "Watch(): entered";
   auto listener_ptr = listener.Bind();
   // Build a complete state snapshot and send it to |listener|.
-  auto all_values = f1dl::Array<ContextDebugValuePtr>::New(0);
+  auto all_values = f1dl::VectorPtr<ContextDebugValuePtr>::New(0);
   for (const auto& entry : repository_->values_) {
     auto update = ContextDebugValue::New();
     update->id = entry.first;
     update->value = entry.second.value.Clone();
-    update->parent_ids = f1dl::Array<f1dl::String>::From(
+    update->parent_ids = f1dl::VectorPtr<f1dl::StringPtr>::From(
         repository_->graph_.GetParents(entry.first));
     all_values.push_back(std::move(update));
   }
@@ -66,13 +66,13 @@ void ContextDebugImpl::Watch(
 }
 
 void ContextDebugImpl::DispatchOneValue(ContextDebugValuePtr value) {
-  f1dl::Array<ContextDebugValuePtr> values;
+  f1dl::VectorPtr<ContextDebugValuePtr> values;
   values.push_back(value.Clone());
   DispatchValues(std::move(values));
 }
 
 void ContextDebugImpl::DispatchValues(
-    f1dl::Array<ContextDebugValuePtr> values) {
+    f1dl::VectorPtr<ContextDebugValuePtr> values) {
   listeners_.ForAllPtrs([&values](ContextDebugListener* listener) {
     listener->OnValuesChanged(values.Clone());
   });
@@ -80,13 +80,13 @@ void ContextDebugImpl::DispatchValues(
 
 void ContextDebugImpl::DispatchOneSubscription(
     ContextDebugSubscriptionPtr value) {
-  f1dl::Array<ContextDebugSubscriptionPtr> values;
+  f1dl::VectorPtr<ContextDebugSubscriptionPtr> values;
   values.push_back(value.Clone());
   DispatchSubscriptions(std::move(values));
 }
 
 void ContextDebugImpl::DispatchSubscriptions(
-    f1dl::Array<ContextDebugSubscriptionPtr> subscriptions) {
+    f1dl::VectorPtr<ContextDebugSubscriptionPtr> subscriptions) {
   listeners_.ForAllPtrs([&subscriptions](ContextDebugListener* listener) {
     listener->OnSubscriptionsChanged(subscriptions.Clone());
   });

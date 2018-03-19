@@ -26,7 +26,7 @@ void XdrFocusInfo(XdrContext* const xdr, FocusInfo* const data) {
 
 }  // namespace
 
-FocusHandler::FocusHandler(const f1dl::String& device_id,
+FocusHandler::FocusHandler(const f1dl::StringPtr& device_id,
                            LedgerClient* const ledger_client,
                            LedgerPageId page_id)
     : PageClient("FocusHandler",
@@ -59,7 +59,7 @@ void FocusHandler::Watch(f1dl::InterfaceHandle<FocusWatcher> watcher) {
 }
 
 // |FocusProvider|
-void FocusHandler::Request(const f1dl::String& story_id) {
+void FocusHandler::Request(const f1dl::StringPtr& story_id) {
   for (const auto& watcher : request_watchers_) {
     watcher->OnFocusRequest(story_id);
   }
@@ -71,7 +71,7 @@ void FocusHandler::Duplicate(f1dl::InterfaceRequest<FocusProvider> request) {
 }
 
 // |FocusController|
-void FocusHandler::Set(const f1dl::String& story_id) {
+void FocusHandler::Set(const f1dl::StringPtr& story_id) {
   FocusInfoPtr data = FocusInfo::New();
   data->device_id = device_id_;
   data->focused_story_id = story_id;
@@ -102,7 +102,7 @@ void FocusHandler::OnPageChange(const std::string& /*key*/,
 }
 
 VisibleStoriesHandler::VisibleStoriesHandler()
-    : visible_stories_(f1dl::Array<f1dl::String>::New(0)) {}
+    : visible_stories_(f1dl::VectorPtr<f1dl::StringPtr>::New(0)) {}
 
 VisibleStoriesHandler::~VisibleStoriesHandler() = default;
 
@@ -130,7 +130,7 @@ void VisibleStoriesHandler::Duplicate(
   provider_bindings_.AddBinding(this, std::move(request));
 }
 
-void VisibleStoriesHandler::Set(f1dl::Array<f1dl::String> story_ids) {
+void VisibleStoriesHandler::Set(f1dl::VectorPtr<f1dl::StringPtr> story_ids) {
   visible_stories_ = std::move(story_ids);
   for (const auto& watcher : change_watchers_) {
     watcher->OnVisibleStoriesChange(visible_stories_.Clone());
