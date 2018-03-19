@@ -44,7 +44,7 @@ one-or-more = ( list-part )+ ;
 ```
 file = library-header , using-list , declaration-list ;
 
-library-header = "library" , compound-identifier , ";" ;
+library-header = "library" , IDENTIFIER , ";" ;
 
 using-list = ( using )* ;
 

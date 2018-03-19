@@ -357,7 +357,7 @@ struct UnionDeclaration {
 };
 
 struct File {
-    File(std::unique_ptr<CompoundIdentifier> identifier,
+    File(std::unique_ptr<Identifier> identifier,
          std::vector<std::unique_ptr<Using>> using_list,
          std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list,
          std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list,
@@ -371,7 +371,7 @@ struct File {
           struct_declaration_list(std::move(struct_declaration_list)),
           union_declaration_list(std::move(union_declaration_list)) {}
 
-    std::unique_ptr<CompoundIdentifier> identifier;
+    std::unique_ptr<Identifier> identifier;
     std::vector<std::unique_ptr<Using>> using_list;
     std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list;
     std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list;

@@ -914,7 +914,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     ConsumeToken(Token::Kind::Library);
     if (!Ok())
         return Fail();
-    auto identifier = ParseCompoundIdentifier();
+    auto identifier = ParseIdentifier();
     if (!Ok())
         return Fail();
     ConsumeToken(Token::Kind::Semicolon);
