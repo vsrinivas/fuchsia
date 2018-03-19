@@ -21,10 +21,13 @@ VkCubeView::VkCubeView(
 VkCubeView::~VkCubeView() {}
 
 void VkCubeView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
-  if (size_.Equals(logical_size()))
+  if (!has_metrics())
+    return;
+  if (size_.Equals(logical_size()) && physical_size_.Equals(physical_size()))
     return;
 
   size_ = logical_size();
+  physical_size_ = physical_size();
 
   scenic_lib::Rectangle pane_shape(session(), logical_size().width,
                                    logical_size().height);
@@ -51,6 +54,6 @@ void VkCubeView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
   // OnSceneInvalidated.
 
   resize_callback_(
-      logical_size().width, logical_size().height,
+      physical_size().width, physical_size().height,
       f1dl::InterfaceHandle<ui::gfx::ImagePipe>(std::move(endpoint0)));
 }

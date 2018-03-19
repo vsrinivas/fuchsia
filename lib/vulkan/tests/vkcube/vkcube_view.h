@@ -23,6 +23,7 @@ private:
     void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) override;
 
     mozart::SizeF size_;
+    mozart::Size physical_size_;
     scenic_lib::ShapeNode pane_node_;
     std::function<void(float width, float height,
                        f1dl::InterfaceHandle<ui::gfx::ImagePipe> interface_request)>
