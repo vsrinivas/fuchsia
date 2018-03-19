@@ -15,7 +15,7 @@ declare_args() {
 #     Path to the Zircon kernel. Either "zircon" or "linux" must be specified.
 #   linux (string, optional)
 #     Path to the Linux kernel. Either "zircon" or "linux" must be specified.
-#   ramdisk (string, required)
+#   ramdisk (string, optional)
 #     Path to a ramdisk file to be loaded into the guest.
 #   cmdline (string, optional)
 #     Kernel cmdline string.
@@ -24,7 +24,6 @@ declare_args() {
 #
 template("guest_app") {
   assert(defined(invoker.zircon) || defined(invoker.linux), "")
-  assert(defined(invoker.ramdisk), "")
 
   guest_config_target_name = "${target_name}_guest_config"
   guest_config_file = "${target_out_dir}/guest.cfg"
@@ -138,14 +137,16 @@ template("guest_app") {
     }
 
     # Add ramdisk resource.
-    ramdisk = rebase_path(invoker.ramdisk)
-    inputs += [ ramdisk ]
-    resources += [
-      {
-        path = ramdisk
-        dest = "ramdisk"
-      },
-    ]
+    if (defined(invoker.ramdisk)) {
+      ramdisk = rebase_path(invoker.ramdisk)
+      inputs += [ ramdisk ]
+      resources += [
+        {
+          path = ramdisk
+          dest = "ramdisk"
+        },
+      ]
+    }
 
     resources += [
       {
