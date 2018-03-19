@@ -13,4 +13,4 @@ set -e
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-"${ZIRCON_TOOLS_DIR}/loglistener" "$@"
+exec "${ZIRCON_TOOLS_DIR}/loglistener" "$@"
