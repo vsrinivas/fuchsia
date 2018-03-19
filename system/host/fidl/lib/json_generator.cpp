@@ -197,10 +197,6 @@ void JSONGenerator::Generate(const raw::Identifier& value) {
     EmitString(&json_file_, value.location.data());
 }
 
-void JSONGenerator::Generate(const raw::CompoundIdentifier& value) {
-    Generate(value.components);
-}
-
 void JSONGenerator::Generate(const raw::Literal& value) {
     GenerateObject([&]() {
         GenerateObjectMember("kind", NameRawLiteralKind(value.kind), Position::First);
@@ -324,12 +320,23 @@ void JSONGenerator::Generate(const flat::Ordinal& value) {
 }
 
 void JSONGenerator::Generate(const flat::Name& value) {
-    GenerateObject([&]() {
-        GenerateObjectMember("nested-decls", value.nested_decls(), Position::First);
-        GenerateObjectMember("name", value.name());
-        if (value.library())
-            GenerateObjectMember("library", value.library()->name());
-    });
+    // These look like (when there is a library)
+    //     LIB/DECL-DECL-ID
+    //     LIB/ID
+    // or (when there is not)
+    //     DECL-DECL-ID
+    //     ID
+    std::string encoded_string;
+    if (value.library()) {
+        encoded_string += std::string(value.library()->name());
+        encoded_string += "/";
+    }
+    for (auto decl : value.nested_decls()) {
+        encoded_string += std::string(decl.data());
+        encoded_string += "-";
+    }
+    encoded_string += std::string(value.name().data());
+    Generate(encoded_string);
 }
 
 void JSONGenerator::Generate(const flat::Const& value) {

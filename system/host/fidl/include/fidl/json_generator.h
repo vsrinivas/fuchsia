@@ -70,7 +70,6 @@ private:
     void Generate(types::PrimitiveSubtype value);
 
     void Generate(const raw::Identifier& value);
-    void Generate(const raw::CompoundIdentifier& value);
     void Generate(const raw::Literal& value);
     void Generate(const raw::Type& value);
     void Generate(const raw::Constant& value);
