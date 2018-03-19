@@ -180,7 +180,9 @@ void Transport::NotifyClosedCallback() {
   const auto async = fsl::MessageLoop::GetCurrent()->async();
 
   cmd_channel_wait_.Cancel(async);
-  acl_channel_wait_.Cancel(async);
+  if (acl_data_channel_) {
+    acl_channel_wait_.Cancel(async);
+  }
 
   FXL_LOG(INFO) << "hci: Transport: HCI channel(s) were closed";
   if (closed_cb_)
