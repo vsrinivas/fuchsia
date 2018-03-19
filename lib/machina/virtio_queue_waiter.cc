@@ -13,13 +13,15 @@ VirtioQueueWaiter::VirtioQueueWaiter(async_t* async) : async_(async) {
 }
 
 zx_status_t VirtioQueueWaiter::Wait(VirtioQueue* queue, Callback callback) {
+  callback_ = fbl::move(callback);
+  queue_ = queue;
   wait_.set_object(queue->event());
   wait_.set_trigger(VirtioQueue::SIGNAL_QUEUE_AVAIL);
   wait_.set_handler(fbl::BindMember(this, &VirtioQueueWaiter::Handler));
   zx_status_t status = wait_.Begin(async_);
-  if (status == ZX_OK) {
-    callback_ = fbl::move(callback);
-    queue_ = queue;
+  if (status != ZX_OK) {
+    callback_ = Callback();
+    queue_ = nullptr;
   }
   return status;
 }
