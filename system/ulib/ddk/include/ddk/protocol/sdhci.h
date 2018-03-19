@@ -14,6 +14,10 @@ typedef struct sdhci_protocol_ops {
     // TODO: should be replaced with a generic busdev mechanism
     zx_status_t (*get_interrupt)(void* ctx, zx_handle_t* handle_out);
     zx_status_t (*get_mmio)(void* ctx, volatile sdhci_regs_t** out);
+    // Gets a handle to the bus transaction initiator for the device. The caller
+    // receives ownership of the handle.
+    zx_status_t (*get_bti)(void* ctx, uint32_t index, zx_handle_t* out_handle);
+
     uint32_t (*get_base_clock)(void* ctx);
 
     // returns device quirks
