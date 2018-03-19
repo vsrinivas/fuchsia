@@ -29,7 +29,7 @@ public:
     const StringView& data() const { return data_; }
     const SourceFile& source_file() const { return *source_file_; }
 
-    StringView SourceLine(int* line_number_out) const;
+    StringView SourceLine(SourceFile::Position* position_out) const;
 
 private:
     StringView data_;

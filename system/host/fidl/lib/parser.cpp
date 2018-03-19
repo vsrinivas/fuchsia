@@ -79,15 +79,23 @@ bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
 
 decltype(nullptr) Parser::Fail() {
     if (ok_) {
-        int line_number;
-        auto surrounding_line = last_token_.location().SourceLine(&line_number);
+        auto token_location = last_token_.location();
+        auto token_data = token_location.data();
 
-        std::string error = "found unexpected token: ";
-        error += last_token_.data();
-        error += "\n";
-        error += "on line #" + std::to_string(line_number) + ":\n\n";
+        SourceFile::Position position;
+        std::string surrounding_line = token_location.SourceLine(&position);
+        auto line_number = std::to_string(position.line);
+        auto column_number = std::to_string(position.column);
+
+        std::string squiggle(position.column, ' ');
+        squiggle +="^";
+        squiggle += std::string(token_data.size() - 1, '~');
+
+        std::string error = "found unexpected token on ";
+        error += "line " + line_number;
+        error += " column " + column_number + ":\n";
         error += surrounding_line;
-        error += "\n";
+        error += squiggle + "\n";
 
         error_reporter_->ReportError(error);
         ok_ = false;

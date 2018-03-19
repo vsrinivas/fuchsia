@@ -31,7 +31,7 @@ SourceFile::SourceFile(std::string filename, std::string data)
 
 SourceFile::~SourceFile() = default;
 
-StringView SourceFile::LineContaining(StringView view, int* line_number_out) const {
+StringView SourceFile::LineContaining(StringView view, Position* position_out) const {
     auto ptr_order = [](const char* left, const char* right) {
         return std::less_equal<const char*>()(left, right);
     };
@@ -50,9 +50,12 @@ StringView SourceFile::LineContaining(StringView view, int* line_number_out) con
     auto line = std::find_if(lines_.cbegin(), lines_.cend(), is_in_line);
     assert(line != lines_.cend());
 
-    if (line_number_out != nullptr) {
+    if (position_out != nullptr) {
         // Humans number lines from 1.
-        *line_number_out = (line - lines_.cbegin()) + 1;
+        int line_number = (line - lines_.cbegin()) + 1;
+        // But columns from 0!
+        int column_number = view.data() - line->data();
+        *position_out = {line_number, column_number};
     }
     return *line;
 }

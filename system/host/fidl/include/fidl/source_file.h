@@ -21,7 +21,14 @@ public:
     StringView filename() const { return filename_; }
     StringView data() const { return data_; }
 
-    StringView LineContaining(StringView view, int* line_number_out) const;
+    // This is in the coordinates that most editors use. Lines start
+    // at 1 but columns start at 0.
+    struct Position {
+        int line;
+        int column;
+    };
+
+    StringView LineContaining(StringView view, Position* position_out) const;
 
 private:
     std::string filename_;
