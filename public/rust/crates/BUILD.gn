@@ -15,11 +15,13 @@ package("rust-crates-tests") {
     "fuchsia-vfs",
     "fuchsia-vfs/fuchsia-vfs-watcher",
     "fuchsia-zircon",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fidl_crates/fidl2_examples",
   ]
 
   tests = [
     { name = "fdio-lib-unit-test" },
+    { name = "fidl-lib-unit-test" },
     { name = "fuchsia_async-lib-unit-test" },
     { name = "fuchsia_vfs-lib-unit-test" },
     { name = "fuchsia_vfs_watcher-lib-unit-test" },
