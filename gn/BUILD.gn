@@ -4,6 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/bootdata.gni")
+import("//build/config/fuchsia/sdk.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/gn/config.gni")
 import("//build/gn/packages.gni")
@@ -474,6 +475,8 @@ zircon_tool_action("fvm.blk") {
   args = [
     rebase_path(fvm_image_path),
     "create",
+    "--length",
+    fvm_size,
     "--blob",
     rebase_path(blob_image_path),
   ]
