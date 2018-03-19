@@ -243,6 +243,8 @@ class SuggestionEngineImpl : public ContextListener,
   // URLs (stored as strings).
   std::vector<QueryHandlerRecord> query_handlers_;
 
+  std::map<std::string, std::shared_ptr<RankingFeature>> ranking_features;
+
   // The ProposalPublishers that have registered with the SuggestionEngine.
   std::map<std::string, std::unique_ptr<ProposalPublisherImpl>>
       proposal_publishers_;

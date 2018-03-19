@@ -65,9 +65,9 @@ void NextProcessor::RemoveProposal(const std::string& component_url,
   }
 }
 
-void NextProcessor::UpdateRanking(const ContextUpdatePtr& context_update) {
+void NextProcessor::UpdateRanking() {
   if (dirty_) {
-    engine_->next_suggestions_.Rank(UserInput(), context_update);
+    engine_->next_suggestions_.Rank(UserInput());
     NotifyAllOfResults();
     engine_->debug_.OnNextUpdate(&engine_->next_suggestions_);
     NotifyOfProcessingChange(false);

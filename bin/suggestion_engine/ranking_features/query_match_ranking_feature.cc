@@ -11,9 +11,7 @@ QueryMatchRankingFeature::QueryMatchRankingFeature() = default;
 QueryMatchRankingFeature::~QueryMatchRankingFeature() = default;
 
 double QueryMatchRankingFeature::ComputeFeatureInternal(
-    const UserInput& query,
-    const RankedSuggestion& suggestion,
-    const f1dl::VectorPtr<ContextValuePtr>& context_update_values) {
+    const UserInput& query, const RankedSuggestion& suggestion) {
   std::string text = suggestion.prototype->proposal->display->headline;
   std::string norm_query = query.text;
 

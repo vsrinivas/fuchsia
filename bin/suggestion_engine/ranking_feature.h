@@ -23,23 +23,20 @@ class RankingFeature {
   // Compute the numeric value for a feature, ensuring bounds on the result
   // in the range of [0.0,1.0]
   double ComputeFeature(
-      const UserInput& query, const RankedSuggestion& suggestion,
-      const f1dl::VectorPtr<ContextValuePtr>& context_update_values);
+      const UserInput& query, const RankedSuggestion& suggestion);
 
   // Fills the context selector with the values and meta the feature needs to
   // request from the context. Returns true if it filled anything, false
   // otherwise.
   ContextSelectorPtr CreateContextSelector();
 
-  // Returns a unique id for the ranking feature instance. This is used to know
-  // what context query selector belongs to the ranking feature.
-  const std::string UniqueId() const;
+  // Updates the context that the feature needs.
+  void UpdateContext(const f1dl::Array<ContextValuePtr>& context_update_values);
 
  protected:
   // Compute the numeric feature for a feature, to be overridden by subclasses
   virtual double ComputeFeatureInternal(
-      const UserInput& query, const RankedSuggestion& suggestion,
-      const f1dl::VectorPtr<ContextValuePtr>& context_update_values) = 0;
+      const UserInput& query, const RankedSuggestion& suggestion) = 0;
 
   // Create the context selector. Returns nullptr if the feature doesn't require
   // context.
@@ -49,8 +46,12 @@ class RankingFeature {
   // indicates if the file could be loaded and parsed.
   std::pair<bool, rapidjson::Document> FetchJsonObject(const std::string& path);
 
+  // Returns current context values the ranking feature has.
+  f1dl::Array<ContextValuePtr>& ContextValues();
+
  private:
   static int instances_;
+  f1dl::Array<ContextValuePtr> context_values_;
   const int id_;
 };
 

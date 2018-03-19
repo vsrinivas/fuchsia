@@ -37,7 +37,7 @@ class NextProcessor {
                       const std::string& proposal_id);
 
   // Reranks suggestions if dirty and updates listeners
-  void UpdateRanking(const ContextUpdatePtr& context_update);
+  void UpdateRanking();
 
   // Notify the listeners of new suggestions
   void NotifyAllOfResults();

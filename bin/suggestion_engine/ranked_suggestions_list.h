@@ -28,8 +28,7 @@ class RankedSuggestionsList {
 
   void AddRankingFeature(double weight,
                          std::shared_ptr<RankingFeature> ranking_feature);
-  void Rank(const UserInput& query = UserInput(),
-            const ContextUpdatePtr& context_update = nullptr);
+  void Rank(const UserInput& query = UserInput());
 
   void AddSuggestion(SuggestionPrototype* const prototype);
 

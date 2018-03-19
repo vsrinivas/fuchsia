@@ -18,8 +18,7 @@ class ProposalHintRankingFeature : public RankingFeature {
 
  protected:
   double ComputeFeatureInternal(
-      const UserInput& query, const RankedSuggestion& suggestion,
-      const f1dl::VectorPtr<ContextValuePtr>& context_update_values) override;
+      const UserInput& query, const RankedSuggestion& suggestion) override;
 };
 
 }  // namespace maxwell

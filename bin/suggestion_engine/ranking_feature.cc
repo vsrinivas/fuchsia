@@ -15,15 +15,13 @@ namespace maxwell {
 
 int RankingFeature::instances_ = 0;
 
-RankingFeature::RankingFeature() : id_(instances_++) {};
+RankingFeature::RankingFeature() : id_(instances_++) {}
 
 RankingFeature::~RankingFeature() = default;
 
 double RankingFeature::ComputeFeature(
-    const UserInput& query, const RankedSuggestion& suggestion,
-    const f1dl::VectorPtr<ContextValuePtr>& context_update_values) {
-  const double feature = ComputeFeatureInternal(
-      query, suggestion, context_update_values);
+    const UserInput& query, const RankedSuggestion& suggestion) {
+  const double feature = ComputeFeatureInternal(query, suggestion);
   FXL_CHECK(feature <= kMaxConfidence);
   FXL_CHECK(feature >= kMinConfidence);
   return feature;
@@ -33,10 +31,9 @@ ContextSelectorPtr RankingFeature::CreateContextSelector() {
   return CreateContextSelectorInternal();
 }
 
-const std::string RankingFeature::UniqueId() const {
-  std::stringstream ss;
-  ss << "rf_" << id_;
-  return ss.str();
+void RankingFeature::UpdateContext(
+    const f1dl::Array<ContextValuePtr>& context_update_values) {
+  context_values_ = context_update_values.Clone();
 }
 
 ContextSelectorPtr RankingFeature::CreateContextSelectorInternal() {
@@ -44,6 +41,10 @@ ContextSelectorPtr RankingFeature::CreateContextSelectorInternal() {
   // require context. If a ranking feature requires context, it should create a
   // context selector, set the values it needs and return it.
   return nullptr;
+}
+
+f1dl::Array<ContextValuePtr>& RankingFeature::ContextValues() {
+  return context_values_;
 }
 
 std::pair<bool, rapidjson::Document> RankingFeature::FetchJsonObject(

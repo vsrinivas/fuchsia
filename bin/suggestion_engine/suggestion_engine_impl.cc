@@ -109,7 +109,7 @@ void SuggestionEngineImpl::Query(f1dl::InterfaceHandle<QueryListener> listener,
 }
 
 void SuggestionEngineImpl::UpdateRanking() {
-  next_processor_.UpdateRanking(latest_context_update_);
+  next_processor_.UpdateRanking();
 }
 
 // |SuggestionProvider|
@@ -217,20 +217,21 @@ void SuggestionEngineImpl::Initialize(
 
 void SuggestionEngineImpl::RegisterRankingFeatures() {
   // Create common ranking features
-  std::shared_ptr<RankingFeature> proposal_hint_feature =
+  ranking_features["proposal_hint_rf"] =
       std::make_shared<ProposalHintRankingFeature>();
-  std::shared_ptr<RankingFeature> kronk_feature =
-      std::make_shared<KronkRankingFeature>();
-  std::shared_ptr<RankingFeature> mod_pair_feature =
-      std::make_shared<ModPairRankingFeature>();
+  ranking_features["kronk_rf"] = std::make_shared<KronkRankingFeature>();
+  ranking_features["mod_pairs_rf"] = std::make_shared<ModPairRankingFeature>();
+  ranking_features["query_match_rf"] =
+      std::make_shared<QueryMatchRankingFeature>();
 
   // Get context updates every time a story is focused to rerank suggestions
   // based on the story that is focused at the moment.
   auto query = ContextQuery::New();
-  ContextSelectorPtr selector = mod_pair_feature->CreateContextSelector();
-  if (!selector.is_null()) {
-    AddToContextQuery(query.get(), mod_pair_feature->UniqueId(),
-                      std::move(selector));
+  for (auto const& it : ranking_features) {
+    ContextSelectorPtr selector = it.second->CreateContextSelector();
+    if (!selector.is_null()) {
+      AddToContextQuery(query.get(), it.first, std::move(selector));
+    }
   }
   context_reader_->Subscribe(std::move(query),
                              context_listener_binding_.NewBinding());
@@ -239,16 +240,17 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   // with a configuration file
 
   // Set up the next ranking features
-  next_suggestions_.AddRankingFeature(1.0, proposal_hint_feature);
-  next_suggestions_.AddRankingFeature(-0.1, kronk_feature);
-  next_suggestions_.AddRankingFeature(0, mod_pair_feature);
+  next_suggestions_.AddRankingFeature(
+      1.0, ranking_features["proposal_hint_rf"]);
+  next_suggestions_.AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
+  next_suggestions_.AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
 
   // Set up the query ranking features
-  query_suggestions_.AddRankingFeature(1.0, proposal_hint_feature);
-  query_suggestions_.AddRankingFeature(-0.1, kronk_feature);
-  query_suggestions_.AddRankingFeature(0, mod_pair_feature);
   query_suggestions_.AddRankingFeature(
-      0, std::make_shared<QueryMatchRankingFeature>());
+      1.0, ranking_features["proposal_hint_rf"]);
+  query_suggestions_.AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
+  query_suggestions_.AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
+  query_suggestions_.AddRankingFeature(0, ranking_features["query_match_rf"]);
 }
 
 void SuggestionEngineImpl::CleanUpPreviousQuery() {
@@ -473,7 +475,12 @@ void SuggestionEngineImpl::HandleMediaUpdates(
 }
 
 void SuggestionEngineImpl::OnContextUpdate(ContextUpdatePtr update) {
-  latest_context_update_ = std::move(update);
+  for (auto const& it : ranking_features) {
+    auto result = TakeContextValue(update.get(), it.first);
+    if (result.first) {
+      it.second->UpdateContext(result.second);
+    }
+  }
   UpdateRanking();
 }
 
