@@ -27,8 +27,8 @@ There are three ways to run zircon_benchmarks:
 
   For this, run `zircon_benchmarks --fbenchmark_out=output.json`.  The
   result data will be written to `output.json`.  This uses the JSON output
-  format described in the [Fuchsia Tracing Usage
-  Guide](../../docs/tracing_usage_guide.md#benchmark-result-export).
+  format described in the [Benchmarking](../../docs/benchmarking.md#export)
+  guide.
 
   Options:
 
