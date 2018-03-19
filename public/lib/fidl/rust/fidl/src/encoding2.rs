@@ -844,64 +844,63 @@ macro_rules! fidl2_enum {
     }
 }
 
-#[macro_export]
-macro_rules! fidl2_nullable {
-    ($name:ident) => {
-        impl $crate::encoding2::Encodable for Option<Box<$name>> {
-            fn inline_align(&self) -> usize {
-                fidl2_inline_align!(u64)
+/// A trait that provides automatic `Encodable` and `Decodable`
+/// implementations for `Option<Box<Self>>`.
+pub trait Autonull: Encodable + Decodable {}
+
+impl<T: Autonull> Encodable for Option<Box<T>> {
+    fn inline_align(&self) -> usize {
+        fidl2_inline_align!(u64)
+    }
+    fn inline_size(&self) -> usize {
+        fidl2_inline_size!(u64)
+    }
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        match *self {
+            Some(ref mut inner) => {
+                ALLOC_PRESENT_U64.encode(encoder)?;
+                encoder.write_out_of_line(
+                    (*inner).inline_size(),
+                    |encoder| (*inner).encode(encoder))
             }
-            fn inline_size(&self) -> usize {
-                fidl2_inline_size!(u64)
-            }
-            fn encode(&mut self, encoder: &mut $crate::encoding2::Encoder) -> Result<()> {
-                match *self {
-                    Some(ref mut inner) => {
-                        fidl2_encode!(&mut ALLOC_PRESENT_U64, encoder)?;
-                        encoder.write_out_of_line(
-                            fidl2_inline_size!($name),
-                            |encoder| fidl2_encode!(&mut **inner, encoder))
-                    }
-                    None => {
-                        fidl2_encode!(&mut ALLOC_ABSENT_U64, encoder)
-                    }
-                }
+            None => {
+                ALLOC_ABSENT_U64.encode(encoder)
             }
         }
+    }
+}
 
-        impl $crate::encoding2::Decodable for Option<Box<$name>> {
-            fn inline_align() -> usize {
-                fidl2_inline_align!(u64)
+impl<T: Autonull> Decodable for Option<Box<T>> {
+    fn inline_align() -> usize {
+        fidl2_inline_align!(u64)
+    }
+    fn inline_size() -> usize {
+        fidl2_inline_size!(u64)
+    }
+    fn new_empty() -> Self {
+        None
+    }
+    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+        let mut present: u64 = 0;
+        fidl2_decode!(&mut present, decoder)?;
+        match present {
+            ALLOC_ABSENT_U64 => {
+                *self = None;
+                Ok(())
             }
-            fn inline_size() -> usize {
-                fidl2_inline_size!(u64)
-            }
-            fn new_empty() -> Self {
-                None
-            }
-            fn decode(&mut self, decoder: &mut $crate::encoding2::Decoder) -> Result<()> {
-                let mut present: u64 = 0;
-                fidl2_decode!(&mut present, decoder)?;
-                match present {
-                    ALLOC_ABSENT_U64 => {
-                        *self = None;
-                        Ok(())
+            ALLOC_PRESENT_U64 => {
+                // Loop will only run once to set `self` to `Some` before decoding innards
+                loop {
+                    if let Some(ref mut inner) = *self {
+                        return decoder.read_out_of_line(
+                            <T as Decodable>::inline_size(),
+                            |decoder| (*inner).decode(decoder));
+                    } else {
+                        *self = Some(Box::new(T::new_empty()));
                     }
-                    ALLOC_PRESENT_U64 => {
-                        // Loop will only run once to set `self` to `Some` before decoding innards
-                        loop {
-                            if let Some(ref mut inner) = *self {
-                                return decoder.read_out_of_line(
-                                    fidl2_inline_size!($name),
-                                    |decoder| fidl2_decode!(&mut **inner, decoder));
-                            } else {
-                                *self = Some(Box::new(fidl2_new_empty!($name)));
-                            }
-                        }
-                    }
-                    _ => Err(Error::Invalid),
                 }
             }
+            _ => Err(Error::Invalid),
         }
     }
 }
@@ -909,7 +908,7 @@ macro_rules! fidl2_nullable {
 #[macro_export]
 macro_rules! fidl2_struct {
     (
-        name: $name:ident,
+        name: $name:ty,
         members: [$(
             $member_name:ident {
                 ty: $member_ty:ident,
@@ -928,7 +927,7 @@ macro_rules! fidl2_struct {
                 $size
             }
 
-            fn encode(&mut self, encoder: &mut $crate::encoding2::Encoder) -> Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding2::Encoder) -> $crate::Result<()> {
                 encoder.recurse(|encoder| {
                     let mut cur_offset = 0;
                     $(
@@ -955,14 +954,14 @@ macro_rules! fidl2_struct {
             }
 
             fn new_empty() -> Self {
-                $name {
+                Self {
                     $(
                         $member_name: fidl2_new_empty!($member_ty),
                     )*
                 }
             }
 
-            fn decode(&mut self, decoder: &mut $crate::encoding2::Decoder) -> Result<()> {
+            fn decode(&mut self, decoder: &mut $crate::encoding2::Decoder) -> $crate::Result<()> {
                 decoder.recurse(|decoder| {
                     let mut cur_offset = 0;
                     $(
@@ -979,7 +978,7 @@ macro_rules! fidl2_struct {
             }
         }
 
-        fidl2_nullable!($name);
+        impl $crate::encoding2::Autonull for $name {}
     }
 }
 
@@ -1026,7 +1025,7 @@ macro_rules! fidl2_union {
                 $size
             }
 
-            fn encode(&mut self, encoder: &mut $crate::encoding2::Encoder) -> Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding2::Encoder) -> $crate::Result<()> {
                 let mut member_index = self.member_index();
                 // Encode tag
                 fidl2_encode!(&mut member_index, encoder)?;
@@ -1064,7 +1063,7 @@ macro_rules! fidl2_union {
                 panic!("called new_empty on empty fidl union")
             }
 
-            fn decode(&mut self, decoder: &mut $crate::encoding2::Decoder) -> Result<()> {
+            fn decode(&mut self, decoder: &mut $crate::encoding2::Decoder) -> $crate::Result<()> {
                 #![allow(unused)]
                 let mut tag: u32 = 0;
                 fidl2_decode!(&mut tag, decoder)?;
@@ -1095,7 +1094,7 @@ macro_rules! fidl2_union {
             }
         }
 
-        fidl2_nullable!($name);
+        impl $crate::encoding2::Autonull for $name {}
     }
 }
 
