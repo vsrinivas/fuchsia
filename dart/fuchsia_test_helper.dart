@@ -5,8 +5,12 @@
 // ignore_for_file: implementation_imports
 
 import 'dart:async';
+import 'dart:io';
 import 'package:test/src/backend/declarer.dart';
 import 'package:test/src/backend/group.dart';
+import 'package:test/src/backend/suite_platform.dart';
+import 'package:test/src/backend/operating_system.dart';
+import 'package:test/src/backend/runtime.dart';
 import 'package:test/src/runner/runner_suite.dart';
 import 'package:test/src/runner/configuration/suite.dart';
 import 'package:test/src/runner/engine.dart';
@@ -29,8 +33,13 @@ Future<bool> runFuchsiaTests(List<Function> mainFunctions) async {
 
   final Group group = declarer.build();
 
+  final SuitePlatform platform = new SuitePlatform(
+      Runtime.vm,
+      os: OperatingSystem.findByIoName(Platform.operatingSystem),
+      inGoogle: false);
   final RunnerSuite suite = new RunnerSuite(
-      const PluginEnvironment(), SuiteConfiguration.empty, group);
+      const PluginEnvironment(), SuiteConfiguration.empty, group,
+      platform);
 
   final Engine engine = new Engine();
   engine.suiteSink.add(suite);
