@@ -12,9 +12,9 @@ device.
 ## Build host system with the guest package
 Configure, build, and boot the guest package as follows:
 ```
-$ fx set x64 --packages "garnet/packages/guest" --release
+$ fx set x64 --packages "garnet/packages/guest"
 $ fx full-build
-$ fx boot -1
+$ fx boot
 ```
 
 ## Running guests
@@ -31,7 +31,7 @@ $ guest launch linux-guest
 ## Running from Topaz
 To run from Topaz, configure the guest package as follows:
 ```
-$ fx set x64 --packages "topaz/packages/default,garnet/packages/guest" --release
+$ fx set x64 --packages "topaz/packages/default,garnet/packages/guest"
 ```
 
 After netbooting the guest packages can be launched from the system launcher as
@@ -48,9 +48,9 @@ $ scripts/flash-vim2 -m
 
 Then configure, build, and boot the guest package as follows:
 ```
-$ fx set arm64 --packages "garnet/packages/guest" --release --netboot
+$ fx set arm64 --packages "garnet/packages/guest" --netboot
 $ fx full-build
-$ fx boot vim2 -1
+$ fx boot vim2
 ```
 
 # Guest Configuration

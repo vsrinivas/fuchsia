@@ -32,18 +32,18 @@ case "${1}" in
 arm64)
   type aarch64-linux-gnu-gcc ||
     { echo "Required package gcc-aarch64-linux-gnu is not installed."
-      echo "(sudo apt install gcc-aarch64-linux-gnu)"; exit 1; };
-  declare -x ARCH=arm64;
+      echo "(sudo apt install gcc-aarch64-linux-gnu)"; exit 1; }
+
   declare -x CROSS_COMPILE=aarch64-linux-gnu-
   declare -r LINUX_IMAGE="${LINUX_DIR}/arch/arm64/boot/Image";;
 x86)
-  declare -x ARCH=x86;
   declare -x CROSS_COMPILE=x86_64-linux-gnu-
   declare -r LINUX_IMAGE="${LINUX_DIR}/arch/x86/boot/bzImage";;
 *)
   usage;;
 esac
 
+declare -x ARCH="${1}";
 declare -r LINUX_DIR=${LINUX_DIR:-/tmp/linux}
 declare -r DEFCONFIG=${DEFCONFIG:-machina_defconfig}
 echo "Building Linux with ${DEFCONFIG} in ${LINUX_DIR}"
