@@ -38,8 +38,8 @@ bool Equals(const f1dl::Array<uint8_t>& a1, const A& a2) {
 
 f1dl::Array<uint8_t> TestArray() {
   std::string value = "value";
-  f1dl::Array<uint8_t> result = f1dl::Array<uint8_t>::New(value.size());
-  memcpy(&result[0], &value[0], value.size());
+  f1dl::Array<uint8_t> result(value.size());
+  memcpy(&result->at(0), &value[0], value.size());
   return result;
 }
 
@@ -124,7 +124,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
       return ::testing::AssertionFailure()
              << "GetEntriesInline failed with status " << status;
     }
-    *entry_count = entries.size();
+    *entry_count = entries->size();
     return ::testing::AssertionSuccess();
   }
 

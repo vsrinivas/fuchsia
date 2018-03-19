@@ -686,7 +686,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
                                   f1dl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
-    for (auto& entry : entries) {
+    for (auto& entry : entries.take()) {
       actual_entries.push_back(std::move(entry));
     }
     EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
@@ -700,8 +700,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
     ASSERT_EQ(GetKey(i, min_key_size),
-              convert::ToString(actual_entries[i]->key));
-    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries[i]->value));
+              convert::ToString(actual_entries->at(i)->key));
+    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries->at(i)->value));
   }
 }
 
@@ -734,7 +734,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(actual_next_token2.is_null());
-  for (auto& entry : actual_entries2) {
+  for (auto& entry : actual_entries2.take()) {
     actual_entries.push_back(std::move(entry));
   }
   EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
@@ -742,9 +742,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
-    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries[i]->key));
+    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries->at(i)->key));
     ASSERT_EQ(GetValue(i, min_value_size),
-              convert::ToString(actual_entries[i]->value));
+              convert::ToString(actual_entries->at(i)->value));
   }
 }
 
@@ -788,7 +788,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(actual_next_token2.is_null());
-  for (auto& entry : actual_entries2) {
+  for (auto& entry : actual_entries2.take()) {
     actual_entries.push_back(std::move(entry));
   }
   EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
@@ -796,9 +796,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
-    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries[i]->key));
+    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries->at(i)->key));
     ASSERT_EQ(GetValue(i, min_value_size),
-              convert::ToString(actual_entries[i]->value));
+              convert::ToString(actual_entries->at(i)->value));
   }
 }
 
@@ -828,7 +828,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
                                   f1dl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
-    for (auto& entry : entries) {
+    for (auto& entry : entries.take()) {
       actual_entries.push_back(std::move(entry));
     }
     EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
@@ -841,8 +841,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
-    ASSERT_EQ(GetKey(i), convert::ToString(actual_entries[i]->key));
-    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries[i]->value));
+    ASSERT_EQ(GetKey(i), convert::ToString(actual_entries->at(i)->key));
+    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries->at(i)->value));
   }
 }
 
@@ -1016,9 +1016,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
   snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(2u, actual_keys.size());
-  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys[0]));
-  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys[1]));
+  EXPECT_EQ(2u, actual_keys->size());
+  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
+  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys->at(1)));
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
@@ -1053,10 +1053,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
                                f1dl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
-    for (auto& key : keys) {
+    for (auto& key : keys.take()) {
       actual_keys.push_back(std::move(key));
     }
-    EXPECT_EQ(static_cast<size_t>(key_count), actual_keys.size());
+    EXPECT_EQ(static_cast<size_t>(key_count), actual_keys->size());
     message_loop_.PostQuitTask();
   };
   snapshot->GetKeys(nullptr, std::move(actual_next_token), callback_getkeys2);
@@ -1064,8 +1064,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
-  for (size_t i = 0; i < actual_keys.size(); ++i) {
-    ASSERT_EQ(GetKey(i, min_key_size), convert::ToString(actual_keys[i]));
+  for (size_t i = 0; i < actual_keys->size(); ++i) {
+    ASSERT_EQ(GetKey(i, min_key_size), convert::ToString(actual_keys->at(i)));
   }
 }
 
@@ -1105,16 +1105,16 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
   snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(1u, actual_keys.size());
-  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys[0]));
+  EXPECT_EQ(1u, actual_keys->size());
+  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
 
   snapshot = GetSnapshot(convert::ToArray("00"));
   snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(2u, actual_keys.size());
-  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys[0]));
-  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys[1]));
+  EXPECT_EQ(2u, actual_keys->size());
+  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
+  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys->at(1)));
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
@@ -1153,16 +1153,16 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
   snapshot->GetKeys(convert::ToArray("002"), nullptr, callback_getkeys);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(1u, actual_keys.size());
-  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys[0]));
+  EXPECT_EQ(1u, actual_keys->size());
+  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys->at(0)));
 
   snapshot = GetSnapshot();
   snapshot->GetKeys(convert::ToArray("001"), nullptr, callback_getkeys);
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(2u, actual_keys.size());
-  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys[0]));
-  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys[1]));
+  EXPECT_EQ(2u, actual_keys->size());
+  EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
+  EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys->at(1)));
 }
 
 TEST_F(PageImplTest, SnapshotGetSmall) {

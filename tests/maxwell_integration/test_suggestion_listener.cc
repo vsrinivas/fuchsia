@@ -45,7 +45,7 @@ void TestSuggestionListener::OnAnyResults(
   ClearSuggestions();
 
   auto insert_head = ordered_suggestions_.begin();
-  for (auto& suggestion : suggestions) {
+  for (auto& suggestion : suggestions.take()) {
     insert_head = std::upper_bound(insert_head, ordered_suggestions_.end(),
                                    suggestion.get(), suggestion_less);
     insert_head =

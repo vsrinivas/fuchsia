@@ -38,9 +38,9 @@ class TestApp : public ModuleWatcher {
     // TODO(thatguy): We should be specifying type constraints when we create
     // the Link.
     auto entity_data = f1dl::Array<TypeToDataEntryPtr>::New(1);
-    entity_data[0] = TypeToDataEntry::New();
-    entity_data[0]->type = "myType";
-    entity_data[0]->data = "1337";
+    entity_data->at(0) = TypeToDataEntry::New();
+    entity_data->at(0)->type = "myType";
+    entity_data->at(0)->data = "1337";
     component_context_->CreateEntityWithData(
         std::move(entity_data), [this](const f1dl::String& reference) {
           entity_one_reference_ = reference;
@@ -73,23 +73,23 @@ class TestApp : public ModuleWatcher {
     link_one_->SetEntity(entity_one_reference_);
     auto noun = Noun::New();
     noun->set_link_name("foo");
-    daisy_->nouns[0] = NounEntry::New();
-    daisy_->nouns[0]->name = "one";
-    daisy_->nouns[0]->noun = std::move(noun);
+    daisy_->nouns->at(0) = NounEntry::New();
+    daisy_->nouns->at(0)->name = "one";
+    daisy_->nouns->at(0)->noun = std::move(noun);
 
     module_context_->GetLink("bar", link_two_.NewRequest());
     link_two_->Set(nullptr, "12345");
     noun = Noun::New();
     noun->set_link_name("bar");
-    daisy_->nouns[1] = NounEntry::New();
-    daisy_->nouns[1]->name = "two";
-    daisy_->nouns[1]->noun = std::move(noun);
+    daisy_->nouns->at(1) = NounEntry::New();
+    daisy_->nouns->at(1)->name = "two";
+    daisy_->nouns->at(1)->noun = std::move(noun);
 
     noun = Noun::New();
     noun->set_json("67890");
-    daisy_->nouns[2] = NounEntry::New();
-    daisy_->nouns[2]->name = "three";
-    daisy_->nouns[2]->noun = std::move(noun);
+    daisy_->nouns->at(2) = NounEntry::New();
+    daisy_->nouns->at(2)->name = "three";
+    daisy_->nouns->at(2)->noun = std::move(noun);
 
     // Sync to avoid race conditions between writing
     link_one_->Sync([this] {

@@ -148,7 +148,7 @@ class ContextListenerImpl : maxwell::ContextListener {
   void OnContextUpdate(maxwell::ContextUpdatePtr update) override {
     FXL_VLOG(4) << "ContextListenerImpl::OnUpdate()";
     const auto& values = TakeContextValue(update.get(), "all");
-    for (const auto& value : values.second) {
+    for (const auto& value : *values.second) {
       FXL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << value;
       if (value->meta && value->meta->entity) {
         handler_(value->meta->entity->topic, value->content);

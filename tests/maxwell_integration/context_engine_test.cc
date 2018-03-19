@@ -102,12 +102,12 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   ASSERT_TRUE(RunLoopUntilWithTimeout([&listener, &result] {
     return listener.last_update &&
            (result = TakeContextValue(listener.last_update.get(), "a").second)
-                   .size() == 3;
+                   ->size() == 3;
   }));
 
-  EXPECT_EQ("topic", result[0]->meta->entity->topic);
-  EXPECT_EQ("frob", result[1]->meta->entity->topic);
-  EXPECT_EQ("borf", result[2]->meta->entity->topic);
+  EXPECT_EQ("topic", result->at(0)->meta->entity->topic);
+  EXPECT_EQ("frob", result->at(1)->meta->entity->topic);
+  EXPECT_EQ("borf", result->at(2)->meta->entity->topic);
 
   // Update value1 and value3 so they no longer matches for the 'someType'
   // query.
@@ -117,10 +117,10 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   ASSERT_TRUE(RunLoopUntilWithTimeout([&listener, &result] {
     return !!listener.last_update &&
            (result = TakeContextValue(listener.last_update.get(), "a").second)
-                   .size() == 1;
+                   ->size() == 1;
   }));
 
-  EXPECT_EQ("frob", result[0]->meta->entity->topic);
+  EXPECT_EQ("frob", result->at(0)->meta->entity->topic);
 
   // Create two new values: A Story value and a child Entity value, where the
   // Entity value matches our query.
@@ -137,18 +137,18 @@ TEST_F(ContextEngineTest, ContextValueWriter) {
   ASSERT_TRUE(
       RunLoopUntilWithTimeout([&listener] { return !!listener.last_update; }));
   result = TakeContextValue(listener.last_update.get(), "a").second;
-  ASSERT_EQ(2lu, result.size());
-  EXPECT_EQ("frob", result[0]->meta->entity->topic);
-  EXPECT_EQ("1", result[1]->content);
-  EXPECT_EQ("story", result[1]->meta->story->id);
+  ASSERT_EQ(2lu, result->size());
+  EXPECT_EQ("frob", result->at(0)->meta->entity->topic);
+  EXPECT_EQ("1", result->at(1)->content);
+  EXPECT_EQ("story", result->at(1)->meta->story->id);
 
   // Lastly remove one of the values by resetting the ContextValueWriter proxy.
   listener.Reset();
   value4.Unbind();
   RunLoopUntilWithTimeout([&listener] { return !!listener.last_update; });
   result = TakeContextValue(listener.last_update.get(), "a").second;
-  EXPECT_EQ(1lu, result.size());
-  EXPECT_EQ("frob", result[0]->meta->entity->topic);
+  EXPECT_EQ(1lu, result->size());
+  EXPECT_EQ("frob", result->at(0)->meta->entity->topic);
 }
 
 TEST_F(ContextEngineTest, WriteNullEntity) {
@@ -175,10 +175,10 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
   ASSERT_TRUE(RunLoopUntilWithTimeout([&listener, &result] {
     return !!listener.last_update &&
            (result = TakeContextValue(listener.last_update.get(), "a").second)
-                   .size() == 1;
+                   ->size() == 1;
   }));
 
-  EXPECT_EQ(value1, result[0]->content);
+  EXPECT_EQ(value1, result->at(0)->content);
 
   listener.Reset();
 
@@ -193,8 +193,8 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
       [&listener, &result] { return !!listener.last_update; }));
 
   result = TakeContextValue(listener.last_update.get(), "a").second;
-  EXPECT_EQ(1lu, result.size());
-  EXPECT_EQ(value2, result[0]->content);
+  EXPECT_EQ(1lu, result->size());
+  EXPECT_EQ(value2, result->at(0)->content);
 }
 
 TEST_F(ContextEngineTest, CloseListenerAndReader) {
@@ -265,9 +265,9 @@ TEST_F(ContextEngineTest, GetContext) {
     std::pair<bool, f1dl::Array<ContextValuePtr>> result =
         TakeContextValue(update.get(), "a");
     EXPECT_TRUE(result.first);
-    EXPECT_EQ(result.second.size(), 2u);
-    EXPECT_EQ("topic", result.second[0]->meta->entity->topic);
-    EXPECT_EQ("frob", result.second[1]->meta->entity->topic);
+    EXPECT_EQ(result.second->size(), 2u);
+    EXPECT_EQ("topic", result.second->at(0)->meta->entity->topic);
+    EXPECT_EQ("frob", result.second->at(1)->meta->entity->topic);
     callback_called = true;
   });
 

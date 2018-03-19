@@ -39,7 +39,7 @@ std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
 
 f1dl::Array<uint8_t> ToArray(const std::string& val) {
   auto ret = f1dl::Array<uint8_t>::New(val.size());
-  memcpy(ret.data(), val.data(), val.size());
+  memcpy(ret->data(), val.data(), val.size());
   return ret;
 }
 
@@ -181,15 +181,15 @@ void TodoApp::AddNew() {
 }
 
 void TodoApp::DeleteOne(f1dl::Array<Key> keys) {
-  FXL_DCHECK(keys.size());
-  std::uniform_int_distribution<> distribution(0, keys.size() - 1);
-  page_->Delete(std::move(keys[distribution(rng_)]), HandleResponse("Delete"));
+  FXL_DCHECK(keys->size());
+  std::uniform_int_distribution<> distribution(0, keys->size() - 1);
+  page_->Delete(std::move(keys->at(distribution(rng_))), HandleResponse("Delete"));
 }
 
 void TodoApp::Act() {
   GetKeys([this](f1dl::Array<Key> keys) {
     size_t target_size = std::round(size_distribution_(rng_));
-    if (keys.size() > std::max(static_cast<size_t>(0), target_size)) {
+    if (keys->size() > std::max(static_cast<size_t>(0), target_size)) {
       DeleteOne(std::move(keys));
     } else {
       AddNew();

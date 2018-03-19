@@ -159,9 +159,9 @@ class NProposals : public Proposinator, public ContextListener {
   void OnContextUpdate(ContextUpdatePtr update) override {
     auto r = TakeContextValue(update.get(), "n");
     ASSERT_TRUE(r.first) << "Expect an update key for every query key.";
-    if (r.second.empty())
+    if (r.second->empty())
       return;
-    int n = std::stoi(r.second[0]->content);
+    int n = std::stoi(r.second->at(0)->content);
 
     for (int i = n_; i < n; i++)
       Propose(std::to_string(i));

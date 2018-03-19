@@ -124,8 +124,8 @@ void SyncBenchmark::OnChange(ledger::PageChangePtr page_change,
                              const OnChangeCallback& callback) {
   FXL_DCHECK(page_change->changed_entries->size() > 0);
   size_t i =
-      std::stoul(convert::ToString(page_change->changed_entries[0]->key));
-  changed_entries_received_ += page_change->changed_entries.size();
+      std::stoul(convert::ToString(page_change->changed_entries->at(0)->key));
+  changed_entries_received_ += page_change->changed_entries->size();
   if (result_state == ledger::ResultState::COMPLETED ||
       result_state == ledger::ResultState::PARTIAL_STARTED) {
     TRACE_ASYNC_END("benchmark", "sync latency", i);

@@ -175,8 +175,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
   ledger::PageChangePtr change = std::move(watcher.last_page_change_);
   EXPECT_EQ(0u, change->changed_entries->size());
-  ASSERT_EQ(1u, change->deleted_keys.size());
-  EXPECT_EQ("foo", convert::ToString(change->deleted_keys[0]));
+  ASSERT_EQ(1u, change->deleted_keys->size());
+  EXPECT_EQ("foo", convert::ToString(change->deleted_keys->at(0)));
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
@@ -333,8 +333,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
 
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
-  f1dl::Array<ledger::EntryPtr> entries =
-      SnapshotGetEntries(&(watcher.last_snapshot_), convert::ToArray(""));
+  auto entries =
+      SnapshotGetEntries(&(watcher.last_snapshot_), convert::ToArray("")).take();
   ASSERT_EQ(1u, entries.size());
   EXPECT_EQ("name", convert::ToString(entries[0]->key));
   EXPECT_EQ("Alice", ToString(entries[0]->value));

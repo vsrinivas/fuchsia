@@ -353,7 +353,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
 
     device_map_->Query([this](f1dl::Array<modular::DeviceMapEntryPtr> devices) {
       FXL_LOG(INFO) << "Devices from device_map_->Query():";
-      for (modular::DeviceMapEntryPtr& device : devices) {
+      for (modular::DeviceMapEntryPtr& device : devices.take()) {
         FXL_LOG(INFO) << " - " << device->name;
         device_map_entries_.emplace_back(std::move(device));
       }

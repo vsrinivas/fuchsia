@@ -152,7 +152,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   void GetActiveModules1() {
     story_controller_->GetActiveModules(
         nullptr, [this](f1dl::Array<modular::ModuleDataPtr> modules) {
-          if (modules.size() == 1) {
+          if (modules->size() == 1) {
             module1_gone_.Pass();
           }
 
@@ -213,7 +213,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   void GetActiveModules2() {
     story_controller_->GetActiveModules(
         nullptr, [this](f1dl::Array<modular::ModuleDataPtr> modules) {
-          if (modules.size() == 1) {
+          if (modules->size() == 1) {
             module2_gone_.Pass();
           }
 

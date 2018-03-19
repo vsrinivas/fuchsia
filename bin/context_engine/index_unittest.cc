@@ -90,7 +90,7 @@ TEST(IndexTest, Encode_Differences) {
   // If we start changing some values to be equal, we should see encoded values
   // included.
   meta2->story->focused->state = FocusedState::State::FOCUSED;
-  meta2->entity->type[1] = "type2";
+  meta2->entity->type->at(1) = "type2";
 
   encoded1 = internal::EncodeMetadataAndType(kEntity, meta1);
   encoded2 = internal::EncodeMetadataAndType(kEntity, meta2);
@@ -162,7 +162,7 @@ TEST(IndexTest, AddRemoveQuery) {
   EXPECT_TRUE(res.find("e2") != res.end());
 
   // Changing the query's type param to "type3" should only return "e2".
-  query1->entity->type[0] = "type3";
+  query1->entity->type->at(0) = "type3";
   res.clear();
   index.Query(kEntity, query1, &res);
   EXPECT_EQ(1ul, res.size());
@@ -176,7 +176,7 @@ TEST(IndexTest, AddRemoveQuery) {
   EXPECT_TRUE(res.empty());
 
   // But "e1" is still there.
-  query1->entity->type[0] = "type2";
+  query1->entity->type->at(0) = "type2";
   res.clear();
   index.Query(kEntity, query1, &res);
   EXPECT_EQ(1ul, res.size());

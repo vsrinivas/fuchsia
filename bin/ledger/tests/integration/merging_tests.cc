@@ -208,8 +208,8 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
                 ledger::Status s, f1dl::Array<ledger::DiffEntryPtr> changes,
                 f1dl::Array<uint8_t> next) {
               status = s;
-              for (auto& change : changes) {
-                entries->push_back(std::move(change));
+              for (size_t i = 0; i < changes->size(); ++i) {
+                entries->push_back(std::move(changes->at(i)));
               }
               next_token = std::move(next);
             });
@@ -476,11 +476,11 @@ TEST_F(MergingIntegrationTest, Merging) {
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, watcher1.changes_seen);
   ledger::PageChangePtr change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change->changed_entries.size());
-  EXPECT_EQ("city", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Paris", ToString(change->changed_entries[0]->value));
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[1]->key));
-  EXPECT_EQ("Alice", ToString(change->changed_entries[1]->value));
+  ASSERT_EQ(2u, change->changed_entries->size());
+  EXPECT_EQ("city", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Paris", ToString(change->changed_entries->at(0)->value));
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(1)->key));
+  EXPECT_EQ("Alice", ToString(change->changed_entries->at(1)->value));
 
   page2->Commit(
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
@@ -489,28 +489,28 @@ TEST_F(MergingIntegrationTest, Merging) {
 
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(2u, change->changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Bob", ToString(change->changed_entries[0]->value));
-  EXPECT_EQ("phone", convert::ToString(change->changed_entries[1]->key));
-  EXPECT_EQ("0123456789", ToString(change->changed_entries[1]->value));
+  ASSERT_EQ(2u, change->changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Bob", ToString(change->changed_entries->at(0)->value));
+  EXPECT_EQ("phone", convert::ToString(change->changed_entries->at(1)->key));
+  EXPECT_EQ("0123456789", ToString(change->changed_entries->at(1)->value));
 
   ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_FALSE(RunLoopWithTimeout());
   // Each change is seen once, and by the correct watcher only.
   EXPECT_EQ(2u, watcher1.changes_seen);
   change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change->changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Bob", ToString(change->changed_entries[0]->value));
-  EXPECT_EQ("phone", convert::ToString(change->changed_entries[1]->key));
-  EXPECT_EQ("0123456789", ToString(change->changed_entries[1]->value));
+  ASSERT_EQ(2u, change->changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Bob", ToString(change->changed_entries->at(0)->value));
+  EXPECT_EQ("phone", convert::ToString(change->changed_entries->at(1)->key));
+  EXPECT_EQ("0123456789", ToString(change->changed_entries->at(1)->value));
 
   EXPECT_EQ(2u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change->changed_entries.size());
-  EXPECT_EQ("city", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Paris", ToString(change->changed_entries[0]->value));
+  ASSERT_EQ(1u, change->changed_entries->size());
+  EXPECT_EQ("city", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Paris", ToString(change->changed_entries->at(0)->value));
 }
 
 TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
@@ -587,11 +587,11 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   EXPECT_EQ(1u, watcher1.changes_seen);
   ledger::PageChangePtr change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change->changed_entries.size());
-  EXPECT_EQ("city", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Paris", ToString(change->changed_entries[0]->value));
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[1]->key));
-  EXPECT_EQ("Alice", ToString(change->changed_entries[1]->value));
+  ASSERT_EQ(2u, change->changed_entries->size());
+  EXPECT_EQ("city", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Paris", ToString(change->changed_entries->at(0)->value));
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(1)->key));
+  EXPECT_EQ("Alice", ToString(change->changed_entries->at(1)->value));
 
   page2->Commit(
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
@@ -600,11 +600,11 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(2u, change->changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Bob", ToString(change->changed_entries[0]->value));
-  EXPECT_EQ("phone", convert::ToString(change->changed_entries[1]->key));
-  EXPECT_EQ("0123456789", ToString(change->changed_entries[1]->value));
+  ASSERT_EQ(2u, change->changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Bob", ToString(change->changed_entries->at(0)->value));
+  EXPECT_EQ("phone", convert::ToString(change->changed_entries->at(1)->key));
+  EXPECT_EQ("0123456789", ToString(change->changed_entries->at(1)->value));
   EXPECT_TRUE(RunLoopWithTimeout());
   EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 
@@ -625,17 +625,17 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   // Each change is seen once, and by the correct watcher only.
   EXPECT_EQ(2u, watcher1.changes_seen);
   change = std::move(watcher1.last_page_change_);
-  ASSERT_EQ(2u, change->changed_entries.size());
-  EXPECT_EQ("name", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Bob", ToString(change->changed_entries[0]->value));
-  EXPECT_EQ("phone", convert::ToString(change->changed_entries[1]->key));
-  EXPECT_EQ("0123456789", ToString(change->changed_entries[1]->value));
+  ASSERT_EQ(2u, change->changed_entries->size());
+  EXPECT_EQ("name", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Bob", ToString(change->changed_entries->at(0)->value));
+  EXPECT_EQ("phone", convert::ToString(change->changed_entries->at(1)->key));
+  EXPECT_EQ("0123456789", ToString(change->changed_entries->at(1)->value));
 
   EXPECT_EQ(2u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  ASSERT_EQ(1u, change->changed_entries.size());
-  EXPECT_EQ("city", convert::ToString(change->changed_entries[0]->key));
-  EXPECT_EQ("Paris", ToString(change->changed_entries[0]->value));
+  ASSERT_EQ(1u, change->changed_entries->size());
+  EXPECT_EQ("city", convert::ToString(change->changed_entries->at(0)->key));
+  EXPECT_EQ("Paris", ToString(change->changed_entries->at(0)->value));
 
   EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 }
@@ -706,30 +706,29 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   f1dl::Array<ledger::DiffEntryPtr> changes;
   ASSERT_TRUE(resolver_impl->requests[0].GetFullDiff(&changes));
 
-  EXPECT_EQ(4u, changes.size());
+  EXPECT_EQ(4u, changes->size());
   EXPECT_TRUE(ChangeMatch("city", Optional<std::string>(),
                           Optional<std::string>(),
-                          Optional<std::string>("Paris"), changes[0]));
+                          Optional<std::string>("Paris"), changes->at(0)));
   EXPECT_TRUE(ChangeMatch("email", Optional<std::string>(),
                           Optional<std::string>("alice@example.org"),
-                          Optional<std::string>(), changes[1]));
+                          Optional<std::string>(), changes->at(1)));
   EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(),
                           Optional<std::string>(),
-                          Optional<std::string>("Alice"), changes[2]));
+                          Optional<std::string>("Alice"), changes->at(2)));
   EXPECT_TRUE(ChangeMatch("phone", Optional<std::string>(),
                           Optional<std::string>("0123456789"),
-                          Optional<std::string>(), changes[3]));
+                          Optional<std::string>(), changes->at(3)));
 
   // Common ancestor is empty.
   ledger::PageSnapshotPtr snapshot =
       resolver_impl->requests[0].common_version.Bind();
   f1dl::Array<ledger::EntryPtr> entries =
       SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>());
-  EXPECT_EQ(0u, entries.size());
+  EXPECT_EQ(0u, entries->size());
 
   // Prepare the merged values
-  f1dl::Array<ledger::MergedValuePtr> merged_values =
-      f1dl::Array<ledger::MergedValuePtr>::New(0);
+  f1dl::Array<ledger::MergedValuePtr> merged_values;
   {
     ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
     merged_value->key = convert::ToArray("name");
@@ -767,8 +766,8 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   // Wait for the watcher to be called.
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  f1dl::Array<ledger::EntryPtr> final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>());
+  auto final_entries =
+      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>()).take();
   ASSERT_EQ(3u, final_entries.size());
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0]->key));
   EXPECT_EQ("pager", convert::ExtendedStringView(final_entries[1]->key));
@@ -835,7 +834,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   f1dl::Array<ledger::DiffEntryPtr> changes;
   ASSERT_TRUE(resolver_impl->requests[0].GetFullDiff(&changes, 1));
 
-  EXPECT_EQ(2u * N, changes.size());
+  EXPECT_EQ(2u * N, changes->size());
   // Keys are in order, so we expect to have all the page1_key_* keys before the
   // page2_key_* keys.
   for (int i = 0; i < N; ++i) {
@@ -843,11 +842,11 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
     // comes from |page1|.
     EXPECT_TRUE(ChangeMatch(page1_keys[i], Optional<std::string>(),
                             Optional<std::string>(),
-                            Optional<std::string>("value"), changes[i]));
+                            Optional<std::string>("value"), changes->at(i)));
 
     EXPECT_TRUE(ChangeMatch(page2_keys[i], Optional<std::string>(),
                             Optional<std::string>("value"),
-                            Optional<std::string>(), changes[N + i]));
+                            Optional<std::string>(), changes->at(N + i)));
   }
 }
 
@@ -1219,8 +1218,8 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   // Wait for the watcher to be called.
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  f1dl::Array<ledger::EntryPtr> final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>());
+  auto final_entries =
+      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>()).take();
   ASSERT_EQ(2u, final_entries.size());
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0]->key));
   EXPECT_EQ("pager", convert::ExtendedStringView(final_entries[1]->key));
@@ -1307,8 +1306,8 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
 
   EXPECT_EQ(2u, watcher.changes_seen);
 
-  f1dl::Array<ledger::EntryPtr> final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>());
+  auto final_entries =
+      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>()).take();
   ASSERT_EQ(4u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0]->key));
   EXPECT_EQ("email", convert::ExtendedStringView(final_entries[1]->key));
@@ -1378,21 +1377,21 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   f1dl::Array<ledger::DiffEntryPtr> changes;
   ASSERT_TRUE(resolver_impl->requests[0].GetFullDiff(&changes));
 
-  EXPECT_EQ(2u, changes.size());
+  EXPECT_EQ(2u, changes->size());
   // Left change is the most recent, so the one made on |page2|.
   EXPECT_TRUE(ChangeMatch("city", Optional<std::string>(),
                           Optional<std::string>("San Francisco"),
-                          Optional<std::string>("Paris"), changes[0]));
+                          Optional<std::string>("Paris"), changes->at(0)));
   EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(),
                           Optional<std::string>("Alice"),
-                          Optional<std::string>(), changes[1]));
+                          Optional<std::string>(), changes->at(1)));
 
   // Common ancestor is empty.
   ledger::PageSnapshotPtr snapshot =
       resolver_impl->requests[0].common_version.Bind();
   f1dl::Array<ledger::EntryPtr> entries =
       SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>());
-  EXPECT_EQ(0u, entries.size());
+  EXPECT_EQ(0u, entries->size());
 
   // Prepare the merged values
   f1dl::Array<ledger::MergedValuePtr> merged_values =
@@ -1419,8 +1418,8 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   // Wait for the watcher to be called.
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  f1dl::Array<ledger::EntryPtr> final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>());
+  auto final_entries =
+      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>()).take();
   ASSERT_EQ(2u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0]->key));
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1]->key));
@@ -1519,8 +1518,8 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   // Wait for the watcher to be called.
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  f1dl::Array<ledger::EntryPtr> final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>());
+  auto final_entries =
+      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>()).take();
   ASSERT_EQ(3u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0]->key));
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1]->key));
@@ -1622,8 +1621,8 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
 
   EXPECT_EQ(3u, watcher.changes_seen);
 
-  f1dl::Array<ledger::EntryPtr> final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>());
+  auto final_entries =
+      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>()).take();
   ASSERT_EQ(1u, final_entries.size());
   EXPECT_EQ("email", convert::ExtendedStringView(final_entries[0]->key));
 }
@@ -1843,10 +1842,10 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   f1dl::Array<ledger::DiffEntryPtr> changes;
   ASSERT_TRUE(resolver_impl->requests[0].GetConflictingDiff(&changes));
 
-  EXPECT_EQ(1u, changes.size());
+  EXPECT_EQ(1u, changes->size());
   EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(),
                           Optional<std::string>("Bob"),
-                          Optional<std::string>("Alice"), changes[0]));
+                          Optional<std::string>("Alice"), changes->at(0)));
 
   // Prepare the merged values
   f1dl::Array<ledger::MergedValuePtr> merged_values =
@@ -1874,8 +1873,8 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   // Wait for the watcher to be called.
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  f1dl::Array<ledger::EntryPtr> final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>());
+  auto final_entries =
+      SnapshotGetEntries(&watcher.last_snapshot_, f1dl::Array<uint8_t>()).take();
   ASSERT_EQ(3u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0]->key));
   EXPECT_EQ("Paris", ToString(final_entries[0]->value));

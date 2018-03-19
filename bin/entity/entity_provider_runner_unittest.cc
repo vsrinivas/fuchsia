@@ -229,8 +229,8 @@ TEST_F(EntityProviderRunnerTest, Basic) {
 
   std::map<std::string, uint32_t> counts;
   entity->GetTypes([&counts](const f1dl::Array<f1dl::String>& types) {
-    EXPECT_EQ(1u, types.size());
-    EXPECT_EQ("MyType", types[0]);
+    EXPECT_EQ(1u, types->size());
+    EXPECT_EQ("MyType", types->at(0));
     counts["GetTypes"]++;
   });
   entity->GetData("MyType", [&counts](const f1dl::String& data) {
@@ -260,8 +260,8 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   });
   RunLoopUntilWithTimeout([&output_types] { return !output_types.is_null(); });
 
-  EXPECT_EQ(data.size(), output_types.size());
-  EXPECT_EQ("type1", output_types[0]);
+  EXPECT_EQ(data.size(), output_types->size());
+  EXPECT_EQ("type1", output_types->at(0));
 
   f1dl::String output_data;
   entity->GetData(

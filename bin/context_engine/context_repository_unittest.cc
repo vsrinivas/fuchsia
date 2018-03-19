@@ -255,7 +255,7 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   result = TakeContextValue(listener.last_update.get(), "a").second;
   EXPECT_EQ(2lu, result->size());
   EXPECT_EQ("now it matches", result->at(0)->content);
-  EXPECT_EQ("match", result[1]->content);
+  EXPECT_EQ("match", result->at(1)->content);
   listener.reset();
 
   // (4)

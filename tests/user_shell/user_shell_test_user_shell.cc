@@ -104,7 +104,7 @@ class StoryModulesWatcherImpl : modular::StoryModulesWatcher {
                            [this](f1dl::Array<modular::ModuleDataPtr> data) {
                              FXL_LOG(INFO)
                                  << "StoryModulesWatcherImpl GetModules(): "
-                                 << data.size() << " modules";
+                                 << data->size() << " modules";
                            });
   }
 
@@ -140,7 +140,7 @@ class StoryLinksWatcherImpl : modular::StoryLinksWatcher {
         ->GetActiveLinks(binding_.NewBinding(),
                          [this](f1dl::Array<modular::LinkPathPtr> data) {
                            FXL_LOG(INFO) << "StoryLinksWatcherImpl GetLinks(): "
-                                         << data.size() << " links";
+                                         << data->size() << " links";
                          });
   }
 
@@ -336,17 +336,17 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint get_story_info_{"StoryProvider.GetStoryInfo()"};
 
   void TestStoryProvider_GetStoryInfo(f1dl::Array<f1dl::String> stories) {
-    if (stories.empty()) {
+    if (stories->empty()) {
       get_story_info_.Pass();
       TestStory1();
       return;
     }
 
     std::shared_ptr<unsigned int> count = std::make_shared<unsigned int>(0);
-    for (auto& story_id : stories) {
+    for (auto& story_id : *stories) {
       story_provider_->GetStoryInfo(
           story_id, [this, story_id, count,
-                     max = stories.size()](modular::StoryInfoPtr story_info) {
+                     max = stories->size()](modular::StoryInfoPtr story_info) {
             ++*count;
 
             if (!story_info.is_null()) {
@@ -459,13 +459,13 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
           story2_get_modules_.Pass();
 
           FXL_LOG(INFO) << "TestUserShell MODULES:";
-          for (const auto& module_data : modules) {
+          for (const auto& module_data : *modules) {
             FXL_LOG(INFO) << "TestUserShell MODULE: url="
                           << module_data->module_url;
             FXL_LOG(INFO) << "TestUserShell         link="
                           << module_data->link_path->link_name;
             std::string path;
-            for (const auto& path_element : module_data->module_path) {
+            for (const auto& path_element : *module_data->module_path) {
               path.push_back(' ');
               path.append(path_element);
             }

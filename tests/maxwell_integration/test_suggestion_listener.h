@@ -79,8 +79,8 @@ class TestProposalListener {
  protected:
   void UpdateProposals(f1dl::Array<maxwell::ProposalSummaryPtr> proposals) {
     proposals_.clear();
-    for (auto& proposal : proposals) {
-      proposals_.push_back(std::move(proposal));
+    for (size_t i = 0; i < proposals->size(); ++i) {
+      proposals_.push_back(std::move(proposals->at(i)));
     }
   }
   std::vector<maxwell::ProposalSummaryPtr> proposals_;

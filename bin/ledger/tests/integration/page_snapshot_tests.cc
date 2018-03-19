@@ -282,7 +282,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   f1dl::Array<ledger::EntryPtr> entries =
       SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>());
-  EXPECT_EQ(0u, entries.size());
+  EXPECT_EQ(0u, entries->size());
 
   // Add entries and grab a new snapshot.
   const size_t N = 4;
@@ -308,39 +308,39 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
 
   // Get all entries.
   entries = SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>());
-  EXPECT_EQ(N, entries.size());
+  EXPECT_EQ(N, entries->size());
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_TRUE(keys[i].Equals(entries[i]->key));
-    EXPECT_TRUE(values[i].Equals(ToArray(entries[i]->value)));
+    EXPECT_TRUE(keys[i].Equals(entries->at(i)->key));
+    EXPECT_TRUE(values[i].Equals(ToArray(entries->at(i)->value)));
   }
 
   // Get entries matching the prefix "0".
   snapshot = PageGetSnapshot(
       &page, f1dl::Array<uint8_t>::From(std::vector<uint8_t>{0}));
   entries = SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>());
-  EXPECT_EQ(N, entries.size());
+  EXPECT_EQ(N, entries->size());
   for (size_t i = 0; i < N; ++i) {
-    EXPECT_TRUE(keys[i].Equals(entries[i]->key));
-    EXPECT_TRUE(values[i].Equals(ToArray(entries[i]->value)));
+    EXPECT_TRUE(keys[i].Equals(entries->at(i)->key));
+    EXPECT_TRUE(values[i].Equals(ToArray(entries->at(i)->value)));
   }
 
   // Get entries matching the prefix "00".
   snapshot = PageGetSnapshot(
       &page, f1dl::Array<uint8_t>::From(std::vector<uint8_t>{0, 0}));
   entries = SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>());
-  ASSERT_EQ(2u, entries.size());
+  ASSERT_EQ(2u, entries->size());
   for (size_t i = 0; i < 2; ++i) {
-    EXPECT_TRUE(keys[i].Equals(entries[i]->key));
-    EXPECT_TRUE(values[i].Equals(ToArray(entries[i]->value)));
+    EXPECT_TRUE(keys[i].Equals(entries->at(i)->key));
+    EXPECT_TRUE(values[i].Equals(ToArray(entries->at(i)->value)));
   }
 
   // Get keys matching the prefix "010".
   snapshot = PageGetSnapshot(
       &page, f1dl::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
   entries = SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>());
-  ASSERT_EQ(1u, entries.size());
-  EXPECT_TRUE(keys[2].Equals(entries[0]->key));
-  EXPECT_TRUE(values[2].Equals(ToArray(entries[0]->value)));
+  ASSERT_EQ(1u, entries->size());
+  EXPECT_TRUE(keys[2].Equals(entries->at(0)->key));
+  EXPECT_TRUE(values[2].Equals(ToArray(entries->at(0)->value)));
 
   // Get keys matching the prefix "5".
   snapshot = PageGetSnapshot(
@@ -355,7 +355,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
         entries = std::move(e);
       });
   EXPECT_TRUE(snapshot.WaitForResponse());
-  EXPECT_EQ(0u, entries.size());
+  EXPECT_EQ(0u, entries->size());
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
@@ -366,8 +366,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   // returns empty results.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
-  f1dl::Array<ledger::EntryPtr> entries =
-      SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>(), &num_queries);
+  auto entries =
+      SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>(), &num_queries).take();
   EXPECT_EQ(0u, entries.size());
   EXPECT_EQ(1, num_queries);
 
@@ -398,7 +398,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   snapshot = PageGetSnapshot(&page);
 
   // Get all entries.
-  entries = SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>(), &num_queries);
+  entries = SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>(), &num_queries).take();
   EXPECT_TRUE(num_queries > 1);
   ASSERT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
@@ -415,8 +415,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   // returns empty results.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
-  f1dl::Array<ledger::EntryPtr> entries =
-      SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>(), &num_queries);
+  auto entries =
+      SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>(), &num_queries).take();
   EXPECT_EQ(0u, entries.size());
   EXPECT_EQ(1, num_queries);
 
@@ -441,7 +441,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   snapshot = PageGetSnapshot(&page);
 
   // Get all entries.
-  entries = SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>(), &num_queries);
+  entries = SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>(), &num_queries).take();
   EXPECT_TRUE(num_queries > 1);
   ASSERT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
@@ -486,8 +486,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   EXPECT_TRUE(keys[1].Equals(result->at(3)));
 
   // Verify that GetEntries() results are sorted.
-  f1dl::Array<ledger::EntryPtr> entries =
-      SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>());
+  auto entries =
+      SnapshotGetEntries(&snapshot, f1dl::Array<uint8_t>()).take();
   EXPECT_TRUE(keys[3].Equals(entries[0]->key));
   EXPECT_TRUE(values[3].Equals(ToArray(entries[0]->value)));
   EXPECT_TRUE(keys[0].Equals(entries[1]->key));

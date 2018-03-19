@@ -26,7 +26,7 @@ namespace {
 
 f1dl::Array<uint8_t> DoubleToArray(double dbl) {
   f1dl::Array<uint8_t> array = f1dl::Array<uint8_t>::New(sizeof(double));
-  std::memcpy(array.data(), &dbl, sizeof(double));
+  std::memcpy(array->data(), &dbl, sizeof(double));
   return array;
 }
 
@@ -160,14 +160,14 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
                               f1dl::Array<ledger::DiffEntryPtr> changes,
                               f1dl::Array<uint8_t> next_token) mutable {
           ASSERT_EQ(ledger::Status::OK, status);
-          ASSERT_EQ(1u, changes.size());
+          ASSERT_EQ(1u, changes->size());
 
           double d1, d2;
-          EXPECT_TRUE(VmoToDouble(changes[0]->left->value, &d1));
-          EXPECT_TRUE(VmoToDouble(changes[0]->right->value, &d2));
+          EXPECT_TRUE(VmoToDouble(changes->at(0)->left->value, &d1));
+          EXPECT_TRUE(VmoToDouble(changes->at(0)->right->value, &d2));
           double new_value = (4 * d1 + d2) / 3;
           ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
-          merged_value->key = std::move(changes[0]->key);
+          merged_value->key = std::move(changes->at(0)->key);
           merged_value->source = ledger::ValueSource::NEW;
           merged_value->new_value = ledger::BytesOrReference::New();
           merged_value->new_value->set_bytes(DoubleToArray(new_value));

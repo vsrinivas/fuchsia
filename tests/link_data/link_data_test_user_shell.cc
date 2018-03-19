@@ -282,7 +282,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
             // in TeardownStoryController().
             story_provider_->RunningStories(
                 [this, round](f1dl::Array<f1dl::String> story_ids) {
-                  auto n = count(story_ids.begin(), story_ids.end(),
+                  auto n = count(story_ids->begin(), story_ids->end(),
                                  story_info_->id);
                   FXL_CHECK(n == 0);
                   TestStory1_Run(round + 1);

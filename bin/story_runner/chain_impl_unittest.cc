@@ -56,14 +56,14 @@ TEST_F(ChainImplTest, GetLinkPath) {
 
   auto path = impl_->GetLinkPathForKey("key1");
   ASSERT_TRUE(path);
-  EXPECT_TRUE(path->module_path.Equals(
-      f1dl::Array<f1dl::String>{"link", "path1"}));
+  f1dl::Array<f1dl::String> expected;
+  expected.reset({"link", "path1"});
+  EXPECT_TRUE(path->module_path.Equals(expected));
 
   path = impl_->GetLinkPathForKey("key2");
   ASSERT_TRUE(path);
-  EXPECT_TRUE(path->module_path.Equals(
-      f1dl::Array<f1dl::String>{"link", "path2"}));
-
+  expected.reset({"link", "path2"});
+  EXPECT_TRUE(path->module_path.Equals(expected));
 }
 
 }  // namespace

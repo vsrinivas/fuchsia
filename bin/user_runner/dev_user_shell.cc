@@ -159,7 +159,7 @@ class DevUserShellApp : modular::StoryWatcher,
   // |NextListener|
   void OnNextResults(f1dl::Array<maxwell::SuggestionPtr> suggestions) override {
     FXL_VLOG(4) << "DevUserShell/NextListener::OnNextResults()";
-    for (auto& suggestion : suggestions) {
+    for (auto& suggestion : *suggestions) {
       FXL_LOG(INFO) << "  " << suggestion->uuid << " "
                     << suggestion->display->headline;
     }

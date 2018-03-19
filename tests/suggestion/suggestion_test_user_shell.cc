@@ -83,7 +83,7 @@ class TestApp : modular::StoryWatcher,
 
   // |NextListener|
   void OnNextResults(f1dl::Array<maxwell::SuggestionPtr> suggestions) override {
-    for (auto& suggestion : suggestions) {
+    for (auto& suggestion : *suggestions) {
       auto& display = suggestion->display;
       if (display->headline == "foo" && display->subheadline == "bar" &&
           display->details == "baz") {

@@ -121,14 +121,14 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
 
       user_provider_->PreviousUsers(
           [this](f1dl::Array<modular::auth::AccountPtr> accounts) {
-            FXL_LOG(INFO) << "Found " << accounts.size()
+            FXL_LOG(INFO) << "Found " << accounts->size()
                           << " users in the user "
                           << "database";
 
             // Not running in incognito mode. Add the user if not already
             // added.
             std::string account_id;
-            for (const auto& account : accounts) {
+            for (const auto& account : *accounts) {
               FXL_LOG(INFO) << "Found user " << account->display_name;
               if (account->display_name->size() >= settings_.user.size() &&
                   account->display_name->substr(settings_.user.size()) ==

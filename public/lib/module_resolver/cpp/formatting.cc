@@ -8,7 +8,7 @@ namespace modular {
 
 std::ostream& operator<<(std::ostream& os, const Daisy& daisy) {
   os << "{ verb: " << daisy.verb << ", nouns: [" << std::endl;
-  for (auto it = daisy.nouns.begin(); it != daisy.nouns.end(); ++it) {
+  for (auto it = daisy.nouns->begin(); it != daisy.nouns->end(); ++it) {
     os << "    " << (*it)->name << ": " << (*it)->noun << "," << std::endl;
   }
   os << "  ] }";
@@ -21,7 +21,7 @@ std::ostream& operator<<(std::ostream& os, const Noun& noun) {
   } else if (noun.is_entity_reference()) {
     os << "[ref: " << noun.get_entity_reference() << "]";
   } else if (noun.is_entity_type()) {
-    for (const auto& type : noun.get_entity_type()) {
+    for (const auto& type : *noun.get_entity_type()) {
       os << type << ", ";
     }
   }

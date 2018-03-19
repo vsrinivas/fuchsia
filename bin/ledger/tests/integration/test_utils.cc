@@ -91,7 +91,7 @@ f1dl::Array<f1dl::Array<uint8_t>> SnapshotGetKeys(
           if (num_queries) {
             (*num_queries)++;
           }
-          for (auto& key : keys) {
+          for (auto& key : keys.take()) {
             result.push_back(std::move(key));
           }
           next_token = std::move(new_next_token);
@@ -131,7 +131,7 @@ f1dl::Array<ledger::EntryPtr> SnapshotGetEntries(
           if (num_queries) {
             (*num_queries)++;
           }
-          for (auto& entry : entries) {
+          for (auto& entry : entries.take()) {
             result.push_back(std::move(entry));
           }
           next_token = std::move(new_next_token);

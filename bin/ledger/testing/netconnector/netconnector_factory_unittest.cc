@@ -49,9 +49,9 @@ TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
 
   EXPECT_TRUE(called);
   EXPECT_NE(netconnector::NetConnector::kInitialKnownDeviceNames, version);
-  ASSERT_GE(1u, host_list.size());
-  EXPECT_EQ(1u, host_list.size());
-  EXPECT_EQ("host1", host_list[0]);
+  ASSERT_GE(1u, host_list->size());
+  EXPECT_EQ(1u, host_list->size());
+  EXPECT_EQ("host1", host_list->at(0));
 
   called = false;
   netconnector1->GetKnownDeviceNames(
@@ -93,10 +93,10 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_NE(new_version, version);
-  ASSERT_GE(2u, host_list.size());
-  EXPECT_EQ(2u, host_list.size());
-  EXPECT_EQ("host1", host_list[0]);
-  EXPECT_EQ("host2", host_list[1]);
+  ASSERT_GE(2u, host_list->size());
+  EXPECT_EQ(2u, host_list->size());
+  EXPECT_EQ("host1", host_list->at(0));
+  EXPECT_EQ("host2", host_list->at(1));
 
   called = false;
   netconnector2->GetKnownDeviceNames(
@@ -106,10 +106,10 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  ASSERT_GE(2u, host_list.size());
-  EXPECT_EQ(2u, host_list.size());
-  EXPECT_EQ("host1", host_list[0]);
-  EXPECT_EQ("host2", host_list[1]);
+  ASSERT_GE(2u, host_list->size());
+  EXPECT_EQ(2u, host_list->size());
+  EXPECT_EQ("host1", host_list->at(0));
+  EXPECT_EQ("host2", host_list->at(1));
 
   netconnector2.Unbind();
 
@@ -118,9 +118,9 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
                                      &new_version, &host_list));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
-  ASSERT_GE(1u, host_list.size());
-  EXPECT_EQ(1u, host_list.size());
-  EXPECT_EQ("host1", host_list[0]);
+  ASSERT_GE(1u, host_list->size());
+  EXPECT_EQ(1u, host_list->size());
+  EXPECT_EQ("host1", host_list->at(0));
 }
 
 // Tests that two "hosts" can talk to each other through the NetConnector

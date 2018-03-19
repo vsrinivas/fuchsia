@@ -66,7 +66,7 @@ class ContextListenerImpl : maxwell::ContextListener {
   void OnContextUpdate(maxwell::ContextUpdatePtr update) override {
     FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate()";
     const auto& values = TakeContextValue(update.get(), "all");
-    for (const auto& value : values.second) {
+    for (const auto& value : *values.second) {
       FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate() " << value;
       handler_(value);
     }
@@ -159,7 +159,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     if (value->meta->story->id != story_id_ ||
         value->meta->entity->type.is_null() ||
-        value->meta->entity->type.size() != 1) {
+        value->meta->entity->type->size() != 1) {
       FXL_LOG(ERROR) << "ContextValue metadata is incorrect: " << value;
       return;
     }
@@ -186,7 +186,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     }
 
     const std::string value_property{doc["value"].GetString()};
-    const std::string type{value->meta->entity->type[0]};
+    const std::string type{value->meta->entity->type->at(0)};
     if (value_property != "value1" && value_property != "value2") {
       FXL_LOG(ERROR) << "JSON 'value' property (set by module) wrong: "
                      << value_property;

@@ -168,7 +168,7 @@ TEST_F(PageCloudTest, AddAndGetCommits) {
       });
   ASSERT_TRUE(page_cloud.WaitForResponse());
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(2u, commits.size());
+  EXPECT_EQ(2u, commits->size());
   EXPECT_TRUE(CheckThatCommitsContain(commits, "id0", "data0"));
   EXPECT_TRUE(CheckThatCommitsContain(commits, "id1", "data1"));
 }
@@ -279,7 +279,7 @@ TEST_F(PageCloudTest, WatchAndReceiveCommits) {
   // delivered over two notifications, the second one can only be delivered
   // after the client confirms having processed the first one by calling the
   // notification callback.
-  while (on_new_commits_commits_.size() < 2u) {
+  while (on_new_commits_commits_->size() < 2u) {
     ASSERT_TRUE(binding.WaitForMessage());
     on_new_commits_commits_callback_();
   }
@@ -310,7 +310,7 @@ TEST_F(PageCloudTest, WatchWithBacklog) {
   ASSERT_TRUE(page_cloud.WaitForResponse());
   EXPECT_EQ(Status::OK, status);
 
-  while (on_new_commits_commits_.size() < 2u) {
+  while (on_new_commits_commits_->size() < 2u) {
     ASSERT_TRUE(binding.WaitForMessage());
     on_new_commits_commits_callback_();
   }

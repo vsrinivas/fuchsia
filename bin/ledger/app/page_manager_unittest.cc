@@ -439,8 +439,8 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, expected_entries1->size());
-  EXPECT_EQ(key1, convert::ToString(expected_entries1[0]->key));
-  EXPECT_EQ(value1, ToString(expected_entries1[0]->value));
+  EXPECT_EQ(key1, convert::ToString(expected_entries1->at(0)->key));
+  EXPECT_EQ(value1, ToString(expected_entries1->at(0)->value));
 
   f1dl::Array<EntryPtr> expected_entries2;
   snapshot2->GetEntries(nullptr, nullptr,
@@ -449,10 +449,10 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(2u, expected_entries2->size());
-  EXPECT_EQ(key1, convert::ToString(expected_entries2[0]->key));
-  EXPECT_EQ(value1, ToString(expected_entries2[0]->value));
-  EXPECT_EQ(key2, convert::ToString(expected_entries2[1]->key));
-  EXPECT_EQ(value2, ToString(expected_entries2[1]->value));
+  EXPECT_EQ(key1, convert::ToString(expected_entries2->at(0)->key));
+  EXPECT_EQ(value1, ToString(expected_entries2->at(0)->value));
+  EXPECT_EQ(key2, convert::ToString(expected_entries2->at(1)->key));
+  EXPECT_EQ(value2, ToString(expected_entries2->at(1)->value));
 }
 
 TEST_F(PageManagerTest, GetCommit) {
@@ -516,7 +516,7 @@ TEST_F(PageManagerTest, GetCommit) {
   EXPECT_EQ(1u, commit_struct->parents_ids->size());
   EXPECT_EQ(1u, commit_struct->generation);
   EXPECT_EQ(convert::ToString(heads1->at(0)),
-            convert::ToString(commit_struct->parents_ids[0]));
+            convert::ToString(commit_struct->parents_ids->at(0)));
 }
 
 TEST_F(PageManagerTest, GetCommitError) {

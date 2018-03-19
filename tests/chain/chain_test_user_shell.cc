@@ -104,7 +104,9 @@ class TestApp : public testing::ComponentBase<UserShell>,
     daisy->nouns.push_back(std::move(entry));
     story_controller_->AddModule({}, "rootMod", std::move(daisy),
                                  nullptr /* surface_relation */);
-    story_controller_->GetModuleController({"rootMod"},
+    f1dl::Array<f1dl::String> path;
+    path.reset({"rootMod"});
+    story_controller_->GetModuleController(std::move(path),
                                            child_module_.NewRequest());
     ModuleWatcherPtr watcher;
     module_watcher_binding_.Bind(watcher.NewRequest());
