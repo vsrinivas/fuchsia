@@ -11,11 +11,13 @@ extern crate fdio;
 extern crate fuchsia_bluetooth as bluetooth;
 extern crate fuchsia_zircon as zircon;
 
-use bluetooth::hci;
 use failure::Error;
 use rand::Rng;
 use std::fs::{File, OpenOptions};
 use std::path::Path;
+
+use bluetooth::hci;
+use zircon::Channel;
 
 fn usage(appname: &str) -> (){
     eprintln!("usage: {} [add|rm]", appname);

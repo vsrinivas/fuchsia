@@ -5,13 +5,17 @@
 #[deny(warnings)]
 
 use failure::Error;
-use fdio::{fdio_sys, ioctl};
 use rand::{self, Rng};
 use std::ffi::{CString, OsStr, OsString};
 use std::fs::{read_dir, File, OpenOptions};
 use std::os::raw;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
+use std::mem;
+use std;
+
+use fdio::{fdio_sys, ioctl};
+use zircon::{self, Handle};
 
 pub const DEV_TEST: &str = "/dev/misc/test";
 pub const BTHCI_DRIVER_NAME: &str = "/system/driver/bthci-fake.so";
@@ -142,6 +146,20 @@ pub fn get_device_driver_topo(device: &File) -> Result<OsString, Error> {
     Ok(ospath)
 }
 
+pub fn open_snoop_channel(device: &File) -> Result<zircon::Handle, Error> {
+    let mut handle = zircon::sys::ZX_HANDLE_INVALID;
+    unsafe {
+        ioctl(&device,
+              IOCTL_BT_HCI_GET_SNOOP_CHANNEL,
+              ::std::ptr::null_mut() as *mut raw::c_void,
+              0,
+              &mut handle as *mut _ as *mut std::os::raw::c_void,
+              mem::size_of::<zircon::sys::zx_handle_t>())
+            .map(|_| Handle::from_raw(handle))
+            .map_err(|e| e.into())
+    }
+}
+
 fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
     OpenOptions::new().read(true).write(true).open(path).map_err(|e| e.into())
 }
@@ -178,3 +196,10 @@ const IOCTL_DEVICE_GET_TOPO_PATH: raw::c_int = make_ioctl!(
     4
 );
 
+// Bluetooth specific Ioctls
+
+const IOCTL_BT_HCI_GET_SNOOP_CHANNEL: raw::c_int = make_ioctl!(
+    fdio_sys::IOCTL_KIND_GET_HANDLE,
+    fdio_sys::IOCTL_FAMILY_BT_HCI,
+    2
+);

@@ -1,0 +1,24 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+[package]
+name = "btsnoop"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Benjamin Brittain <bwb@google.com>"]
+description = "btsnoop client"
+
+[dependencies.clap]
+version = "2.31"
+default-features = false
+features = [ "suggestions", "color" ]
+
+[dependencies]
+fuchsia-bluetooth = "0.1"
+fuchsia-zircon = "0.3"
+fuchsia-async = "0.1"
+futures-util = "0.2.0-alpha"
+failure = "0.1"
+byteorder = "1.2"
+futures = "=0.2.0-alpha"

@@ -122,6 +122,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "btsnoop"
+version = "0.1.0"
+dependencies = [
+ "byteorder 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clap 2.31.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fuchsia-async 0.1.0",
+ "fuchsia-bluetooth 0.1.0",
+ "fuchsia-zircon 0.3.4",
+ "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-util 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "build_const"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -4,8 +4,6 @@
 
 source_set("common") {
   sources = [
-    "bt_snoop_logger.cc",
-    "bt_snoop_logger.h",
     "byte_buffer.cc",
     "byte_buffer.h",
     "cancelable_callback.h",
@@ -47,10 +45,6 @@ source_set("tests") {
   testonly = true
 
   sources = [
-    # TODO(armansito): This test intermittently fails to remove the tmp file and
-    # sometimes fails to read its contents. Figure out what to do with it as the
-    # utilty of the test itself is questionable.
-    # "bt_snoop_logger_unittest.cc",
     "byte_buffer_unittest.cc",
     "cancelable_callback_unittest.cc",
     "cancelable_task_unittest.cc",
