@@ -260,13 +260,13 @@ mod tests {
         let readonly_vmo = vmo.duplicate_handle(Rights::READ).unwrap();
         // Make sure we can read but not write.
         let mut read_vec = vec![0; hello_length];
-        assert_eq!(readonly_vmo.read(&mut read_vec, 0).unwrap(), hello_length);
+        assert!(readonly_vmo.read(&mut read_vec, 0).is_ok());
         assert_eq!(read_vec, b"hello");
         assert_eq!(readonly_vmo.write(b"", 0), Err(Status::ACCESS_DENIED));
 
         // Write new data to the original handle, and read it from the new handle
         assert!(vmo.write(b"bye", 0).is_ok());
-        assert_eq!(readonly_vmo.read(&mut read_vec, 0).unwrap(), hello_length);
+        assert!(readonly_vmo.read(&mut read_vec, 0).is_ok());
         assert_eq!(read_vec, b"byelo");
     }
 
@@ -283,7 +283,7 @@ mod tests {
         let readonly_vmo = vmo.replace_handle(Rights::READ).unwrap();
         // Make sure we can read but not write.
         let mut read_vec = vec![0; hello_length];
-        assert_eq!(readonly_vmo.read(&mut read_vec, 0).unwrap(), hello_length);
+        assert!(readonly_vmo.read(&mut read_vec, 0).is_ok());
         assert_eq!(read_vec, b"hello");
         assert_eq!(readonly_vmo.write(b"", 0), Err(Status::ACCESS_DENIED));
     }

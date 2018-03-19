@@ -124,14 +124,9 @@ bool Process::InitChildProcess(benchmark::State& state) {
     state.SkipWithError("Failed to create vmo");
     return false;
   }
-  size_t actual = 0;
-  if (zx_vmo_write_old(stack_vmo, reinterpret_cast<void*>(&call_exit), 0, num_to_copy, &actual) !=
+  if (zx_vmo_write(stack_vmo, reinterpret_cast<void*>(&call_exit), 0, num_to_copy) !=
       ZX_OK) {
     state.SkipWithError("Failed to write vmo");
-    return false;
-  }
-  if (actual != num_to_copy) {
-    state.SkipWithError("Failed to fully write vmo");
     return false;
   }
   if (zx_vmar_map(vmar_handle, 0, stack_vmo, 0, stack_size, stack_perm, &stack_base) != ZX_OK) {

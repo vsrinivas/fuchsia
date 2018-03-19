@@ -355,11 +355,11 @@ mod tests {
 
         // Now to test that we got the right handle, try writing something to it...
         let received_vmo = Vmo::from(received_handle);
-        assert_eq!(received_vmo.write(b"hello", 0).unwrap(), hello_length);
+        assert!(received_vmo.write(b"hello", 0).is_ok());
 
         // ... and reading it back from the original VMO.
         let mut read_vec = vec![0; hello_length];
-        assert_eq!(vmo.read(&mut read_vec, 0).unwrap(), hello_length);
+        assert!(vmo.read(&mut read_vec, 0).is_ok());
         assert_eq!(read_vec, b"hello");
     }
 
