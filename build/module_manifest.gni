@@ -6,6 +6,7 @@ import("//build/compiled_action.gni")
 
 module_manifest_schema =
     "//peridot/bin/package_manager/metadata_schemas/module.json"
+module_manifests_out_dir = "$root_build_dir/module_manifests"
 
 # This template generates a target that will verify the supplied module
 # manifest.
@@ -44,6 +45,20 @@ template("verify_module_manifest") {
       rebase_path(module_manifest_schema),
       rebase_path(invoker.module_manifest),
       rebase_path(stamp_file),
+    ]
+  }
+}
+
+template("copy_module_manifest") {
+  assert(defined(invoker.module_manifest), "Must specify module_manifest.")
+  assert(defined(invoker.package_name), "Must specify package_name.")
+
+  copy(target_name) {
+    sources = [
+      rebase_path(invoker.module_manifest),
+    ]
+    outputs = [
+      "$module_manifests_out_dir/${invoker.package_name}",
     ]
   }
 }
