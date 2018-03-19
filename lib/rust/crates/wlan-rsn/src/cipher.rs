@@ -33,8 +33,8 @@ pub const BIP_CMAC_256: u8 = 13;
 // 14-255 - Reserved.
 
 pub struct Cipher<'a> {
-    oui: &'a [u8],
-    suite_type: u8,
+    pub oui: &'a [u8],
+    pub suite_type: u8,
 }
 
 impl<'a> Cipher<'a> {

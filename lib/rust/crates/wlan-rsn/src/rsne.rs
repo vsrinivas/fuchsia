@@ -13,18 +13,20 @@ macro_rules! if_remaining (
   ($i:expr, $f:expr) => ( cond!($i, $i.len() !=0, call!($f)); );
 );
 
+pub const ID: u8 = 48;
+
 // IEEE 802.11-2016, 9.4.2.25.1
 #[derive(Default, Debug)]
 pub struct Rsne<'a> {
-    element_id: u8,
-    length: u8,
-    version: u16,
-    group_data_cipher_suite: Option<cipher::Cipher<'a>>,
-    pairwise_cipher_suites: Vec<cipher::Cipher<'a>>,
-    akm_suites: Vec<akm::Akm<'a>>,
-    rsn_capabilities: u16,
-    pmkids: Vec<pmkid::Pmkid<'a>>,
-    group_mgmt_cipher_suite: Option<cipher::Cipher<'a>>,
+    pub element_id: u8,
+    pub length: u8,
+    pub version: u16,
+    pub group_data_cipher_suite: Option<cipher::Cipher<'a>>,
+    pub pairwise_cipher_suites: Vec<cipher::Cipher<'a>>,
+    pub akm_suites: Vec<akm::Akm<'a>>,
+    pub rsn_capabilities: u16,
+    pub pmkids: Vec<pmkid::Pmkid<'a>>,
+    pub group_mgmt_cipher_suite: Option<cipher::Cipher<'a>>,
 }
 
 fn read_suite_selector<'a, T>(input: &'a [u8]) -> IResult<&'a [u8], T>
