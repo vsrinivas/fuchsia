@@ -168,9 +168,7 @@ class Array {
   // value-initialized (meaning that they will be initialized by their default
   // constructor, if any, or else zero-initialized).
   static Array New(size_t size) {
-    Array ret;
-    ret.resize(size);
-    return ret;
+    return Array(size);
   }
 
   // Creates a new array with a copy of the contents of |other|.
@@ -186,11 +184,6 @@ class Array {
   }
 
  private:
-  void Take(Array* other) {
-    reset();
-    Swap(other);
-  }
-
   std::vector<T> vec_;
   bool is_null_;
 };
