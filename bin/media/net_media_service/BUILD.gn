@@ -23,10 +23,10 @@ executable("bin") {
 
   sources = [
     "main.cc",
+    "media_player_messages.cc",
+    "media_player_messages.h",
     "net_media_player_impl.cc",
     "net_media_player_impl.h",
-    "net_media_player_messages.cc",
-    "net_media_player_messages.h",
     "net_media_player_net_proxy.cc",
     "net_media_player_net_proxy.h",
     "net_media_player_net_stub.cc",

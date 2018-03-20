@@ -74,22 +74,22 @@ NetMediaPlayerNetProxy::~NetMediaPlayerNetProxy() {}
 
 void NetMediaPlayerNetProxy::SetUrl(const f1dl::StringPtr& url) {
   message_relay_.SendMessage(
-      Serializer::Serialize(NetMediaPlayerInMessage::SetUrlRequest(url)));
+      Serializer::Serialize(MediaPlayerInMessage::SetUrlRequest(url)));
 }
 
 void NetMediaPlayerNetProxy::Play() {
   message_relay_.SendMessage(
-      Serializer::Serialize(NetMediaPlayerInMessage::PlayRequest()));
+      Serializer::Serialize(MediaPlayerInMessage::PlayRequest()));
 }
 
 void NetMediaPlayerNetProxy::Pause() {
   message_relay_.SendMessage(
-      Serializer::Serialize(NetMediaPlayerInMessage::PauseRequest()));
+      Serializer::Serialize(MediaPlayerInMessage::PauseRequest()));
 }
 
 void NetMediaPlayerNetProxy::Seek(int64_t position) {
   message_relay_.SendMessage(
-      Serializer::Serialize(NetMediaPlayerInMessage::SeekRequest(position)));
+      Serializer::Serialize(MediaPlayerInMessage::SeekRequest(position)));
 }
 
 void NetMediaPlayerNetProxy::GetStatus(uint64_t version_last_seen,
@@ -99,12 +99,12 @@ void NetMediaPlayerNetProxy::GetStatus(uint64_t version_last_seen,
 
 void NetMediaPlayerNetProxy::SendTimeCheckMessage() {
   message_relay_.SendMessage(Serializer::Serialize(
-      NetMediaPlayerInMessage::TimeCheckRequest(Timeline::local_now())));
+      MediaPlayerInMessage::TimeCheckRequest(Timeline::local_now())));
 }
 
 void NetMediaPlayerNetProxy::HandleReceivedMessage(
     std::vector<uint8_t> serial_message) {
-  std::unique_ptr<NetMediaPlayerOutMessage> message;
+  std::unique_ptr<MediaPlayerOutMessage> message;
   Deserializer deserializer(serial_message);
   deserializer >> message;
 
@@ -117,7 +117,7 @@ void NetMediaPlayerNetProxy::HandleReceivedMessage(
   FXL_DCHECK(message);
 
   switch (message->type_) {
-    case NetMediaPlayerOutMessageType::kTimeCheckResponse: {
+    case MediaPlayerOutMessageType::kTimeCheckResponse: {
       FXL_DCHECK(message->time_check_response_);
       // Estimate the local system system time when the responder's clock was
       // samples on the remote machine. Assume the clock was sampled halfway
@@ -137,7 +137,7 @@ void NetMediaPlayerNetProxy::HandleReceivedMessage(
           local_then, message->time_check_response_->responder_time_, 1, 1);
     } break;
 
-    case NetMediaPlayerOutMessageType::kStatusNotification:
+    case MediaPlayerOutMessageType::kStatusNotification:
       FXL_DCHECK(message->status_notification_);
       status_ = std::move(message->status_notification_->status_);
       if (status_->timeline_transform) {

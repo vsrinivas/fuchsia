@@ -36,7 +36,7 @@ NetMediaPlayerNetStub::~NetMediaPlayerNetStub() {}
 
 void NetMediaPlayerNetStub::HandleReceivedMessage(
     std::vector<uint8_t> serial_message) {
-  std::unique_ptr<NetMediaPlayerInMessage> message;
+  std::unique_ptr<MediaPlayerInMessage> message;
   Deserializer deserializer(serial_message);
   deserializer >> message;
 
@@ -49,10 +49,10 @@ void NetMediaPlayerNetStub::HandleReceivedMessage(
   FXL_DCHECK(message);
 
   switch (message->type_) {
-    case NetMediaPlayerInMessageType::kTimeCheckRequest:
+    case MediaPlayerInMessageType::kTimeCheckRequest:
       FXL_DCHECK(message->time_check_request_);
       message_relay_.SendMessage(
-          Serializer::Serialize(NetMediaPlayerOutMessage::TimeCheckResponse(
+          Serializer::Serialize(MediaPlayerOutMessage::TimeCheckResponse(
               message->time_check_request_->requestor_time_,
               Timeline::local_now())));
 
@@ -61,20 +61,20 @@ void NetMediaPlayerNetStub::HandleReceivedMessage(
       HandleStatusUpdates();
       break;
 
-    case NetMediaPlayerInMessageType::kSetUrlRequest:
+    case MediaPlayerInMessageType::kSetUrlRequest:
       FXL_DCHECK(message->set_url_request_);
       player_->SetUrl(message->set_url_request_->url_);
       break;
 
-    case NetMediaPlayerInMessageType::kPlayRequest:
+    case MediaPlayerInMessageType::kPlayRequest:
       player_->Play();
       break;
 
-    case NetMediaPlayerInMessageType::kPauseRequest:
+    case MediaPlayerInMessageType::kPauseRequest:
       player_->Pause();
       break;
 
-    case NetMediaPlayerInMessageType::kSeekRequest:
+    case MediaPlayerInMessageType::kSeekRequest:
       FXL_DCHECK(message->seek_request_);
       player_->Seek(message->seek_request_->position_);
       break;
@@ -85,7 +85,7 @@ void NetMediaPlayerNetStub::HandleStatusUpdates(uint64_t version,
                                                 MediaPlayerStatusPtr status) {
   if (status) {
     message_relay_.SendMessage(Serializer::Serialize(
-        NetMediaPlayerOutMessage::StatusNotification(std::move(status))));
+        MediaPlayerOutMessage::StatusNotification(std::move(status))));
   }
 
   // Request a status update.

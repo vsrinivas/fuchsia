@@ -9,7 +9,7 @@
 #include <endian.h>
 #include <zx/channel.h>
 
-#include "garnet/bin/media/net_media_service/net_media_player_messages.h"
+#include "garnet/bin/media/net_media_service/media_player_messages.h"
 #include "lib/fxl/macros.h"
 #include "lib/media/fidl/net_media_player.fidl.h"
 #include "lib/netconnector/cpp/message_relay.h"
