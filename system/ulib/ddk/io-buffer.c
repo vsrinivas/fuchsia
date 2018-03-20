@@ -115,17 +115,8 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_ha
     return ZX_OK;
 }
 
-zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t alignment_log2,
-                                   uint32_t flags) {
-    return io_buffer_init_aligned_with_bti(buffer, ZX_HANDLE_INVALID, size, alignment_log2, flags);
-}
-
-zx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags) {
-    return io_buffer_init_with_bti(buffer, ZX_HANDLE_INVALID, size, flags);
-}
-
-zx_status_t io_buffer_init_aligned_with_bti(io_buffer_t* buffer, zx_handle_t bti,
-                                            size_t size, uint32_t alignment_log2, uint32_t flags) {
+zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, zx_handle_t bti, size_t size,
+                                   uint32_t alignment_log2, uint32_t flags) {
     memset(buffer, 0, sizeof(*buffer));
 
     if (size == 0) {
@@ -163,10 +154,9 @@ zx_status_t io_buffer_init_aligned_with_bti(io_buffer_t* buffer, zx_handle_t bti
     return io_buffer_init_common(buffer, bti, vmo_handle, size, 0, flags);
 }
 
-zx_status_t io_buffer_init_with_bti(io_buffer_t* buffer, zx_handle_t bti,
-                                    size_t size, uint32_t flags) {
+zx_status_t io_buffer_init(io_buffer_t* buffer, zx_handle_t bti, size_t size, uint32_t flags) {
     // A zero alignment gets interpreted as PAGE_SIZE_SHIFT.
-    return io_buffer_init_aligned_with_bti(buffer, bti, size, 0, flags);
+    return io_buffer_init_aligned(buffer, bti, size, 0, flags);
 }
 
 zx_status_t io_buffer_init_vmo(io_buffer_t* buffer, zx_handle_t bti, zx_handle_t vmo_handle,
