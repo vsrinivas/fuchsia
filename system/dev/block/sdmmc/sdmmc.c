@@ -166,7 +166,7 @@ static zx_protocol_device_t sdmmc_device_proto = {
 static void sdmmc_query(void* ctx, block_info_t* info_out, size_t* block_op_size_out) {
     sdmmc_device_t* dev = ctx;
     memcpy(info_out, &dev->block_info, sizeof(*info_out));
-    *block_op_size_out = sizeof(sdmmc_req_t);
+    *block_op_size_out = sizeof(sdmmc_txn_t);
 }
 
 static void sdmmc_queue(void* ctx, block_op_t* btxn) {
@@ -179,9 +179,11 @@ static void sdmmc_queue(void* ctx, block_op_t* btxn) {
         uint64_t max = dev->block_info.block_count;
         if ((btxn->rw.offset_dev >= max) || ((max - btxn->rw.offset_dev) < btxn->rw.length)) {
             block_complete(btxn, ZX_ERR_OUT_OF_RANGE);
+            return;
         }
         if (btxn->rw.length == 0) {
             block_complete(btxn, ZX_OK);
+            return;
         }
         break;
     }
