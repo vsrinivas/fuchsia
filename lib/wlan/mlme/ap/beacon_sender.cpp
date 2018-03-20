@@ -95,10 +95,8 @@ zx_status_t BeaconSender::WriteBeacon(const TrafficIndicationMap* tim) {
         return ZX_ERR_IO;
     }
 
-    // TODO(NET-427): Support channel selection.
-    if (!w.write<DsssParamSetElement>(1)) {
-        errorf("[bcn-sender] [%s] could not write extended supported rates\n",
-               bssid.ToString().c_str());
+    if (!w.write<DsssParamSetElement>(req_->channel)) {
+        errorf("[bcn-sender] [%s] could not write DSSS parameters\n", bssid.ToString().c_str());
         return ZX_ERR_IO;
     }
 

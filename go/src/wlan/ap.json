@@ -2,5 +2,6 @@
     "SSID": "FUCHSIA-TEST-AP",
     "BeaconPeriod": 100,
     "DTIMPeriod": 1,
+    "Channel": 6,
     "Active": false
 }

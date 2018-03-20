@@ -54,17 +54,18 @@ func (s *startBSSState) String() string {
 	return "starting-bss"
 }
 
-func newStartBSSRequest(ssid string, beaconPeriod uint32, dtimPeriod uint32) *mlme.StartRequest {
+func newStartBSSRequest(ssid string, beaconPeriod uint32, dtimPeriod uint32, channel uint8) *mlme.StartRequest {
 	return &mlme.StartRequest{
 		Ssid:         ssid,
 		BeaconPeriod: beaconPeriod,
 		DtimPeriod:   dtimPeriod,
 		BssType:      mlme.BssTypes_Infrastructure,
+		Channel:      channel,
 	}
 }
 
 func (s *startBSSState) run(c *Client) (time.Duration, error) {
-	req := newStartBSSRequest(c.apCfg.SSID, uint32(c.apCfg.BeaconPeriod), uint32(c.apCfg.DTIMPeriod))
+	req := newStartBSSRequest(c.apCfg.SSID, uint32(c.apCfg.BeaconPeriod), uint32(c.apCfg.DTIMPeriod), c.apCfg.Channel)
 	timeout := StartBSSTimeout
 	if req != nil {
 		if debug {
@@ -249,7 +250,7 @@ func (s *scanState) getChannelsSlice() []uint8 {
 		length = len(s.supportedChannels) - s.channelScanOffset
 	}
 	channels := make([]uint8, length)
-	channels = s.supportedChannels[s.channelScanOffset:s.channelScanOffset+length]
+	channels = s.supportedChannels[s.channelScanOffset:s.channelScanOffset + length]
 	if debug {
 		log.Printf("Channel Slice: %v Offset: %v Slice: %v Total: %v", channels, s.channelScanOffset, length, len(s.supportedChannels))
 	}

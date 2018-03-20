@@ -422,7 +422,7 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
         mlme_.reset();
         return ZX_OK;
     case Method::START_request:
-        return HandleMlmeMethodInlinedStruct<StartRequest>(packet, method);
+        return HandleMlmeMethod<StartRequest>(packet, method);
     case Method::SCAN_request:
         return HandleMlmeMethod<ScanRequest>(packet, method);
     case Method::JOIN_request:

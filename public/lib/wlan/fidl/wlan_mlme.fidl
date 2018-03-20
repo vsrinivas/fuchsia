@@ -253,6 +253,10 @@ struct StartRequest {
     uint32 beacon_period;
     uint32 dtim_period;
 
+    // Temporary field to support AP channel selection until
+    // MLME-CHANNELSWITCH.request is supported.
+    uint8 channel;
+
     // TODO(hahnr): Add additional elements.
 };
 

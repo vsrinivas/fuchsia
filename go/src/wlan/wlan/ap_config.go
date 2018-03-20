@@ -14,6 +14,7 @@ type APConfig struct {
 	BeaconPeriod int
 	DTIMPeriod   int
 	Active       bool
+	Channel      uint8
 }
 
 func NewAPConfig() *APConfig {

@@ -31,6 +31,17 @@ void InfraBss::Start(const StartRequest& req) {
     ZX_DEBUG_ASSERT(!IsStarted());
     if (IsStarted()) { return; }
 
+    // Move to requested channel.
+    auto chan = wlan_channel_t{
+        .primary = req.channel,
+        .cbw = CBW20,
+    };
+    auto status = device_->SetChannel(chan);
+    if (status != ZX_OK) {
+        errorf("[infra-bss] [%s] requested start on channel %u failed: %d\n",
+               bssid_.ToString().c_str(), req.channel, status);
+    }
+
     // Start sending Beacon frames.
     started_at_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
     bcn_sender_->Start(this, req);
