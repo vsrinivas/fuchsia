@@ -446,6 +446,7 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device)
     di->format = ZX_PIXEL_FORMAT_ARGB_8888;
     di->width = device->core_device->display_size().width;
     di->height = device->core_device->display_size().height;
+    di->pixelsize = ZX_PIXEL_FORMAT_BYTES(di->format);
 
     constexpr uint32_t kCacheLineWords = 64 / 4;
     di->stride = magma::round_up(di->width, kCacheLineWords);
