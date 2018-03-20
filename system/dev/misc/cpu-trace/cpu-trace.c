@@ -72,6 +72,7 @@ static void cpu_trace_release(void* ctx) {
     ipt_release(dev);
     ipm_release(dev);
 
+    zx_handle_close(dev->bti);
     free(dev);
 }
 
@@ -87,9 +88,21 @@ static zx_status_t cpu_trace_bind(void* ctx, zx_device_t* parent) {
     ipt_init_once();
     ipm_init_once();
 
+    platform_device_protocol_t pdev;
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &pdev);
+    if (status != ZX_OK) {
+        return status;
+    }
+
     cpu_trace_device_t* dev = calloc(1, sizeof(*dev));
-    if (!dev)
+    if (!dev) {
         return ZX_ERR_NO_MEMORY;
+    }
+
+    status = pdev_get_bti(&pdev, 0, &dev->bti);
+    if (status != ZX_OK) {
+        goto fail;
+    }
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -98,13 +111,16 @@ static zx_status_t cpu_trace_bind(void* ctx, zx_device_t* parent) {
         .ops = &cpu_trace_device_proto,
     };
 
-    zx_status_t status;
     if ((status = device_add(parent, &args, NULL)) < 0) {
-        free(dev);
-        return status;
+        goto fail;
     }
 
     return ZX_OK;
+
+fail:
+    zx_handle_close(dev->bti);
+    free(dev);
+    return status;
 }
 
 static zx_driver_ops_t cpu_trace_driver_ops = {

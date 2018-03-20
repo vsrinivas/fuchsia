@@ -17,6 +17,8 @@ typedef struct cpu_trace_device {
 
     struct ipt_device* ipt;
     struct ipm_device* ipm;
+
+    zx_handle_t bti;
 } cpu_trace_device_t;
 
 

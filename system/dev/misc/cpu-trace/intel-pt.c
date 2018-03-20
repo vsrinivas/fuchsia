@@ -82,6 +82,9 @@ typedef struct ipt_device {
 
     // Once tracing has started various things are not allowed until it stops.
     bool active;
+
+    // Borrowed handle from cpu_trace_device.  Must not close
+    zx_handle_t bti;
 } ipt_device_t;
 
 // This struct is temporary, pending subsuming the "ipt" device driver
@@ -353,8 +356,9 @@ static zx_status_t x86_pt_alloc_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_sta
     for (uint32_t i = 0; i < num; ++i) {
         // ToPA entries of size N must be aligned to N, too.
         uint32_t alignment_log2 = PAGE_SIZE_SHIFT + order;
-        status = io_buffer_init_aligned(&per_trace->chunks[i], chunk_pages * PAGE_SIZE,
-                                        alignment_log2, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+        status = io_buffer_init_aligned_with_bti(&per_trace->chunks[i], ipt_dev->bti,
+                                                 chunk_pages * PAGE_SIZE, alignment_log2,
+                                                 IO_BUFFER_RW | IO_BUFFER_CONTIG);
         if (status != ZX_OK)
             return status;
         // Keep track of allocated buffers as we go in case we later fail:
@@ -398,8 +402,9 @@ static zx_status_t x86_pt_alloc_buffer1(ipt_device_t* ipt_dev, ipt_per_trace_sta
         return ZX_ERR_NO_MEMORY;
 
     for (uint32_t i = 0; i < table_count; ++i) {
-        status = io_buffer_init(&per_trace->topas[i], sizeof(uint64_t) * IPT_TOPA_MAX_TABLE_ENTRIES,
-                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
+        status = io_buffer_init_with_bti(&per_trace->topas[i], ipt_dev->bti,
+                                         sizeof(uint64_t) * IPT_TOPA_MAX_TABLE_ENTRIES,
+                                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
         if (status != ZX_OK)
             return ZX_ERR_NO_MEMORY;
         // Keep track of allocated tables as we go in case we later fail:
@@ -595,6 +600,7 @@ static zx_status_t ipt_alloc_trace(cpu_trace_device_t* dev,
         return ZX_ERR_NO_MEMORY;
 
     ipt_dev->num_traces = zx_system_get_num_cpus();
+    ipt_dev->bti = dev->bti;
 
     ipt_dev->per_trace_state = calloc(ipt_dev->num_traces, sizeof(ipt_dev->per_trace_state[0]));
     if (!ipt_dev->per_trace_state) {
