@@ -238,20 +238,16 @@ static int bcm_hci_start_thread(void* arg) {
 
         zx_off_t offset = 0;
         while (offset < fw_size) {
+            uint8_t buffer[255 + 3];
             size_t actual;
-            status = zx_vmo_get_size(fw_vmo, &actual);
+
+            status = zx_vmo_read_old(fw_vmo, buffer, offset, sizeof(buffer), &actual);
             if (status != ZX_OK) {
                 goto vmo_close_fail;
             }
             if (actual < 3) {
                 zxlogf(ERROR, "short HCI command in firmware download\n");
                 status = ZX_ERR_INTERNAL;
-                goto vmo_close_fail;
-            }
-
-            uint8_t buffer[actual];
-            status = zx_vmo_read(fw_vmo, buffer, offset, sizeof(buffer));
-            if (status != ZX_OK) {
                 goto vmo_close_fail;
             }
 

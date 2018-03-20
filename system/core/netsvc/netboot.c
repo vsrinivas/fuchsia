@@ -234,15 +234,16 @@ static zx_status_t do_dmctl_mexec(void) {
     };
     bootdata_t* hdr = (bootdata_t*)nbbootdata.file.data;
 
-    st = zx_vmo_write(nbbootdata.data, &new_hdr, hdr->length + sizeof(bootdata_t),
-                      sizeof(bootdata_t));
-    if (st != ZX_OK) {
+    size_t actual;
+    st = zx_vmo_write_old(nbbootdata.data, &new_hdr, hdr->length + sizeof(bootdata_t),
+                      sizeof(bootdata_t), &actual);
+    if ((st != ZX_OK) || (actual != sizeof(bootdata_t))) {
         printf("netbootloader: failed to write cmdline header\n");
         return st;
     }
-    st = zx_vmo_write(nbbootdata.data, nbcmdline.file.data,
-                      hdr->length + 2 * sizeof(bootdata_t), nbcmdline.file.size);
-    if (st != ZX_OK) {
+    st = zx_vmo_write_old(nbbootdata.data, nbcmdline.file.data,
+                      hdr->length + 2 * sizeof(bootdata_t), nbcmdline.file.size, &actual);
+    if ((st != ZX_OK) || (actual != nbcmdline.file.size)) {
         printf("netbootloader: failed to write cmdline\n");
         return st;
     }

@@ -60,10 +60,15 @@ static zx_status_t read_file_into_vmo(fdio_t* io, zx_handle_t* out_vmo) {
                 zx_handle_close(*out_vmo);
                 return status;
             }
-            status = zx_vmo_write(*out_vmo, buffer, offset, nread);
+            size_t n;
+            status = zx_vmo_write_old(*out_vmo, buffer, offset, nread, &n);
             if (status < 0) {
                 zx_handle_close(*out_vmo);
                 return status;
+            }
+            if (n != (size_t)nread) {
+                zx_handle_close(*out_vmo);
+                return ZX_ERR_IO;
             }
             offset += nread;
             size -= nread;

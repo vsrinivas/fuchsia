@@ -255,9 +255,10 @@ static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
 
 zx_status_t devmgr_set_platform_id(zx_handle_t vmo, zx_off_t offset, size_t length) {
     bootdata_platform_id_t platform_id;
+    size_t actual;
 
-    zx_status_t status = zx_vmo_read(vmo, &platform_id, offset, sizeof(platform_id));
-    if (status < 0) {
+    zx_status_t status = zx_vmo_read_old(vmo, &platform_id, offset, sizeof(platform_id), &actual);
+    if ((status < 0) || (actual != sizeof(platform_id))) {
         return status;
     }
 

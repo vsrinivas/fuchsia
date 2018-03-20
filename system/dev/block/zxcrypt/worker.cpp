@@ -66,9 +66,10 @@ zx_status_t Worker::Loop() {
     while (port_.wait(zx::time::infinite(), &packet, 1) == ZX_OK && packet.status == ZX_ERR_NEXT) {
         block_op_t* block = reinterpret_cast<block_op_t*>(packet.user.u64[0]);
         extra_op_t* ex = device_->BlockToExtra(block);
+        size_t actual;
         switch (block->command) {
         case BLOCK_OP_WRITE:
-            if ((rc = zx_vmo_read(ex->vmo, ex->buf, ex->off, ex->len)) != ZX_OK ||
+            if ((rc = zx_vmo_read_old(ex->vmo, ex->buf, ex->off, ex->len, &actual)) != ZX_OK ||
                 (rc = encrypt_.Encrypt(ex->buf, ex->num, ex->len, ex->buf) != ZX_OK)) {
                 device_->BlockRelease(block, rc);
                 break;
@@ -78,7 +79,7 @@ zx_status_t Worker::Loop() {
 
         case BLOCK_OP_READ:
             if ((rc = decrypt_.Decrypt(ex->buf, ex->num, ex->len, ex->buf)) != ZX_OK ||
-                (rc = zx_vmo_write(ex->vmo, ex->buf, ex->off, ex->len)) != ZX_OK) {
+                (rc = zx_vmo_write_old(ex->vmo, ex->buf, ex->off, ex->len, &actual)) != ZX_OK) {
                 device_->BlockRelease(block, rc);
                 break;
             }

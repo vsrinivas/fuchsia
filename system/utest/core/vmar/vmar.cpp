@@ -465,7 +465,6 @@ bool map_over_destroyed_test() {
     zx_handle_t region[2] = {};
     uintptr_t region_addr[2];
     uintptr_t map_addr;
-    size_t len;
 
     ASSERT_EQ(zx_process_create(zx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), ZX_OK);
@@ -493,7 +492,9 @@ bool map_over_destroyed_test() {
     // Check that the mapping worked
     {
         uint8_t buf = 5;
-        ASSERT_EQ(zx_vmo_write(vmo, &buf, 0, 1), ZX_OK);
+        size_t len;
+        ASSERT_EQ(zx_vmo_write_old(vmo, &buf, 0, 1, &len), ZX_OK);
+        EXPECT_EQ(len, 1U);
 
         buf = 0;
         EXPECT_EQ(zx_process_read_memory(process, map_addr, &buf, 1, &len),
@@ -1438,9 +1439,9 @@ bool map_specific_overwrite_test() {
     // which.
     for (size_t i = 0; i < mapping_size / PAGE_SIZE; ++i) {
         buf[0] = 1;
-        ASSERT_EQ(zx_vmo_write(vmo, buf, i * PAGE_SIZE, 1), ZX_OK);
+        ASSERT_EQ(zx_vmo_write_old(vmo, buf, i * PAGE_SIZE, 1, &len), ZX_OK);
         buf[0] = 2;
-        ASSERT_EQ(zx_vmo_write(vmo2, buf, i * PAGE_SIZE, 1), ZX_OK);
+        ASSERT_EQ(zx_vmo_write_old(vmo2, buf, i * PAGE_SIZE, 1, &len), ZX_OK);
     }
 
     // Create a single mapping and overwrite it

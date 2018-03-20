@@ -731,7 +731,8 @@ codec_encode(struct nodelist *nlist, zx_handle_t *vmo)
 	zx_status_t status = zx_vmo_create(total_size, 0, vmo);
 	if (status != ZX_OK)
 		return status;
-	return zx_vmo_write(*vmo, buffer, 0, total_size);
+	size_t actual;
+	return zx_vmo_write_old(*vmo, buffer, 0, total_size, &actual);
 }
 
 struct nodelist *codec_decode(char *buffer, size_t length)
