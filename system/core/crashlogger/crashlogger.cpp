@@ -27,6 +27,9 @@
 
 static int verbosity_level = 0;
 
+// The task that we are monitoring.
+static zx_handle_t subject = ZX_HANDLE_INVALID;
+
 // If true then s/w breakpoint instructions do not kill the process.
 // After the backtrace is printed the thread quietly resumes.
 // TODO: The default is on for now for development purposes.
@@ -369,19 +372,12 @@ Fail:
     zx_handle_close(process);
 }
 
-// A small wrapper to provide a useful name to the API call used to effect
-// the request.
-
-zx_status_t bind_system_exception_port(zx_handle_t eport) {
-    return zx_task_bind_exception_port(ZX_HANDLE_INVALID, eport, kSysExceptionKey, 0);
+zx_status_t bind_subject_exception_port(zx_handle_t eport) {
+    return zx_task_bind_exception_port(subject, eport, kSysExceptionKey, 0);
 }
 
-// A small wrapper to provide a useful name to the API call used to effect
-// the request.
-
-zx_status_t unbind_system_exception_port() {
-    return zx_task_bind_exception_port(ZX_HANDLE_INVALID, ZX_HANDLE_INVALID,
-                                         kSysExceptionKey, 0);
+zx_status_t unbind_subject_exception_port() {
+    return zx_task_bind_exception_port(subject, ZX_HANDLE_INVALID, kSysExceptionKey, 0);
 }
 
 int self_dump_func(void* arg) {
@@ -402,9 +398,9 @@ int self_dump_func(void* arg) {
     // The main thread got an exception.
     // Try to print a dump of it before we shutdown.
 
-    // Disable system exception handling ASAP: If we get another exception
-    // we're hosed. This is also a workaround to ZX-307.
-    auto unbind_status = unbind_system_exception_port();
+    // Disable subject exception handling ASAP: If we get another exception
+    // we're hosed.
+    auto unbind_status = unbind_subject_exception_port();
 
     // Also, before we do anything else, "resume" the original crashing thread.
     // Otherwise whomever is waiting on its process to terminate will hang.
@@ -420,7 +416,7 @@ int self_dump_func(void* arg) {
     // This could be an assert, but we don't want the check disabled in
     // release builds.
     if (unbind_status != ZX_OK) {
-        print_zx_error("WARNING: unable to unbind system exception port", unbind_status);
+        print_zx_error("WARNING: unable to unbind subject exception port", unbind_status);
         // This "shouldn't happen", safer to just terminate.
         exit(1);
     }
@@ -449,9 +445,12 @@ void usage() {
     fprintf(stderr, "  -s[on|off] = enable s/w breakpoints to trigger\n");
     fprintf(stderr, "      a backtrace without terminating the process\n");
     fprintf(stderr, "\n");
-    fprintf(stderr, "The exception port may be passed in as an argument, "
-            "as PA_HND(PA_USER0, 0).  (Note that the port key value must "
-            "match the one used by crashlogger.)\n");
+    fprintf(stderr, "The task to monitor must be passed as PA_HND(PA_USER0, 0).\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "The exception port may be passed in as an argument,\n"
+            "as PA_HND(PA_USER0, 1). The port must be bound to the provided task's\n"
+            "exception port. (Note that the port key value must match the one used\n"
+            "by crashlogger.)\n");
 }
 
 int main(int argc, char** argv) {
@@ -514,13 +513,19 @@ int main(int argc, char** argv) {
         inspector_dso_free_list(dso_list);
     }
 
+    subject = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+    if (subject == ZX_HANDLE_INVALID) {
+        fprintf(stderr, "error: unable to find a task to monitor in PA_USER0.\n");
+        return 1;
+    }
+
     // If asked, undo any previously installed exception port.
     // This is useful if the system gets in a state where we want to replace
     // an existing crashlogger with this one.
     if (force) {
-        status = unbind_system_exception_port();
+        status = unbind_subject_exception_port();
         if (status != ZX_OK) {
-            print_zx_error("unable to unbind system exception port", status);
+            print_zx_error("unable to unbind subject exception port", status);
             return 1;
         }
     }
@@ -561,17 +566,17 @@ int main(int argc, char** argv) {
     }
 
     // The exception port may be passed in from the parent process.  If it
-    // wasn't, we bind the system exception port.
-    zx_handle_t ex_port = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+    // wasn't, we bind the subject exception port.
+    zx_handle_t ex_port = zx_get_startup_handle(PA_HND(PA_USER0, 1));
     if (ex_port == ZX_HANDLE_INVALID) {
         if ((status = zx_port_create(0, &ex_port)) < 0) {
             print_zx_error("zx_port_create failed", status);
             return 1;
         }
 
-        status = bind_system_exception_port(ex_port);
+        status = bind_subject_exception_port(ex_port);
         if (status < 0) {
-            print_zx_error("unable to bind system exception port", status);
+            print_zx_error("unable to bind subject exception port", status);
             return 1;
         }
     }

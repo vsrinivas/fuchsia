@@ -200,10 +200,11 @@ int service_starter(void* arg) {
         // This should match the value used by crashlogger.
         const uint64_t kSysExceptionKey = 1166444u;
         if (zx_port_create(0, &exception_port) == ZX_OK &&
-            zx_task_bind_exception_port(ZX_HANDLE_INVALID, exception_port,
+            zx_task_bind_exception_port(root_job_handle, exception_port,
                                         kSysExceptionKey, 0) == ZX_OK) {
-            zx_handle_t handles[] = { exception_port };
-            uint32_t handle_types[] = { PA_HND(PA_USER0, 0) };
+            zx_handle_t handles[] = { ZX_HANDLE_INVALID, exception_port };
+            zx_handle_duplicate(root_job_handle, ZX_RIGHT_SAME_RIGHTS, &handles[0]);
+            uint32_t handle_types[] = { PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1) };
 
             devmgr_launch(svcs_job_handle, "crashlogger",
                           argc_crashlogger, argv_crashlogger,

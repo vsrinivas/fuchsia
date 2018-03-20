@@ -41,15 +41,6 @@ static fbl::RefPtr<JobDispatcher> root_job;
 // not a Dispatcher, just a plain class.
 static PolicyManager* policy_manager;
 
-zx_status_t SetSystemExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
-    DEBUG_ASSERT(eport->type() == ExceptionPort::Type::JOB);
-    return root_job->SetExceptionPort(fbl::move(eport));
-}
-
-bool ResetSystemExceptionPort() {
-    return root_job->ResetExceptionPort(false /* quietly */);
-}
-
 fbl::RefPtr<JobDispatcher> GetRootJobDispatcher() {
     return root_job;
 }

@@ -108,8 +108,9 @@ bool test_crash(const char* crash_arg) {
     launchpad_clone(crasher_lp, LP_CLONE_ALL);
     launchpad_set_args(crashlogger_lp, static_cast<int>(fbl::count_of(crashlogger_argv)),
                        crashlogger_argv);
-    zx_handle_t handles[] = { exception_port };
-    uint32_t handle_types[] = { PA_HND(PA_USER0, 0) };
+    zx_handle_t handles[] = { ZX_HANDLE_INVALID, exception_port };
+    zx_handle_duplicate(crasher_proc, ZX_RIGHT_SAME_RIGHTS, &handles[0]);
+    uint32_t handle_types[] = { PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1) };
     launchpad_add_handles(crashlogger_lp, fbl::count_of(handles), handles,
                           handle_types);
     int pipe_fd;

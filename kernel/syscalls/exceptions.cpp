@@ -24,16 +24,6 @@
 
 static zx_status_t object_unbind_exception_port(zx_handle_t obj_handle, bool debugger, bool quietly) {
     // TODO(ZX-968): check rights once appropriate right is determined
-
-    if (obj_handle == ZX_HANDLE_INVALID) {
-        // TODO(ZX-987): handle for system exception
-        if (debugger || quietly)
-            return ZX_ERR_INVALID_ARGS;
-        return ResetSystemExceptionPort()
-                   ? ZX_OK
-                   : ZX_ERR_BAD_STATE;  // No port was bound.
-    }
-
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<Dispatcher> dispatcher;
@@ -78,24 +68,12 @@ static zx_status_t task_bind_exception_port(zx_handle_t obj_handle, zx_handle_t 
     if (status != ZX_OK)
         return status;
 
-    fbl::RefPtr<ExceptionPort> eport;
-
-    if (obj_handle == ZX_HANDLE_INVALID) {
-        // TODO(ZX-987): handle for system exception
-        if (debugger)
-            return ZX_ERR_INVALID_ARGS;
-        status = ExceptionPort::Create(ExceptionPort::Type::JOB,
-                                       fbl::move(port), key, &eport);
-        if (status != ZX_OK)
-            return status;
-
-        return SetSystemExceptionPort(eport);
-    }
-
     fbl::RefPtr<Dispatcher> dispatcher;
     status = up->GetDispatcher(obj_handle, &dispatcher);
     if (status != ZX_OK)
         return status;
+
+    fbl::RefPtr<ExceptionPort> eport;
 
     auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
     if (job) {

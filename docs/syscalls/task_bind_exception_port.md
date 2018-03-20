@@ -17,9 +17,7 @@ zx_status_t zx_task_bind_exception_port(zx_handle_t object, zx_handle_t eport,
 ## DESCRIPTION
 
 **task_bind_exception_port**() is used to bind (or unbind) a port to
-the exception port of a job, process, thread, or the system exception port.
-
-To bind to the system exception port pass **ZX_HANDLE_INVALID** for *object*.
+the exception port of a job, process, or thread.
 
 *eport* is an IO port created by [zx_port_create](port_create.md). The same
 IO port can be bound to multiple objects.
@@ -35,9 +33,6 @@ in exception processing. See below for how exceptions are processed.
 To unbind from an exception port pass **ZX_HANDLE_INVALID** for *eport*.
 This will remove the exception port from *object* and *eport* will no
 longer participate in exception processing for *object*.
-
-To unbind from the system exception port pass **ZX_HANDLE_INVALID** for
-*object*.
 
 The exception port will unbind automatically if all handles to *eport*
 are closed while it is still bound.
@@ -64,10 +59,8 @@ In the event of failure, a negative error value is returned.
 ## ERRORS
 
 **ZX_ERR_BAD_HANDLE** *object* is not a valid handle,
-or *eport* is not a valid handle. Note that when binding/unbinding
-to the system exception port *object* is **ZX_HANDLE_INVALID**.
-Also note that when unbinding from an exception port *eport* is
-**ZX_HANDLE_INVALID**.
+or *eport* is not a valid handle. Note that when unbinding from an exception
+port *eport* is **ZX_HANDLE_INVALID**.
 
 **ZX_ERR_WRONG_TYPE**  *object* is not that of a job, process, or thread,
 and is not **ZX_HANDLE_INVALID**,

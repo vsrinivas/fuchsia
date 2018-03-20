@@ -323,13 +323,6 @@ zx_handle_t tu_io_port_create(void)
     return handle;
 }
 
-void tu_set_system_exception_port(zx_handle_t eport, uint64_t key)
-{
-    zx_status_t status = zx_task_bind_exception_port(0, eport, key, 0);
-    if (status < 0)
-        tu_fatal(__func__, status);
-}
-
 void tu_set_exception_port(zx_handle_t handle, zx_handle_t eport, uint64_t key, uint32_t options)
 {
     if (handle == 0)

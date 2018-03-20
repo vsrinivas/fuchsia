@@ -151,10 +151,6 @@ zx_handle_t tu_job_create(zx_handle_t job);
 
 zx_handle_t tu_io_port_create(void);
 
-// Set the system exception port.
-
-void tu_set_system_exception_port(zx_handle_t eport, uint64_t key);
-
 // Set the exception port for |handle| which is a process or thread.
 
 void tu_set_exception_port(zx_handle_t handle, zx_handle_t eport, uint64_t key, uint32_t options);
