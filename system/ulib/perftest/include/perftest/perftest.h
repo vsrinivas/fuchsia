@@ -71,6 +71,15 @@ typedef bool SimpleTestFunc();
 
 void RegisterTest(const char* name, fbl::Function<TestFunc> test_func);
 
+// Convenience routine for registering parameterized perf tests.
+template <typename Func, typename Arg, typename... Args>
+void RegisterTest(const char* name, Func test_func, Arg arg, Args... args) {
+    auto wrapper_func = [=](RepeatState* state) {
+        return test_func(state, arg, args...);
+    };
+    RegisterTest(name, wrapper_func);
+}
+
 // Convenience routine for registering a perf test that is specified by a
 // function.  This is for tests that don't set up any fixtures that are
 // shared across invocations of the function.
