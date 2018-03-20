@@ -8,6 +8,7 @@
 #include <fdio/namespace.h>
 #include <fdio/util.h>
 #include <launchpad/launchpad.h>
+#include <lib/async/default.h>
 #include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -78,7 +79,8 @@ std::string GetLabelFromURL(const std::string& url) {
   return url.substr(last_slash + 1);
 }
 
-void PushFileDescriptor(component::FileDescriptorPtr fd, int new_fd,
+void PushFileDescriptor(component::FileDescriptorPtr fd,
+                        int new_fd,
                         std::vector<uint32_t>* ids,
                         std::vector<zx_handle_t>* handles) {
   if (!fd)
@@ -208,7 +210,8 @@ JobHolder::JobHolder(JobHolder* parent,
     : parent_(parent),
       default_namespace_(
           fxl::MakeRefCounted<ApplicationNamespace>(nullptr, this, nullptr)),
-      info_dir_(fbl::AdoptRef(new fs::PseudoDir())) {
+      info_dir_(fbl::AdoptRef(new fs::PseudoDir())),
+      info_vfs_(async_get_default()) {
   // parent_ is null if this is the root application environment. if so, we
   // derive from the application manager's job.
   zx_handle_t parent_job =
@@ -232,6 +235,24 @@ JobHolder::JobHolder(JobHolder* parent,
 
 JobHolder::~JobHolder() {
   job_.kill();
+}
+
+zx::channel JobHolder::OpenRootInfoDir() {
+  JobHolder* root_job_holder = this;
+  while (root_job_holder->parent() != nullptr) {
+    root_job_holder = root_job_holder->parent();
+  }
+
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) < 0) {
+    return zx::channel();
+  }
+
+  if (info_vfs_.ServeDirectory(root_job_holder->info_dir(), std::move(h1)) !=
+      ZX_OK) {
+    return zx::channel();
+  }
+  return h2;
 }
 
 void JobHolder::CreateNestedJob(
@@ -270,10 +291,9 @@ void JobHolder::CreateApplication(
   // launch_info is moved before LoadApplication() gets at its first argument.
   f1dl::StringPtr url = launch_info->url;
   loader_->LoadApplication(
-      url, fxl::MakeCopyable([
-        this, launch_info = std::move(launch_info),
-        controller = std::move(controller)
-      ](ApplicationPackagePtr package) mutable {
+      url, fxl::MakeCopyable([this, launch_info = std::move(launch_info),
+                              controller = std::move(controller)](
+                                 ApplicationPackagePtr package) mutable {
         fxl::RefPtr<ApplicationNamespace> application_namespace =
             default_namespace_;
         if (!launch_info->additional_services.is_null()) {
@@ -446,7 +466,7 @@ void JobHolder::CreateApplicationFromPackage(
     if (sandbox.HasFeature("shell"))
       loader_service.reset();
 
-    builder.AddSandbox(sandbox);
+    builder.AddSandbox(sandbox, [this] { return OpenRootInfoDir(); });
   }
 
   // Add the custom namespace.

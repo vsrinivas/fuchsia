@@ -45,7 +45,9 @@ void NamespaceBuilder::AddServices(zx::channel services) {
   PushDirectoryFromChannel("/svc", std::move(services));
 }
 
-void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
+void NamespaceBuilder::AddSandbox(
+    const SandboxMetadata& sandbox,
+    const HubDirectoryFactory& hub_directory_factory) {
   for (const auto& path : sandbox.dev()) {
     if (path == "class") {
       FXL_LOG(WARNING) << "Ignoring request for all device classes";
@@ -75,6 +77,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox) {
       PushDirectoryFromPath("/boot");
       PushDirectoryFromPath("/data");
       PushDirectoryFromPath("/dev");
+      PushDirectoryFromChannel("/hub", hub_directory_factory());
       PushDirectoryFromPath("/install");
       PushDirectoryFromPath("/pkgfs");
       PushDirectoryFromPath("/system");

@@ -5,6 +5,9 @@
 #ifndef GARNET_BIN_APPMGR_JOB_HOLDER_H_
 #define GARNET_BIN_APPMGR_JOB_HOLDER_H_
 
+#include <fs/managed-vfs.h>
+#include <zx/channel.h>
+
 #include <iosfwd>
 #include <memory>
 #include <string>
@@ -22,8 +25,6 @@
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 namespace component {
-
-class NamespaceBuilder;
 
 class JobHolder {
  public:
@@ -79,6 +80,8 @@ class JobHolder {
       f1dl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<ApplicationNamespace> application_namespace);
 
+  zx::channel OpenRootInfoDir();
+
   JobHolder* const parent_;
   ApplicationLoaderPtr loader_;
   std::string label_;
@@ -91,6 +94,7 @@ class JobHolder {
   // A pseudo-directory which describes the components within the scope of
   // this job.
   fbl::RefPtr<fs::PseudoDir> info_dir_;
+  fs::ManagedVfs info_vfs_;
 
   std::unordered_map<JobHolder*,
                      std::unique_ptr<ApplicationEnvironmentControllerImpl>>

@@ -5,13 +5,14 @@
 #ifndef GARNET_BIN_APPMGR_NAMESPACE_BUILDER_H_
 #define GARNET_BIN_APPMGR_NAMESPACE_BUILDER_H_
 
-#include <zx/channel.h>
 #include <fdio/namespace.h>
+#include <zx/channel.h>
 
 #include <vector>
 
-#include "lib/app/fidl/flat_namespace.fidl.h"
+#include "garnet/bin/appmgr/job_holder.h"
 #include "garnet/bin/appmgr/sandbox_metadata.h"
+#include "lib/app/fidl/flat_namespace.fidl.h"
 #include "lib/fxl/macros.h"
 
 namespace component {
@@ -25,7 +26,11 @@ class NamespaceBuilder {
   void AddPackage(zx::channel package);
   void AddDirectoryIfNotPresent(const std::string& path, zx::channel directory);
   void AddServices(zx::channel services);
-  void AddSandbox(const SandboxMetadata& sandbox);
+
+  // A factory function that returns a new directory that /hub points to.
+  using HubDirectoryFactory = std::function<zx::channel()>;
+  void AddSandbox(const SandboxMetadata& sandbox,
+                  const HubDirectoryFactory& hub_directory_factory);
 
   // This function grants access to a number of directories to processes that
   // lack a sandbox policy. Once every application has a proper sandbox policy
@@ -50,8 +55,7 @@ class NamespaceBuilder {
 
  private:
   void PushDirectoryFromPath(std::string path);
-  void PushDirectoryFromPathAs(std::string src_path,
-                               std::string dst_path);
+  void PushDirectoryFromPathAs(std::string src_path, std::string dst_path);
   void PushDirectoryFromPathIfNotPresent(std::string path);
   void PushDirectoryFromChannel(std::string path, zx::channel channel);
   void Release();
