@@ -1,6 +1,6 @@
 {
     "imports": [
-        "garnet/packages/prod/image-pipe-swapchain"
+        "garnet/packages/prod/image_pipe_swapchain"
     ],
     "packages": {
         "image-pipe-swapchain-tests": "//garnet/lib/vulkan:image-pipe-swapchain-tests"

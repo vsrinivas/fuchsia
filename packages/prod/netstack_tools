@@ -1,11 +1,12 @@
 {
     "languages": [
-        "cpp"
+        "cpp",
+        "go"
     ],
     "imports": [
         "garnet/packages/prod/netstack"
     ],
     "packages": {
-        "network": "//garnet/bin/network"
+        "netstack_tools": "//garnet/go/src/netstack:netstack_tools"
     }
 }

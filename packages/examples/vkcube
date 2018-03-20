@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "magma": "//garnet/lib/magma"
+        "vkcube" : "//garnet/lib/magma:vkcube"
     }
 }

@@ -3,13 +3,11 @@
         "cpp"
     ],
     "imports": [
-        "garnet/packages/prod/tracing",
         "garnet/packages/prod/vulkan"
     ],
     "packages": {
         "ime_service": "//garnet/bin/ui:ime_service",
         "scenic": "//garnet/bin/ui:scenic",
-        "scenic_tools": "//garnet/bin/ui:scenic_tools",
         "root_presenter": "//garnet/bin/ui:root_presenter",
         "view_manager": "//garnet/bin/ui:view_manager"
     }

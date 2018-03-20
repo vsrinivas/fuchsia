@@ -2,6 +2,10 @@
     "languages": [
         "cpp"
     ],
+    "imports": [
+        "garnet/packages/prod/sbase",
+        "garnet/packages/prod/vim"
+    ],
     "packages": {
         "cowsay": "//garnet/bin/cowsay",
         "sysinfo": "//garnet/bin/sysinfo",

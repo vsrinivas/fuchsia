@@ -11,6 +11,9 @@
         "garnet/packages/examples/netstack",
         "garnet/packages/examples/network",
         "garnet/packages/examples/rust",
-        "garnet/packages/examples/scenic"
+        "garnet/packages/examples/scenic",
+        "garnet/packages/examples/vkcube",
+        "garnet/packages/examples/vkcube_image_pipe_swapchain",
+        "garnet/packages/examples/vulkaninfo"
     ]
 }

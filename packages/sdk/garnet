@@ -1,5 +1,5 @@
 {
-  "labels": [
-    "//garnet/public/sdk:garnet"
-  ]
+    "labels": [
+        "//garnet/public/sdk:garnet"
+    ]
 }

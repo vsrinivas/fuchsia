@@ -2,16 +2,6 @@
     "languages": [
         "cpp"
     ],
-    "imports": [
-        "garnet/packages/prod/boringssl_libssl",
-        "garnet/packages/config/network",
-        "garnet/packages/products/installer-system",
-        "garnet/packages/prod/mdns_service",
-        "garnet/packages/prod/netconnector",
-        "garnet/packages/prod/netstack",
-        "garnet/packages/prod/network",
-        "garnet/packages/prod/runtime"
-    ],
     "packages": {
         "cobalt": "//garnet/bin/cobalt:cobalt",
         "cobalt_system_metrics": "//garnet/bin/cobalt:cobalt_system_metrics"

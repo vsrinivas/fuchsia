@@ -3,7 +3,7 @@
         "cpp"
     ],
     "imports": [
-      "garnet/packages/prod/icu_data"
+        "garnet/packages/prod/icu_data"
     ],
     "packages": {
         "time_service": "//garnet/bin/time_service:time_service"

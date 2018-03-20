@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "far": "//garnet/bin/far"
+    },
+    "labels": [
+        "//garnet/bin/far:host"
+    ]
+}

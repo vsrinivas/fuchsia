@@ -1,0 +1,6 @@
+{
+    "imports": [
+        "garnet/packages/products/sshd",
+        "garnet/packages/prod/scenic"
+    ]
+}

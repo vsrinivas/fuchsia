@@ -1,6 +1,5 @@
 {
     "languages": [
-        "cpp",
         "go"
     ],
     "packages": {

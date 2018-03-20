@@ -19,7 +19,7 @@
         "garnet/packages/tests/go_merkle_tests",
         "garnet/packages/tests/go_stdlib_tests",
         "garnet/packages/tests/guest",
-        "garnet/packages/tests/image-pipe-swapchain",
+        "garnet/packages/tests/image_pipe_swapchain",
         "garnet/packages/tests/lib",
         "garnet/packages/tests/libc",
         "garnet/packages/tests/logger",

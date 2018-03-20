@@ -3,7 +3,6 @@
         "cpp"
     ],
     "labels": [
-        "//garnet/bin/insntrace",
         "//garnet/bin/insntrace:host_insntrace_print"
     ],
     "packages": {

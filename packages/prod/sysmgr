@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "magma": "//garnet/lib/magma"
+        "sysmgr": "//garnet/bin/sysmgr"
     }
 }

@@ -7,7 +7,7 @@
         "garnet/packages/experimental/linux_guest",
         "garnet/packages/experimental/zircon_guest",
         "garnet/packages/prod/guest_tool",
-        "garnet/packages/prod/pmd",
+        "garnet/packages/prod/pkgsvr",
         "garnet/packages/prod/runtime"
     ]
 }
