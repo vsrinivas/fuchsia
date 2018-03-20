@@ -113,8 +113,17 @@ static bool basic_test(void) {
         ASSERT_EQ(n[0], 11u + i, "");
     }
 
+    // write and then close, verify we can read written entries before
+    // receiving ZX_ERR_PEER_CLOSED.
+    n[0] = 19u;
+    ASSERT_EQ(zx_fifo_write(b, n, sizeof(n[0]), &actual), ZX_OK, "");
+    ASSERT_EQ(actual, 1u, "");
     zx_handle_close(b);
+    EXPECT_SIGNALS(a, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED);
+    ASSERT_EQ(zx_fifo_read(a, n, sizeof(n), &actual), ZX_OK, "");
+    ASSERT_EQ(actual, 1u, "");
     EXPECT_SIGNALS(a, ZX_FIFO_PEER_CLOSED);
+    ASSERT_EQ(zx_fifo_read(a, n, sizeof(n), &actual), ZX_ERR_PEER_CLOSED, "");
 
     zx_handle_close(a);
 

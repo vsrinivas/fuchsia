@@ -204,7 +204,7 @@ zx_status_t FifoDispatcher::ReadToUser(user_out_ptr<uint8_t> ptr, size_t bytelen
     size_t avail = (head_ - tail_);
 
     if (avail == 0)
-        return ZX_ERR_SHOULD_WAIT;
+        return peer_ ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
 
     bool was_full = (avail == elem_count_);
 
