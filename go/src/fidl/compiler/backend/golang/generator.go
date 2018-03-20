@@ -7,26 +7,31 @@
 package golang
 
 import (
+	"bytes"
 	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/golang/ir"
 	"fidl/compiler/backend/golang/templates"
 	"fidl/compiler/backend/types"
-	"os"
+	"go/format"
+	"io/ioutil"
 	"text/template"
 )
 
 type FidlGenerator struct{}
 
-func writeFile(outputFilename string,
-	templateName string,
-	tmpls *template.Template,
-	tree ir.Root) error {
-	f, err := os.Create(outputFilename)
-	if err != nil {
+func writeGoFile(filename string, tmpl *template.Template, tree ir.Root) error {
+	buf := new(bytes.Buffer)
+	if err := tmpl.Execute(buf, tree); err != nil {
 		return err
 	}
-	defer f.Close()
-	return tmpls.ExecuteTemplate(f, templateName, tree)
+	data, err := format.Source(buf.Bytes())
+	if err != nil {
+		// Write the unformatted source, so the user has something
+		// to compare to the line number in the error message.
+		ioutil.WriteFile(filename, buf.Bytes(), 0666)
+		return err
+	}
+	return ioutil.WriteFile(filename, data, 0666)
 }
 
 func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
@@ -41,5 +46,5 @@ func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error
 	template.Must(tmpls.Parse(templates.Struct))
 
 	libraryPath := config.FidlStem + ".go"
-	return writeFile(libraryPath, "GenerateLibraryFile", tmpls, tree)
+	return writeGoFile(libraryPath, tmpls.Lookup("GenerateLibraryFile"), tree)
 }
