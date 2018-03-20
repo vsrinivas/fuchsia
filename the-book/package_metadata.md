@@ -122,7 +122,11 @@ The set of currently known features are as follows:
 
 - `shell`, which requests access to the resources appropriate for an interactive
   command line. Typically, shells are granted access to all the resources
-  available in the current environment.
+  available in the current environment. Currently, when a package requests the
+  `shell` feature, the package loads shared libraries from `/system/lib` instead
+  of from its own package. This behavior will probably change over time, but we
+  do this currently so that programs that are run from the shell can find their
+  shared libraries.
 
 - `system-temp`, which requests access to the system temp directory, located at
   `/tmp` in the package's namespace. (Future work will likely remove access to
