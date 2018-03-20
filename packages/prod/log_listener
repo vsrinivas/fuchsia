@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "rust"
+    ],
+    "packages": {
+        "log_listener": "//garnet/bin/log_listener:log_listener"
+    }
+}

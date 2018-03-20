@@ -1,0 +1,11 @@
+{
+    "languages": [
+        "rust"
+    ],
+    "imports": [
+        "garnet/packages/prod/log_listener"
+    ],
+    "packages": {
+        "log_listener_tests": "//garnet/bin/log_listener:log_listener_tests"
+    }
+}

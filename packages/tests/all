@@ -22,6 +22,7 @@
         "garnet/packages/tests/image_pipe_swapchain",
         "garnet/packages/tests/lib",
         "garnet/packages/tests/libc",
+        "garnet/packages/tests/log_listener",
         "garnet/packages/tests/logger",
         "garnet/packages/tests/magma_non_hardware",
         "garnet/packages/tests/media",

@@ -827,6 +827,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "log_listener"
+version = "0.1.0"
+dependencies = [
+ "fidl 0.1.0",
+ "garnet_public_lib_logger_fidl 0.1.0",
+]
+
+[[package]]
 name = "logger"
 version = "0.1.0"
 dependencies = [
