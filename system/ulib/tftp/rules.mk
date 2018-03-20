@@ -23,7 +23,7 @@ MODULE := $(LOCAL_DIR).test
 
 MODULE_TYPE := usertest
 
-MODULE_SRCS := $(LOCAL_DIR)/tftp-test.cpp $(LOCAL_DIR)/tftp-file-test.c
+MODULE_SRCS := $(LOCAL_DIR)/tftp-test.cpp $(LOCAL_DIR)/tftp-file-test.cpp
 
 MODULE_NAME := tftp-test
 

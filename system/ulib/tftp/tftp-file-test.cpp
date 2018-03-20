@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/atomic.h>
 #include <tftp/tftp.h>
 #include <unittest/unittest.h>
 
@@ -36,8 +37,8 @@ typedef struct {
 
 // Allocate our src and dst buffers, filling both with random values.
 int initialize_files(struct test_params* tp) {
-    src_file = malloc(tp->filesz);
-    dst_file = malloc(tp->filesz);
+    src_file = reinterpret_cast<uint8_t*>(malloc(tp->filesz));
+    dst_file = reinterpret_cast<uint8_t*>(malloc(tp->filesz));
 
     if (!src_file || !dst_file) {
         return 1;
@@ -55,8 +56,8 @@ int initialize_files(struct test_params* tp) {
     for (ndx = (tp->filesz / sizeof(int)) * sizeof(int);
          ndx < tp->filesz;
          ndx++) {
-        src_file[ndx] = rand();
-        dst_file[ndx] = rand();
+        src_file[ndx] = static_cast<uint8_t>(rand());
+        dst_file[ndx] = static_cast<uint8_t>(rand());
     }
 
     return 0;
@@ -71,7 +72,7 @@ const char* file_get_filename(file_info_t* file_info) {
 }
 
 ssize_t file_open_read(const char* filename, void* file_cookie) {
-    file_info_t* file_info = file_cookie;
+    auto* file_info = reinterpret_cast<file_info_t*>(file_cookie);
     file_info->buf = src_file;
     strncpy(file_info->filename, filename, PATH_MAX);
     file_info->filename[PATH_MAX] = '\0';
@@ -81,7 +82,7 @@ ssize_t file_open_read(const char* filename, void* file_cookie) {
 tftp_status file_open_write(const char* filename,
                             size_t size,
                             void* file_cookie) {
-    file_info_t* file_info = file_cookie;
+    auto* file_info = reinterpret_cast<file_info_t*>(file_cookie);
     file_info->buf = dst_file;
     file_info->filename[PATH_MAX] = '\0';
     strncpy(file_info->filename, filename, PATH_MAX);
@@ -94,7 +95,7 @@ tftp_status file_open_write(const char* filename,
 
 tftp_status file_read(void* data, size_t* length, off_t offset,
                       void* file_cookie) {
-    file_info_t* file_info = file_cookie;
+    auto* file_info = reinterpret_cast<file_info_t*>(file_cookie);
     if ((size_t)offset > file_info->filesz) {
         // Something has gone wrong in libtftp
         return TFTP_ERR_INTERNAL;
@@ -116,7 +117,7 @@ tftp_status file_read(void* data, size_t* length, off_t offset,
 
 tftp_status file_write(const void* data, size_t* length, off_t offset,
                        void* file_cookie) {
-    file_info_t* file_info = file_cookie;
+    auto* file_info = reinterpret_cast<file_info_t*>(file_cookie);
     if (((size_t)offset > file_info->filesz) || ((offset + *length) > file_info->filesz)) {
         // Something has gone wrong in libtftp
         return TFTP_ERR_INTERNAL;
@@ -137,12 +138,12 @@ void file_close(void* file_cookie) {
 #define FAKE_SOCK_BUF_SZ 65536
 typedef struct {
     uint8_t buf[FAKE_SOCK_BUF_SZ];
-    size_t size;
-    _Atomic size_t read_ndx;
-    _Atomic size_t write_ndx;
+    size_t size = FAKE_SOCK_BUF_SZ;
+    fbl::atomic<size_t> read_ndx;
+    fbl::atomic<size_t> write_ndx;
 } fake_socket_t;
-static fake_socket_t client_out_socket = { .size = FAKE_SOCK_BUF_SZ };
-static fake_socket_t server_out_socket = { .size = FAKE_SOCK_BUF_SZ };
+static fake_socket_t client_out_socket;
+static fake_socket_t server_out_socket;
 
 typedef struct {
     fake_socket_t* in_sock;
@@ -150,10 +151,10 @@ typedef struct {
 } transport_info_t;
 
 void clear_sockets(void) {
-    client_out_socket.read_ndx = 0;
-    client_out_socket.write_ndx = 0;
-    server_out_socket.read_ndx = 0;
-    server_out_socket.write_ndx = 0;
+    client_out_socket.read_ndx.store(0);
+    client_out_socket.write_ndx.store(0);
+    server_out_socket.read_ndx.store(0);
+    server_out_socket.write_ndx.store(0);
 }
 
 // Initialize "sockets" for either client or server.
@@ -169,9 +170,9 @@ void transport_init(transport_info_t* transport_info, bool is_server) {
 
 // Write to our circular message buffer.
 void write_to_buf(fake_socket_t* sock, void* data, size_t size) {
-    uint8_t* in_buf = data;
+    uint8_t* in_buf = reinterpret_cast<uint8_t*>(data);
     uint8_t* out_buf = sock->buf;
-    size_t curr_offset = sock->write_ndx % sock->size;
+    size_t curr_offset = sock->write_ndx.load() % sock->size;
     if (curr_offset + size <= sock->size) {
         memcpy(&out_buf[curr_offset], in_buf, size);
     } else {
@@ -180,15 +181,15 @@ void write_to_buf(fake_socket_t* sock, void* data, size_t size) {
         memcpy(out_buf + curr_offset, in_buf, first_size);
         memcpy(out_buf, in_buf + first_size, second_size);
     }
-    sock->write_ndx += size;
+    sock->write_ndx.fetch_add(size);
 }
 
 // Send a message. Note that the buffer's read_ndx and write_ndx don't wrap,
 // which makes it easier to recognize underflow.
 tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
-    transport_info_t* transport_info = transport_cookie;
+    auto* transport_info = reinterpret_cast<transport_info_t*>(transport_cookie);
     fake_socket_t* sock = transport_info->out_sock;
-    while ((sock->write_ndx + sizeof(len) + len - sock->read_ndx)
+    while ((sock->write_ndx.load() + sizeof(len) + len - sock->read_ndx.load())
            > sock->size) {
         // Wait for the other thread to catch up
         usleep(10);
@@ -203,8 +204,8 @@ tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
 void read_from_buf(fake_socket_t* sock, void* data, size_t size,
                    bool move_ptr) {
     uint8_t* in_buf = sock->buf;
-    uint8_t* out_buf = data;
-    size_t curr_offset = sock->read_ndx % sock->size;
+    uint8_t* out_buf = reinterpret_cast<uint8_t*>(data);
+    size_t curr_offset = sock->read_ndx.load() % sock->size;
     if (curr_offset + size <= sock->size) {
         memcpy(out_buf, &in_buf[curr_offset], size);
     } else {
@@ -214,21 +215,21 @@ void read_from_buf(fake_socket_t* sock, void* data, size_t size,
         memcpy(out_buf + first_size, in_buf, second_size);
     }
     if (move_ptr) {
-        sock->read_ndx += size;
+        sock->read_ndx.fetch_add(size);
     }
 }
 
 // Receive a message. Note that the buffer's read_ndx and write_ndx don't
 // wrap, which makes it easier to recognize underflow.
 int transport_recv(void* data, size_t len, bool block, void* transport_cookie) {
-    transport_info_t* transport_info = transport_cookie;
+    auto* transport_info = reinterpret_cast<transport_info_t*>(transport_cookie);
     if (block) {
-        while ((transport_info->in_sock->read_ndx + sizeof(size_t)) >=
-               transport_info->in_sock->write_ndx) {
+        while ((transport_info->in_sock->read_ndx.load() + sizeof(size_t)) >=
+               transport_info->in_sock->write_ndx.load()) {
             usleep(10);
         }
-    } else if ((transport_info->in_sock->read_ndx + sizeof(size_t)) >=
-               transport_info->in_sock->write_ndx) {
+    } else if ((transport_info->in_sock->read_ndx.load() + sizeof(size_t)) >=
+               transport_info->in_sock->write_ndx.load()) {
         return TFTP_ERR_TIMED_OUT;
     }
     size_t block_len;
@@ -237,9 +238,9 @@ int transport_recv(void* data, size_t len, bool block, void* transport_cookie) {
     if (block_len > len) {
         return TFTP_ERR_BUFFER_TOO_SMALL;
     }
-    transport_info->in_sock->read_ndx += sizeof(block_len);
+    transport_info->in_sock->read_ndx.fetch_add(sizeof(block_len));
     read_from_buf(transport_info->in_sock, data, block_len, true);
-    return block_len;
+    return static_cast<int>(block_len);
 }
 
 int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
@@ -255,7 +256,7 @@ bool run_client_test(struct test_params* tp) {
     tftp_session* session;
     size_t session_size = tftp_sizeof_session();
     void* session_buf = malloc(session_size);
-    ASSERT_NE(session_buf, NULL, "memory allocation failed");
+    ASSERT_NONNULL(session_buf, "memory allocation failed");
 
     tftp_status status = tftp_init(&session, session_buf, session_size);
     ASSERT_EQ(status, TFTP_NO_ERROR, "unable to initialize a tftp session");
@@ -285,22 +286,23 @@ bool run_client_test(struct test_params* tp) {
     // Allocate intermediate buffers
     size_t buf_sz = tp->blksz > PATH_MAX ?
                     tp->blksz + 2 : PATH_MAX + 2;
-    char* msg_in_buf = malloc(buf_sz);
-    ASSERT_NE(msg_in_buf, NULL, "memory allocation failure");
-    char* msg_out_buf = malloc(buf_sz);
-    ASSERT_NE(msg_out_buf, NULL, "memory allocation failure");
+    char* msg_in_buf = reinterpret_cast<char*>(malloc(buf_sz));
+    ASSERT_NONNULL(msg_in_buf, "memory allocation failure");
+    char* msg_out_buf = reinterpret_cast<char*>(malloc(buf_sz));
+    ASSERT_NONNULL(msg_out_buf, "memory allocation failure");
 
     char err_msg_buf[128];
 
     // Set our preferred transport options
     tftp_set_options(session, &tp->blksz, NULL, &tp->winsz);
 
-    tftp_request_opts opts = { .inbuf = msg_in_buf,
-                               .inbuf_sz = buf_sz,
-                               .outbuf = msg_out_buf,
-                               .outbuf_sz = buf_sz,
-                               .err_msg = err_msg_buf,
-                               .err_msg_sz = sizeof(err_msg_buf) };
+    tftp_request_opts opts = {};
+    opts.inbuf = msg_in_buf;
+    opts.inbuf_sz = buf_sz;
+    opts.outbuf = msg_out_buf;
+    opts.outbuf_sz = buf_sz;
+    opts.err_msg = err_msg_buf;
+    opts.err_msg_sz = sizeof(err_msg_buf);
 
     if (tp->direction == DIR_SEND) {
         status = tftp_push_file(session, &transport_info, &file_info, "abc.txt",
@@ -317,7 +319,7 @@ bool run_client_test(struct test_params* tp) {
 }
 
 void* tftp_client_main(void* arg) {
-    struct test_params* tp = arg;
+    auto* tp = reinterpret_cast<test_params*>(arg);
     run_client_test(tp);
     pthread_exit(NULL);
 }
@@ -331,7 +333,7 @@ bool run_server_test(struct test_params* tp) {
     tftp_session* session;
     size_t session_size = tftp_sizeof_session();
     void* session_buf = malloc(session_size);
-    ASSERT_NE(session_buf, NULL, "memory allocation failed");
+    ASSERT_NONNULL(session_buf, "memory allocation failed");
 
     tftp_status status = tftp_init(&session, session_buf, session_size);
     ASSERT_EQ(status, TFTP_NO_ERROR, "unable to initiate a tftp session");
@@ -360,10 +362,10 @@ bool run_server_test(struct test_params* tp) {
     // Allocate intermediate buffers
     size_t buf_sz = tp->blksz > PATH_MAX ?
                     tp->blksz + 2 : PATH_MAX + 2;
-    char* msg_in_buf = malloc(buf_sz);
-    ASSERT_NE(msg_in_buf, NULL, "memory allocation failure");
-    char* msg_out_buf = malloc(buf_sz);
-    ASSERT_NE(msg_out_buf, NULL, "memory allocation failure");
+    char* msg_in_buf = reinterpret_cast<char*>(malloc(buf_sz));
+    ASSERT_NONNULL(msg_in_buf, "memory allocation failure");
+    char* msg_out_buf = reinterpret_cast<char*>(malloc(buf_sz));
+    ASSERT_NONNULL(msg_out_buf, "memory allocation failure");
 
     char err_msg_buf[128];
     tftp_handler_opts opts = { .inbuf = msg_in_buf,
@@ -382,7 +384,7 @@ bool run_server_test(struct test_params* tp) {
 }
 
 void* tftp_server_main(void* arg) {
-    struct test_params* tp = arg;
+    auto* tp = reinterpret_cast<test_params*>(arg);
     run_server_test(tp);
     pthread_exit(NULL);
 }
