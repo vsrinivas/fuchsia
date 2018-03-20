@@ -360,8 +360,8 @@ zx_status_t Dispatcher::HandleEthPacket(const Packet* packet) {
         return ZX_ERR_IO;
     }
 
-    auto payload = packet->field<uint8_t>(sizeof(hdr));
-    size_t payload_len = packet->len() - sizeof(hdr);
+    auto payload = packet->field<uint8_t>(sizeof(EthernetII));
+    size_t payload_len = packet->len() - sizeof(EthernetII);
     auto frame = ImmutableBaseFrame<EthernetII>(hdr, payload, payload_len);
     return mlme_->HandleFrame(frame);
 }
