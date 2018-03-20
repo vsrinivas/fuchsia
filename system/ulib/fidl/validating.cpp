@@ -58,10 +58,10 @@ private:
     // Returns true when the buffer space is claimed, and false when
     // the requested claim is too large for bytes_.
     bool ClaimOutOfLineStorage(uint32_t size, uint32_t* out_offset) {
-        // Unlike the inline case, we have to manually maintain
-        // alignment here. For example, a pointer to a struct that is
-        // 4 bytes still needs to advance the next out-of-line offset
-        // by 8 to maintain the aligned-to-FIDL_ALIGNMENT property.
+        // We have to manually maintain alignment here. For example, a pointer
+        // to a struct that is 4 bytes still needs to advance the next
+        // out-of-line offset by 8 to maintain the aligned-to-FIDL_ALIGNMENT
+        // property.
         uint64_t aligned_offset = fidl::FidlAlign(out_of_line_offset_ + size);
         if (aligned_offset > static_cast<uint64_t>(num_bytes_)) {
             return false;
@@ -283,16 +283,7 @@ zx_status_t FidlValidator::ValidateMessage() {
         return WithError("Message size is smaller than expected");
     }
 
-    // Any type that calls into ClaimOutOfLineStorage will have a
-    // string, vector, struct pointer, or union pointer in the primary
-    // message struct. This will force the size of that struct to be a
-    // multiple of 8. Any type that does not have any out of line
-    // objects, and that has a size 4 modulo 8, would fail the check
-    // at the end that out_of_line_offset_ and num_bytes_ are the same
-    // if we rounded it. Thus we in fact do not want to round this up
-    // to FIDL_ALIGNMENT here, as it is already aligned enough when it
-    // needs to be.
-    out_of_line_offset_ = type_->coded_struct.size;
+    out_of_line_offset_ = static_cast<uint32_t>(fidl::FidlAlign(type_->coded_struct.size));
 
     Push(Frame::DoneSentinel());
     Push(Frame(type_, 0u));
