@@ -13,6 +13,8 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/platform-defs.h>
+#include <ddk/protocol/platform-device.h>
 
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/resource.h>
@@ -110,6 +112,9 @@ static zx_driver_ops_t cpu_trace_driver_ops = {
     .bind = cpu_trace_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(cpu_trace, cpu_trace_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
+ZIRCON_DRIVER_BEGIN(cpu_trace, cpu_trace_driver_ops, "zircon", "0.1", 4)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_INTEL),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_INTEL_CPU_TRACE),
 ZIRCON_DRIVER_END(cpu_trace)
