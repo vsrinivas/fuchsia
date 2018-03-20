@@ -345,6 +345,19 @@ somewhere earlier in the logging stream.  It should always be possible
 for the symbolizing filter to be implemented as a single pass over the
 raw logging stream, accumulating context and massaging text as it goes.
 
+* `{{{reset}}}`
+
+  This should be output before any other contextual element. The need
+  for this contextual element is to support implementations that handle
+  logs coming from multiple processes. Such implementations might not
+  know when a new process starts or ends. Because some identifying
+  information (like process IDs) might be the same between old and new
+  processes, a way is needed to distinguish two processes with such
+  identical identifying information. This element informs such
+  implementations to reset the state of a filter so that information
+  from a previous process's contextual elements is not assumed for new
+  process that just happens have the same identifying information.
+
 * `{{{module:%x:%s:...}}}`
 
   Here `%x` encodes an ELF Build ID (or equivalent unique identifier).
