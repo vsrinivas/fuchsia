@@ -1,9 +1,12 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 [package]
 name = "garnet_examples_fidl2_services_echo2"
 version = "0.1.0"
 license = "BSD-3-Clause"
-authors = ["Taylor Cramer <cramertj@google.com>"]
-description = "Generated interface"
+authors = ["rust-fuchsia@fuchsia.com"]
+description = "Generated FIDL interface"
 repository = "https://fuchsia.googlesource.com/garnet/"
 
 [dependencies]

@@ -1,0 +1,9 @@
+{
+  "public": [
+    {
+      "fidl_target": "//garnet/examples/fidl2/services:echo2",
+      "deps": []
+    }
+  ],
+  "private": []
+}

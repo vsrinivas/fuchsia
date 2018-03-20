@@ -7,12 +7,6 @@ import("//build/rust/toolchain.gni")
 
 rust_library("garnet_examples_fidl2_services_echo2") {
   deps = [
-    ":gen",
-  ]
-}
-
-group("gen") {
-  deps = [
     "//garnet/examples/fidl2/services:echo2($rust_toolchain)",
   ]
 }
