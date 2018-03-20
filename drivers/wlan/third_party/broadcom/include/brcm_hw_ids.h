@@ -28,6 +28,7 @@
 #define CY_USB_VENDOR_ID_CYPRESS 0x04b4
 #define BRCM_PCIE_VENDOR_ID_BROADCOM 0x14e4
 
+// TODO(cja): get these CLASS defs in a public ddk header
 #define PCI_CLASS_NETWORK (0x02)
 #define PCI_SUBCLASS_NETWORK_OTHER (0x80)
 #define PCI_D3hot (3)
