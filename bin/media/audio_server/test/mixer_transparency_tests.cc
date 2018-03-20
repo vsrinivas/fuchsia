@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
 #include "audio_analysis.h"
 #include "audio_result.h"
 #include "lib/fxl/logging.h"
@@ -321,9 +320,6 @@ TEST(PassThru, Output_16_Silence) {
 // those buffers (eliminating the need for FFT windowing). The reference
 // frequency below was specifically chosen as an approximation of a 1kHz tone,
 // assuming a 48kHz sample rate.
-constexpr uint32_t kNoiseFloorBufSize = 65536;
-constexpr uint32_t kReferenceFreq = 1363;  // 1kHz equivalent (65536/48000)
-
 template <typename T>
 double MeasureSourceNoiseFloor(double* magn_other_db) {
   audio::MixerPtr mixer;
@@ -341,23 +337,23 @@ double MeasureSourceNoiseFloor(double* magn_other_db) {
                                : std::numeric_limits<int16_t>::max();
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
-  std::vector<T> source(kNoiseFloorBufSize);
-  OverwriteCosine(source.data(), kNoiseFloorBufSize, kReferenceFreq, amplitude);
+  std::vector<T> source(kFreqTestBufSize);
+  OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                  amplitude);
 
-  std::vector<int32_t> accum(kNoiseFloorBufSize);
+  std::vector<int32_t> accum(kFreqTestBufSize);
   uint32_t dst_offset = 0;
   int32_t frac_src_offset = 0;
-  mixer->Mix(accum.data(), kNoiseFloorBufSize, &dst_offset, source.data(),
-             kNoiseFloorBufSize << audio::kPtsFractionalBits, &frac_src_offset,
+  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
+             kFreqTestBufSize << audio::kPtsFractionalBits, &frac_src_offset,
              media::audio::Mixer::FRAC_ONE, audio::Gain::kUnityScale, false);
-  EXPECT_EQ(kNoiseFloorBufSize, dst_offset);
-  EXPECT_EQ(
-      static_cast<int32_t>(kNoiseFloorBufSize << audio::kPtsFractionalBits),
-      frac_src_offset);
+  EXPECT_EQ(kFreqTestBufSize, dst_offset);
+  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << audio::kPtsFractionalBits),
+            frac_src_offset);
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;
-  MeasureAudioFreq(accum.data(), kNoiseFloorBufSize, kReferenceFreq,
+  MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_signal, &magn_other);
 
   // Calculate Signal-to-Noise-And-Distortion (SINAD)
@@ -409,16 +405,16 @@ double MeasureOutputNoiseFloor(double* magn_other_db) {
   const double amplitude = std::numeric_limits<int16_t>::max();
 
   // Populate accum buffer and output to destination buffer
-  std::vector<int32_t> accum(kNoiseFloorBufSize);
-  OverwriteCosine(accum.data(), kNoiseFloorBufSize, kReferenceFreq, amplitude);
+  std::vector<int32_t> accum(kFreqTestBufSize);
+  OverwriteCosine(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                  amplitude);
 
-  std::vector<T> dest(kNoiseFloorBufSize);
-  output_formatter->ProduceOutput(accum.data(), dest.data(),
-                                  kNoiseFloorBufSize);
+  std::vector<T> dest(kFreqTestBufSize);
+  output_formatter->ProduceOutput(accum.data(), dest.data(), kFreqTestBufSize);
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;
-  MeasureAudioFreq(dest.data(), kNoiseFloorBufSize, kReferenceFreq,
+  MeasureAudioFreq(dest.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_signal, &magn_other);
 
   // Calculate Signal-to-Noise-And-Distortion (SINAD)

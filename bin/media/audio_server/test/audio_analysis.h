@@ -5,7 +5,6 @@
 #pragma once
 
 #include <cmath>
-
 #include "garnet/bin/media/audio_server/gain.h"
 
 namespace media {

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cmath>
+#include "frequency_set.h"
 
 namespace media {
 namespace test {
@@ -51,6 +52,66 @@ class AudioResult {
   static constexpr double kPrevFloorOutput8 = 45.920261;
   static constexpr double kPrevFloorSource16 = 98.104753;
   static constexpr double kPrevFloorOutput16 = 98.104753;
+
+  //
+  // What is our received level (in dBFS), when sending sinusoids through our
+  // mixers at certain resampling ratios. The PointSampler and LinearSampler
+  // objects are specifically targeted with resampling ratios that are highly
+  // representative of how the current system uses them. A more exhaustive set
+  // of ratios will be included in subsequent CL, for more in-depth testing
+  // outside of CQ.
+  //
+  // We test PointSampler at Unity (no SRC) and 2:1 (such as 96-to-48), and
+  // LinearSampler at 294:160 and 147:160 (e.g. 88.2-to-48 and 44.1-to-48).
+  //
+  // We perform frequency fesponse tests at various frequencies (kSummaryFreqs[]
+  // from frequency_set.h), storing the result at each frequency. As with
+  // resampling ratios, subsequent CL contains a more exhaustive frequency set,
+  // for in-depth testing and diagnostics to be done outside CQ.
+  static double FreqRespPointUnity[FrequencySet::kNumSummaryFreqs];
+  static double FreqRespPointDown[FrequencySet::kNumSummaryFreqs];
+  static double FreqRespLinearDown[FrequencySet::kNumSummaryFreqs];
+  static double FreqRespLinearUp[FrequencySet::kNumSummaryFreqs];
+
+  // Val-being-checked (in dBFS) must be greater than or equal to this value.
+  // For these 1:1 and N:1 ratios, PointSampler's frequency response is ideal
+  // (flat). It is actually very slightly positive; for completeness we verify
+  // that response is no greater than (0.0 + kLevelToleranceSource16).
+  //
+  // Note: with rates other than N:1 or 1:N, interpolating resamplers dampen
+  // high frequencies -- as shown in previously-saved LinearSampler results.
+  //
+  // We save previous results to 8-digit accuracy (>23 bits), exceeding float32
+  // precision. This does not pose a risk of 'flaky test' since the math should
+  // be the same every time. With no real dependencies outside FBL, we expect
+  // any change that affects these results to be directly within the core
+  // objects (Mixer, Gain, OutputFormatter), and the corresponding adjustments
+  // to these thresholds should be included with that CL.
+  //
+  // clang-format off
+  static constexpr double kPrevFreqRespPointUnity[] =
+      { 0.0,               0.0,            0.0        };
+  static constexpr double kPrevFreqRespPointDown[]  =
+      { 0.0,               0.0,            0.0        };
+  static constexpr double kPrevFreqRespLinearDown[] =
+      { -0.0000094623437, -0.0036589951,  -0.53193138 };
+  static constexpr double kPrevFreqRespLinearUp[]   =
+      { -0.000026934650,  -0.014647070,   -2.1693107  };
+  // clang-format on
+
+  //
+  // Distortion is measured at a single reference frequency (kReferenceFreq).
+  // Sinad (signal-to-noise-and-distortion) is the ratio (in dBr) of reference
+  // signal (nominally 1kHz) to the combined power of all OTHER frequencies.
+  static double SinadPointUnity;
+  static double SinadPointDown;
+  static double SinadLinearDown;
+  static double SinadLinearUp;
+
+  static constexpr double kPrevSinadPointUnity = 98.104753;
+  static constexpr double kPrevSinadPointDown = 98.104753;
+  static constexpr double kPrevSinadLinearDown = 74.421795;
+  static constexpr double kPrevSinadLinearUp = 62.428449;
 
   // class is static only - prevent attempts to instantiate it
   AudioResult() = delete;
