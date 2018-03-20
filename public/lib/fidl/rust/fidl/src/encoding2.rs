@@ -113,10 +113,6 @@ pub struct Decoder<'a> {
     /// Buffer from which to read out-of-line data.
     out_of_line_buf: &'a [u8],
 
-    /// The number of bytes that `out_of_line_buf` has advanced since the start of the entire buffer.
-    /// This is used for calculating offsets of new out-of-line sections of data.
-    out_of_line_advanced: usize,
-
     /// Buffer from which to read handles.
     handles: &'a mut [zx::Handle],
 }
@@ -205,7 +201,6 @@ impl<'a> Decoder<'a> {
             remaining_depth: MAX_RECURSION,
             buf,
             out_of_line_buf,
-            out_of_line_advanced: out_of_line_offset,
             handles,
         };
 
@@ -238,20 +233,20 @@ impl<'a> Decoder<'a> {
         // Currently, out-of-line points here:
         // [---------------------------------]
         //     ^---buf--^    ^-out-of-line--^ (slices)
-        //                   ^out-of-line-advanced (index)
         //
         // We want to shift so that `buf` points to the first `len` bytes in `out-of-line` that
         // are aligned to `align`, and `old-buf` points to the previous value of `buf`:
         //
         // [---------------------------------]
         //     ^old--buf^      ^--buf--^^ool^
-        //                              ^out-of-line-advanced
 
-        // We split off the first `len` bytes from `out_of_line` and adjust
-        // `out-of-line-advanced` appropriately.
+        // We split off the first `len` bytes from `out_of_line`.
         let new_buf = split_off_front(&mut self.out_of_line_buf, len)?;
-        // Out of line data must always be aligned to 8 bytes
-        self.out_of_line_advanced += round_up_to_align(len, 8);
+        // Split off any trailing bytes up to the alignment and discard them.
+        if len % 8 != 0 {
+            let trailer = 8 - (len % 8);
+            let _ = split_off_front(&mut self.out_of_line_buf, trailer)?;
+        }
 
         // Store the current `buf` slice and shift the `buf` slice to point at the out-of-line data.
         let old_buf = take_slice(&mut self.buf);
