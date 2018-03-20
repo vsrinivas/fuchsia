@@ -116,17 +116,18 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
                                          : GenericEnableParam::kDisable;
 
   hci_cmd_runner()->QueueCommand(std::move(command));
-  hci_cmd_runner()->RunCommands([this, period_ms](bool success) {
+  hci_cmd_runner()->RunCommands([this, period_ms](hci::Status status) {
     FXL_DCHECK(scan_cb_);
     FXL_DCHECK(state() == State::kInitiating);
 
-    if (!success) {
+    if (status != hci::Status::kSuccess) {
       auto cb = scan_cb_;
 
       scan_cb_ = nullptr;
       set_state(State::kIdle);
 
-      FXL_LOG(ERROR) << "gap: LegacyLowEnergyScanner: failed to start scan";
+      FXL_LOG(ERROR) << "gap: LegacyLowEnergyScanner: failed to start scan: "
+                     << StatusToString(status);
       cb(Status::kFailed);
       return;
     }
@@ -202,12 +203,13 @@ void LegacyLowEnergyScanner::StopScanInternal(bool stopped) {
   enable_params->filter_duplicates = GenericEnableParam::kDisable;
 
   hci_cmd_runner()->QueueCommand(std::move(command));
-  hci_cmd_runner()->RunCommands([this, stopped](bool success) {
+  hci_cmd_runner()->RunCommands([this, stopped](hci::Status status) {
     FXL_DCHECK(scan_cb_);
     FXL_DCHECK(state() == State::kStopping);
 
-    if (!success) {
-      FXL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: Failed to stop scan";
+    if (status != hci::Status::kSuccess) {
+      FXL_LOG(WARNING) << "gap: LegacyLowEnergyScanner: Failed to stop scan: "
+                       << StatusToString(status);
       // Something went wrong but there isn't really a meaningful way to
       // recover, so we just fall through and notify the caller with
       // Status::kFailed instead.
@@ -218,8 +220,9 @@ void LegacyLowEnergyScanner::StopScanInternal(bool stopped) {
     scan_cb_ = nullptr;
     set_state(State::kIdle);
 
-    cb(!success ? Status::kFailed
-                : (stopped ? Status::kStopped : Status::kComplete));
+    cb(status != hci::Status::kSuccess
+           ? Status::kFailed
+           : (stopped ? Status::kStopped : Status::kComplete));
   });
 }
 

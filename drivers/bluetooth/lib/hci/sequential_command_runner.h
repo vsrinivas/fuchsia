@@ -47,8 +47,9 @@ class SequentialCommandRunner final {
       const CommandCompleteCallback& callback = CommandCompleteCallback());
 
   // Runs all the queued commands. Once this is called no new commands can be
-  // queued. This method will return before all queued commands have been run
-  // which is signaled by invoking |result_callback| asynchronously.
+  // queued. This method will return before queued commands have been run.
+  // |result_callback| is called with the status of the last command run,
+  // or kSuccess if all commands returned HCI_Command_Complete.
   //
   // Once RunCommands() has been called this instance will not be ready for
   // re-use until |result_callback| gets run. At that point new commands can be
@@ -56,7 +57,7 @@ class SequentialCommandRunner final {
   //
   // RunCommands() will always send the first queued HCI command to
   // CommandChannel even if it is followed by a call to Cancel().
-  using ResultCallback = std::function<void(bool success)>;
+  using ResultCallback = std::function<void(hci::Status status)>;
   void RunCommands(const ResultCallback& result_callback);
 
   // Returns true if commands can be queued and run on this instance. This
@@ -84,7 +85,7 @@ class SequentialCommandRunner final {
  private:
   void RunNextQueuedCommand();
   void Reset();
-  void NotifyResultAndReset(bool result);
+  void NotifyResultAndReset(hci::Status result);
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   fxl::RefPtr<Transport> transport_;

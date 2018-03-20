@@ -8,6 +8,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
+#include "garnet/drivers/bluetooth/lib/hci/util.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace btlib {
@@ -226,25 +227,21 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
   hci_cmd_runner_->QueueCommand(BuildEnablePacket(GenericEnableParam::kEnable));
 
   hci_cmd_runner_->RunCommands([this, address, interval_slices, callback,
-                                connect_callback](bool success) {
+                                connect_callback](hci::Status status) {
     FXL_DCHECK(starting_);
     starting_ = false;
 
-    FXL_VLOG(1)
-        << "gap: LegacyLowEnergyAdvertiser: advertising started (success: "
-        << std::boolalpha << success << ")";
+    FXL_VLOG(1) << "gap: LegacyLowEnergyAdvertiser: advertising started ("
+                << StatusToString(status) << ")";
 
-    if (success) {
+    if (status == Status::kSuccess) {
       advertised_ = address;
       connect_callback_ = connect_callback;
       callback(TimeslicesToMilliseconds(interval_slices), kSuccess);
     } else {
       // Clear out the advertising data if it partially succeeded.
       StopAdvertisingInternal();
-
-      // TODO(armansito): SequentialCommandRunner should return the HCI
-      // status so that |callback| can report the actual error (NET-273).
-      callback(0, kUnspecifiedError);
+      callback(0, status);
     }
   });
 }
@@ -298,10 +295,9 @@ void LegacyLowEnergyAdvertiser::StopAdvertisingInternal() {
   scan_rsp_packet->mutable_view()->mutable_payload_data().SetToZeros();
   hci_cmd_runner_->QueueCommand(std::move(scan_rsp_packet));
 
-  hci_cmd_runner_->RunCommands([](bool success) {
-    FXL_VLOG(1)
-        << "gap: LegacyLowEnergyAdvertiser: advertising stopped (success: "
-        << std::boolalpha << success << ")";
+  hci_cmd_runner_->RunCommands([](hci::Status status) {
+    FXL_VLOG(1) << "gap: LegacyLowEnergyAdvertiser: advertising stopped ("
+                << StatusToString(status) << ")";
   });
 }
 

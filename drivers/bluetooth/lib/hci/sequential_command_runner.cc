@@ -68,7 +68,7 @@ void SequentialCommandRunner::RunNextQueuedCommand() {
   FXL_DCHECK(result_callback_);
 
   if (command_queue_.empty()) {
-    NotifyResultAndReset(true);
+    NotifyResultAndReset(hci::kSuccess);
     return;
   }
 
@@ -79,7 +79,7 @@ void SequentialCommandRunner::RunNextQueuedCommand() {
       [this, cmd_cb = next.second](CommandChannel::TransactionId,
                                    const EventPacket& event_packet) {
         if (event_packet.status() != Status::kSuccess) {
-          NotifyResultAndReset(false);
+          NotifyResultAndReset(event_packet.status());
           return;
         }
 
@@ -115,7 +115,7 @@ void SequentialCommandRunner::RunNextQueuedCommand() {
 
   if (!transport_->command_channel()->SendCommand(
           std::move(next.first), task_runner_, complete_callback_.callback())) {
-    NotifyResultAndReset(false);
+    NotifyResultAndReset(hci::kUnspecifiedError);
   }
 }
 
@@ -126,7 +126,7 @@ void SequentialCommandRunner::Reset() {
   complete_callback_.Cancel();
 }
 
-void SequentialCommandRunner::NotifyResultAndReset(bool result) {
+void SequentialCommandRunner::NotifyResultAndReset(hci::Status result) {
   FXL_DCHECK(result_callback_);
   auto result_cb = result_callback_;
   Reset();
