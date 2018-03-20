@@ -72,6 +72,14 @@ func nullable(t types.Type) types.Type {
 	return t
 }
 
+func compoundIdentifier(a ...string) types.CompoundIdentifier {
+	var r types.CompoundIdentifier
+	for _, s := range a {
+		r = append(r, types.Identifier(s))
+	}
+	return r
+}
+
 func compileExpect(t *testing.T, testName string, input types.Root, expect Root) {
 	t.Run(testName, func(t *testing.T) {
 		actual := Compile(input)
@@ -89,12 +97,16 @@ func compileStructsExpect(t *testing.T, testName string, input []types.Struct, e
 	compileExpect(t, testName, types.Root{Structs: input}, Root{Structs: expect})
 }
 
+func compileInterfaceExpect(t *testing.T, testName string, input types.Interface, expect Interface) {
+	compileExpect(t, testName, types.Root{Interfaces: []types.Interface{input}}, Root{Interfaces: []Interface{expect}})
+}
+
 func TestCompileStruct(t *testing.T) {
 	t.Parallel()
 
 	compileStructsExpect(t, "Basic struct", []types.Struct{
 		{
-			Name: types.Identifier("Test"),
+			Name: compoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
 					Type: primitiveType(types.Int8),
@@ -124,7 +136,7 @@ func TestCompileStruct(t *testing.T) {
 
 	compileStructsExpect(t, "Struct with name mangling", []types.Struct{
 		{
-			Name: types.Identifier("test"),
+			Name: compoundIdentifier("test"),
 			Members: []types.StructMember{
 				{
 					Type: primitiveType(types.Int8),
@@ -146,7 +158,7 @@ func TestCompileStruct(t *testing.T) {
 
 	compileStructsExpect(t, "Struct with array types", []types.Struct{
 		{
-			Name: types.Identifier("Test"),
+			Name: compoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
 					Type: arrayType(primitiveType(types.Uint8), 10),
@@ -177,7 +189,7 @@ func TestCompileStruct(t *testing.T) {
 	maxElems := 40
 	compileStructsExpect(t, "Struct with string types", []types.Struct{
 		{
-			Name: types.Identifier("Test"),
+			Name: compoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
 					Type: stringType(nil),
@@ -233,7 +245,7 @@ func TestCompileStruct(t *testing.T) {
 
 	compileStructsExpect(t, "Struct with vector types", []types.Struct{
 		{
-			Name: types.Identifier("Test"),
+			Name: compoundIdentifier("Test"),
 			Members: []types.StructMember{
 				{
 					Type: vectorType(primitiveType(types.Uint8), nil),
@@ -293,7 +305,7 @@ func TestCompileEnum(t *testing.T) {
 
 	compileEnumsExpect(t, "Basic enum", []types.Enum{
 		{
-			Name: types.Identifier("Test"),
+			Name: compoundIdentifier("Test"),
 			Type: types.Int64,
 			Members: []types.EnumMember{
 				{
@@ -325,7 +337,7 @@ func TestCompileEnum(t *testing.T) {
 
 	compileEnumsExpect(t, "Bool enum", []types.Enum{
 		{
-			Name: types.Identifier("Test"),
+			Name: compoundIdentifier("Test"),
 			Type: types.Bool,
 			Members: []types.EnumMember{
 				{
@@ -357,7 +369,7 @@ func TestCompileEnum(t *testing.T) {
 
 	compileEnumsExpect(t, "Enum with name mangling", []types.Enum{
 		{
-			Name: types.Identifier("test"),
+			Name: compoundIdentifier("test"),
 			Type: types.Uint32,
 			Members: []types.EnumMember{
 				{
@@ -374,6 +386,132 @@ func TestCompileEnum(t *testing.T) {
 				{
 					Name:  "Test",
 					Value: "125412512",
+				},
+			},
+		},
+	})
+}
+
+func TestCompileInterface(t *testing.T) {
+	compileInterfaceExpect(t, "Basic", types.Interface{
+		Attributes: []types.Attribute{{Name: types.Identifier("ServiceName"), Value: "Test"}},
+		Name:       compoundIdentifier("Test"),
+		Methods: []types.Method{
+			{
+				Ordinal:    types.Ordinal(1),
+				Name:       types.Identifier("First"),
+				HasRequest: true,
+				Request: []types.Parameter{
+					{
+						Type: primitiveType(types.Int16),
+						Name: types.Identifier("Value"),
+					},
+				},
+				RequestSize: 18,
+			},
+			{
+				Ordinal:    types.Ordinal(2),
+				Name:       types.Identifier("Second"),
+				HasRequest: true,
+				Request: []types.Parameter{
+					{
+						Type: nullable(stringType(nil)),
+						Name: types.Identifier("Value"),
+					},
+				},
+				RequestSize: 32,
+				HasResponse: true,
+				Response: []types.Parameter{
+					{
+						Type: primitiveType(types.Uint32),
+						Name: types.Identifier("Value"),
+					},
+				},
+				ResponseSize: 20,
+			},
+		},
+	}, Interface{
+		Name:        "Test",
+		ProxyName:   "TestProxy",
+		StubName:    "TestStub",
+		ServiceName: "Test",
+		Methods: []Method{
+			{
+				Ordinal: types.Ordinal(1),
+				Name:    "TestFirst",
+				Request: &Struct{
+					Name: "TestFirstRequest",
+					Members: []StructMember{
+						{
+							Name: "Value",
+							Type: "int16",
+						},
+					},
+					Size: 2,
+				},
+			},
+			{
+				Ordinal: types.Ordinal(2),
+				Name:    "TestSecond",
+				Request: &Struct{
+					Name: "TestSecondRequest",
+					Members: []StructMember{
+						{
+							Name: "Value",
+							Type: "*string",
+						},
+					},
+					Size: 16,
+				},
+				Response: &Struct{
+					Name: "TestSecondResponse",
+					Members: []StructMember{
+						{
+							Name: "Value",
+							Type: "uint32",
+						},
+					},
+					Size: 4,
+				},
+			},
+		},
+	})
+
+	compileInterfaceExpect(t, "Event and name mangling", types.Interface{
+		Attributes: []types.Attribute{{Name: types.Identifier("ServiceName"), Value: "Test"}},
+		Name:       compoundIdentifier("test"),
+		Methods: []types.Method{
+			{
+				Ordinal:     types.Ordinal(1),
+				Name:        types.Identifier("first"),
+				HasResponse: true,
+				Response: []types.Parameter{
+					{
+						Type: stringType(nil),
+						Name: types.Identifier("value"),
+					},
+				},
+				ResponseSize: 32,
+			},
+		},
+	}, Interface{
+		Name:        "Test",
+		ProxyName:   "TestProxy",
+		StubName:    "TestStub",
+		ServiceName: "Test",
+		Methods: []Method{
+			{
+				Ordinal: types.Ordinal(1),
+				Name:    "TestFirst",
+				Response: &Struct{
+					Name: "TestFirstResponse",
+					Members: []StructMember{
+						{
+							Name: "Value",
+							Type: "string",
+						},
+					},
+					Size: 16,
 				},
 			},
 		},

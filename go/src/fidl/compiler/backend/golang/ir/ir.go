@@ -14,6 +14,14 @@ import (
 	"fidl/compiler/backend/types"
 )
 
+const (
+	ProxySuffix   = "Interface"
+	StubSuffix    = "Stub"
+	RequestSuffix = "InterfaceRequest"
+
+	MessageHeaderSize = 16
+)
+
 // Type represents a golang type.
 type Type string
 
@@ -95,8 +103,6 @@ func (t *Tag) String() string {
 	if t.Nullable {
 		elemsTag = append(elemsTag, "*")
 		anyData = true
-	} else {
-		elemsTag = append(elemsTag, "")
 	}
 	for _, elems := range t.MaxElems {
 		if elems == nil {
@@ -125,18 +131,54 @@ type StructMember struct {
 	Tag string
 }
 
+// Interface represents a FIDL interface in terms of golang structures.
+type Interface struct {
+	// Name is the Golang name of the interface.
+	Name string
+
+	// ProxyName is the name of the proxy type for this FIDL interface.
+	ProxyName string
+
+	// StubName is the name of the stub type for this FIDL interface.
+	StubName string
+
+	// ServiceName is the service name for this FIDL interface.
+	ServiceName string
+
+	// Methods is a list of methods for this FIDL interface.
+	Methods []Method
+}
+
+// Method represents a method of a FIDL interface in terms of golang structures.
+type Method struct {
+	// Ordinal is the ordinal for this method.
+	Ordinal types.Ordinal
+
+	// Name is the name of the Method, including the interface name as a prefix.
+	Name string
+
+	// Request represents a goland struct containing the request parameters.
+	Request *Struct
+
+	// Response represents an optional golang struct containing the response parameters.
+	Response *Struct
+}
+
 // Root is the root of the golang backend IR structure.
 //
 // The golang backend IR structure is loosely modeled after an abstract syntax
 // tree, and is used to generate golang code from templates.
 type Root struct {
-	// TODO(mknyszek): Support unions, interfaces, and constants.
+	// TODO(mknyszek): Support unions and constants.
 
 	// Enums represents a list of FIDL enums represented as Go enums.
 	Enums []Enum
 
 	// Structs represents the list of FIDL structs represented as Go structs.
 	Structs []Struct
+
+	// Interfaces represents the list of FIDL interfaces represented as Go types.
+	Interfaces []Interface
 }
 
 // compiler contains the state necessary for recursive compilation.
@@ -324,10 +366,15 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 		if !ok {
 			log.Fatal("Unknown identifier:", val.Identifier)
 		}
-		// TODO(mknyszek): Support unions and interfaces.
+		// TODO(mknyszek): Support unions.
 		switch declType {
 		case types.EnumDeclType:
 			r = Type(e)
+		case types.InterfaceDeclType:
+			if val.Nullable {
+				t.Nullable = true
+			}
+			r = Type(e + ProxySuffix)
 		case types.StructDeclType:
 			if val.Nullable {
 				r = Type("*" + e)
@@ -382,6 +429,62 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	return r
 }
 
+func (c *compiler) compileParameter(p types.Parameter) StructMember {
+	ty, tag := c.compileType(p.Type)
+	return StructMember{
+		Type: ty,
+		Name: changeIfReserved(exportIdentifier(p.Name)),
+		Tag:  tag.String(),
+	}
+}
+
+func (c *compiler) compileMethod(ifaceName types.Identifier, val types.Method) Method {
+	methodName := exportIdentifier(val.Name)
+	r := Method{
+		Name:    changeIfReserved(methodName),
+		Ordinal: val.Ordinal,
+	}
+	if val.HasRequest {
+		req := Struct{
+			Name: changeIfReserved(ifaceName + methodName + "Request"),
+			// We want just the size of the parameter array as a struct, not
+			// including the message header size.
+			Size: val.RequestSize - MessageHeaderSize,
+		}
+		for _, p := range val.Request {
+			req.Members = append(req.Members, c.compileParameter(p))
+		}
+		r.Request = &req
+	}
+	if val.HasResponse {
+		resp := Struct{
+			Name: changeIfReserved(ifaceName + methodName + "Response"),
+			// We want just the size of the parameter array as a struct, not
+			// including the message header size.
+			Size: val.ResponseSize - MessageHeaderSize,
+		}
+		for _, p := range val.Response {
+			resp.Members = append(resp.Members, c.compileParameter(p))
+		}
+		r.Response = &resp
+	}
+	return r
+}
+
+func (c *compiler) compileInterface(val types.Interface) Interface {
+	ifaceName := exportIdentifier(val.Name.Name)
+	r := Interface{
+		Name:        changeIfReserved(ifaceName),
+		ProxyName:   changeIfReserved(ifaceName + ProxySuffix),
+		StubName:    changeIfReserved(ifaceName + StubSuffix),
+		ServiceName: val.GetAttribute("ServiceName"),
+	}
+	for _, v := range val.Methods {
+		r.Methods = append(r.Methods, c.compileMethod(ifaceName, v))
+	}
+	return r
+}
+
 // Compile translates parsed FIDL IR into golang backend IR for code generation.
 func Compile(fidlData types.Root) Root {
 	c := compiler{decls: fidlData.Decls}
@@ -391,6 +494,9 @@ func Compile(fidlData types.Root) Root {
 	}
 	for _, v := range fidlData.Structs {
 		r.Structs = append(r.Structs, c.compileStruct(v))
+	}
+	for _, v := range fidlData.Interfaces {
+		r.Interfaces = append(r.Interfaces, c.compileInterface(v))
 	}
 	return r
 }

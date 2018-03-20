@@ -7,6 +7,7 @@
 package golang
 
 import (
+	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/golang/ir"
 	"fidl/compiler/backend/golang/templates"
 	"fidl/compiler/backend/types"
@@ -31,8 +32,11 @@ func writeFile(outputFilename string,
 func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
 	tree := ir.Compile(fidl)
 
-	tmpls := template.New("GoTemplates")
+	tmpls := template.New("GoTemplates").Funcs(template.FuncMap{
+		"privatize": common.ToLowerCamelCase,
+	})
 	template.Must(tmpls.Parse(templates.Enum))
+	template.Must(tmpls.Parse(templates.Interface))
 	template.Must(tmpls.Parse(templates.Library))
 	template.Must(tmpls.Parse(templates.Struct))
 

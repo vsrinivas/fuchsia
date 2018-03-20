@@ -13,12 +13,16 @@ const Library = `
 package main
 
 import _zx "syscall/zx"
+import _bindings "fidl/bindings2"
 
 {{ range $enum := .Enums -}}
 {{ template "EnumDefinition" $enum }}
 {{ end -}}
 {{ range $struct := .Structs -}}
 {{ template "StructDefinition" $struct }}
+{{ end -}}
+{{ range $interface := .Interfaces -}}
+{{ template "InterfaceDefinition" $interface }}
 {{ end -}}
 
 {{- end -}}
