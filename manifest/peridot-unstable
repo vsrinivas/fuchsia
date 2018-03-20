@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Manifest that depends on zircon and garnet at tip of tree.
+  There is no expectation that this manifest will build at any particular time.
+-->
+<manifest>
+  <imports>
+    <localimport file="minimal"/>
+    <localimport file="third_party"/>
+    <import remote="https://fuchsia.googlesource.com/garnet"
+            manifest="manifest/garnet-unstable"
+            name="garnet"/>
+  </imports>
+</manifest>
