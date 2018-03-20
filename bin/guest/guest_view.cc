@@ -62,7 +62,8 @@ void ScenicScanout::InvalidateRegion(const machina::GpuRect& rect) {
 }
 
 GuestView::GuestView(
-    machina::GpuScanout* scanout, machina::InputDispatcher* input_dispatcher,
+    machina::GpuScanout* scanout,
+    machina::InputDispatcher* input_dispatcher,
     mozart::ViewManagerPtr view_manager,
     f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Guest"),
