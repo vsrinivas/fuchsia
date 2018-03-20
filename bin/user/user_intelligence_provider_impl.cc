@@ -22,6 +22,7 @@
 namespace maxwell {
 
 constexpr char kMIDashboardUrl[] = "mi_dashboard";
+constexpr char kUsageLogUrl[] = "usage_log";
 
 namespace {
 
@@ -267,7 +268,7 @@ f1dl::VectorPtr<f1dl::StringPtr> UserIntelligenceProviderImpl::AddStandardServic
   agent_host->AddService<resolver::Resolver>(std::bind(
       &UserIntelligenceProviderImpl::GetResolver, this, std::placeholders::_1));
 
-  if (url == kMIDashboardUrl) {
+  if (url == kMIDashboardUrl || url == kUsageLogUrl) {
     service_names.push_back(maxwell::ContextDebug::Name_);
     agent_host->AddService<maxwell::ContextDebug>(
         [this](f1dl::InterfaceRequest<maxwell::ContextDebug> request) {
