@@ -412,7 +412,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryFailureManyPending) {
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestart) {
   // Set a very short scan period for the sake of the test.
-  discovery_manager()->set_scan_period(200);
+  discovery_manager()->set_scan_period(1);
 
   std::unique_ptr<LowEnergyDiscoverySession> session;
   discovery_manager()->StartDiscovery(
@@ -436,7 +436,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestart) {
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartFailure) {
   // Set a very short scan period for the sake of the test.
-  discovery_manager()->set_scan_period(200);
+  discovery_manager()->set_scan_period(1);
   set_quit_message_loop_on_scan_state_change(true);
 
   std::unique_ptr<LowEnergyDiscoverySession> session;
@@ -466,7 +466,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartFailure) {
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartRemoveSession) {
   // Set a very short scan period for the sake of the test.
-  discovery_manager()->set_scan_period(200);
+  discovery_manager()->set_scan_period(1);
   set_quit_message_loop_on_scan_state_change(true);
 
   std::unique_ptr<LowEnergyDiscoverySession> session;
@@ -494,7 +494,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, ScanPeriodRestartRemoveSession) {
 TEST_F(GAP_LowEnergyDiscoveryManagerTest,
        ScanPeriodRestartRemoveAndAddSession) {
   // Set a very short scan period for the sake of the test.
-  discovery_manager()->set_scan_period(200);
+  discovery_manager()->set_scan_period(1);
   set_quit_message_loop_on_scan_state_change(true);
 
   std::unique_ptr<LowEnergyDiscoverySession> session;

@@ -37,8 +37,7 @@ const common::DeviceAddress kAddress1(common::DeviceAddress::Type::kLEPublic,
 const common::DeviceAddress kAddress2(common::DeviceAddress::Type::kBREDR,
                                       "00:00:00:00:00:03");
 
-// This must be longer than FakeDevice::kDefaultConnectResponseTimeMs.
-constexpr int64_t kTestRequestTimeoutMs = 200;
+constexpr int64_t kTestRequestTimeoutMs = 1;
 
 class LowEnergyConnectionManagerTest : public TestingBase {
  public:

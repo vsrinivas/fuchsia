@@ -19,7 +19,7 @@ using ::btlib::testing::FakeController;
 using ::btlib::testing::FakeDevice;
 using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
-constexpr int64_t kScanPeriodMs = 100;
+constexpr int64_t kScanPeriodMs = 10;
 
 constexpr char kPlainAdvData[] = "Test";
 constexpr char kPlainScanRsp[] = "Data";
@@ -213,7 +213,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
       kScanPeriodMs, cb));
 
   EXPECT_EQ(LowEnergyScanner::State::kInitiating, scanner()->state());
-  RunMessageLoop();
+  RunUntilIdle();
 
   // Scan should have started.
   EXPECT_EQ(LowEnergyScanner::Status::kStarted, status);
@@ -235,7 +235,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
       true /* filter_duplicates */, LEScanFilterPolicy::kNoWhiteList,
       kScanPeriodMs, cb));
 
-  // After 200 ms (kScanPeriodMs) the scan should stop by itself.
+  // After 10 ms (kScanPeriodMs) the scan should stop by itself.
   RunMessageLoop();
   EXPECT_EQ(LowEnergyScanner::Status::kComplete, status);
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
