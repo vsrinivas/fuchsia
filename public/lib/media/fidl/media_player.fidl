@@ -59,10 +59,6 @@ interface MediaPlayer {
   // audio_renderer parameter is null, the SetGain method does nothing.
   SetAudioRenderer@9(AudioRenderer? audio_renderer,
                      MediaRenderer media_renderer);
-
-  // DEPRECATED.
-  // TODO(dalesat): Remove after topaz transition.
-  SetReader@10(SeekingReader? reader);
 };
 
 // MediaPlayer status information.

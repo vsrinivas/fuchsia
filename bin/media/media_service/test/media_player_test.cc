@@ -58,7 +58,7 @@ class MediaPlayerTester {
 
     media_player_->SetAudioRenderer(nullptr, std::move(fake_renderer_ptr));
 
-    media_player_->SetReader(std::move(fake_reader_ptr));
+    media_player_->SetReaderSource(std::move(fake_reader_ptr));
     FXL_LOG(INFO) << "player created " << (media_player_ ? "ok" : "NULL PTR");
 
     HandleStatusUpdates();

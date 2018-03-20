@@ -57,8 +57,6 @@ class MediaPlayerImpl : public MediaComponentFactory::Product<MediaPlayer>,
       f1dl::InterfaceHandle<AudioRenderer> audio_renderer,
       f1dl::InterfaceHandle<MediaRenderer> media_renderer) override;
 
-  void SetReader(f1dl::InterfaceHandle<SeekingReader> reader_handle) override;
-
  private:
   static constexpr int64_t kMinimumLeadTime = Timeline::ns_from_ms(30);
 

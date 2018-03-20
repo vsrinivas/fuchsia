@@ -106,8 +106,8 @@ void MediaPlayerImpl::MaybeCreateSource() {
                         source_.NewRequest());
   HandleSourceStatusUpdates();
 
-  source_->Describe(
-      fxl::MakeCopyable([this](f1dl::VectorPtr<MediaTypePtr> stream_types) mutable {
+  source_->Describe(fxl::MakeCopyable(
+      [this](f1dl::VectorPtr<MediaTypePtr> stream_types) mutable {
         stream_types_ = std::move(stream_types);
         ConnectSinks();
       }));
@@ -263,7 +263,7 @@ void MediaPlayerImpl::Update() {
         if (!reader_transition_pending_) {
           return;
         }
-        // Falls through.
+      // Falls through.
 
       case State::kFlushed:
         // Presentation time is not progressing, and the pipeline is clear of
@@ -478,14 +478,14 @@ TimelineTransformPtr MediaPlayerImpl::CreateTimelineTransform(
 void MediaPlayerImpl::SetHttpSource(const f1dl::StringPtr& http_url) {
   f1dl::InterfaceHandle<SeekingReader> reader;
   owner()->CreateHttpReader(http_url, reader.NewRequest());
-  SetReader(std::move(reader));
+  SetReaderSource(std::move(reader));
 }
 
 void MediaPlayerImpl::SetFileSource(zx::channel file_channel) {
   f1dl::InterfaceHandle<SeekingReader> reader;
   owner()->CreateFileChannelReader(std::move(file_channel),
                                    reader.NewRequest());
-  SetReader(std::move(reader));
+  SetReaderSource(std::move(reader));
 }
 
 void MediaPlayerImpl::SetReaderSource(
@@ -566,11 +566,6 @@ void MediaPlayerImpl::SetAudioRenderer(
   if (audio_renderer) {
     audio_renderer_.Bind(std::move(audio_renderer));
   }
-}
-
-void MediaPlayerImpl::SetReader(
-    f1dl::InterfaceHandle<SeekingReader> reader_handle) {
-  SetReaderSource(std::move(reader_handle));
 }
 
 void MediaPlayerImpl::SetVideoRenderer(
