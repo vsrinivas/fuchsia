@@ -248,6 +248,26 @@ This option requests that *command* be run at boot, after devmgr starts up.
 Any `+` characters in *command* are treated as argument separators, allowing
 you to pass arguments to an executable.
 
+### Sidebar: Injecting a personal autorun script <a name="autorun"></a>
+
+It's often useful to inject a personal autorun script into the boot filesystem,
+especially for running tests or setup tasks. You can do this with the zircon
+build system's `EXTRA_USER_MANIFEST_LINES` make variable.
+
+1.  Create a local shell script with the commands you want to run; for this
+    example, call it `${HOME}/my_local_script.sh`. \
+    **NOTE**: The first line must be a `#!` line, typically `#!/boot/bin/sh`.
+2.  Add your script to the boot filesystem by invoking `make` (or one of the
+    `//zircon/scripts/build-*` scripts) with \
+    `EXTRA_USER_MANIFEST_LINES="my_installed_script=${HOME}/my_local_script.sh"`
+    \
+    This will copy your local script into the boot filesystem at the path
+    `/boot/my_installed_script`. (You can change the `my_installed_script` part
+    to change the basename of the installed script, though it will always appear
+    under `/boot`.)
+3.  Tell `devmgr` to invoke your script by passing a commandline like
+    `zircon.autorun.boot=/boot/my_installed_script`
+
 ## zircon.autorun.system=\<command>
 
 This option requests that *command* be run once the system partition is mounted
