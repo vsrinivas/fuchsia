@@ -1456,6 +1456,8 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 			if ios.listenLoopDone != nil {
 				<-ios.listenLoopDone
 			}
+		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+			// Ignore.
 		default:
 			log.Printf("close: signal failed: %v", err)
 		}
