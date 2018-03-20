@@ -373,7 +373,7 @@ void __brcmf_err(const char* func, const char* fmt, ...) {
 
     vaf.fmt = fmt;
     vaf.va = &args;
-    pr_err("%s: %pV", func, &vaf);
+    zxlogf(ERROR, "brcmfmac: %s: %pV", func, &vaf);
 
     va_end(args);
 }
@@ -389,7 +389,7 @@ void __brcmf_dbg(uint32_t level, const char* func, const char* fmt, ...) {
     va_start(args, fmt);
     vaf.va = &args;
     if (brcmf_msg_level & level) {
-        pr_debug("%s %pV", func, &vaf);
+        zxlogf(INFO, "brcmfmac: %s %pV", func, &vaf);
     }
     trace_brcmf_dbg(level, func, &vaf);
     va_end(args);

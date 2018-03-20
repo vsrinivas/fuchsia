@@ -58,14 +58,22 @@ typedef struct {
         int res = mtx_trylock(lock);                                          \
         ZX_ASSERT(res != 0);                                                  \
         if (res == 0) {                                                       \
-            printf("broadcom: lock not held at %s:%d\n", __FILE__, __LINE__); \
+            zxlogf(ERROR, "brcmfmac: lock not held at %s:%d\n", __FILE__, __LINE__); \
             mtx_unlock(lock);                                                 \
         }                                                                     \
     } while (0)
 
-#define WARN(cond, msg) \
-    printf("broadcom: unexpected condition %s warns %s at %s:%d\n", #cond, msg, __FILE__, __LINE__)
+#define WARN(cond, msg)                                                           \
+    ({  bool ret_cond = cond;                                                     \
+        if (ret_cond) {                                                           \
+            zxlogf(INFO, "brcmfmac: unexpected condition %s warns %s at %s:%d\n", \
+                #cond, msg, __FILE__, __LINE__);                                  \
+        }                                                                         \
+        ret_cond;                                                                 \
+    })
 
+// TODO(cphoenix): Looks like these evaluate cond multiple times. And maybe should
+// pass cond, not #cond, into WARN.
 #define WARN_ON(cond)                          \
     ({                                         \
         if (cond) { WARN(#cond, "it's bad"); } \
@@ -119,13 +127,13 @@ typedef uint32_t gfp_t;
 
 #define LINUX_FUNC(name, paramtype, rettype)                                                   \
     static inline rettype name(paramtype foo, ...) {                                           \
-        zxlogf(ERROR, "cphoenix: You called linux function %s at line %d of file %s\n", #name, \
+        zxlogf(ERROR, "brcmfmac: You called linux function %s at line %d of file %s\n", #name, \
                __LINE__, __FILE__);                                                            \
         return (rettype)0;                                                                     \
     }
 #define LINUX_FUNCX(name)                                                                      \
     static inline int name() {                                                                 \
-        zxlogf(ERROR, "cphoenix: You called linux function %s at line %d of file %s\n", #name, \
+        zxlogf(ERROR, "brcmfmac: You called linux function %s at line %d of file %s\n", #name, \
                __LINE__, __FILE__);                                                            \
         return 0;                                                                              \
     }
@@ -272,7 +280,6 @@ LINUX_FUNCVI(sdio_f0_writeb)
 LINUX_FUNCVI(queue_work)
 LINUX_FUNCX(in_interrupt)
 LINUX_FUNCVI(sdio_f0_readb)
-LINUX_FUNCVI(pr_debug)
 LINUX_FUNCII(allow_signal)
 LINUX_FUNCX(kthread_should_stop)
 LINUX_FUNCVI(wait_for_completion_interruptible)
@@ -445,11 +452,7 @@ LINUX_FUNCVI(sdio_writel) // Last param is zx_status_t
 LINUX_FUNCVS(sdio_memcpy_fromio)
 LINUX_FUNCVS(sdio_readsb)
 LINUX_FUNCVI(dev_coredumpv)
-LINUX_FUNCVS(debugfs_create_dir) // Must set dir to NULL or valid pointer
-LINUX_FUNCVS(debugfs_create_devm_seqfile)
-LINUX_FUNCVI(debugfs_remove_recursive)
 LINUX_FUNCVI(sg_set_buf)
-LINUX_FUNCVI(debugfs_create_u32)
 LINUX_FUNCVV(sg_next)
 LINUX_FUNCVI(cfg80211_crit_proto_stopped)
 LINUX_FUNCVI(scnprintf)
@@ -459,7 +462,6 @@ LINUX_FUNCVV(skb_queue_prev)
 LINUX_FUNCII(BITS_TO_LONGS)
 LINUX_FUNCVV(cfg80211_vendor_cmd_alloc_reply_skb)
 LINUX_FUNCVI(cfg80211_vendor_cmd_reply)
-LINUX_FUNCVI(pr_err)
 LINUX_FUNCcVI(trace_brcmf_err)
 LINUX_FUNCIV(dev_alloc_skb)
 LINUX_FUNCVI(usb_fill_bulk_urb)
@@ -1633,5 +1635,22 @@ struct usb_driver {
         struct device_driver driver;
     } drvwrap;
 };
+
+struct dentry {
+    void* foo;
+};
+
+zx_status_t debugfs_create_dir(char *name, struct dentry* parent,
+                               struct dentry** new_folder_out);
+
+zx_status_t debugfs_create_devm_seqfile(void* dev, const char* fn, struct dentry* parent,
+                                        zx_status_t (*read_fn)(struct seq_file* seq,
+                                                               void* data),
+                                        struct dentry** new_file_out);
+
+zx_status_t debugfs_remove_recursive(struct dentry* dir);
+
+zx_status_t debugfs_create_u32(const char* name, uint32_t permissions, struct dentry* dentry,
+                               uint32_t* console_interval_out);
 
 #endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_LINUXISMS_H_

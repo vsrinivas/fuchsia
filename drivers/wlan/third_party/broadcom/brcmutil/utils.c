@@ -305,7 +305,7 @@ void brcmu_prpkt(const char* msg, struct sk_buff* p0) {
     struct sk_buff* p;
 
     if (msg && (msg[0] != '\0')) {
-        pr_debug("%s:\n", msg);
+        zxlogf(INFO, "brcmfmac: %s:\n", msg);
     }
 
     for (p = p0; p; p = p->next) {
@@ -323,7 +323,7 @@ void brcmu_dbg_hex_dump(const void* data, size_t size, const char* fmt, ...) {
     vaf.fmt = fmt;
     vaf.va = &args;
 
-    pr_debug("%pV", &vaf);
+    zxlogf(INFO, "brcmfmac: %pV", &vaf);
 
     va_end(args);
 

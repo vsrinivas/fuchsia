@@ -31,7 +31,7 @@ void __brcmf_err(const char* func, const char* fmt, ...) {
 
     va_start(args, fmt);
     vaf.va = &args;
-    pr_err("%s: %pV", func, &vaf);
+    zxlogf(ERROR, "brcmfmac: %s: %pV", func, &vaf);
     trace_brcmf_err(func, &vaf);
     va_end(args);
 }

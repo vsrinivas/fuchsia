@@ -669,7 +669,7 @@ static void brcmf_pcie_bus_console_read(struct brcmf_pciedev_info* devinfo) {
         }
         if (ch == '\n') {
             console->log_str[console->log_idx] = 0;
-            pr_debug("CONSOLE: %s", console->log_str);
+            zxlogf(INFO, "brcmfmac: CONSOLE: %s", console->log_str);
             console->log_idx = 0;
         }
     }

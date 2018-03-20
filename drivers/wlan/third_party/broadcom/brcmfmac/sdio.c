@@ -2749,7 +2749,7 @@ static zx_status_t brcmf_sdio_readconsole(struct brcmf_sdio* bus) {
                 n--;
             }
             line[n] = 0;
-            pr_debug("CONSOLE: %s\n", line);
+            zxlogf(INFO, "brcmfmac: CONSOLE: %s\n", line);
         }
     }
 break2:
@@ -3666,7 +3666,7 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     sdiodev = bus->sdiodev;
     sdio_claim_host(sdiodev->func1);
 
-    pr_debug("F1 signature read @0x18000000=0x%4x\n",
+    zxlogf(INFO, "brcmfmac: F1 signature read @0x18000000=0x%4x\n",
              brcmf_sdiod_readl(sdiodev, SI_ENUM_BASE, NULL));
 
     /*

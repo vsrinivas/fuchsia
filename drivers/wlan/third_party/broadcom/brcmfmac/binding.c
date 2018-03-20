@@ -2,20 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <brcm_hw_ids.h>
+#include "brcm_hw_ids.h"
+#include "common.h"
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-
 #include <zircon/types.h>
-
-uint64_t jiffies; // To make it link, jiffies has to be defined (not just declared)
-struct current_with_pid* current; // likewise current
 
 zx_status_t brcmfmac_bind(void* ctx, zx_device_t* device) {
     zxlogf(INFO, "brcmfmac: Bind was called!!\n");
-    // TODO(cphoenix): Do the entry-point work starting at common.c:brcmfmac_module_init()
     return ZX_ERR_NOT_SUPPORTED;
 }
 
