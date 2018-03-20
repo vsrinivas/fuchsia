@@ -143,4 +143,16 @@ func TestEncodingIdentity(t *testing.T) {
 		}, 48, &TestHandle2{})
 		vmo.Close()
 	})
+	t.Run("Interfaces", func(t *testing.T) {
+		h0, h1, err := zx.NewChannel(0)
+		defer h0.Close()
+		defer h1.Close()
+		if err != nil {
+			t.Fatalf("failed to create vmo: %v", err)
+		}
+		testIdentity(t, &TestInterface1{
+			A: Test1Interface(Proxy{Channel: h0}),
+			B: Test1Interface(Proxy{Channel: zx.Channel(zx.HANDLE_INVALID)}),
+		}, 8, &TestInterface1{})
+	})
 }

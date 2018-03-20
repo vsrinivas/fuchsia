@@ -38,6 +38,7 @@ var (
 	eventType               = reflect.TypeOf(zx.Event(0))
 	socketType              = reflect.TypeOf(zx.Socket(0))
 	vmarType                = reflect.TypeOf(zx.VMAR(0))
+	proxyType               = reflect.TypeOf(Proxy{})
 )
 
 // isHandleType returns true if the reflected type is a Fuchsia handle type.
@@ -55,6 +56,12 @@ func isHandleType(t reflect.Type) bool {
 		return true
 	}
 	return false
+}
+
+// isInterfaceType returns true if the reflected type is a FIDL interface type.
+func isInterfaceType(t reflect.Type) bool {
+	// FIDL interfaces are represented as aliases over Proxy.
+	return t.ConvertibleTo(proxyType)
 }
 
 // getSize returns the size of the type. Occasionally this requires the value,
@@ -467,6 +474,11 @@ func (e *encoder) marshal(t reflect.Type, v reflect.Value, n nestedTypeData) err
 	if isHandleType(t) {
 		return e.marshalHandle(v, n)
 	}
+	if isInterfaceType(t) {
+		// An interface is represented by a Proxy, whose first field is
+		// a zx.Channel, and we can just marshal that.
+		return e.marshalHandle(v.Field(0), n)
+	}
 	return e.marshalInline(t, v, n)
 }
 
@@ -815,6 +827,11 @@ func (d *decoder) unmarshal(t reflect.Type, v reflect.Value, n nestedTypeData) e
 	}
 	if isHandleType(t) {
 		return d.unmarshalHandle(v, n)
+	}
+	if isInterfaceType(t) {
+		// An interface is represented by a Proxy, whose first field is
+		// a zx.Channel, and we can just unmarshal that.
+		return d.unmarshalHandle(v.Field(0), n)
 	}
 	return d.unmarshalInline(t, v, n)
 }

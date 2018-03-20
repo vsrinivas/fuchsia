@@ -110,3 +110,12 @@ struct TestHandle2 {
     vector<handle>:1 a;
     vector<handle<vmo>?>:1 b;
 };
+
+interface Test1 {
+    10: Echo(string? in) -> (string? out);
+};
+
+struct TestInterface1 {
+    Test1 a;
+    Test1? b;
+};
