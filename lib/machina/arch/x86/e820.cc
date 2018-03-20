@@ -12,7 +12,7 @@ static constexpr uint32_t kE820Reserved = 2;
 // clang-format off
 
 static constexpr uint64_t kAddr32kb     = 0x0000000000008000;
-static constexpr uint64_t kAddr64kb     = 0x0000000000010000;
+static constexpr uint64_t kAddr512kb    = 0x0000000000080000;
 static constexpr uint64_t kAddr1mb      = 0x0000000000100000;
 static constexpr uint64_t kAddr3500mb   = 0x00000000e0000000;
 static constexpr uint64_t kAddr4000mb   = 0x0000000100000000;
@@ -45,13 +45,13 @@ zx_status_t create_e820(const machina::PhysMem& phys_mem, uintptr_t e820_off) {
   entry[0].addr = 0;
   entry[0].size = kAddr32kb;
   entry[0].type = kE820Reserved;
-  // 32kb to to 64kb is available (for linux's real mode trampoline).
+  // 32kb to to 512kb is available (for Linux's real mode trampoline).
   entry[1].addr = kAddr32kb;
-  entry[1].size = kAddr32kb;
+  entry[1].size = kAddr512kb - kAddr32kb;
   entry[1].type = kE820Ram;
-  // 64kb to 1mb is reserved.
-  entry[2].addr = kAddr64kb;
-  entry[2].size = kAddr1mb - kAddr64kb;
+  // 512kb to 1mb is reserved.
+  entry[2].addr = kAddr512kb;
+  entry[2].size = kAddr1mb - kAddr512kb;
   entry[2].type = kE820Reserved;
   // 1mb to min(size, 3500mb) is available.
   entry[3].addr = kAddr1mb;
