@@ -39,7 +39,7 @@ CARGO_TOML_CONTENTS = '''\
 [package]
 name = "%(crate_name)s"
 version = "0.1.0"
-license = "BSD-3-Clause
+license = "BSD-3-Clause"
 authors = ["rust-fuchsia@fuchsia.com"]
 description = "Generated FIDL interface"
 repository = "https://fuchsia.googlesource.com/garnet/"
@@ -144,6 +144,15 @@ def insert_alphabetically_between(lines, line_to_add, first_line_stripped, last_
             # We've found the first line that should be after our line alphabetically
             # Insert the line at the position just before the last line read
             lines.insert(i, line_to_add)
+
+            # Remove any non-alphabetical copies of the entry we just added
+            i += 1
+            while i < len(lines):
+                stripped_line = "".join(lines[i].split())
+                if stripped_line == line_to_add_stripped:
+                    lines.pop(i)
+                else:
+                    i += 1
             return lines
 
         i += 1
