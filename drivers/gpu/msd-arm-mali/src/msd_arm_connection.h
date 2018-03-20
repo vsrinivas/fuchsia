@@ -36,6 +36,7 @@ public:
         {
             return kArmMaliCacheCoherencyNone;
         }
+        virtual magma::PlatformBusMapper* GetBusMapper() = 0;
     };
 
     static std::shared_ptr<MsdArmConnection> Create(msd_client_id_t client_id, Owner* owner);
@@ -91,6 +92,8 @@ private:
     MsdArmConnection(msd_client_id_t client_id, Owner* owner);
 
     bool Init();
+
+    magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
 
     msd_client_id_t client_id_;
     std::mutex address_lock_;

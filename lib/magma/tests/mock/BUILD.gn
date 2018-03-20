@@ -35,6 +35,14 @@ source_set("mmio") {
   ]
 }
 
+source_set("bus_mapper") {
+  public_configs = [ "$magma_build_root:magma_tests_include_config" ]
+
+  sources = [
+    "mock_bus_mapper.h",
+  ]
+}
+
 source_set("magma_system") {
   sources = [
     "mock_magma_system.cc",

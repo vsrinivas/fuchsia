@@ -4,6 +4,7 @@
 
 #include <limits>
 
+#include "mock/mock_bus_mapper.h"
 #include "gtest/gtest.h"
 
 #include "address_manager.h"
@@ -45,12 +46,14 @@ public:
     }
     AddressSpaceObserver* GetAddressSpaceObserver() override { return &observer_; }
     TestAddressSpaceObserver* GetTestAddressSpaceObserver() { return &observer_; }
+    magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
 
     const std::vector<MsdArmConnection*>& cancel_atoms_list() { return cancel_atoms_list_; }
     const std::vector<std::shared_ptr<MsdArmAtom>>& atoms_list() { return atoms_list_; }
 
 private:
     TestAddressSpaceObserver observer_;
+    MockBusMapper bus_mapper_;
     std::vector<MsdArmConnection*> cancel_atoms_list_;
     std::vector<std::shared_ptr<MsdArmAtom>> atoms_list_;
 };

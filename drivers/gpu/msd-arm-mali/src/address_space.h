@@ -11,6 +11,7 @@
 
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
+#include "platform_bus_mapper.h"
 #include "types.h"
 
 #ifndef PAGE_SHIFT
@@ -61,6 +62,7 @@ public:
         virtual ~Owner() = 0;
         virtual AddressSpaceObserver* GetAddressSpaceObserver() = 0;
         virtual std::shared_ptr<Owner> GetSharedPtr() = 0;
+        virtual magma::PlatformBusMapper* GetBusMapper() = 0;
     };
 
     static constexpr uint32_t kVirtualAddressSize = 48;
@@ -73,7 +75,7 @@ public:
 
     ~AddressSpace();
 
-    bool Insert(gpu_addr_t addr, magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t offset,
+    bool Insert(gpu_addr_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping, uint64_t offset,
                 uint64_t length, uint64_t flags);
 
     bool Clear(gpu_addr_t start, uint64_t length);
@@ -102,7 +104,7 @@ private:
 
     class PageTable {
     public:
-        static std::unique_ptr<PageTable> Create(uint32_t level, bool cache_coherent);
+        static std::unique_ptr<PageTable> Create(Owner* owner, uint32_t level, bool cache_coherent);
 
         PageTableGpu* gpu() { return gpu_; }
 
@@ -123,16 +125,17 @@ private:
     private:
         static mali_pte_t get_directory_entry(uint64_t physical_address);
 
-        PageTable(uint32_t level, bool cache_coherent,
+        PageTable(Owner* owner, uint32_t level, bool cache_coherent,
                   std::unique_ptr<magma::PlatformBuffer> buffer, PageTableGpu* gpu,
-                  std::unique_ptr<magma::PlatformBuffer::BusMapping> bus_mapping);
+                  std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping);
 
         // The root page table has level 3, and the leaves have level 0.
+        Owner* owner_;
         const uint32_t level_;
         const bool cache_coherent_;
         std::unique_ptr<magma::PlatformBuffer> buffer_;
         PageTableGpu* gpu_;
-        std::unique_ptr<magma::PlatformBuffer::BusMapping> bus_mapping_;
+        std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping_;
         std::vector<std::unique_ptr<PageTable>> next_levels_;
 
         friend class TestAddressSpace;

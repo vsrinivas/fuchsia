@@ -47,10 +47,10 @@ static inline gen_pte_t gen_pte_encode(uint64_t bus_addr, CachingType caching_ty
 //////////////////////////////////////////////////////////////////////////////
 
 std::unique_ptr<PerProcessGtt::PageTable>
-PerProcessGtt::PageTable::Create(std::shared_ptr<PerProcessGtt::Page> scratch_page)
+PerProcessGtt::PageTable::Create(Owner* owner, std::shared_ptr<PerProcessGtt::Page> scratch_page)
 {
     auto page_table = std::unique_ptr<PageTable>(new PageTable(std::move(scratch_page)));
-    if (!page_table->Init())
+    if (!page_table->Init(owner))
         return DRETP(nullptr, "page table init failed");
     for (uint32_t i = 0; i < kPageTableEntries; i++) {
         *page_table->page_table_entry(i) =
@@ -60,10 +60,11 @@ PerProcessGtt::PageTable::Create(std::shared_ptr<PerProcessGtt::Page> scratch_pa
 }
 
 std::unique_ptr<PerProcessGtt::PageDirectory>
-PerProcessGtt::PageDirectory::Create(std::shared_ptr<PerProcessGtt::PageTable> scratch_table)
+PerProcessGtt::PageDirectory::Create(Owner* owner,
+                                     std::shared_ptr<PerProcessGtt::PageTable> scratch_table)
 {
     auto dir = std::unique_ptr<PageDirectory>(new PageDirectory(std::move(scratch_table)));
-    if (!dir->Init())
+    if (!dir->Init(owner))
         return DRETP(nullptr, "init failed");
     for (uint32_t i = 0; i < kPageDirectoryEntries; i++) {
         dir->page_directory_table_gpu()->entry[i] =
@@ -73,11 +74,11 @@ PerProcessGtt::PageDirectory::Create(std::shared_ptr<PerProcessGtt::PageTable> s
 }
 
 std::unique_ptr<PerProcessGtt::PageDirectoryPtrTable> PerProcessGtt::PageDirectoryPtrTable::Create(
-    std::shared_ptr<PerProcessGtt::PageDirectory> scratch_dir)
+    Owner* owner, std::shared_ptr<PerProcessGtt::PageDirectory> scratch_dir)
 {
     auto table =
         std::unique_ptr<PageDirectoryPtrTable>(new PageDirectoryPtrTable(std::move(scratch_dir)));
-    if (!table->Init())
+    if (!table->Init(owner))
         return DRETP(nullptr, "init failed");
     for (uint32_t i = 0; i < kPageDirectoryPtrEntries; i++) {
         table->page_directory_ptr_table_gpu()->entry[i] =
@@ -86,32 +87,33 @@ std::unique_ptr<PerProcessGtt::PageDirectoryPtrTable> PerProcessGtt::PageDirecto
     return table;
 }
 
-std::unique_ptr<PerProcessGtt::Pml4Table> PerProcessGtt::Pml4Table::Create()
+std::unique_ptr<PerProcessGtt::Pml4Table> PerProcessGtt::Pml4Table::Create(Owner* owner)
 {
     auto scratch_page = std::shared_ptr<Page>(new Page());
     if (!scratch_page)
         return DRETP(nullptr, "failed to create scratch page");
-    if (!scratch_page->Init())
+    if (!scratch_page->Init(owner))
         return DRETP(nullptr, "failed to init scratch page");
 
     uint64_t scratch_bus_addr = scratch_page->bus_addr();
 
-    auto scratch_table = std::shared_ptr<PageTable>(PageTable::Create(std::move(scratch_page)));
+    auto scratch_table =
+        std::shared_ptr<PageTable>(PageTable::Create(owner, std::move(scratch_page)));
     if (!scratch_table)
         return DRETP(nullptr, "failed to create scratch table");
 
     auto scratch_dir =
-        std::shared_ptr<PageDirectory>(PageDirectory::Create(std::move(scratch_table)));
+        std::shared_ptr<PageDirectory>(PageDirectory::Create(owner, std::move(scratch_table)));
     if (!scratch_dir)
         return DRETP(nullptr, "failed to create scratch dir");
 
-    auto scratch_directory_ptr = PageDirectoryPtrTable::Create(std::move(scratch_dir));
+    auto scratch_directory_ptr = PageDirectoryPtrTable::Create(owner, std::move(scratch_dir));
     if (!scratch_directory_ptr)
         return DRETP(nullptr, "failed to create scratch directory ptr");
 
     auto table = std::unique_ptr<Pml4Table>(
         new Pml4Table(scratch_bus_addr, std::move(scratch_directory_ptr)));
-    if (!table->Init())
+    if (!table->Init(owner))
         return DRETP(nullptr, "init failed");
 
     for (uint32_t i = 0; i < kPml4Entries; i++) {
@@ -122,19 +124,20 @@ std::unique_ptr<PerProcessGtt::Pml4Table> PerProcessGtt::Pml4Table::Create()
     return table;
 }
 
-std::unique_ptr<PerProcessGtt> PerProcessGtt::Create(std::shared_ptr<GpuMappingCache> cache)
+std::unique_ptr<PerProcessGtt> PerProcessGtt::Create(Owner* owner,
+                                                     std::shared_ptr<GpuMappingCache> cache)
 {
-    auto pml4_table = Pml4Table::Create();
+    auto pml4_table = Pml4Table::Create(owner);
     if (!pml4_table)
         return DRETP(nullptr, "failed to create pml4table");
 
     return std::unique_ptr<PerProcessGtt>(
-        new PerProcessGtt(std::move(pml4_table), std::move(cache)));
+        new PerProcessGtt(owner, std::move(pml4_table), std::move(cache)));
 }
 
-PerProcessGtt::PerProcessGtt(std::unique_ptr<Pml4Table> pml4_table,
+PerProcessGtt::PerProcessGtt(Owner* owner, std::unique_ptr<Pml4Table> pml4_table,
                              std::shared_ptr<GpuMappingCache> cache)
-    : AddressSpace(ADDRESS_SPACE_PPGTT, cache), pml4_table_(std::move(pml4_table))
+    : AddressSpace(owner, ADDRESS_SPACE_PPGTT, cache), pml4_table_(std::move(pml4_table))
 {
 }
 
@@ -251,7 +254,7 @@ bool PerProcessGtt::Free(uint64_t addr)
     return allocator_->Free(addr);
 }
 
-bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBuffer::BusMapping* bus_mapping,
+bool PerProcessGtt::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
                            uint64_t page_offset, uint64_t page_count, CachingType caching_type)
 {
     if (kLogEnable)

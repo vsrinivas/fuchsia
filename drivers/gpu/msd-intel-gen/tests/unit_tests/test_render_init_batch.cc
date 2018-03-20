@@ -3,16 +3,28 @@
 // found in the LICENSE file.
 
 #include "mock/mock_address_space.h"
+#include "mock/mock_bus_mapper.h"
 #include "render_init_batch.h"
 #include "gtest/gtest.h"
 
 class TestRenderInitBatch {
 public:
+    class AddressSpaceOwner : public AddressSpace::Owner {
+    public:
+        virtual ~AddressSpaceOwner() = default;
+        magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+
+    private:
+        MockBusMapper bus_mapper_;
+    };
+
     void Init(std::unique_ptr<RenderInitBatch> batch)
     {
+        auto owner = std::make_unique<AddressSpaceOwner>();
+
         uint64_t base = 0x10000;
-        std::shared_ptr<MockAddressSpace> address_space(
-            new MockAddressSpace(base, magma::round_up(batch->size(), PAGE_SIZE)));
+        auto address_space = std::make_shared<MockAddressSpace>(
+            owner.get(), base, magma::round_up(batch->size(), PAGE_SIZE));
 
         std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(batch->size(), "test"));
         ASSERT_NE(buffer, nullptr);

@@ -4,16 +4,9 @@
 
 #include "zircon_platform_buffer.h"
 #include "fdio/io.h"
-#include "magma_util/dlog.h"
-#include "magma_util/macros.h"
-#include "platform_object.h"
 #include "platform_trace.h"
+#include "zircon_platform_handle.h"
 #include <ddk/driver.h>
-#include <limits.h> // PAGE_SIZE
-#include <map>
-#include <vector>
-#include <zx/vmar.h>
-#include <zx/vmo.h>
 
 namespace magma {
 
@@ -138,31 +131,6 @@ bool ZirconPlatformBuffer::CommitPages(uint32_t start_page_index, uint32_t page_
         return DRETF(false, "failed to commit vmo pages: %d", status);
 
     return true;
-}
-
-std::unique_ptr<PlatformBuffer::BusMapping>
-ZirconPlatformBuffer::MapPageRangeBus(uint32_t start_page_index, uint32_t page_count)
-{
-    TRACE_DURATION("magma", "MapPageRangeBus");
-    static_assert(sizeof(zx_paddr_t) == sizeof(uint64_t), "unexpected sizeof(zx_paddr_t)");
-
-    // This will be fast if pages have already been committed.
-    if (!CommitPages(start_page_index, page_count))
-        return DRETP(nullptr, "failed to commit pages");
-
-    auto mapping = std::make_unique<ZirconBusMapping>(start_page_index, page_count);
-
-    zx_status_t status;
-    {
-        TRACE_DURATION("magma", "vmo lookup");
-        status =
-            vmo_.op_range(ZX_VMO_OP_LOOKUP, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
-                          mapping->Get().data(), page_count * sizeof(uint64_t));
-    }
-    if (status != ZX_OK)
-        return DRETP(nullptr, "failed to lookup vmo");
-
-    return mapping;
 }
 
 bool ZirconPlatformBuffer::CleanCache(uint64_t offset, uint64_t length, bool invalidate)

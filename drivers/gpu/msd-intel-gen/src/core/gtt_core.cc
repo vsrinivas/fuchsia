@@ -12,6 +12,7 @@
 #include "magma_util/macros.h"
 #include "magma_util/simple_allocator.h"
 #include "platform_buffer.h"
+#include "platform_bus_mapper.h"
 #include "platform_pci_device.h"
 
 class GttCore : public Gtt {
@@ -29,13 +30,13 @@ public:
     bool Clear(uint64_t addr) override;
 
     bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer,
-                         magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t page_offset,
+                         magma::PlatformBusMapper::BusMapping* bus_mapping, uint64_t page_offset,
                          uint64_t page_count, CachingType caching_type) override
     {
         return Insert(addr, bus_mapping, page_offset, page_count, caching_type);
     }
-    bool Insert(uint64_t addr, magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t page_offset,
-                uint64_t page_count, CachingType caching_type) override;
+    bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
+                uint64_t page_offset, uint64_t page_count, CachingType caching_type) override;
 
 private:
     uint64_t pte_mmio_offset() { return mmio_->size() / 2; }
@@ -56,7 +57,7 @@ private:
     // Protect all AddressSpace methods because of access from gpu and core device.
     std::mutex mutex_;
 
-    std::unique_ptr<magma::PlatformBuffer::BusMapping> scratch_bus_mapping_;
+    std::unique_ptr<magma::PlatformBusMapper::BusMapping> scratch_bus_mapping_;
     uint64_t size_;
 
     friend class TestGtt;
@@ -71,7 +72,7 @@ static inline gen_pte_t gen_pte_encode(uint64_t bus_addr, bool valid)
     return pte;
 }
 
-GttCore::GttCore(Owner* owner) : owner_(owner) {}
+GttCore::GttCore(Owner* owner) : Gtt(owner), owner_(owner) {}
 
 bool GttCore::Init(uint64_t gtt_size)
 {
@@ -124,7 +125,7 @@ bool GttCore::InitScratch()
 {
     scratch_ = magma::PlatformBuffer::Create(PAGE_SIZE, "gtt-scratch");
 
-    scratch_bus_mapping_ = scratch_->MapPageRangeBus(0, 1);
+    scratch_bus_mapping_ = owner_->GetBusMapper()->MapPageRangeBus(scratch_.get(), 0, 1);
     if (!scratch_bus_mapping_)
         return DRETF(false, "MapPageBus failed");
 
@@ -192,7 +193,7 @@ bool GttCore::Clear(uint64_t start, uint64_t length)
     return true;
 }
 
-bool GttCore::Insert(uint64_t addr, magma::PlatformBuffer::BusMapping* bus_mapping,
+bool GttCore::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
                      uint64_t page_offset, uint64_t page_count, CachingType caching_type)
 {
     DLOG("InsertEntries addr 0x%lx", addr);

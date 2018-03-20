@@ -30,6 +30,7 @@ source_set("tests_not_requiring_hardware") {
 
   deps = [
     ":test_deps",
+    "//garnet/lib/magma/tests/mock:bus_mapper"
   ]
 }
 

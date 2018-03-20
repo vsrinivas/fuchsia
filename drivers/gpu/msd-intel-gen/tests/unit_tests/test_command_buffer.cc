@@ -8,12 +8,22 @@
 #include "helper/command_buffer_helper.h"
 #include "helper/platform_device_helper.h"
 #include "mock/mock_address_space.h"
+#include "mock/mock_bus_mapper.h"
 #include "msd_intel_context.h"
 #include "msd_intel_device.h"
 #include "gtest/gtest.h"
 
 class Test {
 public:
+    class AddressSpaceOwner : public AddressSpace::Owner {
+    public:
+        virtual ~AddressSpaceOwner() = default;
+        magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+
+    private:
+        MockBusMapper bus_mapper_;
+    };
+
     static std::unique_ptr<Test> Create() { return std::unique_ptr<Test>(new Test()); }
 
     MsdIntelDevice* device() { return MsdIntelDevice::cast(helper_->dev()->msd_dev()); }
@@ -26,8 +36,9 @@ public:
 
     void TestMapUnmapResourcesGpu()
     {
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
         auto addr_space =
-            std::shared_ptr<MockAddressSpace>(new MockAddressSpace(0, 1024 * PAGE_SIZE));
+            std::make_shared<MockAddressSpace>(address_space_owner.get(), 0, 1024 * PAGE_SIZE);
 
         std::vector<std::shared_ptr<GpuMapping>> mappings;
         ASSERT_TRUE(TestCommandBuffer::MapResourcesGpu(cmd_buf_.get(), addr_space, mappings));
@@ -52,8 +63,9 @@ public:
 
     void TestPatchRelocations()
     {
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
         auto addr_space =
-            std::shared_ptr<MockAddressSpace>(new MockAddressSpace(0, 1024 * PAGE_SIZE));
+            std::make_shared<MockAddressSpace>(address_space_owner.get(), 0, 1024 * PAGE_SIZE);
 
         auto batch_buf_index = TestCommandBuffer::batch_buffer_resource_index(cmd_buf_.get());
         auto batch_res = TestCommandBuffer::exec_resources(cmd_buf_.get())[batch_buf_index];

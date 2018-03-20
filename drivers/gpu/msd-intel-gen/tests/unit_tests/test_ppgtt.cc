@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "mock/mock_bus_mapper.h"
 #include "mock/mock_mmio.h"
 #include "platform_mmio.h"
 #include "ppgtt.h"
@@ -10,7 +11,7 @@
 
 class TestPerProcessGtt {
 public:
-    class MockBusMapping : public magma::PlatformBuffer::BusMapping {
+    class MockBusMapping : public magma::PlatformBusMapper::BusMapping {
     public:
         MockBusMapping(uint64_t page_offset, uint64_t page_count)
             : page_offset_(page_offset), phys_addr_(page_count)
@@ -24,6 +25,15 @@ public:
     private:
         uint64_t page_offset_;
         std::vector<uint64_t> phys_addr_;
+    };
+
+    class AddressSpaceOwner : public PerProcessGtt::Owner {
+    public:
+        virtual ~AddressSpaceOwner() = default;
+        magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+
+    private:
+        MockBusMapper bus_mapper_;
     };
 
     static uint32_t cache_bits(CachingType caching_type)
@@ -52,8 +62,8 @@ public:
     }
 
     static void check_pte_entries(PerProcessGtt* ppgtt,
-                                  magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t gpu_addr,
-                                  CachingType caching_type)
+                                  magma::PlatformBusMapper::BusMapping* bus_mapping,
+                                  uint64_t gpu_addr, CachingType caching_type)
     {
         auto& bus_addr_array = bus_mapping->Get();
 
@@ -75,7 +85,8 @@ public:
 
     static void Init()
     {
-        auto ppgtt = PerProcessGtt::Create(GpuMappingCache::Create());
+        auto owner = std::make_unique<AddressSpaceOwner>();
+        auto ppgtt = PerProcessGtt::Create(owner.get(), GpuMappingCache::Create());
         ASSERT_TRUE(ppgtt->Init());
 
         check_pte_entries_clear(ppgtt.get(), (1ull << 48) - PAGE_SIZE, PAGE_SIZE);
@@ -89,7 +100,8 @@ public:
 
     static void Error()
     {
-        auto ppgtt = PerProcessGtt::Create(GpuMappingCache::Create());
+        auto owner = std::make_unique<AddressSpaceOwner>();
+        auto ppgtt = PerProcessGtt::Create(owner.get(), GpuMappingCache::Create());
         EXPECT_TRUE(ppgtt->Init());
 
         std::vector<uint64_t> addr(2);
@@ -119,7 +131,8 @@ public:
 
     static void Insert()
     {
-        auto ppgtt = PerProcessGtt::Create(GpuMappingCache::Create());
+        auto owner = std::make_unique<AddressSpaceOwner>();
+        auto ppgtt = PerProcessGtt::Create(owner.get(), GpuMappingCache::Create());
         EXPECT_TRUE(ppgtt->Init());
 
         std::vector<uint64_t> addr(2);

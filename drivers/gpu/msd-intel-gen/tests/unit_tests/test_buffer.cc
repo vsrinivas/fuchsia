@@ -5,11 +5,21 @@
 #include "gpu_mapping_cache.h"
 #include "magma_util/sleep.h"
 #include "mock/mock_address_space.h"
+#include "mock/mock_bus_mapper.h"
 #include "msd_intel_buffer.h"
 #include "gtest/gtest.h"
 
 class TestMsdIntelBuffer {
 public:
+    class AddressSpaceOwner : public AddressSpace::Owner {
+    public:
+        virtual ~AddressSpaceOwner() = default;
+        magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+
+    private:
+        MockBusMapper bus_mapper_;
+    };
+
     static void CreateAndDestroy()
     {
         std::unique_ptr<MsdIntelBuffer> buffer;
@@ -32,7 +42,9 @@ public:
         uint64_t base = PAGE_SIZE;
         uint64_t size = PAGE_SIZE * 10;
 
-        std::shared_ptr<MockAddressSpace> address_space(new MockAddressSpace(base, size));
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space =
+            std::make_shared<MockAddressSpace>(address_space_owner.get(), base, size);
 
         std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
         ASSERT_NE(buffer, nullptr);
@@ -55,13 +67,15 @@ public:
 
     static void CachedMapping()
     {
-
         const uint64_t kBufferSize = 4 * PAGE_SIZE;
+
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
 
         std::shared_ptr<MockAddressSpace> address_space;
 
         // Verify Uncached Behavior
-        address_space = std::make_shared<MockAddressSpace>(0, kBufferSize * 16, nullptr);
+        address_space = std::make_shared<MockAddressSpace>(address_space_owner.get(), 0,
+                                                           kBufferSize * 16, nullptr);
         {
             std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize, "test"));
             EXPECT_EQ(buffer->shared_mapping_count(), 0u);
@@ -77,8 +91,8 @@ public:
         }
 
         // Basic Caching of a single buffer
-        address_space =
-            std::make_shared<MockAddressSpace>(0, kBufferSize * 16, GpuMappingCache::Create());
+        address_space = std::make_shared<MockAddressSpace>(
+            address_space_owner.get(), 0, kBufferSize * 16, GpuMappingCache::Create());
         {
             std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(kBufferSize, "test"));
             EXPECT_EQ(buffer->shared_mapping_count(), 0u);
@@ -94,8 +108,8 @@ public:
         }
 
         // Buffer Eviction
-        address_space =
-            std::make_shared<MockAddressSpace>(0, kBufferSize * 16, GpuMappingCache::Create());
+        address_space = std::make_shared<MockAddressSpace>(
+            address_space_owner.get(), 0, kBufferSize * 16, GpuMappingCache::Create());
         {
             std::shared_ptr<MsdIntelBuffer> buffer0(MsdIntelBuffer::Create(kBufferSize, "test"));
             std::shared_ptr<MsdIntelBuffer> buffer1(MsdIntelBuffer::Create(kBufferSize, "test"));
@@ -123,8 +137,9 @@ public:
 
     static void SharedMapping(uint64_t size, uint32_t alignment)
     {
-        std::shared_ptr<MockAddressSpace> address_space(
-            new MockAddressSpace(0, magma::round_up(size, PAGE_SIZE)));
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space = std::make_shared<MockAddressSpace>(address_space_owner.get(), 0,
+                                                                magma::round_up(size, PAGE_SIZE));
         ASSERT_EQ(address_space->type(), ADDRESS_SPACE_PPGTT);
 
         std::shared_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(size, "test"));
@@ -198,7 +213,9 @@ public:
 
     static void OverlappedMapping(uint32_t alignment)
     {
-        std::shared_ptr<MockAddressSpace> address_space(new MockAddressSpace(0, PAGE_SIZE * 10));
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space =
+            std::make_shared<MockAddressSpace>(address_space_owner.get(), 0, PAGE_SIZE * 10);
         ASSERT_EQ(address_space->type(), ADDRESS_SPACE_PPGTT);
 
         constexpr uint32_t kBufferSize = PAGE_SIZE * 6;

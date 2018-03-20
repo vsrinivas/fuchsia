@@ -51,8 +51,9 @@ std::unique_ptr<GpuMapping> AddressSpace::MapBufferGpu(std::shared_ptr<AddressSp
     uint64_t page_offset = offset / PAGE_SIZE;
     uint32_t page_count = length / PAGE_SIZE;
 
-    std::unique_ptr<magma::PlatformBuffer::BusMapping> bus_mapping =
-        buffer->platform_buffer()->MapPageRangeBus(page_offset, page_count);
+    std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping =
+        address_space->owner_->GetBusMapper()->MapPageRangeBus(buffer->platform_buffer(),
+                                                               page_offset, page_count);
     if (!bus_mapping)
         return DRETP(nullptr, "failed to bus map the page range");
 

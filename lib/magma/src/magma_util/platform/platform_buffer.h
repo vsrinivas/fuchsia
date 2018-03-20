@@ -40,19 +40,6 @@ public:
 
     virtual bool MapAtCpuAddr(uint64_t addr) = 0;
 
-    class BusMapping {
-    public:
-        virtual ~BusMapping() {}
-        virtual uint64_t page_offset() = 0;
-        virtual uint64_t page_count() = 0;
-        virtual std::vector<uint64_t>& Get() = 0;
-    };
-
-    // Mapping to the bus will commit pages, and may be slow if CommitPages hasn't already been
-    // called.
-    virtual std::unique_ptr<BusMapping> MapPageRangeBus(uint32_t start_page_index,
-                                                        uint32_t page_count) = 0;
-
     virtual bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) = 0;
 
     virtual bool SetCachePolicy(magma_cache_policy_t cache_policy) = 0;

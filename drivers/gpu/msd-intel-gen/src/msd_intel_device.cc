@@ -200,6 +200,10 @@ bool MsdIntelDevice::Init(void* device_handle)
         return false;
     }
 
+    bus_mapper_ = magma::PlatformBusMapper::Create(platform_device_->GetBusTransactionInitiator());
+    if (!bus_mapper_)
+        return DRETF(false, "failed to create bus mapper");
+
     // Clear faults
     registers::AllEngineFault::clear(register_io_.get());
 

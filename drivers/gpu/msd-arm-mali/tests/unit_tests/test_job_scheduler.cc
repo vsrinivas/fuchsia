@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "mock/mock_bus_mapper.h"
 #include "msd_arm_connection.h"
 #include "platform_port.h"
 #include "gtest/gtest.h"
@@ -54,9 +55,11 @@ public:
     void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override {}
     void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) override {}
     AddressSpaceObserver* GetAddressSpaceObserver() override { return &address_space_observer_; }
+    magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
 
 private:
     TestAddressSpaceObserver address_space_observer_;
+    MockBusMapper bus_mapper_;
 };
 }
 

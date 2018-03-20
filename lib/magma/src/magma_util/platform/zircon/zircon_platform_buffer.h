@@ -11,7 +11,6 @@
 #include "platform_object.h"
 #include "zircon_platform_handle.h"
 #include <limits.h> // PAGE_SIZE
-#include <vector>
 #include <zx/vmar.h>
 #include <zx/vmo.h>
 
@@ -56,25 +55,6 @@ public:
     bool MapCpu(void** addr_out, uintptr_t alignment) override;
     bool UnmapCpu() override;
     bool MapAtCpuAddr(uint64_t addr) override;
-
-    class ZirconBusMapping : public BusMapping {
-    public:
-        ZirconBusMapping(uint64_t page_offset, uint64_t page_count)
-            : page_offset_(page_offset), page_addr_(page_count)
-        {
-        }
-
-        uint64_t page_offset() override { return page_offset_; }
-        uint64_t page_count() override { return page_addr_.size(); }
-        std::vector<uint64_t>& Get() override { return page_addr_; }
-
-    private:
-        uint64_t page_offset_;
-        std::vector<uint64_t> page_addr_;
-    };
-
-    std::unique_ptr<PlatformBuffer::BusMapping> MapPageRangeBus(uint32_t start_page_index,
-                                                                uint32_t page_count) override;
 
     bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) override;
     bool SetCachePolicy(magma_cache_policy_t cache_policy) override;

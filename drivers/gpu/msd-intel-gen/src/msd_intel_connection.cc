@@ -74,5 +74,5 @@ std::unique_ptr<MsdIntelConnection> MsdIntelConnection::Create(Owner* owner,
     cache = GpuMappingCache::Create();
 #endif
     return std::unique_ptr<MsdIntelConnection>(
-        new MsdIntelConnection(owner, PerProcessGtt::Create(std::move(cache)), client_id));
+        new MsdIntelConnection(owner, PerProcessGtt::Create(owner, std::move(cache)), client_id));
 }

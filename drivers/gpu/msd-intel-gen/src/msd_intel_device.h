@@ -132,6 +132,7 @@ private:
     void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
     void ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
                        std::shared_ptr<MsdIntelBuffer> buffer) override;
+    magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
 
     void StartDeviceThread();
 
@@ -198,6 +199,7 @@ private:
     std::unique_ptr<Sequencer> sequencer_;
     std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
     std::unique_ptr<InterruptManager> interrupt_manager_;
+    std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
 
     class CommandBufferRequest;
     class DestroyContextRequest;

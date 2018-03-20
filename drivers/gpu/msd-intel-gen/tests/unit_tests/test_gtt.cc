@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "gtt.h"
+#include "mock/mock_bus_mapper.h"
 #include "mock/mock_mmio.h"
 #include "platform_mmio.h"
 #include "registers.h"
@@ -15,6 +16,8 @@ public:
     MockPlatformPciDevice(uint64_t bar0_size) : bar0_size_(bar0_size) {}
 
     void* GetDeviceHandle() override { return nullptr; }
+
+    std::unique_ptr<magma::PlatformHandle> GetBusTransactionInitiator() override { return nullptr; }
 
     std::unique_ptr<magma::PlatformMmio>
     CpuMapPciMmio(unsigned int pci_bar, magma::PlatformMmio::CachePolicy cache_policy) override
@@ -54,7 +57,7 @@ void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr, uint6
     }
 }
 
-void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer::BusMapping* bus_mapping,
+void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBusMapper::BusMapping* bus_mapping,
                        uint64_t gpu_addr, CachingType caching_type)
 {
     ASSERT_NE(mmio, nullptr);
@@ -79,7 +82,7 @@ void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer::BusMapp
 
 class TestDevice : public Gtt::Owner {
 public:
-    class MockBusMapping : public magma::PlatformBuffer::BusMapping {
+    class MockBusMapping : public magma::PlatformBusMapper::BusMapping {
     public:
         MockBusMapping(uint64_t page_offset, uint64_t page_count)
             : page_offset_(page_offset), phys_addr_(page_count)
@@ -95,7 +98,11 @@ public:
         std::vector<uint64_t> phys_addr_;
     };
 
+    TestDevice() { bus_mapper_ = std::make_unique<MockBusMapper>(); }
+
     magma::PlatformPciDevice* platform_device() override { return platform_device_.get(); }
+
+    magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
 
     // size_bits: 1 (2MB), 2 (4MB), 3 (8MB)
     void Init(unsigned int size_bits)
@@ -133,7 +140,7 @@ public:
         // create some buffers
         std::vector<uint64_t> addr(2);
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
-        std::vector<std::unique_ptr<magma::PlatformBuffer::BusMapping>> bus_mapping(2);
+        std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> bus_mapping(2);
 
         buffer[0] = magma::PlatformBuffer::Create(1000, "test");
         EXPECT_TRUE(gtt->Alloc(buffer[0]->size(), 0, &addr[0]));
@@ -191,6 +198,7 @@ public:
     }
 
     std::shared_ptr<MockPlatformPciDevice> platform_device_;
+    std::unique_ptr<MockBusMapper> bus_mapper_;
 };
 
 TEST(Gtt, Init3) { TestDevice().Init(3); }

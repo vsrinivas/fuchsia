@@ -6,7 +6,7 @@
 #define GPU_MAPPING_H
 
 #include "magma_util/macros.h"
-#include "platform_buffer.h"
+#include "platform_bus_mapper.h"
 #include "types.h"
 #include <memory>
 
@@ -17,7 +17,7 @@ class GpuMapping {
 public:
     GpuMapping(std::shared_ptr<AddressSpace> address_space, std::shared_ptr<MsdIntelBuffer> buffer,
                uint64_t offset, uint64_t length, gpu_addr_t gpu_addr,
-               std::unique_ptr<magma::PlatformBuffer::BusMapping> bus_mapping);
+               std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping);
 
     ~GpuMapping();
 
@@ -41,7 +41,7 @@ private:
     uint64_t offset_;
     uint64_t length_;
     gpu_addr_t gpu_addr_;
-    std::unique_ptr<magma::PlatformBuffer::BusMapping> bus_mapping_;
+    std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping_;
 };
 
 #endif // GPU_MAPPING_H

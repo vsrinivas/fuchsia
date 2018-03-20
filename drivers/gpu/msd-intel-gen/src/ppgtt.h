@@ -5,8 +5,6 @@
 #ifndef PPGTT_H
 #define PPGTT_H
 
-#include <memory>
-#include <vector>
 #include "address_space.h"
 #include "magma_util/address_space_allocator.h"
 #include "magma_util/register_io.h"
@@ -33,7 +31,11 @@ static inline gen_pml4e_t gen_pml4_encode(uint64_t bus_addr)
 
 class PerProcessGtt : public AddressSpace {
 public:
-    static std::unique_ptr<PerProcessGtt> Create(std::shared_ptr<GpuMappingCache> cache);
+    class Owner : public AddressSpace::Owner {
+    };
+
+    static std::unique_ptr<PerProcessGtt> Create(Owner* owner,
+                                                 std::shared_ptr<GpuMappingCache> cache);
 
     uint64_t Size() const override { return kSize; }
 
@@ -44,7 +46,7 @@ public:
     bool Free(uint64_t addr) override;
 
     bool Clear(uint64_t addr) override;
-    bool Insert(uint64_t addr, magma::PlatformBuffer::BusMapping* buffer, uint64_t page_offset,
+    bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* buffer, uint64_t page_offset,
                 uint64_t page_count, CachingType caching_type) override;
 
     uint64_t get_pml4_bus_addr() { return pml4_table_->bus_addr(); }
@@ -84,7 +86,7 @@ public:
 
     class Page {
     public:
-        bool Init()
+        bool Init(Owner* owner)
         {
             buffer_ = magma::PlatformBuffer::Create(PAGE_SIZE, "ppgtt table");
             if (!buffer_)
@@ -93,10 +95,11 @@ public:
             if (!buffer_->MapCpu(&mapping_))
                 return DRETF(false, "failed to map cpu");
 
-            bus_mapping_ = buffer_->MapPageRangeBus(0, 1);
+            bus_mapping_ = owner->GetBusMapper()->MapPageRangeBus(buffer_.get(), 0, 1);
             if (!bus_mapping_)
                 return DRETF(false, "failed to map page range bus");
 
+            owner_ = owner;
             return true;
         }
 
@@ -104,10 +107,13 @@ public:
 
         uint64_t bus_addr() { return bus_mapping_->Get()[0]; }
 
+        Owner* owner() { return owner_; }
+
     private:
         std::unique_ptr<magma::PlatformBuffer> buffer_;
-        void* mapping_;
-        std::unique_ptr<magma::PlatformBuffer::BusMapping> bus_mapping_;
+        void* mapping_ = nullptr;
+        std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping_;
+        Owner* owner_ = nullptr;
     };
 
     class PageTable : public Page {
@@ -118,7 +124,7 @@ public:
             return &reinterpret_cast<PageTableGpu*>(mapping())->entry[page_index];
         }
 
-        static std::unique_ptr<PageTable> Create(std::shared_ptr<Page> scratch_page);
+        static std::unique_ptr<PageTable> Create(Owner* owner, std::shared_ptr<Page> scratch_page);
 
         std::shared_ptr<Page> scratch_page() { return scratch_page_; }
 
@@ -141,7 +147,7 @@ public:
             if (!page_tables_[index]) {
                 if (!alloc)
                     return scratch_table_.get();
-                page_tables_[index] = PageTable::Create(scratch_table_->scratch_page());
+                page_tables_[index] = PageTable::Create(owner(), scratch_table_->scratch_page());
                 if (!page_tables_[index])
                     return DRETP(nullptr, "couldn't create page table");
                 page_directory_table_gpu()->entry[index] =
@@ -158,7 +164,8 @@ public:
             return table->page_table_entry(page_table_index);
         }
 
-        static std::unique_ptr<PageDirectory> Create(std::shared_ptr<PageTable> scratch_table);
+        static std::unique_ptr<PageDirectory> Create(Owner* owner,
+                                                     std::shared_ptr<PageTable> scratch_table);
 
         std::shared_ptr<PageTable> scratch_table() { return scratch_table_; }
 
@@ -185,7 +192,8 @@ public:
             if (!page_directories_[index]) {
                 if (!alloc)
                     return scratch_dir_.get();
-                page_directories_[index] = PageDirectory::Create(scratch_dir_->scratch_table());
+                page_directories_[index] =
+                    PageDirectory::Create(owner(), scratch_dir_->scratch_table());
                 if (!page_directories_[index])
                     return DRETP(nullptr, "couldn't create page directory");
                 page_directory_ptr_table_gpu()->entry[index] =
@@ -204,7 +212,7 @@ public:
         }
 
         static std::unique_ptr<PageDirectoryPtrTable>
-        Create(std::shared_ptr<PageDirectory> scratch_dir);
+        Create(Owner* owner, std::shared_ptr<PageDirectory> scratch_dir);
 
         std::shared_ptr<PageDirectory> scratch_dir() { return scratch_dir_; }
 
@@ -229,7 +237,7 @@ public:
                 if (!alloc)
                     return scratch_directory_ptr_.get();
                 directory_ptrs_[index] =
-                    PageDirectoryPtrTable::Create(scratch_directory_ptr_->scratch_dir());
+                    PageDirectoryPtrTable::Create(owner(), scratch_directory_ptr_->scratch_dir());
                 if (!directory_ptrs_[index])
                     return DRETP(nullptr, "couldn't create page directory ptr table");
                 pml4_table_gpu()->entry[index] =
@@ -248,7 +256,7 @@ public:
 
         uint64_t scratch_page_bus_addr() { return scratch_page_bus_addr_; }
 
-        static std::unique_ptr<Pml4Table> Create();
+        static std::unique_ptr<Pml4Table> Create(Owner* owner);
 
     private:
         Pml4Table(uint64_t scratch_page_bus_addr,
@@ -266,7 +274,8 @@ public:
     Pml4Table* pml4_table() { return pml4_table_.get(); }
 
 private:
-    PerProcessGtt(std::unique_ptr<Pml4Table> pml4_table, std::shared_ptr<GpuMappingCache> cache);
+    PerProcessGtt(Owner* owner, std::unique_ptr<Pml4Table> pml4_table,
+                  std::shared_ptr<GpuMappingCache> cache);
 
     static constexpr uint64_t kSize = kPml4Entries * kPageDirectoryPtrEntries *
                                       kPageDirectoryEntries * kPageTableEntries * PAGE_SIZE;

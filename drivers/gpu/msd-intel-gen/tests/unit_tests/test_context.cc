@@ -4,6 +4,7 @@
 
 #include "global_context.h"
 #include "mock/mock_address_space.h"
+#include "mock/mock_bus_mapper.h"
 #include "msd_intel_connection.h"
 #include "msd_intel_context.h"
 #include "ringbuffer.h"
@@ -12,11 +13,22 @@
 
 class TestContext {
 public:
+    class AddressSpaceOwner : public AddressSpace::Owner {
+    public:
+        virtual ~AddressSpaceOwner() = default;
+        magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+
+    private:
+        MockBusMapper bus_mapper_;
+    };
+
     void Init()
     {
-        std::weak_ptr<MsdIntelConnection> connection;
-        auto address_space = std::make_shared<MockAddressSpace>(0, PAGE_SIZE);
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space =
+            std::make_shared<MockAddressSpace>(address_space_owner.get(), 0, PAGE_SIZE);
 
+        std::weak_ptr<MsdIntelConnection> connection;
         std::unique_ptr<MsdIntelContext> context(new ClientContext(connection, address_space));
 
         EXPECT_EQ(nullptr, get_buffer(context.get(), RENDER_COMMAND_STREAMER));
@@ -48,8 +60,10 @@ public:
         std::unique_ptr<Ringbuffer> ringbuffer(new Ringbuffer(
             std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"))));
 
-        std::shared_ptr<AddressSpace> address_space(
-            new MockAddressSpace(base, buffer->platform_buffer()->size() + ringbuffer->size()));
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space = std::make_shared<MockAddressSpace>(address_space_owner.get(), base,
+                                                                buffer->platform_buffer()->size() +
+                                                                    ringbuffer->size());
 
         if (global)
             context = std::unique_ptr<MsdIntelContext>(new GlobalContext(address_space));
@@ -90,6 +104,7 @@ public:
                 std::function<void(std::unique_ptr<CommandBuffer> command_buffer)> callback)
                 : callback_(callback)
             {
+                address_space_owner_ = std::make_unique<AddressSpaceOwner>();
             }
 
             magma::Status
@@ -107,8 +122,14 @@ public:
             {
             }
 
+            magma::PlatformBusMapper* GetBusMapper() override
+            {
+                return address_space_owner_->GetBusMapper();
+            }
+
             std::function<void(std::unique_ptr<CommandBuffer>)> callback_;
             std::unique_ptr<magma::PlatformSemaphore> semaphore_;
+            std::unique_ptr<AddressSpaceOwner> address_space_owner_;
         };
 
         std::vector<std::unique_ptr<CommandBuffer>> submitted_command_buffers;
@@ -125,7 +146,7 @@ public:
 
         auto connection =
             std::shared_ptr<MsdIntelConnection>(MsdIntelConnection::Create(owner.get(), 0u));
-        auto address_space = std::make_shared<MockAddressSpace>(0, PAGE_SIZE);
+        auto address_space = std::make_shared<MockAddressSpace>(owner.get(), 0, PAGE_SIZE);
 
         auto context = std::make_shared<ClientContext>(connection, address_space);
 

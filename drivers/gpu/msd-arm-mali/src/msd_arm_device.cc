@@ -180,6 +180,10 @@ bool MsdArmDevice::Init(void* device_handle)
     scheduler_ = std::make_unique<JobScheduler>(this, 3);
     address_manager_ = std::make_unique<AddressManager>(this, gpu_features_.address_space_count);
 
+    bus_mapper_ = magma::PlatformBusMapper::Create(platform_device_->GetBusTransactionInitiator());
+    if (!bus_mapper_)
+        return DRETF(false, "Failed to create bus mapper");
+
     if (!InitializeInterrupts())
         return false;
 

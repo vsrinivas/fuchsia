@@ -14,9 +14,9 @@
 
 class ClientContext;
 
-class MsdIntelConnection {
+class MsdIntelConnection : PerProcessGtt::Owner {
 public:
-    class Owner {
+    class Owner : public PerProcessGtt::Owner {
     public:
         virtual ~Owner() = default;
 
@@ -54,6 +54,9 @@ public:
     void set_context_killed() { context_killed_ = true; }
 
 private:
+    // PerProcessGtt::Owner
+    magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
+
     MsdIntelConnection(Owner* owner, std::shared_ptr<PerProcessGtt> ppgtt,
                        msd_client_id_t client_id)
         : owner_(owner), ppgtt_(std::move(ppgtt)), client_id_(client_id)

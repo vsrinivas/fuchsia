@@ -5,6 +5,7 @@
 #include <future>
 
 #include "address_manager.h"
+#include "mock/mock_bus_mapper.h"
 #include "mock/mock_mmio.h"
 #include "platform_mmio.h"
 #include "registers.h"
@@ -29,9 +30,11 @@ public:
     void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override {}
     void CancelAtoms(std::shared_ptr<MsdArmConnection> connection) override {}
     AddressSpaceObserver* GetAddressSpaceObserver() override { return manager_; }
+    magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
 
 private:
     AddressManager* manager_;
+    MockBusMapper bus_mapper_;
 };
 
 static constexpr uint64_t kMemoryAttributes = 0x8848u;
@@ -157,6 +160,7 @@ TEST(AddressManager, FlushAddressRange)
 {
     std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
     FakeOwner owner(reg_io.get());
+    auto mapper = std::unique_ptr<MockBusMapper>();
 
     const uint32_t kNumberAddressSpaces = 8;
     AddressManager address_manager(&owner, kNumberAddressSpaces);
@@ -171,7 +175,8 @@ TEST(AddressManager, FlushAddressRange)
 
     buffer = magma::PlatformBuffer::Create(PAGE_SIZE * 3, "test");
 
-    auto bus_mapping = buffer->MapPageRangeBus(0, buffer->size() / PAGE_SIZE);
+    auto bus_mapping = connection_owner.GetBusMapper()->MapPageRangeBus(buffer.get(), 0,
+                                                                        buffer->size() / PAGE_SIZE);
     ASSERT_NE(nullptr, bus_mapping);
 
     EXPECT_TRUE(connection->address_space_for_testing()->Insert(

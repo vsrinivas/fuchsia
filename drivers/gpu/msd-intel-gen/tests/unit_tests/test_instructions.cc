@@ -4,6 +4,7 @@
 
 #include "instructions.h"
 #include "mock/mock_address_space.h"
+#include "mock/mock_bus_mapper.h"
 #include "ringbuffer.h"
 #include "gtest/gtest.h"
 
@@ -14,12 +15,21 @@ public:
 
 class TestInstructions {
 public:
+    class AddressSpaceOwner : public AddressSpace::Owner {
+    public:
+        virtual ~AddressSpaceOwner() = default;
+        magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+
+    private:
+        MockBusMapper bus_mapper_;
+    };
+
     TestInstructions()
     {
-        ringbuffer_ =
-            std::unique_ptr<Ringbuffer>(new Ringbuffer(MsdIntelBuffer::Create(PAGE_SIZE, "test")));
-        address_space_ =
-            std::shared_ptr<MockAddressSpace>(new MockAddressSpace(0x10000, ringbuffer_->size()));
+        ringbuffer_ = std::make_unique<Ringbuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
+        address_space_owner_ = std::make_unique<AddressSpaceOwner>();
+        address_space_ = std::make_shared<MockAddressSpace>(address_space_owner_.get(), 0x10000,
+                                                            ringbuffer_->size());
 
         EXPECT_TRUE(ringbuffer_->Map(address_space_));
     }
@@ -94,6 +104,7 @@ public:
 
 private:
     // order of destruction important so gpu mappings can access the address space
+    std::unique_ptr<AddressSpaceOwner> address_space_owner_;
     std::shared_ptr<AddressSpace> address_space_;
     std::unique_ptr<Ringbuffer> ringbuffer_;
 };

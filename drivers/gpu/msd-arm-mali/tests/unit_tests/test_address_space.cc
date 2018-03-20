@@ -4,6 +4,7 @@
 
 #include "address_manager.h"
 #include "address_space.h"
+#include "mock/mock_bus_mapper.h"
 #include "mock/mock_mmio.h"
 #include "platform_mmio.h"
 #include "registers.h"
@@ -15,9 +16,11 @@ public:
     FakeAddressSpaceOwner() : address_manager_(nullptr, 8) {}
     AddressSpaceObserver* GetAddressSpaceObserver() override { return &address_manager_; }
     std::shared_ptr<AddressSpace::Owner> GetSharedPtr() override { return shared_from_this(); }
+    magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
 
 private:
     AddressManager address_manager_;
+    MockBusMapper bus_mapper_;
 };
 
 class TestAddressSpace {
@@ -45,8 +48,8 @@ public:
     }
 
     static void check_pte_entries(AddressSpace* address_space,
-                                  magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t gpu_addr,
-                                  uint64_t page_offset, uint64_t flags)
+                                  magma::PlatformBusMapper::BusMapping* bus_mapping,
+                                  uint64_t gpu_addr, uint64_t page_offset, uint64_t flags)
     {
         ASSERT_NE(address_space, nullptr);
 
@@ -89,13 +92,15 @@ public:
         // create some buffers
         std::vector<uint64_t> addr = {PAGE_SIZE * 0xbdefcccef, PAGE_SIZE * 100};
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
-        std::vector<std::unique_ptr<magma::PlatformBuffer::BusMapping>> bus_mapping(2);
+        std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> bus_mapping(2);
 
         buffer[0] = magma::PlatformBuffer::Create(1000, "test");
         buffer[1] = magma::PlatformBuffer::Create(10000, "test");
 
-        bus_mapping[0] = buffer[0]->MapPageRangeBus(0, buffer[0]->size() / PAGE_SIZE);
-        bus_mapping[1] = buffer[1]->MapPageRangeBus(0, buffer[1]->size() / PAGE_SIZE);
+        bus_mapping[0] = owner.GetBusMapper()->MapPageRangeBus(buffer[0].get(), 0,
+                                                               buffer[0]->size() / PAGE_SIZE);
+        bus_mapping[1] = owner.GetBusMapper()->MapPageRangeBus(buffer[1].get(), 0,
+                                                               buffer[1]->size() / PAGE_SIZE);
 
         EXPECT_TRUE(address_space->Insert(addr[0], bus_mapping[0].get(), 0, buffer[0]->size(),
                                           kAccessFlagRead | kAccessFlagNoExecute));
@@ -151,7 +156,8 @@ public:
         static constexpr uint64_t kAddr = PAGE_SIZE * 100;
 
         auto buffer = magma::PlatformBuffer::Create(10000, "test");
-        auto bus_mapping = buffer->MapPageRangeBus(1, (buffer->size() - PAGE_SIZE) / PAGE_SIZE);
+        auto bus_mapping = owner.GetBusMapper()->MapPageRangeBus(
+            buffer.get(), 1, (buffer->size() - PAGE_SIZE) / PAGE_SIZE);
 
         EXPECT_TRUE(address_space->Insert(kAddr, bus_mapping.get(), PAGE_SIZE,
                                           buffer->size() - PAGE_SIZE,
@@ -170,13 +176,15 @@ public:
         // create some buffers
         std::vector<uint64_t> addr = {kInitialAddress, kInitialAddress + PAGE_SIZE * 5};
         std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
-        std::vector<std::unique_ptr<magma::PlatformBuffer::BusMapping>> bus_mapping(2);
+        std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> bus_mapping(2);
 
         buffer[0] = magma::PlatformBuffer::Create(PAGE_SIZE * 5, "test");
         buffer[1] = magma::PlatformBuffer::Create(PAGE_SIZE * 10, "test");
 
-        bus_mapping[0] = buffer[0]->MapPageRangeBus(0, buffer[0]->size() / PAGE_SIZE);
-        bus_mapping[1] = buffer[1]->MapPageRangeBus(0, buffer[1]->size() / PAGE_SIZE);
+        bus_mapping[0] = owner.GetBusMapper()->MapPageRangeBus(buffer[0].get(), 0,
+                                                               buffer[0]->size() / PAGE_SIZE);
+        bus_mapping[1] = owner.GetBusMapper()->MapPageRangeBus(buffer[1].get(), 0,
+                                                               buffer[1]->size() / PAGE_SIZE);
 
         EXPECT_TRUE(address_space->Insert(addr[0], bus_mapping[0].get(), 0, buffer[0]->size(),
                                           kAccessFlagRead | kAccessFlagNoExecute));

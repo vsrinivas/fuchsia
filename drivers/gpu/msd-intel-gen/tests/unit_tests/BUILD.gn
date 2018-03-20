@@ -74,6 +74,7 @@ group("test_deps") {
     "$magma_build_root/tests/helper:command_buffer_helper",
     "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/tests/mock:mmio",
+    "$magma_build_root/tests/mock:bus_mapper",
     "$msd_intel_gen_build_root/src",
     "$msd_intel_gen_build_root/tests/mock",
     "//third_party/googletest:gtest",

@@ -11,17 +11,17 @@
 
 class Gtt : public AddressSpace {
 public:
-    class Owner {
+    class Owner : public AddressSpace::Owner {
     public:
         virtual magma::PlatformPciDevice* platform_device() = 0;
     };
 
-    Gtt() : AddressSpace(ADDRESS_SPACE_GGTT, nullptr) {}
+    Gtt(Owner* owner) : AddressSpace(owner, ADDRESS_SPACE_GGTT, nullptr) {}
 
     virtual bool Init(uint64_t gtt_size) = 0;
 
     virtual bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer,
-                                 magma::PlatformBuffer::BusMapping* bus_mapping,
+                                 magma::PlatformBusMapper::BusMapping* bus_mapping,
                                  uint64_t page_offset, uint64_t page_count,
                                  CachingType caching_type) = 0;
 

@@ -312,8 +312,9 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) FXL_NO_THREAD_
         uint64_t pages_to_add = committed_page_count - prev_committed_page_count;
         uint64_t page_offset_in_buffer = mapping->page_offset() + prev_committed_page_count;
 
-        std::unique_ptr<magma::PlatformBuffer::BusMapping> bus_mapping =
-            buffer->platform_buffer()->MapPageRangeBus(page_offset_in_buffer, pages_to_add);
+        std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping =
+            owner_->GetBusMapper()->MapPageRangeBus(buffer->platform_buffer(),
+                                                    page_offset_in_buffer, pages_to_add);
 
         if (!address_space_->Insert(mapping->gpu_va() + prev_committed_page_count * PAGE_SIZE,
                                     bus_mapping.get(), page_offset_in_buffer * PAGE_SIZE,

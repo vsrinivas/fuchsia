@@ -7,13 +7,13 @@
 
 class GttIntelGpuCore : public Gtt {
 public:
-    class Owner {
+    class Owner : public Gtt::Owner {
     public:
         virtual zx_intel_gpu_core_protocol_ops_t* ops() = 0;
         virtual void* context() = 0;
     };
 
-    GttIntelGpuCore(Owner* owner) : owner_(owner) {}
+    GttIntelGpuCore(Owner* owner) : Gtt(owner), owner_(owner) {}
 
     uint64_t Size() const override { return owner_->ops()->gtt_get_size(owner_->context()); }
 
@@ -52,15 +52,15 @@ public:
         return true;
     }
 
-    bool Insert(uint64_t addr, magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t page_offset,
-                uint64_t page_count, CachingType caching_type) override
+    bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
+                uint64_t page_offset, uint64_t page_count, CachingType caching_type) override
     {
         DASSERT(false);
         return false;
     }
 
     bool GlobalGttInsert(uint64_t addr, magma::PlatformBuffer* buffer,
-                         magma::PlatformBuffer::BusMapping* bus_mapping, uint64_t page_offset,
+                         magma::PlatformBusMapper::BusMapping* bus_mapping, uint64_t page_offset,
                          uint64_t page_count, CachingType caching_type) override
     {
         // Bus mapping will be redone in the core driver.
@@ -110,6 +110,12 @@ public:
 
     void* GetDeviceHandle() override { return intel_gpu_core_; }
 
+    magma::PlatformBusMapper* GetBusMapper() override
+    {
+        DASSERT(false);
+        return nullptr;
+    }
+
     std::unique_ptr<magma::PlatformHandle> GetBusTransactionInitiator() override
     {
         zx_handle_t bti_handle;
@@ -118,6 +124,8 @@ public:
             return DRETP(nullptr, "get_pci_bti failed: %d", status);
         return magma::PlatformHandle::Create(bti_handle);
     }
+
+    magma::PlatformPciDevice* platform_device() override { return this; }
 
     bool ReadPciConfig16(uint64_t addr, uint16_t* value) override
     {

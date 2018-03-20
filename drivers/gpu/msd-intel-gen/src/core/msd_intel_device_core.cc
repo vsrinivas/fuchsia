@@ -107,6 +107,10 @@ bool MsdIntelDeviceCore::Init(void* device_handle)
 
     register_io_ = std::unique_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
 
+    bus_mapper_ = magma::PlatformBusMapper::Create(platform_device_->GetBusTransactionInitiator());
+    if (!bus_mapper_)
+        return DRETF(false, "failed to created bus mapper");
+
     ReadDisplaySize();
 
     gtt_ = Gtt::CreateCore(this);

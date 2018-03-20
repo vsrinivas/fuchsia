@@ -9,12 +9,18 @@
 #include "gpu_mapping_cache.h"
 #include "msd_intel_buffer.h"
 #include "pagetable.h"
+#include "platform_bus_mapper.h"
 
 // Base class for various address spaces.
 class AddressSpace {
 public:
-    AddressSpace(AddressSpaceType type, std::shared_ptr<GpuMappingCache> cache)
-        : type_(type), cache_(cache)
+    class Owner {
+    public:
+        virtual magma::PlatformBusMapper* GetBusMapper() = 0;
+    };
+
+    AddressSpace(Owner* owner, AddressSpaceType type, std::shared_ptr<GpuMappingCache> cache)
+        : owner_(owner), type_(type), cache_(cache)
     {
     }
 
@@ -35,7 +41,7 @@ public:
 
     // Inserts the pages for the given buffer into page table entries for the allocation at the
     // given address.
-    virtual bool Insert(uint64_t addr, magma::PlatformBuffer::BusMapping* bus_mapping,
+    virtual bool Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
                         uint64_t page_offset, uint64_t page_count, CachingType caching_type) = 0;
 
     static std::unique_ptr<GpuMapping> MapBufferGpu(std::shared_ptr<AddressSpace> address_space,
@@ -71,6 +77,7 @@ public:
     void RemoveCachedMappings(MsdIntelBuffer* buffer);
 
 private:
+    Owner* owner_;
     AddressSpaceType type_;
     std::shared_ptr<GpuMappingCache> cache_;
 };

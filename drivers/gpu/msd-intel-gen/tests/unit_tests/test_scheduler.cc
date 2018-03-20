@@ -4,6 +4,7 @@
 
 #include "magma_util/sleep.h"
 #include "mock/mock_address_space.h"
+#include "mock/mock_bus_mapper.h"
 #include "mock/mock_mapped_batch.h"
 #include "msd_intel_context.h"
 #include "scheduler.h"
@@ -13,9 +14,19 @@ class TestScheduler {
 public:
     static constexpr uint32_t kNumContext = 3;
 
+    class AddressSpaceOwner : public AddressSpace::Owner {
+    public:
+        virtual ~AddressSpaceOwner() = default;
+        magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+
+    private:
+        MockBusMapper bus_mapper_;
+    };
+
     TestScheduler()
     {
-        auto address_space = std::make_shared<MockAddressSpace>(0, PAGE_SIZE);
+        auto owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space = std::make_shared<MockAddressSpace>(owner.get(), 0, PAGE_SIZE);
         for (uint32_t i = 0; i < kNumContext; i++) {
             context_[i] = std::make_shared<ClientContext>(connection_, address_space);
         }

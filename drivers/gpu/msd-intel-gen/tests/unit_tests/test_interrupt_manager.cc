@@ -29,6 +29,8 @@ class MockPlatformDevice : public magma::PlatformPciDevice {
 public:
     void* GetDeviceHandle() override { return nullptr; }
 
+    std::unique_ptr<magma::PlatformHandle> GetBusTransactionInitiator() override { return nullptr; }
+
     std::unique_ptr<magma::PlatformInterrupt> RegisterInterrupt() override
     {
         auto interrupt = std::make_unique<MockInterrupt>();

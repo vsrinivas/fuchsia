@@ -3,11 +3,21 @@
 // found in the LICENSE file.
 
 #include "mock/mock_address_space.h"
+#include "mock/mock_bus_mapper.h"
 #include "ringbuffer.h"
 #include "gtest/gtest.h"
 
 class TestRingbuffer {
 public:
+    class AddressSpaceOwner : public AddressSpace::Owner {
+    public:
+        virtual ~AddressSpaceOwner() = default;
+        magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+
+    private:
+        MockBusMapper bus_mapper_;
+    };
+
     void CreateAndDestroy()
     {
         uint32_t size = PAGE_SIZE;
@@ -29,7 +39,8 @@ public:
         EXPECT_FALSE(ringbuffer->HasSpace(size));
         EXPECT_TRUE(ringbuffer->HasSpace(size - 4));
 
-        auto address_space = std::shared_ptr<AddressSpace>(new MockAddressSpace(0x10000, size));
+        auto owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space = std::make_shared<MockAddressSpace>(owner.get(), 0x10000, size);
         EXPECT_TRUE(ringbuffer->Map(address_space));
 
         uint32_t* vaddr = ringbuffer->vaddr();

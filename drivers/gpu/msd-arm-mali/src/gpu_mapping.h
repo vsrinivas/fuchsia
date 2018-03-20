@@ -6,7 +6,7 @@
 #define GPU_MAPPING_H_
 
 #include "magma_util/macros.h"
-#include "platform_buffer.h"
+#include "platform_bus_mapper.h"
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -42,7 +42,7 @@ public:
         DASSERT(pinned_page_count_ >= pages_removed);
         pinned_page_count_ -= pages_removed;
     }
-    void grow_pinned_pages(std::unique_ptr<magma::PlatformBuffer::BusMapping> bus_mapping)
+    void grow_pinned_pages(std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping)
     {
         pinned_page_count_ += bus_mapping->page_count();
         bus_mappings_.push_back(std::move(bus_mapping));
@@ -60,7 +60,7 @@ private:
     Owner* const owner_;
     uint64_t pinned_page_count_ = 0;
     std::weak_ptr<MsdArmBuffer> buffer_;
-    std::vector<std::unique_ptr<magma::PlatformBuffer::BusMapping>> bus_mappings_;
+    std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> bus_mappings_;
 };
 
 #endif // GPU_MAPPING_H_

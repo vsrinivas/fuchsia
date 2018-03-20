@@ -90,6 +90,7 @@ public:
     {
         return cache_coherency_status_;
     }
+    magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
 
     magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
 
@@ -174,6 +175,7 @@ private:
     std::unique_ptr<PowerManager> power_manager_;
     std::unique_ptr<AddressManager> address_manager_;
     std::unique_ptr<JobScheduler> scheduler_;
+    std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
 };
 
 #endif // MSD_ARM_DEVICE_H
