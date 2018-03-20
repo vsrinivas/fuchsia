@@ -50,15 +50,10 @@ zx_status_t elf_load_get_interp(elf_load_info_t* info, zx_handle_t vmo,
         buffer = malloc(*interp_len + 1);
         if (buffer == NULL)
             return ZX_ERR_NO_MEMORY;
-        size_t n;
-        zx_status_t status = zx_vmo_read_old(vmo, buffer, offset, *interp_len, &n);
+        zx_status_t status = zx_vmo_read(vmo, buffer, offset, *interp_len);
         if (status < 0) {
             free(buffer);
             return status;
-        }
-        if (n != *interp_len) {
-            free(buffer);
-            return ERR_ELF_BAD_FORMAT;
         }
         buffer[*interp_len] = '\0';
     }

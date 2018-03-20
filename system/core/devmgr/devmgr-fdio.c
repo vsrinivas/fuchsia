@@ -144,16 +144,15 @@ zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_
 
     while (length > 0) {
         size_t copy = (length > sizeof(buffer) ? sizeof(buffer) : length);
-        size_t actual;
-        if ((status = zx_vmo_read_old(src, buffer, src_offset, copy, &actual)) != ZX_OK) {
+        if ((status = zx_vmo_read(src, buffer, src_offset, copy)) != ZX_OK) {
             goto fail;
         }
-        if ((status = zx_vmo_write_old(dest, buffer, dest_offset, actual, &actual)) != ZX_OK) {
+        if ((status = zx_vmo_write(dest, buffer, dest_offset, copy)) != ZX_OK) {
             goto fail;
         }
-        src_offset += actual;
-        dest_offset += actual;
-        length -= actual;
+        src_offset += copy;
+        dest_offset += copy;
+        length -= copy;
     }
 
     *out_dest = dest;

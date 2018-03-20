@@ -377,20 +377,18 @@ syscall vmo_create
     (size: uint64_t, options: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-# TODO(ZX-1802): remove actual argument, un-deprecate, delete _old
-syscall vmo_read deprecated
+syscall vmo_read
     (handle: zx_handle_t, data: any[len] OUT, offset: uint64_t, len: size_t)
-    returns (zx_status_t, actual: size_t);
+    returns (zx_status_t);
 
 # TODO(ZX-1802): delete
 syscall vmo_read_old
     (handle: zx_handle_t, data: any[len] OUT, offset: uint64_t, len: size_t)
     returns (zx_status_t, actual: size_t);
 
-# TODO(ZX-1802): remove actual argument, un-deprecate, delete _old
-syscall vmo_write deprecated
+syscall vmo_write
     (handle: zx_handle_t, data: any[len] IN, offset: uint64_t, len: size_t)
-    returns (zx_status_t, actual: size_t);
+    returns (zx_status_t);
 
 # TODO(ZX-1802): delete
 syscall vmo_write_old

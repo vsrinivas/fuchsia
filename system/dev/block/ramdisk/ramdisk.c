@@ -81,7 +81,6 @@ static int worker_thread(void* arg) {
         zx_status_t status = ZX_OK;
         void* addr = (void*) dev->mapped_addr + txn->op.rw.offset_dev;
         size_t len = txn->op.rw.length * dev->blk_size;
-        size_t actual;
 
         // Put the ramdisk to sleep if we have reached the required # of transactions
         if (dev->sa_txn_count > 0 && dev->txn_count >= dev->sa_txn_count) {
@@ -91,17 +90,15 @@ static int worker_thread(void* arg) {
         if (dev->asleep) {
             status = ZX_ERR_UNAVAILABLE;
         } else if (txn->op.command == BLOCK_OP_READ) {
-            if ((zx_vmo_write_old(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
-                              len, &actual) != ZX_OK) ||
-                (actual != len)) {
+            if (zx_vmo_write(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
+                             len) != ZX_OK)  {
                 status = ZX_ERR_IO;
             } else {
                 dev->txn_count++;
             }
         } else { // BLOCK_OP_WRITE
-            if ((zx_vmo_read_old(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
-                             len, &actual) != ZX_OK) ||
-                (actual != len)) {
+            if (zx_vmo_read(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
+                            len) != ZX_OK) {
                 status = ZX_ERR_IO;
             } else {
                 dev->txn_count++;

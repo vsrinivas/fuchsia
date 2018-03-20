@@ -255,10 +255,8 @@ static zx_status_t blkdev_io(blkdev_t* bdev, void* buf, size_t count,
         }
     }
 
-    size_t actual;
     if (write) {
-        if ((zx_vmo_write_old(bdev->iovmo, buf, 0, count, &actual) != ZX_OK) ||
-            (count != actual)) {
+        if (zx_vmo_write(bdev->iovmo, buf, 0, count) != ZX_OK) {
             return ZX_ERR_INTERNAL;
         }
     }
@@ -278,8 +276,7 @@ static zx_status_t blkdev_io(blkdev_t* bdev, void* buf, size_t count,
     completion_wait(&bdev->iosignal, ZX_TIME_INFINITE);
 
     if (!write && (bdev->iostatus == ZX_OK)) {
-        if ((zx_vmo_read_old(bdev->iovmo, buf, 0, count, &actual) != ZX_OK) ||
-            (count != actual)) {
+        if (zx_vmo_read(bdev->iovmo, buf, 0, count) != ZX_OK) {
             return ZX_ERR_INTERNAL;
         }
     }

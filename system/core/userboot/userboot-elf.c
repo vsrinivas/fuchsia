@@ -155,14 +155,11 @@ zx_vaddr_t elf_load_bootfs(zx_handle_t log, struct bootfs *fs, zx_handle_t proc,
     if (interp_len > 0) {
         char interp[sizeof(INTERP_PREFIX) + interp_len];
         memcpy(interp, INTERP_PREFIX, sizeof(INTERP_PREFIX) - 1);
-        size_t n;
-        zx_status_t status = zx_vmo_read_old(
+        zx_status_t status = zx_vmo_read(
             vmo, &interp[sizeof(INTERP_PREFIX) - 1],
-            interp_off, interp_len, &n);
+            interp_off, interp_len);
         if (status < 0)
             fail(log, "zx_vmo_read failed: %d", status);
-        if (n != interp_len)
-            fail(log, "zx_vmo_read short read");
         interp[sizeof(INTERP_PREFIX) - 1 + interp_len] = '\0';
 
         printl(log, "'%s' has PT_INTERP \"%s\"", filename, interp);
