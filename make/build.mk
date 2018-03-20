@@ -109,16 +109,6 @@ USER_MANIFEST_LINES += $(EXTRA_USER_MANIFEST_LINES)
 $(info EXTRA_USER_MANIFEST_LINES = $(EXTRA_USER_MANIFEST_LINES))
 endif
 
-# TODO(dbort): Remove all references to USER_AUTORUN after 2018-03-16, once
-# all current users have had a chance to encounter this error.
-ifneq ($(USER_AUTORUN),)
-$(warning USER_AUTORUN=$(USER_AUTORUN) is deprecated)
-$(warning - Use EXTRA_USER_MANIFEST_LINES="autorun=$(USER_AUTORUN)")
-$(warning - Ensure that $(USER_AUTORUN) starts with "#!/boot/bin/sh")
-$(warning - Add "zircon.autorun.boot=/boot/autorun" to the kernel cmdline)
-$(error USER_AUTORUN is no longer supported)
-endif
-
 # generate a new manifest and compare to see if it differs from the previous one
 # USER_MANIFEST_DEBUG_INPUTS is a dependency here as the file name to put in
 # the manifest must be computed *after* the input file is produced (to get the
