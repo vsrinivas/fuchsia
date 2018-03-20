@@ -10,10 +10,12 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/results.cpp \
+    $(LOCAL_DIR)/runner.cpp \
 
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fbl \
+    system/ulib/unittest \
     system/ulib/zircon \
 
 MODULE_PACKAGE := src

@@ -41,6 +41,10 @@ public:
         : label_(label),
           unit_(unit) {}
 
+    fbl::String label() const { return label_; }
+    fbl::String unit() const { return unit_; }
+    fbl::Vector<double>* values() { return &values_; }
+
     void AppendValue(double value) {
         values_.push_back(value);
     }
@@ -63,11 +67,14 @@ private:
 // case affects a later test case.)
 class ResultsSet {
 public:
+    fbl::Vector<TestCaseResults>* results() { return &results_; }
+
     TestCaseResults* AddTestCase(const fbl::String& label,
                                  const fbl::String& unit);
 
     // A caller may check for errors using ferror().
     void WriteJSON(FILE* out_file) const;
+    void PrintSummaryStatistics(FILE* out_file) const;
 
 private:
     fbl::Vector<TestCaseResults> results_;

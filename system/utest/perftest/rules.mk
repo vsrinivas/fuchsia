@@ -10,8 +10,10 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/results-test.cpp \
+    $(LOCAL_DIR)/runner-test.cpp \
+    $(LOCAL_DIR)/syscalls-test.cpp \
 
-MODULE_NAME := perftest-results-test
+MODULE_NAME := perf-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \

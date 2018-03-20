@@ -121,4 +121,19 @@ void ResultsSet::WriteJSON(FILE* out_file) const {
     fprintf(out_file, "]");
 }
 
+void ResultsSet::PrintSummaryStatistics(FILE* out_file) const {
+    // Print table headings row.
+    fprintf(out_file, "%10s %10s %10s %10s %-12s %s\n",
+           "Mean", "Std dev", "Min", "Max", "Unit", "Test case");
+    if (results_.size() == 0) {
+        fprintf(out_file, "(No test results)\n");
+    }
+    for (const auto& test : results_) {
+        SummaryStatistics stats = test.GetSummaryStatistics();
+        fprintf(out_file, "%10.0f %10.0f %10.0f %10.0f %-12s %s\n",
+                stats.mean, stats.std_dev, stats.min, stats.max,
+                test.unit().c_str(), test.label().c_str());
+    }
+}
+
 } // namespace perftest

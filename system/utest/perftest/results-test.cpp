@@ -69,8 +69,3 @@ BEGIN_TEST_CASE(perf_results_output_tests)
 RUN_TEST(test_json_output)
 RUN_TEST(test_json_string_escaping)
 END_TEST_CASE(perf_results_output_tests)
-
-int main(int argc, char** argv) {
-    bool success = unittest_run_all_tests(argc, argv);
-    return success ? 0 : -1;
-}
