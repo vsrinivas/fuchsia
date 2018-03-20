@@ -27,6 +27,24 @@ periph-mem-map = {
     }
 }
 
+boot-reserve-mem-map = {
+    // Reserved for RTC
+    bank = {
+        base-phys = 0x09010000
+        length    = 0x1000 // 4KB
+    }
+    // Reserved for MMIO
+    bank = {
+        base-phys = 0x06fe0000
+        length    = 0x1000000 // 16MB
+    }
+    // Reserved for ECAM
+    bank = {
+        base-phys = 0x2e000000
+        length    = 0x1000000 // 16MB
+    }
+}
+
 kernel = {
     arm-pl011-uart = {
         base-phys = 0xfff32000
