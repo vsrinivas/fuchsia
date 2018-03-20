@@ -36,7 +36,7 @@ zx_status_t VmoMapper::CreateAndMap(uint64_t size,
         }
     }
 
-    ret = InternalMap(vmo, size, map_flags, fbl::move(vmar_manager));
+    ret = InternalMap(vmo, 0, size, map_flags, fbl::move(vmar_manager));
     if (ret != ZX_OK) {
         return ret;
     }
@@ -57,6 +57,7 @@ zx_status_t VmoMapper::CreateAndMap(uint64_t size,
 }
 
 zx_status_t VmoMapper::Map(const zx::vmo& vmo,
+                           uint64_t offset,
                            uint64_t size,
                            uint32_t map_flags,
                            RefPtr<VmarManager> vmar_manager) {
@@ -71,13 +72,22 @@ zx_status_t VmoMapper::Map(const zx::vmo& vmo,
         return res;
     }
 
-    if (!size) {
-        res = vmo.get_size(&size);
-        if (res != ZX_OK) {
-            return res;
-        }
+    uint64_t vmo_size;
+    res = vmo.get_size(&vmo_size);
+    if (res != ZX_OK) {
+        return res;
     }
-    return InternalMap(vmo, size, map_flags, vmar_manager);
+
+    uint64_t end_addr;
+    if (add_overflow(size, offset, &end_addr) || end_addr > vmo_size) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    if (!size) {
+        size = vmo_size - offset;
+    }
+
+    return InternalMap(vmo, offset, size, map_flags, vmar_manager);
 }
 
 void VmoMapper::Unmap() {
@@ -110,6 +120,7 @@ zx_status_t VmoMapper::CheckReadyToMap(const RefPtr<VmarManager>& vmar_manager) 
 }
 
 zx_status_t VmoMapper::InternalMap(const zx::vmo& vmo,
+                                   uint64_t offset,
                                    uint64_t size,
                                    uint32_t map_flags,
                                    RefPtr<VmarManager> vmar_manager) {
@@ -123,7 +134,7 @@ zx_status_t VmoMapper::InternalMap(const zx::vmo& vmo,
         ? zx::vmar::root_self().get()
         : vmar_manager->vmar().get();
 
-    zx_status_t res = zx_vmar_map(vmar_handle, 0, vmo.get(), 0, size, map_flags, &tmp);
+    zx_status_t res = zx_vmar_map(vmar_handle, 0, vmo.get(), offset, size, map_flags, &tmp);
     if (res != ZX_OK) {
         return res;
     }

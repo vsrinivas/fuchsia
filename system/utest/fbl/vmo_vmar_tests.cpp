@@ -105,16 +105,19 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
     struct {
         uint32_t access_flags;
         zx_rights_t vmo_rights;
+        size_t test_offset;
         size_t test_size;
         void* start;
     } kVmoTests[] = {
         { .access_flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
           .vmo_rights = ZX_RIGHT_SAME_RIGHTS,
+          .test_offset = 0,
           .test_size = kVmoTestSize >> 1,
           .start = nullptr,
         },
         { .access_flags = ZX_VM_FLAG_PERM_READ,
           .vmo_rights = ZX_RIGHT_READ | ZX_RIGHT_MAP,
+          .test_offset = 0,
           .test_size = kVmoTestSize,
           .start = nullptr,
         },
@@ -123,12 +126,20 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
 #if 0
         { .access_flags = ZX_VM_FLAG_PERM_WRITE,
           .vmo_rights = ZX_RIGHT_WRITE | ZX_RIGHT_MAP,
+          .test_offset = 0,
           .test_size = 0,
           .start = nullptr,
         },
 #endif
         { .access_flags = 0,
           .vmo_rights = 0,
+          .test_offset = 0,
+          .test_size = 0,
+          .start = nullptr,
+        },
+        { .access_flags = 0,
+          .vmo_rights = 0,
+          .test_offset = kVmoTestSize >> 1,
           .test_size = 0,
           .start = nullptr,
         },
@@ -172,6 +183,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
                         }
 
                         res = mappers[i].Map(vmo_handles[i],
+                                             t.test_offset,
                                              t.test_size,
                                              t.access_flags,
                                              target_vmar);
@@ -225,10 +237,10 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
                     ASSERT_EQ(info.rights, expected_rights, "Rights reduction failure");
                 } else {
                     // If we mapped this VMO, and we passed zero for the map size, the Mapper should
-                    // have mapped the entire VMO and its size should reflect that.
+                    // have mapped the entire VMO after the offset and its size should reflect that.
                     if (!t.test_size) {
-                        ASSERT_EQ(mappers[i].size(), kVmoTestSize);
-                        t.test_size = kVmoTestSize;
+                        ASSERT_EQ(mappers[i].size() + t.test_offset, kVmoTestSize);
+                        t.test_size = kVmoTestSize - t.test_offset;
                     }
                 }
             }

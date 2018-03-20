@@ -44,12 +44,14 @@ public:
     // flags and optional target VMAR.
     //
     // vmo        : The vmo to map.
-    // size       : The amount of the vmo, in bytes, to map, or 0 to map the
-    //              entire VMO.
+    // offset     : The offset into the vmo, in bytes, to start the map
+    // size       : The amount of the vmo, in bytes, to map, or 0 to map from
+    //              the offset to the end of the VMO.
     // map_flags  : The flags to use when mapping the VMO.
     // vmar       : A reference to a VmarManager to use when mapping the VMO, or
     //              nullptr to map the VMO using the root VMAR.
     zx_status_t Map(const zx::vmo& vmo,
+                    uint64_t offset,
                     uint64_t size,
                     uint32_t map_flags,
                     RefPtr<VmarManager> vmar_manager = nullptr);
@@ -66,6 +68,7 @@ public:
 private:
     zx_status_t CheckReadyToMap(const RefPtr<VmarManager>& vmar_manager);
     zx_status_t InternalMap(const zx::vmo& vmo,
+                            uint64_t offset,
                             uint64_t size,
                             uint32_t map_flags,
                             RefPtr<VmarManager> vmar_manager);

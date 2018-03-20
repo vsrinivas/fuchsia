@@ -226,7 +226,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
     // Map the VMO in, make sure to put it in the same VMAR as the rest of our
     // registers.
     constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
-    res = mapped_regs_.Map(bar_vmo, bar_info.size, CPU_MAP_FLAGS, DriverVmars::registers());
+    res = mapped_regs_.Map(bar_vmo, 0, bar_info.size, CPU_MAP_FLAGS, DriverVmars::registers());
     if (res != ZX_OK) {
         LOG(ERROR, "Error attempting to map registers (res %d)\n", res);
         return res;
