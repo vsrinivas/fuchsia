@@ -15,7 +15,7 @@
 
 namespace cpuperf {
 
-const char kCpuPerfDev[] = "/dev/misc/cpu-trace";
+const char kCpuPerfDev[] = "/dev/sys/cpu-trace/cpu-trace";
 
 static bool IsSampleMode(const cpuperf_config_t& config) {
   for (size_t i = 0; i < countof(config.rate); ++i) {
