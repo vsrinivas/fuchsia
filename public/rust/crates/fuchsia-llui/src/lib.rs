@@ -13,8 +13,8 @@ mod color;
 
 pub use color::Color;
 use failure::Error;
-use fdio::{ioctl, make_ioctl};
-use fdio::fdio_sys::{IOCTL_FAMILY_DISPLAY, IOCTL_KIND_DEFAULT, IOCTL_KIND_GET_HANDLE};
+use fdio::{make_ioctl};
+use fdio::fdio_sys::{IOCTL_FAMILY_DISPLAY, IOCTL_KIND_DEFAULT, IOCTL_KIND_GET_HANDLE, fdio_ioctl};
 use fuchsia_zircon_sys::{ZX_VM_FLAG_PERM_READ, ZX_VM_FLAG_PERM_WRITE, zx_handle_t, zx_vmar_map,
                          zx_vmar_root_self};
 use std::fmt;
@@ -76,7 +76,7 @@ fn get_info_for_device(fd: i32) -> Result<ioctl_display_get_fb_t, Error> {
         *mut std::os::raw::c_void;
 
     let status = unsafe {
-        ioctl(
+        fdio_ioctl(
             fd,
             ioctl_display_get_fb_value,
             ptr::null(),
@@ -171,7 +171,7 @@ impl FrameBuffer {
     pub fn flush(&self) -> Result<(), Error> {
         let ioctl_display_flush_fb_value = make_ioctl(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DISPLAY, 2);
         let status = unsafe {
-            ioctl(
+            fdio_ioctl(
                 self.file.as_raw_fd(),
                 ioctl_display_flush_fb_value,
                 ptr::null(),

@@ -2,20 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![recursion_limit = "1024"]
-
-#[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate fuchsia_llui as llui;
 
+use failure::Error;
 use llui::{Color, FrameBuffer, wait_for_close};
 use std::{thread, time};
-
-error_chain!{
-    links {
-        LUI(::llui::Error, ::llui::ErrorKind);
-    }
-}
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
 pub struct Size {
@@ -120,7 +112,7 @@ fn fill_rectangle(fb: &mut FrameBuffer, color: &Color, r: &Rectangle) {
     }
 }
 
-fn run() -> Result<()> {
+fn run() -> Result<(), Error> {
     wait_for_close();
 
     let mut fb = FrameBuffer::new(None)?;
@@ -178,17 +170,6 @@ fn run() -> Result<()> {
 fn main() {
     if let Err(ref e) = run() {
         println!("error: {}", e);
-
-        for e in e.iter().skip(1) {
-            println!("caused by: {}", e);
-        }
-
-        // The backtrace is not always generated. Try to run this example
-        // with `RUST_BACKTRACE=1`.
-        if let Some(backtrace) = e.backtrace() {
-            println!("backtrace: {:?}", backtrace);
-        }
-
         ::std::process::exit(1);
     }
 }
