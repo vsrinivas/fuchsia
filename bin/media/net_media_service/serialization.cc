@@ -81,6 +81,11 @@ Serializer& Serializer::operator<<(int64_t value) {
   return *this;
 }
 
+Serializer& Serializer::operator<<(float value) {
+  PutBytes(sizeof(value), &value);
+  return *this;
+}
+
 Serializer& operator<<(Serializer& serializer, const std::string& value) {
   serializer << value.size();
   serializer.PutBytes(value.size(), value.data());
@@ -166,6 +171,11 @@ Deserializer& Deserializer::operator>>(int32_t& value) {
 Deserializer& Deserializer::operator>>(int64_t& value) {
   GetBytes(sizeof(value), &value);
   value = betoh64(value);
+  return *this;
+}
+
+Deserializer& Deserializer::operator>>(float& value) {
+  GetBytes(sizeof(value), &value);
   return *this;
 }
 

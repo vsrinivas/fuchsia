@@ -1,8 +1,8 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/net_media_service/net_media_player_net_stub.h"
+#include "garnet/bin/media/net_media_service/media_player_net_stub.h"
 
 #include <vector>
 
@@ -14,11 +14,10 @@
 
 namespace media {
 
-NetMediaPlayerNetStub::NetMediaPlayerNetStub(
-    NetMediaPlayer* player,
+MediaPlayerNetStub::MediaPlayerNetStub(
+    MediaPlayer* player,
     zx::channel channel,
-    netconnector::NetStubResponder<NetMediaPlayer, NetMediaPlayerNetStub>*
-        responder)
+    netconnector::NetStubResponder<MediaPlayer, MediaPlayerNetStub>* responder)
     : player_(player), responder_(responder) {
   FXL_DCHECK(player_);
   FXL_DCHECK(responder_);
@@ -32,9 +31,9 @@ NetMediaPlayerNetStub::NetMediaPlayerNetStub(
   message_relay_.SetChannel(std::move(channel));
 }
 
-NetMediaPlayerNetStub::~NetMediaPlayerNetStub() {}
+MediaPlayerNetStub::~MediaPlayerNetStub() {}
 
-void NetMediaPlayerNetStub::HandleReceivedMessage(
+void MediaPlayerNetStub::HandleReceivedMessage(
     std::vector<uint8_t> serial_message) {
   std::unique_ptr<MediaPlayerInMessage> message;
   Deserializer deserializer(serial_message);
@@ -63,7 +62,7 @@ void NetMediaPlayerNetStub::HandleReceivedMessage(
 
     case MediaPlayerInMessageType::kSetHttpSourceRequest:
       FXL_DCHECK(message->set_http_source_request_);
-      player_->SetUrl(message->set_http_source_request_->url_);
+      player_->SetHttpSource(message->set_http_source_request_->url_);
       break;
 
     case MediaPlayerInMessageType::kPlayRequest:
@@ -80,14 +79,14 @@ void NetMediaPlayerNetStub::HandleReceivedMessage(
       break;
 
     case MediaPlayerInMessageType::kSetGainRequest:
-      // Not supported.
-      FXL_LOG(ERROR) << "NetMediaPlayerNetStub received SetGain message.";
+      FXL_DCHECK(message->set_gain_request_);
+      player_->SetGain(message->set_gain_request_->gain_);
       break;
   }
 }
 
-void NetMediaPlayerNetStub::HandleStatusUpdates(uint64_t version,
-                                                MediaPlayerStatusPtr status) {
+void MediaPlayerNetStub::HandleStatusUpdates(uint64_t version,
+                                             MediaPlayerStatusPtr status) {
   if (status) {
     message_relay_.SendMessage(Serializer::Serialize(
         MediaPlayerOutMessage::StatusNotification(std::move(status))));
@@ -96,7 +95,7 @@ void NetMediaPlayerNetStub::HandleStatusUpdates(uint64_t version,
   // Request a status update.
   player_->GetStatus(
       version, [weak_this =
-                    std::weak_ptr<NetMediaPlayerNetStub>(shared_from_this())](
+                    std::weak_ptr<MediaPlayerNetStub>(shared_from_this())](
                    uint64_t version, MediaPlayerStatusPtr status) {
         auto shared_this = weak_this.lock();
         if (shared_this) {

@@ -50,6 +50,7 @@ class Serializer {
   Serializer& operator<<(int16_t value);
   Serializer& operator<<(int32_t value);
   Serializer& operator<<(int64_t value);
+  Serializer& operator<<(float value);
 
  private:
   std::vector<uint8_t> serial_message_;
@@ -108,6 +109,7 @@ class Deserializer {
   Deserializer& operator>>(int16_t& value);
   Deserializer& operator>>(int32_t& value);
   Deserializer& operator>>(int64_t& value);
+  Deserializer& operator>>(float& value);
 
  private:
   bool healthy_ = true;

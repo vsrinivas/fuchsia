@@ -7,6 +7,7 @@ module media;
 import "lib/media/fidl/media_player.fidl";
 
 // Plays media.
+// DEPRECATED
 interface NetMediaPlayer {
   // Special value for GetStatus version_last_seen parameter to get the current
   // status immediately.

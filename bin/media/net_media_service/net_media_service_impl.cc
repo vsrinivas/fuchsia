@@ -4,6 +4,8 @@
 
 #include "garnet/bin/media/net_media_service/net_media_service_impl.h"
 
+#include "garnet/bin/media/net_media_service/media_player_net_proxy.h"
+#include "garnet/bin/media/net_media_service/media_player_net_publisher.h"
 #include "garnet/bin/media/net_media_service/net_media_player_impl.h"
 #include "garnet/bin/media/net_media_service/net_media_player_net_proxy.h"
 
@@ -19,6 +21,21 @@ NetMediaServiceImpl::NetMediaServiceImpl(
 }
 
 NetMediaServiceImpl::~NetMediaServiceImpl() {}
+
+void NetMediaServiceImpl::PublishMediaPlayer(
+    const f1dl::StringPtr& service_name,
+    f1dl::InterfaceHandle<MediaPlayer> media_player) {
+  AddProduct(MediaPlayerNetPublisher::Create(service_name,
+                                             std::move(media_player), this));
+}
+
+void NetMediaServiceImpl::CreateMediaPlayerProxy(
+    const f1dl::StringPtr& device_name,
+    const f1dl::StringPtr& service_name,
+    f1dl::InterfaceRequest<MediaPlayer> media_player_request) {
+  AddProduct(MediaPlayerNetProxy::Create(
+      device_name, service_name, std::move(media_player_request), this));
+}
 
 void NetMediaServiceImpl::CreateNetMediaPlayer(
     const f1dl::StringPtr& service_name,

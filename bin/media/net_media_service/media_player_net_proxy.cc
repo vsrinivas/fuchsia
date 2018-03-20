@@ -1,8 +1,8 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/net_media_service/net_media_player_net_proxy.h"
+#include "garnet/bin/media/net_media_service/media_player_net_proxy.h"
 
 #include <vector>
 
@@ -15,23 +15,23 @@
 namespace media {
 
 // static
-std::shared_ptr<NetMediaPlayerNetProxy> NetMediaPlayerNetProxy::Create(
+std::shared_ptr<MediaPlayerNetProxy> MediaPlayerNetProxy::Create(
     const f1dl::StringPtr& device_name,
     const f1dl::StringPtr& service_name,
-    f1dl::InterfaceRequest<NetMediaPlayer> request,
+    f1dl::InterfaceRequest<MediaPlayer> request,
     NetMediaServiceImpl* owner) {
-  return std::shared_ptr<NetMediaPlayerNetProxy>(new NetMediaPlayerNetProxy(
+  return std::shared_ptr<MediaPlayerNetProxy>(new MediaPlayerNetProxy(
       device_name, service_name, std::move(request), owner));
 }
 
-NetMediaPlayerNetProxy::NetMediaPlayerNetProxy(
+MediaPlayerNetProxy::MediaPlayerNetProxy(
     const f1dl::StringPtr& device_name,
     const f1dl::StringPtr& service_name,
-    f1dl::InterfaceRequest<NetMediaPlayer> request,
+    f1dl::InterfaceRequest<MediaPlayer> request,
     NetMediaServiceImpl* owner)
-    : NetMediaServiceImpl::Product<NetMediaPlayer>(this,
-                                                   std::move(request),
-                                                   owner),
+    : NetMediaServiceImpl::MultiClientProduct<MediaPlayer>(this,
+                                                           std::move(request),
+                                                           owner),
       status_(MediaPlayerStatus::New()) {
   FXL_DCHECK(owner);
 
@@ -69,39 +69,77 @@ NetMediaPlayerNetProxy::NetMediaPlayerNetProxy(
   SendTimeCheckMessage();
 }
 
-NetMediaPlayerNetProxy::~NetMediaPlayerNetProxy() {}
+MediaPlayerNetProxy::~MediaPlayerNetProxy() {}
 
-void NetMediaPlayerNetProxy::SetUrl(const f1dl::StringPtr& url) {
-  message_relay_.SendMessage(Serializer::Serialize(
-      MediaPlayerInMessage::SetHttpSourceRequest(url)));
+void MediaPlayerNetProxy::SetHttpSource(const f1dl::StringPtr& url) {
+  message_relay_.SendMessage(
+      Serializer::Serialize(MediaPlayerInMessage::SetHttpSourceRequest(url)));
 }
 
-void NetMediaPlayerNetProxy::Play() {
+void MediaPlayerNetProxy::SetFileSource(zx::channel file_channel) {
+  FXL_LOG(ERROR)
+      << "SetFileSource called on MediaPlayer proxy - not supported.";
+  UnbindAndReleaseFromOwner();
+}
+
+void MediaPlayerNetProxy::SetReaderSource(
+    f1dl::InterfaceHandle<SeekingReader> reader_handle) {
+  FXL_LOG(ERROR)
+      << "SetReaderSource called on MediaPlayer proxy - not supported.";
+  UnbindAndReleaseFromOwner();
+}
+
+void MediaPlayerNetProxy::Play() {
   message_relay_.SendMessage(
       Serializer::Serialize(MediaPlayerInMessage::PlayRequest()));
 }
 
-void NetMediaPlayerNetProxy::Pause() {
+void MediaPlayerNetProxy::Pause() {
   message_relay_.SendMessage(
       Serializer::Serialize(MediaPlayerInMessage::PauseRequest()));
 }
 
-void NetMediaPlayerNetProxy::Seek(int64_t position) {
+void MediaPlayerNetProxy::Seek(int64_t position) {
   message_relay_.SendMessage(
       Serializer::Serialize(MediaPlayerInMessage::SeekRequest(position)));
 }
 
-void NetMediaPlayerNetProxy::GetStatus(uint64_t version_last_seen,
-                                       const GetStatusCallback& callback) {
+void MediaPlayerNetProxy::GetStatus(uint64_t version_last_seen,
+                                    const GetStatusCallback& callback) {
   status_publisher_.Get(version_last_seen, callback);
 }
 
-void NetMediaPlayerNetProxy::SendTimeCheckMessage() {
+void MediaPlayerNetProxy::SetGain(float gain) {
+  message_relay_.SendMessage(
+      Serializer::Serialize(MediaPlayerInMessage::SetGainRequest(gain)));
+}
+
+void MediaPlayerNetProxy::CreateView(
+    f1dl::InterfaceHandle<mozart::ViewManager> view_manager,
+    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+  FXL_LOG(ERROR) << "CreateView called on MediaPlayer proxy - not supported.";
+  UnbindAndReleaseFromOwner();
+}
+
+void MediaPlayerNetProxy::SetAudioRenderer(
+    f1dl::InterfaceHandle<AudioRenderer> audio_renderer,
+    f1dl::InterfaceHandle<MediaRenderer> media_renderer) {
+  FXL_LOG(ERROR)
+      << "SetAudioRenderer called on MediaPlayer proxy - not supported.";
+  UnbindAndReleaseFromOwner();
+}
+
+void MediaPlayerNetProxy::AddBinding(
+    f1dl::InterfaceRequest<MediaPlayer> request) {
+  MultiClientProduct::AddBinding(std::move(request));
+}
+
+void MediaPlayerNetProxy::SendTimeCheckMessage() {
   message_relay_.SendMessage(Serializer::Serialize(
       MediaPlayerInMessage::TimeCheckRequest(Timeline::local_now())));
 }
 
-void NetMediaPlayerNetProxy::HandleReceivedMessage(
+void MediaPlayerNetProxy::HandleReceivedMessage(
     std::vector<uint8_t> serial_message) {
   std::unique_ptr<MediaPlayerOutMessage> message;
   Deserializer deserializer(serial_message);

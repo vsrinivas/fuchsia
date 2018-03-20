@@ -18,10 +18,11 @@ namespace media {
 // Types of messages sent by the proxy and handled by the stub.
 enum class MediaPlayerInMessageType : uint8_t {
   kTimeCheckRequest,
-  kSetUrlRequest,
+  kSetHttpSourceRequest,
   kPlayRequest,
   kPauseRequest,
-  kSeekRequest
+  kSeekRequest,
+  kSetGainRequest
 };
 
 // Types of messages sent by the stub and handled by the proxy.
@@ -44,7 +45,7 @@ struct MediaPlayerTimeCheckResponse {
 };
 
 // Sent by the proxy to request a url change.
-struct MediaPlayerSetUrlRequest {
+struct MediaPlayerSetHttpSourceRequest {
   f1dl::StringPtr url_;
 };
 
@@ -54,6 +55,11 @@ struct MediaPlayerSetUrlRequest {
 // Sent by the proxy to request a seek.
 struct MediaPlayerSeekRequest {
   int64_t position_;
+};
+
+// Sent by the proxy to request a gain change.
+struct MediaPlayerSetGainRequest {
+  float gain_;
 };
 
 // Sent by the stub to notify the proxy of a change in status.
@@ -66,18 +72,20 @@ struct MediaPlayerStatusNotification {
 struct MediaPlayerInMessage {
   static std::unique_ptr<MediaPlayerInMessage> TimeCheckRequest(
       int64_t requestor_time);
-  static std::unique_ptr<MediaPlayerInMessage> SetUrlRequest(
+  static std::unique_ptr<MediaPlayerInMessage> SetHttpSourceRequest(
       const f1dl::StringPtr& url);
   static std::unique_ptr<MediaPlayerInMessage> PlayRequest();
   static std::unique_ptr<MediaPlayerInMessage> PauseRequest();
   static std::unique_ptr<MediaPlayerInMessage> SeekRequest(int64_t position);
+  static std::unique_ptr<MediaPlayerInMessage> SetGainRequest(float gain);
 
   MediaPlayerInMessageType type_;
   std::unique_ptr<MediaPlayerTimeCheckRequest> time_check_request_;
-  std::unique_ptr<MediaPlayerSetUrlRequest> set_url_request_;
+  std::unique_ptr<MediaPlayerSetHttpSourceRequest> set_http_source_request_;
   // Play has no parameters.
   // Pause has no parameters.
   std::unique_ptr<MediaPlayerSeekRequest> seek_request_;
+  std::unique_ptr<MediaPlayerSetGainRequest> set_gain_request_;
 };
 
 // Union-like of all possible messages sent by the stub and handled
@@ -104,10 +112,13 @@ Serializer& operator<<(
 Serializer& operator<<(
     Serializer& serializer,
     const std::unique_ptr<MediaPlayerTimeCheckResponse>& value);
-Serializer& operator<<(Serializer& serializer,
-                       const std::unique_ptr<MediaPlayerSetUrlRequest>& value);
+Serializer& operator<<(
+    Serializer& serializer,
+    const std::unique_ptr<MediaPlayerSetHttpSourceRequest>& value);
 Serializer& operator<<(Serializer& serializer,
                        const std::unique_ptr<MediaPlayerSeekRequest>& value);
+Serializer& operator<<(Serializer& serializer,
+                       const std::unique_ptr<MediaPlayerSetGainRequest>& value);
 Serializer& operator<<(
     Serializer& serializer,
     const std::unique_ptr<MediaPlayerStatusNotification>& value);
@@ -132,10 +143,13 @@ Deserializer& operator>>(Deserializer& deserializer,
                          std::unique_ptr<MediaPlayerTimeCheckRequest>& value);
 Deserializer& operator>>(Deserializer& deserializer,
                          std::unique_ptr<MediaPlayerTimeCheckResponse>& value);
-Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerSetUrlRequest>& value);
+Deserializer& operator>>(
+    Deserializer& deserializer,
+    std::unique_ptr<MediaPlayerSetHttpSourceRequest>& value);
 Deserializer& operator>>(Deserializer& deserializer,
                          std::unique_ptr<MediaPlayerSeekRequest>& value);
+Deserializer& operator>>(Deserializer& deserializer,
+                         std::unique_ptr<MediaPlayerSetGainRequest>& value);
 Deserializer& operator>>(Deserializer& deserializer,
                          std::unique_ptr<MediaPlayerStatusNotification>& value);
 Deserializer& operator>>(Deserializer& deserializer,

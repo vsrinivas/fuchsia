@@ -20,6 +20,15 @@ class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
   ~NetMediaServiceImpl() override;
 
   // NetMediaService implementation.
+  void PublishMediaPlayer(
+      const f1dl::StringPtr& service_name,
+      f1dl::InterfaceHandle<MediaPlayer> media_player) override;
+
+  void CreateMediaPlayerProxy(
+      const f1dl::StringPtr& device_name,
+      const f1dl::StringPtr& service_name,
+      f1dl::InterfaceRequest<MediaPlayer> media_player_request) override;
+
   void CreateNetMediaPlayer(
       const f1dl::StringPtr& service_name,
       f1dl::InterfaceHandle<MediaPlayer> media_player,

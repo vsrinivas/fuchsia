@@ -21,13 +21,14 @@ std::unique_ptr<MediaPlayerInMessage> MediaPlayerInMessage::TimeCheckRequest(
 }
 
 // static
-std::unique_ptr<MediaPlayerInMessage> MediaPlayerInMessage::SetUrlRequest(
-    const f1dl::StringPtr& url) {
+std::unique_ptr<MediaPlayerInMessage>
+MediaPlayerInMessage::SetHttpSourceRequest(const f1dl::StringPtr& url) {
   std::unique_ptr<MediaPlayerInMessage> message =
       std::make_unique<MediaPlayerInMessage>();
-  message->type_ = MediaPlayerInMessageType::kSetUrlRequest;
-  message->set_url_request_ = std::make_unique<MediaPlayerSetUrlRequest>();
-  message->set_url_request_->url_ = url;
+  message->type_ = MediaPlayerInMessageType::kSetHttpSourceRequest;
+  message->set_http_source_request_ =
+      std::make_unique<MediaPlayerSetHttpSourceRequest>();
+  message->set_http_source_request_->url_ = url;
   return message;
 }
 
@@ -55,6 +56,17 @@ std::unique_ptr<MediaPlayerInMessage> MediaPlayerInMessage::SeekRequest(
   message->type_ = MediaPlayerInMessageType::kSeekRequest;
   message->seek_request_ = std::make_unique<MediaPlayerSeekRequest>();
   message->seek_request_->position_ = position;
+  return message;
+}
+
+// static
+std::unique_ptr<MediaPlayerInMessage> MediaPlayerInMessage::SetGainRequest(
+    float gain) {
+  std::unique_ptr<MediaPlayerInMessage> message =
+      std::make_unique<MediaPlayerInMessage>();
+  message->type_ = MediaPlayerInMessageType::kSetGainRequest;
+  message->set_gain_request_ = std::make_unique<MediaPlayerSetGainRequest>();
+  message->set_gain_request_->gain_ = gain;
   return message;
 }
 
@@ -113,8 +125,9 @@ Serializer& operator<<(
   return serializer << value->requestor_time_ << value->responder_time_;
 }
 
-Serializer& operator<<(Serializer& serializer,
-                       const std::unique_ptr<MediaPlayerSetUrlRequest>& value) {
+Serializer& operator<<(
+    Serializer& serializer,
+    const std::unique_ptr<MediaPlayerSetHttpSourceRequest>& value) {
   FXL_DCHECK(value);
   return serializer << value->url_;
 }
@@ -123,6 +136,13 @@ Serializer& operator<<(Serializer& serializer,
                        const std::unique_ptr<MediaPlayerSeekRequest>& value) {
   FXL_DCHECK(value);
   return serializer << value->position_;
+}
+
+Serializer& operator<<(
+    Serializer& serializer,
+    const std::unique_ptr<MediaPlayerSetGainRequest>& value) {
+  FXL_DCHECK(value);
+  return serializer << value->gain_;
 }
 
 Serializer& operator<<(
@@ -170,8 +190,8 @@ Serializer& operator<<(Serializer& serializer,
     case MediaPlayerInMessageType::kTimeCheckRequest:
       serializer << value->time_check_request_;
       break;
-    case MediaPlayerInMessageType::kSetUrlRequest:
-      serializer << value->set_url_request_;
+    case MediaPlayerInMessageType::kSetHttpSourceRequest:
+      serializer << value->set_http_source_request_;
       break;
     case MediaPlayerInMessageType::kPlayRequest:
     case MediaPlayerInMessageType::kPauseRequest:
@@ -179,6 +199,9 @@ Serializer& operator<<(Serializer& serializer,
       break;
     case MediaPlayerInMessageType::kSeekRequest:
       serializer << value->seek_request_;
+      break;
+    case MediaPlayerInMessageType::kSetGainRequest:
+      serializer << value->set_gain_request_;
       break;
   }
 
@@ -246,9 +269,10 @@ Deserializer& operator>>(Deserializer& deserializer,
   return deserializer;
 }
 
-Deserializer& operator>>(Deserializer& deserializer,
-                         std::unique_ptr<MediaPlayerSetUrlRequest>& value) {
-  value = std::make_unique<MediaPlayerSetUrlRequest>();
+Deserializer& operator>>(
+    Deserializer& deserializer,
+    std::unique_ptr<MediaPlayerSetHttpSourceRequest>& value) {
+  value = std::make_unique<MediaPlayerSetHttpSourceRequest>();
   deserializer >> value->url_;
   if (!deserializer.healthy()) {
     value.reset();
@@ -260,6 +284,16 @@ Deserializer& operator>>(Deserializer& deserializer,
                          std::unique_ptr<MediaPlayerSeekRequest>& value) {
   value = std::make_unique<MediaPlayerSeekRequest>();
   deserializer >> value->position_;
+  if (!deserializer.healthy()) {
+    value.reset();
+  }
+  return deserializer;
+}
+
+Deserializer& operator>>(Deserializer& deserializer,
+                         std::unique_ptr<MediaPlayerSetGainRequest>& value) {
+  value = std::make_unique<MediaPlayerSetGainRequest>();
+  deserializer >> value->gain_;
   if (!deserializer.healthy()) {
     value.reset();
   }
@@ -331,8 +365,8 @@ Deserializer& operator>>(Deserializer& deserializer,
     case MediaPlayerInMessageType::kTimeCheckRequest:
       deserializer >> value->time_check_request_;
       break;
-    case MediaPlayerInMessageType::kSetUrlRequest:
-      deserializer >> value->set_url_request_;
+    case MediaPlayerInMessageType::kSetHttpSourceRequest:
+      deserializer >> value->set_http_source_request_;
       break;
     case MediaPlayerInMessageType::kPlayRequest:
     case MediaPlayerInMessageType::kPauseRequest:
@@ -340,6 +374,9 @@ Deserializer& operator>>(Deserializer& deserializer,
       break;
     case MediaPlayerInMessageType::kSeekRequest:
       deserializer >> value->seek_request_;
+      break;
+    case MediaPlayerInMessageType::kSetGainRequest:
+      deserializer >> value->set_gain_request_;
       break;
     default:
       FXL_LOG(ERROR) << "Unsupported media player in-message type "
