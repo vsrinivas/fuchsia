@@ -114,16 +114,24 @@ fn main() {
 
     let device_path = Path::new(args.value_of("device").unwrap_or(HCI_DEVICE));
     let count = match args.value_of("count") {
-        Some(num) => {
-            Some(u64::from_str(num).unwrap())
-        },
-        None => None
+        Some(num) => Some(u64::from_str(num).unwrap()),
+        None => None,
     };
-    eprintln!(
-        "btsnoop: Capturing {:?} packets on bt-hci/{}",
-        count,
-        device_path.file_name().unwrap().to_string_lossy()
-    );
+    match count {
+        Some(count) => {
+            eprintln!(
+                "btsnoop: Capturing {} packets on bt-hci/{}",
+                count,
+                device_path.file_name().unwrap().to_string_lossy()
+            );
+        }
+        None => {
+            eprintln!(
+                "btsnoop: Capturing packets on bt-hci/{}",
+                device_path.file_name().unwrap().to_string_lossy()
+            );
+        }
+    };
 
     let format = match args.value_of("format") {
         Some(val) => {
