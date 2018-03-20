@@ -60,7 +60,7 @@ struct sdmmc_req {
 
     bool use_dma;
     void* virt;
-    zx_paddr_t phys[SDMMC_PAGES_COUNT];
+    zx_paddr_t phys;
 
     // response data
     uint32_t response[4];
