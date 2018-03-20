@@ -4,6 +4,7 @@
 
 #include <fbl/algorithm.h>
 #include "audio_analysis.h"
+#include "audio_result.h"
 #include "lib/fxl/logging.h"
 #include "mixer_tests_shared.h"
 
@@ -360,9 +361,11 @@ double MeasureSourceNoiseFloor(double* magn_other_db) {
                    &magn_signal, &magn_other);
 
   // Calculate Signal-to-Noise-And-Distortion (SINAD)
+  // We can directly compare 'signal' and 'other', regardless of source format.
   *magn_other_db = ValToDb(magn_signal / magn_other);
 
-  // Calculate magnitude of primary signal strength
+  // Amplitude is in source format; accum buf is 16-bit. For 8-bit sources, we
+  // must compensate for the 8-bit shift before calculating output response.
   if (std::is_same<T, uint8_t>::value) {
     magn_signal /= 256.0;
   }
@@ -371,22 +374,24 @@ double MeasureSourceNoiseFloor(double* magn_other_db) {
 
 // Measure Frequency Response and SINAD for 1kHz sine from 8-bit source.
 TEST(NoiseFloor, Source_8) {
-  double magn_signal_db = MeasureSourceNoiseFloor<uint8_t>(&floor_8bit_source);
+  double magn_signal_db =
+      MeasureSourceNoiseFloor<uint8_t>(&AudioResult::FloorSource8);
 
-  EXPECT_GE(magn_signal_db, -0.1) << "Test signal magnitude out of range";
-  EXPECT_LE(magn_signal_db, 0.1) << "Test signal magnitude out of range";
+  EXPECT_GE(magn_signal_db, -AudioResult::kLevelToleranceSource8);
+  EXPECT_LE(magn_signal_db, AudioResult::kLevelToleranceSource8);
 
-  EXPECT_GE(floor_8bit_source, 49.0) << "Noise level out of range";
+  EXPECT_GE(AudioResult::FloorSource8, AudioResult::kPrevFloorSource8);
 }
 
 // Measure Frequency Response and SINAD for 1kHz sine from 16bit source.
 TEST(NoiseFloor, Source_16) {
-  double magn_signal_db = MeasureSourceNoiseFloor<int16_t>(&floor_16bit_source);
+  double magn_signal_db =
+      MeasureSourceNoiseFloor<int16_t>(&AudioResult::FloorSource16);
 
-  EXPECT_GE(magn_signal_db, -0.001) << "Test signal magnitude out of range";
-  EXPECT_LE(magn_signal_db, 0.001) << "Test signal magnitude out of range";
+  EXPECT_GE(magn_signal_db, -AudioResult::kLevelToleranceSource16);
+  EXPECT_LE(magn_signal_db, AudioResult::kLevelToleranceSource16);
 
-  EXPECT_GE(floor_16bit_source, 98.0) << "Noise level out of range";
+  EXPECT_GE(AudioResult::FloorSource16, AudioResult::kPrevFloorSource16);
 }
 
 template <typename T>
@@ -417,34 +422,39 @@ double MeasureOutputNoiseFloor(double* magn_other_db) {
                    &magn_signal, &magn_other);
 
   // Calculate Signal-to-Noise-And-Distortion (SINAD)
+  // We can directly compare 'signal' and 'other', regardless of output format.
   *magn_other_db = ValToDb(magn_signal / magn_other);
 
+  // Calculate magnitude of primary signal strength
+  // Amplitude is ~int16:max regardless of output. For 8-bit outputs, we must
+  // first compensate for the 8-bit shift before calculating output response.
   if (std::is_same<T, uint8_t>::value) {
     magn_signal *= 256.0;
   }
 
-  // Calculate magnitude of primary signal strength
   return ValToDb(magn_signal / amplitude);
 }
 
 // Measure Frequency Response and SINAD for 1kHz sine, to an 8bit output.
 TEST(NoiseFloor, Output_8) {
-  double magn_signal_db = MeasureOutputNoiseFloor<uint8_t>(&floor_8bit_output);
+  double magn_signal_db =
+      MeasureOutputNoiseFloor<uint8_t>(&AudioResult::FloorOutput8);
 
-  EXPECT_GE(magn_signal_db, -0.1) << "Test signal magnitude out of range";
-  EXPECT_LE(magn_signal_db, 0.1) << "Test signal magnitude out of range";
+  EXPECT_GE(magn_signal_db, -AudioResult::kLevelToleranceOutput8);
+  EXPECT_LE(magn_signal_db, AudioResult::kLevelToleranceOutput8);
 
-  EXPECT_GE(floor_8bit_output, 45.0) << "Noise level out of range";
+  EXPECT_GE(AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8);
 }
 
 // Measure Frequency Response and SINAD for 1kHz sine, to a 16bit output.
 TEST(NoiseFloor, Output_16) {
-  double magn_signal_db = MeasureOutputNoiseFloor<int16_t>(&floor_16bit_output);
+  double magn_signal_db =
+      MeasureOutputNoiseFloor<int16_t>(&AudioResult::FloorOutput16);
 
-  EXPECT_GE(magn_signal_db, -0.001) << "Test signal magnitude out of range";
-  EXPECT_LE(magn_signal_db, 0.001) << "Test signal magnitude out of range";
+  EXPECT_GE(magn_signal_db, -AudioResult::kLevelToleranceOutput16);
+  EXPECT_LE(magn_signal_db, AudioResult::kLevelToleranceOutput16);
 
-  EXPECT_GE(floor_16bit_output, 98.0) << "Noise level out of range";
+  EXPECT_GE(AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16);
 }
 
 }  // namespace test

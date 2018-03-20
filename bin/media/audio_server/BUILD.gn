@@ -110,10 +110,12 @@ test("tests") {
   output_name = "audio_mixer_tests"
 
   sources = [
-    "test/mixer_tests_shared.cc",
+    "test/audio_result.h",
+    "test/audio_result.cc",
     "test/mixer_tests_shared.h",
-    "test/audio_analysis.cc",
+    "test/mixer_tests_shared.cc",
     "test/audio_analysis.h",
+    "test/audio_analysis.cc",
     "test/audio_analysis_tests.cc",
     "test/mixer_transparency_tests.cc",
     "test/mixer_gain_tests.cc",
