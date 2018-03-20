@@ -5,15 +5,16 @@
 import("//build/package.gni")
 
 package("module_resolver") {
-  system_image = true
-
   deps = [
     ":bin",
   ]
 
-  binaries = [
+  binary = "module_resolver"
+
+  meta = [
     {
-      name = "module_resolver"
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
     },
   ]
 }
@@ -33,6 +34,7 @@ executable("bin") {
     "//garnet/public/lib/network/fidl",
     "//peridot/lib/module_manifest_source:directory_source",
     "//peridot/lib/module_manifest_source:firebase_source",
+    "//peridot/lib/module_manifest_source:push_package_source",
     "//peridot/public/lib/app_driver/cpp:app_driver",
     "//peridot/public/lib/component/fidl",
     "//peridot/public/lib/entity/cpp:json",

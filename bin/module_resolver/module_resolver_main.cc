@@ -20,13 +20,14 @@
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 #include "peridot/lib/module_manifest_source/directory_source.h"
 #include "peridot/lib/module_manifest_source/firebase_source.h"
+#include "peridot/lib/module_manifest_source/push_package_source.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
 namespace maxwell {
 namespace {
 
 // NOTE: This must match the path specified in
-// build/module_repository/publish.gni
+// peridot/build/module_repository/manifest_package.gni
 constexpr char kReadOnlyModuleRepositoryPath[] =
     "/system/data/module_manifest_repository";
 
@@ -71,6 +72,9 @@ class ModuleResolverApp : ContextListener {
                 return network_service;
               },
               "cloud-mods", "" /* prefix */));
+      resolver_impl_->AddSource(
+          "push_package",
+          std::make_unique<modular::PushPackageSource>(context));
     }
 
     // Make |resolver_impl_| a query (ask) handler.
@@ -233,7 +237,8 @@ class ModuleResolverApp : ContextListener {
   // that link_info can be constructed for the noun constraint.
   modular::ResolverNounConstraintEntryPtr
   CreateResolverNounConstraintFromContextValue(const ContextValuePtr& value) {
-    f1dl::VectorPtr<f1dl::StringPtr> entity_types = value->meta->entity->type.Clone();
+    f1dl::VectorPtr<f1dl::StringPtr> entity_types =
+        value->meta->entity->type.Clone();
     const LinkMetadataPtr& link_metadata = value->meta->link;
 
     auto link_info = modular::ResolverLinkInfo::New();

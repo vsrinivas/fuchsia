@@ -1,0 +1,27 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("push_package_indexer_bin") {
+  output_name = "push_package_indexer"
+
+  sources = ["main.cc"]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/module_manifest_source/fidl",
+    "//zircon/public/lib/fdio"
+  ]
+}
+
+package("push_package_indexer") {
+  deps = [":push_package_indexer_bin"]
+  binary = "push_package_indexer"
+  meta = [ {
+        path = rebase_path("meta/sandbox")
+        dest = "sandbox"
+      } ]
+}

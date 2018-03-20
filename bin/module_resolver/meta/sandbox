@@ -1,0 +1,4 @@
+{
+    "pkgfs": [ "packages" ],
+    "system": ["data/module_manifest_repository"]
+}

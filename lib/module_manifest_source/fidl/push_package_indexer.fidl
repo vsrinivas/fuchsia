@@ -1,0 +1,10 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+[ServiceName="modular.PushPackageIndexer"]
+interface PushPackageIndexer {
+  IndexManifest@0(string package_name, string module_manifest_path);
+};

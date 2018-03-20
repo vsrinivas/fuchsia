@@ -41,6 +41,8 @@ class DirectoryModuleManifestSource : public ModuleManifestSource {
   RemovedEntryFn removed_entry_fn_;
 
   fxl::WeakPtrFactory<DirectoryModuleManifestSource> weak_factory_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(DirectoryModuleManifestSource);
 };
 
 }  // namespace modular

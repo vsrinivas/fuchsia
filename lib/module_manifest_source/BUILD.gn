@@ -86,3 +86,18 @@ source_set("firebase_source") {
     "//third_party/rapidjson",
   ]
 }
+
+source_set("push_package_source") {
+  sources = [
+    "push_package_source.cc",
+    "push_package_source.h",
+  ]
+
+  public_deps = [
+    ":json",
+    ":module_manifest_source",
+    "fidl",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fxl",
+  ]
+}
