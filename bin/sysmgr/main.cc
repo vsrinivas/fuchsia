@@ -2,17 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/cpp/loop.h>
+
 #include "garnet/bin/sysmgr/app.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  fsl::MessageLoop loop;
+  async_loop_config_t config = {
+      .make_default_for_current_thread = true,
+  };
+  async::Loop loop(&config);
   sysmgr::App app;
   loop.Run();
   return 0;

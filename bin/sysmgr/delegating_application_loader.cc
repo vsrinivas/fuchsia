@@ -5,9 +5,18 @@
 #include "garnet/bin/sysmgr/delegating_application_loader.h"
 
 #include "lib/svc/cpp/services.h"
-#include "lib/url/gurl.h"
 
 namespace sysmgr {
+namespace {
+
+std::string GetScheme(const std::string& url) {
+  size_t pos = url.find(':');
+  if (pos == std::string::npos)
+    return std::string();
+  return url.substr(0, pos);
+}
+
+}  // namespace
 
 DelegatingApplicationLoader::DelegatingApplicationLoader(
     Config::ServiceMap delegates,
@@ -26,9 +35,9 @@ DelegatingApplicationLoader::~DelegatingApplicationLoader() = default;
 void DelegatingApplicationLoader::LoadApplication(
     const f1dl::StringPtr& url,
     const ApplicationLoader::LoadApplicationCallback& callback) {
-  const url::GURL gurl(url);
-  if (gurl.is_valid()) {
-    auto it = delegates_by_scheme_.find(gurl.scheme());
+  std::string scheme = GetScheme(url);
+  if (!scheme.empty()) {
+    auto it = delegates_by_scheme_.find(scheme);
     if (it != delegates_by_scheme_.end()) {
       auto* record = it->second;
       if (!record->loader) {
