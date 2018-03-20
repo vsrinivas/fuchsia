@@ -99,7 +99,9 @@ source_set("msd_intel_test_entry") {
   ]
   libs = [ "zircon" ]
   deps += [
-    ":indriver_gtest",
+    "tests/unit_tests:hardware_tests",
+    "//garnet/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
+    "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
     "//garnet/lib/magma/src/sys_driver:pci_driver_gtest",
   ]
 }
@@ -108,14 +110,6 @@ group("tests") {
   testonly = true
   public_deps = [
     "tests/unit_tests:msd_intel_gen_nonhardware_tests",
-  ]
-}
-
-group("indriver_gtest") {
-  testonly = true
-
-  deps = [
-    "tests:gtest",
   ]
 }
 

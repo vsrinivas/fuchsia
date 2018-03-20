@@ -39,16 +39,17 @@ TEST(PlatformPciDevice, RegisterInterrupt)
     ASSERT_NE(platform_device, nullptr);
 
     auto interrupt = platform_device->RegisterInterrupt();
-    ASSERT_NE(nullptr, interrupt);
+    // Interrupt may be null if no core device support.
+    if (interrupt) {
+        std::thread thread([interrupt_raw = interrupt.get()] {
+            DLOG("waiting for interrupt");
+            interrupt_raw->Wait();
+            DLOG("returned from interrupt");
+        });
 
-    std::thread thread([interrupt_raw = interrupt.get()] {
-        DLOG("waiting for interrupt");
-        interrupt_raw->Wait();
-        DLOG("returned from interrupt");
-    });
+        interrupt->Signal();
 
-    interrupt->Signal();
-
-    DLOG("waiting for thread");
-    thread.join();
+        DLOG("waiting for thread");
+        thread.join();
+    }
 }

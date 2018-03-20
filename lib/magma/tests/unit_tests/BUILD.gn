@@ -93,7 +93,8 @@ executable("magma_sys_display_unit_tests") {
   ]
 }
 
-source_set("magma_platform_tests") {
+# Requires hardware
+source_set("magma_platform_hardware_tests") {
   testonly = true
 
   sources = [
@@ -136,6 +137,7 @@ executable("magma_abi_conformance_tests") {
   ]
 }
 
+# Requires hardware
 source_set("msd_abi_conformance_tests") {
   testonly = true
 

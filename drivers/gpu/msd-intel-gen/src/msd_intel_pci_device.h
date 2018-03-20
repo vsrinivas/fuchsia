@@ -12,11 +12,7 @@
 
 class MsdIntelPciDevice : public magma::PlatformPciDevice {
 public:
-    std::unique_ptr<magma::PlatformInterrupt> RegisterInterrupt() override
-    {
-        DASSERT(false);
-        return nullptr;
-    }
+    std::unique_ptr<magma::PlatformInterrupt> RegisterInterrupt() override { return nullptr; }
 
     // Additional core device implmementation that may reside inside a separate core driver.
     virtual bool RegisterInterruptCallback(InterruptManager::InterruptCallback callback, void* data,

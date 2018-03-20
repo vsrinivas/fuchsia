@@ -145,6 +145,9 @@ private:
 
 std::unique_ptr<MsdIntelPciDevice> MsdIntelPciDevice::CreateShim(void* platform_device_handle)
 {
+    if (!platform_device_handle)
+        return DRETP(nullptr, "null platform_device_handle");
+
     return std::make_unique<MsdIntelPciDeviceShim>(
         reinterpret_cast<zx_intel_gpu_core_protocol_t*>(platform_device_handle));
 }

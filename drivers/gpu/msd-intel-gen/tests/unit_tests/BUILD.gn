@@ -12,14 +12,14 @@ executable("msd_intel_gen_nonhardware_tests") {
   ]
 
   public_deps = [
-    ":tests_not_requiring_hardware",
+    ":nonhardware_tests",
     "//third_party/googletest:gtest",
   ]
 }
 
 # These tests don't require Intel graphics hardware to run, so they
 # can be run under QEMU.
-source_set("tests_not_requiring_hardware") {
+source_set("nonhardware_tests") {
   testonly = true
 
   sources = [
@@ -49,7 +49,7 @@ source_set("tests_not_requiring_hardware") {
 
 # These tests do require Intel graphics hardware to run.  They can be
 # run inside the test build of the driver.
-source_set("tests_requiring_hardware") {
+source_set("hardware_tests") {
   testonly = true
 
   sources = [
