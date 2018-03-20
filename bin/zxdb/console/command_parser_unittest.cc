@@ -134,11 +134,28 @@ TEST(CommandParser, Switches) {
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Invalid switch \"-\".", err.msg());
 
-  // Valid long switch.
+  // Valid long switch with no equals.
   err = ParseCommand("mem-read --size 234 next", &output);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(1u, output.switches().size());
   EXPECT_EQ("234", output.GetSwitchValue(size_switch->id));
+  ASSERT_EQ(1u, output.args().size());
+  EXPECT_EQ("next", output.args()[0]);
+
+  // Valid long switch with equals sign.
+  err = ParseCommand("mem-read --size=234 next", &output);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(1u, output.switches().size());
+  EXPECT_EQ("234", output.GetSwitchValue(size_switch->id));
+  ASSERT_EQ(1u, output.args().size());
+  EXPECT_EQ("next", output.args()[0]);
+
+  // Valid long switch with equals and no value (this is OK, value is empty
+  // string).
+  err = ParseCommand("mem-read --size= next", &output);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(1u, output.switches().size());
+  EXPECT_EQ("", output.GetSwitchValue(size_switch->id));
   ASSERT_EQ(1u, output.args().size());
   EXPECT_EQ("next", output.args()[0]);
 

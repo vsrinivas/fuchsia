@@ -52,13 +52,32 @@ bool IsTokenSeparator(char c) {
   return c == ' ';
 }
 
-// Finds the record for the switch associated with string (which should not
-// include leading dashes),
-// or null if there is no match.
-const SwitchRecord* FindSwitch(const std::string& str,
-                               const VerbRecord& record) {
+// Finds the record for the switch associated with long switch string (which
+// includes the two leading dashes), or null if there is no match.
+//
+// The token can contain and equals sign. In this case, only the text
+// preceeding the equals sign counts as the switch, and the index of the equals
+// sign is placed into *equals_index. Otherwise *equals_index will be set to
+// std::string::npos. This is to handle the fact that long switches can be
+// expressed as either "--foo=bar" and "--foo bar".
+const SwitchRecord* FindLongSwitch(const std::string& str,
+                                   const VerbRecord& record,
+                                   size_t* equals_index) {
+  // Should have two leading dashes.
+  FXL_DCHECK(str.size() >= 2 && str.substr(0, 2) == "--");
+
+  // Extract the switch value (varing depend on presence of '='), not counting
+  // the two leading dashes.
+  *equals_index = str.find('=');
+  std::string switch_str;
+  if (*equals_index == std::string::npos) {
+    switch_str = str.substr(2);
+  } else {
+    switch_str = str.substr(2, *equals_index - 2);
+  }
+
   for (const auto& sr : record.switches) {
-    if (sr.name == str)
+    if (sr.name == switch_str)
       return &sr;
   }
   return nullptr;
@@ -228,10 +247,24 @@ Err ParseCommand(const std::vector<std::string>& tokens, Command* output) {
     bool next_token_is_value = false;
     if (token[1] == '-') {
       // Two-hyphen switch.
-      sw_record = FindSwitch(token.substr(2), verb_record);
+      size_t equals_index = std::string::npos;
+      sw_record = FindLongSwitch(token, verb_record, &equals_index);
       if (!sw_record)
-        return Err(std::string("Unknown switch \"") + token + "\".");
-      next_token_is_value = sw_record->has_value;
+        return Err("Unknown switch \"" + token + "\".");
+
+      if (equals_index == std::string::npos) {
+        // "--foo bar" format.
+        next_token_is_value = sw_record->has_value;
+      } else {
+        // "--foo=bar" format.
+        if (sw_record->has_value) {
+          // Extract the token following the equals sign.
+          value = token.substr(equals_index + 1);
+        } else {
+          return Err("The switch " + token.substr(0, equals_index) +
+                     " does not take a value.");
+        }
+      }
     } else {
       // Single-dash token means one character.
       char switch_char = token[1];
