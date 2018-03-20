@@ -71,9 +71,6 @@ bitflags! {
         const SOCKET_WRITABLE    = ZX_SOCKET_WRITABLE;
         const SOCKET_PEER_CLOSED = ZX_SOCKET_PEER_CLOSED;
 
-        // Port
-        const PORT_READABLE = ZX_PORT_READABLE;
-
         // Resource
         const RESOURCE_DESTROYED   = ZX_RESOURCE_DESTROYED;
         const RESOURCE_READABLE    = ZX_RESOURCE_READABLE;

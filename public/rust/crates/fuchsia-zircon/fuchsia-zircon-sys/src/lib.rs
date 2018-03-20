@@ -192,9 +192,6 @@ multiconst!(zx_signals_t, [
     ZX_SOCKET_WRITABLE          = ZX_OBJECT_SIGNAL_1;
     ZX_SOCKET_PEER_CLOSED       = ZX_OBJECT_SIGNAL_2;
 
-    // Port
-    ZX_PORT_READABLE            = ZX_OBJECT_READABLE;
-
     // Resource
     ZX_RESOURCE_DESTROYED       = ZX_OBJECT_SIGNAL_3;
     ZX_RESOURCE_READABLE        = ZX_OBJECT_READABLE;
