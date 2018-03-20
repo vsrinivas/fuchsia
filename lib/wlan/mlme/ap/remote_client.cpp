@@ -212,8 +212,8 @@ zx_status_t AssociatedState::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFr
 
         // Treat Packet as Ethernet frame.
         auto hdr = packet->field<EthernetII>(0);
-        auto payload = packet->field<uint8_t>(sizeof(hdr));
-        size_t payload_len = packet->len() - sizeof(hdr);
+        auto payload = packet->field<uint8_t>(sizeof(EthernetII));
+        size_t payload_len = packet->len() - sizeof(EthernetII);
         auto eth_frame = ImmutableBaseFrame<EthernetII>(hdr, payload, payload_len);
 
         // Convert Ethernet to Data frame.
