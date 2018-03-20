@@ -247,7 +247,7 @@ void AudioRenderer2Impl::SetPayloadBuffer(zx::vmo payload_buffer) {
   // once teisenbe@ provides guidance on the best-practice for doing this.
   zx_status_t res;
   payload_buffer_ = fbl::AdoptRef(new fbl::RefCountedVmoMapper());
-  res = payload_buffer_->Map(payload_buffer, 0, ZX_VM_FLAG_PERM_READ);
+  res = payload_buffer_->Map(payload_buffer, 0, 0, ZX_VM_FLAG_PERM_READ);
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to map payload buffer (res = " << res << ")";
     return;
