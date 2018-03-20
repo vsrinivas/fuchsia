@@ -4,12 +4,6 @@
 
 import("//garnet/bin/guest/guest.gni")
 
-if (target_cpu == "x64") {
-  linux_platform = "x86"
-} else {
-  linux_platform = target_cpu
-}
-
 linux_dir = "$target_out_dir/linux/source"
 sysroot_dir = "$target_out_dir/linux/sysroot"
 linux_image = "$target_out_dir/linux/Image"
@@ -33,7 +27,7 @@ action("sysroot") {
     rebase_path("$sysroot_dir/toybox"),
     "-s",
     rebase_path("$sysroot_dir/dash"),
-    "$linux_platform",
+    "$target_cpu",
   ]
 
   outputs = [
@@ -51,7 +45,7 @@ action("kernel") {
     rebase_path("$linux_dir"),
     "-o",
     rebase_path("$linux_image"),
-    "$linux_platform",
+    "$target_cpu",
   ]
 
   outputs = [

@@ -14,7 +14,7 @@ GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DASH_SRC_DIR="/tmp/dash"
 
 usage() {
-    echo "usage: ${0} [options] {arm64, x86}"
+    echo "usage: ${0} [options] {arm64, x64}"
     echo ""
     echo "    -r Build ext2 filesystem image."
     echo "    -i Build initrd CPIO archive."
@@ -175,7 +175,7 @@ arm64)
     { echo "Required package gcc-aarch64-linux-gnu is not installed."
       echo "(sudo apt install gcc-aarch64-linux-gnu)"; exit 1; };
   AC_HOST="aarch64-linux-gnu";;
-x86)
+x64)
   AC_HOST="x86_64-linux-gnu";;
 *)
   usage;;
