@@ -178,6 +178,8 @@ class AssociatedState : public BaseState {
     bool active_;
     // `true` if the client entered Power Saving mode's doze state.
     bool dozing_;
+    // `true` if a Deauthentication notification should be sent when leaving the state.
+    bool req_deauth_ = true;
 };
 
 }  // namespace wlan

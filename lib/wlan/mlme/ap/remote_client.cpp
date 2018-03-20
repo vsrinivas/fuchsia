@@ -87,7 +87,7 @@ zx_status_t AuthenticatedState::HandleAuthentication(
 
 zx_status_t AuthenticatedState::HandleDeauthentication(
     const ImmutableMgmtFrame<Deauthentication>& frame, const wlan_rx_info_t& rxinfo) {
-    debugbss("[client] [%s] received Deauthentication request: %u\n",
+    debugbss("[client] [%s] received Deauthentication: %u\n",
              client_->addr().ToString().c_str(), frame.body->reason_code);
     MoveToState<DeauthenticatedState>();
     LOG_STATE_TRANSITION(client_->addr(), "Authenticated", "Deauthenticated");
@@ -177,8 +177,9 @@ zx_status_t AssociatedState::HandleEthFrame(const ImmutableBaseFrame<EthernetII>
 
 zx_status_t AssociatedState::HandleDeauthentication(
     const ImmutableMgmtFrame<Deauthentication>& frame, const wlan_rx_info_t& rxinfo) {
-    debugbss("[client] [%s] received Deauthentication request: %u\n",
+    debugbss("[client] [%s] received Deauthentication: %u\n",
              client_->addr().ToString().c_str(), frame.body->reason_code);
+    req_deauth_ = false;
     MoveToState<DeauthenticatedState>();
     LOG_STATE_TRANSITION(client_->addr(), "Associated", "Deauthenticated");
     return ZX_OK;
@@ -264,6 +265,17 @@ zx_status_t AssociatedState::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFr
 void AssociatedState::OnExit() {
     client_->CancelTimer();
     inactive_timeout_ = zx::time();
+
+    // Ensure Deauthentication is sent to the client if itself didn't send such notification or such
+    // notification wasn't already sent due to inactivity of the client.
+    // This Deauthentication is usually issued when the BSS stopped and its associated clients
+    // need to get notified.
+    if (req_deauth_) {
+        req_deauth_ = false;
+        debugbss("[client] [%s] ending association; deauthenticating client\n",
+                 client_->addr().ToString().c_str());
+        client_->SendDeauthentication(reason_code::ReasonCode::kLeavingNetworkDeauth);
+    }
 
     // Ensure the client's AID is released when association is broken.
     client_->bss()->ReleaseAid(client_->addr());
@@ -362,6 +374,7 @@ void AssociatedState::HandleTimeout() {
 
         // The client timed-out, send Deauthentication. Ignore result, always leave associated
         // state.
+        req_deauth_ = false;
         client_->SendDeauthentication(reason_code::ReasonCode::kReasonInactivity);
         debugbss("[client] [%s] client inactive for %lu seconds; deauthenticating client\n",
                  client_->addr().ToString().c_str(), kInactivityTimeoutTu / 1000);

@@ -53,7 +53,6 @@ void InfraBss::Stop() {
 
     bcn_sender_->Stop();
     started_at_ = 0;
-    // TODO(hahnr): Send deauthentication frame to all associated clients.
     clients_.Clear();
 }
 
