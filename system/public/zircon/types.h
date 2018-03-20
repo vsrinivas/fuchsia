@@ -121,9 +121,6 @@ typedef uint32_t zx_signals_t;
 #define ZX_SOCKET_ACCEPT            __ZX_OBJECT_SIGNAL_8
 #define ZX_SOCKET_SHARE             __ZX_OBJECT_SIGNAL_9
 
-// Port
-#define ZX_PORT_READABLE            __ZX_OBJECT_READABLE
-
 // Fifo
 #define ZX_FIFO_READABLE            __ZX_OBJECT_READABLE
 #define ZX_FIFO_WRITABLE            __ZX_OBJECT_WRITABLE
