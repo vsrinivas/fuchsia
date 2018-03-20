@@ -267,8 +267,10 @@ var handleTypes = map[types.HandleSubtype]string{
 	types.Vmar:    "_zx.VMAR",
 }
 
-func exportIdentifier(name types.Identifier) types.Identifier {
-	return types.Identifier(common.ToUpperCamelCase(string(name)))
+func exportIdentifier(name types.EncodedIdentifier) types.CompoundIdentifier {
+	ci := types.ParseCompoundIdentifier(name)
+	ci.Name = types.Identifier(common.ToUpperCamelCase(string(ci.Name)))
+	return ci
 }
 
 func isReservedWord(str string) bool {
@@ -283,6 +285,19 @@ func changeIfReserved(val types.Identifier) string {
 		return str + "_"
 	}
 	return str
+}
+
+func (_ *compiler) compileIdentifier(id types.Identifier) string {
+	str := string(id)
+	str = common.ToUpperCamelCase(str)
+	return changeIfReserved(types.Identifier(str))
+}
+
+func (_ *compiler) compileCompoundIdentifier(ei types.EncodedIdentifier) string {
+	ci := exportIdentifier(ei)
+	// TODO(kulakowski) Support more complicated names
+	return changeIfReserved(ci.Name)
+
 }
 
 func (_ *compiler) compileLiteral(val types.Literal) string {
@@ -356,13 +371,8 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 	case types.PrimitiveType:
 		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
-		// val.Identifier is a CompoundIdentifier, but we don't have the
-		// ability to look up the declaration type for identifiers in other
-		// libraries. We also don't know how cross-library identifier references
-		// are even going to look for Go. For now, just use the first component
-		// of the identifier and assume that the identifier is in this library.
-		e := changeIfReserved(exportIdentifier(val.Identifier.Name))
-		declType, ok := c.decls[val.Identifier.Name]
+		e := c.compileCompoundIdentifier(val.Identifier)
+		declType, ok := c.decls[val.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier:", val.Identifier)
 		}
@@ -392,14 +402,14 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 
 func (c *compiler) compileEnumMember(val types.EnumMember) EnumMember {
 	return EnumMember{
-		Name:  changeIfReserved(exportIdentifier(val.Name)),
+		Name:  c.compileIdentifier(val.Name),
 		Value: c.compileConstant(val.Value),
 	}
 }
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
-		Name: changeIfReserved(exportIdentifier(val.Name.Name)),
+		Name: c.compileCompoundIdentifier(val.Name),
 		Type: c.compilePrimitiveSubtype(val.Type),
 	}
 	for _, v := range val.Members {
@@ -412,14 +422,14 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	ty, tag := c.compileType(val.Type)
 	return StructMember{
 		Type: ty,
-		Name: changeIfReserved(exportIdentifier(val.Name)),
+		Name: c.compileIdentifier(val.Name),
 		Tag:  tag.String(),
 	}
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
-		Name:      changeIfReserved(exportIdentifier(val.Name.Name)),
+		Name:      c.compileCompoundIdentifier(val.Name),
 		Size:      val.Size,
 		Alignment: val.Alignment,
 	}

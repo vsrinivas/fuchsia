@@ -314,8 +314,8 @@ func isReservedWord(str string) bool {
 	return ok
 }
 
-func changeIfReserved(val types.Identifier) string {
-	str := string(val)
+func changeIfReserved(i types.Identifier, ext string) string {
+	str := string(i) + ext
 	if isReservedWord(str) {
 		return str + "_"
 	}
@@ -327,15 +327,16 @@ type compiler struct {
 	decls     *types.DeclMap
 }
 
-func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
+func (c *compiler) compileCompoundIdentifier(ei types.EncodedIdentifier, ext string) string {
+	val := types.ParseCompoundIdentifier(ei)
 	strs := []string{}
-	if (val.Library != "") {
-		strs = append(strs, changeIfReserved(val.Library))
+	if val.Library != "" {
+		strs = append(strs, changeIfReserved(val.Library, ""))
 	}
 	for _, v := range val.NestedDecls {
-		strs = append(strs, changeIfReserved(v))
+		strs = append(strs, changeIfReserved(v, ""))
 	}
-	strs = append(strs, changeIfReserved(val.Name))
+	strs = append(strs, changeIfReserved(val.Name, ext))
 	return strings.Join(strs, "::")
 }
 
@@ -360,7 +361,7 @@ func (c *compiler) compileLiteral(val types.Literal) string {
 func (c *compiler) compileConstant(val types.Constant) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
-		return c.compileCompoundIdentifier(val.Identifier)
+		return c.compileCompoundIdentifier(val.Identifier, "")
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	default:
@@ -395,18 +396,14 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
 		r.Dtor = fmt.Sprintf("~%s", val.HandleSubtype)
 	case types.RequestType:
-		t := c.compileCompoundIdentifier(val.RequestSubtype)
+		t := c.compileCompoundIdentifier(val.RequestSubtype, "")
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>", t)
 		r.Dtor = fmt.Sprintf("~InterfaceRequest", r.Decl)
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
-		t := c.compileCompoundIdentifier(val.Identifier)
-		// val.Identifier is a CompoundIdentifier, but we don't have the
-		// ability to look up the declaration type for identifiers in other
-		// libraries. For now, just use the first component of the identifier
-		// and assume that the identifier is in this library.
-		declType, ok := (*c.decls)[val.Identifier.Name]
+		t := c.compileCompoundIdentifier(val.Identifier, "")
+		declType, ok := (*c.decls)[val.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier:", val.Identifier)
 		}
@@ -446,7 +443,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 			Type{
 				Decl: "char",
 			},
-			changeIfReserved(val.Name.Name) + "[]",
+			c.compileCompoundIdentifier(val.Name, "[]"),
 			c.compileConstant(val.Value),
 		}
 		return r
@@ -455,7 +452,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 			false,
 			"constexpr",
 			c.compileType(val.Type),
-			changeIfReserved(val.Name.Name),
+			c.compileCompoundIdentifier(val.Name, ""),
 			c.compileConstant(val.Value),
 		}
 		if r.Type.DeclType == types.EnumDeclType {
@@ -469,12 +466,12 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
 		c.namespace,
 		c.compilePrimitiveSubtype(val.Type),
-		changeIfReserved(val.Name.Name),
+		c.compileCompoundIdentifier(val.Name, ""),
 		[]EnumMember{},
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
-			changeIfReserved(v.Name),
+			changeIfReserved(v.Name, ""),
 			c.compileConstant(v.Value),
 		})
 	}
@@ -487,7 +484,7 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 	for _, v := range val {
 		p := Parameter{
 			c.compileType(v.Type),
-			changeIfReserved(v.Name),
+			changeIfReserved(v.Name, ""),
 			v.Offset,
 		}
 		r = append(r, p)
@@ -499,20 +496,20 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		c.namespace,
-		changeIfReserved(val.Name.Name),
+		c.compileCompoundIdentifier(val.Name, ""),
 		val.GetAttribute("ServiceName"),
-		changeIfReserved(val.Name.Name + "_Proxy"),
-		changeIfReserved(val.Name.Name + "_Stub"),
-		changeIfReserved(val.Name.Name + "_Sync"),
-		changeIfReserved(val.Name.Name + "_SyncProxy"),
+		c.compileCompoundIdentifier(val.Name, "_Proxy"),
+		c.compileCompoundIdentifier(val.Name, "_Stub"),
+		c.compileCompoundIdentifier(val.Name, "_Sync"),
+		c.compileCompoundIdentifier(val.Name, "_SyncProxy"),
 		[]Method{},
 	}
 
 	for _, v := range val.Methods {
-		name := changeIfReserved(v.Name)
+		name := changeIfReserved(v.Name, "")
 		callbackType := ""
 		if v.HasResponse {
-			callbackType = changeIfReserved(v.Name + "Callback")
+			callbackType = changeIfReserved(v.Name, "Callback")
 		}
 		m := Method{
 			v.Ordinal,
@@ -544,14 +541,14 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 
 	return StructMember{
 		c.compileType(val.Type),
-		changeIfReserved(val.Name),
+		changeIfReserved(val.Name, ""),
 		defaultValue,
 		val.Offset,
 	}
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
-	name := changeIfReserved(val.Name.Name)
+	name := c.compileCompoundIdentifier(val.Name, "")
 	r := Struct{
 		c.namespace,
 		name,
@@ -570,8 +567,8 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
 		c.compileType(val.Type),
-		changeIfReserved(val.Name),
-		changeIfReserved(val.Name + "_"),
+		changeIfReserved(val.Name, ""),
+		changeIfReserved(val.Name, "_"),
 		val.Offset,
 	}
 }
@@ -579,7 +576,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
 		c.namespace,
-		changeIfReserved(val.Name.Name),
+		c.compileCompoundIdentifier(val.Name, ""),
 		[]UnionMember{},
 		val.Size,
 	}
@@ -594,41 +591,41 @@ func (c *compiler) compileUnion(val types.Union) Union {
 func Compile(r types.Root) Root {
 	root := Root{}
 	c := compiler{
-		changeIfReserved(r.Name),
+		changeIfReserved(r.Name, ""),
 		&r.Decls,
 	}
 
 	root.Namespace = c.namespace
 
-	decls := map[types.Identifier]Decl{}
+	decls := map[types.EncodedIdentifier]Decl{}
 
 	for _, v := range r.Consts {
 		d := c.compileConst(v)
-		decls[v.Name.Name] = &d
+		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Enums {
 		d := c.compileEnum(v)
-		decls[v.Name.Name] = &d
+		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Interfaces {
 		d := c.compileInterface(v)
-		decls[v.Name.Name] = &d
+		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Structs {
 		d := c.compileStruct(v)
-		decls[v.Name.Name] = &d
+		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Unions {
 		d := c.compileUnion(v)
-		decls[v.Name.Name] = &d
+		decls[v.Name] = &d
 	}
 
 	for _, v := range r.DeclOrder {
-		root.Decls = append(root.Decls, decls[v.Name])
+		root.Decls = append(root.Decls, decls[v])
 	}
 
 	return root

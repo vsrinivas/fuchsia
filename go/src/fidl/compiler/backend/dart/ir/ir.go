@@ -280,18 +280,14 @@ func typeSymbolForCompoundIdentifier(ident types.CompoundIdentifier) string {
 	return fmt.Sprintf("k%s_Type", ident.Name)
 }
 
-func typeSymbolForIdentifier(ident types.Identifier) string {
-	return fmt.Sprintf("k%s_Type", ident)
-}
-
-func isReservedWord(str string) bool {
-	_, ok := reservedWords[str]
+func isReservedWord(str types.Identifier) bool {
+	_, ok := reservedWords[string(str)]
 	return ok
 }
 
 func changeIfReserved(val types.Identifier) string {
 	str := string(val)
-	if isReservedWord(str) {
+	if isReservedWord(val) {
 		return str + "_"
 	}
 	return str
@@ -321,6 +317,18 @@ func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) strin
 	return strings.Join(strs, ".")
 }
 
+func (c *compiler) compileUpperCamelCompoundIdentifier(val types.CompoundIdentifier, ext string) string {
+	str := common.ToUpperCamelCase(changeIfReserved(val.Name)) + ext
+	val.Name = types.Identifier(str)
+	return c.compileCompoundIdentifier(val)
+}
+
+func (c *compiler) compileLowerCamelCompoundIdentifier(val types.CompoundIdentifier, ext string) string {
+	str := common.ToLowerCamelCase(changeIfReserved(val.Name)) + ext
+	val.Name = types.Identifier(str)
+	return c.compileCompoundIdentifier(val)
+}
+
 func (c *compiler) compileLiteral(val types.Literal) string {
 	switch val.Kind {
 	case types.StringLiteral:
@@ -344,7 +352,7 @@ func (c *compiler) compileLiteral(val types.Literal) string {
 func (c *compiler) compileConstant(val types.Constant) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
-		return c.compileLowerCamelIdentifier(val.Identifier.Name)
+		return c.compileLowerCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier), "")
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	default:
@@ -403,7 +411,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.typeExpr = fmt.Sprintf("const $fidl.HandleType(nullable: %s)",
 			formatBool(val.Nullable))
 	case types.RequestType:
-		t := c.compileCompoundIdentifier(val.RequestSubtype)
+		t := c.compileCompoundIdentifier(types.ParseCompoundIdentifier(val.RequestSubtype))
 		r.Decl = fmt.Sprintf("$fidl.InterfaceRequest<%s>", t)
 		r.typeExpr = fmt.Sprintf("const $fidl.InterfaceRequestType<%s>(nullable: %s)",
 			t, formatBool(val.Nullable))
@@ -412,12 +420,8 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.typedDataDecl = typedDataDecl[val.PrimitiveSubtype]
 		r.typeExpr = typeExprForPrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
-		t := c.compileCompoundIdentifier(val.Identifier)
-		// val.Identifier is a CompoundIdentifier, but we don't have the
-		// ability to look up the declaration type for identifiers in other
-		// libraries. For now, just use the first component of the identifier
-		// and assume that the identifier is in this library.
-		declType, ok := (*c.decls)[val.Identifier.Name]
+		t := c.compileCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier))
+		declType, ok := (*c.decls)[val.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier:", val.Identifier)
 		}
@@ -431,7 +435,7 @@ func (c *compiler) compileType(val types.Type) Type {
 			fallthrough
 		case types.UnionDeclType:
 			r.Decl = t
-			r.typeExpr = typeSymbolForCompoundIdentifier(val.Identifier)
+			r.typeExpr = typeSymbolForCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier))
 			if val.Nullable {
 				r.typeExpr = fmt.Sprintf("const $fidl.PointerType<%s>(element: %s)",
 					t, r.typeExpr)
@@ -452,7 +456,7 @@ func (c *compiler) compileType(val types.Type) Type {
 func (c *compiler) compileConst(val types.Const) Const {
 	r := Const{
 		c.compileType(val.Type),
-		c.compileLowerCamelIdentifier(val.Name.Name),
+		c.compileLowerCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.Name), ""),
 		c.compileConstant(val.Value),
 	}
 	if r.Type.declType == types.EnumDeclType {
@@ -462,11 +466,12 @@ func (c *compiler) compileConst(val types.Const) Const {
 }
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
-	n := c.compileUpperCamelIdentifier(val.Name.Name)
+	ci := types.ParseCompoundIdentifier(val.Name)
+	n := c.compileUpperCamelCompoundIdentifier(ci, "")
 	e := Enum{
 		n,
 		[]EnumMember{},
-		typeSymbolForIdentifier(val.Name.Name),
+		typeSymbolForCompoundIdentifier(ci),
 		fmt.Sprintf("const $fidl.EnumType<%s>(type: %s, ctor: %s._ctor)", n, typeExprForPrimitiveSubtype(val.Type), n),
 	}
 	for _, v := range val.Members {
@@ -498,11 +503,12 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 }
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
+	ci := types.ParseCompoundIdentifier(val.Name)
 	r := Interface{
-		c.compileUpperCamelIdentifier(val.Name.Name),
+		c.compileUpperCamelCompoundIdentifier(ci, ""),
 		val.GetAttribute("ServiceName"),
-		c.compileUpperCamelIdentifier(val.Name.Name + "Proxy"),
-		c.compileUpperCamelIdentifier(val.Name.Name + "Binding"),
+		c.compileUpperCamelCompoundIdentifier(ci, "Proxy"),
+		c.compileUpperCamelCompoundIdentifier(ci, "Binding"),
 		[]Method{},
 	}
 
@@ -552,10 +558,11 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
+	ci := types.ParseCompoundIdentifier(val.Name)
 	r := Struct{
-		c.compileUpperCamelIdentifier(val.Name.Name),
+		c.compileUpperCamelCompoundIdentifier(ci, ""),
 		[]StructMember{},
-		typeSymbolForIdentifier(val.Name.Name),
+		typeSymbolForCompoundIdentifier(ci),
 		"",
 	}
 
@@ -584,11 +591,12 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 }
 
 func (c *compiler) compileUnion(val types.Union) Union {
+	ci := types.ParseCompoundIdentifier(val.Name)
 	r := Union{
-		c.compileUpperCamelIdentifier(val.Name.Name),
-		c.compileUpperCamelIdentifier(val.Name.Name + "Tag"),
+		c.compileUpperCamelCompoundIdentifier(ci, ""),
+		c.compileUpperCamelCompoundIdentifier(ci, "Tag"),
 		[]UnionMember{},
-		typeSymbolForIdentifier(val.Name.Name),
+		typeSymbolForCompoundIdentifier(ci),
 		"",
 	}
 
