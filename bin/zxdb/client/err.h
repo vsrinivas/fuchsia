@@ -21,6 +21,9 @@ enum class ErrType {
   // Data was corrupted between us and the debug agent.
   kCorruptMessage,
 
+  // An invalid client API call.
+  kClientApi,
+
   // Some problem getting input from the user (parse error, etc.).
   kInput,
 };

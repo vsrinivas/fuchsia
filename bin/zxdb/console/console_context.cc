@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 
+#include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -23,7 +24,7 @@ ConsoleContext::ConsoleContext(Session* session) : session_(session) {
 
   // Pick up any previously created targets. This will normally just be the
   // default one.
-  for (Target* target : session->system().GetAllTargets())
+  for (Target* target : session->system().GetTargets())
     DidCreateTarget(target);
 }
 
@@ -31,7 +32,7 @@ ConsoleContext::~ConsoleContext() {
   session_->system().RemoveObserver(this);
 }
 
-int ConsoleContext::IdForTarget(Target* target) const {
+int ConsoleContext::IdForTarget(const Target* target) const {
   const auto& found = target_to_id_.find(target);
   if (found == target_to_id_.end()) {
     FXL_NOTREACHED();
@@ -40,7 +41,7 @@ int ConsoleContext::IdForTarget(Target* target) const {
   return found->second;
 }
 
-int ConsoleContext::IdForThread(Thread* thread) const {
+int ConsoleContext::IdForThread(const Thread* thread) const {
   const TargetRecord* record =
       const_cast<ConsoleContext*>(this)->GetTargetRecord(
           thread->GetProcess()->GetTarget());
@@ -55,7 +56,16 @@ int ConsoleContext::IdForThread(Thread* thread) const {
   return found->second;
 }
 
-void ConsoleContext::SetActiveTarget(Target* target) {
+int ConsoleContext::IdForBreakpoint(const Breakpoint* breakpoint) const {
+  auto found = breakpoint_to_id_.find(breakpoint);
+  if (found == breakpoint_to_id_.end()) {
+    FXL_NOTREACHED();
+    return 0;
+  }
+  return found->second;
+}
+
+void ConsoleContext::SetActiveTarget(const Target* target) {
   auto found = target_to_id_.find(target);
   if (found == target_to_id_.end()) {
     FXL_NOTREACHED();
@@ -64,18 +74,18 @@ void ConsoleContext::SetActiveTarget(Target* target) {
   active_target_id_ = found->second;
 }
 
-int ConsoleContext::GetActiveTargetId() {
+int ConsoleContext::GetActiveTargetId() const {
   return active_target_id_;
 }
 
-Target* ConsoleContext::GetActiveTarget() {
+Target* ConsoleContext::GetActiveTarget() const {
   auto found = id_to_target_.find(active_target_id_);
   if (found == id_to_target_.end())
     return nullptr;
   return found->second.target;
 }
 
-void ConsoleContext::SetActiveThreadForTarget(Thread* thread) {
+void ConsoleContext::SetActiveThreadForTarget(const Thread* thread) {
   TargetRecord* record = GetTargetRecord(thread->GetProcess()->GetTarget());
   if (!record)
     return;
@@ -88,13 +98,34 @@ void ConsoleContext::SetActiveThreadForTarget(Thread* thread) {
   record->active_thread_id = found->second;
 }
 
-int ConsoleContext::GetActiveThreadIdForTarget(Target* target) {
-  TargetRecord* record = GetTargetRecord(target);
+int ConsoleContext::GetActiveThreadIdForTarget(const Target* target) {
+  const TargetRecord* record = GetTargetRecord(target);
   if (!record) {
     FXL_NOTREACHED();
     return 0;
   }
   return record->active_thread_id;
+}
+
+void ConsoleContext::SetActiveBreakpoint(const Breakpoint* breakpoint) {
+  int id = IdForBreakpoint(breakpoint);
+  if (id != 0)
+    active_breakpoint_id_ = id;
+}
+
+int ConsoleContext::GetActiveBreakpointId() const {
+  return active_breakpoint_id_;
+}
+
+Breakpoint* ConsoleContext::GetActiveBreakpoint() const {
+  if (active_breakpoint_id_ == 0)
+    return nullptr;
+  auto found = id_to_breakpoint_.find(active_breakpoint_id_);
+  if (found == id_to_breakpoint_.end()) {
+    FXL_NOTREACHED();
+    return nullptr;
+  }
+  return found->second;
 }
 
 Err ConsoleContext::FillOutCommand(Command* cmd) {
@@ -124,11 +155,14 @@ Err ConsoleContext::FillOutCommand(Command* cmd) {
   if (thread_id == Command::kNoIndex) {
     // No index: use the active one (though it may not exist if the program
     // isn't running, for example).
-    thread_id = record->active_thread_id;
-    if (thread_id > 0) {
-      cmd->set_thread(record->id_to_thread[thread_id]);
-      FXL_DCHECK(cmd->thread());  // Should have been validated above.
+    if (cmd->HasNoun(Noun::kThread) && !record->active_thread_id) {
+      return Err(ErrType::kInput,
+          "There is no active thread.\n"
+          "Use \"thread <index>\" to set the active one, or specify an "
+          "explicit\none for a command via \"thread <index> <command>\".");
     }
+    thread_id = record->active_thread_id;
+    cmd->set_thread(record->id_to_thread[thread_id]);
   } else {
     // Explicit index given, look it up.
     auto found_thread = record->id_to_thread.find(thread_id);
@@ -141,6 +175,29 @@ Err ConsoleContext::FillOutCommand(Command* cmd) {
           "There is no thread %d in process %d.", thread_id, target_id));
     }
     cmd->set_thread(found_thread->second);
+  }
+
+  // Breakpoint.
+  int breakpoint_id = cmd->GetNounIndex(Noun::kBreakpoint);
+  if (breakpoint_id == Command::kNoIndex) {
+    // No index: use the active one (which may not exist).
+    if (cmd->HasNoun(Noun::kBreakpoint) && !active_breakpoint_id_) {
+      return Err(ErrType::kInput,
+          "There is no active breakpoint.\n"
+          "Use \"breakpoint <index>\" to set the active one, or specify an "
+          "explicit\none for a command via \"breakpoint <index> <command>\".");
+    }
+    breakpoint_id = active_breakpoint_id_;
+    cmd->set_breakpoint(GetActiveBreakpoint());
+  } else {
+    // Explicit index given, look it up.
+    auto found_breakpoint = id_to_breakpoint_.find(breakpoint_id);
+    if (found_breakpoint == id_to_breakpoint_.end()) {
+      return Err(ErrType::kInput,
+                 fxl::StringPrintf("There is no breakpoint %d.",
+                                   breakpoint_id));
+    }
+    cmd->set_breakpoint(found_breakpoint->second);
   }
 
   return Err();
@@ -193,6 +250,31 @@ void ConsoleContext::WillDestroyTarget(Target* target) {
   target_to_id_.erase(target);
   id_to_target_.erase(record->target_id);
   // *record is now invalid.
+}
+
+void ConsoleContext::DidCreateBreakpoint(Breakpoint* breakpoint) {
+  int id = next_breakpoint_id_;
+  next_breakpoint_id_++;
+
+  id_to_breakpoint_[id] = breakpoint;
+  breakpoint_to_id_[breakpoint] = id;
+}
+
+void ConsoleContext::WillDestroyBreakpoint(Breakpoint* breakpoint) {
+  auto found_breakpoint = breakpoint_to_id_.find(breakpoint);
+  if (found_breakpoint == breakpoint_to_id_.end()) {
+    FXL_NOTREACHED();
+    return;
+  }
+  int id = found_breakpoint->second;
+
+  // Clear any active breakpoint if it's the deleted one.
+  if (active_breakpoint_id_ == id)
+    active_breakpoint_id_ = 0;
+
+  id_to_breakpoint_.erase(id);
+  breakpoint_to_id_.erase(found_breakpoint);
+
 }
 
 void ConsoleContext::DidCreateProcess(Target* target, Process* process) {
@@ -309,7 +391,8 @@ ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(int target_id) {
   return &found_to_record->second;
 }
 
-ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(Target* target) {
+ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(
+    const Target* target) {
   auto found_to_id = target_to_id_.find(target);
   if (found_to_id == target_to_id_.end()) {
     FXL_NOTREACHED();

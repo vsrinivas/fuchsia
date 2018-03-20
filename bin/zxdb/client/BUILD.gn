@@ -5,6 +5,8 @@
 static_library("client") {
   public = [
     "agent_connection.h",
+    "breakpoint.h",
+    "breakpoint_observer.h",
     "client_object.h",
     "err.h",
     "memory_dump.h",
@@ -21,6 +23,9 @@ static_library("client") {
 
   sources = [
     "agent_connection.cc",
+    "breakpoint.cc",
+    "breakpoint_impl.cc",
+    "breakpoint_impl.h",
     "client_object.cc",
     "err.cc",
     "memory_dump.cc",

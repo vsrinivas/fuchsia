@@ -13,6 +13,7 @@
 
 namespace zxdb {
 
+class Breakpoint;
 class ConsoleContext;
 class Target;
 class Thread;
@@ -24,6 +25,8 @@ enum class Noun {
   kFrame,
   kThread,
   kProcess,
+
+  kBreakpoint,
 
   // Adding a new one? Add to GetNouns().
   kLast  // Not a real noun, keep last.
@@ -40,8 +43,11 @@ enum class Verb {
   kNone = 0,
 
   kAttach,
-  kDetach,
+  kBreak,
+  kClear,
   kContinue,
+  kDetach,
+  kEdit,
   kHelp,
   kListProcesses,
   kMemRead,
@@ -103,10 +109,15 @@ class Command {
   // The computed environment for the command. This is filled in with the
   // objects corresponding to the indices given on the command line, and
   // default to the current one for the current command line.
+  //
+  // If HasNoun() returns true, the corresponding getter here is guaranteed
+  // non-null.
   Target* target() const { return target_; }
   void set_target(Target* t) { target_ = t; }
   Thread* thread() const { return thread_; }
   void set_thread(Thread* t) { thread_ = t; }
+  Breakpoint* breakpoint() const { return breakpoint_; }
+  void set_breakpoint(Breakpoint* b) { breakpoint_ = b; }
 
  private:
   // The nouns specified for this command. If not present here, the noun
@@ -121,6 +132,7 @@ class Command {
   Target* target_ = nullptr;  // Guaranteed non-null for valid commands.
   Thread* thread_ = nullptr;  // Will be null if not running.
   // Frame* frame_ = nullptr;  // TODO(brettw) do frame support.
+  Breakpoint* breakpoint_ = nullptr;  // May be null.
 
   Verb verb_ = Verb::kNone;
 

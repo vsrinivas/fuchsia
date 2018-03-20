@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/system_impl.h"
 
+#include "garnet/bin/zxdb/client/breakpoint_impl.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system_observer.h"
@@ -26,10 +27,18 @@ ProcessImpl* SystemImpl::ProcessImplFromKoid(uint64_t koid) const {
   return nullptr;
 }
 
-std::vector<Target*> SystemImpl::GetAllTargets() const {
+std::vector<Target*> SystemImpl::GetTargets() const {
   std::vector<Target*> result;
   result.reserve(targets_.size());
   for (const auto& t : targets_)
+    result.push_back(t.get());
+  return result;
+}
+
+std::vector<Breakpoint*> SystemImpl::GetBreakpoints() const {
+  std::vector<Breakpoint*> result;
+  result.reserve(breakpoints_.size());
+  for (const auto& t : breakpoints_)
     result.push_back(t.get());
   return result;
 }
@@ -49,6 +58,31 @@ Target* SystemImpl::CreateNewTarget(Target* clone) {
   Target* to_return = target.get();
   AddNewTarget(std::move(target));
   return to_return;
+}
+
+Breakpoint* SystemImpl::CreateNewBreakpoint() {
+  breakpoints_.push_back(std::make_unique<BreakpointImpl>(session()));
+  Breakpoint* to_return = breakpoints_.back().get();
+
+  // Notify observers (may mutate breakpoint list).
+  for (auto& observer : observers())
+    observer.DidCreateBreakpoint(to_return);
+
+  return to_return;
+}
+
+void SystemImpl::DeleteBreakpoint(Breakpoint* breakpoint) {
+  for (size_t i = 0; i < breakpoints_.size(); i++) {
+    if (breakpoints_[i].get() == breakpoint) {
+      // Notify observers.
+      for (auto& observer : observers())
+        observer.WillDestroyBreakpoint(breakpoint);
+
+      breakpoints_.erase(breakpoints_.begin() + i);
+      return;
+    }
+  }
+  FXL_NOTREACHED();
 }
 
 void SystemImpl::Continue() {

@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/lib/debug_ipc/records.h"
 
@@ -34,12 +35,19 @@ Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
 std::string TargetStateToString(Target::State state);
 std::string ThreadStateToString(debug_ipc::ThreadRecord::State state);
 
+std::string BreakpointScopeToString(const ConsoleContext* context,
+                                    const Breakpoint* breakpoint);
+std::string BreakpointStopToString(Breakpoint::Stop stop);
+
 // Returns a string describing the given thing in the given context. If
 // columns is set, there will be extra padding added so that multiple things
 // line up when printed vertically.
-std::string DescribeTarget(ConsoleContext* context, Target* target,
+std::string DescribeTarget(const ConsoleContext* context, const Target* target,
                            bool columns);
-std::string DescribeThread(ConsoleContext* context, Thread* thread,
+std::string DescribeThread(const ConsoleContext* context, const Thread* thread,
                            bool columns);
+std::string DescribeBreakpoint(const ConsoleContext* context,
+                               const Breakpoint* breakpoint,
+                               bool columns);
 
 }  // namespace zxdb

@@ -25,6 +25,7 @@ static_library("console") {
     "output_buffer.cc",
     "output_buffer.h",
     "verbs.h",
+    "verbs_breakpoint.cc",
     "verbs_control.cc",
     "verbs_memory.cc",
     "verbs_process.cc",

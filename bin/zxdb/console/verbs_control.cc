@@ -16,39 +16,39 @@ namespace zxdb {
 namespace {
 
 const char kHelpShortHelp[] =
-    R"(help)";
+    R"(help / h)";
 const char kHelpHelp[] =
     R"(help
 
-    Yo dawg, I heard you like help on your help so I put help on the help in
-    the help.)";
+  Yo dawg, I heard you like help on your help so I put help on the help in
+  the help.)";
 
 const char kHelpIntro[] =
     R"(Help!
 
-    Type "help <topic>" for more information.
+  Type "help <topic>" for more information.
 
 Command syntax
 
-    Verbs
-        "step"
-            Applies the "step" verb to the currently selected thread.
-        "mem-read --size=16 0x12345678"
-            Pass a named switch and an argument.
+  Verbs
+      "step"
+          Applies the "step" verb to the currently selected thread.
+      "mem-read --size=16 0x12345678"
+          Pass a named switch and an argument.
 
-    Nouns
-        "thread"
-            List available threads
-        "thread 1"
-            Select thread with ID 1 to be the default.
+  Nouns
+      "thread"
+          List available threads
+      "thread 1"
+          Select thread with ID 1 to be the default.
 
-    Verb-noun combinations
-        "thread 4 step"
-            Steps thread 4 of the current process regardless of the currently
-            selected thread.
-        "process 1 thread 4 step"
-            Steps thread 4 of process 1 regardless of the currently selected
-            thread or process.
+  Verb-noun combinations
+      "thread 4 step"
+          Steps thread 4 of the current process regardless of the currently
+          selected thread.
+      "process 1 thread 4 step"
+          Steps thread 4 of process 1 regardless of the currently selected
+          thread or process.
 )";
 
 std::string GetReference() {
@@ -116,11 +116,11 @@ Err DoHelp(ConsoleContext* context, const Command& cmd) {
 }
 
 const char kQuitShortHelp[] =
-    R"(quit: Quits the debugger.)";
+    R"(quit / q: Quits the debugger.)";
 const char kQuitHelp[] =
     R"(quit
 
-    Quits the debugger.)";
+  Quits the debugger.)";
 
 Err DoQuit(ConsoleContext* context, const Command& cmd) {
   // This command is special-cased by the main loop so it shouldn't get

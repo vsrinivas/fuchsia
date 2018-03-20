@@ -12,6 +12,7 @@
 
 namespace zxdb {
 
+class BreakpointImpl;
 class ProcessImpl;
 class TargetImpl;
 
@@ -23,16 +24,20 @@ class SystemImpl : public System {
   ProcessImpl* ProcessImplFromKoid(uint64_t koid) const;
 
   // System implementation:
-  std::vector<Target*> GetAllTargets() const override;
+  std::vector<Target*> GetTargets() const override;
+  std::vector<Breakpoint*> GetBreakpoints() const override;
   Process* ProcessFromKoid(uint64_t koid) const override;
   void GetProcessTree(ProcessTreeCallback callback) override;
   Target* CreateNewTarget(Target* clone) override;
+  Breakpoint* CreateNewBreakpoint() override;
+  void DeleteBreakpoint(Breakpoint* breakpoint) override;
   void Continue() override;
 
  private:
   void AddNewTarget(std::unique_ptr<TargetImpl> target);
 
   std::vector<std::unique_ptr<TargetImpl>> targets_;
+  std::vector<std::unique_ptr<BreakpointImpl>> breakpoints_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SystemImpl);
 };

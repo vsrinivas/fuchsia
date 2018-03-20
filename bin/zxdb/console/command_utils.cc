@@ -106,7 +106,47 @@ std::string ThreadStateToString(debug_ipc::ThreadRecord::State state) {
   return std::string();
 }
 
-std::string DescribeTarget(ConsoleContext* context, Target* target,
+std::string BreakpointScopeToString(const ConsoleContext* context,
+                                    const Breakpoint* breakpoint) {
+  Target* target_scope = nullptr;
+  Thread* thread_scope = nullptr;
+  Breakpoint::Scope scope = breakpoint->GetScope(&target_scope, &thread_scope);
+  switch (scope) {
+    case Breakpoint::Scope::kSystem:
+      return "Global";
+    case Breakpoint::Scope::kTarget:
+      return fxl::StringPrintf("pr %d", context->IdForTarget(target_scope));
+    case Breakpoint::Scope::kThread:
+      return fxl::StringPrintf(
+          "pr %d t %d",
+          context->IdForTarget(thread_scope->GetProcess()->GetTarget()),
+          context->IdForThread(thread_scope));
+    default:
+      FXL_NOTREACHED();
+      return std::string();
+  }
+}
+
+std::string BreakpointStopToString(Breakpoint::Stop stop) {
+  struct Mapping {
+    Breakpoint::Stop stop;
+    const char* string;
+  };
+  static const Mapping mappings[] = {
+    { Breakpoint::Stop::kAll, "All" },
+    { Breakpoint::Stop::kProcess, "Process" },
+    { Breakpoint::Stop::kThread, "Thread" }
+  };
+
+  for (const Mapping& mapping : mappings) {
+    if (mapping.stop == stop)
+      return mapping.string;
+  }
+  FXL_NOTREACHED();
+  return std::string();
+}
+
+std::string DescribeTarget(const ConsoleContext* context, const Target* target,
                            bool columns) {
   int id = context->IdForTarget(target);
   std::string state = TargetStateToString(target->GetState());
@@ -146,7 +186,7 @@ std::string DescribeTarget(ConsoleContext* context, Target* target,
   return result;
 }
 
-std::string DescribeThread(ConsoleContext* context, Thread* thread,
+std::string DescribeThread(const ConsoleContext* context, const Thread* thread,
                            bool columns) {
   std::string state = ThreadStateToString(thread->GetState());
 
@@ -158,6 +198,28 @@ std::string DescribeThread(ConsoleContext* context, Thread* thread,
   return fxl::StringPrintf(format_string, context->IdForThread(thread),
                            state.c_str(), thread->GetKoid(),
                            thread->GetName().c_str());
+}
+
+std::string DescribeBreakpoint(const ConsoleContext* context,
+                               const Breakpoint* breakpoint,
+                               bool columns) {
+  const char* format_string;
+  if (columns)
+    format_string = "%3d %10s %8s %7s %5d %s";
+  else
+    format_string = "Breakpoint %d on %s, %s, stop=%s, hit=%d, @ %s";
+
+  std::string scope = BreakpointScopeToString(context, breakpoint);
+  std::string stop = BreakpointStopToString(breakpoint->GetStopMode());
+  const char* enabled = breakpoint->IsEnabled() ? "Enabled" : "Disabled";
+
+  std::string location = fxl::StringPrintf(
+      "0x%" PRIx64, breakpoint->GetAddressLocation());
+
+  return fxl::StringPrintf(format_string,
+                           context->IdForBreakpoint(breakpoint),
+                           scope.c_str(), enabled, stop.c_str(),
+                           breakpoint->GetHitCount(), location.c_str());
 }
 
 }  // namespace zxdb

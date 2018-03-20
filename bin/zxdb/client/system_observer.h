@@ -6,6 +6,7 @@
 
 namespace zxdb {
 
+class Breakpoint;
 class Target;
 
 class SystemObserver {
@@ -13,6 +14,10 @@ class SystemObserver {
   // Called immediately after creation / before destruction of a target.
   virtual void DidCreateTarget(Target* target) {}
   virtual void WillDestroyTarget(Target* target) {}
+
+  // Called immediately after creation / before destruction of a breakpoint.
+  virtual void DidCreateBreakpoint(Breakpoint* breakpoint) {}
+  virtual void WillDestroyBreakpoint(Breakpoint* breakpoint) {}
 };
 
 }  // namespace zxdb

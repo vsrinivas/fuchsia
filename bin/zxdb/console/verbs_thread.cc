@@ -83,7 +83,7 @@ Err DoContinue(ConsoleContext* context, const Command& cmd) {
     // successfully continue 0 processes) which is confusing to users who may
     // not realize the process isn't running.
     bool has_running_target = false;
-    for (const Target* target : context->session()->system().GetAllTargets()) {
+    for (const Target* target : context->session()->system().GetTargets()) {
       if (target->GetProcess()) {
         has_running_target = true;
         break;

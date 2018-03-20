@@ -15,6 +15,7 @@
 
 namespace zxdb {
 
+class Breakpoint;
 class Err;
 class SystemObserver;
 
@@ -34,7 +35,12 @@ class System : public ClientObject {
   // Returns all targets currently in the System. The returned pointers are
   // managed by the System object and should not be cached once you return to
   // the message loop.
-  virtual std::vector<Target*> GetAllTargets() const = 0;
+  virtual std::vector<Target*> GetTargets() const = 0;
+
+  // Returns all breakpoints currently in the system. The returned pointers are
+  // managed by the System object and should not be cached once you return to
+  // the message loop.
+  virtual std::vector<Breakpoint*> GetBreakpoints() const = 0;
 
   // Returns the process (and hence Target) associated with the given live
   // koid. Returns 0 if not found.
@@ -47,6 +53,14 @@ class System : public ClientObject {
   // from that target will be cloned into the new one. If clone is null,
   // an empty Target will be allocated.
   virtual Target* CreateNewTarget(Target* clone) = 0;
+
+  // Creates a new breakpoint. It will have no associated process or location
+  // and will be disabled.
+  virtual Breakpoint* CreateNewBreakpoint() = 0;
+
+  // Deletes the given breakpoint. The passed-in pointer will be invalid after
+  // this call.
+  virtual void DeleteBreakpoint(Breakpoint* breakpoint) = 0;
 
   // Continues execution of all threads in all debugged processes.
   virtual void Continue() = 0;

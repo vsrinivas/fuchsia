@@ -34,7 +34,6 @@ class Target : public ClientObject {
  public:
   using Callback = std::function<void(Target*, const Err&)>;
 
-
   enum State {
     // There is no process currently running. From here, it can only transition
     // to starting.

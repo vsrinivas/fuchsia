@@ -17,7 +17,7 @@ namespace zxdb {
 namespace {
 
 const char kFrameShortHelp[] =
-    "frame";
+    "frame / f: ";
 const char kFrameHelp[] =
     R"(frame
 
@@ -25,7 +25,7 @@ const char kFrameHelp[] =
 )";
 
 const char kThreadShortHelp[] =
-    "thread: Select or list threads.";
+    "thread / t: Select or list threads.";
 const char kThreadHelp[] =
     R"(thread [ <id> [ <command> ... ] ]
 
@@ -64,17 +64,19 @@ Examples
 )";
 
 const char kProcessShortHelp[] =
-    "process: Select or list process contexts.";
+    "process / pr: Select or list process contexts.";
 const char kProcessHelp[] =
     R"(process [ <id> [ <command> ... ] ]
+
+  Alias: "pr"
 
   Selects or lists process contexts.
 
   By itself, "process" will list available process contexts with their IDs. New
-  process contexts can be created with the "new" command. This list of
-  debugger contexts is different than the list of processes on the target
-  system (use "ps" to list all running processes, and "attach" to attach a
-  context to a running process).
+  process contexts can be created with the "new" command. This list of debugger
+  contexts is different than the list of processes on the target system (use
+  "ps" to list all running processes, and "attach" to attach a context to a
+  running process).
 
   With an ID following it ("process 3"), selects that process context as the
   current active context. This context will apply by default for subsequent
@@ -86,14 +88,52 @@ const char kProcessHelp[] =
 
 Examples
 
+  pr
   process
       Lists all process contexts.
 
+  pr 2
   process 2
       Sets process context 2 as the active one.
 
+  pr 2 r
   process 2 run
       Runs process context 2, regardless of the active one.
+)";
+
+const char kBreakpointShortHelp[] =
+    "breakpoint / bp: Select or list breakpoints.";
+const char kBreakpointHelp[] =
+    R"(breakpoint [ <id> [ <command> ... ] ]
+
+  Alias: "bp"
+
+  Selects or lists breakpoints. Not to be confused with the "break" / "b"
+  command which creates new breakpoints. See "help break" for more.
+
+  By itself, "breakpoint" or "bp" will list all breakpoints with their IDs.
+
+  With an ID following it ("breakpoint 3"), selects that breakpoint as the
+  current active breakpoint. This breakpoint will apply by default for
+  subsequent breakpoint commands (like "clear" or "edit").
+
+  With an ID and another command following it ("breakpoint 2 clear"), modifies
+  the breakpoint context for that command only. This allows modifying
+  breakpoints regardless of the active one.
+
+Examples
+
+  bp
+  breakpoint
+      Lists all breakpoints.
+
+  bp 2
+  breakpoint 2
+      Sets breakpoint 2 as the active one.
+
+  bp 2 cl
+  breakpoint 2 clear
+      Clears breakpoint 2.
 )";
 
 }  // namespace
@@ -186,6 +226,8 @@ std::string VerbToString(Verb v) {
 const std::map<Noun, NounRecord>& GetNouns() {
   static std::map<Noun, NounRecord> all_nouns;
   if (all_nouns.empty()) {
+    all_nouns[Noun::kBreakpoint] =
+        NounRecord({"breakpoint", "bp"}, kBreakpointShortHelp, kBreakpointHelp);
     all_nouns[Noun::kFrame] =
         NounRecord({"frame", "f"}, kFrameShortHelp, kFrameHelp);
     all_nouns[Noun::kThread] =
@@ -203,6 +245,7 @@ const std::map<Noun, NounRecord>& GetNouns() {
 const std::map<Verb, VerbRecord>& GetVerbs() {
   static std::map<Verb, VerbRecord> all_verbs;
   if (all_verbs.empty()) {
+    AppendBreakpointVerbs(&all_verbs);
     AppendControlVerbs(&all_verbs);
     AppendMemoryVerbs(&all_verbs);
     AppendProcessVerbs(&all_verbs);

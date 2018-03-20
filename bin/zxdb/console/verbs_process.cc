@@ -193,10 +193,13 @@ Err DoAttach(ConsoleContext* context, const Command& cmd) {
 
 // detach ----------------------------------------------------------------------
 
-const char kDetachShortHelp[] = "detach: Detach from a process context.";
+const char kDetachShortHelp[] = "detach: Detach from a process.";
 const char kDetachHelp[] =
     R"(detach
-  Detaches a process from the debugger.
+
+  Detaches the debugger from a running process. The process will continue
+  running.
+
 Hints
 
   By default the current process is detached.
