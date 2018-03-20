@@ -22,14 +22,14 @@
 #include <zircon/process.h>
 #include <zircon/syscalls/iommu.h>
 
-#include "errors.h"
-#include "init.h"
+#include "cpu-trace.h"
 #include "dev.h"
 #include "errors.h"
+#include "init.h"
 #include "pci.h"
 #include "powerbtn.h"
-#include "processor.h"
 #include "power.h"
+#include "processor.h"
 #include "resources.h"
 
 #define MAX_NAMESPACE_DEPTH 100
@@ -804,6 +804,18 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
     status = device_add(parent, &args, &sys_root);
     if (status != ZX_OK) {
         zxlogf(ERROR, "acpi-bus: error %d in device_add(sys)\n", status);
+        return status;
+    }
+
+    zx_handle_t cpu_trace_bti;
+    status = zx_bti_create(dummy_iommu_handle, 0, CPU_TRACE_BTI_ID, &cpu_trace_bti);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "acpi-bus: error %d in bti_create(cpu_trace_bti)\n", status);
+        return status;
+    }
+
+    status = publish_cpu_trace(cpu_trace_bti, sys_root);
+    if (status != ZX_OK) {
         return status;
     }
 

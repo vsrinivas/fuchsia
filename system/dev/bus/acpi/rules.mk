@@ -23,6 +23,7 @@ MODULE_COMPILEFLAGS += -Ithird_party/lib/acpica/source/include
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/bus-acpi.c \
+    $(LOCAL_DIR)/cpu-trace.c \
     $(LOCAL_DIR)/dev-battery.c \
     $(LOCAL_DIR)/dev-cros-ec/dev.cpp \
     $(LOCAL_DIR)/dev-cros-ec/motion.cpp \
