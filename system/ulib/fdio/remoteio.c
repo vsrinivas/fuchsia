@@ -109,7 +109,7 @@ zx_status_t zxrio_handle_close(zxrio_cb_t cb, void* cookie) {
     msg.hcount = 0;
 #endif
     cb(&msg, cookie);
-    return ZX_OK;
+    return ERR_DISPATCHER_DONE;
 }
 
 zx_status_t zxrio_handler(zx_handle_t h, zxrio_cb_t cb, void* cookie) {

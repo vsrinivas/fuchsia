@@ -150,7 +150,7 @@ Connection::Connection(Vfs* vfs, fbl::RefPtr<Vnode> vnode,
 
         // Give the dispatcher a chance to clean up.
         if (status != ERR_DISPATCHER_DONE) {
-            CallHandler();
+            CallClose();
         }
 
         // Tell the VFS that the connection closed remotely.
@@ -167,7 +167,7 @@ Connection::~Connection() {
         ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "Could not cancel wait: status=%d", status);
         wait_.set_object(ZX_HANDLE_INVALID);
 
-        CallHandler();
+        CallClose();
     }
 
     // Release the token associated with this connection's vnode since the connection
@@ -190,6 +190,11 @@ zx_status_t Connection::Serve() {
 
 zx_status_t Connection::CallHandler() {
     return zxrio_handler(channel_.get(), &Connection::HandleMessageThunk, this);
+}
+
+void Connection::CallClose() {
+    channel_.reset();
+    CallHandler();
 }
 
 zx_status_t Connection::HandleMessageThunk(zxrio_msg_t* msg, void* cookie) {

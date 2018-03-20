@@ -57,6 +57,11 @@ public:
 private:
     zx_status_t CallHandler();
 
+    // Sends an explicit close message to the underlying vnode.
+    // Only necessary if the handler has not returned ERR_DISPATCHER_DONE
+    // and has been opened.
+    void CallClose();
+
     static zx_status_t HandleMessageThunk(zxrio_msg_t* msg, void* cookie);
     zx_status_t HandleMessage(zxrio_msg_t* msg);
 

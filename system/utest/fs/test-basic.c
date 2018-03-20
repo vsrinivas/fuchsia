@@ -9,7 +9,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fdio/limits.h>
+#include <fdio/util.h>
 #include <unittest/unittest.h>
+#include <zircon/syscalls.h>
 
 #include "filesystems.h"
 
@@ -68,6 +71,29 @@ bool test_basic(void) {
     END_TEST;
 }
 
+bool test_unclean_close(void) {
+    BEGIN_TEST;
+
+    int fd = open("::foobar", O_CREAT | O_RDWR);
+    ASSERT_GT(fd, 0, "");
+
+    // Try closing a connection to a file with an "unclean" shutdown,
+    // noticed by the filesystem server as a closed handle rather than
+    // an explicit "Close" call.
+    zx_handle_t handles[FDIO_MAX_HANDLES];
+    uint32_t types[FDIO_MAX_HANDLES];
+    zx_status_t r = fdio_transfer_fd(fd, 0, handles, types);
+    ASSERT_GE(fd, 0, "");
+    for (size_t i = 0; i < (size_t) r; i++) {
+        ASSERT_EQ(zx_handle_close(handles[i]), ZX_OK, "");
+    }
+
+    ASSERT_EQ(unlink("::foobar"), 0, "");
+
+    END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(basic_tests,
     RUN_TEST_MEDIUM(test_basic)
+    RUN_TEST_MEDIUM(test_unclean_close)
 )
