@@ -68,6 +68,14 @@ class FirestoreService {
       std::shared_ptr<grpc::CallCredentials> call_credentials,
       std::function<void(grpc::Status)> callback) = 0;
 
+  // Commits a transaction, while optionally updating documents.
+  virtual void Commit(
+      google::firestore::v1beta1::CommitRequest request,
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
+      std::function<void(grpc::Status,
+                         google::firestore::v1beta1::CommitResponse)>
+          callback) = 0;
+
   // Initiates a stream to watch for change notifications.
   virtual std::unique_ptr<ListenCallHandler> Listen(
       std::shared_ptr<grpc::CallCredentials> call_credentials,

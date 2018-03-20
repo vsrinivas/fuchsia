@@ -38,6 +38,12 @@ struct DeleteDocumentRecord {
   std::function<void(grpc::Status)> callback;
 };
 
+struct CommitRecord {
+  google::firestore::v1beta1::CommitRequest request;
+  std::function<void(grpc::Status, google::firestore::v1beta1::CommitResponse)>
+      callback;
+};
+
 class TestFirestoreService : public FirestoreService {
  public:
   TestFirestoreService();
@@ -71,6 +77,12 @@ class TestFirestoreService : public FirestoreService {
                       std::shared_ptr<grpc::CallCredentials> call_credentials,
                       std::function<void(grpc::Status)> callback) override;
 
+  void Commit(google::firestore::v1beta1::CommitRequest request,
+              std::shared_ptr<grpc::CallCredentials> call_credentials,
+              std::function<void(grpc::Status,
+                                 google::firestore::v1beta1::CommitResponse)>
+                  callback) override;
+
   std::unique_ptr<ListenCallHandler> Listen(
       std::shared_ptr<grpc::CallCredentials> call_credentials,
       ListenCallClient* client) override;
@@ -81,6 +93,7 @@ class TestFirestoreService : public FirestoreService {
   std::vector<ListDocumentsRecord> list_documents_records;
   std::vector<CreateDocumentRecord> create_document_records;
   std::vector<DeleteDocumentRecord> delete_document_records;
+  std::vector<CommitRecord> commit_records;
   std::vector<ListenCallClient*> listen_clients;
 
   fxl::Closure shutdown_callback;

@@ -125,6 +125,21 @@ void FirestoreServiceImpl::DeleteDocument(
                                     std::move(callback));
 }
 
+void FirestoreServiceImpl::Commit(
+    google::firestore::v1beta1::CommitRequest request,
+    std::shared_ptr<grpc::CallCredentials> call_credentials,
+    std::function<void(grpc::Status,
+                       google::firestore::v1beta1::CommitResponse)> callback) {
+  FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+  CommitResponseCall& call = commit_response_calls_.emplace();
+  call.context.set_credentials(call_credentials);
+  auto response_reader =
+      firestore_->AsyncCommit(&call.context, std::move(request), &cq_);
+
+  MakeCall<google::firestore::v1beta1::CommitResponse>(
+      &call, std::move(response_reader), std::move(callback));
+}
+
 std::unique_ptr<ListenCallHandler> FirestoreServiceImpl::Listen(
     std::shared_ptr<grpc::CallCredentials> call_credentials,
     ListenCallClient* client) {

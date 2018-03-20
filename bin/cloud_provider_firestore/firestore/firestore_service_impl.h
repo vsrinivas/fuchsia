@@ -44,6 +44,9 @@ struct SingleResponseCall {
 using DocumentResponseCall =
     SingleResponseCall<google::firestore::v1beta1::Document>;
 
+using CommitResponseCall =
+    SingleResponseCall<google::firestore::v1beta1::CommitResponse>;
+
 using ListDocumentsResponseCall =
     SingleResponseCall<google::firestore::v1beta1::ListDocumentsResponse>;
 
@@ -90,6 +93,12 @@ class FirestoreServiceImpl : public FirestoreService {
                       std::shared_ptr<grpc::CallCredentials> call_credentials,
                       std::function<void(grpc::Status)> callback) override;
 
+  void Commit(google::firestore::v1beta1::CommitRequest request,
+              std::shared_ptr<grpc::CallCredentials> call_credentials,
+              std::function<void(grpc::Status,
+                                 google::firestore::v1beta1::CommitResponse)>
+                  callback) override;
+
   std::unique_ptr<ListenCallHandler> Listen(
       std::shared_ptr<grpc::CallCredentials> call_credentials,
       ListenCallClient* client) override;
@@ -110,6 +119,7 @@ class FirestoreServiceImpl : public FirestoreService {
   grpc::CompletionQueue cq_;
 
   callback::AutoCleanableSet<DocumentResponseCall> document_response_calls_;
+  callback::AutoCleanableSet<CommitResponseCall> commit_response_calls_;
   callback::AutoCleanableSet<ListDocumentsResponseCall>
       list_documents_response_calls_;
   callback::AutoCleanableSet<EmptyResponseCall> empty_response_calls_;
