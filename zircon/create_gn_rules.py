@@ -26,6 +26,12 @@ from mako.template import Template
 # Packages included in the sysroot.
 SYSROOT_PACKAGES = ['c', 'zircon']
 
+# List of libraries with header files being transitioned from 'include/foo/foo.h' to
+# 'include/lib/foo/foo.h'. During the transition, both the library's 'include/' and 'include/lib'
+# directories are added to the include path so both old and new style #include work.
+# TODO(ZX-1871): Once everything in Zircon is migrated, remove this mechanism.
+LIBRARIES_BEING_MOVED = [ 'zx' ]
+
 
 def make_dir(path, is_dir=False):
     '''Creates the directory at `path`.'''
@@ -136,6 +142,8 @@ def generate_source_library(package, context):
         (file, folder) = extract_file(name, path, context)
         data.includes[name] = '//%s' % file
         data.include_dirs.add('//%s' % folder)
+        if lib_name in LIBRARIES_BEING_MOVED:
+            data.include_dirs.add('//%s/lib' % folder)
 
     # Source files.
     for name, path in package.get('src', {}).iteritems():
