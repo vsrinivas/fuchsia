@@ -87,7 +87,7 @@ typedef struct {
     usb_mode_t usb_mode;
 
     // event stuff
-    pdev_vmo_buffer_t event_buffer;
+    io_buffer_t event_buffer;
     zx_handle_t irq_handle;
     thrd_t irq_thread;
 
@@ -98,7 +98,7 @@ typedef struct {
 
     // ep0 stuff
     usb_setup_t cur_setup;      // current setup request
-    pdev_vmo_buffer_t ep0_buffer;
+    io_buffer_t ep0_buffer;
     dwc3_ep0_state ep0_state;
 
     // Used for synchronizing global state
