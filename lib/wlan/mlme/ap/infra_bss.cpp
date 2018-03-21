@@ -28,7 +28,6 @@ InfraBss::~InfraBss() {
 }
 
 void InfraBss::Start(const StartRequest& req) {
-    ZX_DEBUG_ASSERT(!IsStarted());
     if (IsStarted()) { return; }
 
     // Move to requested channel.
@@ -42,14 +41,21 @@ void InfraBss::Start(const StartRequest& req) {
                bssid_.ToString().c_str(), req.channel, status);
     }
 
+    debugbss("[infra-bss] [%s] starting BSS\n", bssid_.ToString().c_str());
+    debugbss("    SSID: %s\n", req.ssid->data());
+    debugbss("    Beacon Period: %u\n", req.beacon_period);
+    debugbss("    DTIM Period: %u\n", req.dtim_period);
+    debugbss("    Channel: %u\n", req.channel);
+
     // Start sending Beacon frames.
     started_at_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
     bcn_sender_->Start(this, req);
 }
 
 void InfraBss::Stop() {
-    ZX_DEBUG_ASSERT(IsStarted());
     if (!IsStarted()) { return; }
+
+    debugbss("[infra-bss] [%s] stopping BSS\n", bssid_.ToString().c_str());
 
     bcn_sender_->Stop();
     started_at_ = 0;

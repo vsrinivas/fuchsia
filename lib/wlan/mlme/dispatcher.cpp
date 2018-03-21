@@ -387,9 +387,13 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
     // Only a subset of requests are supported before an MLME has been initialized.
     if (mlme_ == nullptr) {
         switch (method) {
+        case Method::RESET_request:
+            // MLME already reset.
+            return ZX_OK;
         case Method::SCAN_request:
         // fallthrough
         case Method::JOIN_request: {
+            infof("configuring Client MLME\n");
             mlme_.reset(new ClientMlme(device_));
             auto status = mlme_->Init();
             if (status != ZX_OK) {
@@ -400,6 +404,7 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
             break;
         }
         case Method::START_request: {
+            infof("configuring AP MLME\n");
             mlme_.reset(new ApMlme(device_));
             auto status = mlme_->Init();
             if (status != ZX_OK) {
@@ -418,11 +423,14 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
     switch (method) {
     case Method::RESET_request:
         // Let currently active MLME handle RESET request, then, reset MLME.
+        infof("resetting MLME\n");
         HandleMlmeMethod<ResetRequest>(packet, method);
         mlme_.reset();
         return ZX_OK;
     case Method::START_request:
         return HandleMlmeMethod<StartRequest>(packet, method);
+    case Method::STOP_request:
+        return HandleMlmeMethodInlinedStruct<StopRequest>(packet, method);
     case Method::SCAN_request:
         return HandleMlmeMethod<ScanRequest>(packet, method);
     case Method::JOIN_request:

@@ -18,7 +18,7 @@ namespace wlan {
 class ApMlme : public Mlme {
    public:
     explicit ApMlme(DeviceInterface* device);
-    ~ApMlme() = default;
+    ~ApMlme();
 
     // FrameHandler methods.
     zx_status_t HandleMlmeStartReq(const StartRequest& req) override;

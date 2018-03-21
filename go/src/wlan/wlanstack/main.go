@@ -121,6 +121,40 @@ func (ws *Wlanstack) Status() (res wlan_service.WlanStatus, err error) {
 	return cli.Status(), nil
 }
 
+func (ws *Wlanstack) StartBss(sc_cfg wlan_service.BssConfig) (wserr wlan_service.Error, err error) {
+	cli := ws.getCurrentClient()
+	if cli == nil {
+		return wlan_service.Error{wlan_service.ErrCode_NotFound, "No wlan interface found"}, nil
+	}
+
+	cfg := wlan.NewAPConfig(sc_cfg.Ssid)
+	respC := make(chan *wlan.CommandResult, 1)
+	cli.PostCommand(wlan.CmdStartBSS, cfg, respC)
+
+	resp := <-respC
+	if resp.Err != nil {
+		return *resp.Err, nil
+	}
+	return wlan_service.Error{wlan_service.ErrCode_Ok, "OK"}, nil
+}
+
+func (ws *Wlanstack) StopBss() (wserr wlan_service.Error, err error) {
+	cli := ws.getCurrentClient()
+	if cli == nil {
+		return wlan_service.Error{wlan_service.ErrCode_NotFound, "No wlan interface found"}, nil
+	}
+
+	respC := make(chan *wlan.CommandResult, 1)
+	var noArgs interface{}
+	cli.PostCommand(wlan.CmdStopBSS, noArgs, respC)
+
+	resp := <-respC
+	if resp.Err != nil {
+		return *resp.Err, nil
+	}
+	return wlan_service.Error{wlan_service.ErrCode_Ok, "OK"}, nil
+}
+
 func (ws *Wlanstack) Bind(r wlan_service.Wlan_Request) {
 	s := r.NewStub(ws, bindings.GetAsyncWaiter())
 	ws.stubs = append(ws.stubs, s)

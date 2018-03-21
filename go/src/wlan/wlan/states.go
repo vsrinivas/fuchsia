@@ -34,6 +34,8 @@ const (
 	CmdScan Command = iota
 	CmdSetScanConfig
 	CmdDisconnect
+	CmdStartBSS
+	CmdStopBSS
 )
 
 const InfiniteTimeout = 0 * time.Second
@@ -64,6 +66,18 @@ func newStartBSSRequest(ssid string, beaconPeriod uint32, dtimPeriod uint32, cha
 	}
 }
 
+func newStopBSSRequest(ssid string) *mlme.StopRequest {
+	return &mlme.StopRequest{
+		Ssid: ssid,
+	}
+}
+
+func newResetRequest(staAddr  [6]uint8) *mlme.ResetRequest {
+	return &mlme.ResetRequest{
+		StaAddress: staAddr,
+	}
+}
+
 func (s *startBSSState) run(c *Client) (time.Duration, error) {
 	req := newStartBSSRequest(c.apCfg.SSID, uint32(c.apCfg.BeaconPeriod), uint32(c.apCfg.DTIMPeriod), c.apCfg.Channel)
 	timeout := StartBSSTimeout
@@ -85,6 +99,43 @@ func (s *startBSSState) commandIsDisabled() bool {
 }
 
 func (s *startBSSState) handleCommand(cmd *commandRequest, c *Client) (state, error) {
+	switch cmd.id {
+	case CmdStopBSS:
+		res := &CommandResult{}
+		req := newStopBSSRequest(c.apCfg.SSID)
+		if req != nil {
+			if debug {
+				log.Printf("stop bss req: %v", req)
+			}
+			err := c.SendMessage(req, int32(mlme.Method_StopRequest))
+			if err != nil {
+				res.Err = &wlan_service.Error{wlan_service.ErrCode_Internal, "Could not send MLME request"}
+			} else {
+				// Send MLME-RESET.request to reset and allow MLME to move into Client mode.
+				req := newResetRequest(c.staAddr)
+				if req != nil {
+					if debug {
+						log.Printf("reset req: %v", req)
+					}
+					err := c.SendMessage(req, int32(mlme.Method_ResetRequest))
+					if err != nil {
+						res.Err = &wlan_service.Error{wlan_service.ErrCode_Internal, "Could not send MLME request"}
+					}
+				}
+			}
+		}
+
+		c.cfg = nil
+		c.apCfg = nil
+		cmd.respC <- res
+		if res.Err == nil {
+			return newScanState(c), nil
+		}
+	default:
+		cmd.respC <- &CommandResult{nil,
+			&wlan_service.Error{wlan_service.ErrCode_NotSupported,
+				"Can't run the command in scanState"}}
+	}
 	return s, nil
 }
 
@@ -321,6 +372,34 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 			}
 		}
 		cmd.respC <- res
+	case CmdStartBSS:
+		newCfg, ok := cmd.arg.(*APConfig)
+		c.cfg = nil
+		c.apCfg = newCfg
+
+		res := &CommandResult{}
+		if !ok {
+			res.Err = &wlan_service.Error{
+				wlan_service.ErrCode_InvalidArgs,
+				"Invalid arguments",
+			}
+		} else {
+			// Send MLME-RESET.request to reset and allow MLME to move into AP mode.
+			req := newResetRequest(c.staAddr)
+			if req != nil {
+				if debug {
+					log.Printf("reset req: %v", req)
+				}
+				err := c.SendMessage(req, int32(mlme.Method_ResetRequest))
+				if err != nil {
+					res.Err = &wlan_service.Error{wlan_service.ErrCode_Internal, "Could not send MLME request"}
+				}
+			}
+		}
+		cmd.respC <- res
+		if res.Err == nil {
+			return newStartBSSState(c), nil
+		}
 	default:
 		cmd.respC <- &CommandResult{nil,
 			&wlan_service.Error{wlan_service.ErrCode_NotSupported,

@@ -21,6 +21,8 @@ const (
 	cmdConnect    = "connect"
 	cmdDisconnect = "disconnect"
 	cmdStatus     = "status"
+	cmdStartBSS   = "start-bss"
+	cmdStopBSS    = "stop-bss"
 )
 
 type ToolApp struct {
@@ -87,6 +89,32 @@ func (a *ToolApp) Disconnect() {
 	}
 }
 
+func (a *ToolApp) StartBSS(ssid string) {
+	if len(ssid) > 32 {
+		fmt.Println("ssid is too long")
+		return
+	}
+	if len(ssid) == 0 {
+		fmt.Println("ssid is too short")
+		return
+	}
+	werr, err := a.wlan.StartBss(wlan_service.BssConfig{ssid})
+	if err != nil {
+		fmt.Println("Error:", err)
+	} else if werr.Code != wlan_service.ErrCode_Ok {
+		fmt.Println("Error:", werr.Description)
+	}
+}
+
+func (a *ToolApp) StopBSS() {
+	werr, err := a.wlan.StopBss()
+	if err != nil {
+		fmt.Println("Error:", err)
+	} else if werr.Code != wlan_service.ErrCode_Ok {
+		fmt.Println("Error:", werr.Description)
+	}
+}
+
 func (a *ToolApp) Status() {
 	res, err := a.wlan.Status()
 	if err != nil {
@@ -132,13 +160,15 @@ var Usage = func() {
 	fmt.Printf("       %v %v [-p <passphrase>] [-t <timeout>] [-b <bssid>] ssid\n", os.Args[0], cmdConnect)
 	fmt.Printf("       %v %v\n", os.Args[0], cmdDisconnect)
 	fmt.Printf("       %v %v\n", os.Args[0], cmdStatus)
+	fmt.Printf("       %v %v ssid\n", os.Args[0], cmdStartBSS)
+	fmt.Printf("       %v %v\n", os.Args[0], cmdStopBSS)
 }
 
 func main() {
-	scanFlagSet := flag.NewFlagSet("scan", flag.ExitOnError)
+	scanFlagSet := flag.NewFlagSet(cmdScan, flag.ExitOnError)
 	scanTimeout := scanFlagSet.Int("t", 0, "scan timeout (1 - 255 seconds)")
 
-	connectFlagSet := flag.NewFlagSet("connect", flag.ExitOnError)
+	connectFlagSet := flag.NewFlagSet(cmdConnect, flag.ExitOnError)
 	connectScanTimeout := connectFlagSet.Int("t", 0, "scan timeout (1 to 255 seconds)")
 	connectPassPhrase := connectFlagSet.String("p", "", "pass-phrase (8 to 63 ASCII characters")
 	connectBSSID := connectFlagSet.String("b", "", "BSSID")
@@ -188,7 +218,7 @@ func main() {
 		ssid := connectFlagSet.Arg(0)
 		a.Connect(ssid, *connectBSSID, *connectPassPhrase, uint8(*connectScanTimeout))
 	case cmdDisconnect:
-		disconnectFlagSet := flag.NewFlagSet("disconnect", flag.ExitOnError)
+		disconnectFlagSet := flag.NewFlagSet(cmdDisconnect, flag.ExitOnError)
 		disconnectFlagSet.Parse(os.Args[2:])
 		if disconnectFlagSet.NArg() != 0 {
 			Usage()
@@ -196,13 +226,30 @@ func main() {
 		}
 		a.Disconnect()
 	case cmdStatus:
-		statusFlagSet := flag.NewFlagSet("status", flag.ExitOnError)
+		statusFlagSet := flag.NewFlagSet(cmdStatus, flag.ExitOnError)
 		statusFlagSet.Parse(os.Args[2:])
 		if statusFlagSet.NArg() != 0 {
 			Usage()
 			return
 		}
 		a.Status()
+	case cmdStartBSS:
+		startBSSFlagSet := flag.NewFlagSet(cmdStartBSS, flag.ExitOnError)
+		startBSSFlagSet.Parse(os.Args[2:])
+		if startBSSFlagSet.NArg() != 1 {
+			Usage()
+			return
+		}
+		ssid := startBSSFlagSet.Arg(0)
+		a.StartBSS(ssid)
+	case cmdStopBSS:
+		stopBSSFlagSet := flag.NewFlagSet(cmdStartBSS, flag.ExitOnError)
+		stopBSSFlagSet.Parse(os.Args[2:])
+		if stopBSSFlagSet.NArg() != 0 {
+			Usage()
+			return
+		}
+		a.StopBSS()
 	default:
 		Usage()
 	}

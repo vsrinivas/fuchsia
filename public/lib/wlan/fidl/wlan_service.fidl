@@ -58,6 +58,10 @@ struct WlanStatus {
   AP? current_ap;
 };
 
+struct BssConfig {
+  string ssid;
+};
+
 // Stub interface; eventually to be replaced by something based on the 802.11
 // SME / MSGCF.
 [ServiceName="wlan::WlanService"]
@@ -66,4 +70,6 @@ interface Wlan {
   Connect@1(ConnectConfig request) => (Error error);
   Disconnect@2() => (Error error);
   Status@3() => (WlanStatus status);
+  StartBss@4(BssConfig cfg) => (Error error);
+  StopBss@5() => (Error error);
 };

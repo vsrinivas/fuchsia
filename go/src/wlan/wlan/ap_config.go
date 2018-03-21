@@ -17,8 +17,12 @@ type APConfig struct {
 	Channel      uint8
 }
 
-func NewAPConfig() *APConfig {
+func NewEmptyAPConfig() *APConfig {
 	return &APConfig{}
+}
+
+func NewAPConfig(ssid string) *APConfig {
+	return &APConfig{ssid, 100, 1, true, 6}
 }
 
 func ReadAPConfigFromFile(path string) (*APConfig, error) {
@@ -27,7 +31,7 @@ func ReadAPConfigFromFile(path string) (*APConfig, error) {
 		return nil, err
 	}
 
-	cfg := NewAPConfig()
+	cfg := NewEmptyAPConfig()
 	err = json.Unmarshal(cfgBytes, cfg)
 	return cfg, err
 }
