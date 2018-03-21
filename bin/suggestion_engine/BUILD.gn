@@ -62,6 +62,14 @@ executable("bin") {
   ]
 }
 
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":ranking_unittest",
+  ]
+}
+
 source_set("interruptions") {
   sources = [
     "interruptions_processor.cc",
@@ -187,5 +195,23 @@ source_set("debug") {
     "//peridot/lib/util:wait_until_idle",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl",
+  ]
+}
+
+source_set("ranking_unittest") {
+  testonly = true
+
+  sources = [
+    "ranking_features/kronk_ranking_feature_unittest.cc",
+    "ranking_features/mod_pair_ranking_feature_unittest.cc",
+    "ranking_features/proposal_hint_ranking_feature_unittest.cc",
+    "ranking_features/query_match_ranking_feature_unittest.cc",
+  ]
+
+  deps = [
+    ":ranking",
+    "//garnet/lib/gtest",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest",
   ]
 }

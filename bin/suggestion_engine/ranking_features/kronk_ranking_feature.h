@@ -16,7 +16,7 @@ class KronkRankingFeature : public RankingFeature {
   KronkRankingFeature();
   ~KronkRankingFeature() override;
 
- protected:
+ private:
   double ComputeFeatureInternal(
       const UserInput& query, const RankedSuggestion& suggestion) override;
 };

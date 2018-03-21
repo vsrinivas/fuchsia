@@ -15,18 +15,16 @@ namespace modular {
 
 class ModPairRankingFeature : public RankingFeature {
  public:
-  ModPairRankingFeature();
+  ModPairRankingFeature(bool init_data = true);
   ~ModPairRankingFeature() override;
 
+  void LoadDataFromFile(const std::string& filepath);
 
- protected:
+ private:
   double ComputeFeatureInternal(
       const UserInput& query, const RankedSuggestion& suggestion) override;
 
   ContextSelectorPtr CreateContextSelectorInternal() override;
-
- private:
-  void InitData();
 
   std::unordered_map<std::string, std::unordered_map<std::string, double>>
       module_pairs_;

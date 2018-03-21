@@ -11,30 +11,34 @@
 namespace modular {
 
 namespace {
+// Sample map using data collected between Feb 6-20, 2018
 constexpr char kDataFilePath[] = "/pkg/data/ranking_data/mod_pairs.json";
 }
 
 
-ModPairRankingFeature::ModPairRankingFeature() {
-  InitData();
-};
+ModPairRankingFeature::ModPairRankingFeature(const bool init_data) {
+  if (init_data) {
+    LoadDataFromFile(kDataFilePath);
+  }
+}
 
 ModPairRankingFeature::~ModPairRankingFeature() = default;
 
-// Sample map using data collected between Feb 6-20, 2018
-void ModPairRankingFeature::InitData() {
-  std::pair<bool, rapidjson::Document> result = FetchJsonObject(kDataFilePath);
+void ModPairRankingFeature::LoadDataFromFile(const std::string& filepath) {
+  std::pair<bool, rapidjson::Document> result =
+      FetchJsonObject(filepath);
   if (!result.first) {
     FXL_LOG(WARNING) << "Failed to fetch mod pairs ranking feature data.";
     return;
   }
+  module_pairs_.clear();
   for (rapidjson::Value::ConstMemberIterator iter = result.second.MemberBegin();
        iter != result.second.MemberEnd(); ++iter) {
-    std::string existing_mod_url = iter->name.GetString();
+    const std::string existing_mod_url = iter->name.GetString();
     rapidjson::Value& other_mods = result.second[existing_mod_url.c_str()];
     for (rapidjson::Value::ConstMemberIterator iter2 = other_mods.MemberBegin();
          iter2 != other_mods.MemberEnd(); ++iter2) {
-      std::string added_mod_url = iter2->name.GetString();
+      const std::string added_mod_url = iter2->name.GetString();
       module_pairs_[existing_mod_url][added_mod_url] = iter2->value.GetDouble();
     }
   }
@@ -72,7 +76,7 @@ double ModPairRankingFeature::ComputeFeatureInternal(
     // Currently computing: max{P(m|mi) for mi in modules_in_source_story}
     // TODO(miguelfrde): compute P(module_url | modules in source story)
     for (auto& context_value : *ContextValues()) {
-      std::string existing_mod_url = context_value.meta.mod->url;
+      const std::string existing_mod_url = context_value.meta.mod->url;
       if (module_pairs_.count(existing_mod_url) &&
           module_pairs_[existing_mod_url].count(module_url)) {
         prob = std::max(prob, module_pairs_[existing_mod_url][module_url]);
@@ -83,6 +87,7 @@ double ModPairRankingFeature::ComputeFeatureInternal(
 }
 
 ContextSelectorPtr ModPairRankingFeature::CreateContextSelectorInternal() {
+  // Get modules in the currently focused story.
   auto selector = ContextSelector::New();
   selector->type = ContextValueType::MODULE;
   selector->meta = ContextMetadata::New();

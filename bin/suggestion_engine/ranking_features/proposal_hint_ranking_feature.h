@@ -16,7 +16,7 @@ class ProposalHintRankingFeature : public RankingFeature {
   ProposalHintRankingFeature();
   ~ProposalHintRankingFeature() override;
 
- protected:
+ private:
   double ComputeFeatureInternal(
       const UserInput& query, const RankedSuggestion& suggestion) override;
 };

@@ -16,7 +16,7 @@ class QueryMatchRankingFeature : public RankingFeature {
   QueryMatchRankingFeature();
   ~QueryMatchRankingFeature() override;
 
- protected:
+ private:
   double ComputeFeatureInternal(
       const UserInput& query, const RankedSuggestion& suggestion) override;
 };
