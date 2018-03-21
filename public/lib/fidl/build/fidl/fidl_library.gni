@@ -23,7 +23,10 @@ template("fidl_library") {
     assert(false, "A FIDL library requires some sources.")
   }
 
-  not_needed(invoker, [ "name" ])
+  library_name = target_name
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  }
 
   response_file = "$target_gen_dir/$target_name.args"
   fidl_stem = "$target_gen_dir/$target_name.fidl"
@@ -66,6 +69,8 @@ template("fidl_library") {
       rebase_path(json_representation, root_build_dir),
       "--tables",
       rebase_path(coding_tables, root_build_dir),
+      "--name",
+      library_name,
       "--sources",
     ] + rebase_path(sources, root_build_dir)
 

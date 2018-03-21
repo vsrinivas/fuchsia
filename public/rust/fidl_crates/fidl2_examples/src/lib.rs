@@ -1,6 +1,6 @@
 #![feature(conservative_impl_trait)]
 
-include!(concat!(env!("FIDL_GEN_ROOT"), "/garnet/go/src/fidl/examples/example-9.fidl.rs"));
+include!(concat!(env!("FIDL_GEN_ROOT"), "/garnet/go/src/fidl/examples/example_9.fidl.rs"));
 
 #[cfg(test)]
 mod test {

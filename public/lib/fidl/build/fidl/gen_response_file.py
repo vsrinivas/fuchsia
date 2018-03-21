@@ -32,6 +32,7 @@ def main():
     parser.add_argument("--json", help="The path for the JSON file to generate, if any")
     parser.add_argument("--tables", help="The path for the tables file to generate, if any")
     parser.add_argument("--c-header", help="The path for the C headers file to generate, if any")
+    parser.add_argument("--name", help="The name for the generated FIDL library, if any")
     parser.add_argument("--sources", help="List of FIDL source files", nargs="*")
     parser.add_argument("--dep-libraries", help="List of dependent libraries", nargs="*")
     args = parser.parse_args()
@@ -58,6 +59,9 @@ def main():
 
     if args.c_header:
         response_file.append("--c-header %s" % args.c_header)
+
+    if args.name:
+        response_file.append("--name %s" % args.name)
 
     response_file.extend(["--files %s" % library for library in target_libraries])
 

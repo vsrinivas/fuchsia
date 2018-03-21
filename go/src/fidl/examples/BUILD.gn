@@ -7,6 +7,8 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 template("fidl_example") {
   not_needed(invoker, "*")
   fidl(target_name) {
+    forward_variables_from(invoker, [ "name" ])
+
     sources = [
       "//zircon/system/host/fidl/examples/${target_name}.fidl2"
     ]
@@ -15,17 +17,17 @@ template("fidl_example") {
 
 fidl_example("alignment") {}
 fidl_example("enums") {}
-fidl_example("example-0") {}
-fidl_example("example-1") {}
-fidl_example("example-2") {}
-fidl_example("example-3") {}
-fidl_example("example-4") {}
-fidl_example("example-5") {}
-fidl_example("example-6") {}
-fidl_example("example-7") {}
-fidl_example("example-8") {}
-fidl_example("example-9") {}
-fidl_example("interface-ordinals") {}
+fidl_example("example-0") { name = "example_0" }
+fidl_example("example-1") { name = "example_1" }
+fidl_example("example-2") { name = "example_2" }
+fidl_example("example-3") { name = "example_3" }
+fidl_example("example-4") { name = "example_4" }
+fidl_example("example-5") { name = "example_5" }
+fidl_example("example-6") { name = "example_6" }
+fidl_example("example-7") { name = "example_7" }
+fidl_example("example-8") { name = "example_8" }
+fidl_example("example-9") { name = "example_9" }
+fidl_example("interface-ordinals") { name = "interface_ordinals" }
 fidl_example("test") {}
 fidl_example("types") {}
 
