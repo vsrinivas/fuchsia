@@ -4,6 +4,7 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -22,6 +23,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fdio/debug.h>
+#include <fs-management/ramdisk.h>
 #include <lib/zx/vmo.h>
 #include <sync/completion.h>
 #include <zircon/compiler.h>
@@ -45,10 +47,6 @@ namespace zxcrypt {
 // Determines what algorithms are in use when creating new zxcrypt devices.
 const Volume::Version Volume::kDefaultVersion = Volume::kAES128_CTR_SHA256;
 
-// The number of FVM-like slices reserved at the start of the device, each holding |kMetadataBlocks|
-// copies of the superblock.
-const size_t Volume::kReservedSlices = 2;
-
 // The amount of data that can "in-flight" to the underlying block device before the zxcrypt
 // driver begins queuing transactions
 //
@@ -59,6 +57,9 @@ const uint32_t Volume::kBufferSize = 1U << 24;
 static_assert(Volume::kBufferSize % PAGE_SIZE == 0, "kBufferSize must be page aligned");
 
 namespace {
+
+// The zxcrypt driver
+const char* kDriverLib = "/boot/driver/zxcrypt.so";
 
 // The number of metadata blocks in a reserved metadata slice, each holding a copy of the
 // superblock.
@@ -151,7 +152,8 @@ Volume::~Volume() {}
 
 // Library methods
 
-zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Bytes& key) {
+zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Bytes& key,
+                           fbl::unique_ptr<Volume>* out) {
     zx_status_t rc;
 
     if (!fd) {
@@ -159,17 +161,26 @@ zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Bytes& key) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    Volume volume(fbl::move(fd));
-    if ((rc = volume.Init()) != ZX_OK || (rc = volume.CreateBlock()) != ZX_OK ||
-        (rc = volume.SealBlock(key, 0)) != ZX_OK || (rc = volume.CommitBlock()) != ZX_OK) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<Volume> volume(new (&ac) Volume(fbl::move(fd)));
+    if (!ac.check()) {
+        xprintf("allocation failed: %zu bytes\n", sizeof(Volume));
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    if ((rc = volume->Init()) != ZX_OK || (rc = volume->CreateBlock()) != ZX_OK ||
+        (rc = volume->SealBlock(key, 0)) != ZX_OK || (rc = volume->CommitBlock()) != ZX_OK) {
         return rc;
     }
 
+    if (out) {
+        *out = fbl::move(volume);
+    }
     return ZX_OK;
 }
 
-zx_status_t Volume::Open(fbl::unique_fd fd, const crypto::Bytes& key, key_slot_t slot,
-                         fbl::unique_ptr<Volume>* out) {
+zx_status_t Volume::Unlock(fbl::unique_fd fd, const crypto::Bytes& key, key_slot_t slot,
+                           fbl::unique_ptr<Volume>* out) {
     zx_status_t rc;
 
     if (!fd || !out) {
@@ -183,11 +194,53 @@ zx_status_t Volume::Open(fbl::unique_fd fd, const crypto::Bytes& key, key_slot_t
         xprintf("allocation failed: %zu bytes\n", sizeof(Volume));
         return ZX_ERR_NO_MEMORY;
     }
-    if ((rc = volume->Init()) != ZX_OK || (rc = volume->Open(key, slot)) != ZX_OK) {
+    if ((rc = volume->Init()) != ZX_OK || (rc = volume->Unseal(key, slot)) != ZX_OK) {
         return rc;
     }
 
     *out = fbl::move(volume);
+    return ZX_OK;
+}
+
+zx_status_t Volume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
+    zx_status_t rc;
+    ssize_t res;
+
+    // Get the full device path
+    const char* kZxcryptSuffix = "/zxcrypt/block";
+    char path[PATH_MAX];
+    size_t max = sizeof(path) - (strlen(kZxcryptSuffix) + 1);
+    if ((res = ioctl_device_get_topo_path(fd_.get(), path, max)) < 0) {
+        rc = static_cast<zx_status_t>(res);
+        xprintf("could not find parent device: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    strncat(path, kZxcryptSuffix, strlen(kZxcryptSuffix));
+
+    // Early return if already bound
+    fbl::unique_fd fd(open(path, O_RDWR));
+    if (fd) {
+        out->reset(fd.release());
+        return ZX_OK;
+    }
+
+    // Bind the device
+    if ((res = ioctl_device_bind(fd_.get(), kDriverLib, strlen(kDriverLib))) < 0) {
+        rc = static_cast<zx_status_t>(res);
+        xprintf("could not bind zxcrypt driver: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = wait_for_device(path, timeout.get())) != ZX_OK) {
+        xprintf("zxcrypt driver failed to bind: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    fd.reset(open(path, O_RDWR));
+    if (!fd) {
+        xprintf("failed to open zxcrypt volume\n");
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    out->reset(fd.release());
     return ZX_OK;
 }
 
@@ -255,8 +308,8 @@ zx_status_t Volume::Shred() {
 
 // Driver methods
 
-zx_status_t Volume::Open(zx_device_t* dev, const crypto::Bytes& key, key_slot_t slot,
-                         fbl::unique_ptr<Volume>* out) {
+zx_status_t Volume::Unlock(zx_device_t* dev, const crypto::Bytes& key, key_slot_t slot,
+                           fbl::unique_ptr<Volume>* out) {
     zx_status_t rc;
 
     if (!dev || !out) {
@@ -269,7 +322,7 @@ zx_status_t Volume::Open(zx_device_t* dev, const crypto::Bytes& key, key_slot_t 
         xprintf("allocation failed: %zu bytes\n", sizeof(Volume));
         return ZX_ERR_NO_MEMORY;
     }
-    if ((rc = volume->Init()) != ZX_OK || (rc = volume->Open(key, slot)) != ZX_OK) {
+    if ((rc = volume->Init()) != ZX_OK || (rc = volume->Unseal(key, slot)) != ZX_OK) {
         return rc;
     }
 
@@ -555,13 +608,13 @@ zx_status_t Volume::SealBlock(const crypto::Bytes& key, key_slot_t slot) {
     return ZX_OK;
 }
 
-zx_status_t Volume::Open(const crypto::Bytes& key, key_slot_t slot) {
+zx_status_t Volume::Unseal(const crypto::Bytes& key, key_slot_t slot) {
     zx_status_t rc;
 
     for (rc = Begin(); rc == ZX_ERR_NEXT; rc = Next()) {
         if ((rc = Read()) != ZX_OK) {
             xprintf("failed to read block at %" PRIu64 ": %s\n", offset_, zx_status_get_string(rc));
-        } else if ((rc = OpenBlock(key, slot)) != ZX_OK) {
+        } else if ((rc = UnsealBlock(key, slot)) != ZX_OK) {
             xprintf("failed to open block at %" PRIu64 ": %s\n", offset_, zx_status_get_string(rc));
         } else {
             return CommitBlock();
@@ -571,7 +624,7 @@ zx_status_t Volume::Open(const crypto::Bytes& key, key_slot_t slot) {
     return ZX_ERR_ACCESS_DENIED;
 }
 
-zx_status_t Volume::OpenBlock(const crypto::Bytes& key, key_slot_t slot) {
+zx_status_t Volume::UnsealBlock(const crypto::Bytes& key, key_slot_t slot) {
     zx_status_t rc;
 
     // Check the type GUID matches |kTypeGuid|.

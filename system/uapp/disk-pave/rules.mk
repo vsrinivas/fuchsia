@@ -22,6 +22,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/fs-management \
     system/ulib/fvm \
+    system/ulib/ddk \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/fbl \
@@ -35,6 +36,8 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/zircon \
     system/ulib/fdio \
+    system/ulib/crypto \
+    system/ulib/zxcrypt \
 
 MODULE_PACKAGE := src
 

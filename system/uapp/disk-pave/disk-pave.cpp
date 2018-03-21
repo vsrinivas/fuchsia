@@ -13,6 +13,7 @@
 
 #include <block-client/client.h>
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
+#include <crypto/bytes.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
@@ -23,19 +24,23 @@
 #include <fs-management/ramdisk.h>
 #include <fs/mapped-vmo.h>
 #include <fvm/fvm-lz4.h>
+#include <fvm/fvm-sparse.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
-#include <zircon/device/block.h>
-#include <zircon/device/device.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
+#include <zircon/device/block.h>
+#include <zircon/device/device.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+#include <zxcrypt/volume.h>
 
 #include "fvm/fvm-sparse.h"
 #include "fvm/fvm.h"
 
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
+#define ZXCRYPT_DRIVER_LIB "/boot/driver/zxcrypt.so"
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
 
 #define PAVER_PREFIX "paver:"
@@ -297,6 +302,56 @@ fbl::unique_fd fvm_find_or_format(size_t slice_size) {
     return try_to_bind_fvm_driver(fd, zx::sec(3));
 }
 
+// Formats a block device as a zxcrypt volume.
+//
+// On success, returns a file descriptor to an FVM.
+// On failure, returns -1
+zx_status_t zxcrypt_create(partition_info* part) {
+    zx_status_t status;
+
+    char path[PATH_MAX];
+    ssize_t r;
+    if ((r = ioctl_device_get_topo_path(part->new_part.get(), path, sizeof(path))) < 0) {
+        status = static_cast<zx_status_t>(r);
+        ERROR("Failed to get topological path\n");
+        return status;
+    }
+    // TODO(security): ZX-1130. We need to bind with channel in order to pass a key here.
+    // TODO(security): ZX-1864. The created volume must marked as needing key rotation.
+    fbl::unique_ptr<zxcrypt::Volume> volume;
+    crypto::Bytes key;
+    if ((status = key.InitZero(zxcrypt::kZx1130KeyLen)) != ZX_OK ||
+        (status = zxcrypt::Volume::Create(fbl::move(part->new_part), key, &volume)) != ZX_OK ||
+        (status = volume->Open(zx::sec(3), &part->new_part)) != ZX_OK) {
+        ERROR("Could not create zxcrypt volume\n");
+        return status;
+    }
+
+    fvm::extent_descriptor_t* ext = get_extent(part->pd, 0);
+    size_t reserved = volume->reserved_slices();
+
+    // |Create| guarantees at least |reserved| + 1 slices are allocated.  If the first extent had a
+    // single slice, we're done.
+    size_t allocated = fbl::max(reserved + 1, ext->slice_count);
+    size_t needed = reserved + ext->slice_count;
+    if (allocated >= needed) {
+        return ZX_OK;
+    }
+
+    // Otherwise, extend by the number of slices we stole for metadata
+    extend_request_t req;
+    req.offset = allocated - reserved;
+    req.length = needed - allocated;
+
+    if ((r = ioctl_block_fvm_extend(part->new_part.get(), &req)) < 0) {
+        status = static_cast<zx_status_t>(r);
+        ERROR("Failed to extend zxcrypt volume: %s\n", zx_status_get_string(status));
+        return status;
+    }
+
+    return ZX_OK;
+}
+
 // Returns |ZX_OK| if |part_fd| is a child of |fvm_fd|.
 zx_status_t fvm_partition_match(const fbl::unique_fd& fvm_fd, const fbl::unique_fd& part_fd) {
     char fvm_path[PATH_MAX];
@@ -388,7 +443,6 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
     for (size_t p = 0; p < hdr->partition_count; p++) {
         parts[p].pd = part;
         parts[p].old_part.reset(open_partition(nullptr, part->type, ZX_SEC(2), nullptr));
-
         if (parts[p].pd->magic != fvm::kPartitionDescriptorMagic) {
             ERROR("Bad partition magic\n");
             return ZX_ERR_IO;
@@ -438,11 +492,19 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
         memcpy(&alloc.name, parts[p].pd->name, sizeof(alloc.name));
         LOG("Allocating partition %s consisting of %zu slices\n", alloc.name, alloc.slice_count);
         parts[p].new_part.reset(fvm_allocate_partition(fvm_fd.get(), &alloc));
-
         if (!parts[p].new_part) {
             ERROR("Couldn't allocate partition\n");
             return ZX_ERR_BAD_STATE;
         }
+
+        // Add filter drivers
+        if ((part->flags & fvm::kSparseFlagZxcrypt) != 0) {
+            LOG("Creating zxcrypt volume\n");
+            if ((status = zxcrypt_create(&parts[p])) != ZX_OK) {
+                return status;
+            }
+        }
+
         block_info_t binfo;
         if (block_size == 0) {
             if ((ioctl_block_get_info(parts[p].new_part.get(), &binfo)) < 0) {

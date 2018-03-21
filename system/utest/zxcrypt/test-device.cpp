@@ -39,6 +39,9 @@ namespace {
 // No test step should take longer than this
 const zx::duration kTimeout = zx::sec(3);
 
+// FVM driver library
+const char* kFvmDriver = "/boot/driver/fvm.so";
+
 // Takes a given |result|, e.g. from an ioctl, and translates into a zx_status_t.
 zx_status_t ToStatus(ssize_t result) {
     return result < 0 ? static_cast<zx_status_t>(result) : ZX_OK;
@@ -66,19 +69,6 @@ bool WaitAndOpen(char* path, fbl::unique_fd* out) {
         out->swap(fd);
     }
 
-    END_HELPER;
-}
-
-// Binds a given |driver| to a |parent| device, waits for the |child| device to show up in the
-// device tree, opens it, and returns the file descriptor via |out|.
-bool BindAndOpen(const fbl::unique_fd& parent, const char* child, const char* driver,
-                 fbl::unique_fd* out) {
-    BEGIN_HELPER;
-    char path[PATH_MAX];
-    ASSERT_OK(ToStatus(ioctl_device_bind(parent.get(), driver, strlen(driver))));
-    ASSERT_OK(ToStatus(ioctl_device_get_topo_path(parent.get(), path, sizeof(path))));
-    ASSERT_GE(snprintf(path, sizeof(path), "%s/%s", path, child), 0);
-    ASSERT_TRUE(WaitAndOpen(path, out), Error("failed to open %s", path));
     END_HELPER;
 }
 
@@ -153,7 +143,7 @@ bool TestDevice::Rebind() {
     ASSERT_OK(ToStatus(ioctl_block_rr_part(ramdisk_.get())));
     zxcrypt_.reset();
     fvm_part_.reset();
-    ramdisk_.reset();
+
     ASSERT_TRUE(WaitAndOpen(ramdisk_path_, &ramdisk_), Error("failed to open %s", ramdisk_path_));
     if (strlen(fvm_part_path_) != 0) {
         ASSERT_TRUE(WaitAndOpen(fvm_part_path_, &fvm_part_),
@@ -319,10 +309,13 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     ASSERT_TRUE(CreateRamdisk(device_size + (new_meta * 2), block_size));
 
     // Format the ramdisk as FVM and bind to it
-    fbl::unique_fd fvm_fd;
     ASSERT_OK(fvm_init(ramdisk_.get(), FVM_BLOCK_SIZE));
-    ASSERT_TRUE(BindAndOpen(ramdisk_, "fvm", "/boot/driver/fvm.so", &fvm_fd),
-                Error("failed to bind and open fvm"));
+    ASSERT_OK(ToStatus(ioctl_device_bind(ramdisk_.get(), kFvmDriver, strlen(kFvmDriver))));
+
+    char path[PATH_MAX];
+    fbl::unique_fd fvm_fd;
+    snprintf(path, sizeof(path), "%s/fvm", ramdisk_path_);
+    ASSERT_TRUE(WaitAndOpen(path, &fvm_fd));
 
     // Allocate a FVM partition with the last slice unallocated.
     alloc_req_t req;
@@ -347,11 +340,8 @@ bool TestDevice::Connect() {
     BEGIN_HELPER;
     ZX_DEBUG_ASSERT(!zxcrypt_);
 
-    ASSERT_TRUE(BindAndOpen(parent(), "zxcrypt/block", "/boot/driver/zxcrypt.so", &zxcrypt_),
-                Error("failed to bind and open zxcrypt"));
-
-    fbl::unique_fd tmp(dup(parent().get()));
-    ASSERT_OK(Volume::Open(fbl::move(tmp), key_, 0, &volume_));
+    ASSERT_OK(Volume::Unlock(parent(), key_, 0, &volume_));
+    ASSERT_OK(volume_->Open(kTimeout, &zxcrypt_));
 
     block_info_t blk;
     ASSERT_OK(ToStatus(ioctl_block_get_info(zxcrypt_.get(), &blk)));

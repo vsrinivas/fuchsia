@@ -104,7 +104,7 @@ zx_status_t Device::Init() {
     crypto::Bytes root_key;
     fbl::unique_ptr<Volume> volume;
     if ((rc = root_key.InitZero(kZx1130KeyLen)) != ZX_OK ||
-        (rc = Volume::Open(parent(), root_key, 0, &volume)) != ZX_OK) {
+        (rc = Volume::Unlock(parent(), root_key, 0, &volume)) != ZX_OK) {
         return rc;
     }
 

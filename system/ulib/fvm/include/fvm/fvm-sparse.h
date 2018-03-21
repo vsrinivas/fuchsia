@@ -46,6 +46,7 @@ constexpr uint64_t kSparseFormatMagic = (0x53525053204d5646ull); // 'FVM SPRS'
 constexpr uint64_t kSparseFormatVersion = 0x2;
 
 constexpr uint32_t kSparseFlagLz4 = 0x1;
+constexpr uint32_t kSparseFlagZxcrypt = 0x2;
 
 typedef struct sparse_image {
     uint64_t magic;
