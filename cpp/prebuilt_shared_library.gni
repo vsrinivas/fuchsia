@@ -145,11 +145,16 @@ template("prebuilt_shared_library") {
 
     shared_out_dir = get_label_info(":bogus($shlib_toolchain)", "root_out_dir")
     lib_name = "lib$output_name.so"
+    # TODO(TO-791): put ABI stubs under lib/, not the full thing.
     files += [
       {
         source = "$shared_out_dir/$lib_name"
-        dest = "lib/$lib_name"
+        dest = "package/$lib_name"
         packaged = true
+      },
+      {
+        source = "$shared_out_dir/$lib_name"
+        dest = "lib/$lib_name"
       },
       {
         source = "$shared_out_dir/lib.unstripped/$lib_name"
