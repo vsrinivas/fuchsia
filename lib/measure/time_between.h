@@ -10,9 +10,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include <trace-reader/reader.h>
+
 #include "garnet/lib/measure/event_spec.h"
 #include "lib/fxl/macros.h"
-#include "zircon/system/ulib/trace-reader/include/trace-reader/reader.h"
 
 namespace tracing {
 namespace measure {

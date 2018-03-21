@@ -5,10 +5,11 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_IMPORT_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_IMPORT_H_
 
+#include <zx/eventpair.h>
+
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/gfx/fidl/resources.fidl.h"
-#include "zircon/system/ulib/zx/include/zx/eventpair.h"
 
 namespace scenic {
 namespace gfx {

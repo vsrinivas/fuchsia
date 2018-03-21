@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "zircon/system/ulib/trace-reader/include/trace-reader/reader.h"
+#include <trace-reader/reader.h>
 
 namespace tracing {
 namespace measure {

@@ -2,16 +2,16 @@
 // Use of source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zx/eventpair.h>
+
+#include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
+#include "garnet/lib/ui/gfx/tests/session_test.h"
+#include "garnet/lib/ui/gfx/tests/util.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/thread.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/synchronization/waitable_event.h"
-#include "zircon/system/ulib/zx/include/zx/eventpair.h"
-
-#include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
-#include "garnet/lib/ui/gfx/tests/session_test.h"
-#include "garnet/lib/ui/gfx/tests/util.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 

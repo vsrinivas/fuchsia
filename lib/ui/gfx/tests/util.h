@@ -6,13 +6,12 @@
 #define GARNET_LIB_UI_GFX_TESTS_UTIL_H_
 
 #include <zx/event.h>
+#include <zx/eventpair.h>
 
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fsl/vmo/shared_vmo.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/time/time_delta.h"
-#include "zircon/system/ulib/zx/include/zx/event.h"
-#include "zircon/system/ulib/zx/include/zx/eventpair.h"
 
 namespace scenic {
 namespace gfx {
