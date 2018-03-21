@@ -231,8 +231,9 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     assert(slot < AHCI_MAX_COMMANDS);
     assert(!ahci_port_cmd_busy(port, slot));
 
+    uint64_t offset_vmo = txn->bop.rw.offset_vmo * port->devinfo.block_size;
     uint64_t bytes = txn->bop.rw.length * port->devinfo.block_size;
-    size_t pagecount = ((txn->bop.rw.offset_vmo & (PAGE_SIZE - 1)) + bytes + (PAGE_SIZE - 1)) /
+    size_t pagecount = ((offset_vmo & (PAGE_SIZE - 1)) + bytes + (PAGE_SIZE - 1)) /
                        PAGE_SIZE;
     zx_paddr_t pages[AHCI_MAX_PAGES];
     if (pagecount > AHCI_MAX_PAGES) {
@@ -241,7 +242,6 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     }
 
     zx_handle_t vmo = txn->bop.rw.vmo;
-    uint64_t offset_vmo = txn->bop.rw.offset_vmo * port->devinfo.block_size;
     zx_status_t st = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, offset_vmo, bytes, NULL, 0);
     if (st != ZX_OK) {
         zxlogf(SPEW, "ahci.%d: failed to commit pages, err = %d\n", port->nr, st);
