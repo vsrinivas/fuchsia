@@ -15,10 +15,13 @@ int usage(void) {
     fprintf(stderr, "fvm performs host-side FVM and sparse file creation\n");
     fprintf(stderr, "Commands:\n");
     fprintf(stderr, " create : Creates an FVM partition\n");
-    fprintf(stderr, " verify : Report basic information about sparse/fvm files and run fsck on"                     "contained partitions\n");
     fprintf(stderr, " add : Adds a Minfs or Blobfs partition to an FVM (input path is"
                     " required)\n");
+    fprintf(stderr, " extend : Extends an FVM container to the specified size (length is"
+                        " required)\n");
     fprintf(stderr, " sparse : Creates a sparse file. One or more input paths are required.\n");
+    fprintf(stderr, " verify : Report basic information about sparse/fvm files and run fsck on"
+                        " contained partitions\n");
     fprintf(stderr, "Flags (neither or both of offset/length must be specified):\n");
     fprintf(stderr, " --slice [bytes] - specify slice size (default: %zu)\n", DEFAULT_SLICE_SIZE);
     fprintf(stderr, " --offset [bytes] - offset at which container begins (fvm only)\n");
@@ -49,14 +52,30 @@ int add_partitions(Container* container, int argc, char** argv) {
     return 0;
 }
 
+size_t get_disk_size(const char* path, size_t offset) {
+    fbl::unique_fd fd(open(path, O_RDONLY, 0644));
+
+    if (fd) {
+        struct stat s;
+        if (fstat(fd.get(), &s) < 0) {
+            fprintf(stderr, "Failed to stat %s\n", path);
+            exit(-1);
+        }
+
+        return s.st_size - offset;
+    }
+
+    return 0;
+}
+
 int main(int argc, char** argv) {
     if (argc < 3) {
         usage();
     }
 
     unsigned i = 1;
-    char* path = argv[i++]; // Output path
-    char* command = argv[i++]; // Command
+    const char* path = argv[i++]; // Output path
+    const char* command = argv[i++]; // Command
 
     size_t length = 0;
     size_t offset = 0;
@@ -99,21 +118,10 @@ int main(int argc, char** argv) {
 
     // If length was not specified, use remainder of file after offset
     if (length == 0) {
-        fbl::unique_fd fd(open(path, O_RDONLY, 0644));
-
-        if (fd) {
-            struct stat s;
-            if (fstat(fd.get(), &s) < 0) {
-                fprintf(stderr, "Failed to stat %s\n", path);
-                return -1;
-            }
-
-            length = s.st_size - offset;
-        }
+        length = get_disk_size(path, offset);
     }
 
     if (!strcmp(command, "create")) {
-
         // If length was specified, an offset was not, we were asked to create a
         // file, and the file does not exist, truncate it to the given length.
         if (length != 0 && offset == 0) {
@@ -136,15 +144,6 @@ int main(int argc, char** argv) {
         if (fvmContainer->Commit() != ZX_OK) {
             return -1;
         }
-    } else if (!strcmp(command, "verify")) {
-        fbl::unique_ptr<Container> containerData;
-        if (Container::Create(path, offset, length, &containerData) != ZX_OK) {
-            return -1;
-        }
-
-        if (containerData->Verify() != ZX_OK) {
-            return -1;
-        }
     } else if (!strcmp(command, "add")) {
         fbl::AllocChecker ac;
         fbl::unique_ptr<FvmContainer> fvmContainer(new (&ac) FvmContainer(path, slice_size, offset,
@@ -158,6 +157,29 @@ int main(int argc, char** argv) {
         }
 
         if (fvmContainer->Commit() != ZX_OK) {
+            return -1;
+        }
+    } else if (!strcmp(command, "extend")) {
+        if (length == 0 || offset > 0) {
+            usage();
+        }
+
+        size_t disk_size = get_disk_size(path, 0);
+
+        if (length <= disk_size) {
+            fprintf(stderr, "Cannot extend to a value %zu less than current size %zu\n", length,
+                    disk_size);
+            usage();
+        }
+
+        fbl::AllocChecker ac;
+        fbl::unique_ptr<FvmContainer> fvmContainer(new (&ac) FvmContainer(path, slice_size, offset,
+                                                                          disk_size));
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+
+        if (fvmContainer->Extend(length) != ZX_OK) {
             return -1;
         }
     } else if (!strcmp(command, "sparse")) {
@@ -176,6 +198,15 @@ int main(int argc, char** argv) {
         }
 
         if (sparseContainer->Commit() != ZX_OK) {
+            return -1;
+        }
+    } else if (!strcmp(command, "verify")) {
+        fbl::unique_ptr<Container> containerData;
+        if (Container::Create(path, offset, length, &containerData) != ZX_OK) {
+            return -1;
+        }
+
+        if (containerData->Verify() != ZX_OK) {
             return -1;
         }
     } else {

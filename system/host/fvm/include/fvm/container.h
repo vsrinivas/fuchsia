@@ -4,7 +4,9 @@
 
 #include <fcntl.h>
 #include <lz4/lz4frame.h>
+#include <string.h>
 
+#include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <fbl/unique_fd.h>
 #include <fvm/fvm-sparse.h>
@@ -26,8 +28,12 @@ public:
     static zx_status_t Create(const char* path, off_t offset, off_t length,
                               fbl::unique_ptr<Container>* out);
 
-    Container(size_t slice_size)
-        : dirty_(false), slice_size_(slice_size) {}
+    Container(const char* path, size_t slice_size)
+        : dirty_(false), slice_size_(slice_size) {
+            strncpy(path_, path, PATH_MAX);
+            path_[sizeof(path_) - 1] = '\0';
+        }
+
     virtual ~Container() {}
 
     // Resets the Container state so we are ready to add a new set of partitions
@@ -49,6 +55,7 @@ public:
     virtual zx_status_t AddPartition(const char* path, const char* type_name) = 0;
 
 protected:
+    char path_[PATH_MAX];
     fbl::unique_fd fd_;
     bool dirty_;
     size_t slice_size_;
@@ -75,6 +82,9 @@ public:
     zx_status_t Init() final;
     zx_status_t Verify() const final;
     zx_status_t Commit() final;
+
+    // Extends the FVM container to the specified length
+    zx_status_t Extend(size_t length);
     size_t SliceSize() const final;
     zx_status_t AddPartition(const char* path, const char* type_name) final;
 

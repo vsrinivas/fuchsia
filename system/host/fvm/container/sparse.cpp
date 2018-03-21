@@ -33,7 +33,8 @@ zx_status_t SparseContainer::Create(const char* path, size_t slice_size, compres
 }
 
 SparseContainer::SparseContainer(const char* path, uint64_t slice_size, compress_type_t compress)
-    : Container(slice_size), valid_(false), compress_(compress), disk_size_(0), extent_size_(0) {
+    : Container(path, slice_size), valid_(false), compress_(compress), disk_size_(0),
+      extent_size_(0) {
     fd_.reset(open(path, O_CREAT | O_RDWR, 0666));
 
     if (!fd_) {

@@ -212,6 +212,19 @@ bool CreateFvm(bool create_before, off_t offset) {
     END_HELPER;
 }
 
+bool ExtendFvm(off_t length) {
+    BEGIN_HELPER;
+    off_t current_length;
+    ASSERT_TRUE(StatFile(fvm_path, &current_length));
+    fbl::unique_ptr<FvmContainer> fvmContainer;
+    ASSERT_EQ(FvmContainer::Create(fvm_path, SLICE_SIZE, 0, current_length, &fvmContainer),
+              ZX_OK, "Failed to initialize fvm container");
+    ASSERT_EQ(fvmContainer->Extend(length), ZX_OK, "Failed to write to fvm file");
+    ASSERT_TRUE(StatFile(fvm_path, &current_length));
+    ASSERT_EQ(current_length, length);
+    END_HELPER;
+}
+
 bool ReportFvm(off_t offset) {
     return ReportContainer(fvm_path, offset);
 }
@@ -423,11 +436,15 @@ bool CreateReportDestroy(container_t type) {
     case FVM: {
         ASSERT_TRUE(CreateFvm(true, 0));
         ASSERT_TRUE(ReportFvm(0));
+        ASSERT_TRUE(ExtendFvm(CONTAINER_SIZE * 2));
+        ASSERT_TRUE(ReportFvm(0));
         ASSERT_TRUE(DestroyFvm());
         break;
     }
     case FVM_NEW: {
         ASSERT_TRUE(CreateFvm(false, 0));
+        ASSERT_TRUE(ReportFvm(0));
+        ASSERT_TRUE(ExtendFvm(CONTAINER_SIZE * 2));
         ASSERT_TRUE(ReportFvm(0));
         ASSERT_TRUE(DestroyFvm());
         break;
