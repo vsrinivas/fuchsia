@@ -33,6 +33,11 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
         return res;
     }
 
+    res = pdev_get_bti(&stream->pdev_, 0, stream->bti_.reset_and_get_address());
+    if (res != ZX_OK) {
+        return res;
+    }
+
     size_t mmio_size;
     void *regs;
     res = pdev_map_mmio(&stream->pdev_, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
@@ -127,14 +132,7 @@ zx_status_t TdmOutputStream::Bind(const char* devname) {
 }
 
 void TdmOutputStream::ReleaseRingBufferLocked() {
-    if (ring_buffer_virt_ != nullptr) {
-        ZX_DEBUG_ASSERT(ring_buffer_size_ != 0);
-        zx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(ring_buffer_virt_),
-                                    ring_buffer_size_);
-        ring_buffer_virt_ = nullptr;
-        ring_buffer_size_ = 0;
-    }
-    ring_buffer_vmo_.reset();
+    io_buffer_release(&ring_buffer_);
 }
 
 zx_status_t TdmOutputStream::AddFormats(
@@ -579,14 +577,15 @@ zx_status_t TdmOutputStream::OnGetBufferLocked(dispatcher::Channel* channel,
         ring_buffer_size_ = fbl::round_up(fifo_bytes_, frame_size_);
 
     // TODO - (hollande) Make this work with non contig vmo
-    resp.result = pdev_alloc_contig_vmo(&pdev_, ring_buffer_size_, 0, ZX_CACHE_POLICY_CACHED,
-                                        ring_buffer_vmo_.reset_and_get_address());
-
+    resp.result = io_buffer_init_with_bti(&ring_buffer_, bti_.get(), ring_buffer_size_,
+                                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (resp.result != ZX_OK) {
         zxlogf(ERROR, "Failed to create ring buffer (size %u, res %d)\n", ring_buffer_size_,
                resp.result);
         goto finished;
     }
+    ring_buffer_phys_ = (uint32_t)io_buffer_phys(&ring_buffer_);
+    ring_buffer_virt_ = io_buffer_virt(&ring_buffer_);
 
     uint32_t bytes_per_notification;
     if (req.notifications_per_ring) {
@@ -597,22 +596,16 @@ zx_status_t TdmOutputStream::OnGetBufferLocked(dispatcher::Channel* channel,
     //TODO - (hollande) calculate this with current rate;
     us_per_notification_ = (1000 * bytes_per_notification) /(48 * frame_size_);
 
-    // Ring buffer is contig, so get address of first page
-    zx_paddr_t temp_addr;
-    resp.result = ring_buffer_vmo_.op_range(ZX_VMO_OP_LOOKUP, 0, 4096,
-                                  &temp_addr, sizeof(temp_addr));
-    if (resp.result != ZX_OK) goto finished;
-
-    ring_buffer_phys_ = static_cast<uint32_t>(temp_addr);
-
     // Create the client's handle to the ring buffer vmo and set it back to them.
     client_rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE;
 
-    resp.result = ring_buffer_vmo_.duplicate(client_rights, &client_rb_handle);
+    zx_handle_t vmo_copy;
+    resp.result = zx_handle_duplicate(ring_buffer_.vmo_handle, client_rights, &vmo_copy);
     if (resp.result != ZX_OK) {
         zxlogf(ERROR, "Failed to duplicate ring buffer handle (res %d)\n", resp.result);
         goto finished;
     }
+    client_rb_handle.reset(vmo_copy);
     resp.num_ring_buffer_frames = ring_buffer_size_ / frame_size_;
 
 finished:

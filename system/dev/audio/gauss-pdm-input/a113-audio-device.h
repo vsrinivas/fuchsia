@@ -21,6 +21,7 @@ typedef struct a113_audio_device {
     pdev_vmo_buffer_t pdm_mmio;
 
     zx_handle_t pdm_irq;
+    zx_handle_t bti;
 } a113_audio_device_t;
 
 zx_status_t a113_audio_device_init(a113_audio_device_t* audio_device,

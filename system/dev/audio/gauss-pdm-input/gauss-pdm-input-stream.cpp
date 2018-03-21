@@ -68,6 +68,12 @@ zx_status_t GaussPdmInputStream::Bind(const char* devname,
         goto finished;
     }
 
+    status = pdev_get_bti(&audio_device_.pdev, 0, &audio_device_.bti);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "Colud not get bti.\n");
+        goto finished;
+    }
+
     status = thrd_create_with_name(
         &irqthrd_,
         [](void* thiz) -> int {
@@ -82,6 +88,7 @@ zx_status_t GaussPdmInputStream::Bind(const char* devname,
 finished:
     if (status != ZX_OK) {
         zx_handle_close(audio_device_.pdm_irq);
+        zx_handle_close(audio_device_.bti);
         return status;
     }
 
@@ -105,6 +112,7 @@ void GaussPdmInputStream::DdkRelease() {
     thrd_join(irqthrd_, nullptr);
 
     zx_handle_close(audio_device_.pdm_irq);
+    zx_handle_close(audio_device_.bti);
 
     // Reclaim our reference from the driver framework and let it go out of
     // scope.  If this is our last reference (it should be), we will destruct
@@ -577,7 +585,7 @@ GaussPdmInputStream::OnGetBuffer(dispatcher::Channel* channel,
            req.notifications_per_ring);
 
     // Create the ring buffer vmo we will use to share memory with the client.
-    resp.result = vmo_helper_.AllocateVmo(&audio_device_.pdev,
+    resp.result = vmo_helper_.AllocateVmo(audio_device_.bti,
                                           ring_buffer_size_.load());
     if (resp.result != ZX_OK) {
         zxlogf(ERROR, "Failed to create ring buffer (size %lu)\n",

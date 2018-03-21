@@ -4,12 +4,13 @@
 
 #pragma once
 
+#include <ddk/io-buffer.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddktl/device.h>
 #include <ddktl/device-internal.h>
 #include <zircon/listnode.h>
-#include <zx/vmo.h>
+#include <zx/bti.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 
@@ -149,7 +150,8 @@ private:
     uint32_t us_per_notification_ = 0;
     volatile bool running_;
 
-    zx::vmo  ring_buffer_vmo_;
+    zx::bti bti_;
+    io_buffer_t ring_buffer_;
     void*    ring_buffer_virt_  = nullptr;
     uint32_t ring_buffer_phys_  = 0;
     uint32_t ring_buffer_size_  = 0;
