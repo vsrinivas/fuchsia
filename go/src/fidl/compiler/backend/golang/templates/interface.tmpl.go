@@ -69,5 +69,66 @@ func (p *{{ $.ProxyName }}) {{ .Name }}(
 	{{- end }}
 }
 {{- end }}
+
+type {{ .Name }} interface {
+{{- range .Methods }}
+	{{ .Name }}(
+	{{- if .Request -}}
+	{{- range $index, $m := .Request.Members -}}
+		{{- if $index -}}, {{- end -}}
+		{{ $m.Name | privatize }} {{ $m.Type }}
+	{{- end -}}
+	{{- end -}}
+	)
+	{{- if .Response -}}
+	{{- if len .Response.Members }} (
+	{{- range .Response.Members }}{{ .Name | privatize }} {{ .Type }}, {{ end -}}
+		err error)
+	{{- else }} error{{ end -}}
+	{{- else }} error{{ end }}
+{{- end }}
+}
+
+type {{ .StubName }} struct {
+	Impl {{ .Name }}
+}
+
+func (s *{{ .StubName }}) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
+	switch ord {
+	{{- range .Methods }}
+	case {{ .Ordinal }}:
+		{{- if .Request }}
+		in_ := {{ .Request.Name }}{}
+		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
+			return nil, err_
+		}
+		{{- end }}
+		{{- if .Response }}
+		out_ := {{ .Response.Name }}{}
+		{{- end }}
+		{{ if .Response }}
+		{{- range .Response.Members }}{{ .Name | privatize }}, {{ end -}}
+		{{- end -}}
+		err_ := s.Impl.{{ .Name }}(
+		{{- if .Request -}}
+		{{- range $index, $m := .Request.Members -}}
+		{{- if $index -}}, {{- end -}}
+		in_.{{ $m.Name }}
+		{{- end -}}
+		{{- end -}}
+		)
+		{{- if .Response }}
+		{{- range .Response.Members }}
+		out_.{{ .Name }} = {{ .Name | privatize }}
+		{{- end }}
+		return &out_, err_
+		{{- else }}
+		return nil, err_
+		{{- end }}
+	{{- end }}
+	}
+	// TODO(mknyszek): Use a well-defined error here.
+	return nil, fmt.Errorf("Unknown ordinal %d", ord)
+}
 {{ end -}}
 `

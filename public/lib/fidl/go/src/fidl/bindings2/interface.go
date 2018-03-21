@@ -41,8 +41,8 @@ func (p *Proxy) Recv(ordinal uint32, resp Payload) error {
 	// Allocate maximum size of a message on the stack.
 	var respb [zx.ChannelMaxMessageBytes]byte
 	var resph [zx.ChannelMaxMessageHandles]zx.Handle
-	// Wait on the channel to be readable or close.
 
+	// Wait on the channel to be readable or close.
 	h := zx.Handle(p.Channel)
 	sigs, err := h.WaitOne(
 		zx.SignalChannelReadable|zx.SignalChannelPeerClosed,
@@ -105,4 +105,19 @@ func (p *Proxy) Call(ordinal uint32, req Payload, resp Payload) error {
 		return fmt.Errorf("expected txid %d, got %d", p.Txid, header.Txid)
 	}
 	return nil
+}
+
+// Stub represents a generated type which wraps the server-side implementation of a
+// FIDL interface.
+//
+// It contains logic which is able to dispatch into the correct implementation given
+// the incoming message ordinal and its data.
+type Stub interface {
+	// Dispatch dispatches into the appropriate method implementation for a FIDL
+	// interface by using the ordinal.
+	//
+	// It also takes the data as bytes and transforms it into arguments usable by
+	// the method implementation. It then optionally returns a response if the
+	// method has a response.
+	Dispatch(ordinal uint32, bytes []byte, handles []zx.Handle) (Payload, error)
 }

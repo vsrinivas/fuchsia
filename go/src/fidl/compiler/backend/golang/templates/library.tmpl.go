@@ -12,8 +12,11 @@ const Library = `
 
 package main
 
-import _zx "syscall/zx"
-import _bindings "fidl/bindings2"
+import (
+	"fmt"
+	_bindings "fidl/bindings2"
+	_zx "syscall/zx"
+)
 
 {{ range $enum := .Enums -}}
 {{ template "EnumDefinition" $enum }}
