@@ -53,19 +53,7 @@
             }
         },
         "declarations": {
-            "type": "object",
-            "patternProperties": {
-                ".*": {
-                    "type": "string",
-                    "enum": [
-                        "const",
-                        "enum",
-                        "interface",
-                        "struct",
-                        "union"
-                    ]
-                }
-            }
+            "$ref": "#/definitions/declarations-map"
         },
         "library_dependencies": {
             "type": "array",
@@ -343,9 +331,35 @@
                 }
             }
         },
+        "declarations-map": {
+            "type": "object",
+            "patternProperties": {
+                ".*": {
+                    "type": "string",
+                    "enum": [
+                        "const",
+                        "enum",
+                        "interface",
+                        "struct",
+                        "union"
+                    ]
+                }
+            }
+        },
         "library": {
             "type": "object",
-            "properties": {}
+            "required": [
+                "name",
+                "declarations"
+            ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/identifier"
+                },
+                "declarations": {
+                    "$ref": "#/definitions/declarations-map"
+                }
+            }
         },
         "type": {
             "oneOf": [
