@@ -166,6 +166,8 @@ class CompiledLibrary(object):
         self.include_dirs = set()
         self.deps = []
         self.lib_name = ''
+        self.has_impl_prebuilt = False
+        self.impl_prebuilt = ''
         self.prebuilt = ''
         self.debug_prebuilt = ''
 
@@ -190,7 +192,8 @@ def generate_compiled_library(package, context):
         (file, _) = extract_file(name, path, context)
         data.prebuilt = '//%s' % file
         data.lib_name = os.path.basename(file)
-    elif len(libs) == 2:
+    # TODO(jamesr): Delete the == 2 path once Zircon rolls up through all layers
+    elif len(libs) == 2 or len(libs) == 3:
         # Shared library.
         is_shared = True
         for name, path in libs.iteritems():
@@ -198,6 +201,9 @@ def generate_compiled_library(package, context):
             if '/debug/' in name:
                 data.debug_prebuilt = '//%s' % file
                 data.lib_name = os.path.basename(file)
+            elif '.so.strip' in file:
+                data.has_impl_prebuilt = True
+                data.impl_prebuilt = '//%s' % file
             else:
                 data.prebuilt = '//%s' % file
     else:

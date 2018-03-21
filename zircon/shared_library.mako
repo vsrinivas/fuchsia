@@ -34,18 +34,35 @@ group("${data.name}") {
 
 # In the shared toolchain, we normally set up the library.
 
-_lib = "$root_out_dir/${data.lib_name}"
+_abi_lib = "$root_out_dir/${data.lib_name}"
+% if data.has_impl_prebuilt:
+_impl_lib = "$root_out_dir/${data.lib_name}.impl"
+% endif
 _debug_lib = "$root_out_dir/lib.unstripped/${data.lib_name}"
 
-copy("${data.name}_copy_lib") {
+copy("${data.name}_copy_abi_lib") {
   sources = [
     "${data.prebuilt}",
   ]
 
   outputs = [
-    _lib,
+    _abi_lib,
   ]
 }
+
+% if data.has_impl_prebuilt:
+copy("${data.name}_copy_impl_lib") {
+sources = [
+ "${data.impl_prebuilt}",
+]
+
+outputs = [
+ _impl_lib,
+]
+}
+% else:
+group("${data.name}_copy_impl_lib") {}
+% endif
 
 copy("${data.name}_copy_unstripped_lib") {
   sources = [
@@ -57,7 +74,7 @@ copy("${data.name}_copy_unstripped_lib") {
   ]
 }
 
-_linked_lib = _lib
+_linked_lib = _abi_lib
 if (is_debug) {
   _linked_lib = _debug_lib
 }
@@ -74,7 +91,8 @@ config("${data.name}_lib_config") {
 group("${data.name}") {
 
   public_deps = [
-    ":${data.name}_copy_lib",
+    ":${data.name}_copy_abi_lib",
+    ":${data.name}_copy_impl_lib",
     ":${data.name}_copy_unstripped_lib",
     % for dep in sorted(data.deps):
     "../${dep}",
@@ -87,7 +105,7 @@ group("${data.name}") {
   ]
 
   data_deps = [
-    ":${data.name}_copy_lib",
+    ":${data.name}_copy_abi_lib",
   ]
 }
 
@@ -114,8 +132,17 @@ sdk_atom("${data.name}_sdk") {
     {
       source = "$shared_out_dir/${data.lib_name}"
       dest = "lib/${data.lib_name}"
+    % if not data.has_impl_prebuilt:
+      packaged = true
+    % endif
+    },
+    % if data.has_impl_prebuilt:
+    {
+      source = "$shared_out_dir/${data.lib_name}.impl"
+      dest = "package/${data.lib_name}"
       packaged = true
     },
+    % endif
     {
       source = "$shared_out_dir/lib.unstripped/${data.lib_name}"
       dest = "debug/${data.lib_name}"
