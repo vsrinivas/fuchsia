@@ -10,12 +10,18 @@ const Library = `
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+library {{ .LibraryName }};
+
 import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:fidl/fidl.dart' as $fidl;
 import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart';
+
+{{ range .Imports -}}
+import '{{ .Url }}' as {{ .LocalName }};
+{{ end -}}
 
 // ignore_for_file: always_specify_types
 // ignore_for_file: avoid_positional_boolean_parameters

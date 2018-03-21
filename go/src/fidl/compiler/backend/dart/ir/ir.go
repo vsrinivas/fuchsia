@@ -98,12 +98,19 @@ type Parameter struct {
 	typeExpr string
 }
 
+type Import struct {
+	Url       string
+	LocalName string
+}
+
 type Root struct {
-	Consts     []Const
-	Enums      []Enum
-	Interfaces []Interface
-	Structs    []Struct
-	Unions     []Union
+	LibraryName string
+	Imports     []Import
+	Consts      []Const
+	Enums       []Enum
+	Interfaces  []Interface
+	Structs     []Struct
+	Unions      []Union
 }
 
 var reservedWords = map[string]bool{
@@ -276,8 +283,11 @@ func typeExprForPrimitiveSubtype(val types.PrimitiveSubtype) string {
 }
 
 func typeSymbolForCompoundIdentifier(ident types.CompoundIdentifier) string {
-	// TODO(abarth): Figure out how to reference type symbols in other libraries.
-	return fmt.Sprintf("k%s_Type", ident.Name)
+	t := fmt.Sprintf("k%s_Type", ident.Name)
+	if ident.Library != "" {
+		return fmt.Sprintf("%s.%s", ident.Library, t)
+	}
+	return t
 }
 
 func isReservedWord(str types.Identifier) bool {
@@ -616,6 +626,8 @@ func Compile(r types.Root) Root {
 	root := Root{}
 	c := compiler{&r.Decls}
 
+	root.LibraryName = fmt.Sprintf("fuchsia.fidl.%s", r.Name)
+
 	for _, v := range r.Consts {
 		root.Consts = append(root.Consts, c.compileConst(v))
 	}
@@ -634,6 +646,17 @@ func Compile(r types.Root) Root {
 
 	for _, v := range r.Unions {
 		root.Unions = append(root.Unions, c.compileUnion(v))
+	}
+
+	for _, l := range r.Libraries {
+		if l.Name == r.Name {
+			// We don't need to import our own package.
+			continue
+		}
+		root.Imports = append(root.Imports, Import{
+			fmt.Sprintf("package:fuchsia.fidl.%s/%s.dart", l.Name, l.Name),
+			string(l.Name),
+		})
 	}
 
 	return root

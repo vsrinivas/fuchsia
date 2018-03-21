@@ -30,7 +30,7 @@ template("fidl_dart") {
     library_name = invoker.name
   }
   root_dir = "$target_gen_dir/${library_name}_package"
-  file_stem = "$root_dir/lib/$library_name.fidl"
+  file_stem = "$root_dir/lib/$library_name"
   bindings_file = "$file_stem.dart"
 
   fidl_target_gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
@@ -90,8 +90,6 @@ template("fidl_dart") {
     ]
   }
 
-  target_label = get_label_info(":$target_name", "label_no_toolchain")
-
   dart_library(main_target_name) {
     forward_variables_from(invoker, [
       "testonly",
@@ -100,7 +98,7 @@ template("fidl_dart") {
 
     package_root = root_dir
 
-    package_label = target_label
+    package_name = "fuchsia.fidl.$library_name"
 
     sources = [
       bindings_file,
