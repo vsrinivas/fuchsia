@@ -11,6 +11,7 @@ extern crate failure;
 #[macro_use]
 extern crate fdio;
 extern crate fidl;
+extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zircon;
 extern crate fidl_wlan_device as wlan;
 
@@ -40,8 +41,9 @@ impl WlanPhy {
     }
 
     /// Retrieves a zircon channel to the WLAN Phy device, for use with the WLAN Phy fidl service.
-    pub fn connect(&self) -> Result<zircon::Channel, zircon::Status> {
-        sys::connect_wlanphy_device(&self.dev_node).map_err(|_| zircon::Status::INTERNAL)
+    pub fn connect(&self) -> Result<wlan::PhyProxy, zircon::Status> {
+        let chan = sys::connect_wlanphy_device(&self.dev_node).map_err(|_| zircon::Status::INTERNAL)?;
+        Ok(wlan::PhyProxy::new(async::Channel::from_channel(chan)?))
     }
 
     /// Queries the WLAN Phy device for its capabilities.

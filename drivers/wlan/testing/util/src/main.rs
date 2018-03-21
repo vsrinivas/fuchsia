@@ -39,8 +39,7 @@ fn get_proxy() -> Result<(async::Executor, wlan::PhyProxy), Error> {
     let executor = async::Executor::new().context("error creating event loop")?;
 
     let phy = wlan_dev::WlanPhy::new(DEV_WLANPHY)?;
-    let chan = phy.connect()?;
-    let proxy = wlan::PhyProxy::new(async::Channel::from_channel(chan)?);
+    let proxy = phy.connect()?;
     Ok((executor, proxy))
 }
 

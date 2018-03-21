@@ -20,7 +20,7 @@ fn catch_and_log_err<F>(ctx: &'static str, f: F) -> FutureResult<(), Never>
 {
     let res = f();
     if let Err(e) = res {
-        eprintln!("Error running device_settings_server fidl handler {}: {:?}", ctx, e);
+        eprintln!("Error running wlanstack fidl handler {}: {:?}", ctx, e);
     }
     future::ok(())
 }

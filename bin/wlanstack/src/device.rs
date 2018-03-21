@@ -19,14 +19,17 @@ use std::str::FromStr;
 
 struct PhyDevice {
     id: u16,
+    proxy: wlan::PhyProxy,
     dev: wlan_dev::WlanPhy,
 }
 
 impl PhyDevice {
     fn new<P: AsRef<Path>>(id: u16, path: P) -> Result<Self, Error> {
+        let dev = wlan_dev::WlanPhy::new(path)?;
         Ok(PhyDevice {
             id: id,
-            dev: wlan_dev::WlanPhy::new(path)?,
+            proxy: dev.connect()?,
+            dev: dev,
         })
     }
 }
@@ -111,32 +114,6 @@ impl DeviceManager {
     }
 }
 
-struct PhyQuery {
-    devmgr: DevMgrRef,
-    phy: Option<PhyDevice>,
-}
-
-impl Future for PhyQuery {
-    type Item = ();
-    type Error = zx::Status;
-
-    fn poll(&mut self, _: &mut task::Context) -> Poll<Self::Item, Self::Error> {
-        // TODO(tkilbourn): make this async once queries are async.
-        // TODO(tkilbourn): store the result in the PhyDevice once we can clone FIDL structs.
-        let phy = self.phy.take().expect("PhyQuery polled after completion");
-        let _info = phy.dev
-            .query()
-            .map(|mut info| {
-                // We add the id to the device's info.
-                info.id = phy.id;
-                info
-            })?;
-
-        self.devmgr.lock().add_phy(phy);
-        Ok(Async::Ready(()))
-    }
-}
-
 fn new_watcher<P, OnAdd, OnRm>(
     path: P,
     devmgr: DevMgrRef,
@@ -190,12 +167,14 @@ pub fn new_phy_watcher<P: AsRef<Path>>(
             // This could fail if the device were to go away in between our receiving the watcher
             // message and here. TODO(tkilbourn): handle this case more cleanly.
             let phy = PhyDevice::new(id, path).expect("Failed to open phy device");
-            async::spawn(PhyQuery {
-                devmgr: devmgr.clone(),
-                phy: Some(phy),
-            }.recover(
-                |e| eprintln!("Could not query wlan phy device: {:?}", e)
-            ));
+            async::spawn(
+                phy.proxy.query()
+                    .and_then(move |_resp| {
+                        devmgr.lock().add_phy(phy);
+                        Ok(())
+                    })
+                    .recover(
+                        |e| eprintln!("Could not query/add wlan phy device: {:?}", e)));
         },
         |devmgr, path| {
             info!("removing phy at {}", path.to_string_lossy());
