@@ -7,7 +7,7 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/frame_handler.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl.h"
+#include <fuchsia/cpp/wlan_mlme.h>
 
 #include <zircon/types.h>
 
@@ -22,7 +22,7 @@ class BeaconSender : public FrameHandler {
     BeaconSender(DeviceInterface* device);
     ~BeaconSender();
 
-    void Start(BssInterface* bss, const StartRequest& req);
+    void Start(BssInterface* bss, const wlan_mlme::StartRequest& req);
     void Stop();
     zx_status_t UpdateBeacon(const TrafficIndicationMap& tim);
     zx_status_t HandleProbeRequest(const ImmutableMgmtFrame<ProbeRequest>& frame,
@@ -39,7 +39,7 @@ class BeaconSender : public FrameHandler {
     bool IsStarted();
 
     DeviceInterface* const device_;
-    StartRequestPtr req_;
+    wlan_mlme::StartRequest req_;
     BssInterface* bss_;
     // Buffer to write the Partial Virtual Bitmap to which was derived from a Traffic Indication
     // Map.

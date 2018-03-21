@@ -4,15 +4,17 @@
 
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
-fidl("fidl") {
-  sources = [
-    "wlan_service.fidl",
-  ]
-}
-
 fidl("mlme") {
+  name = "wlan_mlme"
   sources = [
     "wlan_mlme.fidl",
     "wlan_mlme_ext.fidl",
+  ]
+}
+
+fidl("service") {
+  name = "wlan_service"
+  sources = [
+    "wlan_service.fidl",
   ]
 }

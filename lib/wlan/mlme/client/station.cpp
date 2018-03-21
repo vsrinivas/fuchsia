@@ -42,36 +42,25 @@ void Station::Reset() {
     bssid_.Reset();
 }
 
-zx_status_t Station::HandleMlmeMessage(const Method& method) {
+zx_status_t Station::HandleMlmeMessage(const wlan_mlme::Method& method) {
     // Always allow MLME-JOIN.request.
-    if (method == Method::JOIN_request) { return ZX_OK; }
+    if (method == wlan_mlme::Method::JOIN_request) { return ZX_OK; }
     // Drop other MLME requests if there is no BSSID set yet.
     return (bssid() == nullptr ? ZX_ERR_STOP : ZX_OK);
 }
 
-zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
+zx_status_t Station::HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) {
     debugfn();
-
-    if (req.selected_bss.is_null()) {
-        errorf("bad join request\n");
-        // Don't reset because of a bad request. Just send the response.
-        return service::SendJoinResponse(device_, JoinResultCodes::JOIN_FAILURE_TIMEOUT);
-    }
 
     if (state_ != WlanState::kUnjoined) {
         warnf("already joined; resetting station\n");
         Reset();
     }
 
-    // Clone request to take ownership of the BSS>
-    auto req_clone = req.Clone();
-    bss_ = std::move(req_clone->selected_bss);
-    bssid_.Set(bss_->bssid->data());
-
-    if (bss_->chan.is_null()) {
-        errorf("Requested BSS to join has missing channel\n");
-        return ZX_ERR_BAD_STATE;
-    }
+    // Clone request to take ownership of the BSS.
+    bss_ = wlan_mlme::BSSDescription::New();
+    req.selected_bss.Clone(bss_.get());
+    bssid_.Set(bss_->bssid.data());
 
     auto chan = GetBssChan();
 
@@ -102,7 +91,7 @@ zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
         errorf("could not set wlan channel to %s (status %d)\n", common::ChanStr(chan).c_str(),
                status);
         Reset();
-        service::SendJoinResponse(device_, JoinResultCodes::JOIN_FAILURE_TIMEOUT);
+        service::SendJoinResponse(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
         return status;
     }
 
@@ -112,7 +101,7 @@ zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
     if (status != ZX_OK) {
         errorf("could not set join timer: %d\n", status);
         Reset();
-        service::SendJoinResponse(device_, JoinResultCodes::JOIN_FAILURE_TIMEOUT);
+        service::SendJoinResponse(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
     }
 
     // TODO(hahnr): Update when other BSS types are supported.
@@ -125,28 +114,29 @@ zx_status_t Station::HandleMlmeJoinReq(const JoinRequest& req) {
     return status;
 }  // namespace wlan
 
-zx_status_t Station::HandleMlmeAuthReq(const AuthenticateRequest& req) {
+zx_status_t Station::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req) {
     debugfn();
 
-    if (bss_.is_null()) { return ZX_ERR_BAD_STATE; }
+    if (bss_ == nullptr) { return ZX_ERR_BAD_STATE; }
 
     // TODO(tkilbourn): better result codes
-    if (!bss_->bssid.Equals(req.peer_sta_address)) {
+    common::MacAddr peer_sta_addr(req.peer_sta_address.data());
+    if (bssid_ != peer_sta_addr) {
         errorf("cannot authenticate before joining\n");
-        return service::SendAuthResponse(device_, bssid_, AuthenticateResultCodes::REFUSED);
+        return service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
     if (state_ == WlanState::kUnjoined) {
         errorf("must join before authenticating\n");
-        return service::SendAuthResponse(device_, bssid_, AuthenticateResultCodes::REFUSED);
+        return service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
     if (state_ != WlanState::kUnauthenticated) {
         warnf("already authenticated; sending request anyway\n");
     }
-    if (req.auth_type != AuthenticationTypes::OPEN_SYSTEM) {
+    if (req.auth_type != wlan_mlme::AuthenticationTypes::OPEN_SYSTEM) {
         // TODO(tkilbourn): support other authentication types
         // TODO(tkilbourn): set the auth_alg_ when we support other authentication types
         errorf("only OpenSystem authentication is supported\n");
-        return service::SendAuthResponse(device_, bssid_, AuthenticateResultCodes::REFUSED);
+        return service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
 
     debugjoin("authenticating to %s\n", MACSTR(bssid_));
@@ -176,7 +166,7 @@ zx_status_t Station::HandleMlmeAuthReq(const AuthenticateRequest& req) {
     zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send auth packet: %d\n", status);
-        service::SendAuthResponse(device_, bssid_, AuthenticateResultCodes::REFUSED);
+        service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
         return status;
     }
 
@@ -185,25 +175,24 @@ zx_status_t Station::HandleMlmeAuthReq(const AuthenticateRequest& req) {
     if (status != ZX_OK) {
         errorf("could not set auth timer: %d\n", status);
         // This is the wrong result code, but we need to define our own codes at some later time.
-        service::SendAuthResponse(device_, bssid_, AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
+        service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
         // TODO(tkilbourn): reset the station?
     }
     return status;
 }
 
-zx_status_t Station::HandleMlmeDeauthReq(const DeauthenticateRequest& req) {
+zx_status_t Station::HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest& req) {
     debugfn();
-    ZX_DEBUG_ASSERT(!req.peer_sta_address.is_null());
 
     if (state_ != WlanState::kAssociated && state_ != WlanState::kAuthenticated) {
         errorf("not associated or authenticated; ignoring deauthenticate request\n");
         return ZX_OK;
     }
 
-    if (bss_.is_null()) { return ZX_ERR_BAD_STATE; }
+    if (bss_ == nullptr) { return ZX_ERR_BAD_STATE; }
 
     // Check whether the request wants to deauthenticate from this STA's BSS.
-    common::MacAddr peer_sta_addr(req.peer_sta_address->data());
+    common::MacAddr peer_sta_addr(req.peer_sta_address.data());
     if (bssid_ != peer_sta_addr) { return ZX_OK; }
 
     fbl::unique_ptr<Packet> packet = nullptr;
@@ -239,19 +228,20 @@ zx_status_t Station::HandleMlmeDeauthReq(const DeauthenticateRequest& req) {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
+zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) {
     debugfn();
 
-    if (bss_.is_null()) { return ZX_ERR_BAD_STATE; }
+    if (bss_ == nullptr) { return ZX_ERR_BAD_STATE; }
 
     // TODO(tkilbourn): better result codes
-    if (!bss_->bssid.Equals(req.peer_sta_address)) {
+    common::MacAddr peer_sta_addr(req.peer_sta_address.data());
+    if (bssid_ != peer_sta_addr) {
         errorf("bad peer STA address for association\n");
-        return service::SendAuthResponse(device_, bssid_, AuthenticateResultCodes::REFUSED);
+        return service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
     if (state_ == WlanState::kUnjoined || state_ == WlanState::kUnauthenticated) {
         errorf("must authenticate before associating\n");
-        return service::SendAuthResponse(device_, bssid_, AuthenticateResultCodes::REFUSED);
+        return service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
     if (state_ == WlanState::kAssociated) {
         warnf("already authenticated; sending request anyway\n");
@@ -283,23 +273,22 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
                     packet->len() - sizeof(MgmtFrameHeader) - sizeof(AssociationRequest));
     if (!w.write<SsidElement>(bss_->ssid->data())) {
         errorf("could not write ssid \"%s\" to association request\n", bss_->ssid->data());
-        service::SendAssocResponse(device_, AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;
     }
-    // TODO(tkilbourn): add extended rates support to get the rest of 802.11g rates.
     // TODO(tkilbourn): determine these rates based on hardware and the AP
     std::vector<uint8_t> rates = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24};
 
     if (!w.write<SupportedRatesElement>(std::move(rates))) {
         errorf("could not write supported rates\n");
-        service::SendAssocResponse(device_, AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;
     }
 
     std::vector<uint8_t> ext_rates = {0x30, 0x48, 0x60, 0x6c};
     if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
         errorf("could not write extended supported rates\n");
-        service::SendAssocResponse(device_, AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;
     }
 
@@ -313,7 +302,7 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
         if (!w.write<HtCapabilities>(htc.ht_cap_info, htc.ampdu_params, htc.mcs_set, htc.ht_ext_cap,
                                      htc.txbf_cap, htc.asel_cap)) {
             errorf("could not write HtCapabilities\n");
-            service::SendAssocResponse(device_, AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+            service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
             return ZX_ERR_IO;
         }
     }
@@ -327,7 +316,7 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
     zx_status_t status = packet->set_len(frame_len);
     if (status != ZX_OK) {
         errorf("could not set packet length to %zu: %d\n", frame_len, status);
-        service::SendAssocResponse(device_, AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return status;
     }
 
@@ -335,7 +324,7 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
     status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send assoc packet: %d\n", status);
-        service::SendAssocResponse(device_, AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return status;
     }
 
@@ -345,7 +334,7 @@ zx_status_t Station::HandleMlmeAssocReq(const AssociateRequest& req) {
     if (status != ZX_OK) {
         errorf("could not set auth timer: %d\n", status);
         // This is the wrong result code, but we need to define our own codes at some later time.
-        service::SendAssocResponse(device_, AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         // TODO(tkilbourn): reset the station?
     }
     return status;
@@ -362,9 +351,9 @@ zx_status_t Station::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
 zx_status_t Station::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
                                   const wlan_rx_info_t& rxinfo) {
     debugfn();
-    ZX_DEBUG_ASSERT(!bss_.is_null());
+    ZX_DEBUG_ASSERT(bss_ != nullptr);
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kBeacon);
-    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
 
     avg_rssi_.add(rxinfo.rssi);
 
@@ -375,7 +364,7 @@ zx_status_t Station::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
         timer_->CancelTimer();
         state_ = WlanState::kUnauthenticated;
         debugjoin("joined %s\n", bss_->ssid->data());
-        return service::SendJoinResponse(device_, JoinResultCodes::SUCCESS);
+        return service::SendJoinResponse(device_, wlan_mlme::JoinResultCodes::SUCCESS);
     }
 
     auto bcn = frame.body;
@@ -406,7 +395,7 @@ zx_status_t Station::HandleAuthentication(const ImmutableMgmtFrame<Authenticatio
                                           const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kAuthentication);
-    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
 
     if (state_ != WlanState::kUnauthenticated) {
         // TODO(tkilbourn): should we process this Authentication packet anyway? The spec is
@@ -433,16 +422,16 @@ zx_status_t Station::HandleAuthentication(const ImmutableMgmtFrame<Authenticatio
         errorf("authentication failed (status code=%u)\n", auth->status_code);
         // TODO(tkilbourn): is this the right result code?
         service::SendAuthResponse(device_, bssid_,
-                                  AuthenticateResultCodes::AUTHENTICATION_REJECTED);
+                                  wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
         return ZX_ERR_BAD_STATE;
     }
 
-    common::MacAddr bssid(bss_->bssid->data());
+    common::MacAddr bssid(bss_->bssid.data());
     debugjoin("authenticated to %s\n", MACSTR(bssid));
     state_ = WlanState::kAuthenticated;
     auth_timeout_ = zx::time();
     timer_->CancelTimer();
-    service::SendAuthResponse(device_, bssid_, AuthenticateResultCodes::SUCCESS);
+    service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::SUCCESS);
     return ZX_OK;
 }
 
@@ -450,7 +439,7 @@ zx_status_t Station::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentic
                                             const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kDeauthentication);
-    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
 
     if (state_ != WlanState::kAssociated && state_ != WlanState::kAuthenticated) {
         debugjoin("got spurious deauthenticate; ignoring\n");
@@ -471,7 +460,7 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
                                                const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kAssociationResponse);
-    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
 
     if (state_ != WlanState::kAuthenticated) {
         // TODO(tkilbourn): should we process this Association response packet anyway? The spec is
@@ -484,16 +473,16 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
     if (assoc->status_code != status_code::kSuccess) {
         errorf("association failed (status code=%u)\n", assoc->status_code);
         // TODO(tkilbourn): map to the correct result code
-        service::SendAssocResponse(device_, AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_BAD_STATE;
     }
 
-    common::MacAddr bssid(bss_->bssid->data());
+    common::MacAddr bssid(bss_->bssid.data());
     state_ = WlanState::kAssociated;
     assoc_timeout_ = zx::time();
     aid_ = assoc->aid & kAidMask;
     timer_->CancelTimer();
-    service::SendAssocResponse(device_, AssociateResultCodes::SUCCESS, aid_);
+    service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::SUCCESS, aid_);
 
     signal_report_timeout_ = deadline_after_bcn_period(kSignalReportTimeoutTu);
     timer_->SetTimer(signal_report_timeout_);
@@ -525,7 +514,7 @@ zx_status_t Station::HandleDisassociation(const ImmutableMgmtFrame<Disassociatio
                                           const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == ManagementSubtype::kDisassociation);
-    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
 
     if (state_ != WlanState::kAssociated) {
         debugjoin("got spurious disassociate; ignoring\n");
@@ -533,7 +522,7 @@ zx_status_t Station::HandleDisassociation(const ImmutableMgmtFrame<Disassociatio
     }
 
     auto disassoc = frame.body;
-    common::MacAddr bssid(bss_->bssid->data());
+    common::MacAddr bssid(bss_->bssid.data());
     infof("disassociating from %s(%s), reason=%u\n", MACSTR(bssid), bss_->ssid->data(),
           disassoc->reason_code);
 
@@ -551,7 +540,7 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
                                              const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(rx_frame.hdr->fc.subtype() == ManagementSubtype::kAction);
-    ZX_DEBUG_ASSERT(rx_frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
+    ZX_DEBUG_ASSERT(rx_frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
     ZX_DEBUG_ASSERT(rx_frame.body->category == action::Category::kBlockAck);
     ZX_DEBUG_ASSERT(rx_frame.body->action == action::BaAction::kAddBaRequest);
 
@@ -615,7 +604,7 @@ zx_status_t Station::HandleAddBaResponseFrame(
     ZX_DEBUG_ASSERT(rx_frame.hdr != nullptr);
     ZX_DEBUG_ASSERT(rx_frame.body != nullptr);
     ZX_DEBUG_ASSERT(rx_frame.hdr->fc.subtype() == ManagementSubtype::kAction);
-    ZX_DEBUG_ASSERT(rx_frame.hdr->addr3 == common::MacAddr(bss_->bssid->data()));
+    ZX_DEBUG_ASSERT(rx_frame.hdr->addr3 == common::MacAddr(bss_->bssid.data()));
     ZX_DEBUG_ASSERT(rx_frame.body->category == action::Category::kBlockAck);
     ZX_DEBUG_ASSERT(rx_frame.body->action == action::BaAction::kAddBaResponse);
 
@@ -641,7 +630,7 @@ zx_status_t Station::HandleNullDataFrame(const ImmutableDataFrame<NilHeader>& fr
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->fc.subtype() == DataSubtype::kNull);
     ZX_DEBUG_ASSERT(bssid() != nullptr);
-    ZX_DEBUG_ASSERT(frame.hdr->addr2 == common::MacAddr(bss_->bssid->data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr2 == common::MacAddr(bss_->bssid.data()));
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     // Take signal strength into account.
@@ -666,7 +655,7 @@ zx_status_t Station::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
     }
 
     ZX_DEBUG_ASSERT(bssid() != nullptr);
-    ZX_DEBUG_ASSERT(frame.hdr->addr2 == common::MacAddr(bss_->bssid->data()));
+    ZX_DEBUG_ASSERT(frame.hdr->addr2 == common::MacAddr(bss_->bssid.data()));
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     switch (frame.hdr->fc.subtype()) {
@@ -777,7 +766,7 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
         txinfo.tx_flags |= WLAN_TX_INFO_FLAGS_PROTECTED;
     }
 
-    hdr->addr1 = common::MacAddr(bss_->bssid->data());
+    hdr->addr1 = common::MacAddr(bss_->bssid.data());
     hdr->addr2 = eth->src;
     hdr->addr3 = eth->dest;
 
@@ -842,21 +831,21 @@ zx_status_t Station::HandleTimeout() {
         debugjoin("join timed out; resetting\n");
 
         Reset();
-        return service::SendJoinResponse(device_, JoinResultCodes::JOIN_FAILURE_TIMEOUT);
+        return service::SendJoinResponse(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
     }
 
     if (auth_timeout_ > zx::time() && now >= auth_timeout_) {
         debugjoin("auth timed out; moving back to joining\n");
         auth_timeout_ = zx::time();
         return service::SendAuthResponse(device_, bssid_,
-                                         AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
+                                         wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
     }
 
     if (assoc_timeout_ > zx::time() && now >= assoc_timeout_) {
         debugjoin("assoc timed out; moving back to authenticated\n");
         assoc_timeout_ = zx::time();
         // TODO(tkilbourn): need a better error code for this
-        return service::SendAssocResponse(device_, AssociateResultCodes::REFUSED_TEMPORARILY);
+        return service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
     }
 
     if (signal_report_timeout_ > zx::time() && now > signal_report_timeout_ &&
@@ -888,7 +877,7 @@ zx_status_t Station::SendKeepAliveResponse() {
     hdr->fc.set_subtype(DataSubtype::kNull);
     hdr->fc.set_to_ds(1);
 
-    common::MacAddr bssid(bss_->bssid->data());
+    common::MacAddr bssid(bss_->bssid.data());
     hdr->addr1 = bssid;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid;
@@ -951,7 +940,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleMlmeEapolReq(const EapolRequest& req) {
+zx_status_t Station::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) {
     debugfn();
 
     if (!bss_) { return ZX_ERR_BAD_STATE; }
@@ -970,9 +959,9 @@ zx_status_t Station::HandleMlmeEapolReq(const EapolRequest& req) {
     hdr->fc.set_type(FrameType::kData);
     hdr->fc.set_to_ds(1);
 
-    hdr->addr1.Set(req.dst_addr->data());
-    hdr->addr2.Set(req.src_addr->data());
-    hdr->addr3.Set(req.dst_addr->data());
+    hdr->addr1.Set(req.dst_addr.data());
+    hdr->addr2.Set(req.src_addr.data());
+    hdr->addr3.Set(req.dst_addr.data());
 
     SetSeqNo(hdr, &seq_);
 
@@ -987,30 +976,30 @@ zx_status_t Station::HandleMlmeEapolReq(const EapolRequest& req) {
     zx_status_t status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send eapol request packet: %d\n", status);
-        service::SendEapolResponse(device_, EapolResultCodes::TRANSMISSION_FAILURE);
+        service::SendEapolResponse(device_, wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
         return status;
     }
 
-    service::SendEapolResponse(device_, EapolResultCodes::SUCCESS);
+    service::SendEapolResponse(device_, wlan_mlme::EapolResultCodes::SUCCESS);
 
     return status;
 }
 
-zx_status_t Station::HandleMlmeSetKeysReq(const SetKeysRequest& req) {
+zx_status_t Station::HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) {
     debugfn();
 
-    for (auto& keyPtr : *req.keylist) {
-        if (keyPtr.is_null() || keyPtr->key.is_null()) { return ZX_ERR_NOT_SUPPORTED; }
+    for (auto& keyDesc : *req.keylist) {
+        if (keyDesc.key.is_null()) { return ZX_ERR_NOT_SUPPORTED; }
 
         uint8_t key_type;
-        switch (keyPtr->key_type) {
-        case KeyType::PAIRWISE:
+        switch (keyDesc.key_type) {
+        case wlan_mlme::KeyType::PAIRWISE:
             key_type = WLAN_KEY_TYPE_PAIRWISE;
             break;
-        case KeyType::PEER_KEY:
+        case wlan_mlme::KeyType::PEER_KEY:
             key_type = WLAN_KEY_TYPE_PEER;
             break;
-        case KeyType::IGTK:
+        case wlan_mlme::KeyType::IGTK:
             key_type = WLAN_KEY_TYPE_IGTK;
             break;
         default:
@@ -1019,17 +1008,15 @@ zx_status_t Station::HandleMlmeSetKeysReq(const SetKeysRequest& req) {
         }
 
         wlan_key_config_t key_config = {};
-        memcpy(key_config.key, keyPtr->key->data(), keyPtr->length);
+        memcpy(key_config.key, keyDesc.key->data(), keyDesc.length);
         key_config.key_type = key_type;
-        key_config.key_len = static_cast<uint8_t>(keyPtr->length);
-        key_config.key_idx = keyPtr->key_id;
+        key_config.key_len = static_cast<uint8_t>(keyDesc.length);
+        key_config.key_idx = keyDesc.key_id;
         key_config.protection = WLAN_PROTECTION_RX_TX;
-        key_config.cipher_type = keyPtr->cipher_suite_type;
-        memcpy(key_config.cipher_oui, keyPtr->cipher_suite_oui->data(),
+        key_config.cipher_type = keyDesc.cipher_suite_type;
+        memcpy(key_config.cipher_oui, keyDesc.cipher_suite_oui.data(),
                sizeof(key_config.cipher_oui));
-        if (!keyPtr->address.is_null()) {
-            memcpy(key_config.peer_addr, keyPtr->address->data(), sizeof(key_config.peer_addr));
-        }
+        memcpy(key_config.peer_addr, keyDesc.address.data(), sizeof(key_config.peer_addr));
 
         auto status = device_->SetKey(&key_config);
         if (status != ZX_OK) {
@@ -1113,7 +1100,7 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
     hdr->fc.set_pwr_mgmt(ps_mode);
     hdr->fc.set_to_ds(1);
 
-    common::MacAddr bssid(bss_->bssid->data());
+    common::MacAddr bssid(bss_->bssid.data());
     hdr->addr1 = bssid;
     hdr->addr2 = mymac;
     hdr->addr3 = bssid;
@@ -1148,7 +1135,7 @@ zx_status_t Station::SendPsPoll() {
     frame->fc.set_subtype(ControlSubtype::kPsPoll);
     frame->aid = aid_;
 
-    frame->bssid = common::MacAddr(bss_->bssid->data());
+    frame->bssid = common::MacAddr(bss_->bssid.data());
     frame->ta = mymac;
 
     zx_status_t status = device_->SendWlan(std::move(packet));
@@ -1160,7 +1147,7 @@ zx_status_t Station::SendPsPoll() {
 }
 
 zx::time Station::deadline_after_bcn_period(zx_duration_t tus) {
-    ZX_DEBUG_ASSERT(!bss_.is_null());
+    ZX_DEBUG_ASSERT(bss_ != nullptr);
     return timer_->Now() + WLAN_TU(bss_->beacon_period * tus);
 }
 

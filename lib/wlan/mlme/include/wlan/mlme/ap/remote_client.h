@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fuchsia/cpp/wlan_mlme.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/ap/remote_client_interface.h>
 #include <wlan/mlme/device_interface.h>
@@ -162,7 +163,7 @@ class AssociatedState : public BaseState {
     zx_status_t HandleCtrlFrame(const FrameControl& fc) override;
     zx_status_t HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
                                   const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleMlmeEapolReq(const EapolRequest& req) override;
+    zx_status_t HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) override;
 
     inline RemoteClient::StateId id() const override { return RemoteClient::StateId::kAssociated; }
 

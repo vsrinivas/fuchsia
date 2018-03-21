@@ -9,8 +9,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/sequence.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl.h"
-#include "lib/wlan/fidl/wlan_mlme_ext.fidl.h"
+#include <fuchsia/cpp/wlan_mlme.h>
 
 #include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
@@ -50,19 +49,18 @@ class Station : public FrameHandler {
         // (1) if no Bss Descriptor came down from SME.
         // (2) if bssid_ is uninitlized.
         // (3) if bssid_ is kZeroMac.
-        if (bss_.is_null()) { return nullptr; }
+        if (!bss_) { return nullptr; }
         return &bssid_;
     }
 
     uint16_t aid() const { return aid_; }
 
     wlan_channel_t GetBssChan() const {
-        ZX_DEBUG_ASSERT(!bss_.is_null());
-        ZX_DEBUG_ASSERT(!bss_->chan.is_null());
+        ZX_DEBUG_ASSERT(bss_ != nullptr);
 
         return wlan_channel_t{
-            .primary = bss_->chan->primary,
-            .cbw = static_cast<uint8_t>(bss_->chan->cbw),
+            .primary = bss_->chan.primary,
+            .cbw = static_cast<uint8_t>(bss_->chan.cbw),
         };
     }
 
@@ -76,13 +74,13 @@ class Station : public FrameHandler {
 
     zx_status_t SendKeepAliveResponse();
 
-    zx_status_t HandleMlmeMessage(const Method& method) override;
-    zx_status_t HandleMlmeJoinReq(const JoinRequest& req) override;
-    zx_status_t HandleMlmeAuthReq(const AuthenticateRequest& req) override;
-    zx_status_t HandleMlmeDeauthReq(const DeauthenticateRequest& req) override;
-    zx_status_t HandleMlmeAssocReq(const AssociateRequest& req) override;
-    zx_status_t HandleMlmeEapolReq(const EapolRequest& req) override;
-    zx_status_t HandleMlmeSetKeysReq(const SetKeysRequest& req) override;
+    zx_status_t HandleMlmeMessage(const wlan_mlme::Method& method) override;
+    zx_status_t HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) override;
+    zx_status_t HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req) override;
+    zx_status_t HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest& req) override;
+    zx_status_t HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) override;
+    zx_status_t HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) override;
+    zx_status_t HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) override;
 
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
@@ -133,7 +131,7 @@ class Station : public FrameHandler {
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
-    BSSDescriptionPtr bss_;
+    wlan_mlme::BSSDescriptionPtr bss_;
     common::MacAddr bssid_;
     Sequence seq_;
 

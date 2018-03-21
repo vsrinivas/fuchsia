@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module wlan;
+library wlan_service;
 
 enum ErrCode {
-  OK,
-  INTERNAL,
-  NOT_FOUND,
-  NOT_SUPPORTED,
-  INVALID_ARGS,
+  OK = 0;
+  INTERNAL = 1;
+  NOT_FOUND = 2;
+  NOT_SUPPORTED = 3;
+  INVALID_ARGS = 4;
 };
 
 struct Error {
@@ -18,7 +18,7 @@ struct Error {
 };
 
 struct AP {
-  array<uint8> bssid;
+  vector<uint8> bssid;
   string       ssid;
   int32        last_rssi; // dBm (some vendors may not support dBm)
   bool         is_secure;
@@ -31,7 +31,7 @@ struct ScanRequest {
 
 struct ScanResult {
   Error error;
-  array<AP>? aps;
+  vector<AP>? aps;
 };
 
 struct ConnectConfig {
@@ -42,14 +42,14 @@ struct ConnectConfig {
 };
 
 enum State {
-  UNKNOWN,
-  BSS,
-  QUERYING,
-  SCANNING,
-  JOINING,
-  AUTHENTICATING,
-  ASSOCIATING,
-  ASSOCIATED,
+  UNKNOWN = 0;
+  BSS = 1;
+  QUERYING = 2;
+  SCANNING = 3;
+  JOINING = 4;
+  AUTHENTICATING = 5;
+  ASSOCIATING = 6;
+  ASSOCIATED = 7;
 };
 
 struct WlanStatus {
@@ -66,10 +66,10 @@ struct BssConfig {
 // SME / MSGCF.
 [ServiceName="wlan::WlanService"]
 interface Wlan {
-  Scan@0(ScanRequest request) => (ScanResult result);
-  Connect@1(ConnectConfig request) => (Error error);
-  Disconnect@2() => (Error error);
-  Status@3() => (WlanStatus status);
-  StartBss@4(BssConfig cfg) => (Error error);
-  StopBss@5() => (Error error);
+  1: Scan(ScanRequest req) -> (ScanResult result);
+  2: Connect(ConnectConfig req) -> (Error error);
+  3: Disconnect() -> (Error error);
+  4: Status() -> (WlanStatus @status);
+  5: StartBss(BssConfig cfg) -> (Error error);
+  6: StopBss() -> (Error error);
 };

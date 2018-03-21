@@ -7,7 +7,7 @@
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/frame_handler.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl.h"
+#include <fuchsia/cpp/wlan_mlme.h>
 
 #include <fbl/unique_ptr.h>
 #include <wlan/protocol/mac.h>
@@ -33,14 +33,14 @@ class Scanner : public FrameHandler {
         kActive,
     };
 
-    zx_status_t Start(const ScanRequest& req);
+    zx_status_t Start(const wlan_mlme::ScanRequest& req);
     void Reset();
 
     bool IsRunning() const;
     Type ScanType() const;
     wlan_channel_t ScanChannel() const;
 
-    zx_status_t HandleMlmeScanReq(const ScanRequest& req) override;
+    zx_status_t HandleMlmeScanReq(const wlan_mlme::ScanRequest& req) override;
 
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
@@ -67,8 +67,8 @@ class Scanner : public FrameHandler {
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
-    ScanRequestPtr req_;
-    ScanResponsePtr resp_ = nullptr;
+    wlan_mlme::ScanRequestPtr req_ = nullptr;
+    wlan_mlme::ScanResponsePtr resp_ = nullptr;
 
     size_t channel_index_ = 0;
     zx::time channel_start_;

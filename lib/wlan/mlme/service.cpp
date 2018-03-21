@@ -10,19 +10,21 @@ namespace wlan {
 
 namespace service {
 
-zx_status_t SendJoinResponse(DeviceInterface* device, JoinResultCodes result_code) {
+zx_status_t SendJoinResponse(DeviceInterface* device, wlan_mlme::JoinResultCodes result_code) {
     debugfn();
 
-    auto resp = JoinResponse::New();
+    auto resp = wlan_mlme::JoinResponse::New();
     resp->result_code = result_code;
 
-    size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
+    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
+    // everyone.
+    size_t buf_len = 4096;
     auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), Method::JOIN_confirm, resp);
+    auto status = SerializeServiceMsg(packet.get(), wlan_mlme::Method::JOIN_confirm, resp.get());
     if (status != ZX_OK) {
         errorf("could not serialize JoinResponse: %d\n", status);
     } else {
@@ -33,23 +35,24 @@ zx_status_t SendJoinResponse(DeviceInterface* device, JoinResultCodes result_cod
 }
 
 zx_status_t SendAuthResponse(DeviceInterface* device, const common::MacAddr& peer_sta,
-                             AuthenticateResultCodes code) {
+                             wlan_mlme::AuthenticateResultCodes code) {
     debugfn();
 
-    auto resp = AuthenticateResponse::New();
-    resp->peer_sta_address = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
-    peer_sta.CopyTo(resp->peer_sta_address->data());
+    auto resp = wlan_mlme::AuthenticateResponse::New();
+    peer_sta.CopyTo(resp->peer_sta_address.mutable_data());
     // TODO(tkilbourn): set this based on the actual auth type
-    resp->auth_type = AuthenticationTypes::OPEN_SYSTEM;
+    resp->auth_type = wlan_mlme::AuthenticationTypes::OPEN_SYSTEM;
     resp->result_code = code;
 
-    size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
+    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
+    // everyone.
+    size_t buf_len = 4096;
     auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), Method::AUTHENTICATE_confirm, resp);
+    auto status = SerializeServiceMsg(packet.get(), wlan_mlme::Method::AUTHENTICATE_confirm, resp.get());
     if (status != ZX_OK) {
         errorf("could not serialize AuthenticateResponse: %d\n", status);
     } else {
@@ -62,17 +65,18 @@ zx_status_t SendAuthResponse(DeviceInterface* device, const common::MacAddr& pee
 zx_status_t SendDeauthResponse(DeviceInterface* device, const common::MacAddr& peer_sta) {
     debugfn();
 
-    auto resp = DeauthenticateResponse::New();
-    resp->peer_sta_address = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
-    peer_sta.CopyTo(resp->peer_sta_address->data());
+    auto resp = wlan_mlme::DeauthenticateResponse::New();
+    peer_sta.CopyTo(resp->peer_sta_address.mutable_data());
 
-    size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
+    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
+    // everyone.
+    size_t buf_len = 4096;
     auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), Method::DEAUTHENTICATE_confirm, resp);
+    auto status = SerializeServiceMsg(packet.get(), wlan_mlme::Method::DEAUTHENTICATE_confirm, resp.get());
     if (status != ZX_OK) {
         errorf("could not serialize DeauthenticateResponse: %d\n", status);
     } else {
@@ -86,18 +90,19 @@ zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr&
                                  uint16_t code) {
     debugfn();
 
-    auto ind = DeauthenticateIndication::New();
-    ind->peer_sta_address = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
-    peer_sta.CopyTo(ind->peer_sta_address->data());
+    auto ind = wlan_mlme::DeauthenticateIndication::New();
+    peer_sta.CopyTo(ind->peer_sta_address.mutable_data());
     ind->reason_code = code;
 
-    size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
+    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
+    // everyone.
+    size_t buf_len = 4096;
     auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), Method::DEAUTHENTICATE_indication, ind);
+    auto status = SerializeServiceMsg(packet.get(), wlan_mlme::Method::DEAUTHENTICATE_indication, ind.get());
     if (status != ZX_OK) {
         errorf("could not serialize DeauthenticateIndication: %d\n", status);
     } else {
@@ -107,21 +112,23 @@ zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr&
     return status;
 }
 
-zx_status_t SendAssocResponse(DeviceInterface* device, AssociateResultCodes code, uint16_t aid) {
+zx_status_t SendAssocResponse(DeviceInterface* device, wlan_mlme::AssociateResultCodes code, uint16_t aid) {
     debugfn();
-    ZX_DEBUG_ASSERT(code != AssociateResultCodes::SUCCESS || aid != 0);
+    ZX_DEBUG_ASSERT(code != wlan_mlme::AssociateResultCodes::SUCCESS || aid != 0);
 
-    auto resp = AssociateResponse::New();
+    auto resp = wlan_mlme::AssociateResponse::New();
     resp->result_code = code;
     resp->association_id = aid;
 
-    size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
+    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
+    // everyone.
+    size_t buf_len = 4096;
     auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), Method::ASSOCIATE_confirm, resp);
+    auto status = SerializeServiceMsg(packet.get(), wlan_mlme::Method::ASSOCIATE_confirm, resp.get());
     if (status != ZX_OK) {
         errorf("could not serialize AssociateResponse: %d\n", status);
     } else {
@@ -135,18 +142,19 @@ zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::Ma
                                        uint16_t code) {
     debugfn();
 
-    auto ind = DisassociateIndication::New();
-    ind->peer_sta_address = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
-    peer_sta.CopyTo(ind->peer_sta_address->data());
+    auto ind = wlan_mlme::DisassociateIndication::New();
+    peer_sta.CopyTo(ind->peer_sta_address.mutable_data());
     ind->reason_code = code;
 
-    size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
+    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
+    // everyone.
+    size_t buf_len = 4096;
     auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), Method::DISASSOCIATE_indication, ind);
+    auto status = SerializeServiceMsg(packet.get(), wlan_mlme::Method::DISASSOCIATE_indication, ind.get());
     if (status != ZX_OK) {
         errorf("could not serialize DisassociateIndication: %d\n", status);
     } else {
@@ -159,16 +167,18 @@ zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::Ma
 zx_status_t SendSignalReportIndication(DeviceInterface* device, uint8_t rssi) {
     debugfn();
 
-    auto ind = SignalReportIndication::New();
+    auto ind = wlan_mlme::SignalReportIndication::New();
     ind->rssi = rssi;
 
-    size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
+    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
+    // everyone.
+    size_t buf_len = 4096;
     auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), Method::SIGNAL_REPORT_indication, ind);
+    auto status = SerializeServiceMsg(packet.get(), wlan_mlme::Method::SIGNAL_REPORT_indication, ind.get());
     if (status != ZX_OK) {
         errorf("could not serialize SignalReportIndication: %d\n", status);
     } else {
@@ -178,19 +188,21 @@ zx_status_t SendSignalReportIndication(DeviceInterface* device, uint8_t rssi) {
     return status;
 }
 
-zx_status_t SendEapolResponse(DeviceInterface* device, EapolResultCodes result_code) {
+zx_status_t SendEapolResponse(DeviceInterface* device, wlan_mlme::EapolResultCodes result_code) {
     debugfn();
 
-    auto resp = EapolResponse::New();
+    auto resp = wlan_mlme::EapolResponse::New();
     resp->result_code = result_code;
 
-    size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
+    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
+    // everyone.
+    size_t buf_len = 4096;
     auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), Method::EAPOL_confirm, resp);
+    auto status = SerializeServiceMsg(packet.get(), wlan_mlme::Method::EAPOL_confirm, resp.get());
     if (status != ZX_OK) {
         errorf("could not serialize EapolResponse: %d\n", status);
     } else {
@@ -210,21 +222,21 @@ zx_status_t SendEapolIndication(DeviceInterface* device, const EapolFrame& eapol
     size_t len = sizeof(EapolFrame) + be16toh(eapol.packet_body_length);
     if (len > 255) { return ZX_OK; }
 
-    auto ind = EapolIndication::New();
-    ind->data = ::f1dl::VectorPtr<uint8_t>::New(len);
+    auto ind = wlan_mlme::EapolIndication::New();
+    ind->data = ::fidl::VectorPtr<uint8_t>::New(len);
     std::memcpy(ind->data->data(), &eapol, len);
-    ind->src_addr = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
-    ind->dst_addr = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
-    src.CopyTo(ind->src_addr->data());
-    dst.CopyTo(ind->dst_addr->data());
+    src.CopyTo(ind->src_addr.mutable_data());
+    dst.CopyTo(ind->dst_addr.mutable_data());
 
-    size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
+    // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
+    // everyone.
+    size_t buf_len = 4096;
     auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), Method::EAPOL_indication, ind);
+    auto status = SerializeServiceMsg(packet.get(), wlan_mlme::Method::EAPOL_indication, ind.get());
     if (status != ZX_OK) {
         errorf("could not serialize MLME-Eapol.indication: %d\n", status);
     } else {

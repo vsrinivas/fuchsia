@@ -10,7 +10,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl.h"
+#include <fuchsia/cpp/wlan_mlme.h>
 
 #include <zircon/assert.h>
 
@@ -23,10 +23,10 @@ BeaconSender::~BeaconSender() {
     Stop();
 }
 
-void BeaconSender::Start(BssInterface* bss, const StartRequest& req) {
+void BeaconSender::Start(BssInterface* bss, const wlan_mlme::StartRequest& req) {
     ZX_DEBUG_ASSERT(!IsStarted());
     bss_ = bss;
-    req_ = req.Clone();
+    req.Clone(&req_);
     WriteBeacon(nullptr);
     debugbss("[bcn-sender] [%s] started sending Beacons\n", bss_->bssid().ToString().c_str());
 }
@@ -62,8 +62,8 @@ zx_status_t BeaconSender::HandleProbeRequest(const ImmutableMgmtFrame<ProbeReque
         case element_id::kSsid: {
             auto ie = reader.read<SsidElement>();
             if (ie == nullptr) { return ZX_ERR_STOP; };
-            size_t ssid_len = strlen(req_->ssid->data());
-            if (strncmp(ie->ssid, req_->ssid->data(), ssid_len) != 0) { return ZX_ERR_STOP; }
+            size_t ssid_len = strlen(req_.ssid->data());
+            if (strncmp(ie->ssid, req_.ssid->data(), ssid_len) != 0) { return ZX_ERR_STOP; }
 
             break;
         }
@@ -103,7 +103,7 @@ zx_status_t BeaconSender::WriteBeacon(const TrafficIndicationMap* tim) {
     FillTxInfo(&packet, *hdr);
 
     auto bcn = frame.body;
-    bcn->beacon_interval = req_->beacon_period;
+    bcn->beacon_interval = req_.beacon_period;
     bcn->timestamp = bss_->timestamp();
     bcn->cap.set_ess(1);
     bcn->cap.set_short_preamble(1);
@@ -172,7 +172,7 @@ zx_status_t BeaconSender::SendProbeResponse(const ImmutableMgmtFrame<ProbeReques
     FillTxInfo(&packet, *hdr);
 
     auto resp = frame.body;
-    resp->beacon_interval = req_->beacon_period;
+    resp->beacon_interval = req_.beacon_period;
     resp->timestamp = bss_->timestamp();
     resp->cap.set_ess(1);
     resp->cap.set_short_preamble(1);
@@ -217,9 +217,9 @@ zx_status_t BeaconSender::SendProbeResponse(const ImmutableMgmtFrame<ProbeReques
 }
 
 zx_status_t BeaconSender::WriteSsid(ElementWriter* w) {
-    if (!w->write<SsidElement>(req_->ssid->data())) {
+    if (!w->write<SsidElement>(req_.ssid->data())) {
         errorf("[bcn-sender] [%s] could not write ssid \"%s\" to Beacon\n",
-               bss_->bssid().ToString().c_str(), req_->ssid->data());
+               bss_->bssid().ToString().c_str(), req_.ssid->data());
         return ZX_ERR_IO;
     }
     return ZX_OK;
@@ -237,7 +237,7 @@ zx_status_t BeaconSender::WriteSupportedRates(ElementWriter* w) {
 }
 
 zx_status_t BeaconSender::WriteDsssParamSet(ElementWriter* w) {
-    if (!w->write<DsssParamSetElement>(req_->channel)) {
+    if (!w->write<DsssParamSetElement>(req_.channel)) {
         errorf("[bcn-sender] [%s] could not write DSSS parameters\n",
                bss_->bssid().ToString().c_str());
         return ZX_ERR_IO;
@@ -257,7 +257,7 @@ zx_status_t BeaconSender::WriteTim(ElementWriter* w, const TrafficIndicationMap&
 
     // TODO(NET-579): Add support for DTIM count. For now always send DTIMs with no BU.
     uint8_t dtim_count = 0;
-    uint8_t dtim_period = req_->dtim_period;
+    uint8_t dtim_period = req_.dtim_period;
     BitmapControl bmp_ctrl;
     bmp_ctrl.set_offset(bitmap_offset);
     // TODO(NET-579): Write group traffic indication to bitmap control.

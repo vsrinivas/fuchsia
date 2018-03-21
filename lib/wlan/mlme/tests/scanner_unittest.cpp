@@ -17,7 +17,7 @@
 #include <gtest/gtest.h>
 #include <cstring>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl.h"
+#include <fuchsia/cpp/wlan_mlme.h>
 
 namespace wlan {
 namespace {
@@ -88,15 +88,17 @@ class ScannerTest : public ::testing::Test {
    protected:
     void SetupMessages() {
         req_ = ScanRequest::New();
-        req_->channel_list.push_back(1);
-        resp_ = ScanResponse::New();
+        req_->channel_list.resize(0);
+        req_->channel_list->push_back(1);
     }
 
     void SetPassive() { req_->scan_type = ScanTypes::PASSIVE; }
 
     void SetActive() { req_->scan_type = ScanTypes::ACTIVE; }
 
-    zx_status_t Start() { return scanner_.Start(*req_.Clone().get()); }
+    zx_status_t Start() {
+        return scanner_.Start(*req_);
+    }
 
     uint16_t CurrentChannel() { return mock_dev_.GetState()->channel().primary; }
 
@@ -276,16 +278,16 @@ TEST_F(ScannerTest, ScanResponse) {
     ASSERT_EQ(1u, resp_->bss_description_set->size());
     EXPECT_EQ(ScanResultCodes::SUCCESS, resp_->result_code);
 
-    auto bss = resp_->bss_description_set->at(0).get();
-    EXPECT_EQ(0, std::memcmp(kBeacon + 16, bss->bssid->data(), 6));
-    EXPECT_STREQ("test ssid", bss->ssid.get().c_str());
-    EXPECT_EQ(BSSTypes::INFRASTRUCTURE, bss->bss_type);
-    EXPECT_EQ(100u, bss->beacon_period);
-    EXPECT_EQ(1024u, bss->timestamp);
+    auto& bss = resp_->bss_description_set->at(0);
+    EXPECT_EQ(0, std::memcmp(kBeacon + 16, bss.bssid.data(), 6));
+    EXPECT_STREQ("test ssid", bss.ssid.get().c_str());
+    EXPECT_EQ(BSSTypes::INFRASTRUCTURE, bss.bss_type);
+    EXPECT_EQ(100u, bss.beacon_period);
+    EXPECT_EQ(1024u, bss.timestamp);
     // EXPECT_EQ(1u, bss->channel);  // IE missing. info.chan != bss->channel.
-    EXPECT_EQ(10u, bss->rssi_measurement);
-    EXPECT_EQ(0, bss->rcpi_measurement);  // Not reported. Default at 0.
-    EXPECT_EQ(60u, bss->rsni_measurement);
+    EXPECT_EQ(10u, bss.rssi_measurement);
+    EXPECT_EQ(0, bss.rcpi_measurement);  // Not reported. Default at 0.
+    EXPECT_EQ(60u, bss.rsni_measurement);
 }
 
 // TODO(hahnr): add test for active scanning

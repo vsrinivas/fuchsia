@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "garnet/public/lib/wlan/fidl/wlan_mlme.fidl.h"
+#include <fuchsia/cpp/wlan_mlme.h>
 
 #include <wlan/protocol/mac.h>
 
@@ -47,7 +47,7 @@ struct Channel {
     // See IEEE Std 802.11-2016 19.3.15
 };
 
-wlan_channel_t FromFidl(const wlan::WlanChan& fidl_chan);
+wlan_channel_t FromFidl(const wlan_mlme::WlanChan& fidl_chan);
 
 }  // namespace common
 }  // namespace wlan

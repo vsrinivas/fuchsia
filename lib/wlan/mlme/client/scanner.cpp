@@ -13,7 +13,7 @@
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
 
-#include "lib/fidl/cpp/array.h"
+#include "lib/fidl/cpp/vector.h"
 
 #include <fbl/unique_ptr.h>
 #include <zircon/assert.h>
@@ -29,35 +29,42 @@ Scanner::Scanner(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
     ZX_DEBUG_ASSERT(timer_.get());
 }
 
-zx_status_t Scanner::HandleMlmeScanReq(const ScanRequest& req) {
+zx_status_t Scanner::HandleMlmeScanReq(const wlan_mlme::ScanRequest& req) {
     return Start(req);
 }
 
-zx_status_t Scanner::Start(const ScanRequest& req) {
+zx_status_t Scanner::Start(const wlan_mlme::ScanRequest& req) {
     debugfn();
 
     if (IsRunning()) { return ZX_ERR_UNAVAILABLE; }
     ZX_DEBUG_ASSERT(channel_index_ == 0);
     ZX_DEBUG_ASSERT(channel_start_.get() == 0);
 
-    resp_ = ScanResponse::New();
-    resp_->bss_description_set = f1dl::VectorPtr<BSSDescriptionPtr>::New(0);
-    resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
+    resp_ = wlan_mlme::ScanResponse::New();
+    resp_->bss_description_set = fidl::VectorPtr<wlan_mlme::BSSDescription>::New(0);
+    resp_->result_code = wlan_mlme::ScanResultCodes::NOT_SUPPORTED;
 
     if (req.channel_list->size() == 0) { return SendScanResponse(); }
     if (req.max_channel_time < req.min_channel_time) { return SendScanResponse(); }
-    if (!BSSTypes_IsValidValue(req.bss_type) || !ScanTypes_IsValidValue(req.scan_type)) {
-        return SendScanResponse();
-    }
+    // TODO(NET-629): re-enable checking the enum value after fidl2 lands
+    //if (!BSSTypes_IsValidValue(req.bss_type) || !ScanTypes_IsValidValue(req.scan_type)) {
+    //    return SendScanResponse();
+    //}
 
     // TODO(tkilbourn): define another result code (out of spec) for errors that aren't
     // NOT_SUPPORTED errors. Then set SUCCESS only when we've successfully finished scanning.
-    resp_->result_code = ScanResultCodes::SUCCESS;
-    req_ = req.Clone();
+    resp_->result_code = wlan_mlme::ScanResultCodes::SUCCESS;
+    req_ = wlan_mlme::ScanRequest::New();
+    zx_status_t status = req.Clone(req_.get());
+    if (status != ZX_OK) {
+        errorf("could not clone Scanrequest: %d\n", status);
+        Reset();
+        return status;
+    }
 
     channel_start_ = timer_->Now();
     zx::time timeout = InitialTimeout();
-    zx_status_t status = device_->SetChannel(ScanChannel());
+    status = device_->SetChannel(ScanChannel());
     if (status != ZX_OK) {
         errorf("could not queue set channel: %d\n", status);
         SendScanResponse();
@@ -68,7 +75,7 @@ zx_status_t Scanner::Start(const ScanRequest& req) {
     status = timer_->SetTimer(timeout);
     if (status != ZX_OK) {
         errorf("could not start scan timer: %d\n", status);
-        resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
+        resp_->result_code = wlan_mlme::ScanResultCodes::NOT_SUPPORTED;
         SendScanResponse();
         Reset();
         return status;
@@ -88,15 +95,15 @@ void Scanner::Reset() {
 }
 
 bool Scanner::IsRunning() const {
-    return !req_.is_null();
+    return req_ != nullptr;
 }
 
 Scanner::Type Scanner::ScanType() const {
     ZX_DEBUG_ASSERT(IsRunning());
     switch (req_->scan_type) {
-    case ScanTypes::PASSIVE:
+    case wlan_mlme::ScanTypes::PASSIVE:
         return Type::kPassive;
-    case ScanTypes::ACTIVE:
+    case wlan_mlme::ScanTypes::ACTIVE:
         return Type::kActive;
     }
 }
@@ -222,7 +229,7 @@ zx_status_t Scanner::HandleTimeout() {
     }
 
     // Reached probe delay for an active scan
-    if (req_->scan_type == ScanTypes::ACTIVE &&
+    if (req_->scan_type == wlan_mlme::ScanTypes::ACTIVE &&
         now >= channel_start_ + WLAN_TU(req_->probe_delay)) {
         debugf("Reached probe delay\n");
         // TODO(hahnr): Add support for CCA as described in IEEE Std 802.11-2016 11.1.4.3.2 f)
@@ -245,14 +252,14 @@ timer_fail:
 
 zx_status_t Scanner::HandleError(zx_status_t error_code) {
     debugfn();
-    resp_ = ScanResponse::New();
+    resp_ = wlan_mlme::ScanResponse::New();
     // TODO(tkilbourn): report the error code somehow
-    resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
+    resp_->result_code = wlan_mlme::ScanResultCodes::NOT_SUPPORTED;
     return SendScanResponse();
 }
 
 zx::time Scanner::InitialTimeout() const {
-    if (req_->scan_type == ScanTypes::PASSIVE) {
+    if (req_->scan_type == wlan_mlme::ScanTypes::PASSIVE) {
         return channel_start_ + WLAN_TU(req_->min_channel_time);
     } else {
         return channel_start_ + WLAN_TU(req_->probe_delay);
@@ -271,7 +278,7 @@ zx_status_t Scanner::SendProbeRequest() {
 
     auto hdr = frame.hdr;
     const common::MacAddr& mymac = device_->GetState()->address();
-    const common::MacAddr& bssid = common::MacAddr(req_->bssid->data());
+    const common::MacAddr& bssid = common::MacAddr(req_->bssid.data());
 
     hdr->addr1 = common::kBcastMac;
     hdr->addr2 = mymac;
@@ -331,17 +338,18 @@ zx_status_t Scanner::SendScanResponse() {
     nbrs_bss_.ForEach([this](fbl::RefPtr<Bss> bss) {
         if (req_->ssid->size() == 0 || req_->ssid == bss->SsidToString()) {
             debugbss("%s\n", bss->ToString().c_str());
-            resp_->bss_description_set.push_back(bss->ToFidl());
+            resp_->bss_description_set->push_back(bss->ToFidl());
         }
     });
 
-    size_t buf_len = sizeof(ServiceHeader) + resp_->GetSerializedSize();
+    // TODO(FIDL-2): replace this when we can get the size of the serialized response.
+    size_t buf_len = 16384;
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    zx_status_t status = SerializeServiceMsg(packet.get(), Method::SCAN_confirm, resp_);
+    zx_status_t status = SerializeServiceMsg(packet.get(), wlan_mlme::Method::SCAN_confirm, resp_.get());
     if (status != ZX_OK) {
         errorf("could not serialize ScanResponse: %d\n", status);
     } else {

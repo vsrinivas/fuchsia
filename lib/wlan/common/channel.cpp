@@ -170,7 +170,7 @@ std::string BandStr(const wlan_channel_t& chan) {
     return Is2Ghz(chan) ? "2GHz" : "5GHz";
 }
 
-wlan_channel_t FromFidl(const wlan::WlanChan& fidl_chan) {
+wlan_channel_t FromFidl(const wlan_mlme::WlanChan& fidl_chan) {
     // Translate wlan::WlanChan class defined in wlan-mlme.fidl
     // to wlan_channel_t struct defined in wlan.h
     return wlan_channel_t{

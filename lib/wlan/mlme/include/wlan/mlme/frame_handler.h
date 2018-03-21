@@ -6,8 +6,7 @@
 
 #include <wlan/mlme/mac_frame.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl.h"
-#include "lib/wlan/fidl/wlan_mlme_ext.fidl.h"
+#include <fuchsia/cpp/wlan_mlme.h>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -18,10 +17,10 @@
     virtual zx_status_t methodName(args) { return ZX_OK; }
 
 #define WLAN_DECL_FUNC_HANDLE_MLME(methodName, mlmeMsgType) \
-    WLAN_DECL_VIRT_FUNC_HANDLE(methodName, const mlmeMsgType&)
+    WLAN_DECL_VIRT_FUNC_HANDLE(methodName, const wlan_mlme::mlmeMsgType&)
 
 #define WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(methodName, mlmeMsgType)                    \
-    zx_status_t HandleMlmeFrameInternal(const Method& method, const mlmeMsgType& msg) { \
+    zx_status_t HandleMlmeFrameInternal(const wlan_mlme::Method& method, const wlan_mlme::mlmeMsgType& msg) { \
         return methodName(msg);                                                         \
     }
 
@@ -142,7 +141,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     }
 
     // Service Message handlers.
-    virtual zx_status_t HandleMlmeMessage(const Method& method) { return ZX_OK; }
+    virtual zx_status_t HandleMlmeMessage(const wlan_mlme::Method& method) { return ZX_OK; }
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeResetReq, ResetRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeScanReq, ScanRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeJoinReq, JoinRequest)
@@ -181,7 +180,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
    private:
     // Internal Service Message handlers.
     template <typename Message>
-    zx_status_t HandleFrameInternal(const Method& method, const Message& msg) {
+    zx_status_t HandleFrameInternal(const wlan_mlme::Method& method, const Message& msg) {
         auto status = HandleMlmeMessage(method);
         if (status != ZX_OK) { return status; }
 

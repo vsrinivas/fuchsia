@@ -7,7 +7,7 @@
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/mac_frame.h>
 
-#include "lib/wlan/fidl/wlan_mlme.fidl.h"
+#include <fuchsia/cpp/wlan_mlme.h>
 
 #include <wlan/common/bitfield.h>
 #include <wlan/protocol/mac.h>

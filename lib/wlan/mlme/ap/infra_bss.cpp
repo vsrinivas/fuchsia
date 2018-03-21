@@ -27,7 +27,7 @@ InfraBss::~InfraBss() {
     Stop();
 }
 
-void InfraBss::Start(const StartRequest& req) {
+void InfraBss::Start(const wlan_mlme::StartRequest& req) {
     if (IsStarted()) { return; }
 
     // Move to requested channel.

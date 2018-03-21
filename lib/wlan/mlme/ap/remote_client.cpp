@@ -394,7 +394,7 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
     }
 }
 
-zx_status_t AssociatedState::HandleMlmeEapolReq(const EapolRequest& req) {
+zx_status_t AssociatedState::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) {
     size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req.data->size();
     auto buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
@@ -406,9 +406,9 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const EapolRequest& req) {
     auto hdr = packet->mut_field<DataFrameHeader>(0);
     hdr->fc.set_type(FrameType::kData);
     hdr->fc.set_from_ds(1);
-    hdr->addr1.Set(req.dst_addr->data());
+    hdr->addr1.Set(req.dst_addr.data());
     hdr->addr2 = client_->bss()->bssid();
-    hdr->addr3.Set(req.src_addr->data());
+    hdr->addr3.Set(req.src_addr.data());
     hdr->sc.set_seq(client_->bss()->NextSeq(*hdr));
 
     auto llc = packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
@@ -423,11 +423,11 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const EapolRequest& req) {
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send EAPOL request packet: %d\n",
                client_->addr().ToString().c_str(), status);
-        service::SendEapolResponse(client_->device(), EapolResultCodes::TRANSMISSION_FAILURE);
+        service::SendEapolResponse(client_->device(), wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
         return status;
     }
 
-    service::SendEapolResponse(client_->device(), EapolResultCodes::SUCCESS);
+    service::SendEapolResponse(client_->device(), wlan_mlme::EapolResultCodes::SUCCESS);
     return status;
 }
 

@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module wlan;
-
-import "wlan_mlme.fidl";
+library wlan_mlme;
 
 // Custom primitives for communicating between the wlan service and the MLME drivers.
 // The primitives defined here are not part of the official 802.11 MLME SAP interface specification,
@@ -20,38 +18,36 @@ struct SignalReportIndication {
 // EAPOL.indication
 
 struct EapolIndication {
-    array<uint8, 6> src_addr;
-    array<uint8, 6> dst_addr;
-    array<uint8> data;
+    array<uint8>:6 src_addr;
+    array<uint8>:6 dst_addr;
+    vector<uint8> data;
 };
 
 // DEVICE_QUERY.request
 
 struct DeviceQueryRequest {
-    // This field prevents the C++ bindings from using an InlineStructPtr, which doesn't work with
-    // our dispatcher.
-    array<uint8, 1> unused;
+    int32 foo;
 };
 
 // DEVICE_QUERY.confirm
 
 enum MacMode {
-    STA,
-    AP,
+    STA = 1;
+    AP = 2;
 };
 
 struct BandCapabilities {
-    array<uint16> basic_rates;
+    vector<uint16> basic_rates;
     uint16 base_frequency;
-    array<uint8> channels;
+    vector<uint8> channels;
 };
 
 // TODO(tkilbourn): add more fields for debugging. For now, we just have the information
 // necessary for the SME.
 struct DeviceQueryResponse {
-    array<uint8, 6> mac_addr;
-    array<MacMode> modes;
-    array<BandCapabilities> bands;
+    array<uint8>:6 mac_addr;
+    vector<MacMode> modes;
+    vector<BandCapabilities> bands;
 };
 
 // Method ordinals are defined in wlan_mlme.fidl to prevent error prone overlaps with official

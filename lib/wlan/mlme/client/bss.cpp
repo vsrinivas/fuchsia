@@ -44,7 +44,7 @@ std::string Bss::ToString() const {
     char buf[1024];
     snprintf(buf, sizeof(buf),
              "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s Cap %04x SSID [%s]",
-             bssid_.ToString().c_str(), GetBssType() == BSSTypes::INFRASTRUCTURE ? "Y" : "N", rssi_,
+             bssid_.ToString().c_str(), GetBssType() == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N", rssi_,
              country_.c_str(), common::ChanStr(bcn_rx_chan_).c_str(), cap_.val(),
              SsidToString().c_str());
     return std::string(buf);
@@ -224,44 +224,41 @@ BeaconHash Bss::GetBeaconSignature(const Beacon* beacon, size_t len) const {
     return hash;
 }
 
-f1dl::StringPtr Bss::SsidToFidlString() {
+fidl::StringPtr Bss::SsidToFidlString() {
     // TODO(porce): Merge into SSID Element upon IE revamp.
-    return f1dl::StringPtr(reinterpret_cast<const char*>(ssid_), ssid_len_);
+    return fidl::StringPtr(reinterpret_cast<const char*>(ssid_), ssid_len_);
 }
 
-BSSDescriptionPtr Bss::ToFidl() {
+wlan_mlme::BSSDescription Bss::ToFidl() {
     // Translates the Bss object into FIDL message.
     // Note, this API does not directly handle Beacon frame or ProbeResponse frame.
 
-    auto fidl_ptr = BSSDescription::New();
-    auto fidl = fidl_ptr.get();
+    wlan_mlme::BSSDescription fidl;
 
-    fidl->bssid = f1dl::VectorPtr<uint8_t>::New(common::kMacAddrLen);
-    std::memcpy(fidl->bssid->data(), bssid_.byte, common::kMacAddrLen);
+    std::memcpy(fidl.bssid.mutable_data(), bssid_.byte, common::kMacAddrLen);
 
-    fidl->bss_type = GetBssType();
-    fidl->ssid = SsidToFidlString();
+    fidl.bss_type = GetBssType();
+    fidl.ssid = SsidToFidlString();
 
-    fidl->beacon_period = bcn_interval_;  // TODO(porce): consistent naming.
-    fidl->timestamp = timestamp_;
+    fidl.beacon_period = bcn_interval_;  // TODO(porce): consistent naming.
+    fidl.timestamp = timestamp_;
 
-    fidl->chan = WlanChan::New();
-    fidl->chan->primary = bcn_rx_chan_.primary;
-    fidl->chan->cbw = static_cast<wlan::CBW>(bcn_rx_chan_.cbw);
+    fidl.chan.primary = bcn_rx_chan_.primary;
+    fidl.chan.cbw = static_cast<wlan_mlme::CBW>(bcn_rx_chan_.cbw);
 
     // Stats
-    fidl->rssi_measurement = rssi_;
-    fidl->rcpi_measurement = rcpi_;
-    fidl->rsni_measurement = rsni_;
+    fidl.rssi_measurement = rssi_;
+    fidl.rcpi_measurement = rcpi_;
+    fidl.rsni_measurement = rsni_;
 
     // RSN
-    fidl->rsn.reset();
+    fidl.rsn.reset();
     if (rsne_len_ > 0) {
-        fidl->rsn = f1dl::VectorPtr<uint8_t>::New(rsne_len_);
-        memcpy(fidl->rsn->data(), rsne_.get(), rsne_len_);
+        fidl.rsn = fidl::VectorPtr<uint8_t>::New(rsne_len_);
+        memcpy(fidl.rsn->data(), rsne_.get(), rsne_len_);
     }
 
-    return fidl_ptr;
+    return fidl;
 }
 
 std::string Bss::SsidToString() const {
