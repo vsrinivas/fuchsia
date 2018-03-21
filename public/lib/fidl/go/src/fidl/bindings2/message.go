@@ -33,8 +33,8 @@ type Payload interface {
 // MarshalMessage is a convenience function for marshalling a full FIDL message,
 // that is, header and payload.
 func MarshalMessage(header *MessageHeader, s Payload, data []byte, handles []zx.Handle) (int, int, error) {
-	MarshalHeader(header, data[:])
-	nb, nh, err := Marshal(s, data[:MessageHeaderSize], handles[:])
+	MarshalHeader(header, data[:MessageHeaderSize])
+	nb, nh, err := Marshal(s, data[MessageHeaderSize:], handles[:])
 	return nb + MessageHeaderSize, nh, err
 }
 

@@ -98,7 +98,7 @@ func (p *Proxy) Call(ordinal uint32, req Payload, resp Payload) error {
 
 	// Marshal the message into the buffer
 	header := MessageHeader{
-		Txid:    0, // Txid == 0 for messages without a response.
+		Txid:    txid,
 		Ordinal: ordinal,
 	}
 	nb, nh, err := MarshalMessage(&header, req, respb[:], resph[:])
