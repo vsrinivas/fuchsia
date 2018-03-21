@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "audio_analysis.h"
 #include "garnet/bin/media/audio_server/gain.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 #include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
+#include "garnet/bin/media/audio_server/test/audio_analysis.h"
 #include "gtest/gtest.h"
 
 namespace media {

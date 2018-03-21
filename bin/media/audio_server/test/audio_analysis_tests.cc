@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
-#include "audio_analysis.h"
+#include "garnet/bin/media/audio_server/test/audio_analysis.h"
 #include "gtest/gtest.h"
 
 namespace media {

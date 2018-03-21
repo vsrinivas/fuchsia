@@ -14,8 +14,8 @@ namespace test {
 // In performing all of our audio analysis tests with a specific buffer length,
 // we can choose input sinusoids with frequencies that perfectly fit within
 // those buffers, eliminating the need for FFT windowing. Our measurement
-// frequencies are specifically chosen as approximations of the standard "3
-// freqs" per octave" representative set, assuming a 65536/48000 ratio between
+// frequencies have been specifically chosen as approximations of the standard
+// "3 freqs per octave" representative set, assuming a 65536/48000 ratio between
 // buffer size and eventual sample rate.
 //
 // Working in concert with GenerateCosine, these summary frequencies (currently
@@ -67,8 +67,8 @@ class FrequencySet {
   static constexpr uint32_t kRefFreqBin = 1;
   static constexpr uint32_t kReferenceFreq = kSummaryFreqs[kRefFreqBin];
 
+  // class is static only - prevent attempts to instantiate it
   FrequencySet() = delete;
-  ~FrequencySet() = delete;
 };
 
 }  // namespace test

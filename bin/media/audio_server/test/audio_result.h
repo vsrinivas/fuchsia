@@ -5,7 +5,7 @@
 #pragma once
 
 #include <cmath>
-#include "frequency_set.h"
+#include "garnet/bin/media/audio_server/test/frequency_set.h"
 
 namespace media {
 namespace test {
@@ -115,7 +115,6 @@ class AudioResult {
 
   // class is static only - prevent attempts to instantiate it
   AudioResult() = delete;
-  ~AudioResult() = delete;
 };
 
 }  // namespace test

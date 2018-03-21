@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "audio_result.h"
+#include "garnet/bin/media/audio_server/test/audio_result.h"
+#include "garnet/bin/media/audio_server/test/mixer_tests_shared.h"
 #include "lib/fxl/logging.h"
-#include "mixer_tests_shared.h"
 
 namespace media {
 namespace test {
