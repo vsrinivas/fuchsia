@@ -64,8 +64,9 @@ type StructMember struct {
 }
 
 type Interface struct {
-	Name    string
-	Methods []Method
+	Name        string
+	Methods     []Method
+	ServiceName string
 }
 
 type Method struct {
@@ -355,13 +356,28 @@ func (c *compiler) compileType(val types.Type) Type {
 		r = fmt.Sprintf("[%s; %v]", t.Decl, *val.ElementCount)
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
-		r = fmt.Sprintf("Vec<%s>", t.Decl)
+		if val.Nullable {
+			r = fmt.Sprintf("Option<Vec<%s>>", t.Decl)
+		} else {
+			r = fmt.Sprintf("Vec<%s>", t.Decl)
+		}
 	case types.StringType:
-		r = "String"
+		if val.Nullable {
+			r = "Option<String>"
+		} else {
+			r = "String"
+		}
 	case types.HandleType:
-		r = fmt.Sprintf("::zx::%s", compileHandleSubtype(val.HandleSubtype))
+		r = fmt.Sprintf("zx::%s", compileHandleSubtype(val.HandleSubtype))
+		if val.Nullable {
+			r = fmt.Sprintf("Option<%s>", r)
+		}
 	case types.RequestType:
 		r = compileCompoundIdentifier(types.ParseCompoundIdentifier(val.RequestSubtype))
+		r = fmt.Sprintf("fidl::endpoints2::ServerEnd<%sMarker>", r)
+		if val.Nullable {
+			r = fmt.Sprintf("Option<%s>", r)
+		}
 	case types.PrimitiveType:
 		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
@@ -384,7 +400,10 @@ func (c *compiler) compileType(val types.Type) Type {
 				r = t
 			}
 		case types.InterfaceDeclType:
-			r = fmt.Sprintf("::fidl::encoding2::InterfaceHandle<%s>", t)
+			r = fmt.Sprintf("fidl::endpoints2::ClientEnd<%sMarker>", t)
+			if val.Nullable {
+				r = fmt.Sprintf("Option<%s>", r)
+			}
 		default:
 			log.Fatal("Unknown declaration type: ", declType)
 		}
@@ -433,6 +452,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		compileCamelCompoundIdentifier(val.Name),
 		[]Method{},
+		strings.Trim(val.GetAttribute("ServiceName"), "\""),
 	}
 
 	for _, v := range val.Methods {

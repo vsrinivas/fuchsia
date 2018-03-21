@@ -26,8 +26,22 @@ State,
 {{- $interface := . }}
 
 #[derive(Debug, Clone)]
+pub struct {{ $interface.Name }}Marker;
+
+impl fidl::endpoints2::ServiceMarker for {{ $interface.Name }}Marker {
+  type Proxy = {{ $interface.Name }}Proxy;
+  const NAME: &'static str = "{{ $interface.ServiceName }}";
+}
+
+#[derive(Debug, Clone)]
 pub struct {{ $interface.Name }}Proxy {
   client: fidl::client2::Client,
+}
+
+impl fidl::endpoints2::Proxy for {{ $interface.Name }}Proxy {
+  fn from_channel(inner: async::Channel) -> Self {
+	 Self::new(inner)
+  }
 }
 
 impl {{ $interface.Name }}Proxy {
@@ -42,20 +56,20 @@ impl {{ $interface.Name }}Proxy {
    {{- end }}
   )
   {{- if $method.HasResponse -}}
-  -> fidl::client2::QueryResponseFut<
+  -> fidl::client2::QueryResponseFut<(
    {{- range $index, $response := $method.Response -}}
    {{- if (eq $index 0) -}} {{ $response.Type }}
    {{- else -}}, {{ $response.Type }} {{- end -}}
    {{- end -}}
-  > {
+  )> {
    self.client.send_query(&mut (
   {{- else -}}
   -> Result<(), fidl::Error> {
    self.client.send(&mut (
   {{- end -}}
     {{- range $index, $request := $method.Request -}}
-    {{- if (eq $index 0) -}} {{ $request.Name }}
-    {{- else -}}, {{ $request.Name }} {{- end -}}
+    {{- if (eq $index 0) -}} &mut *{{ $request.Name }}
+    {{- else -}}, &mut *{{ $request.Name }} {{- end -}}
     {{- end -}}
    ), {{ $method.Ordinal }})
   }
@@ -273,7 +287,7 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Response {
 
    let mut msg = fidl::encoding2::TransactionMessage {
     header,
-    body: response,
+    body: &mut response,
    };
 
    let (bytes, handles) = (&mut vec![], &mut vec![]);
