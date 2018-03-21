@@ -85,6 +85,26 @@ __BEGIN_CDECLS;
 
 #define PCI_MAX_BAR_COUNT           6u
 
+#define PCI_CLASS_LEGACY_DEVICE     0x00
+#define PCI_CLASS_MASS_STORAGE      0x01
+#define PCI_CLASS_NETWORK           0x02
+#define PCI_CLASS_DISPLAY           0x03
+#define PCI_CLASS_MULTIMEDIA        0x04
+#define PCI_CLASS_MEMORY            0x05
+#define PCI_CLASS_BRIDGE            0x06
+#define PCI_CLASS_SIMPLE_COMM       0x07
+#define PCI_CLASS_BASE_PERIPH       0x08
+#define PCI_CLASS_INPUT             0x09
+#define PCI_CLASS_DOCK              0x0A
+#define PCI_CLASS_PROCESSOR         0x0B
+#define PCI_CLASS_SERIAL_BUS        0x0C
+#define PCI_CLASS_WIRELESS          0x0D
+#define PCI_CLASS_INTELLIGENT_IO    0x0E
+#define PCI_CLASS_SATELLITE_COMM    0x0F
+#define PCI_CLASS_ENCRYPTION        0x10
+#define PCI_CLASS_DATA_ACQ          0x11
+#define PCI_CLASS_UNDEFINED         0x99
+
 typedef struct {
     uint16_t vendor_id;
     uint16_t device_id;
