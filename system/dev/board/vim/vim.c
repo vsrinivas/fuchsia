@@ -60,11 +60,17 @@ static pbus_mmio_t vim_display_mmios[] = {
     },
 };
 
-
 const pbus_gpio_t vim_display_gpios[] = {
     {
         // HPD
         .gpio = S912_GPIOH(20),
+    },
+};
+
+static const pbus_bti_t vim_display_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_DISPLAY,
     },
 };
 
@@ -77,6 +83,8 @@ static const pbus_dev_t display_dev = {
     .mmio_count = countof(vim_display_mmios),
     .gpios = vim_display_gpios,
     .gpio_count = countof(vim_display_gpios),
+    .btis = vim_display_btis,
+    .bti_count = countof(vim_display_btis),
 };
 
 static void vim_bus_release(void* ctx) {

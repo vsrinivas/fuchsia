@@ -52,12 +52,12 @@ static zx_status_t vc_get_mode(void* ctx, zx_display_info_t* info) {
 static zx_status_t vc_get_framebuffer(void* ctx, void** framebuffer) {
     if (!framebuffer) return ZX_ERR_INVALID_ARGS;
     vim2_display_t* display = ctx;
-    *framebuffer = display->fbuffer.vaddr;
+    *framebuffer = io_buffer_virt(&display->fbuffer);
     return ZX_OK;
 }
 
 static void flush_framebuffer(vim2_display_t* display) {
-    pdev_vmo_buffer_cache_flush(&display->fbuffer, 0,
+    io_buffer_cache_flush(&display->fbuffer, 0,
         (display->disp_info.stride * display->disp_info.height *
             ZX_PIXEL_FORMAT_BYTES(display->disp_info.format)));
 }
@@ -107,7 +107,8 @@ static void display_release(void* ctx) {
         pdev_vmo_buffer_release(&display->mmio_hdmitx_sec);
         pdev_vmo_buffer_release(&display->mmio_dmc);
         pdev_vmo_buffer_release(&display->mmio_cbus);
-        pdev_vmo_buffer_release(&display->fbuffer);
+        io_buffer_release(&display->fbuffer);
+        zx_handle_close(display->bti);
         free(display->edid_buf);
         free(display->p);
     }
@@ -133,7 +134,7 @@ static zx_status_t display_client_ioctl(void* ctx, uint32_t op, const void* in_b
         if (out_len < sizeof(ioctl_display_get_fb_t))
             return ZX_ERR_INVALID_ARGS;
         ioctl_display_get_fb_t* description = (ioctl_display_get_fb_t*)(out_buf);
-        zx_status_t status = zx_handle_duplicate(display->fbuffer.handle, ZX_RIGHT_SAME_RIGHTS, &description->vmo);
+        zx_status_t status = zx_handle_duplicate(display->fbuffer.vmo_handle, ZX_RIGHT_SAME_RIGHTS, &description->vmo);
         if (status != ZX_OK)
             return ZX_ERR_NO_RESOURCES;
         description->info = display->disp_info;
@@ -217,11 +218,10 @@ static zx_status_t setup_hdmi(vim2_display_t* display)
     display->disp_info.stride = display->p->timings.hactive;
     display->disp_info.pixelsize = ZX_PIXEL_FORMAT_BYTES(display->disp_info.format);
 
-    status = pdev_map_contig_buffer(&display->pdev,
+    status = io_buffer_init_with_bti(&display->fbuffer, display->bti,
                                     (display->disp_info.stride * display->disp_info.height *
                                      ZX_PIXEL_FORMAT_BYTES(display->disp_info.format)),
-                                    0, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, ZX_CACHE_POLICY_CACHED,
-                                    &display->fbuffer);
+                                     IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         return status;
     }
@@ -243,7 +243,7 @@ static zx_status_t setup_hdmi(vim2_display_t* display)
     /* OSD2 setup */
     configure_osd2(display);
 
-    zx_set_framebuffer(get_root_resource(), display->fbuffer.vaddr,
+    zx_set_framebuffer(get_root_resource(), io_buffer_virt(&display->fbuffer),
                        display->fbuffer.size, display->disp_info.format,
                        display->disp_info.width, display->disp_info.height,
                        display->disp_info.stride);
@@ -292,7 +292,7 @@ static int main_hdmi_thread(void *arg)
                 // let's shutdown hdmi
                 DISP_ERROR("Display Disconnected!\n");
                 hdmi_shutdown(display);
-                pdev_vmo_buffer_release(&display->fbuffer);
+                io_buffer_release(&display->fbuffer);
                 device_remove(display->fbdevice);
                 hdmi_inited = false;
             }
@@ -322,6 +322,12 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &display->pdev);
     if (status !=  ZX_OK) {
         DISP_ERROR("Could not get parent protocol\n");
+        goto fail;
+    }
+
+    status = pdev_get_bti(&display->pdev, 0, &display->bti);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not get BTI handle\n");
         goto fail;
     }
 

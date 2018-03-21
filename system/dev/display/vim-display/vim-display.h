@@ -6,6 +6,7 @@
 
 #include "edid.h"
 #include <assert.h>
+#include <ddk/io-buffer.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/gpio.h>
 #include <stdint.h>
@@ -29,6 +30,7 @@ typedef struct {
     zx_device_t*                        parent;
     zx_device_t*                        mydevice;
     zx_device_t*                        fbdevice;
+    zx_handle_t                         bti;
 
     gpio_protocol_t                     gpio;
 
@@ -41,7 +43,7 @@ typedef struct {
     pdev_vmo_buffer_t                   mmio_hdmitx_sec;
     pdev_vmo_buffer_t                   mmio_dmc;
     pdev_vmo_buffer_t                   mmio_cbus;
-    pdev_vmo_buffer_t                   fbuffer;
+    io_buffer_t                         fbuffer;
     zx_display_info_t                   disp_info;
 
     uint8_t                             input_color_format;

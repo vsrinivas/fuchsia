@@ -33,7 +33,7 @@ zx_status_t configure_canvas(vim2_display_t* display)
 
     // set framebuffer address in DMC, read/modify/write
     WRITE32_DMC_REG(DMC_CAV_LUT_DATAL,
-        (((display->fbuffer.paddr + 7) >> 3) & DMC_CAV_ADDR_LMASK) |
+        (((io_buffer_phys(&display->fbuffer) + 7) >> 3) & DMC_CAV_ADDR_LMASK) |
              ((((fbw + 7) >> 3) & DMC_CAV_WIDTH_LMASK) << DMC_CAV_WIDTH_LBIT));
 
     WRITE32_DMC_REG(DMC_CAV_LUT_DATAH,
