@@ -122,6 +122,14 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
     cameras.push_back(camera);
   }
 
+  // Dispatch the shader once to test the stereo flow.
+  // This is kept simple as most of the functionality is tested above.
+  // Identity Camera.
+  Camera left_camera(glm::mat4(1), glm::mat4(2));
+  Camera right_camera(glm::mat4(1), glm::mat4(3));
+  BufferPtr stereo_output_buffer = test_shader.LatchStereoPose(
+      frame, left_camera, right_camera, pose_buffer, base_time, true);
+
   // Execute shaders.
   frame->EndFrame(nullptr, []() {});
   auto result = escher->vk_device().waitIdle();
@@ -146,6 +154,21 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
       EXPECT_TRUE(CompareMatrix(mat4(), vp_matrix_out, 0.0));
     }
   }
+
+  // Stereo flow:
+  glm::mat4 left_vp_matrix_in = left_camera.projection() *
+                                MatrixFromPose(poses[0]) *
+                                left_camera.transform();
+  glm::mat4 left_vp_matrix_out = glm::make_mat4(reinterpret_cast<float*>(
+      stereo_output_buffer->ptr() + sizeof(hmd::Pose)));
+  EXPECT_TRUE(CompareMatrix(left_vp_matrix_in, left_vp_matrix_out, 0.00001));
+
+  glm::mat4 right_vp_matrix_in = right_camera.projection() *
+                                 MatrixFromPose(poses[0]) *
+                                 right_camera.transform();
+  glm::mat4 right_vp_matrix_out = glm::make_mat4(reinterpret_cast<float*>(
+      stereo_output_buffer->ptr() + sizeof(hmd::Pose) + 16 * sizeof(float)));
+  EXPECT_TRUE(CompareMatrix(right_vp_matrix_in, right_vp_matrix_out, 0.00001));
 
   escher->Cleanup();
 }
