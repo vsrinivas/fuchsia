@@ -28,7 +28,7 @@ namespace async {
 // because it is more efficient.  Using async::WaitMethod will generate
 // less code and use fewer indirect jumps at run time for dispatching each
 // event.
-class Wait final : private async_wait_t {
+class Wait final : public async_wait_t {
 public:
     // Handles completion of asynchronous wait operations.
     //
