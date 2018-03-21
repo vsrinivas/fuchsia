@@ -25,6 +25,7 @@
 #include <fbl/new.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
@@ -487,6 +488,39 @@ static bool TestTooSmall(void) {
     ASSERT_GT(fd, 0);
     size_t slice_size = blk_size * blk_count;
     ASSERT_EQ(fvm_init(fd, slice_size), ZX_ERR_NO_SPACE);
+    ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
+    END_TEST;
+}
+
+// Test initializing the FVM on a large partition, with metadata size > the max transfer size
+static bool TestLarge(void) {
+    BEGIN_TEST;
+
+    if (use_real_disk) {
+        fprintf(stderr, "Test is ramdisk-exclusive; ignoring\n");
+        return true;
+    }
+
+    char ramdisk_path[PATH_MAX];
+    uint64_t blk_size = 512;
+    uint64_t blk_count = 8 * (1 << 20);
+    ASSERT_GE(create_ramdisk(blk_size, blk_count, ramdisk_path), 0);
+
+    fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
+    ASSERT_GT(fd.get(), 0);
+    size_t slice_size = 16 * (1 << 10);
+    size_t metadata_size = fvm::MetadataSize(blk_size * blk_count, slice_size);
+
+    block_info_t info;
+    ASSERT_GE(ioctl_block_get_info(fd.get(), &info), 0);
+    ASSERT_LT(info.max_transfer_size, metadata_size);
+
+    ASSERT_EQ(fvm_init(fd.get(), slice_size), ZX_OK);
+
+    ASSERT_EQ(ioctl_device_bind(fd.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)), 0);
+    fd.reset();
+
+    ASSERT_EQ(wait_for_driver_bind(ramdisk_path, "fvm"), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -2780,6 +2814,7 @@ static bool TestRandomOpMultithreaded(void) {
 
 BEGIN_TEST_CASE(fvm_tests)
 RUN_TEST_MEDIUM(TestTooSmall)
+RUN_TEST_MEDIUM(TestLarge)
 RUN_TEST_MEDIUM(TestEmpty)
 RUN_TEST_MEDIUM(TestAllocateOne)
 RUN_TEST_MEDIUM(TestAllocateMany)

@@ -10,6 +10,7 @@
 #include <ddk/protocol/block.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fbl/array.h>
 #include <fbl/limits.h>
 #include <fbl/new.h>
 #include <fs/mapped-vmo.h>
@@ -103,35 +104,68 @@ zx_status_t VPartitionManager::AddPartition(fbl::unique_ptr<VPartition> vp) cons
     return ZX_OK;
 }
 
-static void io_callback(block_op_t* op, zx_status_t status) {
-    // Use the 32bit command field to shuttle the response
-    // back to the callsite that's waiting on the completion
-    op->command = status;
-    completion_signal((completion_t*) op->cookie);
+struct VpmIoCookie {
+    fbl::atomic<size_t> num_txns;
+    fbl::atomic<zx_status_t> status;
+    completion_t signal;
+};
+
+static void IoCallback(block_op_t* op, zx_status_t status) {
+    VpmIoCookie* c = reinterpret_cast<VpmIoCookie*>(op->cookie);
+    if (status != ZX_OK) {
+        c->status.store(status);
+    }
+    if (c->num_txns.fetch_sub(1) - 1 == 0) {
+        completion_signal(&c->signal);
+    }
 }
 
 zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off,
                                           size_t len, uint32_t command) {
-    completion_t signal;
+    size_t block_size = info_.block_size;
+    const size_t max_transfer = info_.max_transfer_size / block_size;
+    size_t len_remaining = len / block_size;
+    size_t vmo_offset = 0;
+    size_t dev_offset = off / block_size;
+    size_t num_txns = fbl::round_up(len_remaining, max_transfer) / max_transfer;
 
-    char buffer[block_op_size_];
-    block_op_t* bop = reinterpret_cast<block_op_t*>(buffer);
-    size_t bsz = info_.block_size;
+    fbl::AllocChecker ac;
+    fbl::Array<uint8_t> buffer(new (&ac) uint8_t[block_op_size_ * num_txns],
+                               block_op_size_ * num_txns);
 
-    bop->command = command;
-    bop->rw.vmo = vmo;
-    bop->rw.length = (uint32_t) (len / bsz);
-    bop->rw.offset_dev = off / bsz;
-    bop->rw.offset_vmo = 0;
-    bop->rw.pages = NULL;
-    bop->completion_cb = io_callback;
-    bop->cookie = &signal;
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
 
-    completion_reset(&signal);
-    bp_.ops->queue(bp_.ctx, bop);
-    completion_wait(&signal, ZX_TIME_INFINITE);
+    VpmIoCookie cookie;
+    cookie.num_txns.store(num_txns);
+    cookie.status.store(ZX_OK);
+    completion_reset(&cookie.signal);
 
-    return bop->command;
+    for (size_t i = 0; i < num_txns; i++) {
+        size_t length = fbl::min(len_remaining, max_transfer);
+        len_remaining -= length;
+
+        block_op_t* bop = reinterpret_cast<block_op_t*>(buffer.get() + (block_op_size_ * i));
+        bop->command = command;
+        bop->rw.vmo = vmo;
+        bop->rw.length = static_cast<uint32_t>(length);
+        bop->rw.offset_dev = dev_offset;
+        bop->rw.offset_vmo = vmo_offset;
+        bop->rw.pages = NULL;
+        bop->completion_cb = IoCallback;
+        bop->cookie = &cookie;
+        memset(buffer.get() + (block_op_size_ * i) + sizeof(block_op_t), 0,
+               block_op_size_ - sizeof(block_op_t));
+        bp_.ops->queue(bp_.ctx, bop);
+
+        vmo_offset += length;
+        dev_offset += length;
+    }
+
+    ZX_DEBUG_ASSERT(len_remaining == 0);
+    completion_wait(&cookie.signal, ZX_TIME_INFINITE);
+    return static_cast<zx_status_t>(cookie.status.load());
 }
 
 zx_status_t VPartitionManager::Load() {

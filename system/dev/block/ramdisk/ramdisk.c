@@ -24,6 +24,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#define MAX_TRANSFER_SIZE (1 << 19)
+
 typedef struct {
     zx_device_t* zxdev;
 } ramctl_device_t;
@@ -82,6 +84,11 @@ static int worker_thread(void* arg) {
         void* addr = (void*) dev->mapped_addr + txn->op.rw.offset_dev;
         size_t len = txn->op.rw.length * dev->blk_size;
 
+        if (len > MAX_TRANSFER_SIZE) {
+            txn->op.completion_cb(&txn->op, ZX_ERR_OUT_OF_RANGE);
+            continue;
+        }
+
         // Put the ramdisk to sleep if we have reached the required # of transactions
         if (dev->sa_txn_count > 0 && dev->txn_count >= dev->sa_txn_count) {
             dev->asleep = true;
@@ -128,7 +135,7 @@ static void ramdisk_get_info(void* ctx, block_info_t* info) {
     info->block_size = ramdev->blk_size;
     info->block_count = ramdev->blk_count;
     // Arbitrarily set, but matches the SATA driver for testing
-    info->max_transfer_size = (1 << 25);
+    info->max_transfer_size = MAX_TRANSFER_SIZE;
     info->flags = ramdev->flags;
 }
 
