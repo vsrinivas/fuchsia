@@ -29,6 +29,7 @@ QueryProcessor::QueryProcessor(SuggestionEngineImpl* engine,
       dirty_(false),
       has_media_response_(false),
       request_ended_(false),
+      activity_(engine->debug()->RegisterOngoingActivity()),
       weak_ptr_factory_(this) {
   if (engine_->query_handlers_.empty()) {
     EndRequest();
@@ -89,7 +90,8 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
 
     // TODO(rosswang): allow falling back on natural language text response
     // without a spoken response
-    f1dl::StringPtr text_response = std::move(response->natural_language_response);
+    f1dl::StringPtr text_response =
+        std::move(response->natural_language_response);
     if (!text_response)
       text_response = "";
     engine_->speech_listeners_.ForAllPtrs([&](FeedbackListener* listener) {
@@ -137,6 +139,7 @@ void QueryProcessor::EndRequest() {
 
   weak_ptr_factory_.InvalidateWeakPtrs();
   request_ended_ = true;
+  activity_ = nullptr;
 }
 
 void QueryProcessor::TimeOut() {

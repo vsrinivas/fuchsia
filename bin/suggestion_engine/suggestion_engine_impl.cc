@@ -54,6 +54,10 @@ SuggestionEngineImpl::SuggestionEngineImpl(
 
 SuggestionEngineImpl::~SuggestionEngineImpl() = default;
 
+fxl::WeakPtr<SuggestionDebugImpl> SuggestionEngineImpl::debug() {
+  return debug_.GetWeakPtr();
+}
+
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
                                            ProposalPtr proposal) {
   next_processor_.AddProposal(source->component_url(), std::move(proposal));
@@ -240,14 +244,14 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   // with a configuration file
 
   // Set up the next ranking features
-  next_suggestions_.AddRankingFeature(
-      1.0, ranking_features["proposal_hint_rf"]);
+  next_suggestions_.AddRankingFeature(1.0,
+                                      ranking_features["proposal_hint_rf"]);
   next_suggestions_.AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
   next_suggestions_.AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
 
   // Set up the query ranking features
-  query_suggestions_.AddRankingFeature(
-      1.0, ranking_features["proposal_hint_rf"]);
+  query_suggestions_.AddRankingFeature(1.0,
+                                       ranking_features["proposal_hint_rf"]);
   query_suggestions_.AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
   query_suggestions_.AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
   query_suggestions_.AddRankingFeature(0, ranking_features["query_match_rf"]);
@@ -311,6 +315,7 @@ void SuggestionEngineImpl::PerformActions(
 
 void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
                                                     uint32_t story_color) {
+  auto activity = debug_.RegisterOngoingActivity();
   const auto& create_story = action->get_create_story();
 
   if (story_provider_) {
@@ -326,7 +331,7 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
     auto& module_id = create_story->module_id;
     story_provider_->CreateStoryWithInfo(
         create_story->module_id, std::move(extra_info), std::move(initial_data),
-        [this, module_id](const f1dl::StringPtr& story_id) {
+        [this, activity, module_id](const f1dl::StringPtr& story_id) {
           modular::StoryControllerPtr story_controller;
           story_provider_->GetController(story_id,
                                          story_controller.NewRequest());
@@ -335,10 +340,10 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
           story_controller->GetInfo(fxl::MakeCopyable(
               // TODO(thatguy): We should not be std::move()ing
               // story_controller *while we're calling it*.
-              [ this, controller = std::move(story_controller) ](
+              [this, activity, controller = std::move(story_controller)](
                   modular::StoryInfoPtr story_info, modular::StoryState state) {
-                FXL_LOG(INFO) << "Requesting focus for story_id "
-                              << story_info->id;
+                FXL_LOG(INFO)
+                    << "Requesting focus for story_id " << story_info->id;
                 focus_provider_ptr_->Request(story_info->id);
               }));
         });
@@ -400,18 +405,21 @@ void SuggestionEngineImpl::PerformAddModuleAction(const ActionPtr& action) {
 void SuggestionEngineImpl::PerformCustomAction(const ActionPtr& action,
                                                const std::string& source_url,
                                                uint32_t story_color) {
+  auto activity = debug_.RegisterOngoingActivity();
   auto custom_action = action->get_custom_action().Bind();
-  custom_action->Execute(fxl::MakeCopyable([
-    this, custom_action = std::move(custom_action), source_url, story_color
-  ](f1dl::VectorPtr<maxwell::ActionPtr> actions) {
-    if (actions)
-      PerformActions(std::move(actions), source_url, story_color);
-  }));
+  custom_action->Execute(fxl::MakeCopyable(
+      [this, activity, custom_action = std::move(custom_action), source_url,
+       story_color](f1dl::VectorPtr<maxwell::ActionPtr> actions) {
+        if (actions)
+          PerformActions(std::move(actions), source_url, story_color);
+      }));
 }
 
 void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
   if (!audio_server_)
     return;
+
+  auto activity = debug_.RegisterOngoingActivity();
 
   media_renderer_.Unbind();
 
@@ -424,7 +432,7 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
   media::MediaPacketConsumerPtr consumer;
   media_renderer_->GetPacketConsumer(consumer.NewRequest());
 
-  media_packet_producer_->Connect(std::move(consumer), [this] {
+  media_packet_producer_->Connect(std::move(consumer), [this, activity] {
     time_lord_.Unbind();
     media_timeline_consumer_.Unbind();
 
@@ -434,7 +442,7 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
 
     media_renderer_->GetTimelineControlPoint(time_lord_.NewRequest());
     time_lord_->GetTimelineConsumer(media_timeline_consumer_.NewRequest());
-    time_lord_->Prime([this] {
+    time_lord_->Prime([this, activity] {
       auto tt = media::TimelineTransform::New();
       tt->reference_time =
           media::Timeline::local_now() + media::Timeline::ns_from_ms(30);
@@ -444,8 +452,8 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
       HandleMediaUpdates(media::MediaTimelineControlPoint::kInitialStatus,
                          nullptr);
 
-      media_timeline_consumer_->SetTimelineTransform(std::move(tt),
-                                                     [](bool completed) {});
+      media_timeline_consumer_->SetTimelineTransform(
+          std::move(tt), [activity](bool completed) {});
     });
   });
 
@@ -459,6 +467,8 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
 void SuggestionEngineImpl::HandleMediaUpdates(
     uint64_t version,
     media::MediaTimelineControlPointStatusPtr status) {
+  auto activity = debug_.RegisterOngoingActivity();
+
   if (status && status->end_of_stream) {
     speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
       listener->OnStatusChanged(SpeechStatus::IDLE);
@@ -467,8 +477,9 @@ void SuggestionEngineImpl::HandleMediaUpdates(
     media_renderer_ = nullptr;
   } else {
     time_lord_->GetStatus(
-        version, [this](uint64_t next_version,
-                        media::MediaTimelineControlPointStatusPtr next_status) {
+        version, [this, activity](
+                     uint64_t next_version,
+                     media::MediaTimelineControlPointStatusPtr next_status) {
           HandleMediaUpdates(next_version, std::move(next_status));
         });
   }
@@ -488,11 +499,19 @@ void SuggestionEngineImpl::OnContextUpdate(ContextUpdatePtr update) {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto context = component::ApplicationContext::CreateFromStartupInfo();
+  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto suggestion_engine =
+      std::make_unique<maxwell::SuggestionEngineImpl>(app_context.get());
+  fxl::WeakPtr<maxwell::SuggestionDebugImpl> debug = suggestion_engine->debug();
   modular::AppDriver<maxwell::SuggestionEngineImpl> driver(
-      context->outgoing_services(),
-      std::make_unique<maxwell::SuggestionEngineImpl>(context.get()),
+      app_context->outgoing_services(), std::move(suggestion_engine),
       [&loop] { loop.QuitNow(); });
-  loop.Run();
+
+  // The |WaitUntilIdle| debug functionality escapes the main message loop to
+  // perform its test.
+  do {
+    loop.Run();
+  } while (debug && debug->FinishIdleCheck());
+
   return 0;
 }

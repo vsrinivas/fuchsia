@@ -16,6 +16,7 @@
 #include "peridot/bin/agents/ideas.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/story_provider_mock.h"
+#include "peridot/lib/util/wait_until_idle.h"
 #include "peridot/tests/maxwell_integration/context_engine_test_base.h"
 #include "peridot/tests/maxwell_integration/test_suggestion_listener.h"
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -106,6 +107,16 @@ class AskProposinator : public Proposinator, public QueryHandler {
     query_ = std::move(query);
     query_callback_ = callback;
     query_proposals_.resize(0);
+
+    if (waiting_for_query_) {
+      waiting_for_query_ = false;
+      fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    }
+  }
+
+  void WaitForQuery() {
+    waiting_for_query_ = true;
+    fsl::MessageLoop::GetCurrent()->Run();
   }
 
   void Commit() {
@@ -135,6 +146,7 @@ class AskProposinator : public Proposinator, public QueryHandler {
   UserInputPtr query_;
   f1dl::VectorPtr<ProposalPtr> query_proposals_;
   OnQueryCallback query_callback_;
+  bool waiting_for_query_ = false;
 };
 
 // maintains the number of proposals specified by the context field "n"
@@ -253,6 +265,11 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     Interact(suggestion_id, InteractionType::DISMISSED);
   }
 
+  void WaitUntilIdle() {
+    ContextEngineTestBase::WaitUntilIdle();
+    util::WaitUntilIdle(suggestion_debug_.get());
+  }
+
  private:
   void Interact(const std::string& suggestion_id,
                 InteractionType interaction_type) {
@@ -337,6 +354,9 @@ class InterruptionTest : public virtual SuggestionEngineTest {
         listener_binding_.NewBinding());
     suggestion_debug()->WatchInterruptionProposals(
         debug_listener_binding_.NewBinding());
+
+    // Make sure we're subscribed before we start the test.
+    WaitUntilIdle();
   }
 
   TestDebugInterruptionListener* debugListener() { return &debug_listener_; }
@@ -348,7 +368,7 @@ class InterruptionTest : public virtual SuggestionEngineTest {
   void EnsureDebugMatches() {
     auto& subscriberNexts = listener_.GetSuggestions();
     auto lastInterruption = debug_listener_.get_interrupt_proposal();
-    EXPECT_GE(subscriberNexts.size(), (size_t)1);
+    ASSERT_GE(subscriberNexts.size(), 1u);
     auto& suggestion = subscriberNexts[0];
     EXPECT_EQ(suggestion->display->headline,
               lastInterruption->display->headline);
@@ -452,58 +472,72 @@ class ResultCountTest : public NextTest {
 
 TEST_F(ResultCountTest, InitiallyEmpty) {
   StartListening(10);
-  CHECK_RESULT_COUNT(0);
+  WaitUntilIdle();
+  EXPECT_EQ(0, suggestion_count());
 }
 
 TEST_F(ResultCountTest, OneByOne) {
   StartListening(10);
   PublishNewSignal();
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
 
   PublishNewSignal();
-  CHECK_RESULT_COUNT(2);
+  WaitUntilIdle();
+  EXPECT_EQ(2, suggestion_count());
 }
 
 TEST_F(ResultCountTest, AddOverLimit) {
   StartListening(0);
   PublishNewSignal(3);
-  CHECK_RESULT_COUNT(0);
+  WaitUntilIdle();
+  EXPECT_EQ(0, suggestion_count());
 
   SetResultCount(1);
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
 
   SetResultCount(3);
-  CHECK_RESULT_COUNT(3);
+  WaitUntilIdle();
+  EXPECT_EQ(3, suggestion_count());
 
   SetResultCount(5);
-  CHECK_RESULT_COUNT(3);
+  WaitUntilIdle();
+  EXPECT_EQ(3, suggestion_count());
 
   PublishNewSignal(4);
-  CHECK_RESULT_COUNT(5);
+  WaitUntilIdle();
+  EXPECT_EQ(5, suggestion_count());
 }
 
 TEST_F(ResultCountTest, Clear) {
   StartListening(10);
   PublishNewSignal(3);
-  CHECK_RESULT_COUNT(3);
+  WaitUntilIdle();
+  EXPECT_EQ(3, suggestion_count());
 
   SetResultCount(0);
-  CHECK_RESULT_COUNT(0);
+  WaitUntilIdle();
+  EXPECT_EQ(0, suggestion_count());
 
   SetResultCount(10);
-  CHECK_RESULT_COUNT(3);
+  WaitUntilIdle();
+  EXPECT_EQ(3, suggestion_count());
 }
 
 TEST_F(ResultCountTest, MultiRemove) {
   StartListening(10);
   PublishNewSignal(3);
-  CHECK_RESULT_COUNT(3);
+  WaitUntilIdle();
+  EXPECT_EQ(3, suggestion_count());
 
   SetResultCount(1);
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
 
   SetResultCount(10);
-  CHECK_RESULT_COUNT(3);
+  WaitUntilIdle();
+  EXPECT_EQ(3, suggestion_count());
 }
 
 /* TODO(jwnichols): Re-enable these two tests when this functionality returns
@@ -519,15 +553,17 @@ TEST_F(NextTest, Dedup) {
 
   StartListening(10);
   gps.Publish(90, 0);
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
   const Suggestion* suggestion = GetOnlySuggestion();
   const std::string uuid1 = suggestion->uuid;
   const std::string headline1 = suggestion->display->headline;
   gps.Publish(-90, 0);
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
   suggestion = GetOnlySuggestion();
   EXPECT_NE(headline1, suggestion->display->headline);
-  Sleep();
+  WaitUntilIdle();
   EnsureDebugMatches();
 }
 
@@ -545,7 +581,8 @@ TEST_F(NextTest, NamespacingPerAgent) {
   // Spoof the idea agent's proposal ID (well, not really spoofing since they
   // are namespaced by component).
   conflictinator.Propose(agents::IdeasAgent::kIdeaId);
-  CHECK_RESULT_COUNT(2);
+  WaitUntilIdle();
+  EXPECT_EQ(2, suggestion_count());
   EnsureDebugMatches();
 }
 */
@@ -562,13 +599,16 @@ TEST_F(NextTest, Fifo) {
 
   StartListening(10);
   fifo.Propose("1");
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
   auto uuid_1 = GetOnlySuggestion()->uuid;
 
   fifo.Propose("2");
-  CHECK_RESULT_COUNT(2);
+  WaitUntilIdle();
+  EXPECT_EQ(2, suggestion_count());
   fifo.Remove("1");
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
   auto suggestion = GetOnlySuggestion();
   EXPECT_NE(uuid_1, suggestion->uuid);
   EXPECT_EQ("2", suggestion->display->headline);
@@ -581,19 +621,20 @@ TEST_F(NextTest, CappedFifo) {
 
   StartListening(1);
   fifo.Propose("1");
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
   auto uuid1 = GetOnlySuggestion()->uuid;
 
   fifo.Propose("2");
-  Sleep();
+  WaitUntilIdle();
   EXPECT_EQ(uuid1, GetOnlySuggestion()->uuid)
       << "Proposal 2 ranked over proposal 2; test invalid; update to test "
          "FIFO-ranked proposals.";
 
   fifo.Remove("1");
-  // Need the suggestion-count() == 1 because there may be a brief moment when
-  // the suggestion count is 2.
-  ASYNC_CHECK(suggestion_count() == 1 && GetOnlySuggestion()->uuid != uuid1);
+  WaitUntilIdle();
+  ASSERT_EQ(1, suggestion_count());
+  EXPECT_NE(uuid1, GetOnlySuggestion()->uuid);
 
   EXPECT_EQ("2", GetOnlySuggestion()->display->headline);
 }
@@ -603,20 +644,22 @@ TEST_F(NextTest, RemoveBeforeSubscribe) {
 
   zombinator.Propose("brains");
   zombinator.Remove("brains");
-  Sleep();
+  WaitUntilIdle();
 
   StartListening(10);
-  CHECK_RESULT_COUNT(0);
+  WaitUntilIdle();
+  EXPECT_EQ(0, suggestion_count());
 }
 
 TEST_F(NextTest, SubscribeBeyondController) {
   Proposinator p(suggestion_engine());
 
   StartListening(10);
-  Sleep();
+  WaitUntilIdle();
   p.Propose("1");
   p.Propose("2");
-  CHECK_RESULT_COUNT(2);
+  WaitUntilIdle();
+  EXPECT_EQ(2, suggestion_count());
 }
 
 class SuggestionInteractionTest : public NextTest {};
@@ -632,11 +675,13 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   f1dl::VectorPtr<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
 
   auto suggestion_id = GetOnlySuggestion()->uuid;
   AcceptSuggestion(suggestion_id);
-  ASYNC_EQ("foo://bar", story_provider()->last_created_story());
+  WaitUntilIdle();
+  EXPECT_EQ("foo://bar", story_provider()->last_created_story());
 }
 
 TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
@@ -655,11 +700,13 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   f1dl::VectorPtr<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
 
   auto suggestion_id = GetOnlySuggestion()->uuid;
   AcceptSuggestion(suggestion_id);
-  ASYNC_EQ("foo://bar", story_provider()->last_created_story());
+  WaitUntilIdle();
+  EXPECT_EQ("foo://bar", story_provider()->last_created_story());
 }
 
 TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
@@ -681,32 +728,35 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
   f1dl::VectorPtr<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
 
   auto suggestion_id = GetOnlySuggestion()->uuid;
   AcceptSuggestion(suggestion_id);
 
-  ASYNC_EQ(module_id, story_provider()->story_controller().last_added_module());
+  WaitUntilIdle();
+  EXPECT_EQ(module_id,
+            story_provider()->story_controller().last_added_module());
 }
 
 TEST_F(AskTest, DefaultAsk) {
   AskProposinator p(suggestion_engine());
 
   Query("test query");
-  Sleep();
+  p.WaitForQuery();
   p.ProposeForAsk("1");
   p.Commit();
-  Sleep();
 
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
 
   Query("test query 2");
-  Sleep();
+  p.WaitForQuery();
   p.ProposeForAsk("2");
   p.Commit();
-  Sleep();
 
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
   EnsureDebugMatches();
 }
 
@@ -722,20 +772,20 @@ TEST_F(AskTest, AskDifferentQueries) {
   AskProposinator p(suggestion_engine());
 
   Query("The Hottest Band on the Internet");
-  Sleep();
+  p.WaitForQuery();
   p.ProposeForAsk("Mozart's Ghost");
   p.ProposeForAsk("The Hottest Band on the Internet");
   p.Commit();
-  Sleep();
+  WaitUntilIdle();
 
   CHECK_TOP_HEADLINE("The Hottest Band on the Internet");
 
   Query("Mozart's Ghost");
-  Sleep();
+  p.WaitForQuery();
   p.ProposeForAsk("Mozart's Ghost");
   p.ProposeForAsk("The Hottest Band on the Internet");
   p.Commit();
-  Sleep();
+  WaitUntilIdle();
 
   CHECK_TOP_HEADLINE("Mozart's Ghost");
   EnsureDebugMatches();
@@ -745,41 +795,41 @@ TEST_F(AskTest, ChangeHeadlineRank) {
   AskProposinator p(suggestion_engine());
 
   Query("test query");
-  Sleep();
+  p.WaitForQuery();
   p.ProposeForAsk("E-mail", "E-mail");
   p.ProposeForAsk("E-vite", "E-vite");
   p.ProposeForAsk("E-card", "E-card");
   p.ProposeForAsk("Music", "Music");
   p.Commit();
-  Sleep();
 
-  CHECK_RESULT_COUNT(4);
+  WaitUntilIdle();
+  EXPECT_EQ(4, suggestion_count());
 
   Query("Ca");
-  Sleep();
+  p.WaitForQuery();
   p.ProposeForAsk("E-mail", "E-mail");
   p.ProposeForAsk("E-vite", "E-vite");
   p.ProposeForAsk("E-card", "E-card");
   p.ProposeForAsk("Music", "Music");
   p.Commit();
-  Sleep();
+  WaitUntilIdle();
 
   // E-card has a 'ca' in the 3rd position, so should be ranked highest.
   CHECK_TOP_HEADLINE("E-card");
 
   Query("Ca");
-  Sleep();
+  p.WaitForQuery();
   p.ProposeForAsk("E-mail", "E-mail");
   p.ProposeForAsk("E-mail", "Cam");
   p.ProposeForAsk("E-vite", "E-vite");
   p.ProposeForAsk("E-card", "E-card");
   p.ProposeForAsk("Music", "Music");
   p.Commit();
-  Sleep();
+  WaitUntilIdle();
 
   CHECK_TOP_HEADLINE("Cam");
   EnsureDebugMatches();
-  CHECK_RESULT_COUNT(4);
+  EXPECT_EQ(4, suggestion_count());
 }
 */
 
@@ -793,16 +843,16 @@ TEST_F(AskTest, AskRanking) {
   AskProposinator p(suggestion_engine());
 
   Query("");
-  Sleep();
+  p.WaitForQuery();
   p.ProposeForAsk("View E-mail");
   p.ProposeForAsk("Compose E-mail");
   p.ProposeForAsk("Reply to E-mail");
   p.ProposeForAsk("Send E-vites");
   p.ProposeForAsk("E-mail Guests");
   p.Commit();
-  Sleep();
 
-  CHECK_RESULT_COUNT(5);
+  WaitUntilIdle();
+  EXPECT_EQ(5, suggestion_count());
   // Results should be ranked by timestamp at this point.
   HEADLINE_EQ("View E-mail", 0);
   HEADLINE_EQ("Compose E-mail", 1);
@@ -812,16 +862,16 @@ TEST_F(AskTest, AskRanking) {
   EnsureDebugMatches();
 
   Query("e-mail");
-  Sleep();
+  p.WaitForQuery();
   p.ProposeForAsk("View E-mail");
   p.ProposeForAsk("Compose E-mail");
   p.ProposeForAsk("Reply to E-mail");
   p.ProposeForAsk("Send E-vites");
   p.ProposeForAsk("E-mail Guests");
   p.Commit();
-  Sleep();
 
-  CHECK_RESULT_COUNT(5);
+  WaitUntilIdle();
+  EXPECT_EQ(5, suggestion_count());
   HEADLINE_EQ("View E-mail", 0);
   HEADLINE_EQ("E-mail Guests", 1);
   HEADLINE_EQ("Compose E-mail", 2);
@@ -829,30 +879,30 @@ TEST_F(AskTest, AskRanking) {
   EnsureDebugMatches();
 
   Query("e-mail", 2);
-  Sleep();
+  p.WaitForQuery();
   p.ProposeForAsk("View E-mail");
   p.ProposeForAsk("Compose E-mail");
   p.ProposeForAsk("Reply to E-mail");
   p.ProposeForAsk("Send E-vites");
   p.ProposeForAsk("E-mail Guests");
   p.Commit();
-  Sleep();
 
-  CHECK_RESULT_COUNT(2);
+  WaitUntilIdle();
+  EXPECT_EQ(2, suggestion_count());
   HEADLINE_EQ("View E-mail", 0);
   HEADLINE_EQ("E-mail Guests", 1);
 
   Query("Compose", 1);
-  Sleep();
+  p.WaitForQuery();
   p.ProposeForAsk("View E-mail");
   p.ProposeForAsk("Compose E-mail");
   p.ProposeForAsk("Reply to E-mail");
   p.ProposeForAsk("Send E-vites");
   p.ProposeForAsk("E-mail Guests");
   p.Commit();
-  Sleep();
 
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
   HEADLINE_EQ("Compose E-mail", 0);
   EnsureDebugMatches();
 }
@@ -860,8 +910,6 @@ TEST_F(AskTest, AskRanking) {
 class SuggestionFilteringTest : public NextTest {};
 
 TEST_F(SuggestionFilteringTest, Baseline) {
-  Sleep();  // TEMPORARY; wait for init
-
   // Show that without any existing Stories, we see Proposals to launch
   // any story.
   Proposinator p(suggestion_engine());
@@ -874,12 +922,11 @@ TEST_F(SuggestionFilteringTest, Baseline) {
   f1dl::VectorPtr<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
 }
 
 TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
-  Sleep();  // TEMPORARY; wait for init
-
   // Show that with an existing Story for a URL, we see Proposals to launch
   // other URLs.
   Proposinator p(suggestion_engine());
@@ -900,15 +947,14 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   f1dl::VectorPtr<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
 }
 
 /* TODO(jwnichols): Re-enable these two tests when this functionality returns
    to the suggestion engine.
 
 TEST_F(SuggestionFilteringTest, FilterOnPropose) {
-  Sleep();  // TEMPORARY; wait for init
-
   // If a Story already exists, then Proposals that want to create
   // that same story are filtered when they are proposed.
   Proposinator p(suggestion_engine());
@@ -931,12 +977,11 @@ TEST_F(SuggestionFilteringTest, FilterOnPropose) {
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   p.Propose("2");
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
 }
 
 TEST_F(SuggestionFilteringTest, ChangeFiltered) {
-  Sleep();  // TEMPORARY; wait for init
-
   Proposinator p(suggestion_engine());
   StartListening(10);
 
@@ -961,38 +1006,35 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
   // historically crashed by now
   p.Propose("2");
 
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
 }
 */
 
 TEST_F(InterruptionTest, SingleInterruption) {
-  Sleep();  // TEMPORARY; wait for init
-
   Proposinator p(suggestion_engine());
 
   p.Propose("1", "2", maxwell::AnnoyanceType::INTERRUPT);
-  Sleep();
 
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
   EnsureDebugMatches();
 }
 
 TEST_F(InterruptionTest, RemovedInterruption) {
-  Sleep();
-
   Proposinator p(suggestion_engine());
 
   p.Propose("1", "2", maxwell::AnnoyanceType::INTERRUPT);
-  Sleep();
 
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
   EnsureDebugMatches();
 
   // Removing shouldn't do anything to an interruption
   p.Remove("1");
-  Sleep();
 
-  CHECK_RESULT_COUNT(1);
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
 }
 
 }  // namespace maxwell

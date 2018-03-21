@@ -4,65 +4,6 @@
 
 #include "peridot/tests/maxwell_integration/test.h"
 
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/synchronization/sleep.h"
-
-constexpr auto kYieldSleepPeriod = fxl::TimeDelta::FromMilliseconds(1);
-constexpr auto kYieldBatchPeriod = fxl::TimeDelta::FromMilliseconds(0);
-
-void Yield() {
-  // Tried a combination of Thread::sleep_for (formerly required) and
-  // PostDelayedTask delays for a particular test sequence:
-  //
-  //        PostDelayedTask
-  // s        0ms  1ms
-  // l   w/o: 9.8s 8s
-  // e   1ns: 8s
-  // e   1ms: 7.9s 7.9s
-  // p  10ms: 8s
-  //
-  // However, we've observed some additional flakiness in the Launcher tests
-  // without the sleep.
-  //
-  // Based on those results, opt to sleep 1ms; post delayed w/ 0ms.
-  fxl::SleepFor(kYieldSleepPeriod);
-
-  // Combinations tried:
-  //                      PostQuitTask QuitNow
-  //               inline    no msgs    hang (invalid call per docs)
-  // SetAfterTaskCallback     hang      hang
-  //      PostDelayedTask      ok        ok
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); },
-      kYieldBatchPeriod);
-  fsl::MessageLoop::GetCurrent()->Run();
-}
-
-Predicate operator&&(const Predicate& a, const Predicate& b) {
-  return [&a, &b] { return a() && b(); };
-}
-
-Predicate operator||(const Predicate& a, const Predicate& b) {
-  return [&a, &b] { return a() || b(); };
-}
-
-Predicate operator!(const Predicate& a) {
-  return [&a] { return !a(); };
-}
-
-Predicate Deadline(const fxl::TimeDelta& duration) {
-  const auto deadline = fxl::TimePoint::Now() + duration;
-  return [deadline] { return fxl::TimePoint::Now() >= deadline; };
-}
-
-void Sleep(const fxl::TimeDelta& duration) {
-  WaitUntil(Deadline(duration));
-}
-
-void Sleep() {
-  Sleep(fxl::TimeDelta::FromMilliseconds(1500));
-}
-
 namespace maxwell {
 
 MaxwellTestBase::MaxwellTestBase() {
@@ -70,8 +11,7 @@ MaxwellTestBase::MaxwellTestBase() {
   auto root_environment = startup_context_->environment().get();
   FXL_CHECK(root_environment != nullptr);
 
-  agent_launcher_ =
-      std::make_unique<maxwell::AgentLauncher>(root_environment);
+  agent_launcher_ = std::make_unique<maxwell::AgentLauncher>(root_environment);
 
   child_app_services_.AddService<modular::ComponentContext>(
       [this](f1dl::InterfaceRequest<modular::ComponentContext> request) {
@@ -90,8 +30,8 @@ component::Services MaxwellTestBase::StartServices(const std::string& url) {
   child_app_services_.AddBinding(service_list->provider.NewRequest());
   launch_info->additional_services = std::move(service_list);
 
-  startup_context_->launcher()->CreateApplication(
-      std::move(launch_info), nullptr);
+  startup_context_->launcher()->CreateApplication(std::move(launch_info),
+                                                  nullptr);
   return services;
 }
 

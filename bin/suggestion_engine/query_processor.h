@@ -11,6 +11,7 @@
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "lib/suggestion/fidl/user_input.fidl.h"
 #include "peridot/bin/suggestion_engine/query_handler_record.h"
+#include "peridot/lib/util/wait_until_idle.h"
 
 namespace maxwell {
 
@@ -52,6 +53,7 @@ class QueryProcessor {
   bool has_media_response_;
   bool request_ended_;
 
+  util::IdleWaiter::ActivityToken activity_;
   fxl::WeakPtrFactory<QueryProcessor> weak_ptr_factory_;
 };
 

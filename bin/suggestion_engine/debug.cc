@@ -8,8 +8,12 @@
 
 namespace maxwell {
 
-SuggestionDebugImpl::SuggestionDebugImpl() = default;
+SuggestionDebugImpl::SuggestionDebugImpl() : weak_ptr_factory_(this){};
 SuggestionDebugImpl::~SuggestionDebugImpl() = default;
+
+fxl::WeakPtr<SuggestionDebugImpl> SuggestionDebugImpl::GetWeakPtr() {
+  return weak_ptr_factory_.GetWeakPtr();
+}
 
 void makeProposalSummary(const SuggestionPrototype* suggestion,
                          ProposalSummaryPtr* summary) {
@@ -72,6 +76,14 @@ void SuggestionDebugImpl::OnNextUpdate(
       });
 }
 
+util::IdleWaiter::ActivityToken SuggestionDebugImpl::RegisterOngoingActivity() {
+  return wait_until_idle_.RegisterOngoingActivity();
+}
+
+bool SuggestionDebugImpl::FinishIdleCheck() {
+  return wait_until_idle_.FinishIdleCheck();
+}
+
 void SuggestionDebugImpl::WatchAskProposals(
     f1dl::InterfaceHandle<AskProposalListener> listener) {
   auto listener_ptr = listener.Bind();
@@ -91,6 +103,10 @@ void SuggestionDebugImpl::WatchNextProposals(
   if (cached_next_proposals_) {
     listener_ptr->OnNextUpdate(std::move(cached_next_proposals_));
   }
+}
+
+void SuggestionDebugImpl::WaitUntilIdle(const WaitUntilIdleCallback& callback) {
+  wait_until_idle_.WaitUntilIdle(callback);
 }
 
 }  // namespace maxwell

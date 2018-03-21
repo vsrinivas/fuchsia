@@ -11,7 +11,6 @@ namespace maxwell {
 InterruptionsProcessor::InterruptionsProcessor() = default;
 InterruptionsProcessor::~InterruptionsProcessor() = default;
 
-
 void InterruptionsProcessor::RegisterListener(
     f1dl::InterfaceHandle<InterruptionListener> listener) {
   listeners_.AddInterfacePtr(listener.Bind());

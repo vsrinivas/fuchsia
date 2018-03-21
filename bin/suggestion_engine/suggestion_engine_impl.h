@@ -77,6 +77,8 @@ class SuggestionEngineImpl : public ContextListener,
   SuggestionEngineImpl(component::ApplicationContext* app_context);
   ~SuggestionEngineImpl();
 
+  fxl::WeakPtr<SuggestionDebugImpl> debug();
+
   // TODO(andrewosh): The following two methods should be removed. New
   // ProposalPublishers should be created whenever they're requested, and they
   // should be erased automatically when the client disconnects (they should be

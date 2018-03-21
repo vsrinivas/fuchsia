@@ -11,9 +11,10 @@ package("suggestion_engine") {
 
   resources = [
     {
-      path = rebase_path("//peridot/bin/suggestion_engine/resources/mod_pairs.json")
+      path = rebase_path(
+              "//peridot/bin/suggestion_engine/resources/mod_pairs.json")
       dest = "ranking_data/mod_pairs.json"
-    }
+    },
   ]
 
   binary = "suggestion_engine"
@@ -50,6 +51,7 @@ executable("bin") {
     "//peridot/lib/bound_set",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util:rate_limited_retry",
+    "//peridot/lib/util:wait_until_idle",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/fidl",
@@ -96,8 +98,8 @@ source_set("ranking") {
   deps = [
     ":models",
     "//garnet/public/lib/fsl",
-    "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/context/cpp:context_helper",
+    "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/suggestion/fidl",
     "//third_party/rapidjson",
   ]
@@ -181,6 +183,7 @@ source_set("debug") {
   deps = [
     ":models",
     ":state",
+    "//peridot/lib/util:wait_until_idle",
     "//peridot/public/lib/suggestion/fidl",
     "//peridot/public/lib/suggestion/fidl:debug",
   ]

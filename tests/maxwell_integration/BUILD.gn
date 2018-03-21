@@ -54,6 +54,7 @@ executable("suggestion_engine_test") {
     "//peridot/bin/agents:ideas",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:story_provider_mock",
+    "//peridot/lib/util:wait_until_idle",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/fidl",
     "//peridot/public/lib/suggestion/fidl",

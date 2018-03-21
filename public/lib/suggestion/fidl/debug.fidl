@@ -14,6 +14,10 @@ interface SuggestionDebug {
   WatchAskProposals@0(AskProposalListener listener);
   WatchInterruptionProposals@1(InterruptionProposalListener listener);
   WatchNextProposals@2(NextProposalListener listener);
+
+  // Waits until Suggestion Engine has reached a steady state such that no
+  // further activity will occur unless acted upon from the outside.
+  WaitUntilIdle@3() => ();
 };
 
 interface AskProposalListener {
