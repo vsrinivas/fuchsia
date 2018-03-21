@@ -12,29 +12,31 @@ namespace test {
 // These test functions, run after all other details tests have executed,
 // producing a digest of the various audio fidelity measurements made.
 //
-// Display our best-case noise floor measurements, in decibels below full-scale
+// Display our baseline noise floor measurements, in decibels below full-scale
+//
+// 'Source' noise floor is the demonstrated best-case background noise when
+// accepting audio (from an AudioRenderer or audio Input device, for example).
+// 'Output' noise floor is the demonstrated best-case background noise when
+// emitting audio (to an audio Output device or AudioCapturer, for example).
 TEST(Recap, NoiseFloor) {
-  // When the mixer accepts audio in 8-bit form (from AudioRenderer, for
-  // example), this is our demonstrated best-case noise-floor measurement.
-  printf("\n Baseline noise-floor for 8-bit sources:    %5.2lf dB (was %5.2lf)",
-         AudioResult::FloorSource8, AudioResult::kPrevFloorSource8);
+  printf("\n Best-case noise-floor\n   (no gain/SRC)");
 
-  // When the mixer accepts audio in 16-bit form (from AudioRenderer, for
-  // example), this is our demonstrated best-case noise-floor measurement.
-  printf("\n Baseline noise-floor for 16-bit sources:   %5.2lf dB (was %5.2lf)",
-         AudioResult::FloorSource16, AudioResult::kPrevFloorSource16);
+  printf("\n\t\t\t   Sources\t\t   Outputs\n\t\t");
+  for (uint32_t type = 0; type < 2; ++type) {
+    printf("      8-bit       16-bit");
+  }
 
-  // When the mixer produces and outputs audio in 8-bit form (to an audio
-  // Output device, for example), this is our demonstrated best-case noise-floor
-  printf("\n Baseline noise-floor for 8-bit outputs:    %5.2lf dB (was %5.2lf)",
-         AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8);
+  printf("\n\t\t      ");
+  printf("%5.2lf dB    %5.2lf dB    %5.2lf dB    %5.2lf dB",
+         AudioResult::FloorSource8, AudioResult::FloorSource16,
+         AudioResult::FloorOutput8, AudioResult::FloorOutput16);
 
-  // When the mixer produces and outputs audio in 16-bit form (to an audio
-  // Output device, for example), this is our demonstrated best-case noise-floor
-  printf("\n Baseline noise-floor for 16-bit outputs:   %5.2lf dB (was %5.2lf)",
-         AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16);
+  printf("\n\t   (prior)    ");
+  printf("%5.2lf       %5.2lf       %5.2lf       %5.2lf",
+         AudioResult::kPrevFloorSource8, AudioResult::kPrevFloorSource16,
+         AudioResult::kPrevFloorOutput8, AudioResult::kPrevFloorOutput16);
 
-  printf("\n\n");
+  printf("\n\n\n");
 }
 
 }  // namespace test
