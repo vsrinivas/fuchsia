@@ -23,6 +23,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fdio/debug.h>
+#include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <lib/zx/vmo.h>
 #include <sync/completion.h>
@@ -71,7 +72,7 @@ const char* kWrapKeyLabel = "wrap key %" PRIu64;
 const char* kWrapIvLabel = "wrap iv %" PRIu64;
 
 // Header is type GUID | instance GUID | version.
-const size_t kHeaderLen = GUID_LEN + GUID_LEN + sizeof(uint32_t);
+const size_t kHeaderLen = sizeof(zxcrypt_magic) + GUID_LEN + sizeof(uint32_t);
 
 void SyncComplete(block_op_t* block, zx_status_t status) {
     // Use the 32bit command field to shuttle the response back to the callsite that's waiting on
@@ -340,7 +341,6 @@ zx_status_t Volume::Bind(crypto::Cipher::Direction direction, crypto::Cipher* ci
     }
     if (!block_.get()) {
         xprintf("not initialized\n");
-        ;
         return ZX_ERR_BAD_STATE;
     }
     if ((rc = cipher->Init(cipher_, direction, data_key_, data_iv_, block_.len())) != ZX_OK) {
@@ -534,9 +534,11 @@ zx_status_t Volume::CreateBlock() {
     }
 
     // Write the variant 1/version 1 type GUID according to RFC 4122.
+    // TODO(aarongreen): ZX-2106.  This and other magic numbers should be moved to a public/zircon
+    // header, and the dependency removed.
     uint8_t* out = block_.get();
-    memcpy(out, kTypeGuid, GUID_LEN);
-    out += GUID_LEN;
+    memcpy(out, zxcrypt_magic, sizeof(zxcrypt_magic));
+    out += sizeof(zxcrypt_magic);
 
     // Create a variant 1/version 4 instance GUID according to RFC 4122.
     if ((rc = guid_.InitRandom(GUID_LEN)) != ZX_OK) {
@@ -629,11 +631,11 @@ zx_status_t Volume::UnsealBlock(const crypto::Bytes& key, key_slot_t slot) {
 
     // Check the type GUID matches |kTypeGuid|.
     uint8_t* in = block_.get();
-    if (memcmp(in, kTypeGuid, GUID_LEN) != 0) {
+    if (memcmp(in, zxcrypt_magic, sizeof(zxcrypt_magic)) != 0) {
         xprintf("not a zxcrypt device\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
-    in += GUID_LEN;
+    in += sizeof(zxcrypt_magic);
 
     // Save the instance GUID
     if ((rc = guid_.Copy(in, GUID_LEN)) != ZX_OK) {

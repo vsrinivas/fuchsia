@@ -31,11 +31,6 @@
 //  - HMAC: Derived from the root keys and used to verify the integrity of the superblock.
 namespace zxcrypt {
 
-// An RFC 4122 variant 1/version 1 UUID.  It corresponds to Oct 17 12:00:00 PDT 2017.  The clock
-// sequence and node address contain 'zxcrypt'.
-const uint8_t kTypeGuid[GUID_LEN] = {0x5f, 0xe8, 0xf8, 0x00, 0xb3, 0x6d, 0x11, 0xe7,
-                                     0x80, 0x7a, 0x78, 0x63, 0x72, 0x79, 0x70, 0x74};
-
 // TODO(aarongreen): ZX-1130 workaround: Until we have a means to pass the root key on binding, we
 // simply use a null key of a fixed length. Remove this constant when ZX-1130 is resolved.
 const size_t kZx1130KeyLen = 32;

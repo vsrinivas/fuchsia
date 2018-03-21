@@ -273,6 +273,10 @@ disk_format_t detect_disk_format(int fd) {
         return DISK_FORMAT_FVM;
     }
 
+    if (!memcmp(data, zxcrypt_magic, sizeof(zxcrypt_magic))) {
+        return DISK_FORMAT_ZXCRYPT;
+    }
+
     if (!memcmp(data + 0x200, gpt_magic, sizeof(gpt_magic))) {
         return DISK_FORMAT_GPT;
     }

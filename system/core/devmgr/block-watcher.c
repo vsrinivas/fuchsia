@@ -216,6 +216,7 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
 #define GPT_DRIVER_LIB "/boot/driver/gpt.so"
 #define MBR_DRIVER_LIB "/boot/driver/mbr.so"
 #define BOOTPART_DRIVER_LIB "/boot/driver/bootpart.so"
+#define ZXCRYPT_DRIVER_LIB "/boot/driver/zxcrypt.so"
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
 
 static zx_status_t block_device_added(int dirfd, int event, const char* name, void* cookie) {
@@ -259,6 +260,14 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
         printf("devmgr: %s: MBR?\n", device_path);
         // probe for partition table
         ioctl_device_bind(fd, MBR_DRIVER_LIB, STRLEN(MBR_DRIVER_LIB));
+        close(fd);
+        return ZX_OK;
+    }
+    case DISK_FORMAT_ZXCRYPT: {
+        printf("devmgr: %s: zxcrypt?\n", device_path);
+        // TODO(security): ZX-1130. We need to bind with channel in order to pass a key here.
+        // Where does the key come from?  We need to determine if this is unattended.
+        ioctl_device_bind(fd, ZXCRYPT_DRIVER_LIB, STRLEN(ZXCRYPT_DRIVER_LIB));
         close(fd);
         return ZX_OK;
     }

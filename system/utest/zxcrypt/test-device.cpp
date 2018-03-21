@@ -20,6 +20,7 @@
 #include <fbl/unique_fd.h>
 #include <fdio/debug.h>
 #include <fdio/watcher.h>
+#include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
 #include <lib/zx/time.h>
@@ -321,7 +322,7 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
     alloc_req_t req;
     memset(&req, 0, sizeof(alloc_req_t));
     req.slice_count = (kDeviceSize / FVM_BLOCK_SIZE) - 1;
-    memcpy(req.type, kTypeGuid, GUID_LEN);
+    memcpy(req.type, zxcrypt_magic, sizeof(zxcrypt_magic));
     for (uint8_t i = 0; i < GUID_LEN; ++i) {
         req.guid[i] = i;
     }

@@ -16,6 +16,7 @@ MODULE_LIBS := \
     system/ulib/crypto \
     system/ulib/driver \
     system/ulib/fdio \
+    system/ulib/fs-management \
     system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \

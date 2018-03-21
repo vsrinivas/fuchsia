@@ -28,6 +28,7 @@ typedef enum disk_format_type {
     DISK_FORMAT_FAT,
     DISK_FORMAT_BLOBFS,
     DISK_FORMAT_FVM,
+    DISK_FORMAT_ZXCRYPT,
 } disk_format_t;
 
 #define HEADER_SIZE 4096
@@ -49,6 +50,11 @@ static const uint8_t gpt_magic[16] = {
 
 static const uint8_t fvm_magic[8] = {
     0x46, 0x56, 0x4d, 0x20, 0x50, 0x41, 0x52, 0x54,
+};
+
+static const uint8_t zxcrypt_magic[16] = {
+    0x5f, 0xe8, 0xf8, 0x00, 0xb3, 0x6d, 0x11, 0xe7,
+    0x80, 0x7a, 0x78, 0x63, 0x72, 0x79, 0x70, 0x74,
 };
 
 disk_format_t detect_disk_format(int fd);
