@@ -15,7 +15,7 @@ in Fuchsia.
     <layer>          # all production pkg up to this layer
     dev              # pkg declared at this layer; for daily development
     default          # alias for dev
-    dev_full         # all pkg up to this layer
+    kitchen_sink     # all pkg up to this layer
     all              # grab bag of every pkg in this layer
     prod/            # pkg that can be picked up in production
     tests/           # correctness tests (target & host)
@@ -35,7 +35,7 @@ in Fuchsia.
   - this defines a pure production build
 - `dev(N)` depends on `<layer>(N-1)` and adds all artifacts of (N)
   - this defines a build suitable for developing (N) itself
-- `dev_full(N)` depends on `dev_full(N-1)` and adds all artifacts of (N)
+- `kitchen_sink(N)` depends on `kitchen_sink(N-1)` and adds all artifacts of (N)
   - this defines a build suitable for developing (N) as well as its dependencies
 
 ## Inner-layer dependencies
