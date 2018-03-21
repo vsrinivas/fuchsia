@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_SOURCE_MANAGER_H_
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_SOURCE_MANAGER_H_
 
+#include <memory>
 #include <vector>
 
 #include "fidl/source_file.h"
@@ -14,13 +15,13 @@ namespace fidl {
 
 class SourceManager {
 public:
-    // Returns nullptr if |filename| could not be read.
-    const SourceFile* CreateSource(StringView filename);
+    // Returns whether the filename was successfully read.
+    bool CreateSource(StringView filename);
 
-    const std::vector<SourceFile>& sources() const { return sources_; }
+    const std::vector<std::unique_ptr<SourceFile>>& sources() const { return sources_; }
 
 private:
-    std::vector<SourceFile> sources_;
+    std::vector<std::unique_ptr<SourceFile>> sources_;
 };
 
 } // namespace fidl

@@ -6,10 +6,10 @@
 
 namespace fidl {
 
-const SourceFile* SourceManager::CreateSource(StringView filename) {
+bool SourceManager::CreateSource(StringView filename) {
     FILE* file = fopen(filename.data(), "rb");
     if (!file)
-        return nullptr;
+        return false;
 
     // The lexer requires zero terminated data.
     std::string data;
@@ -21,8 +21,8 @@ const SourceFile* SourceManager::CreateSource(StringView filename) {
     data[filesize] = 0;
     fclose(file);
 
-    sources_.emplace_back(filename, std::move(data));
-    return &sources_.back();
+    sources_.push_back(std::make_unique<SourceFile>(filename, std::move(data)));
+    return true;
 }
 
 } // namespace fidl

@@ -217,8 +217,7 @@ int main(int argc, char* argv[]) {
         if (arg == "--files") {
             source_managers.emplace_back();
         } else {
-            const fidl::SourceFile* source = source_managers.back().CreateSource(arg.data());
-            if (source == nullptr) {
+            if (!source_managers.back().CreateSource(arg.data())) {
                 fprintf(stderr, "Couldn't read in source data from %s\n", arg.data());
                 return 1;
             }
@@ -232,7 +231,7 @@ int main(int argc, char* argv[]) {
     for (const auto& source_manager : source_managers) {
         auto library = std::make_unique<fidl::flat::Library>(&compiled_libraries, &error_reporter);
         for (const auto& source_file : source_manager.sources()) {
-            if (!Parse(source_file, &identifier_table, &error_reporter, library.get())) {
+            if (!Parse(*source_file, &identifier_table, &error_reporter, library.get())) {
                 error_reporter.PrintReports();
                 return 1;
             }
