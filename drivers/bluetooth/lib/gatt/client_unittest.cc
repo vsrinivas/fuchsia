@@ -28,6 +28,7 @@ const auto kDiscoverAllPrimaryRequest = common::CreateStaticByteBuffer(
 // clang-format on
 
 void NopSvcCallback(const gatt::ServiceData&) {}
+void NopChrcCallback(const gatt::CharacteristicData&) {}
 
 class GATT_ClientTest : public l2cap::testing::FakeChannelTest {
  public:
@@ -298,7 +299,7 @@ TEST_F(GATT_ClientTest, ExchangeMTUSelectDefault) {
 
 TEST_F(GATT_ClientTest, DiscoverAllPrimaryResponseTooShort) {
   att::Status status;
-  auto res_cb = [this, &status](att::Status cb_res) { status = cb_res; };
+  auto res_cb = [this, &status](att::Status val) { status = val; };
 
   // Initiate the request on the loop since Expect() below blocks.
   async::PostTask(dispatcher(), [&, this] {
@@ -317,7 +318,7 @@ TEST_F(GATT_ClientTest, DiscoverAllPrimaryResponseTooShort) {
 
 TEST_F(GATT_ClientTest, DiscoverAllPrimaryMalformedDataLength) {
   att::Status status;
-  auto res_cb = [this, &status](att::Status cb_res) { status = cb_res; };
+  auto res_cb = [this, &status](att::Status val) { status = val; };
 
   // Initiate the request on the loop since Expect() below blocks.
   async::PostTask(dispatcher(), [&, this] {
@@ -342,7 +343,7 @@ TEST_F(GATT_ClientTest, DiscoverAllPrimaryMalformedDataLength) {
 
 TEST_F(GATT_ClientTest, DiscoverAllPrimaryMalformedAttrDataList) {
   att::Status status;
-  auto res_cb = [this, &status](att::Status cb_res) { status = cb_res; };
+  auto res_cb = [this, &status](att::Status val) { status = val; };
 
   // Initiate the request on the loop since Expect() below blocks.
   async::PostTask(dispatcher(), [&, this] {
@@ -368,7 +369,7 @@ TEST_F(GATT_ClientTest, DiscoverAllPrimaryMalformedAttrDataList) {
 // an empty data list as not an error.
 TEST_F(GATT_ClientTest, DiscoverAllPrimaryEmptyDataList) {
   att::Status status(HostError::kFailed);
-  auto res_cb = [this, &status](att::Status cb_res) { status = cb_res; };
+  auto res_cb = [this, &status](att::Status val) { status = val; };
 
   // Initiate the request on the loop since Expect() below blocks.
   async::PostTask(dispatcher(), [&, this] {
@@ -390,7 +391,7 @@ TEST_F(GATT_ClientTest, DiscoverAllPrimaryEmptyDataList) {
 // The first request results in "Attribute Not Found".
 TEST_F(GATT_ClientTest, DiscoverAllPrimaryAttributeNotFound) {
   att::Status status(HostError::kFailed);
-  auto res_cb = [this, &status](att::Status cb_res) { status = cb_res; };
+  auto res_cb = [this, &status](att::Status val) { status = val; };
 
   // Initiate the request on the loop since Expect() below blocks.
   async::PostTask(dispatcher(), [&, this] {
@@ -415,7 +416,7 @@ TEST_F(GATT_ClientTest, DiscoverAllPrimaryAttributeNotFound) {
 // The first request results in an error.
 TEST_F(GATT_ClientTest, DiscoverAllPrimaryError) {
   att::Status status(HostError::kFailed);
-  auto res_cb = [this, &status](att::Status cb_res) { status = cb_res; };
+  auto res_cb = [this, &status](att::Status val) { status = val; };
 
   // Initiate the request on the loop since Expect() below blocks.
   async::PostTask(dispatcher(), [&, this] {
@@ -439,7 +440,7 @@ TEST_F(GATT_ClientTest, DiscoverAllPrimaryError) {
 
 TEST_F(GATT_ClientTest, DiscoverAllPrimaryMalformedServiceRange) {
   att::Status status(HostError::kFailed);
-  auto res_cb = [this, &status](att::Status cb_res) { status = cb_res; };
+  auto res_cb = [this, &status](att::Status val) { status = val; };
 
   // Initiate the request on the loop since Expect() below blocks.
   async::PostTask(dispatcher(), [this, res_cb] {
@@ -466,7 +467,7 @@ TEST_F(GATT_ClientTest, DiscoverAllPrimaryMalformedServiceRange) {
 
 TEST_F(GATT_ClientTest, DiscoverAllPrimary16BitResultsSingleRequest) {
   att::Status status(HostError::kFailed);
-  auto res_cb = [this, &status](att::Status cb_res) { status = cb_res; };
+  auto res_cb = [this, &status](att::Status val) { status = val; };
 
   std::vector<ServiceData> services;
   auto svc_cb = [&services](const ServiceData& svc) {
@@ -507,7 +508,7 @@ TEST_F(GATT_ClientTest, DiscoverAllPrimary16BitResultsSingleRequest) {
 
 TEST_F(GATT_ClientTest, DiscoverAllPrimary128BitResultSingleRequest) {
   att::Status status(HostError::kFailed);
-  auto res_cb = [this, &status](att::Status cb_res) { status = cb_res; };
+  auto res_cb = [this, &status](att::Status val) { status = val; };
 
   std::vector<ServiceData> services;
   auto svc_cb = [&services](const ServiceData& svc) {
@@ -562,7 +563,7 @@ TEST_F(GATT_ClientTest, DiscoverAllPrimaryMultipleRequests) {
   );
 
   att::Status status(HostError::kFailed);
-  auto res_cb = [this, &status](att::Status cb_res) { status = cb_res; };
+  auto res_cb = [this, &status](att::Status val) { status = val; };
 
   std::vector<ServiceData> services;
   auto svc_cb = [&services](const ServiceData& svc) {
@@ -632,6 +633,546 @@ TEST_F(GATT_ClientTest, DiscoverAllPrimaryMultipleRequests) {
   EXPECT_EQ(0x0008, services[2].range_start);
   EXPECT_EQ(0x0009, services[2].range_end);
   EXPECT_EQ(kTestUuid3, services[2].type);
+}
+
+TEST_F(GATT_ClientTest, DiscoverCharacHandlesEqual) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0x0001;
+
+  att::Status status(HostError::kFailed);  // Initialize as error
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  // Should succeed immediately.
+  client()->DiscoverCharacteristics(kStart, kEnd, NopChrcCallback, res_cb);
+  EXPECT_TRUE(status);
+}
+
+TEST_F(GATT_ClientTest, DiscoverCharacResponseTooShort) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0xFFFF;
+
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x01, 0x00,  // start handle: 0x0001
+      0xFF, 0xFF,  // end handle: 0xFFFF
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, NopChrcCallback, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  // Respond back with a malformed payload.
+  fake_chan()->Receive(common::CreateStaticByteBuffer(0x09));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+}
+
+TEST_F(GATT_ClientTest, DiscoverCharacMalformedDataLength) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0xFFFF;
+
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x01, 0x00,  // start handle: 0x0001
+      0xFF, 0xFF,  // end handle: 0xFFFF
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, NopChrcCallback, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  // Respond back with an unexpected data length. This is 7 for characteristics
+  // with a 16-bit UUID (handle (2) + props (1) + value handle (2) + uuid (2))
+  // and 21 for 128-bit (handle (2) + props (1) + value handle (2) + uuid (16)).
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x09,                   // opcode: read by type response
+      8,                      // data length: 8 (not 7 or 21)
+      0, 1, 2, 3, 4, 5, 6, 7  // one entry of length 8, which will be ignored
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+}
+
+TEST_F(GATT_ClientTest, DiscoverCharacMalformedAttrDataList) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0xFFFF;
+
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x01, 0x00,  // start handle: 0x0001
+      0xFF, 0xFF,  // end handle: 0xFFFF
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, NopChrcCallback, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  // Respond back with an unexpected data length. This is 7 for characteristics
+  // with a 16-bit UUID (handle (2) + props (1) + value handle (2) + uuid (2))
+  // and 21 for 128-bit (handle (2) + props (1) + value handle (2) + uuid (16)).
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x09,                 // opcode: read by type response
+      7,                    // data length: 7 (16-bit UUIDs)
+      0, 1, 2, 3, 4, 5, 6,  // entry 1: correct size
+      0, 1, 2, 3, 4, 5      // entry 2: incorrect size
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+}
+
+TEST_F(GATT_ClientTest, DiscoverCharacEmptyDataList) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0xFFFF;
+
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x01, 0x00,  // start handle: 0x0001
+      0xFF, 0xFF,  // end handle: 0xFFFF
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, NopChrcCallback, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x09,  // opcode: read by type response
+      7      // data length: 7 (16-bit UUIDs)
+             // data list empty
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
+}
+
+TEST_F(GATT_ClientTest, DiscoverCharacAttributeNotFound) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0xFFFF;
+
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x01, 0x00,  // start handle: 0x0001
+      0xFF, 0xFF,  // end handle: 0xFFFF
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, NopChrcCallback, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x01, 0x00,  // handle: 0x0001
+      0x0A         // error: Attribute Not Found
+      ));
+
+  RunUntilIdle();
+
+  // Attribute Not Found error means the procedure is over.
+  EXPECT_TRUE(status);
+}
+
+TEST_F(GATT_ClientTest, DiscoverCharacError) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0xFFFF;
+
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x01, 0x00,  // start handle: 0x0001
+      0xFF, 0xFF,  // end handle: 0xFFFF
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, NopChrcCallback, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x01, 0x00,  // handle: 0x0001
+      0x06         // error: Request Not Supported
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status.is_protocol_error());
+  EXPECT_EQ(att::ErrorCode::kRequestNotSupported, status.protocol_error());
+}
+
+TEST_F(GATT_ClientTest, DiscoverCharac16BitResultsSingleRequest) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0x0005;
+
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x01, 0x00,  // start handle: 0x0001
+      0x05, 0x00,  // end handle: 0x0005
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  std::vector<CharacteristicData> chrcs;
+  auto chrc_cb = [&chrcs](const CharacteristicData& chrc) {
+    chrcs.push_back(chrc);
+  };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, chrc_cb, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x09,        // opcode: read by type response
+      0x07,        // data length: 7 (16-bit UUIDs)
+      0x03, 0x00,  // chrc 1 handle
+      0x00,        // chrc 1 properties
+      0x04, 0x00,  // chrc 1 value handle
+      0xAD, 0xDE,  // chrc 1 uuid: 0xDEAD
+      0x05, 0x00,  // chrc 2 handle (0x0005 is the end of the requested range)
+      0x01,        // chrc 2 properties
+      0x06, 0x00,  // chrc 2 value handle
+      0xEF, 0xBE   // chrc 2 uuid: 0xBEEF
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
+  EXPECT_EQ(2u, chrcs.size());
+  EXPECT_EQ(0x0003, chrcs[0].handle);
+  EXPECT_EQ(0, chrcs[0].properties);
+  EXPECT_EQ(0x0004, chrcs[0].value_handle);
+  EXPECT_EQ(kTestUuid1, chrcs[0].type);
+  EXPECT_EQ(0x0005, chrcs[1].handle);
+  EXPECT_EQ(1, chrcs[1].properties);
+  EXPECT_EQ(0x0006, chrcs[1].value_handle);
+  EXPECT_EQ(kTestUuid2, chrcs[1].type);
+}
+
+TEST_F(GATT_ClientTest, DiscoverCharac128BitResultsSingleRequest) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0x0005;
+
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x01, 0x00,  // start handle: 0x0001
+      0x05, 0x00,  // end handle: 0x0005
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  std::vector<CharacteristicData> chrcs;
+  auto chrc_cb = [&chrcs](const CharacteristicData& chrc) {
+    chrcs.push_back(chrc);
+  };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, chrc_cb, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x09,        // opcode: read by type response
+      0x15,        // data length: 21 (128-bit UUIDs)
+      0x05, 0x00,  // chrc handle
+      0x00,        // chrc properties
+      0x06, 0x00,  // chrc value handle
+
+      // UUID matches |kTestUuid3| declared above.
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15));
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
+  EXPECT_EQ(1u, chrcs.size());
+  EXPECT_EQ(0x0005, chrcs[0].handle);
+  EXPECT_EQ(0, chrcs[0].properties);
+  EXPECT_EQ(0x0006, chrcs[0].value_handle);
+  EXPECT_EQ(kTestUuid3, chrcs[0].type);
+}
+
+TEST_F(GATT_ClientTest, DiscoverCharacMultipleRequests) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0xFFFF;
+
+  const auto kExpectedRequest1 = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x01, 0x00,  // start handle: 0x0001
+      0xFF, 0xFF,  // end handle: 0xFFFF
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+  const auto kExpectedRequest2 = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x06, 0x00,  // start handle: 0x0006
+      0xFF, 0xFF,  // end handle: 0xFFFF
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+  const auto kExpectedRequest3 = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x08, 0x00,  // start handle: 0x0008
+      0xFF, 0xFF,  // end handle: 0xFFFF
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  std::vector<CharacteristicData> chrcs;
+  auto chrc_cb = [&chrcs](const CharacteristicData& chrc) {
+    chrcs.push_back(chrc);
+  };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, chrc_cb, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest1));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x09,        // opcode: read by type response
+      0x07,        // data length: 7 (16-bit UUIDs)
+      0x03, 0x00,  // chrc 1 handle
+      0x00,        // chrc 1 properties
+      0x04, 0x00,  // chrc 1 value handle
+      0xAD, 0xDE,  // chrc 1 uuid: 0xDEAD
+      0x05, 0x00,  // chrc 2 handle
+      0x01,        // chrc 2 properties
+      0x06, 0x00,  // chrc 2 value handle
+      0xEF, 0xBE   // chrc 2 uuid: 0xBEEF
+      ));
+
+  // The client should follow up with a second request following the last
+  // characteristic declaration handle.
+  ASSERT_TRUE(Expect(kExpectedRequest2));
+
+  // Respond with one characteristic with a 128-bit UUID
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x09,        // opcode: read by type response
+      0x15,        // data length: 21 (128-bit UUIDs)
+      0x07, 0x00,  // chrc handle
+      0x00,        // chrc properties
+      0x08, 0x00,  // chrc value handle
+
+      // UUID matches |kTestUuid3| declared above.
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15));
+
+  // The client should follow up with a third request following the last
+  // characteristic declaration handle.
+  ASSERT_TRUE(Expect(kExpectedRequest3));
+
+  // Terminate the procedure with an error response.
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x0A, 0x00,  // handle: 0x000A
+      0x0A         // error: Attribute Not Found
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
+  EXPECT_EQ(3u, chrcs.size());
+
+  EXPECT_EQ(0x0003, chrcs[0].handle);
+  EXPECT_EQ(0, chrcs[0].properties);
+  EXPECT_EQ(0x0004, chrcs[0].value_handle);
+  EXPECT_EQ(kTestUuid1, chrcs[0].type);
+
+  EXPECT_EQ(0x0005, chrcs[1].handle);
+  EXPECT_EQ(1, chrcs[1].properties);
+  EXPECT_EQ(0x0006, chrcs[1].value_handle);
+  EXPECT_EQ(kTestUuid2, chrcs[1].type);
+
+  EXPECT_EQ(0x0007, chrcs[2].handle);
+  EXPECT_EQ(0, chrcs[2].properties);
+  EXPECT_EQ(0x0008, chrcs[2].value_handle);
+  EXPECT_EQ(kTestUuid3, chrcs[2].type);
+}
+
+// Expects the discovery procedure to end with an error if a batch contains
+// results that are from before requested range.
+TEST_F(GATT_ClientTest, CharacteristicDiscoveryResultsBeforeRange) {
+  constexpr att::Handle kStart = 0x0002;
+  constexpr att::Handle kEnd = 0x0005;
+
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x02, 0x00,  // start handle: 0x0002
+      0x05, 0x00,  // end handle: 0x0005
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  std::vector<CharacteristicData> chrcs;
+  auto chrc_cb = [&chrcs](const CharacteristicData& chrc) {
+    chrcs.push_back(chrc);
+  };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, chrc_cb, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x09,        // opcode: read by type response
+      0x07,        // data length: 7 (16-bit UUIDs)
+      0x01, 0x00,  // chrc 1 handle (handle is before the range)
+      0x00,        // chrc 1 properties
+      0x02, 0x00,  // chrc 1 value handle
+      0xAD, 0xDE   // chrc 1 uuid: 0xDEAD
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+  EXPECT_TRUE(chrcs.empty());
+}
+
+// Expects the discovery procedure to end with an error if a batch contains
+// results that are from beyond the requested range.
+TEST_F(GATT_ClientTest, CharacteristicDiscoveryResultsBeyondRange) {
+  constexpr att::Handle kStart = 0x0002;
+  constexpr att::Handle kEnd = 0x0005;
+
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x02, 0x00,  // start handle: 0x0002
+      0x05, 0x00,  // end handle: 0x0005
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  std::vector<CharacteristicData> chrcs;
+  auto chrc_cb = [&chrcs](const CharacteristicData& chrc) {
+    chrcs.push_back(chrc);
+  };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, chrc_cb, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x09,        // opcode: read by type response
+      0x07,        // data length: 7 (16-bit UUIDs)
+      0x06, 0x00,  // chrc 1 handle (handle is beyond the range)
+      0x00,        // chrc 1 properties
+      0x07, 0x00,  // chrc 1 value handle
+      0xAD, 0xDE   // chrc 1 uuid: 0xDEAD
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+  EXPECT_TRUE(chrcs.empty());
+}
+
+// Expects the the characteristic value handle to immediately follow the
+// declaration as specified in Vol 3, Part G, 3.3.
+TEST_F(GATT_ClientTest, CharacteristicDiscoveryValueNotContiguous) {
+  constexpr att::Handle kStart = 0x0002;
+  constexpr att::Handle kEnd = 0x0005;
+
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x02, 0x00,  // start handle: 0x0002
+      0x05, 0x00,  // end handle: 0x0005
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  std::vector<CharacteristicData> chrcs;
+  auto chrc_cb = [&chrcs](const CharacteristicData& chrc) {
+    chrcs.push_back(chrc);
+  };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, chrc_cb, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x09,        // opcode: read by type response
+      0x07,        // data length: 7 (16-bit UUIDs)
+      0x02, 0x00,  // chrc 1 handle
+      0x00,        // chrc 1 properties
+      0x04, 0x00,  // chrc 1 value handle (not immediate)
+      0xAD, 0xDE   // chrc 1 uuid: 0xDEAD
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+  EXPECT_TRUE(chrcs.empty());
 }
 
 }  // namespace

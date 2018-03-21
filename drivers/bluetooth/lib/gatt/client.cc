@@ -9,6 +9,8 @@
 
 #include "gatt_defs.h"
 
+using btlib::common::HostError;
+
 namespace btlib {
 
 using common::BufferView;
@@ -210,6 +212,152 @@ class Impl final : public Client {
                                                            att::Handle handle) {
           // An Error Response code of "Attribute Not Found" indicates the end
           // of the procedure (v5.0, Vol 3, Part G, 4.4.1).
+          if (status.is_protocol_error() &&
+              status.protocol_error() == att::ErrorCode::kAttributeNotFound) {
+            res_cb(att::Status());
+            return;
+          }
+
+          res_cb(status);
+        });
+
+    att_->StartTransaction(std::move(pdu), rsp_cb, error_cb);
+  }
+
+  void DiscoverCharacteristics(att::Handle range_start,
+                               att::Handle range_end,
+                               CharacteristicCallback chrc_callback,
+                               StatusCallback status_callback) override {
+    FXL_DCHECK(range_start <= range_end);
+    FXL_DCHECK(chrc_callback);
+    FXL_DCHECK(status_callback);
+
+    if (range_start == range_end) {
+      status_callback(att::Status());
+      return;
+    }
+
+    auto pdu = NewPDU(sizeof(att::ReadByTypeRequestParams16));
+    if (!pdu) {
+      status_callback(att::Status(HostError::kOutOfMemory));
+      return;
+    }
+
+    att::PacketWriter writer(att::kReadByTypeRequest, pdu.get());
+    auto* params = writer.mutable_payload<att::ReadByTypeRequestParams16>();
+    params->start_handle = htole16(range_start);
+    params->end_handle = htole16(range_end);
+    params->type = htole16(types::kCharacteristicDeclaration16);
+
+    auto rsp_cb = BindCallback(
+        [this, range_start, range_end, chrc_cb = std::move(chrc_callback),
+         res_cb = status_callback](const att::PacketReader& rsp) mutable {
+          FXL_DCHECK(rsp.opcode() == att::kReadByTypeResponse);
+
+          if (rsp.payload_size() < sizeof(att::ReadByTypeResponseParams)) {
+            FXL_VLOG(1) << "gatt: Received malformed Read By Type response";
+            att_->ShutDown();
+            res_cb(att::Status(HostError::kPacketMalformed));
+            return;
+          }
+
+          const auto& rsp_params = rsp.payload<att::ReadByTypeResponseParams>();
+          uint8_t entry_length = rsp_params.length;
+
+          // The characteristic declaration value contains:
+          // 1 octet: properties
+          // 2 octets: value handle
+          // 2 or 16 octets: UUID
+          constexpr size_t kCharacDeclSize16 = sizeof(Properties) +
+                                               sizeof(att::Handle) +
+                                               sizeof(att::AttributeType16);
+          constexpr size_t kCharacDeclSize128 = sizeof(Properties) +
+                                                sizeof(att::Handle) +
+                                                sizeof(att::AttributeType128);
+
+          constexpr size_t kAttributeDataSize16 =
+              sizeof(att::AttributeData) + kCharacDeclSize16;
+          constexpr size_t kAttributeDataSize128 =
+              sizeof(att::AttributeData) + kCharacDeclSize128;
+
+          if (entry_length != kAttributeDataSize16 &&
+              entry_length != kAttributeDataSize128) {
+            FXL_VLOG(1) << "gatt: Invalid attribute data length!";
+            att_->ShutDown();
+            res_cb(att::Status(HostError::kPacketMalformed));
+            return;
+          }
+
+          common::BufferView attr_data_list(rsp_params.attribute_data_list,
+                                            rsp.payload_size() - 1);
+          if (attr_data_list.size() % entry_length) {
+            FXL_VLOG(1) << "gatt: Malformed attribute data list!";
+            att_->ShutDown();
+            res_cb(att::Status(HostError::kPacketMalformed));
+            return;
+          }
+
+          att::Handle last_handle = range_end;
+          while (attr_data_list.size()) {
+            const auto& entry = attr_data_list.As<att::AttributeData>();
+            common::BufferView value(entry.value,
+                                     entry_length - sizeof(att::Handle));
+
+            CharacteristicData chrc;
+            chrc.handle = le16toh(entry.handle);
+            chrc.properties = value[0];
+            chrc.value_handle = le16toh(value.view(1, 2).As<att::Handle>());
+
+            // Vol 3, Part G, 3.3: "The Characteristic Value declaration shall
+            // exist immediately following the characteristic declaration."
+            if (chrc.value_handle != chrc.handle + 1) {
+              FXL_VLOG(1) << "gatt: Characteristic value doesn't follow decl";
+              res_cb(att::Status(HostError::kPacketMalformed));
+              return;
+            }
+
+            // Stop and report an error if the server erroneously responds with
+            // an attribute outside the requested range.
+            if (chrc.handle > range_end || chrc.handle < range_start) {
+              FXL_VLOG(1) << fxl::StringPrintf(
+                  "gatt: Characteristic handle out of range (handle: 0x%04x, "
+                  "range: 0x%04x - 0x%04x)",
+                  chrc.handle, range_start, range_end);
+              res_cb(att::Status(HostError::kPacketMalformed));
+              return;
+            }
+
+            last_handle = chrc.handle;
+
+            // This must succeed as we have performed the necessary checks
+            // above.
+            __UNUSED bool result =
+                common::UUID::FromBytes(value.view(3), &chrc.type);
+            FXL_DCHECK(result);
+
+            // Notify the handler.
+            chrc_cb(chrc);
+
+            attr_data_list = attr_data_list.view(entry_length);
+          }
+
+          // The procedure is over if we have reached the end of the handle
+          // range.
+          if (last_handle == range_end) {
+            res_cb(att::Status());
+            return;
+          }
+
+          // Request the next batch.
+          DiscoverCharacteristics(last_handle + 1, range_end,
+                                  std::move(chrc_cb), std::move(res_cb));
+        });
+
+    auto error_cb =
+        BindErrorCallback([this, res_cb = status_callback](att::Status status,
+                                                           att::Handle handle) {
+          // An Error Response code of "Attribute Not Found" indicates the end
+          // of the procedure (v5.0, Vol 3, Part G, 4.6.1).
           if (status.is_protocol_error() &&
               status.protocol_error() == att::ErrorCode::kAttributeNotFound) {
             res_cb(att::Status());

@@ -53,6 +53,7 @@ enum Property : uint8_t {
   kAuthenticatedSignedWrites = 0x40,
   kExtendedProperties = 0x80,
 };
+using Properties = uint8_t;
 
 // Values for "Characteristic Extended Properties" bitfield.
 // (see Vol 3, Part G, 3.3.3.1)
@@ -60,6 +61,7 @@ enum ExtendedProperty : uint16_t {
   kReliableWrite = 0x0001,
   kWritableAuxiliaries = 0x0002,
 };
+using ExtendedProperties = uint16_t;
 
 }  // namespace gatt
 }  // namespace btlib

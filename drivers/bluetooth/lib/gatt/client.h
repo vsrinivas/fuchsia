@@ -9,6 +9,7 @@
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/att/bearer.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
+#include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -23,6 +24,13 @@ struct ServiceData {
 
   att::Handle range_start;
   att::Handle range_end;
+  common::UUID type;
+};
+
+struct CharacteristicData {
+  Properties properties;
+  att::Handle handle;
+  att::Handle value_handle;
   common::UUID type;
 };
 
@@ -74,6 +82,14 @@ class Client {
   // to clear any cached state in this case.
   using ServiceCallback = std::function<void(const ServiceData&)>;
   virtual void DiscoverPrimaryServices(ServiceCallback svc_callback,
+                                       StatusCallback status_callback) = 0;
+
+  // Performs the "Discover All Characteristics of a Service" procedure defined
+  // in v5.0, Vol 3, Part G, 4.6.1.
+  using CharacteristicCallback = std::function<void(const CharacteristicData&)>;
+  virtual void DiscoverCharacteristics(att::Handle range_start,
+                                       att::Handle range_end,
+                                       CharacteristicCallback chrc_callback,
                                        StatusCallback status_callback) = 0;
 };
 

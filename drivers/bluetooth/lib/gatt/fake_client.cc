@@ -37,6 +37,13 @@ void FakeClient::DiscoverPrimaryServices(ServiceCallback svc_callback,
   });
 }
 
+void FakeClient::DiscoverCharacteristics(att::Handle range_start,
+                                         att::Handle range_end,
+                                         CharacteristicCallback chrc_callback,
+                                         StatusCallback status_callback) {
+  // TODO(armansito): Do something.
+}
+
 }  // namespace testing
 }  // namespace gatt
 }  // namespace btlib

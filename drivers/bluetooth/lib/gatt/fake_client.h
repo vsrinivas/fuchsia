@@ -34,6 +34,10 @@ class FakeClient final : public Client {
   void ExchangeMTU(MTUCallback callback) override;
   void DiscoverPrimaryServices(ServiceCallback svc_callback,
                                StatusCallback status_callback) override;
+  void DiscoverCharacteristics(att::Handle range_start,
+                               att::Handle range_end,
+                               CharacteristicCallback chrc_callback,
+                               StatusCallback status_callback) override;
 
   // All callbacks will be posted on this dispatcher to emulate asynchronous
   // behavior.
