@@ -31,10 +31,6 @@ namespace {
 constexpr char kReadOnlyModuleRepositoryPath[] =
     "/system/data/module_manifest_repository";
 
-// NOTE: This must match deploy-module in the SDK.
-constexpr char kReadWriteModuleRepositoryPath[] =
-    "/data/module_manifest_repository";
-
 constexpr char kContextListenerEntitiesKey[] = "entities";
 
 class ModuleResolverApp : ContextListener {
@@ -58,9 +54,6 @@ class ModuleResolverApp : ContextListener {
         "local_ro", std::make_unique<modular::DirectoryModuleManifestSource>(
                         kReadOnlyModuleRepositoryPath, false /* create */));
     if (!is_test) {
-      resolver_impl_->AddSource(
-          "local_rw", std::make_unique<modular::DirectoryModuleManifestSource>(
-                          kReadWriteModuleRepositoryPath, true /* create */));
       resolver_impl_->AddSource(
           "firebase_mods",
           std::make_unique<modular::FirebaseModuleManifestSource>(
