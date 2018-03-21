@@ -12,38 +12,67 @@ if !exists("g:main_syntax")
   syntax region fidlFold start="{" end="}" transparent fold
 endif
 
-" keyword definitions
-syn match fidlImport        "^\(import\)\s"
-syn keyword fidlLanguageKeywords enum module interface struct union
-syn keyword fidlType array bool float double int8 int16 int32 int64 uint8 uint16 uint32 uint64 string handle channel socket vmo process job thread
+" Keywords
+syn keyword fidlKeyword as const enum interface library struct union using
+
+
+" Types
+syn match fidlType "request<@\?[a-zA-Z][a-zA-Z0-9]*\(\.[a-zA-Z][a-zA-Z0-9]*\)*>?\?"
+
+syn match fidlType "handle?\?\<\@!"
+syn match fidlBadType "handle<[a-z]*>?\?"
+syn match fidlType "handle<\(channel\|event\|eventpair\|fifo\|job\|process\|port\|resource\|socket\|thread\|vmo\)>?\?"
+
+syn match fidlType "string\(:[0-9][0-9]*\)\??\?"
+syn match fidlType "bool"
+syn match fidlBadType "bool?"
+syn match fidlType "float\(32\|64\)"
+syn match fidlBadType "float\(32\|64\)?"
+syn match fidlType "u\?int\(8\|16\|32\|64\)"
+syn match fidlBadType "u\?int\(8\|16\|32\|64\)?"
+
+" TODO: error highlight arrays without length / with "?"
+syn region fidlType matchgroup=Type start="vector<" end=">\(:[0-9][0-9]*\)\??\?" contains=fidlType,fidlBadType transparent
+syn region fidlType matchgroup=Type start="array<" end=">:[0-9][0-9]*" contains=fidlType,fidlBadType transparent
+
+
+" Identifiers prefixed with @
+syn match fidlEscapedIdentifier "@[a-zA-Z][a-zA-Z0-9]*"
+
 
 " Comments
 syntax keyword fidlTodo           contained TODO FIXME XXX
 syntax region  fidlDocLink        contained start=+\[+ end=+\]+
-syntax region  fidlComment        start="/\*"  end="\*/" contains=fidlTodo,fidlDocLink,@Spell
 syntax match   fidlLineComment    "//.*" contains=fidlTodo,@Spell
 syntax match   fidlLineDocComment "///.*" contains=fidlTodo,fidlDocLink,@Spell
 
+
+" Literals
 syn region fidlString start='"' end='"' contained
-syn region fidlDesc start='\[' end='\]'
+
+
+" Attributes
+syn region fidlAttribute start='\[' end='\]'
 
 let b:current_syntax = "fidl"
 let b:spell_options = "contained"
 
-hi def link fidlImport      Include
-hi def link fidlLanguageKeywords Keyword
-hi def link fidlTodo        Todo
+hi def link fidlKeyword Keyword
 
-hi def link fidlComment         Comment
+hi def link fidlTodo            Todo
 hi def link fidlLineComment     Comment
 hi def link fidlLineDocComment  Comment
 hi def link fidlDocLink         SpecialComment
 
 hi def link fidlBlockCmd    Statement
 hi def link fidlType        Type
-hi def link fidlString      Constant
-hi def link fidlDesc        PreProc
-hi def link fidlNumber      Constanterface
+hi def link fidlBadType     Error
+hi def link fidlIntType     Type
+hi def link fidlString      String
+hi def link fidlAttribute   PreProc
+hi def link fidlNumber      Number
+
+hi def link fidlEscapedIdentifier Normal
 
 if g:main_syntax is# 'fidl'
   unlet g:main_syntax
