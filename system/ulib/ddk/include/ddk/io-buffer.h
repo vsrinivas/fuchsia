@@ -67,11 +67,6 @@ zx_status_t io_buffer_init_vmo(io_buffer_t* buffer, zx_handle_t bti, zx_handle_t
 zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_handle_t bti, zx_paddr_t addr,
                                     size_t size, zx_handle_t resource, uint32_t cache_policy);
 
-// Legacy names for the init functions
-// TODO(teisenbe/ZX-1804): Remove this once all callers are migrated
-#define io_buffer_init_with_bti io_buffer_init
-#define io_buffer_init_aligned_with_bti io_buffer_init_aligned
-
 zx_status_t io_buffer_cache_op(io_buffer_t* buffer, const uint32_t op,
                                const zx_off_t offset, const size_t size);
 
