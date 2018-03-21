@@ -18,19 +18,22 @@
 #include <threads.h>
 
 #include "core.h"
+#include "debug.h"
 #include "msg_buf.h"
 #include "wmi-tlv.h"
 
 // Information about our message types. This doesn't have to be in the same order as the
 // ath10k_msg_type enums, but in order for the init algorithm to work properly, a type
 // must be defined in the init_data array before it appears in an 'isa' field.
-#define MSG(type, base, hdr) { type, base, hdr }  // See msg_buf.h
+#define STR_NAME(name) #name
+#define MSG(type, base, hdr) { type, base, hdr, STR_NAME(type) }
 static const struct {
     enum ath10k_msg_type type;
     enum ath10k_msg_type isa;
     size_t hdr_size;
+    const char* name;
 } ath10k_msg_types_init_data[] = {
-    {ATH10K_MSG_TYPE_BASE, 0, 0},
+    {ATH10K_MSG_TYPE_BASE, 0, 0, "ATH10K_MSG_TYPE_BASE"},
 
     HTC_MSGS,
 
@@ -50,6 +53,7 @@ static struct ath10k_msg_type_info {
     enum ath10k_msg_type isa;
     size_t offset;
     size_t hdr_size;
+    const char* name;
 } ath10k_msg_types_info[ATH10K_MSG_TYPE_COUNT];
 static mtx_t ath10k_msg_types_lock = MTX_INIT;
 static bool ath10k_msg_types_initialized = false;
@@ -79,6 +83,7 @@ zx_status_t ath10k_msg_bufs_init(struct ath10k* ar) {
             type_info->offset = ath10k_msg_types_info[parent_type].offset
                                 + ath10k_msg_types_info[parent_type].hdr_size;
             type_info->hdr_size = ath10k_msg_types_init_data[ndx].hdr_size;
+            type_info->name = ath10k_msg_types_init_data[ndx].name;
         }
         ath10k_msg_types_initialized = true;
     }
@@ -141,8 +146,8 @@ void* ath10k_msg_buf_get_header(struct ath10k_msg_buf* msg_buf,
     return (void*)((uint8_t*)msg_buf->vaddr + ath10k_msg_types_info[type].offset);
 }
 
-void* ath10k_msg_buf_get_payload(struct ath10k_msg_buf* msg_buf,
-                                 enum ath10k_msg_type type) {
+void* ath10k_msg_buf_get_payload(struct ath10k_msg_buf* msg_buf) {
+    enum ath10k_msg_type type = msg_buf->type;
     return (void*)((uint8_t*)msg_buf->vaddr
                    + ath10k_msg_types_info[type].offset
                    + ath10k_msg_types_info[type].hdr_size);
@@ -175,3 +180,17 @@ void ath10k_msg_buf_free(struct ath10k_msg_buf* msg_buf) {
     }
 }
 
+void ath10k_msg_buf_dump(struct ath10k_msg_buf* msg_buf, const char* prefix) {
+    uint8_t* raw_data = msg_buf->vaddr;
+    ath10k_info("msg_buf (%s): paddr %#x\n",
+                ath10k_msg_types_info[msg_buf->type].name,
+                (unsigned int)msg_buf->paddr);
+    unsigned ndx;
+    for (ndx = 0; msg_buf->used - ndx >= 4; ndx += 4) {
+        ath10k_info("%s0x%02x 0x%02x 0x%02x 0x%02x\n", prefix,
+                    raw_data[ndx], raw_data[ndx + 1], raw_data[ndx + 2], raw_data[ndx + 3]);
+    }
+    if (ndx != msg_buf->used) {
+        ath10k_err("%sBuffer has %d bytes extra\n", prefix, (int)(msg_buf->used - ndx));
+    }
+}

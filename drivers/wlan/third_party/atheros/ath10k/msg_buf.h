@@ -83,8 +83,7 @@ zx_status_t ath10k_msg_buf_alloc(struct ath10k* ar,
 void* ath10k_msg_buf_get_header(struct ath10k_msg_buf* msg_buf,
                                 enum ath10k_msg_type msg_type);
 
-void* ath10k_msg_buf_get_payload(struct ath10k_msg_buf* msg_buf,
-                                 enum ath10k_msg_type msg_type);
+void* ath10k_msg_buf_get_payload(struct ath10k_msg_buf* msg_buf);
 
 size_t ath10k_msg_buf_get_offset(enum ath10k_msg_type msg_type);
 
@@ -92,3 +91,4 @@ size_t ath10k_msg_buf_get_payload_offset(enum ath10k_msg_type msg_type);
 
 void ath10k_msg_buf_free(struct ath10k_msg_buf* msg_buf);
 
+void ath10k_msg_buf_dump(struct ath10k_msg_buf* msg_buf, const char* prefix);
