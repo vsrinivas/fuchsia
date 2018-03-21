@@ -167,4 +167,7 @@ int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request);
 int open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID,
                    zx_duration_t timeout, char* out_path);
 
+// Finds and destroys the partition with the given GUID pair, if it exists.
+zx_status_t destroy_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID);
+
 __END_CDECLS
