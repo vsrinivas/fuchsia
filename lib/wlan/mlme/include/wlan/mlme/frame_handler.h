@@ -165,6 +165,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     virtual zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) { return ZX_OK; }
     WLAN_DECL_FUNC_HANDLE_MGMT(Beacon)
     WLAN_DECL_FUNC_HANDLE_MGMT(ProbeResponse)
+    WLAN_DECL_FUNC_HANDLE_MGMT(ProbeRequest)
     WLAN_DECL_FUNC_HANDLE_MGMT(Authentication)
     WLAN_DECL_FUNC_HANDLE_MGMT(Deauthentication)
     WLAN_DECL_FUNC_HANDLE_MGMT(AssociationRequest)
@@ -208,6 +209,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     }
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(Beacon)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(ProbeResponse)
+    WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(ProbeRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(Authentication)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(Deauthentication)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(AssociationRequest)

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <wlan/mlme/device_interface.h>
+#include <wlan/mlme/frame_handler.h>
 
 #include "lib/wlan/fidl/wlan_mlme.fidl.h"
 
@@ -16,7 +17,7 @@ class BssInterface;
 class TrafficIndicationMap;
 
 // Configures the driver to send Beacon frames periodically.
-class BeaconSender {
+class BeaconSender : public FrameHandler {
    public:
     BeaconSender(DeviceInterface* device);
     ~BeaconSender();
@@ -24,9 +25,12 @@ class BeaconSender {
     void Start(BssInterface* bss, const StartRequest& req);
     void Stop();
     zx_status_t UpdateBeacon(const TrafficIndicationMap& tim);
+    zx_status_t HandleProbeRequest(const ImmutableMgmtFrame<ProbeRequest>& frame,
+                                   const wlan_rx_info_t& rxinfo) override;
 
    private:
     zx_status_t WriteBeacon(const TrafficIndicationMap* tim);
+    zx_status_t SendProbeResponse(const ImmutableMgmtFrame<ProbeRequest>& frame);
     bool IsStarted();
 
     DeviceInterface* const device_;

@@ -49,6 +49,35 @@ bool BeaconSender::IsStarted() {
     return bss_ != nullptr;
 }
 
+zx_status_t BeaconSender::HandleProbeRequest(const ImmutableMgmtFrame<ProbeRequest>& frame,
+                                             const wlan_rx_info_t& rxinfo) {
+    auto probereq = frame.body;
+    size_t elt_len = frame.body_len - sizeof(ProbeRequest);
+    ElementReader reader(probereq->elements, elt_len);
+    while (reader.is_valid()) {
+        const ElementHeader* hdr = reader.peek();
+        if (hdr == nullptr) break;
+
+        switch (hdr->id) {
+        case element_id::kSsid: {
+            auto ie = reader.read<SsidElement>();
+            if (ie == nullptr) { return ZX_ERR_STOP; };
+            size_t ssid_len = strlen(req_->ssid->data());
+            if (strncmp(ie->ssid, req_->ssid->data(), ssid_len) != 0) { return ZX_ERR_STOP; }
+
+            break;
+        }
+        default:
+            // TODO(hahnr): Process additional IEs.
+            reader.skip(sizeof(ElementHeader) + hdr->len);
+            break;
+        }
+    }
+
+    // ProbeRequest is valid, send response.
+    return SendProbeResponse(frame);
+}
+
 zx_status_t BeaconSender::UpdateBeacon(const TrafficIndicationMap& tim) {
     debugfn();
     return WriteBeacon(&tim);
@@ -152,6 +181,11 @@ zx_status_t BeaconSender::WriteBeacon(const TrafficIndicationMap* tim) {
         return status;
     }
 
+    return ZX_OK;
+}
+
+zx_status_t BeaconSender::SendProbeResponse(const ImmutableMgmtFrame<ProbeRequest>& frame) {
+    // TODO(NET-443): Send ProbeResponse.
     return ZX_OK;
 }
 

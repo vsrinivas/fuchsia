@@ -73,9 +73,21 @@ zx_status_t InfraBss::HandleTimeout(const common::MacAddr& client_addr) {
 }
 
 zx_status_t InfraBss::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
+    bool to_bss = (bssid_ == hdr.addr1 && bssid_ == hdr.addr3);
+
+    // Special treatment for ProbeRequests which can be addressed towards broadcast address.
+    if (hdr.fc.subtype() == ManagementSubtype::kProbeRequest) {
+        // Drop all ProbeRequests which are neither targeted to this BSS nor to broadcast address.
+        bool to_bcast = (common::kBcastMac == hdr.addr1 && common::kBcastMac == hdr.addr3);
+        if (!to_bss && !to_bcast) { return ZX_ERR_STOP; }
+
+        // Valid ProbeRequest, forward to BeaconSender for processing.
+        ForwardCurrentFrameTo(bcn_sender_.get());
+        return ZX_OK;
+    }
+
     // Drop management frames which are not targeted towards this BSS.
-    // TODO(hahnr): Need to support wildcard BSSID for ProbeRequests.
-    if (bssid_ != hdr.addr1 || bssid_ != hdr.addr3) { return ZX_ERR_STOP; }
+    if (!to_bss) { return ZX_ERR_STOP; }
 
     // Let the correct RemoteClient instance process the received frame.
     auto& client_addr = hdr.addr2;

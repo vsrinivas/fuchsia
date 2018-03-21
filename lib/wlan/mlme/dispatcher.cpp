@@ -235,6 +235,15 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
         auto frame = ImmutableMgmtFrame<ProbeResponse>(hdr, proberesp, payload_len);
         return mlme_->HandleFrame(frame, *rxinfo);
     }
+    case ManagementSubtype::kProbeRequest: {
+        auto probereq = packet->field<ProbeRequest>(hdr->len());
+        if (probereq == nullptr) {
+            errorf("probe request packet too small (len=%zd)\n", payload_len);
+            return ZX_ERR_IO;
+        }
+        auto frame = ImmutableMgmtFrame<ProbeRequest>(hdr, probereq, payload_len);
+        return mlme_->HandleFrame(frame, *rxinfo);
+    }
     case ManagementSubtype::kAuthentication: {
         auto auth = packet->field<Authentication>(hdr->len());
         if (auth == nullptr) {
