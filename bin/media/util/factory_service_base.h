@@ -48,7 +48,8 @@ class FactoryServiceBase {
     bool quit_on_destruct_ = false;
   };
 
-  // A |ProductBase| that exposes FIDL interface |Interface|.
+  // A |ProductBase| that exposes FIDL interface |Interface| via a single
+  // binding.
   template <typename Interface>
   class Product : public ProductBase {
    public:
@@ -100,6 +101,54 @@ class FactoryServiceBase {
    private:
     size_t retention_count_ = 0;
     f1dl::Binding<Interface> binding_;
+  };
+
+  // A |ProductBase| that exposes FIDL interface |Interface| via multiple
+  // bindings.
+  template <typename Interface>
+  class MultiClientProduct : public ProductBase {
+   public:
+    virtual ~MultiClientProduct() {}
+
+   protected:
+    MultiClientProduct(Interface* impl,
+                       f1dl::InterfaceRequest<Interface> request,
+                       Factory* owner)
+        : ProductBase(owner), impl_(impl) {
+      FXL_DCHECK(impl);
+
+      if (request) {
+        AddBinding(std::move(request));
+      }
+
+      bindings_.set_empty_set_handler([this]() {
+        bindings_.set_empty_set_handler(nullptr);
+        ProductBase::ReleaseFromOwner();
+      });
+    }
+
+    // Returns the bindings for this product.
+    const f1dl::BindingSet<Interface>& bindings() { return bindings_; }
+
+    // Adds a binding.
+    void AddBinding(f1dl::InterfaceRequest<Interface> request) {
+      FXL_DCHECK(request);
+      bindings_.AddBinding(impl_, std::move(request));
+    }
+
+    // Closes the bindings.
+    void Unbind() { bindings_.CloseAll(); }
+
+    // Closes the bindings and calls ReleaseFromOwner. This method can only
+    // be called after the first shared_ptr to the product is created.
+    void UnbindAndReleaseFromOwner() {
+      Unbind();
+      ProductBase::ReleaseFromOwner();
+    }
+
+   private:
+    Interface* impl_;
+    f1dl::BindingSet<Interface> bindings_;
   };
 
   FactoryServiceBase(

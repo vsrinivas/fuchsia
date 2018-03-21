@@ -25,9 +25,9 @@ std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
 
 MediaPlayerImpl::MediaPlayerImpl(f1dl::InterfaceRequest<MediaPlayer> request,
                                  MediaComponentFactory* owner)
-    : MediaComponentFactory::Product<MediaPlayer>(this,
-                                                  std::move(request),
-                                                  owner) {
+    : MediaComponentFactory::MultiClientProduct<MediaPlayer>(this,
+                                                             std::move(request),
+                                                             owner) {
   FXL_DCHECK(owner);
 
   status_publisher_.SetCallbackRunner(
@@ -566,6 +566,10 @@ void MediaPlayerImpl::SetAudioRenderer(
   if (audio_renderer) {
     audio_renderer_.Bind(std::move(audio_renderer));
   }
+}
+
+void MediaPlayerImpl::AddBinding(f1dl::InterfaceRequest<MediaPlayer> request) {
+  MultiClientProduct::AddBinding(std::move(request));
 }
 
 void MediaPlayerImpl::SetVideoRenderer(

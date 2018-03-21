@@ -21,8 +21,9 @@
 namespace media {
 
 // Fidl agent that renders streams derived from a SeekingReader.
-class MediaPlayerImpl : public MediaComponentFactory::Product<MediaPlayer>,
-                        public MediaPlayer {
+class MediaPlayerImpl
+    : public MediaComponentFactory::MultiClientProduct<MediaPlayer>,
+      public MediaPlayer {
  public:
   static std::shared_ptr<MediaPlayerImpl> Create(
       f1dl::InterfaceRequest<MediaPlayer> request,
@@ -56,6 +57,8 @@ class MediaPlayerImpl : public MediaComponentFactory::Product<MediaPlayer>,
   void SetAudioRenderer(
       f1dl::InterfaceHandle<AudioRenderer> audio_renderer,
       f1dl::InterfaceHandle<MediaRenderer> media_renderer) override;
+
+  void AddBinding(f1dl::InterfaceRequest<MediaPlayer> request) override;
 
  private:
   static constexpr int64_t kMinimumLeadTime = Timeline::ns_from_ms(30);

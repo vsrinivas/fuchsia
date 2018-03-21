@@ -59,6 +59,9 @@ interface MediaPlayer {
   // audio_renderer parameter is null, the SetGain method does nothing.
   SetAudioRenderer@9(AudioRenderer? audio_renderer,
                      MediaRenderer media_renderer);
+
+  // Adds a new binding to this MediaPlayer.
+  AddBinding(MediaPlayer& media_player);
 };
 
 // MediaPlayer status information.
