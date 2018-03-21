@@ -10,7 +10,7 @@ const Implementation = `
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "{{ .PrimaryHeader }}"
+#include <{{ .PrimaryHeader }}>
 
 #include "lib/fidl/cpp/internal/implementation.h"
 

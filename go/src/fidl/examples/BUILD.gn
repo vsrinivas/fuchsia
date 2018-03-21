@@ -29,6 +29,22 @@ fidl_example("interface-ordinals") {}
 fidl_example("test") {}
 fidl_example("types") {}
 
+fidl("point") {
+  sources = [
+    "//zircon/system/host/fidl/examples/library-a/point.fidl2"
+  ]
+}
+
+fidl("view") {
+  sources = [
+    "//zircon/system/host/fidl/examples/library-b/view.fidl2"
+  ]
+
+  deps = [
+    ":point",
+  ]
+}
+
 group("examples") {
   deps = [
     ":alignment",
@@ -46,5 +62,8 @@ group("examples") {
     ":interface-ordinals",
     ":test",
     ":types",
+    # TODO(abarth): Build these targets too.
+    # ":point",
+    # ":view",
   ]
 }

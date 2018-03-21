@@ -374,7 +374,7 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 		e := c.compileCompoundIdentifier(val.Identifier, "")
 		declType, ok := c.decls[val.Identifier]
 		if !ok {
-			log.Fatal("Unknown identifier:", val.Identifier)
+			log.Fatal("Unknown identifier: ", val.Identifier)
 		}
 		// TODO(mknyszek): Support unions.
 		switch declType {
@@ -392,7 +392,7 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 				r = Type(e)
 			}
 		default:
-			log.Fatal("Unknown declaration type:", declType)
+			log.Fatal("Unknown declaration type: ", declType)
 		}
 	default:
 		log.Fatal("Unknown type kind: ", val.Kind)
@@ -456,7 +456,7 @@ func (c *compiler) compileMethod(ifaceName types.EncodedIdentifier, val types.Me
 	}
 	if val.HasRequest {
 		req := Struct{
-			Name: c.compileCompoundIdentifier(ifaceName, methodName + "Request"),
+			Name: c.compileCompoundIdentifier(ifaceName, methodName+"Request"),
 			// We want just the size of the parameter array as a struct, not
 			// including the message header size.
 			Size: val.RequestSize - MessageHeaderSize,
@@ -468,7 +468,7 @@ func (c *compiler) compileMethod(ifaceName types.EncodedIdentifier, val types.Me
 	}
 	if val.HasResponse {
 		resp := Struct{
-			Name: c.compileCompoundIdentifier(ifaceName, methodName + "Response"),
+			Name: c.compileCompoundIdentifier(ifaceName, methodName+"Response"),
 			// We want just the size of the parameter array as a struct, not
 			// including the message header size.
 			Size: val.ResponseSize - MessageHeaderSize,

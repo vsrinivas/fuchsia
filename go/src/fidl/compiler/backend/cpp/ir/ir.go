@@ -111,7 +111,7 @@ type Parameter struct {
 
 type Root struct {
 	PrimaryHeader string
-	CHeader       string
+	Headers       []string
 	Namespace     string
 	Decls         []Decl
 }
@@ -353,7 +353,7 @@ func (c *compiler) compileLiteral(val types.Literal) string {
 	case types.DefaultLiteral:
 		return "default"
 	default:
-		log.Fatal("Unknown literal kind:", val.Kind)
+		log.Fatal("Unknown literal kind: ", val.Kind)
 		return ""
 	}
 }
@@ -365,7 +365,7 @@ func (c *compiler) compileConstant(val types.Constant) string {
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	default:
-		log.Fatal("Unknown constant kind:", val.Kind)
+		log.Fatal("Unknown constant kind: ", val.Kind)
 		return ""
 	}
 }
@@ -374,7 +374,7 @@ func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
 	if t, ok := primitiveTypes[val]; ok {
 		return t
 	}
-	log.Fatal("Unknown primitive type:", val)
+	log.Fatal("Unknown primitive type: ", val)
 	return ""
 }
 
@@ -405,7 +405,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		t := c.compileCompoundIdentifier(val.Identifier, "")
 		declType, ok := (*c.decls)[val.Identifier]
 		if !ok {
-			log.Fatal("Unknown identifier:", val.Identifier)
+			log.Fatal("Unknown identifier: ", val.Identifier)
 		}
 		switch declType {
 		case types.ConstDeclType:
@@ -426,11 +426,11 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
 			r.Dtor = fmt.Sprintf("~InterfaceHandle")
 		default:
-			log.Fatal("Unknown declaration type:", declType)
+			log.Fatal("Unknown declaration type: ", declType)
 		}
 		r.DeclType = declType
 	default:
-		log.Fatal("Unknown type kind:", val.Kind)
+		log.Fatal("Unknown type kind: ", val.Kind)
 	}
 	return r
 }
@@ -625,7 +625,21 @@ func Compile(r types.Root) Root {
 	}
 
 	for _, v := range r.DeclOrder {
-		root.Decls = append(root.Decls, decls[v])
+		d := decls[v]
+		if d == nil {
+			log.Fatal("Unknown declaration: ", v)
+		}
+		root.Decls = append(root.Decls, d)
+	}
+
+	for _, l := range r.Libraries {
+		if l.Name == r.Name {
+			// We don't need to include our own header.
+			continue
+		}
+		// TODO(abarth): Support dependencies on headers outside the SDK.
+		h := fmt.Sprintf("fuchsia/fidl/%s.cc.h", l.Name)
+		root.Headers = append(root.Headers, h)
 	}
 
 	return root

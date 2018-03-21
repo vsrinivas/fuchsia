@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/fidl/echo2.cc.h>
 #include <launchpad/launchpad.h>
 #include <lib/async/cpp/loop.h>
 #include <lib/async/default.h>
 #include <zircon/processargs.h>
 #include <zx/process.h>
 
-#include "garnet/examples/fidl2/services/echo2.fidl.cc.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/svc/cpp/services.h"

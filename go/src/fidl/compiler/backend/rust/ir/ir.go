@@ -295,7 +295,7 @@ func compileLiteral(val types.Literal) string {
 	case types.DefaultLiteral:
 		return "::Default::default()"
 	default:
-		log.Fatal("Unknown literal kind:", val.Kind)
+		log.Fatal("Unknown literal kind: ", val.Kind)
 		return ""
 	}
 }
@@ -307,7 +307,7 @@ func compileConstant(val types.Constant) string {
 	case types.LiteralConstant:
 		return compileLiteral(val.Literal)
 	default:
-		log.Fatal("Unknown constant kind:", val.Kind)
+		log.Fatal("Unknown constant kind: ", val.Kind)
 		return ""
 	}
 }
@@ -334,7 +334,7 @@ func compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
 	if t, ok := primitiveTypes[val]; ok {
 		return t
 	}
-	log.Fatal("Unknown primitive type:", val)
+	log.Fatal("Unknown primitive type: ", val)
 	return ""
 }
 
@@ -342,7 +342,7 @@ func compileHandleSubtype(val types.HandleSubtype) string {
 	if t, ok := handleSubtypes[val]; ok {
 		return t
 	}
-	log.Fatal("Unknown handle type:", val)
+	log.Fatal("Unknown handle type: ", val)
 	return ""
 }
 
@@ -368,7 +368,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		t := compileCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier))
 		declType, ok := (*c.decls)[val.Identifier]
 		if !ok {
-			log.Fatal("unknown identifier:", val.Identifier)
+			log.Fatal("unknown identifier: ", val.Identifier)
 		}
 		switch declType {
 		case types.ConstDeclType:
@@ -389,7 +389,7 @@ func (c *compiler) compileType(val types.Type) Type {
 			log.Fatal("Unknown declaration type: ", declType)
 		}
 	default:
-		log.Fatal("Unknown type kind:", val.Kind)
+		log.Fatal("Unknown type kind: ", val.Kind)
 	}
 
 	return Type{

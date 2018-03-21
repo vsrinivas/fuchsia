@@ -7,7 +7,6 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -37,30 +36,30 @@ type CompoundIdentifier struct {
 
 func ParseCompoundIdentifier(ei EncodedIdentifier) CompoundIdentifier {
 	s := string(ei)
-	libraryParts := strings.FieldsFunc(s, func(r rune) bool { return r == '/' })
-	if len(libraryParts) > 2 {
-		log.Fatal("Received a compound identifier with more than one '/': %s", s)
-	}
+	parts := strings.SplitN(s, "/", 2)
 	var library Identifier
 	var decls string
-	if len(library) == 2 {
-		library = Identifier(libraryParts[0])
-		decls = libraryParts[1]
+	if len(parts) == 2 {
+		library = Identifier(parts[0])
+		decls = parts[1]
 	} else {
 		library = Identifier("")
-		decls = libraryParts[0]
+		decls = s
 	}
-	declParts := strings.FieldsFunc(decls, func(r rune) bool { return r == '-' })
-	numParts := len(declParts)
-	if numParts == 0 {
-		log.Fatal("Received a compound identifier with no name after the library: %s", s)
+	parts = strings.Split(decls, "-")
+	ids := make([]Identifier, len(parts)-1)
+	for i, decl := range parts[:len(parts)-1] {
+		ids[i] = Identifier(decl)
 	}
-	declIdentifiers := make([]Identifier, numParts-1)
-	for i, decl := range declParts[:numParts-1] {
-		declIdentifiers[i] = Identifier(decl)
+	name := Identifier(parts[len(parts)-1])
+	return CompoundIdentifier{library, ids, name}
+}
+
+func EnsureLibrary(l Identifier, ei EncodedIdentifier) EncodedIdentifier {
+	if strings.Index(string(ei), "/") != -1 {
+		return ei
 	}
-	name := Identifier(declParts[numParts-1])
-	return CompoundIdentifier{library, declIdentifiers, name}
+	return EncodedIdentifier(fmt.Sprintf("%s/%s", l, ei))
 }
 
 type Ordinal uint32
@@ -245,11 +244,6 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// Library represents a FIDL2 dependency on a separate library.
-type Library struct {
-	// TODO(cramertj/kulakowski)
-}
-
 type Attribute struct {
 	Name  Identifier `json:"name"`
 	Value string     `json:"value"`
@@ -399,6 +393,12 @@ const (
 //     DECL-DECL-ID
 //     ID
 type DeclMap map[EncodedIdentifier]DeclType
+
+// Library represents a FIDL2 dependency on a separate library.
+type Library struct {
+	Name  Identifier `json:"name,omitempty"`
+	Decls DeclMap    `json:"declarations,omitempty"`
+}
 
 // Root is the top-level object for a FIDL2 library.
 // It contains lists of all declarations and dependencies within the library.

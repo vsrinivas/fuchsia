@@ -66,6 +66,12 @@ func main() {
 		log.Fatalf("Error parsing JSON as FIDL data: %v", err)
 	}
 
+	for _, l := range fidlData.Libraries {
+		for k, v := range l.Decls {
+			fidlData.Decls[types.EnsureLibrary(l.Name, k)] = v
+		}
+	}
+
 	running := 0
 	results := make(chan error)
 	didError := false

@@ -270,7 +270,7 @@ func typeExprForMethod(request []Parameter, response []Parameter) string {
 func typeExprForPrimitiveSubtype(val types.PrimitiveSubtype) string {
 	t, ok := typeForPrimitiveSubtype[val]
 	if !ok {
-		log.Fatal("Unknown primitive subtype:", val)
+		log.Fatal("Unknown primitive subtype: ", val)
 	}
 	return fmt.Sprintf("const $fidl.%s()", t)
 }
@@ -344,7 +344,7 @@ func (c *compiler) compileLiteral(val types.Literal) string {
 	case types.DefaultLiteral:
 		return "default"
 	default:
-		log.Fatal("Unknown literal kind:", val.Kind)
+		log.Fatal("Unknown literal kind: ", val.Kind)
 		return ""
 	}
 }
@@ -356,7 +356,7 @@ func (c *compiler) compileConstant(val types.Constant) string {
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	default:
-		log.Fatal("Unknown constant kind:", val.Kind)
+		log.Fatal("Unknown constant kind: ", val.Kind)
 		return ""
 	}
 }
@@ -365,7 +365,7 @@ func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
 	if t, ok := declForPrimitiveType[val]; ok {
 		return t
 	}
-	log.Fatal("Unknown primitive type:", val)
+	log.Fatal("Unknown primitive type: ", val)
 	return ""
 }
 
@@ -423,7 +423,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		t := c.compileUpperCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier), "")
 		declType, ok := (*c.decls)[val.Identifier]
 		if !ok {
-			log.Fatal("Unknown identifier:", val.Identifier)
+			log.Fatal("Unknown identifier: ", val.Identifier)
 		}
 		r.declType = declType
 		switch r.declType {
@@ -445,10 +445,10 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.typeExpr = fmt.Sprintf("const $fidl.InterfaceHandleType<%s>(nullable: %s)",
 				t, formatBool(val.Nullable))
 		default:
-			log.Fatal("Unknown declaration type:", r.declType)
+			log.Fatal("Unknown declaration type: ", r.declType)
 		}
 	default:
-		log.Fatal("Unknown type kind:", val.Kind)
+		log.Fatal("Unknown type kind: ", val.Kind)
 	}
 	return r
 }

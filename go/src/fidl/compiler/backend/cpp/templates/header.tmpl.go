@@ -14,6 +14,10 @@ const Header = `
 
 #include "lib/fidl/cpp/internal/header.h"
 
+{{ range .Headers -}}
+#include <{{ . }}>
+{{ end -}}
+
 namespace {{ .Namespace }} {
 {{ end }}
 

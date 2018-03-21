@@ -92,7 +92,6 @@ func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error
 	headerPath := config.FidlStem + ".cc.h"
 	implementationPath := config.FidlStem + ".cc"
 	tree.PrimaryHeader = relStem + ".cc.h"
-	tree.CHeader = relStem + ".c.h"
 
 	tmpls := template.New("CPPTemplates")
 	template.Must(tmpls.Parse(templates.Const))
