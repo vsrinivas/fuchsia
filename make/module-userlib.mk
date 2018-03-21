@@ -192,6 +192,7 @@ MODULE_PKG_TAG := "[lib]"
 ifneq ($(filter shared,$(MODULE_PACKAGE)),)
 ifneq ($(MODULE_SO_NAME),)
 MODULE_PKG_SRCS += lib/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so.abi
+MODULE_PKG_SRCS += package/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so.strip
 MODULE_PKG_SRCS += lib/debug/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so
 endif
 endif
@@ -286,8 +287,9 @@ ifeq ($(MODULE_TYPE),userlib)
 
 ifneq ($(filter so,$(MODULE_EXPORT)),)
 ifneq ($(MODULE_SO_NAME),)
+# Install the .so.abi, which is needed at link time, into the sysroot's lib directory.
 #$(info EXPORT $(MODULE) shared)
-MODULE_TEMP_NAME := $(BUILDSYSROOT)/lib/lib$(MODULE_SO_NAME).so
+MODULE_TEMP_NAME := $(BUILDSYSROOT)/lib/lib$(MODULE_SO_NAME).so.abi
 $(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).so.abi)
 SYSROOT_DEPS += $(MODULE_TEMP_NAME)
 GENERATED += $(MODULE_TEMP_NAME)
