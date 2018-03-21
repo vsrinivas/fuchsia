@@ -917,8 +917,14 @@ dependencies = [
 name = "log_listener"
 version = "0.1.0"
 dependencies = [
+ "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fidl 0.1.0",
  "fidl_logger 0.1.0",
+ "fuchsia-app 0.1.0",
+ "fuchsia-async 0.1.0",
+ "fuchsia-zircon 0.3.4",
+ "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
+ "tempdir 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
