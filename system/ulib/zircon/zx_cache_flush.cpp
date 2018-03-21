@@ -49,7 +49,22 @@ zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t flags) {
 
 #if defined(__x86_64__)
 
-    // Nothing needs doing for x86.
+    unsigned cacheline_size = DATA_CONSTANTS.dcache_line_size;
+    if (cacheline_size == 0) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    const uint64_t mask = cacheline_size - 1;
+    uint8_t* p = reinterpret_cast<uint8_t*>(reinterpret_cast<uintptr_t>(addr) & ~mask);
+    const uint8_t* end = reinterpret_cast<const uint8_t*>(addr) + len;
+
+    // TODO: Use clflushopt if available
+    // TODO: Use clwb if available and we weren't asked to invalidate
+    while (p < end) {
+        __asm__ volatile("clflush %0" ::"m"(*p));
+        p += cacheline_size;
+    }
+    __asm__ volatile("mfence");
 
 #elif defined(__aarch64__)
 
