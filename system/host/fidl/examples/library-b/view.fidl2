@@ -3,5 +3,5 @@ library view;
 using point;
 
 interface View {
-    1: View(point.Point p);
+    1: MoveTo(point.Point p);
 };

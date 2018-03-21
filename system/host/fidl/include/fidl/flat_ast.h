@@ -110,12 +110,13 @@ struct Decl {
         kUnion,
     };
 
-    Decl(Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
-        : kind(kind), attributes(std::move(attributes)), name(std::move(name)) {}
+    Decl(const Library* library, Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
+        : library(library), kind(kind), attributes(std::move(attributes)), name(std::move(name)) {}
 
     Decl(Decl&&) = default;
     Decl& operator=(Decl&&) = default;
 
+    const Library* library;
     const Kind kind;
     std::unique_ptr<raw::AttributeList> attributes;
     const Name name;
@@ -316,8 +317,8 @@ inline bool Type::operator<(const Type& other) const {
 }
 
 struct Const : public Decl {
-    Const(std::unique_ptr<raw::AttributeList> attributes, Name name, std::unique_ptr<Type> type, std::unique_ptr<raw::Constant> value)
-        : Decl(Kind::kConst, std::move(attributes), std::move(name)), type(std::move(type)), value(std::move(value)) {}
+    Const(const Library* library, std::unique_ptr<raw::AttributeList> attributes, Name name, std::unique_ptr<Type> type, std::unique_ptr<raw::Constant> value)
+        : Decl(library, Kind::kConst, std::move(attributes), std::move(name)), type(std::move(type)), value(std::move(value)) {}
     std::unique_ptr<Type> type;
     std::unique_ptr<raw::Constant> value;
 };
@@ -330,8 +331,8 @@ struct Enum : public Decl {
         std::unique_ptr<raw::Constant> value;
     };
 
-    Enum(std::unique_ptr<raw::AttributeList> attributes, Name name, types::PrimitiveSubtype type, std::vector<Member> members)
-        : Decl(Kind::kEnum, std::move(attributes), std::move(name)), type(type), members(std::move(members)) {}
+    Enum(const Library* library, std::unique_ptr<raw::AttributeList> attributes, Name name, types::PrimitiveSubtype type, std::vector<Member> members)
+        : Decl(library, Kind::kEnum, std::move(attributes), std::move(name)), type(type), members(std::move(members)) {}
 
     types::PrimitiveSubtype type;
     std::vector<Member> members;
@@ -372,8 +373,8 @@ struct Interface : public Decl {
         std::unique_ptr<Message> maybe_response;
     };
 
-    Interface(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Method> methods)
-        : Decl(Kind::kInterface, std::move(attributes), std::move(name)), methods(std::move(methods)) {}
+    Interface(const Library* library, std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Method> methods)
+        : Decl(library, Kind::kInterface, std::move(attributes), std::move(name)), methods(std::move(methods)) {}
 
     std::vector<Method> methods;
 };
@@ -391,8 +392,8 @@ struct Struct : public Decl {
         FieldShape fieldshape;
     };
 
-    Struct(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
-        : Decl(Kind::kStruct, std::move(attributes), std::move(name)), members(std::move(members)) {}
+    Struct(const Library* library, std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
+        : Decl(library, Kind::kStruct, std::move(attributes), std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
     TypeShape typeshape;
@@ -408,8 +409,8 @@ struct Union : public Decl {
         FieldShape fieldshape;
     };
 
-    Union(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
-        : Decl(Kind::kUnion, std::move(attributes), std::move(name)), members(std::move(members)) {}
+    Union(const Library* library, std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
+        : Decl(library, Kind::kUnion, std::move(attributes), std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
     // The offset of each of the union members is the same, so store

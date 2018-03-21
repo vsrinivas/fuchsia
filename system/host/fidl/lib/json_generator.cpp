@@ -510,7 +510,17 @@ std::ostringstream JSONGenerator::Produce() {
         GenerateObjectMember("interface_declarations", library_->interface_declarations_);
         GenerateObjectMember("struct_declarations", library_->struct_declarations_);
         GenerateObjectMember("union_declarations", library_->union_declarations_);
-        GenerateObjectMember("declaration_order", library_->declaration_order_);
+
+        // The library's declaration_order_ contains all the declarations for all
+        // transitive dependencies. The backend only needs the declaration order
+        // for this specific library.
+        std::vector<flat::Decl*> declaration_order;
+        for (flat::Decl* decl : library_->declaration_order_) {
+            if (decl->library == library_)
+                declaration_order.push_back(decl);
+        }
+        GenerateObjectMember("declaration_order", declaration_order);
+
         GenerateDeclarationsMember(library_);
     });
     GenerateEOF();
