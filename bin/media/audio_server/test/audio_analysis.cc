@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "audio_analysis.h"
+#include <fbl/algorithm.h>
+#include <vector>
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -12,22 +14,20 @@ namespace test {
 // This library contains standalone functions that enable tests to analyze
 // audio- or gain-related outputs.
 //
-// The ValToDb and GainScaleToDb functions convert numerical values (RMS level)
-// into the decibel scale (hence 20dB per 10x, not 10dB). The GenerateCosine
-// function populates audio buffers with sinusoidal values of the given
-// frequency, magnitude and phase. The FFT function performs Fast Fourier
-// Transforms on the provided real and imaginary arrays. The MeasureAudioFreq
-// function analyzes the given audio buffer at the specified frequency,
-// returning the magnitude of signal that resides at that frequency, as well as
-// the combined magnitude of all other frequencies (useful for computing
-// signal-to-noise and other metrics).
+// The GenerateCosine function populates audio buffers with sinusoidal values of
+// the given frequency, magnitude and phase. The FFT function performs Fast
+// Fourier Transforms on the provided real and imaginary arrays. The
+// MeasureAudioFreq function analyzes the given audio buffer at the specified
+// frequency, returning the magnitude of signal that resides at that frequency,
+// as well as the combined magnitude of all other frequencies (useful for
+// computing signal-to-noise and other metrics).
 //
 
 //
-// TODO(mpuryear): Consider using the googletest Array Matchers for this
-//
 // Numerically compare two buffers of integers. Emit values if mismatch found.
 // For testability, last param bool represents whether we expect comp to fail
+//
+// TODO(mpuryear): Consider using the googletest Array Matchers for this
 template <typename T>
 bool CompareBuffers(const T* actual,
                     const T* expect,

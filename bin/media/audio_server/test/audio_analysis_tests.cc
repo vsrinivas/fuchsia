@@ -15,20 +15,8 @@ TEST(AnalysisHelpers, ValToDb) {
   EXPECT_EQ(ValToDb(100.0), 40.0);  // 100x is 40 dB
   EXPECT_EQ(ValToDb(0.1), -20.0);   // 10% is -20 dB
 
-  EXPECT_GE(ValToDb(0.5), -6.0206004);  // 50% is roughly -6.0206 dB
-  EXPECT_LE(ValToDb(0.5), -6.0205998);  // inexact representation: 2 compares
-}
-
-// Test the inline function that converts from fixed-point gain to dB.
-TEST(AnalysisHelpers, GainScaleToDb) {
-  EXPECT_EQ(GainScaleToDb(audio::Gain::kUnityScale), 0.0);
-  EXPECT_EQ(GainScaleToDb(audio::Gain::kUnityScale * 10), 20.0);
-
-  EXPECT_GE(GainScaleToDb(audio::Gain::kUnityScale / 100), -40.000002);
-  EXPECT_LE(GainScaleToDb(audio::Gain::kUnityScale / 100), -39.999998);
-
-  EXPECT_GE(GainScaleToDb(audio::Gain::kUnityScale >> 1), -6.0206004);
-  EXPECT_LE(GainScaleToDb(audio::Gain::kUnityScale >> 1), -6.0205998);
+  EXPECT_GE(ValToDb(0.5), -6.0206 * 1.000001);  // 50% is roughly -6.0206 dB
+  EXPECT_LE(ValToDb(0.5), -6.0206 * 0.999999);  // FP representation => 2 comps
 }
 
 // Test uint8 version of CompareBuffers, which we use to test output buffers

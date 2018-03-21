@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
-#include "audio_analysis.h"
 #include "mixer_tests_shared.h"
 
 namespace media {

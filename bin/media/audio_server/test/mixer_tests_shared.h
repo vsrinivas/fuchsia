@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "audio_analysis.h"
 #include "garnet/bin/media/audio_server/gain.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 #include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
@@ -15,6 +16,12 @@ namespace test {
 //
 // Subtest shared helper functions -- used by tests; can ASSERT on their own.
 //
+
+// Converts a gain multiplier (in fixed-pt 4.28) to decibels (in double floating
+// point). Here, dB refers to Power, so 10x change is +20 dB (not +10dB).
+inline double GainScaleToDb(audio::Gain::AScale gain_scale) {
+  return ValToDb(static_cast<double>(gain_scale) / audio::Gain::kUnityScale);
+}
 
 // Find a suitable mixer for the provided format, channels and frame rates.
 // TODO(mpuryear): add the ability to specify which resampler.

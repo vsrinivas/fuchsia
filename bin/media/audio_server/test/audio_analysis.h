@@ -4,20 +4,15 @@
 
 #pragma once
 
+#include <zircon/types.h>
 #include <cmath>
-#include "garnet/bin/media/audio_server/gain.h"
 
 namespace media {
 namespace test {
 
-// Convert float/double into decibels, from RMS *level* (hence 20 instead of 10)
+// Convert double into decibels, from RMS *level* (hence 20dB per 10x, not 10).
 inline double ValToDb(double value) {
   return std::log10(value) * 20.0;
-}
-// Converts a gain multiplier (in fixed-pt 4.28) to decibels (in double floating
-// point). Here, dB refers to Power, so 10x change is +20 dB (not +10dB).
-inline double GainScaleToDb(audio::Gain::AScale gain_scale) {
-  return ValToDb(static_cast<double>(gain_scale) / audio::Gain::kUnityScale);
 }
 
 // Numerically compare two buffers of integers. A bool (default true) represents

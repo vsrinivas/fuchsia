@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
-#include "audio_analysis.h"
 #include "mixer_tests_shared.h"
 
 namespace media {
@@ -18,6 +17,18 @@ namespace test {
 //
 // Gain tests using the Gain and AScale objects only
 //
+// Test the inline function that converts from fixed-point gain to dB.
+TEST(Gain, GainScaleToDb) {
+  EXPECT_EQ(GainScaleToDb(audio::Gain::kUnityScale), 0.0);
+  EXPECT_EQ(GainScaleToDb(audio::Gain::kUnityScale * 10), 20.0);
+
+  EXPECT_GE(GainScaleToDb(audio::Gain::kUnityScale / 100), -40.0 * 1.000001);
+  EXPECT_LE(GainScaleToDb(audio::Gain::kUnityScale / 100), -40.0 * 0.999999);
+
+  EXPECT_GE(GainScaleToDb(audio::Gain::kUnityScale >> 1), -6.0206 * 1.000001);
+  EXPECT_LE(GainScaleToDb(audio::Gain::kUnityScale >> 1), -6.0206 * 0.999999);
+}
+
 // Do renderer and output gains correctly combine to produce unity scaling?
 TEST(Gain, Unity) {
   audio::Gain gain;
