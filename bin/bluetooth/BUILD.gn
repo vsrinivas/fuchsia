@@ -64,6 +64,5 @@ package("bluetooth_tests") {
 
   tests = [
     { name = "bluetooth_unittests" },
-    { name = "bluetooth-lifecycle-lib-integration-test" },
   ]
 }

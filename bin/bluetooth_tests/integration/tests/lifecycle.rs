@@ -22,8 +22,11 @@ fn sleep() -> () {
 
 #[test]
 fn bt_host_lifecycle() {
+    println!("at {} {}", file!(), line!());
     let original_hosts = hci::list_host_devices();
+    println!("at {} {}", file!(), line!());
     let (hci_device, _) = hci::create_and_bind_device().unwrap();
+    println!("at {} {}", file!(), line!());
 
     // TODO(armansito): Use a device watcher instead of polling.
 
@@ -31,28 +34,36 @@ fn bt_host_lifecycle() {
     let mut retry = 0;
     'find_device: while retry < ITERATIONS {
         retry += 1;
+        println!("at {}", line!());
         let new_hosts = hci::list_host_devices();
+        println!("at {}", line!());
         for host in new_hosts {
             if !original_hosts.contains(&host) {
+                println!("at {}", line!());
                 bthost = host;
                 break 'find_device;
             }
         }
+        println!("at {}", line!());
         sleep();
     }
 
+    println!("at {}", line!());
     // Check a device showed up within an acceptable timeout
     let found_device = common::open_rdwr(&bthost);
     assert!(found_device.is_ok());
+    println!("at {}", line!());
     let found_device = found_device.unwrap();
 
     // Check the right driver is bound to the device
     let driver_name = hci::get_device_driver_name(&found_device).unwrap();
     assert_eq!("bthost", driver_name.to_str().unwrap());
+    println!("at {}", line!());
 
     // Confirm device topology, host is under bt-hci
     let device_topo = hci::get_device_driver_topo(&found_device).unwrap();
     assert!(device_topo.to_string_lossy().contains("bt-hci"));
+    println!("at {}", line!());
 
     // Remove the bt-hci device
     hci::destroy_device(&hci_device);
