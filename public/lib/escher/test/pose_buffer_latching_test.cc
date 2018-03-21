@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/escher/test/gtest_vulkan.h"
 #include "garnet/public/lib/escher/escher.h"
-#include "garnet/public/lib/escher/vk/buffer.h"
+#include "garnet/public/lib/escher/hmd/pose_buffer_latching_shader.h"
 #include "garnet/public/lib/escher/renderer/frame.h"
 #include "garnet/public/lib/escher/resources/resource_recycler.h"
 #include "garnet/public/lib/escher/scene/camera.h"
+#include "garnet/public/lib/escher/test/gtest_vulkan.h"
+#include "garnet/public/lib/escher/vk/buffer.h"
 #include "gtest/gtest.h"
 #include "lib/escher/hmd/pose_buffer.h"
-#include "garnet/public/lib/escher/hmd/pose_buffer_latching_shader.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -93,14 +93,9 @@ glm::mat4 MatrixFromPose(const hmd::Pose& pose) {
 VK_TEST(PoseBuffer, ComputeShaderLatching) {
   // Initialize Vulkan.
   escher::VulkanInstance::Params instance_params(
-      {{},
+      {{"VK_LAYER_LUNARG_standard_validation"},
        {VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
-       true});
-
-// Only enable Vulkan validation layers when in debug mode.
-#if !defined(NDEBUG)
-  instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
-#endif
+       false});
 
   auto vulkan_instance =
       escher::VulkanInstance::New(std::move(instance_params));
@@ -110,7 +105,7 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
   escher::FramePtr frame = escher->NewFrame("PoseBufferLatchingTest");
 
   uint32_t num_entries = 8;
-  uint64_t base_time = 42L;  // Choose an arbitrary, non-zero time.
+  uint64_t base_time = 42L;              // Choose an arbitrary, non-zero time.
   uint64_t time_interval = 1024 * 1024;  // 1 ms
 
   vk::DeviceSize pose_buffer_size = num_entries * sizeof(escher::hmd::Pose);
@@ -191,5 +186,6 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
 
   escher->Cleanup();
 }
-}
-}
+
+}  // namespace test
+}  // namespace escher
