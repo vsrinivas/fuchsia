@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <fbl/atomic.h>
 #include <kernel/event.h>
 #include <kernel/sched.h>
 #include <kernel/timer.h>
@@ -68,10 +69,10 @@ static bool test_in_timer_callback() {
 
 static void timer_set_preempt_pending(timer_t* timer, zx_time_t now,
                                       void* arg) {
-    volatile bool* timer_ran = (volatile bool*)arg;
+    auto* timer_ran = reinterpret_cast<fbl::atomic<bool>*>(arg);
 
     thread_preempt_set_pending();
-    *timer_ran = true;
+    timer_ran->store(true);
 }
 
 static bool test_outside_interrupt() {
@@ -131,13 +132,13 @@ static bool test_outside_interrupt() {
     // accidentally call any blocking operations that cause our thread to
     // be rescheduled to another CPU.
     thread_preempt_disable();
-    volatile bool timer_ran = false;
+    fbl::atomic<bool> timer_ran(false);
     timer_t timer;
     timer_init(&timer);
     timer_set(&timer, current_time() + ZX_USEC(100), TIMER_SLACK_CENTER, 0,
-              timer_set_preempt_pending, (void*)&timer_ran);
+              timer_set_preempt_pending, reinterpret_cast<void*>(&timer_ran));
     // Spin until timer_ran is set by the interrupt handler.
-    while (!timer_ran) {}
+    while (!timer_ran.load()) {}
     EXPECT_EQ(thread->preempt_pending, true, "");
     thread_preempt_reenable();
 
