@@ -64,7 +64,7 @@ in the document.
 
 ## Build Zircon
 
-Build results will be in $SRC/zircon/build-{arm64,x86}
+Build results will be in $SRC/zircon/build-{arm64,x64}
 
 The variable $BUILDDIR in examples below refers to the build output directory
 for the particular build in question.
@@ -75,8 +75,8 @@ cd $SRC/zircon
 # for aarch64
 make -j32 arm64
 
-# for x86
-make -j32 x86
+# for x64
+make -j32 x64
 ```
 
 ### Using Clang
@@ -90,8 +90,8 @@ cd $SRC/zircon
 # for aarch64
 make -j32 USE_CLANG=true arm64
 
-# for x86
-make -j32 USE_CLANG=true x86
+# for x64
+make -j32 USE_CLANG=true x64
 ```
 
 ## Building Zircon for all targets
