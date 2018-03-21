@@ -33,9 +33,8 @@ bool VolumeCreate(const fbl::unique_fd& fd, const crypto::Bytes& key, bool fvm,
     if (fvm) {
         fvm_info_t fInfo;
         ASSERT_GE(ioctl_block_fvm_query(fd.get(), &fInfo), 0);
-        snprintf(err, sizeof(err),
-                 "details: block size=%" PRIu32 ", block count=%" PRIu64
-                 ", slice size=%zu, slice count=%zu",
+        snprintf(err, sizeof(err), "details: block size=%" PRIu32 ", block count=%" PRIu64
+                                   ", slice size=%zu, slice count=%zu",
                  bInfo.block_size, bInfo.block_count, fInfo.slice_size, fInfo.vslice_count);
     } else {
         snprintf(err, sizeof(err), "details: block size=%" PRIu32 ", block count=%" PRIu64,

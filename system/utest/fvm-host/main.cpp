@@ -36,11 +36,12 @@ typedef enum {
 } guid_type_t;
 
 typedef enum {
-    SPARSE,     // Sparse container
-    SPARSE_LZ4, // Sparse container compressed with LZ4
-    FVM,        // Explicitly created FVM container
-    FVM_NEW,    // FVM container created on FvmContainer::Create
-    FVM_OFFSET, // FVM container created at an offset within a file
+    SPARSE,         // Sparse container
+    SPARSE_LZ4,     // Sparse container compressed with LZ4
+    SPARSE_ZXCRYPT, // Sparse,container to be stored on a zxcrypt volume
+    FVM,            // Explicitly created FVM container
+    FVM_NEW,        // FVM container created on FvmContainer::Create
+    FVM_OFFSET,     // FVM container created at an offset within a file
 } container_t;
 
 typedef struct {
@@ -151,12 +152,12 @@ bool AddPartitions(Container* container) {
     END_HELPER;
 }
 
-bool CreateSparse(compress_type_t compress, size_t slice_size) {
+bool CreateSparse(uint32_t flags, size_t slice_size) {
     BEGIN_HELPER;
-    const char* path = compress ? sparse_lz4_path : sparse_path;
+    const char* path = ((flags & fvm::kSparseFlagLz4) != 0) ? sparse_lz4_path : sparse_path;
     unittest_printf("Creating sparse container: %s\n", path);
     fbl::unique_ptr<SparseContainer> sparseContainer;
-    ASSERT_EQ(SparseContainer::Create(path, slice_size, compress, &sparseContainer), ZX_OK,
+    ASSERT_EQ(SparseContainer::Create(path, slice_size, flags, &sparseContainer), ZX_OK,
               "Failed to initialize sparse container");
     ASSERT_TRUE(AddPartitions(sparseContainer.get()));
     ASSERT_EQ(sparseContainer->Commit(), ZX_OK, "Failed to write to sparse file");
@@ -177,14 +178,14 @@ bool ReportContainer(const char* path, off_t offset) {
     fbl::unique_ptr<Container> container;
     off_t length;
     ASSERT_TRUE(StatFile(path, &length));
-    ASSERT_EQ(Container::Create(path, offset, length - offset, &container), ZX_OK,
+    ASSERT_EQ(Container::Create(path, offset, length - offset, 0, &container), ZX_OK,
               "Failed to initialize container");
     ASSERT_EQ(container->Verify(), ZX_OK, "File check failed\n");
     return true;
 }
 
-bool ReportSparse(bool compress) {
-    if (compress) {
+bool ReportSparse(uint32_t flags) {
+    if ((flags & fvm::kSparseFlagLz4) != 0) {
         unittest_printf("Decompressing sparse file\n");
         if (fvm::decompress_sparse(sparse_lz4_path, sparse_path) != ZX_OK) {
             return false;
@@ -357,14 +358,12 @@ bool PopulatePartitions(size_t ndirs, size_t nfiles, size_t max_size) {
     END_HELPER;
 }
 
-bool DestroySparse(compress_type_t compress) {
+bool DestroySparse(uint32_t flags) {
     BEGIN_HELPER;
-    switch (compress) {
-    case LZ4:
+    if ((flags & fvm::kSparseFlagLz4) != 0) {
         unittest_printf("Destroying compressed sparse container: %s\n", sparse_lz4_path);
         ASSERT_EQ(unlink(sparse_lz4_path), 0, "Failed to unlink path");
-    case NONE:
-    default:
+    } else {
         unittest_printf("Destroying sparse container: %s\n", sparse_path);
         ASSERT_EQ(unlink(sparse_path), 0, "Failed to unlink path");
     }
@@ -422,15 +421,21 @@ bool CreateReportDestroy(container_t type, size_t slice_size) {
     BEGIN_HELPER;
     switch (type) {
     case SPARSE: {
-        ASSERT_TRUE(CreateSparse(NONE, slice_size));
-        ASSERT_TRUE(ReportSparse(NONE));
-        ASSERT_TRUE(DestroySparse(NONE));
+        ASSERT_TRUE(CreateSparse(0, slice_size));
+        ASSERT_TRUE(ReportSparse(0));
+        ASSERT_TRUE(DestroySparse(0));
         break;
     }
     case SPARSE_LZ4: {
-        ASSERT_TRUE(CreateSparse(LZ4, slice_size));
-        ASSERT_TRUE(ReportSparse(LZ4));
-        ASSERT_TRUE(DestroySparse(LZ4));
+        ASSERT_TRUE(CreateSparse(fvm::kSparseFlagLz4, slice_size));
+        ASSERT_TRUE(ReportSparse(fvm::kSparseFlagLz4));
+        ASSERT_TRUE(DestroySparse(fvm::kSparseFlagLz4));
+        break;
+    }
+    case SPARSE_ZXCRYPT: {
+        ASSERT_TRUE(CreateSparse(fvm::kSparseFlagZxcrypt, slice_size));
+        ASSERT_TRUE(ReportSparse(fvm::kSparseFlagZxcrypt));
+        ASSERT_TRUE(DestroySparse(fvm::kSparseFlagZxcrypt));
         break;
     }
     case FVM: {
@@ -551,6 +556,7 @@ bool Cleanup() {
 #define RUN_FOR_ALL_TYPES_EMPTY(slice_size) \
     RUN_TEST_MEDIUM((TestEmptyPartitions<SPARSE, slice_size>)) \
     RUN_TEST_MEDIUM((TestEmptyPartitions<SPARSE_LZ4, slice_size>)) \
+    RUN_TEST_MEDIUM((TestEmptyPartitions<SPARSE_ZXCRYPT, slice_size>)) \
     RUN_TEST_MEDIUM((TestEmptyPartitions<FVM, slice_size>)) \
     RUN_TEST_MEDIUM((TestEmptyPartitions<FVM_NEW, slice_size>)) \
     RUN_TEST_MEDIUM((TestEmptyPartitions<FVM_OFFSET, slice_size>))
@@ -558,6 +564,7 @@ bool Cleanup() {
 #define RUN_FOR_ALL_TYPES(num_dirs, num_files, max_size, slice_size) \
     RUN_TEST_MEDIUM((TestPartitions<SPARSE, num_dirs, num_files, max_size, slice_size>)) \
     RUN_TEST_MEDIUM((TestPartitions<SPARSE_LZ4, num_dirs, num_files, max_size, slice_size>)) \
+    RUN_TEST_MEDIUM((TestPartitions<SPARSE_ZXCRYPT, num_dirs, num_files, max_size, slice_size>)) \
     RUN_TEST_MEDIUM((TestPartitions<FVM, num_dirs, num_files, max_size, slice_size>)) \
     RUN_TEST_MEDIUM((TestPartitions<FVM_NEW, num_dirs, num_files, max_size, slice_size>)) \
     RUN_TEST_MEDIUM((TestPartitions<FVM_OFFSET, num_dirs, num_files, max_size, slice_size>))

@@ -39,7 +39,7 @@ zx_status_t FvmContainer::Create(const char* path, size_t slice_size, off_t offs
 }
 
 FvmContainer::FvmContainer(const char* path, size_t slice_size, off_t offset, off_t length)
-    : Container(path, slice_size), valid_(false), disk_offset_(offset), disk_size_(length),
+    : Container(path, slice_size, 0), valid_(false), disk_offset_(offset), disk_size_(length),
       vpart_hint_(1), pslice_hint_(1) {
     fd_.reset(open(path, O_RDWR, 0644));
     if (!fd_) {
@@ -500,7 +500,8 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
     format->Type(type);
     format->Name(name);
     uint32_t vpart_index;
-    if ((status = AllocatePartition(type, guid, name, 1, &vpart_index)) != ZX_OK) {
+    uint32_t flags = flags_ & format->FlagMask();
+    if ((status = AllocatePartition(type, guid, name, 1, flags, &vpart_index)) != ZX_OK) {
         return status;
     }
 
@@ -597,7 +598,7 @@ zx_status_t FvmContainer::GrowMetadata(size_t new_size) {
 }
 
 zx_status_t FvmContainer::AllocatePartition(uint8_t* type, uint8_t* guid, const char* name,
-                                            uint32_t slices, uint32_t* vpart_index) {
+                                            uint32_t slices, uint32_t flags, uint32_t* vpart_index) {
     CheckValid();
     for (unsigned index = vpart_hint_; index < FVM_MAX_ENTRIES; index++) {
         zx_status_t status;
@@ -609,7 +610,7 @@ zx_status_t FvmContainer::AllocatePartition(uint8_t* type, uint8_t* guid, const 
 
         // Make sure this vpartition has not already been allocated
         if (vpart->slices == 0) {
-            vpart->init(type, guid, slices, name, 0);
+            vpart->init(type, guid, slices, name, flags);
             vpart_hint_ = index + 1;
             dirty_ = true;
             *vpart_index = index;

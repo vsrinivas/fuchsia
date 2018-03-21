@@ -2,12 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
+
 #include <fbl/unique_fd.h>
 
 #include "fvm/container.h"
 
 zx_status_t Container::Create(const char* path, off_t offset, off_t length,
-                              fbl::unique_ptr<Container>* container) {
+                              uint32_t flags, fbl::unique_ptr<Container>* container) {
+    if ((flags & ~fvm::kSparseFlagAllValid) != 0) {
+        fprintf(stderr, "Invalid flags: %08" PRIx32 "\n", flags);
+        return -1;
+    }
+
     fbl::unique_fd fd(open(path, O_RDONLY));
     if (!fd) {
         fprintf(stderr, "Unable to open path %s\n", path);
@@ -49,7 +56,7 @@ zx_status_t Container::Create(const char* path, off_t offset, off_t length,
         // Found sparse container
         fbl::unique_ptr<Container> sparseContainer(new (&ac) SparseContainer(path,
                                                                              image->slice_size,
-                                                                             NONE));
+                                                                             flags));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -61,3 +68,10 @@ zx_status_t Container::Create(const char* path, off_t offset, off_t length,
     fprintf(stderr, "File format not supported\n");
     return ZX_ERR_NOT_SUPPORTED;
 }
+
+Container::Container(const char* path, size_t slice_size, uint32_t flags)
+    : dirty_(false), slice_size_(slice_size), flags_(flags) {
+    snprintf(path_, sizeof(path_), "%s", path);
+}
+
+Container::~Container() {}

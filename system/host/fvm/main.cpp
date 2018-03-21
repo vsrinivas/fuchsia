@@ -27,6 +27,7 @@ int usage(void) {
     fprintf(stderr, " --offset [bytes] - offset at which container begins (fvm only)\n");
     fprintf(stderr, " --length [bytes] - length of container within file (fvm only)\n");
     fprintf(stderr, " --compress - specify that file should be compressed (sparse only)\n");
+    fprintf(stderr, " --zxcrypt - specify that data be placed in zxcrypt volume (sparse only)\n");
     fprintf(stderr, "Input options:\n");
     fprintf(stderr, " --blob [path] - Add path as blob type (must be blobfs)\n");
     fprintf(stderr, " --data [path] - Add path as data type (must be minfs)\n");
@@ -81,8 +82,7 @@ int main(int argc, char** argv) {
     size_t offset = 0;
     size_t slice_size = DEFAULT_SLICE_SIZE;
     bool should_unlink = true;
-    compress_type_t compress = NONE;
-
+    uint32_t flags = 0;
     while (i < argc) {
         if (!strcmp(argv[i], "--slice") && i + 1 < argc) {
             slice_size = atoll(argv[++i]);
@@ -100,11 +100,13 @@ int main(int argc, char** argv) {
             length = atoll(argv[++i]);
         } else if (!strcmp(argv[i], "--compress")) {
             if (!strcmp(argv[++i], "lz4")) {
-                compress = LZ4;
+                flags |= fvm::kSparseFlagLz4;
             } else {
                 fprintf(stderr, "Invalid compression type\n");
                 return -1;
             }
+        } else if (!strcmp(argv[i], "--zxcrypt")) {
+            flags |= fvm::kSparseFlagZxcrypt;
         } else {
             break;
         }
@@ -189,7 +191,7 @@ int main(int argc, char** argv) {
         }
 
         fbl::unique_ptr<SparseContainer> sparseContainer;
-        if (SparseContainer::Create(path, slice_size, compress, &sparseContainer) != ZX_OK) {
+        if (SparseContainer::Create(path, slice_size, flags, &sparseContainer) != ZX_OK) {
             return -1;
         }
 
@@ -202,7 +204,7 @@ int main(int argc, char** argv) {
         }
     } else if (!strcmp(command, "verify")) {
         fbl::unique_ptr<Container> containerData;
-        if (Container::Create(path, offset, length, &containerData) != ZX_OK) {
+        if (Container::Create(path, offset, length, flags, &containerData) != ZX_OK) {
             return -1;
         }
 

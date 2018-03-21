@@ -88,6 +88,7 @@ public:
     virtual void Name(char* name) const = 0;
     virtual uint32_t BlockSize() const = 0;
     virtual uint32_t BlocksPerSlice() const = 0;
+    virtual uint32_t FlagMask() const = 0;
 
     uint32_t VpartIndex() const {
         CheckFvmReady();
@@ -127,6 +128,7 @@ public:
     void Name(char* name) const final;
     uint32_t BlockSize() const final;
     uint32_t BlocksPerSlice() const final;
+    uint32_t FlagMask() const final;
     uint8_t datablk[minfs::kMinfsBlockSize];
 
 private:
@@ -158,6 +160,7 @@ public:
     void Name(char* name) const final;
     uint32_t BlockSize() const final;
     uint32_t BlocksPerSlice() const final;
+    uint32_t FlagMask() const final;
     uint8_t datablk[blobfs::kBlobfsBlockSize];
 
 private:

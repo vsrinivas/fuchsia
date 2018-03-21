@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fvm/fvm-sparse.h>
+
 #include "fvm/format.h"
 
 MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type)
@@ -184,4 +186,8 @@ uint32_t MinfsFormat::BlockSize() const {
 uint32_t MinfsFormat::BlocksPerSlice() const {
     CheckFvmReady();
     return fvm_info_.slice_size / BlockSize();
+}
+
+uint32_t MinfsFormat::FlagMask() const {
+    return fvm::kSparseFlagZxcrypt;
 }

@@ -158,3 +158,7 @@ uint32_t BlobfsFormat::BlocksPerSlice() const {
     CheckFvmReady();
     return fvm_info_.slice_size / BlockSize();
 }
+
+uint32_t BlobfsFormat::FlagMask() const {
+    return 0;
+}

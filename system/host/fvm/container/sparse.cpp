@@ -14,11 +14,11 @@ static LZ4F_preferences_t lz4_prefs = {
     .compressionLevel = 0,
 };
 
-zx_status_t SparseContainer::Create(const char* path, size_t slice_size, compress_type_t compress,
+zx_status_t SparseContainer::Create(const char* path, size_t slice_size, uint32_t flags,
                                     fbl::unique_ptr<SparseContainer>* out) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<SparseContainer> sparseContainer(new (&ac) SparseContainer(path, slice_size,
-                                                                               compress));
+                                                                               flags));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -32,8 +32,8 @@ zx_status_t SparseContainer::Create(const char* path, size_t slice_size, compres
     return ZX_OK;
 }
 
-SparseContainer::SparseContainer(const char* path, uint64_t slice_size, compress_type_t compress)
-    : Container(path, slice_size), valid_(false), compress_(compress), disk_size_(0),
+SparseContainer::SparseContainer(const char* path, uint64_t slice_size, uint32_t flags)
+    : Container(path, slice_size, flags), valid_(false), disk_size_(0),
       extent_size_(0) {
     fd_.reset(open(path, O_CREAT | O_RDWR, 0666));
 
@@ -95,7 +95,7 @@ zx_status_t SparseContainer::Init() {
     image_.slice_size = slice_size_;
     image_.partition_count = 0;
     image_.header_length = sizeof(fvm::sparse_image_t);
-    image_.flags = compress_ == LZ4 ? fvm::kSparseFlagLz4 : 0;
+    image_.flags = flags_;
     partitions_.reset();
     dirty_ = true;
     valid_ = true;
@@ -286,7 +286,7 @@ zx_status_t SparseContainer::AllocatePartition(fbl::unique_ptr<Format> format) {
     format->Type(partition.descriptor.type);
     format->Name(reinterpret_cast<char*>(partition.descriptor.name));
     partition.descriptor.extent_count = 0;
-    //TODO(planders): flags?
+    partition.descriptor.flags = flags_ & format->FlagMask();
     image_.header_length += sizeof(fvm::partition_descriptor_t);
     uint32_t part_index = image_.partition_count;
 
@@ -349,7 +349,7 @@ zx_status_t SparseContainer::AllocateExtent(uint32_t part_index, uint64_t slice_
 }
 
 zx_status_t SparseContainer::SetupCompression(compression_t* comp, size_t max_len) {
-    if (!compress_) {
+    if ((flags_ & fvm::kSparseFlagLz4) == 0) {
         return ZX_OK;
     }
 
@@ -375,7 +375,7 @@ zx_status_t SparseContainer::SetupCompression(compression_t* comp, size_t max_le
 }
 
 zx_status_t SparseContainer::WriteData(const void* data, size_t length, compression_t* comp) {
-    if (compress_) {
+    if ((flags_ & fvm::kSparseFlagLz4) != 0) {
         size_t r = LZ4F_compressUpdate(comp->cctx, comp->buf(), comp->size(), data, length, NULL);
         if (LZ4F_isError(r)) {
             fprintf(stderr, "Could not compress data: %s\n", LZ4F_getErrorName(r));
@@ -391,7 +391,7 @@ zx_status_t SparseContainer::WriteData(const void* data, size_t length, compress
 }
 
 zx_status_t SparseContainer::FinishCompression(compression_t* comp) {
-    if (!compress_) {
+    if ((flags_ & fvm::kSparseFlagLz4) == 0) {
         return ZX_OK;
     }
 

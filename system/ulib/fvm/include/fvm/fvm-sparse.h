@@ -45,8 +45,12 @@ namespace fvm {
 constexpr uint64_t kSparseFormatMagic = (0x53525053204d5646ull); // 'FVM SPRS'
 constexpr uint64_t kSparseFormatVersion = 0x2;
 
-constexpr uint32_t kSparseFlagLz4 = 0x1;
-constexpr uint32_t kSparseFlagZxcrypt = 0x2;
+typedef enum sparse_flags {
+    kSparseFlagLz4 = 0x1,
+    kSparseFlagZxcrypt = 0x2,
+    // The final value is the bitwise-OR of all other flags
+    kSparseFlagAllValid = kSparseFlagLz4 | kSparseFlagZxcrypt,
+} sparse_flags_t;
 
 typedef struct sparse_image {
     uint64_t magic;
