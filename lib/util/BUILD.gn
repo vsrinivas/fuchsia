@@ -61,3 +61,15 @@ source_set("unittests") {
     "//third_party/googletest:gtest",
   ]
 }
+
+source_set("wait_until_idle") {
+  sources = [
+    "wait_until_idle.cc",
+    "wait_until_idle.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}

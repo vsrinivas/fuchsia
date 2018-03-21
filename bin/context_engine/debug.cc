@@ -8,22 +8,8 @@
 
 namespace maxwell {
 
-ContextDebugImpl::Activity::Activity(fxl::WeakPtr<ContextDebugImpl> debug)
-    : debug_(debug) {
-  debug_->activity_ = this;
-}
-
-ContextDebugImpl::Activity::~Activity() {
-  if (debug_) {
-    debug_->activity_ = nullptr;
-    debug_->PostIdleCheck();
-  }
-}
-
 ContextDebugImpl::ContextDebugImpl(const ContextRepository* const repository)
-    : repository_(repository),
-      message_loop_(fsl::MessageLoop::GetCurrent()),
-      weak_ptr_factory_(this) {}
+    : repository_(repository), weak_ptr_factory_(this) {}
 ContextDebugImpl::~ContextDebugImpl() = default;
 
 fxl::WeakPtr<ContextDebugImpl> ContextDebugImpl::GetWeakPtr() {
@@ -64,16 +50,12 @@ void ContextDebugImpl::OnSubscriptionRemoved(const Id& id) {
   DispatchOneSubscription(std::move(update));
 }
 
-ContextDebugImpl::ActivityToken ContextDebugImpl::RegisterOngoingActivity() {
-  FXL_DCHECK(message_loop_ == fsl::MessageLoop::GetCurrent());
+util::IdleWaiter::ActivityToken ContextDebugImpl::RegisterOngoingActivity() {
+  return wait_until_idle_.RegisterOngoingActivity();
+}
 
-  if (activity_) {
-    return ActivityToken(activity_);
-  } else {
-    // |activity_| is set in the |Activity| constructor and cleared in
-    // the destructor
-    return fxl::MakeRefCounted<Activity>(weak_ptr_factory_.GetWeakPtr());
-  }
+bool ContextDebugImpl::FinishIdleCheck() {
+  return wait_until_idle_.FinishIdleCheck();
 }
 
 void ContextDebugImpl::Watch(
@@ -97,8 +79,7 @@ void ContextDebugImpl::Watch(
 }
 
 void ContextDebugImpl::WaitUntilIdle(const WaitUntilIdleCallback& callback) {
-  idle_waiters_.push_back(callback);
-  PostIdleCheck();
+  wait_until_idle_.WaitUntilIdle(callback);
 }
 
 void ContextDebugImpl::DispatchOneValue(ContextDebugValuePtr value) {
@@ -126,33 +107,6 @@ void ContextDebugImpl::DispatchSubscriptions(
   listeners_.ForAllPtrs([&subscriptions](ContextDebugListener* listener) {
     listener->OnSubscriptionsChanged(subscriptions.Clone());
   });
-}
-
-void ContextDebugImpl::PostIdleCheck() {
-  if (!(idle_waiters_.empty() || activity_ || idle_check_pending_)) {
-    FXL_DCHECK(message_loop_);
-    message_loop_->PostQuitTask();
-    idle_check_pending_ = true;
-  }
-}
-
-bool ContextDebugImpl::FinishIdleCheck() {
-  if (idle_check_pending_) {
-    message_loop_->RunUntilIdle();
-    if (!activity_) {
-      for (const auto& callback : idle_waiters_) {
-        callback();
-      }
-      idle_waiters_.clear();
-    }
-    // Otherwise, |PostIdleCheck| will be invoked again when |activity_| is
-    // released.
-
-    idle_check_pending_ = false;
-    return true;
-  } else {
-    return false;
-  }
 }
 
 }  // namespace maxwell

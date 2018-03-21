@@ -4,6 +4,8 @@
 
 #include "peridot/tests/maxwell_integration/context_engine_test_base.h"
 
+#include "peridot/lib/util/wait_until_idle.h"
+
 namespace maxwell {
 
 void ContextEngineTestBase::SetUp() {
@@ -34,12 +36,7 @@ void ContextEngineTestBase::StartContextAgent(const std::string& url) {
 }
 
 void ContextEngineTestBase::WaitUntilIdle() {
-  // We can't just use a synchronous ptr because those don't run the message
-  // loop while they wait.
-  debug_->WaitUntilIdle([] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  fsl::MessageLoop::GetCurrent()->Run();
-  // Finish processing any remaining messages.
-  fsl::MessageLoop::GetCurrent()->RunUntilIdle();
+  util::WaitUntilIdle(debug_.get());
 }
 
 }  // namespace maxwell

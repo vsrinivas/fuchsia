@@ -73,6 +73,7 @@ source_set("context_common") {
 
   deps = [
     ":common",
+    "//peridot/lib/util:wait_until_idle",
   ]
 
   public_deps = [

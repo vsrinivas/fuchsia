@@ -24,4 +24,4 @@ bool EqualPtr(const std::unique_ptr<T>& lhs, const std::unique_ptr<T>& rhs) {
 
 }  // namespace util
 
-#endif  // PERIDOT_LIB_UTIL_DEBUG_H_
+#endif  // PERIDOT_LIB_UTIL_PTR_H_

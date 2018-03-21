@@ -93,6 +93,7 @@ source_set("context_repository") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/bound_set",
     "//peridot/lib/rapidjson",
+    "//peridot/lib/util:wait_until_idle",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/context/fidl",
     "//third_party/rapidjson",
