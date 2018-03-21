@@ -10,12 +10,12 @@ extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
-extern crate garnet_examples_fidl2_services_echo2;
+extern crate fidl_echo2;
 
 use component::server::{ServiceFactories, ServicesServer};
 use failure::{Error, ResultExt};
 use futures::prelude::*;
-use garnet_examples_fidl2_services_echo2::{Echo, EchoImpl};
+use fidl_echo2::{Echo, EchoImpl};
 
 fn echo_server(chan: async::Channel) -> impl Future<Item = (), Error = Never> {
     EchoImpl {

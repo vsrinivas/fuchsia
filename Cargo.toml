@@ -41,12 +41,12 @@ members =  [
   "public/rust/crates/mxruntime",
   "public/rust/crates/mxruntime/mxruntime-sys",
   "public/rust/fidl_crates/fidl2_examples",
-  "public/rust/fidl_crates/garnet_examples_fidl2_services_echo2",
+  "public/rust/fidl_crates/fidl_device_settings",
+  "public/rust/fidl_crates/fidl_echo2",
   "public/rust/fidl_crates/garnet_examples_fidl_services",
   "public/rust/fidl_crates/garnet_public_lib_app_fidl",
   "public/rust/fidl_crates/garnet_public_lib_app_fidl_service_provider",
   "public/rust/fidl_crates/garnet_public_lib_bluetooth_fidl",
-  "public/rust/fidl_crates/garnet_public_lib_device_settings_fidl",
   "public/rust/fidl_crates/garnet_public_lib_fsl_fidl",
   "public/rust/fidl_crates/garnet_public_lib_logger_fidl",
   "public/rust/fidl_crates/garnet_public_lib_mdns_fidl",
@@ -60,6 +60,8 @@ members =  [
 # workspace must have a patch statement here and the version of the crate
 # at the path specified must be compatible with all crates in the tree.
 [patch.crates-io]
+fidl_device_settings = { path = "public/rust/fidl_crates/fidl_device_settings" }
+fidl_echo2 = { path = "public/rust/fidl_crates/fidl_echo2" }
 fuchsia-ddk = { path = "public/rust/crates/fuchsia-ddk" }
 eapol = { path = "lib/rust/crates/eapol" }
 fdio = { path = "public/rust/crates/fdio" }
@@ -72,14 +74,12 @@ fuchsia-vfs-watcher = { path = "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watch
 fuchsia-wlan-dev = { path = "lib/rust/crates/fuchsia-wlan-dev" }
 fuchsia-zircon = { path = "public/rust/crates/fuchsia-zircon" }
 fuchsia-zircon-sys = { path = "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys" }
-garnet_examples_fidl2_services_echo2 = { path = "public/rust/fidl_crates/garnet_examples_fidl2_services_echo2" }
 garnet_examples_fidl_services = { path = "public/rust/fidl_crates/garnet_examples_fidl_services" }
 garnet_lib_wlan_fidl = { path = "lib/rust/fidl_crates/garnet_lib_wlan_fidl" }
 garnet_lib_wlan_fidl_service = { path = "lib/rust/fidl_crates/garnet_lib_wlan_fidl_service" }
 garnet_public_lib_app_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_app_fidl" }
 garnet_public_lib_app_fidl_service_provider = { path = "public/rust/fidl_crates/garnet_public_lib_app_fidl_service_provider" }
 garnet_public_lib_bluetooth_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_bluetooth_fidl" }
-garnet_public_lib_device_settings_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_device_settings_fidl" }
 garnet_public_lib_fsl_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_fsl_fidl" }
 garnet_public_lib_logger_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_logger_fidl" }
 garnet_public_lib_mdns_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_mdns_fidl" }

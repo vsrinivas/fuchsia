@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 [package]
-name = "garnet_examples_fidl2_services_echo2"
+name = "fidl_echo2"
 version = "0.1.0"
 license = "BSD-3-Clause"
 authors = ["rust-fuchsia@fuchsia.com"]

@@ -2,26 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![deny(warnings)]
+// #![deny(warnings)]
+#![feature(conservative_impl_trait)]
 
 extern crate failure;
 extern crate fdio;
 extern crate fidl;
-extern crate fuchsia_app as component;
+extern crate fidl_device_settings;
+extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
+#[macro_use]
+extern crate fuchsia_syslog as syslog;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
 extern crate mxruntime;
 extern crate mxruntime_sys;
 extern crate parking_lot;
 
-#[macro_use]
-extern crate fuchsia_syslog as syslog;
 
-use component::server::ServicesServer;
+use app::server::{ServicesServer, ServiceFactories};
 use failure::{Error, ResultExt};
-use fidl::{ClientEnd, InterfacePtr};
-use futures::future::ok as fok;
+use futures::prelude::*;
+use futures::future::{FutureResult, ok as fok};
 use futures::io;
 use parking_lot::Mutex;
 use std::collections::HashMap;
@@ -30,13 +32,19 @@ use std::io::prelude::*;
 use std::sync::Arc;
 
 // Include the generated FIDL bindings for the `DeviceSetting` service.
-extern crate garnet_public_lib_device_settings_fidl;
-use garnet_public_lib_device_settings_fidl::{DeviceSettingsManager, DeviceSettingsWatcher, Status,
-                                             ValueType};
+use fidl_device_settings::{
+    DeviceSettingsManager,
+    DeviceSettingsManagerImpl,
+    DeviceSettingsWatcherProxy,
+    Status,
+    ValueType
+};
+
+type Watchers = Arc<Mutex<HashMap<String, Vec<DeviceSettingsWatcherProxy>>>>;
 
 struct DeviceSettingsManagerServer {
     setting_file_map: HashMap<String, String>,
-    watchers: Arc<Mutex<HashMap<String, Vec<DeviceSettingsWatcher::Proxy>>>>,
+    watchers: Watchers,
 }
 
 impl DeviceSettingsManagerServer {
@@ -46,11 +54,11 @@ impl DeviceSettingsManagerServer {
             .collect();
     }
 
-    fn run_watchers(&mut self, key: &str, t: ValueType) {
+    fn run_watchers(&mut self, key: &str, mut t: ValueType) {
         let mut map = self.watchers.lock();
         if let Some(m) = map.get_mut(key) {
             m.retain(|w| {
-                if let Err(e) = w.on_change_settings(t) {
+                if let Err(e) = w.on_change_settings(&mut t) {
                     match e {
                         fidl::Error::ClientRead(zx::Status::PEER_CLOSED)
                         | fidl::Error::ClientWrite(zx::Status::PEER_CLOSED) => {
@@ -92,95 +100,116 @@ fn read_file(file: &str) -> io::Result<String> {
     Ok(contents)
 }
 
-impl DeviceSettingsManager::Server for DeviceSettingsManagerServer {
-    type GetInteger = fidl::ServerImmediate<(i64, Status)>;
+fn catch_and_log_err<F>(ctx: &'static str, f: F) -> FutureResult<(), Never>
+    where F: FnOnce() -> Result<(), fidl::Error>
+{
+    let res = f();
+    if let Err(e) = res {
+        fx_log_err!("Error running device_settings_server fidl handler {}: {:?}", ctx, e);
+    }
+    fok(())
+}
 
-    fn get_integer(&mut self, key: String) -> Self::GetInteger {
-        let file = if let Some(f) = self.setting_file_map.get(&key) {
-            f
-        } else {
-            return fok((0, Status::ErrInvalidSetting));
-        };
-        match read_file(file) {
-            Err(e) => {
-                if e.kind() == io::ErrorKind::NotFound {
-                    return fok((0, Status::ErrNotSet));
+fn device_settings_server(state: DeviceSettingsManagerServer, channel: async::Channel)
+    -> impl Future<Item = (), Error = Never>
+{
+    DeviceSettingsManagerImpl {
+        state,
+        get_integer: |state, key, res| catch_and_log_err("get_integer", || {
+            let file = if let Some(f) = state.setting_file_map.get(&key) {
+                f
+            } else {
+                res.send(&mut 0, &mut Status::ErrInvalidSetting)?;
+                return Ok(());
+            };
+            match read_file(file) {
+                Err(e) => {
+                    if e.kind() == io::ErrorKind::NotFound {
+                        res.send(&mut 0, &mut Status::ErrNotSet)
+                    } else {
+                        fx_log_err!("reading integer: {:?}", e);
+                        res.send(&mut 0, &mut Status::ErrRead)
+                    }
                 }
-                fx_log_err!("reading integer: {:?}", e);
-                return fok((0, Status::ErrRead));
+                Ok(str) => match str.parse::<i64>() {
+                    Err(_e) => res.send(&mut 0, &mut Status::ErrIncorrectType),
+                    Ok(mut i) => res.send(&mut i, &mut Status::Ok),
+                },
             }
-            Ok(str) => match str.parse::<i64>() {
-                Err(_e) => fok((0, Status::ErrIncorrectType)),
-                Ok(i) => fok((i, Status::Ok)),
-            },
-        }
-    }
-
-    type SetInteger = fidl::ServerImmediate<bool>;
-
-    fn set_integer(&mut self, key: String, val: i64) -> Self::SetInteger {
-        match self.set_key(&key, val.to_string().as_bytes(), ValueType::Int) {
-            Ok(r) => return fok(r),
-            Err(e) => {
-                fx_log_err!("setting integer: {:?}", e);
-                return fok(false);
-            }
-        }
-    }
-
-    type GetString = fidl::ServerImmediate<(String, Status)>;
-
-    fn get_string(&mut self, key: String) -> Self::GetString {
-        let file = if let Some(f) = self.setting_file_map.get(&key) {
-            f
-        } else {
-            return fok(("".to_string(), Status::ErrInvalidSetting));
-        };
-        match read_file(file) {
-            Err(e) => {
-                if e.kind() == io::ErrorKind::NotFound {
-                    return fok(("".to_string(), Status::ErrNotSet));
+        }),
+        set_integer: |state, key, val, res| catch_and_log_err("set_integer", || {
+            match state.set_key(&key, val.to_string().as_bytes(), ValueType::Number) {
+                Ok(mut r) => res.send(&mut r),
+                Err(e) => {
+                    fx_log_err!("setting integer: {:?}", e);
+                    res.send(&mut false)
                 }
-                fx_log_err!("reading string: {:?}", e);
-                return fok(("".to_string(), Status::ErrRead));
             }
-            Ok(s) => fok((s, Status::Ok)),
-        }
+        }),
+        get_string: |state, key, res| catch_and_log_err("get_string", || {
+            let file = if let Some(f) = state.setting_file_map.get(&key) {
+                f
+            } else {
+                res.send(&mut "".to_string(), &mut Status::ErrInvalidSetting)?;
+                return Ok(());
+            };
+            match read_file(file) {
+                Err(e) => {
+                    if e.kind() == io::ErrorKind::NotFound {
+                        res.send(&mut "".to_string(), &mut Status::ErrNotSet)
+                    } else {
+                        fx_log_err!("reading string: {:?}", e);
+                        res.send(&mut "".to_string(), &mut Status::ErrRead)
+                    }
+                }
+                Ok(mut s) => res.send(&mut s, &mut Status::Ok),
+            }
+        }),
+        set_string: |state, key, val, res| catch_and_log_err("set_string", || {
+            fx_log_info!("setting string key: {:?}, val: {:?}", key, val);
+            match state.set_key(&key, val.as_bytes(), ValueType::Text) {
+                Ok(mut r) => res.send(&mut r),
+                Err(e) => {
+                    fx_log_err!("setting string: {:?}", e);
+                    res.send(&mut false)
+                }
+            }
+        }),
+        watch: |state, key, watcher, res| catch_and_log_err("watch", || {
+            if !state.setting_file_map.contains_key(&key) {
+                return res.send(&mut Status::ErrInvalidSetting);
+            }
+            match watcher.into_proxy() {
+                Err(e) => {
+                    fx_log_err!("getting watcher proxy: {:?}", e);
+                    res.send(&mut Status::ErrUnknown)
+                }
+                Ok(w) => {
+                    let mut map = state.watchers.lock();
+                    let mv = map.entry(key).or_insert(Vec::new());
+                    mv.push(w);
+                    res.send(&mut Status::Ok)
+                }
+            }
+        }),
     }
+    .serve(channel)
+    .recover(|e| fx_log_err!("error running device settings server: {:?}", e))
+}
 
-    type SetString = fidl::ServerImmediate<bool>;
+struct Factory {
+    watchers: Watchers,
+}
+impl ServiceFactories for Factory {
+    fn spawn_service(&mut self, _: String, channel: async::Channel) {
+        let mut d = DeviceSettingsManagerServer {
+            setting_file_map: HashMap::new(),
+            watchers: self.watchers.clone(),
+        };
 
-    fn set_string(&mut self, key: String, val: String) -> Self::SetString {
-        match self.set_key(&key, val.as_bytes(), ValueType::String) {
-            Ok(r) => return fok(r),
-            Err(e) => {
-                fx_log_err!("setting string: {:?}", e);
-                return fok(false);
-            }
-        }
-    }
+        d.initialize_keys(DATA_DIR, &["Timezone", "TestSetting"]);
 
-    type Watch = fidl::ServerImmediate<Status>;
-    fn watch(
-        &mut self,
-        key: String,
-        watcher: InterfacePtr<ClientEnd<DeviceSettingsWatcher::Service>>,
-    ) -> Self::Watch {
-        if !self.setting_file_map.contains_key(&key) {
-            return fok(Status::ErrInvalidSetting);
-        }
-        match DeviceSettingsWatcher::new_proxy(watcher.inner) {
-            Err(e) => {
-                fx_log_err!("getting watcher proxy: {:?}", e);
-                return fok(Status::ErrUnknown);
-            }
-            Ok(w) => {
-                let mut map = self.watchers.lock();
-                let mv = map.entry(key).or_insert(Vec::new());
-                mv.push(w);
-                fok(Status::Ok)
-            }
-        }
+        async::spawn(device_settings_server(d, channel))
     }
 }
 
@@ -198,18 +227,7 @@ fn main_ds() -> Result<(), Error> {
     // Attempt to create data directory
     fs::create_dir_all(DATA_DIR).context("creating directory")?;
 
-    let server = ServicesServer::new()
-        .add_service(move || {
-            let mut d = DeviceSettingsManagerServer {
-                setting_file_map: HashMap::new(),
-                watchers: watchers.clone(),
-            };
-
-            d.initialize_keys(DATA_DIR, &["Timezone", "TestSetting"]);
-
-            DeviceSettingsManager::Dispatcher(d)
-        })
-        .start()
+    let server = ServicesServer::new_with_factories(Factory { watchers }).start()
         .map_err(|e| e.context("error starting service server"))?;
 
     Ok(core.run(server, /* threads */ 2).context("running server")?)
@@ -223,12 +241,12 @@ mod tests {
     use futures::prelude::*;
     use super::*;
 
-    use garnet_public_lib_device_settings_fidl::DeviceSettingsManager::Server;
+    use fidl_device_settings::DeviceSettingsManagerProxy;
 
     fn async_test<F, Fut>(keys: &[&str], f: F)
     where
-        F: FnOnce(DeviceSettingsManagerServer) -> Fut,
-        Fut: Future<Item = (), Error = fidl::CloseChannel>,
+        F: FnOnce(DeviceSettingsManagerProxy) -> Fut,
+        Fut: Future<Item = (), Error = fidl::Error>,
     {
         let (mut exec, device_settings, _t) = setup(keys).expect("Setup should not have failed");
 
@@ -238,7 +256,7 @@ mod tests {
             .expect("executor run failed");
     }
 
-    fn setup(keys: &[&str]) -> Result<(async::Executor, DeviceSettingsManagerServer, TempDir), ()> {
+    fn setup(keys: &[&str]) -> Result<(async::Executor, DeviceSettingsManagerProxy, TempDir), ()> {
         let exec = async::Executor::new().unwrap();
         let mut device_settings = DeviceSettingsManagerServer {
             setting_file_map: HashMap::new(),
@@ -248,18 +266,26 @@ mod tests {
 
         device_settings.initialize_keys(tmp_dir.path().to_str().unwrap(), keys);
 
+        let (server_chan, client_chan) = zx::Channel::create().unwrap();
+        let server_chan = async::Channel::from_channel(server_chan).unwrap();
+        let client_chan = async::Channel::from_channel(client_chan).unwrap();
+
+        async::spawn(device_settings_server(device_settings, server_chan));
+
+        let proxy = DeviceSettingsManagerProxy::new(client_chan);
+
         // return tmp_dir to keep it in scope
-        return Ok((exec, device_settings, tmp_dir));
+        return Ok((exec, proxy, tmp_dir));
     }
 
     #[test]
     fn test_int() {
-        async_test(&["TestKey"], |mut device_settings| {
+        async_test(&["TestKey"], |device_settings| {
             device_settings
-                .set_integer("TestKey".to_string(), 18)
+                .set_integer(&mut "TestKey".to_string(), &mut 18)
                 .and_then(move |response| {
                     assert!(response, "set_integer failed");
-                    device_settings.get_integer("TestKey".to_string())
+                    device_settings.get_integer(&mut "TestKey".to_string())
                 })
                 .and_then(move |response| {
                     assert_eq!(response, (18, Status::Ok));
@@ -270,12 +296,12 @@ mod tests {
 
     #[test]
     fn test_string() {
-        async_test(&["TestKey"], |mut device_settings| {
+        async_test(&["TestKey"], |device_settings| {
             device_settings
-                .set_string("TestKey".to_string(), "mystring".to_string())
+                .set_string(&mut "TestKey".to_string(), &mut "mystring".to_string())
                 .and_then(move |response| {
                     assert!(response, "set_string failed");
-                    device_settings.get_string("TestKey".to_string())
+                    device_settings.get_string(&mut "TestKey".to_string())
                 })
                 .and_then(move |response| {
                     assert_eq!(response, ("mystring".to_string(), Status::Ok));
@@ -286,12 +312,12 @@ mod tests {
 
     #[test]
     fn test_invalid_key() {
-        async_test(&[], |mut device_settings| {
+        async_test(&[], |device_settings| {
             device_settings
-                .get_string("TestKey".to_string())
+                .get_string(&mut "TestKey".to_string())
                 .and_then(move |response| {
                     assert_eq!(response, ("".to_string(), Status::ErrInvalidSetting));
-                    device_settings.get_integer("TestKey".to_string())
+                    device_settings.get_integer(&mut "TestKey".to_string())
                 })
                 .and_then(move |response| {
                     assert_eq!(response, (0, Status::ErrInvalidSetting));
@@ -302,12 +328,12 @@ mod tests {
 
     #[test]
     fn test_incorrect_type() {
-        async_test(&["TestKey"], |mut device_settings| {
+        async_test(&["TestKey"], |device_settings| {
             device_settings
-                .set_string("TestKey".to_string(), "mystring".to_string())
+                .set_string(&mut "TestKey".to_string(), &mut "mystring".to_string())
                 .and_then(move |response| {
                     assert!(response, "set_string failed");
-                    device_settings.get_integer("TestKey".to_string())
+                    device_settings.get_integer(&mut "TestKey".to_string())
                 })
                 .and_then(move |response| {
                     assert_eq!(response, (0, Status::ErrIncorrectType));
@@ -318,12 +344,12 @@ mod tests {
 
     #[test]
     fn test_not_set_err() {
-        async_test(&["TestKey"], |mut device_settings| {
+        async_test(&["TestKey"], |device_settings| {
             device_settings
-                .get_integer("TestKey".to_string())
+                .get_integer(&mut "TestKey".to_string())
                 .and_then(move |response| {
                     assert_eq!(response, (0, Status::ErrNotSet));
-                    device_settings.get_string("TestKey".to_string())
+                    device_settings.get_string(&mut "TestKey".to_string())
                 })
                 .and_then(move |response| {
                     assert_eq!(response, ("".to_string(), Status::ErrNotSet));
@@ -334,24 +360,24 @@ mod tests {
 
     #[test]
     fn test_multiple_keys() {
-        async_test(&["TestKey1", "TestKey2"], |mut device_settings| {
+        async_test(&["TestKey1", "TestKey2"], |device_settings| {
             device_settings
-                .set_integer("TestKey1".to_string(), 18)
+                .set_integer(&mut "TestKey1".to_string(), &mut 18)
                 .and_then(move |response| {
                     assert!(response, "set_integer failed");
                     device_settings
-                        .set_string("TestKey2".to_string(), "mystring".to_string())
+                        .set_string(&mut "TestKey2".to_string(), &mut "mystring".to_string())
                         .map(move |response| (response, device_settings))
                 })
-                .and_then(|(response, mut device_settings)| {
+                .and_then(|(response, device_settings)| {
                     assert!(response, "set_string failed");
                     device_settings
-                        .get_integer("TestKey1".to_string())
+                        .get_integer(&mut "TestKey1".to_string())
                         .map(move |response| (response, device_settings))
                 })
-                .and_then(|(response, mut device_settings)| {
+                .and_then(|(response, device_settings)| {
                     assert_eq!(response, (18, Status::Ok));
-                    device_settings.get_string("TestKey2".to_string())
+                    device_settings.get_string(&mut "TestKey2".to_string())
                 })
                 .and_then(|response| {
                     assert_eq!(response, ("mystring".to_string(), Status::Ok));

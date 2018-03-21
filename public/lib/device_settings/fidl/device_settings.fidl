@@ -1,43 +1,42 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+library device_settings;
 
-module device_settings;
-
-enum Status {
-  OK,
-  ERR_NOT_SET,
-  ERR_INVALID_SETTING,
-  ERR_READ,
-  ERR_INCORRECT_TYPE,
-  ERR_UNKNOWN
+enum Status: uint8 {
+  ok = 1;
+  errNotSet = 2;
+  errInvalidSetting = 3;
+  errRead = 4;
+  errIncorrectType = 5;
+  errUnknown = 6;
 };
 
-enum ValueType {
-  INT,
-  STRING
+enum ValueType: uint8 {
+  number = 1;
+  text = 2;
 };
 
 
-// Manager Interface used to mange settings
+// Manager interface used to manage settings
 [ServiceName="device_settings::DeviceSettings"]
 interface DeviceSettingsManager {
-  GetInteger@0(string key) => (int64 val, Status s);
+  1: GetInteger(string key) -> (int64 val, Status s);
 
-  GetString@1(string key) => (string val, Status s);
+  2: GetString(string key) -> (string val, Status s);
 
-  // Return false on database error and true on success.
-  SetInteger@2(string key, int64 val) => (bool result);
+  // Returns false on database error and true on success.
+  3: SetInteger(string key, int64 val) -> (bool result);
 
-  // Return false on database error and true on success.
-  SetString@3(string key, string val) => (bool result);
+  // Returns false on database error and true on success.
+  4: SetString(string key, string val) -> (bool result);
 
-  // watcher called when a settings changes
-  // Return Status::OK, Status::ERR_INVALID_SETTING or Status::ERR_UNKNOWN
-  Watch@4(string key, DeviceSettingsWatcher watcher) => (Status status);
+  // Register a watcher to be called when a setting changes
+  // Returns Status::ok, Status::errInvalidSetting or Status::errUnknown
+  5: Watch(string key, DeviceSettingsWatcher watcher) -> (Status s);
 };
 
-// Watcher on battery status
+// A watcher for device settings changes
 interface DeviceSettingsWatcher {
-  OnChangeSettings@0(ValueType type);
+  1: OnChangeSettings(ValueType type);
 };

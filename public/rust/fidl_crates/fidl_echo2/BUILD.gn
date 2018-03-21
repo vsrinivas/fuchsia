@@ -5,7 +5,7 @@
 import("//build/rust/rust_library.gni")
 import("//build/rust/toolchain.gni")
 
-rust_library("garnet_examples_fidl2_services_echo2") {
+rust_library("fidl_echo2") {
   deps = [
     "//garnet/examples/fidl2/services:echo2($rust_toolchain)",
   ]

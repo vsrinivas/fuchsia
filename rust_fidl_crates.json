@@ -1,9 +1,14 @@
-{
-  "public": [
-    {
-      "fidl_target": "//garnet/examples/fidl2/services:echo2",
-      "deps": []
-    }
-  ],
-  "private": []
-}
+[
+  {
+    "library_name": "echo2",
+    "fidl_target": "//garnet/examples/fidl2/services:echo2",
+    "library_deps": [],
+    "public": true
+  },
+  {
+    "library_name": "device_settings",
+    "fidl_target": "//garnet/public/lib/device_settings/fidl:device_settings",
+    "library_deps": [],
+    "public": true
+  }
+]
