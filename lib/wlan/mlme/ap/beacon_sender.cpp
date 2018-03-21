@@ -34,9 +34,15 @@ void BeaconSender::Start(BssInterface* bss, const StartRequest& req) {
 void BeaconSender::Stop() {
     if (!IsStarted()) { return; }
 
-    bss_ = nullptr;
-    // TODO(hahnr): Let hardware know there is no need for sending Beacon frames anymore.
+    auto status = device_->ConfigureBeacon(nullptr);
+    if (status != ZX_OK) {
+        errorf("[bcn-sender] [%s] could not stop beacon sending: %d\n",
+               bss_->bssid().ToString().c_str(), status);
+        return;
+    }
+
     debugbss("[bcn-sender] [%s] stopped sending Beacons\n", bss_->bssid().ToString().c_str());
+    bss_ = nullptr;
 }
 
 bool BeaconSender::IsStarted() {

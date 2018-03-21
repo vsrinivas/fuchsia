@@ -206,6 +206,8 @@ class Device {
     zx_status_t FillUsbTxPacket(TxPacket* usb_packet, wlan_tx_packet_t* wlan_packet);
     uint8_t LookupTxWcid(const uint8_t* addr1, bool protected_frame);
 
+    zx_status_t EnableHwBcn(bool active);
+
     static void ReadRequestComplete(usb_request_t* request, void* cookie);
     static void WriteRequestComplete(usb_request_t* request, void* cookie);
 

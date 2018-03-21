@@ -428,6 +428,9 @@ zx_status_t Device::ConfigureBss(wlan_bss_config_t* cfg) {
 }
 
 zx_status_t Device::ConfigureBeacon(fbl::unique_ptr<Packet> beacon) {
+    // Disable hardware Beacons if no Beacon frame was supplied.
+    if (beacon.get() == nullptr) { return wlanmac_proxy_.ConfigureBeacon(0u, nullptr); }
+
     wlan_tx_packet_t tx_packet;
     auto status = beacon->AsWlanTxPacket(&tx_packet);
     if (status != ZX_OK) {

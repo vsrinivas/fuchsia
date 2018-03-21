@@ -3737,6 +3737,11 @@ void DumpTxwi(TxPacket* packet) {
 }
 
 zx_status_t Device::WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* bcn_pkt) {
+    // Deactivate if no Beacon was supplied.
+    if (bcn_pkt == nullptr) {
+        return EnableHwBcn(false);
+    }
+
     size_t req_len = usb_tx_pkt_len(bcn_pkt);
     if (req_len > kMaxBeaconSizeByte) {
         errorf("Beacon exceeds limit of %zu bytes: %zu\n", kMaxBeaconSizeByte, req_len);
@@ -3771,6 +3776,10 @@ zx_status_t Device::WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* b
             return ZX_ERR_IO;
         }
     }
+
+    // Ensure hardware Beacons are activated.
+    EnableHwBcn(true);
+
     return ZX_OK;
 }
 
@@ -3930,6 +3939,18 @@ uint8_t Device::LookupTxWcid(const uint8_t* addr1, bool protected_frame) {
     return kWcidUnknown;
 }
 
+zx_status_t Device::EnableHwBcn(bool active) {
+    BcnTimeCfg bcnTimeCfg;
+    auto status = ReadRegister(&bcnTimeCfg);
+    CHECK_READ(BCN_TIME_CFG, status);
+    if (bcnTimeCfg.bcn_tx_en() != active) {
+        bcnTimeCfg.set_bcn_tx_en(active);
+        status = WriteRegister(bcnTimeCfg);
+        CHECK_WRITE(BCN_TIME_CFG, status);
+    }
+    return ZX_OK;
+}
+
 zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
     // Beware the multiple different return paths with different recovery requirements.
 
@@ -4034,7 +4055,7 @@ zx_status_t Device::WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* con
         bcnTimeCfg.set_tsf_timer_en(1);
         bcnTimeCfg.set_tsf_sync_mode(3);
         bcnTimeCfg.set_tbtt_timer_en(1);
-        bcnTimeCfg.set_bcn_tx_en(1);
+        bcnTimeCfg.set_bcn_tx_en(0);
         status = WriteRegister(bcnTimeCfg);
         CHECK_WRITE(BCN_TIME_CFG, status);
 
