@@ -73,8 +73,7 @@ In the event of failure, a negative error value is returned.
 valid pointer, *addrs_count* is not the same as the number of entries that would be
 returned, or *offset* or *size* is not page-aligned.
 
-**ZX_ERR_ALREADY_BOUND** The requested range contains a page already pinned by this
-BTI.
+**ZX_ERR_OUT_OF_RANGE** *offset* + *size* is out of the bounds of *vmo*.
 
 **ZX_ERR_UNAVAILABLE** (Temporary) At least one page in the requested range could
 not be pinned at this time.
