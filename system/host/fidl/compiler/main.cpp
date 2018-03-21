@@ -29,6 +29,7 @@ namespace {
                  "    fidl [--c-header HEADER_PATH]\n"
                  "         [--tables TABLES_PATH]\n"
                  "         [--json JSON_PATH]\n"
+                 "         [--name LIBRARY_NAME]\n"
                  "         [--files [FIDL_FILE...]...]\n"
                  "    * If no output types are provided, the FIDL_FILES are parsed and\n"
                  "      compiled, but no output is produced. Otherwise:\n"
@@ -38,6 +39,8 @@ namespace {
                  "        into TABLES_PATH.\n"
                  "    * If --json is provided, JSON intermediate data is generated\n"
                  "        into JSON_PATH.\n"
+                 "    * If --name is provided, the compiler will check that the generated\n"
+                 "        library has the given name.\n"
                  "    Each `--file [FIDL_FILE...]` chunk of arguments describes a library, all\n"
                  "    of which must share the same top-level library name declaration. Libraries\n"
                  "    must be presented in dependency order, with latter libraries able to use\n"
@@ -190,6 +193,8 @@ int main(int argc, char* argv[]) {
         args = response_file_args.get();
     }
 
+    std::string library_name;
+
     std::map<Behavior, std::fstream> outputs;
     while (args->Remaining()) {
         // Try to parse an output type.
@@ -201,6 +206,8 @@ int main(int argc, char* argv[]) {
             outputs.emplace(Behavior::Tables, Open(args->Claim(), std::ios::out));
         } else if (behavior_argument == "--json") {
             outputs.emplace(Behavior::JSON, Open(args->Claim(), std::ios::out));
+        } else if (behavior_argument == "--name") {
+            library_name = args->Claim();
         } else if (behavior_argument == "--files") {
             // Start parsing filenames.
             break;
@@ -245,9 +252,17 @@ int main(int argc, char* argv[]) {
         auto iter = compiled_libraries.insert(std::move(name_and_library));
         if (!iter.second) {
             auto name = iter.first->first;
-            fprintf(stderr, "Mulitple libraries with the same name: '%.*s'",
+            fprintf(stderr, "Mulitple libraries with the same name: '%.*s'\n",
                     static_cast<int>(name.size()), name.data());
+            return 1;
         }
+    }
+
+    if (!library_name.empty() && final_library->name() != library_name) {
+        auto name = final_library->name();
+        fprintf(stderr, "Generated library did not match --name argument: '%.*s'\n",
+                static_cast<int>(name.size()), name.data());
+        return 1;
     }
 
     // We recompile dependencies, and only emit output for the final
