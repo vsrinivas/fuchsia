@@ -345,53 +345,6 @@ static zx_status_t platform_dev_get_bti(void* ctx, uint32_t index, zx_handle_t* 
     return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), out_handle, 1, NULL);
 }
 
-static zx_status_t platform_dev_alloc_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
-                                                 uint32_t cache_policy, zx_handle_t* out_handle) {
-    platform_proxy_t* dev = ctx;
-    pdev_req_t req = {
-        .op = PDEV_ALLOC_CONTIG_VMO,
-        .contig_vmo = {
-            .size = size,
-            .align_log2 = align_log2,
-            .cache_policy = cache_policy,
-        },
-    };
-    pdev_resp_t resp;
-
-    return platform_dev_rpc(dev, &req, sizeof(req), &resp, sizeof(resp), out_handle, 1, NULL);
-}
-
-static zx_status_t platform_dev_map_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
-                                               uint32_t map_flags, uint32_t cache_policy,
-                                               void** out_vaddr, zx_paddr_t* out_paddr,
-                                               zx_handle_t* out_handle) {
-    zx_handle_t handle;
-    zx_status_t status = platform_dev_alloc_contig_vmo(ctx, size, align_log2, cache_policy,
-                                                       &handle);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status = zx_vmo_op_range(handle, ZX_VMO_OP_LOOKUP, 0, PAGE_SIZE, out_paddr, sizeof(*out_paddr));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_contig_vmo: zx_vmo_op_range failed %d\n", status);
-        zx_handle_close(handle);
-        return status;
-    }
-
-    uintptr_t addr;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, handle, 0, size, map_flags, &addr);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_contig_vmo: zx_vmar_map failed %d\n", status);
-        zx_handle_close(handle);
-        return status;
-    }
-
-    *out_vaddr = (void *)addr;
-    *out_handle = handle;
-    return ZX_OK;
-}
-
 static zx_status_t platform_dev_get_device_info(void* ctx, pdev_device_info_t* out_info) {
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
@@ -412,8 +365,6 @@ static platform_device_protocol_ops_t platform_dev_proto_ops = {
     .map_mmio = platform_dev_map_mmio,
     .map_interrupt = platform_dev_map_interrupt,
     .get_bti = platform_dev_get_bti,
-    .alloc_contig_vmo = platform_dev_alloc_contig_vmo,
-    .map_contig_vmo = platform_dev_map_contig_vmo,
     .get_device_info = platform_dev_get_device_info,
 };
 

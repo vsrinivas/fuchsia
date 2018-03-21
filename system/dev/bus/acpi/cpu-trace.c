@@ -44,24 +44,10 @@ static zx_status_t cpu_trace_map_interrupt(void* ctx, uint32_t index, zx_handle_
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t cpu_trace_alloc_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
-                                              uint32_t cache_policy, zx_handle_t* out_handle) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-static zx_status_t cpu_trace_map_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
-                                            uint32_t map_flags, uint32_t cache_policy,
-                                            void** out_vaddr, zx_paddr_t* out_paddr,
-                                            zx_handle_t* out_handle) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 static platform_device_protocol_ops_t cpu_trace_proto_ops = {
     .map_mmio = cpu_trace_map_mmio,
     .map_interrupt = cpu_trace_map_interrupt,
     .get_bti = cpu_trace_get_bti,
-    .alloc_contig_vmo = cpu_trace_alloc_contig_vmo,
-    .map_contig_vmo = cpu_trace_map_contig_vmo,
     .get_device_info = cpu_trace_get_device_info,
 };
 

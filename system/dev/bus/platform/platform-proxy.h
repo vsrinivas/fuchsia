@@ -19,7 +19,6 @@ enum {
     PDEV_GET_MMIO = 1,
     PDEV_GET_INTERRUPT,
     PDEV_GET_BTI,
-    PDEV_ALLOC_CONTIG_VMO,
     PDEV_GET_DEVICE_INFO,
 
     // ZX_PROTOCOL_USB_MODE_SWITCH
@@ -60,7 +59,6 @@ typedef struct pdev_req {
     uint32_t op;
     uint32_t index;
     union {
-        pdev_config_vmo_t contig_vmo;
         usb_mode_t usb_mode;
         uint32_t gpio_flags;
         uint32_t gpio_alt_function;

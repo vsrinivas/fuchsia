@@ -93,63 +93,6 @@ static zx_status_t platform_dev_get_bti(void* ctx, uint32_t index, zx_handle_t* 
     return iommu_get_bti(iommu, bti->iommu_index, bti->bti_id, out_handle);
 }
 
-static zx_status_t platform_dev_alloc_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
-                                                 uint32_t cache_policy, zx_handle_t* out_handle) {
-    platform_dev_t* dev = ctx;
-    zx_handle_t vmo_handle;
-
-    zx_status_t status = zx_vmo_create_contiguous(dev->bus->resource, size, align_log2,
-                                                  &vmo_handle);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_alloc_contig_vmo: zx_vmo_create_contiguous failed %d\n",
-               status);
-    }
-
-    if (cache_policy != ZX_CACHE_POLICY_CACHED) {
-        status = zx_vmo_set_cache_policy(vmo_handle, cache_policy);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "platform_dev_alloc_contig_vmo: zx_vmo_set_cache_policy failed %d\n",
-                   status);
-            zx_handle_close(vmo_handle);
-            return status;
-        }
-    }
-
-    *out_handle = vmo_handle;
-    return status;
-}
-
-static zx_status_t platform_dev_map_contig_vmo(void* ctx, size_t size, uint32_t align_log2,
-                                               uint32_t map_flags, uint32_t cache_policy,
-                                               void** out_vaddr, zx_paddr_t* out_paddr,
-                                               zx_handle_t* out_handle) {
-    zx_handle_t handle;
-    zx_status_t status = platform_dev_alloc_contig_vmo(ctx, size, align_log2, cache_policy,
-                                                       &handle);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status = zx_vmo_op_range(handle, ZX_VMO_OP_LOOKUP, 0, PAGE_SIZE, out_paddr, sizeof(*out_paddr));
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_contig_vmo: zx_vmo_op_range failed %d\n", status);
-        zx_handle_close(handle);
-        return status;
-    }
-
-    uintptr_t addr;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, handle, 0, size, map_flags, &addr);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_contig_vmo: zx_vmar_map failed %d\n", status);
-        zx_handle_close(handle);
-        return status;
-    }
-
-    *out_vaddr = (void *)addr;
-    *out_handle = handle;
-    return ZX_OK;
-}
-
 static zx_status_t platform_dev_get_device_info(void* ctx, pdev_device_info_t* out_info) {
     platform_dev_t* dev = ctx;
 
@@ -172,8 +115,6 @@ static platform_device_protocol_ops_t platform_dev_proto_ops = {
     .map_mmio = platform_dev_map_mmio,
     .map_interrupt = platform_dev_map_interrupt,
     .get_bti = platform_dev_get_bti,
-    .alloc_contig_vmo = platform_dev_alloc_contig_vmo,
-    .map_contig_vmo = platform_dev_map_contig_vmo,
     .get_device_info = platform_dev_get_device_info,
 };
 
@@ -213,17 +154,6 @@ static zx_status_t pdev_rpc_get_bti(platform_dev_t* dev, uint32_t index, zx_hand
                                     uint32_t* out_handle_count) {
 
     zx_status_t status = platform_dev_get_bti(dev, index, out_handle);
-    if (status == ZX_OK) {
-        *out_handle_count = 1;
-    }
-    return status;
-}
-
-static zx_status_t pdev_rpc_alloc_contig_vmo(platform_dev_t* dev, size_t size,
-                                             uint32_t align_log2, uint32_t cache_policy,
-                                             zx_handle_t* out_handle,  uint32_t* out_handle_count) {
-    zx_status_t status = platform_dev_alloc_contig_vmo(dev, size, align_log2, cache_policy,
-                                                       out_handle);
     if (status == ZX_OK) {
         *out_handle_count = 1;
     }
@@ -378,12 +308,6 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         break;
     case PDEV_GET_BTI:
         resp.status = pdev_rpc_get_bti(dev, req->index, &handle, &handle_count);
-        break;
-    case PDEV_ALLOC_CONTIG_VMO:
-        resp.status = pdev_rpc_alloc_contig_vmo(dev, req->contig_vmo.size,
-                                                req->contig_vmo.align_log2,
-                                                req->contig_vmo.cache_policy,
-                                                &handle, &handle_count);
         break;
     case PDEV_GET_DEVICE_INFO:
          resp.status = platform_dev_get_device_info(dev, &resp.info);
