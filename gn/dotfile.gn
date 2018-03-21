@@ -35,4 +35,5 @@ default_args = {
 check_targets = [
   "//garnet/*",
   "//peridot/*",
+  "//topaz/*",
 ]
