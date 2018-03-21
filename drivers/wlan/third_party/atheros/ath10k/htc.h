@@ -385,12 +385,12 @@ struct ath10k_htc {
     HTC_MSG(UNKNOWN,            ath10k_htc_unknown),                \
     HTC_MSG(SETUP_COMPLETE_EXT, ath10k_htc_setup_complete_extended)
 
-int ath10k_htc_init(struct ath10k* ar);
-int ath10k_htc_wait_target(struct ath10k_htc* htc);
-int ath10k_htc_start(struct ath10k_htc* htc);
-int ath10k_htc_connect_service(struct ath10k_htc* htc,
-                               struct ath10k_htc_svc_conn_req*  conn_req,
-                               struct ath10k_htc_svc_conn_resp* conn_resp);
+zx_status_t ath10k_htc_init(struct ath10k* ar);
+zx_status_t ath10k_htc_wait_target(struct ath10k_htc* htc);
+zx_status_t ath10k_htc_start(struct ath10k_htc* htc);
+zx_status_t ath10k_htc_connect_service(struct ath10k_htc* htc,
+                                       struct ath10k_htc_svc_conn_req*  conn_req,
+                                       struct ath10k_htc_svc_conn_resp* conn_resp);
 int ath10k_htc_send(struct ath10k_htc* htc, enum ath10k_htc_ep_id eid,
                     struct ath10k_msg_buf* msg_buf);
 void ath10k_htc_tx_completion_handler(struct ath10k* ar, struct ath10k_msg_buf* msg_buf);
