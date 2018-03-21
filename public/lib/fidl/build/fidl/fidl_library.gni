@@ -23,6 +23,8 @@ template("fidl_library") {
     assert(false, "A FIDL library requires some sources.")
   }
 
+  not_needed(invoker, [ "name" ])
+
   response_file = "$target_gen_dir/$target_name.args"
   fidl_stem = "$target_gen_dir/$target_name.fidl"
   json_representation = "$fidl_stem.json"
@@ -42,8 +44,9 @@ template("fidl_library") {
 
     forward_variables_from(invoker,
                            [
-                             "sources",
                              "deps",
+                             "public_deps",
+                             "sources",
                            ])
 
     libraries = "$target_gen_dir/$main_target_name.libraries"

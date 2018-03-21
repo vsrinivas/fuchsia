@@ -92,6 +92,7 @@ template("fidl_dart") {
 
   dart_library(main_target_name) {
     forward_variables_from(invoker, [
+      "public_deps",
       "testonly",
       "visibility",
     ])

@@ -65,6 +65,12 @@ template("fidl_rust") {
   }
 
   group(main_target_name) {
+    forward_variables_from(invoker, [
+      "public_deps",
+      "testonly",
+      "visibility",
+    ])
+
     deps = [
       ":$generation_target_name",
     ]

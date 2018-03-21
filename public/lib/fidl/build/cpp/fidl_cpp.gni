@@ -104,11 +104,18 @@ template("fidl_cpp") {
     deps = [
       ":$generation_target_name($current_base_toolchain)",
       ":$main_target_name($fidl_toolchain)",
+    ]
+
+    public_deps = [
       "//garnet/public/lib/fidl/cpp",
     ]
 
     if (defined(invoker.deps)) {
       deps += invoker.deps
+    }
+
+    if (defined(invoker.public_deps)) {
+      public_deps += invoker.public_deps
     }
   }
 }
