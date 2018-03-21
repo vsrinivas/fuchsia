@@ -19,7 +19,7 @@ zx_status_t PostTask(async_t* async, fbl::Function<void(void)> closure,
 // C++ wrapper for a pending task.
 //
 // This class is thread-safe.
-class Task final : public async_task_t {
+class Task final : private async_task_t {
 public:
     // Handles execution of a posted task.
     //
