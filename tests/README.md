@@ -39,7 +39,7 @@ under fuchsia. In order to start `test_runner`, you can either:
   workstation, do:
 
 ```
-fx set x64 --packages peridot/packages/boot_test_modular
+fx set x64 --packages peridot/packages/products/test_modular
 ```
 
 * Alternatively, invoke `test_runner` manually after starting fuchsia. In a
