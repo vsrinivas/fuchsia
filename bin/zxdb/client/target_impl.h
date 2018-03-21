@@ -30,7 +30,6 @@ class TargetImpl : public Target {
   Process* GetProcess() const override;
   const std::vector<std::string>& GetArgs() const override;
   void SetArgs(std::vector<std::string> args) override;
-  int64_t GetLastReturnCode() const override;
   void Launch(Callback callback) override;
   void Attach(uint64_t koid, Callback callback) override;
   void Detach(Callback callback) override;
@@ -43,14 +42,12 @@ class TargetImpl : public Target {
 
   void OnDetachReply(const Err& err, uint32_t status, Callback callback);
 
-  State state_ = kStopped;
+  State state_ = kNone;
 
   std::vector<std::string> args_;
 
   // Associated process if there is one.
   std::unique_ptr<ProcessImpl> process_;
-
-  int64_t last_return_code_ = 0;
 
   std::shared_ptr<WeakThunk<TargetImpl>> weak_thunk_;
   // ^ Keep at the bottom to make sure it's destructed last.

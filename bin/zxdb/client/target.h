@@ -36,9 +36,9 @@ class Target : public ClientObject {
 
 
   enum State {
-    // The process has not been started or has stopped. From here, it can only
-    // transition to starting.
-    kStopped,
+    // There is no process currently running. From here, it can only transition
+    // to starting.
+    kNone,
 
     // A pending state when the process has been requested to be started but
     // there is no reply from the debug agent yet. From here, it can transition
@@ -65,10 +65,6 @@ class Target : public ClientObject {
   // program name, the rest of the array are the command-line.
   virtual const std::vector<std::string>& GetArgs() const = 0;
   virtual void SetArgs(std::vector<std::string> args) = 0;
-
-  // Returns the return code from the last time the process exited. If a
-  // process has not yet been run and exited, this will be 0.
-  virtual int64_t GetLastReturnCode() const = 0;
 
   // Launches the program. The program must be in a kStopped state and the
   // program name configured via SetArgs().

@@ -68,7 +68,9 @@ class ConsoleContext
   void WillDestroyTarget(Target* target) override;
 
   // TargetObserver implementation:
-  void DidChangeTargetState(Target* target, Target::State old_state) override;
+  void DidCreateProcess(Target* target, Process* process) override;
+  void DidDestroyProcess(Target* target, DestroyReason reason,
+                         int exit_code) override;
 
   // ProcessObserver implementation:
   void DidCreateThread(Process* process, Thread* thread) override;

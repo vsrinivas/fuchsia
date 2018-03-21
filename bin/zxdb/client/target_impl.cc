@@ -42,12 +42,8 @@ void TargetImpl::SetArgs(std::vector<std::string> args) {
   args_ = std::move(args);
 }
 
-int64_t TargetImpl::GetLastReturnCode() const {
-  return last_return_code_;
-}
-
 void TargetImpl::Launch(Callback callback) {
-  if (state_ != State::kStopped) {
+  if (state_ != State::kNone) {
     // TODO(brettw) issue callback asynchronously to avoid reentering caller.
     callback(this, Err("Can't launch, program is already running."));
     return;
@@ -78,9 +74,6 @@ void TargetImpl::Launch(Callback callback) {
               "be running.\n");
         }
       });
-
-  for (auto& observer : observers())
-    observer.DidChangeTargetState(this, State::kStopped);
 }
 
 void TargetImpl::Attach(uint64_t koid, Callback callback) {
@@ -135,12 +128,12 @@ void TargetImpl::Detach(Callback callback) {
 void TargetImpl::OnProcessExiting(int return_code) {
   FXL_DCHECK(state_ == State::kRunning);
 
-  last_return_code_ = return_code;
-  state_ = State::kStopped;
+  state_ = State::kNone;
   process_.reset();
-
-  for (auto& observer : observers())
-    observer.DidChangeTargetState(this, State::kRunning);
+  for (auto& observer : observers()) {
+    observer.DidDestroyProcess(
+        this, TargetObserver::DestroyReason::kExit, return_code);
+  }
 }
 
 void TargetImpl::OnLaunchOrAttachReply(const Err& err, uint64_t koid,
@@ -156,7 +149,7 @@ void TargetImpl::OnLaunchOrAttachReply(const Err& err, uint64_t koid,
     issue_err = err;
   } else if (status != 0) {
     // Error from launching.
-    state_ = State::kStopped;
+    state_ = State::kNone;
     issue_err = Err(fxl::StringPrintf("Error launching, status = %d.", status));
   } else {
     state_ = State::kRunning;
@@ -166,17 +159,14 @@ void TargetImpl::OnLaunchOrAttachReply(const Err& err, uint64_t koid,
   if (callback)
     callback(this, issue_err);
 
-  for (auto& observer : observers()) {
-    // Note state argument is the old state of the target (which is asserted at
-    // the top is "Starting").
-    observer.DidChangeTargetState(this, State::kStarting);
-  }
+  for (auto& observer : observers())
+    observer.DidCreateProcess(this, process_.get());
 }
 
-void TargetImpl::OnDetachReply(const Err& err, uint32_t status, Callback callback) {
+void TargetImpl::OnDetachReply(const Err& err, uint32_t status,
+                               Callback callback) {
   FXL_DCHECK(process_.get());  // Should have a process.
 
-  auto previous_state = state_;
   Err issue_err;  // Error to send in callback.
   if (err.has_error()) {
     // Error from transport.
@@ -186,16 +176,17 @@ void TargetImpl::OnDetachReply(const Err& err, uint32_t status, Callback callbac
     // TODO(davemoore): Not sure what state the target should be if we error upon detach.
     issue_err = Err(fxl::StringPrintf("Error detaching, status = %d.", status));
   } else {
-    state_ = State::kStopped;
+    // Successfully detached.
+    state_ = State::kNone;
+    process_.reset();
+    for (auto& observer : observers()) {
+      observer.DidDestroyProcess(
+          this, TargetObserver::DestroyReason::kDetach, 0);
+    }
   }
 
   if (callback)
     callback(this, issue_err);
-
-  if (state_ != previous_state) {
-    for (auto& observer : observers())
-      observer.DidChangeTargetState(this, previous_state);
-  }
 }
 
 }  // namespace zxdb

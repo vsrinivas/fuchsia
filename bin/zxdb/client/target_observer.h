@@ -10,10 +10,22 @@ namespace zxdb {
 
 class TargetObserver {
  public:
-  // This callback will be called immediately after each state change, so
-  // target->state() will represent the new state. In the case of launching,
-  // the general callback will be called after the Launch-specific one.
-  virtual void DidChangeTargetState(Target* target, Target::State old_state) {}
+  // Reason for destroying a process object.
+  enum class DestroyReason {
+    kExit,
+    kDetach,
+    kKill
+  };
+
+  // The process could have been newly launched or attached to an existing
+  // process.
+  virtual void DidCreateProcess(Target* target, Process* process) {}
+
+  // Called after detaching from or destroying a process. The Process object
+  // will no longer exist. The exit code will only have meaning when reason ==
+  // kExit, otherwise it will be 0.
+  virtual void DidDestroyProcess(Target* target, DestroyReason reason,
+                                 int exit_code) {}
 };
 
 }  // namespace zxdb

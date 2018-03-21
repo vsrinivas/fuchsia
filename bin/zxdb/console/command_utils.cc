@@ -71,7 +71,7 @@ std::string TargetStateToString(Target::State state) {
     const char* string;
   };
   static const Mapping mappings[] = {
-    { Target::State::kStopped, "Stopped" },
+    { Target::State::kNone, "Not running" },
     { Target::State::kStarting, "Starting" },
     { Target::State::kRunning, "Running" }
   };
@@ -122,7 +122,7 @@ std::string DescribeTarget(ConsoleContext* context, Target* target,
 
   const char* format_string;
   if (columns)
-    format_string = "%3d %8s %8s";
+    format_string = "%3d %11s %8s";
   else
     format_string = "Process %d %s %s";
   std::string result = fxl::StringPrintf(format_string, id, state.c_str(),

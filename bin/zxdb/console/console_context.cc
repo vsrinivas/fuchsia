@@ -195,37 +195,44 @@ void ConsoleContext::WillDestroyTarget(Target* target) {
   // *record is now invalid.
 }
 
-void ConsoleContext::DidChangeTargetState(Target* target,
-                                          Target::State old_state) {
+void ConsoleContext::DidCreateProcess(Target* target, Process* process) {
   TargetRecord* record = GetTargetRecord(target);
   if (!record) {
     FXL_NOTREACHED();
     return;
   }
 
-  // When starting a new process, register for notifications.
-  Target::State new_state = target->GetState();
-  if (new_state == Target::State::kRunning) {
-    target->GetProcess()->AddObserver(this);
+  process->AddObserver(this);
 
-    // Restart the thread ID counting when the process starts in case this
-    // target was previously running (we want to restart numbering every time).
-    record->next_thread_id = 1;
+  // Restart the thread ID counting when the process starts in case this
+  // target was previously running (we want to restart numbering every time).
+  record->next_thread_id = 1;
+}
+
+void ConsoleContext::DidDestroyProcess(Target* target, DestroyReason reason,
+                                       int exit_code) {
+  TargetRecord* record = GetTargetRecord(target);
+  if (!record) {
+    FXL_NOTREACHED();
+    return;
   }
 
-  if (new_state == Target::State::kStopped &&
-      old_state == Target::State::kRunning) {
-    // Only print info for running->stopped transitions. The launch
-    // callback will be called for succeeded and failed starts
-    // (starting->stopped and starting->running) with the appropriate error
-    // or information.
-    Console* console = Console::get();
-    OutputBuffer out;
-    out.Append(DescribeTarget(&console->context(), target, false));
-    out.Append(fxl::StringPrintf(": exit code %" PRId64 ".",
-                                 target->GetLastReturnCode()));
-    console->Output(std::move(out));
+  Console* console = Console::get();
+  std::string msg;
+  switch (reason) {
+    case TargetObserver::DestroyReason::kExit:
+      msg = fxl::StringPrintf("Exited with code %d: ", exit_code);
+      break;
+    case TargetObserver::DestroyReason::kDetach:
+      msg += "Detached: ";
+      break;
+    case TargetObserver::DestroyReason::kKill:
+      msg += "Killed: ";
+      break;
   }
+  msg += DescribeTarget(&console->context(), target, false);
+
+  console->Output(msg);
 }
 
 void ConsoleContext::DidCreateThread(Process* process, Thread* thread) {

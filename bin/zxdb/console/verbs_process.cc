@@ -54,22 +54,6 @@ void RunAndAttachCallback(const char* verb, Target* target, const Err& err) {
   console->Output(std::move(out));
 }
 
-// Callback for "detach".
-void DetachCallback(Target* target, const Err& err) {
-  Console* console = Console::get();
-
-  OutputBuffer out;
-  if (err.has_error()) {
-    out.Append(fxl::StringPrintf("Process %d detach failed.\n",
-                                 console->context().IdForTarget(target)));
-    out.OutputErr(err);
-  } else {
-    out.Append(DescribeTarget(&console->context(), target, false));
-  }
-
-  console->Output(std::move(out));
-}
-
 // new -------------------------------------------------------------------------
 
 const char kNewShortHelp[] = "new: Create a new process context.";
@@ -232,8 +216,18 @@ Err DoDetach(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
+  // Only print something when there was an error detaching. The console
+  // context will watch for Process destruction and print messages for each one
+  // in the success case.
   cmd.target()->Detach([](Target* target, const Err& err) {
-      DetachCallback(target, err);
+    if (err.has_error()) {
+      Console* console = Console::get();
+      OutputBuffer out;
+      out.Append(fxl::StringPrintf("Process %d detach failed.\n",
+          console->context().IdForTarget(target)));
+      out.OutputErr(err);
+      console->Output(std::move(out));
+    }
   });
   return Err();
 }
