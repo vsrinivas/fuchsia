@@ -4,8 +4,11 @@
 
 #include "garnet/examples/media/audio_player/audio_player.h"
 
+#include <fcntl.h>
+
 #include <iomanip>
 
+#include "garnet/bin/media/util/file_channel.h"
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -13,6 +16,7 @@
 #include "lib/media/fidl/media_player.fidl.h"
 #include "lib/media/fidl/net_media_service.fidl.h"
 #include "lib/media/timeline/timeline.h"
+#include "lib/url/gurl.h"
 
 namespace examples {
 
@@ -23,20 +27,32 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params)
   auto application_context =
       component::ApplicationContext::CreateFromStartupInfo();
 
-  auto media_player =
+  media_player_ =
       application_context->ConnectToEnvironmentService<media::MediaPlayer>();
 
-  auto net_media_service =
-      application_context
-          ->ConnectToEnvironmentService<media::NetMediaService>();
+  if (!params.service_name().empty()) {
+    auto net_media_service =
+        application_context
+            ->ConnectToEnvironmentService<media::NetMediaService>();
 
-  net_media_service->CreateNetMediaPlayer(
-      params.service_name().empty() ? "audio_player" : params.service_name(),
-      std::move(media_player), net_media_player_.NewRequest());
+    f1dl::InterfaceHandle<media::MediaPlayer> media_player_handle;
+    media_player_->AddBinding(media_player_handle.NewRequest());
+
+    net_media_service->PublishMediaPlayer(params.service_name(),
+                                          std::move(media_player_handle));
+  }
 
   if (!params.url().empty()) {
-    net_media_player_->SetUrl(params.url());
-    net_media_player_->Play();
+    url::GURL url = url::GURL(params.url());
+
+    if (url.SchemeIsFile()) {
+      media_player_->SetFileSource(media::ChannelFromFd(
+          fxl::UniqueFD(open(url.path().c_str(), O_RDONLY))));
+    } else {
+      media_player_->SetHttpSource(params.url());
+    }
+
+    media_player_->Play();
   }
 
   HandleStatusUpdates();
@@ -94,7 +110,7 @@ void AudioPlayer::HandleStatusUpdates(uint64_t version,
   }
 
   // Request a status update.
-  net_media_player_->GetStatus(
+  media_player_->GetStatus(
       version, [this](uint64_t version, media::MediaPlayerStatusPtr status) {
         HandleStatusUpdates(version, std::move(status));
       });

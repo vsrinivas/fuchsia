@@ -7,7 +7,7 @@
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
-#include "lib/media/fidl/net_media_player.fidl.h"
+#include "lib/media/fidl/media_player.fidl.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace examples {
@@ -25,7 +25,7 @@ class AudioPlayer {
       uint64_t version = media::MediaPlayer::kInitialStatus,
       media::MediaPlayerStatusPtr status = nullptr);
 
-  media::NetMediaPlayerPtr net_media_player_;
+  media::MediaPlayerPtr media_player_;
   bool metadata_shown_ = false;
   bool problem_shown_ = false;
   bool quit_when_done_;
