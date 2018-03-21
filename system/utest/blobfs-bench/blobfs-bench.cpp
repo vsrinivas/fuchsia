@@ -41,7 +41,7 @@ static char start_time[50];
 // Sets start_time to current time reported by rtc
 // Returns 0 on success, -1 otherwise
 static int GetStartTime() {
-    int rtc_fd = open("/dev/misc/rtc", O_RDONLY);
+    int rtc_fd = open("/dev/sys/acpi/rtc/rtc", O_RDONLY);
     if (rtc_fd < 0) {
         return -1;
     }

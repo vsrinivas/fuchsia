@@ -21,7 +21,7 @@ int usage(const char* cmd) {
 }
 
 int open_rtc(int mode) {
-    int rtc_fd = open("/dev/misc/rtc", mode);
+    int rtc_fd = open("/dev/sys/acpi/rtc/rtc", mode);
     if (rtc_fd < 0) {
         printf("Can not open RTC device\n");
     }
