@@ -70,7 +70,7 @@ bool TimeService::UpdateSystemTime(uint8_t tries) {
     rtc.day = ptm.tm_mday;
     rtc.month = ptm.tm_mon + 1;
     rtc.year = ptm.tm_year + 1900;
-    int rtc_fd = open("/dev/misc/rtc", O_WRONLY);
+    int rtc_fd = open("/dev/sys/acpi/rtc/rtc", O_WRONLY);
     if (rtc_fd < 0) {
       FX_LOGS(ERROR) << "open rtc: " << strerror(errno);
       return false;
