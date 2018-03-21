@@ -29,16 +29,6 @@ class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
       fidl::StringPtr service_name,
       fidl::InterfaceRequest<MediaPlayer> media_player_request) override;
 
-  void CreateNetMediaPlayer(
-      fidl::StringPtr service_name,
-      fidl::InterfaceHandle<MediaPlayer> media_player,
-      fidl::InterfaceRequest<NetMediaPlayer> net_media_player_request) override;
-
-  void CreateNetMediaPlayerProxy(
-      fidl::StringPtr device_name,
-      fidl::StringPtr service_name,
-      fidl::InterfaceRequest<NetMediaPlayer> net_media_player_request) override;
-
  private:
   fidl::BindingSet<NetMediaService> bindings_;
 

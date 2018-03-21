@@ -11,11 +11,6 @@ package("net_media_service") {
   ]
 
   binary = "net_media_service"
-
-  meta = [ {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
-      } ]
 }
 
 executable("bin") {
@@ -31,12 +26,6 @@ executable("bin") {
     "media_player_net_publisher.h",
     "media_player_net_stub.cc",
     "media_player_net_stub.h",
-    "net_media_player_impl.cc",
-    "net_media_player_impl.h",
-    "net_media_player_net_proxy.cc",
-    "net_media_player_net_proxy.h",
-    "net_media_player_net_stub.cc",
-    "net_media_player_net_stub.h",
     "net_media_service_impl.cc",
     "net_media_service_impl.h",
   ]

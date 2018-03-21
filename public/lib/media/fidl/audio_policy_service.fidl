@@ -4,8 +4,6 @@
 
 library media;
 
-// import "lib/media/fidl/net_media_player.fidl";
-
 // Special value for GetStatus version_last_seen parameter to get the current
 // status immediately.
 const uint64 kInitialStatus = 0;

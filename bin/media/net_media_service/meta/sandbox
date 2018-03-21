@@ -1,4 +1,0 @@
-{
-    "system": [ "data" ],
-    "features": [ "persistent-storage", "system-temp" ]
-}

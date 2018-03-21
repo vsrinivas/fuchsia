@@ -6,8 +6,6 @@
 
 #include "garnet/bin/media/net_media_service/media_player_net_proxy.h"
 #include "garnet/bin/media/net_media_service/media_player_net_publisher.h"
-#include "garnet/bin/media/net_media_service/net_media_player_impl.h"
-#include "garnet/bin/media/net_media_service/net_media_player_net_proxy.h"
 
 namespace media {
 
@@ -35,23 +33,6 @@ void NetMediaServiceImpl::CreateMediaPlayerProxy(
     fidl::InterfaceRequest<MediaPlayer> media_player_request) {
   AddProduct(MediaPlayerNetProxy::Create(
       device_name, service_name, std::move(media_player_request), this));
-}
-
-void NetMediaServiceImpl::CreateNetMediaPlayer(
-    fidl::StringPtr service_name,
-    fidl::InterfaceHandle<MediaPlayer> media_player,
-    fidl::InterfaceRequest<NetMediaPlayer> net_media_player_request) {
-  AddProduct(NetMediaPlayerImpl::Create(service_name, std::move(media_player),
-                                        std::move(net_media_player_request),
-                                        this));
-}
-
-void NetMediaServiceImpl::CreateNetMediaPlayerProxy(
-    fidl::StringPtr device_name,
-    fidl::StringPtr service_name,
-    fidl::InterfaceRequest<NetMediaPlayer> net_media_player_request) {
-  AddProduct(NetMediaPlayerNetProxy::Create(
-      device_name, service_name, std::move(net_media_player_request), this));
 }
 
 }  // namespace media
