@@ -113,7 +113,7 @@ static bool test_outside_interrupt() {
     thread_reschedule();
     EXPECT_EQ(thread->preempt_pending, true, "");
     arch_disable_ints();
-    thread_sleep(current_time() + ZX_MSEC(10));
+    thread_sleep_relative(ZX_MSEC(10));
     // Read preempt_pending with interrupts disabled because otherwise an
     // interrupt handler could set it to true.
     EXPECT_EQ(thread->preempt_pending, false, "");
