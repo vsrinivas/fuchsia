@@ -278,25 +278,25 @@ func isReservedWord(str string) bool {
 	return ok
 }
 
-func changeIfReserved(val types.Identifier) string {
+func changeIfReserved(val types.Identifier, ext string) string {
 	// TODO(mknyszek): Detect name collision within a scope as a result of transforming.
-	str := string(val)
+	str := string(val) + ext
 	if isReservedWord(str) {
 		return str + "_"
 	}
 	return str
 }
 
-func (_ *compiler) compileIdentifier(id types.Identifier) string {
+func (_ *compiler) compileIdentifier(id types.Identifier, ext string) string {
 	str := string(id)
 	str = common.ToUpperCamelCase(str)
-	return changeIfReserved(types.Identifier(str))
+	return changeIfReserved(types.Identifier(str), ext)
 }
 
-func (_ *compiler) compileCompoundIdentifier(ei types.EncodedIdentifier) string {
+func (_ *compiler) compileCompoundIdentifier(ei types.EncodedIdentifier, ext string) string {
 	ci := exportIdentifier(ei)
 	// TODO(kulakowski) Support more complicated names
-	return changeIfReserved(ci.Name)
+	return changeIfReserved(ci.Name, ext)
 
 }
 
@@ -371,7 +371,7 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 	case types.PrimitiveType:
 		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
-		e := c.compileCompoundIdentifier(val.Identifier)
+		e := c.compileCompoundIdentifier(val.Identifier, "")
 		declType, ok := c.decls[val.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier:", val.Identifier)
@@ -402,14 +402,14 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 
 func (c *compiler) compileEnumMember(val types.EnumMember) EnumMember {
 	return EnumMember{
-		Name:  c.compileIdentifier(val.Name),
+		Name:  c.compileIdentifier(val.Name, ""),
 		Value: c.compileConstant(val.Value),
 	}
 }
 
 func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
-		Name: c.compileCompoundIdentifier(val.Name),
+		Name: c.compileCompoundIdentifier(val.Name, ""),
 		Type: c.compilePrimitiveSubtype(val.Type),
 	}
 	for _, v := range val.Members {
@@ -422,14 +422,14 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	ty, tag := c.compileType(val.Type)
 	return StructMember{
 		Type: ty,
-		Name: c.compileIdentifier(val.Name),
+		Name: c.compileIdentifier(val.Name, ""),
 		Tag:  tag.String(),
 	}
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
-		Name:      c.compileCompoundIdentifier(val.Name),
+		Name:      c.compileCompoundIdentifier(val.Name, ""),
 		Size:      val.Size,
 		Alignment: val.Alignment,
 	}
@@ -443,20 +443,20 @@ func (c *compiler) compileParameter(p types.Parameter) StructMember {
 	ty, tag := c.compileType(p.Type)
 	return StructMember{
 		Type: ty,
-		Name: changeIfReserved(exportIdentifier(p.Name)),
+		Name: c.compileIdentifier(p.Name, ""),
 		Tag:  tag.String(),
 	}
 }
 
-func (c *compiler) compileMethod(ifaceName types.Identifier, val types.Method) Method {
-	methodName := exportIdentifier(val.Name)
+func (c *compiler) compileMethod(ifaceName types.EncodedIdentifier, val types.Method) Method {
+	methodName := c.compileIdentifier(val.Name, "")
 	r := Method{
-		Name:    changeIfReserved(methodName),
+		Name:    methodName,
 		Ordinal: val.Ordinal,
 	}
 	if val.HasRequest {
 		req := Struct{
-			Name: changeIfReserved(ifaceName + methodName + "Request"),
+			Name: c.compileCompoundIdentifier(ifaceName, methodName + "Request"),
 			// We want just the size of the parameter array as a struct, not
 			// including the message header size.
 			Size: val.RequestSize - MessageHeaderSize,
@@ -468,7 +468,7 @@ func (c *compiler) compileMethod(ifaceName types.Identifier, val types.Method) M
 	}
 	if val.HasResponse {
 		resp := Struct{
-			Name: changeIfReserved(ifaceName + methodName + "Response"),
+			Name: c.compileCompoundIdentifier(ifaceName, methodName + "Response"),
 			// We want just the size of the parameter array as a struct, not
 			// including the message header size.
 			Size: val.ResponseSize - MessageHeaderSize,
@@ -482,15 +482,14 @@ func (c *compiler) compileMethod(ifaceName types.Identifier, val types.Method) M
 }
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
-	ifaceName := exportIdentifier(val.Name.Name)
 	r := Interface{
-		Name:        changeIfReserved(ifaceName),
-		ProxyName:   changeIfReserved(ifaceName + ProxySuffix),
-		StubName:    changeIfReserved(ifaceName + StubSuffix),
+		Name:        c.compileCompoundIdentifier(val.Name, ""),
+		ProxyName:   c.compileCompoundIdentifier(val.Name, ProxySuffix),
+		StubName:    c.compileCompoundIdentifier(val.Name, StubSuffix),
 		ServiceName: val.GetAttribute("ServiceName"),
 	}
 	for _, v := range val.Methods {
-		r.Methods = append(r.Methods, c.compileMethod(ifaceName, v))
+		r.Methods = append(r.Methods, c.compileMethod(val.Name, v))
 	}
 	return r
 }
