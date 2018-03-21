@@ -23,17 +23,22 @@ type Proxy struct {
 // Send sends the request payload over the channel with the specified ordinal
 // without a response.
 func (p *Proxy) Send(ordinal uint32, req Payload) error {
-	b, h, err := Marshal(&MessageHeader{
+	// Allocate maximum size of a message on the stack.
+	var respb [zx.ChannelMaxMessageBytes]byte
+	var resph [zx.ChannelMaxMessageHandles]zx.Handle
+
+	// Marshal the message into the buffer.
+	header := MessageHeader{
 		Txid:    0, // Txid == 0 for messages without a response.
 		Ordinal: ordinal,
-	}, req)
+	}
+	nb, nh, err := MarshalMessage(&header, req, respb[:], resph[:])
 	if err != nil {
 		return err
 	}
-	if err := p.Channel.Write(b, h, 0); err != nil {
-		return err
-	}
-	return nil
+
+	// Write the encoded bytes to the channel.
+	return p.Channel.Write(respb[:nb], resph[:nh], 0)
 }
 
 // Recv waits for an event and writes the response into the response payload.
@@ -56,12 +61,14 @@ func (p *Proxy) Recv(ordinal uint32, resp Payload) error {
 		return &zx.Error{Status: zx.ErrPeerClosed}
 	}
 	// Otherwise, now we can read!
-	nb, nh, err := p.Read(respb[:], resph[:], 0)
+	nb, nh, err := p.Channel.Read(respb[:], resph[:], 0)
 	if err != nil {
 		return err
 	}
-	header, err := Unmarshal(respb[:nb], resph[:nh], resp)
-	if err != nil {
+
+	// Unmarshal the message.
+	var header MessageHeader
+	if err := UnmarshalMessage(respb[:nb], resph[:nh], &header, resp); err != nil {
 		return err
 	}
 	if header.Ordinal != ordinal {
@@ -74,28 +81,35 @@ func (p *Proxy) Recv(ordinal uint32, resp Payload) error {
 // and synchronously waits for a response. It then writes the response into the
 // response payload.
 func (p *Proxy) Call(ordinal uint32, req Payload, resp Payload) error {
+	// Allocate maximum size of a message on the stack.
+	var respb [zx.ChannelMaxMessageBytes]byte
+	var resph [zx.ChannelMaxMessageHandles]zx.Handle
+
 	// Make sure the Txid is non-zero, since that's reserved for messages without
 	// a response.
 	txid := atomic.AddUint32(&p.Txid, 1)
 	for txid == 0 {
 		txid = atomic.AddUint32(&p.Txid, 1)
 	}
-	b, h, err := Marshal(&MessageHeader{
-		Txid:    txid,
+
+	// Marshal the message into the buffer
+	header := MessageHeader{
+		Txid:    0, // Txid == 0 for messages without a response.
 		Ordinal: ordinal,
-	}, req)
+	}
+	nb, nh, err := MarshalMessage(&header, req, respb[:], resph[:])
 	if err != nil {
 		return err
 	}
-	// Allocate maximum size of a message on the stack.
-	var respb [zx.ChannelMaxMessageBytes]byte
-	var resph [zx.ChannelMaxMessageHandles]zx.Handle
-	nb, nh, _, err := p.Channel.Call(0, zx.TimensecInfinite, b, h, respb[:], resph[:])
+
+	// Make the IPC call.
+	cnb, cnh, _, err := p.Channel.Call(0, zx.TimensecInfinite, respb[:nb], resph[:nh], respb[:], resph[:])
 	if err != nil {
 		return err
 	}
-	header, err := Unmarshal(respb[:nb], resph[:nh], resp)
-	if err != nil {
+
+	// Unmarshal the message.
+	if err := UnmarshalMessage(respb[:cnb], resph[:cnh], &header, resp); err != nil {
 		return err
 	}
 	if header.Ordinal != ordinal {

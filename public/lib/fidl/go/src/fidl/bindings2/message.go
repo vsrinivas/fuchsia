@@ -4,6 +4,10 @@
 
 package bindings2
 
+import (
+	"syscall/zx"
+)
+
 // MessageHeaderSize is the size of the encoded message header.
 const MessageHeaderSize int = 16
 
@@ -24,4 +28,21 @@ type Payload interface {
 
 	// InlineAlignment returns the alignment of the structure.
 	InlineAlignment() int
+}
+
+// MarshalMessage is a convenience function for marshalling a full FIDL message,
+// that is, header and payload.
+func MarshalMessage(header *MessageHeader, s Payload, data []byte, handles []zx.Handle) (int, int, error) {
+	MarshalHeader(header, data[:])
+	nb, nh, err := Marshal(s, data[:MessageHeaderSize], handles[:])
+	return nb + MessageHeaderSize, nh, err
+}
+
+// UnmarshalMessage is a convenience function for unmarshalling a full FIDL message,
+// that is, header and payload.
+func UnmarshalMessage(data []byte, handles []zx.Handle, header *MessageHeader, s Payload) error {
+	if err := UnmarshalHeader(data[:MessageHeaderSize], header); err != nil {
+		return err
+	}
+	return Unmarshal(data[MessageHeaderSize:], handles[:], s)
 }

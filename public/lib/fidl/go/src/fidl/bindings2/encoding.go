@@ -482,44 +482,44 @@ func (e *encoder) marshal(t reflect.Type, v reflect.Value, n nestedTypeData) err
 	return e.marshalInline(t, v, n)
 }
 
-func marshalHeader(header *MessageHeader) []byte {
-	e := encoder{}
+// MarshalHeader encodes the FIDL message header into the beginning of data.
+func MarshalHeader(header *MessageHeader, data []byte) {
+	// Clear the buffer so we can append to it.
+	e := encoder{buffer: data[:0]}
 	e.head = e.newObject(MessageHeaderSize)
 	e.writeUint(uint64(header.Txid), 4)
 	e.writeUint(uint64(header.Reserved), 4)
 	e.writeUint(uint64(header.Flags), 4)
 	e.writeUint(uint64(header.Ordinal), 4)
-	return e.buffer
 }
 
-// Marshal returns the FIDL encoding of a FIDL message comprised of a header
-// and a payload which lies in s.
+// Marshal the FIDL payload in s into data and handles.
 //
 // s must be a pointer to a struct, since the primary object in a FIDL message
 // is always a struct.
 //
 // Marshal traverses the value s recursively, following nested type values via
 // reflection in order to encode the FIDL struct.
-func Marshal(header *MessageHeader, s Payload) ([]byte, []zx.Handle, error) {
+func Marshal(s Payload, data []byte, handles []zx.Handle) (int, int, error) {
 	// First, let's make sure we have the right type in s.
 	t := reflect.TypeOf(s)
 	if t.Kind() != reflect.Ptr {
-		return nil, nil, errors.New("expected a pointer")
+		return 0, 0, errors.New("expected a pointer")
 	}
 	t = t.Elem()
 	if t.Kind() != reflect.Struct {
-		return nil, nil, errors.New("primary object must be a struct")
+		return 0, 0, errors.New("primary object must be a struct")
 	}
 
 	// Now, let's get the value of s, marshal the header into a starting
 	// buffer, and then marshal the rest of the payload in s.
 	v := reflect.ValueOf(s).Elem()
-	e := encoder{buffer: marshalHeader(header)}
+	e := encoder{buffer: data[:0], handles: handles[:0]}
 	e.head = e.newObject(s.InlineSize())
 	if err := e.marshalStructFields(t, v); err != nil {
-		return nil, nil, err
+		return 0, 0, err
 	}
-	return e.buffer, e.handles, nil
+	return len(e.buffer), len(e.handles), nil
 }
 
 // decoder represents the decoding context that is necessary to maintain
@@ -836,7 +836,8 @@ func (d *decoder) unmarshal(t reflect.Type, v reflect.Value, n nestedTypeData) e
 	return d.unmarshalInline(t, v, n)
 }
 
-func unmarshalHeader(data []byte, m *MessageHeader) error {
+// UnmarshalHeader parses a FIDL header in the data into m.
+func UnmarshalHeader(data []byte, m *MessageHeader) error {
 	if len(data) < 16 {
 		return fmt.Errorf("too few bytes in payload to parse header")
 	}
@@ -848,37 +849,31 @@ func unmarshalHeader(data []byte, m *MessageHeader) error {
 	return nil
 }
 
-// Unmarshal parses the encoded FIDL message in data, storing the decoded payload
-// in s and returning the message header.
+// Unmarshal parses the encoded FIDL payload in data and handles, storing the
+// decoded payload in s.
 //
 // The value pointed to by s must be a pointer to a golang struct which represents
 // the decoded primary object of a FIDL message. The data decode process is guided
 // by the structure of the struct pointed to by s.
 //
 // TODO(mknyszek): More rigorously validate the input.
-func Unmarshal(data []byte, handles []zx.Handle, s Payload) (*MessageHeader, error) {
+func Unmarshal(data []byte, handles []zx.Handle, s Payload) error {
 	// First, let's make sure we have the right type in s.
 	t := reflect.TypeOf(s)
 	if t.Kind() != reflect.Ptr {
-		return nil, errors.New("expected a pointer")
+		return errors.New("expected a pointer")
 	}
 	t = t.Elem()
 	if t.Kind() != reflect.Struct {
-		return nil, errors.New("primary object must be a struct")
-	}
-
-	// Since that succeeded, let's unmarshal the header.
-	var m MessageHeader
-	if err := unmarshalHeader(data, &m); err != nil {
-		return nil, err
+		return errors.New("primary object must be a struct")
 	}
 
 	// Get the payload's value and unmarshal it.
 	nextObject := align(s.InlineSize(), 8)
 	d := decoder{
-		buffer:     data[MessageHeaderSize:],
+		buffer:     data,
 		handles:    handles,
 		nextObject: nextObject,
 	}
-	return &m, d.unmarshalStructFields(t, reflect.ValueOf(s).Elem())
+	return d.unmarshalStructFields(t, reflect.ValueOf(s).Elem())
 }
