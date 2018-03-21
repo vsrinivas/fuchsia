@@ -17,7 +17,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_CANONICAL_PACKAGES = [
     'default',
     'dev',
-    'dev_full'
+    'kitchen_sink',
 ]
 
 # Standard names for packages in a layer.
