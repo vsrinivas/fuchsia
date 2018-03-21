@@ -130,8 +130,8 @@ zx_status_t InitBuffers(const zx::bti& bti, fbl::unique_ptr<io_buffer_t[]>* out)
     memset(bufs.get(), 0, sizeof(io_buffer_t) * kNumIoBufs);
     size_t buf_size = kFrameSize * kFramesInBuf;
     for (uint16_t id = 0; id < kNumIoBufs; ++id) {
-        if ((rc = io_buffer_init_with_bti(&bufs[id], bti.get(), buf_size,
-                                          IO_BUFFER_RW | IO_BUFFER_CONTIG)) != ZX_OK) {
+        if ((rc = io_buffer_init(&bufs[id], bti.get(), buf_size,
+                                 IO_BUFFER_RW | IO_BUFFER_CONTIG)) != ZX_OK) {
             zxlogf(ERROR, "failed to allocate I/O buffers: %s\n", zx_status_get_string(rc));
             return rc;
         }

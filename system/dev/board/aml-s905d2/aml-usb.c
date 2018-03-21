@@ -62,7 +62,7 @@ zx_status_t aml_usb_init(aml_bus_t* bus) {
     status = io_buffer_init_physical(&usb_phy, bti, 0xd0078000, 4096,  get_root_resource(),
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_usb_init io_buffer_init_physical_with_bti failed %d\n", status);
+        zxlogf(ERROR, "aml_usb_init io_buffer_init_physical failed %d\n", status);
         zx_handle_close(bti);
         return status;
     }

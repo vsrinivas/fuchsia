@@ -382,8 +382,8 @@ static zx_status_t ahci_port_initialize(ahci_device_t* dev, ahci_port_t* port) {
     size_t ct_prd_padding = 0x80 - (ct_prd_sz & (0x80 - 1)); // 128-byte aligned
     size_t mem_sz = sizeof(ahci_fis_t) + sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS
                     + (ct_prd_sz + ct_prd_padding) * AHCI_MAX_COMMANDS;
-    zx_status_t status = io_buffer_init_with_bti(&port->buffer, dev->bti_handle,
-                                                 mem_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    zx_status_t status = io_buffer_init(&port->buffer, dev->bti_handle,
+                                        mem_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status < 0) {
         zxlogf(ERROR, "ahci.%d: error %d allocating dma memory\n", port->nr, status);
         return status;

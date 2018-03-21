@@ -874,9 +874,9 @@ static zx_status_t sdhci_controller_init(sdhci_device_t* dev) {
 
     // allocate and setup DMA descriptor
     if (sdhci_supports_adma2_64bit(dev)) {
-        status = io_buffer_init_with_bti(&dev->iobuf, dev->bti_handle,
-                                         DMA_DESC_COUNT * sizeof(sdhci_adma64_desc_t),
-                                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
+        status = io_buffer_init(&dev->iobuf, dev->bti_handle,
+                                DMA_DESC_COUNT * sizeof(sdhci_adma64_desc_t),
+                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
         if (status != ZX_OK) {
             zxlogf(ERROR, "sdhci: error allocating DMA descriptors\n");
             goto fail;

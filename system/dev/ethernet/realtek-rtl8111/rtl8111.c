@@ -400,8 +400,7 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
 
     // TODO(stevensd): Don't require a contiguous buffer
     uint32_t alloc_size = ((ETH_BUF_SIZE + ETH_DESC_ELT_SIZE) * ETH_BUF_COUNT) * 2;
-    r = io_buffer_init_with_bti(&edev->buffer, edev->btih, alloc_size,
-                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    r = io_buffer_init(&edev->buffer, edev->btih, alloc_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (r != ZX_OK) {
         zxlogf(ERROR, "rtl8111: cannot alloc io-buffer %d\n", r);
         goto fail;

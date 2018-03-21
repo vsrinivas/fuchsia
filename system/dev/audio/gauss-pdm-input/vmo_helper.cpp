@@ -12,8 +12,7 @@ namespace audio {
 namespace gauss {
 
 zx_status_t VmoHelperBase::AllocateVmo(zx_handle_t bti, size_t buffer_size) {
-    return io_buffer_init_with_bti(&buffer_, bti, buffer_size,
-                                   IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    return io_buffer_init(&buffer_, bti, buffer_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
 }
 
 zx_status_t VmoHelper<true>::AllocateVmo(zx_handle_t bti, size_t buffer_size) {

@@ -61,8 +61,7 @@ zx_status_t TransferBuffer::Init(const zx::bti& bti, size_t count, uint32_t chun
 
     descriptor_.reset(descriptor, count_);
 
-    zx_status_t status = io_buffer_init_with_bti(&buf_, bti.get(), size_,
-                                                 IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    zx_status_t status = io_buffer_init(&buf_, bti.get(), size_, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         zxlogf(ERROR, "Failed to allocate transfer buffers (%d)\n", status);
         return status;

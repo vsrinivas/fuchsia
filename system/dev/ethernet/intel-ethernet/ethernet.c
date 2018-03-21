@@ -285,8 +285,7 @@ static zx_status_t eth_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
-    r = io_buffer_init_with_bti(&edev->buffer, edev->btih, ETH_ALLOC,
-                                IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    r = io_buffer_init(&edev->buffer, edev->btih, ETH_ALLOC, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (r < 0) {
         printf("eth: cannot alloc io-buffer %d\n", r);
         goto fail;

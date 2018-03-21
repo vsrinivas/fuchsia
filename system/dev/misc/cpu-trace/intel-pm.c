@@ -352,8 +352,7 @@ static zx_status_t ipm_alloc_trace(cpu_trace_device_t* dev,
     uint32_t i = 0;
     for ( ; i < num_cpus; ++i) {
         zx_status_t status =
-            io_buffer_init_with_bti(&per_trace->buffers[i], dev->bti,
-                                    alloc.buffer_size, IO_BUFFER_RW);
+            io_buffer_init(&per_trace->buffers[i], dev->bti, alloc.buffer_size, IO_BUFFER_RW);
         if (status != ZX_OK)
             break;
     }

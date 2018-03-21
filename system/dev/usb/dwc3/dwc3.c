@@ -437,16 +437,16 @@ static zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    status = io_buffer_init_with_bti(&dwc->event_buffer, dwc->bti_handle, EVENT_BUFFER_SIZE,
-                                     IO_BUFFER_RO | IO_BUFFER_CONTIG);
+    status = io_buffer_init(&dwc->event_buffer, dwc->bti_handle, EVENT_BUFFER_SIZE,
+                            IO_BUFFER_RO | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dwc3_bind: io_buffer_init failed\n");
         goto fail;
     }
     io_buffer_cache_flush(&dwc->event_buffer, 0, EVENT_BUFFER_SIZE);
 
-    status = io_buffer_init_with_bti(&dwc->ep0_buffer,  dwc->bti_handle, 65536,
-                                     IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    status = io_buffer_init(&dwc->ep0_buffer,  dwc->bti_handle, 65536,
+                            IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         zxlogf(ERROR, "dwc3_bind: io_buffer_init failed\n");
         goto fail;

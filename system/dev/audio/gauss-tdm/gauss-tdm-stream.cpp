@@ -577,8 +577,8 @@ zx_status_t TdmOutputStream::OnGetBufferLocked(dispatcher::Channel* channel,
         ring_buffer_size_ = fbl::round_up(fifo_bytes_, frame_size_);
 
     // TODO - (hollande) Make this work with non contig vmo
-    resp.result = io_buffer_init_with_bti(&ring_buffer_, bti_.get(), ring_buffer_size_,
-                                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    resp.result = io_buffer_init(&ring_buffer_, bti_.get(), ring_buffer_size_,
+                                 IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (resp.result != ZX_OK) {
         zxlogf(ERROR, "Failed to create ring buffer (size %u, res %d)\n", ring_buffer_size_,
                resp.result);

@@ -29,8 +29,7 @@ zx_status_t usb_request_alloc(usb_request_t** out, zx_handle_t bti_handle, uint6
         return ZX_ERR_NO_MEMORY;
     }
     if (data_size > 0) {
-        zx_status_t status = io_buffer_init_with_bti(&req->buffer, bti_handle, data_size,
-                                                     IO_BUFFER_RW);
+        zx_status_t status = io_buffer_init(&req->buffer, bti_handle, data_size, IO_BUFFER_RW);
         if (status != ZX_OK) {
             free(req);
             return status;

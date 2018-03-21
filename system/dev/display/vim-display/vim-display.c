@@ -218,10 +218,10 @@ static zx_status_t setup_hdmi(vim2_display_t* display)
     display->disp_info.stride = display->p->timings.hactive;
     display->disp_info.pixelsize = ZX_PIXEL_FORMAT_BYTES(display->disp_info.format);
 
-    status = io_buffer_init_with_bti(&display->fbuffer, display->bti,
-                                    (display->disp_info.stride * display->disp_info.height *
-                                     ZX_PIXEL_FORMAT_BYTES(display->disp_info.format)),
-                                     IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    status = io_buffer_init(&display->fbuffer, display->bti,
+                            (display->disp_info.stride * display->disp_info.height *
+                             ZX_PIXEL_FORMAT_BYTES(display->disp_info.format)),
+                            IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         return status;
     }

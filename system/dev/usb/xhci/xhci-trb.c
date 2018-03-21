@@ -8,9 +8,9 @@
 #include "xhci.h"
 
 zx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, zx_handle_t bti_handle, int count) {
-    zx_status_t status = io_buffer_init_with_bti(&ring->buffer, bti_handle,
-                                                 count * sizeof(xhci_trb_t),
-                                                 IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
+    zx_status_t status = io_buffer_init(&ring->buffer, bti_handle,
+                                        count * sizeof(xhci_trb_t),
+                                        IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
     if (status != ZX_OK) return status;
 
     ring->start = io_buffer_virt(&ring->buffer);
@@ -53,9 +53,9 @@ size_t xhci_transfer_ring_free_trbs(xhci_transfer_ring_t* ring) {
 zx_status_t xhci_event_ring_init(xhci_event_ring_t* ring, zx_handle_t bti_handle,
                                  erst_entry_t* erst_array, int count) {
     // allocate a read-only buffer for TRBs
-    zx_status_t status = io_buffer_init_with_bti(&ring->buffer, bti_handle,
-                                                 count * sizeof(xhci_trb_t),
-                                                 IO_BUFFER_RO | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
+    zx_status_t status = io_buffer_init(&ring->buffer, bti_handle,
+                                        count * sizeof(xhci_trb_t),
+                                        IO_BUFFER_RO | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
     if (status != ZX_OK) return status;
 
     ring->start = io_buffer_virt(&ring->buffer);

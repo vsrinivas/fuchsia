@@ -346,7 +346,7 @@ zx_status_t GpuDevice::virtio_gpu_start() {
     // Attach a backing store to the resource
     size_t len = pmode_.r.width * pmode_.r.height * 4;
 
-    status = io_buffer_init_with_bti(&fb_, bti_.get(), len, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    status = io_buffer_init(&fb_, bti_.get(), len, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: failed to allocate framebuffer, wanted 0x%zx bytes\n", tag(), len);
         return ZX_ERR_NO_MEMORY;
@@ -427,8 +427,7 @@ zx_status_t GpuDevice::Init() {
     }
 
     // Allocate a GPU request
-    status = io_buffer_init_with_bti(&gpu_req_, bti_.get(), PAGE_SIZE,
-                                     IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    status = io_buffer_init(&gpu_req_, bti_.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: cannot alloc gpu_req buffers %d\n", tag(), status);
         return status;

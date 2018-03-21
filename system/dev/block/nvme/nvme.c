@@ -797,7 +797,7 @@ static zx_status_t nvme_init(nvme_device_t* nvme) {
     }
     // allocate pages for various queues and the utxn scatter lists
     // TODO: these should all be RO to hardware apart from the scratch io page(s)
-    if (io_buffer_init_with_bti(&nvme->iob, nvme->bti, PAGE_SIZE * IO_PAGE_COUNT, IO_BUFFER_RW) ||
+    if (io_buffer_init(&nvme->iob, nvme->bti, PAGE_SIZE * IO_PAGE_COUNT, IO_BUFFER_RW) ||
         io_buffer_physmap(&nvme->iob)) {
         zxlogf(ERROR, "nvme: could not allocate io buffers\n");
         return ZX_ERR_NO_MEMORY;
