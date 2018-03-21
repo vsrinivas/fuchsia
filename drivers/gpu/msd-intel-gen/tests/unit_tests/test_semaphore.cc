@@ -37,4 +37,5 @@ public:
 };
 }
 
-TEST(MsdIntelSemaphore, Test) { TestMsdIntelSemaphore::Test(); }
+// TODO(MA-433): deflake
+TEST(MsdIntelSemaphore, DISABLED_Test) { TestMsdIntelSemaphore::Test(); }
