@@ -81,10 +81,10 @@ class MediaTimelineControllerImpl
   class TimelineTransition
       : public std::enable_shared_from_this<TimelineTransition> {
    public:
-    TimelineTransition(int64_t reference_time,
-                       int64_t subject_time,
-                       uint32_t reference_delta,
+    TimelineTransition(int64_t subject_time,
+                       int64_t reference_time,
                        uint32_t subject_delta,
+                       uint32_t reference_delta,
                        const SetTimelineTransformCallback& callback);
 
     ~TimelineTransition();

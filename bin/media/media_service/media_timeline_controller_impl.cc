@@ -164,18 +164,18 @@ void MediaTimelineControllerImpl::SetTimelineTransform(
 
   // Record the new pending transition.
   std::shared_ptr<TimelineTransition> transition =
-      std::shared_ptr<TimelineTransition>(
-          new TimelineTransition(reference_time, actual_subject_time,
-                                 timeline_transform->reference_delta,
-                                 timeline_transform->subject_delta, callback));
+      std::shared_ptr<TimelineTransition>(new TimelineTransition(
+          actual_subject_time, reference_time,
+          timeline_transform->subject_delta,
+          timeline_transform->reference_delta, callback));
 
   pending_transition_ = transition;
 
   TimelineTransform transform_to_send;
-  transform_to_send.reference_time = reference_time;
   transform_to_send.subject_time = subject_time;
-  transform_to_send.reference_delta = timeline_transform->reference_delta;
+  transform_to_send.reference_time = reference_time;
   transform_to_send.subject_delta = timeline_transform->subject_delta;
+  transform_to_send.reference_delta = timeline_transform->reference_delta;
 
   // Initiate the transition for each control point.
   for (const std::unique_ptr<ControlPointState>& control_point_state :
@@ -242,15 +242,15 @@ void MediaTimelineControllerImpl::ControlPointState::HandleStatusUpdates(
 }
 
 MediaTimelineControllerImpl::TimelineTransition::TimelineTransition(
-    int64_t reference_time,
     int64_t subject_time,
-    uint32_t reference_delta,
+    int64_t reference_time,
     uint32_t subject_delta,
+    uint32_t reference_delta,
     const SetTimelineTransformCallback& callback)
-    : new_timeline_function_(reference_time,
-                             subject_time,
-                             reference_delta,
-                             subject_delta),
+    : new_timeline_function_(subject_time,
+                             reference_time,
+                             subject_delta,
+                             reference_delta),
       callback_(callback) {
   FXL_DCHECK(callback_);
   callback_joiner_.WhenJoined([this]() {
