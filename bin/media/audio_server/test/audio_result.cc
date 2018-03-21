@@ -21,6 +21,11 @@ constexpr double AudioResult::kLevelToleranceSource16;
 constexpr double AudioResult::kLevelToleranceOutput16;
 
 //
+// Purely when calculating gain (in dB) from gain_scale (fixed-point int),
+// derived values must be within this multiplier (above or below) of target.
+constexpr double AudioResult::kGainToleranceMultiplier;
+
+//
 // What is our best-case noise floor in absence of rechannel/gain/SRC/mix.
 // Val is root-sum-square of all other freqs besides the 1kHz reference, in
 // dBr units (compared to magnitude of received reference). Using dBr (not

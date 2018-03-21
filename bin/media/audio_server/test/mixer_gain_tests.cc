@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
+#include "garnet/bin/media/audio_server/test/audio_result.h"
 #include "garnet/bin/media/audio_server/test/mixer_tests_shared.h"
 
 namespace media {
@@ -21,16 +22,20 @@ using Resampler = media::audio::Mixer::Resampler;
 //
 // Gain tests using the Gain and AScale objects only
 //
-// Test the inline function that converts from fixed-point gain to dB.
+// Test the internally-used inline func that converts fixed-point gain to dB.
 TEST(Gain, GainScaleToDb) {
   EXPECT_EQ(GainScaleToDb(Gain::kUnityScale), 0.0);
   EXPECT_EQ(GainScaleToDb(Gain::kUnityScale * 10), 20.0);
 
-  EXPECT_GE(GainScaleToDb(Gain::kUnityScale / 100), -40.0 * 1.000001);
-  EXPECT_LE(GainScaleToDb(Gain::kUnityScale / 100), -40.0 * 0.999999);
+  EXPECT_GE(GainScaleToDb(Gain::kUnityScale / 100),
+            -40.0 * AudioResult::kGainToleranceMultiplier);
+  EXPECT_LE(GainScaleToDb(Gain::kUnityScale / 100),
+            -40.0 / AudioResult::kGainToleranceMultiplier);
 
-  EXPECT_GE(GainScaleToDb(Gain::kUnityScale >> 1), -6.0206 * 1.000001);
-  EXPECT_LE(GainScaleToDb(Gain::kUnityScale >> 1), -6.0206 * 0.999999);
+  EXPECT_GE(GainScaleToDb(Gain::kUnityScale >> 1),
+            -6.0206 * AudioResult::kGainToleranceMultiplier);
+  EXPECT_LE(GainScaleToDb(Gain::kUnityScale >> 1),
+            -6.0206 / AudioResult::kGainToleranceMultiplier);
 }
 
 // Do renderer and output gains correctly combine to produce unity scaling?

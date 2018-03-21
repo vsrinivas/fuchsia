@@ -20,24 +20,70 @@ namespace test {
 // 'Output' noise floor is the demonstrated best-case background noise when
 // emitting audio (to an audio Output device or AudioCapturer, for example).
 TEST(Recap, NoiseFloor) {
-  printf("\n Best-case noise-floor\n   (no gain/SRC)");
+  printf("\n Best-case noise-floor");
+  printf("\n   (in dB, with prior results)");
 
-  printf("\n\t\t\t   Sources\t\t   Outputs\n\t\t");
-  for (uint32_t type = 0; type < 2; ++type) {
-    printf("      8-bit       16-bit");
-  }
+  printf("\n\n     Sources");
+  printf("\n           8-bit           16-bit");
+  printf("\n       %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
+         AudioResult::FloorSource8, AudioResult::kPrevFloorSource8,
+         AudioResult::FloorSource16, AudioResult::kPrevFloorSource16);
 
-  printf("\n\t\t      ");
-  printf("%5.2lf dB    %5.2lf dB    %5.2lf dB    %5.2lf dB",
-         AudioResult::FloorSource8, AudioResult::FloorSource16,
-         AudioResult::FloorOutput8, AudioResult::FloorOutput16);
-
-  printf("\n\t   (prior)    ");
-  printf("%5.2lf       %5.2lf       %5.2lf       %5.2lf",
-         AudioResult::kPrevFloorSource8, AudioResult::kPrevFloorSource16,
-         AudioResult::kPrevFloorOutput8, AudioResult::kPrevFloorOutput16);
+  printf("\n\n     Outputs");
+  printf("\n           8-bit           16-bit");
+  printf("\n       %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
+         AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8,
+         AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16);
 
   printf("\n\n\n");
+}
+
+TEST(Recap, FreqResp) {
+  printf("\n Frequency Response");
+  printf("\n   (in dB, with prior results)");
+
+  printf("\n\n   Point resampler");
+  printf("\n\t\t       No SRC                  96k->48k");
+  for (uint32_t freq = 0; freq < FrequencySet::kNumSummaryFreqs; ++freq) {
+    printf("\n   %8u Hz  %9.6lf  (%9.6lf)   %9.6lf  (%9.6lf)",
+           FrequencySet::kSummaryFreqsTranslated[freq],
+           AudioResult::FreqRespPointUnity[freq],
+           AudioResult::kPrevFreqRespPointUnity[freq],
+           AudioResult::FreqRespPointDown[freq],
+           AudioResult::kPrevFreqRespPointDown[freq]);
+  }
+
+  printf("\n\n   Linear resampler");
+  printf("\n\t\t     88.2k->48k               44.1k->48k");
+  for (uint32_t freq = 0; freq < FrequencySet::kNumSummaryFreqs; ++freq) {
+    printf("\n   %8u Hz  %9.6lf  (%9.6lf)   %9.6lf  (%9.6lf)",
+           FrequencySet::kSummaryFreqsTranslated[freq],
+           AudioResult::FreqRespLinearDown[freq],
+           AudioResult::kPrevFreqRespLinearDown[freq],
+           AudioResult::FreqRespLinearUp[freq],
+           AudioResult::kPrevFreqRespLinearUp[freq]);
+  }
+  printf("\n\n");
+}
+
+TEST(Recap, SINAD) {
+  printf("\n Signal-to-Noise-and-Distortion (SINAD)");
+  printf("\n   (in dB, with prior results)");
+  printf("\n   1kHz tone @ 0dBFS");
+
+  printf("\n\n     Point resampler");
+  printf("\n\t          No SRC          96k->48k");
+  printf("\n\t       %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
+         AudioResult::SinadPointUnity, AudioResult::kPrevSinadPointUnity,
+         AudioResult::SinadPointDown, AudioResult::kPrevSinadPointDown);
+
+  printf("\n\n     Linear resampler");
+  printf("\n\t        88.2k->48k       44.1k->48k");
+  printf("\n\t       %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
+         AudioResult::SinadLinearDown, AudioResult::kPrevSinadLinearDown,
+         AudioResult::SinadLinearUp, AudioResult::kPrevSinadLinearUp);
+
+  printf("\n\n");
 }
 
 }  // namespace test
