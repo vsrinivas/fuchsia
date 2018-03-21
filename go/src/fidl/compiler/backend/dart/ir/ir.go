@@ -313,7 +313,7 @@ func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) strin
 	for _, v := range val.NestedDecls {
 		strs = append(strs, c.compileUpperCamelIdentifier(v))
 	}
-	strs = append(strs, c.compileUpperCamelIdentifier(val.Name))
+	strs = append(strs, changeIfReserved(val.Name))
 	return strings.Join(strs, ".")
 }
 
@@ -411,7 +411,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.typeExpr = fmt.Sprintf("const $fidl.HandleType(nullable: %s)",
 			formatBool(val.Nullable))
 	case types.RequestType:
-		t := c.compileCompoundIdentifier(types.ParseCompoundIdentifier(val.RequestSubtype))
+		t := c.compileUpperCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.RequestSubtype), "")
 		r.Decl = fmt.Sprintf("$fidl.InterfaceRequest<%s>", t)
 		r.typeExpr = fmt.Sprintf("const $fidl.InterfaceRequestType<%s>(nullable: %s)",
 			t, formatBool(val.Nullable))
@@ -420,7 +420,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.typedDataDecl = typedDataDecl[val.PrimitiveSubtype]
 		r.typeExpr = typeExprForPrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
-		t := c.compileCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier))
+		t := c.compileUpperCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier), "")
 		declType, ok := (*c.decls)[val.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier:", val.Identifier)
