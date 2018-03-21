@@ -15,9 +15,9 @@ integration tests).
   doc](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Enabling-Network).
   For QEMU, see also the warning below.
 
-- A build configuration that runs `test_runner` at startup. For example,
-  `./package/gn/gen.py -p boot_test_modular`. Alternatively, you can run
-  `test_runner` from the shell.
+- A build configuration that runs `test_runner` at startup. For example:
+  `fx set x64 --packages peridot/packages/products/test_modular`. Alternatively,
+   you can run `test_runner` from the shell.
 
 *** note
 **QEMU**: `test_runner` doesn't currently work with the default networking
