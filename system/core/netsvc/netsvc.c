@@ -125,9 +125,12 @@ int main(int argc, char** argv) {
 
     const char* interface = NULL;
     bool nodename_provided = false;
+    bool should_advertise = false;
     while (argc > 1) {
         if (!strncmp(argv[1], "--netboot", 9)) {
             netbootloader = true;
+        } else if (!strncmp(argv[1], "--advertise", 11)) {
+            should_advertise = true;
         } else if (!strncmp(argv[1], "--interface", 11)) {
             if (argc < 3) {
                 printf("netsvc: fatal error: missing argument to --interface\n");
@@ -166,10 +169,14 @@ int main(int argc, char** argv) {
         }
 
         printf("netsvc: nodename='%s'\n", nodename);
+        if (!should_advertise) {
+            printf("netsvc: will not advertise\n");
+        }
         printf("netsvc: start\n");
         for (;;) {
-            if (netbootloader)
+            if (netbootloader && should_advertise) {
                 netboot_advertise(nodename);
+            }
 
             update_timeouts();
 

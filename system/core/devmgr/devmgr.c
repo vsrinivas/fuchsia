@@ -217,13 +217,17 @@ int service_starter(void* arg) {
     __UNUSED bool netboot = false;
     bool vruncmd = false;
     if (!getenv_bool("netsvc.disable", false)) {
-        const char* args[] = { "/boot/bin/netsvc", NULL, NULL, NULL, NULL };
+        const char* args[] = { "/boot/bin/netsvc", NULL, NULL, NULL, NULL, NULL };
         int argc = 1;
 
         if (getenv_bool("netsvc.netboot", false)) {
             args[argc++] = "--netboot";
             netboot = true;
             vruncmd = true;
+        }
+
+        if (getenv_bool("netsvc.advertise", true)) {
+            args[argc++] = "--advertise";
         }
 
         const char* interface;
