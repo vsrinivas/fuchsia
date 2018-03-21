@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
 
