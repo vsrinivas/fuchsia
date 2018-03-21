@@ -59,6 +59,10 @@ bool pipe_in_use(const fbl::Vector<i915::DisplayDevice*>& displays, registers::P
     }
     return false;
 }
+
+static inline bool is_modesetting_enabled(uint16_t device_id) {
+    return ENABLE_MODESETTING && i915::is_gen9(device_id);
+}
 } // namespace
 
 namespace i915 {
@@ -446,7 +450,7 @@ fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
 }
 
 zx_status_t Controller::InitDisplays() {
-    if (ENABLE_MODESETTING && is_gen9(device_id_)) {
+    if (is_modesetting_enabled(device_id_)) {
         BringUpDisplayEngine(false);
 
         for (uint32_t i = 0; i < registers::kDdiCount; i++) {
@@ -603,7 +607,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     }
 
     zx_status_t status;
-    if (is_gen9(device_id_) && ENABLE_MODESETTING) {
+    if (is_modesetting_enabled(device_id_)) {
         status = igd_opregion_.Init(&pci_);
         if (status != ZX_OK) {
             zxlogf(ERROR, "i915: Failed to init VBT (%d)\n", status);
@@ -642,7 +646,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     ddi_a_lane_capability_control_ = registers::DdiRegs(registers::DDI_A).DdiBufControl()
             .ReadFrom(mmio_space_.get()).ddi_a_lane_capability_control();
 
-    if (ENABLE_MODESETTING && is_gen9(device_id_)) {
+    if (is_modesetting_enabled(device_id_)) {
         zxlogf(TRACE, "i915: initialzing hotplug\n");
         status = interrupts_.Init(this);
         if (status != ZX_OK) {
@@ -673,7 +677,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         return status;
     }
 
-    if (is_gen9(device_id_)) {
+    if (is_modesetting_enabled(device_id_)) {
         interrupts_.FinishInit();
     }
 
