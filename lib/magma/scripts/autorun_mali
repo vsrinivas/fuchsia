@@ -20,6 +20,17 @@ if [ -e /system/test/magma_arm_integration_tests ]; then
   echo [INTEGRATION START=]
   /system/test/magma_arm_integration_tests
   echo [INTEGRATION END===]
+  echo [==========]
 else
   echo SKIPPED /system/test/magma_arm_integration_tests
+fi
+
+if [ -e /system/test/vkext ]; then
+  echo [APP START=]
+  /system/test/vkext --gtest_filter=-VulkanExtension.Scanout
+  /system/test/vkreadback
+  echo [APP END===]
+  echo [==========]
+else
+  echo SKIPPED app tests - no /system/test/vkext
 fi
