@@ -9,7 +9,7 @@ const Enum = `
 type {{ .Name }} {{ .Type }}
 const (
 	{{- range .Members }}
-	{{ $.Name }}{{ .Name }} {{ $.Type }} = {{ .Value }}
+	{{ $.Name }}{{ .Name }} {{ $.Name }} = {{ .Value }}
 	{{- end }}
 )
 {{- end -}}
