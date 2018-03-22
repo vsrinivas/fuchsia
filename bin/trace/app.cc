@@ -8,14 +8,12 @@
 #include "garnet/bin/trace/app.h"
 
 #include "garnet/bin/trace/commands/list_categories.h"
-#include "garnet/bin/trace/commands/list_providers.h"
 #include "garnet/bin/trace/commands/record.h"
 
 namespace tracing {
 
 App::App(component::ApplicationContext* context) : Command(context) {
   RegisterCommand(ListCategories::Describe());
-  RegisterCommand(ListProviders::Describe());
   RegisterCommand(Record::Describe());
 }
 

@@ -24,8 +24,6 @@ source_set("trace_app") {
     "command.h",
     "commands/list_categories.cc",
     "commands/list_categories.h",
-    "commands/list_providers.cc",
-    "commands/list_providers.h",
     "commands/record.cc",
     "commands/record.h",
     "results_export.cc",
