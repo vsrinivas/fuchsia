@@ -96,7 +96,7 @@ interface ViewContainer {
   //
   // It is an error to add more than one child to a |ViewTree|'s container;
   // it can only have at most one child (its root).
-  2: AddChild(uint32 child_key, ViewOwner child_view_owner,
+  2: AddChild(uint32 child_key, views_v1_token.ViewOwner child_view_owner,
       handle<eventpair> host_import_token);
 
   // Removes the view referenced by |child_key| from the view's
@@ -108,7 +108,7 @@ interface ViewContainer {
   //
   // It is an error to remove a view whose |child_key| does not appear
   // in the container's list of children; the connection will be closed.
-  3: RemoveChild(uint32 child_key, request<ViewOwner>? transferred_view_owner);
+  3: RemoveChild(uint32 child_key, request<views_v1_token.ViewOwner>? transferred_view_owner);
 
   // Sets view properties for the child, such as layout constraints.
   //

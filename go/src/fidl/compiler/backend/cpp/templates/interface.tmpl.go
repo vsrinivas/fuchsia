@@ -154,7 +154,9 @@ const char {{ .Name }}::Name_[] = {{ .ServiceName }};
 {{ .SyncName }}::~{{ .SyncName }}() = default;
 
 {{ .ProxyName }}::{{ .ProxyName }}(::fidl::internal::ProxyController* controller)
-    : controller_(controller) {}
+    : controller_(controller) {
+  (void) controller_;
+}
 
 {{ .ProxyName }}::~{{ .ProxyName }}() = default;
 
@@ -216,7 +218,9 @@ void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
   {{- end }}
 {{- end }}
 
-{{ .StubName }}::{{ .StubName }}({{ .Name }}* impl) : impl_(impl) {}
+{{ .StubName }}::{{ .StubName }}({{ .Name }}* impl) : impl_(impl) {
+  (void) impl_;
+}
 
 {{ .StubName }}::~{{ .StubName }}() = default;
 

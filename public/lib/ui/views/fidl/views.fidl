@@ -47,7 +47,7 @@ library views_v1;
 // 3. Set listeners on the input connection to receive events.
 interface View {
   // Gets the view's token.
-  1: GetToken() -> (ViewToken token);
+  1: GetToken() -> (views_v1_token.ViewToken token);
 
   // Gets a service provider to access services which are associated with
   // the view such as input, accessibility and editing capabilities.
