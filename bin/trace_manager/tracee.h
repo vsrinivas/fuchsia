@@ -13,8 +13,8 @@
 #include <iosfwd>
 
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
-#include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/string.h"
+#include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -52,7 +52,7 @@ class Tracee {
 
   bool operator==(TraceProviderBundle* bundle) const;
   bool Start(size_t buffer_size,
-             f1dl::VectorPtr<f1dl::StringPtr> categories,
+             fidl::VectorPtr<fidl::StringPtr> categories,
              fxl::Closure started_callback,
              fxl::Closure stopped_callback);
   void Stop();

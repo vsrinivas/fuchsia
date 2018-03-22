@@ -6,9 +6,8 @@
 #include <iostream>
 
 #include "garnet/bin/trace_manager/trace_manager.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fsl/tasks/message_loop.h"
-
-using namespace tracing::internal;
 
 namespace tracing {
 namespace {
@@ -18,14 +17,6 @@ namespace {
 const fxl::TimeDelta kStopTimeout = fxl::TimeDelta::FromSeconds(60);
 static constexpr uint32_t kMinBufferSizeMegabytes = 1;
 static constexpr uint32_t kMaxBufferSizeMegabytes = 64;
-
-std::string SanitizeLabel(const f1dl::StringPtr& label) {
-  std::string result =
-      label.get().substr(0, tracing::TraceRegistry::kLabelMaxLength);
-  if (result.empty())
-    result = "unnamed";
-  return result;
-}
 
 }  // namespace
 
@@ -41,22 +32,22 @@ TraceManager::TraceManager(component::ApplicationContext* context,
 
 TraceManager::~TraceManager() = default;
 
-void TraceManager::StartTracing(TraceOptionsPtr options,
+void TraceManager::StartTracing(TraceOptions options,
                                 zx::socket output,
-                                const StartTracingCallback& start_callback) {
+                                StartTracingCallback start_callback) {
   if (session_) {
     FXL_LOG(ERROR) << "Trace already in progress";
     return;
   }
 
   uint32_t buffer_size_megabytes = std::min(
-      std::max(options->buffer_size_megabytes_hint, kMinBufferSizeMegabytes),
+      std::max(options.buffer_size_megabytes_hint, kMinBufferSizeMegabytes),
       kMaxBufferSizeMegabytes);
   FXL_LOG(INFO) << "Starting trace with " << buffer_size_megabytes
                 << " MB buffers";
 
   session_ = fxl::MakeRefCounted<TraceSession>(
-      std::move(output), std::move(options->categories),
+      std::move(output), std::move(options.categories),
       buffer_size_megabytes * 1024 * 1024, [this]() { session_ = nullptr; });
 
   for (auto& bundle : providers_) {
@@ -65,7 +56,7 @@ void TraceManager::StartTracing(TraceOptionsPtr options,
 
   session_->WaitForProvidersToStart(
       start_callback,
-      fxl::TimeDelta::FromMilliseconds(options->start_timeout_milliseconds));
+      fxl::TimeDelta::FromMilliseconds(options.start_timeout_milliseconds));
 }
 
 void TraceManager::StopTracing() {
@@ -81,39 +72,19 @@ void TraceManager::StopTracing() {
       kStopTimeout);
 }
 
-void TraceManager::GetKnownCategories(
-    const GetKnownCategoriesCallback& callback) {
-  f1dl::VectorPtr<KnownCategoryPtr> known_categories;
+void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
+  fidl::VectorPtr<KnownCategory> known_categories;
   for (const auto& it : config_.known_categories()) {
-    auto known_category = KnownCategory::New();
-    known_category->name = it.first;
-    known_category->description = it.second;
-    known_categories.push_back(std::move(known_category));
+    known_categories.push_back(KnownCategory{it.first, it.second});
   }
   callback(std::move(known_categories));
 }
 
-void TraceManager::GetRegisteredProviders(
-    const GetRegisteredProvidersCallback& callback) {
-  f1dl::VectorPtr<TraceProviderInfoPtr> results;
-  results.resize(0u);
-  for (const auto& provider : providers_) {
-    auto info = TraceProviderInfo::New();
-    info->label = provider.label;
-    info->id = provider.id;
-    results.push_back(std::move(info));
-  }
-  callback(std::move(results));
-}
-
 void TraceManager::RegisterTraceProvider(
-    f1dl::InterfaceHandle<TraceProvider> handle,
-    const f1dl::StringPtr& label) {
-  FXL_VLOG(1) << "Registering provider with label: " << label;
-
+    fidl::InterfaceHandle<trace_link::Provider> handle) {
   auto it = providers_.emplace(
-      providers_.end(), TraceProviderBundle{handle.Bind(), next_provider_id_++,
-                                            SanitizeLabel(label)});
+      providers_.end(),
+      TraceProviderBundle{handle.Bind(), next_provider_id_++});
 
   it->provider.set_error_handler([this, it]() {
     if (session_)
@@ -149,9 +120,9 @@ void TraceManager::LaunchConfiguredProviders() {
       }
       FXL_VLOG(2) << "Args:" << args;
     }
-    auto launch_info = component::ApplicationLaunchInfo::New();
-    launch_info->url = pair.second->url;
-    launch_info->arguments = pair.second->arguments.Clone();
+    component::ApplicationLaunchInfo launch_info;
+    launch_info.url = pair.second->url;
+    fidl::Clone(pair.second->arguments, &launch_info.arguments);
     context_->launcher()->CreateApplication(std::move(launch_info), nullptr);
   }
 }

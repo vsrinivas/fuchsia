@@ -9,8 +9,7 @@
 namespace tracing {
 
 std::ostream& operator<<(std::ostream& out, const TraceProviderBundle& bundle) {
-  return out << "#" << bundle.id << " "
-             << "'" << bundle.label << "'";
+  return out << "#" << bundle.id;
 }
 
 }  // namespace tracing

@@ -12,12 +12,12 @@
 #include "garnet/bin/trace/results_export.h"
 #include "garnet/bin/trace/results_output.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "<fuchsia/cpp/network.h>"
 
 namespace tracing {
 
@@ -266,10 +266,10 @@ void Record::Run(const fxl::CommandLine& command_line, OnDoneCallback on_done) {
 
   tracing_ = true;
 
-  auto trace_options = TraceOptions::New();
-  trace_options->categories =
-      f1dl::VectorPtr<f1dl::StringPtr>::From(options_.categories);
-  trace_options->buffer_size_megabytes_hint =
+  TraceOptions trace_options;
+  trace_options.categories =
+      fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.categories);
+  trace_options.buffer_size_megabytes_hint =
       options_.buffer_size_megabytes_hint;
 
   tracer_->Start(
@@ -376,11 +376,12 @@ void Record::DoneTrace() {
 }
 
 void Record::LaunchApp() {
-  auto launch_info = component::ApplicationLaunchInfo::New();
-  launch_info->url = f1dl::StringPtr(options_.app);
-  launch_info->arguments = f1dl::VectorPtr<f1dl::StringPtr>::From(options_.args);
+  component::ApplicationLaunchInfo launch_info;
+  launch_info.url = fidl::StringPtr(options_.app);
+  launch_info.arguments =
+      fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.args);
 
-  out() << "Launching " << launch_info->url << std::endl;
+  out() << "Launching " << launch_info.url << std::endl;
   context()->launcher()->CreateApplication(
       std::move(launch_info), application_controller_.NewRequest());
   application_controller_.set_error_handler([this] {

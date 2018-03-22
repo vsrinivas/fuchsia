@@ -31,10 +31,10 @@ void ListCategories::Run(const fxl::CommandLine& command_line,
   }
 
   trace_controller()->GetKnownCategories([on_done = std::move(on_done)](
-      f1dl::VectorPtr<KnownCategoryPtr> known_categories) {
+      fidl::VectorPtr<KnownCategory> known_categories) {
     out() << "Known categories" << std::endl;
     for (const auto& it : *known_categories) {
-      out() << "  " << it->name.get() << ": " << it->description.get()
+      out() << "  " << it.name.get() << ": " << it.description.get()
             << std::endl;
     }
 

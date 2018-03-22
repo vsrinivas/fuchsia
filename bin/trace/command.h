@@ -11,11 +11,12 @@
 #include <memory>
 #include <string>
 
+#include <fuchsia/cpp/tracing.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/tracing/fidl/trace_controller.fidl.h"
 
 namespace tracing {
 

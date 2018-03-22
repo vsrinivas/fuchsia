@@ -14,8 +14,6 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
-using namespace tracing::internal;
-
 namespace tracing {
 namespace {
 
@@ -34,7 +32,7 @@ Tracer::~Tracer() {
   CloseSocket();
 }
 
-void Tracer::Start(TraceOptionsPtr options,
+void Tracer::Start(TraceOptions options,
                    RecordConsumer record_consumer,
                    ErrorHandler error_handler,
                    fxl::Closure start_callback,

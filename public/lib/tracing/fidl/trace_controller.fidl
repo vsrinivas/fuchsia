@@ -2,15 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module tracing;
-
-struct KnownCategory {
-  string name;
-  string description;
-};
+library tracing;
 
 // The controller interface used by the trace tool to start/stop tracing.
-[ServiceName="tracing::TraceController"]
+[ServiceName="tracing.TraceController"]
 interface TraceController {
   // Requests to start tracing with the specified |options|.
   //
@@ -30,38 +25,31 @@ interface TraceController {
   // themselves.  For example, it should not try to check argument lengths in
   // events.  This ensures that the trace format can be extended without needing
   // to modify the trace controller.
-  StartTracing@0(TraceOptions options, handle<socket> output) => ();
+  1: StartTracing(TraceOptions options, handle<socket> output) -> ();
 
   // Requests to stop tracing.
   //
   // The trace controller continues to transfer any remaining data to the
   // output until finished, then closes the output.
-  StopTracing@1();
+  2: StopTracing();
 
   // Gets the known categories.
-  GetKnownCategories@3() => (array<KnownCategory> categories);
+  3: GetKnownCategories() -> (vector<KnownCategory> categories);
+};
 
-  // Gets the list of registered providers.
-  GetRegisteredProviders@4() => (array<TraceProviderInfo> providers);
+struct KnownCategory {
+  string:100 name;
+  string description;
 };
 
 // Provides options for the trace.
 struct TraceOptions {
   // The trace categories to record, or an empty array for all.
-  array<string> categories;
+  vector<string:100>:100 categories;
 
   // Suggested size of trace buffer which each provider should receive.
   uint32 buffer_size_megabytes_hint = 4;
 
   // Acknowledge start request after at most |start_timeout_milliseconds|.
   uint64 start_timeout_milliseconds = 5000;
-};
-
-// Information about a registered trace provider.
-struct TraceProviderInfo {
-  // The provider's id.
-  uint32 id;
-
-  // The trace provider's label.
-  string label;
 };

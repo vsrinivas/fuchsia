@@ -10,14 +10,14 @@
 #include <list>
 #include <vector>
 
+#include <fuchsia/cpp/trace_link.h>
 #include <zx/socket.h>
 #include <zx/vmo.h>
 
-#include "lib/tracing/fidl/trace_provider.fidl.h"
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
 #include "garnet/bin/trace_manager/tracee.h"
-#include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/string.h"
+#include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
@@ -39,7 +39,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   // |abort_handler| is invoked whenever the session encounters
   // unrecoverable errors that render the session dead.
   explicit TraceSession(zx::socket destination,
-                        f1dl::VectorPtr<f1dl::StringPtr> categories,
+                        fidl::VectorPtr<fidl::StringPtr> categories,
                         size_t trace_buffer_size,
                         fxl::Closure abort_handler);
   // Frees all allocated resources and closes the outgoing
@@ -77,7 +77,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
 
   State state_ = State::kReady;
   zx::socket destination_;
-  f1dl::VectorPtr<f1dl::StringPtr> categories_;
+  fidl::VectorPtr<fidl::StringPtr> categories_;
   size_t trace_buffer_size_;
   std::vector<uint8_t> buffer_;
   std::list<std::unique_ptr<Tracee>> tracees_;

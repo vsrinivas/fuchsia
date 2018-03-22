@@ -5,18 +5,17 @@
 #ifndef GARNET_BIN_TRACE_TRACER_H_
 #define GARNET_BIN_TRACE_TRACER_H_
 
-#include <lib/async/cpp/wait.h>
-#include <zx/socket.h>
-
 #include <functional>
 #include <string>
 #include <vector>
 
+#include <fuchsia/cpp/tracing.h>
+#include <lib/async/cpp/wait.h>
 #include <trace-reader/reader.h>
+#include <zx/socket.h>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/tracing/fidl/trace_controller.fidl.h"
 
 namespace tracing {
 
@@ -32,7 +31,7 @@ class Tracer {
   // Starts tracing.
   // Streams records |record_consumer| and errors to |error_handler|.
   // Invokes |done_callback| when tracing stops.
-  void Start(TraceOptionsPtr options,
+  void Start(TraceOptions options,
              RecordConsumer record_consumer,
              ErrorHandler error_handler,
              fxl::Closure start_callback,

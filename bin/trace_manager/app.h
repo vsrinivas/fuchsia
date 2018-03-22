@@ -7,8 +7,11 @@
 
 #include <memory>
 
-#include "lib/app/cpp/application_context.h"
+#include <fuchsia/cpp/trace_link.h>
+#include <fuchsia/cpp/tracing.h>
+
 #include "garnet/bin/trace_manager/trace_manager.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
@@ -22,8 +25,8 @@ class TraceManagerApp {
  private:
   std::unique_ptr<component::ApplicationContext> context_;
   TraceManager trace_manager_;
-  f1dl::BindingSet<TraceRegistry> trace_registry_bindings_;
-  f1dl::BindingSet<TraceController> trace_controller_bindings_;
+  fidl::BindingSet<trace_link::Registry> trace_registry_bindings_;
+  fidl::BindingSet<TraceController> trace_controller_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TraceManagerApp);
 };

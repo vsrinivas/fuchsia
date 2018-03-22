@@ -5,13 +5,14 @@
 #include <numeric>
 
 #include "garnet/bin/trace_manager/trace_session.h"
-#include "lib/fxl/logging.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 namespace tracing {
 
 TraceSession::TraceSession(zx::socket destination,
-                           f1dl::VectorPtr<f1dl::StringPtr> categories,
+                           fidl::VectorPtr<fidl::StringPtr> categories,
                            size_t trace_buffer_size,
                            fxl::Closure abort_handler)
     : destination_(std::move(destination)),
@@ -46,8 +47,10 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   FXL_VLOG(1) << "Adding provider " << *bundle;
 
   tracees_.emplace_back(std::make_unique<Tracee>(bundle));
+  fidl::VectorPtr<fidl::StringPtr> categories_clone;
+  fidl::Clone(categories_, &categories_clone);
   if (!tracees_.back()->Start(
-          trace_buffer_size_, categories_.Clone(),
+          trace_buffer_size_, std::move(categories_clone),
           [ weak = weak_ptr_factory_.GetWeakPtr(), bundle ]() {
             if (weak)
               weak->CheckAllProvidersStarted();
@@ -124,8 +127,8 @@ void TraceSession::CheckAllProvidersStarted() {
                       // TODO(TO-530): We should still record what providers
                       // failed to start.
                       tracee->state() == Tracee::State::kStopped);
-        FXL_VLOG(2) << "tracee " << *tracee->bundle()
-                    << (ready ? "" : " not") << " ready";
+        FXL_VLOG(2) << "tracee " << *tracee->bundle() << (ready ? "" : " not")
+                    << " ready";
         return value && ready;
       });
 
@@ -182,7 +185,8 @@ void TraceSession::FinishSessionDueToTimeout() {
   // We do not consider pending_start_tracees_ here as we only
   // stop them as a best effort.
   if (state_ == State::kStopping && !tracees_.empty()) {
-    FXL_VLOG(1) << "Marking session as stopped, timed out waiting for tracee(s)";
+    FXL_VLOG(1)
+        << "Marking session as stopped, timed out waiting for tracee(s)";
     TransitionToState(State::kStopped);
     for (auto& tracee : tracees_) {
       if (tracee->state() != Tracee::State::kStopped)
@@ -194,8 +198,7 @@ void TraceSession::FinishSessionDueToTimeout() {
 }
 
 void TraceSession::TransitionToState(State new_state) {
-  FXL_VLOG(2) << "Transitioning from " << state_
-              << " to " << new_state;
+  FXL_VLOG(2) << "Transitioning from " << state_ << " to " << new_state;
   state_ = new_state;
 }
 

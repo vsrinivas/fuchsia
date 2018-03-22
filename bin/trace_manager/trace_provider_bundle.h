@@ -8,16 +8,14 @@
 #include <stdint.h>
 
 #include <iosfwd>
-#include <string>
 
-#include "lib/tracing/fidl/trace_provider.fidl.h"
+#include <fuchsia/cpp/trace_link.h>
 
 namespace tracing {
 
 struct TraceProviderBundle {
-  TraceProviderPtr provider;
+  trace_link::ProviderPtr provider;
   uint32_t id;
-  std::string label;
 };
 
 std::ostream& operator<<(std::ostream& out, const TraceProviderBundle& bundle);
