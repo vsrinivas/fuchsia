@@ -387,7 +387,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
         for (const auto& method : interface_decl->methods) {
             std::string method_name = NameMethod(interface_name, method);
             auto CreateMessage = [&](const flat::Interface::Method::Message& message,
-                                        types::MessageKind kind) -> void {
+                                     types::MessageKind kind) -> void {
                 std::vector<coded::Field> request_fields;
                 std::string request_name = NameMessage(method_name, kind);
                 for (const auto& parameter : message.parameters) {
@@ -443,8 +443,11 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
 std::ostringstream TablesGenerator::Produce() {
     GenerateFilePreamble();
 
-    for (const auto& decl : library_->declaration_order_)
+    for (const auto& decl : library_->declaration_order_) {
+        if (decl->library != library_)
+            continue;
         Compile(decl);
+    }
 
     for (const auto& coded_type : coded_types_) {
         if (coded_type->coding_needed == coded::CodingNeeded::kNotNeeded)
