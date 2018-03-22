@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module images;
+library images;
 
-import "lib/images/fidl/image_info.fidl";
-import "lib/images/fidl/memory_type.fidl";
-import "lib/images/fidl/presentation_info.fidl";
+// import "lib/images/fidl/image_info.fidl";
+// import "lib/images/fidl/memory_type.fidl";
+// import "lib/images/fidl/presentation_info.fidl";
 
 // ImagePipe is a mechanism for streaming shared images between a producer
 // and a consumer which may be running in different processes.
@@ -81,7 +81,7 @@ interface ImagePipe {
   // - |memory| is not a handle for a readable VMO
   // - the image data expected at |memory_offset| according to the |image_info|
   //   exceeds the memory object's bounds
-  AddImage@0(uint32 image_id, ImageInfo image_info,
+  1: AddImage(uint32 image_id, ImageInfo image_info,
              handle<vmo> memory, MemoryType memory_type, uint64 memory_offset);
 
   // Removes an image resource from the pipe.
@@ -98,7 +98,7 @@ interface ImagePipe {
   //
   // The following errors will cause the connection to be closed:
   // - |image_id| does not reference a currently registered image resource
-  RemoveImage@1(uint32 image_id);
+  2: RemoveImage(uint32 image_id);
 
   // Enqueues the specified image for presentation by the consumer.
   //
@@ -117,7 +117,7 @@ interface ImagePipe {
   //
   // The following errors will cause the connection to be closed:
   // - |image_id| does not reference a currently registered image resource
-  PresentImage@2(uint32 image_id, uint64 presentation_time,
-      array<handle<event>> acquire_fences, array<handle<event>> release_fences) =>
+  3: PresentImage(uint32 image_id, uint64 presentation_time,
+      vector<handle<event>> acquire_fences, vector<handle<event>> release_fences) ->
           (PresentationInfo presentation_info);
 };

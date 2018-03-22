@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module images;
+library images;
 
 // Information about a graphical image (texture) including its format and size.
 struct ImageInfo {
@@ -12,60 +12,60 @@ struct ImageInfo {
     // Byte order: B, G, R, A (little-endian ARGB packed 32-bit word).
     // Equivalent to Skia |kBGRA_8888_SkColorType| color type.
     // Equivalent to Zircon |ARGB_8888| pixel format on little-endian arch.
-    BGRA_8 = 0,
+    BGRA_8 = 0;
     // A 32-bit component that contains information for 2 pixels:
     // Byte order: Y1, U, Y2, V
     // Unpacks to 2 RGB pixels, where RGB1 = func(Y1, U, V)
     // and RGB2 = func(Y2, U, V)
     // Equivalent to YUV422
-    YUY2 = 1,
+    YUY2 = 1;
   };
 
   // Specifies how pixel color information should be interpreted.
   enum ColorSpace {
-    SRGB = 0,
+    SRGB = 0;
   };
 
   // Specifies how pixels are arranged in memory.
   enum Tiling {
     // Pixels are packed linearly.
     // Equivalent to |VK_IMAGE_TILING_LINEAR|.
-    LINEAR = 0,
+    LINEAR = 0;
 
     // Pixels are packed in a GPU-dependent optimal format.
     // Equivalent to |VK_IMAGE_TILING_OPTIMAL|.
-    GPU_OPTIMAL = 1,
+    GPU_OPTIMAL = 1;
   };
 
   // Specifies how alpha information should be interpreted.
   enum AlphaFormat {
     // Image is considered to be opaque.  Alpha channel is ignored.
     // Blend function is: src.RGB
-    OPAQUE = 0,
+    OPAQUE = 0;
     // Color channels have been premultiplied by alpha.
     // Blend function is: src.RGB + (dest.RGB * (1 - src.A))
-    PREMULTIPLIED = 1,
+    PREMULTIPLIED = 1;
     // Color channels have not been premultiplied by alpha.
     // Blend function is: (src.RGB * src.A) + (dest.RGB * (1 - src.A))
-    NON_PREMULTIPLIED = 2,
+    NON_PREMULTIPLIED = 2;
   };
 
   enum Transform {
     // Pixels are displayed normally.
-    NORMAL = 0,
+    NORMAL = 0;
 
     // Pixels are mirrored left-right.
-    FLIP_HORIZONTAL = 1,
+    FLIP_HORIZONTAL = 1;
 
     // Pixels are flipped vertically.
-    FLIP_VERTICAL = 2,
+    FLIP_VERTICAL = 2;
 
     // Pixels are flipped vertically and mirrored left-right.
-    FLIP_VERTICAL_AND_HORIZONTAL = 3,
+    FLIP_VERTICAL_AND_HORIZONTAL = 3;
   };
 
   // Specifies if the image should be mirrored before displaying.
-  Transform transform = Transform.NORMAL;
+  Transform transform = NORMAL;
 
   // The width and height of the image in pixels.
   uint32 width;
@@ -75,14 +75,14 @@ struct ImageInfo {
   uint32 stride;
 
   // The pixel format of the image.
-  PixelFormat pixel_format = PixelFormat.BGRA_8;
+  PixelFormat pixel_format = BGRA_8;
 
   // The pixel color space.
-  ColorSpace color_space = ColorSpace.SRGB;
+  ColorSpace color_space = SRGB;
 
   // The pixel arrangement in memory.
-  Tiling tiling = Tiling.LINEAR;
+  Tiling tiling = LINEAR;
 
   // Specifies the interpretion of the alpha channel, if one exists.
-  AlphaFormat alpha_format = AlphaFormat.OPAQUE;
+  AlphaFormat alpha_format = OPAQUE;
 };
