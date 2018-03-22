@@ -13,21 +13,22 @@ extern crate xi_rpc;
 extern crate fuchsia_zircon as zx;
 extern crate mxruntime;
 extern crate fidl;
+extern crate fidl_xi;
 extern crate byteorder;
 extern crate failure;
 extern crate futures;
 extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
-extern crate garnet_public_lib_xi_fidl;
 
+use fidl::endpoints2::ServiceMarker;
 use std::io;
 use std::sync::Arc;
 use std::thread;
 
 use failure::{Error, ResultExt};
-use futures::future;
+use futures::{FutureExt, future};
 
-use garnet_public_lib_xi_fidl::Json;
+use fidl_xi::{Json, JsonImpl, JsonMarker};
 
 use component::server::ServicesServer;
 
@@ -78,15 +79,18 @@ fn editor_main(sock: Socket) {
     let _ = rpc_looper.mainloop(|| my_in, &mut state);
 }
 
-fn json_server() -> impl Json::Server {
-    Json::Impl {
+fn spawn_json_server(chan: async::Channel) {
+    async::spawn(
+    JsonImpl {
         state: (),
-        connect_socket: |_state, socket| {
+        connect_socket: |_state, socket, _controller| {
             eprintln!("connect_socket");
             let _ = thread::spawn(move || editor_main(socket));
             future::ok(())
         }
     }
+    .serve(chan)
+    .recover(|e| eprintln!("error running xi Json server {:?}", e)))
 }
 
 fn main() {
@@ -98,9 +102,10 @@ fn main() {
 fn main_xi() -> Result<(), Error> {
     let mut executor = async::Executor::new().context("unable to create executor")?;
 
-    let server = ServicesServer::new().add_service(|| Json::Dispatcher(json_server()))
-    .start()
-    .map_err(|e| e.context("error starting service server"))?;
+    let server = ServicesServer::new()
+        .add_service((JsonMarker::NAME, spawn_json_server))
+        .start()
+        .map_err(|e| e.context("error starting service server"))?;
 
     let n_threads = 2;
     executor.run(server, n_threads)

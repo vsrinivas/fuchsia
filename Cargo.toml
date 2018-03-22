@@ -42,6 +42,7 @@ members =  [
   "public/rust/fidl_crates/fidl_echo2",
   "public/rust/fidl_crates/fidl_fsl",
   "public/rust/fidl_crates/fidl_logger",
+  "public/rust/fidl_crates/fidl_xi",
 ]
 
 # Any crate in the Fuchsia tree that is a dependency of a member of this
@@ -53,6 +54,7 @@ fidl_device_settings = { path = "public/rust/fidl_crates/fidl_device_settings" }
 fidl_echo2 = { path = "public/rust/fidl_crates/fidl_echo2" }
 fidl_fsl = { path = "public/rust/fidl_crates/fidl_fsl" }
 fidl_logger = { path = "public/rust/fidl_crates/fidl_logger" }
+fidl_xi = { path = "public/rust/fidl_crates/fidl_xi" }
 fuchsia-ddk = { path = "public/rust/crates/fuchsia-ddk" }
 eapol = { path = "lib/rust/crates/eapol" }
 fdio = { path = "public/rust/crates/fdio" }

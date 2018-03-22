@@ -28,5 +28,11 @@
     "fidl_target": "//garnet/public/lib/logger/fidl:logger",
     "library_deps": [],
     "public": true
+  },
+  {
+    "library_name": "xi",
+    "fidl_target": "//garnet/public/lib/xi/fidl:fidl",
+    "library_deps": [],
+    "public": true
   }
 ]
