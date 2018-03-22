@@ -13,16 +13,14 @@ import (
 	"syscall/zx/fdio"
 	"syscall/zx/mxruntime"
 
-	"garnet/public/lib/app/fidl/application_environment"
-	"garnet/public/lib/app/fidl/application_launcher"
-	"garnet/public/lib/app/fidl/service_provider"
+	"fuchsia/go/component"
 )
 
 type Context struct {
-	Environment     *application_environment.ApplicationEnvironment_Proxy
+	Environment     *component.ApplicationEnvironment_Proxy
 	OutgoingService *svcns.Namespace
 	serviceRoot     zx.Handle
-	Launcher        *application_launcher.ApplicationLauncher_Proxy
+	Launcher        *component.ApplicationLauncher_Proxy
 	appServices     zx.Handle
 }
 
@@ -71,9 +69,9 @@ func New(serviceRoot, serviceRequest, appServices zx.Handle) *Context {
 
 func (c *Context) Serve() {
 	if c.appServices.IsValid() {
-		r := service_provider.ServiceProvider_Request{
+		r := component.ServiceProvider_Request{
 			bindings.NewChannelHandleOwner(c.appServices)}
-		s := service_provider.NewStubForServiceProvider(
+		s := component.NewStubForServiceProvider(
 			r, c.OutgoingService, bindings.GetAsyncWaiter())
 		go func() {
 			for {
