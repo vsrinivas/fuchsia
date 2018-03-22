@@ -139,7 +139,7 @@ sdk_atom("${data.name}_sdk") {
     % if data.has_impl_prebuilt:
     {
       source = "$shared_out_dir/${data.lib_name}.impl"
-      dest = "package/${data.lib_name}"
+      dest = "dist/${data.lib_name}"
       packaged = true
     },
     % endif

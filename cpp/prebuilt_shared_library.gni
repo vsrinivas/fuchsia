@@ -149,7 +149,7 @@ template("prebuilt_shared_library") {
     files += [
       {
         source = "$shared_out_dir/$lib_name"
-        dest = "package/$lib_name"
+        dest = "dist/$lib_name"
         packaged = true
       },
       {
