@@ -32,6 +32,7 @@ std::string NameUnionTag(StringView union_name, const flat::Union::Member& membe
 std::string NameFlatCType(const flat::Type* type);
 std::string NameInterface(const flat::Interface& interface);
 std::string NameMethod(StringView interface_name, const flat::Interface::Method& method);
+std::string NameOrdinal(StringView method_name);
 std::string NameMessage(StringView method_name, types::MessageKind kind);
 std::string NameParameter(StringView message_name,
                           const flat::Interface::Method::Parameter& parameter);

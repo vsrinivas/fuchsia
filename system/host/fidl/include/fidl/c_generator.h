@@ -57,6 +57,8 @@ private:
     };
 
     struct NamedMethod {
+        uint32_t ordinal;
+        std::string ordinal_name;
         std::unique_ptr<NamedMessage> request;
         std::unique_ptr<NamedMessage> response;
     };

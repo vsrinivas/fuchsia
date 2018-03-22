@@ -271,6 +271,8 @@ std::map<const flat::Decl*, CGenerator::NamedInterface> CGenerator::NameInterfac
         for (const auto& method : interface_info->methods) {
             NamedMethod named_method;
             std::string method_name = NameMethod(interface_name, method);
+            named_method.ordinal = method.ordinal.Value();
+            named_method.ordinal_name = NameOrdinal(method_name);
             if (method.maybe_request != nullptr) {
                 std::string c_name = NameMessage(method_name, types::MessageKind::kRequest);
                 std::string coded_name = NameTable(c_name);
@@ -333,6 +335,7 @@ void CGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) {
 
 void CGenerator::ProduceInterfaceForwardDeclaration(const NamedInterface& named_interface) {
     for (const auto& method_info : named_interface.methods) {
+        header_file_ << "#define " << method_info.ordinal_name << " ((uint32_t)" << method_info.ordinal << ")\n";
         if (method_info.request)
             GenerateStructTypedef(method_info.request->c_name);
         if (method_info.response)
