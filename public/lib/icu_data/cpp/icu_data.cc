@@ -6,10 +6,10 @@
 
 #include <zx/vmar.h>
 
+#include <fuchsia/cpp/icu_data.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/icu_data/cpp/constants.h"
-#include "lib/icu_data/fidl/icu_data.fidl.h"
 #include "third_party/icu/source/common/unicode/udata.h"
 
 namespace icu_data {

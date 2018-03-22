@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module icu_data;
+library icu_data;
 
-import "lib/fsl/fidl/sized_vmo_transport.fidl";
+// import "lib/fsl/fidl/sized_vmo_transport.fidl";
 
 struct ICUData {
   fsl.SizedVmoTransport vmo;
@@ -12,5 +12,5 @@ struct ICUData {
 
 [ServiceName="icu_data::ICUDataProvider"]
 interface ICUDataProvider {
-  ICUDataWithSha1@0(string sha1hash) => (ICUData? response);
+  1: ICUDataWithSha1(string sha1hash) -> (ICUData? response);
 };

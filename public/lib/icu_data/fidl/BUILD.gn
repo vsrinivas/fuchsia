@@ -5,6 +5,8 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
+  name = "icu_data"
+
   sources = [
     "icu_data.fidl",
   ]

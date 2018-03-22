@@ -9,13 +9,13 @@
 #include <fstream>
 #include <memory>
 
+#include <fuchsia/cpp/icu_data.h>
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/icu_data/cpp/constants.h"
-#include "lib/icu_data/fidl/icu_data.fidl.h"
 #include "third_party/icu/source/common/unicode/udata.h"
 #include "third_party/icu/source/i18n/unicode/timezone.h"
 

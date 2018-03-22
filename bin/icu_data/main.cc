@@ -4,11 +4,11 @@
 
 #include <utility>
 
-#include "lib/app/cpp/application_context.h"
 #include "garnet/bin/icu_data/icu_data_provider_impl.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/macros.h"
 
 namespace icu_data {
 
@@ -18,7 +18,7 @@ class App {
     if (!icu_data_.LoadData())
       exit(ZX_ERR_UNAVAILABLE);
     context_->outgoing_services()->AddService<ICUDataProvider>(
-        [this](f1dl::InterfaceRequest<ICUDataProvider> request) {
+        [this](fidl::InterfaceRequest<ICUDataProvider> request) {
           icu_data_.AddBinding(std::move(request));
         });
   }
