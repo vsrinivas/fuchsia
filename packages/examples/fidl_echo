@@ -10,6 +10,8 @@
         "echo_server_cpp": "//garnet/examples/fidl/echo_server_cpp",
         "echo_server_go": "//garnet/examples/fidl/echo_server_go",
         "echo2_client_cpp": "//garnet/examples/fidl2/echo2_client_cpp",
-        "echo2_server_cpp": "//garnet/examples/fidl2/echo2_server_cpp"
+        "echo2_server_cpp": "//garnet/examples/fidl2/echo2_server_cpp",
+        "echo2_client_rust": "//garnet/examples/fidl2/echo2_client_rust",
+        "echo2_server_rust": "//garnet/examples/fidl2/echo2_server_rust"
     }
 }

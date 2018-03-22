@@ -109,21 +109,12 @@ pub mod client {
     impl App {
         #[inline]
         /// Connect to a service provided by the `App`.
-        pub fn connect_to_service<S: ServiceMarker>(&self)
+        pub fn connect_to_service<S: ServiceMarker>(&self, _: S)
             -> Result<S::Proxy, Error>
         {
             let (client_channel, server_channel) = zx::Channel::create()?;
             fdio::service_connect_at(&self.directory_request, S::NAME, server_channel)?;
             Ok(S::Proxy::from_channel(async::Channel::from_channel(client_channel)?))
-        }
-
-        /// Connect `channel` to a service called `service_name` provided by the `App`.
-        #[inline]
-        pub fn connect_to_service_raw(&self, channel: zx::Channel, service_name: &str)
-            -> Result<(), Error>
-        {
-            fdio::service_connect_at(&self.directory_request, service_name, channel)?;
-            Ok(())
         }
     }
 }
@@ -183,8 +174,9 @@ pub mod server {
         }
 
         /// Add a service to the `ServicesServer`.
-        pub fn add_service<S: ServiceFactory + 'static>(&mut self, service_factory: S) {
-            self.services.push(Box::new(service_factory))
+        pub fn add_service<S: ServiceFactory + 'static>(mut self, service_factory: S) -> Self {
+            self.services.push(Box::new(service_factory));
+            self
         }
 
         /// Start serving directory protocol service requests on the process PA_DIRECTORY_REQUEST handle

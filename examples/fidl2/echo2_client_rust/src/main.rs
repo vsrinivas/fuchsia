@@ -3,19 +3,19 @@
 // found in the LICENSE file.
 
 extern crate fidl;
+extern crate fidl_echo2;
 extern crate failure;
 extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
-extern crate garnet_examples_fidl2_services_echo2;
 #[macro_use]
 extern crate structopt;
 
 use component::client::Launcher;
 use failure::{Error, ResultExt};
 use futures::prelude::*;
-use garnet_examples_fidl2_services_echo2::EchoProxy;
+use fidl_echo2::EchoMarker;
 use structopt::StructOpt;
 
 fn main() {
@@ -42,15 +42,10 @@ fn main_res() -> Result<(), Error> {
     let app = launcher.launch(server_url, None)
                       .context("Failed to launch echo service")?;
 
-    let (client_end, server_end) = zx::Channel::create().context("Failed to create channel")?;
-
-    app.connect_to_service_raw(server_end, "echo2.Echo")
+    let echo = app.connect_to_service(EchoMarker)
        .context("Failed to connect to echo service")?;
 
-    let echo = EchoProxy::new(
-        async::Channel::from_channel(client_end).context("failed to make async channel")?);
-
-    let fut = echo.echo_string(&mut "hello world!".to_string())
+    let fut = echo.echo_string(&mut Some("hello world!".to_string()))
         .map(|res| println!("response: {:?}", res));
 
     executor.run_singlethreaded(fut).context("failed to execute echo future")?;

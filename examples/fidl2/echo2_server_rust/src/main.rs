@@ -12,16 +12,17 @@ extern crate fuchsia_zircon as zx;
 extern crate futures;
 extern crate fidl_echo2;
 
-use component::server::{ServiceFactories, ServicesServer};
+use component::server::ServicesServer;
 use failure::{Error, ResultExt};
 use futures::prelude::*;
-use fidl_echo2::{Echo, EchoImpl};
+use fidl::endpoints2::ServiceMarker;
+use fidl_echo2::{Echo, EchoMarker, EchoImpl};
 
-fn echo_server(chan: async::Channel) -> impl Future<Item = (), Error = Never> {
-    EchoImpl {
+fn spawn_echo_server(chan: async::Channel) {
+    async::spawn(EchoImpl {
         state: (),
         echo_string: |_, mut s, res| {
-            println!("Received echo request for string {}", s);
+            println!("Received echo request for string {:?}", s);
             res.send(&mut s)
                .into_future()
                .map(|_| println!("echo response sent successfully"))
@@ -29,15 +30,7 @@ fn echo_server(chan: async::Channel) -> impl Future<Item = (), Error = Never> {
        }
     }
     .serve(chan)
-    .recover(|e| eprintln!("error running echo server: {:?}", e))
-}
-
-struct EchoFactory;
-impl ServiceFactories for EchoFactory {
-    fn spawn_service(&mut self, service_name: String, channel: async::Channel) {
-        println!("Ignoring request for service {} and starting echo server instead", service_name);
-        async::spawn(echo_server(channel))
-    }
+    .recover(|e| eprintln!("error running echo server: {:?}", e)))
 }
 
 fn main() {
@@ -49,7 +42,9 @@ fn main() {
 fn main_res() -> Result<(), Error> {
     let mut executor = async::Executor::new().context("Error creating executor")?;
 
-    let fut = ServicesServer::new_with_factories(EchoFactory).start()
+    let fut = ServicesServer::new()
+                .add_service((EchoMarker::NAME, |chan| spawn_echo_server(chan)))
+                .start()
                 .context("Error starting echo services server")?;
 
     executor.run_singlethreaded(fut).context("failed to execute echo future")?;
