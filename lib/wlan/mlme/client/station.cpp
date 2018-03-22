@@ -272,7 +272,7 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
 
     auto assoc = frame.body;
     assoc->cap.set_ess(1);
-    assoc->cap.set_short_preamble(1);
+    assoc->cap.set_short_preamble(0);  // For robustness. TODO(porce): Enforce Ralink
     assoc->listen_interval = 0;
 
     ElementWriter w(assoc->elements,
@@ -587,7 +587,8 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
     resp->status_code = status_code::kSuccess;
 
     // TODO(porce): Query the radio chipset capability to build the response.
-    resp->params.set_amsdu(0);
+    // TODO(NET-567): Use the outcome of the association negotiation
+    resp->params.set_amsdu(0);  // For Aruba
     resp->params.set_policy(BlockAckParameters::kImmediate);
     resp->params.set_tid(addbar->params.tid());
 
@@ -930,14 +931,14 @@ zx_status_t Station::SendAddBaRequestFrame() {
     // It appears there is no particular rule to choose the value for
     // dialog_token. See IEEE Std 802.11-2016, 9.6.5.2.
     req->dialog_token = 0x01;
-    req->params.set_amsdu(0);
+    req->params.set_amsdu(0);  // Aruba
     req->params.set_policy(BlockAckParameters::BlockAckPolicy::kImmediate);
     req->params.set_tid(GetTid());  // TODO(porce): Communicate this with lower MAC.
     // TODO(porce): Fix the discrepancy of this value from the Ralink's TXWI ba_win_size setting
     req->params.set_buffer_size(64);
     req->timeout = 0;               // Disables the timeout
     req->seq_ctrl.set_fragment(0);  // TODO(porce): Send this down to the lower MAC
-    req->seq_ctrl.set_starting_seq(0);
+    req->seq_ctrl.set_starting_seq(1);
 
     finspect("Outbound ADDBA Req frame: len %zu\n", packet->len());
     finspect("  addba req: %s\n", debug::Describe(*req).c_str());
@@ -1229,6 +1230,7 @@ HtCapabilities Station::BuildHtCapabilities() const {
     SupportedMcsSet& mcs = htc.mcs_set;
     mcs.rx_mcs_head.set_bitmask(0xff);  // MCS 0-7
     // mcs.rx_mcs_head.set_bitmask(0xffff);  // MCS 0-15
+    mcs.tx_mcs.set_set_defined(1);  // Aruba
 
     HtExtCapabilities& hec = htc.ht_ext_cap;
     hec.set_pco(0);

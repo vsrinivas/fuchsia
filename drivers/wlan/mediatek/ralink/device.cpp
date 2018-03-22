@@ -3989,9 +3989,9 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
     txwi0.set_cfack(0);
     txwi0.set_ts(0);  // TODO(porce): Set it 1 for beacon or proberesp.
     txwi0.set_ampdu(0);
-    txwi0.set_mpdu_density(Txwi0::kNoRestrict);
-    // txwi0.set_mpdu_density(Txwi0::kFourUsec); // Aruba
-    // txwi0.set_mpdu_density(Txwi0::kEightUsec);  // TP-Link
+
+    // TODO(NET-567): Use the outcome of the association negotiation
+    txwi0.set_mpdu_density(Txwi0::kFourUsec);  // Aruba
     txwi0.set_txop(Txwi0::kHtTxop);
 
     uint8_t phy_mode = ddk_phy_to_ralink_phy(WLAN_PHY_OFDM);  // Default
@@ -4014,7 +4014,7 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
     }
     txwi0.set_bw(cbw == CBW20 ? k20MHz : k40MHz);
 
-    txwi0.set_sgi(1);
+    txwi0.set_sgi(0);   // Long guard interval for robustness
     txwi0.set_stbc(0);  // TODO(porce): Define the value.
 
     // The frame header is always in the packet head.
