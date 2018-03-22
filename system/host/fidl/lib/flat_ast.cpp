@@ -182,7 +182,9 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
         auto library_name = components[0]->location.data();
         auto iter = dependencies_->find(library_name);
         if (iter == dependencies_->end()) {
-            return Fail("Could not find identifier in library dependency");
+            std::string message("Could not find library named ");
+            message += library_name;
+            return Fail(message.data());
         }
         const std::unique_ptr<Library>& library = iter->second;
         auto decl_name = components[1]->location;
