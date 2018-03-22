@@ -37,8 +37,8 @@ std::string NameMessage(StringView method_name, types::MessageKind kind);
 std::string NameParameter(StringView message_name,
                           const flat::Interface::Method::Parameter& parameter);
 
-std::string NameTable(StringView type_name);
-std::string NamePointer(StringView name);
+std::string NameTable(StringView library_name, StringView type_name);
+std::string NamePointer(StringView library_name, StringView name);
 std::string NameMembers(StringView name);
 std::string NameFields(StringView name);
 

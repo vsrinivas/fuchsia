@@ -280,7 +280,7 @@ std::string NameIdentifier(SourceLocation name) {
 }
 
 std::string NameName(const flat::Name& name) {
-    // TODO(TO-701) Handle complex names.
+    // TODO(TO-701) Handle nested declarations.
     return name.name().data();
 }
 
@@ -315,14 +315,14 @@ std::string NameMessage(StringView method_name, types::MessageKind kind) {
     return message_name;
 }
 
-std::string NameTable(StringView type_name) {
-    return std::string(type_name) + "Table";
+std::string NameTable(StringView library_name, StringView type_name) {
+    return std::string(library_name) + std::string(type_name) + "Table";
 }
 
-std::string NamePointer(StringView name) {
+std::string NamePointer(StringView library_name, StringView name) {
     std::string pointer_name(name);
     pointer_name += "Pointer";
-    return NameTable(pointer_name);
+    return NameTable(library_name, pointer_name);
 }
 
 std::string NameMembers(StringView name) {
