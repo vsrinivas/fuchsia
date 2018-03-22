@@ -53,6 +53,11 @@ template("fidl_cpp") {
     json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
     compiled_action(generation_target_name) {
+      forward_variables_from(invoker,
+                            [
+                              "testonly",
+                            ])
+
       visibility = [ ":$main_target_name" ]
 
       tool = "//garnet/go/src/fidl:fidl_backend"

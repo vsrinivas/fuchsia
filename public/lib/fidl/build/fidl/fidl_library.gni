@@ -47,6 +47,7 @@ template("fidl_library") {
                              "deps",
                              "public_deps",
                              "sources",
+                             "testonly",
                            ])
 
     libraries = "$target_gen_dir/$main_target_name.libraries"
@@ -86,6 +87,11 @@ template("fidl_library") {
   }
 
   compiled_action(compilation_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                           ])
+
     visibility = [
       ":*",
     ]
@@ -113,6 +119,11 @@ template("fidl_library") {
   }
 
   compiled_action(verification_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                           ])
+
     visibility = [
       ":*",
     ]
@@ -137,6 +148,12 @@ template("fidl_library") {
   }
 
   group(main_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visiblity",
+                           ])
+
     public_deps = [
       ":$compilation_target_name",
       ":$response_file_target_name",
