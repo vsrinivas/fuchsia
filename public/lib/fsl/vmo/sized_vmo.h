@@ -5,7 +5,8 @@
 #ifndef GARNET_PUBLIC_LIB_FSL_VMO_SIZED_VMO_H_
 #define GARNET_PUBLIC_LIB_FSL_VMO_SIZED_VMO_H_
 
-#include "lib/fsl/fidl/sized_vmo_transport.fidl.h"
+#include <fuchsia/cpp/fsl.h>
+
 #include "zx/vmo.h"
 
 namespace fsl {
@@ -24,7 +25,7 @@ class SizedVmo {
   // is not valid. For the object to be valid, it must either be null, or the
   // vmo must be valid and the size must be inferior or equal to the physical
   // size of the vmo.
-  static bool FromTransport(SizedVmoTransportPtr transport, SizedVmo* out);
+  static bool FromTransport(SizedVmoTransport transport, SizedVmo* out);
 
   static bool IsSizeValid(const zx::vmo& vmo, uint64_t size);
 
@@ -39,7 +40,7 @@ class SizedVmo {
 
   // Builds a SizedVmoTransport from this object. This will null this object
   // vmo.
-  SizedVmoTransportPtr ToTransport() &&;
+  SizedVmoTransport ToTransport() &&;
 
   zx_status_t Duplicate(zx_rights_t rights, SizedVmo* output) const;
 
