@@ -224,6 +224,7 @@ func usage() {
 	fmt.Printf("  %s [<interface>]\n", os.Args[0])
 	fmt.Printf("  %s [<interface>] [up|down]\n", os.Args[0])
 	fmt.Printf("  %s [<interface>] [add|del] [<address>]/[<mask>]\n", os.Args[0])
+	os.Exit(1)
 }
 
 func main() {
