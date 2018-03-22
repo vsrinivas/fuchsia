@@ -138,7 +138,7 @@ void ResourceLinker::RemoveExportedResourceIfUnbound(
 }
 
 bool ResourceLinker::ImportResource(Import* import,
-                                    ui::gfx::ImportSpec import_spec,
+                                    ::gfx::ImportSpec import_spec,
                                     zx::eventpair import_token) {
   // Make sure the import handle is valid.
   zx_koid_t import_koid = fsl::GetKoid(import_token.get());

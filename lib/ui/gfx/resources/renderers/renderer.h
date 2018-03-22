@@ -5,10 +5,10 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_RENDERERS_RENDERER_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_RENDERERS_RENDERER_H_
 
+#include <fuchsia/cpp/gfx.h>
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
 #include "lib/escher/scene/object.h"
-#include "lib/ui/gfx/fidl/renderer.fidl.h"
 
 namespace scenic {
 namespace gfx {
@@ -42,14 +42,14 @@ class Renderer : public Resource {
 
   // Set the shadow algorithm that the |Renderer| should use when lighting
   // the scene.
-  bool SetShadowTechnique(ui::gfx::ShadowTechnique technique);
+  bool SetShadowTechnique(::gfx::ShadowTechnique technique);
 
   // Set whether clipping is disabled; false by default.
   void DisableClipping(bool disable_clipping);
 
   Camera* camera() const { return camera_.get(); }
 
-  ui::gfx::ShadowTechnique shadow_technique() const { return shadow_technique_; }
+  ::gfx::ShadowTechnique shadow_technique() const { return shadow_technique_; }
 
  private:
   class Visitor : public ResourceVisitor {
@@ -93,8 +93,7 @@ class Renderer : public Resource {
 
   CameraPtr camera_;
   escher::MaterialPtr default_material_;
-  ui::gfx::ShadowTechnique shadow_technique_ =
-      ui::gfx::ShadowTechnique::SCREEN_SPACE;
+  ::gfx::ShadowTechnique shadow_technique_ = ::gfx::ShadowTechnique::SCREEN_SPACE;
   bool disable_clipping_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);

@@ -34,7 +34,7 @@ class ScenicScanout : public machina::GpuScanout, public mozart::ViewProvider {
   void InvalidateRegion(const machina::GpuRect& rect) override;
 
   // |ViewProvider|
-  void CreateView(f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+  void CreateView(f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
                   f1dl::InterfaceRequest<component::ServiceProvider>
                       view_services) override;
 
@@ -50,19 +50,19 @@ class GuestView : public mozart::BaseView {
  public:
   GuestView(machina::GpuScanout* scanout,
             machina::InputDispatcher* input_dispatcher,
-            mozart::ViewManagerPtr view_manager,
-            f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+            views_v1::ViewManagerPtr view_manager,
+            f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   ~GuestView() override;
 
  private:
   // |BaseView|:
-  void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) override;
-  bool OnInputEvent(mozart::InputEventPtr event) override;
+  void OnSceneInvalidated(images::PresentationInfoPtr presentation_info) override;
+  bool OnInputEvent(input::InputEventPtr event) override;
 
   scenic_lib::ShapeNode background_node_;
   scenic_lib::Material material_;
-  ui::gfx::ImageInfo image_info_;
+  images::ImageInfo image_info_;
   fbl::unique_ptr<scenic_lib::HostMemory> memory_;
 
   machina::InputDispatcher* input_dispatcher_;

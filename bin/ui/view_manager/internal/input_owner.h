@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_UI_VIEW_MANAGER_INTERNAL_INPUT_OWNER_H_
 #define GARNET_BIN_UI_VIEW_MANAGER_INTERNAL_INPUT_OWNER_H_
 
-#include "lib/ui/input/fidl/input_connection.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
+#include <fuchsia/cpp/input.h>
+#include <fuchsia/cpp/views_v1_token.h>
 
 namespace view_manager {
 
@@ -20,8 +20,8 @@ class InputOwner {
   virtual ~InputOwner() {}
 
   // Delivers an event to a view.
-  virtual void DeliverEvent(const mozart::ViewToken* view_token,
-                            mozart::InputEventPtr event,
+  virtual void DeliverEvent(const views_v1_token::ViewToken* view_token,
+                            input::InputEventPtr event,
                             OnEventDelivered callback) = 0;
 
   // INPUT CONNECTION CALLBACKS

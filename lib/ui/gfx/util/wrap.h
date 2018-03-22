@@ -5,14 +5,16 @@
 #ifndef GARNET_LIB_UI_GFX_UTIL_WRAP_H_
 #define GARNET_LIB_UI_GFX_UTIL_WRAP_H_
 
+#include <fuchsia/cpp/gfx.h>
 #include "lib/escher/geometry/transform.h"
-#include "lib/ui/gfx/fidl/types.fidl.h"
 
 namespace scenic {
 namespace gfx {
 
-inline ui::gfx::mat4Ptr Wrap(const escher::mat4& args) {
-  std::vector<float> m(16);
+inline ::gfx::mat4 Wrap(const escher::mat4& args) {
+  ::gfx::mat4 value;
+  FXL_DCHECK(value.matrix.count() == 16);
+  float* m = value.matrix.mutable_data();
   m[0] = args[0][0];
   m[1] = args[0][1];
   m[2] = args[0][2];
@@ -29,17 +31,15 @@ inline ui::gfx::mat4Ptr Wrap(const escher::mat4& args) {
   m[13] = args[3][1];
   m[14] = args[3][2];
   m[15] = args[3][3];
-  auto result = ui::gfx::mat4::New();
-  result->matrix.reset(std::move(m));
-  return result;
+  return value;
 }
 
-inline ui::gfx::vec4Ptr Wrap(const escher::vec4& p) {
-  auto result = ui::gfx::vec4::New();
-  result->x = p[0];
-  result->y = p[1];
-  result->z = p[2];
-  result->w = p[3];
+inline ::gfx::vec4 Wrap(const escher::vec4& p) {
+  ::gfx::vec4 result;
+  result.x = p[0];
+  result.y = p[1];
+  result.z = p[2];
+  result.w = p[3];
   return result;
 }
 

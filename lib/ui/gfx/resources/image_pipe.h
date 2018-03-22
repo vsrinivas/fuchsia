@@ -10,6 +10,7 @@
 
 #include <queue>
 
+#include <fuchsia/cpp/images.h>
 #include "garnet/lib/ui/gfx/engine/resource_map.h"
 #include "garnet/lib/ui/gfx/resources/image.h"
 #include "garnet/lib/ui/gfx/resources/image_base.h"
@@ -19,7 +20,6 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/tasks/message_loop_handler.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/images/fidl/image_pipe.fidl.h"
 
 namespace scenic {
 namespace gfx {
@@ -34,21 +34,21 @@ class ImagePipe : public ImageBase {
   ImagePipe(Session* session, scenic::ResourceId id);
   ImagePipe(Session* session,
             scenic::ResourceId id,
-            ::f1dl::InterfaceRequest<ui::gfx::ImagePipe> request);
+            ::fidl::InterfaceRequest<images::ImagePipe> request);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
   void AddImage(uint32_t image_id,
-                ui::gfx::ImageInfoPtr image_info,
+                images::ImageInfo image_info,
                 zx::vmo memory,
-                ui::gfx::MemoryType memory_type,
+                images::MemoryType memory_type,
                 uint64_t memory_offset);
   void RemoveImage(uint32_t image_id);
 
   void PresentImage(uint32_t image_id,
                     uint64_t presentation_time,
-                    ::f1dl::VectorPtr<zx::event> acquire_fences,
-                    ::f1dl::VectorPtr<zx::event> release_fences,
-                    const ui::gfx::ImagePipe::PresentImageCallback& callback);
+                    ::fidl::VectorPtr<zx::event> acquire_fences,
+                    ::fidl::VectorPtr<zx::event> release_fences,
+                    images::ImagePipe::PresentImageCallback callback);
 
   void Accept(class ResourceVisitor* visitor) override;
 
@@ -78,7 +78,7 @@ class ImagePipe : public ImageBase {
   // Virtual so that test subclasses can override.
   virtual ImagePtr CreateImage(Session* session,
                                MemoryPtr memory,
-                               const ui::gfx::ImageInfoPtr& image_info,
+                               const images::ImageInfo& image_info,
                                uint64_t memory_offset,
                                ErrorReporter* error_reporter);
 
@@ -90,18 +90,18 @@ class ImagePipe : public ImageBase {
     scenic::ResourceId image_id;
     uint64_t presentation_time;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
-    ::f1dl::VectorPtr<zx::event> release_fences;
+    ::fidl::VectorPtr<zx::event> release_fences;
 
     // Callback to report when the update has been applied in response to
     // an invocation of |ImagePipe.PresentImage()|.
-    ui::gfx::ImagePipe::PresentImageCallback present_image_callback;
+    images::ImagePipe::PresentImageCallback present_image_callback;
   };
   std::queue<Frame> frames_;
   std::unique_ptr<ImagePipeHandler> handler_;
 
   scenic::ResourceId current_image_id_ = 0;
   ImagePtr current_image_;
-  ::f1dl::VectorPtr<zx::event> current_release_fences_;
+  ::fidl::VectorPtr<zx::event> current_release_fences_;
 
   ResourceMap images_;
   bool is_valid_ = true;

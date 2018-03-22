@@ -90,11 +90,11 @@ TEST_F(NodeTest, SettingHitTestBehavior) {
   EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCommand(kNodeId)));
 
   auto shape_node = FindResource<ShapeNode>(kNodeId);
-  EXPECT_EQ(ui::gfx::HitTestBehavior::kDefault, shape_node->hit_test_behavior());
+  EXPECT_EQ(::gfx::HitTestBehavior::kDefault, shape_node->hit_test_behavior());
 
   EXPECT_TRUE(Apply(scenic_lib::NewSetHitTestBehaviorCommand(
-      kNodeId, ui::gfx::HitTestBehavior::kSuppress)));
-  EXPECT_EQ(ui::gfx::HitTestBehavior::kSuppress,
+      kNodeId, ::gfx::HitTestBehavior::kSuppress)));
+  EXPECT_EQ(::gfx::HitTestBehavior::kSuppress,
             shape_node->hit_test_behavior());
 }
 

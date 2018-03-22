@@ -10,14 +10,15 @@
 namespace scenic {
 
 Scenic::Scenic(component::ApplicationContext* app_context,
-               fxl::TaskRunner* task_runner, Clock* clock)
+               fxl::TaskRunner* task_runner,
+               Clock* clock)
     : app_context_(app_context), task_runner_(task_runner), clock_(clock) {
   FXL_DCHECK(app_context_);
   FXL_DCHECK(task_runner_);
   FXL_DCHECK(clock_);
 
   app_context->outgoing_services()->AddService<ui::Scenic>(
-      [this](f1dl::InterfaceRequest<ui::Scenic> request) {
+      [this](fidl::InterfaceRequest<ui::Scenic> request) {
         FXL_VLOG(1) << "Accepting connection to Scenic";
         scenic_bindings_.AddBinding(this, std::move(request));
       });
@@ -49,8 +50,8 @@ void Scenic::CloseSession(Session* session) {
 }
 
 void Scenic::CreateSession(
-    ::f1dl::InterfaceRequest<ui::Session> session_request,
-    ::f1dl::InterfaceHandle<ui::SessionListener> listener) {
+    ::fidl::InterfaceRequest<ui::Session> session_request,
+    ::fidl::InterfaceHandle<ui::SessionListener> listener) {
   if (uninitialized_systems_.empty()) {
     CreateSessionImmediately(std::move(session_request), std::move(listener));
   } else {
@@ -64,8 +65,8 @@ void Scenic::CreateSession(
 }
 
 void Scenic::CreateSessionImmediately(
-    ::f1dl::InterfaceRequest<ui::Session> session_request,
-    ::f1dl::InterfaceHandle<ui::SessionListener> listener) {
+    ::fidl::InterfaceRequest<ui::Session> session_request,
+    ::fidl::InterfaceHandle<ui::SessionListener> listener) {
   auto session =
       std::make_unique<Session>(this, next_session_id_++, std::move(listener));
 
@@ -84,8 +85,7 @@ void Scenic::CreateSessionImmediately(
   session_bindings_.AddBinding(std::move(session), std::move(session_request));
 }
 
-void Scenic::GetDisplayInfo(
-    const ui::Scenic::GetDisplayInfoCallback& callback) {
+void Scenic::GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) {
   FXL_DCHECK(systems_[System::kGfx]);
   TempSystemDelegate* delegate =
       reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());

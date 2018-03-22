@@ -20,14 +20,14 @@ using namespace sketchy_lib;
 class View final : public mozart::BaseView {
  public:
   View(component::ApplicationContext* application_context,
-       mozart::ViewManagerPtr view_manager,
-       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+       views_v1::ViewManagerPtr view_manager,
+       f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   ~View() override = default;
 
   // mozart::BaseView.
-  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
-  bool OnInputEvent(mozart::InputEventPtr event) override;
+  void OnPropertiesChanged(views_v1::ViewPropertiesPtr old_properties) override;
+  bool OnInputEvent(input::InputEventPtr event) override;
 
  private:
   Canvas canvas_;

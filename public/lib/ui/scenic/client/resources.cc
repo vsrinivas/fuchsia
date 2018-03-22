@@ -83,16 +83,14 @@ RoundedRectangle::RoundedRectangle(RoundedRectangle&& moved)
 
 RoundedRectangle::~RoundedRectangle() = default;
 
-Image::Image(const Memory& memory,
-             off_t memory_offset,
-             ui::gfx::ImageInfoPtr info)
+Image::Image(const Memory& memory, off_t memory_offset, images::ImageInfo info)
     : Image(memory.session(), memory.id(), memory_offset, std::move(info)) {}
 
 Image::Image(Session* session,
              uint32_t memory_id,
              off_t memory_offset,
-             ui::gfx::ImageInfoPtr info)
-    : Resource(session), memory_offset_(memory_offset), info_(*info) {
+             images::ImageInfo info)
+    : Resource(session), memory_offset_(memory_offset), info_(info) {
   session->Enqueue(
       NewCreateImageCommand(id(), memory_id, memory_offset_, std::move(info)));
 }
@@ -104,13 +102,13 @@ Image::Image(Image&& moved)
 
 Image::~Image() = default;
 
-size_t Image::ComputeSize(const ui::gfx::ImageInfo& image_info) {
-  FXL_DCHECK(image_info.tiling == ui::gfx::ImageInfo::Tiling::LINEAR);
+size_t Image::ComputeSize(const images::ImageInfo& image_info) {
+  FXL_DCHECK(image_info.tiling == images::Tiling::LINEAR);
 
   switch (image_info.pixel_format) {
-    case ui::gfx::ImageInfo::PixelFormat::BGRA_8:
+    case images::PixelFormat::BGRA_8:
       return image_info.height * image_info.stride;
-    case ui::gfx::ImageInfo::PixelFormat::YUY2:
+    case images::PixelFormat::YUY2:
       return image_info.height * image_info.stride;
   }
 
@@ -133,7 +131,7 @@ Buffer::Buffer(Buffer&& moved) : Resource(std::move(moved)) {}
 
 Buffer::~Buffer() = default;
 
-Memory::Memory(Session* session, zx::vmo vmo, ui::gfx::MemoryType memory_type)
+Memory::Memory(Session* session, zx::vmo vmo, images::MemoryType memory_type)
     : Resource(session), memory_type_(memory_type) {
   session->Enqueue(NewCreateMemoryCommand(id(), std::move(vmo), memory_type));
 }
@@ -152,11 +150,11 @@ Mesh::Mesh(Mesh&& moved) : Shape(std::move(moved)) {}
 Mesh::~Mesh() = default;
 
 void Mesh::BindBuffers(const Buffer& index_buffer,
-                       ui::gfx::MeshIndexFormat index_format,
+                       gfx::MeshIndexFormat index_format,
                        uint64_t index_offset,
                        uint32_t index_count,
                        const Buffer& vertex_buffer,
-                       ui::gfx::MeshVertexFormatPtr vertex_format,
+                       gfx::MeshVertexFormatPtr vertex_format,
                        uint64_t vertex_offset,
                        uint32_t vertex_count,
                        const float bounding_box_min[3],
@@ -228,7 +226,7 @@ void Node::SetTag(uint32_t tag_value) {
   session()->Enqueue(NewSetTagCommand(id(), tag_value));
 }
 
-void Node::SetHitTestBehavior(ui::gfx::HitTestBehavior hit_test_behavior) {
+void Node::SetHitTestBehavior(gfx::HitTestBehavior hit_test_behavior) {
   session()->Enqueue(NewSetHitTestBehaviorCommand(id(), hit_test_behavior));
 }
 
@@ -290,7 +288,7 @@ ImportNode::~ImportNode() {
 
 void ImportNode::Bind(zx::eventpair import_token) {
   FXL_DCHECK(!is_bound_);
-  session()->Enqueue(NewImportResourceCommand(id(), ui::gfx::ImportSpec::NODE,
+  session()->Enqueue(NewImportResourceCommand(id(), gfx::ImportSpec::NODE,
                                               std::move(import_token)));
   is_bound_ = true;
 }
@@ -298,7 +296,7 @@ void ImportNode::Bind(zx::eventpair import_token) {
 void ImportNode::BindAsRequest(zx::eventpair* out_export_token) {
   FXL_DCHECK(!is_bound_);
   session()->Enqueue(NewImportResourceCommandAsRequest(
-      id(), ui::gfx::ImportSpec::NODE, out_export_token));
+      id(), gfx::ImportSpec::NODE, out_export_token));
   is_bound_ = true;
 }
 
@@ -330,7 +328,7 @@ void OpacityNode::SetOpacity(double opacity) {
   // TODO(MZ-139): Opacities are not currently implemented.
 }
 
-Variable::Variable(Session* session, ui::gfx::ValuePtr initial_value)
+Variable::Variable(Session* session, gfx::Value initial_value)
     : Resource(session) {
   session->Enqueue(NewCreateVariableCommand(id(), std::move(initial_value)));
 }
@@ -396,13 +394,13 @@ void Renderer::SetCamera(uint32_t camera_id) {
   session()->Enqueue(NewSetCameraCommand(id(), camera_id));
 }
 
-void Renderer::SetParam(ui::gfx::RendererParamPtr param) {
+void Renderer::SetParam(gfx::RendererParam param) {
   session()->Enqueue(NewSetRendererParamCommand(id(), std::move(param)));
 }
 
-void Renderer::SetShadowTechnique(ui::gfx::ShadowTechnique technique) {
-  auto param = ui::gfx::RendererParam::New();
-  param->set_shadow_technique(technique);
+void Renderer::SetShadowTechnique(gfx::ShadowTechnique technique) {
+  auto param = gfx::RendererParam();
+  param.set_shadow_technique(technique);
   SetParam(std::move(param));
 }
 

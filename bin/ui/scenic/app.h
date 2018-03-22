@@ -19,7 +19,7 @@ class App {
  private:
   Clock clock_;
   std::unique_ptr<Scenic> scenic_;
-  f1dl::BindingSet<Scenic> bindings_;
+  fidl::BindingSet<Scenic> bindings_;
 };
 
 }  // namespace scenic

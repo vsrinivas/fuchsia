@@ -8,14 +8,14 @@ namespace scenic {
 
 Session::Session(Scenic* owner,
                  SessionId id,
-                 ::f1dl::InterfaceHandle<ui::SessionListener> listener)
+                 ::fidl::InterfaceHandle<ui::SessionListener> listener)
     : scenic_(owner), id_(id), listener_(listener.Bind()), weak_factory_(this) {
   FXL_DCHECK(scenic_);
 }
 
 Session::~Session() = default;
 
-void Session::Enqueue(::f1dl::VectorPtr<ui::CommandPtr> cmds) {
+void Session::Enqueue(::fidl::VectorPtr<ui::Command> cmds) {
   // TODO(MZ-469): Move Present logic into Session.
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
@@ -25,9 +25,9 @@ void Session::Enqueue(::f1dl::VectorPtr<ui::CommandPtr> cmds) {
 }
 
 void Session::Present(uint64_t presentation_time,
-                      ::f1dl::VectorPtr<zx::event> acquire_fences,
-                      ::f1dl::VectorPtr<zx::event> release_fences,
-                      const PresentCallback& callback) {
+                      ::fidl::VectorPtr<zx::event> acquire_fences,
+                      ::fidl::VectorPtr<zx::event> release_fences,
+                      PresentCallback callback) {
   // TODO(MZ-469): Move Present logic into Session.
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
@@ -45,19 +45,19 @@ void Session::SetCommandDispatchers(
   }
 }
 
-bool Session::ApplyCommand(const ui::CommandPtr& command) {
+bool Session::ApplyCommand(const ui::Command& command) {
   System::TypeId system_type = System::TypeId::kMaxSystems;  // invalid
-  switch (command->which()) {
-    case ui::Command::Tag::GFX:
+  switch (command.Which()) {
+    case ui::Command::Tag::kGfx:
       system_type = System::TypeId::kGfx;
       break;
-    case ui::Command::Tag::VIEWS:
+    case ui::Command::Tag::kViews:
       system_type = System::TypeId::kViews;
       break;
-    case ui::Command::Tag::DUMMY:
+    case ui::Command::Tag::kDummy:
       system_type = System::TypeId::kDummySystem;
       break;
-    case ui::Command::Tag::__UNKNOWN__:
+    case ui::Command::Tag::Invalid:
       error_reporter()->ERROR() << "Session: unknown system type.";
       return false;
   }
@@ -71,9 +71,9 @@ bool Session::ApplyCommand(const ui::CommandPtr& command) {
 }
 
 void Session::HitTest(uint32_t node_id,
-                      ui::gfx::vec3Ptr ray_origin,
-                      ui::gfx::vec3Ptr ray_direction,
-                      const HitTestCallback& callback) {
+                      ::gfx::vec3 ray_origin,
+                      ::gfx::vec3 ray_direction,
+                      HitTestCallback callback) {
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
   TempSessionDelegate* delegate =
@@ -82,9 +82,9 @@ void Session::HitTest(uint32_t node_id,
                     callback);
 }
 
-void Session::HitTestDeviceRay(ui::gfx::vec3Ptr ray_origin,
-                               ui::gfx::vec3Ptr ray_direction,
-                               const HitTestCallback& callback) {
+void Session::HitTestDeviceRay(::gfx::vec3 ray_origin,
+                               ::gfx::vec3 ray_direction,
+                               HitTestCallback callback) {
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
   TempSessionDelegate* delegate =
@@ -93,7 +93,7 @@ void Session::HitTestDeviceRay(ui::gfx::vec3Ptr ray_origin,
                              callback);
 }
 
-void Session::SendEvents(::f1dl::VectorPtr<ui::EventPtr> events) {
+void Session::SendEvents(::fidl::VectorPtr<ui::Event> events) {
   if (listener_) {
     listener_->OnEvent(std::move(events));
   }

@@ -16,13 +16,13 @@
 
 namespace print_input {
 
-class App : public mozart::InputDeviceRegistry,
-            public mozart::InputDeviceImpl::Listener {
+class App : public input::InputDeviceRegistry,
+            public input::InputDeviceImpl::Listener {
  public:
   App() : reader_(this, true) { reader_.Start(); }
   ~App() {}
 
-  void OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
+  void OnDeviceDisconnected(input::InputDeviceImpl* input_device) {
     FXL_VLOG(1) << "UnregisterDevice " << input_device->id();
 
     if (devices_.count(input_device->id()) != 0) {
@@ -31,15 +31,15 @@ class App : public mozart::InputDeviceRegistry,
     }
   }
 
-  void OnReport(mozart::InputDeviceImpl* input_device,
-                mozart::InputReportPtr report) {
+  void OnReport(input::InputDeviceImpl* input_device,
+                input::InputReportPtr report) {
     FXL_VLOG(2) << "DispatchReport " << input_device->id() << " " << *report;
     if (devices_.count(input_device->id()) == 0) {
       FXL_VLOG(1) << "DispatchReport: Unknown device " << input_device->id();
       return;
     }
 
-    mozart::Size size;
+    geometry::Size size;
     size.width = 100.0;
     size.height = 100.0;
 
@@ -52,22 +52,22 @@ class App : public mozart::InputDeviceRegistry,
  private:
   void RegisterDevice(
       mozart::DeviceDescriptorPtr descriptor,
-      f1dl::InterfaceRequest<mozart::InputDevice> input_device_request) {
+      fidl::InterfaceRequest<input::InputDevice> input_device_request) {
     uint32_t device_id = next_device_token_++;
 
     FXL_VLOG(1) << "RegisterDevice " << *descriptor << " -> " << device_id;
 
     FXL_CHECK(devices_.count(device_id) == 0);
 
-    std::unique_ptr<mozart::InputDeviceImpl> input_device =
-        std::make_unique<mozart::InputDeviceImpl>(
+    std::unique_ptr<input::InputDeviceImpl> input_device =
+        std::make_unique<input::InputDeviceImpl>(
             device_id, std::move(descriptor), std::move(input_device_request),
             this);
 
     std::unique_ptr<mozart::DeviceState> state =
         std::make_unique<mozart::DeviceState>(
             input_device->id(), input_device->descriptor(),
-            [this](mozart::InputEventPtr event) { OnEvent(std::move(event)); });
+            [this](input::InputEventPtr event) { OnEvent(std::move(event)); });
     mozart::DeviceState* state_ptr = state.get();
     auto device_pair =
         std::make_pair(std::move(input_device), std::move(state));
@@ -75,12 +75,12 @@ class App : public mozart::InputDeviceRegistry,
     state_ptr->OnRegistered();
   }
 
-  void OnEvent(mozart::InputEventPtr event) { FXL_LOG(INFO) << *event; }
+  void OnEvent(input::InputEventPtr event) { FXL_LOG(INFO) << *event; }
 
   uint32_t next_device_token_ = 0;
   mozart::input::InputReader reader_;
   std::unordered_map<uint32_t,
-                     std::pair<std::unique_ptr<mozart::InputDeviceImpl>,
+                     std::pair<std::unique_ptr<input::InputDeviceImpl>,
                                std::unique_ptr<mozart::DeviceState>>>
       devices_;
 

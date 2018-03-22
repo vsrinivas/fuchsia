@@ -14,16 +14,16 @@ CubicBezier2::CubicBezier2(glm::vec2 pt0,
 
 sketchy::CubicBezier2Ptr CubicBezier2::NewSketchyCubicBezier2() const {
   auto sketchy_cubic_bezier2 = sketchy::CubicBezier2::New();
-  sketchy_cubic_bezier2->pt0 = ui::gfx::vec2::New();
+  sketchy_cubic_bezier2->pt0 = gfx::vec2::New();
   sketchy_cubic_bezier2->pt0->x = pt0_.x;
   sketchy_cubic_bezier2->pt0->y = pt0_.y;
-  sketchy_cubic_bezier2->pt1 = ui::gfx::vec2::New();
+  sketchy_cubic_bezier2->pt1 = gfx::vec2::New();
   sketchy_cubic_bezier2->pt1->x = pt1_.x;
   sketchy_cubic_bezier2->pt1->y = pt1_.y;
-  sketchy_cubic_bezier2->pt2 = ui::gfx::vec2::New();
+  sketchy_cubic_bezier2->pt2 = gfx::vec2::New();
   sketchy_cubic_bezier2->pt2->x = pt2_.x;
   sketchy_cubic_bezier2->pt2->y = pt2_.y;
-  sketchy_cubic_bezier2->pt3 = ui::gfx::vec2::New();
+  sketchy_cubic_bezier2->pt3 = gfx::vec2::New();
   sketchy_cubic_bezier2->pt3->x = pt3_.x;
   sketchy_cubic_bezier2->pt3->y = pt3_.y;
   return sketchy_cubic_bezier2;
@@ -33,7 +33,7 @@ StrokePath::StrokePath(std::vector<CubicBezier2> segments)
     : segments_(segments) {}
 
 sketchy::StrokePathPtr StrokePath::NewSketchyStrokePath() const {
-  auto sketchy_segments = f1dl::VectorPtr<sketchy::CubicBezier2Ptr>::New(0);
+  auto sketchy_segments = fidl::VectorPtr<sketchy::CubicBezier2Ptr>::New(0);
   for (auto& segment : segments_) {
     auto sketchy_segment = segment.NewSketchyCubicBezier2();
     sketchy_segments.push_back(std::move(sketchy_segment));

@@ -9,8 +9,8 @@
 #include <fuchsia/cpp/input.h>
 #include "garnet/bin/ui/ime/ime_impl.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/ui/input/cpp/formatting.h"
 #include "lib/fxl/logging.h"
+#include "lib/ui/input/cpp/formatting.h"
 
 namespace ime {
 
@@ -35,10 +35,15 @@ void App::GetInputMethodEditor(
   FXL_DCHECK(client);
   FXL_DCHECK(editor_request.is_valid());
 
-  FXL_VLOG(1) << "GetInputMethodEditor: "
-              << ", keyboard_type=" << static_cast<std::underlying_type<input::KeyboardType>::type>(keyboard_type)
-              << ", action=" << static_cast<std::underlying_type<input::InputMethodAction>::type>(action)
-              << ", initial_state=" << &initial_state;
+  FXL_VLOG(1)
+      << "GetInputMethodEditor: "
+      << ", keyboard_type="
+      << static_cast<std::underlying_type<input::KeyboardType>::type>(
+             keyboard_type)
+      << ", action="
+      << static_cast<std::underlying_type<input::InputMethodAction>::type>(
+             action)
+      << ", initial_state=" << &initial_state;
 
   std::unique_ptr<ImeImpl> ime_impl =
       std::make_unique<ImeImpl>(keyboard_type, action, std::move(initial_state),

@@ -89,7 +89,7 @@ struct FuchsiaState {
     fsl::MessageLoop loop;
     uint32_t image_pipe_handle = 0;
     display_pipe::DisplayProviderPtr display;
-    ui::gfx::ImagePipePtr pipe;
+    gfx::ImagePipePtr pipe;
 #if defined(CUBE_USE_MOZART)
     std::unique_ptr<mozart::ViewProviderService> view_provider_service;
 #endif

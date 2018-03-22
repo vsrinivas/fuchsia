@@ -11,22 +11,22 @@
 
 class VkCubeView : public mozart::BaseView {
 public:
-    VkCubeView(mozart::ViewManagerPtr view_manager,
-               f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    VkCubeView(views_v1::ViewManagerPtr view_manager,
+               f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
                std::function<void(float width, float height,
-                                  f1dl::InterfaceHandle<ui::gfx::ImagePipe> interface_request)>
+                                  f1dl::InterfaceHandle<gfx::ImagePipe> interface_request)>
                    resize_callback);
     ~VkCubeView() override;
 
 private:
     // |BaseView|:
-    void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) override;
+    void OnSceneInvalidated(images::PresentationInfoPtr presentation_info) override;
 
-    mozart::SizeF size_;
-    mozart::Size physical_size_;
+    geometry::SizeF size_;
+    geometry::Size physical_size_;
     scenic_lib::ShapeNode pane_node_;
     std::function<void(float width, float height,
-                       f1dl::InterfaceHandle<ui::gfx::ImagePipe> interface_request)>
+                       f1dl::InterfaceHandle<gfx::ImagePipe> interface_request)>
         resize_callback_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(VkCubeView);

@@ -6,7 +6,7 @@
 #define LIB_UI_TESTS_MOCKS_MOCK_VIEW_CONTAINER_LISTENER_H_
 
 #include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/ui/views/fidl/views.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/fxl/macros.h"
 
 namespace mozart {
@@ -16,7 +16,7 @@ using OnMockChildAttachedCallback =
     std::function<void(uint32_t, mozart::ViewInfoPtr)>;
 using OnMockChildUnavailable = std::function<void(uint32_t)>;
 
-class MockViewContainerListener : public mozart::ViewContainerListener {
+class MockViewContainerListener : public views_v1::ViewContainerListener {
  public:
   MockViewContainerListener();
   MockViewContainerListener(

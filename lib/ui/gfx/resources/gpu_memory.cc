@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/gfx/resources/gpu_memory.h"
 
-#include "lib/images/fidl/memory_type.fidl.h"
+#include <fuchsia/cpp/images.h>
 
 namespace scenic {
 namespace gfx {
@@ -25,14 +25,15 @@ GpuMemory::GpuMemory(Session* session,
 GpuMemoryPtr GpuMemory::New(Session* session,
                             scenic::ResourceId id,
                             vk::Device device,
-                            const ui::gfx::MemoryArgsPtr& args,
+                            ::gfx::MemoryArgs args,
                             ErrorReporter* error_reporter) {
-  if (args->memory_type != ui::gfx::MemoryType::VK_DEVICE_MEMORY) {
+  if (args.memory_type != images::MemoryType::VK_DEVICE_MEMORY) {
     error_reporter->ERROR() << "scenic::gfx::GpuMemory::New(): "
                                "Memory must be of type VK_DEVICE_MEMORY.";
     return nullptr;
   }
-  return New(session, id, device, std::move(args->vmo), error_reporter);
+
+  return New(session, id, device, std::move(args.vmo), error_reporter);
 }
 
 GpuMemoryPtr GpuMemory::New(Session* session,

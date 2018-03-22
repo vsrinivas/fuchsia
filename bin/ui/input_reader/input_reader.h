@@ -31,7 +31,7 @@ struct DeviceInfo;
 // process device input even if the console owns the display.
 class InputReader {
  public:
-  InputReader(mozart::InputDeviceRegistry* registry,
+  InputReader(input::InputDeviceRegistry* registry,
               bool ignore_console = false);
   ~InputReader();
 
@@ -50,7 +50,7 @@ class InputReader {
                                            zx_status_t status,
                                            const zx_packet_signal_t* signal);
 
-  mozart::InputDeviceRegistry* const registry_;
+  input::InputDeviceRegistry* const registry_;
   const bool ignore_console_;
 
   std::map<zx_handle_t, std::unique_ptr<DeviceInfo>> devices_;

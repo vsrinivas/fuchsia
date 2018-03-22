@@ -24,7 +24,7 @@ void SceneManagerTest::SetUp() {
 
   manager_impl_ = std::make_unique<SceneManagerImpl>(std::move(engine));
 
-  manager_binding_ = std::make_unique<f1dl::Binding<ui::gfx::SceneManager>>(
+  manager_binding_ = std::make_unique<fidl::Binding<gfx::SceneManager>>(
       manager_impl_.get());
 
   thread_ = std::make_unique<fsl::Thread>();

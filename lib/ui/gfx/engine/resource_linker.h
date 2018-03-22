@@ -11,9 +11,9 @@
 #include <lib/async/cpp/auto_wait.h>
 #include "lib/fsl/handles/object_info.h"
 
+#include <fuchsia/cpp/gfx.h>
 #include "garnet/lib/ui/gfx/engine/unresolved_imports.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
-#include "lib/ui/gfx/fidl/commands.fidl-common.h"
 
 namespace scenic {
 namespace gfx {
@@ -58,7 +58,7 @@ class ResourceLinker {
   //
   // Returns true if there are no errors.
   bool ImportResource(Import* import,
-                      ui::gfx::ImportSpec spec,
+                      ::gfx::ImportSpec spec,
                       zx::eventpair import_token);
 
   size_t NumExports() const;

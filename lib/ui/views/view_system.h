@@ -32,7 +32,7 @@ class ViewCommandDispatcher : public CommandDispatcher {
                         scenic::gfx::ScenicSystem* scenic_system);
   ~ViewCommandDispatcher() override;
 
-  bool ApplyCommand(const ui::CommandPtr& command) override;
+  bool ApplyCommand(const ui::Command& command) override;
 
  private:
   scenic::gfx::ScenicSystem* scenic_system_;

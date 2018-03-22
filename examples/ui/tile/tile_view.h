@@ -24,8 +24,8 @@ namespace examples {
 class TileView : public mozart::BaseView,
                  public mozart::Presenter {
  public:
-  TileView(mozart::ViewManagerPtr view_manager,
-           f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+  TileView(views_v1::ViewManagerPtr view_manager,
+           f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
            component::ApplicationContext* application_context,
            const TileParams& tile_params);
 
@@ -43,7 +43,7 @@ class TileView : public mozart::BaseView,
     component::ApplicationControllerPtr controller;
     scenic_lib::EntityNode host_node;
 
-    mozart::ViewPropertiesPtr view_properties;
+    views_v1::ViewPropertiesPtr view_properties;
     mozart::ViewInfoPtr view_info;
   };
 
@@ -51,11 +51,11 @@ class TileView : public mozart::BaseView,
   void OnChildAttached(uint32_t child_key,
                        mozart::ViewInfoPtr child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
-  void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) override;
+  void OnSceneInvalidated(images::PresentationInfoPtr presentation_info) override;
 
   // |Presenter|:
   void Present(
-      f1dl::InterfaceHandle<mozart::ViewOwner> view_owner,
+      f1dl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
       f1dl::InterfaceRequest<mozart::Presentation> presentation) override;
 
   // Set up environment with a |Presenter| service.
@@ -65,7 +65,7 @@ class TileView : public mozart::BaseView,
   // Launches initial list of views, passed as command line parameters.
   void ConnectViews();
 
-  void AddChildView(f1dl::InterfaceHandle<mozart::ViewOwner> view_owner,
+  void AddChildView(f1dl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
                     const std::string& url,
                     component::ApplicationControllerPtr);
   void RemoveChildView(uint32_t child_key);

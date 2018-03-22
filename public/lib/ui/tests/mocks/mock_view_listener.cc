@@ -15,7 +15,7 @@ MockViewListener::MockViewListener(const OnMockViewPropertiesCallback& callback)
 MockViewListener::~MockViewListener() {}
 
 void MockViewListener::OnPropertiesChanged(
-    mozart::ViewPropertiesPtr properties,
+    views_v1::ViewPropertiesPtr properties,
     const OnPropertiesChangedCallback& callback) {
   if (callback_) {
     callback_(std::move(properties));

@@ -19,7 +19,7 @@ TEST(TestInputState, DeleteBackward) {
 
   revision = 0 + 1;
   base = extent = -1;
-  text = f1dl::StringPtr("");
+  text = fidl::StringPtr("");
 
   DeleteBackward(state);
   EXPECT_EQ(2U, revision);
@@ -32,7 +32,7 @@ TEST(TestInputState, DeleteBackward) {
   EXPECT_EQ(0, base);
   EXPECT_EQ(0, extent);
 
-  text = f1dl::StringPtr("abcdefghi");
+  text = fidl::StringPtr("abcdefghi");
   DeleteBackward(state);
   EXPECT_EQ(4U, revision);
   EXPECT_EQ(0, base);

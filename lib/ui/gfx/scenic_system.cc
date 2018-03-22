@@ -86,20 +86,19 @@ void ScenicSystem::Initialize() {
 };
 
 void ScenicSystem::GetDisplayInfoImmediately(
-    const ui::Scenic::GetDisplayInfoCallback& callback) {
+    ui::Scenic::GetDisplayInfoCallback callback) {
   FXL_DCHECK(initialized_);
   Display* display = engine_->display_manager()->default_display();
   FXL_CHECK(display) << "There must be a default display.";
 
-  auto info = ui::gfx::DisplayInfo::New();
-  info->width_in_px = display->width_in_px();
-  info->height_in_px = display->height_in_px();
+  auto info = ::gfx::DisplayInfo();
+  info.width_in_px = display->width_in_px();
+  info.height_in_px = display->height_in_px();
 
   callback(std::move(info));
 }
 
-void ScenicSystem::GetDisplayInfo(
-    const ui::Scenic::GetDisplayInfoCallback& callback) {
+void ScenicSystem::GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) {
   if (initialized_) {
     GetDisplayInfoImmediately(callback);
   } else {

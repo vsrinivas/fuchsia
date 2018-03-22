@@ -9,16 +9,16 @@
 
 namespace mozart {
 
-std::ostream& operator<<(std::ostream& os, const Point& value);
-std::ostream& operator<<(std::ostream& os, const PointF& value);
-std::ostream& operator<<(std::ostream& os, const Rect& value);
-std::ostream& operator<<(std::ostream& os, const RectF& value);
-std::ostream& operator<<(std::ostream& os, const RRectF& value);
-std::ostream& operator<<(std::ostream& os, const Size& value);
-std::ostream& operator<<(std::ostream& os, const SizeF& value);
-std::ostream& operator<<(std::ostream& os, const Inset& value);
-std::ostream& operator<<(std::ostream& os, const InsetF& value);
-std::ostream& operator<<(std::ostream& os, const Transform& value);
+std::ostream& operator<<(std::ostream& os, const geometry::Point& value);
+std::ostream& operator<<(std::ostream& os, const geometry::PointF& value);
+std::ostream& operator<<(std::ostream& os, const geometry::Rect& value);
+std::ostream& operator<<(std::ostream& os, const geometry::RectF& value);
+std::ostream& operator<<(std::ostream& os, const geometry::RRectF& value);
+std::ostream& operator<<(std::ostream& os, const geometry::Size& value);
+std::ostream& operator<<(std::ostream& os, const geometry::SizeF& value);
+std::ostream& operator<<(std::ostream& os, const geometry::Inset& value);
+std::ostream& operator<<(std::ostream& os, const geometry::InsetF& value);
+std::ostream& operator<<(std::ostream& os, const geometry::Transform& value);
 
 }  // namespace mozart
 

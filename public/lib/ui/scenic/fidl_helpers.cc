@@ -10,6 +10,13 @@
 
 namespace scenic_lib {
 
+// TODO(mikejurka): this should be in an images util file
+bool ImageInfoEquals(const images::ImageInfo& a, const images::ImageInfo& b) {
+  return a.transform == b.transform && a.width == b.width &&
+         a.height == b.height && a.stride == b.stride &&
+         a.pixel_format == b.pixel_format && a.color_space == b.color_space &&
+         a.tiling == b.tiling && a.alpha_format == b.alpha_format;
+}
 ui::Command NewCommand(gfx::Command command) {
   ui::Command scenic_command;
   scenic_command.set_gfx(std::move(command));
@@ -366,16 +373,16 @@ gfx::Command NewCreateShapeNodeCommand(uint32_t id) {
 gfx::Command NewCreateVariableCommand(uint32_t id, gfx::Value value) {
   gfx::VariableArgs variable;
   switch (value.Which()) {
-    case gfx::Value::Tag::kVector1:
+    case ::gfx::Value::Tag::kVector1:
       variable.type = gfx::ValueType::kVector1;
       break;
-    case gfx::Value::Tag::kVector2:
+    case ::gfx::Value::Tag::kVector2:
       variable.type = gfx::ValueType::kVector2;
       break;
-    case gfx::Value::Tag::kVector3:
+    case ::gfx::Value::Tag::kVector3:
       variable.type = gfx::ValueType::kVector3;
       break;
-    case gfx::Value::Tag::kVector4:
+    case ::gfx::Value::Tag::kVector4:
       variable.type = gfx::ValueType::kVector4;
       break;
     case gfx::Value::Tag::kMatrix4x4:
@@ -398,6 +405,8 @@ gfx::Command NewCreateVariableCommand(uint32_t id, gfx::Value value) {
       break;
     case gfx::Value::Tag::kVariableId:
       // A variable's initial value cannot be another variable.
+      return gfx::Command();
+    case gfx::Value::Tag::Invalid:
       return gfx::Command();
   }
   variable.initial_value = std::move(value);

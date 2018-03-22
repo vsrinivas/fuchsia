@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_VARIABLE_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_VARIABLE_H_
 
+#include <set>
+
 #include "garnet/lib/ui/gfx/resources/resource.h"
 
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
@@ -15,12 +17,12 @@ namespace scenic {
 namespace gfx {
 
 class Variable;
-template <ui::gfx::Value::Tag VT, typename T>
+template <::gfx::Value::Tag VT, typename T>
 class TypedVariable;
 
 // Callback for watchers of Variable. Any class implementing this interface must
 // hold a strong reference to Variable.
-template <ui::gfx::Value::Tag VT, typename T>
+template <::gfx::Value::Tag VT, typename T>
 class OnVariableValueChangedListener {
  public:
   virtual void OnVariableValueChanged(TypedVariable<VT, T>* v) = 0;
@@ -32,23 +34,23 @@ class Variable : public Resource {
   virtual ~Variable();
 
   static const ResourceTypeInfo kTypeInfo;
-  virtual ui::gfx::Value::Tag value_type() = 0;
+  virtual ::gfx::Value::Tag value_type() = 0;
 
-  virtual bool SetValue(const ui::gfx::ValuePtr& value) = 0;
+  virtual bool SetValue(const ::gfx::Value& value) = 0;
 };
 
 // Represents a variable whose value can change, usually via animations.
-template <ui::gfx::Value::Tag VT, typename T>
+template <::gfx::Value::Tag VT, typename T>
 class TypedVariable : public Variable {
  public:
   TypedVariable(Session* session, scenic::ResourceId id);
 
-  static constexpr ui::gfx::Value::Tag ValueType() { return VT; }
-  ui::gfx::Value::Tag value_type() override { return VT; }
+  static constexpr ::gfx::Value::Tag ValueType() { return VT; }
+  ::gfx::Value::Tag value_type() override { return VT; }
 
   T value() { return value_; }
   void SetValue(T value);
-  bool SetValue(const ui::gfx::ValuePtr& value) override;
+  bool SetValue(const ::gfx::Value& value) override;
 
   void AddListener(OnVariableValueChangedListener<VT, T>* listener) {
     listeners_.insert(listener);
@@ -68,19 +70,19 @@ class TypedVariable : public Variable {
   std::set<OnVariableValueChangedListener<VT, T>*> listeners_;
 };
 
-using FloatVariable = TypedVariable<ui::gfx::Value::Tag::VECTOR1, float>;
+using FloatVariable = TypedVariable<::gfx::Value::Tag::kVector1, float>;
 using Vector2Variable =
-    TypedVariable<ui::gfx::Value::Tag::VECTOR2, escher::vec2>;
+    TypedVariable<::gfx::Value::Tag::kVector2, escher::vec2>;
 using Vector3Variable =
-    TypedVariable<ui::gfx::Value::Tag::VECTOR3, escher::vec3>;
+    TypedVariable<::gfx::Value::Tag::kVector3, escher::vec3>;
 using Vector4Variable =
-    TypedVariable<ui::gfx::Value::Tag::VECTOR4, escher::vec4>;
+    TypedVariable<::gfx::Value::Tag::kVector4, escher::vec4>;
 using Matrix4x4Variable =
-    TypedVariable<ui::gfx::Value::Tag::MATRIX4X4, escher::mat4>;
+    TypedVariable<::gfx::Value::Tag::kMatrix4x4, escher::mat4>;
 using QuaternionVariable =
-    TypedVariable<ui::gfx::Value::Tag::QUATERNION, escher::quat>;
+    TypedVariable<::gfx::Value::Tag::kQuaternion, escher::quat>;
 // using TransformVariable =
-//    TypedVariable<ui::gfx::Value::Tag::TRANSFORM, escher::Transform>;
+//    TypedVariable<::gfx::Value::Tag::kTransform, escher::Transform>;
 
 using FloatVariablePtr = fxl::RefPtr<FloatVariable>;
 using Vector2VariablePtr = fxl::RefPtr<Vector2Variable>;

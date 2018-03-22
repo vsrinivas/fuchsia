@@ -28,8 +28,8 @@ constexpr uint32_t kShapeHeight = 288;
 }  // namespace
 
 View::View(component::ApplicationContext* application_context,
-           mozart::ViewManagerPtr view_manager,
-           f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+           views_v1::ViewManagerPtr view_manager,
+           f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Shadertoy Example"),
       application_context_(application_context),
@@ -46,7 +46,7 @@ View::View(component::ApplicationContext* application_context,
 
   // Create an ImagePipe and pass one end of it to the ShadertoyFactory in
   // order to obtain a Shadertoy.
-  f1dl::InterfaceHandle<ui::gfx::ImagePipe> image_pipe_handle;
+  f1dl::InterfaceHandle<gfx::ImagePipe> image_pipe_handle;
   auto image_pipe_request = image_pipe_handle.NewRequest();
   shadertoy_factory_->NewImagePipeShadertoy(shadertoy_.NewRequest(),
                                             std::move(image_pipe_handle));
@@ -119,7 +119,7 @@ float View::UpdateTransition(zx_time_t presentation_time) {
   return glm::smoothstep(0.f, 1.f, transition_param);
 }
 
-void View::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
+void View::OnSceneInvalidated(images::PresentationInfoPtr presentation_info) {
   if (!has_logical_size())
     return;
 
@@ -173,7 +173,7 @@ void View::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
   InvalidateScene();
 }
 
-bool View::OnInputEvent(mozart::InputEventPtr event) {
+bool View::OnInputEvent(input::InputEventPtr event) {
   if (animation_state_ == kChangingToFourCorners ||
       animation_state_ == kChangingToSwirling) {
     // Ignore input until transition is complete.
@@ -181,8 +181,8 @@ bool View::OnInputEvent(mozart::InputEventPtr event) {
   }
 
   if (event->is_pointer()) {
-    const mozart::PointerEventPtr& pointer = event->get_pointer();
-    if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
+    const input::PointerEventPtr& pointer = event->get_pointer();
+    if (pointer->phase == input::PointerEvent::Phase::DOWN) {
       switch (animation_state_) {
         case kFourCorners:
           animation_state_ = kChangingToSwirling;

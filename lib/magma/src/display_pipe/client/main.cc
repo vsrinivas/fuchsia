@@ -141,8 +141,8 @@ void allocate_buffer(uint32_t index, uint32_t width, uint32_t height)
 
     zx::vmo vmo;
     buffer->dupVmo(&vmo);
-    image_pipe->AddImage(index, std::move(info), std::move(vmo),
-                         images::MemoryType::HOST_MEMORY, 0);
+    image_pipe->AddImage(index, std::move(info), std::move(vmo), images::MemoryType::HOST_MEMORY,
+                         0);
 
     handlers[index] = new BufferHandler(buffer, index);
 }
@@ -155,11 +155,9 @@ int main(int argc, char* argv[])
 
     fsl::MessageLoop loop;
 
-    auto application_context_ =
-        component::ApplicationContext::CreateFromStartupInfo();
+    auto application_context_ = component::ApplicationContext::CreateFromStartupInfo();
     component::ServiceProviderPtr services;
-    display =
-        application_context_->ConnectToEnvironmentService<display_pipe::DisplayProvider>();
+    display = application_context_->ConnectToEnvironmentService<display_pipe::DisplayProvider>();
 
     display->GetInfo([](display_pipe::DisplayInfo info) {
         printf("%d x %d\n", info.width, info.height);

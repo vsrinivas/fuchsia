@@ -59,7 +59,7 @@ void VideoFrameSource::AdvanceReferenceTime(int64_t reference_time) {
 }
 
 void VideoFrameSource::GetRgbaFrame(uint8_t* rgba_buffer,
-                                    const mozart::Size& rgba_buffer_size) {
+                                    const geometry::Size& rgba_buffer_size) {
   if (held_packet_) {
     converter_.ConvertFrame(rgba_buffer, rgba_buffer_size.width,
                             rgba_buffer_size.height, held_packet_->payload(),

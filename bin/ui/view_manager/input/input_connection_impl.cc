@@ -4,19 +4,19 @@
 
 #include "garnet/bin/ui/view_manager/input/input_connection_impl.h"
 
-#include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/views/cpp/formatting.h"
 #include "garnet/bin/ui/view_manager/internal/input_owner.h"
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/views/cpp/formatting.h"
 
 namespace view_manager {
 
 InputConnectionImpl::InputConnectionImpl(
     ViewInspector* inspector,
     InputOwner* owner,
-    mozart::ViewTokenPtr view_token,
-    f1dl::InterfaceRequest<mozart::InputConnection> request)
+    views_v1_token::ViewTokenPtr view_token,
+    fidl::InterfaceRequest<input::InputConnection> request)
     : inspector_(inspector),
       owner_(owner),
       view_token_(std::move(view_token)),
@@ -25,13 +25,12 @@ InputConnectionImpl::InputConnectionImpl(
       client_binding_(this) {
   FXL_DCHECK(inspector_);
   FXL_DCHECK(view_token_);
-  binding_.set_error_handler(
-      [this] { owner_->OnInputConnectionDied(this); });
+  binding_.set_error_handler([this] { owner_->OnInputConnectionDied(this); });
 }
 
 InputConnectionImpl::~InputConnectionImpl() {}
 
-void InputConnectionImpl::DeliverEvent(mozart::InputEventPtr event,
+void InputConnectionImpl::DeliverEvent(input::InputEvent event,
                                        OnEventDelivered callback) {
   if (!event_listener_) {
     FXL_VLOG(1) << "DeliverEvent: " << *view_token_
@@ -40,25 +39,26 @@ void InputConnectionImpl::DeliverEvent(mozart::InputEventPtr event,
     return;
   }
 
-  if (event->is_keyboard()) {
-    InjectInput(event.Clone());
+  if (event.is_keyboard()) {
+    // TODO(mikejurka): If we move this event here, the OnEvent() below will be
+    // working on a null event. Do we need to clone this?
+    InjectInput(event);
   }
 
   event_listener_->OnEvent(std::move(event), callback);
 }
 
 void InputConnectionImpl::SetEventListener(
-    f1dl::InterfaceHandle<mozart::InputListener> listener) {
+    fidl::InterfaceHandle<input::InputListener> listener) {
   event_listener_ = listener.Bind();
 }
 
 void InputConnectionImpl::GetInputMethodEditor(
-    mozart::KeyboardType keyboard_type,
-    mozart::InputMethodAction action,
-    mozart::TextInputStatePtr initial_state,
-    f1dl::InterfaceHandle<mozart::InputMethodEditorClient> client,
-    f1dl::InterfaceRequest<mozart::InputMethodEditor> editor_request) {
-  FXL_DCHECK(initial_state);
+    input::KeyboardType keyboard_type,
+    input::InputMethodAction action,
+    input::TextInputState initial_state,
+    fidl::InterfaceHandle<input::InputMethodEditorClient> client,
+    fidl::InterfaceRequest<input::InputMethodEditor> editor_request) {
   FXL_DCHECK(client);
   FXL_DCHECK(editor_request.is_valid());
 
@@ -69,11 +69,11 @@ void InputConnectionImpl::GetInputMethodEditor(
   Reset();
 
   inspector_->HasFocus(
-      view_token_.Clone(), fxl::MakeCopyable([
-        this, editor_request = std::move(editor_request),
-        client = std::move(client), keyboard_type, action,
-        initial_state = std::move(initial_state)
-      ](bool focused) mutable {
+      view_token_.Clone(),
+      fxl::MakeCopyable([this, editor_request = std::move(editor_request),
+                         client = std::move(client), keyboard_type, action,
+                         initial_state =
+                             std::move(initial_state)](bool focused) mutable {
         FXL_VLOG(1) << "GetInputMethodEditor: " << *view_token_ << " "
                     << (focused ? "Focused" : "Not focused");
 
@@ -81,8 +81,7 @@ void InputConnectionImpl::GetInputMethodEditor(
           return;
 
         editor_binding_.Bind(std::move(editor_request));
-        editor_binding_.set_error_handler(
-            [this] { OnEditorDied(); });
+        editor_binding_.set_error_handler([this] { OnEditorDied(); });
 
         client_ = client.Bind();
 
@@ -99,21 +98,20 @@ void InputConnectionImpl::GetInputMethodEditor(
             Reset();
           });
 
-          container_->Show(fxl::MakeCopyable([
-            this, keyboard_type, action,
-            initial_state = std::move(initial_state)
-          ](bool shown) mutable {
-            FXL_VLOG(1) << "SoftKeyboardContainer.Show " << shown;
-            if (shown) {
-              ConnectWithImeService(keyboard_type, action,
-                                    std::move(initial_state));
-            }
-          }));
+          container_->Show(fxl::MakeCopyable(
+              [this, keyboard_type, action,
+               initial_state = std::move(initial_state)](bool shown) mutable {
+                FXL_VLOG(1) << "SoftKeyboardContainer.Show " << shown;
+                if (shown) {
+                  ConnectWithImeService(keyboard_type, action,
+                                        std::move(initial_state));
+                }
+              }));
         }
       }));
 }
 
-void InputConnectionImpl::InjectInput(mozart::InputEventPtr event) {
+void InputConnectionImpl::InjectInput(input::InputEvent event) {
   if (editor_) {
     FXL_VLOG(1) << "InjectInput: view_token=" << *view_token_
                 << ", event=" << *event;
@@ -122,9 +120,9 @@ void InputConnectionImpl::InjectInput(mozart::InputEventPtr event) {
 }
 
 void InputConnectionImpl::ConnectWithImeService(
-    mozart::KeyboardType keyboard_type,
-    mozart::InputMethodAction action,
-    mozart::TextInputStatePtr state) {
+    input::KeyboardType keyboard_type,
+    input::InputMethodAction action,
+    input::TextInputState state) {
   FXL_VLOG(1) << "ConnectWithImeService: view_token=" << *view_token_
               << ", keyboard_type=" << keyboard_type << ", action=" << action
               << ", initial_state=" << *state;
@@ -136,7 +134,7 @@ void InputConnectionImpl::ConnectWithImeService(
   });
 
   // GetInputMethodEditor from IME service
-  mozart::InputMethodEditorClientPtr client_ptr;
+  input::InputMethodEditorClientPtr client_ptr;
   client_binding_.Bind(client_ptr.NewRequest());
   client_binding_.set_error_handler([this] { OnClientDied(); });
   ime_service_->GetInputMethodEditor(keyboard_type, action, std::move(state),
@@ -174,7 +172,7 @@ void InputConnectionImpl::Reset() {
     client_binding_.Unbind();
 }
 
-void InputConnectionImpl::SetState(mozart::TextInputStatePtr state) {
+void InputConnectionImpl::SetState(input::TextInputState state) {
   if (editor_) {
     FXL_VLOG(1) << "SetState: view_token=" << *view_token_
                 << ", state=" << *state;
@@ -185,7 +183,7 @@ void InputConnectionImpl::SetState(mozart::TextInputStatePtr state) {
   }
 }
 
-void InputConnectionImpl::SetKeyboardType(mozart::KeyboardType keyboard_type) {
+void InputConnectionImpl::SetKeyboardType(input::KeyboardType keyboard_type) {
   if (editor_) {
     FXL_VLOG(1) << "SetKeyboardType: view_token=" << *view_token_
                 << ", keyboard_type=" << keyboard_type;
@@ -200,8 +198,8 @@ void InputConnectionImpl::Show() {}
 
 void InputConnectionImpl::Hide() {}
 
-void InputConnectionImpl::DidUpdateState(mozart::TextInputStatePtr state,
-                                         mozart::InputEventPtr event) {
+void InputConnectionImpl::DidUpdateState(input::TextInputStatePtr state,
+                                         input::InputEventPtr event) {
   if (client_) {
     FXL_VLOG(1) << "DidUpdateState: view_token=" << *view_token_
                 << ", state=" << *state;
@@ -212,7 +210,7 @@ void InputConnectionImpl::DidUpdateState(mozart::TextInputStatePtr state,
   }
 }
 
-void InputConnectionImpl::OnAction(mozart::InputMethodAction action) {
+void InputConnectionImpl::OnAction(input::InputMethodAction action) {
   if (client_) {
     FXL_VLOG(1) << "OnAction: view_token=" << *view_token_
                 << ", action=" << action;

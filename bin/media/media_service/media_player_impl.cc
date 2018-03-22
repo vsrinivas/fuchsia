@@ -540,8 +540,8 @@ void MediaPlayerImpl::SetGain(float gain) {
 }
 
 void MediaPlayerImpl::CreateView(
-    f1dl::InterfaceHandle<mozart::ViewManager> view_manager,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+    f1dl::InterfaceHandle<views_v1::ViewManager> view_manager,
+    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   MaybeCreateRenderer(MediaTypeMedium::VIDEO);
   if (!video_renderer_impl_) {
     return;

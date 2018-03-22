@@ -17,13 +17,13 @@ CanvasImpl::CanvasImpl(scenic_lib::Session* session, escher::Escher* escher)
       shared_buffer_pool_(session, escher),
       stroke_manager_(escher) {}
 
-void CanvasImpl::Init(f1dl::InterfaceHandle<sketchy::CanvasListener> listener) {
+void CanvasImpl::Init(fidl::InterfaceHandle<sketchy::CanvasListener> listener) {
   // TODO(MZ-269): unimplemented.
   FXL_LOG(ERROR) << "Init: unimplemented.";
 }
 
-void CanvasImpl::Enqueue(f1dl::VectorPtr<sketchy::CommandPtr> commands) {
-  // TODO: Use `AddAll()` when f1dl::VectorPtr supports it.
+void CanvasImpl::Enqueue(fidl::VectorPtr<sketchy::CommandPtr> commands) {
+  // TODO: Use `AddAll()` when fidl::VectorPtr supports it.
   for (size_t i = 0; i < commands->size(); ++i) {
     commands_.push_back(std::move(commands->at(i)));
   }
@@ -53,11 +53,11 @@ void CanvasImpl::RequestScenicPresent(uint64_t presentation_time) {
   is_scenic_present_requested_ = true;
 
   auto session_callback = [ this, callbacks = std::move(callbacks_) ](
-      ui::PresentationInfoPtr info) {
+      images::PresentationInfoPtr info) {
     FXL_DCHECK(is_scenic_present_requested_);
     is_scenic_present_requested_ = false;
     for (auto& callback : callbacks) {
-      auto _info = ui::PresentationInfo::New();
+      auto _info = images::PresentationInfo::New();
       _info->presentation_time = _info->presentation_time;
       _info->presentation_interval = _info->presentation_interval;
       callback(std::move(_info));
@@ -234,9 +234,9 @@ bool CanvasImpl::ApplyClearGroupCommand(
 }
 
 bool CanvasImpl::ApplyScenicImportResourceCommand(
-    const ui::gfx::ImportResourceCommandPtr& import_resource) {
+    const gfx::ImportResourceCommandPtr& import_resource) {
   switch (import_resource->spec) {
-    case ui::gfx::ImportSpec::NODE:
+    case gfx::ImportSpec::NODE:
       return ScenicImportNode(import_resource->id,
                               std::move(import_resource->token));
   }
@@ -250,7 +250,7 @@ bool CanvasImpl::ScenicImportNode(ResourceId id, zx::eventpair token) {
 }
 
 bool CanvasImpl::ApplyScenicAddChildCommand(
-    const ui::gfx::AddChildCommandPtr& add_child) {
+    const gfx::AddChildCommandPtr& add_child) {
   auto import_node = resource_map_.FindResource<ImportNode>(add_child->node_id);
   auto stroke_group =
       resource_map_.FindResource<StrokeGroup>(add_child->child_id);

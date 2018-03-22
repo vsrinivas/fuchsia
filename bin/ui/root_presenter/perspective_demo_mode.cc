@@ -30,12 +30,12 @@ constexpr float kPi = glm::pi<float>();
 
 PerspectiveDemoMode::PerspectiveDemoMode() {}
 
-bool PerspectiveDemoMode::OnEvent(const mozart::InputEventPtr& event,
+bool PerspectiveDemoMode::OnEvent(const input::InputEventPtr& event,
                                   Presentation* presenter) {
   if (event->is_pointer()) {
-    const mozart::PointerEventPtr& pointer = event->get_pointer();
+    const input::PointerEventPtr& pointer = event->get_pointer();
     if (animation_state_ == kTrackball) {
-      if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
+      if (pointer->phase == input::PointerEvent::Phase::DOWN) {
         // If we're not already panning/rotating the camera, then start, but
         // only if the touch-down is in the bottom 10% of the screen.
         if (!trackball_pointer_down_ &&
@@ -45,7 +45,7 @@ bool PerspectiveDemoMode::OnEvent(const mozart::InputEventPtr& event,
           trackball_pointer_id_ = pointer->pointer_id;
           trackball_previous_x_ = pointer->x;
         }
-      } else if (pointer->phase == mozart::PointerEvent::Phase::MOVE) {
+      } else if (pointer->phase == input::PointerEvent::Phase::MOVE) {
         // If the moved pointer is the one that is currently panning/rotating
         // the camera, then update the camera position.
         if (trackball_pointer_down_ &&
@@ -62,7 +62,7 @@ bool PerspectiveDemoMode::OnEvent(const mozart::InputEventPtr& event,
             camera_pan_ = 1.f;
           }
         }
-      } else if (pointer->phase == mozart::PointerEvent::Phase::UP) {
+      } else if (pointer->phase == input::PointerEvent::Phase::UP) {
         // The pointer was released.
         if (trackball_pointer_down_ &&
             trackball_device_id_ == pointer->device_id &&
@@ -73,9 +73,9 @@ bool PerspectiveDemoMode::OnEvent(const mozart::InputEventPtr& event,
     }
   } else if (event->is_keyboard()) {
     // Alt-Backspace cycles through modes.
-    const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
+    const input::KeyboardEventPtr& kbd = event->get_keyboard();
     if ((kbd->modifiers & mozart::kModifierAlt) &&
-        kbd->phase == mozart::KeyboardEvent::Phase::PRESSED &&
+        kbd->phase == input::KeyboardEvent::Phase::PRESSED &&
         kbd->code_point == 0 && kbd->hid_usage == 42 &&
         !trackball_pointer_down_) {
       HandleAltBackspace(presenter);

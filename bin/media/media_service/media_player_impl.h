@@ -51,8 +51,8 @@ class MediaPlayerImpl
   void SetGain(float gain) override;
 
   void CreateView(
-      f1dl::InterfaceHandle<mozart::ViewManager> view_manager,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
+      f1dl::InterfaceHandle<views_v1::ViewManager> view_manager,
+      f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
 
   void SetAudioRenderer(
       f1dl::InterfaceHandle<AudioRenderer> audio_renderer,

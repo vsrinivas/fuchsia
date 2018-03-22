@@ -14,52 +14,52 @@ ViewImpl::ViewImpl(ViewRegistry* registry, ViewState* state)
 
 ViewImpl::~ViewImpl() {}
 
-void ViewImpl::GetToken(const mozart::View::GetTokenCallback& callback) {
+void ViewImpl::GetToken(views_v1::View::GetTokenCallback callback) {
   callback(state_->view_token()->Clone());
 }
 
 void ViewImpl::GetServiceProvider(
-    f1dl::InterfaceRequest<component::ServiceProvider>
+    fidl::InterfaceRequest<component::ServiceProvider>
         service_provider_request) {
   service_provider_bindings_.AddBinding(this,
                                         std::move(service_provider_request));
 }
 
 void ViewImpl::OfferServiceProvider(
-    f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
-    f1dl::VectorPtr<f1dl::StringPtr> service_names) {
+    fidl::InterfaceHandle<component::ServiceProvider> service_provider,
+    fidl::VectorPtr<fidl::StringPtr> service_names) {
   state_->SetServiceProvider(std::move(service_provider),
                              std::move(service_names));
 }
 
 void ViewImpl::GetContainer(
-    f1dl::InterfaceRequest<mozart::ViewContainer> view_container_request) {
+    fidl::InterfaceRequest<views_v1::ViewContainer> view_container_request) {
   container_bindings_.AddBinding(this, std::move(view_container_request));
 }
 
 void ViewImpl::SetListener(
-    f1dl::InterfaceHandle<mozart::ViewContainerListener> listener) {
+    fidl::InterfaceHandle<views_v1::ViewContainerListener> listener) {
   state_->set_view_container_listener(listener.Bind());
 }
 
 void ViewImpl::AddChild(
     uint32_t child_key,
-    f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
     zx::eventpair host_import_token) {
   registry_->AddChild(state_, child_key, std::move(child_view_owner),
                       std::move(host_import_token));
 }
 
-void ViewImpl::RemoveChild(
-    uint32_t child_key,
-    f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
+void ViewImpl::RemoveChild(uint32_t child_key,
+                           fidl::InterfaceRequest<views_v1_token::ViewOwner>
+                               transferred_view_owner_request) {
   registry_->RemoveChild(state_, child_key,
                          std::move(transferred_view_owner_request));
 }
 
 void ViewImpl::SetChildProperties(
     uint32_t child_key,
-    mozart::ViewPropertiesPtr child_view_properties) {
+    views_v1::ViewPropertiesPtr child_view_properties) {
   registry_->SetChildProperties(state_, child_key,
                                 std::move(child_view_properties));
 }
@@ -68,7 +68,7 @@ void ViewImpl::RequestFocus(uint32_t child_key) {
   registry_->RequestFocus(state_, child_key);
 }
 
-void ViewImpl::ConnectToService(const f1dl::StringPtr& service_name,
+void ViewImpl::ConnectToService(fidl::StringPtr service_name,
                                 zx::channel client_handle) {
   registry_->ConnectToViewService(state_, service_name,
                                   std::move(client_handle));

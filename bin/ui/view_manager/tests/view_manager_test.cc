@@ -14,7 +14,7 @@
 #include "lib/ui/tests/mocks/mock_view_tree_listener.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/ui/views/fidl/views.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 
 extern std::unique_ptr<component::ApplicationContext> g_application_context;
 
@@ -25,13 +25,13 @@ class ViewManagerTest : public ::testing::Test {
  protected:
   static void SetUpTestCase() {
     view_manager_ = g_application_context
-                        ->ConnectToEnvironmentService<mozart::ViewManager>();
+                        ->ConnectToEnvironmentService<views_v1::ViewManager>();
   }
 
-  static mozart::ViewManagerPtr view_manager_;
+  static views_v1::ViewManagerPtr view_manager_;
 };
 
-mozart::ViewManagerPtr ViewManagerTest::view_manager_;
+views_v1::ViewManagerPtr ViewManagerTest::view_manager_;
 
 TEST_F(ViewManagerTest, CreateAViewManager) {
   ASSERT_TRUE(view_manager_.is_bound());
@@ -41,21 +41,21 @@ TEST_F(ViewManagerTest, CreateAView) {
   ASSERT_TRUE(view_manager_.is_bound());
 
   // Create and bind a mock view listener
-  mozart::ViewListenerPtr view_listener;
+  views_v1::ViewListenerPtr view_listener;
   mozart::test::MockViewListener mock_view_listener;
-  f1dl::Binding<mozart::ViewListener> view_listener_binding(
+  fidl::Binding<views_v1::ViewListener> view_listener_binding(
       &mock_view_listener, view_listener.NewRequest());
 
   // Create a view
   mozart::ViewPtr view;
-  mozart::ViewOwnerPtr view_owner;
+  views_v1_token::ViewOwnerPtr view_owner;
   view_manager_->CreateView(view.NewRequest(), view_owner.NewRequest(),
                             std::move(view_listener), "test_view");
 
   // Call View::GetToken. Check that you get the callback.
   int view_token_callback_invokecount = 0;
   auto view_token_callback =
-      [&view_token_callback_invokecount](mozart::ViewTokenPtr token) {
+      [&view_token_callback_invokecount](views_v1_token::ViewTokenPtr token) {
         view_token_callback_invokecount++;
       };
 
@@ -69,30 +69,30 @@ TEST_F(ViewManagerTest, CreateAView) {
 
 TEST_F(ViewManagerTest, CreateAChildView) {
   // Create and bind a mock view listener for a parent view
-  mozart::ViewListenerPtr parent_view_listener;
+  views_v1::ViewListenerPtr parent_view_listener;
   mozart::test::MockViewListener parent_mock_view_listener;
-  f1dl::Binding<mozart::ViewListener> child_view_listener_binding(
+  fidl::Binding<views_v1::ViewListener> child_view_listener_binding(
       &parent_mock_view_listener, parent_view_listener.NewRequest());
 
   // Create a parent view
   mozart::ViewPtr parent_view;
-  mozart::ViewOwnerPtr parent_view_owner;
+  views_v1_token::ViewOwnerPtr parent_view_owner;
   view_manager_->CreateView(
       parent_view.NewRequest(), parent_view_owner.NewRequest(),
       std::move(parent_view_listener), "parent_test_view");
 
-  mozart::ViewContainerPtr parent_view_container;
+  views_v1::ViewContainerPtr parent_view_container;
   parent_view->GetContainer(parent_view_container.NewRequest());
 
   // Create and bind a mock view listener for a child view
-  mozart::ViewListenerPtr child_view_listener;
+  views_v1::ViewListenerPtr child_view_listener;
   mozart::test::MockViewListener child_mock_view_listener;
-  f1dl::Binding<mozart::ViewListener> parent_view_listener_binding(
+  fidl::Binding<views_v1::ViewListener> parent_view_listener_binding(
       &child_mock_view_listener, child_view_listener.NewRequest());
 
   // Create a child view
   mozart::ViewPtr child_view;
-  mozart::ViewOwnerPtr child_view_owner;
+  views_v1_token::ViewOwnerPtr child_view_owner;
   view_manager_->CreateView(child_view.NewRequest(),
                             child_view_owner.NewRequest(),
                             std::move(child_view_listener), "test_view");
@@ -101,7 +101,7 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   parent_view_container->AddChild(0, std::move(child_view_owner));
 
   // Remove the view from the parent
-  mozart::ViewOwnerPtr new_child_view_owner;
+  views_v1_token::ViewOwnerPtr new_child_view_owner;
   parent_view_container->RemoveChild(0, new_child_view_owner.NewRequest());
 
   // If we had a ViewContainerListener, we would still not get a OnViewAttached
@@ -110,7 +110,7 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   // Call View::GetToken. Check that you get the callback.
   int view_token_callback_invokecount = 0;
   auto view_token_callback =
-      [&view_token_callback_invokecount](mozart::ViewTokenPtr token) {
+      [&view_token_callback_invokecount](views_v1_token::ViewTokenPtr token) {
         view_token_callback_invokecount++;
       };
 
@@ -134,32 +134,32 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   uint32_t child_scene_version = 1;
 
   // Create tree
-  mozart::ViewTreePtr tree;
-  mozart::ViewTreeListenerPtr tree_listener;
+  views_v1::ViewTreePtr tree;
+  views_v1::ViewTreeListenerPtr tree_listener;
   mozart::test::MockViewTreeListener mock_tree_view_listener;
-  f1dl::Binding<mozart::ViewTreeListener> tree_listener_binding(
+  fidl::Binding<views_v1::ViewTreeListener> tree_listener_binding(
       &mock_tree_view_listener, tree_listener.NewRequest());
   view_manager_->CreateViewTree(tree.NewRequest(), std::move(tree_listener),
                                 "test_view_tree");
 
   // Get tree's container and wire up listener
-  mozart::ViewContainerPtr tree_container;
+  views_v1::ViewContainerPtr tree_container;
   tree->GetContainer(tree_container.NewRequest());
-  mozart::ViewContainerListenerPtr tree_container_listener;
+  views_v1::ViewContainerListenerPtr tree_container_listener;
   mozart::test::MockViewContainerListener mock_tree_container_listener;
-  f1dl::Binding<mozart::ViewContainerListener> tree_container_listener_binding(
+  fidl::Binding<views_v1::ViewContainerListener> tree_container_listener_binding(
       &mock_tree_container_listener, tree_container_listener.NewRequest());
   tree_container->SetListener(std::move(tree_container_listener));
 
   // Create and bind a mock view listener for a parent view
-  mozart::ViewListenerPtr parent_view_listener;
+  views_v1::ViewListenerPtr parent_view_listener;
   mozart::test::MockViewListener parent_mock_view_listener;
-  f1dl::Binding<mozart::ViewListener> child_view_listener_binding(
+  fidl::Binding<views_v1::ViewListener> child_view_listener_binding(
       &parent_mock_view_listener, parent_view_listener.NewRequest());
 
   // Create a parent view
   mozart::ViewPtr parent_view;
-  mozart::ViewOwnerPtr parent_view_owner;
+  views_v1_token::ViewOwnerPtr parent_view_owner;
   view_manager_->CreateView(
       parent_view.NewRequest(), parent_view_owner.NewRequest(),
       std::move(parent_view_listener), "parent_test_view");
@@ -167,22 +167,22 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   // Add root view to tree
   tree_container->AddChild(parent_key, std::move(parent_view_owner));
 
-  auto parent_view_properties = mozart::ViewProperties::New();
-  parent_view_properties->display_metrics = mozart::DisplayMetrics::New();
+  auto parent_view_properties = views_v1::ViewProperties::New();
+  parent_view_properties->display_metrics = views_v1::DisplayMetrics::New();
   parent_view_properties->display_metrics->device_pixel_ratio = 1.0;
-  parent_view_properties->view_layout = mozart::ViewLayout::New();
-  parent_view_properties->view_layout->size = mozart::Size::New();
+  parent_view_properties->view_layout = views_v1::ViewLayout::New();
+  parent_view_properties->view_layout->size = geometry::Size::New();
   parent_view_properties->view_layout->size->width = parent_view_width;
   parent_view_properties->view_layout->size->height = parent_view_height;
   parent_view_properties->view_layout->inset = mozart::Inset::New();
   tree_container->SetChildProperties(parent_key, parent_scene_version,
                                      std::move(parent_view_properties));
 
-  mozart::ViewContainerPtr parent_view_container;
+  views_v1::ViewContainerPtr parent_view_container;
   parent_view->GetContainer(parent_view_container.NewRequest());
 
   // Create and bind a mock view listener for a child view
-  mozart::ViewListenerPtr child_view_listener;
+  views_v1::ViewListenerPtr child_view_listener;
   mozart::test::MockViewListener child_mock_view_listener(
       [&invalidation_count, child_view_width,
        child_view_height](mozart::ViewInvalidationPtr invalidation) {
@@ -193,12 +193,12 @@ TEST_F(ViewManagerTest, SetChildProperties) {
                   invalidation->properties->view_layout->size->height);
         invalidation_count++;
       });
-  f1dl::Binding<mozart::ViewListener> parent_view_listener_binding(
+  fidl::Binding<views_v1::ViewListener> parent_view_listener_binding(
       &child_mock_view_listener, child_view_listener.NewRequest());
 
   // Create a child view
   mozart::ViewPtr child_view;
-  mozart::ViewOwnerPtr child_view_owner;
+  views_v1_token::ViewOwnerPtr child_view_owner;
   view_manager_->CreateView(child_view.NewRequest(),
                             child_view_owner.NewRequest(),
                             std::move(child_view_listener), "test_view");
@@ -206,11 +206,11 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   // Add the view to the parent
   parent_view_container->AddChild(child_key, std::move(child_view_owner));
 
-  auto view_properties = mozart::ViewProperties::New();
-  view_properties->view_layout = mozart::ViewLayout::New();
-  view_properties->display_metrics = mozart::DisplayMetrics::New();
+  auto view_properties = views_v1::ViewProperties::New();
+  view_properties->view_layout = views_v1::ViewLayout::New();
+  view_properties->display_metrics = views_v1::DisplayMetrics::New();
   view_properties->display_metrics->device_pixel_ratio = 1.0;
-  view_properties->view_layout->size = mozart::Size::New();
+  view_properties->view_layout->size = geometry::Size::New();
   view_properties->view_layout->size->width = child_view_width;
   view_properties->view_layout->size->height = child_view_height;
   view_properties->view_layout->inset = mozart::Inset::New();

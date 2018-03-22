@@ -13,7 +13,7 @@ namespace mozart {
 class InputDeviceImpl : public input::InputDevice {
  public:
   class Listener {
-  public:
+   public:
     virtual void OnDeviceDisconnected(InputDeviceImpl* input_device) = 0;
     virtual void OnReport(InputDeviceImpl* input_device,
                           input::InputReport report) = 0;

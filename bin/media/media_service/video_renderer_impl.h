@@ -34,31 +34,31 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
   void Bind(f1dl::InterfaceRequest<VideoRenderer> request);
 
   // Creates a view.
-  void CreateView(f1dl::InterfacePtr<mozart::ViewManager> view_manager,
-                  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+  void CreateView(f1dl::InterfacePtr<views_v1::ViewManager> view_manager,
+                  f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   // Sets a callback that's called when the results of |GetSize| and/or
   // |GetPixelAspectRatio| may have changed.
   void SetGeometryUpdateCallback(const fxl::Closure& callback);
 
   // Gets the size of the video.
-  mozart::Size GetSize() const;
+  geometry::Size GetSize() const;
 
   // Gets the pixel aspect ratio of the video.
-  mozart::Size GetPixelAspectRatio() const;
+  geometry::Size GetPixelAspectRatio() const;
 
  private:
   class View : public mozart::BaseView {
    public:
-    View(mozart::ViewManagerPtr view_manager,
-         f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    View(views_v1::ViewManagerPtr view_manager,
+         f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
          std::shared_ptr<VideoFrameSource> video_frame_source);
 
     ~View() override;
 
    private:
     // |BaseView|:
-    void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) override;
+    void OnSceneInvalidated(images::PresentationInfoPtr presentation_info) override;
 
     std::shared_ptr<VideoFrameSource> video_frame_source_;
     TimelineFunction timeline_function_;
@@ -89,7 +89,7 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
                  const GetStatusCallback& callback) override;
 
   void CreateView(
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
+      f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
 
   // Returns the media types supported by this video renderer.
   f1dl::VectorPtr<MediaTypeSetPtr> SupportedMediaTypes();

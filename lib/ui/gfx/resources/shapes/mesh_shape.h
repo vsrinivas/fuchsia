@@ -5,9 +5,9 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_SHAPES_MESH_SHAPE_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_SHAPES_MESH_SHAPE_H_
 
+#include <fuchsia/cpp/gfx.h>
 #include "garnet/lib/ui/gfx/resources/buffer.h"
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
-#include "lib/ui/gfx/fidl/commands.fidl.h"
 
 #include "lib/escher/shape/mesh.h"
 
@@ -24,11 +24,11 @@ class MeshShape final : public Shape {
 
   // These correspond to BindMeshBuffersCommand in commands.fidl.
   bool BindBuffers(BufferPtr index_buffer,
-                   ui::gfx::MeshIndexFormat index_format,
+                   ::gfx::MeshIndexFormat index_format,
                    uint64_t index_offset,
                    uint32_t index_count,
                    BufferPtr vertex_buffer,
-                   const ui::gfx::MeshVertexFormatPtr& vertex_format,
+                   const ::gfx::MeshVertexFormat& vertex_format,
                    uint64_t vertex_offset,
                    uint32_t vertex_count,
                    escher::BoundingBox bounding_box);

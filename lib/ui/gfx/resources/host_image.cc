@@ -21,69 +21,72 @@ HostImage::HostImage(Session* session,
                      HostMemoryPtr memory,
                      escher::ImagePtr image,
                      uint64_t host_memory_offset,
-                     ui::gfx::ImageInfo host_image_format)
+                     images::ImageInfo host_image_format)
     : Image(session, id, HostImage::kTypeInfo),
       memory_(std::move(memory)),
       memory_offset_(host_memory_offset),
       host_image_format_(host_image_format) {
   image_ = std::move(image);
-  image_conversion_function_ = image_formats::GetFunctionToConvertToBgra8(host_image_format);
+  image_conversion_function_ =
+      image_formats::GetFunctionToConvertToBgra8(host_image_format);
 }
 
 ImagePtr HostImage::New(Session* session,
                         scenic::ResourceId id,
                         HostMemoryPtr host_memory,
-                        const ui::gfx::ImageInfoPtr& host_image_info,
+                        const images::ImageInfo& host_image_info,
                         uint64_t memory_offset,
                         ErrorReporter* error_reporter) {
   // No matter what the incoming format, the gpu format will be BGRA:
   vk::Format gpu_image_pixel_format = vk::Format::eB8G8R8A8Unorm;
-  size_t bytes_per_pixel = image_formats::BytesPerPixel(host_image_info->pixel_format);
-  size_t pixel_alignment = image_formats::PixelAlignment(host_image_info->pixel_format);
+  size_t bytes_per_pixel =
+      image_formats::BytesPerPixel(host_image_info.pixel_format);
+  size_t pixel_alignment =
+      image_formats::PixelAlignment(host_image_info.pixel_format);
 
-  if (host_image_info->width <= 0) {
+  if (host_image_info.width <= 0) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): width must be greater than 0.";
     return nullptr;
   }
-  if (host_image_info->height <= 0) {
+  if (host_image_info.height <= 0) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): height must be greater than 0.";
     return nullptr;
   }
 
   auto& caps = session->engine()->escher()->device()->caps();
-  if (host_image_info->width > caps.max_image_width) {
+  if (host_image_info.width > caps.max_image_width) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): image width exceeds maximum ("
-        << host_image_info->width << " vs. " << caps.max_image_width << ").";
+        << host_image_info.width << " vs. " << caps.max_image_width << ").";
     return nullptr;
   }
-  if (host_image_info->height > caps.max_image_height) {
+  if (host_image_info.height > caps.max_image_height) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): image height exceeds maximum ("
-        << host_image_info->height << " vs. " << caps.max_image_height << ").";
+        << host_image_info.height << " vs. " << caps.max_image_height << ").";
     return nullptr;
   }
 
-  if (host_image_info->stride < host_image_info->width * bytes_per_pixel) {
+  if (host_image_info.stride < host_image_info.width * bytes_per_pixel) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): stride too small for width.";
     return nullptr;
   }
-  if (host_image_info->stride % pixel_alignment != 0) {
+  if (host_image_info.stride % pixel_alignment != 0) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): stride must preserve pixel alignment.";
     return nullptr;
   }
-  if (host_image_info->tiling != ui::gfx::ImageInfo::Tiling::LINEAR) {
+  if (host_image_info.tiling != images::Tiling::LINEAR) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): tiling must be LINEAR for images "
         << "created using host memory.";
     return nullptr;
   }
 
-  size_t image_size = host_image_info->height * host_image_info->stride;
+  size_t image_size = host_image_info.height * host_image_info.stride;
   if (memory_offset >= host_memory->size()) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): the offset of the Image must be "
@@ -99,7 +102,7 @@ ImagePtr HostImage::New(Session* session,
   }
 
   // TODO(MZ-141): Support non-minimal strides.
-  if (host_image_info->stride != host_image_info->width * bytes_per_pixel) {
+  if (host_image_info.stride != host_image_info.width * bytes_per_pixel) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): the stride must be minimal (MZ-141)";
     return nullptr;
@@ -107,11 +110,11 @@ ImagePtr HostImage::New(Session* session,
 
   auto escher_image = escher::image_utils::NewImage(
       session->engine()->escher_image_factory(), gpu_image_pixel_format,
-      host_image_info->width, host_image_info->height);
+      host_image_info.width, host_image_info.height);
 
   auto host_image = fxl::AdoptRef(
       new HostImage(session, id, std::move(host_memory),
-                    std::move(escher_image), memory_offset, *host_image_info));
+                    std::move(escher_image), memory_offset, host_image_info));
   host_image->UpdatePixels();
   return host_image;
 }
@@ -134,8 +137,8 @@ ImagePtr HostImage::NewForTesting(Session* session,
   escher::ImagePtr escher_image = escher::Image::New(
       image_owner, escher::ImageInfo(), vk::Image(), nullptr);
   FXL_CHECK(escher_image);
-  ui::gfx::ImageInfo host_image_format;
-  host_image_format.pixel_format = ui::gfx::ImageInfo::PixelFormat::BGRA_8;
+  images::ImageInfo host_image_format;
+  host_image_format.pixel_format = images::PixelFormat::BGRA_8;
   return fxl::AdoptRef(new HostImage(session, id, host_memory, escher_image, 0,
                                      host_image_format));
 }

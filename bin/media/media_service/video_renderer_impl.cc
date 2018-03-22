@@ -62,8 +62,8 @@ void VideoRendererImpl::Bind(f1dl::InterfaceRequest<VideoRenderer> request) {
 }
 
 void VideoRendererImpl::CreateView(
-    f1dl::InterfacePtr<mozart::ViewManager> view_manager,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+    f1dl::InterfacePtr<views_v1::ViewManager> view_manager,
+    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   FXL_DCHECK(video_frame_source_);
   new View(std::move(view_manager), std::move(view_owner_request),
            video_frame_source_);
@@ -74,11 +74,11 @@ void VideoRendererImpl::SetGeometryUpdateCallback(
   geometry_update_callback_ = callback;
 }
 
-mozart::Size VideoRendererImpl::GetSize() const {
+geometry::Size VideoRendererImpl::GetSize() const {
   return video_frame_source_->converter().GetSize();
 }
 
-mozart::Size VideoRendererImpl::GetPixelAspectRatio() const {
+geometry::Size VideoRendererImpl::GetPixelAspectRatio() const {
   return video_frame_source_->converter().GetPixelAspectRatio();
 }
 
@@ -127,8 +127,8 @@ void VideoRendererImpl::GetStatus(uint64_t version_last_seen,
 }
 
 void VideoRendererImpl::CreateView(
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  CreateView(owner()->ConnectToEnvironmentService<mozart::ViewManager>(),
+    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
+  CreateView(owner()->ConnectToEnvironmentService<views_v1::ViewManager>(),
              std::move(view_owner_request));
 }
 
@@ -149,8 +149,8 @@ f1dl::VectorPtr<MediaTypeSetPtr> VideoRendererImpl::SupportedMediaTypes() {
 }
 
 VideoRendererImpl::View::View(
-    mozart::ViewManagerPtr view_manager,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    views_v1::ViewManagerPtr view_manager,
+    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     std::shared_ptr<VideoFrameSource> video_frame_source)
     : mozart::BaseView(std::move(view_manager),
                        std::move(view_owner_request),
@@ -168,21 +168,21 @@ VideoRendererImpl::View::View(
 VideoRendererImpl::View::~View() {}
 
 void VideoRendererImpl::View::OnSceneInvalidated(
-    ui::PresentationInfoPtr presentation_info) {
+    images::PresentationInfoPtr presentation_info) {
   TRACE_DURATION("motown", "OnSceneInvalidated");
 
   video_frame_source_->AdvanceReferenceTime(
       presentation_info->presentation_time);
 
-  mozart::Size video_size = video_frame_source_->converter().GetSize();
+  geometry::Size video_size = video_frame_source_->converter().GetSize();
   if (!has_logical_size() || video_size.width == 0 || video_size.height == 0)
     return;
 
   // Update the image.
   const scenic_lib::HostImage* image = image_cycler_.AcquireImage(
       video_size.width, video_size.height, video_size.width * 4u,
-      ui::gfx::ImageInfo::PixelFormat::BGRA_8,
-      ui::gfx::ImageInfo::ColorSpace::SRGB);
+      images::PixelFormat::BGRA_8,
+      images::ColorSpace::SRGB);
   FXL_DCHECK(image);
   video_frame_source_->GetRgbaFrame(static_cast<uint8_t*>(image->image_ptr()),
                                     video_size);

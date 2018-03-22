@@ -15,9 +15,9 @@ namespace view_manager {
 
 ViewTreeState::ViewTreeState(
     ViewRegistry* registry,
-    mozart::ViewTreeTokenPtr view_tree_token,
-    f1dl::InterfaceRequest<mozart::ViewTree> view_tree_request,
-    mozart::ViewTreeListenerPtr view_tree_listener,
+    views_v1::ViewTreeTokenPtr view_tree_token,
+    fidl::InterfaceRequest<views_v1::ViewTree> view_tree_request,
+    views_v1::ViewTreeListenerPtr view_tree_listener,
     const std::string& label)
     : view_tree_token_(std::move(view_tree_token)),
       view_tree_listener_(std::move(view_tree_listener)),

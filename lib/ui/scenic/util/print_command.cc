@@ -4,243 +4,242 @@
 
 #include "garnet/lib/ui/scenic/util/print_command.h"
 
-using ui::gfx::Command;
-using ui::gfx::CommandPtr;
-using ui::gfx::RendererParam;
-using ui::gfx::ResourceArgs;
-using ui::gfx::ShadowTechnique;
-using ui::gfx::Value;
+using gfx::Command;
+using gfx::CommandPtr;
+using gfx::RendererParam;
+using gfx::ResourceArgs;
+using gfx::ShadowTechnique;
+using gfx::Value;
 
-std::ostream& operator<<(std::ostream& stream,
-                         const ui::gfx::CommandPtr& command) {
-  switch (command->which()) {
-    case Command::Tag::CREATE_RESOURCE:
-      return stream << command->get_create_resource();
-    case Command::Tag::EXPORT_RESOURCE:
-      return stream << "EXPORT_RESOURCE";
-    case Command::Tag::IMPORT_RESOURCE:
-      return stream << "IMPORT_RESOURCE";
-    case Command::Tag::RELEASE_RESOURCE:
-      return stream << "RELEASE_RESOURCE";
-    case Command::Tag::SET_TRANSLATION:
-      return stream << "SET_TRANSLATION";
-    case Command::Tag::SET_SCALE:
-      return stream << "SET_SCALE";
-    case Command::Tag::SET_ROTATION:
-      return stream << "SET_ROTATION";
-    case Command::Tag::SET_ANCHOR:
-      return stream << "SET_ANCHOR";
-    case Command::Tag::SET_SIZE:
-      return stream << "SET_SIZE";
-    case Command::Tag::SET_TAG:
-      return stream << "SET_TAG";
-    case Command::Tag::ADD_CHILD:
-      return stream << "ADD_CHILD";
-    case Command::Tag::ADD_PART:
-      return stream << "ADD_PART";
-    case Command::Tag::DETACH:
-      return stream << "DETACH";
-    case Command::Tag::DETACH_CHILDREN:
-      return stream << "DETACH_CHILDREN";
-    case Command::Tag::SET_SHAPE:
-      return stream << "SET_SHAPE";
-    case Command::Tag::SET_MATERIAL:
-      return stream << "SET_MATERIAL";
-    case Command::Tag::SET_CLIP:
-      return stream << "SET_CLIP";
-    case Command::Tag::SET_HIT_TEST_BEHAVIOR:
-      return stream << "SET_HIT_TEST_BEHAVIOR";
-    case Command::Tag::SET_CAMERA:
-      return stream << "SET_CAMERA";
-    case Command::Tag::SET_CAMERA_TRANSFORM:
-      return stream << "SET_CAMERA_TRANSFORM";
-    case Command::Tag::SET_STEREO_CAMERA_PROJECTION:
-      return stream << "SET_STEREO_CAMERA_PROJECTION";
-    case Command::Tag::SET_CAMERA_PROJECTION:
-      return stream << "SET_CAMERA_PROJECTION";
-    case ui::gfx::Command::Tag::SET_CAMERA_POSE_BUFFER:
-      return stream << "SET_CAMERA_POSE_BUFFER";
-    case Command::Tag::SET_LIGHT_COLOR:
-      return stream << "SET_LIGHT_COLOR";
-    case Command::Tag::SET_LIGHT_DIRECTION:
-      return stream << "SET_LIGHT_DIRECTION";
-    case Command::Tag::ADD_LIGHT:
-      return stream << "ADD_LIGHT";
-    case Command::Tag::DETACH_LIGHT:
-      return stream << "DETACH_LIGHT";
-    case Command::Tag::DETACH_LIGHTS:
-      return stream << "DETACH_LIGHTS";
-    case Command::Tag::SET_TEXTURE:
-      return stream << "SET_TEXTURE";
-    case Command::Tag::SET_COLOR:
-      return stream << "SET_COLOR";
-    case Command::Tag::BIND_MESH_BUFFERS:
-      return stream << "BIND_MESH_BUFFERS";
-    case Command::Tag::ADD_LAYER:
-      return stream << "ADD_LAYER";
-    case Command::Tag::SET_LAYER_STACK:
-      return stream << "SET_LAYER_STACK";
-    case Command::Tag::SET_RENDERER:
-      return stream << "SET_RENDERER";
-    case Command::Tag::SET_RENDERER_PARAM:
-      return stream << command->get_set_renderer_param();
-    case Command::Tag::SET_EVENT_MASK:
-      return stream << "SET_EVENT_MASK";
-    case Command::Tag::SET_LABEL:
-      return stream << "SET_LABEL";
-    case Command::Tag::SET_DISABLE_CLIPPING:
-      return stream << "SET_DISABLE_CLIPPING";
-    case Command::Tag::__UNKNOWN__:
-      return stream << "__UNKNOWN__";
+std::ostream& operator<<(std::ostream& stream, const gfx::Command& command) {
+  switch (command.Which()) {
+    case Command::Tag::kCreateResource:
+      return stream << command.create_resource();
+    case Command::Tag::kExportResource:
+      return stream << "ExportResource";
+    case Command::Tag::kImportResource:
+      return stream << "ImportResource";
+    case Command::Tag::kReleaseResource:
+      return stream << "ReleaseResource";
+    case Command::Tag::kSetTranslation:
+      return stream << "SetTranslation";
+    case Command::Tag::kSetScale:
+      return stream << "SetScale";
+    case Command::Tag::kSetRotation:
+      return stream << "SetRotation";
+    case Command::Tag::kSetAnchor:
+      return stream << "SetAnchor";
+    case Command::Tag::kSetSize:
+      return stream << "SetSize";
+    case Command::Tag::kSetTag:
+      return stream << "SetTag";
+    case Command::Tag::kAddChild:
+      return stream << "AddChild";
+    case Command::Tag::kAddPart:
+      return stream << "AddPart";
+    case Command::Tag::kDetach:
+      return stream << "Detach";
+    case Command::Tag::kDetachChildren:
+      return stream << "DetachChildren";
+    case Command::Tag::kSetShape:
+      return stream << "SetShape";
+    case Command::Tag::kSetMaterial:
+      return stream << "SetMaterial";
+    case Command::Tag::kSetClip:
+      return stream << "SetClip";
+    case Command::Tag::kSetHitTestBehavior:
+      return stream << "SetHitTestBehavior";
+    case Command::Tag::kSetCamera:
+      return stream << "SetCamera";
+    case Command::Tag::kSetCameraTransform:
+      return stream << "SetCameraTransform";
+    case Command::Tag::kSetStereoCameraProjection:
+      return stream << "SetStereoCameraProjection";
+    case Command::Tag::kSetCameraProjection:
+      return stream << "SetCameraProjection";
+    case gfx::Command::Tag::kSetCameraPoseBuffer:
+      return stream << "SetCameraPoseBuffer";
+    case Command::Tag::kSetLightColor:
+      return stream << "SetLightColor";
+    case Command::Tag::kSetLightDirection:
+      return stream << "SetLightDirection";
+    case Command::Tag::kAddLight:
+      return stream << "AddLight";
+    case Command::Tag::kDetachLight:
+      return stream << "DetachLight";
+    case Command::Tag::kDetachLights:
+      return stream << "DetachLights";
+    case Command::Tag::kSetTexture:
+      return stream << "SetTexture";
+    case Command::Tag::kSetColor:
+      return stream << "SetColor";
+    case Command::Tag::kBindMeshBuffers:
+      return stream << "BindMeshBuffers";
+    case Command::Tag::kAddLayer:
+      return stream << "AddLayer";
+    case Command::Tag::kSetLayerStack:
+      return stream << "SetLayerStack";
+    case Command::Tag::kSetRenderer:
+      return stream << "SetRenderer";
+    case Command::Tag::kSetRendererParam:
+      return stream << command.set_renderer_param();
+    case Command::Tag::kSetEventMask:
+      return stream << "SetEventMask";
+    case Command::Tag::kSetLabel:
+      return stream << "SetLabel";
+    case Command::Tag::kSetDisableClipping:
+      return stream << "SetDisableClipping";
+    case Command::Tag::Invalid:
+      return stream << "Invalid";
   }
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const ui::gfx::CreateResourceCommandPtr& command) {
-  stream << "CreateResourceCommand(id:" << command->id << " ";
-  switch (command->resource->which()) {
-    case ResourceArgs::Tag::MEMORY:
+                         const gfx::CreateResourceCommand& command) {
+  stream << "CreateResourceCommand(id:" << command.id << " ";
+  switch (command.resource.Which()) {
+    case ResourceArgs::Tag::kMemory:
       stream << "Memory";
       break;
-    case ResourceArgs::Tag::IMAGE:
+    case ResourceArgs::Tag::kImage:
       stream << "Image";
       break;
-    case ResourceArgs::Tag::IMAGE_PIPE:
+    case ResourceArgs::Tag::kImagePipe:
       stream << "ImagePipe";
       break;
-    case ResourceArgs::Tag::BUFFER:
+    case ResourceArgs::Tag::kBuffer:
       stream << "Buffer";
       break;
-    case ResourceArgs::Tag::SCENE:
+    case ResourceArgs::Tag::kScene:
       stream << "Scene";
       break;
-    case ResourceArgs::Tag::CAMERA:
+    case ResourceArgs::Tag::kCamera:
       stream << "Camera";
       break;
-    case ResourceArgs::Tag::STEREO_CAMERA:
+    case ResourceArgs::Tag::kStereoCamera:
       stream << "StereoCamera";
       break;
-    case ResourceArgs::Tag::RENDERER:
+    case ResourceArgs::Tag::kRenderer:
       stream << "Renderer";
       break;
-    case ResourceArgs::Tag::AMBIENT_LIGHT:
+    case ResourceArgs::Tag::kAmbientLight:
       stream << "AmbientLight";
       break;
-    case ResourceArgs::Tag::DIRECTIONAL_LIGHT:
+    case ResourceArgs::Tag::kDirectionalLight:
       stream << "DirectionalLight";
       break;
-    case ResourceArgs::Tag::RECTANGLE:
+    case ResourceArgs::Tag::kRectangle:
       stream << "Rectangle";
       break;
-    case ResourceArgs::Tag::ROUNDED_RECTANGLE:
+    case ResourceArgs::Tag::kRoundedRectangle:
       stream << "RoundedRectangle";
       break;
-    case ResourceArgs::Tag::CIRCLE:
+    case ResourceArgs::Tag::kCircle:
       stream << "Circle";
       break;
-    case ResourceArgs::Tag::MESH:
+    case ResourceArgs::Tag::kMesh:
       stream << "Mesh";
       break;
-    case ResourceArgs::Tag::MATERIAL:
+    case ResourceArgs::Tag::kMaterial:
       stream << "Material";
       break;
-    case ResourceArgs::Tag::CLIP_NODE:
+    case ResourceArgs::Tag::kClipNode:
       stream << "ClipNode";
       break;
-    case ResourceArgs::Tag::ENTITY_NODE:
+    case ResourceArgs::Tag::kEntityNode:
       stream << "EntityNode";
       break;
-    case ResourceArgs::Tag::SHAPE_NODE:
+    case ResourceArgs::Tag::kShapeNode:
       stream << "ShapeNode";
       break;
-    case ResourceArgs::Tag::DISPLAY_COMPOSITOR:
+    case ResourceArgs::Tag::kDisplayCompositor:
       stream << "DisplayCompositor";
       break;
-    case ResourceArgs::Tag::IMAGE_PIPE_COMPOSITOR:
+    case ResourceArgs::Tag::kImagePipeCompositor:
       stream << "ImagePipeCompositor";
       break;
-    case ResourceArgs::Tag::LAYER_STACK:
+    case ResourceArgs::Tag::kLayerStack:
       stream << "LayerStack";
       break;
-    case ResourceArgs::Tag::LAYER:
+    case ResourceArgs::Tag::kLayer:
       stream << "Layer";
       break;
-    case ResourceArgs::Tag::VARIABLE:
+    case ResourceArgs::Tag::kVariable:
       stream << "Variable";
       break;
-    case ResourceArgs::Tag::__UNKNOWN__:
-      stream << "__UNKNOWN__";
+    case ResourceArgs::Tag::Invalid:
+      stream << "Unknown";
       break;
   }
   return stream << ")";
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const ui::gfx::SetRendererParamCommandPtr& command) {
-  stream << "SetRendererParamCommand(id=" << command->renderer_id << " ";
-  switch (command->param->which()) {
-    case RendererParam::Tag::SHADOW_TECHNIQUE:
+                         const gfx::SetRendererParamCommand& command) {
+  stream << "SetRendererParamCommand(id=" << command.renderer_id << " ";
+  switch (command.param.Which()) {
+    case RendererParam::Tag::kShadowTechnique:
       stream << "shadow_technique=";
-      switch (command->param->get_shadow_technique()) {
+      switch (command.param.shadow_technique()) {
         case ShadowTechnique::UNSHADOWED:
-          stream << "UNSHADOWED";
+          stream << "Unshadowed";
           break;
         case ShadowTechnique::SCREEN_SPACE:
-          stream << "SCREEN_SPACE";
+          stream << "ScreenSpace";
           break;
         case ShadowTechnique::SHADOW_MAP:
-          stream << "SHADOW_MAP";
+          stream << "ShadowMap";
           break;
         case ShadowTechnique::MOMENT_SHADOW_MAP:
-          stream << "MOMENT_SHADOW_MAP";
+          stream << "MomentShadowMap";
           break;
       }
       break;
-    case RendererParam::Tag::__UNKNOWN__:
-      stream << "__UNKNOWN__";
+    case RendererParam::Tag::Invalid:
+      stream << "Invalid";
       break;
   }
   return stream << ")";
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const ui::gfx::SetTextureCommandPtr& command) {
-  stream << "SetTextureCommand(id:" << command->material_id
-         << " texture: " << command->texture_id;
+                         const gfx::SetTextureCommand& command) {
+  stream << "SetTextureCommand(id:" << command.material_id
+         << " texture: " << command.texture_id;
   return stream << ")";
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const ui::gfx::SetColorCommandPtr& command) {
-  stream << "SetColorCommand(id:" << command->material_id;
+                         const gfx::SetColorCommand& command) {
+  stream << "SetColorCommand(id:" << command.material_id;
   return stream << ")";
 }
 
-std::ostream& operator<<(std::ostream& stream, const ui::gfx::Value::Tag& tag) {
+std::ostream& operator<<(std::ostream& stream, const gfx::Value::Tag& tag) {
   switch (tag) {
-    case Value::Tag::VECTOR1:
+    case Value::Tag::kVector1:
       return stream << "vec1";
-    case Value::Tag::VECTOR2:
+    case Value::Tag::kVector2:
       return stream << "vec2";
-    case Value::Tag::VECTOR3:
+    case Value::Tag::kVector3:
       return stream << "vec3";
-    case Value::Tag::VECTOR4:
+    case Value::Tag::kVector4:
       return stream << "vec4";
-    case Value::Tag::MATRIX4X4:
+    case Value::Tag::kMatrix4x4:
       return stream << "mat4";
-    case Value::Tag::COLOR_RGB:
+    case Value::Tag::kColorRgb:
       return stream << "rgb";
-    case Value::Tag::COLOR_RGBA:
+    case Value::Tag::kColorRgba:
       return stream << "rgba";
-    case Value::Tag::DEGREES:
+    case Value::Tag::kDegrees:
       return stream << "degrees";
-    case Value::Tag::QUATERNION:
+    case Value::Tag::kQuaternion:
       return stream << "quat";
-    case Value::Tag::TRANSFORM:
+    case Value::Tag::kTransform:
       return stream << "transform";
-    case Value::Tag::VARIABLE_ID:
+    case Value::Tag::kVariableId:
       return stream << "variable";
-    case Value::Tag::__UNKNOWN__:
-      return stream << "__UNKNOWN__";
+    case Value::Tag::Invalid:
+      return stream << "Invalid";
   }
 }

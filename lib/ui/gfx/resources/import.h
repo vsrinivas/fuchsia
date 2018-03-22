@@ -7,9 +7,9 @@
 
 #include <zx/eventpair.h>
 
+#include <fuchsia/cpp/gfx.h>
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/gfx/fidl/resources.fidl.h"
 
 namespace scenic {
 namespace gfx {
@@ -39,7 +39,7 @@ class Import final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Import(Session* session, scenic::ResourceId id, ui::gfx::ImportSpec spec);
+  Import(Session* session, scenic::ResourceId id, ::gfx::ImportSpec spec);
 
   ~Import() override;
 
@@ -48,14 +48,14 @@ class Import final : public Resource {
 
   /// Returns the resource that is a suitable standin for the resource being
   /// bound to by the import. Imported resources are never modified by the
-  /// importing session. Commands directed at the import resource are instead applied
-  /// to this delegate. This delegate also holds the side-effects of these
-  /// operations such as the list of children which were attached.
+  /// importing session. Commands directed at the import resource are instead
+  /// applied to this delegate. This delegate also holds the side-effects of
+  /// these operations such as the list of children which were attached.
   Resource* delegate() { return delegate_.get(); }
 
   /// The specification used to represent the underlying type of the resource
   /// being bound to the import.
-  ui::gfx::ImportSpec import_spec() const { return import_spec_; }
+  ::gfx::ImportSpec import_spec() const { return import_spec_; }
 
   /// If an active binding exists between this import and an imported resource,
   // returns that resource. If no binding exists, returns nullptr.
@@ -65,7 +65,7 @@ class Import final : public Resource {
   bool is_bound() const { return imported_resource_ != nullptr; }
 
  private:
-  const ui::gfx::ImportSpec import_spec_;
+  const ::gfx::ImportSpec import_spec_;
   const ResourcePtr delegate_;
   Resource* imported_resource_ = nullptr;
 

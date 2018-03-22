@@ -40,12 +40,12 @@ std::string GetDisplayUsageAsString(mozart::DisplayUsage usage) {
 
 DisplayUsageSwitcher::DisplayUsageSwitcher() {}
 
-bool DisplayUsageSwitcher::OnEvent(const mozart::InputEventPtr& event,
+bool DisplayUsageSwitcher::OnEvent(const input::InputEventPtr& event,
                                    Presentation* presenter) {
   if (event->is_keyboard()) {
-    const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
+    const input::KeyboardEventPtr& kbd = event->get_keyboard();
     if ((kbd->modifiers & mozart::kModifierAlt) &&
-        kbd->phase == mozart::KeyboardEvent::Phase::PRESSED &&
+        kbd->phase == input::KeyboardEvent::Phase::PRESSED &&
         kbd->code_point == kGlobalShortcutKeyCodePoint &&
         kbd->hid_usage == kGlobalShortcutKeyHidUsage) {
       // Switch to the next display usage value.

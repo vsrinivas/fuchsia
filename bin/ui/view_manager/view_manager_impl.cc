@@ -17,25 +17,25 @@ ViewManagerImpl::ViewManagerImpl(ViewRegistry* registry)
 ViewManagerImpl::~ViewManagerImpl() {}
 
 void ViewManagerImpl::GetScenic(
-    f1dl::InterfaceRequest<ui::Scenic> scenic_request) {
+    fidl::InterfaceRequest<ui::Scenic> scenic_request) {
   registry_->GetScenic(std::move(scenic_request));
 }
 
 void ViewManagerImpl::CreateView(
-    f1dl::InterfaceRequest<mozart::View> view_request,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    f1dl::InterfaceHandle<mozart::ViewListener> view_listener,
+    fidl::InterfaceRequest<views_v1::View> view_request,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+    fidl::InterfaceHandle<views_v1::ViewListener> view_listener,
     zx::eventpair parent_export_token,
-    const f1dl::StringPtr& label) {
+    fidl::StringPtr label) {
   registry_->CreateView(std::move(view_request), std::move(view_owner_request),
                         view_listener.Bind(), std::move(parent_export_token),
                         label);
 }
 
 void ViewManagerImpl::CreateViewTree(
-    f1dl::InterfaceRequest<mozart::ViewTree> view_tree_request,
-    f1dl::InterfaceHandle<mozart::ViewTreeListener> view_tree_listener,
-    const f1dl::StringPtr& label) {
+    fidl::InterfaceRequest<views_v1::ViewTree> view_tree_request,
+    fidl::InterfaceHandle<views_v1::ViewTreeListener> view_tree_listener,
+    fidl::StringPtr label) {
   registry_->CreateViewTree(std::move(view_tree_request),
                             view_tree_listener.Bind(), label);
 }

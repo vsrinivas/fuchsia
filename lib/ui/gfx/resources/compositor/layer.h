@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_LAYER_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_COMPOSITOR_LAYER_H_
 
+#include <set>
+
 #include "garnet/lib/ui/gfx/engine/hit.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 

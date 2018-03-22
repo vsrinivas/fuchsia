@@ -10,10 +10,10 @@
 
 #include <zx/eventpair.h>
 
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/views/fidl/views.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "lib/ui/scenic/client/resources.h"
 
 namespace view_manager {
 
@@ -49,7 +49,7 @@ class ViewStub {
   // |host_import_token| is the import token associated with the node
   // that the parent view exported to host the view's graphical contents.
   ViewStub(ViewRegistry* registry,
-           f1dl::InterfaceHandle<mozart::ViewOwner> owner,
+           fidl::InterfaceHandle<views_v1_token::ViewOwner> owner,
            zx::eventpair host_import_token);
   ~ViewStub();
 
@@ -86,12 +86,12 @@ class ViewStub {
 
   // Gets the properties which the container set on this view, or null
   // if none set or the view has become unavailable.
-  const mozart::ViewPropertiesPtr& properties() const { return properties_; }
+  const views_v1::ViewPropertiesPtr& properties() const { return properties_; }
 
   // Sets the properties set by the container.
   // May be called when the view is pending or attached but not after it
   // has become unavailable.
-  void SetProperties(mozart::ViewPropertiesPtr properties);
+  void SetProperties(views_v1::ViewPropertiesPtr properties);
 
   // Binds the stub to the specified actual view, which must not be null.
   // Must be called at most once to apply the effects of resolving the
@@ -115,7 +115,8 @@ class ViewStub {
   // be transferred
   void TransferViewOwnerWhenViewResolved(
       std::unique_ptr<ViewStub> view_stub,
-      f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
+      fidl::InterfaceRequest<views_v1_token::ViewOwner>
+          transferred_view_owner_request);
 
   // Releases the host import token and host node.
   void ReleaseHost();
@@ -133,7 +134,7 @@ class ViewStub {
   void SetTreeRecursively(ViewTreeState* tree);
   static void SetTreeForChildrenOfView(ViewState* view, ViewTreeState* tree);
 
-  void OnViewResolved(mozart::ViewTokenPtr view_token);
+  void OnViewResolved(views_v1_token::ViewToken view_token, bool success);
 
   // This is true when |ViewStub| has been transferred before |OnViewResolved|
   // has been called, and the child view's ownership is supposed to be
@@ -144,7 +145,7 @@ class ViewStub {
   }
 
   ViewRegistry* registry_;
-  mozart::ViewOwnerPtr owner_;
+  views_v1_token::ViewOwnerPtr owner_;
   ViewState* state_ = nullptr;
   bool unavailable_ = false;
 
@@ -156,7 +157,7 @@ class ViewStub {
   // ourselves to keep us alive until |OnViewResolved| is called.
   std::unique_ptr<PendingViewOwnerTransferState> pending_view_owner_transfer_;
 
-  mozart::ViewPropertiesPtr properties_;
+  views_v1::ViewPropertiesPtr properties_;
 
   ViewTreeState* tree_ = nullptr;
   ViewState* parent_ = nullptr;

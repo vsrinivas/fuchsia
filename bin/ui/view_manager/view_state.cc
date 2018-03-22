@@ -12,9 +12,9 @@
 namespace view_manager {
 
 ViewState::ViewState(ViewRegistry* registry,
-                     mozart::ViewTokenPtr view_token,
-                     f1dl::InterfaceRequest<mozart::View> view_request,
-                     mozart::ViewListenerPtr view_listener,
+                     views_v1_token::ViewTokenPtr view_token,
+                     fidl::InterfaceRequest<views_v1::View> view_request,
+                     views_v1::ViewListenerPtr view_listener,
                      scenic_lib::Session* session,
                      const std::string& label)
     : view_token_(std::move(view_token)),
@@ -41,12 +41,12 @@ ViewState::ViewState(ViewRegistry* registry,
 
 ViewState::~ViewState() {}
 
-void ViewState::IssueProperties(mozart::ViewPropertiesPtr properties) {
+void ViewState::IssueProperties(views_v1::ViewPropertiesPtr properties) {
   issued_properties_ = std::move(properties);
 }
 
 void ViewState::BindOwner(
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   FXL_DCHECK(!owner_binding_.is_bound());
   owner_binding_.Bind(std::move(view_owner_request));
 }
@@ -81,8 +81,8 @@ component::ServiceProvider* ViewState::GetServiceProviderIfSupports(
 }
 
 void ViewState::SetServiceProvider(
-    f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
-    f1dl::VectorPtr<f1dl::StringPtr> service_names) {
+    fidl::InterfaceHandle<component::ServiceProvider> service_provider,
+    fidl::VectorPtr<fidl::StringPtr> service_names) {
   if (service_provider) {
     service_provider_ = service_provider.Bind();
     service_names_ = std::move(service_names);

@@ -23,8 +23,8 @@ class CanvasImpl final : public sketchy::Canvas {
   CanvasImpl(scenic_lib::Session* session, escher::Escher* escher);
 
   // |sketchy::Canvas|
-  void Init(::f1dl::InterfaceHandle<sketchy::CanvasListener> listener) override;
-  void Enqueue(::f1dl::VectorPtr<sketchy::CommandPtr> commands) override;
+  void Init(::fidl::InterfaceHandle<sketchy::CanvasListener> listener) override;
+  void Enqueue(::fidl::VectorPtr<sketchy::CommandPtr> commands) override;
   void Present(uint64_t presentation_time,
                const PresentCallback& callback) override;
 
@@ -51,7 +51,7 @@ class CanvasImpl final : public sketchy::Canvas {
   bool ApplyClearGroupCommand(const sketchy::ClearGroupCommandPtr& command);
 
   bool ApplyScenicImportResourceCommand(
-      const ui::gfx::ImportResourceCommandPtr& import_resource);
+      const gfx::ImportResourceCommandPtr& import_resource);
 
   // Imports an exported ScenicNode that can be used as an
   // attachment point for a StrokeGroup.
@@ -62,12 +62,12 @@ class CanvasImpl final : public sketchy::Canvas {
   //     to the SceneManager to import the node.
   bool ScenicImportNode(ResourceId id, zx::eventpair token);
 
-  bool ApplyScenicAddChildCommand(const ui::gfx::AddChildCommandPtr& add_child);
+  bool ApplyScenicAddChildCommand(const gfx::AddChildCommandPtr& add_child);
 
   scenic_lib::Session* const session_;
   SharedBufferPool shared_buffer_pool_;
 
-  ::f1dl::VectorPtr<sketchy::CommandPtr> commands_;
+  ::fidl::VectorPtr<sketchy::CommandPtr> commands_;
   ResourceMap resource_map_;
   bool is_scenic_present_requested_ = false;
   std::vector<scenic_lib::Session::PresentCallback> callbacks_;

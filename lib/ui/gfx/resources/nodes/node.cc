@@ -6,9 +6,9 @@
 
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 
+#include <fuchsia/cpp/gfx.h>
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
-#include "lib/ui/gfx/fidl/events.fidl.h"
 
 #include "lib/escher/geometry/types.h"
 
@@ -51,8 +51,8 @@ bool Node::SetEventMask(uint32_t event_mask) {
 
   // If the client unsubscribed from the event, ensure that we will deliver
   // fresh metrics next time they subscribe.
-  if (!(event_mask & ui::gfx::kMetricsEventMask)) {
-    reported_metrics_ = ui::gfx::Metrics();
+  if (!(event_mask & ::gfx::kMetricsEventMask)) {
+    reported_metrics_ = ::gfx::Metrics();
   }
   return true;
 }
@@ -300,7 +300,7 @@ bool Node::SetClipToSelf(bool clip_to_self) {
   return true;
 }
 
-bool Node::SetHitTestBehavior(ui::gfx::HitTestBehavior hit_test_behavior) {
+bool Node::SetHitTestBehavior(::gfx::HitTestBehavior hit_test_behavior) {
   hit_test_behavior_ = hit_test_behavior;
   return true;
 }

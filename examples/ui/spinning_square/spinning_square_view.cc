@@ -20,8 +20,8 @@ constexpr float kSecondsPerNanosecond = .000'000'001f;
 }  // namespace
 
 SpinningSquareView::SpinningSquareView(
-    mozart::ViewManagerPtr view_manager,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+    views_v1::ViewManagerPtr view_manager,
+    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
                "Spinning Square"),
@@ -41,7 +41,7 @@ SpinningSquareView::SpinningSquareView(
 SpinningSquareView::~SpinningSquareView() {}
 
 void SpinningSquareView::OnSceneInvalidated(
-    ui::PresentationInfoPtr presentation_info) {
+    images::PresentationInfoPtr presentation_info) {
   if (!has_logical_size())
     return;
 

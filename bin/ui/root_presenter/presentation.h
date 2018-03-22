@@ -18,7 +18,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/ui/geometry/fidl/geometry.fidl.h"
+#include <fuchsia/cpp/geometry.h>
 #include "lib/ui/input/device_state.h"
 #include "lib/ui/input/fidl/input_dispatcher.fidl.h"
 #include "lib/ui/input/fidl/input_events.fidl.h"
@@ -26,7 +26,7 @@
 #include "lib/ui/presentation/fidl/presentation.fidl.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/ui/views/fidl/views.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 #if defined(countof)
 // Workaround for compiler error due to Zircon defining countof() as a macro.
 // Redefines countof() using GLM_COUNTOF(), which currently provides a more
@@ -60,12 +60,12 @@ namespace root_presenter {
 //           + link: Content view's actual content
 //   + child: cursor 1
 //   + child: cursor N
-class Presentation : private mozart::ViewTreeListener,
-                     private mozart::ViewListener,
-                     private mozart::ViewContainerListener,
+class Presentation : private views_v1::ViewTreeListener,
+                     private views_v1::ViewListener,
+                     private views_v1::ViewContainerListener,
                      private mozart::Presentation {
  public:
-  Presentation(mozart::ViewManager* view_manager, ui::Scenic* scenic);
+  Presentation(views_v1::ViewManager* view_manager, ui::Scenic* scenic);
 
   ~Presentation() override;
 
@@ -74,12 +74,12 @@ class Presentation : private mozart::ViewTreeListener,
   // This method must be called at most once for the lifetime of the
   // presentation.
   void Present(
-      mozart::ViewOwnerPtr view_owner,
-      f1dl::InterfaceRequest<mozart::Presentation> presentation_request,
+      views_v1_token::ViewOwnerPtr view_owner,
+      fidl::InterfaceRequest<mozart::Presentation> presentation_request,
       fxl::Closure shutdown_callback);
 
-  void OnReport(uint32_t device_id, mozart::InputReportPtr report);
-  void OnDeviceAdded(mozart::InputDeviceImpl* input_device);
+  void OnReport(uint32_t device_id, input::InputReportPtr report);
+  void OnDeviceAdded(input::InputDeviceImpl* input_device);
   void OnDeviceRemoved(uint32_t device_id);
 
  private:
@@ -102,7 +102,7 @@ class Presentation : private mozart::ViewTreeListener,
 
   // |ViewListener|:
   void OnPropertiesChanged(
-      mozart::ViewPropertiesPtr properties,
+      views_v1::ViewPropertiesPtr properties,
       const OnPropertiesChangedCallback& callback) override;
 
   // |Presentation|
@@ -116,9 +116,9 @@ class Presentation : private mozart::ViewTreeListener,
 
   // |Presentation|
   void SetRendererParams(
-      ::f1dl::VectorPtr<ui::gfx::RendererParamPtr> params) override;
+      ::fidl::VectorPtr<gfx::RendererParamPtr> params) override;
 
-  void InitializeDisplayModel(ui::gfx::DisplayInfoPtr display_info);
+  void InitializeDisplayModel(gfx::DisplayInfoPtr display_info);
 
   // |Presentation|
   void SetDisplayUsage(mozart::DisplayUsage usage) override;
@@ -136,23 +136,23 @@ class Presentation : private mozart::ViewTreeListener,
 
   // |Presentation|
   void CaptureKeyboardEvent(
-      mozart::KeyboardEventPtr event_to_capture,
-      f1dl::InterfaceHandle<mozart::KeyboardCaptureListener> listener) override;
+      input::KeyboardEventPtr event_to_capture,
+      fidl::InterfaceHandle<input::KeyboardCaptureListener> listener) override;
 
   void CreateViewTree(
-      mozart::ViewOwnerPtr view_owner,
-      f1dl::InterfaceRequest<mozart::Presentation> presentation_request,
-      ui::gfx::DisplayInfoPtr display_info);
+      views_v1_token::ViewOwnerPtr view_owner,
+      fidl::InterfaceRequest<mozart::Presentation> presentation_request,
+      gfx::DisplayInfoPtr display_info);
 
   // Returns true if the event was consumed and the scene is to be invalidated.
-  bool GlobalHooksHandleEvent(const mozart::InputEventPtr& event);
+  bool GlobalHooksHandleEvent(const input::InputEventPtr& event);
 
-  void OnEvent(mozart::InputEventPtr event);
+  void OnEvent(input::InputEventPtr event);
 
   void PresentScene();
   void Shutdown();
 
-  mozart::ViewManager* const view_manager_;
+  views_v1::ViewManager* const view_manager_;
   ui::Scenic* const scenic_;
 
   scenic_lib::Session session_;
@@ -190,16 +190,16 @@ class Presentation : private mozart::ViewTreeListener,
 
   mozart::PointF mouse_coordinates_;
 
-  f1dl::Binding<mozart::Presentation> presentation_binding_;
-  f1dl::Binding<mozart::ViewTreeListener> tree_listener_binding_;
-  f1dl::Binding<mozart::ViewContainerListener> tree_container_listener_binding_;
-  f1dl::Binding<mozart::ViewContainerListener> view_container_listener_binding_;
-  f1dl::Binding<mozart::ViewListener> view_listener_binding_;
+  fidl::Binding<mozart::Presentation> presentation_binding_;
+  fidl::Binding<views_v1::ViewTreeListener> tree_listener_binding_;
+  fidl::Binding<views_v1::ViewContainerListener> tree_container_listener_binding_;
+  fidl::Binding<views_v1::ViewContainerListener> view_container_listener_binding_;
+  fidl::Binding<views_v1::ViewListener> view_listener_binding_;
 
-  mozart::ViewTreePtr tree_;
-  mozart::ViewContainerPtr tree_container_;
-  mozart::ViewContainerPtr root_container_;
-  mozart::InputDispatcherPtr input_dispatcher_;
+  views_v1::ViewTreePtr tree_;
+  views_v1::ViewContainerPtr tree_container_;
+  views_v1::ViewContainerPtr root_container_;
+  input::InputDispatcherPtr input_dispatcher_;
 
   // Rotates the display 180 degrees in response to events.
   DisplayRotater display_rotater_;
@@ -222,14 +222,14 @@ class Presentation : private mozart::ViewTreeListener,
   std::map<uint32_t, CursorState> cursors_;
   std::map<
       uint32_t,
-      std::pair<mozart::InputDeviceImpl*, std::unique_ptr<mozart::DeviceState>>>
+      std::pair<input::InputDeviceImpl*, std::unique_ptr<mozart::DeviceState>>>
       device_states_by_id_;
 
   // A registry of listeners who want to be notified when their keyboard
   // event happens.
   struct KeyboardCaptureItem {
-    mozart::KeyboardEventPtr event;
-    mozart::KeyboardCaptureListenerPtr listener;
+    input::KeyboardEventPtr event;
+    input::KeyboardCaptureListenerPtr listener;
   };
   std::vector<KeyboardCaptureItem> captured_keybindings_;
 

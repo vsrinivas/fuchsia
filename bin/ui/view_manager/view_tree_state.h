@@ -8,13 +8,13 @@
 #include <memory>
 #include <string>
 
-#include "lib/ui/views/cpp/formatting.h"
-#include "lib/ui/views/fidl/view_trees.fidl.h"
+#include <fuchsia/cpp/views.h>
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "lib/ui/views/cpp/formatting.h"
 
 namespace view_manager {
 
@@ -33,9 +33,9 @@ class ViewTreeState : public ViewContainerState {
   };
 
   ViewTreeState(ViewRegistry* registry,
-                mozart::ViewTreeTokenPtr view_tree_token,
-                f1dl::InterfaceRequest<mozart::ViewTree> view_tree_request,
-                mozart::ViewTreeListenerPtr view_tree_listener,
+                views_v1::ViewTreeTokenPtr view_tree_token,
+                fidl::InterfaceRequest<views_v1::ViewTree> view_tree_request,
+                views_v1::ViewTreeListenerPtr view_tree_listener,
                 const std::string& label);
   ~ViewTreeState() override;
 
@@ -45,13 +45,13 @@ class ViewTreeState : public ViewContainerState {
 
   // Gets the token used to refer to this view tree globally.
   // Caller does not obtain ownership of the token.
-  const mozart::ViewTreeTokenPtr& view_tree_token() const {
+  const views_v1::ViewTreeTokenPtr& view_tree_token() const {
     return view_tree_token_;
   }
 
   // Gets the view tree listener interface, never null.
   // Caller does not obtain ownership of the view tree listener.
-  const mozart::ViewTreeListenerPtr& view_tree_listener() const {
+  const views_v1::ViewTreeListenerPtr& view_tree_listener() const {
     return view_tree_listener_;
   }
 
@@ -71,14 +71,14 @@ class ViewTreeState : public ViewContainerState {
   const FocusChain* focus_chain();
 
  private:
-  mozart::ViewTreeTokenPtr view_tree_token_;
-  mozart::ViewTreeListenerPtr view_tree_listener_;
+  views_v1::ViewTreeTokenPtr view_tree_token_;
+  views_v1::ViewTreeListenerPtr view_tree_listener_;
 
   const std::string label_;
   mutable std::string formatted_label_cache_;
 
   std::unique_ptr<ViewTreeImpl> impl_;
-  f1dl::Binding<mozart::ViewTree> view_tree_binding_;
+  fidl::Binding<views_v1::ViewTree> view_tree_binding_;
 
   uint32_t invalidation_flags_ = 0u;
 

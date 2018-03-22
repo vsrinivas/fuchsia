@@ -282,7 +282,7 @@ VkResult ImagePipeSwapchain::Initialize(
     images::ImageInfo image_info;
     image_info.width = width;
     image_info.height = height;
-    image_info.stride = 0; // Meaningless for optimal tiling.
+    image_info.stride = 0;  // Meaningless for optimal tiling.
     image_info.pixel_format = images::PixelFormat::BGRA_8;
     image_info.color_space = images::ColorSpace::SRGB;
     image_info.tiling = images::Tiling::GPU_OPTIMAL;

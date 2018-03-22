@@ -48,7 +48,7 @@ App::App()
     FXL_LOG(INFO) << "Lost connection to Mozart service.";
     loop_->QuitNow();
   });
-  scenic_->GetDisplayInfo([this](ui::gfx::DisplayInfoPtr display_info) {
+  scenic_->GetDisplayInfo([this](gfx::DisplayInfoPtr display_info) {
     Init(std::move(display_info));
   });
 }
@@ -71,15 +71,15 @@ void App::InitCheckerboardMaterial(Material* uninitialized_material) {
          checkerboard_pixels_size);
 
   // Create an Image to wrap the checkerboard.
-  auto checkerboard_image_info = ui::gfx::ImageInfo::New();
+  auto checkerboard_image_info = images::ImageInfo::New();
   checkerboard_image_info->width = checkerboard_width;
   checkerboard_image_info->height = checkerboard_height;
   const size_t kBytesPerPixel = 4u;
   checkerboard_image_info->stride = checkerboard_width * kBytesPerPixel;
   checkerboard_image_info->pixel_format =
-      ui::gfx::ImageInfo::PixelFormat::BGRA_8;
-  checkerboard_image_info->color_space = ui::gfx::ImageInfo::ColorSpace::SRGB;
-  checkerboard_image_info->tiling = ui::gfx::ImageInfo::Tiling::LINEAR;
+      images::PixelFormat::BGRA_8;
+  checkerboard_image_info->color_space = images::ColorSpace::SRGB;
+  checkerboard_image_info->tiling = images::Tiling::LINEAR;
 
   HostImage checkerboard_image(checkerboard_memory, 0,
                                std::move(checkerboard_image_info));
@@ -195,7 +195,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
   pane_2_contents.SetTranslation(0, 0, 10);
 }
 
-void App::Init(ui::gfx::DisplayInfoPtr display_info) {
+void App::Init(gfx::DisplayInfoPtr display_info) {
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
@@ -280,7 +280,7 @@ void App::Update(uint64_t next_presentation_time) {
 
   // Present
   session_->Present(
-      next_presentation_time, [this](ui::PresentationInfoPtr info) {
+      next_presentation_time, [this](images::PresentationInfoPtr info) {
         Update(info->presentation_time + info->presentation_interval);
       });
 }

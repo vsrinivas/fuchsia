@@ -27,7 +27,7 @@ ViewCommandDispatcher::ViewCommandDispatcher(
 
 ViewCommandDispatcher::~ViewCommandDispatcher() = default;
 
-bool ViewCommandDispatcher::ApplyCommand(const ui::CommandPtr& command) {
+bool ViewCommandDispatcher::ApplyCommand(const ui::Command& command) {
   FXL_CHECK(false) << "not implemented";
   return false;
 }

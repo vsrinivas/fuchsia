@@ -20,7 +20,7 @@ class App {
 
  private:
   // Called asynchronously by constructor.
-  void Init(ui::gfx::DisplayInfoPtr display_info);
+  void Init(gfx::DisplayInfoPtr display_info);
 
   // Updates and presents the scene.  Called first by Init().  Each invocation
   // schedules another call to Update() when the result of the previous

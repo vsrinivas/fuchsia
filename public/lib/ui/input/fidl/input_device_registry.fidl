@@ -12,7 +12,7 @@ library input;
 // and register themselves with the |InputDeviceRegistry|. They will receive
 // a |DeviceToken| which can be used to send |InputReports| and unregister
 // the device.
-[ServiceName="mozart::InputDeviceRegistry"]
+[ServiceName="input::InputDeviceRegistry"]
 interface InputDeviceRegistry {
   // Register a device with the capabilities described by |DeviceDescriptor|
   1: RegisterDevice(DeviceDescriptor descriptor, request<InputDevice> input_device);

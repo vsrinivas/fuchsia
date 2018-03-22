@@ -12,10 +12,10 @@ namespace {
 constexpr vk::DeviceSize kVertexStride = sizeof(float) * 4;
 constexpr vk::DeviceSize kIndexStride = sizeof(uint32_t);
 
-constexpr auto kMeshVertexPositionType = ui::gfx::ValueType::kVector2;
-constexpr auto kMeshVertexNormalType = ui::gfx::ValueType::kNone;
-constexpr auto kMeshVertexTexCoodType = ui::gfx::ValueType::kVector2;
-constexpr auto kMeshIndexFormat = ui::gfx::MeshIndexFormat::kUint32;
+constexpr auto kMeshVertexPositionType = gfx::ValueType::kVector2;
+constexpr auto kMeshVertexNormalType = gfx::ValueType::kNone;
+constexpr auto kMeshVertexTexCoodType = gfx::ValueType::kVector2;
+constexpr auto kMeshIndexFormat = gfx::MeshIndexFormat::kUint32;
 
 }  // namespace
 

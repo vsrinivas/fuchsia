@@ -30,7 +30,7 @@ class DisplayUsageSwitcher {
   // |presenter| is the root presenter.
   //
   // Returns true if the scene should be invalidated.
-  bool OnEvent(const mozart::InputEventPtr& event, Presentation* presenter);
+  bool OnEvent(const input::InputEventPtr& event, Presentation* presenter);
 
  private:
   uint32_t current_display_usage_index_ = 0;

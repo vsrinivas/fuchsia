@@ -24,7 +24,7 @@ class DisplayRotater {
   // |Presentation| is the root presenter.
   //
   // Returns true if the scene should be invalidated.
-  bool OnEvent(const mozart::InputEventPtr& event, Presentation* presentation);
+  bool OnEvent(const input::InputEventPtr& event, Presentation* presentation);
 
  private:
   void FlipDisplay(Presentation* presentation);

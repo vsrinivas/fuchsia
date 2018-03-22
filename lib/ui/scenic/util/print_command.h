@@ -4,15 +4,13 @@
 
 #pragma once
 
-#include "lib/ui/gfx/fidl/commands.fidl.h"
-#include "lib/ui/gfx/fidl/types.fidl.h"
+#include <fuchsia/cpp/gfx.h>
 
 #include <ostream>
 
+std::ostream& operator<<(std::ostream& stream, const gfx::Command& command);
 std::ostream& operator<<(std::ostream& stream,
-                         const ui::gfx::CommandPtr& command);
+                         const gfx::CreateResourceCommand& command);
 std::ostream& operator<<(std::ostream& stream,
-                         const ui::gfx::CreateResourceCommandPtr& command);
-std::ostream& operator<<(std::ostream& stream,
-                         const ui::gfx::SetRendererParamCommandPtr& command);
-std::ostream& operator<<(std::ostream& stream, const ui::gfx::Value::Tag& tag);
+                         const gfx::SetRendererParamCommand& command);
+std::ostream& operator<<(std::ostream& stream, const gfx::Value::Tag& tag);

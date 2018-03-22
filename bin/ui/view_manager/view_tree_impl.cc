@@ -14,43 +14,43 @@ ViewTreeImpl::ViewTreeImpl(ViewRegistry* registry, ViewTreeState* state)
 
 ViewTreeImpl::~ViewTreeImpl() {}
 
-void ViewTreeImpl::GetToken(const GetTokenCallback& callback) {
+void ViewTreeImpl::GetToken(GetTokenCallback callback) {
   callback(state_->view_tree_token()->Clone());
 }
 
 void ViewTreeImpl::GetServiceProvider(
-    f1dl::InterfaceRequest<component::ServiceProvider> service_provider) {
+    fidl::InterfaceRequest<component::ServiceProvider> service_provider) {
   service_provider_bindings_.AddBinding(this, std::move(service_provider));
 }
 
 void ViewTreeImpl::GetContainer(
-    f1dl::InterfaceRequest<mozart::ViewContainer> view_container_request) {
+    fidl::InterfaceRequest<views_v1::ViewContainer> view_container_request) {
   container_bindings_.AddBinding(this, std::move(view_container_request));
 }
 
 void ViewTreeImpl::SetListener(
-    f1dl::InterfaceHandle<mozart::ViewContainerListener> listener) {
+    fidl::InterfaceHandle<views_v1::ViewContainerListener> listener) {
   state_->set_view_container_listener(listener.Bind());
 }
 
 void ViewTreeImpl::AddChild(
     uint32_t child_key,
-    f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
     zx::eventpair host_import_token) {
   registry_->AddChild(state_, child_key, std::move(child_view_owner),
                       std::move(host_import_token));
 }
 
-void ViewTreeImpl::RemoveChild(
-    uint32_t child_key,
-    f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request) {
+void ViewTreeImpl::RemoveChild(uint32_t child_key,
+                               fidl::InterfaceRequest<views_v1_token::ViewOwner>
+                                   transferred_view_owner_request) {
   registry_->RemoveChild(state_, child_key,
                          std::move(transferred_view_owner_request));
 }
 
 void ViewTreeImpl::SetChildProperties(
     uint32_t child_key,
-    mozart::ViewPropertiesPtr child_view_properties) {
+    views_v1::ViewPropertiesPtr child_view_properties) {
   registry_->SetChildProperties(state_, child_key,
                                 std::move(child_view_properties));
 }
@@ -59,7 +59,7 @@ void ViewTreeImpl::RequestFocus(uint32_t child_key) {
   registry_->RequestFocus(state_, child_key);
 }
 
-void ViewTreeImpl::ConnectToService(const f1dl::StringPtr& service_name,
+void ViewTreeImpl::ConnectToService(fidl::StringPtr service_name,
                                     zx::channel client_handle) {
   registry_->ConnectToViewTreeService(state_, service_name,
                                       std::move(client_handle));

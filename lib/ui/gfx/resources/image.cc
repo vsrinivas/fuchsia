@@ -27,7 +27,7 @@ Image::Image(Session* session,
 ImagePtr Image::New(Session* session,
                     scenic::ResourceId id,
                     MemoryPtr memory,
-                    const ui::gfx::ImageInfoPtr& image_info,
+                    const images::ImageInfo& image_info,
                     uint64_t memory_offset,
                     ErrorReporter* error_reporter) {
   // Create from host memory.

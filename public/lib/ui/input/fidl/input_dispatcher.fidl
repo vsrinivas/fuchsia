@@ -15,7 +15,7 @@ library input;
 // TODO(jeffbrown): Elaborate how input devices are registered with the
 // dispatcher so that applications can query their capabilities and distinguish
 // input coming from multiple sources concurrently.
-[ServiceName="mozart::InputDispatcher"]
+[ServiceName="input::InputDispatcher"]
 interface InputDispatcher {
   // Dispatches an event through the view tree.  The dispatcher will deliver
   // the event to the appropriate views based on the current state of the

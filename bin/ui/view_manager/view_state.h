@@ -10,7 +10,7 @@
 
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/views/cpp/formatting.h"
-#include "lib/ui/views/fidl/views.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
 #include "lib/fidl/cpp/binding.h"
@@ -46,9 +46,9 @@ class ViewState : public ViewContainerState {
   };
 
   ViewState(ViewRegistry* registry,
-            mozart::ViewTokenPtr view_token,
-            f1dl::InterfaceRequest<mozart::View> view_request,
-            mozart::ViewListenerPtr view_listener,
+            views_v1_token::ViewTokenPtr view_token,
+            fidl::InterfaceRequest<views_v1::View> view_request,
+            views_v1::ViewListenerPtr view_listener,
             scenic_lib::Session* session,
             const std::string& label);
   ~ViewState() override;
@@ -57,11 +57,11 @@ class ViewState : public ViewContainerState {
 
   // Gets the token used to refer to this view globally.
   // Caller does not obtain ownership of the token.
-  const mozart::ViewTokenPtr& view_token() const { return view_token_; }
+  const views_v1_token::ViewTokenPtr& view_token() const { return view_token_; }
 
   // Gets the view listener interface, never null.
   // Caller does not obtain ownership of the view listener.
-  const mozart::ViewListenerPtr& view_listener() const {
+  const views_v1::ViewListenerPtr& view_listener() const {
     return view_listener_;
   }
 
@@ -76,13 +76,13 @@ class ViewState : public ViewContainerState {
   // Gets the properties the view was asked to apply, after applying
   // any inherited properties from the container, or null if none set.
   // This value is preserved across reparenting.
-  const mozart::ViewPropertiesPtr& issued_properties() const {
+  const views_v1::ViewPropertiesPtr& issued_properties() const {
     return issued_properties_;
   }
 
   // Sets the requested properties.
   // Sets |issued_properties_valid()| to true if |properties| is not null.
-  void IssueProperties(mozart::ViewPropertiesPtr properties);
+  void IssueProperties(views_v1::ViewPropertiesPtr properties);
 
   // Gets or sets flags describing the invalidation state of the view.
   uint32_t invalidation_flags() const { return invalidation_flags_; }
@@ -90,7 +90,7 @@ class ViewState : public ViewContainerState {
 
   // Binds the |ViewOwner| interface to the view which has the effect of
   // tying the view's lifetime to that of the owner's pipe.
-  void BindOwner(f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+  void BindOwner(fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   // Unbinds the view from its owner.
   void ReleaseOwner();
@@ -111,32 +111,32 @@ class ViewState : public ViewContainerState {
       std::string service_name);
 
   void SetServiceProvider(
-      f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
-      f1dl::VectorPtr<f1dl::StringPtr> service_names);
+      fidl::InterfaceHandle<component::ServiceProvider> service_provider,
+      fidl::VectorPtr<fidl::StringPtr> service_names);
 
  private:
   void RebuildFocusChain();
 
-  mozart::ViewTokenPtr view_token_;
-  mozart::ViewListenerPtr view_listener_;
+  views_v1_token::ViewTokenPtr view_token_;
+  views_v1::ViewListenerPtr view_listener_;
   scenic_lib::EntityNode top_node_;
 
   const std::string label_;
   mutable std::string formatted_label_cache_;
 
   std::unique_ptr<ViewImpl> impl_;
-  f1dl::Binding<mozart::View> view_binding_;
-  f1dl::Binding<mozart::ViewOwner> owner_binding_;
+  fidl::Binding<views_v1::View> view_binding_;
+  fidl::Binding<views_v1_token::ViewOwner> owner_binding_;
 
   ViewStub* view_stub_ = nullptr;
 
-  mozart::ViewPropertiesPtr issued_properties_;
+  views_v1::ViewPropertiesPtr issued_properties_;
 
   uint32_t invalidation_flags_ = 0u;
 
   std::unique_ptr<FocusChain> focus_chain_;
   component::ServiceProviderPtr service_provider_;
-  f1dl::VectorPtr<f1dl::StringPtr> service_names_;
+  fidl::VectorPtr<fidl::StringPtr> service_names_;
 
   fxl::WeakPtrFactory<ViewState> weak_factory_;  // must be last
 

@@ -18,17 +18,17 @@ namespace shadertoy_client {
 class View : public mozart::BaseView {
  public:
   View(component::ApplicationContext* application_context,
-       mozart::ViewManagerPtr view_manager,
-       f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+       views_v1::ViewManagerPtr view_manager,
+       f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   ~View() override;
 
   // mozart::BaseView.
-  virtual bool OnInputEvent(mozart::InputEventPtr event) override;
+  virtual bool OnInputEvent(input::InputEventPtr event) override;
 
  private:
   // |BaseView|.
-  void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) override;
+  void OnSceneInvalidated(images::PresentationInfoPtr presentation_info) override;
 
   component::ApplicationContext* const application_context_;
   fsl::MessageLoop* loop_;

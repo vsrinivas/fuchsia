@@ -8,6 +8,8 @@
 
 #include <limits>
 
+#include "lib/fxl/logging.h"
+
 namespace mozart {
 
 static const float kIdentityMatrix[]{
@@ -16,61 +18,75 @@ static const float kIdentityMatrix[]{
     0.f, 0.f, 1.f, 0.f,  //
     0.f, 0.f, 0.f, 1.f};
 
-void SetIdentityTransform(Transform* transform) {
-  transform->matrix.resize(16u);
-  memcpy(transform->matrix->data(), kIdentityMatrix, sizeof(kIdentityMatrix));
+void SetIdentityTransform(geometry::Transform* transform) {
+  FXL_DCHECK(transform->matrix.count() == 16);
+  memcpy(static_cast<void*>(transform->matrix.mutable_data()), kIdentityMatrix,
+         sizeof(kIdentityMatrix));
 }
 
-void SetTranslationTransform(Transform* transform, float x, float y, float z) {
+void SetTranslationTransform(geometry::Transform* transform,
+                             float x,
+                             float y,
+                             float z) {
   SetIdentityTransform(transform);
   Translate(transform, x, y, z);
 }
 
-void SetScaleTransform(Transform* transform, float x, float y, float z) {
+void SetScaleTransform(geometry::Transform* transform,
+                       float x,
+                       float y,
+                       float z) {
   SetIdentityTransform(transform);
   Scale(transform, x, y, z);
 }
 
-void Translate(Transform* transform, float x, float y, float z) {
-  transform->matrix->at(3) += x;
-  transform->matrix->at(7) += y;
-  transform->matrix->at(11) += z;
+void Translate(geometry::Transform* transform, float x, float y, float z) {
+  transform->matrix.at(3) += x;
+  transform->matrix.at(7) += y;
+  transform->matrix.at(11) += z;
 }
 
-void Scale(Transform* transform, float x, float y, float z) {
-  transform->matrix->at(0) *= x;
-  transform->matrix->at(5) *= y;
-  transform->matrix->at(10) *= z;
+void Scale(geometry::Transform* transform, float x, float y, float z) {
+  transform->matrix.at(0) *= x;
+  transform->matrix.at(5) *= y;
+  transform->matrix.at(10) *= z;
 }
 
-TransformPtr CreateIdentityTransform() {
-  TransformPtr result = Transform::New();
-  result->matrix = f1dl::VectorPtr<float>::New(16);
+geometry::TransformPtr CreateIdentityTransform() {
+  geometry::TransformPtr result = geometry::Transform::New();
+  result->matrix = fidl::Array<float, 16>();
   SetIdentityTransform(result.get());
   return result;
 }
 
-TransformPtr CreateTranslationTransform(float x, float y, float z) {
+geometry::TransformPtr CreateTranslationTransform(float x, float y, float z) {
   return Translate(CreateIdentityTransform(), x, y, z);
 }
 
-TransformPtr CreateScaleTransform(float x, float y, float z) {
+geometry::TransformPtr CreateScaleTransform(float x, float y, float z) {
   return Scale(CreateIdentityTransform(), x, y, z);
 }
 
-TransformPtr Translate(TransformPtr transform, float x, float y, float z) {
+geometry::TransformPtr Translate(geometry::TransformPtr transform,
+                                 float x,
+                                 float y,
+                                 float z) {
   Translate(transform.get(), x, y, z);
   return transform;
 }
 
-TransformPtr Scale(TransformPtr transform, float x, float y, float z) {
+geometry::TransformPtr Scale(geometry::TransformPtr transform,
+                             float x,
+                             float y,
+                             float z) {
   Scale(transform.get(), x, y, z);
   return transform;
 }
 
-PointF TransformPoint(const Transform& transform, const PointF& point) {
-  PointF result;
-  const auto& m = *transform.matrix;
+geometry::PointF TransformPoint(const geometry::Transform& transform,
+                                const geometry::PointF& point) {
+  geometry::PointF result;
+  const auto& m = transform.matrix;
   float w = m[12] * point.x + m[13] * point.y + m[15];
   if (w) {
     w = 1.f / w;

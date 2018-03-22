@@ -31,7 +31,7 @@ class InputInterpreter {
   using OnReportCallback = std::function<void(ReportType type)>;
 
   static std::unique_ptr<InputInterpreter>
-  Open(int dirfd, std::string filename, mozart::InputDeviceRegistry* registry);
+  Open(int dirfd, std::string filename, input::InputDeviceRegistry* registry);
   ~InputInterpreter();
 
   bool Initialize();
@@ -50,16 +50,11 @@ class InputInterpreter {
     EGALAX
   };
 
-  enum class MouseDeviceType {
-    NONE,
-    BOOT,
-    PARADISEv1,
-    PARADISEv2
-  };
+  enum class MouseDeviceType { NONE, BOOT, PARADISEv1, PARADISEv2 };
 
   InputInterpreter(std::string name,
                    int fd,
-                   mozart::InputDeviceRegistry* registry);
+                   input::InputDeviceRegistry* registry);
 
   zx_status_t GetProtocol(int* out_proto);
   zx_status_t GetReportDescriptionLength(size_t* out_report_desc_len);
@@ -82,7 +77,7 @@ class InputInterpreter {
 
   const int fd_;
   const std::string name_;
-  mozart::InputDeviceRegistry* registry_;
+  input::InputDeviceRegistry* registry_;
 
   zx::event event_;
   std::vector<uint8_t> report_;
@@ -91,13 +86,13 @@ class InputInterpreter {
   acer12_touch_t acer12_touch_reports_[2];
 
   bool has_keyboard_ = false;
-  mozart::KeyboardDescriptorPtr keyboard_descriptor_;
+  input::KeyboardDescriptorPtr keyboard_descriptor_;
   bool has_mouse_ = false;
-  mozart::MouseDescriptorPtr mouse_descriptor_;
+  input::MouseDescriptorPtr mouse_descriptor_;
   bool has_stylus_ = false;
-  mozart::StylusDescriptorPtr stylus_descriptor_;
+  input::StylusDescriptorPtr stylus_descriptor_;
   bool has_touchscreen_ = false;
-  mozart::TouchscreenDescriptorPtr touchscreen_descriptor_;
+  input::TouchscreenDescriptorPtr touchscreen_descriptor_;
 
   TouchDeviceType touch_device_type_ = TouchDeviceType::NONE;
   MouseDeviceType mouse_device_type_ = MouseDeviceType::NONE;
@@ -106,12 +101,12 @@ class InputInterpreter {
   int32_t mouse_abs_x_ = -1;
   int32_t mouse_abs_y_ = -1;
 
-  mozart::InputReportPtr keyboard_report_;
-  mozart::InputReportPtr mouse_report_;
-  mozart::InputReportPtr touchscreen_report_;
-  mozart::InputReportPtr stylus_report_;
+  input::InputReportPtr keyboard_report_;
+  input::InputReportPtr mouse_report_;
+  input::InputReportPtr touchscreen_report_;
+  input::InputReportPtr stylus_report_;
 
-  mozart::InputDevicePtr input_device_;
+  input::InputDevicePtr input_device_;
 };
 
 }  // namespace input

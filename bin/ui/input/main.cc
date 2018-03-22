@@ -33,7 +33,7 @@ class InputApp {
             component::ApplicationContext::CreateFromStartupInfo()) {
     registry_ =
         application_context_
-            ->ConnectToEnvironmentService<mozart::InputDeviceRegistry>();
+            ->ConnectToEnvironmentService<input::InputDeviceRegistry>();
   }
 
   ~InputApp() {}
@@ -118,8 +118,8 @@ class InputApp {
     fsl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
-  mozart::InputDevicePtr RegisterTouchscreen(uint32_t width, uint32_t height) {
-    mozart::InputDevicePtr input_device;
+  input::InputDevicePtr RegisterTouchscreen(uint32_t width, uint32_t height) {
+    input::InputDevicePtr input_device;
 
     mozart::TouchscreenDescriptorPtr touchscreen =
         mozart::TouchscreenDescriptor::New();
@@ -163,7 +163,7 @@ class InputApp {
 
     FXL_VLOG(1) << "TapEvent " << x << "x" << y;
 
-    mozart::InputDevicePtr input_device = RegisterTouchscreen(width, height);
+    input::InputDevicePtr input_device = RegisterTouchscreen(width, height);
     SendTap(std::move(input_device), x, y, duration_ms);
   }
 
@@ -188,7 +188,7 @@ class InputApp {
 
     FXL_VLOG(1) << "KeyEvent " << usage;
 
-    mozart::KeyboardDescriptorPtr keyboard = mozart::KeyboardDescriptor::New();
+    input::KeyboardDescriptorPtr keyboard = input::KeyboardDescriptor::New();
     keyboard->keys.resize(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
     for (size_t index = HID_USAGE_KEY_A; index < HID_USAGE_KEY_RIGHT_GUI;
          ++index) {
@@ -197,7 +197,7 @@ class InputApp {
     mozart::DeviceDescriptorPtr descriptor = mozart::DeviceDescriptor::New();
     descriptor->keyboard = std::move(keyboard);
 
-    mozart::InputDevicePtr input_device;
+    input::InputDevicePtr input_device;
     FXL_VLOG(1) << "Registering " << *descriptor;
     registry_->RegisterDevice(std::move(descriptor), input_device.NewRequest());
 
@@ -234,12 +234,12 @@ class InputApp {
 
     FXL_VLOG(1) << "SwipeEvent " << x0 << "x" << y0 << " -> " << x1 << "x"
                 << y1;
-    mozart::InputDevicePtr input_device = RegisterTouchscreen(width, height);
+    input::InputDevicePtr input_device = RegisterTouchscreen(width, height);
 
     SendSwipe(std::move(input_device), x0, y0, x1, y1, duration);
   }
 
-  void SendTap(mozart::InputDevicePtr input_device,
+  void SendTap(input::InputDevicePtr input_device,
                uint32_t x,
                uint32_t y,
                uint32_t duration_ms) {
@@ -251,7 +251,7 @@ class InputApp {
     mozart::TouchscreenReportPtr touchscreen = mozart::TouchscreenReport::New();
     touchscreen->touches.push_back(std::move(touch));
 
-    mozart::InputReportPtr report = mozart::InputReport::New();
+    input::InputReportPtr report = input::InputReport::New();
     report->event_time = InputEventTimestampNow();
     report->touchscreen = std::move(touchscreen);
 
@@ -266,7 +266,7 @@ class InputApp {
               mozart::TouchscreenReport::New();
           touchscreen->touches.resize(0);
 
-          mozart::InputReportPtr report = mozart::InputReport::New();
+          input::InputReportPtr report = input::InputReport::New();
           report->event_time = InputEventTimestampNow();
           report->touchscreen = std::move(touchscreen);
 
@@ -277,14 +277,14 @@ class InputApp {
         delta);
   }
 
-  void SendKeyPress(mozart::InputDevicePtr input_device,
+  void SendKeyPress(input::InputDevicePtr input_device,
                     uint32_t usage,
                     uint32_t duration_ms) {
     // PRESSED
-    mozart::KeyboardReportPtr keyboard = mozart::KeyboardReport::New();
+    input::KeyboardReportPtr keyboard = input::KeyboardReport::New();
     keyboard->pressed_keys.push_back(usage);
 
-    mozart::InputReportPtr report = mozart::InputReport::New();
+    input::InputReportPtr report = input::InputReport::New();
     report->event_time = InputEventTimestampNow();
     report->keyboard = std::move(keyboard);
     FXL_VLOG(1) << "SendKeyPress " << *report;
@@ -295,10 +295,10 @@ class InputApp {
         fxl::MakeCopyable([device = std::move(input_device)]() mutable {
 
           // RELEASED
-          mozart::KeyboardReportPtr keyboard = mozart::KeyboardReport::New();
+          input::KeyboardReportPtr keyboard = input::KeyboardReport::New();
           keyboard->pressed_keys.resize(0);
 
-          mozart::InputReportPtr report = mozart::InputReport::New();
+          input::InputReportPtr report = input::InputReport::New();
           report->event_time = InputEventTimestampNow();
           report->keyboard = std::move(keyboard);
           FXL_VLOG(1) << "SendKeyPress " << *report;
@@ -308,7 +308,7 @@ class InputApp {
         delta);
   }
 
-  void SendSwipe(mozart::InputDevicePtr input_device,
+  void SendSwipe(input::InputDevicePtr input_device,
                  uint32_t x0,
                  uint32_t y0,
                  uint32_t x1,
@@ -322,7 +322,7 @@ class InputApp {
     mozart::TouchscreenReportPtr touchscreen = mozart::TouchscreenReport::New();
     touchscreen->touches.push_back(std::move(touch));
 
-    mozart::InputReportPtr report = mozart::InputReport::New();
+    input::InputReportPtr report = input::InputReport::New();
     report->event_time = InputEventTimestampNow();
     report->touchscreen = std::move(touchscreen);
     FXL_VLOG(1) << "SendSwipe " << *report;
@@ -341,7 +341,7 @@ class InputApp {
                   mozart::TouchscreenReport::New();
               touchscreen->touches.push_back(std::move(touch));
 
-              mozart::InputReportPtr report = mozart::InputReport::New();
+              input::InputReportPtr report = input::InputReport::New();
               report->event_time = InputEventTimestampNow();
               report->touchscreen = std::move(touchscreen);
               FXL_VLOG(1) << "SendSwipe " << *report;
@@ -351,7 +351,7 @@ class InputApp {
               touchscreen = mozart::TouchscreenReport::New();
               touchscreen->touches.resize(0);
 
-              report = mozart::InputReport::New();
+              report = input::InputReport::New();
               report->event_time = InputEventTimestampNow();
               report->touchscreen = std::move(touchscreen);
               FXL_VLOG(1) << "SendSwipe " << *report;
@@ -363,7 +363,7 @@ class InputApp {
   }
 
   std::unique_ptr<component::ApplicationContext> application_context_;
-  f1dl::InterfacePtr<mozart::InputDeviceRegistry> registry_;
+  fidl::InterfacePtr<input::InputDeviceRegistry> registry_;
 };
 }  // namespace input
 

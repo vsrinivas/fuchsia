@@ -38,8 +38,8 @@ inline mozart::SceneTokenPtr MakeDummySceneToken(uint32_t value) {
   return result.Pass();
 }
 
-inline mozart::ViewTokenPtr MakeDummyViewToken(uint32_t value) {
-  auto result = mozart::ViewToken::New();
+inline views_v1_token::ViewTokenPtr MakeDummyViewToken(uint32_t value) {
+  auto result = views_v1_token::ViewToken::New();
   result->value = value;
   return result.Pass();
 }

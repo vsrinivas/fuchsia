@@ -15,14 +15,14 @@ namespace shadertoy {
 
 fxl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
     App* app,
-    ::f1dl::InterfaceHandle<ui::gfx::ImagePipe> image_pipe) {
+    ::f1dl::InterfaceHandle<gfx::ImagePipe> image_pipe) {
   return fxl::AdoptRef(
       new ShadertoyStateForImagePipe(app, std::move(image_pipe)));
 }
 
 fxl::RefPtr<ShadertoyState> ShadertoyState::NewForView(
     App* app,
-    ::f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    ::f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     bool handle_input_events) {
   FXL_CHECK(false) << "unimplemented.";
   return fxl::RefPtr<ShadertoyState>();
@@ -106,7 +106,7 @@ void ShadertoyState::SetMouse(glm::vec4 i_mouse) {
 
 void ShadertoyState::SetImage(
     uint32_t channel,
-    ::f1dl::InterfaceRequest<ui::gfx::ImagePipe> request) {
+    ::f1dl::InterfaceRequest<gfx::ImagePipe> request) {
   FXL_CHECK(false) << "unimplemented";
 }
 
@@ -124,7 +124,7 @@ void ShadertoyState::RequestFrame(uint64_t presentation_time) {
   KeepAlive(escher()->command_buffer_sequencer()->latest_sequence_number());
 }
 
-void ShadertoyState::OnFramePresented(const ui::PresentationInfoPtr& info) {
+void ShadertoyState::OnFramePresented(const images::PresentationInfoPtr& info) {
   FXL_DCHECK(is_drawing_);
   is_drawing_ = false;
   RequestFrame(info->presentation_time + info->presentation_interval);

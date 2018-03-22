@@ -14,7 +14,7 @@
 #include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/transport/media_packet_consumer_base.h"
-#include "lib/ui/geometry/fidl/geometry.fidl.h"
+#include <fuchsia/cpp/geometry.h>
 #include "lib/ui/view_framework/base_view.h"
 
 namespace media {
@@ -69,7 +69,7 @@ class VideoFrameSource : public MediaPacketConsumerBase {
                  const VideoRenderer::GetStatusCallback& callback);
 
   // Gets an RGBA video frame corresponding to the current reference time.
-  void GetRgbaFrame(uint8_t* rgba_buffer, const mozart::Size& rgba_buffer_size);
+  void GetRgbaFrame(uint8_t* rgba_buffer, const geometry::Size& rgba_buffer_size);
 
  private:
   static constexpr uint32_t kPacketDemand = 3;

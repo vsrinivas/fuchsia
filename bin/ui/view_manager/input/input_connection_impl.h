@@ -5,10 +5,8 @@
 #ifndef GARNET_BIN_UI_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
 #define GARNET_BIN_UI_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
 
-#include "lib/ui/input/fidl/ime_service.fidl.h"
-#include "lib/ui/input/fidl/input_connection.fidl.h"
-#include "lib/ui/input/fidl/text_input.fidl.h"
-#include "lib/ui/views/fidl/views.fidl.h"
+#include <fuchsia/cpp/input.h>
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
@@ -22,49 +20,51 @@ using OnEventDelivered = std::function<void(bool handled)>;
 
 // InputConnection implementation.
 // Binds incoming requests to the relevant view token.
-class InputConnectionImpl : public mozart::InputConnection,
-                            mozart::InputMethodEditor,
-                            mozart::InputMethodEditorClient {
+class InputConnectionImpl : public input::InputConnection,
+                            input::InputMethodEditor,
+                            input::InputMethodEditorClient {
  public:
   InputConnectionImpl(ViewInspector* inspector,
                       InputOwner* owner,
-                      mozart::ViewTokenPtr view_token,
-                      f1dl::InterfaceRequest<mozart::InputConnection> request);
+                      views_v1_token::ViewTokenPtr view_token,
+                      fidl::InterfaceRequest<input::InputConnection> request);
   ~InputConnectionImpl() override;
 
-  const mozart::ViewToken* view_token() const { return view_token_.get(); }
+  const views_v1_token::ViewToken* view_token() const {
+    return view_token_.get();
+  }
 
   // Delivers an event to a view.
-  void DeliverEvent(mozart::InputEventPtr event, OnEventDelivered callback);
+  void DeliverEvent(input::InputEvent event, OnEventDelivered callback);
 
-  // |mozart::InputConnection|
+  // |input::InputConnection|
   void SetEventListener(
-      f1dl::InterfaceHandle<mozart::InputListener> listener) override;
+      fidl::InterfaceHandle<input::InputListener> listener) override;
   void GetInputMethodEditor(
-      mozart::KeyboardType keyboard_type,
-      mozart::InputMethodAction action,
-      mozart::TextInputStatePtr initial_state,
-      f1dl::InterfaceHandle<mozart::InputMethodEditorClient> client,
-      f1dl::InterfaceRequest<mozart::InputMethodEditor> editor) override;
+      input::KeyboardType keyboard_type,
+      input::InputMethodAction action,
+      input::TextInputState initial_state,
+      fidl::InterfaceHandle<input::InputMethodEditorClient> client,
+      fidl::InterfaceRequest<input::InputMethodEditor> editor) override;
 
-  // |mozart::InputMethodEditor|
-  void SetState(mozart::TextInputStatePtr state) override;
-  void SetKeyboardType(mozart::KeyboardType keyboard_type) override;
-  void InjectInput(mozart::InputEventPtr event) override;
+  // |input::InputMethodEditor|
+  void SetState(input::TextInputState state) override;
+  void SetKeyboardType(input::KeyboardType keyboard_type) override;
+  void InjectInput(input::InputEvent event) override;
   void Show() override;
   void Hide() override;
 
-  // |mozart::InputMethodEditorClient|
-  void DidUpdateState(mozart::TextInputStatePtr state,
-                      mozart::InputEventPtr event) override;
-  void OnAction(mozart::InputMethodAction action) override;
+  // |input::InputMethodEditorClient|
+  void DidUpdateState(input::TextInputState state,
+                      input::InputEventPtr event) override;
+  void OnAction(input::InputMethodAction action) override;
 
  private:
   void OnEditorDied();
   void OnClientDied();
-  void ConnectWithImeService(mozart::KeyboardType keyboard_type,
-                             mozart::InputMethodAction action,
-                             mozart::TextInputStatePtr state);
+  void ConnectWithImeService(input::KeyboardType keyboard_type,
+                             input::InputMethodAction action,
+                             input::TextInputState state);
   void Reset();
 
   // TODO(jpoichet) Query to see if it is attached
@@ -72,21 +72,21 @@ class InputConnectionImpl : public mozart::InputConnection,
 
   ViewInspector* const inspector_;
   InputOwner* const owner_;
-  mozart::ViewTokenPtr view_token_;
-  mozart::InputListenerPtr event_listener_;
+  views_v1_token::ViewTokenPtr view_token_;
+  input::InputListenerPtr event_listener_;
 
-  f1dl::Binding<mozart::InputConnection> binding_;
+  fidl::Binding<input::InputConnection> binding_;
 
   // From the test input
-  f1dl::Binding<mozart::InputMethodEditor> editor_binding_;
-  mozart::InputMethodEditorClientPtr client_;
+  fidl::Binding<input::InputMethodEditor> editor_binding_;
+  input::InputMethodEditorClientPtr client_;
 
   // From the IME service
-  f1dl::Binding<mozart::InputMethodEditorClient> client_binding_;
-  mozart::InputMethodEditorPtr editor_;
+  fidl::Binding<input::InputMethodEditorClient> client_binding_;
+  input::InputMethodEditorPtr editor_;
 
-  mozart::SoftKeyboardContainerPtr container_;
-  mozart::ImeServicePtr ime_service_;
+  input::SoftKeyboardContainerPtr container_;
+  input::ImeServicePtr ime_service_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InputConnectionImpl);
 };

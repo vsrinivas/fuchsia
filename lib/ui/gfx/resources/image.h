@@ -22,7 +22,7 @@ class Image : public ImageBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  // Create Image given a MemoryPtr, ui::gfx::ImageInfoPtr, and memory_offset.
+  // Create Image given a MemoryPtr, images::ImageInfoPtr, and memory_offset.
   //
   // |session| is the Session that this image can be referenced from.
   // |memory| is the memory that is associated with this image.
@@ -34,7 +34,7 @@ class Image : public ImageBase {
   static ImagePtr New(Session* session,
                       scenic::ResourceId id,
                       MemoryPtr memory,
-                      const ui::gfx::ImageInfoPtr& image_info,
+                      const images::ImageInfo& image_info,
                       uint64_t memory_offset,
                       ErrorReporter* error_reporter);
 

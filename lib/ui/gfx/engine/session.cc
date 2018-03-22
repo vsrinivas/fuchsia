@@ -6,7 +6,9 @@
 
 #include <trace/event.h>
 #include <zx/time.h>
+#include <utility>
 
+#include <fuchsia/cpp/gfx.h>
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/gfx/resources/buffer.h"
@@ -33,7 +35,6 @@
 #include "garnet/lib/ui/gfx/resources/variable.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/gfx/util/wrap.h"
-#include "lib/ui/gfx/fidl/types.fidl.h"
 
 #include "lib/escher/hmd/pose_buffer.h"
 #include "lib/escher/shape/mesh.h"
@@ -49,22 +50,22 @@ namespace {
 // or a variable.
 // TODO: There should also be a convenient way of type-checking a variable;
 // this will necessarily involve looking up the value in the ResourceMap.
-constexpr std::array<ui::gfx::Value::Tag, 2> kFloatValueTypes{
-    {ui::gfx::Value::Tag::VECTOR1, ui::gfx::Value::Tag::VARIABLE_ID}};
+constexpr std::array<::gfx::Value::Tag, 2> kFloatValueTypes{
+    {::gfx::Value::Tag::kVector1, ::gfx::Value::Tag::kVariableId}};
 
 // Converts the provided vector of scene_manager hits into a fidl array of
 // HitPtrs.
-f1dl::VectorPtr<ui::gfx::HitPtr> WrapHits(const std::vector<Hit>& hits) {
-  f1dl::VectorPtr<ui::gfx::HitPtr> wrapped_hits;
+fidl::VectorPtr<::gfx::Hit> WrapHits(const std::vector<Hit>& hits) {
+  fidl::VectorPtr<::gfx::Hit> wrapped_hits;
   wrapped_hits.resize(hits.size());
   for (size_t i = 0; i < hits.size(); ++i) {
     const Hit& hit = hits[i];
-    ui::gfx::HitPtr wrapped_hit = ui::gfx::Hit::New();
-    wrapped_hit->tag_value = hit.tag_value;
-    wrapped_hit->ray_origin = Wrap(hit.ray.origin);
-    wrapped_hit->ray_direction = Wrap(hit.ray.direction);
-    wrapped_hit->inverse_transform = Wrap(hit.inverse_transform);
-    wrapped_hit->distance = hit.distance;
+    ::gfx::Hit wrapped_hit;
+    wrapped_hit.tag_value = hit.tag_value;
+    wrapped_hit.ray_origin = Wrap(hit.ray.origin);
+    wrapped_hit.ray_direction = Wrap(hit.ray.direction);
+    wrapped_hit.inverse_transform = Wrap(hit.inverse_transform);
+    wrapped_hit.distance = hit.distance;
     wrapped_hits->at(i) = std::move(wrapped_hit);
   }
   return wrapped_hits;
@@ -90,100 +91,102 @@ Session::~Session() {
   FXL_DCHECK(!is_valid_);
 }
 
-bool Session::ApplyCommand(const ui::gfx::CommandPtr& command) {
-  switch (command->which()) {
-    case ui::gfx::Command::Tag::CREATE_RESOURCE:
-      return ApplyCreateResourceCommand(command->get_create_resource());
-    case ui::gfx::Command::Tag::RELEASE_RESOURCE:
-      return ApplyReleaseResourceCommand(command->get_release_resource());
-    case ui::gfx::Command::Tag::EXPORT_RESOURCE:
-      return ApplyExportResourceCommand(command->get_export_resource());
-    case ui::gfx::Command::Tag::IMPORT_RESOURCE:
-      return ApplyImportResourceCommand(command->get_import_resource());
-    case ui::gfx::Command::Tag::ADD_CHILD:
-      return ApplyAddChildCommand(command->get_add_child());
-    case ui::gfx::Command::Tag::ADD_PART:
-      return ApplyAddPartCommand(command->get_add_part());
-    case ui::gfx::Command::Tag::DETACH:
-      return ApplyDetachCommand(command->get_detach());
-    case ui::gfx::Command::Tag::DETACH_CHILDREN:
-      return ApplyDetachChildrenCommand(command->get_detach_children());
-    case ui::gfx::Command::Tag::SET_TAG:
-      return ApplySetTagCommand(command->get_set_tag());
-    case ui::gfx::Command::Tag::SET_TRANSLATION:
-      return ApplySetTranslationCommand(command->get_set_translation());
-    case ui::gfx::Command::Tag::SET_SCALE:
-      return ApplySetScaleCommand(command->get_set_scale());
-    case ui::gfx::Command::Tag::SET_ROTATION:
-      return ApplySetRotationCommand(command->get_set_rotation());
-    case ui::gfx::Command::Tag::SET_ANCHOR:
-      return ApplySetAnchorCommand(command->get_set_anchor());
-    case ui::gfx::Command::Tag::SET_SIZE:
-      return ApplySetSizeCommand(command->get_set_size());
-    case ui::gfx::Command::Tag::SET_SHAPE:
-      return ApplySetShapeCommand(command->get_set_shape());
-    case ui::gfx::Command::Tag::SET_MATERIAL:
-      return ApplySetMaterialCommand(command->get_set_material());
-    case ui::gfx::Command::Tag::SET_CLIP:
-      return ApplySetClipCommand(command->get_set_clip());
-    case ui::gfx::Command::Tag::SET_HIT_TEST_BEHAVIOR:
+bool Session::ApplyCommand(::gfx::Command command) {
+  switch (command.Which()) {
+    case ::gfx::Command::Tag::kCreateResource:
+      return ApplyCreateResourceCommand(std::move(command.create_resource()));
+    case ::gfx::Command::Tag::kReleaseResource:
+      return ApplyReleaseResourceCommand(std::move(command.release_resource()));
+    case ::gfx::Command::Tag::kExportResource:
+      return ApplyExportResourceCommand(std::move(command.export_resource()));
+    case ::gfx::Command::Tag::kImportResource:
+      return ApplyImportResourceCommand(std::move(command.import_resource()));
+    case ::gfx::Command::Tag::kAddChild:
+      return ApplyAddChildCommand(std::move(command.add_child()));
+    case ::gfx::Command::Tag::kAddPart:
+      return ApplyAddPartCommand(std::move(command.add_part()));
+    case ::gfx::Command::Tag::kDetach:
+      return ApplyDetachCommand(std::move(command.detach()));
+    case ::gfx::Command::Tag::kDetachChildren:
+      return ApplyDetachChildrenCommand(std::move(command.detach_children()));
+    case ::gfx::Command::Tag::kSetTag:
+      return ApplySetTagCommand(std::move(command.set_tag()));
+    case ::gfx::Command::Tag::kSetTranslation:
+      return ApplySetTranslationCommand(std::move(command.set_translation()));
+    case ::gfx::Command::Tag::kSetScale:
+      return ApplySetScaleCommand(std::move(command.set_scale()));
+    case ::gfx::Command::Tag::kSetRotation:
+      return ApplySetRotationCommand(std::move(command.set_rotation()));
+    case ::gfx::Command::Tag::kSetAnchor:
+      return ApplySetAnchorCommand(std::move(command.set_anchor()));
+    case ::gfx::Command::Tag::kSetSize:
+      return ApplySetSizeCommand(std::move(command.set_size()));
+    case ::gfx::Command::Tag::kSetShape:
+      return ApplySetShapeCommand(std::move(command.set_shape()));
+    case ::gfx::Command::Tag::kSetMaterial:
+      return ApplySetMaterialCommand(std::move(command.set_material()));
+    case ::gfx::Command::Tag::kSetClip:
+      return ApplySetClipCommand(std::move(command.set_clip()));
+    case ::gfx::Command::Tag::kSetHitTestBehavior:
       return ApplySetHitTestBehaviorCommand(
-          command->get_set_hit_test_behavior());
-    case ui::gfx::Command::Tag::SET_CAMERA:
-      return ApplySetCameraCommand(command->get_set_camera());
-    case ui::gfx::Command::Tag::SET_CAMERA_TRANSFORM:
+          std::move(command.set_hit_test_behavior()));
+    case ::gfx::Command::Tag::kSetCamera:
+      return ApplySetCameraCommand(std::move(command.set_camera()));
+    case ::gfx::Command::Tag::kSetCameraTransform:
       return ApplySetCameraTransformCommand(
-          command->get_set_camera_transform());
-    case ui::gfx::Command::Tag::SET_CAMERA_PROJECTION:
+          std::move(command.set_camera_transform()));
+    case ::gfx::Command::Tag::kSetCameraProjection:
       return ApplySetCameraProjectionCommand(
-          command->get_set_camera_projection());
-    case ui::gfx::Command::Tag::SET_STEREO_CAMERA_PROJECTION:
+          std::move(command.set_camera_projection()));
+    case ::gfx::Command::Tag::kSetStereoCameraProjection:
       return ApplySetStereoCameraProjectionCommand(
-          command->get_set_stereo_camera_projection());
-    case ui::gfx::Command::Tag::SET_CAMERA_POSE_BUFFER:
+          std::move(command.set_stereo_camera_projection()));
+    case ::gfx::Command::Tag::kSetCameraPoseBuffer:
       return ApplySetCameraPoseBufferCommand(
-          command->get_set_camera_pose_buffer());
-    case ui::gfx::Command::Tag::SET_LIGHT_COLOR:
-      return ApplySetLightColorCommand(command->get_set_light_color());
-    case ui::gfx::Command::Tag::SET_LIGHT_DIRECTION:
-      return ApplySetLightDirectionCommand(command->get_set_light_direction());
-    case ui::gfx::Command::Tag::ADD_LIGHT:
-      return ApplyAddLightCommand(command->get_add_light());
-    case ui::gfx::Command::Tag::DETACH_LIGHT:
-      return ApplyDetachLightCommand(command->get_detach_light());
-    case ui::gfx::Command::Tag::DETACH_LIGHTS:
-      return ApplyDetachLightsCommand(command->get_detach_lights());
-    case ui::gfx::Command::Tag::SET_TEXTURE:
-      return ApplySetTextureCommand(command->get_set_texture());
-    case ui::gfx::Command::Tag::SET_COLOR:
-      return ApplySetColorCommand(command->get_set_color());
-    case ui::gfx::Command::Tag::BIND_MESH_BUFFERS:
-      return ApplyBindMeshBuffersCommand(command->get_bind_mesh_buffers());
-    case ui::gfx::Command::Tag::ADD_LAYER:
-      return ApplyAddLayerCommand(command->get_add_layer());
-    case ui::gfx::Command::Tag::SET_LAYER_STACK:
-      return ApplySetLayerStackCommand(command->get_set_layer_stack());
-    case ui::gfx::Command::Tag::SET_RENDERER:
-      return ApplySetRendererCommand(command->get_set_renderer());
-    case ui::gfx::Command::Tag::SET_RENDERER_PARAM:
-      return ApplySetRendererParamCommand(command->get_set_renderer_param());
-    case ui::gfx::Command::Tag::SET_EVENT_MASK:
-      return ApplySetEventMaskCommand(command->get_set_event_mask());
-    case ui::gfx::Command::Tag::SET_LABEL:
-      return ApplySetLabelCommand(command->get_set_label());
-    case ui::gfx::Command::Tag::SET_DISABLE_CLIPPING:
+          std::move(command.set_camera_pose_buffer()));
+    case ::gfx::Command::Tag::kSetLightColor:
+      return ApplySetLightColorCommand(std::move(command.set_light_color()));
+    case ::gfx::Command::Tag::kSetLightDirection:
+      return ApplySetLightDirectionCommand(
+          std::move(command.set_light_direction()));
+    case ::gfx::Command::Tag::kAddLight:
+      return ApplyAddLightCommand(std::move(command.add_light()));
+    case ::gfx::Command::Tag::kDetachLight:
+      return ApplyDetachLightCommand(std::move(command.detach_light()));
+    case ::gfx::Command::Tag::kDetachLights:
+      return ApplyDetachLightsCommand(std::move(command.detach_lights()));
+    case ::gfx::Command::Tag::kSetTexture:
+      return ApplySetTextureCommand(std::move(command.set_texture()));
+    case ::gfx::Command::Tag::kSetColor:
+      return ApplySetColorCommand(std::move(command.set_color()));
+    case ::gfx::Command::Tag::kBindMeshBuffers:
+      return ApplyBindMeshBuffersCommand(
+          std::move(command.bind_mesh_buffers()));
+    case ::gfx::Command::Tag::kAddLayer:
+      return ApplyAddLayerCommand(std::move(command.add_layer()));
+    case ::gfx::Command::Tag::kSetLayerStack:
+      return ApplySetLayerStackCommand(std::move(command.set_layer_stack()));
+    case ::gfx::Command::Tag::kSetRenderer:
+      return ApplySetRendererCommand(std::move(command.set_renderer()));
+    case ::gfx::Command::Tag::kSetRendererParam:
+      return ApplySetRendererParamCommand(
+          std::move(command.set_renderer_param()));
+    case ::gfx::Command::Tag::kSetEventMask:
+      return ApplySetEventMaskCommand(std::move(command.set_event_mask()));
+    case ::gfx::Command::Tag::kSetLabel:
+      return ApplySetLabelCommand(std::move(command.set_label()));
+    case ::gfx::Command::Tag::kSetDisableClipping:
       return ApplySetDisableClippingCommand(
-          command->get_set_disable_clipping());
-    case ui::gfx::Command::Tag::__UNKNOWN__:
+          std::move(command.set_disable_clipping()));
+    case ::gfx::Command::Tag::Invalid:
       // FIDL validation should make this impossible.
       FXL_CHECK(false);
       return false;
   }
 }
 
-bool Session::ApplyCreateResourceCommand(
-    const ui::gfx::CreateResourceCommandPtr& command) {
-  const scenic::ResourceId id = command->id;
+bool Session::ApplyCreateResourceCommand(::gfx::CreateResourceCommand command) {
+  const scenic::ResourceId id = command.id;
   if (id == 0) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplyCreateResourceCommand(): invalid ID: "
@@ -191,60 +194,62 @@ bool Session::ApplyCreateResourceCommand(
     return false;
   }
 
-  switch (command->resource->which()) {
-    case ui::gfx::ResourceArgs::Tag::MEMORY:
-      return ApplyCreateMemory(id, command->resource->get_memory());
-    case ui::gfx::ResourceArgs::Tag::IMAGE:
-      return ApplyCreateImage(id, command->resource->get_image());
-    case ui::gfx::ResourceArgs::Tag::IMAGE_PIPE:
-      return ApplyCreateImagePipe(id, command->resource->get_image_pipe());
-    case ui::gfx::ResourceArgs::Tag::BUFFER:
-      return ApplyCreateBuffer(id, command->resource->get_buffer());
-    case ui::gfx::ResourceArgs::Tag::SCENE:
-      return ApplyCreateScene(id, command->resource->get_scene());
-    case ui::gfx::ResourceArgs::Tag::CAMERA:
-      return ApplyCreateCamera(id, command->resource->get_camera());
-    case ui::gfx::ResourceArgs::Tag::STEREO_CAMERA:
-      return ApplyCreateStereoCamera(id,
-                                     command->resource->get_stereo_camera());
-    case ui::gfx::ResourceArgs::Tag::RENDERER:
-      return ApplyCreateRenderer(id, command->resource->get_renderer());
-    case ui::gfx::ResourceArgs::Tag::AMBIENT_LIGHT:
-      return ApplyCreateAmbientLight(id,
-                                     command->resource->get_ambient_light());
-    case ui::gfx::ResourceArgs::Tag::DIRECTIONAL_LIGHT:
+  switch (command.resource.Which()) {
+    case ::gfx::ResourceArgs::Tag::kMemory:
+      return ApplyCreateMemory(id, std::move(command.resource.memory()));
+    case ::gfx::ResourceArgs::Tag::kImage:
+      return ApplyCreateImage(id, std::move(command.resource.image()));
+    case ::gfx::ResourceArgs::Tag::kImagePipe:
+      return ApplyCreateImagePipe(id, std::move(command.resource.image_pipe()));
+    case ::gfx::ResourceArgs::Tag::kBuffer:
+      return ApplyCreateBuffer(id, std::move(command.resource.buffer()));
+    case ::gfx::ResourceArgs::Tag::kScene:
+      return ApplyCreateScene(id, std::move(command.resource.scene()));
+    case ::gfx::ResourceArgs::Tag::kCamera:
+      return ApplyCreateCamera(id, std::move(command.resource.camera()));
+    case ::gfx::ResourceArgs::Tag::kStereoCamera:
+      return ApplyCreateStereoCamera(
+          id, std::move(command.resource.stereo_camera()));
+    case ::gfx::ResourceArgs::Tag::kRenderer:
+      return ApplyCreateRenderer(id, std::move(command.resource.renderer()));
+    case ::gfx::ResourceArgs::Tag::kAmbientLight:
+      return ApplyCreateAmbientLight(
+          id, std::move(command.resource.ambient_light()));
+    case ::gfx::ResourceArgs::Tag::kDirectionalLight:
       return ApplyCreateDirectionalLight(
-          id, command->resource->get_directional_light());
-    case ui::gfx::ResourceArgs::Tag::RECTANGLE:
-      return ApplyCreateRectangle(id, command->resource->get_rectangle());
-    case ui::gfx::ResourceArgs::Tag::ROUNDED_RECTANGLE:
+          id, std::move(command.resource.directional_light()));
+    case ::gfx::ResourceArgs::Tag::kRectangle:
+      return ApplyCreateRectangle(id, std::move(command.resource.rectangle()));
+    case ::gfx::ResourceArgs::Tag::kRoundedRectangle:
       return ApplyCreateRoundedRectangle(
-          id, command->resource->get_rounded_rectangle());
-    case ui::gfx::ResourceArgs::Tag::CIRCLE:
-      return ApplyCreateCircle(id, command->resource->get_circle());
-    case ui::gfx::ResourceArgs::Tag::MESH:
-      return ApplyCreateMesh(id, command->resource->get_mesh());
-    case ui::gfx::ResourceArgs::Tag::MATERIAL:
-      return ApplyCreateMaterial(id, command->resource->get_material());
-    case ui::gfx::ResourceArgs::Tag::CLIP_NODE:
-      return ApplyCreateClipNode(id, command->resource->get_clip_node());
-    case ui::gfx::ResourceArgs::Tag::ENTITY_NODE:
-      return ApplyCreateEntityNode(id, command->resource->get_entity_node());
-    case ui::gfx::ResourceArgs::Tag::SHAPE_NODE:
-      return ApplyCreateShapeNode(id, command->resource->get_shape_node());
-    case ui::gfx::ResourceArgs::Tag::DISPLAY_COMPOSITOR:
+          id, std::move(command.resource.rounded_rectangle()));
+    case ::gfx::ResourceArgs::Tag::kCircle:
+      return ApplyCreateCircle(id, std::move(command.resource.circle()));
+    case ::gfx::ResourceArgs::Tag::kMesh:
+      return ApplyCreateMesh(id, std::move(command.resource.mesh()));
+    case ::gfx::ResourceArgs::Tag::kMaterial:
+      return ApplyCreateMaterial(id, std::move(command.resource.material()));
+    case ::gfx::ResourceArgs::Tag::kClipNode:
+      return ApplyCreateClipNode(id, std::move(command.resource.clip_node()));
+    case ::gfx::ResourceArgs::Tag::kEntityNode:
+      return ApplyCreateEntityNode(id,
+                                   std::move(command.resource.entity_node()));
+    case ::gfx::ResourceArgs::Tag::kShapeNode:
+      return ApplyCreateShapeNode(id, std::move(command.resource.shape_node()));
+    case ::gfx::ResourceArgs::Tag::kDisplayCompositor:
       return ApplyCreateDisplayCompositor(
-          id, command->resource->get_display_compositor());
-    case ui::gfx::ResourceArgs::Tag::IMAGE_PIPE_COMPOSITOR:
+          id, std::move(command.resource.display_compositor()));
+    case ::gfx::ResourceArgs::Tag::kImagePipeCompositor:
       return ApplyCreateImagePipeCompositor(
-          id, command->resource->get_image_pipe_compositor());
-    case ui::gfx::ResourceArgs::Tag::LAYER_STACK:
-      return ApplyCreateLayerStack(id, command->resource->get_layer_stack());
-    case ui::gfx::ResourceArgs::Tag::LAYER:
-      return ApplyCreateLayer(id, command->resource->get_layer());
-    case ui::gfx::ResourceArgs::Tag::VARIABLE:
-      return ApplyCreateVariable(id, command->resource->get_variable());
-    case ui::gfx::ResourceArgs::Tag::__UNKNOWN__:
+          id, std::move(command.resource.image_pipe_compositor()));
+    case ::gfx::ResourceArgs::Tag::kLayerStack:
+      return ApplyCreateLayerStack(id,
+                                   std::move(command.resource.layer_stack()));
+    case ::gfx::ResourceArgs::Tag::kLayer:
+      return ApplyCreateLayer(id, std::move(command.resource.layer()));
+    case ::gfx::ResourceArgs::Tag::kVariable:
+      return ApplyCreateVariable(id, std::move(command.resource.variable()));
+    case ::gfx::ResourceArgs::Tag::Invalid:
       // FIDL validation should make this impossible.
       FXL_CHECK(false);
       return false;
@@ -252,156 +257,150 @@ bool Session::ApplyCreateResourceCommand(
 }
 
 bool Session::ApplyReleaseResourceCommand(
-    const ui::gfx::ReleaseResourceCommandPtr& command) {
-  return resources_.RemoveResource(command->id);
+    ::gfx::ReleaseResourceCommand command) {
+  return resources_.RemoveResource(command.id);
 }
 
-bool Session::ApplyExportResourceCommand(
-    const ui::gfx::ExportResourceCommandPtr& command) {
-  if (!command->token) {
+bool Session::ApplyExportResourceCommand(::gfx::ExportResourceCommand command) {
+  if (!command.token) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplyExportResourceCommand(): "
            "no token provided.";
     return false;
   }
-  if (auto resource = resources_.FindResource<Resource>(command->id)) {
-    return engine_->resource_linker()->ExportResource(
-        resource.get(), std::move(command->token));
+  if (auto resource = resources_.FindResource<Resource>(command.id)) {
+    return engine_->resource_linker()->ExportResource(resource.get(),
+                                                      std::move(command.token));
   }
   return false;
 }
 
-bool Session::ApplyImportResourceCommand(
-    const ui::gfx::ImportResourceCommandPtr& command) {
-  if (!command->token) {
+bool Session::ApplyImportResourceCommand(::gfx::ImportResourceCommand command) {
+  if (!command.token) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplyImportResourceCommand(): "
            "no token provided.";
     return false;
   }
   ImportPtr import =
-      fxl::MakeRefCounted<Import>(this, command->id, command->spec);
-  return engine_->resource_linker()->ImportResource(
-             import.get(), command->spec, std::move(command->token)) &&
-         resources_.AddResource(command->id, std::move(import));
+      fxl::MakeRefCounted<Import>(this, command.id, command.spec);
+  return engine_->resource_linker()->ImportResource(import.get(), command.spec,
+                                                    std::move(command.token)) &&
+         resources_.AddResource(command.id, std::move(import));
 }
 
-bool Session::ApplyAddChildCommand(const ui::gfx::AddChildCommandPtr& command) {
+bool Session::ApplyAddChildCommand(::gfx::AddChildCommand command) {
   // Find the parent and child nodes.
-  if (auto parent_node = resources_.FindResource<Node>(command->node_id)) {
-    if (auto child_node = resources_.FindResource<Node>(command->child_id)) {
+  if (auto parent_node = resources_.FindResource<Node>(command.node_id)) {
+    if (auto child_node = resources_.FindResource<Node>(command.child_id)) {
       return parent_node->AddChild(std::move(child_node));
     }
   }
   return false;
 }
 
-bool Session::ApplyAddPartCommand(const ui::gfx::AddPartCommandPtr& command) {
+bool Session::ApplyAddPartCommand(::gfx::AddPartCommand command) {
   // Find the parent and part nodes.
-  if (auto parent_node = resources_.FindResource<Node>(command->node_id)) {
-    if (auto part_node = resources_.FindResource<Node>(command->part_id)) {
+  if (auto parent_node = resources_.FindResource<Node>(command.node_id)) {
+    if (auto part_node = resources_.FindResource<Node>(command.part_id)) {
       return parent_node->AddPart(std::move(part_node));
     }
   }
   return false;
 }
 
-bool Session::ApplyDetachCommand(const ui::gfx::DetachCommandPtr& command) {
-  if (auto resource = resources_.FindResource<Resource>(command->id)) {
+bool Session::ApplyDetachCommand(::gfx::DetachCommand command) {
+  if (auto resource = resources_.FindResource<Resource>(command.id)) {
     return resource->Detach();
   }
   return false;
 }
 
-bool Session::ApplyDetachChildrenCommand(
-    const ui::gfx::DetachChildrenCommandPtr& command) {
-  if (auto node = resources_.FindResource<Node>(command->node_id)) {
+bool Session::ApplyDetachChildrenCommand(::gfx::DetachChildrenCommand command) {
+  if (auto node = resources_.FindResource<Node>(command.node_id)) {
     return node->DetachChildren();
   }
   return false;
 }
 
-bool Session::ApplySetTagCommand(const ui::gfx::SetTagCommandPtr& command) {
-  if (auto node = resources_.FindResource<Node>(command->node_id)) {
-    return node->SetTagValue(command->tag_value);
+bool Session::ApplySetTagCommand(::gfx::SetTagCommand command) {
+  if (auto node = resources_.FindResource<Node>(command.node_id)) {
+    return node->SetTagValue(command.tag_value);
   }
   return false;
 }
 
-bool Session::ApplySetTranslationCommand(
-    const ui::gfx::SetTranslationCommandPtr& command) {
-  if (auto node = resources_.FindResource<Node>(command->id)) {
-    if (IsVariable(command->value)) {
+bool Session::ApplySetTranslationCommand(::gfx::SetTranslationCommand command) {
+  if (auto node = resources_.FindResource<Node>(command.id)) {
+    if (IsVariable(command.value)) {
       if (auto variable = resources_.FindVariableResource<Vector3Variable>(
-              command->value->variable_id)) {
+              command.value.variable_id)) {
         return node->SetTranslation(variable);
       }
     } else {
-      return node->SetTranslation(UnwrapVector3(command->value));
+      return node->SetTranslation(UnwrapVector3(command.value));
     }
   }
   return false;
 }
 
-bool Session::ApplySetScaleCommand(const ui::gfx::SetScaleCommandPtr& command) {
-  if (auto node = resources_.FindResource<Node>(command->id)) {
-    if (IsVariable(command->value)) {
+bool Session::ApplySetScaleCommand(::gfx::SetScaleCommand command) {
+  if (auto node = resources_.FindResource<Node>(command.id)) {
+    if (IsVariable(command.value)) {
       if (auto variable = resources_.FindVariableResource<Vector3Variable>(
-              command->value->variable_id)) {
+              command.value.variable_id)) {
         return node->SetScale(variable);
       }
     } else {
-      return node->SetScale(UnwrapVector3(command->value));
+      return node->SetScale(UnwrapVector3(command.value));
     }
   }
   return false;
 }
 
-bool Session::ApplySetRotationCommand(
-    const ui::gfx::SetRotationCommandPtr& command) {
-  if (auto node = resources_.FindResource<Node>(command->id)) {
-    if (IsVariable(command->value)) {
+bool Session::ApplySetRotationCommand(::gfx::SetRotationCommand command) {
+  if (auto node = resources_.FindResource<Node>(command.id)) {
+    if (IsVariable(command.value)) {
       if (auto variable = resources_.FindVariableResource<QuaternionVariable>(
-              command->value->variable_id)) {
+              command.value.variable_id)) {
         return node->SetRotation(variable);
       }
     } else {
-      return node->SetRotation(UnwrapQuaternion(command->value));
+      return node->SetRotation(UnwrapQuaternion(command.value));
     }
   }
   return false;
 }
 
-bool Session::ApplySetAnchorCommand(
-    const ui::gfx::SetAnchorCommandPtr& command) {
-  if (auto node = resources_.FindResource<Node>(command->id)) {
-    if (IsVariable(command->value)) {
+bool Session::ApplySetAnchorCommand(::gfx::SetAnchorCommand command) {
+  if (auto node = resources_.FindResource<Node>(command.id)) {
+    if (IsVariable(command.value)) {
       if (auto variable = resources_.FindVariableResource<Vector3Variable>(
-              command->value->variable_id)) {
+              command.value.variable_id)) {
         return node->SetAnchor(variable);
       }
     }
-    return node->SetAnchor(UnwrapVector3(command->value));
+    return node->SetAnchor(UnwrapVector3(command.value));
   }
   return false;
 }
 
-bool Session::ApplySetSizeCommand(const ui::gfx::SetSizeCommandPtr& command) {
-  if (auto layer = resources_.FindResource<Layer>(command->id)) {
-    if (IsVariable(command->value)) {
+bool Session::ApplySetSizeCommand(::gfx::SetSizeCommand command) {
+  if (auto layer = resources_.FindResource<Layer>(command.id)) {
+    if (IsVariable(command.value)) {
       error_reporter_->ERROR()
           << "scenic::gfx::Session::ApplySetSizeCommand(): "
              "unimplemented for variable value.";
       return false;
     }
-    return layer->SetSize(UnwrapVector2(command->value));
+    return layer->SetSize(UnwrapVector2(command.value));
   }
   return false;
 }
 
-bool Session::ApplySetShapeCommand(const ui::gfx::SetShapeCommandPtr& command) {
-  if (auto node = resources_.FindResource<ShapeNode>(command->node_id)) {
-    if (auto shape = resources_.FindResource<Shape>(command->shape_id)) {
+bool Session::ApplySetShapeCommand(::gfx::SetShapeCommand command) {
+  if (auto node = resources_.FindResource<ShapeNode>(command.node_id)) {
+    if (auto shape = resources_.FindResource<Shape>(command.shape_id)) {
       node->SetShape(std::move(shape));
       return true;
     }
@@ -409,11 +408,10 @@ bool Session::ApplySetShapeCommand(const ui::gfx::SetShapeCommandPtr& command) {
   return false;
 }
 
-bool Session::ApplySetMaterialCommand(
-    const ui::gfx::SetMaterialCommandPtr& command) {
-  if (auto node = resources_.FindResource<ShapeNode>(command->node_id)) {
+bool Session::ApplySetMaterialCommand(::gfx::SetMaterialCommand command) {
+  if (auto node = resources_.FindResource<ShapeNode>(command.node_id)) {
     if (auto material =
-            resources_.FindResource<Material>(command->material_id)) {
+            resources_.FindResource<Material>(command.material_id)) {
       node->SetMaterial(std::move(material));
       return true;
     }
@@ -421,8 +419,8 @@ bool Session::ApplySetMaterialCommand(
   return false;
 }
 
-bool Session::ApplySetClipCommand(const ui::gfx::SetClipCommandPtr& command) {
-  if (command->clip_id != 0) {
+bool Session::ApplySetClipCommand(::gfx::SetClipCommand command) {
+  if (command.clip_id != 0) {
     // TODO(MZ-167): Support non-zero clip_id.
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetClipCommand(): only "
@@ -430,30 +428,29 @@ bool Session::ApplySetClipCommand(const ui::gfx::SetClipCommandPtr& command) {
     return false;
   }
 
-  if (auto node = resources_.FindResource<Node>(command->node_id)) {
-    return node->SetClipToSelf(command->clip_to_self);
+  if (auto node = resources_.FindResource<Node>(command.node_id)) {
+    return node->SetClipToSelf(command.clip_to_self);
   }
 
   return false;
 }
 
 bool Session::ApplySetHitTestBehaviorCommand(
-    const ui::gfx::SetHitTestBehaviorCommandPtr& command) {
-  if (auto node = resources_.FindResource<Node>(command->node_id)) {
-    return node->SetHitTestBehavior(command->hit_test_behavior);
+    ::gfx::SetHitTestBehaviorCommand command) {
+  if (auto node = resources_.FindResource<Node>(command.node_id)) {
+    return node->SetHitTestBehavior(command.hit_test_behavior);
   }
 
   return false;
 }
 
-bool Session::ApplySetCameraCommand(
-    const ui::gfx::SetCameraCommandPtr& command) {
-  if (auto renderer = resources_.FindResource<Renderer>(command->renderer_id)) {
-    if (command->camera_id == 0) {
+bool Session::ApplySetCameraCommand(::gfx::SetCameraCommand command) {
+  if (auto renderer = resources_.FindResource<Renderer>(command.renderer_id)) {
+    if (command.camera_id == 0) {
       renderer->SetCamera(nullptr);
       return true;
     } else if (auto camera =
-                   resources_.FindResource<Camera>(command->camera_id)) {
+                   resources_.FindResource<Camera>(command.camera_id)) {
       renderer->SetCamera(std::move(camera));
       return true;
     }
@@ -461,14 +458,13 @@ bool Session::ApplySetCameraCommand(
   return false;
 }
 
-bool Session::ApplySetTextureCommand(
-    const ui::gfx::SetTextureCommandPtr& command) {
-  if (auto material = resources_.FindResource<Material>(command->material_id)) {
-    if (command->texture_id == 0) {
+bool Session::ApplySetTextureCommand(::gfx::SetTextureCommand command) {
+  if (auto material = resources_.FindResource<Material>(command.material_id)) {
+    if (command.texture_id == 0) {
       material->SetTexture(nullptr);
       return true;
     } else if (auto image =
-                   resources_.FindResource<ImageBase>(command->texture_id)) {
+                   resources_.FindResource<ImageBase>(command.texture_id)) {
       material->SetTexture(std::move(image));
       return true;
     }
@@ -476,20 +472,20 @@ bool Session::ApplySetTextureCommand(
   return false;
 }
 
-bool Session::ApplySetColorCommand(const ui::gfx::SetColorCommandPtr& command) {
-  if (auto material = resources_.FindResource<Material>(command->material_id)) {
-    if (IsVariable(command->color)) {
+bool Session::ApplySetColorCommand(::gfx::SetColorCommand command) {
+  if (auto material = resources_.FindResource<Material>(command.material_id)) {
+    if (IsVariable(command.color)) {
       error_reporter_->ERROR()
           << "scenic::gfx::Session::ApplySetColorCommand(): "
              "unimplemented for variable color.";
       return false;
     }
 
-    auto& color = command->color->value;
-    float red = static_cast<float>(color->red) / 255.f;
-    float green = static_cast<float>(color->green) / 255.f;
-    float blue = static_cast<float>(color->blue) / 255.f;
-    float alpha = static_cast<float>(color->alpha) / 255.f;
+    auto& color = command.color.value;
+    float red = static_cast<float>(color.red) / 255.f;
+    float green = static_cast<float>(color.green) / 255.f;
+    float blue = static_cast<float>(color.blue) / 255.f;
+    float alpha = static_cast<float>(color.alpha) / 255.f;
     material->SetColor(red, green, blue, alpha);
     return true;
   }
@@ -497,46 +493,44 @@ bool Session::ApplySetColorCommand(const ui::gfx::SetColorCommandPtr& command) {
 }
 
 bool Session::ApplyBindMeshBuffersCommand(
-    const ui::gfx::BindMeshBuffersCommandPtr& command) {
-  auto mesh = resources_.FindResource<MeshShape>(command->mesh_id);
-  auto index_buffer = resources_.FindResource<Buffer>(command->index_buffer_id);
+    ::gfx::BindMeshBuffersCommand command) {
+  auto mesh = resources_.FindResource<MeshShape>(command.mesh_id);
+  auto index_buffer = resources_.FindResource<Buffer>(command.index_buffer_id);
   auto vertex_buffer =
-      resources_.FindResource<Buffer>(command->vertex_buffer_id);
+      resources_.FindResource<Buffer>(command.vertex_buffer_id);
   if (mesh && index_buffer && vertex_buffer) {
-    return mesh->BindBuffers(std::move(index_buffer), command->index_format,
-                             command->index_offset, command->index_count,
-                             std::move(vertex_buffer), command->vertex_format,
-                             command->vertex_offset, command->vertex_count,
-                             Unwrap(command->bounding_box));
+    return mesh->BindBuffers(std::move(index_buffer), command.index_format,
+                             command.index_offset, command.index_count,
+                             std::move(vertex_buffer), command.vertex_format,
+                             command.vertex_offset, command.vertex_count,
+                             Unwrap(command.bounding_box));
   }
   return false;
 }
 
-bool Session::ApplyAddLayerCommand(const ui::gfx::AddLayerCommandPtr& command) {
+bool Session::ApplyAddLayerCommand(::gfx::AddLayerCommand command) {
   auto layer_stack =
-      resources_.FindResource<LayerStack>(command->layer_stack_id);
-  auto layer = resources_.FindResource<Layer>(command->layer_id);
+      resources_.FindResource<LayerStack>(command.layer_stack_id);
+  auto layer = resources_.FindResource<Layer>(command.layer_id);
   if (layer_stack && layer) {
     return layer_stack->AddLayer(std::move(layer));
   }
   return false;
 }
 
-bool Session::ApplySetLayerStackCommand(
-    const ui::gfx::SetLayerStackCommandPtr& command) {
-  auto compositor = resources_.FindResource<Compositor>(command->compositor_id);
+bool Session::ApplySetLayerStackCommand(::gfx::SetLayerStackCommand command) {
+  auto compositor = resources_.FindResource<Compositor>(command.compositor_id);
   auto layer_stack =
-      resources_.FindResource<LayerStack>(command->layer_stack_id);
+      resources_.FindResource<LayerStack>(command.layer_stack_id);
   if (compositor && layer_stack) {
     return compositor->SetLayerStack(std::move(layer_stack));
   }
   return false;
 }
 
-bool Session::ApplySetRendererCommand(
-    const ui::gfx::SetRendererCommandPtr& command) {
-  auto layer = resources_.FindResource<Layer>(command->layer_id);
-  auto renderer = resources_.FindResource<Renderer>(command->renderer_id);
+bool Session::ApplySetRendererCommand(::gfx::SetRendererCommand command) {
+  auto layer = resources_.FindResource<Layer>(command.layer_id);
+  auto renderer = resources_.FindResource<Renderer>(command.renderer_id);
 
   if (layer && renderer) {
     return layer->SetRenderer(std::move(renderer));
@@ -545,67 +539,63 @@ bool Session::ApplySetRendererCommand(
 }
 
 bool Session::ApplySetRendererParamCommand(
-    const ui::gfx::SetRendererParamCommandPtr& command) {
-  auto renderer = resources_.FindResource<Renderer>(command->renderer_id);
+    ::gfx::SetRendererParamCommand command) {
+  auto renderer = resources_.FindResource<Renderer>(command.renderer_id);
   if (renderer) {
-    switch (command->param->which()) {
-      case ui::gfx::RendererParam::Tag::SHADOW_TECHNIQUE:
-        return renderer->SetShadowTechnique(
-            command->param->get_shadow_technique());
-      case ui::gfx::RendererParam::Tag::__UNKNOWN__:
+    switch (command.param.Which()) {
+      case ::gfx::RendererParam::Tag::kShadowTechnique:
+        return renderer->SetShadowTechnique(command.param.shadow_technique());
+      case ::gfx::RendererParam::Tag::Invalid:
         error_reporter_->ERROR()
             << "scenic::gfx::Session::ApplySetRendererParamCommand(): "
-               "unknown param.";
+               "invalid param.";
     }
   }
   return false;
 }
 
-bool Session::ApplySetEventMaskCommand(
-    const ui::gfx::SetEventMaskCommandPtr& command) {
-  if (auto r = resources_.FindResource<Resource>(command->id)) {
-    return r->SetEventMask(command->event_mask);
+bool Session::ApplySetEventMaskCommand(::gfx::SetEventMaskCommand command) {
+  if (auto r = resources_.FindResource<Resource>(command.id)) {
+    return r->SetEventMask(command.event_mask);
   }
   return false;
 }
 
 bool Session::ApplySetCameraTransformCommand(
-    const ui::gfx::SetCameraTransformCommandPtr& command) {
+    ::gfx::SetCameraTransformCommand command) {
   // TODO(MZ-123): support variables.
-  if (IsVariable(command->eye_position) || IsVariable(command->eye_look_at) ||
-      IsVariable(command->eye_up)) {
+  if (IsVariable(command.eye_position) || IsVariable(command.eye_look_at) ||
+      IsVariable(command.eye_up)) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetCameraTransformCommand(): "
            "unimplemented: variable properties.";
     return false;
-  } else if (auto camera =
-                 resources_.FindResource<Camera>(command->camera_id)) {
-    camera->SetTransform(UnwrapVector3(command->eye_position),
-                         UnwrapVector3(command->eye_look_at),
-                         UnwrapVector3(command->eye_up));
+  } else if (auto camera = resources_.FindResource<Camera>(command.camera_id)) {
+    camera->SetTransform(UnwrapVector3(command.eye_position),
+                         UnwrapVector3(command.eye_look_at),
+                         UnwrapVector3(command.eye_up));
     return true;
   }
   return false;
 }
 
 bool Session::ApplySetCameraProjectionCommand(
-    const ui::gfx::SetCameraProjectionCommandPtr& command) {
+    ::gfx::SetCameraProjectionCommand command) {
   // TODO(MZ-123): support variables.
-  if (IsVariable(command->fovy)) {
+  if (IsVariable(command.fovy)) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetCameraProjectionCommand(): "
            "unimplemented: variable properties.";
     return false;
-  } else if (auto camera =
-                 resources_.FindResource<Camera>(command->camera_id)) {
-    camera->SetProjection(UnwrapFloat(command->fovy));
+  } else if (auto camera = resources_.FindResource<Camera>(command.camera_id)) {
+    camera->SetProjection(UnwrapFloat(command.fovy));
     return true;
   }
   return false;
 }
 
 bool Session::ApplySetStereoCameraProjectionCommand(
-    const ui::gfx::SetStereoCameraProjectionCommandPtr& command) {
+    ::gfx::SetStereoCameraProjectionCommand command) {
   error_reporter_->ERROR() << "scenic::gfx::Session::"
                               "ApplySetStereoCameraProjectionCommand(): "
                               "unimplemented.";
@@ -613,15 +603,15 @@ bool Session::ApplySetStereoCameraProjectionCommand(
 }
 
 bool Session::ApplySetCameraPoseBufferCommand(
-    const ui::gfx::SetCameraPoseBufferCommandPtr& command) {
-  if (command->base_time > zx::clock::get(ZX_CLOCK_MONOTONIC).get()) {
+    ::gfx::SetCameraPoseBufferCommand command) {
+  if (command.base_time > zx::clock::get(ZX_CLOCK_MONOTONIC).get()) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetCameraPoseBufferCommand(): "
            "base time not in the past";
     return false;
   }
 
-  auto buffer = resources_.FindResource<Buffer>(command->buffer_id);
+  auto buffer = resources_.FindResource<Buffer>(command.buffer_id);
   if (!buffer) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetCameraPoseBufferCommand(): "
@@ -629,21 +619,21 @@ bool Session::ApplySetCameraPoseBufferCommand(
     return false;
   }
 
-  if (command->num_entries < 1) {
+  if (command.num_entries < 1) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetCameraPoseBufferCommand(): "
            "must have at least one entry in the pose buffer";
     return false;
   }
 
-  if (buffer->size() < command->num_entries * sizeof(escher::hmd::Pose)) {
+  if (buffer->size() < command.num_entries * sizeof(escher::hmd::Pose)) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetCameraPoseBufferCommand(): "
            "buffer is not large enough";
     return false;
   }
 
-  auto camera = resources_.FindResource<Camera>(command->camera_id);
+  auto camera = resources_.FindResource<Camera>(command.camera_id);
   if (!camera) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetCameraPoseBufferCommand(): "
@@ -651,44 +641,43 @@ bool Session::ApplySetCameraPoseBufferCommand(
     return false;
   }
 
-  camera->SetPoseBuffer(buffer, command->num_entries, command->base_time,
-                        command->time_interval);
+  camera->SetPoseBuffer(buffer, command.num_entries, command.base_time,
+                        command.time_interval);
 
   return true;
 }
 
-bool Session::ApplySetLightColorCommand(
-    const ui::gfx::SetLightColorCommandPtr& command) {
+bool Session::ApplySetLightColorCommand(::gfx::SetLightColorCommand command) {
   // TODO(MZ-123): support variables.
-  if (command->color->variable_id) {
+  if (command.color.variable_id) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetLightColorCommand(): "
            "unimplemented: variable color.";
     return false;
-  } else if (auto light = resources_.FindResource<Light>(command->light_id)) {
-    return light->SetColor(Unwrap(command->color->value));
+  } else if (auto light = resources_.FindResource<Light>(command.light_id)) {
+    return light->SetColor(Unwrap(command.color.value));
   }
   return false;
 }
 
 bool Session::ApplySetLightDirectionCommand(
-    const ui::gfx::SetLightDirectionCommandPtr& command) {
+    ::gfx::SetLightDirectionCommand command) {
   // TODO(MZ-123): support variables.
-  if (command->direction->variable_id) {
+  if (command.direction.variable_id) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplySetLightDirectionCommand(): "
            "unimplemented: variable direction.";
     return false;
   } else if (auto light =
-                 resources_.FindResource<DirectionalLight>(command->light_id)) {
-    return light->SetDirection(Unwrap(command->direction->value));
+                 resources_.FindResource<DirectionalLight>(command.light_id)) {
+    return light->SetDirection(Unwrap(command.direction.value));
   }
   return false;
 }
 
-bool Session::ApplyAddLightCommand(const ui::gfx::AddLightCommandPtr& command) {
-  if (auto scene = resources_.FindResource<Scene>(command->scene_id)) {
-    if (auto light = resources_.FindResource<Light>(command->light_id)) {
+bool Session::ApplyAddLightCommand(::gfx::AddLightCommand command) {
+  if (auto scene = resources_.FindResource<Scene>(command.scene_id)) {
+    if (auto light = resources_.FindResource<Light>(command.light_id)) {
       return scene->AddLight(std::move(light));
     }
   }
@@ -698,45 +687,41 @@ bool Session::ApplyAddLightCommand(const ui::gfx::AddLightCommandPtr& command) {
   return false;
 }
 
-bool Session::ApplyDetachLightCommand(
-    const ui::gfx::DetachLightCommandPtr& command) {
+bool Session::ApplyDetachLightCommand(::gfx::DetachLightCommand command) {
   error_reporter_->ERROR()
       << "scenic::gfx::Session::ApplyDetachLightCommand(): unimplemented.";
   return false;
 }
 
-bool Session::ApplyDetachLightsCommand(
-    const ui::gfx::DetachLightsCommandPtr& command) {
+bool Session::ApplyDetachLightsCommand(::gfx::DetachLightsCommand command) {
   error_reporter_->ERROR()
       << "scenic::gfx::Session::ApplyDetachLightsCommand(): unimplemented.";
   return false;
 }
 
-bool Session::ApplySetLabelCommand(const ui::gfx::SetLabelCommandPtr& command) {
-  if (auto r = resources_.FindResource<Resource>(command->id)) {
-    return r->SetLabel(command->label.get());
+bool Session::ApplySetLabelCommand(::gfx::SetLabelCommand command) {
+  if (auto r = resources_.FindResource<Resource>(command.id)) {
+    return r->SetLabel(command.label.get());
   }
   return false;
 }
 
 bool Session::ApplySetDisableClippingCommand(
-    const ui::gfx::SetDisableClippingCommandPtr& command) {
-  if (auto r = resources_.FindResource<Renderer>(command->renderer_id)) {
-    r->DisableClipping(command->disable_clipping);
+    ::gfx::SetDisableClippingCommand command) {
+  if (auto r = resources_.FindResource<Renderer>(command.renderer_id)) {
+    r->DisableClipping(command.disable_clipping);
     return true;
   }
   return false;
 }
 
-bool Session::ApplyCreateMemory(scenic::ResourceId id,
-                                const ui::gfx::MemoryArgsPtr& args) {
-  auto memory = CreateMemory(id, args);
+bool Session::ApplyCreateMemory(scenic::ResourceId id, ::gfx::MemoryArgs args) {
+  auto memory = CreateMemory(id, std::move(args));
   return memory ? resources_.AddResource(id, std::move(memory)) : false;
 }
 
-bool Session::ApplyCreateImage(scenic::ResourceId id,
-                               const ui::gfx::ImageArgsPtr& args) {
-  if (auto memory = resources_.FindResource<Memory>(args->memory_id)) {
+bool Session::ApplyCreateImage(scenic::ResourceId id, ::gfx::ImageArgs args) {
+  if (auto memory = resources_.FindResource<Memory>(args.memory_id)) {
     if (auto image = CreateImage(id, std::move(memory), args)) {
       return resources_.AddResource(id, std::move(image));
     }
@@ -746,111 +731,104 @@ bool Session::ApplyCreateImage(scenic::ResourceId id,
 }
 
 bool Session::ApplyCreateImagePipe(scenic::ResourceId id,
-                                   const ui::gfx::ImagePipeArgsPtr& args) {
+                                   ::gfx::ImagePipeArgs args) {
   auto image_pipe = fxl::MakeRefCounted<ImagePipe>(
-      this, id, std::move(args->image_pipe_request));
+      this, id, std::move(args.image_pipe_request));
   return resources_.AddResource(id, image_pipe);
 }
 
-bool Session::ApplyCreateBuffer(scenic::ResourceId id,
-                                const ui::gfx::BufferArgsPtr& args) {
-  if (auto memory = resources_.FindResource<Memory>(args->memory_id)) {
-    if (auto buffer = CreateBuffer(id, std::move(memory), args->memory_offset,
-                                   args->num_bytes)) {
+bool Session::ApplyCreateBuffer(scenic::ResourceId id, ::gfx::BufferArgs args) {
+  if (auto memory = resources_.FindResource<Memory>(args.memory_id)) {
+    if (auto buffer = CreateBuffer(id, std::move(memory), args.memory_offset,
+                                   args.num_bytes)) {
       return resources_.AddResource(id, std::move(buffer));
     }
   }
   return false;
 }
 
-bool Session::ApplyCreateScene(scenic::ResourceId id,
-                               const ui::gfx::SceneArgsPtr& args) {
-  auto scene = CreateScene(id, args);
+bool Session::ApplyCreateScene(scenic::ResourceId id, ::gfx::SceneArgs args) {
+  auto scene = CreateScene(id, std::move(args));
   return scene ? resources_.AddResource(id, std::move(scene)) : false;
 }
 
-bool Session::ApplyCreateCamera(scenic::ResourceId id,
-                                const ui::gfx::CameraArgsPtr& args) {
-  auto camera = CreateCamera(id, args);
+bool Session::ApplyCreateCamera(scenic::ResourceId id, ::gfx::CameraArgs args) {
+  auto camera = CreateCamera(id, std::move(args));
   return camera ? resources_.AddResource(id, std::move(camera)) : false;
 }
 
-bool Session::ApplyCreateStereoCamera(
-    scenic::ResourceId id,
-    const ui::gfx::StereoCameraArgsPtr& args) {
+bool Session::ApplyCreateStereoCamera(scenic::ResourceId id,
+                                      ::gfx::StereoCameraArgs args) {
   error_reporter_->ERROR()
       << "scene_manager::Session::ApplyCreateStereoCamera() unimplemented";
   return false;
 }
 
 bool Session::ApplyCreateRenderer(scenic::ResourceId id,
-                                  const ui::gfx::RendererArgsPtr& args) {
-  auto renderer = CreateRenderer(id, args);
+                                  ::gfx::RendererArgs args) {
+  auto renderer = CreateRenderer(id, std::move(args));
   return renderer ? resources_.AddResource(id, std::move(renderer)) : false;
 }
 
-bool Session::ApplyCreateAmbientLight(
-    scenic::ResourceId id,
-    const ui::gfx::AmbientLightArgsPtr& args) {
+bool Session::ApplyCreateAmbientLight(scenic::ResourceId id,
+                                      ::gfx::AmbientLightArgs args) {
   auto light = CreateAmbientLight(id);
   return light ? resources_.AddResource(id, std::move(light)) : false;
 }
 
-bool Session::ApplyCreateDirectionalLight(
-    scenic::ResourceId id,
-    const ui::gfx::DirectionalLightArgsPtr& args) {
+bool Session::ApplyCreateDirectionalLight(scenic::ResourceId id,
+                                          ::gfx::DirectionalLightArgs args) {
   auto light = CreateDirectionalLight(id);
   return light ? resources_.AddResource(id, std::move(light)) : false;
 }
 
 bool Session::ApplyCreateRectangle(scenic::ResourceId id,
-                                   const ui::gfx::RectangleArgsPtr& args) {
-  if (!AssertValueIsOfType(args->width, kFloatValueTypes) ||
-      !AssertValueIsOfType(args->height, kFloatValueTypes)) {
+                                   ::gfx::RectangleArgs args) {
+  if (!AssertValueIsOfType(args.width, kFloatValueTypes) ||
+      !AssertValueIsOfType(args.height, kFloatValueTypes)) {
     return false;
   }
 
   // TODO(MZ-123): support variables.
-  if (IsVariable(args->width) || IsVariable(args->height)) {
+  if (IsVariable(args.width) || IsVariable(args.height)) {
     error_reporter_->ERROR() << "scenic::gfx::Session::ApplyCreateRectangle(): "
                                 "unimplemented: variable width/height.";
     return false;
   }
 
-  auto rectangle = CreateRectangle(id, args->width->get_vector1(),
-                                   args->height->get_vector1());
+  auto rectangle =
+      CreateRectangle(id, args.width.vector1(), args.height.vector1());
   return rectangle ? resources_.AddResource(id, std::move(rectangle)) : false;
 }
 
-bool Session::ApplyCreateRoundedRectangle(
-    scenic::ResourceId id,
-    const ui::gfx::RoundedRectangleArgsPtr& args) {
-  if (!AssertValueIsOfType(args->width, kFloatValueTypes) ||
-      !AssertValueIsOfType(args->height, kFloatValueTypes) ||
-      !AssertValueIsOfType(args->top_left_radius, kFloatValueTypes) ||
-      !AssertValueIsOfType(args->top_right_radius, kFloatValueTypes) ||
-      !AssertValueIsOfType(args->bottom_left_radius, kFloatValueTypes) ||
-      !AssertValueIsOfType(args->bottom_right_radius, kFloatValueTypes)) {
+bool Session::ApplyCreateRoundedRectangle(scenic::ResourceId id,
+                                          ::gfx::RoundedRectangleArgs args) {
+  if (!AssertValueIsOfType(args.width, kFloatValueTypes) ||
+      !AssertValueIsOfType(args.height, kFloatValueTypes) ||
+      !AssertValueIsOfType(args.top_left_radius, kFloatValueTypes) ||
+      !AssertValueIsOfType(args.top_right_radius, kFloatValueTypes) ||
+      !AssertValueIsOfType(args.bottom_left_radius, kFloatValueTypes) ||
+      !AssertValueIsOfType(args.bottom_right_radius, kFloatValueTypes)) {
     return false;
   }
 
   // TODO(MZ-123): support variables.
-  if (IsVariable(args->width) || IsVariable(args->height) ||
-      IsVariable(args->top_left_radius) || IsVariable(args->top_right_radius) ||
-      IsVariable(args->bottom_left_radius) ||
-      IsVariable(args->bottom_right_radius)) {
+  if (IsVariable(args.width) || IsVariable(args.height) ||
+      IsVariable(args.top_left_radius) || IsVariable(args.top_right_radius) ||
+      IsVariable(args.bottom_left_radius) ||
+      IsVariable(args.bottom_right_radius)) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplyCreateRoundedRectangle(): "
            "unimplemented: variable width/height/radii.";
     return false;
   }
 
-  const float width = args->width->get_vector1();
-  const float height = args->height->get_vector1();
-  const float top_left_radius = args->top_left_radius->get_vector1();
-  const float top_right_radius = args->top_right_radius->get_vector1();
-  const float bottom_right_radius = args->bottom_right_radius->get_vector1();
-  const float bottom_left_radius = args->bottom_left_radius->get_vector1();
+  const float width = args.width.vector1();
+  const float height = args.height.vector1();
+  const float top_left_radius = args.top_left_radius.vector1();
+  const float top_right_radius = args.top_right_radius.vector1();
+  const float bottom_right_radius = args.bottom_right_radius.vector1();
+  const float bottom_left_radius = args.bottom_left_radius.vector1();
 
   auto rectangle = CreateRoundedRectangle(id, width, height, top_left_radius,
                                           top_right_radius, bottom_right_radius,
@@ -858,101 +836,98 @@ bool Session::ApplyCreateRoundedRectangle(
   return rectangle ? resources_.AddResource(id, std::move(rectangle)) : false;
 }
 
-bool Session::ApplyCreateCircle(scenic::ResourceId id,
-                                const ui::gfx::CircleArgsPtr& args) {
-  if (!AssertValueIsOfType(args->radius, kFloatValueTypes)) {
+bool Session::ApplyCreateCircle(scenic::ResourceId id, ::gfx::CircleArgs args) {
+  if (!AssertValueIsOfType(args.radius, kFloatValueTypes)) {
     return false;
   }
 
   // TODO(MZ-123): support variables.
-  if (IsVariable(args->radius)) {
+  if (IsVariable(args.radius)) {
     error_reporter_->ERROR() << "scenic::gfx::Session::ApplyCreateCircle(): "
                                 "unimplemented: variable radius.";
     return false;
   }
 
-  auto circle = CreateCircle(id, args->radius->get_vector1());
+  auto circle = CreateCircle(id, args.radius.vector1());
   return circle ? resources_.AddResource(id, std::move(circle)) : false;
 }
 
-bool Session::ApplyCreateMesh(scenic::ResourceId id,
-                              const ui::gfx::MeshArgsPtr& args) {
+bool Session::ApplyCreateMesh(scenic::ResourceId id, ::gfx::MeshArgs args) {
   auto mesh = CreateMesh(id);
   return mesh ? resources_.AddResource(id, std::move(mesh)) : false;
 }
 
 bool Session::ApplyCreateMaterial(scenic::ResourceId id,
-                                  const ui::gfx::MaterialArgsPtr& args) {
+                                  ::gfx::MaterialArgs args) {
   auto material = CreateMaterial(id);
   return material ? resources_.AddResource(id, std::move(material)) : false;
 }
 
 bool Session::ApplyCreateClipNode(scenic::ResourceId id,
-                                  const ui::gfx::ClipNodeArgsPtr& args) {
-  auto node = CreateClipNode(id, args);
+                                  ::gfx::ClipNodeArgs args) {
+  auto node = CreateClipNode(id, std::move(args));
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
 bool Session::ApplyCreateEntityNode(scenic::ResourceId id,
-                                    const ui::gfx::EntityNodeArgsPtr& args) {
-  auto node = CreateEntityNode(id, args);
+                                    ::gfx::EntityNodeArgs args) {
+  auto node = CreateEntityNode(id, std::move(args));
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
 bool Session::ApplyCreateShapeNode(scenic::ResourceId id,
-                                   const ui::gfx::ShapeNodeArgsPtr& args) {
-  auto node = CreateShapeNode(id, args);
+                                   ::gfx::ShapeNodeArgs args) {
+  auto node = CreateShapeNode(id, std::move(args));
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
-bool Session::ApplyCreateDisplayCompositor(
-    scenic::ResourceId id,
-    const ui::gfx::DisplayCompositorArgsPtr& args) {
-  auto compositor = CreateDisplayCompositor(id, args);
+bool Session::ApplyCreateDisplayCompositor(scenic::ResourceId id,
+                                           ::gfx::DisplayCompositorArgs args) {
+  auto compositor = CreateDisplayCompositor(id, std::move(args));
   return compositor ? resources_.AddResource(id, std::move(compositor)) : false;
 }
 
 bool Session::ApplyCreateImagePipeCompositor(
     scenic::ResourceId id,
-    const ui::gfx::ImagePipeCompositorArgsPtr& args) {
-  auto compositor = CreateImagePipeCompositor(id, args);
+    ::gfx::ImagePipeCompositorArgs args) {
+  auto compositor = CreateImagePipeCompositor(id, std::move(args));
   return compositor ? resources_.AddResource(id, std::move(compositor)) : false;
 }
 
 bool Session::ApplyCreateLayerStack(scenic::ResourceId id,
-                                    const ui::gfx::LayerStackArgsPtr& args) {
-  auto layer_stack = CreateLayerStack(id, args);
+                                    ::gfx::LayerStackArgs args) {
+  auto layer_stack = CreateLayerStack(id, std::move(args));
   return layer_stack ? resources_.AddResource(id, std::move(layer_stack))
                      : false;
 }
 
-bool Session::ApplyCreateLayer(scenic::ResourceId id,
-                               const ui::gfx::LayerArgsPtr& args) {
-  auto layer = CreateLayer(id, args);
+bool Session::ApplyCreateLayer(scenic::ResourceId id, ::gfx::LayerArgs args) {
+  auto layer = CreateLayer(id, std::move(args));
   return layer ? resources_.AddResource(id, std::move(layer)) : false;
 }
 
 bool Session::ApplyCreateVariable(scenic::ResourceId id,
-                                  const ui::gfx::VariableArgsPtr& args) {
-  auto variable = CreateVariable(id, args);
+                                  ::gfx::VariableArgs args) {
+  auto variable = CreateVariable(id, std::move(args));
   return variable ? resources_.AddResource(id, std::move(variable)) : false;
 }
 
 ResourcePtr Session::CreateMemory(scenic::ResourceId id,
-                                  const ui::gfx::MemoryArgsPtr& args) {
+                                  ::gfx::MemoryArgs args) {
   vk::Device device = engine()->vk_device();
-  switch (args->memory_type) {
-    case ui::gfx::MemoryType::VK_DEVICE_MEMORY:
-      return GpuMemory::New(this, id, device, args, error_reporter_);
-    case ui::gfx::MemoryType::HOST_MEMORY:
-      return HostMemory::New(this, id, device, args, error_reporter_);
+  switch (args.memory_type) {
+    case images::MemoryType::VK_DEVICE_MEMORY:
+      return GpuMemory::New(this, id, device, std::move(args), error_reporter_);
+    case images::MemoryType::HOST_MEMORY:
+      return HostMemory::New(this, id, device, std::move(args),
+                             error_reporter_);
   }
 }
 
 ResourcePtr Session::CreateImage(scenic::ResourceId id,
                                  MemoryPtr memory,
-                                 const ui::gfx::ImageArgsPtr& args) {
-  return Image::New(this, id, memory, args->info, args->memory_offset,
+                                 ::gfx::ImageArgs args) {
+  return Image::New(this, id, memory, args.info, args.memory_offset,
                     error_reporter_);
 }
 
@@ -982,21 +957,20 @@ ResourcePtr Session::CreateBuffer(scenic::ResourceId id,
                                      memory_offset);
 }
 
-ResourcePtr Session::CreateScene(scenic::ResourceId id,
-                                 const ui::gfx::SceneArgsPtr& args) {
+ResourcePtr Session::CreateScene(scenic::ResourceId id, ::gfx::SceneArgs args) {
   return fxl::MakeRefCounted<Scene>(this, id);
 }
 
 ResourcePtr Session::CreateCamera(scenic::ResourceId id,
-                                  const ui::gfx::CameraArgsPtr& args) {
-  if (auto scene = resources_.FindResource<Scene>(args->scene_id)) {
+                                  ::gfx::CameraArgs args) {
+  if (auto scene = resources_.FindResource<Scene>(args.scene_id)) {
     return fxl::MakeRefCounted<Camera>(this, id, std::move(scene));
   }
   return ResourcePtr();
 }
 
 ResourcePtr Session::CreateRenderer(scenic::ResourceId id,
-                                    const ui::gfx::RendererArgsPtr& args) {
+                                    ::gfx::RendererArgs args) {
   return fxl::MakeRefCounted<Renderer>(this, id);
 }
 
@@ -1009,25 +983,25 @@ ResourcePtr Session::CreateDirectionalLight(scenic::ResourceId id) {
 }
 
 ResourcePtr Session::CreateClipNode(scenic::ResourceId id,
-                                    const ui::gfx::ClipNodeArgsPtr& args) {
+                                    ::gfx::ClipNodeArgs args) {
   error_reporter_->ERROR() << "scenic::gfx::Session::CreateClipNode(): "
                               "unimplemented.";
   return ResourcePtr();
 }
 
 ResourcePtr Session::CreateEntityNode(scenic::ResourceId id,
-                                      const ui::gfx::EntityNodeArgsPtr& args) {
+                                      ::gfx::EntityNodeArgs args) {
   return fxl::MakeRefCounted<EntityNode>(this, id);
 }
 
 ResourcePtr Session::CreateShapeNode(scenic::ResourceId id,
-                                     const ui::gfx::ShapeNodeArgsPtr& args) {
+                                     ::gfx::ShapeNodeArgs args) {
   return fxl::MakeRefCounted<ShapeNode>(this, id);
 }
 
 ResourcePtr Session::CreateDisplayCompositor(
     scenic::ResourceId id,
-    const ui::gfx::DisplayCompositorArgsPtr& args) {
+    ::gfx::DisplayCompositorArgs args) {
   Display* display = engine()->display_manager()->default_display();
   if (!display) {
     error_reporter_->ERROR() << "There is no default display available.";
@@ -1045,7 +1019,7 @@ ResourcePtr Session::CreateDisplayCompositor(
 
 ResourcePtr Session::CreateImagePipeCompositor(
     scenic::ResourceId id,
-    const ui::gfx::ImagePipeCompositorArgsPtr& args) {
+    ::gfx::ImagePipeCompositorArgs args) {
   // TODO(MZ-179)
   error_reporter_->ERROR()
       << "scenic::gfx::Session::ApplyCreateImagePipeCompositor() "
@@ -1054,55 +1028,54 @@ ResourcePtr Session::CreateImagePipeCompositor(
 }
 
 ResourcePtr Session::CreateLayerStack(scenic::ResourceId id,
-                                      const ui::gfx::LayerStackArgsPtr& args) {
+                                      ::gfx::LayerStackArgs args) {
   return fxl::MakeRefCounted<LayerStack>(this, id);
 }
 
 ResourcePtr Session::CreateVariable(scenic::ResourceId id,
-                                    const ui::gfx::VariableArgsPtr& args) {
+                                    ::gfx::VariableArgs args) {
   fxl::RefPtr<Variable> variable;
-  switch (args->type) {
-    case ui::gfx::ValueType::kVector1:
+  switch (args.type) {
+    case ::gfx::ValueType::kVector1:
       variable = fxl::MakeRefCounted<FloatVariable>(this, id);
       break;
-    case ui::gfx::ValueType::kVector2:
+    case ::gfx::ValueType::kVector2:
       variable = fxl::MakeRefCounted<Vector2Variable>(this, id);
       break;
-    case ui::gfx::ValueType::kVector3:
+    case ::gfx::ValueType::kVector3:
       variable = fxl::MakeRefCounted<Vector3Variable>(this, id);
       break;
-    case ui::gfx::ValueType::kVector4:
+    case ::gfx::ValueType::kVector4:
       variable = fxl::MakeRefCounted<Vector4Variable>(this, id);
       break;
-    case ui::gfx::ValueType::kMatrix4:
+    case ::gfx::ValueType::kMatrix4:
       variable = fxl::MakeRefCounted<Matrix4x4Variable>(this, id);
       break;
-    case ui::gfx::ValueType::kColorRgb:
+    case ::gfx::ValueType::kColorRgb:
       // not yet supported
       variable = nullptr;
       break;
-    case ui::gfx::ValueType::kColorRgba:
+    case ::gfx::ValueType::kColorRgba:
       // not yet supported
       variable = nullptr;
       break;
-    case ui::gfx::ValueType::kQuaternion:
+    case ::gfx::ValueType::kQuaternion:
       variable = fxl::MakeRefCounted<QuaternionVariable>(this, id);
       break;
-    case ui::gfx::ValueType::kTransform:
+    case ::gfx::ValueType::kFactoredTransform:
       /* variable = fxl::MakeRefCounted<TransformVariable>(this, id); */
       variable = nullptr;
       break;
-    case ui::gfx::ValueType::kNone:
+    case ::gfx::ValueType::kNone:
       break;
   }
-  if (variable && variable->SetValue(args->initial_value)) {
+  if (variable && variable->SetValue(args.initial_value)) {
     return variable;
   }
   return nullptr;
 }
 
-ResourcePtr Session::CreateLayer(scenic::ResourceId id,
-                                 const ui::gfx::LayerArgsPtr& args) {
+ResourcePtr Session::CreateLayer(scenic::ResourceId id, ::gfx::LayerArgs args) {
   return fxl::MakeRefCounted<Layer>(this, id);
 }
 
@@ -1176,10 +1149,10 @@ void Session::TearDown() {
   resources_.Clear();
   scheduled_image_pipe_updates_ = {};
 
-  // We assume the channel for the associated ui::gfx::Session is closed because
+  // We assume the channel for the associated ::gfx::Session is closed because
   // SessionHandler closes it before calling this method.
   // The channel *must* be closed before we clear |scheduled_updates_|, since it
-  // contains pending callbacks to ui::gfx::Session::Present(); if it were not
+  // contains pending callbacks to ::gfx::Session::Present(); if it were not
   // closed, we would have to invoke those callbacks before destroying them.
   scheduled_updates_ = {};
   fences_to_release_on_next_update_.reset();
@@ -1200,12 +1173,12 @@ ErrorReporter* Session::error_reporter() const {
   return error_reporter_ ? error_reporter_ : ErrorReporter::Default();
 }
 
-bool Session::AssertValueIsOfType(const ui::gfx::ValuePtr& value,
-                                  const ui::gfx::Value::Tag* tags,
+bool Session::AssertValueIsOfType(const ::gfx::Value& value,
+                                  const ::gfx::Value::Tag* tags,
                                   size_t tag_count) {
   FXL_DCHECK(tag_count > 0);
   for (size_t i = 0; i < tag_count; ++i) {
-    if (value->which() == tags[i]) {
+    if (value.Which() == tags[i]) {
       return true;
     }
   }
@@ -1220,15 +1193,15 @@ bool Session::AssertValueIsOfType(const ui::gfx::ValuePtr& value,
     str << ").";
   }
   error_reporter_->ERROR() << "scenic::gfx::Session: received value of type: "
-                           << value->which() << str.str();
+                           << value.Which() << str.str();
   return false;
 }
 
 bool Session::ScheduleUpdate(uint64_t presentation_time,
-                             ::f1dl::VectorPtr<ui::gfx::CommandPtr> commands,
-                             ::f1dl::VectorPtr<zx::event> acquire_fences,
-                             ::f1dl::VectorPtr<zx::event> release_events,
-                             const ui::Session::PresentCallback& callback) {
+                             ::fidl::VectorPtr<::gfx::Command> commands,
+                             ::fidl::VectorPtr<zx::event> acquire_fences,
+                             ::fidl::VectorPtr<zx::event> release_events,
+                             ui::Session::PresentCallback callback) {
   if (is_valid()) {
     uint64_t last_scheduled_presentation_time =
         last_applied_update_presentation_time_;
@@ -1298,9 +1271,9 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
          scheduled_updates_.front().acquire_fences->ready()) {
     if (ApplyUpdate(&scheduled_updates_.front())) {
       needs_render = true;
-      auto info = ui::PresentationInfo::New();
-      info->presentation_time = presentation_time;
-      info->presentation_interval = presentation_interval;
+      auto info = images::PresentationInfo();
+      info.presentation_time = presentation_time;
+      info.presentation_interval = presentation_interval;
       scheduled_updates_.front().present_callback(std::move(info));
 
       FXL_DCHECK(last_applied_update_presentation_time_ <=
@@ -1345,9 +1318,8 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
   return needs_render;
 }
 
-void Session::EnqueueEvent(ui::gfx::EventPtr event) {
+void Session::EnqueueEvent(::gfx::Event event) {
   if (is_valid()) {
-    FXL_DCHECK(event);
     if (buffered_events_->empty()) {
       fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
           [weak = weak_factory_.GetWeakPtr()] {
@@ -1355,8 +1327,8 @@ void Session::EnqueueEvent(ui::gfx::EventPtr event) {
               weak->FlushEvents();
           });
     }
-    auto scenic_event = ui::Event::New();
-    scenic_event->set_gfx(std::move(event));
+    ui::Event scenic_event;
+    scenic_event.set_gfx(std::move(event));
     buffered_events_.push_back(std::move(scenic_event));
   }
 }
@@ -1370,8 +1342,13 @@ void Session::FlushEvents() {
 bool Session::ApplyUpdate(Session::Update* update) {
   TRACE_DURATION("gfx", "Session::ApplyUpdate");
   if (is_valid()) {
+    // TODO(mikejurka): We should probably be moving the update here, not just
+    // passing a pointer
+    // Also, we'll have an issue with logging an error on a command after we
+    // moved it
     for (auto& command : *update->commands) {
-      if (!ApplyCommand(command)) {
+      auto moved_command = std::move(command);
+      if (!ApplyCommand(std::move(moved_command))) {
         error_reporter_->ERROR()
             << "scenic::gfx::Session::ApplyCommand() failed to apply Command: "
             << command;
@@ -1380,15 +1357,14 @@ bool Session::ApplyUpdate(Session::Update* update) {
     }
   }
   return true;
-
   // TODO: acquire_fences and release_fences should be added to a list that is
   // consumed by the FrameScheduler.
 }
 
 void Session::HitTest(uint32_t node_id,
-                      ui::gfx::vec3Ptr ray_origin,
-                      ui::gfx::vec3Ptr ray_direction,
-                      const ui::Session::HitTestCallback& callback) {
+                      ::gfx::vec3 ray_origin,
+                      ::gfx::vec3 ray_direction,
+                      ui::Session::HitTestCallback callback) {
   if (auto node = resources_.FindResource<Node>(node_id)) {
     HitTester hit_tester;
     std::vector<Hit> hits = hit_tester.HitTest(
@@ -1406,9 +1382,9 @@ void Session::HitTest(uint32_t node_id,
   }
 }
 
-void Session::HitTestDeviceRay(ui::gfx::vec3Ptr ray_origin,
-                               ui::gfx::vec3Ptr ray_direction,
-                               const ui::Session::HitTestCallback& callback) {
+void Session::HitTestDeviceRay(::gfx::vec3 ray_origin,
+                               ::gfx::vec3 ray_direction,
+                               ui::Session::HitTestCallback callback) {
   escher::ray4 ray =
       escher::ray4{{Unwrap(ray_origin), 1.f}, {Unwrap(ray_direction), 0.f}};
 

@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_SCENIC_EVENT_REPORTER_H_
 #define GARNET_LIB_UI_SCENIC_EVENT_REPORTER_H_
 
-#include "lib/ui/scenic/fidl/events.fidl.h"
+#include <fuchsia/cpp/ui.h>
 
 namespace scenic {
 
@@ -13,7 +13,7 @@ namespace scenic {
 class EventReporter {
  public:
   // Flushes enqueued session events to the session listener as a batch.
-  virtual void SendEvents(::f1dl::VectorPtr<ui::EventPtr> buffered_events) = 0;
+  virtual void SendEvents(::fidl::VectorPtr<ui::Event> buffered_events) = 0;
 };
 
 }  // namespace scenic

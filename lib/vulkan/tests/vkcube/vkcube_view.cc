@@ -6,11 +6,11 @@
 #include "garnet/public/lib/ui/scenic/fidl_helpers.h"
 
 VkCubeView::VkCubeView(
-    mozart::ViewManagerPtr view_manager,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    views_v1::ViewManagerPtr view_manager,
+    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     std::function<void(float width,
                        float height,
-                       f1dl::InterfaceHandle<ui::gfx::ImagePipe>
+                       f1dl::InterfaceHandle<gfx::ImagePipe>
                            interface_request)> resize_callback)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
@@ -20,7 +20,7 @@ VkCubeView::VkCubeView(
 
 VkCubeView::~VkCubeView() {}
 
-void VkCubeView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
+void VkCubeView::OnSceneInvalidated(images::PresentationInfoPtr presentation_info) {
   if (!has_metrics())
     return;
   if (size_.Equals(logical_size()) && physical_size_.Equals(physical_size()))
@@ -46,7 +46,7 @@ void VkCubeView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
   uint32_t image_pipe_id = session()->AllocResourceId();
   session()->Enqueue(scenic_lib::NewCreateImagePipeCommand(
       image_pipe_id,
-      f1dl::InterfaceRequest<ui::gfx::ImagePipe>(std::move(endpoint1))));
+      f1dl::InterfaceRequest<gfx::ImagePipe>(std::move(endpoint1))));
   pane_material.SetTexture(image_pipe_id);
   session()->ReleaseResource(image_pipe_id);
 
@@ -55,5 +55,5 @@ void VkCubeView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
 
   resize_callback_(
       physical_size().width, physical_size().height,
-      f1dl::InterfaceHandle<ui::gfx::ImagePipe>(std::move(endpoint0)));
+      f1dl::InterfaceHandle<gfx::ImagePipe>(std::move(endpoint0)));
 }

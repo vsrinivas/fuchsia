@@ -20,7 +20,7 @@ namespace gfx {
 namespace test {
 
 TEST_F(SceneManagerTest, CreateAndDestroySession) {
-  ui::gfx::SessionPtr session;
+  gfx::SessionPtr session;
   EXPECT_EQ(0U, engine()->GetSessionCount());
   manager_->CreateSession(session.NewRequest(), nullptr);
   RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
@@ -30,13 +30,13 @@ TEST_F(SceneManagerTest, CreateAndDestroySession) {
 
 TEST_F(SceneManagerTest, ScheduleUpdateOutOfOrder) {
   // Create a session.
-  ui::gfx::SessionPtr session;
+  gfx::SessionPtr session;
   EXPECT_EQ(0U, engine()->GetSessionCount());
   manager_->CreateSession(session.NewRequest(), nullptr);
   RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
 
   // Present on the session with presentation_time = 1.
-  ui::gfx::Session::PresentCallback callback = [](auto) {};
+  gfx::Session::PresentCallback callback = [](auto) {};
   session->Present(1, CreateEventArray(1), CreateEventArray(1), callback);
 
   // Briefly pump the message loop. Expect that the session is not destroyed.
@@ -51,13 +51,13 @@ TEST_F(SceneManagerTest, ScheduleUpdateOutOfOrder) {
 
 TEST_F(SceneManagerTest, ScheduleUpdateInOrder) {
   // Create a session.
-  ui::gfx::SessionPtr session;
+  gfx::SessionPtr session;
   EXPECT_EQ(0U, engine()->GetSessionCount());
   manager_->CreateSession(session.NewRequest(), nullptr);
   RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
 
   // Present on the session with presentation_time = 1.
-  ui::gfx::Session::PresentCallback callback = [](auto) {};
+  gfx::Session::PresentCallback callback = [](auto) {};
   session->Present(1, CreateEventArray(1), CreateEventArray(1), callback);
 
   // Briefly pump the message loop. Expect that the session is not destroyed.
@@ -85,7 +85,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   // The release fences should be signalled after a subsequent Present.
   EXPECT_EQ(0u, engine()->GetSessionCount());
 
-  ui::gfx::SessionPtr session;
+  gfx::SessionPtr session;
   manager_->CreateSession(session.NewRequest(), nullptr);
 
   RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
@@ -93,7 +93,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   auto handler = static_cast<SessionHandlerForTest*>(engine()->FindSession(1));
 
   {
-    ::f1dl::VectorPtr<ui::gfx::CommandPtr> ops;
+    ::fidl::VectorPtr<gfx::CommandPtr> ops;
     ops.push_back(scenic_lib::NewCreateCircleOp(1, 50.f));
     ops.push_back(scenic_lib::NewCreateCircleOp(2, 25.f));
     session->Enqueue(std::move(ops));
@@ -102,7 +102,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   EXPECT_EQ(1u, handler->enqueue_count());
 
   // Create release fences
-  ::f1dl::VectorPtr<zx::event> release_fences = CreateEventArray(2);
+  ::fidl::VectorPtr<zx::event> release_fences = CreateEventArray(2);
   zx::event release_fence1 = CopyEvent(release_fences[0]);
   zx::event release_fence2 = CopyEvent(release_fences[1]);
 
@@ -110,18 +110,18 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   EXPECT_FALSE(IsFenceSignalled(release_fence2));
 
   // Call Present with release fences.
-  session->Present(0u, ::f1dl::VectorPtr<zx::event>::New(0),
+  session->Present(0u, ::fidl::VectorPtr<zx::event>::New(0),
                    std::move(release_fences),
-                   [](ui::PresentationInfoPtr info) {});
+                   [](images::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 1);
   EXPECT_EQ(1u, handler->present_count());
 
   EXPECT_FALSE(IsFenceSignalled(release_fence1));
   EXPECT_FALSE(IsFenceSignalled(release_fence2));
   // Call Present again with no release fences.
-  session->Present(0u, ::f1dl::VectorPtr<zx::event>::New(0),
-                   ::f1dl::VectorPtr<zx::event>::New(0),
-                   [](ui::PresentationInfoPtr info) {});
+  session->Present(0u, ::fidl::VectorPtr<zx::event>::New(0),
+                   ::fidl::VectorPtr<zx::event>::New(0),
+                   [](images::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 2);
   EXPECT_EQ(2u, handler->present_count());
 
@@ -135,7 +135,7 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   // Present, and not until the acquire fence has been signalled.
   EXPECT_EQ(0u, engine()->GetSessionCount());
 
-  ui::gfx::SessionPtr session;
+  gfx::SessionPtr session;
   manager_->CreateSession(session.NewRequest(), nullptr);
 
   RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
@@ -143,7 +143,7 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   auto handler = static_cast<SessionHandlerForTest*>(engine()->FindSession(1));
 
   {
-    ::f1dl::VectorPtr<ui::gfx::CommandPtr> ops;
+    ::fidl::VectorPtr<gfx::CommandPtr> ops;
     ops.push_back(scenic_lib::NewCreateCircleOp(1, 50.f));
     ops.push_back(scenic_lib::NewCreateCircleOp(2, 25.f));
     session->Enqueue(std::move(ops));
@@ -157,24 +157,24 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   zx::event release_fence;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &release_fence));
 
-  ::f1dl::VectorPtr<zx::event> acquire_fences;
+  ::fidl::VectorPtr<zx::event> acquire_fences;
   acquire_fences.push_back(CopyEvent(acquire_fence));
 
-  ::f1dl::VectorPtr<zx::event> release_fences;
+  ::fidl::VectorPtr<zx::event> release_fences;
   release_fences.push_back(CopyEvent(release_fence));
 
   // Call Present with both the acquire and release fences.
   session->Present(0u, std::move(acquire_fences), std::move(release_fences),
-                   [](ui::PresentationInfoPtr info) {});
+                   [](images::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 1);
   EXPECT_EQ(1u, handler->present_count());
 
   EXPECT_FALSE(IsFenceSignalled(release_fence));
 
   // Call Present again with no fences.
-  session->Present(0u, ::f1dl::VectorPtr<zx::event>::New(0),
-                   ::f1dl::VectorPtr<zx::event>::New(0),
-                   [](ui::PresentationInfoPtr info) {});
+  session->Present(0u, ::fidl::VectorPtr<zx::event>::New(0),
+                   ::fidl::VectorPtr<zx::event>::New(0),
+                   [](images::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 2);
 
   EXPECT_FALSE(IsFenceSignalled(release_fence));

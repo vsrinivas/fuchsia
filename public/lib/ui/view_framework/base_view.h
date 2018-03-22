@@ -17,7 +17,7 @@
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/ui/views/fidl/views.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 
 namespace mozart {
 
@@ -29,10 +29,10 @@ namespace mozart {
 // This class is merely intended to make the simple apps easier to write.
 class BaseView : private ViewListener,
                  private ViewContainerListener,
-                 private mozart::InputListener {
+                 private input::InputListener {
  public:
   BaseView(ViewManagerPtr view_manager,
-           f1dl::InterfaceRequest<ViewOwner> view_owner_request,
+           fidl::InterfaceRequest<ViewOwner> view_owner_request,
            const std::string& label);
 
   ~BaseView() override;
@@ -67,7 +67,7 @@ class BaseView : private ViewListener,
 
   // Gets the size of the view in logical pixels.
   // This value is zero until the view receives a layout from its parent.
-  const mozart::SizeF& logical_size() const { return logical_size_; }
+  const geometry::SizeF& logical_size() const { return logical_size_; }
 
   // Returns true if the view has a non-empty size in physical pixels.
   bool has_physical_size() const {
@@ -77,7 +77,7 @@ class BaseView : private ViewListener,
   // Gets the size of the view in physical pixels.
   // This value is zero until the view receives a layout from its parent
   // and metrics from its session.
-  const mozart::Size& physical_size() const { return physical_size_; }
+  const geometry::Size& physical_size() const { return physical_size_; }
 
   // When true, the session provided metrics are adjusted such that the
   // X and Y scale factors are made equal before computing the physical size.
@@ -93,7 +93,7 @@ class BaseView : private ViewListener,
 
   // Gets the view's metrics.
   // This value is zero until the view receives metrics from its session.
-  const ui::gfx::Metrics& metrics() const { return adjusted_metrics_; }
+  const gfx::Metrics& metrics() const { return adjusted_metrics_; }
 
   // Gets the input connection.
   InputConnection* input_connection() { return input_connection_.get(); }
@@ -122,19 +122,19 @@ class BaseView : private ViewListener,
   // invalidation.  The new contents are presented once this function returns.
   //
   // The default implementation does nothing.
-  virtual void OnSceneInvalidated(ui::PresentationInfoPtr presentation_info);
+  virtual void OnSceneInvalidated(images::PresentationInfoPtr presentation_info);
 
   // Called when session events are received.
   //
   // The default implementation does nothing.
-  virtual void OnSessionEvent(f1dl::VectorPtr<ui::EventPtr> events);
+  virtual void OnSessionEvent(fidl::VectorPtr<ui::EventPtr> events);
 
   // Called to handle an input event.
   // Returns true if the view will handle the event, false if the event
   // should continue propagating to other views which may handle it themselves.
   //
   // The default implementation returns false.
-  virtual bool OnInputEvent(mozart::InputEventPtr event);
+  virtual bool OnInputEvent(input::InputEventPtr event);
 
   // Called when a child is attached.
   //
@@ -160,17 +160,17 @@ class BaseView : private ViewListener,
                           const OnChildUnavailableCallback& callback) override;
 
   // |InputListener|:
-  void OnEvent(mozart::InputEventPtr event,
+  void OnEvent(input::InputEventPtr event,
                const OnEventCallback& callback) override;
 
   void PresentScene(zx_time_t presentation_time);
-  void HandleSessionEvents(f1dl::VectorPtr<ui::EventPtr> events);
+  void HandleSessionEvents(fidl::VectorPtr<ui::EventPtr> events);
   void AdjustMetricsAndPhysicalSize();
 
   ViewManagerPtr view_manager_;
-  f1dl::Binding<ViewListener> view_listener_binding_;
-  f1dl::Binding<ViewContainerListener> view_container_listener_binding_;
-  f1dl::Binding<InputListener> input_listener_binding_;
+  fidl::Binding<ViewListener> view_listener_binding_;
+  fidl::Binding<ViewContainerListener> view_container_listener_binding_;
+  fidl::Binding<InputListener> input_listener_binding_;
 
   ViewPtr view_;
   component::ServiceProviderPtr view_service_provider_;
@@ -180,8 +180,8 @@ class BaseView : private ViewListener,
   SizeF logical_size_;
   Size physical_size_;
   bool need_square_metrics_ = false;
-  ui::gfx::Metrics original_metrics_;
-  ui::gfx::Metrics adjusted_metrics_;
+  gfx::Metrics original_metrics_;
+  gfx::Metrics adjusted_metrics_;
   scenic_lib::Session session_;
   scenic_lib::ImportNode parent_node_;
 

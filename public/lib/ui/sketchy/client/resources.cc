@@ -33,8 +33,8 @@ void Resource::EnqueueCreateResourceCommand(ResourceId resource_id,
 
 void Resource::EnqueueImportResourceCommand(ResourceId resource_id,
                                        zx::eventpair token,
-                                       ui::gfx::ImportSpec spec) const {
-  auto import_resource = ui::gfx::ImportResourceCommand::New();
+                                       gfx::ImportSpec spec) const {
+  auto import_resource = gfx::ImportResourceCommand::New();
   import_resource->id = resource_id;
   import_resource->token = std::move(token);
   import_resource->spec = spec;
@@ -63,7 +63,7 @@ void Stroke::Begin(glm::vec2 pt) const {
   auto begin_stroke = sketchy::BeginStrokeCommand::New();
   begin_stroke->stroke_id = id();
   auto touch = sketchy::Touch::New();
-  touch->position = ui::gfx::vec2::New();
+  touch->position = gfx::vec2::New();
   touch->position->x = pt.x;
   touch->position->y = pt.y;
   begin_stroke->touch = std::move(touch);
@@ -75,16 +75,16 @@ void Stroke::Begin(glm::vec2 pt) const {
 void Stroke::Extend(std::vector<glm::vec2> pts) const {
   auto extend_stroke = sketchy::ExtendStrokeCommand::New();
   extend_stroke->stroke_id = id();
-  auto touches = ::f1dl::VectorPtr<sketchy::TouchPtr>::New(pts.size());
+  auto touches = ::fidl::VectorPtr<sketchy::TouchPtr>::New(pts.size());
   for (size_t i = 0; i < pts.size(); i++) {
     touches->at(i) = sketchy::Touch::New();
-    touches->at(i)->position = ui::gfx::vec2::New();
+    touches->at(i)->position = gfx::vec2::New();
     touches->at(i)->position->x = pts[i].x;
     touches->at(i)->position->y = pts[i].y;
   }
   extend_stroke->touches = std::move(touches);
   // TODO(MZ-269): Populate predicted touches.
-  extend_stroke->predicted_touches = ::f1dl::VectorPtr<sketchy::TouchPtr>::New(0);
+  extend_stroke->predicted_touches = ::fidl::VectorPtr<sketchy::TouchPtr>::New(0);
   auto command = sketchy::Command::New();
   command->set_extend_stroke(std::move(extend_stroke));
   EnqueueCommand(std::move(command));
@@ -135,11 +135,11 @@ ImportNode::ImportNode(Canvas* canvas, scenic_lib::EntityNode& export_node)
     : Resource(canvas) {
   zx::eventpair token;
   export_node.ExportAsRequest(&token);
-  EnqueueImportResourceCommand(id(), std::move(token), ui::gfx::ImportSpec::NODE);
+  EnqueueImportResourceCommand(id(), std::move(token), gfx::ImportSpec::NODE);
 }
 
 void ImportNode::AddChild(const Resource& child) const {
-  auto add_child = ui::gfx::AddChildCommand::New();
+  auto add_child = gfx::AddChildCommand::New();
   add_child->child_id = child.id();
   add_child->node_id = id();
   auto command = sketchy::Command::New();

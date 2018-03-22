@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_UI_VIEW_MANAGER_VIEW_IMPL_H_
 #define GARNET_BIN_UI_VIEW_MANAGER_VIEW_IMPL_H_
 
-#include "lib/ui/views/fidl/views.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
@@ -16,9 +16,9 @@ class ViewState;
 
 // View interface implementation.
 // This object is owned by its associated ViewState.
-class ViewImpl : public mozart::View,
-                 public mozart::ViewContainer,
-                 public mozart::ViewOwner,
+class ViewImpl : public views_v1::View,
+                 public views_v1::ViewContainer,
+                 public views_v1_token::ViewOwner,
                  public component::ServiceProvider {
  public:
   ViewImpl(ViewRegistry* registry, ViewState* state);
@@ -26,37 +26,38 @@ class ViewImpl : public mozart::View,
 
  private:
   // |View|:
-  void GetToken(const mozart::View::GetTokenCallback& callback) override;
-  void GetServiceProvider(f1dl::InterfaceRequest<component::ServiceProvider>
+  void GetToken(views_v1::View::GetTokenCallback callback) override;
+  void GetServiceProvider(fidl::InterfaceRequest<component::ServiceProvider>
                               service_provider_request) override;
   void OfferServiceProvider(
-      f1dl::InterfaceHandle<component::ServiceProvider> service_provider,
-      f1dl::VectorPtr<f1dl::StringPtr> service_names) override;
-  void GetContainer(f1dl::InterfaceRequest<mozart::ViewContainer>
+      fidl::InterfaceHandle<component::ServiceProvider> service_provider,
+      fidl::VectorPtr<fidl::StringPtr> service_names) override;
+  void GetContainer(fidl::InterfaceRequest<views_v1::ViewContainer>
                         view_container_request) override;
 
   // |ViewContainer|:
   void SetListener(
-      f1dl::InterfaceHandle<mozart::ViewContainerListener> listener) override;
-  void AddChild(uint32_t child_key,
-                f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
-                zx::eventpair host_import_token) override;
+      fidl::InterfaceHandle<views_v1::ViewContainerListener> listener) override;
+  void AddChild(
+      uint32_t child_key,
+      fidl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
+      zx::eventpair host_import_token) override;
   void RemoveChild(uint32_t child_key,
-                   f1dl::InterfaceRequest<mozart::ViewOwner>
+                   fidl::InterfaceRequest<views_v1_token::ViewOwner>
                        transferred_view_owner_request) override;
   void SetChildProperties(
       uint32_t child_key,
-      mozart::ViewPropertiesPtr child_view_properties) override;
+      views_v1::ViewPropertiesPtr child_view_properties) override;
   void RequestFocus(uint32_t child_key) override;
 
   // |component::ServiceProvider|:
-  void ConnectToService(const f1dl::StringPtr& service_name,
+  void ConnectToService(fidl::StringPtr service_name,
                         zx::channel client_handle) override;
 
   ViewRegistry* const registry_;
   ViewState* const state_;
-  f1dl::BindingSet<component::ServiceProvider> service_provider_bindings_;
-  f1dl::BindingSet<mozart::ViewContainer> container_bindings_;
+  fidl::BindingSet<component::ServiceProvider> service_provider_bindings_;
+  fidl::BindingSet<views_v1::ViewContainer> container_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewImpl);
 };

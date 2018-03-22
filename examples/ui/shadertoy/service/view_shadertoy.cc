@@ -8,7 +8,7 @@ namespace shadertoy {
 
 ShadertoyStateForView::ShadertoyStateForView(
     App* app,
-    ::f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    ::f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     bool handle_input_events)
     : ShadertoyState(app) {
   FXL_CHECK(false) << "not implemented";

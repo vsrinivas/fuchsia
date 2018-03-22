@@ -8,6 +8,10 @@
 #include <string>
 #include <unordered_map>
 
+#include <fuchsia/cpp/gfx.h>
+#include <fuchsia/cpp/ui.h>
+#include <fuchsia/cpp/views.h>
+#include <fuchsia/cpp/views_v1.h>
 #include "garnet/bin/ui/view_manager/input/input_connection_impl.h"
 #include "garnet/bin/ui/view_manager/input/input_dispatcher_impl.h"
 #include "garnet/bin/ui/view_manager/internal/input_owner.h"
@@ -19,11 +23,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/ui/gfx/fidl/hit.fidl.h"
 #include "lib/ui/scenic/client/session.h"
-#include "lib/ui/scenic/fidl/scenic.fidl.h"
-#include "lib/ui/views/fidl/view_trees.fidl.h"
-#include "lib/ui/views/fidl/views.fidl.h"
 
 namespace view_manager {
 
@@ -36,23 +36,26 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // VIEW MANAGER REQUESTS
 
-  void GetScenic(f1dl::InterfaceRequest<ui::Scenic> scenic_request);
-  void CreateView(f1dl::InterfaceRequest<mozart::View> view_request,
-                  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-                  mozart::ViewListenerPtr view_listener,
-                  zx::eventpair parent_export_token,
-                  const f1dl::StringPtr& label);
+  void GetScenic(fidl::InterfaceRequest<ui::Scenic> scenic_request);
+  void CreateView(
+      fidl::InterfaceRequest<views_v1::View> view_request,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      views_v1::ViewListenerPtr view_listener,
+      zx::eventpair parent_export_token,
+      fidl::StringPtr label);
   void CreateViewTree(
-      f1dl::InterfaceRequest<mozart::ViewTree> view_tree_request,
-      mozart::ViewTreeListenerPtr view_tree_listener,
-      const f1dl::StringPtr& label);
+      fidl::InterfaceRequest<views_v1::ViewTree> view_tree_request,
+      views_v1::ViewTreeListenerPtr view_tree_listener,
+      fidl::StringPtr label);
 
   // VIEW STUB REQUESTS
 
-  void OnViewResolved(ViewStub* view_stub, mozart::ViewTokenPtr view_token);
-  void TransferViewOwner(
-      mozart::ViewTokenPtr view_token,
-      f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
+  void OnViewResolved(ViewStub* view_stub,
+                      views_v1_token::ViewToken view_token,
+                      bool success);
+  void TransferViewOwner(views_v1_token::ViewToken view_token,
+                         fidl::InterfaceRequest<views_v1_token::ViewOwner>
+                             transferred_view_owner_request);
 
   // VIEW REQUESTS
 
@@ -68,23 +71,24 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // Adds a child, reparenting it if necessary.
   // Destroys |container_state| if an error occurs.
-  void AddChild(ViewContainerState* container_state,
-                uint32_t child_key,
-                f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
-                zx::eventpair host_import_token);
+  void AddChild(
+      ViewContainerState* container_state,
+      uint32_t child_key,
+      fidl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
+      zx::eventpair host_import_token);
 
   // Removes a child.
   // Destroys |container_state| if an error occurs.
-  void RemoveChild(
-      ViewContainerState* container_state,
-      uint32_t child_key,
-      f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
+  void RemoveChild(ViewContainerState* container_state,
+                   uint32_t child_key,
+                   fidl::InterfaceRequest<views_v1_token::ViewOwner>
+                       transferred_view_owner_request);
 
   // Sets a child's properties.
   // Destroys |container_state| if an error occurs.
   void SetChildProperties(ViewContainerState* container_state,
                           uint32_t child_key,
-                          mozart::ViewPropertiesPtr child_properties);
+                          views_v1::ViewPropertiesPtr child_properties);
 
   // Make child the first responder
   // Destroys |container_state| if an error occurs.
@@ -95,37 +99,37 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // Connects to a view service.
   // Destroys |view_state| if an error occurs.
   void ConnectToViewService(ViewState* view_state,
-                            const f1dl::StringPtr& service_name,
+                            const fidl::StringPtr& service_name,
                             zx::channel client_handle);
 
   // Connects to a view service.
   // Destroys |view_state| if an error occurs.
   void ConnectToViewTreeService(ViewTreeState* tree_state,
-                                const f1dl::StringPtr& service_name,
+                                const fidl::StringPtr& service_name,
                                 zx::channel client_handle);
 
   // VIEW INSPECTOR REQUESTS
 
-  void HitTest(const mozart::ViewTreeToken& view_tree_token,
-               const mozart::Point3F& ray_origin,
-               const mozart::Point3F& ray_direction,
+  void HitTest(const views_v1::ViewTreeToken& view_tree_token,
+               const geometry::Point3F& ray_origin,
+               const geometry::Point3F& ray_direction,
                HitTestCallback callback) override;
-  void ResolveFocusChain(mozart::ViewTreeTokenPtr view_tree_token,
+  void ResolveFocusChain(views_v1::ViewTreeTokenPtr view_tree_token,
                          const ResolveFocusChainCallback& callback) override;
-  void ActivateFocusChain(mozart::ViewTokenPtr view_token,
+  void ActivateFocusChain(views_v1_token::ViewTokenPtr view_token,
                           const ActivateFocusChainCallback& callback) override;
-  void HasFocus(mozart::ViewTokenPtr view_token,
+  void HasFocus(views_v1_token::ViewTokenPtr view_token,
                 const HasFocusCallback& callback) override;
   void GetSoftKeyboardContainer(
-      mozart::ViewTokenPtr view_token,
-      f1dl::InterfaceRequest<mozart::SoftKeyboardContainer> container) override;
+      views_v1_token::ViewTokenPtr view_token,
+      fidl::InterfaceRequest<input::SoftKeyboardContainer> container) override;
   void GetImeService(
-      mozart::ViewTokenPtr view_token,
-      f1dl::InterfaceRequest<mozart::ImeService> ime_service) override;
+      views_v1_token::ViewTokenPtr view_token,
+      fidl::InterfaceRequest<input::ImeService> ime_service) override;
 
   // Delivers an event to a view.
-  void DeliverEvent(const mozart::ViewToken* view_token,
-                    mozart::InputEventPtr event,
+  void DeliverEvent(const views_v1_token::ViewToken* view_token,
+                    input::InputEventPtr event,
                     ViewInspector::OnEventDelivered callback) override;
 
   // INPUT CONNECTION CALLBACKS
@@ -151,7 +155,8 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   void HijackView(ViewState* view_state);
   void TransferOrUnregisterViewStub(
       std::unique_ptr<ViewStub> view_stub,
-      f1dl::InterfaceRequest<mozart::ViewOwner> transferred_view_owner_request);
+      fidl::InterfaceRequest<views_v1_token::ViewOwner>
+          transferred_view_owner_request);
 
   // INVALIDATION
 
@@ -169,7 +174,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   void Traverse();
   void TraverseViewTree(ViewTreeState* tree_state);
   void TraverseView(ViewState* view_state, bool parent_properties_changed);
-  mozart::ViewPropertiesPtr ResolveViewProperties(ViewState* view_state);
+  views_v1::ViewPropertiesPtr ResolveViewProperties(ViewState* view_state);
 
   // SESSION MANAGEMENT
 
@@ -179,22 +184,22 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // SIGNALING
 
   void SendPropertiesChanged(ViewState* view_state,
-                             mozart::ViewPropertiesPtr properties);
+                             views_v1::ViewPropertiesPtr properties);
   void SendChildAttached(ViewContainerState* container_state,
                          uint32_t child_key,
-                         mozart::ViewInfoPtr child_view_info);
+                         views_v1::ViewInfoPtr child_view_info);
   void SendChildUnavailable(ViewContainerState* container_state,
                             uint32_t child_key);
 
   // INPUT CONNECTION
   void CreateInputConnection(
-      mozart::ViewTokenPtr view_token,
-      f1dl::InterfaceRequest<mozart::InputConnection> request);
+      views_v1_token::ViewTokenPtr view_token,
+      fidl::InterfaceRequest<input::InputConnection> request);
 
   // INPUT DISPATCHER
   void CreateInputDispatcher(
-      mozart::ViewTreeTokenPtr view_tree_token,
-      f1dl::InterfaceRequest<mozart::InputDispatcher> request);
+      views_v1::ViewTreeTokenPtr view_tree_token,
+      fidl::InterfaceRequest<input::InputDispatcher> request);
 
   // LOOKUP
 

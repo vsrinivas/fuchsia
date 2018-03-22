@@ -22,8 +22,8 @@ DummyCommandDispatcher::DummyCommandDispatcher(CommandDispatcherContext context)
     : CommandDispatcher(std::move(context)) {}
 DummyCommandDispatcher::~DummyCommandDispatcher() = default;
 
-bool DummyCommandDispatcher::ApplyCommand(const ui::CommandPtr& command) {
-  return command->which() == ui::Command::Tag::DUMMY;
+bool DummyCommandDispatcher::ApplyCommand(const ui::Command& command) {
+  return command.Which() == ui::Command::Tag::kDummy;
 }
 
 }  // namespace test

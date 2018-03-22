@@ -52,7 +52,7 @@ App::App()
     FXL_LOG(INFO) << "Lost connection to Mozart service.";
     loop_->QuitNow();
   });
-  scenic_->GetDisplayInfo([this](ui::gfx::DisplayInfoPtr display_info) {
+  scenic_->GetDisplayInfo([this](gfx::DisplayInfoPtr display_info) {
     Init(std::move(display_info));
   });
 }
@@ -143,13 +143,13 @@ void App::CreateExampleScene(float display_width, float display_height) {
   uint64_t time_interval = 1024 * 1024 * 60 / 3.0;  // 16.67 ms
   uint32_t num_entries = 1;
 
-  Memory mem(session, std::move(vmo), ui::gfx::MemoryType::VK_DEVICE_MEMORY);
+  Memory mem(session, std::move(vmo), images::MemoryType::VK_DEVICE_MEMORY);
   Buffer pose_buffer(mem, 0, vmo_size);
 
   camera_->SetPoseBuffer(pose_buffer, num_entries, base_time, time_interval);
 }
 
-void App::Init(ui::gfx::DisplayInfoPtr display_info) {
+void App::Init(gfx::DisplayInfoPtr display_info) {
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
@@ -192,7 +192,7 @@ void App::Update(uint64_t next_presentation_time) {
 
   // Present
   session_->Present(
-      next_presentation_time, [this](ui::PresentationInfoPtr info) {
+      next_presentation_time, [this](images::PresentationInfoPtr info) {
         Update(info->presentation_time + info->presentation_interval);
       });
 }

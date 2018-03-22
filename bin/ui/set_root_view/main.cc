@@ -57,9 +57,9 @@ int main(int argc, const char** argv) {
   });
 
   // Create the view.
-  f1dl::InterfacePtr<mozart::ViewProvider> view_provider;
+  fidl::InterfacePtr<mozart::ViewProvider> view_provider;
   services.ConnectToService(view_provider.NewRequest());
-  f1dl::InterfaceHandle<mozart::ViewOwner> view_owner;
+  fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner;
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
 
   // Ask the presenter to display it.

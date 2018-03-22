@@ -22,10 +22,10 @@ class HostImageCycler : public scenic_lib::EntityNode {
   const HostImage* AcquireImage(uint32_t width,
                                 uint32_t height,
                                 uint32_t stride,
-                                ui::gfx::ImageInfo::PixelFormat pixel_format =
-                                    ui::gfx::ImageInfo::PixelFormat::BGRA_8,
-                                ui::gfx::ImageInfo::ColorSpace color_space =
-                                    ui::gfx::ImageInfo::ColorSpace::SRGB);
+                                images::PixelFormat pixel_format =
+                                    images::PixelFormat::BGRA_8,
+                                images::ColorSpace color_space =
+                                    images::ColorSpace::SRGB);
 
   // Releases the image most recently acquired using |AcquireImage()|.
   // Sets the content node's texture to be backed by the image.

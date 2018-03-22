@@ -12,8 +12,8 @@
 
 namespace examples {
 
-TileView::TileView(mozart::ViewManagerPtr view_manager,
-                   f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+TileView::TileView(views_v1::ViewManagerPtr view_manager,
+                   f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
                    component::ApplicationContext* application_context,
                    const TileParams& params)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
@@ -29,7 +29,7 @@ TileView::TileView(mozart::ViewManagerPtr view_manager,
 TileView::~TileView() {}
 
 void TileView::Present(
-    f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+    f1dl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
     f1dl::InterfaceRequest<mozart::Presentation> presentation) {
   const std::string empty_url;
   AddChildView(std::move(child_view_owner), empty_url, nullptr);
@@ -51,7 +51,7 @@ void TileView::ConnectViews() {
     // Get the view provider back from the launched app.
     auto view_provider = services.ConnectToService<mozart::ViewProvider>();
 
-    f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner;
+    f1dl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner;
     view_provider->CreateView(child_view_owner.NewRequest(), nullptr);
 
     // Add the view, which increments child_key_.
@@ -94,7 +94,7 @@ void TileView::OnChildUnavailable(uint32_t child_key) {
 }
 
 void TileView::AddChildView(
-    f1dl::InterfaceHandle<mozart::ViewOwner> child_view_owner,
+    f1dl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
     const std::string& url,
     component::ApplicationControllerPtr app_controller) {
   const uint32_t view_key = next_child_view_key_++;
@@ -123,7 +123,7 @@ void TileView::RemoveChildView(uint32_t child_key) {
   InvalidateScene();
 }
 
-void TileView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
+void TileView::OnSceneInvalidated(images::PresentationInfoPtr presentation_info) {
   if (!has_logical_size() || views_.empty())
     return;
 
@@ -160,9 +160,9 @@ void TileView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {
     }
     offset += extent;
 
-    auto view_properties = mozart::ViewProperties::New();
-    view_properties->view_layout = mozart::ViewLayout::New();
-    view_properties->view_layout->size = mozart::SizeF::New();
+    auto view_properties = views_v1::ViewProperties::New();
+    view_properties->view_layout = views_v1::ViewLayout::New();
+    view_properties->view_layout->size = geometry::SizeF::New();
     view_properties->view_layout->size->width = layout_bounds.width;
     view_properties->view_layout->size->height = layout_bounds.height;
     view_properties->view_layout->inset = mozart::InsetF::New();

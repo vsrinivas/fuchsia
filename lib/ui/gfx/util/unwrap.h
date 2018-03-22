@@ -5,52 +5,52 @@
 #ifndef GARNET_LIB_UI_GFX_UTIL_UNWRAP_H_
 #define GARNET_LIB_UI_GFX_UTIL_UNWRAP_H_
 
+#include <fuchsia/cpp/gfx.h>
 #include "lib/escher/geometry/bounding_box.h"
 #include "lib/escher/geometry/transform.h"
 #include "lib/escher/geometry/types.h"
-#include "lib/ui/gfx/fidl/types.fidl.h"
 
 namespace scenic {
 namespace gfx {
 
-inline escher::vec2 Unwrap(const ui::gfx::vec2Ptr& args) {
-  return {args->x, args->y};
+inline escher::vec2 Unwrap(::gfx::vec2 args) {
+  return {args.x, args.y};
 }
 
-inline escher::vec3 Unwrap(const ui::gfx::vec3Ptr& args) {
-  return {args->x, args->y, args->z};
+inline escher::vec3 Unwrap(::gfx::vec3 args) {
+  return {args.x, args.y, args.z};
 }
 
-inline escher::vec4 Unwrap(const ui::gfx::vec4Ptr& args) {
-  return {args->x, args->y, args->z, args->w};
+inline escher::vec4 Unwrap(::gfx::vec4 args) {
+  return {args.x, args.y, args.z, args.w};
 }
 
-inline escher::mat4 Unwrap(const ui::gfx::mat4Ptr& args) {
-  auto& m = *args->matrix;
+inline escher::mat4 Unwrap(::gfx::mat4 args) {
+  auto& m = args.matrix;
   return {m[0], m[1], m[2],  m[3],  m[4],  m[5],  m[6],  m[7],
           m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]};
 }
 
-inline escher::vec3 Unwrap(const ui::gfx::ColorRgbPtr& args) {
-  return {args->red, args->green, args->blue};
+inline escher::vec3 Unwrap(::gfx::ColorRgb args) {
+  return {args.red, args.green, args.blue};
 }
 
-inline escher::vec4 Unwrap(const ui::gfx::ColorRgbaPtr& args) {
-  return {args->red, args->green, args->blue, args->alpha};
+inline escher::vec4 Unwrap(::gfx::ColorRgba args) {
+  return {args.red, args.green, args.blue, args.alpha};
 }
 
-inline escher::quat Unwrap(const ui::gfx::QuaternionPtr& args) {
-  return {args->w, escher::vec3(args->x, args->y, args->z)};
+inline escher::quat Unwrap(::gfx::Quaternion args) {
+  return {args.w, escher::vec3(args.x, args.y, args.z)};
 }
 
-inline escher::Transform Unwrap(const ui::gfx::TransformPtr& args) {
-  return {Unwrap(args->translation), Unwrap(args->scale),
-          Unwrap(args->rotation), Unwrap(args->anchor)};
+inline escher::Transform Unwrap(::gfx::FactoredTransform args) {
+  return {Unwrap(args.translation), Unwrap(args.scale), Unwrap(args.rotation),
+          Unwrap(args.anchor)};
 }
 
-inline escher::BoundingBox Unwrap(const ui::gfx::BoundingBoxPtr& args) {
-  escher::vec3 min = Unwrap(args->min);
-  escher::vec3 max = Unwrap(args->max);
+inline escher::BoundingBox Unwrap(::gfx::BoundingBox args) {
+  escher::vec3 min = Unwrap(args.min);
+  escher::vec3 max = Unwrap(args.max);
   if (min.x > max.x || min.y > max.y || min.z > max.z) {
     // This bounding box is empty.
     return escher::BoundingBox();
@@ -58,138 +58,138 @@ inline escher::BoundingBox Unwrap(const ui::gfx::BoundingBoxPtr& args) {
   return {min, max};
 }
 
-inline bool IsFloat(const ui::gfx::ValuePtr& val) {
+inline bool IsFloat(const ::gfx::Value& val) {
   // TODO: support variables of type kVector1.
-  return val->which() == ui::gfx::Value::Tag::VECTOR1;
+  return val.Which() == ::gfx::Value::Tag::kVector1;
 }
 
-inline bool IsVector2(const ui::gfx::ValuePtr& val) {
+inline bool IsVector2(const ::gfx::Value& val) {
   // TODO: support variables of type kVector2.
-  return val->which() == ui::gfx::Value::Tag::VECTOR2;
+  return val.Which() == ::gfx::Value::Tag::kVector2;
 }
 
-inline bool IsVector3(const ui::gfx::ValuePtr& val) {
+inline bool IsVector3(const ::gfx::Value& val) {
   // TODO: support variables of type kVector3.
-  return val->which() == ui::gfx::Value::Tag::VECTOR3;
+  return val.Which() == ::gfx::Value::Tag::kVector3;
 }
 
-inline bool IsVector4(const ui::gfx::ValuePtr& val) {
+inline bool IsVector4(const ::gfx::Value& val) {
   // TODO: support variables of type kVector4.
-  return val->which() == ui::gfx::Value::Tag::VECTOR4;
+  return val.Which() == ::gfx::Value::Tag::kVector4;
 }
 
-inline bool IsMatrix4x4(const ui::gfx::ValuePtr& val) {
+inline bool IsMatrix4x4(const ::gfx::Value& val) {
   // TODO: support variables of type kMatrix4x4.
-  return val->which() == ui::gfx::Value::Tag::MATRIX4X4;
+  return val.Which() == ::gfx::Value::Tag::kMatrix4x4;
 }
 
-inline bool IsQuaternion(const ui::gfx::ValuePtr& val) {
+inline bool IsQuaternion(const ::gfx::Value& val) {
   // TODO: support variables of type kQuaternion.
-  return val->which() == ui::gfx::Value::Tag::QUATERNION;
+  return val.Which() == ::gfx::Value::Tag::kQuaternion;
 }
 
-inline bool IsTransform(const ui::gfx::ValuePtr& val) {
+inline bool IsTransform(const ::gfx::Value& val) {
   // TODO: support variables of type kTransform.
-  return val->which() == ui::gfx::Value::Tag::TRANSFORM;
+  return val.Which() == ::gfx::Value::Tag::kTransform;
 }
 
-inline bool IsVariable(const ui::gfx::ValuePtr& val) {
-  return val->which() == ui::gfx::Value::Tag::VARIABLE_ID;
+inline bool IsVariable(const ::gfx::Value& val) {
+  return val.Which() == ::gfx::Value::Tag::kVariableId;
 }
 
-template <typename ValuePtrT>
-inline bool IsVariable(const ValuePtrT& val) {
-  return val->variable_id != 0;
+template <typename ValueT>
+inline bool IsVariable(const ValueT& val) {
+  return val.variable_id != 0;
 }
 
 // Caller must verify that the value is a Matrix4x4 before calling this.
-inline escher::mat4 UnwrapMatrix4x4(const ui::gfx::ValuePtr& val) {
+inline escher::mat4 UnwrapMatrix4x4(const ::gfx::Value& val) {
   FXL_DCHECK(IsMatrix4x4(val));
-  return Unwrap(val->get_matrix4x4());
+  return Unwrap(val.matrix4x4());
 }
 
 // Caller must verify that the value is a Transform before calling this.
-inline escher::Transform UnwrapTransform(const ui::gfx::ValuePtr& val) {
+inline escher::Transform UnwrapTransform(const ::gfx::Value& val) {
   FXL_DCHECK(IsTransform(val));
-  return Unwrap(val->get_transform());
+  return Unwrap(val.transform());
 }
 
-inline float UnwrapFloat(const ui::gfx::FloatValuePtr& val) {
+inline float UnwrapFloat(const ::gfx::FloatValue& val) {
   FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
-  return val->value;
+  return val.value;
 }
 
-inline escher::vec2 UnwrapVector2(const ui::gfx::Vector2ValuePtr& val) {
+inline escher::vec2 UnwrapVector2(const ::gfx::Vector2Value& val) {
   FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
-  return Unwrap(val->value);
+  return Unwrap(val.value);
 }
 
-inline escher::vec3 UnwrapVector3(const ui::gfx::Vector3ValuePtr& val) {
+inline escher::vec3 UnwrapVector3(const ::gfx::Vector3Value& val) {
   FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
-  return Unwrap(val->value);
+  return Unwrap(val.value);
 }
 
-inline escher::vec4 UnwrapVector4(const ui::gfx::Vector4ValuePtr& val) {
+inline escher::vec4 UnwrapVector4(const ::gfx::Vector4Value& val) {
   FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
-  return Unwrap(val->value);
+  return Unwrap(val.value);
 }
 
-inline escher::quat UnwrapQuaternion(const ui::gfx::QuaternionValuePtr& val) {
+inline escher::quat UnwrapQuaternion(const ::gfx::QuaternionValue& val) {
   FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
-  return Unwrap(val->value);
+  return Unwrap(val.value);
 }
 
-inline bool Unwrap(const ui::gfx::ValuePtr& value, float* out) {
+inline bool Unwrap(const ::gfx::Value& value, float* out) {
   if (!IsVariable(value) && IsFloat(value)) {
-    (*out) = value->get_vector1();
+    (*out) = value.vector1();
     return true;
   }
   return false;
 }
 
-inline bool Unwrap(const ui::gfx::ValuePtr& value, escher::vec2* out) {
+inline bool Unwrap(const ::gfx::Value& value, escher::vec2* out) {
   if (!IsVariable(value) && IsVector2(value)) {
-    (*out) = Unwrap(value->get_vector2());
+    (*out) = Unwrap(value.vector2());
     return true;
   }
   return false;
 }
 
-inline bool Unwrap(const ui::gfx::ValuePtr& value, escher::vec3* out) {
+inline bool Unwrap(const ::gfx::Value& value, escher::vec3* out) {
   if (!IsVariable(value) && IsVector3(value)) {
-    (*out) = Unwrap(value->get_vector3());
+    (*out) = Unwrap(value.vector3());
     return true;
   }
   return false;
 }
 
-inline bool Unwrap(const ui::gfx::ValuePtr& value, escher::vec4* out) {
+inline bool Unwrap(const ::gfx::Value& value, escher::vec4* out) {
   if (!IsVariable(value) && IsVector4(value)) {
-    (*out) = Unwrap(value->get_vector4());
+    (*out) = Unwrap(value.vector4());
     return true;
   }
   return false;
 }
 
-inline bool Unwrap(const ui::gfx::ValuePtr& value, escher::quat* out) {
+inline bool Unwrap(const ::gfx::Value& value, escher::quat* out) {
   if (!IsVariable(value) && IsQuaternion(value)) {
-    (*out) = Unwrap(value->get_quaternion());
+    (*out) = Unwrap(value.quaternion());
     return true;
   }
   return false;
 }
 
-inline bool Unwrap(const ui::gfx::ValuePtr& value, escher::mat4* out) {
+inline bool Unwrap(const ::gfx::Value& value, escher::mat4* out) {
   if (!IsVariable(value) && IsMatrix4x4(value)) {
-    (*out) = Unwrap(value->get_matrix4x4());
+    (*out) = Unwrap(value.matrix4x4());
     return true;
   }
   return false;
 }
 
-inline bool Unwrap(const ui::gfx::ValuePtr& value, escher::Transform* out) {
+inline bool Unwrap(const ::gfx::Value& value, escher::Transform* out) {
   if (!IsVariable(value) && IsTransform(value)) {
-    (*out) = Unwrap(value->get_transform());
+    (*out) = Unwrap(value.transform());
     return true;
   }
   return false;

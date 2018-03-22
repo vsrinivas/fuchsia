@@ -23,18 +23,18 @@ const HostImage* HostImageCycler::AcquireImage(
     uint32_t width,
     uint32_t height,
     uint32_t stride,
-    ui::gfx::ImageInfo::PixelFormat pixel_format,
-    ui::gfx::ImageInfo::ColorSpace color_space) {
+    images::PixelFormat pixel_format,
+    images::ColorSpace color_space) {
   FXL_DCHECK(!acquired_image_);
 
   // Update the image pool and content shape.
-  ui::gfx::ImageInfo image_info;
+  images::ImageInfo image_info;
   image_info.width = width;
   image_info.height = height;
   image_info.stride = stride;
   image_info.pixel_format = pixel_format;
   image_info.color_space = color_space;
-  image_info.tiling = ui::gfx::ImageInfo::Tiling::LINEAR;
+  image_info.tiling = images::Tiling::LINEAR;
   reconfigured_ = image_pool_.Configure(&image_info);
 
   const HostImage* image = image_pool_.GetImage(image_index_);

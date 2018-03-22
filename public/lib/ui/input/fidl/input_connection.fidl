@@ -16,7 +16,7 @@ library input;
 //
 // TODO(jeffbrown): Elaborate this.  Particularly need to think about
 // how to handle focus and gestures.
-[ServiceName="mozart::InputConnection"]
+[ServiceName="input::InputConnection"]
 interface InputConnection {
   // Sets the listener for receiving input events.
   //

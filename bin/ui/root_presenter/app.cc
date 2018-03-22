@@ -23,13 +23,13 @@ App::App(const fxl::CommandLine& command_line)
   input_reader_.Start();
 
   application_context_->outgoing_services()->AddService<mozart::Presenter>(
-      [this](f1dl::InterfaceRequest<mozart::Presenter> request) {
+      [this](fidl::InterfaceRequest<mozart::Presenter> request) {
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
   application_context_->outgoing_services()
-      ->AddService<mozart::InputDeviceRegistry>(
-          [this](f1dl::InterfaceRequest<mozart::InputDeviceRegistry> request) {
+      ->AddService<input::InputDeviceRegistry>(
+          [this](fidl::InterfaceRequest<input::InputDeviceRegistry> request) {
             input_receiver_bindings_.AddBinding(this, std::move(request));
           });
 }
@@ -37,8 +37,8 @@ App::App(const fxl::CommandLine& command_line)
 App::~App() {}
 
 void App::Present(
-    f1dl::InterfaceHandle<mozart::ViewOwner> view_owner_handle,
-    f1dl::InterfaceRequest<mozart::Presentation> presentation_request) {
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner_handle,
+    fidl::InterfaceRequest<mozart::Presentation> presentation_request) {
   InitializeServices();
 
   auto presentation =
@@ -63,12 +63,12 @@ void App::Present(
 
 void App::RegisterDevice(
     mozart::DeviceDescriptorPtr descriptor,
-    f1dl::InterfaceRequest<mozart::InputDevice> input_device_request) {
+    fidl::InterfaceRequest<input::InputDevice> input_device_request) {
   uint32_t device_id = ++next_device_token_;
 
   FXL_VLOG(1) << "RegisterDevice " << device_id << " " << *descriptor;
-  std::unique_ptr<mozart::InputDeviceImpl> input_device =
-      std::make_unique<mozart::InputDeviceImpl>(
+  std::unique_ptr<input::InputDeviceImpl> input_device =
+      std::make_unique<input::InputDeviceImpl>(
           device_id, std::move(descriptor), std::move(input_device_request),
           this);
 
@@ -79,7 +79,7 @@ void App::RegisterDevice(
   devices_by_id_.emplace(device_id, std::move(input_device));
 }
 
-void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
+void App::OnDeviceDisconnected(input::InputDeviceImpl* input_device) {
   if (devices_by_id_.count(input_device->id()) == 0)
     return;
 
@@ -91,8 +91,8 @@ void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
   devices_by_id_.erase(input_device->id());
 }
 
-void App::OnReport(mozart::InputDeviceImpl* input_device,
-                   mozart::InputReportPtr report) {
+void App::OnReport(input::InputDeviceImpl* input_device,
+                   input::InputReportPtr report) {
   FXL_VLOG(2) << "OnReport from " << input_device->id() << " " << *report;
   if (devices_by_id_.count(input_device->id()) == 0)
     return;

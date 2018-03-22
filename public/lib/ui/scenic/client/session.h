@@ -29,8 +29,7 @@ class Session : private ui::SessionListener {
   using PresentCallback = std::function<void(images::PresentationInfo info)>;
 
   // Provide information about hits.
-  using HitTestCallback =
-      std::function<void(fidl::VectorPtr<gfx::Hit> hits)>;
+  using HitTestCallback = std::function<void(fidl::VectorPtr<gfx::Hit> hits)>;
 
   // Called when session events are received.
   using EventHandler = std::function<void(fidl::VectorPtr<ui::Event>)>;

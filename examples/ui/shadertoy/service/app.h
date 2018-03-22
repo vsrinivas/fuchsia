@@ -41,12 +41,12 @@ class App : public mozart::example::ShadertoyFactory {
   // |ShadertoyFactory|
   void NewImagePipeShadertoy(
       ::f1dl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
-      ::f1dl::InterfaceHandle<ui::gfx::ImagePipe> image_pipe) override;
+      ::f1dl::InterfaceHandle<gfx::ImagePipe> image_pipe) override;
 
   // |ShadertoyFactory|
   void NewViewShadertoy(
       ::f1dl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
-      ::f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      ::f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       bool handle_input_events) override;
 
   f1dl::BindingSet<mozart::example::ShadertoyFactory> factory_bindings_;

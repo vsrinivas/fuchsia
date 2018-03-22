@@ -32,24 +32,33 @@ SessionHandler::~SessionHandler() {
   TearDown();
 }
 
-void SessionHandler::SendEvents(::f1dl::VectorPtr<ui::EventPtr> events) {
+void SessionHandler::SendEvents(::fidl::VectorPtr<ui::Event> events) {
   event_reporter_->SendEvents(std::move(events));
 }
 
-void SessionHandler::Enqueue(::f1dl::VectorPtr<ui::CommandPtr> commands) {
+void SessionHandler::Enqueue(::fidl::VectorPtr<ui::Command> commands) {
   // TODO: Add them all at once instead of iterating.  The problem
   // is that ::fidl::Array doesn't support this.  Or, at least reserve
   // enough space.  But ::fidl::Array doesn't support this, either.
-  for (auto& command : *commands) {
-    FXL_CHECK(command->which() == ui::Command::Tag::GFX);
-    buffered_commands_.push_back(std::move(command->get_gfx()));
+  /*for (auto& command : *commands) {
+    FXL_CHECK(command.Which() == ui::Command::Tag::kGfx);
+    // TODO(mikejurka): does buffered_commands_ have to be
+    // ::fidl::VectorPtr<::gfx::CommandPtr>?
+    buffered_commands_.push_back(std::move(command.gfx()));
+  }*/
+  // TODO(mikejurka): Is there a better way to do this?
+  while (commands->size() > 0) {
+    ui::Command command;
+    std::swap(command, commands->back());
+    commands->pop_back();
+    buffered_commands_.push_back(std::move(command.gfx()));
   }
 }
 
 void SessionHandler::Present(uint64_t presentation_time,
-                             ::f1dl::VectorPtr<zx::event> acquire_fences,
-                             ::f1dl::VectorPtr<zx::event> release_fences,
-                             const ui::Session::PresentCallback& callback) {
+                             ::fidl::VectorPtr<zx::event> acquire_fences,
+                             ::fidl::VectorPtr<zx::event> release_fences,
+                             ui::Session::PresentCallback callback) {
   if (!session_->ScheduleUpdate(
           presentation_time, std::move(buffered_commands_),
           std::move(acquire_fences), std::move(release_fences), callback)) {
@@ -58,22 +67,22 @@ void SessionHandler::Present(uint64_t presentation_time,
 }
 
 void SessionHandler::HitTest(uint32_t node_id,
-                             ui::gfx::vec3Ptr ray_origin,
-                             ui::gfx::vec3Ptr ray_direction,
-                             const ui::Session::HitTestCallback& callback) {
+                             ::gfx::vec3 ray_origin,
+                             ::gfx::vec3 ray_direction,
+                             ui::Session::HitTestCallback callback) {
   session_->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
                     callback);
 }
 
 void SessionHandler::HitTestDeviceRay(
-    ui::gfx::vec3Ptr ray_origin,
-    ui::gfx::vec3Ptr ray_direction,
-    const ui::Session::HitTestDeviceRayCallback& callback) {
+    ::gfx::vec3 ray_origin,
+    ::gfx::vec3 ray_direction,
+    ui::Session::HitTestDeviceRayCallback callback) {
   session_->HitTestDeviceRay(std::move(ray_origin), std::move(ray_direction),
                              callback);
 }
 
-bool SessionHandler::ApplyCommand(const ui::CommandPtr& command) {
+bool SessionHandler::ApplyCommand(const ui::Command& command) {
   // TODO(MZ-469): Implement once we push session management into Mozart.
   FXL_CHECK(false);
   return false;

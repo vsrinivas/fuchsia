@@ -18,6 +18,8 @@ constexpr float kOnesFloat3[3] = {1.f, 1.f, 1.f};
 // A quaterion that has no rotation.
 constexpr float kQuaternionDefault[4] = {0.f, 0.f, 0.f, 1.f};
 
+bool ImageInfoEquals(const images::ImageInfo& a, const images::ImageInfo& b);
+
 // Helper function for wrapping Scenic ops as Mozart commands.
 ui::Command NewCommand(gfx::Command command);
 

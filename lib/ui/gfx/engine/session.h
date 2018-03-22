@@ -49,7 +49,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // Apply the operation to the current session state.  Return true if
   // successful, and false if the op is somehow invalid.  In the latter case,
   // the Session is left unchanged.
-  bool ApplyCommand(const ui::gfx::CommandPtr& command);
+  bool ApplyCommand(::gfx::Command command);
 
   SessionId id() const { return id_; }
   Engine* engine() const { return engine_; }
@@ -74,10 +74,10 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // Called by SessionHandler::Present().  Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().
   bool ScheduleUpdate(uint64_t presentation_time,
-                      ::f1dl::VectorPtr<ui::gfx::CommandPtr> commands,
-                      ::f1dl::VectorPtr<zx::event> acquire_fences,
-                      ::f1dl::VectorPtr<zx::event> release_fences,
-                      const ui::Session::PresentCallback& callback);
+                      ::fidl::VectorPtr<::gfx::Command> commands,
+                      ::fidl::VectorPtr<zx::event> acquire_fences,
+                      ::fidl::VectorPtr<zx::event> release_fences,
+                      ui::Session::PresentCallback callback);
 
   // Called by ImagePipe::PresentImage().  Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().
@@ -92,18 +92,18 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 
   // Add an event to our queue, which will be scheduled to be flushed and sent
   // to the event reporter later.
-  void EnqueueEvent(ui::gfx::EventPtr event);
+  void EnqueueEvent(::gfx::Event event);
 
   // Called by SessionHandler::HitTest().
   void HitTest(uint32_t node_id,
-               ui::gfx::vec3Ptr ray_origin,
-               ui::gfx::vec3Ptr ray_direction,
-               const ui::Session::HitTestCallback& callback);
+               ::gfx::vec3 ray_origin,
+               ::gfx::vec3 ray_direction,
+               ui::Session::HitTestCallback callback);
 
   // Called by SessionHandler::HitTestDeviceRay().
-  void HitTestDeviceRay(ui::gfx::vec3Ptr ray_origin,
-                        ui::gfx::vec3Ptr ray_direction,
-                        const ui::Session::HitTestCallback& callback);
+  void HitTestDeviceRay(::gfx::vec3 ray_origin,
+                        ::gfx::vec3 ray_direction,
+                        ui::Session::HitTestCallback callback);
 
  protected:
   friend class SessionHandler;
@@ -125,147 +125,104 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   void BeginTearDown();
 
   // Commanderation application functions, called by ApplyCommand().
-  bool ApplyCreateResourceCommand(
-      const ui::gfx::CreateResourceCommandPtr& command);
-  bool ApplyReleaseResourceCommand(
-      const ui::gfx::ReleaseResourceCommandPtr& command);
-  bool ApplyExportResourceCommand(
-      const ui::gfx::ExportResourceCommandPtr& command);
-  bool ApplyImportResourceCommand(
-      const ui::gfx::ImportResourceCommandPtr& command);
-  bool ApplyAddChildCommand(const ui::gfx::AddChildCommandPtr& command);
-  bool ApplyAddPartCommand(const ui::gfx::AddPartCommandPtr& command);
-  bool ApplyDetachCommand(const ui::gfx::DetachCommandPtr& command);
-  bool ApplyDetachChildrenCommand(
-      const ui::gfx::DetachChildrenCommandPtr& command);
-  bool ApplySetTagCommand(const ui::gfx::SetTagCommandPtr& command);
-  bool ApplySetTranslationCommand(
-      const ui::gfx::SetTranslationCommandPtr& command);
-  bool ApplySetScaleCommand(const ui::gfx::SetScaleCommandPtr& command);
-  bool ApplySetRotationCommand(const ui::gfx::SetRotationCommandPtr& command);
-  bool ApplySetAnchorCommand(const ui::gfx::SetAnchorCommandPtr& command);
-  bool ApplySetSizeCommand(const ui::gfx::SetSizeCommandPtr& command);
-  bool ApplySetShapeCommand(const ui::gfx::SetShapeCommandPtr& command);
-  bool ApplySetMaterialCommand(const ui::gfx::SetMaterialCommandPtr& command);
-  bool ApplySetClipCommand(const ui::gfx::SetClipCommandPtr& command);
-  bool ApplySetHitTestBehaviorCommand(
-      const ui::gfx::SetHitTestBehaviorCommandPtr& command);
-  bool ApplySetCameraCommand(const ui::gfx::SetCameraCommandPtr& command);
-  bool ApplySetCameraTransformCommand(
-      const ui::gfx::SetCameraTransformCommandPtr& command);
+  bool ApplyCreateResourceCommand(::gfx::CreateResourceCommand command);
+  bool ApplyReleaseResourceCommand(::gfx::ReleaseResourceCommand command);
+  bool ApplyExportResourceCommand(::gfx::ExportResourceCommand command);
+  bool ApplyImportResourceCommand(::gfx::ImportResourceCommand command);
+  bool ApplyAddChildCommand(::gfx::AddChildCommand command);
+  bool ApplyAddPartCommand(::gfx::AddPartCommand command);
+  bool ApplyDetachCommand(::gfx::DetachCommand command);
+  bool ApplyDetachChildrenCommand(::gfx::DetachChildrenCommand command);
+  bool ApplySetTagCommand(::gfx::SetTagCommand command);
+  bool ApplySetTranslationCommand(::gfx::SetTranslationCommand command);
+  bool ApplySetScaleCommand(::gfx::SetScaleCommand command);
+  bool ApplySetRotationCommand(::gfx::SetRotationCommand command);
+  bool ApplySetAnchorCommand(::gfx::SetAnchorCommand command);
+  bool ApplySetSizeCommand(::gfx::SetSizeCommand command);
+  bool ApplySetShapeCommand(::gfx::SetShapeCommand command);
+  bool ApplySetMaterialCommand(::gfx::SetMaterialCommand command);
+  bool ApplySetClipCommand(::gfx::SetClipCommand command);
+  bool ApplySetHitTestBehaviorCommand(::gfx::SetHitTestBehaviorCommand command);
+  bool ApplySetCameraCommand(::gfx::SetCameraCommand command);
+  bool ApplySetCameraTransformCommand(::gfx::SetCameraTransformCommand command);
   bool ApplySetCameraProjectionCommand(
-      const ui::gfx::SetCameraProjectionCommandPtr& command);
+      ::gfx::SetCameraProjectionCommand command);
   bool ApplySetStereoCameraProjectionCommand(
-      const ui::gfx::SetStereoCameraProjectionCommandPtr& command);
+      ::gfx::SetStereoCameraProjectionCommand command);
   bool ApplySetCameraPoseBufferCommand(
-      const ui::gfx::SetCameraPoseBufferCommandPtr& command);
-  bool ApplySetLightColorCommand(
-      const ui::gfx::SetLightColorCommandPtr& command);
-  bool ApplySetLightDirectionCommand(
-      const ui::gfx::SetLightDirectionCommandPtr& command);
-  bool ApplyAddLightCommand(const ui::gfx::AddLightCommandPtr& command);
-  bool ApplyDetachLightCommand(const ui::gfx::DetachLightCommandPtr& command);
-  bool ApplyDetachLightsCommand(const ui::gfx::DetachLightsCommandPtr& command);
-  bool ApplySetTextureCommand(const ui::gfx::SetTextureCommandPtr& command);
-  bool ApplySetColorCommand(const ui::gfx::SetColorCommandPtr& command);
-  bool ApplyBindMeshBuffersCommand(
-      const ui::gfx::BindMeshBuffersCommandPtr& command);
-  bool ApplyAddLayerCommand(const ui::gfx::AddLayerCommandPtr& command);
-  bool ApplySetLayerStackCommand(
-      const ui::gfx::SetLayerStackCommandPtr& command);
-  bool ApplySetRendererCommand(const ui::gfx::SetRendererCommandPtr& command);
-  bool ApplySetRendererParamCommand(
-      const ui::gfx::SetRendererParamCommandPtr& command);
-  bool ApplySetEventMaskCommand(const ui::gfx::SetEventMaskCommandPtr& command);
-  bool ApplySetLabelCommand(const ui::gfx::SetLabelCommandPtr& command);
-  bool ApplySetDisableClippingCommand(
-      const ui::gfx::SetDisableClippingCommandPtr& command);
+      ::gfx::SetCameraPoseBufferCommand command);
+  bool ApplySetLightColorCommand(::gfx::SetLightColorCommand command);
+  bool ApplySetLightDirectionCommand(::gfx::SetLightDirectionCommand command);
+  bool ApplyAddLightCommand(::gfx::AddLightCommand command);
+  bool ApplyDetachLightCommand(::gfx::DetachLightCommand command);
+  bool ApplyDetachLightsCommand(::gfx::DetachLightsCommand command);
+  bool ApplySetTextureCommand(::gfx::SetTextureCommand command);
+  bool ApplySetColorCommand(::gfx::SetColorCommand command);
+  bool ApplyBindMeshBuffersCommand(::gfx::BindMeshBuffersCommand command);
+  bool ApplyAddLayerCommand(::gfx::AddLayerCommand command);
+  bool ApplySetLayerStackCommand(::gfx::SetLayerStackCommand command);
+  bool ApplySetRendererCommand(::gfx::SetRendererCommand command);
+  bool ApplySetRendererParamCommand(::gfx::SetRendererParamCommand command);
+  bool ApplySetEventMaskCommand(::gfx::SetEventMaskCommand command);
+  bool ApplySetLabelCommand(::gfx::SetLabelCommand command);
+  bool ApplySetDisableClippingCommand(::gfx::SetDisableClippingCommand command);
 
   // Resource creation functions, called by ApplyCreateResourceCommand().
-  bool ApplyCreateMemory(scenic::ResourceId id,
-                         const ui::gfx::MemoryArgsPtr& args);
-  bool ApplyCreateImage(scenic::ResourceId id,
-                        const ui::gfx::ImageArgsPtr& args);
-  bool ApplyCreateImagePipe(scenic::ResourceId id,
-                            const ui::gfx::ImagePipeArgsPtr& args);
-  bool ApplyCreateBuffer(scenic::ResourceId id,
-                         const ui::gfx::BufferArgsPtr& args);
-  bool ApplyCreateScene(scenic::ResourceId id,
-                        const ui::gfx::SceneArgsPtr& args);
-  bool ApplyCreateCamera(scenic::ResourceId id,
-                         const ui::gfx::CameraArgsPtr& args);
+  bool ApplyCreateMemory(scenic::ResourceId id, ::gfx::MemoryArgs args);
+  bool ApplyCreateImage(scenic::ResourceId id, ::gfx::ImageArgs args);
+  bool ApplyCreateImagePipe(scenic::ResourceId id, ::gfx::ImagePipeArgs args);
+  bool ApplyCreateBuffer(scenic::ResourceId id, ::gfx::BufferArgs args);
+  bool ApplyCreateScene(scenic::ResourceId id, ::gfx::SceneArgs args);
+  bool ApplyCreateCamera(scenic::ResourceId id, ::gfx::CameraArgs args);
   bool ApplyCreateStereoCamera(scenic::ResourceId id,
-                               const ui::gfx::StereoCameraArgsPtr& args);
-  bool ApplyCreateRenderer(scenic::ResourceId id,
-                           const ui::gfx::RendererArgsPtr& args);
+                               ::gfx::StereoCameraArgs args);
+  bool ApplyCreateRenderer(scenic::ResourceId id, ::gfx::RendererArgs args);
   bool ApplyCreateAmbientLight(scenic::ResourceId id,
-                               const ui::gfx::AmbientLightArgsPtr& args);
-  bool ApplyCreateDirectionalLight(
-      scenic::ResourceId id,
-      const ui::gfx::DirectionalLightArgsPtr& args);
-  bool ApplyCreateRectangle(scenic::ResourceId id,
-                            const ui::gfx::RectangleArgsPtr& args);
-  bool ApplyCreateRoundedRectangle(
-      scenic::ResourceId id,
-      const ui::gfx::RoundedRectangleArgsPtr& args);
-  bool ApplyCreateCircle(scenic::ResourceId id,
-                         const ui::gfx::CircleArgsPtr& args);
-  bool ApplyCreateMesh(scenic::ResourceId id, const ui::gfx::MeshArgsPtr& args);
-  bool ApplyCreateMaterial(scenic::ResourceId id,
-                           const ui::gfx::MaterialArgsPtr& args);
-  bool ApplyCreateClipNode(scenic::ResourceId id,
-                           const ui::gfx::ClipNodeArgsPtr& args);
-  bool ApplyCreateEntityNode(scenic::ResourceId id,
-                             const ui::gfx::EntityNodeArgsPtr& args);
-  bool ApplyCreateShapeNode(scenic::ResourceId id,
-                            const ui::gfx::ShapeNodeArgsPtr& args);
-  bool ApplyCreateDisplayCompositor(
-      scenic::ResourceId id,
-      const ui::gfx::DisplayCompositorArgsPtr& args);
-  bool ApplyCreateImagePipeCompositor(
-      scenic::ResourceId id,
-      const ui::gfx::ImagePipeCompositorArgsPtr& args);
-  bool ApplyCreateLayerStack(scenic::ResourceId id,
-                             const ui::gfx::LayerStackArgsPtr& args);
-  bool ApplyCreateLayer(scenic::ResourceId id,
-                        const ui::gfx::LayerArgsPtr& args);
-  bool ApplyCreateVariable(scenic::ResourceId id,
-                           const ui::gfx::VariableArgsPtr& args);
+                               ::gfx::AmbientLightArgs args);
+  bool ApplyCreateDirectionalLight(scenic::ResourceId id,
+                                   ::gfx::DirectionalLightArgs args);
+  bool ApplyCreateRectangle(scenic::ResourceId id, ::gfx::RectangleArgs args);
+  bool ApplyCreateRoundedRectangle(scenic::ResourceId id,
+                                   ::gfx::RoundedRectangleArgs args);
+  bool ApplyCreateCircle(scenic::ResourceId id, ::gfx::CircleArgs args);
+  bool ApplyCreateMesh(scenic::ResourceId id, ::gfx::MeshArgs args);
+  bool ApplyCreateMaterial(scenic::ResourceId id, ::gfx::MaterialArgs args);
+  bool ApplyCreateClipNode(scenic::ResourceId id, ::gfx::ClipNodeArgs args);
+  bool ApplyCreateEntityNode(scenic::ResourceId id, ::gfx::EntityNodeArgs args);
+  bool ApplyCreateShapeNode(scenic::ResourceId id, ::gfx::ShapeNodeArgs args);
+  bool ApplyCreateDisplayCompositor(scenic::ResourceId id,
+                                    ::gfx::DisplayCompositorArgs args);
+  bool ApplyCreateImagePipeCompositor(scenic::ResourceId id,
+                                      ::gfx::ImagePipeCompositorArgs args);
+  bool ApplyCreateLayerStack(scenic::ResourceId id, ::gfx::LayerStackArgs args);
+  bool ApplyCreateLayer(scenic::ResourceId id, ::gfx::LayerArgs args);
+  bool ApplyCreateVariable(scenic::ResourceId id, ::gfx::VariableArgs args);
 
   // Actually create resources.
-  ResourcePtr CreateMemory(scenic::ResourceId id,
-                           const ui::gfx::MemoryArgsPtr& args);
+  ResourcePtr CreateMemory(scenic::ResourceId id, ::gfx::MemoryArgs args);
   ResourcePtr CreateImage(scenic::ResourceId id,
                           MemoryPtr memory,
-                          const ui::gfx::ImageArgsPtr& args);
+                          ::gfx::ImageArgs args);
   ResourcePtr CreateBuffer(scenic::ResourceId id,
                            MemoryPtr memory,
                            uint32_t memory_offset,
                            uint32_t num_bytes);
-  ResourcePtr CreateScene(scenic::ResourceId id,
-                          const ui::gfx::SceneArgsPtr& args);
-  ResourcePtr CreateCamera(scenic::ResourceId id,
-                           const ui::gfx::CameraArgsPtr& args);
-  ResourcePtr CreateRenderer(scenic::ResourceId id,
-                             const ui::gfx::RendererArgsPtr& args);
+  ResourcePtr CreateScene(scenic::ResourceId id, ::gfx::SceneArgs args);
+  ResourcePtr CreateCamera(scenic::ResourceId id, ::gfx::CameraArgs args);
+  ResourcePtr CreateRenderer(scenic::ResourceId id, ::gfx::RendererArgs args);
   ResourcePtr CreateAmbientLight(scenic::ResourceId id);
   ResourcePtr CreateDirectionalLight(scenic::ResourceId id);
-  ResourcePtr CreateClipNode(scenic::ResourceId id,
-                             const ui::gfx::ClipNodeArgsPtr& args);
+  ResourcePtr CreateClipNode(scenic::ResourceId id, ::gfx::ClipNodeArgs args);
   ResourcePtr CreateEntityNode(scenic::ResourceId id,
-                               const ui::gfx::EntityNodeArgsPtr& args);
-  ResourcePtr CreateShapeNode(scenic::ResourceId id,
-                              const ui::gfx::ShapeNodeArgsPtr& args);
-  ResourcePtr CreateDisplayCompositor(
-      scenic::ResourceId id,
-      const ui::gfx::DisplayCompositorArgsPtr& args);
-  ResourcePtr CreateImagePipeCompositor(
-      scenic::ResourceId id,
-      const ui::gfx::ImagePipeCompositorArgsPtr& args);
+                               ::gfx::EntityNodeArgs args);
+  ResourcePtr CreateShapeNode(scenic::ResourceId id, ::gfx::ShapeNodeArgs args);
+  ResourcePtr CreateDisplayCompositor(scenic::ResourceId id,
+                                      ::gfx::DisplayCompositorArgs args);
+  ResourcePtr CreateImagePipeCompositor(scenic::ResourceId id,
+                                        ::gfx::ImagePipeCompositorArgs args);
   ResourcePtr CreateLayerStack(scenic::ResourceId id,
-                               const ui::gfx::LayerStackArgsPtr& args);
-  ResourcePtr CreateLayer(scenic::ResourceId id,
-                          const ui::gfx::LayerArgsPtr& args);
+                               ::gfx::LayerStackArgs args);
+  ResourcePtr CreateLayer(scenic::ResourceId id, ::gfx::LayerArgs args);
   ResourcePtr CreateCircle(scenic::ResourceId id, float initial_radius);
   ResourcePtr CreateRectangle(scenic::ResourceId id, float width, float height);
   ResourcePtr CreateRoundedRectangle(scenic::ResourceId id,
@@ -277,19 +234,18 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                                      float bottom_left_radius);
   ResourcePtr CreateMesh(scenic::ResourceId id);
   ResourcePtr CreateMaterial(scenic::ResourceId id);
-  ResourcePtr CreateVariable(scenic::ResourceId id,
-                             const ui::gfx::VariableArgsPtr& args);
+  ResourcePtr CreateVariable(scenic::ResourceId id, ::gfx::VariableArgs args);
 
   // Return false and log an error if the value is not of the expected type.
   // NOTE: although failure does not halt execution of the program, it does
   // indicate client error, and will be used by the caller to tear down the
   // Session.
-  bool AssertValueIsOfType(const ui::gfx::ValuePtr& value,
-                           const ui::gfx::Value::Tag* tags,
+  bool AssertValueIsOfType(const ::gfx::Value& value,
+                           const ::gfx::Value::Tag* tags,
                            size_t tag_count);
   template <size_t N>
-  bool AssertValueIsOfType(const ui::gfx::ValuePtr& value,
-                           const std::array<ui::gfx::Value::Tag, N>& tags) {
+  bool AssertValueIsOfType(const ::gfx::Value& value,
+                           const std::array<::gfx::Value::Tag, N>& tags) {
     return AssertValueIsOfType(value, tags.data(), N);
   }
 
@@ -302,9 +258,9 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   struct Update {
     uint64_t presentation_time;
 
-    ::f1dl::VectorPtr<ui::gfx::CommandPtr> commands;
+    ::fidl::VectorPtr<::gfx::Command> commands;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
-    ::f1dl::VectorPtr<zx::event> release_fences;
+    ::fidl::VectorPtr<zx::event> release_fences;
 
     // Callback to report when the update has been applied in response to
     // an invocation of |Session.Present()|.
@@ -312,7 +268,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   };
   bool ApplyUpdate(Update* update);
   std::queue<Update> scheduled_updates_;
-  ::f1dl::VectorPtr<zx::event> fences_to_release_on_next_update_;
+  ::fidl::VectorPtr<zx::event> fences_to_release_on_next_update_;
 
   uint64_t last_applied_update_presentation_time_ = 0;
   uint64_t last_presentation_time_ = 0;
@@ -326,7 +282,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
     }
   };
   std::priority_queue<ImagePipeUpdate> scheduled_image_pipe_updates_;
-  ::f1dl::VectorPtr<ui::EventPtr> buffered_events_;
+  ::fidl::VectorPtr<ui::Event> buffered_events_;
 
   const SessionId id_;
   Engine* const engine_;

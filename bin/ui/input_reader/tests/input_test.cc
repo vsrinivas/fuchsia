@@ -17,7 +17,7 @@ namespace test {
 class InputTest : public ::testing::Test {};
 
 mozart::DeviceDescriptorPtr GenerateKeyboardDescriptor() {
-  mozart::KeyboardDescriptorPtr keyboard = mozart::KeyboardDescriptor::New();
+  input::KeyboardDescriptorPtr keyboard = input::KeyboardDescriptor::New();
   keyboard->keys.resize(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
   for (size_t index = HID_USAGE_KEY_A; index < HID_USAGE_KEY_RIGHT_GUI;
        ++index) {
@@ -31,7 +31,7 @@ mozart::DeviceDescriptorPtr GenerateKeyboardDescriptor() {
 TEST_F(InputTest, RegisterKeyboardTest) {
   mozart::DeviceDescriptorPtr descriptor = GenerateKeyboardDescriptor();
 
-  mozart::InputDevicePtr input_device;
+  input::InputDevicePtr input_device;
   uint32_t on_register_count = 0;
   mozart::test::MockInputDeviceRegistry registry(
       [&on_register_count](mozart::test::MockInputDevice* input_device) {
@@ -48,10 +48,10 @@ TEST_F(InputTest, RegisterKeyboardTest) {
 TEST_F(InputTest, InputKeyboardTest) {
   mozart::DeviceDescriptorPtr descriptor = GenerateKeyboardDescriptor();
 
-  mozart::InputDevicePtr input_device;
+  input::InputDevicePtr input_device;
   uint32_t on_report_count = 0;
   mozart::test::MockInputDeviceRegistry registry(
-      nullptr, [&on_report_count](mozart::InputReportPtr report) {
+      nullptr, [&on_report_count](input::InputReportPtr report) {
         EXPECT_TRUE(report->keyboard);
         EXPECT_EQ(HID_USAGE_KEY_A, report->keyboard->pressed_keys->at(0));
         on_report_count++;
@@ -60,10 +60,10 @@ TEST_F(InputTest, InputKeyboardTest) {
   registry.RegisterDevice(std::move(descriptor), input_device.NewRequest());
 
   // PRESSED
-  mozart::KeyboardReportPtr keyboard_report = mozart::KeyboardReport::New();
+  input::KeyboardReportPtr keyboard_report = input::KeyboardReport::New();
   keyboard_report->pressed_keys.push_back(HID_USAGE_KEY_A);
 
-  mozart::InputReportPtr report = mozart::InputReport::New();
+  input::InputReportPtr report = input::InputReport::New();
   report->event_time = fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
   report->keyboard = std::move(keyboard_report);
   input_device->DispatchReport(std::move(report));

@@ -18,7 +18,7 @@ namespace test {
 
 using OnDeviceCallback = std::function<void(MockInputDevice*)>;
 
-class MockInputDeviceRegistry : public mozart::InputDeviceRegistry {
+class MockInputDeviceRegistry : public input::InputDeviceRegistry {
  public:
   MockInputDeviceRegistry(const OnDeviceCallback on_device_callback,
                           const OnReportCallback on_report_callback);
@@ -26,7 +26,7 @@ class MockInputDeviceRegistry : public mozart::InputDeviceRegistry {
 
   // |InputDeviceRegistry|:
   void RegisterDevice(mozart::DeviceDescriptorPtr descriptor,
-                      f1dl::InterfaceRequest<mozart::InputDevice>
+                      fidl::InterfaceRequest<input::InputDevice>
                           input_device_request) override;
 
  private:

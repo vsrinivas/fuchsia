@@ -5,12 +5,14 @@
 #ifndef GARNET_LIB_UI_SCENIC_SCENIC_H_
 #define GARNET_LIB_UI_SCENIC_SCENIC_H_
 
+#include <set>
+
+#include <fuchsia/cpp/ui.h>
 #include "garnet/lib/ui/scenic/session.h"
 #include "garnet/lib/ui/scenic/system.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/scenic/fidl/scenic.fidl.h"
 
 namespace scenic {
 
@@ -22,7 +24,8 @@ class Clock;
 class Scenic : public ui::Scenic {
  public:
   Scenic(component::ApplicationContext* app_context,
-         fxl::TaskRunner* task_runner, Clock* clock);
+         fxl::TaskRunner* task_runner,
+         Clock* clock);
   ~Scenic();
 
   // Create and register a new system of the specified type.  At most one System
@@ -35,8 +38,8 @@ class Scenic : public ui::Scenic {
 
   // |ui::Scenic|
   void CreateSession(
-      ::f1dl::InterfaceRequest<ui::Session> session,
-      ::f1dl::InterfaceHandle<ui::SessionListener> listener) override;
+      ::fidl::InterfaceRequest<ui::Session> session,
+      ::fidl::InterfaceHandle<ui::SessionListener> listener) override;
 
   component::ApplicationContext* app_context() const { return app_context_; }
   fxl::TaskRunner* task_runner() const { return task_runner_; }
@@ -49,8 +52,8 @@ class Scenic : public ui::Scenic {
   fxl::TaskRunner* const task_runner_;
   Clock* clock_;
 
-  f1dl::BindingSet<ui::Session, std::unique_ptr<Session>> session_bindings_;
-  f1dl::BindingSet<ui::Scenic> scenic_bindings_;
+  fidl::BindingSet<ui::Session, std::unique_ptr<Session>> session_bindings_;
+  fidl::BindingSet<ui::Scenic> scenic_bindings_;
 
   // Registered systems, indexed by their TypeId. These slots could be null,
   // indicating the System is not available or supported.
@@ -64,15 +67,14 @@ class Scenic : public ui::Scenic {
   std::vector<fxl::Closure> run_after_all_systems_initialized_;
 
   void CreateSessionImmediately(
-      ::f1dl::InterfaceRequest<ui::Session> session_request,
-      ::f1dl::InterfaceHandle<ui::SessionListener> listener);
+      ::fidl::InterfaceRequest<ui::Session> session_request,
+      ::fidl::InterfaceHandle<ui::SessionListener> listener);
 
   // If a System is not initially initialized, this method will be called when
   // it is ready.
   void OnSystemInitialized(System* system);
 
-  void GetDisplayInfo(
-      const ui::Scenic::GetDisplayInfoCallback& callback) override;
+  void GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) override;
 
   size_t next_session_id_ = 1;
 

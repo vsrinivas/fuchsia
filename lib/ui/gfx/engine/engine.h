@@ -118,7 +118,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   // Update reported metrics for nodes which subscribe to metrics events.
   // If anything changed, append the node to |updated_nodes|.
   void UpdateMetrics(Node* node,
-                     const ui::gfx::Metrics& parent_metrics,
+                     const ::gfx::Metrics& parent_metrics,
                      std::vector<Node*>* updated_nodes);
 
   // Allow overriding to support tests.

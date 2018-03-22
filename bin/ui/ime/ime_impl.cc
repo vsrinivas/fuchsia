@@ -26,7 +26,9 @@ ImeImpl::ImeImpl(
       action_(action),
       state_(std::move(initial_state)) {
   FXL_VLOG(1) << "ImeImpl: "
-              << ", keyboard_type=" << static_cast<std::underlying_type<input::KeyboardType>::type>(keyboard_type)
+              << ", keyboard_type="
+              << static_cast<std::underlying_type<input::KeyboardType>::type>(
+                     keyboard_type)
               << ", initial_state=" << &state_;
 
   editor_binding_.set_error_handler([this] { OnEditorDied(); });
@@ -41,7 +43,9 @@ void ImeImpl::OnEditorDied() {
 }
 
 void ImeImpl::SetKeyboardType(input::KeyboardType keyboard_type) {
-  FXL_VLOG(1) << "SetKeyboardType: keyboard_type=" << static_cast<std::underlying_type<input::KeyboardType>::type>(keyboard_type);
+  FXL_VLOG(1) << "SetKeyboardType: keyboard_type="
+              << static_cast<std::underlying_type<input::KeyboardType>::type>(
+                     keyboard_type);
   keyboard_type_ = keyboard_type;
 }
 
@@ -81,7 +85,8 @@ void ImeImpl::InjectInput(input::InputEvent event) {
       input::TextInputState state_clone;
       zx_status_t clone_result = fidl::Clone(state_, &state_clone);
       FXL_DCHECK(clone_result);
-      client_->DidUpdateState(std::move(state_clone), fidl::MakeOptional(std::move(event)));
+      client_->DidUpdateState(std::move(state_clone),
+                              fidl::MakeOptional(std::move(event)));
     } else {
       switch (keyboard.hid_usage) {
         case HID_USAGE_KEY_BACKSPACE: {
@@ -90,15 +95,16 @@ void ImeImpl::InjectInput(input::InputEvent event) {
           input::TextInputState state_clone;
           zx_status_t clone_result = fidl::Clone(state_, &state_clone);
           FXL_DCHECK(clone_result);
-          client_->DidUpdateState(std::move(state_clone), fidl::MakeOptional(std::move(event)));
+          client_->DidUpdateState(std::move(state_clone),
+                                  fidl::MakeOptional(std::move(event)));
         } break;
         case HID_USAGE_KEY_LEFT: {
           FXL_VLOG(1) << "Moving left (state = " << &state_ << "')";
           state_.revision++;
           // TODO(jpoichet) actually pay attention to affinity
           state_.selection.base = state_.selection.base > 0
-                                        ? state_.selection.base - 1
-                                        : state_.selection.base;
+                                      ? state_.selection.base - 1
+                                      : state_.selection.base;
           if (keyboard.modifiers & input::kModifierShift) {
           } else {
             state_.selection.extent = state_.selection.base;
@@ -108,7 +114,8 @@ void ImeImpl::InjectInput(input::InputEvent event) {
           input::TextInputState state_clone;
           zx_status_t clone_result = fidl::Clone(state_, &state_clone);
           FXL_DCHECK(clone_result);
-          client_->DidUpdateState(std::move(state_clone), fidl::MakeOptional(std::move(event)));
+          client_->DidUpdateState(std::move(state_clone),
+                                  fidl::MakeOptional(std::move(event)));
         } break;
         case HID_USAGE_KEY_RIGHT: {
           FXL_VLOG(1) << "Moving right (state = " << &state_ << "')";
@@ -127,7 +134,8 @@ void ImeImpl::InjectInput(input::InputEvent event) {
           input::TextInputState state_clone;
           zx_status_t clone_result = fidl::Clone(state_, &state_clone);
           FXL_DCHECK(clone_result);
-          client_->DidUpdateState(std::move(state_clone), fidl::MakeOptional(std::move(event)));
+          client_->DidUpdateState(std::move(state_clone),
+                                  fidl::MakeOptional(std::move(event)));
         } break;
         case HID_USAGE_KEY_ENTER: {
           client_->OnAction(action_);

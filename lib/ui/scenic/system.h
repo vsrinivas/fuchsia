@@ -6,9 +6,11 @@
 #define GARNET_LIB_UI_SCENIC_SYSTEM_H_
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
+
+#include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 // TODO(MZ-453): Don't support GetDisplayInfo in scenic fidl API.
-#include "lib/ui/scenic/fidl/scenic.fidl.h"
+#include <fuchsia/cpp/ui.h>
 
 namespace component {
 class ApplicationContext;
@@ -28,7 +30,8 @@ class Session;
 class SystemContext final {
  public:
   explicit SystemContext(component::ApplicationContext* app_context,
-                         fxl::TaskRunner* task_runner, Clock* clock);
+                         fxl::TaskRunner* task_runner,
+                         Clock* clock);
   SystemContext(SystemContext&& context);
 
   component::ApplicationContext* app_context() const { return app_context_; }
@@ -99,8 +102,7 @@ class TempSystemDelegate : public System {
  public:
   explicit TempSystemDelegate(SystemContext context,
                               bool initialized_after_construction);
-  virtual void GetDisplayInfo(
-      const ui::Scenic::GetDisplayInfoCallback& callback) = 0;
+  virtual void GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) = 0;
 };
 
 }  // namespace scenic

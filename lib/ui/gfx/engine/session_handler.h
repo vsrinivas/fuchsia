@@ -9,12 +9,12 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/tasks/task_runner.h"
 
+#include <fuchsia/cpp/ui.h>
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
-#include "lib/ui/scenic/fidl/events.fidl.h"
 
 namespace scenic {
 namespace gfx {
@@ -37,26 +37,26 @@ class SessionHandler : public TempSessionDelegate, public EventReporter {
   scenic::gfx::Session* session() const { return session_.get(); }
 
   // Flushes enqueued session events to the session listener as a batch.
-  void SendEvents(::f1dl::VectorPtr<ui::EventPtr> events) override;
+  void SendEvents(::fidl::VectorPtr<ui::Event> events) override;
 
  protected:
   // |ui::Session|
-  void Enqueue(::f1dl::VectorPtr<ui::CommandPtr> commands) override;
+  void Enqueue(::fidl::VectorPtr<ui::Command> commands) override;
   void Present(uint64_t presentation_time,
-               ::f1dl::VectorPtr<zx::event> acquire_fences,
-               ::f1dl::VectorPtr<zx::event> release_fences,
-               const ui::Session::PresentCallback& callback) override;
+               ::fidl::VectorPtr<zx::event> acquire_fences,
+               ::fidl::VectorPtr<zx::event> release_fences,
+               ui::Session::PresentCallback callback) override;
 
   void HitTest(uint32_t node_id,
-               ui::gfx::vec3Ptr ray_origin,
-               ui::gfx::vec3Ptr ray_direction,
-               const ui::Session::HitTestCallback& callback) override;
+               ::gfx::vec3 ray_origin,
+               ::gfx::vec3 ray_direction,
+               ui::Session::HitTestCallback callback) override;
 
-  void HitTestDeviceRay(ui::gfx::vec3Ptr ray_origin,
-                        ui::gfx::vec3Ptr ray_direction,
-                        const ui::Session::HitTestCallback& clback) override;
+  void HitTestDeviceRay(::gfx::vec3 ray_origin,
+                        ::gfx::vec3 ray_direction,
+                        ui::Session::HitTestCallback callback) override;
 
-  bool ApplyCommand(const ui::CommandPtr& command) override;
+  bool ApplyCommand(const ui::Command& command) override;
 
  private:
   friend class SessionManager;
@@ -75,7 +75,7 @@ class SessionHandler : public TempSessionDelegate, public EventReporter {
   ErrorReporter* const error_reporter_;
   scenic::gfx::SessionPtr session_;
 
-  ::f1dl::VectorPtr<ui::gfx::CommandPtr> buffered_commands_;
+  ::fidl::VectorPtr<::gfx::Command> buffered_commands_;
 };
 
 }  // namespace gfx

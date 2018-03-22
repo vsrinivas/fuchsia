@@ -12,7 +12,7 @@
 #include "lib/escher/util/stopwatch.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/images/fidl/image_pipe.fidl.h"
+#include <fuchsia/cpp/images.h>
 #include "lib/ui/views/fidl/view_token.fidl.h"
 
 namespace shadertoy {
@@ -30,12 +30,12 @@ class ShadertoyState : public escher::Resource {
   // Factory constructor.
   static fxl::RefPtr<ShadertoyState> NewForImagePipe(
       App* app,
-      ::f1dl::InterfaceHandle<ui::gfx::ImagePipe> image_pipe);
+      ::f1dl::InterfaceHandle<gfx::ImagePipe> image_pipe);
 
   // Factory constructor.
   static fxl::RefPtr<ShadertoyState> NewForView(
       App* app,
-      ::f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      ::f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       bool handle_input_events);
 
   virtual ~ShadertoyState();
@@ -51,7 +51,7 @@ class ShadertoyState : public escher::Resource {
   void SetMouse(glm::vec4 i_mouse);
 
   void SetImage(uint32_t channel,
-                ::f1dl::InterfaceRequest<ui::gfx::ImagePipe> request);
+                ::f1dl::InterfaceRequest<gfx::ImagePipe> request);
 
  protected:
   explicit ShadertoyState(App* app);
@@ -60,7 +60,7 @@ class ShadertoyState : public escher::Resource {
   void Close();
 
   // Subclasses must call this from DrawFrame().
-  void OnFramePresented(const ui::PresentationInfoPtr& info);
+  void OnFramePresented(const images::PresentationInfoPtr& info);
 
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }

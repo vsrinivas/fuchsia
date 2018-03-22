@@ -18,7 +18,7 @@ library views_v1;
 // containing views from various applications.
 //
 // Refer to |View| and |ViewTree| for more information about these objects.
-[ServiceName="mozart::ViewManager"]
+[ServiceName="views_v1::ViewManager"]
 interface ViewManager {
   // Maximum length for a view or view tree label.
   const uint32 kLabelMaxLength = 32;

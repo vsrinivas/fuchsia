@@ -23,7 +23,7 @@ struct DeviceInfo {
   std::unique_ptr<async::AutoWait> waiter;
 };
 
-InputReader::InputReader(mozart::InputDeviceRegistry* registry,
+InputReader::InputReader(input::InputDeviceRegistry* registry,
                          bool ignore_console)
     : registry_(registry), ignore_console_(ignore_console) {
        FXL_CHECK(registry_);

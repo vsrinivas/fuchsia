@@ -24,8 +24,7 @@ class ScenicSystem : public TempSystemDelegate {
       CommandDispatcherContext context) override;
 
   // TODO(MZ-452): Remove this when we externalize Displays.
-  void GetDisplayInfo(
-      const ui::Scenic::GetDisplayInfoCallback& callback) override;
+  void GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) override;
 
  private:
   void Initialize();
@@ -33,8 +32,7 @@ class ScenicSystem : public TempSystemDelegate {
   DisplayManager display_manager_;
 
   // TODO(MZ-452): Remove this when we externalize Displays.
-  void GetDisplayInfoImmediately(
-      const ui::Scenic::GetDisplayInfoCallback& callback);
+  void GetDisplayInfoImmediately(ui::Scenic::GetDisplayInfoCallback callback);
 
   // TODO(MZ-452): Remove this when we externalize Displays.
   bool initialized_ = false;

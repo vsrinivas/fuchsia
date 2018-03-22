@@ -28,13 +28,13 @@ constexpr float kPi = glm::pi<float>();
 
 DisplayRotater::DisplayRotater() {}
 
-bool DisplayRotater::OnEvent(const mozart::InputEventPtr& event,
+bool DisplayRotater::OnEvent(const input::InputEventPtr& event,
                              Presentation* presentation) {
   if (event->is_keyboard()) {
-    const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
+    const input::KeyboardEventPtr& kbd = event->get_keyboard();
     const uint32_t kVolumeDownKey = 232;
     if (kbd->modifiers == 0 &&
-        kbd->phase == mozart::KeyboardEvent::Phase::PRESSED &&
+        kbd->phase == input::KeyboardEvent::Phase::PRESSED &&
         kbd->code_point == 0 && kbd->hid_usage == kVolumeDownKey) {
       FlipDisplay(presentation);
       return true;

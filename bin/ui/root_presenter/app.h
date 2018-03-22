@@ -29,43 +29,43 @@ class Presentation;
 // Any number of view trees can be created, although multi-display support
 // and input routing is not fully supported (TODO).
 class App : public mozart::Presenter,
-            public mozart::InputDeviceRegistry,
-            public mozart::InputDeviceImpl::Listener {
+            public input::InputDeviceRegistry,
+            public input::InputDeviceImpl::Listener {
  public:
   explicit App(const fxl::CommandLine& command_line);
   ~App();
 
   // |InputDeviceImpl::Listener|
-  void OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) override;
-  void OnReport(mozart::InputDeviceImpl* input_device,
-                mozart::InputReportPtr report) override;
+  void OnDeviceDisconnected(input::InputDeviceImpl* input_device) override;
+  void OnReport(input::InputDeviceImpl* input_device,
+                input::InputReportPtr report) override;
 
  private:
   // |Presenter|:
-  void Present(f1dl::InterfaceHandle<mozart::ViewOwner> view_owner,
-               f1dl::InterfaceRequest<mozart::Presentation>
+  void Present(fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
+               fidl::InterfaceRequest<mozart::Presentation>
                    presentation_request) override;
 
   // |InputDeviceRegistry|:
   void RegisterDevice(mozart::DeviceDescriptorPtr descriptor,
-                      f1dl::InterfaceRequest<mozart::InputDevice>
+                      fidl::InterfaceRequest<input::InputDevice>
                           input_device_request) override;
 
   void InitializeServices();
   void Reset();
 
   std::unique_ptr<component::ApplicationContext> application_context_;
-  f1dl::BindingSet<mozart::Presenter> presenter_bindings_;
-  f1dl::BindingSet<mozart::InputDeviceRegistry> input_receiver_bindings_;
+  fidl::BindingSet<mozart::Presenter> presenter_bindings_;
+  fidl::BindingSet<input::InputDeviceRegistry> input_receiver_bindings_;
   mozart::input::InputReader input_reader_;
 
-  mozart::ViewManagerPtr view_manager_;
+  views_v1::ViewManagerPtr view_manager_;
   ui::ScenicPtr scenic_;
 
   std::vector<std::unique_ptr<Presentation>> presentations_;
 
   uint32_t next_device_token_ = 0;
-  std::unordered_map<uint32_t, std::unique_ptr<mozart::InputDeviceImpl>>
+  std::unordered_map<uint32_t, std::unique_ptr<input::InputDeviceImpl>>
       devices_by_id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

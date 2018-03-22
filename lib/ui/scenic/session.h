@@ -8,13 +8,13 @@
 #include <array>
 #include <memory>
 
+#include <fuchsia/cpp/gfx.h>
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/lib/ui/scenic/system.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/ui/scenic/fidl/session.fidl.h"
 
 namespace scenic {
 
@@ -29,39 +29,39 @@ class Session final : public ui::Session,
  public:
   Session(Scenic* owner,
           SessionId id,
-          ::f1dl::InterfaceHandle<ui::SessionListener> listener);
+          ::fidl::InterfaceHandle<ui::SessionListener> listener);
   ~Session() override;
 
   void SetCommandDispatchers(
       std::array<std::unique_ptr<CommandDispatcher>,
                  System::TypeId::kMaxSystems> dispatchers);
 
-  bool ApplyCommand(const ui::CommandPtr& command);
+  bool ApplyCommand(const ui::Command& command);
 
   // |ui::Session|
-  void Enqueue(::f1dl::VectorPtr<ui::CommandPtr> cmds) override;
+  void Enqueue(::fidl::VectorPtr<ui::Command> cmds) override;
 
   // |ui::Session|
   void Present(uint64_t presentation_time,
-               ::f1dl::VectorPtr<zx::event> acquire_fences,
-               ::f1dl::VectorPtr<zx::event> release_fences,
-               const PresentCallback& callback) override;
+               ::fidl::VectorPtr<zx::event> acquire_fences,
+               ::fidl::VectorPtr<zx::event> release_fences,
+               PresentCallback callback) override;
 
   // |ui::Session|
   // TODO(MZ-422): Remove this after it's removed from session.fidl.
   void HitTest(uint32_t node_id,
-               ui::gfx::vec3Ptr ray_origin,
-               ui::gfx::vec3Ptr ray_direction,
-               const HitTestCallback& callback) override;
+               ::gfx::vec3 ray_origin,
+               ::gfx::vec3 ray_direction,
+               HitTestCallback callback) override;
 
   // |ui::Session|
   // TODO(MZ-422): Remove this after it's removed from session.fidl.
-  void HitTestDeviceRay(ui::gfx::vec3Ptr ray_origin,
-                        ui::gfx::vec3Ptr ray_direction,
-                        const HitTestCallback& callback) override;
+  void HitTestDeviceRay(::gfx::vec3 ray_origin,
+                        ::gfx::vec3 ray_direction,
+                        HitTestCallback callback) override;
 
   // |EventReporter|
-  void SendEvents(::f1dl::VectorPtr<ui::EventPtr> events) override;
+  void SendEvents(::fidl::VectorPtr<ui::Event> events) override;
 
   // |ErrorReporter|
   // Customize behavior of ErrorReporter::ReportError().
@@ -75,7 +75,7 @@ class Session final : public ui::Session,
  private:
   Scenic* const scenic_;
   const SessionId id_;
-  ::f1dl::InterfacePtr<ui::SessionListener> listener_;
+  ::fidl::InterfacePtr<ui::SessionListener> listener_;
 
   std::array<std::unique_ptr<CommandDispatcher>, System::TypeId::kMaxSystems>
       dispatchers_;

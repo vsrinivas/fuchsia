@@ -5,34 +5,34 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_HANDLER_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_HANDLER_H_
 
+#include <fuchsia/cpp/images.h>
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/images/fidl/image_pipe.fidl.h"
 
 namespace scenic {
 namespace gfx {
 
 class ImagePipe;
 
-class ImagePipeHandler : public ui::gfx::ImagePipe {
+class ImagePipeHandler : public images::ImagePipe {
  public:
-  ImagePipeHandler(::f1dl::InterfaceRequest<ui::gfx::ImagePipe> request,
+  ImagePipeHandler(::fidl::InterfaceRequest<images::ImagePipe> request,
                    scenic::gfx::ImagePipe* image_pipe);
 
  private:
   void AddImage(uint32_t image_id,
-                ui::gfx::ImageInfoPtr image_info,
+                images::ImageInfo image_info,
                 zx::vmo memory,
-                ui::gfx::MemoryType memory_type,
+                images::MemoryType memory_type,
                 uint64_t memory_offset) override;
   void RemoveImage(uint32_t image_id) override;
 
   void PresentImage(uint32_t image_id,
                     uint64_t presentation_time,
-                    ::f1dl::VectorPtr<zx::event> acquire_fences,
-                    ::f1dl::VectorPtr<zx::event> release_fences,
-                    const PresentImageCallback& callback) override;
+                    ::fidl::VectorPtr<zx::event> acquire_fences,
+                    ::fidl::VectorPtr<zx::event> release_fences,
+                    PresentImageCallback callback) override;
 
-  ::f1dl::Binding<ui::gfx::ImagePipe> binding_;
+  ::fidl::Binding<images::ImagePipe> binding_;
   scenic::gfx::ImagePipe* image_pipe_;
 };
 

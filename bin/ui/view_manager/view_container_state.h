@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "lib/ui/views/fidl/view_containers.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 #include "garnet/bin/ui/view_manager/view_stub.h"
 #include "lib/fxl/macros.h"
 
@@ -29,11 +29,11 @@ class ViewContainerState {
   ViewContainerState();
 
   // Gets or sets the view container listener.
-  mozart::ViewContainerListener* view_container_listener() const {
+  views_v1::ViewContainerListener* view_container_listener() const {
     return view_container_listener_.get();
   }
   void set_view_container_listener(
-      mozart::ViewContainerListenerPtr view_container_listener) {
+      views_v1::ViewContainerListenerPtr view_container_listener) {
     view_container_listener_ = std::move(view_container_listener);
   }
 
@@ -61,7 +61,7 @@ class ViewContainerState {
   virtual ~ViewContainerState();
 
  private:
-  mozart::ViewContainerListenerPtr view_container_listener_;
+  views_v1::ViewContainerListenerPtr view_container_listener_;
   ChildrenMap children_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewContainerState);

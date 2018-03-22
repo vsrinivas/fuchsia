@@ -28,15 +28,15 @@ bool MeshShape::GetIntersection(const escher::ray4& ray,
 }
 
 bool MeshShape::BindBuffers(BufferPtr index_buffer,
-                            ui::gfx::MeshIndexFormat index_format,
+                            ::gfx::MeshIndexFormat index_format,
                             uint64_t index_offset,
                             uint32_t index_count,
                             BufferPtr vertex_buffer,
-                            const ui::gfx::MeshVertexFormatPtr& vertex_format,
+                            const ::gfx::MeshVertexFormat& vertex_format,
                             uint64_t vertex_offset,
                             uint32_t vertex_count,
                             escher::BoundingBox bounding_box) {
-  if (index_format != ui::gfx::MeshIndexFormat::kUint32) {
+  if (index_format != ::gfx::MeshIndexFormat::kUint32) {
     // TODO(MZ-275): only 32-bit indices are supported.
     session()->error_reporter()->ERROR() << "BindBuffers::BindBuffers(): "
                                             "TODO(MZ-275): only 32-bit indices "
@@ -44,11 +44,11 @@ bool MeshShape::BindBuffers(BufferPtr index_buffer,
     return false;
   }
   escher::MeshSpec spec;
-  switch (vertex_format->position_type) {
-    case ui::gfx::ValueType::kVector2:
+  switch (vertex_format.position_type) {
+    case ::gfx::ValueType::kVector2:
       spec.flags |= escher::MeshAttribute::kPosition2D;
       break;
-    case ui::gfx::ValueType::kVector3:
+    case ::gfx::ValueType::kVector3:
       spec.flags |= escher::MeshAttribute::kPosition3D;
       break;
     default:
@@ -56,19 +56,19 @@ bool MeshShape::BindBuffers(BufferPtr index_buffer,
           << "MeshShape::BindBuffers(): bad vertex position format.";
       return false;
   }
-  switch (vertex_format->normal_type) {
-    case ui::gfx::ValueType::kNone:
+  switch (vertex_format.normal_type) {
+    case ::gfx::ValueType::kNone:
       break;
     default:
       session()->error_reporter()->ERROR()
           << "MeshShape::BindBuffers(): bad vertex normal format.";
       return false;
   }
-  switch (vertex_format->tex_coord_type) {
-    case ui::gfx::ValueType::kVector2:
+  switch (vertex_format.tex_coord_type) {
+    case ::gfx::ValueType::kVector2:
       spec.flags |= escher::MeshAttribute::kUV;
       break;
-    case ui::gfx::ValueType::kNone:
+    case ::gfx::ValueType::kNone:
       break;
     default:
       session()->error_reporter()->ERROR()

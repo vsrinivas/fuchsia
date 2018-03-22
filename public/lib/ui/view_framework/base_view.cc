@@ -22,7 +22,7 @@ ui::ScenicPtr GetScenic(ViewManager* view_manager) {
 }  // namespace
 
 BaseView::BaseView(ViewManagerPtr view_manager,
-                   f1dl::InterfaceRequest<ViewOwner> view_owner_request,
+                   fidl::InterfaceRequest<ViewOwner> view_owner_request,
                    const std::string& label)
     : view_manager_(std::move(view_manager)),
       view_listener_binding_(this),
@@ -45,7 +45,7 @@ BaseView::BaseView(ViewManagerPtr view_manager,
 
   session_.set_event_handler(
       std::bind(&BaseView::HandleSessionEvents, this, std::placeholders::_1));
-  parent_node_.SetEventMask(ui::gfx::kMetricsEventMask);
+  parent_node_.SetEventMask(gfx::kMetricsEventMask);
 }
 
 BaseView::~BaseView() = default;
@@ -94,7 +94,7 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
   // Session.Present(), for use in InvalidateScene().
   last_presentation_time_ = presentation_time;
 
-  session()->Present(presentation_time, [this](ui::PresentationInfoPtr info) {
+  session()->Present(presentation_time, [this](images::PresentationInfoPtr info) {
     FXL_DCHECK(present_pending_);
 
     zx_time_t next_presentation_time =
@@ -113,11 +113,11 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
   });
 }
 
-void BaseView::HandleSessionEvents(f1dl::VectorPtr<ui::EventPtr> events) {
-  ui::gfx::Metrics* new_metrics = nullptr;
+void BaseView::HandleSessionEvents(fidl::VectorPtr<ui::EventPtr> events) {
+  gfx::Metrics* new_metrics = nullptr;
   for (const auto& event : *events) {
     if (event->is_gfx()) {
-      const ui::gfx::EventPtr& scenic_event = event->get_gfx();
+      const gfx::EventPtr& scenic_event = event->get_gfx();
       if (scenic_event->is_metrics() &&
           scenic_event->get_metrics()->node_id == parent_node_.id()) {
         new_metrics = scenic_event->get_metrics()->metrics.get();
@@ -155,11 +155,11 @@ void BaseView::AdjustMetricsAndPhysicalSize() {
 
 void BaseView::OnPropertiesChanged(ViewPropertiesPtr old_properties) {}
 
-void BaseView::OnSceneInvalidated(ui::PresentationInfoPtr presentation_info) {}
+void BaseView::OnSceneInvalidated(images::PresentationInfoPtr presentation_info) {}
 
-void BaseView::OnSessionEvent(f1dl::VectorPtr<ui::EventPtr> events) {}
+void BaseView::OnSessionEvent(fidl::VectorPtr<ui::EventPtr> events) {}
 
-bool BaseView::OnInputEvent(mozart::InputEventPtr event) {
+bool BaseView::OnInputEvent(input::InputEventPtr event) {
   return false;
 }
 
@@ -204,7 +204,7 @@ void BaseView::OnChildUnavailable(uint32_t child_key,
   callback();
 }
 
-void BaseView::OnEvent(mozart::InputEventPtr event,
+void BaseView::OnEvent(input::InputEventPtr event,
                        const OnEventCallback& callback) {
   TRACE_DURATION("view", "OnEvent");
   bool handled = OnInputEvent(std::move(event));

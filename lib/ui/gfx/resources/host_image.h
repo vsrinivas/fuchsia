@@ -25,7 +25,7 @@ class HostImage : public Image {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  // Create Image given a HostMemoryPtr, ui::gfx::ImageInfoPtr, and
+  // Create Image given a HostMemoryPtr, images::ImageInfoPtr, and
   // memory_offset.
   //
   // |session| is the Session that this image can be referenced from.
@@ -41,7 +41,7 @@ class HostImage : public Image {
   static ImagePtr New(Session* session,
                       scenic::ResourceId id,
                       HostMemoryPtr memory,
-                      const ui::gfx::ImageInfoPtr& host_image_info,
+                      const images::ImageInfo& host_image_info,
                       uint64_t memory_offset,
                       ErrorReporter* error_reporter);
 
@@ -69,14 +69,15 @@ class HostImage : public Image {
             HostMemoryPtr memory,
             escher::ImagePtr image,
             uint64_t host_memory_offset,
-            ui::gfx::ImageInfo host_image_format);
+            images::ImageInfo host_image_format);
 
   HostMemoryPtr memory_;
   // The offset into |memory_| where the image is stored, in bytes.
   uint64_t memory_offset_;
   // The format of the image stored in host memory.
-  ui::gfx::ImageInfo host_image_format_;
-  escher::image_utils::ImageConversionFunction image_conversion_function_ = nullptr;
+  images::ImageInfo host_image_format_;
+  escher::image_utils::ImageConversionFunction image_conversion_function_ =
+      nullptr;
 };
 
 }  // namespace gfx

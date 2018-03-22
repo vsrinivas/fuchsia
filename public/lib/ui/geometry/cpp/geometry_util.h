@@ -5,56 +5,68 @@
 #ifndef LIB_UI_GEOMETRY_CPP_GEOMETRY_UTIL_H_
 #define LIB_UI_GEOMETRY_CPP_GEOMETRY_UTIL_H_
 
-#include "lib/ui/geometry/fidl/geometry.fidl.h"
+#include <fuchsia/cpp/geometry.h>
 
 namespace mozart {
 
-inline bool operator==(const Rect& lhs, const Rect& rhs) {
+inline bool operator==(const geometry::Rect& lhs, const geometry::Rect& rhs) {
   return lhs.x == rhs.x && lhs.y == rhs.y && lhs.width == rhs.width &&
          lhs.height == rhs.height;
 }
 
-inline bool operator!=(const Rect& lhs, const Rect& rhs) {
+inline bool operator!=(const geometry::Rect& lhs, const geometry::Rect& rhs) {
   return !(lhs == rhs);
 }
 
-inline bool operator==(const Size& lhs, const Size& rhs) {
+inline bool operator==(const geometry::Size& lhs, const geometry::Size& rhs) {
   return lhs.width == rhs.width && lhs.height == rhs.height;
 }
 
-inline bool operator!=(const Size& lhs, const Size& rhs) {
+inline bool operator!=(const geometry::Size& lhs, const geometry::Size& rhs) {
   return !(lhs == rhs);
 }
 
-inline bool operator==(const Point& lhs, const Point& rhs) {
+inline bool operator==(const geometry::Point& lhs, const geometry::Point& rhs) {
   return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
-inline bool operator!=(const Point& lhs, const Point& rhs) {
+inline bool operator!=(const geometry::Point& lhs, const geometry::Point& rhs) {
   return !(lhs == rhs);
 }
 
-void SetIdentityTransform(Transform* transform);
-void SetTranslationTransform(Transform* transform,
+void SetIdentityTransform(geometry::Transform* transform);
+void SetTranslationTransform(geometry::Transform* transform,
                              float x,
                              float y,
                              float z = 0.0f);
-void SetScaleTransform(Transform* transform, float x, float y, float z = 1.0f);
-
-void Translate(Transform* transform, float x, float y, float z = 0.0f);
-void Scale(Transform* transform, float x, float y, float z = 1.0f);
-
-TransformPtr CreateIdentityTransform();
-TransformPtr CreateTranslationTransform(float x, float y, float z = 0.0f);
-TransformPtr CreateScaleTransform(float x, float y, float z = 1.0f);
-
-TransformPtr Translate(TransformPtr transform,
+void SetScaleTransform(geometry::Transform* transform,
                        float x,
                        float y,
-                       float z = 0.0f);
-TransformPtr Scale(TransformPtr transform, float x, float y, float z = 1.0f);
+                       float z = 1.0f);
 
-PointF TransformPoint(const Transform& transform, const PointF& point);
+void Translate(geometry::Transform* transform,
+               float x,
+               float y,
+               float z = 0.0f);
+void Scale(geometry::Transform* transform, float x, float y, float z = 1.0f);
+
+geometry::TransformPtr CreateIdentityTransform();
+geometry::TransformPtr CreateTranslationTransform(float x,
+                                                  float y,
+                                                  float z = 0.0f);
+geometry::TransformPtr CreateScaleTransform(float x, float y, float z = 1.0f);
+
+geometry::TransformPtr Translate(geometry::TransformPtr transform,
+                                 float x,
+                                 float y,
+                                 float z = 0.0f);
+geometry::TransformPtr Scale(geometry::TransformPtr transform,
+                             float x,
+                             float y,
+                             float z = 1.0f);
+
+geometry::PointF TransformPoint(const geometry::Transform& transform,
+                                const geometry::PointF& point);
 
 }  // namespace mozart
 

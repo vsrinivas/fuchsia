@@ -12,14 +12,14 @@
 namespace mozart {
 namespace test {
 
-using OnReportCallback = std::function<void(mozart::InputReportPtr report)>;
+using OnReportCallback = std::function<void(input::InputReportPtr report)>;
 
-class MockInputDevice : public mozart::InputDevice {
+class MockInputDevice : public input::InputDevice {
  public:
   MockInputDevice(
       uint32_t device_id,
       mozart::DeviceDescriptorPtr descriptor,
-      f1dl::InterfaceRequest<mozart::InputDevice> input_device_request,
+      fidl::InterfaceRequest<input::InputDevice> input_device_request,
       const OnReportCallback& on_report_callback);
   ~MockInputDevice();
 
@@ -27,12 +27,12 @@ class MockInputDevice : public mozart::InputDevice {
   mozart::DeviceDescriptor* descriptor() { return descriptor_.get(); }
 
   // |InputDevice|
-  void DispatchReport(mozart::InputReportPtr report) override;
+  void DispatchReport(input::InputReportPtr report) override;
 
  private:
   uint32_t id_;
   mozart::DeviceDescriptorPtr descriptor_;
-  f1dl::Binding<mozart::InputDevice> input_device_binding_;
+  fidl::Binding<input::InputDevice> input_device_binding_;
   OnReportCallback on_report_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockInputDevice);

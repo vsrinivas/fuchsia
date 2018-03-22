@@ -18,7 +18,7 @@ ViewProviderService::ViewProviderService(
   FXL_DCHECK(application_context_);
 
   application_context_->outgoing_services()->AddService<ViewProvider>(
-      [this](f1dl::InterfaceRequest<ViewProvider> request) {
+      [this](fidl::InterfaceRequest<ViewProvider> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 }
@@ -28,8 +28,8 @@ ViewProviderService::~ViewProviderService() {
 }
 
 void ViewProviderService::CreateView(
-    f1dl::InterfaceRequest<ViewOwner> view_owner_request,
-    f1dl::InterfaceRequest<component::ServiceProvider> view_services) {
+    fidl::InterfaceRequest<ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<component::ServiceProvider> view_services) {
   ViewContext view_context;
   view_context.application_context = application_context_;
   view_context.view_manager =
