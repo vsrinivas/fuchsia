@@ -14,7 +14,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/functional/closure.h"
-#include "lib/network/fidl/network_service.fidl.h"
+#include "<fuchsia/cpp/network.h>"
 
 namespace network {
 

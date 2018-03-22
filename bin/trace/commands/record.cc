@@ -17,7 +17,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/network/fidl/network_service.fidl.h"
+#include "<fuchsia/cpp/network.h>"
 
 namespace tracing {
 

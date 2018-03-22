@@ -9,7 +9,7 @@
 #include "garnet/bin/network/net_errors.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/logging.h"
-#include "lib/network/fidl/network_service.fidl.h"
+#include "<fuchsia/cpp/network.h>"
 
 namespace media {
 

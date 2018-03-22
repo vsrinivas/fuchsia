@@ -9,7 +9,7 @@
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "lib/netconnector/fidl/netconnector.fidl.h"
+#include "<fuchsia/cpp/netconnector.h>"
 
 namespace examples {
 namespace {

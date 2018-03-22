@@ -24,7 +24,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
 #include <fuchsia/cpp/mdns.h>
-#include "lib/netconnector/fidl/netconnector.fidl.h"
+#include "<fuchsia/cpp/netconnector.h>"
 
 namespace netconnector {
 

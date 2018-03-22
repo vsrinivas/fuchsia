@@ -12,11 +12,11 @@
 #include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/media/fidl/media_types.fidl.h"
 #include "lib/media/fidl/timelines.fidl.h"
-#include "lib/network/fidl/http_header.fidl.h"
-#include "lib/network/fidl/network_error.fidl.h"
-#include "lib/network/fidl/url_body.fidl.h"
-#include "lib/network/fidl/url_request.fidl.h"
-#include "lib/network/fidl/url_response.fidl.h"
+#include "<fuchsia/cpp/network.h>"
+#include "<fuchsia/cpp/network.h>"
+#include "<fuchsia/cpp/network.h>"
+#include "<fuchsia/cpp/network.h>"
+#include "<fuchsia/cpp/network.h>"
 
 namespace media {
 

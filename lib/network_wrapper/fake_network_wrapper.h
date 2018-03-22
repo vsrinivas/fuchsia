@@ -8,7 +8,7 @@
 #include "garnet/lib/network_wrapper/network_wrapper.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/network/fidl/network_service.fidl.h"
+#include "<fuchsia/cpp/network.h>"
 
 namespace network_wrapper {
 

@@ -8,7 +8,7 @@
 
 #include "garnet/bin/mdns/service/interface_monitor.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/netstack/fidl/netstack.fidl.h"
+#include "<fuchsia/cpp/netstack.h>"
 
 namespace mdns {
 

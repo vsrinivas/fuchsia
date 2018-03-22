@@ -10,7 +10,7 @@
 #include <sys/socket.h>
 
 #include "garnet/bin/netconnector/ip_address.h"
-#include "lib/netstack/fidl/netstack.fidl.h"
+#include "<fuchsia/cpp/netstack.h>"
 
 namespace netconnector {
 

@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_NETWORK_URL_LOADER_IMPL_H_
 #define GARNET_BIN_NETWORK_URL_LOADER_IMPL_H_
 
-#include "lib/network/fidl/url_loader.fidl.h"
+#include "<fuchsia/cpp/network.h>"
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fidl/cpp/binding.h"

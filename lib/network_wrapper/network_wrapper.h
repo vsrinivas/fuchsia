@@ -8,8 +8,8 @@
 #include "garnet/lib/callback/cancellable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/network/fidl/url_request.fidl.h"
-#include "lib/network/fidl/url_response.fidl.h"
+#include "<fuchsia/cpp/network.h>"
+#include "<fuchsia/cpp/network.h>"
 
 namespace network_wrapper {
 

@@ -10,7 +10,7 @@
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/media/fidl/seeking_reader.fidl.h"
-#include "lib/network/fidl/url_loader.fidl.h"
+#include "<fuchsia/cpp/network.h>"
 
 namespace media {
 

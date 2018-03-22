@@ -6,7 +6,7 @@
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
-#include "lib/netconnector/fidl/netconnector.fidl.h"
+#include "<fuchsia/cpp/netconnector.h>"
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);

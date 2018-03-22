@@ -10,7 +10,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/network/fidl/network_service.fidl.h"
+#include "<fuchsia/cpp/network.h>"
 
 namespace {
 
