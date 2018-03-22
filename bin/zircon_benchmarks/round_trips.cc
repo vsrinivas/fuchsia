@@ -16,8 +16,8 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
+#include <fuchsia/cpp/zircon_benchmarks.h>
 #include "channels.h"
-#include "garnet/bin/zircon_benchmarks/round_trip_service.fidl.h"
 #include "round_trips.h"
 #include "test_runner.h"
 
@@ -328,10 +328,9 @@ class PortTest {
 };
 
 // Implementation of FIDL interface for testing round trip IPCs.
-class RoundTripServiceImpl : public RoundTripService {
+class RoundTripServiceImpl : public zircon_benchmarks::RoundTripService {
  public:
-  void RoundTripTest(uint32_t arg,
-                     const RoundTripTestCallback& callback) override {
+  void RoundTripTest(uint32_t arg, RoundTripTestCallback callback) override {
     FXL_CHECK(arg == 123);
     callback(456);
   }
@@ -342,8 +341,7 @@ class RoundTripServiceImpl : public RoundTripService {
 class FidlTest {
  public:
   FidlTest(MultiProc multiproc) {
-    zx_handle_t server =
-        GetSynchronousProxy(&service_ptr_).TakeChannel().release();
+    zx_handle_t server = service_ptr_.NewRequest().TakeChannel().release();
     thread_or_process_.Launch("FidlTest::ThreadFunc", &server, 1, multiproc);
   }
 
@@ -353,7 +351,8 @@ class FidlTest {
 
     fsl::MessageLoop loop;
     RoundTripServiceImpl service_impl;
-    f1dl::Binding<RoundTripService> binding(&service_impl, std::move(channel));
+    fidl::Binding<zircon_benchmarks::RoundTripService> binding(
+        &service_impl, std::move(channel));
     binding.set_error_handler(
         [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
     loop.Run();
@@ -367,7 +366,7 @@ class FidlTest {
 
  private:
   ThreadOrProcess thread_or_process_;
-  RoundTripServiceSyncPtr service_ptr_;
+  zircon_benchmarks::RoundTripServiceSyncPtr service_ptr_;
 };
 
 // Test the round trip time for waking up threads using Zircon futexes.
@@ -514,15 +513,12 @@ ThreadFunc GetThreadFunc(const char* name) {
 template <class TestClass>
 void RegisterTestMultiProc(const char* base_name) {
   fbenchmark::RegisterTest<TestClass>(
-      (std::string(base_name) + "_SingleProcess").c_str(),
-      SingleProcess);
+      (std::string(base_name) + "_SingleProcess").c_str(), SingleProcess);
   fbenchmark::RegisterTest<TestClass>(
-      (std::string(base_name) + "_MultiProcess").c_str(),
-      MultiProcess);
+      (std::string(base_name) + "_MultiProcess").c_str(), MultiProcess);
 }
 
-__attribute__((constructor))
-void RegisterTests() {
+__attribute__((constructor)) void RegisterTests() {
   RegisterTestMultiProc<BasicChannelTest>("RoundTrip_BasicChannel");
   RegisterTestMultiProc<ChannelPortTest>("RoundTrip_ChannelPort");
   RegisterTestMultiProc<ChannelCallTest>("RoundTrip_ChannelCall");

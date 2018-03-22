@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+library zircon_benchmarks;
+
 // Example interface for testing performance of round trips.
 interface RoundTripService {
-  RoundTripTest@0(uint32 arg) => (uint32 result);
+  1: RoundTripTest(uint32 arg) -> (uint32 result);
 };

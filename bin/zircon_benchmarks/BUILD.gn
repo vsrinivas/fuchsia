@@ -75,6 +75,7 @@ source_set("lib") {
 
 fidl("fidl_interface") {
   testonly = true
+  name = "zircon_benchmarks"
   sources = [
     "round_trip_service.fidl",
   ]
