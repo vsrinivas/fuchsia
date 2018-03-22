@@ -103,7 +103,11 @@ zx_status_t IntelHDAController::Enumerate() {
 
     zx_status_t res = ZirconDevice::Enumerate(nullptr, DEV_PATH, DEV_FMT,
     [](void*, uint32_t id, const char* const dev_name) -> zx_status_t {
-        fbl::unique_ptr<IntelHDAController> dev(new IntelHDAController(id, dev_name));
+        fbl::AllocChecker ac;
+        fbl::unique_ptr<IntelHDAController> dev(new (&ac) IntelHDAController(id, dev_name));
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
 
         if (!controllers_.insert_or_find(fbl::move(dev)))
             return ZX_ERR_INTERNAL;

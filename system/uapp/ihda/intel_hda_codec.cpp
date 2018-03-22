@@ -117,7 +117,12 @@ static zx_status_t ParseAWConnectionListLen(AudioWidgetState& widget, const Code
         widget.conn_list_len_ = resp.data & 0x7f;
 
         if (widget.conn_list_len_) {
-            widget.conn_list_.reset(new AudioWidgetState::ConnListEntry[widget.conn_list_len_]);
+            fbl::AllocChecker ac;
+            widget.conn_list_.reset(
+                    new (&ac) AudioWidgetState::ConnListEntry[widget.conn_list_len_]);
+            if (!ac.check()) {
+                return ZX_ERR_NO_MEMORY;
+            }
         }
     } else {
         widget.long_form_conn_list_ = false;
@@ -184,7 +189,11 @@ static zx_status_t ParseAudioWidgetType(AudioWidgetStatePtr& ptr, const CodecRes
         return ZX_ERR_INVALID_ARGS;
     }
 
-    ptr.reset(new AudioWidgetState(caps));
+    fbl::AllocChecker ac;
+    ptr.reset(new (&ac) AudioWidgetState(caps));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
 
     return ZX_OK;
 }
@@ -310,7 +319,11 @@ static zx_status_t ParseAFGWidgetCount(AudioFunctionGroupState& afg, const Codec
         return ZX_ERR_INTERNAL;
 
     if (afg.widget_count_) {
-        afg.widgets_.reset(new AudioWidgetStatePtr[afg.widget_count_]);
+        fbl::AllocChecker ac;
+        afg.widgets_.reset(new (&ac) AudioWidgetStatePtr[afg.widget_count_]);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
     }
 
     return ZX_OK;
@@ -330,19 +343,29 @@ static const IntelHDACodec::CommandListEntry<AudioFunctionGroupState> FETCH_AFG_
 static zx_status_t ParseFnGroupType(FunctionGroupStatePtr& ptr, const CodecResponse& resp) {
     /* Response format documented in section 7.3.4.1 */
     auto type = static_cast<FunctionGroupState::Type>(resp.data & 0xFF);
+    fbl::AllocChecker ac;
 
     switch (type) {
     case FunctionGroupState::Type::AUDIO:
-        ptr.reset(new AudioFunctionGroupState());
+        ptr.reset(new (&ac) AudioFunctionGroupState());
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
         break;
 
     case FunctionGroupState::Type::MODEM:
-        ptr.reset(new ModemFunctionGroupState());
+        ptr.reset(new (&ac) ModemFunctionGroupState());
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
         break;
     default:
         if ((type >= FunctionGroupState::Type::VENDOR_START) &&
             (type <= FunctionGroupState::Type::VENDOR_END)) {
-            ptr.reset(new VendorFunctionGroupState(type));
+            ptr.reset(new (&ac) VendorFunctionGroupState(type));
+            if (!ac.check()) {
+                return ZX_ERR_NO_MEMORY;
+            }
         } else {
             return ZX_ERR_INTERNAL;
         }
@@ -395,7 +418,11 @@ static zx_status_t ParseFnGroupCount(CodecState& codec, const CodecResponse& res
 
     // Allocate the storage for the function group state pointers, then
     // start the process of enumerating their properties and widgets.
-    codec.fn_groups_.reset(new FunctionGroupStatePtr[codec.fn_group_count_]);
+    fbl::AllocChecker ac;
+    codec.fn_groups_.reset(new (&ac) FunctionGroupStatePtr[codec.fn_group_count_]);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
 
     return ZX_OK;
 }
@@ -412,7 +439,11 @@ zx_status_t IntelHDACodec::Enumerate() {
 
     zx_status_t res = ZirconDevice::Enumerate(nullptr, DEV_PATH, DEV_FMT,
     [](void*, uint32_t id, const char* const dev_name) -> zx_status_t {
-        auto codec = fbl::unique_ptr<IntelHDACodec>(new IntelHDACodec(id, dev_name));
+        fbl::AllocChecker ac;
+        auto codec = fbl::unique_ptr<IntelHDACodec>(new (&ac) IntelHDACodec(id, dev_name));
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
 
         if (codec == nullptr)
             return ZX_ERR_NO_MEMORY;

@@ -11,12 +11,6 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/codec-utils/codec-driver-base.cpp \
     $(LOCAL_DIR)/codec-utils/stream-base.cpp \
-    $(LOCAL_DIR)/ihda/intel_hda_device.cpp \
-    $(LOCAL_DIR)/ihda/print_codec_state.cpp \
-    $(LOCAL_DIR)/ihda/intel_hda_codec.cpp \
-    $(LOCAL_DIR)/ihda/ihda.cpp \
-    $(LOCAL_DIR)/ihda/zircon_device.cpp \
-    $(LOCAL_DIR)/ihda/intel_hda_controller.cpp \
     $(LOCAL_DIR)/utils/codec-caps.cpp \
     $(LOCAL_DIR)/utils/utils.cpp \
 
@@ -26,7 +20,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/dispatcher-pool \
     system/ulib/fbl \
-    system/ulib/fdio \
     system/ulib/zx \
 
 include make/module.mk
