@@ -4,6 +4,7 @@
 
 #include "garnet/bin/sysmgr/delegating_application_loader.h"
 
+#include "lib/fidl/cpp/clone.h"
 #include "lib/svc/cpp/services.h"
 
 namespace sysmgr {
@@ -33,8 +34,8 @@ DelegatingApplicationLoader::DelegatingApplicationLoader(
 DelegatingApplicationLoader::~DelegatingApplicationLoader() = default;
 
 void DelegatingApplicationLoader::LoadApplication(
-    const f1dl::StringPtr& url,
-    const ApplicationLoader::LoadApplicationCallback& callback) {
+    fidl::StringPtr url,
+    LoadApplicationCallback callback) {
   std::string scheme = GetScheme(url);
   if (!scheme.empty()) {
     auto it = delegates_by_scheme_.find(scheme);
@@ -54,10 +55,10 @@ void DelegatingApplicationLoader::LoadApplication(
 void DelegatingApplicationLoader::StartDelegate(
     ApplicationLoaderRecord* record) {
   component::Services services;
-  auto dup_launch_info = component::ApplicationLaunchInfo::New();
-  dup_launch_info->url = record->launch_info->url;
-  dup_launch_info->arguments = record->launch_info->arguments.Clone();
-  dup_launch_info->directory_request = services.NewRequest();
+  component::ApplicationLaunchInfo dup_launch_info;
+  dup_launch_info.url = record->launch_info->url;
+  fidl::Clone(record->launch_info->arguments, &dup_launch_info.arguments);
+  dup_launch_info.directory_request = services.NewRequest();
   delegate_launcher_->CreateApplication(std::move(dup_launch_info),
                                         record->controller.NewRequest());
 

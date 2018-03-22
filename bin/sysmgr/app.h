@@ -36,7 +36,7 @@ class App {
                          component::ApplicationLaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
   void RegisterAppLoaders(Config::ServiceMap app_loaders);
-  void LaunchApplication(component::ApplicationLaunchInfoPtr launch_info);
+  void LaunchApplication(component::ApplicationLaunchInfo launch_info);
 
   std::unique_ptr<component::ApplicationContext> application_context_;
 
@@ -50,7 +50,7 @@ class App {
   component::ApplicationLauncherPtr env_launcher_;
 
   std::unique_ptr<DelegatingApplicationLoader> app_loader_;
-  f1dl::BindingSet<component::ApplicationLoader> app_loader_bindings_;
+  fidl::BindingSet<component::ApplicationLoader> app_loader_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

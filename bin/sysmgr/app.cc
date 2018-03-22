@@ -11,6 +11,7 @@
 #include <zircon/processargs.h>
 
 #include "lib/app/cpp/connect.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
@@ -90,7 +91,7 @@ App::App()
 
   // Launch startup applications.
   for (auto& launch_info : config.TakeApps())
-    LaunchApplication(std::move(launch_info));
+    LaunchApplication(std::move(*launch_info));
 
   // TODO(abarth): Remove this hard-coded mention of netstack once netstack is
   // fully converted to using service namespaces.
@@ -114,10 +115,10 @@ void App::RegisterSingleton(std::string service_name,
           FXL_VLOG(1) << "Starting singleton " << launch_info->url
                       << " for service " << service_name;
           component::Services services;
-          auto dup_launch_info = component::ApplicationLaunchInfo::New();
-          dup_launch_info->url = launch_info->url;
-          dup_launch_info->arguments = launch_info->arguments.Clone();
-          dup_launch_info->directory_request = services.NewRequest();
+          component::ApplicationLaunchInfo dup_launch_info;
+          dup_launch_info.url = launch_info->url;
+          fidl::Clone(launch_info->arguments, &dup_launch_info.arguments);
+          dup_launch_info.directory_request = services.NewRequest();
           env_launcher_->CreateApplication(std::move(dup_launch_info),
                                            controller.NewRequest());
           controller.set_error_handler(
@@ -143,13 +144,13 @@ void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
           ->ConnectToEnvironmentService<component::ApplicationLoader>());
 
   service_provider_bridge_.AddService<component::ApplicationLoader>(
-      [this](f1dl::InterfaceRequest<component::ApplicationLoader> request) {
+      [this](fidl::InterfaceRequest<component::ApplicationLoader> request) {
         app_loader_bindings_.AddBinding(app_loader_.get(), std::move(request));
       });
 }
 
-void App::LaunchApplication(component::ApplicationLaunchInfoPtr launch_info) {
-  FXL_VLOG(1) << "Launching application " << launch_info->url;
+void App::LaunchApplication(component::ApplicationLaunchInfo launch_info) {
+  FXL_VLOG(1) << "Launching application " << launch_info.url;
   env_launcher_->CreateApplication(std::move(launch_info), nullptr);
 }
 

@@ -29,8 +29,8 @@ class DelegatingApplicationLoader : public component::ApplicationLoader {
 
   // |ApplicationLoader|:
   void LoadApplication(
-      const f1dl::StringPtr& url,
-      const ApplicationLoader::LoadApplicationCallback& callback) override;
+      fidl::StringPtr url,
+      LoadApplicationCallback callback) override;
 
  private:
   struct ApplicationLoaderRecord {
