@@ -75,6 +75,15 @@ impl<T> From<zx::Handle> for ClientEnd<T> {
     }
 }
 
+impl<T> From<zx::Channel> for ClientEnd<T> {
+    fn from(chan: zx::Channel) -> Self {
+        ClientEnd {
+            inner: chan,
+            phantom: PhantomData,
+        }
+    }
+}
+
 impl<T: ServiceMarker> ::std::fmt::Debug for ClientEnd<T> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         write!(f, "ClientEnd(name={}, channel={:?})", T::NAME, self.inner)
@@ -118,6 +127,15 @@ impl<T> From<zx::Handle> for ServerEnd<T> {
     fn from(handle: zx::Handle) -> Self {
         ServerEnd {
             inner: handle.into(),
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<T> From<zx::Channel> for ServerEnd<T> {
+    fn from(chan: zx::Channel) -> Self {
+        ServerEnd {
+            inner: chan,
             phantom: PhantomData,
         }
     }
