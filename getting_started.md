@@ -27,15 +27,20 @@ sudo apt-get install texinfo libglib2.0-dev liblz4-tool autoconf libtool libsdl-
 
 ### macOS
 
-Install the Xcode Command Line Tools:
+1. Install the Xcode Command Line Tools:
+
 ```
 xcode-select --install
 ```
 
-Install a recent version of Xcode.
+1. In addition to the Xcode Command Line tools, you also need to
+   install a recent version of the full Xcode.
+   Download Xcode from https://developer.apple.com/xcode/.
 
-Install the other pre-reqs:
+1. Install the other pre-reqs:
+
 * Using Homebrew:
+
 ```
 # Install Homebrew
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
@@ -44,6 +49,7 @@ brew install wget pkg-config glib autoconf automake libtool golang
 ```
 
 * Using MacPorts:
+
 ```
 # Install MacPorts
 # See https://guide.macports.org/chunked/installing.macports.html
