@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "lib/ui/input/fidl/text_input.fidl.h"
+#include <fuchsia/cpp/input.h>
 
 namespace ime {
 
@@ -17,7 +17,7 @@ namespace ime {
 // - else, if the cursor is not at the beginning of the text, delete the
 //   character immediately preceding the cursor.
 // - else, no update occurs.
-void DeleteBackward(const mozart::TextInputStatePtr& current_state);
+void DeleteBackward(input::TextInputState& current_state);
 
 }  // namespace ime
 

@@ -6,10 +6,10 @@
 
 #include <algorithm>
 
+#include <fuchsia/cpp/input.h>
+#include "garnet/bin/ui/ime/ime_impl.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/input/fidl/text_input.fidl.h"
-#include "garnet/bin/ui/ime/ime_impl.h"
 #include "lib/fxl/logging.h"
 
 namespace ime {
@@ -18,8 +18,8 @@ App::App(const fxl::CommandLine& command_line)
     : application_context_(
           component::ApplicationContext::CreateFromStartupInfo()) {
   FXL_DCHECK(application_context_);
-  application_context_->outgoing_services()->AddService<mozart::ImeService>(
-      [this](f1dl::InterfaceRequest<mozart::ImeService> request) {
+  application_context_->outgoing_services()->AddService<input::ImeService>(
+      [this](fidl::InterfaceRequest<input::ImeService> request) {
         ime_bindings_.AddBinding(this, std::move(request));
       });
 }
@@ -27,18 +27,18 @@ App::App(const fxl::CommandLine& command_line)
 App::~App() {}
 
 void App::GetInputMethodEditor(
-    mozart::KeyboardType keyboard_type,
-    mozart::InputMethodAction action,
-    mozart::TextInputStatePtr initial_state,
-    f1dl::InterfaceHandle<mozart::InputMethodEditorClient> client,
-    f1dl::InterfaceRequest<mozart::InputMethodEditor> editor_request) {
-  FXL_DCHECK(initial_state);
+    input::KeyboardType keyboard_type,
+    input::InputMethodAction action,
+    input::TextInputState initial_state,
+    fidl::InterfaceHandle<input::InputMethodEditorClient> client,
+    fidl::InterfaceRequest<input::InputMethodEditor> editor_request) {
   FXL_DCHECK(client);
   FXL_DCHECK(editor_request.is_valid());
 
   FXL_VLOG(1) << "GetInputMethodEditor: "
-              << ", keyboard_type=" << keyboard_type << ", action=" << action
-              << ", initial_state=" << *initial_state;
+              << ", keyboard_type=" << static_cast<std::underlying_type<input::KeyboardType>::type>(keyboard_type)
+              << ", action=" << static_cast<std::underlying_type<input::InputMethodAction>::type>(action)
+              << ", initial_state=" << &initial_state;
 
   std::unique_ptr<ImeImpl> ime_impl =
       std::make_unique<ImeImpl>(keyboard_type, action, std::move(initial_state),

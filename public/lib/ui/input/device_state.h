@@ -11,16 +11,15 @@
 
 #include <vector>
 
-#include "lib/ui/input/fidl/input_events.fidl.h"
-#include "lib/ui/input/fidl/input_device_registry.fidl.h"
-#include "lib/ui/input/fidl/input_reports.fidl.h"
+#include <fuchsia/cpp/geometry.h>
+#include <fuchsia/cpp/input.h>
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace mozart {
 
-using OnEventCallback = std::function<void(mozart::InputEventPtr event)>;
+using OnEventCallback = std::function<void(input::InputEvent event)>;
 
 class DeviceState;
 
@@ -33,10 +32,10 @@ class State {
 class KeyboardState : public State {
  public:
   KeyboardState(DeviceState* device_state);
-  void Update(mozart::InputReportPtr report);
+  void Update(input::InputReportPtr report);
 
  private:
-  void SendEvent(mozart::KeyboardEvent::Phase phase,
+  void SendEvent(input::KeyboardEventPhase phase,
                  uint32_t key,
                  uint64_t modifiers,
                  uint64_t timestamp);
@@ -57,7 +56,7 @@ class KeyboardState : public State {
 class MouseState : public State {
  public:
   MouseState(DeviceState* device_state) : device_state_(device_state) {}
-  void Update(mozart::InputReportPtr report, mozart::Size display_size);
+  void Update(input::InputReportPtr report, geometry::Size display_size);
   void OnRegistered();
   void OnUnregistered();
 
@@ -65,23 +64,23 @@ class MouseState : public State {
   void SendEvent(float rel_x,
                  float rel_y,
                  int64_t timestamp,
-                 mozart::PointerEvent::Phase phase,
+                 input::PointerEventPhase phase,
                  uint32_t buttons);
 
   DeviceState* device_state_;
   uint8_t buttons_ = 0;
-  mozart::PointF position_;
+  geometry::PointF position_;
 };
 
 class StylusState : public State {
  public:
   StylusState(DeviceState* device_state) : device_state_(device_state) {}
-  void Update(mozart::InputReportPtr report, mozart::Size display_size);
+  void Update(input::InputReportPtr report, geometry::Size display_size);
 
  private:
   void SendEvent(int64_t timestamp,
-                 mozart::PointerEvent::Phase phase,
-                 mozart::PointerEvent::Type type,
+                 input::PointerEventPhase phase,
+                 input::PointerEventType type,
                  float x,
                  float y,
                  uint32_t buttons);
@@ -90,50 +89,50 @@ class StylusState : public State {
   bool stylus_down_ = false;
   bool stylus_in_range_ = false;
   bool inverted_stylus_ = false;
-  mozart::PointerEvent stylus_;
+  input::PointerEvent stylus_;
 };
 
 class TouchscreenState : public State {
  public:
   TouchscreenState(DeviceState* device_state) : device_state_(device_state) {}
-  void Update(mozart::InputReportPtr report, mozart::Size display_size);
+  void Update(input::InputReportPtr report, geometry::Size display_size);
 
  private:
   DeviceState* device_state_;
-  std::vector<mozart::PointerEvent> pointers_;
+  std::vector<input::PointerEvent> pointers_;
 };
 
 class DeviceState {
  public:
   DeviceState(uint32_t device_id,
-              mozart::DeviceDescriptor* descriptor,
+              input::DeviceDescriptor* descriptor,
               OnEventCallback callback);
   ~DeviceState();
 
   void OnRegistered();
   void OnUnregistered();
 
-  void Update(mozart::InputReportPtr report, mozart::Size display_size);
+  void Update(input::InputReportPtr report, geometry::Size display_size);
 
   uint32_t device_id() { return device_id_; }
   OnEventCallback callback() { return callback_; }
 
-  mozart::KeyboardDescriptor* keyboard_descriptor() {
+  input::KeyboardDescriptor* keyboard_descriptor() {
     return descriptor_->keyboard.get();
   }
-  mozart::MouseDescriptor* mouse_descriptor() {
+  input::MouseDescriptor* mouse_descriptor() {
     return descriptor_->mouse.get();
   }
-  mozart::StylusDescriptor* stylus_descriptor() {
+  input::StylusDescriptor* stylus_descriptor() {
     return descriptor_->stylus.get();
   }
-  mozart::TouchscreenDescriptor* touchscreen_descriptor() {
+  input::TouchscreenDescriptor* touchscreen_descriptor() {
     return descriptor_->touchscreen.get();
   }
 
  private:
   uint32_t device_id_;
-  mozart::DeviceDescriptor* descriptor_;
+  input::DeviceDescriptor* descriptor_;
   OnEventCallback callback_;
   KeyboardState keyboard_;
   MouseState mouse_;

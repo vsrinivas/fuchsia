@@ -6,44 +6,44 @@
 
 #include <iostream>
 
+#include <fuchsia/cpp/input.h>
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/ui/input/fidl/usages.fidl.h"
 
 namespace mozart {
 
-std::ostream& operator<<(std::ostream& os, const InputEvent& value) {
+std::ostream& operator<<(std::ostream& os, const input::InputEvent& value) {
   if (value.is_pointer()) {
-    return os << *(value.get_pointer().get());
+    return os << value.pointer();
   } else if (value.is_keyboard()) {
-    return os << *(value.get_keyboard().get());
+    return os << value.keyboard();
   } else {
     return os;
   }
 }
 
-std::ostream& operator<<(std::ostream& os, const PointerEvent& value) {
+std::ostream& operator<<(std::ostream& os, const input::PointerEvent& value) {
   os << "{PointerEvent:";
 
   switch (value.phase) {
-    case mozart::PointerEvent::Phase::ADD:
+    case input::PointerEventPhase::ADD:
       os << "ADD";
       break;
-    case mozart::PointerEvent::Phase::REMOVE:
+    case input::PointerEventPhase::REMOVE:
       os << "REMOVE";
       break;
-    case mozart::PointerEvent::Phase::CANCEL:
+    case input::PointerEventPhase::CANCEL:
       os << "CANCEL";
       break;
-    case mozart::PointerEvent::Phase::DOWN:
+    case input::PointerEventPhase::DOWN:
       os << "DOWN";
       break;
-    case mozart::PointerEvent::Phase::MOVE:
+    case input::PointerEventPhase::MOVE:
       os << "MOVE";
       break;
-    case mozart::PointerEvent::Phase::UP:
+    case input::PointerEventPhase::UP:
       os << "UP";
       break;
-    case mozart::PointerEvent::Phase::HOVER:
+    case input::PointerEventPhase::HOVER:
       os << "HOVER";
       break;
     default:
@@ -53,16 +53,16 @@ std::ostream& operator<<(std::ostream& os, const PointerEvent& value) {
   os << ", device_id=" << value.device_id;
   os << ", pointer_id=" << value.pointer_id << ", type=";
   switch (value.type) {
-    case mozart::PointerEvent::Type::TOUCH:
+    case input::PointerEventType::TOUCH:
       os << "TOUCH";
       break;
-    case mozart::PointerEvent::Type::STYLUS:
+    case input::PointerEventType::STYLUS:
       os << "STYLUS";
       break;
-    case mozart::PointerEvent::Type::INVERTED_STYLUS:
+    case input::PointerEventType::INVERTED_STYLUS:
       os << "INVERTED_STYLUS";
       break;
-    case mozart::PointerEvent::Type::MOUSE:
+    case input::PointerEventType::MOUSE:
       os << "MOUSE";
       break;
     default:
@@ -74,20 +74,20 @@ std::ostream& operator<<(std::ostream& os, const PointerEvent& value) {
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const KeyboardEvent& value) {
+std::ostream& operator<<(std::ostream& os, const input::KeyboardEvent& value) {
   os << "{KeyboardEvent:";
 
   switch (value.phase) {
-    case mozart::KeyboardEvent::Phase::PRESSED:
+    case input::KeyboardEventPhase::PRESSED:
       os << "PRESSED";
       break;
-    case mozart::KeyboardEvent::Phase::RELEASED:
+    case input::KeyboardEventPhase::RELEASED:
       os << "RELEASED";
       break;
-    case mozart::KeyboardEvent::Phase::CANCELLED:
+    case input::KeyboardEventPhase::CANCELLED:
       os << "CANCELLED";
       break;
-    case mozart::KeyboardEvent::Phase::REPEAT:
+    case input::KeyboardEventPhase::REPEAT:
       os << "REPEAT";
       break;
     default:
@@ -99,19 +99,19 @@ std::ostream& operator<<(std::ostream& os, const KeyboardEvent& value) {
     os << ", character=" << value.code_point;
     if (value.modifiers) {
       os << ", modifiers";
-      if (value.modifiers & mozart::kModifierCapsLock) {
+      if (value.modifiers & input::kModifierCapsLock) {
         os << ":CAPS_LOCK";
       }
-      if (value.modifiers & mozart::kModifierShift) {
+      if (value.modifiers & input::kModifierShift) {
         os << ":SHIFT";
       }
-      if (value.modifiers & mozart::kModifierControl) {
+      if (value.modifiers & input::kModifierControl) {
         os << ":CONTROL";
       }
-      if (value.modifiers & mozart::kModifierAlt) {
+      if (value.modifiers & input::kModifierAlt) {
         os << ":ALT";
       }
-      if (value.modifiers & mozart::kModifierSuper) {
+      if (value.modifiers & input::kModifierSuper) {
         os << ":SUPER";
       }
     }
@@ -122,16 +122,16 @@ std::ostream& operator<<(std::ostream& os, const KeyboardEvent& value) {
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const Range& value) {
+std::ostream& operator<<(std::ostream& os, const input::Range& value) {
   return os << "{Range[" << value.min << "," << value.max << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const Axis& value) {
-  return os << "{Axis: range=" << *(value.range)
+std::ostream& operator<<(std::ostream& os, const input::Axis& value) {
+  return os << "{Axis: range=" << value.range
             << ", resolution=" << value.resolution << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const KeyboardDescriptor& value) {
+std::ostream& operator<<(std::ostream& os, const input::KeyboardDescriptor& value) {
   os << "{Keyboard:";
   bool first = true;
   for (size_t index = 0; index < value.keys->size(); ++index) {
@@ -145,18 +145,18 @@ std::ostream& operator<<(std::ostream& os, const KeyboardDescriptor& value) {
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const MouseDescriptor& value) {
+std::ostream& operator<<(std::ostream& os, const input::MouseDescriptor& value) {
   os << "{Mouse:";
-  os << "rel_x=" << *(value.rel_x);
-  os << ", rel_y=" << *(value.rel_y);
+  os << "rel_x=" << value.rel_x;
+  os << ", rel_y=" << value.rel_y;
   // TODO(jpoichet) vscroll, hscroll
   bool first = true;
   os << ", buttons=[";
-  if (value.buttons & kMouseButtonPrimary) {
+  if (value.buttons & input::kMouseButtonPrimary) {
     os << "PRIMARY";
     first = false;
   }
-  if (value.buttons & kMouseButtonSecondary) {
+  if (value.buttons & input::kMouseButtonSecondary) {
     if (first) {
       os << "SECONDARY";
       first = false;
@@ -164,7 +164,7 @@ std::ostream& operator<<(std::ostream& os, const MouseDescriptor& value) {
       os << ",SECONDARY";
     }
   }
-  if (value.buttons & kMouseButtonTertiary) {
+  if (value.buttons & input::kMouseButtonTertiary) {
     if (first) {
       os << "TERTIARY";
       first = false;
@@ -175,25 +175,25 @@ std::ostream& operator<<(std::ostream& os, const MouseDescriptor& value) {
   return os << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const StylusDescriptor& value) {
+std::ostream& operator<<(std::ostream& os, const input::StylusDescriptor& value) {
   os << "{Stylus:";
-  os << "x=" << *(value.x);
-  os << ", y=" << *(value.y);
+  os << "x=" << value.x;
+  os << ", y=" << value.y;
   os << ", buttons=[";
-  if (value.buttons & kStylusBarrel) {
+  if (value.buttons & input::kStylusBarrel) {
     os << "BARREL";
   }
   return os << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const TouchscreenDescriptor& value) {
+std::ostream& operator<<(std::ostream& os, const input::TouchscreenDescriptor& value) {
   os << "{Touchscreen:";
-  os << "x=" << *(value.x);
-  os << ", y=" << *(value.y);
+  os << "x=" << value.x;
+  os << ", y=" << value.y;
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const DeviceDescriptor& value) {
+std::ostream& operator<<(std::ostream& os, const input::DeviceDescriptor& value) {
   os << "{DeviceDescriptor:";
   bool previous = false;
   if (value.keyboard) {
@@ -221,7 +221,7 @@ std::ostream& operator<<(std::ostream& os, const DeviceDescriptor& value) {
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const KeyboardReport& value) {
+std::ostream& operator<<(std::ostream& os, const input::KeyboardReport& value) {
   os << "{KeyboardReport: pressed_keys=[";
   bool first = true;
   for (size_t index = 0; index < value.pressed_keys->size(); ++index) {
@@ -235,7 +235,7 @@ std::ostream& operator<<(std::ostream& os, const KeyboardReport& value) {
   return os << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const MouseReport& value) {
+std::ostream& operator<<(std::ostream& os, const input::MouseReport& value) {
   os << "{MouseReport:";
   os << "rel_x=" << value.rel_x;
   os << ", rel_y=" << value.rel_y;
@@ -244,7 +244,7 @@ std::ostream& operator<<(std::ostream& os, const MouseReport& value) {
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const StylusReport& value) {
+std::ostream& operator<<(std::ostream& os, const input::StylusReport& value) {
   os << "{StylusReport:";
   os << "x=" << value.x;
   os << ", y=" << value.y;
@@ -254,13 +254,13 @@ std::ostream& operator<<(std::ostream& os, const StylusReport& value) {
   os << ", is_inverted=" << value.is_inverted;
 
   os << ", pressed_buttons=[";
-  if (value.pressed_buttons & kStylusBarrel) {
+  if (value.pressed_buttons & input::kStylusBarrel) {
     os << "BARREL";
   }
   return os << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const Touch& value) {
+std::ostream& operator<<(std::ostream& os, const input::Touch& value) {
   os << "{Touch:";
   os << "finger_id= " << value.finger_id;
   os << ", x=" << value.x;
@@ -270,22 +270,22 @@ std::ostream& operator<<(std::ostream& os, const Touch& value) {
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const TouchscreenReport& value) {
+std::ostream& operator<<(std::ostream& os, const input::TouchscreenReport& value) {
   os << "{TouchscreenReport: touches=[";
   bool first = true;
   for (size_t index = 0; index < value.touches->size(); ++index) {
     if (first) {
       first = false;
-      os << *(value.touches->at(index));
+      os << value.touches->at(index);
     } else {
-      os << ", " << *(value.touches->at(index));
+      os << ", " << value.touches->at(index);
     }
   }
 
   return os << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const InputReport& value) {
+std::ostream& operator<<(std::ostream& os, const input::InputReport& value) {
   os << "{InputReport: event_time=" << value.event_time << ",";
 
   if (value.keyboard) {
@@ -302,14 +302,14 @@ std::ostream& operator<<(std::ostream& os, const InputReport& value) {
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const TextSelection& value) {
+std::ostream& operator<<(std::ostream& os, const input::TextSelection& value) {
   os << "{TextSelection: base=" << value.base << ", extent=" << value.extent
      << ", affinity=";
   switch (value.affinity) {
-    case mozart::TextAffinity::UPSTREAM:
+    case input::TextAffinity::UPSTREAM:
       os << "UPSTREAM";
       break;
-    case mozart::TextAffinity::DOWNSTREAM:
+    case input::TextAffinity::DOWNSTREAM:
       os << "DOWNSTREAM";
       break;
     default:
@@ -318,16 +318,16 @@ std::ostream& operator<<(std::ostream& os, const TextSelection& value) {
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const TextRange& value) {
+std::ostream& operator<<(std::ostream& os, const input::TextRange& value) {
   return os << "{TextRange: start=" << value.start << ", end=" << value.end
             << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const TextInputState& value) {
+std::ostream& operator<<(std::ostream& os, const input::TextInputState& value) {
   os << "{TextInputState: revision=" << value.revision;
   os << ", text='" << value.text << "'";
-  os << ", selection=" << *(value.selection);
-  os << ", composing=" << *(value.composing);
+  os << ", selection=" << value.selection;
+  os << ", composing=" << value.composing;
   return os << "}";
 }
 

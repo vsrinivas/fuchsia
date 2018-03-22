@@ -6,8 +6,8 @@ namespace mozart {
 
 InputDeviceImpl::InputDeviceImpl(
     uint32_t id,
-    mozart::DeviceDescriptorPtr descriptor,
-    f1dl::InterfaceRequest<mozart::InputDevice> input_device_request,
+    input::DeviceDescriptorPtr descriptor,
+    fidl::InterfaceRequest<input::InputDevice> input_device_request,
     Listener* listener)
     : id_(id),
       descriptor_(std::move(descriptor)),
@@ -21,7 +21,7 @@ InputDeviceImpl::InputDeviceImpl(
 
 InputDeviceImpl::~InputDeviceImpl() {}
 
-void InputDeviceImpl::DispatchReport(mozart::InputReportPtr report) {
+void InputDeviceImpl::DispatchReport(input::InputReport report) {
   listener_->OnReport(this, std::move(report));
 }
 

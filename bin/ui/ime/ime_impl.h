@@ -9,8 +9,7 @@
 #include <vector>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/ui/input/fidl/ime_service.fidl.h"
-#include "lib/ui/input/fidl/input_events.fidl.h"
+#include <fuchsia/cpp/input.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
@@ -18,30 +17,30 @@
 
 namespace ime {
 
-class ImeImpl : public mozart::InputMethodEditor {
+class ImeImpl : public input::InputMethodEditor {
  public:
-  ImeImpl(mozart::KeyboardType keyboard_type,
-          mozart::InputMethodAction action,
-          mozart::TextInputStatePtr initial_state,
-          f1dl::InterfaceHandle<mozart::InputMethodEditorClient> client,
-          f1dl::InterfaceRequest<mozart::InputMethodEditor> editor_request);
+  ImeImpl(input::KeyboardType keyboard_type,
+          input::InputMethodAction action,
+          input::TextInputState initial_state,
+          fidl::InterfaceHandle<input::InputMethodEditorClient> client,
+          fidl::InterfaceRequest<input::InputMethodEditor> editor_request);
   ~ImeImpl();
 
  private:
-  // |mozart::InputMethodEditor|
-  void SetKeyboardType(mozart::KeyboardType keyboard_type) override;
-  void SetState(mozart::TextInputStatePtr state) override;
-  void InjectInput(mozart::InputEventPtr event) override;
+  // |input::InputMethodEditor|
+  void SetKeyboardType(input::KeyboardType keyboard_type) override;
+  void SetState(input::TextInputState state) override;
+  void InjectInput(input::InputEvent event) override;
   void Show() override;
   void Hide() override;
 
   void OnEditorDied();
 
-  f1dl::Binding<mozart::InputMethodEditor> editor_binding_;
-  mozart::InputMethodEditorClientPtr client_;
-  mozart::KeyboardType keyboard_type_;
-  mozart::InputMethodAction action_ = mozart::InputMethodAction::UNSPECIFIED;
-  mozart::TextInputStatePtr state_;
+  fidl::Binding<input::InputMethodEditor> editor_binding_;
+  input::InputMethodEditorClientPtr client_;
+  input::KeyboardType keyboard_type_;
+  input::InputMethodAction action_ = input::InputMethodAction::UNSPECIFIED;
+  input::TextInputState state_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ImeImpl);
 };

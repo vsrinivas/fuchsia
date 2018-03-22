@@ -9,13 +9,13 @@
 
 namespace ime {
 
-void DeleteBackward(const mozart::TextInputStatePtr& current_state) {
-  FXL_VLOG(1) << "Deleting character (state = " << *current_state << "')";
+void DeleteBackward(input::TextInputState& current_state) {
+  FXL_VLOG(1) << "Deleting character (state = " << &current_state << "')";
 
-  int64_t& base = current_state->selection->base;
-  int64_t& extent = current_state->selection->extent;
-  std::string text = current_state->text;
-  current_state->revision++;
+  int64_t& base = current_state.selection.base;
+  int64_t& extent = current_state.selection.extent;
+  std::string text = current_state.text;
+  current_state.revision++;
 
   if (base == -1 || extent == -1) {
     // There is no selection/cursor.  Move cursor to end of the text.
@@ -39,7 +39,7 @@ void DeleteBackward(const mozart::TextInputStatePtr& current_state) {
   FXL_DCHECK(base < extent);
   FXL_DCHECK(extent <= static_cast<int64_t>(text.size()));
   text.erase(base, extent - base);
-  current_state->text = f1dl::StringPtr(std::move(text));
+  current_state.text = fidl::StringPtr(std::move(text));
   extent = base;
 }
 
