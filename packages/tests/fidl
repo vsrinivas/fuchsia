@@ -1,8 +1,0 @@
-{
-    "languages": [
-        "cpp"
-    ],
-    "packages": {
-        "fidl_tests": "//garnet/public/lib/fidl/cpp/bindings/tests:fidl_tests"
-    }
-}
