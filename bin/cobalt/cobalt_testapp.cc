@@ -14,10 +14,10 @@
 #include <string>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/cobalt/fidl/cobalt.fidl-sync.h"
-#include "lib/cobalt/fidl/cobalt.fidl.h"
+#include <fuchsia/cpp/cobalt.h>
+#include <fuchsia/cpp/cobalt.h>
 #include "lib/cobalt/fidl/cobalt_controller.fidl-sync.h"
-#include "lib/cobalt/fidl/cobalt_controller.fidl.h"
+#include <fuchsia/cpp/cobalt.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -29,8 +29,7 @@
 #include "lib/svc/cpp/services.h"
 
 using cobalt::ObservationValue;
-using cobalt::ObservationValuePtr;
-using f1dl::VectorPtr;
+using fidl::VectorPtr;
 
 // Command-line flags
 
@@ -288,10 +287,10 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   });
 
   cobalt::CobaltEncoderFactorySyncPtr factory;
-  services.ConnectToService(f1dl::GetSynchronousProxy(&factory));
+  services.ConnectToService(fidl::GetSynchronousProxy(&factory));
   factory->GetEncoder(kTestAppProjectId, GetSynchronousProxy(&encoder_));
 
-  services.ConnectToService(f1dl::GetSynchronousProxy(&cobalt_controller_));
+  services.ConnectToService(fidl::GetSynchronousProxy(&cobalt_controller_));
 }
 
 bool CobaltTestApp::RunTestsWithRequestSendSoon() {
@@ -331,7 +330,7 @@ bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
 bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   // Connect to the Cobalt FIDL service provided by the environment.
   cobalt::CobaltEncoderFactorySyncPtr factory;
-  context_->ConnectToEnvironmentService(f1dl::GetSynchronousProxy(&factory));
+  context_->ConnectToEnvironmentService(fidl::GetSynchronousProxy(&factory));
 
   factory->GetEncoder(kTestAppProjectId, GetSynchronousProxy(&encoder_));
 
@@ -546,7 +545,7 @@ bool CobaltTestApp::EncodeIntDistributionAndSend(
     bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-    f1dl::VectorPtr<cobalt::BucketDistributionEntryPtr> distribution;
+    fidl::VectorPtr<cobalt::BucketDistributionEntry> distribution;
     for (auto it = distribution_map.begin(); distribution_map.end() != it;
          it++) {
       auto entry = cobalt::BucketDistributionEntry::New();
@@ -638,17 +637,13 @@ bool CobaltTestApp::EncodeStringPairAndSend(uint32_t metric_id,
                                             bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-    f1dl::VectorPtr<ObservationValuePtr> parts(2);
-    parts->at(0) = ObservationValue::New();
-    parts->at(0)->name = part0;
-    parts->at(0)->encoding_id = encoding_id0;
-    parts->at(0)->value = cobalt::Value::New();
-    parts->at(0)->value->set_string_value(val0);
-    parts->at(1) = ObservationValue::New();
-    parts->at(1)->name = part1;
-    parts->at(1)->encoding_id = encoding_id1;
-    parts->at(1)->value = cobalt::Value::New();
-    parts->at(1)->value->set_string_value(val1);
+    fidl::VectorPtr<ObservationValue> parts(2);
+    parts->at(0).name = part0;
+    parts->at(0).encoding_id = encoding_id0;
+    parts->at(0).value.set_string_value(val0);
+    parts->at(1).name = part1;
+    parts->at(1).encoding_id = encoding_id1;
+    parts->at(1).value.set_string_value(val1);
     encoder_->AddMultipartObservation(metric_id, std::move(parts), &status);
     FXL_VLOG(1) << "AddMultipartObservation(" << val0 << ", " << val1 << ") => "
                 << StatusToString(status);

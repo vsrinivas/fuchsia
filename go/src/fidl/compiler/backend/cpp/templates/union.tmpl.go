@@ -18,12 +18,19 @@ class {{ .Name }} {
   {{ .Name }}({{ .Name }}&&);
   {{ .Name }}& operator=({{ .Name }}&&);
 
+  enum class Tag : fidl_union_tag_t {
+  {{- range $index, $member := .Members }}
+    {{ .TagName }} = {{ $index }},
+  {{- end }}
+  };
+
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
   zx_status_t Clone({{ .Name }}* result) const;
   {{- range $index, $member := .Members }}
 
   bool is_{{ .Name }}() const { return tag_ == {{ $index }}; }
+  {{ .Type.Decl }}& {{ .Name }}() { return {{ .StorageName }}; }
   const {{ .Type.Decl }}& {{ .Name }}() const { return {{ .StorageName }}; }
   void set_{{ .Name }}({{ .Type.Decl }} value) {
     Destroy();
@@ -31,6 +38,8 @@ class {{ .Name }} {
     {{ .StorageName }} = std::move(value);
   }
   {{- end }}
+
+  Tag Which() const { return Tag(tag_); }
 
  private:
   void Destroy();

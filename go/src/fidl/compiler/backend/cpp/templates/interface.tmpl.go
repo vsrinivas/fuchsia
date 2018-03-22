@@ -200,17 +200,17 @@ class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
 
 {{- end }}
 void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
-  ::fidl::Encoder encoder({{ .OrdinalName }});
+  ::fidl::Encoder _encoder({{ .OrdinalName }});
     {{- if .Request }}
-  encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
+  _encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
       {{- range .Request }}
-  ::fidl::Encode(&encoder, &{{ .Name }}, {{ .Offset }});
+  ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
       {{- end }}
     {{- end }}
     {{- if .HasResponse }}
-  controller_->Send(&{{ .RequestTypeName }}, encoder.GetMessage(), std::make_unique<{{ .ResponseHandlerType }}>(std::move(callback)));
+  controller_->Send(&{{ .RequestTypeName }}, _encoder.GetMessage(), std::make_unique<{{ .ResponseHandlerType }}>(std::move(callback)));
     {{- else }}
-  controller_->Send(&{{ .RequestTypeName }}, encoder.GetMessage(), nullptr);
+  controller_->Send(&{{ .RequestTypeName }}, _encoder.GetMessage(), nullptr);
     {{- end }}
 }
   {{- end }}
@@ -231,14 +231,14 @@ class {{ .ResponderType }} {
       : response_(std::move(response)) {}
 
   void operator()({{ template "Params" .Response }}) {
-    ::fidl::Encoder encoder({{ .OrdinalName }});
+    ::fidl::Encoder _encoder({{ .OrdinalName }});
       {{- if .Response }}
-  encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
+  _encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
         {{- range .Response }}
-  ::fidl::Encode(&encoder, &{{ .Name }}, {{ .Offset }});
+  ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
         {{- end }}
       {{- end }}
-    response_.Send(&{{ .ResponseTypeName }}, encoder.GetMessage());
+    response_.Send(&{{ .ResponseTypeName }}, _encoder.GetMessage());
   }
 
  private:
@@ -295,17 +295,17 @@ zx_status_t {{ .StubName }}::Dispatch(
 {{- range .Methods }}
   {{- if .HasRequest }}
 zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }} {
-  ::fidl::Encoder encoder_({{ .OrdinalName }});
+  ::fidl::Encoder _encoder({{ .OrdinalName }});
     {{- if .Request }}
-  encoder_.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
+  _encoder.Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
       {{- range .Request }}
-  ::fidl::Encode(&encoder_, &{{ .Name }}, {{ .Offset }});
+  ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
       {{- end }}
     {{- end }}
     {{- if .HasResponse }}
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
-  zx_status_t status_ = proxy_.Call(&{{ .RequestTypeName }}, &{{ .ResponseTypeName }}, encoder_.GetMessage(), &response_);
+  zx_status_t status_ = proxy_.Call(&{{ .RequestTypeName }}, &{{ .ResponseTypeName }}, _encoder.GetMessage(), &response_);
   if (status_ != ZX_OK)
     return status_;
       {{- if .Response }}
@@ -316,7 +316,7 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
       {{- end }}
   return ZX_OK;
     {{- else }}
-  return proxy_.Send(&{{ .RequestTypeName }}, encoder_.GetMessage());
+  return proxy_.Send(&{{ .RequestTypeName }}, _encoder.GetMessage());
     {{- end }}
 }
   {{- end }}

@@ -14,8 +14,8 @@
 #include <zircon/device/sysinfo.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/cobalt/fidl/cobalt.fidl-sync.h"
-#include "lib/cobalt/fidl/cobalt.fidl.h"
+#include <fuchsia/cpp/cobalt.h>
+#include <fuchsia/cpp/cobalt.h>
 #include "lib/fsl/tasks/message_loop.h"
 
 const uint32_t kSystemMetricsProjectId = 102;
@@ -157,27 +157,21 @@ cobalt::Status SystemMetricsApp::LogMemoryUsage(
     return cobalt::Status::INTERNAL_ERROR;
   }
 
-  auto values = f1dl::VectorPtr<cobalt::ObservationValuePtr>::New(3);
-  values->at(0) = cobalt::ObservationValue::New();
+  auto values = fidl::VectorPtr<cobalt::ObservationValue>::New(3);
   // Metric part name as defined in the corresponding metric config.
-  values->at(0)->name = "system_uptime_minutes";
-  values->at(0)->value = cobalt::Value::New();
-  values->at(0)->value->set_int_value(uptime_minutes.count());
-  values->at(0)->encoding_id = kRawEncodingId;
+  values->at(0).name = "system_uptime_minutes";
+  values->at(0).value.set_int_value(uptime_minutes.count());
+  values->at(0).encoding_id = kRawEncodingId;
 
-  values->at(1) = cobalt::ObservationValue::New();
   // Metric part name as defined in the corresponding metric config.
-  values->at(1)->name = "total_system_memory";
-  values->at(1)->value = cobalt::Value::New();
-  values->at(1)->value->set_int_value(stats.total_bytes);
-  values->at(1)->encoding_id = kRawEncodingId;
+  values->at(1).name = "total_system_memory";
+  values->at(1).value.set_int_value(stats.total_bytes);
+  values->at(1).encoding_id = kRawEncodingId;
 
-  values->at(2) = cobalt::ObservationValue::New();
   // Metric part name as defined in the corresponding metric config.
-  values->at(2)->name = "free_memory";
-  values->at(2)->value = cobalt::Value::New();
-  values->at(2)->value->set_int_value(stats.free_bytes);
-  values->at(2)->encoding_id = kRawEncodingId;
+  values->at(2).name = "free_memory";
+  values->at(2).value.set_int_value(stats.free_bytes);
+  values->at(2).encoding_id = kRawEncodingId;
 
   cobalt::Status cobalt_status = cobalt::Status::INTERNAL_ERROR;
   encoder_->AddMultipartObservation(kMemoryUsageMetricId, std::move(values),
@@ -205,8 +199,8 @@ void SystemMetricsApp::Main() {
 void SystemMetricsApp::ConnectToEnvironmentService() {
   // Connect to the Cobalt FIDL service provided by the environment.
   cobalt::CobaltEncoderFactorySyncPtr factory;
-  context_->ConnectToEnvironmentService(f1dl::GetSynchronousProxy(&factory));
-  factory->GetEncoder(kSystemMetricsProjectId, GetSynchronousProxy(&encoder_));
+  context_->ConnectToEnvironmentService(factory.NewRequest());
+  factory->GetEncoder(kSystemMetricsProjectId, encoder_.NewRequest());
 }
 
 int main(int argc, const char** argv) {

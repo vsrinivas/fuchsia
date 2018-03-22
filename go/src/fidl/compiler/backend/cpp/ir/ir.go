@@ -5,6 +5,7 @@
 package ir
 
 import (
+	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/types"
 	"fmt"
 	"io"
@@ -57,6 +58,7 @@ type UnionMember struct {
 	Type        Type
 	Name        string
 	StorageName string
+	TagName     string
 	Offset      int
 }
 
@@ -572,10 +574,12 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 }
 
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
+	n := changeIfReserved(val.Name, "")
 	return UnionMember{
 		c.compileType(val.Type),
-		changeIfReserved(val.Name, ""),
+		n,
 		changeIfReserved(val.Name, "_"),
+		fmt.Sprintf("k%s", common.ToUpperCamelCase(n)),
 		val.Offset,
 	}
 }

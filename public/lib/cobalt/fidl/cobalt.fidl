@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module cobalt;
+library cobalt;
 
 // Cobalt is the service used in Fuchsia to report metrics. This file contains
 // interfaces that allow clients to report metric Observations to Cobalt.
@@ -25,24 +25,24 @@ module cobalt;
 const int64 kMaxBytesPerObservation = 102400;
 
 // Response codes for Cobalt encoder operations.
-enum Status {
-  OK = 0,
+enum Status : int32 {
+  OK = 0;
 
   // For example the supplied metric id, encoding id or observation value is
   // invalid.
-  INVALID_ARGUMENTS,
+  INVALID_ARGUMENTS = 1;
 
   // Sending observations failed too many times or with an unrecoverable error
   // Try the send again later. OBSOLETE: This status is never used.
-  SEND_FAILED,
+  SEND_FAILED = 2;
 
   // The attempted operation failed because some precondition was not met.
   // OBSOLETE: This status is never used.
-  FAILED_PRECONDITION,
+  FAILED_PRECONDITION = 3;
 
   // An attempt was made to add an Observation whose seralized size exceeds
   // kMaxBytesPerObservation.
-  OBSERVATION_TOO_BIG,
+  OBSERVATION_TOO_BIG = 4;
 
   // Cobalt's local cache is temporarily full and cannot handle any more
   // Observations at this time. This condition should be rare because Cobalt
@@ -52,10 +52,10 @@ enum Status {
   // server is down for a long time. In the future Cobalt will store
   // Observations in non-volatile storage making this condition much less
   // likely.
-  TEMPORARILY_FULL,
+  TEMPORARILY_FULL = 5;
 
   // Catch-all for unexpected errors.
-  INTERNAL_ERROR = -1
+  INTERNAL_ERROR = -1;
 };
 
 // One part of a multi-part observation. This is used by the method
@@ -66,7 +66,7 @@ struct ObservationValue {
   string name;
 
   // The value to assign to that part of the Observation.
-  Value  value;
+  Value value;
 
   // The ID of the encoding to use for that part of the Observation.
   uint32 encoding_id;
@@ -81,11 +81,11 @@ struct BucketDistributionEntry {
 union Value {
   string string_value;
   int64  int_value;
-  double double_value;
+  float64 double_value;
   uint32 index_value;
   // Definition of the buckets is given by the IntegerBuckets in the MetricPart
   // definition registered with Cobalt.
-  array<BucketDistributionEntry> int_bucket_distribution;
+  vector<BucketDistributionEntry> int_bucket_distribution;
 };
 
 [ServiceName="cobalt::CobaltEncoderFactory"]
@@ -93,7 +93,7 @@ union Value {
 interface CobaltEncoderFactory {
   // Creates a CobaltEncoder for the specified project.
   // |project_id| Should be a project ID registered with the Cobalt system.
-  GetEncoder@0(int32 project_id, CobaltEncoder& encoder);
+  1: GetEncoder(int32 project_id, request<CobaltEncoder> encoder);
 };
 
 // CobaltEncoder accumulates Observations in a local cache and periodically
@@ -113,9 +113,9 @@ interface CobaltEncoder {
   // |observation| The string value to be encoded. Must be consistent with
   //               the definition of the metric and encoding. Some encodings
   //               restrict the set of values to a pre-defined list.
-  AddStringObservation@0(uint32 metric_id, uint32 encoding_id,
+  1: AddStringObservation(uint32 metric_id, uint32 encoding_id,
                          string observation)
-      => (Status status);
+      -> (Status @status);
 
   // Adds an integer observation. It will eventually be sent to the Cobalt
   // server.
@@ -129,8 +129,8 @@ interface CobaltEncoder {
   // |observation| The integer value to be encoded. Must be consistent with
   //               the definition of the metric and encoding. Some encodings
   //               restrict the set of values to a pre-defined list.
-  AddIntObservation@3(uint32 metric_id, uint32 encoding_id, int64 observation)
-      => (Status status);
+  4: AddIntObservation(uint32 metric_id, uint32 encoding_id, int64 observation)
+      -> (Status @status);
 
   // Adds a double observation. It will eventually be sent to the Cobalt server.
   // |metric_id| Must be a metric ID registered with the Cobalt system and
@@ -142,9 +142,9 @@ interface CobaltEncoder {
   //
   // |observation| The double value to be encoded. Must be consistent with
   //               the definition of the metric and encoding.
-  AddDoubleObservation@4(uint32 metric_id, uint32 encoding_id,
-                         double observation)
-      => (Status status);
+  5: AddDoubleObservation(uint32 metric_id, uint32 encoding_id,
+                         float64 observation)
+      -> (Status @status);
 
   // Adds an observation specified by its index. This only makes sense if
   // the specified metric and encoding are consistent with values of type INDEX.
@@ -169,8 +169,8 @@ interface CobaltEncoder {
   //          place of the indices when generating reports. However there is
   //          no requirement to register a label with an index in order to
   //          use the index here. Also the label may be added or changed later.
-  AddIndexObservation@1(uint32 metric_id, uint32 encoding_id, uint32 index)
-      => (Status status);
+  2: AddIndexObservation(uint32 metric_id, uint32 encoding_id, uint32 index)
+      -> (Status @status);
 
   // Adds an observation. It will eventually be sent to the Cobalt server.
   // This version of Add*Observation() allows the user to specify the
@@ -185,9 +185,9 @@ interface CobaltEncoder {
   //
   // |observation| The Observation to be encoded. The runtime type must be
   //               consistent with the definition of the metric and encoding.
-  AddObservation@7(uint32 metric_id, uint32 encoding_id,
+  8: AddObservation(uint32 metric_id, uint32 encoding_id,
                    Value observation)
-      => (Status status);
+      -> (Status @status);
 
   // Adds a distribution of int observations. It will eventually be sent to the
   // Cobalt server.
@@ -204,9 +204,9 @@ interface CobaltEncoder {
   //                buckets. The definition of the buckets is given by the
   //                IntegerBuckets in the MetricPart definition registered with
   //                Cobalt.
-  AddIntBucketDistribution@6(uint32 metric_id, uint32 encoding_id,
-                             array<BucketDistributionEntry> distribution)
-      => (Status status);
+  7: AddIntBucketDistribution(uint32 metric_id, uint32 encoding_id,
+                             vector<BucketDistributionEntry> distribution)
+      -> (Status @status);
 
   // Adds a multi-part observation. It will eventually be sent to the Cobalt
   // server.
@@ -215,10 +215,10 @@ interface CobaltEncoder {
   //
   // |observation| The multi-value Observation to be encoded. Must be consistent
   //               with the definition of the metric and encoding.
-  AddMultipartObservation@5(uint32 metric_id,
-                            array<ObservationValue> observation)
-      => (Status status);
+  6: AddMultipartObservation(uint32 metric_id,
+                            vector<ObservationValue> observation)
+      -> (Status @status);
 
   // Obsolete. This does nothing and always returns OK.
-  SendObservations@2() => (Status status);
+  3: SendObservations() -> (Status @status);
 };
