@@ -148,8 +148,8 @@ void InfraBss::HandleClientStateChange(const common::MacAddr& client, RemoteClie
 
     ZX_DEBUG_ASSERT(clients_.Has(client));
     if (!clients_.Has(client)) {
-        errorf("state change (%hhu, %hhu) reported for unknown client: %s\n", from, to,
-               client.ToString().c_str());
+        errorf("[infra-bss] [%s] state change (%hhu, %hhu) reported for unknown client: %s\n",
+               bssid_.ToString().c_str(), from, to, client.ToString().c_str());
         return;
     }
 
@@ -157,8 +157,8 @@ void InfraBss::HandleClientStateChange(const common::MacAddr& client, RemoteClie
     if (to == RemoteClient::StateId::kDeauthenticated) {
         auto status = clients_.Remove(client);
         if (status != ZX_OK) {
-            errorf("[infra-bss] couldn't remove client %s: %d\n", client.ToString().c_str(),
-                   status);
+            errorf("[infra-bss] [%s] couldn't remove client %s: %d\n", bssid_.ToString().c_str(),
+                   client.ToString().c_str(), status);
         }
     }
 }
@@ -168,8 +168,8 @@ void InfraBss::HandleClientBuChange(const common::MacAddr& client, size_t bu_cou
     auto aid = clients_.GetClientAid(client);
     ZX_DEBUG_ASSERT(aid != kUnknownAid);
     if (aid == kUnknownAid) {
-        errorf("[infra-bss] received traffic indication from client with unknown AID: %s\n",
-               client.ToString().c_str());
+        errorf("[infra-bss] [%s] received traffic indication from client with unknown AID: %s\n",
+               bssid_.ToString().c_str(), client.ToString().c_str());
         return;
     }
 
@@ -181,8 +181,8 @@ zx_status_t InfraBss::AssignAid(const common::MacAddr& client, aid_t* out_aid) {
     debugfn();
     auto status = clients_.AssignAid(client, out_aid);
     if (status != ZX_OK) {
-        errorf("[infra-bss] couldn't assign AID to client %s: %d\n", client.ToString().c_str(),
-               status);
+        errorf("[infra-bss] [%s] couldn't assign AID to client %s: %d\n", bssid_.ToString().c_str(),
+               client.ToString().c_str(), status);
         return status;
     }
     return ZX_OK;
@@ -193,8 +193,8 @@ zx_status_t InfraBss::ReleaseAid(const common::MacAddr& client) {
     auto aid = clients_.GetClientAid(client);
     ZX_DEBUG_ASSERT(aid != kUnknownAid);
     if (aid == kUnknownAid) {
-        errorf("[infra-bss] tried releasing AID for unknown client: %s\n",
-               client.ToString().c_str());
+        errorf("[infra-bss] [%s] tried releasing AID for unknown client: %s\n",
+               bssid_.ToString().c_str(), client.ToString().c_str());
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -216,7 +216,8 @@ zx_status_t InfraBss::CreateClientTimer(const common::MacAddr& client_addr,
     zx_status_t status =
         device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), out_timer);
     if (status != ZX_OK) {
-        errorf("could not create bss timer: %d\n", status);
+        errorf("[infra-bss] [%s] could not create bss timer: %d\n", bssid_.ToString().c_str(),
+               status);
         return status;
     }
     return ZX_OK;
