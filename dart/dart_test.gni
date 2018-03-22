@@ -56,15 +56,23 @@ template("dart_test") {
     }
   }
 
-  dart_target_gen_dir = get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
+  dart_target_gen_dir =
+      get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
   dot_packages_file = "$dart_target_gen_dir/$library_target_name.packages"
 
-  fuchsia_tester_label =
-      "//third_party/dart-pkg/git/flutter/packages/flutter_tools:fuchsia_tester($host_toolchain)"
+  fuchsia_tester_label = "//third_party/dart-pkg/git/flutter/packages/flutter_tools:fuchsia_tester($host_toolchain)"
   fuchsia_tester_out_dir = get_label_info(fuchsia_tester_label, "root_out_dir")
   fuchsia_tester_bin = "$fuchsia_tester_out_dir/dart-tools/fuchsia_tester"
 
-  flutter_shell_label = "//third_party/flutter/shell/platform/$host_os/($host_toolchain)"
+  if (host_os == "linux") {
+    flutter_shell_label =
+        "//third_party/flutter/shell/platform/$host_os/($host_toolchain)"
+  } else if (host_os == "mac") {
+    flutter_shell_label =
+        "//third_party/flutter/shell/platform/darwin/($host_toolchain)"
+  } else {
+    assert(false, "Unsupported host OS ${host_os}")
+  }
   flutter_shell_out_dir = get_label_info(flutter_shell_label, "root_out_dir")
   flutter_shell_bin = "$flutter_shell_out_dir/flutter_tester"
 
