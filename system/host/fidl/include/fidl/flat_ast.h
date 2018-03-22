@@ -456,6 +456,10 @@ public:
 
 private:
     bool Fail(StringView message);
+    bool Fail(const SourceLocation& location, StringView message);
+    bool Fail(const Name& name, StringView message) {
+      return Fail(name.name(), message);
+    }
 
     bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
                                    Name* name_out);

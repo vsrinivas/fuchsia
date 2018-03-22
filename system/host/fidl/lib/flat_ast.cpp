@@ -154,6 +154,13 @@ bool Library::Fail(StringView message) {
     return false;
 }
 
+bool Library::Fail(const SourceLocation& location, StringView message) {
+    auto formatted_message = location.position() + ": " +
+        std::string(message) + "\n";
+    error_reporter_->ReportError(std::move(formatted_message));
+    return false;
+}
+
 Library::Library(const std::map<StringView, std::unique_ptr<Library>>* dependencies,
                  ErrorReporter* error_reporter)
     : dependencies_(dependencies), error_reporter_(error_reporter) {
@@ -183,11 +190,8 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
         return true;
     }
 
-    std::string message = "TODO(TO-701) Handle nested declarations at: ";
-    const auto& components = compound_identifier->components;
-    message.append(components.back()->location.position());
-
-    return Fail(message);
+    return Fail(compound_identifier->components.back()->location,
+                "TODO(TO-701) Handle nested declarations.");
 }
 
 bool Library::ParseSize(std::unique_ptr<raw::Constant> raw_constant, Size* out_size) {
@@ -206,9 +210,7 @@ bool Library::RegisterDecl(Decl* decl) {
     if (!iter.second) {
         std::string message = "Name collision: ";
         message.append(name->name().data());
-        message.append(" at ");
-        message.append(name->name().position());
-        return Fail(message);
+        return Fail(*name, message);
     }
     return true;
 }
@@ -801,7 +803,7 @@ bool Library::CompileHandleType(flat::HandleType* handle_type, TypeShape* out_ty
 bool Library::CompileRequestHandleType(flat::RequestHandleType* request_type, TypeShape* out_typeshape) {
     auto named_decl = LookupType(request_type->name);
     if (!named_decl || named_decl->kind != Decl::Kind::kInterface)
-        return Fail("Undefined reference in request handle name");
+        return Fail(request_type->name, "Undefined reference in request handle name");
 
     *out_typeshape = kHandleTypeShape;
     return true;
@@ -819,7 +821,7 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
 
     auto named_decl = LookupType(identifier_type->name);
     if (!named_decl)
-        return Fail("Undefined reference in identifier type name");
+        return Fail(identifier_type->name, "Undefined reference in identifier type name");
 
     switch (named_decl->kind) {
     case Decl::Kind::kConst: {
