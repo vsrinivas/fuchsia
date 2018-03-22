@@ -28,8 +28,8 @@
 #include "ahci.h"
 #include "sata.h"
 
-#define ahci_read(reg)       pcie_read32(reg)
-#define ahci_write(reg, val) pcie_write32(reg, val)
+#define ahci_read(reg)       le32toh(*reg)
+#define ahci_write(reg, val) (*reg = htole32(val))
 
 #define HI32(val) (((val) >> 32) & 0xffffffff)
 #define LO32(val) ((val) & 0xffffffff)

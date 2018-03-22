@@ -132,15 +132,4 @@ typedef struct {
     uint8_t max_latency;
 } __PACKED pci_config_t;
 
-/*
- * Endian independent PCIe register access helpers.
- */
-static inline uint8_t  pcie_read8 (const volatile uint8_t*  reg) { return *reg; }
-static inline uint16_t pcie_read16(const volatile uint16_t* reg) { return le16toh(*reg); }
-static inline uint32_t pcie_read32(const volatile uint32_t* reg) { return le32toh(*reg); }
-
-static inline void pcie_write8 (volatile uint8_t*  reg, uint8_t  val) { *reg = val; }
-static inline void pcie_write16(volatile uint16_t* reg, uint16_t val) { *reg = htole16(val); }
-static inline void pcie_write32(volatile uint32_t* reg, uint32_t val) { *reg = htole32(val); }
-
 __END_CDECLS;
