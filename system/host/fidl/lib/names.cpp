@@ -299,8 +299,9 @@ std::string NameOrdinal(StringView method_name) {
     return ordinal_name;
 }
 
-std::string NameMessage(StringView method_name, types::MessageKind kind) {
-    std::string message_name(method_name);
+std::string NameMessage(StringView library_name, StringView method_name, types::MessageKind kind) {
+    std::string message_name(library_name);
+    message_name += method_name;
     switch (kind) {
     case types::MessageKind::kRequest:
         message_name += "Request";
@@ -315,14 +316,14 @@ std::string NameMessage(StringView method_name, types::MessageKind kind) {
     return message_name;
 }
 
-std::string NameTable(StringView library_name, StringView type_name) {
-    return std::string(library_name) + std::string(type_name) + "Table";
+std::string NameTable(StringView type_name) {
+    return std::string(type_name) + "Table";
 }
 
-std::string NamePointer(StringView library_name, StringView name) {
+std::string NamePointer(StringView name) {
     std::string pointer_name(name);
     pointer_name += "Pointer";
-    return NameTable(library_name, pointer_name);
+    return NameTable(pointer_name);
 }
 
 std::string NameMembers(StringView name) {
@@ -344,15 +345,17 @@ std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nul
     return name;
 }
 
-std::string NameCodedInterfaceHandle(StringView interface_name, types::Nullability nullability) {
-    std::string name("Interface");
+std::string NameCodedInterfaceHandle(StringView library_name, StringView interface_name, types::Nullability nullability) {
+    std::string name(library_name);
+    name += "Interface";
     name += interface_name;
     name += NameNullability(nullability);
     return name;
 }
 
-std::string NameCodedRequestHandle(StringView interface_name, types::Nullability nullability) {
-    std::string name("Request");
+std::string NameCodedRequestHandle(StringView library_name, StringView interface_name, types::Nullability nullability) {
+    std::string name(library_name);
+    name += "Request";
     name += interface_name;
     name += NameNullability(nullability);
     return name;

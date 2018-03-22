@@ -98,7 +98,7 @@ void TablesGenerator::GenerateArray(const Collection& collection) {
 
 void TablesGenerator::Generate(const coded::StructType& struct_type) {
     Emit(&tables_file_, "extern const fidl_type_t ");
-    Emit(&tables_file_, NameTable(LibraryName(library_), struct_type.coded_name));
+    Emit(&tables_file_, NameTable(struct_type.coded_name));
     Emit(&tables_file_, ";\n");
 
     Emit(&tables_file_, "static const ::fidl::FidlField ");
@@ -108,7 +108,7 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
     Emit(&tables_file_, ";\n");
 
     Emit(&tables_file_, "const fidl_type_t ");
-    Emit(&tables_file_, NameTable(LibraryName(library_), struct_type.coded_name));
+    Emit(&tables_file_, NameTable(struct_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStruct(");
     Emit(&tables_file_, NameFields(struct_type.coded_name));
     Emit(&tables_file_, ", ");
@@ -119,20 +119,20 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
 
     if (struct_type.referenced_by_pointer) {
         Emit(&tables_file_, "extern const fidl_type_t ");
-        Emit(&tables_file_, NamePointer(LibraryName(library_), struct_type.coded_name));
+        Emit(&tables_file_, NamePointer(struct_type.coded_name));
         Emit(&tables_file_, ";\n");
 
         Emit(&tables_file_, "const fidl_type_t ");
-        Emit(&tables_file_, NamePointer(LibraryName(library_), struct_type.coded_name));
+        Emit(&tables_file_, NamePointer(struct_type.coded_name));
         Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStructPointer(&");
-        Emit(&tables_file_, NameTable(LibraryName(library_), struct_type.coded_name));
+        Emit(&tables_file_, NameTable(struct_type.coded_name));
         Emit(&tables_file_, ".coded_struct));\n\n");
     }
 }
 
 void TablesGenerator::Generate(const coded::UnionType& union_type) {
     Emit(&tables_file_, "extern const fidl_type_t ");
-    Emit(&tables_file_, NameTable(LibraryName(library_), union_type.coded_name));
+    Emit(&tables_file_, NameTable(union_type.coded_name));
     Emit(&tables_file_, ";\n");
 
     Emit(&tables_file_, "static const fidl_type_t* ");
@@ -142,7 +142,7 @@ void TablesGenerator::Generate(const coded::UnionType& union_type) {
     Emit(&tables_file_, ";\n");
 
     Emit(&tables_file_, "const fidl_type_t ");
-    Emit(&tables_file_, NameTable(LibraryName(library_), union_type.coded_name));
+    Emit(&tables_file_, NameTable(union_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnion(");
     Emit(&tables_file_, NameMembers(union_type.coded_name));
     Emit(&tables_file_, ", ");
@@ -155,20 +155,20 @@ void TablesGenerator::Generate(const coded::UnionType& union_type) {
 
     if (union_type.referenced_by_pointer) {
         Emit(&tables_file_, "extern const fidl_type_t ");
-        Emit(&tables_file_, NamePointer(LibraryName(library_), union_type.coded_name));
+        Emit(&tables_file_, NamePointer(union_type.coded_name));
         Emit(&tables_file_, ";\n");
 
         Emit(&tables_file_, "const fidl_type_t ");
-        Emit(&tables_file_, NamePointer(LibraryName(library_), union_type.coded_name));
+        Emit(&tables_file_, NamePointer(union_type.coded_name));
         Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnionPointer(&");
-        Emit(&tables_file_, NameTable(LibraryName(library_), union_type.coded_name));
+        Emit(&tables_file_, NameTable(union_type.coded_name));
         Emit(&tables_file_, ".coded_union));\n\n");
     }
 }
 
 void TablesGenerator::Generate(const coded::HandleType& handle_type) {
     Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(LibraryName(library_), handle_type.coded_name));
+    Emit(&tables_file_, NameTable(handle_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedHandle(");
     Emit(&tables_file_, handle_type.subtype);
     Emit(&tables_file_, ", ");
@@ -178,7 +178,7 @@ void TablesGenerator::Generate(const coded::HandleType& handle_type) {
 
 void TablesGenerator::Generate(const coded::RequestHandleType& request_type) {
     Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(LibraryName(library_), request_type.coded_name));
+    Emit(&tables_file_, NameTable(request_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedHandle(");
     Emit(&tables_file_, types::HandleSubtype::Channel);
     Emit(&tables_file_, ", ");
@@ -188,7 +188,7 @@ void TablesGenerator::Generate(const coded::RequestHandleType& request_type) {
 
 void TablesGenerator::Generate(const coded::InterfaceHandleType& interface_type) {
     Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(LibraryName(library_), interface_type.coded_name));
+    Emit(&tables_file_, NameTable(interface_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedHandle(");
     Emit(&tables_file_, types::HandleSubtype::Channel);
     Emit(&tables_file_, ", ");
@@ -198,9 +198,9 @@ void TablesGenerator::Generate(const coded::InterfaceHandleType& interface_type)
 
 void TablesGenerator::Generate(const coded::ArrayType& array_type) {
     Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(LibraryName(library_), array_type.coded_name));
+    Emit(&tables_file_, NameTable(array_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedArray(&");
-    Emit(&tables_file_, NameTable(LibraryName(library_), array_type.element_type->coded_name));
+    Emit(&tables_file_, NameTable(array_type.element_type->coded_name));
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, array_type.size);
     Emit(&tables_file_, ", ");
@@ -210,7 +210,7 @@ void TablesGenerator::Generate(const coded::ArrayType& array_type) {
 
 void TablesGenerator::Generate(const coded::StringType& string_type) {
     Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(LibraryName(library_), string_type.coded_name));
+    Emit(&tables_file_, NameTable(string_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedString(");
     Emit(&tables_file_, string_type.max_size);
     Emit(&tables_file_, ", ");
@@ -220,11 +220,11 @@ void TablesGenerator::Generate(const coded::StringType& string_type) {
 
 void TablesGenerator::Generate(const coded::VectorType& vector_type) {
     Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(LibraryName(library_), vector_type.coded_name));
+    Emit(&tables_file_, NameTable(vector_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedVector(");
     if (vector_type.element_type->coding_needed == coded::CodingNeeded::kNeeded) {
         Emit(&tables_file_, "&");
-        Emit(&tables_file_, NameTable(LibraryName(library_), vector_type.element_type->coded_name));
+        Emit(&tables_file_, NameTable(vector_type.element_type->coded_name));
     } else {
         Emit(&tables_file_, "nullptr");
     }
@@ -239,12 +239,12 @@ void TablesGenerator::Generate(const coded::VectorType& vector_type) {
 
 void TablesGenerator::Generate(const coded::Type* type) {
     Emit(&tables_file_, "&");
-    Emit(&tables_file_, NameTable(LibraryName(library_), type->coded_name));
+    Emit(&tables_file_, NameTable(type->coded_name));
 }
 
 void TablesGenerator::Generate(const coded::Field& field) {
     Emit(&tables_file_, "::fidl::FidlField(&");
-    Emit(&tables_file_, NameTable(LibraryName(library_), field.type->coded_name));
+    Emit(&tables_file_, NameTable(field.type->coded_name));
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, field.offset);
     Emit(&tables_file_, ")");
@@ -309,7 +309,7 @@ const coded::Type* TablesGenerator::Compile(const flat::Type* type) {
         auto iter = request_type_map_.find(request_type);
         if (iter != request_type_map_.end())
             return iter->second;
-        auto name = NameCodedRequestHandle(NameName(request_type->name), request_type->nullability);
+        auto name = NameCodedRequestHandle(LibraryName(request_type->name.library()), NameName(request_type->name), request_type->nullability);
         auto coded_request_type = std::make_unique<coded::RequestHandleType>(std::move(name), request_type->nullability);
         request_type_map_[request_type] = coded_request_type.get();
         coded_types_.push_back(std::move(coded_request_type));
@@ -331,7 +331,7 @@ const coded::Type* TablesGenerator::Compile(const flat::Type* type) {
         auto iter = named_type_map_.find(&identifier_type->name);
         if (iter == named_type_map_.end()) {
             // This must be an interface we haven't seen yet.
-            auto name = NameCodedInterfaceHandle(NameName(identifier_type->name), identifier_type->nullability);
+            auto name = NameCodedInterfaceHandle(LibraryName(identifier_type->name.library()), NameName(identifier_type->name), identifier_type->nullability);
             coded_types_.push_back(std::make_unique<coded::InterfaceHandleType>(std::move(name), identifier_type->nullability));
             auto coded_type = coded_types_.back().get();
             named_type_map_[&identifier_type->name] = coded_type;
@@ -389,7 +389,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
             auto CreateMessage = [&](const flat::Interface::Method::Message& message,
                                      types::MessageKind kind) -> void {
                 std::vector<coded::Field> request_fields;
-                std::string request_name = NameMessage(method_name, kind);
+                std::string request_name = NameMessage(LibraryName(decl->name.library()), method_name, kind);
                 for (const auto& parameter : message.parameters) {
                     std::string parameter_name = request_name + "_" + std::string(parameter.name.data());
                     auto coded_parameter_type = Compile(parameter.type.get());

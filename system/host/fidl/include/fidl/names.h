@@ -33,18 +33,18 @@ std::string NameFlatCType(const flat::Type* type);
 std::string NameInterface(const flat::Interface& interface);
 std::string NameMethod(StringView interface_name, const flat::Interface::Method& method);
 std::string NameOrdinal(StringView method_name);
-std::string NameMessage(StringView method_name, types::MessageKind kind);
+std::string NameMessage(StringView library_name, StringView method_name, types::MessageKind kind);
 std::string NameParameter(StringView message_name,
                           const flat::Interface::Method::Parameter& parameter);
 
-std::string NameTable(StringView library_name, StringView type_name);
-std::string NamePointer(StringView library_name, StringView name);
+std::string NameTable(StringView type_name);
+std::string NamePointer(StringView name);
 std::string NameMembers(StringView name);
 std::string NameFields(StringView name);
 
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability);
-std::string NameCodedInterfaceHandle(StringView interface_name, types::Nullability nullability);
-std::string NameCodedRequestHandle(StringView interface_name, types::Nullability nullability);
+std::string NameCodedInterfaceHandle(StringView library_name, StringView interface_name, types::Nullability nullability);
+std::string NameCodedRequestHandle(StringView library_name, StringView interface_name, types::Nullability nullability);
 std::string NameCodedArray(StringView element_name, uint64_t size);
 std::string NameCodedVector(StringView element_name, uint64_t max_size, types::Nullability nullability);
 std::string NameCodedString(uint64_t max_size, types::Nullability nullability);
