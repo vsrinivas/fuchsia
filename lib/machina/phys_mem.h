@@ -29,6 +29,14 @@ class PhysMem {
     return reinterpret_cast<T*>(addr_ + off);
   }
 
+  template <typename T>
+  uintptr_t offset(T* ptr, size_t size = sizeof(T)) const {
+    uintptr_t off = reinterpret_cast<uintptr_t>(ptr);
+    FXL_DCHECK(off >= addr_ && (off - addr_ + size <= vmo_size_))
+        << "Pointer is not contained within guest physical memory";
+    return off - addr_;
+  }
+
  protected:
   zx::vmo vmo_;
   size_t vmo_size_ = 0;

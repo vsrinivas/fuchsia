@@ -74,13 +74,11 @@ void VirtioNet::Stream::OnQueueReady(zx_status_t status, uint16_t head) {
     uintptr_t packet_length;
     auto header = reinterpret_cast<virtio_net_hdr_t*>(desc.addr);
     if (!desc.has_next) {
-      packet_offset = static_cast<uint32_t>(
-          reinterpret_cast<uintptr_t>(header + 1) - device_->phys_mem().addr());
+      packet_offset = device_->phys_mem().offset(header + 1);
       packet_length = static_cast<uint16_t>(desc.len - sizeof(*header));
     } else if (desc.len == sizeof(virtio_net_hdr_t)) {
       status = queue_->ReadDesc(desc.next, &desc);
-      packet_offset = static_cast<uint32_t>(
-          reinterpret_cast<uintptr_t>(desc.addr) - device_->phys_mem().addr());
+      packet_offset = device_->phys_mem().offset(desc.addr, desc.len);
       packet_length = static_cast<uint16_t>(desc.len);
     }
 
