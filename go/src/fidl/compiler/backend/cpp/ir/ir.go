@@ -332,6 +332,7 @@ func formatDestructor(ei types.EncodedIdentifier) string {
 type compiler struct {
 	namespace string
 	decls     *types.DeclMap
+	library   string
 }
 
 func (c *compiler) compileCompoundIdentifier(ei types.EncodedIdentifier, ext string) string {
@@ -525,11 +526,11 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			v.HasRequest,
 			c.compileParameterArray(v.Request),
 			v.RequestSize,
-			fmt.Sprintf("%s%sRequestTable", r.Name, v.Name),
+			fmt.Sprintf("%s%s%sRequestTable", c.library, r.Name, v.Name),
 			v.HasResponse,
 			c.compileParameterArray(v.Response),
 			v.ResponseSize,
-			fmt.Sprintf("%s%sResponseTable", r.Name, v.Name),
+			fmt.Sprintf("%s%s%sResponseTable", c.library, r.Name, v.Name),
 			callbackType,
 			fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
@@ -604,6 +605,7 @@ func Compile(r types.Root) Root {
 	c := compiler{
 		changeIfReserved(r.Name, ""),
 		&r.Decls,
+		string(r.Name),
 	}
 
 	root.Namespace = c.namespace
