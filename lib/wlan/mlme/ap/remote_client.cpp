@@ -520,7 +520,6 @@ zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {
     FillTxInfo(&packet, *frame.hdr);
 
     auto hdr = frame.hdr;
-    hdr->fc.set_from_ds(1);
     hdr->addr1 = addr_;
     hdr->addr2 = bss_->bssid();
     hdr->addr3 = bss_->bssid();
@@ -549,7 +548,6 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto hdr = frame.hdr;
-    hdr->fc.set_from_ds(1);
     hdr->addr1 = addr_;
     hdr->addr2 = bss_->bssid();
     hdr->addr3 = bss_->bssid();
@@ -578,7 +576,6 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto hdr = frame.hdr;
-    hdr->fc.set_from_ds(1);
     hdr->addr1 = addr_;
     hdr->addr2 = bss_->bssid();
     hdr->addr3 = bss_->bssid();
