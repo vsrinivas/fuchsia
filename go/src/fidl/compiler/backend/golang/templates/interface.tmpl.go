@@ -28,7 +28,7 @@ func (p *{{ $.ProxyName }}) {{ .Name }}(
 	{{- if .Request -}}
 	{{- range $index, $m := .Request.Members -}}
 		{{- if $index -}}, {{- end -}}
-		{{ $m.Name | privatize }} {{ $m.Type }}
+		{{ $m.PrivateName }} {{ $m.Type }}
 	{{- end -}}
 	{{- end -}}
 	)
@@ -42,7 +42,7 @@ func (p *{{ $.ProxyName }}) {{ .Name }}(
 	{{- if .Request }}
 	req_ := {{ .Request.Name }}{
 		{{- range .Request.Members }}
-		{{ .Name }}: {{ .Name | privatize }},
+		{{ .Name }}: {{ .PrivateName }},
 		{{- end }}
 	}
 	{{- end }}
@@ -76,13 +76,13 @@ type {{ .Name }} interface {
 	{{- if .Request -}}
 	{{- range $index, $m := .Request.Members -}}
 		{{- if $index -}}, {{- end -}}
-		{{ $m.Name | privatize }} {{ $m.Type }}
+		{{ $m.PrivateName }} {{ $m.Type }}
 	{{- end -}}
 	{{- end -}}
 	)
 	{{- if .Response -}}
 	{{- if len .Response.Members }} (
-	{{- range .Response.Members }}{{ .Name | privatize }} {{ .Type }}, {{ end -}}
+	{{- range .Response.Members }}{{ .PrivateName }} {{ .Type }}, {{ end -}}
 		err_ error)
 	{{- else }} error{{ end -}}
 	{{- else }} error{{ end }}
@@ -126,7 +126,7 @@ func (s *{{ .StubName }}) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bin
 		out_ := {{ .Response.Name }}{}
 		{{- end }}
 		{{ if .Response }}
-		{{- range .Response.Members }}{{ .Name | privatize }}, {{ end -}}
+		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
 		{{- end -}}
 		err_ := s.Impl.{{ .Name }}(
 		{{- if .Request -}}
@@ -138,7 +138,7 @@ func (s *{{ .StubName }}) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bin
 		)
 		{{- if .Response }}
 		{{- range .Response.Members }}
-		out_.{{ .Name }} = {{ .Name | privatize }}
+		out_.{{ .Name }} = {{ .PrivateName }}
 		{{- end }}
 		return &out_, err_
 		{{- else }}

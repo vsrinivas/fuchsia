@@ -135,6 +135,9 @@ type StructMember struct {
 	// Name is the name of the golang struct member.
 	Name string
 
+	// PrivateName is the unexported version of the name of the struct member.
+	PrivateName string
+
 	// Type is the type of the golang struct member.
 	Type Type
 
@@ -313,7 +316,7 @@ func isReservedWord(str string) bool {
 	return ok
 }
 
-func ChangeIfReserved(val types.Identifier, ext string) string {
+func changeIfReserved(val types.Identifier, ext string) string {
 	// TODO(mknyszek): Detect name collision within a scope as a result of transforming.
 	str := string(val) + ext
 	if isReservedWord(str) {
@@ -322,22 +325,26 @@ func ChangeIfReserved(val types.Identifier, ext string) string {
 	return str
 }
 
-func (_ *compiler) compileIdentifier(id types.Identifier, ext string) string {
+func (_ *compiler) compileIdentifier(id types.Identifier, export bool, ext string) string {
 	str := string(id)
-	str = common.ToUpperCamelCase(str)
-	return ChangeIfReserved(types.Identifier(str), ext)
+	if export {
+		str = common.ToUpperCamelCase(str)
+	} else {
+		str = common.ToLowerCamelCase(str)
+	}
+	return changeIfReserved(types.Identifier(str), ext)
 }
 
 func (_ *compiler) compileCompoundIdentifier(ei types.EncodedIdentifier, ext string) string {
 	ci := exportIdentifier(ei)
 	strs := []string{}
 	if ci.Library != "" {
-		strs = append(strs, ChangeIfReserved(ci.Library, "")+".")
+		strs = append(strs, changeIfReserved(ci.Library, "")+".")
 	}
 	for _, v := range ci.NestedDecls {
-		strs = append(strs, ChangeIfReserved(v, ""))
+		strs = append(strs, changeIfReserved(v, ""))
 	}
-	strs = append(strs, ChangeIfReserved(ci.Name, ext))
+	strs = append(strs, changeIfReserved(ci.Name, ext))
 	return strings.Join(strs, "")
 }
 
@@ -460,7 +467,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 
 func (c *compiler) compileEnumMember(val types.EnumMember) EnumMember {
 	return EnumMember{
-		Name:  c.compileIdentifier(val.Name, ""),
+		Name:  c.compileIdentifier(val.Name, true, ""),
 		Value: c.compileConstant(val.Value),
 	}
 }
@@ -480,7 +487,8 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	ty, tag := c.compileType(val.Type)
 	return StructMember{
 		Type: ty,
-		Name: c.compileIdentifier(val.Name, ""),
+		Name: c.compileIdentifier(val.Name, true, ""),
+		PrivateName: c.compileIdentifier(val.Name, false, ""),
 		Tag:  tag.String(),
 	}
 }
@@ -501,13 +509,14 @@ func (c *compiler) compileParameter(p types.Parameter) StructMember {
 	ty, tag := c.compileType(p.Type)
 	return StructMember{
 		Type: ty,
-		Name: c.compileIdentifier(p.Name, ""),
+		Name: c.compileIdentifier(p.Name, true, ""),
+		PrivateName: c.compileIdentifier(p.Name, false, ""),
 		Tag:  tag.String(),
 	}
 }
 
 func (c *compiler) compileMethod(ifaceName types.EncodedIdentifier, val types.Method) Method {
-	methodName := c.compileIdentifier(val.Name, "")
+	methodName := c.compileIdentifier(val.Name, true, "")
 	r := Method{
 		Name:    methodName,
 		Ordinal: val.Ordinal,

@@ -8,7 +8,6 @@ package golang
 
 import (
 	"bytes"
-	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/golang/ir"
 	"fidl/compiler/backend/golang/templates"
 	"fidl/compiler/backend/types"
@@ -43,11 +42,7 @@ func writeGoLibrary(libpath string, tmpl *template.Template, tree ir.Root) error
 func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
 	tree := ir.Compile(fidl)
 
-	tmpls := template.New("GoTemplates").Funcs(template.FuncMap{
-		"privatize": func(s string) string {
-			return ir.ChangeIfReserved(types.Identifier(common.ToLowerCamelCase(s)), "")
-		},
-	})
+	tmpls := template.New("GoTemplates")
 	template.Must(tmpls.Parse(templates.Enum))
 	template.Must(tmpls.Parse(templates.Interface))
 	template.Must(tmpls.Parse(templates.Library))
