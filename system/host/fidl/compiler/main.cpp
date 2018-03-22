@@ -236,6 +236,9 @@ int main(int argc, char* argv[]) {
     std::map<fidl::StringView, std::unique_ptr<fidl::flat::Library>> compiled_libraries;
     const fidl::flat::Library* final_library = nullptr;
     for (const auto& source_manager : source_managers) {
+        if (source_manager.sources().empty()) {
+            continue;
+        }
         auto library = std::make_unique<fidl::flat::Library>(&compiled_libraries, &error_reporter);
         for (const auto& source_file : source_manager.sources()) {
             if (!Parse(*source_file, &identifier_table, &error_reporter, library.get())) {
@@ -256,6 +259,10 @@ int main(int argc, char* argv[]) {
                     static_cast<int>(name.size()), name.data());
             return 1;
         }
+    }
+    if (final_library == nullptr) {
+        fputs("No library was produced.\n", stderr);
+        return 1;
     }
 
     if (!library_name.empty() && final_library->name() != library_name) {
