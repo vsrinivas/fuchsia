@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module netstack;
+library netstack;
 
 enum Protocol {
-  UNSPECIFIED,
-  UDP,
-  TCP,
+  UNSPECIFIED = 0;
+  UDP = 1;
+  TCP = 2;
 };
 
 enum Status {
-  OK,
-  UNKNOWN_ERROR,
-  DNS_ERROR,
-  PARSE_ERROR,
-  IPV4_ONLY,
+  OK = 0;
+  UNKNOWN_ERROR = 1;
+  DNS_ERROR = 2;
+  PARSE_ERROR = 3;
+  IPV4_ONLY = 4;
 };
 
 struct NetErr {
-  Status status;
+  Status @status;
   string message;
 };
 
@@ -82,8 +82,8 @@ struct NetInterface {
   NetAddress addr;
   NetAddress netmask;
   NetAddress broadaddr;
-  array<Subnet> ipv6addrs;
-  array<uint8> hwaddr;
+  vector<Subnet> ipv6addrs;
+  vector<uint8> hwaddr;
 };
 
 // Flags for NetInterface.flags.
@@ -99,47 +99,47 @@ struct RouteTableEntry {
 interface NotificationListener {
   // Called by the netstack when one or more interfaces or their properties change.
   // TODO: include only the interface(s) that have changed?
-  OnInterfacesChanged@0(array<NetInterface> interfaces);
+  1: OnInterfacesChanged(vector<NetInterface> interfaces);
 };
 
 [ServiceName="netstack::Netstack"]
 interface Netstack {
   // Registers the given NotificationListener to be notified of changes. Only one
   // NotificationListener may be active for each client's Netstack instance.
-  RegisterListener@0(NotificationListener? listener);
+  1: RegisterListener(NotificationListener? listener);
 
   // Finds the port number from a given service name and protocol. [service] can be a
   // number like "42", or a service name like "http". If [protocol] is UNSPECIFIED,
   // the service is checked for TCP first, then UDP.
-  GetPortForService@1(string service, Protocol protocol) => (uint16 port);
+  2: GetPortForService(string service, Protocol protocol) -> (uint16 port);
 
   // Finds the IP address for a given host name and port. This may issue network
   // requests via DNS to look up domain names. E.g.
-  // GetAddress("example.com", 80) => [{142.42.42.1}]
-  GetAddress@2(string address, uint16 port) => (array<SocketAddress> addresses, NetErr err);
+  // GetAddress("example.com", 80) -> [{142.42.42.1}]
+  3: GetAddress(string address, uint16 port) -> (vector<SocketAddress> addresses, NetErr err);
 
   // Returns the list of registered network interfaces.
-  GetInterfaces@3() => (array<NetInterface> interfaces);
+  4: GetInterfaces() -> (vector<NetInterface> interfaces);
 
   // Returns the netstack's node name.
-  GetNodeName@4() => (string node_name);
+  5: GetNodeName() -> (string node_name);
 
-  GetRouteTable@5() => (array<RouteTableEntry> rt);
+  6: GetRouteTable() -> (vector<RouteTableEntry> rt);
 
   // TODO (porce): Separate interfaces.
-  GetStats@6(uint32 nicid) => (NetInterfaceStats stats);
+  7: GetStats(uint32 nicid) -> (NetInterfaceStats stats);
 
   // Get stats for all NICs on the stack.
-  GetAggregateStats@7() => (AggregateStats stats);
+  8: GetAggregateStats() -> (AggregateStats stats);
 
   // Sets the status (up or down) for the interface with the given nicid.
-  SetInterfaceStatus@8(uint32 nicid, bool enabled);
+  9: SetInterfaceStatus(uint32 nicid, bool enabled);
 
-  SetRouteTable@9(array<RouteTableEntry> rt);
+  10: SetRouteTable(vector<RouteTableEntry> rt);
 
   // Sets the address for the interface with the given nicid.
   // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
   // TODO: prefix length is 64-bit to work around TO-830.
   // Change the argument type once FIDL2 migration is complete.
-  SetInterfaceAddress@10(uint32 nicid, NetAddress addr, uint64 prefixLen) => (NetErr result);
+  11: SetInterfaceAddress(uint32 nicid, NetAddress addr, uint64 prefixLen) -> (NetErr result);
 };
