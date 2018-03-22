@@ -29,7 +29,7 @@ void ConnectToEnvironmentService(const std::string& interface_name,
 // binding the service to an interface request.
 template <typename Interface>
 void ConnectToEnvironmentService(
-    f1dl::InterfaceRequest<Interface> request,
+    fidl::InterfaceRequest<Interface> request,
     const std::string& interface_name = Interface::Name_) {
   ConnectToEnvironmentService(interface_name, request.TakeChannel());
 }
@@ -37,9 +37,9 @@ void ConnectToEnvironmentService(
 // Connects to a service provided by the application's static environment,
 // returning an interface pointer.
 template <typename Interface>
-f1dl::InterfacePtr<Interface> ConnectToEnvironmentService(
+fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
     const std::string& interface_name = Interface::Name_) {
-  f1dl::InterfacePtr<Interface> interface_ptr;
+  fidl::InterfacePtr<Interface> interface_ptr;
   ConnectToEnvironmentService(interface_name,
                               interface_ptr.NewRequest().TakeChannel());
   return interface_ptr;

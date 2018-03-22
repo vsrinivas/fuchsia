@@ -13,14 +13,14 @@ namespace component {
 ServiceProviderImpl::ServiceProviderImpl() {}
 
 ServiceProviderImpl::ServiceProviderImpl(
-    f1dl::InterfaceRequest<ServiceProvider> request) {
+    fidl::InterfaceRequest<ServiceProvider> request) {
   AddBinding(std::move(request));
 }
 
 ServiceProviderImpl::~ServiceProviderImpl() = default;
 
 void ServiceProviderImpl::AddBinding(
-    f1dl::InterfaceRequest<ServiceProvider> request) {
+    fidl::InterfaceRequest<ServiceProvider> request) {
   if (request)
     bindings_.AddBinding(this, std::move(request));
 }
@@ -41,7 +41,7 @@ void ServiceProviderImpl::RemoveServiceForName(
     name_to_service_connector_.erase(it);
 }
 
-void ServiceProviderImpl::ConnectToService(const f1dl::StringPtr& service_name,
+void ServiceProviderImpl::ConnectToService(fidl::StringPtr service_name,
                                            zx::channel client_handle) {
   auto it = name_to_service_connector_.find(service_name);
   if (it != name_to_service_connector_.end())

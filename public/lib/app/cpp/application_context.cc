@@ -59,22 +59,22 @@ ApplicationContext::CreateFromStartupInfoNotChecked() {
 }
 
 std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
-    ApplicationStartupInfoPtr startup_info) {
-  const FlatNamespacePtr& flat = startup_info->flat_namespace;
-  if (flat->paths->size() != flat->directories->size())
+    ApplicationStartupInfo startup_info) {
+  FlatNamespace& flat = startup_info.flat_namespace;
+  if (flat.paths->size() != flat.directories->size())
     return nullptr;
 
   zx::channel service_root;
-  for (size_t i = 0; i < flat->paths->size(); ++i) {
-    if (flat->paths->at(i) == kServiceRootPath) {
-      service_root = std::move(flat->directories->at(i));
+  for (size_t i = 0; i < flat.paths->size(); ++i) {
+    if (flat.paths->at(i) == kServiceRootPath) {
+      service_root = std::move(flat.directories->at(i));
       break;
     }
   }
 
   return std::make_unique<ApplicationContext>(
       std::move(service_root),
-      std::move(startup_info->launch_info->directory_request));
+      std::move(startup_info.launch_info.directory_request));
 }
 
 void ApplicationContext::ConnectToEnvironmentService(
