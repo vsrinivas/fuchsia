@@ -26,7 +26,7 @@ source_set("input") {
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/views/cpp",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
   ]
 
   public_configs = [ ":common_include_dirs" ]

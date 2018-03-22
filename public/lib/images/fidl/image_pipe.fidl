@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module ui.gfx;
+module images;
 
 import "lib/images/fidl/image_info.fidl";
 import "lib/images/fidl/memory_type.fidl";
-import "lib/ui/scenic/fidl/presentation_info.fidl";
+import "lib/images/fidl/presentation_info.fidl";
 
 // ImagePipe is a mechanism for streaming shared images between a producer
 // and a consumer which may be running in different processes.
@@ -119,5 +119,5 @@ interface ImagePipe {
   // - |image_id| does not reference a currently registered image resource
   PresentImage@2(uint32 image_id, uint64 presentation_time,
       array<handle<event>> acquire_fences, array<handle<event>> release_fences) =>
-          (ui.PresentationInfo presentation_info);
+          (PresentationInfo presentation_info);
 };

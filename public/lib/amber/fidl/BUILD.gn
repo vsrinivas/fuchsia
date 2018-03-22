@@ -5,5 +5,7 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
+  name = "amber"
+
   sources = [ "amber.fidl" ]
 }

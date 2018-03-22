@@ -44,7 +44,7 @@ source_set("vkcube_common") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/view_framework:view_provider",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//garnet/public/lib/vulkan",
   ]
 

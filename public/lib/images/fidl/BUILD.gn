@@ -5,14 +5,13 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
+  name = "images"
+
   sources = [
     "encoded_image.fidl",
     "image_info.fidl",
     "image_pipe.fidl",
     "memory_type.fidl",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/ui/scenic/fidl:presentation_info",
+    "presentation_info.fidl",
   ]
 }

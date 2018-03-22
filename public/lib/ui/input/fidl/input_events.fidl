@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module mozart;
+module input;
 
 import "lib/ui/geometry/fidl/geometry.fidl";
 import "lib/ui/input/fidl/input_event_constants.fidl";

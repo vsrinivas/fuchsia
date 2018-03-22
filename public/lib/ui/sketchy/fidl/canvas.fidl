@@ -4,7 +4,7 @@
 
 module sketchy;
 
-import "lib/ui/scenic/fidl/presentation_info.fidl";
+import "lib/images/fidl/presentation_info.fidl";
 import "lib/ui/sketchy/fidl/commands.fidl";
 import "lib/ui/sketchy/fidl/types.fidl";
 
@@ -29,7 +29,7 @@ interface Canvas {
   //
   // Akin to ui::gfx::Session.Present(); see scenic/session.fidl for details.
   Present@2(uint64 presentation_time) =>
-      (ui.PresentationInfo presentation_info);
+      (images.PresentationInfo presentation_info);
 };
 
 // Allows clients to observe canvas events.

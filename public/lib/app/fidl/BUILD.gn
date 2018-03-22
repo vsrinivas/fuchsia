@@ -5,24 +5,20 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
+  name = "component"
+
   sources = [
     "application_controller.fidl",
-    "application_environment.fidl",
     "application_environment_controller.fidl",
+    "application_environment.fidl",
     "application_launcher.fidl",
     "application_loader.fidl",
     "application_runner.fidl",
     "flat_namespace.fidl",
+    "service_provider.fidl",
   ]
 
   public_deps = [
-    ":service_provider",
     "//garnet/public/lib/fsl/fidl",
-  ]
-}
-
-fidl("service_provider") {
-  sources = [
-    "service_provider.fidl",
   ]
 }

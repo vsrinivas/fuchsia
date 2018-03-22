@@ -5,6 +5,8 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
+  name = "input"
+
   sources = [
     "ime_service.fidl",
     "input_connection.fidl",

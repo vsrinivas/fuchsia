@@ -5,6 +5,8 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
+  name = "scenic_dummy_system"
+
   sources = [
     "commands.fidl",
     "events.fidl",
