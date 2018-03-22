@@ -166,7 +166,7 @@ template("fidl_library") {
     forward_variables_from(invoker,
                            [
                              "testonly",
-                             "visiblity",
+                             "visibility",
                            ])
 
     public_deps = [
