@@ -358,10 +358,14 @@ func (c *compiler) compileLiteral(val types.Literal) string {
 	}
 }
 
-func (c *compiler) compileConstant(val types.Constant) string {
+func (c *compiler) compileConstant(val types.Constant, t *Type) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
-		return c.compileCompoundIdentifier(val.Identifier, "")
+		v := c.compileCompoundIdentifier(val.Identifier, "")
+		if t != nil && t.DeclType == types.EnumDeclType {
+			v = fmt.Sprintf("%s::%s", t.Decl, v)
+		}
+		return v
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	default:
@@ -437,28 +441,24 @@ func (c *compiler) compileType(val types.Type) Type {
 
 func (c *compiler) compileConst(val types.Const) Const {
 	if val.Type.Kind == types.StringType {
-		r := Const{
+		return Const{
 			true,
 			"const",
 			Type{
 				Decl: "char",
 			},
 			c.compileCompoundIdentifier(val.Name, "[]"),
-			c.compileConstant(val.Value),
+			c.compileConstant(val.Value, nil),
 		}
-		return r
 	} else {
-		r := Const{
+		t := c.compileType(val.Type)
+		return Const{
 			false,
 			"constexpr",
-			c.compileType(val.Type),
+			t,
 			c.compileCompoundIdentifier(val.Name, ""),
-			c.compileConstant(val.Value),
+			c.compileConstant(val.Value, &t),
 		}
-		if r.Type.DeclType == types.EnumDeclType {
-			r.Value = fmt.Sprintf("%s::%s", r.Type.Decl, r.Value)
-		}
-		return r
 	}
 }
 
@@ -472,7 +472,7 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
 			changeIfReserved(v.Name, ""),
-			c.compileConstant(v.Value),
+			c.compileConstant(v.Value, nil),
 		})
 	}
 	return r
@@ -534,13 +534,15 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 }
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
+	t := c.compileType(val.Type)
+
 	defaultValue := ""
 	if val.MaybeDefaultValue != nil {
-		defaultValue = c.compileConstant(*val.MaybeDefaultValue)
+		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t)
 	}
 
 	return StructMember{
-		c.compileType(val.Type),
+		t,
 		changeIfReserved(val.Name, ""),
 		defaultValue,
 		val.Offset,
