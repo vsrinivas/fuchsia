@@ -20,8 +20,9 @@ extern crate mxruntime_sys;
 extern crate parking_lot;
 
 
-use app::server::{ServicesServer, ServiceFactories};
+use app::server::ServicesServer;
 use failure::{Error, ResultExt};
+use fidl::endpoints2::ServiceMarker;
 use futures::prelude::*;
 use futures::future::{FutureResult, ok as fok};
 use futures::io;
@@ -35,6 +36,7 @@ use std::sync::Arc;
 use fidl_device_settings::{
     DeviceSettingsManager,
     DeviceSettingsManagerImpl,
+    DeviceSettingsManagerMarker,
     DeviceSettingsWatcherProxy,
     Status,
     ValueType
@@ -197,22 +199,6 @@ fn device_settings_server(state: DeviceSettingsManagerServer, channel: async::Ch
     .recover(|e| fx_log_err!("error running device settings server: {:?}", e))
 }
 
-struct Factory {
-    watchers: Watchers,
-}
-impl ServiceFactories for Factory {
-    fn spawn_service(&mut self, _: String, channel: async::Channel) {
-        let mut d = DeviceSettingsManagerServer {
-            setting_file_map: HashMap::new(),
-            watchers: self.watchers.clone(),
-        };
-
-        d.initialize_keys(DATA_DIR, &["Timezone", "TestSetting"]);
-
-        async::spawn(device_settings_server(d, channel))
-    }
-}
-
 fn main() {
     if let Err(e) = main_ds() {
         fx_log_err!("{:?}", e);
@@ -227,7 +213,18 @@ fn main_ds() -> Result<(), Error> {
     // Attempt to create data directory
     fs::create_dir_all(DATA_DIR).context("creating directory")?;
 
-    let server = ServicesServer::new_with_factories(Factory { watchers }).start()
+    let server = ServicesServer::new()
+        .add_service((DeviceSettingsManagerMarker::NAME, move |channel| {
+            let mut d = DeviceSettingsManagerServer {
+                setting_file_map: HashMap::new(),
+                watchers: watchers.clone(),
+            };
+
+            d.initialize_keys(DATA_DIR, &["Timezone", "TestSetting"]);
+
+            async::spawn(device_settings_server(d, channel))
+        }))
+        .start()
         .map_err(|e| e.context("error starting service server"))?;
 
     Ok(core.run(server, /* threads */ 2).context("running server")?)

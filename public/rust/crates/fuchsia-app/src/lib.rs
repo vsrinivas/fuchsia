@@ -138,7 +138,7 @@ pub mod server {
     /// `ServiceFactory` lazily creates instances of services.
     ///
     /// Note that this trait is implemented by `FnMut` closures like `|| MyService { ... }`.
-    pub trait ServiceFactory {
+    pub trait ServiceFactory: Send + 'static {
         /// The path name of a service.
         ///
         /// Used by the `FdioServer` to know which service to connect incoming requests to.
@@ -150,7 +150,7 @@ pub mod server {
     }
 
     impl<F> ServiceFactory for (&'static str, F)
-        where F: FnMut(async::Channel),
+        where F: FnMut(async::Channel) + Send + 'static,
     {
         fn service_name(&self) -> &str {
             self.0
@@ -174,7 +174,7 @@ pub mod server {
         }
 
         /// Add a service to the `ServicesServer`.
-        pub fn add_service<S: ServiceFactory + 'static>(mut self, service_factory: S) -> Self {
+        pub fn add_service<S: ServiceFactory>(mut self, service_factory: S) -> Self {
             self.services.push(Box::new(service_factory));
             self
         }
