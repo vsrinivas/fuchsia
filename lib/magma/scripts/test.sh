@@ -6,16 +6,14 @@
 
 set -e
 fuchsia_root=`pwd`
-tools_path=$fuchsia_root/buildtools
 netaddr=$fuchsia_root/out/build-zircon/tools/netaddr
-ssh_config="-F $fuchsia_root/out/debug-x64/ssh-keys/ssh_config"
-test_out=/tmp/test_out
+test_out=/tmp/magma_test_out
 
-ssh $ssh_config `$netaddr --fuchsia` 'export GTEST_OUTPUT=xml:/data/test_out/ && . /system/bin/magma_autorun'
+scripts/fx shell 'rm -rf /data/magma_test_out; export GTEST_OUTPUT=xml:/data/magma_test_out/ && . /system/bin/magma_autorun'
 
 rm -rf $test_out
 mkdir $test_out
-scp -q $ssh_config [`$netaddr --fuchsia`]:/data/test_out/*.xml $test_out
+scripts/fx scp [`$netaddr --fuchsia`]:/data/magma_test_out/*.xml $test_out
 
 echo "Grepping for failures:"
 grep failures $test_out/* | grep -v 'failures=\"0\"'
