@@ -91,8 +91,9 @@ decltype(nullptr) Parser::Fail() {
         squiggle +="^";
         squiggle += std::string(token_data.size() - 1, '~');
 
-        std::string error = "found unexpected token on ";
-        error += "line " + line_number;
+        std::string error = "found unexpected token in file ";
+        error += token_location.source_file().filename();
+        error += " on line " + line_number;
         error += " column " + column_number + ":\n";
         error += surrounding_line;
         error += squiggle + "\n";
@@ -102,6 +103,7 @@ decltype(nullptr) Parser::Fail() {
     }
     return nullptr;
 }
+
 
 std::unique_ptr<raw::Identifier> Parser::ParseIdentifier() {
     auto identifier = ConsumeToken(Token::Kind::Identifier);
