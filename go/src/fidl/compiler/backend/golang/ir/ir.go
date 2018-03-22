@@ -174,6 +174,9 @@ type Method struct {
 type Root struct {
 	// TODO(mknyszek): Support unions and constants.
 
+	// Name is the name of the library.
+	Name string
+
 	// Enums represents a list of FIDL enums represented as Go enums.
 	Enums []Enum
 
@@ -182,6 +185,10 @@ type Root struct {
 
 	// Interfaces represents the list of FIDL interfaces represented as Go types.
 	Interfaces []Interface
+
+	// Libraries represents the set of library dependencies for this FIDL library.
+	// These are only the names of the libraries, as those are sufficient.
+	Libraries []string
 }
 
 // compiler contains the state necessary for recursive compilation.
@@ -298,9 +305,15 @@ func (_ *compiler) compileIdentifier(id types.Identifier, ext string) string {
 
 func (_ *compiler) compileCompoundIdentifier(ei types.EncodedIdentifier, ext string) string {
 	ci := exportIdentifier(ei)
-	// TODO(kulakowski) Support more complicated names
-	return changeIfReserved(ci.Name, ext)
-
+	strs := []string{}
+	if ci.Library != "" {
+		strs = append(strs, changeIfReserved(ci.Library, "")+".")
+	}
+	for _, v := range ci.NestedDecls {
+		strs = append(strs, changeIfReserved(v, ""))
+	}
+	strs = append(strs, changeIfReserved(ci.Name, ext))
+	return strings.Join(strs, "")
 }
 
 func (_ *compiler) compileLiteral(val types.Literal) string {
@@ -506,7 +519,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 // Compile translates parsed FIDL IR into golang backend IR for code generation.
 func Compile(fidlData types.Root) Root {
 	c := compiler{decls: fidlData.Decls}
-	r := Root{}
+	r := Root{Name: string(fidlData.Name)}
 	for _, v := range fidlData.Enums {
 		r.Enums = append(r.Enums, c.compileEnum(v))
 	}
@@ -515,6 +528,13 @@ func Compile(fidlData types.Root) Root {
 	}
 	for _, v := range fidlData.Interfaces {
 		r.Interfaces = append(r.Interfaces, c.compileInterface(v))
+	}
+	for _, v := range fidlData.Libraries {
+		// Don't try to import yourself.
+		if v.Name == fidlData.Name {
+			continue
+		}
+		r.Libraries = append(r.Libraries, string(v.Name))
 	}
 	return r
 }

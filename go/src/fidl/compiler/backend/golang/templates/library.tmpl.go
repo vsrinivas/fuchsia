@@ -10,12 +10,16 @@ const Library = `
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package {{ .Name }}
 
 import (
 	"fmt"
 	_bindings "fidl/bindings2"
 	_zx "syscall/zx"
+
+{{- range $lib := .Libraries }}
+	{{ $lib }} "fuchsia/go/{{ $lib }}"
+{{- end }}
 )
 
 {{ range $enum := .Enums -}}
