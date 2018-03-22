@@ -87,7 +87,7 @@ static zx_status_t load_bootfs(const int fd,
       bootdata_off + sizeof(bootdata_t) + BOOTDATA_ALIGN(container_hdr->length);
 
   ret =
-      read(fd, phys_mem.ptr(data_off, ramdisk_hdr.length), ramdisk_hdr.length);
+      read(fd, phys_mem.as<void>(data_off, ramdisk_hdr.length), ramdisk_hdr.length);
   if (ret < 0 || (size_t)ret != ramdisk_hdr.length) {
     FXL_LOG(ERROR) << "Failed to read BOOTFS image data";
     return ZX_ERR_IO;

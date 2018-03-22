@@ -58,7 +58,7 @@ static zx_status_t load_file(const char* path,
     FXL_LOG(ERROR) << "Failed to stat ACPI table " << path;
     return ZX_ERR_IO;
   }
-  ret = read(fd.get(), phys_mem.ptr(off, stat.st_size), stat.st_size);
+  ret = read(fd.get(), phys_mem.as<void>(off, stat.st_size), stat.st_size);
   if (ret != stat.st_size) {
     FXL_LOG(ERROR) << "Failed to read ACPI table " << path;
     return ZX_ERR_IO;

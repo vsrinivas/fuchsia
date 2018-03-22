@@ -136,7 +136,7 @@ static zx_status_t read_fd(const int fd,
     FXL_LOG(ERROR) << "Failed to stat file";
     return ZX_ERR_IO;
   }
-  ret = read(fd, phys_mem.ptr(off, stat.st_size), stat.st_size);
+  ret = read(fd, phys_mem.as<void>(off, stat.st_size), stat.st_size);
   if (ret != stat.st_size) {
     FXL_LOG(ERROR) << "Failed to read file";
     return ZX_ERR_IO;
@@ -202,7 +202,7 @@ static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
     return ZX_ERR_OUT_OF_RANGE;
   }
   uint32_t cmdline_off = phys_mem.size() - PAGE_SIZE;
-  memcpy(phys_mem.ptr(cmdline_off, cmdline_len), cmdline.c_str(), cmdline_len);
+  memcpy(phys_mem.as<void>(cmdline_off, cmdline_len), cmdline.c_str(), cmdline_len);
   bp(phys_mem, COMMAND_LINE) = cmdline_off;
 
 #if __aarch64__
@@ -246,7 +246,7 @@ static zx_status_t load_device_tree(const int fd,
   }
 
   // Validate device tree.
-  void* dtb = phys_mem.ptr(kDtbOffset, dtb_size);
+  void* dtb = phys_mem.as<void>(kDtbOffset, dtb_size);
   int ret = fdt_check_header(dtb);
   if (ret < 0) {
     FXL_LOG(ERROR) << "Invalid device tree";

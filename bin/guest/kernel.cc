@@ -36,7 +36,7 @@ zx_status_t load_kernel(const std::string& kernel_path,
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  ret = read(fd.get(), phys_mem.ptr(kernel_off, stat.st_size), stat.st_size);
+  ret = read(fd.get(), phys_mem.as<void>(kernel_off, stat.st_size), stat.st_size);
   if (ret != stat.st_size) {
     FXL_LOG(ERROR) << "Failed to read kernel image";
     return ZX_ERR_IO;
