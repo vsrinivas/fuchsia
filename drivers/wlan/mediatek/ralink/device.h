@@ -229,9 +229,9 @@ class Device : public wlan_device::Phy {
     uint8_t GetRxAckPolicy(const wlan_tx_packet_t& wlan_pkt);
     size_t WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt);
     size_t GetL2PadLen(const wlan_tx_packet_t& wlan_pkt);
-    zx_device_t* parent_;
-    zx_device_t* zxdev_;
-    zx_device_t* wlanmac_dev_;
+    zx_device_t* parent_ = nullptr;
+    zx_device_t* zxdev_ = nullptr;
+    zx_device_t* wlanmac_dev_ = nullptr;
     usb_protocol_t usb_;
 
     uint8_t rx_endpt_ = 0;

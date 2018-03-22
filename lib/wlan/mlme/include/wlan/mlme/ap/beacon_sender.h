@@ -42,7 +42,7 @@ class BeaconSender : public FrameHandler {
 
     DeviceInterface* const device_;
     wlan_mlme::StartRequest req_;
-    BssInterface* bss_;
+    BssInterface* bss_ = nullptr;
     // Buffer to write the Partial Virtual Bitmap to which was derived from a Traffic Indication
     // Map.
     uint8_t pvb_[TimElement::kMaxLenBmp];
