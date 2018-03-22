@@ -9,7 +9,7 @@
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
-#include "lib/media/fidl/audio_server.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace {
 // Set the renderer format to: 44.1 kHz, stereo, 16-bit LPCM (signed integer).

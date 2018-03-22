@@ -12,7 +12,7 @@
 #include "garnet/bin/media/audio_server/utils.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/media/fidl/audio_renderer.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 namespace audio {

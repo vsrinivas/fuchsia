@@ -14,8 +14,8 @@
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
-#include "lib/media/fidl/audio_renderer.fidl.h"
-#include "lib/media/fidl/audio_server.fidl.h"
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline.h"
 
 namespace media_client {

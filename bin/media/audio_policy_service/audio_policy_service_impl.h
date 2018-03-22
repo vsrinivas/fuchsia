@@ -10,9 +10,9 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/media/fidl/audio_policy_service.fidl.h"
-#include "lib/media/fidl/audio_renderer.fidl.h"
-#include "lib/media/fidl/audio_server.fidl.h"
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 

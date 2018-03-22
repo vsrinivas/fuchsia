@@ -19,7 +19,7 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/media/fidl/audio_server.fidl.h"
+#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_function.h"
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"

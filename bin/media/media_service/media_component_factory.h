@@ -7,13 +7,13 @@
 #include "garnet/bin/media/util/factory_service_base.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
-#include "lib/media/fidl/media_player.fidl.h"
-#include "lib/media/fidl/media_renderer.fidl.h"
-#include "lib/media/fidl/media_sink.fidl.h"
-#include "lib/media/fidl/media_source.fidl.h"
-#include "lib/media/fidl/media_type_converter.fidl.h"
-#include "lib/media/fidl/seeking_reader.fidl.h"
-#include "lib/media/fidl/video_renderer.fidl.h"
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 

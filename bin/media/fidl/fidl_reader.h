@@ -13,7 +13,7 @@
 #include "garnet/bin/media/fidl/fidl_default_waiter.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/media/fidl/seeking_reader.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 

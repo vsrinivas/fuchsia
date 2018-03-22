@@ -6,7 +6,7 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/media/fidl/tts_service.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace {
 

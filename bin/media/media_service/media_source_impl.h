@@ -14,8 +14,8 @@
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/media/fidl/media_source.fidl.h"
-#include "lib/media/fidl/seeking_reader.fidl.h"
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 

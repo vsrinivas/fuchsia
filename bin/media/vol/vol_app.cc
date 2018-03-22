@@ -13,7 +13,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/media/audio/perceived_level.h"
-#include "lib/media/fidl/audio_policy_service.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 namespace {

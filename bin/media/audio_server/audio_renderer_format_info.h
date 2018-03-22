@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 #include "garnet/bin/media/audio_server/fwd_decls.h"
-#include "lib/media/fidl/media_types.fidl.h"
+#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media {

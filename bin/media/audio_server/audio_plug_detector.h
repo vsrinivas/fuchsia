@@ -12,7 +12,7 @@
 
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "lib/media/fidl/media_result.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 namespace audio {

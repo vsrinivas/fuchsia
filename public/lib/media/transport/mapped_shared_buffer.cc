@@ -9,7 +9,7 @@
 #include <zx/vmo.h>
 
 #include "lib/fxl/logging.h"
-#include "lib/media/fidl/media_transport.fidl.h"
+#include <fuchsia/cpp/media.h>
 #include "lib/media/transport/fifo_allocator.h"
 
 namespace media {

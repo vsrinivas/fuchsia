@@ -10,8 +10,8 @@
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/media/fidl/media_sink.fidl.h"
-#include "lib/media/fidl/timeline_controller.fidl.h"
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 

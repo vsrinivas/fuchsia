@@ -6,7 +6,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/media/fidl/tts_service.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 namespace tts {

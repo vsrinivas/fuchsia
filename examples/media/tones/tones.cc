@@ -10,7 +10,7 @@
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "lib/media/fidl/audio_server.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 // TODO(dalesat): Remove once the mixer supports floats.
 #define FLOAT_SAMPLES_SUPPORTED 0

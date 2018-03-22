@@ -12,7 +12,7 @@
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
-#include "lib/media/fidl/seeking_reader.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 

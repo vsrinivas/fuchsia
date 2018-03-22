@@ -8,7 +8,7 @@
 
 #include "garnet/bin/media/util/file_channel.h"
 #include "lib/fxl/logging.h"
-#include "lib/media/fidl/seeking_reader.fidl.h"
+#include <fuchsia/cpp/media.h>
 #include "lib/url/gurl.h"
 
 namespace media {

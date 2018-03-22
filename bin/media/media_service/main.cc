@@ -8,7 +8,7 @@
 
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/media/fidl/media_player.fidl.h"
+#include <fuchsia/cpp/media.h>
 #include "lib/svc/cpp/services.h"
 
 const std::string kIsolateUrl = "media_service";

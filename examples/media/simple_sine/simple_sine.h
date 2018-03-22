@@ -7,8 +7,8 @@
 #include <fbl/vmo_mapper.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/media/fidl/audio_renderer.fidl.h"
-#include "lib/media/fidl/media_transport.fidl.h"
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
 
 namespace examples {
 

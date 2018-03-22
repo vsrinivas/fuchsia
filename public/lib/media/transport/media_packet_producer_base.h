@@ -10,7 +10,7 @@
 
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/media/fidl/media_transport.fidl.h"
+#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_rate.h"
 #include "lib/media/transport/shared_buffer_set_allocator.h"
 

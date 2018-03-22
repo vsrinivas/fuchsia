@@ -14,10 +14,10 @@
 #include "lib/fxl/time/time_point.h"
 #include "lib/media/audio/lpcm_payload.h"
 #include "lib/media/audio/types.h"
-#include "lib/media/fidl/audio_renderer.fidl.h"
-#include "lib/media/fidl/media_renderer.fidl.h"
-#include "lib/media/fidl/media_result.fidl.h"
-#include "lib/media/fidl/timeline_controller.fidl.h"
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/transport/media_packet_producer_base.h"

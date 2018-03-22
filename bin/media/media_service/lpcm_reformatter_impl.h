@@ -12,7 +12,7 @@
 #include "garnet/bin/media/framework/graph.h"
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/media/fidl/media_type_converter.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 

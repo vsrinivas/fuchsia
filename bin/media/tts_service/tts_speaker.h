@@ -14,7 +14,7 @@
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/media/fidl/audio_server.fidl.h"
+#include <fuchsia/cpp/media.h>
 #include "third_party/flite/include/flite_fuchsia.h"
 
 namespace media {

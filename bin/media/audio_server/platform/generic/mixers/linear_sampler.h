@@ -5,7 +5,7 @@
 #pragma once
 
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
-#include "lib/media/fidl/media_types.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 namespace audio {

@@ -12,7 +12,7 @@
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/media/fidl/media_type_converter.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 

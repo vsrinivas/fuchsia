@@ -7,7 +7,7 @@
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
-#include "lib/media/fidl/media_player.fidl.h"
+#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_function.h"
 
 namespace examples {

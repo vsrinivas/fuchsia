@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "garnet/bin/media/framework/types/stream_type.h"
-#include "lib/media/fidl/media_transport.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 

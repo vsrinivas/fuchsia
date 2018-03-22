@@ -14,8 +14,8 @@
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 #include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/media/fidl/media_result.fidl.h"
-#include "lib/media/fidl/media_types.fidl.h"
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 

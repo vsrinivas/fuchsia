@@ -8,7 +8,7 @@
 #include "garnet/bin/media/framework/payload_allocator.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/media/fidl/media_transport.fidl.h"
+#include <fuchsia/cpp/media.h>
 #include "lib/media/transport/media_packet_producer_base.h"
 
 namespace media {

@@ -8,7 +8,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/media/fidl/net_media_service.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 

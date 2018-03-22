@@ -10,8 +10,8 @@
 
 #include "garnet/bin/media/util/timeline_control_point.h"
 #include "garnet/bin/media/video/video_converter.h"
-#include "lib/media/fidl/media_transport.fidl.h"
-#include "lib/media/fidl/video_renderer.fidl.h"
+#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/transport/media_packet_consumer_base.h"
 #include "lib/ui/geometry/fidl/geometry.fidl.h"

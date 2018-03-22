@@ -12,7 +12,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/macros.h"
-#include "lib/media/fidl/audio_renderer.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace examples {
 

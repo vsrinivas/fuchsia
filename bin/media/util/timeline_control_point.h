@@ -10,7 +10,7 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/media/fidl/timeline_controller.fidl.h"
+#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media {

@@ -11,7 +11,7 @@
 #include "garnet/bin/media/fidl/fidl_default_waiter.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
-#include "lib/media/fidl/seeking_reader.fidl.h"
+#include <fuchsia/cpp/media.h>
 
 namespace media {
 

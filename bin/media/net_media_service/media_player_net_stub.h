@@ -11,7 +11,7 @@
 
 #include "garnet/bin/media/net_media_service/media_player_messages.h"
 #include "lib/fxl/macros.h"
-#include "lib/media/fidl/media_player.fidl.h"
+#include <fuchsia/cpp/media.h>
 #include "lib/netconnector/cpp/message_relay.h"
 #include "lib/netconnector/cpp/net_stub_responder.h"
 

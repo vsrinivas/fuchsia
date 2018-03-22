@@ -9,7 +9,7 @@
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/media/fidl/seeking_reader.fidl.h"
+#include <fuchsia/cpp/media.h>
 #include "<fuchsia/cpp/network.h>"
 
 namespace media {
