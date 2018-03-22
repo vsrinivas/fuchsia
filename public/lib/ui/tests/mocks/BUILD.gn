@@ -20,8 +20,7 @@ source_set("mocks") {
 
   deps = [
     "//garnet/bin/ui/view_manager:lib",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//garnet/public/lib/fidl/cpp/bindings:bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//third_party/googletest:gtest",
   ]
 }

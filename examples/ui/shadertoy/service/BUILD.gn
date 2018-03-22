@@ -31,7 +31,7 @@ executable("service") {
     "//garnet/examples/escher/common",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/escher",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/gfx/fidl",

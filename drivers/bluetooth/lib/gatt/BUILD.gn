@@ -19,7 +19,7 @@ static_library("gatt") {
 
   deps = [
     "//garnet/drivers/bluetooth/lib/att",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
   ]
 }
 

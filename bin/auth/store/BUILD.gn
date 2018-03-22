@@ -19,7 +19,7 @@ source_set("lib") {
 
   deps = [
     ":credentials",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
   ]
 }
