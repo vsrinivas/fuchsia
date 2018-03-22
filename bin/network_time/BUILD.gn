@@ -47,8 +47,8 @@ source_set("lib") {
     "roughtime_server.h",
     "time_server_config.cc",
     "time_server_config.h",
-    "time_service.cc",
-    "time_service.h",
+    "timezone.cc",
+    "timezone.h",
   ]
 
   deps = [

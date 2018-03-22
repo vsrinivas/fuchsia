@@ -8,18 +8,18 @@
 #include <string>
 #include <utility>
 
-namespace timeservice {
+namespace time_zone {
 
-class TimeService {
+class Timezone {
  public:
   bool Run();
   bool UpdateSystemTime(uint8_t tries);
-  TimeService(std::string server_config_file)
+  Timezone(std::string server_config_file)
       : server_config_file_(std::move(server_config_file)) {}
-  ~TimeService() = default;
+  ~Timezone() = default;
 
  private:
   std::string server_config_file_;
 };
 
-}  // namespace timeservice
+}  // namespace time_zone

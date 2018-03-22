@@ -10,7 +10,7 @@
 #define MULTILINE(...) #__VA_ARGS__
 #define INVALID_CONFIGS 4
 
-namespace timeservice {
+namespace time_zone {
 
 const char* invalid_configs[INVALID_CONFIGS] = {
     MULTILINE({
@@ -157,4 +157,4 @@ TEST(TimeServerConfigTest, HandlesMultipleServerNAddressesInput) {
   ASSERT_EQ(server_list.size(), 3u);
 }
 
-}  // namespace timeservice
+}  // namespace time_zone

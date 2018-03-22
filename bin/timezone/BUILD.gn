@@ -4,13 +4,13 @@
 
 import("//build/package.gni")
 
-executable("time_service_bin") {
-  output_name = "time_service"
+executable("timezone_bin") {
+  output_name = "timezone"
 
   sources = [
     "main.cc",
-    "time_service.cc",
-    "time_service.h",
+    "timezone.cc",
+    "timezone.h",
   ]
 
   deps = [
@@ -19,17 +19,17 @@ executable("time_service_bin") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/icu_data/cpp",
     "//garnet/public/lib/icu_data/fidl",
-    "//garnet/public/lib/time_service/fidl",
+    "//garnet/public/lib/time_zone/fidl",
     "//third_party/icu",
   ]
 }
 
-package("time_service") {
+package("timezone") {
   deps = [
-    ":time_service_bin",
+    ":timezone_bin",
   ]
 
-  binary = "time_service"
+  binary = "timezone"
 
   meta = [{
     path = rebase_path("meta/sandbox")

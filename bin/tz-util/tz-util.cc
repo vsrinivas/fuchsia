@@ -12,7 +12,7 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/time_service/fidl/time_service.fidl.h"
+#include <fuchsia/cpp/time_zone.h>
 
 static constexpr char kGetOffsetCmd[] = "get_offset_minutes";
 static constexpr char kSetTimezoneIdCmd[] = "set_timezone_id";
@@ -21,7 +21,7 @@ static constexpr char kGetTimezoneIdCmd[] = "get_timezone_id";
 class TzUtil {
  public:
   TzUtil() {
-    component::ConnectToEnvironmentService(GetSynchronousProxy(&time_svc_));
+    component::ConnectToEnvironmentService(timezone_.NewRequest());
   }
 
   void Run(fxl::CommandLine command_line) {
@@ -34,7 +34,7 @@ class TzUtil {
       command_line.GetOptionValue(kSetTimezoneIdCmd, &timezone_id);
       if (!timezone_id.empty()) {
         bool status;
-        if (!time_svc_->SetTimezone(timezone_id, &status) || !status) {
+        if (!timezone_->SetTimezone(timezone_id, &status) || !status) {
           std::cerr << "ERROR: Unable to set ID." << std::endl;
           exit(1);
         }
@@ -45,8 +45,8 @@ class TzUtil {
       return;
     }
     if (command_line.HasOption(kGetTimezoneIdCmd)) {
-      f1dl::StringPtr timezone_id;
-      if (time_svc_->GetTimezoneId(&timezone_id)) {
+      fidl::StringPtr timezone_id;
+      if (timezone_->GetTimezoneId(&timezone_id)) {
         std::cout << timezone_id << std::endl;
       } else {
         std::cerr << "ERROR: Unable to get timezone ID." << std::endl;
@@ -57,7 +57,7 @@ class TzUtil {
       int32_t local_offset, dst_offset;
       zx_time_t milliseconds_since_epoch =
           zx_clock_get(ZX_CLOCK_UTC) / ZX_MSEC(1);
-      if (time_svc_->GetTimezoneOffsetMinutes(milliseconds_since_epoch,
+      if (timezone_->GetTimezoneOffsetMinutes(milliseconds_since_epoch,
                                               &local_offset, &dst_offset)) {
         std::cout << local_offset + dst_offset << std::endl;
       } else {
@@ -79,7 +79,7 @@ class TzUtil {
     std::cout << std::endl;
   }
 
-  time_service::TimeServiceSyncPtr time_svc_;
+  time_zone::TimezoneSyncPtr timezone_;
 };
 
 int main(int argc, char** argv) {

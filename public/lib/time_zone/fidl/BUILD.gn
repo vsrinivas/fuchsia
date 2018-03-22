@@ -5,7 +5,9 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
+  name = "time_zone"
+
   sources = [
-    "time_service.fidl"
+    "time_zone.fidl"
   ]
 }

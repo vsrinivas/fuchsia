@@ -18,7 +18,7 @@
 
 #define PORT 3453
 
-namespace timeservice {
+namespace time_zone {
 
 TEST(RoughTimeServerTest, TestValid) {
   uint8_t key[ED25519_PUBLIC_KEY_LEN] = {0};
@@ -83,13 +83,13 @@ TEST(RoughTimeServerTest, TestServerRequest) {
   std::thread t1(listen, sock);
 
   roughtime::rough_time_t t;
-  timeservice::Status ret;
+  time_zone::Status ret;
   int attempts = 3;
   do {
     attempts--;
     ret = server.GetTimeFromServer(&t);
-  } while (attempts > 0 && ret == timeservice::Status::NETWORK_ERROR);
+  } while (attempts > 0 && ret == time_zone::Status::NETWORK_ERROR);
   t1.join();
 }
 
-}  // namespace timeservice
+}  // namespace time_zone

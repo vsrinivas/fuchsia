@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/network_time/time_service.h"
+#include "garnet/bin/network_time/timezone.h"
 
 #include <fcntl.h>
 #include <inttypes.h>
@@ -16,15 +16,15 @@
 #include "garnet/bin/network_time/time_server_config.h"
 #include "lib/syslog/cpp/logger.h"
 
-namespace timeservice {
+namespace time_zone {
 
-bool TimeService::Run() {
+bool Timezone::Run() {
   FX_LOGS(INFO) << "started";
   UpdateSystemTime(3);
   return true;
 }
 
-bool TimeService::UpdateSystemTime(uint8_t tries) {
+bool Timezone::UpdateSystemTime(uint8_t tries) {
   TimeServerConfig config;
   if (!config.Parse(server_config_file_)) {
     return false;
@@ -91,4 +91,4 @@ bool TimeService::UpdateSystemTime(uint8_t tries) {
   return true;
 }
 
-}  // namespace timeservice
+}  // namespace time_zone

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/time_service/time_service.h"
+#include "garnet/bin/timezone/timezone.h"
 
 #include <zircon/syscalls.h>
 #include <algorithm>
@@ -23,17 +23,17 @@ static constexpr char kTzIdFile[] = "/data/tz_id";
 static constexpr char kDefaultTimezone[] = "UTC";
 static constexpr int32_t kMillisecondsInMinute = 60000;
 
-namespace time_service {
+namespace time_zone {
 
-TimeServiceImpl::TimeServiceImpl() : valid_(Init()) {}
+TimezoneImpl::TimezoneImpl() : valid_(Init()) {}
 
-TimeServiceImpl::~TimeServiceImpl() = default;
+TimezoneImpl::~TimezoneImpl() = default;
 
-bool TimeServiceImpl::Init() {
+bool TimezoneImpl::Init() {
   icu_data::ICUDataProviderSyncPtr icu_provider;
   icu_data::ICUDataPtr icu_data_out;
   fsl::SizedVmo icu_vmo;
-  component::ConnectToEnvironmentService(GetSynchronousProxy(&icu_provider));
+  component::ConnectToEnvironmentService(icu_provider.NewRequest());
   icu_provider->ICUDataWithSha1(icu_data::kDataHash, &icu_data_out);
   if (!icu_data_out) {
     FXL_LOG(ERROR) << "Unable to load ICU data. Timezone data unavailable.";
@@ -64,14 +64,14 @@ bool TimeServiceImpl::Init() {
   return true;
 }
 
-void TimeServiceImpl::GetTimezoneOffsetMinutes(
+void TimezoneImpl::GetTimezoneOffsetMinutes(
     int64_t milliseconds_since_epoch,
-    const GetTimezoneOffsetMinutesCallback& callback) {
+    GetTimezoneOffsetMinutesCallback callback) {
   if (!valid_) {
     callback(0, 0);
     return;
   }
-  f1dl::StringPtr timezone_id = GetTimezoneIdImpl();
+  fidl::StringPtr timezone_id = GetTimezoneIdImpl();
   std::unique_ptr<icu::TimeZone> timezone(
       icu::TimeZone::createTimeZone(timezone_id.get().c_str()));
   int32_t local_offset = 0, dst_offset = 0;
@@ -89,13 +89,13 @@ void TimeServiceImpl::GetTimezoneOffsetMinutes(
   callback(local_offset, dst_offset);
 }
 
-void TimeServiceImpl::NotifyWatchers(const f1dl::StringPtr& new_timezone_id) {
+void TimezoneImpl::NotifyWatchers(const fidl::StringPtr& new_timezone_id) {
   for (auto& watcher : watchers_) {
     watcher->OnTimezoneOffsetChange(new_timezone_id);
   }
 }
 
-bool TimeServiceImpl::IsValidTimezoneId(const f1dl::StringPtr& timezone_id) {
+bool TimezoneImpl::IsValidTimezoneId(const fidl::StringPtr& timezone_id) {
   std::unique_ptr<icu::TimeZone> timezone(
       icu::TimeZone::createTimeZone(timezone_id.get().c_str()));
   if ((*timezone) == icu::TimeZone::getUnknown()) {
@@ -104,8 +104,8 @@ bool TimeServiceImpl::IsValidTimezoneId(const f1dl::StringPtr& timezone_id) {
   return true;
 }
 
-void TimeServiceImpl::SetTimezone(const f1dl::StringPtr& timezone_id,
-                                  const SetTimezoneCallback& callback) {
+void TimezoneImpl::SetTimezone(fidl::StringPtr timezone_id,
+                               SetTimezoneCallback callback) {
   if (!valid_) {
     FXL_LOG(ERROR) << "Time service is not valid.";
     callback(false);
@@ -128,11 +128,11 @@ void TimeServiceImpl::SetTimezone(const f1dl::StringPtr& timezone_id,
   callback(true);
 }
 
-void TimeServiceImpl::GetTimezoneId(const GetTimezoneIdCallback& callback) {
+void TimezoneImpl::GetTimezoneId(GetTimezoneIdCallback callback) {
   callback(GetTimezoneIdImpl());
 }
 
-f1dl::StringPtr TimeServiceImpl::GetTimezoneIdImpl() {
+fidl::StringPtr TimezoneImpl::GetTimezoneIdImpl() {
   if (!valid_) {
     return kDefaultTimezone;
   }
@@ -155,7 +155,7 @@ f1dl::StringPtr TimeServiceImpl::GetTimezoneIdImpl() {
   return id_str;
 }
 
-void TimeServiceImpl::ReleaseWatcher(TimeServiceWatcher* watcher) {
+void TimezoneImpl::ReleaseWatcher(TimezoneWatcher* watcher) {
   auto predicate = [watcher](const auto& target) {
     return target.get() == watcher;
   };
@@ -163,16 +163,16 @@ void TimeServiceImpl::ReleaseWatcher(TimeServiceWatcher* watcher) {
       std::remove_if(watchers_.begin(), watchers_.end(), predicate));
 }
 
-void TimeServiceImpl::Watch(f1dl::InterfaceHandle<TimeServiceWatcher> watcher) {
-  TimeServiceWatcherPtr watcher_proxy = watcher.Bind();
-  TimeServiceWatcher* proxy_raw_ptr = watcher_proxy.get();
+void TimezoneImpl::Watch(fidl::InterfaceHandle<TimezoneWatcher> watcher) {
+  TimezoneWatcherPtr watcher_proxy = watcher.Bind();
+  TimezoneWatcher* proxy_raw_ptr = watcher_proxy.get();
   watcher_proxy.set_error_handler(
       [this, proxy_raw_ptr] { ReleaseWatcher(proxy_raw_ptr); });
   watchers_.push_back(std::move(watcher_proxy));
 }
 
-void TimeServiceImpl::AddBinding(f1dl::InterfaceRequest<TimeService> request) {
+void TimezoneImpl::AddBinding(fidl::InterfaceRequest<Timezone> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-}  // namespace time_service
+}  // namespace time_zone
