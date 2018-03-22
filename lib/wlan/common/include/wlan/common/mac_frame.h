@@ -640,7 +640,7 @@ struct FrameHeader {
     SequenceControl sc;
 
     uint16_t len() const {
-        if (fc.IsData()) { return reinterpret_cast<const MgmtFrameHeader*>(this)->len(); }
+        if (fc.IsData()) { return reinterpret_cast<const DataFrameHeader*>(this)->len(); }
         if (fc.IsMgmt()) { return reinterpret_cast<const MgmtFrameHeader*>(this)->len(); }
         if (fc.IsCtrl()) {
             if (fc.subtype() < ControlSubtype::kBeamformingReportPoll) {
