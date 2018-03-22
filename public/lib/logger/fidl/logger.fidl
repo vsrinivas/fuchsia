@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module logger;
+library logger;
 
 struct LogFilterOptions {
   bool filter_by_severity;
@@ -17,7 +17,7 @@ struct LogFilterOptions {
   // Return all messages which contains at least one tag.
   // Passed tags should not be more than 63 bytes in length and max tags can be 5.
   // Listener would be discarded if the limit is not followed.
-  array<string> tags;
+  vector<string>:5 tags;
 };
 
 struct LogMessage {
@@ -26,7 +26,7 @@ struct LogMessage {
   uint64 time;
   int32 severity;
   uint32 dropped_logs;
-  array<string> tags;
+  vector<string>:5 tags;
   string msg;
 };
 
@@ -34,17 +34,17 @@ struct LogMessage {
 [ServiceName="logger::Log"]
 interface Log {
   // Listener listens for logs
-  Listen@0(LogListener log_listener, LogFilterOptions? options);
+  1: Listen(LogListener log_listener, LogFilterOptions? options);
 };
 
 // Interface to get and listen to socket from syslogger
 [ServiceName="logger::LogSink"]
 interface LogSink {
   // Client connects to send logs over socket
-  Connect@0(handle<socket> socket);
+  1: Connect(handle<socket> socket);
 };
 
 
 interface LogListener {
-  Log@0(LogMessage log);
+  1: Log(LogMessage log);
 };

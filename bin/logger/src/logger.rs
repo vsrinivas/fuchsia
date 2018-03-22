@@ -4,14 +4,13 @@
 
 use async;
 use byteorder::{ByteOrder, LittleEndian};
+use fidl_logger::LogMessage;
 use futures::io;
 use futures::prelude::*;
 use libc::{c_char, c_int, uint32_t, uint64_t, uint8_t};
 use std::{mem, str};
 use std::cell::RefCell;
 use zx;
-
-use garnet_public_lib_logger_fidl::LogMessage;
 
 type FxLogSeverityT = c_int;
 type ZxKoid = uint64_t;

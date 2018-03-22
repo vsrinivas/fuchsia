@@ -22,5 +22,11 @@
     "fidl_target": "//garnet/public/lib/device_settings/fidl:device_settings",
     "library_deps": [],
     "public": true
+  },
+  {
+    "library_name": "logger",
+    "fidl_target": "//garnet/public/lib/logger/fidl:logger",
+    "library_deps": [],
+    "public": true
   }
 ]

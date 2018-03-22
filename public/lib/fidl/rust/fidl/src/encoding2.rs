@@ -1093,7 +1093,7 @@ macro_rules! fidl2_union {
         size: $size:expr,
         align: $align:expr,
     ) => {
-        #[derive(Debug)]
+        #[derive(Debug, PartialEq)]
         pub enum $name {
             $(
                 $member_name ( $member_ty ),

@@ -6,7 +6,7 @@ package templates
 
 const Struct = `
 {{- define "StructDeclaration" }}
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct {{ .Name }} {
   {{- range .Members }}
   pub {{ .Name }}: {{ .Type }},

@@ -9,6 +9,7 @@
 extern crate byteorder;
 extern crate failure;
 extern crate fidl;
+extern crate fidl_logger;
 extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
@@ -20,8 +21,7 @@ extern crate futures;
 
 use app::server::ServicesServer;
 use failure::{Error, ResultExt};
-use fidl::{ClientEnd, InterfacePtr};
-use futures::future::err as ferr;
+use fidl::endpoints2::ServiceMarker;
 use futures::future::ok as fok;
 use futures::FutureExt;
 use std::collections::HashSet;
@@ -30,28 +30,24 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use futures::StreamExt;
 
-extern crate garnet_public_lib_logger_fidl;
-use garnet_public_lib_logger_fidl::{Log, LogFilterOptions, LogListener, LogMessage, LogSink};
+use fidl_logger::{
+    Log,
+    LogImpl,
+    LogMarker,
+    LogListenerProxy,
+    LogMessage,
+    LogSink,
+    LogSinkImpl,
+    LogSinkMarker,
+};
 
 pub mod logger;
 
 // Store 1000 log messages and delete on FIFO basis.
 const OLD_MSGS_BUF_SIZE: usize = 1000;
 
-fn copy_log_message(log_message: &LogMessage) -> LogMessage {
-    LogMessage {
-        pid: log_message.pid,
-        tid: log_message.tid,
-        time: log_message.time,
-        severity: log_message.severity,
-        dropped_logs: log_message.dropped_logs,
-        tags: log_message.tags.clone(),
-        msg: log_message.msg.clone(),
-    }
-}
-
 struct ListenerWrapper {
-    listener: LogListener::Proxy,
+    listener: LogListenerProxy,
     min_severity: Option<i32>,
     pid: Option<u64>,
     tid: Option<u64>,
@@ -65,7 +61,7 @@ enum ListenerStatus {
 }
 
 impl ListenerWrapper {
-    fn send_log(&self, log_message: &LogMessage) -> ListenerStatus {
+    fn send_log(&self, log_message: &mut LogMessage) -> ListenerStatus {
         if self.pid.map(|pid| pid != log_message.pid).unwrap_or(false)
             || self.tid.map(|tid| tid != log_message.tid).unwrap_or(false)
             || self.min_severity
@@ -80,7 +76,7 @@ impl ListenerWrapper {
                 return ListenerStatus::Fine;
             }
         }
-        if let Err(e) = self.listener.log(copy_log_message(log_message)) {
+        if let Err(e) = self.listener.log(log_message) {
             match e {
                 fidl::Error::ClientRead(zx::Status::PEER_CLOSED)
                 | fidl::Error::ClientWrite(zx::Status::PEER_CLOSED) => ListenerStatus::Stale,
@@ -100,95 +96,105 @@ struct LogManagerShared {
     log_msg_buffer: VecDeque<LogMessage>,
 }
 
+#[derive(Clone)]
 struct LogManager {
     shared_members: Arc<Mutex<LogManagerShared>>,
 }
 
-fn run_listeners(listeners: &mut Vec<ListenerWrapper>, log_message: &LogMessage) {
+fn run_listeners(listeners: &mut Vec<ListenerWrapper>, log_message: &mut LogMessage) {
     listeners.retain(|l| l.send_log(log_message) == ListenerStatus::Fine);
 }
 
-impl Log::Server for LogManager {
-    type Listen = fidl::ServerImmediate<()>;
-    fn listen(
-        &mut self,
-        log_listener: InterfacePtr<ClientEnd<LogListener::Service>>,
-        options: Option<Box<LogFilterOptions>>,
-    ) -> Self::Listen {
-        let ll = match LogListener::new_proxy(log_listener.inner) {
-            Ok(ll) => ll,
-            Err(e) => {
-                eprintln!("Logger: Error getting listener proxy: {:?}", e);
-                return ferr(::fidl::CloseChannel);
-            }
-        };
+fn spawn_log_manager(state: LogManager, chan: async::Channel) {
+    async::spawn(LogImpl {
+        state,
+        listen: |state, log_listener, options, _controller| {
+            let ll = match log_listener.into_proxy() {
+                Ok(ll) => ll,
+                Err(e) => {
+                    eprintln!("Logger: Error getting listener proxy: {:?}", e);
+                    // TODO: close channel
+                    return fok(());
+                }
+            };
 
-        let mut lw = ListenerWrapper {
-            listener: ll,
-            min_severity: None,
-            pid: None,
-            tid: None,
-            tags: HashSet::new(),
-        };
-        if let Some(mut options) = options {
-            lw.tags = options.tags.drain(..).collect();
-            if lw.tags.len() > logger::FX_LOG_MAX_TAGS {
-                return ferr(::fidl::CloseChannel);
-            }
-            for tag in &lw.tags {
-                if tag.len() > logger::FX_LOG_MAX_TAG_LEN - 1 {
-                    return ferr(::fidl::CloseChannel);
+            let mut lw = ListenerWrapper {
+                listener: ll,
+                min_severity: None,
+                pid: None,
+                tid: None,
+                tags: HashSet::new(),
+            };
+
+            if let Some(mut options) = options {
+                lw.tags = options.tags.drain(..).collect();
+                if lw.tags.len() > logger::FX_LOG_MAX_TAGS {
+                    // TODO: close channel
+                    return fok(());
+                }
+                for tag in &lw.tags {
+                    if tag.len() > logger::FX_LOG_MAX_TAG_LEN - 1 {
+                        // TODO: close channel
+                        return fok(());
+                    }
+                }
+                if options.filter_by_pid {
+                    lw.pid = Some(options.pid)
+                }
+                if options.filter_by_tid {
+                    lw.tid = Some(options.tid)
+                }
+                if options.filter_by_severity {
+                    lw.min_severity = Some(options.min_severity)
                 }
             }
-            if options.filter_by_pid {
-                lw.pid = Some(options.pid)
-            }
-            if options.filter_by_tid {
-                lw.tid = Some(options.tid)
-            }
-            if options.filter_by_severity {
-                lw.min_severity = Some(options.min_severity)
-            }
-        }
-        {
-            let mut shared_members = self.shared_members.lock();
-            for msg in shared_members.log_msg_buffer.iter() {
+
+            let mut shared_members = state.shared_members.lock();
+            for msg in &mut shared_members.log_msg_buffer {
                 if ListenerStatus::Fine != lw.send_log(msg) {
                     return fok(());
                 }
             }
             shared_members.listeners.push(lw);
-        }
 
-        fok(())
+            fok(())
+        }
     }
+    .serve(chan)
+    .recover(|e| eprintln!("Log manager failed: {:?}", e)))
 }
 
-impl LogSink::Server for LogManager {
-    type Connect = fidl::ServerImmediate<()>;
-    fn connect(&mut self, socket: zx::Socket) -> Self::Connect {
-        let ls = match logger::LoggerStream::new(socket) {
-            Err(e) => {
-                eprintln!("Logger: Failed to create tokio socket: {:?}", e);
-                return ferr(::fidl::CloseChannel);
-            }
-            Ok(ls) => ls,
-        };
+fn spawn_log_sink(state: LogManager, chan: async::Channel) {
+    async::spawn(LogSinkImpl {
+        state,
+        connect: |state, socket, _controller| {
+            let ls = match logger::LoggerStream::new(socket) {
+                Err(e) => {
+                    eprintln!("Logger: Failed to create tokio socket: {:?}", e);
+                    // TODO: close channel
+                    return fok(());
+                }
+                Ok(ls) => ls,
+            };
 
-        let shared_members = self.shared_members.clone();
-        let f = ls.for_each(move |log_msg| {
-            let mut shared_members = shared_members.lock();
-            run_listeners(&mut shared_members.listeners, &log_msg);
-            shared_members.log_msg_buffer.push_front(log_msg);
-            shared_members.log_msg_buffer.truncate(OLD_MSGS_BUF_SIZE);
-            Ok(())
-        }).map(|_s| ());
+            let shared_members = state.shared_members.clone();
+            let f = ls.for_each(move |mut log_msg| {
+                let mut shared_members = shared_members.lock();
+                run_listeners(&mut shared_members.listeners, &mut log_msg);
+                shared_members.log_msg_buffer.push_front(log_msg);
+                shared_members.log_msg_buffer.truncate(OLD_MSGS_BUF_SIZE);
+                Ok(())
+            }).map(|_s| ());
 
-        async::spawn(f.recover(|e| {
-            eprintln!("Logger: Stream failed {:?}", e);
-        }));
-        return fok(());
+            async::spawn(f.recover(|e| {
+                eprintln!("Logger: Stream failed {:?}", e);
+            }));
+
+            fok(())
+        }
     }
+    .serve(chan)
+    .recover(|e| eprintln!("Log sink failed: {:?}", e)))
 }
 
 fn main() {
@@ -204,37 +210,37 @@ fn main_wrapper() -> Result<(), Error> {
         log_msg_buffer: VecDeque::with_capacity(OLD_MSGS_BUF_SIZE),
     }));
     let shared_members_clone = shared_members.clone();
-    let log_sink_server = ServicesServer::new()
-        .add_service(move || {
+    let server_fut = ServicesServer::new()
+        .add_service((LogMarker::NAME, move |chan| {
             let ls = LogManager {
                 shared_members: shared_members.clone(),
             };
-            LogSink::Dispatcher(ls)
-        })
-        .start()
-        .map_err(|e| e.context("error starting service server"))?;
-
-    let log_server = ServicesServer::new()
-        .add_service(move || {
+            spawn_log_manager(ls, chan);
+        }))
+        .add_service((LogSinkMarker::NAME, move |chan| {
             let ls = LogManager {
                 shared_members: shared_members_clone.clone(),
             };
-            Log::Dispatcher(ls)
-        })
+            spawn_log_sink(ls, chan)
+        }))
         .start()
         .map_err(|e| e.context("error starting service server"))?;
-    let s = log_sink_server.join(log_server);
 
-    Ok(executor.run(s, 2).context("running server").map(|_| ())?) // 2 threads
+    Ok(executor.run(server_fut, 2).context("running server").map(|_| ())?) // 2 threads
 }
 
 #[cfg(test)]
 mod tests {
-
+    /*
     use super::*;
 
-    use garnet_public_lib_logger_fidl::Log::Server;
-    use garnet_public_lib_logger_fidl::LogSink::Server as Server2;
+    use fidl::ClientEnd;
+    use fidl_logger::{
+        LogProxy,
+        LogSinkProxy,
+        LogFilterOptions,
+        LogListenerImpl,
+    };
     use logger::fx_log_packet_t;
     use zx::prelude::*;
 
@@ -245,6 +251,18 @@ mod tests {
     struct LogListenerState {
         expected: Vec<LogMessage>,
         done: Arc<Mutex<bool>>,
+    }
+
+    fn copy_log_message(log_message: &LogMessage) -> LogMessage {
+        LogMessage {
+            pid: log_message.pid,
+            tid: log_message.tid,
+            time: log_message.time,
+            severity: log_message.severity,
+            dropped_logs: log_message.dropped_logs,
+            tags: log_message.tags.clone(),
+            msg: log_message.msg.clone(),
+        }
     }
 
     /// Function to convert fx_log_packet_t to &[u8].
@@ -267,10 +285,10 @@ mod tests {
             .for_each(|x| *x = value);
     }
 
-    fn log_listener(ll: LogListenerState) -> impl LogListener::Server {
-        LogListener::Impl {
+    fn spawn_log_listener(ll: LogListenerState, chan: async::Channel) {
+        async::spawn(LogListenerImpl {
             state: ll,
-            log: |ll, msg| {
+            log: |ll, msg, _controller| {
                 assert_ne!(ll.expected.len(), 0, "got extra message: {:?}", msg);
                 let lm = ll.expected.remove(0);
                 assert_eq!(lm, msg);
@@ -280,41 +298,48 @@ mod tests {
                 fok(())
             },
         }
+        .serve(chan)
+        .recover(|e| panic!("test fail {:?}", e)))
     }
 
     fn setup_listener(
         ll: LogListenerState,
-        lm: &mut LogManager,
+        lm: LogProxy,
         filter_options: Option<Box<LogFilterOptions>>,
     ) {
         let (remote, local) = zx::Channel::create().expect("failed to create zx channel");
-        let remote_ptr = InterfacePtr {
-            inner: ClientEnd::new(remote),
-            version: LogListener::VERSION,
-        };
+        let remote_ptr = ClientEnd::new(remote);
         let local = async::Channel::from_channel(local).expect("failed to make async channel");
-        let listener_fut = fidl::Server::new(LogListener::Dispatcher(log_listener(ll)), local)
-            .expect("failed to create listener server");
-        async::spawn(listener_fut.recover(|e| {
-            panic!("test fail {:?}", e);
-        }));
+        spawn_log_listener(ll, local);
         let f = lm.listen(remote_ptr, filter_options);
         async::spawn(f.recover(|e| {
             panic!("test fail {:?}", e);
         }));
     }
 
-    fn setup_test() -> (async::Executor, LogManager, zx::Socket, zx::Socket) {
+    fn setup_test() -> (async::Executor, LogProxy, LogSinkProxy, zx::Socket, zx::Socket) {
         let executor = async::Executor::new().expect("unable to create executor");
         let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let shared_members = Arc::new(Mutex::new(LogManagerShared {
             listeners: Vec::new(),
             log_msg_buffer: VecDeque::new(),
         }));
+
         let lm = LogManager {
             shared_members: shared_members,
         };
-        (executor, lm, sin, sout)
+
+        let (client_end, server_end) = zx::Channel::create().expect("unable to create channel");
+        let log_proxy = ClientEnd::new(client_end).into_proxy().expect("unable to create proxy");
+        let server_end = async::Channel::from_channel(server_end).expect("unable to asyncify");
+        spawn_log_manager(lm.clone(), server_end);
+
+        let (client_end, server_end) = zx::Channel::create().expect("unable to create channel");
+        let log_sink_proxy = ClientEnd::new(client_end).into_proxy().expect("unable to create proxy");
+        let server_end = async::Channel::from_channel(server_end).expect("unable to asyncify");
+        spawn_log_manager(lm.clone(), server_end);
+
+        (executor, log_proxy, log_sink_proxy, sin, sout)
     }
 
     fn setup_default_packet() -> fx_log_packet_t {
@@ -331,10 +356,10 @@ mod tests {
 
     #[test]
     fn test_log_manager() {
-        let (mut executor, mut lm, sin, sout) = setup_test();
+        let (mut executor, log_proxy, log_sink_proxy, sin, sout) = setup_test();
         let mut p = setup_default_packet();
         sin.write(to_u8_slice(&mut p)).unwrap();
-        let f = lm.connect(sout);
+        let f = log_sink_proxy.connect(sout);
         async::spawn(f.recover(|e| {
             panic!("test fail {:?}", e);
         }));
@@ -359,7 +384,7 @@ mod tests {
             expected: vec![lm1, lm2, lm3],
             done: done.clone(),
         };
-        setup_listener(ls, &mut lm, None);
+        setup_listener(ls, lm, None);
 
         p.metadata.pid = 2;
         sin.write(to_u8_slice(&mut p)).unwrap();
@@ -380,8 +405,8 @@ mod tests {
         packets: Vec<fx_log_packet_t>,
         filter_options: Option<Box<LogFilterOptions>>,
     ) {
-        let (mut executor, mut lm, sin, sout) = setup_test();
-        let f = lm.connect(sout);
+        let (mut executor, log_proxy, log_sink_proxy, sin, sout) = setup_test();
+        let f = log_sink_proxy.connect(sout);
         async::spawn(f.recover(|e| {
             panic!("test fail {:?}", e);
         }));
@@ -390,7 +415,7 @@ mod tests {
             expected: expected,
             done: done.clone(),
         };
-        setup_listener(ls, &mut lm, filter_options);
+        setup_listener(ls, log_proxy, filter_options);
         for mut p in packets {
             sin.write(to_u8_slice(&mut p)).unwrap();
         }
@@ -561,4 +586,5 @@ mod tests {
 
         filter_test_helper(vec![lm1, lm2], vec![p, p2], Some(options));
     }
+    */
 }

@@ -25,7 +25,7 @@ State,
 {{- define "InterfaceDeclaration" -}}
 {{- $interface := . }}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct {{ $interface.Name }}Marker;
 
 impl fidl::endpoints2::ServiceMarker for {{ $interface.Name }}Marker {
