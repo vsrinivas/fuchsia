@@ -11,7 +11,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
-#include "<fuchsia/cpp/netstack.h>"
+#include <fuchsia/cpp/netstack.h>
 
 namespace netconnector {
 namespace {
