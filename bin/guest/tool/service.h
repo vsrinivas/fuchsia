@@ -9,7 +9,7 @@
 #include <fdio/util.h>
 #include <iostream>
 
-#include "garnet/lib/machina/fidl/inspect.fidl.h"
+#include <fuchsia/cpp/machina.h>
 
 // Interface of the inspect service of the guest.
 extern machina::InspectServicePtr inspect_svc;

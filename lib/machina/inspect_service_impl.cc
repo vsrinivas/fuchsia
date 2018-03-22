@@ -26,18 +26,16 @@ InspectServiceImpl::InspectServiceImpl(
   FXL_CHECK(status == ZX_OK) << "Failed to create socket";
 
   application_context->outgoing_services()->AddService<InspectService>(
-      [this](f1dl::InterfaceRequest<InspectService> request) {
+      [this](fidl::InterfaceRequest<InspectService> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 }
 
-void InspectServiceImpl::FetchGuestMemory(
-    const FetchGuestMemoryCallback& callback) {
+void InspectServiceImpl::FetchGuestMemory(FetchGuestMemoryCallback callback) {
   callback(duplicate(vmo_, ZX_RIGHT_SAME_RIGHTS));
 }
 
-void InspectServiceImpl::FetchGuestSerial(
-    const FetchGuestSerialCallback& callback) {
+void InspectServiceImpl::FetchGuestSerial(FetchGuestSerialCallback callback) {
   callback(duplicate(client_socket_, ZX_RIGHT_SAME_RIGHTS));
 }
 
