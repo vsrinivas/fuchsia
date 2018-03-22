@@ -192,7 +192,11 @@ bool Library::RegisterDecl(Decl* decl) {
     const Name* name = &decl->name;
     auto iter = declarations_.emplace(name, decl);
     if (!iter.second) {
-        return Fail("Name collision!");
+        std::string message = "Name collision: ";
+        message.append(name->name().data());
+        message.append(" at ");
+        message.append(name->name().position());
+        return Fail(message);
     }
     return true;
 }

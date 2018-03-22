@@ -31,6 +31,8 @@ public:
 
     StringView SourceLine(SourceFile::Position* position_out) const;
 
+    std::string position() const;
+
 private:
     StringView data_;
     const SourceFile* source_file_;
