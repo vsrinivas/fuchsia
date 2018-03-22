@@ -182,7 +182,12 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
         *name_out = Name(library.get(), {}, decl_name);
         return true;
     }
-    return Fail("TODO(TO-701) Handle nested declarations");
+
+    std::string message = "TODO(TO-701) Handle nested declarations at: ";
+    const auto& components = compound_identifier->components;
+    message.append(components.back()->location.position());
+
+    return Fail(message);
 }
 
 bool Library::ParseSize(std::unique_ptr<raw::Constant> raw_constant, Size* out_size) {
