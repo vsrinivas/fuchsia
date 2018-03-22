@@ -14,8 +14,8 @@ the front of the wrist rest.
 5. The device should check for updates, install any found.
 6. After rebooting from any updates, tap 'Browse as Guest' in the lower left
 corner.
-7. From the browser UI, go into Settings->About Chrome OS and confirm the version
-is &gt;=62.
+7. From the browser UI, go into "Settings->About Chrome OS" or "Help->About Chrome
+OS" and confirm the version is &gt;=62.
 
 ## Put your device into developer mode
 ***WARNING: This will erase any state stored locally on your Pixelbook***
@@ -28,7 +28,7 @@ Then press the Power button (bottom left side of the device).
 4. Press Enter to confirm your choice to enter Developer Mode.
 5. Wait for the device to re-configure itself, which will take several minutes.
 Initially it may not appear to be doing anything. Let the device sit for a
-minute or two. You will heard two loud &lt;BEEP&gt;s early in the process. The
+minute or two. You will hear two loud &lt;BEEP&gt;s early in the process. The
 process is complete when you hear two more loud &lt;BEEP&gt;s.
 6. The device should reboot itself when the Developer Mode transition is
 complete. You can now jump to Step #2 in the "Boot from USB" section.
