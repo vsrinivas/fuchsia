@@ -174,7 +174,7 @@ class AssociatedState : public BaseState {
    private:
     // TODO(hahnr): Use WLAN_MIN_TU once defined.
     static constexpr zx_duration_t kInactivityTimeoutTu = 300000;  // 5min
-
+    zx_status_t SendNextBu();
     void UpdatePowerSaveMode(const FrameControl& fc);
 
     const uint16_t aid_;

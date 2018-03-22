@@ -157,8 +157,8 @@ zx_status_t AssociatedState::HandleEthFrame(const ImmutableBaseFrame<EthernetII>
         // Enqueue ethernet frame and postpone conversion to when the frame is sent to the client.
         auto status = client_->EnqueueEthernetFrame(frame);
         if (status == ZX_ERR_NO_RESOURCES) {
-            debugbss("[client] [%s] reached PS buffering limit; dropping frame\n",
-                     client_->addr().ToString().c_str());
+            debugps("[client] [%s] reached PS buffering limit; dropping frame\n",
+                    client_->addr().ToString().c_str());
         } else if (status != ZX_OK) {
             errorf("[client] couldn't enqueue ethernet frame: %d\n", status);
         }
@@ -204,37 +204,7 @@ zx_status_t AssociatedState::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFr
     debugbss("[client] [%s] client requested BU\n", client_->addr().ToString().c_str());
 
     if (client_->HasBufferedFrames()) {
-        // Dequeue buffered Ethernet frame.
-        fbl::unique_ptr<Packet> packet;
-        auto status = client_->DequeueEthernetFrame(&packet);
-        if (status != ZX_OK) {
-            errorf("[client] [%s] unable to dequeue buffered frames\n",
-                   client_->addr().ToString().c_str());
-            return status;
-        }
-
-        // Treat Packet as Ethernet frame.
-        auto hdr = packet->field<EthernetII>(0);
-        auto payload = packet->field<uint8_t>(sizeof(EthernetII));
-        size_t payload_len = packet->len() - sizeof(EthernetII);
-        auto eth_frame = ImmutableBaseFrame<EthernetII>(hdr, payload, payload_len);
-
-        // Convert Ethernet to Data frame.
-        fbl::unique_ptr<Packet> data_packet;
-        status = client_->ConvertEthernetToDataFrame(eth_frame, &data_packet);
-        if (status != ZX_OK) {
-            errorf("[client] [%s] couldn't convert ethernet frame: %d\n",
-                   client_->addr().ToString().c_str(), status);
-            return status;
-        }
-
-        // Set `more` bit if there are more frames buffered.
-        auto fc = data_packet->mut_field<FrameControl>(0);
-        fc->set_more_data(client_->HasBufferedFrames() ? 1 : 0);
-
-        // Send Data frame.
-        debugbss("[client] [%s] sent BU to client\n", client_->addr().ToString().c_str());
-        return client_->SendDataFrame(fbl::move(data_packet));
+        return SendNextBu();
     }
 
     debugbss("[client] [%s] no more BU available\n", client_->addr().ToString().c_str());
@@ -331,7 +301,6 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
     }
 
     // TODO(NET-463): Disallow data frames if RSNA is required but not established.
-    // TODO(NET-445): Check FC's power saving bit.
 
     const size_t eth_len = frame.body_len + sizeof(EthernetII);
     auto buffer = GetBuffer(eth_len);
@@ -396,9 +365,18 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
             debugbss("[client] [%s] client woke up\n", client_->addr().ToString().c_str());
         }
 
-        if (!dozing_) {
-            // TODO(hahnr): Client became awake.
-            // Send all remaining buffered frames (U-APSD).
+        if (dozing_) {
+            debugps("[client] [%s] client is now dozing\n", client_->addr().ToString().c_str());
+        } else {
+            debugps("[client] [%s] client woke up\n", client_->addr().ToString().c_str());
+
+            // Send all buffered frames when client woke up.
+            // TODO(hahnr): Once we implemented a smarter way of queuing packets, this code should
+            // be revisited.
+            while (client_->HasBufferedFrames()) {
+                auto status = SendNextBu();
+                if (status != ZX_OK) { return; }
+            }
         }
     }
 }
@@ -439,6 +417,43 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& r
 
     service::SendEapolResponse(client_->device(), wlan_mlme::EapolResultCodes::SUCCESS);
     return status;
+}
+
+zx_status_t AssociatedState::SendNextBu() {
+    ZX_DEBUG_ASSERT(client_->HasBufferedFrames());
+    if (!client_->HasBufferedFrames()) { return ZX_ERR_BAD_STATE; }
+
+    // Dequeue buffered Ethernet frame.
+    fbl::unique_ptr<Packet> packet;
+    auto status = client_->DequeueEthernetFrame(&packet);
+    if (status != ZX_OK) {
+        errorf("[client] [%s] unable to dequeue buffered frames\n",
+               client_->addr().ToString().c_str());
+        return status;
+    }
+
+    // Treat Packet as Ethernet frame.
+    auto hdr = packet->field<EthernetII>(0);
+    auto payload = packet->field<uint8_t>(sizeof(EthernetII));
+    size_t payload_len = packet->len() - sizeof(EthernetII);
+    auto eth_frame = ImmutableBaseFrame<EthernetII>(hdr, payload, payload_len);
+
+    // Convert Ethernet to Data frame.
+    fbl::unique_ptr<Packet> data_packet;
+    status = client_->ConvertEthernetToDataFrame(eth_frame, &data_packet);
+    if (status != ZX_OK) {
+        errorf("[client] [%s] couldn't convert ethernet frame: %d\n",
+               client_->addr().ToString().c_str(), status);
+        return status;
+    }
+
+    // Set `more` bit if there are more frames buffered.
+    auto fc = data_packet->mut_field<FrameControl>(0);
+    fc->set_more_data(client_->HasBufferedFrames() ? 1 : 0);
+
+    // Send Data frame.
+    debugps("[client] [%s] sent BU to client\n", client_->addr().ToString().c_str());
+    return client_->SendDataFrame(fbl::move(data_packet));
 }
 
 // RemoteClient implementation.
