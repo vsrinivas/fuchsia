@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module input;
+library input;
 
 // TODO(jeffbrown): Redesign input event representation later.
-import "lib/ui/input/fidl/input_events.fidl";
+// import "lib/ui/input/fidl/input_events.fidl";
 
 // The input dispatcher service allows the component which owns and controls
 // a view tree to dispatch input events to the views that it contains.
@@ -35,5 +35,5 @@ interface InputDispatcher {
   // to block the test until a sequence of events have been delivered and
   // handled.  However these same mechanisms have proven to be brittle in
   // the past so it might be better to solve the problem some other way.
-  DispatchEvent@0(InputEvent event);
+  1: DispatchEvent(InputEvent event);
 };

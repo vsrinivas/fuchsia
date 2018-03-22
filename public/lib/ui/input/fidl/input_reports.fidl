@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module input;
+library input;
 
 // Descriptors are used to describe the capabilities of an input device.
 //
@@ -27,7 +27,8 @@ struct RangeF {
 };
 
 enum AxisScale {
-  LINEAR, LOGARITHMIC,
+  LINEAR = 0;
+  LOGARITHMIC = 1;
 };
 
 // An |Axis| is defined as a |range| and |resolution|.
@@ -49,14 +50,14 @@ struct AxisF {
 // |KeyboardDescriptor| describes the capabilities of a keyboard.
 struct KeyboardDescriptor {
   // The list of HID keyboard usages that this keyboard can generate.
-  array<uint32> keys;
+  vector<uint32> keys;
 };
 
 // |KeyboardReport| lists the keys currently pressed down.
 struct KeyboardReport {
   // |pressed_keys| is the list of HID usage that are currently pressed down on
   // the keyboard.
-  array<uint32> pressed_keys;
+  vector<uint32> pressed_keys;
 };
 
 // Mouse
@@ -163,7 +164,7 @@ struct Touch {
 // |TouchscreenReport| describes the current touches recorded by the touchscreen
 // and holds a |Touch| per finger down.
 struct TouchscreenReport {
-  array<Touch> touches;
+  vector<Touch> touches;
 };
 
 // Device and Report

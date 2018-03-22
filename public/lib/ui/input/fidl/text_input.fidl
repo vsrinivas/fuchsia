@@ -2,27 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module input;
+library input;
 
-import "lib/ui/input/fidl/text_editing.fidl";
-import "lib/ui/input/fidl/input_events.fidl";
+// import "lib/ui/input/fidl/text_editing.fidl";
+// import "lib/ui/input/fidl/input_events.fidl";
 
 enum KeyboardType {
-  TEXT,
-  NUMBER,
-  PHONE,
-  DATETIME,
+  TEXT = 0;
+  NUMBER = 1;
+  PHONE = 2;
+  DATETIME = 3;
 };
 
 enum InputMethodAction {
-  UNSPECIFIED = 0,
-  NONE = 1,
-  GO = 2,
-  SEARCH = 3,
-  SEND = 4,
-  NEXT = 5,
-  DONE = 6,
-  PREVIOUS = 7,
+  UNSPECIFIED = 0;
+  NONE = 1;
+  GO = 2;
+  SEARCH = 3;
+  SEND = 4;
+  NEXT = 5;
+  DONE = 6;
+  PREVIOUS = 7;
 };
 
 // The current text, selection, and composing state for editing a run of text.
@@ -42,15 +42,15 @@ struct TextInputState {
 
 // A interface for interacting with a text input control.
 interface InputMethodEditor {
-  SetKeyboardType@0(KeyboardType keyboard_type);
-  SetState@1(TextInputState state);
-  InjectInput@2(InputEvent event);
-  Show@3();
-  Hide@4();
+  1: SetKeyboardType(KeyboardType keyboard_type);
+  2: SetState(TextInputState state);
+  3: InjectInput(InputEvent event);
+  4: Show();
+  5: Hide();
 };
 
 // An interface to receive information from |TextInputService|.
 interface InputMethodEditorClient {
-  DidUpdateState@0(TextInputState state, InputEvent? event);
-  OnAction@1(InputMethodAction action);
+  1: DidUpdateState(TextInputState state, InputEvent? event);
+  2: OnAction(InputMethodAction action);
 };

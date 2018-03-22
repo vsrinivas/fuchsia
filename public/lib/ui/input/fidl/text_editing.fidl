@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module input;
+library input;
 
 // Whether a TextPosition is visually upstream or downstream of its offset.
 //
@@ -16,13 +16,13 @@ enum TextAffinity {
   //
   // For example, if the offset of the text position is a line break, the
   // position represents the end of the first line.
-  UPSTREAM,
+  UPSTREAM = 0;
 
   // The position has affinity for the downstream side of the text position.
   //
   // For example, if the offset of the text position is a line break, the
   // position represents the start of the second line.
-  DOWNSTREAM,
+  DOWNSTREAM = 1;
 };
 
 // A range of characters in a string of text.

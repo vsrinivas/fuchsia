@@ -11,11 +11,11 @@ library input;
 // The service provided by an IME
 [ServiceName="mozart::ImeService"]
 interface ImeService {
-  GetInputMethodEditor@0(KeyboardType keyboard_type,
+  1: GetInputMethodEditor(KeyboardType keyboard_type,
                          InputMethodAction action,
                          TextInputState initial_state,
                          InputMethodEditorClient client,
-                         InputMethodEditor& editor);
+                         request<InputMethodEditor> editor);
 };
 
 // This is the service a view should expose when it can show and hide a

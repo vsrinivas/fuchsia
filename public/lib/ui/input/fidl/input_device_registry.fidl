@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module input;
+library input;
 
-import "lib/ui/input/fidl/input_reports.fidl";
+// import "lib/ui/input/fidl/input_reports.fidl";
 
 // Service to receive input events.
 //
@@ -15,10 +15,10 @@ import "lib/ui/input/fidl/input_reports.fidl";
 [ServiceName="mozart::InputDeviceRegistry"]
 interface InputDeviceRegistry {
   // Register a device with the capabilities described by |DeviceDescriptor|
-  RegisterDevice@0(DeviceDescriptor descriptor, InputDevice& input_device);
+  1: RegisterDevice(DeviceDescriptor descriptor, request<InputDevice> input_device);
 };
 
 interface InputDevice {
   // Dispatch an |InputReport| from the device |token|
-  DispatchReport@0(InputReport report);
+  1: DispatchReport(InputReport report);
 };
