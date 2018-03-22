@@ -24,10 +24,11 @@ export VULKAN_LIB_PATH=$fuchsia_root/out/debug-$platform/$shared_path-shared
 export VULKAN_LIBRARY=$VULKAN_LIB_PATH/libvulkan.so
 unset EDITOR
 
-CONFIG=Debug
+# CONFIG environment variable can be overridden.
+: "${CONFIG:=Debug}"
 ninja_path=$fuchsia_root/buildtools/ninja
 
-FUCHSIA_PLATFORM_OPTIONS="-DCMAKE_MAKE_PROGRAM=$ninja_path -DFUCHSIA_SYSTEM_PROCESSOR=$system_processor -DFUCHSIA_SYSROOT=$fuchsia_root/out/build-zircon/build-user-$zircon_platform/sysroot -DVULKAN_INCLUDE_DIR=$VULKAN_INCLUDE_DIR -DVULKAN_LIBRARY=$VULKAN_LIBRARY"
+FUCHSIA_PLATFORM_OPTIONS="-DCMAKE_MAKE_PROGRAM=$ninja_path -DFUCHSIA_SYSTEM_PROCESSOR=$system_processor -DFUCHSIA_SYSROOT=$fuchsia_root/out/build-zircon/build-$zircon_platform/sysroot -DVULKAN_INCLUDE_DIR=$VULKAN_INCLUDE_DIR -DVULKAN_LIBRARY=$VULKAN_LIBRARY"
 
 cd third_party/gfxbench
 WORKSPACE=${PWD} PLATFORM=fuchsia CONFIG=$CONFIG FUCHSIA_TOOLCHAIN_FILE=$fuchsia_root/build/Fuchsia.cmake NG_CMAKE_GENERATOR="Ninja" NG_CMAKE_PLATFORM_OPT=$FUCHSIA_PLATFORM_OPTIONS scripts/build-3rdparty.sh
