@@ -22,14 +22,14 @@ $root/
             lib/
                 libzircon.so
                 libfoo.so          # ABI only, to link against
-            package/
+            dist/
                 libfoo.so          # to include in Fuchsia packages
             debug/
                 libzircon.so
                 libfoo.so          # unstripped versions
         arm64/
             lib/
-            package/
+            dist/
             debug/
     target/                        # target-dependent prebuilts
         x64/
