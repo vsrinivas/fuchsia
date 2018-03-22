@@ -3,46 +3,46 @@
 // found in the LICENSE file.
 
 [DartPackage="ledger"]
-module ledger;
+library ledger_internal;
 
-import "lib/ledger/fidl/ledger.fidl";
+// import "lib/ledger/fidl/ledger.fidl";
 
 [ServiceName="ledger::LedgerRepositoryDebug"]
 interface LedgerRepositoryDebug {
   // Returns the instances list in LedgerRepository.
-  GetInstancesList@0() => (array<array<uint8>> result);
+  1: GetInstancesList() -> (array<vector<uint8>> result);
 
   // Returns the debugging interface for the given |ledger_name|.
-  GetLedgerDebug@1(array<uint8> ledger_name, LedgerDebug& ledger_debug) => (Status status);
+  2: GetLedgerDebug(vector<uint8> ledger_name, request<LedgerDebug> ledger_debug) -> (Status status);
 };
 
 interface LedgerDebug {
   // Returns the pages list in Ledger.
-  GetPagesList@0() => (array<array<uint8>> result);
+  1: GetPagesList() -> (array<vector<uint8>> result);
 
   // Returns OK and binds the |page_debug| for the given |page_id|.
   // Returns PAGE_NOT_FOUND if |page_id| isn't found.
-  GetPageDebug@1(array<uint8, 16> page_id, PageDebug& page_debug) => (Status status);
+  2: GetPageDebug(array<uint8, 16> page_id, request<PageDebug> page_debug) -> (Status status);
 };
 
 interface PageDebug {
   // Returns OK and a list of the head commits IDs.
-  GetHeadCommitsIds@0() => (Status status, array<array<uint8>> result);
+  1: GetHeadCommitsIds() -> (Status status, array<vector<uint8>> result);
 
   // Returns OK and creates a snapshot of the page, allowing the client app to read a
   // consistent view of the content of the page.
-  GetSnapshot@1(array<uint8> commit_id, PageSnapshot& snapshot_request) => (Status status);
+  2: GetSnapshot(vector<uint8> commit_id, request<PageSnapshot> snapshot_request) -> (Status status);
 
   // Returns OK and the Commit struct filled for the given |commit_id|.
-  GetCommit@2(array<uint8> commit_id) => (Status status, Commit? commit);
+  3: GetCommit(vector<uint8> commit_id) -> (Status status, Commit? commit);
 };
 
 struct Commit {
   // The ID of this commit.
-  array<uint8> commit_id;
+  vector<uint8> commit_id;
 
   // The IDs of this commit parents.
-  array<array<uint8>> parents_ids;
+  array<vector<uint8>> parents_ids;
 
   // The creation timestamp of this commit in nanoseconds since epoch.
   int64 timestamp;

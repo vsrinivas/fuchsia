@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
-import "lib/action_log/fidl/component.fidl";
-import "lib/context/fidl/context_reader.fidl";
-import "lib/context/fidl/context_writer.fidl";
-import "lib/suggestion/fidl/proposal_publisher.fidl";
-import "lib/suggestion/fidl/query_handler.fidl";
+// import "lib/action_log/fidl/component.fidl";
+// import "lib/context/fidl/context_reader.fidl";
+// import "lib/context/fidl/context_writer.fidl";
+// import "lib/suggestion/fidl/proposal_publisher.fidl";
+// import "lib/suggestion/fidl/query_handler.fidl";
 
 // A container for component-scoped services. This contains any and all
 // services needed by any sort of Module/Agent.
@@ -16,11 +16,11 @@ import "lib/suggestion/fidl/query_handler.fidl";
 interface IntelligenceServices {
   // These are just here for illustrative purposes, and are not a complete
   // list.
-  GetContextReader@0(ContextReader& context_reader);
-  GetContextWriter@1(ContextWriter& context_writer);
+  1: GetContextReader(request<ContextReader> context_reader);
+  2: GetContextWriter(request<ContextWriter> context_writer);
 
-  GetProposalPublisher@2(ProposalPublisher& proposal_publisher);
-  GetActionLog@3(ComponentActionLog& action_log);
+  3: GetProposalPublisher(request<ProposalPublisher> proposal_publisher);
+  4: GetActionLog(request<ComponentActionLog> action_log);
 
-  RegisterQueryHandler@4(QueryHandler query_handler);
+  5: RegisterQueryHandler(QueryHandler query_handler);
 };

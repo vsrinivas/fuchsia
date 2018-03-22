@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
 struct UserAction {
   string component_url;
@@ -13,6 +13,6 @@ struct UserAction {
 
 interface ActionLogListener {
   // Receives an action that was just logged.
-  OnAction@0(UserAction action);
+  1: OnAction(UserAction action);
 };
 

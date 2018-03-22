@@ -27,10 +27,10 @@ executable("bin") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib/action_log/fidl",
-    "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/surface/fidl",
-    "//peridot/public/lib/user_intelligence/fidl:scope",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:maxwell",
     "//third_party/rapidjson",
   ]
 }

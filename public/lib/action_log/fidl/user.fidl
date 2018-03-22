@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
-import "component.fidl";
-import "listener.fidl";
-import "lib/user_intelligence/fidl/scope.fidl";
+// import "component.fidl";
+// import "listener.fidl";
+// import "lib/user_intelligence/fidl/scope.fidl";
 
 [ServiceName="maxwell.action_log.UserActionLog"]
 interface UserActionLog {
-  GetComponentActionLog@0(maxwell.ComponentScope scope,
-      ComponentActionLog& component_action_log);
+  1: GetComponentActionLog(ComponentScope scope,
+      request<ComponentActionLog> component_action_log);
 
   // When a new action is logged, a UserAction is sent to |listener|.
-  Subscribe@1(ActionLogListener listener);
+  2: Subscribe(ActionLogListener listener);
 
-  Duplicate@2(UserActionLog& request);
+  3: Duplicate(request<UserActionLog> @request);
 };

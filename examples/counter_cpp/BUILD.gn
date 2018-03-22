@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/public/lib/fidl/fidl.gni")
+import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 group("counter_cpp") {
   public_deps = [
@@ -24,11 +24,11 @@ executable("example_module1") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib/module/fidl",
-    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -43,12 +43,12 @@ executable("example_module2") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib/module/fidl",
-    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -62,16 +62,16 @@ executable("example_recipe") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib:modular",
     "//peridot/public/lib/ledger/fidl",
-    "//peridot/public/lib/module/fidl",
-    "//peridot/public/lib/story/fidl",
-    "//peridot/public/lib/user/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -85,8 +85,9 @@ source_set("store") {
   ]
 
   public_deps = [
-    "//peridot/public/lib/module/fidl",
-    "//peridot/public/lib/story/fidl",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -110,7 +111,7 @@ source_set("unittests") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:mock_base",
-    "//peridot/public/lib/story/fidl:fidl_cpp_sources",
+    "//peridot/public/lib:modular",
     "//third_party/googletest:gtest",
   ]
 }

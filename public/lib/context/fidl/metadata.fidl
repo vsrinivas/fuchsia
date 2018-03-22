@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
-import "lib/module/fidl/link_path.fidl";
+// import "lib/module/fidl/link_path.fidl";
 
 // This struct serves two purposes. It is:
 //
@@ -35,12 +35,12 @@ struct StoryMetadata {
 
 struct ModuleMetadata {
   string? url;
-  array<string>? path;
+  vector<string>? path;
 };
 
 struct EntityMetadata {
   string? topic;
-  array<string>? type;
+  vector<string>? type;
 };
 
 struct LinkMetadata {
@@ -52,7 +52,7 @@ struct LinkMetadata {
   //
   // TODO(thatguy): Once we have FIDL2 (which will apparently fix the Dart
   // bindings problem), use LinkPath.
-  array<string>? module_path;
+  vector<string>? module_path;
   string? name;
 };
 
@@ -62,8 +62,8 @@ struct LinkMetadata {
 // allow it to be null.
 struct FocusedState {
   enum State {
-    FOCUSED = 1,
-    NOT_FOCUSED = 2
+    FOCUSED = 1;
+    NOT_FOCUSED = 2;
   };
 
   State state;

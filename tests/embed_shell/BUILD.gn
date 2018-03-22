@@ -20,11 +20,11 @@ executable("embed_shell_test_child_module") {
   ]
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib/module/fidl",
-    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -37,11 +37,11 @@ executable("embed_shell_test_parent_module") {
   deps = [
     "//garnet/lib/callback",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib/module/fidl",
-    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -52,19 +52,19 @@ executable("embed_shell_test_story_shell") {
     "embed_shell_test_story_shell.cc",
   ]
   deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/fidl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib/context/fidl",
-    "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/user/fidl",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:modular",
   ]
 }

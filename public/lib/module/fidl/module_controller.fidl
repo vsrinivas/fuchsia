@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/module/fidl/module_state.fidl";
+// import "lib/module/fidl/module_state.fidl";
 
 // This interface is used by the caller of ModuleContext.StartModuleDeprecated()
 // to control the started Module instance.
@@ -15,16 +15,16 @@ import "lib/module/fidl/module_state.fidl";
 interface ModuleController {
   // Registers a watcher that is notified when the module is done or
   // otherwise stops.
-  Watch@0(ModuleWatcher watcher);
+  1: Watch(ModuleWatcher watcher);
 
   // Requests that this module become the focused module in the story.
-  Focus@1();
+  2: Focus();
 
   // Requests that this module be hidden in the story.
-  Defocus@2();
+  3: Defocus();
 
   // Requests the Module instance to stop (see Module.Stop() for how).
-  Stop@3() => ();
+  4: Stop() -> ();
 };
 
 // This interface is implemented by the client calling
@@ -32,5 +32,5 @@ interface ModuleController {
 interface ModuleWatcher {
   // Called with the current state right after registration, and
   // subsequently when the state changes.
-  OnStateChange@0(ModuleState new_state);
+  1: OnStateChange(ModuleState new_state);
 };

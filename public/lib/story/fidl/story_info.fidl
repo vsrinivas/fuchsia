@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 struct StoryInfoExtraEntry {
   string key;
@@ -25,5 +25,5 @@ struct StoryInfo {
 
   // Data the UserShell wants to keep associated with this Story, like
   // title, a color, or a display rank.
-  array<StoryInfoExtraEntry>? extra;
+  vector<StoryInfoExtraEntry>? extra;
 };

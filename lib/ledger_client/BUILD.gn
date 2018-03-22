@@ -45,7 +45,7 @@ source_set("page_client") {
   deps = [
     ":status",
     ":types",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
@@ -74,14 +74,14 @@ source_set("storage") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/util",
   ]
 
   public_deps = [
-    "//peridot/public/lib/module/fidl:module_data",
-    "//peridot/public/lib/story/fidl:private",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular_private",
   ]
 }
 
@@ -91,7 +91,7 @@ source_set("types") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
   ]
 }
 

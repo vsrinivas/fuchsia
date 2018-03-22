@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "create_link.fidl";
-import "peridot/public/lib/module/fidl/link_path.fidl";
+// import "create_link.fidl";
+// import "peridot/public/lib/module/fidl/link_path.fidl";
 
 struct ChainEntry {
   string key;
@@ -15,7 +15,7 @@ struct ChainEntry {
 // Chains contain Links that are each keyed by a string.
 struct CreateChainInfo {
   // Contains instructions to create each key in the Chain.
-  array<ChainEntry>? property_info;
+  vector<ChainEntry>? property_info;
 };
 
 union CreateChainPropertyInfo {

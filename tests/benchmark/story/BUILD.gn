@@ -23,9 +23,9 @@ executable("modular_benchmark_story_module") {
   deps = [
     ":tracing_waiter",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -34,16 +34,16 @@ executable("modular_benchmark_story_user_shell") {
 
   deps = [
     ":tracing_waiter",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/fidl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/user/fidl",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:modular",
   ]
 
   sources = [

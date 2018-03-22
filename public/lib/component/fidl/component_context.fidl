@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/app/fidl/service_provider.fidl";
-import "lib/ledger/fidl/ledger.fidl";
-import "lib/agent/fidl/agent_controller/agent_controller.fidl";
-import "lib/component/fidl/message_queue.fidl";
-import "lib/entity/fidl/entity_resolver.fidl";
+// import "lib/app/fidl/service_provider.fidl";
+// import "lib/ledger/fidl/ledger.fidl";
+// import "lib/agent/fidl/agent_controller/agent_controller.fidl";
+// import "lib/component/fidl/message_queue.fidl";
+// import "lib/entity/fidl/entity_resolver.fidl";
 
 struct TypeToDataEntry {
   string type;
@@ -22,32 +22,32 @@ struct TypeToDataEntry {
 interface ComponentContext {
   // Gets the Ledger associated with this component. This ledger instance
   // is unique to this component under this user.
-  GetLedger@0(ledger.Ledger& request) => (ledger.Status status);
+  1: GetLedger(request<ledger.Ledger> @request) -> (ledger.Status @status);
 
   // Used to start a new agent in the user scope and connect to it.
-  ConnectToAgent@1(string url, component.ServiceProvider& incoming_services,
-                   AgentController& controller);
+  2: ConnectToAgent(string url, request<component.ServiceProvider> incoming_services,
+                   request<AgentController> controller);
 
   // Used to create / delete a message queue or retrieve an existing queue
   // identified by |name|. |name| has to be unique only within the scope of the
   // calling component instance.
-  ObtainMessageQueue@2(string name, MessageQueue& queue);
-  DeleteMessageQueue@3(string name);
+  3: ObtainMessageQueue(string name, request<MessageQueue> queue);
+  4: DeleteMessageQueue(string name);
 
   // Gets a MessageSender service that can be used to send a message to a queue
   // identified by |queue_token|. Token for a MessageQueue is obtained from its
   // GetToken() method and the token is unique within the scope of the user.
-  GetMessageSender@4(string queue_token, MessageSender& sender);
+  5: GetMessageSender(string queue_token, request<MessageSender> sender);
 
   // Gets the EntityResolver service, which can be used to resolve an entity
   // reference to an Entity interface.
-  GetEntityResolver@5(EntityResolver& request);
+  6: GetEntityResolver(request<EntityResolver> @request);
 
   // Creates a new entity from |type_to_data| such that duplicate types are
   // overriden by subsequent entries.
   // This is a useful way to represent small immutable entities without having
   // to provide the entity using an Agent. The types and data together must be
   // within 16KB in size.
-  CreateEntityWithData@6(array<TypeToDataEntry> type_to_data)
-      => (string? entity_reference);
+  7: CreateEntityWithData(vector<TypeToDataEntry> type_to_data)
+      -> (string? entity_reference);
 };

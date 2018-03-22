@@ -19,22 +19,22 @@ executable("chain_test_user_shell") {
     "chain_test_user_shell.cc",
   ]
   deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/fidl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib/context/fidl",
-    "//peridot/public/lib/daisy/fidl",
-    "//peridot/public/lib/entity/fidl",
-    "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/user/fidl",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -46,13 +46,13 @@ executable("chain_test_module") {
   ]
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib/entity/fidl",
-    "//peridot/public/lib/module/fidl",
-    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -64,12 +64,12 @@ executable("chain_test_child_module") {
   ]
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib/entity/fidl",
-    "//peridot/public/lib/module/fidl",
-    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
   ]
 }

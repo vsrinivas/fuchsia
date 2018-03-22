@@ -17,14 +17,14 @@ executable("link_update_test_user_shell") {
     "link_update_test_user_shell.cc",
   ]
   deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/fidl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib/user/fidl",
+    "//peridot/public/lib:modular",
   ]
 }

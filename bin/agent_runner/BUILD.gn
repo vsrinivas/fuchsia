@@ -18,7 +18,7 @@ source_set("agent_runner") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/component",
@@ -29,15 +29,15 @@ source_set("agent_runner") {
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:storage",
     "//peridot/lib/ledger_client:types",
-    "//peridot/public/lib/agent/fidl",
-    "//peridot/public/lib/agent/fidl/agent_controller",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib/component/fidl",
-    "//peridot/public/lib/entity/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
     "//peridot/public/lib/ledger/fidl",
-    "//peridot/public/lib/lifecycle/fidl",
-    "//peridot/public/lib/user_intelligence/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:maxwell",
   ]
 }
 
@@ -63,9 +63,9 @@ source_set("unittests") {
     "//peridot/lib/testing:fake_application_launcher",
     "//peridot/lib/testing:mock_base",
     "//peridot/lib/testing:test_with_ledger",
-    "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib:modular",
     "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib/user_intelligence/fidl",
+    "//peridot/public/lib:maxwell",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/trace",
   ]
@@ -81,16 +81,16 @@ source_set("public") {
 
   deps = [
     "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/bin/entity",
     "//peridot/bin/ledger/fidl",
-    "//peridot/public/lib/agent/fidl",
-    "//peridot/public/lib/agent/fidl/agent_controller",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib/entity/fidl",
+    "//peridot/public/lib:modular",
     "//peridot/public/lib/ledger/fidl",
-    "//peridot/public/lib/user_intelligence/fidl",
+    "//peridot/public/lib:maxwell",
   ]
 }

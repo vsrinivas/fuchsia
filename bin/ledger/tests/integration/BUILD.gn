@@ -21,7 +21,7 @@ executable("integration") {
   deps = [
     ":integration_lib",
     "//garnet/lib/callback",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/ledger/app:lib",

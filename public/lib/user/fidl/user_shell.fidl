@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/agent/fidl/agent_provider.fidl";
-import "lib/auth/fidl/account/account.fidl";
-import "lib/component/fidl/component_context.fidl";
-import "lib/speech/fidl/speech_to_text.fidl";
-import "lib/story/fidl/link.fidl";
-import "lib/story/fidl/story_provider.fidl";
-import "lib/suggestion/fidl/suggestion_provider.fidl";
-import "lib/ui/presentation/fidl/presentation.fidl";
-import "lib/user/fidl/focus.fidl";
-import "lib/user_intelligence/fidl/intelligence_services.fidl";
+// import "lib/agent/fidl/agent_provider.fidl";
+// import "lib/auth/fidl/account/account.fidl";
+// import "lib/component/fidl/component_context.fidl";
+// import "lib/speech/fidl/speech_to_text.fidl";
+// import "lib/story/fidl/link.fidl";
+// import "lib/story/fidl/story_provider.fidl";
+// import "lib/suggestion/fidl/suggestion_provider.fidl";
+// import "lib/ui/presentation/fidl/presentation.fidl";
+// import "lib/user/fidl/focus.fidl";
+// import "lib/user_intelligence/fidl/intelligence_services.fidl";
 
 // This interface is implemented by a user shell. Dependencies are passed to it
 // in Initialize() on startup. The user shell is also expected to implement
@@ -28,7 +28,7 @@ import "lib/user_intelligence/fidl/intelligence_services.fidl";
 // system shutting down.
 [ServiceName="modular.UserShell"]  // Created by user shell applications.
 interface UserShell {
-  Initialize@0(UserShellContext user_shell_context);
+  1: Initialize(UserShellContext user_shell_context);
 };
 
 // This interface allows the |UserShell| to request capabilities from the
@@ -37,21 +37,21 @@ interface UserShell {
 interface UserShellContext {
   // The account associated with the currently logged-in user. It's NULL if
   // logged into GUEST mode.
-  GetAccount@0() => (auth.Account? account);
-  GetAgentProvider@1(AgentProvider& request);
-  GetComponentContext@2(ComponentContext& request);
-  GetDeviceName@3() => (string device_name);
-  GetFocusController@4(FocusController& request);
-  GetFocusProvider@5(FocusProvider& request);
-  GetIntelligenceServices@6(maxwell.IntelligenceServices& request);
-  GetLink@7(Link& request);
-  GetPresentation@8(mozart.Presentation& request);
-  GetSpeechToText@9(speech.SpeechToText& request);
-  GetStoryProvider@10(StoryProvider& request);
-  GetSuggestionProvider@11(maxwell.SuggestionProvider& request);
-  GetVisibleStoriesController@12(VisibleStoriesController& request);
+  1: GetAccount() -> (modular_auth.Account? account);
+  2: GetAgentProvider(request<AgentProvider> @request);
+  3: GetComponentContext(request<ComponentContext> @request);
+  4: GetDeviceName() -> (string device_name);
+  5: GetFocusController(request<FocusController> @request);
+  6: GetFocusProvider(request<FocusProvider> @request);
+  7: GetIntelligenceServices(request<IntelligenceServices> @request);
+  8: GetLink(request<Link> @request);
+  9: GetPresentation(request<presentation.Presentation> @request);
+  10: GetSpeechToText(request<speech.SpeechToText> @request);
+  11: GetStoryProvider(request<StoryProvider> @request);
+  12: GetSuggestionProvider(request<SuggestionProvider> @request);
+  13: GetVisibleStoriesController(request<VisibleStoriesController> @request);
 
   // Requests logout of the user. This causes the device runner to tear down the
   // |UserRunner| instance of the user.
-  Logout@15();
+  16: Logout();
 };

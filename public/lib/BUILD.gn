@@ -2,21 +2,132 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
+
 group("services") {
   deps = [
-    "agent/fidl",
+    ":modular",
+  ]
+}
+
+group("just_fidl") {
+  deps = [
+    ":modular($fidl_toolchain)",
+  ]
+}
+
+fidl("modular") {
+  sources = [
+    "action_log/fidl/component.fidl",
+    "action_log/fidl/factory.fidl",
+    "action_log/fidl/listener.fidl",
+    "action_log/fidl/user.fidl",
+    "agent/fidl/agent.fidl",
+    "agent/fidl/agent_context.fidl",
+    "agent/fidl/agent_controller/agent_controller.fidl",
+    "agent/fidl/agent_provider.fidl",
+    "clipboard/fidl/clipboard.fidl",
+    "component/fidl/component_context.fidl",
+    "component/fidl/message_queue.fidl",
+    "config/fidl/config.fidl",
+    "context/fidl/context_engine.fidl",
+    "context/fidl/context_reader.fidl",
+    "context/fidl/context_writer.fidl",
+    "context/fidl/debug.fidl",
+    "context/fidl/metadata.fidl",
+    "context/fidl/value.fidl",
+    "context/fidl/value_type.fidl",
+    "daisy/fidl/daisy.fidl",
+    "device/fidl/device_runner_monitor.fidl",
+    "device/fidl/device_shell.fidl",
+    "device/fidl/user_provider.fidl",
+    "entity/fidl/entity.fidl",
+    "entity/fidl/entity_provider.fidl",
+    "entity/fidl/entity_reference_factory.fidl",
+    "entity/fidl/entity_resolver.fidl",
+    "lifecycle/fidl/lifecycle.fidl",
+    "module/fidl/link_path.fidl",
+    "module/fidl/module.fidl",
+    "module/fidl/module_context.fidl",
+    "module/fidl/module_controller.fidl",
+    "module/fidl/module_data.fidl",
+    "module/fidl/module_manifest.fidl",
+    "module/fidl/module_state.fidl",
+    "module_resolver/fidl/module_resolver.fidl",
+    "remote/fidl/remote_invoker.fidl",
+    "story/fidl/create_chain.fidl",
+    "story/fidl/create_link.fidl",
+    "story/fidl/link.fidl",
+    "story/fidl/link_change.fidl",
+    "story/fidl/per_device_story_info.fidl",
+    "story/fidl/story_controller.fidl",
+    "story/fidl/story_info.fidl",
+    "story/fidl/story_marker.fidl",
+    "story/fidl/story_provider.fidl",
+    "story/fidl/story_shell.fidl",
+    "story/fidl/story_state.fidl",
+    "suggestion/fidl/debug.fidl",
+    "suggestion/fidl/proposal.fidl",
+    "suggestion/fidl/proposal_publisher.fidl",
+    "suggestion/fidl/query_handler.fidl",
+    "suggestion/fidl/suggestion_display.fidl",
+    "suggestion/fidl/suggestion_engine.fidl",
+    "suggestion/fidl/suggestion_provider.fidl",
+    "suggestion/fidl/user_input.fidl",
+    "surface/fidl/container.fidl",
+    "surface/fidl/surface.fidl",
+    "user/fidl/device_map.fidl",
+    "user/fidl/focus.fidl",
+    "user/fidl/user_shell.fidl",
+    "user_intelligence/fidl/intelligence_services.fidl",
+    "user_intelligence/fidl/scope.fidl",
+    "user_intelligence/fidl/user_intelligence_provider.fidl",
+  ]
+
+  deps = [
     "auth/fidl",
-    "clipboard/fidl",
-    "component/fidl",
-    "config/fidl",
-    "device/fidl",
-    "entity/fidl",
-    "lifecycle/fidl",
-    "module/fidl",
-    "module_resolver/fidl",
-    "remote/fidl",
-    "story/fidl",
-    "surface/fidl",
-    "user/fidl",
+    "ledger/fidl",
+    "resolver/fidl",
+    "speech/fidl",
+    "//garnet/public/lib/images/fidl",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/ui/presentation/fidl",
+  ]
+}
+
+fidl("modular_private") {
+  sources = [
+    "story/fidl/story_data.fidl",
+    "user/fidl/user_runner.fidl",
+  ]
+  deps = [
+    ":modular",
+  ]
+}
+
+fidl("maxwell") {
+  sources = [
+    "action_log/fidl/component.fidl",
+    "action_log/fidl/factory.fidl",
+    "action_log/fidl/listener.fidl",
+    "action_log/fidl/user.fidl",
+    "context/fidl/context_engine.fidl",
+    "context/fidl/context_reader.fidl",
+    "context/fidl/context_writer.fidl",
+    "context/fidl/debug.fidl",
+    "context/fidl/metadata.fidl",
+    "context/fidl/value.fidl",
+    "context/fidl/value_type.fidl",
+    "suggestion/fidl/debug.fidl",
+    "suggestion/fidl/proposal.fidl",
+    "suggestion/fidl/proposal_publisher.fidl",
+    "suggestion/fidl/query_handler.fidl",
+    "suggestion/fidl/suggestion_display.fidl",
+    "suggestion/fidl/suggestion_engine.fidl",
+    "suggestion/fidl/suggestion_provider.fidl",
+    "suggestion/fidl/user_input.fidl",
+    "user_intelligence/fidl/intelligence_services.fidl",
+    "user_intelligence/fidl/scope.fidl",
+    "user_intelligence/fidl/user_intelligence_provider.fidl",
   ]
 }

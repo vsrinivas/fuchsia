@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // Defines the attributes for a Link when the Link is created.
 struct CreateLinkInfo {
@@ -22,10 +22,10 @@ struct CreateLinkInfo {
 enum LinkPermissions {
   // A mutable Link whose contents can be set by anyone that has a handle
   // to the Link.
-  READ_WRITE,
+  READ_WRITE = 0;
   // A Link that is only mutable by the creator of the Link, and
   // is read-only to everyone else.
-  READ_ONLY_FOR_OTHERS,
+  READ_ONLY_FOR_OTHERS = 1;
 };
 
 struct LinkAllowedTypes {
@@ -33,5 +33,5 @@ struct LinkAllowedTypes {
   // one of |allowed_entity_types| in its |Entity.GetTypes()| return value.
   //
   // If empty, allows any Entity type.
-  array<string> allowed_entity_types;
+  vector<string> allowed_entity_types;
 };

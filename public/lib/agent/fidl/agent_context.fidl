@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/auth/fidl/token_provider.fidl";
-import "lib/component/fidl/component_context.fidl";
-import "lib/entity/fidl/entity_reference_factory.fidl";
-import "lib/user_intelligence/fidl/intelligence_services.fidl";
+// import "lib/auth/fidl/token_provider.fidl";
+// import "lib/component/fidl/component_context.fidl";
+// import "lib/entity/fidl/entity_reference_factory.fidl";
+// import "lib/user_intelligence/fidl/intelligence_services.fidl";
 
 // This interface is exposed to all agents. It allows to schedule tasks to occur
 // in response to triggers which are conditions like a message arriving on a
@@ -15,27 +15,27 @@ import "lib/user_intelligence/fidl/intelligence_services.fidl";
 [ServiceName="modular.AgentContext"]
 interface AgentContext {
   // |context| is the ComponentContext which this AgentContext is a part of.
-  GetComponentContext@0(ComponentContext& request);
+  1: GetComponentContext(request<ComponentContext> @request);
 
   // |token_provider| is scoped to this agent.
-  GetTokenProvider@1(auth.TokenProvider& request);
+  2: GetTokenProvider(request<modular_auth.TokenProvider> @request);
 
   // Returns the IntelligenceServices container specific to this Agent.
-  GetIntelligenceServices@2(maxwell.IntelligenceServices& request);
+  3: GetIntelligenceServices(request<IntelligenceServices> @request);
 
   // Returns an EntityReferenceFactory for making entity references for this
   // Agent.
-  GetEntityReferenceFactory@3(EntityReferenceFactory& request);
+  4: GetEntityReferenceFactory(request<EntityReferenceFactory> @request);
 
   // Schedules a task described in |task_info|. When this task is scheduled to
   // run, Agent::RunTask() gets called.
-  ScheduleTask@4(TaskInfo task_info);
+  5: ScheduleTask(TaskInfo task_info);
   // No new runs of this task will be scheduled.
-  DeleteTask@5(string task_id);
+  6: DeleteTask(string task_id);
 
   // Declares that this agent is done, and wants to be torn down. Agent::Stop()
   // will be called as a result of this.
-  Done@6();
+  7: Done();
 };
 
 // Used to describe a task to the framework.

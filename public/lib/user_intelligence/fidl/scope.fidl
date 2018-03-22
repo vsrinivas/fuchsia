@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
 // Specifies the access scope a given component has to services within Maxwell.
 //
@@ -18,12 +18,14 @@ union ComponentScope {
   StoryScope story_scope;
 };
 
-struct GlobalScope {};
+struct GlobalScope {
+  uint32 dummy; // FIDL2 does not allow empty structs
+};
 
 struct ModuleScope {
   string url;
   string story_id;
-  array<string> module_path;
+  vector<string> module_path;
 };
 
 struct AgentScope {

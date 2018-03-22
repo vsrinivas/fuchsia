@@ -16,7 +16,7 @@ source_set("convert") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
   ]
 
   public_deps = [

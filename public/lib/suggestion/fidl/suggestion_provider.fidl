@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
-import "lib/suggestion/fidl/suggestion_display.fidl";
-import "lib/suggestion/fidl/user_input.fidl";
+// import "lib/suggestion/fidl/suggestion_display.fidl";
+// import "lib/suggestion/fidl/user_input.fidl";
 
 // Allows clients to subscribe to different Suggestion "channels" and iterate
 // through the results. Supports both passive consumption of Suggestions based
@@ -21,14 +21,14 @@ interface SuggestionProvider {
   //
   // Any user interactions received by the client should be forwarded to the
   // SuggestionService by calling NotifyInteraction().
-  SubscribeToInterruptions@0(InterruptionListener listener);
+  1: SubscribeToInterruptions(InterruptionListener listener);
 
   // Creates a subscription to "Next" Suggestions, with changes sent to
   // |listener|. A maximum of |count| suggestions will be returned. To
   // change the count, call this method again with a new count.
   //
   // Closing the the |listener| pipe terminates the subscription.
-  SubscribeToNext@1(NextListener listener, int32 count);
+  2: SubscribeToNext(NextListener listener, int32 count);
 
   // Must be called when the user initiates a query for suggestions, perhaps
   // as an “Ask” or a scoped suggestion. Results are sent to |listener|. Changes
@@ -37,11 +37,11 @@ interface SuggestionProvider {
   //
   // Closing the |listener| pipe signals to the SuggestionService that the query
   // has been completed or canceled.
-  Query@2(QueryListener listener, UserInput query, int32 count);
+  3: Query(QueryListener listener, UserInput query, int32 count);
 
   // Notifies the suggestion engine that the user has interacted with the given
   // Suggestion in the manner described in |interaction|.
-  NotifyInteraction@3(string suggestion_uuid, Interaction interaction);
+  4: NotifyInteraction(string suggestion_uuid, Interaction interaction);
 
   // *** Speech Section ***
   // TODO(jwnichols): Move these into a separate speech service.  It is
@@ -49,37 +49,37 @@ interface SuggestionProvider {
   // solution.
 
   // TODO(rosswang): remove this if/when FeedbackListener is merged into Ask.
-  RegisterFeedbackListener@4(FeedbackListener speech_listener);
+  5: RegisterFeedbackListener(FeedbackListener speech_listener);
 };
 
 interface InterruptionListener {
   // Notifies the user interface to interrupt the user
-  OnInterrupt@0(Suggestion suggestion);
+  1: OnInterrupt(Suggestion suggestion);
 };
 
 interface NextListener {
   // Notifies the user interface that the passive suggestion results have been
   // updated. This is called every time the suggestion results change.
-  OnNextResults@0(array<Suggestion> suggestions);
+  1: OnNextResults(vector<Suggestion> suggestions);
 
   // Notifies the user interface when processing is occurring on the passive
   // suggestions, which may result in additions or re-ranking.  The UI may
   // wish to show a spinner during this time.
-  OnProcessingChange@1(bool processing);
+  2: OnProcessingChange(bool processing);
 };
 
 interface QueryListener {
   // Notifies the user interface that new suggestion results are available.
   // This may be called multiple times if the suggestion results are updated.
-  OnQueryResults@0(array<Suggestion> suggestions);
+  1: OnQueryResults(vector<Suggestion> suggestions);
 
   // Notifies the user interface that query processing is completed.
-  OnQueryComplete@1();
+  2: OnQueryComplete();
 };
 
 enum InteractionType {
-  SELECTED,
-  DISMISSED
+  SELECTED = 0;
+  DISMISSED = 1;
   // SNOOZED
 };
 
@@ -96,7 +96,7 @@ struct Suggestion {
 
   // The probability that a given suggestion would be selected if it were the
   // only suggestion shown to the user.
-  float confidence;
+  float32 confidence;
 
   // Display properties of the Suggestion
   SuggestionDisplay display;
@@ -122,11 +122,11 @@ struct Suggestion {
 // |OnProcessingChanged| state event on |SuggestionHandler| soon.
 enum SpeechStatus {
   // Exchange complete or not started
-  IDLE,
+  IDLE = 0;
   // Query sent, awaiting results
-  PROCESSING,
+  PROCESSING = 1;
   // System speaking
-  RESPONDING
+  RESPONDING = 2;
 };
 
 // TODO(rosswang): This is very temporary. Probably next week, OnStatusChanged
@@ -135,7 +135,7 @@ enum SpeechStatus {
 // be part of the callback on |Query|.
 interface FeedbackListener {
   // Called every time the internal |SpeechStatus| changes.
-  OnStatusChanged@0(SpeechStatus status);
+  1: OnStatusChanged(SpeechStatus @status);
 
   // TODO(rosswang): OnAudioResponse method (or fold it into OnTextResponse),
   // once it becomes trivial for SysUI to implement it. This would allow SysUI
@@ -145,5 +145,5 @@ interface FeedbackListener {
 
   // Receives a text representation of the spoken response. This method is
   // called at the beginning of the |RESPONDING| phase.
-  OnTextResponse@1(string response_text);
+  2: OnTextResponse(string response_text);
 };

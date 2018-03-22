@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
-import "user.fidl";
-import "lib/suggestion/fidl/proposal_publisher.fidl";
+// import "user.fidl";
+// import "lib/suggestion/fidl/proposal_publisher.fidl";
 
 [ServiceName="maxwell.action_log.UserActionLogFactory"]
 interface UserActionLogFactory {
-  GetUserActionLog@0(
-      maxwell.ProposalPublisher proposal_publisher,
-      UserActionLog& request);
+  1: GetUserActionLog(
+      ProposalPublisher proposal_publisher,
+      request<UserActionLog> @request);
 };

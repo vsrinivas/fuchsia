@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // EntityProviders (agents) must implement and provide the |EntityProvider|
 // service if they create entity references (using |EntityReferenceFactory|).
@@ -16,12 +16,12 @@ interface EntityProvider {
   // an identical one previously passed to
   // EntityReferenceFactory.CreateReference(). Each entry in |types| should
   // reference a well-known content type.
-  GetTypes@0(string cookie) => (array<string> types);
+  1: GetTypes(string cookie) -> (vector<string> types);
 
   // Given one of the types returned from |GetTypes()| above, returns
   // associated short-form data as a string of bytes. It is common for the data
   // to be represented as JSON. If data for |type| exists, a non-null |data| is
   // returned.
    // TODO(vardhan,thatguy): |data| should be a VMO or a file.
-  GetData@1(string cookie, string type) => (string? data);
+  2: GetData(string cookie, string type) -> (string? data);
 };

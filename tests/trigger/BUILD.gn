@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/public/lib/fidl/fidl.gni")
+import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 group("trigger") {
   testonly = true
@@ -25,9 +25,9 @@ executable("trigger_test_module") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib/component/fidl",
-    "//peridot/public/lib/module/fidl",
-    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -41,9 +41,9 @@ executable("trigger_test_agent") {
     ":trigger_test_service",
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
-    "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib:modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
-    "//peridot/public/lib/lifecycle/fidl",
+    "//peridot/public/lib:modular",
   ]
 }
 

@@ -87,7 +87,7 @@ source_set("unittests") {
     ":lib",
     ":tree_node_storage",
     "//garnet/lib/callback",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/encryption/fake",
     "//peridot/bin/ledger/encryption/primitives",

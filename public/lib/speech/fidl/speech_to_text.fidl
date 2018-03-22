@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module speech;
+library speech;
 
-import "lib/media/fidl/media_capturer.fidl";
+// import "lib/media/fidl/media_capturer.fidl";
 
 [ServiceName="speech.SpeechToText"]
 interface SpeechToText {
   // Starts capturing speech from the microphone.
-  BeginCapture@0(TranscriptionListener transcription_listener);
+  1: BeginCapture(TranscriptionListener transcription_listener);
 
   // Begins hotword detection. Detected hotword utterances are reported on the
   // given listener.
-  ListenForHotword@1(HotwordListener hotword_listener);
+  2: ListenForHotword(HotwordListener hotword_listener);
 };
 
 // Represents an active transcription session. Either side may close this
@@ -24,23 +24,23 @@ interface TranscriptionListener {
   // Indicates that capture has begun. Prior to this, parts of the system may
   // not have been initialized and audio may have been dropped. No calls to
   // |OnTranscriptUpdate| will occur before |OnReady| is called.
-  OnReady@0();
+  1: OnReady();
 
   // Receives updated transcripts. Each call receives the most likely
   // transcription of the entire utterance at that time. Previously transcribed
   // text may mutate in response to later input.
-  OnTranscriptUpdate@1(string spoken_text);
+  2: OnTranscriptUpdate(string spoken_text);
 
   // Provides periodic updates on the user's speech signal power, when the
   // microphone is open and streaming to the backend.
   // |speech_level| is instantaneous speech power, in decibels (negative).
-  OnSpeechLevelUpdate@3(float speech_level);
+  4: OnSpeechLevelUpdate(float32 speech_level);
 
   // An error occurred before or during transcription. Depending on the nature
   // of the error, this may occur before |OnReady| is called, and |OnReady| may
   // never be called. This binding will be closed immediately after sending this
   // message.
-  OnError@2();
+  3: OnError();
 };
 
 // Listens for hotwords. Each detected hotword utterance triggers |OnHotword|.
@@ -49,8 +49,8 @@ interface HotwordListener {
   // Indicates that capture has begun. Prior to this, parts of the system may
   // not have been initialized and audio may have been dropped. No calls to
   // |OnHotword| will occur before |OnReady| is called.
-  OnReady@0();
+  1: OnReady();
 
   // Called for each detected hotword utterance.
-  OnHotword@1();
+  2: OnHotword();
 };

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/app/fidl/service_provider.fidl";
-import "lib/agent/fidl/agent_context.fidl";
+// import "lib/app/fidl/service_provider.fidl";
+// import "lib/agent/fidl/agent_context.fidl";
 
 // This service is implemented by an application that is meant to be run as an
 // Agent.
@@ -25,7 +25,7 @@ interface Agent {
   // |requestor_url| is the identifier for the component which called
   // ComponentContext::ConnectToAgent().
   // |services| are the services that are provided to that component.
-  Connect@0(string requestor_url, component.ServiceProvider& services);
+  1: Connect(string requestor_url, request<component.ServiceProvider> services);
 
   // Called when some task identified by |task_id| is scheduled to run. The task
   // was first posted by this Agent using AgentContext::ScheduleTask(). The
@@ -35,5 +35,5 @@ interface Agent {
   // TODO(alhaad): The current implementation allows the Agent to run a task
   // until its callback returns. Instead, we should cap task length with
   // strategies like budgets.
-  RunTask@1(string task_id) => ();
+  2: RunTask(string task_id) -> ();
 };

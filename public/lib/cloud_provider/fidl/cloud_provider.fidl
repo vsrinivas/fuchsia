@@ -2,25 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="cloud_provider"]
-module cloud_provider;
+library cloud_provider;
 
-import "lib/fsl/fidl/sized_vmo_transport.fidl";
+// import "lib/fsl/fidl/sized_vmo_transport.fidl";
 
 // This file defines a cloud service that can be used by Ledger to power cloud
 // sync.
 
 // Response status for cloud provider operations.
-enum Status {
-  OK = 0,
-  AUTH_ERROR,
-  ARGUMENT_ERROR,
-  INTERNAL_ERROR,
-  NETWORK_ERROR,
-  NOT_FOUND,
-  PARSE_ERROR,
-  SERVER_ERROR,
-  UNKNOWN_ERROR = -1,
+enum Status : int32 {
+  OK = 0;
+  AUTH_ERROR = 1;
+  ARGUMENT_ERROR = 2;
+  INTERNAL_ERROR = 3;
+  NETWORK_ERROR = 4;
+  NOT_FOUND = 5;
+  PARSE_ERROR = 6;
+  SERVER_ERROR = 7;
+  UNKNOWN_ERROR = -1;
 };
 
 // Cloud service that powers cloud sync for a single user. Top-level interface
@@ -31,11 +30,11 @@ enum Status {
 [ServiceName="cloud_provider::CloudProvider"]
 interface CloudProvider {
   // Retrieves the controller for the user device set.
-  GetDeviceSet@0(DeviceSet& device_set) => (Status status);
+  1: GetDeviceSet(request<DeviceSet> device_set) -> (Status @status);
 
   // Retrieves the controller for cloud sync of a particular page.
-  GetPageCloud@1(array<uint8> app_id, array<uint8> page_id, PageCloud& page_cloud)
-      => (Status status);
+  2: GetPageCloud(vector<uint8> app_id, vector<uint8> page_id, request<PageCloud> page_cloud)
+      -> (Status @status);
 };
 
 // Cloud registry of devices participating in cloud sync.
@@ -45,10 +44,10 @@ interface CloudProvider {
 interface DeviceSet {
   // Verifies that the device fingerprint in the cloud is still in the list of
   // devices, ensuring that the cloud was not erased since the last sync.
-  CheckFingerprint@0(array<uint8> fingerprint) => (Status status);
+  1: CheckFingerprint(vector<uint8> fingerprint) -> (Status @status);
 
   // Adds the device fingerprint to the list of devices in the cloud.
-  SetFingerprint@1(array<uint8> fingerprint) => (Status status);
+  2: SetFingerprint(vector<uint8> fingerprint) -> (Status @status);
 
   // Watches the given |fingerprint| in the cloud so that |watcher| is notified
   // when the fingerprint is erased.
@@ -65,12 +64,12 @@ interface DeviceSet {
   //
   // If the returned status is not OK, the corresponding error call is also made
   // on the watcher.
-  SetWatcher@2(array<uint8> fingerprint, DeviceSetWatcher watcher)
-      => (Status status);
+  3: SetWatcher(vector<uint8> fingerprint, DeviceSetWatcher watcher)
+      -> (Status @status);
 
   // Erases the entire registry of devices. This makes all devices detect that
   // cloud has been erased.
-  Erase@3() => (Status status);
+  4: Erase() -> (Status @status);
 };
 
 // Watcher for push notifications from the cloud registry of devices
@@ -78,20 +77,20 @@ interface DeviceSet {
 interface DeviceSetWatcher {
   // Called when cloud provider detects that the cloud storage was erased. No
   // further calls are made on the watcher after this is called.
-  OnCloudErased@0();
+  1: OnCloudErased();
 
   // Called when the network connection is lost. No further calls are made on
   // the watcher after this is called.
-  OnNetworkError@1();
+  2: OnNetworkError();
 };
 
 // Commit stored in the cloud.
 struct Commit {
   // The id of the commit.
-  array<uint8> id;
+  vector<uint8> id;
 
   // The content of the commit.
-  array<uint8> data;
+  vector<uint8> data;
 };
 
 // Handler for cloud sync of a single page.
@@ -110,7 +109,7 @@ interface PageCloud {
   //
   // The commits are added in one batch, on the receiving side they are
   // delivered in the same order in a single OnNewCommits() call.
-  AddCommits@0(array<Commit> commits) => (Status status);
+  1: AddCommits(vector<Commit> commits) -> (Status @status);
 
   // Retrieves commits from the cloud.
   //
@@ -122,19 +121,19 @@ interface PageCloud {
   // If the resulting |status| is |OK|, |commits| contains all matching commits
   // (might be empty) and |position_token| contains the position token of the
   // most recent of the |commits| (null if |commits| is empty).
-  GetCommits@1(array<uint8>? min_position_token)
-      => (Status status, array<Commit>? commits, array<uint8>? position_token);
+  2: GetCommits(vector<uint8>? min_position_token)
+      -> (Status @status, vector<Commit>? commits, vector<uint8>? position_token);
 
   // Uploads the given object to the cloud under the given id.
-  AddObject@2(array<uint8> id, fsl.SizedVmoTransport data) => (Status status);
+  3: AddObject(vector<uint8> id, fsl.SizedVmoTransport data) -> (Status @status);
 
   // Retrieves the object of the given id from the cloud.
   //
   // The size of the object is passed to the callback along with the socket
   // handle, so that the client can verify that all data was streamed when
   // draining the socket.
-  GetObject@3(array<uint8> id)
-      => (Status status, uint64 size, handle<socket>? stream);
+  4: GetObject(vector<uint8> id)
+      -> (Status status, uint64 size, handle<socket>? stream);
 
   // Watches the cloud for push notifications.
   //
@@ -147,8 +146,8 @@ interface PageCloud {
   // addition to that, additional commits older than or at |min_position_token|
   // may be delivered to. If |min_position_token| is null, notifications for
   // all commits are delivered.
-  SetWatcher@4(array<uint8>? min_position_token, PageCloudWatcher watcher)
-      => (Status status);
+  5: SetWatcher(vector<uint8>? min_position_token, PageCloudWatcher watcher)
+      -> (Status @status);
 };
 
 // Watcher for push notifications from cloud sync of a single page.
@@ -160,7 +159,7 @@ interface PageCloudWatcher {
   //
   // No subsequent calls are made until the client calls the callback of the
   // previous one.
-  OnNewCommits@0(array<Commit> commits, array<uint8> position_token) => ();
+  1: OnNewCommits(vector<Commit> commits, vector<uint8> position_token) -> ();
 
   // Called when a new object is added to the cloud.
   //
@@ -168,7 +167,7 @@ interface PageCloudWatcher {
   //
   // No subsequent calls are made until the client calls the callback of the
   // previous one.
-  OnNewObject@1(array<uint8> id, fsl.SizedVmoTransport data) => ();
+  2: OnNewObject(vector<uint8> id, fsl.SizedVmoTransport data) -> ();
 
   // Called when an error occurs.
   //
@@ -180,5 +179,5 @@ interface PageCloudWatcher {
   //   - AUTH_ERROR, if the auth token needs a refresh
   //   - NETWORK_ERROR, if the connection was dropped
   //   - PARSE_ERROR, if an invalid server notification was received
-  OnError@2(Status status);
+  3: OnError(Status @status);
 };

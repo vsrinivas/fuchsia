@@ -4,15 +4,15 @@
 
 // This file contains the definition of module container layouts.
 
-module modular;
+library modular;
 
-import "lib/daisy/fidl/daisy.fidl";
-import "lib/surface/fidl/surface.fidl";
+// import "lib/daisy/fidl/daisy.fidl";
+// import "lib/surface/fidl/surface.fidl";
 
 // Specification of the layout of multiple surfaces in a module container. The
 // surfaces are referenced by name in ContainerRelationEntry.
 struct ContainerLayout {
-  array<LayoutEntry> surfaces;
+  vector<LayoutEntry> surfaces;
 };
 
 // Specification of the postion of one surface within a container layout,
@@ -23,7 +23,7 @@ struct LayoutEntry {
 
   // Layout, as rectangle in Dart conventions(left, top, width, height), as a
   // proportion of the size of the container
-  array<float, 4> rectangle;
+  array<float32>:4 rectangle;
 };
 
 // Specifies the surface relationship between modules started together in module

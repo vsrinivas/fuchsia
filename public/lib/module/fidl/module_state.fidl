@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // State used to notify ModuleWatcher about state transitions of a
 // Module instance. This is very similar to the StoryState, however
@@ -31,9 +31,9 @@ module modular;
 //
 enum ModuleState {
   // Module instance was requested from the Story.
-  STARTING = 1,
+  STARTING = 1;
   // Module instance called Ready() on its Story handle.
-  RUNNING = 2,
+  RUNNING = 2;
   // Module closed the connection on its Module interface request.
   // This is fine, because any application can be run as a module,
   // even one that does not implement the Module service. The module
@@ -46,7 +46,7 @@ enum ModuleState {
   // services than to implement one specific interface. That the root
   // module of a story becomes UNLINKED doesn't affect the state of
   // the Story; that remains RUNNING either way.
-  UNLINKED = 6,
+  UNLINKED = 6;
   // Module instance called Done() on its Story handle. The receiver
   // is free to decide whether it's appropriate to Stop() the module.
   // (It might be appropriate for the receiver to call Done() on its
@@ -54,14 +54,14 @@ enum ModuleState {
   // running, but once it indicated its willingnes to participate in
   // the Story/Module life cycle it should not close its connection;
   // that transitions it to ERROR.
-  DONE = 3,
+  DONE = 3;
   // Module instance is stopped after Module.Stop(). The module can
   // now close its connection without transition to ERROR. No further
   // transitions are to be expected. An UNLINKED module transitions
   // here directly on Story.Stop() or ModuleController.Stop() without
   // going through Module.Stop().
-  STOPPED = 4,
+  STOPPED = 4;
   // Connection to the Module instance was closed without Stop()
   // request. No further transitions are to be expected.
-  ERROR = 5,
+  ERROR = 5;
 };

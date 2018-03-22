@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/device/fidl/user_provider.fidl";
-import "lib/ui/presentation/fidl/presentation.fidl";
-import "lib/ui/views/fidl/view_token.fidl";
+// import "lib/device/fidl/user_provider.fidl";
+// import "lib/ui/presentation/fidl/presentation.fidl";
+// import "lib/ui/views/fidl/view_token.fidl";
 
 // This interface is implemented by a device shell. Dependencies and parameters
 // are passed to it in Initialize() on startup. The device shell is also
@@ -21,7 +21,7 @@ import "lib/ui/views/fidl/view_token.fidl";
 // DeviceShellContext.Shutdown(), or by the system shutting down.
 [ServiceName="modular.DeviceShell"]
 interface DeviceShell {
-  Initialize@0(DeviceShellContext device_shell_context,
+  1: Initialize(DeviceShellContext device_shell_context,
                DeviceShellParams device_shell_params);
 
   // This method may be invoked by the device runner to request an
@@ -31,36 +31,24 @@ interface DeviceShell {
   //
   // A |request| is tied to a |username| because the device runner allows
   // multiple users to be logged in at the same time.
-  GetAuthenticationContext@1(string username,
-                             AuthenticationContext& request);
+  2: GetAuthenticationContext(string username,
+                             request<modular_auth.AuthenticationContext> @request);
 };
 
 // This interface allows the |DeviceShell| to request capabilities from the
 // |DeviceRunner| in a way that is more explicit about the services that are
 // offered than a generic |ServiceProvider|.
 interface DeviceShellContext {
-  GetUserProvider@0(UserProvider& request);
+  1: GetUserProvider(request<UserProvider> @request);
 
   // This requests the shutdown of the device runner.
-  Shutdown@1();
+  2: Shutdown();
 };
 
 // These params are passed to |DeviceShell.Initialize|.
 struct DeviceShellParams {
   // TODO(jjosh): make this non-optional, if feasible.
-  mozart.Presentation? presentation;
+  presentation.Presentation? presentation;
 };
 
-// This interface is implemented by device shell. It is used to notify the
-// device shell that a view for login needs to be started / stopped.
-// The device shell can close this connection if it wants to cancel the current
-// authentication flow.
-interface AuthenticationContext {
-  // Requests device shell to display |view_owner| for authentication. Note that
-  // another call to StartOverlay() will not be made until StopOverlay() has
-  // been called.
-  StartOverlay@0(mozart.ViewOwner view_owner);
 
-  // Requests device shell to stop displaying the auth view.
-  StopOverlay@1();
-};

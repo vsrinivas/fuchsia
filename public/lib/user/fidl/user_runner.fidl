@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "peridot/bin/ledger/fidl/internal.fidl";
-import "lib/auth/fidl/account_provider.fidl";
-import "lib/auth/fidl/account/account.fidl";
-import "lib/config/fidl/config.fidl";
-import "lib/ui/presentation/fidl/presentation.fidl";
-import "lib/ui/views/fidl/view_token.fidl";
+// import "peridot/bin/ledger/fidl/internal.fidl";
+// import "lib/auth/fidl/account_provider.fidl";
+// import "lib/auth/fidl/account/account.fidl";
+// import "lib/config/fidl/config.fidl";
+// import "lib/ui/presentation/fidl/presentation.fidl";
+// import "lib/ui/views/fidl/view_token.fidl";
 
 // The device_runner application (there is no |DeviceRunner| service) requests
 // an instance of this service in order to launch and display a |UserRunner| per
@@ -18,22 +18,22 @@ import "lib/ui/views/fidl/view_token.fidl";
 interface UserRunner {
   // Launches a user runner instance for a user identified by |user_id|.
   // TODO(alhaad): Fold paramters into |UserContext|.
-  Initialize@0(auth.Account? account,
+  1: Initialize(auth.Account? account,
                AppConfig user_shell,
                AppConfig story_shell,
                auth.TokenProviderFactory token_provider_factory,
                UserContext user_context,
-               mozart.ViewOwner&? view_owner);
+               request<mozart.ViewOwner>? view_owner);
 
-  SwapUserShell@1(AppConfig user_shell) => ();
+  2: SwapUserShell(AppConfig user_shell) -> ();
 };
 
 // This interface is provided by device runner to |UserRunner|.
 interface UserContext {
   // See detailed comments in UserShellContext.Logout().
-  Logout@0();
+  1: Logout();
 
-  GetPresentation@1(mozart.Presentation& presentation);
+  2: GetPresentation(request<mozart.Presentation> presentation);
 };
 
 // For development purposes only.
@@ -45,5 +45,5 @@ interface UserContext {
 [ServiceName="modular.UserRunnerDebug"]  // Created by user_runner application.
 interface UserRunnerDebug {
   // TODO(alhaad): We might be limited by FIDL message size. Consider using vmo.
-  DumpState@0() => (string debug_state);
+  1: DumpState() -> (string debug_state);
 };

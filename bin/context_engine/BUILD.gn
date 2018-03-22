@@ -24,8 +24,8 @@ executable("bin") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib/component/fidl",
-    "//peridot/public/lib/entity/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -45,7 +45,8 @@ source_set("context_index") {
   ]
 
   deps = [
-    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib:maxwell",
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -61,7 +62,7 @@ source_set("context_index_unittest") {
     "//garnet/public/lib/fsl",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib:maxwell",
     "//third_party/googletest:gtest",
   ]
 }
@@ -75,8 +76,8 @@ source_set("context_reader_impl") {
   deps = [
     ":context_repository",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib/context/fidl",
-    "//peridot/public/lib/user_intelligence/fidl:scope",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
   ]
 }
 
@@ -95,7 +96,7 @@ source_set("context_repository") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/util:wait_until_idle",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib:maxwell",
     "//third_party/rapidjson",
   ]
 }
@@ -113,7 +114,7 @@ source_set("context_repository_unittest") {
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib:maxwell",
     "//third_party/googletest:gtest",
   ]
 }
@@ -130,11 +131,11 @@ source_set("context_writer_impl") {
     "//peridot/lib/bound_set",
     "//peridot/public/lib/async/cpp:future_value",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib:maxwell",
     "//peridot/public/lib/entity/cpp",
     "//peridot/public/lib/entity/cpp:json",
-    "//peridot/public/lib/entity/fidl",
-    "//peridot/public/lib/user_intelligence/fidl:scope",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:maxwell",
     "//third_party/rapidjson",
   ]
 }
@@ -153,9 +154,9 @@ source_set("context_engine_impl") {
     ":context_reader_impl",
     ":context_repository",
     ":context_writer_impl",
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//peridot/public/lib/context/fidl",
-    "//peridot/public/lib/entity/fidl",
+    "//garnet/public/lib/fidl/cpp",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -167,8 +168,8 @@ source_set("scope_utils") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib/context/fidl",
-    "//peridot/public/lib/user_intelligence/fidl:scope",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
     "//third_party/boringssl",  # for sha256
   ]
 }

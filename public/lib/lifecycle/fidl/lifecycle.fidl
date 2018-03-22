@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // An interface implemented by applications that wish to terminate gracefully.
 [ServiceName="modular.Lifecycle"]
@@ -12,5 +12,5 @@ interface Lifecycle {
   //
   // If the application does not terminate itself in a timely manner, the client
   // may forcibly terminate the application.
-  Terminate@0();
+  1: Terminate();
 };

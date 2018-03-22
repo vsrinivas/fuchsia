@@ -16,6 +16,6 @@ executable("basic_text_listener") {
     "//peridot/bin/agents/entity_utils:entity_utils",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib:maxwell",
   ]
 }

@@ -36,12 +36,12 @@ executable("bin") {
     "//peridot/lib/module_manifest_source:firebase_source",
     "//peridot/lib/module_manifest_source:push_package_source",
     "//peridot/public/lib/app_driver/cpp:app_driver",
-    "//peridot/public/lib/component/fidl",
+    "//peridot/public/lib:modular",
     "//peridot/public/lib/entity/cpp:json",
-    "//peridot/public/lib/entity/fidl",
-    "//peridot/public/lib/module_resolver/fidl",
-    "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/user_intelligence/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
   ]
 }
 
@@ -66,13 +66,13 @@ source_set("module_resolver_impl") {
     "//peridot/lib/module_manifest_source",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib:maxwell",
     "//peridot/public/lib/entity/cpp:json",
-    "//peridot/public/lib/entity/fidl",
-    "//peridot/public/lib/module_resolver/fidl",
-    "//peridot/public/lib/story/fidl",
-    "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/user_intelligence/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
   ]
 }
 
@@ -86,7 +86,6 @@ source_set("module_resolver_impl_unittest") {
   deps = [
     ":module_resolver_impl",
     "//garnet/lib/gtest",
-    "//garnet/public/lib/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/testing:entity_resolver_fake",

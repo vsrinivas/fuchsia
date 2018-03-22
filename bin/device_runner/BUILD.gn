@@ -54,7 +54,7 @@ executable("device_runner_bin") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/presentation/fidl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/bin/device_runner/cobalt",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
@@ -64,10 +64,10 @@ executable("device_runner_bin") {
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/util:filesystem",
     "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib/config/fidl",
-    "//peridot/public/lib/device/fidl",
-    "//peridot/public/lib/lifecycle/fidl",
-    "//peridot/public/lib/user/fidl:private",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular_private",
     "//zircon/public/lib/trace-provider",
   ]
 }
@@ -87,7 +87,7 @@ source_set("lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/presentation/fidl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
     "//peridot/lib/common:xdr",
@@ -97,10 +97,10 @@ source_set("lib") {
     "//peridot/lib/fidl:scope",
     "//peridot/lib/util:filesystem",
     "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib/config/fidl",
-    "//peridot/public/lib/device/fidl",
-    "//peridot/public/lib/lifecycle/fidl",
-    "//peridot/public/lib/user/fidl:private",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular_private",
     "//zircon/public/lib/trace",
   ]
 }
@@ -115,11 +115,11 @@ executable("dev_device_shell_bin") {
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib/device/fidl",
+    "//peridot/public/lib:modular",
   ]
 }
 

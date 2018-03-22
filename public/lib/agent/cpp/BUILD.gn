@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/public/lib/fidl/fidl.gni")
+import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 group("cpp") {
   public_deps = [
@@ -17,9 +17,9 @@ source_set("agent_impl") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
-    "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib:modular",
   ]
 }

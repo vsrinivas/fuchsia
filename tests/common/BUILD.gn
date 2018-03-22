@@ -19,10 +19,10 @@ executable("common_done_module") {
   ]
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -34,9 +34,9 @@ executable("common_null_module") {
   ]
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib/story/fidl",
+    "//peridot/public/lib:modular",
   ]
 }

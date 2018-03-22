@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // State of a Story. It mostly, but not entirely, mirrors (for now)
 // the ModuleState of the root module in the story. Cf. ModuleState in
@@ -26,15 +26,15 @@ module modular;
 // PAUSED vs. FINISHED.
 enum StoryState {
   // Story exists but was not yet started.
-  INITIAL = 0,
+  INITIAL = 0;
   // Story was started by calling Start() but is not yet ready.
-  STARTING = 1,
+  STARTING = 1;
   // Story ready after its root module called Ready().
-  RUNNING = 2,
+  RUNNING = 2;
   // Story done but not yet stopped after its root module called Done().
-  DONE = 3,
+  DONE = 3;
   // Story stopped after Story.Stop() was called.
-  STOPPED = 4,
+  STOPPED = 4;
   // The application of the root module could not be started.
-  ERROR = 5,
+  ERROR = 5;
 };

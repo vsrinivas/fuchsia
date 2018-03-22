@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // The types of operations that can be saved in a Link's history.
 enum LinkChangeOp {
-  SET = 0,
-  UPDATE = 1,
-  ERASE = 2
+  SET = 0;
+  UPDATE = 1;
+  ERASE = 2;
 };
 
 // Internal data that Links use to track the history of operations. The ordered
@@ -23,7 +23,7 @@ struct LinkChange {
   LinkChangeOp op;
 
   // The JSON Pointer passed by the user as the pointer to the value to modify.
-  array<string> pointer;
+  vector<string> pointer;
 
   // The new value, or null if this is an Erase operation.
   string json;

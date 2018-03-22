@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
-import "lib/suggestion/fidl/proposal.fidl";
+// import "lib/suggestion/fidl/proposal.fidl";
 
 // A service enabling Agents and Modules to contribute Proposals proactively to
 // the Suggestion engine.
@@ -16,9 +16,9 @@ interface ProposalPublisher {
   //
   // If a Next/Interruption Proposal with the same id is already present, it is
   // overwritten.
-  Propose@0(Proposal proposal);
+  1: Propose(Proposal proposal);
 
   // Removes the Proposal with the given ID from the Next/Interruption channel
   // produced by this component.
-  Remove@1(string proposal_id);
+  2: Remove(string proposal_id);
 };

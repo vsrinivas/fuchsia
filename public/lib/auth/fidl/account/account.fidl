@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular.auth;
+library modular_auth;
 
 // Stores attributes related to an account that is exposed to device shell.
 // A list of existing account(s) can be obtained via
@@ -43,10 +43,10 @@ enum IdentityProvider {
   // as if it has identified the user. Note that the users that use this id
   // provider would not get cloud ledger access (unless done via a side
   // channel).
-  DEV,
+  DEV = 0;
 
   // Uses Google as the identity provider. Doing this requires a working network
   // connection and a web view.
-  GOOGLE,
+  GOOGLE = 1;
 };
 

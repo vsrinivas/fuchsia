@@ -99,7 +99,7 @@ source_set("lib") {
     ":file_index",
     ":object_identifier_lib",
     "//garnet/lib/callback",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/cobalt",
     "//peridot/bin/ledger/encryption/impl",

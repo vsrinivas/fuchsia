@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // An interface that provides clients with the ability to store and
 // retrieve text.
 [ServiceName="modular.Clipboard"]
 interface Clipboard {
     // Pushes |text| onto the clipboard.
-    Push@0(string text);
+    1: Push(string text);
 
     // Peeks at the current topmost item on the clipboard and returns
     // it, or null if no such item exists.
-    Peek@1() => (string? text);
+    2: Peek() -> (string? text);
 };

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/public/lib/fidl/fidl.gni")
+import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 source_set("app_client") {
   sources = [
@@ -19,8 +19,8 @@ source_set("app_client") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//peridot/lib/common:async_holder",
-    "//peridot/public/lib/config/fidl",
-    "//peridot/public/lib/lifecycle/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -30,7 +30,7 @@ source_set("array_to_string") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
   ]
 }
 
@@ -40,8 +40,8 @@ source_set("context") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//peridot/public/lib/story/fidl:private",
+    "//garnet/public/lib/fidl/cpp",
+    "//peridot/public/lib:modular_private",
   ]
 }
 
@@ -54,7 +54,8 @@ source_set("json_xdr") {
   # MUST be public so clients pick up the defines from
   # //third_party/rapidjson:rapidjson_config
   public_deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fidl/cpp",
     "//peridot/lib/rapidjson",
   ]
 }
@@ -66,7 +67,7 @@ source_set("proxy") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
   ]
 }
@@ -82,7 +83,7 @@ source_set("scope") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
   ]
 }
@@ -95,10 +96,10 @@ source_set("single_service_app") {
   public_deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/ui/views/fidl",
-    "//peridot/public/lib/lifecycle/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
+    "//peridot/public/lib:modular",
   ]
 }
 
@@ -116,7 +117,7 @@ source_set("view_host") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/view_framework",
-    "//garnet/public/lib/ui/views/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
   ]
 }
 
@@ -127,8 +128,8 @@ source_set("message_receiver_client") {
   ]
 
   deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
-    "//peridot/public/lib/component/fidl",
+    "//garnet/public/lib/fidl/cpp",
+    "//peridot/public/lib:modular",
   ]
 }
 

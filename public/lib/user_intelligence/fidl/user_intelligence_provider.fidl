@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
-import "lib/app/fidl/application_launcher.fidl";
-import "lib/resolver/fidl/resolver.fidl";
-import "lib/speech/fidl/speech_to_text.fidl";
-import "lib/suggestion/fidl/suggestion_provider.fidl";
-import "lib/component/fidl/component_context.fidl";
-import "lib/context/fidl/context_engine.fidl";
-import "lib/story/fidl/story_provider.fidl";
-import "lib/user/fidl/focus.fidl";
+// import "lib/app/fidl/application_launcher.fidl";
+// import "lib/resolver/fidl/resolver.fidl";
+// import "lib/speech/fidl/speech_to_text.fidl";
+// import "lib/suggestion/fidl/suggestion_provider.fidl";
+// import "lib/component/fidl/component_context.fidl";
+// import "lib/context/fidl/context_engine.fidl";
+// import "lib/story/fidl/story_provider.fidl";
+// import "lib/user/fidl/focus.fidl";
 
-import "intelligence_services.fidl";
-import "scope.fidl";
+// import "intelligence_services.fidl";
+// import "scope.fidl";
 
 [ServiceName="maxwell.UserIntelligenceProviderFactory"]
 interface UserIntelligenceProviderFactory {
@@ -22,12 +22,12 @@ interface UserIntelligenceProviderFactory {
   //
   // NOTE: Any future dependencies needed are provided here, and are assumed to
   // be scoped to the user.
-  GetUserIntelligenceProvider@0(
-      maxwell.ContextEngine context_engine,
-      modular.StoryProvider story_provider,
-      modular.FocusProvider focus_provider,
-      modular.VisibleStoriesProvider visible_stories_provider,
-      UserIntelligenceProvider& provider);
+  1: GetUserIntelligenceProvider(
+      ContextEngine context_engine,
+      StoryProvider story_provider,
+      FocusProvider focus_provider,
+      VisibleStoriesProvider visible_stories_provider,
+      request<UserIntelligenceProvider> provider);
 };
 
 interface UserIntelligenceProvider {
@@ -42,18 +42,18 @@ interface UserIntelligenceProvider {
   // to put any and all services that are to be exposed to Agents and Modules.
   // Once our understanding of the needs of Agents/Modules is clearer, we
   // should break the bucket apart.
-  GetComponentIntelligenceServices@0(ComponentScope scope,
-                                     IntelligenceServices& services);
+  1: GetComponentIntelligenceServices(ComponentScope scope,
+                                     request<IntelligenceServices> services);
 
-  GetSuggestionProvider@1(SuggestionProvider& suggestion_provider);
+  2: GetSuggestionProvider(request<SuggestionProvider> suggestion_provider);
 
-  GetSpeechToText@2(speech.SpeechToText& speech_to_text);
+  3: GetSpeechToText(request<speech.SpeechToText> speech_to_text);
 
-  GetResolver@3(resolver.Resolver& resolver);
+  4: GetResolver(request<resolver.Resolver> resolver);
 
   // The |ComponentContext| is used to create agents and use message queues.
-  StartAgents@4(modular.ComponentContext user_intelligence_context);
+  5: StartAgents(ComponentContext user_intelligence_context);
 
   // A standard set of services provided to all agents at startup.
-  GetServicesForAgent(string url) => (component.ServiceList service_list);
+  6: GetServicesForAgent(string url) -> (component.ServiceList service_list);
 };

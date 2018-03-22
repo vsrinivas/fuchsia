@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // Module metadata that defined the runtime capabilities of a single module.
 struct ModuleManifest {
@@ -17,7 +17,7 @@ struct ModuleManifest {
   string verb;
 
   // Includes the name and types of entities for the nouns requires to execute |verb|.
-  array<NounConstraint>? noun_constraints;
+  vector<NounConstraint>? noun_constraints;
 
   // Identifies the pattern with which to compose this module with others.
   string? composition_pattern;

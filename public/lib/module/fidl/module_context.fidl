@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/app/fidl/service_provider.fidl";
-import "lib/user_intelligence/fidl/intelligence_services.fidl";
-import "lib/component/fidl/component_context.fidl";
-import "lib/story/fidl/link.fidl";
-import "lib/surface/fidl/container.fidl";
-import "lib/surface/fidl/surface.fidl";
-import "lib/module/fidl/module_controller.fidl";
-import "lib/daisy/fidl/daisy.fidl";
-import "lib/ui/views/fidl/view_token.fidl";
+// import "lib/app/fidl/service_provider.fidl";
+// import "lib/user_intelligence/fidl/intelligence_services.fidl";
+// import "lib/component/fidl/component_context.fidl";
+// import "lib/story/fidl/link.fidl";
+// import "lib/surface/fidl/container.fidl";
+// import "lib/surface/fidl/surface.fidl";
+// import "lib/module/fidl/module_controller.fidl";
+// import "lib/daisy/fidl/daisy.fidl";
+// import "lib/ui/views/fidl/view_token.fidl";
 
 // This interface is exposed to all modules in a story. It allows to
 // create Link instances and run Module instances.
@@ -29,7 +29,7 @@ interface ModuleContext {
   // It's up to the Module instance to ensure the name is unique
   // within the scope of itself. A null |name| is allowed for backwards
   // compatibility reasons. MI4-739
-  GetLink@0(string? name, Link& link);
+  1: GetLink(string? name, request<Link> link);
 
   // Like EmbedDaisy(), but the view of the newly started module is sent to the
   // story shell for display.
@@ -38,11 +38,11 @@ interface ModuleContext {
   // surfaces that the new module creates. If |surface_relation|
   // is null then a default relation is used.
   // TODO(thatguy): Rename to StartModuleDeprecated().
-  StartModule@1(string name, Daisy daisy,
-                component.ServiceProvider&? incoming_services,
-                ModuleController& module_controller,
+  2: StartModule(string name, Daisy daisy,
+                request<component.ServiceProvider>? incoming_services,
+                request<ModuleController> module_controller,
                 SurfaceRelation? surface_relation)
-                => (StartModuleStatus status);
+                -> (StartModuleStatus @status);
 
   // Starts a new Module instance. The Module to execute is identified
   // by the the contents of |daisy| and the Module instance
@@ -59,21 +59,21 @@ interface ModuleContext {
   // instance may implement |incoming_services|, if an interface
   // request is supplied.
   // TODO(thatguy): Rename to EmbedModule().
-  EmbedModule@2(string name, Daisy daisy,
-                component.ServiceProvider&? incoming_services,
-                ModuleController& module_controller,
-                mozart.ViewOwner& view_owner) => (StartModuleStatus status);
+  3: EmbedModule(string name, Daisy daisy,
+                request<component.ServiceProvider>? incoming_services,
+                request<ModuleController> module_controller,
+                request<views_v1_token.ViewOwner> view_owner) -> (StartModuleStatus @status);
 
   // DEPRECATED: Use EmbedDaisy().
-  StartModuleDeprecated@3(string name, string module_url, string? link_name,
-                          component.ServiceProvider&? incoming_services,
-                          ModuleController& module_controller,
-                          mozart.ViewOwner& view_owner);
+  4: StartModuleDeprecated(string name, string module_url, string? link_name,
+                          request<component.ServiceProvider>? incoming_services,
+                          request<ModuleController> module_controller,
+                          request<views_v1_token.ViewOwner> view_owner);
 
   // DEPRECATED: Use StartDaisy().
-  StartModuleInShellDeprecated@4(string name, string module_url, string? link_name,
-                                 component.ServiceProvider&? incoming_services,
-                                 ModuleController& module_controller,
+  5: StartModuleInShellDeprecated(string name, string module_url, string? link_name,
+                                 request<component.ServiceProvider>? incoming_services,
+                                 request<ModuleController> module_controller,
                                  SurfaceRelation? surface_relation,
                                  bool focused);
 
@@ -81,11 +81,11 @@ interface ModuleContext {
   // specifies a custom layout for them (aka container).
   //
   // There are multiple layouts specified, for different screen sizes etc.
-  StartContainerInShell@13(string container_name,
+  14: StartContainerInShell(string container_name,
                            SurfaceRelation parent_relation,
-                           array<ContainerLayout> layout,
-                           array<ContainerRelationEntry> relationships,
-                           array<ContainerNode> nodes);
+                           vector<ContainerLayout> layout,
+                           vector<ContainerRelationEntry> relationships,
+                           vector<ContainerNode> nodes);
 
   // Like StartModuleDeprecated(), used to embed the view of the requested module, but
   // also allows to obtain information of modules started transitively in the
@@ -109,29 +109,29 @@ interface ModuleContext {
   // the URL and Daisy variants of these calls should be merged.
   // TODO(thatguy): This doesn't appear to be used outside peridot tests.
   // Consider removing it if it's not in fact used.
-  EmbedModuleDeprecated@5(string name, string module_url, string? link_name,
-                          component.ServiceProvider&? incoming_services,
-                          ModuleController& module_controller,
+  6: EmbedModuleDeprecated(string name, string module_url, string? link_name,
+                          request<component.ServiceProvider>? incoming_services,
+                          request<ModuleController> module_controller,
                           EmbedModuleWatcher? embed_module_watcher,
-                          mozart.ViewOwner& view_owner);
+                          request<views_v1_token.ViewOwner> view_owner);
 
   // Gets the ComponentContext instance associated with this Module
   // instance. This ComponentContext instance is unique to this
   // particular Module instance.
-  GetComponentContext@6(ComponentContext& context_request);
+  7: GetComponentContext(request<ComponentContext> context_request);
 
   // Gets the IntelligenceServices service vendor associated with this
   // module.
-  GetIntelligenceServices@7(maxwell.IntelligenceServices& request);
+  8: GetIntelligenceServices(request<IntelligenceServices> @request);
 
   // Gets the id for this story which may be used to create a
   // suggestion proposal to resume this story.
-  GetStoryId@8() => (string story_id);
+  9: GetStoryId() -> (string story_id);
 
   // Requests that the current story and module gain focus.
   // HACK(zbowling): This is temporary and ripe for abuse by modules authors.
   // Callers should be limited, possibly by policy, from taking user focus.
-  RequestFocus@9();
+  10: RequestFocus();
 
   // The Module instance holding this handle to the ModuleContext
   // declares it's ready to run. The module context implementation
@@ -140,7 +140,7 @@ interface ModuleContext {
   // transitions.
   // TODO(vardhan): Deprecate this in favour of adding a return callback to
   // Module.Initialize().
-  Ready@10();
+  11: Ready();
 
   // The Module instance holding this handle to the ModuleContext
   // declares it's done and wants to be torn down. The module context
@@ -149,7 +149,7 @@ interface ModuleContext {
   // to decide whether it's appropriate to Stop() the module. (It
   // might be appropriate for the receiver to call Done() on its own
   // instead.) See ModuleState for all states and transitions.
-  Done@11();
+  12: Done();
 };
 
 // Implemented by a Module in order to receive information about modules started
@@ -170,7 +170,7 @@ interface EmbedModuleWatcher {
   //
   // TODO(mesch): Eventually we might expose the title of the embedded module,
   // which could be used to create a button to focus or unfocus it.
-  OnStartModuleInShell@0(EmbedModuleController module_controller);
+  1: OnStartModuleInShell(EmbedModuleController module_controller);
 };
 
 // Controls appearance in the story shell of modules that are transitively
@@ -180,14 +180,14 @@ interface EmbedModuleWatcher {
 // This is a subset of ModuleController.
 interface EmbedModuleController {
   // Requests that the module become the focused module in the story.
-  Focus@0();
+  1: Focus();
 
   // Requests that the module be hidden in the story.
-  Defocus@1();
+  2: Defocus();
 };
 
 // Communicates the status of the daisy resolution
 enum StartModuleStatus {
-  SUCCESS = 0,
-  NO_MODULES_FOUND = 1
+  SUCCESS = 0;
+  NO_MODULES_FOUND = 1;
 };

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module component;
+library modular;
 
-import "lib/app/fidl/service_provider.fidl";
-import "lib/network/fidl/network_error.fidl";
+// import "lib/app/fidl/service_provider.fidl";
+// import "lib/network/fidl/network_error.fidl";
 
 struct StringPair {
   string first;
@@ -22,13 +22,13 @@ struct ComponentFacet {
 
 // Represents the contents of the fuchsia:resources facet, resolved to this machine.
 struct ResourcesFacet {
-  array<StringPair> resource_urls;
+  vector<StringPair> resource_urls;
 };
 
 // Represents the contents of the fuchsia:application facet.
 struct ApplicationFacet {
   string resource;
-  array<string>? arguments;
+  vector<string>? arguments;
   string? runner;
   string? name;
 };
@@ -45,10 +45,10 @@ struct ComponentManifest {
 };
 
 interface ComponentResources {
-  GetResourceNames@0() => (array<string> resource_names);
-  GetResourceURLs@1() => (array<StringPair> resource_urls);
-  GetResource@2(string resource_name)
-      => (handle<vmo>? data, network.NetworkError? error);
+  1: GetResourceNames() -> (vector<string> resource_names);
+  2: GetResourceURLs() -> (vector<StringPair> resource_urls);
+  3: GetResource(string resource_name)
+      -> (handle<vmo>? data, network.NetworkError? error);
 };
 
 // Exposed by the component_manager.
@@ -64,8 +64,8 @@ interface ComponentIndex {
   // always be supplied when |component_manifest->resources| is set.
   //
   // If an error occurs a |NetworkError| will be returned.
-  GetComponent@0(string component_id)
-      => (ComponentManifest? component_manifest,
+  1: GetComponent(string component_id)
+      -> (ComponentManifest? component_manifest,
           ComponentResources? component_resources,
           network.NetworkError? error);
 
@@ -77,6 +77,6 @@ interface ComponentIndex {
   //
   // TODO(thatguy): |filter| should become a more descriptive query
   // representation when more than property equality is needed.
-  FindComponentManifests@1(array<StringPair> filter)
-      => (array<ComponentManifest> results);
+  2: FindComponentManifests(vector<StringPair> filter)
+      -> (vector<ComponentManifest> results);
 };

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/module/fidl/module_controller.fidl";
-import "lib/module/fidl/module_data.fidl";
-import "lib/daisy/fidl/daisy.fidl";
-import "lib/story/fidl/link.fidl";
-import "lib/story/fidl/story_info.fidl";
-import "lib/story/fidl/story_state.fidl";
-import "lib/surface/fidl/surface.fidl";
-import "lib/ui/views/fidl/view_token.fidl";
+// import "lib/module/fidl/module_controller.fidl";
+// import "lib/module/fidl/module_data.fidl";
+// import "lib/daisy/fidl/daisy.fidl";
+// import "lib/story/fidl/link.fidl";
+// import "lib/story/fidl/story_info.fidl";
+// import "lib/story/fidl/story_state.fidl";
+// import "lib/surface/fidl/surface.fidl";
+// import "lib/ui/views/fidl/view_token.fidl";
 
 // Used by the clients of StoryProvider (UserShell) to interact with a single
 // story. Created by StoryProvider.
@@ -20,11 +20,11 @@ import "lib/ui/views/fidl/view_token.fidl";
 // does not change.
 interface StoryController {
   // Gets information associated with the story.
-  GetInfo@0() => (StoryInfo info, StoryState state);
+  1: GetInfo() -> (StoryInfo info, StoryState state);
 
   // Stores extra information associated with the story, like title, color,
   // etc. Available in the |extra| field in StoryInfo.
-  SetInfoExtra@1(string name, string value) => ();
+  2: SetInfoExtra(string name, string value) -> ();
 
   // Runs the story controlled by this |StoryController| instance if not yet
   // running or requested to start, else does nothing. |view_owner| is an
@@ -32,14 +32,14 @@ interface StoryController {
   // story is already running, the view owner request is dropped. If Stop()
   // requests are pending when this request is issued, the request is queued
   // until the Stop() requests complete.
-  Start@2(mozart.ViewOwner& view_owner);
+  3: Start(request<views_v1_token.ViewOwner> view_owner);
 
   // Stops this story if it is running, else does nothing. Returns when the
   // story is stopped.
-  Stop@3() => ();
+  4: Stop() -> ();
 
   // Registers a watcher for changes of the story state.
-  Watch@4(StoryWatcher watcher);
+  5: Watch(StoryWatcher watcher);
 
   // Adds a module matching the provided Daisy to the story.
   //
@@ -55,7 +55,7 @@ interface StoryController {
   // |daisy| is the daisy that will be used for module resolution.
   // |surface_relation| is used to determine how the started module will be
   //                    presented.
-  AddModule@11(array<string>? parent_module_path, string module_name,
+  12: AddModule(vector<string>? parent_module_path, string module_name,
                Daisy daisy, SurfaceRelation? surface_relation);
 
   // Adds and starts a module in the story.
@@ -79,7 +79,7 @@ interface StoryController {
   // A ModuleController for the newly added module can be obtained through
   // GetModuleController().
   // TODO(thatguy): Add a Daisy variant of this call, deprecate this one.
-  AddModuleDeprecated@5(array<string>? parent_module_path, string module_name,
+  6: AddModuleDeprecated(vector<string>? parent_module_path, string module_name,
                         string module_url, string link_name,
                         SurfaceRelation? surface_relation);
 
@@ -92,10 +92,10 @@ interface StoryController {
   //
   // Notifications for changes to this list are provided through
   // StoryModulesWatcher.OnNewModule(), if a watcher is supplied in the call.
-  GetActiveModules@6(StoryModulesWatcher? watcher) => (array<ModuleData> module_data);
+  7: GetActiveModules(StoryModulesWatcher? watcher) -> (vector<ModuleData> module_data);
 
   // Lists all known modules in the story, as recorded in the ledger.
-  GetModules@7() => (array<ModuleData> module_data);
+  8: GetModules() -> (vector<ModuleData> module_data);
 
   // Obtains a ModuleController for the module at the given path. If no module
   // exists at that path, the request is dropped. This is mostly to allow to
@@ -104,7 +104,7 @@ interface StoryController {
   // TODO(mesch): This is EXPERIMENTAL. We want something like this for story
   // crafting, but giving the same module controller to the story crafting
   // client as to the parent module or story runner might not be right yet.
-  GetModuleController@8(array<string> module_path, ModuleController& request);
+  9: GetModuleController(vector<string> module_path, request<ModuleController> @request);
 
   // Lists the active links in the story. Active links are those in memory with
   // connections to modules and watchers.
@@ -115,7 +115,7 @@ interface StoryController {
   //
   // Notifications for changes to this list are supplied through
   // StoryLinksWatcher.OnNewLink(), if a watcher is supplied in the call.
-  GetActiveLinks@9(StoryLinksWatcher? watcher) => (array<LinkPath> link_data);
+  10: GetActiveLinks(StoryLinksWatcher? watcher) -> (vector<LinkPath> link_data);
 
   // Gets a connection to the named Link in the story.
   //
@@ -135,19 +135,19 @@ interface StoryController {
   //
   // For the links leading to top level modules (specifically for the "root"
   // link to the root module), the |module_path| is empty or null.
-  GetLink@10(array<string>? module_path, string link_name, Link& link);
+  11: GetLink(vector<string>? module_path, string link_name, request<Link> link);
 };
 
 // Implemented by the client calling StoryController.Watch().
 interface StoryWatcher {
   // Called with the current state right after registration, and subsequently
   // when the state changes.
-  OnStateChange@0(StoryState new_state);
+  1: OnStateChange(StoryState new_state);
 
   // Called when a module is added to a story.
   //
   // TODO(mesch): Remove, use StoryModulesWatcher instead.
-  OnModuleAdded@1(ModuleData module_data);
+  2: OnModuleAdded(ModuleData module_data);
 };
 
 // Implemented by the client calling StoryController.GetActiveModules().
@@ -159,13 +159,13 @@ interface StoryModulesWatcher {
   //
   // This is EXPERIMENTAL. We certainly can make this simpler once we know it is
   // what we need.
-  OnNewModule@0(ModuleData module_data);
+  1: OnNewModule(ModuleData module_data);
 
   // Called when a module becomes inactive in the story, i.e. when the module
   // controller is destroyed because its parent or the story runner called
   // Stop() for it. This is not called when modules are torn down because the
   // story as a whole is stopped.
-  OnStopModule@1(ModuleData module_data);
+  2: OnStopModule(ModuleData module_data);
 };
 
 // Implemented by the client calling StoryController.GetActiveLinks().
@@ -183,5 +183,5 @@ interface StoryLinksWatcher {
   //
   // This is EXPERIMENTAL. We certainly can make this simpler once we know it is
   // what we need.
-  OnNewLink@0(LinkPath link_path);
+  1: OnNewLink(LinkPath link_path);
 };

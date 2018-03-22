@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // A dummy service that allows applications that can run both as
 // modules in a story and standalone from the shell to determine

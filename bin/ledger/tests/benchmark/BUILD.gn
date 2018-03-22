@@ -32,7 +32,7 @@ executable("launch_benchmark") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",

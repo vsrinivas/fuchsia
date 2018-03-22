@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 [DartPackage="cloud_provider_firebase"]
-module cloud_provider_firebase;
+library cloud_provider_firebase;
 
-import "lib/ledger/fidl/ledger.fidl";
-import "lib/cloud_provider/fidl/cloud_provider.fidl";
-import "lib/auth/fidl/token_provider.fidl";
+// import "lib/ledger/fidl/ledger.fidl";
+// import "lib/cloud_provider/fidl/cloud_provider.fidl";
+// import "lib/auth/fidl/token_provider.fidl";
 
 // Configuration to use when connecting to the Firebase server.
 struct Config {
@@ -26,9 +26,9 @@ interface Factory {
   // |config| configuration
   // |token_provider| is used to get the appropriate auth tokens
   //     associated with user for whom the cloud provider is running.
-  GetCloudProvider@0(
+  1: GetCloudProvider(
                 Config config,
                 modular.auth.TokenProvider token_provider,
-                cloud_provider.CloudProvider& cloud_provider)
-      => (cloud_provider.Status status);
+                cloudrequest<_provider.CloudProvider> cloud_provider)
+      -> (cloud_provider.Status status);
 };

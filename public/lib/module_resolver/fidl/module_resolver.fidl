@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/daisy/fidl/daisy.fidl";
-import "lib/story/fidl/create_chain.fidl";
-import "lib/story/fidl/create_link.fidl";
-import "lib/module/fidl/link_path.fidl";
-import "lib/module/fidl/module_manifest.fidl";
+// import "lib/daisy/fidl/daisy.fidl";
+// import "lib/story/fidl/create_chain.fidl";
+// import "lib/story/fidl/create_link.fidl";
+// import "lib/module/fidl/link_path.fidl";
+// import "lib/module/fidl/module_manifest.fidl";
 
 [ServiceName="modular.ModuleResolver"]
 interface ModuleResolver {
@@ -23,7 +23,7 @@ interface ModuleResolver {
   // For detailed information on the resolution process, see
   // docs/module_resolution.md.
   // TODO(thatguy): Make |scoring_info| required, when we do ranking.
-  FindModules@0(ResolverQuery query, ResolverScoringInfo? scoring_info) =>
+  1: FindModules(ResolverQuery query, ResolverScoringInfo? scoring_info) ->
       (FindModulesResult result);
 };
 
@@ -48,7 +48,7 @@ struct ResolverQuery {
   // exactly that looks like.
   string? url;
 
-  array<ResolverNounConstraintEntry>? noun_constraints;
+  vector<ResolverNounConstraintEntry>? noun_constraints;
 };
 
 union ResolverNounConstraint {
@@ -61,7 +61,7 @@ union ResolverNounConstraint {
   string json;
 
   // A list of Entity types.
-  array<string> entity_type;
+  vector<string> entity_type;
 
   // Information about the state of a Link at the time this query is made.
   // TODO(thatguy): Collapse the contents of this into |entity_type| as well,
@@ -93,10 +93,11 @@ struct ResolverLinkInfo {
 //
 // This may become a service in the future.
 struct ResolverScoringInfo {
+  uint32 dummy; // FIDL2 does not allow empty structs
 };
 
 struct FindModulesResult {
-  array<ModuleResolverResult> modules;
+  vector<ModuleResolverResult> modules;
 };
 
 struct ModuleResolverResult {
@@ -112,4 +113,5 @@ struct ModuleResolverResult {
 };
 
 struct ResolutionDebugInfo {
+  uint32 dummy; // FIDL2 does not allow empty structs
 };

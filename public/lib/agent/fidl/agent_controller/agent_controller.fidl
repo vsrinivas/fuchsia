@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // This interface is used by the caller of ComponentContext::ConnectToAgent() to
 // tell the framework that it is still interested in keeping this Agent running.

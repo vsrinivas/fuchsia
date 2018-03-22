@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/story/fidl/link.fidl";
-import "lib/module/fidl/module_context.fidl";
+// import "lib/story/fidl/link.fidl";
+// import "lib/module/fidl/module_context.fidl";
 
 // This service is implemented by an application that is meant to be run under a
 // ModuleContext in a Story.
@@ -50,6 +50,6 @@ interface Module {
   // ModuleContext.Done() signals this module requests to be stopped.
   //
   // TODO(vardhan): Move outgoing_services as getter into ModuleContext.
-  Initialize@0(ModuleContext module_context,
-               component.ServiceProvider&? outgoing_services);
+  1: Initialize(ModuleContext module_context,
+               request<component.ServiceProvider>? outgoing_services);
 };

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/ui/views/fidl/view_token.fidl";
-import "lib/surface/fidl/container.fidl";
-import "lib/surface/fidl/surface.fidl";
-import "lib/module/fidl/module_manifest.fidl";
+// import "lib/ui/views/fidl/view_token.fidl";
+// import "lib/surface/fidl/container.fidl";
+// import "lib/surface/fidl/surface.fidl";
+// import "lib/module/fidl/module_manifest.fidl";
 
 // This interface is implemented by a story shell. Dependencies are passed to it
 // in Initialize() on startup. The story shell is also expected to implement
@@ -21,41 +21,41 @@ import "lib/module/fidl/module_manifest.fidl";
 // by the user runner being terminated, or by the system shutting down.
 [ServiceName="modular.StoryShell"]  // Created by story shell applications.
 interface StoryShell {
-  Initialize@0(StoryContext story_context);
+  1: Initialize(StoryContext story_context);
 
   // Registers a new view to be displayed by the StoryShell. More context that
   // allows the story shell to decide how to layout will be added later. Also,
   // interface to influence life cycle and focus is obviously missing.
-  ConnectView@1(mozart.ViewOwner owner, string view_id, string parent_id,
+  2: ConnectView(views_v1_token.ViewOwner owner, string view_id, string parent_id,
                 SurfaceRelation? surface_relation, ModuleManifest? module_manifest);
 
   // Focuses the view with view_id, bringing it to the foreground. Optionally
   // provide a relative_view_id to focus relative to another view instead of
   // absolutely.
-  FocusView@2(string view_id, string? relative_view_id);
+  3: FocusView(string view_id, string? relative_view_id);
 
   // Defocuses the view with view_id, dismissing it to the background.
-  DefocusView@3(string view_id) => ();
+  4: DefocusView(string view_id) -> ();
 
   // Adds a container, with corresponding container layouts to the story.
   // Optionally provide a parent_id to connect to, if omitted adds the
   // Container node as the root of a new tree in the Story
-  AddContainer@4(string containerName, string? parentId,
+  5: AddContainer(string containerName, string? parentId,
                   SurfaceRelation relation, // relation of container to parent
-                  array<ContainerLayout> layout,
-                  array<ContainerRelationEntry> relationships,
-                  array<ContainerView> views);
+                  vector<ContainerLayout> layout,
+                  vector<ContainerRelationEntry> relationships,
+                  vector<ContainerView> views);
 };
 
 // Maps the node_name to the specific mozart view resulting from resolving and
 // launching the daisy specified in a Container node
 struct ContainerView {
-  // Name by which this container node is referenced in container layout and 
+  // Name by which this container node is referenced in container layout and
   // surface relationship specifications (cf. container.fidl)
   string node_name;
 
   // The new view resolved from the daisy corresponding to node_name
-  mozart.ViewOwner owner;
+  views_v1_token.ViewOwner owner;
 };
 
 // This interface provides the StoryShell instance with everything it needs to

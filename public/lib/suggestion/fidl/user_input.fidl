@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
 enum InputType {
-  TEXT,
-  SPEECH
+  TEXT = 0;
+  SPEECH = 1;
 };
 
 struct UserInput {

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/story/fidl/story_info.fidl";
+// import "lib/story/fidl/story_info.fidl";
 
 // Internal data that user runner keeps about stories. Some of them
 // are exposed to the UserShell, which are kept in StoryInfo.
@@ -41,7 +41,7 @@ struct StoryContextEntry {
 struct StoryContextLog {
   // The context as obtained from the maxwell Context service. Cf.
   // //lib/context/fidl/context_reader.fidl
-  array<StoryContextEntry> context;
+  vector<StoryContextEntry> context;
 
   // Where the context was captured.
   string device_id;

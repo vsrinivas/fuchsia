@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
-import "context_reader.fidl";
-import "context_writer.fidl";
-import "debug.fidl";
-import "lib/user_intelligence/fidl/scope.fidl";
+// import "context_reader.fidl";
+// import "context_writer.fidl";
+// import "debug.fidl";
+// import "lib/user_intelligence/fidl/scope.fidl";
 
 // Top-level service provider interface that vends services to read and write
 // context data.
 [ServiceName="maxwell.ContextEngine"]
 interface ContextEngine {
-  GetReader@0(ComponentScope client_info, ContextReader& request);
+  1: GetReader(ComponentScope client_info, request<ContextReader> @request);
 
-  GetWriter@1(ComponentScope client_info, ContextWriter& request);
+  2: GetWriter(ComponentScope client_info, request<ContextWriter> @request);
 
-  GetContextDebug@2(ContextDebug& request);
+  3: GetContextDebug(request<ContextDebug> @request);
 };

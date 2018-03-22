@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // Service for modules to make calls to remote devices.
 [ServiceName="modular.RemoteInvoker"]
@@ -14,5 +14,5 @@ interface RemoteInvoker {
 
   // Returns the page_id of the Ledger page written to. If the page_id exists, the call was successful.
   // TODO(planders) Find a better way to determine whether call was successful.
-  StartOnDevice@0(string device_id, string story_id) => (string? page_id);
+  1: StartOnDevice(string device_id, string story_id) -> (string? page_id);
 };

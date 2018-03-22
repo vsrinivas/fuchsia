@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
 // ComponentActionLog allows a component to log actions it implements as they
 // performed by the user.
 interface ComponentActionLog {
-  LogAction@0(string method, string parameters);
+  1: LogAction(string method, string parameters);
 };

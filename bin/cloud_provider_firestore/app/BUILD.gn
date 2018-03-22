@@ -14,10 +14,10 @@ executable("app") {
   deps = [
     ":lib",
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib/lifecycle/fidl",
+    "//peridot/public/lib:modular",
     "//zircon/public/lib/trace-provider",
   ]
 }
@@ -40,7 +40,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firestore/fidl",
     "//peridot/bin/cloud_provider_firestore/firestore",
@@ -73,7 +73,7 @@ source_set("unittests") {
     ":lib",
     "//garnet/lib/callback",
     "//garnet/lib/gtest",
-    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl:fxl_printers",
     "//peridot/bin/cloud_provider_firestore/app/testing",
     "//peridot/bin/cloud_provider_firestore/firestore/testing",

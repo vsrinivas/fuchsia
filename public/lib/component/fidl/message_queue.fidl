@@ -2,27 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // Message queue is a named, persistant FIFO data structure that can be created
 // retrieved and deleted from ComponentContext service.
 interface MessageQueue {
   // Get a token associated with this queue. It can be used by other components
   // to send messages to this queue.
-  GetToken@0() => (string queue_token);
+  1: GetToken() -> (string queue_token);
 
   // Registers a receiver for this MessageQueue. MessageReader.OnReceive is
   // called when there is an unread message. There can only be one receiver
   // registered for a message queue at any given time. Registering a new
   // receiver replaces the previous one.
-  RegisterReceiver@1(MessageReader receiver);
+  2: RegisterReceiver(MessageReader receiver);
 };
 
 // Used to send a message to a particular queue and obtained from
 // ComponentContext::GetMessageSender using queue token of the MessageQueue to
 // send |message| to.
 interface MessageSender {
-  Send@0(string message);
+  1: Send(string message);
 };
 
 // A client may implement and register a MessageReader interface using
@@ -37,5 +37,5 @@ interface MessageReader {
   // next one is sent when available. If a client's OnReceive() does not respond
   // before the MessageReader interface is closed, then a future MessageReader
   // for this message queue will receive the unacknowledged message again.
-  OnReceive@0(string message) => ();
+  1: OnReceive(string message) -> ();
 };

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/public/lib/fidl/fidl.gni")
+import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 executable("story_info") {
   output_name = "acquirers/story_info_main"
@@ -28,17 +28,17 @@ executable("story_info") {
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/ledger_client:storage",
     "//peridot/lib/rapidjson",
-    "//peridot/public/lib/agent/fidl",
+    "//peridot/public/lib:modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib:maxwell",
     "//peridot/public/lib/entity/cpp",
     "//peridot/public/lib/entity/cpp:json",
-    "//peridot/public/lib/lifecycle/fidl",
-    "//peridot/public/lib/story/fidl",
-    "//peridot/public/lib/user/fidl",
-    "//peridot/public/lib/user_intelligence/fidl",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:maxwell",
     "//third_party/rapidjson",
   ]
 }
@@ -49,8 +49,8 @@ fidl("initializer") {
   ]
 
   deps = [
-    "//peridot/public/lib/context/fidl",
-    "//peridot/public/lib/story/fidl",
-    "//peridot/public/lib/user/fidl:focus",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:modular",
+    "//peridot/public/lib:modular",
   ]
 }

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library module_manifest_source;
 
 [ServiceName="modular.PushPackageIndexer"]
 interface PushPackageIndexer {
-  IndexManifest@0(string package_name, string module_manifest_path);
+  1: IndexManifest(string package_name, string module_manifest_path);
 };

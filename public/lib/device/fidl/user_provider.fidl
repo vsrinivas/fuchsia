@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
-import "lib/app/fidl/service_provider.fidl";
-import "lib/auth/fidl/account/account.fidl";
-import "lib/config/fidl/config.fidl";
-import "lib/ui/views/fidl/view_token.fidl";
+// import "lib/app/fidl/service_provider.fidl";
+// import "lib/auth/fidl/account/account.fidl";
+// import "lib/config/fidl/config.fidl";
+// import "lib/ui/views/fidl/view_token.fidl";
 
 // Given by the |DeviceRunner| to the |DeviceShell| at Initialize() so the
 // |DeviceShell| can get information about the users of this device from the
@@ -25,23 +25,23 @@ interface UserProvider {
   //
   // |account| is NULL if there was an error during identification and
   // |error_code| is set.
-  AddUser@0(auth.IdentityProvider identity_provider) =>
-      (auth.Account? account, string? error_code);
+  1: AddUser(modular_auth.IdentityProvider identity_provider) ->
+      (modular_auth.Account? account, string? error_code);
 
   // Removes information of a user from the local user database.
   //
   // |account_id| is received from either AddUser() or PreviousUsers().
-  RemoveUser@1(string account_id) => (string? error_code);
+  2: RemoveUser(string account_id) -> (string? error_code);
 
   // Uses the credentials provided in AddUser() to start a user session. This
   // would mean syncing with the user's ledger instance and displaying a user
   // shell with all of the user's stories.
   // TODO(alhaad): In the future, we want to protect Login() with a password,
   // Android lock pattern, etc.
-  Login@2(UserLoginParams user_login_params);
+  3: Login(UserLoginParams user_login_params);
 
   // List of all users who have authenticated to this device in the past.
-  PreviousUsers@3() => (array<auth.Account> accounts);
+  4: PreviousUsers() -> (vector<modular_auth.Account> accounts);
 };
 
 // Used to specify arguments to log into a user session.
@@ -52,14 +52,14 @@ struct UserLoginParams {
 
   // |view_owner| is the view given to the |UserShell| started for the newly
   // logged-in user.
-  mozart.ViewOwner& view_owner;
+  request<views_v1_token.ViewOwner> view_owner;
 
   // Services provided by the |DeviceShell| that can be offered to the
   // |UserShell| that is being logged into.
   component.ServiceProvider? services;
 
   // If login fails, |user_controller| is closed.
-  UserController& user_controller;
+  request<UserController> user_controller;
 
   // Configuration of the user shell to run. It can be NULL which means that
   // this configuration is picked up from command-line arguments to device
@@ -93,15 +93,15 @@ interface UserController {
   // Logs out a user by tearing down its user runner. Returns once the
   // UserRunner has been torn down. This also triggers OnLogout() for
   // |UserWatcher|s.
-  Logout@0() => ();
+  1: Logout() -> ();
 
   // Registers a watcher for the user's life cycle events.
-  Watch@1(UserWatcher watcher);
+  2: Watch(UserWatcher watcher);
 
   // Stops the currently running user shell and starts the one specified by
   // |user_shell_config|. This operation stops all stories before starting the
   // new shell.
-  SwapUserShell@2(AppConfig user_shell_config) => ();
+  3: SwapUserShell(AppConfig user_shell_config) -> ();
 };
 
 // Implemented by a |DeviceShell| implementation in order to receive
@@ -113,5 +113,5 @@ interface UserWatcher {
   //
   // TODO(vardhan): Make a guarantee that once OnLogout() is invoked, it is
   // possible to UserProvider.Login() the same user.
-  OnLogout@0();
+  1: OnLogout();
 };

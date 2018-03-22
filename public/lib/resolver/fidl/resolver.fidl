@@ -8,14 +8,14 @@
 // Please see public/lib/module_resolver/fidl
 //////////////////////////////////////////////////////////////////////////
 
-module resolver;
+library resolver;
 
 [ServiceName="resolver"]
 interface Resolver {
   // Find components whose module facets match the specified |contract| and can
   // accept the optionally-specified |data|. The |results| are ordered from
   // most relevant to least relevant.
-  ResolveModules@0(string contract, string? json_data) => (array<ModuleInfo> modules);
+  1: ResolveModules(string contract, string? json_data) -> (vector<ModuleInfo> modules);
 };
 
 struct ModuleInfo {

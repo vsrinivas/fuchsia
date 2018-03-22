@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.c
 
-module maxwell;
+library modular;
 
-import "lib/daisy/fidl/daisy.fidl";
-import "lib/suggestion/fidl/suggestion_display.fidl";
-import "lib/surface/fidl/surface.fidl";
+// import "lib/daisy/fidl/daisy.fidl";
+// import "lib/suggestion/fidl/suggestion_display.fidl";
+// import "lib/surface/fidl/surface.fidl";
 
 // NOTE: Some future-thinking features are represented here and commented out
 // to give a sense for the likely future direction of this service, and are left
@@ -19,21 +19,21 @@ struct Proposal {
 
   // The Proposal is only considered valid if all of |preconditions| are
   // evaluated to true.
-  // array<Precondition> preconditions;
+  // vector<Precondition> preconditions;
 
   // The Proposal is considered expired if *any* of the |expiry_conditions|
   // are true.
-  // array<ExpiryCondition> expiry_conditions;
+  // vector<ExpiryCondition> expiry_conditions;
 
   // The list of actions to take when the user selects the associated
   // Suggestion.
-  array<Action> on_selected;
+  vector<Action> on_selected;
 
   // An optional hint about the probability that this proposal would be chosen
   // if it were the only proposal presented to the user. A confidence of 0.0
   // indicates no hint. The confidence assigned by the system may be subject to
   // other considerations such as performance metrics.
-  float confidence = 0.0;
+  float32 confidence = 0.0;
 
   SuggestionDisplay display;
 };
@@ -105,10 +105,10 @@ struct AddModuleToStory {
   // Module instance which is already in the story and to which the added module
   // is to be associated. |link_name| then refers to a link emanating from that
   // module. If empty, the module is added as a root module to the story.
-  array<string> module_path;
+  vector<string> module_path;
 
   // Advise the framework on how to layout the newly added module.
-  modular.SurfaceRelation surface_relation;
+  SurfaceRelation surface_relation;
 };
 
 // Adds a module from a Daisy to an existing story.
@@ -122,10 +122,10 @@ struct AddModule {
   string module_name;
 
   // The Daisy that is to be added to the story.
-  modular.Daisy daisy;
+  Daisy daisy;
 
   // The relation to use when adding a module as a result of resolving the Daisy.
-  modular.SurfaceRelation surface_relation;
+  SurfaceRelation surface_relation;
 };
 
 // An action that calls back to the proposal publisher to be performed.
@@ -133,5 +133,5 @@ struct AddModule {
 // This can be used to defer expensive RPCs until the suggestion has been
 // selected.
 interface CustomAction {
-  Execute@0() => (array<Action>? actions);
+  1: Execute() -> (vector<Action?>? actions);
 };

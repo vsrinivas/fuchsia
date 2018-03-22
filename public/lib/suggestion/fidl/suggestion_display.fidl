@@ -2,25 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
-import "lib/images/fidl/encoded_image.fidl";
+// import "lib/images/fidl/encoded_image.fidl";
 
 enum SuggestionImageType {
-  PERSON,
-  OTHER
+  PERSON = 0;
+  OTHER = 1;
 };
 
 enum AnnoyanceType {
-  NONE,
-  PEEK,
-  INTERRUPT
+  NONE = 0;
+  PEEK = 1;
+  INTERRUPT = 2;
 };
 
 // Information for the main image of the Suggestion.
 struct SuggestionDisplayImage {
   // The image as a vmo.
-  ui.gfx.EncodedImage image;
+  images.EncodedImage image;
 
   // Information about the content contained in the image
   SuggestionImageType image_type;
@@ -43,7 +43,7 @@ struct SuggestionDisplay {
   uint32 color;
 
   // Optional list of icons that can be displayed with the Suggestion
-  array<SuggestionDisplayImage>? icons;
+  vector<SuggestionDisplayImage>? icons;
 
   // Optional image to display as part of the Suggestion
   SuggestionDisplayImage? image;

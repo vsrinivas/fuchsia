@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // This file has interfaces for 2 pieces of information: (1) The story
 // that is currently in focus and (2) stories that are visible to the
@@ -22,15 +22,15 @@ module modular;
 // Implemented by user runner. Given to user shell in UserShell.Initialize().
 interface FocusController {
   // Sets the focus on this device.
-  Set@0(string? focused_story_id);
-  WatchRequest@1(FocusRequestWatcher watcher);
+  1: Set(string? focused_story_id);
+  2: WatchRequest(FocusRequestWatcher watcher);
 };
 
 // Implemented by user shell. OnFocusRequest() gets called whenever there
 // is a new request to change focus on this device. Requests can be
 // made via FocusProvider.Request().
 interface FocusRequestWatcher {
-  OnFocusRequest@0(string story_id);
+  1: OnFocusRequest(string story_id);
 };
 
 // Implemented by user runner. Given to user shell in
@@ -38,10 +38,10 @@ interface FocusRequestWatcher {
 // maxwell.Launcher.Initialize(). Focus is persisted on the ledger.
 interface FocusProvider {
  // Returns the stories that are focused across all devices.
- Query@0() => (array<FocusInfo> focused_stories);
+ 1: Query() -> (vector<FocusInfo> focused_stories);
 
  // Watches for change in focus on any of the user's devices.
- Watch@1(FocusWatcher watcher);
+ 2: Watch(FocusWatcher watcher);
 
  // Requests user shell to change focus on this device. If user shell
  // responds to this request, focus shall be taken away from
@@ -51,15 +51,15 @@ interface FocusProvider {
  //
  // TODO(alhaad): Consider making this available for remote devices as
  // well.
- Request@2(string? story_id);
+ 3: Request(string? story_id);
 
- Duplicate@3(FocusProvider& provider);
+ 4: Duplicate(request<FocusProvider> provider);
 };
 
 // Implemented by anyone who is interested in getting updates when focus
 // changes.
 interface FocusWatcher {
-  OnFocusChange@0(FocusInfo? focus_info);
+  1: OnFocusChange(FocusInfo? focus_info);
 };
 
 // Specifies the focused story of a device.
@@ -78,7 +78,7 @@ struct FocusInfo {
 // Implemented by user runner. Given to user shell in
 // UserShell.Initialize().
 interface VisibleStoriesController {
-  Set@0(array<string>? visible_story_ids);
+  1: Set(vector<string>? visible_story_ids);
 };
 
 // Implemented by user runner. Given to Maxwell in
@@ -87,16 +87,16 @@ interface VisibleStoriesController {
 [ServiceName="modular.VisibleStoriesProvider"]  // Maxwell apps request this from environment.
 interface VisibleStoriesProvider {
   // Returns the |story_ids| that are currently visible.
-  Query@0() => (array<string> story_id);
+  1: Query() -> (vector<string> story_id);
 
   // Watches for change in visible stories on this device.
-  Watch@1(VisibleStoriesWatcher watcher);
+  2: Watch(VisibleStoriesWatcher watcher);
 
-  Duplicate@2(VisibleStoriesProvider& provider);
+  3: Duplicate(request<VisibleStoriesProvider> provider);
 };
 
 // Implemented by anyone (maxwell) who is interested in getting updates when
 // stories that are currently visible change.
 interface VisibleStoriesWatcher {
-  OnVisibleStoriesChange@0(array<string>? visible_story_ids);
+  1: OnVisibleStoriesChange(vector<string>? visible_story_ids);
 };

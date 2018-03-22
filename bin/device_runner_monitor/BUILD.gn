@@ -32,6 +32,6 @@ executable("bin") {
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib/device/fidl",
+    "//peridot/public/lib:modular",
   ]
 }

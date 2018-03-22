@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
-import "metadata.fidl";
-import "value.fidl";
-import "value_type.fidl";
+// import "metadata.fidl";
+// import "value.fidl";
+// import "value_type.fidl";
 
 // Exposes access to Context values, each of which are explicitly named by a
 // 'topic'. Each topic has a known/pre-defined value representation.
@@ -23,10 +23,10 @@ interface ContextReader {
   //
   // The subscription will continue to stay active as long as the |listener|
   // handle is not closed.
-  Subscribe@0(ContextQuery query, ContextListener listener);
+  1: Subscribe(ContextQuery query, ContextListener listener);
 
   // Returns the current context state matching |query|.
-  Get@1(ContextQuery query) => (ContextUpdate update);
+  2: Get(ContextQuery query) -> (ContextUpdate update);
 };
 
 interface ContextListener {
@@ -39,18 +39,18 @@ interface ContextListener {
   // updates would not be propagated. If this becomes an issue, allowing
   // clients to opt for delta-updates instead of state snapshots would suffice,
   // albeit also add some complexity to client implementations.
-  OnContextUpdate@0(ContextUpdate update);
+  1: OnContextUpdate(ContextUpdate update);
 };
 
 struct ContextUpdateEntry {
   string key;
-  array<ContextValue> value;
+  vector<ContextValue> value;
 };
 
 struct ContextUpdate {
   // A list of ContextValue for each key in |ContextQuery.selector|. An empty
   // list means no values matched the given ContextSelector.
-  array<ContextUpdateEntry> values;
+  vector<ContextUpdateEntry> values;
 };
 
 struct ContextQueryEntry {
@@ -62,7 +62,7 @@ struct ContextQuery {
   // A map of ContextSelector structs. The keys are specified by the client.
   // Each key gets a corresponding entry in |ContextUpdate.values| when it is
   // generated in response to this query.
-  array<ContextQueryEntry> selector;
+  vector<ContextQueryEntry> selector;
 };
 
 struct ContextSelector {

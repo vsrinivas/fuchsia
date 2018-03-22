@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular;
 
 // Agents use this interface to create Entity references that can subsequently
 // be dereferenced into an |Entity| interface using |EntityResolver|.
@@ -21,5 +21,5 @@ interface EntityReferenceFactory {
   // |cookie| should uniquely identify the |Entity| within the scope of the
   // calling entity provider. For example, it may be used as the primary key
   // value for a database.
-   CreateReference@0(string cookie) => (string entity_reference);
+   1: CreateReference(string cookie) -> (string entity_reference);
 };

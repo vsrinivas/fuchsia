@@ -41,7 +41,7 @@ executable("bin") {
     ":user_intelligence_provider",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
-    "//peridot/public/lib/user_intelligence/fidl",
+    "//peridot/public/lib:maxwell",
     "//third_party/rapidjson",
   ]
 }
@@ -72,13 +72,13 @@ source_set("user_intelligence_provider") {
     "//garnet/public/lib/network/fidl",
     "//peridot/bin/acquirers/story_info:initializer",
     "//peridot/lib/util:rate_limited_retry",
-    "//peridot/public/lib/action_log/fidl",
-    "//peridot/public/lib/context/fidl",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
     "//peridot/public/lib/resolver/fidl",
-    "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/suggestion/fidl:debug",
-    "//peridot/public/lib/user_intelligence/fidl",
-    "//peridot/public/lib/user_intelligence/fidl:scope",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
   ]
 }
 
@@ -89,11 +89,11 @@ source_set("intelligence_services") {
   ]
 
   deps = [
-    "//peridot/public/lib/action_log/fidl",
-    "//peridot/public/lib/context/fidl",
-    "//peridot/public/lib/suggestion/fidl",
-    "//peridot/public/lib/user_intelligence/fidl",
-    "//peridot/public/lib/user_intelligence/fidl:scope",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:maxwell",
   ]
 }
 

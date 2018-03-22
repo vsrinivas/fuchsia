@@ -2,40 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
-import "proposal.fidl";
-import "user_input.fidl";
+// import "proposal.fidl";
+// import "user_input.fidl";
 
 // Debug service provider interface that provides the ability to listen to
 // the internal state of the suggestion service.
 [ServiceName="maxwell.SuggestionDebug"]
 interface SuggestionDebug {
-  WatchAskProposals@0(AskProposalListener listener);
-  WatchInterruptionProposals@1(InterruptionProposalListener listener);
-  WatchNextProposals@2(NextProposalListener listener);
+  1: WatchAskProposals(AskProposalListener listener);
+  2: WatchInterruptionProposals(InterruptionProposalListener listener);
+  3: WatchNextProposals(NextProposalListener listener);
 
   // Waits until Suggestion Engine has reached a steady state such that no
   // further activity will occur unless acted upon from the outside.
-  WaitUntilIdle@3() => ();
+  4: WaitUntilIdle() -> ();
 };
 
 interface AskProposalListener {
   // Receives the current ask query and ranked proposals
-  OnAskStart@0(string query, array<ProposalSummary> proposals);
+  1: OnAskStart(string query, vector<ProposalSummary> proposals);
   // Receives notification of query completion or dismissal.
   // |selected_proposal| is null if query was dismissed
-  OnProposalSelected@1(ProposalSummary? selected_proposal);
+  2: OnProposalSelected(ProposalSummary? selected_proposal);
 };
 
 interface InterruptionProposalListener {
   // Receives updates to the current proposal list and rankings
-  OnInterrupt@0(ProposalSummary interruption_proposal);
+  1: OnInterrupt(ProposalSummary interruption_proposal);
 };
 
 interface NextProposalListener {
   // Receives updates to the current proposal list and rankings
-  OnNextUpdate@0(array<ProposalSummary> proposals);
+  1: OnNextUpdate(vector<ProposalSummary> proposals);
 };
 
 // This is necessary because a Proposal is not Clone-able, as CustomAction

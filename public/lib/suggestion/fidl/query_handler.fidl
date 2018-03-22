@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell;
+library modular;
 
-import "lib/media/fidl/media_transport.fidl";
-import "lib/suggestion/fidl/proposal.fidl";
-import "lib/suggestion/fidl/user_input.fidl";
+// import "lib/media/fidl/media_transport.fidl";
+// import "lib/suggestion/fidl/proposal.fidl";
+// import "lib/suggestion/fidl/user_input.fidl";
 
 // For now, it is expected that the format must be known synchronously at
 // response time, before connecting to the packet producer. If in the future
@@ -17,7 +17,7 @@ struct MediaResponse {
   media.MediaPacketProducer media_packet_producer;
 };
 struct QueryResponse {
-  array<Proposal> proposals;
+  vector<Proposal> proposals;
   string? natural_language_response;
   // An optional voice/audio/media response to the query as answered by this
   // agent.
@@ -41,5 +41,5 @@ interface QueryHandler {
   // ProposalPublisher to make persistent Proposals. However, these
   // proposals may be subject to more stringent filtering by the Suggestion
   // Engine. TODO(rosswang): spec/revisit.
-  OnQuery@0(UserInput query) => (QueryResponse response);
+  1: OnQuery(UserInput query) -> (QueryResponse response);
 };
