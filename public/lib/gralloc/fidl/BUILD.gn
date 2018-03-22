@@ -5,6 +5,8 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
+  name = "gralloc"
+
   sources = [
     "gralloc.fidl",
   ]

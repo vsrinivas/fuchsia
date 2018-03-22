@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module gralloc;
+library gralloc;
 
 // Returns a new VMO of the requested size, unless it fails.
 [ServiceName="gralloc::Gralloc"]
 interface Gralloc {
-  Allocate@0(uint64 size) => (handle<vmo>? vmo);
+  1: Allocate(uint64 size) -> (handle<vmo>? vmo);
 };

@@ -7,12 +7,12 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "lib/gralloc/fidl/gralloc.fidl.h"
+#include <fuchsia/cpp/gralloc.h>
 
 class GrallocImpl : public gralloc::Gralloc {
  public:
   // |gralloc::Gralloc|
-  void Allocate(uint64_t size, const AllocateCallback& callback) override {
+  void Allocate(uint64_t size, AllocateCallback callback) override {
     zx::vmo vmo;
     zx_status_t status = zx::vmo::create(size, 0, &vmo);
 
@@ -32,11 +32,11 @@ int main(int argc, const char** argv) {
 
   GrallocImpl grallocator;
 
-  f1dl::BindingSet<gralloc::Gralloc> bindings;
+  fidl::BindingSet<gralloc::Gralloc> bindings;
 
   app_context->outgoing_services()->AddService<gralloc::Gralloc>(
       [&grallocator,
-       &bindings](f1dl::InterfaceRequest<gralloc::Gralloc> request) {
+       &bindings](fidl::InterfaceRequest<gralloc::Gralloc> request) {
         bindings.AddBinding(&grallocator, std::move(request));
       });
 
