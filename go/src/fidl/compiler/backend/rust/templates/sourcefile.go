@@ -15,6 +15,9 @@ extern crate fuchsia_zircon as zx;
 #[macro_use]
 extern crate fidl;
 extern crate futures;
+{{ range $crate := .ExternCrates -}}
+extern crate {{ $crate }};
+{{ end -}}
 
 use fidl::encoding2::{Encodable, Decodable};
 use futures::{Future, Stream, Never};

@@ -88,11 +88,12 @@ type Parameter struct {
 }
 
 type Root struct {
-	Consts     []Const
-	Enums      []Enum
-	Structs    []Struct
-	Unions     []Union
-	Interfaces []Interface
+	ExternCrates []string
+	Consts       []Const
+	Enums        []Enum
+	Structs      []Struct
+	Unions       []Union
+	Interfaces   []Interface
 }
 
 var reservedWords = map[string]bool{
@@ -243,6 +244,10 @@ func compileCamelIdentifier(val types.Identifier) string {
 	return common.ToUpperCamelCase(changeIfReserved(val))
 }
 
+func compileLibraryName(val types.Identifier) string {
+	return changeIfReserved("fidl_" + val)
+}
+
 func compileSnakeIdentifier(val types.Identifier) string {
 	return common.ToSnakeCase(changeIfReserved(val))
 }
@@ -254,7 +259,7 @@ func compileScreamingSnakeIdentifier(val types.Identifier) string {
 func compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
 	if val.Library != "" {
-		strs = append(strs, changeIfReserved(val.Library))
+		strs = append(strs, compileLibraryName(val.Library))
 	}
 	for _, v := range val.NestedDecls {
 		str := changeIfReserved(v)
@@ -528,6 +533,12 @@ func (c *compiler) compileUnion(val types.Union) Union {
 func Compile(r types.Root) Root {
 	root := Root{}
 	c := compiler{&r.Decls}
+
+	for _, l := range r.Libraries {
+		if l.Name != r.Name {
+			root.ExternCrates = append(root.ExternCrates, compileLibraryName(l.Name))
+		}
+	}
 
 	for _, v := range r.Consts {
 		root.Consts = append(root.Consts, c.compileConst(v))
