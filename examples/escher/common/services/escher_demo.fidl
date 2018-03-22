@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module escher_demo;
-
-import "lib/app/fidl/service_provider.fidl";
+library escher_demo;
 
 [ServiceName="escher_demo::EscherDemo"]
 interface EscherDemo {
-  // GetCurrentFrameNumber() => (uint64 frame_number);
-  HandleKeyPress@0(uint8 key);
-  HandleTouchBegin@1(uint64 touch_id, double xpos, double ypos);
-  HandleTouchContinue@2(uint64 touch_id, double xpos, double ypos);
-  HandleTouchEnd@3(uint64 touch_id, double xpos, double ypos);
+  // GetCurrentFrameNumber() -> (uint64 frame_number);
+  1: HandleKeyPress(uint8 key);
+  2: HandleTouchBegin(uint64 touch_id, float64 xpos, float64 ypos);
+  3: HandleTouchContinue(uint64 touch_id, float64 xpos, float64 ypos);
+  4: HandleTouchEnd(uint64 touch_id, float64 xpos, float64 ypos);
 };
