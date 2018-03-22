@@ -15,7 +15,7 @@ State,
   {{- if $method.HasResponse -}}
   {{- $interface.Name -}}{{- $method.CamelName -}}Response
   {{- else }}
-  {{ $interface.Name -}}Controller
+  {{ $interface.Name -}}Controller_ask_cramertj_to_fix_naming_now
   {{- end }}) -> {{ $method.CamelName }}Fut,
   {{ $method.CamelName }}Fut: Future<Item = (), Error = Never>,
   {{- end -}}
@@ -88,7 +88,7 @@ pub trait {{ $interface.Name }} {
    {{- if $method.HasResponse }}
    response_chan: {{ $interface.Name }}{{ $method.CamelName }}Response,
    {{- else }}
-   controller: {{ $interface.Name }}Controller
+   controller: {{ $interface.Name }}Controller_ask_cramertj_to_fix_naming_now
    {{- end }}
   ) -> Self::{{ $method.CamelName }}Fut;
   {{ end -}}
@@ -164,7 +164,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
         {{- end -}}
        ) = fidl::encoding2::Decodable::new_empty();
        fidl::encoding2::Decoder::decode_into(body_bytes, handles, &mut req)?;
-       let controller = {{ $interface.Name }}Controller{};
+       let controller = {{ $interface.Name }}Controller_ask_cramertj_to_fix_naming_now{};
 
        self.{{ $method.Name }}_futures.push(
         self.server.{{ $method.Name }}(
@@ -232,7 +232,7 @@ impl<
    {{- if $method.HasResponse }}
    response_chan: {{ $interface.Name }}{{ $method.CamelName}}Response
    {{- else }}
-   response_chan: {{ $interface.Name }}Controller
+   response_chan: {{ $interface.Name }}Controller_ask_cramertj_to_fix_naming_now
    {{- end }}
   ) -> Self::{{ $method.CamelName }}Fut
   {
@@ -248,7 +248,7 @@ impl<
   {{- end }}
 }
 
-pub struct {{ $interface.Name }}Controller {
+pub struct {{ $interface.Name }}Controller_ask_cramertj_to_fix_naming_now {
   // TODO(cramertj): add Arc<fidl::server2::ServerPool> for reusable message buffers
   // TODO(cramertj): add ability to kill channel (w/ optional epitaph), send events
 }
@@ -257,7 +257,7 @@ pub struct {{ $interface.Name }}Controller {
 {{- range $method := $interface.Methods }}
 {{- if $method.HasResponse }}
 pub struct {{ $interface.Name }}{{ $method.CamelName }}Response {
-  controller: {{ $interface.Name }}Controller,
+  controller: {{ $interface.Name }}Controller_ask_cramertj_to_fix_naming_now,
   tx_id: u32,
   channel: ::std::sync::Arc<async::Channel>,
 }

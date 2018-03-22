@@ -6,6 +6,12 @@
     "public": true
   },
   {
+    "library_name": "component",
+    "fidl_target": "//garnet/public/lib/app/fidl:fidl",
+    "library_deps": ["fsl"],
+    "public": true
+  },
+  {
     "library_name": "fsl",
     "fidl_target": "//garnet/public/lib/fsl/fidl:fidl",
     "library_deps": [],

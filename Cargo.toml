@@ -37,6 +37,7 @@ members =  [
   "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
   "public/rust/crates/mxruntime",
   "public/rust/crates/mxruntime/mxruntime-sys",
+  "public/rust/fidl_crates/fidl_component",
   "public/rust/fidl_crates/fidl_device_settings",
   "public/rust/fidl_crates/fidl_echo2",
   "public/rust/fidl_crates/fidl_fsl",
@@ -46,6 +47,7 @@ members =  [
 # workspace must have a patch statement here and the version of the crate
 # at the path specified must be compatible with all crates in the tree.
 [patch.crates-io]
+fidl_component = { path = "public/rust/fidl_crates/fidl_component" }
 fidl_device_settings = { path = "public/rust/fidl_crates/fidl_device_settings" }
 fidl_echo2 = { path = "public/rust/fidl_crates/fidl_echo2" }
 fidl_fsl = { path = "public/rust/fidl_crates/fidl_fsl" }
