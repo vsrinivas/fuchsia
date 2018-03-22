@@ -92,7 +92,6 @@ template("fidl_dart") {
 
   dart_library(main_target_name) {
     forward_variables_from(invoker, [
-      "public_deps",
       "testonly",
       "visibility",
     ])
@@ -112,6 +111,9 @@ template("fidl_dart") {
 
     if (defined(invoker.deps)) {
       deps += invoker.deps
+    }
+    if (defined(invoker.public_deps)) {
+      deps += invoker.public_deps
     }
 
     non_dart_deps = [
