@@ -191,7 +191,10 @@ bool Library::ParseSize(std::unique_ptr<raw::Constant> raw_constant, Size* out_s
 bool Library::RegisterDecl(Decl* decl) {
     const Name* name = &decl->name;
     auto iter = declarations_.emplace(name, decl);
-    return iter.second;
+    if (!iter.second) {
+        return Fail("Name collision!");
+    }
+    return true;
 }
 
 bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<Type>* out_type) {
