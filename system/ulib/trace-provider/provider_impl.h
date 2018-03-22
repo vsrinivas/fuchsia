@@ -4,14 +4,14 @@
 
 #pragma once
 
-#include <lib/async/cpp/wait.h>
-#include <zx/channel.h>
-#include <zx/eventpair.h>
-#include <zx/vmo.h>
 #include <fbl/macros.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
+#include <lib/async/cpp/wait.h>
 #include <trace-provider/provider.h>
+#include <zx/channel.h>
+#include <zx/eventpair.h>
+#include <zx/vmo.h>
 
 // Provide a definition for the opaque type declared in provider.h.
 struct trace_provider {};
@@ -36,6 +36,8 @@ private:
                                    const zx_packet_signal_t* signal);
 
         bool ReadMessage();
+        bool DecodeAndDispatch(uint8_t* buffer, uint32_t num_bytes,
+                               zx_handle_t* handles, uint32_t num_handles);
         void Close();
 
         TraceProviderImpl* const impl_;
