@@ -918,8 +918,29 @@ macro_rules! handle_based_codable {
 }
 
 type ZxChannel = zx::Channel;
+type ZxEvent = zx::Event;
+type ZxEventPair = zx::EventPair;
+type ZxFifo = zx::Fifo;
+type ZxJob = zx::Job;
+type ZxProcess = zx::Process;
 type ZxSocket = zx::Socket;
-handle_based_codable![ZxChannel, ZxSocket,];
+type ZxThread = zx::Thread;
+type ZxTimer = zx::Timer;
+type ZxPort = zx::Port;
+type ZxVmo = zx::Vmo;
+handle_based_codable![
+    ZxChannel,
+    ZxEvent,
+    ZxEventPair,
+    ZxFifo,
+    ZxJob,
+    ZxProcess,
+    ZxSocket,
+    ZxThread,
+    ZxTimer,
+    ZxPort,
+    ZxVmo,
+];
 
 /// A trait that provides automatic `Encodable` and `Decodable`
 /// implementations for `Option<Box<Self>>`.

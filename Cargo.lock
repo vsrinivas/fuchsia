@@ -359,6 +359,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fidl_fsl"
+version = "0.1.0"
+dependencies = [
+ "fidl 0.1.0",
+ "fuchsia-async 0.1.0",
+ "fuchsia-zircon 0.3.4",
+ "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "font-rs"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -39,6 +39,7 @@ members =  [
   "public/rust/crates/mxruntime/mxruntime-sys",
   "public/rust/fidl_crates/fidl_device_settings",
   "public/rust/fidl_crates/fidl_echo2",
+  "public/rust/fidl_crates/fidl_fsl",
 ]
 
 # Any crate in the Fuchsia tree that is a dependency of a member of this
@@ -47,6 +48,7 @@ members =  [
 [patch.crates-io]
 fidl_device_settings = { path = "public/rust/fidl_crates/fidl_device_settings" }
 fidl_echo2 = { path = "public/rust/fidl_crates/fidl_echo2" }
+fidl_fsl = { path = "public/rust/fidl_crates/fidl_fsl" }
 fuchsia-ddk = { path = "public/rust/crates/fuchsia-ddk" }
 eapol = { path = "lib/rust/crates/eapol" }
 fdio = { path = "public/rust/crates/fdio" }
