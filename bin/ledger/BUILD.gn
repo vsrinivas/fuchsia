@@ -196,6 +196,12 @@ package("ledger_tests") {
 
     {
       path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/convergence/multidevice_convergence.tspec")
+      dest = "ledger/benchmark/multidevice_convergence.tspec"
+    },
+
+    {
+      path = rebase_path(
               "//peridot/bin/ledger/tests/benchmark/put/transaction.tspec")
       dest = "ledger/benchmark/transaction.tspec"
     },

@@ -13,7 +13,6 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
@@ -22,15 +21,16 @@
 #include "peridot/lib/convert/convert.h"
 
 namespace {
-constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/sync";
+constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/convergence";
 constexpr fxl::StringView kEntryCountFlag = "entry-count";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
+constexpr fxl::StringView kDeviceCountFlag = "device-count";
 constexpr fxl::StringView kServerIdFlag = "server-id";
 
 void PrintUsage(const char* executable_name) {
   std::cout << "Usage: " << executable_name << " --" << kEntryCountFlag
-            << "=<int> --" << kValueSizeFlag << "=<int> --" << kServerIdFlag
-            << "=<string>" << std::endl;
+            << "=<int> --" << kValueSizeFlag << "=<int> --" << kDeviceCountFlag
+            << "=<int> --" << kServerIdFlag << "=<string>" << std::endl;
 }
 
 constexpr size_t kKeySize = 100;
@@ -40,73 +40,59 @@ constexpr size_t kKeySize = 100;
 namespace test {
 namespace benchmark {
 
-ConvergenceBenchmark::ConvergenceBenchmark(int entry_count, int value_size,
+ConvergenceBenchmark::ConvergenceBenchmark(int entry_count,
+                                           int value_size,
+                                           int device_count,
                                            std::string server_id)
     : application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(application_context_.get()),
       entry_count_(entry_count),
       value_size_(value_size),
+      device_count_(device_count),
       server_id_(std::move(server_id)),
-      alpha_watcher_binding_(this),
-      beta_watcher_binding_(this),
-      alpha_tmp_dir_(kStoragePath),
-      beta_tmp_dir_(kStoragePath) {
-  FXL_DCHECK(entry_count > 0);
-  FXL_DCHECK(value_size > 0);
+      devices_(device_count) {
+  FXL_DCHECK(entry_count_ > 0);
+  FXL_DCHECK(value_size_ > 0);
+  FXL_DCHECK(device_count_ > 1);
+  for (auto& device_context : devices_) {
+    device_context.storage_directory = files::ScopedTempDir(kStoragePath);
+    device_context.page_watcher =
+        std::make_unique<f1dl::Binding<ledger::PageWatcher>>(this);
+  }
+  page_id_ = generator_.MakePageId();
   cloud_provider_firebase_factory_.Init();
 }
 
 void ConvergenceBenchmark::Run() {
-  // Name of the storage directory currently identifies the user. Ensure the
-  // most nested directory has the same name to make the ledgers sync.
-  std::string alpha_path = alpha_tmp_dir_.path() + "/sync_user";
-  bool ret = files::CreateDirectory(alpha_path);
-  FXL_DCHECK(ret);
-
-  std::string beta_path = beta_tmp_dir_.path() + "/sync_user";
-  ret = files::CreateDirectory(beta_path);
-  FXL_DCHECK(ret);
-
-  cloud_provider::CloudProviderPtr cloud_provider_alpha;
-  cloud_provider_firebase_factory_.MakeCloudProvider(
-      server_id_, "", cloud_provider_alpha.NewRequest());
-  ledger::Status status = test::GetLedger(
-      fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &alpha_controller_, std::move(cloud_provider_alpha), "sync", alpha_path,
-      &alpha_ledger_);
-  QuitOnError(status, "alpha ledger");
-
-  cloud_provider::CloudProviderPtr cloud_provider_beta;
-  cloud_provider_firebase_factory_.MakeCloudProvider(
-      server_id_, "", cloud_provider_beta.NewRequest());
-  status = test::GetLedger(fsl::MessageLoop::GetCurrent(),
-                           application_context_.get(), &beta_controller_,
-                           std::move(cloud_provider_beta), "sync", beta_path,
-                           &beta_ledger_);
-  QuitOnError(status, "beta ledger");
-
-  ledger::PagePtr page;
-  f1dl::VectorPtr<uint8_t> id;
-  status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
-                                          &alpha_ledger_, nullptr, &page, &id);
-  QuitOnError(status, "alpha page initialization");
-  page_id_ = id.Clone();
-  alpha_page_ = std::move(page);
-  beta_ledger_->GetPage(std::move(id), beta_page_.NewRequest(),
-                        benchmark::QuitOnErrorCallback("GetPage"));
-
-  // Register both watchers. We don't actually need the snapshots.
   auto waiter =
       callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
-  ledger::PageSnapshotPtr alpha_snapshot;
-  alpha_page_->GetSnapshot(alpha_snapshot.NewRequest(), nullptr,
-                           alpha_watcher_binding_.NewBinding(),
-                           waiter->NewCallback());
-  ledger::PageSnapshotPtr beta_snapshot;
-  beta_page_->GetSnapshot(beta_snapshot.NewRequest(), nullptr,
-                          beta_watcher_binding_.NewBinding(),
-                          waiter->NewCallback());
+  for (auto& device_context : devices_) {
+    // Initialize ledgers in different paths to emulate separate devices,
+    // but with the same lowest-level directory name, so they correspond to the
+    // same "user".
+    std::string synced_dir_path =
+        device_context.storage_directory.path() + "/convergence_user";
+    bool ret = files::CreateDirectory(synced_dir_path);
+    FXL_DCHECK(ret);
+
+    cloud_provider::CloudProviderPtr cloud_provider;
+    cloud_provider_firebase_factory_.MakeCloudProvider(
+        server_id_, "", cloud_provider.NewRequest());
+    ledger::Status status = test::GetLedger(
+        fsl::MessageLoop::GetCurrent(), application_context_.get(),
+        &device_context.app_controller, std::move(cloud_provider),
+        "convergence", synced_dir_path, &device_context.ledger);
+    QuitOnError(status, "GetLedger");
+    device_context.ledger->GetPage(page_id_.Clone(),
+                                   device_context.page_connection.NewRequest(),
+                                   benchmark::QuitOnErrorCallback("GetPage"));
+    ledger::PageSnapshotPtr snapshot;
+    // Register a watcher; we don't really need the snapshot.
+    device_context.page_connection->GetSnapshot(
+        snapshot.NewRequest(), nullptr,
+        device_context.page_watcher->NewBinding(), waiter->NewCallback());
+  }
   waiter->Finalize([this](ledger::Status status) {
     if (benchmark::QuitOnError(status, "GetSnapshot")) {
       return;
@@ -121,28 +107,19 @@ void ConvergenceBenchmark::Start(int step) {
     return;
   }
 
-  {
-    f1dl::VectorPtr<uint8_t> key = generator_.MakeKey(2 * step, kKeySize);
-    // Insert each key twice, as we will receive two notifications - one on the
-    // sender side (each page client sees their own changes), and one on the
-    // receiving side.
-    remaining_keys_.insert(convert::ToString(key));
-    remaining_keys_.insert(convert::ToString(key));
+  for (int device_id = 0; device_id < device_count_; device_id++) {
+    f1dl::VectorPtr<uint8_t> key =
+        generator_.MakeKey(device_count_ * step + device_id, kKeySize);
+    // Insert each key N times, as we will receive N notifications - one for
+    // each connection, sender included.
+    for (int receiving_device = 0; receiving_device < device_count_;
+         receiving_device++) {
+      remaining_keys_.insert(convert::ToString(key));
+    }
     f1dl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
-    alpha_page_->Put(std::move(key), std::move(value),
-                     benchmark::QuitOnErrorCallback("Put"));
-  }
-
-  {
-    f1dl::VectorPtr<uint8_t> key = generator_.MakeKey(2 * step + 1, kKeySize);
-    // Insert each key twice, as we will receive two notifications - one on the
-    // sender side (each page client sees their own changes), and one on the
-    // receiving side.
-    remaining_keys_.insert(convert::ToString(key));
-    remaining_keys_.insert(convert::ToString(key));
-    f1dl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
-    beta_page_->Put(std::move(key), std::move(value),
-                    benchmark::QuitOnErrorCallback("Put"));
+    devices_[device_id].page_connection->Put(
+        std::move(key), std::move(value),
+        benchmark::QuitOnErrorCallback("Put"));
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "convergence", step);
@@ -167,10 +144,11 @@ void ConvergenceBenchmark::OnChange(ledger::PageChangePtr page_change,
 }
 
 void ConvergenceBenchmark::ShutDown() {
-  alpha_controller_->Kill();
-  alpha_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
-  beta_controller_->Kill();
-  beta_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
+  for (auto& device_context : devices_) {
+    device_context.app_controller->Kill();
+    device_context.app_controller.WaitForResponseUntil(
+        zx::deadline_after(zx::sec(5)));
+  }
 
   fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
@@ -184,6 +162,8 @@ int main(int argc, const char** argv) {
   int entry_count;
   std::string value_size_str;
   int value_size;
+  std::string device_count_str;
+  int device_count;
   std::string server_id;
   if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
                                    &entry_count_str) ||
@@ -193,12 +173,17 @@ int main(int argc, const char** argv) {
                                    &value_size_str) ||
       !fxl::StringToNumberWithError(value_size_str, &value_size) ||
       value_size <= 0 ||
+      !command_line.GetOptionValue(kDeviceCountFlag.ToString(),
+                                   &device_count_str) ||
+      !fxl::StringToNumberWithError(device_count_str, &device_count) ||
+      device_count <= 0 ||
       !command_line.GetOptionValue(kServerIdFlag.ToString(), &server_id)) {
     PrintUsage(argv[0]);
     return -1;
   }
 
   fsl::MessageLoop loop;
-  test::benchmark::ConvergenceBenchmark app(entry_count, value_size, server_id);
+  test::benchmark::ConvergenceBenchmark app(entry_count, value_size,
+                                            device_count, server_id);
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

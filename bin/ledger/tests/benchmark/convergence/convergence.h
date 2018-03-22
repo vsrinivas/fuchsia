@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <set>
+#include <vector>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -17,20 +18,32 @@
 namespace test {
 namespace benchmark {
 
+struct DeviceContext {
+  component::ApplicationControllerPtr app_controller;
+  ledger::LedgerPtr ledger;
+  files::ScopedTempDir storage_directory;
+  ledger::PagePtr page_connection;
+  std::unique_ptr<f1dl::Binding<ledger::PageWatcher>> page_watcher;
+};
+
 // Benchmark that measures the time it takes to sync and reconcile concurrent
 // writes.
 //
-// In this scenario there is two devices. At each step, both devices make a
-// concurrent write, and we measure the time until both changes are visible to
-// both devices.
+// In this scenario there are specified number of (emulated) devices. At each
+// step, every device makes a concurrent write, and we measure the time until
+// all the changes are visible to all devices.
 //
 // Parameters:
 //   --entry-count=<int> the number of entries to be put by each device
 //   --value-size=<int> the size of a single value in bytes
-//   --server-id=<string> the ID of the Firebase instance ot use for syncing
+//   --device-count=<int> number of devices writing to the same page
+//   --server-id=<string> the ID of the Firebase instance to use for syncing
 class ConvergenceBenchmark : public ledger::PageWatcher {
  public:
-  ConvergenceBenchmark(int entry_count, int value_size, std::string server_id);
+  ConvergenceBenchmark(int entry_count,
+                       int value_size,
+                       int device_count,
+                       std::string server_id);
 
   void Run();
 
@@ -49,18 +62,10 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
   const int entry_count_;
   const int value_size_;
+  const int device_count_;
   std::string server_id_;
-  f1dl::Binding<ledger::PageWatcher> alpha_watcher_binding_;
-  f1dl::Binding<ledger::PageWatcher> beta_watcher_binding_;
-  files::ScopedTempDir alpha_tmp_dir_;
-  files::ScopedTempDir beta_tmp_dir_;
-  component::ApplicationControllerPtr alpha_controller_;
-  component::ApplicationControllerPtr beta_controller_;
-  ledger::LedgerPtr alpha_ledger_;
-  ledger::LedgerPtr beta_ledger_;
+  std::vector<DeviceContext> devices_;
   f1dl::VectorPtr<uint8_t> page_id_;
-  ledger::PagePtr alpha_page_;
-  ledger::PagePtr beta_page_;
   std::multiset<std::string> remaining_keys_;
   int current_step_ = -1;
 
