@@ -83,7 +83,7 @@ type {{ .Name }} interface {
 	{{- if .Response -}}
 	{{- if len .Response.Members }} (
 	{{- range .Response.Members }}{{ .Name | privatize }} {{ .Type }}, {{ end -}}
-		err error)
+		err_ error)
 	{{- else }} error{{ end -}}
 	{{- else }} error{{ end }}
 {{- end }}
