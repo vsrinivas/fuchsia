@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module test_runner;
+library test_runner;
 
 struct TestResult {
   string name;
@@ -19,43 +19,43 @@ struct TestResult {
 [ServiceName="test_runner.TestRunner"]
 interface TestRunner {
   // Tells the test runner how to identify this test program.
-  Identify@0(string program_name) => ();
+  1: Identify(string program_name) -> ();
 
   // Tells the test runner that a paritcular test case finished. May be called
   // multiple times.
-  ReportResult@1(TestResult result);
+  2: ReportResult(TestResult result);
 
   // Tells the test runner that a particular test case failed, with the supplied
   // message. May be called multiple times. When |Teardown()| is called, the
   // test program ends as a failure.
   //
   // |Fail()| is deprecated in favor of |ReportResult|.
-  Fail@2(string log_message);
+  3: Fail(string log_message);
 
   // Either this method, |Teardown()| or |WillTerminate()| must be invoked
   // before closing the connection to this interface; otherwise the TestRunner
   // service will assume that the connection broke due to the test crashing.
   // The test runner will send a reply back as an acknowledgement when it starts
   // processing this method.
-  Done@3() => ();
+  4: Done() -> ();
 
   // Signals that the test program is complete and the entire test harness
   // should be torn down. The test will be declared a failure if |Fail()| was
   // ever called, or if |ReportResult()| was ever called where |failed| is true.
   // Otherwise the test will be declared successful. The test runner will send a
   // reply back as an acknowledgement when it starts processing this method.
-  Teardown@4() => ();
+  5: Teardown() -> ();
 
   // Signals that this process expects to be terminated within the time
   // specified. If it is not killed that is a failure. A test that calls this
   // should not call |Done()| or |Teardown()|.
-  WillTerminate@5(double withinSeconds);
+  6: WillTerminate(float64 withinSeconds);
 
   // Declare how many test points this test is expected to pass to complete.
-  SetTestPointCount@6(int64 count);
+  7: SetTestPointCount(int64 count);
 
   // Signals that a test point has been passed.
-  PassTestPoint@7();
+  8: PassTestPoint();
 };
 
 // This service is included in the ApplicationEnvironment of the test runner
@@ -79,10 +79,10 @@ interface TestRunner {
 interface TestRunnerStore {
   // This will store |key| with value |value| and respond back. Subsequent
   // Put()s to |key| are queued up until they are read by a |Get()|.
-  Put@0(string key, string value) => ();
+  1: Put(string key, string value) -> ();
 
   // Get() will return the next queued value associated with the |key|. If there
   // are no values queued for key, this method will not return until one has
   // been Put().
-  Get@1(string key) => (string value);
+  2: Get(string key) -> (string value);
 };

@@ -9,7 +9,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/test_runner/cpp/scope.h"
 #include "lib/test_runner/cpp/test_runner_store_impl.h"
-#include "lib/test_runner/fidl/test_runner.fidl.h"
+#include <fuchsia/cpp/test_runner.h>
 #include "lib/fxl/tasks/one_shot_timer.h"
 
 namespace test_runner {
@@ -30,7 +30,7 @@ class TestRunContext;
 // forwarded to and handled by TestRunContext.
 class TestRunnerImpl : public TestRunner {
  public:
-  TestRunnerImpl(f1dl::InterfaceRequest<TestRunner> request,
+  TestRunnerImpl(fidl::InterfaceRequest<TestRunner> request,
                  TestRunContext* test_run_context);
 
   const std::string& program_name() const;
@@ -47,16 +47,16 @@ class TestRunnerImpl : public TestRunner {
 
  private:
   // |TestRunner|
-  void Identify(const f1dl::StringPtr& program_name,
-                const IdentifyCallback& callback) override;
+  void Identify(fidl::StringPtr program_name,
+                IdentifyCallback callback) override;
   // |TestRunner|
-  void ReportResult(TestResultPtr result) override;
+  void ReportResult(TestResult result) override;
   // |TestRunner|
-  void Fail(const f1dl::StringPtr& log_message) override;
+  void Fail(fidl::StringPtr log_message) override;
   // |TestRunner|
-  void Done(const DoneCallback& callback) override;
+  void Done(DoneCallback callback) override;
   // |TestRunner|
-  void Teardown(const TeardownCallback& callback) override;
+  void Teardown(TeardownCallback callback) override;
   // |TestRunner|
   void WillTerminate(double withinSeconds) override;
   // |TestRunner|
@@ -64,7 +64,7 @@ class TestRunnerImpl : public TestRunner {
   // |TestRunner|
   void PassTestPoint() override;
 
-  f1dl::Binding<TestRunner> binding_;
+  fidl::Binding<TestRunner> binding_;
   TestRunContext* const test_run_context_;
   std::string program_name_ = "UNKNOWN";
   bool waiting_for_termination_ = false;
@@ -89,8 +89,8 @@ class TestRunContext {
 
   // Called from TestRunnerImpl, the actual implemention of |TestRunner|.
   void StopTrackingClient(TestRunnerImpl* client, bool crashed);
-  void ReportResult(TestResultPtr result);
-  void Fail(const f1dl::StringPtr& log_message);
+  void ReportResult(TestResult result);
+  void Fail(const fidl::StringPtr& log_message);
   void Teardown(TestRunnerImpl* teardown_client);
 
  private:

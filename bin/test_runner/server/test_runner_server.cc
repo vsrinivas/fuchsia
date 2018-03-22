@@ -38,7 +38,7 @@
 #include <vector>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/test_runner/fidl/test_runner.fidl.h"
+#include <fuchsia/cpp/test_runner.h>
 #include "lib/test_runner/cpp/scope.h"
 #include "lib/test_runner/cpp/test_runner.h"
 #include "lib/test_runner/cpp/test_runner_store_impl.h"

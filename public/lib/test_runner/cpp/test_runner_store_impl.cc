@@ -9,18 +9,18 @@ namespace test_runner {
 TestRunnerStoreImpl::TestRunnerStoreImpl() = default;
 
 void TestRunnerStoreImpl::AddBinding(
-    f1dl::InterfaceRequest<TestRunnerStore> req) {
+    fidl::InterfaceRequest<TestRunnerStore> req) {
   binding_set_.AddBinding(this, std::move(req));
 }
 
-void TestRunnerStoreImpl::Get(const f1dl::StringPtr& key, const GetCallback& cb) {
+void TestRunnerStoreImpl::Get(fidl::StringPtr key, GetCallback cb) {
   get_queue_[key].push(cb);
   MaybeNotify(key);
 }
 
-void TestRunnerStoreImpl::Put(const f1dl::StringPtr& key,
-                              const f1dl::StringPtr& value,
-                              const PutCallback& cb) {
+void TestRunnerStoreImpl::Put(fidl::StringPtr key,
+                              fidl::StringPtr value,
+                              PutCallback cb) {
   store_[key].push(value);
   MaybeNotify(key);
   cb();

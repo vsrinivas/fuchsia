@@ -17,7 +17,7 @@ void ReportResult(std::string identity, component::ApplicationContext* context,
   }
 
   TestRunnerSyncPtr test_runner;
-  context->ConnectToEnvironmentService(f1dl::GetSynchronousProxy(&test_runner));
+  context->ConnectToEnvironmentService(fidl::GetSynchronousProxy(&test_runner));
 
   test_runner->Identify(identity);
   for (auto& result : results) {

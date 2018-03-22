@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/test_runner/fidl/test_runner.fidl.h"
+#include <fuchsia/cpp/test_runner.h>
 #include "lib/fxl/time/stopwatch.h"
 #include "lib/fsl/tasks/message_loop.h"
 
