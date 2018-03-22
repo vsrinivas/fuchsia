@@ -9,7 +9,7 @@
 #include "garnet/examples/escher/common/demo_harness.h"
 #include "garnet/examples/escher/common/services/escher_demo.fidl.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 
 class DemoHarnessFuchsia : public DemoHarness, public escher_demo::EscherDemo {

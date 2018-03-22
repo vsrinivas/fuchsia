@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_HANDLER_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_HANDLER_H_
 
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/images/fidl/image_pipe.fidl.h"
 
 namespace scenic {

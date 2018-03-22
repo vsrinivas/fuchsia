@@ -8,7 +8,7 @@
 #include <zx/event.h>
 #include <zx/eventpair.h>
 
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 #include "lib/fsl/vmo/shared_vmo.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/time/time_delta.h"

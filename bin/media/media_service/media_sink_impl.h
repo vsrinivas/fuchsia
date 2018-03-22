@@ -9,7 +9,7 @@
 #include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/incident.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/media/fidl/media_sink.fidl.h"
 #include "lib/media/fidl/timeline_controller.fidl.h"
 

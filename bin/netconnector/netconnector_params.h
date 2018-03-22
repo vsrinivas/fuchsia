@@ -8,7 +8,7 @@
 #include <unordered_map>
 
 #include "garnet/bin/netconnector/ip_address.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
+#include <fuchsia/cpp/component.h>
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 

@@ -10,8 +10,8 @@
 #include "garnet/bin/auth/token_manager/test/dev_auth_provider_impl.h"
 #include "garnet/public/lib/auth/fidl/auth_provider.fidl.h"
 #include "garnet/public/lib/auth/fidl/auth_provider_factory.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 
 namespace auth {

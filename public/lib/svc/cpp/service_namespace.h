@@ -15,8 +15,8 @@
 #include <unordered_map>
 #include <utility>
 
-#include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include <fuchsia/cpp/component.h>
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
 namespace component {
@@ -40,7 +40,7 @@ class ServiceNamespace : public component::ServiceProvider {
   // by the interface).
   template <typename Interface>
   using InterfaceRequestHandler =
-      std::function<void(f1dl::InterfaceRequest<Interface> interface_request)>;
+      std::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
 
   // Constructs this service namespace implementation in an unbound state.
   ServiceNamespace();
@@ -49,7 +49,7 @@ class ServiceNamespace : public component::ServiceProvider {
   // interface request. Note: If |request| is not valid ("pending"), then the
   // object will be put into an unbound state.
   explicit ServiceNamespace(
-      f1dl::InterfaceRequest<component::ServiceProvider> request);
+      fidl::InterfaceRequest<component::ServiceProvider> request);
 
   explicit ServiceNamespace(fbl::RefPtr<fs::PseudoDir> directory);
 
@@ -61,7 +61,7 @@ class ServiceNamespace : public component::ServiceProvider {
   // Binds this service provider implementation to the given interface request.
   // Multiple bindings may be added.  They are automatically removed when closed
   // remotely.
-  void AddBinding(f1dl::InterfaceRequest<component::ServiceProvider> request);
+  void AddBinding(fidl::InterfaceRequest<component::ServiceProvider> request);
 
   // Disconnect this service provider implementation and put it in a state where
   // it can be rebound to a new request (i.e., restores this object to an
@@ -89,7 +89,7 @@ class ServiceNamespace : public component::ServiceProvider {
                   const std::string& service_name = Interface::Name_) {
     AddServiceForName(
         [handler](zx::channel channel) {
-          handler(f1dl::InterfaceRequest<Interface>(std::move(channel)));
+          handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
         },
         service_name);
   }
@@ -108,7 +108,7 @@ class ServiceNamespace : public component::ServiceProvider {
 
  private:
   // Overridden from |component::ServiceProvider|:
-  void ConnectToService(const f1dl::StringPtr& service_name,
+  void ConnectToService(fidl::StringPtr service_name,
                         zx::channel channel) override;
 
   void Connect(fbl::StringPiece name, zx::channel channel);
@@ -117,7 +117,7 @@ class ServiceNamespace : public component::ServiceProvider {
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
 
   fbl::RefPtr<fs::PseudoDir> directory_;
-  f1dl::BindingSet<component::ServiceProvider> bindings_;
+  fidl::BindingSet<component::ServiceProvider> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceNamespace);
 };

@@ -7,9 +7,9 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/auth/fidl/token_manager.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/interface_request.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
 
 namespace auth {

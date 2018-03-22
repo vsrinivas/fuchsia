@@ -11,7 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 #include "garnet/public/lib/bluetooth/fidl/gatt.fidl.h"
 
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 

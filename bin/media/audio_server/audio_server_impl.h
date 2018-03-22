@@ -14,7 +14,7 @@
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "garnet/bin/media/audio_server/pending_flush_token.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"

@@ -7,7 +7,7 @@
 
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/ui/input/fidl/input_reports.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 
 namespace mozart {
 

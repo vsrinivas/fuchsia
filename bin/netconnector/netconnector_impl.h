@@ -18,9 +18,9 @@
 #include "garnet/bin/netconnector/responding_service_host.h"
 #include "garnet/bin/netconnector/service_agent.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/component.h>
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
 #include "lib/mdns/fidl/mdns.fidl.h"

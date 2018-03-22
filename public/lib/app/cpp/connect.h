@@ -10,8 +10,8 @@
 #ifndef LIB_APP_CPP_CONNECT_H_
 #define LIB_APP_CPP_CONNECT_H_
 
-#include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include <fuchsia/cpp/component.h>
+#include "lib/fidl/cpp/interface_request.h"
 
 namespace component {
 

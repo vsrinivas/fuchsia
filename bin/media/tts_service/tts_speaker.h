@@ -11,7 +11,7 @@
 #include <thread>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/fidl/audio_server.fidl.h"

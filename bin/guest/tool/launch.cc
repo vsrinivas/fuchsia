@@ -9,7 +9,7 @@
 
 #include "garnet/bin/guest/tool/serial.h"
 #include "lib/app/cpp/environment_services.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
+#include <fuchsia/cpp/component.h>
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 

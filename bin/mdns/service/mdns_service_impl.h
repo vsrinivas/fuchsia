@@ -9,7 +9,7 @@
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/mdns/fidl/mdns.fidl.h"
 

@@ -14,7 +14,7 @@
 #include "lib/auth/fidl/auth_provider.fidl.h"
 #include "lib/auth/fidl/token_manager.fidl-sync.h"
 #include "lib/auth/fidl/token_manager.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"

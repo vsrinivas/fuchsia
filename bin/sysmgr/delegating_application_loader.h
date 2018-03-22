@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_SYSMGR_DELEGATING_APPLICATION_LOADER_H_
 #define GARNET_BIN_SYSMGR_DELEGATING_APPLICATION_LOADER_H_
 
-#include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/app/fidl/application_loader.fidl.h"
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/component.h>
 #include "garnet/bin/sysmgr/config.h"
 #include "lib/fxl/macros.h"
 

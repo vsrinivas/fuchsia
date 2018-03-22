@@ -4,7 +4,7 @@
 
 #include "token_cache.h"
 
-#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/fxl/time/time_point.h"
 
 namespace auth {

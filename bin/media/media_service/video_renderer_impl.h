@@ -11,7 +11,7 @@
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/media/video/video_frame_source.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/media/fidl/media_renderer.fidl.h"
 #include "lib/media/fidl/video_renderer.fidl.h"
 #include "lib/ui/scenic/client/host_image_cycler.h"

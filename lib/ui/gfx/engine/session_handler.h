@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_SESSION_HANDLER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_SESSION_HANDLER_H_
 
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/tasks/task_runner.h"
 
 #include "garnet/lib/ui/gfx/engine/engine.h"

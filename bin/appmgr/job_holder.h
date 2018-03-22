@@ -17,8 +17,8 @@
 #include "garnet/bin/appmgr/application_environment_controller_impl.h"
 #include "garnet/bin/appmgr/application_namespace.h"
 #include "garnet/bin/appmgr/application_runner_holder.h"
-#include "lib/app/fidl/application_loader.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include <fuchsia/cpp/component.h>
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"

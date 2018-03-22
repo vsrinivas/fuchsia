@@ -10,7 +10,7 @@
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"

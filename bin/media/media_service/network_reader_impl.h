@@ -8,7 +8,7 @@
 
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/incident.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/media/fidl/seeking_reader.fidl.h"
 #include "lib/network/fidl/url_loader.fidl.h"
 

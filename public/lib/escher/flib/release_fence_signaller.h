@@ -10,7 +10,7 @@
 #include <zx/event.h>
 #include "lib/escher/flib/fence.h"
 #include "lib/escher/impl/command_buffer_sequencer.h"
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {

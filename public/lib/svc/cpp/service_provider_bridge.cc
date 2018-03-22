@@ -23,7 +23,7 @@ ServiceProviderBridge::ServiceProviderBridge()
 ServiceProviderBridge::~ServiceProviderBridge() = default;
 
 void ServiceProviderBridge::AddBinding(
-    f1dl::InterfaceRequest<component::ServiceProvider> request) {
+    fidl::InterfaceRequest<component::ServiceProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -57,13 +57,13 @@ int ServiceProviderBridge::OpenAsFileDescriptor() {
   return fdio_bind_to_fd(io, -1, 0);
 }
 
-void ServiceProviderBridge::ConnectToService(const f1dl::StringPtr& service_name,
+void ServiceProviderBridge::ConnectToService(fidl::StringPtr service_name,
                                              zx::channel channel) {
   auto it = name_to_service_connector_.find(service_name.get());
   if (it != name_to_service_connector_.end())
     it->second(std::move(channel));
   else if (backend_)
-    backend_->ConnectToService(service_name, std::move(channel));
+    backend_->ConnectToService(*service_name, std::move(channel));
   else if (backing_dir_)
     fdio_service_connect_at(backing_dir_.get(), service_name->c_str(),
                             channel.release());
@@ -80,7 +80,7 @@ zx_status_t ServiceProviderBridge::ServiceProviderDir::Lookup(
     fbl::StringPiece name) {
   *out = fbl::AdoptRef(new fs::Service(
       [bridge = bridge_,
-       name = f1dl::StringPtr(name.data(), name.length())](zx::channel channel) {
+       name = std::string(name.data(), name.length())](zx::channel channel) {
         if (bridge) {
           bridge->ConnectToService(name, std::move(channel));
           return ZX_OK;

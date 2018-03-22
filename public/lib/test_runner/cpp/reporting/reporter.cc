@@ -5,7 +5,7 @@
 #include "lib/test_runner/cpp/reporting/reporter.h"
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/test_runner/fidl/test_runner.fidl-sync.h"
 
 namespace test_runner {

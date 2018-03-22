@@ -12,7 +12,7 @@
 #include "garnet/drivers/bluetooth/lib/gatt/local_service_manager.h"
 #include "garnet/drivers/bluetooth/lib/gatt/types.h"
 
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 

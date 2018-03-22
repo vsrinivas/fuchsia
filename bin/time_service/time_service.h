@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/time_service/fidl/time_service.fidl.h"
 #include "third_party/icu/source/common/unicode/strenum.h"
 

@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
+#include <fuchsia/cpp/component.h>
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/services.h"
 #include "lib/svc/cpp/service_namespace.h"

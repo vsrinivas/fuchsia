@@ -14,8 +14,8 @@
 #include <unordered_map>
 #include <utility>
 
-#include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include <fuchsia/cpp/component.h>
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
@@ -36,7 +36,7 @@ class ServiceProviderBridge : public component::ServiceProvider {
 
   template <typename Interface>
   using InterfaceRequestHandler =
-      std::function<void(f1dl::InterfaceRequest<Interface> interface_request)>;
+      std::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
 
   void AddServiceForName(ServiceConnector connector,
                          const std::string& service_name);
@@ -46,7 +46,7 @@ class ServiceProviderBridge : public component::ServiceProvider {
                   const std::string& service_name = Interface::Name_) {
     AddServiceForName(
         [handler](zx::channel channel) {
-          handler(f1dl::InterfaceRequest<Interface>(std::move(channel)));
+          handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
         },
         service_name);
   }
@@ -59,7 +59,7 @@ class ServiceProviderBridge : public component::ServiceProvider {
     backing_dir_ = std::move(backing_dir);
   }
 
-  void AddBinding(f1dl::InterfaceRequest<component::ServiceProvider> request);
+  void AddBinding(fidl::InterfaceRequest<component::ServiceProvider> request);
   bool ServeDirectory(zx::channel channel);
 
   zx::channel OpenAsDirectory();
@@ -84,11 +84,11 @@ class ServiceProviderBridge : public component::ServiceProvider {
   };
 
   // Overridden from |component::ServiceProvider|:
-  void ConnectToService(const f1dl::StringPtr& service_name,
+  void ConnectToService(fidl::StringPtr service_name,
                         zx::channel channel) override;
 
   fs::ManagedVfs vfs_;
-  f1dl::BindingSet<component::ServiceProvider> bindings_;
+  fidl::BindingSet<component::ServiceProvider> bindings_;
   fbl::RefPtr<ServiceProviderDir> directory_;
 
   std::map<std::string, ServiceConnector> name_to_service_connector_;

@@ -11,8 +11,8 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/ui/input/fidl/ime_service.fidl.h"
 #include "lib/ui/input/fidl/input_events.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 

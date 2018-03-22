@@ -4,7 +4,7 @@
 
 #include "garnet/bin/mdns/service/mdns_fidl_util.h"
 
-#include "lib/fidl/cpp/bindings/type_converters.h"
+#include "lib/fidl/cpp/type_converters.h"
 #include "lib/fxl/logging.h"
 
 namespace mdns {

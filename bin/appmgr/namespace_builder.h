@@ -12,7 +12,7 @@
 
 #include "garnet/bin/appmgr/job_holder.h"
 #include "garnet/bin/appmgr/sandbox_metadata.h"
-#include "lib/app/fidl/flat_namespace.fidl.h"
+#include <fuchsia/cpp/component.h>
 #include "lib/fxl/macros.h"
 
 namespace component {

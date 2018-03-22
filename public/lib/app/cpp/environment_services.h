@@ -9,8 +9,8 @@
 
 #include <string>
 
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/interface_ptr.h"
+#include "lib/fidl/cpp/interface_request.h"
 
 namespace component {
 

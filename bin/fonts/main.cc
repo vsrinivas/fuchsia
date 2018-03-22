@@ -6,7 +6,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "garnet/bin/fonts/font_provider_impl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"
 

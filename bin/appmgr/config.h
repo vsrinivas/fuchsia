@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "lib/app/fidl/application_launcher.fidl.h"
+#include <fuchsia/cpp/component.h>
 #include "lib/fxl/macros.h"
 
 namespace component {

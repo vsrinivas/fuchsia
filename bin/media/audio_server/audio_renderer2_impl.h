@@ -10,8 +10,8 @@
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/utils.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"
 
 namespace media {

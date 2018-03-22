@@ -4,7 +4,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/media/fidl/tts_service.fidl.h"
 

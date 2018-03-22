@@ -9,7 +9,7 @@
 
 #include "lib/ui/geometry/cpp/formatting.h"
 #include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/fidl/cpp/bindings/formatting.h"
+#include "lib/fidl/cpp/formatting.h"
 
 namespace mozart {
 

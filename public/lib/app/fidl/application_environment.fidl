@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module component;
+library component;
 
-import "lib/app/fidl/application_launcher.fidl";
-import "lib/app/fidl/application_environment_controller.fidl";
-import "lib/app/fidl/service_provider.fidl";
+// import "lib/app/fidl/application_launcher.fidl";
+// import "lib/app/fidl/application_environment_controller.fidl";
+// import "lib/app/fidl/service_provider.fidl";
 
 // An interface for managing a set of applications.
 //
@@ -39,22 +39,22 @@ interface ApplicationEnvironment {
   // The |label| is an optional name to associate with the environment for
   // diagnostic purposes.  The label will be truncated if it is longer
   // than |kLabelMaxLength|.
-  CreateNestedEnvironment@0(handle<channel> host_directory,
-                            ApplicationEnvironment& environment,
-                            ApplicationEnvironmentController&? controller,
+  1: CreateNestedEnvironment(handle<channel> host_directory,
+                            request<ApplicationEnvironment> environment,
+                            request<ApplicationEnvironmentController>? controller,
                             string? label);
 
   // Gets the ApplicationLauncher associated with this environment.
   //
   // Applications created using this application launcher will be given the
   // environment services provided by this environment's |host_directory|.
-  GetApplicationLauncher@1(ApplicationLauncher& launcher);
+  2: GetApplicationLauncher(request<ApplicationLauncher> launcher);
 
   // Gets a superset of services provided by this environment's
   // |host_directory|.
-  GetServices@2(ServiceProvider& services);
+  3: GetServices(request<ServiceProvider> services);
 
   // Gets a superset of services provided by this environment's
   // |host_directory|.
-  GetDirectory@3(handle<channel> directory_request);
+  4: GetDirectory(handle<channel> directory_request);
 };

@@ -11,8 +11,8 @@
 
 #include "garnet/bin/appmgr/application_namespace.h"
 #include "garnet/lib/farfs/file_system.h"
-#include "lib/app/fidl/application_controller.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include <fuchsia/cpp/component.h>
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 

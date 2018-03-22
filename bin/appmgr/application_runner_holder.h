@@ -9,8 +9,8 @@
 
 #include "garnet/bin/appmgr/application_namespace.h"
 #include "garnet/lib/farfs/file_system.h"
-#include "lib/app/fidl/application_controller.fidl.h"
-#include "lib/app/fidl/application_runner.fidl.h"
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/component.h>
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"

@@ -13,8 +13,8 @@
 #include "lib/svc/cpp/service_namespace.h"
 #include "lib/svc/cpp/services.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
-#include "lib/app/fidl/application_controller.fidl.h"
-#include "lib/app/fidl/application_environment.fidl.h"
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/component.h>
 #include "garnet/bin/sysmgr/delegating_application_loader.h"
 #include "lib/fxl/macros.h"
 

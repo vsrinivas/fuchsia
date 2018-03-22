@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"
 

@@ -8,9 +8,9 @@
 #include <memory>
 #include <string>
 
-#include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include <fuchsia/cpp/component.h>
+#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/input/fidl/input_connection.fidl.h"

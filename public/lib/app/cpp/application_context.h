@@ -10,12 +10,12 @@
 #include <memory>
 
 #include "lib/app/cpp/service_provider_impl.h"
-#include "lib/app/fidl/application_environment.fidl.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/app/fidl/application_runner.fidl.h"
-#include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/component.h>
+#include "lib/fidl/cpp/interface_handle.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/svc/cpp/service_namespace.h"
 
 namespace component {

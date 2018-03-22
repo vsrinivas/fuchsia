@@ -12,8 +12,8 @@
 
 #include <zx/vmo.h>
 
-#include "lib/app/fidl/application_loader.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include <fuchsia/cpp/component.h>
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
 namespace component {

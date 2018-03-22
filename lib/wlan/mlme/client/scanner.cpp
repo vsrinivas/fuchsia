@@ -13,7 +13,7 @@
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
 
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 
 #include <fbl/unique_ptr.h>
 #include <zircon/assert.h>

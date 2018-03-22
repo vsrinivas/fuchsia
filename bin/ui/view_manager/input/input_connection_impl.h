@@ -9,8 +9,8 @@
 #include "lib/ui/input/fidl/input_connection.fidl.h"
 #include "lib/ui/input/fidl/text_input.fidl.h"
 #include "lib/ui/views/fidl/views.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 
 namespace view_manager {

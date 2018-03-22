@@ -7,7 +7,7 @@
 
 #include "garnet/lib/ui/scenic/session.h"
 #include "garnet/lib/ui/scenic/system.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/fidl/scenic.fidl.h"

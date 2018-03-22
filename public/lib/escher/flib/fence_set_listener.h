@@ -9,7 +9,7 @@
 
 #include <lib/async/cpp/auto_wait.h>
 #include "lib/escher/flib/fence.h"
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"

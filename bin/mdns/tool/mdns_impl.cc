@@ -9,7 +9,7 @@
 
 #include "garnet/bin/mdns/tool/formatting.h"
 #include "garnet/bin/mdns/tool/mdns_params.h"
-#include "lib/fidl/cpp/bindings/type_converters.h"
+#include "lib/fidl/cpp/type_converters.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/mdns/fidl/mdns.fidl.h"

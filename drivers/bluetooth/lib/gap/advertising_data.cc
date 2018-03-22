@@ -9,7 +9,7 @@
 #include <endian.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "lib/fidl/cpp/bindings/type_converter.h"
+#include "lib/fidl/cpp/type_converter.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/utf_codecs.h"

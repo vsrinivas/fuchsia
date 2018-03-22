@@ -11,8 +11,8 @@
 #include "lib/ui/input/fidl/input_dispatcher.fidl.h"
 #include "lib/ui/views/fidl/view_trees.fidl.h"
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 

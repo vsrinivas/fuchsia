@@ -7,7 +7,7 @@
 #include <mutex>
 
 #include "garnet/bin/media/util/fidl_publisher.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/fidl/timeline_controller.fidl.h"

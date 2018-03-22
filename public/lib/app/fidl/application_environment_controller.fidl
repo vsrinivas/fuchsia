@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module component;
+library component;
 
 // An interface for controlling an environment.
 //
@@ -18,11 +18,11 @@ interface ApplicationEnvironmentController {
   // When an |ApplicationEnvironment| is terminated, all applications launched
   // in the environment (and in all transitively nested environments) are also
   // killed.
-  Kill@0() => ();
+  1: Kill() -> ();
 
   // Decouples the lifetime of the environment from this controller.
   //
   // After calling |Detach|, the environment will not be implicitly killed when
   // this interface is closed.
-  Detach@1();
+  2: Detach();
 };

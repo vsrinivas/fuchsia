@@ -11,7 +11,7 @@
 #include "garnet/lib/media/client/audio_output_manager.h"
 
 #include "lib/app/cpp/environment_services.h"
-#include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
 #include "lib/media/fidl/audio_renderer.fidl.h"

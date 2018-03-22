@@ -9,9 +9,9 @@
 #include <string>
 #include <unordered_map>
 
-#include "lib/app/fidl/application_environment.fidl.h"
-#include "lib/app/fidl/application_loader.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/component.h>
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/strings/string_view.h"

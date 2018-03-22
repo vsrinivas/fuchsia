@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module component;
+library component;
 
 struct FlatNamespace {
   // The mount point for each of the directories below.
   //
   // For example, ["/pkg", "/svc"].
-  array<string> paths;
+  vector<string> paths;
 
   // The directories mounted at each path in the namespace.
-  array<handle<channel>> directories;
+  vector<handle<channel>> directories;
 };

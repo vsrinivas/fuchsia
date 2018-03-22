@@ -8,7 +8,7 @@
 #include <queue>
 #include <vector>
 
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/media/fidl/media_renderer.fidl.h"
 #include "lib/media/fidl/media_transport.fidl.h"
 #include "lib/media/timeline/timeline_function.h"

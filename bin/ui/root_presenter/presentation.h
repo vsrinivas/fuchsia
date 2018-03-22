@@ -14,7 +14,7 @@
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
 #include "garnet/bin/ui/root_presenter/displays/display_model.h"
 #include "garnet/bin/ui/root_presenter/perspective_demo_mode.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"

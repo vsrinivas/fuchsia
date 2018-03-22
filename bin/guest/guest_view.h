@@ -11,7 +11,7 @@
 #include "garnet/lib/machina/input_dispatcher.h"
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/ui/scenic/client/host_memory.h"

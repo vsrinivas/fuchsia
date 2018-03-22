@@ -8,7 +8,7 @@
 #include "garnet/lib/machina/fidl/inspect.fidl.h"
 #include "garnet/lib/machina/phys_mem.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 
 namespace machina {
 

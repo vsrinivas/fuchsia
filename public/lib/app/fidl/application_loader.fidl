@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module component;
+library component;
 
-import "lib/app/fidl/application_runner.fidl";
+// import "lib/app/fidl/application_runner.fidl";
 
 // An interface for loading applications.
 [ServiceName="component.ApplicationLoader"]
 interface ApplicationLoader {
   // Load an application's package.
-  LoadApplication@0(string url) => (ApplicationPackage? package);
+  1: LoadApplication(string url) -> (ApplicationPackage? package);
 };

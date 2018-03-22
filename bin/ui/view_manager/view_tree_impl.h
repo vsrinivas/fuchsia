@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_VIEW_MANAGER_VIEW_TREE_IMPL_H_
 
 #include "lib/ui/views/fidl/view_trees.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
 namespace view_manager {

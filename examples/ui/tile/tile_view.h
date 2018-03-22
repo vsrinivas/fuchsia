@@ -10,8 +10,8 @@
 
 #include "garnet/examples/ui/tile/tile_params.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include <fuchsia/cpp/component.h>
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 #include "lib/ui/presentation/fidl/presenter.fidl.h"

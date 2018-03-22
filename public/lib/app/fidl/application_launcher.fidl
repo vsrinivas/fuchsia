@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module component;
+library component;
 
-import "lib/app/fidl/application_controller.fidl";
-import "lib/app/fidl/flat_namespace.fidl";
-import "lib/app/fidl/service_provider.fidl";
+// import "lib/app/fidl/application_controller.fidl";
+// import "lib/app/fidl/flat_namespace.fidl";
+// import "lib/app/fidl/service_provider.fidl";
 
 // An FDIO file descriptor.
 // TODO(abarth): Use the real FDIO declaration once FDIO converts to FIDL2.
@@ -33,7 +33,7 @@ struct ApplicationLaunchInfo {
   string url;
 
   // The arguments to be provided to the application.
-  array<string>? arguments;
+  vector<string>? arguments;
 
   // The file descriptor to use for stdout.
   //
@@ -64,7 +64,7 @@ struct ApplicationLaunchInfo {
 
 struct ServiceList {
   // A list of services that can be requested from |provider|.
-  array<string> names;
+  vector<string> names;
 
   // A service provider to get the services listed in |names| from.
   ServiceProvider provider;
@@ -85,6 +85,6 @@ interface ApplicationLauncher {
   // The |controller| can be used to control the lifecycle of the created
   // application instance. If an |ApplicationController|'s interface is
   // requested, the application instance is killed when the interface is closed.
-  CreateApplication@0(ApplicationLaunchInfo launch_info,
-                      ApplicationController&? controller);
+  1: CreateApplication(ApplicationLaunchInfo launch_info,
+                      request<ApplicationController>? controller);
 };

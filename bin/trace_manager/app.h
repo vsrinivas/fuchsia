@@ -9,7 +9,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "garnet/bin/trace_manager/trace_manager.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
 namespace tracing {

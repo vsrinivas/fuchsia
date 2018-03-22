@@ -6,8 +6,8 @@
 
 #include <string>
 
-#include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fidl/cpp/array.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"

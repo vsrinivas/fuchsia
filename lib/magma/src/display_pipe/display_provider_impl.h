@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "garnet/lib/magma/src/display_pipe/services/display_provider.fidl.h"
 #include "garnet/lib/magma/src/display_pipe/image_pipe_impl.h"
 #include "garnet/lib/magma/src/display_pipe/magma_connection.h"

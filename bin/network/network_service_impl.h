@@ -11,8 +11,8 @@
 #include <queue>
 
 #include "garnet/bin/network/url_loader_impl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/network/fidl/network_service.fidl.h"
 

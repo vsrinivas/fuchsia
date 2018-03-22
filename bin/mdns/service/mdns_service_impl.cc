@@ -9,7 +9,7 @@
 #include "garnet/bin/mdns/service/mdns_fidl_util.h"
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/type_converters.h"
+#include "lib/fidl/cpp/type_converters.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 

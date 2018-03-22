@@ -9,7 +9,7 @@
 
 #include <functional>
 
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/fidl/scenic.fidl.h"

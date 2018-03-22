@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module component;
+library component;
 
-import "lib/app/fidl/application_controller.fidl";
-import "lib/app/fidl/application_environment.fidl";
-import "lib/app/fidl/flat_namespace.fidl";
-import "lib/fsl/fidl/sized_vmo_transport.fidl";
+using fsl;
+
+// import "lib/app/fidl/application_controller.fidl";
+// import "lib/app/fidl/application_environment.fidl";
+// import "lib/app/fidl/flat_namespace.fidl";
+// import "lib/fsl/fidl/sized_vmo_transport.fidl";
 
 // Information given to applications at startup.
 //
@@ -60,7 +62,7 @@ interface ApplicationRunner {
   // The |controller| interface request typically originates from the
   // |ApplicationLauncher.CreateApplication| message that caused this
   // application to be started.
-  StartApplication@0(ApplicationPackage application,
+  1: StartApplication(ApplicationPackage application,
                      ApplicationStartupInfo startup_info,
-                     ApplicationController&? controller);
+                     request<ApplicationController>? controller);
 };
