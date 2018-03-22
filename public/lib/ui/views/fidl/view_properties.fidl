@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module views_v1;
+library views_v1;
 
-import "lib/ui/geometry/fidl/geometry.fidl";
+// import "lib/ui/geometry/fidl/geometry.fidl";
 
 // Parameters and contextual information for a view provided by its container.
 //
@@ -31,9 +31,9 @@ struct DisplayMetrics {
 struct ViewLayout {
   // The size of the view in logical pixels.
   // Must be non-negative.
-  SizeF size;
+  geometry.SizeF size;
 
   // The inset of the view in logical pixels.
   // Must be non-negative.
-  InsetF inset;
+  geometry.InsetF inset;
 };

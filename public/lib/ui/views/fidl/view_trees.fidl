@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module views_v1;
+library views_v1;
 
-import "lib/app/fidl/service_provider.fidl";
-import "lib/ui/views/fidl/view_containers.fidl";
-import "lib/ui/views/fidl/view_tree_token.fidl";
+// import "lib/app/fidl/service_provider.fidl";
+// import "lib/ui/views/fidl/view_containers.fidl";
+// import "lib/ui/views/fidl/view_tree_token.fidl";
 
 // A view tree is a top-level container for a hierarchy of views.
 // Each view is intended to operate independently from others and will
@@ -48,7 +48,7 @@ import "lib/ui/views/fidl/view_tree_token.fidl";
 // 3. Send input events to the dispatcher for delivery to views.
 interface ViewTree {
   // Gets the view tree's token.
-  GetToken@0() => (ViewTreeToken token);
+  1: GetToken() -> (ViewTreeToken token);
 
   // Gets a service provider to access services which are associated with
   // the view tree such as input, accessibility and editing capabilities.
@@ -56,10 +56,10 @@ interface ViewTree {
   // not be shared with anyone else.
   //
   // See |InputDispatcher|.
-  GetServiceProvider@1(component.ServiceProvider& service_provider);
+  2: GetServiceProvider(request<component.ServiceProvider> service_provider);
 
   // Gets an interface for managing the view tree's root.
-  GetContainer@2(ViewContainer& container);
+  3: GetContainer(request<ViewContainer> container);
 };
 
 // An interface clients may implement to receive events from a view tree.

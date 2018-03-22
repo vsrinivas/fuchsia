@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module views_v1;
+library views_v1;
 
-import "lib/ui/views/fidl/view_properties.fidl";
-import "lib/ui/views/fidl/view_token.fidl";
+// import "lib/ui/views/fidl/view_properties.fidl";
+// import "lib/ui/views/fidl/view_token.fidl";
 
 // A view container is an interface exposed by |View| and |ViewTree| to
 // manage their child views.  Although |View| may have any number of children,
@@ -47,7 +47,7 @@ import "lib/ui/views/fidl/view_token.fidl";
 // context to know what to draw).
 interface ViewContainer {
   // Sets the view container listener, or null to remove.
-  SetListener@0(ViewContainerListener? listener);
+  1: SetListener(ViewContainerListener? listener);
 
   // Adds the view referenced by |child_view_owner| as a child and assigns
   // it the provided |child_key| to identify it among its children.
@@ -96,7 +96,7 @@ interface ViewContainer {
   //
   // It is an error to add more than one child to a |ViewTree|'s container;
   // it can only have at most one child (its root).
-  AddChild@1(uint32 child_key, ViewOwner child_view_owner,
+  2: AddChild(uint32 child_key, ViewOwner child_view_owner,
       handle<eventpair> host_import_token);
 
   // Removes the view referenced by |child_key| from the view's
@@ -108,7 +108,7 @@ interface ViewContainer {
   //
   // It is an error to remove a view whose |child_key| does not appear
   // in the container's list of children; the connection will be closed.
-  RemoveChild@2(uint32 child_key, ViewOwner&? transferred_view_owner);
+  3: RemoveChild(uint32 child_key, request<ViewOwner>? transferred_view_owner);
 
   // Sets view properties for the child, such as layout constraints.
   //
@@ -135,10 +135,10 @@ interface ViewContainer {
   //
   // It is an error to specify malformed |child_view_properties| such
   // as invalid layout properties; the connection will be closed.
-  SetChildProperties@3(uint32 child_key, ViewProperties? child_view_properties);
+  4: SetChildProperties(uint32 child_key, ViewProperties? child_view_properties);
 
   // Request the child view to get input focus for key events.
-  RequestFocus@4(uint32 child_key);
+  5: RequestFocus(uint32 child_key);
 };
 
 // An interface clients may implement to receive events from a view container.
@@ -149,7 +149,7 @@ interface ViewContainerListener {
   //
   // The implementation should invoke the callback once the event has
   // been handled.
-  OnChildAttached@0(uint32 child_key, ViewInfo child_view_info) => ();
+  1: OnChildAttached(uint32 child_key, ViewInfo child_view_info) -> ();
 
   // Called when a child view has become unavailable.
   //
@@ -162,7 +162,7 @@ interface ViewContainerListener {
   //
   // The implementation should invoke the callback once the event has
   // been handled.
-  OnChildUnavailable@1(uint32 child_key) => ();
+  2: OnChildUnavailable(uint32 child_key) -> ();
 
   // TODO(jeffbrown): Once we figure out measurement, add a |OnChildResized|
   // event or similar to allow the container to get the size along with the
@@ -175,4 +175,5 @@ interface ViewContainerListener {
 struct ViewInfo {
   // There is currently no information here but we have preserved the
   // plumbing for now.  May remove later.
+  uint8 dummy;
 };

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module views_v1;
+library views_v1;
 
-import "lib/app/fidl/service_provider.fidl";
-import "lib/ui/views/fidl/views.fidl";
+// import "lib/app/fidl/service_provider.fidl";
+// import "lib/ui/views/fidl/views.fidl";
 
 // Provides a View upon request.
 //
@@ -23,6 +23,6 @@ interface ViewProvider {
   //
   // The caller may request services from the created view via the |services|
   // service provider.
-  CreateView@0(ViewOwner& view_owner,
-               component.ServiceProvider&? services);
+  1: CreateView(request<ViewOwner> view_owner,
+               request<component.ServiceProvider>? services);
 };

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module views;
+library views;
 
-import "lib/app/fidl/service_provider.fidl";
+// import "lib/app/fidl/service_provider.fidl";
 
 union Command {
   CreateViewCmd create_view;

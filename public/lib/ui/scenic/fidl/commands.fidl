@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module ui;
+library ui;
 
-import "lib/ui/scenic/fidl/dummy_system/commands.fidl";
-import "lib/ui/gfx/fidl/commands.fidl";
-import "lib/ui/views/fidl/commands.fidl";
+// import "lib/ui/scenic/fidl/dummy_system/commands.fidl";
+// import "lib/ui/gfx/fidl/commands.fidl";
+// import "lib/ui/views/fidl/commands.fidl";
 
 union Command {
-  ui.gfx.Command gfx;
-  ui_views.Command views;
-  DummySystemCommand dummy;
+  gfx.Command gfx;
+  views.Command views;
+  scenic_dummy_system.DummySystemCommand dummy;
 };

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module ui;
+library ui;
 
-import "lib/ui/scenic/fidl/dummy_system/events.fidl";
-import "lib/ui/gfx/fidl/events.fidl";
+// import "lib/ui/scenic/fidl/dummy_system/events.fidl";
+// import "lib/ui/gfx/fidl/events.fidl";
 
 union Event {
-  ui.gfx.Event gfx;
-  DummySystemEvent dummy;
+  gfx.Event gfx;
+  scenic_dummy_system.DummySystemEvent dummy;
 };
