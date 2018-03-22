@@ -46,7 +46,7 @@ template("fidl_go") {
     ]
 
     outputs = [
-      "$file_stem.go",
+      "$file_stem/impl.go",
     ]
 
     args = [
@@ -66,9 +66,9 @@ template("fidl_go") {
   }
 
   go_library(main_target_name) {
-    name = library_name
+    name = "fuchsia/go/$library_name"
 
-    source_dir = target_gen_dir
+    source_dir = file_stem
 
     non_go_deps = [
       ":$generation_target_name",
