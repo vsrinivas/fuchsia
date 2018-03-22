@@ -70,13 +70,14 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
     return pending > 0;
 }
 
-static void gich_active_interrupts(InterruptBitmap* active_interrupts) {
+static bool gich_active_interrupts(InterruptBitmap* active_interrupts) {
     active_interrupts->ClearAll();
-    uint32_t lr_limit = __builtin_ctzl(gic_read_gich_elrs());
+    const uint32_t lr_limit = __builtin_ctzl(gic_read_gich_elrs());
     for (uint32_t i = 0; i < lr_limit; i++) {
         uint32_t vector = gic_read_gich_lr(i) & GICH_LR_VIRTUAL_ID_MASK;
         active_interrupts->SetOne(vector);
     }
+    return lr_limit > 0;
 }
 
 AutoGich::AutoGich(GichState* gich_state)
@@ -181,13 +182,16 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     const ArchVmAspace& aspace = guest_->AddressSpace()->aspace()->arch_aspace();
     zx_paddr_t vttbr = arm64_vttbr(aspace.arch_asid(), aspace.arch_table_phys());
     GuestState* guest_state = &el2_state_->guest_state;
+    bool force_virtual_interrupt = false;
     zx_status_t status;
     do {
+        bool has_active_interrupt;
         {
             AutoGich auto_gich(&gich_state_);
             uint64_t curr_hcr = hcr_;
-            if (gich_maybe_interrupt(guest_state, &gich_state_)) {
+            if (gich_maybe_interrupt(guest_state, &gich_state_) || force_virtual_interrupt) {
                 curr_hcr |= HCR_EL2_VI;
+                force_virtual_interrupt = false;
             }
 
             ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
@@ -195,7 +199,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), curr_hcr);
             running_.store(false);
 
-            gich_active_interrupts(&gich_state_.active_interrupts);
+            has_active_interrupt = gich_active_interrupts(&gich_state_.active_interrupts);
         }
         if (status == ZX_ERR_NEXT) {
             // We received a physical interrupt. If it was due to the thread
@@ -203,6 +207,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             // to the guest.
             ktrace_vcpu(TAG_VCPU_EXIT, VCPU_PHYSICAL_INTERRUPT);
             status = thread_->signals & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
+            // If there were active interrupts when the physical interrupt
+            // occurred, raise a virtual interrupt when we re-enter the guest.
+            force_virtual_interrupt = has_active_interrupt;
         } else if (status == ZX_OK) {
             status = vmexit_handler(&hcr_, guest_state, &gich_state_, guest_->AddressSpace(),
                                     guest_->Traps(), packet);
