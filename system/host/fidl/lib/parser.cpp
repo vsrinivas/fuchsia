@@ -89,7 +89,11 @@ decltype(nullptr) Parser::Fail() {
 
         std::string squiggle(position.column, ' ');
         squiggle +="^";
-        squiggle += std::string(token_data.size() - 1, '~');
+        size_t squiggle_size = token_data.size();
+        if (squiggle_size != 0u) {
+            --squiggle_size;
+        }
+        squiggle += std::string(squiggle_size, '~');
 
         std::string error = "found unexpected token in file ";
         error += token_location.source_file().filename();
