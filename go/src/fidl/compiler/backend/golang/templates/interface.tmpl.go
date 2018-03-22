@@ -51,13 +51,13 @@ func (p *{{ $.ProxyName }}) {{ .Name }}(
 	{{- end }}
 	{{- if .Request }}
 		{{- if .Response }}
-	err := ((*Proxy)(p)).Call({{ .Ordinal }}, &req_, &resp_)
+	err := ((*_bindings.Proxy)(p)).Call({{ .Ordinal }}, &req_, &resp_)
 		{{- else }}
-	err := p.Send({{ .Ordinal }}, &req_)
+	err := ((*_bindings.Proxy)(p)).Send({{ .Ordinal }}, &req_)
 		{{- end }}
 	{{- else }}
 		{{- if .Response }}
-	err := p.Recv({{ .Ordinal }}, &resp_)
+	err := ((*_bindings.Proxy)(p)).Recv({{ .Ordinal }}, &resp_)
 		{{- else }}
 	err := nil
 		{{- end }}
