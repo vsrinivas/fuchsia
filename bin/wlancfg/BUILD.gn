@@ -9,12 +9,6 @@ rust_binary("bin") {
   with_unit_tests = true
 
   name = "wlancfg"
-
-  deps = [
-    "//garnet/public/rust/crates/fuchsia-app",
-    "//garnet/lib/rust/fidl_crates/garnet_lib_wlan_fidl",
-    "//garnet/lib/rust/fidl_crates/garnet_lib_wlan_fidl_service",
-  ]
 }
 
 package("wlancfg") {

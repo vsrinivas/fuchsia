@@ -14,7 +14,6 @@ members =  [
   "drivers/wlan/testing/util",
   "bin/bluetooth_tests/integration",
   "examples/bluetooth/ble_battery_service",
-  "examples/fidl/*_rust",
   "examples/fidl2/*rust",
   "examples/network/wget-rs",
   "examples/rust/testing",
@@ -23,8 +22,6 @@ members =  [
   "lib/rust/crates/fuchsia-wlan-dev",
   "lib/rust/crates/wlan-rsn",
   "lib/rust/crates/wlan-sme",
-  "lib/rust/fidl_crates/garnet_lib_wlan_fidl",
-  "lib/rust/fidl_crates/garnet_lib_wlan_fidl_service",
   "public/lib/fidl/rust/fidl",
   "public/rust/crates/fuchsia-ddk",
   "public/rust/crates/fuchsia-ddk/examples/ddk_toy",
@@ -40,20 +37,8 @@ members =  [
   "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
   "public/rust/crates/mxruntime",
   "public/rust/crates/mxruntime/mxruntime-sys",
-  "public/rust/fidl_crates/fidl2_examples",
   "public/rust/fidl_crates/fidl_device_settings",
   "public/rust/fidl_crates/fidl_echo2",
-  "public/rust/fidl_crates/garnet_examples_fidl_services",
-  "public/rust/fidl_crates/garnet_public_lib_app_fidl",
-  "public/rust/fidl_crates/garnet_public_lib_app_fidl_service_provider",
-  "public/rust/fidl_crates/garnet_public_lib_bluetooth_fidl",
-  "public/rust/fidl_crates/garnet_public_lib_fsl_fidl",
-  "public/rust/fidl_crates/garnet_public_lib_logger_fidl",
-  "public/rust/fidl_crates/garnet_public_lib_mdns_fidl",
-  "public/rust/fidl_crates/garnet_public_lib_netstack_fidl_net_address",
-  "public/rust/fidl_crates/garnet_public_lib_network_fidl",
-  "public/rust/fidl_crates/garnet_public_lib_power_fidl",
-  "public/rust/fidl_crates/garnet_public_lib_xi_fidl",
 ]
 
 # Any crate in the Fuchsia tree that is a dependency of a member of this
@@ -74,19 +59,6 @@ fuchsia-vfs-watcher = { path = "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watch
 fuchsia-wlan-dev = { path = "lib/rust/crates/fuchsia-wlan-dev" }
 fuchsia-zircon = { path = "public/rust/crates/fuchsia-zircon" }
 fuchsia-zircon-sys = { path = "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys" }
-garnet_examples_fidl_services = { path = "public/rust/fidl_crates/garnet_examples_fidl_services" }
-garnet_lib_wlan_fidl = { path = "lib/rust/fidl_crates/garnet_lib_wlan_fidl" }
-garnet_lib_wlan_fidl_service = { path = "lib/rust/fidl_crates/garnet_lib_wlan_fidl_service" }
-garnet_public_lib_app_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_app_fidl" }
-garnet_public_lib_app_fidl_service_provider = { path = "public/rust/fidl_crates/garnet_public_lib_app_fidl_service_provider" }
-garnet_public_lib_bluetooth_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_bluetooth_fidl" }
-garnet_public_lib_fsl_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_fsl_fidl" }
-garnet_public_lib_logger_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_logger_fidl" }
-garnet_public_lib_mdns_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_mdns_fidl" }
-garnet_public_lib_netstack_fidl_net_address = { path = "public/rust/fidl_crates/garnet_public_lib_netstack_fidl_net_address" }
-garnet_public_lib_network_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_network_fidl" }
-garnet_public_lib_power_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_power_fidl" }
-garnet_public_lib_xi_fidl = { path = "public/rust/fidl_crates/garnet_public_lib_xi_fidl" }
 mio = { path = "../third_party/rust-mirrors/mio" }
 mxruntime = { path = "public/rust/crates/mxruntime" }
 mxruntime-sys = { path = "public/rust/crates/mxruntime/mxruntime-sys" }

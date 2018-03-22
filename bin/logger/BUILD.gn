@@ -9,12 +9,6 @@ rust_binary("bin") {
   with_unit_tests = true
 
   name = "logger"
-
-  deps = [
-    "//garnet/public/rust/crates/fuchsia-app",
-    "//garnet/public/rust/fidl_crates/garnet_public_lib_app_fidl",
-    "//garnet/public/rust/fidl_crates/garnet_public_lib_logger_fidl",
-  ]
 }
 
 executable("logger_integration_tests") {

@@ -9,10 +9,6 @@ rust_binary("bin") {
   with_unit_tests = true
 
   name = "log_listener"
-
-  deps = [
-    "//garnet/public/rust/fidl_crates/garnet_public_lib_logger_fidl",
-  ]
 }
 
 package("log_listener") {

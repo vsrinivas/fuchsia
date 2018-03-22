@@ -85,8 +85,6 @@ dependencies = [
  "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_public_lib_bluetooth_fidl 0.1.0",
- "garnet_public_lib_power_fidl 0.1.0",
  "parking_lot 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -291,31 +289,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "echo_client_rust"
-version = "0.1.0"
-dependencies = [
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fidl 0.1.0",
- "fuchsia-app 0.1.0",
- "fuchsia-async 0.1.0",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_examples_fidl_services 0.1.0",
- "structopt 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "echo_server_rust"
-version = "0.1.0"
-dependencies = [
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fidl 0.1.0",
- "fuchsia-app 0.1.0",
- "fuchsia-async 0.1.0",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_examples_fidl_services 0.1.0",
-]
-
-[[package]]
 name = "either"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -366,16 +339,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fidl2_examples"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "fidl_device_settings"
 version = "0.1.0"
 dependencies = [
@@ -413,10 +376,6 @@ dependencies = [
  "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_examples_fidl_services 0.1.0",
- "garnet_public_lib_app_fidl 0.1.0",
- "garnet_public_lib_app_fidl_service_provider 0.1.0",
- "garnet_public_lib_fsl_fidl 0.1.0",
  "mxruntime 0.1.0",
 ]
 
@@ -511,7 +470,6 @@ dependencies = [
  "fdio 0.2.0",
  "fidl 0.1.0",
  "fuchsia-zircon 0.3.4",
- "garnet_lib_wlan_fidl 0.1.0",
 ]
 
 [[package]]
@@ -603,148 +561,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "garnet_examples_fidl_services"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "garnet_lib_wlan_fidl"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "garnet_lib_wlan_fidl_service"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_lib_wlan_fidl 0.1.0",
-]
-
-[[package]]
-name = "garnet_public_lib_app_fidl"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_public_lib_app_fidl_service_provider 0.1.0",
- "garnet_public_lib_fsl_fidl 0.1.0",
-]
-
-[[package]]
-name = "garnet_public_lib_app_fidl_service_provider"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "garnet_public_lib_bluetooth_fidl"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_public_lib_fsl_fidl 0.1.0",
- "garnet_public_lib_netstack_fidl_net_address 0.1.0",
- "garnet_public_lib_power_fidl 0.1.0",
-]
-
-[[package]]
-name = "garnet_public_lib_fsl_fidl"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "garnet_public_lib_logger_fidl"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "garnet_public_lib_mdns_fidl"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_public_lib_app_fidl 0.1.0",
- "garnet_public_lib_netstack_fidl_net_address 0.1.0",
-]
-
-[[package]]
-name = "garnet_public_lib_netstack_fidl_net_address"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "garnet_public_lib_network_fidl"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_public_lib_fsl_fidl 0.1.0",
- "garnet_public_lib_netstack_fidl_net_address 0.1.0",
-]
-
-[[package]]
-name = "garnet_public_lib_power_fidl"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_public_lib_app_fidl_service_provider 0.1.0",
- "garnet_public_lib_fsl_fidl 0.1.0",
-]
-
-[[package]]
-name = "garnet_public_lib_xi_fidl"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "gcc"
 version = "0.3.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -831,7 +647,6 @@ name = "log_listener"
 version = "0.1.0"
 dependencies = [
  "fidl 0.1.0",
- "garnet_public_lib_logger_fidl 0.1.0",
 ]
 
 [[package]]
@@ -845,7 +660,6 @@ dependencies = [
  "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_public_lib_logger_fidl 0.1.0",
  "libc 0.2.39 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1342,8 +1156,6 @@ dependencies = [
  "fuchsia-app 0.1.0",
  "fuchsia-async 0.1.0",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_public_lib_fsl_fidl 0.1.0",
- "garnet_public_lib_network_fidl 0.1.0",
 ]
 
 [[package]]
@@ -1404,7 +1216,6 @@ dependencies = [
  "fdio 0.2.0",
  "fuchsia-wlan-dev 0.1.0",
  "fuchsia-zircon 0.3.4",
- "garnet_lib_wlan_fidl 0.1.0",
 ]
 
 [[package]]
@@ -1417,8 +1228,6 @@ dependencies = [
  "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_lib_wlan_fidl 0.1.0",
- "garnet_lib_wlan_fidl_service 0.1.0",
 ]
 
 [[package]]
@@ -1433,8 +1242,6 @@ dependencies = [
  "fuchsia-wlan-dev 0.1.0",
  "fuchsia-zircon 0.3.4",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_lib_wlan_fidl 0.1.0",
- "garnet_lib_wlan_fidl_service 0.1.0",
  "log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "parking_lot 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "wlan-sme 0.1.0",
@@ -1450,8 +1257,6 @@ dependencies = [
  "fuchsia-app 0.1.0",
  "fuchsia-async 0.1.0",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_lib_wlan_fidl 0.1.0",
- "garnet_lib_wlan_fidl_service 0.1.0",
  "structopt 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1531,7 +1336,6 @@ dependencies = [
  "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
- "garnet_public_lib_xi_fidl 0.1.0",
  "mxruntime 0.1.0",
  "xi-core-lib 0.2.0",
  "xi-rpc 0.2.0",

@@ -16,7 +16,6 @@ package("rust-crates-tests") {
     "fuchsia-vfs/fuchsia-vfs-watcher",
     "fuchsia-zircon",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fidl_crates/fidl2_examples",
   ]
 
   tests = [

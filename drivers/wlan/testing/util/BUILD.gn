@@ -6,8 +6,4 @@ import("//build/rust/rust_binary.gni")
 
 rust_binary("util") {
   name = "wlan-test-util"
-
-  deps = [
-    "//garnet/lib/rust/fidl_crates/garnet_lib_wlan_fidl",
-  ]
 }

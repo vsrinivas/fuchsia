@@ -6,10 +6,4 @@ import("//build/rust/rust_library.gni")
 import("//build/package.gni")
 
 rust_library("fuchsia-app") {
-  deps = [
-    "//garnet/public/rust/fidl_crates/garnet_examples_fidl_services",
-    "//garnet/public/rust/fidl_crates/garnet_public_lib_app_fidl",
-    "//garnet/public/rust/fidl_crates/garnet_public_lib_app_fidl_service_provider",
-    "//garnet/public/rust/fidl_crates/garnet_public_lib_fsl_fidl",
-  ]
 }
