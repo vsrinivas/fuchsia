@@ -17,10 +17,10 @@ import (
 )
 
 type Context struct {
-	Environment     *component.ApplicationEnvironment_Proxy
+	Environment     *component.ApplicationEnvironmentInterface
 	OutgoingService *svcns.Namespace
 	serviceRoot     zx.Handle
-	Launcher        *component.ApplicationLauncher_Proxy
+	Launcher        *component.ApplicationLauncherInterface
 	appServices     zx.Handle
 }
 
