@@ -157,7 +157,6 @@ source_set("gfx") {
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/geometry/fidl",
     "//garnet/public/lib/ui/gfx/fidl",
-    "//garnet/public/lib/ui/gfx/fidl:fidl_cpp_sources__common",
     "//garnet/public/lib/vulkan",
   ]
 

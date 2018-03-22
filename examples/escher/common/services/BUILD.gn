@@ -5,6 +5,8 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("services") {
+  name = "escher_demo"
+
   sources = [
     "escher_demo.fidl",
   ]

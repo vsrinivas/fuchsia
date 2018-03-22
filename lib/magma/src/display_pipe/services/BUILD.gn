@@ -5,6 +5,8 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("services") {
+  name = "display_pipe"
+
   sources = [
     "display_provider.fidl",
   ]
