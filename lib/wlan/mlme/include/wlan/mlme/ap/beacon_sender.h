@@ -31,6 +31,11 @@ class BeaconSender : public FrameHandler {
    private:
     zx_status_t WriteBeacon(const TrafficIndicationMap* tim);
     zx_status_t SendProbeResponse(const ImmutableMgmtFrame<ProbeRequest>& frame);
+    zx_status_t WriteSsid(ElementWriter* w);
+    zx_status_t WriteSupportedRates(ElementWriter* w);
+    zx_status_t WriteDsssParamSet(ElementWriter* w);
+    zx_status_t WriteTim(ElementWriter* w, const TrafficIndicationMap& tim);
+    zx_status_t WriteExtendedSupportedRates(ElementWriter* w);
     bool IsStarted();
 
     DeviceInterface* const device_;

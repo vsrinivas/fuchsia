@@ -38,6 +38,7 @@ MgmtFrame<Body> BuildMgmtFrame(fbl::unique_ptr<Packet>* packet, size_t body_payl
                                                 size_t body_payload_len, bool has_ht_ctrl)
 
 DECLARE_BUILD_MGMTFRAME(ProbeRequest);
+DECLARE_BUILD_MGMTFRAME(ProbeResponse);
 DECLARE_BUILD_MGMTFRAME(Beacon);
 DECLARE_BUILD_MGMTFRAME(Authentication);
 DECLARE_BUILD_MGMTFRAME(Deauthentication);

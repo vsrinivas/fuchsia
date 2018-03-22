@@ -444,6 +444,8 @@ struct ProbeRequest {
 struct ProbeResponse {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeResponse; }
 
+    bool Validate(size_t len);
+
     // 9.4.1.10
     uint64_t timestamp;
     // 9.4.1.3
