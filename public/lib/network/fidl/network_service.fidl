@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module network;
+library network;
 
-import "lib/network/fidl/url_loader.fidl";
+// import "lib/network/fidl/url_loader.fidl";
 
 [ServiceName="network::NetworkService"]
 interface NetworkService {
-  CreateURLLoader@0(URLLoader& loader);
+  1: CreateURLLoader(request<URLLoader> loader);
 
   // This is not implemented
-  GetCookieStore@1(handle<channel> cookie_store);
+  2: GetCookieStore(handle<channel> cookie_store);
 
   // This is not implemented
-  CreateWebSocket@2(handle<channel> socket);
+  3: CreateWebSocket(handle<channel> socket);
 };

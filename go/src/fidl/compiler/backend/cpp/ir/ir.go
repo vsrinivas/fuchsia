@@ -322,6 +322,11 @@ func changeIfReserved(i types.Identifier, ext string) string {
 	return str
 }
 
+func formatDestructor(ei types.EncodedIdentifier) string {
+	val := types.ParseCompoundIdentifier(ei)
+	return fmt.Sprintf("~%s", changeIfReserved(val.Name, ""))
+}
+
 type compiler struct {
 	namespace string
 	decls     *types.DeclMap
@@ -388,11 +393,11 @@ func (c *compiler) compileType(val types.Type) Type {
 	case types.ArrayType:
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::fidl::Array<%s, %v>", t.Decl, *val.ElementCount)
-		r.Dtor = fmt.Sprintf("~Array", r.Decl)
+		r.Dtor = fmt.Sprintf("~Array")
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
-		r.Dtor = fmt.Sprintf("~VectorPtr", r.Decl)
+		r.Dtor = fmt.Sprintf("~VectorPtr")
 	case types.StringType:
 		r.Decl = "::fidl::StringPtr"
 		r.Dtor = "~StringPtr"
@@ -424,7 +429,7 @@ func (c *compiler) compileType(val types.Type) Type {
 				r.Dtor = fmt.Sprintf("~unique_ptr")
 			} else {
 				r.Decl = t
-				r.Dtor = fmt.Sprintf("~%s", t)
+				r.Dtor = formatDestructor(val.Identifier)
 			}
 		case types.InterfaceDeclType:
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)

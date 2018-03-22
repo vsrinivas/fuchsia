@@ -42,9 +42,9 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
 zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   {{- range $index, $member := .Members }}
   {{ if not $index }}zx_status_t {{ end -}}
-  status = ::fidl::Clone({{ .Name }}, &result->{{ .Name }});
-  if (status != ZX_OK)
-    return status;
+  _status = ::fidl::Clone({{ .Name }}, &result->{{ .Name }});
+  if (_status != ZX_OK)
+    return _status;
   {{- end }}
   return ZX_OK;
 }

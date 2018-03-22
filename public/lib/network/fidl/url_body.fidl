@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module network;
+library network;
 
-import "lib/fsl/fidl/sized_vmo_transport.fidl";
+using fsl;
+
+// import "lib/fsl/fidl/sized_vmo_transport.fidl";
 
 union URLBody {
   // A socket that will contain the streaming request or response body.
@@ -14,5 +16,3 @@ union URLBody {
   // A sized shared buffer that will contain the complete request or response body.
   fsl.SizedVmoTransport sized_buffer;
 };
-
-

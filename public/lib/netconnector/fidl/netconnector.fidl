@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module netconnector;
+library netconnector;
 
-import "lib/app/fidl/service_provider.fidl";
+using component;
+
+// import "lib/app/fidl/service_provider.fidl";
 
 // Primary netconnector service definition.
 [ServiceName="netconnector::NetConnector"]
@@ -18,18 +20,18 @@ interface NetConnector {
   // provides the service. This method is provided so that responding services
   // running in a user context can register with a |netconnector| running in a
   // device context.
-  RegisterServiceProvider@0(string service_name,
+  1: RegisterServiceProvider(string service_name,
                             component.ServiceProvider service_provider);
 
   // Gets a provider for services on the specified device. Services provided
   // on the local device can be accessed by passing a |device_name| of "local"
   // or the actual name of the local device.
-  GetDeviceServiceProvider@1(string device_name,
-                             component.ServiceProvider& service_provider);
+  2: GetDeviceServiceProvider(string device_name,
+                             request<component.ServiceProvider> service_provider);
 
   // Gets the names of known devices. To get the list immediately, call
   // |GetKnownDeviceNames(kInitialKnownDeviceNames)|. To get updates thereafter,
   // pass the version sent in the previous callback.
-  GetKnownDeviceNames@2(uint64 version_last_seen) =>
-    (uint64 version, array<string> devices);
+  3: GetKnownDeviceNames(uint64 version_last_seen) ->
+    (uint64 version, vector<string> devices);
 };

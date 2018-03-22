@@ -44,7 +44,7 @@ def main():
         for library in dep_libraries:
             if library in target_libraries:
                 continue
-        target_libraries.append(library)
+            target_libraries.append(library)
 
     target_libraries.append(" ".join(sorted(args.sources)))
     write_libraries(args.out_libraries, target_libraries)
