@@ -14,7 +14,7 @@ import (
 	"syscall/zx"
 	"syscall/zx/mxerror"
 
-	"garnet/amber/api/amber"
+	"fuchsia/go/amber"
 
 	"amber/daemon"
 	"amber/pkg"
@@ -99,7 +99,7 @@ func (c *ControlSrvr) Quit() {
 	c.stubs = []*bindings.Stub{}
 }
 
-func (c *ControlSrvr) Bind(req amber.Control_Request) {
+func (c *ControlSrvr) Bind(req amber.ControlInterface) {
 	s := req.NewStub(c, bindings.GetAsyncWaiter())
 	c.stubs = append(c.stubs, s)
 	go func(b *bindings.Stub) {

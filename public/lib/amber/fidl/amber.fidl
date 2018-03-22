@@ -7,7 +7,7 @@ library amber;
 [ServiceName="update::Control"]
 interface Control {
   // simple no-op that can be used to test the connection
-  1: DoTest(int32 value) -> (string value);
+  1: DoTest(int32 input) -> (string output);
 
   // Add a source at the provided URL. The rate limit indicates the minimum
   // interval between requests to the source expressed in seconds. A limit of

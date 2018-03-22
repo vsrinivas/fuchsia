@@ -21,7 +21,7 @@ import (
 	"amber/ipcserver"
 	"amber/pkg"
 	"amber/source"
-	"garnet/amber/api/amber"
+	"fuchsia/go/amber"
 
 	"application/lib/app/context"
 

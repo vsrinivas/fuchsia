@@ -69,7 +69,7 @@ func New(serviceRoot, serviceRequest, appServices zx.Handle) *Context {
 
 func (c *Context) Serve() {
 	if c.appServices.IsValid() {
-		r := component.ServiceProvider_Request{
+		r := component.ServiceProviderInterface{
 			bindings.NewChannelHandleOwner(c.appServices)}
 		s := component.NewStubForServiceProvider(
 			r, c.OutgoingService, bindings.GetAsyncWaiter())

@@ -4,6 +4,7 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
 import("//build/host.gni")
 import("//build/package.gni")
 
@@ -44,20 +45,12 @@ common_dependencies = [
 
 fidl_dependencies = [
       {
-        package = "garnet/amber/api"
-        source = "$root_gen_dir/go/src/garnet/public/lib/amber/fidl"
-      },
-      {
         package = "fidl"
         source = "//garnet/public/lib/fidl/go/src/fidl"
       },
       {
         package = "application/lib/app"
         source = "//garnet/public/lib/app/go/src/app"
-      },
-      {
-        package = "garnet/public/lib/app/fidl"
-        source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
       },
       {
         package = "svc"
@@ -91,9 +84,9 @@ foreach(tgt, amber_target_binaries) {
 
     gopackage = tgt.gopkg
 
-    deps = [
-      "//garnet/public/lib/amber/fidl",
-      "//garnet/public/lib/app/fidl",
+    extra_dependencies = [
+      "//garnet/public/lib/amber/fidl($go_toolchain)",
+      "//garnet/public/lib/app/fidl($go_toolchain)",
     ]
 
     go_dependencies = common_dependencies + fidl_dependencies
@@ -193,9 +186,9 @@ foreach(test, test_targets) {
   go_test(test.name) {
     gopackage = test.gopkg
 
-    deps = [
-      "//garnet/public/lib/amber/fidl",
-      "//garnet/public/lib/app/fidl",
+    extra_dependencies = [
+      "//garnet/public/lib/amber/fidl($go_toolchain)",
+      "//garnet/public/lib/app/fidl($go_toolchain)",
     ]
 
     go_dependencies =
