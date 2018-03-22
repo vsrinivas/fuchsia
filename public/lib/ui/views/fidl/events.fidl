@@ -4,8 +4,8 @@
 
 module views;
 
-import "lib/ui/geometry/fidl/geometry.fidl";
-import "lib/ui/gfx/fidl/types.fidl";
+// import "lib/ui/geometry/fidl/geometry.fidl";
+// import "lib/ui/gfx/fidl/types.fidl";
 
 union Event {
   ViewPropertiesChangedEvent view_properties_changed;
@@ -24,15 +24,15 @@ struct ViewPropertiesChangedEvent {
   // The ratio of the size of a logical pixel to a physical pixel assuming
   // pixels are square.  This value changes in relation to display
   // resolution and density.  Must be > 0.
-  float device_pixel_ratio = 1.0;
+  float32 device_pixel_ratio = 1.0;
 
   // The size of the view in logical pixels.
   // Must be non-negative.
-  ui.gfx.BoundingBox size;
+  gfx.BoundingBox size;
 
   // The inset of the view in logical pixels.
   // Must be non-negative.
-  ui.gfx.vec3 inset;
+  gfx.vec3 inset;
 };
 
 // Called when a child view is attached.

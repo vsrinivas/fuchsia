@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module gfx;
+library gfx;
 
-import "lib/ui/gfx/fidl/types.fidl";
-import "lib/ui/geometry/fidl/geometry.fidl";
+// import "lib/ui/gfx/fidl/types.fidl";
+// import "lib/ui/geometry/fidl/geometry.fidl";
 
 // The shapes defined in this file can be used to define the rendered shape of
 // an |ObjectNode|, and to define the clip region of a |ClipNode|.
 
 // Rectangle centered at (0,0).
 struct RectangleArgs {
-  Value width;  // float
-  Value height; // float
+  Value width;  // float32
+  Value height; // float32
 };
 
 // RoundedRectangle centered at (0,0).  Legal parameter values must satisfy the
@@ -24,18 +24,20 @@ struct RectangleArgs {
 //   - top_left_radius + bottom_left_radius <= height
 //   - top_right_radius + bottom_right_radius <= height
 struct RoundedRectangleArgs {
-  Value width;                // float
-  Value height;               // float
-  Value top_left_radius;      // float
-  Value top_right_radius;     // float
-  Value bottom_right_radius;  // float
-  Value bottom_left_radius;   // float
+  Value width;                // float32
+  Value height;               // float32
+  Value top_left_radius;      // float32
+  Value top_right_radius;     // float32
+  Value bottom_right_radius;  // float32
+  Value bottom_left_radius;   // float32
 };
 
 struct CircleArgs {
-  Value radius;  // float
+  Value radius;  // float32
 };
 
 // A Mesh cannot be rendered until it has been bound to vertex/index buffers;
 // see BindMeshBuffersCommand.
-struct MeshArgs {};
+struct MeshArgs {
+    uint8 dummy;
+};

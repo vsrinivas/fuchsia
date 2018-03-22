@@ -9,7 +9,7 @@ import "lib/ui/gfx/fidl/types.fidl";
 struct Touch {
   ui.gfx.vec2 position;
   uint32 nanoseconds;
-  float pressure;
+  float32 pressure;
 };
 
 struct CubicBezier2 {

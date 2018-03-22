@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module gfx;
+library gfx;
 
 // These are all of the types of parameters that can be set to configure a
 // |Renderer|.
@@ -14,11 +14,11 @@ union RendererParam {
 // the scene.
 enum ShadowTechnique {
   // No shadows.
-  UNSHADOWED = 0,
+  UNSHADOWED = 0;
   // Default.  Screen-space, depth-buffer based shadows; SSDO-ish.
-  SCREEN_SPACE,
+  SCREEN_SPACE = 1;
   // Basic shadow map.
-  SHADOW_MAP,
+  SHADOW_MAP = 2;
   // Moment shadow map (see http://momentsingraphics.de).
-  MOMENT_SHADOW_MAP,
+  MOMENT_SHADOW_MAP = 3;
 };

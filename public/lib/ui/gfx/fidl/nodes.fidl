@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module gfx;
+library gfx;
 
 // These are the types of nodes that can be created within a Mozart |Session|.
 //
@@ -25,17 +25,23 @@ module gfx;
 // - has_transform
 // - is_clip
 // - has_parts
-struct ClipNodeArgs {};
+struct ClipNodeArgs {
+    uint8 unused;
+};
 
 // Characteristics:
 // - has_transform
 // - has_children
 // - has_parts
 // - has_clip
-struct EntityNodeArgs {};
+struct EntityNodeArgs {
+    uint8 unused;
+};
 
 // Characteristics:
 // - has_transform
 // - has_shape
 // - has_material
-struct ShapeNodeArgs {};
+struct ShapeNodeArgs {
+    uint8 unused;
+};

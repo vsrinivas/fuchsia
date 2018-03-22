@@ -124,18 +124,18 @@ struct PointerEvent {
   Phase phase;
 
   // |x| and |y| are in the coordinate system of the View.
-  float x;
-  float y;
+  float32 x;
+  float32 y;
 
-  // TODO(jpoichet) float vx;
-  // TODO(jpoichet) float vy;
+  // TODO(jpoichet) float32 vx;
+  // TODO(jpoichet) float32 vy;
 
-  float radius_major;
-  float radius_minor;
-  // TODO(jpoichet) float orientation;
-  // TODO(jpoichet) float tilt;
-  // TODO(jpoichet) float altitude;
-  // TODO(jpichet) float amplitude;
+  float32 radius_major;
+  float32 radius_minor;
+  // TODO(jpoichet) float32 orientation;
+  // TODO(jpoichet) float32 tilt;
+  // TODO(jpoichet) float32 altitude;
+  // TODO(jpichet) float32 amplitude;
 
   // Currently pressed buttons as defined the kButton constants such as
   // |kMousePrimaryButton|

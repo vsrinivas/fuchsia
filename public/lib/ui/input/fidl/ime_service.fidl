@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module input;
+library input;
 
-import "lib/ui/input/fidl/text_editing.fidl";
-import "lib/ui/input/fidl/text_input.fidl";
-import "lib/ui/input/fidl/input_events.fidl";
+// import "lib/ui/input/fidl/text_editing.fidl";
+// import "lib/ui/input/fidl/text_input.fidl";
+// import "lib/ui/input/fidl/input_events.fidl";
 
 // The service provided by an IME
 [ServiceName="mozart::ImeService"]
@@ -24,6 +24,6 @@ interface ImeService {
 // View can use the |OfferServiceProvider| API to expose that service.
 [ServiceName="mozart::SoftKeyboardContainer"]
 interface SoftKeyboardContainer {
-  Show@0() => (bool shown);
-  Hide@1();
+  1: Show() -> (bool shown);
+  2: Hide();
 };

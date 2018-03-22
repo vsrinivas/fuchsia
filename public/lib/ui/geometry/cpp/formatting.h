@@ -5,7 +5,7 @@
 #ifndef LIB_UI_GEOMETRY_CPP_FORMATTING_H_
 #define LIB_UI_GEOMETRY_CPP_FORMATTING_H_
 
-#include "lib/ui/geometry/fidl/geometry.fidl.h"
+#include <fuchsia/cpp/geometry.h>
 
 namespace mozart {
 

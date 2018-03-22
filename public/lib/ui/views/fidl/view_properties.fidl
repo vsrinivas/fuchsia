@@ -20,7 +20,7 @@ struct DisplayMetrics {
   // The ratio of the size of a logical pixel to a physical pixel assuming
   // pixels are square.  This value changes in relation to display
   // resolution and density.  Must be > 0.
-  float device_pixel_ratio = 1.0;
+  float32 device_pixel_ratio = 1.0;
 };
 
 // Provides layout constraints for a view.

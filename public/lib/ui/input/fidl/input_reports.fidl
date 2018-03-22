@@ -22,8 +22,8 @@ struct Range {
 };
 
 struct RangeF {
-  float min;
-  float max;
+  float32 min;
+  float32 max;
 };
 
 enum AxisScale {
@@ -39,7 +39,7 @@ struct Axis {
 
 struct AxisF {
   RangeF range;
-  float resolution = 1.0;
+  float32 resolution = 1.0;
   AxisScale scale = LINEAR;
 };
 

@@ -67,18 +67,18 @@ struct Pen {
 // - SetPenStyle (as arg).
 // - SetStrokeStyle (as arg).
 struct WobblyStyle {
-  float speed1;
-  float amplitude1;
-  float frequency1;
-  float speed2;
-  float amplitude2;
-  float frequency2;
-  float speed3;
-  float amplitude3;
-  float frequency3;
+  float32 speed1;
+  float32 amplitude1;
+  float32 frequency1;
+  float32 speed2;
+  float32 amplitude2;
+  float32 frequency2;
+  float32 speed3;
+  float32 amplitude3;
+  float32 frequency3;
 };
 
-// Allows clients to provide a list of floats that are sampled along the stroke,
+// Allows clients to provide a list of float32s that are sampled along the stroke,
 // proportionally to the arc-length of the stroke.  An example use-case is a
 // to visualize the frequency spectrum of an audio signal.
 //
@@ -86,5 +86,5 @@ struct WobblyStyle {
 // - SetPenStyle (as arg)
 // - SetStrokeStyle (as arg).
 struct ExplicitWidthStyle {
-  array<float> vals;
+  array<float32> vals;
 };

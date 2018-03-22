@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module views_v1_token;
+library views_v1_token;
 
 // A view token is an opaque transferable reference to a view.
 //
@@ -28,5 +28,5 @@ struct ViewToken {
 // to obtain the desired ownership semantics.
 interface ViewOwner {
   // Gets the |ViewToken| associated with the view.
-  GetToken@0() => (ViewToken token);
+  1: GetToken() -> (ViewToken token);
 };
