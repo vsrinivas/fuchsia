@@ -34,7 +34,7 @@ template("fidl_cpp") {
   # gets compiled separately in multiple variants of the target toolchains.
   # The generation happens in the base (C++) toolchain, but put its output
   # into fidl_toolchain's gen/ directory instead so that a single
-  # `-Ifidling/gen` lets `#include <fuchsia/library.cc.h>` find the
+  # `-Ifidling/gen` lets `#include <fuchsia/cpp/library.h>` find the
   # files without adding `-Igen` when gen/ is for a different actual C++
   # toolchain.  Since `fidling/gen` contains nothing but FIDL-generated
   # code, it's not so scary to have that included in code built by multiple
@@ -44,7 +44,7 @@ template("fidl_cpp") {
   fidl_root_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
 
-  file_stem = "$fidl_root_gen_dir/fuchsia/fidl/$library_name"
+  file_stem = "$fidl_root_gen_dir/fuchsia/cpp/$library_name"
   coding_tables = "$fidl_target_gen_dir/$target_name.fidl.tables.cc"
 
   if (current_toolchain == current_base_toolchain) {
@@ -67,7 +67,7 @@ template("fidl_cpp") {
       ]
 
       outputs = [
-        "$file_stem.cc.h",
+        "$file_stem.h",
         "$file_stem.cc",
       ]
 
@@ -99,11 +99,11 @@ template("fidl_cpp") {
 
     sources = [
       "$file_stem.cc",
-      "$file_stem.cc.h",
+      "$file_stem.h",
       coding_tables,
     ]
 
-    # Let dependencies use `#include "$file_stem.cc.h"`.
+    # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ "//garnet/public/lib/fidl/build/cpp:fidl_gen_config" ]
 
     deps = [

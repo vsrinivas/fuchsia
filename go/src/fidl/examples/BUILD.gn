@@ -64,8 +64,7 @@ group("examples") {
     ":interface-ordinals",
     ":test",
     ":types",
-    # TODO(abarth): Build these targets too.
-    # ":point",
-    # ":view",
+    ":point",
+    ":view",
   ]
 }

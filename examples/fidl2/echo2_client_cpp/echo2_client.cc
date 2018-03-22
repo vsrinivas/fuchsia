@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/fidl/echo2.cc.h>
+#include <fuchsia/cpp/echo2.h>
 #include <launchpad/launchpad.h>
 #include <lib/async/cpp/loop.h>
 #include <lib/async/default.h>

@@ -638,7 +638,7 @@ func Compile(r types.Root) Root {
 			continue
 		}
 		// TODO(abarth): Support dependencies on headers outside the SDK.
-		h := fmt.Sprintf("fuchsia/fidl/%s.cc.h", l.Name)
+		h := fmt.Sprintf("fuchsia/cpp/%s.h", l.Name)
 		root.Headers = append(root.Headers, h)
 	}
 
