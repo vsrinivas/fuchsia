@@ -74,10 +74,20 @@ template("fidl_library") {
       "--sources",
     ] + rebase_path(sources, root_build_dir)
 
-    if (defined(invoker.deps)) {
+    if (defined(invoker.deps) || defined(invoker.public_deps)) {
       dep_libraries = []
 
-      foreach(dep, invoker.deps) {
+      merged_deps = []
+
+      if (defined(invoker.deps)) {
+        merged_deps += invoker.deps
+      }
+
+      if (defined(invoker.public_deps)) {
+        merged_deps += invoker.public_deps
+      }
+
+      foreach(dep, merged_deps) {
         gen_dir = get_label_info(dep, "target_gen_dir")
         name = get_label_info(dep, "name")
         dep_libraries += [ "$gen_dir/$name.libraries" ]
