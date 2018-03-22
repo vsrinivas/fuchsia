@@ -14,8 +14,7 @@ import (
 	"app/context"
 	"fidl/bindings"
 
-	"garnet/public/lib/netstack/fidl/net_address"
-	"garnet/public/lib/netstack/fidl/netstack"
+	"fuchsia/go/netstack"
 )
 
 type netstackClientApp struct {
@@ -156,12 +155,12 @@ func hwAddrToString(hwaddr []uint8) string {
 	return str
 }
 
-func netAddrToString(addr net_address.NetAddress) string {
+func netAddrToString(addr netstack.NetAddress) string {
 	switch addr.Family {
-	case net_address.NetAddressFamily_Ipv4:
+	case netstack.NetAddressFamily_Ipv4:
 		a := tcpip.Address(addr.Ipv4[:])
 		return fmt.Sprintf("%s", a)
-	case net_address.NetAddressFamily_Ipv6:
+	case netstack.NetAddressFamily_Ipv6:
 		a := tcpip.Address(addr.Ipv6[:])
 		return fmt.Sprintf("%s", a)
 	}
@@ -180,14 +179,14 @@ func isIPv4(ip net.IP) bool {
 	return ip.DefaultMask() != nil
 }
 
-func toNetAddress(addr net.IP) net_address.NetAddress {
-	out := net_address.NetAddress{Family: net_address.NetAddressFamily_Unspecified}
+func toNetAddress(addr net.IP) netstack.NetAddress {
+	out := netstack.NetAddress{Family: netstack.NetAddressFamily_Unspecified}
 	if isIPv4(addr) {
-		out.Family = net_address.NetAddressFamily_Ipv4
+		out.Family = netstack.NetAddressFamily_Ipv4
 		out.Ipv4 = &[4]uint8{}
 		copy(out.Ipv4[:], addr[len(addr)-4:])
 	} else {
-		out.Family = net_address.NetAddressFamily_Ipv6
+		out.Family = netstack.NetAddressFamily_Ipv6
 		out.Ipv6 = &[16]uint8{}
 		copy(out.Ipv6[:], addr[:])
 	}

@@ -18,8 +18,7 @@ import (
 	"app/context"
 	"fidl/bindings"
 
-	"garnet/public/lib/netstack/fidl/net_address"
-	"garnet/public/lib/netstack/fidl/netstack"
+	"fuchsia/go/netstack"
 )
 
 type testApp struct {
@@ -100,12 +99,12 @@ func printIface(iface netstack.NetInterface) {
 	fmt.Printf("%s: addr=%s [%s]\n", iface.Name, netAddrToString(iface.Addr), flagsToString(iface.Flags))
 }
 
-func netAddrToString(addr net_address.NetAddress) string {
+func netAddrToString(addr netstack.NetAddress) string {
 	switch addr.Family {
-	case net_address.NetAddressFamily_Ipv4:
+	case netstack.NetAddressFamily_Ipv4:
 		a := tcpip.Address(addr.Ipv4[:])
 		return fmt.Sprintf("%s", a)
-	case net_address.NetAddressFamily_Ipv6:
+	case netstack.NetAddressFamily_Ipv6:
 		a := tcpip.Address(addr.Ipv6[:])
 		return fmt.Sprintf("%s", a)
 	}

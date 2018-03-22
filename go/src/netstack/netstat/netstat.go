@@ -14,8 +14,7 @@ import (
 	"app/context"
 	"fidl/bindings"
 
-	"garnet/public/lib/netstack/fidl/net_address"
-	"garnet/public/lib/netstack/fidl/netstack"
+	"fuchsia/go/netstack"
 )
 
 type netstatApp struct {
@@ -149,16 +148,16 @@ func dumpRouteTables(a *netstatApp) {
 	}
 }
 
-func netAddressZero(addr net_address.NetAddress) bool {
+func netAddressZero(addr netstack.NetAddress) bool {
 	switch addr.Family {
-	case net_address.NetAddressFamily_Ipv4:
+	case netstack.NetAddressFamily_Ipv4:
 		for _, b := range addr.Ipv4 {
 			if b != 0 {
 				return false
 			}
 		}
 		return true
-	case net_address.NetAddressFamily_Ipv6:
+	case netstack.NetAddressFamily_Ipv6:
 		for _, b := range addr.Ipv6 {
 			if b != 0 {
 				return false
@@ -169,12 +168,12 @@ func netAddressZero(addr net_address.NetAddress) bool {
 	return true
 }
 
-func netAddressToString(addr net_address.NetAddress) string {
+func netAddressToString(addr netstack.NetAddress) string {
 	switch addr.Family {
-	case net_address.NetAddressFamily_Ipv4:
+	case netstack.NetAddressFamily_Ipv4:
 		a := tcpip.Address(addr.Ipv4[:])
 		return fmt.Sprintf("%s", a)
-	case net_address.NetAddressFamily_Ipv6:
+	case netstack.NetAddressFamily_Ipv6:
 		a := tcpip.Address(addr.Ipv6[:])
 		return fmt.Sprintf("%s", a)
 	}

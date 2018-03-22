@@ -14,7 +14,7 @@ import (
 	"app/context"
 	"fidl/bindings"
 
-	"garnet/public/lib/netstack/fidl/netstack"
+	"fuchsia/go/netstack"
 
 	"github.com/google/netstack/tcpip"
 )

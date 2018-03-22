@@ -15,8 +15,7 @@ import (
 	"syscall/zx"
 	"syscall/zx/mxerror"
 
-	"garnet/public/lib/netstack/fidl/net_address"
-	nsfidl "garnet/public/lib/netstack/fidl/netstack"
+	nsfidl "fuchsia/go/netstack"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
@@ -29,37 +28,37 @@ type netstackImpl struct {
 	stub     *bindings.Stub
 }
 
-func toTCPIPAddress(addr net_address.NetAddress) tcpip.Address {
+func toTCPIPAddress(addr nsfidl.NetAddress) tcpip.Address {
 	out := tcpip.Address("")
 	switch addr.Family {
-	case net_address.NetAddressFamily_Ipv4:
+	case nsfidl.NetAddressFamily_Ipv4:
 		out = tcpip.Address(addr.Ipv4[:])
-	case net_address.NetAddressFamily_Ipv6:
+	case nsfidl.NetAddressFamily_Ipv6:
 		out = tcpip.Address(addr.Ipv6[:])
 	}
 	return out
 }
 
-func toNetAddress(addr tcpip.Address) net_address.NetAddress {
-	out := net_address.NetAddress{Family: net_address.NetAddressFamily_Unspecified}
+func toNetAddress(addr tcpip.Address) nsfidl.NetAddress {
+	out := nsfidl.NetAddress{Family: nsfidl.NetAddressFamily_Unspecified}
 	switch len(addr) {
 	case 4:
-		out.Family = net_address.NetAddressFamily_Ipv4
+		out.Family = nsfidl.NetAddressFamily_Ipv4
 		out.Ipv4 = &[4]uint8{}
 		copy(out.Ipv4[:], addr[:])
 	case 16:
-		out.Family = net_address.NetAddressFamily_Ipv6
+		out.Family = nsfidl.NetAddressFamily_Ipv6
 		out.Ipv6 = &[16]uint8{}
 		copy(out.Ipv6[:], addr[:])
 	}
 	return out
 }
 
-func toSubnets(addrs []tcpip.Address) []net_address.Subnet {
-	out := make([]net_address.Subnet, len(addrs))
+func toSubnets(addrs []tcpip.Address) []nsfidl.Subnet {
+	out := make([]nsfidl.Subnet, len(addrs))
 	for i := range addrs {
 		// TODO: prefix len?
-		out[i] = net_address.Subnet{Addr: toNetAddress(addrs[i]), PrefixLen: 64}
+		out[i] = nsfidl.Subnet{Addr: toNetAddress(addrs[i]), PrefixLen: 64}
 	}
 	return out
 }
@@ -126,12 +125,12 @@ func (ni *netstackImpl) GetPortForService(service string, protocol nsfidl.Protoc
 	return port, err
 }
 
-func (ni *netstackImpl) GetAddress(name string, port uint16) (out []net_address.SocketAddress, netErr nsfidl.NetErr, retErr error) {
+func (ni *netstackImpl) GetAddress(name string, port uint16) (out []nsfidl.SocketAddress, netErr nsfidl.NetErr, retErr error) {
 	// TODO: This should handle IP address strings, empty strings, "localhost", etc. Pull the logic from
 	// fdio's getaddrinfo into here.
 	addrs, err := ns.dispatcher.dnsClient.LookupIP(name)
 	if err == nil {
-		out = make([]net_address.SocketAddress, len(addrs))
+		out = make([]nsfidl.SocketAddress, len(addrs))
 		netErr = nsfidl.NetErr{Status: nsfidl.Status_Ok}
 		for i, addr := range addrs {
 			switch len(addr) {
@@ -215,7 +214,7 @@ func (ni *netstackImpl) SetRouteTable(rt []nsfidl.RouteTableEntry) error {
 	return nil
 }
 
-func toSubnet(address net_address.NetAddress, prefixLen uint64) (tcpip.Subnet, error) {
+func toSubnet(address nsfidl.NetAddress, prefixLen uint64) (tcpip.Subnet, error) {
 	// TODO: use tcpip.Address#mask after fuchsia/third_party/netstack and github/third_party/netstack are unified and #mask can be made public.
 	a := []byte(toTCPIPAddress(address))
 	m := tcpip.CIDRMask(int(prefixLen), int(len(a)*8))
@@ -226,13 +225,13 @@ func toSubnet(address net_address.NetAddress, prefixLen uint64) (tcpip.Subnet, e
 }
 
 // Add address to the given network interface.
-func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address net_address.NetAddress, prefixLen uint64) (result nsfidl.NetErr, endService error) {
+func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address nsfidl.NetAddress, prefixLen uint64) (result nsfidl.NetErr, endService error) {
 	log.Printf("net address %+v", address)
 	var protocol tcpip.NetworkProtocolNumber
 	switch address.Family {
-	case net_address.NetAddressFamily_Ipv4:
+	case nsfidl.NetAddressFamily_Ipv4:
 		protocol = ipv4.ProtocolNumber
-	case net_address.NetAddressFamily_Ipv6:
+	case nsfidl.NetAddressFamily_Ipv6:
 		return nsfidl.NetErr{nsfidl.Status_Ipv4Only, "IPv6 not yet supported for SetInterfaceAddress"}, nil
 	}
 
