@@ -21,7 +21,7 @@ import (
 	"syscall/zx/fdio"
 	"time"
 
-	"garnet/public/lib/power/fidl/power_manager"
+	"fuchsia/go/power_manager"
 )
 
 var (
@@ -40,7 +40,7 @@ func init() {
 type PowerManager struct {
 	mu                     sync.Mutex
 	batteryStatus          power_manager.BatteryStatus
-	watchers               []*power_manager.PowerManagerWatcher_Proxy
+	watchers               []*power_manager.PowerManagerWatcherInterface
 	powerAdapterTimeStamp  int64
 	batteryStatusTimeStamp int64
 }

@@ -21,7 +21,7 @@ import (
 
 	"application/lib/app/context"
 	"fidl/bindings"
-	"garnet/amber/api/amber"
+	"fuchsia/go/amber"
 	"thinfs/fs"
 	"thinfs/zircon/rpc"
 
@@ -37,7 +37,7 @@ type Filesystem struct {
 	blobfs    *blobfs.Manager
 	mountInfo mountInfo
 	mountTime time.Time
-	amberPxy  *amber.Control_Proxy
+	amberPxy  *amber.ControlInterface
 }
 
 // New initializes a new pkgfs filesystem server
@@ -82,7 +82,7 @@ func New(indexDir, blobDir string) (*Filesystem, error) {
 		},
 	}
 
-	var pxy *amber.Control_Proxy
+	var pxy *amber.ControlInterface
 	req, pxy := pxy.NewRequest(bindings.GetAsyncWaiter())
 	context.CreateFromStartupInfo().ConnectToEnvService(req)
 	f.amberPxy = pxy

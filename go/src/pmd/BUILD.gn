@@ -4,6 +4,7 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
 import("//build/host.gni")
 import("//build/package.gni")
 
@@ -32,10 +33,6 @@ common_dependencies = [
     source = "//third_party/golang/crypto"
   },
   {
-    package = "garnet/amber/api"
-    source = "$root_gen_dir/go/src/garnet/public/lib/amber/fidl"
-  },
-  {
     package = "fidl"
     source = "//garnet/public/lib/fidl/go/src/fidl"
   },
@@ -47,18 +44,14 @@ common_dependencies = [
     package = "svc"
     source = "//garnet/public/lib/svc/go/src/svc"
   },
-  {
-    package = "garnet/public/lib/app/fidl"
-    source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
-  },
 ]
 
 go_binary("pkgsvr_bin") {
   output_name = "pkgsvr"
   gopackage = "fuchsia.googlesource.com/pmd/cmd/pkgsvr"
-  deps = [
-    "//garnet/public/lib/amber/fidl",
-    "//garnet/public/lib/app/fidl",
+  extra_dependencies = [
+    "//garnet/public/lib/amber/fidl($go_toolchain)",
+    "//garnet/public/lib/app/fidl($go_toolchain)",
   ]
   go_dependencies = common_dependencies
 }
@@ -76,9 +69,9 @@ test_packages = [
 foreach(testpkg, test_packages) {
   go_test("pmd_${testpkg}_test") {
     gopackage = "fuchsia.googlesource.com/pmd/${testpkg}"
-    deps = [
-      "//garnet/public/lib/amber/fidl",
-      "//garnet/public/lib/app/fidl",
+    extra_dependencies = [
+      "//garnet/public/lib/amber/fidl($go_toolchain)",
+      "//garnet/public/lib/app/fidl($go_toolchain)",
     ]
     go_dependencies = common_dependencies
   }

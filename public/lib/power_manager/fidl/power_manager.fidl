@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module power;
+library power_manager;
 
 enum Status {
-  OK,
-  NotAvailable
+  OK = 0;
+  NotAvailable = 1;
 };
 
 // Provides battery status
 struct BatteryStatus {
   // Error status
-  Status status;
+  Status @status;
 
   // If battery is present
   bool batteryPresent;
@@ -33,23 +33,23 @@ struct BatteryStatus {
   int64 timestamp;
 
   // Battery level in percentage
-  float level;
+  float32 level;
 
   // Remaining Battery life in hours. It is negative when battery is not discharging
-  float remainingBatteryLife;
+  float32 remainingBatteryLife;
 };
 
 // Manager Interface used to manage power
 [ServiceName="power::PowerManager"]
 interface PowerManager {
   // Gets battery status
-  GetBatteryStatus@0() => (BatteryStatus status);
+  1: GetBatteryStatus() -> (BatteryStatus @status);
 
   // watcher called when battery status changes
-  Watch@1(PowerManagerWatcher watcher);
+  2: Watch(PowerManagerWatcher watcher);
 };
 
 // Watcher on battery status
 interface PowerManagerWatcher {
-  OnChangeBatteryStatus@0(BatteryStatus battery_status);
+  1: OnChangeBatteryStatus(BatteryStatus battery_status);
 };
