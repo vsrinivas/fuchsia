@@ -9,7 +9,6 @@
 #include "garnet/bin/media/framework/types/audio_stream_type.h"
 #include "garnet/bin/media/framework/types/stream_type.h"
 #include "garnet/bin/media/framework/types/video_stream_type.h"
-#include "lib/fidl/cpp/type_converters.h"
 #include "lib/fxl/type_converter.h"
 #include "lib/media/fidl/media_metadata.fidl.h"
 #include "lib/media/fidl/media_result.fidl.h"

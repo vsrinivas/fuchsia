@@ -56,15 +56,13 @@ std::ostream& operator<<(std::ostream& os, const MdnsServiceInstance& value) {
 
 std::ostream& operator<<(std::ostream& os,
                          const netstack::SocketAddress& value) {
-  FXL_DCHECK(value.addr);
-
-  if (value.addr->family == netstack::NetAddressFamily::UNSPECIFIED) {
+  if (value.addr.family == netstack::NetAddressFamily::UNSPECIFIED) {
     return os << "<unspecified>";
   }
 
-  if (value.addr->family == netstack::NetAddressFamily::IPV4) {
+  if (value.addr.family == netstack::NetAddressFamily::IPV4) {
     const uint8_t* bytes =
-        reinterpret_cast<const uint8_t*>(value.addr->ipv4->data());
+        reinterpret_cast<const uint8_t*>(value.addr.ipv4->addr.data());
     os << static_cast<int>(bytes[0]) << '.' << static_cast<int>(bytes[1]) << '.'
        << static_cast<int>(bytes[2]) << '.' << static_cast<int>(bytes[3]);
   } else {
@@ -76,7 +74,7 @@ std::ostream& operator<<(std::ostream& os,
     // 4) Use lower-case hexadecimal.
 
     const uint16_t* words =
-        reinterpret_cast<const uint16_t*>(value.addr->ipv6->data());
+        reinterpret_cast<const uint16_t*>(value.addr.ipv6->addr.data());
 
     // Figure out where the longest span of zeros is.
     uint8_t start_of_zeros;

@@ -6,7 +6,7 @@
 
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/mdns/service/socket_address.h"
-#include "lib/mdns/fidl/mdns.fidl.h"
+#include <fuchsia/cpp/mdns.h>
 
 namespace mdns {
 

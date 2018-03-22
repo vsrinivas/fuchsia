@@ -9,10 +9,11 @@
 
 #include "garnet/bin/mdns/tool/formatting.h"
 #include "garnet/bin/mdns/tool/mdns_params.h"
-#include "lib/fidl/cpp/type_converters.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/logging.h"
-#include "lib/mdns/fidl/mdns.fidl.h"
+#include "lib/fxl/type_converter.h"
+#include <fuchsia/cpp/mdns.h>
 
 namespace mdns {
 
@@ -113,7 +114,7 @@ void MdnsImpl::Subscribe(const std::string& service_name) {
   mdns_service_->SubscribeToService(service_name, subscription.NewRequest());
   subscriber_.Init(
       std::move(subscription),
-      [this](mdns::MdnsServiceInstance* from, mdns::MdnsServiceInstance* to) {
+      [this](const mdns::MdnsServiceInstance* from, const mdns::MdnsServiceInstance* to) {
         if (from == nullptr) {
           FXL_DCHECK(to != nullptr);
           std::cout << "added:\n" << indent << begl << *to << outdent << "\n";
@@ -136,7 +137,7 @@ void MdnsImpl::Publish(const std::string& service_name,
             << service_name << "\n";
   mdns_service_->PublishServiceInstance(
       service_name, instance_name, port,
-      fxl::To<f1dl::VectorPtr<f1dl::StringPtr>>(text), [this](MdnsResult result) {
+      fxl::To<fidl::VectorPtr<fidl::StringPtr>>(text), [this](MdnsResult result) {
         UpdateStatus(result);
         fsl::MessageLoop::GetCurrent()->PostQuitTask();
       });
@@ -158,7 +159,7 @@ void MdnsImpl::Respond(const std::string& service_name,
   std::cout << "responding as instance " << instance_name << " of service "
             << service_name << "\n";
   std::cout << "press escape key to quit\n";
-  f1dl::InterfaceHandle<MdnsResponder> responder_handle;
+  fidl::InterfaceHandle<MdnsResponder> responder_handle;
 
   binding_.Bind(responder_handle.NewRequest());
   binding_.set_error_handler([this]() {
@@ -176,7 +177,7 @@ void MdnsImpl::Respond(const std::string& service_name,
 
   if (!announce.empty()) {
     mdns_service_->SetSubtypes(service_name, instance_name,
-                               fxl::To<f1dl::VectorPtr<f1dl::StringPtr>>(announce));
+                               fxl::To<fidl::VectorPtr<fidl::StringPtr>>(announce));
   }
 
   WaitForKeystroke();
@@ -208,8 +209,8 @@ void MdnsImpl::UpdateStatus(MdnsResult result) {
 }
 
 void MdnsImpl::GetPublication(bool query,
-                              const f1dl::StringPtr& subtype,
-                              const GetPublicationCallback& callback) {
+                              fidl::StringPtr subtype,
+                              GetPublicationCallback callback) {
   std::cout << (query ? "query" : "initial publication");
   if (subtype) {
     std::cout << " for subtype " << subtype;
@@ -219,7 +220,7 @@ void MdnsImpl::GetPublication(bool query,
 
   auto publication = MdnsPublication::New();
   publication->port = publication_port_;
-  publication->text = fxl::To<f1dl::VectorPtr<f1dl::StringPtr>>(publication_text_);
+  publication->text = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(publication_text_);
 
   callback(std::move(publication));
 }

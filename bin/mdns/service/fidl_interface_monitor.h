@@ -32,10 +32,10 @@ class FidlInterfaceMonitor : public netstack::NotificationListener,
  private:
   // NotificationListener implementation.
   void OnInterfacesChanged(
-      f1dl::VectorPtr<netstack::NetInterfacePtr> interfaces) override;
+      fidl::VectorPtr<netstack::NetInterfacePtr> interfaces) override;
 
   netstack::NetstackPtr netstack_;
-  f1dl::Binding<netstack::NotificationListener> binding_;
+  fidl::Binding<netstack::NotificationListener> binding_;
   fxl::Closure link_change_callback_;
   std::vector<std::unique_ptr<InterfaceDescriptor>> interfaces_;
 };

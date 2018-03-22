@@ -143,7 +143,7 @@ void NetConnectorImpl::StartListener() {
 
   mdns_subscriber_.Init(
       std::move(subscription),
-      [this](mdns::MdnsServiceInstance* from, mdns::MdnsServiceInstance* to) {
+      [this](const mdns::MdnsServiceInstance* from, const mdns::MdnsServiceInstance* to) {
         if (from == nullptr && to != nullptr) {
           if (to->v4_address) {
             std::cerr << "netconnector: Device '" << to->instance_name

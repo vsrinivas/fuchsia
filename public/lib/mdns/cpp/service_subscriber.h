@@ -7,7 +7,7 @@
 #include <functional>
 
 #include "lib/fxl/macros.h"
-#include "lib/mdns/fidl/mdns.fidl.h"
+#include <fuchsia/cpp/mdns.h>
 
 namespace mdns {
 
@@ -20,7 +20,7 @@ class ServiceSubscriber {
   // with a null |to| value and |from| value describing the lost service. When
   // a service changes, |from| is the old description, and |to| is the new one.
   using UpdateCallback =
-      std::function<void(MdnsServiceInstance* from, MdnsServiceInstance* to)>;
+      std::function<void(const MdnsServiceInstance* from, const MdnsServiceInstance* to)>;
 
   ServiceSubscriber();
 
@@ -37,7 +37,7 @@ class ServiceSubscriber {
   MdnsServiceSubscriptionPtr Reset();
 
   // Returns the current set of service instances.
-  const f1dl::VectorPtr<MdnsServiceInstancePtr>& instances() const {
+  const fidl::VectorPtr<MdnsServiceInstance>& instances() const {
     return instances_;
   }
 
@@ -48,14 +48,14 @@ class ServiceSubscriber {
 
  private:
   void HandleInstanceUpdates(
-      uint64_t version = MdnsServiceSubscription::kInitialInstances,
-      f1dl::VectorPtr<MdnsServiceInstancePtr> instances = nullptr);
+      uint64_t version = kInitialInstances,
+      fidl::VectorPtr<MdnsServiceInstance> instances = nullptr);
 
-  void IssueCallbacks(const f1dl::VectorPtr<MdnsServiceInstancePtr>& instances);
+  void IssueCallbacks(const fidl::VectorPtr<MdnsServiceInstance>& instances);
 
   MdnsServiceSubscriptionPtr subscription_;
   UpdateCallback callback_;
-  f1dl::VectorPtr<MdnsServiceInstancePtr> instances_;
+  fidl::VectorPtr<MdnsServiceInstance> instances_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceSubscriber);
 };

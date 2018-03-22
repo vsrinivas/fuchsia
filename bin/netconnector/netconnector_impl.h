@@ -23,7 +23,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
-#include "lib/mdns/fidl/mdns.fidl.h"
+#include <fuchsia/cpp/mdns.h>
 #include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace netconnector {

@@ -11,7 +11,7 @@
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
-#include "lib/mdns/fidl/mdns.fidl.h"
+#include <fuchsia/cpp/mdns.h>
 
 namespace mdns {
 
@@ -49,12 +49,12 @@ class MdnsImpl : public MdnsResponder {
   void UpdateStatus(MdnsResult result) override;
 
   void GetPublication(bool query,
-                      const f1dl::StringPtr& subtype,
-                      const GetPublicationCallback& callback) override;
+                      fidl::StringPtr subtype,
+                      GetPublicationCallback callback) override;
 
   MdnsServicePtr mdns_service_;
   ServiceSubscriber subscriber_;
-  f1dl::Binding<MdnsResponder> binding_;
+  fidl::Binding<MdnsResponder> binding_;
   fsl::FDWaiter fd_waiter_;
 
   uint16_t publication_port_;

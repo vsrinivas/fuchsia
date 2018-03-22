@@ -11,7 +11,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/mdns/fidl/mdns.fidl.h"
+#include <fuchsia/cpp/mdns.h>
 
 namespace mdns {
 
@@ -22,42 +22,42 @@ class MdnsServiceImpl : public MdnsService {
   ~MdnsServiceImpl() override;
 
   // MdnsService implementation.
-  void ResolveHostName(const f1dl::StringPtr& host_name,
+  void ResolveHostName(const fidl::StringPtr& host_name,
                        uint32_t timeout_ms,
                        const ResolveHostNameCallback& callback) override;
 
-  void SubscribeToService(const f1dl::StringPtr& service_name,
-                          f1dl::InterfaceRequest<MdnsServiceSubscription>
+  void SubscribeToService(const fidl::StringPtr& service_name,
+                          fidl::InterfaceRequest<MdnsServiceSubscription>
                               subscription_request) override;
 
   void PublishServiceInstance(
-      const f1dl::StringPtr& service_name,
-      const f1dl::StringPtr& instance_name,
+      const fidl::StringPtr& service_name,
+      const fidl::StringPtr& instance_name,
       uint16_t port,
-      f1dl::VectorPtr<f1dl::StringPtr> text,
+      fidl::VectorPtr<fidl::StringPtr> text,
       const PublishServiceInstanceCallback& callback) override;
 
-  void UnpublishServiceInstance(const f1dl::StringPtr& service_name,
-                                const f1dl::StringPtr& instance_name) override;
+  void UnpublishServiceInstance(const fidl::StringPtr& service_name,
+                                const fidl::StringPtr& instance_name) override;
 
   void AddResponder(
-      const f1dl::StringPtr& service_name,
-      const f1dl::StringPtr& instance_name,
-      f1dl::InterfaceHandle<MdnsResponder> responder_handle) override;
+      const fidl::StringPtr& service_name,
+      const fidl::StringPtr& instance_name,
+      fidl::InterfaceHandle<MdnsResponder> responder_handle) override;
 
-  void SetSubtypes(const f1dl::StringPtr& service_name,
-                   const f1dl::StringPtr& instance_name,
-                   f1dl::VectorPtr<f1dl::StringPtr> subtypes) override;
+  void SetSubtypes(const fidl::StringPtr& service_name,
+                   const fidl::StringPtr& instance_name,
+                   fidl::VectorPtr<fidl::StringPtr> subtypes) override;
 
-  void ReannounceInstance(const f1dl::StringPtr& service_name,
-                          const f1dl::StringPtr& instance_name) override;
+  void ReannounceInstance(const fidl::StringPtr& service_name,
+                          const fidl::StringPtr& instance_name) override;
 
   void SetVerbose(bool value) override;
 
  private:
   class Subscriber : public Mdns::Subscriber, public MdnsServiceSubscription {
    public:
-    Subscriber(f1dl::InterfaceRequest<MdnsServiceSubscription> request,
+    Subscriber(fidl::InterfaceRequest<MdnsServiceSubscription> request,
                const fxl::Closure& deleter);
 
     ~Subscriber() override;
@@ -85,7 +85,7 @@ class MdnsServiceImpl : public MdnsService {
                       const GetInstancesCallback& callback) override;
 
    private:
-    f1dl::Binding<MdnsServiceSubscription> binding_;
+    fidl::Binding<MdnsServiceSubscription> binding_;
     media::FidlPublisher<GetInstancesCallback> instances_publisher_;
     std::unordered_map<std::string, MdnsServiceInstancePtr> instances_by_name_;
 
@@ -96,7 +96,7 @@ class MdnsServiceImpl : public MdnsService {
   class SimplePublisher : public Mdns::Publisher {
    public:
     SimplePublisher(IpPort port,
-                    f1dl::VectorPtr<f1dl::StringPtr> text,
+                    fidl::VectorPtr<fidl::StringPtr> text,
                     const PublishServiceInstanceCallback& callback);
 
    private:
@@ -139,7 +139,7 @@ class MdnsServiceImpl : public MdnsService {
   void Start();
 
   component::ApplicationContext* application_context_;
-  f1dl::BindingSet<MdnsService> bindings_;
+  fidl::BindingSet<MdnsService> bindings_;
   mdns::Mdns mdns_;
   size_t next_subscriber_id_ = 0;
   std::unordered_map<size_t, std::unique_ptr<Subscriber>> subscribers_by_id_;
