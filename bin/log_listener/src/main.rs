@@ -7,8 +7,8 @@
 use std::env;
 
 // Include the generated FIDL bindings for the `Logger` service.
-extern crate garnet_public_lib_logger_fidl;
-use garnet_public_lib_logger_fidl::LogFilterOptions;
+extern crate fidl_logger;
+use fidl_logger::LogFilterOptions;
 
 const FX_LOG_MAX_TAGS: usize = 5;
 const FX_LOG_MAX_TAG_LEN: usize = 63;

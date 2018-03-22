@@ -689,6 +689,7 @@ name = "log_listener"
 version = "0.1.0"
 dependencies = [
  "fidl 0.1.0",
+ "fidl_logger 0.1.0",
 ]
 
 [[package]]

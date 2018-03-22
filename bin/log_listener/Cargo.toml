@@ -9,4 +9,4 @@ license = "BSD-3-Clause"
 
 [dependencies]
 fidl = "0.1"
-# garnet_public_lib_logger_fidl = "0.1"
+fidl_logger = "0.1"
