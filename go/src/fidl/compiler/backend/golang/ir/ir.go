@@ -298,7 +298,7 @@ func isReservedWord(str string) bool {
 	return ok
 }
 
-func changeIfReserved(val types.Identifier, ext string) string {
+func ChangeIfReserved(val types.Identifier, ext string) string {
 	// TODO(mknyszek): Detect name collision within a scope as a result of transforming.
 	str := string(val) + ext
 	if isReservedWord(str) {
@@ -310,19 +310,19 @@ func changeIfReserved(val types.Identifier, ext string) string {
 func (_ *compiler) compileIdentifier(id types.Identifier, ext string) string {
 	str := string(id)
 	str = common.ToUpperCamelCase(str)
-	return changeIfReserved(types.Identifier(str), ext)
+	return ChangeIfReserved(types.Identifier(str), ext)
 }
 
 func (_ *compiler) compileCompoundIdentifier(ei types.EncodedIdentifier, ext string) string {
 	ci := exportIdentifier(ei)
 	strs := []string{}
 	if ci.Library != "" {
-		strs = append(strs, changeIfReserved(ci.Library, "")+".")
+		strs = append(strs, ChangeIfReserved(ci.Library, "")+".")
 	}
 	for _, v := range ci.NestedDecls {
-		strs = append(strs, changeIfReserved(v, ""))
+		strs = append(strs, ChangeIfReserved(v, ""))
 	}
-	strs = append(strs, changeIfReserved(ci.Name, ext))
+	strs = append(strs, ChangeIfReserved(ci.Name, ext))
 	return strings.Join(strs, "")
 }
 

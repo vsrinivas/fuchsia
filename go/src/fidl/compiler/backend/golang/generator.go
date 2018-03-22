@@ -44,7 +44,9 @@ func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error
 	tree := ir.Compile(fidl)
 
 	tmpls := template.New("GoTemplates").Funcs(template.FuncMap{
-		"privatize": common.ToLowerCamelCase,
+		"privatize": func(s string) string {
+			return ir.ChangeIfReserved(types.Identifier(common.ToLowerCamelCase(s)), "")
+		},
 	})
 	template.Must(tmpls.Parse(templates.Enum))
 	template.Must(tmpls.Parse(templates.Interface))
