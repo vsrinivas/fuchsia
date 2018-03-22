@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module media;
+library media;
 
-import "lib/media/fidl/media_types.fidl";
+// import "lib/media/fidl/media_types.fidl";
 
 interface AudioRenderer {
   // A special value which will always cause an audio renderer to become
   // explicitly muted.
-  const float kMutedGain = -160.0;
+  const float32 kMutedGain = -160.0;
 
   // The maximum permitted above-unity gain.
-  const float kMaxGain = 24.0;
+  const float32 kMaxGain = 24.0;
 
   // Sets the current gain/attenuation of the renderer, expressed in dB.  Legal
   // values are in the range [-inf, 24.0].  Any value less than or equal to the
   // constant kMutedGain will result in the renderer becoming explicitly muted
   // (regardless of its underlying resolution or intensity).
-  SetGain@0(float db_gain);
+  1: SetGain(float32 db_gain);
 
   // Query the minimum possible presentation delay for this renderer, expressed
   // in nanoseconds.
@@ -26,30 +26,10 @@ interface AudioRenderer {
   // This value depends on the media type and configuration of the renderer and
   // what it is bound to, so in theory this should be queried again when either
   // of these change. In practice, it's currently static.
-  GetMinDelay@1() => (int64 delay);
+  2: GetMinDelay() -> (int64 delay);
 };
 
 struct AudioPacket {
-  // A special value which may be written into the PTS field in certain
-  // circumstances.  For example, depending on the specific scenario,
-  // kNoTimestamp may be used if...
-  //
-  // 1) The timestamp of a packet is simply not known.
-  // 2) A client wishes for the timestamp of a packet to be interpolated based
-  //    on nominal frame rate and previous packet timestamps.
-  // 3) A client wishes to schedule a packet or timeline transformation to take
-  //    place as soon as possible.
-  const int64 kNoTimestamp = 0x7fffffffffffffff;
-
-  // TODO(johngro): review these flags.  Do they make sense for audio?  Right
-  // now, the AudioRenderer(v2) does not care about any of these.  The
-  // discontinuous flag might be used to affect discontinuity, but that has not
-  // even been spec'ed yet.
-  const uint32 kFlagEos = 0x01;
-  const uint32 kFlagKeyframe = 0x02;
-  const uint32 kFlagDroppable = 0x04;
-  const uint32 kFlagDiscontinuous = 0x08;
-
   // Time at which the audio is to be presented, or was captured, as measured on
   // the reference clock.
   int64 timestamp = kNoTimestamp;
@@ -66,11 +46,11 @@ struct AudioPacket {
 };
 
 interface AudioRendererGainControl {
-  SetGainMute@1(float gain,
+  2: SetGainMute(float32 gain,
                 bool mute, // false
                 uint32 flags) // kGainFlagGainValid
-    => (float gain, bool mute);
-  SetGainMuteNoReply@2(float gain,
+    -> (float32 gain, bool mute);
+  3: SetGainMuteNoReply(float32 gain,
                        bool mute, // false
                        uint32 flags); // kGainFlagGainValid
 };
@@ -78,7 +58,7 @@ interface AudioRendererGainControl {
 
 // TODO(johngro): Remove this when FIDL events happen
 interface AudioRendererMinLeadTimeChangedEvent {
-  OnMinLeadTimeChanged@1(int64 min_lead_time_nsec);
+  2: OnMinLeadTimeChanged(int64 min_lead_time_nsec);
 };
 
 interface AudioRenderer2 {
@@ -102,18 +82,18 @@ interface AudioRenderer2 {
   // Sets the PCM type of the stream to be delivered by the client.
   //
   // TODO(johngro): Define how to set a compressed format.
-  SetPcmFormat@100(AudioPcmFormat format);
+  101: SetPcmFormat(AudioPcmFormat format);
 
   // Set the shared buffer used to transport the frames of audio to be rendered.
   //
   // TODO(johngro) : consider extending this so that multiple payload buffers
   // may be assigned if needed.
-  SetPayloadBuffer@101(handle<vmo> payload_buffer);
+  102: SetPayloadBuffer(handle<vmo> payload_buffer);
 
   // Sets the units used by the media/pts timeline.  By default, these units are
   // nanoseconds (1e9/1).  If you are using timestamps from an MPEG-PS
   // container, you would change this to 90000/1 (90 KHz).
-  SetPtsUnits@102(uint32 tick_per_second_numerator,
+  103: SetPtsUnits(uint32 tick_per_second_numerator,
                   uint32 tick_per_second_denominator);
 
   // Sets the maximum distance (in frames) between an explicit PTS (provided by
@@ -175,7 +155,7 @@ interface AudioRenderer2 {
   // wish to *always* explicitly schedule their audio exactly may specify a CT
   // of 0.
   //
-  SetPtsContinuityThreshold@103(float threshold_seconds);
+  104: SetPtsContinuityThreshold(float32 threshold_seconds);
 
   // Set the reference clock used to control playback rate and as the reference
   // for scheduled clock transformations.
@@ -184,7 +164,7 @@ interface AudioRenderer2 {
   // what a clock handle is/looks like.  Also, should we allow the user to lock
   // their rate to CLOCK_MONO instead of following the default (perhaps dynamic)
   // system rate?
-  SetReferenceClock@104(handle ref_clock);
+  105: SetReferenceClock(handle ref_clock);
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -197,8 +177,8 @@ interface AudioRenderer2 {
   // packet has been flushed.
   //
   // TODO(johngro): Collapse these if we ever have optional retvals in FIDL
-  SendPacket@200(AudioPacket packet) => ();
-  SendPacketNoReply@201(AudioPacket packet);
+  201: SendPacket(AudioPacket packet) -> ();
+  202: SendPacketNoReply(AudioPacket packet);
 
   // Immediately flush all media in the pipeline which is currently waiting to
   // be rendered.  Specifically this means that...
@@ -211,8 +191,8 @@ interface AudioRenderer2 {
   // 4) Finally, the Flush callback (if requested) will be invoked.
   //
   // TODO(johngro): Collapse these if we ever have optional retvals in FIDL
-  Flush@202() => ();
-  FlushNoReply@203();
+  203: Flush() -> ();
+  204: FlushNoReply();
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -300,10 +280,10 @@ interface AudioRenderer2 {
   // discontinuity.
   //
   // TODO(johngro): Collapse these if we ever have optional retvals in FIDL
-  Play@300(int64 reference_time, // MediaPacket::kNoTimestamp
-           int64 media_time) => // MediaPacket::kNoTimestamp
+  301: Play(int64 reference_time, // MediaPacket::kNoTimestamp
+           int64 media_time) -> // MediaPacket::kNoTimestamp
     (int64 reference_time, int64 media_time);
-  PlayNoReply@301(int64 reference_time, // MediaPacket::kNoTimestamp
+  302: PlayNoReply(int64 reference_time, // MediaPacket::kNoTimestamp
                   int64 media_time); // MediaPacket::kNoTimestamp
 
   // Immediately put the renderer into the paused state and then report the
@@ -321,8 +301,8 @@ interface AudioRenderer2 {
   // introducing a discontinuity in the process.
   //
   // TODO(johngro): Collapse these if we ever have optional retvals in FIDL
-  Pause@302() => (int64 reference_time, int64 media_time);
-  PauseNoReply@303();
+  303: Pause() -> (int64 reference_time, int64 media_time);
+  304: PauseNoReply();
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -349,17 +329,17 @@ interface AudioRenderer2 {
   // GetGainMute() --> SetGainMute(0, false, 0)
   //
   // TODO(johngro): Collapse these if we ever have optional retvals in FIDL
-  SetGainMute@400(float gain,
+  401: SetGainMute(float32 gain,
                   bool mute, // false
                   uint32 flags) // kGainFlagGainValid
-    => (float gain, bool mute);
-  SetGainMuteNoReply@401(float gain,
+    -> (float32 gain, bool mute);
+  402: SetGainMuteNoReply(float32 gain,
                          bool mute, // false
                          uint32 flags); // kGainFlagGainValid
 
   // Create a new interface (bound to this renderer) which is restricted to gain
   // control functions only.
-  DuplicateGainControlInterface@499(AudioRendererGainControl& request);
+  500: DuplicateGainControlInterface(request<AudioRendererGainControl> @request);
 
   // Enable or disable notifications about changes to the minimim clock lead
   // time (in nanoseconds) for this audio renderer.
@@ -389,7 +369,7 @@ interface AudioRenderer2 {
   //
   // EnableMinLeadTimeEvents(bool enable_events);
   // event OnMinLeadTimeChanged(int64);
-  EnableMinLeadTimeEvents@500(AudioRendererMinLeadTimeChangedEvent? evt);
+  501: EnableMinLeadTimeEvents(AudioRendererMinLeadTimeChangedEvent? evt);
 
   // Get the current minimum lead time requirement for the renderer.
   //
@@ -398,7 +378,7 @@ interface AudioRenderer2 {
   // requirements down to the bare minimum really need to be paying attention to
   // changes in the minimum lead time requirement.  Polling it does not really
   // make a lot of sense.
-  GetMinLeadTime@501() => (int64 min_lead_time_nsec);
+  502: GetMinLeadTime() -> (int64 min_lead_time_nsec);
 
   // TODO(johngro): Spec methods/events which can be used for unintentional
   // discontinuity/underflow detection.

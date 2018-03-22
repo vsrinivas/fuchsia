@@ -2,33 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module media;
+library media;
 
-import "lib/media/fidl/media_player.fidl";
+// import "lib/media/fidl/media_player.fidl";
 
 // Plays media.
 // DEPRECATED
 interface NetMediaPlayer {
-  // Special value for GetStatus version_last_seen parameter to get the current
-  // status immediately.
-  const uint64 kInitialStatus = 0;
-
   // Sets the content url. Passing a null string closes the current content
   // source.
-  SetUrl@0(string? url);
+  1: SetUrl(string? url);
 
   // Starts playback.
-  Play@1();
+  2: Play();
 
   // Pauses playback.
-  Pause@2();
+  3: Pause();
 
   // Seeks to the specified position, specified in nanoseconds.
-  Seek@3(int64 position);
+  4: Seek(int64 position);
 
   // Gets the status. To get the status immediately, call
   // GetStatus(kInitialStatus). To get updates thereafter, pass the version
   // sent in the previous callback.
-  GetStatus@4(uint64 version_last_seen)
-      => (uint64 version, MediaPlayerStatus status);
+  5: GetStatus(uint64 version_last_seen)
+      -> (uint64 version, MediaPlayerStatus @status);
 };

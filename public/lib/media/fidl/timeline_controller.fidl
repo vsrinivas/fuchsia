@@ -2,41 +2,39 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module media;
+library media;
 
-import "lib/media/fidl/timelines.fidl";
+// import "lib/media/fidl/timelines.fidl";
 
 // Timing controller for a media graph.
 interface MediaTimelineController {
   // Associates a control point with the controller.
-  AddControlPoint@0(MediaTimelineControlPoint control_point);
+  1: AddControlPoint(MediaTimelineControlPoint control_point);
 
   // Gets a timeline control point interface for the controller.
-  GetControlPoint@1(MediaTimelineControlPoint& control_point);
+  2: GetControlPoint(request<MediaTimelineControlPoint> control_point);
 };
 
 // Media graph component controlled by a MediaTimelineController.
 interface MediaTimelineControlPoint {
-  const uint64 kInitialStatus = 0;
-
   // Gets the status. To get the status immediately, call
   // GetStatus(kInitialStatus). To get updates thereafter, pass the version sent
   // in the previous callback.
-  GetStatus@0(uint64 version_last_seen) =>
-      (uint64 version, MediaTimelineControlPointStatus status);
+  1: GetStatus(uint64 version_last_seen) ->
+      (uint64 version, MediaTimelineControlPointStatus @status);
 
   // Gets a timeline consumer interface for the control point.
-  GetTimelineConsumer@1(TimelineConsumer& timeline_consumer);
+  2: GetTimelineConsumer(request<TimelineConsumer> timeline_consumer);
 
   // Specifies the range of PTS values to be accepted at this control point for
   // the given program.
-  SetProgramRange@2(uint64 program, int64 min_pts, int64 max_pts);
+  3: SetProgramRange(uint64 program, int64 min_pts, int64 max_pts);
 
   // Signals that the control point should prepare for a timeline transition
   // away from zero rate (stopped). The response indicates that the control
   // point is ready for the transition.
   // TODO(dalesat): Include a rate so the renderer won't starve on fast play.
-  Prime@3() => ();
+  4: Prime() -> ();
 };
 
 // Status returned by MediaTimelineControlPoint's GetStatus method.

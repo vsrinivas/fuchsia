@@ -2,34 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module media;
+library media;
 
-import "lib/media/fidl/media_player.fidl";
-import "lib/media/fidl/net_media_player.fidl";
+// import "lib/media/fidl/media_player.fidl";
+// import "lib/media/fidl/net_media_player.fidl";
 
 // Network media service definition.
 [ServiceName="media::NetMediaService"]
 interface NetMediaService {
   // Publishes a MediaPlayer for remote access.
-  PublishMediaPlayer@0(string service_name, MediaPlayer media_player);
+  1: PublishMediaPlayer(string service_name, MediaPlayer media_player);
 
   // Creates a proxy for a remote MediaPlayer.
-  CreateMediaPlayerProxy@1(
+  2: CreateMediaPlayerProxy(
     string device_name,
     string service_name,
-    MediaPlayer& media_player_proxy);
+    request<MediaPlayer> media_player_proxy);
 
   // Creates a net media player that wraps the provided MediaPlayer.
   // DEPRECATED, use PublishMediaPlayer.
-  CreateNetMediaPlayer@2(
+  3: CreateNetMediaPlayer(
     string service_name,
     MediaPlayer media_player,
-    NetMediaPlayer& net_media_player);
+    request<NetMediaPlayer> net_media_player);
 
   // Creates a proxy for a remote NetMediaPlayer.
   // DEPRECATED, use CreateMediaPlayerProxy.
-  CreateNetMediaPlayerProxy@3(
+  4: CreateNetMediaPlayerProxy(
     string device_name,
     string service_name,
-    NetMediaPlayer& net_media_player_proxy);
+    request<NetMediaPlayer> net_media_player_proxy);
 };

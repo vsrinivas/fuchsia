@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module media;
+library media;
 
-import "lib/media/fidl/net_media_player.fidl";
+// import "lib/media/fidl/net_media_player.fidl";
+
+// Special value for GetStatus version_last_seen parameter to get the current
+// status immediately.
+const uint64 kInitialStatus = 0;
 
 // Audio policy service definition.
 //
@@ -15,34 +19,30 @@ import "lib/media/fidl/net_media_player.fidl";
 // individual output gains can be tweaked.
 [ServiceName="media::AudioPolicyService"]
 interface AudioPolicyService {
-  // Special value for GetStatus version_last_seen parameter to get the current
-  // status immediately.
-  const uint64 kInitialStatus = 0;
-
   // Gets the status. To get the status immediately, call
   // GetStatus(kInitialStatus). To get updates thereafter, pass the version
   // sent in the previous callback.
-  GetStatus@0(uint64 version_last_seen)
-      => (uint64 version, AudioPolicyStatus status);
+  1: GetStatus(uint64 version_last_seen)
+      -> (uint64 version, AudioPolicyStatus @status);
 
   // Sets the system-wide gain in decibels. |db| values are clamped to the
   // range -160db to 0db inclusive. Setting gain to -160db implicitly mutes
   // system audio. Setting gain to a higher values when it's already -160db
   // implicitly unmutes system audio. Gain and mute are otherwise independent.
-  SetSystemAudioGain@1(float db);
+  2: SetSystemAudioGain(float32 db);
 
   // Sets the system-wide 'muted' value. Changing this value has no effect on
   // the system audio gain value. Calling this method with argument |false|
   // has no effect if system audio gain is set to -160db. Gain and mute are
   // otherwise independent.
-  SetSystemAudioMute@2(bool muted);
+  3: SetSystemAudioMute(bool muted);
 };
 
 // Describes the status of the audio policy service.
 struct AudioPolicyStatus {
   // Current system audio gain in decibels. This value is independent of system
   // audio muted state.
-  float system_audio_gain_db;
+  float32 system_audio_gain_db;
 
   // Indicates whether system audio is currently muted.
   bool system_audio_muted;

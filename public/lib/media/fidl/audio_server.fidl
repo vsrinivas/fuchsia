@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module media;
+library media;
 
-import "lib/media/fidl/audio_capturer.fidl";
-import "lib/media/fidl/audio_renderer.fidl";
-import "lib/media/fidl/media_renderer.fidl";
+// import "lib/media/fidl/audio_capturer.fidl";
+// import "lib/media/fidl/audio_renderer.fidl";
+// import "lib/media/fidl/media_renderer.fidl";
 
 [ServiceName="media::AudioServer"]
 interface AudioServer {
-  CreateRenderer@0(AudioRenderer& audio_renderer, MediaRenderer& media_renderer);
-  CreateRendererV2@4(AudioRenderer2& audio_renderer);
+  1: CreateRenderer(request<AudioRenderer> audio_renderer, request<MediaRenderer> media_renderer);
+  5: CreateRendererV2(request<AudioRenderer2> audio_renderer);
 
   // Create an audio capturer which either captures from the current default
   // audio input device, or loops-back from the current default audio output
@@ -23,7 +23,7 @@ interface AudioServer {
   // Eventually, I suspect that all of this will move up into the audio policy
   // manager and application clients will obtain capturers from and control
   // through the policy manager.
-  CreateCapturer@1(AudioCapturer& audio_capturer, bool loopback);
+  2: CreateCapturer(request<AudioCapturer> audio_capturer, bool loopback);
 
   // Sets the master gain/attenuation of the mixer, expressed in dB.  Master
   // gain is applied to all active outputs.  Legal values are in the range
@@ -33,8 +33,8 @@ interface AudioServer {
   //
   // TODO(johngro): Remove this as soon as we have a policy manager in control
   // of output gain.
-  SetMasterGain@2(float db_gain);
+  3: SetMasterGain(float32 db_gain);
 
   // Get the current value of the master gain for the audio service.
-  GetMasterGain@3() => (float db_gain);
+  4: GetMasterGain() -> (float32 db_gain);
 };

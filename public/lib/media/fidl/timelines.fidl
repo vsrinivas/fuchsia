@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module media;
+library media;
 
 // Used as a placeholder for unspecified time values.
 const int64 kUnspecifiedTime = 0x7fffffffffffffff;
@@ -74,10 +74,10 @@ interface TimelineConsumer {
   // The callback is called at the effective time or when a pending operation is
   // cancelled due to a subsequent call, in which case the 'completed' value is
   // false.
-  SetTimelineTransform@0(TimelineTransform timeline_transform) =>
+  1: SetTimelineTransform(TimelineTransform timeline_transform) ->
       (bool completed);
 
   // Same as above, but without the completion callback. This version is useful
   // for clients that use a synchronous proxy or if the reply isn't needed.
-  SetTimelineTransformNoReply@1(TimelineTransform timeline_transform);
+  2: SetTimelineTransformNoReply(TimelineTransform timeline_transform);
 };

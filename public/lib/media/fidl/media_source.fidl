@@ -2,38 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module media;
+library media;
 
-import "lib/media/fidl/media_metadata.fidl";
-import "lib/media/fidl/media_transport.fidl";
-import "lib/media/fidl/media_types.fidl";
-import "lib/media/fidl/problem.fidl";
+// import "lib/media/fidl/media_metadata.fidl";
+// import "lib/media/fidl/media_transport.fidl";
+// import "lib/media/fidl/media_types.fidl";
+// import "lib/media/fidl/problem.fidl";
 
 // Produces media streams delivered from a specified origin.
 interface MediaSource {
-  // Special value for GetStatus version_last_seen parameter to get the current
-  // status immediately.
-  const uint64 kInitialStatus = 0;
-
   // Describes the source.
-  Describe@0() => (array<MediaType> stream_types);
+  1: Describe() -> (vector<MediaType> stream_types);
 
   // Gets the packet producer for the specified stream.
-  GetPacketProducer@1(uint32 stream_index, MediaPacketProducer& packet_producer);
+  2: GetPacketProducer(uint32 stream_index, request<MediaPacketProducer> packet_producer);
 
   // Gets the status. To get the status immediately, call
   // GetStatus(kInitialStatus). To get updates thereafter, pass the version
   // sent in the previous callback.
-  GetStatus@2(uint64 version_last_seen)
-      => (uint64 version, MediaSourceStatus status);
+  3: GetStatus(uint64 version_last_seen)
+      -> (uint64 version, MediaSourceStatus @status);
 
   // Flushes the source and downstream components. |hold_frame| indicates
   // whether a video renderer (if any) should continue to display the last
   // displayed frame.
-  Flush@3(bool hold_frame) => ();
+  4: Flush(bool hold_frame) -> ();
 
   // Seeks to the specified position, specified in nanoseconds.
-  Seek@4(int64 position) => ();
+  5: Seek(int64 position) -> ();
 };
 
 // Describes the status of the media source.
