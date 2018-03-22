@@ -6,7 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/go/toolchain.gni")
 
-# Generates some C++ bindings for a FIDL library.
+# Generates some Go bindings for a FIDL library.
 #
 # The parameters for this template are defined in //build/fidl/fidl.gni. The
 # relevant parameters in this template are:
@@ -28,9 +28,9 @@ template("fidl_go") {
   if (defined(invoker.name)) {
     library_name = invoker.name
   }
-  file_stem = "$target_gen_dir/$library_name.fidl"
 
-  fidl_target_gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
+  fidl_target_gen_dir = get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
+  file_stem = "$fidl_target_gen_dir/$library_name.fidl"
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
   compiled_action(generation_target_name) {
