@@ -18,13 +18,12 @@ using ASF = AudioSampleFormat;
 // accumulation format (not the destination format), so we need not specify a
 // dst_format. Actual frame rate values are unimportant, but inter-rate RATIO
 // is VERY important: required SRC is the primary factor in Mix selection.
-// TODO(mpuryear): MTWN-90 Augment Mixer::Select, to specify which resampler --
-// then come back and rework not only this helper function, but numerous tests
 audio::MixerPtr SelectMixer(ASF src_format,
                             uint32_t src_channels,
                             uint32_t src_frame_rate,
                             uint32_t dst_channels,
-                            uint32_t dst_frame_rate) {
+                            uint32_t dst_frame_rate,
+                            audio::Mixer::Resampler resampler) {
   AudioMediaTypeDetails src_details;
   src_details.sample_format = src_format;
   src_details.channels = src_channels;
@@ -35,7 +34,8 @@ audio::MixerPtr SelectMixer(ASF src_format,
   dst_details->channels = dst_channels;
   dst_details->frames_per_second = dst_frame_rate;
 
-  audio::MixerPtr mixer = audio::Mixer::Select(src_details, &dst_details);
+  audio::MixerPtr mixer =
+      audio::Mixer::Select(src_details, &dst_details, resampler);
 
   return mixer;
 }

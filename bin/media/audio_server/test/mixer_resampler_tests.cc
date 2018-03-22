@@ -31,7 +31,8 @@ TEST(Timing, Position_Basic_Point) {
   uint32_t frac_step_size = media::audio::Mixer::FRAC_ONE;
   bool mix_result;
   audio::MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 24000, 1, 24000);
+      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 24000, 1, 24000,
+                  audio::Mixer::Resampler::SampleAndHold);
 
   //
   // Check: source supply exceeds destination demand.
@@ -77,11 +78,10 @@ TEST(Timing, Position_Basic_Point) {
 TEST(Timing, Position_Basic_Linear) {
   uint32_t frac_step_size = media::audio::Mixer::FRAC_ONE;
   bool mix_result;
-  // Even though we specify a resampling rate of one, we list divergent sample
-  // rates, to force the system to select the LinearResampler.
-  // TODO(mpuryear): MTWN-90 Augment Mixer::Select, to specify which resampler
+
   audio::MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 48000);
+      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                  audio::Mixer::Resampler::LinearInterpolation);
 
   //
   // Check: source supply equals destination demand.
@@ -148,7 +148,8 @@ TEST(Timing, Position_Fractional_Point) {
   uint32_t frac_step_size = media::audio::Mixer::FRAC_ONE;
   bool mix_result;
   audio::MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100);
+      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
+                  audio::Mixer::Resampler::SampleAndHold);
 
   //
   // Check: source supply exceeds destination demand
@@ -196,11 +197,9 @@ TEST(Timing, Position_Fractional_Point) {
 TEST(Timing, Position_Fractional_Linear) {
   uint32_t frac_step_size = media::audio::Mixer::FRAC_ONE;
   bool mix_result;
-  // Even though we specify a resampling rate of one, we list divergent sample
-  // rates, to force the system to select the LinearResampler.
-  // TODO(mpuryear): MTWN-90 Augment Mixer::Select, to specify which resampler
   audio::MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 44100);
+      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                  audio::Mixer::Resampler::LinearInterpolation);
 
   //
   // Check: Source supply equals destination demand
@@ -266,11 +265,9 @@ TEST(Timing, Position_Fractional_Linear) {
 TEST(Timing, Interpolation_Values) {
   uint32_t frac_step_size = media::audio::Mixer::FRAC_ONE;
   bool mix_result;
-  // Even though we specify a resampling rate of one, we list divergent sample
-  // rates, to force the system to select the LinearResampler.
-  // TODO(mpuryear): MTWN-90 Augment Mixer::Select, to specify which resampler
   audio::MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 24000, 1, 44100);
+      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                  audio::Mixer::Resampler::LinearInterpolation);
 
   //
   // Base check: interpolated value is zero.
@@ -362,7 +359,8 @@ TEST(Timing, Interpolation_Values) {
 TEST(Timing, Interpolation_Rates) {
   bool mix_result;
   audio::MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 24000, 1, 44100);
+      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                  audio::Mixer::Resampler::LinearInterpolation);
 
   //
   // Step_size slightly above 1.5 (1 unit more).

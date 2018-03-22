@@ -24,12 +24,13 @@ inline double GainScaleToDb(audio::Gain::AScale gain_scale) {
 }
 
 // Find a suitable mixer for the provided format, channels and frame rates.
-// TODO(mpuryear): add the ability to specify which resampler.
-audio::MixerPtr SelectMixer(AudioSampleFormat src_format,
-                            uint32_t src_channels,
-                            uint32_t src_frame_rate,
-                            uint32_t dst_channels,
-                            uint32_t dst_frame_rate);
+audio::MixerPtr SelectMixer(
+    AudioSampleFormat src_format,
+    uint32_t src_channels,
+    uint32_t src_frame_rate,
+    uint32_t dst_channels,
+    uint32_t dst_frame_rate,
+    audio::Mixer::Resampler resampler = audio::Mixer::Resampler::Default);
 
 // OutputFormatters convert frames from accumulation format to dest format.
 audio::OutputFormatterPtr SelectOutputFormatter(AudioSampleFormat dst_format,

@@ -6,9 +6,9 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/audio_server/constants.h"
 #include "garnet/bin/media/audio_server/gain.h"
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 namespace audio {
@@ -22,17 +22,42 @@ class Mixer {
   static constexpr uint32_t FRAC_MASK = FRAC_ONE - 1u;
   virtual ~Mixer();
 
+  // Resampler enum
+  //
+  // This enum lists Fuchsia's available resamplers. Callers of Mixer::Select
+  // optionally use this enum to specify which resampler they require. Default
+  // allows an existing algorithm to select a resampler based on the ratio of
+  // incoming and outgoing sample rates.
+  //
+  // Although the NoOp mixer is a subclass of Mixer, it is NOT included here.
+  enum class Resampler {
+    Default = 0,
+    SampleAndHold,
+    LinearInterpolation,
+  };
+
   // Select
   //
-  // Select an appropriate instance of a mixer based on the properties of the
-  // source and destination formats.
+  // Select an appropriate mixer instance, based on an optionally-specified
+  // resampler type, or else by the properties of source/destination formats.
   //
-  // TODO(johngro): Come back here and add a way to indicate user preference
-  // where appropriate.  For example, where we might chose a linear
-  // interpolation sampler, the user may actually prefer cubic interpolation, or
-  // perhaps just a point sampler.
+  // When calling Mixer::Select, resampler_type is optional. If caller specifies
+  // a particular resampler, Mixer::Select will either instantiate exactly what
+  // was requested, or return nullptr -- even if otherwise it could successfully
+  // instantiate a different one. Setting this param to non-Default says "I know
+  // exactly what I need: I want you to fail rather than give me anything else."
+  //
+  // If resampler_type is absent or indicates Default, the resampler type is
+  // determined by algorithm (as has been the case before this CL). As always,
+  // if dst_format is null, a No-Op "do nothing" mixer is returned, which
+  // performs no mixing and simply tracks the advance of source position.
+  //
+  // For optimum system performance across changing conditions, callers should
+  // take care when directly specifying a resampler type, if they do so at all.
+  // The default should be allowed whenever possible.
   static MixerPtr Select(const AudioMediaTypeDetails& src_format,
-                         const AudioMediaTypeDetailsPtr* dst_format);
+                         const AudioMediaTypeDetailsPtr* dst_format,
+                         Resampler resampler_type = Resampler::Default);
 
   // Mix
   //
