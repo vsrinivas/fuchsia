@@ -9,6 +9,9 @@ namespace media {
 namespace audio {
 namespace test {
 
+// Convenience abbreviation within this source file to shorten names
+using Resampler = media::audio::Mixer::Resampler;
+
 //
 // Gain tests - how does the Gain object respond when given values close to its
 // maximum or minimum; does it correctly cache; do values combine to form Unity
@@ -182,7 +185,7 @@ TEST(Gain, Scaling_Linearity) {
   Gain::AScale stream_scale = gain.GetGainScale(0.0f);
 
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
-                               Mixer::Resampler::SampleAndHold);
+                               Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         stream_scale);
 
@@ -196,7 +199,7 @@ TEST(Gain, Scaling_Linearity) {
   stream_scale = gain.GetGainScale(0.0f);
 
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
-                      Mixer::Resampler::SampleAndHold);
+                      Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         stream_scale);
 
@@ -219,7 +222,7 @@ TEST(Gain, Scaling_Precision) {
   // Today, a gain even slightly less than unity will reduce all positive vals
   Gain::AScale gain_scale = Gain::kUnityScale - 1;
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Mixer::Resampler::SampleAndHold);
+                               Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         gain_scale);
 
@@ -230,7 +233,7 @@ TEST(Gain, Scaling_Precision) {
   // This gain will output non-zero, given a full-scale signal.
   gain_scale = 0x00002001;
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                      Mixer::Resampler::SampleAndHold);
+                      Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, 2, gain_scale);
 
   int32_t expect2[] = {1, -2, -1, 0};
@@ -240,7 +243,7 @@ TEST(Gain, Scaling_Precision) {
   // Today, this gain truncates full-scale to zero.
   gain_scale = 0x00002000;
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                      Mixer::Resampler::SampleAndHold);
+                      Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, 2, gain_scale);
 
   int32_t expect3[] = {0, -1, -1, 0};
@@ -259,7 +262,7 @@ TEST(Gain, Accumulator) {
   // when mixed, these should exceed the int32 range
 
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Mixer::Resampler::SampleAndHold);
+                               Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum));
 
   // These values exceed the per-stream range of int16
@@ -267,7 +270,7 @@ TEST(Gain, Accumulator) {
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
-                      Mixer::Resampler::SampleAndHold);
+                      Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, 1);
 
   // these values even exceed uint16
@@ -284,7 +287,7 @@ TEST(Gain, Accumulator_Clamp) {
                      std::numeric_limits<int32_t>::min() + 32768 - 2};
 
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Mixer::Resampler::SampleAndHold);
+                               Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum));
 
   // TODO(mpuryear): when MTWN-83 is fixed, expect max and min respectively.

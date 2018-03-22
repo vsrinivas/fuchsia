@@ -9,6 +9,9 @@ namespace media {
 namespace audio {
 namespace test {
 
+// Convenience abbreviation within this source file to shorten names
+using Resampler = media::audio::Mixer::Resampler;
+
 //
 // Timing tests
 //
@@ -32,7 +35,7 @@ TEST(Timing, Position_Basic_Point) {
   uint32_t frac_step_size = Mixer::FRAC_ONE;
   bool mix_result;
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 24000, 1, 24000,
-                               Mixer::Resampler::SampleAndHold);
+                               Resampler::SampleAndHold);
 
   //
   // Check: source supply exceeds destination demand.
@@ -80,7 +83,7 @@ TEST(Timing, Position_Basic_Linear) {
   bool mix_result;
 
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Mixer::Resampler::LinearInterpolation);
+                               Resampler::LinearInterpolation);
 
   //
   // Check: source supply equals destination demand.
@@ -147,7 +150,7 @@ TEST(Timing, Position_Fractional_Point) {
   uint32_t frac_step_size = Mixer::FRAC_ONE;
   bool mix_result;
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
-                               Mixer::Resampler::SampleAndHold);
+                               Resampler::SampleAndHold);
 
   //
   // Check: source supply exceeds destination demand
@@ -196,7 +199,7 @@ TEST(Timing, Position_Fractional_Linear) {
   uint32_t frac_step_size = Mixer::FRAC_ONE;
   bool mix_result;
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Mixer::Resampler::LinearInterpolation);
+                               Resampler::LinearInterpolation);
 
   //
   // Check: Source supply equals destination demand
@@ -263,7 +266,7 @@ TEST(Timing, Interpolation_Values) {
   uint32_t frac_step_size = Mixer::FRAC_ONE;
   bool mix_result;
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Mixer::Resampler::LinearInterpolation);
+                               Resampler::LinearInterpolation);
 
   //
   // Base check: interpolated value is zero.
@@ -355,7 +358,7 @@ TEST(Timing, Interpolation_Values) {
 TEST(Timing, Interpolation_Rates) {
   bool mix_result;
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               Mixer::Resampler::LinearInterpolation);
+                               Resampler::LinearInterpolation);
 
   //
   // Step_size slightly above 1.5 (1 unit more).

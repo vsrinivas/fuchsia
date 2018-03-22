@@ -10,6 +10,9 @@ namespace media {
 namespace audio {
 namespace test {
 
+// Convenience abbreviation within this source file to shorten names
+using Resampler = media::audio::Mixer::Resampler;
+
 //
 // DataFormats tests - can we "connect the dots" from data source to data
 // destination, for any permutation of format/configuration settings
@@ -20,7 +23,7 @@ namespace test {
 // Create PointSampler objects for incoming buffers of type uint8
 TEST(DataFormats, PointSampler_8) {
   EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::UNSIGNED_8, 2, 32000, 1,
-                                 16000, Mixer::Resampler::SampleAndHold));
+                                 16000, Resampler::SampleAndHold));
   EXPECT_NE(nullptr,
             SelectMixer(AudioSampleFormat::UNSIGNED_8, 4, 48000, 4, 48000));
 }
@@ -28,16 +31,16 @@ TEST(DataFormats, PointSampler_8) {
 // Create PointSampler objects for incoming buffers of type int16
 TEST(DataFormats, PointSampler_16) {
   EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::SIGNED_16, 1, 24000, 1,
-                                 24000, Mixer::Resampler::SampleAndHold));
+                                 24000, Resampler::SampleAndHold));
   EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 2,
-                                 11025, Mixer::Resampler::Default));
+                                 11025, Resampler::Default));
 }
 
 // Create PointSampler objects for other formats of incoming buffers
 // This is not expected to work, as these are not yet implemented
 TEST(DataFormats, PointSampler_Other) {
   EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::SIGNED_24_IN_32, 2, 8000, 1,
-                                 8000, Mixer::Resampler::SampleAndHold));
+                                 8000, Resampler::SampleAndHold));
   EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::FLOAT, 2, 48000, 2, 16000));
 }
 
@@ -48,7 +51,7 @@ TEST(DataFormats, PointSampler_Other) {
 // Create LinearSampler objects for incoming buffers of type uint8
 TEST(DataFormats, LinearSampler_8) {
   EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 22050, 2,
-                                 44100, Mixer::Resampler::LinearInterpolation));
+                                 44100, Resampler::LinearInterpolation));
   EXPECT_NE(nullptr,
             SelectMixer(AudioSampleFormat::UNSIGNED_8, 2, 44100, 1, 48000));
 }
@@ -56,9 +59,9 @@ TEST(DataFormats, LinearSampler_8) {
 // Create LinearSampler objects for incoming buffers of type int16
 TEST(DataFormats, LinearSampler_16) {
   EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::SIGNED_16, 2, 16000, 2,
-                                 48000, Mixer::Resampler::LinearInterpolation));
+                                 48000, Resampler::LinearInterpolation));
   EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::SIGNED_16, 2, 44100, 1,
-                                 48000, Mixer::Resampler::Default));
+                                 48000, Resampler::Default));
   EXPECT_NE(nullptr,
             SelectMixer(AudioSampleFormat::SIGNED_16, 8, 48000, 8, 44100));
 }
@@ -69,7 +72,7 @@ TEST(DataFormats, LinearSampler_Other) {
   EXPECT_EQ(nullptr,
             SelectMixer(AudioSampleFormat::SIGNED_24_IN_32, 2, 8000, 1, 11025));
   EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::FLOAT, 2, 48000, 2, 44100,
-                                 Mixer::Resampler::LinearInterpolation));
+                                 Resampler::LinearInterpolation));
 }
 
 // If the destination details are unspecified (nullptr), select NoOpMixer
@@ -81,8 +84,7 @@ TEST(DataFormats, NoOpMixer) {
   src_details.channels = 2;
   src_details.frames_per_second = 48000;
 
-  EXPECT_NE(nullptr,
-            Mixer::Select(src_details, nullptr, Mixer::Resampler::Default));
+  EXPECT_NE(nullptr, Mixer::Select(src_details, nullptr, Resampler::Default));
   EXPECT_NE(nullptr, Mixer::Select(src_details, nullptr));
 }
 
@@ -117,12 +119,12 @@ TEST(PassThru, Source_8) {
                       -0x0100, 0,      0x2600,  -0x1300};
 
   MixerPtr mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1,
-                               48000, Mixer::Resampler::SampleAndHold);
+                               48000, Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 8, 48000, 8, 48000,
-                      Mixer::Resampler::SampleAndHold);
+                      Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 8);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
@@ -138,14 +140,14 @@ TEST(PassThru, Source_16) {
 
   // Try in 2-channel mode
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
-                               Mixer::Resampler::SampleAndHold);
+                               Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 2);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   ::memset(accum, 0, sizeof(accum));
   // Now try in 4-channel mode
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 4, 48000, 4, 48000,
-                      Mixer::Resampler::SampleAndHold);
+                      Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 4);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
@@ -158,7 +160,7 @@ TEST(PassThru, NoOp) {
   src_details.frames_per_second = 48000;
 
   MixerPtr no_op_mixer =
-      Mixer::Select(src_details, nullptr, Mixer::Resampler::Default);
+      Mixer::Select(src_details, nullptr, Resampler::Default);
   EXPECT_NE(nullptr, no_op_mixer);
 
   uint32_t dst_frames = 2, dst_offset = 0;
@@ -189,7 +191,7 @@ TEST(PassThru, MonoToStereo) {
                       0,      0,      1,      1,      32767, 32767};
 
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 2, 48000,
-                               Mixer::Resampler::SampleAndHold);
+                               Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 2);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
@@ -201,7 +203,7 @@ TEST(PassThru, StereoToMono_Cancel) {
   int32_t accum[6];
 
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
-                               Mixer::Resampler::SampleAndHold);
+                               Resampler::SampleAndHold);
 
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum));
   EXPECT_TRUE(CompareBufferToVal(accum, 0, fbl::count_of(accum)));
@@ -219,7 +221,7 @@ TEST(PassThru, StereoToMono_Round) {
   int32_t expect[] = {6000, -111, 2, -5578, 32767, -32768};
 
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
-                               Mixer::Resampler::SampleAndHold);
+                               Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
@@ -231,13 +233,13 @@ TEST(PassThru, Accumulate) {
   int32_t expect[] = {17901, 13456, 1234, 865};
 
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
-                               Mixer::Resampler::SampleAndHold);
+                               Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum) / 2);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   int32_t expect2[] = {-4321, 2345, 6789, -8765};
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
-                      Mixer::Resampler::SampleAndHold);
+                      Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 2);
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }

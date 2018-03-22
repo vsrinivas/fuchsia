@@ -8,6 +8,8 @@ namespace media {
 namespace audio {
 namespace test {
 
+// Convenience abbreviations within this source file to shorten names
+using Resampler = media::audio::Mixer::Resampler;
 using ASF = AudioSampleFormat;
 
 //
@@ -24,7 +26,7 @@ MixerPtr SelectMixer(ASF src_format,
                      uint32_t src_frame_rate,
                      uint32_t dst_channels,
                      uint32_t dst_frame_rate,
-                     Mixer::Resampler resampler) {
+                     Resampler resampler) {
   AudioMediaTypeDetails src_details;
   src_details.sample_format = src_format;
   src_details.channels = src_channels;
