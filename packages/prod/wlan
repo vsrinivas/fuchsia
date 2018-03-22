@@ -7,7 +7,6 @@
         "garnet/packages/prod/broadcom"
     ],
     "packages": {
-        "wlan": "//garnet/drivers/wlan/wlan",
-        "ralink": "//garnet/drivers/wlan/mediatek/ralink"
+        "wlan": "//garnet/drivers/wlan/wlan"
     }
 }
