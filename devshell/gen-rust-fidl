@@ -73,12 +73,12 @@ def ensure_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def write_lib_rs(crate_path, label_name, fidl_target_fs_path):
+def write_lib_rs(crate_path, lib_name, fidl_target_fs_path):
     ensure_dir(crate_path)
     src_path = os.path.join(crate_path, "src")
     ensure_dir(src_path)
     lib_rs_path = os.path.join(src_path, "lib.rs")
-    path_to_generated_code = "%s/%s.fidl.rs" % (fidl_target_fs_path, label_name)
+    path_to_generated_code = "%s/%s.fidl.rs" % (fidl_target_fs_path, lib_name)
     with open(lib_rs_path, "w") as f:
         f.write(LIB_RS_CONTENTS % { "year": cur_year(), "path": path_to_generated_code })
 
@@ -114,7 +114,7 @@ def write_facade(folder_path, lib_name, fidl_target, deps):
     fidl_target_fs_path = rm_left_slashes(fidl_target_gn_path)
     crate_name = "fidl_" + lib_name
     crate_path = os.path.join(folder_path, crate_name)
-    write_lib_rs(crate_path, fidl_target_label, fidl_target_fs_path)
+    write_lib_rs(crate_path, lib_name, fidl_target_fs_path)
     write_cargo_toml_file(crate_path, crate_name, deps)
     write_build_gn_file(crate_path, crate_name, fidl_target_fs_path, fidl_target_label)
     return (crate_name, crate_path)
