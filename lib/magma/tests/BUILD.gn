@@ -169,7 +169,7 @@ package("magma-test") {
 
     binaries = [ {
           name = "autorun_mali"
-          dest = "magma_autorun_mali"
+          dest = "magma_autorun"
         } ]
   }
 }
