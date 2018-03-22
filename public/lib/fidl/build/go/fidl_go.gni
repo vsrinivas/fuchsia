@@ -73,5 +73,8 @@ template("fidl_go") {
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
+    if (defined(invoker.public_deps)) {
+      public_deps = invoker.public_deps
+    }
   }
 }
