@@ -10,11 +10,24 @@ enum NetAddressFamily {
   IPV6 = 2;
 };
 
-union NetAddress {
-  // The address is expressed in network byte order, so the most significant
-  // byte ("127" in the address "127.0.0.1") will be at index 0.
-  array<uint8>:4 ipv4;
-  array<uint8>:16 ipv6;
+struct Ipv4Address {
+  array<uint8>:4 addr;
+};
+
+struct Ipv6Address {
+  array<uint8>:16 addr;
+};
+
+// TODO(tkilbourn): make this a union when they're fully supported
+struct NetAddress {
+  //NetAddressFamily family = UNSPECIFIED;
+  NetAddressFamily family;
+
+  // At most one of the following fields is non-NULL depending on the value of
+  // |family|.  The address is expressed in network byte order, so the most
+  // significant byte ("127" in the address "127.0.0.1") will be at index 0.
+  Ipv4Address? ipv4;
+  Ipv6Address? ipv6;
 };
 
 struct SocketAddress {
