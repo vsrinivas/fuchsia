@@ -29,6 +29,8 @@ struct MsgHeader {
     kProcessTree,
     kThreads,
     kReadMemory,
+    kAddOrChangeBreakpoint,
+    kRemoveBreakpoint,
 
     // The "notify" messages are sent unrequested from the agent to the client.
     kNotifyProcessExiting,
@@ -117,6 +119,26 @@ struct ReadMemoryRequest {
 };
 struct ReadMemoryReply {
   std::vector<MemoryBlock> blocks;
+};
+
+struct AddOrChangeBreakpointRequest {
+  uint64_t process_koid = 0;
+  BreakpointSettings breakpoint;
+};
+struct AddOrChangeBreakpointReply {
+  // If the satatus is not ZX_OK (0), the breakpoint add/change did not
+  // succeded. In the case of changed breakpoints failing to modify, the
+  // breakpoint with the given ID will be removed so the client and agent can
+  // be in a consistent state (error always means it doesn't exist).
+  uint32_t status = 0;  // zx_status_t
+  std::string error_message;
+};
+
+struct RemoveBreakpointRequest {
+  uint64_t process_koid = 0;
+  uint32_t breakpoint_id = 0;
+};
+struct RemoveBreakpointReply {
 };
 
 // Data for process destroyed messages (process created messages are in

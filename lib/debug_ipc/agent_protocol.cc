@@ -190,6 +190,44 @@ void WriteReply(const ReadMemoryReply& reply,
   Serialize(reply.blocks, writer);
 }
 
+// AddOrChangeBreakpoint -------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader,
+                 AddOrChangeBreakpointRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return reader->ReadBytes(sizeof(AddOrChangeBreakpointRequest), request);
+}
+
+void WriteReply(const AddOrChangeBreakpointReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kAddOrChangeBreakpoint, transaction_id);
+  writer->WriteUint32(reply.status);
+  writer->WriteString(reply.error_message);
+}
+
+// RemoveBreakpoint ------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader,
+                 RemoveBreakpointRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return reader->ReadBytes(sizeof(RemoveBreakpointRequest), request);
+}
+
+void WriteReply(const RemoveBreakpointReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kRemoveBreakpoint, transaction_id);
+}
+
 // Notifications ---------------------------------------------------------------
 
 void WriteNotifyProcess(const NotifyProcess& notify, MessageWriter* writer) {

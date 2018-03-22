@@ -75,6 +75,22 @@ bool ReadReply(MessageReader* reader,
                ReadMemoryReply* reply,
                uint32_t* transaction_id);
 
+// AddOrChangeBreakpoint.
+void WriteRequest(const AddOrChangeBreakpointRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer);
+bool ReadReply(MessageReader* reader,
+               AddOrChangeBreakpointReply* reply,
+               uint32_t* transaction_id);
+
+// RemoveBreakpoint.
+void WriteRequest(const RemoveBreakpointRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer);
+bool ReadReply(MessageReader* reader,
+               RemoveBreakpointReply* reply,
+               uint32_t* transaction_id);
+
 // Notifications ---------------------------------------------------------------
 //
 // (These don't have a "request"/"reply".)

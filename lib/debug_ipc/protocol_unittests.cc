@@ -264,6 +264,58 @@ TEST(Protocol, ReadMemoryReply) {
   EXPECT_TRUE(second.blocks[1].data.empty());
 }
 
+// AddOrChangeBreakpoint -------------------------------------------------------
+
+TEST(Protocol, AddOrChangeBreakpointRequest) {
+  AddOrChangeBreakpointRequest initial;
+  initial.process_koid = 1234;
+  initial.breakpoint.breakpoint_id = 8976;
+  initial.breakpoint.thread_koid = 14612;
+  initial.breakpoint.address = 0x723456234;
+  initial.breakpoint.stop = debug_ipc::Stop::kProcess;
+
+  AddOrChangeBreakpointRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.breakpoint.breakpoint_id, second.breakpoint.breakpoint_id);
+  EXPECT_EQ(initial.breakpoint.thread_koid, second.breakpoint.thread_koid);
+  EXPECT_EQ(initial.breakpoint.address, second.breakpoint.address);
+  EXPECT_EQ(initial.breakpoint.stop, second.breakpoint.stop);
+}
+
+TEST(Protocol, AddOrChangeBreakpointReply) {
+  AddOrChangeBreakpointReply initial;
+  initial.status = 78;
+  initial.error_message = "foo bar";
+
+  AddOrChangeBreakpointReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  EXPECT_EQ(initial.status, second.status);
+  EXPECT_EQ(initial.error_message, second.error_message);
+}
+
+// RemoveBreakpoint ------------------------------------------------------------
+
+TEST(Protocol, RemoveBreakpointRequest) {
+  RemoveBreakpointRequest initial;
+  initial.process_koid = 1234;
+  initial.breakpoint_id = 8976;
+
+  RemoveBreakpointRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.breakpoint_id, second.breakpoint_id);
+}
+
+TEST(Protocol, RemoveBreakpointReply) {
+  RemoveBreakpointReply initial;
+  RemoveBreakpointReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+}
+
 // Notifications ---------------------------------------------------------------
 
 TEST(Protocol, NotifyThread) {

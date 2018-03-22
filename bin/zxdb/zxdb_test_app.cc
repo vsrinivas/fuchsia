@@ -19,17 +19,24 @@ void DebugBreak() {
 #elif defined(__aarch64__)
   __asm__ volatile("brk 0");
 #else
-  #error
+#error
 #endif
+}
+
+void PrintHello() {
+  const char msg[] = "Hello from zxdb_test_app!\n";
+  zx_debug_write(msg, strlen(msg));
 }
 
 int main(int arch, char* argv[]) {
   // Print out the address of main to the system debug log.
   char buf[128];
-  snprintf(buf, sizeof(buf), "zxdb_test_app, &main = 0x%llx\n",
-           static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(&main)));
+  snprintf(buf, sizeof(buf), "zxdb_test_app, &PrintHello = 0x%llx\n",
+           static_cast<unsigned long long>(
+               reinterpret_cast<uintptr_t>(&PrintHello)));
   zx_debug_write(buf, strlen(buf));
 
   DebugBreak();
+  PrintHello();
   return 0;
 }

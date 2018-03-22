@@ -6,6 +6,7 @@
 
 #include "garnet/bin/zxdb/client/breakpoint_observer.h"
 #include "garnet/bin/zxdb/client/client_object.h"
+#include "garnet/lib/debug_ipc/records.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/observer_list.h"
 
@@ -27,39 +28,46 @@ class Breakpoint : public ClientObject {
     kThread
   };
 
-  // What stops when this breakpoint is hit.
-  enum class Stop {
-    kAll,      // All threads of all processes stop.
-    kProcess,  // All threads of the process that hit the breakpoint stop.
-    kThread    // Just the thread that hits the breakpoint stops.
-  };
-
   explicit Breakpoint(Session* session);
   ~Breakpoint() override;
 
   void AddObserver(BreakpointObserver* observer);
   void RemoveObserver(BreakpointObserver* observer);
 
+  // Commits all current settings to the breakpoint. Without calling this,
+  // no breakpoint settings are send to the agent.
+  //
+  // The callback will be issued once the changes have taken effect. Be aware
+  // that the breakpoint object could have been deleted by the time the
+  // callback is issued, so don't retain references to it.
+  virtual void CommitChanges(std::function<void(const Err&)> callback) = 0;
+
   // Sets whether this breakpoint is enabled. Disabled breakpoints still exist
-  // on the client but are removed from the code. SetEnabled may return an
-  // error if the breakpoint isn't in a state where it can be enabled (like
-  // there is no valid location set on it).
+  // on the client but are removed from the code.
+  //
+  // You must call CommitChanges before changes will have an effect.
   virtual bool IsEnabled() const = 0;
-  virtual Err SetEnabled(bool enabled) = 0;
+  virtual void SetEnabled(bool enabled) = 0;
 
   // Sets/gets the scoping for this breakpoint. For both setter and getter:
   // - KSession: Process and thread are null.
   // - kTarget: Target is the desired target/process, thread is null.
   // - kThread: Target and thread are set.
+  //
+  // You must call CommitChanges before changes will have an effect.
   virtual Err SetScope(Scope scope, Target* target, Thread* thread) = 0;
   virtual Scope GetScope(Target** target, Thread** thread) const = 0;
 
   // Sets gets the stop mode.
-  virtual void SetStopMode(Stop stop) = 0;
-  virtual Stop GetStopMode() const = 0;
+  //
+  // You must call CommitChanges before changes will have an effect.
+  virtual void SetStopMode(debug_ipc::Stop stop) = 0;
+  virtual debug_ipc::Stop GetStopMode() const = 0;
 
   // Sets the breakpoint location to the given address. Address breakpoints
   // must not be of Session scope (set the scope first).
+  //
+  // You must call CommitChanges before changes will have an effect.
   virtual void SetAddressLocation(uint64_t address) = 0;
   virtual uint64_t GetAddressLocation() const = 0;
 

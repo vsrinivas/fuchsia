@@ -9,6 +9,7 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/console_context.h"
+#include "garnet/bin/zxdb/console/output_buffer.h"
 
 namespace zxdb {
 
@@ -40,16 +41,16 @@ Err CreateOrEditBreakpoint(ConsoleContext* context,
   }
 
   // Stop flag (default to all for new breakpoints).
-  Breakpoint::Stop stop =
-      breakpoint ? breakpoint->GetStopMode() : Breakpoint::Stop::kAll;
+  debug_ipc::Stop stop =
+      breakpoint ? breakpoint->GetStopMode() : debug_ipc::Stop::kAll;
   if (cmd.HasSwitch(kStopSwitch)) {
     std::string stop_str = cmd.GetSwitchValue(kStopSwitch);
     if (stop_str == "all") {
-      stop = Breakpoint::Stop::kAll;
+      stop = debug_ipc::Stop::kAll;
     } else if (stop_str == "process") {
-      stop = Breakpoint::Stop::kProcess;
+      stop = debug_ipc::Stop::kProcess;
     } else if (stop_str == "thread") {
-      stop = Breakpoint::Stop::kThread;
+      stop = debug_ipc::Stop::kThread;
     } else {
       return Err(
           "--stop switch requires \"all\", \"process\", \"thread\", "
@@ -99,12 +100,16 @@ Err CreateOrEditBreakpoint(ConsoleContext* context,
   if (address)
     breakpoint->SetAddressLocation(address);
 
-  err = breakpoint->SetEnabled(enabled);
-  if (err.has_error()) {
-    FXL_NOTREACHED();  // Should have been validated enough above.
-    return err;
-  }
-  FXL_DCHECK(!err.has_error());
+  breakpoint->SetEnabled(enabled);
+
+  breakpoint->CommitChanges([](const Err& err) {
+    if (err.has_error()) {
+      OutputBuffer out;
+      out.Append("Error setting breakpoint: ");
+      out.OutputErr(err);
+      Console::get()->Output(std::move(out));
+    }
+  });
 
   Console::get()->Output(DescribeBreakpoint(context, breakpoint, false));
   return err;

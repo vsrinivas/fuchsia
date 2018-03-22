@@ -226,6 +226,47 @@ bool ReadReply(MessageReader* reader,
   return Deserialize(reader, &reply->blocks);
 }
 
+// AddOrChangeBreakpoint -------------------------------------------------------
+
+void WriteRequest(const AddOrChangeBreakpointRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kAddOrChangeBreakpoint, transaction_id);
+  writer->WriteBytes(&request, sizeof(AddOrChangeBreakpointRequest));
+}
+
+bool ReadReply(MessageReader* reader,
+               AddOrChangeBreakpointReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  if (!reader->ReadUint32(&reply->status))
+    return false;
+  return reader->ReadString(&reply->error_message);
+}
+
+// RemoveBreakpoint ------------------------------------------------------------
+
+void WriteRequest(const RemoveBreakpointRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kRemoveBreakpoint, transaction_id);
+  writer->WriteBytes(&request, sizeof(RemoveBreakpointRequest));
+}
+
+bool ReadReply(MessageReader* reader,
+               RemoveBreakpointReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return true;
+}
+
 // Notifications ---------------------------------------------------------------
 
 bool ReadNotifyProcess(MessageReader* reader, NotifyProcess* process) {

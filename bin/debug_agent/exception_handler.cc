@@ -127,7 +127,8 @@ void ExceptionHandler::DoThread() {
 
       switch (packet.type) {
         case ZX_EXCP_THREAD_STARTING:
-          sink_->OnThreadStarting(thread, proc->koid, packet.exception.tid);
+          sink_->OnThreadStarting(std::move(thread), proc->koid,
+                                  packet.exception.tid);
           break;
         case ZX_EXCP_THREAD_EXITING:
           sink_->OnThreadExiting(proc->koid, packet.exception.tid);
@@ -139,7 +140,7 @@ void ExceptionHandler::DoThread() {
         case ZX_EXCP_HW_BREAKPOINT:
         case ZX_EXCP_UNALIGNED_ACCESS:
         case ZX_EXCP_POLICY_ERROR:
-          sink_->OnException(thread, proc->koid, packet.type);
+          sink_->OnException(proc->koid, packet.exception.tid, packet.type);
           break;
         default:
           fprintf(stderr, "Unknown exception.\n");

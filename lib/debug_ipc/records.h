@@ -60,6 +60,28 @@ struct MemoryBlock {
   std::vector<uint8_t> data;
 };
 
+// What threads to stop when the breakpoint is hit.
+enum class Stop : uint32_t {
+  kAll,  // Stop all threads of all processes attached to the debugger.
+  kProcess,  // Stop all threads of the process that hit the breakpoint.
+  kThread  // Stop only the thread that hit the breakpoint.
+};
+
+struct BreakpointSettings {
+  // The ID if this breakpoint. This is assigned by the client and identifies a
+  // single breakpoint at a single address in a single process. This is
+  // different than the ID in the console frontend which can be across mutliple
+  // processes or may match several addresses in a single process.
+  uint32_t breakpoint_id = 0;
+
+  // Thread that this breakpoint applies to. If 0 it will apply to all threads
+  // in the process.
+  uint64_t thread_koid = 0;
+
+  uint64_t address = 0;
+  Stop stop = Stop::kAll;
+};
+
 #pragma pack(pop)
 
 }  // namespace debug_ipc

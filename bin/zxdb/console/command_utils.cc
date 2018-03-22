@@ -127,15 +127,15 @@ std::string BreakpointScopeToString(const ConsoleContext* context,
   }
 }
 
-std::string BreakpointStopToString(Breakpoint::Stop stop) {
+std::string BreakpointStopToString(debug_ipc::Stop stop) {
   struct Mapping {
-    Breakpoint::Stop stop;
+    debug_ipc::Stop stop;
     const char* string;
   };
   static const Mapping mappings[] = {
-    { Breakpoint::Stop::kAll, "All" },
-    { Breakpoint::Stop::kProcess, "Process" },
-    { Breakpoint::Stop::kThread, "Thread" }
+    { debug_ipc::Stop::kAll, "All" },
+    { debug_ipc::Stop::kProcess, "Process" },
+    { debug_ipc::Stop::kThread, "Thread" }
   };
 
   for (const Mapping& mapping : mappings) {

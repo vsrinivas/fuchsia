@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/client/breakpoint_impl.h"
 
+#include <inttypes.h>
+
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
@@ -13,19 +15,70 @@
 
 namespace zxdb {
 
-BreakpointImpl::BreakpointImpl(Session* session) : Breakpoint(session) {}
+namespace {
+
+uint32_t next_breakpoint_id = 1;
+
+}  // namespace
+
+BreakpointImpl::BreakpointImpl(Session* session)
+    : Breakpoint(session), weak_factory_(this) {}
 
 BreakpointImpl::~BreakpointImpl() {
-  StartObserving();
+  if (backend_id_ && target_scope_ && target_scope_->GetProcess()) {
+    // Breakpoint was installed and the process still exists.
+    enabled_ = false;
+    SendBreakpointRemove(target_scope_->GetProcess(),
+                         std::function<void(const Err&)>());
+  }
+
+  StopObserving();
+}
+
+void BreakpointImpl::CommitChanges(std::function<void(const Err&)> callback) {
+  // TODO(brettw) this assumes there's only one backend breakpoint!
+  if (!target_scope_) {
+    fprintf(stderr, "TODO(brettw) need to support non-target breakpoints.\n");
+    return;
+  }
+  Process* process = target_scope_->GetProcess();
+  if (!process)
+    return;  // Process not running, don't try to set any breakpoints.
+
+  if (!backend_id_) {
+    if (!enabled_) {
+      // The breakpoint isn't enabled and there's no backend breakpoint to
+      // clear, don't need to do anything.
+      //
+      // TODO(brettw) issue callback non-reentrantly by posting back to the
+      // message loop.
+      if (callback)
+        callback(Err());
+      return;
+    }
+
+    // Assign a new ID.
+    backend_id_ = next_breakpoint_id;
+    next_breakpoint_id++;
+  } else {
+    // Backend breakpoint exists.
+    if (!enabled_) {
+      // Disable the backend breakpoint.
+      SendBreakpointRemove(process, std::move(callback));
+      return;
+    }
+  }
+
+  // New or changed breakpoint.
+  SendAddOrChange(process, callback);
 }
 
 bool BreakpointImpl::IsEnabled() const {
   return enabled_;
 }
 
-Err BreakpointImpl::SetEnabled(bool enabled) {
+void BreakpointImpl::SetEnabled(bool enabled) {
   enabled_ = enabled;
-  return Err();
 }
 
 Err BreakpointImpl::SetScope(Scope scope, Target* target, Thread* thread) {
@@ -70,11 +123,11 @@ Breakpoint::Scope BreakpointImpl::GetScope(Target** target,
   return scope_;
 }
 
-void BreakpointImpl::SetStopMode(Stop stop) {
+void BreakpointImpl::SetStopMode(debug_ipc::Stop stop) {
   stop_mode_ = stop;
 }
 
-Breakpoint::Stop BreakpointImpl::GetStopMode() const {
+debug_ipc::Stop BreakpointImpl::GetStopMode() const {
   return stop_mode_;
 }
 
@@ -169,6 +222,73 @@ void BreakpointImpl::StartObserving() {
     thread_scope_->GetProcess()->AddObserver(this);
     is_process_observer_ = true;
   }
+}
+
+void BreakpointImpl::SendAddOrChange(Process* process,
+                                     std::function<void(const Err&)> callback) {
+  FXL_DCHECK(backend_id_); // ID should have been assigned by the caller.
+  FXL_DCHECK(enabled_);  // Shouldn't add or change disabled ones.
+
+  debug_ipc::AddOrChangeBreakpointRequest request;
+  request.process_koid = process->GetKoid();
+  request.breakpoint.breakpoint_id = backend_id_;
+  request.breakpoint.thread_koid =
+      thread_scope_ ? thread_scope_->GetKoid() : 0;
+  request.breakpoint.address = address_;
+  request.breakpoint.stop = stop_mode_;
+
+  session()->Send<debug_ipc::AddOrChangeBreakpointRequest,
+                  debug_ipc::AddOrChangeBreakpointReply>(
+    request,
+    [callback, breakpoint = weak_factory_.GetWeakPtr()](
+        const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
+      // Be sure to issue the callback even if the breakpoint no longer exists.
+      if (err.has_error()) {
+        // Transport error. We don't actually know what state the agent is in
+        // since it never got the message. In general this means things were
+        // disconnected and the agent no longer exists, so mark the breakpoint
+        // disabled.
+        if (breakpoint)
+          breakpoint->enabled_ = false;
+        if (callback)
+          callback(err);
+      } else if (reply.status != 0) {
+        // Backend error. The protocol specifies that errors adding or changing
+        // will result in any existing breakpoints with that ID being removed.
+        // So mark the breakpoint disabled but keep the settings to the user
+        // can fix the problem from the current state if desired.
+        if (breakpoint)
+          breakpoint->enabled_ = false;
+        if (callback)
+          callback(Err(ErrType::kGeneral, reply.error_message));
+      } else {
+        // Success.
+        if (callback)
+          callback(Err());
+      }
+    });
+}
+
+void BreakpointImpl::SendBreakpointRemove(
+    Process* process,
+    std::function<void(const Err&)> callback) {
+  FXL_DCHECK(!enabled_);  // Caller should have disabled already.
+  FXL_DCHECK(backend_id_);
+
+  debug_ipc::RemoveBreakpointRequest request;
+  request.process_koid = process->GetKoid();
+  request.breakpoint_id = backend_id_;
+
+  session()->Send<debug_ipc::RemoveBreakpointRequest,
+                  debug_ipc::RemoveBreakpointReply>(
+    request,
+    [callback](const Err& err, debug_ipc::RemoveBreakpointReply reply) {
+      if (callback)
+        callback(Err());
+    });
+
+  // Indicate the backend breakpoint is gone.
+  backend_id_ = 0;
 }
 
 }  // namespace zxdb

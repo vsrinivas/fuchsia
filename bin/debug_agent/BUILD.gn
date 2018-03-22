@@ -6,10 +6,13 @@ import("//build/package.gni")
 
 static_library("lib") {
   sources = [
+    "arch.h",
     "debug_agent.cc",
     "debug_agent.h",
     "debugged_process.cc",
     "debugged_process.h",
+    "debugged_thread.cc",
+    "debugged_thread.h",
     "exception_handler.cc",
     "exception_handler.h",
     "launcher.cc",
@@ -18,9 +21,25 @@ static_library("lib") {
     "object_util.h",
     "process_info.cc",
     "process_info.h",
+    "process_breakpoint.cc",
+    "process_breakpoint.h",
     "system_info.cc",
     "system_info.h",
   ]
+
+  if (current_cpu == "x64") {
+    sources += [
+      "arch_x64.cc",
+      "arch_x64.h",
+    ]
+  } else if (current_cpu == "arm64") {
+    sources += [
+      "arch_arm64.cc",
+      "arch_arm64.h",
+    ]
+  } else {
+    assert(false)
+  }
 
   public_deps = [
     "//garnet/lib/debug_ipc:agent",

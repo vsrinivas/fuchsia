@@ -37,7 +37,7 @@ std::string ThreadStateToString(debug_ipc::ThreadRecord::State state);
 
 std::string BreakpointScopeToString(const ConsoleContext* context,
                                     const Breakpoint* breakpoint);
-std::string BreakpointStopToString(Breakpoint::Stop stop);
+std::string BreakpointStopToString(debug_ipc::Stop stop);
 
 // Returns a string describing the given thing in the given context. If
 // columns is set, there will be extra padding added so that multiple things
