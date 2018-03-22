@@ -201,6 +201,8 @@ zx_status_t AssociatedState::HandleCtrlFrame(const FrameControl& fc) {
 
 zx_status_t AssociatedState::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
                                                const wlan_rx_info_t& rxinfo) {
+    debugbss("[client] [%s] client requested BU\n", client_->addr().ToString().c_str());
+
     if (client_->HasBufferedFrames()) {
         // Dequeue buffered Ethernet frame.
         fbl::unique_ptr<Packet> packet;
@@ -231,9 +233,11 @@ zx_status_t AssociatedState::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFr
         fc->set_more_data(client_->HasBufferedFrames() ? 1 : 0);
 
         // Send Data frame.
+        debugbss("[client] [%s] sent BU to client\n", client_->addr().ToString().c_str());
         return client_->SendDataFrame(fbl::move(data_packet));
     }
 
+    debugbss("[client] [%s] no more BU available\n", client_->addr().ToString().c_str());
     // There are no frames buffered for the client.
     // Respond with a null data frame and report the situation.
     size_t len = sizeof(DataFrameHeader);
@@ -386,6 +390,11 @@ void AssociatedState::HandleTimeout() {
 void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
     if (fc.pwr_mgmt() != dozing_) {
         dozing_ = fc.pwr_mgmt();
+        if (dozing_) {
+            debugbss("[client] [%s] client is now dozing\n", client_->addr().ToString().c_str());
+        } else {
+            debugbss("[client] [%s] client woke up\n", client_->addr().ToString().c_str());
+        }
 
         if (!dozing_) {
             // TODO(hahnr): Client became awake.
@@ -569,7 +578,7 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
 
 zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_code) {
     debugfn();
-    debugbss("[client] [%s] sending Disassociation\n", addr_.ToString().c_str());
+    debugbss("[client] [%s] sending Deauthentication\n", addr_.ToString().c_str());
 
     fbl::unique_ptr<Packet> packet = nullptr;
     auto frame = BuildMgmtFrame<Deauthentication>(&packet);
@@ -586,7 +595,7 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
 
     auto status = device_->SendWlan(fbl::move(packet));
     if (status != ZX_OK) {
-        errorf("[client] [%s] could not send disassocation packet: %d\n", addr_.ToString().c_str(),
+        errorf("[client] [%s] could not send dauthentication packet: %d\n", addr_.ToString().c_str(),
                status);
     }
     return status;
@@ -602,6 +611,8 @@ zx_status_t RemoteClient::SendDataFrame(fbl::unique_ptr<Packet> packet) {
 
 zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame) {
     if (ps_pkt_queue_.size() >= kMaxPowerSavingQueueSize) { return ZX_ERR_NO_RESOURCES; }
+
+    debugbss("[client] [%s] client is dozing; buffer outbound frame\n", addr().ToString().c_str());
 
     size_t hdr_len = sizeof(EthernetII);
     size_t frame_len = hdr_len + frame.body_len;

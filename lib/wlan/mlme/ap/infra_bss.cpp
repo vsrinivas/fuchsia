@@ -57,9 +57,9 @@ void InfraBss::Stop() {
 
     debugbss("[infra-bss] [%s] stopping BSS\n", bssid_.ToString().c_str());
 
+    clients_.Clear();
     bcn_sender_->Stop();
     started_at_ = 0;
-    clients_.Clear();
 }
 
 bool InfraBss::IsStarted() {
