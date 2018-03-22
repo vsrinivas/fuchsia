@@ -43,9 +43,7 @@ class VectorPtr {
   // Creates a VectorPtr of the given size.
   //
   // Equivalent to using the |VectorPtr(size_t)| constructor.
-  static VectorPtr New(size_t size) {
-    return VectorPtr(size);
-  }
+  static VectorPtr New(size_t size) { return VectorPtr(size); }
 
   // Accesses the underlying std::vector object.
   const std::vector<T>& get() const { return vec_; }
@@ -83,16 +81,16 @@ class VectorPtr {
   //
   // If this vector was null, it will become non-null with a size of 1.
   void push_back(const T& value) {
-    is_null_ = false;
     vec_.push_back(value);
+    is_null_ = false;
   }
 
   // Pushes |value| onto the back of this VectorPtr.
   //
   // If this vector was null, it will become non-null with a size of 1.
   void push_back(T&& value) {
-    is_null_ = false;
     vec_.push_back(std::forward<T>(value));
+    is_null_ = false;
   }
 
   void swap(VectorPtr& other) {
