@@ -297,7 +297,7 @@ void JSONGenerator::Generate(const raw::Constant& value) {
         case raw::Constant::Kind::Identifier: {
             auto type = static_cast<const raw::IdentifierConstant*>(&value);
             // TODO(TO-701) More complicated type names.
-            flat::Name name(type->identifier->components[0]->location);
+            flat::Name name(nullptr, type->identifier->components[0]->location);
             GenerateObjectMember("identifier", name);
             break;
         }
@@ -336,8 +336,8 @@ void JSONGenerator::Generate(const flat::Name& value) {
     //     DECL-DECL-ID
     //     ID
     std::string encoded_string;
-    if (value.library()) {
-        encoded_string += std::string(value.library()->name());
+    if (LibraryName(value.library()) != LibraryName(library_)) {
+        encoded_string += LibraryName(value.library());
         encoded_string += "/";
     }
     for (auto decl : value.nested_decls()) {
@@ -516,7 +516,7 @@ std::ostringstream JSONGenerator::Produce() {
         // for this specific library.
         std::vector<flat::Decl*> declaration_order;
         for (flat::Decl* decl : library_->declaration_order_) {
-            if (decl->library == library_)
+            if (decl->name.library() == library_)
                 declaration_order.push_back(decl);
         }
         GenerateObjectMember("declaration_order", declaration_order);

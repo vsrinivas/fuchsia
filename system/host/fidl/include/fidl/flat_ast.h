@@ -64,6 +64,9 @@ using Size = IntConstant<uint32_t>;
 struct Decl;
 class Library;
 
+// This is needed (for now) to work around declaration order issues.
+StringView LibraryName(const Library* library);
+
 // TODO(TO-701) Handle multipart names.
 struct Name {
     Name()
@@ -72,8 +75,8 @@ struct Name {
     Name(const Library* library, std::vector<SourceLocation> nested_decls, SourceLocation name)
         : library_(library), nested_decls_(std::move(nested_decls)), name_(name) {}
 
-    explicit Name(SourceLocation name)
-        : name_(name) {}
+    Name(const Library* library, SourceLocation name)
+        : Name(library, {}, name) {}
 
     Name(Name&&) = default;
     Name& operator=(Name&&) = default;
@@ -83,6 +86,17 @@ struct Name {
     SourceLocation name() const { return name_; }
 
     bool operator==(const Name& other) const {
+        if (LibraryName(library_) != LibraryName(other.library_)) {
+            return false;
+        }
+        if (nested_decls_.size() != other.nested_decls_.size()) {
+            return false;
+        }
+        for (size_t idx = 0u; idx < nested_decls_.size(); ++idx) {
+            if (nested_decls_[idx].data() != other.nested_decls_[idx].data()) {
+                return false;
+            }
+        }
         return name_.data() == other.name_.data();
     }
     bool operator!=(const Name& other) const {
@@ -90,6 +104,17 @@ struct Name {
     }
 
     bool operator<(const Name& other) const {
+        if (LibraryName(library_) != LibraryName(other.library_)) {
+            return LibraryName(library_) < LibraryName(other.library_);
+        }
+        if (nested_decls_.size() != other.nested_decls_.size()) {
+            return nested_decls_.size() < other.nested_decls_.size();
+        }
+        for (size_t idx = 0u; idx < nested_decls_.size(); ++idx) {
+            if (nested_decls_[idx].data() != other.nested_decls_[idx].data()) {
+                return nested_decls_[idx].data() < other.nested_decls_[idx].data();
+            }
+        }
         return name_.data() < other.name_.data();
     }
 
@@ -110,13 +135,12 @@ struct Decl {
         kUnion,
     };
 
-    Decl(const Library* library, Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
-        : library(library), kind(kind), attributes(std::move(attributes)), name(std::move(name)) {}
+    Decl(Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
+        : kind(kind), attributes(std::move(attributes)), name(std::move(name)) {}
 
     Decl(Decl&&) = default;
     Decl& operator=(Decl&&) = default;
 
-    const Library* library;
     const Kind kind;
     std::unique_ptr<raw::AttributeList> attributes;
     const Name name;
@@ -317,8 +341,8 @@ inline bool Type::operator<(const Type& other) const {
 }
 
 struct Const : public Decl {
-    Const(const Library* library, std::unique_ptr<raw::AttributeList> attributes, Name name, std::unique_ptr<Type> type, std::unique_ptr<raw::Constant> value)
-        : Decl(library, Kind::kConst, std::move(attributes), std::move(name)), type(std::move(type)), value(std::move(value)) {}
+    Const(std::unique_ptr<raw::AttributeList> attributes, Name name, std::unique_ptr<Type> type, std::unique_ptr<raw::Constant> value)
+        : Decl(Kind::kConst, std::move(attributes), std::move(name)), type(std::move(type)), value(std::move(value)) {}
     std::unique_ptr<Type> type;
     std::unique_ptr<raw::Constant> value;
 };
@@ -331,8 +355,8 @@ struct Enum : public Decl {
         std::unique_ptr<raw::Constant> value;
     };
 
-    Enum(const Library* library, std::unique_ptr<raw::AttributeList> attributes, Name name, types::PrimitiveSubtype type, std::vector<Member> members)
-        : Decl(library, Kind::kEnum, std::move(attributes), std::move(name)), type(type), members(std::move(members)) {}
+    Enum(std::unique_ptr<raw::AttributeList> attributes, Name name, types::PrimitiveSubtype type, std::vector<Member> members)
+        : Decl(Kind::kEnum, std::move(attributes), std::move(name)), type(type), members(std::move(members)) {}
 
     types::PrimitiveSubtype type;
     std::vector<Member> members;
@@ -373,8 +397,8 @@ struct Interface : public Decl {
         std::unique_ptr<Message> maybe_response;
     };
 
-    Interface(const Library* library, std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Method> methods)
-        : Decl(library, Kind::kInterface, std::move(attributes), std::move(name)), methods(std::move(methods)) {}
+    Interface(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Method> methods)
+        : Decl(Kind::kInterface, std::move(attributes), std::move(name)), methods(std::move(methods)) {}
 
     std::vector<Method> methods;
 };
@@ -392,8 +416,8 @@ struct Struct : public Decl {
         FieldShape fieldshape;
     };
 
-    Struct(const Library* library, std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
-        : Decl(library, Kind::kStruct, std::move(attributes), std::move(name)), members(std::move(members)) {}
+    Struct(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
+        : Decl(Kind::kStruct, std::move(attributes), std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
     TypeShape typeshape;
@@ -409,8 +433,8 @@ struct Union : public Decl {
         FieldShape fieldshape;
     };
 
-    Union(const Library* library, std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
-        : Decl(library, Kind::kUnion, std::move(attributes), std::move(name)), members(std::move(members)) {}
+    Union(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
+        : Decl(Kind::kUnion, std::move(attributes), std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
     // The offset of each of the union members is the same, so store
@@ -426,7 +450,9 @@ public:
     bool ConsumeFile(std::unique_ptr<raw::File> file);
     bool Compile();
 
-    StringView name() const { return library_name_.data(); }
+    StringView name() const {
+        return library_name_.data();
+    }
 
 private:
     bool Fail(StringView message);
@@ -521,7 +547,7 @@ public:
             auto identifier_constant = static_cast<const raw::IdentifierConstant*>(constant);
             auto identifier = identifier_constant->identifier.get();
             // TODO(TO-701) Support more parts of names.
-            Name name(identifier->components[0]->location);
+            Name name(this, identifier->components[0]->location);
             auto decl = LookupType(name);
             if (!decl || decl->kind != Decl::Kind::kConst)
                 return false;

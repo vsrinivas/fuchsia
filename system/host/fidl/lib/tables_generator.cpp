@@ -444,7 +444,7 @@ std::ostringstream TablesGenerator::Produce() {
     GenerateFilePreamble();
 
     for (const auto& decl : library_->declaration_order_) {
-        if (decl->library != library_)
+        if (decl->name.library() != library_)
             continue;
         Compile(decl);
     }

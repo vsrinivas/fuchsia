@@ -141,6 +141,13 @@ TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
 // a struct declaration inside an interface out to the top level and
 // so on.
 
+StringView LibraryName(const Library* library) {
+    if (library == nullptr) {
+        return "";
+    }
+    return library->name();
+}
+
 bool Library::Fail(StringView message) {
     auto formatted_message = std::string(message) + "\n";
     error_reporter_->ReportError(std::move(formatted_message));
@@ -160,7 +167,7 @@ Library::Library(const std::map<StringView, std::unique_ptr<Library>>* dependenc
 bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
                                         Name* name_out) {
     if (compound_identifier->components.size() == 1) {
-        *name_out = Name(compound_identifier->components[0]->location);
+        *name_out = Name(this, compound_identifier->components[0]->location);
         return true;
     }
     if (compound_identifier->components.size() == 2) {
@@ -273,12 +280,12 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
 
 bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
     auto attributes = std::move(const_declaration->attributes);
-    auto name = Name(const_declaration->identifier->location);
+    auto name = Name(this, const_declaration->identifier->location);
     std::unique_ptr<Type> type;
     if (!ConsumeType(std::move(const_declaration->type), &type))
         return false;
 
-    const_declarations_.push_back(std::make_unique<Const>(this, std::move(attributes), std::move(name), std::move(type),
+    const_declarations_.push_back(std::make_unique<Const>(std::move(attributes), std::move(name), std::move(type),
                                                           std::move(const_declaration->constant)));
     return RegisterDecl(const_declarations_.back().get());
 }
@@ -295,16 +302,16 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
         type = enum_declaration->maybe_subtype->subtype;
 
     auto attributes = std::move(enum_declaration->attributes);
-    auto name = Name(enum_declaration->identifier->location);
+    auto name = Name(this, enum_declaration->identifier->location);
 
-    enum_declarations_.push_back(std::make_unique<Enum>(this, std::move(attributes), std::move(name), type, std::move(members)));
+    enum_declarations_.push_back(std::make_unique<Enum>(std::move(attributes), std::move(name), type, std::move(members)));
     return RegisterDecl(enum_declarations_.back().get());
 }
 
 bool Library::ConsumeInterfaceDeclaration(
     std::unique_ptr<raw::InterfaceDeclaration> interface_declaration) {
     auto attributes = std::move(interface_declaration->attributes);
-    auto name = Name(interface_declaration->identifier->location);
+    auto name = Name(this, interface_declaration->identifier->location);
 
     for (auto& const_member : interface_declaration->const_members)
         if (!ConsumeConstDeclaration(std::move(const_member)))
@@ -355,13 +362,13 @@ bool Library::ConsumeInterfaceDeclaration(
                              std::move(maybe_request), std::move(maybe_response));
     }
 
-    interface_declarations_.push_back(std::make_unique<Interface>(this, std::move(attributes), std::move(name), std::move(methods)));
+    interface_declarations_.push_back(std::make_unique<Interface>(std::move(attributes), std::move(name), std::move(methods)));
     return RegisterDecl(interface_declarations_.back().get());
 }
 
 bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
     auto attributes = std::move(struct_declaration->attributes);
-    auto name = Name(struct_declaration->identifier->location);
+    auto name = Name(this, struct_declaration->identifier->location);
 
     for (auto& const_member : struct_declaration->const_members)
         if (!ConsumeConstDeclaration(std::move(const_member)))
@@ -380,7 +387,7 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
                              std::move(member->maybe_default_value));
     }
 
-    struct_declarations_.push_back(std::make_unique<Struct>(this, std::move(attributes), std::move(name), std::move(members)));
+    struct_declarations_.push_back(std::make_unique<Struct>(std::move(attributes), std::move(name), std::move(members)));
     return RegisterDecl(struct_declarations_.back().get());
 }
 
@@ -394,9 +401,9 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     }
 
     auto attributes = std::move(union_declaration->attributes);
-    auto name = Name(union_declaration->identifier->location);
+    auto name = Name(this, union_declaration->identifier->location);
 
-    union_declarations_.push_back(std::make_unique<Union>(this, std::move(attributes), std::move(name), std::move(members)));
+    union_declarations_.push_back(std::make_unique<Union>(std::move(attributes), std::move(name), std::move(members)));
     return RegisterDecl(union_declarations_.back().get());
 }
 
