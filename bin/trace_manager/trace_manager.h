@@ -7,17 +7,17 @@
 
 #include <list>
 
-#include "lib/app/cpp/application_context.h"
-#include "lib/tracing/fidl/trace_controller.fidl.h"
-#include "lib/tracing/fidl/trace_registry.fidl.h"
 #include "garnet/bin/trace_manager/config.h"
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
 #include "garnet/bin/trace_manager/trace_session.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/one_shot_timer.h"
+#include "lib/tracing/fidl/trace_controller.fidl.h"
+#include "lib/tracing/fidl/trace_registry.fidl.h"
 
 namespace tracing {
 
@@ -32,7 +32,6 @@ class TraceManager : public TraceRegistry, public TraceController {
                     zx::socket output,
                     const StartTracingCallback& cb) override;
   void StopTracing() override;
-  void DumpProvider(uint32_t provider_id, zx::socket output) override;
   void GetKnownCategories(const GetKnownCategoriesCallback& callback) override;
   void GetRegisteredProviders(
       const GetRegisteredProvidersCallback& callback) override;

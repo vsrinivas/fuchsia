@@ -81,18 +81,6 @@ void TraceManager::StopTracing() {
       kStopTimeout);
 }
 
-void TraceManager::DumpProvider(uint32_t provider_id, zx::socket output) {
-  for (const auto& provider : providers_) {
-    if (provider.id == provider_id) {
-      FXL_LOG(INFO) << "Dumping provider: " << provider;
-      provider.provider->Dump(std::move(output));
-      return;
-    }
-  }
-  FXL_LOG(ERROR) << "Failed to dump provider " << provider_id
-                 << ", provider not found";
-}
-
 void TraceManager::GetKnownCategories(
     const GetKnownCategoriesCallback& callback) {
   f1dl::VectorPtr<KnownCategoryPtr> known_categories;

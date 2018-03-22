@@ -38,10 +38,6 @@ interface TraceController {
   // output until finished, then closes the output.
   StopTracing@1();
 
-  // Dumps the internal state of the specified trace provider in a
-  // human-readable form.
-  DumpProvider@2(uint32 provider_id, handle<socket> output);
-
   // Gets the known categories.
   GetKnownCategories@3() => (array<KnownCategory> categories);
 
