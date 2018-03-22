@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/fidl/toolchain.gni")
+import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
 
 # Generates some Go bindings for a FIDL library.
@@ -64,17 +65,21 @@ template("fidl_go") {
     ]
   }
 
-  # TODO(TO-862): turn this into a target consumable by other Go targets.
-  group(main_target_name) {
-    deps = [
+  go_library(main_target_name) {
+    name = library_name
+
+    source_dir = target_gen_dir
+
+    non_go_deps = [
       ":$generation_target_name",
     ]
 
+    deps = []
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
     if (defined(invoker.public_deps)) {
-      public_deps = invoker.public_deps
+      deps += invoker.public_deps
     }
   }
 }
