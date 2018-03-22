@@ -1,0 +1,66 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Defines a set of Go code that can be used by other Go targets
+#
+# Parameters
+#
+#   name (optional)
+#     Name of the Go package.
+#     Defaults to the target name.
+#
+#   source_dir (optional)
+#     Path to the root of the sources for the package.
+#     Defaults to the current directory.
+#
+#   deps (optional)
+#     Other Go libraries this target depends on.
+
+template("go_library") {
+  name = target_name
+  if (defined(invoker.name)) {
+    name = invoker.name
+  }
+
+  source_dir = "."
+  if (defined(invoker.source_dir)) {
+    source_dir = invoker.source_dir
+  }
+
+  action(target_name) {
+    script = "//build/go/gen_libraries.py"
+
+    library_file = "$target_gen_dir/$target_name.go_deps"
+
+    outputs = [
+      library_file,
+    ]
+
+    deps = []
+    if (defined(invoker.deps)) {
+      deps = invoker.deps
+    }
+
+    dependent_libraries = []
+    foreach(dep, deps) {
+      gen_dir = get_label_info(dep, "target_gen_dir")
+      name = get_label_info(dep, "name")
+      dependent_libraries += [
+        "$gen_dir/$name.go_deps",
+      ]
+    }
+
+    inputs = dependent_libraries
+
+    args = [
+      "--name",
+      invoker.name,
+      "--source-dir",
+      rebase_path(source_dir),
+      "--output",
+      rebase_path(library_file),
+      "--deps",
+    ] + rebase_path(dependent_libraries)
+  }
+}

@@ -13,6 +13,8 @@ import string
 import shutil
 import errno
 
+from gen_libraries import get_libraries
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -33,6 +35,9 @@ def main():
                         default=False)
     parser.add_argument('--go-dependency', help='Manifest of dest=src of dependencies',
                         action='append')
+    parser.add_argument('--go-dep-files',
+                        help='List of files describing library dependencies',
+                        nargs='*')
     parser.add_argument('--binname', help='Output file', required=True)
     parser.add_argument('--unstripped-binname', help='Unstripped output file')
     parser.add_argument('--toolchain-prefix', help='Path to toolchain binaries',
@@ -67,10 +72,13 @@ def main():
     shutil.rmtree(os.path.join(project_path, 'src'), ignore_errors=True)
     os.makedirs(os.path.join(project_path, 'src'))
 
-    if args.go_dependency:
+    if args.go_dependency or args.go_dep_files:
       # Create a gopath for the packages dependency tree
+      dependencies = []
       for dep in args.go_dependency:
-        dst, src = string.split(dep, '=', 2)
+        dependencies.append(string.split(dep, '=', 1))
+      dependencies.extend(get_libraries(args.go_dep_files).items())
+      for dst, src in dependencies:
         # |dst| must be relative
         if os.path.isabs(dst):
           raise ValueError("--go-dependency destination location must be relative to $project_path/src")

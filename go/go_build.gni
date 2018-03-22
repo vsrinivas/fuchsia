@@ -28,7 +28,7 @@
 # containing the caller BUILD.gn. If source is ever omitted, it is assumed to be
 # the directory of the containing action.
 #
-# At miniumum there should be a go_dependencies declaration for the package to
+# At minimum there should be a go_dependencies declaration for the package to
 # be built.
 
 import("//build/config/clang/clang.gni")
@@ -58,6 +58,10 @@ template("go_build") {
   action(main_target_name) {
     forward_variables_from(invoker, [ "deps" ])
 
+    if (!defined(deps)) {
+      deps = []
+    }
+
     use_strip = is_fuchsia
 
     outputs = [
@@ -71,6 +75,10 @@ template("go_build") {
 
     script = "//build/go/build.py"
     depfile = "${output_path}.d"
+
+    sources = [
+      "//build/go/gen_libraries.py",
+    ]
 
     go_dependencies = []
     if (defined(invoker.go_dependencies)) {
@@ -114,6 +122,20 @@ template("go_build") {
       args += [ "--is-test=true" ]
     }
 
+    dependent_libraries = []
+    if (defined(invoker.extra_dependencies)) {
+      deps += invoker.extra_dependencies
+      foreach(dep, invoker.extra_dependencies) {
+        gen_dir = get_label_info(dep, "target_gen_dir")
+        name = get_label_info(dep, "name")
+        dependent_libraries += [
+          "$gen_dir/$name.go_deps",
+        ]
+      }
+    }
+
+    args += [ "--go-dep-files" ] + rebase_path(dependent_libraries)
+
     foreach(dep, go_dependencies) {
       if (!defined(dep.source)) {
         dep.source = "."
@@ -126,10 +148,6 @@ template("go_build") {
     }
 
     args += [ invoker.gopackage ]
-
-    if (!defined(deps)) {
-      deps = []
-    }
 
     deps += [ "//third_party/go:go_runtime" ]
 
