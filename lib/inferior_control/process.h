@@ -52,9 +52,7 @@ class Process final {
         const zx_exception_context_t& context) = 0;
 
     // Called when |process| has exited.
-    virtual void OnProcessExit(
-        Process* process,
-        const zx_exception_context_t& context) = 0;
+    virtual void OnProcessExit(Process* process) = 0;
 
     // Called when the kernel reports an architectural exception.
     virtual void OnArchitecturalException(
@@ -224,8 +222,8 @@ class Process final {
   Process() = default;
 
   // The exception handler invoked by ExceptionPort.
-  void OnException(const zx_port_packet_t& packet,
-                   const zx_exception_context_t& context);
+  void OnExceptionOrSignal(const zx_port_packet_t& packet,
+                           const zx_exception_context_t& context);
 
   // Debug handle mgmt.
   bool AllocDebugHandle();

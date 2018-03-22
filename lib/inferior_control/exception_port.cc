@@ -17,7 +17,7 @@
 
 #include "garnet/lib/debugger_utils/util.h"
 
-#include "process.h"
+#include "thread.h"
 
 using std::lock_guard;
 using std::mutex;
@@ -110,6 +110,18 @@ ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
   FXL_DCHECK(callback);
   FXL_DCHECK(eport_handle_);
 
+  zx_info_handle_basic_t info;
+  zx_status_t status =
+      zx_object_get_info(process_handle, ZX_INFO_HANDLE_BASIC, &info,
+                         sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "zx_object_get_info_failed: "
+                   << util::ZxErrorString(status);
+    return 0;
+  }
+  FXL_DCHECK(info.type == ZX_OBJ_TYPE_PROCESS);
+  zx_koid_t process_koid = info.koid;
+
   Key next_key = g_key_counter + 1;
 
   // Check for overflows. We don't keep track of which keys are ready to use and
@@ -119,11 +131,21 @@ ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
     return 0;
   }
 
-  zx_status_t status =
+  status =
       zx_task_bind_exception_port(process_handle, eport_handle_.get(),
-                                    next_key, ZX_EXCEPTION_PORT_DEBUGGER);
+                                  next_key, ZX_EXCEPTION_PORT_DEBUGGER);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to bind exception port: "
+                   << util::ZxErrorString(status);
+    return 0;
+  }
+
+  // Also watch for process terminated signals.
+  status = zx_object_wait_async(process_handle, eport_handle_.get(),
+                                next_key, ZX_TASK_TERMINATED,
+                                ZX_WAIT_ASYNC_ONCE);
+  if (status < 0) {
+    FXL_LOG(ERROR) << "Failed to async wait for process: "
                    << util::ZxErrorString(status);
     return 0;
   }
@@ -131,7 +153,7 @@ ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
   // |next_key| should not have been used before.
   FXL_DCHECK(callbacks_.find(next_key) == callbacks_.end());
 
-  callbacks_[next_key] = BindData(process_handle, callback);
+  callbacks_[next_key] = BindData(process_handle, process_koid, callback);
   ++g_key_counter;
 
   FXL_VLOG(1) << "Exception port bound to process handle " << process_handle
@@ -181,18 +203,26 @@ void ExceptionPort::Worker() {
     FXL_VLOG(2) << "IO port packet received - key: " << packet.key
                 << " type: " << IOPortPacketTypeToString(packet);
 
-    // TODO(armansito): How to handle this?
-    if (!ZX_PKT_IS_EXCEPTION(packet.type))
+    if (ZX_PKT_IS_EXCEPTION(packet.type)) {
+      FXL_VLOG(1) << "Exception received: "
+                  << util::ExceptionName(static_cast<const zx_excp_type_t>(
+                                           packet.type))
+                  << " (" << packet.type
+                  << "), pid: " << packet.exception.pid
+                  << ", tid: " << packet.exception.tid;
+    } else if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE) {
+      FXL_VLOG(1) << "Signal received:"
+                  << " trigger=0x" << std::hex << packet.signal.trigger
+                  << " observed=0x" << std::hex << packet.signal.observed;
+    } else if (packet.type == ZX_PKT_TYPE_USER) {
+      // Sent when exiting loop, just ignore.
       continue;
+    } else {
+      FXL_LOG(WARNING) << "Unexpected packet type: " << packet.type;
+      continue;
+    }
 
-    FXL_VLOG(1) << "Exception received: "
-                << util::ExceptionName(static_cast<const zx_excp_type_t>(
-                       packet.type))
-                << " (" << packet.type
-                << "), pid: " << packet.exception.pid
-                << ", tid: " << packet.exception.tid;
-
-    // Handle the exception on the main thread.
+    // Handle the exception/signal on the main thread.
     origin_task_runner_->PostTask([packet, this] {
       const auto& iter = callbacks_.find(packet.key);
       if (iter == callbacks_.end()) {
@@ -202,7 +232,10 @@ void ExceptionPort::Worker() {
 
       zx_exception_report_t report;
 
-      if (ZX_EXCP_IS_ARCH(packet.type)) {
+      if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE) {
+        // Process terminated.
+        memset(&report, 0, sizeof(report));
+      } else if (ZX_EXCP_IS_ARCH(packet.type)) {
         // TODO(dje): We already maintain a table of threads plus their
         // handles. Rewrite this to work with that table. Now would be a fine
         // time to notice new threads, but for existing threads there's no

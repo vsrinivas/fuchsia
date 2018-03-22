@@ -21,7 +21,6 @@
 
 namespace debugserver {
 
-class Process;
 class Thread;
 
 // Maintains a dedicated thread for listening to exceptions from multiple
@@ -68,10 +67,13 @@ class ExceptionPort final {
  private:
   struct BindData {
     BindData() = default;
-    BindData(zx_handle_t process_handle, const Callback& callback)
-        : process_handle(process_handle), callback(callback) {}
+    BindData(zx_handle_t process_handle, zx_koid_t process_koid,
+             const Callback& callback)
+        : process_handle(process_handle), process_koid(process_koid),
+          callback(callback) {}
 
     zx_handle_t process_handle;
+    zx_koid_t process_koid;
     Callback callback;
   };
 

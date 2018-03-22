@@ -262,8 +262,7 @@ void IptServer::OnThreadExiting(Process* process,
   thread->ResumeForExit();
 }
 
-void IptServer::OnProcessExit(Process* process,
-                              const zx_exception_context_t& context) {
+void IptServer::OnProcessExit(Process* process) {
   FXL_DCHECK(process);
 
   printf("Process %s is gone, rc %d\n",

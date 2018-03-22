@@ -296,7 +296,7 @@ void Process::CloseDebugHandle() {
 bool Process::BindExceptionPort() {
   ExceptionPort::Key key = server_->exception_port()->Bind(
     handle_,
-    std::bind(&Process::OnException, this, std::placeholders::_1,
+    std::bind(&Process::OnExceptionOrSignal, this, std::placeholders::_1,
               std::placeholders::_2));
   if (!key)
     return false;
@@ -680,8 +680,24 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
   }
 }
 
-void Process::OnException(const zx_port_packet_t& packet,
-                          const zx_exception_context_t& context) {
+void Process::OnExceptionOrSignal(const zx_port_packet_t& packet,
+                                  const zx_exception_context_t& context) {
+  // Process exit is sent as a regular signal.
+  if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE) {
+    FXL_VLOG(1) << "Received ZX_PKT_TYPE_SIGNAL_ONE, trigger 0x"
+                << std::hex << packet.signal.trigger;
+    if (packet.signal.trigger & ZX_TASK_TERMINATED) {
+      set_state(Process::State::kGone);
+      delegate_->OnProcessExit(this);
+      if (!Detach()) {
+        // This is not a fatal error, just log it.
+        FXL_LOG(ERROR) << "Unexpected failure to detach (already detached)";
+        Clear();
+      }
+    }
+    return;
+  }
+
   zx_excp_type_t type = static_cast<zx_excp_type_t>(packet.type);
   Thread* thread = nullptr;
   if (packet.exception.tid != ZX_KOID_INVALID)

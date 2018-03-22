@@ -111,8 +111,7 @@ class IptServer final : public Server {
   void OnThreadExiting(Process* process,
                        Thread* thread,
                        const zx_exception_context_t& context) override;
-  void OnProcessExit(Process* process,
-                     const zx_exception_context_t& context) override;
+  void OnProcessExit(Process* process) override;
   void OnArchitecturalException(Process* process,
                                 Thread* thread,
                                 const zx_excp_type_t type,

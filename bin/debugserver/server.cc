@@ -403,8 +403,7 @@ void RspServer::OnThreadExiting(Process* process,
   thread->ResumeForExit();
 }
 
-void RspServer::OnProcessExit(Process* process,
-                              const zx_exception_context_t& context) {
+void RspServer::OnProcessExit(Process* process) {
   std::vector<char> packet;
   FXL_LOG(INFO) << "Process " << process->GetName() << " exited";
   SetCurrentThread(nullptr);
