@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/display.h>
@@ -19,16 +20,6 @@
 
 #define QEMU_VGA_VID (0x1234)
 #define QEMU_VGA_DID (0x1111)
-
-#define TRACE 0
-
-#if TRACE
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...) \
-    do {                \
-    } while (0)
-#endif
 
 typedef struct bochs_vbe_device {
     void* regs;
@@ -69,7 +60,7 @@ static int zx_display_format_to_bpp(unsigned format) {
 }
 
 static void set_hw_mode(bochs_vbe_device_t* dev) {
-    xprintf("id: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_ID));
+    zxlogf(SPEW, "id: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_ID));
 
     int bpp = zx_display_format_to_bpp(dev->info.format);
     assert(bpp >= 0);
@@ -89,20 +80,18 @@ static void set_hw_mode(bochs_vbe_device_t* dev) {
                        dev->framebuffer_size, dev->info.format,
                        dev->info.width, dev->info.height, dev->info.stride);
 
-#if TRACE
-    xprintf("bochs_vbe_set_hw_mode:\n");
-    xprintf("     ID: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_ID));
-    xprintf("   XRES: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_XRES));
-    xprintf("   YRES: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_YRES));
-    xprintf("    BPP: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_BPP));
-    xprintf(" ENABLE: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_ENABLE));
-    xprintf("   BANK: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_BANK));
-    xprintf("VWIDTH: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_VIRT_WIDTH));
-    xprintf("VHEIGHT: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_VIRT_HEIGHT));
-    xprintf("   XOFF: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_X_OFFSET));
-    xprintf("   YOFF: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_Y_OFFSET));
-    xprintf("    64K: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_VIDEO_MEMORY_64K));
-#endif
+    zxlogf(SPEW, "bochs_vbe_set_hw_mode:\n");
+    zxlogf(SPEW, "     ID: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_ID));
+    zxlogf(SPEW, "   XRES: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_XRES));
+    zxlogf(SPEW, "   YRES: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_YRES));
+    zxlogf(SPEW, "    BPP: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_BPP));
+    zxlogf(SPEW, " ENABLE: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_ENABLE));
+    zxlogf(SPEW, "   BANK: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_BANK));
+    zxlogf(SPEW, "VWIDTH: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_VIRT_WIDTH));
+    zxlogf(SPEW, "VHEIGHT: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_VIRT_HEIGHT));
+    zxlogf(SPEW, "   XOFF: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_X_OFFSET));
+    zxlogf(SPEW, "   YOFF: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_Y_OFFSET));
+    zxlogf(SPEW, "    64K: 0x%x\n", bochs_vbe_dispi_read(dev->regs, BOCHS_VBE_DISPI_VIDEO_MEMORY_64K));
 }
 
 // implement display protocol
@@ -212,7 +201,7 @@ static zx_status_t bochs_vbe_bind(void* ctx, zx_device_t* dev) {
         goto fail;
     }
 
-    xprintf("initialized bochs_vbe display driver, reg=%p regsize=0x%lx fb=%p fbsize=0x%lx\n",
+    zxlogf(SPEW, "initialized bochs_vbe display driver, reg=%p regsize=0x%lx fb=%p fbsize=0x%lx\n",
             device->regs, device->regs_size, device->framebuffer, device->framebuffer_size);
 
     return ZX_OK;
