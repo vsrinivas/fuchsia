@@ -66,7 +66,7 @@ typedef struct {
 #define WARN(cond, msg)                                                           \
     ({  bool ret_cond = cond;                                                     \
         if (ret_cond) {                                                           \
-            zxlogf(INFO, "brcmfmac: unexpected condition %s warns %s at %s:%d\n", \
+            zxlogf(WARN, "brcmfmac: unexpected condition %s warns %s at %s:%d\n", \
                 #cond, msg, __FILE__, __LINE__);                                  \
         }                                                                         \
         ret_cond;                                                                 \
