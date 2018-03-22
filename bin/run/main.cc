@@ -35,22 +35,22 @@ int main(int argc, const char** argv) {
     fprintf(stderr, "Usage: run <program> <args>*\n");
     return 1;
   }
-  auto launch_info = component::ApplicationLaunchInfo::New();
-  launch_info->url = argv[1];
+  component::ApplicationLaunchInfo launch_info;
+  launch_info.url = argv[1];
   for (int i = 0; i < argc - 2; ++i) {
-    launch_info->arguments.push_back(argv[2 + i]);
+    launch_info.arguments.push_back(argv[2 + i]);
   }
 
-  launch_info->out = CloneFileDescriptor(STDOUT_FILENO);
-  launch_info->err = CloneFileDescriptor(STDERR_FILENO);
+  launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
+  launch_info.err = CloneFileDescriptor(STDERR_FILENO);
 
   // Connect to the ApplicationLauncher service through our static environment.
   component::ApplicationLauncherSyncPtr launcher;
-  component::ConnectToEnvironmentService(GetSynchronousProxy(&launcher));
+  component::ConnectToEnvironmentService(launcher.NewRequest());
 
   component::ApplicationControllerSyncPtr controller;
   launcher->CreateApplication(std::move(launch_info),
-                              GetSynchronousProxy(&controller));
+                              controller.NewRequest());
 
   int32_t return_code;
   if (!controller->Wait(&return_code)) {
