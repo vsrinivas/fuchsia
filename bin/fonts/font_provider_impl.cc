@@ -19,7 +19,8 @@ namespace fonts {
 namespace {
 
 constexpr char kFontManifestPath[] = "/pkg/data/manifest.json";
-constexpr char kVendorFontManifestPath[] = "/system/data/vendor/fonts/manifest.json";
+constexpr char kVendorFontManifestPath[] =
+    "/system/data/vendor/fonts/manifest.json";
 constexpr char kFallback[] = "fallback";
 constexpr char kFamilies[] = "families";
 
@@ -32,7 +33,8 @@ FontProviderImpl::FontProviderImpl() = default;
 
 FontProviderImpl::~FontProviderImpl() = default;
 
-bool FontProviderImpl::LoadFontsInternal(const char path[], bool fallback_required) {
+bool FontProviderImpl::LoadFontsInternal(const char path[],
+                                         bool fallback_required) {
   std::string json_data;
   if (!files::ReadFileToString(path, &json_data)) {
     FXL_LOG(ERROR) << "Failed to read font manifest from '" << path << "'.";
@@ -49,8 +51,8 @@ bool FontProviderImpl::LoadFontsInternal(const char path[], bool fallback_requir
   const auto& fallback = document.FindMember(kFallback);
   if (fallback == document.MemberEnd() || !fallback->value.IsString()) {
     if (fallback_required) {
-      FXL_LOG(ERROR)
-        << "Font manifest '" << path << "' did not contain a valid 'fallback' family.";
+      FXL_LOG(ERROR) << "Font manifest '" << path
+                     << "' did not contain a valid 'fallback' family.";
       return false;
     }
   } else {
@@ -59,7 +61,8 @@ bool FontProviderImpl::LoadFontsInternal(const char path[], bool fallback_requir
 
   const auto& families = document.FindMember(kFamilies);
   if (families == document.MemberEnd() || !families->value.IsArray()) {
-    FXL_LOG(ERROR) << "Font manifest '" << path << "' did not contain any families.";
+    FXL_LOG(ERROR) << "Font manifest '" << path
+                   << "' did not contain any families.";
     return false;
   }
 
@@ -100,18 +103,17 @@ void FontProviderImpl::Reset() {
 }
 
 void FontProviderImpl::AddBinding(
-    f1dl::InterfaceRequest<FontProvider> request) {
+    fidl::InterfaceRequest<FontProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void FontProviderImpl::GetFont(FontRequestPtr request,
-                               const GetFontCallback& callback) {
+void FontProviderImpl::GetFont(FontRequest request, GetFontCallback callback) {
   if (families_.empty()) {
     callback(nullptr);
     return;
   }
 
-  auto it = families_.find(request->family);
+  auto it = families_.find(request.family);
   if (it == families_.end())
     it = families_.find(fallback_);
 
@@ -132,8 +134,8 @@ void FontProviderImpl::GetFont(FontRequestPtr request,
     return;
   }
 
-  auto data = FontData::New();
-  data->vmo = std::move(duplicated_data).ToTransport();
+  FontData data;
+  data.vmo = std::move(duplicated_data).ToTransport();
   auto response = FontResponse::New();
   response->data = std::move(data);
   callback(std::move(response));

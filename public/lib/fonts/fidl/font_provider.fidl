@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module fonts;
+library fonts;
 
-import "lib/fsl/fidl/sized_vmo_transport.fidl";
+using fsl;
 
 enum FontSlant {
-  UPRIGHT,
-  ITALIC,
+  UPRIGHT = 1;
+  ITALIC = 2;
 };
 
 struct FontRequest {
@@ -23,7 +23,7 @@ struct FontRequest {
   // For example, 5 is normal.
   uint32 width = 5;
 
-  FontSlant slant = FontSlant.UPRIGHT;
+  FontSlant slant = UPRIGHT;
 };
 
 struct FontData {
@@ -36,5 +36,5 @@ struct FontResponse {
 
 [ServiceName="fonts::FontProvider"]
 interface FontProvider {
-  GetFont@0(FontRequest request) => (FontResponse? response);
+  1: GetFont(FontRequest @request) -> (FontResponse? response);
 };

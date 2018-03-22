@@ -122,8 +122,8 @@ bool FontFamily::Load(const rapidjson::Document::ValueType& family) {
   return true;
 }
 
-fsl::SizedVmo* FontFamily::GetFontData(const FontRequestPtr& request) {
-  Matcher matcher(request->slant, request->weight);
+fsl::SizedVmo* FontFamily::GetFontData(const FontRequest& request) {
+  Matcher matcher(request.slant, request.weight);
   auto it = std::min_element(fonts_.begin(), fonts_.end(), matcher);
   if (it == fonts_.end())
     return nullptr;

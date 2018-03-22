@@ -10,8 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <fuchsia/cpp/fonts.h>
 #include "garnet/bin/fonts/font_family.h"
-#include "lib/fonts/fidl/font_provider.fidl.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
@@ -26,12 +26,11 @@ class FontProviderImpl : public FontProvider {
   // persistent storage.
   bool LoadFonts();
 
-  void AddBinding(f1dl::InterfaceRequest<FontProvider> request);
+  void AddBinding(fidl::InterfaceRequest<FontProvider> request);
 
  private:
   // |FontProvider| implementation:
-  void GetFont(FontRequestPtr request,
-               const GetFontCallback& callback) override;
+  void GetFont(FontRequest request, GetFontCallback callback) override;
 
   // Load fonts. Returns true if all were loaded.
   bool LoadFontsInternal(const char path[], bool fallback_required);
@@ -39,7 +38,7 @@ class FontProviderImpl : public FontProvider {
   // Discard all font data.
   void Reset();
 
-  f1dl::BindingSet<FontProvider> bindings_;
+  fidl::BindingSet<FontProvider> bindings_;
   std::string fallback_;
   std::unordered_map<std::string, std::unique_ptr<FontFamily>> families_;
 
