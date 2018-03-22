@@ -186,16 +186,4 @@ if [[ $? -ne 0 ]]; then
 fi
 
 shift # Removes the command name.
-
-# Turn --switch=value into --switch value.
-declare -a args=()
-while [[ $# -ne 0 ]]; do
-  if [[ "$1" == --*=* ]]; then
-    args+=("${1%%=*}" "${1#*=}")
-  else
-    args+=("$1")
-  fi
-  shift
-done
-
-exec "${command_path}" "${args[@]}"
+exec "${command_path}" "$@"
