@@ -52,7 +52,7 @@ consumed by other tools.
 The following keywords are reserved in FIDL.
 
 ```
-as, bool, const, enum, float32, float64, handle, int8, int16,
+array, as, bool, const, enum, float32, float64, handle, int8, int16,
 int32, int64, interface, library, request, string, struct, uint8,
 uint16, uint32, uint64, union, using, vector
 ```
