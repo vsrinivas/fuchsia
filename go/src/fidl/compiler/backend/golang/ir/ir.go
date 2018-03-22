@@ -189,10 +189,20 @@ type Root struct {
 	// Libraries represents the set of library dependencies for this FIDL library.
 	// These are only the names of the libraries, as those are sufficient.
 	Libraries []string
+
+	// NeedsBindings is whether or not the generated code depends on the bindings.
+	NeedsBindings bool
+
+	// NeedsSyscallZx is whether or not the generated code depends on syscall/zx.
+	NeedsSyscallZx bool
 }
 
 // compiler contains the state necessary for recursive compilation.
 type compiler struct {
+	// needsSyscallZx is whether or not we discovered that the generated code
+	// depends on syscall/zx.
+	needsSyscallZx bool
+
 	// decls contains all top-level declarations for the FIDL source.
 	decls types.DeclMap
 }
@@ -364,6 +374,7 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 			r = Type("string")
 		}
 	case types.HandleType:
+		c.needsSyscallZx = true
 		e, ok := handleTypes[val.HandleSubtype]
 		if !ok {
 			// Fall back onto a generic handle if we don't support that particular
@@ -526,6 +537,10 @@ func Compile(fidlData types.Root) Root {
 	for _, v := range fidlData.Structs {
 		r.Structs = append(r.Structs, c.compileStruct(v))
 	}
+	if len(fidlData.Interfaces) != 0 {
+		r.NeedsBindings = true
+		r.NeedsSyscallZx = true
+	}
 	for _, v := range fidlData.Interfaces {
 		r.Interfaces = append(r.Interfaces, c.compileInterface(v))
 	}
@@ -536,5 +551,6 @@ func Compile(fidlData types.Root) Root {
 		}
 		r.Libraries = append(r.Libraries, string(v.Name))
 	}
+	r.NeedsSyscallZx = r.NeedsSyscallZx || c.needsSyscallZx
 	return r
 }

@@ -129,8 +129,7 @@ func (s *{{ .StubName }}) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bin
 		{{- end }}
 	{{- end }}
 	}
-	// TODO(mknyszek): Use a well-defined error here.
-	return nil, fmt.Errorf("Unknown ordinal %d", ord)
+	return nil, _bindings.ErrUnknownOrdinal
 }
 {{ end -}}
 `
