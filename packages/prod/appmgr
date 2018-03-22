@@ -4,7 +4,6 @@
         "rust"
     ],
     "packages": {
-        "appmgr": "//garnet/bin/appmgr",
+        "appmgr": "//garnet/bin/appmgr"
     }
-
 }
