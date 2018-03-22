@@ -5,17 +5,10 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
+  name = "netstack"
+
   sources = [
     "netstack.fidl",
-  ]
-
-  public_deps = [
-    ":net_address",
-  ]
-}
-
-fidl("net_address") {
-  sources = [
     "net_address.fidl",
   ]
 }

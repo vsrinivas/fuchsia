@@ -4,8 +4,6 @@
 
 module netstack;
 
-import "lib/netstack/fidl/net_address.fidl";
-
 enum Protocol {
   UNSPECIFIED,
   UDP,

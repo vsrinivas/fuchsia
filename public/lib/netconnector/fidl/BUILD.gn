@@ -5,13 +5,15 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
+  name = "netconnector"
+
   sources = [
     "netconnector.fidl",
   ]
 
   public_deps = [
     "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/netstack/fidl:net_address",
+    "//garnet/public/lib/netstack/fidl",
     "//garnet/public/lib/network/fidl",
   ]
 }

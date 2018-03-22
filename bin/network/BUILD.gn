@@ -42,7 +42,7 @@ executable("bin") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/netstack/fidl:net_address",
+    "//garnet/public/lib/netstack/fidl",
     "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/url",
     "//third_party/asio",
