@@ -333,9 +333,9 @@ bool Library::ConsumeInterfaceDeclaration(
         auto ordinal_literal = std::move(method->ordinal);
         uint32_t value;
         if (!ParseIntegerLiteral<decltype(value)>(ordinal_literal.get(), &value))
-            return Fail("Unable to parse ordinal");
+            return Fail(ordinal_literal->location, "Unable to parse ordinal");
         if (value == 0u)
-            return Fail("Fidl ordinals cannot be 0");
+            return Fail(ordinal_literal->location, "Fidl ordinals cannot be 0");
         Ordinal ordinal(std::move(ordinal_literal), value);
 
         SourceLocation method_name = method->identifier->location;
@@ -423,7 +423,7 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
         StringView current_name = library_name_.data();
         StringView new_name = library_name.data();
         if (current_name != new_name) {
-            return Fail("Two files in the library disagree about the name of the library");
+            return Fail(library_name, "Two files in the library disagree about the name of the library");
         }
     } else {
         library_name_ = library_name;
@@ -654,9 +654,9 @@ bool Library::CompileInterface(Interface* interface_declaration) {
     Scope<uint32_t> ordinal_scope;
     for (auto& method : interface_declaration->methods) {
         if (!name_scope.Insert(method.name.data()))
-            return Fail("Multiple methods with the same name in an interface");
+            return Fail(method.name, "Multiple methods with the same name in an interface");
         if (!ordinal_scope.Insert(method.ordinal.Value()))
-            return Fail("Mulitple methods with the same ordinal in an interface");
+            return Fail(method.name, "Mulitple methods with the same ordinal in an interface");
         auto CreateMessage = [&](Interface::Method::Message* message) -> bool{
             Scope<StringView> scope;
             auto header_field_shape = FieldShape(TypeShape(16u, 4u));
@@ -664,7 +664,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
             message_struct.push_back(&header_field_shape);
             for (auto& param : message->parameters) {
                 if (!scope.Insert(param.name.data()))
-                    return Fail("Multiple parameters with the same name in a method");
+                    return Fail(param.name, "Multiple parameters with the same name in a method");
                 if (!CompileType(param.type.get(), &param.fieldshape.Typeshape()))
                     return false;
                 message_struct.push_back(&param.fieldshape);
@@ -689,7 +689,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
     std::vector<FieldShape*> fidl_struct;
     for (auto& member : struct_declaration->members) {
         if (!scope.Insert(member.name.data()))
-            return Fail("Multiple struct fields with the same name");
+            return Fail(member.name, "Multiple struct fields with the same name");
         if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
         fidl_struct.push_back(&member.fieldshape);
@@ -704,7 +704,7 @@ bool Library::CompileUnion(Union* union_declaration) {
     Scope<StringView> scope;
     for (auto& member : union_declaration->members) {
         if (!scope.Insert(member.name.data()))
-            return Fail("Multiple union members with the same name");
+            return Fail(member.name, "Multiple union members with the same name");
         if (!CompileType(member.type.get(), &member.fieldshape.Typeshape()))
             return false;
     }
@@ -827,12 +827,12 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
     switch (named_decl->kind) {
     case Decl::Kind::kConst: {
         // A constant isn't a type!
-        return Fail("The name of a constant was used where a type was expected");
+        return Fail(identifier_type->name, "The name of a constant was used where a type was expected");
     }
     case Decl::Kind::kEnum: {
         if (identifier_type->nullability == types::Nullability::Nullable) {
             // Enums aren't nullable!
-            return Fail("An enum was referred to as 'nullable'");
+            return Fail(identifier_type->name, "An enum was referred to as 'nullable'");
         } else {
             typeshape = static_cast<const Enum*>(named_decl)->typeshape;
         }
