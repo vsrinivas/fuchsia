@@ -38,7 +38,6 @@ class Config {
   bool ReadFromIfExists(const std::string& config_file);
 
   std::vector<std::string> path_;
-  std::vector<ApplicationLaunchInfoPtr> initial_apps_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };

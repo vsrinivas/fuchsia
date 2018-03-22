@@ -30,7 +30,7 @@ class JobHolder {
  public:
   JobHolder(JobHolder* parent,
             zx::channel host_directory,
-            const f1dl::StringPtr& label);
+            fidl::StringPtr label);
   ~JobHolder();
 
   JobHolder* parent() const { return parent_; }
@@ -40,13 +40,13 @@ class JobHolder {
 
   void CreateNestedJob(
       zx::channel host_directory,
-      f1dl::InterfaceRequest<ApplicationEnvironment> environment,
-      f1dl::InterfaceRequest<ApplicationEnvironmentController> controller,
-      const f1dl::StringPtr& label);
+      fidl::InterfaceRequest<ApplicationEnvironment> environment,
+      fidl::InterfaceRequest<ApplicationEnvironmentController> controller,
+      fidl::StringPtr label);
 
   void CreateApplication(
-      ApplicationLaunchInfoPtr launch_info,
-      f1dl::InterfaceRequest<ApplicationController> controller);
+      ApplicationLaunchInfo launch_info,
+      fidl::InterfaceRequest<ApplicationController> controller);
 
   // Removes the child job holder from this job holder and returns the owning
   // reference to the child's controller. The caller of this function typically
@@ -62,7 +62,7 @@ class JobHolder {
   std::unique_ptr<ApplicationControllerImpl> ExtractApplication(
       ApplicationControllerImpl* controller);
 
-  void AddBinding(f1dl::InterfaceRequest<ApplicationEnvironment> environment);
+  void AddBinding(fidl::InterfaceRequest<ApplicationEnvironment> environment);
 
  private:
   static uint32_t next_numbered_label_;
@@ -71,13 +71,13 @@ class JobHolder {
 
   void CreateApplicationWithProcess(
       ApplicationPackagePtr package,
-      ApplicationLaunchInfoPtr launch_info,
-      f1dl::InterfaceRequest<ApplicationController> controller,
+      ApplicationLaunchInfo launch_info,
+      fidl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<ApplicationNamespace> application_namespace);
   void CreateApplicationFromPackage(
       ApplicationPackagePtr package,
-      ApplicationLaunchInfoPtr launch_info,
-      f1dl::InterfaceRequest<ApplicationController> controller,
+      ApplicationLaunchInfo launch_info,
+      fidl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<ApplicationNamespace> application_namespace);
 
   zx::channel OpenRootInfoDir();

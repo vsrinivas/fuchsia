@@ -36,6 +36,7 @@ source_set("cpp") {
     "internal/synchronous_proxy.h",
     "internal/weak_stub_controller.cc",
     "internal/weak_stub_controller.h",
+    "optional.h",
     "string.cc",
     "string.h",
     "thread_safe_binding_set.h",

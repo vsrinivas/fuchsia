@@ -51,7 +51,7 @@ class NamespaceBuilder {
 
   // Similar to Build() but returns a FIDL struct with ownership of all
   // zx:channel that are part of this namespace.
-  FlatNamespacePtr BuildForRunner();
+  FlatNamespace BuildForRunner();
 
  private:
   void PushDirectoryFromPath(std::string path);

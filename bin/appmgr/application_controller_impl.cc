@@ -21,7 +21,7 @@
 namespace component {
 
 ApplicationControllerImpl::ApplicationControllerImpl(
-    f1dl::InterfaceRequest<ApplicationController> request,
+    fidl::InterfaceRequest<ApplicationController> request,
     JobHolder* job_holder,
     std::unique_ptr<archive::FileSystem> fs,
     zx::process process,
@@ -127,7 +127,7 @@ bool ApplicationControllerImpl::SendReturnCodeIfTerminated() {
   return process_info.exited;
 }
 
-void ApplicationControllerImpl::Wait(const WaitCallback& callback) {
+void ApplicationControllerImpl::Wait(WaitCallback callback) {
   wait_callbacks_.push_back(callback);
   SendReturnCodeIfTerminated();
 }

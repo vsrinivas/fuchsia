@@ -50,11 +50,11 @@ enum class LaunchType {
 };
 
 std::vector<const char*> GetArgv(const std::string& argv0,
-                                 const ApplicationLaunchInfoPtr& launch_info) {
+                                 const ApplicationLaunchInfo& launch_info) {
   std::vector<const char*> argv;
-  argv.reserve(launch_info->arguments->size() + 1);
+  argv.reserve(launch_info.arguments->size() + 1);
   argv.push_back(argv0.c_str());
-  for (const auto& argument : *launch_info->arguments)
+  for (const auto& argument : *launch_info.arguments)
     argv.push_back(argument.get().c_str());
   return argv;
 }
@@ -102,27 +102,27 @@ void PushFileDescriptor(component::FileDescriptorPtr fd,
 zx::process CreateProcess(const zx::job& job,
                           fsl::SizedVmo data,
                           const std::string& argv0,
-                          ApplicationLaunchInfoPtr launch_info,
+                          ApplicationLaunchInfo launch_info,
                           zx::channel loader_service,
                           fdio_flat_namespace_t* flat) {
   if (!data)
     return zx::process();
 
-  std::string label = GetLabelFromURL(launch_info->url);
+  std::string label = GetLabelFromURL(launch_info.url);
   std::vector<const char*> argv = GetArgv(argv0, launch_info);
 
   std::vector<uint32_t> ids;
   std::vector<zx_handle_t> handles;
 
-  zx::channel directory_request = std::move(launch_info->directory_request);
+  zx::channel directory_request = std::move(launch_info.directory_request);
   if (directory_request) {
     ids.push_back(PA_DIRECTORY_REQUEST);
     handles.push_back(directory_request.release());
   }
 
-  PushFileDescriptor(std::move(launch_info->out), STDOUT_FILENO, &ids,
+  PushFileDescriptor(std::move(launch_info.out), STDOUT_FILENO, &ids,
                      &handles);
-  PushFileDescriptor(std::move(launch_info->err), STDERR_FILENO, &ids,
+  PushFileDescriptor(std::move(launch_info.err), STDERR_FILENO, &ids,
                      &handles);
 
   for (size_t i = 0; i < flat->count; ++i) {
@@ -140,9 +140,9 @@ zx::process CreateProcess(const zx::job& job,
 
   launchpad_clone(lp, LP_CLONE_ENVIRON);
   launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
-  if (!launch_info->out)
+  if (!launch_info.out)
     launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
-  if (!launch_info->err)
+  if (!launch_info.err)
     launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
   if (loader_service)
     launchpad_use_loader_service(lp, loader_service.release());
@@ -206,7 +206,7 @@ uint32_t JobHolder::next_numbered_label_ = 1u;
 
 JobHolder::JobHolder(JobHolder* parent,
                      zx::channel host_directory,
-                     const f1dl::StringPtr& label)
+                     fidl::StringPtr label)
     : parent_(parent),
       default_namespace_(
           fxl::MakeRefCounted<ApplicationNamespace>(nullptr, this, nullptr)),
@@ -222,7 +222,7 @@ JobHolder::JobHolder(JobHolder* parent,
   if (label->size() == 0)
     label_ = fxl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
   else
-    label_ = label.get().substr(0, ApplicationEnvironment::kLabelMaxLength);
+    label_ = label.get().substr(0, component::kLabelMaxLength);
 
   fsl::SetObjectName(job_.get(), label_);
 
@@ -257,9 +257,9 @@ zx::channel JobHolder::OpenRootInfoDir() {
 
 void JobHolder::CreateNestedJob(
     zx::channel host_directory,
-    f1dl::InterfaceRequest<ApplicationEnvironment> environment,
-    f1dl::InterfaceRequest<ApplicationEnvironmentController> controller_request,
-    const f1dl::StringPtr& label) {
+    fidl::InterfaceRequest<ApplicationEnvironment> environment,
+    fidl::InterfaceRequest<ApplicationEnvironmentController> controller_request,
+    fidl::StringPtr label) {
   auto controller = std::make_unique<ApplicationEnvironmentControllerImpl>(
       std::move(controller_request),
       std::make_unique<JobHolder>(this, std::move(host_directory), label));
@@ -273,33 +273,33 @@ void JobHolder::CreateNestedJob(
 }
 
 void JobHolder::CreateApplication(
-    ApplicationLaunchInfoPtr launch_info,
-    f1dl::InterfaceRequest<ApplicationController> controller) {
-  if (launch_info->url.get().empty()) {
+    ApplicationLaunchInfo launch_info,
+    fidl::InterfaceRequest<ApplicationController> controller) {
+  if (launch_info.url.get().empty()) {
     FXL_LOG(ERROR) << "Cannot create application because launch_info contains"
                       " an empty url";
     return;
   }
-  std::string canon_url = CanonicalizeURL(launch_info->url);
+  std::string canon_url = CanonicalizeURL(launch_info.url);
   if (canon_url.empty()) {
-    FXL_LOG(ERROR) << "Cannot run " << launch_info->url
+    FXL_LOG(ERROR) << "Cannot run " << launch_info.url
                    << " because the url could not be canonicalized";
     return;
   }
-  launch_info->url = canon_url;
+  launch_info.url = canon_url;
 
   // launch_info is moved before LoadApplication() gets at its first argument.
-  f1dl::StringPtr url = launch_info->url;
+  fidl::StringPtr url = launch_info.url;
   loader_->LoadApplication(
       url, fxl::MakeCopyable([this, launch_info = std::move(launch_info),
                               controller = std::move(controller)](
                                  ApplicationPackagePtr package) mutable {
         fxl::RefPtr<ApplicationNamespace> application_namespace =
             default_namespace_;
-        if (!launch_info->additional_services.is_null()) {
+        if (launch_info.additional_services) {
           application_namespace = fxl::MakeRefCounted<ApplicationNamespace>(
               default_namespace_, this,
-              std::move(launch_info->additional_services));
+              std::move(launch_info.additional_services));
         }
 
         if (package) {
@@ -352,14 +352,14 @@ std::unique_ptr<ApplicationControllerImpl> JobHolder::ExtractApplication(
 }
 
 void JobHolder::AddBinding(
-    f1dl::InterfaceRequest<ApplicationEnvironment> environment) {
+    fidl::InterfaceRequest<ApplicationEnvironment> environment) {
   default_namespace_->AddBinding(std::move(environment));
 }
 
 void JobHolder::CreateApplicationWithProcess(
     ApplicationPackagePtr package,
-    ApplicationLaunchInfoPtr launch_info,
-    f1dl::InterfaceRequest<ApplicationController> controller,
+    ApplicationLaunchInfo launch_info,
+    fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<ApplicationNamespace> application_namespace) {
   zx::channel svc = application_namespace->services().OpenAsDirectory();
   if (!svc)
@@ -373,17 +373,17 @@ void JobHolder::CreateApplicationWithProcess(
   // namespace so that we can filter out entries already added in previous
   // steps.
   // HACK(alhaad): We add deprecated default directories after this.
-  builder.AddFlatNamespace(std::move(launch_info->flat_namespace));
+  builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
   // TODO(abarth): Remove this call to AddDeprecatedDefaultDirectories once
   // every application has a proper sandbox configuration.
   builder.AddDeprecatedDefaultDirectories();
 
   fsl::SizedVmo executable;
-  if (!fsl::SizedVmo::FromTransport(std::move(package->data), &executable))
+  if (!fsl::SizedVmo::FromTransport(std::move(*package->data), &executable))
     return;
 
-  const std::string url = launch_info->url;  // Keep a copy before moving it.
-  auto channels = BindDirectory(launch_info.get());
+  const std::string url = launch_info.url;  // Keep a copy before moving it.
+  auto channels = BindDirectory(&launch_info);
   zx::process process =
       CreateProcess(job_for_child_, std::move(executable), url,
                     std::move(launch_info), zx::channel(), builder.Build());
@@ -402,8 +402,8 @@ void JobHolder::CreateApplicationWithProcess(
 
 void JobHolder::CreateApplicationFromPackage(
     ApplicationPackagePtr package,
-    ApplicationLaunchInfoPtr launch_info,
-    f1dl::InterfaceRequest<ApplicationController> controller,
+    ApplicationLaunchInfo launch_info,
+    fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<ApplicationNamespace> application_namespace) {
   zx::channel svc = application_namespace->services().OpenAsDirectory();
   if (!svc)
@@ -456,7 +456,7 @@ void JobHolder::CreateApplicationFromPackage(
     SandboxMetadata sandbox;
     if (!sandbox.Parse(sandbox_data)) {
       FXL_LOG(ERROR) << "Failed to parse sandbox metadata for "
-                     << launch_info->url;
+                     << launch_info.url;
       return;
     }
 
@@ -473,11 +473,11 @@ void JobHolder::CreateApplicationFromPackage(
   // Note that this must be the last |builder| step adding entries to the
   // namespace so that we can filter out entries already added in previous
   // steps.
-  builder.AddFlatNamespace(std::move(launch_info->flat_namespace));
+  builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
 
   if (app_data) {
-    const std::string url = launch_info->url;  // Keep a copy before moving it.
-    auto channels = BindDirectory(launch_info.get());
+    const std::string url = launch_info.url;  // Keep a copy before moving it.
+    auto channels = BindDirectory(&launch_info);
     zx::process process = CreateProcess(
         job_for_child_, std::move(app_data), kAppArv0, std::move(launch_info),
         std::move(loader_service), builder.Build());
@@ -496,21 +496,21 @@ void JobHolder::CreateApplicationFromPackage(
     RuntimeMetadata runtime;
     if (!runtime.Parse(runtime_data)) {
       FXL_LOG(ERROR) << "Failed to parse runtime metadata for "
-                     << launch_info->url;
+                     << launch_info.url;
       return;
     }
 
-    auto inner_package = ApplicationPackage::New();
-    inner_package->resolved_url = package->resolved_url;
+    ApplicationPackage inner_package;
+    inner_package.resolved_url = package->resolved_url;
 
-    auto startup_info = ApplicationStartupInfo::New();
-    startup_info->launch_info = std::move(launch_info);
-    startup_info->flat_namespace = builder.BuildForRunner();
+    ApplicationStartupInfo startup_info;
+    startup_info.launch_info = std::move(launch_info);
+    startup_info.flat_namespace = builder.BuildForRunner();
 
     auto* runner = GetOrCreateRunner(runtime.runner());
     if (runner == nullptr) {
       FXL_LOG(ERROR) << "Cannot create " << runner << " to run "
-                     << launch_info->url;
+                     << launch_info.url;
       return;
     }
     runner->StartApplication(
@@ -527,9 +527,9 @@ ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
   if (result.second) {
     Services runner_services;
     ApplicationControllerPtr runner_controller;
-    auto runner_launch_info = ApplicationLaunchInfo::New();
-    runner_launch_info->url = runner;
-    runner_launch_info->directory_request = runner_services.NewRequest();
+    ApplicationLaunchInfo runner_launch_info;
+    runner_launch_info.url = runner;
+    runner_launch_info.directory_request = runner_services.NewRequest();
     CreateApplication(std::move(runner_launch_info),
                       runner_controller.NewRequest());
 

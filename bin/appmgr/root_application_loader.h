@@ -23,16 +23,15 @@ class RootApplicationLoader : public ApplicationLoader {
   explicit RootApplicationLoader(std::vector<std::string> path);
   ~RootApplicationLoader() override;
 
-  void LoadApplication(
-      const f1dl::StringPtr& url,
-      const ApplicationLoader::LoadApplicationCallback& callback) override;
+  void LoadApplication(fidl::StringPtr url,
+                       LoadApplicationCallback callback) override;
 
-  void AddBinding(f1dl::InterfaceRequest<ApplicationLoader> request);
+  void AddBinding(fidl::InterfaceRequest<ApplicationLoader> request);
 
  private:
   std::vector<std::string> path_;
 
-  f1dl::BindingSet<ApplicationLoader> bindings_;
+  fidl::BindingSet<ApplicationLoader> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RootApplicationLoader);
 };

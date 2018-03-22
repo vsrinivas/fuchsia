@@ -12,7 +12,7 @@
 namespace component {
 
 ApplicationEnvironmentControllerImpl::ApplicationEnvironmentControllerImpl(
-    f1dl::InterfaceRequest<ApplicationEnvironmentController> request,
+    fidl::InterfaceRequest<ApplicationEnvironmentController> request,
     std::unique_ptr<JobHolder> job_holder)
     : binding_(this), job_holder_(std::move(job_holder)) {
   if (request.is_valid()) {
@@ -28,7 +28,7 @@ ApplicationEnvironmentControllerImpl::ApplicationEnvironmentControllerImpl(
 ApplicationEnvironmentControllerImpl::~ApplicationEnvironmentControllerImpl() =
     default;
 
-void ApplicationEnvironmentControllerImpl::Kill(const KillCallback& callback) {
+void ApplicationEnvironmentControllerImpl::Kill(KillCallback callback) {
   std::unique_ptr<ApplicationEnvironmentControllerImpl> self =
       job_holder_->parent()->ExtractChild(job_holder_.get());
   job_holder_ = nullptr;

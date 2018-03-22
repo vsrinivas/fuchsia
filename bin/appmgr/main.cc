@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
       component::ApplicationLoader::Name_,
       fbl::AdoptRef(new fs::Service([&root_loader](zx::channel channel) {
         root_loader.AddBinding(
-            f1dl::InterfaceRequest<component::ApplicationLoader>(
+            fidl::InterfaceRequest<component::ApplicationLoader>(
                 std::move(channel)));
         return ZX_OK;
       })));
@@ -65,8 +65,8 @@ int main(int argc, char** argv) {
 
   component::ApplicationControllerPtr sysmgr;
   auto run_sysmgr = [&root_job_holder, &sysmgr] {
-    auto launch_info = component::ApplicationLaunchInfo::New();
-    launch_info->url = "sysmgr";
+    component::ApplicationLaunchInfo launch_info;
+    launch_info.url = "sysmgr";
     root_job_holder.CreateApplication(
         std::move(launch_info), sysmgr.NewRequest());
   };

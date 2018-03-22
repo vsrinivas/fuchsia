@@ -22,15 +22,15 @@ ApplicationNamespace::ApplicationNamespace(
   services_.set_backend(std::move(services_backend));
 
   services_.AddService<ApplicationEnvironment>(
-      [this](f1dl::InterfaceRequest<ApplicationEnvironment> request) {
+      [this](fidl::InterfaceRequest<ApplicationEnvironment> request) {
         environment_bindings_.AddBinding(this, std::move(request));
       });
   services_.AddService<ApplicationLauncher>(
-      [this](f1dl::InterfaceRequest<ApplicationLauncher> request) {
+      [this](fidl::InterfaceRequest<ApplicationLauncher> request) {
         launcher_bindings_.AddBinding(this, std::move(request));
       });
 
-  if (!service_list.is_null()) {
+  if (service_list) {
     auto& names = service_list->names;
     additional_services_ = service_list->provider.Bind();
     for (auto& name : *names) {
@@ -46,27 +46,27 @@ ApplicationNamespace::ApplicationNamespace(
 ApplicationNamespace::~ApplicationNamespace() {}
 
 void ApplicationNamespace::AddBinding(
-    f1dl::InterfaceRequest<ApplicationEnvironment> environment) {
+    fidl::InterfaceRequest<ApplicationEnvironment> environment) {
   environment_bindings_.AddBinding(this, std::move(environment));
 }
 
 void ApplicationNamespace::CreateNestedEnvironment(
     zx::channel host_directory,
-    f1dl::InterfaceRequest<ApplicationEnvironment> environment,
-    f1dl::InterfaceRequest<ApplicationEnvironmentController> controller,
-    const f1dl::StringPtr& label) {
+    fidl::InterfaceRequest<ApplicationEnvironment> environment,
+    fidl::InterfaceRequest<ApplicationEnvironmentController> controller,
+    fidl::StringPtr label) {
   job_holder_->CreateNestedJob(std::move(host_directory),
                                std::move(environment), std::move(controller),
                                label);
 }
 
 void ApplicationNamespace::GetApplicationLauncher(
-    f1dl::InterfaceRequest<ApplicationLauncher> launcher) {
+    fidl::InterfaceRequest<ApplicationLauncher> launcher) {
   launcher_bindings_.AddBinding(this, std::move(launcher));
 }
 
 void ApplicationNamespace::GetServices(
-    f1dl::InterfaceRequest<ServiceProvider> services) {
+    fidl::InterfaceRequest<ServiceProvider> services) {
   services_.AddBinding(std::move(services));
 }
 
@@ -75,8 +75,8 @@ void ApplicationNamespace::GetDirectory(zx::channel directory_request) {
 }
 
 void ApplicationNamespace::CreateApplication(
-    ApplicationLaunchInfoPtr launch_info,
-    f1dl::InterfaceRequest<ApplicationController> controller) {
+    ApplicationLaunchInfo launch_info,
+    fidl::InterfaceRequest<ApplicationController> controller) {
   job_holder_->CreateApplication(std::move(launch_info), std::move(controller));
 }
 

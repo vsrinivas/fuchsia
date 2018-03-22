@@ -25,11 +25,11 @@ class ApplicationRunnerHolder {
   ~ApplicationRunnerHolder();
 
   void StartApplication(
-      ApplicationPackagePtr package,
-      ApplicationStartupInfoPtr startup_info,
+      ApplicationPackage package,
+      ApplicationStartupInfo startup_info,
       std::unique_ptr<archive::FileSystem> file_system,
       fxl::RefPtr<ApplicationNamespace> application_namespace,
-      f1dl::InterfaceRequest<ApplicationController> controller);
+      fidl::InterfaceRequest<ApplicationController> controller);
 
  private:
   Services services_;

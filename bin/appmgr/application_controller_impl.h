@@ -36,7 +36,7 @@ enum class ExportedDirType {
 class ApplicationControllerImpl : public ApplicationController {
  public:
   ApplicationControllerImpl(
-      f1dl::InterfaceRequest<ApplicationController> request,
+      fidl::InterfaceRequest<ApplicationController> request,
       JobHolder* job_holder,
       std::unique_ptr<archive::FileSystem> fs,
       zx::process process,
@@ -54,7 +54,7 @@ class ApplicationControllerImpl : public ApplicationController {
   // |ApplicationController| implementation:
   void Kill() override;
   void Detach() override;
-  void Wait(const WaitCallback& callback) override;
+  void Wait(WaitCallback callback) override;
 
  private:
   async_wait_result_t Handler(async_t* async,
@@ -63,7 +63,7 @@ class ApplicationControllerImpl : public ApplicationController {
 
   bool SendReturnCodeIfTerminated();
 
-  f1dl::Binding<ApplicationController> binding_;
+  fidl::Binding<ApplicationController> binding_;
   JobHolder* job_holder_;
   std::unique_ptr<archive::FileSystem> fs_;
   zx::process process_;

@@ -27,28 +27,28 @@ class ApplicationNamespace
  public:
   ServiceProviderBridge& services() { return services_; }
 
-  void AddBinding(f1dl::InterfaceRequest<ApplicationEnvironment> environment);
+  void AddBinding(fidl::InterfaceRequest<ApplicationEnvironment> environment);
 
   // ApplicationEnvironment implementation:
 
   void CreateNestedEnvironment(
       zx::channel host_directory,
-      f1dl::InterfaceRequest<ApplicationEnvironment> environment,
-      f1dl::InterfaceRequest<ApplicationEnvironmentController> controller,
-      const f1dl::StringPtr& label) override;
+      fidl::InterfaceRequest<ApplicationEnvironment> environment,
+      fidl::InterfaceRequest<ApplicationEnvironmentController> controller,
+      fidl::StringPtr label) override;
 
   void GetApplicationLauncher(
-      f1dl::InterfaceRequest<ApplicationLauncher> launcher) override;
+      fidl::InterfaceRequest<ApplicationLauncher> launcher) override;
 
-  void GetServices(f1dl::InterfaceRequest<ServiceProvider> services) override;
+  void GetServices(fidl::InterfaceRequest<ServiceProvider> services) override;
 
   void GetDirectory(zx::channel directory_request) override;
 
   // ApplicationLauncher implementation:
 
   void CreateApplication(
-      ApplicationLaunchInfoPtr launch_info,
-      f1dl::InterfaceRequest<ApplicationController> controller) override;
+      ApplicationLaunchInfo launch_info,
+      fidl::InterfaceRequest<ApplicationController> controller) override;
 
  private:
   FRIEND_MAKE_REF_COUNTED(ApplicationNamespace);
@@ -59,8 +59,8 @@ class ApplicationNamespace
   FRIEND_REF_COUNTED_THREAD_SAFE(ApplicationNamespace);
   ~ApplicationNamespace() override;
 
-  f1dl::BindingSet<ApplicationEnvironment> environment_bindings_;
-  f1dl::BindingSet<ApplicationLauncher> launcher_bindings_;
+  fidl::BindingSet<ApplicationEnvironment> environment_bindings_;
+  fidl::BindingSet<ApplicationLauncher> launcher_bindings_;
 
   ServiceProviderBridge services_;
 
