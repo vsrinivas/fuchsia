@@ -411,9 +411,10 @@ void MsdArmConnection::ReleaseBuffer(MsdArmAbiBuffer* buffer)
     buffers_.erase(buffer);
 }
 
-void msd_connection_map_buffer_gpu(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,
-                                   uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
-                                   uint64_t flags)
+magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
+                                             msd_buffer_t* abi_buffer, uint64_t gpu_va,
+                                             uint64_t page_offset, uint64_t page_count,
+                                             uint64_t flags)
 {
     TRACE_DURATION("magma", "msd_connection_map_buffer_gpu", "page_count", page_count);
     MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
@@ -421,21 +422,29 @@ void msd_connection_map_buffer_gpu(msd_connection_t* abi_connection, msd_buffer_
 
     auto mapping = std::make_unique<GpuMapping>(gpu_va, page_offset, page_count * PAGE_SIZE, flags,
                                                 connection, buffer);
-    connection->AddMapping(std::move(mapping));
+    if (!connection->AddMapping(std::move(mapping)))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "AddMapping failed");
+    return MAGMA_STATUS_OK;
 }
 
-void msd_connection_unmap_buffer_gpu(msd_connection_t* abi_connection, msd_buffer_t* buffer,
-                                     uint64_t gpu_va)
+magma_status_t msd_connection_unmap_buffer_gpu(msd_connection_t* abi_connection,
+                                               msd_buffer_t* buffer, uint64_t gpu_va)
 {
     TRACE_DURATION("magma", "msd_connection_unmap_buffer_gpu");
-    MsdArmAbiConnection::cast(abi_connection)->ptr()->RemoveMapping(gpu_va);
+    if (!MsdArmAbiConnection::cast(abi_connection)->ptr()->RemoveMapping(gpu_va))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "RemoveMapping failed");
+    return MAGMA_STATUS_OK;
 }
 
-void msd_connection_commit_buffer(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,
-                                  uint64_t page_offset, uint64_t page_count)
+magma_status_t msd_connection_commit_buffer(msd_connection_t* abi_connection,
+                                            msd_buffer_t* abi_buffer, uint64_t page_offset,
+                                            uint64_t page_count)
 {
     MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
-    connection->CommitMemoryForBuffer(MsdArmAbiBuffer::cast(abi_buffer), page_offset, page_count);
+    if (!connection->CommitMemoryForBuffer(MsdArmAbiBuffer::cast(abi_buffer), page_offset,
+                                           page_count))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "CommitMemoryForBuffer failed");
+    return MAGMA_STATUS_OK;
 }
 
 void msd_connection_set_notification_channel(msd_connection_t* abi_connection,

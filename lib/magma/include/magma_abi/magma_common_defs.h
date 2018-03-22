@@ -29,6 +29,7 @@ extern "C" {
 #define MAGMA_STATUS_CONTEXT_KILLED (-5)
 #define MAGMA_STATUS_CONNECTION_LOST (-6)
 #define MAGMA_STATUS_TIMED_OUT (-7)
+#define MAGMA_STATUS_UNIMPLEMENTED (-8)
 
 // possible values for magma_image_tiling_t
 #define MAGMA_IMAGE_TILING_OPTIMAL 0

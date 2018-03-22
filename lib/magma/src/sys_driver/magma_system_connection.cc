@@ -199,8 +199,9 @@ bool MagmaSystemConnection::MapBufferGpu(uint64_t id, uint64_t gpu_va, uint64_t 
     auto iter = buffer_map_.find(id);
     if (iter == buffer_map_.end())
         return DRETF(false, "Attempting to gpu map invalid buffer id");
-    msd_connection_map_buffer_gpu(msd_connection(), iter->second.buffer->msd_buf(), gpu_va,
-                                  page_offset, page_count, flags);
+    if (msd_connection_map_buffer_gpu(msd_connection(), iter->second.buffer->msd_buf(), gpu_va,
+                                      page_offset, page_count, flags) != MAGMA_STATUS_OK)
+        return DRETF(false, "msd_connection_map_buffer_gpu failed");
 
     return true;
 }
@@ -210,7 +211,9 @@ bool MagmaSystemConnection::UnmapBufferGpu(uint64_t id, uint64_t gpu_va)
     auto iter = buffer_map_.find(id);
     if (iter == buffer_map_.end())
         return DRETF(false, "Attempting to gpu unmap invalid buffer id");
-    msd_connection_unmap_buffer_gpu(msd_connection(), iter->second.buffer->msd_buf(), gpu_va);
+    if (msd_connection_unmap_buffer_gpu(msd_connection(), iter->second.buffer->msd_buf(), gpu_va) !=
+        MAGMA_STATUS_OK)
+        return DRETF(false, "msd_connection_unmap_buffer_gpu failed");
 
     return true;
 }
@@ -226,8 +229,9 @@ bool MagmaSystemConnection::CommitBuffer(uint64_t id, uint64_t page_offset, uint
     if (page_count + page_offset > iter->second.buffer->size() / PAGE_SIZE) {
         return DRETF(false, "Page offset too large for buffer");
     }
-    msd_connection_commit_buffer(msd_connection(), iter->second.buffer->msd_buf(), page_offset,
-                                 page_count);
+    if (msd_connection_commit_buffer(msd_connection(), iter->second.buffer->msd_buf(), page_offset,
+                                     page_count) != MAGMA_STATUS_OK)
+        return DRETF(false, "msd_connection_commit_buffer failed");
 
     return true;
 }

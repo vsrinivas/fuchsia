@@ -41,24 +41,31 @@ TEST(MsdBuffer, MapAndUnmap)
 
     auto connection = msd_device_open(device, 0);
 
-    msd_connection_map_buffer_gpu(connection, msd_buffer, 0, 0, kBufferSize / PAGE_SIZE,
-                                  MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE);
+    magma_status_t status =
+        msd_connection_map_buffer_gpu(connection, msd_buffer, 0, 0, kBufferSize / PAGE_SIZE,
+                                      MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE);
+    EXPECT_TRUE(status == MAGMA_STATUS_UNIMPLEMENTED || status == MAGMA_STATUS_OK);
 
     // Ensure it can map twice.
-    msd_connection_map_buffer_gpu(connection, msd_buffer, PAGE_SIZE * 1024, 0,
-                                  kBufferSize / PAGE_SIZE,
-                                  MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_EXECUTE);
+    status = msd_connection_map_buffer_gpu(connection, msd_buffer, PAGE_SIZE * 1024, 0,
+                                           kBufferSize / PAGE_SIZE,
+                                           MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_EXECUTE);
+    EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_UNIMPLEMENTED);
 
     // Try to unmap a region that doesn't exist.
-    msd_connection_unmap_buffer_gpu(connection, msd_buffer, PAGE_SIZE * 2048);
+    status = msd_connection_unmap_buffer_gpu(connection, msd_buffer, PAGE_SIZE * 2048);
+    EXPECT_TRUE(status != MAGMA_STATUS_OK);
 
     // Commit an invalid region.
-    msd_connection_commit_buffer(connection, msd_buffer, 1, 2);
+    status = msd_connection_commit_buffer(connection, msd_buffer, 1, 2);
+    EXPECT_TRUE(status != MAGMA_STATUS_OK);
 
     // Commit the entire valid region.
-    msd_connection_commit_buffer(connection, msd_buffer, 0, 1);
+    status = msd_connection_commit_buffer(connection, msd_buffer, 0, 1);
+    EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_UNIMPLEMENTED);
 
-    msd_connection_unmap_buffer_gpu(connection, msd_buffer, 0);
+    status = msd_connection_unmap_buffer_gpu(connection, msd_buffer, 0);
+    EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_UNIMPLEMENTED);
 
     // One mapping is still outstanding, and this should release it.
     msd_connection_release_buffer(connection, msd_buffer);
