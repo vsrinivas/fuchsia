@@ -1294,7 +1294,7 @@ tftp_status tftp_handle_msg(tftp_session* session,
     if (ret == TFTP_ERR_SHOULD_WAIT) {
         REPORT_ERR(opts, "request received, host is busy");
     } else if (ret < 0) {
-        REPORT_ERR(opts, "failed to parse request");
+        REPORT_ERR(opts, "handling tftp request failed (file might not exist)");
     } else if (ret == TFTP_TRANSFER_COMPLETED) {
         if (session->file_interface.close) {
             session->file_interface.close(file_cookie);
