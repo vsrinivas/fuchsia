@@ -8,7 +8,7 @@ import (
 	"app/context"
 	"bytes"
 	"encoding/binary"
-	"fidl/bindings"
+	"fidl/bindings2"
 	"flag"
 	"fmt"
 	"log"
@@ -17,7 +17,6 @@ import (
 	"sync"
 	"syscall"
 	"syscall/zx"
-	"syscall/zx/mxerror"
 	"syscall/zx/fdio"
 	"time"
 
@@ -40,9 +39,10 @@ func init() {
 type PowerManager struct {
 	mu                     sync.Mutex
 	batteryStatus          power_manager.BatteryStatus
-	watchers               []*power_manager.PowerManagerWatcherInterface
+	watchers               []power_manager.PowerManagerWatcherInterface
 	powerAdapterTimeStamp  int64
 	batteryStatusTimeStamp int64
+	bs                     bindings2.BindingSet
 }
 
 func (pm *PowerManager) GetBatteryStatus() (power_manager.BatteryStatus, error) {
@@ -53,12 +53,11 @@ func (pm *PowerManager) GetBatteryStatus() (power_manager.BatteryStatus, error) 
 	return pm.batteryStatus, nil
 }
 
-func (pm *PowerManager) Watch(watcher power_manager.PowerManagerWatcher_Pointer) error {
-	pmw := power_manager.NewProxyForPowerManagerWatcher(watcher, bindings.GetAsyncWaiter())
+func (pm *PowerManager) Watch(watcher power_manager.PowerManagerWatcherInterface) error {
 	pm.mu.Lock()
-	pm.watchers = append(pm.watchers, pmw)
+	pm.watchers = append(pm.watchers, watcher)
 	pm.mu.Unlock()
-	go pmw.OnChangeBatteryStatus(pm.batteryStatus)
+	go watcher.OnChangeBatteryStatus(pm.batteryStatus)
 	return nil
 }
 
@@ -179,7 +178,7 @@ func (pm *PowerManager) updateStatus(m fdio.FDIO) error {
 		pm.batteryStatus.PowerAdapterOnline = pi.State&fdio.PowerStateOnline > 0
 	}
 
-	pm.batteryStatus.Status = power_manager.Status_Ok
+	pm.batteryStatus.Status = power_manager.StatusOk
 
 	if oldStatus != pm.batteryStatus {
 		// Only update time stamp when status changes
@@ -195,24 +194,6 @@ func (pm *PowerManager) updateStatus(m fdio.FDIO) error {
 	return nil
 }
 
-func (pm *PowerManager) Bind(r power_manager.PowerManager_Request) {
-	logger.Println("Bind")
-
-	s := r.NewStub(pm, bindings.GetAsyncWaiter())
-
-	go func() {
-		defer logger.Println("Bye Bind")
-		for {
-			if err := s.ServeRequest(); err != nil {
-				if mxerror.Status(err) != zx.ErrPeerClosed {
-					log.Println(err)
-				}
-				break
-			}
-		}
-	}()
-}
-
 func main() {
 	logger.Println("start")
 	defer logger.Println("stop")
@@ -224,7 +205,7 @@ func main() {
 	now := time.Now().UnixNano()
 	pm := &PowerManager{
 		batteryStatus: power_manager.BatteryStatus{
-			Status:    power_manager.Status_NotAvailable,
+			Status:    power_manager.StatusNotAvailable,
 			Level:     float32(0),
 			Timestamp: now,
 		},
@@ -233,7 +214,11 @@ func main() {
 	}
 
 	c := context.CreateFromStartupInfo()
-	c.OutgoingService.AddService(&power_manager.PowerManager_ServiceBinder{pm})
+	c.OutgoingService.AddService("power_manager", func(c zx.Channel) error {
+		return pm.bs.Add(&power_manager.PowerManagerStub{
+			Impl: pm,
+		}, c)
+	})
 	c.Serve()
 
 	adapterDeviceFound := false
