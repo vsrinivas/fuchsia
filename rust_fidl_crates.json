@@ -46,5 +46,17 @@
     "fidl_target": "//garnet/lib/wlan/fidl:service",
     "library_deps": ["wlan_device"],
     "public": false
+  },
+  {
+    "library_name": "netstack",
+    "fidl_target": "//garnet/public/lib/netstack/fidl:fidl",
+    "library_deps": [],
+    "public": true
+  },
+  {
+    "library_name": "network",
+    "fidl_target": "//garnet/public/lib/network/fidl:fidl",
+    "library_deps": ["fsl", "netstack"],
+    "public": true
   }
 ]

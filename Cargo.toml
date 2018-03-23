@@ -44,6 +44,8 @@ members =  [
   "public/rust/fidl_crates/fidl_echo2",
   "public/rust/fidl_crates/fidl_fsl",
   "public/rust/fidl_crates/fidl_logger",
+  "public/rust/fidl_crates/fidl_netstack",
+  "public/rust/fidl_crates/fidl_network",
   "public/rust/fidl_crates/fidl_xi",
 ]
 
@@ -56,6 +58,8 @@ fidl_device_settings = { path = "public/rust/fidl_crates/fidl_device_settings" }
 fidl_echo2 = { path = "public/rust/fidl_crates/fidl_echo2" }
 fidl_fsl = { path = "public/rust/fidl_crates/fidl_fsl" }
 fidl_logger = { path = "public/rust/fidl_crates/fidl_logger" }
+fidl_netstack = { path = "public/rust/fidl_crates/fidl_netstack" }
+fidl_network = { path = "public/rust/fidl_crates/fidl_network" }
 fidl_wlan_device = { path = "lib/rust/fidl_crates/fidl_wlan_device" }
 fidl_wlan_device_service = { path = "lib/rust/fidl_crates/fidl_wlan_device_service" }
 fidl_xi = { path = "public/rust/fidl_crates/fidl_xi" }
