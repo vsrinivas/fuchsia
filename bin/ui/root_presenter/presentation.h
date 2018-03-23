@@ -65,7 +65,8 @@ class Presentation : private views_v1::ViewTreeListener,
                      private views_v1::ViewContainerListener,
                      private presentation::Presentation {
  public:
-  Presentation(views_v1::ViewManager* view_manager, ui::Scenic* scenic);
+  Presentation(views_v1::ViewManager* view_manager,
+               ui::Scenic* scenic, scenic_lib::Session* session);
 
   ~Presentation() override;
 
@@ -81,6 +82,8 @@ class Presentation : private views_v1::ViewTreeListener,
   void OnReport(uint32_t device_id, input::InputReport report);
   void OnDeviceAdded(mozart::InputDeviceImpl* input_device);
   void OnDeviceRemoved(uint32_t device_id);
+
+  const scenic_lib::Layer& layer() { return layer_; }
 
  private:
   friend class DisplayRotater;
@@ -154,10 +157,8 @@ class Presentation : private views_v1::ViewTreeListener,
 
   views_v1::ViewManager* const view_manager_;
   ui::Scenic* const scenic_;
+  scenic_lib::Session* const session_;
 
-  scenic_lib::Session session_;
-  scenic_lib::DisplayCompositor compositor_;
-  scenic_lib::LayerStack layer_stack_;
   scenic_lib::Layer layer_;
   scenic_lib::Renderer renderer_;
   // TODO(MZ-254): put camera before scene.

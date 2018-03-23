@@ -46,42 +46,35 @@ constexpr float kCursorElevation = 800;
 }  // namespace
 
 Presentation::Presentation(views_v1::ViewManager* view_manager,
-                           ui::Scenic* scenic)
+                           ui::Scenic* scenic, scenic_lib::Session* session)
     : view_manager_(view_manager),
       scenic_(scenic),
-      session_(scenic_),
-      compositor_(&session_),
-      layer_stack_(&session_),
-      layer_(&session_),
-      renderer_(&session_),
-      scene_(&session_),
+      session_(session),
+      layer_(session_),
+      renderer_(session_),
+      scene_(session_),
       camera_(scene_),
-      ambient_light_(&session_),
-      directional_light_(&session_),
-      root_view_host_node_(&session_),
-      root_view_parent_node_(&session_),
-      content_view_host_node_(&session_),
-      cursor_shape_(&session_,
+      ambient_light_(session_),
+      directional_light_(session_),
+      root_view_host_node_(session_),
+      root_view_parent_node_(session_),
+      content_view_host_node_(session_),
+      cursor_shape_(session_,
                     kCursorWidth,
                     kCursorHeight,
                     0u,
                     kCursorRadius,
                     kCursorRadius,
                     kCursorRadius),
-      cursor_material_(&session_),
+      cursor_material_(session_),
       presentation_binding_(this),
       tree_listener_binding_(this),
       tree_container_listener_binding_(this),
       view_container_listener_binding_(this),
       view_listener_binding_(this),
       weak_factory_(this) {
-  session_.set_error_handler([this] {
-    FXL_LOG(ERROR)
-        << "Root presenter: Scene manager session died unexpectedly.";
-    Shutdown();
-  });
-
   renderer_.SetCamera(camera_);
+  layer_.SetRenderer(renderer_);
   scene_.AddChild(root_view_host_node_);
 
   scene_.AddLight(ambient_light_);
@@ -91,10 +84,6 @@ Presentation::Presentation(views_v1::ViewManager* view_manager,
   light_direction_ = glm::vec3(1.f, 1.f, -2.f);
   directional_light_.SetDirection(light_direction_.x, light_direction_.y,
                                   light_direction_.z);
-
-  layer_.SetRenderer(renderer_);
-  layer_stack_.AddLayer(layer_);
-  compositor_.SetLayerStack(layer_stack_);
 
   root_view_host_node_.ExportAsRequest(&root_view_host_import_token_);
   root_view_parent_node_.BindAsRequest(&root_view_parent_export_token_);
@@ -566,11 +555,13 @@ void Presentation::UsePerspectiveView() {
 }
 
 void Presentation::PresentScene() {
+  // TODO(SCN-631): Individual Presentations shouldn't directly manage cursor
+  // state.
   for (auto it = cursors_.begin(); it != cursors_.end(); ++it) {
     CursorState& state = it->second;
     if (state.visible) {
       if (!state.created) {
-        state.node = std::make_unique<scenic_lib::ShapeNode>(&session_);
+        state.node = std::make_unique<scenic_lib::ShapeNode>(session_);
         state.node->SetShape(cursor_shape_);
         state.node->SetMaterial(cursor_material_);
         scene_.AddChild(*state.node);
@@ -588,7 +579,7 @@ void Presentation::PresentScene() {
     }
   }
 
-  session_.Present(
+  session_->Present(
       0, [weak = weak_factory_.GetWeakPtr()](images::PresentationInfo info) {
         if (auto self = weak.get()) {
           uint64_t next_presentation_time =
@@ -610,7 +601,7 @@ void Presentation::SetRendererParams(
   for (size_t i = 0; i < params->size(); ++i) {
     renderer_.SetParam(std::move(params->at(i)));
   }
-  session_.Present(0, [](images::PresentationInfo info) {});
+  session_->Present(0, [](images::PresentationInfo info) {});
 }
 
 }  // namespace root_presenter

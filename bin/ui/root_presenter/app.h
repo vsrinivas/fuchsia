@@ -8,15 +8,16 @@
 #include <memory>
 #include <vector>
 
+#include <fuchsia/cpp/input.h>
+#include <fuchsia/cpp/presentation.h>
+#include <fuchsia/cpp/views_v1.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/input.h>
 #include "lib/ui/input/input_device_impl.h"
-#include <fuchsia/cpp/presentation.h>
-#include <fuchsia/cpp/views_v1.h>
+#include "lib/ui/scenic/client/resources.h"
 
 namespace root_presenter {
 
@@ -61,6 +62,10 @@ class App : public presentation::Presenter,
 
   views_v1::ViewManagerPtr view_manager_;
   ui::ScenicPtr scenic_;
+
+  std::unique_ptr<scenic_lib::Session> session_;
+  std::unique_ptr<scenic_lib::DisplayCompositor> compositor_;
+  std::unique_ptr<scenic_lib::LayerStack> layer_stack_;
 
   std::vector<std::unique_ptr<Presentation>> presentations_;
 

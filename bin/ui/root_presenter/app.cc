@@ -6,12 +6,12 @@
 
 #include <algorithm>
 
+#include <fuchsia/cpp/views_v1.h>
 #include "garnet/bin/ui/root_presenter/presentation.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
-#include <fuchsia/cpp/views_v1.h>
 
 namespace root_presenter {
 
@@ -43,7 +43,10 @@ void App::Present(
   InitializeServices();
 
   auto presentation =
-      std::make_unique<Presentation>(view_manager_.get(), scenic_.get());
+      std::make_unique<Presentation>(view_manager_.get(),
+                                     scenic_.get(), session_.get());
+  // TODO(SCN-593): Replace the current layer (if any) with the new one.
+  layer_stack_->AddLayer(presentation->layer());
   presentation->Present(
       view_owner_handle.Bind(), std::move(presentation_request),
       [this, presentation = presentation.get()] {
@@ -54,6 +57,7 @@ void App::Present(
             });
         FXL_DCHECK(it != presentations_.end());
         presentations_.erase(it);
+        // TODO(SCN-636): Remove the layer once implemented.
       });
 
   for (auto& it : devices_by_id_) {
@@ -120,12 +124,27 @@ void App::InitializeServices() {
       FXL_LOG(ERROR) << "Scenic died, destroying view trees.";
       Reset();
     });
+
+    session_ = std::make_unique<scenic_lib::Session>(scenic_.get());
+    session_->set_error_handler([this] {
+      FXL_LOG(ERROR) << "Session died, destroying view trees.";
+      Reset();
+    });
+
+    compositor_ = std::make_unique<scenic_lib::DisplayCompositor>(
+        session_.get());
+    layer_stack_ = std::make_unique<scenic_lib::LayerStack>(session_.get());
+    compositor_->SetLayerStack(*layer_stack_.get());
+    session_->Present(0, [](images::PresentationInfo info) {});
   }
 }
 
 void App::Reset() {
   presentations_.clear();  // must be first, holds pointers to services
   view_manager_.Unbind();
+  layer_stack_ = nullptr;
+  compositor_ = nullptr;
+  session_ = nullptr;
   scenic_.Unbind();
 }
 
