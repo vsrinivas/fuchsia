@@ -418,7 +418,9 @@ zx_status_t VirtioInput::SendVirtioEvent(const virtio_input_event_t& event) {
   auto event_out = static_cast<virtio_input_event_t*>(desc.addr);
   memcpy(event_out, &event, sizeof(event));
 
-  event_queue()->Return(head, sizeof(event));
+  // To be less chatty, we'll only send interrupts on barrier events.
+  event_queue()->Return(head, sizeof(event),
+                        VirtioQueue::InterruptAction::SET_FLAGS);
   return ZX_OK;
 }
 

@@ -176,17 +176,15 @@ async_wait_result_t VirtioNet::Stream::OnFifoReadable(
     FXL_LOG(ERROR) << "Failed to read from fifo: " << status;
     return ASYNC_WAIT_FINISHED;
   }
+
   for (uint32_t i = 0; i < num_entries_read; i++) {
     auto head = reinterpret_cast<uintptr_t>(entries[i].cookie);
     auto length = entries[i].length + sizeof(virtio_net_hdr_t);
-    queue_->Return(head, length);
-  }
-
-  // Notify guest of updates to the queue.
-  status = device_->NotifyGuest();
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to notify guest";
-    return ASYNC_WAIT_FINISHED;
+    status = queue_->Return(head, length);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to return descriptor to the queue " << status;
+      return ASYNC_WAIT_FINISHED;
+    }
   }
   return ASYNC_WAIT_AGAIN;
 }

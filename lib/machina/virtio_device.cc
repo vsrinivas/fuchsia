@@ -43,8 +43,9 @@ zx_status_t VirtioDevice::NotifyGuest() {
 }
 
 zx_status_t VirtioDevice::Kick(uint16_t kicked_queue) {
-  if (kicked_queue >= num_queues_)
+  if (kicked_queue >= num_queues_) {
     return ZX_ERR_OUT_OF_RANGE;
+  }
 
   zx_status_t status = HandleQueueNotify(kicked_queue);
   if (status != ZX_OK) {
@@ -60,7 +61,6 @@ zx_status_t VirtioDevice::Kick(uint16_t kicked_queue) {
   }
 
   // Notify threads waiting on a descriptor.
-  fbl::AutoLock lock(&mutex_);
   return queues_[kicked_queue].Signal();
 }
 

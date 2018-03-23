@@ -93,11 +93,9 @@ async_wait_result_t VirtioConsole::Stream::OnSocketReady(
     OnStreamClosed(status, do_read ? "read from socket" : "write to socket");
     return ASYNC_WAIT_FINISHED;
   }
-  queue_->Return(head_, do_read ? actual : 0);
-
-  status = queue_->device()->NotifyGuest();
+  status = queue_->Return(head_, do_read ? actual : 0);
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "Failed to notify device " << status;
+    FXL_LOG(WARNING) << "Failed to return descriptor " << status;
   }
   status = WaitOnQueue();
   if (status != ZX_OK) {

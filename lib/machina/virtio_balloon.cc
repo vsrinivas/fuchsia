@@ -140,8 +140,7 @@ zx_status_t VirtioBalloon::RequestStats(StatsHandler handler) {
   // We have a buffer. We need to return it to the driver. It'll populate
   // a new buffer with stats and then send it back to us.
   stats_.has_buffer = false;
-  stats_queue->Return(stats_.desc_index, 0);
-  zx_status_t status = NotifyGuest();
+  zx_status_t status = stats_queue->Return(stats_.desc_index, 0);
   if (status != ZX_OK) {
     return status;
   }

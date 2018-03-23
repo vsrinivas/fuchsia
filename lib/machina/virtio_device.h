@@ -16,6 +16,9 @@
 
 namespace machina {
 
+// Set of features that are supported by the bus transparently for all devices.
+static constexpr uint32_t kVirtioBusFeatures = 1u << VIRTIO_F_RING_EVENT_IDX;
+
 class VirtioDevice;
 
 // Interface for all virtio devices.
@@ -60,7 +63,7 @@ class VirtioDevice {
   //
   // These are feature bits that are supported by the device. They may or
   // may not correspond to the set of feature flags that have been negotiated
-  // at runtime.
+  // at runtime. For negotiated features, see |has_enabled_features|.
   void add_device_features(uint32_t features) {
     fbl::AutoLock lock(&mutex_);
     features_ |= features;
@@ -68,6 +71,12 @@ class VirtioDevice {
   bool has_device_features(uint32_t features) {
     fbl::AutoLock lock(&mutex_);
     return (features_ & features) == features;
+  }
+
+  // Returns true if the set of features have been negotiated to be enabled.
+  bool has_enabled_features(uint32_t features) {
+    fbl::AutoLock lock(&mutex_);
+    return (features_ & driver_features_ & features) == features;
   }
 
   PciDevice* pci_device() { return &pci_; }
@@ -143,6 +152,8 @@ class VirtioDeviceBase : public VirtioDevice {
                      queues_,
                      NUM_QUEUES,
                      phys_mem) {
+    // Advertise support for common/bus features.
+    add_device_features(kVirtioBusFeatures);
     for (int i = 0; i < NUM_QUEUES; ++i) {
       queues_[i].set_size(QUEUE_SIZE_MAX);
       queues_[i].set_device(this);

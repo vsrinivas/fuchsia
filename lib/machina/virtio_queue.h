@@ -133,6 +133,18 @@ class VirtioQueue {
     ring_.size = size;
   };
 
+  // If the device negotiates |VIRTIO_F_EVENT_IDX|, this is the number of
+  // descriptors to allow the driver to queue into the avail ring before
+  // signalling the device that the queue has descriptors.
+  //
+  // The default value is 1 so that every update to the avail ring causes a
+  // notification that descriptors are available.
+  //
+  // If the device does not negotiate |VIRTIO_F_EVENT_IDX|, this attribute has
+  // no effect.
+  uint16_t avail_event_num();
+  void set_avail_event_num(uint16_t num);
+
   // Gets or sets the address of the descriptor table for this queue.
   // The address should be in guest physical address space.
   void set_desc_addr(uint64_t desc_addr);
@@ -175,7 +187,15 @@ class VirtioQueue {
   // |index| must be a value received from a call to virtio_queue_next_avail.
   // Any buffers accessed via |index| or any chained descriptors must not be
   // used after calling virtio_queue_return.
-  void Return(uint16_t index, uint32_t len);
+  //
+  // The |action| parameter allows the caller to suppress sending an interrupt
+  // if (for example) the device is returning several descriptors sequentially.
+  // The |SEND_INTERRUPT| flag will still respect any requirements enforced by
+  // the bus regarding interrupt suppression.
+  enum class InterruptAction { SET_FLAGS, SEND_INTERRUPT };
+  zx_status_t Return(uint16_t index,
+                     uint32_t len,
+                     InterruptAction action = InterruptAction::SEND_INTERRUPT);
 
   // Reads a single descriptor from the queue.
   //
@@ -223,6 +243,7 @@ class VirtioQueue {
   VirtioDevice* device_;
   virtio_queue_t ring_ __TA_GUARDED(mutex_) = {};
   zx::event event_;
+  uint16_t avail_event_num_ __TA_GUARDED(mutex_) = 1;
 };
 
 }  // namespace machina

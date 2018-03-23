@@ -57,6 +57,16 @@ void VirtioQueue::set_size(uint16_t size) {
   ring_.size = size;
 }
 
+uint16_t VirtioQueue::avail_event_num() {
+  fbl::AutoLock lock(&mutex_);
+  return avail_event_num_;
+}
+
+void VirtioQueue::set_avail_event_num(uint16_t num) {
+  fbl::AutoLock lock(&mutex_);
+  avail_event_num_ = num;
+}
+
 void VirtioQueue::set_desc_addr(uint64_t desc_paddr) {
   fbl::AutoLock lock(&mutex_);
   ring_.addr.desc = desc_paddr;
@@ -119,6 +129,14 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
   }
 
   *index = ring_.avail->ring[RingIndexLocked(ring_.index++)];
+
+  // If we have event indicies enabled, update the avail-event to notify us
+  // when we have sufficient descriptors available.
+  if (device()->has_enabled_features(1u << VIRTIO_F_RING_EVENT_IDX) &&
+      ring_.avail_event) {
+    *ring_.avail_event = ring_.index + avail_event_num_ - 1;
+  }
+
   if (!HasAvailLocked()) {
     return event_.signal(SIGNAL_QUEUE_AVAIL, 0);
   }
@@ -166,7 +184,11 @@ static int virtio_queue_poll_task(void* ctx) {
     uint32_t used = 0;
     zx_status_t status =
         args->handler(args->queue, descriptor, &used, args->ctx);
-    args->queue->Return(descriptor, used);
+    result = args->queue->Return(descriptor, used);
+    if (result != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to return descriptor to queue " << result;
+      break;
+    }
 
     if (status == ZX_ERR_STOP) {
       break;
@@ -175,11 +197,6 @@ static int virtio_queue_poll_task(void* ctx) {
       FXL_LOG(ERROR) << "Error " << status
                      << " while handling queue buffer for queue " << args->name;
       result = status;
-      break;
-    }
-
-    result = args->queue->device()->NotifyGuest();
-    if (result != ZX_OK) {
       break;
     }
   }
@@ -236,10 +253,12 @@ async_wait_result_t VirtioQueue::InvokeAsyncHandler(
   }
   if (status == ZX_OK) {
     status = handler(this, head, &used, ctx);
-    Return(head, used);
-  }
-  if (status == ZX_OK) {
-    status = device()->NotifyGuest();
+    // Try to return the buffer to the queue, even if the handler has failed
+    // so we don't leak the descriptor.
+    zx_status_t return_status = Return(head, used);
+    if (status == ZX_OK) {
+      status = return_status;
+    }
   }
   return status == ZX_OK ? ASYNC_WAIT_AGAIN : ASYNC_WAIT_FINISHED;
 }
@@ -263,8 +282,12 @@ zx_status_t VirtioQueue::ReadDesc(uint16_t desc_index, virtio_desc_t* out) {
   return ZX_OK;
 }
 
-void VirtioQueue::Return(uint16_t index, uint32_t len) {
-  bool needs_interrupt;
+zx_status_t VirtioQueue::Return(uint16_t index,
+                                uint32_t len,
+                                InterruptAction action) {
+  bool needs_interrupt = false;
+  bool use_event_index =
+      device()->has_enabled_features(1u << VIRTIO_F_RING_EVENT_IDX);
   {
     fbl::AutoLock lock(&mutex_);
     volatile struct vring_used_elem* used =
@@ -275,16 +298,37 @@ void VirtioQueue::Return(uint16_t index, uint32_t len) {
     ring_.used->idx++;
 
     // Virtio 1.0 Section 2.4.7.2: Virtqueue Interrupt Suppression
-    //  - If flags is 1, the device SHOULD NOT send an interrupt.
-    //  - If flags is 0, the device MUST send an interrupt.
-    needs_interrupt = ring_.used->flags == 0;
+    if (!use_event_index) {
+      // If the VIRTIO_F_EVENT_IDX feature bit is not negotiated:
+      //  - The device MUST ignore the used_event value.
+      //  - After the device writes a descriptor index into the used ring:
+      //    - If flags is 1, the device SHOULD NOT send an interrupt.
+      //    - If flags is 0, the device MUST send an interrupt.
+      needs_interrupt = ring_.used->flags == 0;
+    } else {
+      // Otherwise, if the VIRTIO_F_EVENT_IDX feature bit is negotiated:
+      //
+      //  - The device MUST ignore the lower bit of flags.
+      //  - After the device writes a descriptor index into the used ring:
+      //    - If the idx field in the used ring (which determined where that
+      //      descriptor index was placed) was equal to used_event, the device
+      //      MUST send an interrupt.
+      //    - Otherwise the device SHOULD NOT send an interrupt.
+      if (ring_.used_event) {
+        needs_interrupt = ring_.used->idx == (*ring_.used_event + 1);
+      }
+    }
   }
 
   if (needs_interrupt) {
     // Set the queue bit in the device ISR so that the driver knows to check
     // the queues on the next interrupt.
     device()->add_isr_flags(VirtioDevice::VIRTIO_ISR_QUEUE);
+    if (action == InterruptAction::SEND_INTERRUPT) {
+      return device()->NotifyGuest();
+    }
   }
+  return ZX_OK;
 }
 
 zx_status_t VirtioQueue::HandleDescriptor(virtio_queue_fn_t handler,
@@ -330,7 +374,10 @@ zx_status_t VirtioQueue::HandleDescriptor(virtio_queue_fn_t handler,
     desc_index = desc->next;
   } while (desc->flags & VRING_DESC_F_NEXT);
 
-  Return(head, used_len);
+  status = Return(head, used_len);
+  if (status != ZX_OK) {
+    return status;
+  }
   fbl::AutoLock lock(&mutex_);
   return HasAvailLocked() ? ZX_ERR_NEXT : ZX_OK;
 }
