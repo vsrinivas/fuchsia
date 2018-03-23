@@ -8,6 +8,7 @@
 #include "garnet/bin/media/audio_server/test/frequency_set.h"
 
 namespace media {
+namespace audio {
 namespace test {
 
 // Audio measurements that are determined by various test cases throughout the
@@ -118,4 +119,5 @@ class AudioResult {
 };
 
 }  // namespace test
+}  // namespace audio
 }  // namespace media

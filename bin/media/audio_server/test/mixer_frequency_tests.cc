@@ -7,6 +7,7 @@
 #include "lib/fxl/logging.h"
 
 namespace media {
+namespace audio {
 namespace test {
 
 //
@@ -24,7 +25,7 @@ namespace test {
 // assuming an eventual 48kHz output sample rate.
 template <typename T>
 double MeasureSourceNoiseFloor(double* magn_other_db) {
-  audio::MixerPtr mixer;
+  MixerPtr mixer;
 
   if (std::is_same<T, uint8_t>::value) {
     mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000);
@@ -47,10 +48,10 @@ double MeasureSourceNoiseFloor(double* magn_other_db) {
   uint32_t dst_offset = 0;
   int32_t frac_src_offset = 0;
   mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
-             kFreqTestBufSize << audio::kPtsFractionalBits, &frac_src_offset,
-             media::audio::Mixer::FRAC_ONE, audio::Gain::kUnityScale, false);
+             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
+             Mixer::FRAC_ONE, Gain::kUnityScale, false);
   EXPECT_EQ(kFreqTestBufSize, dst_offset);
-  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << audio::kPtsFractionalBits),
+  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
             frac_src_offset);
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
@@ -94,7 +95,7 @@ TEST(NoiseFloor, Source_16) {
 
 template <typename T>
 double MeasureOutputNoiseFloor(double* magn_other_db) {
-  audio::OutputFormatterPtr output_formatter;
+  OutputFormatterPtr output_formatter;
 
   if (std::is_same<T, uint8_t>::value) {
     output_formatter = SelectOutputFormatter(AudioSampleFormat::UNSIGNED_8, 1);
@@ -156,4 +157,5 @@ TEST(NoiseFloor, Output_16) {
 }
 
 }  // namespace test
+}  // namespace audio
 }  // namespace media

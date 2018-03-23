@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 
 namespace media {
+namespace audio {
 namespace test {
 
 //
@@ -40,4 +41,5 @@ TEST(Recap, NoiseFloor) {
 }
 
 }  // namespace test
+}  // namespace audio
 }  // namespace media

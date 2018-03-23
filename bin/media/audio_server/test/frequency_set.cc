@@ -5,6 +5,7 @@
 #include "garnet/bin/media/audio_server/test/frequency_set.h"
 
 namespace media {
+namespace audio {
 namespace test {
 
 //
@@ -39,4 +40,5 @@ static_assert(
     "Incorrect 1kHz reference frequency");
 
 }  // namespace test
+}  // namespace audio
 }  // namespace media

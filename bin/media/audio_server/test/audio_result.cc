@@ -5,6 +5,7 @@
 #include "garnet/bin/media/audio_server/test/audio_result.h"
 
 namespace media {
+namespace audio {
 namespace test {
 
 // Audio measurements that are determined by various test cases throughout the
@@ -89,4 +90,5 @@ constexpr double AudioResult::kPrevSinadLinearDown;
 constexpr double AudioResult::kPrevSinadLinearUp;
 
 }  // namespace test
+}  // namespace audio
 }  // namespace media

@@ -8,6 +8,7 @@
 #include <zircon/types.h>
 
 namespace media {
+namespace audio {
 namespace test {
 
 //
@@ -72,4 +73,5 @@ class FrequencySet {
 };
 
 }  // namespace test
+}  // namespace audio
 }  // namespace media

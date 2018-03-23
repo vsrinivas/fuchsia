@@ -8,6 +8,7 @@
 #include "lib/fxl/logging.h"
 
 namespace media {
+namespace audio {
 namespace test {
 
 //
@@ -402,4 +403,5 @@ template void MeasureAudioFreq<int32_t>(int32_t* audio,
                                         double* magn_other = nullptr);
 
 }  // namespace test
+}  // namespace audio
 }  // namespace media

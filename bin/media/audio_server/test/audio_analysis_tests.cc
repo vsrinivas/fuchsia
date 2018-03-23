@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 
 namespace media {
+namespace audio {
 namespace test {
 
 // Test the inline function that converts a numerical value to dB.
@@ -253,4 +254,5 @@ TEST(AnalysisHelpers, MeasureAudioFreq_32) {
 }
 
 }  // namespace test
+}  // namespace audio
 }  // namespace media

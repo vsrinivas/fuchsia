@@ -8,6 +8,7 @@
 #include <cmath>
 
 namespace media {
+namespace audio {
 namespace test {
 
 // Convert double into decibels, from RMS *level* (hence 20dB per 10x, not 10).
@@ -88,4 +89,5 @@ void MeasureAudioFreq(T* audio,
                       double* magn_signal,
                       double* magn_other = nullptr);
 }  // namespace test
+}  // namespace audio
 }  // namespace media

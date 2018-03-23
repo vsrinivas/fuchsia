@@ -5,6 +5,7 @@
 #include "garnet/bin/media/audio_server/test/mixer_tests_shared.h"
 
 namespace media {
+namespace audio {
 namespace test {
 
 using ASF = AudioSampleFormat;
@@ -18,12 +19,12 @@ using ASF = AudioSampleFormat;
 // accumulation format (not the destination format), so we need not specify a
 // dst_format. Actual frame rate values are unimportant, but inter-rate RATIO
 // is VERY important: required SRC is the primary factor in Mix selection.
-audio::MixerPtr SelectMixer(ASF src_format,
-                            uint32_t src_channels,
-                            uint32_t src_frame_rate,
-                            uint32_t dst_channels,
-                            uint32_t dst_frame_rate,
-                            audio::Mixer::Resampler resampler) {
+MixerPtr SelectMixer(ASF src_format,
+                     uint32_t src_channels,
+                     uint32_t src_frame_rate,
+                     uint32_t dst_channels,
+                     uint32_t dst_frame_rate,
+                     Mixer::Resampler resampler) {
   AudioMediaTypeDetails src_details;
   src_details.sample_format = src_format;
   src_details.channels = src_channels;
@@ -34,8 +35,7 @@ audio::MixerPtr SelectMixer(ASF src_format,
   dst_details->channels = dst_channels;
   dst_details->frames_per_second = dst_frame_rate;
 
-  audio::MixerPtr mixer =
-      audio::Mixer::Select(src_details, &dst_details, resampler);
+  MixerPtr mixer = Mixer::Select(src_details, &dst_details, resampler);
 
   return mixer;
 }
@@ -45,15 +45,14 @@ audio::MixerPtr SelectMixer(ASF src_format,
 // destination format. They perform no SRC, gain scaling or rechannelization, so
 // frames_per_second is unimportant and num_channels is only needed so that they
 // can calculate the size of a (multi-channel) audio frame.
-audio::OutputFormatterPtr SelectOutputFormatter(ASF dst_format,
-                                                uint32_t num_channels) {
+OutputFormatterPtr SelectOutputFormatter(ASF dst_format,
+                                         uint32_t num_channels) {
   AudioMediaTypeDetailsPtr dst_details = AudioMediaTypeDetails::New();
   dst_details->sample_format = dst_format;
   dst_details->channels = num_channels;
   dst_details->frames_per_second = 48000;
 
-  audio::OutputFormatterPtr output_formatter =
-      audio::OutputFormatter::Select(dst_details);
+  OutputFormatterPtr output_formatter = OutputFormatter::Select(dst_details);
 
   return output_formatter;
 }
@@ -61,24 +60,25 @@ audio::OutputFormatterPtr SelectOutputFormatter(ASF dst_format,
 // Use the supplied mixer to scale from src into accum buffers.  Assumes a
 // specific buffer size, with no SRC, starting at the beginning of each buffer.
 // By default, does not gain-scale or accumulate (both can be overridden).
-void DoMix(audio::MixerPtr mixer,
+void DoMix(MixerPtr mixer,
            const void* src_buf,
            int32_t* accum_buf,
            bool accumulate,
            int32_t num_frames,
-           audio::Gain::AScale mix_scale) {
+           Gain::AScale mix_scale) {
   uint32_t dst_offset = 0;
   int32_t frac_src_offset = 0;
   bool mix_result =
       mixer->Mix(accum_buf, num_frames, &dst_offset, src_buf,
-                 num_frames << audio::kPtsFractionalBits, &frac_src_offset,
-                 media::audio::Mixer::FRAC_ONE, mix_scale, accumulate);
+                 num_frames << kPtsFractionalBits, &frac_src_offset,
+                 Mixer::FRAC_ONE, mix_scale, accumulate);
 
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(static_cast<uint32_t>(num_frames), dst_offset);
-  EXPECT_EQ(dst_offset << audio::kPtsFractionalBits,
+  EXPECT_EQ(dst_offset << kPtsFractionalBits,
             static_cast<uint32_t>(frac_src_offset));
 }
 
 }  // namespace test
+}  // namespace audio
 }  // namespace media
