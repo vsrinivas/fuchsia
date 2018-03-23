@@ -9,11 +9,11 @@
 extern crate clap;
 extern crate failure;
 extern crate fidl;
+extern crate fidl_wlan_device as wlan;
+extern crate fidl_wlan_device_service as wlan_service;
 extern crate fuchsia_async as async;
 extern crate fuchsia_app as component;
 extern crate futures;
-extern crate garnet_lib_wlan_fidl as wlan;
-extern crate garnet_lib_wlan_fidl_service as wlan_service;
 #[macro_use]
 extern crate structopt;
 
@@ -21,12 +21,12 @@ use component::client::connect_to_service;
 use failure::{Error, Fail, ResultExt};
 use futures::prelude::*;
 use structopt::StructOpt;
-use wlan_service::DeviceService;
+use wlan_service::{DeviceServiceMarker, DeviceServiceProxy};
 
 mod opts;
 use opts::*;
 
-type WlanSvc = <DeviceService::Service as fidl::FidlService>::Proxy;
+type WlanSvc = DeviceServiceProxy;
 
 fn main() {
     if let Err(e) = main_res() {
@@ -39,7 +39,7 @@ fn main_res() -> Result<(), Error> {
     println!("{:?}", opt);
 
     let mut exec = async::Executor::new().context("error creating event loop")?;
-    let wlan_svc = connect_to_service::<DeviceService::Service>()
+    let wlan_svc = connect_to_service::<DeviceServiceMarker>()
                     .context("failed to connect to device service")?;
 
 
@@ -72,12 +72,12 @@ fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc)
 {
     match cmd {
         opts::IfaceCmd::New { phy_id, role } => {
-            let req = wlan_service::CreateIfaceRequest {
+            let mut req = wlan_service::CreateIfaceRequest {
                 phy_id: phy_id,
                 role: role.into(),
             };
 
-            wlan_svc.create_iface(req)
+            wlan_svc.create_iface(&mut req)
                 .map_err(|e| e.context("error getting response").into())
                 .and_then(|response| {
                     println!("response: {:?}", response);
@@ -86,12 +86,12 @@ fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc)
                 .left()
         }
         opts::IfaceCmd::Delete { phy_id, iface_id } => {
-            let req = wlan_service::DestroyIfaceRequest {
+            let mut req = wlan_service::DestroyIfaceRequest {
                 phy_id: phy_id,
                 iface_id: iface_id,
             };
 
-            wlan_svc.destroy_iface(req)
+            wlan_svc.destroy_iface(&mut req)
                 .map(|()| println!("deleted iface {:?}", iface_id))
                 .map_err(|e| e.context("error destroying iface").into())
                 .into_future()
