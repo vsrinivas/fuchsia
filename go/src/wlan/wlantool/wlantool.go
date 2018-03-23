@@ -11,9 +11,8 @@ import (
 	"time"
 
 	"app/context"
-	"fidl/bindings"
 
-	"garnet/public/lib/wlan/fidl/wlan_service"
+	"fuchsia/go/wlan_service"
 )
 
 const (
@@ -27,7 +26,7 @@ const (
 
 type ToolApp struct {
 	ctx  *context.Context
-	wlan *wlan_service.Wlan_Proxy
+	wlan *wlan_service.WlanInterface
 }
 
 func (a *ToolApp) Scan(seconds uint8) {
@@ -43,7 +42,7 @@ func (a *ToolApp) Scan(seconds uint8) {
 		res, err := a.wlan.Scan(wlan_service.ScanRequest{seconds})
 		if err != nil {
 			fmt.Println("Error:", err)
-		} else if res.Error.Code != wlan_service.ErrCode_Ok {
+		} else if res.Error.Code != wlan_service.ErrCodeOk {
 			fmt.Println("Error:", res.Error.Description)
 		} else {
 			for _, ap := range *res.Aps {
@@ -75,7 +74,7 @@ func (a *ToolApp) Connect(ssid string, bssid string, passPhrase string, seconds 
 	werr, err := a.wlan.Connect(wlan_service.ConnectConfig{ssid, passPhrase, seconds, bssid})
 	if err != nil {
 		fmt.Println("Error:", err)
-	} else if werr.Code != wlan_service.ErrCode_Ok {
+	} else if werr.Code != wlan_service.ErrCodeOk {
 		fmt.Println("Error:", werr.Description)
 	}
 }
@@ -84,7 +83,7 @@ func (a *ToolApp) Disconnect() {
 	werr, err := a.wlan.Disconnect()
 	if err != nil {
 		fmt.Println("Error:", err)
-	} else if werr.Code != wlan_service.ErrCode_Ok {
+	} else if werr.Code != wlan_service.ErrCodeOk {
 		fmt.Println("Error:", werr.Description)
 	}
 }
@@ -101,7 +100,7 @@ func (a *ToolApp) StartBSS(ssid string) {
 	werr, err := a.wlan.StartBss(wlan_service.BssConfig{ssid})
 	if err != nil {
 		fmt.Println("Error:", err)
-	} else if werr.Code != wlan_service.ErrCode_Ok {
+	} else if werr.Code != wlan_service.ErrCodeOk {
 		fmt.Println("Error:", werr.Description)
 	}
 }
@@ -110,7 +109,7 @@ func (a *ToolApp) StopBSS() {
 	werr, err := a.wlan.StopBss()
 	if err != nil {
 		fmt.Println("Error:", err)
-	} else if werr.Code != wlan_service.ErrCode_Ok {
+	} else if werr.Code != wlan_service.ErrCodeOk {
 		fmt.Println("Error:", werr.Description)
 	}
 }
@@ -119,24 +118,24 @@ func (a *ToolApp) Status() {
 	res, err := a.wlan.Status()
 	if err != nil {
 		fmt.Println("Error:", err)
-	} else if res.Error.Code != wlan_service.ErrCode_Ok {
+	} else if res.Error.Code != wlan_service.ErrCodeOk {
 		fmt.Println("Error:", res.Error.Description)
 	} else {
 		state := "unknown"
 		switch res.State {
-		case wlan_service.State_Bss:
+		case wlan_service.StateBss:
 			state = "starting-bss"
-		case wlan_service.State_Querying:
+		case wlan_service.StateQuerying:
 			state = "querying"
-		case wlan_service.State_Scanning:
+		case wlan_service.StateScanning:
 			state = "scanning"
-		case wlan_service.State_Joining:
+		case wlan_service.StateJoining:
 			state = "joining"
-		case wlan_service.State_Authenticating:
+		case wlan_service.StateAuthenticating:
 			state = "authenticating"
-		case wlan_service.State_Associating:
+		case wlan_service.StateAssociating:
 			state = "associating"
-		case wlan_service.State_Associated:
+		case wlan_service.StateAssociated:
 			state = "associated"
 		default:
 			state = "unknown"
@@ -174,10 +173,13 @@ func main() {
 	connectBSSID := connectFlagSet.String("b", "", "BSSID")
 
 	a := &ToolApp{ctx: context.CreateFromStartupInfo()}
-	r, p := a.wlan.NewRequest(bindings.GetAsyncWaiter())
-	a.wlan = p
+	req, pxy, err := wlan_service.NewWlanInterfaceRequest()
+	if err != nil {
+		panic(err.Error())
+	}
+	a.wlan = pxy
 	defer a.wlan.Close()
-	a.ctx.ConnectToEnvService(r)
+	a.ctx.ConnectToEnvService(req)
 
 	if len(os.Args) < 2 {
 		Usage()
