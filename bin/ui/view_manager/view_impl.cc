@@ -15,7 +15,7 @@ ViewImpl::ViewImpl(ViewRegistry* registry, ViewState* state)
 ViewImpl::~ViewImpl() {}
 
 void ViewImpl::GetToken(views_v1::View::GetTokenCallback callback) {
-  callback(state_->view_token()->Clone());
+  callback(state_->view_token());
 }
 
 void ViewImpl::GetServiceProvider(

@@ -110,26 +110,26 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // VIEW INSPECTOR REQUESTS
 
-  void HitTest(const views_v1::ViewTreeToken& view_tree_token,
+  void HitTest(views_v1::ViewTreeToken view_tree_token,
                const geometry::Point3F& ray_origin,
                const geometry::Point3F& ray_direction,
                HitTestCallback callback) override;
-  void ResolveFocusChain(views_v1::ViewTreeTokenPtr view_tree_token,
+  void ResolveFocusChain(views_v1::ViewTreeToken view_tree_token,
                          const ResolveFocusChainCallback& callback) override;
-  void ActivateFocusChain(views_v1_token::ViewTokenPtr view_token,
+  void ActivateFocusChain(views_v1_token::ViewToken view_token,
                           const ActivateFocusChainCallback& callback) override;
-  void HasFocus(views_v1_token::ViewTokenPtr view_token,
+  void HasFocus(views_v1_token::ViewToken view_token,
                 const HasFocusCallback& callback) override;
   void GetSoftKeyboardContainer(
-      views_v1_token::ViewTokenPtr view_token,
+      views_v1_token::ViewToken view_token,
       fidl::InterfaceRequest<input::SoftKeyboardContainer> container) override;
   void GetImeService(
-      views_v1_token::ViewTokenPtr view_token,
+      views_v1_token::ViewToken view_token,
       fidl::InterfaceRequest<input::ImeService> ime_service) override;
 
   // Delivers an event to a view.
-  void DeliverEvent(const views_v1_token::ViewToken* view_token,
-                    input::InputEventPtr event,
+  void DeliverEvent(views_v1_token::ViewToken view_token,
+                    input::InputEvent event,
                     ViewInspector::OnEventDelivered callback) override;
 
   // INPUT CONNECTION CALLBACKS
@@ -184,21 +184,21 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // SIGNALING
 
   void SendPropertiesChanged(ViewState* view_state,
-                             views_v1::ViewPropertiesPtr properties);
+                             views_v1::ViewProperties properties);
   void SendChildAttached(ViewContainerState* container_state,
                          uint32_t child_key,
-                         views_v1::ViewInfoPtr child_view_info);
+                         views_v1::ViewInfo child_view_info);
   void SendChildUnavailable(ViewContainerState* container_state,
                             uint32_t child_key);
 
   // INPUT CONNECTION
   void CreateInputConnection(
-      views_v1_token::ViewTokenPtr view_token,
+      views_v1_token::ViewToken view_token,
       fidl::InterfaceRequest<input::InputConnection> request);
 
   // INPUT DISPATCHER
   void CreateInputDispatcher(
-      views_v1::ViewTreeTokenPtr view_tree_token,
+      views_v1::ViewTreeToken view_tree_token,
       fidl::InterfaceRequest<input::InputDispatcher> request);
 
   // LOOKUP
@@ -212,11 +212,11 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   ViewTreeState* FindViewTree(uint32_t view_tree_token_value);
 
   bool IsViewStateRegisteredDebug(ViewState* view_state) {
-    return view_state && FindView(view_state->view_token()->value);
+    return view_state && FindView(view_state->view_token().value);
   }
 
   bool IsViewTreeStateRegisteredDebug(ViewTreeState* tree_state) {
-    return tree_state && FindViewTree(tree_state->view_tree_token()->value);
+    return tree_state && FindViewTree(tree_state->view_tree_token().value);
   }
 
   bool IsViewContainerStateRegisteredDebug(

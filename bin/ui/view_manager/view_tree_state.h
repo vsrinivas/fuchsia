@@ -33,7 +33,7 @@ class ViewTreeState : public ViewContainerState {
   };
 
   ViewTreeState(ViewRegistry* registry,
-                views_v1::ViewTreeTokenPtr view_tree_token,
+                views_v1::ViewTreeToken view_tree_token,
                 fidl::InterfaceRequest<views_v1::ViewTree> view_tree_request,
                 views_v1::ViewTreeListenerPtr view_tree_listener,
                 const std::string& label);
@@ -44,8 +44,7 @@ class ViewTreeState : public ViewContainerState {
   }
 
   // Gets the token used to refer to this view tree globally.
-  // Caller does not obtain ownership of the token.
-  const views_v1::ViewTreeTokenPtr& view_tree_token() const {
+  views_v1::ViewTreeToken view_tree_token() const {
     return view_tree_token_;
   }
 
@@ -71,7 +70,7 @@ class ViewTreeState : public ViewContainerState {
   const FocusChain* focus_chain();
 
  private:
-  views_v1::ViewTreeTokenPtr view_tree_token_;
+  views_v1::ViewTreeToken view_tree_token_;
   views_v1::ViewTreeListenerPtr view_tree_listener_;
 
   const std::string label_;

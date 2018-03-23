@@ -53,9 +53,9 @@ void ApplyOverrides(views_v1::ViewProperties* value,
   if (!overrides)
     return;
   if (overrides->display_metrics)
-    value->display_metrics = overrides->display_metrics.Clone();
+    *value->display_metrics = *overrides->display_metrics;
   if (overrides->view_layout)
-    value->view_layout = overrides->view_layout.Clone();
+    *value->view_layout = *overrides->view_layout;
 }
 
 std::string SanitizeLabel(fidl::StringPtr label) {
@@ -69,18 +69,17 @@ std::unique_ptr<FocusChain> CopyFocusChain(const FocusChain* chain) {
     new_chain->version = chain->version;
     new_chain->chain.resize(chain->chain.size());
     for (size_t index = 0; index < chain->chain.size(); ++index) {
-      new_chain->chain[index] = chain->chain[index].Clone();
+      new_chain->chain[index] = chain->chain[index];
     }
   }
   return new_chain;
 }
 
-geometry::TransformPtr ToTransform(gfx::mat4Ptr matrix) {
-  FXL_DCHECK(matrix);
+geometry::Transform ToTransform(const gfx::mat4& matrix) {
   // Note: mat4 is column-major but transform is row-major
-  auto transform = geometry::Transform::New();
-  const auto& in = *matrix->matrix;
-  std::vector<float> out(16u);
+  geometry::Transform transform;
+  const auto& in = matrix.matrix;
+  auto& out = transform.matrix;
   out[0] = in[0];
   out[1] = in[4];
   out[2] = in[8];
@@ -97,8 +96,36 @@ geometry::TransformPtr ToTransform(gfx::mat4Ptr matrix) {
   out[13] = in[7];
   out[14] = in[11];
   out[15] = in[15];
-  transform->matrix.reset(std::move(out));
   return transform;
+}
+
+bool Equals(const views_v1::DisplayMetrics& a,
+            const views_v1::DisplayMetrics& b) {
+  return a.device_pixel_ratio == b.device_pixel_ratio;
+}
+
+bool Equals(const views_v1::ViewLayout& a,
+            const views_v1::ViewLayout& b) {
+  return a.size.width == b.size.width &&
+         a.size.height == b.size.height &&
+         a.inset.top == b.inset.top &&
+         a.inset.right == b.inset.right &&
+         a.inset.bottom == b.inset.bottom &&
+         a.inset.left == b.inset.left;
+}
+
+bool Equals(const views_v1::ViewProperties& a, const views_v1::ViewProperties& b) {
+  if (!!a.display_metrics != !!b.display_metrics)
+    return false;
+  if (a.display_metrics) {
+      if (!Equals(*a.display_metrics, *b.display_metrics))
+        return false;
+  }
+  if (!!a.view_layout != !!b.view_layout)
+    return false;
+  if (a.view_layout)
+    return Equals(*a.view_layout, *b.view_layout);
+  return true;
 }
 
 }  // namespace
@@ -144,10 +171,10 @@ void ViewRegistry::CreateView(
   FXL_DCHECK(view_listener);
   FXL_DCHECK(parent_export_token);
 
-  auto view_token = views_v1_token::ViewToken::New();
-  view_token->value = next_view_token_value_++;
-  FXL_CHECK(view_token->value);
-  FXL_CHECK(!FindView(view_token->value));
+  views_v1_token::ViewToken view_token;
+  view_token.value = next_view_token_value_++;
+  FXL_CHECK(view_token.value);
+  FXL_CHECK(!FindView(view_token.value));
 
   // Create the state and bind the interfaces to it.
   ViewState* view_state =
@@ -157,7 +184,7 @@ void ViewRegistry::CreateView(
 
   // Export a node which represents the view's attachment point.
   view_state->top_node().Export(std::move(parent_export_token));
-  view_state->top_node().SetTag(view_state->view_token()->value);
+  view_state->top_node().SetTag(view_state->view_token().value);
   view_state->top_node().SetLabel(view_state->FormattedLabel());
 
   // TODO(MZ-371): Avoid Z-fighting by introducing a smidgen of elevation
@@ -166,7 +193,7 @@ void ViewRegistry::CreateView(
   SchedulePresentSession();
 
   // Add to registry and return token.
-  views_by_token_.emplace(view_state->view_token()->value, view_state);
+  views_by_token_.emplace(view_state->view_token().value, view_state);
   FXL_VLOG(1) << "CreateView: view=" << view_state;
 }
 
@@ -190,7 +217,7 @@ void ViewRegistry::UnregisterView(ViewState* view_state) {
   SchedulePresentSession();
 
   // Remove from registry.
-  views_by_token_.erase(view_state->view_token()->value);
+  views_by_token_.erase(view_state->view_token().value);
   delete view_state;
 }
 
@@ -203,18 +230,18 @@ void ViewRegistry::CreateViewTree(
   FXL_DCHECK(view_tree_request.is_valid());
   FXL_DCHECK(view_tree_listener);
 
-  auto view_tree_token = views_v1::ViewTreeToken::New();
-  view_tree_token->value = next_view_tree_token_value_++;
-  FXL_CHECK(view_tree_token->value);
-  FXL_CHECK(!FindViewTree(view_tree_token->value));
+  views_v1::ViewTreeToken view_tree_token;
+  view_tree_token.value = next_view_tree_token_value_++;
+  FXL_CHECK(view_tree_token.value);
+  FXL_CHECK(!FindViewTree(view_tree_token.value));
 
   // Create the state and bind the interfaces to it.
   ViewTreeState* tree_state = new ViewTreeState(
-      this, std::move(view_tree_token), std::move(view_tree_request),
+      this, view_tree_token, std::move(view_tree_request),
       std::move(view_tree_listener), SanitizeLabel(label));
 
   // Add to registry.
-  view_trees_by_token_.emplace(tree_state->view_tree_token()->value,
+  view_trees_by_token_.emplace(tree_state->view_tree_token().value,
                                tree_state);
   FXL_VLOG(1) << "CreateViewTree: tree=" << tree_state;
 }
@@ -234,7 +261,7 @@ void ViewRegistry::UnregisterViewTree(ViewTreeState* tree_state) {
   UnregisterChildren(tree_state);
 
   // Remove from registry.
-  view_trees_by_token_.erase(tree_state->view_tree_token()->value);
+  view_trees_by_token_.erase(tree_state->view_tree_token().value);
   delete tree_state;
 }
 
@@ -375,7 +402,7 @@ void ViewRegistry::SetChildProperties(
     return;
 
   // Store the updated properties specified by the container if changed.
-  if (child_properties.Equals(child_stub->properties()))
+  if (Equals(*child_properties, *child_stub->properties()))
     return;
 
   // Apply the change.
@@ -428,13 +455,12 @@ void ViewRegistry::OnViewResolved(ViewStub* view_stub,
 }
 
 void ViewRegistry::TransferViewOwner(
-    views_v1_token::ViewTokenPtr view_token,
+    views_v1_token::ViewToken view_token,
     fidl::InterfaceRequest<views_v1_token::ViewOwner>
         transferred_view_owner_request) {
-  FXL_DCHECK(view_token);
   FXL_DCHECK(transferred_view_owner_request.is_valid());
 
-  ViewState* view_state = view_token ? FindView(view_token->value) : nullptr;
+  ViewState* view_state = FindView(view_token.value);
   if (view_state) {
     view_state->ReleaseOwner();  // don't need the ViewOwner pipe anymore
     view_state->BindOwner(std::move(transferred_view_owner_request));
@@ -456,9 +482,8 @@ void ViewRegistry::AttachResolvedViewAndNotify(ViewStub* view_stub,
     view_stub->host_node()->AddChild(view_state->top_node());
     SchedulePresentSession();
 
-    auto view_info = views_v1::ViewInfo::New();
     SendChildAttached(view_stub->container(), view_stub->key(),
-                      std::move(view_info));
+                      views_v1::ViewInfo());
   }
 
   // Attach the view.
@@ -593,7 +618,7 @@ void ViewRegistry::TraverseView(ViewState* view_state,
     views_v1::ViewPropertiesPtr properties = ResolveViewProperties(view_state);
     if (properties) {
       if (!view_state->issued_properties() ||
-          !properties->Equals(*view_state->issued_properties())) {
+          !Equals(*properties, *view_state->issued_properties())) {
         view_state->IssueProperties(std::move(properties));
         view_properties_changed = true;
       }
@@ -615,8 +640,10 @@ void ViewRegistry::TraverseView(ViewState* view_state,
                          (flags & ViewState::INVALIDATION_RESEND_PROPERTIES);
   if (send_properties) {
     if (!(flags & ViewState::INVALIDATION_IN_PROGRESS)) {
+      views_v1::ViewProperties cloned_properties;
+      view_state->issued_properties()->Clone(&cloned_properties);
       SendPropertiesChanged(view_state,
-                            view_state->issued_properties().Clone());
+                            std::move(cloned_properties));
       flags = ViewState::INVALIDATION_IN_PROGRESS;
     } else {
       FXL_VLOG(2) << "View invalidation stalled awaiting response: view="
@@ -655,8 +682,8 @@ views_v1::ViewPropertiesPtr ViewRegistry::ResolveViewProperties(
   if (view_stub->parent()) {
     if (!view_stub->parent()->issued_properties())
       return nullptr;
-    views_v1::ViewPropertiesPtr properties =
-        view_stub->parent()->issued_properties().Clone();
+    auto properties = views_v1::ViewProperties::New();
+    view_stub->parent()->issued_properties()->Clone(properties.get());
     ApplyOverrides(properties.get(), view_stub->properties().get());
     return properties;
   } else if (view_stub->is_root_of_tree()) {
@@ -665,7 +692,9 @@ views_v1::ViewPropertiesPtr ViewRegistry::ResolveViewProperties(
                   << ", properties=" << view_stub->properties();
       return nullptr;
     }
-    return view_stub->properties().Clone();
+    auto cloned_properties = views_v1::ViewProperties::New();
+    view_stub->properties()->Clone(cloned_properties.get());
+    return cloned_properties;
   } else {
     return nullptr;
   }
@@ -686,7 +715,7 @@ void ViewRegistry::PresentSession() {
   FXL_DCHECK(present_session_scheduled_);
 
   present_session_scheduled_ = false;
-  session_.Present(0, [this](images::PresentationInfoPtr info) {});
+  session_.Present(0, [this](images::PresentationInfo info) {});
 }
 
 // VIEW AND VIEW TREE SERVICE PROVIDERS
@@ -696,7 +725,7 @@ void ViewRegistry::ConnectToViewService(ViewState* view_state,
                                         zx::channel client_handle) {
   FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
   if (service_name == input::InputConnection::Name_) {
-    CreateInputConnection(view_state->view_token()->Clone(),
+    CreateInputConnection(view_state->view_token(),
                           fidl::InterfaceRequest<input::InputConnection>(
                               std::move(client_handle)));
   }
@@ -707,7 +736,7 @@ void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
                                             zx::channel client_handle) {
   FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   if (service_name == input::InputDispatcher::Name_) {
-    CreateInputDispatcher(tree_state->view_tree_token()->Clone(),
+    CreateInputDispatcher(tree_state->view_tree_token(),
                           fidl::InterfaceRequest<input::InputDispatcher>(
                               std::move(client_handle)));
   }
@@ -715,7 +744,7 @@ void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
 
 // VIEW INSPECTOR
 
-void ViewRegistry::HitTest(const views_v1::ViewTreeToken& view_tree_token,
+void ViewRegistry::HitTest(views_v1::ViewTreeToken view_tree_token,
                            const geometry::Point3F& ray_origin,
                            const geometry::Point3F& ray_direction,
                            HitTestCallback callback) {
@@ -724,7 +753,7 @@ void ViewRegistry::HitTest(const views_v1::ViewTreeToken& view_tree_token,
   ViewTreeState* view_tree = FindViewTree(view_tree_token.value);
   if (!view_tree || !view_tree->GetRoot() ||
       !view_tree->GetRoot()->host_node()) {
-    callback(std::vector<ViewHit>());
+    callback(fidl::VectorPtr<ViewHit>());
     return;
   }
 
@@ -732,17 +761,16 @@ void ViewRegistry::HitTest(const views_v1::ViewTreeToken& view_tree_token,
       (float[3]){ray_origin.x, ray_origin.y, ray_origin.z},
       (float[3]){ray_direction.x, ray_direction.y, ray_direction.z},
       [this, callback = std::move(callback), ray_origin,
-       ray_direction](fidl::VectorPtr<gfx::HitPtr> hits) {
-        std::vector<ViewHit> view_hits;
-        view_hits.reserve(hits->size());
+       ray_direction](fidl::VectorPtr<gfx::Hit> hits) {
+        auto view_hits = fidl::VectorPtr<ViewHit>::New(hits->size());
         for (auto& hit : *hits) {
-          auto it = views_by_token_.find(hit->tag_value);
+          auto it = views_by_token_.find(hit.tag_value);
           if (it != views_by_token_.end()) {
             ViewState* view_state = it->second;
 
-            view_hits.emplace_back(ViewHit{
-                *view_state->view_token(), ray_origin, ray_direction,
-                hit->distance, ToTransform(std::move(hit->inverse_transform))});
+            view_hits->emplace_back(ViewHit{
+                view_state->view_token(), ray_origin, ray_direction,
+                hit.distance, ToTransform(hit.inverse_transform)});
           }
         }
         callback(std::move(view_hits));
@@ -750,12 +778,11 @@ void ViewRegistry::HitTest(const views_v1::ViewTreeToken& view_tree_token,
 }
 
 void ViewRegistry::ResolveFocusChain(
-    views_v1::ViewTreeTokenPtr view_tree_token,
+    views_v1::ViewTreeToken view_tree_token,
     const ResolveFocusChainCallback& callback) {
-  FXL_DCHECK(view_tree_token);
   FXL_VLOG(1) << "ResolveFocusChain: view_tree_token=" << view_tree_token;
 
-  auto it = view_trees_by_token_.find(view_tree_token->value);
+  auto it = view_trees_by_token_.find(view_tree_token.value);
   if (it != view_trees_by_token_.end()) {
     callback(CopyFocusChain(it->second->focus_chain()));
   } else {
@@ -764,12 +791,11 @@ void ViewRegistry::ResolveFocusChain(
 }
 
 void ViewRegistry::ActivateFocusChain(
-    views_v1_token::ViewTokenPtr view_token,
+    views_v1_token::ViewToken view_token,
     const ActivateFocusChainCallback& callback) {
-  FXL_DCHECK(view_token);
   FXL_VLOG(1) << "ActivateFocusChain: view_token=" << view_token;
 
-  ViewState* view = FindView(view_token->value);
+  ViewState* view = FindView(view_token.value);
   if (!view) {
     callback(nullptr);
     return;
@@ -782,11 +808,10 @@ void ViewRegistry::ActivateFocusChain(
   callback(std::move(new_chain));
 }
 
-void ViewRegistry::HasFocus(views_v1_token::ViewTokenPtr view_token,
+void ViewRegistry::HasFocus(views_v1_token::ViewToken view_token,
                             const HasFocusCallback& callback) {
-  FXL_DCHECK(view_token);
   FXL_VLOG(1) << "HasFocus: view_token=" << view_token;
-  ViewState* view = FindView(view_token->value);
+  ViewState* view = FindView(view_token.value);
   if (!view) {
     callback(false);
     return;
@@ -795,7 +820,7 @@ void ViewRegistry::HasFocus(views_v1_token::ViewTokenPtr view_token,
   auto chain = tree_state->focus_chain();
   if (chain) {
     for (size_t index = 0; index < chain->chain.size(); ++index) {
-      if (chain->chain[index]->value == view_token->value) {
+      if (chain->chain[index].value == view_token.value) {
         callback(true);
         return;
       }
@@ -823,28 +848,26 @@ component::ServiceProvider* ViewRegistry::FindViewServiceProvider(
 }
 
 void ViewRegistry::GetSoftKeyboardContainer(
-    views_v1_token::ViewTokenPtr view_token,
-    fidl::InterfaceRequest<mozart::SoftKeyboardContainer> container) {
-  FXL_DCHECK(view_token);
+    views_v1_token::ViewToken view_token,
+    fidl::InterfaceRequest<input::SoftKeyboardContainer> container) {
   FXL_DCHECK(container.is_valid());
   FXL_VLOG(1) << "GetSoftKeyboardContainer: view_token=" << view_token;
 
-  auto provider = FindViewServiceProvider(view_token->value,
-                                          mozart::SoftKeyboardContainer::Name_);
+  auto provider = FindViewServiceProvider(view_token.value,
+                                          input::SoftKeyboardContainer::Name_);
   if (provider) {
     component::ConnectToService(provider, std::move(container));
   }
 }
 
 void ViewRegistry::GetImeService(
-    views_v1_token::ViewTokenPtr view_token,
-    fidl::InterfaceRequest<mozart::ImeService> ime_service) {
-  FXL_DCHECK(view_token);
+    views_v1_token::ViewToken view_token,
+    fidl::InterfaceRequest<input::ImeService> ime_service) {
   FXL_DCHECK(ime_service.is_valid());
   FXL_VLOG(1) << "GetImeService: view_token=" << view_token;
 
   auto provider =
-      FindViewServiceProvider(view_token->value, mozart::ImeService::Name_);
+      FindViewServiceProvider(view_token.value, input::ImeService::Name_);
   if (provider) {
     component::ConnectToService(provider, std::move(ime_service));
   } else {
@@ -856,7 +879,7 @@ void ViewRegistry::GetImeService(
 
 void ViewRegistry::SendPropertiesChanged(
     ViewState* view_state,
-    views_v1::ViewPropertiesPtr properties) {
+    views_v1::ViewProperties properties) {
   FXL_DCHECK(view_state);
   FXL_DCHECK(view_state->view_listener());
 
@@ -885,9 +908,8 @@ void ViewRegistry::SendPropertiesChanged(
 
 void ViewRegistry::SendChildAttached(ViewContainerState* container_state,
                                      uint32_t child_key,
-                                     views_v1::ViewInfoPtr child_view_info) {
+                                     views_v1::ViewInfo child_view_info) {
   FXL_DCHECK(container_state);
-  FXL_DCHECK(child_view_info);
 
   if (!container_state->view_container_listener())
     return;
@@ -897,7 +919,7 @@ void ViewRegistry::SendChildAttached(ViewContainerState* container_state,
               << ", child_key=" << child_key
               << ", child_view_info=" << child_view_info;
   container_state->view_container_listener()->OnChildAttached(
-      child_key, std::move(child_view_info), [] {});
+      child_key, child_view_info, [] {});
 }
 
 void ViewRegistry::SendChildUnavailable(ViewContainerState* container_state,
@@ -914,15 +936,13 @@ void ViewRegistry::SendChildUnavailable(ViewContainerState* container_state,
                                                                  [] {});
 }
 
-void ViewRegistry::DeliverEvent(const views_v1_token::ViewToken* view_token,
-                                input::InputEventPtr event,
+void ViewRegistry::DeliverEvent(views_v1_token::ViewToken view_token,
+                                input::InputEvent event,
                                 ViewInspector::OnEventDelivered callback) {
-  FXL_DCHECK(view_token);
-  FXL_DCHECK(event);
-  FXL_VLOG(1) << "DeliverEvent: view_token=" << *view_token
-              << ", event=" << *event;
+  FXL_VLOG(1) << "DeliverEvent: view_token=" << view_token
+              << ", event=" << event;
 
-  auto it = input_connections_by_view_token_.find(view_token->value);
+  auto it = input_connections_by_view_token_.find(view_token.value);
   if (it == input_connections_by_view_token_.end()) {
     FXL_VLOG(1)
         << "DeliverEvent: dropped because there was no input connection";
@@ -938,23 +958,22 @@ void ViewRegistry::DeliverEvent(const views_v1_token::ViewToken* view_token,
 }
 
 void ViewRegistry::CreateInputConnection(
-    views_v1_token::ViewTokenPtr view_token,
+    views_v1_token::ViewToken view_token,
     fidl::InterfaceRequest<input::InputConnection> request) {
-  FXL_DCHECK(view_token);
   FXL_DCHECK(request.is_valid());
   FXL_VLOG(1) << "CreateInputConnection: view_token=" << view_token;
 
-  const uint32_t view_token_value = view_token->value;
+  const uint32_t view_token_value = view_token.value;
   input_connections_by_view_token_.emplace(
       view_token_value,
-      std::make_unique<InputConnectionImpl>(this, this, std::move(view_token),
+      std::make_unique<InputConnectionImpl>(this, this, view_token,
                                             std::move(request)));
 }
 
 void ViewRegistry::OnInputConnectionDied(InputConnectionImpl* connection) {
   FXL_DCHECK(connection);
   auto it =
-      input_connections_by_view_token_.find(connection->view_token()->value);
+      input_connections_by_view_token_.find(connection->view_token().value);
   FXL_DCHECK(it != input_connections_by_view_token_.end());
   FXL_DCHECK(it->second.get() == connection);
   FXL_VLOG(1) << "OnInputConnectionDied: view_token="
@@ -964,17 +983,16 @@ void ViewRegistry::OnInputConnectionDied(InputConnectionImpl* connection) {
 }
 
 void ViewRegistry::CreateInputDispatcher(
-    views_v1::ViewTreeTokenPtr view_tree_token,
+    views_v1::ViewTreeToken view_tree_token,
     fidl::InterfaceRequest<input::InputDispatcher> request) {
-  FXL_DCHECK(view_tree_token);
   FXL_DCHECK(request.is_valid());
   FXL_VLOG(1) << "CreateInputDispatcher: view_tree_token=" << view_tree_token;
 
-  const uint32_t view_tree_token_value = view_tree_token->value;
+  const uint32_t view_tree_token_value = view_tree_token.value;
   input_dispatchers_by_view_tree_token_.emplace(
       view_tree_token_value,
       std::unique_ptr<InputDispatcherImpl>(new InputDispatcherImpl(
-          this, this, std::move(view_tree_token), std::move(request))));
+          this, this, view_tree_token, std::move(request))));
 }
 
 void ViewRegistry::OnInputDispatcherDied(InputDispatcherImpl* dispatcher) {
@@ -983,7 +1001,7 @@ void ViewRegistry::OnInputDispatcherDied(InputDispatcherImpl* dispatcher) {
               << dispatcher->view_tree_token();
 
   auto it = input_dispatchers_by_view_tree_token_.find(
-      dispatcher->view_tree_token()->value);
+      dispatcher->view_tree_token().value);
   FXL_DCHECK(it != input_dispatchers_by_view_tree_token_.end());
   FXL_DCHECK(it->second.get() == dispatcher);
 

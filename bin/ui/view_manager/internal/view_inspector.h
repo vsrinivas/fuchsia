@@ -52,7 +52,7 @@ struct ViewHit {
 // on the contents of views and view trees.
 class ViewInspector {
  public:
-  using HitTestCallback = std::function<void(std::vector<ViewHit>)>;
+  using HitTestCallback = std::function<void(fidl::VectorPtr<ViewHit>)>;
   using ResolveFocusChainCallback =
       std::function<void(std::unique_ptr<FocusChain>)>;
   using ActivateFocusChainCallback =
@@ -64,7 +64,7 @@ class ViewInspector {
 
   // Performs a hit test using a vector with the provided ray, and returns the
   // list of views which were hit.
-  virtual void HitTest(const views_v1::ViewTreeToken& view_tree_token,
+  virtual void HitTest(views_v1::ViewTreeToken view_tree_token,
                        const geometry::Point3F& ray_origin,
                        const geometry::Point3F& ray_direction,
                        HitTestCallback callback) = 0;

@@ -12,7 +12,7 @@
 namespace view_manager {
 
 ViewState::ViewState(ViewRegistry* registry,
-                     views_v1_token::ViewTokenPtr view_token,
+                     views_v1_token::ViewToken view_token,
                      fidl::InterfaceRequest<views_v1::View> view_request,
                      views_v1::ViewListenerPtr view_listener,
                      scenic_lib::Session* session,
@@ -25,7 +25,6 @@ ViewState::ViewState(ViewRegistry* registry,
       view_binding_(impl_.get(), std::move(view_request)),
       owner_binding_(impl_.get()),
       weak_factory_(this) {
-  FXL_DCHECK(view_token_);
   FXL_DCHECK(view_listener_);
 
   view_binding_.set_error_handler([this, registry] {
@@ -64,8 +63,8 @@ const std::string& ViewState::FormattedLabel() const {
   if (formatted_label_cache_.empty()) {
     formatted_label_cache_ =
         label_.empty()
-            ? fxl::StringPrintf("<V%d>", view_token_->value)
-            : fxl::StringPrintf("<V%d:%s>", view_token_->value, label_.c_str());
+            ? fxl::StringPrintf("<V%d>", view_token_.value)
+            : fxl::StringPrintf("<V%d:%s>", view_token_.value, label_.c_str());
   }
   return formatted_label_cache_;
 }
@@ -101,11 +100,11 @@ void ViewState::RebuildFocusChain() {
   // Construct focus chain by adding our ancestors until we hit a root
   size_t index = 0;
   focus_chain_->chain.resize(index + 1);
-  focus_chain_->chain[index++] = view_token().Clone();
+  focus_chain_->chain[index++] = view_token();
   ViewState* parent = view_stub()->parent();
   while (parent) {
     focus_chain_->chain.resize(index + 1);
-    focus_chain_->chain[index++] = parent->view_token().Clone();
+    focus_chain_->chain[index++] = parent->view_token();
     ViewStub* stub = parent->view_stub();
     parent = stub ? stub->parent() : nullptr;
   }

@@ -46,7 +46,7 @@ class ViewState : public ViewContainerState {
   };
 
   ViewState(ViewRegistry* registry,
-            views_v1_token::ViewTokenPtr view_token,
+            views_v1_token::ViewToken view_token,
             fidl::InterfaceRequest<views_v1::View> view_request,
             views_v1::ViewListenerPtr view_listener,
             scenic_lib::Session* session,
@@ -57,7 +57,7 @@ class ViewState : public ViewContainerState {
 
   // Gets the token used to refer to this view globally.
   // Caller does not obtain ownership of the token.
-  const views_v1_token::ViewTokenPtr& view_token() const { return view_token_; }
+  const views_v1_token::ViewToken& view_token() const { return view_token_; }
 
   // Gets the view listener interface, never null.
   // Caller does not obtain ownership of the view listener.
@@ -117,7 +117,7 @@ class ViewState : public ViewContainerState {
  private:
   void RebuildFocusChain();
 
-  views_v1_token::ViewTokenPtr view_token_;
+  views_v1_token::ViewToken view_token_;
   views_v1::ViewListenerPtr view_listener_;
   scenic_lib::EntityNode top_node_;
 

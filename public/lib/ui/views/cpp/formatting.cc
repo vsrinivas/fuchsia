@@ -23,6 +23,7 @@ std::ostream& operator<<(std::ostream& os,
             << ", view_layout=" << *value.view_layout << "}";
 }
 
+
 std::ostream& operator<<(std::ostream& os,
                          const views_v1::DisplayMetrics& value) {
   return os << "{device_pixel_ratio=" << value.device_pixel_ratio << "}";

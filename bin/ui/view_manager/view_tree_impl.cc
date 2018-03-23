@@ -15,7 +15,7 @@ ViewTreeImpl::ViewTreeImpl(ViewRegistry* registry, ViewTreeState* state)
 ViewTreeImpl::~ViewTreeImpl() {}
 
 void ViewTreeImpl::GetToken(GetTokenCallback callback) {
-  callback(state_->view_tree_token()->Clone());
+  callback(state_->view_tree_token());
 }
 
 void ViewTreeImpl::GetServiceProvider(

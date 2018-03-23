@@ -15,7 +15,7 @@ namespace view_manager {
 
 ViewTreeState::ViewTreeState(
     ViewRegistry* registry,
-    views_v1::ViewTreeTokenPtr view_tree_token,
+    views_v1::ViewTreeToken view_tree_token,
     fidl::InterfaceRequest<views_v1::ViewTree> view_tree_request,
     views_v1::ViewTreeListenerPtr view_tree_listener,
     const std::string& label)
@@ -25,7 +25,6 @@ ViewTreeState::ViewTreeState(
       impl_(new ViewTreeImpl(registry, this)),
       view_tree_binding_(impl_.get(), std::move(view_tree_request)),
       weak_factory_(this) {
-  FXL_DCHECK(view_tree_token_);
   FXL_DCHECK(view_tree_listener_);
 
   view_tree_binding_.set_error_handler([this, registry] {
@@ -62,8 +61,8 @@ const FocusChain* ViewTreeState::focus_chain() {
 const std::string& ViewTreeState::FormattedLabel() const {
   if (formatted_label_cache_.empty()) {
     formatted_label_cache_ =
-        label_.empty() ? fxl::StringPrintf("<T%d>", view_tree_token_->value)
-                       : fxl::StringPrintf("<T%d:%s>", view_tree_token_->value,
+        label_.empty() ? fxl::StringPrintf("<T%d>", view_tree_token_.value)
+                       : fxl::StringPrintf("<T%d:%s>", view_tree_token_.value,
                                            label_.c_str());
   }
   return formatted_label_cache_;
