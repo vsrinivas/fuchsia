@@ -26,7 +26,7 @@ class StoryControllerImpl;
 // client that called ModuleContext.StartModuleDeprecated(). Exactly one
 // ModuleControllerImpl instance is associated with each
 // ModuleContextImpl instance.
-class ModuleControllerImpl : ModuleController, EmbedModuleController {
+class ModuleControllerImpl : ModuleController {
  public:
   ModuleControllerImpl(
       StoryControllerImpl* story_controller_impl,
@@ -42,8 +42,6 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
 
   void Connect(fidl::InterfaceRequest<ModuleController> request);
 
-  EmbedModuleControllerPtr NewEmbedModuleController();
-
   // Notifies all watchers of a state change of the module. Also
   // remembers the state to initialize future added watchers.
   void SetState(ModuleState new_state);
@@ -58,10 +56,10 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
   // |ModuleController|
   void Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) override;
 
-  // |ModuleController| and |EmbedModuleController|
+  // |ModuleController|
   void Focus() override;
 
-  // |ModuleController| and |EmbedModuleController|
+  // |ModuleController|
   void Defocus() override;
 
   // |ModuleController|
@@ -81,7 +79,6 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
 
   // The service provided here.
   fidl::BindingSet<ModuleController> module_controller_bindings_;
-  fidl::BindingSet<EmbedModuleController> embed_module_controller_bindings_;
 
   // Watchers of this Module instance.
   fidl::InterfacePtrSet<ModuleWatcher> watchers_;

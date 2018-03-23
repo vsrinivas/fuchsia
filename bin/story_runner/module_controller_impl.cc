@@ -78,10 +78,6 @@ void ModuleControllerImpl::Connect(
   module_controller_bindings_.AddBinding(this, std::move(request));
 }
 
-EmbedModuleControllerPtr ModuleControllerImpl::NewEmbedModuleController() {
-  return embed_module_controller_bindings_.AddBinding(this).Bind();
-}
-
 // If the Module instance closes its own connection, we signal this to
 // all current and future watchers by an appropriate state transition.
 void ModuleControllerImpl::OnConnectionError() {

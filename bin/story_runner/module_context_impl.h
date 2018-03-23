@@ -98,15 +98,6 @@ class ModuleContextImpl : ModuleContext {
       fidl::VectorPtr<ContainerRelationEntry> relationships,
       fidl::VectorPtr<ContainerNode> nodes) override;
   // |ModuleContext|
-  void EmbedModuleDeprecated(
-      fidl::StringPtr name,
-      fidl::StringPtr query,
-      fidl::StringPtr link_name,
-      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) override;
-  // |ModuleContext|
   void GetComponentContext(
       fidl::InterfaceRequest<ComponentContext> context_request) override;
   // |ModuleContext|

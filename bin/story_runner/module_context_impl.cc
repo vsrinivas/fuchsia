@@ -132,21 +132,6 @@ void ModuleContextImpl::StartContainerInShell(
       std::move(relationships), std::move(node_ptrs));
 }
 
-void ModuleContextImpl::EmbedModuleDeprecated(
-    fidl::StringPtr name,
-    fidl::StringPtr query,
-    fidl::StringPtr link_name,
-    fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller,
-    fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) {
-  story_controller_impl_->EmbedModuleDeprecated(
-      module_data_->module_path, name, query, link_name,
-      nullptr /* create_chain_info */, std::move(incoming_services),
-      std::move(module_controller), std::move(embed_module_watcher),
-      std::move(view_owner));
-}
-
 void ModuleContextImpl::GetComponentContext(
     fidl::InterfaceRequest<ComponentContext> context_request) {
   component_context_impl_.Connect(std::move(context_request));

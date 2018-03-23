@@ -22,41 +22,41 @@ library modular;
 interface ModuleContext {
   // Gets a Link instance with the given name.
   //
-  // The link instance has a name so that it can be recognized when
-  // the story is resumed. The name is unique in the scope of the
-  // Module instance. If the method is called again by the same Module
-  // instance, a new connection to the same Link instance is obtained.
-  // It's up to the Module instance to ensure the name is unique
-  // within the scope of itself. A null |name| is allowed for backwards
-  // compatibility reasons. MI4-739
+  // The link instance has a name so that it can be recognized when the story
+  // is resumed. The name is unique in the scope of the Module instance. If the
+  // method is called again by the same Module instance, a new connection to
+  // the same Link instance is obtained.  It's up to the Module instance to
+  // ensure the name is unique within the scope of itself. A null |name| is
+  // allowed for backwards compatibility reasons. MI4-739
   1: GetLink(string? name, request<Link> link);
 
-  // Like EmbedDaisy(), but the view of the newly started module is sent to the
-  // story shell for display.
+  // Starts a new Module instance. The Module to execute is identified by the
+  // the contents of |daisy| and the Module instance is given a |name| in the
+  // scope of the starting Module instance. The view for the Module is given to
+  // the story shell for display.
   //
   // Providing a |surface_relation| will advise the StoryShell how to layout
-  // surfaces that the new module creates. If |surface_relation|
-  // is null then a default relation is used.
+  // surfaces that the new module creates. If |surface_relation| is null then a
+  // default relation is used.
+  //
+  // If the method is called again with the same |name| by the same Module
+  // instance, but with different arguments (or with non-null service exchange
+  // arguments), the existing Module instance is restarted with the changed
+  // arguments. If the other arguments don't change, just an additional module
+  // controller connection is made.
+  //
+  // The calling Module instance and the new Module instance may also interact
+  // by exchanging ServiceProviders. The new Module instance may implement
+  // |incoming_services|, if an interface request is supplied.
   2: StartModule(string name, Daisy daisy,
                 request<component.ServiceProvider>? incoming_services,
                 request<ModuleController> module_controller,
                 SurfaceRelation? surface_relation)
                 -> (StartModuleStatus @status);
 
-  // Starts a new Module instance. The Module to execute is identified
-  // by the the contents of |daisy| and the Module instance
-  // is given a |name| in the scope of the starting Module instance.
-  //
-  // If the method is called again with the same |name| by the same Module
-  // instance, but with different arguments (or with non-null service exchange
-  // arguments), the existing Module instance is restarted with the changed
-  // arguments. If the other arguments don't change, just an additional module
-  // controller connection is made, and the |view_owner| request is closed.
-  //
-  // The calling Module instance and the new Module instance may also
-  // interact by exchanging ServiceProviders. The new Module
-  // instance may implement |incoming_services|, if an interface
-  // request is supplied.
+  // Like StartModule(), but provides a |view_owner| explicitly instead of
+  // relying on the story shell for display. If a Module with the same
+  // |name| and |daisy| was already started, |view_owner| is closed.
   3: EmbedModule(string name, Daisy daisy,
                 request<component.ServiceProvider>? incoming_services,
                 request<ModuleController> module_controller,
@@ -75,39 +75,15 @@ interface ModuleContext {
                                  SurfaceRelation? surface_relation,
                                  bool focused);
 
-  // Like StartModuleInShell(), but starts multiple modules simultaneously and
+  // Like StartModule(), but starts multiple modules simultaneously and
   // specifies a custom layout for them (aka container).
   //
   // There are multiple layouts specified, for different screen sizes etc.
-  14: StartContainerInShell(string container_name,
+  6: StartContainerInShell(string container_name,
                            SurfaceRelation parent_relation,
                            vector<ContainerLayout> layout,
                            vector<ContainerRelationEntry> relationships,
                            vector<ContainerNode> nodes);
-
-  // Like StartModuleDeprecated(), used to embed the view of the requested module, but
-  // also allows to obtain information of modules started transitively in the
-  // story shell by the embedded module through the supplied EmbedModuleWatcher.
-  //
-  // The information about transitively started modules sent to the
-  // EmbedModuleWatcher can be used to manage the display of the transitively
-  // embedded modules in the story shell, specifically to Focus() and Defocus()
-  // them through an EmbedModuleController.
-  //
-  // The EmbedModuleWatcher is registered directly here rather than on the
-  // ModuleController to avoid the race condition between the registration
-  // request being connected and the embedded module starting more modules. This
-  // could also be addressed by sending catch up notifications. TBD.
-  //
-  // The EmbedModuleWatcher may be null, then EmbedModule() does exactly the
-  // same as StartModuleDeprecated().
-  //
-  // DEPRECATED: This is going to be removed.
-  6: EmbedModuleDeprecated(string name, string module_url, string? link_name,
-                          request<component.ServiceProvider>? incoming_services,
-                          request<ModuleController> module_controller,
-                          EmbedModuleWatcher? embed_module_watcher,
-                          request<views_v1_token.ViewOwner> view_owner);
 
   // Gets the ComponentContext instance associated with this Module
   // instance. This ComponentContext instance is unique to this
@@ -127,57 +103,22 @@ interface ModuleContext {
   // Callers should be limited, possibly by policy, from taking user focus.
   10: RequestFocus();
 
-  // The Module instance holding this handle to the ModuleContext
-  // declares it's ready to run. The module context implementation
-  // notifies all ModuleWatchers registered on the ModuleController by
-  // calling OnStateChange(). See ModuleState for all states and
-  // transitions.
+  // The Module instance holding this handle to the ModuleContext declares it's
+  // ready to run. The module context implementation notifies all
+  // ModuleWatchers registered on the ModuleController by calling
+  // OnStateChange(). See ModuleState for all states and transitions.
   // TODO(vardhan): Deprecate this in favour of adding a return callback to
   // Module.Initialize().
   11: Ready();
 
-  // The Module instance holding this handle to the ModuleContext
-  // declares it's done and wants to be torn down. The module context
-  // implementation notifies all ModuleWatchers registered on the
-  // ModuleController by calling OnStateChange(). The receiver is free
-  // to decide whether it's appropriate to Stop() the module. (It
-  // might be appropriate for the receiver to call Done() on its own
-  // instead.) See ModuleState for all states and transitions.
+  // The Module instance holding this handle to the ModuleContext declares it's
+  // done and wants to be torn down. The module context implementation notifies
+  // all ModuleWatchers registered on the ModuleController by calling
+  // OnStateChange(). The receiver is free to decide whether it's appropriate
+  // to Stop() the module. (It might be appropriate for the receiver to call
+  // Done() on its own instead.) See ModuleState for all states and
+  // transitions.
   12: Done();
-};
-
-// Implemented by a Module in order to receive information about modules started
-// in the story shell by an embedded module (aka transitive embeds).
-//
-// The view ID information received this way can be used to manage focus in the
-// story shell of the transitively embedded modules.
-interface EmbedModuleWatcher {
-  // Whenever a module is sent to the story shell from the embedded module, a
-  // notification is sent here too. The EmbedModuleController connection to the
-  // module controller allows to focus and defocus the module, but not to stop
-  // or watch it.
-  //
-  // NOTE(mesch): This is EXPERIMENTAL and may change.
-  //
-  // TODO(mesch): TBD if surface relationship with embedded module and the
-  // anchor view should be exposed too.
-  //
-  // TODO(mesch): Eventually we might expose the title of the embedded module,
-  // which could be used to create a button to focus or unfocus it.
-  1: OnStartModuleInShell(EmbedModuleController module_controller);
-};
-
-// Controls appearance in the story shell of modules that are transitively
-// started from an embedded module. When the module is stopped, the connection
-// is closed.
-//
-// This is a subset of ModuleController.
-interface EmbedModuleController {
-  // Requests that the module become the focused module in the story.
-  1: Focus();
-
-  // Requests that the module be hidden in the story.
-  2: Defocus();
 };
 
 // Communicates the status of the daisy resolution

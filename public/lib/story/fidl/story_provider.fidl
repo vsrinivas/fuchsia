@@ -18,7 +18,7 @@ interface StoryProvider {
   // specifically starting it.
   //
   // Providing |module_url| is deprecated. It is preferred to GetController()
-  // and call StoryController.AddDaisy().
+  // and call StoryController.AddModule().
   1: CreateStory(string? module_url) -> (string story_id);
 
   // Like CreateStory(), but with extra info and with values for the root link
@@ -27,7 +27,7 @@ interface StoryProvider {
   // generated, which is inconvenient.
   //
   // Providing |module_url| is deprecated. It is preferred to GetController()
-  // and call StoryController.AddDaisy().
+  // and call StoryController.AddModule().
   2: CreateStoryWithInfo(string? module_url,
                         vector<StoryInfoExtraEntry>? extra_info,
                         string? root_json) -> (string story_id);
