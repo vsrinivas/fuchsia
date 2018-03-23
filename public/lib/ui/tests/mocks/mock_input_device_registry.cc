@@ -16,7 +16,7 @@ MockInputDeviceRegistry::MockInputDeviceRegistry(
 MockInputDeviceRegistry::~MockInputDeviceRegistry() {}
 
 void MockInputDeviceRegistry::RegisterDevice(
-    input::DeviceDescriptorPtr descriptor,
+    input::DeviceDescriptor descriptor,
     fidl::InterfaceRequest<input::InputDevice> input_device_request) {
   uint32_t device_id = ++next_device_token_;
 

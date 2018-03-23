@@ -8,10 +8,10 @@
 #include <memory>
 #include <unordered_map>
 
-#include "lib/app/cpp/application_context.h"
-#include "lib/ui/tests/mocks/mock_input_device.h"
 #include <fuchsia/cpp/input.h>
+#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/tests/mocks/mock_input_device.h"
 
 namespace mozart {
 namespace test {
@@ -20,14 +20,14 @@ using OnDeviceCallback = std::function<void(MockInputDevice*)>;
 
 class MockInputDeviceRegistry : public input::InputDeviceRegistry {
  public:
-  MockInputDeviceRegistry(const OnDeviceCallback on_device_callback,
-                          const OnReportCallback on_report_callback);
+  MockInputDeviceRegistry(OnDeviceCallback on_device_callback,
+                          OnReportCallback on_report_callback);
   ~MockInputDeviceRegistry();
 
   // |InputDeviceRegistry|:
-  void RegisterDevice(input::DeviceDescriptorPtr descriptor,
-                      fidl::InterfaceRequest<input::InputDevice>
-                          input_device_request) override;
+  void RegisterDevice(
+      input::DeviceDescriptor descriptor,
+      fidl::InterfaceRequest<input::InputDevice> input_device_request) override;
 
  private:
   OnDeviceCallback on_device_callback_;

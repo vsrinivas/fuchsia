@@ -6,7 +6,6 @@
 #define LIB_UI_TESTS_MOCKS_MOCK_VIEW_LISTENER_H_
 
 #include <fuchsia/cpp/views_v1.h>
-#include <fuchsia/cpp/views_v1.h>
 #include "lib/fxl/macros.h"
 
 #include <functional>
@@ -15,17 +14,16 @@ namespace mozart {
 namespace test {
 
 using OnMockViewPropertiesCallback =
-    std::function<void(views_v1::ViewPropertiesPtr v)>;
+    std::function<void(views_v1::ViewProperties)>;
 
 class MockViewListener : public views_v1::ViewListener {
  public:
   MockViewListener();
-  MockViewListener(const OnMockViewPropertiesCallback& callback);
+  MockViewListener(OnMockViewPropertiesCallback callback);
   ~MockViewListener() override;
 
-  void OnPropertiesChanged(
-      views_v1::ViewPropertiesPtr properties,
-      const OnPropertiesChangedCallback& callback) override;
+  void OnPropertiesChanged(views_v1::ViewProperties properties,
+                           OnPropertiesChangedCallback callback) override;
 
  private:
   OnMockViewPropertiesCallback callback_;

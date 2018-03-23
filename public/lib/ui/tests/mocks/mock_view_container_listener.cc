@@ -11,8 +11,8 @@ MockViewContainerListener::MockViewContainerListener()
     : child_attached_callback_(nullptr), child_unavailable_callback_(nullptr) {}
 
 MockViewContainerListener::MockViewContainerListener(
-    const OnMockChildAttachedCallback& child_attached_callback,
-    const OnMockChildUnavailable& child_unavailable_callback)
+    OnMockChildAttachedCallback child_attached_callback,
+    OnMockChildUnavailable child_unavailable_callback)
     : child_attached_callback_(child_attached_callback),
       child_unavailable_callback_(child_unavailable_callback) {}
 
@@ -20,8 +20,8 @@ MockViewContainerListener::~MockViewContainerListener() {}
 
 void MockViewContainerListener::OnChildAttached(
     uint32_t child_key,
-    views_v1::ViewInfoPtr child_view_info,
-    const OnChildAttachedCallback& callback) {
+    views_v1::ViewInfo child_view_info,
+    OnChildAttachedCallback callback) {
   if (child_attached_callback_) {
     child_attached_callback_(child_key, std::move(child_view_info));
   }
@@ -30,7 +30,7 @@ void MockViewContainerListener::OnChildAttached(
 
 void MockViewContainerListener::OnChildUnavailable(
     uint32_t child_key,
-    const OnChildUnavailableCallback& callback) {
+    OnChildUnavailableCallback callback) {
   if (child_unavailable_callback_) {
     child_unavailable_callback_(child_key);
   }

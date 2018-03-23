@@ -12,26 +12,26 @@
 namespace mozart {
 namespace test {
 
-using OnReportCallback = std::function<void(input::InputReportPtr report)>;
+using OnReportCallback = std::function<void(input::InputReport report)>;
 
 class MockInputDevice : public input::InputDevice {
  public:
   MockInputDevice(
       uint32_t device_id,
-      input::DeviceDescriptorPtr descriptor,
+      input::DeviceDescriptor descriptor,
       fidl::InterfaceRequest<input::InputDevice> input_device_request,
       const OnReportCallback& on_report_callback);
   ~MockInputDevice();
 
   uint32_t id() { return id_; }
-  mozart::DeviceDescriptor* descriptor() { return descriptor_.get(); }
+  input::DeviceDescriptor* descriptor() { return &descriptor_; }
 
   // |InputDevice|
-  void DispatchReport(input::InputReportPtr report) override;
+  void DispatchReport(input::InputReport report) override;
 
  private:
   uint32_t id_;
-  input::DeviceDescriptorPtr descriptor_;
+  input::DeviceDescriptor descriptor_;
   fidl::Binding<input::InputDevice> input_device_binding_;
   OnReportCallback on_report_callback_;
 

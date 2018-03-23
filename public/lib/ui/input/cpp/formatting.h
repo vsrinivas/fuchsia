@@ -40,10 +40,6 @@ std::ostream& operator<<(std::ostream& os, const input::TextSelection& value);
 std::ostream& operator<<(std::ostream& os, const input::TextRange& value);
 std::ostream& operator<<(std::ostream& os, const input::TextInputState& value);
 
-std::ostream& operator<<(std::ostream& os, const input::KeyboardType& value);
-std::ostream& operator<<(std::ostream& os,
-                         const input::InputMethodAction& value);
-
 }  // namespace input
 
 #endif  // LIB_UI_INPUT_CPP_FORMATTING_H_

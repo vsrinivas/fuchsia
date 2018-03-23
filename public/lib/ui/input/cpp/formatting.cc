@@ -337,12 +337,4 @@ std::ostream& operator<<(std::ostream& os, const input::TextInputState& value) {
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const input::KeyboardType& value) {
-  return os << static_cast<uint32_t>(value);
-}
-std::ostream& operator<<(std::ostream& os,
-                         const input::InputMethodAction& value) {
-  return os << static_cast<uint32_t>(value);
-}
-
 }  // namespace input
