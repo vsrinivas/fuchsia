@@ -10,7 +10,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
@@ -20,8 +20,8 @@ namespace mozart {
 // Parameters for creating a view.
 struct ViewContext {
   component::ApplicationContext* application_context;
-  ViewManagerPtr view_manager;
-  fidl::InterfaceRequest<ViewOwner> view_owner_request;
+  views_v1::ViewManagerPtr view_manager;
+  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request;
   fidl::InterfaceRequest<component::ServiceProvider> outgoing_services;
 };
 
@@ -42,7 +42,7 @@ class ViewProviderService : public ViewProvider {
   ~ViewProviderService();
 
   // |ViewProvider|
-  void CreateView(fidl::InterfaceRequest<ViewOwner> view_owner_request,
+  void CreateView(fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
                   fidl::InterfaceRequest<component::ServiceProvider>
                       view_services) override;
 

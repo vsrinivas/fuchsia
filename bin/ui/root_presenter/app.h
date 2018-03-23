@@ -16,7 +16,7 @@
 #include "lib/ui/input/fidl/input_device_registry.fidl.h"
 #include "lib/ui/input/input_device_impl.h"
 #include "lib/ui/presentation/fidl/presenter.fidl.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 
 namespace root_presenter {
 

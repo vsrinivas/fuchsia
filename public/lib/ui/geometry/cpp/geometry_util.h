@@ -18,6 +18,14 @@ inline bool operator!=(const geometry::Rect& lhs, const geometry::Rect& rhs) {
   return !(lhs == rhs);
 }
 
+inline bool operator==(const geometry::SizeF& lhs, const geometry::SizeF& rhs) {
+  return lhs.width == rhs.width && lhs.height == rhs.height;
+}
+
+inline bool operator!=(const geometry::SizeF& lhs, const geometry::SizeF& rhs) {
+  return !(lhs == rhs);
+}
+
 inline bool operator==(const geometry::Size& lhs, const geometry::Size& rhs) {
   return lhs.width == rhs.width && lhs.height == rhs.height;
 }

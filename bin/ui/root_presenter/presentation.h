@@ -25,7 +25,7 @@
 #include "lib/ui/input/input_device_impl.h"
 #include "lib/ui/presentation/fidl/presentation.fidl.h"
 #include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1.h>
 #if defined(countof)
 // Workaround for compiler error due to Zircon defining countof() as a macro.

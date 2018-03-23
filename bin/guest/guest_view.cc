@@ -7,7 +7,7 @@
 #include <semaphore.h>
 
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 
 // For now we expose a fixed size display to the guest. Scenic will scale this

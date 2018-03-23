@@ -5,19 +5,19 @@
 #ifndef LIB_UI_VIEW_FRAMEWORK_BASE_VIEW_H_
 #define LIB_UI_VIEW_FRAMEWORK_BASE_VIEW_H_
 
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/input.h>
+#include <fuchsia/cpp/views_v1.h>
+
 #include <memory>
 #include <string>
 
-#include <fuchsia/cpp/component.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/input/fidl/input_connection.fidl.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
-#include <fuchsia/cpp/views_v1.h>
 
 namespace mozart {
 
@@ -27,27 +27,27 @@ namespace mozart {
 //
 // It is not necessary to use this class to implement all Views.
 // This class is merely intended to make the simple apps easier to write.
-class BaseView : private ViewListener,
-                 private ViewContainerListener,
+class BaseView : private views_v1::ViewListener,
+                 private views_v1::ViewContainerListener,
                  private input::InputListener {
  public:
-  BaseView(ViewManagerPtr view_manager,
-           fidl::InterfaceRequest<ViewOwner> view_owner_request,
+  BaseView(views_v1::ViewManagerPtr view_manager,
+           fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
            const std::string& label);
 
   ~BaseView() override;
 
   // Gets the view manager.
-  ViewManager* view_manager() { return view_manager_.get(); }
+  views_v1::ViewManager* view_manager() { return view_manager_.get(); }
 
   // Gets the underlying view interface.
-  View* view() { return view_.get(); }
+  views_v1::View* view() { return view_.get(); }
 
   // Gets the service provider for the view.
   component::ServiceProvider* GetViewServiceProvider();
 
   // Gets the underlying view container interface.
-  ViewContainer* GetViewContainer();
+  views_v1::ViewContainer* GetViewContainer();
 
   // Gets a wrapper for the view's session.
   scenic_lib::Session* session() { return &session_; }
@@ -58,7 +58,7 @@ class BaseView : private ViewListener,
 
   // Gets the current view properties.
   // Returns nullptr if unknown.
-  const ViewProperties* properties() const { return properties_.get(); }
+  const views_v1::ViewProperties& properties() const { return properties_; }
 
   // Returns true if the view has a non-empty size in logical pixels.
   bool has_logical_size() const {
@@ -96,7 +96,7 @@ class BaseView : private ViewListener,
   const gfx::Metrics& metrics() const { return adjusted_metrics_; }
 
   // Gets the input connection.
-  InputConnection* input_connection() { return input_connection_.get(); }
+  input::InputConnection* input_connection() { return input_connection_.get(); }
 
   // Sets a callback which is invoked when the view's owner releases the
   // view causing the view manager to unregister it.
@@ -116,30 +116,30 @@ class BaseView : private ViewListener,
   // the view then update accordingly.
   //
   // The default implementation does nothing.
-  virtual void OnPropertiesChanged(ViewPropertiesPtr old_properties);
+  virtual void OnPropertiesChanged(views_v1::ViewProperties old_properties);
 
   // Called when it's time for the view to update its scene contents due to
   // invalidation.  The new contents are presented once this function returns.
   //
   // The default implementation does nothing.
-  virtual void OnSceneInvalidated(images::PresentationInfoPtr presentation_info);
+  virtual void OnSceneInvalidated(images::PresentationInfo presentation_info);
 
   // Called when session events are received.
   //
   // The default implementation does nothing.
-  virtual void OnSessionEvent(fidl::VectorPtr<ui::EventPtr> events);
+  virtual void OnSessionEvent(fidl::VectorPtr<ui::Event> events);
 
   // Called to handle an input event.
   // Returns true if the view will handle the event, false if the event
   // should continue propagating to other views which may handle it themselves.
   //
   // The default implementation returns false.
-  virtual bool OnInputEvent(input::InputEventPtr event);
+  virtual bool OnInputEvent(input::InputEvent event);
 
   // Called when a child is attached.
   //
   // The default implementation does nothing.
-  virtual void OnChildAttached(uint32_t child_key, ViewInfoPtr child_view_info);
+  virtual void OnChildAttached(uint32_t child_key, views_v1::ViewInfo child_view_info);
 
   // Called when a child becomes unavailable.
   //
@@ -149,36 +149,36 @@ class BaseView : private ViewListener,
  private:
   // |ViewListener|:
   void OnPropertiesChanged(
-      ViewPropertiesPtr properties,
-      const OnPropertiesChangedCallback& callback) override;
+      views_v1::ViewProperties properties,
+      OnPropertiesChangedCallback callback) override;
 
   // |ViewContainerListener|:
   void OnChildAttached(uint32_t child_key,
-                       ViewInfoPtr child_view_info,
-                       const OnChildAttachedCallback& callback) override;
+                       views_v1::ViewInfo child_view_info,
+                       OnChildAttachedCallback callback) override;
   void OnChildUnavailable(uint32_t child_key,
-                          const OnChildUnavailableCallback& callback) override;
+                          OnChildUnavailableCallback callback) override;
 
   // |InputListener|:
-  void OnEvent(input::InputEventPtr event,
-               const OnEventCallback& callback) override;
+  void OnEvent(input::InputEvent event,
+               OnEventCallback callback) override;
 
   void PresentScene(zx_time_t presentation_time);
-  void HandleSessionEvents(fidl::VectorPtr<ui::EventPtr> events);
+  void HandleSessionEvents(fidl::VectorPtr<ui::Event> events);
   void AdjustMetricsAndPhysicalSize();
 
-  ViewManagerPtr view_manager_;
-  fidl::Binding<ViewListener> view_listener_binding_;
-  fidl::Binding<ViewContainerListener> view_container_listener_binding_;
-  fidl::Binding<InputListener> input_listener_binding_;
+  views_v1::ViewManagerPtr view_manager_;
+  fidl::Binding<views_v1::ViewListener> view_listener_binding_;
+  fidl::Binding<views_v1::ViewContainerListener> view_container_listener_binding_;
+  fidl::Binding<input::InputListener> input_listener_binding_;
 
-  ViewPtr view_;
+  views_v1::ViewPtr view_;
   component::ServiceProviderPtr view_service_provider_;
-  ViewContainerPtr view_container_;
-  InputConnectionPtr input_connection_;
-  ViewPropertiesPtr properties_;
-  SizeF logical_size_;
-  Size physical_size_;
+  views_v1::ViewContainerPtr view_container_;
+  input::InputConnectionPtr input_connection_;
+  views_v1::ViewProperties properties_;
+  geometry::SizeF logical_size_;
+  geometry::Size physical_size_;
   bool need_square_metrics_ = false;
   gfx::Metrics original_metrics_;
   gfx::Metrics adjusted_metrics_;

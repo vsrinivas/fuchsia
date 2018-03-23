@@ -13,7 +13,7 @@
 #include "lib/ui/tests/mocks/mock_view_listener.h"
 #include "lib/ui/tests/mocks/mock_view_tree_listener.h"
 #include "lib/ui/tests/test_with_message_loop.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1.h>
 
 extern std::unique_ptr<component::ApplicationContext> g_application_context;
