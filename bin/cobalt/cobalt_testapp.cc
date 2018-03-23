@@ -13,11 +13,8 @@
 #include <sstream>
 #include <string>
 
+#include <fuchsia/cpp/cobalt.h>
 #include "lib/app/cpp/application_context.h"
-#include <fuchsia/cpp/cobalt.h>
-#include <fuchsia/cpp/cobalt.h>
-#include "lib/cobalt/fidl/cobalt_controller.fidl-sync.h"
-#include <fuchsia/cpp/cobalt.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -104,7 +101,8 @@ std::string StatusToString(cobalt::Status status) {
 
 class CobaltTestApp {
  public:
-  CobaltTestApp(bool use_network, bool do_environment_test,
+  CobaltTestApp(bool use_network,
+                bool do_environment_test,
                 int num_observations_per_batch)
       : use_network_(use_network),
         do_environment_test_(do_environment_test),
@@ -260,25 +258,25 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
                             uint32_t min_interval_seconds) {
   app_controller_.Unbind();
   component::Services services;
-  auto launch_info = component::ApplicationLaunchInfo::New();
-  launch_info->url = "cobalt";
-  launch_info->directory_request = services.NewRequest();
+  component::ApplicationLaunchInfo launch_info;
+  launch_info.url = "cobalt";
+  launch_info.directory_request = services.NewRequest();
   {
     std::ostringstream stream;
     stream << "--schedule_interval_seconds=" << schedule_interval_seconds;
-    launch_info->arguments.push_back(stream.str());
+    launch_info.arguments.push_back(stream.str());
   }
 
   {
     std::ostringstream stream;
     stream << "--min_interval_seconds=" << min_interval_seconds;
-    launch_info->arguments.push_back(stream.str());
+    launch_info.arguments.push_back(stream.str());
   }
 
   {
     std::ostringstream stream;
     stream << "--verbose=" << fxl::GetVlogVerbosity();
-    launch_info->arguments.push_back(stream.str());
+    launch_info.arguments.push_back(stream.str());
   }
   context_->launcher()->CreateApplication(std::move(launch_info),
                                           app_controller_.NewRequest());
@@ -287,10 +285,10 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   });
 
   cobalt::CobaltEncoderFactorySyncPtr factory;
-  services.ConnectToService(fidl::GetSynchronousProxy(&factory));
-  factory->GetEncoder(kTestAppProjectId, GetSynchronousProxy(&encoder_));
+  services.ConnectToService(factory.NewRequest());
+  factory->GetEncoder(kTestAppProjectId, encoder_.NewRequest());
 
-  services.ConnectToService(fidl::GetSynchronousProxy(&cobalt_controller_));
+  services.ConnectToService(cobalt_controller_.NewRequest());
 }
 
 bool CobaltTestApp::RunTestsWithRequestSendSoon() {
@@ -330,9 +328,9 @@ bool CobaltTestApp::RunTestsWithBlockUntilEmpty() {
 bool CobaltTestApp::RunTestsUsingServiceFromEnvironment() {
   // Connect to the Cobalt FIDL service provided by the environment.
   cobalt::CobaltEncoderFactorySyncPtr factory;
-  context_->ConnectToEnvironmentService(fidl::GetSynchronousProxy(&factory));
+  context_->ConnectToEnvironmentService(factory.NewRequest());
 
-  factory->GetEncoder(kTestAppProjectId, GetSynchronousProxy(&encoder_));
+  factory->GetEncoder(kTestAppProjectId, encoder_.NewRequest());
 
   // Invoke TestRareEventWithIndicesUsingServiceFromEnvironment() three times
   // and return true if it succeeds all three times.
@@ -494,8 +492,8 @@ bool CobaltTestApp::EncodeStringAndSend(uint32_t metric_id,
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
     if (i == 0) {
-      auto value = cobalt::Value::New();
-      value->set_string_value(val);
+      cobalt::Value value;
+      value.set_string_value(val);
       encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
                                &status);
     } else {
@@ -520,8 +518,8 @@ bool CobaltTestApp::EncodeIntAndSend(uint32_t metric_id,
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
     if (i == 0) {
-      auto value = cobalt::Value::New();
-      value->set_int_value(val);
+      cobalt::Value value;
+      value.set_int_value(val);
       encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
                                &status);
     } else {
@@ -548,15 +546,15 @@ bool CobaltTestApp::EncodeIntDistributionAndSend(
     fidl::VectorPtr<cobalt::BucketDistributionEntry> distribution;
     for (auto it = distribution_map.begin(); distribution_map.end() != it;
          it++) {
-      auto entry = cobalt::BucketDistributionEntry::New();
-      entry->index = it->first;
-      entry->count = it->second;
+      cobalt::BucketDistributionEntry entry;
+      entry.index = it->first;
+      entry.count = it->second;
       distribution.push_back(std::move(entry));
     }
 
     if (i == 0) {
-      auto value = cobalt::Value::New();
-      value->set_int_bucket_distribution(std::move(distribution));
+      cobalt::Value value;
+      value.set_int_bucket_distribution(std::move(distribution));
       encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
                                &status);
     } else {
@@ -582,8 +580,8 @@ bool CobaltTestApp::EncodeDoubleAndSend(uint32_t metric_id,
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
     if (i == 0) {
-      auto value = cobalt::Value::New();
-      value->set_double_value(val);
+      cobalt::Value value;
+      value.set_double_value(val);
       encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
                                &status);
     } else {
@@ -608,8 +606,8 @@ bool CobaltTestApp::EncodeIndexAndSend(uint32_t metric_id,
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
     if (i == 0) {
-      auto value = cobalt::Value::New();
-      value->set_index_value(index);
+      cobalt::Value value;
+      value.set_index_value(index);
       encoder_->AddObservation(metric_id, encoding_config_id, std::move(value),
                                &status);
     } else {
