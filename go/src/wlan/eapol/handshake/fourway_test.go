@@ -12,7 +12,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
+	mlme "fuchsia/go/wlan_mlme"
 	"testing"
 	"wlan/eapol"
 	"wlan/eapol/crypto"

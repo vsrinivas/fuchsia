@@ -5,7 +5,7 @@
 package wlan_test
 
 import (
-	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
+	mlme "fuchsia/go/wlan_mlme"
 	"testing"
 	. "wlan/wlan"
 )
@@ -14,7 +14,7 @@ func addBss(index int, ssid string, channel uint8, cbw mlme.Cbw, rssi uint8, res
 	bssDesc := mlme.BssDescription{
 		Bssid:   [6]uint8{uint8(index), 1, 2, 3, 4, 5},
 		Ssid:    ssid,
-		BssType: mlme.BssTypes_Infrastructure,
+		BssType: mlme.BssTypesInfrastructure,
 		Chan: mlme.WlanChan{
 			Primary: channel,
 			Cbw:     cbw,
@@ -26,9 +26,9 @@ func addBss(index int, ssid string, channel uint8, cbw mlme.Cbw, rssi uint8, res
 
 func TestCollectResults(t *testing.T) {
 	resp := &mlme.ScanResponse{}
-	addBss(0, "abc", 1, mlme.Cbw_Cbw20, 0x80, resp)
-	addBss(1, "def", 1, mlme.Cbw_Cbw20, 0x80, resp)
-	addBss(2, "abc", 6, mlme.Cbw_Cbw20, 0x85, resp)
+	addBss(0, "abc", 1, mlme.CbwCbw20, 0x80, resp)
+	addBss(1, "def", 1, mlme.CbwCbw20, 0x80, resp)
+	addBss(2, "abc", 6, mlme.CbwCbw20, 0x85, resp)
 
 	aps := CollectScanResults(resp, "abc", "")
 	if len(aps) != 2 {
