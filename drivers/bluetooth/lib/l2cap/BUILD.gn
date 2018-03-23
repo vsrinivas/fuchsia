@@ -28,7 +28,7 @@ static_library("l2cap") {
     "signaling_channel.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/public/lib/fxl",
   ]
@@ -46,7 +46,7 @@ source_set("testing") {
     "fake_layer.h",
   ]
 
-  deps = [
+  public_deps = [
     ":l2cap",
     "//garnet/drivers/bluetooth/lib/common",
     "//garnet/drivers/bluetooth/lib/hci",

@@ -17,7 +17,7 @@ static_library("gatt") {
     "types.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/drivers/bluetooth/lib/att",
     "//garnet/public/lib/fidl/cpp",
   ]
@@ -31,7 +31,7 @@ source_set("testing") {
     "fake_layer.h",
   ]
 
-  deps = [
+  public_deps = [
     ":gatt",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fbl",
