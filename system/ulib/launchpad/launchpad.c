@@ -1280,8 +1280,6 @@ zx_status_t launchpad_go(launchpad_t* lp, zx_handle_t* proc, const char** errmsg
     return status;
 }
 
-#include <launchpad/vmo.h>
-
 static zx_status_t launchpad_file_load_with_vdso(launchpad_t* lp, zx_handle_t vmo) {
     launchpad_file_load(lp, vmo);
     launchpad_load_vdso(lp, ZX_HANDLE_INVALID);
