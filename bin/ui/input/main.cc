@@ -125,13 +125,13 @@ class InputApp {
         mozart::TouchscreenDescriptor::New();
     touchscreen->x = mozart::Axis::New();
     touchscreen->x->range = mozart::Range::New();
-    touchscreen->x->range->min = 0;
-    touchscreen->x->range->max = width;
+    touchscreen->x.range.min = 0;
+    touchscreen->x.range.max = width;
 
     touchscreen->y = mozart::Axis::New();
     touchscreen->y->range = mozart::Range::New();
-    touchscreen->y->range->min = 0;
-    touchscreen->y->range->max = height;
+    touchscreen->y.range.min = 0;
+    touchscreen->y.range.max = height;
 
     mozart::DeviceDescriptorPtr descriptor = mozart::DeviceDescriptor::New();
     descriptor->touchscreen = std::move(touchscreen);

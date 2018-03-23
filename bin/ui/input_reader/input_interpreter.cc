@@ -20,19 +20,27 @@
 
 #include <trace/event.h>
 
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include <fuchsia/cpp/input.h>
 
 namespace {
+
 int64_t InputEventTimestampNow() {
   return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
 }
+
+input::InputReport CloneReport(const input::InputReportPtr& report) {
+  input::InputReport result;
+  fidl::Clone(*report, &result);
+  return result;
+}
+
 }  // namespace
 
 namespace mozart {
-namespace input {
 
 std::unique_ptr<InputInterpreter> InputInterpreter::Open(
     int dirfd,
@@ -88,21 +96,17 @@ bool InputInterpreter::Initialize() {
     mouse_device_type_ = MouseDeviceType::BOOT;
 
     mouse_descriptor_ = input::MouseDescriptor::New();
-    mouse_descriptor_->rel_x = input::Axis::New();
-    mouse_descriptor_->rel_x->range = input::Range::New();
-    mouse_descriptor_->rel_x->range->min = INT32_MIN;
-    mouse_descriptor_->rel_x->range->max = INT32_MAX;
-    mouse_descriptor_->rel_x->resolution = 1;
+    mouse_descriptor_->rel_x.range.min = INT32_MIN;
+    mouse_descriptor_->rel_x.range.max = INT32_MAX;
+    mouse_descriptor_->rel_x.resolution = 1;
 
-    mouse_descriptor_->rel_y = input::Axis::New();
-    mouse_descriptor_->rel_y->range = input::Range::New();
-    mouse_descriptor_->rel_y->range->min = INT32_MIN;
-    mouse_descriptor_->rel_y->range->max = INT32_MAX;
-    mouse_descriptor_->rel_y->resolution = 1;
+    mouse_descriptor_->rel_y.range.min = INT32_MIN;
+    mouse_descriptor_->rel_y.range.max = INT32_MAX;
+    mouse_descriptor_->rel_y.resolution = 1;
 
-    mouse_descriptor_->buttons |= kMouseButtonPrimary;
-    mouse_descriptor_->buttons |= kMouseButtonSecondary;
-    mouse_descriptor_->buttons |= kMouseButtonTertiary;
+    mouse_descriptor_->buttons |= input::kMouseButtonPrimary;
+    mouse_descriptor_->buttons |= input::kMouseButtonSecondary;
+    mouse_descriptor_->buttons |= input::kMouseButtonTertiary;
 
     mouse_report_ = input::InputReport::New();
     mouse_report_->mouse = input::MouseReport::New();
@@ -131,21 +135,18 @@ bool InputInterpreter::Initialize() {
       FXL_VLOG(2) << "Device " << name_ << " has stylus";
       has_stylus_ = true;
       stylus_descriptor_ = input::StylusDescriptor::New();
-      stylus_descriptor_->x = input::Axis::New();
-      stylus_descriptor_->x->range = input::Range::New();
-      stylus_descriptor_->x->range->min = 0;
-      stylus_descriptor_->x->range->max = ACER12_STYLUS_X_MAX;
-      stylus_descriptor_->x->resolution = 1;
 
-      stylus_descriptor_->y = input::Axis::New();
-      stylus_descriptor_->y->range = input::Range::New();
-      stylus_descriptor_->y->range->min = 0;
-      stylus_descriptor_->y->range->max = ACER12_STYLUS_Y_MAX;
-      stylus_descriptor_->y->resolution = 1;
+      stylus_descriptor_->x.range.min = 0;
+      stylus_descriptor_->x.range.max = ACER12_STYLUS_X_MAX;
+      stylus_descriptor_->x.resolution = 1;
+
+      stylus_descriptor_->y.range.min = 0;
+      stylus_descriptor_->y.range.max = ACER12_STYLUS_Y_MAX;
+      stylus_descriptor_->y.resolution = 1;
 
       stylus_descriptor_->is_invertible = false;
 
-      stylus_descriptor_->buttons |= kStylusBarrel;
+      stylus_descriptor_->buttons |= input::kStylusBarrel;
 
       stylus_report_ = input::InputReport::New();
       stylus_report_->stylus = input::StylusReport::New();
@@ -153,17 +154,14 @@ bool InputInterpreter::Initialize() {
       FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
-      touchscreen_descriptor_->x = input::Axis::New();
-      touchscreen_descriptor_->x->range = input::Range::New();
-      touchscreen_descriptor_->x->range->min = 0;
-      touchscreen_descriptor_->x->range->max = ACER12_X_MAX;
-      touchscreen_descriptor_->x->resolution = 1;
 
-      touchscreen_descriptor_->y = input::Axis::New();
-      touchscreen_descriptor_->y->range = input::Range::New();
-      touchscreen_descriptor_->y->range->min = 0;
-      touchscreen_descriptor_->y->range->max = ACER12_Y_MAX;
-      touchscreen_descriptor_->y->resolution = 1;
+      touchscreen_descriptor_->x.range.min = 0;
+      touchscreen_descriptor_->x.range.max = ACER12_X_MAX;
+      touchscreen_descriptor_->x.resolution = 1;
+
+      touchscreen_descriptor_->y.range.min = 0;
+      touchscreen_descriptor_->y.range.max = ACER12_Y_MAX;
+      touchscreen_descriptor_->y.resolution = 1;
 
       // TODO(jpoichet) do not hardcode this
       touchscreen_descriptor_->max_finger_id = 255;
@@ -183,17 +181,14 @@ bool InputInterpreter::Initialize() {
       FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
-      touchscreen_descriptor_->x = input::Axis::New();
-      touchscreen_descriptor_->x->range = input::Range::New();
-      touchscreen_descriptor_->x->range->min = 0;
-      touchscreen_descriptor_->x->range->max = SAMSUNG_X_MAX;
-      touchscreen_descriptor_->x->resolution = 1;
 
-      touchscreen_descriptor_->y = input::Axis::New();
-      touchscreen_descriptor_->y->range = input::Range::New();
-      touchscreen_descriptor_->y->range->min = 0;
-      touchscreen_descriptor_->y->range->max = SAMSUNG_Y_MAX;
-      touchscreen_descriptor_->y->resolution = 1;
+      touchscreen_descriptor_->x.range.min = 0;
+      touchscreen_descriptor_->x.range.max = SAMSUNG_X_MAX;
+      touchscreen_descriptor_->x.resolution = 1;
+
+      touchscreen_descriptor_->y.range.min = 0;
+      touchscreen_descriptor_->y.range.max = SAMSUNG_Y_MAX;
+      touchscreen_descriptor_->y.resolution = 1;
 
       // TODO(jpoichet) do not hardcode this
       touchscreen_descriptor_->max_finger_id = 255;
@@ -215,17 +210,14 @@ bool InputInterpreter::Initialize() {
       FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
-      touchscreen_descriptor_->x = input::Axis::New();
-      touchscreen_descriptor_->x->range = input::Range::New();
-      touchscreen_descriptor_->x->range->min = 0;
-      touchscreen_descriptor_->x->range->max = PARADISE_X_MAX;
-      touchscreen_descriptor_->x->resolution = 1;
 
-      touchscreen_descriptor_->y = input::Axis::New();
-      touchscreen_descriptor_->y->range = input::Range::New();
-      touchscreen_descriptor_->y->range->min = 0;
-      touchscreen_descriptor_->y->range->max = PARADISE_Y_MAX;
-      touchscreen_descriptor_->y->resolution = 1;
+      touchscreen_descriptor_->x.range.min = 0;
+      touchscreen_descriptor_->x.range.max = PARADISE_X_MAX;
+      touchscreen_descriptor_->x.resolution = 1;
+
+      touchscreen_descriptor_->y.range.min = 0;
+      touchscreen_descriptor_->y.range.max = PARADISE_Y_MAX;
+      touchscreen_descriptor_->y.resolution = 1;
 
       // TODO(cpu) do not hardcode |max_finger_id|.
       touchscreen_descriptor_->max_finger_id = 255;
@@ -247,17 +239,14 @@ bool InputInterpreter::Initialize() {
       FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
-      touchscreen_descriptor_->x = input::Axis::New();
-      touchscreen_descriptor_->x->range = input::Range::New();
-      touchscreen_descriptor_->x->range->min = 0;
-      touchscreen_descriptor_->x->range->max = PARADISE_X_MAX;
-      touchscreen_descriptor_->x->resolution = 1;
 
-      touchscreen_descriptor_->y = input::Axis::New();
-      touchscreen_descriptor_->y->range = input::Range::New();
-      touchscreen_descriptor_->y->range->min = 0;
-      touchscreen_descriptor_->y->range->max = PARADISE_Y_MAX;
-      touchscreen_descriptor_->y->resolution = 1;
+      touchscreen_descriptor_->x.range.min = 0;
+      touchscreen_descriptor_->x.range.max = PARADISE_X_MAX;
+      touchscreen_descriptor_->x.resolution = 1;
+
+      touchscreen_descriptor_->y.range.min = 0;
+      touchscreen_descriptor_->y.range.max = PARADISE_Y_MAX;
+      touchscreen_descriptor_->y.resolution = 1;
 
       // TODO(cpu) do not hardcode |max_finger_id|.
       touchscreen_descriptor_->max_finger_id = 255;
@@ -279,19 +268,16 @@ bool InputInterpreter::Initialize() {
       mouse_device_type_ = MouseDeviceType::PARADISEv1;
 
       mouse_descriptor_ = input::MouseDescriptor::New();
-      mouse_descriptor_->rel_x = input::Axis::New();
-      mouse_descriptor_->rel_x->range = input::Range::New();
-      mouse_descriptor_->rel_x->range->min = INT32_MIN;
-      mouse_descriptor_->rel_x->range->max = INT32_MAX;
-      mouse_descriptor_->rel_x->resolution = 1;
 
-      mouse_descriptor_->rel_y = input::Axis::New();
-      mouse_descriptor_->rel_y->range = input::Range::New();
-      mouse_descriptor_->rel_y->range->min = INT32_MIN;
-      mouse_descriptor_->rel_y->range->max = INT32_MAX;
-      mouse_descriptor_->rel_y->resolution = 1;
+      mouse_descriptor_->rel_x.range.min = INT32_MIN;
+      mouse_descriptor_->rel_x.range.max = INT32_MAX;
+      mouse_descriptor_->rel_x.resolution = 1;
 
-      mouse_descriptor_->buttons |= kMouseButtonPrimary;
+      mouse_descriptor_->rel_y.range.min = INT32_MIN;
+      mouse_descriptor_->rel_y.range.max = INT32_MAX;
+      mouse_descriptor_->rel_y.resolution = 1;
+
+      mouse_descriptor_->buttons |= input::kMouseButtonPrimary;
 
       mouse_report_ = input::InputReport::New();
       mouse_report_->mouse = input::MouseReport::New();
@@ -308,19 +294,16 @@ bool InputInterpreter::Initialize() {
       mouse_device_type_ = MouseDeviceType::PARADISEv2;
 
       mouse_descriptor_ = input::MouseDescriptor::New();
-      mouse_descriptor_->rel_x = input::Axis::New();
-      mouse_descriptor_->rel_x->range = input::Range::New();
-      mouse_descriptor_->rel_x->range->min = INT32_MIN;
-      mouse_descriptor_->rel_x->range->max = INT32_MAX;
-      mouse_descriptor_->rel_x->resolution = 1;
 
-      mouse_descriptor_->rel_y = input::Axis::New();
-      mouse_descriptor_->rel_y->range = input::Range::New();
-      mouse_descriptor_->rel_y->range->min = INT32_MIN;
-      mouse_descriptor_->rel_y->range->max = INT32_MAX;
-      mouse_descriptor_->rel_y->resolution = 1;
+      mouse_descriptor_->rel_x.range.min = INT32_MIN;
+      mouse_descriptor_->rel_x.range.max = INT32_MAX;
+      mouse_descriptor_->rel_x.resolution = 1;
 
-      mouse_descriptor_->buttons |= kMouseButtonPrimary;
+      mouse_descriptor_->rel_y.range.min = INT32_MIN;
+      mouse_descriptor_->rel_y.range.max = INT32_MAX;
+      mouse_descriptor_->rel_y.resolution = 1;
+
+      mouse_descriptor_->buttons |= input::kMouseButtonPrimary;
 
       mouse_report_ = input::InputReport::New();
       mouse_report_->mouse = input::MouseReport::New();
@@ -335,17 +318,14 @@ bool InputInterpreter::Initialize() {
       FXL_VLOG(2) << "Device " << name_ << " has touchscreen";
       has_touchscreen_ = true;
       touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
-      touchscreen_descriptor_->x = input::Axis::New();
-      touchscreen_descriptor_->x->range = input::Range::New();
-      touchscreen_descriptor_->x->range->min = 0;
-      touchscreen_descriptor_->x->range->max = EGALAX_X_MAX;
-      touchscreen_descriptor_->x->resolution = 1;
 
-      touchscreen_descriptor_->y = input::Axis::New();
-      touchscreen_descriptor_->y->range = input::Range::New();
-      touchscreen_descriptor_->y->range->min = 0;
-      touchscreen_descriptor_->y->range->max = EGALAX_Y_MAX;
-      touchscreen_descriptor_->y->resolution = 1;
+      touchscreen_descriptor_->x.range.min = 0;
+      touchscreen_descriptor_->x.range.max = EGALAX_X_MAX;
+      touchscreen_descriptor_->x.resolution = 1;
+
+      touchscreen_descriptor_->y.range.min = 0;
+      touchscreen_descriptor_->y.range.max = EGALAX_Y_MAX;
+      touchscreen_descriptor_->y.resolution = 1;
 
       touchscreen_descriptor_->max_finger_id = 1;
 
@@ -386,18 +366,18 @@ bool InputInterpreter::Initialize() {
 }
 
 void InputInterpreter::NotifyRegistry() {
-  input::DeviceDescriptorPtr descriptor = input::DeviceDescriptor::New();
+  input::DeviceDescriptor descriptor;
   if (has_keyboard_) {
-    descriptor->keyboard = keyboard_descriptor_.Clone();
+    fidl::Clone(keyboard_descriptor_, &descriptor.keyboard);
   }
   if (has_mouse_) {
-    descriptor->mouse = mouse_descriptor_.Clone();
+    fidl::Clone(mouse_descriptor_, &descriptor.mouse);
   }
   if (has_stylus_) {
-    descriptor->stylus = stylus_descriptor_.Clone();
+    fidl::Clone(stylus_descriptor_, &descriptor.stylus);
   }
   if (has_touchscreen_) {
-    descriptor->touchscreen = touchscreen_descriptor_.Clone();
+    fidl::Clone(touchscreen_descriptor_, &descriptor.touchscreen);
   }
 
   registry_->RegisterDevice(std::move(descriptor), input_device_.NewRequest());
@@ -415,7 +395,7 @@ bool InputInterpreter::Read(bool discard) {
   if (has_keyboard_) {
     ParseKeyboardReport(report_.data(), rc);
     if (!discard) {
-      input_device_->DispatchReport(keyboard_report_.Clone());
+      input_device_->DispatchReport(CloneReport(keyboard_report_));
     }
   }
 
@@ -423,14 +403,14 @@ bool InputInterpreter::Read(bool discard) {
     case MouseDeviceType::BOOT:
       ParseMouseReport(report_.data(), rc);
       if (!discard) {
-        input_device_->DispatchReport(mouse_report_.Clone());
+        input_device_->DispatchReport(CloneReport(mouse_report_));
       }
       break;
     case MouseDeviceType::PARADISEv1:
       if (ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(report_.data(),
                                                               rc)) {
         if (!discard) {
-          input_device_->DispatchReport(mouse_report_.Clone());
+          input_device_->DispatchReport(CloneReport(mouse_report_));
         }
       }
       break;
@@ -438,7 +418,7 @@ bool InputInterpreter::Read(bool discard) {
       if (ParseParadiseTouchpadReport<paradise_touchpad_v2_t>(report_.data(),
                                                               rc)) {
         if (!discard) {
-          input_device_->DispatchReport(mouse_report_.Clone());
+          input_device_->DispatchReport(CloneReport(mouse_report_));
         }
       }
       break;
@@ -451,13 +431,13 @@ bool InputInterpreter::Read(bool discard) {
       if (report_[0] == ACER12_RPT_ID_STYLUS) {
         if (ParseAcer12StylusReport(report_.data(), rc)) {
           if (!discard) {
-            input_device_->DispatchReport(stylus_report_.Clone());
+            input_device_->DispatchReport(CloneReport(stylus_report_));
           }
         }
       } else if (report_[0] == ACER12_RPT_ID_TOUCH) {
         if (ParseAcer12TouchscreenReport(report_.data(), rc)) {
           if (!discard) {
-            input_device_->DispatchReport(touchscreen_report_.Clone());
+            input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
         }
       }
@@ -467,7 +447,7 @@ bool InputInterpreter::Read(bool discard) {
       if (report_[0] == SAMSUNG_RPT_ID_TOUCH) {
         if (ParseSamsungTouchscreenReport(report_.data(), rc)) {
           if (!discard) {
-            input_device_->DispatchReport(touchscreen_report_.Clone());
+            input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
         }
       }
@@ -478,7 +458,7 @@ bool InputInterpreter::Read(bool discard) {
         if (ParseParadiseTouchscreenReport<paradise_touch_t>(report_.data(),
                                                              rc)) {
           if (!discard) {
-            input_device_->DispatchReport(touchscreen_report_.Clone());
+            input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
         }
       }
@@ -488,7 +468,7 @@ bool InputInterpreter::Read(bool discard) {
         if (ParseParadiseTouchscreenReport<paradise_touch_v2_t>(report_.data(),
                                                                 rc)) {
           if (!discard) {
-            input_device_->DispatchReport(touchscreen_report_.Clone());
+            input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
         }
       }
@@ -497,7 +477,7 @@ bool InputInterpreter::Read(bool discard) {
       if (report_[0] == EGALAX_RPT_ID_TOUCH) {
         if (ParseEGalaxTouchscreenReport(report_.data(), rc)) {
           if (!discard) {
-            input_device_->DispatchReport(touchscreen_report_.Clone());
+            input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
         }
       }
@@ -562,7 +542,7 @@ bool InputInterpreter::ParseAcer12StylusReport(uint8_t* r, size_t len) {
   }
 
   if (acer12_stylus_status_barrel(report->status)) {
-    stylus_report_->stylus->pressed_buttons |= kStylusBarrel;
+    stylus_report_->stylus->pressed_buttons |= input::kStylusBarrel;
   }
   FXL_VLOG(2) << name_ << " parsed: " << *stylus_report_;
 
@@ -595,12 +575,12 @@ bool InputInterpreter::ParseAcer12TouchscreenReport(uint8_t* r, size_t len) {
 
       if (!acer12_finger_id_tswitch(fid))
         continue;
-      input::TouchPtr touch = input::Touch::New();
-      touch->finger_id = acer12_finger_id_contact(fid);
-      touch->x = acer12_touch_reports_[i].fingers[c].x;
-      touch->y = acer12_touch_reports_[i].fingers[c].y;
-      touch->width = acer12_touch_reports_[i].fingers[c].width;
-      touch->height = acer12_touch_reports_[i].fingers[c].height;
+      input::Touch touch;
+      touch.finger_id = acer12_finger_id_contact(fid);
+      touch.x = acer12_touch_reports_[i].fingers[c].x;
+      touch.y = acer12_touch_reports_[i].fingers[c].y;
+      touch.width = acer12_touch_reports_[i].fingers[c].width;
+      touch.height = acer12_touch_reports_[i].fingers[c].height;
       touchscreen_report_->touchscreen->touches.resize(index + 1);
       touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
     }
@@ -626,12 +606,12 @@ bool InputInterpreter::ParseSamsungTouchscreenReport(uint8_t* r, size_t len) {
     if (!samsung_finger_id_tswitch(fid))
       continue;
 
-    input::TouchPtr touch = input::Touch::New();
-    touch->finger_id = samsung_finger_id_contact(fid);
-    touch->x = report.fingers[i].x;
-    touch->y = report.fingers[i].y;
-    touch->width = report.fingers[i].width;
-    touch->height = report.fingers[i].height;
+    input::Touch touch;
+    touch.finger_id = samsung_finger_id_contact(fid);
+    touch.x = report.fingers[i].x;
+    touch.y = report.fingers[i].y;
+    touch.width = report.fingers[i].width;
+    touch.height = report.fingers[i].height;
     touchscreen_report_->touchscreen->touches.resize(index + 1);
     touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
   }
@@ -656,12 +636,12 @@ bool InputInterpreter::ParseParadiseTouchscreenReport(uint8_t* r, size_t len) {
     if (!paradise_finger_flags_tswitch(report.fingers[i].flags))
       continue;
 
-    input::TouchPtr touch = input::Touch::New();
-    touch->finger_id = report.fingers[i].finger_id;
-    touch->x = report.fingers[i].x;
-    touch->y = report.fingers[i].y;
-    touch->width = 5;  // TODO(cpu): Don't hardcode |width| or |height|.
-    touch->height = 5;
+    input::Touch touch;
+    touch.finger_id = report.fingers[i].finger_id;
+    touch.x = report.fingers[i].x;
+    touch.y = report.fingers[i].y;
+    touch.width = 5;  // TODO(cpu): Don't hardcode |width| or |height|.
+    touch.height = 5;
     touchscreen_report_->touchscreen->touches.resize(index + 1);
     touchscreen_report_->touchscreen->touches->at(index++) = std::move(touch);
   }
@@ -680,12 +660,12 @@ bool InputInterpreter::ParseEGalaxTouchscreenReport(uint8_t* r, size_t len) {
   const auto& report = *(reinterpret_cast<egalax_touch_t*>(r));
   touchscreen_report_->event_time = InputEventTimestampNow();
   if (egalax_pressed_flags(report.button_pad)) {
-    input::TouchPtr touch = input::Touch::New();
-    touch->finger_id = 0;
-    touch->x = report.x;
-    touch->y = report.y;
-    touch->width = 5;
-    touch->height = 5;
+    input::Touch touch;
+    touch.finger_id = 0;
+    touch.x = report.x;
+    touch.y = report.y;
+    touch.width = 5;
+    touch.height = 5;
     touchscreen_report_->touchscreen->touches.resize(1);
     touchscreen_report_->touchscreen->touches->at(0) = std::move(touch);
   } else {
@@ -724,7 +704,7 @@ bool InputInterpreter::ParseParadiseTouchpadReport(uint8_t* r, size_t len) {
   mouse_report_->mouse->rel_y =
       mouse_abs_x_ != -1 ? 5 * (report.fingers[0].y - mouse_abs_y_) / 32 : 0;
   mouse_report_->mouse->pressed_buttons =
-      report.button ? kMouseButtonPrimary : 0;
+      report.button ? input::kMouseButtonPrimary : 0;
 
   // Don't update the abs position if there was no relative change, so that
   // we don't drop fractional relative deltas.
@@ -777,5 +757,4 @@ zx_status_t InputInterpreter::GetMaxReportLength(
   return rc;
 }
 
-}  // namespace input
 }  // namespace mozart

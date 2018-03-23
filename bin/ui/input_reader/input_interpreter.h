@@ -17,7 +17,6 @@
 #include <fuchsia/cpp/input.h>
 
 namespace mozart {
-namespace input {
 
 class InputInterpreter {
  public:
@@ -109,7 +108,6 @@ class InputInterpreter {
   input::InputDevicePtr input_device_;
 };
 
-}  // namespace input
 }  // namespace mozart
 
 #endif  // GARNET_BIN_UI_INPUT_READER_INPUT_INTERPRETER_H_

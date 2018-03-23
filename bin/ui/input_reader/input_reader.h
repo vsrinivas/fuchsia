@@ -16,7 +16,6 @@
 #include <fuchsia/cpp/input.h>
 
 namespace mozart {
-namespace input {
 
 struct DeviceInfo;
 
@@ -63,7 +62,6 @@ class InputReader {
   FXL_DISALLOW_COPY_AND_ASSIGN(InputReader);
 };
 
-}  // namespace input
 }  // namespace mozart
 
 #endif  // GARNET_BIN_UI_INPUT_READER_INPUT_READER_H_

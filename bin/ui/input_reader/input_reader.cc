@@ -10,7 +10,6 @@
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace mozart {
-namespace input {
 
 constexpr char kInputDevPath[] = "/dev/class/input";
 constexpr char kFramebuffPath[] = "/dev/class/framebuffer";
@@ -151,5 +150,4 @@ async_wait_result_t InputReader::OnDisplayHandleReady(
   return ASYNC_WAIT_FINISHED;
 }
 
-}  // namespace input
 }  // namespace mozart
