@@ -34,6 +34,8 @@
 #endif
 
 #if defined(CUBE_USE_IMAGE_PIPE)
+#include <fuchsia/cpp/display_pipe.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -41,7 +43,6 @@
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/logging.h"
 #include "garnet/lib/magma/src/display_pipe/client/buffer.h"
-#include "garnet/lib/magma/src/display_pipe/services/display_provider.fidl.h"
 
 #include "garnet/public/lib/ui/gfx/fidl/commands.fidl.h"
 #include "garnet/public/lib/ui/scenic/fidl_helpers.h"

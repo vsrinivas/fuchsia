@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
+
 #include <algorithm>
+#include <unordered_map>
 #include <vector>
 
-#include <unordered_map>
+#include <fuchsia/cpp/images.h>
+
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
-#include "lib/images/fidl/image_pipe.fidl.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer_config.h"
 #include "vk_layer_extension_utils.h"
@@ -64,7 +66,7 @@ struct SupportedImageProperties {
 };
 
 struct ImagePipeSurface {
-  ui::gfx::ImagePipeSyncPtr image_pipe;
+  images::ImagePipeSyncPtr image_pipe;
   SupportedImageProperties supported_properties;
 };
 
@@ -76,7 +78,7 @@ struct PendingImageInfo {
 class ImagePipeSwapchain {
  public:
   ImagePipeSwapchain(SupportedImageProperties supported_properties,
-                     ui::gfx::ImagePipeSyncPtr image_pipe)
+                     images::ImagePipeSyncPtr image_pipe)
       : supported_properties_(supported_properties),
         image_pipe_(std::move(image_pipe)),
         image_pipe_closed_(false),
@@ -99,7 +101,7 @@ class ImagePipeSwapchain {
 
  private:
   SupportedImageProperties supported_properties_;
-  ui::gfx::ImagePipeSyncPtr image_pipe_;
+  images::ImagePipeSyncPtr image_pipe_;
   std::vector<VkImage> images_;
   std::vector<zx::event> acquire_events_;
   std::vector<VkDeviceMemory> memories_;
@@ -277,16 +279,16 @@ VkResult ImagePipeSwapchain::Initialize(
 
     zx::vmo vmo(vmo_handle);
 
-    auto image_info = ui::gfx::ImageInfo::New();
-    image_info->width = width;
-    image_info->height = height;
-    image_info->stride = 0; // Meaningless for optimal tiling.
-    image_info->pixel_format = ui::gfx::ImageInfo::PixelFormat::BGRA_8;
-    image_info->color_space = ui::gfx::ImageInfo::ColorSpace::SRGB;
-    image_info->tiling = ui::gfx::ImageInfo::Tiling::GPU_OPTIMAL;
+    images::ImageInfo image_info;
+    image_info.width = width;
+    image_info.height = height;
+    image_info.stride = 0; // Meaningless for optimal tiling.
+    image_info.pixel_format = images::PixelFormat::BGRA_8;
+    image_info.color_space = images::ColorSpace::SRGB;
+    image_info.tiling = images::Tiling::GPU_OPTIMAL;
 
     image_pipe_->AddImage(ImageIdFromIndex(i), std::move(image_info),
-                          std::move(vmo), ui::gfx::MemoryType::VK_DEVICE_MEMORY,
+                          std::move(vmo), images::MemoryType::VK_DEVICE_MEMORY,
                           0);
 
     available_ids_.push_back(i);
@@ -500,7 +502,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue,
     return VK_ERROR_SURFACE_LOST_KHR;
   }
 
-  auto acquire_fences = f1dl::VectorPtr<zx::event>::New(1);
+  auto acquire_fences = fidl::VectorPtr<zx::event>::New(1);
 
   VkSemaphoreGetFuchsiaHandleInfoKHR semaphore_info = {
       .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
@@ -537,10 +539,10 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue,
 
   pending_images_.push_back({std::move(image_release_fence), index});
 
-  f1dl::VectorPtr<zx::event> release_fences;
+  fidl::VectorPtr<zx::event> release_fences;
   release_fences.push_back(std::move(release_fence));
 
-  ui::PresentationInfoPtr info;
+  images::PresentationInfo info;
   image_pipe_->PresentImage(ImageIdFromIndex(index), 0,
                             std::move(acquire_fences),
                             std::move(release_fences), &info);
@@ -584,9 +586,7 @@ CreateMagmaSurfaceKHR(VkInstance instance,
       {{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}});
   surface->supported_properties = {{pCreateInfo->width, pCreateInfo->height},
                                    formats};
-  surface->image_pipe =
-      ui::gfx::ImagePipeSyncPtr::Create(f1dl::InterfaceHandle<ui::gfx::ImagePipe>(
-          zx::channel(pCreateInfo->imagePipeHandle)));
+  surface->image_pipe.Bind(zx::channel(pCreateInfo->imagePipeHandle));
   *pSurface = reinterpret_cast<VkSurfaceKHR>(surface);
   return VK_SUCCESS;
 }

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/display_pipe.h>
 #include <lib/async/cpp/auto_wait.h>
 
 #include "garnet/lib/magma/src/display_pipe/client/buffer.h"
-#include "garnet/lib/magma/src/display_pipe/services/display_provider.fidl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -15,7 +15,7 @@
 #include "zircon/status.h"
 
 display_pipe::DisplayProviderPtr display;
-ui::gfx::ImagePipePtr image_pipe;
+images::ImagePipePtr image_pipe;
 uint64_t hsv_index;
 
 // HSV code adopted from:
@@ -101,13 +101,13 @@ public:
 
         buffer_->Reset();
 
-        auto acq = f1dl::VectorPtr<zx::event>::New(1);
-        auto rel = f1dl::VectorPtr<zx::event>::New(1);
+        auto acq = fidl::VectorPtr<zx::event>::New(1);
+        auto rel = fidl::VectorPtr<zx::event>::New(1);
         buffer_->dupAcquireFence(&acq->front());
         buffer_->dupReleaseFence(&rel->front());
 
         image_pipe->PresentImage(index_, 0, std::move(acq), std::move(rel),
-                                 [](ui::PresentationInfoPtr info) {});
+                                 [](images::PresentationInfo info) {});
 
         uint8_t r, g, b;
         hsv_color(hsv_index, &r, &g, &b);
@@ -132,17 +132,17 @@ void allocate_buffer(uint32_t index, uint32_t width, uint32_t height)
     Buffer* buffer = Buffer::NewBuffer(width, height);
     buffers[index] = buffer;
 
-    auto info = ui::gfx::ImageInfo::New();
-    info->width = width;
-    info->height = height;
-    info->stride = width * 4;
-    info->pixel_format = ui::gfx::ImageInfo::PixelFormat::BGRA_8;
-    info->color_space = ui::gfx::ImageInfo::ColorSpace::SRGB;
+    images::ImageInfo info;
+    info.width = width;
+    info.height = height;
+    info.stride = width * 4;
+    info.pixel_format = images::PixelFormat::BGRA_8;
+    info.color_space = images::ColorSpace::SRGB;
 
     zx::vmo vmo;
     buffer->dupVmo(&vmo);
     image_pipe->AddImage(index, std::move(info), std::move(vmo),
-                         ui::gfx::MemoryType::HOST_MEMORY, 0);
+                         images::MemoryType::HOST_MEMORY, 0);
 
     handlers[index] = new BufferHandler(buffer, index);
 }
@@ -161,11 +161,11 @@ int main(int argc, char* argv[])
     display =
         application_context_->ConnectToEnvironmentService<display_pipe::DisplayProvider>();
 
-    display->GetInfo([](display_pipe::DisplayInfoPtr info) {
-        printf("%d x %d\n", info->width, info->height);
+    display->GetInfo([](display_pipe::DisplayInfo info) {
+        printf("%d x %d\n", info.width, info.height);
         display->BindPipe(image_pipe.NewRequest());
-        allocate_buffer(0, info->width, info->height);
-        allocate_buffer(1, info->width, info->height);
+        allocate_buffer(0, info.width, info.height);
+        allocate_buffer(1, info.width, info.height);
     });
 
     loop.Run();
