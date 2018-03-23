@@ -23,7 +23,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
 #include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/input/fidl/usages.fidl.h"
+#include <fuchsia/cpp/input.h>
 
 namespace {
 int64_t InputEventTimestampNow() {

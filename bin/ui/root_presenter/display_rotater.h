@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_ROTATER_H_
 
 #include "lib/fxl/macros.h"
-#include "lib/ui/input/fidl/input_events.fidl.h"
+#include <fuchsia/cpp/input.h>
 #include "lib/ui/scenic/client/resources.h"
 
 namespace root_presenter {

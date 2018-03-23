@@ -5,7 +5,7 @@
 #include "lib/ui/input/device_state.h"
 #include "lib/ui/input/input_device_impl.h"
 #include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/input/fidl/input_device_registry.fidl.h"
+#include <fuchsia/cpp/input.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"

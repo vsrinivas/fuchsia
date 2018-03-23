@@ -20,10 +20,10 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include <fuchsia/cpp/geometry.h>
 #include "lib/ui/input/device_state.h"
-#include "lib/ui/input/fidl/input_dispatcher.fidl.h"
-#include "lib/ui/input/fidl/input_events.fidl.h"
+#include <fuchsia/cpp/input.h>
+#include <fuchsia/cpp/input.h>
 #include "lib/ui/input/input_device_impl.h"
-#include "lib/ui/presentation/fidl/presentation.fidl.h"
+#include <fuchsia/cpp/presentation.h>
 #include "lib/ui/scenic/client/resources.h"
 #include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1.h>

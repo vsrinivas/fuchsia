@@ -16,7 +16,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/input/fidl/input_device_registry.fidl.h"
+#include <fuchsia/cpp/input.h>
 
 namespace {
 int64_t InputEventTimestampNow() {

@@ -10,7 +10,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
-#include "lib/ui/input/fidl/input_device_registry.fidl.h"
+#include <fuchsia/cpp/input.h>
 #include "lib/fxl/macros.h"
 
 namespace mozart {

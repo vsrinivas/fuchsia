@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/ui/input/fidl/input_reports.fidl.h"
+#include <fuchsia/cpp/input.h>
 #include "lib/ui/tests/mocks/mock_input_device.h"
 #include "lib/ui/tests/mocks/mock_input_device_registry.h"
 #include "lib/ui/tests/test_with_message_loop.h"

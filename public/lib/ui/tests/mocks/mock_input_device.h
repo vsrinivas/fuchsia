@@ -5,7 +5,7 @@
 #ifndef LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
 #define LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
 
-#include "lib/ui/input/fidl/input_device_registry.fidl.h"
+#include <fuchsia/cpp/input.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 

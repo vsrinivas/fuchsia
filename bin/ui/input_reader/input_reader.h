@@ -12,8 +12,8 @@
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/input/fidl/input_device_registry.fidl.h"
-#include "lib/ui/input/fidl/input_reports.fidl.h"
+#include <fuchsia/cpp/input.h>
+#include <fuchsia/cpp/input.h>
 
 namespace mozart {
 namespace input {

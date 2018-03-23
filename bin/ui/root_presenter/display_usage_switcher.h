@@ -6,8 +6,8 @@
 #define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_USAGE_SWITCHER_H_
 
 #include "lib/fxl/macros.h"
-#include "lib/ui/input/fidl/input_events.fidl.h"
-#include "lib/ui/presentation/fidl/display_usage.fidl.h"
+#include <fuchsia/cpp/input.h>
+#include <fuchsia/cpp/presentation.h>
 #include "lib/ui/scenic/client/resources.h"
 
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"

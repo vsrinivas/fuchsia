@@ -10,7 +10,7 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
-#include "lib/ui/presentation/fidl/presenter.fidl.h"
+#include <fuchsia/cpp/presentation.h>
 #include "lib/ui/views/fidl/view_provider.fidl.h"
 
 int main(int argc, const char** argv) {
