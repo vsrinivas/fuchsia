@@ -210,7 +210,8 @@ class Device : public wlan_device::Phy {
     void HandleRxComplete(usb_request_t* request);
     void HandleTxComplete(usb_request_t* request);
 
-    zx_status_t FillUsbTxPacket(BulkoutAggregation* aggr, wlan_tx_packet_t* wlan_packet);
+    zx_status_t FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* wlan_pkt,
+                                size_t aggr_payload_len);
     uint8_t LookupTxWcid(const uint8_t* addr1, bool protected_frame);
 
     zx_status_t EnableHwBcn(bool active);
@@ -218,14 +219,16 @@ class Device : public wlan_device::Phy {
     static void ReadRequestComplete(usb_request_t* request, void* cookie);
     static void WriteRequestComplete(usb_request_t* request, void* cookie);
 
-    void DumpLengths(wlan_tx_packet_t* wlan_pkt, BulkoutAggregation* aggr, usb_request_t* req);
-    size_t tx_pkt_len(wlan_tx_packet_t* pkt);
-    size_t txwi_len();
-    size_t align_pad_len(wlan_tx_packet_t* pkt);
-    size_t terminal_pad_len();
-    size_t usb_tx_pkt_len(wlan_tx_packet_t* pkt);
-    uint8_t GetRxAckPolicy(const wlan_tx_packet_t& wlan_packet);
-
+    void DumpLengths(const wlan_tx_packet_t& wlan_pkt, BulkoutAggregation* aggr,
+                     usb_request_t* req);
+    size_t GetMpduLen(const wlan_tx_packet_t& wlan_pkt);
+    size_t GetTxwiLen();
+    size_t GetBulkoutAggrTailLen();
+    size_t GetUsbReqLen(const wlan_tx_packet_t& wlan_pkt);
+    size_t GetBulkoutAggrPayloadLen(const wlan_tx_packet_t& wlan_pkt);
+    uint8_t GetRxAckPolicy(const wlan_tx_packet_t& wlan_pkt);
+    size_t WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt);
+    size_t GetL2PadLen(const wlan_tx_packet_t& wlan_pkt);
     zx_device_t* parent_;
     zx_device_t* zxdev_;
     zx_device_t* wlanmac_dev_;
