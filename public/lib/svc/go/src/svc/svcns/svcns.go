@@ -39,7 +39,7 @@ func (sn *Namespace) ServeDirectory(h zx.Handle) error {
 
 	n := &svcfs.Namespace{
 		Provider: func(name string, h zx.Handle) {
-			sn.ConnectToService(name, h)
+			sn.ConnectToService(name, zx.Channel(h))
 		},
 		Dispatcher: d,
 	}
@@ -53,13 +53,13 @@ func (sn *Namespace) ServeDirectory(h zx.Handle) error {
 	return nil
 }
 
-func (sn *Namespace) ConnectToService(name string, h zx.Handle) error {
+func (sn *Namespace) ConnectToService(name string, h zx.Channel) error {
 	b, ok := sn.binders[name]
 	if !ok {
 		h.Close()
 		return nil
 	}
-	b.Bind(h)
+	b.Bind(zx.Handle(h))
 	return nil
 }
 
