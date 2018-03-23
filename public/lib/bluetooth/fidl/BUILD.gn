@@ -4,11 +4,38 @@
 
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
-fidl("fidl") {
+group("fidl") {
+  deps = [
+    ":bluetooth",
+    ":bluetooth_control",
+    ":bluetooth_gatt",
+    ":bluetooth_low_energy",
+  ]
+}
+
+fidl("bluetooth") {
   sources = [
     "common.fidl",
+  ]
+}
+
+fidl("bluetooth_control") {
+  sources = [
     "control.fidl",
+  ]
+  deps = [ ":bluetooth", ]
+}
+
+fidl("bluetooth_gatt") {
+  sources = [
     "gatt.fidl",
+  ]
+  deps = [ ":bluetooth", ]
+}
+
+fidl("bluetooth_low_energy") {
+  sources = [
     "low_energy.fidl",
   ]
+  deps = [ ":bluetooth", ]
 }

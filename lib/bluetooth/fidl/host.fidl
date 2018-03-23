@@ -2,26 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module bluetooth.host;
-
-import "lib/bluetooth/fidl/control.fidl";
-import "lib/bluetooth/fidl/gatt.fidl";
-import "lib/bluetooth/fidl/low_energy.fidl";
+library bluetooth_host;
 
 // Management interface implemented by bt-host devices.
 interface Host {
   // Returns information about the Bluetooth adapter managed by this host.
-  GetInfo@0() => (control.AdapterInfo info);
+  1: GetInfo() -> (bluetooth_control.AdapterInfo info);
 
   // The following methods fulfill a given interface request. bt-host device
   // will start processing FIDL messages. If the request cannot be fulfilled,
   // the bt-host device will close its end of the given channel.
-  RequestControlAdapter@1(control.Adapter& adapter);
-  RequestLowEnergyCentral@2(low_energy.Central& central);
-  RequestLowEnergyPeripheral@3(low_energy.Peripheral& peripheral);
-  RequestGattServer@4(gatt.Server& server);
+  2: RequestControlAdapter(request<bluetooth_control.Adapter> adapter);
+  3: RequestLowEnergyCentral(request<bluetooth_low_energy.Central> central);
+  4: RequestLowEnergyPeripheral(request<bluetooth_low_energy.Peripheral> peripheral);
+  5: RequestGattServer(request<bluetooth_gatt.Server> server);
 
   // Closes all FIDL interface handles that are associated with this bt-host
   // device (exluding any Host interface handles).
-  Close@5();
+  6: Close();
 };
