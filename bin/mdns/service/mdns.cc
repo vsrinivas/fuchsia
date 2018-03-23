@@ -125,7 +125,7 @@ void Mdns::Stop() {
 
 void Mdns::ResolveHostName(const std::string& host_name,
                            fxl::TimePoint timeout,
-                           const ResolveHostNameCallback& callback) {
+                           ResolveHostNameCallback callback) {
   FXL_DCHECK(MdnsNames::IsValidHostName(host_name));
   FXL_DCHECK(callback);
 

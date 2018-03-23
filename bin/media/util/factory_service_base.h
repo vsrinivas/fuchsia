@@ -57,7 +57,7 @@ class FactoryServiceBase {
 
    protected:
     Product(Interface* impl,
-            f1dl::InterfaceRequest<Interface> request,
+            fidl::InterfaceRequest<Interface> request,
             Factory* owner)
         : ProductBase(owner), binding_(impl, std::move(request)) {
       FXL_DCHECK(impl);
@@ -70,7 +70,7 @@ class FactoryServiceBase {
     }
 
     // Returns the binding established via the request in the constructor.
-    const f1dl::Binding<Interface>& binding() { return binding_; }
+    const fidl::Binding<Interface>& binding() { return binding_; }
 
     // Increments the retention count.
     void Retain() { ++retention_count_; }
@@ -100,7 +100,7 @@ class FactoryServiceBase {
 
    private:
     size_t retention_count_ = 0;
-    f1dl::Binding<Interface> binding_;
+    fidl::Binding<Interface> binding_;
   };
 
   // A |ProductBase| that exposes FIDL interface |Interface| via multiple
@@ -112,7 +112,7 @@ class FactoryServiceBase {
 
    protected:
     MultiClientProduct(Interface* impl,
-                       f1dl::InterfaceRequest<Interface> request,
+                       fidl::InterfaceRequest<Interface> request,
                        Factory* owner)
         : ProductBase(owner), impl_(impl) {
       FXL_DCHECK(impl);
@@ -128,10 +128,10 @@ class FactoryServiceBase {
     }
 
     // Returns the bindings for this product.
-    const f1dl::BindingSet<Interface>& bindings() { return bindings_; }
+    const fidl::BindingSet<Interface>& bindings() { return bindings_; }
 
     // Adds a binding.
-    void AddBinding(f1dl::InterfaceRequest<Interface> request) {
+    void AddBinding(fidl::InterfaceRequest<Interface> request) {
       FXL_DCHECK(request);
       bindings_.AddBinding(impl_, std::move(request));
     }
@@ -148,7 +148,7 @@ class FactoryServiceBase {
 
    private:
     Interface* impl_;
-    f1dl::BindingSet<Interface> bindings_;
+    fidl::BindingSet<Interface> bindings_;
   };
 
   FactoryServiceBase(
@@ -165,7 +165,7 @@ class FactoryServiceBase {
 
   // Connects to a service registered with the application environment.
   template <typename Interface>
-  f1dl::InterfacePtr<Interface> ConnectToEnvironmentService(
+  fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
       const std::string& interface_name = Interface::Name_) {
     return application_context_->ConnectToEnvironmentService<Interface>(
         interface_name);

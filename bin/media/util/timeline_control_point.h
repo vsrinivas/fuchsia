@@ -29,7 +29,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   ~TimelineControlPoint() override;
 
   // Binds to the control point. If a binding exists already, it is closed.
-  void Bind(f1dl::InterfaceRequest<MediaTimelineControlPoint> request);
+  void Bind(fidl::InterfaceRequest<MediaTimelineControlPoint> request);
 
   // Determines whether the control point is currently bound.
   bool is_bound() { return control_point_binding_.is_bound(); }
@@ -73,25 +73,24 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   void ClearEndOfStream();
 
   // MediaTimelineControlPoint implementation.
-  void GetStatus(uint64_t version_last_seen,
-                 const GetStatusCallback& callback) override;
+  void GetStatus(uint64_t version_last_seen, GetStatusCallback callback) override;
 
   void GetTimelineConsumer(
-      f1dl::InterfaceRequest<TimelineConsumer> timeline_consumer) override;
+      fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) override;
 
   void SetProgramRange(uint64_t program,
                        int64_t min_pts,
                        int64_t max_pts) override;
 
-  void Prime(const PrimeCallback& callback) override;
+  void Prime(PrimeCallback callback) override;
 
   // TimelineConsumer implementation.
   void SetTimelineTransform(
-      TimelineTransformPtr timeline_transform,
-      const SetTimelineTransformCallback& callback) override;
+      TimelineTransform timeline_transform,
+      SetTimelineTransformCallback callback) override;
 
   void SetTimelineTransformNoReply(
-      TimelineTransformPtr timeline_transform) override;
+      TimelineTransform timeline_transform) override;
 
  private:
   // Applies pending_timeline_function_ if it's time to do so based on the
@@ -119,11 +118,11 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   // cause it to progress.
   bool ProgressingInternal() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  void SetTimelineTransformLocked(TimelineTransformPtr timeline_transform)
+  void SetTimelineTransformLocked(TimelineTransform timeline_transform)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  f1dl::Binding<MediaTimelineControlPoint> control_point_binding_;
-  f1dl::Binding<TimelineConsumer> consumer_binding_;
+  fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
+  fidl::Binding<TimelineConsumer> consumer_binding_;
   FidlPublisher<GetStatusCallback> status_publisher_;
   ProgramRangeSetCallback program_range_set_callback_;
   PrimeRequestedCallback prime_requested_callback_;

@@ -33,18 +33,17 @@ TimelineFunction TimelineFunction::Compose(const TimelineFunction& bc,
                           TimelineRate::Product(ab.rate(), bc.rate(), exact));
 }
 
-TimelineFunction::TimelineFunction(const TimelineTransformPtr& from)
-    : subject_time_(from ? from->subject_time : 0),
-      reference_time_(from ? from->reference_time : 0),
-      rate_(from ? TimelineRate(from->subject_delta, from->reference_delta)
-                 : TimelineRate()) {}
+TimelineFunction::TimelineFunction(const TimelineTransform& from)
+    : subject_time_(from.subject_time),
+      reference_time_(from.reference_time),
+      rate_(TimelineRate(from.subject_delta, from.reference_delta)) {}
 
-TimelineFunction::operator TimelineTransformPtr() const {
-  TimelineTransformPtr result = TimelineTransform::New();
-  result->subject_time = subject_time();
-  result->reference_time = reference_time();
-  result->subject_delta = subject_delta();
-  result->reference_delta = reference_delta();
+TimelineFunction::operator TimelineTransform() const {
+  TimelineTransform result;
+  result.subject_time = subject_time();
+  result.reference_time = reference_time();
+  result.subject_delta = subject_delta();
+  result.reference_delta = reference_delta();
   return result;
 }
 

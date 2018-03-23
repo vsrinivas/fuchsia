@@ -29,14 +29,12 @@ TimelineControlPoint::TimelineControlPoint()
   ClearPendingTimelineFunction(false);
 
   status_publisher_.SetCallbackRunner(
-      [this](const GetStatusCallback& callback, uint64_t version) {
-        MediaTimelineControlPointStatusPtr status;
+      [this](GetStatusCallback callback, uint64_t version) {
+        MediaTimelineControlPointStatus status;
         {
           std::lock_guard<std::mutex> locker(mutex_);
-          status = MediaTimelineControlPointStatus::New();
-          status->timeline_transform =
-              static_cast<TimelineTransformPtr>(current_timeline_function_);
-          status->end_of_stream = ReachedEndOfStream();
+          status.timeline_transform = static_cast<TimelineTransform>(current_timeline_function_);
+          status.end_of_stream = ReachedEndOfStream();
         }
         callback(version, std::move(status));
       });
@@ -56,7 +54,7 @@ TimelineControlPoint::~TimelineControlPoint() {
 }
 
 void TimelineControlPoint::Bind(
-    f1dl::InterfaceRequest<MediaTimelineControlPoint> request) {
+    fidl::InterfaceRequest<MediaTimelineControlPoint> request) {
   if (control_point_binding_.is_bound()) {
     control_point_binding_.Unbind();
   }
@@ -123,12 +121,12 @@ bool TimelineControlPoint::ReachedEndOfStream() {
 }
 
 void TimelineControlPoint::GetStatus(uint64_t version_last_seen,
-                                     const GetStatusCallback& callback) {
+                                     GetStatusCallback callback) {
   status_publisher_.Get(version_last_seen, callback);
 }
 
 void TimelineControlPoint::GetTimelineConsumer(
-    f1dl::InterfaceRequest<TimelineConsumer> timeline_consumer) {
+    fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) {
   if (consumer_binding_.is_bound()) {
     consumer_binding_.Unbind();
   }
@@ -144,7 +142,7 @@ void TimelineControlPoint::SetProgramRange(uint64_t program,
   }
 }
 
-void TimelineControlPoint::Prime(const PrimeCallback& callback) {
+void TimelineControlPoint::Prime(PrimeCallback callback) {
   if (prime_requested_callback_) {
     prime_requested_callback_([this, callback]() { callback(); });
   } else {
@@ -153,8 +151,8 @@ void TimelineControlPoint::Prime(const PrimeCallback& callback) {
 }
 
 void TimelineControlPoint::SetTimelineTransform(
-    TimelineTransformPtr timeline_transform,
-    const SetTimelineTransformCallback& callback) {
+    TimelineTransform timeline_transform,
+    SetTimelineTransformCallback callback) {
   std::lock_guard<std::mutex> locker(mutex_);
 
   SetTimelineTransformLocked(std::move(timeline_transform));
@@ -163,34 +161,33 @@ void TimelineControlPoint::SetTimelineTransform(
 }
 
 void TimelineControlPoint::SetTimelineTransformNoReply(
-    TimelineTransformPtr timeline_transform) {
+    TimelineTransform timeline_transform) {
   std::lock_guard<std::mutex> locker(mutex_);
 
   SetTimelineTransformLocked(std::move(timeline_transform));
 }
 
 void TimelineControlPoint::SetTimelineTransformLocked(
-    TimelineTransformPtr timeline_transform) {
-  RCHECK(timeline_transform);
-  RCHECK(timeline_transform->reference_delta != 0);
+    TimelineTransform timeline_transform) {
+  RCHECK(timeline_transform.reference_delta != 0);
 
   bool was_progressing = ProgressingInternal();
 
   int64_t reference_time =
-      timeline_transform->reference_time == kUnspecifiedTime
+      timeline_transform.reference_time == kUnspecifiedTime
           ? Timeline::local_now()
-          : timeline_transform->reference_time;
-  int64_t subject_time = timeline_transform->subject_time == kUnspecifiedTime
+          : timeline_transform.reference_time;
+  int64_t subject_time = timeline_transform.subject_time == kUnspecifiedTime
                              ? current_timeline_function_(reference_time)
-                             : timeline_transform->subject_time;
+                             : timeline_transform.subject_time;
 
   // Eject any previous pending change.
   ClearPendingTimelineFunction(false);
 
   // Queue up the new pending change.
   pending_timeline_function_ = TimelineFunction(
-      subject_time, reference_time, timeline_transform->subject_delta,
-      timeline_transform->reference_delta);
+      subject_time, reference_time, timeline_transform.subject_delta,
+      timeline_transform.reference_delta);
 
   if (progress_started_callback_ && !was_progressing && ProgressingInternal()) {
     task_runner_->PostTask([this]() {

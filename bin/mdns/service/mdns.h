@@ -160,7 +160,7 @@ class Mdns : public MdnsAgent::Host {
   // Resolves |host_name| to one or two |IpAddress|es.
   void ResolveHostName(const std::string& host_name,
                        fxl::TimePoint timeout,
-                       const ResolveHostNameCallback& callback);
+                       ResolveHostNameCallback callback);
 
   // Subscribes to the specified service. The subscription is cancelled when
   // the subscriber is deleted or its |Unsubscribe| method is called.

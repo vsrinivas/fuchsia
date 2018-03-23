@@ -63,9 +63,9 @@ class TimelineFunction {
   explicit TimelineFunction(TimelineRate rate)
       : subject_time_(0), reference_time_(0), rate_(rate) {}
 
-  explicit TimelineFunction(const TimelineTransformPtr& from);
+  explicit TimelineFunction(const TimelineTransform& from);
 
-  explicit operator TimelineTransformPtr() const;
+  explicit operator TimelineTransform() const;
 
   // Determines whether this |TimelineFunction| is invertable.
   bool invertable() const { return rate_.invertable(); }

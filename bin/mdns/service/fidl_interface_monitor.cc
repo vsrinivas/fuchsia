@@ -34,7 +34,7 @@ FidlInterfaceMonitor::FidlInterfaceMonitor(
   netstack_->RegisterListener(std::move(listener_handle));
 
   netstack_->GetInterfaces(
-      [this](fidl::VectorPtr<netstack::NetInterfacePtr> interfaces) {
+      [this](fidl::VectorPtr<netstack::NetInterface> interfaces) {
         OnInterfacesChanged(std::move(interfaces));
       });
 }
@@ -57,18 +57,18 @@ FidlInterfaceMonitor::GetInterfaces() {
 }
 
 void FidlInterfaceMonitor::OnInterfacesChanged(
-    fidl::VectorPtr<netstack::NetInterfacePtr> interfaces) {
+    fidl::VectorPtr<netstack::NetInterface> interfaces) {
   bool link_change = false;
 
   for (const auto& if_info : *interfaces) {
-    IpAddress address = MdnsFidlUtil::IpAddressFrom(if_info->addr.get());
+    IpAddress address = MdnsFidlUtil::IpAddressFrom(&if_info.addr);
 
     if (!address.is_valid() || address.is_loopback() ||
-        (if_info->flags & netstack::NetInterfaceFlagUp) == 0) {
-      if (interfaces_.size() > if_info->id &&
-          interfaces_[if_info->id] != nullptr) {
+        (if_info.flags & netstack::NetInterfaceFlagUp) == 0) {
+      if (interfaces_.size() > if_info.id &&
+          interfaces_[if_info.id] != nullptr) {
         // Interface went away.
-        interfaces_[if_info->id] = nullptr;
+        interfaces_[if_info.id] = nullptr;
         link_change = true;
       }
 
@@ -76,23 +76,23 @@ void FidlInterfaceMonitor::OnInterfacesChanged(
     }
 
     // Make sure the |interfaces_| array is big enough.
-    if (interfaces_.size() <= if_info->id) {
-      interfaces_.resize(if_info->id + 1);
+    if (interfaces_.size() <= if_info.id) {
+      interfaces_.resize(if_info.id + 1);
     }
 
-    InterfaceDescriptor* existing = interfaces_[if_info->id].get();
+    InterfaceDescriptor* existing = interfaces_[if_info.id].get();
 
     if (existing == nullptr) {
       // We don't have an |InterfaceDescriptor| for this interface yet. Add one.
-      interfaces_[if_info->id].reset(
-          new InterfaceDescriptor(address, if_info->name));
+      interfaces_[if_info.id].reset(
+          new InterfaceDescriptor(address, if_info.name));
       link_change = true;
     } else if (existing->address_ != address ||
-               existing->name_ != if_info->name) {
+               existing->name_ != if_info.name) {
       // We have an |InterfaceDescriptor| for this interface, but it's
       // out-of-date. Update it.
       existing->address_ = address;
-      existing->name_ = if_info->name;
+      existing->name_ = if_info.name;
       link_change = true;
     }
   }
