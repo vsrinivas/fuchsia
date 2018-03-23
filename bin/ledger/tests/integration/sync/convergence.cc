@@ -311,9 +311,7 @@ class ConvergenceTest
 
 // Verify that the Ledger converges over different settings of merging functions
 // and number of ledger instances.
-//
-// This test is flaky. https://fuchsia.atlassian.net/browse/LE-386
-TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
+TEST_P(ConvergenceTest, NLedgersConverge) {
   std::vector<std::unique_ptr<PageWatcherImpl>> watchers;
   std::vector<std::unique_ptr<SyncWatcherImpl>> sync_watchers;
 
