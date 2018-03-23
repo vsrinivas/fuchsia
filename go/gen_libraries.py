@@ -70,7 +70,7 @@ def main():
     current_library = Library(args.name, args.source_dir, args.output)
     result = get_libraries(args.deps, extra_library=current_library)
     with open(args.output, 'w') as output_file:
-        json.dump(result, output_file)
+        json.dump(result, output_file, indent=2, sort_keys=True)
 
 
 if __name__ == '__main__':
