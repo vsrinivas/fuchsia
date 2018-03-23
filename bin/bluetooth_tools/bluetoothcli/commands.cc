@@ -33,7 +33,7 @@ bool HandleListAdapters(const App* app,
                         const fxl::CommandLine& cmd_line,
                         const fxl::Closure& complete_cb) {
   app->adapter_manager()->ListAdapters(
-      [complete_cb](f1dl::VectorPtr<bluetooth::control::AdapterInfoPtr> adapters) {
+      [complete_cb](fidl::VectorPtr<bluetooth_control::AdapterInfo> adapters) {
         auto ac = fxl::MakeAutoCall(complete_cb);
 
         if (!adapters || adapters->size() == 0) {
@@ -59,7 +59,7 @@ bool HandleActiveAdapter(const App* app,
   }
 
   app->active_adapter()->GetInfo(
-      [complete_cb](bluetooth::control::AdapterInfoPtr adapter_info) {
+      [complete_cb](bluetooth_control::AdapterInfo adapter_info) {
         PrintAdapterInfo(adapter_info);
         complete_cb();
       });
@@ -82,10 +82,10 @@ bool HandleStartDiscovery(const App* app,
     return false;
   }
 
-  app->active_adapter()->StartDiscovery([complete_cb](auto status) {
-    if (status->error) {
-      CLI_LOG() << "StartDiscovery failed: " << status->error->description
-                << ", (error = " << ErrorCodeToString(status->error->error_code)
+  app->active_adapter()->StartDiscovery([complete_cb](bluetooth::Status status) {
+    if (status.error) {
+      CLI_LOG() << "StartDiscovery failed: " << status.error->description
+                << ", (error = " << ErrorCodeToString(status.error->error_code)
                 << ")";
     }
 
@@ -103,10 +103,10 @@ bool HandleStopDiscovery(const App* app,
     return false;
   }
 
-  app->active_adapter()->StopDiscovery([complete_cb](auto status) {
-    if (status->error) {
-      CLI_LOG() << "StopDiscovery failed: " << status->error->description
-                << ", (error = " << ErrorCodeToString(status->error->error_code)
+  app->active_adapter()->StopDiscovery([complete_cb](bluetooth::Status status) {
+    if (status.error) {
+      CLI_LOG() << "StopDiscovery failed: " << status.error->description
+                << ", (error = " << ErrorCodeToString(status.error->error_code)
                 << ")";
     }
 

@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include "lib/bluetooth/fidl/low_energy.fidl.h"
+#include <fuchsia/cpp/bluetooth_low_energy.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -20,15 +20,15 @@ namespace bthost {
 
 // Implements the low_energy::Central FIDL interface.
 class LowEnergyPeripheralServer
-    : public AdapterServerBase<bluetooth::low_energy::Peripheral> {
+    : public AdapterServerBase<bluetooth_low_energy::Peripheral> {
  public:
   LowEnergyPeripheralServer(
       fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-      f1dl::InterfaceRequest<bluetooth::low_energy::Peripheral> request);
+      fidl::InterfaceRequest<bluetooth_low_energy::Peripheral> request);
   ~LowEnergyPeripheralServer() override;
 
  private:
-  using DelegatePtr = bluetooth::low_energy::PeripheralDelegatePtr;
+  using DelegatePtr = bluetooth_low_energy::PeripheralDelegatePtr;
   using ConnectionRefPtr = ::btlib::gap::LowEnergyConnectionRefPtr;
 
   class InstanceData final {
@@ -44,7 +44,7 @@ class LowEnergyPeripheralServer
     // Takes ownership of |conn_ref| and notifies the delegate of the new
     // connection.
     void RetainConnection(ConnectionRefPtr conn_ref,
-                          bluetooth::low_energy::RemoteDevicePtr central);
+                          bluetooth_low_energy::RemoteDevice central);
 
     // Deletes the connetion reference and notifies the delegate of
     // disconnection.
@@ -58,18 +58,18 @@ class LowEnergyPeripheralServer
     FXL_DISALLOW_COPY_AND_ASSIGN(InstanceData);
   };
 
-  // bluetooth::low_energy::Peripheral overrides:
+  // bluetooth_low_energy::Peripheral overrides:
   void StartAdvertising(
-      bluetooth::low_energy::AdvertisingDataPtr advertising_data,
-      bluetooth::low_energy::AdvertisingDataPtr scan_result,
-      ::f1dl::InterfaceHandle<bluetooth::low_energy::PeripheralDelegate>
+      bluetooth_low_energy::AdvertisingData advertising_data,
+      bluetooth_low_energy::AdvertisingDataPtr scan_result,
+      ::fidl::InterfaceHandle<bluetooth_low_energy::PeripheralDelegate>
           delegate,
       uint32_t interval,
       bool anonymous,
-      const StartAdvertisingCallback& callback) override;
+      StartAdvertisingCallback callback) override;
 
-  void StopAdvertising(const ::f1dl::StringPtr& advertisement_id,
-                       const StopAdvertisingCallback& callback) override;
+  void StopAdvertising(::fidl::StringPtr advertisement_id,
+                       StopAdvertisingCallback callback) override;
   bool StopAdvertisingInternal(const std::string& id);
 
   // Called when a central connects to us.  When this is called, the

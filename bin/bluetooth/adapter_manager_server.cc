@@ -7,23 +7,24 @@
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
+#include "lib/fidl/cpp/clone.h"
 
 #include "adapter_manager.h"
 
 using bluetooth::Error;
 using bluetooth::ErrorCode;
 using bluetooth::Status;
-using bluetooth::control::AdapterInfoPtr;
-using bluetooth::control::AdapterManager;
-using bluetooth::control::AdapterManagerDelegate;
-using bluetooth::control::AdapterManagerDelegatePtr;
-using bluetooth::control::AdapterManagerPtr;
+using bluetooth_control::AdapterInfoPtr;
+using bluetooth_control::AdapterManager;
+using bluetooth_control::AdapterManagerDelegate;
+using bluetooth_control::AdapterManagerDelegatePtr;
+using bluetooth_control::AdapterManagerPtr;
 
 namespace bluetooth_service {
 
 AdapterManagerServer::AdapterManagerServer(
     ::bluetooth_service::AdapterManager* adapter_manager,
-    ::f1dl::InterfaceRequest<AdapterManager> request,
+    ::fidl::InterfaceRequest<AdapterManager> request,
     const ConnectionErrorHandler& connection_error_handler)
     : adapter_manager_(adapter_manager),
       binding_(this, std::move(request)),
@@ -36,25 +37,28 @@ AdapterManagerServer::AdapterManagerServer(
 
 void AdapterManagerServer::NotifyActiveAdapterChanged(const Adapter* adapter) {
   if (delegate_) {
-    delegate_->OnActiveAdapterChanged(adapter ? adapter->info().Clone()
-                                              : nullptr);
+    bluetooth_control::AdapterInfoPtr info = bluetooth_control::AdapterInfo::New();
+    fidl::Clone(adapter->info(), info.get());
+    delegate_->OnActiveAdapterChanged(std::move(info));
   }
 }
 
 void AdapterManagerServer::NotifyAdapterAdded(const Adapter& adapter) {
   if (delegate_) {
-    delegate_->OnAdapterAdded(adapter.info().Clone());
+    bluetooth_control::AdapterInfo info;
+    fidl::Clone(adapter.info(), &info);
+    delegate_->OnAdapterAdded(std::move(info));
   }
 }
 
 void AdapterManagerServer::NotifyAdapterRemoved(const Adapter& adapter) {
   if (delegate_) {
-    delegate_->OnAdapterRemoved(adapter.info()->identifier);
+    delegate_->OnAdapterRemoved(adapter.info().identifier);
   }
 }
 
 void AdapterManagerServer::IsBluetoothAvailable(
-    const IsBluetoothAvailableCallback& callback) {
+    IsBluetoothAvailableCallback callback) {
   // Return true if there is an active adapter.
   auto self = weak_ptr_factory_.GetWeakPtr();
   adapter_manager_->GetActiveAdapter([self, callback](const auto* adapter) {
@@ -65,7 +69,7 @@ void AdapterManagerServer::IsBluetoothAvailable(
 }
 
 void AdapterManagerServer::SetDelegate(
-    ::f1dl::InterfaceHandle<AdapterManagerDelegate> delegate) {
+    ::fidl::InterfaceHandle<AdapterManagerDelegate> delegate) {
   if (!delegate) {
     FXL_VLOG(1) << "bluetooth: Cannot assign a null delegate";
     return;
@@ -81,25 +85,31 @@ void AdapterManagerServer::SetDelegate(
   // these synchronously instead of waiting for |adapter_manager_| to be fully
   // initialized.
   for (const auto& iter : adapter_manager_->adapters()) {
-    delegate_->OnAdapterAdded(iter.second->info().Clone());
+    bluetooth_control::AdapterInfo info;
+    fidl::Clone(iter.second->info(), &info);
+    delegate_->OnAdapterAdded(std::move(info));
   }
 
   // Also notify the delegate of the current active adapter, if it exists.
   auto active_adapter = adapter_manager_->active_adapter();
   if (active_adapter) {
-    delegate_->OnActiveAdapterChanged(active_adapter->info().Clone());
+    bluetooth_control::AdapterInfoPtr info = bluetooth_control::AdapterInfo::New();
+    fidl::Clone(active_adapter->info(), info.get());
+    delegate_->OnActiveAdapterChanged(std::move(info));
   }
 }
 
-void AdapterManagerServer::ListAdapters(const ListAdaptersCallback& callback) {
+void AdapterManagerServer::ListAdapters(ListAdaptersCallback callback) {
   auto self = weak_ptr_factory_.GetWeakPtr();
   adapter_manager_->ListAdapters([self, callback](const auto& adapter_map) {
     if (!self)
       return;
 
-    f1dl::VectorPtr<AdapterInfoPtr> adapters;
+    fidl::VectorPtr<bluetooth_control::AdapterInfo> adapters;
     for (const auto& iter : adapter_map) {
-      adapters.push_back(iter.second->info().Clone());
+      bluetooth_control::AdapterInfo info;
+      fidl::Clone(iter.second->info(), &info);
+      adapters.push_back(std::move(info));
     }
 
     callback(std::move(adapters));
@@ -107,21 +117,21 @@ void AdapterManagerServer::ListAdapters(const ListAdaptersCallback& callback) {
 }
 
 void AdapterManagerServer::SetActiveAdapter(
-    const ::f1dl::StringPtr& identifier,
-    const SetActiveAdapterCallback& callback) {
-  auto status = Status::New();
+    ::fidl::StringPtr identifier,
+    SetActiveAdapterCallback callback) {
+  bluetooth::Status status;
   auto ac =
       fxl::MakeAutoCall([&status, &callback] { callback(std::move(status)); });
 
   if (!adapter_manager_->SetActiveAdapter(identifier)) {
-    status->error = Error::New();
-    status->error->error_code = ErrorCode::NOT_FOUND;
-    status->error->description = "Adapter not found";
+    status.error = Error::New();
+    status.error->error_code = ErrorCode::NOT_FOUND;
+    status.error->description = "Adapter not found";
   }
 }
 
 void AdapterManagerServer::GetActiveAdapter(
-    ::f1dl::InterfaceRequest<bluetooth::control::Adapter> request) {
+    ::fidl::InterfaceRequest<bluetooth_control::Adapter> request) {
   auto self = weak_ptr_factory_.GetWeakPtr();
   adapter_manager_->GetActiveAdapter(fxl::MakeCopyable(
       [self, request = std::move(request)](auto* adapter) mutable {

@@ -25,10 +25,9 @@ constexpr zx::duration kInitTimeout = zx::sec(5);
 
 }  // namespace
 
-Adapter::Adapter(bluetooth::control::AdapterInfoPtr info,
-                 bluetooth::host::HostPtr host)
+Adapter::Adapter(bluetooth_control::AdapterInfo info,
+                 bluetooth_host::HostPtr host)
     : info_(std::move(info)), host_(std::move(host)) {
-  FXL_DCHECK(info_);
   FXL_DCHECK(host_);
 }
 
@@ -118,7 +117,7 @@ void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
 
   FXL_DCHECK(host_channel);
 
-  f1dl::InterfaceHandle<bluetooth::host::Host> handle(std::move(host_channel));
+  fidl::InterfaceHandle<bluetooth_host::Host> handle(std::move(host_channel));
   FXL_DCHECK(handle.is_valid());
 
   // Bind the channel to a host interface pointer.
@@ -142,13 +141,12 @@ void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
   host_raw->GetInfo(callback);
 }
 
-void AdapterManager::CreateAdapter(bluetooth::host::HostPtr host,
-                                   bluetooth::control::AdapterInfoPtr info) {
+void AdapterManager::CreateAdapter(bluetooth_host::HostPtr host,
+                                   bluetooth_control::AdapterInfo info) {
   FXL_DCHECK(host);
-  FXL_DCHECK(info);
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  auto id = info->identifier;
+  auto id = info.identifier;
   host.set_error_handler([self, id] {
     if (self)
       self->OnHostDisconnected(id);

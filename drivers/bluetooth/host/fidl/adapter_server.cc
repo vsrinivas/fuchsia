@@ -15,27 +15,27 @@ using bluetooth::Bool;
 using bluetooth::ErrorCode;
 using bluetooth::Status;
 
-using bluetooth::control::AdapterDelegate;
-using bluetooth::control::AdapterDelegatePtr;
-using bluetooth::control::AdapterState;
+using bluetooth_control::AdapterDelegate;
+using bluetooth_control::AdapterDelegatePtr;
+using bluetooth_control::AdapterState;
 
 namespace bthost {
 
 AdapterServer::AdapterServer(
     fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-    f1dl::InterfaceRequest<bluetooth::control::Adapter> request)
+    fidl::InterfaceRequest<bluetooth_control::Adapter> request)
     : AdapterServerBase(adapter, this, std::move(request)),
       requesting_discovery_(false),
       weak_ptr_factory_(this) {}
 
 AdapterServer::~AdapterServer() {}
 
-void AdapterServer::GetInfo(const GetInfoCallback& callback) {
+void AdapterServer::GetInfo(GetInfoCallback callback) {
   callback(fidl_helpers::NewAdapterInfo(*adapter()));
 }
 
 void AdapterServer::SetDelegate(
-    f1dl::InterfaceHandle<AdapterDelegate> delegate) {
+    fidl::InterfaceHandle<AdapterDelegate> delegate) {
   if (delegate) {
     delegate_ = delegate.Bind();
   } else {
@@ -64,18 +64,18 @@ void AdapterServer::SetDelegate(
   }
 }
 
-void AdapterServer::SetLocalName(const f1dl::StringPtr& local_name,
-                                 const f1dl::StringPtr& shortened_local_name,
-                                 const SetLocalNameCallback& callback) {
+void AdapterServer::SetLocalName(::fidl::StringPtr local_name,
+                                 ::fidl::StringPtr shortened_local_name,
+                                 SetLocalNameCallback callback) {
   FXL_NOTIMPLEMENTED();
 }
 
 void AdapterServer::SetPowered(bool powered,
-                               const SetPoweredCallback& callback) {
+                               SetPoweredCallback callback) {
   FXL_NOTIMPLEMENTED();
 }
 
-void AdapterServer::StartDiscovery(const StartDiscoveryCallback& callback) {
+void AdapterServer::StartDiscovery(StartDiscoveryCallback callback) {
   FXL_VLOG(1) << "Adapter StartDiscovery()";
   FXL_DCHECK(adapter());
 
@@ -113,11 +113,11 @@ void AdapterServer::StartDiscovery(const StartDiscoveryCallback& callback) {
 
         self->le_discovery_session_ = std::move(session);
         self->NotifyDiscoveringChanged();
-        callback(Status::New());
+        callback(Status());
       });
 }
 
-void AdapterServer::StopDiscovery(const StopDiscoveryCallback& callback) {
+void AdapterServer::StopDiscovery(StopDiscoveryCallback callback) {
   FXL_VLOG(1) << "Adapter StopDiscovery()";
   if (!le_discovery_session_) {
     FXL_VLOG(1) << "No active discovery session";
@@ -128,7 +128,7 @@ void AdapterServer::StopDiscovery(const StopDiscoveryCallback& callback) {
 
   le_discovery_session_ = nullptr;
   NotifyDiscoveringChanged();
-  callback(Status::New());
+  callback(Status());
 }
 
 void AdapterServer::OnDiscoveryResult(
@@ -142,16 +142,16 @@ void AdapterServer::OnDiscoveryResult(
     return;
   }
 
-  delegate_->OnDeviceDiscovered(std::move(fidl_device));
+  delegate_->OnDeviceDiscovered(std::move(*fidl_device));
 }
 
 void AdapterServer::NotifyDiscoveringChanged() {
   if (!delegate_)
     return;
 
-  auto adapter_state = AdapterState::New();
-  adapter_state->discovering = Bool::New();
-  adapter_state->discovering->value = le_discovery_session_ != nullptr;
+  AdapterState adapter_state;
+  adapter_state.discovering = Bool::New();
+  adapter_state.discovering->value = le_discovery_session_ != nullptr;
 
   delegate_->OnAdapterStateChanged(std::move(adapter_state));
 }

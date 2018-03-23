@@ -13,7 +13,7 @@
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 
-#include "lib/bluetooth/fidl/low_energy.fidl.h"
+#include <fuchsia/cpp/bluetooth_low_energy.h>
 
 // The internal library components and the generated FIDL bindings are both
 // declared under the "bluetooth" namespace. We define an alias here to
@@ -55,7 +55,7 @@ class AdvertisingData {
 
   // Fill the AdvertisingData |out_ad| from the corresponding FIDL object |obj|
   // Does not clear |out_ad| first.
-  static void FromFidl(::btfidl::low_energy::AdvertisingDataPtr& fidl_ad,
+  static void FromFidl(const ::bluetooth_low_energy::AdvertisingData& fidl_ad,
                        AdvertisingData* out_ad);
 
   // Copies all of the data in this object to |out|, including making a copy of
@@ -134,7 +134,7 @@ class AdvertisingData {
   bool WriteBlock(common::MutableByteBuffer* buffer) const;
 
   // Makes a FIDL object that holds the same data
-  ::btfidl::low_energy::AdvertisingDataPtr AsLEAdvertisingData() const;
+  ::bluetooth_low_energy::AdvertisingDataPtr AsLEAdvertisingData() const;
 
   // Relation operators
   bool operator==(const AdvertisingData& other) const;

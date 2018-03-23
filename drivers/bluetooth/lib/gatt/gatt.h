@@ -12,7 +12,7 @@
 #include "garnet/drivers/bluetooth/lib/gatt/local_service_manager.h"
 #include "garnet/drivers/bluetooth/lib/gatt/types.h"
 
-#include "lib/fidl/cpp/array.h"
+#include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 
@@ -115,7 +115,7 @@ class GATT : public fbl::RefCounted<GATT> {
   virtual void SendNotification(IdType service_id,
                                 IdType chrc_id,
                                 std::string peer_id,
-                                ::f1dl::VectorPtr<uint8_t> value,
+                                ::fidl::VectorPtr<uint8_t> value,
                                 bool indicate) = 0;
 
  protected:

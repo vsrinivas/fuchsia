@@ -11,12 +11,12 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "lib/bluetooth/fidl/control.fidl.h"
+#include <fuchsia/cpp/bluetooth_control.h>
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-#include "garnet/lib/bluetooth/fidl/host.fidl.h"
+#include <fuchsia/cpp/bluetooth_host.h>
 
 namespace bluetooth_service {
 
@@ -25,21 +25,21 @@ namespace bluetooth_service {
 class Adapter {
  public:
   // Returns a basic information about this adapter, such as its ID and address.
-  const bluetooth::control::AdapterInfoPtr& info() const { return info_; }
+  const bluetooth_control::AdapterInfo& info() const { return info_; }
 
   // Returns a Host interface pointer that can be used to send messages to the
   // underlying bt-host. Returns nullptr if the Host interface pointer is not
   // bound.
-  bluetooth::host::Host* host() const { return host_ ? host_.get() : nullptr; }
+  bluetooth_host::Host* host() const { return host_ ? host_.get() : nullptr; }
 
  private:
   friend class AdapterManager;
 
-  Adapter(bluetooth::control::AdapterInfoPtr info,
-          bluetooth::host::HostPtr host);
+  Adapter(bluetooth_control::AdapterInfo info,
+          bluetooth_host::HostPtr host);
 
-  bluetooth::control::AdapterInfoPtr info_;
-  bluetooth::host::HostPtr host_;
+  bluetooth_control::AdapterInfo info_;
+  bluetooth_host::HostPtr host_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Adapter);
 };
@@ -129,8 +129,8 @@ class AdapterManager final {
   // This also causes this AdapterManager to transition out of the
   // "initializing" state (if it is in that state) and resolve all adapter
   // requests that were previously queued.
-  void CreateAdapter(bluetooth::host::HostPtr host,
-                     bluetooth::control::AdapterInfoPtr info);
+  void CreateAdapter(bluetooth_host::HostPtr host,
+                     bluetooth_control::AdapterInfo info);
 
   // Called when the connection to a Host is lost.
   void OnHostDisconnected(const std::string& identifier);

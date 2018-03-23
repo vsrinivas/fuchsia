@@ -14,21 +14,21 @@ using bluetooth::ErrorCode;
 using bluetooth::Int8;
 using bluetooth::Status;
 
-using bluetooth::low_energy::CentralDelegate;
-using bluetooth::low_energy::CentralDelegatePtr;
-using bluetooth::low_energy::ScanFilterPtr;
+using bluetooth_low_energy::CentralDelegate;
+using bluetooth_low_energy::CentralDelegatePtr;
+using bluetooth_low_energy::ScanFilterPtr;
 
 namespace bthost {
 
 LowEnergyCentralServer::LowEnergyCentralServer(
     fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-    f1dl::InterfaceRequest<Central> request)
+    fidl::InterfaceRequest<Central> request)
     : AdapterServerBase(adapter, this, std::move(request)),
       requesting_scan_(false),
       weak_ptr_factory_(this) {}
 
 void LowEnergyCentralServer::SetDelegate(
-    ::f1dl::InterfaceHandle<CentralDelegate> delegate) {
+    ::fidl::InterfaceHandle<CentralDelegate> delegate) {
   if (!delegate) {
     FXL_VLOG(1) << "Cannot set a null delegate";
     return;
@@ -42,21 +42,21 @@ void LowEnergyCentralServer::SetDelegate(
 }
 
 void LowEnergyCentralServer::GetPeripherals(
-    ::f1dl::VectorPtr<::f1dl::StringPtr> service_uuids,
-    const GetPeripheralsCallback& callback) {
+    ::fidl::VectorPtr<::fidl::StringPtr> service_uuids,
+    GetPeripheralsCallback callback) {
   // TODO:
   FXL_NOTIMPLEMENTED();
 }
 
 void LowEnergyCentralServer::GetPeripheral(
-    const ::f1dl::StringPtr& identifier,
-    const GetPeripheralCallback& callback) {
+    ::fidl::StringPtr identifier,
+     GetPeripheralCallback callback) {
   // TODO:
   FXL_NOTIMPLEMENTED();
 }
 
 void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
-                                       const StartScanCallback& callback) {
+                                       StartScanCallback callback) {
   FXL_VLOG(1) << "Low Energy Central StartScan()";
 
   if (requesting_scan_) {
@@ -77,7 +77,7 @@ void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
     // A scan is already in progress. Update its filter and report success.
     scan_session_->ResetToDefault();
     fidl_helpers::PopulateDiscoveryFilter(*filter, scan_session_->filter());
-    callback(Status::New());
+    callback(Status());
     return;
   }
 
@@ -115,7 +115,7 @@ void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
 
         self->scan_session_ = std::move(session);
         self->NotifyScanStateChanged(true);
-        callback(Status::New());
+        callback(Status());
       }));
 }
 
@@ -132,8 +132,8 @@ void LowEnergyCentralServer::StopScan() {
 }
 
 void LowEnergyCentralServer::ConnectPeripheral(
-    const ::f1dl::StringPtr& identifier,
-    const ConnectPeripheralCallback& callback) {
+    ::fidl::StringPtr identifier,
+    ConnectPeripheralCallback callback) {
   FXL_VLOG(1) << "Low Energy Central ConnectPeripheral()";
 
   auto iter = connections_.find(identifier);
@@ -173,7 +173,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
       // an actual HCI error reported from the controller. LE conn mgr currently
       // uses HCI error codes for internal errors which needs to change.
       auto error = fidl_helpers::NewErrorStatus(ErrorCode::PROTOCOL_ERROR, msg);
-      error->error->protocol_error_code = status;
+      error.error->protocol_error_code = status;
       callback(std::move(error));
       return;
     }
@@ -201,7 +201,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
                      "connection attempt";
     }
 
-    callback(Status::New());
+    callback(Status());
   };
 
   if (!adapter()->le_connection_manager()->Connect(identifier.get(), conn_cb)) {
@@ -216,8 +216,8 @@ void LowEnergyCentralServer::ConnectPeripheral(
 }
 
 void LowEnergyCentralServer::DisconnectPeripheral(
-    const ::f1dl::StringPtr& identifier,
-    const DisconnectPeripheralCallback& callback) {
+    ::fidl::StringPtr identifier,
+    DisconnectPeripheralCallback callback) {
   auto iter = connections_.find(identifier.get());
   if (iter == connections_.end()) {
     auto msg = fxl::StringPrintf("Client not connected to device (id: %s)",
@@ -237,7 +237,7 @@ void LowEnergyCentralServer::DisconnectPeripheral(
     NotifyPeripheralDisconnected(identifier.get());
   }
 
-  callback(Status::New());
+  callback(Status());
 }
 
 void LowEnergyCentralServer::OnScanResult(
@@ -256,7 +256,7 @@ void LowEnergyCentralServer::OnScanResult(
     fidl_device->rssi->value = remote_device.rssi();
   }
 
-  delegate_->OnDeviceDiscovered(std::move(fidl_device));
+  delegate_->OnDeviceDiscovered(std::move(*fidl_device));
 }
 
 void LowEnergyCentralServer::NotifyScanStateChanged(bool scanning) {

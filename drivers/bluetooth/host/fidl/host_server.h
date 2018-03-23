@@ -15,7 +15,7 @@
 
 #include "garnet/drivers/bluetooth/host/fidl/server_base.h"
 #include "garnet/drivers/bluetooth/lib/gap/adapter.h"
-#include "garnet/lib/bluetooth/fidl/host.fidl.h"
+#include <fuchsia/cpp/bluetooth_host.h>
 
 namespace bthost {
 
@@ -23,7 +23,7 @@ class GattHost;
 
 // Implements the Host FIDL interface. Owns all FIDL connections that have been
 // opened through it.
-class HostServer : public AdapterServerBase<::bluetooth::host::Host> {
+class HostServer : public AdapterServerBase<::bluetooth_host::Host> {
  public:
   HostServer(zx::channel channel,
              fxl::WeakPtr<btlib::gap::Adapter> adapter,
@@ -31,27 +31,27 @@ class HostServer : public AdapterServerBase<::bluetooth::host::Host> {
   ~HostServer() override = default;
 
  private:
-  // ::bluetooth::host::Host overrides:
-  void GetInfo(const GetInfoCallback& callback) override;
+  // ::bluetooth_host::Host overrides:
+  void GetInfo(GetInfoCallback callback) override;
   void RequestControlAdapter(
-      ::f1dl::InterfaceRequest<bluetooth::control::Adapter> adapter) override;
+      ::fidl::InterfaceRequest<bluetooth_control::Adapter> adapter) override;
   void RequestLowEnergyCentral(
-      ::f1dl::InterfaceRequest<bluetooth::low_energy::Central> central)
+      ::fidl::InterfaceRequest<bluetooth_low_energy::Central> central)
       override;
   void RequestLowEnergyPeripheral(
-      ::f1dl::InterfaceRequest<bluetooth::low_energy::Peripheral> peripheral)
+      ::fidl::InterfaceRequest<bluetooth_low_energy::Peripheral> peripheral)
       override;
   void RequestGattServer(
-      ::f1dl::InterfaceRequest<bluetooth::gatt::Server> server) override;
+      ::fidl::InterfaceRequest<bluetooth_gatt::Server> server) override;
   void Close() override;
 
   // Called when |server| receives a channel connection error.
   void OnConnectionError(Server* server);
 
-  // Helper for binding a f1dl::InterfaceRequest to a FIDL server of type
+  // Helper for binding a fidl::InterfaceRequest to a FIDL server of type
   // ServerType.
   template <typename ServerType, typename InterfaceType>
-  void BindServer(f1dl::InterfaceRequest<InterfaceType> request) {
+  void BindServer(fidl::InterfaceRequest<InterfaceType> request) {
     auto server = std::make_unique<ServerType>(adapter()->AsWeakPtr(),
                                                std::move(request));
     server->set_error_handler(

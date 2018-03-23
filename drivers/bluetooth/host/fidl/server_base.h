@@ -11,6 +11,7 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fidl/cpp/interface_request.h"
 
 namespace btlib {
 
@@ -39,9 +40,9 @@ class Server {
 template <typename Interface>
 class ServerBase : public Server, public Interface {
  public:
-  // Constructs a FIDL server by binding a f1dl::InterfaceRequest.
-  ServerBase(Interface* impl, f1dl::InterfaceRequest<Interface> request)
-      : ServerBase(impl, request.PassChannel()) {}
+  // Constructs a FIDL server by binding a fidl::InterfaceRequest.
+  ServerBase(Interface* impl, fidl::InterfaceRequest<Interface> request)
+      : ServerBase(impl, request.TakeChannel()) {}
 
   // Constructs a FIDL server by binding a zx::channel.
   ServerBase(Interface* impl, zx::channel channel)
@@ -57,7 +58,7 @@ class ServerBase : public Server, public Interface {
 
  private:
   // Holds the channel from the FIDL client.
-  ::f1dl::Binding<Interface> binding_;
+  ::fidl::Binding<Interface> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServerBase);
 };
@@ -69,8 +70,8 @@ class AdapterServerBase : public ServerBase<Interface> {
  public:
   AdapterServerBase(fxl::WeakPtr<btlib::gap::Adapter> adapter,
                     Interface* impl,
-                    f1dl::InterfaceRequest<Interface> request)
-      : AdapterServerBase(adapter, impl, request.PassChannel()) {}
+                    fidl::InterfaceRequest<Interface> request)
+      : AdapterServerBase(adapter, impl, request.TakeChannel()) {}
 
   AdapterServerBase(fxl::WeakPtr<btlib::gap::Adapter> adapter,
                     Interface* impl,
@@ -97,7 +98,7 @@ class GattServerBase : public ServerBase<Interface> {
  public:
   GattServerBase(fbl::RefPtr<btlib::gatt::GATT> gatt,
                  Interface* impl,
-                 f1dl::InterfaceRequest<Interface> request)
+                 fidl::InterfaceRequest<Interface> request)
       : ServerBase<Interface>(impl, std::move(request)), gatt_(gatt) {
     FXL_DCHECK(gatt_);
   }

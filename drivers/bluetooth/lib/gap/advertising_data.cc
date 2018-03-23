@@ -9,21 +9,22 @@
 #include <endian.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "lib/fidl/cpp/type_converter.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/utf_codecs.h"
+#include "lib/fxl/type_converter.h"
+#include "lib/fidl/cpp/vector.h"
 
-// A partial f1dl::TypeConverter template specialization for copying the
+// A partial fxl::TypeConverter template specialization for copying the
 // contents of a type that derives from common::ByteBuffer into a
-// f1dl::VectorPtr<unsigned char>. If the input array is empty, the output array
-// will be empty. Used by Array<uint8_t>::From() in AsLEAdvertisingData()
+// fidl::VectorPtr<unsigned char>. If the input array is empty, the output array
+// will be empty. Used by Vector<uint8_t>::From() in AsLEAdvertisingData()
 template <typename T>
-struct f1dl::TypeConverter<f1dl::VectorPtr<unsigned char>, T> {
-  static f1dl::VectorPtr<unsigned char> Convert(const T& input) {
+struct fxl::TypeConverter<fidl::VectorPtr<unsigned char>, T> {
+  static fidl::VectorPtr<unsigned char> Convert(const T& input) {
     static_assert(std::is_base_of<::btlib::common::ByteBuffer, T>::value, "");
 
-    Array<unsigned char> result = Array<unsigned char>::New(input.size());
+    fidl::VectorPtr<unsigned char> result = fidl::VectorPtr<unsigned char>::New(input.size());
     memcpy(result->data(), input.data(), input.size());
     return result;
   }
@@ -253,9 +254,9 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
   return true;
 }
 
-::btfidl::low_energy::AdvertisingDataPtr AdvertisingData::AsLEAdvertisingData()
+::bluetooth_low_energy::AdvertisingDataPtr AdvertisingData::AsLEAdvertisingData()
     const {
-  auto fidl_data = ::btfidl::low_energy::AdvertisingData::New();
+  auto fidl_data = ::bluetooth_low_energy::AdvertisingData::New();
   FXL_DCHECK(fidl_data);
 
   if (tx_power_) {
@@ -269,16 +270,16 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
   }
 
   for (const auto& pair : manufacturer_data_) {
-    auto entry = ::btfidl::low_energy::ManufacturerSpecificDataEntry::New();
-    entry->company_id = pair.first;
-    entry->data = f1dl::VectorPtr<unsigned char>::From(pair.second);
+    ::bluetooth_low_energy::ManufacturerSpecificDataEntry entry;
+    entry.company_id = pair.first;
+    entry.data = fxl::To<fidl::VectorPtr<unsigned char>>(pair.second);
     fidl_data->manufacturer_specific_data.push_back(std::move(entry));
   }
 
   for (const auto& pair : service_data_) {
-    auto entry = ::btfidl::low_energy::ServiceDataEntry::New();
-    entry->uuid = pair.first.ToString();
-    entry->data = f1dl::VectorPtr<unsigned char>::From(pair.second);
+    ::bluetooth_low_energy::ServiceDataEntry entry;
+    entry.uuid = pair.first.ToString();
+    entry.data = fxl::To<fidl::VectorPtr<unsigned char>>(pair.second);
     fidl_data->service_data.push_back(std::move(entry));
   }
 
@@ -298,44 +299,43 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data,
 }
 
 void AdvertisingData::FromFidl(
-    ::btfidl::low_energy::AdvertisingDataPtr& fidl_ad,
+    const ::bluetooth_low_energy::AdvertisingData& fidl_ad,
     AdvertisingData* out_ad) {
-  FXL_DCHECK(fidl_ad);
   FXL_DCHECK(out_ad);
   common::UUID uuid;
-  for (const auto& uuid_str : *fidl_ad->service_uuids) {
+  for (const auto& uuid_str : *fidl_ad.service_uuids) {
     if (common::StringToUuid(uuid_str, &uuid)) {
       out_ad->AddServiceUuid(uuid);
     }
   }
 
-  for (const auto& it : *fidl_ad->manufacturer_specific_data) {
-    f1dl::VectorPtr<uint8_t>& data = it->data;
+  for (const auto& it : *fidl_ad.manufacturer_specific_data) {
+    const fidl::VectorPtr<uint8_t>& data = it.data;
     common::BufferView manuf_view(data->data(), data->size());
-    out_ad->SetManufacturerData(it->company_id, manuf_view);
+    out_ad->SetManufacturerData(it.company_id, manuf_view);
   }
 
-  for (const auto& it : *fidl_ad->service_data) {
-    f1dl::VectorPtr<uint8_t>& data = it->data;
+  for (const auto& it : *fidl_ad.service_data) {
+    const fidl::VectorPtr<uint8_t>& data = it.data;
     common::BufferView servdata_view(data->data(), data->size());
     common::UUID servdata_uuid;
-    if (StringToUuid(it->uuid.get(), &servdata_uuid)) {
+    if (StringToUuid(it.uuid.get(), &servdata_uuid)) {
       out_ad->SetServiceData(servdata_uuid, servdata_view);
     } else {
       FXL_LOG(WARNING) << "FIDL Service Data has malformed UUID";
     }
   }
 
-  if (fidl_ad->appearance) {
-    out_ad->SetAppearance(fidl_ad->appearance->value);
+  if (fidl_ad.appearance) {
+    out_ad->SetAppearance(fidl_ad.appearance->value);
   }
 
-  if (fidl_ad->tx_power_level) {
-    out_ad->SetTxPower(fidl_ad->tx_power_level->value);
+  if (fidl_ad.tx_power_level) {
+    out_ad->SetTxPower(fidl_ad.tx_power_level->value);
   }
 
-  if (fidl_ad->name) {
-    out_ad->SetLocalName(fidl_ad->name);
+  if (fidl_ad.name) {
+    out_ad->SetLocalName(fidl_ad.name);
   }
 }
 

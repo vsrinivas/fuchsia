@@ -49,7 +49,7 @@ void GattHost::CleanUp() {
 }
 
 void GattHost::BindGattServer(
-    f1dl::InterfaceRequest<bluetooth::gatt::Server> request) {
+    fidl::InterfaceRequest<bluetooth_gatt::Server> request) {
   // TODO(armansito): Stop using MakeCopyable! (NET-425)
   PostMessage(fxl::MakeCopyable([this, request = std::move(request)]() mutable {
     AddServer(std::make_unique<GattServerServer>(gatt_, std::move(request)));

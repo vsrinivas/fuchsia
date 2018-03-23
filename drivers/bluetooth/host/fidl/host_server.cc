@@ -21,27 +21,27 @@ HostServer::HostServer(zx::channel channel,
   FXL_DCHECK(gatt_host_);
 }
 
-void HostServer::GetInfo(const GetInfoCallback& callback) {
+void HostServer::GetInfo(GetInfoCallback callback) {
   callback(fidl_helpers::NewAdapterInfo(*adapter()));
 }
 
 void HostServer::RequestControlAdapter(
-    f1dl::InterfaceRequest<bluetooth::control::Adapter> request) {
+    fidl::InterfaceRequest<bluetooth_control::Adapter> request) {
   BindServer<AdapterServer>(std::move(request));
 }
 
 void HostServer::RequestLowEnergyCentral(
-    f1dl::InterfaceRequest<bluetooth::low_energy::Central> request) {
+    fidl::InterfaceRequest<bluetooth_low_energy::Central> request) {
   BindServer<LowEnergyCentralServer>(std::move(request));
 }
 
 void HostServer::RequestLowEnergyPeripheral(
-    f1dl::InterfaceRequest<bluetooth::low_energy::Peripheral> request) {
+    fidl::InterfaceRequest<bluetooth_low_energy::Peripheral> request) {
   BindServer<LowEnergyPeripheralServer>(std::move(request));
 }
 
 void HostServer::RequestGattServer(
-    f1dl::InterfaceRequest<bluetooth::gatt::Server> request) {
+    fidl::InterfaceRequest<bluetooth_gatt::Server> request) {
   // GATT FIDL requests are handled by GattHost.
   gatt_host_->BindGattServer(std::move(request));
 }

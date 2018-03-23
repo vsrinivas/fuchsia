@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include "lib/bluetooth/fidl/low_energy.fidl.h"
+#include <fuchsia/cpp/bluetooth_low_energy.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
@@ -19,30 +19,30 @@ namespace bthost {
 
 // Implements the low_energy::Central FIDL interface.
 class LowEnergyCentralServer
-    : public AdapterServerBase<bluetooth::low_energy::Central> {
+    : public AdapterServerBase<bluetooth_low_energy::Central> {
  public:
   LowEnergyCentralServer(
       fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-      ::f1dl::InterfaceRequest<::bluetooth::low_energy::Central> request);
+      ::fidl::InterfaceRequest<::bluetooth_low_energy::Central> request);
   ~LowEnergyCentralServer() override = default;
 
  private:
-  // ::bluetooth::low_energy::Central overrides:
+  // ::bluetooth_low_energy::Central overrides:
   void SetDelegate(
-      ::f1dl::InterfaceHandle<::bluetooth::low_energy::CentralDelegate>
+      ::fidl::InterfaceHandle<::bluetooth_low_energy::CentralDelegate>
           delegate) override;
-  void GetPeripherals(::f1dl::VectorPtr<::f1dl::StringPtr> service_uuids,
-                      const GetPeripheralsCallback& callback) override;
-  void GetPeripheral(const ::f1dl::StringPtr& identifier,
-                     const GetPeripheralCallback& callback) override;
-  void StartScan(::bluetooth::low_energy::ScanFilterPtr filter,
-                 const StartScanCallback& callback) override;
+  void GetPeripherals(::fidl::VectorPtr<::fidl::StringPtr> service_uuids,
+                      GetPeripheralsCallback callback) override;
+  void GetPeripheral(::fidl::StringPtr identifier,
+                     GetPeripheralCallback callback) override;
+  void StartScan(::bluetooth_low_energy::ScanFilterPtr filter,
+                 StartScanCallback callback) override;
   void StopScan() override;
-  void ConnectPeripheral(const ::f1dl::StringPtr& identifier,
-                         const ConnectPeripheralCallback& callback) override;
+  void ConnectPeripheral(::fidl::StringPtr identifier,
+                         ConnectPeripheralCallback callback) override;
   void DisconnectPeripheral(
-      const ::f1dl::StringPtr& identifier,
-      const DisconnectPeripheralCallback& callback) override;
+      ::fidl::StringPtr identifier,
+      DisconnectPeripheralCallback callback) override;
 
   // Called by |scan_session_| when a device is discovered.
   void OnScanResult(const ::btlib::gap::RemoteDevice& remote_device);
@@ -68,7 +68,7 @@ class LowEnergyCentralServer
       connections_;
 
   // The delegate that is set via SetDelegate()
-  ::bluetooth::low_energy::CentralDelegatePtr delegate_;
+  ::bluetooth_low_energy::CentralDelegatePtr delegate_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.

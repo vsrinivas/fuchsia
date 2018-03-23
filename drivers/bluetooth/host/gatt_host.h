@@ -9,7 +9,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/task_domain.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
-#include "garnet/public/lib/bluetooth/fidl/gatt.fidl.h"
+#include <fuchsia/cpp/bluetooth_gatt.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
@@ -49,7 +49,7 @@ class GattHost final : public fbl::RefCounted<GattHost>,
   void CloseServers();
 
   // Binds the given request to a FIDL server.
-  void BindGattServer(f1dl::InterfaceRequest<bluetooth::gatt::Server> request);
+  void BindGattServer(fidl::InterfaceRequest<bluetooth_gatt::Server> request);
 
   // Returns the GATT profile implementation.
   fbl::RefPtr<btlib::gatt::GATT> profile() const { return gatt_; }

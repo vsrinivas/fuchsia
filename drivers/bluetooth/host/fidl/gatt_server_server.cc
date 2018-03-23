@@ -16,16 +16,16 @@
 
 using bluetooth::ErrorCode;
 using bluetooth::Status;
-using GattErrorCode = bluetooth::gatt::ErrorCode;
+using GattErrorCode = bluetooth_gatt::ErrorCode;
 
-using bluetooth::gatt::Characteristic;
-using bluetooth::gatt::CharacteristicProperty;
-using bluetooth::gatt::Descriptor;
-using bluetooth::gatt::SecurityRequirementsPtr;
-using bluetooth::gatt::Service;
-using bluetooth::gatt::ServiceDelegate;
-using bluetooth::gatt::ServiceDelegatePtr;
-using bluetooth::gatt::ServiceInfoPtr;
+using bluetooth_gatt::Characteristic;
+using bluetooth_gatt::CharacteristicProperty;
+using bluetooth_gatt::Descriptor;
+using bluetooth_gatt::SecurityRequirementsPtr;
+using bluetooth_gatt::Service;
+using bluetooth_gatt::ServiceDelegate;
+using bluetooth_gatt::ServiceDelegatePtr;
+using bluetooth_gatt::ServiceInfoPtr;
 
 namespace bthost {
 namespace {
@@ -49,7 +49,7 @@ namespace {
   return ::btlib::att::ErrorCode::kUnlikelyError;
 }
 
-void ParseProperties(const f1dl::VectorPtr<CharacteristicProperty>& properties,
+void ParseProperties(const fidl::VectorPtr<CharacteristicProperty>& properties,
                      uint8_t* out_props,
                      uint16_t* out_ext_props) {
   FXL_DCHECK(out_props);
@@ -167,10 +167,7 @@ CharacteristicResult NewCharacteristic(const Characteristic& fidl_chrc) {
       fidl_chrc.id, type, props, ext_props, read_reqs, write_reqs, update_reqs);
   if (fidl_chrc.descriptors && !fidl_chrc.descriptors->empty()) {
     for (const auto& fidl_desc : *fidl_chrc.descriptors) {
-      if (!fidl_desc) {
-        return CharacteristicResult("null descriptor");
-      }
-      auto desc_result = NewDescriptor(*fidl_desc);
+        auto desc_result = NewDescriptor(fidl_desc);
       if (desc_result.is_error()) {
         return CharacteristicResult(std::move(desc_result.error));
       }
@@ -187,12 +184,12 @@ CharacteristicResult NewCharacteristic(const Characteristic& fidl_chrc) {
 // Implements the gatt::Service FIDL interface. Instances of this class are only
 // created by a GattServerServer.
 class GattServerServer::ServiceImpl
-    : public GattServerBase<::bluetooth::gatt::Service> {
+    : public GattServerBase<::bluetooth_gatt::Service> {
  public:
   ServiceImpl(GattServerServer* owner,
               uint64_t id,
-              ::bluetooth::gatt::ServiceDelegatePtr delegate,
-              ::f1dl::InterfaceRequest<::bluetooth::gatt::Service> request)
+              ::bluetooth_gatt::ServiceDelegatePtr delegate,
+              ::fidl::InterfaceRequest<::bluetooth_gatt::Service> request)
       : GattServerBase(owner->gatt(), this, std::move(request)),
         owner_(owner),
         id_(id),
@@ -211,18 +208,18 @@ class GattServerServer::ServiceImpl
 
   // Returns the current delegate. Returns nullptr if the delegate was
   // disconnected (e.g. due to a call to RemoveService()).
-  ::bluetooth::gatt::ServiceDelegate* delegate() { return delegate_.get(); }
+  ::bluetooth_gatt::ServiceDelegate* delegate() { return delegate_.get(); }
 
  private:
-  // ::bluetooth::gatt::Service overrides:
+  // ::bluetooth_gatt::Service overrides:
   void RemoveService() override {
     CleanUp();
     owner_->RemoveService(id_);
   }
 
   void NotifyValue(uint64_t characteristic_id,
-                   const ::f1dl::StringPtr& peer_id,
-                   ::f1dl::VectorPtr<uint8_t> value,
+                   ::fidl::StringPtr peer_id,
+                   ::fidl::VectorPtr<uint8_t> value,
                    bool confirm) override {
     gatt()->SendNotification(id_, characteristic_id, peer_id, std::move(value),
                              confirm);
@@ -241,14 +238,14 @@ class GattServerServer::ServiceImpl
   // The delegate connection for the corresponding service instance. This gets
   // cleared when the service is unregistered (via RemoveService() or
   // destruction).
-  ::bluetooth::gatt::ServiceDelegatePtr delegate_;
+  ::bluetooth_gatt::ServiceDelegatePtr delegate_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceImpl);
 };
 
 GattServerServer::GattServerServer(
     fbl::RefPtr<btlib::gatt::GATT> gatt,
-    f1dl::InterfaceRequest<bluetooth::gatt::Server> request)
+    fidl::InterfaceRequest<bluetooth_gatt::Server> request)
     : GattServerBase(gatt, this, std::move(request)), weak_ptr_factory_(this) {}
 
 GattServerServer::~GattServerServer() {
@@ -265,16 +262,10 @@ void GattServerServer::RemoveService(uint64_t id) {
 }
 
 void GattServerServer::PublishService(
-    ServiceInfoPtr service_info,
-    f1dl::InterfaceHandle<ServiceDelegate> delegate,
-    f1dl::InterfaceRequest<Service> service_iface,
-    const PublishServiceCallback& callback) {
-  if (!service_info) {
-    auto error = fidl_helpers::NewErrorStatus(ErrorCode::INVALID_ARGUMENTS,
-                                              "A service is required");
-    callback(std::move(error));
-    return;
-  }
+    bluetooth_gatt::ServiceInfo service_info,
+    fidl::InterfaceHandle<ServiceDelegate> delegate,
+    fidl::InterfaceRequest<Service> service_iface,
+    PublishServiceCallback callback) {
 
   if (!delegate) {
     auto error = fidl_helpers::NewErrorStatus(ErrorCode::INVALID_ARGUMENTS,
@@ -291,7 +282,7 @@ void GattServerServer::PublishService(
   }
 
   ::btlib::common::UUID service_type;
-  if (!::btlib::common::StringToUuid(service_info->type.get(), &service_type)) {
+  if (!::btlib::common::StringToUuid(service_info.type.get(), &service_type)) {
     auto error = fidl_helpers::NewErrorStatus(ErrorCode::INVALID_ARGUMENTS,
                                               "Invalid service UUID");
     callback(std::move(error));
@@ -299,18 +290,11 @@ void GattServerServer::PublishService(
   }
 
   // Process the FIDL service tree.
-  auto service = std::make_unique<::btlib::gatt::Service>(service_info->primary,
+  auto service = std::make_unique<::btlib::gatt::Service>(service_info.primary,
                                                           service_type);
-  if (service_info->characteristics) {
-    for (const auto& fidl_chrc : *service_info->characteristics) {
-      if (!fidl_chrc) {
-        auto error = fidl_helpers::NewErrorStatus(ErrorCode::INVALID_ARGUMENTS,
-                                                  "null characteristic");
-        callback(std::move(error));
-        return;
-      }
-
-      auto chrc_result = NewCharacteristic(*fidl_chrc);
+  if (service_info.characteristics) {
+    for (const auto& fidl_chrc : *service_info.characteristics) {
+      auto chrc_result = NewCharacteristic(fidl_chrc);
       if (chrc_result.is_error()) {
         auto error = fidl_helpers::NewErrorStatus(ErrorCode::INVALID_ARGUMENTS,
                                                   chrc_result.error);
@@ -382,7 +366,7 @@ void GattServerServer::PublishService(
         service_server->set_error_handler(connection_error_cb);
         self->services_[id] = std::move(service_server);
 
-        callback(Status::New());
+        callback(Status());
       });
 
   gatt()->RegisterService(std::move(service), std::move(id_cb),
@@ -403,7 +387,7 @@ void GattServerServer::OnReadRequest(
     return;
   }
 
-  auto cb = [responder](f1dl::VectorPtr<uint8_t> value, auto error_code) {
+  auto cb = [responder](fidl::VectorPtr<uint8_t> value, auto error_code) {
     responder(GattErrorCodeFromFidl(error_code, true /* is_read */),
               ::btlib::common::BufferView(value->data(), value->size()));
   };
@@ -425,7 +409,7 @@ void GattServerServer::OnWriteRequest(
     return;
   }
 
-  auto fidl_value = f1dl::VectorPtr<uint8_t>::From(value);
+  auto fidl_value = fxl::To<fidl::VectorPtr<uint8_t>>(value);
   auto* delegate = iter->second->delegate();
   FXL_DCHECK(delegate);
 

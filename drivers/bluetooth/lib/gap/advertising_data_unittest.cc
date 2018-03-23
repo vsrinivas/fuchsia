@@ -107,19 +107,19 @@ TEST(GAP_AdvertisingDataTest, ParseBlock) {
 }
 
 TEST(GAP_AdvertisingDataTest, ParseFIDL) {
-  auto fidl_ad = ::btfidl::low_energy::AdvertisingData::New();
+  auto fidl_ad = ::bluetooth_low_energy::AdvertisingData::New();
 
   // Confirming UTF-8 codepoints are working as well.
   fidl_ad->name = "Test💖";
   fidl_ad->service_uuids.push_back(kId1AsString);
   fidl_ad->service_uuids.push_back(kId3AsString);
 
-  auto array = f1dl::VectorPtr<uint8_t>::New(4);
+  auto array = fidl::VectorPtr<uint8_t>::New(4);
   for (size_t i = 0; i < array->size(); i++) {
     array->at(i) = static_cast<uint8_t>(i * 3);
   }
 
-  auto service_data_entry = ::btfidl::low_energy::ServiceDataEntry::New();
+  auto service_data_entry = ::bluetooth_low_energy::ServiceDataEntry::New();
   service_data_entry->uuid = kId1AsString;
   service_data_entry->data = std::move(array);
   fidl_ad->service_data.push_back(std::move(service_data_entry));

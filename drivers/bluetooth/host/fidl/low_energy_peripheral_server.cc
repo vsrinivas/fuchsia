@@ -16,12 +16,12 @@
 using bluetooth::ErrorCode;
 using bluetooth::Status;
 
-using bluetooth::low_energy::AdvertisingData;
-using bluetooth::low_energy::AdvertisingDataPtr;
-using bluetooth::low_energy::Peripheral;
-using bluetooth::low_energy::PeripheralDelegate;
-using bluetooth::low_energy::PeripheralDelegatePtr;
-using bluetooth::low_energy::RemoteDevicePtr;
+using bluetooth_low_energy::AdvertisingData;
+using bluetooth_low_energy::AdvertisingDataPtr;
+using bluetooth_low_energy::Peripheral;
+using bluetooth_low_energy::PeripheralDelegate;
+using bluetooth_low_energy::PeripheralDelegatePtr;
+using bluetooth_low_energy::RemoteDevicePtr;
 
 namespace bthost {
 
@@ -48,7 +48,7 @@ LowEnergyPeripheralServer::InstanceData::InstanceData(const std::string& id,
 
 void LowEnergyPeripheralServer::InstanceData::RetainConnection(
     ConnectionRefPtr conn_ref,
-    RemoteDevicePtr peer) {
+    bluetooth_low_energy::RemoteDevice peer) {
   FXL_DCHECK(connectable());
   FXL_DCHECK(!conn_ref_);
 
@@ -66,7 +66,7 @@ void LowEnergyPeripheralServer::InstanceData::ReleaseConnection() {
 
 LowEnergyPeripheralServer::LowEnergyPeripheralServer(
     fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-    f1dl::InterfaceRequest<Peripheral> request)
+    fidl::InterfaceRequest<Peripheral> request)
     : AdapterServerBase(adapter, this, std::move(request)),
       weak_ptr_factory_(this) {}
 
@@ -80,19 +80,19 @@ LowEnergyPeripheralServer::~LowEnergyPeripheralServer() {
 }
 
 void LowEnergyPeripheralServer::StartAdvertising(
-    AdvertisingDataPtr advertising_data,
+    AdvertisingData advertising_data,
     AdvertisingDataPtr scan_result,
-    ::f1dl::InterfaceHandle<PeripheralDelegate> delegate,
+    ::fidl::InterfaceHandle<PeripheralDelegate> delegate,
     uint32_t interval,
     bool anonymous,
-    const StartAdvertisingCallback& callback) {
+    StartAdvertisingCallback callback) {
   auto* advertising_manager = adapter()->le_advertising_manager();
   FXL_DCHECK(advertising_manager);
 
   ::btlib::gap::AdvertisingData ad_data, scan_data;
   ::btlib::gap::AdvertisingData::FromFidl(advertising_data, &ad_data);
   if (scan_result) {
-    ::btlib::gap::AdvertisingData::FromFidl(scan_result, &scan_data);
+    ::btlib::gap::AdvertisingData::FromFidl(*scan_result, &scan_data);
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
@@ -118,7 +118,7 @@ void LowEnergyPeripheralServer::StartAdvertising(
         if (status != ::btlib::hci::kSuccess) {
           auto fidlerror = fidl_helpers::NewErrorStatus(
               ErrorCode::PROTOCOL_ERROR, ErrorToString(status));
-          fidlerror->error->protocol_error_code = status;
+          fidlerror.error->protocol_error_code = status;
           callback(std::move(fidlerror), "");
           return;
         }
@@ -136,7 +136,7 @@ void LowEnergyPeripheralServer::StartAdvertising(
         }
 
         self->instances_[ad_id] = InstanceData(ad_id, std::move(delegate_ptr));
-        callback(Status::New(), ad_id);
+        callback(Status(), ad_id);
       });
 
   advertising_manager->StartAdvertising(ad_data, scan_data, connect_cb,
@@ -145,10 +145,10 @@ void LowEnergyPeripheralServer::StartAdvertising(
 }
 
 void LowEnergyPeripheralServer::StopAdvertising(
-    const ::f1dl::StringPtr& id,
-    const StopAdvertisingCallback& callback) {
+    ::fidl::StringPtr id,
+    StopAdvertisingCallback callback) {
   if (StopAdvertisingInternal(id)) {
-    callback(Status::New());
+    callback(Status());
   } else {
     callback(fidl_helpers::NewErrorStatus(ErrorCode::NOT_FOUND,
                                           "Unrecognized advertisement ID"));
@@ -207,8 +207,10 @@ void LowEnergyPeripheralServer::OnConnected(std::string advertisement_id,
   FXL_DCHECK(device);
 
   FXL_VLOG(1) << "Central connected";
-  it->second.RetainConnection(std::move(conn),
-                              fidl_helpers::NewLERemoteDevice(*device));
+  ::bluetooth_low_energy::RemoteDevicePtr remote_device =
+      fidl_helpers::NewLERemoteDevice(std::move(*device));
+  FXL_DCHECK(remote_device);
+  it->second.RetainConnection(std::move(conn), std::move(*remote_device));
 }
 
 }  // namespace bthost

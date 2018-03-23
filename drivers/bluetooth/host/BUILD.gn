@@ -42,7 +42,10 @@ source_set("sources") {
 
   deps = [
     "//garnet/drivers/bluetooth/lib/gap",
-    "//garnet/public/lib/bluetooth/fidl",
+    "//garnet/public/lib/bluetooth/fidl:bluetooth",
+    "//garnet/public/lib/bluetooth/fidl:bluetooth_control",
+    "//garnet/public/lib/bluetooth/fidl:bluetooth_gatt",
+    "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy",
     "//garnet/public/lib/fxl",
     "//garnet/lib/bluetooth/fidl",
     "//garnet/lib/bluetooth/c",

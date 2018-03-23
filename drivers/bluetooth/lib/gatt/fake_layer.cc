@@ -41,7 +41,7 @@ void FakeLayer::UnregisterService(IdType service_id) {
 void FakeLayer::SendNotification(IdType service_id,
                                  IdType chrc_id,
                                  std::string peer_id,
-                                 ::f1dl::VectorPtr<uint8_t> value,
+                                 ::fidl::VectorPtr<uint8_t> value,
                                  bool indicate) {
   // TODO: implement
 }

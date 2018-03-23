@@ -120,7 +120,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
   void SendNotification(IdType service_id,
                         IdType chrc_id,
                         std::string peer_id,
-                        ::f1dl::VectorPtr<uint8_t> value,
+                        ::fidl::VectorPtr<uint8_t> value,
                         bool indicate) override {
     FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
 

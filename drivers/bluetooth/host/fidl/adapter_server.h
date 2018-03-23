@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "lib/bluetooth/fidl/control.fidl.h"
+#include <fuchsia/cpp/bluetooth_control.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
@@ -24,24 +24,24 @@ class RemoteDevice;
 namespace bthost {
 
 // Implements the control.Adapter FIDL interface.
-class AdapterServer : public AdapterServerBase<::bluetooth::control::Adapter> {
+class AdapterServer : public AdapterServerBase<::bluetooth_control::Adapter> {
  public:
   AdapterServer(fxl::WeakPtr<::btlib::gap::Adapter> adapter,
-                f1dl::InterfaceRequest<bluetooth::control::Adapter> request);
+                fidl::InterfaceRequest<bluetooth_control::Adapter> request);
   ~AdapterServer() override;
 
  private:
-  // ::bluetooth::control::Adapter overrides:
-  void GetInfo(const GetInfoCallback& callback) override;
+  // ::bluetooth_control::Adapter overrides:
+  void GetInfo(GetInfoCallback callback) override;
   void SetDelegate(
-      ::f1dl::InterfaceHandle<::bluetooth::control::AdapterDelegate> delegate)
+      ::fidl::InterfaceHandle<::bluetooth_control::AdapterDelegate> delegate)
       override;
-  void SetLocalName(const ::f1dl::StringPtr& local_name,
-                    const ::f1dl::StringPtr& shortened_local_name,
-                    const SetLocalNameCallback& callback) override;
-  void SetPowered(bool powered, const SetPoweredCallback& callback) override;
-  void StartDiscovery(const StartDiscoveryCallback& callback) override;
-  void StopDiscovery(const StopDiscoveryCallback& callback) override;
+  void SetLocalName(::fidl::StringPtr local_name,
+                    ::fidl::StringPtr shortened_local_name,
+                    SetLocalNameCallback callback) override;
+  void SetPowered(bool powered, SetPoweredCallback callback) override;
+  void StartDiscovery(StartDiscoveryCallback callback) override;
+  void StopDiscovery(StopDiscoveryCallback callback) override;
 
   // Called by |le_discovery_session_| when devices are discovered.
   void OnDiscoveryResult(const ::btlib::gap::RemoteDevice& remote_device);
@@ -56,7 +56,7 @@ class AdapterServer : public AdapterServerBase<::bluetooth::control::Adapter> {
       le_discovery_session_;
 
   // The delegate that was set via SetDelegate().
-  ::bluetooth::control::AdapterDelegatePtr delegate_;
+  ::bluetooth_control::AdapterDelegatePtr delegate_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.
