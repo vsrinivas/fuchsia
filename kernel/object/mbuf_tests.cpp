@@ -148,8 +148,17 @@ static bool stream_write_too_much() {
     END_TEST;
 }
 
-// TODO(ZX-1847): Implemented a test that verifies behavior of calling ReadDatagram when MBufChain
-// is empty.
+// Tests reading a datagram when chain is empty.
+static bool datagram_read_empty() {
+    BEGIN_TEST;
+    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
+    auto mem_out = make_user_out_ptr(mem->out());
+
+    MBufChain chain;
+    EXPECT_EQ(0U, chain.Read(mem_out, 1, true), "");
+    EXPECT_TRUE(chain.is_empty(), "");
+    END_TEST;
+}
 
 // Tests reading a datagram with a zero-length buffer.
 static bool datagram_read_zero() {
@@ -310,6 +319,7 @@ UNITTEST("stream_read_zero", stream_read_zero)
 UNITTEST("stream_write_basic", stream_write_basic)
 UNITTEST("stream_write_zero", stream_write_zero)
 UNITTEST("stream_write_too_much", stream_write_too_much)
+UNITTEST("datagram_read_empty", datagram_read_empty)
 UNITTEST("datagram_read_zero", datagram_read_zero)
 UNITTEST("datagram_read_buffer_too_small", datagram_read_buffer_too_small)
 UNITTEST("datagram_write_basic", datagram_write_basic)

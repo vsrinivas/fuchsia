@@ -38,6 +38,10 @@ bool MBufChain::is_empty() const {
 }
 
 size_t MBufChain::Read(user_out_ptr<void> dst, size_t len, bool datagram) {
+    if (size_ == 0) {
+        return 0;
+    }
+
     if (datagram && len > tail_.front().pkt_len_)
         len = tail_.front().pkt_len_;
 
