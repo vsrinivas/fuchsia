@@ -155,7 +155,7 @@ void MediaDemuxImpl::GetStatus(uint64_t version_last_seen,
   status_publisher_.Get(version_last_seen, callback);
 }
 
-void MediaDemuxImpl::Flush(bool hold_frame, const FlushCallback& callback) {
+void MediaDemuxImpl::Flush(bool hold_frame, FlushCallback callback) {
   RCHECK(init_complete_.occurred());
 
   graph_.FlushAllOutputs(demux_node_, hold_frame);

@@ -9,11 +9,11 @@
 
 #include <zx/socket.h>
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/demux/reader.h"
 #include "garnet/bin/media/fidl/fidl_default_waiter.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 
@@ -23,7 +23,7 @@ class FidlReader : public Reader,
  public:
   // Creates an FidlReader. Must be called on a fidl thread.
   static std::shared_ptr<Reader> Create(
-      f1dl::InterfaceHandle<SeekingReader> seeking_reader) {
+      fidl::InterfaceHandle<SeekingReader> seeking_reader) {
     return std::shared_ptr<Reader>(new FidlReader(std::move(seeking_reader)));
   }
 
@@ -44,7 +44,7 @@ class FidlReader : public Reader,
                                    uint64_t count,
                                    void* closure);
 
-  FidlReader(f1dl::InterfaceHandle<SeekingReader> seeking_reader);
+  FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader);
 
   // Continues a ReadAt operation on the thread on which this reader was
   // constructed (a fidl thread).

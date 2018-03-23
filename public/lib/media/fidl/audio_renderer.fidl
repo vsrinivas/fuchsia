@@ -280,11 +280,11 @@ interface AudioRenderer2 {
   // discontinuity.
   //
   // TODO(johngro): Collapse these if we ever have optional retvals in FIDL
-  301: Play(int64 reference_time, // MediaPacket::kNoTimestamp
-           int64 media_time) -> // MediaPacket::kNoTimestamp
+  301: Play(int64 reference_time, // kNoTimestamp
+           int64 media_time) -> // kNoTimestamp
     (int64 reference_time, int64 media_time);
-  302: PlayNoReply(int64 reference_time, // MediaPacket::kNoTimestamp
-                  int64 media_time); // MediaPacket::kNoTimestamp
+  302: PlayNoReply(int64 reference_time, // kNoTimestamp
+                  int64 media_time); // kNoTimestamp
 
   // Immediately put the renderer into the paused state and then report the
   // relationship between the media and reference timelines which was

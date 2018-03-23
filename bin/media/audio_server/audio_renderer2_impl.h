@@ -44,7 +44,7 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
   void SendPacket(AudioPacketPtr packet,
                   const SendPacketCallback& callback) final;
   void SendPacketNoReply(AudioPacketPtr packet) final;
-  void Flush(const FlushCallback& callback) final;
+  void Flush(FlushCallback callback) final;
   void FlushNoReply() final;
   void Play(int64_t reference_time,
             int64_t media_time,

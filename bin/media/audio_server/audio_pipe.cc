@@ -7,8 +7,8 @@
 #include <limits>
 #include <vector>
 
-#include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_renderer1_impl.h"
+#include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
 #include "garnet/bin/media/audio_server/constants.h"
 
@@ -35,7 +35,7 @@ void* AudioPipe::AudioPacketRefV1::payload() {
 }
 
 uint32_t AudioPipe::AudioPacketRefV1::flags() {
-  return supplied_packet_->packet()->flags;
+  return supplied_packet_->packet().flags;
 }
 
 AudioPipe::AudioPipe(AudioRenderer1Impl* owner, AudioServerImpl* server)
@@ -91,8 +91,7 @@ void AudioPipe::PrimeRequested(
 }
 
 void AudioPipe::OnPacketSupplied(
-      std::unique_ptr<MediaPacketConsumerBase::SuppliedPacket>
-      supplied_packet) {
+    std::unique_ptr<MediaPacketConsumerBase::SuppliedPacket> supplied_packet) {
   FXL_DCHECK(supplied_packet);
   FXL_DCHECK(owner_);
 
@@ -107,9 +106,9 @@ void AudioPipe::OnPacketSupplied(
     FXL_DCHECK(!min_pts_dirty_);
   }
 
-  FXL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
+  FXL_DCHECK(supplied_packet->packet().pts_rate_ticks ==
              owner_->format_info()->format()->frames_per_second);
-  FXL_DCHECK(supplied_packet->packet()->pts_rate_seconds == 1);
+  FXL_DCHECK(supplied_packet->packet().pts_rate_seconds == 1);
 
   // Start by making sure that the region we are receiving is made from an
   // integral number of audio frames.  Count the total number of frames in the
@@ -139,10 +138,10 @@ void AudioPipe::OnPacketSupplied(
 
   // Figure out the starting PTS.
   int64_t start_pts;
-  if (supplied_packet->packet()->pts != MediaPacket::kNoTimestamp) {
+  if (supplied_packet->packet().pts != kNoTimestamp) {
     // The user provided an explicit PTS for this audio.  Transform it into
     // units of fractional frames.
-    start_pts = supplied_packet->packet()->pts *
+    start_pts = supplied_packet->packet().pts *
                 owner_->format_info()->frame_to_media_ratio();
   } else {
     // No PTS was provided.  Use the end time of the last audio packet, if
@@ -156,15 +155,13 @@ void AudioPipe::OnPacketSupplied(
   next_pts_ = start_pts + pts_delta;
   next_pts_known_ = true;
 
-  bool end_of_stream = supplied_packet->packet()->flags & MediaPacket::kFlagEos;
+  bool end_of_stream = supplied_packet->packet().flags & kFlagEos;
 
   // Send the packet along unless it falls outside the program range.
   if (next_pts_ >= min_pts_) {
-    auto packet = fbl::AdoptRef<AudioPacketRef>(new AudioPacketRefV1(
-        std::move(supplied_packet),
-        server_,
-        frame_count << kPtsFractionalBits,
-        start_pts));
+    auto packet = fbl::AdoptRef<AudioPacketRef>(
+        new AudioPacketRefV1(std::move(supplied_packet), server_,
+                             frame_count << kPtsFractionalBits, start_pts));
     owner_->OnPacketReceived(std::move(packet));
   }
 

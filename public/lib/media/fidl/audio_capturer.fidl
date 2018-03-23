@@ -61,7 +61,7 @@ interface AudioCapturerClient {
 // ++ Users should always treat the payload buffer as read-only.
 //
 // ** Synchronous vs. Asynchronous capture mode **
-// 
+//
 // The AudioCapturer interface can be used in one of two mutually exclusive
 // modes: Synchronous and Asynchronous.  A description of each mode and their
 // tradeoffs is given below.
@@ -174,7 +174,7 @@ interface AudioCapturerClient {
 // packets have no data in them, but FIDL demands that all pending
 // method-return-value callbacks be executed.  Because of this, the regions will
 // be returned to the user, but their timestamps will be set to
-// MediaPacket::kNoTimestamp, and their payload sizes will be set to zero.  Any
+// kNoTimestamp, and their payload sizes will be set to zero.  Any
 // partially filled payload will have a valid timestamp, but a payload size
 // smaller than originally requested.  The final flushed payload (if there were
 // any to flush) will have the EOS flag set on it.

@@ -442,7 +442,7 @@ void AudioRenderer2Impl::SendPacketNoReply(AudioPacketPtr packet) {
   SendPacket(std::move(packet), nullptr);
 }
 
-void AudioRenderer2Impl::Flush(const FlushCallback& callback) {
+void AudioRenderer2Impl::Flush(FlushCallback callback) {
   // If the user has requested a callback, create the flush token we will use to
   // invoke the callback at the proper time.
   fbl::RefPtr<PendingFlushToken> flush_token;

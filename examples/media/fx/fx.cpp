@@ -15,11 +15,11 @@
 #include <zx/vmar.h>
 #include <zx/vmo.h>
 
+#include <fuchsia/cpp/media.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_function.h"
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
@@ -194,7 +194,7 @@ void FxProcessor::Startup() {
   media::MediaTypePtr media_type = media::MediaType::New();
   media_type->medium = media::MediaTypeMedium::AUDIO;
   media_type->details = std::move(media_details);
-  media_type->encoding = media::MediaType::kAudioEncodingLpcm;
+  media_type->encoding = media::kAudioEncodingLpcm;
 
   // Create a renderer.  Setup connection error handlers.
   audio_server_->CreateRenderer(output_audio_.NewRequest(),

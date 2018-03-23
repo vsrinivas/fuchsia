@@ -83,7 +83,7 @@ void FakeRenderer::SetMediaType(MediaTypePtr media_type) {
     FXL_DCHECK(details);
     pts_rate_ = TimelineRate::NsPerSecond;
   } else if (media_type->details->is_audio()) {
-    const AudioMediaTypeDetailsPtr& details = media_type->details->get_audio();
+    const AudioMediaTypeDetailsPtr& details = media_type->details.audio();
     FXL_DCHECK(details);
     pts_rate_ = TimelineRate(details->frames_per_second, 1);
   } else {
@@ -106,20 +106,19 @@ void FakeRenderer::GetTimelineControlPoint(
 void FakeRenderer::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
   FXL_DCHECK(supplied_packet);
-  FXL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
+  FXL_DCHECK(supplied_packet->packet().pts_rate_ticks ==
              pts_rate_.subject_delta());
-  FXL_DCHECK(supplied_packet->packet()->pts_rate_seconds ==
+  FXL_DCHECK(supplied_packet->packet().pts_rate_seconds ==
              pts_rate_.reference_delta());
-  if (supplied_packet->packet()->flags & MediaPacket::kFlagEos) {
+  if (supplied_packet->packet().flags & kFlagEos) {
     end_of_stream_ = true;
     SendStatusUpdates();
   }
 
   if (dump_packets_) {
-    std::cerr << "{ " << supplied_packet->packet()->pts << ", "
-              << ((supplied_packet->packet()->flags & MediaPacket::kFlagEos)
-                      ? "true"
-                      : "false")
+    std::cerr << "{ " << supplied_packet->packet().pts << ", "
+              << ((supplied_packet->packet().flags & kFlagEos) ? "true"
+                                                               : "false")
               << ", " << supplied_packet->payload_size() << ", 0x" << std::hex
               << std::setw(16) << std::setfill('0')
               << Hash(supplied_packet->payload(),
@@ -133,9 +132,9 @@ void FakeRenderer::OnPacketSupplied(
       expected_ = false;
     }
 
-    if (expected_packets_info_iter_->pts() != supplied_packet->packet()->pts ||
+    if (expected_packets_info_iter_->pts() != supplied_packet->packet().pts ||
         expected_packets_info_iter_->end_of_stream() !=
-            (supplied_packet->packet()->flags & MediaPacket::kFlagEos) ||
+            (supplied_packet->packet().flags & kFlagEos) ||
         expected_packets_info_iter_->size() !=
             supplied_packet->payload_size() ||
         expected_packets_info_iter_->hash() !=
@@ -153,8 +152,7 @@ void FakeRenderer::OnPacketSupplied(
   }
 }
 
-void FakeRenderer::OnFlushRequested(bool hold_frame,
-                                    const FlushCallback& callback) {
+void FakeRenderer::OnFlushRequested(bool hold_frame, FlushCallback callback) {
   while (!packet_queue_.empty()) {
     packet_queue_.pop();
   }

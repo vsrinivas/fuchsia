@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/framework/models/active_sink.h"
 #include "garnet/bin/media/framework/payload_allocator.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/media/transport/media_packet_producer_base.h"
 
 namespace media {
@@ -29,7 +29,7 @@ class FidlPacketProducer
   ~FidlPacketProducer() override;
 
   // Binds.
-  void Bind(f1dl::InterfaceRequest<MediaPacketProducer> request);
+  void Bind(fidl::InterfaceRequest<MediaPacketProducer> request);
 
   // Sets a callback called whenever the connection state changes.
   void SetConnectionStateChangedCallback(
@@ -45,8 +45,8 @@ class FidlPacketProducer
   Demand SupplyPacket(PacketPtr packet) override;
 
   // MediaPacketProducer implementation.
-  void Connect(f1dl::InterfaceHandle<MediaPacketConsumer> consumer,
-               const ConnectCallback& callback) override;
+  void Connect(fidl::InterfaceHandle<MediaPacketConsumer> consumer,
+               ConnectCallback callback) override;
 
   void Disconnect() override;
 
@@ -79,7 +79,7 @@ class FidlPacketProducer
   // additional packet was outstanding.
   Demand CurrentDemand(uint32_t additional_packets_outstanding = 0);
 
-  f1dl::Binding<MediaPacketProducer> binding_;
+  fidl::Binding<MediaPacketProducer> binding_;
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   ConnectionStateChangedCallback connectionStateChangedCallback_;

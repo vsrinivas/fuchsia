@@ -109,7 +109,7 @@ void MediaSourceImpl::GetStatus(uint64_t version_last_seen,
   status_publisher_.Get(version_last_seen, callback);
 }
 
-void MediaSourceImpl::Flush(bool hold_frame, const FlushCallback& callback) {
+void MediaSourceImpl::Flush(bool hold_frame, FlushCallback callback) {
   RCHECK(init_complete_.occurred());
 
   demux_->Flush(hold_frame, callback);

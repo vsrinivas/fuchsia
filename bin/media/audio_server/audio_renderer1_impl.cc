@@ -160,7 +160,7 @@ void AudioRenderer1Impl::SetMediaType(MediaTypePtr media_type) {
 
   // Search our supported configuration sets to find one compatible with this
   // request.
-  auto& cfg = media_type->details->get_audio();
+  auto& cfg = media_type->details.audio();
   size_t i;
   for (i = 0; i < arraysize(kSupportedAudioTypeSets); ++i) {
     const auto& cfg_set = kSupportedAudioTypeSets[i];
@@ -340,7 +340,7 @@ void AudioRenderer1Impl::OnPacketReceived(fbl::RefPtr<AudioPacketRef> packet) {
     }
   }
 
-  if (packet->flags() & MediaPacket::kFlagEos) {
+  if (packet->flags() & kFlagEos) {
     timeline_control_point_.SetEndOfStreamPts(
         (packet->end_pts() >> kPtsFractionalBits) /
         format_info_->frames_per_ns());

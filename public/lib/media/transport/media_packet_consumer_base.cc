@@ -39,7 +39,7 @@ MediaPacketConsumerBase::~MediaPacketConsumerBase() {
 }
 
 void MediaPacketConsumerBase::Bind(
-    f1dl::InterfaceRequest<MediaPacketConsumer> request) {
+    fidl::InterfaceRequest<MediaPacketConsumer> request) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   binding_.Bind(std::move(request));
   binding_.set_error_handler([this]() { Reset(); });
@@ -47,7 +47,7 @@ void MediaPacketConsumerBase::Bind(
 }
 
 void MediaPacketConsumerBase::Bind(
-    f1dl::InterfaceHandle<MediaPacketConsumer>* handle) {
+    fidl::InterfaceHandle<MediaPacketConsumer>* handle) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   binding_.Bind(handle->NewRequest());
   binding_.set_error_handler([this]() { Reset(); });
@@ -92,7 +92,7 @@ void MediaPacketConsumerBase::Reset() {
   }
 
   demand_.min_packets_outstanding = 0;
-  demand_.min_pts = MediaPacket::kNoTimestamp;
+  demand_.min_pts = kNoTimestamp;
 
   get_demand_update_callback_ = nullptr;
 
@@ -119,7 +119,7 @@ void MediaPacketConsumerBase::Fail() {
 void MediaPacketConsumerBase::OnPacketReturning() {}
 
 void MediaPacketConsumerBase::OnFlushRequested(bool hold_frame,
-                                               const FlushCallback& callback) {
+                                               FlushCallback callback) {
   callback();
 }
 
@@ -132,14 +132,14 @@ void MediaPacketConsumerBase::OnFailure() {
 }
 
 void MediaPacketConsumerBase::PullDemandUpdate(
-    const PullDemandUpdateCallback& callback) {
+    PullDemandUpdateCallback callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   if (get_demand_update_callback_) {
     // There's already a pending request. This isn't harmful, but it indicates
     // that the client doesn't know what it's doing.
     FXL_DLOG(WARNING) << "PullDemandUpdate was called when another "
                          "PullDemandUpdate call was pending";
-    get_demand_update_callback_(demand_.Clone());
+    get_demand_update_callback_(std::make_unique<MediaPacketDemand>(demand_));
   }
 
   get_demand_update_callback_ = callback;
@@ -161,13 +161,11 @@ void MediaPacketConsumerBase::RemovePayloadBuffer(uint32_t payload_buffer_id) {
   counter_->buffer_set().RemoveBuffer(payload_buffer_id);
 }
 
-void MediaPacketConsumerBase::SupplyPacket(
-    MediaPacketPtr media_packet,
-    const SupplyPacketCallback& callback) {
+void MediaPacketConsumerBase::SupplyPacket(MediaPacket media_packet,
+                                           SupplyPacketCallback callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(media_packet);
 
-  if (media_packet->revised_media_type && !accept_revised_media_type_) {
+  if (media_packet.revised_media_type && !accept_revised_media_type_) {
     FXL_DLOG(WARNING) << "Media type revision rejected. Resetting.";
     callback(nullptr);
     Reset();
@@ -175,36 +173,35 @@ void MediaPacketConsumerBase::SupplyPacket(
   }
 
   void* payload;
-  if (media_packet->payload_size == 0) {
+  if (media_packet.payload_size == 0) {
     payload = nullptr;
   } else {
     RCHECK(counter_->buffer_set().Validate(
-               SharedBufferSet::Locator(media_packet->payload_buffer_id,
-                                        media_packet->payload_offset),
-               media_packet->payload_size),
+               SharedBufferSet::Locator(media_packet.payload_buffer_id,
+                                        media_packet.payload_offset),
+               media_packet.payload_size),
            "invalid buffer region");
     payload = counter_->buffer_set().PtrFromLocator(SharedBufferSet::Locator(
-        media_packet->payload_buffer_id, media_packet->payload_offset));
+        media_packet.payload_buffer_id, media_packet.payload_offset));
   }
 
   uint64_t label = ++prev_packet_label_;
 
-  SetPacketPtsRate(media_packet);
+  SetPacketPtsRate(&media_packet);
 
   OnPacketSupplied(std::unique_ptr<SuppliedPacket>(new SuppliedPacket(
       label, std::move(media_packet), payload, callback, counter_)));
 }
 
-void MediaPacketConsumerBase::SupplyPacketNoReply(MediaPacketPtr media_packet) {
+void MediaPacketConsumerBase::SupplyPacketNoReply(MediaPacket media_packet) {
   SupplyPacket(std::move(media_packet), SupplyPacketCallback());
 }
 
-void MediaPacketConsumerBase::Flush(bool hold_frame,
-                                    const FlushCallback& callback) {
+void MediaPacketConsumerBase::Flush(bool hold_frame, FlushCallback callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   demand_.min_packets_outstanding = 0;
-  demand_.min_pts = MediaPacket::kNoTimestamp;
+  demand_.min_pts = kNoTimestamp;
 
   flush_pending_ = true;
 
@@ -225,7 +222,7 @@ void MediaPacketConsumerBase::MaybeCompletePullDemandUpdate() {
   }
 
   demand_update_required_ = false;
-  get_demand_update_callback_(demand_.Clone());
+  get_demand_update_callback_(std::make_unique<MediaPacketDemand>(demand_));
   get_demand_update_callback_ = nullptr;
 }
 
@@ -245,10 +242,10 @@ MediaPacketDemandPtr MediaPacketConsumerBase::GetDemandForPacketDeparture(
   }
 
   demand_update_required_ = false;
-  return demand_.Clone();
+  return std::make_unique<MediaPacketDemand>(demand_);
 }
 
-void MediaPacketConsumerBase::SetPacketPtsRate(const MediaPacketPtr& packet) {
+void MediaPacketConsumerBase::SetPacketPtsRate(MediaPacket* packet) {
   if (pts_rate_ == TimelineRate::Zero) {
     return;
   }
@@ -270,16 +267,15 @@ void MediaPacketConsumerBase::SetPacketPtsRate(const MediaPacketPtr& packet) {
 
 MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
     uint64_t label,
-    MediaPacketPtr packet,
+    MediaPacket packet,
     void* payload,
-    const SupplyPacketCallback& callback,
+    SupplyPacketCallback callback,
     std::shared_ptr<SuppliedPacketCounter> counter)
     : label_(label),
       packet_(std::move(packet)),
       payload_(payload),
       callback_(callback),
       counter_(counter) {
-  FXL_DCHECK(packet_);
   FXL_DCHECK(counter_);
   counter_->OnPacketArrival();
 }

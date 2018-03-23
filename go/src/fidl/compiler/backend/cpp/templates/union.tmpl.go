@@ -30,6 +30,9 @@ class {{ .Name }} {
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
   zx_status_t Clone({{ .Name }}* result) const;
+
+  bool has_invalid_tag() const { return tag_ == ::std::numeric_limits<::fidl_union_tag_t>::max(); }
+
   {{- range $index, $member := .Members }}
 
   bool is_{{ .Name }}() const { return tag_ == {{ $index }}; }

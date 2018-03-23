@@ -68,7 +68,7 @@ void MediaPacketProducerBase::FlushConsumer(
 
   MediaPacketDemand demand;
   demand.min_packets_outstanding = 0;
-  demand.min_pts = MediaPacket::kNoTimestamp;
+  demand.min_pts = kNoTimestamp;
   UpdateDemand(demand);
 
   flush_in_progress_ = true;
@@ -105,16 +105,16 @@ void MediaPacketProducerBase::ProducePacket(
 
   SharedBufferSet::Locator locator = allocator_.LocatorFromPtr(payload);
 
-  MediaPacketPtr media_packet = MediaPacket::New();
-  media_packet->pts = pts;
-  media_packet->pts_rate_ticks = pts_rate.subject_delta();
-  media_packet->pts_rate_seconds = pts_rate.reference_delta();
-  media_packet->flags = (keyframe ? MediaPacket::kFlagKeyframe : 0) |
-                        (end_of_stream ? MediaPacket::kFlagEos : 0);
-  media_packet->revised_media_type = std::move(revised_media_type);
-  media_packet->payload_buffer_id = locator.buffer_id();
-  media_packet->payload_offset = locator.offset();
-  media_packet->payload_size = size;
+  MediaPacket media_packet;
+  media_packet.pts = pts;
+  media_packet.pts_rate_ticks = pts_rate.subject_delta();
+  media_packet.pts_rate_seconds = pts_rate.reference_delta();
+  media_packet.flags =
+      (keyframe ? kFlagKeyframe : 0) | (end_of_stream ? kFlagEos : 0);
+  media_packet.revised_media_type = std::move(revised_media_type);
+  media_packet.payload_buffer_id = locator.buffer_id();
+  media_packet.payload_offset = locator.offset();
+  media_packet.payload_size = size;
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
@@ -167,7 +167,7 @@ bool MediaPacketProducerBase::ShouldProducePacket(
   }
 
   // See if a higher PTS is demanded.
-  return demand_.min_pts != MediaPacket::kNoTimestamp &&
+  return demand_.min_pts != kNoTimestamp &&
          demand_.min_pts > pts_last_produced_;
 }
 
@@ -179,7 +179,7 @@ void MediaPacketProducerBase::ResetDemand() {
   std::lock_guard<std::mutex> locker(mutex_);
   packets_outstanding_ = 0;
   demand_.min_packets_outstanding = 0;
-  demand_.min_pts = MediaPacket::kNoTimestamp;
+  demand_.min_pts = kNoTimestamp;
 }
 
 void MediaPacketProducerBase::HandleDemandUpdate(MediaPacketDemandPtr demand) {

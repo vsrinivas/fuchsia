@@ -14,42 +14,29 @@ namespace fxl {
 namespace {
 
 bool KnownEncodingsMatch() {
-  return media::StreamType::kAudioEncodingAac ==
-             media::MediaType::kAudioEncodingAac &&
-         media::StreamType::kAudioEncodingAmrNb ==
-             media::MediaType::kAudioEncodingAmrNb &&
-         media::StreamType::kAudioEncodingAmrWb ==
-             media::MediaType::kAudioEncodingAmrWb &&
-         media::StreamType::kAudioEncodingFlac ==
-             media::MediaType::kAudioEncodingFlac &&
-         media::StreamType::kAudioEncodingGsmMs ==
-             media::MediaType::kAudioEncodingGsmMs &&
-         media::StreamType::kAudioEncodingLpcm ==
-             media::MediaType::kAudioEncodingLpcm &&
-         media::StreamType::kAudioEncodingMp3 ==
-             media::MediaType::kAudioEncodingMp3 &&
+  return media::StreamType::kAudioEncodingAac == media::kAudioEncodingAac &&
+         media::StreamType::kAudioEncodingAmrNb == media::kAudioEncodingAmrNb &&
+         media::StreamType::kAudioEncodingAmrWb == media::kAudioEncodingAmrWb &&
+         media::StreamType::kAudioEncodingFlac == media::kAudioEncodingFlac &&
+         media::StreamType::kAudioEncodingGsmMs == media::kAudioEncodingGsmMs &&
+         media::StreamType::kAudioEncodingLpcm == media::kAudioEncodingLpcm &&
+         media::StreamType::kAudioEncodingMp3 == media::kAudioEncodingMp3 &&
          media::StreamType::kAudioEncodingPcmALaw ==
-             media::MediaType::kAudioEncodingPcmALaw &&
+             media::kAudioEncodingPcmALaw &&
          media::StreamType::kAudioEncodingPcmMuLaw ==
-             media::MediaType::kAudioEncodingPcmMuLaw &&
+             media::kAudioEncodingPcmMuLaw &&
          media::StreamType::kAudioEncodingVorbis ==
-             media::MediaType::kAudioEncodingVorbis &&
-         media::StreamType::kVideoEncodingH263 ==
-             media::MediaType::kVideoEncodingH263 &&
-         media::StreamType::kVideoEncodingH264 ==
-             media::MediaType::kVideoEncodingH264 &&
-         media::StreamType::kVideoEncodingMpeg4 ==
-             media::MediaType::kVideoEncodingMpeg4 &&
+             media::kAudioEncodingVorbis &&
+         media::StreamType::kVideoEncodingH263 == media::kVideoEncodingH263 &&
+         media::StreamType::kVideoEncodingH264 == media::kVideoEncodingH264 &&
+         media::StreamType::kVideoEncodingMpeg4 == media::kVideoEncodingMpeg4 &&
          media::StreamType::kVideoEncodingTheora ==
-             media::MediaType::kVideoEncodingTheora &&
+             media::kVideoEncodingTheora &&
          media::StreamType::kVideoEncodingUncompressed ==
-             media::MediaType::kVideoEncodingUncompressed &&
-         media::StreamType::kVideoEncodingVp3 ==
-             media::MediaType::kVideoEncodingVp3 &&
-         media::StreamType::kVideoEncodingVp8 ==
-             media::MediaType::kVideoEncodingVp8 &&
-         media::StreamType::kVideoEncodingVp9 ==
-             media::MediaType::kVideoEncodingVp9;
+             media::kVideoEncodingUncompressed &&
+         media::StreamType::kVideoEncodingVp3 == media::kVideoEncodingVp3 &&
+         media::StreamType::kVideoEncodingVp8 == media::kVideoEncodingVp8 &&
+         media::StreamType::kVideoEncodingVp9 == media::kVideoEncodingVp9;
 }
 
 }  // namespace
@@ -359,84 +346,82 @@ TypeConverter<media::ColorSpace, media::VideoStreamType::ColorSpace>::Convert(
   abort();
 }
 
-media::MediaTypePtr
-TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
+media::MediaType
+TypeConverter<media::MediaType, std::unique_ptr<media::StreamType>>::Convert(
     const std::unique_ptr<media::StreamType>& input) {
   FXL_DCHECK(KnownEncodingsMatch());
 
   if (input == nullptr) {
-    return nullptr;
+    return media::MediaType();
   }
 
   switch (input->medium()) {
     case media::StreamType::Medium::kAudio: {
-      media::AudioMediaTypeDetailsPtr audio_details =
-          media::AudioMediaTypeDetails::New();
-      audio_details->sample_format =
+      media::AudioMediaTypeDetails audio_details;
+      audio_details.sample_format =
           To<media::AudioSampleFormat>(input->audio()->sample_format());
-      audio_details->channels = input->audio()->channels();
-      audio_details->frames_per_second = input->audio()->frames_per_second();
-      media::MediaTypeDetailsPtr details = media::MediaTypeDetails::New();
-      details->set_audio(std::move(audio_details));
-      media::MediaTypePtr media_type = media::MediaType::New();
-      media_type->medium = media::MediaTypeMedium::AUDIO;
-      media_type->details = std::move(details);
-      media_type->encoding = input->encoding();
-      media_type->encoding_parameters =
-          To<f1dl::VectorPtr<uint8_t>>(input->encoding_parameters());
+      audio_details.channels = input->audio()->channels();
+      audio_details.frames_per_second = input->audio()->frames_per_second();
+      media::MediaTypeDetails details;
+      details.set_audio(std::move(audio_details));
+      media::MediaType media_type;
+      media_type.medium = media::MediaTypeMedium::AUDIO;
+      media_type.details = std::move(details);
+      media_type.encoding = input->encoding();
+      media_type.encoding_parameters =
+          To<fidl::VectorPtr<uint8_t>>(input->encoding_parameters());
       return media_type;
     }
     case media::StreamType::Medium::kVideo: {
-      media::VideoMediaTypeDetailsPtr video_details =
-          media::VideoMediaTypeDetails::New();
-      video_details->profile =
+      media::VideoMediaTypeDetails video_details;
+      video_details.profile =
           To<media::VideoProfile>(input->video()->profile());
-      video_details->pixel_format =
+      video_details.pixel_format =
           To<media::PixelFormat>(input->video()->pixel_format());
-      video_details->color_space =
+      video_details.color_space =
           To<media::ColorSpace>(input->video()->color_space());
-      video_details->width = input->video()->width();
-      video_details->height = input->video()->height();
-      video_details->coded_width = input->video()->coded_width();
-      video_details->coded_height = input->video()->coded_height();
-      video_details->pixel_aspect_ratio_width =
+      video_details.width = input->video()->width();
+      video_details.height = input->video()->height();
+      video_details.coded_width = input->video()->coded_width();
+      video_details.coded_height = input->video()->coded_height();
+      video_details.pixel_aspect_ratio_width =
           input->video()->pixel_aspect_ratio_width();
-      video_details->pixel_aspect_ratio_height =
+      video_details.pixel_aspect_ratio_height =
           input->video()->pixel_aspect_ratio_height();
-      video_details->line_stride =
-          To<f1dl::VectorPtr<uint32_t>>(input->video()->line_stride());
-      video_details->plane_offset =
-          To<f1dl::VectorPtr<uint32_t>>(input->video()->plane_offset());
-      media::MediaTypeDetailsPtr details = media::MediaTypeDetails::New();
-      details->set_video(std::move(video_details));
-      media::MediaTypePtr media_type = media::MediaType::New();
-      media_type->medium = media::MediaTypeMedium::VIDEO;
-      media_type->details = std::move(details);
-      media_type->encoding = input->encoding();
-      media_type->encoding_parameters =
-          To<f1dl::VectorPtr<uint8_t>>(input->encoding_parameters());
+      video_details.line_stride =
+          To<fidl::VectorPtr<uint32_t>>(input->video()->line_stride());
+      video_details.plane_offset =
+          To<fidl::VectorPtr<uint32_t>>(input->video()->plane_offset());
+      media::MediaTypeDetails details;
+      details.set_video(std::move(video_details));
+      media::MediaType media_type;
+      media_type.medium = media::MediaTypeMedium::VIDEO;
+      media_type.details = std::move(details);
+      media_type.encoding = input->encoding();
+      media_type.encoding_parameters =
+          To<fidl::VectorPtr<uint8_t>>(input->encoding_parameters());
       return media_type;
     }
     case media::StreamType::Medium::kText: {
-      media::MediaTypeDetailsPtr details = media::MediaTypeDetails::New();
-      details->set_text(media::TextMediaTypeDetails::New());
-      media::MediaTypePtr media_type = media::MediaType::New();
-      media_type->medium = media::MediaTypeMedium::TEXT;
-      media_type->details = std::move(details);
-      media_type->encoding = input->encoding();
-      media_type->encoding_parameters =
-          To<f1dl::VectorPtr<uint8_t>>(input->encoding_parameters());
+      media::MediaTypeDetails details;
+      details.set_text(media::TextMediaTypeDetails());
+      media::MediaType media_type;
+      media_type.medium = media::MediaTypeMedium::TEXT;
+      media_type.details = std::move(details);
+      media_type.encoding = input->encoding();
+      media_type.encoding_parameters =
+          To<fidl::VectorPtr<uint8_t>>(input->encoding_parameters());
       return media_type;
     }
     case media::StreamType::Medium::kSubpicture: {
-      media::MediaTypeDetailsPtr details = media::MediaTypeDetails::New();
-      details->set_subpicture(media::SubpictureMediaTypeDetails::New());
-      media::MediaTypePtr media_type = media::MediaType::New();
-      media_type->medium = media::MediaTypeMedium::SUBPICTURE;
-      media_type->details = std::move(details);
-      media_type->encoding = input->encoding();
-      media_type->encoding_parameters =
-          To<f1dl::VectorPtr<uint8_t>>(input->encoding_parameters());
+      media::MediaTypeDetails details;
+      details.set_subpicture(media::SubpictureMediaTypeDetails());
+      media::MediaType media_type;
+      media_type.medium = media::MediaTypeMedium::SUBPICTURE;
+      media_type.details = std::move(details);
+      media_type.encoding = input->encoding();
+      media_type.encoding_parameters =
+          To<fidl::VectorPtr<uint8_t>>(input->encoding_parameters());
       return media_type;
     }
   }
@@ -446,118 +431,110 @@ TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>>::Convert(
 }
 
 std::unique_ptr<media::StreamType>
-TypeConverter<std::unique_ptr<media::StreamType>, media::MediaTypePtr>::Convert(
-    const media::MediaTypePtr& input) {
+TypeConverter<std::unique_ptr<media::StreamType>, media::MediaType>::Convert(
+    const media::MediaType& input) {
   FXL_DCHECK(KnownEncodingsMatch());
 
-  if (!input) {
-    return nullptr;
-  }
-
-  switch (input->medium) {
+  switch (input.medium) {
     case media::MediaTypeMedium::AUDIO:
       return media::AudioStreamType::Create(
-          input->encoding,
-          To<std::unique_ptr<media::Bytes>>(input->encoding_parameters),
+          input.encoding,
+          To<std::unique_ptr<media::Bytes>>(input.encoding_parameters),
           To<media::AudioStreamType::SampleFormat>(
-              input->details->get_audio()->sample_format),
-          input->details->get_audio()->channels,
-          input->details->get_audio()->frames_per_second);
+              input.details.audio().sample_format),
+          input.details.audio().channels,
+          input.details.audio().frames_per_second);
     case media::MediaTypeMedium::VIDEO:
       return media::VideoStreamType::Create(
-          input->encoding,
-          To<std::unique_ptr<media::Bytes>>(input->encoding_parameters),
+          input.encoding,
+          To<std::unique_ptr<media::Bytes>>(input.encoding_parameters),
           To<media::VideoStreamType::VideoProfile>(
-              input->details->get_video()->profile),
+              input.details.video().profile),
           To<media::VideoStreamType::PixelFormat>(
-              input->details->get_video()->pixel_format),
+              input.details.video().pixel_format),
           To<media::VideoStreamType::ColorSpace>(
-              input->details->get_video()->color_space),
-          input->details->get_video()->width,
-          input->details->get_video()->height,
-          input->details->get_video()->coded_width,
-          input->details->get_video()->coded_height,
-          input->details->get_video()->pixel_aspect_ratio_width,
-          input->details->get_video()->pixel_aspect_ratio_height,
-          input->details->get_video()->line_stride,
-          input->details->get_video()->plane_offset);
+              input.details.video().color_space),
+          input.details.video().width, input.details.video().height,
+          input.details.video().coded_width, input.details.video().coded_height,
+          input.details.video().pixel_aspect_ratio_width,
+          input.details.video().pixel_aspect_ratio_height,
+          input.details.video().line_stride,
+          input.details.video().plane_offset);
     case media::MediaTypeMedium::TEXT:
       return media::TextStreamType::Create(
-          input->encoding,
-          To<std::unique_ptr<media::Bytes>>(input->encoding_parameters));
+          input.encoding,
+          To<std::unique_ptr<media::Bytes>>(input.encoding_parameters));
     case media::MediaTypeMedium::SUBPICTURE:
       return media::SubpictureStreamType::Create(
-          input->encoding,
-          To<std::unique_ptr<media::Bytes>>(input->encoding_parameters));
+          input.encoding,
+          To<std::unique_ptr<media::Bytes>>(input.encoding_parameters));
   }
 
   return nullptr;
 }
 
-media::MediaTypeSetPtr
-TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
+media::MediaTypeSet
+TypeConverter<media::MediaTypeSet, std::unique_ptr<media::StreamTypeSet>>::
     Convert(const std::unique_ptr<media::StreamTypeSet>& input) {
   FXL_DCHECK(KnownEncodingsMatch());
 
   if (input == nullptr) {
-    return nullptr;
+    return media::MediaTypeSet();
   }
 
   switch (input->medium()) {
     case media::StreamType::Medium::kAudio: {
-      media::AudioMediaTypeSetDetailsPtr audio_details =
-          media::AudioMediaTypeSetDetails::New();
-      audio_details->sample_format =
+      media::AudioMediaTypeSetDetails audio_details;
+      audio_details.sample_format =
           To<media::AudioSampleFormat>(input->audio()->sample_format());
-      audio_details->min_channels = input->audio()->channels().min;
-      audio_details->max_channels = input->audio()->channels().max;
-      audio_details->min_frames_per_second =
+      audio_details.min_channels = input->audio()->channels().min;
+      audio_details.max_channels = input->audio()->channels().max;
+      audio_details.min_frames_per_second =
           input->audio()->frames_per_second().min;
-      audio_details->max_frames_per_second =
+      audio_details.max_frames_per_second =
           input->audio()->frames_per_second().max;
-      media::MediaTypeSetDetailsPtr details = media::MediaTypeSetDetails::New();
-      details->set_audio(std::move(audio_details));
-      media::MediaTypeSetPtr media_type_set = media::MediaTypeSet::New();
-      media_type_set->medium = media::MediaTypeMedium::AUDIO;
-      media_type_set->details = std::move(details);
-      media_type_set->encodings =
-          To<f1dl::VectorPtr<f1dl::StringPtr>>(input->encodings());
+      media::MediaTypeSetDetails details;
+      details.set_audio(std::move(audio_details));
+      media::MediaTypeSet media_type_set;
+      media_type_set.medium = media::MediaTypeMedium::AUDIO;
+      media_type_set.details = std::move(details);
+      media_type_set.encodings =
+          To<fidl::VectorPtr<fidl::StringPtr>>(input->encodings());
       return media_type_set;
     }
     case media::StreamType::Medium::kVideo: {
-      media::VideoMediaTypeSetDetailsPtr video_details =
-          media::VideoMediaTypeSetDetails::New();
-      video_details->min_width = input->video()->width().min;
-      video_details->max_width = input->video()->width().max;
-      video_details->min_height = input->video()->height().min;
-      video_details->max_height = input->video()->height().max;
-      media::MediaTypeSetDetailsPtr details = media::MediaTypeSetDetails::New();
-      details->set_video(std::move(video_details));
-      media::MediaTypeSetPtr media_type_set = media::MediaTypeSet::New();
-      media_type_set->medium = media::MediaTypeMedium::VIDEO;
-      media_type_set->details = std::move(details);
-      media_type_set->encodings =
-          To<f1dl::VectorPtr<f1dl::StringPtr>>(input->encodings());
+      media::VideoMediaTypeSetDetails video_details;
+      video_details.min_width = input->video()->width().min;
+      video_details.max_width = input->video()->width().max;
+      video_details.min_height = input->video()->height().min;
+      video_details.max_height = input->video()->height().max;
+      media::MediaTypeSetDetails details;
+      details.set_video(std::move(video_details));
+      media::MediaTypeSet media_type_set;
+      media_type_set.medium = media::MediaTypeMedium::VIDEO;
+      media_type_set.details = std::move(details);
+      media_type_set.encodings =
+          To<fidl::VectorPtr<fidl::StringPtr>>(input->encodings());
       return media_type_set;
     }
     case media::StreamType::Medium::kText: {
-      media::MediaTypeSetDetailsPtr details = media::MediaTypeSetDetails::New();
-      details->set_text(media::TextMediaTypeSetDetails::New());
-      media::MediaTypeSetPtr media_type_set = media::MediaTypeSet::New();
-      media_type_set->medium = media::MediaTypeMedium::TEXT;
-      media_type_set->details = std::move(details);
-      media_type_set->encodings =
-          To<f1dl::VectorPtr<f1dl::StringPtr>>(input->encodings());
+      media::MediaTypeSetDetails details;
+      details.set_text(media::TextMediaTypeSetDetails());
+      media::MediaTypeSet media_type_set;
+      media_type_set.medium = media::MediaTypeMedium::TEXT;
+      media_type_set.details = std::move(details);
+      media_type_set.encodings =
+          To<fidl::VectorPtr<fidl::StringPtr>>(input->encodings());
       return media_type_set;
     }
     case media::StreamType::Medium::kSubpicture: {
-      media::MediaTypeSetDetailsPtr details = media::MediaTypeSetDetails::New();
-      details->set_subpicture(media::SubpictureMediaTypeSetDetails::New());
-      media::MediaTypeSetPtr media_type_set = media::MediaTypeSet::New();
-      media_type_set->medium = media::MediaTypeMedium::SUBPICTURE;
-      media_type_set->details = std::move(details);
-      media_type_set->encodings =
-          To<f1dl::VectorPtr<f1dl::StringPtr>>(input->encodings());
+      media::MediaTypeSetDetails details;
+      details.set_subpicture(media::SubpictureMediaTypeSetDetails());
+      media::MediaTypeSet media_type_set;
+      media_type_set.medium = media::MediaTypeMedium::SUBPICTURE;
+      media_type_set.details = std::move(details);
+      media_type_set.encodings =
+          To<fidl::VectorPtr<fidl::StringPtr>>(input->encodings());
       return media_type_set;
     }
   }
@@ -566,39 +543,34 @@ TypeConverter<media::MediaTypeSetPtr, std::unique_ptr<media::StreamTypeSet>>::
   abort();
 }
 
-std::unique_ptr<media::StreamTypeSet> TypeConverter<
-    std::unique_ptr<media::StreamTypeSet>,
-    media::MediaTypeSetPtr>::Convert(const media::MediaTypeSetPtr& input) {
+std::unique_ptr<media::StreamTypeSet>
+TypeConverter<std::unique_ptr<media::StreamTypeSet>,
+              media::MediaTypeSet>::Convert(const media::MediaTypeSet& input) {
   FXL_DCHECK(KnownEncodingsMatch());
 
-  if (!input) {
-    return nullptr;
-  }
-
-  switch (input->medium) {
+  switch (input.medium) {
     case media::MediaTypeMedium::AUDIO:
       return media::AudioStreamTypeSet::Create(
-          To<std::vector<std::string>>(input->encodings),
+          To<std::vector<std::string>>(input.encodings),
           To<media::AudioStreamType::SampleFormat>(
-              input->details->get_audio()->sample_format),
-          media::Range<uint32_t>(input->details->get_audio()->min_channels,
-                                 input->details->get_audio()->max_channels),
-          media::Range<uint32_t>(
-              input->details->get_audio()->min_frames_per_second,
-              input->details->get_audio()->max_frames_per_second));
+              input.details.audio().sample_format),
+          media::Range<uint32_t>(input.details.audio().min_channels,
+                                 input.details.audio().max_channels),
+          media::Range<uint32_t>(input.details.audio().min_frames_per_second,
+                                 input.details.audio().max_frames_per_second));
     case media::MediaTypeMedium::VIDEO:
       return media::VideoStreamTypeSet::Create(
-          To<std::vector<std::string>>(input->encodings),
-          media::Range<uint32_t>(input->details->get_video()->min_width,
-                                 input->details->get_video()->max_width),
-          media::Range<uint32_t>(input->details->get_video()->min_height,
-                                 input->details->get_video()->max_height));
+          To<std::vector<std::string>>(input.encodings),
+          media::Range<uint32_t>(input.details.video().min_width,
+                                 input.details.video().max_width),
+          media::Range<uint32_t>(input.details.video().min_height,
+                                 input.details.video().max_height));
     case media::MediaTypeMedium::TEXT:
       return media::TextStreamTypeSet::Create(
-          To<std::vector<std::string>>(input->encodings));
+          To<std::vector<std::string>>(input.encodings));
     case media::MediaTypeMedium::SUBPICTURE:
       return media::SubpictureStreamTypeSet::Create(
-          To<std::vector<std::string>>(input->encodings));
+          To<std::vector<std::string>>(input.encodings));
   }
 
   return nullptr;
@@ -613,20 +585,20 @@ TypeConverter<media::MediaMetadataPtr, std::unique_ptr<media::Metadata>>::
 
   media::MediaMetadataPtr result = media::MediaMetadata::New();
   result->duration = input->duration_ns();
-  result->title =
-      input->title().empty() ? f1dl::StringPtr() : f1dl::StringPtr(input->title());
-  result->artist =
-      input->artist().empty() ? f1dl::StringPtr() : f1dl::StringPtr(input->artist());
-  result->album =
-      input->album().empty() ? f1dl::StringPtr() : f1dl::StringPtr(input->album());
+  result->title = input->title().empty() ? fidl::StringPtr()
+                                         : fidl::StringPtr(input->title());
+  result->artist = input->artist().empty() ? fidl::StringPtr()
+                                           : fidl::StringPtr(input->artist());
+  result->album = input->album().empty() ? fidl::StringPtr()
+                                         : fidl::StringPtr(input->album());
   result->publisher = input->publisher().empty()
-                          ? f1dl::StringPtr()
-                          : f1dl::StringPtr(input->publisher());
-  result->genre =
-      input->genre().empty() ? f1dl::StringPtr() : f1dl::StringPtr(input->genre());
+                          ? fidl::StringPtr()
+                          : fidl::StringPtr(input->publisher());
+  result->genre = input->genre().empty() ? fidl::StringPtr()
+                                         : fidl::StringPtr(input->genre());
   result->composer = input->composer().empty()
-                         ? f1dl::StringPtr()
-                         : f1dl::StringPtr(input->composer());
+                         ? fidl::StringPtr()
+                         : fidl::StringPtr(input->composer());
   return result;
 }
 
@@ -642,22 +614,22 @@ std::unique_ptr<media::Metadata> TypeConverter<
                                  input->composer);
 }
 
-f1dl::VectorPtr<uint8_t>
-TypeConverter<f1dl::VectorPtr<uint8_t>, std::unique_ptr<media::Bytes>>::Convert(
+fidl::VectorPtr<uint8_t>
+TypeConverter<fidl::VectorPtr<uint8_t>, std::unique_ptr<media::Bytes>>::Convert(
     const std::unique_ptr<media::Bytes>& input) {
   if (input == nullptr) {
     return nullptr;
   }
 
-  f1dl::VectorPtr<uint8_t> array = f1dl::VectorPtr<uint8_t>::New(input->size());
+  fidl::VectorPtr<uint8_t> array = fidl::VectorPtr<uint8_t>::New(input->size());
   std::memcpy(array->data(), input->data(), input->size());
 
   return array;
 }
 
 std::unique_ptr<media::Bytes>
-TypeConverter<std::unique_ptr<media::Bytes>, f1dl::VectorPtr<uint8_t>>::Convert(
-    const f1dl::VectorPtr<uint8_t>& input) {
+TypeConverter<std::unique_ptr<media::Bytes>, fidl::VectorPtr<uint8_t>>::Convert(
+    const fidl::VectorPtr<uint8_t>& input) {
   if (input.is_null()) {
     return nullptr;
   }

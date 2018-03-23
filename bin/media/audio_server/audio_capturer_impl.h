@@ -11,11 +11,11 @@
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 #include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
 #include "lib/fidl/cpp/binding.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/timeline/timeline_rate.h"
 
@@ -119,7 +119,7 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
     const uint32_t num_frames;
     const CaptureAtCallback cbk;
 
-    int64_t capture_timestamp = MediaPacket::kNoTimestamp;
+    int64_t capture_timestamp = kNoTimestamp;
     uint32_t flags = 0;
     uint32_t filled_frames = 0;
     const uint32_t sequence_number = sequence_generator.Next();

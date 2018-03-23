@@ -184,7 +184,7 @@ void AudioCapturerImpl::SetMediaType(MediaTypePtr media_type) {
   }
 
   // Sanity check the details of the mode request.
-  const auto& details = media_type->details->get_audio();
+  const auto& details = media_type->details.audio();
   if ((details->channels < media::kMinLpcmChannelCount) ||
       (details->channels > media::kMaxLpcmChannelCount)) {
     FXL_LOG(ERROR) << "Bad channel count, " << details->channels
@@ -466,7 +466,7 @@ void AudioCapturerImpl::Flush() {
   }
 
   if (!finished.is_empty()) {
-    finished.back().flags |= MediaPacket::kFlagEos;
+    finished.back().flags |= kFlagEos;
     FinishBuffers(finished);
   }
 }
@@ -534,8 +534,7 @@ void AudioCapturerImpl::StartAsyncCapture(
   // 4) Kick the work thread to get the ball rolling.
   FXL_DCHECK(async_callback_.is_bound() == false);
   async_callback_.Bind(std::move(callback_target));
-  async_callback_.set_error_handler(
-      [this]() { StopAsyncCapture(); });
+  async_callback_.set_error_handler([this]() { StopAsyncCapture(); });
   async_frames_per_packet_ = frames_per_packet;
   state_.store(State::OperatingAsync);
   mix_wakeup_->Signal();
@@ -636,7 +635,7 @@ zx_status_t AudioCapturerImpl::Process() {
         // produce is guaranteed to be discontinuous relative to the previous
         // one (if any).
         if (!frames_to_clock_mono_.invertable()) {
-          p.flags |= MediaPacket::kFlagDiscontinuous;
+          p.flags |= kFlagDiscontinuous;
         }
 
         // If we are still running, there should be no way that our shared
@@ -765,7 +764,7 @@ zx_status_t AudioCapturerImpl::Process() {
           FXL_DCHECK(p.filled_frames <= p.num_frames);
 
           // Assign a timestamp if one has not already been assigned.
-          if (p.capture_timestamp == MediaPacket::kNoTimestamp) {
+          if (p.capture_timestamp == kNoTimestamp) {
             FXL_DCHECK(frames_to_clock_mono_.invertable());
             p.capture_timestamp = frames_to_clock_mono_.Apply(frame_count_);
           }
@@ -1161,7 +1160,7 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
     }
 
     if (!finished_capture_buffers_.is_empty()) {
-      finished_capture_buffers_.back().flags |= MediaPacket::kFlagEos;
+      finished_capture_buffers_.back().flags |= kFlagEos;
     }
   }
 
@@ -1256,10 +1255,10 @@ void AudioCapturerImpl::FinishAsyncStopThunk() {
   } else if (async_callback_.is_bound()) {
     auto pkt = MediaPacket::New();
 
-    pkt->pts = MediaPacket::kNoTimestamp;
+    pkt->pts = kNoTimestamp;
     pkt->pts_rate_ticks = format_->frames_per_second;
     pkt->pts_rate_seconds = 1u;
-    pkt->flags = MediaPacket::kFlagEos;
+    pkt->flags = kFlagEos;
     pkt->payload_buffer_id = 0u;
     pkt->payload_offset = 0u;
     pkt->payload_size = 0u;

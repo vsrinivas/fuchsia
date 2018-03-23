@@ -82,7 +82,7 @@ class FakeRenderer : public MediaPacketConsumerBase,
       std::unique_ptr<SuppliedPacket> supplied_packet) override;
 
   void OnFlushRequested(bool hold_frame,
-                        const FlushCallback& callback) override;
+                        FlushCallback callback) override;
 
   void OnFailure() override;
 

@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/fidl/fidl_packet_producer.h"
 #include "garnet/bin/media/framework/types/stream_type.h"
 #include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"
@@ -14,8 +15,6 @@
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 
@@ -41,7 +40,7 @@ class MediaSourceImpl : public MediaComponentFactory::Product<MediaSource>,
   void GetStatus(uint64_t version_last_seen,
                  const GetStatusCallback& callback) override;
 
-  void Flush(bool hold_frame, const FlushCallback& callback) override;
+  void Flush(bool hold_frame, FlushCallback callback) override;
 
   void Seek(int64_t position, const SeekCallback& callback) override;
 

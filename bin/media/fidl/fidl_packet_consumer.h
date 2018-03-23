@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/framework/models/active_source.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/media/transport/media_packet_consumer_base.h"
 
 namespace media {
@@ -22,7 +22,7 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   ~FidlPacketConsumer() override;
 
   // Binds.
-  void Bind(f1dl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
+  void Bind(fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
             const std::function<void()>& connection_error_handler);
 
   // Sets a callback signalling that a flush has been requested from the
@@ -38,8 +38,7 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
 
   void OnPacketReturning() override;
 
-  void OnFlushRequested(bool hold_frame,
-                        const FlushCallback& callback) override;
+  void OnFlushRequested(bool hold_frame, FlushCallback callback) override;
 
   void OnUnbind() override;
 

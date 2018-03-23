@@ -21,7 +21,7 @@ FidlPacketConsumer::FidlPacketConsumer() {}
 FidlPacketConsumer::~FidlPacketConsumer() {}
 
 void FidlPacketConsumer::Bind(
-    f1dl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
+    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
     const std::function<void()>& unbind_handler) {
   unbind_handler_ = unbind_handler;
   task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
@@ -54,7 +54,7 @@ void FidlPacketConsumer::OnPacketReturning() {
 }
 
 void FidlPacketConsumer::OnFlushRequested(bool hold_frame,
-                                          const FlushCallback& callback) {
+                                          FlushCallback callback) {
   if (flush_requested_callback_) {
     flush_requested_callback_(hold_frame, callback);
   } else {
@@ -92,17 +92,17 @@ void FidlPacketConsumer::SetDownstreamDemand(Demand demand) {
 
 FidlPacketConsumer::PacketImpl::PacketImpl(
     std::unique_ptr<SuppliedPacket> supplied_packet)
-    : Packet(supplied_packet->packet()->pts,
-             TimelineRate(supplied_packet->packet()->pts_rate_ticks,
-                          supplied_packet->packet()->pts_rate_seconds),
-             supplied_packet->packet()->flags & MediaPacket::kFlagKeyframe,
-             supplied_packet->packet()->flags & MediaPacket::kFlagEos,
+    : Packet(supplied_packet->packet().pts,
+             TimelineRate(supplied_packet->packet().pts_rate_ticks,
+                          supplied_packet->packet().pts_rate_seconds),
+             supplied_packet->packet().flags & kFlagKeyframe,
+             supplied_packet->packet().flags & kFlagEos,
              supplied_packet->payload_size(),
              supplied_packet->payload()),
       supplied_packet_(std::move(supplied_packet)) {
-  if (supplied_packet_->packet()->revised_media_type) {
+  if (supplied_packet_->packet().revised_media_type) {
     SetRevisedStreamType(fxl::To<std::unique_ptr<StreamType>>(
-        supplied_packet_->packet()->revised_media_type));
+        *supplied_packet_->packet().revised_media_type));
   }
 }
 

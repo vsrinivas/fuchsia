@@ -178,7 +178,7 @@ void WavRecorder::OnDefaultFormatFetched(media::MediaTypePtr type) {
     return;
   }
 
-  const auto& fmt = type->details->get_audio();
+  const auto& fmt = type->details.audio();
   sample_format_ = fmt->sample_format;
   channel_count_ = fmt->channels;
   frames_per_second_ = fmt->frames_per_second;
@@ -317,7 +317,7 @@ void WavRecorder::OnPacketCaptured(media::MediaPacketPtr pkt) {
 
   if (!clean_shutdown_ && !async_binding_.is_bound()) {
     SendCaptureJob();
-  } else if (pkt->flags & media::MediaPacket::kFlagEos) {
+  } else if (pkt->flags & media::kFlagEos) {
     Shutdown();
   }
 }

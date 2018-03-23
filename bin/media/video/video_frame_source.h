@@ -8,13 +8,12 @@
 #include <queue>
 #include <unordered_set>
 
+#include <fuchsia/cpp/geometry.h>
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/util/timeline_control_point.h"
 #include "garnet/bin/media/video/video_converter.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/transport/media_packet_consumer_base.h"
-#include <fuchsia/cpp/geometry.h>
 #include "lib/ui/view_framework/base_view.h"
 
 namespace media {
@@ -69,7 +68,8 @@ class VideoFrameSource : public MediaPacketConsumerBase {
                  const VideoRenderer::GetStatusCallback& callback);
 
   // Gets an RGBA video frame corresponding to the current reference time.
-  void GetRgbaFrame(uint8_t* rgba_buffer, const geometry::Size& rgba_buffer_size);
+  void GetRgbaFrame(uint8_t* rgba_buffer,
+                    const geometry::Size& rgba_buffer_size);
 
  private:
   static constexpr uint32_t kPacketDemand = 3;
@@ -78,8 +78,7 @@ class VideoFrameSource : public MediaPacketConsumerBase {
   void OnPacketSupplied(
       std::unique_ptr<SuppliedPacket> supplied_packet) override;
 
-  void OnFlushRequested(bool hold_frame,
-                        const FlushCallback& callback) override;
+  void OnFlushRequested(bool hold_frame, FlushCallback callback) override;
 
   void OnFailure() override;
 

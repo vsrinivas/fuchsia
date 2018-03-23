@@ -119,7 +119,7 @@ zx_status_t TtsSpeaker::Init(
   auto media_type = media::MediaType::New();
   media_type->medium = media::MediaTypeMedium::AUDIO;
   media_type->details = std::move(media_details);
-  media_type->encoding = media::MediaType::kAudioEncodingLpcm;
+  media_type->encoding = media::kAudioEncodingLpcm;
 
   media_renderer_->SetMediaType(std::move(media_type));
   media_renderer_->GetPacketConsumer(packet_consumer_.NewRequest());
@@ -187,8 +187,7 @@ void TtsSpeaker::SendPendingAudio() {
     pkt->pts_rate_ticks = kFliteFrameRate;
     pkt->pts_rate_seconds = 1u;
     pkt->pts = first_payload ? 0 : media::kUnspecifiedTime;
-    pkt->flags =
-        (eos && (todo == bytes_to_send)) ? media::MediaPacket::kFlagEos : 0u;
+    pkt->flags = (eos && (todo == bytes_to_send)) ? media::kFlagEos : 0u;
 
     pkt->payload_buffer_id = kOutputBufferId;
     pkt->payload_offset = tx_ptr_;
@@ -203,7 +202,7 @@ void TtsSpeaker::SendPendingAudio() {
 
     media::MediaPacketConsumer::SupplyPacketCallback after_payload_rendered;
 
-    if (pkt->flags & media::MediaPacket::kFlagEos) {
+    if (pkt->flags & media::kFlagEos) {
       after_payload_rendered = [speak_complete_cbk =
                                     std::move(speak_complete_cbk_)](
           media::MediaPacketDemandPtr) {

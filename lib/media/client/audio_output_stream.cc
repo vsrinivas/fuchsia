@@ -10,12 +10,11 @@
 #include "garnet/lib/media/client/audio_output_device.h"
 #include "garnet/lib/media/client/audio_output_manager.h"
 
+#include <fuchsia/cpp/media.h>
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline.h"
 
 namespace media_client {
@@ -90,7 +89,7 @@ bool AudioOutputStream::SetMediaType(int num_channels, int sample_rate) {
 
   auto media_type = media::MediaType::New();
   media_type->medium = media::MediaTypeMedium::AUDIO;
-  media_type->encoding = media::MediaType::kAudioEncodingLpcm;
+  media_type->encoding = media::kAudioEncodingLpcm;
   media_type->details = media::MediaTypeDetails::New();
   media_type->details->set_audio(std::move(details));
 
@@ -259,7 +258,7 @@ int AudioOutputStream::Write(float* client_buffer,
 
   // On first packet, establish a timeline starting at given presentation time.
   // Others get kNoTimestamp, indicating 'play without gap after the previous'.
-  zx_time_t subject_time = media::MediaPacket::kNoTimestamp;
+  zx_time_t subject_time = media::kNoTimestamp;
   if (!received_first_frame_) {
     subject_time = 0;
     start_time_ = pres_time;

@@ -42,7 +42,7 @@ class MediaDemuxImpl : public MediaComponentFactory::Product<MediaSource>,
   void GetStatus(uint64_t version_last_seen,
                  const GetStatusCallback& callback) override;
 
-  void Flush(bool hold_frame, const FlushCallback& callback) override;
+  void Flush(bool hold_frame, FlushCallback callback) override;
 
   void Seek(int64_t position, const SeekCallback& callback) override;
 

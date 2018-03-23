@@ -6,11 +6,11 @@
 
 #include <atomic>
 
+#include <fuchsia/cpp/media.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_checker.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_rate.h"
 #include "lib/media/transport/shared_buffer_set.h"
 
@@ -33,20 +33,20 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
    public:
     ~SuppliedPacket();
 
-    const MediaPacketPtr& packet() { return packet_; }
+    const MediaPacket& packet() { return packet_; }
     void* payload() { return payload_; }
-    uint64_t payload_size() { return packet_->payload_size; }
+    uint64_t payload_size() { return packet_.payload_size; }
     uint64_t label() { return label_; }
 
    private:
     SuppliedPacket(uint64_t label,
-                   MediaPacketPtr packet,
+                   MediaPacket packet,
                    void* payload,
-                   const SupplyPacketCallback& callback,
+                   SupplyPacketCallback callback,
                    std::shared_ptr<SuppliedPacketCounter> counter);
 
     uint64_t label_;
-    MediaPacketPtr packet_;
+    MediaPacket packet_;
     void* payload_;
     SupplyPacketCallback callback_;
     std::shared_ptr<SuppliedPacketCounter> counter_;
@@ -58,10 +58,10 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   };
 
   // Binds to this MediaPacketConsumer.
-  void Bind(f1dl::InterfaceRequest<MediaPacketConsumer> request);
+  void Bind(fidl::InterfaceRequest<MediaPacketConsumer> request);
 
   // Binds to this MediaPacketConsumer.
-  void Bind(f1dl::InterfaceHandle<MediaPacketConsumer>* handle);
+  void Bind(fidl::InterfaceHandle<MediaPacketConsumer>* handle);
 
   // Determines if the consumer is bound to a channel.
   bool is_bound();
@@ -79,7 +79,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   // Sets the demand, which is communicated back to the producer at the first
   // opportunity (in response to PullDemandUpdate or SupplyPacket).
   void SetDemand(uint32_t min_packets_outstanding,
-                 int64_t min_pts = MediaPacket::kNoTimestamp);
+                 int64_t min_pts = kNoTimestamp);
 
   // Shuts down the consumer.
   void Reset();
@@ -100,7 +100,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
   // Called when the consumer is asked to flush. The default implementation
   // just runs the callback.
-  virtual void OnFlushRequested(bool hold_frame, const FlushCallback& callback);
+  virtual void OnFlushRequested(bool hold_frame, FlushCallback callback);
 
   // Called when the binding is unbound. The default implementation does
   // nothing. Subclasses may delete themselves in overrides of |OnUnbind|.
@@ -115,19 +115,18 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
  private:
   // MediaPacketConsumer implementation.
-  void PullDemandUpdate(const PullDemandUpdateCallback& callback) final;
+  void PullDemandUpdate(PullDemandUpdateCallback callback) final;
 
   void AddPayloadBuffer(uint32_t payload_buffer_id,
                         zx::vmo payload_buffer) final;
 
   void RemovePayloadBuffer(uint32_t payload_buffer_id) final;
 
-  void SupplyPacket(MediaPacketPtr packet,
-                    const SupplyPacketCallback& callback) final;
+  void SupplyPacket(MediaPacket packet, SupplyPacketCallback callback) final;
 
-  void SupplyPacketNoReply(MediaPacketPtr packet) final;
+  void SupplyPacketNoReply(MediaPacket packet) final;
 
-  void Flush(bool hold_frame, const FlushCallback& callback) final;
+  void Flush(bool hold_frame, FlushCallback callback) final;
 
   // Counts oustanding supplied packets and uses their callbacks to deliver
   // demand updates. This class is referenced using shared_ptrs so that no
@@ -188,9 +187,9 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
   // Sets the PTS rate of the packet to pts_rate_ unless pts_rate_ is zero.
   // Does nothing if pts_rate_ is zero.
-  void SetPacketPtsRate(const MediaPacketPtr& packet);
+  void SetPacketPtsRate(MediaPacket* packet);
 
-  f1dl::Binding<MediaPacketConsumer> binding_;
+  fidl::Binding<MediaPacketConsumer> binding_;
   bool accept_revised_media_type_ = false;
   MediaPacketDemand demand_;
   bool demand_update_required_ = false;

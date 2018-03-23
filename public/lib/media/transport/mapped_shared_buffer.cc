@@ -8,8 +8,8 @@
 #include <zx/vmar.h>
 #include <zx/vmo.h>
 
-#include "lib/fxl/logging.h"
 #include <fuchsia/cpp/media.h>
+#include "lib/fxl/logging.h"
 #include "lib/media/transport/fifo_allocator.h"
 
 namespace media {
@@ -55,7 +55,7 @@ zx_status_t MappedSharedBuffer::InitInternal(zx::vmo vmo, uint32_t map_flags) {
     return status;
   }
 
-  if (size == 0 || size > MediaPacketConsumer::kMaxBufferLen) {
+  if (size == 0 || size > kMaxBufferLen) {
     FXL_LOG(ERROR) << "zx::vmo::get_size returned invalid size " << size;
     return ZX_ERR_OUT_OF_RANGE;
   }

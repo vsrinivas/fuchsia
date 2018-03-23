@@ -78,12 +78,12 @@ void VideoFrameSource::GetRgbaFrame(uint8_t* rgba_buffer,
 void VideoFrameSource::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
   FXL_DCHECK(supplied_packet);
-  FXL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
+  FXL_DCHECK(supplied_packet->packet().pts_rate_ticks ==
              TimelineRate::NsPerSecond.subject_delta());
-  FXL_DCHECK(supplied_packet->packet()->pts_rate_seconds ==
+  FXL_DCHECK(supplied_packet->packet().pts_rate_seconds ==
              TimelineRate::NsPerSecond.reference_delta());
 
-  if (supplied_packet->packet()->flags & MediaPacket::kFlagEos) {
+  if (supplied_packet->packet().flags & kFlagEos) {
     if (prime_callback_) {
       // We won't get any more packets, so we're as primed as we're going to
       // get.
@@ -91,7 +91,7 @@ void VideoFrameSource::OnPacketSupplied(
       prime_callback_ = nullptr;
     }
 
-    timeline_control_point_.SetEndOfStreamPts(supplied_packet->packet()->pts);
+    timeline_control_point_.SetEndOfStreamPts(supplied_packet->packet().pts);
   }
 
   // Discard empty packets so they don't confuse the selection logic.
@@ -106,7 +106,7 @@ void VideoFrameSource::OnPacketSupplied(
     CheckForRevisedMediaType(supplied_packet->packet());
   }
 
-  if (supplied_packet->packet()->pts < min_pts_) {
+  if (supplied_packet->packet().pts < min_pts_) {
     // This packet falls outside the program range. Discard it.
     return;
   }
@@ -137,7 +137,7 @@ void VideoFrameSource::OnPacketSupplied(
 }
 
 void VideoFrameSource::OnFlushRequested(bool hold_frame,
-                                        const FlushCallback& callback) {
+                                        FlushCallback callback) {
   if (!packet_queue_.empty()) {
     if (hold_frame) {
       held_packet_ = std::move(packet_queue_.front());
