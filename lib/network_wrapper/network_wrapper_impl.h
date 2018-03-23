@@ -23,8 +23,8 @@ class NetworkWrapperImpl : public NetworkWrapper {
   ~NetworkWrapperImpl() override;
 
   fxl::RefPtr<callback::Cancellable> Request(
-      std::function<network::URLRequestPtr()> request_factory,
-      std::function<void(network::URLResponsePtr)> callback) override;
+      std::function<network::URLRequest()> request_factory,
+      std::function<void(network::URLResponse)> callback) override;
 
  private:
   class RunningRequest;

@@ -23,16 +23,16 @@ network::URLRequest* FakeNetworkWrapper::GetRequest() {
 
 void FakeNetworkWrapper::ResetRequest() { request_received_.reset(); }
 
-void FakeNetworkWrapper::SetResponse(network::URLResponsePtr response) {
+void FakeNetworkWrapper::SetResponse(network::URLResponse response) {
   response_to_return_ = std::move(response);
 }
 
 void FakeNetworkWrapper::SetSocketResponse(zx::socket body,
                                            uint32_t status_code) {
-  network::URLResponsePtr server_response = network::URLResponse::New();
-  server_response->body = network::URLBody::New();
-  server_response->body->set_stream(std::move(body));
-  server_response->status_code = status_code;
+  network::URLResponse server_response;
+  server_response.body = network::URLBody::New();
+  server_response.body->set_stream(std::move(body));
+  server_response.status_code = status_code;
   SetResponse(std::move(server_response));
 }
 
@@ -42,8 +42,8 @@ void FakeNetworkWrapper::SetStringResponse(const std::string& body,
 }
 
 fxl::RefPtr<callback::Cancellable> FakeNetworkWrapper::Request(
-    std::function<network::URLRequestPtr()> request_factory,
-    std::function<void(network::URLResponsePtr)> callback) {
+    std::function<network::URLRequest()> request_factory,
+    std::function<void(network::URLResponse)> callback) {
   std::unique_ptr<bool> cancelled = std::make_unique<bool>(false);
 
   bool* cancelled_ptr = cancelled.get();

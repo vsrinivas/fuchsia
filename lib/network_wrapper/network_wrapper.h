@@ -23,8 +23,8 @@ class NetworkWrapper {
 
   // Starts a url network request.
   virtual fxl::RefPtr<callback::Cancellable> Request(
-      std::function<network::URLRequestPtr()> request_factory,
-      std::function<void(network::URLResponsePtr)> callback) = 0;
+      std::function<network::URLRequest()> request_factory,
+      std::function<void(network::URLResponse)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(NetworkWrapper);

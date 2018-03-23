@@ -15,14 +15,13 @@
 namespace network_wrapper {
 
 const uint32_t kMaxRedirectCount = 32;
-const int32_t kInvalidArgument = -4;
 const int32_t kTooManyRedirectErrorCode = -310;
 const int32_t kInvalidResponseErrorCode = -320;
 
 class NetworkWrapperImpl::RunningRequest {
  public:
   explicit RunningRequest(
-      std::function<network::URLRequestPtr()> request_factory)
+      std::function<network::URLRequest()> request_factory)
       : request_factory_(std::move(request_factory)), redirect_count_(0u) {}
 
   void Cancel() {
@@ -39,10 +38,10 @@ class NetworkWrapperImpl::RunningRequest {
     }
   }
 
-  void set_callback(std::function<void(network::URLResponsePtr)> callback) {
+  void set_callback(std::function<void(network::URLResponse)> callback) {
     // Once this class calls its callback, it must notify its container.
     callback_ = [ this, callback = std::move(callback) ](
-        network::URLResponsePtr response) mutable {
+        network::URLResponse response) mutable {
       FXL_DCHECK(on_empty_callback_);
       if (destruction_sentinel_.DestructedWhile([
             callback = std::move(callback), &response
@@ -68,36 +67,29 @@ class NetworkWrapperImpl::RunningRequest {
 
     auto request = request_factory_();
 
-    if (!request) {
-      callback_(NewErrorResponse(kInvalidArgument,
-                                 "Factory didn't returns a request."));
-      return;
-    }
-
     // If last response was a redirect, follow it.
     if (!next_url_.empty())
-      request->url = next_url_;
+      request.url = next_url_;
 
     network_service_->CreateURLLoader(url_loader_.NewRequest());
 
-    const std::string& url = request->url.get();
-    const std::string& method = request->method.get();
+    const std::string& url = request.url;
+    const std::string& method = request.method;
     url_loader_->Start(
         std::move(request),
         TRACE_CALLBACK(
-            callback::ToStdFunction([this](network::URLResponsePtr response) {
+            callback::ToStdFunction([this](network::URLResponse response) {
               url_loader_.Unbind();
 
-              if (response->error) {
+              if (response.error) {
                 callback_(std::move(response));
                 return;
               }
 
               // 307 and 308 are redirects for which the HTTP
-              // method must not
-              // change.
-              if (response->status_code == 307 ||
-                  response->status_code == 308) {
+              // method must not change.
+              if (response.status_code == 307 ||
+                  response.status_code == 308) {
                 HandleRedirect(std::move(response));
                 return;
               }
@@ -117,10 +109,10 @@ class NetworkWrapperImpl::RunningRequest {
     });
   }
 
-  void HandleRedirect(network::URLResponsePtr response) {
+  void HandleRedirect(network::URLResponse response) {
     // Follow the redirect if a Location header is found.
-    for (const auto& header : *response->headers) {
-      if (fxl::EqualsCaseInsensitiveASCII(header->name.get(), "location")) {
+    for (const auto& header : *response.headers) {
+      if (fxl::EqualsCaseInsensitiveASCII(header.name.get(), "location")) {
         ++redirect_count_;
         if (redirect_count_ >= kMaxRedirectCount) {
           callback_(NewErrorResponse(kTooManyRedirectErrorCode,
@@ -128,7 +120,7 @@ class NetworkWrapperImpl::RunningRequest {
           return;
         }
 
-        next_url_ = header->value;
+        next_url_ = header.value;
         Start();
         return;
       }
@@ -141,16 +133,16 @@ class NetworkWrapperImpl::RunningRequest {
     // variables afterwards.
   }
 
-  network::URLResponsePtr NewErrorResponse(int32_t code, std::string reason) {
-    auto response = network::URLResponse::New();
-    response->error = network::NetworkError::New();
-    response->error->code = code;
-    response->error->description = reason;
+  network::URLResponse NewErrorResponse(int32_t code, std::string reason) {
+    network::URLResponse response;
+    response.error = network::NetworkError::New();
+    response.error->code = code;
+    response.error->description = reason;
     return response;
   }
 
-  std::function<network::URLRequestPtr()> request_factory_;
-  std::function<void(network::URLResponsePtr)> callback_;
+  std::function<network::URLRequest()> request_factory_;
+  std::function<void(network::URLResponse)> callback_;
   fxl::Closure on_empty_callback_;
   std::string next_url_;
   uint32_t redirect_count_;
@@ -170,8 +162,8 @@ NetworkWrapperImpl::NetworkWrapperImpl(
 NetworkWrapperImpl::~NetworkWrapperImpl() {}
 
 fxl::RefPtr<callback::Cancellable> NetworkWrapperImpl::Request(
-    std::function<network::URLRequestPtr()> request_factory,
-    std::function<void(network::URLResponsePtr)> callback) {
+    std::function<network::URLRequest()> request_factory,
+    std::function<void(network::URLResponse)> callback) {
   RunningRequest& request =
       running_requests_.emplace(std::move(request_factory));
 

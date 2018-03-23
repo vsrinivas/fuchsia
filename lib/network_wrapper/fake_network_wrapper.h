@@ -20,7 +20,7 @@ class FakeNetworkWrapper : public NetworkWrapper {
   network::URLRequest* GetRequest();
   void ResetRequest();
 
-  void SetResponse(network::URLResponsePtr response);
+  void SetResponse(network::URLResponse response);
 
   void SetSocketResponse(zx::socket body, uint32_t status_code);
 
@@ -29,11 +29,11 @@ class FakeNetworkWrapper : public NetworkWrapper {
  private:
   // NetworkWrapper
   fxl::RefPtr<callback::Cancellable> Request(
-      std::function<network::URLRequestPtr()> request_factory,
-      std::function<void(network::URLResponsePtr)> callback) override;
+      std::function<network::URLRequest()> request_factory,
+      std::function<void(network::URLResponse)> callback) override;
 
-  network::URLRequestPtr request_received_;
-  network::URLResponsePtr response_to_return_;
+  network::URLRequest request_received_;
+  network::URLResponse response_to_return_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeNetworkWrapper);
