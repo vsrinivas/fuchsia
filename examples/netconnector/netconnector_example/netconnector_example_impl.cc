@@ -9,7 +9,7 @@
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "<fuchsia/cpp/netconnector.h>"
+#include <fuchsia/cpp/netconnector.h>
 
 namespace examples {
 namespace {
@@ -62,7 +62,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
           application_context_
               ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
-      f1dl::InterfaceHandle<component::ServiceProvider> handle;
+      fidl::InterfaceHandle<component::ServiceProvider> handle;
       application_context_->outgoing_services()->AddBinding(
           handle.NewRequest());
 
