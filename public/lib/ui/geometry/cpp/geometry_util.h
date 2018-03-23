@@ -42,6 +42,26 @@ inline bool operator!=(const geometry::Point& lhs, const geometry::Point& rhs) {
   return !(lhs == rhs);
 }
 
+inline bool operator==(const geometry::Inset& lhs, const geometry::Inset& rhs) {
+  return lhs.top == rhs.top && lhs.right == rhs.right &&
+         lhs.bottom == rhs.bottom && lhs.left == rhs.left;
+}
+
+inline bool operator!=(const geometry::Inset& lhs, const geometry::Inset& rhs) {
+  return !(lhs == rhs);
+}
+
+inline bool operator==(const geometry::InsetF& lhs,
+                       const geometry::InsetF& rhs) {
+  return lhs.top == rhs.top && lhs.right == rhs.right &&
+         lhs.bottom == rhs.bottom && lhs.left == rhs.left;
+}
+
+inline bool operator!=(const geometry::InsetF& lhs,
+                       const geometry::InsetF& rhs) {
+  return !(lhs == rhs);
+}
+
 void SetIdentityTransform(geometry::Transform* transform);
 void SetTranslationTransform(geometry::Transform* transform,
                              float x,

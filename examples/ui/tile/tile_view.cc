@@ -6,14 +6,17 @@
 
 #include <fdio/util.h>
 
+#include <fuchsia/cpp/views_v1.h>
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
-#include <fuchsia/cpp/views_v1.h>
+#include "lib/ui/geometry/cpp/geometry_util.h"
+#include "lib/ui/views/cpp/views_util.h"
 
 namespace examples {
 
 TileView::TileView(views_v1::ViewManagerPtr view_manager,
-                   f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+                   fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
                    component::ApplicationContext* application_context,
                    const TileParams& params)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
@@ -29,8 +32,8 @@ TileView::TileView(views_v1::ViewManagerPtr view_manager,
 TileView::~TileView() {}
 
 void TileView::Present(
-    f1dl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
-    f1dl::InterfaceRequest<presentation::Presentation> presentation) {
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
+    fidl::InterfaceRequest<presentation::Presentation> presentation) {
   const std::string empty_url;
   AddChildView(std::move(child_view_owner), empty_url, nullptr);
 }
@@ -40,9 +43,9 @@ void TileView::ConnectViews() {
     component::Services services;
     component::ApplicationControllerPtr controller;
 
-    auto launch_info = component::ApplicationLaunchInfo::New();
-    launch_info->url = url;
-    launch_info->directory_request = services.NewRequest();
+    component::ApplicationLaunchInfo launch_info;
+    launch_info.url = url;
+    launch_info.directory_request = services.NewRequest();
 
     // |env_launcher_| launches the app with our nested environment.
     env_launcher_->CreateApplication(std::move(launch_info),
@@ -51,7 +54,7 @@ void TileView::ConnectViews() {
     // Get the view provider back from the launched app.
     auto view_provider = services.ConnectToService<views_v1::ViewProvider>();
 
-    f1dl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner;
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner;
     view_provider->CreateView(child_view_owner.NewRequest(), nullptr);
 
     // Add the view, which increments child_key_.
@@ -68,7 +71,7 @@ void TileView::CreateNestedEnvironment() {
 
   // Add a binding for the presenter service
   service_provider_bridge_.AddService<presentation::Presenter>(
-      [this](f1dl::InterfaceRequest<presentation::Presenter> request) {
+      [this](fidl::InterfaceRequest<presentation::Presenter> request) {
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
@@ -80,7 +83,7 @@ void TileView::CreateNestedEnvironment() {
 }
 
 void TileView::OnChildAttached(uint32_t child_key,
-                               views_v1::ViewInfoPtr child_view_info) {
+                               views_v1::ViewInfo child_view_info) {
   auto it = views_.find(child_key);
   FXL_DCHECK(it != views_.end());
 
@@ -94,7 +97,7 @@ void TileView::OnChildUnavailable(uint32_t child_key) {
 }
 
 void TileView::AddChildView(
-    f1dl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
     const std::string& url,
     component::ApplicationControllerPtr app_controller) {
   const uint32_t view_key = next_child_view_key_++;
@@ -123,7 +126,7 @@ void TileView::RemoveChildView(uint32_t child_key) {
   InvalidateScene();
 }
 
-void TileView::OnSceneInvalidated(images::PresentationInfoPtr presentation_info) {
+void TileView::OnSceneInvalidated(images::PresentationInfo presentation_info) {
   if (!has_logical_size() || views_.empty())
     return;
 
@@ -146,7 +149,7 @@ void TileView::OnSceneInvalidated(images::PresentationInfoPtr presentation_info)
       excess--;
     }
 
-    mozart::RectF layout_bounds;
+    geometry::RectF layout_bounds;
     if (vertical) {
       layout_bounds.x = 0;
       layout_bounds.y = offset;
@@ -160,15 +163,17 @@ void TileView::OnSceneInvalidated(images::PresentationInfoPtr presentation_info)
     }
     offset += extent;
 
-    auto view_properties = views_v1::ViewProperties::New();
-    view_properties->view_layout = views_v1::ViewLayout::New();
-    view_properties->view_layout->size.width = layout_bounds.width;
-    view_properties->view_layout->size.height = layout_bounds.height;
+    views_v1::ViewProperties view_properties;
+    view_properties.view_layout = views_v1::ViewLayout::New();
+    view_properties.view_layout->size.width = layout_bounds.width;
+    view_properties.view_layout->size.height = layout_bounds.height;
 
-    if (!view_data->view_properties.Equals(view_properties)) {
-      view_data->view_properties = view_properties.Clone();
+    if (view_data->view_properties != view_properties) {
+      views_v1::ViewProperties view_properties_clone;
+      view_properties.Clone(&view_properties_clone);
+      view_data->view_properties = std::move(view_properties_clone);
       GetViewContainer()->SetChildProperties(it->first,
-                                             std::move(view_properties));
+          fidl::MakeOptional(std::move(view_properties)));
     }
 
     view_data->host_node.SetTranslation(layout_bounds.x, layout_bounds.y, 0u);

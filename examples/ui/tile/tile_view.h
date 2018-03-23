@@ -25,7 +25,7 @@ class TileView : public mozart::BaseView,
                  public presentation::Presenter {
  public:
   TileView(views_v1::ViewManagerPtr view_manager,
-           f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+           fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
            component::ApplicationContext* application_context,
            const TileParams& tile_params);
 
@@ -43,20 +43,20 @@ class TileView : public mozart::BaseView,
     component::ApplicationControllerPtr controller;
     scenic_lib::EntityNode host_node;
 
-    views_v1::ViewPropertiesPtr view_properties;
-    views_v1::ViewInfoPtr view_info;
+    views_v1::ViewProperties view_properties;
+    views_v1::ViewInfo view_info;
   };
 
   // |BaseView|:
   void OnChildAttached(uint32_t child_key,
-                       views_v1::ViewInfoPtr child_view_info) override;
+                       views_v1::ViewInfo child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
-  void OnSceneInvalidated(images::PresentationInfoPtr presentation_info) override;
+  void OnSceneInvalidated(images::PresentationInfo presentation_info) override;
 
   // |Presenter|:
   void Present(
-      f1dl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
-      f1dl::InterfaceRequest<presentation::Presentation> presentation) override;
+      fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
+      fidl::InterfaceRequest<presentation::Presentation> presentation) override;
 
   // Set up environment with a |Presenter| service.
   // We launch apps with this environment.
@@ -65,7 +65,7 @@ class TileView : public mozart::BaseView,
   // Launches initial list of views, passed as command line parameters.
   void ConnectViews();
 
-  void AddChildView(f1dl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
+  void AddChildView(fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
                     const std::string& url,
                     component::ApplicationControllerPtr);
   void RemoveChildView(uint32_t child_key);
@@ -91,7 +91,7 @@ class TileView : public mozart::BaseView,
   // Map from keys to |ViewData|
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;
 
-  f1dl::BindingSet<presentation::Presenter> presenter_bindings_;
+  fidl::BindingSet<presentation::Presenter> presenter_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TileView);
 };
