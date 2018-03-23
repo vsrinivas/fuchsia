@@ -105,6 +105,75 @@ __BEGIN_CDECLS;
 #define PCI_CLASS_DATA_ACQ          0x11
 #define PCI_CLASS_UNDEFINED         0x99
 
+// Subclasses by category
+// Mass storage
+#define PCI_SUBCLASS_SCSI           0x00
+#define PCI_SUBCLASS_IDE            0x01
+#define PCI_SUBCLASS_FLOPPY_DISK    0x02
+#define PCI_SUBCLASS_IPI_BUS        0x03
+#define PCI_SUBCLASS_RAID_BUS       0x04
+#define PCI_SUBCLASS_ATA            0x05
+#define PCI_SUBCLASS_SATA           0x06
+#define PCI_SUBCLASS_SERIAL_SCSI    0x07
+#define PCI_SUBCLASS_NVMEM          0x08
+#define PCI_SUBCLASS_MASS_STORAGE   0x80
+// Network
+#define PCI_SUBCLASS_ETHERNET       0x00
+#define PCI_SUBCLASS_TOKEN_RING     0x01
+#define PCI_SUBCLASS_FDDI           0x02
+#define PCI_SUBCLASS_ATM            0x03
+#define PCI_SUBCLASS_ISDN           0x04
+#define PCI_SUBCLASS_WORLDFIP       0x05
+#define PCI_SUBCLASS_PICMG          0x06
+#define PCI_SUBCLASS_INFINIBAND     0x07
+#define PCI_SUBCLASS_FABRIC         0x08
+#define PCI_SUBCLASS_NETWORK        0x80
+// Display
+#define PCI_SUBCLASS_VGA            0x00
+#define PCI_SUBCLASS_XGA            0x01
+#define PCI_SUBCLASS_3D             0x02
+#define PCI_SUBCLASS_DISPLAY        0x80
+// Multimedia
+#define PCI_SUBCLASS_VIDEO_CTRL     0x00
+#define PCI_SUBCLASS_AUDIO_CTRL     0x01
+#define PCI_SUBCLASS_TELEPHONY      0x02
+#define PCI_SUBCLASS_AUDIO_DEVICE   0x03
+#define PCI_SUBCLASS_MULTIMEDIA     0x80
+// Memory
+#define PCI_SUBCLASS_RAM            0x00
+#define PCI_SUBCLASS_FLASH          0x01
+#define PCI_SUBCLASS_MEMORY         0x80
+// Bridge
+#define PCI_SUBCLASS_HOST           0x00
+#define PCI_SUBCLASS_ISA            0x01
+#define PCI_SUBCLASS_EISA           0x02
+#define PCI_SUBCLASS_MICROCHANNEL   0x03
+#define PCI_SUBCLASS_PCI            0x04
+#define PCI_SUBCLASS_PCMCIA         0x05
+#define PCI_SUBCLASS_NUBUS          0x06
+#define PCI_SUBCLASS_CARDBUS        0x07
+#define PCI_SUBCLASS_RACEWAY        0x08
+#define PCI_SUBCLASS_PCI_TO_PCI     0x09
+#define PCI_SUBCLASS_INFI_PCI_HOST  0x0A
+#define PCI_SUBCLASS_BRIDGE         0x80
+// Communication
+#define PCI_SUBCLASS_SERIAL         0x00
+#define PCI_SUBCLASS_PARALLEL       0x01
+#define PCI_SUBCLASS_MULTI_SERIAL   0x02
+#define PCI_SUBCLASS_MODEM          0x03
+#define PCI_SUBCLASS_GPIB_CTRL      0x04
+#define PCI_SUBCLASS_SMARDT_CARD    0x05
+#define PCI_SUBCLASS_COMMUNICATION  0x80
+// Generic
+#define PCI_SUBCLASS_PIC            0x00
+#define PCI_SUBCLASS_DMA            0x01
+#define PCI_SUBCLASS_TIMER          0x02
+#define PCI_SUBCLASS_RTC            0x03
+#define PCI_SUBCLASS_PCI_HOTPLUG    0x04
+#define PCI_SUBCLASS_SD_HOST        0x05
+#define PCI_SUBCLASS_IOMMU          0x06
+#define PCI_SUBCLASS_SYSTEM_PERIPH  0x80
+
 typedef struct {
     uint16_t vendor_id;
     uint16_t device_id;
