@@ -8,7 +8,7 @@
         "maxwell": "//peridot/bin/user:maxwell",
         "maxwell_agents": "//peridot:maxwell_agents",
         "module_resolver": "//peridot/bin/module_resolver",
-        "push_package_indexer": "//peridot/bin/module_resolver/push_package_indexer",
+        "module_package_indexer": "//peridot/bin/module_resolver/module_package_indexer",
         "suggestion_engine": "//peridot/bin/suggestion_engine"
     }
 }

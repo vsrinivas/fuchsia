@@ -31,7 +31,7 @@ import("//peridot/build/module_manifest.gni")
 # NOTE: Using the package rule built below, the fully resolved path will be
 # /system/data/module_manifest_repository
 # This must match that given in bin/module_resolver/module_resolver_main.cc
-_target_directory = "module_manifest_repository"
+_target_directory = "initial_module_manifests"
 
 template("module_manifest_package") {
   assert(defined(invoker.sources), "'sources' must be defined for $target_name")
@@ -57,10 +57,9 @@ template("module_manifest_package") {
       package_name = invoker.package_name
     }
 
-    file_part = get_path_info(module_manifest, "file")
     resources_entries += [ {
       path = rebase_path(module_manifest)
-      dest = _target_directory + "/" + package_name + "_" + file_part
+      dest = _target_directory + "/" + package_name
     } ]
   }
 

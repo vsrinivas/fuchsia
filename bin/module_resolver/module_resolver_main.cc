@@ -19,16 +19,11 @@
 #include "peridot/lib/fidl/equals.h"
 #include "peridot/lib/module_manifest_source/directory_source.h"
 #include "peridot/lib/module_manifest_source/firebase_source.h"
-#include "peridot/lib/module_manifest_source/push_package_source.h"
+#include "peridot/lib/module_manifest_source/module_package_source.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
 namespace modular {
 namespace {
-
-// NOTE: This must match the path specified in
-// peridot/build/module_repository/manifest_package.gni
-constexpr char kReadOnlyModuleRepositoryPath[] =
-    "/system/data/module_manifest_repository";
 
 constexpr char kContextListenerEntitiesKey[] = "entities";
 
@@ -50,8 +45,8 @@ class ModuleResolverApp : ContextListener {
         std::make_unique<ModuleResolverImpl>(std::move(entity_resolver));
     // Set up |resolver_impl_|.
     resolver_impl_->AddSource(
-        "local_ro", std::make_unique<modular::DirectoryModuleManifestSource>(
-                        kReadOnlyModuleRepositoryPath, false /* create */));
+        "module_package",
+        std::make_unique<modular::ModulePackageSource>(context));
     if (!is_test) {
       resolver_impl_->AddSource(
           "firebase_mods",
@@ -64,9 +59,6 @@ class ModuleResolverApp : ContextListener {
                 return network_service;
               },
               "cloud-mods", "" /* prefix */));
-      resolver_impl_->AddSource(
-          "push_package",
-          std::make_unique<modular::PushPackageSource>(context));
     }
 
     // Make |resolver_impl_| a query (ask) handler.

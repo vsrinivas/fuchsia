@@ -87,13 +87,14 @@ source_set("firebase_source") {
   ]
 }
 
-source_set("push_package_source") {
+source_set("module_package_source") {
   sources = [
-    "push_package_source.cc",
-    "push_package_source.h",
+    "module_package_source.cc",
+    "module_package_source.h",
   ]
 
   public_deps = [
+    ":directory_source",
     ":json",
     ":module_manifest_source",
     "fidl",

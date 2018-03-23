@@ -8,6 +8,6 @@ fidl("fidl") {
   name = "module_manifest_source"
 
   sources = [
-    "push_package_indexer.fidl",
+    "module_package_indexer.fidl",
   ]
 }

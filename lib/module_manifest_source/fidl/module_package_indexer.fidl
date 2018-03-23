@@ -4,7 +4,7 @@
 
 library module_manifest_source;
 
-[ServiceName="modular.PushPackageIndexer"]
-interface PushPackageIndexer {
+[ServiceName="modular.ModulePackageIndexer"]
+interface ModulePackageIndexer {
   1: IndexManifest(string package_name, string module_manifest_path);
 };

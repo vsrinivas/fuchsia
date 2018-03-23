@@ -4,8 +4,8 @@
 
 import("//build/package.gni")
 
-executable("push_package_indexer_bin") {
-  output_name = "push_package_indexer"
+executable("module_package_indexer_bin") {
+  output_name = "module_package_indexer"
 
   sources = ["main.cc"]
 
@@ -17,9 +17,9 @@ executable("push_package_indexer_bin") {
   ]
 }
 
-package("push_package_indexer") {
-  deps = [":push_package_indexer_bin"]
-  binary = "push_package_indexer"
+package("module_package_indexer") {
+  deps = [":module_package_indexer_bin"]
+  binary = "module_package_indexer"
   meta = [ {
         path = rebase_path("meta/sandbox")
         dest = "sandbox"

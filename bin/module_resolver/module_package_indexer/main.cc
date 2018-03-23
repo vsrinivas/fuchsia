@@ -17,12 +17,13 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/strings/string_printf.h"
 
-// This function finds the PushPackageIndexer fidl service that the
+// This function finds the ModulePackageIndexer fidl service that the
 // module_resolver runs.
-std::string FindPushPackageIndexerService() {
-  // The PushPackageIndexer service is run by the module_resolver process under
-  // the "user-*" job name.  The structured path of to this service is:
-  // "/hub/sys/<user job name>/module_resolver/debug/modular.PushPackageIndexer"
+std::string FindModulePackageIndexerService() {
+  // The ModulePackageIndexer service is run by the module_resolver process
+  // under the "user-*" job name.  The structured path of to this service is:
+  // "/hub/sys/<user job
+  // name>/module_resolver/debug/modular.ModulePackageIndexer"
 
   // Here, we go through /hub/sys and find the user's job name, which always
   // begins with 'user-'.
@@ -40,7 +41,7 @@ std::string FindPushPackageIndexerService() {
   FXL_CHECK(!user_env.empty()) << "Could not find the running user's job.";
   return fxl::StringPrintf("/hub/sys/%s/module_resolver/debug/%s",
                            user_env.c_str(),
-                           module_manifest_source::PushPackageIndexer::Name_);
+                           module_manifest_source::ModulePackageIndexer::Name_);
 }
 
 int main(int argc, const char** argv) {
@@ -55,14 +56,14 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  auto service_path = FindPushPackageIndexerService();
+  auto service_path = FindModulePackageIndexerService();
   const auto& package_name = command_line.positional_args()[0];
   const auto& package_version = command_line.positional_args()[1];
   auto module_manifest_path =
       fxl::StringPrintf("/pkgfs/packages/%s/%s/meta/module.json",
                         package_name.c_str(), package_version.c_str());
 
-  module_manifest_source::PushPackageIndexerPtr indexer;
+  module_manifest_source::ModulePackageIndexerPtr indexer;
   auto req_handle = indexer.NewRequest().TakeChannel();
   if (fdio_service_connect(service_path.c_str(), req_handle.get()) != ZX_OK) {
     FXL_LOG(FATAL) << "Could not connect to service " << service_path;
