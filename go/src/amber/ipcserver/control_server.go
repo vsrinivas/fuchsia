@@ -6,23 +6,21 @@ package ipcserver
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
-	"fidl/bindings"
-
-	"syscall/zx"
-	"syscall/zx/mxerror"
+	"fidl/bindings2"
 
 	"fuchsia/go/amber"
 
 	"amber/daemon"
 	"amber/pkg"
+
+	"syscall/zx"
 )
 
 type ControlSrvr struct {
 	daemon *daemon.Daemon
-	stubs  []*bindings.Stub
+	bs     bindings2.BindingSet
 }
 
 func NewControlSrvr(d *daemon.Daemon) *ControlSrvr {
@@ -93,23 +91,10 @@ func (c *ControlSrvr) GetBlob(merkle string) error {
 }
 
 func (c *ControlSrvr) Quit() {
-	for _, s := range c.stubs {
-		s.Close()
-	}
-	c.stubs = []*bindings.Stub{}
+	c.bs.Close()
 }
 
-func (c *ControlSrvr) Bind(req amber.ControlInterface) {
-	s := req.NewStub(c, bindings.GetAsyncWaiter())
-	c.stubs = append(c.stubs, s)
-	go func(b *bindings.Stub) {
-		for {
-			if err := b.ServeRequest(); err != nil {
-				if mxerror.Status(err) != zx.ErrPeerClosed {
-					log.Printf("Request error %v \n", err)
-				}
-				break
-			}
-		}
-	}(s)
+func (c *ControlSrvr) Bind(ch zx.Channel) error {
+	s := amber.ControlStub{Impl: &ControlSrvr{}}
+	return c.bs.Add(&s, ch)
 }
