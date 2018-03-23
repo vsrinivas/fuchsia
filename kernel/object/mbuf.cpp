@@ -74,6 +74,9 @@ size_t MBufChain::Read(user_out_ptr<void> dst, size_t len, bool datagram) {
 
 zx_status_t MBufChain::WriteDatagram(user_in_ptr<const void> src, size_t len,
                                      size_t* written) {
+    if (len == 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
     if (len + size_ > kSizeMax)
         return ZX_ERR_SHOULD_WAIT;
 

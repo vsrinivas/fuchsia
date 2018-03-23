@@ -31,6 +31,8 @@ public:
     // This operation is atomic in that either the entire datagram is written successfully or the
     // chain is unmodified.
     //
+    // Writing a zero-length datagram is an error.
+    //
     // Returns an error on failure.
     zx_status_t WriteDatagram(user_in_ptr<const void> src, size_t len, size_t* written);
 

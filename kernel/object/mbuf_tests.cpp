@@ -256,8 +256,21 @@ static bool datagram_write_basic() {
     END_TEST;
 }
 
-// TODO(ZX-1848): Implemented a test that verifies behavior of calling WriteDatagram with a
-// zero-length buffer.
+// Tests writing a zero-length datagram to the chain.
+static bool datagram_write_zero() {
+    BEGIN_TEST;
+    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
+    auto mem_in = make_user_in_ptr(mem->in());
+
+    size_t written = 7;
+    MBufChain chain;
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, chain.WriteDatagram(mem_in, 0, &written), "");
+    EXPECT_EQ(7U, written, "");
+    EXPECT_TRUE(chain.is_empty(), "");
+    EXPECT_FALSE(chain.is_full(), "");
+    EXPECT_EQ(0U, chain.size(), "");
+    END_TEST;
+}
 
 // Tests writing datagrams to the chain until it stops accepting writes.
 static bool datagram_write_too_much() {
@@ -300,5 +313,6 @@ UNITTEST("stream_write_too_much", stream_write_too_much)
 UNITTEST("datagram_read_zero", datagram_read_zero)
 UNITTEST("datagram_read_buffer_too_small", datagram_read_buffer_too_small)
 UNITTEST("datagram_write_basic", datagram_write_basic)
+UNITTEST("datagram_write_zero", datagram_write_zero)
 UNITTEST("datagram_write_too_much", datagram_write_too_much)
 UNITTEST_END_TESTCASE(mbuf_tests, "mbuf", "MBuf test");
