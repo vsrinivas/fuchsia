@@ -4,8 +4,9 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/auth.h>
+
 #include "garnet/bin/auth/token_manager/token_manager_impl.h"
-#include "garnet/public/lib/auth/fidl/auth_provider_factory.fidl.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/svc/cpp/services.h"
 
@@ -14,7 +15,7 @@ namespace auth {
 namespace {
 
 const cache::CacheKey GetCacheKey(auth::AuthProviderType auth_provider_type,
-                                  const f1dl::StringPtr& user_profile_id) {
+                                  fidl::StringPtr user_profile_id) {
   // TODO: consider replacing the static cast with a string map (more type safe)
   return cache::CacheKey(std::to_string(static_cast<int>(auth_provider_type)),
                          user_profile_id.get());
@@ -38,32 +39,35 @@ using auth::Status;
 TokenManagerImpl::TokenManagerImpl(
     component::ApplicationContext* app_context,
     std::unique_ptr<store::AuthDb> auth_db,
-    f1dl::VectorPtr<AuthProviderConfigPtr> auth_provider_configs)
+    fidl::VectorPtr<AuthProviderConfig> auth_provider_configs)
     : token_cache_(kMaxCacheSize), auth_db_(std::move(auth_db)) {
   FXL_CHECK(app_context);
   // TODO: Start the auth provider only when someone does a request to it,
   // instead of starting all the configured providers in advance.
   for (auto& config : *auth_provider_configs) {
-    if (config->url.get().empty()) {
+    if (config.url.get().empty()) {
       FXL_LOG(ERROR) << "Auth provider config url is not set.";
       continue;
     }
 
-    auto launch_info = component::ApplicationLaunchInfo::New();
-    launch_info->url = config->url;
+    component::ApplicationLaunchInfo launch_info;
+    launch_info.url = config.url;
     component::Services services;
-    launch_info->directory_request = services.NewRequest();
+    launch_info.directory_request = services.NewRequest();
 
     component::ApplicationControllerPtr controller;
     app_context->launcher()->CreateApplication(std::move(launch_info),
                                                controller.NewRequest());
-    controller.set_error_handler([this, &config] {
-      FXL_LOG(INFO) << "Auth provider " << config->url << " disconnected";
-      auth_providers_.erase(config->auth_provider_type);
-      auth_provider_controllers_.erase(config->auth_provider_type);
-      // TODO: Try reconnecting to Auth provider using some back-off mechanism.
+    controller.set_error_handler([
+      this, url = config.url, auth_provider_type = config.auth_provider_type
+    ] {
+      FXL_LOG(INFO) << "Auth provider " << url << " disconnected";
+      auth_providers_.erase(auth_provider_type);
+      auth_provider_controllers_.erase(auth_provider_type);
+      // TODO: Try reconnecting to Auth provider using some back-off
+      // mechanism.
     });
-    auth_provider_controllers_[config->auth_provider_type] =
+    auth_provider_controllers_[config.auth_provider_type] =
         std::move(controller);
 
     auth::AuthProviderFactoryPtr auth_provider_factory;
@@ -74,16 +78,19 @@ TokenManagerImpl::TokenManagerImpl(
         auth_provider_ptr.NewRequest(), [](auth::AuthProviderStatus status) {
           if (status != auth::AuthProviderStatus::OK) {
             FXL_LOG(ERROR) << "Failed to connect to the auth provider: "
-                           << status;
+                           << static_cast<uint32_t>(status);
           }
         });
-    auth_provider_ptr.set_error_handler([this, &config] {
-      FXL_LOG(INFO) << "Auth provider " << config->url << " disconnected";
-      auth_providers_.erase(config->auth_provider_type);
-      auth_provider_controllers_.erase(config->auth_provider_type);
-      // TODO: Try reconnecting to Auth provider using some back-off mechanism.
+    auth_provider_ptr.set_error_handler([
+      this, url = config.url, auth_provider_type = config.auth_provider_type
+    ] {
+      FXL_LOG(INFO) << "Auth provider " << url << " disconnected";
+      auth_providers_.erase(auth_provider_type);
+      auth_provider_controllers_.erase(auth_provider_type);
+      // TODO: Try reconnecting to Auth provider using some back-off
+      // mechanism.
     });
-    auth_providers_[config->auth_provider_type] = std::move(auth_provider_ptr);
+    auth_providers_[config.auth_provider_type] = std::move(auth_provider_ptr);
   }
 }
 
@@ -91,8 +98,8 @@ TokenManagerImpl::~TokenManagerImpl() {}
 
 void TokenManagerImpl::Authorize(
     const auth::AuthProviderType auth_provider_type,
-    f1dl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
-    const AuthorizeCallback& callback) {
+    fidl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
+    AuthorizeCallback callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
@@ -101,7 +108,7 @@ void TokenManagerImpl::Authorize(
   it->second->GetPersistentCredential(
       std::move(auth_ui_context),
       [this, auth_provider_type, callback](
-          AuthProviderStatus status, f1dl::StringPtr credential,
+          AuthProviderStatus status, fidl::StringPtr credential,
           UserProfileInfoPtr user_profile_info) {
         if (status != AuthProviderStatus::OK || credential.get().empty()) {
           callback(Status::INTERNAL_ERROR, nullptr);
@@ -125,10 +132,10 @@ void TokenManagerImpl::Authorize(
 
 void TokenManagerImpl::GetAccessToken(
     const auth::AuthProviderType auth_provider_type,
-    const f1dl::StringPtr& user_profile_id,
-    const f1dl::StringPtr& app_client_id,
-    f1dl::VectorPtr<f1dl::StringPtr> app_scopes,
-    const GetAccessTokenCallback& callback) {
+    fidl::StringPtr user_profile_id,
+    fidl::StringPtr app_client_id,
+    fidl::VectorPtr<fidl::StringPtr> app_scopes,
+    GetAccessTokenCallback callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
@@ -149,7 +156,7 @@ void TokenManagerImpl::GetAccessToken(
   }
 
   it->second->GetAppAccessToken(
-      f1dl::StringPtr(credential), app_client_id, std::move(app_scopes),
+      fidl::StringPtr(credential), app_client_id, std::move(app_scopes),
       [this, callback, cache_key, &tokens](AuthProviderStatus status,
                                            AuthTokenPtr access_token) {
         std::string access_token_val;
@@ -180,9 +187,9 @@ void TokenManagerImpl::GetAccessToken(
 
 void TokenManagerImpl::GetIdToken(
     const auth::AuthProviderType auth_provider_type,
-    const f1dl::StringPtr& user_profile_id,
-    const f1dl::StringPtr& audience,
-    const GetIdTokenCallback& callback) {
+    fidl::StringPtr user_profile_id,
+    fidl::StringPtr audience,
+    GetIdTokenCallback callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
@@ -202,7 +209,7 @@ void TokenManagerImpl::GetIdToken(
   }
 
   it->second->GetAppIdToken(
-      f1dl::StringPtr(credential), audience,
+      fidl::StringPtr(credential), audience,
       [this, callback, cache_key, &tokens](AuthProviderStatus status,
                                            AuthTokenPtr id_token) {
         std::string id_token_val;
@@ -233,10 +240,10 @@ void TokenManagerImpl::GetIdToken(
 
 void TokenManagerImpl::GetFirebaseToken(
     const auth::AuthProviderType auth_provider_type,
-    const f1dl::StringPtr& user_profile_id,
-    const f1dl::StringPtr& audience,
-    const f1dl::StringPtr& firebase_api_key,
-    const GetFirebaseTokenCallback& callback) {
+    fidl::StringPtr user_profile_id,
+    fidl::StringPtr audience,
+    fidl::StringPtr firebase_api_key,
+    GetFirebaseTokenCallback callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
@@ -260,7 +267,7 @@ void TokenManagerImpl::GetFirebaseToken(
 
   GetIdToken(auth_provider_type, user_profile_id, audience,
              [this, it, callback, cache_key, firebase_api_key](
-                 Status status, f1dl::StringPtr id_token) {
+                 Status status, fidl::StringPtr id_token) {
                if (status != Status::OK) {
                  callback(Status::AUTH_PROVIDER_SERVER_ERROR, nullptr);
                  // TODO: log error here
@@ -299,8 +306,8 @@ void TokenManagerImpl::GetFirebaseToken(
 
 void TokenManagerImpl::DeleteAllTokens(
     const auth::AuthProviderType auth_provider_type,
-    const f1dl::StringPtr& user_profile_id,
-    const DeleteAllTokensCallback& callback) {
+    fidl::StringPtr user_profile_id,
+    DeleteAllTokensCallback callback) {
   auto it = auth_providers_.find(auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE);
@@ -314,8 +321,8 @@ void TokenManagerImpl::DeleteAllTokens(
   auth_db_->GetRefreshToken(cred_id, &credential);
 
   it->second->RevokeAppOrPersistentCredential(
-      f1dl::StringPtr(credential), [this, auth_provider_type, user_profile_id,
-                                 callback](AuthProviderStatus status) {
+      fidl::StringPtr(credential), [this, auth_provider_type, user_profile_id,
+                                    callback](AuthProviderStatus status) {
         if (status != AuthProviderStatus::OK) {
           callback(Status::AUTH_PROVIDER_SERVER_ERROR);
           return;

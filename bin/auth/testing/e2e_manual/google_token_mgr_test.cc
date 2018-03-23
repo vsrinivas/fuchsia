@@ -7,13 +7,12 @@
 #include <memory>
 #include <string>
 
+#include <fuchsia/cpp/auth.h>
+
 #include "garnet/bin/auth/store/auth_db_file_impl.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/auth/fidl/auth_provider.fidl.h"
-#include "lib/auth/fidl/token_manager.fidl-sync.h"
-#include "lib/auth/fidl/token_manager.fidl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
@@ -52,8 +51,7 @@ class GoogleTokenManagerApp {
       : user_profile_id_(user_profile_id),
         refresh_token_(refresh_token),
         application_context_(
-            component::ApplicationContext::CreateFromStartupInfo()) {
-  }
+            component::ApplicationContext::CreateFromStartupInfo()) {}
 
   ~GoogleTokenManagerApp() {}
 
@@ -69,13 +67,13 @@ class GoogleTokenManagerApp {
  private:
   void Initialize() {
     component::Services services;
-    auto launch_info = component::ApplicationLaunchInfo::New();
-    launch_info->url = "token_manager";
-    launch_info->directory_request = services.NewRequest();
+    component::ApplicationLaunchInfo launch_info;
+    launch_info.url = "token_manager";
+    launch_info.directory_request = services.NewRequest();
     {
       std::ostringstream stream;
       stream << "--verbose=" << fxl::GetVlogVerbosity();
-      launch_info->arguments.push_back(stream.str());
+      launch_info.arguments.push_back(stream.str());
     }
     application_context_->launcher()->CreateApplication(
         std::move(launch_info), app_controller_.NewRequest());
@@ -83,16 +81,17 @@ class GoogleTokenManagerApp {
       FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service.";
     });
 
-    services.ConnectToService(f1dl::GetSynchronousProxy(&token_mgr_factory_));
+    services.ConnectToService(token_mgr_factory_.NewRequest());
 
-    auto google_config_ptr = auth::AuthProviderConfig::New();
-    google_config_ptr->auth_provider_type = kGoogleAuthProvider;
-    google_config_ptr->url = "google_auth_provider";
-    auth_provider_configs_.push_back(std::move(google_config_ptr));
+    auth::AuthProviderConfig google_config;
+    google_config.auth_provider_type = kGoogleAuthProvider;
+    google_config.url = "google_auth_provider";
 
-    token_mgr_factory_->GetTokenManager(kTestUserId,
-                                        std::move(auth_provider_configs_),
-                                        f1dl::GetSynchronousProxy(&token_mgr_));
+    fidl::VectorPtr<auth::AuthProviderConfig> auth_provider_configs;
+    auth_provider_configs.push_back(std::move(google_config));
+
+    token_mgr_factory_->GetTokenManager(
+        kTestUserId, std::move(auth_provider_configs), token_mgr_.NewRequest());
   }
 
   // This step is equivalent to calling Authorize(), until we can figure out how
@@ -117,12 +116,12 @@ class GoogleTokenManagerApp {
   }
 
   void FetchAndVerifyAccessToken() {
-    auto scopes = f1dl::VectorPtr<f1dl::String>::New(0);
+    fidl::VectorPtr<fidl::StringPtr> scopes;
     scopes.push_back("https://www.googleapis.com/auth/plus.me");
     scopes.push_back("https://www.googleapis.com/auth/userinfo.email");
 
     auth::Status status;
-    f1dl::String access_token;
+    fidl::StringPtr access_token;
 
     token_mgr_->GetAccessToken(kGoogleAuthProvider, user_profile_id_, "",
                                std::move(scopes), &status, &access_token);
@@ -132,7 +131,7 @@ class GoogleTokenManagerApp {
 
   void FetchAndVerifyIdToken() {
     auth::Status status;
-    f1dl::String id_token;
+    fidl::StringPtr id_token;
 
     token_mgr_->GetIdToken(kGoogleAuthProvider, user_profile_id_, "", &status,
                            &id_token);
@@ -163,11 +162,10 @@ class GoogleTokenManagerApp {
   const std::string refresh_token_;
   std::unique_ptr<component::ApplicationContext> application_context_;
   component::ApplicationControllerPtr app_controller_;
-  f1dl::VectorPtr<auth::AuthProviderConfigPtr> auth_provider_configs_;
 
   auth::TokenManagerSyncPtr token_mgr_;
   auth::TokenManagerFactorySyncPtr token_mgr_factory_;
-  f1dl::BindingSet<auth::AuthenticationUIContext> ui_bindings_;
+  fidl::BindingSet<auth::AuthenticationUIContext> ui_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GoogleTokenManagerApp);
 };
@@ -178,22 +176,23 @@ class GoogleTokenManagerApp {
 int main(int argc, char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   std::string refresh_token;
-  if (!command_line.GetOptionValue(google_oauth_demo::kRefreshTokenFlag.ToString(),
-                                   &refresh_token)) {
+  if (!command_line.GetOptionValue(
+          google_oauth_demo::kRefreshTokenFlag.ToString(), &refresh_token)) {
     google_oauth_demo::PrintUsage(argv[0]);
     return -1;
   }
 
   std::string user_profile_id_;
-  if (!command_line.GetOptionValue(google_oauth_demo::kUserProfileIdFlag.ToString(),
-                                   &user_profile_id_)) {
+  if (!command_line.GetOptionValue(
+          google_oauth_demo::kUserProfileIdFlag.ToString(),
+          &user_profile_id_)) {
     google_oauth_demo::PrintUsage(argv[0]);
     return -1;
   }
 
   fsl::MessageLoop loop;
   google_oauth_demo::GoogleTokenManagerApp gtm(std::move(refresh_token),
-                                        std::move(user_profile_id_));
+                                               std::move(user_profile_id_));
   gtm.Run();
   return 0;
 }

@@ -5,6 +5,7 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
+  name = "auth"
   sources = [
     "auth_provider.fidl",
     "auth_provider_factory.fidl",

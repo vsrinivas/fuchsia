@@ -7,9 +7,9 @@
 
 #include <unordered_set>
 
+#include <fuchsia/cpp/auth.h>
+
 #include "garnet/bin/auth/token_manager/test/dev_auth_provider_impl.h"
-#include "garnet/public/lib/auth/fidl/auth_provider.fidl.h"
-#include "garnet/public/lib/auth/fidl/auth_provider_factory.fidl.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
@@ -25,10 +25,10 @@ class FactoryImpl : public auth::AuthProviderFactory {
 
  private:
   // Factory:
-  void GetAuthProvider(f1dl::InterfaceRequest<auth::AuthProvider> auth_provider,
-                       const GetAuthProviderCallback& callback) override;
+  void GetAuthProvider(fidl::InterfaceRequest<auth::AuthProvider> auth_provider,
+                       GetAuthProviderCallback callback) override;
 
-  f1dl::BindingSet<
+  fidl::BindingSet<
       AuthProvider,
       std::unique_ptr<auth::dev_auth_provider::DevAuthProviderImpl>>
       dev_bindings_;

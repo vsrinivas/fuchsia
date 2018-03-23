@@ -2,23 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module auth;
-
-import "lib/auth/fidl/auth_provider.fidl";
+library auth;
 
 // Specifies the success/failure status.
 enum Status {
-  OK = 0,
-  AUTH_PROVIDER_SERVICE_UNAVAILABLE,
-  AUTH_PROVIDER_SERVER_ERROR,
-  INTERNAL_ERROR,
-  INVALID_AUTH_CONTEXT,
-  INVALID_USER_ID,
-  USER_NOT_FOUND,
-  INTERNAL_CACHE_ERROR,
-  UNKNOWN_ERROR = -1,
+  OK = 0;
+  AUTH_PROVIDER_SERVICE_UNAVAILABLE = 1;
+  AUTH_PROVIDER_SERVER_ERROR = 2;
+  INTERNAL_ERROR = 3;
+  INVALID_AUTH_CONTEXT = 4;
+  INVALID_USER_ID = 5;
+  USER_NOT_FOUND = 6;
+  INTERNAL_CACHE_ERROR = 7;
+  UNKNOWN_ERROR = 8;
 };
-
 
 // Type of external OAuth identity providers. An identity provider authenticates
 // and authorizes users for accessing their services.
@@ -27,11 +24,11 @@ enum Status {
 // and may provide information about the user that is known to the provider.
 enum AuthProviderType {
   // An identity provider that's used for development and testing.
-  DEV,
+  DEV = 1;
 
   // Uses Google as the identity provider. Doing this requires a working
   // network connection and a web view.
-  GOOGLE,
+  GOOGLE = 2;
 };
 
 // Stores configuration parameters required to connect to available
@@ -45,7 +42,7 @@ struct AuthProviderConfig {
   string? url;
 
   // Optional parameters specified during AuthProvider startup
-  array<string>? params;
+  vector<string>? params;
 };
 
 // TokenManagerFactory creates an OAuth Token Manager for a particular user and
@@ -59,8 +56,8 @@ interface TokenManagerFactory {
   //
   // TODO: AuthproviderConfig should support new custom auth providers added by
   // third party developers.
-  GetTokenManager@0(string user_id, array<AuthProviderConfig> auth_provider_configs,
-      TokenManager& token_manager);
+  1: GetTokenManager(string user_id, vector<AuthProviderConfig> auth_provider_configs,
+      request<TokenManager> token_manager);
 };
 
 // This interface provides oauth tokens for different auth providers.
@@ -90,9 +87,9 @@ interface TokenManager {
   // profile information in |user_profile_info| such as user's email,
   // image_url, profile_url, first and last names as configured on the auth
   // provider backend systems.
-  Authorize@0(AuthProviderType auth_provider_type,
-      AuthenticationUIContext? auth_ui_context) =>
-      (Status status, UserProfileInfo? user_profile_info);
+  1: Authorize(AuthProviderType auth_provider_type,
+      AuthenticationUIContext? auth_ui_context) ->
+      (Status @status, UserProfileInfo? user_profile_info);
 
   // Gets a downscoped access token from the specified |auth_provider_type| for
   // existing user identified by |user_profile_id| and given client
@@ -105,9 +102,9 @@ interface TokenManager {
   // Access token is returned from cache if not expired, otherwise user's
   // persistent credential is exchanged for an access token from the auth
   // provider backend server.
-  GetAccessToken@1(AuthProviderType auth_provider_type, string user_profile_id,
-      string? app_client_id, array<string>? app_scopes)
-      => (Status status, string? access_token);
+  2: GetAccessToken(AuthProviderType auth_provider_type, string user_profile_id,
+      string? app_client_id, vector<string>? app_scopes)
+      -> (Status @status, string? access_token);
 
   // Gets a JWT Identity token from the specified |auth_provider_type| for
   // existing user identified by |user_profile_id| and the given audience. The
@@ -118,8 +115,8 @@ interface TokenManager {
   //
   // Identity token is returned from cache if not expired, otherwise refreshed
   // from the auth provider backend server.
-  GetIdToken@2(AuthProviderType auth_provider_type,  string user_profile_id,
-      string? audience) => (Status status, string? id_token);
+  3: GetIdToken(AuthProviderType auth_provider_type,  string user_profile_id,
+      string? audience) -> (Status @status, string? id_token);
 
   // Gets the |FirebaseToken| for the existing user identified by
   // |user_profile_id| and given |firebase_api_key| from the specified
@@ -132,9 +129,9 @@ interface TokenManager {
   //
   // Firebase auth token is returned from cache if not expired, otherwise
   // refreshed from the auth provider backend server.
-  GetFirebaseToken@3(AuthProviderType auth_provider_type,
+  4: GetFirebaseToken(AuthProviderType auth_provider_type,
       string user_profile_id, string audience, string firebase_api_key)
-      => (Status status, FirebaseToken? firebase_token);
+      -> (Status @status, FirebaseToken? firebase_token);
 
   // Deletes all long lived and short lived tokens generated for
   // |auth_provider_type| for user identified by |user_profile_id|. This
@@ -142,6 +139,6 @@ interface TokenManager {
   //     - deleting persistent credentials stored locally on disk.
   //     - revoking credentials remotely at the auth provider.
   //     - deleting short lived tokens from the in-memory cache.
-  DeleteAllTokens@4(AuthProviderType auth_provider_type,
-      string user_profile_id) => (Status status);
+  5: DeleteAllTokens(AuthProviderType auth_provider_type,
+      string user_profile_id) -> (Status @status);
 };

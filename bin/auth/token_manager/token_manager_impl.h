@@ -7,12 +7,12 @@
 
 #include <map>
 
+#include <fuchsia/cpp/auth.h>
+
 #include "garnet/bin/auth/cache/token_cache.h"
 #include "garnet/bin/auth/store/auth_db.h"
 #include "garnet/bin/auth/token_manager/test/dev_auth_provider_impl.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/auth/fidl/auth_provider.fidl.h"
-#include "lib/auth/fidl/token_manager.fidl.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
@@ -30,37 +30,37 @@ class TokenManagerImpl : public TokenManager {
  public:
   TokenManagerImpl(component::ApplicationContext* context,
                    std::unique_ptr<store::AuthDb> auth_db,
-                   f1dl::VectorPtr<AuthProviderConfigPtr> auth_provider_configs);
+                   fidl::VectorPtr<AuthProviderConfig> auth_provider_configs);
 
   ~TokenManagerImpl() override;
 
  private:
   // |TokenManager|
   void Authorize(const auth::AuthProviderType auth_provider_type,
-                 const f1dl::InterfaceHandle<auth::AuthenticationUIContext>
+                 const fidl::InterfaceHandle<auth::AuthenticationUIContext>
                      auth_ui_context,
-                 const AuthorizeCallback& callback) override;
+                 AuthorizeCallback callback) override;
 
   void GetAccessToken(const auth::AuthProviderType auth_provider_type,
-                      const f1dl::StringPtr& user_profile_id,
-                      const f1dl::StringPtr& app_client_id,
-                      const f1dl::VectorPtr<f1dl::StringPtr> app_scopes,
-                      const GetAccessTokenCallback& callback) override;
+                      fidl::StringPtr user_profile_id,
+                      fidl::StringPtr app_client_id,
+                      const fidl::VectorPtr<fidl::StringPtr> app_scopes,
+                      GetAccessTokenCallback callback) override;
 
   void GetIdToken(const auth::AuthProviderType auth_provider_type,
-                  const f1dl::StringPtr& user_profile_id,
-                  const f1dl::StringPtr& audience,
-                  const GetIdTokenCallback& callback) override;
+                  fidl::StringPtr user_profile_id,
+                  fidl::StringPtr audience,
+                  GetIdTokenCallback callback) override;
 
   void GetFirebaseToken(const auth::AuthProviderType auth_provider_type,
-                        const f1dl::StringPtr& user_profile_id,
-                        const f1dl::StringPtr& audience,
-                        const f1dl::StringPtr& firebase_api_key,
-                        const GetFirebaseTokenCallback& callback) override;
+                        fidl::StringPtr user_profile_id,
+                        fidl::StringPtr audience,
+                        fidl::StringPtr firebase_api_key,
+                        GetFirebaseTokenCallback callback) override;
 
   void DeleteAllTokens(const auth::AuthProviderType auth_provider_type,
-                       const f1dl::StringPtr& user_profile_id,
-                       const DeleteAllTokensCallback& callback) override;
+                       fidl::StringPtr user_profile_id,
+                       DeleteAllTokensCallback callback) override;
 
   std::map<AuthProviderType, component::ApplicationControllerPtr>
       auth_provider_controllers_;

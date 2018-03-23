@@ -17,9 +17,9 @@ TokenManagerFactoryImpl::TokenManagerFactoryImpl(
 TokenManagerFactoryImpl::~TokenManagerFactoryImpl() {}
 
 void TokenManagerFactoryImpl::GetTokenManager(
-    const f1dl::StringPtr& user_id,
-    f1dl::VectorPtr<AuthProviderConfigPtr> auth_provider_configs,
-    f1dl::InterfaceRequest<TokenManager> request) {
+    fidl::StringPtr user_id,
+    fidl::VectorPtr<AuthProviderConfig> auth_provider_configs,
+    fidl::InterfaceRequest<TokenManager> request) {
   auto file_name = kAuthDbPath + user_id.get() + kAuthDbPostfix;
 
   auto auth_db_file = std::make_unique<store::AuthDbFileImpl>(file_name);

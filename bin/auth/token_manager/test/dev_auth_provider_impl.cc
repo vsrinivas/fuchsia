@@ -27,22 +27,23 @@ DevAuthProviderImpl::DevAuthProviderImpl() {}
 DevAuthProviderImpl::~DevAuthProviderImpl() {}
 
 void DevAuthProviderImpl::GetPersistentCredential(
-    f1dl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
-    const GetPersistentCredentialCallback& callback) {
+    fidl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
+    GetPersistentCredentialCallback callback) {
   UserProfileInfoPtr ui = UserProfileInfo::New();
   ui->id = GenerateRandomString() + "@example.com";
   ui->display_name = "test_user_display_name";
   ui->url = "http://test_user/profile/url";
   ui->image_url = "http://test_user/profile/image/url";
 
-  callback(AuthProviderStatus::OK, "rt_" + GenerateRandomString(), std::move(ui));
+  callback(AuthProviderStatus::OK, "rt_" + GenerateRandomString(),
+           std::move(ui));
 }
 
 void DevAuthProviderImpl::GetAppAccessToken(
-    const f1dl::StringPtr& credential,
-    const f1dl::StringPtr& app_client_id,
-    const f1dl::VectorPtr<f1dl::StringPtr> app_scopes,
-    const GetAppAccessTokenCallback& callback) {
+    fidl::StringPtr credential,
+    fidl::StringPtr app_client_id,
+    const fidl::VectorPtr<fidl::StringPtr> app_scopes,
+    GetAppAccessTokenCallback callback) {
   AuthTokenPtr access_token = auth::AuthToken::New();
   access_token->token =
       std::string(credential) + ":at_" + GenerateRandomString();
@@ -52,9 +53,9 @@ void DevAuthProviderImpl::GetAppAccessToken(
   callback(AuthProviderStatus::OK, std::move(access_token));
 }
 
-void DevAuthProviderImpl::GetAppIdToken(const f1dl::StringPtr& credential,
-                                        const f1dl::StringPtr& audience,
-                                        const GetAppIdTokenCallback& callback) {
+void DevAuthProviderImpl::GetAppIdToken(fidl::StringPtr credential,
+                                        fidl::StringPtr audience,
+                                        GetAppIdTokenCallback callback) {
   AuthTokenPtr id_token = auth::AuthToken::New();
   id_token->token = std::string(credential) + ":idt_" + GenerateRandomString();
   id_token->token_type = TokenType::ID_TOKEN;
@@ -64,9 +65,9 @@ void DevAuthProviderImpl::GetAppIdToken(const f1dl::StringPtr& credential,
 }
 
 void DevAuthProviderImpl::GetAppFirebaseToken(
-    const f1dl::StringPtr& id_token,
-    const f1dl::StringPtr& firebase_api_key,
-    const GetAppFirebaseTokenCallback& callback) {
+    fidl::StringPtr id_token,
+    fidl::StringPtr firebase_api_key,
+    GetAppFirebaseTokenCallback callback) {
   FirebaseTokenPtr fb_token = auth::FirebaseToken::New();
   fb_token->id_token =
       std::string(firebase_api_key) + ":fbt_" + GenerateRandomString();
@@ -78,8 +79,8 @@ void DevAuthProviderImpl::GetAppFirebaseToken(
 }
 
 void DevAuthProviderImpl::RevokeAppOrPersistentCredential(
-    const f1dl::StringPtr& credential,
-    const RevokeAppOrPersistentCredentialCallback& callback) {
+    fidl::StringPtr credential,
+    RevokeAppOrPersistentCredentialCallback callback) {
   callback(AuthProviderStatus::OK);
 }
 
