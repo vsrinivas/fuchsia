@@ -19,7 +19,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include <fuchsia/cpp/netstack.h>
-#include "<fuchsia/cpp/network.h>"
+#include <fuchsia/cpp/network.h>
 
 namespace network_wrapper {
 namespace {

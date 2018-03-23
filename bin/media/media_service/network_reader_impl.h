@@ -10,7 +10,7 @@
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/binding.h"
 #include <fuchsia/cpp/media.h>
-#include "<fuchsia/cpp/network.h>"
+#include <fuchsia/cpp/network.h>
 
 namespace media {
 

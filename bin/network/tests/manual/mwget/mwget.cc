@@ -8,8 +8,8 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include "<fuchsia/cpp/network.h>"
-#include "<fuchsia/cpp/network.h>"
+#include <fuchsia/cpp/network.h>
+#include <fuchsia/cpp/network.h>
 
 namespace examples {
 
@@ -19,12 +19,12 @@ class ResponseConsumer {
   ResponseConsumer(int id) : id_(id) {}
   ResponseConsumer() = delete;
 
-  void Run(network::URLResponsePtr response) const {
-    if (response->error) {
-      printf("#%d: Got error: %d (%s)\n", id_, response->error->code,
-             response->error->description.get().c_str());
+  void Run(network::URLResponse response) const {
+    if (response.error) {
+      printf("#%d: Got error: %d (%s)\n", id_, response.error->code,
+             response.error->description.get().c_str());
     } else {
-      ReadResponseBody(std::move(response->body->get_stream()));
+      ReadResponseBody(std::move(response.body->stream()));
     }
   }
 
@@ -84,13 +84,13 @@ class MWGetApp {
     for (int i = 0; i < num_loaders_; i++) {
       network_service_->CreateURLLoader(url_loader_[i].NewRequest());
 
-      network::URLRequestPtr request(network::URLRequest::New());
-      request->url = url;
-      request->method = "GET";
-      request->auto_follow_redirects = true;
+      network::URLRequest request;
+      request.url = url;
+      request.method = "GET";
+      request.auto_follow_redirects = true;
 
       url_loader_[i]->Start(std::move(request),
-                            [this, i](network::URLResponsePtr response) {
+                            [this, i](network::URLResponse response) {
                               ResponseConsumer consumer(i);
                               consumer.Run(std::move(response));
                               ++num_done_;

@@ -9,7 +9,7 @@ namespace network {
 NetworkServiceDelegate::NetworkServiceDelegate()
     : context_(component::ApplicationContext::CreateFromStartupInfo()) {
   context_->outgoing_services()->AddService<NetworkService>(
-      [this](f1dl::InterfaceRequest<NetworkService> request) {
+      [this](fidl::InterfaceRequest<NetworkService> request) {
         network_provider_.AddBinding(std::move(request));
       });
 }

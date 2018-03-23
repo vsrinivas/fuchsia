@@ -6,8 +6,8 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include "<fuchsia/cpp/network.h>"
-#include "<fuchsia/cpp/network.h>"
+#include <fuchsia/cpp/network.h>
+#include <fuchsia/cpp/network.h>
 
 #include <string>
 

@@ -10,7 +10,7 @@
 #include "garnet/lib/callback/scoped_task_runner.h"
 #include "garnet/lib/network_wrapper/network_wrapper.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "<fuchsia/cpp/network.h>"
+#include <fuchsia/cpp/network.h>
 
 namespace network_wrapper {
 

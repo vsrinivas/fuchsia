@@ -13,8 +13,8 @@
 #include "lib/fxl/files/file_descriptor.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "<fuchsia/cpp/network.h>"
-#include "<fuchsia/cpp/network.h>"
+#include <fuchsia/cpp/network.h>
+#include <fuchsia/cpp/network.h>
 
 namespace examples {
 
