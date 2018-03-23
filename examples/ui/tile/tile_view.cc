@@ -49,7 +49,7 @@ void TileView::ConnectViews() {
                                      controller.NewRequest());
 
     // Get the view provider back from the launched app.
-    auto view_provider = services.ConnectToService<mozart::ViewProvider>();
+    auto view_provider = services.ConnectToService<views_v1::ViewProvider>();
 
     f1dl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner;
     view_provider->CreateView(child_view_owner.NewRequest(), nullptr);

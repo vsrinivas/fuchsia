@@ -35,7 +35,7 @@ using ViewFactory =
 // when the view provider itself is destroyed.
 //
 // This is only intended to be used for simple example programs.
-class ViewProviderService : public ViewProvider {
+class ViewProviderService : public views_v1::ViewProvider {
  public:
   explicit ViewProviderService(
       component::ApplicationContext* application_context, ViewFactory factory);

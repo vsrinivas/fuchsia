@@ -16,7 +16,7 @@ extern machina::InspectServicePtr inspect_svc;
 // Path to the inspect service of the guest.
 extern std::string svc_path;
 
-using InspectReq = f1dl::InterfaceRequest<machina::InspectService>;
+using InspectReq = fidl::InterfaceRequest<machina::InspectService>;
 using ConnectFunc = fbl::Function<zx_status_t(InspectReq)>;
 
 static inline zx_status_t connect(InspectReq req) {

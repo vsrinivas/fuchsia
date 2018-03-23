@@ -33,15 +33,15 @@ ScenicScanout::ScenicScanout(component::ApplicationContext* application_context,
   // mozart service.
   SetReady(false);
 
-  application_context_->outgoing_services()->AddService<mozart::ViewProvider>(
-      [this](f1dl::InterfaceRequest<mozart::ViewProvider> request) {
+  application_context_->outgoing_services()->AddService<views_v1::ViewProvider>(
+      [this](fidl::InterfaceRequest<views_v1::ViewProvider> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 }
 
 void ScenicScanout::CreateView(
-    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-    f1dl::InterfaceRequest<component::ServiceProvider> view_services) {
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<component::ServiceProvider> view_services) {
   if (view_) {
     FXL_LOG(ERROR) << "CreateView called when a view already exists";
     return;
@@ -65,7 +65,7 @@ GuestView::GuestView(
     machina::GpuScanout* scanout,
     machina::InputDispatcher* input_dispatcher,
     views_v1::ViewManagerPtr view_manager,
-    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Guest"),
       background_node_(session()),
       material_(session()),
@@ -91,7 +91,7 @@ GuestView::GuestView(
 
 GuestView::~GuestView() = default;
 
-void GuestView::OnSceneInvalidated(images::PresentationInfoPtr presentation_info) {
+void GuestView::OnSceneInvalidated(images::PresentationInfo presentation_info) {
   if (!has_logical_size()) {
     return;
   }
@@ -106,19 +106,19 @@ void GuestView::OnSceneInvalidated(images::PresentationInfoPtr presentation_info
   const float center_y = height * .5f;
   background_node_.SetTranslation(center_x, center_y, kBackgroundElevation);
 
-  scenic_lib::HostImage image(*memory_, 0u, image_info_.Clone());
+  scenic_lib::HostImage image(*memory_, 0u, image_info_);
   material_.SetTexture(image);
 }
 
 zx_status_t FromMozartButton(uint32_t event, machina::Button* button) {
   switch (event) {
-    case mozart::kMousePrimaryButton:
+    case input::kMousePrimaryButton:
       *button = machina::Button::BTN_MOUSE_PRIMARY;
       return ZX_OK;
-    case mozart::kMouseSecondaryButton:
+    case input::kMouseSecondaryButton:
       *button = machina::Button::BTN_MOUSE_SECONDARY;
       return ZX_OK;
-    case mozart::kMouseTertiaryButton:
+    case input::kMouseTertiaryButton:
       *button = machina::Button::BTN_MOUSE_TERTIARY;
       return ZX_OK;
     default:
@@ -126,14 +126,14 @@ zx_status_t FromMozartButton(uint32_t event, machina::Button* button) {
   }
 }
 
-bool GuestView::OnInputEvent(input::InputEventPtr event) {
-  if (event->is_keyboard()) {
-    const input::KeyboardEventPtr& key_event = event->keyboard();
+bool GuestView::OnInputEvent(input::InputEvent event) {
+  if (event.is_keyboard()) {
+    const input::KeyboardEvent& key_event = event.keyboard();
 
     machina::InputEvent event;
     event.type = machina::InputEventType::KEYBOARD;
-    event.key.hid_usage = key_event->hid_usage;
-    switch (key_event->phase) {
+    event.key.hid_usage = key_event.hid_usage;
+    switch (key_event.phase) {
       case input::KeyboardEventPhase::PRESSED:
         event.key.state = machina::KeyState::PRESSED;
         break;
@@ -147,24 +147,24 @@ bool GuestView::OnInputEvent(input::InputEventPtr event) {
     }
     input_dispatcher_->Keyboard()->PostEvent(event, true);
     return true;
-  } else if (event->is_pointer()) {
-    const input::PointerEventPtr& pointer_event = event->pointer();
+  } else if (event.is_pointer()) {
+    const input::PointerEvent& pointer_event = event.pointer();
 
     machina::InputEvent event;
-    switch (pointer_event->phase) {
+    switch (pointer_event.phase) {
       case input::PointerEventPhase::MOVE:
         event.type = machina::InputEventType::POINTER;
         // TODO(PD-102): Convert this to use absolute pointer events.
-        event.pointer.x = pointer_event->x - previous_pointer_x_;
-        event.pointer.y = pointer_event->y - previous_pointer_y_;
+        event.pointer.x = pointer_event.x - previous_pointer_x_;
+        event.pointer.y = pointer_event.y - previous_pointer_y_;
         event.pointer.type = machina::PointerType::RELATIVE;
-        previous_pointer_x_ = pointer_event->x;
-        previous_pointer_y_ = pointer_event->y;
+        previous_pointer_x_ = pointer_event.x;
+        previous_pointer_y_ = pointer_event.y;
         break;
       case input::PointerEventPhase::DOWN:
         event.type = machina::InputEventType::BUTTON;
         event.button.state = machina::KeyState::PRESSED;
-        if (FromMozartButton(pointer_event->buttons, &event.button.button) !=
+        if (FromMozartButton(pointer_event.buttons, &event.button.button) !=
             ZX_OK) {
           // Ignore events for unsupported buttons.
           return true;
@@ -173,7 +173,7 @@ bool GuestView::OnInputEvent(input::InputEventPtr event) {
       case input::PointerEventPhase::UP:
         event.type = machina::InputEventType::BUTTON;
         event.button.state = machina::KeyState::RELEASED;
-        if (FromMozartButton(pointer_event->buttons, &event.button.button) !=
+        if (FromMozartButton(pointer_event.buttons, &event.button.button) !=
             ZX_OK) {
           // Ignore events for unsupported buttons.
           return true;
