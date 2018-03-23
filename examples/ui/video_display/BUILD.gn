@@ -1,0 +1,46 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+  # this has to match the binary name in examples/ui/Build.gn
+
+executable("video_display") {
+  output_name = "video_display"
+
+  sources = [
+    "buffer.cc",
+    "buffer.h",
+    "camera_client.h",
+    "camera_client.cc",
+    "fake_camera_source.h",
+    "fake_camera_source.cc",
+    "fenced_buffer.cc",
+    "fenced_buffer.h",
+    "frame_scheduler.h",
+    "frame_scheduler.cc",
+    "main.cc",
+    "view.cc",
+    "view.h",
+    "camera_interface_base.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/media/timeline:timeline",
+    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/scenic:fidl_helpers",
+    "//garnet/public/lib/ui/scenic/fidl",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/ui/views/fidl:v1",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/async",
+  ]
+
+  include_dirs = [
+    "//third_party/glm",
+    "//lib",
+  ]
+}

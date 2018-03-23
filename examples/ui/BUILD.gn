@@ -15,6 +15,7 @@ group("ui") {
     "sketchy",
     "spinning_square",
     "tile",
+    "video_display",
   ]
 }
 
@@ -45,7 +46,6 @@ package("hello_spaces") {
     },
   ]
 }
-
 package("hello_pose_buffer") {
   system_image = true
   deps = [
@@ -118,4 +118,18 @@ package("tile_view") {
   ]
 
   binary = "tile_view"
+}
+
+package("video_display") {
+
+  deps = [
+    "video_display",
+  ]
+
+  binary = "video_display"
+
+  meta = [ {
+        path = rebase_path("video_display/meta/sandbox")
+        dest = "sandbox"
+      } ]
 }

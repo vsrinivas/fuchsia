@@ -12,6 +12,7 @@
         "sketchy_client": "//garnet/examples/ui:sketchy_client",
         "sketchy_service": "//garnet/bin/ui/sketchy:sketchy_service",
         "spinning_square_view": "//garnet/examples/ui:spinning_square_view",
-        "tile_view": "//garnet/examples/ui:tile_view"
+        "tile_view": "//garnet/examples/ui:tile_view",
+        "video_display": "//garnet/examples/ui:video_display"
     }
 }
