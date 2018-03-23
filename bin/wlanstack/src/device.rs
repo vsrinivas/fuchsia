@@ -73,7 +73,7 @@ impl DeviceManager {
     }
 
     /// Retrieves information about all the phy devices managed by this `DeviceManager`.
-    pub fn list_phys(&self) -> Vec<wlan::WlanPhyInfo> {
+    pub fn list_phys(&self) -> Vec<wlan::PhyInfo> {
         self.phys
             .values()
             .filter_map(|phy| {

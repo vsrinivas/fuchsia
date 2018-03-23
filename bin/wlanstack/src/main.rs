@@ -13,14 +13,14 @@
 
 extern crate failure;
 extern crate fidl;
+extern crate fidl_wlan_device as wlan;
+extern crate fidl_wlan_device_service as wlan_service;
 extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_vfs_watcher as vfs_watcher;
 extern crate fuchsia_wlan_dev as wlan_dev;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
-extern crate garnet_lib_wlan_fidl as wlan;
-extern crate garnet_lib_wlan_fidl_service as wlan_service;
 #[macro_use]
 extern crate log;
 extern crate parking_lot;
@@ -31,10 +31,11 @@ mod service;
 
 use component::server::ServicesServer;
 use failure::{Error, ResultExt};
+use fidl::endpoints2::ServiceMarker;
 use futures::prelude::*;
 use parking_lot::Mutex;
 use std::sync::Arc;
-use wlan_service::DeviceService;
+use wlan_service::DeviceServiceMarker;
 
 
 const MAX_LOG_LEVEL: log::LogLevelFilter = log::LogLevelFilter::Info;
@@ -64,10 +65,10 @@ fn main_res() -> Result<(), Error> {
     let iface_watcher = device::new_iface_watcher(IFACE_PATH, devmgr.clone());
 
     let services_server = ServicesServer::new()
-        .add_service({
-            let devmgr = devmgr.clone();
-            move || DeviceService::Dispatcher(service::device_service(devmgr.clone()))
-        })
+        .add_service((DeviceServiceMarker::NAME,
+                      move |channel|
+                            async::spawn(service::device_service(devmgr.clone(), channel)))
+                     )
         .start()
         .context("error configuring device service")?;
 
