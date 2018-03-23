@@ -25,6 +25,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/pretty \
     system/ulib/sync \
     system/ulib/zx \
+    system/ulib/zxcpp
 
 MODULE_COMPILEFLAGS := -fsanitize=integer-divide-by-zero,signed-integer-overflow -fsanitize-undefined-trap-on-error
 

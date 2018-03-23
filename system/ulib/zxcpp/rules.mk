@@ -13,6 +13,9 @@ MODULE_SRCS = \
 
 MODULE_STATIC_LIBS += system/ulib/c
 
+# Make sure a shared library built with zxcpp doesn't export zxcpp symbols.
+MODULE_COMPILEFLAGS := -fvisibility=hidden
+
 MODULE_PACKAGE := src
 
 include make/module.mk
