@@ -104,6 +104,8 @@ func (_ {{ .RequestName }}) Name() string {
 func (c {{ .RequestName }}) Channel() _zx.Channel {
 	return _zx.Channel(c)
 }
+
+const {{ .Name }}Name = {{ .ServiceName }}
 {{- end }}
 
 type {{ .StubName }} struct {

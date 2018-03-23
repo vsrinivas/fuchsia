@@ -25,6 +25,12 @@ import (
 {{- end }}
 )
 
+const (
+{{- range $const := .Consts }}
+	{{ .Name }} {{ .Type }} = {{ .Value }}
+{{- end }}
+)
+
 {{ range $enum := .Enums -}}
 {{ template "EnumDefinition" $enum }}
 {{ end -}}

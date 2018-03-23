@@ -25,6 +25,18 @@ const (
 // Type represents a golang type.
 type Type string
 
+// Const represents the idiomatic representation of a constant in golang.
+type Const struct {
+	// Name is the name of the constant.
+	Name string
+
+	// Type is the constant's type.
+	Type Type
+
+	// Value is the constant's value.
+	Value string
+}
+
 // Enum represents the idiomatic representation of an enum in golang.
 //
 // That is, something like:
@@ -172,10 +184,13 @@ type Method struct {
 // The golang backend IR structure is loosely modeled after an abstract syntax
 // tree, and is used to generate golang code from templates.
 type Root struct {
-	// TODO(mknyszek): Support unions and constants.
+	// TODO(mknyszek): Support unions.
 
 	// Name is the name of the library.
 	Name string
+
+	// Consts represents a list of FIDL constants represented as Go constants.
+	Consts []Const
 
 	// Enums represents a list of FIDL enums represented as Go enums.
 	Enums []Enum
@@ -432,6 +447,17 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 	return
 }
 
+func (c *compiler) compileConst(val types.Const) Const {
+	// It's OK to ignore the tag because this type is guaranteed by the frontend
+	// to be either an enum, a primitive, or a string.
+	t, _ := c.compileType(val.Type)
+	return Const{
+		Name: c.compileCompoundIdentifier(val.Name, ""),
+		Type: t,
+		Value: c.compileConstant(val.Value),
+	}
+}
+
 func (c *compiler) compileEnumMember(val types.EnumMember) EnumMember {
 	return EnumMember{
 		Name:  c.compileIdentifier(val.Name, ""),
@@ -531,6 +557,9 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 func Compile(fidlData types.Root) Root {
 	c := compiler{decls: fidlData.Decls}
 	r := Root{Name: string(fidlData.Name)}
+	for _, v := range fidlData.Consts {
+		r.Consts = append(r.Consts, c.compileConst(v))
+	}
 	for _, v := range fidlData.Enums {
 		r.Enums = append(r.Enums, c.compileEnum(v))
 	}
