@@ -5,17 +5,17 @@
 #ifndef LIB_UI_SCENIC_CLIENT_SESSION_H_
 #define LIB_UI_SCENIC_CLIENT_SESSION_H_
 
+#include <functional>
+
 #include <zx/event.h>
 
-#include <functional>
+#include <fuchsia/cpp/gfx.h>
+#include <fuchsia/cpp/images.h>
+#include <fuchsia/cpp/ui.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/scenic/fidl/scenic.fidl.h"
-#include "lib/ui/scenic/fidl/session.fidl.h"
-
-#include "lib/ui/gfx/fidl/display_info.fidl.h"
 
 namespace scenic_lib {
 
@@ -26,19 +26,20 @@ class Session : private ui::SessionListener {
  public:
   // Provides timing information about a presentation request which has
   // been applied by the scene manager.
-  using PresentCallback = std::function<void(ui::PresentationInfoPtr info)>;
+  using PresentCallback = std::function<void(images::PresentationInfo info)>;
 
   // Provide information about hits.
-  using HitTestCallback = std::function<void(f1dl::VectorPtr<ui::gfx::HitPtr> hits)>;
+  using HitTestCallback =
+      std::function<void(fidl::VectorPtr<gfx::Hit> hits)>;
 
   // Called when session events are received.
-  using EventHandler = std::function<void(f1dl::VectorPtr<ui::EventPtr>)>;
+  using EventHandler = std::function<void(fidl::VectorPtr<ui::Event>)>;
 
   // Wraps the provided session and session listener.
   // The listener is optional.
   explicit Session(
       ui::SessionPtr session,
-      f1dl::InterfaceRequest<ui::SessionListener> session_listener = nullptr);
+      fidl::InterfaceRequest<ui::SessionListener> session_listener = nullptr);
 
   // Creates a new session using the provided scene manager and binds the
   // session listener to this object.
@@ -71,7 +72,7 @@ class Session : private ui::SessionListener {
   // Enqueues an operation.
   // The session will queue operations locally to batch submission of operations
   // until |Flush()| or |Present()| is called.
-  void Enqueue(ui::gfx::CommandPtr command);
+  void Enqueue(gfx::Command command);
 
   // Registers an acquire fence to be submitted during the subsequent call to
   // |Present()|.
@@ -103,19 +104,19 @@ class Session : private ui::SessionListener {
 
  private:
   // |ui::SessionListener|
-  void OnError(const f1dl::StringPtr& error) override;
-  void OnEvent(f1dl::VectorPtr<ui::EventPtr> events) override;
+  void OnError(fidl::StringPtr error) override;
+  void OnEvent(fidl::VectorPtr<ui::Event> events) override;
 
   ui::SessionPtr session_;
   uint32_t next_resource_id_ = 1u;
   uint32_t resource_count_ = 0u;
 
-  f1dl::VectorPtr<ui::CommandPtr> commands_;
-  f1dl::VectorPtr<zx::event> acquire_fences_;
-  f1dl::VectorPtr<zx::event> release_fences_;
+  fidl::VectorPtr<ui::Command> commands_;
+  fidl::VectorPtr<zx::event> acquire_fences_;
+  fidl::VectorPtr<zx::event> release_fences_;
 
   EventHandler event_handler_;
-  f1dl::Binding<ui::SessionListener> session_listener_binding_;
+  fidl::Binding<ui::SessionListener> session_listener_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Session);
 };

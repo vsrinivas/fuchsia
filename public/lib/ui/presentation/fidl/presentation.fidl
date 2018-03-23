@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module presentation;
+library presentation;
 
-import "lib/ui/presentation/fidl/display_usage.fidl";
-import "lib/ui/gfx/fidl/renderer.fidl";
-import "lib/ui/input/fidl/input_events.fidl";
+using gfx;
+using input;
+
+// import "lib/ui/presentation/fidl/display_usage.fidl";
+// import "lib/ui/gfx/fidl/renderer.fidl";
+// import "lib/ui/input/fidl/input_events.fidl";
 
 // |Presentation.CaptureKeyboardEvent| will consume this listener interface and
 // call |OnEvent| when the registered keyboard event occurs.
 interface KeyboardCaptureListener {
-  OnEvent@0(KeyboardEvent event);
+  1: OnEvent(input.KeyboardEvent event);
 };
 
 // Allows clients of Presenter.Present() to control a presentation.
@@ -19,22 +22,22 @@ interface KeyboardCaptureListener {
 interface Presentation {
   // Enable or disable clipping for the Scenic renderer associated with the
   // presentation.
-  EnableClipping@0(bool enabled);
+  1: EnableClipping(bool enabled);
 
-  UseOrthographicView@1();
-  UsePerspectiveView@2();
+  2: UseOrthographicView();
+  3: UsePerspectiveView();
 
   // Set parameters such as the shadow algorithm used to render the scene.
   // NOTE: a single param would be better than an array; see TO-529.
-  SetRendererParams@3(array<ui.gfx.RendererParam> params);
+  4: SetRendererParams(vector<gfx.RendererParam> params);
 
   // Override the intended usage of the display.
-  SetDisplayUsage@4(DisplayUsage usage);
+  5: SetDisplayUsage(DisplayUsage usage);
 
   // Override the dimensions of the display. Values must be less than the actual
   // size of the display. If either of the values are 0, then they are ignored
   // and the actual size of the display is used.
-  SetDisplaySizeInMm@6(float32 width_in_mm, float32 height_in_mm);
+  7: SetDisplaySizeInMm(float32 width_in_mm, float32 height_in_mm);
 
   // This call exists so that device shell can capture hotkeys and do special
   // things with it (e.g., switch a user shell). Only the codepoint, phase and
@@ -42,6 +45,6 @@ interface Presentation {
   // OnEvent.
   // TODO: Figure out the feasibility of this feature and the best place to put
   // it.
-  CaptureKeyboardEvent@5(KeyboardEvent event_to_capture,
-                         KeyboardCaptureListener listener);
+  6: CaptureKeyboardEvent(input.KeyboardEvent event_to_capture,
+                          KeyboardCaptureListener listener);
 };

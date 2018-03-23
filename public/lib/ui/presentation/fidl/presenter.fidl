@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module presentation;
+library presentation;
 
-import "lib/ui/presentation/fidl/presentation.fidl";
-import "lib/ui/views/fidl/view_token.fidl";
+// import "lib/ui/presentation/fidl/presentation.fidl";
+// import "lib/ui/views/fidl/view_token.fidl";
 
 // The Presenter service provides a way for applications to ask that a
 // specified view be added to a view tree, leaving any window management
 // concerns up to the discretion of the presenter implementation.
 [ServiceName="mozart::Presenter"]
 interface Presenter {
-  Present@0(mozart.ViewOwner view_owner, mozart.Presentation&? presentation_request);
+  1: Present(views_v1_token.ViewOwner view_owner, request<Presentation>? presentation_request);
 };
