@@ -9,7 +9,6 @@
 
 zx_status_t setup_linux(const GuestConfig cfg,
                         const machina::PhysMem& phys_mem,
-                        const uintptr_t acpi_off,
                         uintptr_t* guest_ip,
                         uintptr_t* boot_ptr);
 

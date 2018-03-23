@@ -18,7 +18,7 @@ class PhysMem;
  * @param size The size of guest physical memory.
  * @param end_off The offset to the end of the page table.
  */
-zx_status_t create_page_table(const PhysMem& phys_mem, uintptr_t* end_off);
+zx_status_t create_page_table(const PhysMem& phys_mem);
 
 }  // namespace machina
 

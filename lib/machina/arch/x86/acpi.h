@@ -9,6 +9,12 @@
 
 namespace machina {
 
+// The address of the ACPI table is significant, as this is typically where the
+// ACPICA library starts to scan for an ACPI RSDP. If we are unable to pass the
+// address directly to a kernel, or if the address we pass is ignored, this
+// provides a fallback method for locating it.
+static constexpr uintptr_t kAcpiOffset = 0xe0000;
+
 struct AcpiConfig {
   const char* dsdt_path;
   const char* mcfg_path;
@@ -17,8 +23,7 @@ struct AcpiConfig {
 };
 
 zx_status_t create_acpi_table(const struct AcpiConfig& cfg,
-                              const machina::PhysMem& phys_mem,
-                              uintptr_t acpi_off);
+                              const machina::PhysMem& phys_mem);
 
 }  // namespace machina
 

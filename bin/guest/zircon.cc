@@ -21,6 +21,7 @@
 static constexpr uintptr_t kKernelOffset = 0;
 #elif __x86_64__
 static constexpr uintptr_t kKernelOffset = 0x100000;
+#include "garnet/lib/machina/arch/x86/acpi.h"
 #include "garnet/lib/machina/arch/x86/e820.h"
 #endif
 
@@ -98,7 +99,6 @@ static zx_status_t load_bootfs(const int fd,
 }
 
 static zx_status_t create_bootdata(const machina::PhysMem& phys_mem,
-                                   const uintptr_t acpi_off,
                                    uintptr_t bootdata_off) {
   if (BOOTDATA_ALIGN(bootdata_off) != bootdata_off) {
     return ZX_ERR_INVALID_ARGS;
@@ -130,7 +130,7 @@ static zx_status_t create_bootdata(const machina::PhysMem& phys_mem,
   auto acpi_rsdp_hdr = phys_mem.as<bootdata_t>(bootdata_off);
   set_bootdata(acpi_rsdp_hdr, BOOTDATA_ACPI_RSDP, sizeof(uint64_t));
   bootdata_off += sizeof(bootdata_t);
-  *phys_mem.as<uint64_t>(bootdata_off) = acpi_off;
+  *phys_mem.as<uint64_t>(bootdata_off) = machina::kAcpiOffset;
 
   // E820 memory map.
   bootdata_off += BOOTDATA_ALIGN(sizeof(uint64_t));
@@ -160,7 +160,6 @@ static zx_status_t read_bootdata(const machina::PhysMem& phys_mem,
 
 zx_status_t setup_zircon(const GuestConfig cfg,
                          const machina::PhysMem& phys_mem,
-                         const uintptr_t acpi_off,
                          uintptr_t* guest_ip,
                          uintptr_t* boot_ptr) {
   // Read the kernel image.
@@ -174,7 +173,7 @@ zx_status_t setup_zircon(const GuestConfig cfg,
   }
 
   // Create the BOOTDATA container.
-  status = create_bootdata(phys_mem, acpi_off, kRamdiskOffset);
+  status = create_bootdata(phys_mem, kRamdiskOffset);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create BOOTDATA";
     return status;

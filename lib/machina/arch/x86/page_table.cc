@@ -65,7 +65,7 @@ static uintptr_t create_page_table_level(const machina::PhysMem& phys_mem,
 
 namespace machina {
 
-zx_status_t create_page_table(const PhysMem& phys_mem, uintptr_t* end_off) {
+zx_status_t create_page_table(const PhysMem& phys_mem) {
   if (phys_mem.size() % PAGE_SIZE != 0) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -74,14 +74,14 @@ zx_status_t create_page_table(const PhysMem& phys_mem, uintptr_t* end_off) {
   }
 
   uint64_t aspace_off = 0;
-  *end_off = 0;
-  *end_off = create_page_table_level(phys_mem, kPml4PageSize, *end_off,
+  uintptr_t end_off = 0;
+  end_off = create_page_table_level(phys_mem, kPml4PageSize, end_off,
                                      &aspace_off, false, 0);
-  *end_off = create_page_table_level(phys_mem, kPdpPageSize, *end_off,
+  end_off = create_page_table_level(phys_mem, kPdpPageSize, end_off,
                                      &aspace_off, true, X86_PTE_PS);
-  *end_off = create_page_table_level(phys_mem, kPdPageSize, *end_off,
+  end_off = create_page_table_level(phys_mem, kPdPageSize, end_off,
                                      &aspace_off, true, X86_PTE_PS);
-  *end_off = create_page_table_level(phys_mem, kPtPageSize, *end_off,
+  end_off = create_page_table_level(phys_mem, kPtPageSize, end_off,
                                      &aspace_off, true, 0);
   return ZX_OK;
 }

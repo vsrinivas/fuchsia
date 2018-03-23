@@ -24,6 +24,7 @@
 static constexpr uintptr_t kKernelOffset = 0x80000;
 #elif __x86_64__
 static constexpr uintptr_t kKernelOffset = 0x200000;
+#include "garnet/lib/machina/arch/x86/acpi.h"
 #include "garnet/lib/machina/arch/x86/e820.h"
 #endif
 
@@ -284,16 +285,15 @@ static zx_status_t load_device_tree(const int fd,
   return ZX_OK;
 }
 
-static std::string linux_cmdline(std::string cmdline, uintptr_t acpi_off) {
+static std::string linux_cmdline(std::string cmdline) {
 #if __x86_64__
-  fxl::StringAppendf(&cmdline, " acpi_rsdp=%#lx", acpi_off);
+  fxl::StringAppendf(&cmdline, " acpi_rsdp=%#lx", machina::kAcpiOffset);
 #endif
   return cmdline;
 }
 
 zx_status_t setup_linux(const GuestConfig cfg,
                         const machina::PhysMem& phys_mem,
-                        const uintptr_t acpi_off,
                         uintptr_t* guest_ip,
                         uintptr_t* boot_ptr) {
   // Read the kernel image.
@@ -319,7 +319,7 @@ zx_status_t setup_linux(const GuestConfig cfg,
     }
   }
 
-  std::string cmdline = linux_cmdline(cfg.cmdline(), acpi_off);
+  std::string cmdline = linux_cmdline(cfg.cmdline());
   if (is_boot_params(phys_mem)) {
     status = read_boot_params(phys_mem, guest_ip);
     if (status != ZX_OK) {

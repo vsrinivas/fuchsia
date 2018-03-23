@@ -214,9 +214,8 @@ int main(int argc, char** argv) {
   machina::InspectServiceImpl inspect_svc(application_context.get(),
                                           guest.phys_mem());
 
-  uintptr_t pt_end_off = 0;
 #if __x86_64__
-  status = machina::create_page_table(guest.phys_mem(), &pt_end_off);
+  status = machina::create_page_table(guest.phys_mem());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create page table";
     return status;
@@ -228,7 +227,7 @@ int main(int argc, char** argv) {
       .io_apic_addr = machina::kIoApicPhysBase,
       .num_cpus = cfg.num_cpus(),
   };
-  status = machina::create_acpi_table(acpi_cfg, guest.phys_mem(), pt_end_off);
+  status = machina::create_acpi_table(acpi_cfg, guest.phys_mem());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create ACPI table";
     return status;
@@ -241,11 +240,11 @@ int main(int argc, char** argv) {
   switch (cfg.kernel()) {
     case Kernel::ZIRCON:
       status =
-          setup_zircon(cfg, guest.phys_mem(), pt_end_off, &guest_ip, &boot_ptr);
+          setup_zircon(cfg, guest.phys_mem(), &guest_ip, &boot_ptr);
       break;
     case Kernel::LINUX:
       status =
-          setup_linux(cfg, guest.phys_mem(), pt_end_off, &guest_ip, &boot_ptr);
+          setup_linux(cfg, guest.phys_mem(), &guest_ip, &boot_ptr);
       break;
     default:
       FXL_LOG(ERROR) << "Unknown kernel";
