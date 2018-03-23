@@ -19,6 +19,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include <fuchsia/cpp/gfx.h>
+
 #include "lib/app/cpp/connect.h"
 #include "lib/escher/util/image_utils.h"
 
@@ -26,12 +28,10 @@
 #include "lib/fxl/logging.h"
 
 #include "garnet/lib/ui/gfx/tests/util.h"
-#include "lib/ui/gfx/fidl/commands.fidl.h"
 #include "lib/ui/scenic/client/host_memory.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/scenic/types.h"
 
-using namespace mozart;
 using namespace scenic_lib;
 
 namespace hello_scenic {
@@ -48,9 +48,8 @@ App::App()
     FXL_LOG(INFO) << "Lost connection to Mozart service.";
     loop_->QuitNow();
   });
-  scenic_->GetDisplayInfo([this](gfx::DisplayInfoPtr display_info) {
-    Init(std::move(display_info));
-  });
+  scenic_->GetDisplayInfo(
+      [this](gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
 }
 
 void App::InitCheckerboardMaterial(Material* uninitialized_material) {
@@ -71,15 +70,14 @@ void App::InitCheckerboardMaterial(Material* uninitialized_material) {
          checkerboard_pixels_size);
 
   // Create an Image to wrap the checkerboard.
-  auto checkerboard_image_info = images::ImageInfo::New();
-  checkerboard_image_info->width = checkerboard_width;
-  checkerboard_image_info->height = checkerboard_height;
+  images::ImageInfo checkerboard_image_info;
+  checkerboard_image_info.width = checkerboard_width;
+  checkerboard_image_info.height = checkerboard_height;
   const size_t kBytesPerPixel = 4u;
-  checkerboard_image_info->stride = checkerboard_width * kBytesPerPixel;
-  checkerboard_image_info->pixel_format =
-      images::PixelFormat::BGRA_8;
-  checkerboard_image_info->color_space = images::ColorSpace::SRGB;
-  checkerboard_image_info->tiling = images::Tiling::LINEAR;
+  checkerboard_image_info.stride = checkerboard_width * kBytesPerPixel;
+  checkerboard_image_info.pixel_format = images::PixelFormat::BGRA_8;
+  checkerboard_image_info.color_space = images::ColorSpace::SRGB;
+  checkerboard_image_info.tiling = images::Tiling::LINEAR;
 
   HostImage checkerboard_image(checkerboard_memory, 0,
                                std::move(checkerboard_image_info));
@@ -195,7 +193,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
   pane_2_contents.SetTranslation(0, 0, 10);
 }
 
-void App::Init(gfx::DisplayInfoPtr display_info) {
+void App::Init(gfx::DisplayInfo display_info) {
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
@@ -212,8 +210,8 @@ void App::Init(gfx::DisplayInfoPtr display_info) {
       fxl::TimeDelta::FromSeconds(kSessionDuration));
 
   // Set up initial scene.
-  const float display_width = static_cast<float>(display_info->width_in_px);
-  const float display_height = static_cast<float>(display_info->height_in_px);
+  const float display_width = static_cast<float>(display_info.width_in_px);
+  const float display_height = static_cast<float>(display_info.height_in_px);
   CreateExampleScene(display_width, display_height);
 
   start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
@@ -280,8 +278,8 @@ void App::Update(uint64_t next_presentation_time) {
 
   // Present
   session_->Present(
-      next_presentation_time, [this](images::PresentationInfoPtr info) {
-        Update(info->presentation_time + info->presentation_interval);
+      next_presentation_time, [this](images::PresentationInfo info) {
+        Update(info.presentation_time + info.presentation_interval);
       });
 }
 
