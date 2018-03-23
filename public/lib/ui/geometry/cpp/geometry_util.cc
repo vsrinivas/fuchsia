@@ -10,7 +10,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace mozart {
+namespace geometry {
 
 static const float kIdentityMatrix[]{
     1.f, 0.f, 0.f, 0.f,  // comments to prevent

@@ -44,7 +44,7 @@
 #include "lib/fxl/logging.h"
 #include "garnet/lib/magma/src/display_pipe/client/buffer.h"
 
-#include "garnet/public/lib/ui/gfx/fidl/commands.fidl.h"
+#include <fuchsia/cpp/gfx.h>
 #include "garnet/public/lib/ui/scenic/fidl_helpers.h"
 #include "garnet/public/lib/ui/scenic/types.h"
 #include "lib/ui/scenic/client/resources.h"
@@ -89,7 +89,7 @@ struct FuchsiaState {
     fsl::MessageLoop loop;
     uint32_t image_pipe_handle = 0;
     display_pipe::DisplayProviderPtr display;
-    gfx::ImagePipePtr pipe;
+    images::ImagePipePtr pipe;
 #if defined(CUBE_USE_MOZART)
     std::unique_ptr<mozart::ViewProviderService> view_provider_service;
 #endif

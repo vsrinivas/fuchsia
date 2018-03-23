@@ -7,7 +7,7 @@
 
 #include <fuchsia/cpp/geometry.h>
 
-namespace mozart {
+namespace geometry {
 
 inline bool operator==(const geometry::Rect& lhs, const geometry::Rect& rhs) {
   return lhs.x == rhs.x && lhs.y == rhs.y && lhs.width == rhs.width &&
