@@ -42,6 +42,12 @@ type Proxy struct {
 	Txid uint32
 }
 
+// IsValid returns true if the underlying channel is a valid handle.
+func (p Proxy) IsValid() bool {
+	h := zx.Handle(p.Channel)
+	return h.IsValid()
+}
+
 // Send sends the request payload over the channel with the specified ordinal
 // without a response.
 func (p *Proxy) Send(ordinal uint32, req Payload) error {
