@@ -22,13 +22,17 @@ namespace {
 
 class IntegrationTestTests : public IntegrationTest {};
 
-TEST_F(IntegrationTestTests, MultipleLedgerAppInstances) {
+TEST_P(IntegrationTestTests, MultipleLedgerAppInstances) {
   auto instance1 = NewLedgerAppInstance();
   auto instance2 = NewLedgerAppInstance();
 
   EXPECT_TRUE(instance1->GetTestLedger());
   EXPECT_TRUE(instance2->GetTestLedger());
 }
+
+INSTANTIATE_TEST_CASE_P(IntegrationTestTests,
+                        IntegrationTestTests,
+                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 
 }  // namespace
 }  // namespace integration

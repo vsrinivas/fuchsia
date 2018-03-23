@@ -18,10 +18,28 @@ namespace ledger {
 
 class FakeCloudProvider : public cloud_provider::CloudProvider {
  public:
-  explicit FakeCloudProvider(
-      CloudEraseOnCheck cloud_erase_on_check = CloudEraseOnCheck::NO,
-      CloudEraseFromWatcher cloud_erase_from_watcher =
-          CloudEraseFromWatcher::NO);
+  class Builder {
+   public:
+    Builder();
+    ~Builder();
+
+    Builder& SetInjectNetworkError(InjectNetworkError inject_network_error);
+    Builder& SetCloudEraseOnCheck(CloudEraseOnCheck cloud_erase_on_check);
+    Builder& SetCloudEraseFromWatcher(
+        CloudEraseFromWatcher cloud_erase_from_watcher);
+
+    std::unique_ptr<FakeCloudProvider> Build();
+
+   private:
+    friend FakeCloudProvider;
+
+    InjectNetworkError inject_network_error_ = InjectNetworkError::NO;
+    CloudEraseOnCheck cloud_erase_on_check_ = CloudEraseOnCheck::NO;
+    CloudEraseFromWatcher cloud_erase_from_watcher_ = CloudEraseFromWatcher::NO;
+  };
+
+  FakeCloudProvider();
+  explicit FakeCloudProvider(const Builder& builder);
   ~FakeCloudProvider() override;
 
  private:
@@ -39,6 +57,8 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
       device_set_;
 
   callback::AutoCleanableMap<std::string, FakePageCloud> page_clouds_;
+
+  InjectNetworkError inject_network_error_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeCloudProvider);
 };

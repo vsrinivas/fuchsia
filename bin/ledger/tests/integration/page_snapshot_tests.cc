@@ -32,7 +32,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
   FXL_DISALLOW_COPY_AND_ASSIGN(PageSnapshotIntegrationTest);
 };
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotGet) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotGet) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   page->Put(
@@ -57,7 +57,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGet) {
   EXPECT_EQ(ledger::Status::KEY_NOT_FOUND, status);
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
   auto instance = NewLedgerAppInstance();
   std::string expected_value = "Alice";
   expected_value.resize(100);
@@ -86,7 +86,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
   EXPECT_EQ(expected_value, ToString(value));
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
   auto instance = NewLedgerAppInstance();
   std::string value1 = "Alice";
   value1.resize(100);
@@ -114,7 +114,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
   EXPECT_EQ(value2, ToString(value));
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   page->Put(
@@ -156,7 +156,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   EXPECT_EQ(ledger::Status::KEY_NOT_FOUND, status);
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
 
@@ -229,7 +229,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   EXPECT_EQ(2u, result->size());
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
 
@@ -273,7 +273,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   }
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
 
@@ -358,7 +358,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   EXPECT_EQ(0u, entries->size());
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
 
@@ -407,7 +407,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   }
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
 
@@ -450,7 +450,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   }
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
 
@@ -498,7 +498,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   EXPECT_TRUE(values[1].Equals(ToArray(entries[3]->value)));
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
+TEST_P(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
   auto instance = NewLedgerAppInstance();
   const std::string big_data(1'000'000, 'a');
 
@@ -512,7 +512,7 @@ TEST_F(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
   ASSERT_TRUE(page.WaitForResponse());
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
+TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   auto instance = NewLedgerAppInstance();
   const std::string big_data(1'000'000, 'a');
 
@@ -547,7 +547,7 @@ TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   EXPECT_EQ(big_data, ToString(value));
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
+TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   auto instance = NewLedgerAppInstance();
   const std::string big_data(1'000'000, 'a');
   fsl::SizedVmo vmo;
@@ -584,7 +584,7 @@ TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   EXPECT_EQ(big_data, ToString(value));
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
+TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   page->Put(
@@ -613,7 +613,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   EXPECT_EQ(ledger::Status::KEY_NOT_FOUND, status);
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageGetById) {
+TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   f1dl::VectorPtr<uint8_t> test_page_id;
@@ -644,6 +644,10 @@ TEST_F(PageSnapshotIntegrationTest, PageGetById) {
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ("Alice", ToString(value));
 }
+
+INSTANTIATE_TEST_CASE_P(PageSnapshotIntegrationTest,
+                        PageSnapshotIntegrationTest,
+                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 
 }  // namespace
 }  // namespace integration

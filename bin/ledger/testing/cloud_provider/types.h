@@ -9,6 +9,7 @@ namespace ledger {
 
 enum class CloudEraseOnCheck { YES, NO };
 enum class CloudEraseFromWatcher { YES, NO };
+enum class InjectNetworkError { YES, NO };
 
 }  // namespace ledger
 

@@ -214,10 +214,13 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
 
   // Create a cloud provider configured to trigger the cloude erase recovery on
   // initial check.
-  ledger::FakeCloudProvider cloud_provider(ledger::CloudEraseOnCheck::YES);
+  auto cloud_provider =
+      ledger::FakeCloudProvider::Builder()
+          .SetCloudEraseOnCheck(ledger::CloudEraseOnCheck::YES)
+          .Build();
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   f1dl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
-      &cloud_provider, cloud_provider_ptr.NewRequest());
+      cloud_provider.get(), cloud_provider_ptr.NewRequest());
 
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), std::move(cloud_provider_ptr),
@@ -263,11 +266,13 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   // Create a cloud provider configured to trigger the cloud erase recovery
   // while Ledger is connected.
-  ledger::FakeCloudProvider cloud_provider(ledger::CloudEraseOnCheck::NO,
-                                           ledger::CloudEraseFromWatcher::YES);
+  auto cloud_provider =
+      ledger::FakeCloudProvider::Builder()
+          .SetCloudEraseFromWatcher(ledger::CloudEraseFromWatcher::YES)
+          .Build();
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   f1dl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
-      &cloud_provider, cloud_provider_ptr.NewRequest());
+      cloud_provider.get(), cloud_provider_ptr.NewRequest());
 
   ledger_repository_factory_->GetRepository(
       tmp_dir.path(), std::move(cloud_provider_ptr),

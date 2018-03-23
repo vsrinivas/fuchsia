@@ -18,7 +18,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
-#include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/lib/convert/convert.h"
 

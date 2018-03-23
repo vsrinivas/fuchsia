@@ -29,7 +29,7 @@ class PageIntegrationTest : public IntegrationTest {
   FXL_DISALLOW_COPY_AND_ASSIGN(PageIntegrationTest);
 };
 
-TEST_F(PageIntegrationTest, LedgerRepositoryDuplicate) {
+TEST_P(PageIntegrationTest, LedgerRepositoryDuplicate) {
   auto instance = NewLedgerAppInstance();
 
   files::ScopedTempDir tmp_dir;
@@ -43,12 +43,12 @@ TEST_F(PageIntegrationTest, LedgerRepositoryDuplicate) {
   EXPECT_EQ(ledger::Status::OK, status);
 }
 
-TEST_F(PageIntegrationTest, GetLedger) {
+TEST_P(PageIntegrationTest, GetLedger) {
   auto instance = NewLedgerAppInstance();
   EXPECT_TRUE(instance->GetTestLedger());
 }
 
-TEST_F(PageIntegrationTest, GetRootPage) {
+TEST_P(PageIntegrationTest, GetRootPage) {
   auto instance = NewLedgerAppInstance();
   ledger::LedgerPtr ledger = instance->GetTestLedger();
   ledger::Status status;
@@ -59,7 +59,7 @@ TEST_F(PageIntegrationTest, GetRootPage) {
   EXPECT_EQ(ledger::Status::OK, status);
 }
 
-TEST_F(PageIntegrationTest, NewPage) {
+TEST_P(PageIntegrationTest, NewPage) {
   auto instance = NewLedgerAppInstance();
   // Get two pages and check that their ids are different.
   ledger::PagePtr page1 = instance->GetTestPage();
@@ -70,7 +70,7 @@ TEST_F(PageIntegrationTest, NewPage) {
   EXPECT_TRUE(!id1.Equals(id2));
 }
 
-TEST_F(PageIntegrationTest, GetPage) {
+TEST_P(PageIntegrationTest, GetPage) {
   auto instance = NewLedgerAppInstance();
   // Create a page and expect to find it by its id.
   ledger::PagePtr page = instance->GetTestPage();
@@ -86,7 +86,7 @@ TEST_F(PageIntegrationTest, GetPage) {
 }
 
 // Verifies that a page can be connected to twice.
-TEST_F(PageIntegrationTest, MultiplePageConnections) {
+TEST_P(PageIntegrationTest, MultiplePageConnections) {
   auto instance = NewLedgerAppInstance();
   // Create a new page and find its id.
   ledger::PagePtr page1 = instance->GetTestPage();
@@ -98,7 +98,7 @@ TEST_F(PageIntegrationTest, MultiplePageConnections) {
   EXPECT_EQ(convert::ToString(page_id_1), convert::ToString(page_id_2));
 }
 
-TEST_F(PageIntegrationTest, DeletePage) {
+TEST_P(PageIntegrationTest, DeletePage) {
   auto instance = NewLedgerAppInstance();
   // Create a new page and find its id.
   ledger::PagePtr page = instance->GetTestPage();
@@ -123,7 +123,7 @@ TEST_F(PageIntegrationTest, DeletePage) {
   instance->DeletePage(id, ledger::Status::PAGE_NOT_FOUND);
 }
 
-TEST_F(PageIntegrationTest, MultipleLedgerConnections) {
+TEST_P(PageIntegrationTest, MultipleLedgerConnections) {
   auto instance = NewLedgerAppInstance();
   // Connect to the same ledger instance twice.
   ledger::LedgerPtr ledger_connection_1 = instance->GetTestLedger();
@@ -145,6 +145,10 @@ TEST_F(PageIntegrationTest, MultipleLedgerConnections) {
   EXPECT_TRUE(ledger_connection_2.WaitForResponse());
   EXPECT_EQ(ledger::Status::OK, status);
 }
+
+INSTANTIATE_TEST_CASE_P(PageIntegrationTest,
+                        PageIntegrationTest,
+                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 
 }  // namespace
 }  // namespace integration

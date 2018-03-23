@@ -6,28 +6,45 @@
 
 #include <thread>
 
-#include "garnet/lib/callback/synchronous_task.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
+#include "lib/fxl/command_line.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
-#include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
 
 namespace test {
 namespace integration {
-void IntegrationTest::SetUp() {
+
+namespace {
+constexpr fxl::StringView kServerIdFlag = "server-id";
+std::string* server_id = nullptr;
+
+void PrintUsage(const char* executable_name) {
+  std::cout << "Usage: " << executable_name << " --" << kServerIdFlag
+            << "=<string>" << std::endl;
+}
+}  // namespace
+
+BaseIntegrationTest::BaseIntegrationTest() = default;
+
+BaseIntegrationTest::~BaseIntegrationTest() = default;
+
+void BaseIntegrationTest::SetUp() {
   ::testing::Test::SetUp();
+  trace_provider_ =
+      std::make_unique<trace::TraceProvider>(message_loop_.async());
   socket_thread_ = fsl::CreateThread(&socket_task_runner_);
-  app_factory_ = GetLedgerAppInstanceFactory();
+  if (server_id) {
+    GetAppFactory()->SetServerId(*server_id);
+  }
 }
 
-void IntegrationTest::TearDown() {
+void BaseIntegrationTest::TearDown() {
   socket_task_runner_->PostTask(
       [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
   socket_thread_.join();
@@ -35,7 +52,7 @@ void IntegrationTest::TearDown() {
   ::testing::Test::TearDown();
 }
 
-zx::socket IntegrationTest::StreamDataToSocket(std::string data) {
+zx::socket BaseIntegrationTest::StreamDataToSocket(std::string data) {
   socket::SocketPair sockets;
   socket_task_runner_->PostTask(fxl::MakeCopyable(
       [socket = std::move(sockets.socket1), data = std::move(data)]() mutable {
@@ -46,8 +63,30 @@ zx::socket IntegrationTest::StreamDataToSocket(std::string data) {
 }
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
-IntegrationTest::NewLedgerAppInstance() {
-  return app_factory_->NewLedgerAppInstance();
+BaseIntegrationTest::NewLedgerAppInstance() {
+  return GetAppFactory()->NewLedgerAppInstance();
+}
+
+IntegrationTest::IntegrationTest() = default;
+
+IntegrationTest::~IntegrationTest() = default;
+
+LedgerAppInstanceFactory* IntegrationTest::GetAppFactory() {
+  return GetParam();
+}
+
+bool ProcessCommandLine(int argc, char** argv) {
+  FXL_DCHECK(!test::integration::server_id);
+
+  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+
+  std::string server_id;
+  if (!command_line.GetOptionValue(kServerIdFlag.ToString(), &server_id)) {
+    PrintUsage(argv[0]);
+    return false;
+  }
+  test::integration::server_id = new std::string(server_id);
+  return true;
 }
 
 }  // namespace integration

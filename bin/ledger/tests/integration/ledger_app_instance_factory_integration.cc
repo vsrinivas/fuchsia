@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
-
+#include <memory>
+#include <string>
 #include <thread>
 
 #include "garnet/lib/callback/synchronous_task.h"
@@ -17,12 +17,16 @@
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
+#include "peridot/bin/ledger/testing/cloud_provider/types.h"
+#include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
 
 namespace test {
+namespace integration {
 namespace {
+
 class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
  public:
@@ -105,9 +109,14 @@ LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
   thread_.join();
 }
 
+}  // namespace
+
 class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
-  LedgerAppInstanceFactoryImpl() {}
+  LedgerAppInstanceFactoryImpl(ledger::InjectNetworkError inject_network_error)
+      : cloud_provider_(
+            ledger::FakeCloudProvider::Builder().SetInjectNetworkError(
+                inject_network_error)) {}
   ~LedgerAppInstanceFactoryImpl() override;
   void Init();
 
@@ -151,12 +160,29 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   return result;
 }
 
-}  // namespace
+}  // namespace integration
 
-std::unique_ptr<LedgerAppInstanceFactory> GetLedgerAppInstanceFactory() {
-  auto factory = std::make_unique<LedgerAppInstanceFactoryImpl>();
-  factory->Init();
-  return factory;
+std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories() {
+  static std::vector<std::unique_ptr<LedgerAppInstanceFactory>> factories_impl;
+  static std::once_flag flag;
+
+  auto factories_ptr = &factories_impl;
+  std::call_once(flag, [factories_ptr] {
+    for (auto inject_error :
+         {ledger::InjectNetworkError::NO, ledger::InjectNetworkError::YES}) {
+      auto factory =
+          std::make_unique<integration::LedgerAppInstanceFactoryImpl>(
+              inject_error);
+      factory->Init();
+      factories_ptr->push_back(std::move(factory));
+    }
+  });
+  std::vector<LedgerAppInstanceFactory*> factories;
+  for (const auto& factory : factories_impl) {
+    factories.push_back(factory.get());
+  }
+
+  return factories;
 }
 
 }  // namespace test

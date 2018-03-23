@@ -4,7 +4,7 @@
 
 #include "garnet/lib/callback/capture.h"
 #include "lib/fsl/vmo/strings.h"
-#include "peridot/bin/ledger/tests/integration/sync/lib.h"
+#include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace test {
@@ -12,7 +12,7 @@ namespace integration {
 namespace sync {
 namespace {
 
-class SyncIntegrationTest : public SyncTest {
+class SyncIntegrationTest : public IntegrationTest {
  protected:
   ::testing::AssertionResult GetEntries(
       ledger::Page* page,
@@ -44,7 +44,7 @@ class SyncIntegrationTest : public SyncTest {
   }
 };
 
-TEST_F(SyncIntegrationTest, SerialConnection) {
+TEST_P(SyncIntegrationTest, SerialConnection) {
   auto instance1 = NewLedgerAppInstance();
   auto page = instance1->GetTestPage();
   ledger::Status status;
@@ -79,7 +79,7 @@ TEST_F(SyncIntegrationTest, SerialConnection) {
   ASSERT_EQ("World", convert::ToString(value));
 }
 
-TEST_F(SyncIntegrationTest, ConcurrentConnection) {
+TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   auto instance1 = NewLedgerAppInstance();
   auto instance2 = NewLedgerAppInstance();
 
@@ -115,6 +115,10 @@ TEST_F(SyncIntegrationTest, ConcurrentConnection) {
   ASSERT_EQ(ledger::Status::OK, status);
   ASSERT_EQ("World", convert::ToString(value));
 }
+
+INSTANTIATE_TEST_CASE_P(SyncIntegrationTest,
+                        SyncIntegrationTest,
+                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 
 }  // namespace
 }  // namespace sync

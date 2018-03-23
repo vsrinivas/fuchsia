@@ -62,7 +62,7 @@ class Watcher : public ledger::PageWatcher {
   fxl::Closure change_callback_;
 };
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherSimple) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
@@ -89,7 +89,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
   EXPECT_EQ("Alice", ToString(change->changed_entries->at(0)->value));
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
   auto instance = NewLedgerAppInstance();
   ledger::Status status;
   ledger::PagePtr page = instance->GetTestPage();
@@ -120,7 +120,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
   EXPECT_EQ(ledger::Status::OK, status);
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
   auto instance = NewLedgerAppInstance();
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
@@ -147,7 +147,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
   EXPECT_EQ(1u, watcher.changes_seen);
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherDelete) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   page->Put(
@@ -179,7 +179,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
   EXPECT_EQ("foo", convert::ToString(change->deleted_keys->at(0)));
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   auto instance = NewLedgerAppInstance();
   // Put enough entries to ensure we will need more than one query to retrieve
   // them. The number of entries that can be retrieved in one query is bound by
@@ -252,7 +252,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   }
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   auto instance = NewLedgerAppInstance();
   size_t entry_count = 70;
   ledger::PagePtr page = instance->GetTestPage();
@@ -312,7 +312,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   }
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherSnapshot) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
@@ -341,7 +341,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
   EXPECT_EQ(ledger::Priority::EAGER, entries[0]->priority);
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherTransaction) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
@@ -378,7 +378,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
   EXPECT_EQ("Alice", ToString(change->changed_entries->at(0)->value));
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page1 = instance->GetTestPage();
   f1dl::VectorPtr<uint8_t> test_page_id;
@@ -462,7 +462,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ("Bob", ToString(change->changed_entries->at(0)->value));
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
@@ -486,7 +486,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
   EXPECT_EQ(0u, watcher.changes_seen);
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
+TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page1 = instance->GetTestPage();
   f1dl::VectorPtr<uint8_t> test_page_id;
@@ -571,7 +571,7 @@ class WaitingWatcher : public ledger::PageWatcher {
   fxl::Closure change_callback_;
 };
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
@@ -635,7 +635,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
   EXPECT_EQ(ledger::Status::OK, start_transaction_status);
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherPrefix) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherPrefix) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
@@ -673,7 +673,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherPrefix) {
   EXPECT_EQ("01-key", convert::ToString(change->changed_entries->at(0)->key));
 }
 
-TEST_F(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {
+TEST_P(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
@@ -702,6 +702,10 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {
   // be called, we would know at this point.
   EXPECT_EQ(0u, watcher.changes_seen);
 }
+
+INSTANTIATE_TEST_CASE_P(PageWatcherIntegrationTest,
+                        PageWatcherIntegrationTest,
+                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 
 }  // namespace
 }  // namespace integration

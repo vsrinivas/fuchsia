@@ -8,10 +8,39 @@
 
 namespace ledger {
 
-FakeCloudProvider::FakeCloudProvider(
-    CloudEraseOnCheck cloud_erase_on_check,
-    CloudEraseFromWatcher cloud_erase_from_watcher)
-    : device_set_(cloud_erase_on_check, cloud_erase_from_watcher) {}
+FakeCloudProvider::Builder::Builder() = default;
+
+FakeCloudProvider::Builder::~Builder() = default;
+
+FakeCloudProvider::Builder& FakeCloudProvider::Builder::SetInjectNetworkError(
+    InjectNetworkError inject_network_error) {
+  inject_network_error_ = inject_network_error_;
+  return *this;
+}
+
+FakeCloudProvider::Builder& FakeCloudProvider::Builder::SetCloudEraseOnCheck(
+    CloudEraseOnCheck cloud_erase_on_check) {
+  cloud_erase_on_check_ = cloud_erase_on_check;
+  return *this;
+}
+
+FakeCloudProvider::Builder&
+FakeCloudProvider::Builder::SetCloudEraseFromWatcher(
+    CloudEraseFromWatcher cloud_erase_from_watcher) {
+  cloud_erase_from_watcher_ = cloud_erase_from_watcher;
+  return *this;
+}
+
+std::unique_ptr<FakeCloudProvider> FakeCloudProvider::Builder::Build() {
+  return std::make_unique<FakeCloudProvider>(*this);
+}
+
+FakeCloudProvider::FakeCloudProvider(const Builder& builder)
+    : device_set_(builder.cloud_erase_on_check_,
+                  builder.cloud_erase_from_watcher_),
+      inject_network_error_(builder.inject_network_error_) {}
+
+FakeCloudProvider::FakeCloudProvider() : FakeCloudProvider(Builder()) {}
 
 FakeCloudProvider::~FakeCloudProvider() {}
 
@@ -38,7 +67,7 @@ void FakeCloudProvider::GetPageCloud(
 
   auto ret =
       page_clouds_.emplace(std::piecewise_construct, std::forward_as_tuple(key),
-                           std::forward_as_tuple());
+                           std::forward_as_tuple(inject_network_error_));
   ret.first->second.Bind(std::move(page_cloud));
   callback(cloud_provider::Status::OK);
 }

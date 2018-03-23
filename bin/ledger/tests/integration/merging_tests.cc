@@ -416,7 +416,7 @@ class Optional {
   return ValueMatch("Right", entry->right, expected_right);
 }
 
-TEST_F(MergingIntegrationTest, Merging) {
+TEST_P(MergingIntegrationTest, Merging) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page1 = instance->GetTestPage();
   f1dl::VectorPtr<uint8_t> test_page_id;
@@ -513,7 +513,7 @@ TEST_F(MergingIntegrationTest, Merging) {
   EXPECT_EQ("Paris", ToString(change->changed_entries->at(0)->value));
 }
 
-TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
+TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page1 = instance->GetTestPage();
   f1dl::VectorPtr<uint8_t> test_page_id;
@@ -640,7 +640,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 }
 
-TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
+TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
@@ -774,7 +774,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   EXPECT_EQ("phone", convert::ExtendedStringView(final_entries[2]->key));
 }
 
-TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
+TEST_P(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
@@ -850,7 +850,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   }
 }
 
-TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
+TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
@@ -932,7 +932,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200)));
 }
 
-TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
+TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
@@ -1034,7 +1034,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
 // Tests for a race between setting the new conflict resolver and sending the
 // resolution request. Specifically, the resolution request must be sent to the
 // new resolver, not the old one.
-TEST_F(MergingIntegrationTest,
+TEST_P(MergingIntegrationTest,
        CustomConflictResolutionResetFactory_FactoryRace) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
@@ -1122,7 +1122,7 @@ TEST_F(MergingIntegrationTest,
   ASSERT_EQ(1u, resolver_impl2->requests.size());
 }
 
-TEST_F(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
+TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
@@ -1225,7 +1225,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   EXPECT_EQ("pager", convert::ExtendedStringView(final_entries[1]->key));
 }
 
-TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
+TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
@@ -1315,7 +1315,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   EXPECT_EQ("phone", convert::ExtendedStringView(final_entries[3]->key));
 }
 
-TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
+TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
@@ -1425,7 +1425,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1]->key));
 }
 
-TEST_F(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
+TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
@@ -1529,7 +1529,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
 
 // Tests a merge in which the right side contains no change (e.g. a change was
 // made in a commit, then reverted in another commit).
-TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
+TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
@@ -1627,7 +1627,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   EXPECT_EQ("email", convert::ExtendedStringView(final_entries[0]->key));
 }
 
-TEST_F(MergingIntegrationTest, DeleteDuringConflictResolution) {
+TEST_P(MergingIntegrationTest, DeleteDuringConflictResolution) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
@@ -1687,7 +1687,7 @@ TEST_F(MergingIntegrationTest, DeleteDuringConflictResolution) {
       f1dl::VectorPtr<ledger::MergedValuePtr>::New(0)));
 }
 
-TEST_F(MergingIntegrationTest, WaitForCustomMerge) {
+TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
@@ -1776,7 +1776,7 @@ TEST_F(MergingIntegrationTest, WaitForCustomMerge) {
             wait_status);
 }
 
-TEST_F(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
+TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   auto instance = NewLedgerAppInstance();
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
@@ -1883,6 +1883,10 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   EXPECT_EQ("phone", convert::ExtendedStringView(final_entries[2]->key));
   EXPECT_EQ("0123456789", ToString(final_entries[2]->value));
 }
+
+INSTANTIATE_TEST_CASE_P(MergingIntegrationTest,
+                        MergingIntegrationTest,
+                        ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 
 }  // namespace
 }  // namespace integration

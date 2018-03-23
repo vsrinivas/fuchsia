@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/tests/integration/sync/lib.h"
+#include "peridot/bin/ledger/tests/integration/integration_test.h"
 
 #include <trace/event.h>
 #include <zx/time.h>
@@ -219,15 +219,17 @@ enum class MergeType {
 };
 
 class ConvergenceTest
-    : public SyncTest,
-      public ::testing::WithParamInterface<std::tuple<MergeType, int>> {
+    : public BaseIntegrationTest,
+      public ::testing::WithParamInterface<
+          std::tuple<MergeType, int, LedgerAppInstanceFactory*>> {
  public:
   ConvergenceTest(){};
   ~ConvergenceTest() override{};
 
   void SetUp() override {
-    SyncTest::SetUp();
-    std::tie(merge_function_type_, num_ledgers_) = GetParam();
+    BaseIntegrationTest::SetUp();
+    LedgerAppInstanceFactory* not_used;
+    std::tie(merge_function_type_, num_ledgers_, not_used) = GetParam();
 
     ASSERT_GT(num_ledgers_, 1);
 
@@ -248,6 +250,10 @@ class ConvergenceTest
   }
 
  protected:
+  LedgerAppInstanceFactory* GetAppFactory() override {
+    return std::get<2>(GetParam());
+  }
+
   std::unique_ptr<PageWatcherImpl> WatchPageContents(ledger::PagePtr* page) {
     ledger::PageWatcherPtr page_watcher;
     fxl::RefPtr<RefCountedPageSnapshot> page_snapshot =
@@ -466,7 +472,8 @@ INSTANTIATE_TEST_CASE_P(
     ConvergenceTest,
     ::testing::Combine(::testing::Values(MergeType::LAST_ONE_WINS,
                                          MergeType::NON_ASSOCIATIVE_CUSTOM),
-                       ::testing::Range(2, 6)));
+                       ::testing::Range(2, 6),
+                       ::testing::ValuesIn(GetLedgerAppInstanceFactories())));
 
 }  // namespace
 }  // namespace sync

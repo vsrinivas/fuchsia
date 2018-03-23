@@ -10,20 +10,22 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/testing/cloud_provider/types.h"
 
 namespace ledger {
 
 class FakePageCloud : public cloud_provider::PageCloud {
  public:
-  FakePageCloud();
+  FakePageCloud(InjectNetworkError inject_network_error);
   ~FakePageCloud() override;
 
-  void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
+  void set_on_empty(fxl::Closure on_empty) { on_empty_ = std::move(on_empty); }
 
   void Bind(f1dl::InterfaceRequest<cloud_provider::PageCloud> request);
 
  private:
   void SendPendingCommits();
+  bool MustReturnError();
 
   // cloud_provider::PageCloud:
   void AddCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
@@ -39,6 +41,9 @@ class FakePageCloud : public cloud_provider::PageCloud {
       f1dl::VectorPtr<uint8_t> min_position_token,
       f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
       const SetWatcherCallback& callback) override;
+
+  InjectNetworkError inject_network_error_;
+  size_t remaining_errors_to_inject_;
 
   f1dl::BindingSet<cloud_provider::PageCloud> bindings_;
   fxl::Closure on_empty_;

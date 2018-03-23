@@ -70,7 +70,7 @@ class LedgerAppInstanceFactory {
   virtual std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() = 0;
 };
 
-std::unique_ptr<LedgerAppInstanceFactory> GetLedgerAppInstanceFactory();
+std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories();
 
 }  // namespace test
 

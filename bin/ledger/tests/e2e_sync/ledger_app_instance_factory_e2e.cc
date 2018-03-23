@@ -113,10 +113,18 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
 
 }  // namespace
 
-std::unique_ptr<LedgerAppInstanceFactory> GetLedgerAppInstanceFactory() {
-  auto factory = std::make_unique<LedgerAppInstanceFactoryImpl>();
-  factory->Init();
-  return factory;
+std::vector<LedgerAppInstanceFactory*> GetLedgerAppInstanceFactories() {
+  static std::unique_ptr<LedgerAppInstanceFactory> factory;
+  static std::once_flag flag;
+
+  auto factory_ptr = &factory;
+  std::call_once(flag, [factory_ptr] {
+    auto factory = std::make_unique<LedgerAppInstanceFactoryImpl>();
+    factory->Init();
+    *factory_ptr = std::move(factory);
+  });
+
+  return {factory.get()};
 }
 
 }  // namespace test
