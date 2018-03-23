@@ -42,11 +42,11 @@ func toNetAddress(addr tcpip.Address) nsfidl.NetAddress {
 	switch len(addr) {
 	case 4:
 		out.Family = nsfidl.NetAddressFamilyIpv4
-		out.Ipv4.Addr = [4]uint8{}
+		out.Ipv4 = &nsfidl.Ipv4Address{Addr: [4]uint8{}}
 		copy(out.Ipv4.Addr[:], addr[:])
 	case 16:
 		out.Family = nsfidl.NetAddressFamilyIpv6
-		out.Ipv6.Addr = [16]uint8{}
+		out.Ipv6 = &nsfidl.Ipv6Address{Addr: [16]uint8{}}
 		copy(out.Ipv6.Addr[:], addr[:])
 	}
 	return out
