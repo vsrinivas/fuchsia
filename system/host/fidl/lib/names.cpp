@@ -323,7 +323,7 @@ std::string NameTable(StringView type_name) {
 std::string NamePointer(StringView name) {
     std::string pointer_name(name);
     pointer_name += "Pointer";
-    return NameTable(pointer_name);
+    return pointer_name;
 }
 
 std::string NameMembers(StringView name) {

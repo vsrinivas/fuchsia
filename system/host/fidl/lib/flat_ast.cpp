@@ -267,7 +267,7 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
         if (!CompileCompoundIdentifier(request_type->identifier.get(), &name)) {
             return false;
         }
-        *out_type = std::make_unique<RequestHandleType>(std::move(name), std::move(request_type->nullability));
+        *out_type = std::make_unique<RequestHandleType>(std::move(name), request_type->nullability);
         break;
     }
     case raw::Type::Kind::Primitive: {

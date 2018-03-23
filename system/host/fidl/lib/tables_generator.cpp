@@ -119,11 +119,11 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
 
     if (struct_type.referenced_by_pointer) {
         Emit(&tables_file_, "extern const fidl_type_t ");
-        Emit(&tables_file_, NamePointer(struct_type.coded_name));
+        Emit(&tables_file_, NameTable(struct_type.pointer_name));
         Emit(&tables_file_, ";\n");
 
         Emit(&tables_file_, "const fidl_type_t ");
-        Emit(&tables_file_, NamePointer(struct_type.coded_name));
+        Emit(&tables_file_, NameTable(struct_type.pointer_name));
         Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedStructPointer(&");
         Emit(&tables_file_, NameTable(struct_type.coded_name));
         Emit(&tables_file_, ".coded_struct));\n\n");
@@ -155,11 +155,11 @@ void TablesGenerator::Generate(const coded::UnionType& union_type) {
 
     if (union_type.referenced_by_pointer) {
         Emit(&tables_file_, "extern const fidl_type_t ");
-        Emit(&tables_file_, NamePointer(union_type.coded_name));
+        Emit(&tables_file_, NameTable(union_type.pointer_name));
         Emit(&tables_file_, ";\n");
 
         Emit(&tables_file_, "const fidl_type_t ");
-        Emit(&tables_file_, NamePointer(union_type.coded_name));
+        Emit(&tables_file_, NameTable(union_type.pointer_name));
         Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedUnionPointer(&");
         Emit(&tables_file_, NameTable(union_type.coded_name));
         Emit(&tables_file_, ".coded_union));\n\n");
@@ -342,18 +342,26 @@ const coded::Type* TablesGenerator::Compile(const flat::Type* type) {
         auto coded_type = iter->second;
         if (identifier_type->nullability == types::Nullability::Nullable) {
             switch (coded_type->kind) {
-            case coded::Type::Kind::kStruct:
+            case coded::Type::Kind::kStruct: {
                 // Structs were compiled as part of decl compilation,
                 // but we may now need to generate the StructPointer.
-                static_cast<coded::StructType*>(coded_type)->referenced_by_pointer = true;
-                break;
-            case coded::Type::Kind::kUnion:
+                auto coded_struct_type = static_cast<coded::StructType*>(coded_type);
+                coded_struct_type->referenced_by_pointer = true;
+                coded_types_.push_back(std::make_unique<coded::StructPointerType>(coded_struct_type->pointer_name, coded_struct_type));
+                return coded_types_.back().get();
+            }
+            case coded::Type::Kind::kUnion: {
                 // Unions were compiled as part of decl compilation,
                 // but we may now need to generate the UnionPointer.
-                static_cast<coded::UnionType*>(coded_type)->referenced_by_pointer = true;
-                break;
+                auto coded_union_type = static_cast<coded::UnionType*>(coded_type);
+                coded_union_type->referenced_by_pointer = true;
+                coded_types_.push_back(std::make_unique<coded::UnionPointerType>(coded_union_type->pointer_name, coded_union_type));
+                return coded_types_.back().get();
+            }
             case coded::Type::Kind::kInterfaceHandle:
                 break;
+            case coded::Type::Kind::kStructPointer:
+            case coded::Type::Kind::kUnionPointer:
             case coded::Type::Kind::kPrimitive:
             case coded::Type::Kind::kRequestHandle:
             case coded::Type::Kind::kHandle:
@@ -390,13 +398,14 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
                                      types::MessageKind kind) -> void {
                 std::vector<coded::Field> request_fields;
                 std::string request_name = NameMessage(LibraryName(decl->name.library()), method_name, kind);
+                std::string pointer_name = NamePointer(request_name);
                 for (const auto& parameter : message.parameters) {
                     std::string parameter_name = request_name + "_" + std::string(parameter.name.data());
                     auto coded_parameter_type = Compile(parameter.type.get());
                     if (coded_parameter_type->coding_needed == coded::CodingNeeded::kNeeded)
                         request_fields.emplace_back(coded_parameter_type, parameter.fieldshape.Offset());
                 }
-                coded_types_.push_back(std::make_unique<coded::StructType>(std::move(request_name), std::move(request_fields), message.typeshape.Size()));
+                coded_types_.push_back(std::make_unique<coded::StructType>(std::move(request_name), std::move(request_fields), message.typeshape.Size(), std::move(pointer_name)));
             };
             if (method.maybe_request) {
                 CreateMessage(*method.maybe_request, types::MessageKind::kRequest);
@@ -411,6 +420,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
     case flat::Decl::Kind::kStruct: {
         auto struct_decl = static_cast<const flat::Struct*>(decl);
         std::string struct_name = NameName(struct_decl->name);
+        std::string pointer_name = NamePointer(struct_name);
         std::vector<coded::Field> struct_fields;
         for (const auto& member : struct_decl->members) {
             std::string member_name = struct_name + "_" + std::string(member.name.data());
@@ -418,13 +428,14 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
             if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded)
                 struct_fields.emplace_back(coded_member_type, member.fieldshape.Offset());
         }
-        coded_types_.push_back(std::make_unique<coded::StructType>(std::move(struct_name), std::move(struct_fields), struct_decl->typeshape.Size()));
+        coded_types_.push_back(std::make_unique<coded::StructType>(std::move(struct_name), std::move(struct_fields), struct_decl->typeshape.Size(), std::move(pointer_name)));
         named_type_map_[&decl->name] = coded_types_.back().get();
         break;
     }
     case flat::Decl::Kind::kUnion: {
         auto union_decl = static_cast<const flat::Union*>(decl);
         std::string union_name = NameName(union_decl->name);
+        std::string pointer_name = NamePointer(union_name);
         std::vector<const coded::Type*> union_members;
         for (const auto& member : union_decl->members) {
             std::string member_name = union_name + "_" + std::string(member.name.data());
@@ -433,7 +444,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
                 union_members.push_back(coded_member_type);
         }
         coded_types_.push_back(std::make_unique<coded::UnionType>(std::move(union_name), std::move(union_members),
-                                                                  union_decl->fieldshape.Offset(), union_decl->fieldshape.Size()));
+                                                                  union_decl->fieldshape.Offset(), union_decl->fieldshape.Size(), std::move(pointer_name)));
         named_type_map_[&decl->name] = coded_types_.back().get();
         break;
     }
@@ -457,8 +468,14 @@ std::ostringstream TablesGenerator::Produce() {
         case coded::Type::Kind::kStruct:
             Generate(*static_cast<const coded::StructType*>(coded_type.get()));
             break;
+        case coded::Type::Kind::kStructPointer:
+            // This is generated when the referred-to struct is.
+            break;
         case coded::Type::Kind::kUnion:
             Generate(*static_cast<const coded::UnionType*>(coded_type.get()));
+            break;
+        case coded::Type::Kind::kUnionPointer:
+            // This is generated when the referred-to union is.
             break;
         case coded::Type::Kind::kHandle:
             Generate(*static_cast<const coded::HandleType*>(coded_type.get()));

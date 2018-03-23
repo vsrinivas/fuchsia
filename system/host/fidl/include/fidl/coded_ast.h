@@ -55,7 +55,9 @@ struct Type {
         kInterfaceHandle,
         kRequestHandle,
         kStruct,
+        kStructPointer,
         kUnion,
+        kUnionPointer,
         kArray,
         kString,
         kVector,
@@ -116,21 +118,37 @@ struct RequestHandleType : public Type {
 };
 
 struct StructType : public Type {
-    StructType(std::string name, std::vector<Field> fields, uint32_t size)
-        : Type(Kind::kStruct, std::move(name), size, CodingNeeded::kNeeded), fields(std::move(fields)) {}
+    StructType(std::string name, std::vector<Field> fields, uint32_t size, std::string pointer_name)
+        : Type(Kind::kStruct, std::move(name), size, CodingNeeded::kNeeded), fields(std::move(fields)), pointer_name(std::move(pointer_name)) {}
 
     const std::vector<Field> fields;
+    std::string pointer_name;
     bool referenced_by_pointer = false;
 };
 
+struct StructPointerType : public Type {
+    StructPointerType(std::string name, const StructType* struct_type)
+        : Type(Kind::kStructPointer, std::move(name), 8u, CodingNeeded::kNeeded), struct_type(struct_type) {}
+
+    const StructType* struct_type;
+};
+
 struct UnionType : public Type {
-    UnionType(std::string name, std::vector<const Type*> types, uint32_t data_offset, uint32_t size)
+    UnionType(std::string name, std::vector<const Type*> types, uint32_t data_offset, uint32_t size, std::string pointer_name)
         : Type(Kind::kUnion, std::move(name), size, SomeTypeIsNeeded(types)),
-          types(std::move(types)), data_offset(data_offset) {}
+          types(std::move(types)), data_offset(data_offset), pointer_name(std::move(pointer_name)) {}
 
     const std::vector<const Type*> types;
     const uint32_t data_offset;
+    std::string pointer_name;
     bool referenced_by_pointer = false;
+};
+
+struct UnionPointerType : public Type {
+    UnionPointerType(std::string name, const UnionType* union_type)
+        : Type(Kind::kUnionPointer, std::move(name), 8u, CodingNeeded::kNeeded), union_type(union_type) {}
+
+    const UnionType* union_type;
 };
 
 struct ArrayType : public Type {
