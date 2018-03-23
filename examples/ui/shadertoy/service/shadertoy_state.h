@@ -6,14 +6,14 @@
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 
 #include "garnet/examples/ui/shadertoy/service/glm_hack.h"
-#include "garnet/examples/ui/shadertoy/service/services/shadertoy.fidl.h"
+#include <fuchsia/cpp/shadertoy.h>
 #include "lib/escher/escher.h"
 #include "lib/escher/resources/resource.h"
 #include "lib/escher/util/stopwatch.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include <fuchsia/cpp/images.h>
-#include "lib/ui/views/fidl/view_token.fidl.h"
+#include <fuchsia/cpp/views_v1_token.h>
 
 namespace shadertoy {
 
@@ -30,28 +30,27 @@ class ShadertoyState : public escher::Resource {
   // Factory constructor.
   static fxl::RefPtr<ShadertoyState> NewForImagePipe(
       App* app,
-      ::f1dl::InterfaceHandle<gfx::ImagePipe> image_pipe);
+      ::fidl::InterfaceHandle<images::ImagePipe> image_pipe);
 
   // Factory constructor.
   static fxl::RefPtr<ShadertoyState> NewForView(
       App* app,
-      ::f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      ::fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       bool handle_input_events);
 
   virtual ~ShadertoyState();
 
   void SetPaused(bool paused);
 
-  void SetShaderCode(
-      std::string glsl,
-      const mozart::example::Shadertoy::SetShaderCodeCallback& callback);
+  void SetShaderCode(fidl::StringPtr glsl,
+                     shadertoy::Shadertoy::SetShaderCodeCallback callback);
 
   void SetResolution(uint32_t width, uint32_t height);
 
   void SetMouse(glm::vec4 i_mouse);
 
   void SetImage(uint32_t channel,
-                ::f1dl::InterfaceRequest<gfx::ImagePipe> request);
+                ::fidl::InterfaceRequest<images::ImagePipe> request);
 
  protected:
   explicit ShadertoyState(App* app);
@@ -60,7 +59,7 @@ class ShadertoyState : public escher::Resource {
   void Close();
 
   // Subclasses must call this from DrawFrame().
-  void OnFramePresented(const images::PresentationInfoPtr& info);
+  void OnFramePresented(images::PresentationInfo info);
 
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }

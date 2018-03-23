@@ -29,7 +29,7 @@ constexpr uint32_t kShapeHeight = 288;
 
 View::View(component::ApplicationContext* application_context,
            views_v1::ViewManagerPtr view_manager,
-           f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
+           fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Shadertoy Example"),
       application_context_(application_context),
@@ -37,7 +37,7 @@ View::View(component::ApplicationContext* application_context,
       // TODO: we don't need to keep this around once we have used it to
       // create a Shadertoy.  What is the best way to achieve this?
       shadertoy_factory_(application_context_->ConnectToEnvironmentService<
-                         mozart::example::ShadertoyFactory>()),
+                         shadertoy::ShadertoyFactory>()),
       start_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)) {
   shadertoy_factory_.set_error_handler([this] {
     FXL_LOG(INFO) << "Lost connection to ShadertoyFactory.";
@@ -46,7 +46,7 @@ View::View(component::ApplicationContext* application_context,
 
   // Create an ImagePipe and pass one end of it to the ShadertoyFactory in
   // order to obtain a Shadertoy.
-  f1dl::InterfaceHandle<gfx::ImagePipe> image_pipe_handle;
+  fidl::InterfaceHandle<images::ImagePipe> image_pipe_handle;
   auto image_pipe_request = image_pipe_handle.NewRequest();
   shadertoy_factory_->NewImagePipeShadertoy(shadertoy_.NewRequest(),
                                             std::move(image_pipe_handle));
@@ -119,17 +119,17 @@ float View::UpdateTransition(zx_time_t presentation_time) {
   return glm::smoothstep(0.f, 1.f, transition_param);
 }
 
-void View::OnSceneInvalidated(images::PresentationInfoPtr presentation_info) {
+void View::OnSceneInvalidated(images::PresentationInfo presentation_info) {
   if (!has_logical_size())
     return;
 
   // Compute the amount of time that has elapsed since the view was created.
   double seconds =
-      static_cast<double>(presentation_info->presentation_time - start_time_) /
+      static_cast<double>(presentation_info.presentation_time - start_time_) /
       1'000'000'000;
 
   float transition_param =
-      UpdateTransition(presentation_info->presentation_time);
+      UpdateTransition(presentation_info.presentation_time);
 
   const float kHalfWidth = logical_size().width * 0.5f;
   const float kHalfHeight = logical_size().height * 0.5f;
@@ -173,16 +173,16 @@ void View::OnSceneInvalidated(images::PresentationInfoPtr presentation_info) {
   InvalidateScene();
 }
 
-bool View::OnInputEvent(input::InputEventPtr event) {
+bool View::OnInputEvent(input::InputEvent event) {
   if (animation_state_ == kChangingToFourCorners ||
       animation_state_ == kChangingToSwirling) {
     // Ignore input until transition is complete.
     return false;
   }
 
-  if (event->is_pointer()) {
-    const input::PointerEventPtr& pointer = event->pointer();
-    if (pointer->phase == input::PointerEventPhase::DOWN) {
+  if (event.is_pointer()) {
+    const input::PointerEvent& pointer = event.pointer();
+    if (pointer.phase == input::PointerEventPhase::DOWN) {
       switch (animation_state_) {
         case kFourCorners:
           animation_state_ = kChangingToSwirling;

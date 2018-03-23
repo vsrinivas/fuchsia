@@ -5,7 +5,7 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_APP_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_APP_H_
 
-#include "garnet/examples/ui/shadertoy/service/services/shadertoy_factory.fidl.h"
+#include <fuchsia/cpp/shadertoy.h>
 #include "garnet/examples/ui/shadertoy/service/shadertoy_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/escher/escher.h"
@@ -21,7 +21,7 @@ class ShadertoyState;
 // A thin wrapper that manages connections to a ShadertoyFactoryImpl singleton.
 // TODO: clean up when there are no remaining bindings to Shadertoy nor
 // ShadertoyFactory.  What is the best-practice pattern to use here?
-class App : public mozart::example::ShadertoyFactory {
+class App : public shadertoy::ShadertoyFactory {
  public:
   App(component::ApplicationContext* app_context, escher::Escher* escher);
   ~App();
@@ -40,17 +40,17 @@ class App : public mozart::example::ShadertoyFactory {
 
   // |ShadertoyFactory|
   void NewImagePipeShadertoy(
-      ::f1dl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
-      ::f1dl::InterfaceHandle<gfx::ImagePipe> image_pipe) override;
+      ::fidl::InterfaceRequest<shadertoy::Shadertoy> toy_request,
+      ::fidl::InterfaceHandle<images::ImagePipe> image_pipe) override;
 
   // |ShadertoyFactory|
   void NewViewShadertoy(
-      ::f1dl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
-      ::f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      ::fidl::InterfaceRequest<shadertoy::Shadertoy> toy_request,
+      ::fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       bool handle_input_events) override;
 
-  f1dl::BindingSet<mozart::example::ShadertoyFactory> factory_bindings_;
-  f1dl::BindingSet<mozart::example::Shadertoy, std::unique_ptr<ShadertoyImpl>>
+  fidl::BindingSet<shadertoy::ShadertoyFactory> factory_bindings_;
+  fidl::BindingSet<shadertoy::Shadertoy, std::unique_ptr<ShadertoyImpl>>
       shadertoy_bindings_;
 
   escher::Escher* const escher_;

@@ -20,7 +20,7 @@ namespace shadertoy {
 
 ShadertoyStateForImagePipe::ShadertoyStateForImagePipe(
     App* app,
-    ::f1dl::InterfaceHandle<gfx::ImagePipe> image_pipe)
+    ::fidl::InterfaceHandle<images::ImagePipe> image_pipe)
     : ShadertoyState(app), image_pipe_(image_pipe.Bind()) {
   image_pipe_.set_error_handler([this] { this->Close(); });
 }
@@ -93,11 +93,11 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     fb.release_fence = std::move(release_semaphore_pair.second);
     fb.image_pipe_id = next_image_pipe_id_++;
 
-    auto image_info = images::ImageInfo::New();
-    image_info->width = width();
-    image_info->height = height();
-    image_info->stride = 0;  // inapplicable to GPU_OPTIMAL tiling.
-    image_info->tiling = images::Tiling::GPU_OPTIMAL;
+    images::ImageInfo image_info;
+    image_info.width = width();
+    image_info.height = height();
+    image_info.stride = 0;  // inapplicable to GPU_OPTIMAL tiling.
+    image_info.tiling = images::Tiling::GPU_OPTIMAL;
 
     image_pipe_->AddImage(fb.image_pipe_id, std::move(image_info),
                           std::move(vmo), images::MemoryType::VK_DEVICE_MEMORY,
@@ -144,16 +144,16 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
 
   // Present the image and request another frame.
   auto present_image_callback = [weak = weak_ptr_factory()->GetWeakPtr()](
-      images::PresentationInfoPtr info) {
+      images::PresentationInfo info) {
     // Need this cast in order to call protected member of superclass.
     if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
-      self->OnFramePresented(info);
+      self->OnFramePresented(std::move(info));
     }
   };
 
-  f1dl::VectorPtr<zx::event> acquire_fences;
+  fidl::VectorPtr<zx::event> acquire_fences;
   acquire_fences.push_back(std::move(acquire_fence));
-  f1dl::VectorPtr<zx::event> release_fences;
+  fidl::VectorPtr<zx::event> release_fences;
   release_fences.push_back(std::move(release_fence));
   image_pipe_->PresentImage(fb.image_pipe_id, presentation_time,
                             std::move(acquire_fences),

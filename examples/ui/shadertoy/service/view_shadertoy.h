@@ -16,7 +16,7 @@ class ShadertoyStateForView : public ShadertoyState {
  public:
   ShadertoyStateForView(
       App* app,
-      ::f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      ::fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       bool handle_input_events);
 
  private:

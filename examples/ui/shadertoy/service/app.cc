@@ -16,8 +16,8 @@ App::App(component::ApplicationContext* app_context, escher::Escher* escher)
       compiler_(escher, renderer_.render_pass(),
                 renderer_.descriptor_set_layout()) {
   app_context->outgoing_services()
-      ->AddService<mozart::example::ShadertoyFactory>(
-          [this](f1dl::InterfaceRequest<mozart::example::ShadertoyFactory>
+      ->AddService<shadertoy::ShadertoyFactory>(
+          [this](fidl::InterfaceRequest<shadertoy::ShadertoyFactory>
                      request) {
             FXL_LOG(INFO) << "Accepting connection to ShadertoyFactory";
             factory_bindings_.AddBinding(this, std::move(request));
@@ -27,8 +27,8 @@ App::App(component::ApplicationContext* app_context, escher::Escher* escher)
 App::~App() = default;
 
 void App::NewImagePipeShadertoy(
-    ::f1dl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
-    ::f1dl::InterfaceHandle<gfx::ImagePipe> image_pipe) {
+    ::fidl::InterfaceRequest<shadertoy::Shadertoy> toy_request,
+    ::fidl::InterfaceHandle<images::ImagePipe> image_pipe) {
   shadertoy_bindings_.AddBinding(
       std::make_unique<ShadertoyImpl>(
           ShadertoyState::NewForImagePipe(this, std::move(image_pipe))),
@@ -36,8 +36,8 @@ void App::NewImagePipeShadertoy(
 }
 
 void App::NewViewShadertoy(
-    ::f1dl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
-    ::f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+    ::fidl::InterfaceRequest<shadertoy::Shadertoy> toy_request,
+    ::fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     bool handle_input_events) {
   shadertoy_bindings_.AddBinding(
       std::make_unique<ShadertoyImpl>(ShadertoyState::NewForView(

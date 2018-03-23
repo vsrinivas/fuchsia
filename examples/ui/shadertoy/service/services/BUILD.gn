@@ -5,6 +5,8 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("services") {
+  name = "shadertoy"
+
   sources = [
     "shadertoy.fidl",
     "shadertoy_factory.fidl",
