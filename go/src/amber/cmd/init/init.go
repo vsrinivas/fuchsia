@@ -6,13 +6,14 @@ package main
 
 import (
 	"application/lib/app/context"
-	"fidl/bindings"
-	"garnet/amber/api/amber"
+	"fuchsia/go/amber"
 )
 
-func connect(ctx *context.Context) (*amber.Control_Proxy, amber.Control_Request) {
-	var pxy *amber.Control_Proxy
-	req, pxy := pxy.NewRequest(bindings.GetAsyncWaiter())
+func connect(ctx *context.Context) (*amber.ControlInterface, amber.ControlInterfaceRequest) {
+	req, pxy, err := amber.NewControlInterfaceRequest()
+	if err != nil {
+		panic(err)
+	}
 	ctx.ConnectToEnvService(req)
 	return pxy, req
 }

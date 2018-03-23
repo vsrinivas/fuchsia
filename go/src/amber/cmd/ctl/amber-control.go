@@ -6,10 +6,9 @@ package main
 
 import (
 	"application/lib/app/context"
-	"fidl/bindings"
 	"flag"
 	"fmt"
-	"garnet/amber/api/amber"
+	"fuchsia/go/amber"
 	"os"
 	"strings"
 )
@@ -51,7 +50,7 @@ var (
 	blobID     = fs.String("i", "", "Content ID of the blob")
 )
 
-func doTest(pxy *amber.Control_Proxy) {
+func doTest(pxy *amber.ControlInterface) {
 	v := int32(42)
 	resp, err := pxy.DoTest(v)
 	if err != nil {
@@ -61,9 +60,11 @@ func doTest(pxy *amber.Control_Proxy) {
 	}
 }
 
-func connect(ctx *context.Context) (*amber.Control_Proxy, amber.Control_Request) {
-	var pxy *amber.Control_Proxy
-	req, pxy := pxy.NewRequest(bindings.GetAsyncWaiter())
+func connect(ctx *context.Context) (*amber.ControlInterface, amber.ControlInterfaceRequest) {
+	req, pxy, err := amber.NewControlInterfaceRequest()
+	if err != nil {
+		panic(err)
+	}
 	ctx.ConnectToEnvService(req)
 	return pxy, req
 }
