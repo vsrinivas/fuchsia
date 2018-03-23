@@ -15,7 +15,7 @@ namespace media {
 class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
  public:
   using FlushRequestedCallback =
-      std::function<void(bool hold_frame, const FlushCallback&)>;
+      std::function<void(bool hold_frame, FlushCallback)>;
 
   static std::shared_ptr<FidlPacketConsumer> Create();
 
@@ -27,7 +27,7 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
 
   // Sets a callback signalling that a flush has been requested from the
   // MediaPacketConsumer client.
-  void SetFlushRequestedCallback(const FlushRequestedCallback& callback);
+  void SetFlushRequestedCallback(FlushRequestedCallback callback);
 
  private:
   FidlPacketConsumer();

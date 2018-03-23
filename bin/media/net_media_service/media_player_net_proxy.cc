@@ -16,18 +16,18 @@ namespace media {
 
 // static
 std::shared_ptr<MediaPlayerNetProxy> MediaPlayerNetProxy::Create(
-    const f1dl::StringPtr& device_name,
-    const f1dl::StringPtr& service_name,
-    f1dl::InterfaceRequest<MediaPlayer> request,
+    fidl::StringPtr device_name,
+    fidl::StringPtr service_name,
+    fidl::InterfaceRequest<MediaPlayer> request,
     NetMediaServiceImpl* owner) {
   return std::shared_ptr<MediaPlayerNetProxy>(new MediaPlayerNetProxy(
       device_name, service_name, std::move(request), owner));
 }
 
 MediaPlayerNetProxy::MediaPlayerNetProxy(
-    const f1dl::StringPtr& device_name,
-    const f1dl::StringPtr& service_name,
-    f1dl::InterfaceRequest<MediaPlayer> request,
+    fidl::StringPtr device_name,
+    fidl::StringPtr service_name,
+    fidl::InterfaceRequest<MediaPlayer> request,
     NetMediaServiceImpl* owner)
     : NetMediaServiceImpl::MultiClientProduct<MediaPlayer>(this,
                                                            std::move(request),
@@ -71,7 +71,7 @@ MediaPlayerNetProxy::MediaPlayerNetProxy(
 
 MediaPlayerNetProxy::~MediaPlayerNetProxy() {}
 
-void MediaPlayerNetProxy::SetHttpSource(const f1dl::StringPtr& url) {
+void MediaPlayerNetProxy::SetHttpSource(fidl::StringPtr url) {
   message_relay_.SendMessage(
       Serializer::Serialize(MediaPlayerInMessage::SetHttpSourceRequest(url)));
 }
@@ -83,7 +83,7 @@ void MediaPlayerNetProxy::SetFileSource(zx::channel file_channel) {
 }
 
 void MediaPlayerNetProxy::SetReaderSource(
-    f1dl::InterfaceHandle<SeekingReader> reader_handle) {
+    fidl::InterfaceHandle<SeekingReader> reader_handle) {
   FXL_LOG(ERROR)
       << "SetReaderSource called on MediaPlayer proxy - not supported.";
   UnbindAndReleaseFromOwner();
@@ -115,22 +115,22 @@ void MediaPlayerNetProxy::SetGain(float gain) {
 }
 
 void MediaPlayerNetProxy::CreateView(
-    f1dl::InterfaceHandle<views_v1::ViewManager> view_manager,
-    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
+    fidl::InterfaceHandle<views_v1::ViewManager> view_manager,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   FXL_LOG(ERROR) << "CreateView called on MediaPlayer proxy - not supported.";
   UnbindAndReleaseFromOwner();
 }
 
 void MediaPlayerNetProxy::SetAudioRenderer(
-    f1dl::InterfaceHandle<AudioRenderer> audio_renderer,
-    f1dl::InterfaceHandle<MediaRenderer> media_renderer) {
+    fidl::InterfaceHandle<AudioRenderer> audio_renderer,
+    fidl::InterfaceHandle<MediaRenderer> media_renderer) {
   FXL_LOG(ERROR)
       << "SetAudioRenderer called on MediaPlayer proxy - not supported.";
   UnbindAndReleaseFromOwner();
 }
 
 void MediaPlayerNetProxy::AddBinding(
-    f1dl::InterfaceRequest<MediaPlayer> request) {
+    fidl::InterfaceRequest<MediaPlayer> request) {
   MultiClientProduct::AddBinding(std::move(request));
 }
 

@@ -46,7 +46,7 @@ class Demux : public ActiveMultistreamSource {
   ~Demux() override {}
 
   // Sets a callback to call when metadata or problem changes occur.
-  virtual void SetStatusCallback(const StatusCallback& callback) = 0;
+  virtual void SetStatusCallback(StatusCallback callback) = 0;
 
   // Calls the callback when the initial streams and metadata have
   // established. THE CALLBACK MAY BE CALLED ON AN ARBITRARY THREAD.
@@ -58,7 +58,7 @@ class Demux : public ActiveMultistreamSource {
 
   // Seeks to the specified position and calls the callback. THE CALLBACK MAY
   // BE CALLED ON AN ARBITRARY THREAD.
-  virtual void Seek(int64_t position, const SeekCallback& callback) = 0;
+  virtual void Seek(int64_t position, SeekCallback callback) = 0;
 };
 
 }  // namespace media

@@ -56,7 +56,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // preparing the output.
   virtual void PrepareOutput(size_t index,
                              std::shared_ptr<PayloadAllocator> allocator,
-                             const UpstreamCallback& callback) = 0;
+                             UpstreamCallback callback) = 0;
 
   // Unprepares the input. The default implementation does nothing.
   virtual void UnprepareInput(size_t index);
@@ -64,14 +64,14 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // Unprepares the output. The default implementation does nothing. The
   // the callback is used to indicate what inputs are ready to be unprepared as
   // a consequence of unpreparing the output.
-  virtual void UnprepareOutput(size_t index, const UpstreamCallback& callback);
+  virtual void UnprepareOutput(size_t index, UpstreamCallback callback);
 
   // Flushes an input. |hold_frame| indicates whether a video renderer should
   // hold and display the newest frame. The callback is used to indicate what
   // outputs are ready to be flushed as a consequence of flushing the input.
   virtual void FlushInput(size_t index,
                           bool hold_frame,
-                          const DownstreamCallback& callback) = 0;
+                          DownstreamCallback callback) = 0;
 
   // Flushes an output.
   virtual void FlushOutput(size_t index) = 0;

@@ -48,7 +48,7 @@ MediaDecoderImpl::MediaDecoderImpl(
 
   consumer_->SetFlushRequestedCallback(
       [this, consumer_ref](bool hold_frame,
-                           const MediaPacketConsumer::FlushCallback& callback) {
+                           MediaPacketConsumer::FlushCallback callback) {
         FXL_DCHECK(producer_);
         graph_.FlushOutput(consumer_ref.output(), hold_frame);
         producer_->FlushConnection(hold_frame, callback);
@@ -59,9 +59,9 @@ MediaDecoderImpl::MediaDecoderImpl(
 
 MediaDecoderImpl::~MediaDecoderImpl() {}
 
-void MediaDecoderImpl::GetOutputType(const GetOutputTypeCallback& callback) {
+void MediaDecoderImpl::GetOutputType(GetOutputTypeCallback callback) {
   FXL_DCHECK(decoder_);
-  callback(fxl::To<MediaTypePtr>(decoder_->output_stream_type()));
+  callback(std::move(*fxl::To<MediaTypePtr>(decoder_->output_stream_type())));
 }
 
 void MediaDecoderImpl::GetPacketConsumer(

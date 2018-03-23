@@ -6,15 +6,11 @@
 
 #include <unordered_map>
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/binding.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 
@@ -32,7 +28,7 @@ class MediaPlayerImpl
   ~MediaPlayerImpl() override;
 
   // MediaPlayer implementation.
-  void SetHttpSource(const fidl::StringPtr& http_url) override;
+  void SetHttpSource(fidl::StringPtr http_url) override;
 
   void SetFileSource(zx::channel file_channel) override;
 
@@ -50,9 +46,9 @@ class MediaPlayerImpl
 
   void SetGain(float gain) override;
 
-  void CreateView(
-      fidl::InterfaceHandle<views_v1::ViewManager> view_manager,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
+  void CreateView(fidl::InterfaceHandle<views_v1::ViewManager> view_manager,
+                  fidl::InterfaceRequest<views_v1_token::ViewOwner>
+                      view_owner_request) override;
 
   void SetAudioRenderer(
       fidl::InterfaceHandle<AudioRenderer> audio_renderer,
@@ -102,7 +98,7 @@ class MediaPlayerImpl
   // Prepares a stream.
   void PrepareStream(Stream* stream,
                      size_t index,
-                     const MediaTypePtr& input_media_type,
+                     const MediaType& input_media_type,
                      const std::function<void()>& callback);
 
   // Takes action based on current state.
@@ -131,7 +127,7 @@ class MediaPlayerImpl
 
   fidl::InterfaceHandle<SeekingReader> reader_handle_;
   MediaSourcePtr source_;
-  fidl::VectorPtr<MediaTypePtr> stream_types_;
+  fidl::VectorPtr<MediaType> stream_types_;
   std::unordered_map<MediaTypeMedium, Stream> streams_by_medium_;
   MediaTimelineControllerPtr timeline_controller_;
   MediaTimelineControlPointPtr timeline_control_point_;

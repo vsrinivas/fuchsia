@@ -38,7 +38,7 @@ TimelineFunction::TimelineFunction(const TimelineTransform& from)
       reference_time_(from.reference_time),
       rate_(TimelineRate(from.subject_delta, from.reference_delta)) {}
 
-TimelineFunction::operator TimelineTransform() const {
+TimelineTransform TimelineFunction::ToTimelineTransform() const {
   TimelineTransform result;
   result.subject_time = subject_time();
   result.reference_time = reference_time();

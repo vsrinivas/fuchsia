@@ -33,7 +33,8 @@ TimelineControlPoint::TimelineControlPoint()
         MediaTimelineControlPointStatus status;
         {
           std::lock_guard<std::mutex> locker(mutex_);
-          status.timeline_transform = static_cast<TimelineTransform>(current_timeline_function_);
+          status.timeline_transform =
+              current_timeline_function_.ToTimelineTransform();
           status.end_of_stream = ReachedEndOfStream();
         }
         callback(version, std::move(status));
@@ -173,10 +174,9 @@ void TimelineControlPoint::SetTimelineTransformLocked(
 
   bool was_progressing = ProgressingInternal();
 
-  int64_t reference_time =
-      timeline_transform.reference_time == kUnspecifiedTime
-          ? Timeline::local_now()
-          : timeline_transform.reference_time;
+  int64_t reference_time = timeline_transform.reference_time == kUnspecifiedTime
+                               ? Timeline::local_now()
+                               : timeline_transform.reference_time;
   int64_t subject_time = timeline_transform.subject_time == kUnspecifiedTime
                              ? current_timeline_function_(reference_time)
                              : timeline_transform.subject_time;

@@ -26,7 +26,7 @@ TtsSpeaker::TtsSpeaker(fxl::RefPtr<fxl::TaskRunner> master_task_runner)
       abort_playback_(false),
       synthesis_complete_(false) {}
 
-zx_status_t TtsSpeaker::Speak(const fidl::StringPtr& words,
+zx_status_t TtsSpeaker::Speak(fidl::StringPtr words,
                               const fxl::Closure& speak_complete_cbk) {
   words_ = std::move(words);
   speak_complete_cbk_ = std::move(speak_complete_cbk);

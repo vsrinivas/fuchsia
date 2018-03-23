@@ -22,7 +22,7 @@ std::unique_ptr<MediaPlayerInMessage> MediaPlayerInMessage::TimeCheckRequest(
 
 // static
 std::unique_ptr<MediaPlayerInMessage>
-MediaPlayerInMessage::SetHttpSourceRequest(const f1dl::StringPtr& url) {
+MediaPlayerInMessage::SetHttpSourceRequest(fidl::StringPtr url) {
   std::unique_ptr<MediaPlayerInMessage> message =
       std::make_unique<MediaPlayerInMessage>();
   message->type_ = MediaPlayerInMessageType::kSetHttpSourceRequest;
@@ -96,7 +96,7 @@ MediaPlayerOutMessage::StatusNotification(MediaPlayerStatusPtr status) {
   return message;
 }
 
-Serializer& operator<<(Serializer& serializer, const f1dl::StringPtr& value) {
+Serializer& operator<<(Serializer& serializer, fidl::StringPtr value) {
   serializer << value->size();
   serializer.PutBytes(value->size(), value->data());
   return serializer;
@@ -224,14 +224,14 @@ Serializer& operator<<(Serializer& serializer,
   return serializer;
 }
 
-Deserializer& operator>>(Deserializer& deserializer, f1dl::StringPtr& value) {
+Deserializer& operator>>(Deserializer& deserializer, fidl::StringPtr& value) {
   size_t size;
   deserializer >> size;
   const char* bytes = reinterpret_cast<const char*>(deserializer.Bytes(size));
   if (bytes == nullptr) {
-    value = f1dl::StringPtr();
+    value = fidl::StringPtr();
   } else {
-    value = f1dl::StringPtr(bytes, size);
+    value = fidl::StringPtr(bytes, size);
   }
 
   return deserializer;

@@ -52,7 +52,7 @@ LpcmReformatterImpl::LpcmReformatterImpl(
 
   consumer_->SetFlushRequestedCallback(
       [this, consumer_ref](bool hold_frame,
-                           const MediaPacketConsumer::FlushCallback& callback) {
+                           MediaPacketConsumer::FlushCallback callback) {
         FXL_DCHECK(producer_);
         graph_.FlushOutput(consumer_ref.output(), hold_frame);
         producer_->FlushConnection(hold_frame, callback);
@@ -63,9 +63,9 @@ LpcmReformatterImpl::LpcmReformatterImpl(
 
 LpcmReformatterImpl::~LpcmReformatterImpl() {}
 
-void LpcmReformatterImpl::GetOutputType(const GetOutputTypeCallback& callback) {
+void LpcmReformatterImpl::GetOutputType(GetOutputTypeCallback callback) {
   FXL_DCHECK(reformatter_);
-  callback(fxl::To<MediaTypePtr>(reformatter_->output_stream_type()));
+  callback(fxl::To<MediaType>(reformatter_->output_stream_type()));
 }
 
 void LpcmReformatterImpl::GetPacketConsumer(

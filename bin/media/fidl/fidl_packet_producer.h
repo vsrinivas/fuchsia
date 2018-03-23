@@ -33,11 +33,11 @@ class FidlPacketProducer
 
   // Sets a callback called whenever the connection state changes.
   void SetConnectionStateChangedCallback(
-      const ConnectionStateChangedCallback& callback);
+      ConnectionStateChangedCallback callback);
 
   // Flushes and tells the connected consumer to flush.
   void FlushConnection(bool hold_frame,
-                       const FlushConnectionCallback& callback);
+                       FlushConnectionCallback callback);
 
   // ActiveSink implementation.
   std::shared_ptr<PayloadAllocator> allocator() override;

@@ -30,7 +30,7 @@ class LpcmReformatterImpl
   ~LpcmReformatterImpl() override;
 
   // MediaTypeConverter implementation.
-  void GetOutputType(const GetOutputTypeCallback& callback) override;
+  void GetOutputType(GetOutputTypeCallback callback) override;
 
   void GetPacketConsumer(
       fidl::InterfaceRequest<MediaPacketConsumer> consumer) override;

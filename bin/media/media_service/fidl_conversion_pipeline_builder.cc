@@ -4,6 +4,7 @@
 
 #include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/framework/formatting.h"
 #include "garnet/bin/media/framework/types/audio_stream_type.h"
@@ -13,7 +14,6 @@
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 
@@ -209,7 +209,7 @@ bool Builder::GoalTypeSetsIncludeEncoding(const std::string& encoding) const {
 
 void Builder::AddConverter(MediaTypeConverterPtr converter) {
   converter->GetOutputType([this](MediaType output_type) {
-    current_type_ = fxl::To<std::unique_ptr<StreamType>>(fidl::MakeOptional(output_type));
+    current_type_ = fxl::To<std::unique_ptr<StreamType>>(output_type);
     type_ = &current_type_;
     AddConverters();
   });

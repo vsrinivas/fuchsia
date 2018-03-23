@@ -65,7 +65,7 @@ void AudioPipe::UpdateMinPts(int64_t min_pts) {
 }
 
 void AudioPipe::PrimeRequested(
-    const MediaTimelineControlPoint::PrimeCallback& cbk) {
+    MediaTimelineControlPoint::PrimeCallback cbk) {
   if (prime_callback_) {
     // Prime was already requested. Complete the old one and warn.
     FXL_LOG(WARNING) << "multiple prime requests received";

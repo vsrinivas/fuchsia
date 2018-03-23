@@ -21,20 +21,20 @@ class MediaPlayerNetProxy
       public MediaPlayer {
  public:
   static std::shared_ptr<MediaPlayerNetProxy> Create(
-      const f1dl::StringPtr& device_name,
-      const f1dl::StringPtr& service_name,
-      f1dl::InterfaceRequest<MediaPlayer> request,
+      fidl::StringPtr device_name,
+      fidl::StringPtr service_name,
+      fidl::InterfaceRequest<MediaPlayer> request,
       NetMediaServiceImpl* owner);
 
   ~MediaPlayerNetProxy() override;
 
   // MediaPlayer implementation.
-  void SetHttpSource(const f1dl::StringPtr& http_url) override;
+  void SetHttpSource(fidl::StringPtr http_url) override;
 
   void SetFileSource(zx::channel file_channel) override;
 
   void SetReaderSource(
-      f1dl::InterfaceHandle<SeekingReader> reader_handle) override;
+      fidl::InterfaceHandle<SeekingReader> reader_handle) override;
 
   void Play() override;
 
@@ -48,19 +48,19 @@ class MediaPlayerNetProxy
   void SetGain(float gain) override;
 
   void CreateView(
-      f1dl::InterfaceHandle<views_v1::ViewManager> view_manager,
-      f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
+      fidl::InterfaceHandle<views_v1::ViewManager> view_manager,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
 
   void SetAudioRenderer(
-      f1dl::InterfaceHandle<AudioRenderer> audio_renderer,
-      f1dl::InterfaceHandle<MediaRenderer> media_renderer) override;
+      fidl::InterfaceHandle<AudioRenderer> audio_renderer,
+      fidl::InterfaceHandle<MediaRenderer> media_renderer) override;
 
-  void AddBinding(f1dl::InterfaceRequest<MediaPlayer> request) override;
+  void AddBinding(fidl::InterfaceRequest<MediaPlayer> request) override;
 
  private:
-  MediaPlayerNetProxy(const f1dl::StringPtr& device_name,
-                      const f1dl::StringPtr& service_name,
-                      f1dl::InterfaceRequest<MediaPlayer> request,
+  MediaPlayerNetProxy(fidl::StringPtr device_name,
+                      fidl::StringPtr service_name,
+                      fidl::InterfaceRequest<MediaPlayer> request,
                       NetMediaServiceImpl* owner);
 
   void SendTimeCheckMessage();

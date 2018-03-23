@@ -30,7 +30,7 @@ void FidlPacketConsumer::Bind(
 }
 
 void FidlPacketConsumer::SetFlushRequestedCallback(
-    const FlushRequestedCallback& callback) {
+    FlushRequestedCallback callback) {
   flush_requested_callback_ = callback;
 }
 

@@ -28,7 +28,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   zx_status_t Init(const std::unique_ptr<component::ApplicationContext>&
                        application_context);
 
-  zx_status_t Speak(const fidl::StringPtr& words,
+  zx_status_t Speak(fidl::StringPtr words,
                     const fxl::Closure& speak_complete_cbk);
   void Shutdown();
 

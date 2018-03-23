@@ -7,6 +7,7 @@
 #include <trace/event.h>
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 
@@ -38,9 +39,9 @@ VideoRendererImpl::VideoRendererImpl(
 
   status_publisher_.SetCallbackRunner(
       [this](GetStatusCallback callback, uint64_t version) {
-        VideoRendererStatusPtr status = VideoRendererStatus::New();
-        status->video_size = GetSize().Clone();
-        status->pixel_aspect_ratio = GetPixelAspectRatio().Clone();
+        VideoRendererStatus status;
+        status.video_size = GetSize();
+        status.pixel_aspect_ratio = GetPixelAspectRatio();
         callback(version, std::move(status));
       });
 }
@@ -87,8 +88,8 @@ void VideoRendererImpl::GetSupportedMediaTypes(
   callback(SupportedMediaTypes());
 }
 
-void VideoRendererImpl::SetMediaType(MediaTypePtr media_type) {
-  if (!media_type || !media_type->details || !media_type->details->is_video()) {
+void VideoRendererImpl::SetMediaType(MediaType media_type) {
+  if (media_type.details.is_video()) {
     FXL_LOG(ERROR) << "Invalid argument to SetMediaType call.";
     if (video_renderer_binding_.is_bound()) {
       video_renderer_binding_.Unbind();
@@ -98,9 +99,6 @@ void VideoRendererImpl::SetMediaType(MediaTypePtr media_type) {
 
     return;
   }
-
-  const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
-  FXL_DCHECK(details);
 
   video_frame_source_->converter().SetStreamType(
       fxl::To<std::unique_ptr<StreamType>>(media_type));
@@ -133,16 +131,15 @@ void VideoRendererImpl::CreateView(
 }
 
 fidl::VectorPtr<MediaTypeSet> VideoRendererImpl::SupportedMediaTypes() {
-  VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
-  video_details->min_width = 0;
-  video_details->max_width = std::numeric_limits<uint32_t>::max();
-  video_details->min_height = 0;
-  video_details->max_height = std::numeric_limits<uint32_t>::max();
-  MediaTypeSetPtr supported_type = MediaTypeSet::New();
-  supported_type->medium = MediaTypeMedium::VIDEO;
-  supported_type->details = MediaTypeSetDetails::New();
-  supported_type->details->set_video(std::move(video_details));
-  supported_type->encodings.push_back(MediaType::kVideoEncodingUncompressed);
+  VideoMediaTypeSetDetails video_details;
+  video_details.min_width = 0;
+  video_details.max_width = std::numeric_limits<uint32_t>::max();
+  video_details.min_height = 0;
+  video_details.max_height = std::numeric_limits<uint32_t>::max();
+  MediaTypeSet supported_type;
+  supported_type.medium = MediaTypeMedium::VIDEO;
+  supported_type.details.set_video(std::move(video_details));
+  supported_type.encodings.push_back(kVideoEncodingUncompressed);
   fidl::VectorPtr<MediaTypeSet> supported_types;
   supported_types.push_back(std::move(supported_type));
   return supported_types;
@@ -168,11 +165,11 @@ VideoRendererImpl::View::View(
 VideoRendererImpl::View::~View() {}
 
 void VideoRendererImpl::View::OnSceneInvalidated(
-    images::PresentationInfoPtr presentation_info) {
+    images::PresentationInfo presentation_info) {
   TRACE_DURATION("motown", "OnSceneInvalidated");
 
   video_frame_source_->AdvanceReferenceTime(
-      presentation_info->presentation_time);
+      presentation_info.presentation_time);
 
   geometry::Size video_size = video_frame_source_->converter().GetSize();
   if (!has_logical_size() || video_size.width == 0 || video_size.height == 0)
@@ -181,8 +178,7 @@ void VideoRendererImpl::View::OnSceneInvalidated(
   // Update the image.
   const scenic_lib::HostImage* image = image_cycler_.AcquireImage(
       video_size.width, video_size.height, video_size.width * 4u,
-      images::PixelFormat::BGRA_8,
-      images::ColorSpace::SRGB);
+      images::PixelFormat::BGRA_8, images::ColorSpace::SRGB);
   FXL_DCHECK(image);
   video_frame_source_->GetRgbaFrame(static_cast<uint8_t*>(image->image_ptr()),
                                     video_size);

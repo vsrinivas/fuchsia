@@ -41,7 +41,7 @@ std::shared_ptr<PayloadAllocator> ActiveSourceStageImpl::PrepareInput(
 void ActiveSourceStageImpl::PrepareOutput(
     size_t index,
     std::shared_ptr<PayloadAllocator> allocator,
-    const UpstreamCallback& callback) {
+    UpstreamCallback callback) {
   FXL_DCHECK(index == 0u);
   FXL_DCHECK(source_);
 
@@ -60,7 +60,7 @@ void ActiveSourceStageImpl::PrepareOutput(
 }
 
 void ActiveSourceStageImpl::UnprepareOutput(size_t index,
-                                            const UpstreamCallback& callback) {
+                                            UpstreamCallback callback) {
   FXL_DCHECK(index == 0u);
   FXL_DCHECK(source_);
 
@@ -91,7 +91,7 @@ void ActiveSourceStageImpl::Update() {
 
 void ActiveSourceStageImpl::FlushInput(size_t index,
                                        bool hold_frame,
-                                       const DownstreamCallback& callback) {
+                                       DownstreamCallback callback) {
   FXL_CHECK(false) << "FlushInput called on source";
 }
 

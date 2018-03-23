@@ -31,13 +31,13 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   ~FfmpegDemuxImpl() override;
 
   // Demux implementation.
-  void SetStatusCallback(const StatusCallback& callback) override;
+  void SetStatusCallback(StatusCallback callback) override;
 
   void WhenInitialized(std::function<void(Result)> callback) override;
 
   const std::vector<DemuxStream*>& streams() const override;
 
-  void Seek(int64_t position, const SeekCallback& callback) override;
+  void Seek(int64_t position, SeekCallback callback) override;
 
   // ActiveMultistreamSource implementation.
   size_t stream_count() const override;
@@ -170,7 +170,7 @@ FfmpegDemuxImpl::~FfmpegDemuxImpl() {
   }
 }
 
-void FfmpegDemuxImpl::SetStatusCallback(const StatusCallback& callback) {
+void FfmpegDemuxImpl::SetStatusCallback(StatusCallback callback) {
   status_callback_ = callback;
 }
 
@@ -182,7 +182,7 @@ const std::vector<Demux::DemuxStream*>& FfmpegDemuxImpl::streams() const {
   return streams_;
 }
 
-void FfmpegDemuxImpl::Seek(int64_t position, const SeekCallback& callback) {
+void FfmpegDemuxImpl::Seek(int64_t position, SeekCallback callback) {
   std::lock_guard<std::mutex> locker(mutex_);
   seek_position_ = position;
   seek_callback_ = callback;

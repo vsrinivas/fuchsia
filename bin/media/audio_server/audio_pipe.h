@@ -43,7 +43,7 @@ class AudioPipe : public MediaPacketConsumerBase {
 
   // Indicates the priming was requested. The pipe is responsible for calling
   // the callback when priming is complete.
-  void PrimeRequested(const MediaTimelineControlPoint::PrimeCallback& callback);
+  void PrimeRequested(MediaTimelineControlPoint::PrimeCallback callback);
 
  protected:
   void OnPacketSupplied(

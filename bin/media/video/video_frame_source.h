@@ -65,7 +65,7 @@ class VideoFrameSource : public MediaPacketConsumerBase {
 
   // Gets status (see |VideoRenderer::GetStatus|).
   void GetStatus(uint64_t version_last_seen,
-                 const VideoRenderer::GetStatusCallback& callback);
+                 VideoRenderer::GetStatusCallback callback);
 
   // Gets an RGBA video frame corresponding to the current reference time.
   void GetRgbaFrame(uint8_t* rgba_buffer,

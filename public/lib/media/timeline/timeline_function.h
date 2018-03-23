@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "lib/fxl/logging.h"
 #include <fuchsia/cpp/media.h>
+#include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
@@ -65,7 +65,7 @@ class TimelineFunction {
 
   explicit TimelineFunction(const TimelineTransform& from);
 
-  explicit operator TimelineTransform() const;
+  TimelineTransform ToTimelineTransform() const;
 
   // Determines whether this |TimelineFunction| is invertable.
   bool invertable() const { return rate_.invertable(); }

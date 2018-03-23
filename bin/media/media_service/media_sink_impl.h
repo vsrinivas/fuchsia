@@ -6,12 +6,11 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/binding.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 
@@ -46,8 +45,7 @@ class MediaSinkImpl : public MediaComponentFactory::Product<MediaSink>,
   ConsumeMediaTypeCallback consume_media_type_callback_;
   MediaTypePtr original_media_type_;
   std::unique_ptr<StreamType> stream_type_;
-  std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>
-      supported_stream_types_;
+  fidl::VectorPtr<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
   Incident got_supported_stream_types_;
 };
 

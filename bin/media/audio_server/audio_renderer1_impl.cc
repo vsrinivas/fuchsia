@@ -83,7 +83,7 @@ AudioRenderer1Impl::AudioRenderer1Impl(
       });
 
   timeline_control_point_.SetPrimeRequestedCallback(
-      [this](const TimelineControlPoint::PrimeCallback& callback) {
+      [this](TimelineControlPoint::PrimeCallback callback) {
         pipe_.PrimeRequested(callback);
       });
 }
@@ -348,7 +348,7 @@ void AudioRenderer1Impl::OnPacketReceived(fbl::RefPtr<AudioPacketRef> packet) {
 }
 
 bool AudioRenderer1Impl::OnFlushRequested(
-    const MediaPacketConsumer::FlushCallback& cbk) {
+    MediaPacketConsumer::FlushCallback cbk) {
   fbl::RefPtr<PendingFlushToken> flush_token =
       PendingFlushToken::Create(owner_, cbk);
 

@@ -9,7 +9,10 @@
 #include "garnet/bin/media/framework/formatting.h"
 #include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"
 #include "garnet/bin/media/util/callback_joiner.h"
+#include "lib/fidl/cpp/clone.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -17,41 +20,48 @@ namespace media {
 // static
 std::shared_ptr<MediaSourceImpl> MediaSourceImpl::Create(
     fidl::InterfaceHandle<SeekingReader> reader,
-    const fidl::VectorPtr<MediaTypeSet>& allowed_media_types,
+    fidl::VectorPtr<MediaTypeSet> allowed_media_types,
     fidl::InterfaceRequest<MediaSource> request,
     MediaComponentFactory* owner) {
-  return std::shared_ptr<MediaSourceImpl>(new MediaSourceImpl(
-      std::move(reader), allowed_media_types, std::move(request), owner));
+  return std::shared_ptr<MediaSourceImpl>(
+      new MediaSourceImpl(std::move(reader), std::move(allowed_media_types),
+                          std::move(request), owner));
 }
 
 MediaSourceImpl::MediaSourceImpl(
     fidl::InterfaceHandle<SeekingReader> reader,
-    const fidl::VectorPtr<MediaTypeSet>& allowed_media_types,
+    fidl::VectorPtr<MediaTypeSet> allowed_media_types,
     fidl::InterfaceRequest<MediaSource> request,
     MediaComponentFactory* owner)
     : MediaComponentFactory::Product<MediaSource>(this,
                                                   std::move(request),
-                                                  owner),
-      allowed_stream_types_(
-          fxl::To<std::unique_ptr<
-              std::vector<std::unique_ptr<media::StreamTypeSet>>>>(
-              allowed_media_types)) {
+                                                  owner) {
   FXL_DCHECK(reader);
+
+  if (allowed_media_types) {
+    for (auto it = allowed_media_types->begin();
+         it != allowed_media_types->end(); ++it) {
+      allowed_stream_types_.push_back(
+          fxl::To<std::unique_ptr<media::StreamTypeSet>>(*it));
+    }
+  }
 
   status_publisher_.SetCallbackRunner(
       [this](GetStatusCallback callback, uint64_t version) {
-        callback(version, demux_status_ ? demux_status_.Clone()
-                                        : MediaSourceStatus::New());
+        MediaSourceStatus status;
+        if (demux_status_)
+          fidl::Clone(*demux_status_, &status);
+        callback(version, std::move(status));
       });
 
   owner->CreateDemux(std::move(reader), demux_.NewRequest());
   HandleDemuxStatusUpdates();
 
-  demux_->Describe([this](fidl::VectorPtr<MediaTypePtr> stream_media_types) {
+  demux_->Describe([this](fidl::VectorPtr<MediaType> stream_media_types) {
     std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
 
     size_t stream_index = 0;
-    for (const MediaTypePtr& stream_media_type : *stream_media_types) {
+    for (const MediaType& stream_media_type : *stream_media_types) {
       streams_.emplace_back(new Stream(
           stream_index, this->owner(),
           [this,
@@ -82,10 +92,11 @@ MediaSourceImpl::~MediaSourceImpl() {}
 
 void MediaSourceImpl::Describe(DescribeCallback callback) {
   init_complete_.When([this, callback]() {
-    fidl::VectorPtr<MediaTypePtr> result =
-        fidl::VectorPtr<MediaTypePtr>::New(streams_.size());
+    fidl::VectorPtr<MediaType> result;
     for (size_t i = 0; i < streams_.size(); i++) {
-      result->at(i) = streams_[i]->media_type();
+      MediaType media_type;
+      fidl::Clone(*streams_[i]->media_type(), &media_type);
+      result.push_back(std::move(media_type));
     }
 
     callback(std::move(result));
@@ -115,7 +126,7 @@ void MediaSourceImpl::Flush(bool hold_frame, FlushCallback callback) {
   demux_->Flush(hold_frame, callback);
 }
 
-void MediaSourceImpl::Seek(int64_t position, const SeekCallback& callback) {
+void MediaSourceImpl::Seek(int64_t position, SeekCallback callback) {
   RCHECK(init_complete_.occurred());
 
   demux_->Seek(position, callback);
@@ -128,10 +139,10 @@ void MediaSourceImpl::HandleDemuxStatusUpdates(uint64_t version,
     status_publisher_.SendUpdates();
   }
 
-  demux_->GetStatus(version,
-                    [this](uint64_t version, MediaSourceStatusPtr status) {
-                      HandleDemuxStatusUpdates(version, std::move(status));
-                    });
+  demux_->GetStatus(version, [this](uint64_t version,
+                                    MediaSourceStatus status) {
+    HandleDemuxStatusUpdates(version, fidl::MakeOptional(std::move(status)));
+  });
 }
 
 MediaSourceImpl::Stream::Stream(
@@ -139,15 +150,14 @@ MediaSourceImpl::Stream::Stream(
     MediaComponentFactory* factory,
     const ProducerGetter& producer_getter,
     std::unique_ptr<StreamType> stream_type,
-    const std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>&
-        allowed_stream_types,
+    const fidl::VectorPtr<std::unique_ptr<StreamTypeSet>>& allowed_stream_types,
     const std::function<void()>& callback) {
   FXL_DCHECK(factory);
   FXL_DCHECK(producer_getter);
   FXL_DCHECK(stream_type);
   FXL_DCHECK(callback);
 
-  if (allowed_stream_types == nullptr) {
+  if (!allowed_stream_types) {
     // No conversion requested.
     producer_getter_ = producer_getter;
     stream_type_ = std::move(stream_type);

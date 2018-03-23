@@ -26,7 +26,7 @@ VideoFrameSource::VideoFrameSource() {
       });
 
   timeline_control_point_.SetPrimeRequestedCallback(
-      [this](const MediaTimelineControlPoint::PrimeCallback& callback) {
+      [this](MediaTimelineControlPoint::PrimeCallback callback) {
         SetDemand(kPacketDemand);
 
         if (packet_queue_.size() >= kPacketDemand) {

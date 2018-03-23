@@ -15,7 +15,7 @@ NetMediaServiceImpl::NetMediaServiceImpl(
     std::unique_ptr<component::ApplicationContext> application_context)
     : FactoryServiceBase(std::move(application_context)) {
   this->application_context()->outgoing_services()->AddService<NetMediaService>(
-      [this](f1dl::InterfaceRequest<NetMediaService> request) {
+      [this](fidl::InterfaceRequest<NetMediaService> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 }
@@ -23,33 +23,33 @@ NetMediaServiceImpl::NetMediaServiceImpl(
 NetMediaServiceImpl::~NetMediaServiceImpl() {}
 
 void NetMediaServiceImpl::PublishMediaPlayer(
-    const f1dl::StringPtr& service_name,
-    f1dl::InterfaceHandle<MediaPlayer> media_player) {
+    fidl::StringPtr service_name,
+    fidl::InterfaceHandle<MediaPlayer> media_player) {
   AddProduct(MediaPlayerNetPublisher::Create(service_name,
                                              std::move(media_player), this));
 }
 
 void NetMediaServiceImpl::CreateMediaPlayerProxy(
-    const f1dl::StringPtr& device_name,
-    const f1dl::StringPtr& service_name,
-    f1dl::InterfaceRequest<MediaPlayer> media_player_request) {
+    fidl::StringPtr device_name,
+    fidl::StringPtr service_name,
+    fidl::InterfaceRequest<MediaPlayer> media_player_request) {
   AddProduct(MediaPlayerNetProxy::Create(
       device_name, service_name, std::move(media_player_request), this));
 }
 
 void NetMediaServiceImpl::CreateNetMediaPlayer(
-    const f1dl::StringPtr& service_name,
-    f1dl::InterfaceHandle<MediaPlayer> media_player,
-    f1dl::InterfaceRequest<NetMediaPlayer> net_media_player_request) {
+    fidl::StringPtr service_name,
+    fidl::InterfaceHandle<MediaPlayer> media_player,
+    fidl::InterfaceRequest<NetMediaPlayer> net_media_player_request) {
   AddProduct(NetMediaPlayerImpl::Create(service_name, std::move(media_player),
                                         std::move(net_media_player_request),
                                         this));
 }
 
 void NetMediaServiceImpl::CreateNetMediaPlayerProxy(
-    const f1dl::StringPtr& device_name,
-    const f1dl::StringPtr& service_name,
-    f1dl::InterfaceRequest<NetMediaPlayer> net_media_player_request) {
+    fidl::StringPtr device_name,
+    fidl::StringPtr service_name,
+    fidl::InterfaceRequest<NetMediaPlayer> net_media_player_request) {
   AddProduct(NetMediaPlayerNetProxy::Create(
       device_name, service_name, std::move(net_media_player_request), this));
 }

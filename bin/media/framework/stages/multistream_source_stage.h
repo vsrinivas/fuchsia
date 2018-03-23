@@ -33,13 +33,13 @@ class MultistreamSourceStageImpl : public StageImpl,
 
   void PrepareOutput(size_t index,
                      std::shared_ptr<PayloadAllocator> allocator,
-                     const UpstreamCallback& callback) override;
+                     UpstreamCallback callback) override;
 
-  void UnprepareOutput(size_t index, const UpstreamCallback& callback) override;
+  void UnprepareOutput(size_t index, UpstreamCallback callback) override;
 
   void FlushInput(size_t index,
                   bool hold_frame,
-                  const DownstreamCallback& callback) override;
+                  DownstreamCallback callback) override;
 
   void FlushOutput(size_t index) override;
 

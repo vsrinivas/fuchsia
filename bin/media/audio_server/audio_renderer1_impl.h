@@ -76,7 +76,7 @@ class AudioRenderer1Impl : public AudioRendererImpl,
   // encapsulation so that AudioPipe does not have to know that we are an
   // AudioRenderer1Impl (just that we implement its interface).
   void OnPacketReceived(fbl::RefPtr<AudioPacketRef> packet);
-  bool OnFlushRequested(const MediaPacketConsumer::FlushCallback& cbk);
+  bool OnFlushRequested(MediaPacketConsumer::FlushCallback cbk);
   fidl::VectorPtr<MediaTypeSet> SupportedMediaTypes();
 
   AudioServerImpl* owner_;

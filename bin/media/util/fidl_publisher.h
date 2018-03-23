@@ -15,7 +15,7 @@ namespace media {
 template <typename TCallback>
 class FidlPublisher {
  public:
-  using CallbackRunner = std::function<void(const TCallback&, uint64_t)>;
+  using CallbackRunner = std::function<void(TCallback, uint64_t)>;
 
   // Sets the callback runner. This method must be called before calling Get
   // or Updated. The callback runner calls a single callback using current
@@ -27,7 +27,7 @@ class FidlPublisher {
 
   // Handles a get request from the client. This method should be called from
   // the fidl 'get' method (e.g. MediaPlayer::GetStatus).
-  void Get(uint64_t version_last_seen, const TCallback& callback) {
+  void Get(uint64_t version_last_seen, TCallback callback) {
     FXL_DCHECK(callback_runner_);
 
     if (version_last_seen < version_) {
@@ -48,7 +48,7 @@ class FidlPublisher {
     std::vector<TCallback> pending_callbacks;
     pending_callbacks_.swap(pending_callbacks);
 
-    for (const TCallback& pending_callback : pending_callbacks) {
+    for (TCallback pending_callback : pending_callbacks) {
       callback_runner_(pending_callback, version_);
     }
   }

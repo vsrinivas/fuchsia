@@ -41,7 +41,7 @@ void MediaComponentFactory::CreateSource(
     fidl::InterfaceHandle<SeekingReader> reader,
     fidl::VectorPtr<MediaTypeSet> media_types,
     fidl::InterfaceRequest<MediaSource> source) {
-  AddProduct(MediaSourceImpl::Create(std::move(reader), media_types,
+  AddProduct(MediaSourceImpl::Create(std::move(reader), std::move(media_types),
                                      std::move(source), this));
 }
 

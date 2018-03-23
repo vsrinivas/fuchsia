@@ -48,7 +48,7 @@ std::shared_ptr<PayloadAllocator> TransformStageImpl::PrepareInput(
 void TransformStageImpl::PrepareOutput(
     size_t index,
     std::shared_ptr<PayloadAllocator> allocator,
-    const UpstreamCallback& callback) {
+    UpstreamCallback callback) {
   FXL_DCHECK(index == 0u);
 
   allocator_ =
@@ -58,7 +58,7 @@ void TransformStageImpl::PrepareOutput(
 }
 
 void TransformStageImpl::UnprepareOutput(size_t index,
-                                         const UpstreamCallback& callback) {
+                                         UpstreamCallback callback) {
   allocator_ = nullptr;
   callback(0);
 }
@@ -90,7 +90,7 @@ void TransformStageImpl::Update() {
 
 void TransformStageImpl::FlushInput(size_t index,
                                     bool hold_frame,
-                                    const DownstreamCallback& callback) {
+                                    DownstreamCallback callback) {
   FXL_DCHECK(index == 0u);
   input_.Flush();
   callback(0);

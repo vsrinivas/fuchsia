@@ -192,14 +192,14 @@ void FakeRenderer::SetProgramRange(uint64_t program,
                                    int64_t min_pts,
                                    int64_t max_pts) {}
 
-void FakeRenderer::Prime(const PrimeCallback& callback) {
+void FakeRenderer::Prime(PrimeCallback callback) {
   SetDemand(demand_min_packets_outstanding_);
   callback();
 }
 
 void FakeRenderer::SetTimelineTransform(
     TimelineTransformPtr timeline_transform,
-    const SetTimelineTransformCallback& callback) {
+    SetTimelineTransformCallback callback) {
   SetTimelineTransformNoReply(std::move(timeline_transform));
 
   set_timeline_transform_callback_ = callback;

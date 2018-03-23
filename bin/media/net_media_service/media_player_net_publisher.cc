@@ -15,16 +15,16 @@ namespace media {
 
 // static
 std::shared_ptr<MediaPlayerNetPublisher> MediaPlayerNetPublisher::Create(
-    const f1dl::StringPtr& service_name,
-    f1dl::InterfaceHandle<MediaPlayer> media_player,
+    fidl::StringPtr service_name,
+    fidl::InterfaceHandle<MediaPlayer> media_player,
     NetMediaServiceImpl* owner) {
   return std::shared_ptr<MediaPlayerNetPublisher>(new MediaPlayerNetPublisher(
       service_name, std::move(media_player), owner));
 }
 
 MediaPlayerNetPublisher::MediaPlayerNetPublisher(
-    const f1dl::StringPtr& service_name,
-    f1dl::InterfaceHandle<MediaPlayer> media_player,
+    fidl::StringPtr service_name,
+    fidl::InterfaceHandle<MediaPlayer> media_player,
     NetMediaServiceImpl* owner)
     : NetMediaServiceImpl::ProductBase(owner),
       media_player_(media_player.Bind()),

@@ -8,6 +8,7 @@
 #include "garnet/bin/media/fidl/fidl_reader.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/util/callback_joiner.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
@@ -35,7 +36,7 @@ MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
 
   status_publisher_.SetCallbackRunner(
       [this](GetStatusCallback callback, uint64_t version) {
-        MediaSourceStatusPtr status = MediaSourceStatus::New();
+        MediaSourceStatus status;
 
         for (std::unique_ptr<Stream>& stream : streams_) {
           if (!stream->producer()->is_connected()) {
@@ -44,18 +45,18 @@ MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
 
           switch (stream->stream_type()->medium()) {
             case StreamType::Medium::kAudio:
-              status->audio_connected = true;
+              status.audio_connected = true;
               break;
             case StreamType::Medium::kVideo:
-              status->video_connected = true;
+              status.video_connected = true;
               break;
             default:
               break;
           }
         }
 
-        status->metadata = metadata_.Clone();
-        status->problem = problem_.Clone();
+        fidl::Clone(metadata_, &status.metadata);
+        fidl::Clone(problem_, &status.problem);
         callback(version, std::move(status));
       });
 
@@ -128,10 +129,9 @@ void MediaDemuxImpl::ReportProblem(const std::string& type,
 
 void MediaDemuxImpl::Describe(DescribeCallback callback) {
   init_complete_.When([this, callback]() {
-    fidl::VectorPtr<MediaTypePtr> result =
-        fidl::VectorPtr<MediaTypePtr>::New(streams_.size());
+    fidl::VectorPtr<MediaType> result;
     for (size_t i = 0; i < streams_.size(); i++) {
-      result->at(i) = fxl::To<MediaTypePtr>(streams_[i]->stream_type());
+      result.push_back(fxl::To<MediaType>(streams_[i]->stream_type()));
     }
 
     callback(std::move(result));
@@ -169,7 +169,7 @@ void MediaDemuxImpl::Flush(bool hold_frame, FlushCallback callback) {
   callback_joiner->WhenJoined(callback);
 }
 
-void MediaDemuxImpl::Seek(int64_t position, const SeekCallback& callback) {
+void MediaDemuxImpl::Seek(int64_t position, SeekCallback callback) {
   RCHECK(init_complete_.occurred());
 
   demux_->Seek(position, [this, callback]() {

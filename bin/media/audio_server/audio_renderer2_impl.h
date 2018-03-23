@@ -87,7 +87,7 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
     uint32_t flags() final { return packet_.flags; }
 
     AudioPacketRefV2(fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
-                     const AudioRenderer2::SendPacketCallback& callback,
+                     AudioRenderer2::SendPacketCallback callback,
                      AudioPacket packet,
                      AudioServerImpl* server,
                      uint32_t frac_frame_len,

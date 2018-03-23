@@ -7,6 +7,7 @@
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"
 #include "lib/fidl/cpp/optional.h"
+#include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
@@ -31,16 +32,18 @@ MediaSinkImpl::MediaSinkImpl(
       renderer_(renderer_handle.Bind()) {
   FXL_DCHECK(renderer_);
 
-  renderer_->GetSupportedMediaTypes([this](fidl::VectorPtr<MediaTypeSet>
-                                               supported_media_types) {
-    FXL_DCHECK(supported_media_types);
+  renderer_->GetSupportedMediaTypes(
+      [this](fidl::VectorPtr<MediaTypeSet> supported_media_types) {
+        FXL_DCHECK(supported_media_types);
 
-    supported_stream_types_ = fxl::To<
-        std::unique_ptr<std::vector<std::unique_ptr<media::StreamTypeSet>>>>(
-        supported_media_types);
+        for (auto it = supported_media_types->begin();
+             it != supported_media_types->end(); ++it) {
+          supported_stream_types_.push_back(
+              fxl::To<std::unique_ptr<media::StreamTypeSet>>(*it));
+        }
 
-    got_supported_stream_types_.Occur();
-  });
+        got_supported_stream_types_.Occur();
+      });
 }
 
 MediaSinkImpl::~MediaSinkImpl() {}

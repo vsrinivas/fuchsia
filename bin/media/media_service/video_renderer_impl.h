@@ -8,12 +8,11 @@
 #include <memory>
 #include <vector>
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/media/video/video_frame_source.h"
 #include "lib/fidl/cpp/binding.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 #include "lib/ui/scenic/client/host_image_cycler.h"
 #include "lib/ui/view_framework/base_view.h"
 
@@ -34,8 +33,9 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
   void Bind(fidl::InterfaceRequest<VideoRenderer> request);
 
   // Creates a view.
-  void CreateView(fidl::InterfacePtr<views_v1::ViewManager> view_manager,
-                  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
+  void CreateView(
+      fidl::InterfacePtr<views_v1::ViewManager> view_manager,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   // Sets a callback that's called when the results of |GetSize| and/or
   // |GetPixelAspectRatio| may have changed.
@@ -58,7 +58,8 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
 
    private:
     // |BaseView|:
-    void OnSceneInvalidated(images::PresentationInfoPtr presentation_info) override;
+    void OnSceneInvalidated(
+        images::PresentationInfo presentation_info) override;
 
     std::shared_ptr<VideoFrameSource> video_frame_source_;
     TimelineFunction timeline_function_;
@@ -73,10 +74,9 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
       MediaComponentFactory* owner);
 
   // MediaRenderer implementation.
-  void GetSupportedMediaTypes(
-      GetSupportedMediaTypesCallback callback) override;
+  void GetSupportedMediaTypes(GetSupportedMediaTypesCallback callback) override;
 
-  void SetMediaType(MediaTypePtr media_type) override;
+  void SetMediaType(MediaType media_type) override;
 
   void GetPacketConsumer(fidl::InterfaceRequest<MediaPacketConsumer>
                              packet_consumer_request) override;
@@ -88,8 +88,8 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
   void GetStatus(uint64_t version_last_seen,
                  GetStatusCallback callback) override;
 
-  void CreateView(
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
+  void CreateView(fidl::InterfaceRequest<views_v1_token::ViewOwner>
+                      view_owner_request) override;
 
   // Returns the media types supported by this video renderer.
   fidl::VectorPtr<MediaTypeSet> SupportedMediaTypes();

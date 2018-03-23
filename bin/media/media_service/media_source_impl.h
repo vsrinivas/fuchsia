@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <fuchsia/cpp/media.h>
+
 #include "garnet/bin/media/fidl/fidl_packet_producer.h"
 #include "garnet/bin/media/framework/types/stream_type.h"
 #include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"
@@ -24,7 +25,7 @@ class MediaSourceImpl : public MediaComponentFactory::Product<MediaSource>,
  public:
   static std::shared_ptr<MediaSourceImpl> Create(
       fidl::InterfaceHandle<SeekingReader> reader,
-      const fidl::VectorPtr<MediaTypeSet>& allowed_media_types,
+      fidl::VectorPtr<MediaTypeSet> allowed_media_types,
       fidl::InterfaceRequest<MediaSource> request,
       MediaComponentFactory* owner);
 
@@ -42,11 +43,11 @@ class MediaSourceImpl : public MediaComponentFactory::Product<MediaSource>,
 
   void Flush(bool hold_frame, FlushCallback callback) override;
 
-  void Seek(int64_t position, const SeekCallback& callback) override;
+  void Seek(int64_t position, SeekCallback callback) override;
 
  private:
   MediaSourceImpl(fidl::InterfaceHandle<SeekingReader> reader,
-                  const fidl::VectorPtr<MediaTypeSet>& allowed_media_types,
+                  fidl::VectorPtr<MediaTypeSet> allowed_media_types,
                   fidl::InterfaceRequest<MediaSource> request,
                   MediaComponentFactory* owner);
 
@@ -56,7 +57,7 @@ class MediaSourceImpl : public MediaComponentFactory::Product<MediaSource>,
            MediaComponentFactory* factory,
            const ProducerGetter& producer_getter,
            std::unique_ptr<StreamType> stream_type,
-           const std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>&
+           const fidl::VectorPtr<std::unique_ptr<StreamTypeSet>>&
                allowed_stream_types,
            const std::function<void()>& callback);
 
@@ -79,8 +80,7 @@ class MediaSourceImpl : public MediaComponentFactory::Product<MediaSource>,
   void HandleDemuxStatusUpdates(uint64_t version = kInitialStatus,
                                 MediaSourceStatusPtr status = nullptr);
 
-  std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>
-      allowed_stream_types_;
+  fidl::VectorPtr<std::unique_ptr<StreamTypeSet>> allowed_stream_types_;
   MediaSourcePtr demux_;
   Incident init_complete_;
   std::vector<std::unique_ptr<Stream>> streams_;

@@ -31,11 +31,10 @@ MediaTimelineControllerImpl::MediaTimelineControllerImpl(
       consumer_binding_(this) {
   status_publisher_.SetCallbackRunner(
       [this](GetStatusCallback callback, uint64_t version) {
-        MediaTimelineControlPointStatusPtr status =
-            MediaTimelineControlPointStatus::New();
-        status->timeline_transform =
-            static_cast<TimelineTransformPtr>(current_timeline_function_);
-        status->end_of_stream = end_of_stream_;
+        MediaTimelineControlPointStatus status;
+        status.timeline_transform =
+            current_timeline_function_.ToTimelineTransform();
+        status.end_of_stream = end_of_stream_;
         callback(version, std::move(status));
       });
 }
@@ -96,7 +95,7 @@ void MediaTimelineControllerImpl::SetProgramRange(uint64_t program,
   }
 }
 
-void MediaTimelineControllerImpl::Prime(const PrimeCallback& callback) {
+void MediaTimelineControllerImpl::Prime(PrimeCallback callback) {
   std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
 
   for (const std::unique_ptr<ControlPointState>& control_point_state :
@@ -108,10 +107,9 @@ void MediaTimelineControllerImpl::Prime(const PrimeCallback& callback) {
 }
 
 void MediaTimelineControllerImpl::SetTimelineTransform(
-    TimelineTransformPtr timeline_transform,
-    const SetTimelineTransformCallback& callback) {
-  RCHECK(timeline_transform);
-  RCHECK(timeline_transform->reference_delta != 0);
+    TimelineTransform timeline_transform,
+    SetTimelineTransformCallback callback) {
+  RCHECK(timeline_transform.reference_delta != 0);
 
   // There can only be one SetTimelineTransform transition pending at any
   // moment, so a new SetTimelineTransform call that arrives before a previous
@@ -136,18 +134,17 @@ void MediaTimelineControllerImpl::SetTimelineTransform(
     pending_transition->Cancel();
   }
 
-  if (timeline_transform->subject_time != kUnspecifiedTime) {
+  if (timeline_transform.subject_time != kUnspecifiedTime) {
     // We're seeking, so we may not be at end-of-stream anymore. The control
     // sites will signal end-of-stream again if we are.
     end_of_stream_ = false;
   }
 
   // These will be recorded as part of the new TimelineFunction.
-  int64_t reference_time =
-      timeline_transform->reference_time == kUnspecifiedTime
-          ? (Timeline::local_now() + kDefaultLeadTime)
-          : timeline_transform->reference_time;
-  int64_t subject_time = timeline_transform->subject_time;
+  int64_t reference_time = timeline_transform.reference_time == kUnspecifiedTime
+                               ? (Timeline::local_now() + kDefaultLeadTime)
+                               : timeline_transform.reference_time;
+  int64_t subject_time = timeline_transform.subject_time;
 
   // Determine the actual subject time, inferring it if it wasn't specified.
   int64_t actual_subject_time = subject_time == kUnspecifiedTime
@@ -165,24 +162,23 @@ void MediaTimelineControllerImpl::SetTimelineTransform(
   // Record the new pending transition.
   std::shared_ptr<TimelineTransition> transition =
       std::shared_ptr<TimelineTransition>(new TimelineTransition(
-          actual_subject_time, reference_time,
-          timeline_transform->subject_delta,
-          timeline_transform->reference_delta, callback));
+          actual_subject_time, reference_time, timeline_transform.subject_delta,
+          timeline_transform.reference_delta, callback));
 
   pending_transition_ = transition;
-
-  TimelineTransform transform_to_send;
-  transform_to_send.subject_time = subject_time;
-  transform_to_send.reference_time = reference_time;
-  transform_to_send.subject_delta = timeline_transform->subject_delta;
-  transform_to_send.reference_delta = timeline_transform->reference_delta;
 
   // Initiate the transition for each control point.
   for (const std::unique_ptr<ControlPointState>& control_point_state :
        control_point_states_) {
+    TimelineTransform transform_to_send;
+    transform_to_send.subject_time = subject_time;
+    transform_to_send.reference_time = reference_time;
+    transform_to_send.subject_delta = timeline_transform.subject_delta;
+    transform_to_send.reference_delta = timeline_transform.reference_delta;
+
     control_point_state->end_of_stream_ = false;
     control_point_state->consumer_->SetTimelineTransform(
-        transform_to_send.Clone(), transition->NewCallback());
+        std::move(transform_to_send), transition->NewCallback());
   }
 
   // If and when this transition is complete, adopt the new TimelineFunction
@@ -194,7 +190,7 @@ void MediaTimelineControllerImpl::SetTimelineTransform(
 }
 
 void MediaTimelineControllerImpl::SetTimelineTransformNoReply(
-    TimelineTransformPtr timeline_transform) {
+    TimelineTransform timeline_transform) {
   SetTimelineTransform(std::move(timeline_transform), [](bool completed) {});
 }
 
@@ -246,7 +242,7 @@ MediaTimelineControllerImpl::TimelineTransition::TimelineTransition(
     int64_t reference_time,
     uint32_t subject_delta,
     uint32_t reference_delta,
-    const SetTimelineTransformCallback& callback)
+    SetTimelineTransformCallback callback)
     : new_timeline_function_(subject_time,
                              reference_time,
                              subject_delta,

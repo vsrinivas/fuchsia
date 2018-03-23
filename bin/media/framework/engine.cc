@@ -13,7 +13,7 @@ Engine::~Engine() {}
 void Engine::PrepareInput(Input* input) {
   FXL_DCHECK(input);
   VisitUpstream(input, [](Input* input, Output* output,
-                          const StageImpl::UpstreamCallback& callback) {
+                          StageImpl::UpstreamCallback callback) {
     FXL_DCHECK(input);
     FXL_DCHECK(output);
     FXL_DCHECK(!input->prepared());
@@ -27,7 +27,7 @@ void Engine::PrepareInput(Input* input) {
 void Engine::UnprepareInput(Input* input) {
   FXL_DCHECK(input);
   VisitUpstream(input, [](Input* input, Output* output,
-                          const StageImpl::UpstreamCallback& callback) {
+                          StageImpl::UpstreamCallback callback) {
     FXL_DCHECK(input);
     FXL_DCHECK(output);
     FXL_DCHECK(input->prepared());
@@ -44,7 +44,7 @@ void Engine::FlushOutput(Output* output, bool hold_frame) {
 
   VisitDownstream(
       output, [hold_frame](Output* output, Input* input,
-                           const StageImpl::DownstreamCallback& callback) {
+                           StageImpl::DownstreamCallback callback) {
         FXL_DCHECK(output);
         FXL_DCHECK(input);
         FXL_DCHECK(input->prepared());

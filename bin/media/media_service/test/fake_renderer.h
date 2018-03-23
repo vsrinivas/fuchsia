@@ -97,12 +97,12 @@ class FakeRenderer : public MediaPacketConsumerBase,
                        int64_t min_pts,
                        int64_t max_pts) override;
 
-  void Prime(const PrimeCallback& callback) override;
+  void Prime(PrimeCallback callback) override;
 
   // TimelineConsumer implementation.
   void SetTimelineTransform(
       TimelineTransformPtr timeline_transform,
-      const SetTimelineTransformCallback& callback) override;
+      SetTimelineTransformCallback callback) override;
 
   void SetTimelineTransformNoReply(
       TimelineTransformPtr timeline_transform) override;

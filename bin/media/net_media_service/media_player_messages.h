@@ -46,7 +46,7 @@ struct MediaPlayerTimeCheckResponse {
 
 // Sent by the proxy to request a url change.
 struct MediaPlayerSetHttpSourceRequest {
-  f1dl::StringPtr url_;
+  fidl::StringPtr url_;
 };
 
 // Play and Pause have no parameters, so there is no MediaPlayerPlayRequest
@@ -73,7 +73,7 @@ struct MediaPlayerInMessage {
   static std::unique_ptr<MediaPlayerInMessage> TimeCheckRequest(
       int64_t requestor_time);
   static std::unique_ptr<MediaPlayerInMessage> SetHttpSourceRequest(
-      const f1dl::StringPtr& url);
+      fidl::StringPtr url);
   static std::unique_ptr<MediaPlayerInMessage> PlayRequest();
   static std::unique_ptr<MediaPlayerInMessage> PauseRequest();
   static std::unique_ptr<MediaPlayerInMessage> SeekRequest(int64_t position);
@@ -103,7 +103,7 @@ struct MediaPlayerOutMessage {
 };
 
 // Serialization overrides.
-Serializer& operator<<(Serializer& serializer, const f1dl::StringPtr& value);
+Serializer& operator<<(Serializer& serializer, fidl::StringPtr value);
 Serializer& operator<<(Serializer& serializer, MediaPlayerInMessageType value);
 Serializer& operator<<(Serializer& serializer, MediaPlayerOutMessageType value);
 Serializer& operator<<(
@@ -134,7 +134,7 @@ Serializer& operator<<(Serializer& serializer,
                        const std::unique_ptr<MediaPlayerOutMessage>& value);
 
 // Deserialization overrides.
-Deserializer& operator>>(Deserializer& deserializer, f1dl::StringPtr& value);
+Deserializer& operator>>(Deserializer& deserializer, fidl::StringPtr& value);
 Deserializer& operator>>(Deserializer& deserializer,
                          MediaPlayerInMessageType& value);
 Deserializer& operator>>(Deserializer& deserializer,

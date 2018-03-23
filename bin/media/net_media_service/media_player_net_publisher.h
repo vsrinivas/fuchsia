@@ -19,15 +19,15 @@ namespace media {
 class MediaPlayerNetPublisher : public NetMediaServiceImpl::ProductBase {
  public:
   static std::shared_ptr<MediaPlayerNetPublisher> Create(
-      const f1dl::StringPtr& service_name,
-      f1dl::InterfaceHandle<MediaPlayer> media_player,
+      fidl::StringPtr service_name,
+      fidl::InterfaceHandle<MediaPlayer> media_player,
       NetMediaServiceImpl* owner);
 
   ~MediaPlayerNetPublisher() override;
 
  private:
-  MediaPlayerNetPublisher(const f1dl::StringPtr& service_name,
-                          f1dl::InterfaceHandle<MediaPlayer> media_player,
+  MediaPlayerNetPublisher(fidl::StringPtr service_name,
+                          fidl::InterfaceHandle<MediaPlayer> media_player,
                           NetMediaServiceImpl* owner);
 
   MediaPlayerPtr media_player_;

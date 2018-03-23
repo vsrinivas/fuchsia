@@ -4,13 +4,16 @@
 
 #include "garnet/bin/media/media_service/media_player_impl.h"
 
+#include <fuchsia/cpp/media.h>
+
 #include "garnet/bin/media/fidl/fidl_formatting.h"
 #include "garnet/bin/media/media_service/video_renderer_impl.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/fidl/cpp/clone.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline.h"
 
 namespace media {
@@ -30,53 +33,53 @@ MediaPlayerImpl::MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
                                                              owner) {
   FXL_DCHECK(owner);
 
-  status_publisher_.SetCallbackRunner(
-      [this](GetStatusCallback callback, uint64_t version) {
-        MediaPlayerStatusPtr status = MediaPlayerStatus::New();
-        status->timeline_transform =
-            static_cast<TimelineTransformPtr>(timeline_function_);
-        status->end_of_stream = end_of_stream_;
+  status_publisher_.SetCallbackRunner([this](GetStatusCallback callback,
+                                             uint64_t version) {
+    MediaPlayerStatus status;
+    status.timeline_transform =
+        fidl::MakeOptional(timeline_function_.ToTimelineTransform());
+    status.end_of_stream = end_of_stream_;
 
-        if (stream_types_) {
-          for (const MediaTypePtr& stream_type : *stream_types_) {
-            switch (stream_type->medium) {
-              case MediaTypeMedium::AUDIO:
-                status->content_has_audio = true;
-                break;
-              case MediaTypeMedium::VIDEO:
-                status->content_has_video = true;
-                break;
-              default:
-                break;
-            }
-          }
+    if (stream_types_) {
+      for (const MediaType& stream_type : *stream_types_) {
+        switch (stream_type.medium) {
+          case MediaTypeMedium::AUDIO:
+            status.content_has_audio = true;
+            break;
+          case MediaTypeMedium::VIDEO:
+            status.content_has_video = true;
+            break;
+          default:
+            break;
         }
+      }
+    }
 
-        if (source_status_) {
-          status->audio_connected = source_status_->audio_connected;
-          status->video_connected = source_status_->video_connected;
-          status->metadata = source_status_->metadata.Clone();
+    if (source_status_) {
+      status.audio_connected = source_status_->audio_connected;
+      status.video_connected = source_status_->video_connected;
+      fidl::Clone(source_status_->metadata, &status.metadata);
 
-          if (video_renderer_impl_) {
-            status->video_size = video_renderer_impl_->GetSize().Clone();
-            status->pixel_aspect_ratio =
-                video_renderer_impl_->GetPixelAspectRatio().Clone();
-          }
+      if (video_renderer_impl_) {
+        status.video_size = fidl::MakeOptional(video_renderer_impl_->GetSize());
+        status.pixel_aspect_ratio =
+            fidl::MakeOptional(video_renderer_impl_->GetPixelAspectRatio());
+      }
 
-          if (source_status_->problem) {
-            status->problem = source_status_->problem.Clone();
-          } else if (state_ >= State::kFlushed && !status->audio_connected &&
-                     !status->video_connected) {
-            // The source isn't reporting a problem, but neither audio nor video
-            // is connected. We report this as a problem so the client doesn't
-            // have to check these values separately.
-            status->problem = Problem::New();
-            status->problem->type = kProblemMediaTypeNotSupported;
-          }
-        }
+      if (source_status_->problem) {
+        fidl::Clone(source_status_->problem, &status.problem);
+      } else if (state_ >= State::kFlushed && !status.audio_connected &&
+                 !status.video_connected) {
+        // The source isn't reporting a problem, but neither audio nor video
+        // is connected. We report this as a problem so the client doesn't
+        // have to check these values separately.
+        status.problem = Problem::New();
+        status.problem->type = kProblemMediaTypeNotSupported;
+      }
+    }
 
-        callback(version, std::move(status));
-      });
+    callback(version, std::move(status));
+  });
 
   state_ = State::kInactive;
 
@@ -107,7 +110,7 @@ void MediaPlayerImpl::MaybeCreateSource() {
   HandleSourceStatusUpdates();
 
   source_->Describe(fxl::MakeCopyable(
-      [this](fidl::VectorPtr<MediaTypePtr> stream_types) mutable {
+      [this](fidl::VectorPtr<MediaType> stream_types) mutable {
         stream_types_ = std::move(stream_types);
         ConnectSinks();
       }));
@@ -151,10 +154,10 @@ void MediaPlayerImpl::ConnectSinks() {
 
   size_t stream_index = 0;
 
-  for (const MediaTypePtr& stream_type : *stream_types_) {
-    MaybeCreateRenderer(stream_type->medium);
+  for (const MediaType& stream_type : *stream_types_) {
+    MaybeCreateRenderer(stream_type.medium);
 
-    auto iter = streams_by_medium_.find(stream_type->medium);
+    auto iter = streams_by_medium_.find(stream_type.medium);
     if (iter != streams_by_medium_.end()) {
       auto& stream = iter->second;
 
@@ -162,7 +165,7 @@ void MediaPlayerImpl::ConnectSinks() {
         // TODO(dalesat): How do we choose the right stream?
         FXL_DLOG(INFO) << "Stream " << stream_index
                        << " redundant, already connected to sink with medium "
-                       << stream_type->medium;
+                       << stream_type.medium;
         ++stream_index;
         continue;
       }
@@ -182,7 +185,7 @@ void MediaPlayerImpl::ConnectSinks() {
 
 void MediaPlayerImpl::PrepareStream(Stream* stream,
                                     size_t index,
-                                    const MediaTypePtr& input_media_type,
+                                    const MediaType& input_media_type,
                                     const std::function<void()>& callback) {
   if (!stream->sink_) {
     FXL_DCHECK(stream->renderer_handle_);
@@ -195,8 +198,10 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
     timeline_controller_->AddControlPoint(std::move(timeline_control_point));
   }
 
+  MediaType media_type;
+  fidl::Clone(input_media_type, &media_type);
   stream->sink_->ConsumeMediaType(
-      input_media_type.Clone(),
+      std::move(media_type),
       [this, stream, index,
        callback](fidl::InterfaceHandle<MediaPacketConsumer> consumer) {
         if (!consumer) {
@@ -263,7 +268,7 @@ void MediaPlayerImpl::Update() {
         if (!reader_transition_pending_) {
           return;
         }
-      // Falls through.
+        // Falls through.
 
       case State::kFlushed:
         // Presentation time is not progressing, and the pipeline is clear of
@@ -455,7 +460,7 @@ void MediaPlayerImpl::SetTimelineTransform(
     const TimelineConsumer::SetTimelineTransformCallback callback) {
   TimelineTransformPtr timeline_transform =
       CreateTimelineTransform(rate, reference_time);
-  timeline_consumer_->SetTimelineTransform(std::move(timeline_transform),
+  timeline_consumer_->SetTimelineTransform(std::move(*timeline_transform),
                                            callback);
 }
 
@@ -475,7 +480,7 @@ TimelineTransformPtr MediaPlayerImpl::CreateTimelineTransform(
   return result;
 }
 
-void MediaPlayerImpl::SetHttpSource(const fidl::StringPtr& http_url) {
+void MediaPlayerImpl::SetHttpSource(fidl::StringPtr http_url) {
   fidl::InterfaceHandle<SeekingReader> reader;
   owner()->CreateHttpReader(http_url, reader.NewRequest());
   SetReaderSource(std::move(reader));
@@ -591,10 +596,10 @@ void MediaPlayerImpl::HandleSourceStatusUpdates(uint64_t version,
     status_publisher_.SendUpdates();
   }
 
-  source_->GetStatus(version,
-                     [this](uint64_t version, MediaSourceStatusPtr status) {
-                       HandleSourceStatusUpdates(version, std::move(status));
-                     });
+  source_->GetStatus(version, [this](uint64_t version,
+                                     MediaSourceStatus status) {
+    HandleSourceStatusUpdates(version, fidl::MakeOptional(std::move(status)));
+  });
 }
 
 void MediaPlayerImpl::HandleTimelineControlPointStatusUpdates(

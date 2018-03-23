@@ -40,7 +40,7 @@ std::shared_ptr<PayloadAllocator> ActiveSinkStageImpl::PrepareInput(
 void ActiveSinkStageImpl::PrepareOutput(
     size_t index,
     std::shared_ptr<PayloadAllocator> allocator,
-    const UpstreamCallback& callback) {
+    UpstreamCallback callback) {
   FXL_CHECK(false) << "PrepareOutput called on sink";
 }
 
@@ -70,7 +70,7 @@ void ActiveSinkStageImpl::Update() {
 
 void ActiveSinkStageImpl::FlushInput(size_t index,
                                      bool hold_frame,
-                                     const DownstreamCallback& callback) {
+                                     DownstreamCallback callback) {
   FXL_DCHECK(index == 0u);
   FXL_DCHECK(sink_);
   input_.Flush();

@@ -35,11 +35,11 @@ class Engine {
   using UpstreamVisitor =
       std::function<void(Input* input,
                          Output* output,
-                         const StageImpl::UpstreamCallback& callback)>;
+                         StageImpl::UpstreamCallback callback)>;
   using DownstreamVisitor =
       std::function<void(Output* output,
                          Input* input,
-                         const StageImpl::DownstreamCallback& callback)>;
+                         StageImpl::DownstreamCallback callback)>;
 
   void VisitUpstream(Input* input, const UpstreamVisitor& visitor);
 

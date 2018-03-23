@@ -47,7 +47,7 @@ std::shared_ptr<PayloadAllocator> MultistreamSourceStageImpl::PrepareInput(
 void MultistreamSourceStageImpl::PrepareOutput(
     size_t index,
     std::shared_ptr<PayloadAllocator> allocator,
-    const UpstreamCallback& callback) {
+    UpstreamCallback callback) {
   FXL_DCHECK(index < outputs_.size());
 
   if (allocator != nullptr) {
@@ -60,7 +60,7 @@ void MultistreamSourceStageImpl::PrepareOutput(
 
 void MultistreamSourceStageImpl::UnprepareOutput(
     size_t index,
-    const UpstreamCallback& callback) {
+    UpstreamCallback callback) {
   FXL_DCHECK(index < outputs_.size());
   outputs_[index].SetCopyAllocator(nullptr);
 }
@@ -105,7 +105,7 @@ void MultistreamSourceStageImpl::Update() {
 void MultistreamSourceStageImpl::FlushInput(
     size_t index,
     bool hold_frame,
-    const DownstreamCallback& callback) {
+    DownstreamCallback callback) {
   FXL_CHECK(false) << "FlushInput called on source";
 }
 

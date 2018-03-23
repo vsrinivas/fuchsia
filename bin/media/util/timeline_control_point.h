@@ -21,7 +21,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
  public:
   using ProgramRangeSetCallback =
       std::function<void(uint64_t, int64_t, int64_t)>;
-  using PrimeRequestedCallback = std::function<void(const PrimeCallback&)>;
+  using PrimeRequestedCallback = std::function<void(PrimeCallback)>;
   using ProgressStartedCallback = std::function<void()>;
 
   TimelineControlPoint();
@@ -38,17 +38,17 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   void Reset();
 
   // Sets a callback to be called when priming is requested.
-  void SetProgramRangeSetCallback(const ProgramRangeSetCallback& callback) {
+  void SetProgramRangeSetCallback(ProgramRangeSetCallback callback) {
     program_range_set_callback_ = callback;
   }
 
   // Sets a callback to be called when priming is requested.
-  void SetPrimeRequestedCallback(const PrimeRequestedCallback& callback) {
+  void SetPrimeRequestedCallback(PrimeRequestedCallback callback) {
     prime_requested_callback_ = callback;
   }
 
   // Sets a callback to be called when priming is requested.
-  void SetProgressStartedCallback(const ProgressStartedCallback& callback) {
+  void SetProgressStartedCallback(ProgressStartedCallback callback) {
     progress_started_callback_ = callback;
   }
 

@@ -44,7 +44,7 @@ class MediaDemuxImpl : public MediaComponentFactory::Product<MediaSource>,
 
   void Flush(bool hold_frame, FlushCallback callback) override;
 
-  void Seek(int64_t position, const SeekCallback& callback) override;
+  void Seek(int64_t position, SeekCallback callback) override;
 
  private:
   MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,

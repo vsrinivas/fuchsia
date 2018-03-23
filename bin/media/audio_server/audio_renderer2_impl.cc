@@ -690,7 +690,7 @@ void AudioRenderer2Impl::ReportNewMinClockLeadTime() {
 
 AudioRenderer2Impl::AudioPacketRefV2::AudioPacketRefV2(
         fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
-        const AudioRenderer2::SendPacketCallback& callback,
+        AudioRenderer2::SendPacketCallback callback,
         AudioPacket packet,
         AudioServerImpl* server,
         uint32_t frac_frame_len,
