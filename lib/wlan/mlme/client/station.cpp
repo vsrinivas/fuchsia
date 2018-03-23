@@ -1187,7 +1187,7 @@ bool Station::IsQosReady() const {
 
     // Aruba / Ubiquiti are confirmed to be compatible with QoS field for the BlockAck session,
     // independently of 40MHz operation.
-    return false;
+    return true;
 }
 
 HtCapabilities Station::BuildHtCapabilities() const {

@@ -3988,9 +3988,9 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
     txwi0.set_mmps(0);
     txwi0.set_cfack(0);
     txwi0.set_ts(0);  // TODO(porce): Set it 1 for beacon or proberesp.
-    txwi0.set_ampdu(0);
 
     // TODO(NET-567): Use the outcome of the association negotiation
+    txwi0.set_ampdu(1);
     txwi0.set_mpdu_density(Txwi0::kFourUsec);  // Aruba
     txwi0.set_txop(Txwi0::kHtTxop);
 
