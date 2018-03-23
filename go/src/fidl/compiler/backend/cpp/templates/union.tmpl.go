@@ -22,6 +22,7 @@ class {{ .Name }} {
   {{- range $index, $member := .Members }}
     {{ .TagName }} = {{ $index }},
   {{- end }}
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }
