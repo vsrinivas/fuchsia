@@ -5,8 +5,8 @@
 package bindings2
 
 import (
-	"errors"
 	"log"
+	"sync"
 	"syscall/zx"
 	"syscall/zx/dispatch"
 )
@@ -27,19 +27,19 @@ func Serve() {
 	d.Serve()
 }
 
-// Binding binds the implementation of a Stub to a channel.
+// Binding binds the implementation of a Stub to a Channel.
 //
-// A Binding listens for incoming messages on the channel, decodes them, and
+// A Binding listens for incoming messages on the Channel, decodes them, and
 // asks the Stub to dispatch to the appropriate implementation of the interface.
 // If the message expects a reply, the Binding will also encode the reply and
-// send it back over the channel.
+// send it back over the Channel.
 type Binding struct {
-	// stub is a wrapper around an implementation of a FIDL interface which
+	// Stub is a wrapper around an implementation of a FIDL interface which
 	// knows how to dispatch to a method by ordinal.
-	stub Stub
+	Stub Stub
 
-	// channel is the channel primitive to which the stub is bound.
-	channel zx.Channel
+	// Channel is the Channel primitive to which the Stub is bound.
+	Channel zx.Channel
 
 	// id is an extra bit of state about the underlying wait in the
 	// process-local dispatcher so we can unbind later.
@@ -50,62 +50,8 @@ type Binding struct {
 	errHandler func(error)
 }
 
-// NewBinding returns a new Binding with only the Stub set.
-//
-// One must explicitly call Bind on the Binding to bind a channel to the Stub.
-func NewBinding(s Stub) *Binding {
-	return &Binding{stub: s}
-}
-
-// dispatch reads from the underlying channel and dispatches into the stub.
-//
-// Returns whether we should continue to wait before reading more from the channel,
-// and potentially an error.
-func (b *Binding) dispatch() (bool, error) {
-	// Allocate maximum size of a message on the stack.
-	var respb [zx.ChannelMaxMessageBytes]byte
-	var resph [zx.ChannelMaxMessageHandles]zx.Handle
-	nb, nh, err := b.channel.Read(respb[:], resph[:], 0)
-	if err != nil {
-		zxErr, ok := err.(zx.Error)
-		if ok && zxErr.Status == zx.ErrShouldWait {
-			return true, nil
-		}
-		return false, nil
-	}
-	var header MessageHeader
-	if err := UnmarshalHeader(respb[:], &header); err != nil {
-		return false, err
-	}
-	start := MessageHeaderSize
-	p, err := b.stub.Dispatch(header.Ordinal, respb[start:start+int(nb)], resph[:nh])
-	if err != nil {
-		return false, err
-	}
-	// Message has no response.
-	if p == nil {
-		return false, nil
-	}
-	cnb, cnh, err := MarshalMessage(&header, p, respb[:], resph[:])
-	if err != nil {
-		return false, err
-	}
-	if err := b.channel.Write(respb[:cnb], resph[:cnh], 0); err != nil {
-		return false, err
-	}
-	return false, nil
-}
-
-// Bind binds a channel to the stub. A Binding may only be bound to one
-// channel at at a time.
-//
-// Bind also accepts an error handler which will be executed when a
-// connection error occurs.
-func (b *Binding) Bind(c zx.Channel, e func(error)) error {
-	if b.Bound() {
-		return errors.New("binding already bound")
-	}
-	b.channel = c
+// Init initializes a Binding.
+func (b *Binding) Init(e func(error)) error {
 	b.errHandler = e
 
 	// Declare the wait handler as a closure.
@@ -131,8 +77,13 @@ func (b *Binding) Bind(c zx.Channel, e func(error)) error {
 		return dispatch.WaitFinished
 	}
 
-	// Start the wait on the channel.
-	id, err := d.BeginWait(zx.Handle(c), zx.SignalChannelReadable|zx.SignalChannelPeerClosed, 0, h)
+	// Start the wait on the Channel.
+	id, err := d.BeginWait(
+		zx.Handle(b.Channel),
+		zx.SignalChannelReadable|zx.SignalChannelPeerClosed,
+		0,
+		h,
+	)
 	if err != nil {
 		return err
 	}
@@ -140,52 +91,103 @@ func (b *Binding) Bind(c zx.Channel, e func(error)) error {
 	return nil
 }
 
-// Bound returns true if the Binding already has a channel bound to it.
-func (b *Binding) Bound() bool {
-	return b.id != nil
+// dispatch reads from the underlying Channel and dispatches into the Stub.
+//
+// Returns whether we should continue to wait before reading more from the Channel,
+// and potentially an error.
+func (b *Binding) dispatch() (bool, error) {
+	// Allocate maximum size of a message on the stack.
+	var respb [zx.ChannelMaxMessageBytes]byte
+	var resph [zx.ChannelMaxMessageHandles]zx.Handle
+	nb, nh, err := b.Channel.Read(respb[:], resph[:], 0)
+	if err != nil {
+		zxErr, ok := err.(zx.Error)
+		if ok && zxErr.Status == zx.ErrShouldWait {
+			return true, nil
+		}
+		return false, nil
+	}
+	var header MessageHeader
+	if err := UnmarshalHeader(respb[:], &header); err != nil {
+		return false, err
+	}
+	start := MessageHeaderSize
+	p, err := b.Stub.Dispatch(header.Ordinal, respb[start:start+int(nb)], resph[:nh])
+	if err != nil {
+		return false, err
+	}
+	// Message has no response.
+	if p == nil {
+		return false, nil
+	}
+	cnb, cnh, err := MarshalMessage(&header, p, respb[:], resph[:])
+	if err != nil {
+		return false, err
+	}
+	if err := b.Channel.Write(respb[:cnb], resph[:cnh], 0); err != nil {
+		return false, err
+	}
+	return false, nil
 }
 
-// Unbind cancels an outstanding waits, resets the Binding's state, and
-// closes the bound channel.
-func (b *Binding) Unbind() error {
-	if !b.Bound() {
-		return nil
-	}
+// Close cancels an outstanding waits, resets the Binding's state, and
+// closes the bound Channel.
+func (b *Binding) Close() error {
 	if err := d.CancelWait(*b.id); err != nil {
 		return err
 	}
 	b.id = nil
-	return b.channel.Close()
+	return b.Channel.Close()
 }
 
 // BindingSet is a managed set of Bindings which know how to unbind and
 // remove themselves in the event of a connection error.
 type BindingSet struct {
-	bindings []*Binding
+	mu sync.Mutex
+	Bindings []*Binding
 }
 
-// Add creates a new Binding and adds it to the set.
+// Add creates a new Binding, initializes it, and adds it to the set.
 func (b *BindingSet) Add(s Stub, c zx.Channel) error {
-	binding := NewBinding(s)
-	err := binding.Bind(c, func(err error) {
+	binding := &Binding{
+		Stub: s,
+		Channel: c,
+	}
+	err := binding.Init(func(err error) {
 		log.Println(err)
 		b.Remove(binding)
 	})
 	if err != nil {
 		return err
 	}
-	b.bindings = append(b.bindings, binding)
+	b.mu.Lock()
+	b.Bindings = append(b.Bindings, binding)
+	b.mu.Unlock()
 	return nil
 }
 
 // Remove removes a Binding from the set.
 func (b *BindingSet) Remove(binding *Binding) error {
-	for i := 0; i < len(b.bindings); i++ {
-		if b.bindings[i] != binding {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for i := 0; i < len(b.Bindings); i++ {
+		if b.Bindings[i] != binding {
 			continue
 		}
-		b.bindings = append(b.bindings[:i], b.bindings[i+1:]...)
+		// Swap remove the binding.
+		b.Bindings[i] = b.Bindings[len(b.Bindings)-1]
+		b.Bindings = b.Bindings[:len(b.Bindings)-1]
 		break
 	}
-	return binding.Unbind()
+	return binding.Close()
+}
+
+// Close removes all the bindings from the set.
+func (b *BindingSet) Close() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for _, binding := range b.Bindings {
+		binding.Close()
+	}
+	b.Bindings = []*Binding{}
 }
