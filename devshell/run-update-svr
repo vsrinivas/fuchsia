@@ -9,9 +9,29 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
+active=""
+osname=$( uname )
+if [[ "${osname}" == "Darwin" ]]; then
+  active=$("top" "-l" "1")
+else
+  active=$("top" "-n" "1" "-b")
+fi
+
+is_running=0
+if [[ "${osname}" == "Darwin" ]]; then
+  is_running=$( expr "$active" : ".*amber-srv.*" )
+else
+  is_running=$( expr match "$active" ".*amber-srv.*" )
+fi
+
+if [[ is_running -gt 0 ]]; then
+  echo "amber-srv running"
+  exit 0
+fi
+
 if [[ $1 == "-d" ]]; then
   ${FUCHSIA_BUILD_DIR}/host_x64/amber-srv -d ${FUCHSIA_BUILD_DIR} &
-  echo "amber-srv running at $!"
+  echo "amber-srv started"
 else
   ${FUCHSIA_BUILD_DIR}/host_x64/amber-srv -d ${FUCHSIA_BUILD_DIR}
 fi
