@@ -25,8 +25,8 @@ std::string NameHandleSubtype(types::HandleSubtype subtype);
 std::string NameHandleZXObjType(types::HandleSubtype subtype);
 
 std::string NameRawLiteralKind(raw::Literal::Kind kind);
-std::string NameRawConstantKind(raw::Constant::Kind kind);
 
+std::string NameFlatConstantKind(flat::Constant::Kind kind);
 std::string NameFlatTypeKind(flat::Type::Kind kind);
 std::string NameUnionTag(StringView union_name, const flat::Union::Member& member);
 std::string NameFlatCType(const flat::Type* type);

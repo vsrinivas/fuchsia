@@ -141,5 +141,5 @@ constant = compound-identifier | literal ;
 
 ordinal = NUMERIC-LITERAL ;
 
-literal = STRING-LITERAL | NUMERIC-LITERAL | TRUE | FALSE | DEFAULT ;
+literal = STRING-LITERAL | NUMERIC-LITERAL | TRUE | FALSE ;
 ```

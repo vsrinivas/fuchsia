@@ -51,7 +51,7 @@ void EmitBlank(std::ostream* file) {
 
 // Various computational helper routines.
 
-void EnumValue(types::PrimitiveSubtype type, const raw::Constant* constant,
+void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
                const flat::Library* library, std::string* out_value) {
     // TODO(kulakowski) Move this into library resolution.
 

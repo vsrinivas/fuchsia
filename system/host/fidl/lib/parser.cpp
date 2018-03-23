@@ -30,7 +30,6 @@ namespace fidl {
     case Token::Kind::Request
 
 #define TOKEN_LITERAL_CASES           \
-    case Token::Kind::Default:        \
     case Token::Kind::True:           \
     case Token::Kind::False:          \
     case Token::Kind::NumericLiteral: \
@@ -177,14 +176,6 @@ std::unique_ptr<raw::FalseLiteral> Parser::ParseFalseLiteral() {
     return std::make_unique<raw::FalseLiteral>();
 }
 
-std::unique_ptr<raw::DefaultLiteral> Parser::ParseDefaultLiteral() {
-    ConsumeToken(Token::Kind::Default);
-    if (!Ok())
-        return Fail();
-
-    return std::make_unique<raw::DefaultLiteral>();
-}
-
 std::unique_ptr<raw::Literal> Parser::ParseLiteral() {
     switch (Peek()) {
     case Token::Kind::StringLiteral:
@@ -198,9 +189,6 @@ std::unique_ptr<raw::Literal> Parser::ParseLiteral() {
 
     case Token::Kind::False:
         return ParseFalseLiteral();
-
-    case Token::Kind::Default:
-        return ParseDefaultLiteral();
 
     default:
         return Fail();

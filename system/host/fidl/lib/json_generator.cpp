@@ -229,7 +229,23 @@ void JSONGenerator::Generate(const raw::Literal& value) {
         case raw::Literal::Kind::False: {
             break;
         }
-        case raw::Literal::Kind::Default: {
+        }
+    });
+}
+
+void JSONGenerator::Generate(const flat::Constant& value) {
+    GenerateObject([&]() {
+        GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::First);
+
+        switch (value.kind) {
+        case flat::Constant::Kind::Identifier: {
+            auto type = static_cast<const flat::IdentifierConstant*>(&value);
+            GenerateObjectMember("identifier", type->name);
+            break;
+        }
+        case flat::Constant::Kind::Literal: {
+            auto type = static_cast<const flat::LiteralConstant*>(&value);
+            GenerateObjectMember("literal", type->literal);
             break;
         }
         }
@@ -283,27 +299,6 @@ void JSONGenerator::Generate(const flat::Type& value) {
             auto type = static_cast<const flat::IdentifierType*>(&value);
             GenerateObjectMember("identifier", type->name);
             GenerateObjectMember("nullable", type->nullability);
-            break;
-        }
-        }
-    });
-}
-
-void JSONGenerator::Generate(const raw::Constant& value) {
-    GenerateObject([&]() {
-        GenerateObjectMember("kind", NameRawConstantKind(value.kind), Position::First);
-
-        switch (value.kind) {
-        case raw::Constant::Kind::Identifier: {
-            auto type = static_cast<const raw::IdentifierConstant*>(&value);
-            // TODO(TO-701) More complicated type names.
-            flat::Name name(nullptr, type->identifier->components[0]->location);
-            GenerateObjectMember("identifier", name);
-            break;
-        }
-        case raw::Constant::Kind::Literal: {
-            auto type = static_cast<const raw::LiteralConstant*>(&value);
-            GenerateObjectMember("literal", type->literal);
             break;
         }
         }

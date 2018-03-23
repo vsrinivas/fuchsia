@@ -76,7 +76,6 @@ KEYWORD(Float64, "float64")
 
 KEYWORD(True, "true")
 KEYWORD(False, "false")
-KEYWORD(Default, "default")
 
 #undef KEYWORD
 #undef TOKEN

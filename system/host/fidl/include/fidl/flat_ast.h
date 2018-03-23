@@ -28,39 +28,6 @@ struct PtrCompare {
     }
 };
 
-struct Ordinal {
-    Ordinal(std::unique_ptr<raw::NumericLiteral> literal, uint32_t value)
-        : literal_(std::move(literal)), value_(value) {}
-
-    uint32_t Value() const { return value_; }
-
-private:
-    std::unique_ptr<raw::NumericLiteral> literal_;
-    uint32_t value_;
-};
-
-template <typename IntType>
-struct IntConstant {
-    IntConstant(std::unique_ptr<raw::Constant> raw_constant, IntType value)
-        : raw_constant_(std::move(raw_constant)), value_(value) {}
-
-    explicit IntConstant(IntType value)
-        : value_(value) {}
-
-    IntConstant()
-        : value_(0) {}
-
-    IntType Value() const { return value_; }
-
-    static IntConstant Max() { return IntConstant(std::numeric_limits<IntType>::max()); }
-
-private:
-    std::unique_ptr<raw::Constant> raw_constant_;
-    IntType value_;
-};
-
-using Size = IntConstant<uint32_t>;
-
 struct Decl;
 class Library;
 
@@ -124,6 +91,67 @@ private:
     SourceLocation name_;
 };
 
+struct Constant {
+    virtual ~Constant() {}
+
+    enum struct Kind {
+        Identifier,
+        Literal,
+    };
+
+    explicit Constant(Kind kind)
+        : kind(kind) {}
+
+    const Kind kind;
+};
+
+struct IdentifierConstant : Constant {
+    explicit IdentifierConstant(Name name)
+        : Constant(Kind::Identifier), name(std::move(name)) {}
+
+    Name name;
+};
+
+struct LiteralConstant : Constant {
+    explicit LiteralConstant(std::unique_ptr<raw::Literal> literal)
+        : Constant(Kind::Literal), literal(std::move(literal)) {}
+
+    std::unique_ptr<raw::Literal> literal;
+};
+
+struct Ordinal {
+    Ordinal(std::unique_ptr<raw::NumericLiteral> literal, uint32_t value)
+        : literal_(std::move(literal)), value_(value) {}
+
+    uint32_t Value() const { return value_; }
+
+private:
+    std::unique_ptr<raw::NumericLiteral> literal_;
+    uint32_t value_;
+};
+
+template <typename IntType>
+struct IntConstant {
+    IntConstant(std::unique_ptr<Constant> constant, IntType value)
+        : constant_(std::move(constant)), value_(value) {}
+
+    explicit IntConstant(IntType value)
+        : value_(value) {}
+
+    IntConstant()
+        : value_(0) {}
+
+    IntType Value() const { return value_; }
+
+    static IntConstant Max() { return IntConstant(std::numeric_limits<IntType>::max()); }
+
+private:
+    std::unique_ptr<Constant> constant_;
+    IntType value_;
+};
+
+using Size = IntConstant<uint32_t>;
+
 struct Decl {
     virtual ~Decl() {}
 
@@ -142,6 +170,7 @@ struct Decl {
     Decl& operator=(Decl&&) = default;
 
     const Kind kind;
+
     std::unique_ptr<raw::AttributeList> attributes;
     const Name name;
 };
@@ -341,18 +370,18 @@ inline bool Type::operator<(const Type& other) const {
 }
 
 struct Const : public Decl {
-    Const(std::unique_ptr<raw::AttributeList> attributes, Name name, std::unique_ptr<Type> type, std::unique_ptr<raw::Constant> value)
+    Const(std::unique_ptr<raw::AttributeList> attributes, Name name, std::unique_ptr<Type> type, std::unique_ptr<Constant> value)
         : Decl(Kind::kConst, std::move(attributes), std::move(name)), type(std::move(type)), value(std::move(value)) {}
     std::unique_ptr<Type> type;
-    std::unique_ptr<raw::Constant> value;
+    std::unique_ptr<Constant> value;
 };
 
 struct Enum : public Decl {
     struct Member {
-        Member(SourceLocation name, std::unique_ptr<raw::Constant> value)
+        Member(SourceLocation name, std::unique_ptr<Constant> value)
             : name(name), value(std::move(value)) {}
         SourceLocation name;
-        std::unique_ptr<raw::Constant> value;
+        std::unique_ptr<Constant> value;
     };
 
     Enum(std::unique_ptr<raw::AttributeList> attributes, Name name, types::PrimitiveSubtype type, std::vector<Member> members)
@@ -406,12 +435,12 @@ struct Interface : public Decl {
 struct Struct : public Decl {
     struct Member {
         Member(std::unique_ptr<Type> type, SourceLocation name,
-               std::unique_ptr<raw::Constant> maybe_default_value)
+               std::unique_ptr<Constant> maybe_default_value)
             : type(std::move(type)), name(std::move(name)),
               maybe_default_value(std::move(maybe_default_value)) {}
         std::unique_ptr<Type> type;
         SourceLocation name;
-        std::unique_ptr<raw::Constant> maybe_default_value;
+        std::unique_ptr<Constant> maybe_default_value;
         // TODO(TO-758) Compute these.
         FieldShape fieldshape;
     };
@@ -465,19 +494,31 @@ private:
     }
 
     bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
+                                   SourceLocation location,
                                    Name* name_out);
 
-    bool ParseSize(std::unique_ptr<raw::Constant> raw_constant, Size* out_size);
+    bool ParseSize(std::unique_ptr<Constant> constant, Size* out_size);
 
+    void RegisterConst(Const* decl);
     bool RegisterDecl(Decl* decl);
 
-    bool ConsumeType(std::unique_ptr<raw::Type> type, std::unique_ptr<Type>* out_type, const SourceLocation& source_location);
+    bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceLocation location, std::unique_ptr<Constant>* out_constant);
+    bool ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation location, std::unique_ptr<Type>* out_type);
 
     bool ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
     bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
     bool ConsumeInterfaceDeclaration(std::unique_ptr<raw::InterfaceDeclaration> interface_declaration);
     bool ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
     bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
+
+    bool TypecheckString(const IdentifierConstant* identifier);
+    bool TypecheckPrimitive(const IdentifierConstant* identifier);
+    bool TypecheckConst(const Const* const_declaration);
+
+    // Given a const declaration of the form
+    //     const type foo = name;
+    // return the declaration corresponding to name.
+    Decl* LookupConstant(const Type* type, const Name& name);
 
     // Returns nullptr when |type| does not correspond directly to a
     // declaration. For example, if |type| refers to int32 or if it is
@@ -489,7 +530,7 @@ private:
     // Name. Otherwise it returns the declaration.
     Decl* LookupType(const Name& name) const;
 
-    std::set<Decl*> DeclDependencies(Decl* decl);
+    bool DeclDependencies(Decl* decl, std::set<Decl*>* out_edges);
 
     bool SortDeclarations();
 
@@ -545,28 +586,24 @@ public:
     }
 
     template <typename IntType>
-    bool ParseIntegerConstant(const raw::Constant* constant, IntType* out_value) const {
+    bool ParseIntegerConstant(const Constant* constant, IntType* out_value) const {
         if (!constant) {
             return false;
         }
         switch (constant->kind) {
-        case raw::Constant::Kind::Identifier: {
-            auto identifier_constant = static_cast<const raw::IdentifierConstant*>(constant);
-            auto identifier = identifier_constant->identifier.get();
-            // TODO(TO-701) Support more parts of names.
-            Name name(this, identifier->components[0]->location);
-            auto decl = LookupType(name);
+        case Constant::Kind::Identifier: {
+            auto identifier_constant = static_cast<const IdentifierConstant*>(constant);
+            auto decl = LookupType(identifier_constant->name);
             if (!decl || decl->kind != Decl::Kind::kConst)
                 return false;
             return ParseIntegerConstant(static_cast<Const*>(decl)->value.get(), out_value);
         }
-        case raw::Constant::Kind::Literal: {
-            auto literal_constant = static_cast<const raw::LiteralConstant*>(constant);
+        case Constant::Kind::Literal: {
+            auto literal_constant = static_cast<const LiteralConstant*>(constant);
             switch (literal_constant->literal->kind) {
             case raw::Literal::Kind::String:
             case raw::Literal::Kind::True:
-            case raw::Literal::Kind::False:
-            case raw::Literal::Kind::Default: {
+            case raw::Literal::Kind::False: {
                 return false;
             }
 
@@ -595,9 +632,12 @@ public:
     std::vector<Decl*> declaration_order_;
 
 private:
-    // All Name and Decl pointers here are non-null and are owned by the
-    // various foo_declarations_.
+    // All Name, Constant, and Decl pointers here are non-null and are
+    // owned by the various foo_declarations_.
     std::map<const Name*, Decl*, PtrCompare<Name>> declarations_;
+    std::map<const Name*, Const*, PtrCompare<Name>> string_constants_;
+    std::map<const Name*, Const*, PtrCompare<Name>> primitive_constants_;
+    std::map<const Name*, Const*, PtrCompare<Name>> constants_;
 
     ErrorReporter* error_reporter_;
 };

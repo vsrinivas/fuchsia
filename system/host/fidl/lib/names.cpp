@@ -163,8 +163,6 @@ std::string NameRawLiteralKind(raw::Literal::Kind kind) {
         return "true";
     case raw::Literal::Kind::False:
         return "false";
-    case raw::Literal::Kind::Default:
-        return "default";
     }
 }
 
@@ -187,11 +185,11 @@ std::string NameFlatTypeKind(flat::Type::Kind kind) {
     }
 }
 
-std::string NameRawConstantKind(raw::Constant::Kind kind) {
+std::string NameFlatConstantKind(flat::Constant::Kind kind) {
     switch (kind) {
-    case raw::Constant::Kind::Identifier:
+    case flat::Constant::Kind::Identifier:
         return "identifier";
-    case raw::Constant::Kind::Literal:
+    case flat::Constant::Kind::Literal:
         return "literal";
     }
 }

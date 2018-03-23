@@ -49,7 +49,6 @@ struct Literal {
         Numeric,
         True,
         False,
-        Default,
     };
 
     explicit Literal(Kind kind)
@@ -80,11 +79,6 @@ struct TrueLiteral : public Literal {
 struct FalseLiteral : public Literal {
     FalseLiteral()
         : Literal(Kind::False) {}
-};
-
-struct DefaultLiteral : public Literal {
-    DefaultLiteral()
-        : Literal(Kind::Default) {}
 };
 
 struct Constant {
