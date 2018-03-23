@@ -89,7 +89,22 @@ type {{ .Name }} interface {
 {{- end }}
 }
 
-type {{ .RequestName }} _bindings.InterfaceRequest
+type {{ .RequestName }} _zx.Channel
+
+func New{{ .RequestName }}() ({{ .RequestName }}, *{{ .ProxyName }}, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return {{ .RequestName }}(req), (*{{ .ProxyName }})(cli), err
+}
+
+{{- if .ServiceName }}
+// Implements ServiceRequest.
+func (_ {{ .RequestName }}) Name() string {
+	return {{ .ServiceName }}
+}
+func (c {{ .RequestName }}) Channel() _zx.Channel {
+	return _zx.Channel(c)
+}
+{{- end }}
 
 type {{ .StubName }} struct {
 	Impl {{ .Name }}

@@ -10,9 +10,27 @@ import (
 	"syscall/zx"
 )
 
-// InterfaceRequest represents the server endpoint of the FIDL interface
-// on the client side, which then may be sent to the server.
-type InterfaceRequest zx.Channel
+// ServiceRequest is an abstraction over a FIDL interface request which is
+// intended to be used as part of service discovery.
+type ServiceRequest interface {
+	// Name returns the name of the service being requested.
+	Name() string
+
+	// Channel returns the underlying channel of the ServiceRequest.
+	Channel() zx.Channel
+}
+
+// NewInterfaceRequest generates two sides of a channel with one layer of
+// type casts out of the way to minimize the amount of generated code. Semantically,
+// the two sides of the channel represent the interface request and the client
+// side of the interface (the proxy). It returns an error on failure.
+func NewInterfaceRequest() (zx.Channel, *Proxy, error) {
+	h0, h1, err := zx.NewChannel(0)
+	if err != nil {
+		return zx.Channel(zx.HANDLE_INVALID), nil, err
+	}
+	return h0, &Proxy{Channel: h1}, nil
+}
 
 // Proxy represents the client side of a FIDL interface.
 type Proxy struct {

@@ -5,7 +5,6 @@
 package bindings2
 
 import (
-	"fmt"
 	_zx "syscall/zx"
 )
 
@@ -379,10 +378,15 @@ func (p *Test1Interface) Echo(in *string) (*string, error) {
 }
 
 type Test1 interface {
-	Echo(in *string) (out *string, err error)
+	Echo(in *string) (out *string, err_ error)
 }
 
-type Test1InterfaceRequest InterfaceRequest
+type Test1InterfaceRequest _zx.Channel
+
+func NewTest1InterfaceRequest() (Test1InterfaceRequest, *Test1Interface, error) {
+	req, cli, err := NewInterfaceRequest()
+	return Test1InterfaceRequest(req), (*Test1Interface)(cli), err
+}
 
 type Test1Stub struct {
 	Impl Test1
@@ -400,6 +404,5 @@ func (s *Test1Stub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (Payload, e
 		out_.Out = out
 		return &out_, err_
 	}
-	// TODO(mknyszek): Use a well-defined error here.
-	return nil, fmt.Errorf("Unknown ordinal %d", ord)
+	return nil, ErrUnknownOrdinal
 }
