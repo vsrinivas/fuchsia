@@ -4,9 +4,13 @@
 
 #pragma once
 
+#include <memory>
+#include <set>
+
+#include <fuchsia/cpp/media.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 namespace tts {
@@ -24,15 +28,13 @@ class TtsServiceImpl {
  private:
   class Client : public TtsService {
    public:
-    Client(TtsServiceImpl* owner, f1dl::InterfaceRequest<TtsService> request);
+    Client(TtsServiceImpl* owner, fidl::InterfaceRequest<TtsService> request);
     ~Client();
 
     void Shutdown();
 
     // TtsService
-    void Say(const f1dl::StringPtr& words,
-             uint64_t token,
-             const SayCallback& cbk) override;
+    void Say(fidl::StringPtr words, uint64_t token, SayCallback cbk) override;
 
    private:
     void OnSpeakComplete(std::shared_ptr<TtsSpeaker> speaker,
@@ -40,7 +42,7 @@ class TtsServiceImpl {
                          SayCallback cbk);
 
     TtsServiceImpl* const owner_;
-    f1dl::Binding<TtsService> binding_;
+    fidl::Binding<TtsService> binding_;
     std::set<std::shared_ptr<TtsSpeaker>> active_speakers_;
   };
 

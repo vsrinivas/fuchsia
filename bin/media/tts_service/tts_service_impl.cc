@@ -18,7 +18,7 @@ TtsServiceImpl::TtsServiceImpl(
   FXL_DCHECK(application_context_);
 
   application_context_->outgoing_services()->AddService<TtsService>(
-      [this](f1dl::InterfaceRequest<TtsService> request) {
+      [this](fidl::InterfaceRequest<TtsService> request) {
         clients_.insert(new Client(this, std::move(request)));
       });
 
@@ -43,7 +43,7 @@ zx_status_t TtsServiceImpl::Init() {
 }
 
 TtsServiceImpl::Client::Client(TtsServiceImpl* owner,
-                               f1dl::InterfaceRequest<TtsService> request)
+                               fidl::InterfaceRequest<TtsService> request)
     : owner_(owner), binding_(this, std::move(request)) {
   binding_.set_error_handler([this] { Shutdown(); });
 }
@@ -63,9 +63,9 @@ void TtsServiceImpl::Client::Shutdown() {
   owner_->clients_.erase(owner_->clients_.find(this));
 }
 
-void TtsServiceImpl::Client::Say(const f1dl::StringPtr& words,
+void TtsServiceImpl::Client::Say(fidl::StringPtr words,
                                  uint64_t token,
-                                 const SayCallback& cbk) {
+                                 SayCallback cbk) {
   auto cleanup = fbl::MakeAutoCall([this] { Shutdown(); });
   auto speaker = std::make_shared<TtsSpeaker>(owner_->task_runner_);
 
@@ -73,8 +73,8 @@ void TtsServiceImpl::Client::Say(const f1dl::StringPtr& words,
     return;
   }
 
-  fxl::Closure on_speak_complete = [this, speaker, token,
-                                    say_callback = std::move(cbk)]() {
+  fxl::Closure on_speak_complete =
+      [ this, speaker, token, say_callback = std::move(cbk) ]() {
     OnSpeakComplete(std::move(speaker), token, std::move(say_callback));
   };
 

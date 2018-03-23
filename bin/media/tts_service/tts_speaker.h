@@ -10,11 +10,11 @@
 #include <mutex>
 #include <thread>
 
+#include <fuchsia/cpp/media.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/media.h>
 #include "third_party/flite/include/flite_fuchsia.h"
 
 namespace media {
@@ -28,7 +28,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   zx_status_t Init(const std::unique_ptr<component::ApplicationContext>&
                        application_context);
 
-  zx_status_t Speak(const f1dl::StringPtr& words,
+  zx_status_t Speak(const fidl::StringPtr& words,
                     const fxl::Closure& speak_complete_cbk);
   void Shutdown();
 
@@ -88,7 +88,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   uint64_t tx_ptr_ = 0;
   zx::event wakeup_event_;
 
-  f1dl::StringPtr words_;
+  fidl::StringPtr words_;
   fxl::Closure speak_complete_cbk_;
   std::atomic<bool> abort_playback_;
   std::atomic<bool> synthesis_complete_;
