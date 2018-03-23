@@ -24,6 +24,9 @@ function usage {
 }
 
 function main {
+  fx-standard-switches "$@"
+  set -- "${FX_ARGV[@]}"
+
   local device=""
   local pkgs=""
 

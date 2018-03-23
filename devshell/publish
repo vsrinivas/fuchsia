@@ -30,6 +30,9 @@ function usage {
 # published to the local file system. If no package name is supplied, all
 # built packages are processed.
 function main {
+  fx-standard-switches "$@"
+  set -- "${FX_ARGV[@]}"
+
   local build_dir=""
   local fuchsia_dir="${FUCHSIA_DIR}"
   local argz=()

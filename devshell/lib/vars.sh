@@ -93,3 +93,34 @@ function fx-print-command-help {
 function fx-command-help {
   fx-print-command-help "$0"
 }
+
+# This function massages arguments to an fx subcommand so that a single
+# argument `--switch=value` becomes two arguments `--switch` `value`.
+# This lets each subcommand's main function use simpler argument parsing
+# while still supporting the preferred `--switch=value` syntax.  It also
+# handles the `--help` argument by redirecting to what `fx help command`
+# would do.  Because of the complexities of shell quoting and function
+# semantics, the only way for this function to yield its results
+# reasonably is via a global variable.  FX_ARGV is an array of the
+# results.  The standard boilerplate for using this looks like:
+#   function main {
+#     fx-standard-switches "$@"
+#     set -- "${FX_ARGV[@]}"
+#     ...
+#     }
+function fx-standard-switches {
+  declare -g -a FX_ARGV=()
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" = "--help" ]]; then
+      fx-print-command-help "$0"
+      # Exit rather than return, so we bail out of the whole command early.
+      exit 0
+    elif [[ "$1" == --*=* ]]; then
+      # Turn --switch=value into --switch value.
+      FX_ARGV+=("${1%%=*}" "${1#*=}")
+    else
+      FX_ARGV+=("$1")
+    fi
+    shift
+  done
+}
