@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
 #include <launchpad/launchpad.h>
+#include <unistd.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls/object.h>
-#include <unistd.h>
+#include <iostream>
 
-#include "lib/app/cpp/application_context.h"
 #include <fuchsia/cpp/test_runner.h>
-#include "lib/fxl/time/stopwatch.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/time/stopwatch.h"
 
 class Reporter {
  public:
@@ -21,21 +21,20 @@ class Reporter {
   ~Reporter() {}
 
   void Start() {
-    test_runner_->Identify(name_, []{});
+    test_runner_->Identify(name_, [] {});
     stopwatch_.Start();
   }
 
   void Finish(bool failed, const std::string& message) {
-    test_runner::TestResultPtr result = test_runner::TestResult::New();
-    result->name = name_;
-    result->elapsed = stopwatch_.Elapsed().ToMilliseconds();
-    result->failed = failed;
-    result->message = message;
+    test_runner::TestResult result;
+    result.name = name_;
+    result.elapsed = stopwatch_.Elapsed().ToMilliseconds();
+    result.failed = failed;
+    result.message = message;
 
     test_runner_->ReportResult(std::move(result));
-    test_runner_->Teardown([] {
-      fsl::MessageLoop::GetCurrent()->PostQuitTask();
-    });
+    test_runner_->Teardown(
+        [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
     fsl::MessageLoop::GetCurrent()->Run();
   }
 
