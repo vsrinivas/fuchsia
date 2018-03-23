@@ -24,6 +24,7 @@
 #include <zx/vmo.h>
 
 #include <functional>
+#include <ostream>
 
 #include "lib/fidl/cpp/coding_traits.h"
 #include "lib/fidl/cpp/interface_ptr.h"

@@ -29,7 +29,7 @@ constexpr float kInitialCaptureGain = 0.0;
 AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
 
 fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
-    f1dl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+    fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
     AudioServerImpl* owner,
     bool loopback) {
   return fbl::AdoptRef(new AudioCapturerImpl(std::move(audio_capturer_request),
@@ -37,7 +37,7 @@ fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
-    f1dl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+    fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
     AudioServerImpl* owner,
     bool loopback)
     : AudioObject(Type::Capturer),
@@ -68,10 +68,9 @@ AudioCapturerImpl::~AudioCapturerImpl() {
   FXL_DCHECK(payload_buf_size_ == 0);
 }
 
-void AudioCapturerImpl::SetInitialFormat(AudioMediaTypeDetailsPtr format) {
-  FXL_DCHECK(!format.is_null());
-  UpdateFormat(format->sample_format, format->channels,
-               format->frames_per_second);
+void AudioCapturerImpl::SetInitialFormat(AudioMediaTypeDetails format) {
+  UpdateFormat(format.sample_format, format.channels,
+               format.frames_per_second);
 }
 
 void AudioCapturerImpl::Shutdown() {
@@ -151,17 +150,15 @@ zx_status_t AudioCapturerImpl::InitializeSourceLink(const AudioLinkPtr& link) {
   return res;
 }
 
-void AudioCapturerImpl::GetMediaType(const GetMediaTypeCallback& cbk) {
-  auto ret = MediaType::New();
-  ret->medium = MediaTypeMedium::AUDIO;
-  ret->encoding = MediaType::kAudioEncodingLpcm;
-  ret->details = MediaTypeDetails::New();
-  ret->details->set_audio(format_.Clone());
-
+void AudioCapturerImpl::GetMediaType(GetMediaTypeCallback cbk) {
+  MediaType ret;
+  ret.medium = MediaTypeMedium::AUDIO;
+  ret.encoding = kAudioEncodingLpcm;
+  ret.details.set_audio(*format_);
   cbk(std::move(ret));
 }
 
-void AudioCapturerImpl::SetMediaType(MediaTypePtr media_type) {
+void AudioCapturerImpl::SetMediaType(MediaType media_type) {
   // If something goes wrong, hang up the phone and shutdown.
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
@@ -176,32 +173,32 @@ void AudioCapturerImpl::SetMediaType(MediaTypePtr media_type) {
   }
 
   // The specified media type needs to be audio LPCM
-  if ((media_type->medium != MediaTypeMedium::AUDIO) ||
-      (media_type->encoding != MediaType::kAudioEncodingLpcm) ||
-      !media_type->details->is_audio()) {
+  if ((media_type.medium != MediaTypeMedium::AUDIO) ||
+      (media_type.encoding != kAudioEncodingLpcm) ||
+      !media_type.details.is_audio()) {
     FXL_LOG(ERROR) << "Bad media type!";
     return;
   }
 
   // Sanity check the details of the mode request.
-  const auto& details = media_type->details.audio();
-  if ((details->channels < media::kMinLpcmChannelCount) ||
-      (details->channels > media::kMaxLpcmChannelCount)) {
-    FXL_LOG(ERROR) << "Bad channel count, " << details->channels
+  const auto& details = media_type.details.audio();
+  if ((details.channels < media::kMinLpcmChannelCount) ||
+      (details.channels > media::kMaxLpcmChannelCount)) {
+    FXL_LOG(ERROR) << "Bad channel count, " << details.channels
                    << " is not in the range [" << media::kMinLpcmChannelCount
                    << ", " << media::kMaxLpcmChannelCount << "]";
     return;
   }
 
-  if ((details->frames_per_second < media::kMinLpcmFramesPerSecond) ||
-      (details->frames_per_second > media::kMaxLpcmFramesPerSecond)) {
-    FXL_LOG(ERROR) << "Bad frame rate, " << details->frames_per_second
+  if ((details.frames_per_second < media::kMinLpcmFramesPerSecond) ||
+      (details.frames_per_second > media::kMaxLpcmFramesPerSecond)) {
+    FXL_LOG(ERROR) << "Bad frame rate, " << details.frames_per_second
                    << " is not in the range [" << media::kMinLpcmFramesPerSecond
                    << ", " << media::kMaxLpcmFramesPerSecond << "]";
     return;
   }
 
-  switch (details->sample_format) {
+  switch (details.sample_format) {
     case AudioSampleFormat::UNSIGNED_8:
     case AudioSampleFormat::SIGNED_16:
     case AudioSampleFormat::SIGNED_24_IN_32:
@@ -209,13 +206,13 @@ void AudioCapturerImpl::SetMediaType(MediaTypePtr media_type) {
 
     case AudioSampleFormat::FLOAT:
     default:
-      FXL_LOG(ERROR) << "Bad sample format " << details->sample_format;
+      FXL_LOG(ERROR) << "Bad sample format " << details.sample_format;
       return;
   }
 
   // Success, record our new format.
-  UpdateFormat(details->sample_format, details->channels,
-               details->frames_per_second);
+  UpdateFormat(details.sample_format, details.channels,
+               details.frames_per_second);
 
   cleanup.cancel();
 }
@@ -390,7 +387,7 @@ void AudioCapturerImpl::SetPayloadBuffer(zx::vmo payload_buf_vmo) {
 
 void AudioCapturerImpl::CaptureAt(uint32_t offset_frames,
                                   uint32_t num_frames,
-                                  const CaptureAtCallback& cbk) {
+                                  CaptureAtCallback cbk) {
   // If something goes wrong, hang up the phone and shutdown.
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
@@ -472,7 +469,7 @@ void AudioCapturerImpl::Flush() {
 }
 
 void AudioCapturerImpl::FlushWithCallback(
-    const FlushWithCallbackCallback& cbk) {
+    FlushWithCallbackCallback cbk) {
   Flush();
   if (binding_.is_bound()) {
     cbk();
@@ -480,7 +477,7 @@ void AudioCapturerImpl::FlushWithCallback(
 }
 
 void AudioCapturerImpl::StartAsyncCapture(
-    f1dl::InterfaceHandle<AudioCapturerClient> callback_target,
+    fidl::InterfaceHandle<AudioCapturerClient> callback_target,
     uint32_t frames_per_packet) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
@@ -546,7 +543,7 @@ void AudioCapturerImpl::StopAsyncCapture() {
 }
 
 void AudioCapturerImpl::StopAsyncCaptureWithCallback(
-    const StopAsyncCaptureWithCallbackCallback& cbk) {
+    StopAsyncCaptureWithCallbackCallback cbk) {
   // In order to leave async mode, we must be operating in async mode, or we
   // must already be operating in sync mode (in which case, there is really
   // nothing to do but signal the callback if one was provided)
@@ -1253,15 +1250,15 @@ void AudioCapturerImpl::FinishAsyncStopThunk() {
   if (!finished.is_empty()) {
     FinishBuffers(std::move(finished));
   } else if (async_callback_.is_bound()) {
-    auto pkt = MediaPacket::New();
+    MediaPacket pkt;
 
-    pkt->pts = kNoTimestamp;
-    pkt->pts_rate_ticks = format_->frames_per_second;
-    pkt->pts_rate_seconds = 1u;
-    pkt->flags = kFlagEos;
-    pkt->payload_buffer_id = 0u;
-    pkt->payload_offset = 0u;
-    pkt->payload_size = 0u;
+    pkt.pts = kNoTimestamp;
+    pkt.pts_rate_ticks = format_->frames_per_second;
+    pkt.pts_rate_seconds = 1u;
+    pkt.flags = kFlagEos;
+    pkt.payload_buffer_id = 0u;
+    pkt.payload_offset = 0u;
+    pkt.payload_size = 0u;
 
     async_callback_->OnPacketCaptured(std::move(pkt));
   }
@@ -1309,15 +1306,15 @@ void AudioCapturerImpl::FinishBuffers(const PcbList& finished_buffers) {
       continue;
     }
 
-    auto pkt = MediaPacket::New();
+    MediaPacket pkt;
 
-    pkt->pts = finished_buffer.capture_timestamp;
-    pkt->pts_rate_ticks = format_->frames_per_second;
-    pkt->pts_rate_seconds = 1u;
-    pkt->flags = finished_buffer.flags;
-    pkt->payload_buffer_id = 0u;
-    pkt->payload_offset = finished_buffer.offset_frames * bytes_per_frame_;
-    pkt->payload_size = finished_buffer.filled_frames * bytes_per_frame_;
+    pkt.pts = finished_buffer.capture_timestamp;
+    pkt.pts_rate_ticks = format_->frames_per_second;
+    pkt.pts_rate_seconds = 1u;
+    pkt.flags = finished_buffer.flags;
+    pkt.payload_buffer_id = 0u;
+    pkt.payload_offset = finished_buffer.offset_frames * bytes_per_frame_;
+    pkt.payload_size = finished_buffer.filled_frames * bytes_per_frame_;
 
     if (finished_buffer.cbk != nullptr) {
       finished_buffer.cbk(std::move(pkt));
@@ -1385,7 +1382,7 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
   // cannot set up the mixer.
   AudioMediaTypeDetailsPtr source_format;
   source_format = device->driver()->GetSourceFormat();
-  if (source_format.is_null()) {
+  if (!source_format) {
     FXL_LOG(INFO)
         << "Failed to find mixer.  Source currently has no configured format";
     return ZX_ERR_BAD_STATE;
@@ -1396,7 +1393,7 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
   auto bk = static_cast<CaptureLinkBookkeeping*>(link->bookkeeping().get());
 
   FXL_DCHECK(bk->mixer == nullptr);
-  bk->mixer = Mixer::Select(source_format, &format_);
+  bk->mixer = Mixer::Select(*source_format, &format_);
   if (bk->mixer == nullptr) {
     FXL_LOG(INFO) << "Failed to find mixer for capturer.";
     FXL_LOG(INFO) << "Source cfg: rate " << source_format->frames_per_second

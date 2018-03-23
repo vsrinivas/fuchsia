@@ -120,14 +120,14 @@ class MediaPlayerImpl
 
   // Handles a status update from the source. When called with the default
   // argument values, initiates source status updates.
-  void HandleSourceStatusUpdates(uint64_t version = MediaSource::kInitialStatus,
+  void HandleSourceStatusUpdates(uint64_t version = kInitialStatus,
                                  MediaSourceStatusPtr status = nullptr);
 
   // Handles a status update from the control point. When called with the
   // default argument values, initiates control point. status updates.
   void HandleTimelineControlPointStatusUpdates(
-      uint64_t version = MediaTimelineControlPoint::kInitialStatus,
-      MediaTimelineControlPointStatusPtr status = nullptr);
+      uint64_t version = kInitialStatus,
+      MediaTimelineControlPointStatus* status = nullptr);
 
   f1dl::InterfaceHandle<SeekingReader> reader_handle_;
   MediaSourcePtr source_;

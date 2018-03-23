@@ -413,15 +413,15 @@ bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
 // Templates used to expand all of the different combinations of the possible
 // Linear Sampler Mixer configurations.
 template <size_t DChCount, typename SType, size_t SChCount>
-static inline MixerPtr SelectLSM(const AudioMediaTypeDetailsPtr& src_format,
-                                 const AudioMediaTypeDetailsPtr& dst_format) {
+static inline MixerPtr SelectLSM(const AudioMediaTypeDetails& src_format,
+                                 const AudioMediaTypeDetails& dst_format) {
   return MixerPtr(new LinearSamplerImpl<DChCount, SType, SChCount>());
 }
 
 template <size_t DChCount, typename SType>
-static inline MixerPtr SelectLSM(const AudioMediaTypeDetailsPtr& src_format,
-                                 const AudioMediaTypeDetailsPtr& dst_format) {
-  switch (src_format->channels) {
+static inline MixerPtr SelectLSM(const AudioMediaTypeDetails& src_format,
+                                 const AudioMediaTypeDetails& dst_format) {
+  switch (src_format.channels) {
     case 1:
       return SelectLSM<DChCount, SType, 1>(src_format, dst_format);
     case 2:
@@ -432,9 +432,9 @@ static inline MixerPtr SelectLSM(const AudioMediaTypeDetailsPtr& src_format,
 }
 
 template <size_t DChCount>
-static inline MixerPtr SelectLSM(const AudioMediaTypeDetailsPtr& src_format,
-                                 const AudioMediaTypeDetailsPtr& dst_format) {
-  switch (src_format->sample_format) {
+static inline MixerPtr SelectLSM(const AudioMediaTypeDetails& src_format,
+                                 const AudioMediaTypeDetails& dst_format) {
+  switch (src_format.sample_format) {
     case AudioSampleFormat::UNSIGNED_8:
       return SelectLSM<DChCount, uint8_t>(src_format, dst_format);
     case AudioSampleFormat::SIGNED_16:
@@ -445,25 +445,25 @@ static inline MixerPtr SelectLSM(const AudioMediaTypeDetailsPtr& src_format,
 }
 
 static inline MixerPtr SelectNxNLSM(
-    const AudioMediaTypeDetailsPtr& src_format) {
-  switch (src_format->sample_format) {
+    const AudioMediaTypeDetails& src_format) {
+  switch (src_format.sample_format) {
     case AudioSampleFormat::UNSIGNED_8:
-      return MixerPtr(new NxNLinearSamplerImpl<uint8_t>(src_format->channels));
+      return MixerPtr(new NxNLinearSamplerImpl<uint8_t>(src_format.channels));
     case AudioSampleFormat::SIGNED_16:
-      return MixerPtr(new NxNLinearSamplerImpl<int16_t>(src_format->channels));
+      return MixerPtr(new NxNLinearSamplerImpl<int16_t>(src_format.channels));
     default:
       return nullptr;
   }
 }
 
-MixerPtr LinearSampler::Select(const AudioMediaTypeDetailsPtr& src_format,
-                               const AudioMediaTypeDetailsPtr& dst_format) {
-  if (src_format->channels == dst_format->channels &&
-      src_format->channels > 2) {
+MixerPtr LinearSampler::Select(const AudioMediaTypeDetails& src_format,
+                               const AudioMediaTypeDetails& dst_format) {
+  if (src_format.channels == dst_format.channels &&
+      src_format.channels > 2) {
     return SelectNxNLSM(src_format);
   }
 
-  switch (dst_format->channels) {
+  switch (dst_format.channels) {
     case 1:
       return SelectLSM<1>(src_format, dst_format);
     case 2:

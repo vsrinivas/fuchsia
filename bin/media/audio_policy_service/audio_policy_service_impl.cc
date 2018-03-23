@@ -47,17 +47,17 @@ void AudioPolicyServiceImpl::GetStatus(uint64_t version_last_seen,
 }
 
 void AudioPolicyServiceImpl::SetSystemAudioGain(float db) {
-  db = std::max(std::min(db, kMaxSystemAudioGain), AudioRenderer::kMutedGain);
+  db = std::max(std::min(db, kMaxSystemAudioGain), kMutedGain);
 
   if (system_audio_gain_db_ == db) {
     return;
   }
 
-  if (db == AudioRenderer::kMutedGain) {
+  if (db == kMutedGain) {
     // System audio gain is being set to |kMutedGain|. This implicitly mutes
     // system audio.
     system_audio_muted_ = true;
-  } else if (system_audio_gain_db_ == AudioRenderer::kMutedGain) {
+  } else if (system_audio_gain_db_ == kMutedGain) {
     // System audio was muted, because gain was set to |kMutedGain|. We're
     // raising the gain now, so we unmute.
     system_audio_muted_ = false;
@@ -71,7 +71,7 @@ void AudioPolicyServiceImpl::SetSystemAudioGain(float db) {
 }
 
 void AudioPolicyServiceImpl::SetSystemAudioMute(bool muted) {
-  if (system_audio_gain_db_ == AudioRenderer::kMutedGain) {
+  if (system_audio_gain_db_ == kMutedGain) {
     // Keep audio muted if system audio gain is set to |kMutedGain|.
     muted = true;
   }

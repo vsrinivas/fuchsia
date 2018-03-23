@@ -147,7 +147,7 @@ void AudioDeviceManager::HandlePlugStateChange(
 }
 
 void AudioDeviceManager::SetMasterGain(float db_gain) {
-  master_gain_ = fbl::clamp(db_gain, AudioRenderer::kMutedGain, 0.0f);
+  master_gain_ = fbl::clamp(db_gain, kMutedGain, 0.0f);
   for (auto& device : devices_) {
     if (device.is_input()) {
       continue;
@@ -227,8 +227,8 @@ void AudioDeviceManager::AddCapturer(fbl::RefPtr<AudioCapturerImpl> capturer) {
     FXL_DCHECK(source->driver() != nullptr);
     auto initial_format = source->driver()->GetSourceFormat();
 
-    if (!initial_format.is_null()) {
-      capturer->SetInitialFormat(std::move(initial_format));
+    if (initial_format) {
+      capturer->SetInitialFormat(std::move(*initial_format));
     }
 
     if (source->plugged()) {

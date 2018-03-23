@@ -31,7 +31,7 @@ class Mixer {
   // where appropriate.  For example, where we might chose a linear
   // interpolation sampler, the user may actually prefer cubic interpolation, or
   // perhaps just a point sampler.
-  static MixerPtr Select(const AudioMediaTypeDetailsPtr& src_format,
+  static MixerPtr Select(const AudioMediaTypeDetails& src_format,
                          const AudioMediaTypeDetailsPtr* dst_format);
 
   // Mix

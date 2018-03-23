@@ -318,7 +318,7 @@ void LpcmOutputStream::End(fxl::Closure complete) {
 
 void LpcmOutputStream::SetGain(float gain_db) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(gain_db <= AudioRenderer::kMaxGain);
+  FXL_DCHECK(gain_db <= kMaxGain);
   FXL_DCHECK(is_valid());
 
   if (error_ != MediaResult::OK) {
@@ -337,7 +337,7 @@ void LpcmOutputStream::SetMute(bool mute) {
     return;
   }
 
-  audio_renderer_->SetGain(mute ? AudioRenderer::kMutedGain : gain_db_);
+  audio_renderer_->SetGain(mute ? kMutedGain : gain_db_);
 }
 
 void LpcmOutputStream::SetTimelineTransform(
@@ -346,9 +346,9 @@ void LpcmOutputStream::SetTimelineTransform(
 
   if (started_) {
     local_to_presentation_frames_ = TimelineFunction();
-    timeline_consumer_->SetTimelineTransformNoReply(timeline_transform.Clone());
+    timeline_consumer_->SetTimelineTransformNoReply(*timeline_transform);
   } else {
-    Start(static_cast<TimelineFunction>(timeline_transform));
+    Start(static_cast<TimelineFunction>(*timeline_transform));
   }
 }
 
@@ -369,7 +369,7 @@ void LpcmOutputStream::Start(const TimelineFunction& timeline) {
   sends_pending_ready_.clear();
 
   timeline_consumer_->SetTimelineTransformNoReply(
-      static_cast<TimelineTransformPtr>(timeline));
+      static_cast<TimelineTransform>(timeline));
 }
 
 void LpcmOutputStream::Restart() {
@@ -379,15 +379,14 @@ void LpcmOutputStream::Restart() {
   started_ = false;
   end_method_called_ = false;
 
-  TimelineTransformPtr timeline_transform = media::TimelineTransform::New();
+  TimelineTransform timeline_transform;
 
-  timeline_transform->reference_time = kUnspecifiedTime;
-  timeline_transform->subject_time = kUnspecifiedTime;
-  timeline_transform->reference_delta = 0;
-  timeline_transform->subject_delta = 1;
+  timeline_transform.reference_time = kUnspecifiedTime;
+  timeline_transform.subject_time = kUnspecifiedTime;
+  timeline_transform.reference_delta = 0;
+  timeline_transform.subject_delta = 1;
 
-  timeline_consumer_->SetTimelineTransformNoReply(
-      std::move(timeline_transform));
+  timeline_consumer_->SetTimelineTransformNoReply(timeline_transform);
 
   local_to_presentation_frames_ = TimelineFunction();
 
@@ -538,7 +537,7 @@ void LpcmOutputStream::PostTaskBeforeDeadlineInternal() {
 
 void LpcmOutputStream::HandleStatusUpdates(
     uint64_t version,
-    MediaTimelineControlPointStatusPtr status) {
+    MediaTimelineControlPointStatus* status) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (status) {
@@ -573,8 +572,8 @@ void LpcmOutputStream::HandleStatusUpdates(
   // Request a status update.
   timeline_control_point_->GetStatus(
       version,
-      [this](uint64_t version, MediaTimelineControlPointStatusPtr status) {
-        HandleStatusUpdates(version, std::move(status));
+      [this](uint64_t version, MediaTimelineControlPointStatus status) {
+        HandleStatusUpdates(version, &status);
       });
 }
 

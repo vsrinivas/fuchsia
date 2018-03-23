@@ -57,8 +57,8 @@ void MediaApp::Run(component::ApplicationContext* app_context) {
     SendPacket(CreateAudioPacket(payload_num));
   }
 
-  audio_renderer_->PlayNoReply(media::AudioPacket::kNoTimestamp,
-                               media::AudioPacket::kNoTimestamp);
+  audio_renderer_->PlayNoReply(media::kNoTimestamp,
+                               media::kNoTimestamp);
 }
 
 // Use ApplicationContext to acquire AudioServerPtr, MediaRendererPtr and
@@ -127,19 +127,17 @@ void MediaApp::WriteAudioIntoBuffer() {
 
 // We divided our cross-proc buffer into different zones, called payloads.
 // Create a packet corresponding to this particular payload.
-media::AudioPacketPtr MediaApp::CreateAudioPacket(size_t payload_num) {
-  auto packet = media::AudioPacket::New();
-
-  packet->payload_offset = (payload_num * kPayloadSize) % kTotalMappingSize;
-  packet->payload_size = kPayloadSize;
-
+media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
+  media::AudioPacket packet;
+  packet.payload_offset = (payload_num * kPayloadSize) % kTotalMappingSize;
+  packet.payload_size = kPayloadSize;
   return packet;
 }
 
 // Submit a packet, incrementing our count of packets sent. When it returns:
 // a. if there are more packets to send, create and send the next packet;
 // b. if all expected packets have completed, begin closing down the system.
-void MediaApp::SendPacket(media::AudioPacketPtr packet) {
+void MediaApp::SendPacket(media::AudioPacket packet) {
   ++num_packets_sent_;
   audio_renderer_->SendPacket(
       std::move(packet), [this]() { OnSendPacketComplete(); });

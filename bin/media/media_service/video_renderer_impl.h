@@ -74,7 +74,7 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
 
   // MediaRenderer implementation.
   void GetSupportedMediaTypes(
-      const GetSupportedMediaTypesCallback& callback) override;
+      GetSupportedMediaTypesCallback callback) override;
 
   void SetMediaType(MediaTypePtr media_type) override;
 

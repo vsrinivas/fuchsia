@@ -22,22 +22,21 @@ uint32_t BytesPerSample(AudioSampleFormat sample_format) {
   }
 }
 
-MediaTypePtr CreateLpcmMediaType(AudioSampleFormat sample_format,
-                                 uint32_t channel_count,
-                                 uint32_t frames_per_second) {
-  AudioMediaTypeDetailsPtr audio_details = AudioMediaTypeDetails::New();
+MediaType CreateLpcmMediaType(AudioSampleFormat sample_format,
+                              uint32_t channel_count,
+                              uint32_t frames_per_second) {
+  AudioMediaTypeDetails audio_details;
+  audio_details.sample_format = sample_format;
+  audio_details.channels = channel_count;
+  audio_details.frames_per_second = frames_per_second;
 
-  audio_details->sample_format = sample_format;
-  audio_details->channels = channel_count;
-  audio_details->frames_per_second = frames_per_second;
+  MediaTypeDetails media_details;
+  media_details.set_audio(std::move(audio_details));
 
-  MediaTypeDetailsPtr media_details = MediaTypeDetails::New();
-  media_details->set_audio(std::move(audio_details));
-
-  MediaTypePtr media_type = MediaType::New();
-  media_type->medium = MediaTypeMedium::AUDIO;
-  media_type->details = std::move(media_details);
-  media_type->encoding = MediaType::kAudioEncodingLpcm;
+  MediaType media_type;
+  media_type.medium = MediaTypeMedium::AUDIO;
+  media_type.details = std::move(media_details);
+  media_type.encoding = kAudioEncodingLpcm;
 
   return media_type;
 }

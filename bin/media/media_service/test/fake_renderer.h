@@ -67,7 +67,7 @@ class FakeRenderer : public MediaPacketConsumerBase,
  private:
   // MediaRenderer implementation.
   void GetSupportedMediaTypes(
-      const GetSupportedMediaTypesCallback& callback) override;
+      GetSupportedMediaTypesCallback callback) override;
 
   void SetMediaType(MediaTypePtr media_type) override;
 

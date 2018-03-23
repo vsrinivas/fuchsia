@@ -225,7 +225,7 @@ MediaTimelineControllerImpl::ControlPointState::~ControlPointState() {}
 
 void MediaTimelineControllerImpl::ControlPointState::HandleStatusUpdates(
     uint64_t version,
-    MediaTimelineControlPointStatusPtr status) {
+    MediaTimelineControlPointStatus* status) {
   if (status) {
     // Respond to any end-of-stream changes.
     if (end_of_stream_ != status->end_of_stream) {
@@ -236,8 +236,8 @@ void MediaTimelineControllerImpl::ControlPointState::HandleStatusUpdates(
 
   control_point_->GetStatus(
       version,
-      [this](uint64_t version, MediaTimelineControlPointStatusPtr status) {
-        HandleStatusUpdates(version, std::move(status));
+      [this](uint64_t version, MediaTimelineControlPointStatus status) {
+        HandleStatusUpdates(version, &status);
       });
 }
 

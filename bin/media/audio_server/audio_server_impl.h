@@ -35,15 +35,15 @@ class AudioServerImpl : public AudioServer {
   // TODO(mpuryear): through the codebase, particularly in examples and headers,
   // change 'audio_renderer' variables to 'audio_renderer_request' (media, etc).
   void CreateRenderer(
-      f1dl::InterfaceRequest<AudioRenderer> audio_renderer,
-      f1dl::InterfaceRequest<MediaRenderer> media_renderer) final;
+      fidl::InterfaceRequest<AudioRenderer> audio_renderer,
+      fidl::InterfaceRequest<MediaRenderer> media_renderer) final;
   void CreateRendererV2(
-      f1dl::InterfaceRequest<AudioRenderer2> audio_renderer) final;
+      fidl::InterfaceRequest<AudioRenderer2> audio_renderer) final;
   void CreateCapturer(
-      f1dl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+      fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
       bool loopback) final;
   void SetMasterGain(float db_gain) final;
-  void GetMasterGain(const GetMasterGainCallback& cbk) final;
+  void GetMasterGain(GetMasterGainCallback cbk) final;
 
   // Called (indirectly) by AudioOutputs to schedule the callback for a
   // packet was queued to an AudioRenderer.
@@ -72,7 +72,7 @@ class AudioServerImpl : public AudioServer {
   void DoPacketCleanup();
 
   std::unique_ptr<component::ApplicationContext> application_context_;
-  f1dl::BindingSet<AudioServer> bindings_;
+  fidl::BindingSet<AudioServer> bindings_;
 
   // A reference to our message loop's task runner.  Allows us to post events to
   // be handled by our main application thread from things like the output

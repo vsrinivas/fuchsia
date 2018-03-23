@@ -43,7 +43,7 @@ void FakeRenderer::Bind(
 }
 
 void FakeRenderer::GetSupportedMediaTypes(
-    const GetSupportedMediaTypesCallback& callback) {
+    GetSupportedMediaTypesCallback callback) {
   f1dl::VectorPtr<MediaTypeSetPtr> supported_types =
       f1dl::VectorPtr<MediaTypeSetPtr>::New(2);
 
@@ -57,7 +57,7 @@ void FakeRenderer::GetSupportedMediaTypes(
   supported_type->medium = MediaTypeMedium::AUDIO;
   supported_type->details = MediaTypeSetDetails::New();
   supported_type->details->set_audio(std::move(audio_details));
-  supported_type->encodings.push_back(MediaType::kAudioEncodingLpcm);
+  supported_type->encodings.push_back(kAudioEncodingLpcm);
   supported_types->at(0) = std::move(supported_type);
 
   VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
@@ -83,9 +83,9 @@ void FakeRenderer::SetMediaType(MediaTypePtr media_type) {
     FXL_DCHECK(details);
     pts_rate_ = TimelineRate::NsPerSecond;
   } else if (media_type->details->is_audio()) {
-    const AudioMediaTypeDetailsPtr& details = media_type->details.audio();
+    const AudioMediaTypeDetails& details = media_type->details.audio();
     FXL_DCHECK(details);
-    pts_rate_ = TimelineRate(details->frames_per_second, 1);
+    pts_rate_ = TimelineRate(details.frames_per_second, 1);
   } else {
     FXL_DCHECK(false) << "Media type is neither audio nor video";
   }

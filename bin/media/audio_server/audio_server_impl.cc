@@ -20,7 +20,7 @@ AudioServerImpl::AudioServerImpl(
   FXL_DCHECK(application_context_);
 
   application_context_->outgoing_services()->AddService<AudioServer>(
-      [this](f1dl::InterfaceRequest<AudioServer> request) {
+      [this](fidl::InterfaceRequest<AudioServer> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 
@@ -62,20 +62,20 @@ void AudioServerImpl::Shutdown() {
 }
 
 void AudioServerImpl::CreateRenderer(
-    f1dl::InterfaceRequest<AudioRenderer> audio_renderer,
-    f1dl::InterfaceRequest<MediaRenderer> media_renderer) {
+    fidl::InterfaceRequest<AudioRenderer> audio_renderer,
+    fidl::InterfaceRequest<MediaRenderer> media_renderer) {
   device_manager_.AddRenderer(AudioRenderer1Impl::Create(
       std::move(audio_renderer), std::move(media_renderer), this));
 }
 
 void AudioServerImpl::CreateRendererV2(
-    f1dl::InterfaceRequest<AudioRenderer2> audio_renderer) {
+    fidl::InterfaceRequest<AudioRenderer2> audio_renderer) {
   device_manager_.AddRenderer(
       AudioRenderer2Impl::Create(std::move(audio_renderer), this));
 }
 
 void AudioServerImpl::CreateCapturer(
-    f1dl::InterfaceRequest<AudioCapturer> audio_capturer_request,
+    fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
     bool loopback) {
   device_manager_.AddCapturer(AudioCapturerImpl::Create(
       std::move(audio_capturer_request), this, loopback));
@@ -85,7 +85,7 @@ void AudioServerImpl::SetMasterGain(float db_gain) {
   device_manager_.SetMasterGain(db_gain);
 }
 
-void AudioServerImpl::GetMasterGain(const GetMasterGainCallback& cbk) {
+void AudioServerImpl::GetMasterGain(GetMasterGainCallback cbk) {
   cbk(device_manager_.master_gain());
 }
 

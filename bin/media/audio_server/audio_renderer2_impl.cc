@@ -14,14 +14,14 @@ namespace media {
 namespace audio {
 
 fbl::RefPtr<AudioRenderer2Impl> AudioRenderer2Impl::Create(
-    f1dl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
+    fidl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
     AudioServerImpl* owner) {
   return fbl::AdoptRef(new AudioRenderer2Impl(std::move(audio_renderer_request),
                                               owner));
 }
 
 AudioRenderer2Impl::AudioRenderer2Impl(
-    f1dl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
+    fidl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
     AudioServerImpl* owner)
   : owner_(owner),
     audio_renderer_binding_(this, std::move(audio_renderer_request)),
@@ -108,7 +108,7 @@ bool AudioRenderer2Impl::ValidateConfig() {
   }
 
   // Compute the number of fractional frames per PTS tick.
-  uint32_t fps = format_info()->format()->frames_per_second;
+  uint32_t fps = format_info()->format().frames_per_second;
   uint32_t frac_fps = fps << kPtsFractionalBits;
   frac_frames_per_pts_tick_ = TimelineRate::Product(
       pts_ticks_per_second_.Inverse(), TimelineRate(frac_fps, 1));
@@ -151,7 +151,7 @@ void AudioRenderer2Impl::ComputePtsToFracFrames(int64_t first_pts) {
 //
 // AudioRenderer2 Interface
 //
-void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormatPtr format) {
+void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormat format) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
   // We cannot change the format while we are currently operational
@@ -161,7 +161,7 @@ void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormatPtr format) {
   }
 
   // Sanity check the requested format
-  switch (format->sample_format) {
+  switch (format.sample_format) {
     case AudioSampleFormat::UNSIGNED_8:
     case AudioSampleFormat::SIGNED_16:
       break;
@@ -170,28 +170,28 @@ void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormatPtr format) {
     // mixer core learns to handle them.
     default:
       FXL_LOG(ERROR) << "Unsupported sample format ("
-                     << format->sample_format
+                     << format.sample_format
                      << ") in AudioRenderer::SetPcmFormat.";
       return;
   }
 
-  if ((format->channels < AudioPcmFormat::kMinChannelCount) ||
-      (format->channels > AudioPcmFormat::kMaxChannelCount)) {
+  if ((format.channels < kMinChannelCount) ||
+      (format.channels > kMaxChannelCount)) {
       FXL_LOG(ERROR)
-        << "Invalid channel count (" << format->channels
+        << "Invalid channel count (" << format.channels
         << ") in AudioRenderer::SetPcmFormat.  Must be on the range ["
-        << AudioPcmFormat::kMinChannelCount << ", "
-        << AudioPcmFormat::kMaxChannelCount << "]";
+        << kMinChannelCount << ", "
+        << kMaxChannelCount << "]";
       return;
   }
 
-  if ((format->frames_per_second < AudioPcmFormat::kMinFramesPerSecond) ||
-      (format->frames_per_second > AudioPcmFormat::kMaxFramesPerSecond)) {
+  if ((format.frames_per_second < kMinFramesPerSecond) ||
+      (format.frames_per_second > kMaxFramesPerSecond)) {
       FXL_LOG(ERROR)
-        << "Invalid frame rate (" << format->frames_per_second
+        << "Invalid frame rate (" << format.frames_per_second
         << ") in AudioRenderer::SetPcmFormat.  Must be on the range ["
-        << AudioPcmFormat::kMinFramesPerSecond << ", "
-        << AudioPcmFormat::kMaxFramesPerSecond << "]";
+        << kMinFramesPerSecond << ", "
+        << kMaxFramesPerSecond << "]";
       return;
   }
 
@@ -203,10 +203,10 @@ void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormatPtr format) {
   // TODO(johngro): Look into eliminating most of the format_info class when we
   // finish removing the old audio renererer interface.  At the very least,
   // switch to using the AudioPcmFormat struct instead of AudioMediaTypeDetails
-  AudioMediaTypeDetailsPtr cfg = AudioMediaTypeDetails::New();
-  cfg->sample_format = format->sample_format;
-  cfg->channels = format->channels;
-  cfg->frames_per_second = format->frames_per_second;
+  AudioMediaTypeDetails cfg;
+  cfg.sample_format = format.sample_format;
+  cfg.channels = format.channels;
+  cfg.frames_per_second = format.frames_per_second;
   format_info_ = AudioRendererFormatInfo::Create(std::move(cfg));
 
   // Have the audio output manager initialize our set of outputs.  Note; there
@@ -327,8 +327,8 @@ void AudioRenderer2Impl::SetReferenceClock(zx::handle ref_clock) {
   FXL_LOG(WARNING) << "Not Implemented : " << __PRETTY_FUNCTION__;
 }
 
-void AudioRenderer2Impl::SendPacket(AudioPacketPtr packet,
-                                    const SendPacketCallback& callback) {
+void AudioRenderer2Impl::SendPacket(AudioPacket packet,
+                                    SendPacketCallback callback) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
   // It is an error to attempt to send a packet before we have established at
@@ -344,8 +344,8 @@ void AudioRenderer2Impl::SendPacket(AudioPacketPtr packet,
   // process.
   uint32_t frame_size = format_info()->bytes_per_frame();
   FXL_DCHECK(frame_size != 0);
-  if (packet->payload_size % frame_size) {
-    FXL_LOG(ERROR) << "Region length (" << packet->payload_size
+  if (packet.payload_size % frame_size) {
+    FXL_LOG(ERROR) << "Region length (" << packet.payload_size
                    << ") is not divisible by by audio frame size ("
                    << frame_size << ")";
     return;
@@ -354,7 +354,7 @@ void AudioRenderer2Impl::SendPacket(AudioPacketPtr packet,
   // Make sure that we don't exceed the maximum permissible frames-per-packet.
   static constexpr uint32_t kMaxFrames =
       std::numeric_limits<uint32_t>::max() >> kPtsFractionalBits;
-  uint32_t frame_count = (packet->payload_size / frame_size);
+  uint32_t frame_count = (packet.payload_size / frame_size);
   if (frame_count > kMaxFrames) {
     FXL_LOG(ERROR) << "Audio frame count (" << frame_count
                    << ") exceeds maximum allowed (" << kMaxFrames << ")";
@@ -364,8 +364,8 @@ void AudioRenderer2Impl::SendPacket(AudioPacketPtr packet,
   // Make sure that the packet offset/size exists entirely within the payload
   // buffer.
   FXL_DCHECK(payload_buffer_ != nullptr);
-  uint64_t start = packet->payload_offset;
-  uint64_t end = start + packet->payload_size;
+  uint64_t start = packet.payload_offset;
+  uint64_t end = start + packet.payload_size;
   uint64_t pb_size = payload_buffer_->size();
   if ((start >= payload_buffer_->size()) || (end > payload_buffer_->size())) {
     FXL_LOG(ERROR) << "Bad packet range [" << start << ", " << end
@@ -379,18 +379,18 @@ void AudioRenderer2Impl::SendPacket(AudioPacketPtr packet,
   // startup, and after each flush operation).
   if (!pts_to_frac_frames_valid_) {
     ComputePtsToFracFrames(
-      (packet->timestamp == AudioPacket::kNoTimestamp) ? 0 : packet->timestamp);
+      (packet.timestamp == kNoTimestamp) ? 0 : packet.timestamp);
   }
 
   // Now compute the starting PTS expressed in fractional input frames.  If no
   // explicit PTS was provided, interpolate using the next expected PTS.
   int64_t start_pts;
-  if (packet->timestamp == AudioPacket::kNoTimestamp) {
+  if (packet.timestamp == kNoTimestamp) {
     start_pts = next_frac_frame_pts_;
   } else {
     // Looks like we have an explicit PTS on this packet.  Boost it into the
     // fractional input frame domain, then apply our continuity threshold rules.
-    int64_t packet_ffpts = pts_to_frac_frames_.Apply(packet->timestamp);
+    int64_t packet_ffpts = pts_to_frac_frames_.Apply(packet.timestamp);
     int64_t delta = std::abs(packet_ffpts - next_frac_frame_pts_);
     start_pts = (delta < pts_continuity_threshold_frac_frame_)
               ? next_frac_frame_pts_
@@ -438,7 +438,7 @@ void AudioRenderer2Impl::SendPacket(AudioPacketPtr packet,
   cleanup.cancel();
 }
 
-void AudioRenderer2Impl::SendPacketNoReply(AudioPacketPtr packet) {
+void AudioRenderer2Impl::SendPacketNoReply(AudioPacket packet) {
   SendPacket(std::move(packet), nullptr);
 }
 
@@ -479,7 +479,7 @@ void AudioRenderer2Impl::FlushNoReply() {
 
 void AudioRenderer2Impl::Play(int64_t reference_time,
                               int64_t media_time,
-                              const PlayCallback& callback) {
+                              PlayCallback callback) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
   if (!ValidateConfig()) {
@@ -494,7 +494,7 @@ void AudioRenderer2Impl::Play(int64_t reference_time,
   //
   // TODO(johngro): We need to use our reference clock here, and not just assume
   // clock monotonic is our reference clock.
-  if (reference_time == AudioPacket::kNoTimestamp) {
+  if (reference_time == kNoTimestamp) {
     // TODO(johngro): How much more than the minimum clock lead time do we want
     // to pad this by?  Also, if/when lead time requirements change, do we want
     // to introduce a discontinuity?
@@ -522,7 +522,7 @@ void AudioRenderer2Impl::Play(int64_t reference_time,
   // defined when we transition to our operational mode.  We need to remember to
   // translate back and forth as appropriate.
   int64_t frac_frame_media_time;
-  if (media_time == AudioPacket::kNoTimestamp) {
+  if (media_time == kNoTimestamp) {
     // Are we resuming from pause?
     if (pause_time_frac_frames_valid_) {
       frac_frame_media_time = pause_time_frac_frames_;
@@ -573,7 +573,7 @@ void AudioRenderer2Impl::PlayNoReply(int64_t reference_time,
   Play(reference_time, media_time, nullptr);
 }
 
-void AudioRenderer2Impl::Pause(const PauseCallback& callback) {
+void AudioRenderer2Impl::Pause(PauseCallback callback) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
   if (!ValidateConfig()) {
@@ -621,11 +621,11 @@ void AudioRenderer2Impl::PauseNoReply() { Pause(nullptr); }
 void AudioRenderer2Impl::SetGainMute(float gain,
                                      bool mute,
                                      uint32_t flags,
-                                     const SetGainMuteCallback& callback) {
+                                     SetGainMuteCallback callback) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
   bool dirty = false;
   if ((flags & kGainFlagGainValid) && (db_gain_ != gain)) {
-    if (gain > AudioRenderer::kMaxGain) {
+    if (gain > kMaxGain) {
       FXL_LOG(ERROR) << "Gain value too large (" << gain
                      << ") for audio renderer.";
       return;
@@ -641,7 +641,7 @@ void AudioRenderer2Impl::SetGainMute(float gain,
   }
 
   if (dirty) {
-    float effective_gain = mute_ ? AudioRenderer::kMutedGain : db_gain_;
+    float effective_gain = mute_ ? kMutedGain : db_gain_;
 
     fbl::AutoLock links_lock(&links_lock_);
     for (const auto& link : dest_links_) {
@@ -666,19 +666,19 @@ void AudioRenderer2Impl::SetGainMuteNoReply(float gain,
 }
 
 void AudioRenderer2Impl::DuplicateGainControlInterface(
-    f1dl::InterfaceRequest<AudioRendererGainControl> request) {
+    fidl::InterfaceRequest<AudioRendererGainControl> request) {
   gain_control_bindings_.AddBinding(GainControlBinding::Create(this),
                                     std::move(request));
 }
 
 void AudioRenderer2Impl::EnableMinLeadTimeEvents(
-    f1dl::InterfaceHandle<AudioRendererMinLeadTimeChangedEvent> evt) {
+    fidl::InterfaceHandle<AudioRendererMinLeadTimeChangedEvent> evt) {
   min_clock_lead_time_cbk_.Bind(std::move(evt));
   ReportNewMinClockLeadTime();
 }
 
 void AudioRenderer2Impl::GetMinLeadTime(
-    const GetMinLeadTimeCallback& callback) {
+    GetMinLeadTimeCallback callback) {
   callback(min_clock_lead_nsec_);
 }
 
@@ -691,7 +691,7 @@ void AudioRenderer2Impl::ReportNewMinClockLeadTime() {
 AudioRenderer2Impl::AudioPacketRefV2::AudioPacketRefV2(
         fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
         const AudioRenderer2::SendPacketCallback& callback,
-        AudioPacketPtr packet,
+        AudioPacket packet,
         AudioServerImpl* server,
         uint32_t frac_frame_len,
         int64_t start_pts)
@@ -700,13 +700,12 @@ AudioRenderer2Impl::AudioPacketRefV2::AudioPacketRefV2(
     callback_(callback),
     packet_(std::move(packet)) {
   FXL_DCHECK(vmo_ref_ != nullptr);
-  FXL_DCHECK(packet_.is_null() == false);
 }
 
 // Shorthand to save horizontal space for the thunks which follow.
 void AudioRenderer2Impl::GainControlBinding::SetGainMute(
     float gain, bool mute, uint32_t flags,
-    const SetGainMuteCallback& callback) {
+    SetGainMuteCallback callback) {
   owner_->SetGainMute(gain, mute, flags, callback);
 }
 

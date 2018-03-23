@@ -205,8 +205,8 @@ void Tones::BuildScore() {
 
 void Tones::Start() {
   Send(kTargetPayloadsInFlight);
-  audio_renderer_->PlayNoReply(media::AudioPacket::kNoTimestamp,
-                               media::AudioPacket::kNoTimestamp);
+  audio_renderer_->PlayNoReply(media::kNoTimestamp,
+                               media::kNoTimestamp);
 }
 
 void Tones::Send(uint32_t amt) {

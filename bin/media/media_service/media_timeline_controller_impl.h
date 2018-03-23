@@ -69,8 +69,8 @@ class MediaTimelineControllerImpl
     ~ControlPointState();
 
     void HandleStatusUpdates(
-        uint64_t version = MediaTimelineControlPoint::kInitialStatus,
-        MediaTimelineControlPointStatusPtr status = nullptr);
+        uint64_t version = kInitialStatus,
+        MediaTimelineControlPointStatus* status = nullptr);
 
     MediaTimelineControllerImpl* parent_;
     MediaTimelineControlPointPtr control_point_;

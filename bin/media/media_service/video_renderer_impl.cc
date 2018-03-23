@@ -83,7 +83,7 @@ geometry::Size VideoRendererImpl::GetPixelAspectRatio() const {
 }
 
 void VideoRendererImpl::GetSupportedMediaTypes(
-    const GetSupportedMediaTypesCallback& callback) {
+    GetSupportedMediaTypesCallback callback) {
   callback(SupportedMediaTypes());
 }
 

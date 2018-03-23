@@ -35,8 +35,8 @@ class MediaApp {
 
   bool RefillBuffer();
 
-  media::AudioPacketPtr CreateAudioPacket(size_t payload_num);
-  bool SendAudioPacket(media::AudioPacketPtr packet);
+  media::AudioPacket CreateAudioPacket(size_t payload_num);
+  bool SendAudioPacket(media::AudioPacket packet);
 
   void WaitForPackets(size_t num_packets);
 

@@ -93,8 +93,8 @@ int MediaApp::Run() {
 
   int64_t ref_start_time;
   int64_t media_start_time;
-  audio_renderer_->Play(media::AudioPacket::kNoTimestamp,
-                        media::AudioPacket::kNoTimestamp,
+  audio_renderer_->Play(media::kNoTimestamp,
+                        media::kNoTimestamp,
                         &ref_start_time,
                         &media_start_time);
   start_time_known_ = true;
@@ -179,17 +179,15 @@ void MediaApp::WriteAudioIntoBuffer(void* buffer, size_t num_frames) {
 }
 
 // Create a packet for this payload.
-media::AudioPacketPtr MediaApp::CreateAudioPacket(size_t payload_num) {
-  auto packet = media::AudioPacket::New();
-
-  packet->payload_offset = (payload_num % kNumPayloads) * kPayloadSize;
-  packet->payload_size = kPayloadSize;
-
+media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
+  media::AudioPacket packet;
+  packet.payload_offset = (payload_num % kNumPayloads) * kPayloadSize;
+  packet.payload_size = kPayloadSize;
   return packet;
 }
 
 // Submit a packet, incrementing our count of packets sent.
-bool MediaApp::SendAudioPacket(media::AudioPacketPtr packet) {
+bool MediaApp::SendAudioPacket(media::AudioPacket packet) {
   if (verbose_) {
     const float delay = (start_time_known_
                       ? (float)zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time_

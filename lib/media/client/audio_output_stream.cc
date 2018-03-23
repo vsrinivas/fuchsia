@@ -212,7 +212,7 @@ int AudioOutputStream::SetGain(float db_gain) {
     return ZX_ERR_CONNECTION_ABORTED;
   }
 
-  if (db_gain > media::AudioRenderer::kMaxGain) {
+  if (db_gain > media::kMaxGain) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 

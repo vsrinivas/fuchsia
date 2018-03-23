@@ -108,7 +108,7 @@ class VolApp {
 
     HandleStatus();
     audio_policy_service_->GetStatus(
-        AudioPolicyService::kInitialStatus,
+        kInitialStatus,
         [this](uint64_t version, AudioPolicyStatusPtr status) {});
 
     if (interactive_) {
@@ -147,7 +147,7 @@ class VolApp {
     return (istream >> *float_out) && istream.eof();
   }
 
-  void HandleStatus(uint64_t version = AudioPolicyService::kInitialStatus,
+  void HandleStatus(uint64_t version = kInitialStatus,
                     AudioPolicyStatusPtr status = nullptr) {
     if (status) {
       system_audio_gain_db_ = status->system_audio_gain_db;

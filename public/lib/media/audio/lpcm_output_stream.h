@@ -140,7 +140,7 @@ class LpcmOutputStream : public LpcmPayload::Owner {
   void End(fxl::Closure complete);
 
   // Sets the gain for this stream in decibels. |gain_db| must be at most
-  // |AudioRenderer::kMaxGain|.
+  // |kMaxGain|.
   void SetGain(float gain_db);
 
   // Controls whether this stream is muted.
@@ -285,8 +285,8 @@ class LpcmOutputStream : public LpcmPayload::Owner {
   // Handles a status update from the timeline control point. When called
   // with the default argument values, initiates status updates.
   void HandleStatusUpdates(
-      uint64_t version = MediaTimelineControlPoint::kInitialStatus,
-      MediaTimelineControlPointStatusPtr status = nullptr);
+      uint64_t version = kInitialStatus,
+      MediaTimelineControlPointStatus* status = nullptr);
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
 

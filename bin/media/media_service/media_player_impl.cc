@@ -599,7 +599,7 @@ void MediaPlayerImpl::HandleSourceStatusUpdates(uint64_t version,
 
 void MediaPlayerImpl::HandleTimelineControlPointStatusUpdates(
     uint64_t version,
-    MediaTimelineControlPointStatusPtr status) {
+    MediaTimelineControlPointStatus* status) {
   if (status) {
     timeline_function_ =
         static_cast<TimelineFunction>(status->timeline_transform);
@@ -610,8 +610,8 @@ void MediaPlayerImpl::HandleTimelineControlPointStatusUpdates(
 
   timeline_control_point_->GetStatus(
       version,
-      [this](uint64_t version, MediaTimelineControlPointStatusPtr status) {
-        HandleTimelineControlPointStatusUpdates(version, std::move(status));
+      [this](uint64_t version, MediaTimelineControlPointStatus status) {
+        HandleTimelineControlPointStatusUpdates(version, &status);
       });
 }
 

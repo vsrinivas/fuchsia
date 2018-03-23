@@ -7,6 +7,7 @@
 #include <limits>
 #include <type_traits>
 
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -97,10 +98,11 @@ class OutputFormatterImpl : public OutputFormatter {
 // Constructor/destructor for the common OutputFormatter base class.
 OutputFormatter::OutputFormatter(const AudioMediaTypeDetailsPtr& format,
                                  uint32_t bytes_per_sample)
-    : format_(format.Clone()),
-      channels_(format->channels),
+    : channels_(format->channels),
       bytes_per_sample_(bytes_per_sample),
-      bytes_per_frame_(bytes_per_sample * format->channels) {}
+      bytes_per_frame_(bytes_per_sample * format->channels) {
+  fidl::Clone(format, &format_);
+}
 
 // Selection routine which will instantiate a particular templatized version of
 // the output formatter.
@@ -117,7 +119,7 @@ OutputFormatterPtr OutputFormatter::Select(
     case AudioSampleFormat::SIGNED_16:
       return OutputFormatterPtr(new OutputFormatterImpl<int16_t>(format));
     default:
-      FXL_LOG(ERROR) << "Unsupported output format " << format->sample_format;
+      FXL_LOG(ERROR) << "Unsupported output format " << (uint32_t)format->sample_format;
       return nullptr;
   }
 }

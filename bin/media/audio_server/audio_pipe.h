@@ -48,7 +48,7 @@ class AudioPipe : public MediaPacketConsumerBase {
  protected:
   void OnPacketSupplied(
       std::unique_ptr<MediaPacketConsumerBase::SuppliedPacket> packet) override;
-  void OnFlushRequested(bool hold_frame, const FlushCallback& cbk) override;
+  void OnFlushRequested(bool hold_frame, FlushCallback cbk) override;
 
  private:
   static constexpr uint32_t kDemandMinPacketsOutstanding = 4;

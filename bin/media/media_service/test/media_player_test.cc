@@ -68,7 +68,7 @@ class MediaPlayerTester {
   }
 
  private:
-  void HandleStatusUpdates(uint64_t version = MediaPlayer::kInitialStatus,
+  void HandleStatusUpdates(uint64_t version = kInitialStatus,
                            MediaPlayerStatusPtr status = nullptr) {
     if (status) {
       if (status->end_of_stream) {

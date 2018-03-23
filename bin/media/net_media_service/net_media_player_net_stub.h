@@ -35,7 +35,7 @@ class NetMediaPlayerNetStub
 
   // Handles a status update from the player. When called with the default
   // argument values, initiates status updates.
-  void HandleStatusUpdates(uint64_t version = NetMediaPlayer::kInitialStatus,
+  void HandleStatusUpdates(uint64_t version = kInitialStatus,
                            MediaPlayerStatusPtr status = nullptr);
 
   NetMediaPlayer* player_;

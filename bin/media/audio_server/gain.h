@@ -38,8 +38,8 @@ class Gain {
       (static_cast<AScale>(1u) << kFractionalScaleBits);
   static constexpr AScale kMaxScale = 0xFD9539A4;  // +24.0 dB: kMaxGain
 
-  static constexpr float kMinGain = AudioRenderer::kMutedGain;
-  static constexpr float kMaxGain = AudioRenderer::kMaxGain;
+  static constexpr float kMinGain = kMutedGain;
+  static constexpr float kMaxGain = kMaxGain;
 
   // TODO(mpuryear): MTWN-70 Clarify/document/test audio::Gain's thread-safety
   //

@@ -286,7 +286,7 @@ interface AudioCapturer {
 
   // Set the gain (in dB) applied to the input.  Gain may be adjusted at any
   // time, but must be on the range...
-  // [AudioRenderer::kMutedGain, AudioRenderer::kMaxGain]
+  // [kMutedGain, kMaxGain]
   3: SetGain(float32 gain);
 
   // Set the shared buffer used to transport captured data.

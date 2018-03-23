@@ -11,20 +11,20 @@ namespace media {
 namespace audio {
 
 AudioRendererFormatInfo::AudioRendererFormatInfo(
-    AudioMediaTypeDetailsPtr format)
+    AudioMediaTypeDetails format)
     : format_(std::move(format)) {
   // Precompute some useful timing/format stuff.
   //
   // Start with the ratio between frames and nanoseconds.
   frames_per_ns_ =
-      TimelineRate(format_->frames_per_second, Timeline::ns_from_seconds(1));
+      TimelineRate(format_.frames_per_second, Timeline::ns_from_seconds(1));
 
   // Figure out the rate we need to scale by in order to produce our fixed
   // point timestamps.
   frame_to_media_ratio_ = TimelineRate(1 << kPtsFractionalBits, 1);
 
   // Figure out the total number of bytes in a packed frame.
-  switch (format_->sample_format) {
+  switch (format_.sample_format) {
     case AudioSampleFormat::UNSIGNED_8:
       bytes_per_frame_ = 1;
       break;
@@ -47,12 +47,12 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
       break;
   }
 
-  bytes_per_frame_ *= format_->channels;
+  bytes_per_frame_ *= format_.channels;
 }
 
 // static
 fbl::RefPtr<AudioRendererFormatInfo> AudioRendererFormatInfo::Create(
-    AudioMediaTypeDetailsPtr format) {
+    AudioMediaTypeDetails format) {
   return fbl::AdoptRef(new AudioRendererFormatInfo(std::move(format)));
 }
 

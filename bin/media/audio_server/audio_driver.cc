@@ -8,6 +8,7 @@
 
 #include "garnet/bin/media/audio/driver_utils.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -114,10 +115,12 @@ void AudioDriver::SnapshotRingBuffer(RingBufferSnapshot* snapshot) const {
 AudioMediaTypeDetailsPtr AudioDriver::GetSourceFormat() const {
   std::lock_guard<std::mutex> lock(configured_format_lock_);
 
-  if (configured_format_.is_null())
+  if (!configured_format_)
     return nullptr;
 
-  return configured_format_.Clone();
+  AudioMediaTypeDetailsPtr result;
+  fidl::Clone(configured_format_, &result);
+  return result;
 }
 
 zx_status_t AudioDriver::GetSupportedFormats() {

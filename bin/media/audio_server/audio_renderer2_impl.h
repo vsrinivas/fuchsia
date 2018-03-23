@@ -22,7 +22,7 @@ class AudioServerImpl;
 class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
  public:
   static fbl::RefPtr<AudioRenderer2Impl> Create(
-      f1dl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
+      fidl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
       AudioServerImpl* owner);
 
   // AudioRendererImpl implementation
@@ -35,33 +35,33 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
                                        uint32_t* generation) override;
 
   // AudioRenderer2 Interface
-  void SetPcmFormat(AudioPcmFormatPtr format) final;
+  void SetPcmFormat(AudioPcmFormat format) final;
   void SetPayloadBuffer(zx::vmo payload_buffer) final;
   void SetPtsUnits(uint32_t tick_per_second_numerator,
                    uint32_t tick_per_second_denominator) final;
   void SetPtsContinuityThreshold(float threshold_seconds) final;
   void SetReferenceClock(zx::handle ref_clock) final;
-  void SendPacket(AudioPacketPtr packet,
-                  const SendPacketCallback& callback) final;
-  void SendPacketNoReply(AudioPacketPtr packet) final;
+  void SendPacket(AudioPacket packet,
+                  SendPacketCallback callback) final;
+  void SendPacketNoReply(AudioPacket packet) final;
   void Flush(FlushCallback callback) final;
   void FlushNoReply() final;
   void Play(int64_t reference_time,
             int64_t media_time,
-            const PlayCallback& callback) final;
+            PlayCallback callback) final;
   void PlayNoReply(int64_t reference_time, int64_t media_time) final;
-  void Pause(const PauseCallback& callback) final;
+  void Pause(PauseCallback callback) final;
   void PauseNoReply() final;
   void SetGainMute(float gain,
                    bool mute,
                    uint32_t flags,
-                   const SetGainMuteCallback& callback) final;
+                   SetGainMuteCallback callback) final;
   void SetGainMuteNoReply(float gain, bool mute, uint32_t flags) final;
   void DuplicateGainControlInterface(
-      f1dl::InterfaceRequest<AudioRendererGainControl> request) final;
+      fidl::InterfaceRequest<AudioRendererGainControl> request) final;
   void EnableMinLeadTimeEvents(
-      f1dl::InterfaceHandle<AudioRendererMinLeadTimeChangedEvent> evt) final;
-  void GetMinLeadTime(const GetMinLeadTimeCallback& callback) final;
+      fidl::InterfaceHandle<AudioRendererMinLeadTimeChangedEvent> evt) final;
+  void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
 
  protected:
   // Hook called when the minimum clock lead time requirement changes.
@@ -81,14 +81,14 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
 
     void* payload() final {
       auto start = reinterpret_cast<uint8_t*>(vmo_ref_->start());
-      return (start + packet_->payload_offset);
+      return (start + packet_.payload_offset);
     }
 
-    uint32_t flags() final { return packet_->flags; }
+    uint32_t flags() final { return packet_.flags; }
 
     AudioPacketRefV2(fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
                      const AudioRenderer2::SendPacketCallback& callback,
-                     AudioPacketPtr packet,
+                     AudioPacket packet,
                      AudioServerImpl* server,
                      uint32_t frac_frame_len,
                      int64_t start_pts);
@@ -98,7 +98,7 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
 
     fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref_;
     AudioRenderer2::SendPacketCallback callback_;
-    AudioPacketPtr packet_;
+    AudioPacket packet_;
   };
 
   class GainControlBinding : public AudioRendererGainControl {
@@ -114,7 +114,7 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
     void SetGainMute(float gain,
                      bool mute,
                      uint32_t flags,
-                     const SetGainMuteCallback& callback) override;
+                     SetGainMuteCallback callback) override;
     void SetGainMuteNoReply(float gain, bool mute, uint32_t flags) override;
 
    private:
@@ -131,7 +131,7 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
   friend class GainControlBinding;
 
   AudioRenderer2Impl(
-      f1dl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
+      fidl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
       AudioServerImpl* owner);
 
   ~AudioRenderer2Impl() override;
@@ -141,8 +141,8 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
   void ComputePtsToFracFrames(int64_t first_pts);
 
   AudioServerImpl* owner_ = nullptr;
-  f1dl::Binding<AudioRenderer2> audio_renderer_binding_;
-  f1dl::BindingSet<AudioRendererGainControl,
+  fidl::Binding<AudioRenderer2> audio_renderer_binding_;
+  fidl::BindingSet<AudioRendererGainControl,
                    fbl::unique_ptr<GainControlBinding>>
       gain_control_bindings_;
   bool is_shutdown_ = false;

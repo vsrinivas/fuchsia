@@ -58,7 +58,7 @@ class AudioPolicyServiceImpl : public AudioPolicyService {
   // Returns the effective system audio gain based on |system_audio_gain_db_|
   // and |system_audio_muted_|.
   float effective_system_audio_gain() {
-    return system_audio_muted_ ? AudioRenderer::kMutedGain
+    return system_audio_muted_ ? kMutedGain
                                : system_audio_gain_db_;
   }
 

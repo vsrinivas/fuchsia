@@ -107,7 +107,7 @@ void AudioPipe::OnPacketSupplied(
   }
 
   FXL_DCHECK(supplied_packet->packet().pts_rate_ticks ==
-             owner_->format_info()->format()->frames_per_second);
+             owner_->format_info()->format().frames_per_second);
   FXL_DCHECK(supplied_packet->packet().pts_rate_seconds == 1);
 
   // Start by making sure that the region we are receiving is made from an
@@ -174,7 +174,7 @@ void AudioPipe::OnPacketSupplied(
   }
 }
 
-void AudioPipe::OnFlushRequested(bool hold_frame, const FlushCallback& cbk) {
+void AudioPipe::OnFlushRequested(bool hold_frame, FlushCallback cbk) {
   FXL_DCHECK(owner_);
   next_pts_known_ = false;
   owner_->OnFlushRequested(cbk);

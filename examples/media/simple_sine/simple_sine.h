@@ -26,8 +26,8 @@ class MediaApp {
   zx_status_t CreateMemoryMapping();
   void WriteAudioIntoBuffer();
 
-  media::AudioPacketPtr CreateAudioPacket(size_t packet_num);
-  void SendPacket(media::AudioPacketPtr packet);
+  media::AudioPacket CreateAudioPacket(size_t packet_num);
+  void SendPacket(media::AudioPacket packet);
   void OnSendPacketComplete();
 
   void Shutdown();

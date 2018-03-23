@@ -289,15 +289,15 @@ bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
 // Templates used to expand all of the different combinations of the possible
 // Point Sampler Mixer configurations.
 template <size_t DChCount, typename SType, size_t SChCount>
-static inline MixerPtr SelectPSM(const AudioMediaTypeDetailsPtr& src_format,
-                                 const AudioMediaTypeDetailsPtr& dst_format) {
+static inline MixerPtr SelectPSM(const AudioMediaTypeDetails& src_format,
+                                 const AudioMediaTypeDetails& dst_format) {
   return MixerPtr(new PointSamplerImpl<DChCount, SType, SChCount>());
 }
 
 template <size_t DChCount, typename SType>
-static inline MixerPtr SelectPSM(const AudioMediaTypeDetailsPtr& src_format,
-                                 const AudioMediaTypeDetailsPtr& dst_format) {
-  switch (src_format->channels) {
+static inline MixerPtr SelectPSM(const AudioMediaTypeDetails& src_format,
+                                 const AudioMediaTypeDetails& dst_format) {
+  switch (src_format.channels) {
     case 1:
       return SelectPSM<DChCount, SType, 1>(src_format, dst_format);
     case 2:
@@ -308,9 +308,9 @@ static inline MixerPtr SelectPSM(const AudioMediaTypeDetailsPtr& src_format,
 }
 
 template <size_t DChCount>
-static inline MixerPtr SelectPSM(const AudioMediaTypeDetailsPtr& src_format,
-                                 const AudioMediaTypeDetailsPtr& dst_format) {
-  switch (src_format->sample_format) {
+static inline MixerPtr SelectPSM(const AudioMediaTypeDetails& src_format,
+                                 const AudioMediaTypeDetails& dst_format) {
+  switch (src_format.sample_format) {
     case AudioSampleFormat::UNSIGNED_8:
       return SelectPSM<DChCount, uint8_t>(src_format, dst_format);
     case AudioSampleFormat::SIGNED_16:
@@ -320,26 +320,25 @@ static inline MixerPtr SelectPSM(const AudioMediaTypeDetailsPtr& src_format,
   }
 }
 
-static inline MixerPtr SelectNxNPSM(
-    const AudioMediaTypeDetailsPtr& src_format) {
-  switch (src_format->sample_format) {
+static inline MixerPtr SelectNxNPSM(const AudioMediaTypeDetails& src_format) {
+  switch (src_format.sample_format) {
     case AudioSampleFormat::UNSIGNED_8:
-      return MixerPtr(new NxNPointSamplerImpl<uint8_t>(src_format->channels));
+      return MixerPtr(new NxNPointSamplerImpl<uint8_t>(src_format.channels));
     case AudioSampleFormat::SIGNED_16:
-      return MixerPtr(new NxNPointSamplerImpl<int16_t>(src_format->channels));
+      return MixerPtr(new NxNPointSamplerImpl<int16_t>(src_format.channels));
     default:
       return nullptr;
   }
 }
 
-MixerPtr PointSampler::Select(const AudioMediaTypeDetailsPtr& src_format,
-                              const AudioMediaTypeDetailsPtr& dst_format) {
-  if (src_format->channels == dst_format->channels &&
-      src_format->channels > 2) {
+MixerPtr PointSampler::Select(const AudioMediaTypeDetails& src_format,
+                              const AudioMediaTypeDetails& dst_format) {
+  if (src_format.channels == dst_format.channels &&
+      src_format.channels > 2) {
     return SelectNxNPSM(src_format);
   }
 
-  switch (dst_format->channels) {
+  switch (dst_format.channels) {
     case 1:
       return SelectPSM<1>(src_format, dst_format);
     case 2:

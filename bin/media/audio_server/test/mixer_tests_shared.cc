@@ -25,10 +25,10 @@ audio::MixerPtr SelectMixer(ASF src_format,
                             uint32_t src_frame_rate,
                             uint32_t dst_channels,
                             uint32_t dst_frame_rate) {
-  AudioMediaTypeDetailsPtr src_details = AudioMediaTypeDetails::New();
-  src_details->sample_format = src_format;
-  src_details->channels = src_channels;
-  src_details->frames_per_second = src_frame_rate;
+  AudioMediaTypeDetails src_details;
+  src_details.sample_format = src_format;
+  src_details.channels = src_channels;
+  src_details.frames_per_second = src_frame_rate;
 
   AudioMediaTypeDetailsPtr dst_details = AudioMediaTypeDetails::New();
   dst_details->sample_format = ASF::SIGNED_16;

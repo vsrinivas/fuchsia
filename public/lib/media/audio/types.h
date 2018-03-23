@@ -42,8 +42,8 @@ uint32_t BytesPerSample(AudioSampleFormat format);
 
 // Creates a |MediaType| for LPCM audio.
 // TODO(dalesat): Need to add channel configuration.
-MediaTypePtr CreateLpcmMediaType(AudioSampleFormat sample_format,
-                                 uint32_t channel_count,
-                                 uint32_t frames_per_second);
+MediaType CreateLpcmMediaType(AudioSampleFormat sample_format,
+                              uint32_t channel_count,
+                              uint32_t frames_per_second);
 
 }  // namespace media

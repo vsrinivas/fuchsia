@@ -74,10 +74,10 @@ TEST(DataFormats, LinearSampler_Other) {
 //
 // Create a NoOpMixer object
 TEST(DataFormats, NoOpMixer) {
-  AudioMediaTypeDetailsPtr src_details = AudioMediaTypeDetails::New();
-  src_details->sample_format = AudioSampleFormat::SIGNED_16;
-  src_details->channels = 2;
-  src_details->frames_per_second = 48000;
+  AudioMediaTypeDetails src_details;
+  src_details.sample_format = AudioSampleFormat::SIGNED_16;
+  src_details.channels = 2;
+  src_details.frames_per_second = 48000;
 
   EXPECT_NE(nullptr, audio::Mixer::Select(src_details, nullptr));
 }
@@ -146,10 +146,10 @@ TEST(PassThru, Source_16) {
 
 // Does NoOp mixer behave as expected? (not update offsets, nor touch buffers)
 TEST(PassThru, NoOp) {
-  AudioMediaTypeDetailsPtr src_details = AudioMediaTypeDetails::New();
-  src_details->sample_format = AudioSampleFormat::SIGNED_16;
-  src_details->channels = 1;
-  src_details->frames_per_second = 48000;
+  AudioMediaTypeDetails src_details;
+  src_details.sample_format = AudioSampleFormat::SIGNED_16;
+  src_details.channels = 1;
+  src_details.frames_per_second = 48000;
 
   audio::MixerPtr no_op_mixer = audio::Mixer::Select(src_details, nullptr);
   EXPECT_NE(nullptr, no_op_mixer);

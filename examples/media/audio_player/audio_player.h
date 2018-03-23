@@ -22,7 +22,7 @@ class AudioPlayer {
   // Handles a status update from the player. When called with the default
   // argument values, initiates status updates.
   void HandleStatusUpdates(
-      uint64_t version = media::MediaPlayer::kInitialStatus,
+      uint64_t version = media::kInitialStatus,
       media::MediaPlayerStatusPtr status = nullptr);
 
   media::MediaPlayerPtr media_player_;

@@ -46,8 +46,8 @@ static const struct {
 };
 
 AudioRenderer1Impl::AudioRenderer1Impl(
-    f1dl::InterfaceRequest<AudioRenderer> audio_renderer_request,
-    f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
+    fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
+    fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
     AudioServerImpl* owner)
     : owner_(owner),
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
@@ -95,8 +95,8 @@ AudioRenderer1Impl::~AudioRenderer1Impl() {
 }
 
 fbl::RefPtr<AudioRenderer1Impl> AudioRenderer1Impl::Create(
-    f1dl::InterfaceRequest<AudioRenderer> audio_renderer_request,
-    f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
+    fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
+    fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
     AudioServerImpl* owner) {
   return fbl::AdoptRef(new AudioRenderer1Impl(std::move(audio_renderer_request),
                                               std::move(media_renderer_request),
@@ -142,15 +142,15 @@ void AudioRenderer1Impl::Shutdown() {
 }
 
 void AudioRenderer1Impl::GetSupportedMediaTypes(
-    const GetSupportedMediaTypesCallback& cbk) {
+    GetSupportedMediaTypesCallback cbk) {
   cbk(SupportedMediaTypes());
 }
 
-void AudioRenderer1Impl::SetMediaType(MediaTypePtr media_type) {
+void AudioRenderer1Impl::SetMediaType(MediaType media_type) {
   // Check the requested configuration.
-  if ((media_type->medium != MediaTypeMedium::AUDIO) ||
-      (media_type->encoding != MediaType::kAudioEncodingLpcm) ||
-      (!media_type->details->is_audio())) {
+  if ((media_type.medium != MediaTypeMedium::AUDIO) ||
+      (media_type.encoding != kAudioEncodingLpcm) ||
+      (!media_type.details.is_audio())) {
     FXL_LOG(ERROR) << "Unsupported configuration requested in "
                    << "AudioRenderer::SetMediaType.  "
                    << "Media type must be LPCM audio.";
@@ -160,16 +160,16 @@ void AudioRenderer1Impl::SetMediaType(MediaTypePtr media_type) {
 
   // Search our supported configuration sets to find one compatible with this
   // request.
-  auto& cfg = media_type->details.audio();
+  auto& cfg = media_type.details.audio();
   size_t i;
   for (i = 0; i < arraysize(kSupportedAudioTypeSets); ++i) {
     const auto& cfg_set = kSupportedAudioTypeSets[i];
 
-    if ((cfg->sample_format == cfg_set.sample_format) &&
-        (cfg->channels >= cfg_set.min_channels) &&
-        (cfg->channels <= cfg_set.max_channels) &&
-        (cfg->frames_per_second >= cfg_set.min_frames_per_second) &&
-        (cfg->frames_per_second <= cfg_set.max_frames_per_second)) {
+    if ((cfg.sample_format == cfg_set.sample_format) &&
+        (cfg.channels >= cfg_set.min_channels) &&
+        (cfg.channels <= cfg_set.max_channels) &&
+        (cfg.frames_per_second >= cfg_set.min_frames_per_second) &&
+        (cfg.frames_per_second <= cfg_set.max_frames_per_second)) {
       break;
     }
   }
@@ -177,9 +177,9 @@ void AudioRenderer1Impl::SetMediaType(MediaTypePtr media_type) {
   if (i >= arraysize(kSupportedAudioTypeSets)) {
     FXL_LOG(ERROR) << "Unsupported LPCM configuration requested in "
                    << "AudioRenderer::SetMediaType.  "
-                   << "(format = " << cfg->sample_format
-                   << ", channels = " << static_cast<uint32_t>(cfg->channels)
-                   << ", frames_per_second = " << cfg->frames_per_second << ")";
+                   << "(format = " << cfg.sample_format
+                   << ", channels = " << static_cast<uint32_t>(cfg.channels)
+                   << ", frames_per_second = " << cfg.frames_per_second << ")";
     Shutdown();
     return;
   }
@@ -211,7 +211,7 @@ void AudioRenderer1Impl::SetMediaType(MediaTypePtr media_type) {
   // onto.  New links need to be created with our new format.
   Unlink();
 
-  pipe_.SetPtsRate(TimelineRate(cfg->frames_per_second, 1));
+  pipe_.SetPtsRate(TimelineRate(cfg.frames_per_second, 1));
 
   // Create a new format info object so we can create links to outputs.
   format_info_ = AudioRendererFormatInfo::Create(std::move(cfg));
@@ -236,7 +236,7 @@ void AudioRenderer1Impl::SetMediaType(MediaTypePtr media_type) {
 }
 
 void AudioRenderer1Impl::GetPacketConsumer(
-    f1dl::InterfaceRequest<MediaPacketConsumer> consumer_request) {
+    fidl::InterfaceRequest<MediaPacketConsumer> consumer_request) {
   // Bind our pipe to the interface request.
   if (pipe_.is_bound()) {
     pipe_.Reset();
@@ -246,12 +246,12 @@ void AudioRenderer1Impl::GetPacketConsumer(
 }
 
 void AudioRenderer1Impl::GetTimelineControlPoint(
-    f1dl::InterfaceRequest<MediaTimelineControlPoint> req) {
+    fidl::InterfaceRequest<MediaTimelineControlPoint> req) {
   timeline_control_point_.Bind(std::move(req));
 }
 
 void AudioRenderer1Impl::SetGain(float db_gain) {
-  if (db_gain > AudioRenderer::kMaxGain) {
+  if (db_gain > kMaxGain) {
     FXL_LOG(ERROR) << "Gain value too large (" << db_gain
                    << ") for audio renderer.";
     Shutdown();
@@ -270,7 +270,7 @@ void AudioRenderer1Impl::SetGain(float db_gain) {
   }
 }
 
-void AudioRenderer1Impl::GetMinDelay(const GetMinDelayCallback& callback) {
+void AudioRenderer1Impl::GetMinDelay(GetMinDelayCallback callback) {
   callback(min_clock_lead_nsec_);
 }
 
@@ -370,7 +370,7 @@ bool AudioRenderer1Impl::OnFlushRequested(
   return true;
 }
 
-f1dl::VectorPtr<MediaTypeSetPtr> AudioRenderer1Impl::SupportedMediaTypes() {
+fidl::VectorPtr<MediaTypeSet> AudioRenderer1Impl::SupportedMediaTypes() {
   // Build a minimal descriptor
   //
   // TODO(johngro): one day, we need to make this description much more rich and
@@ -383,26 +383,23 @@ f1dl::VectorPtr<MediaTypeSetPtr> AudioRenderer1Impl::SupportedMediaTypes() {
   // message, but the nature of the structures generated by the C++ bindings
   // make this difficult.  For now, we just create a trivial descriptor entierly
   // by hand.
-  f1dl::VectorPtr<MediaTypeSetPtr> supported_media_types =
-      f1dl::VectorPtr<MediaTypeSetPtr>::New(arraysize(kSupportedAudioTypeSets));
+  fidl::VectorPtr<MediaTypeSet> supported_media_types(
+      arraysize(kSupportedAudioTypeSets));
 
   for (size_t i = 0; i < supported_media_types->size(); ++i) {
-    const MediaTypeSetPtr& mts =
-        (supported_media_types->at(i) = MediaTypeSet::New());
+    MediaTypeSet& mts = supported_media_types->at(i);
 
-    mts->medium = MediaTypeMedium::AUDIO;
-    mts->encodings.push_back(MediaType::kAudioEncodingLpcm);
-    mts->details = MediaTypeSetDetails::New();
+    mts.medium = MediaTypeMedium::AUDIO;
+    mts.encodings.push_back(kAudioEncodingLpcm);
 
     const auto& s = kSupportedAudioTypeSets[i];
-    AudioMediaTypeSetDetailsPtr audio_detail = AudioMediaTypeSetDetails::New();
-
-    audio_detail->sample_format = s.sample_format;
-    audio_detail->min_channels = s.min_channels;
-    audio_detail->max_channels = s.max_channels;
-    audio_detail->min_frames_per_second = s.min_frames_per_second;
-    audio_detail->max_frames_per_second = s.max_frames_per_second;
-    mts->details->set_audio(std::move(audio_detail));
+    AudioMediaTypeSetDetails audio_detail;
+    audio_detail.sample_format = s.sample_format;
+    audio_detail.min_channels = s.min_channels;
+    audio_detail.max_channels = s.max_channels;
+    audio_detail.min_frames_per_second = s.min_frames_per_second;
+    audio_detail.max_frames_per_second = s.max_frames_per_second;
+    mts.details.set_audio(std::move(audio_detail));
   }
 
   return supported_media_types;

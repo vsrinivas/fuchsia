@@ -28,7 +28,7 @@ interface AudioServer {
   // Sets the master gain/attenuation of the mixer, expressed in dB.  Master
   // gain is applied to all active outputs.  Legal values are in the range
   // [-inf, 0.0].  Any value less than or equal to the constant
-  // AudioRenderer::kMutedGain will result in all outputs becoming explicitly
+  // kMutedGain will result in all outputs becoming explicitly
   // muted.
   //
   // TODO(johngro): Remove this as soon as we have a policy manager in control
