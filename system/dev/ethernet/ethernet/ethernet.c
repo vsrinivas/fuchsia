@@ -370,6 +370,24 @@ static void eth0_recv(void* cookie, void* data, size_t len, uint32_t flags) {
     mtx_unlock(&edev0->lock);
 }
 
+// Borrows a TX buffer from the pool. Logs and returns NULL if none is available
+static tx_info_t* eth_get_tx_info(ethdev_t* edev) {
+    mtx_lock(&edev->lock);
+    tx_info_t* tx_info = list_remove_head_type(&edev->free_tx_bufs, tx_info_t, netbuf.node);
+    mtx_unlock(&edev->lock);
+    if (tx_info == NULL) {
+        zxlogf(ERROR, "eth [%s]: tx_info pool empty\n", edev->name);
+    }
+    return tx_info;
+}
+
+// Returns a TX buffer to the pool
+static void eth_put_tx_info(ethdev_t* edev, tx_info_t* tx_info) {
+    mtx_lock(&edev->lock);
+    list_add_head(&edev->free_tx_bufs, &tx_info->netbuf.node);
+    mtx_unlock(&edev->lock);
+}
+
 static void eth0_complete_tx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t status) {
     tx_info_t* tx_info = containerof(netbuf, tx_info_t, netbuf);
     ethdev_t* edev = tx_info->edev;
@@ -380,9 +398,7 @@ static void eth0_complete_tx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t 
 
     // Now that we've copied all pertinent data from the netbuf, return it to the free list so
     // it is avaialble immediately for the next request.
-    mtx_lock(&edev->lock);
-    list_add_head(&edev->free_tx_bufs, &tx_info->netbuf.node);
-    mtx_unlock(&edev->lock);
+    eth_put_tx_info(edev, tx_info);
 
     // Send the eth_fifo_entry back to the client
     tx_fifo_write(edev, &entry, 1);
@@ -435,20 +451,27 @@ static zx_status_t eth_tx_listen_locked(ethdev_t* edev, bool yes) {
     return ZX_OK;
 }
 
+// The array of entries is invalidated after the call
 static int eth_send(ethdev_t* edev, eth_fifo_entry_t* entries, uint32_t count) {
+    tx_info_t* tx_info = NULL;
     ethdev0_t* edev0 = edev->edev0;
+    // The entries that we can't send back to the fifo immediately are filtered
+    // out in-place using a classic algorithm a-la "std::remove_if".
+    // Once the loop finishes, the first 'to_write' entries in the array
+    // will be written back to the fifo. The rest will be written later by
+    // the eth0_complete_tx callback.
+    uint32_t to_write = 0;
     for (eth_fifo_entry_t* e = entries; count > 0; e++) {
         if ((e->offset > edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
             e->flags = ETH_FIFO_INVALID;
-            tx_fifo_write(edev, e, 1);
+            entries[to_write++] = *e;
         } else {
             zx_status_t status;
-            mtx_lock(&edev->lock);
-            tx_info_t* tx_info = list_remove_head_type(&edev->free_tx_bufs, tx_info_t, netbuf.node);
-            mtx_unlock(&edev->lock);
             if (tx_info == NULL) {
-                 zxlogf(ERROR, "eth [%s]: invalid tx_info pool\n", edev->name);
-                 return -1;
+                tx_info = eth_get_tx_info(edev);
+                if (tx_info == NULL) {
+                    return -1;
+                }
             }
             uint32_t opts = count > 1 ? ETHMAC_TX_OPT_MORE : 0u;
             if (opts) {
@@ -466,16 +489,24 @@ static int eth_send(ethdev_t* edev, eth_fifo_entry_t* entries, uint32_t count) {
                 eth_tx_echo(edev0, edev->io_buf + e->offset, e->length);
             }
             if (status != ZX_ERR_SHOULD_WAIT) {
-                // transaction completed, add buffer to free list and return fifo entry
-                // TODO: batch these so we can do a single fifo write
+                // Transmission completed. To avoid extra mutex locking/unlocking,
+                // we don't return the buffer to the pool immediately, but reuse
+                // it on the next iteration of the loop.
                 e->flags = status == ZX_OK ? ETH_FIFO_TX_OK : 0;
-                mtx_lock(&edev->lock);
-                list_add_head(&edev->free_tx_bufs, &tx_info->netbuf.node);
-                mtx_unlock(&edev->lock);
-                tx_fifo_write(edev, e, 1);
+                entries[to_write++] = *e;
+            } else {
+                // The ownership of the TX buffer is transferred to mac.ops->queue_tx().
+                // We can't reuse it, so clear the pointer.
+                tx_info = NULL;
             }
         }
         count--;
+    }
+    if (tx_info) {
+        eth_put_tx_info(edev, tx_info);
+    }
+    if (to_write) {
+        tx_fifo_write(edev, entries, to_write);
     }
     return 0;
 }
