@@ -3,12 +3,17 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/task.h>
+#include <lib/async/cpp/time.h>
 
 namespace async {
 
-zx_status_t PostTask(async_t* async, fbl::Function<void(void)> closure,
-                     zx_time_t deadline) {
-    async::Task* task = new async::Task(deadline, ASYNC_FLAG_HANDLE_SHUTDOWN);
+zx_status_t PostTask(async_t* async, fbl::Function<void(void)> closure) {
+    return PostTaskForTime(async, fbl::move(closure), Now(async));
+}
+
+zx_status_t PostTaskForTime(async_t* async, fbl::Function<void(void)> closure,
+                            zx::time deadline) {
+    async::Task* task = new async::Task(deadline.get(), ASYNC_FLAG_HANDLE_SHUTDOWN);
     task->set_handler([task, closure = fbl::move(closure)](async_t*, zx_status_t status) {
         if (status == ZX_OK) {
             closure();
@@ -21,6 +26,11 @@ zx_status_t PostTask(async_t* async, fbl::Function<void(void)> closure,
         delete task;
     }
     return status;
+}
+
+zx_status_t PostDelayedTask(async_t* async, fbl::Function<void(void)> closure,
+                            zx::duration delay) {
+    return PostTaskForTime(async, fbl::move(closure), Now(async) + delay);
 }
 
 Task::Task(zx_time_t deadline, uint32_t flags)

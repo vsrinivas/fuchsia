@@ -63,6 +63,7 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/c \
+    system/ulib/zx \
     system/ulib/zircon
 
 MODULE_PACKAGE := src

@@ -11,6 +11,7 @@ public:
     AsyncStub();
     virtual ~AsyncStub();
 
+    virtual zx_time_t Now();
     virtual zx_status_t BeginWait(async_wait_t* wait);
     virtual zx_status_t CancelWait(async_wait_t* wait);
     virtual zx_status_t PostTask(async_task_t* task);

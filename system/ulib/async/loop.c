@@ -21,14 +21,17 @@
 // The port wait key associated with the dispatcher's control messages.
 #define KEY_CONTROL (0u)
 
+static zx_time_t async_loop_now(async_t* async);
 static zx_status_t async_loop_begin_wait(async_t* async, async_wait_t* wait);
 static zx_status_t async_loop_cancel_wait(async_t* async, async_wait_t* wait);
 static zx_status_t async_loop_post_task(async_t* async, async_task_t* task);
 static zx_status_t async_loop_cancel_task(async_t* async, async_task_t* task);
 static zx_status_t async_loop_queue_packet(async_t* async, async_receiver_t* receiver,
                                            const zx_packet_user_t* data);
+
 static zx_status_t async_loop_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap);
 static const async_ops_t async_loop_ops = {
+    .now = async_loop_now,
     .begin_wait = async_loop_begin_wait,
     .cancel_wait = async_loop_cancel_wait,
     .post_task = async_loop_post_task,
@@ -43,19 +46,19 @@ typedef struct thread_record {
 } thread_record_t;
 
 typedef struct async_loop {
-    async_t async; // must be first
+    async_t async;              // must be first
     async_loop_config_t config; // immutable
-    zx_handle_t port; // immutable
-    zx_handle_t timer; // immutable
+    zx_handle_t port;           // immutable
+    zx_handle_t timer;          // immutable
 
     _Atomic async_loop_state_t state;
     atomic_uint active_threads; // number of active dispatch threads
 
-    mtx_t lock; // guards the lists and the dispatching tasks flag
-    bool dispatching_tasks; // true while the loop is busy dispatching tasks
-    list_node_t wait_list; // most recently added first
-    list_node_t task_list; // pending tasks, earliest deadline first
-    list_node_t due_list; // due tasks, earliest deadline first
+    mtx_t lock;              // guards the lists and the dispatching tasks flag
+    bool dispatching_tasks;  // true while the loop is busy dispatching tasks
+    list_node_t wait_list;   // most recently added first
+    list_node_t task_list;   // pending tasks, earliest deadline first
+    list_node_t due_list;    // due tasks, earliest deadline first
     list_node_t thread_list; // earliest created thread first
 } async_loop_t;
 
@@ -214,7 +217,7 @@ zx_status_t async_loop_run(async_t* async, zx_time_t deadline, bool once) {
 zx_status_t async_loop_run_until_idle(async_t* async) {
     zx_status_t status = async_loop_run(async, 0, false);
     if (status == ZX_ERR_TIMED_OUT) {
-      status = ZX_OK;
+        status = ZX_OK;
     }
     return status;
 }
@@ -320,7 +323,7 @@ static zx_status_t async_loop_dispatch_tasks(async_loop_t* loop) {
         // we would like to process in order.
         list_node_t* node;
         if (list_is_empty(&loop->due_list)) {
-            zx_time_t due_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+            zx_time_t due_time = async_loop_now((async_t*)loop);
             list_node_t* tail = NULL;
             list_for_every(&loop->task_list, node) {
                 if (node_to_task(node)->deadline > due_time)
@@ -438,6 +441,10 @@ async_loop_state_t async_loop_get_state(async_t* async) {
     ZX_DEBUG_ASSERT(loop);
 
     return atomic_load_explicit(&loop->state, memory_order_acquire);
+}
+
+zx_time_t async_loop_now(async_t* async) {
+    return zx_clock_get(ZX_CLOCK_MONOTONIC);
 }
 
 static zx_status_t async_loop_begin_wait(async_t* async, async_wait_t* wait) {

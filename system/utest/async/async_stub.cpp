@@ -6,6 +6,10 @@
 
 namespace {
 
+zx_time_t stub_now(async_t* async) {
+    return static_cast<AsyncStub*>(async)->Now();
+}
+
 zx_status_t stub_begin_wait(async_t* async, async_wait_t* wait) {
     return static_cast<AsyncStub*>(async)->BeginWait(wait);
 }
@@ -32,6 +36,7 @@ zx_status_t stub_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* tr
 }
 
 const async_ops_t g_stub_ops = {
+    .now = stub_now,
     .begin_wait = stub_begin_wait,
     .cancel_wait = stub_cancel_wait,
     .post_task = stub_post_task,
@@ -46,6 +51,10 @@ AsyncStub::AsyncStub()
     : async_t{&g_stub_ops} {}
 
 AsyncStub::~AsyncStub() {}
+
+zx_time_t AsyncStub::Now() {
+    return 0u;
+}
 
 zx_status_t AsyncStub::BeginWait(async_wait_t* wait) {
     return ZX_ERR_NOT_SUPPORTED;

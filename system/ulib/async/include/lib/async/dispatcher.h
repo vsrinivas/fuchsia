@@ -49,8 +49,9 @@ enum {
 // other header files.  See the documentation of those inline functions for
 // details about each method's purpose and behavior.
 //
-// This interface consists of three groups of methods:
+// This interface consists of four groups of methods:
 //
+// - Timing: |now|
 // - Waiting for signals: |begin_wait|, |cancel_wait|
 // - Posting tasks: |post_task|, |cancel_task|
 // - Queuing packets: |queue_packet|
@@ -66,6 +67,7 @@ enum {
 // Therefore general-purpose dispatcher implementations are strongly encouraged to
 // support the whole interface to ensure broad compatibility.
 typedef struct async_ops {
+    zx_time_t (*now)(async_t* async);
     zx_status_t (*begin_wait)(async_t* async, async_wait_t* wait);
     zx_status_t (*cancel_wait)(async_t* async, async_wait_t* wait);
     zx_status_t (*post_task)(async_t* async, async_task_t* task);

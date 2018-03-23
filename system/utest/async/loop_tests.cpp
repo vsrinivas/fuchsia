@@ -9,14 +9,15 @@
 #include <lib/async/cpp/loop.h>
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async/cpp/time.h>
 #include <lib/async/cpp/wait.h>
 
-#include <zx/event.h>
 #include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
 #include <unittest/unittest.h>
+#include <zx/event.h>
 
 namespace {
 
@@ -291,6 +292,24 @@ bool quit_test() {
     EXPECT_EQ(ASYNC_LOOP_SHUTDOWN, loop.GetState(), "shut down");
     EXPECT_EQ(ZX_ERR_BAD_STATE, loop.Run(), "run returns immediately when shut down");
     EXPECT_EQ(ZX_ERR_BAD_STATE, loop.ResetQuit());
+
+    END_TEST;
+}
+
+bool time_test() {
+    BEGIN_TEST;
+
+    // Verify that the dispatcher's time-telling is strictly monotonic,
+    // which is constent with ZX_CLOCK_MONOTONIC.
+    async::Loop loop;
+    zx::time t0 = zx::clock::get(ZX_CLOCK_MONOTONIC);
+    zx::time t1 = async::Now(loop.async());
+    zx::time t2 = async::Now(loop.async());
+    zx::time t3 = zx::clock::get(ZX_CLOCK_MONOTONIC);
+
+    EXPECT_LE(t0.get(), t1.get());
+    EXPECT_LE(t1.get(), t2.get());
+    EXPECT_LE(t2.get(), t3.get());
 
     END_TEST;
 }
@@ -688,14 +707,14 @@ public:
     void Tally(async_t* async) {
         // Increment count of concurrently active threads.  Update maximum if needed.
         uint32_t active = 1u + fbl::atomic_fetch_add(&active_threads_, 1u,
-                                                      fbl::memory_order_acq_rel);
+                                                     fbl::memory_order_acq_rel);
         uint32_t old_max;
         do {
             old_max = fbl::atomic_load(&max_threads_, fbl::memory_order_acquire);
         } while (active > old_max &&
                  !fbl::atomic_compare_exchange_weak(&max_threads_, &old_max, active,
-                                                     fbl::memory_order_acq_rel,
-                                                     fbl::memory_order_acquire));
+                                                    fbl::memory_order_acq_rel,
+                                                    fbl::memory_order_acquire));
 
         // Pretend to do work.
         zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
@@ -948,6 +967,7 @@ RUN_TEST(c_api_basic_test)
 RUN_TEST(make_default_false_test)
 RUN_TEST(make_default_true_test)
 RUN_TEST(quit_test)
+RUN_TEST(time_test)
 RUN_TEST(wait_test)
 RUN_TEST(wait_invalid_handle_test)
 RUN_TEST(wait_shutdown_test)
