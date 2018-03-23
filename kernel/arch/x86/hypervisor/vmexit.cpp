@@ -474,6 +474,7 @@ static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X2ApicMsr::TMR_31_0... X2ApicMsr::TMR_255_224:
     case X2ApicMsr::IRR_31_0... X2ApicMsr::IRR_255_224:
     case X2ApicMsr::ESR:
+    case X2ApicMsr::LVT_MONITOR:
         // These registers reset to 0. See Volume 3 Section 10.12.5.1.
         next_rip(exit_info, vmcs);
         guest_state->rax = 0;
@@ -960,11 +961,11 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
         ktrace_vcpu(TAG_VCPU_EXIT, VCPU_IO_INSTRUCTION);
         return handle_io_instruction(exit_info, vmcs, guest_state, traps, packet);
     case ExitReason::RDMSR:
-        LTRACEF("handling RDMSR %#" PRIx64 "\n\n", guest_state->rcx);
+        LTRACEF("handling RDMSR %#lx\n\n", guest_state->rcx);
         ktrace_vcpu(TAG_VCPU_EXIT, VCPU_RDMSR);
         return handle_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
     case ExitReason::WRMSR:
-        LTRACEF("handling WRMSR %#" PRIx64 "\n\n", guest_state->rcx);
+        LTRACEF("handling WRMSR %#lx\n\n", guest_state->rcx);
         ktrace_vcpu(TAG_VCPU_EXIT, VCPU_WRMSR);
         return handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pvclock, gpas, packet);
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
