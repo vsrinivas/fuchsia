@@ -441,7 +441,24 @@ static bool test_suspend_sleeping(void) {
     zx_nanosleep(sleep_deadline - ZX_MSEC(50));
 
     // Suspend the thread.
-    ASSERT_TRUE(suspend_thread_synchronous(thread_h), "");
+    zx_status_t status = zx_task_suspend(thread_h);
+    if (status != ZX_OK) {
+        ASSERT_EQ(status, ZX_ERR_BAD_STATE, "");
+        // This might happen if the thread exits before we tried suspending it
+        // (due to e.g. a long context-switch away).  The system is too loaded
+        // and so we might not have a chance at success here without a massive
+        // sleep duration.
+        zx_info_thread_t info;
+        ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD,
+                                     &info, sizeof(info), NULL, NULL),
+                  ZX_OK, "");
+        ASSERT_EQ(info.state, ZX_THREAD_STATE_DEAD, "");
+        ASSERT_EQ(zx_handle_close(thread_h), ZX_OK, "");
+        // Early bail from the test, since we hit a possible race from an
+        // overloaded machine.
+        END_TEST;
+    }
+    ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, NULL), ZX_OK, "");
 
     ASSERT_EQ(zx_task_resume(thread_h, 0), ZX_OK, "");
 
