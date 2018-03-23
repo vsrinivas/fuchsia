@@ -21,13 +21,13 @@ class View final : public mozart::BaseView {
  public:
   View(component::ApplicationContext* application_context,
        views_v1::ViewManagerPtr view_manager,
-       f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
+       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   ~View() override = default;
 
   // mozart::BaseView.
-  void OnPropertiesChanged(views_v1::ViewPropertiesPtr old_properties) override;
-  bool OnInputEvent(input::InputEventPtr event) override;
+  void OnPropertiesChanged(views_v1::ViewProperties old_properties) override;
+  bool OnInputEvent(input::InputEvent event) override;
 
  private:
   Canvas canvas_;

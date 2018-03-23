@@ -8,8 +8,9 @@ namespace sketchy_example {
 
 View::View(component::ApplicationContext* application_context,
            views_v1::ViewManagerPtr view_manager,
-           f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
-    : BaseView(std::move(view_manager), std::move(view_owner_request),
+           fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
+    : BaseView(std::move(view_manager),
+               std::move(view_owner_request),
                "Sketchy Example"),
       canvas_(application_context),
       background_node_(session()),
@@ -28,44 +29,44 @@ View::View(component::ApplicationContext* application_context,
   import_node_.AddChild(stable_group_);
 }
 
-void View::OnPropertiesChanged(views_v1::ViewPropertiesPtr old_properties) {
-  float width = properties()->view_layout->size->width;
-  float height = properties()->view_layout->size->height;
+void View::OnPropertiesChanged(views_v1::ViewProperties old_properties) {
+  float width = properties().view_layout->size.width;
+  float height = properties().view_layout->size.height;
   scenic_lib::Rectangle background_shape(session(), width, height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(width * .5f, height * .5f, .1f);
   canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                  [](images::PresentationInfoPtr info) {});
+                  [](images::PresentationInfo info) {});
 }
 
-bool View::OnInputEvent(input::InputEventPtr event) {
-  if (event->is_pointer()) {
-    const auto& pointer = event->pointer();
-    switch (pointer->phase) {
+bool View::OnInputEvent(input::InputEvent event) {
+  if (event.is_pointer()) {
+    const auto& pointer = event.pointer();
+    switch (pointer.phase) {
       case input::PointerEventPhase::DOWN: {
         auto stroke = fxl::MakeRefCounted<Stroke>(&canvas_);
-        pointer_id_to_stroke_map_.insert({pointer->pointer_id, stroke});
+        pointer_id_to_stroke_map_.insert({pointer.pointer_id, stroke});
         scratch_group_.AddStroke(*stroke);
-        stroke->Begin({pointer->x, pointer->y});
+        stroke->Begin({pointer.x, pointer.y});
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                        [](images::PresentationInfoPtr info) {});
+                        [](images::PresentationInfo info) {});
         return true;
       }
       case input::PointerEventPhase::MOVE: {
         const auto& stroke =
-            pointer_id_to_stroke_map_.find(pointer->pointer_id)->second;
+            pointer_id_to_stroke_map_.find(pointer.pointer_id)->second;
         if (!stroke) {
           return false;
         }
-        stroke->Extend({{pointer->x, pointer->y}});
+        stroke->Extend({{pointer.x, pointer.y}});
         // TODO(MZ-269): The current stroke fitter would simply connect the
         // point if Canvas::Present() is called after extending with one point.
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                        [](images::PresentationInfoPtr info) {});
+                        [](images::PresentationInfo info) {});
         return true;
       }
       case input::PointerEventPhase::UP: {
-        auto it = pointer_id_to_stroke_map_.find(pointer->pointer_id);
+        auto it = pointer_id_to_stroke_map_.find(pointer.pointer_id);
         const auto& stroke = it->second;
         if (!stroke) {
           return false;
@@ -75,7 +76,7 @@ bool View::OnInputEvent(input::InputEventPtr event) {
         stable_group_.AddStroke(*stroke);
         pointer_id_to_stroke_map_.erase(it);
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                        [](images::PresentationInfoPtr info) {});
+                        [](images::PresentationInfo info) {});
         return true;
       }
       default:
@@ -83,13 +84,13 @@ bool View::OnInputEvent(input::InputEventPtr event) {
     }
   }
 
-  if (event->is_keyboard()) {
-    const auto& keyboard = event->keyboard();
-    if (keyboard->phase == input::KeyboardEventPhase::PRESSED &&
-        keyboard->hid_usage == 6 /* c */) {
+  if (event.is_keyboard()) {
+    const auto& keyboard = event.keyboard();
+    if (keyboard.phase == input::KeyboardEventPhase::PRESSED &&
+        keyboard.hid_usage == 6 /* c */) {
       stable_group_.Clear();
       canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                      [](images::PresentationInfoPtr info) {});
+                      [](images::PresentationInfo info) {});
       return true;
     }
   }
