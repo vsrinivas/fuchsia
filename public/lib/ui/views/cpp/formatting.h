@@ -8,7 +8,6 @@
 #include <iosfwd>
 
 #include <fuchsia/cpp/views_v1.h>
-//#include "lib/fidl/cpp/formatting.h"
 #include "lib/ui/geometry/cpp/formatting.h"
 
 namespace mozart {

@@ -24,8 +24,8 @@ std::ostream& operator<<(std::ostream& os, const views_v1::ViewInfo& value) {
 
 std::ostream& operator<<(std::ostream& os,
                          const views_v1::ViewProperties& value) {
-  return os << "{display_metrics=" << value.display_metrics
-            << ", view_layout=" << value.view_layout << "}";
+  return os << "{display_metrics=" << *value.display_metrics
+            << ", view_layout=" << *value.view_layout << "}";
 }
 
 std::ostream& operator<<(std::ostream& os,
