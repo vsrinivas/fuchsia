@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"app/context"
-	"fidl/bindings"
 
 	"fuchsia/go/netstack"
 
@@ -21,7 +20,7 @@ import (
 
 type netstackClientApp struct {
 	ctx      *context.Context
-	netstack *netstack.Netstack_Proxy
+	netstack *netstack.NetstackInterface
 }
 
 func (a *netstackClientApp) start(nicName string) {
@@ -112,9 +111,12 @@ func main() {
 		return
 	}
 
-	r, p := a.netstack.NewRequest(bindings.GetAsyncWaiter())
-	a.netstack = p
-	a.ctx.ConnectToEnvService(r)
+	req, pxy, err := netstack.NewNetstackInterfaceRequest()
+	if err != nil {
+		panic(err.Error())
+	}
+	a.netstack = pxy
+	a.ctx.ConnectToEnvService(req)
 	defer a.netstack.Close()
 
 	if watch == false { // This trick makes it possible to the check the presence of the flag, not only its value.
@@ -124,7 +126,7 @@ func main() {
 
 	// Watch the interface every second.
 	isForever := (sec == 0)
-	err := a.watchIface(nicName, sec, isForever, period)
+	err = a.watchIface(nicName, sec, isForever, period)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}

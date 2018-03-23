@@ -12,14 +12,13 @@ import (
 	"github.com/google/netstack/tcpip"
 
 	"app/context"
-	"fidl/bindings"
 
 	"fuchsia/go/netstack"
 )
 
 type netstackClientApp struct {
 	ctx      *context.Context
-	netstack *netstack.Netstack_Proxy
+	netstack *netstack.NetstackInterface
 }
 
 func (a *netstackClientApp) printAll() {
@@ -84,7 +83,7 @@ func (a *netstackClientApp) addIfaceAddress(iface netstack.NetInterface, cidr st
 	}
 	prefixLen, _ := netSubnet.Mask.Size()
 	result, _ := a.netstack.SetInterfaceAddress(iface.Id, toNetAddress(netAddr), uint64(prefixLen))
-	if result.Status != netstack.Status_Ok {
+	if result.Status != netstack.StatusOk {
 		fmt.Printf("Error setting interface address: %s\n", result.Message)
 	}
 }
@@ -157,11 +156,11 @@ func hwAddrToString(hwaddr []uint8) string {
 
 func netAddrToString(addr netstack.NetAddress) string {
 	switch addr.Family {
-	case netstack.NetAddressFamily_Ipv4:
-		a := tcpip.Address(addr.Ipv4[:])
+	case netstack.NetAddressFamilyIpv4:
+		a := tcpip.Address(addr.Ipv4.Addr[:])
 		return fmt.Sprintf("%s", a)
-	case netstack.NetAddressFamily_Ipv6:
-		a := tcpip.Address(addr.Ipv6[:])
+	case netstack.NetAddressFamilyIpv6:
+		a := tcpip.Address(addr.Ipv6.Addr[:])
 		return fmt.Sprintf("%s", a)
 	}
 	return ""
@@ -180,15 +179,15 @@ func isIPv4(ip net.IP) bool {
 }
 
 func toNetAddress(addr net.IP) netstack.NetAddress {
-	out := netstack.NetAddress{Family: netstack.NetAddressFamily_Unspecified}
+	out := netstack.NetAddress{Family: netstack.NetAddressFamilyUnspecified}
 	if isIPv4(addr) {
-		out.Family = netstack.NetAddressFamily_Ipv4
-		out.Ipv4 = &[4]uint8{}
-		copy(out.Ipv4[:], addr[len(addr)-4:])
+		out.Family = netstack.NetAddressFamilyIpv4
+		out.Ipv4 = &netstack.Ipv4Address{Addr: [4]uint8{}}
+		copy(out.Ipv4.Addr[:], addr[len(addr)-4:])
 	} else {
-		out.Family = netstack.NetAddressFamily_Ipv6
-		out.Ipv6 = &[16]uint8{}
-		copy(out.Ipv6[:], addr[:])
+		out.Family = netstack.NetAddressFamilyIpv6
+		out.Ipv6 = &netstack.Ipv6Address{Addr: [16]uint8{}}
+		copy(out.Ipv6.Addr[:], addr[:])
 	}
 	return out
 }
@@ -229,10 +228,13 @@ func usage() {
 
 func main() {
 	a := &netstackClientApp{ctx: context.CreateFromStartupInfo()}
-	r, p := a.netstack.NewRequest(bindings.GetAsyncWaiter())
-	a.netstack = p
+	req, pxy, err := netstack.NewNetstackInterfaceRequest()
+	if err != nil {
+		panic(err.Error())
+	}
+	a.netstack = pxy
 	defer a.netstack.Close()
-	a.ctx.ConnectToEnvService(r)
+	a.ctx.ConnectToEnvService(req)
 
 	if len(os.Args) == 1 {
 		a.printAll()

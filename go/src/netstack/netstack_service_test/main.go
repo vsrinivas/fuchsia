@@ -9,21 +9,19 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"syscall/zx"
-	"syscall/zx/mxerror"
 	"time"
 
 	"github.com/google/netstack/tcpip"
 
 	"app/context"
-	"fidl/bindings"
+	"fidl/bindings2"
 
 	"fuchsia/go/netstack"
 )
 
 type testApp struct {
 	ctx      *context.Context
-	netstack *netstack.Netstack_Proxy
+	netstack *netstack.NetstackInterface
 }
 
 func main() {
@@ -35,10 +33,13 @@ func main() {
 	flag.StringVar(&getaddr, "getaddr", "", "Lookup the given address via DNS")
 	flag.Parse()
 
-	r, p := a.netstack.NewRequest(bindings.GetAsyncWaiter())
-	a.netstack = p
+	req, pxy, err := netstack.NewNetstackInterfaceRequest()
+	if err != nil {
+		panic(err.Error())
+	}
+	a.netstack = pxy
 	defer a.netstack.Close()
-	a.ctx.ConnectToEnvService(r)
+	a.ctx.ConnectToEnvService(req)
 
 	if getaddr != "" {
 		a.getAddr(getaddr)
@@ -55,9 +56,9 @@ func usage() {
 
 func (a *testApp) getAddr(name string) {
 	fmt.Printf("Looking up %v... ", name)
-	port, _ := a.netstack.GetPortForService("http", netstack.Protocol_Tcp)
+	port, _ := a.netstack.GetPortForService("http", netstack.ProtocolTcp)
 	resp, netErr, _ := a.netstack.GetAddress(name, port)
-	if netErr.Status != netstack.Status_Ok {
+	if netErr.Status != netstack.StatusOk {
 		log.Printf("failed: %v\n", netErr)
 	} else {
 		fmt.Printf("%v entries found\n", len(resp))
@@ -69,21 +70,15 @@ func (a *testApp) getAddr(name string) {
 
 func (a *testApp) listen() {
 	fmt.Printf("Listening for changes...\n")
-	r, p := netstack.NewChannelForNotificationListener()
-	s := r.NewStub(a, bindings.GetAsyncWaiter())
-	a.netstack.RegisterListener(&p)
+	service := &bindings2.BindingSet{}
+	r, p, err := bindings2.NewInterfaceRequest()
+	if err != nil {
+		panic(err.Error())
+	}
+	service.Add(&netstack.NotificationListenerStub{Impl: a}, r)
+	a.netstack.RegisterListener(netstack.NotificationListenerInterface(*p))
 
-	go func() {
-		for {
-			if err := s.ServeRequest(); err != nil {
-				if mxerror.Status(err) != zx.ErrPeerClosed {
-					log.Println(err)
-				}
-				break
-			}
-		}
-	}()
-	select {}
+	bindings2.Serve()
 }
 
 // Implements netstack.NotificationListener.
@@ -101,11 +96,11 @@ func printIface(iface netstack.NetInterface) {
 
 func netAddrToString(addr netstack.NetAddress) string {
 	switch addr.Family {
-	case netstack.NetAddressFamily_Ipv4:
-		a := tcpip.Address(addr.Ipv4[:])
+	case netstack.NetAddressFamilyIpv4:
+		a := tcpip.Address(addr.Ipv4.Addr[:])
 		return fmt.Sprintf("%s", a)
-	case netstack.NetAddressFamily_Ipv6:
-		a := tcpip.Address(addr.Ipv6[:])
+	case netstack.NetAddressFamilyIpv6:
+		a := tcpip.Address(addr.Ipv6.Addr[:])
 		return fmt.Sprintf("%s", a)
 	}
 	return ""
