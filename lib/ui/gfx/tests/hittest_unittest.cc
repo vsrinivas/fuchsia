@@ -127,10 +127,9 @@ class HitTestTest : public SessionTest {
     wrapped_ray_direction.y = ray_direction.y;
     wrapped_ray_direction.z = ray_direction.z;
 
-    fidl::VectorPtr<::gfx::HitPtr> actual_hits;
-    session_->HitTest(node_id, wrapped_ray_origin.Clone(),
-                      wrapped_ray_direction.Clone(),
-                      [&actual_hits](fidl::VectorPtr<::gfx::HitPtr> hits) {
+    fidl::VectorPtr<::gfx::Hit> actual_hits;
+    session_->HitTest(node_id, wrapped_ray_origin, wrapped_ray_direction,
+                      [&actual_hits](fidl::VectorPtr<::gfx::Hit> hits) {
                         actual_hits = std::move(hits);
                       });
 
@@ -138,9 +137,9 @@ class HitTestTest : public SessionTest {
     EXPECT_EQ(expected_hits.size(), actual_hits->size());
     for (uint32_t i = 0;
          i < std::min(expected_hits.size(), actual_hits->size()); i++) {
-      EXPECT_EQ(expected_hits[i].tag, actual_hits->at(i)->tag_value)
+      EXPECT_EQ(expected_hits[i].tag, actual_hits->at(i).tag_value)
           << "i=" << i;
-      const auto& m = *actual_hits->at(i)->inverse_transform->matrix;
+      const auto& m = actual_hits->at(i).inverse_transform.matrix;
       EXPECT_EQ(1.f, m[0]) << "i=" << i;
       EXPECT_EQ(0.f, m[1]) << "i=" << i;
       EXPECT_EQ(0.f, m[2]) << "i=" << i;
@@ -157,7 +156,7 @@ class HitTestTest : public SessionTest {
       EXPECT_EQ(expected_hits[i].ty, m[13]) << "i=" << i;
       EXPECT_EQ(expected_hits[i].tz, m[14]) << "i=" << i;
       EXPECT_EQ(1.f, m[15]) << "i=" << i;
-      EXPECT_EQ(expected_hits[i].d, actual_hits->at(i)->distance) << "i=" << i;
+      EXPECT_EQ(expected_hits[i].d, actual_hits->at(i).distance) << "i=" << i;
     }
   }
 };

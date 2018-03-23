@@ -16,12 +16,12 @@ namespace test {
 
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
   ui::Session::PresentCallback callback = [](auto) {};
-  EXPECT_TRUE(session_->ScheduleUpdate(1, ::fidl::VectorPtr<::gfx::CommandPtr>(),
-                                       ::fidl::VectorPtr<zx::event>(),
-                                       ::fidl::VectorPtr<zx::event>(), callback));
-  EXPECT_FALSE(session_->ScheduleUpdate(0, ::fidl::VectorPtr<::gfx::CommandPtr>(),
-                                        ::fidl::VectorPtr<zx::event>(),
-                                        ::fidl::VectorPtr<zx::event>(), callback));
+  EXPECT_TRUE(session_->ScheduleUpdate(
+      1, ::fidl::VectorPtr<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
+      ::fidl::VectorPtr<zx::event>(), callback));
+  EXPECT_FALSE(session_->ScheduleUpdate(
+      0, ::fidl::VectorPtr<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
+      ::fidl::VectorPtr<zx::event>(), callback));
   ExpectLastReportedError(
       "scenic::gfx::Session: Present called with out-of-order presentation "
       "time. presentation_time=0, last scheduled presentation time=1.");
@@ -29,12 +29,12 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
   ui::Session::PresentCallback callback = [](auto) {};
-  EXPECT_TRUE(session_->ScheduleUpdate(1, ::fidl::VectorPtr<::gfx::CommandPtr>(),
-                                       ::fidl::VectorPtr<zx::event>(),
-                                       ::fidl::VectorPtr<zx::event>(), callback));
-  EXPECT_TRUE(session_->ScheduleUpdate(1, ::fidl::VectorPtr<::gfx::CommandPtr>(),
-                                       ::fidl::VectorPtr<zx::event>(),
-                                       ::fidl::VectorPtr<zx::event>(), callback));
+  EXPECT_TRUE(session_->ScheduleUpdate(
+      1, ::fidl::VectorPtr<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
+      ::fidl::VectorPtr<zx::event>(), callback));
+  EXPECT_TRUE(session_->ScheduleUpdate(
+      1, ::fidl::VectorPtr<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
+      ::fidl::VectorPtr<zx::event>(), callback));
   ExpectLastReportedError(nullptr);
 }
 

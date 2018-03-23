@@ -35,10 +35,10 @@ class SessionTest : public ::testing::Test,
                    std::string error_string) override;
 
   // |EventReporter|
-  void SendEvents(::fidl::VectorPtr<ui::EventPtr> events) override;
+  void SendEvents(::fidl::VectorPtr<ui::Event> events) override;
 
   // Apply the specified Command, and verify that it succeeds.
-  bool Apply(::gfx::CommandPtr command) {
+  bool Apply(::gfx::Command command) {
     return session_->ApplyCommand(std::move(command));
   }
 
@@ -61,7 +61,7 @@ class SessionTest : public ::testing::Test,
   std::unique_ptr<Engine> engine_;
   fxl::RefPtr<SessionForTest> session_;
   std::vector<std::string> reported_errors_;
-  std::vector<ui::EventPtr> events_;
+  std::vector<ui::Event> events_;
 };
 
 class SessionThreadedTest : public SessionTest {

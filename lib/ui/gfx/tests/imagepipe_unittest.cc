@@ -53,14 +53,13 @@ fxl::RefPtr<fsl::SharedVmo> CreateVmoWithCheckerboardPixels(size_t w,
   return CreateVmoWithBuffer(pixels_size, std::move(pixels));
 }
 
-images::ImageInfoPtr CreateImageInfoForBgra8Image(size_t w, size_t h) {
-  auto image_info = images::ImageInfo::New();
-  image_info->pixel_format = images::PixelFormat::BGRA_8;
-  image_info->tiling = images::Tiling::LINEAR;
-  image_info->width = w;
-  image_info->height = h;
-  image_info->stride = w;
-
+images::ImageInfo CreateImageInfoForBgra8Image(size_t w, size_t h) {
+  images::ImageInfo image_info;
+  image_info.pixel_format = images::PixelFormat::BGRA_8;
+  image_info.tiling = images::Tiling::LINEAR;
+  image_info.width = w;
+  image_info.height = h;
+  image_info.stride = w;
   return image_info;
 }
 
@@ -82,7 +81,7 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
   // Override to create an Image without a backing escher::Image.
   ImagePtr CreateImage(Session* session,
                        MemoryPtr memory,
-                       const images::ImageInfoPtr& image_info,
+                       const images::ImageInfo& image_info,
                        uint64_t memory_offset,
                        ErrorReporter* error_reporter) override {
     return HostImage::NewForTesting(session, 0u, dummy_resource_manager_,

@@ -19,6 +19,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include <fuchsia/cpp/gfx.h>
+
 #include "lib/app/cpp/connect.h"
 #include "lib/escher/util/image_utils.h"
 
@@ -27,12 +29,10 @@
 
 #include "garnet/lib/ui/gfx/tests/util.h"
 #include "lib/escher/hmd/pose_buffer.h"
-#include "lib/ui/gfx/fidl/commands.fidl.h"
 #include "lib/ui/scenic/client/host_memory.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 #include "lib/ui/scenic/types.h"
 
-using namespace mozart;
 using namespace scenic_lib;
 
 namespace hello_pose_buffer {
@@ -52,9 +52,8 @@ App::App()
     FXL_LOG(INFO) << "Lost connection to Mozart service.";
     loop_->QuitNow();
   });
-  scenic_->GetDisplayInfo([this](gfx::DisplayInfoPtr display_info) {
-    Init(std::move(display_info));
-  });
+  scenic_->GetDisplayInfo(
+      [this](gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
 }
 
 void App::CreateExampleScene(float display_width, float display_height) {
@@ -149,7 +148,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
   camera_->SetPoseBuffer(pose_buffer, num_entries, base_time, time_interval);
 }
 
-void App::Init(gfx::DisplayInfoPtr display_info) {
+void App::Init(gfx::DisplayInfo display_info) {
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
@@ -166,8 +165,8 @@ void App::Init(gfx::DisplayInfoPtr display_info) {
       fxl::TimeDelta::FromSeconds(kSessionDuration));
 
   // Set up initial scene.
-  const float display_width = static_cast<float>(display_info->width_in_px);
-  const float display_height = static_cast<float>(display_info->height_in_px);
+  const float display_width = static_cast<float>(display_info.width_in_px);
+  const float display_height = static_cast<float>(display_info.height_in_px);
   CreateExampleScene(display_width, display_height);
 
   start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
@@ -192,8 +191,8 @@ void App::Update(uint64_t next_presentation_time) {
 
   // Present
   session_->Present(
-      next_presentation_time, [this](images::PresentationInfoPtr info) {
-        Update(info->presentation_time + info->presentation_interval);
+      next_presentation_time, [this](images::PresentationInfo info) {
+        Update(info.presentation_time + info.presentation_interval);
       });
 }
 

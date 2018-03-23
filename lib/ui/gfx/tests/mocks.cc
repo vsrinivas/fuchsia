@@ -33,16 +33,15 @@ SessionHandlerForTest::SessionHandlerForTest(CommandDispatcherContext context,
       enqueue_count_(0),
       present_count_(0) {}
 
-void SessionHandlerForTest::Enqueue(::fidl::VectorPtr<ui::CommandPtr> commands) {
+void SessionHandlerForTest::Enqueue(::fidl::VectorPtr<ui::Command> commands) {
   SessionHandler::Enqueue(std::move(commands));
   ++enqueue_count_;
 }
 
-void SessionHandlerForTest::Present(
-    uint64_t presentation_time,
-    ::fidl::VectorPtr<zx::event> acquire_fences,
-    ::fidl::VectorPtr<zx::event> release_fences,
-    ui::Session::PresentCallback callback) {
+void SessionHandlerForTest::Present(uint64_t presentation_time,
+                                    ::fidl::VectorPtr<zx::event> acquire_fences,
+                                    ::fidl::VectorPtr<zx::event> release_fences,
+                                    ui::Session::PresentCallback callback) {
   SessionHandler::Present(presentation_time, std::move(acquire_fences),
                           std::move(release_fences), callback);
   ++present_count_;

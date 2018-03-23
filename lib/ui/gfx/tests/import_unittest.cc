@@ -49,7 +49,7 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaCommand) {
   // Apply the import command.
   ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
       1 /* import resource ID */, ::gfx::ImportSpec::NODE, /* spec */
-      std::move(destination))                                /* endpoint */
+      std::move(destination))                              /* endpoint */
                     ));
 
   // Assert that the import node was correctly mapped in. It has not been linked
@@ -78,7 +78,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
         1 /* import resource ID */, ::gfx::ImportSpec::NODE, /* spec */
-        std::move(destination))                                /* endpoint */
+        std::move(destination))                              /* endpoint */
                       ));
 
     // Assert that the import node was correctly mapped in. It has not been
@@ -196,10 +196,10 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
 
   // Verify that we got an ImportUnboundEvent.
   EXPECT_EQ(1u, events_.size());
-  ui::EventPtr event = std::move(events_[0]);
-  EXPECT_EQ(ui::Event::Tag::GFX, event.Which());
-  EXPECT_EQ(::gfx::Event::Tag::IMPORT_UNBOUND, event->get_gfx().Which());
-  ASSERT_EQ(import_node, event->get_gfx()->get_import_unbound()->resource_id);
+  ui::Event event = std::move(events_[0]);
+  EXPECT_EQ(ui::Event::Tag::kGfx, event.Which());
+  EXPECT_EQ(::gfx::Event::Tag::kImportUnbound, event.gfx().Which());
+  ASSERT_EQ(import_node, event.gfx().import_unbound().resource_id);
 }
 
 TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
@@ -226,10 +226,10 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
 
   // Verify that we got an ImportUnboundEvent.
   EXPECT_EQ(1u, events_.size());
-  ui::EventPtr event = std::move(events_[0]);
-  EXPECT_EQ(ui::Event::Tag::GFX, event.Which());
-  EXPECT_EQ(::gfx::Event::Tag::IMPORT_UNBOUND, event->get_gfx().Which());
-  ASSERT_EQ(import_node, event->get_gfx()->get_import_unbound()->resource_id);
+  ui::Event event = std::move(events_[0]);
+  EXPECT_EQ(ui::Event::Tag::kGfx, event.Which());
+  EXPECT_EQ(::gfx::Event::Tag::kImportUnbound, event.gfx().Which());
+  ASSERT_EQ(import_node, event.gfx().import_unbound().resource_id);
 }
 
 TEST_F(ImportThreadedTest, KillingImportedResourceEvictsFromResourceLinker) {
@@ -252,7 +252,7 @@ TEST_F(ImportThreadedTest, KillingImportedResourceEvictsFromResourceLinker) {
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
         1 /* import resource ID */, ::gfx::ImportSpec::NODE, /* spec */
-        std::move(destination))                                /* endpoint */
+        std::move(destination))                              /* endpoint */
                       ));
 
     // Assert that the import node was correctly mapped in. It has not been
@@ -342,7 +342,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
         import_node_id, ::gfx::ImportSpec::NODE, /* spec */
-        CopyEventPair(destination))                /* endpoint */
+        CopyEventPair(destination))              /* endpoint */
                       ));
     auto import_node = FindResource<Import>(import_node_id);
     ASSERT_TRUE(import_node);
@@ -447,7 +447,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
         import_node_id, ::gfx::ImportSpec::NODE, /* spec */
-        CopyEventPair(destination))                /* endpoint */
+        CopyEventPair(destination))              /* endpoint */
                       ));
     auto import_node = FindResource<Import>(import_node_id);
     ASSERT_TRUE(import_node);
@@ -554,7 +554,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
         import_node_id, ::gfx::ImportSpec::NODE, /* spec */
-        CopyEventPair(destination1))               /* endpoint */
+        CopyEventPair(destination1))             /* endpoint */
                       ));
     auto import_node = FindResource<Import>(import_node_id);
     ASSERT_TRUE(import_node);
@@ -680,11 +680,11 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
     // Apply the import commands.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
         import_node_id1, ::gfx::ImportSpec::NODE, /* spec */
-        CopyEventPair(destination1))                /* endpoint */
+        CopyEventPair(destination1))              /* endpoint */
                       ));
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
         import_node_id2, ::gfx::ImportSpec::NODE, /* spec */
-        CopyEventPair(destination1))                /* endpoint */
+        CopyEventPair(destination1))              /* endpoint */
                       ));
     auto import_node1 = FindResource<Import>(import_node_id1);
     ASSERT_TRUE(import_node1);
@@ -775,7 +775,7 @@ TEST_F(ImportTest,
   // Apply the import command.
   ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
       1 /* import resource ID */, ::gfx::ImportSpec::NODE, /* spec */
-      std::move(destination))                                /* endpoint */
+      std::move(destination))                              /* endpoint */
                     ));
 
   // Assert that the import node was correctly mapped in. It has not been
@@ -819,7 +819,7 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptCommands) {
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
         1 /* import resource ID */, ::gfx::ImportSpec::NODE, /* spec */
-        std::move(destination))                                /* endpoint */
+        std::move(destination))                              /* endpoint */
                       ));
 
     // Assert that the import node was correctly mapped in. It has not been
@@ -860,7 +860,7 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptCommands) {
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
         1 /* import resource ID */, ::gfx::ImportSpec::NODE, /* spec */
-        std::move(destination))                                /* endpoint */
+        std::move(destination))                              /* endpoint */
                       ));
 
     // Assert that the import node was correctly mapped in. It has not been

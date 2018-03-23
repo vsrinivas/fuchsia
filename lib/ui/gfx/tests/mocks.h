@@ -34,7 +34,7 @@ class SessionHandlerForTest : public SessionHandler {
                         ErrorReporter* error_reporter);
 
   // ::gfx::Session interface methods.
-  void Enqueue(::fidl::VectorPtr<ui::CommandPtr> commands) override;
+  void Enqueue(::fidl::VectorPtr<ui::Command> commands) override;
   void Present(uint64_t presentation_time,
                ::fidl::VectorPtr<zx::event> acquire_fences,
                ::fidl::VectorPtr<zx::event> release_fences,
