@@ -9,7 +9,7 @@
 #include <fuchsia/cpp/input.h>
 #include "lib/fxl/strings/string_printf.h"
 
-namespace mozart {
+namespace input {
 
 std::ostream& operator<<(std::ostream& os, const input::InputEvent& value) {
   if (value.is_pointer()) {
@@ -331,4 +331,4 @@ std::ostream& operator<<(std::ostream& os, const input::TextInputState& value) {
   return os << "}";
 }
 
-}  // namespace mozart
+}  // namespace input

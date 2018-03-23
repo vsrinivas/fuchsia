@@ -9,7 +9,7 @@
 
 #include <fuchsia/cpp/input.h>
 
-namespace mozart {
+namespace input {
 
 std::ostream& operator<<(std::ostream& os, const input::InputEvent& value);
 std::ostream& operator<<(std::ostream& os, const input::PointerEvent& value);
@@ -35,6 +35,6 @@ std::ostream& operator<<(std::ostream& os, const input::TextSelection& value);
 std::ostream& operator<<(std::ostream& os, const input::TextRange& value);
 std::ostream& operator<<(std::ostream& os, const input::TextInputState& value);
 
-}  // namespace mozart
+}  // namespace input
 
 #endif  // LIB_UI_INPUT_CPP_FORMATTING_H_

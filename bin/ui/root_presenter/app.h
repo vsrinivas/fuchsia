@@ -30,15 +30,15 @@ class Presentation;
 // and input routing is not fully supported (TODO).
 class App : public mozart::Presenter,
             public input::InputDeviceRegistry,
-            public input::InputDeviceImpl::Listener {
+            public mozart::InputDeviceImpl::Listener {
  public:
   explicit App(const fxl::CommandLine& command_line);
   ~App();
 
   // |InputDeviceImpl::Listener|
-  void OnDeviceDisconnected(input::InputDeviceImpl* input_device) override;
-  void OnReport(input::InputDeviceImpl* input_device,
-                input::InputReportPtr report) override;
+  void OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) override;
+  void OnReport(mozart::InputDeviceImpl* input_device,
+                input::InputReport report) override;
 
  private:
   // |Presenter|:
@@ -47,7 +47,7 @@ class App : public mozart::Presenter,
                    presentation_request) override;
 
   // |InputDeviceRegistry|:
-  void RegisterDevice(mozart::DeviceDescriptorPtr descriptor,
+  void RegisterDevice(input::DeviceDescriptorPtr descriptor,
                       fidl::InterfaceRequest<input::InputDevice>
                           input_device_request) override;
 
@@ -57,7 +57,7 @@ class App : public mozart::Presenter,
   std::unique_ptr<component::ApplicationContext> application_context_;
   fidl::BindingSet<mozart::Presenter> presenter_bindings_;
   fidl::BindingSet<input::InputDeviceRegistry> input_receiver_bindings_;
-  mozart::input::InputReader input_reader_;
+  mozart::InputReader input_reader_;
 
   views_v1::ViewManagerPtr view_manager_;
   ui::ScenicPtr scenic_;
@@ -65,7 +65,7 @@ class App : public mozart::Presenter,
   std::vector<std::unique_ptr<Presentation>> presentations_;
 
   uint32_t next_device_token_ = 0;
-  std::unordered_map<uint32_t, std::unique_ptr<input::InputDeviceImpl>>
+  std::unordered_map<uint32_t, std::unique_ptr<mozart::InputDeviceImpl>>
       devices_by_id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

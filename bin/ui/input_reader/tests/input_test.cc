@@ -16,20 +16,20 @@ namespace test {
 
 class InputTest : public ::testing::Test {};
 
-mozart::DeviceDescriptorPtr GenerateKeyboardDescriptor() {
+input::DeviceDescriptorPtr GenerateKeyboardDescriptor() {
   input::KeyboardDescriptorPtr keyboard = input::KeyboardDescriptor::New();
   keyboard->keys.resize(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
   for (size_t index = HID_USAGE_KEY_A; index < HID_USAGE_KEY_RIGHT_GUI;
        ++index) {
     keyboard->keys->at(index - HID_USAGE_KEY_A) = index;
   }
-  mozart::DeviceDescriptorPtr descriptor = mozart::DeviceDescriptor::New();
+  input::DeviceDescriptorPtr descriptor = mozart::DeviceDescriptor::New();
   descriptor->keyboard = std::move(keyboard);
   return descriptor;
 }
 
 TEST_F(InputTest, RegisterKeyboardTest) {
-  mozart::DeviceDescriptorPtr descriptor = GenerateKeyboardDescriptor();
+  input::DeviceDescriptorPtr descriptor = GenerateKeyboardDescriptor();
 
   input::InputDevicePtr input_device;
   uint32_t on_register_count = 0;
@@ -46,7 +46,7 @@ TEST_F(InputTest, RegisterKeyboardTest) {
 }
 
 TEST_F(InputTest, InputKeyboardTest) {
-  mozart::DeviceDescriptorPtr descriptor = GenerateKeyboardDescriptor();
+  input::DeviceDescriptorPtr descriptor = GenerateKeyboardDescriptor();
 
   input::InputDevicePtr input_device;
   uint32_t on_report_count = 0;

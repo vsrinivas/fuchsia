@@ -381,7 +381,7 @@ bool Presentation::ApplyDisplayModelChanges(bool print_log) {
   return true;
 }
 
-void Presentation::OnDeviceAdded(input::InputDeviceImpl* input_device) {
+void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
   FXL_VLOG(1) << "OnDeviceAdded: device_id=" << input_device->id();
 
   FXL_DCHECK(device_states_by_id_.count(input_device->id()) == 0);

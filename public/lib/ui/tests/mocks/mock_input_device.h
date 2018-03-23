@@ -18,7 +18,7 @@ class MockInputDevice : public input::InputDevice {
  public:
   MockInputDevice(
       uint32_t device_id,
-      mozart::DeviceDescriptorPtr descriptor,
+      input::DeviceDescriptorPtr descriptor,
       fidl::InterfaceRequest<input::InputDevice> input_device_request,
       const OnReportCallback& on_report_callback);
   ~MockInputDevice();
@@ -31,7 +31,7 @@ class MockInputDevice : public input::InputDevice {
 
  private:
   uint32_t id_;
-  mozart::DeviceDescriptorPtr descriptor_;
+  input::DeviceDescriptorPtr descriptor_;
   fidl::Binding<input::InputDevice> input_device_binding_;
   OnReportCallback on_report_callback_;
 

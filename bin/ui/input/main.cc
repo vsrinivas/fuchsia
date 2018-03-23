@@ -133,7 +133,7 @@ class InputApp {
     touchscreen->y.range.min = 0;
     touchscreen->y.range.max = height;
 
-    mozart::DeviceDescriptorPtr descriptor = mozart::DeviceDescriptor::New();
+    input::DeviceDescriptorPtr descriptor = mozart::DeviceDescriptor::New();
     descriptor->touchscreen = std::move(touchscreen);
 
     FXL_VLOG(1) << "Registering " << *descriptor;
@@ -194,7 +194,7 @@ class InputApp {
          ++index) {
       keyboard->keys->at(index - HID_USAGE_KEY_A) = index;
     }
-    mozart::DeviceDescriptorPtr descriptor = mozart::DeviceDescriptor::New();
+    input::DeviceDescriptorPtr descriptor = mozart::DeviceDescriptor::New();
     descriptor->keyboard = std::move(keyboard);
 
     input::InputDevicePtr input_device;

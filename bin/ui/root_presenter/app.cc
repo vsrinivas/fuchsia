@@ -62,13 +62,13 @@ void App::Present(
 }
 
 void App::RegisterDevice(
-    mozart::DeviceDescriptorPtr descriptor,
+    input::DeviceDescriptorPtr descriptor,
     fidl::InterfaceRequest<input::InputDevice> input_device_request) {
   uint32_t device_id = ++next_device_token_;
 
   FXL_VLOG(1) << "RegisterDevice " << device_id << " " << *descriptor;
-  std::unique_ptr<input::InputDeviceImpl> input_device =
-      std::make_unique<input::InputDeviceImpl>(
+  std::unique_ptr<mozart::InputDeviceImpl> input_device =
+      std::make_unique<mozart::InputDeviceImpl>(
           device_id, std::move(descriptor), std::move(input_device_request),
           this);
 
@@ -79,7 +79,7 @@ void App::RegisterDevice(
   devices_by_id_.emplace(device_id, std::move(input_device));
 }
 
-void App::OnDeviceDisconnected(input::InputDeviceImpl* input_device) {
+void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
   if (devices_by_id_.count(input_device->id()) == 0)
     return;
 
@@ -91,8 +91,8 @@ void App::OnDeviceDisconnected(input::InputDeviceImpl* input_device) {
   devices_by_id_.erase(input_device->id());
 }
 
-void App::OnReport(input::InputDeviceImpl* input_device,
-                   input::InputReportPtr report) {
+void App::OnReport(mozart::InputDeviceImpl* input_device,
+                   input::InputReport report) {
   FXL_VLOG(2) << "OnReport from " << input_device->id() << " " << *report;
   if (devices_by_id_.count(input_device->id()) == 0)
     return;

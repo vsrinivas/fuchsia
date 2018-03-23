@@ -52,15 +52,15 @@ void KeyboardState::SendEvent(input::KeyboardEventPhase phase,
   device_state_->callback()(std::move(ev));
 }
 
-void KeyboardState::Update(input::InputReportPtr input_report) {
-  FXL_DCHECK(input_report->keyboard);
+void KeyboardState::Update(input::InputReport input_report) {
+  FXL_DCHECK(input_report.keyboard);
 
-  uint64_t now = input_report->event_time;
+  uint64_t now = input_report.event_time;
   std::vector<uint32_t> old_keys = keys_;
   keys_.clear();
   repeat_keys_.clear();
 
-  for (uint32_t key : *input_report->keyboard->pressed_keys) {
+  for (uint32_t key : *input_report.keyboard->pressed_keys) {
     keys_.push_back(key);
     auto it = std::find(old_keys.begin(), old_keys.end(), key);
     if (it != old_keys.end()) {
@@ -203,24 +203,24 @@ void MouseState::SendEvent(float rel_x,
   device_state_->callback()(std::move(ev));
 }
 
-void MouseState::Update(input::InputReportPtr input_report,
+void MouseState::Update(input::InputReport input_report,
                         geometry::Size display_size) {
-  FXL_DCHECK(input_report->mouse);
-  uint64_t now = input_report->event_time;
-  uint8_t pressed = (input_report->mouse->pressed_buttons ^ buttons_) &
-                    input_report->mouse->pressed_buttons;
+  FXL_DCHECK(input_report.mouse);
+  uint64_t now = input_report.event_time;
+  uint8_t pressed = (input_report.mouse->pressed_buttons ^ buttons_) &
+                    input_report.mouse->pressed_buttons;
   uint8_t released =
-      (input_report->mouse->pressed_buttons ^ buttons_) & buttons_;
-  buttons_ = input_report->mouse->pressed_buttons;
+      (input_report.mouse->pressed_buttons ^ buttons_) & buttons_;
+  buttons_ = input_report.mouse->pressed_buttons;
 
   // TODO(jpoichet) Update once we have an API to capture mouse.
   // TODO(MZ-385): Quantize the mouse value to the range [0, display_width -
   // mouse_resolution]
   position_.x =
-      std::max(0.0f, std::min(position_.x + input_report->mouse->rel_x,
+      std::max(0.0f, std::min(position_.x + input_report.mouse->rel_x,
                               static_cast<float>(display_size.width)));
   position_.y =
-      std::max(0.0f, std::min(position_.y + input_report->mouse->rel_y,
+      std::max(0.0f, std::min(position_.y + input_report.mouse->rel_y,
                               static_cast<float>(display_size.height)));
 
   if (!pressed && !released) {
@@ -263,17 +263,17 @@ void StylusState::SendEvent(int64_t timestamp,
   device_state_->callback()(std::move(ev));
 }
 
-void StylusState::Update(input::InputReportPtr input_report,
+void StylusState::Update(input::InputReport input_report,
                          geometry::Size display_size) {
-  FXL_DCHECK(input_report->stylus);
+  FXL_DCHECK(input_report.stylus);
 
   input::StylusDescriptor* descriptor = device_state_->stylus_descriptor();
   FXL_DCHECK(descriptor);
 
   const bool previous_stylus_down = stylus_down_;
   const bool previous_stylus_in_range = stylus_in_range_;
-  stylus_down_ = input_report->stylus->is_in_contact;
-  stylus_in_range_ = input_report->stylus->in_range;
+  stylus_down_ = input_report.stylus->is_in_contact;
+  stylus_in_range_ = input_report.stylus->in_range;
 
   input::PointerEventPhase phase = input::PointerEventPhase::DOWN;
   if (stylus_down_) {
@@ -285,7 +285,7 @@ void StylusState::Update(input::InputReportPtr input_report,
       phase = input::PointerEventPhase::UP;
     } else {
       if (stylus_in_range_ && !previous_stylus_in_range) {
-        inverted_stylus_ = input_report->stylus->is_inverted;
+        inverted_stylus_ = input_report.stylus->is_inverted;
         phase = input::PointerEventPhase::ADD;
       } else if (!stylus_in_range_ && previous_stylus_in_range) {
         phase = input::PointerEventPhase::REMOVE;
@@ -297,7 +297,7 @@ void StylusState::Update(input::InputReportPtr input_report,
     }
   }
 
-  uint64_t now = input_report->event_time;
+  uint64_t now = input_report.event_time;
 
   if (phase == input::PointerEventPhase::UP) {
     SendEvent(now, phase,
@@ -312,7 +312,7 @@ void StylusState::Update(input::InputReportPtr input_report,
                  static_cast<float>(descriptor->x.resolution)) *
         static_cast<float>(descriptor->x.resolution);
     float x =
-        static_cast<float>(display_size.width * (input_report->stylus->x -
+        static_cast<float>(display_size.width * (input_report.stylus->x -
                                                  descriptor->x.range.min)) /
         x_denominator;
 
@@ -322,12 +322,12 @@ void StylusState::Update(input::InputReportPtr input_report,
                  static_cast<float>(descriptor->y.resolution)) *
         static_cast<float>(descriptor->y.resolution);
     float y =
-        static_cast<float>(display_size.height * (input_report->stylus->y -
+        static_cast<float>(display_size.height * (input_report.stylus->y -
                                                   descriptor->y.range.min)) /
         y_denominator;
 
     uint32_t buttons = 0;
-    if (input_report->stylus->pressed_buttons & input::kStylusBarrel) {
+    if (input_report.stylus->pressed_buttons & input::kStylusBarrel) {
       buttons |= input::kStylusPrimaryButton;
     }
     SendEvent(now, phase,
@@ -339,9 +339,9 @@ void StylusState::Update(input::InputReportPtr input_report,
 
 #pragma mark - TouchscreenState
 
-void TouchscreenState::Update(input::InputReportPtr input_report,
+void TouchscreenState::Update(input::InputReport input_report,
                               geometry::Size display_size) {
-  FXL_DCHECK(input_report->touchscreen);
+  FXL_DCHECK(input_report.touchscreen);
   input::TouchscreenDescriptor* descriptor =
       device_state_->touchscreen_descriptor();
   FXL_DCHECK(descriptor);
@@ -349,9 +349,9 @@ void TouchscreenState::Update(input::InputReportPtr input_report,
   std::vector<input::PointerEvent> old_pointers = pointers_;
   pointers_.clear();
 
-  uint64_t now = input_report->event_time;
+  uint64_t now = input_report.event_time;
 
-  for (auto& touch : *input_report->touchscreen->touches) {
+  for (auto& touch : *input_report.touchscreen->touches) {
     input::InputEvent ev;
     input::PointerEvent pt;
     pt.event_time = now;
@@ -479,15 +479,15 @@ void DeviceState::OnUnregistered() {
   }
 }
 
-void DeviceState::Update(input::InputReportPtr input_report,
+void DeviceState::Update(input::InputReport input_report,
                          geometry::Size display_size) {
-  if (input_report->keyboard && descriptor_->keyboard) {
+  if (input_report.keyboard && descriptor_->keyboard) {
     keyboard_.Update(std::move(input_report));
-  } else if (input_report->mouse && descriptor_->mouse) {
+  } else if (input_report.mouse && descriptor_->mouse) {
     mouse_.Update(std::move(input_report), display_size);
-  } else if (input_report->stylus && descriptor_->stylus) {
+  } else if (input_report.stylus && descriptor_->stylus) {
     stylus_.Update(std::move(input_report), display_size);
-  } else if (input_report->touchscreen && descriptor_->touchscreen) {
+  } else if (input_report.touchscreen && descriptor_->touchscreen) {
     touchscreen_.Update(std::move(input_report), display_size);
   }
 }

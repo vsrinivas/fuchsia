@@ -79,7 +79,7 @@ class Presentation : private views_v1::ViewTreeListener,
       fxl::Closure shutdown_callback);
 
   void OnReport(uint32_t device_id, input::InputReportPtr report);
-  void OnDeviceAdded(input::InputDeviceImpl* input_device);
+  void OnDeviceAdded(mozart::InputDeviceImpl* input_device);
   void OnDeviceRemoved(uint32_t device_id);
 
  private:
@@ -222,7 +222,7 @@ class Presentation : private views_v1::ViewTreeListener,
   std::map<uint32_t, CursorState> cursors_;
   std::map<
       uint32_t,
-      std::pair<input::InputDeviceImpl*, std::unique_ptr<mozart::DeviceState>>>
+      std::pair<mozart::InputDeviceImpl*, std::unique_ptr<mozart::DeviceState>>>
       device_states_by_id_;
 
   // A registry of listeners who want to be notified when their keyboard

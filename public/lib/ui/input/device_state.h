@@ -32,7 +32,7 @@ class State {
 class KeyboardState : public State {
  public:
   KeyboardState(DeviceState* device_state);
-  void Update(input::InputReportPtr report);
+  void Update(input::InputReport report);
 
  private:
   void SendEvent(input::KeyboardEventPhase phase,
@@ -56,7 +56,7 @@ class KeyboardState : public State {
 class MouseState : public State {
  public:
   MouseState(DeviceState* device_state) : device_state_(device_state) {}
-  void Update(input::InputReportPtr report, geometry::Size display_size);
+  void Update(input::InputReport report, geometry::Size display_size);
   void OnRegistered();
   void OnUnregistered();
 
@@ -75,7 +75,7 @@ class MouseState : public State {
 class StylusState : public State {
  public:
   StylusState(DeviceState* device_state) : device_state_(device_state) {}
-  void Update(input::InputReportPtr report, geometry::Size display_size);
+  void Update(input::InputReport report, geometry::Size display_size);
 
  private:
   void SendEvent(int64_t timestamp,
@@ -95,7 +95,7 @@ class StylusState : public State {
 class TouchscreenState : public State {
  public:
   TouchscreenState(DeviceState* device_state) : device_state_(device_state) {}
-  void Update(input::InputReportPtr report, geometry::Size display_size);
+  void Update(input::InputReport report, geometry::Size display_size);
 
  private:
   DeviceState* device_state_;
@@ -112,7 +112,7 @@ class DeviceState {
   void OnRegistered();
   void OnUnregistered();
 
-  void Update(input::InputReportPtr report, geometry::Size display_size);
+  void Update(input::InputReport report, geometry::Size display_size);
 
   uint32_t device_id() { return device_id_; }
   OnEventCallback callback() { return callback_; }

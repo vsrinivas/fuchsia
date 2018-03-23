@@ -21,20 +21,20 @@ class InputDeviceImpl : public input::InputDevice {
 
   InputDeviceImpl(
       uint32_t id,
-      input::DeviceDescriptorPtr descriptor,
+      input::DeviceDescriptor descriptor,
       fidl::InterfaceRequest<input::InputDevice> input_device_request,
       Listener* listener);
   ~InputDeviceImpl();
 
   uint32_t id() { return id_; }
-  input::DeviceDescriptor* descriptor() { return descriptor_.get(); }
+  input::DeviceDescriptor* descriptor() { return &descriptor_; }
 
  private:
   // |InputDevice|
   void DispatchReport(input::InputReport report) override;
 
   uint32_t id_;
-  input::DeviceDescriptorPtr descriptor_;
+  input::DeviceDescriptor descriptor_;
   fidl::Binding<input::InputDevice> input_device_binding_;
   Listener* listener_;
 };

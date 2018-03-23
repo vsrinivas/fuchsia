@@ -25,7 +25,7 @@ class MockInputDeviceRegistry : public input::InputDeviceRegistry {
   ~MockInputDeviceRegistry();
 
   // |InputDeviceRegistry|:
-  void RegisterDevice(mozart::DeviceDescriptorPtr descriptor,
+  void RegisterDevice(input::DeviceDescriptorPtr descriptor,
                       fidl::InterfaceRequest<input::InputDevice>
                           input_device_request) override;
 
