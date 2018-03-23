@@ -16,13 +16,13 @@ namespace examples {
 class ShapesView : public mozart::BaseView {
  public:
   ShapesView(views_v1::ViewManagerPtr view_manager,
-             f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
+             fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   ~ShapesView() override;
 
  private:
   // |BaseView|:
-  void OnSceneInvalidated(images::PresentationInfoPtr presentation_info) override;
+  void OnSceneInvalidated(images::PresentationInfo presentation_info) override;
 
   scenic_lib::ShapeNode background_node_;
   scenic_lib::ShapeNode card_node_;

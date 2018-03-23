@@ -21,7 +21,7 @@ constexpr float kSecondsPerNanosecond = .000'000'001f;
 
 SpinningSquareView::SpinningSquareView(
     views_v1::ViewManagerPtr view_manager,
-    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
                "Spinning Square"),
@@ -41,11 +41,11 @@ SpinningSquareView::SpinningSquareView(
 SpinningSquareView::~SpinningSquareView() {}
 
 void SpinningSquareView::OnSceneInvalidated(
-    images::PresentationInfoPtr presentation_info) {
+    images::PresentationInfo presentation_info) {
   if (!has_logical_size())
     return;
 
-  uint64_t presentation_time = presentation_info->presentation_time;
+  uint64_t presentation_time = presentation_info.presentation_time;
   if (!start_time_)
     start_time_ = presentation_time;
 
