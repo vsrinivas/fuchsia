@@ -34,5 +34,17 @@
     "fidl_target": "//garnet/public/lib/xi/fidl:fidl",
     "library_deps": [],
     "public": true
+  },
+  {
+    "library_name": "wlan_device",
+    "fidl_target": "//garnet/lib/wlan/fidl:fidl",
+    "library_deps": [],
+    "public": false
+  },
+  {
+    "library_name": "wlan_device_service",
+    "fidl_target": "//garnet/lib/wlan/fidl:service",
+    "library_deps": ["wlan_device"],
+    "public": false
   }
 ]
