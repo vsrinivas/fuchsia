@@ -99,9 +99,8 @@ static void ihda_dump_stream_regs(const char* name,
 
 zx_status_t IntelHDAController::Enumerate() {
     static const char* const DEV_PATH = "/dev/class/intel-hda";
-    static const char* const DEV_FMT  = "%03hu";
 
-    zx_status_t res = ZirconDevice::Enumerate(nullptr, DEV_PATH, DEV_FMT,
+    zx_status_t res = ZirconDevice::Enumerate(nullptr, DEV_PATH,
     [](void*, uint32_t id, const char* const dev_name) -> zx_status_t {
         fbl::AllocChecker ac;
         fbl::unique_ptr<IntelHDAController> dev(new (&ac) IntelHDAController(id, dev_name));

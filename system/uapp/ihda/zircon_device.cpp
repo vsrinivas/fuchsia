@@ -72,7 +72,6 @@ zx_status_t ZirconDevice::CallDevice(const zx_channel_call_args_t& args, uint64_
 zx_status_t ZirconDevice::Enumerate(
         void* ctx,
         const char* const dev_path,
-        const char* const dev_fmt,
         EnumerateCbk cbk) {
     static constexpr size_t FILENAME_SIZE = 256;
 
@@ -86,11 +85,11 @@ zx_status_t ZirconDevice::Enumerate(
 
     while ((de = readdir(dir)) != NULL) {
         uint32_t id;
-        if (sscanf(de->d_name, dev_fmt, &id) == 1) {
+        if (sscanf(de->d_name, "%u", &id) == 1) {
             size_t total = 0;
 
             total += snprintf(buf + total, sizeof(buf) - total, "%s/", dev_path);
-            total += snprintf(buf + total, sizeof(buf) - total, dev_fmt, id);
+            total += snprintf(buf + total, sizeof(buf) - total, "%03u", id);
 
             res = cbk(ctx, id, buf);
             if (res != ZX_OK)

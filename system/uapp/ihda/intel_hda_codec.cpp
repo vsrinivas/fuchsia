@@ -435,9 +435,8 @@ static const IntelHDACodec::CommandListEntry<CodecState> FETCH_CODEC_ROOT_COMMAN
 
 zx_status_t IntelHDACodec::Enumerate() {
     static const char* const DEV_PATH = "/dev/class/intel-hda-codec";
-    static const char* const DEV_FMT  = "%03hu";
 
-    zx_status_t res = ZirconDevice::Enumerate(nullptr, DEV_PATH, DEV_FMT,
+    zx_status_t res = ZirconDevice::Enumerate(nullptr, DEV_PATH,
     [](void*, uint32_t id, const char* const dev_name) -> zx_status_t {
         fbl::AllocChecker ac;
         auto codec = fbl::unique_ptr<IntelHDACodec>(new (&ac) IntelHDACodec(id, dev_name));

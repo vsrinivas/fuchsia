@@ -25,7 +25,6 @@ public:
     using EnumerateCbk = zx_status_t (*)(void* ctx, uint32_t id, const char* const str);
     static zx_status_t Enumerate(void* ctx,
                                  const char* const dev_path,
-                                 const char* const dev_fmt,
                                  EnumerateCbk cbk);
 
 protected:
