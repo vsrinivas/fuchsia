@@ -17,20 +17,20 @@ class TestListenStream : public ListenStream {
   void StartCall(void* tag) override {
     connect_tag = static_cast<std::function<void(bool)>*>(tag);
   }
-  void ReadInitialMetadata(void* tag) override {}
-  void Read(google::firestore::v1beta1::ListenResponse* response,
+  void ReadInitialMetadata(void* /*tag*/) override {}
+  void Read(google::firestore::v1beta1::ListenResponse* /*response*/,
             void* tag) override {
     read_tag = static_cast<std::function<void(bool)>*>(tag);
   }
-  void Write(const google::firestore::v1beta1::ListenRequest& request,
+  void Write(const google::firestore::v1beta1::ListenRequest& /*request*/,
              void* tag) override {
     write_tag = static_cast<std::function<void(bool)>*>(tag);
   }
-  void Write(const google::firestore::v1beta1::ListenRequest& request,
-             grpc::WriteOptions options,
-             void* tag) override {}
-  void WritesDone(void* tag) override {}
-  void Finish(grpc::Status* status, void* tag) override {
+  void Write(const google::firestore::v1beta1::ListenRequest& /*request*/,
+             grpc::WriteOptions /*options*/,
+             void* /*tag*/) override {}
+  void WritesDone(void* /*tag*/) override {}
+  void Finish(grpc::Status* /*status*/, void* tag) override {
     finish_tag = static_cast<std::function<void(bool)>*>(tag);
   }
 
@@ -60,7 +60,7 @@ class ListenCallTest : public gtest::TestWithMessageLoop,
   void OnConnected() override { on_connected_calls_++; }
 
   void OnResponse(
-      google::firestore::v1beta1::ListenResponse response) override {
+      google::firestore::v1beta1::ListenResponse /*response*/) override {
     on_response_calls_++;
   }
 

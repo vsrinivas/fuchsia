@@ -160,7 +160,7 @@ void DeviceSetImpl::Erase(const EraseCallback& callback) {
 
   credentials_provider_->GetCredentials(
       [this, request = std::move(request),
-       callback](auto call_credentials) mutable {
+       callback = callback](auto call_credentials) mutable {
         firestore_service_->ListDocuments(
             std::move(request), call_credentials,
             [this, call_credentials, callback = std::move(callback)](

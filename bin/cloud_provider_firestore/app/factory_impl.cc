@@ -32,7 +32,7 @@ void FactoryImpl::ShutDown(fxl::Closure callback) {
     return;
   }
 
-  providers_.set_on_empty(std::move(callback));
+  providers_.set_on_empty(callback);
   for (auto& cloud_provider : providers_) {
     cloud_provider.ShutDownAndReportEmpty();
   }

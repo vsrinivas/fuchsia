@@ -28,7 +28,7 @@ struct ResponseVariant<google::protobuf::Empty> {
 
   static void Call(const CallbackType& callback,
                    grpc::Status status,
-                   google::protobuf::Empty response) {
+                   google::protobuf::Empty /*response*/) {
     callback(std::move(status));
   }
 };
@@ -76,7 +76,7 @@ void FirestoreServiceImpl::GetDocument(
   DocumentResponseCall& call = document_response_calls_.emplace();
   call.context.set_credentials(call_credentials);
   auto response_reader =
-      firestore_->AsyncGetDocument(&call.context, std::move(request), &cq_);
+      firestore_->AsyncGetDocument(&call.context, request, &cq_);
   MakeCall<google::firestore::v1beta1::Document>(
       &call, std::move(response_reader), std::move(callback));
 }
@@ -91,7 +91,7 @@ void FirestoreServiceImpl::ListDocuments(
   ListDocumentsResponseCall& call = list_documents_response_calls_.emplace();
   call.context.set_credentials(call_credentials);
   auto response_reader =
-      firestore_->AsyncListDocuments(&call.context, std::move(request), &cq_);
+      firestore_->AsyncListDocuments(&call.context, request, &cq_);
   MakeCall<google::firestore::v1beta1::ListDocumentsResponse>(
       &call, std::move(response_reader), std::move(callback));
 }
@@ -105,7 +105,7 @@ void FirestoreServiceImpl::CreateDocument(
   DocumentResponseCall& call = document_response_calls_.emplace();
   call.context.set_credentials(call_credentials);
   auto response_reader =
-      firestore_->AsyncCreateDocument(&call.context, std::move(request), &cq_);
+      firestore_->AsyncCreateDocument(&call.context, request, &cq_);
 
   MakeCall<google::firestore::v1beta1::Document>(
       &call, std::move(response_reader), std::move(callback));
@@ -119,7 +119,7 @@ void FirestoreServiceImpl::DeleteDocument(
   EmptyResponseCall& call = empty_response_calls_.emplace();
   call.context.set_credentials(call_credentials);
   auto response_reader =
-      firestore_->AsyncDeleteDocument(&call.context, std::move(request), &cq_);
+      firestore_->AsyncDeleteDocument(&call.context, request, &cq_);
 
   MakeCall<google::protobuf::Empty>(&call, std::move(response_reader),
                                     std::move(callback));
@@ -133,8 +133,7 @@ void FirestoreServiceImpl::Commit(
   FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
   CommitResponseCall& call = commit_response_calls_.emplace();
   call.context.set_credentials(call_credentials);
-  auto response_reader =
-      firestore_->AsyncCommit(&call.context, std::move(request), &cq_);
+  auto response_reader = firestore_->AsyncCommit(&call.context, request, &cq_);
 
   MakeCall<google::firestore::v1beta1::CommitResponse>(
       &call, std::move(response_reader), std::move(callback));
