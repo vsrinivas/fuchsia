@@ -3794,11 +3794,11 @@ void DumpWlanTxInfo(const wlan_tx_info_t& txinfo) {
            txinfo.mcs);
 }
 
-void DumpTxwi(TxPacket* packet) {
-    if (packet == nullptr) return;
+void DumpTxwi(BulkoutAggregation* aggr) {
+    if (aggr == nullptr) return;
 
-    Txwi0& txwi0 = packet->txwi0;
-    Txwi1& txwi1 = packet->txwi1;
+    Txwi0& txwi0 = aggr->txwi0;
+    Txwi1& txwi1 = aggr->txwi1;
 
     debugf("txwi:   frag %u mmps %u cfack %u ts %u ampdu %u mpdu_density %u txop %u mcs 0x%02x\n",
            txwi0.frag(), txwi0.mmps(), txwi0.cfack(), txwi0.ts(), txwi0.ampdu(),
@@ -3812,9 +3812,7 @@ void DumpTxwi(TxPacket* packet) {
 
 zx_status_t Device::WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* bcn_pkt) {
     // Deactivate if no Beacon was supplied.
-    if (bcn_pkt == nullptr) {
-        return EnableHwBcn(false);
-    }
+    if (bcn_pkt == nullptr) { return EnableHwBcn(false); }
 
     size_t req_len = usb_tx_pkt_len(bcn_pkt);
     if (req_len > kMaxBeaconSizeByte) {
@@ -3822,8 +3820,8 @@ zx_status_t Device::WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* b
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
     auto buf = fbl::unique_ptr<uint8_t[]>(new uint8_t[req_len]);
-    auto usb_packet = reinterpret_cast<TxPacket*>(buf.get());
-    auto status = FillUsbTxPacket(usb_packet, bcn_pkt);
+    auto aggr = reinterpret_cast<BulkoutAggregation*>(buf.get());
+    auto status = FillUsbTxPacket(aggr, bcn_pkt);
     if (status != ZX_OK) {
         errorf("could not fill usb request packet: %d\n", status);
         return status;
@@ -3883,8 +3881,8 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     }
     ZX_DEBUG_ASSERT(req != nullptr);
 
-    TxPacket* packet;
-    auto status = usb_request_mmap(req, reinterpret_cast<void**>(&packet));
+    BulkoutAggregation* aggr;
+    auto status = usb_request_mmap(req, reinterpret_cast<void**>(&aggr));
     if (status != ZX_OK) {
         errorf("could not map usb request: %d\n", status);
         std::lock_guard<std::mutex> guard(lock_);
@@ -3892,7 +3890,7 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
         return status;
     }
 
-    status = FillUsbTxPacket(packet, pkt);
+    status = FillUsbTxPacket(aggr, pkt);
     if (status != ZX_OK) {
         errorf("could not fill usb request packet: %d\n", status);
         return status;
@@ -3912,25 +3910,25 @@ zx_status_t Device::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
     return ZX_OK;
 }
 
-zx_status_t Device::FillUsbTxPacket(TxPacket* usb_packet, wlan_tx_packet_t* wlan_packet) {
+zx_status_t Device::FillUsbTxPacket(BulkoutAggregation* aggr, wlan_tx_packet_t* wlan_packet) {
     ZX_DEBUG_ASSERT(wlan_packet != nullptr && wlan_packet->packet_head != nullptr);
 
     size_t pkt_length = tx_pkt_len(wlan_packet);
     size_t txwi_length = txwi_len();
     size_t align_pad_length = align_pad_len(wlan_packet);
 
-    std::memset(usb_packet, 0, sizeof(TxInfo) + txwi_length);
+    std::memset(aggr, 0, sizeof(TxInfo) + txwi_length);
 
     // The length field in TxInfo includes everything from the TXWI fields to the alignment pad
-    usb_packet->tx_info.set_tx_pkt_length(txwi_length + pkt_length + align_pad_length);
+    aggr->tx_info.set_aggr_payload_len(txwi_length + pkt_length + align_pad_length);
 
     // TODO(tkilbourn): set these more appropriately
     const bool protected_frame = (wlan_packet->info.tx_flags & WLAN_TX_INFO_FLAGS_PROTECTED);
     uint8_t wiv = !protected_frame;
-    usb_packet->tx_info.set_wiv(wiv);
-    usb_packet->tx_info.set_qsel(2);
+    aggr->tx_info.set_wiv(wiv);
+    aggr->tx_info.set_qsel(2);
 
-    Txwi0& txwi0 = usb_packet->txwi0;
+    Txwi0& txwi0 = aggr->txwi0;
     txwi0.set_frag(0);
     txwi0.set_mmps(0);
     txwi0.set_cfack(0);
@@ -3967,7 +3965,7 @@ zx_status_t Device::FillUsbTxPacket(TxPacket* usb_packet, wlan_tx_packet_t* wlan
     // The frame header is always in the packet head.
     auto frame_hdr = reinterpret_cast<const wlan::FrameHeader*>(wlan_packet->packet_head->data);
     auto wcid = LookupTxWcid(frame_hdr->addr1.byte, protected_frame);
-    Txwi1& txwi1 = usb_packet->txwi1;
+    Txwi1& txwi1 = aggr->txwi1;
     txwi1.set_ack(GetRxAckPolicy(*wlan_packet));
     txwi1.set_nseq(0);
 
@@ -3979,20 +3977,16 @@ zx_status_t Device::FillUsbTxPacket(TxPacket* usb_packet, wlan_tx_packet_t* wlan
     txwi1.set_mpdu_total_byte_count(pkt_length);
     txwi1.set_tx_packet_id(10);
 
-    Txwi2& txwi2 = usb_packet->txwi2;
+    Txwi2& txwi2 = aggr->txwi2;
     txwi2.set_iv(0);
 
-    Txwi3& txwi3 = usb_packet->txwi3;
+    Txwi3& txwi3 = aggr->txwi3;
     txwi3.set_eiv(0);
 
-    // A TxPacket is laid out with 4 TXWI headers, so if there are more than that, we have to
-    // consider them when determining the start of the payload.
-    size_t payload_offset = txwi_length - 16;
-    uint8_t* payload_ptr = &usb_packet->payload[payload_offset];
-
-    // Write out the payload
-    WritePayload(payload_ptr, wlan_packet);
-    std::memset(&payload_ptr[pkt_length], 0, align_pad_length + terminal_pad_len());
+    // Payload
+    uint8_t* aggr_payload = aggr->payload(rt_type_);
+    WritePayload(aggr_payload, wlan_packet);
+    std::memset(aggr_payload + pkt_length, 0, align_pad_length + terminal_pad_len());
 
     return ZX_OK;
 }
@@ -4462,7 +4456,7 @@ size_t Device::usb_tx_pkt_len(wlan_tx_packet_t* pkt) {
     return sizeof(TxInfo) + txwi_len() + tx_pkt_len(pkt) + align_pad_len(pkt) + terminal_pad_len();
 }
 
-void Device::DumpLengths(wlan_tx_packet_t* wlan_pkt, TxPacket* usb_pkt, usb_request_t* req) {
+void Device::DumpLengths(wlan_tx_packet_t* wlan_pkt, BulkoutAggregation* aggr, usb_request_t* req) {
     size_t txinfo_len = sizeof(TxInfo);
     size_t align_len = align_pad_len(wlan_pkt);
     size_t terminal_len = terminal_pad_len();
@@ -4480,7 +4474,7 @@ void Device::DumpLengths(wlan_tx_packet_t* wlan_pkt, TxPacket* usb_pkt, usb_requ
     // usb_pkt_txinfo_tx_pkt_len := txwi_len() + wlan_pkt_len + align_len;
     //                            = usb_tx_pkt_len - txinfo_len - terminal_len
     //                            = usb_tx_pkt_len - 8
-    size_t usb_pkt_txinfo_tx_pkt_len = usb_pkt->tx_info.tx_pkt_length();
+    size_t usb_pkt_txinfo_tx_pkt_len = aggr->tx_info.aggr_payload_len();
 
     size_t usb_pkt_payload_offset =
         txwi_len() - 16;  // 0 or 4. TODO(porce): Convert to a constant literal.

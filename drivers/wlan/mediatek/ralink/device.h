@@ -32,7 +32,7 @@ template <uint8_t A> class RfcsrRegister;
 template <uint16_t A> class EepromField;
 enum KeyMode : uint8_t;
 enum KeyType : uint8_t;
-struct TxPacket;
+struct BulkoutAggregation;
 
 class WlanmacIfcProxy {
    public:
@@ -210,7 +210,7 @@ class Device : public wlan_device::Phy {
     void HandleRxComplete(usb_request_t* request);
     void HandleTxComplete(usb_request_t* request);
 
-    zx_status_t FillUsbTxPacket(TxPacket* usb_packet, wlan_tx_packet_t* wlan_packet);
+    zx_status_t FillUsbTxPacket(BulkoutAggregation* aggr, wlan_tx_packet_t* wlan_packet);
     uint8_t LookupTxWcid(const uint8_t* addr1, bool protected_frame);
 
     zx_status_t EnableHwBcn(bool active);
@@ -218,7 +218,7 @@ class Device : public wlan_device::Phy {
     static void ReadRequestComplete(usb_request_t* request, void* cookie);
     static void WriteRequestComplete(usb_request_t* request, void* cookie);
 
-    void DumpLengths(wlan_tx_packet_t* wlan_pkt, TxPacket* usb_pkt, usb_request_t* req);
+    void DumpLengths(wlan_tx_packet_t* wlan_pkt, BulkoutAggregation* aggr, usb_request_t* req);
     size_t tx_pkt_len(wlan_tx_packet_t* pkt);
     size_t txwi_len();
     size_t align_pad_len(wlan_tx_packet_t* pkt);

@@ -1184,7 +1184,7 @@ class Rxwi3 : public AddressableBitField<uint16_t, uint32_t, 4> {
 
 class TxInfo : public BitField<uint32_t> {
    public:
-    WLAN_BIT_FIELD(tx_pkt_length, 0, 16);
+    WLAN_BIT_FIELD(aggr_payload_len, 0, 16);  // Bulk-out Aggregation format payload length
     // Reserved 8 bits.
     WLAN_BIT_FIELD(wiv, 24, 1);
     WLAN_BIT_FIELD(qsel, 25, 2);
@@ -1260,13 +1260,31 @@ class Txwi3 : public BitField<uint32_t> {
     WLAN_BIT_FIELD(eiv, 0, 32);
 };
 
-struct TxPacket {
+struct BulkoutAggregation {
+    // Aggregation Header
+    // TODO(porce): Investigate if Aggregation Header and TxInfo are identical.
     TxInfo tx_info;
+
+    // Structure of BulkoutAggregation's payload
+    // TXWI            : 16 or 20 bytes // (a).
+    // MPDU header     :      (b) bytes // (b).
+    // L2PAD           :      0~3 bytes // (c).
+    // MSDU            :      (d) bytes // (d).  (b) + (d) is mpdu_len
+    // Bulkout Agg Pad :      0~3 bytes // (e).
     Txwi0 txwi0;
     Txwi1 txwi1;
     Txwi2 txwi2;
     Txwi3 txwi3;
-    uint8_t payload[];
+    // Txwi4 txwi4 for RT5592
+
+    uint8_t* payload(uint16_t rt_type) {  // TODO(porce): better naming
+        // Return where MPDU is to be stored.
+        // Precisely, this will consist of MPDU header + (L2PAD) + MSDU + (AggregatePAD)
+        size_t txwi_len = (rt_type == RT5592) ? 20 : 16;
+        return reinterpret_cast<uint8_t*>(this) + sizeof(TxInfo) + txwi_len;
+    }
+
+    // BulkoutAggregation Tail padding (4 bytes of zeros)
 } __PACKED;
 
 }  // namespace ralink
