@@ -5,6 +5,8 @@
 #ifndef GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_POOL_H_
 #define GARNET_BIN_UI_SKETCHY_BUFFER_SHARED_BUFFER_POOL_H_
 
+#include <set>
+
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer.h"
 #include "lib/escher/flib/fence_listener.h"
 #include "lib/escher/vk/buffer_factory.h"

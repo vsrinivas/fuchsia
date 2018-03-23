@@ -6,6 +6,9 @@
 #define GARNET_BIN_UI_SKETCHY_CANVAS_H_
 
 #include <unordered_map>
+
+#include <fuchsia/cpp/sketchy.h>
+
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer_pool.h"
 #include "garnet/bin/ui/sketchy/resources/resource_map.h"
 #include "garnet/bin/ui/sketchy/resources/stroke_group.h"
@@ -14,7 +17,6 @@
 #include "lib/escher/escher.h"
 #include "lib/escher/vk/buffer_factory.h"
 #include "lib/ui/scenic/client/session.h"
-#include "lib/ui/sketchy/fidl/canvas.fidl.h"
 
 namespace sketchy_service {
 
@@ -24,34 +26,30 @@ class CanvasImpl final : public sketchy::Canvas {
 
   // |sketchy::Canvas|
   void Init(::fidl::InterfaceHandle<sketchy::CanvasListener> listener) override;
-  void Enqueue(::fidl::VectorPtr<sketchy::CommandPtr> commands) override;
-  void Present(uint64_t presentation_time,
-               const PresentCallback& callback) override;
+  void Enqueue(::fidl::VectorPtr<sketchy::Command> commands) override;
+  void Present(uint64_t presentation_time, PresentCallback callback) override;
 
  private:
-  bool ApplyCommand(const sketchy::CommandPtr& command);
+  bool ApplyCommand(sketchy::Command command);
   void RequestScenicPresent(uint64_t presentation_time);
 
-  bool ApplyCreateResourceCommand(
-      const sketchy::CreateResourceCommandPtr& command);
-  bool ApplyReleaseResourceCommand(
-      const sketchy::ReleaseResourceCommandPtr& command);
-  bool CreateStroke(ResourceId id, const sketchy::StrokePtr& stroke);
-  bool CreateStrokeGroup(ResourceId id,
-                         const sketchy::StrokeGroupPtr& stroke_group);
+  bool ApplyCreateResourceCommand(sketchy::CreateResourceCommand command);
+  bool ApplyReleaseResourceCommand(sketchy::ReleaseResourceCommand command);
+  bool CreateStroke(ResourceId id, sketchy::Stroke stroke);
+  bool CreateStrokeGroup(ResourceId id, sketchy::StrokeGroup stroke_group);
 
-  bool ApplySetPathCommand(const sketchy::SetStrokePathCommandPtr& command);
-  bool ApplyAddStrokeCommand(const sketchy::AddStrokeCommandPtr& command);
-  bool ApplyRemoveStrokeCommand(const sketchy::RemoveStrokeCommandPtr& command);
+  bool ApplySetPathCommand(sketchy::SetStrokePathCommand command);
+  bool ApplyAddStrokeCommand(sketchy::AddStrokeCommand command);
+  bool ApplyRemoveStrokeCommand(sketchy::RemoveStrokeCommand command);
 
-  bool ApplyBeginStrokeCommand(const sketchy::BeginStrokeCommandPtr& command);
-  bool ApplyExtendStrokeCommand(const sketchy::ExtendStrokeCommandPtr& command);
-  bool ApplyFinishStrokeCommand(const sketchy::FinishStrokeCommandPtr& command);
+  bool ApplyBeginStrokeCommand(sketchy::BeginStrokeCommand command);
+  bool ApplyExtendStrokeCommand(sketchy::ExtendStrokeCommand command);
+  bool ApplyFinishStrokeCommand(sketchy::FinishStrokeCommand command);
 
-  bool ApplyClearGroupCommand(const sketchy::ClearGroupCommandPtr& command);
+  bool ApplyClearGroupCommand(sketchy::ClearGroupCommand command);
 
   bool ApplyScenicImportResourceCommand(
-      const gfx::ImportResourceCommandPtr& import_resource);
+      gfx::ImportResourceCommand import_resource);
 
   // Imports an exported ScenicNode that can be used as an
   // attachment point for a StrokeGroup.
@@ -62,12 +60,12 @@ class CanvasImpl final : public sketchy::Canvas {
   //     to the SceneManager to import the node.
   bool ScenicImportNode(ResourceId id, zx::eventpair token);
 
-  bool ApplyScenicAddChildCommand(const gfx::AddChildCommandPtr& add_child);
+  bool ApplyScenicAddChildCommand(gfx::AddChildCommand add_child);
 
   scenic_lib::Session* const session_;
   SharedBufferPool shared_buffer_pool_;
 
-  ::fidl::VectorPtr<sketchy::CommandPtr> commands_;
+  ::fidl::VectorPtr<sketchy::Command> commands_;
   ResourceMap resource_map_;
   bool is_scenic_present_requested_ = false;
   std::vector<scenic_lib::Session::PresentCallback> callbacks_;

@@ -5,12 +5,13 @@
 #ifndef GARNET_BIN_UI_SKETCHY_APP_H_
 #define GARNET_BIN_UI_SKETCHY_APP_H_
 
+#include <fuchsia/cpp/sketchy.h>
+
 #include "garnet/bin/ui/sketchy/canvas.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/escher/escher.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/ui/sketchy/fidl/canvas.fidl.h"
 
 namespace sketchy_service {
 

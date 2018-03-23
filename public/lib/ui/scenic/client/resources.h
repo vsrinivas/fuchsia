@@ -188,7 +188,7 @@ class Mesh final : public Shape {
                    uint64_t index_offset,
                    uint32_t index_count,
                    const Buffer& vertex_buffer,
-                   gfx::MeshVertexFormatPtr vertex_format,
+                   gfx::MeshVertexFormat vertex_format,
                    uint64_t vertex_offset,
                    uint32_t vertex_count,
                    const float bounding_box_min[3],

@@ -6,13 +6,13 @@
 
 namespace sketchy_service {
 
-StrokePath::StrokePath(sketchy::StrokePathPtr path) {
-  Reset(path->segments->size());
-  for (const auto& seg : *path->segments) {
-    ExtendWithCurve(CubicBezier2f{{{seg->pt0->x, seg->pt0->y},
-                                   {seg->pt1->x, seg->pt1->y},
-                                   {seg->pt2->x, seg->pt2->y},
-                                   {seg->pt3->x, seg->pt3->y}}});
+StrokePath::StrokePath(sketchy::StrokePath path) {
+  Reset(path.segments->size());
+  for (const auto& seg : *path.segments) {
+    ExtendWithCurve(CubicBezier2f{{{seg.pt0.x, seg.pt0.y},
+                                   {seg.pt1.x, seg.pt1.y},
+                                   {seg.pt2.x, seg.pt2.y},
+                                   {seg.pt3.x, seg.pt3.y}}});
   }
 }
 

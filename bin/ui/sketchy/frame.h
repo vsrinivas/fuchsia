@@ -26,7 +26,7 @@ class Frame final {
   void RequestScenicPresent(
       scenic_lib::Session* session,
       uint64_t presentation_time,
-      const scenic_lib::Session::PresentCallback& callback);
+      scenic_lib::Session::PresentCallback callback);
 
   SharedBufferPool* shared_buffer_pool() const { return shared_buffer_pool_; }
   escher::impl::CommandBuffer* command() const { return command_; }
