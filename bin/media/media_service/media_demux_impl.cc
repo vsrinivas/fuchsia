@@ -34,7 +34,7 @@ MediaDemuxImpl::MediaDemuxImpl(f1dl::InterfaceHandle<SeekingReader> reader,
   FXL_DCHECK(task_runner_);
 
   status_publisher_.SetCallbackRunner(
-      [this](const GetStatusCallback& callback, uint64_t version) {
+      [this](GetStatusCallback callback, uint64_t version) {
         MediaSourceStatusPtr status = MediaSourceStatus::New();
 
         for (std::unique_ptr<Stream>& stream : streams_) {
@@ -151,7 +151,7 @@ void MediaDemuxImpl::GetPacketProducer(
 }
 
 void MediaDemuxImpl::GetStatus(uint64_t version_last_seen,
-                               const GetStatusCallback& callback) {
+                               GetStatusCallback callback) {
   status_publisher_.Get(version_last_seen, callback);
 }
 

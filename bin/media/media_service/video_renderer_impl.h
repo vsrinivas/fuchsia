@@ -86,7 +86,7 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
 
   // VideoRenderer implementation.
   void GetStatus(uint64_t version_last_seen,
-                 const GetStatusCallback& callback) override;
+                 GetStatusCallback callback) override;
 
   void CreateView(
       f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;

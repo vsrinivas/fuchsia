@@ -76,7 +76,7 @@ void NetMediaPlayerImpl::Seek(int64_t position) {
 }
 
 void NetMediaPlayerImpl::GetStatus(uint64_t version_last_seen,
-                                   const GetStatusCallback& callback) {
+                                   GetStatusCallback callback) {
   media_player_->GetStatus(version_last_seen, callback);
 }
 

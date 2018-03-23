@@ -40,7 +40,7 @@ class MediaDemuxImpl : public MediaComponentFactory::Product<MediaSource>,
       f1dl::InterfaceRequest<MediaPacketProducer> producer) override;
 
   void GetStatus(uint64_t version_last_seen,
-                 const GetStatusCallback& callback) override;
+                 GetStatusCallback callback) override;
 
   void Flush(bool hold_frame, FlushCallback callback) override;
 

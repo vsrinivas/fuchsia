@@ -30,7 +30,7 @@ MediaTimelineControllerImpl::MediaTimelineControllerImpl(
       control_point_binding_(this),
       consumer_binding_(this) {
   status_publisher_.SetCallbackRunner(
-      [this](const GetStatusCallback& callback, uint64_t version) {
+      [this](GetStatusCallback callback, uint64_t version) {
         MediaTimelineControlPointStatusPtr status =
             MediaTimelineControlPointStatus::New();
         status->timeline_transform =
@@ -73,7 +73,7 @@ void MediaTimelineControllerImpl::GetControlPoint(
 }
 
 void MediaTimelineControllerImpl::GetStatus(uint64_t version_last_seen,
-                                            const GetStatusCallback& callback) {
+                                            GetStatusCallback callback) {
   status_publisher_.Get(version_last_seen, callback);
 }
 

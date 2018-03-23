@@ -34,7 +34,7 @@ class NetMediaPlayerImpl : public NetMediaServiceImpl::Product<NetMediaPlayer>,
   void Seek(int64_t position) override;
 
   void GetStatus(uint64_t version_last_seen,
-                 const GetStatusCallback& callback) override;
+                 GetStatusCallback callback) override;
 
  private:
   NetMediaPlayerImpl(

@@ -39,7 +39,7 @@ MediaSourceImpl::MediaSourceImpl(
   FXL_DCHECK(reader);
 
   status_publisher_.SetCallbackRunner(
-      [this](const GetStatusCallback& callback, uint64_t version) {
+      [this](GetStatusCallback callback, uint64_t version) {
         callback(version, demux_status_ ? demux_status_.Clone()
                                         : MediaSourceStatus::New());
       });
@@ -105,7 +105,7 @@ void MediaSourceImpl::GetPacketProducer(
 }
 
 void MediaSourceImpl::GetStatus(uint64_t version_last_seen,
-                                const GetStatusCallback& callback) {
+                                GetStatusCallback callback) {
   status_publisher_.Get(version_last_seen, callback);
 }
 

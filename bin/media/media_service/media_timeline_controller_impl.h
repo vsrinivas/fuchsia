@@ -39,7 +39,7 @@ class MediaTimelineControllerImpl
 
   // MediaTimelineControlPoint implementation.
   void GetStatus(uint64_t version_last_seen,
-                 const GetStatusCallback& callback) override;
+                 GetStatusCallback callback) override;
 
   void GetTimelineConsumer(
       f1dl::InterfaceRequest<TimelineConsumer> timeline_consumer) override;

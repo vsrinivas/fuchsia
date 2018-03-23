@@ -31,7 +31,7 @@ MediaPlayerImpl::MediaPlayerImpl(f1dl::InterfaceRequest<MediaPlayer> request,
   FXL_DCHECK(owner);
 
   status_publisher_.SetCallbackRunner(
-      [this](const GetStatusCallback& callback, uint64_t version) {
+      [this](GetStatusCallback callback, uint64_t version) {
         MediaPlayerStatusPtr status = MediaPlayerStatus::New();
         status->timeline_transform =
             static_cast<TimelineTransformPtr>(timeline_function_);
@@ -527,7 +527,7 @@ void MediaPlayerImpl::Seek(int64_t position) {
 }
 
 void MediaPlayerImpl::GetStatus(uint64_t version_last_seen,
-                                const GetStatusCallback& callback) {
+                                GetStatusCallback callback) {
   status_publisher_.Get(version_last_seen, callback);
 }
 

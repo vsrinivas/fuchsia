@@ -36,7 +36,7 @@ NetMediaPlayerNetProxy::NetMediaPlayerNetProxy(
   FXL_DCHECK(owner);
 
   status_publisher_.SetCallbackRunner(
-      [this](const GetStatusCallback& callback, uint64_t version) {
+      [this](GetStatusCallback callback, uint64_t version) {
         callback(version, status_.Clone());
       });
 
@@ -92,7 +92,7 @@ void NetMediaPlayerNetProxy::Seek(int64_t position) {
 }
 
 void NetMediaPlayerNetProxy::GetStatus(uint64_t version_last_seen,
-                                       const GetStatusCallback& callback) {
+                                       GetStatusCallback callback) {
   status_publisher_.Get(version_last_seen, callback);
 }
 

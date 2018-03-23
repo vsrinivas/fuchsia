@@ -24,7 +24,7 @@ class AudioPolicyServiceImpl : public AudioPolicyService {
 
   // AudioPolicyService implementation.
   void GetStatus(uint64_t version_last_seen,
-                 const GetStatusCallback& callback) override;
+                 GetStatusCallback callback) override;
 
   void SetSystemAudioGain(float db) override;
 
@@ -39,7 +39,7 @@ class AudioPolicyServiceImpl : public AudioPolicyService {
 
   // Returns a new status struct built from |system_audio_gain_db_| and
   // |system_audio_muted_|.
-  AudioPolicyStatusPtr Status();
+  AudioPolicyStatus Status();
 
   // Attempts to load the status file, updating |system_audio_gain_db_| and
   // |system_audio_muted_| if successful.
@@ -63,7 +63,7 @@ class AudioPolicyServiceImpl : public AudioPolicyService {
   }
 
   std::unique_ptr<component::ApplicationContext> application_context_;
-  f1dl::BindingSet<AudioPolicyService> bindings_;
+  fidl::BindingSet<AudioPolicyService> bindings_;
   float system_audio_gain_db_ = kDefaultSystemAudioGainDb;
   bool system_audio_muted_ = kDefaultSystemMuted;
   FidlPublisher<GetStatusCallback> status_publisher_;

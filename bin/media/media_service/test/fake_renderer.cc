@@ -176,7 +176,7 @@ void FakeRenderer::OnFailure() {
 }
 
 void FakeRenderer::GetStatus(uint64_t version_last_seen,
-                             const GetStatusCallback& callback) {
+                             GetStatusCallback callback) {
   if (version_last_seen < status_version_) {
     CompleteGetStatus(callback);
   } else {
@@ -265,13 +265,13 @@ void FakeRenderer::SendStatusUpdates() {
   std::vector<GetStatusCallback> pending_status_callbacks;
   pending_status_callbacks_.swap(pending_status_callbacks);
 
-  for (const GetStatusCallback& pending_status_callback :
+  for (GetStatusCallback pending_status_callback :
        pending_status_callbacks) {
     CompleteGetStatus(pending_status_callback);
   }
 }
 
-void FakeRenderer::CompleteGetStatus(const GetStatusCallback& callback) {
+void FakeRenderer::CompleteGetStatus(GetStatusCallback callback) {
   MediaTimelineControlPointStatusPtr status =
       MediaTimelineControlPointStatus::New();
   status->timeline_transform =

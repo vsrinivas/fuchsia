@@ -88,7 +88,7 @@ class FakeRenderer : public MediaPacketConsumerBase,
 
   // MediaTimelineControlPoint implementation.
   void GetStatus(uint64_t version_last_seen,
-                 const GetStatusCallback& callback) override;
+                 GetStatusCallback callback) override;
 
   void GetTimelineConsumer(f1dl::InterfaceRequest<TimelineConsumer>
                                timeline_consumer_request) override;
@@ -118,7 +118,7 @@ class FakeRenderer : public MediaPacketConsumerBase,
   void SendStatusUpdates();
 
   // Calls the callback with the current status.
-  void CompleteGetStatus(const GetStatusCallback& callback);
+  void CompleteGetStatus(GetStatusCallback callback);
 
   uint32_t demand_min_packets_outstanding_ = 1;
   bool dump_packets_ = false;

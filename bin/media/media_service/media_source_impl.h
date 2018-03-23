@@ -38,7 +38,7 @@ class MediaSourceImpl : public MediaComponentFactory::Product<MediaSource>,
       f1dl::InterfaceRequest<MediaPacketProducer> request) override;
 
   void GetStatus(uint64_t version_last_seen,
-                 const GetStatusCallback& callback) override;
+                 GetStatusCallback callback) override;
 
   void Flush(bool hold_frame, FlushCallback callback) override;
 

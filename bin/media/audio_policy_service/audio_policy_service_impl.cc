@@ -27,12 +27,12 @@ AudioPolicyServiceImpl::AudioPolicyServiceImpl(
     : application_context_(std::move(application_context)),
       initialize_attempts_remaining_(kInitializeAttempts) {
   application_context_->outgoing_services()->AddService<AudioPolicyService>(
-      [this](f1dl::InterfaceRequest<AudioPolicyService> request) {
+      [this](fidl::InterfaceRequest<AudioPolicyService> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 
   status_publisher_.SetCallbackRunner(
-      [this](const GetStatusCallback& callback, uint64_t version) {
+      [this](GetStatusCallback callback, uint64_t version) {
         callback(version, Status());
       });
 
@@ -42,7 +42,7 @@ AudioPolicyServiceImpl::AudioPolicyServiceImpl(
 AudioPolicyServiceImpl::~AudioPolicyServiceImpl() {}
 
 void AudioPolicyServiceImpl::GetStatus(uint64_t version_last_seen,
-                                       const GetStatusCallback& callback) {
+                                       GetStatusCallback callback) {
   status_publisher_.Get(version_last_seen, callback);
 }
 
@@ -105,10 +105,10 @@ void AudioPolicyServiceImpl::InitializeAudioService() {
   SaveStatus();
 }
 
-AudioPolicyStatusPtr AudioPolicyServiceImpl::Status() {
-  AudioPolicyStatusPtr status = AudioPolicyStatus::New();
-  status->system_audio_gain_db = system_audio_gain_db_;
-  status->system_audio_muted = system_audio_muted_;
+AudioPolicyStatus AudioPolicyServiceImpl::Status() {
+  AudioPolicyStatus status;
+  status.system_audio_gain_db = system_audio_gain_db_;
+  status.system_audio_muted = system_audio_muted_;
   return status;
 }
 
@@ -122,26 +122,19 @@ void AudioPolicyServiceImpl::LoadStatus() {
 
   AudioPolicyStatus status;
 
-  if (!status.Deserialize(buffer.data(), buffer.size())) {
+  if (buffer.size() != sizeof(status)) {
     FXL_LOG(WARNING) << "Failed to deserialize status";
     return;
   }
+
+  memcpy(&status, buffer.data(), sizeof(status));
 
   system_audio_gain_db_ = status.system_audio_gain_db;
   system_audio_muted_ = status.system_audio_muted;
 }
 
 void AudioPolicyServiceImpl::SaveStatus() {
-  AudioPolicyStatusPtr status = Status();
-  std::vector<uint8_t> buffer(status->GetSerializedSize());
-  size_t actual_size;
-
-  if (!status->Serialize(buffer.data(), buffer.size(), &actual_size)) {
-    FXL_LOG(WARNING) << "Failed to serialize status";
-    return;
-  }
-
-  FXL_DCHECK(actual_size <= buffer.size());
+  AudioPolicyStatus status = Status();
 
   if (!files::IsDirectory(kStatusFileDir) &&
       !files::CreateDirectory(kStatusFileDir)) {
@@ -149,8 +142,8 @@ void AudioPolicyServiceImpl::SaveStatus() {
   }
 
   if (!files::WriteFile(kStatusFilePath,
-                        reinterpret_cast<const char*>(buffer.data()),
-                        actual_size)) {
+                        reinterpret_cast<const char*>(&status),
+                        sizeof(status))) {
     FXL_LOG(WARNING) << "Failed to write status to " << kStatusFilePath;
     return;
   }
