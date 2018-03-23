@@ -5,8 +5,9 @@
 #ifndef LIB_UI_SKETCHY_CLIENT_TYPES_H_
 #define LIB_UI_SKETCHY_CLIENT_TYPES_H_
 
+#include <fuchsia/cpp/sketchy.h>
+
 #include "lib/ui/sketchy/client/glm_hack.h"
-#include "lib/ui/sketchy/fidl/types.fidl.h"
 
 namespace sketchy_lib {
 
@@ -14,7 +15,7 @@ namespace sketchy_lib {
 class CubicBezier2 {
  public:
   CubicBezier2(glm::vec2 pt0, glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3);
-  sketchy::CubicBezier2Ptr NewSketchyCubicBezier2() const;
+  sketchy::CubicBezier2 NewSketchyCubicBezier2() const;
 
  private:
   glm::vec2 pt0_;
@@ -27,7 +28,7 @@ class CubicBezier2 {
 class StrokePath {
  public:
   explicit StrokePath(std::vector<CubicBezier2> segments);
-  sketchy::StrokePathPtr NewSketchyStrokePath() const;
+  sketchy::StrokePath NewSketchyStrokePath() const;
 
  private:
   std::vector<CubicBezier2> segments_;

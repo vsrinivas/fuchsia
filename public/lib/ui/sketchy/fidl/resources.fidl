@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module sketchy;
+library sketchy;
 
 // Specifies the type of a resource created via CreateResourceCommand, along with
 // any other required data.
@@ -34,18 +34,20 @@ union ResourceArgs {
 // - ExtendStroke (as arg)
 // - FinishStroke (as arg)
 struct Stroke {
+  uint8 unused;
 };
 
 // A stroke-group is a container of strokes, which can be inserted into a Scenic
-// scene-graph by importing adding it as a child of an imported |ui.gfx.Node|.
+// scene-graph by importing adding it as a child of an imported |gfx.Node|.
 //
 // Commands:
 // - ClearGroup
 // - AddStroke
 // - RemoveStroke
-// - ui.gfx.Detach
-// - ui.gfx.AddChild (as arg)
+// - gfx.Detach
+// - gfx.AddChild (as arg)
 struct StrokeGroup {
+  uint8 unused;
 };
 
 
@@ -58,6 +60,7 @@ struct StrokeGroup {
 // - FinishStroke
 // - SetPenStyle
 struct Pen {
+  uint8 unused;
 };
 
 
@@ -86,5 +89,5 @@ struct WobblyStyle {
 // - SetPenStyle (as arg)
 // - SetStrokeStyle (as arg).
 struct ExplicitWidthStyle {
-  array<float32> vals;
+  vector<float32> vals;
 };

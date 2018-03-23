@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module sketchy;
+library sketchy;
 
-import "lib/ui/gfx/fidl/types.fidl";
+using gfx;
 
 struct Touch {
-  ui.gfx.vec2 position;
+  gfx.vec2 position;
   uint32 nanoseconds;
   float32 pressure;
 };
 
 struct CubicBezier2 {
-  ui.gfx.vec2 pt0;
-  ui.gfx.vec2 pt1;
-  ui.gfx.vec2 pt2;
-  ui.gfx.vec2 pt3;
+  gfx.vec2 pt0;
+  gfx.vec2 pt1;
+  gfx.vec2 pt2;
+  gfx.vec2 pt3;
 };
 
 struct StrokePath {
-  array<CubicBezier2> segments;
+  vector<CubicBezier2> segments;
 };

@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module sketchy;
+library sketchy;
 
-import "lib/ui/gfx/fidl/commands.fidl";
-import "lib/ui/sketchy/fidl/resources.fidl";
-import "lib/ui/sketchy/fidl/types.fidl";
+using gfx;
 
 union Command {
   // Resource creation and lifecycle.
@@ -36,17 +34,17 @@ union Command {
   // - NODE: imported nodes enable the use of ui.gfx.AddChildCommand to insert
   //         stroke-groups into a Scenic scene-graph.
   // - MATERIAL: imported materials can be applied to a stroke-style.
-  ui.gfx.ImportResourceCommand scenic_import_resource;
+  gfx.ImportResourceCommand scenic_import_resource;
 
   // Attach a stroke-group as a child of the specified imported Scenic node.
-  ui.gfx.AddChildCommand scenic_add_child;
+  gfx.AddChildCommand scenic_add_child;
 
   // Detach a stroke-group from the Scenic node that it is attached to, if any.
-  ui.gfx.DetachCommand scenic_detach;
+  gfx.DetachCommand scenic_detach;
 
   // Set the material of a stroke-style.  This material will be applied to any
   // strokes/stroke-groups that use this style.
-  ui.gfx.SetMaterialCommand scenic_set_material;
+  gfx.SetMaterialCommand scenic_set_material;
 };
 
 // Instantiates a new resource.
@@ -103,13 +101,13 @@ struct ExtendStrokeCommand {
   uint32 pen_id;
   // Touch events that describe the trajectory of the stroke since the previous
   // BeginStrokeCommand or ExtendStrokeCommand.
-  array<Touch> touches;
+  vector<Touch> touches;
   // Procedurally-generated touch events that describe the predicted future
   // trajectory of the stroke.  Sketchy uses these to improve perceived latency
   // while the stroke is being drawn, but they have no impact on the finished
   // stroke.
   // TODO: this may change to reflect however Mozart exposes predicted events.
-  array<Touch> predicted_touches;
+  vector<Touch> predicted_touches;
 };
 
 // Finish drawing a stroke with a pen.

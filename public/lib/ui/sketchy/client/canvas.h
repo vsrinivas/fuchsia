@@ -5,11 +5,12 @@
 #ifndef LIB_UI_SKETCHY_CLIENT_CANVAS_H_
 #define LIB_UI_SKETCHY_CLIENT_CANVAS_H_
 
+#include <fuchsia/cpp/sketchy.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/scenic/client/session.h"
 #include "lib/ui/sketchy/client/resources.h"
-#include "lib/ui/sketchy/fidl/canvas.fidl.h"
 
 namespace sketchy_lib {
 
@@ -25,7 +26,7 @@ class Canvas final {
   ResourceId AllocateResourceId();
 
   sketchy::CanvasPtr canvas_;
-  fidl::VectorPtr<sketchy::CommandPtr> commands_;
+  fidl::VectorPtr<sketchy::Command> commands_;
   ResourceId next_resource_id_;
 };
 

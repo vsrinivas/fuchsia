@@ -5,11 +5,11 @@
 #ifndef LIB_UI_SKETCHY_CLIENT_RESOURCES_H_
 #define LIB_UI_SKETCHY_CLIENT_RESOURCES_H_
 
+#include <fuchsia/cpp/sketchy.h>
 #include <garnet/public/lib/fxl/memory/ref_counted.h>
+
 #include "lib/ui/scenic/client/session.h"
 #include "lib/ui/sketchy/client/types.h"
-#include "lib/ui/sketchy/fidl/commands.fidl.h"
-#include "lib/ui/sketchy/fidl/resources.fidl.h"
 
 namespace sketchy_lib {
 
@@ -40,7 +40,7 @@ class Resource {
   // Enqueue an op in canvas to create a resource. Called in the constructor of
   // concrete resources to be created.
   void EnqueueCreateResourceCommand(ResourceId resource_id,
-                               sketchy::ResourceArgsPtr args) const;
+                                    sketchy::ResourceArgs args) const;
 
   // Enqueue an op in canvas to import the resource. Called in the constructor
   // of concrete resources to be imported.
@@ -53,7 +53,7 @@ class Resource {
                                gfx::ImportSpec spec) const;
 
   // Enqueue an op in canvas.
-  void EnqueueCommand(sketchy::CommandPtr command) const;
+  void EnqueueCommand(sketchy::Command command) const;
 
  private:
   Canvas* const canvas_;
