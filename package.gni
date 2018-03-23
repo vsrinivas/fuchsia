@@ -220,6 +220,7 @@ template("package") {
         output = archive_manifest
       }
       action(extra_target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
         deps = [ ":${manifest_target_name}" ] + invoker.deps
         inputs = [ partial ] + pkg.extra
         outputs = [
