@@ -153,7 +153,7 @@ class SynchronousInterfacePtr {
   //
   //  * |Bind|, which binds a channel to this |SynchronousInterfacePtr|.
   //  * |Unbind|, which unbinds a channel from this |SynchronousInterfacePtr|.
-  bool is_bound() const { return proxy_; }
+  bool is_bound() const { return static_cast<bool>(proxy_); }
 
   // Whether this |SynchronousInterfacePtr| is currently bound to a channel.
   //

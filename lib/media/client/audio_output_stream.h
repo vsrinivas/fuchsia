@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_LIB_MEDIA_CLIENT_AUDIO_OUTPUT_STREAM_H_
+#define GARNET_LIB_MEDIA_CLIENT_AUDIO_OUTPUT_STREAM_H_
 
 #include <zircon/types.h>
 
 #include "garnet/lib/media/client/audio_output_device.h"
 
+#include <fuchsia/cpp/media.h>
 #include "lib/media/c/audio.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 
 namespace media_client {
 
@@ -37,10 +36,10 @@ class AudioOutputStream {
   bool GetDelays();
 
   void PullFromClientBuffer(float* client_buffer, int num_samples);
-  media::MediaPacketPtr CreateMediaPacket(zx_time_t pts,
-                                          size_t payload_offset,
-                                          size_t payload_size);
-  bool SendMediaPacket(media::MediaPacketPtr packet);
+  media::MediaPacket CreateMediaPacket(zx_time_t pts,
+                                       size_t payload_offset,
+                                       size_t payload_size);
+  bool SendMediaPacket(media::MediaPacket packet);
 
   media::AudioRendererSyncPtr audio_renderer_;
   media::MediaRendererSyncPtr media_renderer_;
@@ -64,3 +63,5 @@ class AudioOutputStream {
 };
 
 }  // namespace media_client
+
+#endif  // GARNET_LIB_MEDIA_CLIENT_AUDIO_OUTPUT_STREAM_H_
