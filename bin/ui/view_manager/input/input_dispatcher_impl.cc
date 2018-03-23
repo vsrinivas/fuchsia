@@ -86,15 +86,14 @@ int64_t InputEventTimestampNow() {
 InputDispatcherImpl::InputDispatcherImpl(
     ViewInspector* inspector,
     InputOwner* owner,
-    views_v1::ViewTreeTokenPtr view_tree_token,
+    views_v1::ViewTreeToken view_tree_token,
     fidl::InterfaceRequest<input::InputDispatcher> request)
     : inspector_(inspector),
       owner_(owner),
-      view_tree_token_(std::move(view_tree_token)),
+      view_tree_token_(view_tree_token),
       binding_(this, std::move(request)),
       weak_factory_(this) {
   FXL_DCHECK(inspector_);
-  FXL_DCHECK(view_tree_token_);
 
   binding_.set_error_handler([this] { owner_->OnInputDispatcherDied(this); });
 }
@@ -102,7 +101,7 @@ InputDispatcherImpl::InputDispatcherImpl(
 InputDispatcherImpl::~InputDispatcherImpl() {}
 
 void InputDispatcherImpl::DispatchEvent(input::InputEvent event) {
-  FXL_VLOG(1) << "DispatchEvent: " << *event;
+  FXL_VLOG(1) << "DispatchEvent: " << event;
 
   pending_events_.push(std::move(event));
   if (pending_events_.size() == 1u)
@@ -113,22 +112,22 @@ void InputDispatcherImpl::ProcessNextEvent() {
   FXL_DCHECK(!pending_events_.empty());
 
   do {
-    const input::InputEvent* event = pending_events_.front().get();
-    FXL_VLOG(1) << "ProcessNextEvent: " << *event;
+    const input::InputEvent* event = &pending_events_.front();
+    FXL_VLOG(1) << "ProcessNextEvent: " << event;
 
     if (event->is_pointer()) {
       // TODO(MZ-164): We may also need to perform hit tests on ADD and
       // keep track of which views have seen the ADD or REMOVE so that
       // they can be balanced correctly.
-      const input::PointerEventPtr& pointer = event->pointer();
-      if (pointer->phase == input::Phase::DOWN) {
+      const input::PointerEvent& pointer = event->pointer();
+      if (pointer.phase == input::PointerEventPhase::DOWN) {
         geometry::PointF point;
-        point.x = pointer->x;
-        point.y = pointer->y;
+        point.x = pointer.x;
+        point.y = pointer.y;
         FXL_VLOG(1) << "HitTest: point=" << point;
         std::pair<geometry::Point3F, geometry::Point3F> ray =
             DefaultRayForHitTestingScreenPoint(point);
-        inspector_->HitTest(*view_tree_token_, ray.first, ray.second,
+        inspector_->HitTest(view_tree_token_, ray.first, ray.second,
                             [weak = weak_factory_.GetWeakPtr(),
                              point](std::vector<ViewHit> view_hits) mutable {
                               if (weak)
@@ -139,9 +138,8 @@ void InputDispatcherImpl::ProcessNextEvent() {
       }
     } else if (event->is_keyboard()) {
       inspector_->ResolveFocusChain(
-          view_tree_token_.Clone(),
-          [weak = weak_factory_.GetWeakPtr()](
-              std::unique_ptr<FocusChain> focus_chain) {
+          view_tree_token_, [weak = weak_factory_.GetWeakPtr()](
+                                std::unique_ptr<FocusChain> focus_chain) {
             if (weak) {
               // Make sure to keep processing events when no focus is defined
               if (focus_chain) {
@@ -169,20 +167,19 @@ void InputDispatcherImpl::DeliverEvent(uint64_t event_path_propagation_id,
 
   // TODO(MZ-33) once input arena is in place, we won't need the "handled"
   // boolean on the callback anymore.
-  input::InputEventPtr view_event = event.Clone();
   const ViewHit& view_hit = event_path_[index];
-  const input::PointerEventPtr& pointer = event.pointer();
+  const input::PointerEvent& pointer = event.pointer();
   geometry::PointF point;
-  point.x = pointer->x;
-  point.y = pointer->y;
+  point.x = pointer.x;
+  point.y = pointer.y;
   std::pair<geometry::Point3F, geometry::Point3F> ray =
       DefaultRayForHitTestingScreenPoint(point);
-  TransformPointerEvent(ray.first, ray.second, *view_hit.inverse_transform,
-                        view_hit.distance, view_event.get());
+  TransformPointerEvent(ray.first, ray.second, view_hit.inverse_transform,
+                        view_hit.distance, &event);
   FXL_VLOG(1) << "DeliverEvent " << event_path_propagation_id << " to "
-              << event_path_[index].view_token << ": " << *view_event;
+              << event_path_[index].view_token << ": " << event;
   owner_->DeliverEvent(
-      &event_path_[index].view_token, std::move(view_event),
+      event_path_[index].view_token, std::move(event),
       fxl::MakeCopyable([this, event_path_propagation_id, index,
                          event = std::move(event)](bool handled) mutable {
         if (!handled) {
@@ -202,37 +199,33 @@ void InputDispatcherImpl::DeliverKeyEvent(
   FXL_DCHECK(propagation_index < focus_chain->chain.size());
   FXL_VLOG(1) << "DeliverKeyEvent " << focus_chain->version << " "
               << (1 + propagation_index) << "/" << focus_chain->chain.size()
-              << " " << *(focus_chain->chain[propagation_index]) << ": "
-              << *event;
+              << " " << focus_chain->chain[propagation_index] << ": " << event;
 
-  auto cloned_event = event.Clone();
   owner_->DeliverEvent(
-      focus_chain->chain[propagation_index].get(), std::move(event),
-      fxl::MakeCopyable(
-          [this, focus_chain = std::move(focus_chain), propagation_index,
-           cloned_event = std::move(cloned_event)](bool handled) mutable {
-            FXL_VLOG(2) << "Event " << *cloned_event << (handled ? "" : " Not")
-                        << " Handled by "
-                        << *(focus_chain->chain[propagation_index]);
+      focus_chain->chain[propagation_index], std::move(event),
+      fxl::MakeCopyable([this, focus_chain = std::move(focus_chain),
+                         propagation_index,
+                         event = std::move(event)](bool handled) mutable {
+        FXL_VLOG(2) << "Event " << event << (handled ? "" : " Not")
+                    << " Handled by " << focus_chain->chain[propagation_index];
 
-            if (!handled && propagation_index + 1 < focus_chain->chain.size()) {
-              // Avoid re-entrance on DeliverKeyEvent
-              fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-                  fxl::MakeCopyable(
-                      [weak = weak_factory_.GetWeakPtr(),
-                       focus_chain = std::move(focus_chain), propagation_index,
-                       cloned_event = std::move(cloned_event)]() mutable {
-                        FXL_VLOG(2)
-                            << "Propagating event to "
-                            << *(focus_chain->chain[propagation_index + 1]);
+        if (!handled && propagation_index + 1 < focus_chain->chain.size()) {
+          // Avoid re-entrance on DeliverKeyEvent
+          fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+              fxl::MakeCopyable([weak = weak_factory_.GetWeakPtr(),
+                                 focus_chain = std::move(focus_chain),
+                                 propagation_index,
+                                 event = std::move(event)]() mutable {
+                FXL_VLOG(2) << "Propagating event to "
+                            << focus_chain->chain[propagation_index + 1];
 
-                        if (weak)
-                          weak->DeliverKeyEvent(std::move(focus_chain),
-                                                propagation_index + 1,
-                                                std::move(cloned_event));
-                      }));
-            }
-          }));
+                if (weak)
+                  weak->DeliverKeyEvent(std::move(focus_chain),
+                                        propagation_index + 1,
+                                        std::move(event));
+              }));
+        }
+      }));
 }
 
 void InputDispatcherImpl::PopAndScheduleNextEvent() {
@@ -272,30 +265,29 @@ void InputDispatcherImpl::OnHitTestResult(const geometry::PointF& point,
 
   // FIXME(jpoichet) This should be done somewhere else.
   inspector_->ActivateFocusChain(
-      view_hits.front().view_token.Clone(),
+      view_hits.front().view_token,
       [this](std::unique_ptr<FocusChain> new_chain) {
-        if (!active_focus_chain_ || active_focus_chain_->chain.front()->value !=
-                                        new_chain->chain.front()->value) {
+        if (!active_focus_chain_ || active_focus_chain_->chain.front().value !=
+                                        new_chain->chain.front().value) {
           if (active_focus_chain_) {
             FXL_VLOG(1) << "Input focus lost by "
-                        << *(active_focus_chain_->chain.front().get());
-            input::InputEven event = input::InputEvent();
-            input::FocusEven focus = input::FocusEvent();
+                        << active_focus_chain_->chain.front();
+            input::InputEvent event;
+            input::FocusEvent focus;
             focus.event_time = InputEventTimestampNow();
             focus.focused = false;
             event.set_focus(std::move(focus));
-            owner_->DeliverEvent(active_focus_chain_->chain.front().get(),
+            owner_->DeliverEvent(active_focus_chain_->chain.front(),
                                  std::move(event), nullptr);
           }
 
-          FXL_VLOG(1) << "Input focus gained by "
-                      << *(new_chain->chain.front().get());
+          FXL_VLOG(1) << "Input focus gained by " << new_chain->chain.front();
           input::InputEvent event = input::InputEvent();
           input::FocusEvent focus = input::FocusEvent();
           focus.event_time = InputEventTimestampNow();
           focus.focused = true;
           event.set_focus(std::move(focus));
-          owner_->DeliverEvent(new_chain->chain.front().get(), std::move(event),
+          owner_->DeliverEvent(new_chain->chain.front(), std::move(event),
                                nullptr);
 
           active_focus_chain_ = std::move(new_chain);

@@ -13,9 +13,6 @@
 namespace views_v1 {
 
 std::ostream& operator<<(std::ostream& os,
-                         const views_v1_token::ViewToken& value);
-
-std::ostream& operator<<(std::ostream& os,
                          const views_v1::ViewTreeToken& value);
 
 std::ostream& operator<<(std::ostream& os, const views_v1::ViewInfo& value);
@@ -27,5 +24,12 @@ std::ostream& operator<<(std::ostream& os,
 std::ostream& operator<<(std::ostream& os, const views_v1::ViewLayout& value);
 
 }  // namespace views_v1
+
+namespace views_v1_token {
+
+std::ostream& operator<<(std::ostream& os,
+                         const views_v1_token::ViewToken& value);
+
+}  // namespace views_v1_token
 
 #endif  // LIB_UI_VIEWS_CPP_FORMATTING_H_

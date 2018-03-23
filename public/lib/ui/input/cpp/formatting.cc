@@ -131,7 +131,8 @@ std::ostream& operator<<(std::ostream& os, const input::Axis& value) {
             << ", resolution=" << value.resolution << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const input::KeyboardDescriptor& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const input::KeyboardDescriptor& value) {
   os << "{Keyboard:";
   bool first = true;
   for (size_t index = 0; index < value.keys->size(); ++index) {
@@ -145,7 +146,8 @@ std::ostream& operator<<(std::ostream& os, const input::KeyboardDescriptor& valu
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const input::MouseDescriptor& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const input::MouseDescriptor& value) {
   os << "{Mouse:";
   os << "rel_x=" << value.rel_x;
   os << ", rel_y=" << value.rel_y;
@@ -175,7 +177,8 @@ std::ostream& operator<<(std::ostream& os, const input::MouseDescriptor& value) 
   return os << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const input::StylusDescriptor& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const input::StylusDescriptor& value) {
   os << "{Stylus:";
   os << "x=" << value.x;
   os << ", y=" << value.y;
@@ -186,14 +189,16 @@ std::ostream& operator<<(std::ostream& os, const input::StylusDescriptor& value)
   return os << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const input::TouchscreenDescriptor& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const input::TouchscreenDescriptor& value) {
   os << "{Touchscreen:";
   os << "x=" << value.x;
   os << ", y=" << value.y;
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const input::DeviceDescriptor& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const input::DeviceDescriptor& value) {
   os << "{DeviceDescriptor:";
   bool previous = false;
   if (value.keyboard) {
@@ -270,7 +275,8 @@ std::ostream& operator<<(std::ostream& os, const input::Touch& value) {
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const input::TouchscreenReport& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const input::TouchscreenReport& value) {
   os << "{TouchscreenReport: touches=[";
   bool first = true;
   for (size_t index = 0; index < value.touches->size(); ++index) {
@@ -329,6 +335,14 @@ std::ostream& operator<<(std::ostream& os, const input::TextInputState& value) {
   os << ", selection=" << value.selection;
   os << ", composing=" << value.composing;
   return os << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const input::KeyboardType& value) {
+  return os << static_cast<uint32_t>(value);
+}
+std::ostream& operator<<(std::ostream& os,
+                         const input::InputMethodAction& value) {
+  return os << static_cast<uint32_t>(value);
 }
 
 }  // namespace input

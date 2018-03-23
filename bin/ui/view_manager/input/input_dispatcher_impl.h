@@ -27,13 +27,11 @@ class InputDispatcherImpl : public input::InputDispatcher {
  public:
   InputDispatcherImpl(ViewInspector* inspector,
                       InputOwner* owner,
-                      views_v1::ViewTreeTokenPtr view_tree_token,
+                      views_v1::ViewTreeToken view_tree_token,
                       fidl::InterfaceRequest<input::InputDispatcher> request);
   ~InputDispatcherImpl() override;
 
-  const views_v1::ViewTreeToken* view_tree_token() const {
-    return view_tree_token_.get();
-  }
+  views_v1::ViewTreeToken view_tree_token() const { return view_tree_token_; }
 
   // |input::InputDispatcher|
   void DispatchEvent(input::InputEvent event) override;
@@ -59,7 +57,7 @@ class InputDispatcherImpl : public input::InputDispatcher {
 
   ViewInspector* const inspector_;
   InputOwner* const owner_;
-  views_v1::ViewTreeTokenPtr view_tree_token_;
+  views_v1::ViewTreeToken view_tree_token_;
 
   // TODO(jeffbrown): Replace this with a proper pipeline.
   std::queue<input::InputEvent> pending_events_;

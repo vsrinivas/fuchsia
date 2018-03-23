@@ -24,7 +24,7 @@ struct FocusChain {
   uint64_t version;
 
   // |chain| is the ordered list of views that a keyboard event will propagate
-  std::vector<views_v1_token::ViewTokenPtr> chain;
+  std::vector<views_v1_token::ViewToken> chain;
 };
 
 // Provides information about a view which was hit during a hit tests.
@@ -71,32 +71,31 @@ class ViewInspector {
 
   // Given a token for a view tree, retrieve the current active focus chain for
   // this view tree.
-  virtual void ResolveFocusChain(
-      views_v1::ViewTreeTokenPtr view_tree_token,
-      const ResolveFocusChainCallback& callback) = 0;
+  virtual void ResolveFocusChain(views_v1::ViewTreeToken view_tree_token,
+                                 const ResolveFocusChainCallback& callback) = 0;
 
   // TODO(jpoichet) Move this
   // Set the current input focus to the provided |view_token|.
   // This is a back channel from input_manager to view_manager to swap focus
   // on touch down events. This logic should be moved in the future
   virtual void ActivateFocusChain(
-      views_v1_token::ViewTokenPtr view_token,
+      views_v1_token::ViewToken view_token,
       const ActivateFocusChainCallback& callback) = 0;
 
   // Returns whether view has focus
-  virtual void HasFocus(views_v1_token::ViewTokenPtr view_token,
+  virtual void HasFocus(views_v1_token::ViewToken view_token,
                         const HasFocusCallback& callback) = 0;
 
   // Retrieve the SoftKeyboardContainer that is the closest to the ViewToken
   // in the associated ViewTree
   virtual void GetSoftKeyboardContainer(
-      views_v1_token::ViewTokenPtr view_token,
+      views_v1_token::ViewToken view_token,
       fidl::InterfaceRequest<input::SoftKeyboardContainer> container) = 0;
 
   // Retrieve the IME Service that is the closest to the ViewToken
   // in the associated ViewTree
   virtual void GetImeService(
-      views_v1_token::ViewTokenPtr view_token,
+      views_v1_token::ViewToken view_token,
       fidl::InterfaceRequest<input::ImeService> ime_service) = 0;
 };
 

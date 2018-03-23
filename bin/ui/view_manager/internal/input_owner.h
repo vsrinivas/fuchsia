@@ -20,8 +20,8 @@ class InputOwner {
   virtual ~InputOwner() {}
 
   // Delivers an event to a view.
-  virtual void DeliverEvent(const views_v1_token::ViewToken* view_token,
-                            input::InputEventPtr event,
+  virtual void DeliverEvent(views_v1_token::ViewToken view_token,
+                            input::InputEvent event,
                             OnEventDelivered callback) = 0;
 
   // INPUT CONNECTION CALLBACKS

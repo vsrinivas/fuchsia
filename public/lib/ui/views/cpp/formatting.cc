@@ -9,11 +9,6 @@
 namespace views_v1 {
 
 std::ostream& operator<<(std::ostream& os,
-                         const views_v1_token::ViewToken& value) {
-  return os << "<V" << value.value << ">";
-}
-
-std::ostream& operator<<(std::ostream& os,
                          const views_v1::ViewTreeToken& value) {
   return os << "<T" << value.value << ">";
 }
@@ -38,3 +33,12 @@ std::ostream& operator<<(std::ostream& os, const views_v1::ViewLayout& value) {
 }
 
 }  // namespace views_v1
+
+namespace views_v1_token {
+
+std::ostream& operator<<(std::ostream& os,
+                         const views_v1_token::ViewToken& value) {
+  return os << "<V" << value.value << ">";
+}
+
+}  // namespace views_v1_token

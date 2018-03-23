@@ -18,22 +18,31 @@ std::ostream& operator<<(std::ostream& os, const input::KeyboardEvent& value);
 std::ostream& operator<<(std::ostream& os, const input::Range& value);
 std::ostream& operator<<(std::ostream& os, const input::Axis& value);
 
-std::ostream& operator<<(std::ostream& os, const input::KeyboardDescriptor& value);
+std::ostream& operator<<(std::ostream& os,
+                         const input::KeyboardDescriptor& value);
 std::ostream& operator<<(std::ostream& os, const input::MouseDescriptor& value);
-std::ostream& operator<<(std::ostream& os, const input::StylusDescriptor& value);
-std::ostream& operator<<(std::ostream& os, const input::TouchscreenDescriptor& value);
-std::ostream& operator<<(std::ostream& os, const input::DeviceDescriptor& value);
+std::ostream& operator<<(std::ostream& os,
+                         const input::StylusDescriptor& value);
+std::ostream& operator<<(std::ostream& os,
+                         const input::TouchscreenDescriptor& value);
+std::ostream& operator<<(std::ostream& os,
+                         const input::DeviceDescriptor& value);
 
 std::ostream& operator<<(std::ostream& os, const input::KeyboardReport& value);
 std::ostream& operator<<(std::ostream& os, const input::MouseReport& value);
 std::ostream& operator<<(std::ostream& os, const input::StylusReport& value);
 std::ostream& operator<<(std::ostream& os, const input::Touch& value);
-std::ostream& operator<<(std::ostream& os, const input::TouchscreenReport& value);
+std::ostream& operator<<(std::ostream& os,
+                         const input::TouchscreenReport& value);
 std::ostream& operator<<(std::ostream& os, const input::InputReport& value);
 
 std::ostream& operator<<(std::ostream& os, const input::TextSelection& value);
 std::ostream& operator<<(std::ostream& os, const input::TextRange& value);
 std::ostream& operator<<(std::ostream& os, const input::TextInputState& value);
+
+std::ostream& operator<<(std::ostream& os, const input::KeyboardType& value);
+std::ostream& operator<<(std::ostream& os,
+                         const input::InputMethodAction& value);
 
 }  // namespace input
 

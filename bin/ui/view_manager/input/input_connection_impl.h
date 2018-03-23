@@ -26,13 +26,11 @@ class InputConnectionImpl : public input::InputConnection,
  public:
   InputConnectionImpl(ViewInspector* inspector,
                       InputOwner* owner,
-                      views_v1_token::ViewTokenPtr view_token,
+                      views_v1_token::ViewToken view_token,
                       fidl::InterfaceRequest<input::InputConnection> request);
   ~InputConnectionImpl() override;
 
-  const views_v1_token::ViewToken* view_token() const {
-    return view_token_.get();
-  }
+  views_v1_token::ViewToken view_token() const { return view_token_; }
 
   // Delivers an event to a view.
   void DeliverEvent(input::InputEvent event, OnEventDelivered callback);
@@ -72,7 +70,7 @@ class InputConnectionImpl : public input::InputConnection,
 
   ViewInspector* const inspector_;
   InputOwner* const owner_;
-  views_v1_token::ViewTokenPtr view_token_;
+  views_v1_token::ViewToken view_token_;
   input::InputListenerPtr event_listener_;
 
   fidl::Binding<input::InputConnection> binding_;
