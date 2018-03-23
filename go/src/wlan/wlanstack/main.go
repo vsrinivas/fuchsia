@@ -15,12 +15,12 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"syscall/zx"
 )
 
 type Wlanstack struct {
 	cfg   *wlan.Config
 	apCfg *wlan.APConfig
-	bindings []*bindings2.Binding
 
 	mu     sync.Mutex
 	client []*wlan.Client
@@ -152,13 +152,6 @@ func (ws *Wlanstack) StopBss() (wserr wlan_service.Error, err error) {
 	return wlan_service.Error{wlan_service.ErrCodeOk, "OK"}, nil
 }
 
-func (ws *Wlanstack) Bind(req wlan_service.WlanInterface) {
-	s := wlan_service.WlanStub{Impl: &req}
-	b := bindings2.NewBinding(&s)
-	ws.bindings = append(ws.bindings, b)
-	go bindings2.Serve()
-}
-
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix("wlanstack: ")
@@ -166,8 +159,12 @@ func main() {
 
 	ws := &Wlanstack{}
 
+	service := &bindings2.BindingSet{}
 	ctx := context.CreateFromStartupInfo()
-	ctx.OutgoingService.AddService(ws)
+	ctx.OutgoingService.AddService(wlan_service.WlanName, func(c zx.Channel) error {
+		return service.Add(&wlan_service.WlanStub{Impl: ws}, c)
+	})
+	go bindings2.Serve()
 	ctx.Serve()
 
 	ws.readConfigFile()
