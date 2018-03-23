@@ -10,12 +10,11 @@ namespace ime {
 namespace test {
 
 TEST(TestInputState, DeleteBackward) {
-  auto state = mozart::TextInputState::New();
-  state->selection = mozart::TextSelection::New();
-  auto& revision = state->revision;
-  auto& base = state->selection->base;
-  auto& extent = state->selection->extent;
-  auto& text = state->text;
+  input::TextInputState state;
+  auto& revision = state.revision;
+  auto& base = state.selection.base;
+  auto& extent = state.selection.extent;
+  auto& text = state.text;
 
   revision = 0 + 1;
   base = extent = -1;
