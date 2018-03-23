@@ -218,16 +218,16 @@ bool Library::RegisterDecl(Decl* decl) {
     return true;
 }
 
-bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<Type>* out_type) {
+bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<Type>* out_type, const SourceLocation& source_location) {
     switch (raw_type->kind) {
     case raw::Type::Kind::Array: {
         auto array_type = static_cast<raw::ArrayType*>(raw_type.get());
         std::unique_ptr<Type> element_type;
-        if (!ConsumeType(std::move(array_type->element_type), &element_type))
+        if (!ConsumeType(std::move(array_type->element_type), &element_type, source_location))
             return false;
         Size element_count;
         if (!ParseSize(std::move(array_type->element_count), &element_count))
-            return Fail("Unable to parse array element count");
+            return Fail(source_location, "Unable to parse array element count");
         // TODO(kulakowski) Overflow checking.
         uint32_t size = element_count.Value() * element_type->size;
         *out_type = std::make_unique<ArrayType>(size, std::move(element_type), std::move(element_count));
@@ -236,12 +236,12 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
     case raw::Type::Kind::Vector: {
         auto vector_type = static_cast<raw::VectorType*>(raw_type.get());
         std::unique_ptr<Type> element_type;
-        if (!ConsumeType(std::move(vector_type->element_type), &element_type))
+        if (!ConsumeType(std::move(vector_type->element_type), &element_type, source_location))
             return false;
         Size element_count = Size::Max();
         if (vector_type->maybe_element_count) {
             if (!ParseSize(std::move(vector_type->maybe_element_count), &element_count))
-                return Fail("Unable to parse vector size bound");
+                return Fail(source_location, "Unable to parse vector size bound");
         }
         *out_type = std::make_unique<VectorType>(std::move(element_type), std::move(element_count), vector_type->nullability);
         break;
@@ -251,7 +251,7 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, std::unique_ptr<T
         Size element_count = Size::Max();
         if (string_type->maybe_element_count) {
             if (!ParseSize(std::move(string_type->maybe_element_count), &element_count))
-                return Fail("Unable to parse string size bound");
+                return Fail(source_location, "Unable to parse string size bound");
         }
         *out_type = std::make_unique<StringType>(std::move(element_count), string_type->nullability);
         break;
@@ -292,7 +292,7 @@ bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
     auto attributes = std::move(const_declaration->attributes);
     auto name = Name(this, const_declaration->identifier->location);
     std::unique_ptr<Type> type;
-    if (!ConsumeType(std::move(const_declaration->type), &type))
+    if (!ConsumeType(std::move(const_declaration->type), &type, const_declaration->identifier->location))
         return false;
 
     const_declarations_.push_back(std::make_unique<Const>(std::move(attributes), std::move(name), std::move(type),
@@ -348,7 +348,7 @@ bool Library::ConsumeInterfaceDeclaration(
             for (auto& parameter : method->maybe_request->parameter_list) {
                 SourceLocation parameter_name = parameter->identifier->location;
                 std::unique_ptr<Type> type;
-                if (!ConsumeType(std::move(parameter->type), &type))
+                if (!ConsumeType(std::move(parameter->type), &type, parameter_name))
                     return false;
                 maybe_request->parameters.emplace_back(std::move(type), std::move(parameter_name));
             }
@@ -360,7 +360,7 @@ bool Library::ConsumeInterfaceDeclaration(
             for (auto& parameter : method->maybe_response->parameter_list) {
                 SourceLocation parameter_name = parameter->identifier->location;
                 std::unique_ptr<Type> type;
-                if (!ConsumeType(std::move(parameter->type), &type))
+                if (!ConsumeType(std::move(parameter->type), &type, parameter_name))
                     return false;
                 maybe_response->parameters.emplace_back(std::move(type), parameter_name);
             }
@@ -390,7 +390,7 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
     std::vector<Struct::Member> members;
     for (auto& member : struct_declaration->members) {
         std::unique_ptr<Type> type;
-        if (!ConsumeType(std::move(member->type), &type))
+        if (!ConsumeType(std::move(member->type), &type, member->identifier->location))
             return false;
         members.emplace_back(std::move(type),
                              member->identifier->location,
@@ -405,7 +405,7 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     std::vector<Union::Member> members;
     for (auto& member : union_declaration->members) {
         std::unique_ptr<Type> type;
-        if (!ConsumeType(std::move(member->type), &type))
+        if (!ConsumeType(std::move(member->type), &type, member->identifier->location))
             return false;
         members.emplace_back(std::move(type), member->identifier->location);
     }
@@ -643,7 +643,7 @@ bool Library::CompileEnum(Enum* enum_declaration) {
     case types::PrimitiveSubtype::Float32:
     case types::PrimitiveSubtype::Float64:
         // These are not allowed as enum subtypes.
-        return Fail("Enums cannot be bools, statuses, or floats");
+        return Fail(*enum_declaration, "Enums cannot be bools, statuses, or floats");
     }
 
     // TODO(TO-702) Validate values.

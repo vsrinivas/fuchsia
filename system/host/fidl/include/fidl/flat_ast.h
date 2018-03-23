@@ -460,6 +460,9 @@ private:
     bool Fail(const Name& name, StringView message) {
       return Fail(name.name(), message);
     }
+    bool Fail(const Decl& decl, StringView message) {
+      return Fail(decl.name, message);
+    }
 
     bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
                                    Name* name_out);
@@ -468,7 +471,7 @@ private:
 
     bool RegisterDecl(Decl* decl);
 
-    bool ConsumeType(std::unique_ptr<raw::Type> type, std::unique_ptr<Type>* out_type);
+    bool ConsumeType(std::unique_ptr<raw::Type> type, std::unique_ptr<Type>* out_type, const SourceLocation& source_location);
 
     bool ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
     bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
