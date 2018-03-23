@@ -17,13 +17,13 @@ namespace media {
 
 // static
 std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
-    f1dl::InterfaceRequest<MediaPlayer> request,
+    fidl::InterfaceRequest<MediaPlayer> request,
     MediaComponentFactory* owner) {
   return std::shared_ptr<MediaPlayerImpl>(
       new MediaPlayerImpl(std::move(request), owner));
 }
 
-MediaPlayerImpl::MediaPlayerImpl(f1dl::InterfaceRequest<MediaPlayer> request,
+MediaPlayerImpl::MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
                                  MediaComponentFactory* owner)
     : MediaComponentFactory::MultiClientProduct<MediaPlayer>(this,
                                                              std::move(request),
@@ -71,7 +71,7 @@ MediaPlayerImpl::MediaPlayerImpl(f1dl::InterfaceRequest<MediaPlayer> request,
             // is connected. We report this as a problem so the client doesn't
             // have to check these values separately.
             status->problem = Problem::New();
-            status->problem->type = Problem::kProblemMediaTypeNotSupported;
+            status->problem->type = kProblemMediaTypeNotSupported;
           }
         }
 
@@ -107,7 +107,7 @@ void MediaPlayerImpl::MaybeCreateSource() {
   HandleSourceStatusUpdates();
 
   source_->Describe(fxl::MakeCopyable(
-      [this](f1dl::VectorPtr<MediaTypePtr> stream_types) mutable {
+      [this](fidl::VectorPtr<MediaTypePtr> stream_types) mutable {
         stream_types_ = std::move(stream_types);
         ConnectSinks();
       }));
@@ -123,7 +123,7 @@ void MediaPlayerImpl::MaybeCreateRenderer(MediaTypeMedium medium) {
 
   switch (medium) {
     case MediaTypeMedium::AUDIO: {
-      f1dl::InterfaceHandle<MediaRenderer> audio_media_renderer;
+      fidl::InterfaceHandle<MediaRenderer> audio_media_renderer;
       auto audio_server = owner()->ConnectToEnvironmentService<AudioServer>();
       audio_server->CreateRenderer(audio_renderer_.NewRequest(),
                                    audio_media_renderer.NewRequest());
@@ -133,7 +133,7 @@ void MediaPlayerImpl::MaybeCreateRenderer(MediaTypeMedium medium) {
       }
     } break;
     case MediaTypeMedium::VIDEO: {
-      f1dl::InterfaceHandle<MediaRenderer> video_media_renderer;
+      fidl::InterfaceHandle<MediaRenderer> video_media_renderer;
       video_renderer_impl_ =
           owner()->CreateVideoRenderer(video_media_renderer.NewRequest());
       stream.renderer_handle_ = std::move(video_media_renderer);
@@ -198,7 +198,7 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
   stream->sink_->ConsumeMediaType(
       input_media_type.Clone(),
       [this, stream, index,
-       callback](f1dl::InterfaceHandle<MediaPacketConsumer> consumer) {
+       callback](fidl::InterfaceHandle<MediaPacketConsumer> consumer) {
         if (!consumer) {
           // The sink couldn't build a conversion pipeline for the media type.
           callback();
@@ -475,21 +475,21 @@ TimelineTransformPtr MediaPlayerImpl::CreateTimelineTransform(
   return result;
 }
 
-void MediaPlayerImpl::SetHttpSource(const f1dl::StringPtr& http_url) {
-  f1dl::InterfaceHandle<SeekingReader> reader;
+void MediaPlayerImpl::SetHttpSource(const fidl::StringPtr& http_url) {
+  fidl::InterfaceHandle<SeekingReader> reader;
   owner()->CreateHttpReader(http_url, reader.NewRequest());
   SetReaderSource(std::move(reader));
 }
 
 void MediaPlayerImpl::SetFileSource(zx::channel file_channel) {
-  f1dl::InterfaceHandle<SeekingReader> reader;
+  fidl::InterfaceHandle<SeekingReader> reader;
   owner()->CreateFileChannelReader(std::move(file_channel),
                                    reader.NewRequest());
   SetReaderSource(std::move(reader));
 }
 
 void MediaPlayerImpl::SetReaderSource(
-    f1dl::InterfaceHandle<SeekingReader> reader_handle) {
+    fidl::InterfaceHandle<SeekingReader> reader_handle) {
   if (!reader_handle && !source_) {
     // There was already no reader. Nothing to do.
     return;
@@ -540,8 +540,8 @@ void MediaPlayerImpl::SetGain(float gain) {
 }
 
 void MediaPlayerImpl::CreateView(
-    f1dl::InterfaceHandle<views_v1::ViewManager> view_manager,
-    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
+    fidl::InterfaceHandle<views_v1::ViewManager> view_manager,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   MaybeCreateRenderer(MediaTypeMedium::VIDEO);
   if (!video_renderer_impl_) {
     return;
@@ -552,8 +552,8 @@ void MediaPlayerImpl::CreateView(
 }
 
 void MediaPlayerImpl::SetAudioRenderer(
-    f1dl::InterfaceHandle<AudioRenderer> audio_renderer,
-    f1dl::InterfaceHandle<MediaRenderer> media_renderer) {
+    fidl::InterfaceHandle<AudioRenderer> audio_renderer,
+    fidl::InterfaceHandle<MediaRenderer> media_renderer) {
   if (streams_by_medium_.find(MediaTypeMedium::AUDIO) !=
       streams_by_medium_.end()) {
     // We already have this renderer. Do nothing.
@@ -568,12 +568,12 @@ void MediaPlayerImpl::SetAudioRenderer(
   }
 }
 
-void MediaPlayerImpl::AddBinding(f1dl::InterfaceRequest<MediaPlayer> request) {
+void MediaPlayerImpl::AddBinding(fidl::InterfaceRequest<MediaPlayer> request) {
   MultiClientProduct::AddBinding(std::move(request));
 }
 
 void MediaPlayerImpl::SetVideoRenderer(
-    f1dl::InterfaceHandle<MediaRenderer> media_renderer) {
+    fidl::InterfaceHandle<MediaRenderer> media_renderer) {
   if (streams_by_medium_.find(MediaTypeMedium::VIDEO) !=
       streams_by_medium_.end()) {
     // We already have this renderer. Do nothing.

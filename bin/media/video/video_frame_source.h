@@ -32,13 +32,13 @@ class VideoFrameSource : public MediaPacketConsumerBase {
   }
 
   // Binds the packet consumer.
-  void BindConsumer(f1dl::InterfaceRequest<MediaPacketConsumer> request) {
+  void BindConsumer(fidl::InterfaceRequest<MediaPacketConsumer> request) {
     MediaPacketConsumerBase::Bind(std::move(request));
   }
 
   // Binds the timeline control point.
   void BindTimelineControlPoint(
-      f1dl::InterfaceRequest<MediaTimelineControlPoint> request) {
+      fidl::InterfaceRequest<MediaTimelineControlPoint> request) {
     timeline_control_point_.Bind(std::move(request));
   }
 
@@ -83,13 +83,13 @@ class VideoFrameSource : public MediaPacketConsumerBase {
   void OnFailure() override;
 
   // Returns the supported media types.
-  f1dl::VectorPtr<MediaTypeSetPtr> SupportedMediaTypes();
+  fidl::VectorPtr<MediaTypeSet> SupportedMediaTypes();
 
   // Discards packets that are older than pts_.
   void DiscardOldPackets();
 
   // Checks |packet| for a revised media type and updates state accordingly.
-  void CheckForRevisedMediaType(const MediaPacketPtr& packet);
+  void CheckForRevisedMediaType(const MediaPacket& packet);
 
   // Calls Invalidate on all registered views.
   void InvalidateViews() {

@@ -44,7 +44,7 @@ class FakeRenderer : public MediaPacketConsumerBase,
   ~FakeRenderer() override;
 
   // Binds the renderer.
-  void Bind(f1dl::InterfaceRequest<MediaRenderer> renderer_request);
+  void Bind(fidl::InterfaceRequest<MediaRenderer> renderer_request);
 
   // Sets the demand min_packets_outstanding.
   void ConfigureDemand(uint32_t min_packets_outstanding) {
@@ -71,10 +71,10 @@ class FakeRenderer : public MediaPacketConsumerBase,
 
   void SetMediaType(MediaTypePtr media_type) override;
 
-  void GetPacketConsumer(f1dl::InterfaceRequest<MediaPacketConsumer>
+  void GetPacketConsumer(fidl::InterfaceRequest<MediaPacketConsumer>
                              packet_consumer_request) override;
 
-  void GetTimelineControlPoint(f1dl::InterfaceRequest<MediaTimelineControlPoint>
+  void GetTimelineControlPoint(fidl::InterfaceRequest<MediaTimelineControlPoint>
                                    control_point_request) override;
 
   // MediaPacketConsumerBase overrides.
@@ -90,7 +90,7 @@ class FakeRenderer : public MediaPacketConsumerBase,
   void GetStatus(uint64_t version_last_seen,
                  GetStatusCallback callback) override;
 
-  void GetTimelineConsumer(f1dl::InterfaceRequest<TimelineConsumer>
+  void GetTimelineConsumer(fidl::InterfaceRequest<TimelineConsumer>
                                timeline_consumer_request) override;
 
   void SetProgramRange(uint64_t program,
@@ -125,9 +125,9 @@ class FakeRenderer : public MediaPacketConsumerBase,
   std::vector<PacketInfo> expected_packets_info_;
   std::vector<PacketInfo>::iterator expected_packets_info_iter_;
 
-  f1dl::Binding<MediaRenderer> renderer_binding_;
-  f1dl::Binding<MediaTimelineControlPoint> control_point_binding_;
-  f1dl::Binding<TimelineConsumer> timeline_consumer_binding_;
+  fidl::Binding<MediaRenderer> renderer_binding_;
+  fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
+  fidl::Binding<TimelineConsumer> timeline_consumer_binding_;
   std::queue<std::unique_ptr<SuppliedPacket>> packet_queue_;
   TimelineFunction current_timeline_function_;
   TimelineFunction pending_timeline_function_;

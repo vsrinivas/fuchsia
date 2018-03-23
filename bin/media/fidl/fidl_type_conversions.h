@@ -108,6 +108,16 @@ struct TypeConverter<std::unique_ptr<media::StreamType>, media::MediaType> {
 };
 
 template <>
+struct TypeConverter<std::unique_ptr<media::StreamType>, media::MediaTypePtr> {
+  static std::unique_ptr<media::StreamType> Convert(
+      const media::MediaTypePtr& input) {
+    if (!input)
+      return nullptr;
+    return To<std::unique_ptr<media::StreamType>>(*input);
+  }
+};
+
+template <>
 struct TypeConverter<media::MediaTypeSet,
                      std::unique_ptr<media::StreamTypeSet>> {
   static media::MediaTypeSet Convert(

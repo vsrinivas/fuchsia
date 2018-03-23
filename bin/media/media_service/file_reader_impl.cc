@@ -18,14 +18,14 @@ namespace media {
 // static
 std::shared_ptr<FileReaderImpl> FileReaderImpl::Create(
     zx::channel file_channel,
-    f1dl::InterfaceRequest<SeekingReader> request,
+    fidl::InterfaceRequest<SeekingReader> request,
     MediaComponentFactory* owner) {
   return std::shared_ptr<FileReaderImpl>(new FileReaderImpl(
       FdFromChannel(std::move(file_channel)), std::move(request), owner));
 }
 
 FileReaderImpl::FileReaderImpl(fxl::UniqueFD fd,
-                               f1dl::InterfaceRequest<SeekingReader> request,
+                               fidl::InterfaceRequest<SeekingReader> request,
                                MediaComponentFactory* owner)
     : MediaComponentFactory::Product<SeekingReader>(this,
                                                     std::move(request),
@@ -52,11 +52,11 @@ FileReaderImpl::~FileReaderImpl() {
   }
 }
 
-void FileReaderImpl::Describe(const DescribeCallback& callback) {
+void FileReaderImpl::Describe(DescribeCallback callback) {
   callback(result_, size_, true);
 }
 
-void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
+void FileReaderImpl::ReadAt(uint64_t position, ReadAtCallback callback) {
   FXL_DCHECK(position < size_);
 
   if (result_ != MediaResult::OK) {

@@ -25,17 +25,17 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
                           public VideoRenderer {
  public:
   static std::shared_ptr<VideoRendererImpl> Create(
-      f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
+      fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
       MediaComponentFactory* owner);
 
   ~VideoRendererImpl() override;
 
   // Binds the |VideoRenderer| interface.
-  void Bind(f1dl::InterfaceRequest<VideoRenderer> request);
+  void Bind(fidl::InterfaceRequest<VideoRenderer> request);
 
   // Creates a view.
-  void CreateView(f1dl::InterfacePtr<views_v1::ViewManager> view_manager,
-                  f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
+  void CreateView(fidl::InterfacePtr<views_v1::ViewManager> view_manager,
+                  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   // Sets a callback that's called when the results of |GetSize| and/or
   // |GetPixelAspectRatio| may have changed.
@@ -51,7 +51,7 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
   class View : public mozart::BaseView {
    public:
     View(views_v1::ViewManagerPtr view_manager,
-         f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+         fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
          std::shared_ptr<VideoFrameSource> video_frame_source);
 
     ~View() override;
@@ -69,7 +69,7 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
   };
 
   VideoRendererImpl(
-      f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
+      fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
       MediaComponentFactory* owner);
 
   // MediaRenderer implementation.
@@ -78,10 +78,10 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
 
   void SetMediaType(MediaTypePtr media_type) override;
 
-  void GetPacketConsumer(f1dl::InterfaceRequest<MediaPacketConsumer>
+  void GetPacketConsumer(fidl::InterfaceRequest<MediaPacketConsumer>
                              packet_consumer_request) override;
 
-  void GetTimelineControlPoint(f1dl::InterfaceRequest<MediaTimelineControlPoint>
+  void GetTimelineControlPoint(fidl::InterfaceRequest<MediaTimelineControlPoint>
                                    control_point_request) override;
 
   // VideoRenderer implementation.
@@ -89,12 +89,12 @@ class VideoRendererImpl : public MediaComponentFactory::Product<MediaRenderer>,
                  GetStatusCallback callback) override;
 
   void CreateView(
-      f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
 
   // Returns the media types supported by this video renderer.
-  f1dl::VectorPtr<MediaTypeSetPtr> SupportedMediaTypes();
+  fidl::VectorPtr<MediaTypeSet> SupportedMediaTypes();
 
-  f1dl::Binding<VideoRenderer> video_renderer_binding_;
+  fidl::Binding<VideoRenderer> video_renderer_binding_;
   FidlPublisher<GetStatusCallback> status_publisher_;
   std::shared_ptr<VideoFrameSource> video_frame_source_;
   fxl::Closure geometry_update_callback_;

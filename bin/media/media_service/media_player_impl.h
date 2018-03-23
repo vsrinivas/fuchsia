@@ -26,18 +26,18 @@ class MediaPlayerImpl
       public MediaPlayer {
  public:
   static std::shared_ptr<MediaPlayerImpl> Create(
-      f1dl::InterfaceRequest<MediaPlayer> request,
+      fidl::InterfaceRequest<MediaPlayer> request,
       MediaComponentFactory* owner);
 
   ~MediaPlayerImpl() override;
 
   // MediaPlayer implementation.
-  void SetHttpSource(const f1dl::StringPtr& http_url) override;
+  void SetHttpSource(const fidl::StringPtr& http_url) override;
 
   void SetFileSource(zx::channel file_channel) override;
 
   void SetReaderSource(
-      f1dl::InterfaceHandle<SeekingReader> reader_handle) override;
+      fidl::InterfaceHandle<SeekingReader> reader_handle) override;
 
   void Play() override;
 
@@ -51,14 +51,14 @@ class MediaPlayerImpl
   void SetGain(float gain) override;
 
   void CreateView(
-      f1dl::InterfaceHandle<views_v1::ViewManager> view_manager,
-      f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
+      fidl::InterfaceHandle<views_v1::ViewManager> view_manager,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
 
   void SetAudioRenderer(
-      f1dl::InterfaceHandle<AudioRenderer> audio_renderer,
-      f1dl::InterfaceHandle<MediaRenderer> media_renderer) override;
+      fidl::InterfaceHandle<AudioRenderer> audio_renderer,
+      fidl::InterfaceHandle<MediaRenderer> media_renderer) override;
 
-  void AddBinding(f1dl::InterfaceRequest<MediaPlayer> request) override;
+  void AddBinding(fidl::InterfaceRequest<MediaPlayer> request) override;
 
  private:
   static constexpr int64_t kMinimumLeadTime = Timeline::ns_from_ms(30);
@@ -77,17 +77,17 @@ class MediaPlayerImpl
   // Media for which no renderer was supplied are not represented in
   // |streams_by_medium_|.
   struct Stream {
-    f1dl::InterfaceHandle<MediaRenderer> renderer_handle_;
+    fidl::InterfaceHandle<MediaRenderer> renderer_handle_;
     MediaSinkPtr sink_;
     bool connected_ = false;
   };
 
-  MediaPlayerImpl(f1dl::InterfaceRequest<MediaPlayer> request,
+  MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
                   MediaComponentFactory* owner);
 
   // Sets the video renderer.
   // TODO(dalesat): Remove after topaz transition.
-  void SetVideoRenderer(f1dl::InterfaceHandle<MediaRenderer> video_renderer);
+  void SetVideoRenderer(fidl::InterfaceHandle<MediaRenderer> video_renderer);
 
   // If |reader_handle_| is set, creates the source and calls |ConnectSinks|,
   // otherwise does nothing.
@@ -129,16 +129,16 @@ class MediaPlayerImpl
       uint64_t version = kInitialStatus,
       MediaTimelineControlPointStatus* status = nullptr);
 
-  f1dl::InterfaceHandle<SeekingReader> reader_handle_;
+  fidl::InterfaceHandle<SeekingReader> reader_handle_;
   MediaSourcePtr source_;
-  f1dl::VectorPtr<MediaTypePtr> stream_types_;
+  fidl::VectorPtr<MediaTypePtr> stream_types_;
   std::unordered_map<MediaTypeMedium, Stream> streams_by_medium_;
   MediaTimelineControllerPtr timeline_controller_;
   MediaTimelineControlPointPtr timeline_control_point_;
   TimelineConsumerPtr timeline_consumer_;
   bool reader_transition_pending_ = false;
   float gain_ = 1.0f;
-  f1dl::InterfacePtr<AudioRenderer> audio_renderer_;
+  fidl::InterfacePtr<AudioRenderer> audio_renderer_;
   std::shared_ptr<VideoRendererImpl> video_renderer_impl_;
 
   // The state we're currently in.

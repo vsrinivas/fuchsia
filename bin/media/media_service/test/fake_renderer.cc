@@ -38,14 +38,13 @@ FakeRenderer::~FakeRenderer() {
 }
 
 void FakeRenderer::Bind(
-    f1dl::InterfaceRequest<MediaRenderer> renderer_request) {
+    fidl::InterfaceRequest<MediaRenderer> renderer_request) {
   renderer_binding_.Bind(std::move(renderer_request));
 }
 
 void FakeRenderer::GetSupportedMediaTypes(
     GetSupportedMediaTypesCallback callback) {
-  f1dl::VectorPtr<MediaTypeSetPtr> supported_types =
-      f1dl::VectorPtr<MediaTypeSetPtr>::New(2);
+  fidl::VectorPtr<MediaTypeSet> supported_types(2);
 
   AudioMediaTypeSetDetailsPtr audio_details = AudioMediaTypeSetDetails::New();
   audio_details->sample_format = AudioSampleFormat::ANY;
@@ -94,12 +93,12 @@ void FakeRenderer::SetMediaType(MediaTypePtr media_type) {
 }
 
 void FakeRenderer::GetPacketConsumer(
-    f1dl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
+    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
   MediaPacketConsumerBase::Bind(std::move(packet_consumer_request));
 }
 
 void FakeRenderer::GetTimelineControlPoint(
-    f1dl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
+    fidl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
   control_point_binding_.Bind(std::move(control_point_request));
 }
 
@@ -185,7 +184,7 @@ void FakeRenderer::GetStatus(uint64_t version_last_seen,
 }
 
 void FakeRenderer::GetTimelineConsumer(
-    f1dl::InterfaceRequest<TimelineConsumer> timeline_consumer_request) {
+    fidl::InterfaceRequest<TimelineConsumer> timeline_consumer_request) {
   timeline_consumer_binding_.Bind(std::move(timeline_consumer_request));
 }
 

@@ -16,13 +16,13 @@ const std::string kIsolateArgument = "--transient";
 
 // Connects to the requested service in a media_service isolate.
 template <typename Interface>
-void ConnectToIsolate(f1dl::InterfaceRequest<Interface> request,
+void ConnectToIsolate(fidl::InterfaceRequest<Interface> request,
                       component::ApplicationLauncher* launcher) {
-  auto launch_info = component::ApplicationLaunchInfo::New();
-  launch_info->url = kIsolateUrl;
-  launch_info->arguments.push_back(kIsolateArgument);
+  component::ApplicationLaunchInfo launch_info;
+  launch_info.url = kIsolateUrl;
+  launch_info.arguments.push_back(kIsolateArgument);
   component::Services services;
-  launch_info->directory_request = services.NewRequest();
+  launch_info.directory_request = services.NewRequest();
 
   component::ApplicationControllerPtr controller;
   launcher->CreateApplication(std::move(launch_info), controller.NewRequest());
@@ -53,7 +53,7 @@ int main(int argc, const char** argv) {
     factory.application_context()
         ->outgoing_services()
         ->AddService<media::MediaPlayer>(
-            [&factory](f1dl::InterfaceRequest<media::MediaPlayer> request) {
+            [&factory](fidl::InterfaceRequest<media::MediaPlayer> request) {
               factory.CreateMediaPlayer(std::move(request));
             });
 
@@ -64,7 +64,7 @@ int main(int argc, const char** argv) {
         launcher.NewRequest());
 
     application_context->outgoing_services()->AddService<media::MediaPlayer>(
-        [&launcher](f1dl::InterfaceRequest<media::MediaPlayer> request) {
+        [&launcher](fidl::InterfaceRequest<media::MediaPlayer> request) {
           ConnectToIsolate<media::MediaPlayer>(std::move(request),
                                                launcher.get());
         });

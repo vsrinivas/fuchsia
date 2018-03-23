@@ -163,7 +163,7 @@ void VideoFrameSource::DiscardOldPackets() {
   // We keep at least one packet around even if it's old, so we can show an
   // old frame rather than no frame when we starve.
   while (packet_queue_.size() > 1 &&
-         packet_queue_.front()->packet()->pts < pts_) {
+         packet_queue_.front()->packet().pts < pts_) {
     // TODO(dalesat): Add hysteresis.
     packet_queue_.pop();
     // Make sure the front of the queue has been checked for revised media
@@ -172,13 +172,10 @@ void VideoFrameSource::DiscardOldPackets() {
   }
 }
 
-void VideoFrameSource::CheckForRevisedMediaType(const MediaPacketPtr& packet) {
-  FXL_DCHECK(packet);
+void VideoFrameSource::CheckForRevisedMediaType(const MediaPacket& packet) {
+  const MediaTypePtr& revised_media_type = packet.revised_media_type;
 
-  const MediaTypePtr& revised_media_type = packet->revised_media_type;
-
-  if (revised_media_type && revised_media_type->details &&
-      revised_media_type->details->get_video()) {
+  if (revised_media_type && revised_media_type->details.is_video()) {
     converter_.SetStreamType(
         fxl::To<std::unique_ptr<StreamType>>(revised_media_type));
 

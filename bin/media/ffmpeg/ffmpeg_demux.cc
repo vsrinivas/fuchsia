@@ -206,8 +206,8 @@ void FfmpegDemuxImpl::Worker() {
   if (result_ != Result::kOk) {
     FXL_LOG(ERROR) << "AvIoContext::Create failed, result "
                    << static_cast<int>(result_);
-    ReportProblem(result_ == Result::kNotFound ? Problem::kProblemAssetNotFound
-                                               : Problem::kProblemInternal,
+    ReportProblem(result_ == Result::kNotFound ? kProblemAssetNotFound
+                                               : kProblemInternal,
                   "");
     init_complete_.Occur();
     return;
@@ -219,7 +219,7 @@ void FfmpegDemuxImpl::Worker() {
   if (!format_context_) {
     FXL_LOG(ERROR) << "AvFormatContext::OpenInput failed";
     result_ = Result::kUnsupportedOperation;
-    ReportProblem(Problem::kProblemContainerNotSupported, "");
+    ReportProblem(kProblemContainerNotSupported, "");
     init_complete_.Occur();
     return;
   }
@@ -228,7 +228,7 @@ void FfmpegDemuxImpl::Worker() {
   if (r < 0) {
     FXL_LOG(ERROR) << "avformat_find_stream_info failed, result " << r;
     result_ = Result::kInternalError;
-    ReportProblem(Problem::kProblemInternal,
+    ReportProblem(kProblemInternal,
                   "avformat_find_stream_info failed");
     init_complete_.Occur();
     return;

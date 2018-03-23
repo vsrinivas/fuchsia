@@ -48,12 +48,12 @@ class ReaderCache : public Reader {
   ~ReaderCache() override;
 
   // Reader implementation.
-  void Describe(const DescribeCallback& callback) override;
+  void Describe(DescribeCallback callback) override;
 
   void ReadAt(size_t position,
               uint8_t* buffer,
               size_t bytes_to_read,
-              const ReadAtCallback& callback) override;
+              ReadAtCallback callback) override;
 
  private:
   static constexpr size_t kDefaultReadSize = 32 * 1024;
@@ -70,7 +70,7 @@ class ReaderCache : public Reader {
     void Start(size_t position,
                uint8_t* buffer,
                size_t bytes_to_read,
-               const ReadAtCallback& callback);
+               ReadAtCallback callback);
 
     // Gets the current read position.
     size_t position() { return position_; }
@@ -112,7 +112,7 @@ class ReaderCache : public Reader {
     void Initialize(Result result, size_t size, bool can_seek);
 
     // Calls the callback immediately with description values.
-    void Describe(const DescribeCallback& callback);
+    void Describe(DescribeCallback callback);
 
     // Sets a read request to fulfill.
     void SetReadAtRequest(ReadAtRequest* request);

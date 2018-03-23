@@ -44,15 +44,15 @@ void FakeWavReader::WriteHeader() {
 
 FakeWavReader::~FakeWavReader() {}
 
-void FakeWavReader::Bind(f1dl::InterfaceRequest<SeekingReader> request) {
+void FakeWavReader::Bind(fidl::InterfaceRequest<SeekingReader> request) {
   binding_.Bind(std::move(request));
 }
 
-void FakeWavReader::Describe(const DescribeCallback& callback) {
+void FakeWavReader::Describe(DescribeCallback callback) {
   callback(MediaResult::OK, size_, true);
 }
 
-void FakeWavReader::ReadAt(uint64_t position, const ReadAtCallback& callback) {
+void FakeWavReader::ReadAt(uint64_t position, ReadAtCallback callback) {
   if (socket_) {
     if (wait_id_ != 0) {
       GetDefaultAsyncWaiter()->CancelWait(wait_id_);

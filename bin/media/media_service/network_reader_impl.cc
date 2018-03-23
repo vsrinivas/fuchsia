@@ -20,16 +20,16 @@ const char* NetworkReaderImpl::kRangeHeaderName = "Range";
 
 // static
 std::shared_ptr<NetworkReaderImpl> NetworkReaderImpl::Create(
-    const f1dl::StringPtr& url,
-    f1dl::InterfaceRequest<SeekingReader> request,
+    const fidl::StringPtr& url,
+    fidl::InterfaceRequest<SeekingReader> request,
     MediaComponentFactory* owner) {
   return std::shared_ptr<NetworkReaderImpl>(
       new NetworkReaderImpl(url, std::move(request), owner));
 }
 
 NetworkReaderImpl::NetworkReaderImpl(
-    const f1dl::StringPtr& url,
-    f1dl::InterfaceRequest<SeekingReader> request,
+    const fidl::StringPtr& url,
+    fidl::InterfaceRequest<SeekingReader> request,
     MediaComponentFactory* owner)
     : MediaComponentFactory::Product<SeekingReader>(this,
                                                     std::move(request),
@@ -71,11 +71,11 @@ NetworkReaderImpl::NetworkReaderImpl(
           return;
         }
 
-        for (const network::HttpHeaderPtr& header : *response->headers) {
-          if (header->name == kContentLengthHeaderName) {
-            size_ = std::stoull(header->value);
-          } else if (header->name == kAcceptRangesHeaderName &&
-                     header->value == kAcceptRangesHeaderBytesValue) {
+        for (const network::HttpHeader& header : *response->headers) {
+          if (header.name == kContentLengthHeaderName) {
+            size_ = std::stoull(header.value);
+          } else if (header.name == kAcceptRangesHeaderName &&
+                     header.value == kAcceptRangesHeaderBytesValue) {
             can_seek_ = true;
           }
         }
@@ -86,12 +86,12 @@ NetworkReaderImpl::NetworkReaderImpl(
 
 NetworkReaderImpl::~NetworkReaderImpl() {}
 
-void NetworkReaderImpl::Describe(const DescribeCallback& callback) {
+void NetworkReaderImpl::Describe(DescribeCallback callback) {
   ready_.When([this, callback]() { callback(result_, size_, can_seek_); });
 }
 
 void NetworkReaderImpl::ReadAt(uint64_t position,
-                               const ReadAtCallback& callback) {
+                               ReadAtCallback callback) {
   ready_.When([this, position, callback]() {
     if (result_ != MediaResult::OK) {
       callback(result_, zx::socket());
@@ -115,7 +115,7 @@ void NetworkReaderImpl::ReadAt(uint64_t position,
       header->name = kRangeHeaderName;
       header->value = value.str();
 
-      request->headers = f1dl::VectorPtr<network::HttpHeaderPtr>::New(1);
+      request->headers = fidl::VectorPtr<network::HttpHeaderPtr>::New(1);
       request->headers->at(0) = std::move(header);
     }
 

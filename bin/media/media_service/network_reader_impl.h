@@ -19,16 +19,16 @@ class NetworkReaderImpl : public MediaComponentFactory::Product<SeekingReader>,
                           public SeekingReader {
  public:
   static std::shared_ptr<NetworkReaderImpl> Create(
-      const f1dl::StringPtr& url,
-      f1dl::InterfaceRequest<SeekingReader> request,
+      const fidl::StringPtr& url,
+      fidl::InterfaceRequest<SeekingReader> request,
       MediaComponentFactory* owner);
 
   ~NetworkReaderImpl() override;
 
   // SeekingReader implementation.
-  void Describe(const DescribeCallback& callback) override;
+  void Describe(DescribeCallback callback) override;
 
-  void ReadAt(uint64_t position, const ReadAtCallback& callback) override;
+  void ReadAt(uint64_t position, ReadAtCallback callback) override;
 
  private:
   static const char* kContentLengthHeaderName;
@@ -39,8 +39,8 @@ class NetworkReaderImpl : public MediaComponentFactory::Product<SeekingReader>,
   static constexpr uint32_t kStatusPartialContent = 206u;
   static constexpr uint32_t kStatusNotFound = 404u;
 
-  NetworkReaderImpl(const f1dl::StringPtr& url,
-                    f1dl::InterfaceRequest<SeekingReader> request,
+  NetworkReaderImpl(const fidl::StringPtr& url,
+                    fidl::InterfaceRequest<SeekingReader> request,
                     MediaComponentFactory* owner);
 
   std::string url_;

@@ -15,15 +15,15 @@ namespace media {
 
 // static
 std::shared_ptr<MediaDemuxImpl> MediaDemuxImpl::Create(
-    f1dl::InterfaceHandle<SeekingReader> reader,
-    f1dl::InterfaceRequest<MediaSource> request,
+    fidl::InterfaceHandle<SeekingReader> reader,
+    fidl::InterfaceRequest<MediaSource> request,
     MediaComponentFactory* owner) {
   return std::shared_ptr<MediaDemuxImpl>(
       new MediaDemuxImpl(std::move(reader), std::move(request), owner));
 }
 
-MediaDemuxImpl::MediaDemuxImpl(f1dl::InterfaceHandle<SeekingReader> reader,
-                               f1dl::InterfaceRequest<MediaSource> request,
+MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
+                               fidl::InterfaceRequest<MediaSource> request,
                                MediaComponentFactory* owner)
     : MediaComponentFactory::Product<MediaSource>(this,
                                                   std::move(request),
@@ -61,20 +61,20 @@ MediaDemuxImpl::MediaDemuxImpl(f1dl::InterfaceHandle<SeekingReader> reader,
 
   std::shared_ptr<Reader> reader_ptr = FidlReader::Create(std::move(reader));
   if (!reader_ptr) {
-    ReportProblem(Problem::kProblemInternal, "couldn't create reader");
+    ReportProblem(kProblemInternal, "couldn't create reader");
     return;
   }
 
   std::shared_ptr<ReaderCache> reader_cache_ptr =
       ReaderCache::Create(reader_ptr);
   if (!reader_cache_ptr) {
-    ReportProblem(Problem::kProblemInternal, "couldn't create reader cache");
+    ReportProblem(kProblemInternal, "couldn't create reader cache");
     return;
   }
 
   demux_ = Demux::Create(std::shared_ptr<Reader>(reader_cache_ptr));
   if (!demux_) {
-    ReportProblem(Problem::kProblemInternal, "couldn't create demux");
+    ReportProblem(kProblemInternal, "couldn't create demux");
     return;
   }
 
@@ -122,14 +122,14 @@ void MediaDemuxImpl::ReportProblem(const std::string& type,
                                    const std::string& details) {
   problem_ = Problem::New();
   problem_->type = type;
-  problem_->details = details.empty() ? nullptr : f1dl::StringPtr(details);
+  problem_->details = details.empty() ? nullptr : fidl::StringPtr(details);
   status_publisher_.SendUpdates();
 }
 
-void MediaDemuxImpl::Describe(const DescribeCallback& callback) {
+void MediaDemuxImpl::Describe(DescribeCallback callback) {
   init_complete_.When([this, callback]() {
-    f1dl::VectorPtr<MediaTypePtr> result =
-        f1dl::VectorPtr<MediaTypePtr>::New(streams_.size());
+    fidl::VectorPtr<MediaTypePtr> result =
+        fidl::VectorPtr<MediaTypePtr>::New(streams_.size());
     for (size_t i = 0; i < streams_.size(); i++) {
       result->at(i) = fxl::To<MediaTypePtr>(streams_[i]->stream_type());
     }
@@ -140,7 +140,7 @@ void MediaDemuxImpl::Describe(const DescribeCallback& callback) {
 
 void MediaDemuxImpl::GetPacketProducer(
     uint32_t stream_index,
-    f1dl::InterfaceRequest<MediaPacketProducer> producer) {
+    fidl::InterfaceRequest<MediaPacketProducer> producer) {
   RCHECK(init_complete_.occurred());
 
   if (stream_index >= streams_.size()) {
@@ -191,7 +191,7 @@ MediaDemuxImpl::Stream::Stream(OutputRef output,
 MediaDemuxImpl::Stream::~Stream() {}
 
 void MediaDemuxImpl::Stream::BindPacketProducer(
-    f1dl::InterfaceRequest<MediaPacketProducer> producer) {
+    fidl::InterfaceRequest<MediaPacketProducer> producer) {
   FXL_DCHECK(producer_);
   producer_->Bind(std::move(producer));
 }

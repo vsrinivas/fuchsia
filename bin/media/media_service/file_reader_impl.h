@@ -22,21 +22,21 @@ class FileReaderImpl : public MediaComponentFactory::Product<SeekingReader>,
  public:
   static std::shared_ptr<FileReaderImpl> Create(
       zx::channel file_channel,
-      f1dl::InterfaceRequest<SeekingReader> request,
+      fidl::InterfaceRequest<SeekingReader> request,
       MediaComponentFactory* owner);
 
   ~FileReaderImpl() override;
 
   // SeekingReader implementation.
-  void Describe(const DescribeCallback& callback) override;
+  void Describe(DescribeCallback callback) override;
 
-  void ReadAt(uint64_t position, const ReadAtCallback& callback) override;
+  void ReadAt(uint64_t position, ReadAtCallback callback) override;
 
  private:
   static constexpr size_t kBufferSize = 8192;
 
   FileReaderImpl(fxl::UniqueFD fd,
-                 f1dl::InterfaceRequest<SeekingReader> request,
+                 fidl::InterfaceRequest<SeekingReader> request,
                  MediaComponentFactory* owner);
 
   // Callback function for WriteToSocket's async wait.

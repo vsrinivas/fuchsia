@@ -29,14 +29,14 @@ ReaderCache::ReaderCache(std::shared_ptr<Reader> upstream_reader) {
 
 ReaderCache::~ReaderCache() {}
 
-void ReaderCache::Describe(const DescribeCallback& callback) {
+void ReaderCache::Describe(DescribeCallback callback) {
   describe_is_complete_.When([this, callback]() { store_.Describe(callback); });
 }
 
 void ReaderCache::ReadAt(size_t position,
                          uint8_t* buffer,
                          size_t bytes_to_read,
-                         const ReadAtCallback& callback) {
+                         ReadAtCallback callback) {
   FXL_DCHECK(buffer);
   FXL_DCHECK(bytes_to_read > 0);
 
@@ -55,7 +55,7 @@ ReaderCache::ReadAtRequest::~ReadAtRequest() {}
 void ReaderCache::ReadAtRequest::Start(size_t position,
                                        uint8_t* buffer,
                                        size_t bytes_to_read,
-                                       const ReadAtCallback& callback) {
+                                       ReadAtCallback callback) {
   FXL_DCHECK(!in_progress_) << "concurrent calls to ReadAt are not allowed";
   in_progress_ = true;
   position_ = position;
@@ -107,7 +107,7 @@ void ReaderCache::Store::Initialize(Result result, size_t size, bool can_seek) {
   read_region_ = sparse_byte_buffer_.null_region();
 }
 
-void ReaderCache::Store::Describe(const DescribeCallback& callback) {
+void ReaderCache::Store::Describe(DescribeCallback callback) {
   Result result;
 
   {

@@ -11,6 +11,7 @@
 #include "garnet/bin/media/framework/types/video_stream_type.h"
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/util/callback_joiner.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include <fuchsia/cpp/media.h>
 
@@ -207,8 +208,8 @@ bool Builder::GoalTypeSetsIncludeEncoding(const std::string& encoding) const {
 }
 
 void Builder::AddConverter(MediaTypeConverterPtr converter) {
-  converter->GetOutputType([this](MediaTypePtr output_type) {
-    current_type_ = fxl::To<std::unique_ptr<StreamType>>(output_type);
+  converter->GetOutputType([this](MediaType output_type) {
+    current_type_ = fxl::To<std::unique_ptr<StreamType>>(fidl::MakeOptional(output_type));
     type_ = &current_type_;
     AddConverters();
   });
@@ -417,11 +418,11 @@ void Builder::Succeed() {
       callback_(
           true,
           [shared_converter_ptr](
-              f1dl::InterfaceRequest<MediaPacketConsumer> request) {
+              fidl::InterfaceRequest<MediaPacketConsumer> request) {
             (*shared_converter_ptr)->GetPacketConsumer(std::move(request));
           },
           [shared_converter_ptr](
-              f1dl::InterfaceRequest<MediaPacketProducer> request) {
+              fidl::InterfaceRequest<MediaPacketProducer> request) {
             (*shared_converter_ptr)->GetPacketProducer(std::move(request));
           },
           std::move(*type_));
@@ -435,7 +436,7 @@ void Builder::Succeed() {
       // ConsumerGetter to connect a producer later on.
       consumer_getter_to_return =
           fxl::MakeCopyable([converter = std::move(converters_.front())](
-              f1dl::InterfaceRequest<MediaPacketConsumer> request) {
+              fidl::InterfaceRequest<MediaPacketConsumer> request) {
             converter->GetPacketConsumer(std::move(request));
           });
     }
@@ -446,7 +447,7 @@ void Builder::Succeed() {
       // ProducerGetter to connect a consumer later on.
       producer_getter_to_return =
           fxl::MakeCopyable([converter = std::move(converters_.back())](
-              f1dl::InterfaceRequest<MediaPacketProducer> request) {
+              fidl::InterfaceRequest<MediaPacketProducer> request) {
             converter->GetPacketProducer(std::move(request));
           });
     }

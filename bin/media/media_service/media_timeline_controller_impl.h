@@ -25,24 +25,24 @@ class MediaTimelineControllerImpl
       public TimelineConsumer {
  public:
   static std::shared_ptr<MediaTimelineControllerImpl> Create(
-      f1dl::InterfaceRequest<MediaTimelineController> request,
+      fidl::InterfaceRequest<MediaTimelineController> request,
       MediaComponentFactory* owner);
 
   ~MediaTimelineControllerImpl() override;
 
   // MediaTimelineController implementation.
   void AddControlPoint(
-      f1dl::InterfaceHandle<MediaTimelineControlPoint> control_point) override;
+      fidl::InterfaceHandle<MediaTimelineControlPoint> control_point) override;
 
   void GetControlPoint(
-      f1dl::InterfaceRequest<MediaTimelineControlPoint> control_point) override;
+      fidl::InterfaceRequest<MediaTimelineControlPoint> control_point) override;
 
   // MediaTimelineControlPoint implementation.
   void GetStatus(uint64_t version_last_seen,
                  GetStatusCallback callback) override;
 
   void GetTimelineConsumer(
-      f1dl::InterfaceRequest<TimelineConsumer> timeline_consumer) override;
+      fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) override;
 
   void SetProgramRange(uint64_t program,
                        int64_t min_pts,
@@ -145,14 +145,14 @@ class MediaTimelineControllerImpl
   };
 
   MediaTimelineControllerImpl(
-      f1dl::InterfaceRequest<MediaTimelineController> request,
+      fidl::InterfaceRequest<MediaTimelineController> request,
       MediaComponentFactory* owner);
 
   // Takes action when a control point changes its end-of-stream value.
   void HandleControlPointEndOfStreamChange();
 
-  f1dl::Binding<MediaTimelineControlPoint> control_point_binding_;
-  f1dl::Binding<TimelineConsumer> consumer_binding_;
+  fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
+  fidl::Binding<TimelineConsumer> consumer_binding_;
   FidlPublisher<GetStatusCallback> status_publisher_;
   std::vector<std::unique_ptr<ControlPointState>> control_point_states_;
   TimelineFunction current_timeline_function_;

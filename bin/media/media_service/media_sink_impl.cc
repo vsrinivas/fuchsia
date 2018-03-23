@@ -6,6 +6,7 @@
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
@@ -13,16 +14,16 @@ namespace media {
 
 // static
 std::shared_ptr<MediaSinkImpl> MediaSinkImpl::Create(
-    f1dl::InterfaceHandle<MediaRenderer> renderer_handle,
-    f1dl::InterfaceRequest<MediaSink> sink_request,
+    fidl::InterfaceHandle<MediaRenderer> renderer_handle,
+    fidl::InterfaceRequest<MediaSink> sink_request,
     MediaComponentFactory* owner) {
   return std::shared_ptr<MediaSinkImpl>(new MediaSinkImpl(
       std::move(renderer_handle), std::move(sink_request), owner));
 }
 
 MediaSinkImpl::MediaSinkImpl(
-    f1dl::InterfaceHandle<MediaRenderer> renderer_handle,
-    f1dl::InterfaceRequest<MediaSink> sink_request,
+    fidl::InterfaceHandle<MediaRenderer> renderer_handle,
+    fidl::InterfaceRequest<MediaSink> sink_request,
     MediaComponentFactory* owner)
     : MediaComponentFactory::Product<MediaSink>(this,
                                                 std::move(sink_request),
@@ -30,7 +31,7 @@ MediaSinkImpl::MediaSinkImpl(
       renderer_(renderer_handle.Bind()) {
   FXL_DCHECK(renderer_);
 
-  renderer_->GetSupportedMediaTypes([this](f1dl::VectorPtr<MediaTypeSetPtr>
+  renderer_->GetSupportedMediaTypes([this](fidl::VectorPtr<MediaTypeSet>
                                                supported_media_types) {
     FXL_DCHECK(supported_media_types);
 
@@ -45,13 +46,13 @@ MediaSinkImpl::MediaSinkImpl(
 MediaSinkImpl::~MediaSinkImpl() {}
 
 void MediaSinkImpl::GetTimelineControlPoint(
-    f1dl::InterfaceRequest<MediaTimelineControlPoint> request) {
+    fidl::InterfaceRequest<MediaTimelineControlPoint> request) {
   FXL_DCHECK(renderer_);
   renderer_->GetTimelineControlPoint(std::move(request));
 }
 
-void MediaSinkImpl::ConsumeMediaType(MediaTypePtr media_type,
-                                     const ConsumeMediaTypeCallback& callback) {
+void MediaSinkImpl::ConsumeMediaType(MediaType media_type,
+                                     ConsumeMediaTypeCallback callback) {
   if (consume_media_type_callback_) {
     FXL_DLOG(ERROR) << "ConsumeMediaType called while already pending.";
     callback(nullptr);
@@ -59,7 +60,7 @@ void MediaSinkImpl::ConsumeMediaType(MediaTypePtr media_type,
     return;
   }
 
-  original_media_type_ = std::move(media_type);
+  original_media_type_ = fidl::MakeOptional(std::move(media_type));
   stream_type_ = fxl::To<std::unique_ptr<StreamType>>(original_media_type_);
   consume_media_type_callback_ = callback;
 
@@ -69,7 +70,7 @@ void MediaSinkImpl::ConsumeMediaType(MediaTypePtr media_type,
 void MediaSinkImpl::BuildConversionPipeline() {
   BuildFidlConversionPipeline(
       owner(), *supported_stream_types_, nullptr,
-      [this](f1dl::InterfaceRequest<MediaPacketConsumer> request) {
+      [this](fidl::InterfaceRequest<MediaPacketConsumer> request) {
         renderer_->GetPacketConsumer(std::move(request));
       },
       std::move(stream_type_),
@@ -91,7 +92,7 @@ void MediaSinkImpl::BuildConversionPipeline() {
 
         stream_type_ = std::move(stream_type);
 
-        renderer_->SetMediaType(fxl::To<MediaTypePtr>(stream_type_));
+        renderer_->SetMediaType(fxl::To<MediaType>(stream_type_));
 
         // Not needed anymore.
         original_media_type_.reset();

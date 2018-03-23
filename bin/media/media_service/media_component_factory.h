@@ -30,40 +30,40 @@ class MediaComponentFactory : public FactoryServiceBase<MediaComponentFactory> {
     return multiproc_task_runner_;
   }
 
-  void CreateMediaPlayer(f1dl::InterfaceRequest<MediaPlayer> player);
+  void CreateMediaPlayer(fidl::InterfaceRequest<MediaPlayer> player);
 
-  void CreateSource(f1dl::InterfaceHandle<SeekingReader> reader,
-                    f1dl::VectorPtr<MediaTypeSetPtr> allowed_media_types,
-                    f1dl::InterfaceRequest<MediaSource> source);
+  void CreateSource(fidl::InterfaceHandle<SeekingReader> reader,
+                    fidl::VectorPtr<MediaTypeSet> allowed_media_types,
+                    fidl::InterfaceRequest<MediaSource> source);
 
-  void CreateSink(f1dl::InterfaceHandle<MediaRenderer> renderer,
-                  f1dl::InterfaceRequest<MediaSink> sink_request);
+  void CreateSink(fidl::InterfaceHandle<MediaRenderer> renderer,
+                  fidl::InterfaceRequest<MediaSink> sink_request);
 
-  void CreateDemux(f1dl::InterfaceHandle<SeekingReader> reader,
-                   f1dl::InterfaceRequest<MediaSource> demux);
+  void CreateDemux(fidl::InterfaceHandle<SeekingReader> reader,
+                   fidl::InterfaceRequest<MediaSource> demux);
 
   void CreateDecoder(MediaTypePtr input_media_type,
-                     f1dl::InterfaceRequest<MediaTypeConverter> decoder);
+                     fidl::InterfaceRequest<MediaTypeConverter> decoder);
 
   void CreateTimelineController(
-      f1dl::InterfaceRequest<MediaTimelineController> timeline_controller);
+      fidl::InterfaceRequest<MediaTimelineController> timeline_controller);
 
   void CreateLpcmReformatter(
       MediaTypePtr input_media_type,
       AudioSampleFormat output_sample_format,
-      f1dl::InterfaceRequest<MediaTypeConverter> lpcm_reformatter);
+      fidl::InterfaceRequest<MediaTypeConverter> lpcm_reformatter);
 
   // Creates a |SeekingReader| that reads from an HTTP service.
   void CreateHttpReader(const std::string& http_url,
-                        f1dl::InterfaceRequest<SeekingReader> reader);
+                        fidl::InterfaceRequest<SeekingReader> reader);
 
   // Creates a |SeekingReader| that reads from an fdio channel for a file.
   void CreateFileChannelReader(zx::channel file_channel,
-                               f1dl::InterfaceRequest<SeekingReader> reader);
+                               fidl::InterfaceRequest<SeekingReader> reader);
 
   // Creates a video renderer.
   std::shared_ptr<VideoRendererImpl> CreateVideoRenderer(
-      f1dl::InterfaceRequest<MediaRenderer> media_renderer);
+      fidl::InterfaceRequest<MediaRenderer> media_renderer);
 
  private:
   // FactoryServiceBase override.

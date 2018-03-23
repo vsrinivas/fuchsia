@@ -37,14 +37,14 @@ FidlReader::~FidlReader() {
   }
 }
 
-void FidlReader::Describe(const DescribeCallback& callback) {
+void FidlReader::Describe(DescribeCallback callback) {
   ready_.When([this, callback]() { callback(result_, size_, can_seek_); });
 }
 
 void FidlReader::ReadAt(size_t position,
                         uint8_t* buffer,
                         size_t bytes_to_read,
-                        const ReadAtCallback& callback) {
+                        ReadAtCallback callback) {
   FXL_DCHECK(buffer);
   FXL_DCHECK(bytes_to_read);
 

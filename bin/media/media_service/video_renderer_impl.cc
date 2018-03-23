@@ -14,14 +14,14 @@ namespace media {
 
 // static
 std::shared_ptr<VideoRendererImpl> VideoRendererImpl::Create(
-    f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
+    fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
     MediaComponentFactory* owner) {
   return std::shared_ptr<VideoRendererImpl>(
       new VideoRendererImpl(std::move(media_renderer_request), owner));
 }
 
 VideoRendererImpl::VideoRendererImpl(
-    f1dl::InterfaceRequest<MediaRenderer> media_renderer_request,
+    fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
     MediaComponentFactory* owner)
     : MediaComponentFactory::Product<MediaRenderer>(
           this,
@@ -53,7 +53,7 @@ VideoRendererImpl::~VideoRendererImpl() {
   video_frame_source_->RemoveAllViews();
 }
 
-void VideoRendererImpl::Bind(f1dl::InterfaceRequest<VideoRenderer> request) {
+void VideoRendererImpl::Bind(fidl::InterfaceRequest<VideoRenderer> request) {
   if (video_renderer_binding_.is_bound()) {
     video_renderer_binding_.Unbind();
   }
@@ -62,8 +62,8 @@ void VideoRendererImpl::Bind(f1dl::InterfaceRequest<VideoRenderer> request) {
 }
 
 void VideoRendererImpl::CreateView(
-    f1dl::InterfacePtr<views_v1::ViewManager> view_manager,
-    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
+    fidl::InterfacePtr<views_v1::ViewManager> view_manager,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   FXL_DCHECK(video_frame_source_);
   new View(std::move(view_manager), std::move(view_owner_request),
            video_frame_source_);
@@ -111,12 +111,12 @@ void VideoRendererImpl::SetMediaType(MediaTypePtr media_type) {
 }
 
 void VideoRendererImpl::GetPacketConsumer(
-    f1dl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
+    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
   video_frame_source_->BindConsumer(std::move(packet_consumer_request));
 }
 
 void VideoRendererImpl::GetTimelineControlPoint(
-    f1dl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
+    fidl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
   video_frame_source_->BindTimelineControlPoint(
       std::move(control_point_request));
 }
@@ -127,12 +127,12 @@ void VideoRendererImpl::GetStatus(uint64_t version_last_seen,
 }
 
 void VideoRendererImpl::CreateView(
-    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   CreateView(owner()->ConnectToEnvironmentService<views_v1::ViewManager>(),
              std::move(view_owner_request));
 }
 
-f1dl::VectorPtr<MediaTypeSetPtr> VideoRendererImpl::SupportedMediaTypes() {
+fidl::VectorPtr<MediaTypeSet> VideoRendererImpl::SupportedMediaTypes() {
   VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
   video_details->min_width = 0;
   video_details->max_width = std::numeric_limits<uint32_t>::max();
@@ -143,14 +143,14 @@ f1dl::VectorPtr<MediaTypeSetPtr> VideoRendererImpl::SupportedMediaTypes() {
   supported_type->details = MediaTypeSetDetails::New();
   supported_type->details->set_video(std::move(video_details));
   supported_type->encodings.push_back(MediaType::kVideoEncodingUncompressed);
-  f1dl::VectorPtr<MediaTypeSetPtr> supported_types;
+  fidl::VectorPtr<MediaTypeSet> supported_types;
   supported_types.push_back(std::move(supported_type));
   return supported_types;
 }
 
 VideoRendererImpl::View::View(
     views_v1::ViewManagerPtr view_manager,
-    f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     std::shared_ptr<VideoFrameSource> video_frame_source)
     : mozart::BaseView(std::move(view_manager),
                        std::move(view_owner_request),

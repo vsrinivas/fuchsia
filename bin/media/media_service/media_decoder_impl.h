@@ -23,7 +23,7 @@ class MediaDecoderImpl
  public:
   static std::shared_ptr<MediaDecoderImpl> Create(
       MediaTypePtr input_media_type,
-      f1dl::InterfaceRequest<MediaTypeConverter> request,
+      fidl::InterfaceRequest<MediaTypeConverter> request,
       MediaComponentFactory* owner);
 
   ~MediaDecoderImpl() override;
@@ -32,14 +32,14 @@ class MediaDecoderImpl
   void GetOutputType(const GetOutputTypeCallback& callback) override;
 
   void GetPacketConsumer(
-      f1dl::InterfaceRequest<MediaPacketConsumer> consumer) override;
+      fidl::InterfaceRequest<MediaPacketConsumer> consumer) override;
 
   void GetPacketProducer(
-      f1dl::InterfaceRequest<MediaPacketProducer> producer) override;
+      fidl::InterfaceRequest<MediaPacketProducer> producer) override;
 
  private:
   MediaDecoderImpl(MediaTypePtr input_media_type,
-                   f1dl::InterfaceRequest<MediaTypeConverter> request,
+                   fidl::InterfaceRequest<MediaTypeConverter> request,
                    MediaComponentFactory* owner);
 
   Graph graph_;

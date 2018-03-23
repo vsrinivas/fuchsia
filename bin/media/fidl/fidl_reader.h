@@ -30,12 +30,12 @@ class FidlReader : public Reader,
   ~FidlReader() override;
 
   // Reader implementation.
-  void Describe(const DescribeCallback& callback) override;
+  void Describe(DescribeCallback callback) override;
 
   void ReadAt(size_t position,
               uint8_t* buffer,
               size_t bytes_to_read,
-              const ReadAtCallback& callback) override;
+              ReadAtCallback callback) override;
 
  private:
   // Calls ReadFromSocket.

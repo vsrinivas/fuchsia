@@ -26,7 +26,7 @@ class Reader {
   // Returns a result, the file size and whether the reader supports seeking
   // via a callback. The returned size is kUnknownSize if the content size isn't
   // known.
-  virtual void Describe(const DescribeCallback& callback) = 0;
+  virtual void Describe(DescribeCallback callback) = 0;
 
   // Reads the specified number of bytes into the buffer from the specified
   // position and returns a result and the number of bytes read via the
@@ -34,7 +34,7 @@ class Reader {
   virtual void ReadAt(size_t position,
                       uint8_t* buffer,
                       size_t bytes_to_read,
-                      const ReadAtCallback& callback) = 0;
+                      ReadAtCallback callback) = 0;
 };
 
 }  // namespace media

@@ -24,7 +24,7 @@ class LpcmReformatterImpl
   static std::shared_ptr<LpcmReformatterImpl> Create(
       MediaTypePtr input_media_type,
       AudioSampleFormat output_sample_format,
-      f1dl::InterfaceRequest<MediaTypeConverter> request,
+      fidl::InterfaceRequest<MediaTypeConverter> request,
       MediaComponentFactory* owner);
 
   ~LpcmReformatterImpl() override;
@@ -33,15 +33,15 @@ class LpcmReformatterImpl
   void GetOutputType(const GetOutputTypeCallback& callback) override;
 
   void GetPacketConsumer(
-      f1dl::InterfaceRequest<MediaPacketConsumer> consumer) override;
+      fidl::InterfaceRequest<MediaPacketConsumer> consumer) override;
 
   void GetPacketProducer(
-      f1dl::InterfaceRequest<MediaPacketProducer> producer) override;
+      fidl::InterfaceRequest<MediaPacketProducer> producer) override;
 
  private:
   LpcmReformatterImpl(MediaTypePtr input_media_type,
                       AudioSampleFormat output_sample_format,
-                      f1dl::InterfaceRequest<MediaTypeConverter> request,
+                      fidl::InterfaceRequest<MediaTypeConverter> request,
                       MediaComponentFactory* owner);
 
   Graph graph_;

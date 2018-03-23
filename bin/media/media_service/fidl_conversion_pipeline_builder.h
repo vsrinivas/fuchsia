@@ -16,10 +16,10 @@ namespace media {
 class MediaComponentFactory;
 
 using ProducerGetter =
-    std::function<void(f1dl::InterfaceRequest<MediaPacketProducer>)>;
+    std::function<void(fidl::InterfaceRequest<MediaPacketProducer>)>;
 
 using ConsumerGetter =
-    std::function<void(f1dl::InterfaceRequest<MediaPacketConsumer>)>;
+    std::function<void(fidl::InterfaceRequest<MediaPacketConsumer>)>;
 
 // Builds a pipeline of converters to convert packets of the specified type to
 // a type in the goal set. If the call is successful, |callback| is called with

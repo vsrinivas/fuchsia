@@ -23,19 +23,19 @@ class MediaSourceImpl : public MediaComponentFactory::Product<MediaSource>,
                         public MediaSource {
  public:
   static std::shared_ptr<MediaSourceImpl> Create(
-      f1dl::InterfaceHandle<SeekingReader> reader,
-      const f1dl::VectorPtr<MediaTypeSetPtr>& allowed_media_types,
-      f1dl::InterfaceRequest<MediaSource> request,
+      fidl::InterfaceHandle<SeekingReader> reader,
+      const fidl::VectorPtr<MediaTypeSet>& allowed_media_types,
+      fidl::InterfaceRequest<MediaSource> request,
       MediaComponentFactory* owner);
 
   ~MediaSourceImpl() override;
 
   // MediaSource implementation.
-  void Describe(const DescribeCallback& callback) override;
+  void Describe(DescribeCallback callback) override;
 
   void GetPacketProducer(
       uint32_t stream_index,
-      f1dl::InterfaceRequest<MediaPacketProducer> request) override;
+      fidl::InterfaceRequest<MediaPacketProducer> request) override;
 
   void GetStatus(uint64_t version_last_seen,
                  GetStatusCallback callback) override;
@@ -45,9 +45,9 @@ class MediaSourceImpl : public MediaComponentFactory::Product<MediaSource>,
   void Seek(int64_t position, const SeekCallback& callback) override;
 
  private:
-  MediaSourceImpl(f1dl::InterfaceHandle<SeekingReader> reader,
-                  const f1dl::VectorPtr<MediaTypeSetPtr>& allowed_media_types,
-                  f1dl::InterfaceRequest<MediaSource> request,
+  MediaSourceImpl(fidl::InterfaceHandle<SeekingReader> reader,
+                  const fidl::VectorPtr<MediaTypeSet>& allowed_media_types,
+                  fidl::InterfaceRequest<MediaSource> request,
                   MediaComponentFactory* owner);
 
   class Stream {
@@ -66,7 +66,7 @@ class MediaSourceImpl : public MediaComponentFactory::Product<MediaSource>,
     MediaTypePtr media_type() const;
 
     // Gets the producer.
-    void GetPacketProducer(f1dl::InterfaceRequest<MediaPacketProducer> request);
+    void GetPacketProducer(fidl::InterfaceRequest<MediaPacketProducer> request);
 
     bool valid() { return !!producer_getter_; }
 
