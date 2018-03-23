@@ -34,17 +34,19 @@ def main():
     parser.add_argument('--is-test', help='True if the target is a go test',
                         default=False)
     parser.add_argument('--go-dependency', help='Manifest of dest=src of dependencies',
-                        action='append')
+                        action='append',
+                        default=[])
     parser.add_argument('--go-dep-files',
                         help='List of files describing library dependencies',
-                        nargs='*')
+                        nargs='*',
+                        default=[])
     parser.add_argument('--binname', help='Output file', required=True)
     parser.add_argument('--unstripped-binname', help='Unstripped output file')
     parser.add_argument('--toolchain-prefix', help='Path to toolchain binaries',
                         required=False)
     parser.add_argument('--verbose', help='Tell the go tool to be verbose about what it is doing',
                         action='store_true')
-    parser.add_argument('package', help='The package name')
+    parser.add_argument('--package', help='The package name', required=True)
     args = parser.parse_args()
 
     goarch = {

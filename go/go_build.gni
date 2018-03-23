@@ -122,19 +122,19 @@ template("go_build") {
       args += [ "--is-test=true" ]
     }
 
-    dependent_libraries = []
     if (defined(invoker.extra_dependencies)) {
       deps += invoker.extra_dependencies
+      args += [
+        "--go-dep-files",
+      ]
       foreach(dep, invoker.extra_dependencies) {
         gen_dir = get_label_info(dep, "target_gen_dir")
         name = get_label_info(dep, "name")
-        dependent_libraries += [
-          "$gen_dir/$name.go_deps",
+        args += [
+          rebase_path("$gen_dir/$name.go_deps"),
         ]
       }
     }
-
-    args += [ "--go-dep-files" ] + rebase_path(dependent_libraries)
 
     foreach(dep, go_dependencies) {
       if (!defined(dep.source)) {
@@ -147,7 +147,10 @@ template("go_build") {
       ]
     }
 
-    args += [ invoker.gopackage ]
+    args += [
+      "--package",
+      invoker.gopackage,
+    ]
 
     deps += [ "//third_party/go:go_runtime" ]
 
