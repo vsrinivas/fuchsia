@@ -42,6 +42,8 @@ std::string NamePointer(StringView name);
 std::string NameMembers(StringView name);
 std::string NameFields(StringView name);
 
+std::string NameCodedStruct(const flat::Struct* struct_decl);
+std::string NameCodedUnion(const flat::Union* union_decl);
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability);
 std::string NameCodedInterfaceHandle(StringView library_name, StringView interface_name, types::Nullability nullability);
 std::string NameCodedRequestHandle(StringView library_name, StringView interface_name, types::Nullability nullability);

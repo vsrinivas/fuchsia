@@ -338,6 +338,18 @@ std::string NameFields(StringView name) {
     return fields_name;
 }
 
+std::string NameCodedStruct(const flat::Struct* struct_decl) {
+    std::string name(LibraryName(struct_decl->name.library()));
+    name += NameName(struct_decl->name);
+    return name;
+}
+
+std::string NameCodedUnion(const flat::Union* union_decl) {
+    std::string name(LibraryName(union_decl->name.library()));
+    name += NameName(union_decl->name);
+    return name;
+}
+
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability) {
     std::string name("Handle");
     name += NameHandleSubtype(subtype);

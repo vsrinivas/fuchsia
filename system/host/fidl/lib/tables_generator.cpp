@@ -419,7 +419,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kStruct: {
         auto struct_decl = static_cast<const flat::Struct*>(decl);
-        std::string struct_name = NameName(struct_decl->name);
+        std::string struct_name = NameCodedStruct(struct_decl);
         std::string pointer_name = NamePointer(struct_name);
         std::vector<coded::Field> struct_fields;
         for (const auto& member : struct_decl->members) {
@@ -434,7 +434,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kUnion: {
         auto union_decl = static_cast<const flat::Union*>(decl);
-        std::string union_name = NameName(union_decl->name);
+        std::string union_name = NameCodedUnion(union_decl);
         std::string pointer_name = NamePointer(union_name);
         std::vector<const coded::Type*> union_members;
         for (const auto& member : union_decl->members) {
