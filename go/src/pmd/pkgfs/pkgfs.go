@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"application/lib/app/context"
-	"fidl/bindings"
 	"fuchsia/go/amber"
 	"thinfs/fs"
 	"thinfs/zircon/rpc"
@@ -82,8 +81,10 @@ func New(indexDir, blobDir string) (*Filesystem, error) {
 		},
 	}
 
-	var pxy *amber.ControlInterface
-	req, pxy := pxy.NewRequest(bindings.GetAsyncWaiter())
+	req, pxy, err := amber.NewControlInterfaceRequest()
+	if err != nil {
+		panic(err.Error())
+	}
 	context.CreateFromStartupInfo().ConnectToEnvService(req)
 	f.amberPxy = pxy
 
