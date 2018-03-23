@@ -73,7 +73,7 @@ wlan_go_dependencies = [
 wlan_gn_deps = [
   "//garnet/public/lib/app/fidl",
   "//garnet/public/lib/netstack/fidl",
-  "//garnet/public/lib/wlan/fidl",
+  "//garnet/public/lib/wlan/fidl:service",
 ]
 
 go_test("keywrap_test_bin") {
@@ -100,7 +100,7 @@ go_test("eapol_handshake_test_bin") {
   output_name = "eapol_handshake_test"
   gopackage = "wlan/eapol/handshake"
   deps = [
-    "//garnet/public/lib/wlan/fidl",
+    "//garnet/public/lib/wlan/fidl:service",
     "//garnet/public/lib/wlan/fidl:mlme",
   ]
   deps += wlan_gn_deps
@@ -152,7 +152,7 @@ go_binary("wlanstack_bin") {
   gopackage = "wlanstack"
   deps = [
     "//garnet/public/lib/netstack/fidl",
-    "//garnet/public/lib/wlan/fidl",
+    "//garnet/public/lib/wlan/fidl:service",
     "//garnet/public/lib/wlan/fidl:mlme",
   ]
   deps += wlan_gn_deps
@@ -165,7 +165,7 @@ go_binary("wlantool_bin") {
   deps = [
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/netstack/fidl",
-    "//garnet/public/lib/wlan/fidl",
+    "//garnet/public/lib/wlan/fidl:service",
   ]
   go_dependencies = [
     {

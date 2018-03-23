@@ -5,6 +5,8 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
+  name = "wlan_device"
+
   sources = [
     "iface.fidl",
     "phy.fidl",
@@ -12,6 +14,8 @@ fidl("fidl") {
 }
 
 fidl("service") {
+  name = "wlan_device_service"
+
   sources = [
     "service.fidl",
   ]

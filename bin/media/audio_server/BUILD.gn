@@ -129,6 +129,7 @@ test("tests") {
   deps = [
     "//garnet/bin/media/audio_server:audio_mixer_lib",
     "//third_party/googletest:gtest_main",
+    "//garnet/public/lib/fxl",
     "//zircon/public/lib/fbl",
   ]
 }
