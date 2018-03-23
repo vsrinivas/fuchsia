@@ -291,7 +291,7 @@ void DumpVisitor::Visit(DirectionalLight* r) {
 
 void DumpVisitor::Visit(Import* r) {
   BeginItem("Import", r);
-  WriteProperty("import_spec") << r->import_spec();
+  WriteProperty("import_spec") << static_cast<uint32_t>(r->import_spec());
   WriteProperty("is_bound") << r->is_bound();
   BeginSection("delegate");
   r->delegate()->Accept(this);

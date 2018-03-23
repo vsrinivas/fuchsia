@@ -1346,8 +1346,9 @@ bool Session::ApplyUpdate(Session::Update* update) {
     // passing a pointer
     // Also, we'll have an issue with logging an error on a command after we
     // moved it
-    for (auto& command : *update->commands) {
-      auto moved_command = std::move(command);
+    std::vector<::gfx::Command> commands = update->commands.take();
+    for (auto& command : commands) {
+      ::gfx::Command moved_command = std::move(command);
       if (!ApplyCommand(std::move(moved_command))) {
         error_reporter_->ERROR()
             << "scenic::gfx::Session::ApplyCommand() failed to apply Command: "
