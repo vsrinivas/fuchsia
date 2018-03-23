@@ -32,12 +32,12 @@ MixerPtr SelectMixer(ASF src_format,
   src_details.channels = src_channels;
   src_details.frames_per_second = src_frame_rate;
 
-  AudioMediaTypeDetailsPtr dst_details = AudioMediaTypeDetails::New();
-  dst_details->sample_format = ASF::SIGNED_16;
-  dst_details->channels = dst_channels;
-  dst_details->frames_per_second = dst_frame_rate;
+  AudioMediaTypeDetails dst_details;
+  dst_details.sample_format = ASF::SIGNED_16;
+  dst_details.channels = dst_channels;
+  dst_details.frames_per_second = dst_frame_rate;
 
-  MixerPtr mixer = Mixer::Select(src_details, &dst_details, resampler);
+  MixerPtr mixer = Mixer::Select(src_details, dst_details, resampler);
 
   return mixer;
 }

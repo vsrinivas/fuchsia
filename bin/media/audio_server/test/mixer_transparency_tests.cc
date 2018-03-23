@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
+#include "garnet/bin/media/audio_server/platform/generic/mixers/no_op.h"
 #include "garnet/bin/media/audio_server/test/mixer_tests_shared.h"
 #include "lib/fxl/logging.h"
 
@@ -73,19 +74,6 @@ TEST(DataFormats, LinearSampler_Other) {
             SelectMixer(AudioSampleFormat::SIGNED_24_IN_32, 2, 8000, 1, 11025));
   EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::FLOAT, 2, 48000, 2, 44100,
                                  Resampler::LinearInterpolation));
-}
-
-// If the destination details are unspecified (nullptr), select NoOpMixer
-//
-// Create a NoOpMixer object
-TEST(DataFormats, NoOpMixer) {
-  AudioMediaTypeDetails src_details;
-  src_details.sample_format = AudioSampleFormat::SIGNED_16;
-  src_details.channels = 2;
-  src_details.frames_per_second = 48000;
-
-  EXPECT_NE(nullptr, Mixer::Select(src_details, nullptr, Resampler::Default));
-  EXPECT_NE(nullptr, Mixer::Select(src_details, nullptr));
 }
 
 // Create OutputFormatter objects for outgoing buffers of type uint8
@@ -159,8 +147,7 @@ TEST(PassThru, NoOp) {
   src_details.channels = 1;
   src_details.frames_per_second = 48000;
 
-  MixerPtr no_op_mixer =
-      Mixer::Select(src_details, nullptr, Resampler::Default);
+  MixerPtr no_op_mixer = MixerPtr(new mixers::NoOp());
   EXPECT_NE(nullptr, no_op_mixer);
 
   uint32_t dst_frames = 2, dst_offset = 0;

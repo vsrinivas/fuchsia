@@ -69,8 +69,7 @@ AudioCapturerImpl::~AudioCapturerImpl() {
 }
 
 void AudioCapturerImpl::SetInitialFormat(AudioMediaTypeDetails format) {
-  UpdateFormat(format.sample_format, format.channels,
-               format.frames_per_second);
+  UpdateFormat(format.sample_format, format.channels, format.frames_per_second);
 }
 
 void AudioCapturerImpl::Shutdown() {
@@ -468,8 +467,7 @@ void AudioCapturerImpl::Flush() {
   }
 }
 
-void AudioCapturerImpl::FlushWithCallback(
-    FlushWithCallbackCallback cbk) {
+void AudioCapturerImpl::FlushWithCallback(FlushWithCallbackCallback cbk) {
   Flush();
   if (binding_.is_bound()) {
     cbk();
@@ -1393,7 +1391,7 @@ zx_status_t AudioCapturerImpl::ChooseMixer(
   auto bk = static_cast<CaptureLinkBookkeeping*>(link->bookkeeping().get());
 
   FXL_DCHECK(bk->mixer == nullptr);
-  bk->mixer = Mixer::Select(*source_format, &format_);
+  bk->mixer = Mixer::Select(*source_format, *format_);
   if (bk->mixer == nullptr) {
     FXL_LOG(INFO) << "Failed to find mixer for capturer.";
     FXL_LOG(INFO) << "Source cfg: rate " << source_format->frames_per_second

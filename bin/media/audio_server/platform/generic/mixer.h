@@ -28,8 +28,6 @@ class Mixer {
   // optionally use this enum to specify which resampler they require. Default
   // allows an existing algorithm to select a resampler based on the ratio of
   // incoming and outgoing sample rates.
-  //
-  // Although the NoOp mixer is a subclass of Mixer, it is NOT included here.
   enum class Resampler {
     Default = 0,
     SampleAndHold,
@@ -48,15 +46,12 @@ class Mixer {
   // exactly what I need: I want you to fail rather than give me anything else."
   //
   // If resampler_type is absent or indicates Default, the resampler type is
-  // determined by algorithm (as has been the case before this CL). As always,
-  // if dst_format is null, a No-Op "do nothing" mixer is returned, which
-  // performs no mixing and simply tracks the advance of source position.
-  //
+  // determined by algorithm (as has been the case before this CL).
   // For optimum system performance across changing conditions, callers should
   // take care when directly specifying a resampler type, if they do so at all.
   // The default should be allowed whenever possible.
   static MixerPtr Select(const AudioMediaTypeDetails& src_format,
-                         const AudioMediaTypeDetailsPtr* dst_format,
+                         const AudioMediaTypeDetails& dst_format,
                          Resampler resampler_type = Resampler::Default);
 
   // Mix

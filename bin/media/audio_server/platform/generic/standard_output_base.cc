@@ -12,6 +12,7 @@
 #include "garnet/bin/media/audio_server/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
+#include "garnet/bin/media/audio_server/platform/generic/mixers/no_op.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 
@@ -157,11 +158,16 @@ zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
     return ZX_ERR_INTERNAL;
   }
 
-  // Pick a mixer based on the input and output formats.
+  // If we have an output, pick a mixer based on the input and output formats.
+  // Otherwise, we only need a NoOp mixer (for the time being).
   auto& packet_link = *(static_cast<AudioLinkPacketSource*>(link.get()));
-  bk->mixer =
-      Mixer::Select(packet_link.format_info().format(),
-                    output_formatter_ ? &output_formatter_->format() : nullptr);
+  if (output_formatter_) {
+    bk->mixer = Mixer::Select(packet_link.format_info().format(),
+                              *(output_formatter_->format()));
+  } else {
+    bk->mixer = MixerPtr(new audio::mixers::NoOp());
+  }
+
   if (bk->mixer == nullptr) {
     FXL_LOG(ERROR) << "*** Audio system mixer cannot convert between formats "
                       "*** (could not select mixer while linking to output). "
