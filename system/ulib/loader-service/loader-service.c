@@ -4,13 +4,13 @@
 
 #include <loader-service/loader-service.h>
 
-#include <lib/async/loop.h>
-#include <lib/async/wait.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <fdio/io.h>
 #include <inttypes.h>
 #include <ldmsg/ldmsg.h>
+#include <lib/async/loop.h>
+#include <lib/async/wait.h>
 #include <limits.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -26,6 +26,9 @@
 
 #define PREFIX_MAX 32
 
+// This represents an instance of the loader service. Each session in an
+// instance has a loader_service_session_t pointing to this. All sessions in
+// the same instance behave the same.
 struct loader_service {
     atomic_int refcount;
     async_t* async;
@@ -33,9 +36,15 @@ struct loader_service {
     const loader_service_ops_t* ops;
     void* ctx;
     int dirfd; // Used by fd_ops.
+};
 
+// Per-session state of a loader service instance.
+typedef struct loader_service_session loader_service_session_t;
+struct loader_service_session {
+    async_wait_t wait; // Must be first.
     char config_prefix[PREFIX_MAX];
     bool config_exclusive;
+    loader_service_t* svc;
 };
 
 static void loader_service_addref(loader_service_t* svc) {
@@ -202,7 +211,8 @@ static const loader_service_ops_t fd_ops = {
     .finalizer = fd_finalizer,
 };
 
-static zx_status_t loader_service_rpc(zx_handle_t h, loader_service_t* svc) {
+static zx_status_t loader_service_rpc(zx_handle_t h, loader_service_session_t* session) {
+    loader_service_t* svc = session->svc;
     ldmsg_req_t req;
     uint32_t req_len = sizeof(req);
     zx_handle_t req_handle = ZX_HANDLE_INVALID;
@@ -231,29 +241,29 @@ static zx_status_t loader_service_rpc(zx_handle_t h, loader_service_t* svc) {
     switch (req.header.ordinal) {
     case LDMSG_OP_CONFIG: {
         size_t len = strlen(data);
-        if (len < 2 || len >= sizeof(svc->config_prefix) - 1 || strchr(data, '/') != NULL) {
+        if (len < 2 || len >= sizeof(session->config_prefix) - 1 || strchr(data, '/') != NULL) {
             status = ZX_ERR_INVALID_ARGS;
             break;
         }
-        strncpy(svc->config_prefix, data, len + 1);
-        svc->config_exclusive = false;
-        if (svc->config_prefix[len - 1] == '!') {
+        strncpy(session->config_prefix, data, len + 1);
+        session->config_exclusive = false;
+        if (session->config_prefix[len - 1] == '!') {
             --len;
-            svc->config_exclusive = true;
+            session->config_exclusive = true;
         }
-        svc->config_prefix[len] = '/';
-        svc->config_prefix[len + 1] = '\0';
+        session->config_prefix[len] = '/';
+        session->config_prefix[len + 1] = '\0';
         status = ZX_OK;
         break;
     }
     case LDMSG_OP_LOAD_OBJECT:
         // If a prefix is configured, try loading with that prefix first
-        if (svc->config_prefix[0] != '\0') {
+        if (session->config_prefix[0] != '\0') {
             size_t maxlen = PREFIX_MAX + strlen(data) + 1;
             char prefixed_name[maxlen];
-            snprintf(prefixed_name, maxlen, "%s%s", svc->config_prefix, data);
+            snprintf(prefixed_name, maxlen, "%s%s", session->config_prefix, data);
             if (((status = svc->ops->load_object(svc->ctx, prefixed_name, &rsp_handle)) == ZX_OK) ||
-                svc->config_exclusive) {
+                session->config_exclusive) {
                 // if loading with prefix succeeds, or loading
                 // with prefix is configured to be exclusive of
                 // non-prefix loading, stop here
@@ -387,56 +397,46 @@ zx_status_t loader_service_create_fd(async_t* async,
     return status;
 }
 
-typedef struct loader_service_wait loader_service_wait_t;
-struct loader_service_wait {
-    async_wait_t wait;
-    loader_service_t* svc;
-};
-
-static inline loader_service_t* loader_service_wait_get_svc(async_wait_t* wait) {
-    return ((loader_service_wait_t*)wait)->svc;
-}
-
 static async_wait_result_t loader_service_handler(async_t* async,
                                                   async_wait_t* wait,
                                                   zx_status_t status,
                                                   const zx_packet_signal_t* signal) {
-    loader_service_t* svc = loader_service_wait_get_svc(wait);
+    loader_service_session_t* session = (loader_service_session_t*)wait;
     if (status != ZX_OK)
         goto stop;
-    status = loader_service_rpc(wait->object, svc);
+    status = loader_service_rpc(wait->object, session);
     if (status != ZX_OK)
         goto stop;
     return ASYNC_WAIT_AGAIN;
 stop:
     zx_handle_close(wait->object);
     free(wait);
-    loader_service_deref(svc); // Balanced in |loader_service_attach|.
+    loader_service_deref(session->svc); // Balanced in |loader_service_attach|.
     return ASYNC_WAIT_FINISHED;
 }
 
 zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
     zx_status_t status = ZX_OK;
-    loader_service_wait_t* wait = NULL;
+    loader_service_session_t* session = NULL;
 
     if (svc == NULL) {
         status = ZX_ERR_INVALID_ARGS;
         goto done;
     }
 
-    wait = calloc(1, sizeof(loader_service_wait_t));
-    if (wait == NULL) {
+    session = calloc(1, sizeof(loader_service_session_t));
+    if (session == NULL) {
         status = ZX_ERR_NO_MEMORY;
         goto done;
     }
 
-    wait->wait.handler = loader_service_handler;
-    wait->wait.object = h;
-    wait->wait.trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    wait->wait.flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
-    wait->svc = svc;
+    session->wait.handler = loader_service_handler;
+    session->wait.object = h;
+    session->wait.trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    session->wait.flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
+    session->svc = svc;
 
-    status = async_begin_wait(svc->async, (async_wait_t*)wait);
+    status = async_begin_wait(svc->async, &session->wait);
 
     if (status == ZX_OK)
         loader_service_addref(svc); // Balanced in |loader_service_handler|.
@@ -444,7 +444,7 @@ zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
 done:
     if (status != ZX_OK) {
         zx_handle_close(h);
-        free(wait);
+        free(session);
     }
     return status;
 }
