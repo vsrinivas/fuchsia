@@ -127,7 +127,7 @@ distinguished by the presence of attributes after the system call name:
   C++ function for any other system call entry (whether a public
   generated call, a public hand-written `vdsocall`, or an `internal`
   generated call), but must use its private entry point alias, which has
-  the `VDSO_zx`_ prefix.  Otherwise the code is normal (minimal) C++,
+  the `VDSO_zx_` prefix.  Otherwise the code is normal (minimal) C++,
   but must be stateless and reentrant (use only its stack and registers).
 
  * `internal` entries are declarations of a private API used only by the
