@@ -54,42 +54,31 @@ var (
 	ioctlNetcGetNodename = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 8)
 )
 
-type app struct {
-	socket socketServer
-}
-
-func (a *app) Bind(h zx.Handle) {
-	if err := a.socket.dispatcher.AddHandler(h, fdio.ServerHandler(a.socket.fdioHandler), 0); err != nil {
-		h.Close()
-	}
-
-	if err := h.SignalPeer(0, zx.SignalUser0); err != nil {
-		h.Close()
-	}
-}
-
-func (a *app) Name() string {
-	return "net.Netstack"
-}
-
 func socketDispatcher(stk *stack.Stack, ctx *context.Context) (*socketServer, error) {
 	d, err := fdio.NewDispatcher(fdio.Handler)
 	if err != nil {
 		return nil, err
 	}
-	a := &app{
-		socket: socketServer{
-			dispatcher: d,
-			stack:      stk,
-			dnsClient:  dns.NewClient(stk, 0),
-			io:         make(map[cookie]*iostate),
-			next:       1,
-		},
+	a := socketServer{
+		dispatcher: d,
+		stack:      stk,
+		dnsClient:  dns.NewClient(stk, 0),
+		io:         make(map[cookie]*iostate),
+		next:       1,
 	}
-	ctx.OutgoingService.AddService(a)
+	ctx.OutgoingService.AddService("net.Netstack", func(c zx.Channel) error {
+		h := zx.Handle(c)
+		if err := a.dispatcher.AddHandler(h, fdio.ServerHandler(a.fdioHandler), 0); err != nil {
+			h.Close()
+		}
+		if err := h.SignalPeer(0, zx.SignalUser0); err != nil {
+			h.Close()
+		}
+		return nil
+	})
 
 	go d.Serve()
-	return &a.socket, nil
+	return &a, nil
 }
 
 func (s *socketServer) setNetstack(ns *netstack) {

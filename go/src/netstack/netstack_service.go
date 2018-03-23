@@ -10,10 +10,9 @@ import (
 	"strings"
 
 	"app/context"
-	"fidl/bindings"
+	"fidl/bindings2"
 	"netstack/link/eth"
 	"syscall/zx"
-	"syscall/zx/mxerror"
 
 	nsfidl "fuchsia/go/netstack"
 
@@ -24,32 +23,31 @@ import (
 )
 
 type netstackImpl struct {
-	listener *nsfidl.NotificationListener_Proxy
-	stub     *bindings.Stub
+	listener nsfidl.NotificationListenerInterface
 }
 
 func toTCPIPAddress(addr nsfidl.NetAddress) tcpip.Address {
 	out := tcpip.Address("")
 	switch addr.Family {
-	case nsfidl.NetAddressFamily_Ipv4:
-		out = tcpip.Address(addr.Ipv4[:])
-	case nsfidl.NetAddressFamily_Ipv6:
-		out = tcpip.Address(addr.Ipv6[:])
+	case nsfidl.NetAddressFamilyIpv4:
+		out = tcpip.Address(addr.Ipv4.Addr[:])
+	case nsfidl.NetAddressFamilyIpv6:
+		out = tcpip.Address(addr.Ipv6.Addr[:])
 	}
 	return out
 }
 
 func toNetAddress(addr tcpip.Address) nsfidl.NetAddress {
-	out := nsfidl.NetAddress{Family: nsfidl.NetAddressFamily_Unspecified}
+	out := nsfidl.NetAddress{Family: nsfidl.NetAddressFamilyUnspecified}
 	switch len(addr) {
 	case 4:
-		out.Family = nsfidl.NetAddressFamily_Ipv4
-		out.Ipv4 = &[4]uint8{}
-		copy(out.Ipv4[:], addr[:])
+		out.Family = nsfidl.NetAddressFamilyIpv4
+		out.Ipv4.Addr = [4]uint8{}
+		copy(out.Ipv4.Addr[:], addr[:])
 	case 16:
-		out.Family = nsfidl.NetAddressFamily_Ipv6
-		out.Ipv6 = &[16]uint8{}
-		copy(out.Ipv6[:], addr[:])
+		out.Family = nsfidl.NetAddressFamilyIpv6
+		out.Ipv6.Addr = [16]uint8{}
+		copy(out.Ipv6.Addr[:], addr[:])
 	}
 	return out
 }
@@ -102,19 +100,18 @@ func getInterfaces() (out []nsfidl.NetInterface) {
 	return out
 }
 
-func (ni *netstackImpl) RegisterListener(listener *nsfidl.NotificationListener_Pointer) (err error) {
-	if listener != nil {
-		lp := nsfidl.NewProxyForNotificationListener(*listener, bindings.GetAsyncWaiter())
-		ni.listener = lp
+func (ni *netstackImpl) RegisterListener(listener nsfidl.NotificationListenerInterface) (err error) {
+	if bindings2.Proxy(listener).IsValid() {
+		ni.listener = listener
 	}
 	return nil
 }
 
 func (ni *netstackImpl) GetPortForService(service string, protocol nsfidl.Protocol) (port uint16, err error) {
 	switch protocol {
-	case nsfidl.Protocol_Udp:
+	case nsfidl.ProtocolUdp:
 		port, err = serviceLookup(service, udp.ProtocolNumber)
-	case nsfidl.Protocol_Tcp:
+	case nsfidl.ProtocolTcp:
 		port, err = serviceLookup(service, tcp.ProtocolNumber)
 	default:
 		port, err = serviceLookup(service, tcp.ProtocolNumber)
@@ -131,7 +128,7 @@ func (ni *netstackImpl) GetAddress(name string, port uint16) (out []nsfidl.Socke
 	addrs, err := ns.dispatcher.dnsClient.LookupIP(name)
 	if err == nil {
 		out = make([]nsfidl.SocketAddress, len(addrs))
-		netErr = nsfidl.NetErr{Status: nsfidl.Status_Ok}
+		netErr = nsfidl.NetErr{Status: nsfidl.StatusOk}
 		for i, addr := range addrs {
 			switch len(addr) {
 			case 4, 16:
@@ -140,7 +137,7 @@ func (ni *netstackImpl) GetAddress(name string, port uint16) (out []nsfidl.Socke
 			}
 		}
 	} else {
-		netErr = nsfidl.NetErr{Status: nsfidl.Status_DnsError, Message: err.Error()}
+		netErr = nsfidl.NetErr{Status: nsfidl.StatusDnsError, Message: err.Error()}
 	}
 	return out, netErr, nil
 }
@@ -229,24 +226,24 @@ func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address nsfidl.NetAddr
 	log.Printf("net address %+v", address)
 	var protocol tcpip.NetworkProtocolNumber
 	switch address.Family {
-	case nsfidl.NetAddressFamily_Ipv4:
+	case nsfidl.NetAddressFamilyIpv4:
 		protocol = ipv4.ProtocolNumber
-	case nsfidl.NetAddressFamily_Ipv6:
-		return nsfidl.NetErr{nsfidl.Status_Ipv4Only, "IPv6 not yet supported for SetInterfaceAddress"}, nil
+	case nsfidl.NetAddressFamilyIpv6:
+		return nsfidl.NetErr{nsfidl.StatusIpv4Only, "IPv6 not yet supported for SetInterfaceAddress"}, nil
 	}
 
 	nic := tcpip.NICID(nicid)
 	addr := toTCPIPAddress(address)
 	sn, err := toSubnet(address, prefixLen)
 	if err != nil {
-		result = nsfidl.NetErr{nsfidl.Status_ParseError, "Error applying subnet mask to interface address"}
+		result = nsfidl.NetErr{nsfidl.StatusParseError, "Error applying subnet mask to interface address"}
 		return result, nil
 	}
 
 	if err = ns.setInterfaceAddress(nic, protocol, addr, sn); err != nil {
-		return nsfidl.NetErr{nsfidl.Status_UnknownError, err.Error()}, nil
+		return nsfidl.NetErr{nsfidl.StatusUnknownError, err.Error()}, nil
 	}
-	return nsfidl.NetErr{nsfidl.Status_Ok, ""}, nil
+	return nsfidl.NetErr{nsfidl.StatusOk, ""}, nil
 }
 
 func (ni *netstackImpl) GetAggregateStats() (stats nsfidl.AggregateStats, err error) {
@@ -304,49 +301,12 @@ func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) (err erro
 }
 
 func (ni *netstackImpl) onInterfacesChanged(interfaces []nsfidl.NetInterface) {
-	if ni.listener != nil {
+	if bindings2.Proxy(ni.listener).IsValid() {
 		ni.listener.OnInterfacesChanged(interfaces)
 	}
 }
 
-type netstackDelegate struct {
-	clients []*netstackImpl
-}
-
-func remove(clients []*netstackImpl, client *netstackImpl) []*netstackImpl {
-	for i, s := range clients {
-		if s == client {
-			clients[len(clients)-1], clients[i] = clients[i], clients[len(clients)-1]
-			break
-		}
-	}
-	return clients
-}
-
-func (delegate *netstackDelegate) Bind(request nsfidl.Netstack_Request) {
-	client := &netstackImpl{}
-	client.stub = request.NewStub(client, bindings.GetAsyncWaiter())
-	delegate.clients = append(delegate.clients, client)
-	go func() {
-		for {
-			if err := client.stub.ServeRequest(); err != nil {
-				if mxerror.Status(err) != zx.ErrPeerClosed {
-					log.Println(err)
-				}
-				break
-			}
-		}
-		delegate.clients = remove(delegate.clients, client)
-	}()
-}
-
-func (delegate *netstackDelegate) Quit() {
-	for _, client := range delegate.clients {
-		client.stub.Close()
-	}
-}
-
-var netstackService *netstackDelegate
+var netstackService *bindings2.BindingSet
 
 // AddNetstackService registers the NetstackService with the application context,
 // allowing it to respond to FIDL queries.
@@ -354,16 +314,20 @@ func AddNetstackService(ctx *context.Context) error {
 	if netstackService != nil {
 		return fmt.Errorf("AddNetworkService must be called only once")
 	}
-	netstackService = &netstackDelegate{}
-	ctx.OutgoingService.AddService(&nsfidl.Netstack_ServiceBinder{netstackService})
+	netstackService = &bindings2.BindingSet{}
+	ctx.OutgoingService.AddService(nsfidl.NetstackName, func(c zx.Channel) error {
+		return netstackService.Add(&nsfidl.NetstackStub{
+			Impl: &netstackImpl{},
+		}, c)
+	})
 	return nil
 }
 
 func OnInterfacesChanged() {
-	if netstackService != nil && netstackService.clients != nil {
+	if netstackService != nil {
 		interfaces := getInterfaces()
-		for _, client := range netstackService.clients {
-			client.onInterfacesChanged(interfaces)
+		for _, client := range netstackService.Bindings {
+			client.Stub.(*nsfidl.NetstackStub).Impl.(*netstackImpl).onInterfacesChanged(interfaces)
 		}
 	}
 }
