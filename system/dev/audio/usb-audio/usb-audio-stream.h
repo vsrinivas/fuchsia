@@ -16,8 +16,12 @@
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
 
+#include "debug-logging.h"
+
 namespace audio {
 namespace usb {
+
+class UsbAudioDevice;
 
 struct AudioStreamProtocol : public ddk::internal::base_protocol {
     explicit AudioStreamProtocol(bool is_input) {
@@ -36,15 +40,15 @@ class UsbAudioStream : public UsbAudioStreamBase,
                        public AudioStreamProtocol,
                        public fbl::RefCounted<UsbAudioStream> {
 public:
-    static zx_status_t Create(bool is_input,
-                              zx_device_t* parent,
+    static zx_status_t Create(fbl::RefPtr<UsbAudioDevice> parent,
+                              bool is_input,
                               usb_protocol_t* usb,
                               int index,
                               usb_interface_descriptor_t* usb_interface,
                               usb_endpoint_descriptor_t* usb_endpoint,
                               usb_audio_ac_format_type_i_desc* format_desc);
 
-    void PrintDebugPrefix() const;
+    const char* log_prefix() const { return log_prefix_; }
 
     // DDK device implementation
     void DdkUnbind();
@@ -64,18 +68,11 @@ private:
         STARTED,
     };
 
-    UsbAudioStream(zx_device_t* parent,
+    UsbAudioStream(fbl::RefPtr<UsbAudioDevice> parent,
                    usb_protocol_t* usb,
                    bool is_input,
                    int usb_index,
-                   fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain)
-        : UsbAudioStreamBase(parent),
-          AudioStreamProtocol(is_input),
-          usb_(*usb),
-          default_domain_(fbl::move(default_domain)),
-          usb_index_(usb_index),
-          create_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)) { }
-
+                   fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain);
     virtual ~UsbAudioStream();
 
     zx_status_t Bind(const char* devname,
@@ -125,9 +122,11 @@ private:
     void QueueRequestLocked() __TA_REQUIRES(req_lock_);
     void CompleteRequestLocked(usb_request_t* req) __TA_REQUIRES(req_lock_);
 
+    fbl::RefPtr<UsbAudioDevice> parent_;
     usb_protocol_t usb_;
     fbl::Mutex lock_;
     fbl::Mutex req_lock_ __TA_ACQUIRED_AFTER(lock_);
+    char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
 
     // Dispatcher framework state
     fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);

@@ -10,8 +10,9 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/audio-util.c \
+    $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/midi.c \
-    $(LOCAL_DIR)/usb-audio.c \
+    $(LOCAL_DIR)/usb-audio-device.cpp \
     $(LOCAL_DIR)/usb-audio-stream.cpp \
     $(LOCAL_DIR)/usb-midi-sink.c \
     $(LOCAL_DIR)/usb-midi-source.c \

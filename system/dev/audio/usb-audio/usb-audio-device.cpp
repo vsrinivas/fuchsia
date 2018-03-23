@@ -1,36 +1,16 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/binding.h>
-#include <zircon/hw/usb-audio.h>
-#include <zircon/listnode.h>
-
-#include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <string.h>
-#include <threads.h>
-#include <unistd.h>
 
 #include "usb-audio.h"
+#include "usb-audio-device.h"
+#include "usb-audio-stream.h"
 
-//#define TRACE 1
-#if TRACE
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...) \
-    do {                \
-    } while (0)
-#endif
-
-extern zx_status_t usb_audio_sink_create(zx_device_t* device, usb_protocol_t* usb, int index,
-                                         usb_interface_descriptor_t* intf,
-                                         usb_endpoint_descriptor_t* ep,
-                                         usb_audio_ac_format_type_i_desc* format_desc);
-
+namespace audio {
+namespace usb {
 
 // for list of feature unit descriptors
 typedef struct {
@@ -39,26 +19,77 @@ typedef struct {
     uint8_t intf_num;
 } feature_unit_node_t;
 
-static bool want_interface(usb_interface_descriptor_t* intf, void* arg) {
-    return (intf->bInterfaceClass == USB_CLASS_AUDIO &&
-            intf->bInterfaceSubClass != USB_SUBCLASS_AUDIO_CONTROL);
+zx_status_t UsbAudioDevice::DriverBind(zx_device_t* parent) {
+    fbl::AllocChecker ac;
+    auto usb_device = fbl::AdoptRef(new (&ac) audio::usb::UsbAudioDevice(parent));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    zx_status_t status = usb_device->Bind();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // We have transfered our fbl::RefPtr reference to the C ddk.  We will
+    // recover it (someday) when the release hook is called.  Until then, we
+    // need to deliberately leak our reference so that we do not destruct as we
+    // exit this function.
+    __UNUSED UsbAudioDevice* leaked_ref;
+    leaked_ref = usb_device.leak_ref();
+    return status;
 }
 
-static zx_status_t usb_audio_bind(void* ctx, zx_device_t* device) {
-    usb_protocol_t usb;
-    zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
+UsbAudioDevice::UsbAudioDevice(zx_device_t* parent) : UsbAudioDeviceBase(parent) {
+    ::memset(&usb_proto_, 0, sizeof(usb_proto_));
+    ::memset(&usb_dev_desc_, 0, sizeof(usb_dev_desc_));
+    snprintf(log_prefix_, sizeof(log_prefix_), "UsbAud Unknown");
+}
+
+zx_status_t UsbAudioDevice::Bind() {
+    zx_status_t status;
+
+    status = device_get_protocol(parent(), ZX_PROTOCOL_USB, &usb_proto_);
     if (status != ZX_OK) {
+        LOG(ERROR, "Failed to get USB protocol thunks (status %d)\n", status);
         return status;
     }
-    status = usb_claim_additional_interfaces(&usb, want_interface, NULL);
+
+    usb_get_device_descriptor(&usb_proto_, &usb_dev_desc_);
+    snprintf(log_prefix_, sizeof(log_prefix_), "UsbAud %04x:%04x", vid(), pid());
+
+    status = usb_claim_additional_interfaces(
+            &usb_proto_,
+            [](usb_interface_descriptor_t* intf, void* arg) -> bool {
+                return (intf->bInterfaceClass == USB_CLASS_AUDIO &&
+                        intf->bInterfaceSubClass != USB_SUBCLASS_AUDIO_CONTROL);
+            },
+            NULL);
     if (status != ZX_OK) {
         return status;
     }
 
+    status = DdkAdd("usb-audio-ctrl");
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    Probe();
+
+    return ZX_OK;
+}
+
+void UsbAudioDevice::Probe() {
     // find our endpoints
     usb_desc_iter_t iter;
-    status = usb_desc_iter_init(&usb, &iter);
-    if (status < 0) return status;
+    zx_status_t status;
+
+    status = usb_desc_iter_init(&usb_proto_, &iter);
+    if (status < 0) {
+        LOG(WARN, "Failed to fetch descriptor iterator (status %d)\n", status);
+        return;
+    }
+
     int audio_sink_index = 0;
     int audio_source_index = 0;
     int midi_sink_index = 0;
@@ -79,42 +110,42 @@ static zx_status_t usb_audio_bind(void* ctx, zx_device_t* device) {
                 intf = (usb_interface_descriptor_t *)header;
                 if (intf->bInterfaceClass == USB_CLASS_AUDIO) {
                     if (intf->bInterfaceSubClass == USB_SUBCLASS_AUDIO_CONTROL) {
-                        xprintf("interface USB_SUBCLASS_AUDIO_CONTROL\n");
+                        LOG(TRACE, "interface USB_SUBCLASS_AUDIO_CONTROL\n");
                         break;
                     } else if (intf->bInterfaceSubClass == USB_SUBCLASS_AUDIO_STREAMING) {
-                        xprintf("interface USB_SUBCLASS_AUDIO_STREAMING bAlternateSetting: %d\n",
+                        LOG(TRACE, "interface USB_SUBCLASS_AUDIO_STREAMING bAlternateSetting: %d\n",
                                 intf->bAlternateSetting);
                         // reset format and feature unit descriptors
                         format_desc = NULL;
                         break;
                     } else if (intf->bInterfaceSubClass == USB_SUBCLASS_MIDI_STREAMING) {
-                        xprintf("interface USB_SUBCLASS_MIDI_STREAMING bAlternateSetting: %d\n",
+                        LOG(TRACE, "interface USB_SUBCLASS_MIDI_STREAMING bAlternateSetting: %d\n",
                                 intf->bAlternateSetting);
                         break;
                     }
                 }
-                xprintf("USB_DT_INTERFACE %d %d %d\n", intf->bInterfaceClass, intf->bInterfaceSubClass,
+                LOG(TRACE, "USB_DT_INTERFACE %d %d %d\n", intf->bInterfaceClass, intf->bInterfaceSubClass,
                         intf->bInterfaceProtocol);
                 break;
         }
         case USB_DT_ENDPOINT: {
                 usb_endpoint_descriptor_t* endp = (usb_endpoint_descriptor_t *)header;
-#if TRACE
                 const char* direction = (endp->bEndpointAddress & USB_ENDPOINT_DIR_MASK)
                                          == USB_ENDPOINT_IN ? "IN" : "OUT";
-#endif
-                xprintf("USB_DT_ENDPOINT %s bmAttributes: 0x%02X\n", direction, endp->bmAttributes);
+                LOG(TRACE, "USB_DT_ENDPOINT %s bmAttributes: 0x%02X\n", direction, endp->bmAttributes);
 
                 if (intf) {
                     if (intf->bInterfaceSubClass == USB_SUBCLASS_AUDIO_STREAMING &&
                         usb_ep_type(endp) == USB_ENDPOINT_ISOCHRONOUS) {
-                        if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
-                            usb_audio_sink_create(device, &usb, audio_sink_index++, intf, endp,
-                                                  format_desc);
-                        } else {
-                             usb_audio_source_create(device, &usb, audio_source_index++, intf, endp,
-                                                     format_desc);
-                        }
+                        bool input = usb_ep_direction(endp) != USB_ENDPOINT_OUT;
+                        UsbAudioStream::Create(fbl::WrapRefPtr(this),
+                                               input,
+                                               &usb_proto_,
+                                               input ? audio_source_index++ : audio_sink_index++,
+                                               intf,
+                                               endp,
+                                               format_desc);
+
                         // this is a quick and dirty hack to set volume to 100%
                         // otherwise, audio might default to 0%
                         //
@@ -148,87 +179,84 @@ static zx_status_t usb_audio_bind(void* ctx, zx_device_t* device) {
                         feature_unit_node_t* fu_node;
                         list_for_every_entry(&fu_descs, fu_node, feature_unit_node_t, node) {
                             // this may fail, but we are taking shotgun approach here
-                            usb_audio_set_volume(&usb, fu_node->intf_num, fu_node->desc, 100);
+                            usb_audio_set_volume(&usb_proto_, fu_node->intf_num, fu_node->desc, 100);
                         }
                     } else if (intf->bInterfaceSubClass == USB_SUBCLASS_MIDI_STREAMING &&
                         usb_ep_type(endp) == USB_ENDPOINT_BULK) {
                         if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
-                           usb_midi_sink_create(device, &usb, midi_sink_index++, intf, endp);
+                           usb_midi_sink_create(zxdev(), &usb_proto_, midi_sink_index++, intf, endp);
                         } else {
-                           usb_midi_source_create(device, &usb, midi_source_index++, intf, endp);
+                           usb_midi_source_create(zxdev(), &usb_proto_, midi_source_index++, intf, endp);
                         }
                     }
                 }
                 break;
         }
         case USB_AUDIO_CS_DEVICE:
-            xprintf("USB_AUDIO_CS_DEVICE\n");
+            LOG(TRACE, "USB_AUDIO_CS_DEVICE\n");
             break;
         case USB_AUDIO_CS_CONFIGURATION:
-            xprintf("USB_AUDIO_CS_CONFIGURATION\n");
+            LOG(TRACE, "USB_AUDIO_CS_CONFIGURATION\n");
             break;
         case USB_AUDIO_CS_STRING:
-            xprintf("USB_AUDIO_CS_STRING\n");
+            LOG(TRACE, "USB_AUDIO_CS_STRING\n");
             break;
         case USB_AUDIO_CS_INTERFACE: {
-            usb_audio_ac_desc_header* ac_header = (usb_audio_ac_desc_header *)header;
+            usb_audio_desc_header* ac_header = (usb_audio_desc_header *)header;
             if (intf->bInterfaceSubClass == USB_SUBCLASS_AUDIO_CONTROL) {
                 switch (ac_header->bDescriptorSubtype) {
                 case USB_AUDIO_AC_HEADER:
-                    xprintf("USB_AUDIO_AC_HEADER\n");
+                    LOG(TRACE, "USB_AUDIO_AC_HEADER\n");
                     break;
                 case USB_AUDIO_AC_INPUT_TERMINAL: {
-#if TRACE
-                    usb_audio_ac_input_terminal_desc* desc = (usb_audio_ac_input_terminal_desc *)header;
-#endif
-                    xprintf("USB_AUDIO_AC_INPUT_TERMINAL wTerminalType: %04X\n",
+                    auto desc = reinterpret_cast<usb_audio_ac_input_terminal_desc*>(header);
+                    LOG(TRACE, "USB_AUDIO_AC_INPUT_TERMINAL wTerminalType: %04X\n",
                             le16toh(desc->wTerminalType));
                     break;
                 }
                 case USB_AUDIO_AC_OUTPUT_TERMINAL: {
-#if TRACE
-                    usb_audio_ac_output_terminal_desc* desc = (usb_audio_ac_output_terminal_desc *)header;
-#endif
-                    xprintf("USB_AUDIO_AC_OUTPUT_TERMINAL wTerminalType: %04X\n",
+                    auto desc = reinterpret_cast<usb_audio_ac_output_terminal_desc*>(header);
+                    LOG(TRACE, "USB_AUDIO_AC_OUTPUT_TERMINAL wTerminalType: %04X\n",
                             le16toh(desc->wTerminalType));
                     break;
                 }
                 case USB_AUDIO_AC_MIXER_UNIT:
-                    xprintf("USB_AUDIO_AC_MIXER_UNIT\n");
+                    LOG(TRACE, "USB_AUDIO_AC_MIXER_UNIT\n");
                     break;
                 case USB_AUDIO_AC_SELECTOR_UNIT:
-                    xprintf("USB_AUDIO_AC_SELECTOR_UNIT\n");
+                    LOG(TRACE, "USB_AUDIO_AC_SELECTOR_UNIT\n");
                     break;
                 case USB_AUDIO_AC_FEATURE_UNIT: {
-                    xprintf("USB_AUDIO_AC_FEATURE_UNIT\n");
-                    feature_unit_node_t* fu_node = malloc(sizeof(feature_unit_node_t));
+                    LOG(TRACE, "USB_AUDIO_AC_FEATURE_UNIT\n");
+                    auto fu_node =
+                        reinterpret_cast<feature_unit_node_t*>(malloc(sizeof(feature_unit_node_t)));
                     if (fu_node) {
                         fu_node->desc = (usb_audio_ac_feature_unit_desc *)header;
                         fu_node->intf_num = intf->bInterfaceNumber;
                         list_add_tail(&fu_descs, &fu_node->node);
-#if TRACE
-                        usb_audio_dump_feature_unit_caps(&usb,
-                                                         intf->bInterfaceNumber,
-                                                         fu_node->desc);
-#endif
+                        if (zxlog_level_enabled(TRACE)) {
+                            usb_audio_dump_feature_unit_caps(&usb_proto_,
+                                                             intf->bInterfaceNumber,
+                                                             fu_node->desc);
+                        }
                     }
                     break;
                 }
                 case USB_AUDIO_AC_PROCESSING_UNIT:
-                    xprintf("USB_AUDIO_AC_PROCESSING_UNIT\n");
+                    LOG(TRACE, "USB_AUDIO_AC_PROCESSING_UNIT\n");
                     break;
                 case USB_AUDIO_AC_EXTENSION_UNIT:
-                    xprintf("USB_AUDIO_AS_FORMAT_TYPE\n");
+                    LOG(TRACE, "USB_AUDIO_AS_FORMAT_TYPE\n");
                     break;
                 }
             } else if (intf->bInterfaceSubClass == USB_SUBCLASS_AUDIO_STREAMING) {
                 switch (ac_header->bDescriptorSubtype) {
                 case USB_AUDIO_AS_GENERAL:
-                    xprintf("USB_AUDIO_AS_GENERAL\n");
+                    LOG(TRACE, "USB_AUDIO_AS_GENERAL\n");
                     break;
                 case USB_AUDIO_AS_FORMAT_TYPE: {
                     usb_audio_ac_format_type_i_desc* desc = (usb_audio_ac_format_type_i_desc *)header;
-                    xprintf("USB_AUDIO_AS_FORMAT_TYPE %d\n", desc->bFormatType);
+                    LOG(TRACE, "USB_AUDIO_AS_FORMAT_TYPE %d\n", desc->bFormatType);
                     if (desc->bFormatType == USB_AUDIO_FORMAT_TYPE_I) {
                         format_desc = desc;
                     }
@@ -238,30 +266,28 @@ static zx_status_t usb_audio_bind(void* ctx, zx_device_t* device) {
             } else if (intf->bInterfaceSubClass == USB_SUBCLASS_MIDI_STREAMING) {
                 switch (ac_header->bDescriptorSubtype) {
                 case USB_MIDI_MS_HEADER:
-                    xprintf("USB_MIDI_MS_HEADER\n");
+                    LOG(TRACE, "USB_MIDI_MS_HEADER\n");
                     break;
                 case USB_MIDI_IN_JACK:
-                    xprintf("USB_MIDI_IN_JACK\n");
+                    LOG(TRACE, "USB_MIDI_IN_JACK\n");
                     break;
                 case USB_MIDI_OUT_JACK:
-                    xprintf("USB_MIDI_OUT_JACK\n");
+                    LOG(TRACE, "USB_MIDI_OUT_JACK\n");
                     break;
                 case USB_MIDI_ELEMENT:
-                    xprintf("USB_MIDI_ELEMENT\n");
+                    LOG(TRACE, "USB_MIDI_ELEMENT\n");
                     break;
                 }
             }
             break;
         }
         case USB_AUDIO_CS_ENDPOINT: {
-#if TRACE
-            usb_audio_ac_desc_header* ac_header = (usb_audio_ac_desc_header *)header;
-#endif
-            xprintf("USB_AUDIO_CS_ENDPOINT subtype %d\n", ac_header->bDescriptorSubtype);
+            auto ac_header = reinterpret_cast<usb_audio_desc_header*>(header);
+            LOG(TRACE, "USB_AUDIO_CS_ENDPOINT subtype %d\n", ac_header->bDescriptorSubtype);
             break;
         }
         default:
-            xprintf("unknown DT %d\n", header->bDescriptorType);
+            LOG(TRACE, "unknown DT %d\n", header->bDescriptorType);
             break;
         }
     }
@@ -271,20 +297,28 @@ static zx_status_t usb_audio_bind(void* ctx, zx_device_t* device) {
         free(fu_node);
     }
     usb_desc_iter_release(&iter);
-
-    return ZX_OK;
 }
 
-extern void usb_audio_driver_release(void*);
+void UsbAudioDevice::DdkUnbind() {
+    // Unpublish our device node.
+    DdkRemove();
+}
 
-static zx_driver_ops_t usb_audio_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = usb_audio_bind,
-    .release = usb_audio_driver_release,
-};
+void UsbAudioDevice::DdkRelease() {
+    // Recover our reference from the unmanaged C DDK.  Then, just let it go out
+    // of scope.
+    auto reference = fbl::internal::MakeRefPtrNoAdopt(this);
+}
 
-ZIRCON_DRIVER_BEGIN(usb_audio, usb_audio_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_AUDIO),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_AUDIO_CONTROL),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
-ZIRCON_DRIVER_END(usb_audio)
+}  // namespace usb
+}  // namespace audio
+
+extern "C" {
+zx_status_t usb_audio_device_bind(void* ctx, zx_device_t* device) {
+    return audio::usb::UsbAudioDevice::DriverBind(device);
+}
+
+void usb_audio_driver_release(void*) {
+    dispatcher::ThreadPool::ShutdownAll();
+}
+}  // extern "C"
