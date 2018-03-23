@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module display_pipe;
+library display_pipe;
 
-import "lib/images/fidl/image_pipe.fidl";
+using images;
 
 struct DisplayInfo {
   uint32 width;   // Display width in pixels.
@@ -13,6 +13,6 @@ struct DisplayInfo {
 
 [ServiceName="display_pipe::DisplayProvider"]
 interface DisplayProvider {
-  GetInfo@0() => (DisplayInfo info);
-  BindPipe@1(ui.gfx.ImagePipe &pipe);
+  1: GetInfo() -> (DisplayInfo info);
+  2: BindPipe(request<images.ImagePipe> pipe);
 };

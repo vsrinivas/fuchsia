@@ -7,8 +7,9 @@
 
 #include <unordered_map>
 
+#include <fuchsia/cpp/display_pipe.h>
+
 #include "lib/fidl/cpp/binding_set.h"
-#include "garnet/lib/magma/src/display_pipe/services/display_provider.fidl.h"
 #include "garnet/lib/magma/src/display_pipe/image_pipe_impl.h"
 #include "garnet/lib/magma/src/display_pipe/magma_connection.h"
 
@@ -19,13 +20,13 @@ class DisplayProviderImpl : public DisplayProvider {
   DisplayProviderImpl();
   ~DisplayProviderImpl() override;
 
-  void GetInfo(const GetInfoCallback& callback) override;
-  void BindPipe(::f1dl::InterfaceRequest<ui::gfx::ImagePipe> pipe) override;
+  void GetInfo(GetInfoCallback callback) override;
+  void BindPipe(::fidl::InterfaceRequest<images::ImagePipe> pipe) override;
 
-  void AddBinding(f1dl::InterfaceRequest<DisplayProvider> request);
+  void AddBinding(fidl::InterfaceRequest<DisplayProvider> request);
 
  private:
-  f1dl::BindingSet<DisplayProvider> bindings_;
+  fidl::BindingSet<DisplayProvider> bindings_;
   std::shared_ptr<MagmaConnection> conn_;
   ImagePipeImpl image_pipe_;
 
