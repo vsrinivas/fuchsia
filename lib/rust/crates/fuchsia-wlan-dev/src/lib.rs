@@ -12,7 +12,7 @@ extern crate failure;
 extern crate fdio;
 extern crate fidl;
 extern crate fuchsia_zircon as zircon;
-extern crate garnet_lib_wlan_fidl as wlan;
+extern crate fidl_wlan_device as wlan;
 
 use std::fmt;
 use std::fs::{File, OpenOptions};
@@ -40,12 +40,12 @@ impl WlanPhy {
     }
 
     /// Queries the WLAN Phy device for its capabilities.
-    pub fn query(&self) -> Result<wlan::WlanPhyInfo, zircon::Status> {
+    pub fn query(&self) -> Result<wlan::PhyInfo, zircon::Status> {
         sys::query_wlanphy_device(&self.dev_node).map_err(|_| zircon::Status::INTERNAL)
     }
 
     /// Creates a new WLAN Iface with the given role.
-    pub fn create_iface(&self, role: wlan::MacRole) -> Result<wlan::WlanIfaceInfo, zircon::Status> {
+    pub fn create_iface(&self, role: wlan::MacRole) -> Result<wlan::IfaceInfo, zircon::Status> {
         sys::create_wlaniface(&self.dev_node, role).map_err(|_| zircon::Status::INTERNAL)
     }
 

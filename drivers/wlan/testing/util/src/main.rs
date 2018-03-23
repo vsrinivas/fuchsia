@@ -8,9 +8,9 @@
 extern crate failure;
 #[macro_use]
 extern crate fdio;
+extern crate fidl_wlan_device as wlan;
 extern crate fuchsia_wlan_dev as wlan_dev;
 extern crate fuchsia_zircon as zircon;
-extern crate garnet_lib_wlan_fidl as wlan;
 
 use failure::Error;
 use std::fs::{File, OpenOptions};

@@ -6,7 +6,7 @@
 
 use failure::{Error, ResultExt};
 use fdio::{self, fdio_sys};
-use fidl::{self, DecodablePtr, EncodablePtr};
+use fidl::encoding2::{Decoder, Decodable, Encoder};
 use std::fs::File;
 use std::os::raw;
 use std::os::unix::io::AsRawFd;
@@ -43,21 +43,23 @@ unsafe fn ioctl(
     }
 }
 
-pub fn query_wlanphy_device(device: &File) -> Result<wlan::WlanPhyInfo, Error> {
+pub fn query_wlanphy_device(device: &File) -> Result<wlan::PhyInfo, Error> {
     let mut info = vec![0; 2048];
     // This call is safe because the length of the output buffer is passed based on the length of
     // the |info| vector. The callee will not retain any pointers from this call.
     unsafe {
         ioctl(device, IOCTL_WLANPHY_QUERY, &[], &mut info).context("failure in ioctl wlan query")?;
     }
-    let mut buf = fidl::DecodeBuf::new_with(zircon::MessageBuf::new_with(info, vec![]));
-    wlan::WlanPhyInfo::decode_obj(&mut buf, 0).map_err(|e| e.into())
+    let mut ret = wlan::PhyInfo::new_empty();
+    Decoder::decode_into(&info, &mut [], &mut ret)?;
+    Ok(ret)
 }
 
-pub fn create_wlaniface(device: &File, role: wlan::MacRole) -> Result<wlan::WlanIfaceInfo, Error> {
-    let mut buf = fidl::EncodeBuf::new();
-    let req = wlan::CreateIfaceRequest { role: role };
-    req.encode_obj(&mut buf);
+pub fn create_wlaniface(device: &File, role: wlan::MacRole) -> Result<wlan::IfaceInfo, Error> {
+    let mut buf = vec![];
+    let mut hnds = vec![];
+    let mut req = wlan::CreateIfaceRequest { role: role };
+    Encoder::encode(&mut buf, &mut hnds, &mut req)?;
     let mut info = vec![0; 1024];
     // This call is safe because the length of the buffers are passed based on the length of
     // the |buf| and |info| vectors. The callee will not retain any pointers from this call.
@@ -65,25 +67,27 @@ pub fn create_wlaniface(device: &File, role: wlan::MacRole) -> Result<wlan::Wlan
         ioctl(
             device,
             IOCTL_WLANPHY_CREATE_IFACE,
-            buf.get_bytes(),
+            &buf,
             &mut info,
         ).context("failure in ioctl wlan create iface")?;
     }
-    let mut recvbuf = fidl::DecodeBuf::new_with(zircon::MessageBuf::new_with(info, vec![]));
-    wlan::WlanIfaceInfo::decode_obj(&mut recvbuf, 0).map_err(|e| e.into())
+    let mut ret = wlan::IfaceInfo::new_empty();
+    Decoder::decode_into(&info, &mut [], &mut ret)?;
+    Ok(ret)
 }
 
 pub fn destroy_wlaniface(device: &File, id: u16) -> Result<(), zircon::Status> {
-    let mut buf = fidl::EncodeBuf::new();
-    let req = wlan::DestroyIfaceRequest { id: id };
-    req.encode_obj(&mut buf);
+    let mut buf = vec![];
+    let mut hnds = vec![];
+    let mut req = wlan::DestroyIfaceRequest { id: id };
+    Encoder::encode(&mut buf, &mut hnds, &mut req).map_err(|_| zircon::Status::IO)?;
     // This call is safe because the length of the buffer is passed based on the length of
     // the |buf| vector. The callee will not retain any pointers from this call.
     unsafe {
         ioctl(
             device,
             IOCTL_WLANPHY_DESTROY_IFACE,
-            buf.get_bytes(),
+            &buf,
             &mut [],
         ).map(|_| ())
     }
