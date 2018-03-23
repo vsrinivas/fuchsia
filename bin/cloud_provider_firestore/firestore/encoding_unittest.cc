@@ -6,7 +6,9 @@
 
 #include <string>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
+#include "peridot/lib/convert/convert.h"
 
 namespace cloud_provider_firestore {
 
@@ -18,9 +20,9 @@ std::string operator"" _s(const char* str, size_t size) {
   return std::string(str, size);
 }
 
-class EncodingTest : public ::testing::TestWithParam<std::string> {};
+class StringEncodingTest : public ::testing::TestWithParam<std::string> {};
 
-TEST_P(EncodingTest, BackAndForth) {
+TEST_P(StringEncodingTest, BackAndForth) {
   std::string data = GetParam();
   std::string encoded;
   std::string decoded;
@@ -32,13 +34,123 @@ TEST_P(EncodingTest, BackAndForth) {
 }
 
 INSTANTIATE_TEST_CASE_P(ExampleData,
-                        EncodingTest,
+                        StringEncodingTest,
                         ::testing::Values(""_s,
                                           "abcdef"_s,
                                           "\x02\x7F"_s,
                                           "~!@#$%^&*()_+-="_s,
                                           "\0"_s,
                                           "bazinga\0\0\0"_s));
+
+TEST(BatchEncodingTest, Empty) {
+  f1dl::Array<cloud_provider::CommitPtr> empty(static_cast<size_t>(0u));
+  google::firestore::v1beta1::Document document;
+  EncodeCommitBatch(empty, &document);
+
+  f1dl::Array<cloud_provider::CommitPtr> result;
+  std::string timestamp;
+  EXPECT_TRUE(DecodeCommitBatch(document, &result, &timestamp));
+  EXPECT_EQ(0u, result->size());
+}
+
+TEST(BatchEncodingTest, TwoCommits) {
+  f1dl::Array<cloud_provider::CommitPtr> original;
+  {
+    cloud_provider::CommitPtr commit = cloud_provider::Commit::New();
+    commit->id = convert::ToArray("id0");
+    commit->data = convert::ToArray("data0");
+    original.push_back(std::move(commit));
+  }
+  {
+    cloud_provider::CommitPtr commit = cloud_provider::Commit::New();
+    commit->id = convert::ToArray("id1");
+    commit->data = convert::ToArray("data1");
+    original.push_back(std::move(commit));
+  }
+  google::firestore::v1beta1::Document document;
+  EncodeCommitBatch(original, &document);
+
+  f1dl::Array<cloud_provider::CommitPtr> result;
+  std::string timestamp;
+  EXPECT_TRUE(DecodeCommitBatch(document, &result, &timestamp));
+  EXPECT_EQ(2u, result->size());
+  EXPECT_EQ("id0", convert::ToString(result.get()[0]->id));
+  EXPECT_EQ("data0", convert::ToString(result.get()[0]->data));
+  EXPECT_EQ("id1", convert::ToString(result.get()[1]->id));
+  EXPECT_EQ("data1", convert::ToString(result.get()[1]->data));
+}
+
+TEST(BatchEncodingTest, DecodingErrors) {
+  f1dl::Array<cloud_provider::CommitPtr> result;
+  std::string timestamp;
+
+  {
+    // Empty document.
+    google::firestore::v1beta1::Document document;
+    EXPECT_FALSE(DecodeCommitBatch(document, &result, &timestamp));
+  }
+
+  {
+    // Non-empty but the commit key is missing.
+    google::firestore::v1beta1::Document document;
+    (*document.mutable_fields())["some_field"].set_integer_value(3);
+    EXPECT_FALSE(DecodeCommitBatch(document, &result, &timestamp));
+  }
+
+  {
+    // Commits field is not an array.
+    google::firestore::v1beta1::Document document;
+    (*document.mutable_fields())["commits"].set_integer_value(3);
+    EXPECT_FALSE(DecodeCommitBatch(document, &result, &timestamp));
+  }
+
+  {
+    // Commits contains a commit that is not a map.
+    google::firestore::v1beta1::Document document;
+    google::firestore::v1beta1::ArrayValue* commit_array =
+        (*document.mutable_fields())["commits"].mutable_array_value();
+    commit_array->add_values()->set_integer_value(3);
+    EXPECT_FALSE(DecodeCommitBatch(document, &result, &timestamp));
+  }
+
+  {
+    // Commits contains a commit that misses the "data" field.
+    google::firestore::v1beta1::Document document;
+    google::firestore::v1beta1::ArrayValue* commit_array =
+        (*document.mutable_fields())["commits"].mutable_array_value();
+    google::firestore::v1beta1::MapValue* commit_value =
+        commit_array->add_values()->mutable_map_value();
+    *((*commit_value->mutable_fields())["id"].mutable_bytes_value()) =
+        "some_id";
+    EXPECT_FALSE(DecodeCommitBatch(document, &result, &timestamp));
+  }
+
+  {
+    // Commits contains a commit that misses the "id" field.
+    google::firestore::v1beta1::Document document;
+    google::firestore::v1beta1::ArrayValue* commit_array =
+        (*document.mutable_fields())["commits"].mutable_array_value();
+    google::firestore::v1beta1::MapValue* commit_value =
+        commit_array->add_values()->mutable_map_value();
+    *((*commit_value->mutable_fields())["data"].mutable_bytes_value()) =
+        "some_data";
+    EXPECT_FALSE(DecodeCommitBatch(document, &result, &timestamp));
+  }
+
+  {
+    // Correct batch (sanity check).
+    google::firestore::v1beta1::Document document;
+    google::firestore::v1beta1::ArrayValue* commit_array =
+        (*document.mutable_fields())["commits"].mutable_array_value();
+    google::firestore::v1beta1::MapValue* commit_value =
+        commit_array->add_values()->mutable_map_value();
+    *((*commit_value->mutable_fields())["id"].mutable_bytes_value()) =
+        "some_id";
+    *((*commit_value->mutable_fields())["data"].mutable_bytes_value()) =
+        "some_data";
+    EXPECT_TRUE(DecodeCommitBatch(document, &result, &timestamp));
+  }
+}
 
 }  // namespace
 

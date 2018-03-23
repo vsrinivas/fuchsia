@@ -7,6 +7,10 @@
 
 #include <string>
 
+#include <google/firestore/v1beta1/document.pb.h>
+
+#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace cloud_provider_firestore {
@@ -22,6 +26,16 @@ std::string EncodeKey(fxl::StringView input);
 
 // Decodes a Firestore key encoded using |EncodeKey|.
 bool DecodeKey(fxl::StringView input, std::string* output);
+
+// Encodes a batch of commits in the cloud provider FIDL format as a Firestore
+// document.
+bool EncodeCommitBatch(const f1dl::Array<cloud_provider::CommitPtr>& commits,
+                       google::firestore::v1beta1::Document* document);
+
+// Decodes a Firestore document representing a commit batch.
+bool DecodeCommitBatch(const google::firestore::v1beta1::Document& document,
+                       f1dl::Array<cloud_provider::CommitPtr>* commits,
+                       std::string* timestamp);
 
 }  // namespace cloud_provider_firestore
 

@@ -19,6 +19,7 @@ source_set("firestore") {
   public_deps = [
     "//garnet/lib/callback",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib/cloud_provider/fidl",
     "//third_party/googleapis/google/firestore/v1beta1",
     "//third_party/googleapis/google/firestore/v1beta1:service",
     "//third_party/grpc:grpc++",
@@ -26,6 +27,7 @@ source_set("firestore") {
 
   deps = [
     "//peridot/lib/base64url",
+    "//peridot/lib/convert",
   ]
 
   public_configs = [ "//third_party/googleapis:googleapis_config" ]
@@ -44,5 +46,6 @@ source_set("unittests") {
     "//garnet/lib/gtest",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fxl:fxl_printers",
+    "//peridot/lib/convert",
   ]
 }
