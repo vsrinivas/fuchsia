@@ -2,25 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <poll.h>
-
 #include <cstdio>
 #include <iomanip>
 #include <iostream>
 
+#include <fuchsia/cpp/media.h>
+
 #include "lib/app/cpp/application_context.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/media/audio/perceived_level.h"
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 namespace {
 
 static constexpr float kGainUnchanged = 1.0f;
 static constexpr float kUnityGain = 0.0f;
-static constexpr float kMutedGain = -160.0f;
 static constexpr int kLevelMax = 25;
 static constexpr char kClearEol[] = "\x1b[K";
 static constexpr char kHideCursor[] = "\x1b[?25l";
@@ -108,8 +107,7 @@ class VolApp {
 
     HandleStatus();
     audio_policy_service_->GetStatus(
-        kInitialStatus,
-        [this](uint64_t version, AudioPolicyStatusPtr status) {});
+        kInitialStatus, [this](uint64_t version, AudioPolicyStatus status) {});
 
     if (interactive_) {
       std::cout << "\ninteractive mode:\n";
@@ -167,8 +165,8 @@ class VolApp {
     }
 
     audio_policy_service_->GetStatus(
-        version, [this](uint64_t version, AudioPolicyStatusPtr status) {
-          HandleStatus(version, std::move(status));
+        version, [this](uint64_t version, AudioPolicyStatus status) {
+          HandleStatus(version, fidl::MakeOptional(std::move(status)));
         });
   }
 
