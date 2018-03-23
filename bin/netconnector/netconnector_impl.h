@@ -24,7 +24,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
 #include <fuchsia/cpp/mdns.h>
-#include "<fuchsia/cpp/netconnector.h>"
+#include <fuchsia/cpp/netconnector.h>
 
 namespace netconnector {
 
@@ -54,18 +54,18 @@ class NetConnectorImpl : public NetConnector {
   void ReleaseServiceAgent(ServiceAgent* service_agent);
 
   // NetConnector implementation.
-  void RegisterServiceProvider(const f1dl::StringPtr& name,
-                               f1dl::InterfaceHandle<component::ServiceProvider>
+  void RegisterServiceProvider(fidl::StringPtr name,
+                               fidl::InterfaceHandle<component::ServiceProvider>
                                    service_provider) override;
 
   void GetDeviceServiceProvider(
-      const f1dl::StringPtr& device_name,
-      f1dl::InterfaceRequest<component::ServiceProvider> service_provider)
+      fidl::StringPtr device_name,
+      fidl::InterfaceRequest<component::ServiceProvider> service_provider)
       override;
 
   void GetKnownDeviceNames(
       uint64_t version_last_seen,
-      const GetKnownDeviceNamesCallback& callback) override;
+      GetKnownDeviceNamesCallback callback) override;
 
  private:
   static const IpPort kPort;
@@ -82,7 +82,7 @@ class NetConnectorImpl : public NetConnector {
   NetConnectorParams* params_;
   std::unique_ptr<component::ApplicationContext> application_context_;
   std::string host_name_;
-  f1dl::BindingSet<NetConnector> bindings_;
+  fidl::BindingSet<NetConnector> bindings_;
   Listener listener_;
   RespondingServiceHost responding_service_host_;
   std::unordered_map<DeviceServiceProvider*,

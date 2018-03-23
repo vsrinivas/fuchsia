@@ -29,14 +29,14 @@ class RespondingServiceHost {
   // Registers a provider for a singleton service.
   void RegisterProvider(
       const std::string& service_name,
-      f1dl::InterfaceHandle<component::ServiceProvider> handle);
+      fidl::InterfaceHandle<component::ServiceProvider> handle);
 
   component::ServiceProvider* services() {
     return static_cast<component::ServiceProvider*>(&service_namespace_);
   }
 
   // Adds a binding to the service provider.
-  void AddBinding(f1dl::InterfaceRequest<component::ServiceProvider> request) {
+  void AddBinding(fidl::InterfaceRequest<component::ServiceProvider> request) {
     service_namespace_.AddBinding(std::move(request));
   }
 

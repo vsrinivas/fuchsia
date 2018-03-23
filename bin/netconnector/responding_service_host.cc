@@ -5,6 +5,7 @@
 #include "garnet/bin/netconnector/responding_service_host.h"
 
 #include "lib/app/cpp/connect.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
@@ -38,11 +39,11 @@ void RespondingServiceHost::RegisterSingleton(
           // the constructor. Instead, we should be launching it in a new
           // environment that is restricted based on app permissions.
 
-          auto dup_launch_info = component::ApplicationLaunchInfo::New();
-          dup_launch_info->url = launch_info->url;
-          dup_launch_info->arguments = launch_info->arguments.Clone();
+          component::ApplicationLaunchInfo dup_launch_info;
+          dup_launch_info.url = launch_info->url;
+          fidl::Clone(launch_info->arguments, &dup_launch_info.arguments);
           component::Services services;
-          dup_launch_info->directory_request = services.NewRequest();
+          dup_launch_info.directory_request = services.NewRequest();
 
           component::ApplicationControllerPtr controller;
           launcher_->CreateApplication(std::move(dup_launch_info),
@@ -67,7 +68,7 @@ void RespondingServiceHost::RegisterSingleton(
 
 void RespondingServiceHost::RegisterProvider(
     const std::string& service_name,
-    f1dl::InterfaceHandle<component::ServiceProvider> handle) {
+    fidl::InterfaceHandle<component::ServiceProvider> handle) {
   component::ServiceProviderPtr service_provider = handle.Bind();
 
   service_provider.set_error_handler([this, service_name] {

@@ -11,7 +11,7 @@
 #include "lib/svc/cpp/service_namespace.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "<fuchsia/cpp/netconnector.h>"
+#include <fuchsia/cpp/netconnector.h>
 
 namespace netconnector {
 

@@ -21,23 +21,23 @@ class DeviceServiceProvider : public component::ServiceProvider {
  public:
   static std::unique_ptr<DeviceServiceProvider> Create(
       const std::string& device_name, const SocketAddress& address,
-      f1dl::InterfaceRequest<component::ServiceProvider> request,
+      fidl::InterfaceRequest<component::ServiceProvider> request,
       NetConnectorImpl* owner);
 
   ~DeviceServiceProvider() override;
 
-  void ConnectToService(const f1dl::StringPtr& service_name,
+  void ConnectToService(fidl::StringPtr service_name,
                         zx::channel channel) override;
 
  private:
   DeviceServiceProvider(
       const std::string& device_name, const SocketAddress& address,
-      f1dl::InterfaceRequest<component::ServiceProvider> request,
+      fidl::InterfaceRequest<component::ServiceProvider> request,
       NetConnectorImpl* owner);
 
   std::string device_name_;
   SocketAddress address_;
-  f1dl::Binding<component::ServiceProvider> binding_;
+  fidl::Binding<component::ServiceProvider> binding_;
   NetConnectorImpl* owner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceServiceProvider);

@@ -10,7 +10,7 @@
 
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
-#include "<fuchsia/cpp/netconnector.h>"
+#include <fuchsia/cpp/netconnector.h>
 
 namespace media {
 
