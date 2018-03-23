@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/network.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/network.h>
-#include <fuchsia/cpp/network.h>
 
 #include <string>
 
@@ -15,26 +14,26 @@ namespace examples {
 
 class ResponsePrinter {
  public:
-  void Run(network::URLResponsePtr response) const {
-    if (response->error) {
-      printf("Got error: %d (%s)\n", response->error->code,
-             response->error->description.get().c_str());
+  void Run(network::URLResponse response) const {
+    if (response.error) {
+      printf("Got error: %d (%s)\n", response.error->code,
+             response.error->description.get().c_str());
       exit(1);
     } else {
       PrintResponse(response);
-      PrintResponseBody(std::move(response->body->get_stream()));
+      PrintResponseBody(std::move(response.body->stream()));
     }
 
     fsl::MessageLoop::GetCurrent()->QuitNow();  // All done!
   }
 
-  void PrintResponse(const network::URLResponsePtr& response) const {
+  void PrintResponse(const network::URLResponse& response) const {
     printf(">>> Headers <<< \n");
-    printf("  %s\n", response->status_line.get().c_str());
-    if (response->headers) {
-      for (size_t i = 0; i < response->headers->size(); ++i)
-        printf("  %s=%s\n", response->headers->at(i)->name->data(),
-               response->headers->at(i)->value->data());
+    printf("  %s\n", response.status_line.get().c_str());
+    if (response.headers) {
+      for (size_t i = 0; i < response.headers->size(); ++i)
+        printf("  %s=%s\n", response.headers->at(i).name->data(),
+               response.headers->at(i).value->data());
     }
   }
 
@@ -89,13 +88,13 @@ class WGetApp {
 
     network_service_->CreateURLLoader(url_loader_.NewRequest());
 
-    network::URLRequestPtr request(network::URLRequest::New());
-    request->url = url;
-    request->method = "GET";
-    request->auto_follow_redirects = true;
+    network::URLRequest request;
+    request.url = url;
+    request.method = "GET";
+    request.auto_follow_redirects = true;
 
     url_loader_->Start(std::move(request),
-                       [this](network::URLResponsePtr response) {
+                       [this](network::URLResponse response) {
                          ResponsePrinter printer;
                          printer.Run(std::move(response));
                        });
