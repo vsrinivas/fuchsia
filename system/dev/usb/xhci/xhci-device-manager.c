@@ -81,7 +81,7 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     }
     uint8_t* device_context = (uint8_t *)io_buffer_virt(&slot->buffer);
     xhci_endpoint_t* ep = &slot->eps[0];
-    status = xhci_transfer_ring_init(xhci, &ep->transfer_ring, TRANSFER_RING_SIZE);
+    status = xhci_transfer_ring_init(&ep->transfer_ring, xhci->bti_handle, TRANSFER_RING_SIZE);
     if (status < 0) return status;
     ep->transfer_state = calloc(1, sizeof(xhci_transfer_state_t));
     if (!ep->transfer_state) {
@@ -597,7 +597,7 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
                 (xhci_endpoint_context_t*)&xhci->input_context[(index + 2) * xhci->context_size];
         memset((void*)epc, 0, xhci->context_size);
         // allocate a transfer ring for the endpoint
-        zx_status_t status = xhci_transfer_ring_init(xhci, &ep->transfer_ring, TRANSFER_RING_SIZE);
+        zx_status_t status = xhci_transfer_ring_init(&ep->transfer_ring, xhci->bti_handle, TRANSFER_RING_SIZE);
         if (status < 0) {
             mtx_unlock(&xhci->input_context_lock);
             mtx_unlock(&ep->lock);

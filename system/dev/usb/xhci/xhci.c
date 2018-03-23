@@ -297,14 +297,15 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
         xhci->dcbaa[0] = 0;
     }
 
-    result = xhci_transfer_ring_init(xhci, &xhci->command_ring, COMMAND_RING_SIZE);
+    result = xhci_transfer_ring_init(&xhci->command_ring, xhci->bti_handle, COMMAND_RING_SIZE);
     if (result != ZX_OK) {
         zxlogf(ERROR, "xhci_command_ring_init failed\n");
         goto fail;
     }
 
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
-        result = xhci_event_ring_init(xhci, i, EVENT_RING_SIZE);
+        result = xhci_event_ring_init(&xhci->event_rings[i], xhci->bti_handle,
+                                      xhci->erst_arrays[i], EVENT_RING_SIZE);
         if (result != ZX_OK) {
             zxlogf(ERROR, "xhci_event_ring_init failed\n");
             goto fail;
@@ -503,7 +504,7 @@ void xhci_free(xhci_t* xhci) {
     free(xhci->rh_port_map);
 
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
-        xhci_event_ring_free(xhci, i);
+        xhci_event_ring_free(&xhci->event_rings[i]);
     }
 
     xhci_transfer_ring_free(&xhci->command_ring);
