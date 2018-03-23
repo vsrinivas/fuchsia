@@ -124,7 +124,7 @@ static inline size_t usb_get_max_transfer_size(usb_protocol_t* usb, uint8_t ep_a
     return usb->ops->get_max_transfer_size(usb->ctx, ep_address);
 }
 
-static inline zx_status_t usb_get_device_id(usb_protocol_t* usb) {
+static inline uint32_t usb_get_device_id(usb_protocol_t* usb) {
     return usb->ops->get_device_id(usb->ctx);
 }
 
