@@ -752,6 +752,11 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
         return handle_kvm_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pvclock, gpas);
     default:
         dprintf(INFO, "Unhandled wrmsr %#lx\n", guest_state->rcx);
+    // For these MSRs, we intentionally inject a general protection fault to
+    // indicate to the guest that they are unsupported.
+    case X86_MSR_IA32_SYSENTER_CS:
+    case X86_MSR_IA32_SYSENTER_ESP:
+    case X86_MSR_IA32_SYSENTER_EIP:
         return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
     }
 }
