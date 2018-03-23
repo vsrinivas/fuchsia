@@ -29,7 +29,7 @@ class PerspectiveDemoMode {
   // dispatched.
   //
   // Returns true if the event was consumed and the scene is to be invalidated.
-  bool OnEvent(const input::InputEventPtr& event, Presentation* presenter);
+  bool OnEvent(const input::InputEvent& event, Presentation* presenter);
 
   bool UpdateAnimation(Presentation* presenter, uint64_t presentation_time);
 

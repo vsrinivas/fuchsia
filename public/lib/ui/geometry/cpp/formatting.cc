@@ -8,7 +8,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace mozart {
+namespace geometry {
 
 std::ostream& operator<<(std::ostream& os, const geometry::Point& value) {
   return os << "{x=" << value.x << ", y=" << value.y << "}";
@@ -77,4 +77,4 @@ std::ostream& operator<<(std::ostream& os, const geometry::Transform& value) {
   return os;
 }
 
-}  // namespace mozart
+}  // namespace geometry

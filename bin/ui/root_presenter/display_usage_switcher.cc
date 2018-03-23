@@ -15,39 +15,39 @@ namespace {
 const uint32_t kGlobalShortcutKeyCodePoint = 61;  // '=' key
 const uint32_t kGlobalShortcutKeyHidUsage = 46;   // '=' key
 
-static const std::array<mozart::DisplayUsage, 5> kDisplayUsages = {
-    mozart::DisplayUsage::HANDHELD, mozart::DisplayUsage::CLOSE,
-    mozart::DisplayUsage::NEAR, mozart::DisplayUsage::MIDRANGE,
-    mozart::DisplayUsage::FAR};
+static const std::array<presentation::DisplayUsage, 5> kDisplayUsages = {
+    presentation::DisplayUsage::HANDHELD, presentation::DisplayUsage::CLOSE,
+    presentation::DisplayUsage::NEAR, presentation::DisplayUsage::MIDRANGE,
+    presentation::DisplayUsage::FAR};
 }  // namespace
 
-std::string GetDisplayUsageAsString(mozart::DisplayUsage usage) {
+std::string GetDisplayUsageAsString(presentation::DisplayUsage usage) {
   switch (usage) {
-    case mozart::DisplayUsage::UNKNOWN:
+    case presentation::DisplayUsage::UNKNOWN:
       return "UNKNOWN";
-    case mozart::DisplayUsage::HANDHELD:
+    case presentation::DisplayUsage::HANDHELD:
       return "HANDHELD";
-    case mozart::DisplayUsage::CLOSE:
+    case presentation::DisplayUsage::CLOSE:
       return "CLOSE";
-    case mozart::DisplayUsage::NEAR:
+    case presentation::DisplayUsage::NEAR:
       return "NEAR";
-    case mozart::DisplayUsage::MIDRANGE:
+    case presentation::DisplayUsage::MIDRANGE:
       return "MIDRANGE";
-    case mozart::DisplayUsage::FAR:
+    case presentation::DisplayUsage::FAR:
       return "FAR";
   }
 }
 
 DisplayUsageSwitcher::DisplayUsageSwitcher() {}
 
-bool DisplayUsageSwitcher::OnEvent(const input::InputEventPtr& event,
+bool DisplayUsageSwitcher::OnEvent(const input::InputEvent& event,
                                    Presentation* presenter) {
-  if (event->is_keyboard()) {
-    const input::KeyboardEventPtr& kbd = event->get_keyboard();
-    if ((kbd->modifiers & mozart::kModifierAlt) &&
-        kbd->phase == input::KeyboardEvent::Phase::PRESSED &&
-        kbd->code_point == kGlobalShortcutKeyCodePoint &&
-        kbd->hid_usage == kGlobalShortcutKeyHidUsage) {
+  if (event.is_keyboard()) {
+    const input::KeyboardEvent& kbd = event.keyboard();
+    if ((kbd.modifiers & input::kModifierAlt) &&
+        kbd.phase == input::KeyboardEventPhase::PRESSED &&
+        kbd.code_point == kGlobalShortcutKeyCodePoint &&
+        kbd.hid_usage == kGlobalShortcutKeyHidUsage) {
       // Switch to the next display usage value.
       current_display_usage_index_ =
           (current_display_usage_index_ + 1) % kDisplayUsages.size();

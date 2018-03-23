@@ -16,7 +16,7 @@ namespace root_presenter {
 
 class Presentation;
 
-std::string GetDisplayUsageAsString(mozart::DisplayUsage usage);
+std::string GetDisplayUsageAsString(presentation::DisplayUsage usage);
 
 // This class hooks into Presenter to provide the following behavior: when
 // Alt-Equals is pressed, the current display usage is toggled.
@@ -30,7 +30,7 @@ class DisplayUsageSwitcher {
   // |presenter| is the root presenter.
   //
   // Returns true if the scene should be invalidated.
-  bool OnEvent(const input::InputEventPtr& event, Presentation* presenter);
+  bool OnEvent(const input::InputEvent& event, Presentation* presenter);
 
  private:
   uint32_t current_display_usage_index_ = 0;

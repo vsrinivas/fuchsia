@@ -12,7 +12,7 @@ namespace display_configuration {
 void LogDisplayMetrics(const DisplayMetrics& metrics);
 
 float LookupPixelDensityForDisplay(uint32_t width_in_px, uint32_t height_in_px);
-mozart::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in_px,
+presentation::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in_px,
                                                   uint32_t height_in_px);
 
 void InitializeModelForDisplay(uint32_t width_in_px,
@@ -31,7 +31,7 @@ void InitializeModelForDisplay(uint32_t width_in_px,
       LookupDisplayUsageForDisplay(width_in_px, height_in_px);
 
   FXL_DCHECK(model->display_info().density_in_px_per_mm != 0.f);
-  FXL_DCHECK(model->environment_info().usage != mozart::DisplayUsage::UNKNOWN);
+  FXL_DCHECK(model->environment_info().usage != presentation::DisplayUsage::UNKNOWN);
 }
 
 // Returns density_in_px_per_mm. This will be replaced by something that
@@ -60,22 +60,22 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px,
   }
 }
 
-mozart::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in_px,
+presentation::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in_px,
                                                   uint32_t height_in_px) {
   // TODO(MZ-16): Need to have a database of devices and a more robust way
   // of identifying and classifying them.
   if (width_in_px == 2160 && height_in_px == 1440) {
     // Assume that the device is an Acer Switch 12 Alpha.
-    return mozart::DisplayUsage::CLOSE;
+    return presentation::DisplayUsage::CLOSE;
   } else if (width_in_px == 2400 && height_in_px == 1600) {
     // Assume that the device is a Google Pixelbook.
-    return mozart::DisplayUsage::CLOSE;
+    return presentation::DisplayUsage::CLOSE;
   } else if (width_in_px == 3840 && height_in_px == 2160) {
     // Assume the display is a 24in 4K monitor.
-    return mozart::DisplayUsage::NEAR;
+    return presentation::DisplayUsage::NEAR;
   } else {
     // TODO(MZ-384): Don't lie.
-    return mozart::DisplayUsage::CLOSE;
+    return presentation::DisplayUsage::CLOSE;
   }
 }
 

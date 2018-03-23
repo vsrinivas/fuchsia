@@ -885,7 +885,7 @@ void ViewRegistry::SendPropertiesChanged(
 
 void ViewRegistry::SendChildAttached(ViewContainerState* container_state,
                                      uint32_t child_key,
-                                     mozart::ViewInfoPtr child_view_info) {
+                                     views_v1::ViewInfoPtr child_view_info) {
   FXL_DCHECK(container_state);
   FXL_DCHECK(child_view_info);
 

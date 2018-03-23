@@ -63,7 +63,7 @@ namespace root_presenter {
 class Presentation : private views_v1::ViewTreeListener,
                      private views_v1::ViewListener,
                      private views_v1::ViewContainerListener,
-                     private mozart::Presentation {
+                     private presentation::Presentation {
  public:
   Presentation(views_v1::ViewManager* view_manager, ui::Scenic* scenic);
 
@@ -75,10 +75,10 @@ class Presentation : private views_v1::ViewTreeListener,
   // presentation.
   void Present(
       views_v1_token::ViewOwnerPtr view_owner,
-      fidl::InterfaceRequest<mozart::Presentation> presentation_request,
+      fidl::InterfaceRequest<presentation::Presentation> presentation_request,
       fxl::Closure shutdown_callback);
 
-  void OnReport(uint32_t device_id, input::InputReportPtr report);
+  void OnReport(uint32_t device_id, input::InputReport report);
   void OnDeviceAdded(mozart::InputDeviceImpl* input_device);
   void OnDeviceRemoved(uint32_t device_id);
 
@@ -95,15 +95,15 @@ class Presentation : private views_v1::ViewTreeListener,
 
   // |ViewContainerListener|:
   void OnChildAttached(uint32_t child_key,
-                       mozart::ViewInfoPtr child_view_info,
-                       const OnChildAttachedCallback& callback) override;
+                       views_v1::ViewInfo child_view_info,
+                       OnChildAttachedCallback callback) override;
   void OnChildUnavailable(uint32_t child_key,
-                          const OnChildUnavailableCallback& callback) override;
+                          OnChildUnavailableCallback callback) override;
 
   // |ViewListener|:
   void OnPropertiesChanged(
-      views_v1::ViewPropertiesPtr properties,
-      const OnPropertiesChangedCallback& callback) override;
+      views_v1::ViewProperties properties,
+      OnPropertiesChangedCallback callback) override;
 
   // |Presentation|
   void EnableClipping(bool enabled) override;
@@ -116,14 +116,14 @@ class Presentation : private views_v1::ViewTreeListener,
 
   // |Presentation|
   void SetRendererParams(
-      ::fidl::VectorPtr<gfx::RendererParamPtr> params) override;
+      ::fidl::VectorPtr<gfx::RendererParam> params) override;
 
-  void InitializeDisplayModel(gfx::DisplayInfoPtr display_info);
+  void InitializeDisplayModel(gfx::DisplayInfo display_info);
 
   // |Presentation|
-  void SetDisplayUsage(mozart::DisplayUsage usage) override;
+  void SetDisplayUsage(presentation::DisplayUsage usage) override;
 
-  void SetDisplayUsageWithoutApplyingChanges(mozart::DisplayUsage usage_);
+  void SetDisplayUsageWithoutApplyingChanges(presentation::DisplayUsage usage_);
 
   // |Presentation|
   void SetDisplaySizeInMm(float width_in_mm, float height_in_mm) override;
@@ -136,18 +136,18 @@ class Presentation : private views_v1::ViewTreeListener,
 
   // |Presentation|
   void CaptureKeyboardEvent(
-      input::KeyboardEventPtr event_to_capture,
-      fidl::InterfaceHandle<input::KeyboardCaptureListener> listener) override;
+      input::KeyboardEvent event_to_capture,
+      fidl::InterfaceHandle<presentation::KeyboardCaptureListener> listener) override;
 
   void CreateViewTree(
       views_v1_token::ViewOwnerPtr view_owner,
-      fidl::InterfaceRequest<mozart::Presentation> presentation_request,
-      gfx::DisplayInfoPtr display_info);
+      fidl::InterfaceRequest<presentation::Presentation> presentation_request,
+      gfx::DisplayInfo display_info);
 
   // Returns true if the event was consumed and the scene is to be invalidated.
-  bool GlobalHooksHandleEvent(const input::InputEventPtr& event);
+  bool GlobalHooksHandleEvent(const input::InputEvent& event);
 
-  void OnEvent(input::InputEventPtr event);
+  void OnEvent(input::InputEvent event);
 
   void PresentScene();
   void Shutdown();
@@ -184,13 +184,13 @@ class Presentation : private views_v1::ViewTreeListener,
   // |display_model_simulated_| changes using ApplyDisplayModelChanges().
   DisplayMetrics display_metrics_;
 
-  mozart::ViewPtr root_view_;
+  views_v1::ViewPtr root_view_;
 
   fxl::Closure shutdown_callback_;
 
-  mozart::PointF mouse_coordinates_;
+  geometry::PointF mouse_coordinates_;
 
-  fidl::Binding<mozart::Presentation> presentation_binding_;
+  fidl::Binding<presentation::Presentation> presentation_binding_;
   fidl::Binding<views_v1::ViewTreeListener> tree_listener_binding_;
   fidl::Binding<views_v1::ViewContainerListener> tree_container_listener_binding_;
   fidl::Binding<views_v1::ViewContainerListener> view_container_listener_binding_;
@@ -215,7 +215,7 @@ class Presentation : private views_v1::ViewTreeListener,
   struct CursorState {
     bool created;
     bool visible;
-    mozart::PointF position;
+    geometry::PointF position;
     std::unique_ptr<scenic_lib::ShapeNode> node;
   };
 
@@ -228,8 +228,8 @@ class Presentation : private views_v1::ViewTreeListener,
   // A registry of listeners who want to be notified when their keyboard
   // event happens.
   struct KeyboardCaptureItem {
-    input::KeyboardEventPtr event;
-    input::KeyboardCaptureListenerPtr listener;
+    input::KeyboardEvent event;
+    presentation::KeyboardCaptureListenerPtr listener;
   };
   std::vector<KeyboardCaptureItem> captured_keybindings_;
 

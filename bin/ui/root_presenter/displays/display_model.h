@@ -50,7 +50,7 @@ class DisplayModel {
   struct EnvironmentInfo {
     // The intended usage of the display.
     // Value is |kUnknown| if unknown.
-    mozart::DisplayUsage usage = mozart::DisplayUsage::UNKNOWN;
+    presentation::DisplayUsage usage = presentation::DisplayUsage::UNKNOWN;
 
     // The nominal apparent viewing distance in millimeters.
     // Value is 0.0 if unknown.

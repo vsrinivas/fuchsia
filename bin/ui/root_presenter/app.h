@@ -22,13 +22,13 @@ namespace root_presenter {
 
 class Presentation;
 
-// The presenter provides a |mozart::Presenter| service which displays
+// The presenter provides a |presentation::Presenter| service which displays
 // UI by attaching the provided view to the root of a new view tree
 // associated with a new renderer.
 //
 // Any number of view trees can be created, although multi-display support
 // and input routing is not fully supported (TODO).
-class App : public mozart::Presenter,
+class App : public presentation::Presenter,
             public input::InputDeviceRegistry,
             public mozart::InputDeviceImpl::Listener {
  public:
@@ -43,11 +43,11 @@ class App : public mozart::Presenter,
  private:
   // |Presenter|:
   void Present(fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
-               fidl::InterfaceRequest<mozart::Presentation>
+               fidl::InterfaceRequest<presentation::Presentation>
                    presentation_request) override;
 
   // |InputDeviceRegistry|:
-  void RegisterDevice(input::DeviceDescriptorPtr descriptor,
+  void RegisterDevice(input::DeviceDescriptor descriptor,
                       fidl::InterfaceRequest<input::InputDevice>
                           input_device_request) override;
 
@@ -55,7 +55,7 @@ class App : public mozart::Presenter,
   void Reset();
 
   std::unique_ptr<component::ApplicationContext> application_context_;
-  fidl::BindingSet<mozart::Presenter> presenter_bindings_;
+  fidl::BindingSet<presentation::Presenter> presenter_bindings_;
   fidl::BindingSet<input::InputDeviceRegistry> input_receiver_bindings_;
   mozart::InputReader input_reader_;
 

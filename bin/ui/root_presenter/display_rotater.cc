@@ -28,14 +28,14 @@ constexpr float kPi = glm::pi<float>();
 
 DisplayRotater::DisplayRotater() {}
 
-bool DisplayRotater::OnEvent(const input::InputEventPtr& event,
+bool DisplayRotater::OnEvent(const input::InputEvent& event,
                              Presentation* presentation) {
-  if (event->is_keyboard()) {
-    const input::KeyboardEventPtr& kbd = event->get_keyboard();
+  if (event.is_keyboard()) {
+    const input::KeyboardEvent& kbd = event.keyboard();
     const uint32_t kVolumeDownKey = 232;
-    if (kbd->modifiers == 0 &&
-        kbd->phase == input::KeyboardEvent::Phase::PRESSED &&
-        kbd->code_point == 0 && kbd->hid_usage == kVolumeDownKey) {
+    if (kbd.modifiers == 0 &&
+        kbd.phase == input::KeyboardEventPhase::PRESSED &&
+        kbd.code_point == 0 && kbd.hid_usage == kVolumeDownKey) {
       FlipDisplay(presentation);
       return true;
     }

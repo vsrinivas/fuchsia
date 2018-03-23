@@ -30,30 +30,30 @@ constexpr float kPi = glm::pi<float>();
 
 PerspectiveDemoMode::PerspectiveDemoMode() {}
 
-bool PerspectiveDemoMode::OnEvent(const input::InputEventPtr& event,
+bool PerspectiveDemoMode::OnEvent(const input::InputEvent& event,
                                   Presentation* presenter) {
-  if (event->is_pointer()) {
-    const input::PointerEventPtr& pointer = event->get_pointer();
+  if (event.is_pointer()) {
+    const input::PointerEvent& pointer = event.pointer();
     if (animation_state_ == kTrackball) {
-      if (pointer->phase == input::PointerEvent::Phase::DOWN) {
+      if (pointer.phase == input::PointerEventPhase::DOWN) {
         // If we're not already panning/rotating the camera, then start, but
         // only if the touch-down is in the bottom 10% of the screen.
         if (!trackball_pointer_down_ &&
-            pointer->y > 0.9f * presenter->display_metrics_.height_in_pp()) {
+            pointer.y > 0.9f * presenter->display_metrics_.height_in_pp()) {
           trackball_pointer_down_ = true;
-          trackball_device_id_ = pointer->device_id;
-          trackball_pointer_id_ = pointer->pointer_id;
-          trackball_previous_x_ = pointer->x;
+          trackball_device_id_ = pointer.device_id;
+          trackball_pointer_id_ = pointer.pointer_id;
+          trackball_previous_x_ = pointer.x;
         }
-      } else if (pointer->phase == input::PointerEvent::Phase::MOVE) {
+      } else if (pointer.phase == input::PointerEventPhase::MOVE) {
         // If the moved pointer is the one that is currently panning/rotating
         // the camera, then update the camera position.
         if (trackball_pointer_down_ &&
-            trackball_device_id_ == pointer->device_id &&
-            trackball_device_id_ == pointer->device_id) {
+            trackball_device_id_ == pointer.device_id &&
+            trackball_device_id_ == pointer.device_id) {
           float pan_rate = -2.5f / presenter->display_metrics_.width_in_pp();
-          float pan_change = pan_rate * (pointer->x - trackball_previous_x_);
-          trackball_previous_x_ = pointer->x;
+          float pan_change = pan_rate * (pointer.x - trackball_previous_x_);
+          trackball_previous_x_ = pointer.x;
 
           camera_pan_ += pan_change;
           if (camera_pan_ < -1.f) {
@@ -62,21 +62,21 @@ bool PerspectiveDemoMode::OnEvent(const input::InputEventPtr& event,
             camera_pan_ = 1.f;
           }
         }
-      } else if (pointer->phase == input::PointerEvent::Phase::UP) {
+      } else if (pointer.phase == input::PointerEventPhase::UP) {
         // The pointer was released.
         if (trackball_pointer_down_ &&
-            trackball_device_id_ == pointer->device_id &&
-            trackball_device_id_ == pointer->device_id) {
+            trackball_device_id_ == pointer.device_id &&
+            trackball_device_id_ == pointer.device_id) {
           trackball_pointer_down_ = false;
         }
       }
     }
-  } else if (event->is_keyboard()) {
+  } else if (event.is_keyboard()) {
     // Alt-Backspace cycles through modes.
-    const input::KeyboardEventPtr& kbd = event->get_keyboard();
-    if ((kbd->modifiers & mozart::kModifierAlt) &&
-        kbd->phase == input::KeyboardEvent::Phase::PRESSED &&
-        kbd->code_point == 0 && kbd->hid_usage == 42 &&
+    const input::KeyboardEvent& kbd = event.keyboard();
+    if ((kbd.modifiers & input::kModifierAlt) &&
+        kbd.phase == input::KeyboardEventPhase::PRESSED &&
+        kbd.code_point == 0 && kbd.hid_usage == 42 &&
         !trackball_pointer_down_) {
       HandleAltBackspace(presenter);
       return true;

@@ -28,14 +28,14 @@ const uint32_t kGlobalShortcutKeyHidUsage = 45;   // '-' key
 
 }  // namespace
 
-bool DisplaySizeSwitcher::OnEvent(const input::InputEventPtr& event,
+bool DisplaySizeSwitcher::OnEvent(const input::InputEvent& event,
                                   Presentation* presenter) {
-  if (event->is_keyboard()) {
-    const input::KeyboardEventPtr& kbd = event->get_keyboard();
-    if ((kbd->modifiers & mozart::kModifierAlt) &&
-        kbd->phase == input::KeyboardEvent::Phase::PRESSED &&
-        kbd->code_point == kGlobalShortcutKeyCodePoint &&
-        kbd->hid_usage == kGlobalShortcutKeyHidUsage) {
+  if (event.is_keyboard()) {
+    const input::KeyboardEvent& kbd = event.keyboard();
+    if ((kbd.modifiers & input::kModifierAlt) &&
+        kbd.phase == input::KeyboardEventPhase::PRESSED &&
+        kbd.code_point == kGlobalShortcutKeyCodePoint &&
+        kbd.hid_usage == kGlobalShortcutKeyHidUsage) {
       // Switch to the next display size we can successfully switch to.
       for (size_t offset = 1; offset < kDisplaySizesInMm.size(); ++offset) {
         size_t display_size_index =

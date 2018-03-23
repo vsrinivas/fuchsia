@@ -8,7 +8,7 @@
 
 #include "lib/fsl/tasks/message_loop.h"
 #include <fuchsia/cpp/views_v1.h>
-#include "lib/ui/views/fidl/view_provider.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 
 // For now we expose a fixed size display to the guest. Scenic will scale this
 // buffer to the actual window size on the host.
@@ -128,17 +128,17 @@ zx_status_t FromMozartButton(uint32_t event, machina::Button* button) {
 
 bool GuestView::OnInputEvent(input::InputEventPtr event) {
   if (event->is_keyboard()) {
-    const input::KeyboardEventPtr& key_event = event->get_keyboard();
+    const input::KeyboardEventPtr& key_event = event->keyboard();
 
     machina::InputEvent event;
     event.type = machina::InputEventType::KEYBOARD;
     event.key.hid_usage = key_event->hid_usage;
     switch (key_event->phase) {
-      case input::KeyboardEvent::Phase::PRESSED:
+      case input::KeyboardEventPhase::PRESSED:
         event.key.state = machina::KeyState::PRESSED;
         break;
-      case input::KeyboardEvent::Phase::RELEASED:
-      case input::KeyboardEvent::Phase::CANCELLED:
+      case input::KeyboardEventPhase::RELEASED:
+      case input::KeyboardEventPhase::CANCELLED:
         event.key.state = machina::KeyState::RELEASED;
         break;
       default:
@@ -148,11 +148,11 @@ bool GuestView::OnInputEvent(input::InputEventPtr event) {
     input_dispatcher_->Keyboard()->PostEvent(event, true);
     return true;
   } else if (event->is_pointer()) {
-    const input::PointerEventPtr& pointer_event = event->get_pointer();
+    const input::PointerEventPtr& pointer_event = event->pointer();
 
     machina::InputEvent event;
     switch (pointer_event->phase) {
-      case input::PointerEvent::Phase::MOVE:
+      case input::PointerEventPhase::MOVE:
         event.type = machina::InputEventType::POINTER;
         // TODO(PD-102): Convert this to use absolute pointer events.
         event.pointer.x = pointer_event->x - previous_pointer_x_;
@@ -161,7 +161,7 @@ bool GuestView::OnInputEvent(input::InputEventPtr event) {
         previous_pointer_x_ = pointer_event->x;
         previous_pointer_y_ = pointer_event->y;
         break;
-      case input::PointerEvent::Phase::DOWN:
+      case input::PointerEventPhase::DOWN:
         event.type = machina::InputEventType::BUTTON;
         event.button.state = machina::KeyState::PRESSED;
         if (FromMozartButton(pointer_event->buttons, &event.button.button) !=
@@ -170,7 +170,7 @@ bool GuestView::OnInputEvent(input::InputEventPtr event) {
           return true;
         }
         break;
-      case input::PointerEvent::Phase::UP:
+      case input::PointerEventPhase::UP:
         event.type = machina::InputEventType::BUTTON;
         event.button.state = machina::KeyState::RELEASED;
         if (FromMozartButton(pointer_event->buttons, &event.button.button) !=

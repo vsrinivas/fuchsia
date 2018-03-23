@@ -20,7 +20,7 @@ MockViewContainerListener::~MockViewContainerListener() {}
 
 void MockViewContainerListener::OnChildAttached(
     uint32_t child_key,
-    mozart::ViewInfoPtr child_view_info,
+    views_v1::ViewInfoPtr child_view_info,
     const OnChildAttachedCallback& callback) {
   if (child_attached_callback_) {
     child_attached_callback_(child_key, std::move(child_view_info));

@@ -11,7 +11,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/ui/view_framework/base_view.h"
 #include <fuchsia/cpp/views_v1.h>
-#include "lib/ui/views/fidl/view_provider.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 

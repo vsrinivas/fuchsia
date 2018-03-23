@@ -17,12 +17,12 @@
 #include <fuchsia/cpp/presentation.h>
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 
 namespace examples {
 
 class TileView : public mozart::BaseView,
-                 public mozart::Presenter {
+                 public presentation::Presenter {
  public:
   TileView(views_v1::ViewManagerPtr view_manager,
            f1dl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
@@ -44,19 +44,19 @@ class TileView : public mozart::BaseView,
     scenic_lib::EntityNode host_node;
 
     views_v1::ViewPropertiesPtr view_properties;
-    mozart::ViewInfoPtr view_info;
+    views_v1::ViewInfoPtr view_info;
   };
 
   // |BaseView|:
   void OnChildAttached(uint32_t child_key,
-                       mozart::ViewInfoPtr child_view_info) override;
+                       views_v1::ViewInfoPtr child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
   void OnSceneInvalidated(images::PresentationInfoPtr presentation_info) override;
 
   // |Presenter|:
   void Present(
       f1dl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
-      f1dl::InterfaceRequest<mozart::Presentation> presentation) override;
+      f1dl::InterfaceRequest<presentation::Presentation> presentation) override;
 
   // Set up environment with a |Presenter| service.
   // We launch apps with this environment.
@@ -91,7 +91,7 @@ class TileView : public mozart::BaseView,
   // Map from keys to |ViewData|
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;
 
-  f1dl::BindingSet<mozart::Presenter> presenter_bindings_;
+  f1dl::BindingSet<presentation::Presenter> presenter_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TileView);
 };

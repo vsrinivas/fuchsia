@@ -40,9 +40,9 @@ void View::OnPropertiesChanged(views_v1::ViewPropertiesPtr old_properties) {
 
 bool View::OnInputEvent(input::InputEventPtr event) {
   if (event->is_pointer()) {
-    const auto& pointer = event->get_pointer();
+    const auto& pointer = event->pointer();
     switch (pointer->phase) {
-      case input::PointerEvent::Phase::DOWN: {
+      case input::PointerEventPhase::DOWN: {
         auto stroke = fxl::MakeRefCounted<Stroke>(&canvas_);
         pointer_id_to_stroke_map_.insert({pointer->pointer_id, stroke});
         scratch_group_.AddStroke(*stroke);
@@ -51,7 +51,7 @@ bool View::OnInputEvent(input::InputEventPtr event) {
                         [](images::PresentationInfoPtr info) {});
         return true;
       }
-      case input::PointerEvent::Phase::MOVE: {
+      case input::PointerEventPhase::MOVE: {
         const auto& stroke =
             pointer_id_to_stroke_map_.find(pointer->pointer_id)->second;
         if (!stroke) {
@@ -64,7 +64,7 @@ bool View::OnInputEvent(input::InputEventPtr event) {
                         [](images::PresentationInfoPtr info) {});
         return true;
       }
-      case input::PointerEvent::Phase::UP: {
+      case input::PointerEventPhase::UP: {
         auto it = pointer_id_to_stroke_map_.find(pointer->pointer_id);
         const auto& stroke = it->second;
         if (!stroke) {
@@ -84,8 +84,8 @@ bool View::OnInputEvent(input::InputEventPtr event) {
   }
 
   if (event->is_keyboard()) {
-    const auto& keyboard = event->get_keyboard();
-    if (keyboard->phase == input::KeyboardEvent::Phase::PRESSED &&
+    const auto& keyboard = event->keyboard();
+    if (keyboard->phase == input::KeyboardEventPhase::PRESSED &&
         keyboard->hid_usage == 6 /* c */) {
       stable_group_.Clear();
       canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),

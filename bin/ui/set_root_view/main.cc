@@ -11,7 +11,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
 #include <fuchsia/cpp/presentation.h>
-#include "lib/ui/views/fidl/view_provider.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -64,7 +64,7 @@ int main(int argc, const char** argv) {
 
   // Ask the presenter to display it.
   auto presenter =
-      application_context_->ConnectToEnvironmentService<mozart::Presenter>();
+      application_context_->ConnectToEnvironmentService<presentation::Presenter>();
   presenter->Present(std::move(view_owner), nullptr);
 
   // Done!

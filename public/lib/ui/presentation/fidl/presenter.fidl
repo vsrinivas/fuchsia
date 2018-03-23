@@ -10,7 +10,7 @@ library presentation;
 // The Presenter service provides a way for applications to ask that a
 // specified view be added to a view tree, leaving any window management
 // concerns up to the discretion of the presenter implementation.
-[ServiceName="mozart::Presenter"]
+[ServiceName="presentation::Presenter"]
 interface Presenter {
   1: Present(views_v1_token.ViewOwner view_owner, request<Presentation>? presentation_request);
 };

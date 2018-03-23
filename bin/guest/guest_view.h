@@ -17,7 +17,7 @@
 #include "lib/ui/scenic/client/host_memory.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 
 class GuestView;
 

@@ -10,7 +10,7 @@
 #include <fuchsia/cpp/views_v1.h>
 #include "lib/ui/geometry/cpp/formatting.h"
 
-namespace mozart {
+namespace views_v1 {
 
 std::ostream& operator<<(std::ostream& os,
                          const views_v1_token::ViewToken& value);
@@ -26,6 +26,6 @@ std::ostream& operator<<(std::ostream& os,
                          const views_v1::DisplayMetrics& value);
 std::ostream& operator<<(std::ostream& os, const views_v1::ViewLayout& value);
 
-}  // namespace mozart
+}  // namespace views_v1
 
 #endif  // LIB_UI_VIEWS_CPP_FORMATTING_H_

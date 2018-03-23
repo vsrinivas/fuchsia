@@ -7,7 +7,7 @@
 
 #include <fuchsia/cpp/geometry.h>
 
-namespace mozart {
+namespace geometry {
 
 std::ostream& operator<<(std::ostream& os, const geometry::Point& value);
 std::ostream& operator<<(std::ostream& os, const geometry::PointF& value);
@@ -20,6 +20,6 @@ std::ostream& operator<<(std::ostream& os, const geometry::Inset& value);
 std::ostream& operator<<(std::ostream& os, const geometry::InsetF& value);
 std::ostream& operator<<(std::ostream& os, const geometry::Transform& value);
 
-}  // namespace mozart
+}  // namespace geometry
 
 #endif  // LIB_UI_GEOMETRY_CPP_FORMATTING_H_

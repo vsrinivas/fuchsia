@@ -39,20 +39,20 @@ constexpr float kDefaultPixelVisualAngleDegrees = 0.0213;
 // settings. Empirically determined to be around 0.255.
 constexpr float kIdealPipVisualAngleDegrees = 0.0255;
 
-constexpr float GetDefaultViewingDistanceInMm(mozart::DisplayUsage usage) {
+constexpr float GetDefaultViewingDistanceInMm(presentation::DisplayUsage usage) {
   switch (usage) {
-    case mozart::DisplayUsage::HANDHELD:
+    case presentation::DisplayUsage::HANDHELD:
       return 360.f;
-    case mozart::DisplayUsage::CLOSE:
+    case presentation::DisplayUsage::CLOSE:
       return 500.f;
-    case mozart::DisplayUsage::NEAR:
+    case presentation::DisplayUsage::NEAR:
       return 720.f;
-    case mozart::DisplayUsage::MIDRANGE:
+    case presentation::DisplayUsage::MIDRANGE:
       return 1200.f;
-    case mozart::DisplayUsage::FAR:
+    case presentation::DisplayUsage::FAR:
       return 3000.f;
     default:
-    case mozart::DisplayUsage::UNKNOWN:
+    case presentation::DisplayUsage::UNKNOWN:
       return 0.f;
   }
 }

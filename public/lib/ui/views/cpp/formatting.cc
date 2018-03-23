@@ -6,7 +6,7 @@
 
 #include <ostream>
 
-namespace mozart {
+namespace views_v1 {
 
 std::ostream& operator<<(std::ostream& os,
                          const views_v1_token::ViewToken& value) {
@@ -37,4 +37,4 @@ std::ostream& operator<<(std::ostream& os, const views_v1::ViewLayout& value) {
   return os << "{size=" << value.size << ", inset=" << value.inset << "}";
 }
 
-}  // namespace mozart
+}  // namespace views_v1

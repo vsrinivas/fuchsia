@@ -13,7 +13,7 @@ namespace mozart {
 namespace test {
 
 using OnMockChildAttachedCallback =
-    std::function<void(uint32_t, mozart::ViewInfoPtr)>;
+    std::function<void(uint32_t, views_v1::ViewInfoPtr)>;
 using OnMockChildUnavailable = std::function<void(uint32_t)>;
 
 class MockViewContainerListener : public views_v1::ViewContainerListener {
@@ -26,7 +26,7 @@ class MockViewContainerListener : public views_v1::ViewContainerListener {
 
  private:
   void OnChildAttached(uint32_t child_key,
-                       mozart::ViewInfoPtr child_view_info,
+                       views_v1::ViewInfoPtr child_view_info,
                        const OnChildAttachedCallback& callback) override;
   void OnChildUnavailable(uint32_t child_key,
                           const OnChildUnavailableCallback& callback) override;

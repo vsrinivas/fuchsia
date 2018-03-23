@@ -107,7 +107,7 @@ Presentation::~Presentation() {}
 
 void Presentation::Present(
     views_v1_token::ViewOwnerPtr view_owner,
-    fidl::InterfaceRequest<mozart::Presentation> presentation_request,
+    fidl::InterfaceRequest<presentation::Presentation> presentation_request,
     fxl::Closure shutdown_callback) {
   FXL_DCHECK(view_owner);
   FXL_DCHECK(!display_model_initialized_);
@@ -117,7 +117,7 @@ void Presentation::Present(
   scenic_->GetDisplayInfo(fxl::MakeCopyable(
       [weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
        presentation_request = std::move(presentation_request)](
-          gfx::DisplayInfoPtr display_info) mutable {
+          gfx::DisplayInfo display_info) mutable {
         if (weak)
           weak->CreateViewTree(std::move(view_owner),
                                std::move(presentation_request),
@@ -127,10 +127,8 @@ void Presentation::Present(
 
 void Presentation::CreateViewTree(
     views_v1_token::ViewOwnerPtr view_owner,
-    fidl::InterfaceRequest<mozart::Presentation> presentation_request,
-    gfx::DisplayInfoPtr display_info) {
-  FXL_DCHECK(display_info);
-
+    fidl::InterfaceRequest<presentation::Presentation> presentation_request,
+    gfx::DisplayInfo display_info) {
   if (presentation_request) {
     presentation_binding_.Bind(std::move(presentation_request));
   }
@@ -199,7 +197,7 @@ void Presentation::CreateViewTree(
 }
 
 void Presentation::InitializeDisplayModel(
-    gfx::DisplayInfoPtr display_info) {
+    gfx::DisplayInfo display_info) {
   FXL_DCHECK(!display_model_initialized_);
 
   // Save previous display values. These could have been overriden by earlier
@@ -214,8 +212,8 @@ void Presentation::InitializeDisplayModel(
       display_model_simulated_.display_info().height_in_mm;
 
   // Initialize display model.
-  display_configuration::InitializeModelForDisplay(display_info->width_in_px,
-                                                   display_info->height_in_px,
+  display_configuration::InitializeModelForDisplay(display_info.width_in_px,
+                                                   display_info.height_in_px,
                                                    &display_model_actual_);
   display_model_simulated_ = display_model_actual_;
 
@@ -306,8 +304,8 @@ bool Presentation::SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm,
   return true;
 }
 
-void Presentation::SetDisplayUsage(mozart::DisplayUsage usage) {
-  mozart::DisplayUsage old_usage =
+void Presentation::SetDisplayUsage(presentation::DisplayUsage usage) {
+  presentation::DisplayUsage old_usage =
       display_model_simulated_.environment_info().usage;
   SetDisplayUsageWithoutApplyingChanges(usage);
   if (display_model_simulated_.environment_info().usage == old_usage) {
@@ -323,9 +321,9 @@ void Presentation::SetDisplayUsage(mozart::DisplayUsage usage) {
 }
 
 void Presentation::SetDisplayUsageWithoutApplyingChanges(
-    mozart::DisplayUsage usage) {
+    presentation::DisplayUsage usage) {
   display_model_simulated_.environment_info().usage =
-      (usage == mozart::DisplayUsage::UNKNOWN)
+      (usage == presentation::DisplayUsage::UNKNOWN)
           ? display_model_actual_.environment_info().usage
           : usage;
 }
@@ -354,10 +352,8 @@ bool Presentation::ApplyDisplayModelChanges(bool print_log) {
   root_properties->display_metrics->device_pixel_ratio =
       display_metrics_.x_scale_in_px_per_pp();
   root_properties->view_layout = views_v1::ViewLayout::New();
-  root_properties->view_layout->size = geometry::SizeF::New();
-  root_properties->view_layout->size->width = display_metrics_.width_in_pp();
-  root_properties->view_layout->size->height = display_metrics_.height_in_pp();
-  root_properties->view_layout->inset = mozart::InsetF::New();
+  root_properties->view_layout->size.width = display_metrics_.width_in_pp();
+  root_properties->view_layout->size.height = display_metrics_.height_in_pp();
   tree_container_->SetChildProperties(kRootViewKey, std::move(root_properties));
 
   // Apply device pixel ratio.
@@ -388,7 +384,7 @@ void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
   std::unique_ptr<mozart::DeviceState> state =
       std::make_unique<mozart::DeviceState>(
           input_device->id(), input_device->descriptor(),
-          [this](input::InputEventPtr event) { OnEvent(std::move(event)); });
+          [this](input::InputEvent event) { OnEvent(std::move(event)); });
   mozart::DeviceState* state_ptr = state.get();
   auto device_pair = std::make_pair(input_device, std::move(state));
   state_ptr->OnRegistered();
@@ -410,10 +406,10 @@ void Presentation::OnDeviceRemoved(uint32_t device_id) {
 }
 
 void Presentation::OnReport(uint32_t device_id,
-                            input::InputReportPtr input_report) {
+                            input::InputReport input_report) {
   FXL_VLOG(2) << "OnReport device=" << device_id
               << ", count=" << device_states_by_id_.count(device_id)
-              << ", report=" << *(input_report);
+              << ", report=" << input_report;
 
   if (device_states_by_id_.count(device_id) == 0) {
     FXL_VLOG(1) << "OnReport: Unknown device " << device_id;
@@ -431,9 +427,9 @@ void Presentation::OnReport(uint32_t device_id,
 }
 
 void Presentation::CaptureKeyboardEvent(
-    input::KeyboardEventPtr event_to_capture,
-    fidl::InterfaceHandle<input::KeyboardCaptureListener> listener_handle) {
-  input::KeyboardCaptureListenerPtr listener;
+    input::KeyboardEvent event_to_capture,
+    fidl::InterfaceHandle<presentation::KeyboardCaptureListener> listener_handle) {
+  presentation::KeyboardCaptureListenerPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
   listener.set_error_handler([this, listener = listener.get()] {
@@ -450,15 +446,15 @@ void Presentation::CaptureKeyboardEvent(
       KeyboardCaptureItem{std::move(event_to_capture), std::move(listener)});
 }
 
-bool Presentation::GlobalHooksHandleEvent(const input::InputEventPtr& event) {
+bool Presentation::GlobalHooksHandleEvent(const input::InputEvent& event) {
   return display_rotater_.OnEvent(event, this) ||
          display_usage_switcher_.OnEvent(event, this) ||
          display_size_switcher_.OnEvent(event, this) ||
          perspective_demo_mode_.OnEvent(event, this);
 }
 
-void Presentation::OnEvent(input::InputEventPtr event) {
-  FXL_VLOG(1) << "OnEvent " << *(event);
+void Presentation::OnEvent(input::InputEvent event) {
+  FXL_VLOG(1) << "OnEvent " << event;
 
   bool invalidate = false;
   bool dispatch_event = true;
@@ -470,23 +466,23 @@ void Presentation::OnEvent(input::InputEventPtr event) {
 
   // Process the event.
   if (dispatch_event) {
-    if (event->is_pointer()) {
-      const input::PointerEventPtr& pointer = event->get_pointer();
+    if (event.is_pointer()) {
+      const input::PointerEvent& pointer = event.pointer();
 
-      if (pointer->type == input::PointerEvent::Type::MOUSE) {
-        if (cursors_.count(pointer->device_id) == 0) {
-          cursors_.emplace(pointer->device_id, CursorState{});
+      if (pointer.type == input::PointerEventType::MOUSE) {
+        if (cursors_.count(pointer.device_id) == 0) {
+          cursors_.emplace(pointer.device_id, CursorState{});
         }
 
-        cursors_[pointer->device_id].position.x = pointer->x;
-        cursors_[pointer->device_id].position.y = pointer->y;
+        cursors_[pointer.device_id].position.x = pointer.x;
+        cursors_[pointer.device_id].position.y = pointer.y;
 
         // TODO(jpoichet) for now don't show cursor when mouse is added until we
         // have a timer to hide it. Acer12 sleeve reports 2 mice but only one
         // will generate events for now.
-        if (pointer->phase != input::PointerEvent::Phase::ADD &&
-            pointer->phase != input::PointerEvent::Phase::REMOVE) {
-          cursors_[pointer->device_id].visible = true;
+        if (pointer.phase != input::PointerEventPhase::ADD &&
+            pointer.phase != input::PointerEventPhase::REMOVE) {
+          cursors_[pointer.device_id].visible = true;
         }
         invalidate = true;
       } else {
@@ -498,15 +494,17 @@ void Presentation::OnEvent(input::InputEventPtr event) {
         }
       }
 
-    } else if (event->is_keyboard()) {
-      const input::KeyboardEventPtr& kbd = event->get_keyboard();
+    } else if (event.is_keyboard()) {
+      const input::KeyboardEvent& kbd = event.keyboard();
 
       for (size_t i = 0; i < captured_keybindings_.size(); i++) {
         const auto& event = captured_keybindings_[i].event;
-        if ((kbd->modifiers & event->modifiers) &&
-            (event->phase == kbd->phase) &&
-            (event->code_point == kbd->code_point)) {
-          captured_keybindings_[i].listener->OnEvent(kbd.Clone());
+        if ((kbd.modifiers & event.modifiers) &&
+            (event.phase == kbd.phase) &&
+            (event.code_point == kbd.code_point)) {
+          input::KeyboardEvent clone;
+          fidl::Clone(kbd, &clone);
+          captured_keybindings_[i].listener->OnEvent(std::move(clone));
         }
       }
     }
@@ -521,10 +519,8 @@ void Presentation::OnEvent(input::InputEventPtr event) {
 }
 
 void Presentation::OnChildAttached(uint32_t child_key,
-                                   mozart::ViewInfoPtr child_view_info,
-                                   const OnChildAttachedCallback& callback) {
-  FXL_DCHECK(child_view_info);
-
+                                   views_v1::ViewInfo child_view_info,
+                                   OnChildAttachedCallback callback) {
   if (kContentViewKey == child_key) {
     FXL_VLOG(1) << "OnChildAttached(content): child_view_info="
                 << child_view_info;
@@ -534,7 +530,7 @@ void Presentation::OnChildAttached(uint32_t child_key,
 
 void Presentation::OnChildUnavailable(
     uint32_t child_key,
-    const OnChildUnavailableCallback& callback) {
+    OnChildUnavailableCallback callback) {
   if (kRootViewKey == child_key) {
     FXL_LOG(ERROR) << "Root presenter: Root view terminated unexpectedly.";
     Shutdown();
@@ -546,8 +542,8 @@ void Presentation::OnChildUnavailable(
 }
 
 void Presentation::OnPropertiesChanged(
-    views_v1::ViewPropertiesPtr properties,
-    const OnPropertiesChangedCallback& callback) {
+    views_v1::ViewProperties properties,
+    OnPropertiesChangedCallback callback) {
   // Nothing to do right now.
   callback();
 }
@@ -593,10 +589,10 @@ void Presentation::PresentScene() {
   }
 
   session_.Present(
-      0, [weak = weak_factory_.GetWeakPtr()](images::PresentationInfoPtr info) {
+      0, [weak = weak_factory_.GetWeakPtr()](images::PresentationInfo info) {
         if (auto self = weak.get()) {
           uint64_t next_presentation_time =
-              info->presentation_time + info->presentation_interval;
+              info.presentation_time + info.presentation_interval;
           if (self->perspective_demo_mode_.UpdateAnimation(
                   self, next_presentation_time)) {
             self->PresentScene();
@@ -610,11 +606,11 @@ void Presentation::Shutdown() {
 }
 
 void Presentation::SetRendererParams(
-    ::fidl::VectorPtr<gfx::RendererParamPtr> params) {
+    ::fidl::VectorPtr<gfx::RendererParam> params) {
   for (size_t i = 0; i < params->size(); ++i) {
     renderer_.SetParam(std::move(params->at(i)));
   }
-  session_.Present(0, [](images::PresentationInfoPtr info) {});
+  session_.Present(0, [](images::PresentationInfo info) {});
 }
 
 }  // namespace root_presenter

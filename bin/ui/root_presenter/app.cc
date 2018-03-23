@@ -8,9 +8,10 @@
 
 #include "garnet/bin/ui/root_presenter/presentation.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 
 namespace root_presenter {
 
@@ -22,8 +23,8 @@ App::App(const fxl::CommandLine& command_line)
 
   input_reader_.Start();
 
-  application_context_->outgoing_services()->AddService<mozart::Presenter>(
-      [this](fidl::InterfaceRequest<mozart::Presenter> request) {
+  application_context_->outgoing_services()->AddService<presentation::Presenter>(
+      [this](fidl::InterfaceRequest<presentation::Presenter> request) {
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
@@ -38,7 +39,7 @@ App::~App() {}
 
 void App::Present(
     fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner_handle,
-    fidl::InterfaceRequest<mozart::Presentation> presentation_request) {
+    fidl::InterfaceRequest<presentation::Presentation> presentation_request) {
   InitializeServices();
 
   auto presentation =
@@ -62,11 +63,11 @@ void App::Present(
 }
 
 void App::RegisterDevice(
-    input::DeviceDescriptorPtr descriptor,
+    input::DeviceDescriptor descriptor,
     fidl::InterfaceRequest<input::InputDevice> input_device_request) {
   uint32_t device_id = ++next_device_token_;
 
-  FXL_VLOG(1) << "RegisterDevice " << device_id << " " << *descriptor;
+  FXL_VLOG(1) << "RegisterDevice " << device_id << " " << descriptor;
   std::unique_ptr<mozart::InputDeviceImpl> input_device =
       std::make_unique<mozart::InputDeviceImpl>(
           device_id, std::move(descriptor), std::move(input_device_request),
@@ -93,13 +94,15 @@ void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
 
 void App::OnReport(mozart::InputDeviceImpl* input_device,
                    input::InputReport report) {
-  FXL_VLOG(2) << "OnReport from " << input_device->id() << " " << *report;
+  FXL_VLOG(2) << "OnReport from " << input_device->id() << " " << report;
   if (devices_by_id_.count(input_device->id()) == 0)
     return;
 
   FXL_VLOG(2) << "OnReport to " << presentations_.size();
   for (auto& presentation : presentations_) {
-    presentation->OnReport(input_device->id(), report.Clone());
+    input::InputReport clone;
+    fidl::Clone(report, &clone);
+    presentation->OnReport(input_device->id(), std::move(clone));
   }
 }
 

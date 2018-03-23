@@ -8,7 +8,7 @@
 
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
+#include <fuchsia/cpp/views_v1.h>
 
 namespace examples {
 
@@ -30,7 +30,7 @@ TileView::~TileView() {}
 
 void TileView::Present(
     f1dl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
-    f1dl::InterfaceRequest<mozart::Presentation> presentation) {
+    f1dl::InterfaceRequest<presentation::Presentation> presentation) {
   const std::string empty_url;
   AddChildView(std::move(child_view_owner), empty_url, nullptr);
 }
@@ -67,8 +67,8 @@ void TileView::CreateNestedEnvironment() {
   env_->GetApplicationLauncher(env_launcher_.NewRequest());
 
   // Add a binding for the presenter service
-  service_provider_bridge_.AddService<mozart::Presenter>(
-      [this](f1dl::InterfaceRequest<mozart::Presenter> request) {
+  service_provider_bridge_.AddService<presentation::Presenter>(
+      [this](f1dl::InterfaceRequest<presentation::Presenter> request) {
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
@@ -80,7 +80,7 @@ void TileView::CreateNestedEnvironment() {
 }
 
 void TileView::OnChildAttached(uint32_t child_key,
-                               mozart::ViewInfoPtr child_view_info) {
+                               views_v1::ViewInfoPtr child_view_info) {
   auto it = views_.find(child_key);
   FXL_DCHECK(it != views_.end());
 
@@ -162,10 +162,8 @@ void TileView::OnSceneInvalidated(images::PresentationInfoPtr presentation_info)
 
     auto view_properties = views_v1::ViewProperties::New();
     view_properties->view_layout = views_v1::ViewLayout::New();
-    view_properties->view_layout->size = geometry::SizeF::New();
-    view_properties->view_layout->size->width = layout_bounds.width;
-    view_properties->view_layout->size->height = layout_bounds.height;
-    view_properties->view_layout->inset = mozart::InsetF::New();
+    view_properties->view_layout->size.width = layout_bounds.width;
+    view_properties->view_layout->size.height = layout_bounds.height;
 
     if (!view_data->view_properties.Equals(view_properties)) {
       view_data->view_properties = view_properties.Clone();

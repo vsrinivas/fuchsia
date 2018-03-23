@@ -181,8 +181,8 @@ bool View::OnInputEvent(input::InputEventPtr event) {
   }
 
   if (event->is_pointer()) {
-    const input::PointerEventPtr& pointer = event->get_pointer();
-    if (pointer->phase == input::PointerEvent::Phase::DOWN) {
+    const input::PointerEventPtr& pointer = event->pointer();
+    if (pointer->phase == input::PointerEventPhase::DOWN) {
       switch (animation_state_) {
         case kFourCorners:
           animation_state_ = kChangingToSwirling;

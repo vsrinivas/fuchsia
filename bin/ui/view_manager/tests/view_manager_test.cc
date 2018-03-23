@@ -47,7 +47,7 @@ TEST_F(ViewManagerTest, CreateAView) {
       &mock_view_listener, view_listener.NewRequest());
 
   // Create a view
-  mozart::ViewPtr view;
+  views_v1::ViewPtr view;
   views_v1_token::ViewOwnerPtr view_owner;
   view_manager_->CreateView(view.NewRequest(), view_owner.NewRequest(),
                             std::move(view_listener), "test_view");
@@ -75,7 +75,7 @@ TEST_F(ViewManagerTest, CreateAChildView) {
       &parent_mock_view_listener, parent_view_listener.NewRequest());
 
   // Create a parent view
-  mozart::ViewPtr parent_view;
+  views_v1::ViewPtr parent_view;
   views_v1_token::ViewOwnerPtr parent_view_owner;
   view_manager_->CreateView(
       parent_view.NewRequest(), parent_view_owner.NewRequest(),
@@ -91,7 +91,7 @@ TEST_F(ViewManagerTest, CreateAChildView) {
       &child_mock_view_listener, child_view_listener.NewRequest());
 
   // Create a child view
-  mozart::ViewPtr child_view;
+  views_v1::ViewPtr child_view;
   views_v1_token::ViewOwnerPtr child_view_owner;
   view_manager_->CreateView(child_view.NewRequest(),
                             child_view_owner.NewRequest(),
@@ -158,7 +158,7 @@ TEST_F(ViewManagerTest, SetChildProperties) {
       &parent_mock_view_listener, parent_view_listener.NewRequest());
 
   // Create a parent view
-  mozart::ViewPtr parent_view;
+  views_v1::ViewPtr parent_view;
   views_v1_token::ViewOwnerPtr parent_view_owner;
   view_manager_->CreateView(
       parent_view.NewRequest(), parent_view_owner.NewRequest(),
@@ -197,7 +197,7 @@ TEST_F(ViewManagerTest, SetChildProperties) {
       &child_mock_view_listener, child_view_listener.NewRequest());
 
   // Create a child view
-  mozart::ViewPtr child_view;
+  views_v1::ViewPtr child_view;
   views_v1_token::ViewOwnerPtr child_view_owner;
   view_manager_->CreateView(child_view.NewRequest(),
                             child_view_owner.NewRequest(),
