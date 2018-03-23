@@ -12,6 +12,8 @@ import (
 	"netstack/link/eth"
 	"netstack/watcher"
 
+	"fidl/bindings2"
+
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/arp"
 	"github.com/google/netstack/tcpip/network/ipv4"
@@ -49,6 +51,7 @@ func main() {
 		log.Fatal(err)
 	}
 	ctx.Serve()
+	go bindings2.Serve()
 
 	arena, err := eth.NewArena()
 	if err != nil {
