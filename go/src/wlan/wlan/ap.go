@@ -6,7 +6,7 @@ package wlan
 
 import (
 	"fmt"
-	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
+	mlme "fuchsia/go/wlan_mlme"
 	"sort"
 	"strings"
 )

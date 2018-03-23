@@ -4,6 +4,7 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
 import("//build/package.gni")
 
 # These go dependencies are common to wlanstack and wlanstack_test
@@ -53,27 +54,15 @@ wlan_go_dependencies = [
     source = "//garnet/public/lib/svc/go/src/svc"
   },
   {
-    package = "garnet/public/lib/wlan/fidl"
-    source = "$root_gen_dir/go/src/garnet/public/lib/wlan/fidl"
-  },
-  {
-    package = "garnet/public/lib/app/fidl"
-    source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
-  },
-  {
-    package = "garnet/public/lib/netstack/fidl"
-    source = "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl"
-  },
-  {
     source = "//third_party/golang/crypto"
     package = "golang.org/x/crypto"
   },
 ]
 
 wlan_gn_deps = [
-  "//garnet/public/lib/app/fidl",
-  "//garnet/public/lib/netstack/fidl",
-  "//garnet/public/lib/wlan/fidl:service",
+  "//garnet/public/lib/app/fidl($go_toolchain)",
+  "//garnet/public/lib/netstack/fidl($go_toolchain)",
+  "//garnet/public/lib/wlan/fidl:service($go_toolchain)",
 ]
 
 go_test("keywrap_test_bin") {
@@ -84,7 +73,7 @@ go_test("keywrap_test_bin") {
   # should be updated to match the code.
   go_dependencies = wlan_go_dependencies
 
-  deps = wlan_gn_deps
+  extra_dependencies = wlan_gn_deps
 }
 
 go_test("elements_test_bin") {
@@ -99,19 +88,10 @@ go_test("elements_test_bin") {
 go_test("eapol_handshake_test_bin") {
   output_name = "eapol_handshake_test"
   gopackage = "wlan/eapol/handshake"
-  deps = [
-    "//garnet/public/lib/wlan/fidl:service",
-    "//garnet/public/lib/wlan/fidl:mlme",
-  ]
-  deps += wlan_gn_deps
   go_dependencies = [
       {
         package = "fidl"
         source = "//garnet/public/lib/fidl/go/src/fidl"
-      },
-      {
-        package = "garnet/public/lib/wlan/fidl"
-        source = "$root_gen_dir/go/src/garnet/public/lib/wlan/fidl"
       },
       {
         package = "wlan/wlan"
@@ -129,6 +109,11 @@ go_test("eapol_handshake_test_bin") {
         source = "//third_party/golang/crypto"
         package = "golang.org/x/crypto"
       },
+  ]
+
+  extra_dependencies = wlan_gn_deps
+  extra_dependencies += [
+      "//garnet/public/lib/wlan/fidl:mlme($go_toolchain)",
   ]
 }
 
@@ -150,23 +135,18 @@ go_test("eapol_crypto_test_bin") {
 go_binary("wlanstack_bin") {
   output_name = "wlanstack"
   gopackage = "wlanstack"
-  deps = [
-    "//garnet/public/lib/netstack/fidl",
-    "//garnet/public/lib/wlan/fidl:service",
-    "//garnet/public/lib/wlan/fidl:mlme",
-  ]
-  deps += wlan_gn_deps
   go_dependencies = wlan_go_dependencies
+  extra_dependencies = wlan_gn_deps
+  extra_dependencies += [
+    "//garnet/public/lib/netstack/fidl($go_toolchain)",
+    "//garnet/public/lib/wlan/fidl:service($go_toolchain)",
+    "//garnet/public/lib/wlan/fidl:mlme($go_toolchain)",
+  ]
 }
 
 go_binary("wlantool_bin") {
   output_name = "wlan"
   gopackage = "wlantool"
-  deps = [
-    "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/netstack/fidl",
-    "//garnet/public/lib/wlan/fidl:service",
-  ]
   go_dependencies = [
     {
       package = "wlantool"
@@ -184,30 +164,23 @@ go_binary("wlantool_bin") {
       package = "fidl"
       source = "//garnet/public/lib/fidl/go/src/fidl"
     },
-    {
-      package = "garnet/public/lib/wlan/fidl"
-      source = "$root_gen_dir/go/src/garnet/public/lib/wlan/fidl"
-    },
-    {
-      package = "garnet/public/lib/app/fidl"
-      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
-    },
-    {
-      package = "garnet/public/lib/netstack/fidl"
-      source = "$root_gen_dir/go/src/garnet/public/lib/netstack/fidl"
-    },
+  ]
+  extra_dependencies = [
+    "//garnet/public/lib/app/fidl($go_toolchain)",
+    "//garnet/public/lib/netstack/fidl($go_toolchain)",
+    "//garnet/public/lib/wlan/fidl:service($go_toolchain)",
   ]
 }
 
 go_test("wlanstack_test_bin") {
   output_name = "wlanstack_test"
   gopackage = "wlan/wlan"
-  deps = [
-    "//garnet/public/lib/netstack/fidl",
-    "//garnet/public/lib/wlan/fidl:mlme",
-  ]
-  deps += wlan_gn_deps
   go_dependencies = wlan_go_dependencies
+  extra_dependencies = wlan_gn_deps
+  extra_dependencies += [
+    "//garnet/public/lib/netstack/fidl($go_toolchain)",
+    "//garnet/public/lib/wlan/fidl:mlme($go_toolchain)",
+  ]
 }
 
 package("wlanstack") {

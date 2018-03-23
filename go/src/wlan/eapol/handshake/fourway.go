@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
+	mlme "fuchsia/go/wlan_mlme"
 	"log"
 	"math/big"
 	"wlan/eapol"
@@ -264,7 +264,7 @@ func (s *fourWayStateWaitingGTK) configureKeysInStation(hs *FourWay) error {
 		keyList = append(keyList, mlme.SetKeyDescriptor{
 			Key:             hs.gtk,
 			Length:          uint16(len(hs.gtk)),
-			KeyType:         mlme.KeyType_Group,
+			KeyType:         mlme.KeyType(mlme.KeyTypeGroup),
 			KeyId:           uint16(hs.gtkID),
 			CipherSuiteOui:  cipher.OUI,
 			CipherSuiteType: uint8(cipher.Type),
@@ -283,7 +283,7 @@ func (s *fourWayStateWaitingGTK) configureKeysInStation(hs *FourWay) error {
 		keyList = append(keyList, mlme.SetKeyDescriptor{
 			Key:             hs.ptk.TK,
 			Length:          uint16(len(hs.ptk.TK)),
-			KeyType:         mlme.KeyType_Pairwise,
+			KeyType:         mlme.KeyType(mlme.KeyTypePairwise),
 			Address:         hs.config.PeerAddr,
 			CipherSuiteOui:  cipher.OUI,
 			CipherSuiteType: uint8(cipher.Type),

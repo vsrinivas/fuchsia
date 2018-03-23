@@ -5,9 +5,8 @@
 package wlan
 
 import (
-	mlme "garnet/public/lib/wlan/fidl/wlan_mlme"
-	mlme_ext "garnet/public/lib/wlan/fidl/wlan_mlme_ext"
-	"garnet/public/lib/wlan/fidl/wlan_service"
+	mlme "fuchsia/go/wlan_mlme"
+	"fuchsia/go/wlan_service"
 	"wlan/eapol"
 	"wlan/eapol/handshake"
 	"wlan/wlan/elements"
@@ -61,7 +60,7 @@ func newStartBSSRequest(ssid string, beaconPeriod uint32, dtimPeriod uint32, cha
 		Ssid:         ssid,
 		BeaconPeriod: beaconPeriod,
 		DtimPeriod:   dtimPeriod,
-		BssType:      mlme.BssTypes_Infrastructure,
+		BssType:      mlme.BssTypesInfrastructure,
 		Channel:      channel,
 	}
 }
@@ -85,7 +84,7 @@ func (s *startBSSState) run(c *Client) (time.Duration, error) {
 		if debug {
 			log.Printf("start bss req: %v timeout: %v", req, timeout)
 		}
-		err := c.SendMessage(req, int32(mlme.Method_StartRequest))
+		err := c.SendMessage(req, uint32(mlme.MethodStartRequest))
 		if err != nil {
 			return 0, err
 		}
@@ -107,9 +106,9 @@ func (s *startBSSState) handleCommand(cmd *commandRequest, c *Client) (state, er
 			if debug {
 				log.Printf("stop bss req: %v", req)
 			}
-			err := c.SendMessage(req, int32(mlme.Method_StopRequest))
+			err := c.SendMessage(req, uint32(mlme.MethodStopRequest))
 			if err != nil {
-				res.Err = &wlan_service.Error{wlan_service.ErrCode_Internal, "Could not send MLME request"}
+				res.Err = &wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}
 			} else {
 				// Send MLME-RESET.request to reset and allow MLME to move into Client mode.
 				req := newResetRequest(c.staAddr)
@@ -117,9 +116,9 @@ func (s *startBSSState) handleCommand(cmd *commandRequest, c *Client) (state, er
 					if debug {
 						log.Printf("reset req: %v", req)
 					}
-					err := c.SendMessage(req, int32(mlme.Method_ResetRequest))
+					err := c.SendMessage(req, uint32(mlme.MethodResetRequest))
 					if err != nil {
-						res.Err = &wlan_service.Error{wlan_service.ErrCode_Internal, "Could not send MLME request"}
+						res.Err = &wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}
 					}
 				}
 			}
@@ -133,7 +132,7 @@ func (s *startBSSState) handleCommand(cmd *commandRequest, c *Client) (state, er
 		}
 	default:
 		cmd.respC <- &CommandResult{nil,
-			&wlan_service.Error{wlan_service.ErrCode_NotSupported,
+			&wlan_service.Error{wlan_service.ErrCodeNotSupported,
 				"Can't run the command in scanState"}}
 	}
 	return s, nil
@@ -184,12 +183,12 @@ func (s *queryState) String() string {
 }
 
 func (s *queryState) run(c *Client) (time.Duration, error) {
-	req := &mlme_ext.DeviceQueryRequest{}
+	req := &mlme.DeviceQueryRequest{}
 	if debug {
 		log.Printf("query req: %v", req)
 	}
 
-	return InfiniteTimeout, c.SendMessage(req, int32(mlme.Method_DeviceQueryRequest))
+	return InfiniteTimeout, c.SendMessage(req, uint32(mlme.MethodDeviceQueryRequest))
 }
 
 func (s *queryState) commandIsDisabled() bool {
@@ -202,11 +201,11 @@ func (s *queryState) handleCommand(cmd *commandRequest, c *Client) (state, error
 
 func (s *queryState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
-	case *mlme_ext.DeviceQueryResponse:
+	case *mlme.DeviceQueryResponse:
 		if debug {
 			PrintDeviceQueryResponse(v)
 		}
-		c.wlanInfo, _ = msg.(*mlme_ext.DeviceQueryResponse)
+		c.wlanInfo, _ = msg.(*mlme.DeviceQueryResponse)
 		c.staAddr = c.wlanInfo.MacAddr
 
 		// Enter AP mode if ap config was supplied and is active. Else fall back to client mode.
@@ -285,10 +284,10 @@ func newScanRequest(ssid string, c *Client, channels []uint8) *mlme.ScanRequest 
 		return nil
 	}
 	return &mlme.ScanRequest{
-		BssType:        mlme.BssTypes_Infrastructure,
+		BssType:        mlme.BssTypesInfrastructure,
 		Bssid:          broadcastBssid,
 		Ssid:           ssid,
-		ScanType:       mlme.ScanTypes_Passive,
+		ScanType:       mlme.ScanTypesPassive,
 		ChannelList:    &channels,
 		MinChannelTime: 100,
 		MaxChannelTime: 300,
@@ -327,7 +326,7 @@ func (s *scanState) run(c *Client) (time.Duration, error) {
 		if debug {
 			log.Printf("scan req: %v timeout: %v", req, timeout)
 		}
-		err := c.SendMessage(req, int32(mlme.Method_ScanRequest))
+		err := c.SendMessage(req, uint32(mlme.MethodScanRequest))
 		if err != nil {
 			return 0, err
 		}
@@ -347,7 +346,7 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 		if !ok {
 			res := &CommandResult{}
 			res.Err = &wlan_service.Error{
-				wlan_service.ErrCode_InvalidArgs,
+				wlan_service.ErrCodeInvalidArgs,
 				"Invalid arguments",
 			}
 			cmd.respC <- res
@@ -358,7 +357,7 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 		res := &CommandResult{}
 		if !ok {
 			res.Err = &wlan_service.Error{
-				wlan_service.ErrCode_InvalidArgs,
+				wlan_service.ErrCodeInvalidArgs,
 				"Invalid arguments",
 			}
 		} else {
@@ -380,7 +379,7 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 		res := &CommandResult{}
 		if !ok {
 			res.Err = &wlan_service.Error{
-				wlan_service.ErrCode_InvalidArgs,
+				wlan_service.ErrCodeInvalidArgs,
 				"Invalid arguments",
 			}
 		} else {
@@ -390,9 +389,9 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 				if debug {
 					log.Printf("reset req: %v", req)
 				}
-				err := c.SendMessage(req, int32(mlme.Method_ResetRequest))
+				err := c.SendMessage(req, uint32(mlme.MethodResetRequest))
 				if err != nil {
-					res.Err = &wlan_service.Error{wlan_service.ErrCode_Internal, "Could not send MLME request"}
+					res.Err = &wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}
 				}
 			}
 		}
@@ -402,7 +401,7 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 		}
 	default:
 		cmd.respC <- &CommandResult{nil,
-			&wlan_service.Error{wlan_service.ErrCode_NotSupported,
+			&wlan_service.Error{wlan_service.ErrCodeNotSupported,
 				"Can't run the command in scanState"}}
 	}
 	return s, nil
@@ -535,7 +534,7 @@ func (s *joinState) run(c *Client) (time.Duration, error) {
 		log.Printf("join req: %v", req)
 	}
 
-	return InfiniteTimeout, c.SendMessage(req, int32(mlme.Method_JoinRequest))
+	return InfiniteTimeout, c.SendMessage(req, uint32(mlme.MethodJoinRequest))
 }
 
 func (s *joinState) commandIsDisabled() bool {
@@ -553,7 +552,7 @@ func (s *joinState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 			PrintJoinResponse(v)
 		}
 
-		if v.ResultCode == mlme.JoinResultCodes_Success {
+		if v.ResultCode == mlme.JoinResultCodesSuccess {
 			return newAuthState(), nil
 		} else {
 			return newScanState(c), nil
@@ -591,14 +590,14 @@ func (s *authState) String() string {
 func (s *authState) run(c *Client) (time.Duration, error) {
 	req := &mlme.AuthenticateRequest{
 		PeerStaAddress:     c.ap.BSSDesc.Bssid,
-		AuthType:           mlme.AuthenticationTypes_OpenSystem,
+		AuthType:           mlme.AuthenticationTypesOpenSystem,
 		AuthFailureTimeout: 20,
 	}
 	if debug {
 		log.Printf("auth req: %v", req)
 	}
 
-	return InfiniteTimeout, c.SendMessage(req, int32(mlme.Method_AuthenticateRequest))
+	return InfiniteTimeout, c.SendMessage(req, uint32(mlme.MethodAuthenticateRequest))
 }
 
 func (s *authState) commandIsDisabled() bool {
@@ -616,7 +615,7 @@ func (s *authState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 			PrintAuthenticateResponse(v)
 		}
 
-		if v.ResultCode == mlme.AuthenticateResultCodes_Success {
+		if v.ResultCode == mlme.AuthenticateResultCodesSuccess {
 			return newAssocState(), nil
 		} else {
 			return newScanState(c), nil
@@ -679,7 +678,7 @@ func (s *assocState) run(c *Client) (time.Duration, error) {
 		log.Printf("assoc req: %v", req)
 	}
 
-	return InfiniteTimeout, c.SendMessage(req, int32(mlme.Method_AssociateRequest))
+	return InfiniteTimeout, c.SendMessage(req, uint32(mlme.MethodAssociateRequest))
 }
 
 // Creates the RSNE used in MLME-Association.request to announce supported ciphers and AKMs to the
@@ -757,7 +756,7 @@ func (s *assocState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 			PrintAssociateResponse(v)
 		}
 
-		if v.ResultCode == mlme.AssociateResultCodes_Success {
+		if v.ResultCode == mlme.AssociateResultCodesSuccess {
 			return newAssociatedState(), nil
 		} else {
 			return newScanState(c), nil
@@ -817,10 +816,10 @@ func (s *associatedState) handleCommand(cmd *commandRequest, c *Client) (state, 
 			log.Printf("deauthenticate req: %v", req)
 		}
 
-		err := c.SendMessage(req, int32(mlme.Method_DeauthenticateRequest))
+		err := c.SendMessage(req, uint32(mlme.MethodDeauthenticateRequest))
 		res := &CommandResult{}
 		if err != nil {
-			res.Err = &wlan_service.Error{wlan_service.ErrCode_Internal, "Could not send MLME request"}
+			res.Err = &wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}
 		}
 		cmd.respC <- res
 
@@ -832,7 +831,7 @@ func (s *associatedState) handleCommand(cmd *commandRequest, c *Client) (state, 
 	//	s.scanner.handleCommand(cmd, c)
 	default:
 		cmd.respC <- &CommandResult{nil,
-			&wlan_service.Error{wlan_service.ErrCode_NotSupported,
+			&wlan_service.Error{wlan_service.ErrCodeNotSupported,
 				"Can't run the command in associatedState"}}
 	}
 	return s, nil
@@ -858,13 +857,13 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 			PrintDeauthenticateIndication(v)
 		}
 		return newAuthState(), nil
-	case *mlme_ext.SignalReportIndication:
+	case *mlme.SignalReportIndication:
 		if debug {
 			PrintSignalReportIndication(v)
 		}
 		c.ap.LastRSSI = v.Rssi
 		return s, nil
-	case *mlme_ext.EapolIndication:
+	case *mlme.EapolIndication:
 		if c.eapolC != nil {
 			c.eapolC.HandleEAPOLFrame(v.Data)
 		}
