@@ -4,7 +4,6 @@
 
 #define MAGMA_DLOG_ENABLE 1
 
-#include "vulkan_shim.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +14,12 @@
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+
+#if defined(MAGMA_USE_SHIM)
+#include "vulkan_shim.h"
+#else
+#include <vulkan/vulkan.h>
+#endif
 
 class VkCopyTest {
 public:
@@ -295,7 +300,9 @@ bool VkCopyTest::Exec()
 
 int main(void)
 {
+#if defined(MAGMA_USE_SHIM)
     VulkanShimInit();
+#endif
 
     uint32_t buffer_size = 60 * 1024 * 1024;
     uint32_t iterations = 1000;
