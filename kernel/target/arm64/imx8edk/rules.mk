@@ -9,5 +9,6 @@ PLATFORM_VID := 8   # PDEV_VID_NXP
 PLATFORM_PID := 1   # PDEV_PID_IMX8MEDK
 PLATFORM_BOARD_NAME := imx8edk
 PLATFORM_MDI_SRCS += $(LOCAL_DIR)/imx8edk.mdi
+PLATFORM_USE_SHIM := true
 
 include make/board.mk

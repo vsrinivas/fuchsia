@@ -324,7 +324,7 @@ fi
 case $ARCH in
     arm64)
         QEMU=${QEMUDIR}qemu-system-aarch64
-        ARGS+=" -kernel $BUILDDIR/zircon.bin"
+        ARGS+=" -kernel $BUILDDIR/qemu-zircon.bin"
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host"
           GIC=host

@@ -54,7 +54,9 @@
 #include <zircon/boot/bootdata.h>
 #include <zircon/types.h>
 
-extern paddr_t boot_structure_paddr; // Defined in start.S.
+// Defined in start.S.
+extern paddr_t kernel_entry_paddr;
+extern paddr_t boot_structure_paddrs[2];
 
 static void* ramdisk_base;
 static size_t ramdisk_size;
@@ -117,7 +119,8 @@ void platform_panic_start(void) {
 }
 
 // Reads Linux device tree to initialize command line and return ramdisk location
-static void read_device_tree(void *fdt, void** ramdisk_base, size_t* ramdisk_size, size_t* mem_size) {
+static void read_device_tree(void *fdt, zx_paddr_t ftd_paddr, void** ramdisk_base,
+                             size_t* ramdisk_size, size_t* mem_size) {
     paddr_t ramdisk_start_phys = 0;
     paddr_t ramdisk_end_phys = 0;
 
@@ -135,8 +138,8 @@ static void read_device_tree(void *fdt, void** ramdisk_base, size_t* ramdisk_siz
 
     // mark the range used by the FDT as reserved, in case we need it later
     dprintf(INFO, "FDT: device tree located at [%#" PRIx64 ", %#" PRIx64 "]\n",
-            boot_structure_paddr, boot_structure_paddr + fdt_totalsize(fdt) - 1);
-    boot_reserve_add_range(boot_structure_paddr, fdt_totalsize(fdt));
+            ftd_paddr, ftd_paddr + fdt_totalsize(fdt) - 1);
+    boot_reserve_add_range(ftd_paddr, fdt_totalsize(fdt));
 
     int offset = fdt_path_offset(fdt, "/chosen");
     if (offset < 0) {
@@ -316,7 +319,7 @@ void platform_halt_secondary_cpus(void) {
 }
 
 static void platform_start_cpu(uint cluster, uint cpu) {
-    uint32_t ret = psci_cpu_on(cluster, cpu, get_kernel_base_phys());
+    uint32_t ret = psci_cpu_on(cluster, cpu, kernel_entry_paddr);
     dprintf(INFO, "Trying to start cpu %u:%u returned: %d\n", cluster, cpu, (int)ret);
 }
 
@@ -515,36 +518,59 @@ static void process_bootdata(bootdata_t* root) {
 void platform_early_init(void) {
     // if the boot_structure_paddr variable is -1, it was not set
     // in start.S, so we are in a bad place.
-    if (boot_structure_paddr == -1UL) {
+    if (boot_structure_paddrs[0] == -1UL) {
         panic("no bootdata structure!\n");
     }
 
-    void* boot_structure_kvaddr = paddr_to_physmap(boot_structure_paddr);
-    DEBUG_ASSERT(boot_structure_kvaddr);
+    void* boot_structure_kvaddr0 = (boot_structure_paddrs[0]
+                                        ? paddr_to_physmap(boot_structure_paddrs[0]) : NULL);
+    void* boot_structure_kvaddr1 = (boot_structure_paddrs[1]
+                                        ? paddr_to_physmap(boot_structure_paddrs[1]) : NULL);
 
     // initialize the boot memory reservation system
     boot_reserve_init();
 
+    size_t arena_size = 0;
+
     // The previous environment passes us a boot structure. It may be a
     // device tree or a bootdata container. We attempt to detect the type of the
     // container and handle it appropriately.
-    const char *boot_structure_type = "";
-    size_t arena_size = 0;
-    if (is_bootdata_container(boot_structure_kvaddr)) {
-        // We leave out arena size for now
-        boot_structure_type = "bootdata container";
-        ramdisk_from_bootdata_container(boot_structure_kvaddr, &ramdisk_base,
-                                        &ramdisk_size);
-    } else {
-        boot_structure_type = "FDT";
-        // on qemu we read arena size from the device tree
-        read_device_tree(boot_structure_kvaddr, &ramdisk_base, &ramdisk_size, &arena_size);
-        // Some legacy bootloaders do not properly set linux,initrd-end
-        // Pull the ramdisk size directly from the bootdata container
-        //   now that we have the base to ensure that the size is valid.
-        ramdisk_from_bootdata_container(ramdisk_base, &ramdisk_base,
-                                        &ramdisk_size);
+    if (boot_structure_kvaddr0) {
+        if (is_bootdata_container(boot_structure_kvaddr0)) {
+            dprintf(INFO, "found bootdata in x0\n");
+            ramdisk_from_bootdata_container(boot_structure_kvaddr0, &ramdisk_base,
+                                            &ramdisk_size);
+        } else {
+            // assume we have a device tree
+            // on qemu we read arena size from the device tree
+            read_device_tree(boot_structure_kvaddr0, boot_structure_paddrs[0], &ramdisk_base,
+                             &ramdisk_size, &arena_size);
+            dprintf(INFO, "found device tree in x0\n");
+
+            if (boot_structure_kvaddr1) {
+                if (is_bootdata_container(boot_structure_kvaddr1)) {
+                    dprintf(INFO, "found bootdata in x1\n");
+                    // use bootdata that was passed from the loader shim instead of
+                    ramdisk_base = boot_structure_kvaddr1;
+                }
+            }
+
+            // Some legacy bootloaders do not properly set linux,initrd-end
+            // Pull the ramdisk size directly from the bootdata container
+            //   now that we have the base to ensure that the size is valid.
+            ramdisk_from_bootdata_container(ramdisk_base, &ramdisk_base,
+                                            &ramdisk_size);
+        }
+    } else if (boot_structure_kvaddr1) {
+        if (is_bootdata_container(boot_structure_kvaddr1)) {
+            dprintf(INFO, "found bootdata in x1\n");
+            // use bootdata that was passed from the loader shim instead of
+            ramdisk_base = boot_structure_kvaddr1;
+            ramdisk_from_bootdata_container(ramdisk_base, &ramdisk_base,
+                                            &ramdisk_size);
+        }
     }
+
 
     if (!ramdisk_base || !ramdisk_size) {
         panic("no ramdisk!\n");
@@ -569,10 +595,6 @@ void platform_early_init(void) {
     dprintf(INFO, "reserving ramdisk phys range [%#" PRIx64 ", %#" PRIx64 "]\n",
             ramdisk_start_phys, ramdisk_end_phys - 1);
     boot_reserve_add_range(ramdisk_start_phys, ramdisk_size);
-
-    // print how we got here to help us debug bringup
-    dprintf(INFO, "boot structure at %#lx seems to point to a %s\n",
-            boot_structure_paddr, boot_structure_type);
 
     /* add the main memory arena */
     if (arena_size) {
@@ -729,8 +751,20 @@ zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
 void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
                     uintptr_t new_bootimage_addr, size_t new_bootimage_len,
                     uintptr_t entry64_addr) {
-    mexec_assembly((uintptr_t)new_bootimage_addr, 0, 0, arm64_get_boot_el(),
-                   ops, (void*)(get_kernel_base_phys()));
+    paddr_t kernel_src_phys = (paddr_t)ops[0].src;
+    paddr_t kernel_dst_phys = (paddr_t)ops[0].dst;
+
+    // check to see if the kernel is packaged as a bootdata container
+    bootdata_t* header = (bootdata_t *)paddr_to_physmap(kernel_src_phys);
+    if (header[0].type == BOOTDATA_CONTAINER && header[1].type == BOOTDATA_KERNEL) {
+        bootdata_kernel_t* kernel_header = (bootdata_kernel_t *)&header[2];
+        // add offset from kernel header to entry point
+        kernel_dst_phys += kernel_header->entry64;
+    }
+    // else just jump to beginning of kernel image
+
+    mexec_assembly((uintptr_t)new_bootimage_addr, 0, 0, arm64_get_boot_el(), ops,
+                  (void *)kernel_dst_phys);
 }
 
 bool platform_serial_enabled(void) {

@@ -19,6 +19,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/exceptions_c.cpp \
 	$(LOCAL_DIR)/feature.cpp \
 	$(LOCAL_DIR)/fpu.cpp \
+	$(LOCAL_DIR)/header.S \
 	$(LOCAL_DIR)/mexec.S \
 	$(LOCAL_DIR)/mmu.cpp \
 	$(LOCAL_DIR)/spinlock.cpp \

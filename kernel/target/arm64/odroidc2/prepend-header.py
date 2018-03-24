@@ -26,6 +26,7 @@ def parse_int(x):
 def parse_cmdline():
     parser = ArgumentParser()
     parser.add_argument('--kernel', help='path to the kernel', type=FileType('rb'), required=True)
+    parser.add_argument('--shim', help='path to the kernel shim', type=FileType('rb'), required=True)
     parser.add_argument('--load_offset', help='kernel load offset', type=parse_int, required=True)
     parser.add_argument('-o', '--output', help='output file name', type=FileType('wb'), required=True)
     return parser.parse_args()
@@ -37,6 +38,7 @@ def pad_file(f, padding):
 def main():
     args = parse_cmdline()
     kernel = args.kernel
+    shim = args.shim
     out = args.output
     load_offset = args.load_offset
     kernel_size = fstat(kernel.fileno()).st_size
@@ -55,7 +57,10 @@ def main():
 
     pad_file(out, HEADER_SIZE);
 
-    # followed by the kernel
+    # followed by the shim
+    out.write(shim.read())
+
+    # and finally the kernel
     out.write(kernel.read())
 
 if __name__ == '__main__':

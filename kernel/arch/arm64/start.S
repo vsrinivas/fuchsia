@@ -30,14 +30,20 @@ cpuid                   .req x19
 page_table0             .req x20
 page_table1             .req x21
 
-.section .text.boot0, "a", @progbits
+.section .text.boot, "a", @progbits
 FUNCTION(_start)
     /* Save the Boot info for the primary CPU only */
     mrs     cpuid, mpidr_el1
     ubfx    cpuid, cpuid, #0, #15 /* mask Aff0 and Aff1 fields */
     cbnz    cpuid, .Lno_save_bootinfo
-    adrp    tmp, boot_structure_paddr
-    str     x0, [tmp, #:lo12:boot_structure_paddr]
+    /* save x0 and x1 in boot_structure_paddrs */
+    adrp    tmp, boot_structure_paddrs
+    str     x0, [tmp, #:lo12:boot_structure_paddrs]
+    str     x1, [tmp, #:lo12:boot_structure_paddrs + 8]
+    /* save entry point physical address in kernel_entry_paddr */
+    adrp    tmp, kernel_entry_paddr
+    adr     tmp2, _start
+    str     tmp2, [tmp, #:lo12:kernel_entry_paddr]
     adrp    tmp2, arch_boot_el
     mrs     x2, CurrentEL
     str     x2, [tmp2, #:lo12:arch_boot_el]
@@ -253,9 +259,13 @@ END_FUNCTION(_start)
 DATA(arch_boot_el)
     .quad 0xdeadbeef00ff00ff
 END_DATA(arch_boot_el)
-DATA(boot_structure_paddr)
+DATA(boot_structure_paddrs)
     .quad -1
-END_DATA(boot_structure_paddr)
+    .quad -1
+END_DATA(boot_structure_paddrs)
+DATA(kernel_entry_paddr)
+    .quad -1
+END_DATA(kernel_entry_paddr)
 
 DATA(page_tables_not_ready)
     .long       1

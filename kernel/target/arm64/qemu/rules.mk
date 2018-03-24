@@ -11,5 +11,17 @@ PLATFORM_VID := 1   # PDEV_VID_QEMU
 PLATFORM_PID := 1   # PDEV_PID_QEMU
 PLATFORM_BOARD_NAME := qemu
 PLATFORM_MDI_SRCS += $(LOCAL_DIR)/qemu.mdi
+PLATFORM_USE_SHIM := true
 
 include make/board.mk
+
+# qemu needs a shimmed kernel
+QEMU_ZIRCON := $(BUILDDIR)/qemu-zircon.bin
+
+# prepend shim to kernel image
+$(QEMU_ZIRCON): $(MKBOOTFS) $(BOOT_SHIM_BIN) $(OUTLKBIN)
+	$(call BUILDECHO,generating $@)
+	$(NOECHO)$(MKBOOTFS) -o $@ $(OUTLKBIN) --header $(BOOT_SHIM_BIN) --header-align $(BOOT_SHIM_ALIGN)
+
+GENERATED += $(QEMU_ZIRCON)
+EXTRA_BUILDDEPS += $(QEMU_ZIRCON)

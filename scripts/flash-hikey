@@ -196,5 +196,12 @@ if [[ $FLAG_FIRMWARE ]]; then
     exit 0
 fi
 
-KERNEL="${BUILD_DIR}/zzircon.bin"
+BOARD=hikey960
+BOOTDATA_BIN="${BUILD_DIR}/${BOARD}-combo-bootdata.bin"
+ZBOOTDATA_BIN="${BUILD_DIR}/z${BOARD}-combo-bootdata.bin"
+gzip -c ${BOOTDATA_BIN} > ${ZBOOTDATA_BIN}
+KERNEL=${ZBOOTDATA_BIN}
+RAMDISK="${BUILD_DIR}/dummy-ramdisk.bin"
+dd if=/dev/zero of=${RAMDISK} bs=4096 count=1
+
 flash_kernel
