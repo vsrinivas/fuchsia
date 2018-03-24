@@ -124,15 +124,11 @@ template("go_build") {
 
     if (defined(invoker.extra_dependencies)) {
       deps += invoker.extra_dependencies
-      args += [
-        "--go-dep-files",
-      ]
+      args += [ "--go-dep-files" ]
       foreach(dep, invoker.extra_dependencies) {
         gen_dir = get_label_info(dep, "target_gen_dir")
         name = get_label_info(dep, "name")
-        args += [
-          rebase_path("$gen_dir/$name.go_deps"),
-        ]
+        args += [ rebase_path("$gen_dir/$name.go_deps") ]
       }
     }
 
@@ -155,9 +151,7 @@ template("go_build") {
     deps += [ "//third_party/go:go_runtime" ]
 
     if (is_fuchsia) {
-      deps += [
-        "//garnet/public/sdk:zircon_sysroot_export",
-      ]
+      deps += [ "//garnet/public/sdk:zircon_sysroot_export" ]
     }
   }
 
@@ -166,24 +160,18 @@ template("go_build") {
     name = output_name
 
     if (is_fuchsia) {
-      tags = [
-        "arch:target",
-      ]
+      tags = [ "arch:target" ]
     } else {
-      tags = [
-        "arch:host",
-      ]
+      tags = [ "arch:host" ]
     }
 
     files = [
       {
         source = output_path
         dest = output_name
-      }
+      },
     ]
 
-    non_sdk_deps = [
-      ":$main_target_name",
-    ]
+    non_sdk_deps = [ ":$main_target_name" ]
   }
 }

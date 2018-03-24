@@ -248,15 +248,15 @@ template("bootdata_platform") {
       output_file,
     ]
     args = [
-             "-o",
-             rebase_path(output_file, root_build_dir),
-             "--vid",
-             "${invoker.vid}",  # Turns integer into string.
-             "--pid",
-             "${invoker.pid}",  # Turns integer into string.
-             "--board",
-             invoker.board,
-           ]
+      "-o",
+      rebase_path(output_file, root_build_dir),
+      "--vid",
+      "${invoker.vid}",  # Turns integer into string.
+      "--pid",
+      "${invoker.pid}",  # Turns integer into string.
+      "--board",
+      invoker.board,
+    ]
   }
 }
 

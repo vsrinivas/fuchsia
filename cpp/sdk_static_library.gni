@@ -16,7 +16,6 @@ import("//build/cpp/sdk_library.gni")
 #     If not specified, a name is inferred from the target's label.
 
 template("sdk_static_library") {
-
   sdk_library(target_name) {
     forward_variables_from(invoker, "*")
 

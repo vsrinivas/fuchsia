@@ -21,7 +21,6 @@ import("//build/cpp/sdk_library.gni")
 #     directly under the directory where the GN rules are declared.
 
 template("sdk_source_set") {
-
   sdk_library(target_name) {
     forward_variables_from(invoker, "*")
 

@@ -48,9 +48,7 @@ template("go_library") {
       foreach(dep, invoker.deps) {
         gen_dir = get_label_info(dep, "target_gen_dir")
         name = get_label_info(dep, "name")
-        dependent_libraries += [
-          "$gen_dir/$name.go_deps",
-        ]
+        dependent_libraries += [ "$gen_dir/$name.go_deps" ]
       }
     }
 
@@ -61,13 +59,13 @@ template("go_library") {
     inputs = dependent_libraries
 
     args = [
-      "--name",
-      invoker.name,
-      "--source-dir",
-      rebase_path(source_dir),
-      "--output",
-      rebase_path(library_file),
-      "--deps",
-    ] + rebase_path(dependent_libraries)
+             "--name",
+             invoker.name,
+             "--source-dir",
+             rebase_path(source_dir),
+             "--output",
+             rebase_path(library_file),
+             "--deps",
+           ] + rebase_path(dependent_libraries)
   }
 }

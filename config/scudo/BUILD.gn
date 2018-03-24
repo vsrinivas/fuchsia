@@ -19,7 +19,7 @@ declare_args() {
 
 assert(!use_scudo || scudo_default_options == "",
        "`scudo_default_options` does not affect `use_scudo builds`; " +
-       "use `select_variant` to choose `scudo` instead")
+           "use `select_variant` to choose `scudo` instead")
 
 # This config is added unconditionally by BUILDCONFIG.gn to pick up the
 # global `use_scudo` build argument.  For fine-grained control, leave

@@ -11,10 +11,11 @@ declare_args() {
 
 if (fuchsia_packages == "") {
   _jiri_manifest = "//.jiri_manifest"
-  foreach(layer, exec_script("//build/gn/guess_layer.py",
-                             [rebase_path(_jiri_manifest)],
-                             "list lines",
-                             [_jiri_manifest])) {
+  foreach(layer,
+          exec_script("//build/gn/guess_layer.py",
+                      [ rebase_path(_jiri_manifest) ],
+                      "list lines",
+                      [ _jiri_manifest ])) {
     if (fuchsia_packages != "") {
       fuchsia_packages += ","
     }
@@ -28,7 +29,7 @@ _preprocessed_packages = exec_script("prepreprocess_build_packages.py",
                                        fuchsia_packages,
                                      ],
                                      "scope",
-                                     ["package_imports_resolver.py"])
+                                     [ "package_imports_resolver.py" ])
 
 packages_have_cpp = _preprocessed_packages.have_cpp
 packages_have_dart = _preprocessed_packages.have_dart

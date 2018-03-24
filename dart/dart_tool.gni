@@ -58,9 +58,7 @@ template("dart_tool") {
     if (defined(invoker.source_dir)) {
       source_base = invoker.source_dir
     }
-    sources += [
-      rebase_path(invoker.main_dart, source_base),
-    ]
+    sources += [ rebase_path(invoker.main_dart, source_base) ]
   }
 
   dart_sdk_label = "//third_party/dart:create_host_sdk"

@@ -24,7 +24,6 @@
 #     string; values cannot be arrays or scopes.
 
 template("sdk_molecule") {
-
   gn_deps = []
   if (defined(invoker.non_sdk_deps)) {
     gn_deps = invoker.non_sdk_deps
@@ -54,7 +53,7 @@ template("sdk_molecule") {
 
   # Builds a manifest representing members of the group.
   action(target_name) {
-    forward_variables_from(invoker, ["testonly"])
+    forward_variables_from(invoker, [ "testonly" ])
 
     manifest = "$target_gen_dir/$target_name.sdk"
 
@@ -63,24 +62,22 @@ template("sdk_molecule") {
     deps = gn_deps
 
     inputs = dep_manifests + [
-      # Imported by the action's script.
-      "//build/sdk/sdk_common.py",
-    ]
+               # Imported by the action's script.
+               "//build/sdk/sdk_common.py",
+             ]
 
     outputs = [
       manifest,
     ]
 
     args = [
-      "--out",
-      rebase_path(manifest),
-      "--deps",
-    ] + dep_manifests + metadata
+             "--out",
+             rebase_path(manifest),
+             "--deps",
+           ] + dep_manifests + metadata
 
     if (is_group) {
-      args += [
-        "--is-group",
-      ]
+      args += [ "--is-group" ]
     }
   }
 }

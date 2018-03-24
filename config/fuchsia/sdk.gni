@@ -7,5 +7,9 @@ declare_args() {
   #
   # By default, we search the public directories for the various layers.
   # In the future, we'll search a pre-built SDK as well.
-  sdk_dirs = [ "//garnet/public", "//peridot/public", "//topaz/public" ]
+  sdk_dirs = [
+    "//garnet/public",
+    "//peridot/public",
+    "//topaz/public",
+  ]
 }

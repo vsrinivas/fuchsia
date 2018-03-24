@@ -7,7 +7,6 @@ import("//build/sdk/sdk_molecule.gni")
 # A group of objects that can be added to an SDK.
 
 template("sdk_group") {
-
   main_target_name = target_name
   sdk_target_name = "${target_name}_sdk"
 
@@ -15,9 +14,7 @@ template("sdk_group") {
     forward_variables_from(invoker, "*")
 
     if (defined(visibility)) {
-      visibility += [
-        ":$sdk_target_name",
-      ]
+      visibility += [ ":$sdk_target_name" ]
     }
   }
 
@@ -28,14 +25,10 @@ template("sdk_group") {
     if (defined(invoker.public_deps)) {
       foreach(dep, invoker.public_deps) {
         full_label = get_label_info(dep, "label_no_toolchain")
-        deps += [
-          "${full_label}_sdk",
-        ]
+        deps += [ "${full_label}_sdk" ]
       }
     }
 
-    non_sdk_deps = [
-      ":$main_target_name",
-    ]
+    non_sdk_deps = [ ":$main_target_name" ]
   }
 }

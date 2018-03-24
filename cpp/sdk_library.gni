@@ -34,17 +34,17 @@ template("sdk_library") {
   sdk_target_name = "${target_name}_sdk"
 
   target(library_type, main_target_name) {
-    forward_variables_from(invoker, "*", [
-      "include_base",
-      "sdk_name",
-      "source_dir",
-      "type",
-    ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "include_base",
+                             "sdk_name",
+                             "source_dir",
+                             "type",
+                           ])
 
     if (defined(visibility)) {
-      visibility += [
-        ":$sdk_target_name",
-      ]
+      visibility += [ ":$sdk_target_name" ]
     }
   }
 
@@ -76,10 +76,11 @@ template("sdk_library") {
   }
 
   sdk_atom(sdk_target_name) {
-    forward_variables_from(invoker, [
-      "source_dir",
-      "testonly",
-    ])
+    forward_variables_from(invoker,
+                           [
+                             "source_dir",
+                             "testonly",
+                           ])
 
     domain = "c-pp"
     if (compute_name) {
@@ -88,9 +89,7 @@ template("sdk_library") {
       name = atom_name
     }
 
-    tags = [
-      "type:sources",
-    ]
+    tags = [ "type:sources" ]
 
     files = []
     if (defined(invoker.sources)) {
@@ -102,14 +101,18 @@ template("sdk_library") {
             include_base = invoker.include_base
           }
           destination = rebase_path(source_file, include_base)
-          files += [{
-            source = source_file
-            dest = "include/$destination"
-          }]
+          files += [
+            {
+              source = source_file
+              dest = "include/$destination"
+            },
+          ]
         } else {
-          files += [{
-            source = source_file
-          }]
+          files += [
+            {
+              source = source_file
+            },
+          ]
         }
       }
     }
@@ -118,20 +121,15 @@ template("sdk_library") {
     if (defined(invoker.public_deps)) {
       foreach(dep, invoker.public_deps) {
         full_label = get_label_info(dep, "label_no_toolchain")
-        deps += [
-          "${full_label}_sdk",
-        ]
+        deps += [ "${full_label}_sdk" ]
       }
     }
 
-    non_sdk_deps = [
-      ":$main_target_name",
-    ]
+    non_sdk_deps = [ ":$main_target_name" ]
     if (compute_name) {
-      non_sdk_deps += [
-        ":$name_target_name",
-      ]
+      non_sdk_deps += [ ":$name_target_name" ]
     }
+
     # Explicitly add non-public dependencies, in case some of the source files
     # are generated.
     if (defined(invoker.deps)) {

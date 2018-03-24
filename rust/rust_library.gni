@@ -42,14 +42,15 @@ template("rust_library") {
                              "name",
                              "non_rust_deps",
                              "source_dir",
-                             "with_tests", # alias for with_unit_tests
+                             "with_tests",  # alias for with_unit_tests
                              "with_unit_tests",
                              "integration_tests",
                            ])
     if (defined(name)) {
       # This assertion is a requirement of local_dependencies.py in order to compute
       # the label name for rust_library rules.
-      assert(name == target_name, "name must equal target_name must equal crate name")
+      assert(name == target_name,
+             "name must equal target_name must equal crate name")
     }
     type = "lib"
   }

@@ -62,11 +62,13 @@ template("sdk") {
 
   # Generates the manifest.
   sdk_molecule(generation_target_name) {
-    forward_variables_from(invoker, "*", [
-      "domains",
-      "export",
-      "old_school",
-    ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "domains",
+                             "export",
+                             "old_school",
+                           ])
 
     metadata = [
       {
@@ -130,8 +132,8 @@ template("sdk") {
 
   group(main_target_name) {
     deps = [
-      ":$generation_target_name",
       ":$copy_target_name",
+      ":$generation_target_name",
       ":$verification_target_name",
     ]
   }
@@ -157,24 +159,23 @@ template("sdk") {
       ]
 
       args = [
-        "--out-dir",
-        rebase_path("$root_out_dir/sdks/$sdk_name"),
-        "--stamp-file",
-        rebase_path(stamp_file),
-        "--manifest",
-        rebase_path(final_manifest_file),
-        "--domains",
-      ] + invoker.domains + [
-        "--depfile",
-        rebase_path(depfile),
-        "--depname",
-        rebase_path(stamp_file, root_build_dir),
-      ]
+               "--out-dir",
+               rebase_path("$root_out_dir/sdks/$sdk_name"),
+               "--stamp-file",
+               rebase_path(stamp_file),
+               "--manifest",
+               rebase_path(final_manifest_file),
+               "--domains",
+             ] + invoker.domains +
+             [
+               "--depfile",
+               rebase_path(depfile),
+               "--depname",
+               rebase_path(stamp_file, root_build_dir),
+             ]
 
       if (defined(invoker.old_school) && invoker.old_school) {
-        args += [
-          "--old-school",
-        ]
+        args += [ "--old-school" ]
       }
 
       deps = [
@@ -182,7 +183,7 @@ template("sdk") {
         ":$verification_target_name",
       ]
     }
-  } else { # Not exported.
+  } else {  # Not exported.
     if (defined(invoker.domains)) {
       assert(false, "A domain list may only be set if export = true.")
     }

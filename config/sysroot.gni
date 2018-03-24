@@ -10,7 +10,9 @@ declare_args() {
 if (current_os == target_os && target_sysroot != "") {
   sysroot = target_sysroot
 } else if (is_fuchsia) {
-  _out_dir = get_label_info("//zircon/public/sysroot(//build/zircon:zircon_toolchain)", "target_out_dir")
+  _out_dir =
+      get_label_info("//zircon/public/sysroot(//build/zircon:zircon_toolchain)",
+                     "target_out_dir")
   sysroot = rebase_path("$_out_dir/sysroot")
 } else if (is_linux) {
   sysroot = rebase_path("//buildtools/${host_platform}/sysroot")

@@ -10,7 +10,6 @@ import("//build/sdk/sdk_atom.gni")
 # allow the resulting binary to be included in an SDK.
 
 template("sdk_executable") {
-
   main_target_name = target_name
 
   executable(main_target_name) {
@@ -27,24 +26,18 @@ template("sdk_executable") {
     name = output_name
 
     if (is_fuchsia) {
-      tags = [
-        "arch:target",
-      ]
+      tags = [ "arch:target" ]
     } else {
-      tags = [
-        "arch:host",
-      ]
+      tags = [ "arch:host" ]
     }
 
     files = [
       {
         source = "$root_out_dir/$output_name"
         dest = output_name
-      }
+      },
     ]
 
-    non_sdk_deps = [
-      ":$main_target_name",
-    ]
+    non_sdk_deps = [ ":$main_target_name" ]
   }
 }

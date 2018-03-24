@@ -45,6 +45,7 @@ template("dart_fuchsia_test") {
   }
 
   generated_test_main_target = target_name + "__test_main"
+
   # The generated code needs to be installed under the Dart toolchain directory
   # so that it can be found by the dart_library target powering the JIT app.
   dart_gen_dir = get_label_info(":bogus($dart_toolchain)", "target_gen_dir")

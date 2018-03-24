@@ -18,7 +18,8 @@ testonly = true
 
 # Package up the /system filesystem.
 bootdata("system_bootfs") {
-  assert(bootfs_packages, "bootfs_packages=true required for /system bootfs images")
+  assert(bootfs_packages,
+         "bootfs_packages=true required for /system bootfs images")
 
   deps = [
     "//build/gn:finalize_manifests",
@@ -50,7 +51,7 @@ bootdata("mkbootfs") {
     bootdata_label = "//build/gn:bootdata-qemu"
   }
 
-  extra_input_labels = [bootdata_label] + extra_bootdata
+  extra_input_labels = [ bootdata_label ] + extra_bootdata
   deps += extra_input_labels
 
   foreach(label, extra_input_labels) {

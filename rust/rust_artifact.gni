@@ -159,7 +159,6 @@ template("rust_artifact") {
 
   if ((defined(invoker.with_unit_tests) && invoker.with_unit_tests) ||
       (defined(invoker.with_tests) && invoker.with_tests)) {
-
     test_output = "$base_out_dir/$name-$type-unit-test"
     test_binaries += [ test_output ]
 
@@ -182,7 +181,6 @@ template("rust_artifact") {
 
   if (defined(invoker.integration_tests)) {
     foreach(test_name, invoker.integration_tests) {
-
       test_output = "$base_out_dir/$name-$test_name-$type-integration-test"
       test_binaries += [ test_output ]
 
@@ -208,11 +206,12 @@ template("rust_artifact") {
     script = "//build/rust/build_target.py"
 
     base_gen_dir = "$target_gen_dir/$main_target_name.rust"
-    fidl_gen_dir = get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
+    fidl_gen_dir =
+        get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
 
     depfile = output_depfile
 
-    forward_variables_from(invoker, ["deps"])
+    forward_variables_from(invoker, [ "deps" ])
     if (!defined(deps)) {
       deps = []
     }
@@ -224,52 +223,57 @@ template("rust_artifact") {
     inputs = [
       target_toml,
       workspace_toml,
-      workspace_lock
+      workspace_lock,
     ]
 
-    cargo_deps = exec_script("//build/rust/local_dependencies.py", [
-      "--target-toml",
-      rebase_path(target_toml),
-      "--workspace-toml",
-      rebase_path(workspace_toml),
-      "--workspace-lock",
-      rebase_path(workspace_lock),
-      "--fuchsia-dir",
-      rebase_path("//"),
-    ], "list lines", [target_toml, workspace_toml, workspace_lock])
+    cargo_deps = exec_script("//build/rust/local_dependencies.py",
+                             [
+                               "--target-toml",
+                               rebase_path(target_toml),
+                               "--workspace-toml",
+                               rebase_path(workspace_toml),
+                               "--workspace-lock",
+                               rebase_path(workspace_lock),
+                               "--fuchsia-dir",
+                               rebase_path("//"),
+                             ],
+                             "list lines",
+                             [
+                               target_toml,
+                               workspace_toml,
+                               workspace_lock,
+                             ])
 
     deps += cargo_deps
 
-    outputs = [
-      output_file,
-    ] + test_binaries
+    outputs = [ output_file ] + test_binaries
 
     args = [
-             "--type",
-             type,
-             "--name",
-             name,
-             "--out-dir",
-             rebase_path(base_out_dir),
-             "--gen-dir",
-             rebase_path(base_gen_dir),
-             "--root-out-dir",
-             rebase_path(root_build_dir),
-             "--root-gen-dir",
-             rebase_path(root_gen_dir),
-             "--fidl-gen-dir",
-             rebase_path(fidl_gen_dir),
-             "--crate-root",
-             rebase_path(source_dir),
-             "--cargo",
-             rebase_path("$rustc_prefix/cargo"),
-             "--rustc",
-             rebase_path("$rustc_prefix/rustc"),
-             "--target-triple",
-             target_triple,
-             "--cmake-dir",
-             rebase_path("//buildtools/cmake/bin"),
-           ]
+      "--type",
+      type,
+      "--name",
+      name,
+      "--out-dir",
+      rebase_path(base_out_dir),
+      "--gen-dir",
+      rebase_path(base_gen_dir),
+      "--root-out-dir",
+      rebase_path(root_build_dir),
+      "--root-gen-dir",
+      rebase_path(root_gen_dir),
+      "--fidl-gen-dir",
+      rebase_path(fidl_gen_dir),
+      "--crate-root",
+      rebase_path(source_dir),
+      "--cargo",
+      rebase_path("$rustc_prefix/cargo"),
+      "--rustc",
+      rebase_path("$rustc_prefix/rustc"),
+      "--target-triple",
+      target_triple,
+      "--cmake-dir",
+      rebase_path("//buildtools/cmake/bin"),
+    ]
 
     args += [
       "--shared-libs-root",
@@ -278,8 +282,8 @@ template("rust_artifact") {
     ]
 
     if ((defined(invoker.with_unit_tests) && invoker.with_unit_tests) ||
-        (defined(invoker.with_tests) && invoker.with_tests) ||
-        (defined(invoker.integration_tests) && invoker.integration_tests != [])) {
+        (defined(invoker.with_tests) && invoker.with_tests) || (defined(
+                                                                    invoker.integration_tests) && invoker.integration_tests != [])) {
       args += [ "--with-tests" ]
     }
 

@@ -11,6 +11,7 @@ import("//build/toolchain/variant.gni")
 # but they are always the same in every toolchain.
 stamp_command = "touch {{output}}"
 stamp_description = "STAMP {{output}}"
+
 # We use link instead of copy; the way "copy" tool is being used is
 # compatible with links since Ninja is tracking changes to the source.
 copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"

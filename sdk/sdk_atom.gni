@@ -83,7 +83,6 @@
 #     Whether this file should be added to Fuchsia packages.
 
 template("sdk_atom") {
-
   if (!defined(invoker.domain)) {
     assert(false, "Must define a domain name")
   }
@@ -129,15 +128,13 @@ template("sdk_atom") {
   }
 
   assert(defined(invoker.files) || defined(invoker.file_manifest),
-      "At least one of 'files' and 'file_manifest' must be defined")
+         "At least one of 'files' and 'file_manifest' must be defined")
   file_mappings = []
   file_inputs = []
   if (defined(invoker.files)) {
     foreach(file, invoker.files) {
       assert(defined(file.source), "File $file does not specify a source.")
-      file_inputs += [
-        file.source,
-      ]
+      file_inputs += [ file.source ]
       source = rebase_path(file.source)
       destination = ""
       if (defined(file.dest)) {
@@ -147,9 +144,7 @@ template("sdk_atom") {
       if (defined(file.packaged)) {
         prefix = "packaged"
       }
-      file_mappings += [
-        "$prefix:$destination=$source",
-      ]
+      file_mappings += [ "$prefix:$destination=$source" ]
     }
   }
 
@@ -167,7 +162,7 @@ template("sdk_atom") {
 
   # Builds a manifest representing this element.
   action(target_name) {
-    forward_variables_from(invoker, ["testonly"])
+    forward_variables_from(invoker, [ "testonly" ])
 
     if (defined(invoker.manifest_file)) {
       manifest = invoker.manifest_file
@@ -180,36 +175,29 @@ template("sdk_atom") {
     deps = gn_deps
 
     inputs = dep_manifests + file_inputs + [
-      # Imported by the action's script.
-      "//build/sdk/sdk_common.py",
-    ]
+               # Imported by the action's script.
+               "//build/sdk/sdk_common.py",
+             ]
 
     outputs = [
       manifest,
     ]
 
     args = name_args + [
-      "--domain",
-      domain_name,
-      "--out",
-      rebase_path(manifest),
-      "--base",
-      rebase_path(source_dir),
-      "--gn-label",
-      full_label,
-      "--deps",
-    ] + dep_manifests + [
-      "--package-deps",
-    ] + package_dep_manifests + [
-      "--files",
-    ] + file_mappings + [
-      "--tags",
-    ] + tags
+             "--domain",
+             domain_name,
+             "--out",
+             rebase_path(manifest),
+             "--base",
+             rebase_path(source_dir),
+             "--gn-label",
+             full_label,
+             "--deps",
+           ] + dep_manifests + [ "--package-deps" ] + package_dep_manifests +
+           [ "--files" ] + file_mappings + [ "--tags" ] + tags
 
     if (defined(invoker.file_manifest)) {
-      inputs += [
-        invoker.file_manifest,
-      ]
+      inputs += [ invoker.file_manifest ]
 
       args += [
         "--file-manifest",
