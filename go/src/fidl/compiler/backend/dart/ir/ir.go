@@ -50,6 +50,7 @@ type Union struct {
 type UnionMember struct {
 	Type     Type
 	Name     string
+	CtorName string
 	Offset   int
 	typeExpr string
 }
@@ -609,6 +610,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
 		t,
 		c.compileLowerCamelIdentifier(val.Name),
+		c.compileUpperCamelIdentifier(val.Name),
 		val.Offset,
 		fmt.Sprintf("const $fidl.MemberType<%s>(%s, %s)", t.Decl, typeStr, offsetStr),
 	}

@@ -15,7 +15,7 @@ enum {{ .TagName }} {
 class {{ .Name }} extends $fidl.Union {
 {{- range .Members }}
 
-  const {{ $.Name }}.with{{ .Name }}({{ .Type.Decl }} value)
+  const {{ $.Name }}.with{{ .CtorName }}({{ .Type.Decl }} value)
     : _data = value, tag = {{ $.TagName }}.{{ .Name }};
 {{- end }}
 
