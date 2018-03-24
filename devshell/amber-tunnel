@@ -16,5 +16,7 @@ fi
 fx-command-run ssh -q -R 8083:localhost:8083 $device_addr exit
 result=$?
 if [[ "${result}" -ne 0 ]]; then
-  echo "ssh exited with a non-zero status: ${result}." >&2
+  echo "Connection to target could not be established,"\
+       "ssh exited with status: ${result}. Updates will fail." >&2
+  exit "${result}"
 fi
