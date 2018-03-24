@@ -8,29 +8,26 @@
 
 #include "gtest/gtest.h"
 
-namespace mozart {
+namespace geometry {
 namespace {
 
-TransformPtr CreateTransformFromData(const std::array<float, 16>& data) {
-  TransformPtr transform = Transform::New();
-  transform->matrix = fidl::VectorPtr<float>::New(16);
-
-  memcpy(transform->matrix->data(), &data.front(), 16 * sizeof(float));
+Transform CreateTransformFromData(const std::array<float, 16>& data) {
+  Transform transform;
+  memcpy(transform.matrix.mutable_data(), &data.front(), 16 * sizeof(float));
   return transform;
 }
 
-TransformPtr CreateTestTransform() {
+Transform CreateTestTransform() {
   return CreateTransformFromData(
       {{0.34, 123.7, 89.22, 65.17, 871.12, 87.34, -0.3, -887, 76.2, 2.22222332,
         11.00992, -19, 42, 42, 42, 42}});
 }
 
-void ExpectTransformsAreFloatEq(const TransformPtr& lhs,
-                                const TransformPtr& rhs) {
+void ExpectTransformsAreFloatEq(const Transform& lhs, const Transform& rhs) {
   for (size_t row = 0; row < 4; row++) {
     for (size_t col = 0; col < 4; col++) {
       size_t idx = row * 4 + col;
-      EXPECT_FLOAT_EQ(lhs->matrix->at(idx), rhs->matrix->at(idx))
+      EXPECT_FLOAT_EQ(lhs.matrix.at(idx), rhs.matrix.at(idx))
           << "row=" << row << ", col=" << col;
     }
   }
@@ -103,11 +100,11 @@ TEST(PointTest, Comparisons) {
 }
 
 TEST(TransformFunctionsTest, SetIdentityTransform) {
-  TransformPtr identity = CreateTransformFromData(
+  Transform identity = CreateTransformFromData(
       {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}});
-  TransformPtr transform = CreateTestTransform();
+  Transform transform = CreateTestTransform();
 
-  SetIdentityTransform(transform.get());
+  SetIdentityTransform(&transform);
   ExpectTransformsAreFloatEq(identity, transform);
 }
 
@@ -116,11 +113,11 @@ TEST(TransformFunctionsTest, SetTranslationTransform) {
   const float y = 10.2;
   const float z = -1.5;
 
-  TransformPtr translated = CreateTransformFromData(
+  Transform translated = CreateTransformFromData(
       {{1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1}});
-  TransformPtr transform = CreateTestTransform();
+  Transform transform = CreateTestTransform();
 
-  SetTranslationTransform(transform.get(), x, y, z);
+  SetTranslationTransform(&transform, x, y, z);
   ExpectTransformsAreFloatEq(translated, transform);
 }
 
@@ -129,18 +126,19 @@ TEST(TransformFunctionsTest, Translate) {
   const float y = 0.5;
   const float z = -4.5;
 
-  TransformPtr transform = CreateTestTransform();
-  TransformPtr transform_pristine = transform->Clone();
-  TransformPtr transformed = transform->Clone();
+  Transform transform = CreateTestTransform();
+  Transform transform_pristine = transform;
+  TransformPtr transformed = Transform::New();
+  *transformed = transform;
 
-  transform_pristine->matrix->at(0 * 4 + 3) += x;
-  transform_pristine->matrix->at(1 * 4 + 3) += y;
-  transform_pristine->matrix->at(2 * 4 + 3) += z;
+  transform_pristine.matrix.at(0 * 4 + 3) += x;
+  transform_pristine.matrix.at(1 * 4 + 3) += y;
+  transform_pristine.matrix.at(2 * 4 + 3) += z;
 
   transformed = Translate(std::move(transformed), x, y, z);
-  Translate(transform.get(), x, y, z);
+  Translate(&transform, x, y, z);
 
-  ExpectTransformsAreFloatEq(transform_pristine, transformed);
+  ExpectTransformsAreFloatEq(transform_pristine, *transformed);
   ExpectTransformsAreFloatEq(transform_pristine, transform);
 }
 
@@ -149,26 +147,27 @@ TEST(TransformFunctionsTest, Scale) {
   const float y = -10.2;
   const float z = -7.3;
 
-  TransformPtr transform = CreateTestTransform();
-  TransformPtr transform_pristine = transform->Clone();
-  TransformPtr transformed = transform->Clone();
+  Transform transform = CreateTestTransform();
+  Transform transform_pristine = transform;
+  TransformPtr transformed = Transform::New();
+  *transformed = transform;
 
-  transform_pristine->matrix->at(0 * 4 + 0) *= x;
-  transform_pristine->matrix->at(1 * 4 + 1) *= y;
-  transform_pristine->matrix->at(2 * 4 + 2) *= z;
+  transform_pristine.matrix.at(0 * 4 + 0) *= x;
+  transform_pristine.matrix.at(1 * 4 + 1) *= y;
+  transform_pristine.matrix.at(2 * 4 + 2) *= z;
 
   transformed = Scale(std::move(transformed), x, y, z);
-  Scale(transform.get(), x, y, z);
+  Scale(&transform, x, y, z);
 
-  ExpectTransformsAreFloatEq(transform_pristine, transformed);
+  ExpectTransformsAreFloatEq(transform_pristine, *transformed);
   ExpectTransformsAreFloatEq(transform_pristine, transform);
 }
 
 TEST(TransformFunctionsTest, CreateIdentityTransform) {
-  TransformPtr identity = CreateTransformFromData(
+  Transform identity = CreateTransformFromData(
       {{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}});
 
-  ExpectTransformsAreFloatEq(identity, CreateIdentityTransform());
+  ExpectTransformsAreFloatEq(identity, *CreateIdentityTransform());
 }
 
 TEST(TransformFunctionsTest, CreateTranslationTransform) {
@@ -176,10 +175,10 @@ TEST(TransformFunctionsTest, CreateTranslationTransform) {
   const float y = 123.2;
   const float z = -9.2;
 
-  TransformPtr translation = CreateTransformFromData(
+  Transform translation = CreateTransformFromData(
       {{1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1}});
 
-  ExpectTransformsAreFloatEq(translation, CreateTranslationTransform(x, y, z));
+  ExpectTransformsAreFloatEq(translation, *CreateTranslationTransform(x, y, z));
 }
 
 TEST(TransformFunctionsTest, CreateScaleTransform) {
@@ -187,11 +186,11 @@ TEST(TransformFunctionsTest, CreateScaleTransform) {
   const float y = 10.2;
   const float z = -1.5;
 
-  TransformPtr translation = CreateTransformFromData(
+  Transform translation = CreateTransformFromData(
       {{x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1}});
 
-  ExpectTransformsAreFloatEq(translation, CreateScaleTransform(x, y, z));
+  ExpectTransformsAreFloatEq(translation, *CreateScaleTransform(x, y, z));
 }
 
 }  // namespace
-}  // namespace mozart
+}  // namespace geometry
