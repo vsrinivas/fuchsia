@@ -28,6 +28,7 @@ CANONICAL_PACKAGES = [
 # Directories which do not require aggregation.
 NO_AGGREGATION_DIRECTORIES = [
     'config',
+    'disabled',
     # TODO: force experimental content to be built for each layer.
     'experimental',
     'products',
