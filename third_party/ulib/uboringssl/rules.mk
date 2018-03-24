@@ -5,7 +5,8 @@
 # Variables shared between the userlib and hostlib
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-SHARED_COMPILEFLAGS := -fvisibility=hidden -Wa,--noexecstack -Wno-unused-function
+SHARED_COMPILEFLAGS := \
+    -fvisibility=hidden -Wno-unused-function -include $(LOCAL_DIR)/stack-note.S
 
 SHARED_SRCS := \
     $(LOCAL_DIR)/crypto/chacha/chacha.c \
