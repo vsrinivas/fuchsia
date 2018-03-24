@@ -2,7 +2,6 @@
     "imports": [
         "garnet/packages/examples/auth",
         "garnet/packages/examples/benchmark",
-        "garnet/packages/examples/bluetooth",
         "garnet/packages/examples/escher",
         "garnet/packages/examples/fidl2",
         "garnet/packages/examples/media",
