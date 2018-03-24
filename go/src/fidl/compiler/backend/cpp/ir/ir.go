@@ -66,6 +66,7 @@ type Struct struct {
 	Namespace string
 	Name      string
 	CName     string
+	TableType string
 	Members   []StructMember
 	Size      int
 }
@@ -563,6 +564,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 		c.namespace,
 		name,
 		"::" + name,
+		fmt.Sprintf("%s%sTable", c.library, name),
 		[]StructMember{},
 		val.Size,
 	}

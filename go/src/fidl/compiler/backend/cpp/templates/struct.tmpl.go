@@ -12,6 +12,7 @@ class {{ .Name }};
 {{- define "StructDeclaration" }}
 class {{ .Name }}  {
  public:
+  static const fidl_type_t* FidlType;
   {{- range .Members }}
   {{ .Type.Decl }} {{ .Name }}{{ if .DefaultValue }} = {{ .DefaultValue }}{{ else }}{}{{ end }};
   {{- end }}
@@ -27,6 +28,9 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
 
 {{- define "StructDefinition" }}
+extern "C" const fidl_type_t {{ .TableType }};
+const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
+
 void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
   {{- range .Members }}
   ::fidl::Encode(encoder, &{{ .Name }}, offset + {{ .Offset }});
