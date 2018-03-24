@@ -23,11 +23,11 @@ in Fuchsia.
     tools/           # dev tools not for prod (target & host)
     benchmarks/      # performance tests
     examples/        # pkg demonstrating features offered by this layer
-    experimental/    # pkg not quite ready for prod
+  * experimental/    # pkg not quite ready for prod
   * config/          # config files for the system (e.g. what to boot into)
   * sdk/             # SDK definitions
   * products/        # definitions for specific products
-    ...                # each package will also define additional packages
+    ...              # each layer will also define additional packages
 ```
 
 ## Cross-layer dependencies
@@ -50,6 +50,14 @@ Note that the directories that do not require aggregation are marked with `*` in
 the diagram above.
 
 `default` is currently an alias for `dev`.
+
+## Disabling packages
+
+Some packages might need to get (temporarily) disabled as refactorings occur in
+the Fuchsia codebase. In order to disable a package `<layer>/<type>/foo`, move
+it under `<layer>/<type>/disabled/foo` and remove it from `<layer>/<type>/all`.
+Note that this does not apply to packages in directories that do not require
+aggregation, as these packages are strictly opt-in already.
 
 ## Verification
 
