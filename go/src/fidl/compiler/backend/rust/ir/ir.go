@@ -378,7 +378,7 @@ func (c *compiler) compileType(val types.Type) Type {
 			r = fmt.Sprintf("Option<%s>", r)
 		}
 	case types.RequestType:
-		r = compileCompoundIdentifier(types.ParseCompoundIdentifier(val.RequestSubtype))
+		r = compileCamelCompoundIdentifier(val.RequestSubtype)
 		r = fmt.Sprintf("fidl::endpoints2::ServerEnd<%sMarker>", r)
 		if val.Nullable {
 			r = fmt.Sprintf("Option<%s>", r)
@@ -386,7 +386,7 @@ func (c *compiler) compileType(val types.Type) Type {
 	case types.PrimitiveType:
 		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
-		t := compileCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier))
+		t := compileCamelCompoundIdentifier(val.Identifier)
 		declType, ok := (*c.decls)[val.Identifier]
 		if !ok {
 			log.Fatal("unknown identifier: ", val.Identifier)

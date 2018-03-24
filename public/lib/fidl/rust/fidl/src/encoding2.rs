@@ -1086,7 +1086,7 @@ macro_rules! fidl2_union {
         name: $name:ident,
         members: [$(
             $member_name:ident {
-                ty: $member_ty:ident,
+                ty: $member_ty:ty,
                 offset: $member_offset:expr,
             },
         )*],
@@ -1187,7 +1187,7 @@ macro_rules! fidl2_union {
                         }
                         index += 1;
                     )*
-                    Err(Error::Invalid)
+                    Err($crate::Error::Invalid)
                 })
             }
         }

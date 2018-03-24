@@ -18,6 +18,6 @@ fidl2_union! {
   ],
   size: {{ .Size }},
   align: {{ .Alignment }},
-};
+}
 {{- end }}
 `
