@@ -14,12 +14,5 @@ fidl2_enum! {
   {{- end }}
   }
 }
-
-// TODO(cramertj) do we need these? It seems like some places assume
-// these names are available at top-level (example-9), but
-// adding them to the top-level causes clashes in the "enums" example.
-{{- range $member := $enum.Members }}
-pub const {{ $member.ConstName }}: {{ $enum.Name }} = {{ $enum.Name }}::{{ $member.Name }};
-{{- end }}
 {{ end }}
 `
