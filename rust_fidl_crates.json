@@ -82,5 +82,11 @@
     "fidl_target": "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy",
     "library_deps": ["bluetooth"],
     "public": true
+  },
+  {
+    "library_name": "power_manager",
+    "fidl_target": "//garnet/public/lib/power_manager/fidl:fidl",
+    "library_deps": [],
+    "public": true
   }
 ]
