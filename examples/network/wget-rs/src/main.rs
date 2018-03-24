@@ -8,17 +8,15 @@ extern crate failure;
 extern crate fidl;
 extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
+extern crate fuchsia_zircon as zx;
 extern crate futures;
-extern crate garnet_public_lib_network_fidl;
+extern crate fidl_network as netsvc;
 
-use failure::Error;
-use fidl::FidlService;
+use failure::{Error, ResultExt};
 use futures::prelude::*;
 use futures::io::AllowStdIo;
 
-use garnet_public_lib_network_fidl as netsvc;
-
-fn print_headers(resp: &netsvc::URLResponse) {
+fn print_headers(resp: &netsvc::UrlResponse) {
     println!(">>> Headers <<<");
     if let Some(ref status) = resp.status_line {
         println!("  {}", status);
@@ -56,25 +54,29 @@ fn main_res() -> Result<(), Error> {
     let mut exec = async::Executor::new()?;
 
     // Connect to the network service
-    let net = component::client::connect_to_service::<netsvc::NetworkService::Service>()?;
+    let net = component::client::connect_to_service::<netsvc::NetworkServiceMarker>()?;
 
-    // Create a URLLoader instance
-    let (loader_proxy, loader_server) = netsvc::URLLoader::Service::new_pair()?;
-    net.create_url_loader(loader_server)?;
+    // Create a UrlLoader instance
+    let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
+    let proxy = async::Channel::from_channel(p).context("failed to make async channel")?;
 
-    // Send the URLRequest to fetch the webpage
-    let req = netsvc::URLRequest {
+    let mut loader_server = fidl::endpoints2::ServerEnd::<netsvc::UrlLoaderMarker>::new(s);
+    net.create_url_loader(&mut loader_server)?;
+
+    // Send the UrlRequest to fetch the webpage
+    let mut req = netsvc::UrlRequest {
         url: url,
         method: String::from("GET"),
         headers: None,
         body: None,
         response_body_buffer_size: 0,
         auto_follow_redirects: true,
-        cache_mode: netsvc::URLRequestCacheMode::Default,
-        response_body_mode: netsvc::URLRequestResponseBodyMode::Stream,
+        cache_mode: netsvc::CacheMode::Default,
+        response_body_mode: netsvc::ResponseBodyMode::Stream,
     };
 
-    let fut = loader_proxy.start(req).err_into().and_then(|resp| {
+	let loader_proxy = netsvc::UrlLoaderProxy::new(proxy);
+    let fut = loader_proxy.start(&mut req).err_into().and_then(|resp| {
         if let Some(e) = resp.error {
             let code = e.code;
             println!("Got error: {} ({})",
@@ -85,13 +87,13 @@ fn main_res() -> Result<(), Error> {
         print_headers(&resp);
 
         match resp.body.map(|x| *x) {
-            Some(netsvc::URLBody::Stream(s)) => {
+            Some(netsvc::UrlBody::Stream(s)) => {
                 Some(async::Socket::from_socket(s)
                         .into_future()
                         .err_into())
             }
-            Some(netsvc::URLBody::Buffer(_)) |
-            Some(netsvc::URLBody::SizedBuffer(_)) |
+            Some(netsvc::UrlBody::Buffer(_)) |
+            Some(netsvc::UrlBody::SizedBuffer(_)) |
             None =>  None,
         }
     }).and_then(|socket_opt| {

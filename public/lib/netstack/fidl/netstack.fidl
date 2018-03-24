@@ -5,7 +5,10 @@
 library netstack;
 
 enum Protocol {
-  UNSPECIFIED = 0;
+  // TODO(FIDL-6): Change back to UNSPECIFIED after Rust bindings are fixed. This
+  // "conflicts" with NetAddressFamily's UNSPECIFIED since the generated Rust
+  // code doesn't namespace the constants for enums.
+  UUNSPECIFIED = 0;
   UDP = 1;
   TCP = 2;
 };
