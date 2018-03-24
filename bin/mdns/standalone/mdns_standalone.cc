@@ -7,6 +7,10 @@
 
 #include "garnet/bin/mdns/standalone/mdns_standalone.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <zx/time.h>
+
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "garnet/bin/mdns/standalone/ioctl_interface_monitor.h"
 #include "lib/fsl/handles/object_info.h"
@@ -41,7 +45,7 @@ std::ostream& operator<<(std::ostream& os, zx::duration value) {
             << milliseconds;
 }
 
-const fxl::TimeDelta kTrafficLoggingInterval = fxl::TimeDelta::FromSeconds(60);
+const zx::duration kTrafficLoggingInterval = zx::min(1);
 
 }  // namespace
 
@@ -61,7 +65,8 @@ MdnsStandalone::MdnsStandalone(const std::string& host_name) {
 MdnsStandalone::~MdnsStandalone() {}
 
 void MdnsStandalone::LogTrafficAfterDelay() {
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+  async::PostDelayedTask(
+      async_get_default(),
       [this]() {
         mdns_.LogTraffic();
         zx::duration run_time = fsl::GetCurrentThreadTotalRuntime();

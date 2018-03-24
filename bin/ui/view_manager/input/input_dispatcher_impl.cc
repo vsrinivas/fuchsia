@@ -5,6 +5,10 @@
 #include "garnet/bin/ui/view_manager/input/input_dispatcher_impl.h"
 
 #include <queue>
+
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/bin/ui/view_manager/internal/input_owner.h"
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "lib/escher/util/type_utils.h"
@@ -211,7 +215,7 @@ void InputDispatcherImpl::DeliverKeyEvent(
 
         if (!handled && propagation_index + 1 < focus_chain->chain.size()) {
           // Avoid re-entrance on DeliverKeyEvent
-          fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+          async::PostTask(async_get_default(),
               fxl::MakeCopyable([weak = weak_factory_.GetWeakPtr(),
                                  focus_chain = std::move(focus_chain),
                                  propagation_index,
@@ -237,8 +241,7 @@ void InputDispatcherImpl::PopAndScheduleNextEvent() {
         if (weak)
           weak->ProcessNextEvent();
       };
-      fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-          process_next_event);
+      async::PostTask(async_get_default(), process_next_event);
     }
   }
 }

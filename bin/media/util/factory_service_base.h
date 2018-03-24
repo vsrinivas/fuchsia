@@ -9,6 +9,9 @@
 #include <thread>
 #include <unordered_set>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
@@ -225,11 +228,10 @@ class FactoryServiceBase {
 // The unbind happens synchronously to prevent any pending method calls from
 // happening. The release is deferred so that RCHECK works in a product
 // constructor.
-#define RCHECK(condition)                                             \
-  if (!(condition)) {                                                 \
-    FXL_LOG(ERROR) << "request precondition failed: " #condition "."; \
-    Unbind();                                                         \
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(          \
-        [this]() { ReleaseFromOwner(); });                            \
-    return;                                                           \
+#define RCHECK(condition)                                                   \
+  if (!(condition)) {                                                       \
+    FXL_LOG(ERROR) << "request precondition failed: " #condition ".";       \
+    Unbind();                                                               \
+    async::PostTask(async_get_default(), [this]() { ReleaseFromOwner(); }); \
+    return;                                                                 \
   }

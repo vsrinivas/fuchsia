@@ -6,6 +6,9 @@
 
 #include "gtest/gtest.h"
 
+#include <lib/async/cpp/task.h>
+#include <zx/time.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 
@@ -25,13 +28,14 @@ class TestBase : public ::testing::Test {
   void SetUp() override = 0;
 
   // ::testing::Test override:
-  void TearDown() override  {}
+  void TearDown() override {}
 
   // Posts a delayed task to quit the message loop after |time_delta| has
   // elapsed.
   void PostDelayedQuitTask(const fxl::TimeDelta& time_delta) {
-    message_loop_.task_runner()->PostDelayedTask(
-        [this] { message_loop_.QuitNow(); }, time_delta);
+    async::PostDelayedTask(message_loop_.async(),
+                           [this] { message_loop_.QuitNow(); },
+                           zx::nsec(time_delta.ToNanoseconds()));
   }
 
   // Runs the message loop for the specified amount of time. This is useful for
@@ -47,9 +51,7 @@ class TestBase : public ::testing::Test {
   }
 
   // Runs the message loop until it would wait.
-  void RunUntilIdle() {
-    message_loop_.RunUntilIdle();
-  }
+  void RunUntilIdle() { message_loop_.RunUntilIdle(); }
 
   // Getters for internal fields frequently used by tests.
   fsl::MessageLoop* message_loop() { return &message_loop_; }

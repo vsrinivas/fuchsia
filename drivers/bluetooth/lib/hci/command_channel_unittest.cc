@@ -6,6 +6,8 @@
 
 #include "gtest/gtest.h"
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
@@ -858,8 +860,8 @@ TEST_F(HCI_CommandChannelTest, TransportClosedCallback) {
   transport()->SetTransportClosedCallback(closed_cb,
                                           message_loop()->task_runner());
 
-  message_loop()->task_runner()->PostTask(
-      [this] { test_device()->CloseCommandChannel(); });
+  async::PostTask(message_loop()->async(),
+                  [this] { test_device()->CloseCommandChannel(); });
   RunMessageLoop();
   EXPECT_TRUE(closed_cb_called);
 }

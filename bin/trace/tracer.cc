@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <fbl/type_support.h>
+#include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
@@ -143,8 +144,7 @@ void Tracer::Done() {
   CloseSocket();
 
   if (done_callback_) {
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        std::move(done_callback_));
+    async::PostTask(async_get_default(), std::move(done_callback_));
   }
 }
 

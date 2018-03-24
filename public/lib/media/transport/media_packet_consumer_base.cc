@@ -4,6 +4,8 @@
 
 #include "lib/media/transport/media_packet_consumer_base.h"
 
+#include <lib/async/cpp/task.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
@@ -282,9 +284,10 @@ MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
 
 MediaPacketConsumerBase::SuppliedPacket::~SuppliedPacket() {
   if (callback_) {
-    counter_->task_runner()->PostTask([
-      callback = callback_, counter = std::move(counter_), label = label_
-    ]() { callback(counter->OnPacketDeparture(label)); });
+    async::PostTask(
+        async_get_default(),
+        [callback = callback_, counter = std::move(counter_),
+         label = label_]() { callback(counter->OnPacketDeparture(label)); });
   }
 }
 

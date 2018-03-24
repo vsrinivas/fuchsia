@@ -5,6 +5,7 @@
 #include "server.h"
 
 #include <arpa/inet.h>
+#include <lib/async/cpp/task.h>
 #include <sys/socket.h>
 
 #include <array>
@@ -38,14 +39,12 @@ RspServer::PendingNotification::PendingNotification(
     const fxl::StringView& name,
     const fxl::StringView& event,
     const fxl::TimeDelta& timeout)
-  : name(name.data(), name.size()),
-    event(event.data(), event.size()),
-    timeout(timeout) {}
+    : name(name.data(), name.size()),
+      event(event.data(), event.size()),
+      timeout(timeout) {}
 
 RspServer::RspServer(uint16_t port)
-    : port_(port),
-      server_sock_(-1),
-      command_handler_(this) {}
+    : port_(port), server_sock_(-1), command_handler_(this) {}
 
 bool RspServer::Run() {
   FXL_DCHECK(!io_loop_);
@@ -56,10 +55,10 @@ bool RspServer::Run() {
   }
 
   auto cleanup_exception_port = fxl::MakeAutoCall([&]() {
-      // Tell the exception port to quit and wait for it to finish.
-      FXL_VLOG(2) << "Quitting exception port thread.";
-      exception_port_.Quit();
-    });
+    // Tell the exception port to quit and wait for it to finish.
+    FXL_VLOG(2) << "Quitting exception port thread.";
+    exception_port_.Quit();
+  });
 
   // If we're to attach to a running process at start-up, do so here.
   // This needs to be done after |exception_port_| is set up.
@@ -160,8 +159,8 @@ bool RspServer::Listen() {
 
   fxl::UniqueFD server_sock(socket(AF_INET, SOCK_STREAM, 0));
   if (!server_sock.is_valid()) {
-    FXL_LOG(ERROR) << "Failed to open socket" << ", "
-                   << util::ErrnoString(errno);
+    FXL_LOG(ERROR) << "Failed to open socket"
+                   << ", " << util::ErrnoString(errno);
     return false;
   }
 
@@ -173,14 +172,14 @@ bool RspServer::Listen() {
   addr.sin_port = htons(port_);
 
   if (bind(server_sock.get(), (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-    FXL_LOG(ERROR) << "Failed to bind socket" << ", "
-                   << util::ErrnoString(errno);
+    FXL_LOG(ERROR) << "Failed to bind socket"
+                   << ", " << util::ErrnoString(errno);
     return false;
   }
 
   if (listen(server_sock.get(), 1) < 0) {
-    FXL_LOG(ERROR) << "Listen failed" << ", "
-                   << util::ErrnoString(errno);
+    FXL_LOG(ERROR) << "Listen failed"
+                   << ", " << util::ErrnoString(errno);
     return false;
   }
 
@@ -191,8 +190,8 @@ bool RspServer::Listen() {
   fxl::UniqueFD client_sock(
       accept(server_sock.get(), (struct sockaddr*)&addr, &addrlen));
   if (!client_sock.is_valid()) {
-    FXL_LOG(ERROR) << "Accept failed" << ", "
-                   << util::ErrnoString(errno);
+    FXL_LOG(ERROR) << "Accept failed"
+                   << ", " << util::ErrnoString(errno);
     return false;
   }
 
@@ -217,8 +216,8 @@ void RspServer::PostWriteTask(bool notify, const fxl::StringView& data) {
   FXL_DCHECK(data.size() + 4 < kMaxBufferSize);
 
   // Copy the data into a std::string to capture it in the closure.
-  message_loop_.task_runner()->PostTask(
-      [ this, data = data.ToString(), notify ] {
+  async::PostTask(
+      message_loop_.async(), [this, data = data.ToString(), notify] {
         int index = 0;
         out_buffer_[index++] = notify ? '%' : '$';
         memcpy(out_buffer_.data() + index, data.data(), data.size());
@@ -265,19 +264,23 @@ void RspServer::PostNotificationTimeoutHandler() {
   // Set up a timeout handler.
   // Continually resend the notification until the remote end acknowledges it,
   // or until the notification is removed (say because the process exits).
-  message_loop_.task_runner()->PostDelayedTask(
-      [this, pending = pending_notification_.get()] {
-        // If the notification that we set this timeout for has already been
-        // acknowledged by the remote, then we have nothing to do.
-        // TODO(dje): sequence numbers?
-        if (pending_notification_.get() != pending)
-          return;
+  zx::duration delay =
+      zx::nsec((pending_notification_->timeout).ToNanoseconds());
+  async::PostDelayedTask(message_loop_.async(),
+                         [this, pending = pending_notification_.get()] {
+                           // If the notification that we set this timeout for
+                           // has already been acknowledged by the remote, then
+                           // we have nothing to do.
+                           // TODO(dje): sequence numbers?
+                           if (pending_notification_.get() != pending)
+                             return;
 
-        FXL_LOG(WARNING) << "Notification timed out; retrying";
-        PostPendingNotificationWriteTask();
-        PostNotificationTimeoutHandler();
-      },
-      pending_notification_->timeout);
+                           FXL_LOG(WARNING)
+                               << "Notification timed out; retrying";
+                           PostPendingNotificationWriteTask();
+                           PostNotificationTimeoutHandler();
+                         },
+                         delay);
 }
 
 void RspServer::OnBytesRead(const fxl::StringView& bytes_read) {
@@ -389,7 +392,7 @@ void RspServer::OnThreadExiting(Process* process,
                                 const zx_exception_context_t& context) {
   std::vector<char> packet;
   FXL_LOG(INFO) << "Thread " << thread->GetName() << " exited";
-  int exit_code = 0; // TODO(dje)
+  int exit_code = 0;  // TODO(dje)
   StopReplyPacket stop_reply(StopReplyPacket::Type::kThreadExited);
   stop_reply.SetSignalNumber(exit_code);
   stop_reply.SetThreadId(process->id(), thread->id());
@@ -422,17 +425,19 @@ void RspServer::OnArchitecturalException(
   ExceptionHelper(process, thread, type, context);
 }
 
-void RspServer::OnSyntheticException(
-    Process* process, Thread* thread, zx_excp_type_t type,
-    const zx_exception_context_t& context) {
+void RspServer::OnSyntheticException(Process* process,
+                                     Thread* thread,
+                                     zx_excp_type_t type,
+                                     const zx_exception_context_t& context) {
   // These are basically equivalent to architectural exceptions
   // for our purposes. Handle them the same way.
   ExceptionHelper(process, thread, type, context);
 }
 
-void RspServer::ExceptionHelper(
-    Process* process, Thread* thread, zx_excp_type_t type,
-    const zx_exception_context_t& context) {
+void RspServer::ExceptionHelper(Process* process,
+                                Thread* thread,
+                                zx_excp_type_t type,
+                                const zx_exception_context_t& context) {
   FXL_DCHECK(process);
   FXL_DCHECK(thread);
 

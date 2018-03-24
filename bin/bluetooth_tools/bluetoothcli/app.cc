@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <linenoise/linenoise.h>
 
 #include "lib/fsl/tasks/message_loop.h"
@@ -48,8 +50,7 @@ App::App()
 void App::ReadNextInput() {
   bool call_complete_cb = true;
   auto complete_cb = [this] {
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        [this] { ReadNextInput(); });
+    async::PostTask(async_get_default(), [this] { ReadNextInput(); });
   };
 
   char* line = linenoise("bluetooth> ");

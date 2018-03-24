@@ -4,6 +4,8 @@
 
 #include "garnet/examples/ui/shadertoy/service/compiler.h"
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/examples/ui/shadertoy/service/renderer.h"
 #include "lib/escher/impl/glsl_compiler.h"
 #include "lib/escher/impl/mesh_shader_binding.h"
@@ -193,9 +195,10 @@ void Compiler::ProcessRequestQueue() {
 
     auto pipeline = CompileGlslToPipeline(req.glsl);
 
-    loop_->task_runner()->PostTask(
-        [result = Result{std::move(pipeline)},
-         callback = std::move(req.callback)] { callback(std::move(result)); });
+    async::PostTask(loop_->async(), [result = Result{std::move(pipeline)},
+                                     callback = std::move(req.callback)] {
+      callback(std::move(result));
+    });
   }
 }
 

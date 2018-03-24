@@ -7,6 +7,10 @@
 
 #include <unordered_map>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <zx/time.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/optional.h"
@@ -19,7 +23,8 @@ namespace {
 class RetryingLoader {
  public:
   RetryingLoader(
-      network::URLLoaderPtr url_loader, const std::string& url,
+      network::URLLoaderPtr url_loader,
+      const std::string& url,
       const component::ApplicationLoader::LoadApplicationCallback& callback)
       : url_loader_(std::move(url_loader)),
         url_(url),
@@ -57,7 +62,8 @@ class RetryingLoader {
   void ProcessResponse(const network::URLResponse& response) {
     if (response.status_code == 200) {
       auto package = component::ApplicationPackage::New();
-      package->data = fidl::MakeOptional(std::move(response.body->sized_buffer()));
+      package->data =
+          fidl::MakeOptional(std::move(response.body->sized_buffer()));
       package->resolved_url = std::move(response.url);
       SendResponse(std::move(package));
     } else if (response.error) {
@@ -71,18 +77,18 @@ class RetryingLoader {
   }
 
   void Retry(const network::URLResponse& response) {
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [weak_this = weak_ptr_factory_.GetWeakPtr()] {
-          if (weak_this) {
-            weak_this->Attempt();
-          }
-        },
-        retry_delay_);
+    async::PostDelayedTask(async_get_default(),
+                           [weak_this = weak_ptr_factory_.GetWeakPtr()] {
+                             if (weak_this) {
+                               weak_this->Attempt();
+                             }
+                           },
+                           zx::nsec(retry_delay_.ToNanoseconds()));
 
     if (quiet_tries_ > 0) {
       FXL_VLOG(2) << "Retrying load of " << url_ << " due to "
-                  << response.error->description << " ("
-                  << response.error->code << ")";
+                  << response.error->description << " (" << response.error->code
+                  << ")";
 
       quiet_tries_--;
       // TODO(rosswang): Randomness, and factor out the delay fn.

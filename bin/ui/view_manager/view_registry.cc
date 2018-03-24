@@ -9,6 +9,9 @@
 #include <utility>
 
 #include <fuchsia/cpp/input.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/bin/ui/view_manager/view_impl.h"
 #include "garnet/bin/ui/view_manager/view_tree_impl.h"
 #include "garnet/public/lib/escher/util/type_utils.h"
@@ -569,11 +572,10 @@ void ViewRegistry::InvalidateViewTree(ViewTreeState* tree_state,
 void ViewRegistry::ScheduleTraversal() {
   if (!traversal_scheduled_) {
     traversal_scheduled_ = true;
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        [weak = weak_factory_.GetWeakPtr()] {
-          if (weak)
-            weak->Traverse();
-        });
+    async::PostTask(async_get_default(), [weak = weak_factory_.GetWeakPtr()] {
+      if (weak)
+        weak->Traverse();
+    });
   }
 }
 
@@ -703,11 +705,10 @@ views_v1::ViewPropertiesPtr ViewRegistry::ResolveViewProperties(
 void ViewRegistry::SchedulePresentSession() {
   if (!present_session_scheduled_) {
     present_session_scheduled_ = true;
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        [weak = weak_factory_.GetWeakPtr()] {
-          if (weak)
-            weak->PresentSession();
-        });
+    async::PostTask(async_get_default(), [weak = weak_factory_.GetWeakPtr()] {
+      if (weak)
+        weak->PresentSession();
+    });
   }
 }
 

@@ -7,6 +7,10 @@
 #include <memory>
 
 #include <fuchsia/cpp/input.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <zx/time.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -253,8 +257,8 @@ class InputApp {
     FXL_VLOG(1) << "SendTap " << report;
     input_device->DispatchReport(std::move(report));
 
-    fxl::TimeDelta delta = fxl::TimeDelta::FromMilliseconds(duration_ms);
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    zx::duration delta = zx::msec(duration_ms);
+    async::PostDelayedTask(async_get_default(),
         fxl::MakeCopyable([device = std::move(input_device)]() mutable {
           // UP
           input::TouchscreenReportPtr touchscreen =
@@ -285,8 +289,9 @@ class InputApp {
     FXL_VLOG(1) << "SendKeyPress " << report;
     input_device->DispatchReport(std::move(report));
 
-    fxl::TimeDelta delta = fxl::TimeDelta::FromMilliseconds(duration_ms);
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    zx::duration delta = zx::msec(duration_ms);
+    async::PostDelayedTask(
+        async_get_default(),
         fxl::MakeCopyable([device = std::move(input_device)]() mutable {
           // RELEASED
           input::KeyboardReportPtr keyboard = input::KeyboardReport::New();
@@ -322,8 +327,9 @@ class InputApp {
     FXL_VLOG(1) << "SendSwipe " << report;
     input_device->DispatchReport(std::move(report));
 
-    fxl::TimeDelta delta = fxl::TimeDelta::FromMilliseconds(duration_ms);
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    zx::duration delta = zx::msec(duration_ms);
+    async::PostDelayedTask(
+        async_get_default(),
         fxl::MakeCopyable([device = std::move(input_device), x1, y1]() mutable {
           // MOVE
           input::Touch touch;
@@ -367,7 +373,8 @@ int main(int argc, char** argv) {
 
   fsl::MessageLoop loop;
   input::InputApp app;
-  loop.task_runner()->PostTask([&app, command_line] { app.Run(command_line); });
+  async::PostTask(loop.async(),
+                  [&app, command_line] { app.Run(command_line); });
   loop.Run();
   return 0;
 }

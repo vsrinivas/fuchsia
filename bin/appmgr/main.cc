@@ -12,13 +12,14 @@
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/vfs.h>
+#include <lib/async/cpp/task.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
 #include "garnet/bin/appmgr/config.h"
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
-#include "garnet/bin/appmgr/root_application_loader.h"
 #include "garnet/bin/appmgr/job_holder.h"
+#include "garnet/bin/appmgr/root_application_loader.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
@@ -71,7 +72,7 @@ int main(int argc, char** argv) {
         std::move(launch_info), sysmgr.NewRequest());
   };
 
-  message_loop.task_runner()->PostTask([&run_sysmgr, &sysmgr] {
+  async::PostTask(message_loop.async(), [&run_sysmgr, &sysmgr] {
     run_sysmgr();
     sysmgr.set_error_handler(run_sysmgr);
   });

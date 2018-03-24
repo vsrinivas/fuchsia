@@ -4,6 +4,8 @@
 
 #include "garnet/lib/ui/gfx/engine/session_manager.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/session.h"
@@ -95,8 +97,7 @@ void SessionManager::TearDownSession(SessionId id) {
 
     // Don't destroy handler immediately, since it may be the one calling
     // TearDownSession().
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        [handler] { handler->TearDown(); });
+    async::PostTask(async_get_default(), [handler] { handler->TearDown(); });
   }
 }
 

@@ -1,6 +1,7 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <lib/async/cpp/task.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
@@ -50,7 +51,7 @@ int main(int argc, const char** argv) {
     words += argv[i];
   }
 
-  loop.task_runner()->PostTask([&]() { client.Say(std::move(words)); });
+  async::PostTask(loop.async(), [&]() { client.Say(std::move(words)); });
 
   loop.Run();
 

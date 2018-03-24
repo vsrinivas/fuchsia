@@ -8,6 +8,8 @@
 
 #include "gtest/gtest.h"
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
@@ -326,7 +328,7 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
       LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,
       defaults::kLEScanWindow, kTestParams, callback, kTestTimeoutMs);
 
-  message_loop()->task_runner()->PostTask([kIncomingAddress, this] {
+  async::PostTask(message_loop()->async(), [kIncomingAddress, this] {
     LEConnectionCompleteSubeventParams event;
     std::memset(&event, 0, sizeof(event));
 

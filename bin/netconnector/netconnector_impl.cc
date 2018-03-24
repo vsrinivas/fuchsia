@@ -6,6 +6,10 @@
 
 #include <iostream>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <zx/time.h>
+
 #include "garnet/bin/netconnector/device_service_provider.h"
 #include "garnet/bin/netconnector/host_name.h"
 #include "garnet/bin/netconnector/netconnector_params.h"
@@ -46,8 +50,9 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     if (params_->show_devices()) {
       net_connector->GetKnownDeviceNames(
           kInitialKnownDeviceNames,
-          fxl::MakeCopyable([ this, net_connector = std::move(net_connector) ](
-              uint64_t version, fidl::VectorPtr<fidl::StringPtr> device_names) {
+          fxl::MakeCopyable([this, net_connector = std::move(net_connector)](
+                                uint64_t version,
+                                fidl::VectorPtr<fidl::StringPtr> device_names) {
             if (device_names->size() == 0) {
               std::cout << "No remote devices found\n";
             } else {
@@ -96,8 +101,8 @@ NetConnectorImpl::~NetConnectorImpl() {}
 
 void NetConnectorImpl::StartListener() {
   if (!NetworkIsReady()) {
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this]() { StartListener(); }, fxl::TimeDelta::FromSeconds(5));
+    async::PostDelayedTask(async_get_default(), [this]() { StartListener(); },
+                           zx::sec(5));
     return;
   }
 
@@ -142,8 +147,8 @@ void NetConnectorImpl::StartListener() {
                                     subscription.NewRequest());
 
   mdns_subscriber_.Init(
-      std::move(subscription),
-      [this](const mdns::MdnsServiceInstance* from, const mdns::MdnsServiceInstance* to) {
+      std::move(subscription), [this](const mdns::MdnsServiceInstance* from,
+                                      const mdns::MdnsServiceInstance* to) {
         if (from == nullptr && to != nullptr) {
           if (to->v4_address) {
             std::cerr << "netconnector: Device '" << to->instance_name

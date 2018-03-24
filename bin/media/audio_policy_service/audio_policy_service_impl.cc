@@ -4,6 +4,10 @@
 
 #include "garnet/bin/media/audio_policy_service/audio_policy_service_impl.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <zx/time.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
@@ -13,8 +17,7 @@ namespace {
 
 static constexpr float kMaxSystemAudioGain = 0.0f;
 static constexpr uint32_t kInitializeAttempts = 30;
-static constexpr fxl::TimeDelta kInitializeAttemptInterval =
-    fxl::TimeDelta::FromMilliseconds(100);
+static constexpr zx::duration kInitializeAttemptInterval = zx::msec(100);
 static const std::string kStatusFilePath =
     "/data/app_local/audio_policy_service/status";
 static const std::string kStatusFileDir =
@@ -94,8 +97,9 @@ void AudioPolicyServiceImpl::InitializeAudioService() {
 
   if (!files::IsFile(kStatusFilePath) &&
       --initialize_attempts_remaining_ != 0) {
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this]() { InitializeAudioService(); }, kInitializeAttemptInterval);
+    async::PostDelayedTask(async_get_default(),
+                           [this]() { InitializeAudioService(); },
+                           kInitializeAttemptInterval);
     return;
   }
 
@@ -141,8 +145,7 @@ void AudioPolicyServiceImpl::SaveStatus() {
     FXL_LOG(WARNING) << "Failed to create directory " << kStatusFileDir;
   }
 
-  if (!files::WriteFile(kStatusFilePath,
-                        reinterpret_cast<const char*>(&status),
+  if (!files::WriteFile(kStatusFilePath, reinterpret_cast<const char*>(&status),
                         sizeof(status))) {
     FXL_LOG(WARNING) << "Failed to write status to " << kStatusFilePath;
     return;

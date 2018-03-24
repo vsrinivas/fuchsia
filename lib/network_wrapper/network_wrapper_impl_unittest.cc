@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/backoff/testing/test_backoff.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
@@ -197,7 +199,7 @@ TEST_F(NetworkWrapperImplTest, CancelRequest) {
         received_response = true;
       });
 
-  message_loop_.task_runner()->PostTask([cancel] { cancel->Cancel(); });
+  async::PostTask(message_loop_.async(), [cancel] { cancel->Cancel(); });
   cancel = nullptr;
   RunLoopUntilIdle();
   EXPECT_FALSE(received_response);

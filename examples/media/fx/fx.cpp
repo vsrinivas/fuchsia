@@ -10,13 +10,17 @@
 #include <fbl/vmo_mapper.h>
 #include <inttypes.h>
 #include <stdio.h>
+
+#include <fuchsia/cpp/media.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 #include <zx/vmar.h>
 #include <zx/vmo.h>
+#include <zx/time.h>
 
-#include <fuchsia/cpp/media.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/fd_waiter.h"
@@ -481,9 +485,8 @@ void FxProcessor::ProcessInput() {
   }
 
   // Schedule our next processing callback.
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [this]() { ProcessInput(); },
-      fxl::TimeDelta::FromNanoseconds(PROCESS_CHUNK_TIME));
+  async::PostDelayedTask(async_get_default(), [this]() { ProcessInput(); },
+                         zx::nsec(PROCESS_CHUNK_TIME));
 }
 
 void FxProcessor::ProduceOutputPackets(::media::AudioPacket* out_pkt1,

@@ -4,6 +4,8 @@
 
 #include "garnet/drivers/bluetooth/lib/gatt/server.h"
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/drivers/bluetooth/lib/att/database.h"
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
@@ -1827,8 +1829,8 @@ TEST_F(GATT_ServerTest, ReadBlobRequestStaticSuccess) {
 }
 
 TEST_F(GATT_ServerTest, ReadBlobRequestStaticOverflowError) {
-  const auto kTestValue = common::CreateStaticByteBuffer(
-      's', 'h', 'o', 'r', 't', 'e', 'r');
+  const auto kTestValue =
+      common::CreateStaticByteBuffer('s', 'h', 'o', 'r', 't', 'e', 'r');
 
   auto* grp = db()->NewGrouping(types::kPrimaryService, 0, kTestValue);
   grp->set_active(true);
@@ -1884,7 +1886,7 @@ TEST_F(GATT_ServerTest, ReadBlobRequestNotPermitedError) {
       'e');
   auto* grp = db()->NewGrouping(types::kPrimaryService, 1, kTestValue);
   auto* attr = grp->AddAttribute(kTestType16, att::AccessRequirements(),
-                    att::AccessRequirements(true, false, false));
+                                 att::AccessRequirements(true, false, false));
   attr->set_read_handler([&](const auto& peer_id, att::Handle handle,
                              uint16_t offset, const auto& result_cb) {
     EXPECT_EQ(kTestDeviceId, peer_id);
@@ -1988,8 +1990,9 @@ TEST_F(GATT_ServerTest, SendNotificationEmpty) {
   );
   // clang-format on
 
-  message_loop()->task_runner()->PostTask(
-      [=] { server()->SendNotification(kHandle, kTestValue, false); });
+  async::PostTask(message_loop()->async(), [=] {
+    server()->SendNotification(kHandle, kTestValue, false);
+  });
 
   EXPECT_TRUE(Expect(kExpected));
 }
@@ -2006,8 +2009,9 @@ TEST_F(GATT_ServerTest, SendNotification) {
   );
   // clang-format on
 
-  message_loop()->task_runner()->PostTask(
-      [=] { server()->SendNotification(kHandle, kTestValue, false); });
+  async::PostTask(message_loop()->async(), [=] {
+    server()->SendNotification(kHandle, kTestValue, false);
+  });
 
   EXPECT_TRUE(Expect(kExpected));
 }
@@ -2023,8 +2027,9 @@ TEST_F(GATT_ServerTest, SendIndicationEmpty) {
   );
   // clang-format on
 
-  message_loop()->task_runner()->PostTask(
-      [=] { server()->SendNotification(kHandle, kTestValue, true); });
+  async::PostTask(message_loop()->async(), [=] {
+    server()->SendNotification(kHandle, kTestValue, true);
+  });
 
   EXPECT_TRUE(Expect(kExpected));
 }
@@ -2041,8 +2046,9 @@ TEST_F(GATT_ServerTest, SendIndication) {
   );
   // clang-format on
 
-  message_loop()->task_runner()->PostTask(
-      [=] { server()->SendNotification(kHandle, kTestValue, true); });
+  async::PostTask(message_loop()->async(), [=] {
+    server()->SendNotification(kHandle, kTestValue, true);
+  });
 
   EXPECT_TRUE(Expect(kExpected));
 }

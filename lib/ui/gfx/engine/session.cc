@@ -4,6 +4,8 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <trace/event.h>
 #include <zx/time.h>
 #include <utility>
@@ -1340,11 +1342,10 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
 void Session::EnqueueEvent(::gfx::Event event) {
   if (is_valid()) {
     if (buffered_events_->empty()) {
-      fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-          [weak = weak_factory_.GetWeakPtr()] {
-            if (weak)
-              weak->FlushEvents();
-          });
+      async::PostTask(async_get_default(), [weak = weak_factory_.GetWeakPtr()] {
+        if (weak)
+          weak->FlushEvents();
+      });
     }
     ui::Event scenic_event;
     scenic_event.set_gfx(std::move(event));

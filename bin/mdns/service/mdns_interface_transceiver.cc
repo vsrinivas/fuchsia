@@ -11,6 +11,9 @@
 
 #include <iostream>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/bin/mdns/service/dns_formatting.h"
 #include "garnet/bin/mdns/service/dns_reading.h"
 #include "garnet/bin/mdns/service/dns_writing.h"
@@ -178,8 +181,8 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
   if (result < 0) {
     FXL_LOG(ERROR) << "Failed to recvfrom, errno " << errno;
     // Wait a bit before trying again to avoid spamming the log.
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this]() { WaitForInbound(); }, fxl::TimeDelta::FromSeconds(10));
+    async::PostDelayedTask(async_get_default(), [this]() { WaitForInbound(); },
+                           zx::sec(10));
     return;
   }
 

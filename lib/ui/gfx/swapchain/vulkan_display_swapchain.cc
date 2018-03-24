@@ -4,6 +4,8 @@
 
 #include "garnet/lib/ui/gfx/swapchain/vulkan_display_swapchain.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/displays/display.h"
@@ -283,13 +285,12 @@ bool VulkanDisplaySwapchain::DrawAndPresentFrame(
   }
   // TODO: Wait for sema before triggering callbacks. This class is only used
   // for debugging, so the precise timestamps don't matter as much.
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-      [frame_timings, timing_index] {
-        frame_timings->OnFrameRendered(timing_index,
-                                       zx_clock_get(ZX_CLOCK_MONOTONIC));
-        frame_timings->OnFramePresented(timing_index,
-                                        zx_clock_get(ZX_CLOCK_MONOTONIC));
-      });
+  async::PostTask(async_get_default(), [frame_timings, timing_index] {
+    frame_timings->OnFrameRendered(timing_index,
+                                   zx_clock_get(ZX_CLOCK_MONOTONIC));
+    frame_timings->OnFramePresented(timing_index,
+                                    zx_clock_get(ZX_CLOCK_MONOTONIC));
+  });
 
   return true;
 }

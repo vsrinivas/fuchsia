@@ -9,6 +9,10 @@
 #include <sstream>
 #include <unordered_set>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <zx/time.h>
+
 #include "garnet/bin/trace/commands/record.h"
 #include "garnet/bin/trace/results_export.h"
 #include "garnet/bin/trace/results_output.h"
@@ -434,12 +438,12 @@ void Record::LaunchTool() {
 }
 
 void Record::StartTimer() {
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [weak = weak_ptr_factory_.GetWeakPtr()] {
-        if (weak)
-          weak->StopTrace(0);
-      },
-      options_.duration);
+  async::PostDelayedTask(async_get_default(),
+                         [weak = weak_ptr_factory_.GetWeakPtr()] {
+                           if (weak)
+                             weak->StopTrace(0);
+                         },
+                         zx::nsec(options_.duration.ToNanoseconds()));
   out() << "Starting trace; will stop in " << options_.duration.ToSecondsF()
         << " seconds..." << std::endl;
 }

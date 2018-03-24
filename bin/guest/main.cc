@@ -16,6 +16,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <lib/async/cpp/task.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -489,7 +490,7 @@ int main(int argc, char** argv) {
   };
   if (gpu_scanout) {
     gpu_scanout->WhenReady(
-        [&loop, &start_task] { loop.task_runner()->PostTask(start_task); });
+        [&loop, &start_task] { async::PostTask(loop.async(), start_task); });
 
   } else {
     start_task();

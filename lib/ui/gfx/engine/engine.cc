@@ -6,7 +6,10 @@
 
 #include <set>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <trace/event.h>
+#include <zx/time.h>
 
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
@@ -220,17 +223,18 @@ void Engine::CleanupEscher() {
 
   if (!escher_->Cleanup()) {
     // Wait long enough to give GPU work a chance to finish.
-    const fxl::TimeDelta kCleanupDelay = fxl::TimeDelta::FromMilliseconds(1);
+    const zx::duration kCleanupDelay = zx::msec(1);
     escher_cleanup_scheduled_ = true;
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [weak = weak_factory_.GetWeakPtr()] {
-          if (weak) {
-            // Recursively reschedule if cleanup is incomplete.
-            weak->escher_cleanup_scheduled_ = false;
-            weak->CleanupEscher();
-          }
-        },
-        kCleanupDelay);
+    async::PostDelayedTask(async_get_default(),
+                          [weak = weak_factory_.GetWeakPtr()] {
+                            if (weak) {
+                              // Recursively reschedule if cleanup is
+                              // incomplete.
+                              weak->escher_cleanup_scheduled_ = false;
+                              weak->CleanupEscher();
+                            }
+                          },
+                          kCleanupDelay);
   }
 }
 

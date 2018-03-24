@@ -8,6 +8,8 @@
 
 #include "gtest/gtest.h"
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
@@ -101,7 +103,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketBREDRBuffer) {
   test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
-  message_loop()->task_runner()->PostTask([this, kHandle0, kHandle1] {
+  async::PostTask(message_loop()->async(), [this, kHandle0, kHandle1] {
     for (int i = 0; i < 10; ++i) {
       ConnectionHandle handle = (i % 2) ? kHandle1 : kHandle0;
       Connection::LinkType ll_type =
@@ -177,7 +179,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketLEBuffer) {
   // Queue up 12 packets in total, distributed among the two connection handles
   // and link types. Since the BR/EDR MTU is zero, we expect to only see LE
   // packets transmitted.
-  message_loop()->task_runner()->PostTask([this, kHandle0, kHandle1] {
+  async::PostTask(message_loop()->async(), [this, kHandle0, kHandle1] {
     for (size_t i = 0; i < kTotalAttempts; ++i) {
       ConnectionHandle handle = (i % 2) ? kHandle1 : kHandle0;
       auto packet =
@@ -256,7 +258,7 @@ TEST_F(HCI_ACLDataChannelTest, SendLEPacketBothBuffers) {
   test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
-  message_loop()->task_runner()->PostTask([this, kHandle0, kHandle1] {
+  async::PostTask(message_loop()->async(), [this, kHandle0, kHandle1] {
     for (int i = 0; i < 10; ++i) {
       ConnectionHandle handle = (i % 2) ? kHandle1 : kHandle0;
       Connection::LinkType ll_type =
@@ -330,7 +332,7 @@ TEST_F(HCI_ACLDataChannelTest, SendBREDRPacketBothBuffers) {
   test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
-  message_loop()->task_runner()->PostTask([this, kHandle0, kHandle1] {
+  async::PostTask(message_loop()->async(), [this, kHandle0, kHandle1] {
     for (int i = 0; i < 10; ++i) {
       ConnectionHandle handle = (i % 2) ? kHandle1 : kHandle0;
       Connection::LinkType ll_type =
@@ -445,7 +447,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketFromMultipleThreads) {
   };
 
   std::thread t1, t2, t3;
-  message_loop()->task_runner()->PostTask([&] {
+  async::PostTask(message_loop()->async(), [&] {
     t1 = std::thread(thread_func, kHandle0);
     t2 = std::thread(thread_func, kHandle1);
     t3 = std::thread(thread_func, kHandle2);
@@ -559,7 +561,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketsAtomically) {
   // Send each packet sequence on a different thread and make sure that each
   // sequence arrives atomically.
   std::thread threads[kThreadCount];
-  message_loop()->task_runner()->PostTask([this, &packets, &threads] {
+  async::PostTask(message_loop()->async(), [this, &packets, &threads] {
     auto thread_func = [&packets, this](size_t i) {
       EXPECT_TRUE(acl_data_channel()->SendPackets(std::move(packets[i]),
                                                   Connection::LinkType::kLE));
@@ -626,7 +628,7 @@ TEST_F(HCI_ACLDataChannelTest, ReceiveData) {
   // Valid packet on handle 2.
   auto valid1 = common::CreateStaticByteBuffer(0x02, 0x00, 0x01, 0x00, 0x00);
 
-  message_loop()->task_runner()->PostTask([&, this] {
+  async::PostTask(message_loop()->async(), [&, this] {
     test_device()->SendACLDataChannelPacket(invalid0);
     test_device()->SendACLDataChannelPacket(invalid1);
     test_device()->SendACLDataChannelPacket(valid0);
@@ -644,14 +646,12 @@ TEST_F(HCI_ACLDataChannelTest, TransportClosedCallback) {
   InitializeACLDataChannel(DataBufferInfo(1u, 1u), DataBufferInfo(1u, 1u));
 
   bool closed_cb_called = false;
-  auto closed_cb = [&closed_cb_called, this] {
-    closed_cb_called = true;
-  };
+  auto closed_cb = [&closed_cb_called, this] { closed_cb_called = true; };
   transport()->SetTransportClosedCallback(closed_cb,
                                           message_loop()->task_runner());
 
-  message_loop()->task_runner()->PostTask(
-      [this] { test_device()->CloseACLDataChannel(); });
+  async::PostTask(message_loop()->async(),
+                  [this] { test_device()->CloseACLDataChannel(); });
   RunUntilIdle();
   EXPECT_TRUE(closed_cb_called);
 }
@@ -666,7 +666,7 @@ TEST_F(HCI_ACLDataChannelTest, TransportClosedCallbackBothChannels) {
 
   // We'll send closed events for both channels. The closed callback should get
   // invoked only once.
-  message_loop()->task_runner()->PostTask([this] {
+  async::PostTask(message_loop()->async(), [this] {
     test_device()->CloseACLDataChannel();
     test_device()->CloseCommandChannel();
   });

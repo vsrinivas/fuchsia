@@ -4,6 +4,7 @@
 
 #include "lib/fsl/tasks/message_loop.h"
 
+#include <lib/async/cpp/task.h>
 #include <linenoise/linenoise.h>
 
 #include "app.h"
@@ -29,7 +30,7 @@ int main(int argc, char* argv[]) {
 
   linenoiseSetCompletionCallback(LinenoiseCompletionCallback);
 
-  message_loop.task_runner()->PostTask([&app] { app.ReadNextInput(); });
+  async::PostTask(message_loop.async(), [&app] { app.ReadNextInput(); });
 
   message_loop.Run();
 
