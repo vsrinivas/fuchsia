@@ -75,14 +75,10 @@
 #define S905_UART0_AO_OFFSET       (0x081004c0)
 #define S905_UART1_AO_OFFSET       (0x081004e0)
 
-
-
 static cbuf_t uart_rx_buf;
 static bool initialized = false;
 static uintptr_t s905_uart_base = 0;
 static uint32_t s905_uart_irq = 0;
-
-
 
 /*
  * Tx driven irq:
@@ -101,7 +97,10 @@ static uint32_t s905_uart_irq = 0;
  * read from the Tx FIFO. So we can leave the interrupt unmasked.
  */
 static bool uart_tx_irq_enabled = false;
-static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event, true, 0);
+static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event,
+                                                      true,
+                                                      EVENT_FLAG_AUTOUNSIGNAL);
+
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
 static void uart_irq(void *arg)

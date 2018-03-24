@@ -51,7 +51,10 @@ static cbuf_t uart_rx_buf;
  * xmitting.
  */
 static bool uart_tx_irq_enabled = false;
-static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event, true, 0);
+static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event,
+                                                      true,
+                                                      EVENT_FLAG_AUTOUNSIGNAL);
+
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
 static inline void pl011_mask_tx(void)

@@ -47,7 +47,8 @@ uint32_t uart_fifo_depth;
 
 // tx driven irq
 static bool uart_tx_irq_enabled = false;
-static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event, true, 0);
+static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event, true,
+                                                      EVENT_FLAG_AUTOUNSIGNAL);
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
 static uint8_t uart_read(uint8_t reg) {
@@ -272,19 +273,24 @@ static void platform_dputs(const char* str, size_t len,
     // drop strings if we haven't initialized the uart yet
     if (unlikely(!output_enabled))
         return;
-
     if (!uart_tx_irq_enabled)
         block = false;
-
     spin_lock_irqsave(&uart_spinlock, state);
     while (len > 0) {
         // Is FIFO empty ?
         while (!(uart_read(5) & (1<<5))) {
-            spin_unlock_irqrestore(&uart_spinlock, state);
-            if (block)
+            if (block) {
+                /*
+                 * We want to Tx more and FIFO is empty, re-enable
+                 * Tx interrupts before blocking.
+                 */
+                uart_write(1, (1<<0)|(1<<1)); // rx and tx interrupt enable
+                spin_unlock_irqrestore(&uart_spinlock, state);
                 event_wait(&uart_dputc_event);
-            else
+            } else {
+                spin_unlock_irqrestore(&uart_spinlock, state);
                 arch_spinloop_pause();
+            }
             spin_lock_irqsave(&uart_spinlock, state);
         }
         // Fifo is completely empty now, we can shove an entire
