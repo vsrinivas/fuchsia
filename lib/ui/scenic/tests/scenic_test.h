@@ -41,7 +41,7 @@ class ScenicTest : public ::testing::Test,
                    std::string error_string) override;
 
   // |EventReporter|
-  void SendEvents(::fidl::VectorPtr<ui::EventPtr> events) override;
+  void SendEvents(::fidl::VectorPtr<ui::Event> events) override;
 
   // Verify that the last reported error is as expected.  If no error is
   // expected, use nullptr as |expected_error_string|.
@@ -56,7 +56,7 @@ class ScenicTest : public ::testing::Test,
   fxl::RefPtr<ClockTaskRunner> clock_task_runner_;
   std::unique_ptr<Scenic> scenic_;
   std::vector<std::string> reported_errors_;
-  std::vector<ui::EventPtr> events_;
+  std::vector<ui::Event> events_;
 };
 
 }  // namespace test
