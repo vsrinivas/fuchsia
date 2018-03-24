@@ -417,9 +417,18 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.typeExpr = fmt.Sprintf("const $fidl.StringType(maybeElementCount: %s, nullable: %s)",
 			formatInt(val.ElementCount), formatBool(val.Nullable))
 	case types.HandleType:
-		r.Decl = "Handle"
-		r.typeExpr = fmt.Sprintf("const $fidl.HandleType(nullable: %s)",
-			formatBool(val.Nullable))
+		switch val.HandleSubtype {
+		case "channel":
+			r.Decl = "Channel"
+		case "socket":
+			r.Decl = "Socket"
+		case "vmo":
+			r.Decl = "Vmo"
+		default:
+			r.Decl = "Handle"
+		}
+		r.typeExpr = fmt.Sprintf("const $fidl.%sType(nullable: %s)",
+			r.Decl, formatBool(val.Nullable))
 	case types.RequestType:
 		t := c.compileUpperCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.RequestSubtype), "")
 		r.Decl = fmt.Sprintf("$fidl.InterfaceRequest<%s>", t)
