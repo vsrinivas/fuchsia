@@ -75,6 +75,8 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     const common::MacAddr& addr() { return addr_; }
 
    private:
+    zx_status_t WriteHtCapabilities(ElementWriter* w);
+
     // Maximum amount of packets buffered while the client is in power saving mode.
     // Use `0` buffers to disable buffering until PS mode is ready
     static constexpr size_t kMaxPowerSavingQueueSize = 0;

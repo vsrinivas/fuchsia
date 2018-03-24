@@ -87,8 +87,8 @@ zx_status_t AuthenticatedState::HandleAuthentication(
 
 zx_status_t AuthenticatedState::HandleDeauthentication(
     const ImmutableMgmtFrame<Deauthentication>& frame, const wlan_rx_info_t& rxinfo) {
-    debugbss("[client] [%s] received Deauthentication: %u\n",
-             client_->addr().ToString().c_str(), frame.body->reason_code);
+    debugbss("[client] [%s] received Deauthentication: %u\n", client_->addr().ToString().c_str(),
+             frame.body->reason_code);
     MoveToState<DeauthenticatedState>();
     LOG_STATE_TRANSITION(client_->addr(), "Authenticated", "Deauthenticated");
     return ZX_OK;
@@ -177,8 +177,8 @@ zx_status_t AssociatedState::HandleEthFrame(const ImmutableBaseFrame<EthernetII>
 
 zx_status_t AssociatedState::HandleDeauthentication(
     const ImmutableMgmtFrame<Deauthentication>& frame, const wlan_rx_info_t& rxinfo) {
-    debugbss("[client] [%s] received Deauthentication: %u\n",
-             client_->addr().ToString().c_str(), frame.body->reason_code);
+    debugbss("[client] [%s] received Deauthentication: %u\n", client_->addr().ToString().c_str(),
+             frame.body->reason_code);
     req_deauth_ = false;
     MoveToState<DeauthenticatedState>();
     LOG_STATE_TRANSITION(client_->addr(), "Associated", "Deauthenticated");
@@ -432,7 +432,8 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& r
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send EAPOL request packet: %d\n",
                client_->addr().ToString().c_str(), status);
-        service::SendEapolResponse(client_->device(), wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
+        service::SendEapolResponse(client_->device(),
+                                   wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
         return status;
     }
 
@@ -563,10 +564,12 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto hdr = frame.hdr;
+    const auto& bssid = bss_->bssid();
     hdr->addr1 = addr_;
-    hdr->addr2 = bss_->bssid();
-    hdr->addr3 = bss_->bssid();
+    hdr->addr2 = bssid;
+    hdr->addr3 = bssid;
     hdr->sc.set_seq(bss_->NextSeq(*hdr));
+    FillTxInfo(&packet, *hdr);
 
     auto assoc = frame.body;
     assoc->status_code = result;
@@ -600,6 +603,21 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     if (status != ZX_OK) {
         errorf("[client] [%s] could not set packet length to %zu: %d\n", addr_.ToString().c_str(),
                actual_len, status);
+    }
+
+    // TODO(NET-567): Write negotiated SupportedRates, ExtendedSupportedRates IEs
+
+    if (bss_->IsHTReady()) {
+        status = WriteHtCapabilities(&w);
+        if (status != ZX_OK) { return status; }
+    }
+
+    body_payload_len = w.size();
+    size_t frame_len = hdr->len() + sizeof(AssociationResponse) + body_payload_len;
+    status = packet->set_len(frame_len);
+    if (status != ZX_OK) {
+        errorf("[client] [%s] could not set assocresp length to %zu: %d\n",
+               addr_.ToString().c_str(), frame_len, status);
         return status;
     }
 
@@ -630,8 +648,8 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
 
     auto status = device_->SendWlan(fbl::move(packet));
     if (status != ZX_OK) {
-        errorf("[client] [%s] could not send dauthentication packet: %d\n", addr_.ToString().c_str(),
-               status);
+        errorf("[client] [%s] could not send dauthentication packet: %d\n",
+               addr_.ToString().c_str(), status);
     }
     return status;
 }
@@ -725,6 +743,17 @@ zx_status_t RemoteClient::ConvertEthernetToDataFrame(const ImmutableBaseFrame<Et
 
 void RemoteClient::ReportBuChange(size_t bu_count) {
     if (listener_ != nullptr) { listener_->HandleClientBuChange(addr_, bu_count); }
+}
+
+zx_status_t RemoteClient::WriteHtCapabilities(ElementWriter* w) {
+    HtCapabilities htc = bss_->BuildHtCapabilities();
+    if (!w->write<HtCapabilities>(htc.ht_cap_info, htc.ampdu_params, htc.mcs_set, htc.ht_ext_cap,
+                                  htc.txbf_cap, htc.asel_cap)) {
+        errorf("[client] [%s] could not write HtCapabilities\n", addr_.ToString().c_str());
+        return ZX_ERR_IO;
+    }
+
+    return ZX_OK;
 }
 
 #undef LOG_STATE_TRANSITION
