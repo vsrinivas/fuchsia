@@ -58,6 +58,8 @@ struct Type {
         kStructPointer,
         kUnion,
         kUnionPointer,
+        kMessage,
+        kInterface,
         kArray,
         kString,
         kVector,
@@ -121,7 +123,7 @@ struct StructType : public Type {
     StructType(std::string name, std::vector<Field> fields, uint32_t size, std::string pointer_name)
         : Type(Kind::kStruct, std::move(name), size, CodingNeeded::kNeeded), fields(std::move(fields)), pointer_name(std::move(pointer_name)) {}
 
-    const std::vector<Field> fields;
+    std::vector<Field> fields;
     std::string pointer_name;
     bool referenced_by_pointer = false;
 };
@@ -138,7 +140,7 @@ struct UnionType : public Type {
         : Type(Kind::kUnion, std::move(name), size, SomeTypeIsNeeded(types)),
           types(std::move(types)), data_offset(data_offset), pointer_name(std::move(pointer_name)) {}
 
-    const std::vector<const Type*> types;
+    std::vector<const Type*> types;
     const uint32_t data_offset;
     std::string pointer_name;
     bool referenced_by_pointer = false;
@@ -149,6 +151,20 @@ struct UnionPointerType : public Type {
         : Type(Kind::kUnionPointer, std::move(name), 8u, CodingNeeded::kNeeded), union_type(union_type) {}
 
     const UnionType* union_type;
+};
+
+struct MessageType : public Type {
+    MessageType(std::string name, std::vector<Field> fields, uint32_t size)
+        : Type(Kind::kMessage, std::move(name), size, CodingNeeded::kNeeded), fields(std::move(fields)) {}
+
+    std::vector<Field> fields;
+};
+
+struct InterfaceType : public Type {
+    InterfaceType(std::vector<std::unique_ptr<MessageType>> messages)
+        : Type(Kind::kInterface, "", 0, CodingNeeded::kNotNeeded), messages(std::move(messages)) {}
+
+    std::vector<std::unique_ptr<MessageType>> messages;
 };
 
 struct ArrayType : public Type {

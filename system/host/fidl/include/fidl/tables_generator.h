@@ -46,6 +46,7 @@ private:
 
     void Generate(const coded::StructType& struct_type);
     void Generate(const coded::UnionType& union_type);
+    void Generate(const coded::MessageType& message_type);
     void Generate(const coded::HandleType& handle_type);
     void Generate(const coded::InterfaceHandleType& interface_type);
     void Generate(const coded::RequestHandleType& request_type);
@@ -56,25 +57,32 @@ private:
     void Generate(const coded::Type* type);
     void Generate(const coded::Field& field);
 
-    // Returns a pointer owned by coded_types_.
-    const coded::Type* Compile(const flat::Type* type);
+    void GeneratePointerIfNeeded(const coded::StructType& struct_type);
+    void GeneratePointerIfNeeded(const coded::UnionType& union_type);
 
+    void GenerateForward(const coded::StructType& struct_type);
+    void GenerateForward(const coded::UnionType& union_type);
+
+    // Returns a pointer owned by coded_types_.
+    const coded::Type* CompileType(const flat::Type* type);
+    void CompileFields(const flat::Decl* decl);
     void Compile(const flat::Decl* decl);
 
     const flat::Library* library_;
 
     // All flat::Types and flat::Names here are owned by library_, and
-    // all coded::Types by the coded_types_ vector.
-    std::map<const flat::Name*, coded::Type*, flat::PtrCompare<flat::Name>> named_type_map_;
+    // all coded::Types by the named_coded_types_ map or the coded_types_ vector.
     template <typename FlatType, typename CodedType>
     using TypeMap = std::map<const FlatType*, const CodedType*, flat::PtrCompare<FlatType>>;
     TypeMap<flat::PrimitiveType, coded::PrimitiveType> primitive_type_map_;
     TypeMap<flat::HandleType, coded::HandleType> handle_type_map_;
     TypeMap<flat::RequestHandleType, coded::RequestHandleType> request_type_map_;
+    TypeMap<flat::IdentifierType, coded::InterfaceHandleType> interface_type_map_;
     TypeMap<flat::ArrayType, coded::ArrayType> array_type_map_;
     TypeMap<flat::VectorType, coded::VectorType> vector_type_map_;
     TypeMap<flat::StringType, coded::StringType> string_type_map_;
 
+    std::map<const flat::Name*, std::unique_ptr<coded::Type>, flat::PtrCompare<flat::Name>> named_coded_types_;
     std::vector<std::unique_ptr<coded::Type>> coded_types_;
 
     std::ostringstream tables_file_;
