@@ -6,11 +6,12 @@
 
 #include <vector>
 
+#include <fuchsia/cpp/netconnector.h>
 #include <zx/channel.h>
 
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
-#include <fuchsia/cpp/netconnector.h>
 
 namespace media {
 
@@ -37,7 +38,9 @@ MediaPlayerNetProxy::MediaPlayerNetProxy(
 
   status_publisher_.SetCallbackRunner(
       [this](GetStatusCallback callback, uint64_t version) {
-        callback(version, status_.Clone());
+        MediaPlayerStatus status_clone;
+        fidl::Clone(*status_, &status_clone);
+        callback(version, std::move(status_clone));
       });
 
   message_relay_.SetMessageReceivedCallback(

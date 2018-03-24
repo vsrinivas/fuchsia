@@ -46,44 +46,41 @@ void FakeRenderer::GetSupportedMediaTypes(
     GetSupportedMediaTypesCallback callback) {
   fidl::VectorPtr<MediaTypeSet> supported_types(2);
 
-  AudioMediaTypeSetDetailsPtr audio_details = AudioMediaTypeSetDetails::New();
-  audio_details->sample_format = AudioSampleFormat::ANY;
-  audio_details->min_channels = 1;
-  audio_details->max_channels = std::numeric_limits<uint32_t>::max();
-  audio_details->min_frames_per_second = 1;
-  audio_details->max_frames_per_second = std::numeric_limits<uint32_t>::max();
-  MediaTypeSetPtr supported_type = MediaTypeSet::New();
-  supported_type->medium = MediaTypeMedium::AUDIO;
-  supported_type->details = MediaTypeSetDetails::New();
-  supported_type->details->set_audio(std::move(audio_details));
-  supported_type->encodings.push_back(kAudioEncodingLpcm);
-  supported_types->at(0) = std::move(supported_type);
+  {
+    AudioMediaTypeSetDetails audio_details;
+    audio_details.sample_format = AudioSampleFormat::ANY;
+    audio_details.min_channels = 1;
+    audio_details.max_channels = std::numeric_limits<uint32_t>::max();
+    audio_details.min_frames_per_second = 1;
+    audio_details.max_frames_per_second = std::numeric_limits<uint32_t>::max();
+    MediaTypeSet supported_type;
+    supported_type.medium = MediaTypeMedium::AUDIO;
+    supported_type.details.set_audio(std::move(audio_details));
+    supported_type.encodings.push_back(kAudioEncodingLpcm);
+    supported_types.push_back(std::move(supported_type));
+  }
 
-  VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
-  video_details->min_width = 1;
-  video_details->max_width = std::numeric_limits<uint32_t>::max();
-  video_details->min_height = 1;
-  video_details->max_height = std::numeric_limits<uint32_t>::max();
-  supported_type = MediaTypeSet::New();
-  supported_type->medium = MediaTypeMedium::VIDEO;
-  supported_type->details = MediaTypeSetDetails::New();
-  supported_type->details->set_video(std::move(video_details));
-  supported_type->encodings.push_back(MediaType::kVideoEncodingUncompressed);
-  supported_types->at(1) = std::move(supported_type);
+  {
+    VideoMediaTypeSetDetails video_details;
+    video_details.min_width = 1;
+    video_details.max_width = std::numeric_limits<uint32_t>::max();
+    video_details.min_height = 1;
+    video_details.max_height = std::numeric_limits<uint32_t>::max();
+    MediaTypeSet supported_type;
+    supported_type.medium = MediaTypeMedium::VIDEO;
+    supported_type.details.set_video(std::move(video_details));
+    supported_type.encodings.push_back(kVideoEncodingUncompressed);
+    supported_types.push_back(std::move(supported_type));
+  }
 
   callback(std::move(supported_types));
 }
 
-void FakeRenderer::SetMediaType(MediaTypePtr media_type) {
-  FXL_DCHECK(media_type);
-  FXL_DCHECK(media_type->details);
-  if (media_type->details->is_video()) {
-    const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
-    FXL_DCHECK(details);
+void FakeRenderer::SetMediaType(MediaType media_type) {
+  if (media_type.details.is_video()) {
     pts_rate_ = TimelineRate::NsPerSecond;
-  } else if (media_type->details->is_audio()) {
-    const AudioMediaTypeDetails& details = media_type->details.audio();
-    FXL_DCHECK(details);
+  } else if (media_type.details.is_audio()) {
+    const AudioMediaTypeDetails& details = media_type.details.audio();
     pts_rate_ = TimelineRate(details.frames_per_second, 1);
   } else {
     FXL_DCHECK(false) << "Media type is neither audio nor video";
@@ -197,38 +194,35 @@ void FakeRenderer::Prime(PrimeCallback callback) {
   callback();
 }
 
-void FakeRenderer::SetTimelineTransform(
-    TimelineTransformPtr timeline_transform,
-    SetTimelineTransformCallback callback) {
+void FakeRenderer::SetTimelineTransform(TimelineTransform timeline_transform,
+                                        SetTimelineTransformCallback callback) {
   SetTimelineTransformNoReply(std::move(timeline_transform));
 
   set_timeline_transform_callback_ = callback;
 }
 
 void FakeRenderer::SetTimelineTransformNoReply(
-    TimelineTransformPtr timeline_transform) {
-  FXL_DCHECK(timeline_transform);
-  FXL_DCHECK(timeline_transform->reference_delta != 0);
+    TimelineTransform timeline_transform) {
+  FXL_DCHECK(timeline_transform.reference_delta != 0);
 
-  if (timeline_transform->subject_time != kUnspecifiedTime) {
+  if (timeline_transform.subject_time != kUnspecifiedTime) {
     end_of_stream_ = false;
   }
 
-  int64_t reference_time =
-      timeline_transform->reference_time == kUnspecifiedTime
-          ? Timeline::local_now()
-          : timeline_transform->reference_time;
-  int64_t subject_time = timeline_transform->subject_time == kUnspecifiedTime
+  int64_t reference_time = timeline_transform.reference_time == kUnspecifiedTime
+                               ? Timeline::local_now()
+                               : timeline_transform.reference_time;
+  int64_t subject_time = timeline_transform.subject_time == kUnspecifiedTime
                              ? current_timeline_function_(reference_time)
-                             : timeline_transform->subject_time;
+                             : timeline_transform.subject_time;
 
   // Eject any previous pending change.
   ClearPendingTimelineFunction(false);
 
   // Queue up the new pending change.
   pending_timeline_function_ = TimelineFunction(
-      subject_time, reference_time, timeline_transform->subject_delta,
-      timeline_transform->reference_delta);
+      subject_time, reference_time, timeline_transform.subject_delta,
+      timeline_transform.reference_delta);
 }
 
 void FakeRenderer::ClearPendingTimelineFunction(bool completed) {
@@ -264,18 +258,15 @@ void FakeRenderer::SendStatusUpdates() {
   std::vector<GetStatusCallback> pending_status_callbacks;
   pending_status_callbacks_.swap(pending_status_callbacks);
 
-  for (GetStatusCallback pending_status_callback :
-       pending_status_callbacks) {
+  for (GetStatusCallback pending_status_callback : pending_status_callbacks) {
     CompleteGetStatus(pending_status_callback);
   }
 }
 
 void FakeRenderer::CompleteGetStatus(GetStatusCallback callback) {
-  MediaTimelineControlPointStatusPtr status =
-      MediaTimelineControlPointStatus::New();
-  status->timeline_transform =
-      static_cast<TimelineTransformPtr>(current_timeline_function_);
-  status->end_of_stream = end_of_stream_;
+  MediaTimelineControlPointStatus status;
+  status.timeline_transform = current_timeline_function_.ToTimelineTransform();
+  status.end_of_stream = end_of_stream_;
   callback(status_version_, std::move(status));
 }
 

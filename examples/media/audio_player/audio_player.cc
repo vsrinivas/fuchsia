@@ -8,13 +8,14 @@
 
 #include <iomanip>
 
+#include <fuchsia/cpp/media.h>
+
 #include "garnet/bin/media/util/file_channel.h"
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline.h"
 #include "lib/url/gurl.h"
 
@@ -111,8 +112,8 @@ void AudioPlayer::HandleStatusUpdates(uint64_t version,
 
   // Request a status update.
   media_player_->GetStatus(
-      version, [this](uint64_t version, media::MediaPlayerStatusPtr status) {
-        HandleStatusUpdates(version, std::move(status));
+      version, [this](uint64_t version, media::MediaPlayerStatus status) {
+        HandleStatusUpdates(version, fidl::MakeOptional(std::move(status)));
       });
 }
 

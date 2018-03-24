@@ -7,11 +7,12 @@
 #include <memory>
 #include <unordered_set>
 
+#include <fuchsia/cpp/netconnector.h>
+
 #include "lib/app/cpp/application_context.h"
-#include "lib/svc/cpp/service_namespace.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/netconnector.h>
+#include "lib/svc/cpp/service_namespace.h"
 
 namespace netconnector {
 
@@ -21,7 +22,8 @@ template <typename TInterface, typename TStub>
 class NetStubResponder {
  public:
   // Constructor. |actual| must outlive this.
-  NetStubResponder(TInterface* actual, const std::string& service_name,
+  NetStubResponder(TInterface* actual,
+                   const std::string& service_name,
                    component::ApplicationContext* application_context)
       : actual_(actual) {
     FXL_DCHECK(actual_);
@@ -39,7 +41,7 @@ class NetStubResponder {
         application_context
             ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
-    f1dl::InterfaceHandle<component::ServiceProvider> handle;
+    fidl::InterfaceHandle<component::ServiceProvider> handle;
     service_namespace_.AddBinding(handle.NewRequest());
     FXL_DCHECK(handle);
 

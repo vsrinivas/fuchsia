@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/media.h>
+
 #include "garnet/bin/media/fidl/fidl_formatting.h"
 #include "garnet/bin/media/media_service/test/fake_renderer.h"
 #include "garnet/bin/media/media_service/test/fake_wav_reader.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
@@ -81,8 +83,8 @@ class MediaPlayerTester {
 
     // Request a status update.
     media_player_->GetStatus(
-        version, [this](uint64_t version, MediaPlayerStatusPtr status) {
-          HandleStatusUpdates(version, std::move(status));
+        version, [this](uint64_t version, MediaPlayerStatus status) {
+          HandleStatusUpdates(version, fidl::MakeOptional(std::move(status)));
         });
   }
 

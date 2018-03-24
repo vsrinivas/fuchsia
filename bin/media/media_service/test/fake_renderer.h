@@ -8,9 +8,8 @@
 #include <queue>
 #include <vector>
 
+#include <fuchsia/cpp/media.h>
 #include "lib/fidl/cpp/binding.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/transport/media_packet_consumer_base.h"
 
@@ -66,10 +65,9 @@ class FakeRenderer : public MediaPacketConsumerBase,
 
  private:
   // MediaRenderer implementation.
-  void GetSupportedMediaTypes(
-      GetSupportedMediaTypesCallback callback) override;
+  void GetSupportedMediaTypes(GetSupportedMediaTypesCallback callback) override;
 
-  void SetMediaType(MediaTypePtr media_type) override;
+  void SetMediaType(MediaType media_type) override;
 
   void GetPacketConsumer(fidl::InterfaceRequest<MediaPacketConsumer>
                              packet_consumer_request) override;
@@ -81,8 +79,7 @@ class FakeRenderer : public MediaPacketConsumerBase,
   void OnPacketSupplied(
       std::unique_ptr<SuppliedPacket> supplied_packet) override;
 
-  void OnFlushRequested(bool hold_frame,
-                        FlushCallback callback) override;
+  void OnFlushRequested(bool hold_frame, FlushCallback callback) override;
 
   void OnFailure() override;
 
@@ -100,12 +97,11 @@ class FakeRenderer : public MediaPacketConsumerBase,
   void Prime(PrimeCallback callback) override;
 
   // TimelineConsumer implementation.
-  void SetTimelineTransform(
-      TimelineTransformPtr timeline_transform,
-      SetTimelineTransformCallback callback) override;
+  void SetTimelineTransform(TimelineTransform timeline_transform,
+                            SetTimelineTransformCallback callback) override;
 
   void SetTimelineTransformNoReply(
-      TimelineTransformPtr timeline_transform) override;
+      TimelineTransform timeline_transform) override;
 
   // Clears the pending timeline function and calls its associated callback
   // with the indicated completed status.
