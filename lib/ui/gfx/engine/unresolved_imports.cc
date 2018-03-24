@@ -4,6 +4,8 @@
 
 #include <algorithm>
 
+#include <lib/async/default.h>
+
 #include "garnet/lib/ui/gfx/engine/resource_linker.h"
 #include "lib/fsl/tasks/message_loop.h"
 
@@ -51,8 +53,7 @@ void UnresolvedImports::ListenForTokenPeerDeath(Import* import) {
     // The resource must be removed from being considered for import
     // if its peer is closed.
     auto wait = std::make_unique<async::AutoWait>(
-        fsl::MessageLoop::GetCurrent()->async(), import_handle,
-        kEventPairDeathSignals);
+        async_get_default(), import_handle, kEventPairDeathSignals);
     wait->set_handler(std::bind(&UnresolvedImports::OnTokenPeerDeath, this,
                                 import_koid, std::placeholders::_1,
                                 std::placeholders::_2, std::placeholders::_3));

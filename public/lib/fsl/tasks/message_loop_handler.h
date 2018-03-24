@@ -26,7 +26,7 @@ namespace fsl {
 // public:
 //   MyWaiter(zx::channel channel) :
 //       channel_(std::move(channel)),
-//       wait_(fsl::MessageLoop::GetCurrent()->async(),
+//       wait_(async_get_default(),
 //             channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
 //     wait_.set_handler(fbl::BindMember(this, &MyWaiter::Handler));
 //     zx_status_t status = wait_.Begin();

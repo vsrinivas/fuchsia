@@ -7,17 +7,18 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <zircon/device/ktrace.h>
-#include <zircon/syscalls/log.h>
+#include <lib/async/default.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
+#include <zircon/device/ktrace.h>
+#include <zircon/syscalls/log.h>
 
 #include "garnet/bin/ktrace_provider/importer.h"
 #include "garnet/bin/ktrace_provider/reader.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace ktrace_provider {
 namespace {
@@ -68,8 +69,7 @@ void IoctlKtraceStart(int fd, uint32_t group_mask) {
 App::App(const fxl::CommandLine& command_line)
     : application_context_(
           component::ApplicationContext::CreateFromStartupInfo()) {
-  trace_observer_.Start(fsl::MessageLoop::GetCurrent()->async(),
-                        [this] { UpdateState(); });
+  trace_observer_.Start(async_get_default(), [this] { UpdateState(); });
 }
 
 App::~App() {}

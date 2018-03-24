@@ -6,6 +6,7 @@
 
 #include <endian.h>
 
+#include <lib/async/default.h>
 #include <zircon/status.h>
 
 #include "garnet/drivers/bluetooth/lib/common/run_task_sync.h"
@@ -64,8 +65,7 @@ void CommandChannel::Initialize() {
   auto setup_handler_task = [this] {
     channel_wait_.set_handler(
         fbl::BindMember(this, &CommandChannel::OnChannelReady));
-    zx_status_t status =
-        channel_wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
+    zx_status_t status = channel_wait_.Begin(async_get_default());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "hci: CommandChannel: failed channel setup: "
                      << zx_status_get_string(status);
@@ -97,8 +97,7 @@ void CommandChannel::ShutDown() {
     FXL_DCHECK(fsl::MessageLoop::GetCurrent());
     FXL_LOG(INFO) << "hci: CommandChannel: Removing I/O handler";
     SetPendingCommand(nullptr);
-    zx_status_t status =
-        channel_wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
+    zx_status_t status = channel_wait_.Cancel(async_get_default());
     if (status != ZX_OK) {
       FXL_LOG(WARNING) << "Couldn't cancel wait on channel: "
                        << zx_status_get_string(status);
@@ -247,7 +246,7 @@ void CommandChannel::TrySendNextQueuedCommand() {
   // to HCI_Command_Status or the corresponding completion callback) this
   // timeout callback will be cancelled when SetPendingCommand() is called to
   // clear the pending command.
-  pending_cmd_timeout_.Reset([ this, id = cmd.transaction_data.id ] {
+  pending_cmd_timeout_.Reset([this, id = cmd.transaction_data.id] {
     auto pending_cmd = GetPendingCommand();
 
     // If this callback is ever invoked then the command that timed out should
@@ -332,11 +331,12 @@ bool CommandChannel::HandlePendingCommandComplete(
     return true;
   }
 
-  pending_command->task_runner->PostTask(fxl::MakeCopyable([
-    event = std::move(event),
-    complete_callback = pending_command->complete_callback,
-    transaction_id = pending_command->id
-  ]() mutable { complete_callback(transaction_id, *event); }));
+  pending_command->task_runner->PostTask(
+      fxl::MakeCopyable([event = std::move(event),
+                         complete_callback = pending_command->complete_callback,
+                         transaction_id = pending_command->id]() mutable {
+        complete_callback(transaction_id, *event);
+      }));
 
   return true;
 }
@@ -476,9 +476,11 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
   }
 
   // Post the event on the requested task runner.
-  handler.task_runner->PostTask(fxl::MakeCopyable([
-    event = std::move(event), event_callback = handler.event_callback
-  ]() mutable { event_callback(*event); }));
+  handler.task_runner->PostTask(
+      fxl::MakeCopyable([event = std::move(event),
+                         event_callback = handler.event_callback]() mutable {
+        event_callback(*event);
+      }));
 }
 
 async_wait_result_t CommandChannel::OnChannelReady(

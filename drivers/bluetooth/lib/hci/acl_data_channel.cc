@@ -5,13 +5,14 @@
 #include "acl_data_channel.h"
 
 #include <endian.h>
+
+#include <lib/async/default.h>
 #include <zircon/status.h>
 
 #include "garnet/drivers/bluetooth/lib/common/run_task_sync.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
-
 #include "slab_allocators.h"
 #include "transport.h"
 
@@ -60,8 +61,7 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
   auto setup_handler_task = [this] {
     channel_wait_.set_handler(
         fbl::BindMember(this, &ACLDataChannel::OnChannelReady));
-    zx_status_t status =
-        channel_wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
+    zx_status_t status = channel_wait_.Begin(async_get_default());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "hci: ACLDataChannel: failed channel setup: "
                      << zx_status_get_string(status);
@@ -100,8 +100,7 @@ void ACLDataChannel::ShutDown() {
   auto handler_cleanup_task = [this] {
     FXL_DCHECK(fsl::MessageLoop::GetCurrent());
     FXL_LOG(INFO) << "hci: ACLDataChannel: canceling I/O handler";
-    zx_status_t status =
-        channel_wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
+    zx_status_t status = channel_wait_.Cancel(async_get_default());
     if (status != ZX_OK) {
       FXL_LOG(WARNING) << "Couldn't cancel wait on channel: "
                        << zx_status_get_string(status);

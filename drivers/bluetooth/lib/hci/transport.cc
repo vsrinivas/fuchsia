@@ -4,6 +4,7 @@
 
 #include "transport.h"
 
+#include <lib/async/default.h>
 #include <zircon/status.h>
 #include <zx/channel.h>
 
@@ -112,7 +113,7 @@ void Transport::ShutDown() {
   bool owns_thread = io_thread_.joinable();
   io_task_runner_->PostTask([this, owns_thread] {
     FXL_DCHECK(fsl::MessageLoop::GetCurrent());
-    const auto async = fsl::MessageLoop::GetCurrent()->async();
+    const auto async = async_get_default();
     cmd_channel_wait_.Cancel(async);
     acl_channel_wait_.Cancel(async);
 
@@ -145,11 +146,11 @@ bool Transport::IsInitialized() const {
 
 void Transport::WatchChannelClosed(const zx::channel& channel,
                                    async::Wait& wait) {
-  io_task_runner_->PostTask([ handle = channel.get(), &wait, this ] {
+  io_task_runner_->PostTask([handle = channel.get(), &wait, this] {
     wait.set_object(handle);
     wait.set_trigger(ZX_CHANNEL_PEER_CLOSED);
     wait.set_handler(fbl::BindMember(this, &Transport::OnChannelClosed));
-    zx_status_t status = wait.Begin(fsl::MessageLoop::GetCurrent()->async());
+    zx_status_t status = wait.Begin(async_get_default());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "hci: Transport: failed channel setup: "
                      << zx_status_get_string(status);
@@ -177,7 +178,7 @@ void Transport::NotifyClosedCallback() {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
   // Clear the handlers so that we stop receiving events.
-  const auto async = fsl::MessageLoop::GetCurrent()->async();
+  const auto async = async_get_default();
 
   cmd_channel_wait_.Cancel(async);
   if (acl_data_channel_) {

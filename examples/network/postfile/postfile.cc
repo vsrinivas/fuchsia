@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+
 #include <cstdio>
 
 #include <fuchsia/cpp/network.h>
+#include <lib/async/default.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/socket/files.h"
@@ -113,7 +116,7 @@ class PostFileApp {
     request.body = network::URLBody::New();
     request.body->set_stream(std::move(consumer));
 
-    async_t* async = fsl::MessageLoop::GetCurrent()->async();
+    async_t* async = async_get_default();
     fsl::CopyFromFileDescriptor(std::move(fd), std::move(producer), async,
                                 [](bool result, fxl::UniqueFD fd) {
                                   if (!result) {

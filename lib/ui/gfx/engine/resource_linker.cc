@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/ui/gfx/engine/resource_linker.h"
-#include "lib/fsl/tasks/message_loop.h"
+
+#include <lib/async/default.h>
 
 #include "garnet/lib/ui/gfx/resources/import.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace scenic {
 namespace gfx {
@@ -50,9 +52,9 @@ bool ResourceLinker::ExportResource(Resource* resource,
   // The resource must be removed from being considered for import if its
   // peer is closed.
   auto wait = std::make_unique<async::AutoWait>(
-      fsl::MessageLoop::GetCurrent()->async(),  // async dispatcher
-      export_token.get(),                       // handle
-      kEventPairDeathSignals                    // trigger
+      async_get_default(),    // async dispatcher
+      export_token.get(),     // handle
+      kEventPairDeathSignals  // trigger
   );
   wait->set_handler(std::bind(&ResourceLinker::OnTokenPeerDeath, this,
                               import_koid, std::placeholders::_2,

@@ -8,6 +8,7 @@
 #include <fdio/util.h>
 #include <fs/pseudo-file.h>
 #include <fs/remote-dir.h>
+#include <lib/async/default.h>
 
 #include <cinttypes>
 #include <utility>
@@ -39,8 +40,7 @@ ApplicationControllerImpl::ApplicationControllerImpl(
       info_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       exported_dir_(std::move(exported_dir)),
       application_namespace_(std::move(application_namespace)),
-      wait_(fsl::MessageLoop::GetCurrent()->async(), process_.get(),
-            ZX_TASK_TERMINATED) {
+      wait_(async_get_default(), process_.get(), ZX_TASK_TERMINATED) {
   wait_.set_handler(fbl::BindMember(this, &ApplicationControllerImpl::Handler));
   auto status = wait_.Begin();
   FXL_DCHECK(status == ZX_OK);
@@ -55,24 +55,23 @@ ApplicationControllerImpl::ApplicationControllerImpl(
 
   if (client_request) {
     if (export_dir_type == ExportedDirType::kPublicDebugCtrlLayout) {
-      fdio_service_connect_at(
-          exported_dir_.get(), "public", client_request.release());
+      fdio_service_connect_at(exported_dir_.get(), "public",
+                              client_request.release());
     } else if (export_dir_type == ExportedDirType::kLegacyFlatLayout) {
-      fdio_service_clone_to(
-          exported_dir_.get(), client_request.release());
+      fdio_service_clone_to(exported_dir_.get(), client_request.release());
     }
   }
   if (export_dir_type == ExportedDirType::kPublicDebugCtrlLayout) {
     zx::channel debug_dir_server, debug_dir_client;
-    zx_status_t status = zx::channel::create(0u, &debug_dir_server,
-                                             &debug_dir_client);
+    zx_status_t status =
+        zx::channel::create(0u, &debug_dir_server, &debug_dir_client);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to create channel for service directory."
                      << status;
       return;
     }
-    fdio_service_connect_at(
-        exported_dir_.get(), "debug", debug_dir_server.release());
+    fdio_service_connect_at(exported_dir_.get(), "debug",
+                            debug_dir_server.release());
     zx_koid_t process_koid = fsl::GetKoid(process_.get());
     info_dir_->AddEntry("process", fbl::AdoptRef(new fs::UnbufferedPseudoFile(
                                        [process_koid](fbl::String* output) {
@@ -87,8 +86,7 @@ ApplicationControllerImpl::ApplicationControllerImpl(
           return ZX_OK;
         })));
     info_dir_->AddEntry(
-        "debug",
-        fbl::AdoptRef(new fs::RemoteDir(fbl::move(debug_dir_client))));
+        "debug", fbl::AdoptRef(new fs::RemoteDir(fbl::move(debug_dir_client))));
   }
 }
 
@@ -134,7 +132,9 @@ void ApplicationControllerImpl::Wait(WaitCallback callback) {
 
 // Called when process terminates, regardless of if Kill() was invoked.
 async_wait_result_t ApplicationControllerImpl::Handler(
-    async_t* async, zx_status_t status, const zx_packet_signal* signal) {
+    async_t* async,
+    zx_status_t status,
+    const zx_packet_signal* signal) {
   FXL_DCHECK(status == ZX_OK);
   FXL_DCHECK(signal->observed == ZX_TASK_TERMINATED);
   if (!wait_callbacks_.empty()) {

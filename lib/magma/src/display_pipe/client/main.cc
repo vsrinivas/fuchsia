@@ -4,6 +4,7 @@
 
 #include <fuchsia/cpp/display_pipe.h>
 #include <lib/async/cpp/auto_wait.h>
+#include <lib/async/default.h>
 
 #include "garnet/lib/magma/src/display_pipe/client/buffer.h"
 #include "lib/app/cpp/application_context.h"
@@ -79,8 +80,8 @@ static uint32_t hsv_inc(uint32_t index, int16_t inc)
 class BufferHandler {
 public:
     BufferHandler(Buffer* buffer, uint32_t index)
-        : buffer_(buffer), index_(index), wait_(fsl::MessageLoop::GetCurrent()->async(),
-                                                buffer->release_fence().get(), ZX_EVENT_SIGNALED)
+        : buffer_(buffer), index_(index),
+          wait_(async_get_default(), buffer->release_fence().get(), ZX_EVENT_SIGNALED)
     {
         wait_.set_handler(fbl::BindMember(this, &BufferHandler::Handler));
         auto status = wait_.Begin();

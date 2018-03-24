@@ -4,12 +4,13 @@
 
 #include "garnet/bin/ktrace_provider/log_importer.h"
 
+#include <lib/async/default.h>
+#include <trace-engine/instrumentation.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
-#include <trace-engine/instrumentation.h>
 
-#include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 namespace ktrace_provider {
 
@@ -36,7 +37,7 @@ void LogImporter::Start() {
 
   wait_.set_object(log_.get());
   wait_.set_trigger(ZX_LOG_READABLE);
-  status = wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
+  status = wait_.Begin(async_get_default());
   FXL_CHECK(status == ZX_OK) << "status=" << status;
 }
 
@@ -44,7 +45,7 @@ void LogImporter::Stop() {
   if (!log_)
     return;
 
-  zx_status_t status = wait_.Cancel(fsl::MessageLoop::GetCurrent()->async());
+  zx_status_t status = wait_.Cancel(async_get_default());
   FXL_CHECK(status == ZX_OK) << "status=" << status;
 
   log_.reset();

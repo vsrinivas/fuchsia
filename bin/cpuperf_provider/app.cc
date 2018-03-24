@@ -8,6 +8,8 @@
 #include <limits>
 #include <memory>
 
+#include <lib/async/default.h>
+
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/bin/cpuperf_provider/importer.h"
 #include "garnet/lib/cpuperf/controller.h"
@@ -23,11 +25,10 @@ namespace {
 
 // If only fxl string/number conversions supported 0x.
 
-bool ParseNumber(const char* name, const fxl::StringView& arg,
+bool ParseNumber(const char* name,
+                 const fxl::StringView& arg,
                  uint64_t* value) {
-  if (arg.size() > 2 &&
-      arg[0] == '0' &&
-      (arg[1] == 'x' || arg[1] == 'X')) {
+  if (arg.size() > 2 && arg[0] == '0' && (arg[1] == 'x' || arg[1] == 'X')) {
     if (!fxl::StringToNumberWithError<uint64_t>(arg.substr(2), value,
                                                 fxl::Base::k16)) {
       FXL_LOG(ERROR) << "Invalid value for " << name << ": " << arg;
@@ -68,8 +69,7 @@ App::App(const fxl::CommandLine& command_line)
     buffer_size_in_mb_ = static_cast<uint32_t>(buffer_size);
   }
 
-  trace_observer_.Start(fsl::MessageLoop::GetCurrent()->async(),
-                        [this] { UpdateState(); });
+  trace_observer_.Start(async_get_default(), [this] { UpdateState(); });
 }
 
 App::~App() {}
@@ -79,7 +79,7 @@ void App::PrintHelp() {
   std::cout << "Options:" << std::endl;
   std::cout << "  --help: Produce this help message" << std::endl;
   std::cout << "  --buffer-size=<size>: Trace data buffer size (MB) [default="
-        << kDefaultBufferSizeInMb << "]" << std::endl;
+            << kDefaultBufferSizeInMb << "]" << std::endl;
 }
 
 void App::UpdateState() {
@@ -114,8 +114,7 @@ void App::StartTracing(const TraceConfig& trace_config) {
     return;
   }
 
-  FXL_VLOG(1) << "Starting trace, config = "
-              << trace_config.ToString();
+  FXL_VLOG(1) << "Starting trace, config = " << trace_config.ToString();
 
   context_ = trace_acquire_context();
   if (!context_) {

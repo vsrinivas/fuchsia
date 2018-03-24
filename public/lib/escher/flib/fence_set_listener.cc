@@ -4,7 +4,9 @@
 
 #include "lib/escher/flib/fence_set_listener.h"
 
+#include <lib/async/default.h>
 #include <zx/time.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
@@ -33,9 +35,9 @@ void FenceSetListener::WaitReadyAsync(fxl::Closure ready_callback) {
   // Wait for |kFenceSignalled| on each fence.
   for (auto& fence : *fences_) {
     auto wait = std::make_unique<async::AutoWait>(
-        fsl::MessageLoop::GetCurrent()->async(),  // async dispatcher
-        fence.get(),                              // handle
-        kFenceSignalled                           // trigger
+        async_get_default(),  // async dispatcher
+        fence.get(),          // handle
+        kFenceSignalled       // trigger
     );
     wait->set_handler(std::bind(&FenceSetListener::OnFenceSignalled, this,
                                 waiter_index, std::placeholders::_2,

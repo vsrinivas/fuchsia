@@ -4,7 +4,9 @@
 
 #include "lib/escher/flib/fence_listener.h"
 
+#include <lib/async/default.h>
 #include <zx/time.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
@@ -13,9 +15,9 @@ namespace escher {
 
 FenceListener::FenceListener(zx::event fence)
     : fence_(std::move(fence)),
-      waiter_(fsl::MessageLoop::GetCurrent()->async(),  // dispatcher
-              fence_.get(),                             // handle
-              kFenceSignalled)                          // trigger
+      waiter_(async_get_default(),  // dispatcher
+              fence_.get(),         // handle
+              kFenceSignalled)      // trigger
 {
   FXL_DCHECK(fence_);
 }

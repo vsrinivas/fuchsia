@@ -6,6 +6,8 @@
 
 #include <fcntl.h>
 
+#include <lib/async/default.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace archive {
@@ -98,7 +100,7 @@ bool GetDirectoryEntryByPath(ArchiveReader* const reader,
 }  // namespace
 
 FileSystem::FileSystem(zx::vmo vmo)
-    : vmo_(vmo.get()), vfs_(fsl::MessageLoop::GetCurrent()->async()) {
+    : vmo_(vmo.get()), vfs_(async_get_default()) {
   uint64_t num_bytes = 0;
   zx_status_t status = vmo.get_size(&num_bytes);
   if (status != ZX_OK)
@@ -128,7 +130,8 @@ zx::channel FileSystem::OpenAsDirectory() {
 
 bool FileSystem::IsFile(fxl::StringView path) {
   DirectoryTableEntry entry;
-  return GetDirectoryEntryByPath(reader_.get(), path, &entry);;
+  return GetDirectoryEntryByPath(reader_.get(), path, &entry);
+  ;
 }
 
 fsl::SizedVmo FileSystem::GetFileAsVMO(fxl::StringView path) {
