@@ -360,7 +360,7 @@ class FidlTest {
 
   void Run() {
     uint32_t result;
-    FXL_CHECK(service_ptr_->RoundTripTest(123, &result));
+    FXL_CHECK(service_ptr_->RoundTripTest(123, &result) == ZX_OK);
     FXL_CHECK(result == 456);
   }
 
