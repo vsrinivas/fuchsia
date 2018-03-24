@@ -359,10 +359,14 @@ func (c *compiler) compileLiteral(val types.Literal) string {
 	}
 }
 
-func (c *compiler) compileConstant(val types.Constant) string {
+func (c *compiler) compileConstant(val types.Constant, t *Type) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
-		return c.compileLowerCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier), "")
+		v := c.compileLowerCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier), "")
+		if t != nil && t.declType == types.EnumDeclType {
+			v = fmt.Sprintf("%s.%s", t.Decl, v)
+		}
+		return v
 	case types.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	default:
@@ -379,11 +383,11 @@ func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
 	return ""
 }
 
-func (c *compiler) maybeCompileConstant(val *types.Constant) string {
+func (c *compiler) maybeCompileConstant(val *types.Constant, t *Type) string {
 	if val == nil {
 		return "null"
 	}
-	return c.compileConstant(*val)
+	return c.compileConstant(*val, t)
 }
 
 func (c *compiler) compileType(val types.Type) Type {
@@ -476,7 +480,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 	r := Const{
 		c.compileType(val.Type),
 		c.compileLowerCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.Name), ""),
-		c.compileConstant(val.Value),
+		c.compileConstant(val.Value, nil),
 	}
 	if r.Type.declType == types.EnumDeclType {
 		r.Value = fmt.Sprintf("%s.%s", r.Type.Decl, r.Value)
@@ -496,7 +500,7 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	for _, v := range val.Members {
 		e.Members = append(e.Members, EnumMember{
 			c.compileLowerCamelIdentifier(v.Name),
-			c.compileConstant(v.Value),
+			c.compileConstant(v.Value, nil),
 		})
 	}
 	return e
@@ -559,12 +563,13 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 }
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
+	t := c.compileType(val.Type)
+
 	defaultValue := ""
 	if val.MaybeDefaultValue != nil {
-		defaultValue = c.compileConstant(*val.MaybeDefaultValue)
+		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t)
 	}
 
-	t := c.compileType(val.Type)
 	typeStr := fmt.Sprintf("type: %s", t.typeExpr)
 	offsetStr := fmt.Sprintf("offset: %v", val.Offset)
 	return StructMember{
