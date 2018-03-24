@@ -127,6 +127,11 @@ zx_status_t BeaconSender::WriteBeacon(const TrafficIndicationMap* tim) {
     status = WriteExtendedSupportedRates(&w);
     if (status != ZX_OK) { return status; }
 
+    if (bss_->IsHTReady()) {
+        status = WriteHtCapabilities(&w);
+        if (status != ZX_OK) { return status; }
+    }
+
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
 
     // Validate the request in debug mode.
@@ -190,6 +195,11 @@ zx_status_t BeaconSender::SendProbeResponse(const ImmutableMgmtFrame<ProbeReques
 
     status = WriteExtendedSupportedRates(&w);
     if (status != ZX_OK) { return status; }
+
+    if (bss_->IsHTReady()) {
+        status = WriteHtCapabilities(&w);
+        if (status != ZX_OK) { return status; }
+    }
 
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
 
@@ -276,6 +286,18 @@ zx_status_t BeaconSender::WriteExtendedSupportedRates(ElementWriter* w) {
                bss_->bssid().ToString().c_str());
         return ZX_ERR_IO;
     }
+    return ZX_OK;
+}
+
+zx_status_t BeaconSender::WriteHtCapabilities(ElementWriter* w) {
+    HtCapabilities htc = bss_->BuildHtCapabilities();
+    if (!w->write<HtCapabilities>(htc.ht_cap_info, htc.ampdu_params, htc.mcs_set, htc.ht_ext_cap,
+                                  htc.txbf_cap, htc.asel_cap)) {
+        errorf("[bcn-sender] [%s] could not write HtCapabilities\n",
+               bss_->bssid().ToString().c_str());
+        return ZX_ERR_IO;
+    }
+
     return ZX_OK;
 }
 
