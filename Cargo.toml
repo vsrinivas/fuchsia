@@ -39,6 +39,10 @@ members =  [
   "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
   "public/rust/crates/mxruntime",
   "public/rust/crates/mxruntime/mxruntime-sys",
+  "public/rust/fidl_crates/fidl_bluetooth",
+  "public/rust/fidl_crates/fidl_bluetooth_control",
+  "public/rust/fidl_crates/fidl_bluetooth_gatt",
+  "public/rust/fidl_crates/fidl_bluetooth_low_energy",
   "public/rust/fidl_crates/fidl_component",
   "public/rust/fidl_crates/fidl_device_settings",
   "public/rust/fidl_crates/fidl_echo2",
@@ -53,6 +57,10 @@ members =  [
 # workspace must have a patch statement here and the version of the crate
 # at the path specified must be compatible with all crates in the tree.
 [patch.crates-io]
+fidl_bluetooth = { path = "public/rust/fidl_crates/fidl_bluetooth" }
+fidl_bluetooth_control = { path = "public/rust/fidl_crates/fidl_bluetooth_control" }
+fidl_bluetooth_gatt = { path = "public/rust/fidl_crates/fidl_bluetooth_gatt" }
+fidl_bluetooth_low_energy = { path = "public/rust/fidl_crates/fidl_bluetooth_low_energy" }
 fidl_component = { path = "public/rust/fidl_crates/fidl_component" }
 fidl_device_settings = { path = "public/rust/fidl_crates/fidl_device_settings" }
 fidl_echo2 = { path = "public/rust/fidl_crates/fidl_echo2" }

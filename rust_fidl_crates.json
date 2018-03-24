@@ -58,5 +58,29 @@
     "fidl_target": "//garnet/public/lib/network/fidl:fidl",
     "library_deps": ["fsl", "netstack"],
     "public": true
+  },
+  {
+    "library_name": "bluetooth",
+    "fidl_target": "//garnet/public/lib/bluetooth/fidl:bluetooth",
+    "library_deps": [],
+    "public": true
+  },
+  {
+    "library_name": "bluetooth_control",
+    "fidl_target": "//garnet/public/lib/bluetooth/fidl:bluetooth_control",
+    "library_deps": ["bluetooth"],
+    "public": true
+  },
+  {
+    "library_name": "bluetooth_gatt",
+    "fidl_target": "//garnet/public/lib/bluetooth/fidl:bluetooth_gatt",
+    "library_deps": ["bluetooth"],
+    "public": true
+  },
+  {
+    "library_name": "bluetooth_low_energy",
+    "fidl_target": "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy",
+    "library_deps": ["bluetooth"],
+    "public": true
   }
 ]
