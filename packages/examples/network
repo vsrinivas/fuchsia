@@ -9,6 +9,5 @@
     "packages": {
         "postfile": "//garnet/examples/network/postfile",
         "wget": "//garnet/examples/network/wget",
-        "wget-rs": "//garnet/examples/network/wget-rs"
     }
 }
