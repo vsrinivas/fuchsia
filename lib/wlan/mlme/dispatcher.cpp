@@ -462,7 +462,7 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
 template <typename Message>
 zx_status_t Dispatcher::HandleMlmeMethod(const Packet* packet, wlan_mlme::Method method) {
     auto msg = std::make_unique<Message>();
-    auto status = DeserializeServiceMsg<Message>(*packet, method, &msg);
+    auto status = DeserializeServiceMsg<Message>(*packet, method, msg.get());
     if (status != ZX_OK) {
         errorf("could not deserialize MLME Method %d: %d\n", method, status);
         return status;

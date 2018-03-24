@@ -109,7 +109,7 @@ class ScannerTest : public ::testing::Test {
     }
 
     wlan_mlme::ScanRequestPtr req_;
-    wlan_mlme::ScanResponsePtr resp_;
+    wlan_mlme::ScanResponse resp_;
     TestClock clock_;
     MockDevice mock_dev_;
     Scanner scanner_;
@@ -136,8 +136,8 @@ TEST_F(ScannerTest, Start_InvalidChannelTimes) {
     EXPECT_EQ(0u, CurrentChannel());
 
     EXPECT_EQ(ZX_OK, DeserializeResponse());
-    EXPECT_EQ(0u, resp_->bss_description_set->size());
-    EXPECT_EQ(wlan_mlme::ScanResultCodes::NOT_SUPPORTED, resp_->result_code);
+    EXPECT_EQ(0u, resp_.bss_description_set->size());
+    EXPECT_EQ(wlan_mlme::ScanResultCodes::NOT_SUPPORTED, resp_.result_code);
 }
 
 TEST_F(ScannerTest, Start_NoChannels) {
@@ -151,8 +151,8 @@ TEST_F(ScannerTest, Start_NoChannels) {
     EXPECT_EQ(0u, CurrentChannel());
 
     EXPECT_EQ(ZX_OK, DeserializeResponse());
-    EXPECT_EQ(0u, resp_->bss_description_set->size());
-    EXPECT_EQ(wlan_mlme::ScanResultCodes::NOT_SUPPORTED, resp_->result_code);
+    EXPECT_EQ(0u, resp_.bss_description_set->size());
+    EXPECT_EQ(wlan_mlme::ScanResultCodes::NOT_SUPPORTED, resp_.result_code);
 }
 
 TEST_F(ScannerTest, Reset) {
@@ -211,8 +211,8 @@ TEST_F(ScannerTest, Timeout_MaxChannelTime) {
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 
     EXPECT_EQ(ZX_OK, DeserializeResponse());
-    EXPECT_EQ(0u, resp_->bss_description_set->size());
-    EXPECT_EQ(wlan_mlme::ScanResultCodes::SUCCESS, resp_->result_code);
+    EXPECT_EQ(0u, resp_.bss_description_set->size());
+    EXPECT_EQ(wlan_mlme::ScanResultCodes::SUCCESS, resp_.result_code);
 }
 
 TEST_F(ScannerTest, Timeout_NextChannel) {
@@ -275,10 +275,10 @@ TEST_F(ScannerTest, ScanResponse) {
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 
     EXPECT_EQ(ZX_OK, DeserializeResponse());
-    ASSERT_EQ(1u, resp_->bss_description_set->size());
-    EXPECT_EQ(wlan_mlme::ScanResultCodes::SUCCESS, resp_->result_code);
+    ASSERT_EQ(1u, resp_.bss_description_set->size());
+    EXPECT_EQ(wlan_mlme::ScanResultCodes::SUCCESS, resp_.result_code);
 
-    auto& bss = resp_->bss_description_set->at(0);
+    auto& bss = resp_.bss_description_set->at(0);
     EXPECT_EQ(0, std::memcmp(kBeacon + 16, bss.bssid.data(), 6));
     EXPECT_STREQ("test ssid", bss.ssid.get().c_str());
     EXPECT_EQ(wlan_mlme::BSSTypes::INFRASTRUCTURE, bss.bss_type);

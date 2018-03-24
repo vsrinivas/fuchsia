@@ -36,6 +36,7 @@
         "garnet/packages/tests/tracing",
         "garnet/packages/tests/url",
         "garnet/packages/tests/vulkan",
+        "garnet/packages/tests/wlan",
         "garnet/packages/tests/zxdb",
         "garnet/packages/tools/all"
     ]
