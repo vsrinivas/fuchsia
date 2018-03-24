@@ -45,6 +45,11 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) override;
     seq_t NextSeq(const DataFrameHeader& hdr) override;
 
+    bool IsHTReady() const override;
+    bool IsCbw40RxReady() const override;
+    bool IsCbw40TxReady() const override;
+    HtCapabilities BuildHtCapabilities() const override;
+
    private:
     // FrameHandler implementation
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
