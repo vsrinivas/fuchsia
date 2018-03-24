@@ -291,14 +291,13 @@ func typeSymbolForCompoundIdentifier(ident types.CompoundIdentifier) string {
 	return t
 }
 
-func isReservedWord(str types.Identifier) bool {
-	_, ok := reservedWords[string(str)]
+func isReservedWord(str string) bool {
+	_, ok := reservedWords[str]
 	return ok
 }
 
-func changeIfReserved(val types.Identifier) string {
-	str := string(val)
-	if isReservedWord(val) {
+func changeIfReserved(str string) string {
+	if isReservedWord(str) {
 		return str + "_"
 	}
 	return str
@@ -309,33 +308,33 @@ type compiler struct {
 }
 
 func (c *compiler) compileUpperCamelIdentifier(val types.Identifier) string {
-	return common.ToUpperCamelCase(changeIfReserved(val))
+	return changeIfReserved(common.ToUpperCamelCase(string(val)))
 }
 
 func (c *compiler) compileLowerCamelIdentifier(val types.Identifier) string {
-	return common.ToLowerCamelCase(changeIfReserved(val))
+	return changeIfReserved(common.ToLowerCamelCase(string(val)))
 }
 
 func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
 	if val.Library != "" {
-		strs = append(strs, changeIfReserved(val.Library))
+		strs = append(strs, changeIfReserved(string(val.Library)))
 	}
 	for _, v := range val.NestedDecls {
 		strs = append(strs, c.compileUpperCamelIdentifier(v))
 	}
-	strs = append(strs, changeIfReserved(val.Name))
+	strs = append(strs, changeIfReserved(string(val.Name)))
 	return strings.Join(strs, ".")
 }
 
 func (c *compiler) compileUpperCamelCompoundIdentifier(val types.CompoundIdentifier, ext string) string {
-	str := common.ToUpperCamelCase(changeIfReserved(val.Name)) + ext
+	str := changeIfReserved(common.ToUpperCamelCase(string(val.Name))) + ext
 	val.Name = types.Identifier(str)
 	return c.compileCompoundIdentifier(val)
 }
 
 func (c *compiler) compileLowerCamelCompoundIdentifier(val types.CompoundIdentifier, ext string) string {
-	str := common.ToLowerCamelCase(changeIfReserved(val.Name)) + ext
+	str := changeIfReserved(common.ToLowerCamelCase(string(val.Name))) + ext
 	val.Name = types.Identifier(str)
 	return c.compileCompoundIdentifier(val)
 }
