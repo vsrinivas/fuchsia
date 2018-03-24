@@ -479,24 +479,28 @@ endif
 # Individual modules can append $(NO_SANITIZERS) to counteract this.
 USER_COMPILEFLAGS += -fsanitize=address -fno-sanitize=safe-stack
 
-# Ask the Clang driver where the library with SONAME $1 is found at link time.
-find-clang-solib = \
-    $(shell $(CLANG_TOOLCHAIN_PREFIX)clang $(GLOBAL_COMPILEFLAGS) \
-    -print-file-name=$1)
+# The Clang toolchain includes a manifest for the shared libraries it provides.
+# The right-hand sides are relative to the directory containing the manifest.
+CLANG_MANIFEST := $(CLANG_TOOLCHAIN_PREFIX)../lib/$(CLANG_ARCH)-fuchsia.manifest
+CLANG_MANIFEST_LINES := \
+    $(subst =,=$(CLANG_TOOLCHAIN_PREFIX)../lib/,$(shell cat $(CLANG_MANIFEST)))
+find-clang-solib = $(filter lib/$1=%,$(CLANG_MANIFEST_LINES))
 # Every userland executable and shared library compiled with ASan
 # needs to link with $(ASAN_SOLIB).  module-user{app,lib}.mk adds it
 # to MODULE_EXTRA_OBJS so the linking target will depend on it.
 ASAN_SONAME := libclang_rt.asan-$(CLANG_ARCH).so
-ASAN_SOLIB := $(call find-clang-solib,$(ASAN_SONAME))
-USER_MANIFEST_LINES += {core}lib/$(ASAN_SONAME)=$(ASAN_SOLIB)
+ASAN_SOLIB_MANIFEST := $(call find-clang-solib,$(ASAN_SONAME))
+ASAN_SOLIB := $(word 2,$(subst =, ,$(ASAN_SOLIB_MANIFEST)))
+USER_MANIFEST_LINES += {core}$(ASAN_SOLIB_MANIFEST)
 
 # The ASan runtime DSO depends on more DSOs from the toolchain.  We don't
 # link against those, so we don't need any build-time dependencies on them.
 # But we need them alongside the ASan runtime DSO in the bootfs.
+find-clang-asan-solib = $(or $(call find-clang-solib,asan/$1), \
+			     $(call find-clang-solib,$1))
 ASAN_RUNTIME_SONAMES := libc++abi.so.1 libunwind.so.1
-USER_MANIFEST_LINES += \
-    $(foreach soname,$(ASAN_RUNTIME_SONAMES),\
-    {core}lib/$(soname)=$(call find-clang-solib,$(soname)))
+USER_MANIFEST_LINES += $(foreach soname,$(ASAN_RUNTIME_SONAMES),\
+				 {core}$(call find-clang-asan-solib,$(soname)))
 endif
 
 ifeq ($(call TOBOOL,$(USE_SANCOV)),true)
