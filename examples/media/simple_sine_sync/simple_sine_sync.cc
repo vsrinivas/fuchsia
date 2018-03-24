@@ -4,6 +4,8 @@
 
 #include "garnet/examples/media/simple_sine_sync/simple_sine_sync.h"
 
+#include <math.h>
+
 #include <zircon/syscalls.h>
 
 #include "lib/app/cpp/environment_services.h"
@@ -127,18 +129,18 @@ int MediaApp::Run() {
 // Connect to the AudioServer and get an AudioRenderer.
 bool MediaApp::AcquireRenderer() {
   media::AudioServerSyncPtr audio_server;
-  component::ConnectToEnvironmentService(GetSynchronousProxy(&audio_server));
-  return audio_server->CreateRendererV2(GetSynchronousProxy(&audio_renderer_));
+  component::ConnectToEnvironmentService(audio_server.NewRequest());
+  return audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 }
 
 // Set the AudioRenderer's audio format to stereo 48kHz 16-bit (LPCM).
 void MediaApp::SetMediaType() {
   FXL_DCHECK(audio_renderer_);
 
-  media::AudioPcmFormatPtr format = media::AudioPcmFormat::New();
-  format->sample_format = media::AudioSampleFormat::SIGNED_16;
-  format->channels = kNumChannels;
-  format->frames_per_second = kRendererFrameRate;
+  media::AudioPcmFormat format;
+  format.sample_format = media::AudioSampleFormat::SIGNED_16;
+  format.channels = kNumChannels;
+  format.frames_per_second = kRendererFrameRate;
 
   if (!audio_renderer_->SetPcmFormat(std::move(format)))
     FXL_LOG(ERROR) << "Could not set format";

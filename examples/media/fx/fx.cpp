@@ -182,19 +182,18 @@ void FxProcessor::Startup() {
   }
 
   // Construct the media type we will use to configure the renderer.
-  media::AudioMediaTypeDetailsPtr audio_details =
-      media::AudioMediaTypeDetails::New();
-  audio_details->sample_format = media::AudioSampleFormat::SIGNED_16;
-  audio_details->channels = input_->channel_cnt();
-  audio_details->frames_per_second = input_->frame_rate();
+  media::AudioMediaTypeDetails audio_details;
+  audio_details.sample_format = media::AudioSampleFormat::SIGNED_16;
+  audio_details.channels = input_->channel_cnt();
+  audio_details.frames_per_second = input_->frame_rate();
 
-  media::MediaTypeDetailsPtr media_details = media::MediaTypeDetails::New();
-  media_details->set_audio(std::move(audio_details));
+  media::MediaTypeDetails media_details;
+  media_details.set_audio(std::move(audio_details));
 
-  media::MediaTypePtr media_type = media::MediaType::New();
-  media_type->medium = media::MediaTypeMedium::AUDIO;
-  media_type->details = std::move(media_details);
-  media_type->encoding = media::kAudioEncodingLpcm;
+  media::MediaType media_type;
+  media_type.medium = media::MediaTypeMedium::AUDIO;
+  media_type.details = std::move(media_details);
+  media_type.encoding = media::kAudioEncodingLpcm;
 
   // Create a renderer.  Setup connection error handlers.
   audio_server_->CreateRenderer(output_audio_.NewRequest(),
@@ -472,15 +471,15 @@ void FxProcessor::ProcessInput(bool first_time) {
   // Produce output packet(s)  If we do not produce any packets, something is
   // very wrong and we are in the process of shutting down, so just get out now.
   ProduceOutputPackets(&pkt1, &pkt2);
-  if (pkt1.is_null()) {
+  if (!pkt1) {
     return;
   }
 
   // Send the packet(s)
-  output_consumer_->SupplyPacket(std::move(pkt1),
+  output_consumer_->SupplyPacket(std::move(*pkt1),
                                  [](media::MediaPacketDemandPtr) {});
-  if (!pkt2.is_null()) {
-    output_consumer_->SupplyPacket(std::move(pkt2),
+  if (pkt2) {
+    output_consumer_->SupplyPacket(std::move(*pkt2),
                                    [](media::MediaPacketDemandPtr) {});
   }
 
@@ -488,11 +487,11 @@ void FxProcessor::ProcessInput(bool first_time) {
   if (first_time) {
     // TODO(johngro) : this lead time amount should not be arbitrary... it
     // needs to be based on the requirements of the renderer at the moment.
-    media::TimelineTransformPtr start = media::TimelineTransform::New();
-    start->reference_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + OUTPUT_LEAD_TIME;
-    start->subject_time = 0;
-    start->reference_delta = 1u;
-    start->subject_delta = 1u;
+    media::TimelineTransform start;
+    start.reference_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + OUTPUT_LEAD_TIME;
+    start.subject_time = 0;
+    start.reference_delta = 1u;
+    start.subject_delta = 1u;
     output_timeline_consumer_->SetTimelineTransformNoReply(std::move(start));
   }
 

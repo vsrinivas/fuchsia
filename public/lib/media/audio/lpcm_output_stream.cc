@@ -369,7 +369,7 @@ void LpcmOutputStream::Start(const TimelineFunction& timeline) {
   sends_pending_ready_.clear();
 
   timeline_consumer_->SetTimelineTransformNoReply(
-      static_cast<TimelineTransform>(timeline));
+      timeline.ToTimelineTransform());
 }
 
 void LpcmOutputStream::Restart() {

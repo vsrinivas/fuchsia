@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include <fuchsia/cpp/media.h>
+
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/command_line.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 
 namespace examples {
 
@@ -25,12 +25,12 @@ class WavRecorder : public media::AudioCapturerClient {
   void Shutdown();
   bool SetupPayloadBuffer();
   void SendCaptureJob();
-  void OnDefaultFormatFetched(media::MediaTypePtr type);
-  void OnPacketCaptured(media::MediaPacketPtr pkt) override;
+  void OnDefaultFormatFetched(media::MediaType type);
+  void OnPacketCaptured(media::MediaPacket pkt) override;
   void OnQuit();
 
   media::AudioCapturerPtr capturer_;
-  f1dl::Binding<AudioCapturerClient> async_binding_;
+  fidl::Binding<AudioCapturerClient> async_binding_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<> wav_writer_;
 

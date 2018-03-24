@@ -35,7 +35,7 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params)
         application_context
             ->ConnectToEnvironmentService<media::NetMediaService>();
 
-    f1dl::InterfaceHandle<media::MediaPlayer> media_player_handle;
+    fidl::InterfaceHandle<media::MediaPlayer> media_player_handle;
     media_player_->AddBinding(media_player_handle.NewRequest());
 
     net_media_service->PublishMediaPlayer(params.service_name(),

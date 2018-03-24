@@ -115,10 +115,10 @@ Tones::Tones(bool interactive) : interactive_(interactive) {
   });
 
   // Configure the format of the renderer.
-  media::AudioPcmFormatPtr format = media::AudioPcmFormat::New();
-  format->sample_format = kSampleFormat;
-  format->channels = kChannelCount;
-  format->frames_per_second = kFramesPerSecond;
+  media::AudioPcmFormat format;
+  format.sample_format = kSampleFormat;
+  format.channels = kChannelCount;
+  format.frames_per_second = kFramesPerSecond;
   audio_renderer_->SetPcmFormat(std::move(format));
 
   // Assign our shared payload buffer to the renderer.
@@ -212,15 +212,15 @@ void Tones::Start() {
 void Tones::Send(uint32_t amt) {
   while (!done() && amt--) {
     // Allocate packet and locate its position in the buffer.
-    auto packet = media::AudioPacket::New();
-    packet->payload_offset = (pts_ * kBytesPerFrame) % payload_buffer_.size();
-    packet->payload_size = kBytesPerBuffer;
+    media::AudioPacket packet;
+    packet.payload_offset = (pts_ * kBytesPerFrame) % payload_buffer_.size();
+    packet.payload_size = kBytesPerBuffer;
 
-    FXL_DCHECK((packet->payload_offset + packet->payload_size) <=
+    FXL_DCHECK((packet.payload_offset + packet.payload_size) <=
                 payload_buffer_.size());
 
     auto payload_ptr = reinterpret_cast<uint8_t*>(payload_buffer_.start())
-      + packet->payload_offset;
+      + packet.payload_offset;
 
     // Fill it with audio.
 #if FLOAT_SAMPLES_SUPPORTED

@@ -81,10 +81,10 @@ void MediaApp::AcquireRenderer(component::ApplicationContext* app_context) {
 void MediaApp::SetMediaType() {
   FXL_DCHECK(audio_renderer_);
 
-  media::AudioPcmFormatPtr format = media::AudioPcmFormat::New();
-  format->sample_format = media::AudioSampleFormat::SIGNED_16;
-  format->channels = kNumChannels;
-  format->frames_per_second = kRendererFrameRate;
+  media::AudioPcmFormat format;
+  format.sample_format = media::AudioSampleFormat::SIGNED_16;
+  format.channels = kNumChannels;
+  format.frames_per_second = kRendererFrameRate;
 
   audio_renderer_->SetPcmFormat(std::move(format));
 }
