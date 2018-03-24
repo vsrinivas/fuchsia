@@ -643,7 +643,10 @@ void SsdoSampler::Sample(CommandBuffer* command_buffer,
 
   vk::ClearValue clear_value(
       vk::ClearColorValue(std::array<uint32_t, 4>{{0, 0, 0, 0}}));
-  command_buffer->BeginRenderPass(render_pass_, framebuffer, &clear_value, 1);
+  command_buffer->BeginRenderPass(
+      render_pass_, framebuffer, &clear_value, 1,
+      Camera::Viewport().vk_rect_2d(framebuffer->width(),
+                                    framebuffer->height()));
   {
     auto vk_pipeline_layout = sampler_pipeline_->layout();
 
@@ -717,7 +720,10 @@ void SsdoSampler::Filter(CommandBuffer* command_buffer,
 
   vk::ClearValue clear_value(
       vk::ClearColorValue(std::array<uint32_t, 4>{{0, 0, 0, 0}}));
-  command_buffer->BeginRenderPass(render_pass_, framebuffer, &clear_value, 1);
+  command_buffer->BeginRenderPass(
+      render_pass_, framebuffer, &clear_value, 1,
+      Camera::Viewport().vk_rect_2d(framebuffer->width(),
+                                    framebuffer->height()));
   {
     auto vk_pipeline_layout = sampler_pipeline_->layout();
 

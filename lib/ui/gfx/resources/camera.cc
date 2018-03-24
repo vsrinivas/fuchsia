@@ -14,6 +14,10 @@ const ResourceTypeInfo Camera::kTypeInfo = {ResourceType::kCamera, "Camera"};
 Camera::Camera(Session* session, scenic::ResourceId id, ScenePtr scene)
     : Resource(session, id, Camera::kTypeInfo), scene_(std::move(scene)) {}
 
+Camera::Camera(Session* session, scenic::ResourceId id, ScenePtr scene,
+               const ResourceTypeInfo& type_info)
+    : Resource(session, id, type_info), scene_(std::move(scene)) {}
+
 void Camera::SetTransform(const glm::vec3& eye_position,
                           const glm::vec3& eye_look_at,
                           const glm::vec3& eye_up) {

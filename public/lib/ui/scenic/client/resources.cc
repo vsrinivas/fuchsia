@@ -355,33 +355,50 @@ void Scene::DetachLights() {
   session()->Enqueue(NewDetachLightsCommand(id()));
 }
 
-Camera::Camera(const Scene& scene) : Camera(scene.session(), scene.id()) {}
-
-Camera::Camera(Session* session, uint32_t scene_id) : Resource(session) {
-  session->Enqueue(NewCreateCameraCommand(id(), scene_id));
-}
-
-Camera::Camera(Camera&& moved) : Resource(std::move(moved)) {}
-
-Camera::~Camera() = default;
-
-void Camera::SetTransform(const float eye_position[3],
-                          const float eye_look_at[3],
-                          const float eye_up[3]) {
+void CameraBase::SetTransform(const float eye_position[3],
+                              const float eye_look_at[3],
+                              const float eye_up[3]) {
   session()->Enqueue(
       NewSetCameraTransformCommand(id(), eye_position, eye_look_at, eye_up));
 }
+
+void CameraBase::SetPoseBuffer(const Buffer& buffer, uint32_t num_entries,
+                               uint64_t base_time, uint64_t time_interval) {
+  session()->Enqueue(scenic_lib::NewSetCameraPoseBufferCommand(
+      id(), buffer.id(), num_entries, base_time, time_interval));
+}
+
+Camera::Camera(const Scene& scene) : Camera(scene.session(), scene.id()) {}
+
+Camera::Camera(Session* session, uint32_t scene_id) : CameraBase(session) {
+  session->Enqueue(NewCreateCameraCommand(id(), scene_id));
+}
+
+Camera::Camera(Camera&& moved) : CameraBase(std::move(moved)) {}
+
+Camera::~Camera() = default;
 
 void Camera::SetProjection(const float fovy) {
   session()->Enqueue(NewSetCameraProjectionCommand(id(), fovy));
 }
 
-void Camera::SetPoseBuffer(const Buffer& buffer,
-                           uint32_t num_entries,
-                           uint64_t base_time,
-                           uint64_t time_interval) {
-  session()->Enqueue(scenic_lib::NewSetCameraPoseBufferCommand(
-      id(), buffer.id(), num_entries, base_time, time_interval));
+StereoCamera::StereoCamera(const Scene& scene)
+    : StereoCamera(scene.session(), scene.id()) {}
+
+StereoCamera::StereoCamera(Session* session, uint32_t scene_id)
+    : CameraBase(session) {
+  session->Enqueue(NewCreateStereoCameraCommand(id(), scene_id));
+}
+
+StereoCamera::StereoCamera(StereoCamera&& moved)
+    : CameraBase(std::move(moved)) {}
+
+StereoCamera::~StereoCamera() = default;
+
+void StereoCamera::SetStereoProjection(const float left_projection[16],
+                                       const float right_projection[16]) {
+  session()->Enqueue(NewSetStereoCameraProjectionCommand(id(), left_projection,
+                                                         right_projection));
 }
 
 Renderer::Renderer(Session* session) : Resource(session) {

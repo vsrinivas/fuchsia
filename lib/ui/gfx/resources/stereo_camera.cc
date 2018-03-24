@@ -10,10 +10,12 @@ namespace gfx {
 const ResourceTypeInfo StereoCamera::kTypeInfo = {
     ResourceType::kCamera | ResourceType::kStereoCamera, "StereoCamera"};
 
-StereoCamera::StereoCamera(Session* session,
-                           scenic::ResourceId id,
+StereoCamera::StereoCamera(Session* session, scenic::ResourceId id,
                            ScenePtr scene)
-    : Camera(session, id, scene) {}
+    : Camera(session, id, scene, StereoCamera::kTypeInfo) {
+  viewports_[Eye::LEFT] = {0.f, 0.f, 0.5f, 1.f};
+  viewports_[Eye::RIGHT] = {0.5f, 0.f, 0.5f, 1.f};
+}
 
 void StereoCamera::SetStereoProjection(const glm::mat4 left_projection,
                                        const glm::mat4 right_projection) {
@@ -25,6 +27,8 @@ escher::Camera StereoCamera::GetEscherCamera(Eye eye) const {
   escher::Camera camera(glm::lookAt(eye_position(), eye_look_at(), eye_up()),
                         projection_[eye]);
 
+  camera.SetViewport(viewports_[eye]);
+
   if (pose_buffer_) {
     escher::hmd::PoseBuffer escher_pose_buffer(pose_buffer_->escher_buffer(),
                                                num_entries_, base_time_,
@@ -33,13 +37,6 @@ escher::Camera StereoCamera::GetEscherCamera(Eye eye) const {
   }
 
   return camera;
-}
-
-Resource* StereoCamera::GetDelegate(const ResourceTypeInfo& type_info) {
-  if (StereoCamera::kTypeInfo == type_info) {
-    return this;
-  }
-  return nullptr;
 }
 
 }  // namespace gfx

@@ -128,8 +128,12 @@ void ShadowMapRenderer::DrawShadowPass(impl::CommandBuffer* command_buffer,
 
   command_buffer->KeepAlive(fb);
   command_buffer->KeepAlive(display_list);
-  command_buffer->BeginRenderPass(shadow_map_pass_, fb, clear_values_);
-  model_renderer_->Draw(shadow_stage, display_list, command_buffer);
+
+  command_buffer->BeginRenderPass(
+      shadow_map_pass_, fb, clear_values_,
+      camera.viewport().vk_rect_2d(fb->width(), fb->height()));
+  model_renderer_->Draw(shadow_stage, display_list, command_buffer,
+                        camera.viewport());
   command_buffer->EndRenderPass();
 }
 

@@ -464,22 +464,15 @@ class Scene final : public ContainerNode {
   FXL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };
 
-// Represents a camera resource in a session.
-class Camera final : public Resource {
+class CameraBase : public Resource {
  public:
-  explicit Camera(const Scene& scene);
-  Camera(Session* session, uint32_t scene_id);
-  Camera(Camera&& moved);
-  ~Camera();
-
-  // Sets the camera's projection parameters.
+  CameraBase(Session* session) : Resource(session) {}
+  CameraBase(CameraBase&& moved) : Resource(std::move(moved)) {}
+  ~CameraBase() {}
+  // Sets the camera's view parameters.
   void SetTransform(const float eye_position[3],
                     const float eye_look_at[3],
                     const float eye_up[3]);
-
-  // Sets the camera's projection parameters.
-  void SetProjection(const float fovy);
-
   // Sets the camera pose buffer
   void SetPoseBuffer(const Buffer& buffer,
                      uint32_t num_entries,
@@ -487,7 +480,38 @@ class Camera final : public Resource {
                      uint64_t time_interval);
 
  private:
+  FXL_DISALLOW_COPY_AND_ASSIGN(CameraBase);
+};
+
+// Represents a camera resource in a session.
+class Camera : public CameraBase {
+ public:
+  explicit Camera(const Scene& scene);
+  Camera(Session* session, uint32_t scene_id);
+  Camera(Camera&& moved);
+  ~Camera();
+
+  // Sets the camera's projection parameters.
+  void SetProjection(const float fovy);
+
+ private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Camera);
+};
+
+// Represents a StereoCamera resource in a session.
+class StereoCamera final : public CameraBase {
+ public:
+  explicit StereoCamera(const Scene& scene);
+  StereoCamera(Session* session, uint32_t scene_id);
+  StereoCamera(StereoCamera&& moved);
+  ~StereoCamera();
+
+  // Sets the camera's projection parameters.
+  void SetStereoProjection(const float left_projection[16],
+                           const float right_projection[16]);
+
+ private:
+  FXL_DISALLOW_COPY_AND_ASSIGN(StereoCamera);
 };
 
 // Represents a renderer resource in a session.

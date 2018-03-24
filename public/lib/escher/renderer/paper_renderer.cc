@@ -113,8 +113,11 @@ void PaperRenderer::DrawDepthPrePass(const FramePtr& frame,
 
   command_buffer->KeepAlive(framebuffer);
   command_buffer->KeepAlive(display_list);
-  command_buffer->BeginRenderPass(depth_pass_, framebuffer, clear_values_);
-  model_renderer_->Draw(stage, display_list, command_buffer);
+  command_buffer->BeginRenderPass(
+      depth_pass_, framebuffer, clear_values_,
+      camera.viewport().vk_rect_2d(framebuffer->width(),
+                                   framebuffer->height()));
+  model_renderer_->Draw(stage, display_list, command_buffer, camera.viewport());
   command_buffer->EndRenderPass();
 }
 
@@ -300,11 +303,15 @@ void PaperRenderer::DrawLightingPass(
     command_buffer->KeepAlive(overlay_display_list);
   }
 
-  command_buffer->BeginRenderPass(render_pass, framebuffer, clear_values_);
+  command_buffer->BeginRenderPass(
+      render_pass, framebuffer, clear_values_,
+      camera.viewport().vk_rect_2d(framebuffer->width(),
+                                   framebuffer->height()));
 
-  model_renderer_->Draw(stage, display_list, command_buffer);
+  model_renderer_->Draw(stage, display_list, command_buffer, camera.viewport());
   if (overlay_display_list) {
-    model_renderer_->Draw(stage, overlay_display_list, command_buffer);
+    model_renderer_->Draw(stage, overlay_display_list, command_buffer,
+                          camera.viewport());
   }
 
   command_buffer->EndRenderPass();

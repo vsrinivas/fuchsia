@@ -174,7 +174,10 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer,
   auto descriptor_set =
       GetUpdatedDescriptorSet(frame, channel0, channel1, channel2, channel3);
 
-  command_buffer->BeginRenderPass(render_pass_, framebuffer, {});
+  command_buffer->BeginRenderPass(
+      render_pass_, framebuffer, {},
+      escher::Camera::Viewport().vk_rect_2d(framebuffer->width(),
+                                            framebuffer->height()));
   vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                  pipeline->vk_pipeline());
   vk_command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,

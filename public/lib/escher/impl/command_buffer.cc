@@ -305,57 +305,54 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
 }
 
 void CommandBuffer::BeginRenderPass(
-    const RenderPassPtr& render_pass,
-    const FramebufferPtr& framebuffer,
-    const std::vector<vk::ClearValue>& clear_values) {
+    const RenderPassPtr& render_pass, const FramebufferPtr& framebuffer,
+    const std::vector<vk::ClearValue>& clear_values,
+    const vk::Rect2D viewport) {
   KeepAlive(render_pass);
   BeginRenderPass(render_pass->vk(), framebuffer, clear_values.data(),
-                  clear_values.size());
+                  clear_values.size(), viewport);
 }
 
 void CommandBuffer::BeginRenderPass(
-    vk::RenderPass render_pass,
-    const FramebufferPtr& framebuffer,
-    const std::vector<vk::ClearValue>& clear_values) {
+    vk::RenderPass render_pass, const FramebufferPtr& framebuffer,
+    const std::vector<vk::ClearValue>& clear_values,
+    const vk::Rect2D viewport) {
   BeginRenderPass(render_pass, framebuffer, clear_values.data(),
-                  clear_values.size());
+                  clear_values.size(), viewport);
 }
 
 void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
                                     const FramebufferPtr& framebuffer,
                                     const vk::ClearValue* clear_values,
-                                    size_t clear_value_count) {
+                                    size_t clear_value_count,
+                                    vk::Rect2D viewport) {
   FXL_DCHECK(is_active_);
   KeepAlive(framebuffer);
 
-  uint32_t width = framebuffer->width();
-  uint32_t height = framebuffer->height();
-
   vk::RenderPassBeginInfo info;
   info.renderPass = render_pass;
-  info.renderArea.offset.x = 0;
-  info.renderArea.offset.y = 0;
-  info.renderArea.extent.width = width;
-  info.renderArea.extent.height = height;
+  info.renderArea = viewport;
   info.clearValueCount = static_cast<uint32_t>(clear_value_count);
   info.pClearValues = clear_values;
   info.framebuffer = framebuffer->get();
 
   command_buffer_.beginRenderPass(&info, vk::SubpassContents::eInline);
 
-  vk::Viewport viewport;
-  viewport.width = static_cast<float>(width);
-  viewport.height = static_cast<float>(height);
-  viewport.minDepth = static_cast<float>(0.0f);
-  viewport.maxDepth = static_cast<float>(1.0f);
-  command_buffer_.setViewport(0, 1, &viewport);
+  vk::Viewport vk_viewport;
+  vk_viewport.x = static_cast<float>(viewport.offset.x);
+  vk_viewport.y = static_cast<float>(viewport.offset.y);
+  vk_viewport.width = static_cast<float>(viewport.extent.width);
+  vk_viewport.height = static_cast<float>(viewport.extent.height);
+  vk_viewport.minDepth = static_cast<float>(0.0f);
+  vk_viewport.maxDepth = static_cast<float>(1.0f);
+  command_buffer_.setViewport(0, 1, &vk_viewport);
 
   // TODO: probably unnecessary?
   vk::Rect2D scissor;
-  scissor.extent.width = width;
-  scissor.extent.height = height;
-  scissor.offset.x = 0;
-  scissor.offset.y = 0;
+  scissor.extent.width = viewport.extent.width;
+  scissor.extent.height = viewport.extent.height;
+  scissor.offset.x = viewport.offset.x;
+  scissor.offset.y = viewport.offset.y;
   command_buffer_.setScissor(0, 1, &scissor);
 }
 

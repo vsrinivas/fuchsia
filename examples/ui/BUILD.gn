@@ -9,6 +9,7 @@ group("ui") {
     "hello_pose_buffer",
     "hello_scenic",
     "hello_spaces",
+    "hello_stereo",
     "shadertoy/client",
     "shadertoy/service",
     "shapes",
@@ -55,6 +56,19 @@ package("hello_pose_buffer") {
   binaries = [
     {
       name = "hello_pose_buffer"
+    },
+  ]
+}
+
+package("hello_stereo") {
+  deprecated_system_image = true
+  deps = [
+    "hello_stereo",
+  ]
+
+  binaries = [
+    {
+      name = "hello_stereo"
     },
   ]
 }

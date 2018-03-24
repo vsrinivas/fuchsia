@@ -25,6 +25,7 @@
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
+#include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
 
 namespace scenic {
@@ -217,14 +218,6 @@ void Compositor::DrawLayer(const escher::FramePtr& frame,
                   scene->directional_lights());
   escher::Model model(renderer->CreateDisplayList(renderer->camera()->scene(),
                                                   escher::vec2(layer->size())));
-  escher::Camera camera =
-      renderer->camera()->GetEscherCamera(stage.viewing_volume());
-
-  if (camera.pose_buffer()) {
-    camera.SetLatchedPoseBuffer(pose_buffer_latching_shader_->LatchPose(
-        frame, camera, camera.pose_buffer(),
-        frame_timings->target_presentation_time()));
-  }
 
   // Set the renderer's shadow mode, and generate a shadow map if necessary.
   escher::ShadowMapPtr shadow_map;
@@ -248,8 +241,29 @@ void Compositor::DrawLayer(const escher::FramePtr& frame,
       break;
   }
 
-  escher_renderer->DrawFrame(frame, stage, model, camera, output_image,
-                             shadow_map, overlay_model);
+  auto draw_frame_lambda = [this, escher_renderer, frame, frame_timings, &stage,
+                            &model, &output_image, &shadow_map,
+                            &overlay_model](escher::Camera camera) {
+    if (camera.pose_buffer()) {
+      camera.SetLatchedPoseBuffer(pose_buffer_latching_shader_->LatchPose(
+          frame, camera, camera.pose_buffer(),
+          frame_timings->target_presentation_time()));
+    }
+    escher_renderer->DrawFrame(frame, stage, model, camera, output_image,
+                               shadow_map, overlay_model);
+  };
+
+  if (renderer->camera()->IsKindOf<StereoCamera>()) {
+    auto stereo_camera = renderer->camera()->As<StereoCamera>();
+    for (const auto eye : {StereoCamera::Eye::LEFT, StereoCamera::Eye::RIGHT}) {
+      escher::Camera camera = stereo_camera->GetEscherCamera(eye);
+      draw_frame_lambda(camera);
+    }
+  } else {
+    escher::Camera camera =
+        renderer->camera()->GetEscherCamera(stage.viewing_volume());
+    draw_frame_lambda(camera);
+  }
 }
 
 bool Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,

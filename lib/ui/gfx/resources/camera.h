@@ -57,6 +57,10 @@ class Camera : public Resource {
       const escher::ViewingVolume& viewing_volume) const;
 
  protected:
+  // Note: StereoCamera subclasses Camera and provides its own ResourceTypeInfo.
+  Camera(Session* session, scenic::ResourceId id, ScenePtr scene,
+         const ResourceTypeInfo& type_info);
+
   ScenePtr scene_;
 
   glm::vec3 eye_position_ = glm::vec3();

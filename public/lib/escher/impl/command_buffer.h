@@ -10,6 +10,7 @@
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/renderer/semaphore.h"
+#include "lib/escher/scene/camera.h"
 #include "lib/escher/vk/vulkan_context.h"
 
 #include "lib/fxl/macros.h"
@@ -101,14 +102,16 @@ class CommandBuffer {
   // (i.e. width/height of viewport and scissors are obtained from framebuffer).
   void BeginRenderPass(const RenderPassPtr& render_pass,
                        const FramebufferPtr& framebuffer,
-                       const std::vector<vk::ClearValue>& clear_values);
+                       const std::vector<vk::ClearValue>& clear_values,
+                       const vk::Rect2D viewport);
   void BeginRenderPass(vk::RenderPass render_pass,
                        const FramebufferPtr& framebuffer,
-                       const std::vector<vk::ClearValue>& clear_values);
+                       const std::vector<vk::ClearValue>& clear_values,
+                       const vk::Rect2D viewport);
   void BeginRenderPass(vk::RenderPass render_pass,
                        const FramebufferPtr& framebuffer,
                        const vk::ClearValue* clear_values,
-                       size_t clear_value_count);
+                       size_t clear_value_count, const vk::Rect2D viewport);
 
   // Simple wrapper around endRenderPass().
   void EndRenderPass();

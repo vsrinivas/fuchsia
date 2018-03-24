@@ -26,12 +26,11 @@ class StereoCamera final : public Camera {
 
   escher::Camera GetEscherCamera(Eye eye) const;
 
-  virtual Resource* GetDelegate(const ResourceTypeInfo& type_info);
-
  private:
   ScenePtr scene_;
   // Projection Matrices for each eye, left at position 0, right at position 1.
   glm::mat4 projection_[2];
+  escher::Camera::Viewport viewports_[2];
 };
 
 using StereoCameraPtr = fxl::RefPtr<StereoCamera>;

@@ -1,0 +1,32 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("hello_stereo") {
+  output_name = "hello_stereo"
+
+  sources = [
+    "app.cc",
+    "app.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/ui/gfx/tests:util",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/escher",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/gfx/fidl",
+    "//garnet/public/lib/ui/scenic:client",
+    "//garnet/public/lib/ui/scenic:fidl_helpers",
+  ]
+
+  include_dirs = [
+    "//garnet/public/lib/escher",
+    "//third_party/glm",
+    "//lib",
+  ]
+
+  defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+}

@@ -125,7 +125,8 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
 // TODO: stage shouldn't be necessary.
 void ModelRenderer::Draw(const Stage& stage,
                          const ModelDisplayListPtr& display_list,
-                         CommandBuffer* command_buffer) {
+                         CommandBuffer* command_buffer,
+                         const Camera::Viewport& viewport) {
   TRACE_DURATION("gfx", "escher::ModelRenderer::Draw");
 
   vk::CommandBuffer vk_command_buffer = command_buffer->get();
@@ -145,18 +146,20 @@ void ModelRenderer::Draw(const Stage& stage,
         vk::PipelineStageFlagBits::eFragmentShader);
   }
 
-  vk::Viewport viewport;
-  viewport.width = stage.viewing_volume().width();
-  viewport.height = stage.viewing_volume().height();
+  vk::Viewport vk_viewport;
+  vk_viewport.x = stage.viewing_volume().width() * viewport.x;
+  vk_viewport.y = stage.viewing_volume().height() * viewport.y;
+  vk_viewport.width = stage.viewing_volume().width() * viewport.width;
+  vk_viewport.height = stage.viewing_volume().height() * viewport.height;
   // We normalize all depths to the range [0,1].  If we didn't, then Vulkan
   // would clip them anyway.  NOTE: this is only true because we are using an
   // orthonormal projection; otherwise the depth computed by the vertex shader
   // could be outside [0,1] as long as the perspective division brought it back.
   // In this case, it might make sense to use different values for viewport
   // min/max depth.
-  viewport.minDepth = 0.f;
-  viewport.maxDepth = 1.f;
-  vk_command_buffer.setViewport(0, 1, &viewport);
+  vk_viewport.minDepth = 0.f;
+  vk_viewport.maxDepth = 1.f;
+  vk_command_buffer.setViewport(0, 1, &vk_viewport);
 
   // Retain all display-list resources until the frame is finished rendering.
   command_buffer->KeepAlive(display_list);

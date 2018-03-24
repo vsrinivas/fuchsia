@@ -115,4 +115,14 @@ Camera Camera::NewPerspective(const ViewingVolume& volume,
   return Camera(transform, projection);
 }
 
+vk::Rect2D Camera::Viewport::vk_rect_2d(uint32_t fb_width,
+                                        uint32_t fb_height) const {
+  vk::Rect2D result;
+  result.offset.x = x * fb_width;
+  result.offset.y = y * fb_height;
+  result.extent.width = width * fb_width;
+  result.extent.height = height * fb_height;
+  return result;
+}
+
 }  // namespace escher
