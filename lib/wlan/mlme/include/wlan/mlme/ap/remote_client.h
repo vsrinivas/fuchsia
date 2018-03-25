@@ -43,6 +43,7 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     // RemoteClientInterface implementation
     void HandleTimeout() override;
 
+    zx_status_t HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) override;
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,

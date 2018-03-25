@@ -476,6 +476,11 @@ void RemoteClient::HandleTimeout() {
     state()->HandleTimeout();
 }
 
+zx_status_t RemoteClient::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) {
+    ForwardCurrentFrameTo(state());
+    return ZX_OK;
+}
+
 zx_status_t RemoteClient::HandleDataFrame(const DataFrameHeader& hdr) {
     ZX_DEBUG_ASSERT(hdr.addr2 == addr_);
     if (hdr.addr2 != addr_) { return ZX_ERR_STOP; }
