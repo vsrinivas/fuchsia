@@ -38,11 +38,7 @@ class {{ .Name }} {
   bool is_{{ .Name }}() const { return tag_ == {{ $index }}; }
   {{ .Type.Decl }}& {{ .Name }}() { return {{ .StorageName }}; }
   const {{ .Type.Decl }}& {{ .Name }}() const { return {{ .StorageName }}; }
-  void set_{{ .Name }}({{ .Type.Decl }} value) {
-    Destroy();
-    tag_ = {{ $index }};
-    {{ .StorageName }} = std::move(value);
-  }
+  void set_{{ .Name }}({{ .Type.Decl }} value);
   {{- end }}
 
   Tag Which() const { return Tag(tag_); }
@@ -72,6 +68,9 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
   switch (tag_) {
   {{- range $index, $member := .Members }}
    case {{ $index }}:
+    {{- if .Type.Dtor }}
+    new (&{{ .StorageName }}) {{ .Type.Decl }}();
+    {{- end }}
     {{ .StorageName }} = std::move(other.{{ .StorageName }});
     break;
   {{- end }}
@@ -82,10 +81,14 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 
 {{ .Name }}& {{ .Name }}::operator=({{ .Name }}&& other) {
   if (this != &other) {
+    Destroy();
     tag_ = other.tag_;
     switch (tag_) {
     {{- range $index, $member := .Members }}
      case {{ $index }}:
+      {{- if .Type.Dtor }}
+      new (&{{ .StorageName }}) {{ .Type.Decl }}();
+      {{- end }}
       {{ .StorageName }} = std::move(other.{{ .StorageName }});
       break;
     {{- end }}
@@ -110,10 +113,14 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
 }
 
 void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset) {
+  value->Destroy();
   ::fidl::Decode(decoder, &value->tag_, offset);
   switch (value->tag_) {
   {{- range $index, $member := .Members }}
    case {{ $index }}:
+    {{- if .Type.Dtor }}
+    new (&value->{{ .StorageName }}) {{ .Type.Decl }}();
+    {{- end }}
     ::fidl::Decode(decoder, &value->{{ .StorageName }}, offset + {{ .Offset }});
     break;
   {{- end }}
@@ -123,16 +130,33 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
 }
 
 zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
+  result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
     {{- range $index, $member := .Members }}
      case {{ $index }}:
+      {{- if .Type.Dtor }}
+      new (&result->{{ .StorageName }}) {{ .Type.Decl }}();
+      {{- end }}
       return ::fidl::Clone({{ .StorageName }}, &result->{{ .StorageName }});
     {{- end }}
      default:
       return ZX_ERR_INVALID_ARGS;
   }
 }
+
+{{- range $index, $member := .Members }}
+
+void {{ $.Name }}::set_{{ .Name }}({{ .Type.Decl }} value) {
+  Destroy();
+  tag_ = {{ $index }};
+  {{- if .Type.Dtor }}
+  new (&{{ .StorageName }}) {{ .Type.Decl }}();
+  {{- end }}
+  {{ .StorageName }} = std::move(value);
+}
+
+{{- end }}
 
 void {{ .Name }}::Destroy() {
   switch (tag_) {
