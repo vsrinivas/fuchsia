@@ -1,5 +1,4 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
-// This is a GENERATED file, see //zircon/system/host/sysgen.
 // The license governing this file can be found in the LICENSE file.
 
 #[link(name = "zircon")]
@@ -287,6 +286,8 @@ extern {
         len: usize,
         actual: *mut usize
         ) -> zx_status_t;
+
+    pub fn zx_job_default() -> zx_handle_t;
 
     pub fn zx_job_create(
         parent_job: zx_handle_t,
