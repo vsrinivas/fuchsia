@@ -55,6 +55,8 @@ shared_library("machina") {
     "virtio_queue.h",
     "virtio_queue_waiter.cc",
     "virtio_queue_waiter.h",
+    "virtio_vsock.cc",
+    "virtio_vsock.h",
     "volatile_write_block_dispatcher.cc",
     "volatile_write_block_dispatcher.h",
   ]
@@ -94,6 +96,7 @@ shared_library("machina") {
   public_deps = [
     "//garnet/lib/machina/fidl",
     "//garnet/public/lib/app/cpp",
+    "//zircon/public/lib/bitmap",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/virtio",
@@ -107,7 +110,6 @@ shared_library("machina") {
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/bitmap",
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -135,6 +137,7 @@ executable("machina_unittests") {
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
     "virtio_queue_waiter-unittest.cc",
+    "virtio_vsock-unittest.cc",
     "volatile_write_block_dispatcher-unittest.cc",
   ]
 

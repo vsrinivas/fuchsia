@@ -41,6 +41,7 @@
 #include "garnet/lib/machina/virtio_gpu.h"
 #include "garnet/lib/machina/virtio_input.h"
 #include "garnet/lib/machina/virtio_net.h"
+#include "garnet/lib/machina/virtio_vsock.h"
 #include "garnet/public/lib/fxl/files/file.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -70,6 +71,7 @@ static constexpr uint64_t kUartBases[kNumUarts] = {
 };
 #endif
 
+static constexpr uint32_t kVirtioVsockGuestCid = 3;
 static constexpr size_t kInputQueueDepth = 64;
 
 static void balloon_stats_handler(machina::VirtioBalloon* balloon,
@@ -483,6 +485,14 @@ int main(int argc, char** argv) {
     FXL_LOG(INFO) << "Could not open Ethernet device";
   }
 
+  // Setup vsock device.
+  machina::VirtioVsock vsock(guest.phys_mem(), guest.device_async(),
+                             kVirtioVsockGuestCid);
+  status = bus.Connect(vsock.pci_device());
+  if (status != ZX_OK) {
+    return status;
+  }
+
   // GPU back-ends can take some time to initialize. Wait for them to be
   // created before starting the VCPU so that we can ensure we have the
   // framebuffer allocated before software attempts to interface with it.
@@ -502,6 +512,5 @@ int main(int argc, char** argv) {
   }
 
   loop.Run();
-
   return guest.Join();
 }
