@@ -12,11 +12,11 @@
 #include <thread>
 
 #include "garnet/lib/backoff/exponential_backoff.h"
+#include "garnet/lib/network_wrapper/network_wrapper_impl.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/firebase/firebase_impl.h"
-#include "garnet/lib/network_wrapper/network_wrapper_impl.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace modular {
@@ -25,9 +25,8 @@ namespace {
 
 // TODO(thatguy): This is duplicated from json.cc. Put into a shared
 // file.
-void XdrNounConstraint(
-    modular::XdrContext* const xdr,
-    modular::NounConstraint* const data) {
+void XdrNounConstraint(modular::XdrContext* const xdr,
+                       modular::NounConstraint* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("types", &data->types);
 }
@@ -35,7 +34,7 @@ void XdrNounConstraint(
 void XdrEntry(modular::XdrContext* const xdr,
               modular::ModuleManifest* const data) {
   xdr->Field("binary", &data->binary);
-  xdr->Field("local_name", &data->local_name);
+  xdr->Field("suggestion_headline", &data->suggestion_headline);
   xdr->Field("verb", &data->verb);
   xdr->ReadErrorHandler([data] { data->composition_pattern = ""; })
       ->Field("composition_pattern", &data->composition_pattern);
@@ -121,7 +120,7 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     FXL_LOG(INFO) << "Reconnecting to Firebase in " << reconnect_wait_seconds_
                   << " seconds.";
     task_runner_->PostDelayedTask(
-        [owner = owner_, this]() {
+        [ owner = owner_, this ]() {
           if (!owner)
             return;
           owner->StartWatching(this);

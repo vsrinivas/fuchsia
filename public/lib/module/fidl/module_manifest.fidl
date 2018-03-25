@@ -10,8 +10,8 @@ struct ModuleManifest {
   // file can be found.
   string binary;
 
-  //TODO(thatguy): This property makes no sense any more. Consider removing it.
-  string? local_name;
+  // A human-readable string that can be used when suggesting this Module.
+  string? suggestion_headline;
 
   // Identifies which verb this Module implements.
   string verb;

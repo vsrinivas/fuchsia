@@ -4,7 +4,9 @@
   "definitions": {
     "nounConstraintArray": {
       "type": "array",
-      "items": { "$ref": "#/definitions/nounConstraint" },
+      "items": {
+        "$ref": "#/definitions/nounConstraint"
+      },
       "additionalItems": false,
       "uniqueItems": true,
       "minItems": 1
@@ -12,16 +14,27 @@
     "nounConstraint": {
       "type": "object",
       "properties": {
-        "name": { "$ref": "#/definitions/alphaNumString" },
-        "types": { "$ref": "#/definitions/entityTypeIdArray" },
-        "required": { "type": "boolean" }
+        "name": {
+          "$ref": "#/definitions/alphaNumString"
+        },
+        "types": {
+          "$ref": "#/definitions/entityTypeIdArray"
+        },
+        "required": {
+          "type": "boolean"
+        }
       },
-      "required": [ "name", "types" ],
+      "required": [
+        "name",
+        "types"
+      ],
       "additionalProperties": false
     },
     "entityTypeIdArray": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "additionalItems": false,
       "uniqueItems": true,
       "minItems": 1
@@ -32,17 +45,33 @@
     },
     "compositionPattern": {
       "type": "string",
-      "enum": [ "ticker", "comments-right"]
+      "enum": [
+        "ticker",
+        "comments-right"
+      ]
     }
   },
   "type": "object",
   "properties": {
-    "binary": { "type": "string" },
-    "local_name": { "type": "string" },
-    "verb": { "type" : "string" },
-    "noun_constraints": { "$ref": "#/definitions/nounConstraintArray" },
-    "composition_pattern" : { "$ref": "#/definitions/compositionPattern" }
+    "binary": {
+      "type": "string"
+    },
+    "suggestion_headline": {
+      "type": "string"
+    },
+    "verb": {
+      "type": "string"
+    },
+    "noun_constraints": {
+      "$ref": "#/definitions/nounConstraintArray"
+    },
+    "composition_pattern": {
+      "$ref": "#/definitions/compositionPattern"
+    }
   },
-  "required": [ "binary", "local_name", "verb" ],
+  "required": [
+    "binary",
+    "verb"
+  ],
   "additionalProperties": false
 }

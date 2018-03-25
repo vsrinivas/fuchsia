@@ -12,9 +12,8 @@ namespace modular {
 
 namespace {
 
-void XdrNounConstraint(
-    modular::XdrContext* const xdr,
-    modular::NounConstraint* const data) {
+void XdrNounConstraint(modular::XdrContext* const xdr,
+                       modular::NounConstraint* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("types", &data->types);
 }
@@ -22,7 +21,7 @@ void XdrNounConstraint(
 void XdrEntry(modular::XdrContext* const xdr,
               modular::ModuleManifest* const data) {
   xdr->Field("binary", &data->binary);
-  xdr->Field("local_name", &data->local_name);
+  xdr->Field("suggestion_headline", &data->suggestion_headline);
   xdr->Field("verb", &data->verb);
   xdr->ReadErrorHandler([data] { data->composition_pattern = ""; })
       ->Field("composition_pattern", &data->composition_pattern);

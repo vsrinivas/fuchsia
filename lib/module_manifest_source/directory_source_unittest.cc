@@ -76,7 +76,6 @@ class DirectoryModuleManifestSourceTest : public gtest::TestWithMessageLoop {
 const char* kManifest1 = R"END(
 {
   "binary": "binary1",
-  "local_name": "local_name1",
   "verb": "com.google.fuchsia.navigate.v1",
   "noun_constraints": [
     {
@@ -93,7 +92,6 @@ const char* kManifest1 = R"END(
 const char* kManifest2 = R"END(
 {
   "binary": "binary2",
-  "local_name": "local_name2",
   "verb": "com.google.fuchsia.pick.v1",
   "noun_constraints": [
     {
@@ -106,7 +104,6 @@ const char* kManifest2 = R"END(
 const char* kManifest3 = R"END(
 {
   "binary": "binary3",
-  "local_name": "local_name3",
   "verb": "com.google.fuchsia.annotate.v1",
   "noun_constraints": [
     {
@@ -127,7 +124,6 @@ TEST_F(DirectoryModuleManifestSourceTest, CreateFiles_And_CorrectEntries) {
   ASSERT_TRUE(RunLoopUntilWithTimeout([this]() { return idle_; }));
   ASSERT_EQ(2lu, entries_.size());
   EXPECT_EQ("binary1", entries_[0]->binary);
-  EXPECT_EQ("local_name1", entries_[0]->local_name);
   EXPECT_EQ("com.google.fuchsia.navigate.v1", entries_[0]->verb);
   EXPECT_EQ(2lu, entries_[0]->noun_constraints->size());
   EXPECT_EQ("start", entries_[0]->noun_constraints->at(0)->name);
@@ -139,7 +135,6 @@ TEST_F(DirectoryModuleManifestSourceTest, CreateFiles_And_CorrectEntries) {
   EXPECT_EQ("baz", entries_[0]->noun_constraints->at(1)->types->at(0));
 
   EXPECT_EQ("binary2", entries_[1]->binary);
-  EXPECT_EQ("local_name2", entries_[1]->local_name);
   EXPECT_EQ("com.google.fuchsia.pick.v1", entries_[1]->verb);
   EXPECT_EQ(1lu, entries_[1]->noun_constraints->size());
   EXPECT_EQ("thing", entries_[1]->noun_constraints->at(0)->name);
@@ -152,7 +147,6 @@ TEST_F(DirectoryModuleManifestSourceTest, CreateFiles_And_CorrectEntries) {
       RunLoopUntilWithTimeout([this]() { return entries_.size() == 3; }));
 
   EXPECT_EQ("binary3", entries_[2]->binary);
-  EXPECT_EQ("local_name3", entries_[2]->local_name);
   EXPECT_EQ("com.google.fuchsia.annotate.v1", entries_[2]->verb);
   EXPECT_EQ(1lu, entries_[2]->noun_constraints->size());
   EXPECT_EQ("thingy", entries_[2]->noun_constraints->at(0)->name);

@@ -216,7 +216,13 @@ class ModuleResolverApp : ContextListener {
     proposal->on_selected.push_back(std::move(action));
 
     auto display = SuggestionDisplay::New();
-    display->headline = module_result->module_id;
+    if (module_result->manifest &&
+        module_result->manifest->suggestion_headline) {
+      display->headline = module_result->manifest->suggestion_headline;
+      display->subheadline = module_result->module_id;
+    } else {
+      display->headline = module_result->module_id;
+    }
     display->color = 0x00aa00aa;  // argb purple
     display->annoyance = AnnoyanceType::NONE;
     proposal->display = std::move(display);

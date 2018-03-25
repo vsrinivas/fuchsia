@@ -21,7 +21,7 @@ implements different `verb`s.
 ```javascript
 {
   "binary": "bin/myPersonPreviewer",
-  "local_name": "previewPerson",
+  "suggestion_headline": "See details about person",
   "verb": "com.google.fuchsia.preview.v1",
   "noun_constraints": [
     {
@@ -38,7 +38,7 @@ implements different `verb`s.
 ```javascript
 {
   "binary": "bin/myContactPicker",
-  "local_name": "pickContact",
+  "suggestion_headline": "Pick an instagram friend",
   "verb": "com.google.fuchsia.pick.v1",
   "noun_constraints": [
     {
@@ -69,20 +69,18 @@ Specifies the relative path from the root of the package where the Module
 executable file can be found. Different verb implementations within the same
 package can share a single `binary`.
 
-#### local_name
+#### suggestion_headline
 
-> TODO(thatguy): This property makes no sense any more. Consider removing it.
+> TODO(thatguy): If we keep this, expand it to support 
+> templating based on the entity args.
 
 ```javascript
-"local_name": "previewPerson",
+"suggestion_headline": "See details about person",
 ```
 
-The `local_name` attribute must be unique within this `module` metadata file.
-It is used to inform the `Module` at runtime which verb implementation specified
-in the `module` file is being invoked.
-
-The `local_name` is passed to the Module in its `Module::Initialize()` FIDL
-call. (**TODO(thatguy)**: create and document this in FIDL file)
+The `suggestion_headline` attribute provides human-readable
+text. It will be used if this `Module` is suggested for inclusion
+in the current Story.
 
 #### verb
 
