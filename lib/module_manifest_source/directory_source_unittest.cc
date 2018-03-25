@@ -80,11 +80,11 @@ const char* kManifest1 = R"END(
   "noun_constraints": [
     {
       "name": "start",
-      "types": [ "foo", "bar" ]
+      "type": "foo"
     },
     {
       "name": "destination",
-      "types": [ "baz" ]
+      "type": "baz"
     }
   ]
 }
@@ -96,7 +96,7 @@ const char* kManifest2 = R"END(
   "noun_constraints": [
     {
       "name": "thing",
-      "types": [ "frob" ]
+      "type": "frob"
     }
   ]
 }
@@ -108,7 +108,7 @@ const char* kManifest3 = R"END(
   "noun_constraints": [
     {
       "name": "thingy",
-      "types": [ "chair" ]
+      "type": "chair"
     }
   ]
 }
@@ -127,19 +127,15 @@ TEST_F(DirectoryModuleManifestSourceTest, CreateFiles_And_CorrectEntries) {
   EXPECT_EQ("com.google.fuchsia.navigate.v1", entries_[0]->verb);
   EXPECT_EQ(2lu, entries_[0]->noun_constraints->size());
   EXPECT_EQ("start", entries_[0]->noun_constraints->at(0)->name);
-  EXPECT_EQ(2lu, entries_[0]->noun_constraints->at(0)->types->size());
-  EXPECT_EQ("foo", entries_[0]->noun_constraints->at(0)->types->at(0));
-  EXPECT_EQ("bar", entries_[0]->noun_constraints->at(0)->types->at(1));
+  EXPECT_EQ("foo", entries_[0]->noun_constraints->at(0)->type);
   EXPECT_EQ("destination", entries_[0]->noun_constraints->at(1)->name);
-  EXPECT_EQ(1lu, entries_[0]->noun_constraints->at(1)->types->size());
-  EXPECT_EQ("baz", entries_[0]->noun_constraints->at(1)->types->at(0));
+  EXPECT_EQ("baz", entries_[0]->noun_constraints->at(1)->type);
 
   EXPECT_EQ("binary2", entries_[1]->binary);
   EXPECT_EQ("com.google.fuchsia.pick.v1", entries_[1]->verb);
   EXPECT_EQ(1lu, entries_[1]->noun_constraints->size());
   EXPECT_EQ("thing", entries_[1]->noun_constraints->at(0)->name);
-  EXPECT_EQ(1lu, entries_[1]->noun_constraints->at(0)->types->size());
-  EXPECT_EQ("frob", entries_[1]->noun_constraints->at(0)->types->at(0));
+  EXPECT_EQ("frob", entries_[1]->noun_constraints->at(0)->type);
 
   // Add a new file, expect to see the results.
   WriteManifestFile("manifest3", kManifest3);
@@ -150,8 +146,7 @@ TEST_F(DirectoryModuleManifestSourceTest, CreateFiles_And_CorrectEntries) {
   EXPECT_EQ("com.google.fuchsia.annotate.v1", entries_[2]->verb);
   EXPECT_EQ(1lu, entries_[2]->noun_constraints->size());
   EXPECT_EQ("thingy", entries_[2]->noun_constraints->at(0)->name);
-  EXPECT_EQ(1lu, entries_[2]->noun_constraints->at(0)->types->size());
-  EXPECT_EQ("chair", entries_[2]->noun_constraints->at(0)->types->at(0));
+  EXPECT_EQ("chair", entries_[2]->noun_constraints->at(0)->type);
 }
 
 TEST_F(DirectoryModuleManifestSourceTest, RemovedFiles) {

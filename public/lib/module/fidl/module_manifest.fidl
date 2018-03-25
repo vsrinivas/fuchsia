@@ -27,6 +27,6 @@ struct NounConstraint {
   // The name of the noun.
   string name;
 
-  // An array of the types that are valid for this noun
-  array<string> types;
+  // The entity type that is valid for this noun.
+  string type;
 };

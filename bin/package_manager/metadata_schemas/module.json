@@ -17,8 +17,8 @@
         "name": {
           "$ref": "#/definitions/alphaNumString"
         },
-        "types": {
-          "$ref": "#/definitions/entityTypeIdArray"
+        "type": {
+          "type": "string"
         },
         "required": {
           "type": "boolean"
@@ -26,18 +26,9 @@
       },
       "required": [
         "name",
-        "types"
+        "type"
       ],
       "additionalProperties": false
-    },
-    "entityTypeIdArray": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "additionalItems": false,
-      "uniqueItems": true,
-      "minItems": 1
     },
     "alphaNumString": {
       "type": "string",

@@ -28,7 +28,7 @@ namespace {
 void XdrNounConstraint(modular::XdrContext* const xdr,
                        modular::NounConstraint* const data) {
   xdr->Field("name", &data->name);
-  xdr->Field("types", &data->types);
+  xdr->Field("type", &data->type);
 }
 
 void XdrEntry(modular::XdrContext* const xdr,

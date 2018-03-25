@@ -293,9 +293,10 @@ class ModuleResolverImpl::FindModulesCall
     for (const auto& entry_noun : *entry->noun_constraints) {
       std::vector<std::string> matching_query_nouns;
       for (const auto& query_noun : *query_->noun_constraints) {
-        std::vector<std::string> entry_noun_types = ToArray(entry_noun->types);
-        if (DoTypesIntersect(noun_types_cache_[query_noun->key],
-                             entry_noun_types)) {
+        const auto& this_query_noun_cache = noun_types_cache_[query_noun->key];
+        if (std::find(this_query_noun_cache.begin(),
+                      this_query_noun_cache.end(),
+                      entry_noun->type) != this_query_noun_cache.end()) {
           matching_query_nouns.push_back(query_noun->key);
         }
       }
@@ -371,21 +372,6 @@ class ModuleResolverImpl::FindModulesCall
     }
 
     return result;
-  }
-
-  // Returns true if the any entry of |first_types| is contained in
-  // |second_types|.
-  bool DoTypesIntersect(const std::vector<std::string>& first_types,
-                        const std::vector<std::string>& second_types) {
-    const std::set<std::string> first_type_set(first_types.begin(),
-                                               first_types.end());
-    const std::set<std::string> second_type_set(second_types.begin(),
-                                                second_types.end());
-    std::set<std::string> intersection;
-    std::set_intersection(first_type_set.begin(), first_type_set.end(),
-                          second_type_set.begin(), second_type_set.end(),
-                          std::inserter(intersection, intersection.begin()));
-    return !intersection.empty();
   }
 
   std::vector<std::string> ToArray(f1dl::VectorPtr<f1dl::StringPtr>& values) {
@@ -604,11 +590,10 @@ void ModuleResolverImpl::OnNewManifestEntry(
   verb_to_entries_[entry->verb].insert(id);
 
   for (const auto& constraint : *entry->noun_constraints) {
-    for (const auto& type : *constraint->types) {
-      noun_type_and_name_to_entries_[std::make_pair(type, constraint->name)]
-          .insert(id);
-      noun_type_to_entries_[type].insert(id);
-    }
+    noun_type_and_name_to_entries_[std::make_pair(constraint->type,
+                                                  constraint->name)]
+        .insert(id);
+    noun_type_to_entries_[constraint->type].insert(id);
   }
 }
 
@@ -625,11 +610,10 @@ void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& source_name,
   verb_to_entries_[entry->verb].erase(id);
 
   for (const auto& constraint : *entry->noun_constraints) {
-    for (const auto& type : *constraint->types) {
-      noun_type_and_name_to_entries_[std::make_pair(type, constraint->name)]
-          .erase(id);
-      noun_type_to_entries_[type].erase(id);
-    }
+    noun_type_and_name_to_entries_[std::make_pair(constraint->type,
+                                                  constraint->name)]
+        .erase(id);
+    noun_type_to_entries_[constraint->type].erase(id);
   }
 
   entries_.erase(id);

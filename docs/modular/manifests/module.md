@@ -26,10 +26,7 @@ implements different `verb`s.
   "noun_constraints": [
     {
       "name": "entityToPreview",
-      "types": [
-        "https://fuchsia.io/package/coreTypes/Person",
-        "https://fuchsia.instagram.com/types/Friend"
-      ]
+      "type": "https://fuchsia.instagram.com/types/Friend"
     }
   ],
   "composition_pattern": "ticker"
@@ -43,11 +40,11 @@ implements different `verb`s.
   "noun_constraints": [
     {
       "name": "source",
-      "types": [ "https://fuchsia.instagram.com/types/FriendRepository" ]
+      "type": "https://fuchsia.instagram.com/types/FriendRepository"
     },
     {
       "name": "picked",
-      "types": [ "https://fuchsia.instagram.com/types/Friend" ]
+      "type": "https://fuchsia.instagram.com/types/Friend"
     }
   ]
 }
@@ -102,10 +99,7 @@ The `verb` must match a `verb` name in an associated
 "noun_constraints": [
   {
     "name": "entityToPreview",
-    "types": [
-      "https://fuchsia.io/package/coreTypes/Person",
-      "https://fuchsia.instagram.com/types/Friend"
-    ]
+    "type": "https://fuchsia.instagram.com/types/Friend"
   },
   ...
 ],
@@ -120,20 +114,17 @@ Each noun in the verb template gets an entry in `noun_constraints`. Each entry
 is made up of the following fields:
 
 * `name`: this is the name of the noun given in the [verb template](verb_template.md)
-* `types`: a list of [Entity](../entity.md) types.
-   Multiple entries in this list indicate that any of the listed types are compatible.
+* `type`: an [Entity](../entity.md) types.
 
    > TODO(thatguy): Add information about where entity types & schemas are discoverable.
 
-   > TODO(thatguy): The semantics of `types` doesn't make a lot of sense for *output*
+   > TODO(thatguy): The semantics of `type` doesn't make a lot of sense for *output*
      or maybe *input/output* nouns.
 
 At runtime, this `Module` will communicate with its parent (the invoker of the
-`Module`) through a [`Link`](../../services/story/link.fidl) interface. The `Link` enforces the
+`Module`) through multiple [`Link`](../../services/story/link.fidl) interfaces. The `Link` enforces the
 typing described here, making any attempt to write an `Entity` with an
-incompatible type an error. This applies for all values of `direction` (`input`,
-`output` and `input/output`) on the nouns as specified in the *verb*'s corresponding
-[verb_template](verb_template.md) file.
+incompatible type an error.
 
 #### composition_pattern
 
