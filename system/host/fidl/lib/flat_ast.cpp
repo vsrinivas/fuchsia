@@ -958,6 +958,7 @@ bool Library::CompileUnion(Union* union_declaration) {
     auto tag = FieldShape(kUint32TypeShape);
     auto members = FieldShape(CUnionTypeShape(union_declaration->members));
     std::vector<FieldShape*> fidl_union = {&tag, &members};
+    union_declaration->fieldshape = FieldShape(CStructTypeShape(&fidl_union));
 
     // This is either 4 or 8, depending on whether any union members
     // have alignment 8.
@@ -965,7 +966,6 @@ bool Library::CompileUnion(Union* union_declaration) {
     for (auto& member : union_declaration->members) {
         member.fieldshape.SetOffset(offset);
     }
-    union_declaration->fieldshape = FieldShape(CStructTypeShape(&fidl_union), offset);
 
     return true;
 }
